@@ -575,7 +575,7 @@ namespace Jazz2::UI::Menu
 
 			player->play();
 		} else {
-			LOGE("Sound effect \"%s\" was not found", identifier.data());
+			LOGE("Sound effect \"{}\" was not found", identifier);
 		}
 #endif
 	}

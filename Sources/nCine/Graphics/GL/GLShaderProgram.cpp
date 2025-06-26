@@ -282,7 +282,7 @@ namespace nCine
 				if (length > 0) {
 					static char buffer[2048];
 					glGetProgramInfoLog(glHandle_, sizeof(buffer), &length, buffer);
-					LOGW("%s", buffer);
+					LOGW("{}", buffer);
 				}
 			}
 #endif
@@ -349,7 +349,7 @@ namespace nCine
 				GLUniform& uniform = uniforms_.emplace_back(glHandle_, indices[i]);
 				uniformsSize_ += uniform.GetMemorySize();
 
-				LOGD("Shader program %u - uniform %d : \"%s\"", glHandle_, uniform.GetLocation(), uniform.GetName());
+				LOGD("Shader program {} - uniform {} : \"{}\"", glHandle_, uniform.GetLocation(), uniform.GetName());
 			}
 		}
 		GL_LOG_ERRORS();
@@ -365,7 +365,7 @@ namespace nCine
 			GLUniformBlock& uniformBlock = uniformBlocks_.emplace_back(glHandle_, i, discover);
 			uniformBlocksSize_ += uniformBlock.GetSize();
 
-			LOGD("Shader program %u - uniform block %u : \"%s\" (%d bytes with %u align)", glHandle_, uniformBlock.GetIndex(), uniformBlock.GetName(), uniformBlock.GetSize(), uniformBlock.GetAlignAmount());
+			LOGD("Shader program {} - uniform block {} : \"{}\" ({} bytes with {} align)", glHandle_, uniformBlock.GetIndex(), uniformBlock.GetName(), uniformBlock.GetSize(), uniformBlock.GetAlignAmount());
 		}
 		GL_LOG_ERRORS();
 	}
@@ -378,7 +378,7 @@ namespace nCine
 
 		for (std::int32_t i = 0; i < count; i++) {
 			DEATH_UNUSED GLAttribute& attribute = attributes_.emplace_back(glHandle_, i);
-			LOGD("Shader program %u - attribute %d : \"%s\"", glHandle_, attribute.GetLocation(), attribute.GetName());
+			LOGD("Shader program {} - attribute {} : \"{}\"", glHandle_, attribute.GetLocation(), attribute.GetName());
 		}
 		GL_LOG_ERRORS();
 	}
@@ -388,7 +388,7 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 		const std::uint32_t count = (std::uint32_t)attributes_.size();
 		if (count > GLVertexFormat::MaxAttributes) {
-			LOGW("More active attributes (%d) than supported by the vertex format class (%d)", count, GLVertexFormat::MaxAttributes);
+			LOGW("More active attributes ({}) than supported by the vertex format class ({})", count, GLVertexFormat::MaxAttributes);
 		}
 		for (std::uint32_t i = 0; i < attributes_.size(); i++) {
 			const GLAttribute& attribute = attributes_[i];

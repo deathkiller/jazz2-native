@@ -146,44 +146,44 @@ namespace nCine
 #if defined(DEATH_TRACE)
 		// Log OpenGL device info
 		LOGI("--- OpenGL device info ---");
-		LOGI("Vendor: %s", glInfoStrings_.vendor);
-		LOGI("Renderer: %s", glInfoStrings_.renderer);
-		LOGI("OpenGL Version: %s", glInfoStrings_.glVersion);
-		LOGI("GLSL Version: %s", glInfoStrings_.glslVersion);
+		LOGI("Vendor: {}", glInfoStrings_.vendor);
+		LOGI("Renderer: {}", glInfoStrings_.renderer);
+		LOGI("OpenGL Version: {}", glInfoStrings_.glVersion);
+		LOGI("GLSL Version: {}", glInfoStrings_.glslVersion);
 		//LOGI("--- OpenGL device info ---");
 
 		// Capabilities
 		LOGI("--- OpenGL device capabilities ---");
-		LOGI("GL_MAX_TEXTURE_SIZE: %d", glIntValues_[(std::int32_t)GLIntValues::MAX_TEXTURE_SIZE]);
-		LOGI("GL_MAX_TEXTURE_IMAGE_UNITS: %d", glIntValues_[(std::int32_t)GLIntValues::MAX_TEXTURE_IMAGE_UNITS]);
+		LOGI("GL_MAX_TEXTURE_SIZE: {}", glIntValues_[(std::int32_t)GLIntValues::MAX_TEXTURE_SIZE]);
+		LOGI("GL_MAX_TEXTURE_IMAGE_UNITS: {}", glIntValues_[(std::int32_t)GLIntValues::MAX_TEXTURE_IMAGE_UNITS]);
 		if (glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE] != glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED]) {
-			LOGI("GL_MAX_UNIFORM_BLOCK_SIZE: %d (%d)", glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE], glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED]);
+			LOGI("GL_MAX_UNIFORM_BLOCK_SIZE: {} ({})", glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE], glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED]);
 		} else {
-			LOGI("GL_MAX_UNIFORM_BLOCK_SIZE: %d", glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE]);
+			LOGI("GL_MAX_UNIFORM_BLOCK_SIZE: {}", glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE]);
 		}
-		LOGI("GL_MAX_UNIFORM_BUFFER_BINDINGS: %d", glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BUFFER_BINDINGS]);
-		LOGI("GL_MAX_VERTEX_UNIFORM_BLOCKS: %d", glIntValues_[(std::int32_t)GLIntValues::MAX_VERTEX_UNIFORM_BLOCKS]);
-		LOGI("GL_MAX_FRAGMENT_UNIFORM_BLOCKS: %d", glIntValues_[(std::int32_t)GLIntValues::MAX_FRAGMENT_UNIFORM_BLOCKS]);
-		LOGI("GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT: %d", glIntValues_[(std::int32_t)GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT]);
+		LOGI("GL_MAX_UNIFORM_BUFFER_BINDINGS: {}", glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BUFFER_BINDINGS]);
+		LOGI("GL_MAX_VERTEX_UNIFORM_BLOCKS: {}", glIntValues_[(std::int32_t)GLIntValues::MAX_VERTEX_UNIFORM_BLOCKS]);
+		LOGI("GL_MAX_FRAGMENT_UNIFORM_BLOCKS: {}", glIntValues_[(std::int32_t)GLIntValues::MAX_FRAGMENT_UNIFORM_BLOCKS]);
+		LOGI("GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT: {}", glIntValues_[(std::int32_t)GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT]);
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
-		LOGI("GL_MAX_VERTEX_ATTRIB_STRIDE: %d", glIntValues_[(std::int32_t)GLIntValues::MAX_VERTEX_ATTRIB_STRIDE]);
+		LOGI("GL_MAX_VERTEX_ATTRIB_STRIDE: {}", glIntValues_[(std::int32_t)GLIntValues::MAX_VERTEX_ATTRIB_STRIDE]);
 #endif
-		LOGI("GL_MAX_COLOR_ATTACHMENTS: %d", glIntValues_[(std::int32_t)GLIntValues::MAX_COLOR_ATTACHMENTS]);
-		LOGI("GL_NUM_PROGRAM_BINARY_FORMATS: %d", glIntValues_[(std::int32_t)GLIntValues::NUM_PROGRAM_BINARY_FORMATS]);
+		LOGI("GL_MAX_COLOR_ATTACHMENTS: {}", glIntValues_[(std::int32_t)GLIntValues::MAX_COLOR_ATTACHMENTS]);
+		LOGI("GL_NUM_PROGRAM_BINARY_FORMATS: {}", glIntValues_[(std::int32_t)GLIntValues::NUM_PROGRAM_BINARY_FORMATS]);
 		LOGI("---");
-		LOGI("GL_KHR_debug: %d", glExtensions_[(std::int32_t)GLExtensions::KHR_DEBUG]);
-		LOGI("GL_ARB_texture_storage: %d", glExtensions_[(std::int32_t)GLExtensions::ARB_TEXTURE_STORAGE]);
-		LOGI("GL_ARB_get_program_binary: %d", glExtensions_[(std::int32_t)GLExtensions::ARB_GET_PROGRAM_BINARY]);
+		LOGI("GL_KHR_debug: {}", glExtensions_[(std::int32_t)GLExtensions::KHR_DEBUG]);
+		LOGI("GL_ARB_texture_storage: {}", glExtensions_[(std::int32_t)GLExtensions::ARB_TEXTURE_STORAGE]);
+		LOGI("GL_ARB_get_program_binary: {}", glExtensions_[(std::int32_t)GLExtensions::ARB_GET_PROGRAM_BINARY]);
 #if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
-		LOGI("GL_OES_get_program_binary: %d", glExtensions_[(std::int32_t)GLExtensions::OES_GET_PROGRAM_BINARY]);
+		LOGI("GL_OES_get_program_binary: {}", glExtensions_[(std::int32_t)GLExtensions::OES_GET_PROGRAM_BINARY]);
 #endif
-		LOGI("GL_EXT_texture_compression_s3tc: %d", glExtensions_[(std::int32_t)GLExtensions::EXT_TEXTURE_COMPRESSION_S3TC]);
+		LOGI("GL_EXT_texture_compression_s3tc: {}", glExtensions_[(std::int32_t)GLExtensions::EXT_TEXTURE_COMPRESSION_S3TC]);
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
-		LOGI("GL_OES_compressed_ETC1_RGB8_texture: %d", glExtensions_[(std::int32_t)GLExtensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE]);
+		LOGI("GL_OES_compressed_ETC1_RGB8_texture: {}", glExtensions_[(std::int32_t)GLExtensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE]);
 #endif
-		LOGI("GL_AMD_compressed_ATC_texture: %d", glExtensions_[(std::int32_t)GLExtensions::AMD_COMPRESSED_ATC_TEXTURE]);
-		LOGI("GL_IMG_texture_compression_pvrtc: %d", glExtensions_[(std::int32_t)GLExtensions::IMG_TEXTURE_COMPRESSION_PVRTC]);
-		LOGI("GL_KHR_texture_compression_astc_ldr: %d", glExtensions_[(std::int32_t)GLExtensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR]);
+		LOGI("GL_AMD_compressed_ATC_texture: {}", glExtensions_[(std::int32_t)GLExtensions::AMD_COMPRESSED_ATC_TEXTURE]);
+		LOGI("GL_IMG_texture_compression_pvrtc: {}", glExtensions_[(std::int32_t)GLExtensions::IMG_TEXTURE_COMPRESSION_PVRTC]);
+		LOGI("GL_KHR_texture_compression_astc_ldr: {}", glExtensions_[(std::int32_t)GLExtensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR]);
 		//LOGI("--- OpenGL device capabilities ---");
 		LOGI("---");
 
@@ -193,7 +193,7 @@ namespace nCine
 
 		LOGI("--- OpenGL extensions ---");
 		for (GLuint i = 0; i < static_cast<GLuint>(numExtensions); i++) {
-			LOGI("Extension %u: %s", i, glGetStringi(GL_EXTENSIONS, i));
+			LOGI("Extension {}: {}", i, glGetStringi(GL_EXTENSIONS, i));
 		}
 		LOGI("--- OpenGL extensions ---");*/
 #endif

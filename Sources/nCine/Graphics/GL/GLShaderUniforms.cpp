@@ -71,7 +71,7 @@ namespace nCine
 		if (shaderProgram_ != nullptr) {
 			uniformCache = uniformCaches_.find(String::nullTerminatedView(name));
 		} else {
-			LOGE("Cannot find uniform \"%s\", no shader program associated", name);
+			LOGE("Cannot find uniform \"{}\", no shader program associated", name);
 		}
 		return uniformCache;
 	}
@@ -130,7 +130,7 @@ namespace nCine
 		}
 
 		if (importedCount > UniformCachesHashSize) {
-			LOGW("More imported uniform blocks (%d) than hashmap buckets (%d)", importedCount, UniformCachesHashSize);
+			LOGW("More imported uniform blocks ({}) than hashmap buckets ({})", importedCount, UniformCachesHashSize);
 		}
 	}
 }

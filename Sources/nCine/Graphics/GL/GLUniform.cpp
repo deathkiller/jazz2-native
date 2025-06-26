@@ -56,7 +56,7 @@ namespace nCine
 #endif
 				return GL_INT;
 			default:
-				LOGW("No available case to handle type: %u", type_);
+				LOGW("No available case to handle type: {}", type_);
 				return type_;
 		}
 	}
@@ -97,7 +97,7 @@ namespace nCine
 #endif
 				return 1;
 			default:
-				LOGW("No available case to handle type: %u", type_);
+				LOGW("No available case to handle type: {}", type_);
 				return 0;
 		}
 	}

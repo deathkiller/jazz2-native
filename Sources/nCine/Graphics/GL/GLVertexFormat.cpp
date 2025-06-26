@@ -55,7 +55,7 @@ namespace nCine
 
 		if (stride > MaxVertexAttribStride) {
 			stride_ = MaxVertexAttribStride;
-			LOGW("Vertex attribute stride (%d) is bigger than the maximum value supported (%d)", stride, MaxVertexAttribStride);
+			LOGW("Vertex attribute stride ({}) is bigger than the maximum value supported ({})", stride, MaxVertexAttribStride);
 		} else
 #endif
 		{

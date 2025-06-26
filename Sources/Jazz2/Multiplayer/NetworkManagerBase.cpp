@@ -63,7 +63,7 @@ namespace Jazz2::Multiplayer
 					(ifa->ifa_flags & IFF_UP)) {
 					ifidx = if_nametoindex(ifa->ifa_name);
 					if (ifidx > 0) {
-						LOGI("[MP] Using %s interface \"%s\" (%i)", ifa->ifa_addr->sa_family == AF_INET6
+						LOGI("[MP] Using {} interface \"{}\" ({})", ifa->ifa_addr->sa_family == AF_INET6
 							? "IPv6" : "IPv4", ifa->ifa_name, ifidx);
 						break;
 					}
@@ -102,10 +102,10 @@ namespace Jazz2::Multiplayer
 #else
 						std::int32_t error = errno;
 #endif
-						LOGW("[MP] Failed to parse specified address \"%s\" with error %i", nullTerminatedAddress.data(), error);
+						LOGW("[MP] Failed to parse specified address \"{}\" with error {}", nullTerminatedAddress, error);
 					}
 				} else {
-					LOGW("[MP] Failed to parse specified endpoint \"%s\"", String::nullTerminatedView(p[0]).data());
+					LOGW("[MP] Failed to parse specified endpoint \"{}\"", p[0]);
 				}
 			}
 
@@ -171,12 +171,12 @@ namespace Jazz2::Multiplayer
 
 			if (ioctl(_host->socket, SIOCGIFCONF, &ifc) >= 0) {
 				std::int32_t count = ifc.ifc_len / sizeof(struct ifreq);
-				LOGI("[MP] Found %d interfaces:", count);
+				LOGI("[MP] Found {} interfaces:", count);
 				for (std::int32_t i = 0; i < count; i++) {
 					if (ifr[i].ifr_addr.sa_family == AF_INET) { // IPv4
 						auto* addrPtr = &((struct sockaddr_in*)&ifr[i].ifr_addr)->sin_addr;
 						String addressString = AddressToString(*addrPtr, _host->address.port);
-						LOGI("[MP] -\t%s: %s", ifr[i].ifr_name, addressString.data());
+						LOGI("[MP] -\t{}: {}", ifr[i].ifr_name, addressString);
 						if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
 							arrayAppend(result, std::move(addressString));
 						}
@@ -186,7 +186,7 @@ namespace Jazz2::Multiplayer
 						auto* addrPtr = &((struct sockaddr_in6*)&ifr[i].ifr_addr)->sin6_addr;
 						//auto scopeId = ((struct sockaddr_in6*)&ifr[i].ifr_addr)->sin6_scope_id;
 						String addressString = AddressToString(*addrPtr, /*scopeId*/0, _host->address.port);
-						LOGI("[MP] -\t%s: %s", ifr[i].ifr_name, addressString.data());
+						LOGI("[MP] -\t{}: {}", ifr[i].ifr_name, addressString);
 						if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
 							arrayAppend(result, std::move(addressString));
 						}
@@ -595,7 +595,7 @@ namespace Jazz2::Multiplayer
 	{
 		if (++_initializeCount == 1) {
 			std::int32_t error = enet_initialize();
-			RETURN_ASSERT_MSG(error == 0, "enet_initialize() failed with error %i", error);
+			RETURN_ASSERT_MSG(error == 0, "enet_initialize() failed with error {}", error);
 		}
 	}
 
@@ -620,7 +620,7 @@ namespace Jazz2::Multiplayer
 		ENetEvent ev{};
 		for (std::int32_t i = 0; i < std::int32_t(_this->_desiredEndpoints.size()) && _this->_state != NetworkState::None; i++) {
 			ENetAddress& addr = _this->_desiredEndpoints[i];
-			LOGI("[MP] Connecting to %s (%i/%i)", AddressToString(addr, true).data(), i + 1, std::int32_t(_this->_desiredEndpoints.size()));
+			LOGI("[MP] Connecting to {} ({}/{})", AddressToString(addr, true), i + 1, _this->_desiredEndpoints.size());
 			
 			if (host != nullptr) {
 				enet_host_destroy(host);
@@ -646,7 +646,7 @@ namespace Jazz2::Multiplayer
 					break;
 				}
 
-				LOGD("enet_host_service() is trying to connect: %u", enet_time_get());
+				LOGD("enet_host_service() is trying to connect: {} ms", enet_time_get());
 				if (enet_host_service(host, &ev, 1000) > 0 && ev.type == ENET_EVENT_TYPE_CONNECT) {
 					break;
 				}
@@ -679,7 +679,7 @@ namespace Jazz2::Multiplayer
 
 				if DEATH_UNLIKELY(result <= 0) {
 					if DEATH_UNLIKELY(result < 0) {
-						LOGE("[MP] enet_host_service() returned %i", result);
+						LOGE("[MP] enet_host_service() returned {}", result);
 						reason = Reason::ConnectionLost;
 						break;
 					}
@@ -723,7 +723,7 @@ namespace Jazz2::Multiplayer
 
 		_this->_thread.Detach();
 
-		LOGD("[MP] Client thread exited: %s (%u)", NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
+		LOGD("[MP] Client thread exited: {} ({})", NetworkManagerBase::ReasonToString(reason), reason);
 	}
 
 	void NetworkManagerBase::OnServerThread(void* param)
@@ -746,7 +746,7 @@ namespace Jazz2::Multiplayer
 
 			if DEATH_UNLIKELY(result <= 0) {
 				if DEATH_UNLIKELY(result < 0) {
-					LOGE("[MP] enet_host_service() returned %i", result);
+					LOGE("[MP] enet_host_service() returned {}", result);
 
 					// Server failed, try to recreate it
 					for (auto& peer : _this->_peers) {
@@ -784,7 +784,7 @@ namespace Jazz2::Multiplayer
 							}
 						}
 						if DEATH_UNLIKELY(alreadyExists) {
-							LOGW("Peer is already connected [%08llx]", (std::uint64_t)ev.peer);
+							LOGW("Peer is already connected [{:.8x}]", std::uint64_t(ev.peer));
 						} else {
 							_this->_peers.push_back(ev.peer);
 						}

@@ -117,7 +117,7 @@ namespace nCine::Backends
 				numHats = 0;
 #	endif
 				if (numButtons <= 0 && numAxes <= 0 && numHats <= 0) {
-					LOGI("Gamepad %d has been connected, but reports no axes/buttons/hats - skipping", joyId);
+					LOGI("Gamepad {} has been connected, but reports no axes/buttons/hats - skipping", joyId);
 					continue;
 				}
 
@@ -127,7 +127,7 @@ namespace nCine::Backends
 #	else
 				const char* guid = "default";
 #	endif
-				LOGI("Gamepad %d \"%s\" [%s] has been connected - %d axes, %d buttons, %d hats",
+				LOGI("Gamepad {} \"{}\" [{}] has been connected - {} axes, {} buttons, {} hats",
 					   joyId, glfwGetJoystickName(i), guid, numAxes, numButtons, numHats);
 			}
 		}
@@ -461,7 +461,7 @@ namespace nCine::Backends
 #		else
 			const char* guid = "default";
 #		endif
-			LOGI("Gamepad %d \"%s\" [%s] has been connected", joyId, glfwGetJoystickName(joy), guid);
+			LOGI("Gamepad {} \"{}\" [{}] has been connected", joyId, glfwGetJoystickName(joy), guid);
 #	endif
 #else
 			int numButtons = -1;
@@ -476,7 +476,7 @@ namespace nCine::Backends
 #	endif
 
 			if (numButtons <= 0 && numAxes <= 0 && numHats <= 0) {
-				LOGI("Gamepad %d has been connected, but reports no axes/buttons/hats - skipping", joyId);
+				LOGI("Gamepad {} has been connected, but reports no axes/buttons/hats - skipping", joyId);
 				return;
 			}
 
@@ -487,7 +487,7 @@ namespace nCine::Backends
 #		else
 			const char* guid = "default";
 #		endif
-			LOGI("Gamepad %d \"%s\" [%s] has been connected - %d axes, %d buttons, %d hats",
+			LOGI("Gamepad {} \"{}\" [{}] has been connected - {} axes, {} buttons, {} hats",
 			       joyId, glfwGetJoystickName(joy), guid, numAxes, numButtons, numHats);
 #	endif
 #endif
@@ -500,7 +500,7 @@ namespace nCine::Backends
 			}
 		} else if (event == GLFW_DISCONNECTED) {
 			joyEventsSimulator_.resetJoystickState(joyId);
-			LOGI("Gamepad %d has been disconnected", joyId);
+			LOGI("Gamepad {} has been disconnected", joyId);
 			if (inputEventHandler_ != nullptr) {
 				inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
 				joyMapping_.OnJoyDisconnected(joyConnectionEvent_);

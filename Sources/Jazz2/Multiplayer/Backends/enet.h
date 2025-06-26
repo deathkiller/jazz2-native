@@ -3204,7 +3204,7 @@ extern "C" {
 
 					#ifdef ENET_DEBUG
 					LOGD(
-						"peer %u: %f%%+-%f%% packet loss, %u+-%u ms round trip time, %f%% throttle, %u/%u outgoing, %u/%u incoming", currentPeer->incomingPeerID,
+						"Peer {}: {:.1f}±{:.1f}% packet loss, {}±{} ms round trip time, {}% throttle, {}/{} outgoing, {}/{} incoming", currentPeer->incomingPeerID,
 						currentPeer->packetLoss / (float)ENET_PEER_PACKET_LOSS_SCALE,
 						currentPeer->packetLossVariance / (float)ENET_PEER_PACKET_LOSS_SCALE, currentPeer->roundTripTime, currentPeer->roundTripTimeVariance,
 						currentPeer->packetThrottle / (float)ENET_PEER_PACKET_THROTTLE_SCALE,
@@ -3246,7 +3246,7 @@ extern "C" {
 						host->headerFlags |= ENET_PROTOCOL_HEADER_FLAG_COMPRESSED;
 						shouldCompress     = compressedSize;
 						#ifdef ENET_DEBUG_COMPRESS
-						LOGD("peer %u: compressed %u->%u (%u%%)", currentPeer->incomingPeerID, originalSize, compressedSize, (compressedSize * 100) / originalSize);
+						LOGD("peer {}: compressed {}->{} ({}%)", currentPeer->incomingPeerID, originalSize, compressedSize, (compressedSize * 100) / originalSize);
 						#endif
 					}
 				}
@@ -4596,7 +4596,7 @@ extern "C" {
 			enet_peer_reset(currentPeer);
 		}
 
-		LOGD("enet_host_create() successfully created socket 0x%08llx", (std::uint64_t)host->socket);
+		LOGD("enet_host_create() successfully created socket 0x{:.8x}", std::uint64_t(host->socket));
 		return host;
 	} /* enet_host_create */
 
@@ -5625,7 +5625,7 @@ extern "C" {
 
 		if (bind(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in6)) < 0) {
 			#ifdef ENET_DEBUG
-			LOGW("enet_socket_bind() failed with error %i", errno);
+			LOGW("enet_socket_bind() failed with error {}", errno);
 			#endif
 			return -1;
 		}
@@ -5645,7 +5645,7 @@ extern "C" {
 
 		if (bind(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in)) < 0) {
 			#ifdef ENET_DEBUG
-			LOGW("enet_socket_bind() failed with error %i", errno);
+			LOGW("enet_socket_bind() failed with error {}", errno);
 			#endif
 			return -1;
 		}
@@ -5775,7 +5775,7 @@ extern "C" {
 				return 0;
 			}
 			#ifdef ENET_DEBUG
-			LOGW("enet_socket_connect() failed with error %i", errno);
+			LOGW("enet_socket_connect() failed with error {}", errno);
 			#endif
 		}
 
@@ -5796,7 +5796,7 @@ extern "C" {
 				return 0;
 			}
 			#ifdef ENET_DEBUG
-			LOGW("enet_socket_connect() failed with error %i", errno);
+			LOGW("enet_socket_connect() failed with error {}", errno);
 			#endif
 		}
 
@@ -5881,7 +5881,7 @@ extern "C" {
 				return 0;
 			}
 			#ifdef ENET_DEBUG
-			LOGW("enet_socket_send() failed with error %i", errno);
+			LOGW("enet_socket_send() failed with error {}", errno);
 			#endif
 			return -1;
 		}
@@ -5915,7 +5915,7 @@ extern "C" {
 				return 0;
 			}
 			#ifdef ENET_DEBUG
-			LOGW("enet_socket_send() failed with error %i", errno);
+			LOGW("enet_socket_send() failed with error {}", errno);
 			#endif
 			return -1;
 		}
@@ -5947,7 +5947,7 @@ extern "C" {
 				return 0;
 			}
 			#ifdef ENET_DEBUG
-			LOGW("enet_socket_receive() failed with error %i", errno);
+			LOGW("enet_socket_receive() failed with error {}", errno);
 			#endif
 			return -1;
 		}
@@ -5989,7 +5989,7 @@ extern "C" {
 					return -2;
 			}
 			#ifdef ENET_DEBUG
-			LOGW("enet_socket_receive() failed with error %i", errno);
+			LOGW("enet_socket_receive() failed with error {}", errno);
 			#endif
 			return -1;
 		}
@@ -6269,7 +6269,7 @@ extern "C" {
 		if (bind(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in6)) == SOCKET_ERROR) {
 			#ifdef ENET_DEBUG
 			int error = WSAGetLastError();
-			LOGW("enet_socket_bind() failed with error %i", error);
+			LOGW("enet_socket_bind() failed with error {}", error);
 			#endif
 			return -1;
 		}
@@ -6290,7 +6290,7 @@ extern "C" {
 		if (bind(socket, (struct sockaddr*)&sin, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
 			#ifdef ENET_DEBUG
 			int error = WSAGetLastError();
-			LOGW("enet_socket_bind() failed with error %i", error);
+			LOGW("enet_socket_bind() failed with error {}", error);
 			#endif
 			return -1;
 		}
@@ -6415,7 +6415,7 @@ extern "C" {
 		if (result == SOCKET_ERROR) {
 			int error = WSAGetLastError();
 			#ifdef ENET_DEBUG
-			LOGW("enet_socket_connect() failed with error %i", error);
+			LOGW("enet_socket_connect() failed with error {}", error);
 			#endif
 			if (error != WSAEWOULDBLOCK) {
 				return -1;
@@ -6437,7 +6437,7 @@ extern "C" {
 		if (result == SOCKET_ERROR) {
 			int error = WSAGetLastError();
 			#ifdef ENET_DEBUG
-			LOGW("enet_socket_connect() failed with error %i", error);
+			LOGW("enet_socket_connect() failed with error {}", error);
 			#endif
 			if (error != WSAEWOULDBLOCK) {
 				return -1;
@@ -6526,7 +6526,7 @@ extern "C" {
 					return 0;
 			}
 			#ifdef ENET_DEBUG
-			LOGW("enet_socket_send() failed with error %i", error);
+			LOGW("enet_socket_send() failed with error {}", error);
 			#endif
 			return -1;
 		}
@@ -6561,7 +6561,7 @@ extern "C" {
 					return 0;
 			}
 			#ifdef ENET_DEBUG
-			LOGW("enet_socket_send() failed with error %i", error);
+			LOGW("enet_socket_send() failed with error {}", error);
 			#endif
 			return -1;
 		}
@@ -6593,7 +6593,7 @@ extern "C" {
 					return 0;
 			}
 			#ifdef ENET_DEBUG
-			LOGW("enet_socket_receive() failed with error %i", error);
+			LOGW("enet_socket_receive() failed with error {}", error);
 			#endif
 			return -1;
 		}
@@ -6634,7 +6634,7 @@ extern "C" {
 					return -2;
 			}
 			#ifdef ENET_DEBUG
-			LOGW("enet_socket_receive() failed with error %i", error);
+			LOGW("enet_socket_receive() failed with error {}", error);
 			#endif
 			return -1;
 		}

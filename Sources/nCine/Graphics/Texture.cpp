@@ -95,7 +95,7 @@ namespace nCine
 	{
 		const bool hasLoaded = loadFromFile(filename);
 		if (!hasLoaded) {
-			LOGE("Texture \"%s\" cannot be loaded", String::nullTerminatedView(filename).data());
+			LOGE("Texture \"{}\" cannot be loaded", filename);
 		}
 	}
 
@@ -333,8 +333,8 @@ namespace nCine
 	{
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		const std::int32_t maxTextureSize = gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_TEXTURE_SIZE);
-		FATAL_ASSERT_MSG(texLoader.width() <= maxTextureSize, "Texture width %d is bigger than device maximum %d", texLoader.width(), maxTextureSize);
-		FATAL_ASSERT_MSG(texLoader.height() <= maxTextureSize, "Texture height %d is bigger than device maximum %d", texLoader.height(), maxTextureSize);
+		FATAL_ASSERT_MSG(texLoader.width() <= maxTextureSize, "Texture width {} is bigger than device maximum {}", texLoader.width(), maxTextureSize);
+		FATAL_ASSERT_MSG(texLoader.height() <= maxTextureSize, "Texture height {} is bigger than device maximum {}", texLoader.height(), maxTextureSize);
 
 		const TextureFormat& texFormat = texLoader.texFormat();
 		GLenum internalFormat = texFormat.internalFormat();

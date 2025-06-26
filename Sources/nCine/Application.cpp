@@ -232,7 +232,7 @@ static void CheckConsoleCapabilities()
 		FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, nullptr);
 	if (hStdIn == INVALID_HANDLE_VALUE) {
-		LOGD("Failed to open async \"CONIN$\" handle with error 0x%08x", ::GetLastError());
+		LOGD("Failed to open async \"CONIN$\" handle with error 0x{:.8x}", ::GetLastError());
 		return;
 	}
 
@@ -759,7 +759,7 @@ namespace nCine
 
 #if !defined(WITH_ANGLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
 			if (appCfg_.fixedBatchSize > 0) {
-				LOGI("Using fixed batch size: %u", appCfg_.fixedBatchSize);
+				LOGI("Using fixed batch size: {}", appCfg_.fixedBatchSize);
 			} else {
 #	if defined(DEATH_TARGET_ANDROID)
 				const StringView vendor = gfxCapabilities.GetGLInfoStrings().vendor;
@@ -769,9 +769,9 @@ namespace nCine
 					(vendor == "ARM"_s && renderer == "Mali-T830"_s)) {
 					const StringView vendorPrefix = vendor.findOr(' ', vendor.end());
 					if (renderer.hasPrefix(vendor.prefix(vendorPrefix.begin()))) {
-						LOGW("Detected %s: Using fixed batch size", renderer.data());
+						LOGW("Detected {}: Using fixed batch size", renderer);
 					} else {
-						LOGW("Detected %s %s: Using fixed batch size", vendor.data(), renderer.data());
+						LOGW("Detected {} {}: Using fixed batch size", vendor, renderer);
 					}
 					appCfg_.fixedBatchSize = 10;
 				}
@@ -1339,7 +1339,7 @@ namespace nCine
 #endif
 
 		DEATH_UNUSED TimeStamp suspensionDuration = frameTimer_->Resume();
-		LOGD("Suspended for %.3f seconds", suspensionDuration.seconds());
+		LOGD("Suspended for {:.3} seconds", suspensionDuration.seconds());
 #if defined(NCINE_PROFILING)
 		profileStartTime_ += suspensionDuration;
 #endif

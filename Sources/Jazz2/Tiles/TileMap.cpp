@@ -19,7 +19,7 @@ namespace Jazz2::Tiles
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
 		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, captionTileId, applyPalette);
-		RETURN_ASSERT_MSG(tileSetPart.Data != nullptr, "Failed to load main tileset \"%s\"", tileSetPath.data());
+		RETURN_ASSERT_MSG(tileSetPart.Data != nullptr, "Failed to load main tileset \"{}\"", tileSetPath);
 		
 		tileSetPart.Offset = 0;
 		tileSetPart.Count = tileSetPart.Data->TileCount;
@@ -878,7 +878,7 @@ namespace Jazz2::Tiles
 		tileSetPart.Count = count;
 
 		if (tileSetPart.Data == nullptr) {
-			LOGE("Cannot load extra tileset \"%s\"", tileSetPath.data());
+			LOGE("Cannot load extra tileset \"{}\"", tileSetPath);
 		}
 	}
 
@@ -1471,16 +1471,16 @@ namespace Jazz2::Tiles
 						auto& anim = _animatedTiles[tile.DestructAnimation - _animatedTilesOffset];
 						std::int32_t max = (std::int32_t)anim.Tiles.size() - 2;
 						if (tile.DestructFrameIndex > max) {
-							LOGW("Serialized tile %i with animation frame %i is out of range", i, tile.DestructFrameIndex);
+							LOGW("Serialized tile {} with animation frame {} is out of range", i, tile.DestructFrameIndex);
 							tile.DestructFrameIndex = max;
 						}
 						if (tile.DestructFrameIndex < 0) {
-							LOGW("Serialized tile %i with animation frame %i is out of range", i, tile.DestructFrameIndex);
+							LOGW("Serialized tile {} with animation frame {} is out of range", i, tile.DestructFrameIndex);
 							tile.DestructFrameIndex = 0;
 						}
 						tile.TileID = anim.Tiles[tile.DestructFrameIndex].TileID;
 					} else {
-						LOGW("Invalid animated tile ID %i", tile.DestructAnimation);
+						LOGW("Invalid animated tile ID {}", tile.DestructAnimation);
 					}
 				} else {
 					if (tile.DestructFrameIndex >= 1) {

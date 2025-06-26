@@ -322,7 +322,7 @@ namespace nCine
 				GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
 				if (block != nullptr) {
 					std::int32_t batchSize = maxUniformBlockSize / block->GetSize();
-					LOGI("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderToLoad.shaderName,
+					LOGI("Shader \"{}\" - block size: {} + {} align bytes, max batch size: {}", shaderToLoad.shaderName,
 						block->GetSize() - block->GetAlignAmount(), block->GetAlignAmount(), batchSize);
 
 					bool hasLinkedFinal = false;
@@ -347,14 +347,14 @@ namespace nCine
 						}
 
 						batchSize--;
-						LOGW("Failed to compile the shader, recompiling with batch size: %i", batchSize);
+						LOGW("Failed to compile the shader, recompiling with batch size: {}", batchSize);
 					}
 
-					FATAL_ASSERT_MSG(hasLinkedFinal, "Failed to compile shader \"%s\"", shaderToLoad.shaderName);
+					FATAL_ASSERT_MSG(hasLinkedFinal, "Failed to compile shader \"{}\"", shaderToLoad.shaderName);
 				}
 			} else {
 				bool hasLinked = shaderToLoad.shaderProgram->Link(shaderToLoad.introspection);
-				FATAL_ASSERT_MSG(hasLinked, "Failed to compile shader \"%s\"", shaderToLoad.shaderName);
+				FATAL_ASSERT_MSG(hasLinked, "Failed to compile shader \"{}\"", shaderToLoad.shaderName);
 			}
 
 			binaryShaderCache_->SaveToCache(shaderToLoad.shaderName, shaderVersion, shaderToLoad.shaderProgram.get());

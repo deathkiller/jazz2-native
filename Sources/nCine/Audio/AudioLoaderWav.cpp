@@ -29,8 +29,8 @@ namespace nCine
 		numSamples_ = Stream::Uint32FromLE(header.subchunk2Size) / (numChannels_ * bytesPerSample_);
 		duration_ = float(numSamples_) / frequency_;
 
-		RETURN_ASSERT_MSG(numChannels_ == 1 || numChannels_ == 2, "Unsupported number of channels: %d", numChannels_);
-		LOGD("Duration: %.2fs, channels: %d, frequency: %dHz", duration_, numChannels_, frequency_);
+		RETURN_ASSERT_MSG(numChannels_ == 1 || numChannels_ == 2, "Unsupported number of channels: {}", numChannels_);
+		LOGD("Duration: {:.2}s, channels: {}, frequency: {}Hz", duration_, numChannels_, frequency_);
 
 		hasLoaded_ = true;
 	}

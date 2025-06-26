@@ -182,7 +182,7 @@ namespace Death { namespace IO { namespace Compression {
 		if (error != Z_OK) {
 			_state = State::Failed;
 #if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Failed to initialize compressed stream with error %i", error);
+			LOGE("Failed to initialize compressed stream with error {}", error);
 #endif
 			return;
 		}
@@ -219,7 +219,7 @@ namespace Death { namespace IO { namespace Compression {
 			CeaseReading();
 			_state = State::Failed;
 #if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Failed to inflate compressed stream with error %i", res);
+			LOGE("Failed to inflate compressed stream with error {}", res);
 #endif
 			return Stream::Invalid;
 		}
@@ -268,7 +268,7 @@ namespace Death { namespace IO { namespace Compression {
 		std::int32_t error = inflateEnd((z_stream*)&_strm);
 		if (error != Z_OK) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Failed to finalize compressed stream with error %i", error);
+			LOGE("Failed to finalize compressed stream with error {}", error);
 #endif
 		}
 
@@ -289,7 +289,7 @@ namespace Death { namespace IO { namespace Compression {
 			: deflateInit(&_strm, compressionLevel));
 		if (error != Z_OK) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Failed to initialize compressed stream with error %i", error);
+			LOGE("Failed to initialize compressed stream with error {}", error);
 #endif
 			_state = State::Failed;
 		}
@@ -313,7 +313,7 @@ namespace Death { namespace IO { namespace Compression {
 		std::int32_t error = deflateEnd(&_strm);
 		if (error != Z_OK) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Failed to finalize compressed stream with error %i", error);
+			LOGE("Failed to finalize compressed stream with error {}", error);
 #endif
 		}
 
@@ -405,7 +405,7 @@ namespace Death { namespace IO { namespace Compression {
 			}
 			if (error != Z_OK) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Failed to deflate uncompressed buffer with error %i", error);
+				LOGE("Failed to deflate uncompressed buffer with error {}", error);
 #endif
 				return Stream::Invalid;
 			}

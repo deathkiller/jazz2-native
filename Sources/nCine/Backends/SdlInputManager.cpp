@@ -107,7 +107,7 @@ namespace nCine::Backends
 				std::int32_t playerIndex = SDL_JoystickGetPlayerIndex(joy);
 				const SDL_JoystickGUID joystickGuid = SDL_JoystickGetGUID(joy);
 				SDL_JoystickGetGUIDString(joystickGuid, joyGuidString_, 33);
-				LOGI("Gamepad %d [%d] \"%s\" [%s] has been connected - %d hats, %d axes, %d buttons, %d balls",
+				LOGI("Gamepad {} [{}] \"{}\" [{}] has been connected - {} hats, {} axes, {} buttons, {} balls",
 						i, playerIndex, SDL_JoystickName(joy), joyGuidString_, SDL_JoystickNumHats(joy),
 						SDL_JoystickNumAxes(joy), SDL_JoystickNumButtons(joy), SDL_JoystickNumBalls(joy));
 			}
@@ -456,7 +456,7 @@ namespace nCine::Backends
 			std::int32_t playerIndex = SDL_JoystickGetPlayerIndex(joy);
 			const SDL_JoystickGUID joystickGuid = SDL_JoystickGetGUID(joy);
 			SDL_JoystickGetGUIDString(joystickGuid, joyGuidString_, 33);
-			LOGI("Gamepad %d [%d] \"%s\" [%s] has been %s - %d hats, %d axes, %d buttons, %d balls",
+			LOGI("Gamepad {} [{}] \"{}\" [{}] has been {} - {} hats, {} axes, {} buttons, {} balls",
 					deviceIndex, playerIndex, SDL_JoystickName(joy), joyGuidString_, prevInstance != nullptr ? "reattached" : "connected",
 					SDL_JoystickNumHats(joy), SDL_JoystickNumAxes(joy), SDL_JoystickNumButtons(joy), SDL_JoystickNumBalls(joy));
 #endif
@@ -478,7 +478,7 @@ namespace nCine::Backends
 			}
 			sdlJoysticks_[MaxNumJoysticks - 1] = nullptr;
 
-			LOGI("Gamepad %d has been disconnected", deviceIndex);
+			LOGI("Gamepad {} has been disconnected", deviceIndex);
 			inputEventHandler_->OnJoyDisconnected(joyConnectionEvent_);
 			joyMapping_.OnJoyDisconnected(joyConnectionEvent_);
 		}

@@ -134,7 +134,7 @@ namespace nCine::Backends
 	void Qt5GfxDevice::initGlew()
 	{
 		const GLenum err = glewInit();
-		FATAL_ASSERT_MSG(err == GLEW_OK, "GLEW error: %s", glewGetErrorString(err));
+		FATAL_ASSERT_MSG(err == GLEW_OK, "GLEW error: {}", glewGetErrorString(err));
 
 		glContextInfo_.debugContext = glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output");
 	}

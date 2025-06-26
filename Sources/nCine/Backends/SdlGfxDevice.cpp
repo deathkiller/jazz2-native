@@ -175,7 +175,7 @@ namespace nCine::Backends
 				case SDL_LOG_PRIORITY_ERROR: level = TraceLevel::Error; break;
 				case SDL_LOG_PRIORITY_CRITICAL: level = TraceLevel::Fatal; break;
 			}
-			DEATH_TRACE(level, "SDL2!", "%s", message);
+			DEATH_TRACE(level, "SDL2!", "{}", message);
 		}, nullptr);
 		SDL_SetHint(SDL_HINT_EVENT_LOGGING, "1");
 #endif*/
@@ -191,7 +191,7 @@ namespace nCine::Backends
 		}
 #endif
 		const int err = SDL_InitSubSystem(SDL_INIT_VIDEO);
-		FATAL_ASSERT_MSG(!err, "SDL_InitSubSystem(SDL_INIT_VIDEO) failed: %s", SDL_GetError());
+		FATAL_ASSERT_MSG(!err, "SDL_InitSubSystem(SDL_INIT_VIDEO) failed: {}", SDL_GetError());
 	}
 
 	void SdlGfxDevice::initDevice(int windowPosX, int windowPosY, bool isResizable)
@@ -245,7 +245,7 @@ namespace nCine::Backends
 
 		// Creating a window with SDL2
 		windowHandle_ = SDL_CreateWindow("", windowPosX, windowPosY, width_, height_, flags);
-		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: %s", SDL_GetError());
+		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: {}", SDL_GetError());
 		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
 		initGLViewport();
 
@@ -257,14 +257,14 @@ namespace nCine::Backends
 		}
 
 		glContextHandle_ = SDL_GL_CreateContext(windowHandle_);
-		FATAL_ASSERT_MSG(glContextHandle_, "SDL_GL_CreateContext failed: %s", SDL_GetError());
+		FATAL_ASSERT_MSG(glContextHandle_, "SDL_GL_CreateContext failed: {}", SDL_GetError());
 
 		const int interval = displayMode_.hasVSync() ? 1 : 0;
 		SDL_GL_SetSwapInterval(interval);
 
 #if defined(WITH_GLEW)
 		const GLenum err = glewInit();
-		FATAL_ASSERT_MSG(err == GLEW_OK, "GLEW error: %s", glewGetErrorString(err));
+		FATAL_ASSERT_MSG(err == GLEW_OK, "GLEW error: {}", (const char*)glewGetErrorString(err));
 
 		glContextInfo_.debugContext = (glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output"));
 #endif

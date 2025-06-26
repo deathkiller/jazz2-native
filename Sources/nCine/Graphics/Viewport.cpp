@@ -369,11 +369,11 @@ namespace nCine
 #if defined(DEATH_DEBUG)
 		// TODO: GLDebug
 		/*if (type_ == Type::SCREEN)
-			formatString(debugString, "Draw screen viewport (0x%lx)", uintptr_t(this));
+			formatString(debugString, "Draw screen viewport (0x{:x})", std::uintptr_t(this));
 		else if (type_ == Type::WITH_TEXTURE && textures_[0]->name() != nullptr)
-			formatString(debugString, "Draw viewport \"%s\" (0x%lx)", textures_[0]->name(), uintptr_t(this));
+			formatString(debugString, "Draw viewport \"{}\" (0x{:x})", textures_[0]->name(), std::uintptr_t(this));
 		else
-			formatString(debugString, "Draw viewport (0x%lx)", uintptr_t(this));
+			formatString(debugString, "Draw viewport (0x{:x})", std::uintptr_t(this));
 		GLDebug::ScopedGroup scoped(debugString);*/
 #endif
 
@@ -381,7 +381,7 @@ namespace nCine
 		{
 			ZoneScopedNC("OnDrawViewport", 0x81A861);
 			theApplication().appEventHandler_->OnDrawViewport(*this);
-			//LOGD("IAppEventHandler::OnDrawViewport() invoked with viewport 0x%lx", uintptr_t(this));
+			//LOGD("IAppEventHandler::OnDrawViewport() invoked with viewport 0x{:x}", std::uintptr_t(this));
 		}
 
 		if (type_ == Type::WithTexture) {

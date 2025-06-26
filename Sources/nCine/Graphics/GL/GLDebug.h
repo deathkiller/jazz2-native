@@ -12,7 +12,7 @@
 		do {													\
 			GLenum __err = glGetError();						\
 			if (__err != GL_NO_ERROR) {							\
-				LOGW("OpenGL returned error: %i", __err);		\
+				LOGW("OpenGL returned error: {}", __err);		\
 			}													\
 		} while (false)
 #else

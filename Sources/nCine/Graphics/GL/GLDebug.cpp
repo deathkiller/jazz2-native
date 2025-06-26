@@ -171,7 +171,8 @@ namespace nCine
 			default: severityString = "Unknown"; break;
 		}
 
-		LOGD("OpenGL message %u of type \"%s\" from source \"%s\" with %s severity: \"%s\"", id, typeString, sourceString, severityString, message);
+		LOGD("OpenGL message {} of type \"{}\" from source \"{}\" with {} severity: \"{}\"",
+			id, typeString, sourceString, severityString, message);
 	}
 #endif
 

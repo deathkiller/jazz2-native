@@ -234,7 +234,7 @@ namespace nCine
 #	endif
 #endif
 			default:
-				FATAL_MSG("MIP maps not supported for internal format: 0x%x", internalFormat);
+				FATAL_MSG("MIP maps not supported for internal format: 0x{:x}", internalFormat);
 				break;
 		}
 
@@ -281,9 +281,9 @@ namespace nCine
 			found = oesCompressedFormat();
 #endif
 
-		FATAL_ASSERT_MSG(found, "Unknown internal format: 0x%x", internalFormat_);
+		FATAL_ASSERT_MSG(found, "Unknown internal format: 0x{:x}", internalFormat_);
 
-		//LOGD("Internal format: 0x%x - type: 0x%x", internalFormat_, type_);
+		//LOGD("Internal format: 0x{:x} - type: 0x{:x}", internalFormat_, type_);
 	}
 
 	bool TextureFormat::integerFormat()

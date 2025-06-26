@@ -159,15 +159,15 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 			return begin1;  // Specified in C++11
 		}
 
-		for (std::size_t i = 0; i <= length1 - length2; ++i) {
+		for (std::size_t i = 0; i <= length1 - length2; i++) {
 			ForwardIterator1 it1 = begin1;
 			ForwardIterator2 it2 = begin2;
 			std::size_t matched = 0;
 
 			while (matched < length2 && *it1 == *it2) {
-				++it1;
-				++it2;
-				++matched;
+				it1++;
+				it2++;
+				matched++;
 			}
 
 			if (matched == length2) {
@@ -177,10 +177,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 			begin1++;
 		}
 
-		for (std::size_t i = 0; i < length1; i++) {
-			begin1++;
-		}
-		return begin1;
+		return begin1 + length2;
 	}
 
 	static constexpr std::int32_t constexpr_strcmp_loop(const char* v1, const char* v2) noexcept {

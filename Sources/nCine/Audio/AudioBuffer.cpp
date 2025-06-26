@@ -38,7 +38,7 @@ namespace nCine
 		alGenBuffers(1, &bufferId_);
 		const ALenum error = alGetError();
 		if DEATH_UNLIKELY(error != AL_NO_ERROR) {
-			LOGW("alGenBuffers() failed with error 0x%x", error);
+			LOGW("alGenBuffers() failed with error 0x{:x}", error);
 		}
 #endif
 	}
@@ -60,7 +60,7 @@ namespace nCine
 #if defined(WITH_AUDIO)
 		const bool hasLoaded = loadFromFile(filename);
 		if (!hasLoaded) {
-			LOGE("Audio file \"%s\" cannot be loaded", String::nullTerminatedView(filename).data());
+			LOGE("Audio file \"{}\" cannot be loaded", filename);
 		}
 #endif
 	}
@@ -71,7 +71,7 @@ namespace nCine
 #if defined(WITH_AUDIO)
 		const bool hasLoaded = loadFromStream(std::move(fileHandle), filename);
 		if (!hasLoaded) {
-			LOGE("Audio file \"%s\" cannot be loaded", String::nullTerminatedView(filename).data());
+			LOGE("Audio file \"{}\" cannot be loaded", filename);
 		}
 #endif
 	}
@@ -179,7 +179,7 @@ namespace nCine
 			// On iOS `alBufferDataStatic()` could be used instead
 			alBufferData(bufferId_, format, bufferPtr, bufferSize, frequency_);
 			const ALenum error = alGetError();
-			RETURNF_ASSERT_MSG(error == AL_NO_ERROR, "alBufferData() failed with error 0x%x", error);
+			RETURNF_ASSERT_MSG(error == AL_NO_ERROR, "alBufferData() failed with error 0x{:x}", error);
 
 			numSamples_ = bufferSize / (numChannels_ * bytesPerSample_);
 			duration_ = float(numSamples_) / frequency_;
@@ -194,9 +194,9 @@ namespace nCine
 	{
 #if defined(WITH_AUDIO)
 		RETURNF_ASSERT_MSG(audioLoader.bytesPerSample() == 1 || audioLoader.bytesPerSample() == 2,
-		                     "Unsupported number of bytes per sample: %d", audioLoader.bytesPerSample());
+		                     "Unsupported number of bytes per sample: {}", audioLoader.bytesPerSample());
 		RETURNF_ASSERT_MSG(audioLoader.numChannels() == 1 || audioLoader.numChannels() == 2,
-		                     "Unsupported number of channels: %d", audioLoader.numChannels());
+		                     "Unsupported number of channels: {}", audioLoader.numChannels());
 
 		bytesPerSample_ = audioLoader.bytesPerSample();
 		numChannels_ = audioLoader.numChannels();

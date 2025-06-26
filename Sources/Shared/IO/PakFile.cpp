@@ -224,7 +224,7 @@ namespace Death { namespace IO {
 			return std::make_unique<CompressedBoundedStream<DeflateStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
 #else
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("File \"%s\" was compressed using an unsupported compression method (Deflate)", String::nullTerminatedView(path).data());
+			LOGE("File \"{}\" was compressed using an unsupported compression method (Deflate)", path);
 #	endif
 			return nullptr;
 #endif
@@ -235,7 +235,7 @@ namespace Death { namespace IO {
 			return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
 #else
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("File \"%s\" was compressed using an unsupported compression method (LZ4)", String::nullTerminatedView(path).data());
+			LOGE("File \"{}\" was compressed using an unsupported compression method (LZ4)", path);
 #	endif
 			return nullptr;
 #endif
@@ -246,7 +246,7 @@ namespace Death { namespace IO {
 			return std::make_unique<CompressedBoundedStream<ZstdStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
 #else
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("File \"%s\" was compressed using an unsupported compression method (Zstd)", String::nullTerminatedView(path).data());
+			LOGE("File \"{}\" was compressed using an unsupported compression method (Zstd)", path);
 #	endif
 			return nullptr;
 #endif
@@ -488,7 +488,7 @@ namespace Death { namespace IO {
 	bool PakWriter::AddFile(Stream& stream, StringView path, PakPreferredCompression preferredCompression)
 	{
 		DEATH_ASSERT(_outputStream->IsValid(), "Invalid output stream specified", false);
-		DEATH_ASSERT(!path.empty() && path[path.size() - 1] != '/' && path[path.size() - 1] != '\\', ("\"%s\" is not valid file path", String::nullTerminatedView(path).data()), false);
+		DEATH_ASSERT(!path.empty() && path[path.size() - 1] != '/' && path[path.size() - 1] != '\\', ("\"{}\" is not valid file path", String::nullTerminatedView(path).data()), false);
 
 		PakFile::Item* parentItem = FindOrCreateParentItem(path);
 		Array<PakFile::Item>* items;

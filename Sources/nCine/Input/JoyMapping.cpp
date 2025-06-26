@@ -149,7 +149,7 @@ namespace nCine
 			}
 		}
 
-		LOGI("Added %u internal gamepad mappings for current platform", mappings_.size());
+		LOGI("Added {} internal gamepad mappings for current platform", mappings_.size());
 
 #if defined(DEATH_TARGET_WINDOWS)
 		DWORD envLength = ::GetEnvironmentVariable(L"SDL_GAMECONTROLLERCONFIG", nullptr, 0);
@@ -208,9 +208,9 @@ namespace nCine
 		}
 
 		if (!traceSource.empty()) {
-			LOGI("Added %u gamepad mappings from %s", parsedMappings, String::nullTerminatedView(traceSource).data());
+			LOGI("Added {} gamepad mappings from {}", parsedMappings, traceSource);
 		} else {
-			LOGI("Added %u gamepad mappings", parsedMappings);
+			LOGI("Added {} gamepad mappings", parsedMappings);
 		}
 
 		return (parsedMappings > 0);
@@ -254,7 +254,7 @@ namespace nCine
 	void JoyMapping::OnJoyButtonPressed(const JoyButtonEvent& event)
 	{
 #if defined(NCINE_INPUT_DEBUGGING)
-		LOGI("Button pressed - joyId: %d, buttonId: %d", event.joyId, event.buttonId);
+		LOGI("Button pressed - joyId: {}, buttonId: {}", event.joyId, event.buttonId);
 #endif
 
 		if (inputEventHandler_ == nullptr || event.joyId >= MaxNumJoysticks) {
@@ -269,7 +269,7 @@ namespace nCine
 				mappedButtonEvent_.buttonName = mapping.desc.buttons[event.buttonId];
 				const std::int32_t buttonId = static_cast<std::int32_t>(mappedButtonEvent_.buttonName);
 #if defined(NCINE_INPUT_DEBUGGING)
-				LOGI("Button press mapped as button %d", buttonId);
+				LOGI("Button press mapped as button {}", buttonId);
 #endif
 				mappedJoyStates_[event.joyId].buttons_[buttonId] = true;
 				inputEventHandler_->OnJoyMappedButtonPressed(mappedButtonEvent_);
@@ -281,7 +281,7 @@ namespace nCine
 					mappedAxisEvent_.axisName = axisName;
 					mappedAxisEvent_.value = 1.0f;
 #if defined(NCINE_INPUT_DEBUGGING)
-					LOGI("Button press mapped as axis %d", static_cast<std::int32_t>(axisName));
+					LOGI("Button press mapped as axis {}", axisName);
 #endif
 					mappedJoyStates_[event.joyId].axesValues_[static_cast<std::int32_t>(axisName)] = mappedAxisEvent_.value;
 					inputEventHandler_->OnJoyMappedAxisMoved(mappedAxisEvent_);
@@ -301,7 +301,7 @@ namespace nCine
 	void JoyMapping::OnJoyButtonReleased(const JoyButtonEvent& event)
 	{
 #if defined(NCINE_INPUT_DEBUGGING)
-		LOGI("Button released - joyId: %d, buttonId: %d", event.joyId, event.buttonId);
+		LOGI("Button released - joyId: {}, buttonId: {}", event.joyId, event.buttonId);
 #endif
 
 		if (inputEventHandler_ == nullptr || event.joyId >= MaxNumJoysticks) {
@@ -317,7 +317,7 @@ namespace nCine
 				mappedButtonEvent_.buttonName = mapping.desc.buttons[event.buttonId];
 				const std::int32_t buttonId = static_cast<std::int32_t>(mappedButtonEvent_.buttonName);
 #if defined(NCINE_INPUT_DEBUGGING)
-				LOGI("Button release mapped as button %d", buttonId);
+				LOGI("Button release mapped as button {}", buttonId);
 #endif
 				mappedJoyStates_[event.joyId].buttons_[buttonId] = false;
 				inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
@@ -329,7 +329,7 @@ namespace nCine
 					mappedAxisEvent_.axisName = axisName;
 					mappedAxisEvent_.value = 0.0f;
 #if defined(NCINE_INPUT_DEBUGGING)
-					LOGI("Button release mapped as axis %d", static_cast<std::int32_t>(axisName));
+					LOGI("Button release mapped as axis {}", axisName);
 #endif
 					mappedJoyStates_[event.joyId].axesValues_[static_cast<std::int32_t>(axisName)] = mappedAxisEvent_.value;
 					inputEventHandler_->OnJoyMappedAxisMoved(mappedAxisEvent_);
@@ -349,7 +349,7 @@ namespace nCine
 	void JoyMapping::OnJoyHatMoved(const JoyHatEvent& event)
 	{
 #if defined(NCINE_INPUT_DEBUGGING)
-		LOGI("Hat moved - joyId: %d, hatId: %d, hatState: 0x%02x", event.joyId, event.hatId, event.hatState);
+		LOGI("Hat moved - joyId: {}, hatId: {}, hatState: 0x{:.2x}", event.joyId, event.hatId, event.hatState);
 #endif
 
 		if (inputEventHandler_ == nullptr || event.joyId >= MaxNumJoysticks) {
@@ -375,13 +375,13 @@ namespace nCine
 						const std::int32_t buttonId = static_cast<std::int32_t>(mappedButtonEvent_.buttonName);
 						if (newHatState & hatValue) {
 #if defined(NCINE_INPUT_DEBUGGING)
-							LOGI("Hat move mapped as button press %d", buttonId);
+							LOGI("Hat move mapped as button press {}", buttonId);
 #endif
 							mappedJoyStates_[event.joyId].buttons_[buttonId] = true;
 							inputEventHandler_->OnJoyMappedButtonPressed(mappedButtonEvent_);
 						} else {
 #if defined(NCINE_INPUT_DEBUGGING)
-							LOGI("Hat move mapped as button release %d", buttonId);
+							LOGI("Hat move mapped as button release {}", buttonId);
 #endif
 							mappedJoyStates_[event.joyId].buttons_[buttonId] = false;
 							inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
@@ -402,7 +402,7 @@ namespace nCine
 	void JoyMapping::OnJoyAxisMoved(const JoyAxisEvent& event)
 	{
 #if defined(NCINE_INPUT_DEBUGGING)
-		LOGI("Axis moved - joyId: %d, axisId: %d, value: %f", event.joyId, event.axisId, event.value);
+		LOGI("Axis moved - joyId: {}, axisId: {}, value: {}", event.joyId, event.axisId, event.value);
 #endif
 
 		if (inputEventHandler_ == nullptr || event.joyId >= MaxNumJoysticks) {
@@ -421,7 +421,7 @@ namespace nCine
 				const float value = (event.value + 1.0f) * 0.5f;
 				mappedAxisEvent_.value = axis.min + value * (axis.max - axis.min);
 #if defined(NCINE_INPUT_DEBUGGING)
-				LOGI("Axis move mapped as axis %d (value: %f, normalized: %f, min: %f, max: %f)", static_cast<int>(axis.name), mappedAxisEvent_.value, value, axis.min, axis.max);
+				LOGI("Axis move mapped as axis {} (value: {}, normalized: {}, min: {}, max: {})", axis.name, mappedAxisEvent_.value, value, axis.min, axis.max);
 #endif
 				mappedJoyStates_[event.joyId].axesValues_[static_cast<int>(axis.name)] = mappedAxisEvent_.value;
 				inputEventHandler_->OnJoyMappedAxisMoved(mappedAxisEvent_);
@@ -438,12 +438,12 @@ namespace nCine
 					mappedJoyStates_[event.joyId].buttons_[buttonId] = newState;
 					if (newState) {
 #if defined(NCINE_INPUT_DEBUGGING)
-						LOGI("Axis positive move mapped as button press %d", buttonId);
+						LOGI("Axis positive move mapped as button press {}", buttonId);
 #endif
 						inputEventHandler_->OnJoyMappedButtonPressed(mappedButtonEvent_);
 					} else {
 #if defined(NCINE_INPUT_DEBUGGING)
-						LOGI("Axis positive move mapped as button release %d", buttonId);
+						LOGI("Axis positive move mapped as button release {}", buttonId);
 #endif
 						inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
 					}
@@ -459,12 +459,12 @@ namespace nCine
 					mappedJoyStates_[event.joyId].buttons_[buttonId] = newState;
 					if (newState) {
 #if defined(NCINE_INPUT_DEBUGGING)
-						LOGI("Axis negative move mapped as button press %d", buttonId);
+						LOGI("Axis negative move mapped as button press {}", buttonId);
 #endif
 						inputEventHandler_->OnJoyMappedButtonPressed(mappedButtonEvent_);
 					} else {
 #if defined(NCINE_INPUT_DEBUGGING)
-						LOGI("Axis negative move mapped as button release %d", buttonId);
+						LOGI("Axis negative move mapped as button release {}", buttonId);
 #endif
 						inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
 					}
@@ -486,11 +486,11 @@ namespace nCine
 	bool JoyMapping::OnJoyConnected(const JoyConnectionEvent& event)
 	{
 #if defined(NCINE_INPUT_DEBUGGING)
-		LOGI("Gamepad connected - joyId: %d", event.joyId);
+		LOGI("Gamepad connected - joyId: {}", event.joyId);
 #endif
 
 		if (event.joyId >= MaxNumJoysticks) {
-			LOGW("Maximum number of gamepads reached, skipping newly connected (%i)", event.joyId);
+			LOGW("Maximum number of gamepads reached, skipping newly connected ({})", event.joyId);
 			return false;
 		}
 
@@ -507,7 +507,7 @@ namespace nCine
 				mapping.desc = mappings_[index].desc;
 
 				const std::uint8_t* g = joyGuid.data;
-				LOGI("Gamepad mapping found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), also known as \"%s\"", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId, mappings_[index].name);
+				LOGI("Gamepad mapping found for \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}] ({}), also known as \"{}\"", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId, mappings_[index].name);
 			}
 		}
 
@@ -521,7 +521,7 @@ namespace nCine
 			}
 
 			const std::uint8_t * g = joyGuid.data;
-			LOGI("Gamepad mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using Android default mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
+			LOGI("Gamepad mapping not found for \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}] ({}), using Android default mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
 
 			mapping.isValid = true;
 
@@ -555,7 +555,7 @@ namespace nCine
 				mapping.desc = mappings_[index].desc;
 
 				const std::uint8_t* g = joyGuid.data;
-				LOGI("Gamepad mapping found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d)", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
+				LOGI("Gamepad mapping found for \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}] ({})", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
 			}
 		}
 
@@ -576,13 +576,13 @@ namespace nCine
 				mapping.isValid = true;
 				mapping.desc = mappings_[index].desc;
 
-				const uint8_t* g = joyGuid.data;
-				LOGI("Gamepad mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), using XInput mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
+				const std::uint8_t* g = joyGuid.data;
+				LOGI("Gamepad mapping not found for \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}] ({}), using XInput mapping", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
 			}
 
 			if (!mapping.isValid) {
-				const uint8_t* g = joyGuid.data;
-				LOGI("Gamepad mapping not found for \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x] (%d), please provide correct mapping in \"gamecontrollerdb.txt\" file, otherwise the joystick will not work properly", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
+				const std::uint8_t* g = joyGuid.data;
+				LOGI("Gamepad mapping not found for \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}] ({}), please provide correct mapping in \"gamecontrollerdb.txt\" file, otherwise the joystick will not work properly", joyName, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15], event.joyId);
 			}
 		}
 #endif
@@ -593,7 +593,7 @@ namespace nCine
 	void JoyMapping::OnJoyDisconnected(const JoyConnectionEvent& event)
 	{
 #if defined(NCINE_INPUT_DEBUGGING)
-		LOGI("Gamepad disconnected - joyId: %d", event.joyId);
+		LOGI("Gamepad disconnected - joyId: {}", event.joyId);
 #endif
 
 		if (event.joyId >= MaxNumJoysticks) {
@@ -728,7 +728,7 @@ namespace nCine
 		if (sub[0].empty()) {
 			// Ignore malformed string comming from Steam Input (2024/08/13)
 			if (!mappingString.hasPrefix(",platform:"_s)) {
-				LOGE("Invalid mapping string \"%s\"", String::nullTerminatedView(mappingString).data());
+				LOGE("Invalid mapping string \"{}\"", mappingString);
 			}
 			return false;
 		}
@@ -738,7 +738,7 @@ namespace nCine
 		sub = sub[2].partition(',');
 		sub[0] = sub[0].trimmed();
 		if (sub[0].empty()) {
-			LOGE("Invalid mapping string \"%s\"", String::nullTerminatedView(mappingString).data());
+			LOGE("Invalid mapping string \"{}\"", mappingString);
 			return false;
 		}
 
@@ -751,7 +751,7 @@ namespace nCine
 			keyValue[0] = keyValue[0].trimmed();
 			keyValue[2] = keyValue[2].trimmed();
 			if (keyValue[0].empty()) {
-				LOGE("Invalid mapping string \"%s\"", String::nullTerminatedView(mappingString).data());
+				LOGE("Invalid mapping string \"{}\"", mappingString);
 				return false;
 			}
 
@@ -779,7 +779,7 @@ namespace nCine
 						} else if (!keyValue[2].empty()) {
 							// It's empty sometimes
 							const uint8_t* g = map.guid.data;
-							LOGI("Unsupported assignment in mapping source \"%s\" in \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x]", String::nullTerminatedView(keyValue[0]).data(), map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
+							LOGI("Unsupported assignment in mapping source \"{}\" in \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}]", keyValue[0], map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
 						}
 					}
 				} else {
@@ -802,19 +802,19 @@ namespace nCine
 									} else if (axis.max < 0.0f) {
 										map.desc.axes[axisMapping].buttonNameNegative = static_cast<ButtonName>(buttonIndex);
 									} else {
-										const uint8_t* g = map.guid.data;
-										LOGI("Unsupported axis value \"%s\" for button mapping in \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x]", String::nullTerminatedView(keyValue[2]).data(), map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
+										const std::uint8_t* g = map.guid.data;
+										LOGI("Unsupported axis value \"{}\" for button mapping in \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}]", keyValue[2], map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
 									}
 								} else if (!keyValue[2].empty()) { // It's empty sometimes
-									const uint8_t* g = map.guid.data;
-									LOGI("Unsupported assignment in mapping source \"%s\" in \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x]", String::nullTerminatedView(keyValue[0]).data(), map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
+									const std::uint8_t* g = map.guid.data;
+									LOGI("Unsupported assignment in mapping source \"{}\" in \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}]", keyValue[0], map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
 								}
 							}
 						}
 					} else {
 						// Unknown key
-						DEATH_UNUSED const uint8_t* g = map.guid.data;
-						LOGD("Unsupported mapping source \"%s\" in \"%s\" [%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x]", String::nullTerminatedView(keyValue[0]).data(), map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
+						DEATH_UNUSED const std::uint8_t* g = map.guid.data;
+						LOGD("Unsupported mapping source \"{}\" in \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}]", keyValue[0], map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
 					}
 				}
 			}

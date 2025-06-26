@@ -230,7 +230,7 @@ namespace nCine::Backends
 
 		// There is only one mapping for QGamepad
 		mappingIndex_[event.joyId] = 0;
-		LOGI("Joystick mapping found for \"%s\" (%d)", joyName, event.joyId);
+		LOGI("Joystick mapping found for \"{}\" ({})", joyName, event.joyId);
 
 		return (mappingIndex_[event.joyId] != -1);
 	}

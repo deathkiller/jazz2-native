@@ -52,7 +52,7 @@ namespace nCine
 		int result = ov_open_callbacks(fileHandle_.get(), &oggFile_, nullptr, 0, fileCallbacks);
 #endif
 		if (result != 0) {
-			LOGE("ov_open_callbacks() failed with error %i", result);
+			LOGE("ov_open_callbacks() failed with error {}", result);
 			fileHandle_->Dispose();
 			return;
 		}
@@ -76,8 +76,8 @@ namespace nCine
 		duration_ = float(ov_time_total(&oggFile_, -1));
 #endif
 
-		RETURN_ASSERT_MSG(numChannels_ == 1 || numChannels_ == 2, "Unsupported number of channels: %d", numChannels_);
-		LOGD("Duration: %.2fs, channels: %d, frequency: %dHz", duration_, numChannels_, frequency_);
+		RETURN_ASSERT_MSG(numChannels_ == 1 || numChannels_ == 2, "Unsupported number of channels: {}", numChannels_);
+		LOGD("Duration: {:.2}s, channels: {}, frequency: {}Hz", duration_, numChannels_, frequency_);
 
 		hasLoaded_ = true;
 	}

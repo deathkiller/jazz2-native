@@ -256,6 +256,9 @@
     <Filter Include="Header Files\jsoncpp">
       <UniqueIdentifier>{a03646cd-077d-46ce-84d2-8d0023de9b50}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Shared\Base">
+      <UniqueIdentifier>{28c08749-4861-4751-a607-1c2511ec63f0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1647,6 +1650,9 @@
     <ClInclude Include="Jazz2\Actors\Multiplayer\MpPlayer.h">
       <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
     </ClInclude>
+    <ClInclude Include="$(ExtensionLibraryPath)\Base\Format.h">
+      <Filter>Header Files\Shared\Base</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -2677,6 +2683,9 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Actors\Multiplayer\MpPlayer.cpp">
       <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ExtensionLibraryPath)\Base\Format.cpp">
+      <Filter>Source Files\Shared\Base</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

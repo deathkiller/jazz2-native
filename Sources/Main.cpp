@@ -199,7 +199,7 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 			if (fs::FileExists(pakFile)) {
 				ExtractPakFile(pakFile, config.argv(i + 2));
 			} else {
-				LOGE("\"%s\" not found", pakFile.data());
+				LOGE("\"{}\" not found", pakFile);
 			}
 
 			theApplication().Quit();
@@ -376,7 +376,7 @@ void GameEventHandler::OnInitialize()
 	}
 
 	Vector2i res = theApplication().GetResolution();
-	LOGI("Rendering resolution: %ix%i (%ix%i)", res.X, res.Y, viewSize.X, viewSize.Y);
+	LOGI("Rendering resolution: {}x{} ({}x{})", res.X, res.Y, viewSize.X, viewSize.Y);
 #endif
 }
 
@@ -450,7 +450,7 @@ void GameEventHandler::OnResizeWindow(std::int32_t width, std::int32_t height)
 	PreferencesCache::EnableFullscreen = theApplication().GetGfxDevice().isFullscreen();
 #endif
 
-	LOGI("Rendering resolution: %ix%i (%ix%i)", width, height, viewSize.X, viewSize.Y);
+	LOGI("Rendering resolution: {}x{} ({}x{})", width, height, viewSize.X, viewSize.Y);
 }
 
 void GameEventHandler::OnShutdown()
@@ -618,7 +618,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 #if defined(WITH_MULTIPLAYER)
 			// TODO: This should show some server console instead of exiting
 			if (_networkManager != nullptr) {
-				LOGW("Failed to load level \"%s\", disposing network manager", levelInit.LevelName.data());
+				LOGW("Failed to load level \"{}\", disposing network manager", levelInit.LevelName);
 
 				_networkManager->Dispose();
 				_networkManager = nullptr;
@@ -650,7 +650,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 #if defined(WITH_MULTIPLAYER)
 					// TODO: This should show some server console instead of exiting
 					if (_networkManager != nullptr) {
-						LOGW("Failed to load level \"%s\", disposing network manager", levelInit.LevelName.data());
+						LOGW("Failed to load level \"{}\", disposing network manager", levelInit.LevelName);
 
 						_networkManager->Dispose();
 						_networkManager = nullptr;
@@ -663,7 +663,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 #if defined(WITH_MULTIPLAYER)
 				// TODO: This should show some server console instead of exiting
 				if (_networkManager != nullptr) {
-					LOGW("Failed to load level \"%s\", disposing network manager", levelInit.LevelName.data());
+					LOGW("Failed to load level \"{}\", disposing network manager", levelInit.LevelName);
 
 					_networkManager->Dispose();
 					_networkManager = nullptr;
@@ -711,7 +711,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 #if defined(WITH_MULTIPLAYER)
 					// TODO: This should show some server console instead of exiting
 					if (_networkManager != nullptr) {
-						LOGW("Failed to load level \"%s\", disposing network manager", levelInit.LevelName.data());
+						LOGW("Failed to load level \"{}\", disposing network manager", levelInit.LevelName);
 
 						_networkManager->Dispose();
 						_networkManager = nullptr;
@@ -916,7 +916,7 @@ void GameEventHandler::StartProcessingStdin()
 
 void GameEventHandler::ConnectToServer(StringView endpoint, std::uint16_t defaultPort, StringView password)
 {
-	LOGI("[MP] Preparing connection to %s...", endpoint.data());
+	LOGI("[MP] Preparing connection to {}...", endpoint);
 
 	_networkManager = std::make_unique<NetworkManager>();
 	_networkManager->CreateClient(this, endpoint, defaultPort, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
@@ -959,7 +959,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 		LOGE("Initial level is not specified");
 		return false;
 	} else if (!ContentResolver::Get().LevelExists(serverInit.InitialLevel.LevelName)) {
-		LOGE("Cannot find initial level \"%s\"", serverInit.InitialLevel.LevelName.data());
+		LOGE("Cannot find initial level \"{}\"", serverInit.InitialLevel.LevelName);
 		return false;
 	}
 
@@ -970,7 +970,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 	}
 
 	auto& serverConfig = _networkManager->GetServerConfiguration();
-	LOGI("[MP] Creating %s server \"%s\" on port %u...", serverConfig.IsPrivate ? "private" : "public", serverConfig.ServerName.data(), serverConfig.ServerPort);
+	LOGI("[MP] Creating {} server \"{}\" on port {}...", serverConfig.IsPrivate ? "private" : "public", serverConfig.ServerName, serverConfig.ServerPort);
 
 	InvokeAsync([this, serverInit = std::move(serverInit)]() mutable {
 		auto levelHandler = std::make_shared<MpLevelHandler>(this,
@@ -984,12 +984,12 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 
 ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
 {
-	LOGI("[MP] Peer connected (%s) [%08llx]", NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
+	LOGI("[MP] Peer connected ({}) [{:.8x}]", NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
 
 	if (_networkManager->GetState() == NetworkState::Listening) {
 		if ((clientData & 0xFFF00000) != 0xDEA00000 || (clientData & 0x000FFFFF) > MultiplayerProtocolVersion) {
 			// Connected client is newer than server, reject it
-			LOGI("[MP] Peer kicked (%s) [%08llx]: Incompatible protocol version", NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
+			LOGI("[MP] Peer kicked ({}) [{:.8x}]: Incompatible protocol version", NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
 			return Reason::IncompatibleVersion;
 		}
 
@@ -1047,13 +1047,13 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 {
 	if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
-		LOGI("[MP] Peer disconnected \"%s\" (%s) [%08llx]: %s (%u)", peerDesc->PlayerName.data(),
-			NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet, NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
+		LOGI("[MP] Peer disconnected \"{}\" ({}) [{:.8x}]: {} ({})", peerDesc->PlayerName.data(),
+			NetworkManagerBase::AddressToString(peer).data(), std::uint64_t(peer._enet), NetworkManagerBase::ReasonToString(reason), reason);
 	} else if (peer) {
-		LOGI("[MP] Peer disconnected (%s) [%08llx]: %s (%u)", NetworkManagerBase::AddressToString(peer).data(),
-			(std::uint64_t)peer._enet, NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
+		LOGI("[MP] Peer disconnected ({}) [{:.8x}]: {} ({})", NetworkManagerBase::AddressToString(peer),
+			std::uint64_t(peer._enet), NetworkManagerBase::ReasonToString(reason), reason);
 	} else {
-		LOGI("[MP] Peer disconnected [%08llx]: %s (%u)", (std::uint64_t)peer._enet, NetworkManagerBase::ReasonToString(reason), (std::uint32_t)reason);
+		LOGI("[MP] Peer disconnected [{:.8x}]: {} ({})", std::uint64_t(peer._enet), NetworkManagerBase::ReasonToString(reason), reason);
 	}
 
 	if (auto multiLevelHandler = runtime_cast<MpLevelHandler>(_currentHandler)) {
@@ -1128,7 +1128,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
 
 				if (strncmp("J2R ", gameID, sizeof("J2R ") - 1) != 0 || (gameVersion & VersionMask) != (currentVersion & VersionMask)) {
-					LOGI("[MP] Peer kicked (%s) [%08llx]: Incompatible game version", NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
+					LOGI("[MP] Peer kicked ({}) [{:.8x}]: Incompatible game version", NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
 					_networkManager->Kick(peer, Reason::IncompatibleVersion);
 					return;
 				}
@@ -1137,8 +1137,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				packet.Read(uuid.data(), uuid.size());
 				String uniquePlayerId = NetworkManager::UuidToString(uuid);
 
-				LOGD("[MP] ClientPacketType::Auth [%08llx] - gameID: \"%.*s\", gameVersion: 0x%llx, uuid: \"%s\"",
-					(std::uint64_t)peer._enet, 4, gameID, gameVersion, uniquePlayerId.data());
+				LOGD("[MP] ClientPacketType::Auth [{:.8x}] - gameID: \"{}\", gameVersion: 0x{:x}, uuid: \"{}\"",
+					std::uint64_t(peer._enet), StringView(gameID, 4), gameVersion, uniquePlayerId);
 
 				std::uint32_t passwordLength = packet.ReadVariableUint32();
 				String password{NoInit, passwordLength};
@@ -1148,7 +1148,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				// TODO: Sanitize (\n,\r,\t) and strip formatting (\f) from player name
 				if (playerNameLength == 0 || playerNameLength > MaxPlayerNameLength) {
-					LOGI("[MP] Peer kicked (%s) [%08llx]: Invalid player name", NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
+					LOGI("[MP] Peer kicked ({}) [{:.8x}]: Invalid player name", NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
 					_networkManager->Kick(peer, Reason::InvalidPlayerName);
 					return;
 				}
@@ -1158,18 +1158,18 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				const auto& serverConfig = _networkManager->GetServerConfiguration();
 				if (serverConfig.BannedUniquePlayerIDs.contains(uniquePlayerId)) {
-					LOGI("[MP] Peer kicked \"%s\" (%s) [%08llx]: Banned by unique player ID", playerName.data(), NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
+					LOGI("[MP] Peer kicked \"{}\" ({}) [{:.8x}]: Banned by unique player ID", playerName, NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
 					_networkManager->Kick(peer, Reason::Banned);
 					return;
 				}
 				if (!serverConfig.WhitelistedUniquePlayerIDs.empty() && !serverConfig.WhitelistedUniquePlayerIDs.contains(uniquePlayerId)) {
-					LOGI("[MP] Peer kicked \"%s\" (%s) [%08llx]: Not in whitelist", playerName.data(), NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
+					LOGI("[MP] Peer kicked \"{}\" ({}) [{:.8x}]: Not in whitelist", playerName, NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
 					_networkManager->Kick(peer, Reason::NotInWhitelist);
 					return;
 				}
 
 				if (!serverConfig.ServerPassword.empty() && password != serverConfig.ServerPassword) {
-					LOGI("[MP] Peer kicked \"%s\" (%s) [%08llx]: Invalid password", playerName.data(), NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
+					LOGI("[MP] Peer kicked \"{}\" ({}) [{:.8x}]: Invalid password", playerName, NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
 					_networkManager->Kick(peer, Reason::InvalidPassword);
 					return;
 				}
@@ -1180,7 +1180,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				std::uint64_t playerUserId = packet.ReadVariableUint64();
 				if (serverConfig.RequiresDiscordAuth && playerUserId == 0) {
-					LOGI("[MP] Peer kicked \"%s\" (%s) [%08llx]: Discord authentication is required", playerName.data(), NetworkManagerBase::AddressToString(peer).data(), (std::uint64_t)peer._enet);
+					LOGI("[MP] Peer kicked \"{}\" ({}) [{:.8x}]: Discord authentication is required", playerName, NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
 					_networkManager->Kick(peer, Reason::Requires3rdPartyAuthProvider);
 					return;
 				}
@@ -1195,8 +1195,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						peerDesc->IsAdmin = true;
 					}
 
-					LOGI("[MP] Peer authenticated as \"%s\" (%s)%s [%08llx]", peerDesc->PlayerName.data(), NetworkManagerBase::AddressToString(peer).data(),
-						peerDesc->IsAdmin ? " [Admin]" : "", (std::uint64_t)peer._enet);
+					LOGI("[MP] Peer authenticated as \"{}\" ({}){} [{:.8x}]", peerDesc->PlayerName, NetworkManagerBase::AddressToString(peer),
+						peerDesc->IsAdmin ? " [Admin]" : "", std::uint64_t(peer._enet));
 
 					MemoryStream packet(17);
 					packet.WriteValue<std::uint8_t>(0);	// Flags
@@ -1222,7 +1222,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				MemoryStream packet(data);
 				std::uint32_t assetCount = packet.ReadVariableUint32();
 
-				LOGD("[MP] ServerPacketType::ValidateAssets (%u assets)", assetCount);
+				LOGD("[MP] ServerPacketType::ValidateAssets ({} assets)", assetCount);
 
 				MemoryStream packetOut(8 + assetCount * 64);
 				packetOut.WriteVariableUint32(assetCount);
@@ -1263,7 +1263,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						packet.Read(path.data(), pathLength);
 						std::int64_t size = packet.ReadVariableInt64();
 
-						LOGI("[MP] Downloading asset \"%s\" (%u) with %lli bytes", path.data(), (std::uint8_t)type, size);
+						LOGI("[MP] Downloading asset \"{}\" ({}) with {} bytes", path, type, size);
 
 						auto fullPath = MpLevelHandler::GetAssetFullPath(type, path, _networkManager->GetServerConfiguration().UniqueServerID, true);
 						if (!fullPath.empty()) {
@@ -1275,7 +1275,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 							}
 						}
 
-						LOGE("[MP] Failed to create asset \"%s\"", path.data());
+						LOGE("[MP] Failed to create asset \"{}\"", path);
 						break;
 					}
 					case 2: { // Chunk
@@ -1292,7 +1292,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						break;
 					}
 					default: {
-						LOGD("[MP] ServerPacketType::StreamAsset - unsupported flags (0x%02x)", flags);
+						LOGD("[MP] ServerPacketType::StreamAsset - unsupported flags (0x{:.2x})", flags);
 						break;
 					}
 				}
@@ -1313,7 +1313,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				std::uint32_t totalLaps = packet.ReadVariableUint32();
 				std::uint32_t totalTreasureCollected = packet.ReadVariableUint32();
 
-				LOGI("[MP] ServerPacketType::LoadLevel - flags: 0x%02x, gameMode: %u, level: \"%s\"", flags, (std::uint32_t)gameMode, levelName.data());
+				LOGI("[MP] ServerPacketType::LoadLevel - flags: 0x{:.2x}, gameMode: {}, level: \"{}\"", flags, gameMode, levelName);
 
 				InvokeAsync([this, flags, levelState, gameMode, lastExitType, levelName = std::move(levelName), initialPlayerHealth, maxGameTimeSecs, totalKills, totalLaps, totalTreasureCollected]() {
 					bool isReforged = (flags & 0x01) != 0;
@@ -1551,16 +1551,16 @@ void GameEventHandler::RefreshCache()
 
 		if (currentVersion != lastVersion) {
 			if ((lastVersion & 0xFFFFFFFFULL) == 0x0FFFFFFFULL) {
-				LOGI("Cache is already up-to-date, but created in experimental build v%i.%i.0", (lastVersion >> 48) & 0xFFFFULL, (lastVersion >> 32) & 0xFFFFULL);
+				LOGI("Cache is already up-to-date, but created in experimental build v{}.{}.0", (lastVersion >> 48) & 0xFFFFULL, (lastVersion >> 32) & 0xFFFFULL);
 			} else {
-				LOGI("Cache is already up-to-date, but created in different build v%i.%i.%i", (lastVersion >> 48) & 0xFFFFULL, (lastVersion >> 32) & 0xFFFFULL, lastVersion & 0xFFFFFFFFULL);
+				LOGI("Cache is already up-to-date, but created in different build v{}.{}.{}", (lastVersion >> 48) & 0xFFFFULL, (lastVersion >> 32) & 0xFFFFULL, lastVersion & 0xFFFFFFFFULL);
 			}
 
 			WriteCacheDescriptor(cachePath, currentVersion, animsModified);
 
 			if (!resolver.IsHeadless()) {
 				std::uint32_t filesRemoved = RenderResources::binaryShaderCache().Prune();
-				LOGI("Pruning binary shader cache (removed %u files)...", filesRemoved);
+				LOGI("Pruning binary shader cache (removed {} files)...", filesRemoved);
 			}
 		} else {
 			LOGI("Cache is already up-to-date");
@@ -1582,7 +1582,7 @@ RecreateCache:
 				sourcePath = fs::CombinePath(fs::GetWorkingDirectory(), resolver.GetSourcePath());
 			}
 
-			LOGE("Cannot open \"…%sSource%sAnims.j2a\" file! Make sure Jazz Jackrabbit 2 files are present in \"%s\" directory.", fs::PathSeparator, fs::PathSeparator, sourcePath.data());
+			LOGE("Cannot open \"…{}Source{}Anims.j2a\" file! Make sure Jazz Jackrabbit 2 files are present in \"{}\" directory.", fs::PathSeparator, fs::PathSeparator, sourcePath);
 			_flags |= Flags::IsVerified;
 			return;
 		}
@@ -1601,7 +1601,7 @@ RecreateCache:
 		std::unique_ptr<PakWriter> pakWriter = std::make_unique<PakWriter>(fs::CombinePath(resolver.GetCachePath(), "Source.pak"_s));
 		while (!pakWriter->IsValid()) {
 			if (t > 5) {
-				LOGE("Cannot open \"…%sCache%sSource.pak\" file for writing! Please check if this file is accessible and try again.", fs::PathSeparator, fs::PathSeparator);
+				LOGE("Cannot open \"…{}Cache{}Source.pak\" file for writing! Please check if this file is accessible and try again.", fs::PathSeparator, fs::PathSeparator);
 				_flags |= Flags::IsVerified;
 				return;
 			}
@@ -1614,7 +1614,7 @@ RecreateCache:
 
 		Compatibility::JJ2Version version = Compatibility::JJ2Anims::Convert(animsPath, *pakWriter);
 		if (version == Compatibility::JJ2Version::Unknown) {
-			LOGE("Provided Jazz Jackrabbit 2 version is not supported. Make sure supported Jazz Jackrabbit 2 version is present in \"%s\" directory.", resolver.GetSourcePath().data());
+			LOGE("Provided Jazz Jackrabbit 2 version is not supported. Make sure supported Jazz Jackrabbit 2 version is present in \"{}\" directory.", resolver.GetSourcePath());
 			_flags |= Flags::IsVerified;
 			return;
 		}
@@ -1633,7 +1633,7 @@ RecreateCache:
 
 	if (!resolver.IsHeadless()) {
 		std::uint32_t filesRemoved = RenderResources::binaryShaderCache().Prune();
-		LOGI("Pruning binary shader cache (removed %u files)...", filesRemoved);
+		LOGI("Pruning binary shader cache (removed {} files)...", filesRemoved);
 	}
 
 	resolver.RemountPaks();
@@ -1937,7 +1937,7 @@ void GameEventHandler::CheckUpdates()
 			_newestVersion = s;
 		}
 	} else {
-		LOGW("Failed to check for updates: %s", result.error.data());
+		LOGW("Failed to check for updates: {}", result.error);
 	}
 #endif
 }
@@ -2098,7 +2098,7 @@ void GameEventHandler::ExtractPakFile(StringView pakFile, StringView targetPath)
 		return;
 	}
 
-	LOGI("Extracting files from \"%s\" to \"%s\"...", pakFile.data(), targetPath.data());
+	LOGI("Extracting files from \"{}\" to \"{}\"...", pakFile, targetPath);
 
 	SmallVector<String> queue;
 	queue.emplace_back();	// Root
@@ -2115,7 +2115,7 @@ void GameEventHandler::ExtractPakFile(StringView pakFile, StringView targetPath)
 					sourceFile->CopyTo(*targetFile);
 					successCount++;
 				} else {
-					LOGE("Failed to create target file \"%s\"", targetFilePath.data());
+					LOGE("Failed to create target file \"{}\"", targetFilePath);
 					errorCount++;
 				}
 			} else {
@@ -2125,7 +2125,7 @@ void GameEventHandler::ExtractPakFile(StringView pakFile, StringView targetPath)
 		}
 	}
 
-	LOGI("%i files extracted successfully, %i files failed with error", successCount, errorCount);
+	LOGI("{} files extracted successfully, {} files failed with error", successCount, errorCount);
 }
 
 #if defined(DEATH_TARGET_ANDROID)

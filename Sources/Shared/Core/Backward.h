@@ -3527,6 +3527,8 @@ namespace Death { namespace Backward {
 		}
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		// There is no find_if_not in C++98, lets do something crappy to workaround
 		struct not_isspace {
 			bool operator()(char c) {
@@ -3539,6 +3541,7 @@ namespace Death { namespace Backward {
 				return !(std::find_if(p.second.begin(), p.second.end(), not_isspace()) == p.second.end());
 			}
 		};
+#endif
 
 		Implementation::Handle<std::ifstream*, Implementation::DefaultDelete<std::ifstream*>> _file;
 

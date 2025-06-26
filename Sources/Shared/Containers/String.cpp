@@ -119,9 +119,9 @@ namespace Death { namespace Containers {
 #if defined(DEATH_TARGET_32BIT)
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release
-		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size), );
+		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^{} bytes, got {}", sizeof(std::size_t) * 8 - 2, size), );
 #endif
-		DEATH_ASSERT(data != nullptr || size == 0, ("Received a null string of size %zu", size), );
+		DEATH_ASSERT(data != nullptr || size == 0, ("Received a null string of size {}", size), );
 
 		construct(data, size);
 	}
@@ -141,8 +141,8 @@ namespace Death { namespace Containers {
 	{
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release
-		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size), );
-		DEATH_ASSERT(data != nullptr || size == 0, ("Received a null string of size %zu", size), );
+		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^{} bytes, got {}", sizeof(std::size_t) * 8 - 2, size), );
+		DEATH_ASSERT(data != nullptr || size == 0, ("Received a null string of size {}", size), );
 
 		_large.data = new char[size + 1];
 		// Apparently memcpy() can't be called with null pointers, even if size is zero. I call that bullying.
@@ -192,7 +192,7 @@ namespace Death { namespace Containers {
 		// Compared to StringView construction which happens a lot this shouldn't, the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release; but most importantly checking for null
 		// termination outweighs potential speed issues
-		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size), );
+		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^{} bytes, got {}", sizeof(std::size_t) * 8 - 2, size), );
 		DEATH_ASSERT(data != nullptr && !data[size], "Can only take ownership of a non-null null-terminated array", );
 
 		_large.data = data;
@@ -212,7 +212,7 @@ namespace Death { namespace Containers {
 	{
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus  worth checking even in release
-		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size), );
+		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^{} bytes, got {}", sizeof(std::size_t) * 8 - 2, size), );
 
 		if (size < Implementation::SmallStringSize) {
 			// Everything already zero-init'd in the constructor init list
@@ -228,7 +228,7 @@ namespace Death { namespace Containers {
 	{
 		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
 		// is rare but possible and thus worth checking even in release
-		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^%zu bytes, got %zu", sizeof(std::size_t) * 8 - 2, size), );
+		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^{} bytes, got {}", sizeof(std::size_t) * 8 - 2, size), );
 
 		construct(NoInit, size);
 	}
@@ -424,7 +424,7 @@ namespace Death { namespace Containers {
 
 	char& String::operator[](std::size_t i) {
 		// Accessing the null terminator is fine
-		DEATH_DEBUG_ASSERT(i < size() + 1, ("Index %zu out of range for %zu null-terminated bytes", i, size()), _small.data[0]);
+		DEATH_DEBUG_ASSERT(i < size() + 1, ("Index {} out of range for {} null-terminated bytes", i, size()), _small.data[0]);
 		if (_small.size & Implementation::SmallStringBit)
 			return _small.data[i];
 		return _large.data[i];
@@ -432,7 +432,7 @@ namespace Death { namespace Containers {
 
 	char String::operator[](std::size_t i) const {
 		// Accessing the null terminator is fine
-		DEATH_DEBUG_ASSERT(i < size() + 1, ("Index %zu out of range for %zu null-terminated bytes", i, size()), _small.data[0]);
+		DEATH_DEBUG_ASSERT(i < size() + 1, ("Index {} out of range for {} null-terminated bytes", i, size()), _small.data[0]);
 		if (_small.size & Implementation::SmallStringBit)
 			return _small.data[i];
 		return _large.data[i];

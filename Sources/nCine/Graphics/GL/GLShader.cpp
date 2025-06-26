@@ -140,7 +140,7 @@ namespace nCine
 					glGetShaderInfoLog(glHandle_, sizeof(buffer), &length, buffer);
 					// Trim whitespace - driver messages usually contain newline(s) at the end
 					*(MutableStringView(buffer).trimmed().end()) = '\0';
-					LOGW("Shader: %s", buffer);
+					LOGW("Shader: {}", buffer);
 				}
 				DEATH_ASSERT_BREAK();
 			}

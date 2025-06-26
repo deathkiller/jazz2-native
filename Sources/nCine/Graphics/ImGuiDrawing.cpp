@@ -39,7 +39,7 @@ using namespace nCine::Backends;
 			op;															\
 			GLenum glErr_ = glGetError();								\
 			if (glErr_ != 0) {											\
-				LOGE("GL error 0x%x returned from %s", glErr_, #op);	\
+				LOGE("GL error 0x{:x} returned from {}", glErr_, #op);	\
 			}															\
 		} while (0)
 #else

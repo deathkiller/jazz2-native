@@ -49,7 +49,7 @@ namespace nCine
 
 		// Texture contains compressed data, most significant 4 bytes have been set to zero
 		if (pixelFormat < 0x0000000100000000ULL) {
-			LOGI("Compressed format: %u", pixelFormat);
+			LOGI("Compressed format: {}", pixelFormat);
 
 			// Parsing the pixel format
 			switch (pixelFormat) {
@@ -143,7 +143,7 @@ namespace nCine
 #	endif
 #endif
 				default:
-					RETURNF_MSG("Unsupported PVR3 compressed format: 0x%llx", pixelFormat);
+					RETURNF_MSG("Unsupported PVR3 compressed format: 0x{:x}", pixelFormat);
 					break;
 			}
 
@@ -152,7 +152,7 @@ namespace nCine
 			// Texture contains uncompressed data
 			GLenum type = GL_UNSIGNED_BYTE;
 
-			LOGI("Uncompressed format: %c%c%c%c (%u, %u, %u, %u)",
+			LOGI("Uncompressed format: {:c}{:c}{:c}{:c} ({}, {}, {}, {})",
 				   reinterpret_cast<char*>(&pixelFormat)[0], reinterpret_cast<char*>(&pixelFormat)[1],
 				   reinterpret_cast<char*>(&pixelFormat)[2], reinterpret_cast<char*>(&pixelFormat)[3],
 				   reinterpret_cast<unsigned char*>(&pixelFormat)[4], reinterpret_cast<unsigned char*>(&pixelFormat)[5],
@@ -194,7 +194,7 @@ namespace nCine
 					internalFormat = GL_R8;
 					break;
 				default:
-					RETURNF_MSG("Unsupported PVR3 uncompressed format: 0x%llx", pixelFormat);
+					RETURNF_MSG("Unsupported PVR3 uncompressed format: 0x{:x}", pixelFormat);
 					break;
 			}
 
@@ -202,12 +202,12 @@ namespace nCine
 		}
 
 		if (mipMapCount_ > 1) {
-			LOGI("MIP Maps: %d", mipMapCount_);
+			LOGI("MIP Maps: {}", mipMapCount_);
 			mipDataOffsets_ = std::make_unique<std::uint32_t[]>(mipMapCount_);
 			mipDataSizes_ = std::make_unique<std::uint32_t[]>(mipMapCount_);
 			std::uint32_t dataSizesSum = TextureFormat::calculateMipSizes(internalFormat, width_, height_, mipMapCount_, mipDataOffsets_.get(), mipDataSizes_.get());
 			if (dataSizesSum != dataSize_) {
-				LOGW("The sum of MIP maps size (%ld) is different than texture total data (%ld)", dataSizesSum, dataSize_);
+				LOGW("The sum of MIP maps size ({}) is different than texture total data ({})", dataSizesSum, dataSize_);
 			}
 		}
 

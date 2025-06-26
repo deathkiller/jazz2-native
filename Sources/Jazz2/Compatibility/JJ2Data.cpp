@@ -72,7 +72,7 @@ namespace Jazz2::Compatibility
 
 		for (auto& item : Items) {
 			auto so = fs::Open(fs::CombinePath(targetPath, item.Filename), FileAccess::Write);
-			ASSERT_MSG(so->IsValid(), "Cannot open file \"%s\" for writing", item.Filename.data());
+			ASSERT_MSG(so->IsValid(), "Cannot open file \"{}\" for writing", item.Filename);
 
 			so->Write(item.Blob.get(), item.Size);
 		}

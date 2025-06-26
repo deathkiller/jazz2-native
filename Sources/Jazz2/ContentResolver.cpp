@@ -301,9 +301,9 @@ namespace Jazz2
 
 			auto& pak = _mountedPaks.emplace_back(std::make_unique<PakFile>(item));
 			if (pak->IsValid()) {
-				LOGI("File \"%s\" mounted successfully", item.data());
+				LOGI("File \"{}\" mounted successfully", item);
 			} else {
-				LOGE("Failed to mount file \"%s\"", item.data());
+				LOGE("Failed to mount file \"{}\"", item);
 				_mountedPaks.pop_back();
 			}
 		}
@@ -316,9 +316,9 @@ namespace Jazz2
 
 			auto& pak = _mountedPaks.emplace_back(std::make_unique<PakFile>(item));
 			if (pak->IsValid()) {
-				LOGI("File \"%s\" mounted successfully", item.data());
+				LOGI("File \"{}\" mounted successfully", item);
 			} else {
-				LOGE("Failed to mount file \"%s\"", item.data());
+				LOGE("Failed to mount file \"{}\"", item);
 				_mountedPaks.pop_back();
 			}
 		}
@@ -435,7 +435,7 @@ namespace Jazz2
 #endif
 
 #if defined(DEATH_DEBUG)
-		LOGW("Metadata: %i|%i, Animations: %i|%i, Sounds: %i|%i", metadataKept, metadataReleased,
+		LOGW("Metadata: {}|{}, Animations: {}|{}, Sounds: {}|{}", metadataKept, metadataReleased,
 			animationsKept, animationsReleased, soundsKept, soundsReleased);
 #endif
 
@@ -574,7 +574,7 @@ namespace Jazz2
 								// Additional checks only for Debug configuration
 								for (const auto& anim : metadata->Animations) {
 									if (anim.State == (AnimState)state) {
-										LOGW("Animation state %u defined twice in file \"%s\"", (std::uint32_t)state, path.data());
+										LOGW("Animation state {} defined twice in file \"{}\"", state, path);
 										break;
 									}
 								}
@@ -586,7 +586,7 @@ namespace Jazz2
 					} else if (count > 1) {
 						if (!multipleAnimsNoStatesWarning) {
 							multipleAnimsNoStatesWarning = true;
-							LOGW("Multiple animations defined but no states specified in file \"%s\"", path.data());
+							LOGW("Multiple animations defined but no states specified in file \"{}\"", path);
 						}
 					} else {
 						graphics.State = AnimState::Default;
@@ -1027,7 +1027,7 @@ namespace Jazz2
 				// Palettes differs, drop all cached resources, so it will be reloaded with new palette
 				if (_isLoading) {
 #if defined(DEATH_DEBUG)
-					LOGW("Releasing all animations because of different palette - Metadata: 0|%i, Animations: 0|%i", (std::int32_t)_cachedMetadata.size(), (std::int32_t)_cachedGraphics.size());
+					LOGW("Releasing all animations because of different palette - Metadata: 0|{}, Animations: 0|{}", _cachedMetadata.size(), _cachedGraphics.size());
 #endif
 					_cachedMetadata.clear();
 					_cachedGraphics.clear();
@@ -1630,7 +1630,7 @@ namespace Jazz2
 			ASSERT(block != nullptr);
 			if (block != nullptr) {
 				batchSize = maxUniformBlockSize / block->GetSize();
-				LOGI("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName,
+				LOGI("Shader \"{}\" - block size: {} + {} align bytes, max batch size: {}", shaderName,
 					block->GetSize() - block->GetAlignAmount(), block->GetAlignAmount(), batchSize);
 				
 				bool hasLinked = false;
@@ -1641,7 +1641,7 @@ namespace Jazz2
 					}
 
 					batchSize--;
-					LOGW("Failed to compile the shader, recompiling with batch size: %i", batchSize);
+					LOGW("Failed to compile the shader, recompiling with batch size: {}", batchSize);
 				}
 
 				if (!hasLinked) {
@@ -1688,7 +1688,7 @@ namespace Jazz2
 			ASSERT(block != nullptr);
 			if (block != nullptr) {
 				batchSize = maxUniformBlockSize / block->GetSize();
-				LOGI("Shader \"%s\" - block size: %d + %d align bytes, max batch size: %d", shaderName,
+				LOGI("Shader \"{}\" - block size: {} + {} align bytes, max batch size: {}", shaderName,
 					block->GetSize() - block->GetAlignAmount(), block->GetAlignAmount(), batchSize);
 
 				bool hasLinked = false;
@@ -1699,7 +1699,7 @@ namespace Jazz2
 					}
 
 					batchSize--;
-					LOGW("Failed to compile the shader, recompiling with batch size: %i", batchSize);
+					LOGW("Failed to compile the shader, recompiling with batch size: {}", batchSize);
 				}
 
 				if (!hasLinked) {

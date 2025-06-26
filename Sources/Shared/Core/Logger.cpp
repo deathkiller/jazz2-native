@@ -480,7 +480,7 @@ namespace Death { namespace Trace {
 		}
 	}
 
-	bool LoggerBackend::PopulateTransitEventFromThreadQueue(const std::byte*& readPos, ThreadContext* threadContext, uint64_t tsNow)
+	bool LoggerBackend::PopulateTransitEventFromThreadQueue(const std::byte*& readPos, ThreadContext* threadContext, std::uint64_t tsNow)
 	{
 		using namespace Implementation;
 
@@ -772,7 +772,7 @@ namespace Death { namespace Trace {
 		}
 	}
 #else
-	void LoggerBackend::DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength, StringView threadId)
+	void LoggerBackend::DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength, StringView threadId)
 	{
 		using namespace Implementation;
 
@@ -819,7 +819,7 @@ namespace Death { namespace Trace {
 		}
 	}
 
-	void LoggerBackend::EnqueueEntryToBacktrace(std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength)
+	void LoggerBackend::EnqueueEntryToBacktrace(std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength)
 	{
 		using namespace Implementation;
 
@@ -855,7 +855,7 @@ namespace Death { namespace Trace {
 		_backend.DetachSink(sink);
 	}
 
-	bool Logger::Write(TraceLevel level, const char* functionName, const char* fmt, va_list args)
+	/*bool Logger::Write(TraceLevel level, const char* functionName, const char* fmt, va_list args)
 	{
 		using namespace Implementation;
 
@@ -873,6 +873,27 @@ namespace Death { namespace Trace {
 		}
 
 		bool result = EnqueueEntry(level, timestamp, functionName, formattedMessage, length);
+
+		if DEATH_UNLIKELY(level >= TraceLevel::Error) {
+			// Flush all messages with level Error or higher because of potential immediate crash/termination
+			Flush();
+		} else {
+			_backend.Notify();
+		}
+
+		return result;
+	}*/
+
+	bool Logger::Write(TraceLevel level, const char* functionName, const char* message, std::uint32_t messageLength)
+	{
+#if defined(DEATH_TRACE_ASYNC)
+		std::uint64_t timestamp = Implementation::rdtsc();
+#else
+		std::uint64_t timestamp = static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+			std::chrono::system_clock::now().time_since_epoch()).count());
+#endif
+
+		bool result = EnqueueEntry(level, timestamp, functionName, message, messageLength);
 
 		if DEATH_UNLIKELY(level >= TraceLevel::Error) {
 			// Flush all messages with level Error or higher because of potential immediate crash/termination
@@ -973,7 +994,7 @@ namespace Death { namespace Trace {
 		return _threadContext->GetSpscQueue<DefaultQueueType>().prepareWrite(totalSize);
 	}
 
-	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength)
+	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength)
 	{
 		using namespace Implementation;
 
@@ -1042,7 +1063,7 @@ namespace Death { namespace Trace {
 		return true;
 	}
 #else
-	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength)
+	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength)
 	{
 		if DEATH_UNLIKELY(level == TraceLevel::Deferred) {
 			_backend.EnqueueEntryToBacktrace(timestamp, functionName, content, contentLength);
@@ -1059,41 +1080,44 @@ namespace Death { namespace Trace {
 	}
 #endif
 
-	static Trace::Logger _internalLogger;
+	static Trace::Logger& GetMainLogger()
+	{
+		static Trace::Logger logger;
+		return logger;
+	}
 
 	void AttachSink(ITraceSink* sink)
 	{
-		_internalLogger.AttachSink(sink);
+		GetMainLogger().AttachSink(sink);
 	}
 
 	void DetachSink(ITraceSink* sink)
 	{
-		_internalLogger.DetachSink(sink);
+		GetMainLogger().DetachSink(sink);
 	}
 
 	void Flush()
 	{
-		_internalLogger.Flush();
+		GetMainLogger().Flush();
 	}
 
 	void InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel)
 	{
-		_internalLogger.InitializeBacktrace(maxCapacity, flushLevel);
+		GetMainLogger().InitializeBacktrace(maxCapacity, flushLevel);
 	}
 
 	void FlushBacktraceAsync()
 	{
-		_internalLogger.FlushBacktraceAsync();
+		GetMainLogger().FlushBacktraceAsync();
 	}
 
 }}
 
-void DEATH_TRACE(TraceLevel level, const char* functionName, const char* fmt, ...)
+void DEATH_TRACE(TraceLevel level, const char* functionName, const char* message, std::uint32_t messageLength)
 {
-	va_list args;
-	va_start(args, fmt);
-	Death::Trace::_internalLogger.Write(level, functionName, fmt, args);
-	va_end(args);
+	using namespace Death::Trace;
+
+	GetMainLogger().Write(level, functionName, message, messageLength);
 }
 
 #endif
