@@ -316,7 +316,7 @@ namespace Death { namespace IO {
 #	endif
 #else
 		// An asset file can only be read
-		_asset = AAssetManager_open(_nativeActivity->assetManager, _path, AASSET_MODE_RANDOM);
+		_asset = AAssetManager_open(_nativeActivity->assetManager, _path.data(), AASSET_MODE_RANDOM);
 		if (_asset == nullptr) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Cannot open file \"{}/{}\"", Prefix, _path);
