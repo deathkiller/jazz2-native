@@ -341,7 +341,7 @@ namespace Jazz2::Compatibility
 	void JJ2Level::LoadMlleData(JJ2Block& block, std::uint32_t version, StringView path, bool strictParser)
 	{
 		if (version > 0x107) {
-			LOGW("MLLE stream version 0x%x in level \"%s\" is not supported", version, LevelName.data());
+			LOGW("MLLE stream version 0x{:x} in level \"{}\" is not supported", version, LevelName);
 			return;
 		}
 
@@ -887,7 +887,7 @@ namespace Jazz2::Compatibility
 						if (animIndex < _animCount) {
 							tileIdx = _animatedTiles[animIndex].Frames[0];
 						} else {
-							LOGE("Animated tile references undefined tile %u in level \"%s\" (max. tile count is %u, anim. count is %u)", tileIdx, LevelName.data(), maxTiles, _animCount);
+							LOGE("Animated tile references undefined tile {} in level \"{}\" (max. tile count is {}, anim. count is {})", tileIdx, LevelName, maxTiles, _animCount);
 							tileIdx = 0;
 						}
 					}

@@ -173,7 +173,7 @@ namespace nCine
 
 	void AudioReaderMpt::InternalLog(const char* message, void* user)
 	{
-		LOGI("%s", message);
+		LOGI("{}", message);
 	}
 }
 

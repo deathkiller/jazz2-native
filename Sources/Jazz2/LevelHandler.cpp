@@ -155,7 +155,7 @@ namespace Jazz2
 		LevelDescriptor descriptor;
 		if (!resolver.TryLoadLevel(_levelName, _difficulty, descriptor) &&
 			(p[0] == "unknown"_s || !resolver.TryLoadLevel(String("unknown/"_s + p[2]), _difficulty, descriptor))) {
-			LOGE("Cannot load level \"%s\"", _levelName.data());
+			LOGE("Cannot load level \"{}\"", _levelName);
 			return false;
 		}
 
@@ -206,11 +206,11 @@ namespace Jazz2
 
 		LevelDescriptor descriptor;
 		if (!resolver.TryLoadLevel(_levelName, _difficulty, descriptor)) {
-			LOGE("Cannot load level \"%s\"", _levelName.data());
+			LOGE("Cannot load level \"{}\"", _levelName);
 			return false;
 		}
 
-		_console->WriteLine(UI::MessageLevel::Debug, _f("Level \"%s\" initialized", descriptor.DisplayName.data()));
+		_console->WriteLine(UI::MessageLevel::Debug, _f("Level \"{}\" initialized", descriptor.DisplayName));
 
 		AttachComponents(std::move(descriptor));
 
@@ -401,7 +401,7 @@ namespace Jazz2
 
 		_levelDisplayName = std::move(descriptor.DisplayName);
 
-		LOGI("Level \"%s\" (\"%s.j2l\") loaded", _levelDisplayName.data(), _levelName.data());
+		LOGI("Level \"{}\" (\"{}.j2l\") loaded", _levelDisplayName, _levelName);
 
 		if (!_levelDisplayName.empty()) {
 			theApplication().GetGfxDevice().setWindowTitle(String(NCINE_APP_NAME " - " + _levelDisplayName));

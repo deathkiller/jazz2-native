@@ -12,6 +12,7 @@
 
 #include <Containers/String.h>
 #include <Containers/StringConcatenable.h>
+#include <Containers/StringStl.h>
 #include <Containers/StringStlView.h>
 #include <Containers/StringUtils.h>
 #include <IO/MemoryStream.h>
@@ -60,7 +61,7 @@ namespace Jazz2::Multiplayer
 					(ifa->ifa_flags & IFF_UP) && !(ifa->ifa_flags & IFF_LOOPBACK) && (ifa->ifa_flags & IFF_MULTICAST)) {
 					ifidx = if_nametoindex(ifa->ifa_name);
 					if (ifidx > 0) {
-						LOGI("[MP] Using %s interface \"%s\" (%i) for local discovery", ifa->ifa_addr->sa_family == AF_INET6
+						LOGI("[MP] Using %s interface \"{}\" ({}) for local discovery", ifa->ifa_addr->sa_family == AF_INET6
 							? "IPv6" : "IPv4", ifa->ifa_name, ifidx);
 						break;
 					}
@@ -84,7 +85,7 @@ namespace Jazz2::Multiplayer
 				// Prefer first adapter that is up, not loopback, supports multicast
 				if (adapter->OperStatus == IfOperStatusUp && adapter->IfType != IF_TYPE_SOFTWARE_LOOPBACK &&
 					!(adapter->Flags & IP_ADAPTER_NO_MULTICAST)) {
-					LOGI("[MP] Using IPv6 interface \"%s\" (%s:%i) for local discovery", Utf8::FromUtf16(adapter->FriendlyName).data(),
+					LOGI("[MP] Using IPv6 interface \"{}\" ({}:{}) for local discovery", Utf8::FromUtf16(adapter->FriendlyName),
 						adapter->AdapterName, (std::int32_t)adapter->Ipv6IfIndex);
 					return (std::int32_t)adapter->Ipv6IfIndex;
 				}
@@ -141,7 +142,7 @@ namespace Jazz2::Multiplayer
 #	else
 			std::int32_t error = errno;
 #	endif
-			LOGE("[MP] Failed to create socket for local server discovery (error: %i)", error);
+			LOGE("[MP] Failed to create socket for local server discovery (error: {})", error);
 			return ENET_SOCKET_NULL;
 		}
 
@@ -155,7 +156,7 @@ namespace Jazz2::Multiplayer
 #	else
 			std::int32_t error = errno;
 #	endif
-			LOGE("[MP] Failed to enable multicast on socket for local server discovery (error: %i)", error);
+			LOGE("[MP] Failed to enable multicast on socket for local server discovery (error: {})", error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
@@ -172,7 +173,7 @@ namespace Jazz2::Multiplayer
 #	else
 			std::int32_t error = errno;
 #	endif
-			LOGE("[MP] Failed to bind socket for local server discovery (error: %i)", error);
+			LOGE("[MP] Failed to bind socket for local server discovery (error: {})", error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
@@ -184,7 +185,7 @@ namespace Jazz2::Multiplayer
 #	else
 			std::int32_t error = errno;
 #	endif
-			LOGE("[MP] Failed to parse multicast address for local server discovery (result: %i, error: %i)", result, error);
+			LOGE("[MP] Failed to parse multicast address for local server discovery (result: {}, error: {})", result, error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
@@ -202,7 +203,7 @@ namespace Jazz2::Multiplayer
 #	else
 			std::int32_t error = errno;
 #	endif
-			LOGE("[MP] Failed to join multicast group on socket for local server discovery (error: %i)", error);
+			LOGE("[MP] Failed to join multicast group on socket for local server discovery (error: {})", error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
@@ -235,7 +236,7 @@ namespace Jazz2::Multiplayer
 #else
 			std::int32_t error = errno;
 #endif
-			LOGE("[MP] Failed to send local discovery request (result: %i, error: %i)", result, error);
+			LOGE("[MP] Failed to send local discovery request (result: {}, error: {})", result, error);
 		}
 	}
 
@@ -256,7 +257,7 @@ namespace Jazz2::Multiplayer
 			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
 			Json::Value doc; std::string errors;
 			if (reader->parse(buffer.get(), buffer.get() + size, &doc, &errors)) {
-				LOGI("[MP] Downloaded public server list with %u entries (%u bytes)", (std::uint32_t)doc["s"].size(), (std::uint32_t)size);
+				LOGI("[MP] Downloaded public server list with {} entries ({} bytes)", (std::uint32_t)doc["s"].size(), (std::uint32_t)size);
 
 				for (auto serverItem : doc["s"]) {
 					std::string_view serverName, serverUuid, serverEndpoints;
@@ -279,15 +280,15 @@ namespace Jazz2::Multiplayer
 						discoveredServer.CurrentPlayerCount = (std::uint32_t)currentPlayers;
 						discoveredServer.MaxPlayerCount = (std::uint32_t)maxPlayers;
 
-						LOGD("[MP] -\tFound server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
+						LOGD("[MP] -\tFound server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
 						observer->OnServerFound(std::move(discoveredServer));
 					}
 				}
 			} else {
-				LOGE("[MP] Failed to parse public server list: %s", errors.c_str());
+				LOGE("[MP] Failed to parse public server list: {}", StringView(errors));
 			}
 		} else {
-			LOGE("[MP] Failed to download public server list: %s", result.error.data());
+			LOGE("[MP] Failed to download public server list: {}", result.error);
 		}
 	}
 
@@ -348,7 +349,7 @@ namespace Jazz2::Multiplayer
 		discoveredServer.LevelName = String(NoInit, nameLength);
 		packet.Read(discoveredServer.LevelName.data(), nameLength);
 
-		LOGD("[MP] Found local server \"%s\" at %s", discoveredServer.Name.data(), discoveredServer.EndpointString.data());
+		LOGD("[MP] Found local server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
 		return true;
 	}
 
@@ -441,7 +442,7 @@ namespace Jazz2::Multiplayer
 #else
 				std::int32_t error = errno;
 #endif
-				LOGE("[MP] Failed to send local discovery response (result: %i, error: %i)", result, error);
+				LOGE("[MP] Failed to send local discovery response (result: {}, error: {})", result, error);
 			}
 		}
 	}
@@ -525,15 +526,15 @@ namespace Jazz2::Multiplayer
 				if (doc["r"].get(success) == Json::SUCCESS && success &&
 					doc["e"].get(endpoints) == Json::SUCCESS && !endpoints.empty()) {
 					_onlineSuccess = true;
-					LOGD("[MP] Server published with following endpoints: %s", String(endpoints).data());
+					LOGD("[MP] Server published with following endpoints: {}", StringView(endpoints));
 				} else {
 					LOGE("[MP] Failed to publish the server: Request rejected");
 				}
 			} else {
-				LOGE("[MP] Failed to publish the server: Response cannot be parsed: %s", errors.c_str());
+				LOGE("[MP] Failed to publish the server: Response cannot be parsed: {}", StringView(errors));
 			}
 		} else {
-			LOGE("[MP] Failed to publish the server: %s", result.error.data());
+			LOGE("[MP] Failed to publish the server: {}", result.error);
 		}
 	}
 
@@ -584,10 +585,10 @@ namespace Jazz2::Multiplayer
 					LOGE("[MP] Failed to delist the server: Request rejected");
 				}
 			} else {
-				LOGE("[MP] Failed to delist the server: Response cannot be parsed: %s", errors.c_str());
+				LOGE("[MP] Failed to delist the server: Response cannot be parsed: {}", StringView(errors));
 			}
 		} else {
-			LOGE("[MP] Failed to delist the server: %s", result.error.data());
+			LOGE("[MP] Failed to delist the server: {}", result.error);
 		}
 	}
 

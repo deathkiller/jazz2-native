@@ -11,6 +11,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/IntrinsicsSse4.h
 	${NCINE_SOURCE_DIR}/Shared/IntrinsicsSsse3.h
 	${NCINE_SOURCE_DIR}/Shared/Utf8.h
+	${NCINE_SOURCE_DIR}/Shared/Base/Format.h
 	${NCINE_SOURCE_DIR}/Shared/Base/IDisposable.h
 	${NCINE_SOURCE_DIR}/Shared/Base/Memory.h
 	${NCINE_SOURCE_DIR}/Shared/Base/Move.h

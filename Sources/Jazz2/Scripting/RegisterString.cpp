@@ -57,7 +57,7 @@ namespace Jazz2::Scripting
 				auto data = std::make_unique<String>(stringView);
 				it = _stringCache.emplace(*data.get(), 1).first;
 				it->second.Data = std::move(data);
-				//LOGD("Allocated \"%s\" string", it->second.Data.get()->data());
+				//LOGD("Allocated \"{}\" string", it->second.Data.get());
 			}
 			asReleaseExclusiveLock();
 
@@ -80,7 +80,7 @@ namespace Jazz2::Scripting
 			} else {
 				it->second.RefCount--;
 				if (it->second.RefCount == 0) {
-					//LOGD("Released \"%s\" string", it->second.Data.get()->data());
+					//LOGD("Released \"{}\" string", it->second.Data.get());
 					_stringCache.erase(it);
 				}
 			}

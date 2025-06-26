@@ -170,7 +170,7 @@ namespace Jazz2::Input
 
 		EMSCRIPTEN_RESULT result = emscripten_websocket_send_utf8_text(_ws, request.c_str());
 		if (result) {
-			LOGE("Request failed: %i", result);
+			LOGE("Request failed: {}", result);
 		}
 #endif
 	}
@@ -228,7 +228,7 @@ namespace Jazz2::Input
 
 		EMSCRIPTEN_RESULT result = emscripten_websocket_send_utf8_text(_ws, request.c_str());
 		if (result) {
-			LOGE("Request failed: %i", result);
+			LOGE("Request failed: {}", result);
 		}
 #endif
 	}
@@ -240,7 +240,7 @@ namespace Jazz2::Input
 
 		EMSCRIPTEN_RESULT result = emscripten_websocket_send_utf8_text(websocketEvent->socket, Response);
 		if (result) {
-			LOGE("Response failed: %i", result);
+			LOGE("Response failed: {}", result);
 		} else {
 			RgbLights* _this = static_cast<RgbLights*>(userData);
 			_this->_isConnected = true;

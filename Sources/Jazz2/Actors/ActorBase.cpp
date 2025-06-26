@@ -686,7 +686,7 @@ namespace Jazz2::Actors
 
 		auto* anim = _metadata->FindAnimation(state);
 		if (anim == nullptr) {
-			//LOGE("No animation found for state 0x%08x", state);
+			//LOGE("No animation found for state 0x{:.8x}", state);
 			return false;
 		}
 

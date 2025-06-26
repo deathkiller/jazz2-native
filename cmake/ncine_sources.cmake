@@ -2,6 +2,7 @@ set(SOURCES
 	${NCINE_SOURCE_DIR}/Shared/Environment.cpp
 	${NCINE_SOURCE_DIR}/Shared/Cpu.cpp
 	${NCINE_SOURCE_DIR}/Shared/Utf8.cpp
+	${NCINE_SOURCE_DIR}/Shared/Base/Format.cpp
 	${NCINE_SOURCE_DIR}/Shared/Containers/DateTime.cpp
 	${NCINE_SOURCE_DIR}/Shared/Containers/SmallVector.cpp
 	${NCINE_SOURCE_DIR}/Shared/Containers/String.cpp

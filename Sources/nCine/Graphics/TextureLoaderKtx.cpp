@@ -59,7 +59,7 @@ namespace nCine
 		loadPixels(internalFormat, type);
 
 		if (mipMapCount_ > 1) {
-			LOGI("MIP Maps: %d", mipMapCount_);
+			LOGI("MIP Maps: {}", mipMapCount_);
 			mipDataOffsets_ = std::make_unique<std::uint32_t[]>(mipMapCount_);
 			mipDataSizes_ = std::make_unique<std::uint32_t[]>(mipMapCount_);
 			std::uint32_t dataSizesSum = TextureFormat::calculateMipSizes(internalFormat, width_, height_, mipMapCount_, mipDataOffsets_.get(), mipDataSizes_.get());
@@ -72,7 +72,7 @@ namespace nCine
 			dataSizesSum += 4 * mipMapCount_;
 
 			if (dataSizesSum != dataSize_) {
-				LOGW("The sum of MIP maps size (%ld) is different than texture total data (%ld)", dataSizesSum, dataSize_);
+				LOGW("The sum of MIP maps size ({}) is different than texture total data ({})", dataSizesSum, dataSize_);
 			}
 		}
 

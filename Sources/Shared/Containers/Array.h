@@ -812,7 +812,7 @@ namespace Death { namespace Containers {
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	template<class T, class D> template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type> const T& Array<T, D>::operator[](const U i) const {
-		DEATH_DEBUG_ASSERT(std::size_t(i) < _size, ("Index %zu out of range for %zu elements", std::size_t(i), _size), _data[0]);
+		DEATH_DEBUG_ASSERT(std::size_t(i) < _size, ("Index {} out of range for {} elements", std::size_t(i), _size), _data[0]);
 		return _data[i];
 	}
 #endif

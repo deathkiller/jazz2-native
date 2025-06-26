@@ -27,7 +27,7 @@ namespace nCine
 	/*std::unique_ptr<IAudioLoader> IAudioLoader::createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
 		// TODO: path cannot be null, otherwise InvalidAudioLoader will be created
-		//LOGI("Loading from memory: 0x%lx, %lu bytes", bufferPtr, bufferSize);
+		//LOGI("Loading from memory: 0x{:x}, {} bytes", bufferPtr, bufferSize);
 		return createLoader(fs::CreateFromMemory(bufferPtr, bufferSize), { });
 	}*/
 
@@ -59,7 +59,7 @@ namespace nCine
 		}
 #	endif
 
-		LOGF("Unknown extension: %s", extension.data());
+		LOGF("Unknown extension: {}", extension);
 #endif
 		return std::make_unique<InvalidAudioLoader>();
 	}

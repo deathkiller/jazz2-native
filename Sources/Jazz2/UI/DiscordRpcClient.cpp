@@ -252,7 +252,7 @@ namespace Jazz2::UI
 
 	void DiscordRpcClient::ProcessInboundFrame(const char* json, std::size_t length, std::size_t allocated)
 	{
-		LOGD("%s", String(json, length).data());
+		LOGD("{}", StringView(json, length));
 
 		Json::CharReaderBuilder builder;
 		auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
@@ -267,7 +267,7 @@ namespace Jazz2::UI
 					if (user.isObject() && user["id"].get(userId) == Json::SUCCESS && user["global_name"].get(userGlobalName) == Json::SUCCESS) {
 						_userId = stou64(userId.data(), userId.size());
 						_userDisplayName = userGlobalName;
-						LOGD("Connected to Discord as user \"%s\" (%llu)", _userDisplayName.data(), _userId);
+						LOGD("Connected to Discord as user \"{}\" ({})", _userDisplayName, _userId);
 					}
 				}
 			}
@@ -358,7 +358,7 @@ namespace Jazz2::UI
 						}
 
 						//if (bytesRead > frameSize + 8) {
-						//	LOGW("Partial read (%i bytes left)", bytesRead - (frameSize + 8));
+						//	LOGW("Partial read ({} bytes left)", bytesRead - (frameSize + 8));
 						//}
 					}
 
@@ -387,7 +387,7 @@ namespace Jazz2::UI
 		while (_this->_sockFd >= 0) {
 			std::int32_t bytesRead = ::read(_this->_sockFd, buffer, sizeof(buffer));
 			if (bytesRead <= 0) {
-				LOGE("Failed to read from socket: %i", bytesRead);
+				LOGE("Failed to read from socket: {}", bytesRead);
 				std::int32_t sockFd = _this->_sockFd.exchange(-1);
 				if (sockFd >= 0) {
 					::close(sockFd);
@@ -421,7 +421,7 @@ namespace Jazz2::UI
 			}
 
 			//if (bytesRead > frameSize + 8) {
-			//	LOGW("Partial read (%i bytes left)", bytesRead - (frameSize + 8));
+			//	LOGW("Partial read ({} bytes left)", bytesRead - (frameSize + 8));
 			//}
 		}
 #endif

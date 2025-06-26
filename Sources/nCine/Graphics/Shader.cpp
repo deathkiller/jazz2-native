@@ -94,7 +94,7 @@ namespace nCine
 			: loadFromFile(shaderName, introspection, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
-			LOGE("Shader \"%s\" cannot be loaded", shaderName);
+			LOGE("Shader \"{}\" cannot be loaded", shaderName);
 		}
 	}
 
@@ -106,7 +106,7 @@ namespace nCine
 			: loadFromFile(shaderName, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
-			LOGE("Shader \"%s\" cannot be loaded", shaderName);
+			LOGE("Shader \"{}\" cannot be loaded", shaderName);
 		}
 	}
 
@@ -123,7 +123,7 @@ namespace nCine
 			: loadFromFile(shaderName, introspection, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
-			LOGE("Shader \"%s\" cannot be loaded", shaderName);
+			LOGE("Shader \"{}\" cannot be loaded", shaderName);
 		}
 	}
 
@@ -135,7 +135,7 @@ namespace nCine
 			: loadFromFile(shaderName, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
-			LOGE("Shader \"%s\" cannot be loaded", shaderName);
+			LOGE("Shader \"{}\" cannot be loaded", shaderName);
 		}
 	}
 
@@ -152,7 +152,7 @@ namespace nCine
 			: loadFromFile(shaderName, introspection, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
-			LOGE("Shader \"%s\" cannot be loaded", shaderName);
+			LOGE("Shader \"{}\" cannot be loaded", shaderName);
 		}
 	}
 
@@ -164,7 +164,7 @@ namespace nCine
 			: loadFromFile(shaderName, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
-			LOGE("Shader \"%s\" cannot be loaded", shaderName);
+			LOGE("Shader \"{}\" cannot be loaded", shaderName);
 		}
 	}
 

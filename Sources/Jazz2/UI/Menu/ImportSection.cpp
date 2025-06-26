@@ -135,7 +135,7 @@ namespace Jazz2::UI::Menu
 					name[32] = '\0';
 					file.Read(name, 32);
 
-					LOGD("Found level: %s", name);
+					LOGD("Found level: {}", name);
 					_foundLevels.emplace(name, true);
 				}
 			}

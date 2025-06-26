@@ -19,13 +19,13 @@ namespace nCine
 #endif
 	{
 		device_ = alcOpenDevice(nullptr);
-		RETURN_ASSERT_MSG(device_ != nullptr, "alcOpenDevice() failed with error 0x%x", alGetError());
+		RETURN_ASSERT_MSG(device_ != nullptr, "alcOpenDevice() failed with error 0x{:x}", alGetError());
 		deviceName_ = alcGetString(device_, ALC_DEVICE_SPECIFIER);
 
 		context_ = alcCreateContext(device_, nullptr);
 		if (context_ == nullptr) {
 			alcCloseDevice(device_);
-			RETURN_MSG("alcCreateContext() failed with error 0x%x", alGetError());
+			RETURN_MSG("alcCreateContext() failed with error 0x{:x}", alGetError());
 		}
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -40,14 +40,14 @@ namespace nCine
 		if (!alcMakeContextCurrent(context_)) {
 			alcDestroyContext(context_);
 			alcCloseDevice(device_);
-			RETURN_MSG("alcMakeContextCurrent() failed with error 0x%x", alGetError());
+			RETURN_MSG("alcMakeContextCurrent() failed with error 0x{:x}", alGetError());
 		}
 
 		alGetError();
 		alGenSources(MaxSources, sources_);
 		const ALenum error = alGetError();
 		if (error != AL_NO_ERROR) {
-			LOGE("alGenSources() failed with error 0x%x", error);
+			LOGE("alGenSources() failed with error 0x{:x}", error);
 		} else {
 			for (std::int32_t i = MaxSources - 1; i >= 0; i--) {
 				sourcePool_.push_back(sources_[i]);
@@ -86,7 +86,7 @@ namespace nCine
 		alcDestroyContext(context_);
 
 		if (!alcCloseDevice(device_)) {
-			LOGW("alcCloseDevice() failed with error 0x%x", alGetError());
+			LOGW("alcCloseDevice() failed with error 0x{:x}", alGetError());
 		}
 	}
 
@@ -295,17 +295,17 @@ namespace nCine
 			if (FAILED(hr)) {
 				hr = ::CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr,  CLSCTX_ALL, IID_PPV_ARGS(&pEnumerator_));
 				if (FAILED(hr)) {
-					LOGE("CoCreateInstance() failed with error 0x%08x", hr);
+					LOGE("CoCreateInstance() failed with error 0x{:.8x}", hr);
 				}
 			}
 		} else if (FAILED(hr)) {
-			LOGE("CoCreateInstance() failed with error 0x%08x", hr);
+			LOGE("CoCreateInstance() failed with error 0x{:.8x}", hr);
 		}
 
 		if (pEnumerator_ != nullptr) {
 			HRESULT hr = pEnumerator_->RegisterEndpointNotificationCallback(this);
 			if (FAILED(hr)) {
-				LOGE("RegisterEndpointNotificationCallback() failed with error 0x%08x", hr);
+				LOGE("RegisterEndpointNotificationCallback() failed with error 0x{:.8x}", hr);
 			}
 		}
 	}

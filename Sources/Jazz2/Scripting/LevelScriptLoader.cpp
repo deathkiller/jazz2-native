@@ -27,7 +27,7 @@
 		do {																											\
 			std::int32_t column = 0; const char* sectionName = nullptr;													\
 			std::int32_t line = ctx->GetExceptionLineNumber(&column, &sectionName);										\
-			LOGE("%s:%i(%i) ‡ An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",			\
+			LOGE("{}:{}({}) ‡ An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",			\
 				sectionName, line, column, ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());	\
 		} while (false)
 #else
@@ -37,7 +37,7 @@
 // Without namespace for shorter log messages
 static void asScript(String& msg)
 {
-	LOGI("%s", msg.data());
+	LOGI("{}", msg.data());
 }
 
 namespace Jazz2::Scripting
@@ -346,7 +346,7 @@ namespace Jazz2::Scripting
 			if (it != _playerBackingStore.end()) {
 				if (it->second->_timerState == 1) { // STARTED
 					it->second->_timerLeft -= timeMult;
-					LOGD("Player timer decremented (%f)", it->second->_timerLeft);
+					LOGD("Player timer decremented ({})", it->second->_timerLeft);
 					if (it->second->_timerLeft <= 0.0f) {
 						it->second->_timerState = 0; // STOPPED
 						asIScriptFunction* func = (asIScriptFunction*)it->second->_timerCallback;
@@ -440,7 +440,7 @@ namespace Jazz2::Scripting
 			return;
 		}
 
-		LOGW("Callback function \"%s\" was not found in the script. Please correct the code and try again.", funcName);
+		LOGW("Callback function \"{}\" was not found in the script. Please correct the code and try again.", funcName);
 	}
 
 	bool LevelScriptLoader::OnDraw(UI::HUD* hud, Actors::Player* player, const Rectf& view, DrawType type)

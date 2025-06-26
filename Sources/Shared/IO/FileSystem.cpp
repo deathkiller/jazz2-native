@@ -1805,7 +1805,7 @@ namespace Death { namespace IO {
 						DWORD error = ::GetLastError();
 						if (error != ERROR_ALREADY_EXISTS) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-							LOGW("Cannot create directory \"%s\" with error 0x%08x%s", Utf8::FromUtf16(fullPath).data(), error, __GetWin32ErrorSuffix(error));
+							LOGW("Cannot create directory \"{}\" with error 0x{:.8x}{}", Utf8::FromUtf16(fullPath), error, __GetWin32ErrorSuffix(error));
 #	endif
 							return false;
 						}
@@ -1827,7 +1827,7 @@ namespace Death { namespace IO {
 				DWORD error = ::GetLastError();
 				if (error != ERROR_ALREADY_EXISTS) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-					LOGW("Cannot create directory \"%s\" with error 0x%08x%s", Utf8::FromUtf16(fullPath).data(), error, __GetWin32ErrorSuffix(error));
+					LOGW("Cannot create directory \"{}\" with error 0x{:.8x}{}", Utf8::FromUtf16(fullPath), error, __GetWin32ErrorSuffix(error));
 #	endif
 					return false;
 				}
@@ -1860,7 +1860,7 @@ namespace Death { namespace IO {
 					if (::lstat(fullPath.data(), &sb) != 0) {
 						if (::mkdir(fullPath.data(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-							LOGW("Cannot create directory \"%s\" with error %i%s", fullPath.data(), errno, __GetUnixErrorSuffix(errno));
+							LOGW("Cannot create directory \"{}\" with error {}{}", fullPath, errno, __GetUnixErrorSuffix(errno));
 #	endif
 							return false;
 						}
@@ -1876,7 +1876,7 @@ namespace Death { namespace IO {
 		if (!slashWasLast) {
 			if (::mkdir(fullPath.data(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0 && errno != EEXIST) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGW("Cannot create directory \"%s\" with error %i%s", fullPath.data(), errno, __GetUnixErrorSuffix(errno));
+				LOGW("Cannot create directory \"{}\" with error {}{}", fullPath, errno, __GetUnixErrorSuffix(errno));
 #	endif
 				return false;
 			}
@@ -2481,7 +2481,7 @@ namespace Death { namespace IO {
 		std::int32_t result = __asyncjs__MountAsPersistent(path.data(), path.size());
 		if (!result) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGW("MountAsPersistent(\"%s\") failed", String::nullTerminatedView(path).data());
+			LOGW("MountAsPersistent(\"{}\") failed", path);
 #	endif
 			return false;
 		}
@@ -2537,7 +2537,7 @@ namespace Death { namespace IO {
 				break;
 			default:
 #		if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Cannot open file \"%s\" because of invalid mode (%u)", String::nullTerminatedView(path).data(), (std::uint32_t)mode);
+				LOGE("Cannot open file \"{}\" because of invalid mode ({})", path, std::uint32_t(mode));
 #		endif
 				return {};
 		}
@@ -2545,7 +2545,7 @@ namespace Death { namespace IO {
 		const std::int32_t fd = ::open(String::nullTerminatedView(path).data(), flags);
 		if (fd == -1) {
 #		if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Cannot open file \"%s\" with error %i%s", String::nullTerminatedView(path).data(), errno, __GetUnixErrorSuffix(errno));
+			LOGE("Cannot open file \"{}\" with error {}{}", path, errno, __GetUnixErrorSuffix(errno));
 #		endif
 			return {};
 		}
@@ -2554,7 +2554,7 @@ namespace Death { namespace IO {
 		struct stat sb;
 		if (::fstat(fd, &sb) == 0 && S_ISDIR(sb.st_mode)) {
 #		if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Cannot open directory \"%s\" as memory-mapped file", String::nullTerminatedView(path).data());
+			LOGE("Cannot open directory \"{}\" as memory-mapped file", path);
 #		endif
 			::close(fd);
 			return {};
@@ -2592,7 +2592,7 @@ namespace Death { namespace IO {
 				break;
 			default:
 #		if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Cannot open file \"%s\" because of invalid mode (%u)", String::nullTerminatedView(path).data(), (std::uint32_t)mode);
+				LOGE("Cannot open file \"{}\" because of invalid mode ({})", path, std::uint32_t(mode));
 #		endif
 				return {};
 		}
@@ -2601,7 +2601,7 @@ namespace Death { namespace IO {
 		if (hFile == INVALID_HANDLE_VALUE) {
 #		if defined(DEATH_TRACE_VERBOSE_IO)
 			DWORD error = ::GetLastError();
-			LOGE("Cannot open file \"%s\" with error 0x%08x%s", String::nullTerminatedView(path).data(), error, __GetWin32ErrorSuffix(error));
+			LOGE("Cannot open file \"{}\" with error 0x{:.8x}{}", path, error, __GetWin32ErrorSuffix(error));
 #		endif
 			return {};
 		}
@@ -2619,7 +2619,7 @@ namespace Death { namespace IO {
 			if (!(hMap = ::CreateFileMappingW(hFile, nullptr, protect, 0, 0, nullptr))) {
 #		if defined(DEATH_TRACE_VERBOSE_IO)
 				DWORD error = ::GetLastError();
-				LOGE("Cannot open file \"%s\" with error 0x%08x%s", String::nullTerminatedView(path).data(), error, __GetWin32ErrorSuffix(error));
+				LOGE("Cannot open file \"{}\" with error 0x{:.8x}{}", path, error, __GetWin32ErrorSuffix(error));
 #		endif
 				::CloseHandle(hFile);
 				return {};
@@ -2628,7 +2628,7 @@ namespace Death { namespace IO {
 			if (!(data = reinterpret_cast<char*>(::MapViewOfFile(hMap, mapDesiredAccess, 0, 0, 0)))) {
 #		if defined(DEATH_TRACE_VERBOSE_IO)
 				DWORD error = ::GetLastError();
-				LOGE("Cannot open file \"%s\" with error 0x%08x%s", String::nullTerminatedView(path).data(), error, __GetWin32ErrorSuffix(error));
+				LOGE("Cannot open file \"{}\" with error 0x{:.8x}{}", path, error, __GetWin32ErrorSuffix(error));
 #		endif
 				::CloseHandle(hMap);
 				::CloseHandle(hFile);

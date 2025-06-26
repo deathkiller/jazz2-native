@@ -92,12 +92,12 @@ namespace Death { namespace IO {
 		if (_fileHandle != INVALID_HANDLE_VALUE) {
 			if (::CloseHandle(_fileHandle)) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGB("File \"%s\" closed", _path.data());
+				LOGB("File \"{}\" closed", _path);
 #	endif
 				_fileHandle = INVALID_HANDLE_VALUE;
 			} else {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGW("Cannot close file \"%s\"", _path.data());
+				LOGW("Cannot close file \"{}\"", _path);
 #	endif
 			}
 		}
@@ -106,12 +106,12 @@ namespace Death { namespace IO {
 			const std::int32_t retValue = ::close(_fileDescriptor);
 			if (retValue >= 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGB("File \"%s\" closed", _path.data());
+				LOGB("File \"{}\" closed", _path);
 #	endif
 				_fileDescriptor = -1;
 			} else {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGW("Cannot close file \"%s\"", _path.data());
+				LOGW("Cannot close file \"{}\"", _path);
 #	endif
 			}
 		}
@@ -387,7 +387,7 @@ namespace Death { namespace IO {
 				break;
 			default:
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Cannot open file \"%s\" because of invalid mode (%u)", _path.data(), (std::uint32_t)mode);
+				LOGE("Cannot open file \"{}\" because of invalid mode ({})", _path, std::uint32_t(mode));
 #	endif
 				return;
 		}
@@ -412,7 +412,7 @@ namespace Death { namespace IO {
 		if (_fileHandle == INVALID_HANDLE_VALUE) {
 			DWORD error = ::GetLastError();
 #		if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Cannot open file \"%s\" with error 0x%08x%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+			LOGE("Cannot open file \"{}\" with error 0x{:.8x}{}", _path, error, __GetWin32ErrorSuffix(error));
 #		endif
 			return;
 		}
@@ -435,7 +435,7 @@ namespace Death { namespace IO {
 				break;
 			default:
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Cannot open file \"%s\" because of invalid mode (%u)", _path.data(), (std::uint32_t)mode);
+				LOGE("Cannot open file \"{}\" because of invalid mode ({})", _path, std::uint32_t(mode));
 #	endif
 				return;
 		}
@@ -447,7 +447,7 @@ namespace Death { namespace IO {
 		_fileDescriptor = ::open(_path.data(), openFlags, defaultPermissions);
 		if (_fileDescriptor < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Cannot open file \"%s\" with error %i%s", _path.data(), errno, __GetUnixErrorSuffix(errno));
+			LOGE("Cannot open file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
 #	endif
 			return;
 		}
@@ -467,9 +467,9 @@ namespace Death { namespace IO {
 
 #if defined(DEATH_TRACE_VERBOSE_IO)
 		switch (mode & FileAccess::ReadWrite) {
-			default: LOGB("File \"%s\" opened", _path.data()); break;
-			case FileAccess::Write: LOGB("File \"%s\" opened for write", _path.data()); break;
-			case FileAccess::ReadWrite: LOGB("File \"%s\" opened for read+write", _path.data()); break;
+			default: LOGB("File \"{}\" opened", _path); break;
+			case FileAccess::Write: LOGB("File \"{}\" opened for write", _path); break;
+			case FileAccess::ReadWrite: LOGB("File \"{}\" opened for read+write", _path); break;
 		}
 #endif
 	}
@@ -485,7 +485,7 @@ namespace Death { namespace IO {
 			DWORD error = ::GetLastError();
 			if (error != ERROR_BROKEN_PIPE) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Cannot change position in file \"%s\" with error 0x%08x%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+				LOGE("Cannot change position in file \"{}\" with error 0x{:.8x}{}", _path, error, __GetWin32ErrorSuffix(error));
 #	endif
 			}
 			return Stream::OutOfRange;
@@ -497,7 +497,7 @@ namespace Death { namespace IO {
 		std::int64_t newPos = ::lseek(_fileDescriptor, offset, static_cast<std::int32_t>(origin));
 		if (newPos == -1) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Cannot change position in file \"%s\" with error %i%s", _path.data(), errno, __GetUnixErrorSuffix(errno));
+			LOGE("Cannot change position in file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
 #	endif
 			return Stream::OutOfRange;
 		}
@@ -514,7 +514,7 @@ namespace Death { namespace IO {
 			DWORD error = ::GetLastError();
 			if (error != ERROR_BROKEN_PIPE) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Cannot read from file \"%s\" with error 0x%08x%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+				LOGE("Cannot read from file \"{}\" with error 0x{:.8x}{}", _path, error, __GetWin32ErrorSuffix(error));
 #	endif
 			}
 			return -1;
@@ -526,7 +526,7 @@ namespace Death { namespace IO {
 		std::int32_t bytesRead = static_cast<std::int32_t>(::read(_fileDescriptor, destination, bytesToRead));
 		if (bytesRead < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Cannot read from file \"%s\" with error %i%s", _path.data(), errno, __GetUnixErrorSuffix(errno));
+			LOGE("Cannot read from file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
 #	endif
 			return -1;
 		}
@@ -543,7 +543,7 @@ namespace Death { namespace IO {
 			DWORD error = ::GetLastError();
 			if (error != ERROR_NO_DATA) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Cannot write to file \"%s\" with error 0x%08x%s", _path.data(), error, __GetWin32ErrorSuffix(error));
+				LOGE("Cannot write to file \"{}\" with error 0x{:.8x}{}", _path, error, __GetWin32ErrorSuffix(error));
 #	endif
 			}
 			return -1;
@@ -555,7 +555,7 @@ namespace Death { namespace IO {
 		std::int32_t bytesWritten = static_cast<std::int32_t>(::write(_fileDescriptor, source, bytesToWrite));
 		if (bytesWritten < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Cannot write to file \"%s\" with error %i%s", _path.data(), errno, __GetUnixErrorSuffix(errno));
+			LOGE("Cannot write to file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
 #	endif
 			return -1;
 		}

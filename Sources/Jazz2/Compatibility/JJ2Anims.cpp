@@ -52,7 +52,7 @@ namespace Jazz2::Compatibility
 		for (std::int32_t i = 0; i < setCount; i++) {
 			if (s->GetPosition() >= s->GetSize()) {
 				isStreamComplete = false;
-				LOGW("Stream should contain %i sets, but found %i sets instead!", setCount, i);
+				LOGW("Stream should contain {} sets, but found {} sets instead!", setCount, i);
 				break;
 			}
 
@@ -76,7 +76,7 @@ namespace Jazz2::Compatibility
 			JJ2Block sampleDataBlock(s, sampleDataBlockLenC, sampleDataBlockLenU);
 
 			if (magicANIM != 0x4D494E41) {
-				LOGD("Header for set %i is incorrect (bad magic value), skipping", i);
+				LOGD("Header for set {} is incorrect (bad magic value), skipping", i);
 				continue;
 			}
 
@@ -243,7 +243,7 @@ namespace Jazz2::Compatibility
 
 				if (totalSize > chunkSize + 12) {
 					// Sample data is probably aligned to X bytes since the next sample doesn't always appear right after the first ends.
-					LOGW("Adjusting read offset of sample %i in set %i by %i bytes.", j, i, (totalSize - chunkSize - 12));
+					LOGW("Adjusting read offset of sample {} in set {} by {} bytes.", j, i, (totalSize - chunkSize - 12));
 
 					sampleDataBlock.DiscardBytes(totalSize - chunkSize - 12);
 				}
@@ -283,7 +283,7 @@ namespace Jazz2::Compatibility
 			}
 		} else {
 			version = JJ2Version::Unknown;
-			LOGE("Could not determine the version, header size: %u bytes", headerLen);
+			LOGE("Could not determine the version, header size: {} bytes", headerLen);
 		}
 
 		ImportAnimations(pakWriter, version, anims);
@@ -337,24 +337,24 @@ namespace Jazz2::Compatibility
 			// TODO: Hardcoded name
 			bool applyToasterPowerUpFix = (entry->Category == "Object"_s && entry->Name == "powerup_upgrade_toaster"_s);
 			if (applyToasterPowerUpFix) {
-				LOGI("Applying \"Toaster PowerUp\" palette fix to %i:%u", anim.Set, anim.Anim);
+				LOGI("Applying \"Toaster PowerUp\" palette fix to {}:{}", anim.Set, anim.Anim);
 			}
 
 			bool applyVineFix = (entry->Category == "Object"_s && entry->Name == "vine"_s);
 			if (applyVineFix) {
-				LOGI("Applying \"Vine\" palette fix to %i:%u", anim.Set, anim.Anim);
+				LOGI("Applying \"Vine\" palette fix to {}:{}", anim.Set, anim.Anim);
 			}
 
 			bool applyFlyCarrotFix = (entry->Category == "Pickup"_s && entry->Name == "carrot_fly"_s);
 			if (applyFlyCarrotFix) {
 				// This image has 4 wrong pixels that should be transparent
-				LOGI("Applying \"Fly Carrot\" image fix to %i:%u", anim.Set, anim.Anim);
+				LOGI("Applying \"Fly Carrot\" image fix to {}:{}", anim.Set, anim.Anim);
 			}
 
 			bool playerFlareFix = ((entry->Category == "Jazz"_s || entry->Category == "Spaz"_s) && (entry->Name == "shoot_ver"_s || entry->Name == "vine_shoot_up"_s));
 			if (playerFlareFix) {
 				// This image has already applied weapon flare, remove it
-				LOGI("Applying \"Player Flare\" image fix to %i:%u", anim.Set, anim.Anim);
+				LOGI("Applying \"Player Flare\" image fix to {}:{}", anim.Set, anim.Anim);
 			}
 
 			String filename;
@@ -435,7 +435,7 @@ namespace Jazz2::Compatibility
 
 			bool applyLoriLiftFix = (entry->Category == "Lori"_s && (entry->Name == "lift"_s || entry->Name == "lift_start"_s || entry->Name == "lift_end"_s));
 			if (applyLoriLiftFix) {
-				LOGI("Applying \"Lori\" hotspot fix to %i:%u", anim.Set, anim.Anim);
+				LOGI("Applying \"Lori\" hotspot fix to {}:{}", anim.Set, anim.Anim);
 				anim.NormalizedHotspotX = 20;
 				anim.NormalizedHotspotY = 4;
 			}

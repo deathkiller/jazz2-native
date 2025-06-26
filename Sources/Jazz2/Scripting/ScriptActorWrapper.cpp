@@ -243,7 +243,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		std::int32_t r = ctx->Execute();
 		bool result;
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+			LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
 				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 			result = true;
 		} else {
@@ -270,7 +270,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		std::int32_t r = ctx->Execute();
 		bool result;
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+			LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
 				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 			result = true;
 		} else {
@@ -295,7 +295,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetObject(_obj);
 		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+			LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
 				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
@@ -321,7 +321,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		std::int32_t r = ctx->Execute();
 		bool result;
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+			LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
 				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 			result = true;
 		} else {
@@ -347,7 +347,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetArgFloat(0, timeMult);
 		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+			LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
 				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
@@ -369,7 +369,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetObject(_obj);
 		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+			LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
 				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
@@ -392,7 +392,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 					std::int32_t r = ctx->Execute();
 					bool result;
 					if (r == asEXECUTION_EXCEPTION) {
-						LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+						LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
 							ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 						result = true;
 					} else {
@@ -421,7 +421,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 					std::int32_t r = ctx->Execute();
 					bool result;
 					if (r == asEXECUTION_EXCEPTION) {
-						LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+						LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
 							ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 						result = true;
 					} else {
@@ -462,7 +462,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetArgFloat(0, timeMult);
 		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+			LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
 				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
@@ -483,7 +483,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetArgFloat(0, timeMult);
 		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+			LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
 				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
@@ -504,7 +504,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetArgFloat(0, timeMult);
 		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+			LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
 				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
@@ -524,7 +524,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetObject(_obj);
 		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+			LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
 				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
@@ -547,7 +547,7 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		ctx->SetObject(_obj);
 		std::int32_t r = ctx->Execute();
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.",
+			LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
 				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 		}
 
@@ -682,7 +682,8 @@ shared abstract class CollectibleBase : )" AsClassName R"(
 		std::int32_t r = ctx->Execute();
 		bool result;
 		if (r == asEXECUTION_EXCEPTION) {
-			LOGE("An exception \"%s\" occurred in \"%s\". Please correct the code and try again.", ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
+			LOGE("An exception \"{}\" occurred in \"{}\". Please correct the code and try again.",
+				ctx->GetExceptionString(), ctx->GetExceptionFunction()->GetDeclaration());
 			result = true;
 		} else {
 			result = (ctx->GetReturnByte() != 0);

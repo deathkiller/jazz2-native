@@ -62,13 +62,13 @@ namespace nCine
 	/*std::unique_ptr<ITextureLoader> ITextureLoader::createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
 	{
 		// TODO: path cannot be null, otherwise InvalidAudioLoader will be created
-		//LOGI("Loading from memory: 0x%lx, %lu bytes", bufferPtr, bufferSize);
+		//LOGI("Loading from memory: 0x{:x}, {} bytes", bufferPtr, bufferSize);
 		return createLoader(fs::CreateFromMemory(bufferPtr, bufferSize), { });
 	}*/
 
 	std::unique_ptr<ITextureLoader> ITextureLoader::createFromFile(const StringView path)
 	{
-		//LOGD("Loading from file \"%s\"", path.data());
+		//LOGD("Loading from file \"{}\"", path);
 		return createLoader(fs::Open(path, FileAccess::Read), path);
 	}
 
@@ -103,7 +103,7 @@ namespace nCine
 		}
 #endif
 
-		LOGF("Unknown extension: %s", extension.data());
+		LOGF("Unknown extension: {}", extension);
 		fileHandle.reset(nullptr);
 		return std::make_unique<InvalidTextureLoader>(std::move(fileHandle));
 	}

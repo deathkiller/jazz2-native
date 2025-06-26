@@ -19,7 +19,7 @@ namespace Death { namespace Utf8 {
 
 	Containers::Pair<char32_t, std::size_t> NextChar(const Containers::ArrayView<const char> text, std::size_t cursor)
 	{
-		DEATH_DEBUG_ASSERT(cursor < text.size(), ("Expected cursor to be less than %zu but got %zu", text.size(), cursor), {});
+		DEATH_DEBUG_ASSERT(cursor < text.size(), ("Expected cursor to be less than {} but got {}", text.size(), cursor), {});
 
 		std::uint32_t character = text[cursor];
 		std::size_t end = cursor;
@@ -61,7 +61,7 @@ namespace Death { namespace Utf8 {
 
 	Containers::Pair<char32_t, std::size_t> PrevChar(const Containers::ArrayView<const char> text, std::size_t cursor)
 	{
-		DEATH_DEBUG_ASSERT(cursor > 0 && cursor <= text.size(), ("Expected cursor to be greater than 0 and less than or equal to %zu but got %zu", text.size(), cursor), {});
+		DEATH_DEBUG_ASSERT(cursor > 0 && cursor <= text.size(), ("Expected cursor to be greater than 0 and less than or equal to {} but got {}", text.size(), cursor), {});
 
 		// If the previous byte is a continuation byte, go back until it isn't, but only up to three
 		// bytes -- any longer sequence of continuation bytes would be invalid anyway

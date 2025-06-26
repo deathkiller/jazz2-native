@@ -20,8 +20,8 @@ namespace nCine
 
 		// Checking for the header presence
 		RETURN_ASSERT_MSG(Stream::Uint32FromBE(header.magicId) == 0x504B4D20 /* "PKM 10" */, "Invalid PKM signature");
-		RETURN_ASSERT_MSG(Stream::Uint16FromBE(header.version) == 0x3130 /* "10" */, "PKM version not supported: 0x%04x", header.version);
-		RETURN_ASSERT_MSG(Stream::Uint16FromBE(header.dataType) == 0, "PKM data type not supported: 0x%04x", header.dataType);
+		RETURN_ASSERT_MSG(Stream::Uint16FromBE(header.version) == 0x3130 /* "10" */, "PKM version not supported: 0x{:.4x}", header.version);
+		RETURN_ASSERT_MSG(Stream::Uint16FromBE(header.dataType) == 0, "PKM data type not supported: 0x{:.4x}", header.dataType);
 
 		headerSize_ = 16;
 		width_ = Stream::Uint16FromBE(header.width);
@@ -30,7 +30,7 @@ namespace nCine
 		const int extWidth = Stream::Uint16FromBE(header.extendedWidth);
 		const int extHeight = Stream::Uint16FromBE(header.extendedHeight);
 
-		LOGI("Header found: w:%d h:%d, xw:%d xh:%d", width_, height_, extWidth, extHeight);
+		LOGI("Header found: w:{} h:{}, xw:{} xh:{}", width_, height_, extWidth, extHeight);
 
 		loadPixels(GL_ETC1_RGB8_OES);
 		hasLoaded_ = true;

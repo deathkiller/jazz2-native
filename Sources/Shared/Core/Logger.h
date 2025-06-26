@@ -79,9 +79,6 @@ namespace Death { namespace Trace {
 
 	namespace Implementation
 	{
-		/** @brief Maximum length of single message */
-		static constexpr std::uint32_t MaxMessageLength = 8192;
-
 		DEATH_ALWAYS_INLINE std::uint32_t GetNativeThreadId() noexcept
 		{
 #	if defined(DEATH_TARGET_CYGWIN)
@@ -478,10 +475,10 @@ namespace Death { namespace Trace {
 			}
 #	endif
 
-			static std::byte* alignPointer(void* pointer, size_t alignment) noexcept
+			static std::byte* alignPointer(void* pointer, std::size_t alignment) noexcept
 			{
 				DEATH_DEBUG_ASSERT(IsPowerOfTwo(alignment), "alignment must be a power of two", reinterpret_cast<std::byte*>(pointer));
-				return reinterpret_cast<std::byte*>((reinterpret_cast<uintptr_t>(pointer) + (alignment - 1ul)) &
+				return reinterpret_cast<std::byte*>((reinterpret_cast<std::uintptr_t>(pointer) + (alignment - 1ul)) &
 													~(alignment - 1ul));
 			}
 
@@ -518,7 +515,7 @@ namespace Death { namespace Trace {
 				}
 #		endif
 
-				DEATH_DEBUG_ASSERT(mem != MAP_FAILED, ("mmap() failed with error %i (%s)", errno, strerror(errno)), nullptr);
+				DEATH_DEBUG_ASSERT(mem != MAP_FAILED, ("mmap() failed with error {} ({})", errno, strerror(errno)), nullptr);
 
 				// Calculate the aligned address after the metadata
 				std::byte* alignedAddress = alignPointer(static_cast<std::byte*>(mem) + MetadataSize, alignment);
@@ -921,7 +918,7 @@ namespace Death { namespace Trace {
 		};
 
 	public:
-		ThreadContext(Implementation::QueueType queueType, uint32_t initialSpscQueueCapacity, bool hugesPagesEnabled)
+		ThreadContext(Implementation::QueueType queueType, std::uint32_t initialSpscQueueCapacity, bool hugesPagesEnabled)
 			: _threadId(std::to_string(Implementation::GetNativeThreadId())), _transitEventBuffer(Implementation::TransitEventBufferInitialCapacity),
 				_queueType(queueType), _valid{true}, _failureCounter{0}
 		{
@@ -1065,7 +1062,7 @@ namespace Death { namespace Trace {
 		Containers::SmallVector<std::shared_ptr<ThreadContext>, 0> _threadContexts;
 		Threading::Spinlock _spinlock;
 		std::atomic<bool> _newThreadContextFlag{false};
-		std::atomic<uint8_t> _invalidThreadContextCount{0};
+		std::atomic<std::uint8_t> _invalidThreadContextCount{0};
 
 		ThreadContextManager() = default;
 		~ThreadContextManager() = default;
@@ -1074,7 +1071,7 @@ namespace Death { namespace Trace {
 	class ScopedThreadContext
 	{
 	public:
-		ScopedThreadContext(Implementation::QueueType queueType, uint32_t spscQueueCapacity, bool hugePagesEnabled)
+		ScopedThreadContext(Implementation::QueueType queueType, std::uint32_t spscQueueCapacity, bool hugePagesEnabled)
 			: _threadContext(std::make_shared<ThreadContext>(queueType, spscQueueCapacity, hugePagesEnabled))
 		{
 			ThreadContextManager::instance().RegisterThreadContext(_threadContext);
@@ -1159,7 +1156,7 @@ namespace Death { namespace Trace {
 		bool IsAlive() const noexcept;
 #else
 		/** @brief Dispatches the specified entry to all sinks */
-		void DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength, Containers::StringView threadId);
+		void DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength, Containers::StringView threadId);
 		/** @brief Flushes and waits until all prior entries are written to all sinks */
 		void FlushActiveSinks();
 
@@ -1168,7 +1165,7 @@ namespace Death { namespace Trace {
 		/** @brief Writes any stored deferred entries to all sinks asynchronously */
 		void FlushBacktraceAsync();
 		/** @brief Enqueues the specified entry to backtrace storage */
-		void EnqueueEntryToBacktrace(std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength);
+		void EnqueueEntryToBacktrace(std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength);
 #endif
 
 		/** @brief Returns minimum trace level to trigger automatic flushing of deferred entries */
@@ -1195,7 +1192,7 @@ namespace Death { namespace Trace {
 		void CleanUpBeforeExit();
 		void UpdateActiveThreadContextsCache();
 		void CleanUpInvalidatedThreadContexts();
-		bool PopulateTransitEventFromThreadQueue(const std::byte*& readPos, ThreadContext* threadContext, uint64_t tsNow);
+		bool PopulateTransitEventFromThreadQueue(const std::byte*& readPos, ThreadContext* threadContext, std::uint64_t tsNow);
 
 		const std::byte* ReadUnboundedThreadQueue(Implementation::UnboundedSPSCQueue& frontendQueue, ThreadContext* threadContext) const
 		{
@@ -1287,7 +1284,7 @@ namespace Death { namespace Trace {
 		void DetachSink(ITraceSink* sink);
 
 		/** @brief Writes the specified entry to all sinks */
-		bool Write(TraceLevel level, const char* functionName, const char* fmt, va_list args);
+		bool Write(TraceLevel level, const char* functionName, const char* message, std::uint32_t messageLength);
 		/** @brief Flushes and waits until all prior entries are written to all sinks */
 		void Flush(std::uint32_t sleepDurationNs = 100);
 
@@ -1307,7 +1304,7 @@ namespace Death { namespace Trace {
 		std::byte* PrepareWriteBuffer(std::size_t totalSize);
 #endif
 
-		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::int32_t contentLength);
+		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength);
 	};
 
 }}

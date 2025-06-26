@@ -144,14 +144,14 @@ namespace Jazz2::Multiplayer
 			if (pair.second->RemotePeer) {
 				auto address = NetworkManagerBase::AddressToString(pair.second->RemotePeer);
 				if (_serverConfig->BannedIPAddresses.contains(address)) {
-					LOGI("[MP] Peer kicked \"%s\" (%s): Banned by IP address", pair.second->PlayerName.data(), address.data());
+					LOGI("[MP] Peer kicked \"{}\" ({}): Banned by IP address", pair.second->PlayerName, address);
 					Kick(pair.second->RemotePeer, Reason::Banned);
 					continue;
 				}
 
 				auto uniquePlayerId = UuidToString(pair.second->UniquePlayerID);
 				if (_serverConfig->BannedUniquePlayerIDs.contains(uniquePlayerId)) {
-					LOGI("[MP] Peer kicked \"%s\" (%s): Banned by unique player ID", pair.second->PlayerName.data(), address.data());
+					LOGI("[MP] Peer kicked \"{}\" ({}): Banned by unique player ID", pair.second->PlayerName, address);
 					Kick(pair.second->RemotePeer, Reason::Banned);
 					continue;
 				}
@@ -218,7 +218,7 @@ namespace Jazz2::Multiplayer
 			return {};
 		}
 
-		LOGW("[MP] Overriding path \"%s\" to \"%s\"", path.data(), fullPath.data());
+		LOGW("[MP] Overriding path \"{}\" to \"{}\"", path, fullPath);
 		return fullPath;
 	}
 
@@ -244,9 +244,9 @@ namespace Jazz2::Multiplayer
 			Json::Value doc; std::string errors;
 			if (reader->parse(buffer.get(), buffer.get() + fileSize, &doc, &errors)) {
 				if (level == 0) {
-					LOGI("Loaded configuration from \"%s\"", configPath.data());
+					LOGI("Loaded configuration from \"{}\"", configPath);
 				} else {
-					LOGI("Loaded configuration from \"%s\" because of $include directive", configPath.data());
+					LOGI("Loaded configuration from \"{}\" because of $include directive", configPath);
 				}
 
 				std::string_view includeFile;
@@ -266,10 +266,10 @@ namespace Jazz2::Multiplayer
 						StringView address; std::uint16_t port;
 						if (!TrySplitAddressAndPort(serverConfig.ServerAddressOverride, address, port) ||
 							(!IsAddressValid(address) && !IsDomainValid(address))) {
-							LOGW("Specified server address override \"%s\" is invalid, ignoring", serverConfig.ServerAddressOverride.data());
+							LOGW("Specified server address override \"{}\" is invalid, ignoring", serverConfig.ServerAddressOverride);
 							serverConfig.ServerAddressOverride = {};
 						} else {
-							LOGI("Using server address override \"%s\"", serverConfig.ServerAddressOverride.data());
+							LOGI("Using server address override \"{}\"", serverConfig.ServerAddressOverride);
 						}
 					}
 				}
@@ -514,10 +514,10 @@ namespace Jazz2::Multiplayer
 					serverConfig.PlaylistIndex = std::uint32_t(playlistIndex);
 				}
 			} else {
-				LOGE("Configuration from \"%s\" cannot be parsed: %s", configPath.data(), errors.c_str());
+				LOGE("Configuration from \"{}\" cannot be parsed: {}", configPath, errors.c_str());
 			}
 		} else {
-			LOGE("Configuration file \"%s\" cannot be opened", configPath.data());
+			LOGE("Configuration file \"{}\" cannot be opened", configPath);
 		}
 	}
 
@@ -611,7 +611,7 @@ namespace Jazz2::Multiplayer
 		if (isListening) {
 			auto address = NetworkManagerBase::AddressToString(peer);
 			if (_serverConfig->BannedIPAddresses.contains(address)) {
-				LOGI("[MP] Peer kicked \"<unknown>\" (%s): Banned by IP address", address.data());
+				LOGI("[MP] Peer kicked \"<unknown>\" ({}): Banned by IP address", address);
 				return Reason::Banned;
 			}
 		}

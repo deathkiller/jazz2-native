@@ -27,9 +27,9 @@ namespace Jazz2::Scripting
 		if (ctx != nullptr) {
 			const char* sectionName;
 			std::int32_t lineNumber = ctx->GetLineNumber(0, nullptr, &sectionName);
-			LOGW("%s (called from \"%s:%i\")", sourceName, sectionName, lineNumber);
+			LOGW("{} (called from \"{}:{}\")", sourceName, sectionName, lineNumber);
 		} else {
-			LOGW("%s", sourceName);
+			LOGW("{}", sourceName);
 		}
 	}
 
@@ -2235,7 +2235,7 @@ namespace Jazz2::Scripting
 			std::regex r(expression.begin(), expression.end(), flags);
 			return std::regex_match(text.begin(), text.end(), r);
 		} catch (std::regex_error& e) {
-			LOGE("Failed to process regular expression: %s", e.what());
+			LOGE("Failed to process regular expression: {}", e.what());
 			return false;
 		}
 	}
@@ -2253,7 +2253,7 @@ namespace Jazz2::Scripting
 			// TODO: Results
 			return success;
 		} catch (std::regex_error& e) {
-			LOGE("Failed to process regular expression: %s", e.what());
+			LOGE("Failed to process regular expression: {}", e.what());
 			return false;
 		}
 	}
@@ -2268,7 +2268,7 @@ namespace Jazz2::Scripting
 			std::regex r(expression.begin(), expression.end(), flags);
 			return std::regex_search(text.begin(), text.end(), r);
 		} catch (std::regex_error& e) {
-			LOGE("Failed to process regular expression: %s", e.what());
+			LOGE("Failed to process regular expression: {}", e.what());
 			return false;
 		}
 	}
@@ -2286,7 +2286,7 @@ namespace Jazz2::Scripting
 			// TODO: Results
 			return success;
 		} catch (std::regex_error& e) {
-			LOGE("Failed to process regular expression: %s", e.what());
+			LOGE("Failed to process regular expression: {}", e.what());
 			return false;
 		}
 	}
@@ -2303,7 +2303,7 @@ namespace Jazz2::Scripting
 			std::string replacementStr = replacement;
 			return std::regex_replace(textStr, r, replacementStr);
 		} catch (std::regex_error& e) {
-			LOGE("Failed to process regular expression: %s", e.what());
+			LOGE("Failed to process regular expression: {}", e.what());
 			return text;
 		}
 	}
@@ -2382,13 +2382,13 @@ namespace Jazz2::Scripting
 		_this->_levelHandler->ShowLevelText(text);
 	}
 	void LevelScriptLoader::jjPrint(const String& text, bool timestamp) {
-		LOGW("%s", text.data());
+		LOGW("{}", text);
 	}
 	void LevelScriptLoader::jjDebug(const String& text, bool timestamp) {
-		LOGD("%s", text.data());
+		LOGD("{}", text);
 	}
 	void LevelScriptLoader::jjChat(const String& text, bool teamchat) {
-		LOGW("%s", text.data());
+		LOGW("{}", text);
 
 		if (text.hasPrefix('/')) {
 			// TODO: Process command
@@ -2400,14 +2400,14 @@ namespace Jazz2::Scripting
 		_this->_levelHandler->_console->WriteLine(UI::MessageLevel::Info, text);
 	}
 	void LevelScriptLoader::jjConsole(const String& text, bool sendToAll) {
-		LOGW("%s", text.data());
+		LOGW("{}", text);
 
 		// TODO: sendToAll
 		auto _this = ScriptLoader::FromActiveContext<LevelScriptLoader>();
 		_this->_levelHandler->_console->WriteLine(UI::MessageLevel::Important, text);
 	}
 	void LevelScriptLoader::jjSpy(const String& text) {
-		LOGD("%s", text.data());
+		LOGD("{}", text);
 	}
 
 	// TODO

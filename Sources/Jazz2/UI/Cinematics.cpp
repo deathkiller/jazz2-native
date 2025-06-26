@@ -148,13 +148,13 @@ namespace Jazz2::UI
 		}
 		
 		RETURNF_ASSERT_MSG(s->GetSize() > 32 && s->GetSize() < 64 * 1024 * 1024,
-			"Cannot load \"%s.j2v\" - unexpected file size", path.data());
+			"Cannot load \"{}.j2v\" - unexpected file size", path);
 
 		// "CineFeed" + file size (uint32_t) + CRC of lowercase filename (uint32_t)
 		std::uint8_t internalBuffer[16];
 		s->Read(internalBuffer, 16);
 		RETURNF_ASSERT_MSG(strncmp((const char*)internalBuffer, "CineFeed", sizeof("CineFeed") - 1) == 0,
-			"Cannot load \"%s.j2v\" - invalid signature", path.data());
+			"Cannot load \"{}.j2v\" - invalid signature", path);
 
 		_width = s->ReadValue<std::uint32_t>();
 		_height = s->ReadValue<std::uint32_t>();
@@ -200,13 +200,13 @@ namespace Jazz2::UI
 		}
 
 		RETURNF_ASSERT_MSG(s->GetSize() > 16 && s->GetSize() < 64 * 1024 * 1024,
-			"Cannot load SFX playlist for \"%s.j2v\" - unexpected file size", path.data());
+			"Cannot load SFX playlist for \"{}.j2v\" - unexpected file size", path);
 
 		std::uint64_t signature = s->ReadValue<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		std::uint16_t version = s->ReadValue<std::uint16_t>();
 		RETURNF_ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::SfxListFile && version <= SfxListVersion,
-			"Cannot load SFX playlist for \"%s.j2v\" - invalid signature", path.data());
+			"Cannot load SFX playlist for \"{}.j2v\" - invalid signature", path);
 
 		std::uint32_t sampleCount = s->ReadValue<std::uint16_t>();
 		for (std::uint32_t i = 0; i < sampleCount; i++) {

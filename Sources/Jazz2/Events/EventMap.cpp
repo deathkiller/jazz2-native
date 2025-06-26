@@ -474,7 +474,7 @@ namespace Jazz2::Events
 	{
 		WarpTarget& target = _warpTargets.emplace_back();
 		target.Id = id;
-		target.Pos = Vector2f(x * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2, y * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2);
+		target.Pos = Vector2f((float)x * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2, (float)y * Tiles::TileSet::DefaultTileSize + Tiles::TileSet::DefaultTileSize / 2);
 	}
 
 	void EventMap::AddSpawnPosition(std::uint8_t typeMask, std::int32_t x, std::int32_t y)
@@ -485,7 +485,7 @@ namespace Jazz2::Events
 
 		SpawnPoint& target = _spawnPoints.emplace_back();
 		target.PlayerTypeMask = typeMask;
-		target.Pos = Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize - 8);
+		target.Pos = Vector2f((float)x * Tiles::TileSet::DefaultTileSize, (float)y * Tiles::TileSet::DefaultTileSize - 8.0f);
 	}
 
 	void EventMap::InitializeFromStream(Stream& src)

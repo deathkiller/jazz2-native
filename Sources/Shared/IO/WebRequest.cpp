@@ -2520,7 +2520,7 @@ namespace Death { namespace IO {
 		{
 			CURLcode res = curl_easy_setopt(handle, option, value);
 			if (res != CURLE_OK) {
-				LOGW("curl_easy_setopt(%d, %lld) failed: %s", std::int32_t(option), value, curl_easy_strerror(res));
+				LOGW("curl_easy_setopt({}, {}) failed: {}", std::int32_t(option), value, curl_easy_strerror(res));
 			}
 		}
 
@@ -2528,7 +2528,7 @@ namespace Death { namespace IO {
 		{
 			CURLcode res = curl_easy_setopt(handle, option, value);
 			if (res != CURLE_OK) {
-				LOGW("curl_easy_setopt(%d, %lx) failed: %s", std::int32_t(option), value, curl_easy_strerror(res));
+				LOGW("curl_easy_setopt({}, {}) failed: {}", std::int32_t(option), value, curl_easy_strerror(res));
 			}
 		}
 
@@ -2536,7 +2536,7 @@ namespace Death { namespace IO {
 		{
 			CURLcode res = curl_easy_setopt(handle, option, value);
 			if (res != CURLE_OK) {
-				LOGW("curl_easy_setopt(%d, %ld) failed: %s", std::int32_t(option), value, curl_easy_strerror(res));
+				LOGW("curl_easy_setopt({}, {}) failed: {}", std::int32_t(option), value, curl_easy_strerror(res));
 			}
 		}
 
@@ -2549,7 +2549,7 @@ namespace Death { namespace IO {
 		{
 			CURLcode res = curl_easy_setopt(handle, option, value);
 			if (res != CURLE_OK) {
-				LOGW("curl_easy_setopt(%d, %p) failed: %s", std::int32_t(option), value, curl_easy_strerror(res));
+				LOGW("curl_easy_setopt({}, {}) failed: {}", std::int32_t(option), value, curl_easy_strerror(res));
 			}
 		}
 
@@ -2563,7 +2563,7 @@ namespace Death { namespace IO {
 		{
 			CURLcode res = curl_easy_setopt(handle, option, value);
 			if (res != CURLE_OK) {
-				LOGW("curl_easy_setopt(%d, \"%s\") failed: %s", std::int32_t(option), value, curl_easy_strerror(res));
+				LOGW("curl_easy_setopt({}, \"{}\") failed: {}", std::int32_t(option), value, curl_easy_strerror(res));
 			}
 		}
 

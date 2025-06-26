@@ -20,7 +20,7 @@ namespace nCine
 		if (!HasReservedPrefix()) {
 			location_ = glGetAttribLocation(program, name_);
 			if (location_ == -1) {
-				LOGW("Attribute location not found for attribute \"%s\" (%u) in shader program %u", name_, index, program);
+				LOGW("Attribute location not found for attribute \"{}\" ({}) in shader program {}", name_, index, program);
 			}
 		}
 		GL_LOG_ERRORS();
@@ -50,7 +50,7 @@ namespace nCine
 			case GL_UNSIGNED_INT_VEC4:
 				return GL_UNSIGNED_INT;
 			default:
-				LOGW("No available case to handle type: %u", type_);
+				LOGW("No available case to handle type: {}", type_);
 				return type_;
 		}
 	}
@@ -84,7 +84,7 @@ namespace nCine
 			case GL_UNSIGNED_INT_VEC4:
 				return 4;
 			default:
-				LOGW("No available case to handle type: %u", type_);
+				LOGW("No available case to handle type: {}", type_);
 				return 0;
 		}
 	}

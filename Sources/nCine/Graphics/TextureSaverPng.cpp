@@ -45,7 +45,7 @@
 //	//FATAL_ASSERT(properties.pixels != nullptr);
 //	//ASSERT(properties.format == Format::RGB8 || properties.format == Format::RGBA8);
 //
-//	LOGI("Saving \"%s\"", fileHandle->filename());
+//	LOGI("Saving \"{}\"", fileHandle->filename());
 //	if (fileHandle->IsValid() == false)
 //		return false;
 //

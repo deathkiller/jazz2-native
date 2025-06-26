@@ -22,7 +22,7 @@ namespace nCine
 		alGenBuffers(NumBuffers, buffersIds_.data());
 		const ALenum error = alGetError();
 		if DEATH_UNLIKELY(error != AL_NO_ERROR) {
-			LOGW("alGenBuffers() failed with error 0x%x", error);
+			LOGW("alGenBuffers() failed with error 0x{:x}", error);
 		}
 		memBuffer_ = std::make_unique<char[]>(BufferSize);
 #endif
@@ -35,7 +35,7 @@ namespace nCine
 #if defined(WITH_AUDIO)
 		const bool hasLoaded = loadFromFile(filename);
 		if (!hasLoaded) {
-			LOGE("Audio file \"%s\" cannot be loaded", String::nullTerminatedView(filename).data());
+			LOGE("Audio file \"{}\" cannot be loaded", filename);
 		}
 #endif
 	}
@@ -193,7 +193,7 @@ namespace nCine
 		} else {
 			bytesPerSample_ = 0;
 			numChannels_ = 0;
-			RETURN_MSG("Audio stream with %i channels is not supported", numChannels_);
+			RETURN_MSG("Audio stream with {} channels is not supported", numChannels_);
 		}
 
 		frequency_ = audioLoader.frequency();

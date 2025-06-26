@@ -174,20 +174,20 @@ namespace Jazz2::Compatibility
 
 		// Try to fix some known bugs in tilesets
 		if (_name == "Castle 1"_s || _name == "Castle 1 Night"_s) {
-			LOGI("Applying \"%s\" tileset mask fix", _name.data());
+			LOGI("Applying \"{}\" tileset mask fix", _name);
 			// Spikes with empty mask
 			auto& spikesWithEmptyMask = _tiles[189];
 			auto& spikesWithCorrectMask = _tiles[184];
 			std::memcpy(spikesWithEmptyMask.Mask, spikesWithCorrectMask.Mask, sizeof(spikesWithEmptyMask.Mask));
 		} else if (_name == "Inferno Night"_s) {
-			LOGI("Applying \"%s\" tileset mask fix", _name.data());
+			LOGI("Applying \"{}\" tileset mask fix", _name);
 			// Solid tiles with empty mask
 			static const std::int32_t SolidTilesWithEmptyMask[] = { 142, 143, 146, 152, 153, 156 };
 			for (std::int32_t tileIdx : SolidTilesWithEmptyMask) {
 				std::memset(_tiles[tileIdx].Mask, 0xFF, sizeof(_tiles[tileIdx].Mask));
 			}
 		} else if (_name == "Town House 1"_s || _name == "Town House 2"_s) {
-			LOGI("Applying \"%s\" tileset mask fix", _name.data());
+			LOGI("Applying \"{}\" tileset mask fix", _name);
 			// Vine/chain with empty mask
 			for (std::int32_t tileIdx = 826; tileIdx <= 829; tileIdx++) {
 				auto& mask = _tiles[tileIdx].Mask;

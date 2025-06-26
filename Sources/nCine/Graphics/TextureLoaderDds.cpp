@@ -52,7 +52,7 @@ namespace nCine
 			const uint32_t fourCC = Stream::Uint32FromLE(header.ddspf.dwFourCC);
 
 			const char* fourCCchars = reinterpret_cast<const char*>(&fourCC);
-			LOGI("FourCC: \"%c%c%c%c\" (0x%x)", fourCCchars[0], fourCCchars[1], fourCCchars[2], fourCCchars[3], fourCC);
+			LOGI("FourCC: \"{:c}{:c}{:c}{:c}\" (0x{:x})", fourCCchars[0], fourCCchars[1], fourCCchars[2], fourCCchars[3], fourCC);
 
 			// Parsing the FourCC format
 			switch (fourCC) {
@@ -80,7 +80,7 @@ namespace nCine
 					break;
 #endif
 				default:
-					RETURNF_MSG("Unsupported FourCC compression code: %u", fourCC);
+					RETURNF_MSG("Unsupported FourCC compression code: {}", fourCC);
 					break;
 			}
 
@@ -95,7 +95,7 @@ namespace nCine
 			const uint32_t blueMask = Stream::Uint32FromLE(header.ddspf.dwBBitMask);
 			const uint32_t alphaMask = Stream::Uint32FromLE(header.ddspf.dwABitMask);
 
-			LOGI("Pixel masks (%ubit): R:0x%x G:0x%x B:0x%x A:0x%x", bitCount, redMask, greenMask, blueMask, alphaMask);
+			LOGI("Pixel masks ({}bit): R:0x{:x} G:0x{:x} B:0x{:x} A:0x{:x}", bitCount, redMask, greenMask, blueMask, alphaMask);
 
 			// Texture contains uncompressed RGB data
 			// dwRGBBitCount and the RGB masks (dwRBitMask, dwRBitMask, dwRBitMask) contain valid data
@@ -135,7 +135,7 @@ namespace nCine
 				// dwRGBBitCount contains the alpha channel bitcount; dwABitMask contains valid data
 				internalFormat = GL_R8;
 			} else {
-				RETURNF_MSG("Unsupported DDS uncompressed pixel format: %u", flags);
+				RETURNF_MSG("Unsupported DDS uncompressed pixel format: {}", flags);
 			}
 
 			loadPixels(internalFormat, type);
@@ -146,12 +146,12 @@ namespace nCine
 		}
 
 		if (mipMapCount_ > 1) {
-			LOGI("MIP Maps: %d", mipMapCount_);
+			LOGI("MIP Maps: {}", mipMapCount_);
 			mipDataOffsets_ = std::make_unique<std::uint32_t[]>(mipMapCount_);
 			mipDataSizes_ = std::make_unique<std::uint32_t[]>(mipMapCount_);
 			std::uint32_t dataSizesSum = TextureFormat::calculateMipSizes(internalFormat, width_, height_, mipMapCount_, mipDataOffsets_.get(), mipDataSizes_.get());
 			if (dataSizesSum != dataSize_) {
-				LOGW("The sum of MIP maps size (%ld) is different than texture total data (%ld)", dataSizesSum, dataSize_);
+				LOGW("The sum of MIP maps size ({}) is different than texture total data ({})", dataSizesSum, dataSize_);
 			}
 		}
 

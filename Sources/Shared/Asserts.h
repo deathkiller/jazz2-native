@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common.h"		// for DEATH_HELPER_EXPAND/DEATH_HELPER_PICK/DEATH_REMOVE_PARENS
+#include "Base/Format.h"
 
 #if !defined(DEATH_NO_ASSERT) && (!defined(DEATH_ASSERT) || !defined(DEATH_DEBUG_ASSERT) || !defined(DEATH_CONSTEXPR_ASSERT) || !defined(DEATH_DEBUG_CONSTEXPR_ASSERT) || !defined(DEATH_ASSERT_UNREACHABLE))
 #	if defined(DEATH_STANDARD_ASSERT)
@@ -37,9 +38,17 @@ enum class TraceLevel {
 	This function needs to be provided by the target application to enable the event tracing.
 	Alternatively, @relativeref{Death,ITraceSink} interface can be used instead.
 */
-void DEATH_TRACE(TraceLevel level, const char* functionName, const char* fmt, ...);
+void DEATH_TRACE(TraceLevel level, const char* functionName, const char* message, std::uint32_t messageLength);
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
+template<class ...Args>
+void __WriteTraceProxy(TraceLevel level, const char* functionName, const char* format, const Args&... args)
+{
+	char formattedMessage[8192];
+	std::size_t length = Death::formatIntoInternal(formattedMessage, sizeof(formattedMessage), format, args...);
+	DEATH_TRACE(level, functionName, formattedMessage, std::uint32_t(length));
+}
+
 #	if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
 #		define __DEATH_CURRENT_FUNCTION __PRETTY_FUNCTION__
 #	elif defined(DEATH_TARGET_MSVC)
@@ -51,20 +60,20 @@ void DEATH_TRACE(TraceLevel level, const char* functionName, const char* fmt, ..
 
 /** @brief Print a formatted message with @ref TraceLevel::Debug to the event log */
 #	if defined(DEATH_DEBUG)
-#		define LOGD(fmt, ...) DEATH_TRACE(TraceLevel::Debug, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#		define LOGD(fmt, ...) __WriteTraceProxy(TraceLevel::Debug, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 #	else
 #		define LOGD(fmt, ...) do {} while (false)
 #	endif
 /** @brief Print a deferred formatted message with @ref TraceLevel::Deferred to the event log */
-#	define LOGB(fmt, ...) DEATH_TRACE(TraceLevel::Deferred, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGB(fmt, ...) __WriteTraceProxy(TraceLevel::Deferred, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Info to the event log */
-#	define LOGI(fmt, ...) DEATH_TRACE(TraceLevel::Info, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGI(fmt, ...) __WriteTraceProxy(TraceLevel::Info, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Warning to the event log */
-#	define LOGW(fmt, ...) DEATH_TRACE(TraceLevel::Warning, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGW(fmt, ...) __WriteTraceProxy(TraceLevel::Warning, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Error to the event log */
-#	define LOGE(fmt, ...) DEATH_TRACE(TraceLevel::Error, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGE(fmt, ...) __WriteTraceProxy(TraceLevel::Error, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Fatal to the event log */
-#	define LOGF(fmt, ...) DEATH_TRACE(TraceLevel::Fatal, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGF(fmt, ...) __WriteTraceProxy(TraceLevel::Fatal, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 #else
 /** @brief Print a formatted message with @ref TraceLevel::Debug to the event log */
 #	define LOGD(fmt, ...) do {} while (false)
@@ -102,7 +111,7 @@ void DEATH_TRACE(TraceLevel level, const char* functionName, const char* fmt, ..
 
 // Assertions
 #if !defined(DEATH_NO_ASSERT) && !defined(DEATH_STANDARD_ASSERT) && defined(DEATH_TRACE) && !defined(DOXYGEN_GENERATING_OUTPUT)
-#	define __DEATH_ASSERT_BASE(fmt, ...) DEATH_TRACE(TraceLevel::Assert, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define __DEATH_ASSERT_BASE(fmt, ...) __WriteTraceProxy(TraceLevel::Assert, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 #	define __DEATH_ASSERT_TRACE(...) DEATH_HELPER_EXPAND(__DEATH_ASSERT_BASE(__VA_ARGS__))
 #endif
 
@@ -155,7 +164,7 @@ void DEATH_TRACE(TraceLevel level, const char* functionName, const char* fmt, ..
 #		define __DEATH_DEBUG_ASSERT1(condition)							\
 			do {														\
 				if DEATH_UNLIKELY(!(condition)) {						\
-					__DEATH_ASSERT_TRACE("Assertion (%s) failed at \"%s:%i\"", #condition, __FILE__, __LINE__);	\
+					__DEATH_ASSERT_TRACE("Assertion ({}) failed at \"{}:{}\"", #condition, __FILE__, __LINE__);	\
 					DEATH_ASSERT_BREAK();								\
 				}														\
 			} while(false)
@@ -234,19 +243,26 @@ void DEATH_TRACE(TraceLevel level, const char* functionName, const char* fmt, ..
 #if !defined(DEATH_ASSERT_UNREACHABLE)
 #	if defined(DEATH_NO_ASSERT) || (!defined(DEATH_STANDARD_ASSERT) && !defined(DEATH_TRACE))
 #		if defined(DEATH_TARGET_GCC)
-#			define DEATH_ASSERT_UNREACHABLE() __builtin_unreachable()
+#			define DEATH_ASSERT_UNREACHABLE(...) __builtin_unreachable()
 #		elif defined(DEATH_TARGET_MSVC)
-#			define DEATH_ASSERT_UNREACHABLE() __assume(0)
+#			define DEATH_ASSERT_UNREACHABLE(...) __assume(0)
 #		else
-#			define DEATH_ASSERT_UNREACHABLE() std::abort()
+#			define DEATH_ASSERT_UNREACHABLE(...) std::abort()
 #		endif
 #	elif defined(DEATH_STANDARD_ASSERT)
-#		define DEATH_ASSERT_UNREACHABLE() assert(!"Unreachable code")
+#		define DEATH_ASSERT_UNREACHABLE(...) assert(!"Unreachable code")
 #	else
-#		define DEATH_ASSERT_UNREACHABLE()								\
+#		define __DEATH_ASSERT_UNREACHABLE0()							\
 			do {														\
-				__DEATH_ASSERT_TRACE("Reached unreachable code at \"%s:%i\"", __FILE__, __LINE__);	\
+				__DEATH_ASSERT_TRACE("Reached unreachable code at \"{}:{}\"", __FILE__, __LINE__);	\
 				DEATH_ASSERT_BREAK();									\
-			} while (false)
+			} while(false)
+#		define __DEATH_ASSERT_UNREACHABLE2(message, returnValue)		\
+			do {														\
+				__DEATH_ASSERT_TRACE(DEATH_REMOVE_PARENS(message));		\
+				DEATH_ASSERT_BREAK();									\
+				return returnValue;										\
+			} while(false)
+#		define DEATH_ASSERT_UNREACHABLE(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_ASSERT_UNREACHABLE2, __DEATH_ASSERT_UNREACHABLE2, __DEATH_ASSERT_UNREACHABLE2, __DEATH_ASSERT_UNREACHABLE2, __DEATH_ASSERT_UNREACHABLE2, __DEATH_ASSERT_UNREACHABLE2, __DEATH_ASSERT_UNREACHABLE2, __DEATH_ASSERT_UNREACHABLE0, __DEATH_ASSERT_UNREACHABLE0)(__VA_ARGS__))
 #	endif
 #endif

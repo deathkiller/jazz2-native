@@ -61,7 +61,7 @@ namespace nCine
 
 	RenderBuffersManager::Parameters RenderBuffersManager::acquireMemory(BufferTypes type, std::uint32_t bytes, std::uint32_t alignment)
 	{
-		FATAL_ASSERT_MSG(bytes <= specs_[std::int32_t(type)].maxSize, "Trying to acquire %lu bytes when the maximum for buffer type \"%s\" is %lu",
+		FATAL_ASSERT_MSG(bytes <= specs_[std::int32_t(type)].maxSize, "Trying to acquire {} bytes when the maximum for buffer type \"{}\" is {}",
 						   bytes, bufferTypeToString(type), specs_[std::int32_t(type)].maxSize);
 
 		// Accepting a custom alignment only if it is a multiple of the specification one

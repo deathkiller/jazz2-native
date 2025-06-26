@@ -103,21 +103,27 @@
 #	define _i14 ""
 #endif
 
-#if defined(WITH_MULTIPLAYER)
-#	define _i15 "\nENet \f[c:#707070]· \f[h:80]https://github.com/lsalzman/enet\f[/h]\f[/c]"
+#if defined(WITH_BACKWARD)
+#	define _i15 "\nBackward \f[c:#707070]· \f[h:80]https://github.com/bombela/backward-cpp\f[/h]\f[/c]"
 #else
 #	define _i15 ""
 #endif
 
-#define _i16 "\njsoncpp \f[c:#707070]· \f[h:80]https://github.com/open-source-parsers/jsoncpp\f[/h]\f[/c]\nParallel Hashmap \f[c:#707070]· \f[h:80]https://github.com/greg7mdp/parallel-hashmap\f[/h]\f[/c]\n\f[h:80]Parts of \f[/h]Corrade \f[c:#707070]· \f[h:80]https://github.com/mosra/corrade\f[/h]\f[/c]\nPattern-defeating quicksort \f[c:#707070]· \f[h:80]https://github.com/orlp/pdqsort\f[/h]\f[/c]"
-
-#if defined(WITH_TRACY)
-#	define _i17 "\n\n\f[h:86]Tracy integration is enabled.\f[/h]"
+#if defined(WITH_MULTIPLAYER)
+#	define _i16 "\nENet \f[c:#707070]· \f[h:80]https://github.com/lsalzman/enet\f[/h]\f[/c]"
 #else
-#	define _i17 ""
+#	define _i16 ""
 #endif
 
-#define ADDITIONAL_INFO _i1 _i2 _i3 _i4 _i5 _i6 _i7 _i8 _i9 _i10 _i11 _i12 _i13 _i14 _i15 _i16 _i17
+#define _i17 "\njsoncpp \f[c:#707070]· \f[h:80]https://github.com/open-source-parsers/jsoncpp\f[/h]\f[/c]\nParallel Hashmap \f[c:#707070]· \f[h:80]https://github.com/greg7mdp/parallel-hashmap\f[/h]\f[/c]\n\f[h:80]Parts of \f[/h]Corrade \f[c:#707070]· \f[h:80]https://github.com/mosra/corrade\f[/h]\f[/c]\nPattern-defeating quicksort \f[c:#707070]· \f[h:80]https://github.com/orlp/pdqsort\f[/h]\f[/c]"
+
+#if defined(WITH_TRACY)
+#	define _i18 "\n\n\f[h:86]Tracy integration is enabled.\f[/h]"
+#else
+#	define _i18 ""
+#endif
+
+#define ADDITIONAL_INFO _i1 _i2 _i3 _i4 _i5 _i6 _i7 _i8 _i9 _i10 _i11 _i12 _i13 _i14 _i15 _i16 _i17 _i18
 
 using namespace Jazz2::UI::Menu::Resources;
 

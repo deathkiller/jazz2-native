@@ -51,7 +51,7 @@ namespace Death { namespace Containers {
 		template<class U, std::enable_if_t<!std::is_same<::IUnknown*, U*>::value && !std::is_base_of<T, U>::value, int> = 0>
 		explicit ComPtr(U* ptr) noexcept : _pointer(nullptr) {
 			HRESULT result = ptr->QueryInterface(DEATH_IID_PPV_ARGS(&_pointer));
-			DEATH_ASSERT(result >= 0, ("ComPtr::QueryInterface() failed with error 0x%08x", result), );
+			DEATH_ASSERT(result >= 0, ("ComPtr::QueryInterface() failed with error 0x{:.8x}", result), );
 		}
 #endif
 

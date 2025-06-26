@@ -49,7 +49,7 @@ namespace nCine
 			_avgFps = static_cast<float>(_logNumFrames) / _loggingInterval;
 #if defined(DEATH_TRACE) && defined(DEATH_DEBUG)
 			//const float msPerFrame = (_loggingInterval * 1000.0f) / static_cast<float>(_logNumFrames);
-			//LOGD("%lu frames in %.0f seconds = %.1f FPS (%.2fms per frame)", _logNumFrames, _loggingInterval, _avgFps, msPerFrame);
+			//LOGD("{} frames in {:.0} seconds = {:.1} FPS ({:.2}ms per frame)", _logNumFrames, _loggingInterval, _avgFps, msPerFrame);
 #endif
 			_logNumFrames = 0L;
 			_lastLogUpdate = _frameStart;
