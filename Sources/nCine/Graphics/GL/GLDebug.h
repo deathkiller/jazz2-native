@@ -7,6 +7,8 @@
 
 #include "../../../Main.h"
 
+#include <Containers/StringView.h>
+
 #if defined(DEATH_TRACE) && defined(DEATH_TRACE_VERBOSE_GL)
 #	define GL_LOG_ERRORS()										\
 		do {													\
@@ -18,6 +20,8 @@
 #else
 #	define GL_LOG_ERRORS() do {} while (false)
 #endif
+
+using namespace Death::Containers;
 
 namespace nCine
 {
@@ -70,7 +74,7 @@ namespace nCine
 		class ScopedGroup
 		{
 		public:
-			explicit ScopedGroup(const char* message) {
+			explicit ScopedGroup(StringView message) {
 				PushGroup(message);
 			}
 			~ScopedGroup() {
@@ -87,12 +91,11 @@ namespace nCine
 			return debugAvailable_;
 		}
 
-		static void PushGroup(const char* message);
+		static void PushGroup(StringView message);
 		static void PopGroup();
-		static void MessageInsert(const char* message);
+		static void MessageInsert(StringView message);
 
-		static void SetObjectLabel(LabelTypes identifier, GLuint name, const char* label);
-		static void SetObjectLabel(LabelTypes identifier, GLuint name, GLsizei length, const char* label);
+		static void SetObjectLabel(LabelTypes identifier, GLuint name, StringView label);
 		static void GetObjectLabel(LabelTypes identifier, GLuint name, GLsizei bufSize, GLsizei* length, char* label);
 
 		static inline std::int32_t GetMaxLabelLength() {

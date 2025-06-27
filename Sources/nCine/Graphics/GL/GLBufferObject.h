@@ -2,6 +2,10 @@
 
 #include "GLHashMap.h"
 
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
+
 namespace nCine
 {
 	/// Handles OpenGL buffer objects of different kinds
@@ -41,7 +45,7 @@ namespace nCine
 		void TexBuffer(GLenum internalformat);
 #endif
 
-		void SetObjectLabel(const char* label);
+		void SetObjectLabel(StringView label);
 
 	private:
 		static class GLHashMap<GLBufferObjectMappingFunc::Size, GLBufferObjectMappingFunc> boundBuffers_;

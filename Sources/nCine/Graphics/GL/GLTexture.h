@@ -2,6 +2,10 @@
 
 #include "GLHashMap.h"
 
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
+
 namespace nCine
 {
 	/// Handles OpenGL 2D textures
@@ -46,7 +50,7 @@ namespace nCine
 		void TexParameterf(GLenum pname, GLfloat param);
 		void TexParameteri(GLenum pname, GLint param);
 
-		void SetObjectLabel(const char* label);
+		void SetObjectLabel(StringView label);
 
 	private:
 		static class GLHashMap<GLTextureMappingFunc::Size, GLTextureMappingFunc> boundTextures_[MaxTextureUnits];

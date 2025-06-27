@@ -133,7 +133,7 @@ namespace nCine
 		return (status == GL_FRAMEBUFFER_COMPLETE);
 	}
 
-	void GLFramebuffer::SetObjectLabel(const char* label)
+	void GLFramebuffer::SetObjectLabel(StringView label)
 	{
 		GLDebug::SetObjectLabel(GLDebug::LabelTypes::FrameBuffer, glHandle_, label);
 	}

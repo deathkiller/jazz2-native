@@ -21,14 +21,6 @@
 
 namespace nCine
 {
-#if defined(DEATH_DEBUG)
-	/*namespace
-	{
-		/// The string used to output OpenGL debug group information
-		static char debugString[64];
-	}*/
-#endif
-
 	static GLenum DepthStencilFormatToGLFormat(Viewport::DepthStencilFormat format)
 	{
 		switch (format) {
@@ -368,13 +360,16 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 #if defined(DEATH_DEBUG)
 		// TODO: GLDebug
-		/*if (type_ == Type::SCREEN)
-			formatString(debugString, "Draw screen viewport (0x{:x})", std::uintptr_t(this));
-		else if (type_ == Type::WITH_TEXTURE && textures_[0]->name() != nullptr)
-			formatString(debugString, "Draw viewport \"{}\" (0x{:x})", textures_[0]->name(), std::uintptr_t(this));
-		else
-			formatString(debugString, "Draw viewport (0x{:x})", std::uintptr_t(this));
-		GLDebug::ScopedGroup scoped(debugString);*/
+		/*char debugString[128];
+		std::size_t length;
+		if (type_ == Type::Screen) {
+			length = formatInto(debugString, "Draw screen viewport (0x{:x})", std::uintptr_t(this));
+		} else if (type_ == Type::WithTexture && textures_[0]->name() != nullptr) {
+			length = formatInto(debugString, "Draw viewport \"{}\" (0x{:x})", textures_[0]->name(), std::uintptr_t(this));
+		} else {
+			length = formatInto(debugString, "Draw viewport (0x{:x})", std::uintptr_t(this));
+		}
+		GLDebug::ScopedGroup scoped({ debugString, length });*/
 #endif
 
 		RenderResources::setCurrentViewport(this);

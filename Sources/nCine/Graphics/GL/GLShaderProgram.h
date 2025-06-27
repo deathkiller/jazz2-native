@@ -128,7 +128,7 @@ namespace nCine
 		/// Deletes the current OpenGL shader program so that new shaders can be attached
 		void Reset();
 
-		void SetObjectLabel(const char* label);
+		void SetObjectLabel(StringView label);
 
 		/// Returns the automatic log on errors flag
 		inline bool GetLogOnErrors() const {

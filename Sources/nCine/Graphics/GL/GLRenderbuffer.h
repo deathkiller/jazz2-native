@@ -5,6 +5,10 @@
 #include "../../CommonHeaders.h"
 #endif
 
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
+
 namespace nCine
 {
 	/// Handles OpenGL renderbuffer objects
@@ -33,7 +37,7 @@ namespace nCine
 		bool Bind() const;
 		static bool Unbind();
 
-		void SetObjectLabel(const char* label);
+		void SetObjectLabel(StringView label);
 
 	private:
 		static GLuint boundBuffer_;

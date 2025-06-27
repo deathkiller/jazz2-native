@@ -23,7 +23,7 @@ namespace nCine
 	namespace
 	{
 		static const char BatchSizeDefine[] = "BATCH_SIZE";
-		static const char DefineFormatString[] = "#define %s (%i)\n";
+		static const char DefineFormatString[] = "#define {} ({})\n";
 		static const char ResetLineString[] = "#line 0\n";
 		static const std::int32_t MaxShaderStrings = 8;
 
@@ -54,22 +54,22 @@ namespace nCine
 			}
 		}
 
-		std::int32_t populateShaderStrings(ArrayView<StringView> strings, ArrayView<char> backingStore, const char* content, std::int32_t batchSize, ArrayView<const StringView> defines)
+		std::size_t populateShaderStrings(ArrayView<StringView> strings, ArrayView<char> backingStore, const char* content, std::int32_t batchSize, ArrayView<const StringView> defines)
 		{
-			std::int32_t lastOffset = 0, lastIndex = 0;
+			std::size_t lastOffset = 0, lastIndex = 0;
 			if (batchSize > 0 || !strings.empty()) {
 				if (batchSize > 0) {
-					std::int32_t length = formatString(&backingStore[lastOffset], backingStore.size(), DefineFormatString, BatchSizeDefine, batchSize);
-					strings[lastIndex++] = &backingStore[lastOffset];
+					std::size_t length = formatInto({ &backingStore[lastOffset], backingStore.size() }, DefineFormatString, BatchSizeDefine, batchSize);
+					strings[lastIndex++] = { &backingStore[lastOffset], length };
 					lastOffset += length + 1;
 				}
 				for (auto define : defines) {
-					std::int32_t charsLeft = std::int32_t(backingStore.size()) - lastOffset;
+					std::size_t charsLeft = backingStore.size() - lastOffset;
 					if (lastIndex >= arraySize(strings) - 3 && arraySize(DefineFormatString) + define.size() >= charsLeft) {
 						break;
 					}
-					std::int32_t length = formatString(&backingStore[lastOffset], charsLeft, DefineFormatString, String::nullTerminatedView(define).data(), 1);
-					strings[lastIndex++] = StringView(&backingStore[lastOffset], length);
+					std::size_t length = formatInto({ &backingStore[lastOffset], charsLeft }, DefineFormatString, define, 1);
+					strings[lastIndex++] = { &backingStore[lastOffset], length };
 					lastOffset += length + 1;
 				}
 				strings[lastIndex++] = ResetLineString;
@@ -190,7 +190,7 @@ namespace nCine
 		glShaderProgram_->SetBatchSize(batchSize);
 		glShaderProgram_->SetObjectLabel(shaderName);
 
-		StringView strings[MaxShaderStrings]; std::int32_t stringsCount; char backingStore[256];
+		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, vertex, batchSize, defines);
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), {});
@@ -226,7 +226,7 @@ namespace nCine
 		glShaderProgram_->SetObjectLabel(shaderName);
 		loadDefaultShader(vertex, batchSize);
 
-		StringView strings[MaxShaderStrings]; std::int32_t stringsCount; char backingStore[256];
+		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, fragment, -1, defines);
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), {});
@@ -259,7 +259,7 @@ namespace nCine
 		glShaderProgram_->SetBatchSize(batchSize);
 		glShaderProgram_->SetObjectLabel(shaderName);
 
-		StringView strings[MaxShaderStrings]; std::int32_t stringsCount; char backingStore[256];
+		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, vertex, batchSize, defines);
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), {});
@@ -292,7 +292,7 @@ namespace nCine
 		glShaderProgram_->SetBatchSize(batchSize);
 		glShaderProgram_->SetObjectLabel(shaderName);
 
-		StringView strings[MaxShaderStrings]; std::int32_t stringsCount; char backingStore[256];
+		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, {}, batchSize, defines);
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), vertexPath);
@@ -328,7 +328,7 @@ namespace nCine
 		glShaderProgram_->SetObjectLabel(shaderName);
 		loadDefaultShader(vertex, batchSize);
 
-		StringView strings[MaxShaderStrings]; std::int32_t stringsCount; char backingStore[256];
+		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, {}, -1, defines);
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), fragmentPath);
@@ -361,7 +361,7 @@ namespace nCine
 		glShaderProgram_->SetBatchSize(batchSize);
 		glShaderProgram_->SetObjectLabel(shaderName);
 
-		StringView strings[MaxShaderStrings]; std::int32_t stringsCount; char backingStore[256];
+		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, {}, batchSize, defines);
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), vertexPath);
@@ -483,8 +483,8 @@ namespace nCine
 
 		if (batchSize > 0) {
 			char sourceString[48];
-			std::int32_t length = formatString(sourceString, sizeof(sourceString), DefineFormatString, BatchSizeDefine, batchSize);
-			StringView vertexStrings[2] = { StringView(sourceString, length), ResetLineString };
+			std::size_t length = formatInto(sourceString, DefineFormatString, BatchSizeDefine, batchSize);
+			StringView vertexStrings[2] = { { sourceString, length }, ResetLineString };
 			return glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, vertexShader }));
 		} else {
 			return glShaderProgram_->AttachShaderFromFile(GL_VERTEX_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, vertexShader }));
@@ -527,8 +527,8 @@ namespace nCine
 
 		if (batchSize > 0) {
 			char sourceString[48];
-			std::int32_t length = formatString(sourceString, sizeof(sourceString), DefineFormatString, BatchSizeDefine, batchSize);
-			StringView vertexStrings[3] = { StringView(sourceString, length), ResetLineString, vertexShader };
+			std::size_t length = formatInto(sourceString, DefineFormatString, BatchSizeDefine, batchSize);
+			StringView vertexStrings[3] = { { sourceString, length }, ResetLineString, vertexShader };
 			return glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, {});
 		} else {
 			return glShaderProgram_->AttachShaderFromString(GL_VERTEX_SHADER, vertexShader);

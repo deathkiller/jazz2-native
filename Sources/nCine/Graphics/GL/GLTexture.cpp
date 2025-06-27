@@ -112,7 +112,7 @@ namespace nCine
 		GL_LOG_ERRORS();
 	}
 
-	void GLTexture::SetObjectLabel(const char* label)
+	void GLTexture::SetObjectLabel(StringView label)
 	{
 		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Texture, glHandle_, label);
 	}

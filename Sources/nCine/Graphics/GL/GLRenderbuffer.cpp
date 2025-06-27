@@ -44,7 +44,7 @@ namespace nCine
 		return false;
 	}
 
-	void GLRenderbuffer::SetObjectLabel(const char* label)
+	void GLRenderbuffer::SetObjectLabel(StringView label)
 	{
 		GLDebug::SetObjectLabel(GLDebug::LabelTypes::RenderBuffer, glHandle_, label);
 	}

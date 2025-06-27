@@ -57,7 +57,7 @@ namespace nCine
 
 		bool IsStatusComplete();
 
-		void SetObjectLabel(const char* label);
+		void SetObjectLabel(StringView label);
 
 	private:
 		static std::uint32_t readBoundBuffer_;
