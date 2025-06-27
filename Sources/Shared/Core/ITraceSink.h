@@ -33,7 +33,7 @@ namespace Death
 		ITraceSink& operator=(ITraceSink const&) = delete;
 
 	protected:
-		/** @brief Called when new trace entry is received and should be written to the sink destination */
+		/** @brief Called when a new trace entry is received and should be written to the sink destination */
 		virtual void OnTraceReceived(TraceLevel level, std::uint64_t timestamp, Containers::StringView threadId,
 			Containers::StringView functionName, Containers::StringView content) = 0;
 		/** @brief Called when all sink buffers should be flushed immediately */
@@ -51,7 +51,14 @@ namespace Death
 		/** @brief Flushes and waits until all prior entries are written to all sinks */
 		void Flush();
 
-		/** @brief Initializes backtrace storage to be able to use @ref TraceLevel::Deferred */
+		/**
+			@brief Initializes backtrace storage for @ref TraceLevel::Deferred
+
+			If the backtrace storage is not initialized, all deferred entries are written immediately to all sinks.
+			After initialization, deferred entries are stored in the backtrace storage and written to sinks
+			only when the backtrace is flushed. Flush can be triggered by calling @ref FlushBacktraceAsync()
+			or automatically when an entry with a level higher than the flush level is enqueued.
+		*/
 		void InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel = TraceLevel::Unknown);
 
 		/** @brief Writes any stored deferred entries to all sinks asynchronously */
