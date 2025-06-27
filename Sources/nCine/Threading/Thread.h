@@ -31,16 +31,16 @@ namespace nCine
 		}
 
 		ThreadAffinityMask(std::int32_t cpuNum)
+			: ThreadAffinityMask()
 		{
-			Zero();
 			Set(cpuNum);
 		}
 
 		/** @brief Clears the CPU set */
 		void Zero();
-		/** @brief Sets the specified CPU number to be included in the set */
+		/** @brief Includes the specified CPU number into the set */
 		void Set(std::int32_t cpuNum);
-		/** @brief Sets the specified CPU number to be excluded by the set */
+		/** @brief Excludes the specified CPU number from the set */
 		void Clear(std::int32_t cpuNum);
 		/** @brief Returns `true` if the specified CPU number belongs to the set */
 		bool IsSet(std::int32_t cpuNum);

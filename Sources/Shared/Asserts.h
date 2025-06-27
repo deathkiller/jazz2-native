@@ -24,7 +24,7 @@
 enum class TraceLevel {
 	Unknown,		/**< Unspecified */
 	Debug,			/**< Debug */
-	Deferred,		/**< Deferred (not written immediately) */
+	Deferred,		/**< Deferred (usually not written immediately) */
 	Info,			/**< Info */
 	Warning,		/**< Warning */
 	Error,			/**< Error */
@@ -150,13 +150,14 @@ void __WriteTraceProxy(TraceLevel level, const char* functionName, const char* f
 	@brief Debug-only assertion macro
 
 	Unlike @ref DEATH_ASSERT() this macro expands to @cpp do{}while(false) @ce if @cpp DEATH_DEBUG @ce
-	is not defined (i.e., in release configuration).
+	is not defined (i.e., in release configuration). It also allows to specify only the condition,
+	and the message will be generated automatically without @cpp return @ce statement.
 
 	You can override this implementation by placing your own @cpp #define DEATH_DEBUG_ASSERT @ce before including
 	the @ref Asserts.h header.
 */
 #if !defined(DEATH_DEBUG_ASSERT)
-#	if defined(DEATH_NO_ASSERT) || !defined(DEATH_DEBUG) || (!defined(DEATH_STANDARD_ASSERT) && !defined(DEATH_TRACE))
+#	if defined(DEATH_NO_ASSERT) || !defined(DEATH_DEBUG) || (!defined(DEATH_STANDARD_ASSERT) && !defined(DEATH_TRACE)) || defined(DOXYGEN_GENERATING_OUTPUT)
 #		define DEATH_DEBUG_ASSERT(condition, ...) do {} while (false)
 #	elif defined(DEATH_STANDARD_ASSERT)
 #		define DEATH_DEBUG_ASSERT(condition, ...) assert(condition)
@@ -185,10 +186,10 @@ void __WriteTraceProxy(TraceLevel level, const char* functionName, const char* f
 
 	Unlike @ref DEATH_ASSERT() this macro can be used in C++11 @cpp constexpr @ce functions. In a @cpp constexpr @ce
 	context, if assertion fails, the code fails to compile. In a non-@cpp constexpr @ce context, if assertion fails,
-	@p message is printed with @ref TraceLevel::Assert to the event log and the execution is break. If @cpp DEATH_STANDARD_ASSERT @ce
-	is defined, @p message is ignored and the standard @cpp assert() @ce is called if condition fails. If
-	@cpp DEATH_NO_ASSERT @ce is defined (or if both @cpp DEATH_TRACE @ce and @cpp DEATH_STANDARD_ASSERT @ce are
-	not defined), this macro expands to @cpp static_cast<void>(0) @ce.
+	@p message is printed with @ref TraceLevel::Assert to the event log and the execution is break.
+	If @cpp DEATH_STANDARD_ASSERT @ce is defined, @p message is ignored and the standard @cpp assert() @ce is called
+	if condition fails. If @cpp DEATH_NO_ASSERT @ce is defined (or if both @cpp DEATH_TRACE @ce and
+	@cpp DEATH_STANDARD_ASSERT @ce are not defined), this macro expands to @cpp static_cast<void>(0) @ce.
 
 	You can override this implementation by placing your own @cpp #define DEATH_CONSTEXPR_ASSERT @ce before including
 	the @ref Asserts.h header.
@@ -232,16 +233,16 @@ void __WriteTraceProxy(TraceLevel level, const char* functionName, const char* f
 
 	By default, if code marked with this macro is reached, a hint message is printed with @ref TraceLevel::Assert
 	to the event log. and the execution is break (if @cpp DEATH_DEBUG @ce is defined). If @cpp DEATH_STANDARD_ASSERT @ce
-	is defined, the standard @cpp assert(!"Unreachable code") @ce is called. If @cpp DEATH_NO_ASSERT @ce is defined (or
-	if both @cpp DEATH_TRACE @ce and @cpp DEATH_STANDARD_ASSERT @ce are not defined), this macro hints to the compiler
-	that given code is not reachable, possibly helping the optimizer (using a compiler builtin on GCC, Clang and
-	MSVC; calling @ref std::abort() otherwise).
+	is defined, the standard @cpp assert(!"Unreachable code") @ce is called. If @cpp DEATH_NO_ASSERT @ce is defined
+	(or if both @cpp DEATH_TRACE @ce and @cpp DEATH_STANDARD_ASSERT @ce are not defined), this macro hints to
+	the compiler that given code is not reachable, possibly helping the optimizer (using a compiler builtin on GCC,
+	Clang and MSVC; calling @ref std::abort() otherwise).
 
 	You can override this implementation by placing your own @cpp #define DEATH_ASSERT_UNREACHABLE @ce before
 	including the @ref Asserts.h header.
 */
 #if !defined(DEATH_ASSERT_UNREACHABLE)
-#	if defined(DEATH_NO_ASSERT) || (!defined(DEATH_STANDARD_ASSERT) && !defined(DEATH_TRACE))
+#	if defined(DEATH_NO_ASSERT) || (!defined(DEATH_STANDARD_ASSERT) && !defined(DEATH_TRACE)) || defined(DOXYGEN_GENERATING_OUTPUT)
 #		if defined(DEATH_TARGET_GCC)
 #			define DEATH_ASSERT_UNREACHABLE(...) __builtin_unreachable()
 #		elif defined(DEATH_TARGET_MSVC)

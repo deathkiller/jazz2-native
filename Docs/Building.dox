@@ -235,6 +235,7 @@ The following parameters can be used to customize the build:
 -   `NCINE_CODE_COVERAGE` (default @cpp OFF @ce) --- Enable `gcov` instrumentation for testing code coverage
 -   `NCINE_GCC_HARDENING` (default @cpp OFF @ce) --- Enable memory corruption mitigation methods of GCC
 -   `NCINE_LINKTIME_OPTIMIZATION` (default @cpp ON @ce) --- Compile with link-time optimization
+-   `NCINE_THREAD_SANITIZER` (default @cpp OFF @ce) --- Enable `ThreadSanitizer` detector
 -   `NCINE_UNDEFINED_SANITIZER` (default @cpp OFF @ce) --- Enable `UndefinedBehaviorSanitizer` detector
 
 @subsubsection building-config-params-debug Debugging parameters

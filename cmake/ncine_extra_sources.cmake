@@ -172,7 +172,7 @@ endif()
 #		${NCINE_SOURCE_DIR}/nCine/Graphics/TextureSaverWebP.cpp)
 #endif()
 
-if(Threads_FOUND)
+if(Threads_FOUND AND NCINE_WITH_THREADS)
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_THREADS")
 	target_link_libraries(${NCINE_APP} PRIVATE Threads::Threads)
 

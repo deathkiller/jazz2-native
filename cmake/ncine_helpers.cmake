@@ -482,6 +482,18 @@ function(ncine_apply_compiler_options target)
 				target_link_options(${target} PUBLIC $<$<CONFIG:Debug>:-fsanitize=undefined>)
 			endif()
 		endif()
+		
+		# Only in Debug
+		if(NCINE_THREAD_SANITIZER)
+			# Add TSan options as public so that targets linking the library will also use them
+			if(EMSCRIPTEN)
+				target_compile_options(${target} PUBLIC $<$<CONFIG:Debug>:-O1 -g -fsanitize=thread>)
+				target_link_options(${target} PUBLIC $<$<CONFIG:Debug>:-fsanitize=thread>)
+			elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+				target_compile_options(${target} PUBLIC $<$<CONFIG:Debug>:-O1 -g -fsanitize=thread -fno-omit-frame-pointer>)
+				target_link_options(${target} PUBLIC $<$<CONFIG:Debug>:-fsanitize=thread>)
+			endif()
+		endif()
 
 		# Only in Debug
 		if(("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang") AND NCINE_CODE_COVERAGE)

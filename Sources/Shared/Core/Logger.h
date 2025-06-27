@@ -754,13 +754,19 @@ namespace Death { namespace Trace {
 	*/
 	struct TransitEvent
 	{
+		/** @brief Timestamp */
 		std::uint64_t Timestamp;
 		union {
+			/** @brief Function name */
 			const char* FunctionName;
+			/** @brief Pointer to flush flag in case of flush event */
 			std::atomic<bool>* FlushFlag;
+			/** @brief Requested capacity in case of initialization event */
 			std::uint32_t Capacity;
 		};
+		/** @brief Message */
 		std::string Message;
+		/** @brief Trace level */
 		TraceLevel Level;
 
 		TransitEvent()
