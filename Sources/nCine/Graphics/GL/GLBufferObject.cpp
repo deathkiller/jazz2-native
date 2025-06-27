@@ -151,7 +151,7 @@ namespace nCine
 	}
 #endif
 
-	void GLBufferObject::SetObjectLabel(const char* label)
+	void GLBufferObject::SetObjectLabel(StringView label)
 	{
 		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Buffer, glHandle_, label);
 	}

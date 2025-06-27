@@ -101,7 +101,7 @@ namespace nCine
 		}
 
 		std::size_t count = sourceStrings.size();
-		glShaderSource(glHandle_, count, sourceStrings.data(), sourceLengths.data());
+		glShaderSource(glHandle_, GLsizei(count), sourceStrings.data(), sourceLengths.data());
 		return (count > 1);
 	}
 	
@@ -153,7 +153,7 @@ namespace nCine
 		return true;
 	}
 
-	void GLShader::SetObjectLabel(const char* label)
+	void GLShader::SetObjectLabel(StringView label)
 	{
 		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Shader, glHandle_, label);
 	}

@@ -264,10 +264,10 @@ namespace Jazz2::UI::Multiplayer
 			case MpGameMode::CaptureTheFlag: {
 
 				// TODO
-				/*formatString(stringBuffer, "%u / %u", peerDesc->FlagsCaptured, serverConfig.TotalFlagsCaptured);
-				_smallFont->DrawString(this, stringBuffer, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
+				/*std::size_t length = formatInto(stringBuffer, "{} / {}", peerDesc->FlagsCaptured, serverConfig.TotalFlagsCaptured);
+				_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
 					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-				_smallFont->DrawString(this, stringBuffer, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
+				_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
 					Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);*/
 
 				break;

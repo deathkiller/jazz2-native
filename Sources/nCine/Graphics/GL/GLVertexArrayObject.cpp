@@ -44,7 +44,7 @@ namespace nCine
 		return false;
 	}
 
-	void GLVertexArrayObject::SetObjectLabel(const char* label)
+	void GLVertexArrayObject::SetObjectLabel(StringView label)
 	{
 		GLDebug::SetObjectLabel(GLDebug::LabelTypes::VertexArray, glHandle_, label);
 	}

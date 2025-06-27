@@ -234,7 +234,7 @@ namespace nCine
 		batchSize_ = DefaultBatchSize;
 	}
 
-	void GLShaderProgram::SetObjectLabel(const char* label)
+	void GLShaderProgram::SetObjectLabel(StringView label)
 	{
 		GLDebug::SetObjectLabel(GLDebug::LabelTypes::Program, glHandle_, label);
 	}

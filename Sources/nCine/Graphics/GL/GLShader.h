@@ -59,7 +59,7 @@ namespace nCine
 		bool Compile(ErrorChecking errorChecking, bool logOnErrors);
 		bool CheckCompilation(bool logOnErrors);
 
-		void SetObjectLabel(const char* label);
+		void SetObjectLabel(StringView label);
 
 	private:
 		static constexpr std::uint32_t MaxShaderSourceLength = 32 * 1024;

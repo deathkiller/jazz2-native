@@ -2,6 +2,10 @@
 
 #include "GLHashMap.h"
 
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
+
 namespace nCine
 {
 	/// Handles OpenGL vertex array object
@@ -21,7 +25,7 @@ namespace nCine
 		bool Bind() const;
 		static bool Unbind();
 
-		void SetObjectLabel(const char* label);
+		void SetObjectLabel(StringView label);
 
 	private:
 		static GLuint boundVAO_;

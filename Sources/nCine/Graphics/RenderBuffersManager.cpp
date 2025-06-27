@@ -6,6 +6,9 @@
 #include "../../Main.h"
 #include "../tracy.h"
 
+using namespace Death;
+using namespace Death::Containers::Literals;
+
 namespace nCine
 {
 	RenderBuffersManager::RenderBuffersManager(bool useBufferMapping, std::uint32_t vboMaxSize, std::uint32_t iboMaxSize)
@@ -102,7 +105,7 @@ namespace nCine
 	void RenderBuffersManager::flushUnmap()
 	{
 		ZoneScopedC(0x81A861);
-		GLDebug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()");
+		GLDebug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()"_s);
 
 		for (ManagedBuffer& buffer : buffers_) {
 #if defined(NCINE_PROFILING)
@@ -130,7 +133,7 @@ namespace nCine
 	void RenderBuffersManager::remap()
 	{
 		ZoneScopedC(0x81A861);
-		GLDebug::ScopedGroup scoped("RenderBuffersManager::remap()");
+		GLDebug::ScopedGroup scoped("RenderBuffersManager::remap()"_s);
 
 		for (ManagedBuffer& buffer : buffers_) {
 			ASSERT(buffer.freeSpace == buffer.size);
@@ -159,13 +162,13 @@ namespace nCine
 		switch (managedBuffer.type) {
 			default:
 			case BufferTypes::Array:
-				managedBuffer.object->SetObjectLabel("Vertex_ManagedBuffer");
+				managedBuffer.object->SetObjectLabel("Vertex_ManagedBuffer"_s);
 				break;
 			case BufferTypes::ElementArray:
-				managedBuffer.object->SetObjectLabel("Index_ManagedBuffer");
+				managedBuffer.object->SetObjectLabel("Index_ManagedBuffer"_s);
 				break;
 			case BufferTypes::Uniform:
-				managedBuffer.object->SetObjectLabel("Uniform_ManagedBuffer");
+				managedBuffer.object->SetObjectLabel("Uniform_ManagedBuffer"_s);
 				break;
 		}
 
@@ -178,8 +181,12 @@ namespace nCine
 
 		FATAL_ASSERT(managedBuffer.mapBase != nullptr);
 
-		// TODO: GLDebug
-		//debugString.format("Create %s buffer 0x%lx", bufferTypeToString(specs.type), std::uintptr_t(buffers_.back().object.get()));
-		//GLDebug::messageInsert(debugString.data());
+#if defined(DEATH_DEBUG)
+		if (GLDebug::IsAvailable()) {
+			char debugString[128];
+			std::size_t length = formatInto(debugString, "Create {} buffer 0x{:x}", bufferTypeToString(specs.type), std::uintptr_t(buffers_.back().object.get()));
+			GLDebug::MessageInsert({ debugString, length });
+		}
+#endif
 	}
 }

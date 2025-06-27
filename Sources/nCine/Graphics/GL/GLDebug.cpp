@@ -75,11 +75,11 @@ namespace nCine
 #endif
 	}
 
-	void GLDebug::PushGroup(const char* message)
+	void GLDebug::PushGroup(StringView message)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
-			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, debugGroupId_++, -1, message ? message : emptyString);
+			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, debugGroupId_++, GLsizei(message.size()), message.data());
 		}
 #endif
 	}
@@ -93,29 +93,20 @@ namespace nCine
 #endif
 	}
 
-	void GLDebug::MessageInsert(const char* message)
+	void GLDebug::MessageInsert(StringView message)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
-			glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_MARKER, debugGroupId_++, GL_DEBUG_SEVERITY_NOTIFICATION, -1, message ? message : emptyString);
+			glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_MARKER, debugGroupId_++, GL_DEBUG_SEVERITY_NOTIFICATION, GLsizei(message.size()), message.data());
 		}
 #endif
 	}
 
-	void GLDebug::SetObjectLabel(LabelTypes identifier, GLuint name, const char* label)
+	void GLDebug::SetObjectLabel(LabelTypes identifier, GLuint name, StringView label)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
 		if (debugAvailable_) {
-			glObjectLabel(static_cast<GLenum>(identifier), name, -1, label ? label : emptyString);
-		}
-#endif
-	}
-
-	void GLDebug::SetObjectLabel(LabelTypes identifier, GLuint name, GLsizei length, const char* label)
-	{
-#if defined(GL_DEBUG_SUPPORTED)
-		if (debugAvailable_) {
-			glObjectLabel(static_cast<GLenum>(identifier), name, label ? length : 0, label ? label : emptyString);
+			glObjectLabel(static_cast<GLenum>(identifier), name, GLsizei(label.size()), label.data());
 		}
 #endif
 	}

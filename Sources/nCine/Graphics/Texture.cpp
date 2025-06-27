@@ -168,7 +168,7 @@ namespace nCine
 		}
 #endif
 		glTexture_->Bind();
-		glTexture_->SetObjectLabel(filename.data());
+		glTexture_->SetObjectLabel(filename);
 		initialize(*texLoader);
 		load(*texLoader);
 

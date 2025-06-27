@@ -27,7 +27,7 @@ namespace nCine
 {
 	namespace
 	{
-		static const char BatchSizeFormatString[] = "#ifndef BATCH_SIZE\n\t#define BATCH_SIZE (%d)\n#endif\n#line 0\n";
+		static const char BatchSizeFormatString[] = "#ifndef BATCH_SIZE\n\t#define BATCH_SIZE ({})\n#endif\n#line 0\n";
 
 		struct ShaderLoad
 		{
@@ -282,8 +282,8 @@ namespace nCine
 				// If fixed batch size is used, it's compiled only once with specified batch size
 				shaderToLoad.shaderProgram->SetBatchSize(appCfg.fixedBatchSize);
 
-				std::int32_t length = formatString(sourceString, BatchSizeFormatString, appCfg.fixedBatchSize);
-				vertexStrings[stringsCount++] = StringView(sourceString, length);
+				std::size_t length = formatInto(sourceString, BatchSizeFormatString, appCfg.fixedBatchSize);
+				vertexStrings[stringsCount++] = { sourceString, length };
 #if defined(WITH_EMBEDDED_SHADERS)
 				vertexStrings[stringsCount++] = shaderToLoad.vertexShader;
 #endif
@@ -291,8 +291,8 @@ namespace nCine
 				compileTwice = true;
 
 				// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
-				std::int32_t length = formatString(sourceString, BatchSizeFormatString, 1);
-				vertexStrings[stringsCount++] = StringView(sourceString, length);
+				std::size_t length = formatInto(sourceString, BatchSizeFormatString, 1);
+				vertexStrings[stringsCount++] = { sourceString, length };
 #if defined(WITH_EMBEDDED_SHADERS)
 				vertexStrings[stringsCount++] = shaderToLoad.vertexShader;
 #endif
@@ -329,8 +329,8 @@ namespace nCine
 					while (batchSize > 0) {
 						shaderToLoad.shaderProgram->Reset();
 						shaderToLoad.shaderProgram->SetBatchSize(batchSize);
-						std::int32_t length = formatString(sourceString, BatchSizeFormatString, batchSize);
-						vertexStrings[0] = StringView(sourceString, length);
+						std::size_t length = formatInto(sourceString, BatchSizeFormatString, batchSize);
+						vertexStrings[0] = { sourceString, length };
 
 #if defined(WITH_EMBEDDED_SHADERS)
 						bool vertexFinalCompiled = shaderToLoad.shaderProgram->AttachShaderFromStrings(GL_VERTEX_SHADER, arrayView(vertexStrings, stringsCount));

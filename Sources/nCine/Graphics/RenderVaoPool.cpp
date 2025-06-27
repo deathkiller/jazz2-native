@@ -8,14 +8,6 @@
 
 namespace nCine
 {
-#if defined(DEATH_DEBUG)
-	namespace
-	{
-		/// The string used to output OpenGL debug group information
-		static char debugString[128];
-	}
-#endif
-
 	RenderVaoPool::RenderVaoPool(std::uint32_t vaoPoolSize)
 	{
 		vaoPool_.reserve(vaoPoolSize);
@@ -27,6 +19,10 @@ namespace nCine
 
 	void RenderVaoPool::bindVao(const GLVertexFormat& vertexFormat)
 	{
+#if defined(DEATH_DEBUG)
+		char debugString[128];
+#endif
+
 		bool vaoFound = false;
 		for (VaoBinding& binding : vaoPool_) {
 			if (binding.format == vertexFormat) {
@@ -58,13 +54,13 @@ namespace nCine
 				item.object = std::make_unique<GLVertexArrayObject>();
 				index = std::uint32_t(vaoPool_.size() - 1);
 #if defined(DEATH_DEBUG)
-				/*if (GLDebug::isAvailable()) {
-					debugString.format("Created and defined VAO 0x%lx (%u)", uintptr_t(vaoPool_[index].object.get()), index);
-					GLDebug::messageInsert(debugString.data());
+				if (GLDebug::IsAvailable()) {
+					std::size_t length = formatInto(debugString, "Created and defined VAO 0x{:x} ({})", std::uintptr_t(vaoPool_[index].object.get()), index);
+					GLDebug::MessageInsert({ debugString, length });
 
-					debugString.format("VAO_#%d", index);
-					vaoPool_.back().object->setObjectLabel(debugString.data());
-				}*/
+					length = formatInto(debugString, "VAO_#{}", index);
+					vaoPool_.back().object->SetObjectLabel({ debugString, length });
+				}
 #endif
 			} else {
 				// Find the least recently used VAO
@@ -77,8 +73,8 @@ namespace nCine
 				}
 
 #if defined(DEATH_DEBUG)
-				formatString(debugString, "Reuse and define VAO 0x%lx (%u)", std::uintptr_t(vaoPool_[index].object.get()), index);
-				GLDebug::MessageInsert(debugString);
+				std::size_t length = formatInto(debugString, "Reuse and define VAO 0x{:x} ({})", std::uintptr_t(vaoPool_[index].object.get()), index);
+				GLDebug::MessageInsert({ debugString, length });
 #endif
 #if defined(NCINE_PROFILING)
 				RenderStatistics::addVaoPoolReuse();
@@ -106,7 +102,8 @@ namespace nCine
 	void RenderVaoPool::insertGLDebugMessage(const VaoBinding& binding)
 	{
 #if defined(DEATH_DEBUG)
-		formatString(debugString, "Bind VAO 0x%lx (", std::uintptr_t(binding.object.get()));
+		static char debugString[128];
+		std::size_t length = formatInto(debugString, "Bind VAO 0x{:x}", std::uintptr_t(binding.object.get()));
 
 		// TODO: GLDebug
 		/*bool firstVbo = true;
@@ -124,7 +121,7 @@ namespace nCine
 			debugString.formatAppend(", ibo: 0x%lx", std::uintptr_t(binding.format.ibo()));
 		debugString.formatAppend(")");*/
 
-		GLDebug::MessageInsert(debugString);
+		GLDebug::MessageInsert({ debugString, length });
 #endif
 	}
 }
