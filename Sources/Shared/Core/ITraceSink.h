@@ -46,7 +46,7 @@ namespace Death
 		void AttachSink(ITraceSink* sink);
 
 		/** @brief Unregisters the sink and uninitializes the event logger if no sink left */
-		void DetachSink(ITraceSink* sink);
+		void RemoveSink(ITraceSink* sink);
 
 		/** @brief Flushes and waits until all prior entries are written to all sinks */
 		void Flush();
@@ -57,7 +57,7 @@ namespace Death
 			If the backtrace storage is not initialized, all deferred entries are written immediately to all sinks.
 			After initialization, deferred entries are stored in the backtrace storage and written to sinks
 			only when the backtrace is flushed. Flush can be triggered by calling @ref FlushBacktraceAsync()
-			or automatically when an entry with a level higher than the flush level is enqueued.
+			or automatically when an entry with a level equal or higher than the flush level is enqueued.
 		*/
 		void InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel = TraceLevel::Unknown);
 

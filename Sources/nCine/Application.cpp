@@ -1530,7 +1530,7 @@ namespace nCine
 		}
 #	endif
 
-		Trace::DetachSink(this);
+		Trace::RemoveSink(this);
 
 #	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		if (__consoleType >= ConsoleType::WinApi) {

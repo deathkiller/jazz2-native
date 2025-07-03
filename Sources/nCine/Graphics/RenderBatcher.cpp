@@ -366,7 +366,7 @@ namespace nCine
 			batchCommand->geometry().setNumElementsPerVertex(NumFloatsVertexFormatAndIndex);
 			batchCommand->geometry().setNumIndices(instancesIndicesAmount);
 		} else {
-			batchCommand->geometry().setDrawParameters(GL_TRIANGLES, 0, 6 * (nextStart - start));
+			batchCommand->geometry().setDrawParameters(GL_TRIANGLES, 0, 6 * GLsizei(nextStart - start));
 		}
 
 		return batchCommand;
