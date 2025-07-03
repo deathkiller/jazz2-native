@@ -308,7 +308,7 @@ namespace Death { namespace Trace {
 		}
 	}
 
-	void LoggerBackend::DetachSink(ITraceSink* sink)
+	void LoggerBackend::RemoveSink(ITraceSink* sink)
 	{
 		for (std::size_t i = 0; i < _sinks.size(); i++) {
 			if (_sinks[i] == sink) {
@@ -850,9 +850,9 @@ namespace Death { namespace Trace {
 		_backend.AttachSink(sink);
 	}
 
-	void Logger::DetachSink(ITraceSink* sink)
+	void Logger::RemoveSink(ITraceSink* sink)
 	{
-		_backend.DetachSink(sink);
+		_backend.RemoveSink(sink);
 	}
 
 	/*bool Logger::Write(TraceLevel level, const char* functionName, const char* fmt, va_list args)
@@ -1091,9 +1091,9 @@ namespace Death { namespace Trace {
 		GetMainLogger().AttachSink(sink);
 	}
 
-	void DetachSink(ITraceSink* sink)
+	void RemoveSink(ITraceSink* sink)
 	{
-		GetMainLogger().DetachSink(sink);
+		GetMainLogger().RemoveSink(sink);
 	}
 
 	void Flush()

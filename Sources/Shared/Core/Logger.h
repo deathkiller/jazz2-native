@@ -756,14 +756,19 @@ namespace Death { namespace Trace {
 	{
 		/** @brief Timestamp */
 		std::uint64_t Timestamp;
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 cannot handle anonymous unions properly
 		union {
+#endif
 			/** @brief Function name */
 			const char* FunctionName;
 			/** @brief Pointer to flush flag in case of flush event */
 			std::atomic<bool>* FlushFlag;
 			/** @brief Requested capacity in case of initialization event */
 			std::uint32_t Capacity;
+#ifndef DOXYGEN_GENERATING_OUTPUT
 		};
+#endif
 		/** @brief Message */
 		std::string Message;
 		/** @brief Trace level */
@@ -1152,7 +1157,7 @@ namespace Death { namespace Trace {
 		/** @brief Registers the sink */
 		void AttachSink(ITraceSink* sink);
 		/** @brief Unregisters the sink */
-		void DetachSink(ITraceSink* sink);
+		void RemoveSink(ITraceSink* sink);
 
 		/** @brief Notifies the background worker about new entries in the queue */
 		void Notify();
@@ -1287,7 +1292,7 @@ namespace Death { namespace Trace {
 		/** @brief Registers the sink */
 		void AttachSink(ITraceSink* sink);
 		/** @brief Unregisters the sink */
-		void DetachSink(ITraceSink* sink);
+		void RemoveSink(ITraceSink* sink);
 
 		/** @brief Writes the specified entry to all sinks */
 		bool Write(TraceLevel level, const char* functionName, const char* message, std::uint32_t messageLength);
