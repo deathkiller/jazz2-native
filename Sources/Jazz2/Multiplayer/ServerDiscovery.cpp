@@ -61,7 +61,7 @@ namespace Jazz2::Multiplayer
 					(ifa->ifa_flags & IFF_UP) && !(ifa->ifa_flags & IFF_LOOPBACK) && (ifa->ifa_flags & IFF_MULTICAST)) {
 					ifidx = if_nametoindex(ifa->ifa_name);
 					if (ifidx > 0) {
-						LOGI("[MP] Using %s interface \"{}\" ({}) for local discovery", ifa->ifa_addr->sa_family == AF_INET6
+						LOGI("[MP] Using {} interface \"{}\" ({}) for local discovery", ifa->ifa_addr->sa_family == AF_INET6
 							? "IPv6" : "IPv4", ifa->ifa_name, ifidx);
 						break;
 					}

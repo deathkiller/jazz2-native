@@ -451,7 +451,7 @@ namespace Death { namespace Trace {
 			const bool _hugePagesEnabled;
 
 			alignas(CacheLineAligned) std::atomic<T> _atomicWriterPos{0};
-			alignas(CacheLineAligned) T _writerPos {0};
+			alignas(CacheLineAligned) T _writerPos{0};
 			T _readerPosCache{0};
 			T _lastFlushedWriterPos{0};
 
@@ -558,9 +558,9 @@ namespace Death { namespace Trace {
 		/**
 			@brief Unbounded single-producer single-consumer FIFO queue (ring buffer)
 
-			When the internal circular buffer becomes full a new one will be created and the production will continue
-			in the new buffer. Consumption is wait free. If not data is available a special value is returned.
-			If a new buffer is created from the producer the consumer first consumes everything in the old buffer
+			When the internal circular buffer becomes full, a new one will be created and the production will continue
+			in the new buffer. Consumption is wait free. If no data is available, a special value is returned.
+			If a new buffer is created from the producer, the consumer first consumes everything in the old buffer
 			and then moves to the new buffer.
 		*/
 		class UnboundedSPSCQueue
