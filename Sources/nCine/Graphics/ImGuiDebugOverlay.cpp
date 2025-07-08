@@ -944,7 +944,7 @@ namespace nCine
 			renderDocCapturePath_.setLength(pathLength);
 			RenderDocCapture::setCaptureFileComments(renderDocCapturePath_.data(), renderDocFileComments_.data());
 			renderDocLastNumCaptures_ = RenderDocCapture::numCaptures();
-			LOGI_X("RenderDoc capture %d: %s (%lu)", RenderDocCapture::numCaptures() - 1, renderDocCapturePath_.data(), timestamp);
+			LOGI("RenderDoc capture {}: {} ({})", RenderDocCapture::numCaptures() - 1, renderDocCapturePath_, timestamp);
 		}
 
 		if (ImGui::CollapsingHeader("RenderDoc")) {

@@ -135,11 +135,6 @@ static const char ColorDimString[] = "\x1B[0;38;2;177;150;132m";
 #else
 #	include <IO/FileStream.h>
 static std::unique_ptr<Death::IO::Stream> __logFile;
-
-#	if !defined(DEATH_TRACE_ASYNC)
-#		include <Threading/Spinlock.h>
-static Death::Threading::Spinlock __logFileLock;
-#	endif
 #endif
 
 enum class ConsoleType {
@@ -764,7 +759,7 @@ namespace nCine
 #	if defined(DEATH_TARGET_ANDROID)
 				const StringView vendor = gfxCapabilities.GetGLInfoStrings().vendor;
 				const StringView renderer = gfxCapabilities.GetGLInfoStrings().renderer;
-				// Some GPUs doesn't work with dynamic batch size, so it refuses to render VBOs (shows a black screen), disable it for them
+				// Some GPUs don't work with dynamic batch size, so it refuses to render VBOs (shows a black screen), disable it for them
 				if ((vendor == "Imagination Technologies"_s && (renderer == "PowerVR Rogue GE8300"_s || renderer == "PowerVR Rogue GE8320"_s)) ||
 					(vendor == "ARM"_s && renderer == "Mali-T830"_s)) {
 					const StringView vendorPrefix = vendor.findOr(' ', vendor.end());
@@ -1214,7 +1209,7 @@ namespace nCine
 				}
 			}
 			if (__consoleType >= ConsoleType::EscapeCodes && length2 < MaxLogEntryLength) {
-				// Console can be shared with parent process, so clear the rest of the line (using "\x1b[0K" sequence)
+				// Console can be shared with the parent process, so clear the rest of the line (using "\x1b[0K" sequence)
 				logEntryWithColors[length2++] = '\x1b';
 				logEntryWithColors[length2++] = '[';
 				logEntryWithColors[length2++] = '0';
@@ -1254,7 +1249,7 @@ namespace nCine
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		// Allow to attach custom target using Application::AttachTraceTarget()
+		// Allow attaching custom target using Application::AttachTraceTarget()
 		if (__logFile != nullptr) {
 			std::int32_t length3 = 0;
 			AppendDateTime(logEntryWithColors, length3, timestamp);
@@ -1266,9 +1261,7 @@ namespace nCine
 
 #	if !defined(DEATH_TRACE_ASYNC)
 			// File needs to be locked, because messages can arrive from different threads
-			__logFileLock.lock();
 			__logFile->Write(logEntryWithColors, length3);
-			__logFileLock.unlock();
 #	else
 			__logFile->Write(logEntryWithColors, length3);
 #	endif

@@ -176,7 +176,7 @@ namespace Death { namespace Trace {
 
 	bool ThreadContextManager::HasInvalidThreadContext() const noexcept
 	{
-		// Here we do relaxed, because if the value is not zero we will look inside ThreadContext invalid flag that is
+		// Here we do relaxed, because if the value is not zero, we will look inside ThreadContext invalid flag that is
 		// also a relaxed atomic, and then we will look into the SPSC queue size that is also atomic. Even if we don't
 		// read everything in order, we will check again in the next circle.
 		return _invalidThreadContextCount.load(std::memory_order_relaxed) != 0;
@@ -184,7 +184,7 @@ namespace Death { namespace Trace {
 
 	bool ThreadContextManager::HasNewThreadContext() noexcept
 	{
-		// Again relaxed memory model as in case it is false we will acquire the lock
+		// Again relaxed memory model as in case it is false, we will acquire the lock
 		if (_newThreadContextFlag.load(std::memory_order_relaxed)) {
 			// If the variable was updated to true, set it to false. There should not be any race condition here as this
 			// is the only place _changed is set to false, and we will return true anyway.
@@ -447,7 +447,7 @@ namespace Death { namespace Trace {
 		}
 
 		auto findInvalidAndEmptyThreadContextCallback = [](ThreadContext* threadContext) {
-			// If the thread context is invalid it means the thread that created it has now died.
+			// If the thread context is invalid, it means the thread that created it has now died.
 			// We also want to empty the queue from all LogRecords before removing the thread context
 			if (!threadContext->IsValid()) {
 				DEATH_DEBUG_ASSERT(threadContext->HasUnboundedQueueType() || threadContext->HasBoundedQueueType());
@@ -472,7 +472,7 @@ namespace Death { namespace Trace {
 						 findInvalidAndEmptyThreadContextCallback);
 
 		while DEATH_UNLIKELY(foundInvalidAndEmptyThreadContext != std::end(_activeThreadContextsCache)) {
-			// If we found anything then remove it - Here if we have more than one to remove we will try to acquire
+			// If we found anything then remove it - Here if we have more than one to remove, we will try to acquire
 			// the lock multiple times, but it should be fine as it is unlikely to have that many to remove
 			threadManager.RemoveSharedInvalidatedThreadContext(*foundInvalidAndEmptyThreadContext);
 
@@ -1009,10 +1009,10 @@ namespace Death { namespace Trace {
 			}
 		}
 
-#if defined(DEATH_DEBUG)
+#	if defined(DEATH_DEBUG)
 		std::byte const* const writeBegin = writeBuffer;
 		DEATH_DEBUG_ASSERT(writeBegin != nullptr);
-#endif
+#	endif
 
 		writeBuffer[0] = (std::byte)level;
 		writeBuffer += 1;
@@ -1029,10 +1029,10 @@ namespace Death { namespace Trace {
 		std::memcpy(writeBuffer, content, contentLength);
 		writeBuffer += contentLength;
 
-#if defined(DEATH_DEBUG)
+#	if defined(DEATH_DEBUG)
 		DEATH_DEBUG_ASSERT(writeBuffer > writeBegin);
 		DEATH_DEBUG_ASSERT(totalSize == (static_cast<std::size_t>(writeBuffer - writeBegin)));
-#endif
+#	endif
 
 		_threadContext->GetSpscQueue<DefaultQueueType>().finishAndCommitWrite(totalSize);
 

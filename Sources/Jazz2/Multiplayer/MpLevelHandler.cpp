@@ -2453,7 +2453,7 @@ namespace Jazz2::Multiplayer
 						return false;
 					}
 
-					std::size_t length = formatInto(infoBuffer, "Spawning set to \f[w:80]\f[c:#707070]%s\f[/c]\f[/w]", _enableSpawning ? "Enabled"_s : "Disabled"_s);
+					std::size_t length = formatInto(infoBuffer, "Spawning set to \f[w:80]\f[c:#707070]{}\f[/c]\f[/w]", _enableSpawning ? "Enabled"_s : "Disabled"_s);
 					SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 					return true;
 				}
@@ -3032,7 +3032,7 @@ namespace Jazz2::Multiplayer
 					}
 					
 					Thread streamingThread([_this = runtime_cast<MpLevelHandler>(shared_from_this()), peer, peerDesc = std::move(peerDesc), missingAssets = std::move(missingAssets)]() {
-						LOGI("Started streaming %u assets to peer [{:.8x}]", missingAssets.size(), std::uint64_t(peer._enet));
+						LOGI("Started streaming {} assets to peer [{:.8x}]", missingAssets.size(), std::uint64_t(peer._enet));
 						TimeStamp begin = TimeStamp::now();
 
 						for (std::uint32_t i = 0; i < (std::uint32_t)missingAssets.size(); i++) {
@@ -4351,7 +4351,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerTakeDamage - received playerIndex %u instead of %u", playerIndex, _lastSpawnedActorId);
+						LOGD("[MP] ServerPacketType::PlayerTakeDamage - received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
