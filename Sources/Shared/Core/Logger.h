@@ -1165,6 +1165,8 @@ namespace Death { namespace Trace {
 #if defined(DEATH_TRACE_ASYNC)
 		/** @brief Returns `true` if the background worker is alive */
 		bool IsAlive() const noexcept;
+		/** @brief Returns `true` if the current thread is the background worker thread */
+		bool IsWorkerThread() const noexcept;
 #else
 		/** @brief Dispatches the specified entry to all sinks */
 		void DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength, Containers::StringView threadId);

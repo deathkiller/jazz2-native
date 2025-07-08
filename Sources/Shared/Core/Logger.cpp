@@ -394,6 +394,11 @@ namespace Death { namespace Trace {
 		return _workerThreadAlive.load(std::memory_order_relaxed);
 	}
 
+	bool LoggerBackend::IsWorkerThread() const noexcept
+	{
+		return (std::this_thread::get_id() == _workerThread.get_id());
+	}
+
 	void LoggerBackend::CleanUpBeforeExit()
 	{
 		using namespace Implementation;
@@ -855,35 +860,6 @@ namespace Death { namespace Trace {
 		_backend.RemoveSink(sink);
 	}
 
-	/*bool Logger::Write(TraceLevel level, const char* functionName, const char* fmt, va_list args)
-	{
-		using namespace Implementation;
-
-#if defined(DEATH_TRACE_ASYNC)
-		std::uint64_t timestamp = rdtsc();
-#else
-		std::uint64_t timestamp = static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
-			std::chrono::system_clock::now().time_since_epoch()).count());
-#endif
-
-		char formattedMessage[MaxMessageLength];
-		std::int32_t length = vsnprintf(formattedMessage, sizeof(formattedMessage), fmt, args);
-		if (length <= 0) {
-			return false;
-		}
-
-		bool result = EnqueueEntry(level, timestamp, functionName, formattedMessage, length);
-
-		if DEATH_UNLIKELY(level >= TraceLevel::Error) {
-			// Flush all messages with level Error or higher because of potential immediate crash/termination
-			Flush();
-		} else {
-			_backend.Notify();
-		}
-
-		return result;
-	}*/
-
 	bool Logger::Write(TraceLevel level, const char* functionName, const char* message, std::uint32_t messageLength)
 	{
 #if defined(DEATH_TRACE_ASYNC)
@@ -912,8 +888,8 @@ namespace Death { namespace Trace {
 #if defined(DEATH_TRACE_ASYNC)
 		std::uint64_t timestamp = rdtsc();
 
-		if (!_backend.IsAlive()) {
-			// If the backend is not alive (yet), don't try to wait for the flushing
+		if (!_backend.IsAlive() || _backend.IsWorkerThread()) {
+			// If the backend is not alive (yet) or it's called from worker thread itself (in case of error), don't try to wait for the flushing
 			return;
 		}
 
