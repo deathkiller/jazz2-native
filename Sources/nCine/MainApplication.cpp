@@ -369,7 +369,9 @@ namespace nCine
 		}
 
 		if (appCfg_.withGraphics) {
-			// Graphics device should always be created before the input manager!
+			// Graphics device should always be created before the input manager
+			LOGD("Initializing graphics device and input manager...");
+
 			IGfxDevice::GLContextInfo glContextInfo(appCfg_);
 			const DisplayMode::VSync vSyncMode = (appCfg_.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
 			DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
