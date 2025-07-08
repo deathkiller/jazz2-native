@@ -518,13 +518,13 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 				break;
 			}
 		}
-		std::int32_t j = i;
+		std::int32_t j = std::max(i, 0);
 		while (j > 0 && functionName[j - 1] == ' ') {
 			j--;
 		}
 		// Hopefully only operators can contain spaces in their name
 		if (j > OperatorPrefix.size() && functionNameView.slice(j - OperatorPrefix.size(), j) == OperatorPrefix) {
-			i = j - OperatorPrefix.size();
+			i = j - std::int32_t(OperatorPrefix.size());
 			goto FindFunctionName;
 		}
 		i++;
