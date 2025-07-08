@@ -27,6 +27,8 @@ namespace nCine::Backends
 
 	GlfwGfxDevice::~GlfwGfxDevice()
 	{
+		LOGD("Disposing OpenGL context...");
+
 		glfwDestroyWindow(windowHandle_);
 		windowHandle_ = nullptr;
 		glfwTerminate();
@@ -329,6 +331,8 @@ namespace nCine::Backends
 		}
 #endif
 
+		LOGD("Initializing window...");
+
 		windowHandle_ = glfwCreateWindow(width_, height_, "", monitor, nullptr);
 		FATAL_ASSERT_MSG(windowHandle_, "glfwCreateWindow() failed");
 
@@ -351,6 +355,8 @@ namespace nCine::Backends
 
 		glfwSetWindowSizeLimits(windowHandle_, 200, 160, GLFW_DONT_CARE, GLFW_DONT_CARE);
 
+		LOGD("Initializing OpenGL context...");
+
 		glfwMakeContextCurrent(windowHandle_);
 
 		const int interval = (displayMode_.hasVSync() ? 1 : 0);
@@ -366,6 +372,8 @@ namespace nCine::Backends
 
 	void GlfwGfxDevice::updateMonitors()
 	{
+		LOGD("Updating list of monitors...");
+
 		int monitorCount = 0;
 		GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
 		ASSERT(monitorCount >= 1);

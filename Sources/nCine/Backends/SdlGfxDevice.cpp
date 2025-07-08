@@ -26,6 +26,8 @@ namespace nCine::Backends
 
 	SdlGfxDevice::~SdlGfxDevice()
 	{
+		LOGD("Disposing OpenGL context...");
+
 		SDL_GL_DeleteContext(glContextHandle_);
 		glContextHandle_ = nullptr;
 		SDL_DestroyWindow(windowHandle_);
@@ -196,8 +198,6 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::initDevice(int windowPosX, int windowPosY, bool isResizable)
 	{
-		updateMonitors();
-
 		// Setting OpenGL attributes
 		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, displayMode_.redBits());
 		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, displayMode_.greenBits());
@@ -224,6 +224,8 @@ namespace nCine::Backends
 		if (glContextInfo_.debugContext) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 		}
+
+		LOGD("Initializing window...");
 
 		Uint32 flags = SDL_WINDOW_OPENGL;
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -256,6 +258,8 @@ namespace nCine::Backends
 			SDL_GetWindowSize(windowHandle_, &width_, &height_);
 		}
 
+		LOGD("Initializing OpenGL context...");
+
 		glContextHandle_ = SDL_GL_CreateContext(windowHandle_);
 		FATAL_ASSERT_MSG(glContextHandle_, "SDL_GL_CreateContext failed: {}", SDL_GetError());
 
@@ -272,6 +276,8 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::updateMonitors()
 	{
+		LOGD("Updating list of monitors...");
+
 		const int monitorCount = SDL_GetNumVideoDisplays();
 		ASSERT(monitorCount >= 1);
 		numMonitors_ = (monitorCount < MaxMonitors) ? monitorCount : MaxMonitors;

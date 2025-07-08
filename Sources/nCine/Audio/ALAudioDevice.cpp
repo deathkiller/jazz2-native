@@ -18,6 +18,8 @@ namespace nCine
 		, alcReopenDeviceSOFT_(nullptr), pEnumerator_(nullptr), lastDeviceChangeTime_(0), shouldRecreate_(false)
 #endif
 	{
+		LOGD("Initializing OpenAL audio device...");
+
 		device_ = alcOpenDevice(nullptr);
 		RETURN_ASSERT_MSG(device_ != nullptr, "alcOpenDevice() failed with error 0x{:x}", alGetError());
 		deviceName_ = alcGetString(device_, ALC_DEVICE_SPECIFIER);
@@ -74,6 +76,8 @@ namespace nCine
 
 	ALAudioDevice::~ALAudioDevice()
 	{
+		LOGD("Disposing OpenAL audio device...");
+
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		unregisterAudioEvents();
 #endif
