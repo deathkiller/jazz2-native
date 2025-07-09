@@ -98,6 +98,8 @@ namespace nCine
 		/// The OpenAL device name string
 		const char* deviceName_;
 
+		void Initialize();
+
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		static constexpr std::uint64_t DeviceChangeLimitMs = 250;
 

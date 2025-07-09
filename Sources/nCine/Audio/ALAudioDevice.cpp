@@ -18,6 +18,11 @@ namespace nCine
 		, alcReopenDeviceSOFT_(nullptr), pEnumerator_(nullptr), lastDeviceChangeTime_(0), shouldRecreate_(false)
 #endif
 	{
+		Initialize();
+	}
+
+	void ALAudioDevice::Initialize()
+	{
 		LOGD("Initializing OpenAL audio device...");
 
 		device_ = alcOpenDevice(nullptr);
@@ -71,6 +76,74 @@ namespace nCine
 		// Try to use ALC_SOFT_reopen_device extension to reopen the device
 		alcReopenDeviceSOFT_ = (LPALCREOPENDEVICESOFT)alGetProcAddress("alcReopenDeviceSOFT");
 		registerAudioEvents();
+#endif
+
+#if defined(DEATH_TRACE)
+		// Log OpenAL device info
+		LOGI("--- OpenAL device info ---");
+		const ALCchar* deviceName = alcGetString(device_, ALC_DEVICE_SPECIFIER);
+		LOGI("Device Name: {}", deviceName);
+
+		ALCint attributesSize = 0;
+		alcGetIntegerv(device_, ALC_ATTRIBUTES_SIZE, 1, &attributesSize);
+		if (attributesSize > 0) {
+			constexpr std::int32_t MaxAttributes = 16;
+			ALCint attributes[MaxAttributes * 2];
+			const ALCint numAttributes = (attributesSize < MaxAttributes * 2) ? attributesSize : MaxAttributes * 2;
+
+			alcGetIntegerv(device_, ALC_ALL_ATTRIBUTES, numAttributes, attributes);
+
+			ALCint versionMajor = 0, versionMinor = 0;
+			for (std::int32_t i = 0; i + 1 < numAttributes; i += 2) {
+				switch (attributes[i]) {
+					case ALC_MAJOR_VERSION: versionMajor = attributes[i + 1]; break;
+					case ALC_MINOR_VERSION: versionMinor = attributes[i + 1]; break;
+				}
+			}
+
+			LOGI("OpenAL Version: {}.{}", versionMajor, versionMinor);
+
+			for (std::int32_t i = 0; i + 1 < numAttributes; i += 2) {
+				switch (attributes[i]) {
+					case ALC_FREQUENCY:
+						LOGI("Output Frequency: {} Hz", attributes[i + 1]);
+						break;
+					case ALC_MONO_SOURCES:
+						LOGI("Mono Sources: {}", attributes[i + 1]);
+						break;
+					case ALC_STEREO_SOURCES:
+						LOGI("Stereo Sources: {}", attributes[i + 1]);
+						break;
+					case ALC_REFRESH:
+						LOGI("Refresh Rate: {} Hz", attributes[i + 1]);
+						break;
+					case ALC_SYNC:
+						LOGI("Asynchronous: {}", attributes[i + 1] == ALC_FALSE);
+						break;
+#	if defined(ALC_SOFT_HRTF)
+					case ALC_HRTF_STATUS_SOFT:
+						const char* statusStr;
+						switch (attributes[i + 1]) {
+							case ALC_HRTF_DISABLED_SOFT: statusStr = "disabled"; break;
+							case ALC_HRTF_ENABLED_SOFT: statusStr = "enabled"; break;
+							case ALC_HRTF_DENIED_SOFT: statusStr = "disabled (denied)"; break;
+							case ALC_HRTF_HEADPHONES_DETECTED_SOFT: // Not used by OpenAL Soft anymore
+							case ALC_HRTF_REQUIRED_SOFT: statusStr = "enabled (enforced)"; break;
+							default: statusStr = "unknown"; break;
+						}
+						LOGI("HRTF: {}", statusStr);
+						break;
+#	endif
+				}
+			}
+
+#	if defined(ALC_EXT_EFX_NAME)
+			bool hasExtEfx = alcIsExtensionPresent(device_, ALC_EXT_EFX_NAME);
+#	else
+			bool hasExtEfx = alcIsExtensionPresent(device_, "ALC_EXT_EFX");
+#	endif
+			LOGI("ALC_EXT_EFX: {}", hasExtEfx);
+		}
 #endif
 	}
 
@@ -285,6 +358,21 @@ namespace nCine
 			if (nativeFreq >= 44100 && nativeFreq <= 192000) {
 				nativeFreq_ = nativeFreq;
 			}
+
+#	if defined(DEATH_DEBUG) && defined(DEATH_TRACE) && defined(ALC_SOFT_HRTF)
+			ALCint status;
+			alcGetIntegerv(device_, ALC_HRTF_STATUS_SOFT, 1, &status);
+			const char* statusStr;
+			switch (status) {
+				case ALC_HRTF_DISABLED_SOFT: statusStr = "disabled"; break;
+				case ALC_HRTF_ENABLED_SOFT: statusStr = "enabled"; break;
+				case ALC_HRTF_DENIED_SOFT: statusStr = "disabled (denied)"; break;
+				case ALC_HRTF_HEADPHONES_DETECTED_SOFT: // Not used by OpenAL Soft anymore
+				case ALC_HRTF_REQUIRED_SOFT: statusStr = "enabled (enforced)"; break;
+				default: statusStr = "unknown"; break;
+			}
+			LOGD("HRTF: {}", statusStr);
+#	endif
 		} else {
 			LOGE("Cannot recreate audio device - missing extension");
 		}
@@ -362,7 +450,8 @@ namespace nCine
 
 	HRESULT ALAudioDevice::OnDeviceStateChanged(LPCWSTR pwstrDeviceId, DWORD dwNewState)
 	{
-		shouldRecreate_ = true;
+		// OnDefaultDeviceChanged() is called afterwards, so no need to handle it here
+		//shouldRecreate_ = true;
 		return S_OK;
 	}
 
