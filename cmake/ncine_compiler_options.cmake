@@ -213,8 +213,14 @@ else() # GCC and LLVM
 			endif()
 		endif()
 
+		set(_compressDebugSections "")
+		if(("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.1.0) OR
+		   ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0.0))
+			set(_compressDebugSections "--compress-debug-sections=zlib")
+		endif()
+			
 		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
-			COMMAND ${CMAKE_OBJCOPY} --only-keep-debug "${_targetPath}/${_targetName}" "${_targetPath}/${_targetName}.pdb"
+			COMMAND ${CMAKE_OBJCOPY} --only-keep-debug ${_compressDebugSections} "${_targetPath}/${_targetName}" "${_targetPath}/${_targetName}.pdb"
 			COMMAND ${CMAKE_OBJCOPY} --strip-debug --strip-unneeded "${_targetPath}/${_targetName}"
 			COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink="${_targetName}.pdb" "${_targetPath}/${_targetName}"
 			COMMENT "Splitting symbols and generating debug info"
