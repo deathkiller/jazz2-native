@@ -344,7 +344,7 @@ namespace Jazz2::UI::Menu
 
 		for (auto& item : _items) {
 			if (item.Desc.EndpointString == desc.EndpointString) {
-				std:uint32_t prevFlags = (item.Desc.Flags & 0x80000000u /*Local*/);
+				std::uint32_t prevFlags = (item.Desc.Flags & 0x80000000u /*Local*/);
 				item.Desc = std::move(desc);
 				item.Desc.Flags |= prevFlags;
 				return;

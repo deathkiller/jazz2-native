@@ -21,6 +21,9 @@ namespace Jazz2::Actors::Enemies
 
 	Task<bool> Dragon::OnActivatedAsync(const ActorActivationDetails& details)
 	{
+		// Move the dragon down a bit to avoid being stuck in the ceiling in the first level on hard difficulty
+		MoveInstantly(Vector2f(0.0f, 8.0f), MoveType::Relative | MoveType::Force);
+
 		SetHealthByDifficulty(1);
 		_scoreValue = 200;
 

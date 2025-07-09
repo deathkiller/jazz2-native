@@ -1398,7 +1398,7 @@ namespace Death { namespace Containers {
 		v /= 60;
 
 		char result[64];
-		std::int32_t length = snprintf(result, sizeof(result), "%lld:%02d:%02d.%03d", v, minutes, seconds, milliseconds);
+		std::int32_t length = snprintf(result, sizeof(result), "%d:%02d:%02d.%03d", std::int32_t(v), minutes, seconds, milliseconds);
 		return String(result, length);
 	}
 
