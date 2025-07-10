@@ -30,7 +30,7 @@ namespace nCine
 		duration_ = float(numSamples_) / frequency_;
 
 		RETURN_ASSERT_MSG(numChannels_ == 1 || numChannels_ == 2, "Unsupported number of channels: {}", numChannels_);
-		LOGD("Duration: {:.2}s, channels: {}, frequency: {}Hz", duration_, numChannels_, frequency_);
+		LOGD("Duration: {:.2}s, channels: {}, frequency: {} Hz", duration_, numChannels_, frequency_);
 
 		hasLoaded_ = true;
 	}

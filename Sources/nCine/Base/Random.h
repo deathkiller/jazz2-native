@@ -18,7 +18,7 @@ namespace nCine
 		RandomGenerator(std::uint64_t initState, std::uint64_t initSequence) noexcept;
 
 		/// Initializes the generator with the specified seeds
-		void Initialize(std::uint64_t initState, std::uint64_t initSequence) noexcept;
+		void Init(std::uint64_t initState, std::uint64_t initSequence) noexcept;
 
 		/// Generates a uniformly distributed 32-bit number
 		std::uint32_t Next() noexcept;

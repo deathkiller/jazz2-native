@@ -155,7 +155,7 @@ namespace Death { namespace Trace {
 		}
 	}
 
-	ThreadContextManager& ThreadContextManager::instance() noexcept
+	ThreadContextManager& ThreadContextManager::Get() noexcept
 	{
 		static ThreadContextManager instance;
 		return instance;
@@ -227,63 +227,60 @@ namespace Death { namespace Trace {
 	}
 #endif
 
-	namespace Implementation
+	BacktraceStorage::BacktraceStorage()
+		: _capacity(0), _index(0)
 	{
-		BacktraceStorage::BacktraceStorage()
-			: _capacity(0), _index(0)
-		{
-		}
+	}
 
-		void BacktraceStorage::Store(TransitEvent transitEvent, StringView threadId)
-		{
-			if (_storedEvents.size() < _capacity) {
-				arrayAppend(_storedEvents, InPlaceInit, threadId, Death::move(transitEvent));
+	void BacktraceStorage::Store(TransitEvent transitEvent, StringView threadId)
+	{
+		if (_storedEvents.size() < _capacity) {
+			arrayAppend(_storedEvents, InPlaceInit, threadId, Death::move(transitEvent));
+		} else {
+			StoredTransitEvent& ste = _storedEvents[_index];
+
+			ste = StoredTransitEvent{threadId, Death::move(transitEvent)};
+
+			if (_index < _capacity - 1) {
+				_index++;
 			} else {
-				StoredTransitEvent& ste = _storedEvents[_index];
-
-				ste = StoredTransitEvent{threadId, Death::move(transitEvent)};
-
-				if (_index < _capacity - 1) {
-					_index++;
-				} else {
-					_index = 0;
-				}
-			}
-		}
-
-		void BacktraceStorage::Process(Function<void(TransitEvent const&, StringView threadId)>&& callback)
-		{
-			std::uint32_t index = _index;
-
-			for (std::uint32_t i = 0; i < _storedEvents.size(); i++) {
-				auto& e = _storedEvents[index];
-				callback(e.Event, e.ThreadId);
-
-				if (index < _storedEvents.size() - 1) {
-					index++;
-				} else {
-					index = 0;
-				}
-			}
-
-			arrayClear(_storedEvents);
-			_index = 0;
-		}
-
-		void BacktraceStorage::SetCapacity(std::uint32_t capacity)
-		{
-			if (_capacity != capacity) {
-				_capacity = capacity;
 				_index = 0;
-				arrayClear(_storedEvents);
-				arrayReserve(_storedEvents, _capacity);
+			}
+		}
+	}
+
+	void BacktraceStorage::Process(Function<void(TransitEvent const& event, StringView threadId)>&& callback)
+	{
+		std::uint32_t index = _index;
+
+		for (std::uint32_t i = 0; i < _storedEvents.size(); i++) {
+			auto& e = _storedEvents[index];
+			callback(e.Event, e.ThreadId);
+
+			if (index < _storedEvents.size() - 1) {
+				index++;
+			} else {
+				index = 0;
 			}
 		}
 
-		BacktraceStorage::StoredTransitEvent::StoredTransitEvent(String threadId, TransitEvent transitEvent)
-			: ThreadId(Death::move(threadId)), Event(Death::move(transitEvent))
-		{
+		arrayClear(_storedEvents);
+		_index = 0;
+	}
+
+	void BacktraceStorage::SetCapacity(std::uint32_t capacity)
+	{
+		if (_capacity != capacity) {
+			_capacity = capacity;
+			_index = 0;
+			arrayClear(_storedEvents);
+			arrayReserve(_storedEvents, _capacity);
 		}
+	}
+
+	BacktraceStorage::StoredTransitEvent::StoredTransitEvent(String threadId, TransitEvent transitEvent)
+		: ThreadId(Death::move(threadId)), Event(Death::move(transitEvent))
+	{
 	}
 
 	LoggerBackend::LoggerBackend()
@@ -427,7 +424,7 @@ namespace Death { namespace Trace {
 
 	void LoggerBackend::UpdateActiveThreadContextsCache()
 	{
-		ThreadContextManager& threadManager = ThreadContextManager::instance();
+		ThreadContextManager& threadManager = ThreadContextManager::Get();
 
 		// Check if _threadContexts has changed, this can happen only when a new thread context is added by any Logger
 		if DEATH_UNLIKELY(threadManager.HasNewThreadContext()) {
@@ -440,7 +437,7 @@ namespace Death { namespace Trace {
 
 	void LoggerBackend::CleanUpInvalidatedThreadContexts()
 	{
-		ThreadContextManager& threadManager = ThreadContextManager::instance();
+		ThreadContextManager& threadManager = ThreadContextManager::Get();
 
 		if (!threadManager.HasInvalidThreadContext()) {
 			return;

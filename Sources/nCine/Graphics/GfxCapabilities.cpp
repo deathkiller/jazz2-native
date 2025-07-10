@@ -25,7 +25,7 @@ namespace nCine
 		for (std::int32_t i = 0; i < MaxProgramBinaryFormats; i++) {
 			programBinaryFormats_[i] = -1;
 		}
-		Initialize();
+		Init();
 	}
 
 	std::int32_t GfxCapabilities::GetGLVersion(IGfxCapabilities::GLVersion version) const
@@ -65,7 +65,7 @@ namespace nCine
 		return extensionAvailable;
 	}
 
-	void GfxCapabilities::Initialize()
+	void GfxCapabilities::Init()
 	{
 		const char* version = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 
