@@ -262,7 +262,7 @@ namespace Jazz2::UI
 			OnDrawTouchButtons(controlledPlayer);
 		}
 
-		// FPS
+		// Performance Metrics
 		if (PreferencesCache::ShowPerformanceMetrics) {
 			i32tos((std::int32_t)std::round(theApplication().GetFrameTimer().GetAverageFps()), stringBuffer);
 #if defined(DEATH_TARGET_ANDROID)

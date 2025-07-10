@@ -748,7 +748,7 @@ namespace Death { namespace Trace {
 #endif
 
 	/**
-		@brief Transit event stores required information to be dispatched to sinks
+		@brief Stores required information about a logged entry to be dispatched to sinks
 		
 		This class should not usually be used directly.
 	*/
@@ -802,12 +802,17 @@ namespace Death { namespace Trace {
 		}
 	};
 
-#if defined(DEATH_TRACE_ASYNC)
+#if defined(DEATH_TRACE_ASYNC) || defined(DOXYGEN_GENERATING_OUTPUT)
+	/**
+		@brief Circular buffer for transit events
+		
+		This class should not usually be used directly.
+	*/
 	class TransitEventBuffer
 	{
 	public:
-		explicit TransitEventBuffer(std::size_t initial_capacity)
-			: _capacity(Implementation::NextPowerOfTwo(initial_capacity)), _storage(std::make_unique<TransitEvent[]>(_capacity)),
+		explicit TransitEventBuffer(std::size_t initialCapacity)
+			: _capacity(Implementation::NextPowerOfTwo(initialCapacity)), _storage(std::make_unique<TransitEvent[]>(_capacity)),
 				_mask(_capacity - 1u), _readerPos(0), _writerPos(0)
 		{
 		}
@@ -842,6 +847,7 @@ namespace Death { namespace Trace {
 			return *this;
 		}
 
+		/** @brief Returns a pointer to the first transit event in the buffer, or `nullptr` if the buffer is empty */
 		TransitEvent* front() noexcept
 		{
 			if (_readerPos == _writerPos) {
@@ -850,11 +856,13 @@ namespace Death { namespace Trace {
 			return &_storage[_readerPos & _mask];
 		}
 
+		/** @brief Consumes the first transit event from the buffer */
 		void pop_front() noexcept
 		{
 			++_readerPos;
 		}
 
+		/** @brief Returns a pointer to the last transit event in the buffer, or expands the buffer if it is full */
 		TransitEvent* back() noexcept
 		{
 			if (_capacity == size()) {
@@ -864,21 +872,25 @@ namespace Death { namespace Trace {
 			return &_storage[_writerPos & _mask];
 		}
 
+		/** @brief Adds a new transit event to be consumed */
 		void push_back() noexcept
 		{
 			++_writerPos;
 		}
 
+		/** @brief Returns the number of unconsumed events */
 		std::size_t size() const noexcept
 		{
 			return _writerPos - _readerPos;
 		}
 
+		/** @brief Returns the capacity of the buffer */
 		std::size_t capacity() const noexcept
 		{
 			return _capacity;
 		}
 
+		/** @brief Returns `true` if the buffer is empty */
 		bool empty() const noexcept
 		{
 			return _readerPos == _writerPos;
@@ -914,6 +926,11 @@ namespace Death { namespace Trace {
 
 	class LoggerBackend;
 
+	/**
+		@brief Stores information about the current thread and allows to receive logged entries
+		
+		This class should not usually be used directly.
+	*/
 	class ThreadContext
 	{
 		friend class LoggerBackend;
@@ -952,6 +969,20 @@ namespace Death { namespace Trace {
 		ThreadContext(ThreadContext const&) = delete;
 		ThreadContext& operator=(ThreadContext const&) = delete;
 
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		/** @brief Returns single-producer single-consumer queue for logged entries */
+		Implementation::SPSCQueue& GetSpscQueue() noexcept;
+#else
+		SpscQueueUnion const& GetSpscQueueUnion() const noexcept
+		{
+			return _spscQueueUnion;
+		}
+
+		SpscQueueUnion& GetSpscQueueUnion() noexcept
+		{
+			return _spscQueueUnion;
+		}
+
 		template<Implementation::QueueType queueType_>
 		std::conditional_t<queueType_ == Implementation::QueueType::UnboundedBlocking || queueType_ == Implementation::QueueType::UnboundedDropping,
 			Implementation::UnboundedSPSCQueue, Implementation::BoundedSPSCQueue>& GetSpscQueue() noexcept
@@ -977,57 +1008,57 @@ namespace Death { namespace Trace {
 				return _spscQueueUnion.BoundedSpscQueue;
 			}
 		}
+#endif
 
+		/** @brief Returns `true` if a bounded queue is used */
 		bool HasBoundedQueueType() const noexcept
 		{
 			return (_queueType == Implementation::QueueType::BoundedBlocking) || (_queueType == Implementation::QueueType::BoundedDropping);
 		}
 
+		/** @brief Returns `true` if an unbounded queue is used */
 		bool HasUnboundedQueueType() const noexcept
 		{
 			return (_queueType == Implementation::QueueType::UnboundedBlocking) || (_queueType == Implementation::QueueType::UnboundedDropping);
 		}
 
+		/** @brief Returns `true` if a dropping queue is used */
 		bool HasDroppingQueue() const noexcept
 		{
 			return (_queueType == Implementation::QueueType::UnboundedDropping) || (_queueType == Implementation::QueueType::BoundedDropping);
 		}
 
+		/** @brief Returns `true` if a blocking queue is used */
 		bool HasBlockingQueue() const noexcept
 		{
 			return (_queueType == Implementation::QueueType::UnboundedBlocking) || (_queueType == Implementation::QueueType::BoundedBlocking);
 		}
 
-		SpscQueueUnion const& GetSpscQueueUnion() const noexcept
-		{
-			return _spscQueueUnion;
-		}
-
-		SpscQueueUnion& GetSpscQueueUnion() noexcept
-		{
-			return _spscQueueUnion;
-		}
-
+		/** @brief Returns the thread ID of the current thread context */
 		Containers::StringView GetThreadId() const noexcept
 		{
 			return _threadId;
 		}
 
+		/** @brief Marks the thread context as invalid */
 		void MarkInvalid() noexcept
 		{
 			_valid.store(false, std::memory_order_relaxed);
 		}
 
+		/** @brief Returns `true` if the thread context is still valid */
 		bool IsValid() const noexcept
 		{
 			return _valid.load(std::memory_order_relaxed);
 		}
 
+		/** @brief Increments number of failures */
 		void IncrementFailureCounter() noexcept
 		{
 			_failureCounter.fetch_add(1, std::memory_order_relaxed);
 		}
 
+		/** @brief Returns the current number of failures and resets the counter */
 		std::size_t GetAndResetFailureCounter() noexcept
 		{
 			if DEATH_LIKELY(_failureCounter.load(std::memory_order_relaxed) == 0) {
@@ -1045,14 +1076,21 @@ namespace Death { namespace Trace {
 		alignas(Implementation::CacheLineAligned) std::atomic<std::size_t> _failureCounter;
 	};
 
+	/**
+		@brief Manages thread contexts for @ref LoggerBackend
+		
+		This class should not usually be used directly.
+	*/
 	class ThreadContextManager
 	{
 	public:
-		static ThreadContextManager& instance() noexcept;
+		/** @brief Returns static instance of thread context manager */
+		static ThreadContextManager& Get() noexcept;
 
 		ThreadContextManager(ThreadContextManager const&) = delete;
 		ThreadContextManager& operator=(ThreadContextManager const&) = delete;
 
+		/** @brief Calls the specified callback for each registered thread context */
 		template<typename TCallback>
 		void ForEachThreadContext(TCallback cb)
 		{
@@ -1063,10 +1101,15 @@ namespace Death { namespace Trace {
 			}
 		}
 
+		/** @brief Registers a new thread context */
 		void RegisterThreadContext(std::shared_ptr<ThreadContext> const& threadContext);
+		/** @brief Adds an invalid thread context */
 		void AddInvalidThreadContext() noexcept;
+		/** @brief Returns `true` if an invalid thread context is present */
 		bool HasInvalidThreadContext() const noexcept;
+		/** @brief Returns `true` if a new thread context is present */
 		bool HasNewThreadContext() noexcept;
+		/** @brief Removes shared invalidated thread context */
 		void RemoveSharedInvalidatedThreadContext(ThreadContext const* threadContext);
 
 	private:
@@ -1079,13 +1122,18 @@ namespace Death { namespace Trace {
 		~ThreadContextManager() = default;
 	};
 
+	/**
+		@brief Handles lifetime of the thread context
+		
+		This class should not usually be used directly.
+	*/
 	class ScopedThreadContext
 	{
 	public:
 		ScopedThreadContext(Implementation::QueueType queueType, std::uint32_t spscQueueCapacity, bool hugePagesEnabled)
 			: _threadContext(std::make_shared<ThreadContext>(queueType, spscQueueCapacity, hugePagesEnabled))
 		{
-			ThreadContextManager::instance().RegisterThreadContext(_threadContext);
+			ThreadContextManager::Get().RegisterThreadContext(_threadContext);
 		}
 
 		~ScopedThreadContext() noexcept
@@ -1097,7 +1145,7 @@ namespace Death { namespace Trace {
 			_threadContext->MarkInvalid();
 
 			// Notify the backend thread that one context has been removed
-			ThreadContextManager::instance().AddInvalidThreadContext();
+			ThreadContextManager::Get().AddInvalidThreadContext();
 		}
 
 		ScopedThreadContext(ScopedThreadContext const&) = delete;
@@ -1113,32 +1161,37 @@ namespace Death { namespace Trace {
 		std::shared_ptr<ThreadContext> _threadContext;
 	};
 #endif
-
-	namespace Implementation
+	
+	/**
+		@brief Storage for deferred transit events
+		
+		This class should not usually be used directly.
+	*/
+	class BacktraceStorage
 	{
-		class BacktraceStorage
+	public:
+		BacktraceStorage();
+
+		/** @brief Stores the specified transit event */
+		void Store(TransitEvent transitEvent, Containers::StringView threadId);
+		/** @brief Processes all stored transit events */
+		void Process(Containers::Function<void(TransitEvent const& event, Containers::StringView threadId)>&& callback);
+		/** @brief Resizes the storage to the specified capacity */
+		void SetCapacity(std::uint32_t capacity);
+
+	private:
+		struct StoredTransitEvent
 		{
-		public:
-			BacktraceStorage();
+			StoredTransitEvent(Containers::String threadId, TransitEvent transitEvent);
 
-			void Store(TransitEvent transitEvent, Containers::StringView threadId);
-			void Process(Containers::Function<void(TransitEvent const&, Containers::StringView threadId)>&& callback);
-			void SetCapacity(std::uint32_t capacity);
-
-		private:
-			struct StoredTransitEvent
-			{
-				StoredTransitEvent(Containers::String threadId, TransitEvent transitEvent);
-
-				Containers::String ThreadId;
-				TransitEvent Event;
-			};
-
-			std::uint32_t _capacity;
-			std::uint32_t _index;
-			Containers::Array<StoredTransitEvent> _storedEvents;
+			Containers::String ThreadId;
+			TransitEvent Event;
 		};
-	}
+
+		std::uint32_t _capacity;
+		std::uint32_t _index;
+		Containers::Array<StoredTransitEvent> _storedEvents;
+	};
 
 	/**
 		@brief Logger backend processes trace items in the background
@@ -1162,7 +1215,7 @@ namespace Death { namespace Trace {
 		/** @brief Notifies the background worker about new entries in the queue */
 		void Notify();
 
-#if defined(DEATH_TRACE_ASYNC)
+#if defined(DEATH_TRACE_ASYNC) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Returns `true` if the background worker is alive */
 		bool IsAlive() const noexcept;
 		/** @brief Returns `true` if the current thread is the background worker thread */
@@ -1188,7 +1241,7 @@ namespace Death { namespace Trace {
 
 	private:
 		Containers::SmallVector<ITraceSink*, 1> _sinks;
-		std::shared_ptr<Implementation::BacktraceStorage> _backtraceStorage;
+		std::shared_ptr<BacktraceStorage> _backtraceStorage;
 
 		void Initialize();
 		void Dispose();

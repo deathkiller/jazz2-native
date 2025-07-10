@@ -9,6 +9,10 @@
 #include <Environment.h>
 #include <Utf8.h>
 
+#if defined(DEATH_TARGET_ANDROID)
+#	include "../../../nCine/Backends/Android/AndroidApplication.h"
+#endif
+
 using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
@@ -69,6 +73,8 @@ namespace Jazz2::UI::Menu
 
 	void GraphicsOptionsSection::OnDraw(Canvas* canvas)
 	{
+		Vector2i view = canvas->ViewSize;
+
 		Recti contentBounds = _root->GetContentBounds();
 		float centerX = contentBounds.X + contentBounds.W * 0.5f;
 		float topLine = contentBounds.Y + TopLine;
@@ -82,6 +88,20 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(_("Graphics"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+
+		// Performance Metrics
+		if (PreferencesCache::ShowPerformanceMetrics) {
+			char stringBuffer[32];
+			i32tos((std::int32_t)std::round(theApplication().GetFrameTimer().GetAverageFps()), stringBuffer);
+#if defined(DEATH_TARGET_ANDROID)
+			if (static_cast<AndroidApplication&>(theApplication()).IsScreenRound()) {
+				_root->DrawStringShadow(stringBuffer, charOffset, view.X / 2 + 40.0f, 6.0f, IMenuContainer::FontLayer,
+					Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+			} else
+#endif
+				_root->DrawStringShadow(stringBuffer, charOffset, view.X - 4.0f, 1.0f, IMenuContainer::FontLayer,
+					Alignment::TopRight, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.96f);
+		}
 	}
 
 	void GraphicsOptionsSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)

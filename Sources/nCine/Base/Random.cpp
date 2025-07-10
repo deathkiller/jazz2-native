@@ -48,16 +48,16 @@ namespace nCine
 		: _state(0ULL), _increment(0ULL)
 	{
 		std::uint64_t now = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::system_clock::now()).time_since_epoch().count();
-		Initialize(DefaultInitState ^ now, DefaultInitSequence);
+		Init(DefaultInitState ^ now, DefaultInitSequence);
 	}
 
 	RandomGenerator::RandomGenerator(std::uint64_t initState, std::uint64_t initSequence) noexcept
 		: _state(0ULL), _increment(0ULL)
 	{
-		Initialize(initState, initSequence);
+		Init(initState, initSequence);
 	}
 
-	void RandomGenerator::Initialize(std::uint64_t initState, std::uint64_t initSequence) noexcept
+	void RandomGenerator::Init(std::uint64_t initState, std::uint64_t initSequence) noexcept
 	{
 		_state = 0U;
 		_increment = (initSequence << 1u) | 1u;

@@ -35,7 +35,7 @@ namespace nCine
 		std::int32_t programBinaryFormats_[MaxProgramBinaryFormats];
 
 		/// Queries the device about its runtime graphics capabilities
-		void Initialize();
+		void Init();
 
 		/// Checks for OpenGL extensions availability
 		void CheckGLExtensions(const char* extensionNames[], bool results[], std::uint32_t numExtensionsToCheck) const;

@@ -423,7 +423,7 @@ namespace Jazz2::Scripting
 			return (this == &o);
 		}
 		void jjRNG::seed(std::uint64_t value) {
-			_random.Initialize(value, DefaultInitSequence);
+			_random.Init(value, DefaultInitSequence);
 		}
 		void jjRNG::discard(std::uint64_t count) {
 			for (std::uint64_t i = 0; i < count; i++) {

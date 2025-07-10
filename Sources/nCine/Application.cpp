@@ -729,7 +729,7 @@ namespace nCine
 #endif
 
 		// Initialization of the static random generator seeds
-		Random().Initialize(TimeStamp::now().ticks(), profileStartTime_.ticks());
+		Random().Init(TimeStamp::now().ticks(), profileStartTime_.ticks());
 
 		frameTimer_ = std::make_unique<FrameTimer>(appCfg_.frameTimerLogInterval, 0.2f);
 #if defined(DEATH_TARGET_WINDOWS)
