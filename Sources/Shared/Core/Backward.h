@@ -3189,7 +3189,7 @@ namespace Death { namespace Backward {
 		ResolvedTrace Resolve(ResolvedTrace trace) override {
 			// parse:
 			// <n>  <file>  <addr>  <mangled-name> + <offset>
-			char* filename = _symbols[trace.idx];
+			char* filename = _symbols[trace.Index];
 
 			// skip "<n>  "
 			while (*filename && *filename != ' ')
