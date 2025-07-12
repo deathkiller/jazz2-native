@@ -524,12 +524,12 @@ namespace Death { namespace Backward {
 
 	/** @brief Raw trace item */
 	struct Trace {
-		void* addr;
-		std::size_t idx;
+		void* Address;
+		std::size_t Index;
 
-		Trace() : addr(nullptr), idx(0) {}
+		Trace() : Address(nullptr), Index(0) {}
 
-		explicit Trace(void* addr_, std::size_t idx_) : addr(addr_), idx(idx_) {}
+		explicit Trace(void* addr, std::size_t idx) : Address(addr), Index(idx) {}
 	};
 
 	/** @brief Resolved trace item */
@@ -538,18 +538,18 @@ namespace Death { namespace Backward {
 		/** @brief Source location description */
 		struct SourceLoc {
 			/** @brief Function name */
-			std::string function;
+			std::string Function;
 			/** @brief File name */
-			std::string filename;
+			std::string Filename;
 			/** @brief Line */
-			std::int32_t line;
+			std::int32_t Line;
 			/** @brief Column */
-			std::int32_t col;
+			std::int32_t Column;
 
-			SourceLoc() : line(0), col(0) {}
+			SourceLoc() : Line(0), Column(0) {}
 
 			bool operator==(const SourceLoc& b) const {
-				return function == b.function && filename == b.filename && line == b.line && col == b.col;
+				return Function == b.Function && Filename == b.Filename && Line == b.Line && Column == b.Column;
 			}
 
 			bool operator!=(const SourceLoc& b) const {
@@ -558,28 +558,28 @@ namespace Death { namespace Backward {
 		};
 
 		// In which binary object this trace is located.
-		std::string object_filename;
+		std::string ObjectFilename;
 		// Base address of the binary object
-		void* object_base_address;
+		void* ObjectBaseAddress;
 
 		// The function in the object that contain the trace. This is not the same
 		// as source.function which can be an function inlined in object_function.
-		std::string object_function;
+		std::string ObjectFunction;
 
 		// The source location of this trace. It is possible for filename to be
 		// empty and for line/col to be invalid (value 0) if this information
 		// couldn't be deduced, for example if there is no debug information in the
 		// binary object.
-		SourceLoc source;
+		SourceLoc Source;
 
 		// An optionals list of "inliners". All the successive sources location
 		// from where the source location of the trace (the attribute right above)
 		// is inlined. It is especially useful when you compiled with optimization.
 		typedef std::vector<SourceLoc> source_locs_t;
-		source_locs_t inliners;
+		source_locs_t Inliners;
 
-		ResolvedTrace() : Trace(), object_base_address(nullptr) {}
-		ResolvedTrace(const Trace& mini_trace) : Trace(mini_trace), object_base_address(nullptr) {}
+		ResolvedTrace() : Trace(), ObjectBaseAddress(nullptr) {}
+		ResolvedTrace(const Trace& baseTrace) : Trace(baseTrace), ObjectBaseAddress(nullptr) {}
 	};
 
 	/** @brief Base class of stack trace */
@@ -593,24 +593,24 @@ namespace Death { namespace Backward {
 			return _threadId;
 		}
 
-		void SetSkipEntries(std::size_t n) {
+		void SetSkipFrames(std::size_t n) {
 			_skip = n;
 		}
 
 		std::size_t size() const {
-			return (_stacktrace.size() >= GetSkipEntries())
-				? _stacktrace.size() - GetSkipEntries()
+			return (_stacktrace.size() >= GetSkipFrames())
+				? _stacktrace.size() - GetSkipFrames()
 				: 0;
 		}
 		Trace operator[](std::size_t idx) const {
 			if (idx >= size()) {
 				return Trace();
 			}
-			return Trace(_stacktrace[idx + GetSkipEntries()], idx);
+			return Trace(_stacktrace[idx + GetSkipFrames()], idx);
 		}
 		void* const* begin() const {
 			if (size()) {
-				return &_stacktrace[GetSkipEntries()];
+				return &_stacktrace[GetSkipFrames()];
 			}
 			return nullptr;
 		}
@@ -659,7 +659,7 @@ namespace Death { namespace Backward {
 			return _errorAddr;
 		}
 
-		std::size_t GetSkipEntries() const {
+		std::size_t GetSkipFrames() const {
 			return _skip;
 		}
 	};
@@ -738,7 +738,7 @@ namespace Death { namespace Backward {
 			_stacktrace.resize(depth);
 			std::size_t count = Implementation::Unwind(callback(*this), depth);
 			_stacktrace.resize(count);
-			SetSkipEntries(0);
+			SetSkipFrames(0);
 			return size();
 		}
 		std::size_t LoadFrom(void* addr, std::size_t depth = 32, void* context = nullptr, void* errorAddr = nullptr) {
@@ -746,12 +746,12 @@ namespace Death { namespace Backward {
 
 			for (std::size_t i = 0; i < _stacktrace.size(); ++i) {
 				if (_stacktrace[i] == addr) {
-					SetSkipEntries(i);
+					SetSkipFrames(i);
 					break;
 				}
 			}
 
-			_stacktrace.resize(std::min(_stacktrace.size(), GetSkipEntries() + depth));
+			_stacktrace.resize(std::min(_stacktrace.size(), GetSkipFrames() + depth));
 			return size();
 		}
 
@@ -918,22 +918,22 @@ namespace Death { namespace Backward {
 			--index;
 
 			_stacktrace.resize(index + 1);
-			SetSkipEntries(0);
+			SetSkipFrames(0);
 			return size();
 		}
 
 		std::size_t LoadLrom(void* addr, std::size_t depth = 32, void* context = nullptr, void* errorAddr = nullptr) {
-			LoadHere(depth + 8, context, error_addr);
+			LoadHere(depth + 8, context, errorAddr);
 
 			for (std::size_t i = 0; i < _stacktrace.size(); ++i) {
 				if (_stacktrace[i] == addr) {
-					SetSkipEntries(i);
+					SetSkipFrames(i);
 					_stacktrace[i] = (void*)((std::uintptr_t)_stacktrace[i]);
 					break;
 				}
 			}
 
-			_stacktrace.resize(std::min(_stacktrace.size(), GetSkipEntries() + depth));
+			_stacktrace.resize(std::min(_stacktrace.size(), GetSkipFrames() + depth));
 			return size();
 		}
 	};
@@ -952,7 +952,7 @@ namespace Death { namespace Backward {
 			_stacktrace.resize(depth + 1);
 			std::size_t count = backtrace(&_stacktrace[0], _stacktrace.size());
 			_stacktrace.resize(count);
-			SetSkipEntries(1);
+			SetSkipFrames(1);
 			return size();
 		}
 
@@ -961,13 +961,13 @@ namespace Death { namespace Backward {
 
 			for (std::size_t i = 0; i < _stacktrace.size(); ++i) {
 				if (_stacktrace[i] == addr) {
-					SetSkipEntries(i);
+					SetSkipFrames(i);
 					_stacktrace[i] = (void*)((std::uintptr_t)_stacktrace[i] + 1);
 					break;
 				}
 			}
 
-			_stacktrace.resize(std::min(_stacktrace.size(), GetSkipEntries() + depth));
+			_stacktrace.resize(std::min(_stacktrace.size(), GetSkipFrames() + depth));
 			return size();
 		}
 	};
@@ -1108,12 +1108,12 @@ namespace Death { namespace Backward {
 
 			for (std::size_t i = 0; i < _stacktrace.size(); ++i) {
 				if (_stacktrace[i] == addr) {
-					SetSkipEntries(i);
+					SetSkipFrames(i);
 					break;
 				}
 			}
 
-			_stacktrace.resize(std::min(_stacktrace.size(), GetSkipEntries() + depth));
+			_stacktrace.resize(std::min(_stacktrace.size(), GetSkipFrames() + depth));
 			return size();
 		}
 
@@ -1218,21 +1218,20 @@ namespace Death { namespace Backward {
 
 	class TraceResolver : public TraceResolverLinuxBase {
 	public:
-		void LoadAddresses(void* const* addresses, std::int32_t address_count) override {
-			if (address_count == 0) {
+		void LoadAddresses(void* const* addresses, std::int32_t addressCount) override {
+			if (addressCount == 0) {
 				return;
 			}
-			_symbols.reset(backtrace_symbols(addresses, address_count));
+			_symbols.reset(backtrace_symbols(addresses, addressCount));
 		}
 
 		ResolvedTrace Resolve(ResolvedTrace trace) override {
-			char* filename = _symbols[trace.idx];
+			char* filename = _symbols[trace.Index];
 			char* funcname = filename;
 			while (funcname[0] != '\0' && funcname[0] != '(') {
 				funcname++;
 			}
-			trace.object_filename.assign(filename, funcname); // ok even if funcname is the ending
-			// \0 (then we assign entire string)
+			trace.ObjectFilename.assign(filename, funcname); // ok even if funcname is the ending \0 (then we assign entire string)
 
 			if (funcname[0] != '\0') { // if it's not end of string (e.g. from last frame ip==0)
 				funcname++;
@@ -1241,8 +1240,8 @@ namespace Death { namespace Backward {
 					funcname_end++;
 				}
 				*funcname_end = '\0';
-				trace.object_function = this->Demangle(funcname);
-				trace.source.function = trace.object_function; // we cannot do better.
+				trace.ObjectFunction = this->Demangle(funcname);
+				trace.Source.Function = trace.ObjectFunction; // we cannot do better.
 			}
 			return trace;
 		}
@@ -1264,7 +1263,7 @@ namespace Death { namespace Backward {
 
 			// trace.addr is a virtual address in memory pointing to some code.
 			// Let's try to find from which loaded object it comes from. The loaded object can be yourself btw.
-			if (!dladdr(trace.addr, &symbol_info)) {
+			if (!dladdr(trace.Address, &symbol_info)) {
 				return trace; // dat broken trace...
 			}
 
@@ -1280,14 +1279,14 @@ namespace Death { namespace Backward {
 			//		the exact address corresponding to .dli_sname.
 
 			if (symbol_info.dli_sname) {
-				trace.object_function = Demangle(symbol_info.dli_sname);
+				trace.ObjectFunction = Demangle(symbol_info.dli_sname);
 			}
 
 			if (!symbol_info.dli_fname) {
 				return trace;
 			}
 
-			trace.object_filename = resolve_exec_path(symbol_info);
+			trace.ObjectFilename = resolve_exec_path(symbol_info);
 			bfd_fileobject* fobj;
 			// Before rushing to resolution need to ensure the executable file still can be used. For that compare
 			// inode numbers of what is stored by the executable's file path, and in the dli_fname, which not necessarily
@@ -1299,12 +1298,12 @@ namespace Death { namespace Backward {
 			// actually reused, and the file was kept only in the main memory.
 			struct stat obj_stat;
 			struct stat dli_stat;
-			if (::stat(trace.object_filename.c_str(), &obj_stat) == 0 &&
+			if (::stat(trace.ObjectFilename.c_str(), &obj_stat) == 0 &&
 				::stat(symbol_info.dli_fname, &dli_stat) == 0 &&
 				obj_stat.st_ino == dli_stat.st_ino) {
 				// The executable file, and the shared object containing the  address are the same file. Safe to use
 				// the original path. this is preferable. Libbfd will search for stripped debug symbols in the same directory.
-				fobj = load_object_with_bfd(trace.object_filename);
+				fobj = load_object_with_bfd(trace.ObjectFilename);
 			} else {
 				// The original object file was *deleted*! The only hope is that the debug symbols are either inside
 				// the shared object file, or are in the same directory, and this is not /proc/self/exe.
@@ -1322,7 +1321,7 @@ namespace Death { namespace Backward {
 			// trace.addr is the next instruction to be executed after returning from the nested stack frame. In C++
 			// this usually relate to the next statement right after the function call that leaded to a new stack
 			// frame. This is not usually what you want to see when printing out a stacktrace...
-			find_sym_result details_call_site = find_symbol_details(fobj, trace.addr, symbol_info.dli_fbase);
+			find_sym_result details_call_site = find_symbol_details(fobj, trace.Address, symbol_info.dli_fbase);
 			details_selected = &details_call_site;
 
 #	if defined(BACKWARD_HAS_UNWIND)
@@ -1331,27 +1330,27 @@ namespace Death { namespace Backward {
 			// get something absolutely not related since the compiler can reschedule the return address with inline
 			// functions and tail-call optimization (among other things that I don't even know or cannot even dream
 			// about with my tiny limited brain).
-			find_sym_result details_adjusted_call_site = find_symbol_details(fobj, (void*)(uintptr_t(trace.addr) - 1), symbol_info.dli_fbase);
+			find_sym_result details_adjusted_call_site = find_symbol_details(fobj, (void*)(uintptr_t(trace.Address) - 1), symbol_info.dli_fbase);
 
 			// In debug mode, we should always get the right thing(TM).
 			if (details_call_site.found && details_adjusted_call_site.found) {
 				// Ok, we assume that details_adjusted_call_site is a better estimation.
 				details_selected = &details_adjusted_call_site;
-				trace.addr = (void*)(uintptr_t(trace.addr) - 1);
+				trace.Address = (void*)(uintptr_t(trace.Address) - 1);
 			}
 
 			if (details_selected == &details_call_site && details_call_site.found) {
 				// we have to re-resolve the symbol in order to reset some internal state in BFD... so we can call
 				// backtrace_inliners thereafter...
-				details_call_site = find_symbol_details(fobj, trace.addr, symbol_info.dli_fbase);
+				details_call_site = find_symbol_details(fobj, trace.Address, symbol_info.dli_fbase);
 			}
 #	endif // BACKWARD_HAS_UNWIND
 
 			if (details_selected->found) {
 				if (details_selected->filename) {
-					trace.source.filename = details_selected->filename;
+					trace.Source.Filename = details_selected->filename;
 				}
-				trace.source.line = details_selected->line;
+				trace.Source.Line = details_selected->line;
 
 				if (details_selected->funcname) {
 					// this time we get the name of the function where the code is located, instead of the function were
@@ -1362,16 +1361,16 @@ namespace Death { namespace Backward {
 					if (!symbol_info.dli_sname) {
 						// for the case dladdr failed to find the symbol name of the function, we might as well try
 						// to put something here.
-						trace.object_function = trace.source.function;
+						trace.ObjectFunction = trace.Source.Function;
 					}
 				}
 
 				// Maybe the source of the trace got inlined inside the function (trace.source.function). Let's see
 				// if we can get all the inlined calls along the way up to the initial call site.
-				trace.inliners = backtrace_inliners(fobj, *details_selected);
+				trace.Inliners = backtrace_inliners(fobj, *details_selected);
 
 #	if 0
-				if (trace.inliners.empty()) {
+				if (trace.Inliners.empty()) {
 					// Maybe the trace was not inlined... or maybe it was and we are lacking the debug information.
 					// Let's try to make the world better and see if we can get the line number of the function
 					// (trace.source.function) now.
@@ -1388,17 +1387,17 @@ namespace Death { namespace Backward {
 						find_sym_result details = find_symbol_details(fobj, symbol_info.dli_saddr, symbol_info.dli_fbase);
 						if (details.found) {
 							ResolvedTrace::SourceLoc diy_inliner;
-							diy_inliner.line = details.line;
-							if (details.filename) {
-								diy_inliner.filename = details.filename;
+							diy_inliner.Line = details.Line;
+							if (details.Filename) {
+								diy_inliner.Filename = details.Filename;
 							}
 							if (details.funcname) {
-								diy_inliner.function = Demangle(details.funcname);
+								diy_inliner.Function = Demangle(details.funcname);
 							} else {
-								diy_inliner.function = trace.source.function;
+								diy_inliner.Function = trace.source.function;
 							}
-							if (diy_inliner != trace.source) {
-								trace.inliners.push_back(diy_inliner);
+							if (diy_inliner != trace.Source) {
+								trace.Inliners.push_back(diy_inliner);
 							}
 						}
 					}
@@ -1504,12 +1503,12 @@ namespace Death { namespace Backward {
 			find_sym_result result;
 		};
 
-		find_sym_result find_symbol_details(bfd_fileobject* fobj, void* addr, void* base_addr) {
+		find_sym_result find_symbol_details(bfd_fileobject* fobj, void* addr, void* baseAddr) {
 			find_sym_context context;
 			context.self = this;
 			context.fobj = fobj;
 			context.addr = addr;
-			context.base_addr = base_addr;
+			context.base_addr = baseAddr;
 			context.result.found = false;
 			bfd_map_over_sections(fobj->handle.get(), &find_in_section_trampoline, static_cast<void*>(&context));
 			return context.result;
@@ -1616,7 +1615,7 @@ namespace Death { namespace Backward {
 		ResolvedTrace Resolve(ResolvedTrace trace) override {
 			using namespace Implementation;
 
-			Dwarf_Addr trace_addr = reinterpret_cast<Dwarf_Addr>(trace.addr);
+			Dwarf_Addr trace_addr = reinterpret_cast<Dwarf_Addr>(trace.Address);
 
 			if (!_dwfl_handle_initialized) {
 				// initialize dwfl...
@@ -1653,14 +1652,14 @@ namespace Death { namespace Backward {
 				// or one of the loaded library.
 				const char* module_name = dwfl_module_info(mod, 0, 0, 0, 0, 0, 0, 0);
 				if (module_name != nullptr) {
-					trace.object_filename = module_name;
+					trace.ObjectFilename = module_name;
 				}
 				// We also look after the name of the symbol, equal or before this address. This is found by walking
 				// the symtab. We should get the symbol corresponding to the function (mangled) containing the address.
 				// If the code corresponding to the address was inlined, this is the name of the out-most inliner function.
 				const char* sym_name = dwfl_module_addrname(mod, trace_addr);
 				if (sym_name != nullptr) {
-					trace.object_function = Demangle(sym_name);
+					trace.ObjectFunction = Demangle(sym_name);
 				}
 			}
 
@@ -1671,7 +1670,7 @@ namespace Death { namespace Backward {
 			// unit DIE in .debug_info and return it.
 			Dwarf_Addr mod_bias = 0;
 			Dwarf_Die* cudie = dwfl_module_addrdie(mod, trace_addr, &mod_bias);
-			trace.object_base_address = (void*)mod_bias;
+			trace.ObjectBaseAddress = (void*)mod_bias;
 
 #	if 1
 			if (cudie == nullptr) {
@@ -1731,19 +1730,19 @@ namespace Death { namespace Backward {
 			if (srcloc) {
 				const char* srcfile = dwarf_linesrc(srcloc, 0, 0);
 				if (srcfile != nullptr) {
-					trace.source.filename = srcfile;
+					trace.Source.Filename = srcfile;
 				}
 				std::int32_t line = 0, col = 0;
 				dwarf_lineno(srcloc, &line);
 				dwarf_linecol(srcloc, &col);
-				trace.source.line = line;
-				trace.source.col = col;
+				trace.Source.Line = line;
+				trace.Source.Column = col;
 			}
 
 			deep_first_search_by_pc(cudie, trace_addr - mod_bias, inliners_search_cb(trace));
-			if (trace.source.function.empty()) {
+			if (trace.Source.Function.empty()) {
 				// Fallback
-				trace.source.function = trace.object_function;
+				trace.Source.Function = trace.ObjectFunction;
 			}
 
 			return trace;
@@ -1761,8 +1760,8 @@ namespace Death { namespace Backward {
 					case DW_TAG_subprogram: {
 						const char* name;
 						if ((name = dwarf_diename(die))) {
-							trace.source.function = name;
-							trace.source.function += "()";
+							trace.Source.Function = name;
+							trace.Source.Function += "()";
 						}
 						break;
 					}
@@ -1772,20 +1771,20 @@ namespace Death { namespace Backward {
 
 						const char* name;
 						if ((name = dwarf_diename(die))) {
-							sloc.function = name;
-							sloc.function += "()";
+							sloc.Function = name;
+							sloc.Function += "()";
 						}
 						if ((name = die_call_file(die))) {
-							sloc.filename = name;
+							sloc.Filename = name;
 						}
 
 						Dwarf_Word line = 0, col = 0;
 						dwarf_formudata(dwarf_attr(die, DW_AT_call_line, &attr_mem), &line);
 						dwarf_formudata(dwarf_attr(die, DW_AT_call_column, &attr_mem), &col);
-						sloc.line = static_cast<std::int32_t>(line);
-						sloc.col = static_cast<std::int32_t>(col);
+						sloc.Line = static_cast<std::int32_t>(line);
+						sloc.Column = static_cast<std::int32_t>(col);
 
-						trace.inliners.push_back(sloc);
+						trace.Inliners.push_back(sloc);
 						break;
 					}
 				};
@@ -1928,10 +1927,10 @@ namespace Death { namespace Backward {
 #	if defined(__GLIBC__)
 			link_map* link_map;
 			// We request the link map so we can get information about offsets
-			dladdr_result = dladdr1(trace.addr, &symbol_info, reinterpret_cast<void**>(&link_map), RTLD_DL_LINKMAP);
+			dladdr_result = dladdr1(trace.Address, &symbol_info, reinterpret_cast<void**>(&link_map), RTLD_DL_LINKMAP);
 #	else
 			// Android doesn't have dladdr1. Don't use the linker map.
-			dladdr_result = dladdr(trace.addr, &symbol_info);
+			dladdr_result = dladdr(trace.Address, &symbol_info);
 #	endif
 			if (!dladdr_result) {
 				return trace; // dat broken trace...
@@ -1956,14 +1955,14 @@ namespace Death { namespace Backward {
 			//      absolute pathname where the object was found
 
 			if (symbol_info.dli_sname) {
-				trace.object_function = Demangle(symbol_info.dli_sname);
+				trace.ObjectFunction = Demangle(symbol_info.dli_sname);
 			}
 
 			if (!symbol_info.dli_fname) {
 				return trace;
 			}
 
-			trace.object_filename = resolve_exec_path(symbol_info);
+			trace.ObjectFilename = resolve_exec_path(symbol_info);
 			dwarf_fileobject& fobj = load_object_with_dwarf(symbol_info.dli_fname);
 			if (!fobj.dwarf_handle) {
 				return trace; // sad, we couldn't load the object :(
@@ -1971,13 +1970,13 @@ namespace Death { namespace Backward {
 
 #	if defined(__GLIBC__)
 			// Convert the address to a module relative one by looking at the module's loading address in the link map
-			Dwarf_Addr address = reinterpret_cast<uintptr_t>(trace.addr) - reinterpret_cast<uintptr_t>(link_map->l_addr);
-			trace.object_base_address = (void*)link_map->l_addr;
+			Dwarf_Addr address = reinterpret_cast<uintptr_t>(trace.Address) - reinterpret_cast<uintptr_t>(link_map->l_addr);
+			trace.ObjectBaseAddress = (void*)link_map->l_addr;
 #	else
-			Dwarf_Addr address = reinterpret_cast<uintptr_t>(trace.addr);
+			Dwarf_Addr address = reinterpret_cast<uintptr_t>(trace.Address);
 #	endif
 
-			if (trace.object_function.empty()) {
+			if (trace.ObjectFunction.empty()) {
 				symbol_cache_t::iterator it = fobj.symbol_cache.lower_bound(address);
 
 				if (it != fobj.symbol_cache.end()) {
@@ -2028,21 +2027,21 @@ namespace Death { namespace Backward {
 
 			char* filename;
 			if (dwarf_linesrc(line, &filename, &error) == DW_DLV_OK) {
-				trace.source.filename = std::string(filename);
+				trace.Source.Filename = std::string(filename);
 				dwarf_dealloc(fobj.dwarf_handle.get(), filename, DW_DLA_STRING);
 			}
 
 			Dwarf_Unsigned number = 0;
 			if (dwarf_lineno(line, &number, &error) == DW_DLV_OK) {
-				trace.source.line = number;
+				trace.Source.Line = number;
 			} else {
-				trace.source.line = 0;
+				trace.Source.Line = 0;
 			}
 
 			if (dwarf_lineoff_b(line, &number, &error) == DW_DLV_OK) {
-				trace.source.col = number;
+				trace.Source.Column = number;
 			} else {
-				trace.source.col = 0;
+				trace.Source.Column = 0;
 			}
 
 			std::vector<std::string> namespace_stack;
@@ -2820,28 +2819,28 @@ namespace Death { namespace Backward {
 				switch (tag_value) {
 					char* name;
 					case DW_TAG_subprogram:
-						if (!trace.source.function.empty())
+						if (!trace.Source.Function.empty())
 							break;
 						if (dwarf_diename(die, &name, &error) == DW_DLV_OK) {
-							trace.source.function = std::string(name);
+							trace.Source.Function = std::string(name);
 							dwarf_dealloc(dwarf, name, DW_DLA_STRING);
 						} else {
 							// We don't have a function name in this DIE. Check if there is a referenced non-defining declaration.
-							trace.source.function = get_referenced_die_name(dwarf, die, DW_AT_abstract_origin, true);
-							if (trace.source.function.empty()) {
-								trace.source.function = get_referenced_die_name(dwarf, die, DW_AT_specification, true);
+							trace.Source.Function = get_referenced_die_name(dwarf, die, DW_AT_abstract_origin, true);
+							if (trace.Source.Function.empty()) {
+								trace.Source.Function = get_referenced_die_name(dwarf, die, DW_AT_specification, true);
 							}
 						}
 
 						// Append the function parameters, if available
-						set_function_parameters(trace.source.function, ns, fobj, die);
+						set_function_parameters(trace.Source.Function, ns, fobj, die);
 
 						// If the object function name is empty, it's possible that there is no dynamic symbol table
 						// (maybe the executable was stripped or not built with -rdynamic). See if we have a DWARF
 						// linkage name to use instead. We try both linkage_name and MIPS_linkage_name because
 						// the MIPS tag was the unofficial one until it was adopted in DWARF4. Old gcc versions
 						// generate MIPS_linkage_name
-						if (trace.object_function.empty()) {
+						if (trace.ObjectFunction.empty()) {
 							Implementation::Demangler demangler;
 
 							if (dwarf_attr(die, DW_AT_linkage_name, &attr_mem, &error) != DW_DLV_OK) {
@@ -2852,7 +2851,7 @@ namespace Death { namespace Backward {
 
 							char* linkage;
 							if (dwarf_formstring(attr_mem, &linkage, &error) == DW_DLV_OK) {
-								trace.object_function = demangler.Demangle(linkage);
+								trace.ObjectFunction = demangler.Demangle(linkage);
 								dwarf_dealloc(dwarf, linkage, DW_DLA_STRING);
 							}
 							dwarf_dealloc(dwarf, attr_mem, DW_DLA_ATTR);
@@ -2863,36 +2862,36 @@ namespace Death { namespace Backward {
 						ResolvedTrace::SourceLoc sloc;
 
 						if (dwarf_diename(die, &name, &error) == DW_DLV_OK) {
-							sloc.function = std::string(name);
+							sloc.Function = std::string(name);
 							dwarf_dealloc(dwarf, name, DW_DLA_STRING);
 						} else {
 							// We don't have a name for this inlined DIE, it could be that there is an abstract origin instead.
 							// Get the DW_AT_abstract_origin value, which is a reference to the source DIE and try to get its name.
-							sloc.function = get_referenced_die_name(dwarf, die, DW_AT_abstract_origin, true);
+							sloc.Function = get_referenced_die_name(dwarf, die, DW_AT_abstract_origin, true);
 						}
 
-						set_function_parameters(sloc.function, ns, fobj, die);
+						set_function_parameters(sloc.Function, ns, fobj, die);
 
 						std::string file = die_call_file(dwarf, die, cu_die);
 						if (!file.empty()) {
-							sloc.filename = file;
+							sloc.Filename = file;
 						}
 						Dwarf_Unsigned number = 0;
 						if (dwarf_attr(die, DW_AT_call_line, &attr_mem, &error) == DW_DLV_OK) {
 							if (dwarf_formudata(attr_mem, &number, &error) == DW_DLV_OK) {
-								sloc.line = number;
+								sloc.Line = number;
 							}
 							dwarf_dealloc(dwarf, attr_mem, DW_DLA_ATTR);
 						}
 
 						if (dwarf_attr(die, DW_AT_call_column, &attr_mem, &error) == DW_DLV_OK) {
 							if (dwarf_formudata(attr_mem, &number, &error) == DW_DLV_OK) {
-								sloc.col = number;
+								sloc.Column = number;
 							}
 							dwarf_dealloc(dwarf, attr_mem, DW_DLA_ATTR);
 						}
 
-						trace.inliners.push_back(sloc);
+						trace.Inliners.push_back(sloc);
 						break;
 				};
 			}
@@ -3180,11 +3179,11 @@ namespace Death { namespace Backward {
 
 	class TraceResolver : public TraceResolverBase {
 	public:
-		void LoadAddresses(void* const* addresses, std::int32_t address_count) override {
-			if (address_count == 0) {
+		void LoadAddresses(void* const* addresses, std::int32_t addressCount) override {
+			if (addressCount == 0) {
 				return;
 			}
-			_symbols.reset(backtrace_symbols(addresses, address_count));
+			_symbols.reset(backtrace_symbols(addresses, addressCount));
 		}
 
 		ResolvedTrace Resolve(ResolvedTrace trace) override {
@@ -3231,15 +3230,15 @@ namespace Death { namespace Backward {
 				filename_end = filename + strlen(filename);
 				funcname = filename_end;
 			}
-			trace.object_filename.assign(filename, filename_end); // ok even if filename_end is the ending \0 (then we assign entire string)
+			trace.ObjectFilename.assign(filename, filename_end); // ok even if filename_end is the ending \0 (then we assign entire string)
 
 			if (*funcname != '\0') { // if it's not end of string
 				*funcname_end = '\0';
 
-				trace.object_function = this->Demangle(funcname);
-				trace.object_function += " ";
-				trace.object_function += (funcname_end + 1);
-				trace.source.function = trace.object_function; // we cannot do better.
+				trace.ObjectFunction = this->Demangle(funcname);
+				trace.ObjectFunction += " ";
+				trace.ObjectFunction += (funcname_end + 1);
+				trace.Source.Function = trace.ObjectFunction; // we cannot do better.
 			}
 			return trace;
 		}
@@ -3336,7 +3335,7 @@ namespace Death { namespace Backward {
 			sym.sym.MaxNameLen = MaxSymbolLength;
 
 			char name[256];
-			if (::SymFromAddr(process, (ULONG64)t.addr, &displacement, &sym.sym)) {
+			if (::SymFromAddr(process, (ULONG64)t.Address, &displacement, &sym.sym)) {
 				::UnDecorateSymbolName(sym.sym.Name, (PSTR)name, 256, UNDNAME_COMPLETE);
 				strcat_s(name, "()");
 			} else {
@@ -3345,19 +3344,19 @@ namespace Death { namespace Backward {
 
 			DWORD offset = 0;
 			IMAGEHLP_LINEW64 lineW = { sizeof(IMAGEHLP_LINEW64) };
-			if (::SymGetLineFromAddrW64(process, (ULONG64)t.addr, &offset, &lineW)) {
-				t.source.filename = Death::Utf8::FromUtf16(lineW.FileName);
-				t.source.line = lineW.LineNumber;
-				t.source.col = offset;
+			if (::SymGetLineFromAddrW64(process, (ULONG64)t.Address, &offset, &lineW)) {
+				t.Source.Filename = Death::Utf8::FromUtf16(lineW.FileName);
+				t.Source.Line = lineW.LineNumber;
+				t.Source.Column = offset;
 			}
 
-			t.source.function = name;
-			t.object_function = name;
+			t.Source.Function = name;
+			t.ObjectFunction = name;
 
 			for (auto& m : _modules) {
-				if ((std::uintptr_t)m.base_address <= (std::uintptr_t)t.addr && (std::uintptr_t)t.addr < (std::uintptr_t)m.base_address + m.load_size) {
-					t.object_filename = m.module_name;
-					t.object_base_address = m.base_address;
+				if ((std::uintptr_t)m.base_address <= (std::uintptr_t)t.Address && (std::uintptr_t)t.Address < (std::uintptr_t)m.base_address + m.load_size) {
+					t.ObjectFilename = m.module_name;
+					t.ObjectBaseAddress = m.base_address;
 					break;
 				}
 			}
@@ -3384,6 +3383,7 @@ namespace Death { namespace Backward {
 #endif
 
 		SourceFile() {}
+
 		SourceFile(const std::string& path) {
 			// If BACKWARD_CXX_SOURCE_PREFIXES is set then assume it contains a colon-separated list of path prefixes.
 			// Try prepending each to the given path until a valid file is found.
@@ -3635,7 +3635,7 @@ namespace Death { namespace Backward {
 		/** @brief Write exception info to `stdout` */
 		UseStdError = 0x01,
 		/** @brief Colorize using virtual terminal sequences */
-		ColorizeOutput = 0x02,
+		Colorized = 0x02,
 		/** @brief Include code snippets */
 		IncludeSnippet = 0x04,
 		/** @brief Create memory dump */
@@ -3648,8 +3648,7 @@ namespace Death { namespace Backward {
 	{
 		class StreambufWrapper : public std::streambuf {
 		public:
-			StreambufWrapper(IO::Stream* sink) : _sink(sink) {
-			}
+			StreambufWrapper(IO::Stream* sink) : _sink(sink) {}
 
 			StreambufWrapper(const StreambufWrapper&) = delete;
 			StreambufWrapper& operator=(const StreambufWrapper&) = delete;
@@ -3802,7 +3801,7 @@ namespace Death { namespace Backward {
 			Implementation::StreambufWrapper obuf(s);
 			std::ostream os(&obuf);
 			Implementation::Colorize colorize(os);
-			colorize.SetEnabled((FeatureFlags & Flags::ColorizeOutput) == Flags::ColorizeOutput);
+			colorize.SetEnabled((FeatureFlags & Flags::Colorized) == Flags::Colorized);
 			PrintStacktrace(st, os, exceptionCode, colorize);
 		}
 
@@ -3810,7 +3809,7 @@ namespace Death { namespace Backward {
 		template<typename ST>
 		void Print(ST& st, std::ostream& os, std::uint32_t exceptionCode = 0) {
 			Implementation::Colorize colorize(os);
-			colorize.SetEnabled((FeatureFlags & Flags::ColorizeOutput) == Flags::ColorizeOutput);
+			colorize.SetEnabled((FeatureFlags & Flags::Colorized) == Flags::Colorized);
 			PrintStacktrace(st, os, exceptionCode, colorize);
 		}
 
@@ -3918,16 +3917,16 @@ namespace Death { namespace Backward {
 				const auto& trace = resolvedTrace[traceIdx] = _resolver.Resolve(st[traceIdx]);
 				
 				// Collect all used paths
-				AddPath(trace.object_filename, parsedPaths, tries);
-				AddPath(trace.source.filename, parsedPaths, tries);
+				AddPath(trace.ObjectFilename, parsedPaths, tries);
+				AddPath(trace.Source.Filename, parsedPaths, tries);
 
-				for (std::size_t inlinerIdx = trace.inliners.size(); inlinerIdx > 0; --inlinerIdx) {
-					const ResolvedTrace::SourceLoc& inlinerLoc = trace.inliners[inlinerIdx - 1];
-					AddPath(inlinerLoc.filename, parsedPaths, tries);
+				for (std::size_t inlinerIdx = trace.Inliners.size(); inlinerIdx > 0; --inlinerIdx) {
+					const ResolvedTrace::SourceLoc& inlinerLoc = trace.Inliners[inlinerIdx - 1];
+					AddPath(inlinerLoc.Filename, parsedPaths, tries);
 				}
 
 #	if defined(BACKWARD_TARGET_WINDOWS) || defined(BACKWARD_TARGET_LINUX)
-				if (trace.object_function.empty()) {
+				if (trace.ObjectFunction.empty()) {
 					failed = true;
 				}
 #	endif
@@ -4023,29 +4022,29 @@ namespace Death { namespace Backward {
 		}
 
 		void PrintTrace(std::ostream& os, const ResolvedTrace& trace, Implementation::Colorize& colorize, std::unordered_map<std::string, std::string>& pathMap) {
-			if ((std::uintptr_t)trace.addr == UINTPTR_MAX) {
+			if ((std::uintptr_t)trace.Address == UINTPTR_MAX) {
 				// Skip usually the last frame on Linux
 				return;
 			}
 
-			os << "#" << std::left << std::setw(2) << (trace.idx + 1) << std::right;
+			os << "#" << std::left << std::setw(2) << (trace.Index + 1) << std::right;
 			bool alreadyIndented = true;
 
-			if (!trace.source.filename.size() || Object) {
-				if (!trace.object_filename.empty()) {
+			if (!trace.Source.Filename.size() || Object) {
+				if (!trace.ObjectFilename.empty()) {
 					os << "   Library ";
 					colorize.SetColor(Implementation::Color::BrightGreen);
 					os << "\"";
-					auto path = pathMap.find(trace.object_filename);
+					auto path = pathMap.find(trace.ObjectFilename);
 					if (path != pathMap.end()) {
 						os << path->second;
 					} else {
-						os << trace.object_filename;
+						os << trace.ObjectFilename;
 					}
-					if (trace.object_base_address != nullptr) {
+					if (trace.ObjectBaseAddress != nullptr) {
 						colorize.SetColor(Implementation::Color::Green);
 						os << "!0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
-							<< ((char*)trace.addr - (char*)trace.object_base_address) << std::dec << std::setfill(' ');
+							<< ((char*)trace.Address - (char*)trace.ObjectBaseAddress) << std::dec << std::setfill(' ');
 						colorize.SetColor(Implementation::Color::BrightGreen);
 					}
 					os << "\"";
@@ -4056,22 +4055,22 @@ namespace Death { namespace Backward {
 				}
 
 				colorize.SetColor(Implementation::Color::Reset);
-				if (!trace.object_function.empty()) {
+				if (!trace.ObjectFunction.empty()) {
 					os << ", in ";
 					colorize.SetColor(Implementation::Color::Bold);
-					os << trace.object_function;
+					os << trace.ObjectFunction;
 					colorize.SetColor(Implementation::Color::Reset);
 				}
 				os << " [0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
-					<< std::uint64_t(trace.addr) << std::dec << std::setfill(' ') << "]\n";
+					<< std::uint64_t(trace.Address) << std::dec << std::setfill(' ') << "]\n";
 				alreadyIndented = false;
 			}
 
-			for (std::size_t inlinerIdx = trace.inliners.size(); inlinerIdx > 0; --inlinerIdx) {
+			for (std::size_t inlinerIdx = trace.Inliners.size(); inlinerIdx > 0; --inlinerIdx) {
 				if (!alreadyIndented) {
 					os << "   ";
 				}
-				const ResolvedTrace::SourceLoc& inlinerLoc = trace.inliners[inlinerIdx - 1];
+				const ResolvedTrace::SourceLoc& inlinerLoc = trace.Inliners[inlinerIdx - 1];
 				PrintSourceLocation(os, colorize, pathMap, " │ ", inlinerLoc);
 				if ((FeatureFlags & Flags::IncludeSnippet) == Flags::IncludeSnippet) {
 					PrintSnippet(os, "    │ ", inlinerLoc, colorize, Implementation::Color::Purple, InlinerContextSize);
@@ -4079,13 +4078,13 @@ namespace Death { namespace Backward {
 				alreadyIndented = false;
 			}
 
-			if (trace.source.filename.size()) {
+			if (trace.Source.Filename.size()) {
 				if (!alreadyIndented) {
 					os << "   ";
 				}
-				PrintSourceLocation(os, colorize, pathMap, "   ", trace.source, trace.addr);
+				PrintSourceLocation(os, colorize, pathMap, "   ", trace.Source, trace.Address);
 				if ((FeatureFlags & Flags::IncludeSnippet) == Flags::IncludeSnippet) {
-					PrintSnippet(os, "      ", trace.source, colorize, Implementation::Color::Yellow, TraceContextSize);
+					PrintSnippet(os, "      ", trace.Source, colorize, Implementation::Color::Yellow, TraceContextSize);
 				}
 			}
 		}
@@ -4094,9 +4093,9 @@ namespace Death { namespace Backward {
 						  Implementation::Colorize& colorize, Implementation::Color colorCode, std::int32_t contextSize) {
 			typedef SnippetFactory::lines_t lines_t;
 
-			lines_t lines = _snippets.GetSnippet(sourceLoc.filename, sourceLoc.line, contextSize);
+			lines_t lines = _snippets.GetSnippet(sourceLoc.Filename, sourceLoc.Line, contextSize);
 			for (lines_t::const_iterator it = lines.begin(); it != lines.end(); ++it) {
-				if (it->first == sourceLoc.line) {
+				if (it->first == sourceLoc.Line) {
 					colorize.SetColor(colorCode);
 					os << indent << ">";
 				} else {
@@ -4113,21 +4112,21 @@ namespace Death { namespace Backward {
 			os << indent << "Source ";
 			colorize.SetColor(Implementation::Color::BrightGreen);
 			os << "\"";
-			auto path = pathMap.find(sourceLoc.filename);
+			auto path = pathMap.find(sourceLoc.Filename);
 			if (path != pathMap.end()) {
 				os << path->second;
 			} else {
-				os << sourceLoc.filename;
+				os << sourceLoc.Filename;
 			}
 			colorize.SetColor(Implementation::Color::Green);
-			os << ":" << std::setw(0) << sourceLoc.line;
+			os << ":" << std::setw(0) << sourceLoc.Line;
 			colorize.SetColor(Implementation::Color::BrightGreen);
 			os << "\"";
 			colorize.SetColor(Implementation::Color::Reset);
-			if (!sourceLoc.function.empty()) {
+			if (!sourceLoc.Function.empty()) {
 				os << ", in ";
 				colorize.SetColor(Implementation::Color::Bold);
-				os << sourceLoc.function;
+				os << sourceLoc.Function;
 				colorize.SetColor(Implementation::Color::Reset);
 			}
 			if (Address && addr != nullptr) {
@@ -4148,7 +4147,8 @@ namespace Death { namespace Backward {
 		/** @brief Feature flags */
 		Flags FeatureFlags;
 
-		ExceptionHandling(Flags flags = Flags::None) : Destination(nullptr), FeatureFlags(flags), _loaded(false) {
+		ExceptionHandling(Flags flags = Flags::None)
+			: Destination(nullptr), FeatureFlags(flags), _loaded(false) {
 			auto& current = GetSingleton();
 			if (current != nullptr) {
 				return;
@@ -4157,12 +4157,12 @@ namespace Death { namespace Backward {
 
 			bool success = true;
 
-			const std::size_t stackSize = 1024 * 1024 * 8;
-			_stackContent.reset(static_cast<char*>(std::malloc(stackSize)));
+			constexpr std::size_t StackSize = 1024 * 1024 * 8;
+			_stackContent.reset(static_cast<char*>(std::malloc(StackSize)));
 			if (_stackContent) {
 				stack_t ss;
 				ss.ss_sp = _stackContent.get();
-				ss.ss_size = stackSize;
+				ss.ss_size = StackSize;
 				ss.ss_flags = 0;
 				if (sigaltstack(&ss, nullptr) < 0) {
 					success = false;
@@ -4262,7 +4262,7 @@ namespace Death { namespace Backward {
 			}
 
 			if (shouldWriteToDest) {
-				printer.FeatureFlags = FeatureFlags & ~Flags::ColorizeOutput;
+				printer.FeatureFlags = FeatureFlags & ~Flags::Colorized;
 				printer.PrintFilePrologue(dest);
 				printer.Print(st, dest, std::uint32_t(info->si_signo));
 				dest->Flush();
@@ -4292,13 +4292,13 @@ namespace Death { namespace Backward {
 
 		static constexpr std::int32_t PosixSignalsCount = sizeof(PosixSignals) / sizeof(PosixSignals[0]);
 
-		Implementation::Handle<char*> _stackContent;
-		bool _loaded;
-
 		static ExceptionHandling*& GetSingleton() {
 			static ExceptionHandling* current = nullptr;
 			return current;
 		}
+
+		Implementation::Handle<char*> _stackContent;
+		bool _loaded;
 
 #	if defined(__GNUC__)
 		__attribute__((noreturn))
@@ -4324,7 +4324,9 @@ namespace Death { namespace Backward {
 		IO::Stream* Destination;
 		Flags FeatureFlags;
 
-		ExceptionHandling(Flags flags = Flags::None) : Destination(nullptr), FeatureFlags(flags) {
+		ExceptionHandling(Flags flags = Flags::None)
+			: Destination(nullptr), FeatureFlags(flags), _crashedThread(NULL), _context(nullptr),
+				_status(HandlerStatus::Running), _skipFrames(0) {
 			auto& current = GetSingleton();
 			if (current != nullptr) {
 				return;
@@ -4332,14 +4334,15 @@ namespace Death { namespace Backward {
 			current = this;
 
 			constexpr std::int32_t ExceptionHandlerThreadStackSize = 64 * 1024;
-			_reporterThread = ::CreateThread(NULL, ExceptionHandlerThreadStackSize, OnExceptionHandlerThread, this, 0, nullptr);
+			_reporterThread = ::CreateThread(NULL, ExceptionHandlerThreadStackSize,
+				OnExceptionHandlerThread, this, 0, nullptr);
 			if (_reporterThread == NULL) {
 				return;
 			}
 
 			EnableCrashingOnCrashes();
 
-			*GetPrevExceptionFilterPtr() = ::SetUnhandledExceptionFilter(CrashHandler);
+			_prevExceptionFilter = ::SetUnhandledExceptionFilter(CrashHandler);
 
 			::signal(SIGABRT, SignalHandler);
 //#if !defined(_Build_By_LTL)
@@ -4359,11 +4362,11 @@ namespace Death { namespace Backward {
 
 		~ExceptionHandling() {
 			{
-				std::unique_lock<std::mutex> lk(mtx());
-				crashed() = crash_status::normal_exit;
+				std::unique_lock<std::mutex> lk(_lock);
+				_status = HandlerStatus::NormalExit;
 			}
 
-			cv().notify_one();
+			_cv.notify_one();
 
 			if (_reporterThread != NULL) {
 				if (::WaitForSingleObject(_reporterThread, 5000) != WAIT_OBJECT_0) {
@@ -4413,51 +4416,14 @@ namespace Death { namespace Backward {
 			std::uint32_t RequestingThreadId;
 		};
 
+		enum class HandlerStatus {
+			Running, Crashed, NormalExit, Ending
+		};
+
 		static constexpr std::int32_t ExceptionExitCode = 0xDEADBEEF;
 		static constexpr std::uint32_t MinidumpRawInfoStream = 0x47670001;
 
-		static ExceptionHandling*& GetSingleton() {
-			static ExceptionHandling* current = nullptr;
-			return current;
-		}
-
-		static ExceptionContext* GetContext() {
-			static ExceptionContext data;
-			return &data;
-		}
-
-		static LPTOP_LEVEL_EXCEPTION_FILTER* GetPrevExceptionFilterPtr() {
-			static LPTOP_LEVEL_EXCEPTION_FILTER prevExceptionFilter;
-			return &prevExceptionFilter;
-		}
-
-		enum class crash_status {
-			running, crashed, normal_exit, ending
-		};
-
-		static crash_status& crashed() {
-			static crash_status data;
-			return data;
-		}
-
-		static std::mutex& mtx() {
-			static std::mutex data;
-			return data;
-		}
-
-		static std::condition_variable& cv() {
-			static std::condition_variable data;
-			return data;
-		}
-
-		static HANDLE& GetThreadHandle() {
-			static HANDLE handle;
-			return handle;
-		}
-
-		HANDLE _reporterThread;
-
-		static const constexpr std::int32_t SignalSkipRecords =
+		static constexpr std::int32_t SignalSkipFrames =
 #	if defined(DEATH_TARGET_CLANG)
 			// With clang, RtlCaptureContext also captures the stack frame of the current function Below that,
 			// there are 3 internal Windows functions
@@ -4469,10 +4435,19 @@ namespace Death { namespace Backward {
 #	endif
 			;
 
-		std::int32_t& SkipRecords() {
-			static std::int32_t data;
-			return data;
+		static ExceptionHandling*& GetSingleton() {
+			static ExceptionHandling* current = nullptr;
+			return current;
 		}
+
+		HANDLE _reporterThread;
+		LPTOP_LEVEL_EXCEPTION_FILTER _prevExceptionFilter;
+		ExceptionContext* _context;
+		std::mutex _lock;
+		std::condition_variable _cv;
+		HANDLE _crashedThread;
+		HandlerStatus _status;
+		std::int32_t _skipFrames;
 
 		static DWORD WINAPI OnExceptionHandlerThread(void* lpParameter) {
 			// We handle crashes in a utility thread: backward structures and some Windows functions called here
@@ -4480,63 +4455,67 @@ namespace Death { namespace Backward {
 			// To support reporting stack traces during a stack overflow, we create a utility thread at startup,
 			// which waits until a crash happens or the program exits normally.
 
+			auto* _this = static_cast<ExceptionHandling*>(lpParameter);
+
 			{
-				std::unique_lock<std::mutex> lk(mtx());
-				cv().wait(lk, []() { return crashed() != crash_status::running; });
+				std::unique_lock<std::mutex> lk(_this->_lock);
+				_this->_cv.wait(lk, [_this]() { return _this->_status != HandlerStatus::Running; });
 			}
-			if (crashed() == crash_status::crashed) {
+			if (_this->_status == HandlerStatus::Crashed) {
 				// For some reason this must be called first, otherwise the dump is not linked to sources correctly
 				auto* current = GetSingleton();
 				if ((current->FeatureFlags & Flags::CreateMemoryDump) == Flags::CreateMemoryDump) {
-					WriteMinidumpWithException(::GetThreadId(GetThreadHandle()), GetContext());
+					WriteMinidumpWithException(::GetThreadId(_this->_crashedThread), _this->_context);
 				}
 				current->HandleStacktrace();
 			}
 			{
-				std::unique_lock<std::mutex> lk(mtx());
-				crashed() = crash_status::ending;
+				std::unique_lock<std::mutex> lk(_this->_lock);
+				_this->_status = HandlerStatus::Ending;
 			}
-			cv().notify_one();
+			_this->_cv.notify_one();
 			return 0;
 		}
 
 		static inline void Terminator() {
-			GetSingleton()->CrashHandler(SignalSkipRecords);
+			GetSingleton()->CrashHandler(SignalSkipFrames);
 			::exit(ExceptionExitCode);
 		}
 
 		static inline void SignalHandler(int) {
-			GetSingleton()->CrashHandler(SignalSkipRecords);
+			GetSingleton()->CrashHandler(SignalSkipFrames);
 			::exit(ExceptionExitCode);
 		}
 
 #	if _MSC_VER >= 1400
 		static inline void __cdecl InvalidParameterHandler(const wchar_t* expression, const wchar_t* function, const wchar_t* file, std::uint32_t line, std::uintptr_t reserved) {
-			GetSingleton()->CrashHandler(SignalSkipRecords);
+			GetSingleton()->CrashHandler(SignalSkipFrames);
 			::exit(ExceptionExitCode);
 		}
 #	endif
 
 		DEATH_NEVER_INLINE static LONG WINAPI CrashHandler(EXCEPTION_POINTERS* info) {
+			auto* _this = GetSingleton();
 			DWORD code = info->ExceptionRecord->ExceptionCode;
 
 			// Pass-through MSVC exceptions
-			if (code == 0xE06D7363 &&
-				(*GetPrevExceptionFilterPtr()) != nullptr) {
-				return (*GetPrevExceptionFilterPtr())(info);
+			if (code == 0xE06D7363 && _this->_prevExceptionFilter != nullptr) {
+				return _this->_prevExceptionFilter(info);
 			}
 
 			// The exception info supplies a trace from exactly where the issue was, no need to skip records
 			bool isDebugException = (code == EXCEPTION_BREAKPOINT || code == EXCEPTION_SINGLE_STEP ||
 									 code == DBG_PRINTEXCEPTION_C || code == DBG_PRINTEXCEPTION_WIDE_C);
 			if (!isDebugException) {
-				GetSingleton()->CrashHandler(0, info);
+				_this->CrashHandler(0, info);
 			}
 			return EXCEPTION_CONTINUE_SEARCH;
 		}
 
 		DEATH_NEVER_INLINE void CrashHandler(std::int32_t skip, EXCEPTION_POINTERS* info = nullptr) {
-			ExceptionContext* context = GetContext();
+			auto* _this = GetSingleton();
+			auto* context = _this->_context;
+
 			if (info == nullptr) {
 #	if (defined(_M_IX86) || defined(__i386__)) && defined(DEATH_TARGET_MSVC)
 				// RtlCaptureContext() doesn't work on i386
@@ -4560,21 +4539,21 @@ namespace Death { namespace Backward {
 				std::memcpy(&(context->ExceptionRecord), info->ExceptionRecord, sizeof(EXCEPTION_RECORD));
 			}
 			::DuplicateHandle(::GetCurrentProcess(), ::GetCurrentThread(),
-								::GetCurrentProcess(), &GetThreadHandle(),
+								::GetCurrentProcess(), &_this->_crashedThread,
 								0, FALSE, DUPLICATE_SAME_ACCESS);
 
-			SkipRecords() = skip;
+			_this->_skipFrames = skip;
 
 			{
-				std::unique_lock<std::mutex> lk(mtx());
-				crashed() = crash_status::crashed;
+				std::unique_lock<std::mutex> lk(_this->_lock);
+				_this->_status = HandlerStatus::Crashed;
 			}
 
-			cv().notify_one();
+			_this->_cv.notify_one();
 
 			{
-				std::unique_lock<std::mutex> lk(mtx());
-				cv().wait(lk, []() { return crashed() != crash_status::crashed; });
+				std::unique_lock<std::mutex> lk(_this->_lock);
+				_this->_cv.wait(lk, [_this]() { return _this->_status != HandlerStatus::Crashed; });
 			}
 		}
 
@@ -4593,26 +4572,26 @@ namespace Death { namespace Backward {
 				return;
 			}
 
-			std::int32_t skipFrames = SkipRecords();
+			std::int32_t skipFrames = _skipFrames;
 
 			Printer printer;
 			printer.Address = true;
 
 			StackTrace st;
 			st.SetMachineType(printer.GetResolver().GetMachineType());
-			st.SetThreadHandle(GetThreadHandle());
-			st.LoadHere(32 + skipFrames, GetContext());
-			st.SetSkipEntries(skipFrames);
+			st.SetThreadHandle(_crashedThread);
+			st.LoadHere(32 + skipFrames, _context);
+			st.SetSkipFrames(skipFrames);
 
 			if (shouldWriteToStdErr) {
 				printer.FeatureFlags = FeatureFlags;
-				printer.Print(st, std::cerr, GetContext()->ExceptionRecord.ExceptionCode);
+				printer.Print(st, std::cerr, _context->ExceptionRecord.ExceptionCode);
 			}
 
 			if (shouldWriteToDest) {
-				printer.FeatureFlags = FeatureFlags & ~Flags::ColorizeOutput;
+				printer.FeatureFlags = FeatureFlags & ~Flags::Colorized;
 				printer.PrintFilePrologue(dest);
-				printer.Print(st, dest, GetContext()->ExceptionRecord.ExceptionCode);
+				printer.Print(st, dest, _context->ExceptionRecord.ExceptionCode);
 				dest->Flush();
 			}
 		}

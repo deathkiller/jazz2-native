@@ -93,17 +93,32 @@ namespace nCine
 
 			alcGetIntegerv(device_, ALC_ALL_ATTRIBUTES, numAttributes, attributes);
 
-			ALCint versionMajor = 0, versionMinor = 0, monoSources = 0, stereoSources = 0;
+			ALCint versionMajor = 0, versionMinor = 0, monoSources = 0, stereoSources = 0, efxVersionMajor = 0, efxVersionMinor = 0, efxAuxSends = 0;
 			for (std::int32_t i = 0; i + 1 < numAttributes; i += 2) {
 				switch (attributes[i]) {
 					case ALC_MAJOR_VERSION: versionMajor = attributes[i + 1]; break;
 					case ALC_MINOR_VERSION: versionMinor = attributes[i + 1]; break;
 					case ALC_MONO_SOURCES: monoSources = attributes[i + 1]; break;
 					case ALC_STEREO_SOURCES: stereoSources = attributes[i + 1]; break;
+					case ALC_EFX_MAJOR_VERSION: efxVersionMajor = attributes[i + 1]; break;
+					case ALC_EFX_MINOR_VERSION: efxVersionMinor = attributes[i + 1]; break;
+					case ALC_MAX_AUXILIARY_SENDS: efxAuxSends = attributes[i + 1]; break;
 				}
 			}
 
 			LOGI("OpenAL Version: {}.{}", versionMajor, versionMinor);
+
+#	if defined(ALC_EXT_EFX_NAME)
+			bool hasExtEfx = alcIsExtensionPresent(device_, ALC_EXT_EFX_NAME);
+#	else
+			bool hasExtEfx = alcIsExtensionPresent(device_, "ALC_EXT_EFX");
+#	endif
+			if (hasExtEfx) {
+				LOGI("ALC_EXT_EFX Version: {}.{} ({} auxiliary sends)", efxVersionMajor, efxVersionMinor, efxAuxSends);
+			} else {
+				LOGI("ALC_EXT_EFX Version: unsupported", hasExtEfx);
+			}
+
 			LOGI("Sources: {} (M) / {} (S)", monoSources, stereoSources);
 
 			for (std::int32_t i = 0; i + 1 < numAttributes; i += 2) {
@@ -126,20 +141,13 @@ namespace nCine
 							case ALC_HRTF_DENIED_SOFT: statusStr = "disabled (denied)"; break;
 							case ALC_HRTF_HEADPHONES_DETECTED_SOFT: // Not used by OpenAL Soft anymore
 							case ALC_HRTF_REQUIRED_SOFT: statusStr = "enabled (enforced)"; break;
-							default: statusStr = "unknown"; break;
+							default: statusStr = "unsupported"; break;
 						}
 						LOGI("HRTF: {}", statusStr);
 						break;
 #	endif
 				}
 			}
-
-#	if defined(ALC_EXT_EFX_NAME)
-			bool hasExtEfx = alcIsExtensionPresent(device_, ALC_EXT_EFX_NAME);
-#	else
-			bool hasExtEfx = alcIsExtensionPresent(device_, "ALC_EXT_EFX");
-#	endif
-			LOGI("ALC_EXT_EFX: {}", hasExtEfx);
 		}
 #endif
 	}
