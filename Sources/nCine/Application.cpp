@@ -1405,7 +1405,7 @@ namespace nCine
 
 #	if defined(WITH_BACKWARD)
 				if (__consoleType >= ConsoleType::EscapeCodes) {
-					__eh.FeatureFlags |= Backward::Flags::ColorizeOutput;
+					__eh.FeatureFlags |= Backward::Flags::Colorized;
 				}
 #	endif
 			}
@@ -1501,7 +1501,7 @@ namespace nCine
 
 #	if defined(WITH_BACKWARD)
 		if (__consoleType >= ConsoleType::EscapeCodes) {
-			__eh.FeatureFlags |= Backward::Flags::ColorizeOutput;
+			__eh.FeatureFlags |= Backward::Flags::Colorized;
 		}
 #	endif
 

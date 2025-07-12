@@ -936,6 +936,8 @@ namespace Death { namespace Trace {
 		friend class LoggerBackend;
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		union SpscQueueUnion
 		{
 			Implementation::UnboundedSPSCQueue UnboundedSpscQueue;
@@ -944,6 +946,7 @@ namespace Death { namespace Trace {
 			SpscQueueUnion() {}
 			~SpscQueueUnion() {}
 		};
+#endif
 
 	public:
 		ThreadContext(Implementation::QueueType queueType, std::uint32_t initialSpscQueueCapacity, bool hugesPagesEnabled)
@@ -1151,6 +1154,7 @@ namespace Death { namespace Trace {
 		ScopedThreadContext(ScopedThreadContext const&) = delete;
 		ScopedThreadContext& operator=(ScopedThreadContext const&) = delete;
 
+		/** @brief Returns the assigned thread context */
 		ThreadContext* GetThreadContext() const noexcept
 		{
 			DEATH_DEBUG_ASSERT(_threadContext != nullptr);
@@ -1180,6 +1184,8 @@ namespace Death { namespace Trace {
 		void SetCapacity(std::uint32_t capacity);
 
 	private:
+#ifndef DOXYGEN_GENERATING_OUTPUT
+		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct StoredTransitEvent
 		{
 			StoredTransitEvent(Containers::String threadId, TransitEvent transitEvent);
@@ -1187,6 +1193,7 @@ namespace Death { namespace Trace {
 			Containers::String ThreadId;
 			TransitEvent Event;
 		};
+#endif
 
 		std::uint32_t _capacity;
 		std::uint32_t _index;
