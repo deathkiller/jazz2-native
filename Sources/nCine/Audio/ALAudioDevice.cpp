@@ -100,9 +100,15 @@ namespace nCine
 					case ALC_MINOR_VERSION: versionMinor = attributes[i + 1]; break;
 					case ALC_MONO_SOURCES: monoSources = attributes[i + 1]; break;
 					case ALC_STEREO_SOURCES: stereoSources = attributes[i + 1]; break;
+#if defined(ALC_EFX_MAJOR_VERSION)
 					case ALC_EFX_MAJOR_VERSION: efxVersionMajor = attributes[i + 1]; break;
+#endif
+#if defined(ALC_EFX_MINOR_VERSION)
 					case ALC_EFX_MINOR_VERSION: efxVersionMinor = attributes[i + 1]; break;
+#endif
+#if defined(ALC_MAX_AUXILIARY_SENDS)
 					case ALC_MAX_AUXILIARY_SENDS: efxAuxSends = attributes[i + 1]; break;
+#endif
 				}
 			}
 
