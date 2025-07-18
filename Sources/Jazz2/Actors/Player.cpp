@@ -4036,7 +4036,13 @@ namespace Jazz2::Actors
 
 	void Player::AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade)
 	{
+		bool shouldSwitchToWeapon = (_weaponUpgrades[(std::int32_t)weaponType] == 0);
+
 		_weaponUpgrades[(std::int32_t)weaponType] |= upgrade;
+
+		if (shouldSwitchToWeapon) {
+			SetCurrentWeapon(weaponType, SetCurrentWeaponReason::AddUpgrade);
+		}
 	}
 
 	bool Player::AddFastFire(std::int32_t count)
@@ -4161,8 +4167,15 @@ namespace Jazz2::Actors
 
 	bool Player::SetShield(ShieldType shieldType, float time)
 	{
+		bool shouldSwitchToBlaster = (shieldType != ShieldType::None && _activeShield == ShieldType::None);
+
 		_activeShield = shieldType;
 		_activeShieldTime = (shieldType != ShieldType::None ? time : 0.0f);
+
+		if (shouldSwitchToBlaster) {
+			SetCurrentWeapon(WeaponType::Blaster, SetCurrentWeaponReason::Shield);
+		}
+
 		return true;
 	}
 

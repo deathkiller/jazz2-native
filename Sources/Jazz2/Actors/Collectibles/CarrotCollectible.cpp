@@ -1,5 +1,6 @@
 ﻿#include "CarrotCollectible.h"
 #include "../Player.h"
+#include "../../ILevelHandler.h"
 
 #include "../../../nCine/Base/FrameTimer.h"
 
@@ -42,9 +43,12 @@ namespace Jazz2::Actors::Collectibles
 	void CarrotCollectible::OnCollect(Player* player)
 	{
 		if (_maxCarrot) {
-			player->AddHealth(-1);
-			player->SetInvulnerability(5.0f * FrameTimer::FramesPerSecond, Player::InvulnerableType::Shielded);
-			CollectibleBase::OnCollect(player);
+			bool healthNotFull = player->AddHealth(-1);
+			// Always collect if Reforged is enabled
+			if (healthNotFull || _levelHandler->IsReforged()) {
+				player->SetInvulnerability(5.0f * FrameTimer::FramesPerSecond, Player::InvulnerableType::Shielded);
+				CollectibleBase::OnCollect(player);
+			}
 		} else {
 			if (player->AddHealth(1)) {
 				player->SetInvulnerability(0.8f * FrameTimer::FramesPerSecond, Player::InvulnerableType::Shielded);

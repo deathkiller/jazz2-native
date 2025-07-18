@@ -149,7 +149,7 @@ namespace Jazz2::Actors::Solid
 
 	bool Pole::CanCauseDamage(ActorBase* collider)
 	{
-		return true;
+		return _levelHandler->IsReforged() || runtime_cast<Weapons::TNT>(collider);
 	}
 
 	void Pole::Fall(FallDirection dir)

@@ -80,7 +80,7 @@ namespace Jazz2::Actors::Environment
 
 	bool BirdCage::CanCauseDamage(ActorBase* collider)
 	{
-		return true;
+		return _levelHandler->IsReforged() || runtime_cast<Weapons::TNT>(collider);
 	}
 
 	bool BirdCage::TryApplyToPlayer(Player* player)

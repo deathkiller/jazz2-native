@@ -58,8 +58,8 @@ namespace Jazz2::Actors::Environment
 
 		async_await RequestMetadataAsync("Object/Spring"_s);
 
-		Vector2f tileCorner = Vector2f((int)(_pos.X / Tiles::TileSet::DefaultTileSize) * Tiles::TileSet::DefaultTileSize,
-			(int)(_pos.Y / Tiles::TileSet::DefaultTileSize) * Tiles::TileSet::DefaultTileSize);
+		Vector2f tileCorner = Vector2f((std::int32_t)(_pos.X / Tiles::TileSet::DefaultTileSize) * Tiles::TileSet::DefaultTileSize,
+			(std::int32_t)(_pos.Y / Tiles::TileSet::DefaultTileSize) * Tiles::TileSet::DefaultTileSize);
 		if (_orientation > Orientation::Left) {
 			// JJ2 horizontal springs held no data about which way they were facing.
 			// For compatibility, correct orientation is evaluated during runtime.
@@ -68,7 +68,7 @@ namespace Jazz2::Actors::Environment
 			_orientation = (_levelHandler->TileMap()->IsTileEmpty(aabb, params) != (_orientation == (Orientation)5) ? Orientation::Right : Orientation::Left);
 		}
 
-		int orientationBit = 0;
+		std::int32_t orientationBit = 0;
 		switch (_orientation) {
 			case Orientation::Bottom:
 				MoveInstantly(Vector2f(tileCorner.X + 16, tileCorner.Y + 8), MoveType::Absolute | MoveType::Force);
@@ -108,7 +108,7 @@ namespace Jazz2::Actors::Environment
 					_strength = 1.25f;
 					break;
 				case 1: // Green
-					_strength = 1.50f;
+					_strength = (_levelHandler->IsReforged() ? 1.50f : 1.52f);
 					break;
 				case 2: // Blue
 					_strength = (_levelHandler->IsReforged() ? 1.68f : 1.72f);

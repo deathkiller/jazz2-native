@@ -112,7 +112,7 @@ namespace Jazz2::Actors::Solid
 
 	bool PowerUpWeaponMonitor::CanCauseDamage(ActorBase* collider)
 	{
-		return true;
+		return _levelHandler->IsReforged() || runtime_cast<Weapons::TNT>(collider);
 	}
 
 	bool PowerUpWeaponMonitor::OnPerish(ActorBase* collider)
@@ -124,8 +124,8 @@ namespace Jazz2::Actors::Solid
 
 	void PowerUpWeaponMonitor::DestroyAndApplyToPlayer(Player* player)
 	{
-		player->AddWeaponUpgrade(_weaponType, 0x01);
 		player->AddAmmo(_weaponType, 25);
+		player->AddWeaponUpgrade(_weaponType, 0x01);
 
 		DecreaseHealth(INT32_MAX, player);
 		PlaySfx("Break"_s);

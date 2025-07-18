@@ -1,8 +1,8 @@
 ﻿#include "GenericContainer.h"
+#include "../Weapons/TNT.h"
 #include "../../ILevelHandler.h"
 #include "../../Events/EventSpawner.h"
 #include "../../Tiles/TileMap.h"
-
 #include "../../../nCine/Base/Random.h"
 
 using namespace Jazz2::Tiles;
@@ -15,7 +15,7 @@ namespace Jazz2::Actors::Solid
 
 	bool GenericContainer::CanCauseDamage(ActorBase* collider)
 	{
-		return true;
+		return _levelHandler->IsReforged() || runtime_cast<Weapons::TNT>(collider);
 	}
 
 	bool GenericContainer::OnPerish(ActorBase* collider)

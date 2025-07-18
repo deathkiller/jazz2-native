@@ -178,4 +178,22 @@ namespace Death { namespace Environment {
 		return QueryUnbiasedInterruptTime() / 10000LL;
 	}
 
+	/**
+	 * @brief Returns the current coarse interrupt-time count, in milliseconds
+	 *
+	 * The coarse interrupt-time count is fast, monotonic time source with a resolution typically limited
+	 * to 16 milliseconds. Falls back to another monotonic time source if not supported.
+	 */
+	DEATH_ALWAYS_INLINE std::uint64_t QueryCoarseTimeAsMs() noexcept {
+#if defined(DEATH_TARGET_WINDOWS)
+		return ::GetTickCount64();
+#elif defined(DEATH_TARGET_APPLE)
+		return clock_gettime_nsec_np(CLOCK_MONOTONIC_COARSE) / 1000000ULL;
+#else
+		struct timespec ts;
+		clock_gettime(CLOCK_MONOTONIC_COARSE, &ts);
+		return std::uint64_t(ts.tv_sec) * 1000ULL + std::uint64_t(ts.tv_nsec) / 1000000ULL;
+#endif
+	}
+
 }}

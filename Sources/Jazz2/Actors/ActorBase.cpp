@@ -1326,7 +1326,8 @@ namespace Jazz2::Actors
 				_renderer.AnimPaused = true;
 				freezerShot->DecreaseHealth(INT32_MAX);
 			}
-		} else if(runtime_cast<Weapons::ToasterShot>(shot) || runtime_cast<Weapons::Thunderbolt>(shot)) {
+		} else if (runtime_cast<Weapons::ToasterShot>(shot) || runtime_cast<Weapons::ShieldFireShot>(shot) ||
+				   runtime_cast<Weapons::Thunderbolt>(shot)) {
 			_frozenTimeLeft = std::min(1.0f, _frozenTimeLeft);
 		}
 	}
