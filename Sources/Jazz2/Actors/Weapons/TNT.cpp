@@ -108,14 +108,14 @@ namespace Jazz2::Actors::Weapons
 			_renderer.setScale(1.0f);
 			PlaySfx("Explosion"_s);
 
-			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 50.0f, [this](ActorBase* actor) {
+			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 96.0f, [this](ActorBase* actor) {
 				actor->OnHandleCollision(shared_from_this());
 				return true;
 			});
 
 			auto* tiles = _levelHandler->TileMap();
 			if (tiles != nullptr) {
-				AABBf aabb = AABBf(_pos.X - 34.0f, _pos.Y - 34.0f, _pos.X + 34.0f, _pos.Y + 34.0f);
+				AABBf aabb = AABBf(_pos.X - 72.0f, _pos.Y - 72.0f, _pos.X + 72.0f, _pos.Y + 72.0f);
 				TileCollisionParams params = { TileDestructType::Special | TileDestructType::Weapon | TileDestructType::IgnoreSolidTiles, false, WeaponType::TNT, 8 };
 				tiles->IsTileEmpty(aabb, params);
 				if (params.TilesDestroyed > 0) {
