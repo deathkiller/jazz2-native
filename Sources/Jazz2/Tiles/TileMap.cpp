@@ -19,7 +19,7 @@ namespace Jazz2::Tiles
 	{
 		auto& tileSetPart = _tileSets.emplace_back();
 		tileSetPart.Data = ContentResolver::Get().RequestTileSet(tileSetPath, captionTileId, applyPalette);
-		RETURN_ASSERT_MSG(tileSetPart.Data != nullptr, "Failed to load main tileset \"{}\"", tileSetPath);
+		DEATH_ASSERT(tileSetPart.Data != nullptr, ("Failed to load main tileset \"{}\"", tileSetPath), );
 		
 		tileSetPart.Offset = 0;
 		tileSetPart.Count = tileSetPart.Data->TileCount;
@@ -1456,11 +1456,11 @@ namespace Jazz2::Tiles
 			return;
 		}
 
-		RETURN_ASSERT_MSG(_sprLayerIndex != -1, "Sprite layer not defined");
+		DEATH_ASSERT(_sprLayerIndex != -1, "Sprite layer not defined", );
 		
 		auto& spriteLayer = _layers[_sprLayerIndex];
 		std::int32_t realLayoutSize = spriteLayer.LayoutSize.X * spriteLayer.LayoutSize.Y;
-		RETURN_ASSERT_MSG(layoutSize == realLayoutSize, "Layout size mismatch");
+		DEATH_ASSERT(layoutSize == realLayoutSize, "Layout size mismatch", );
 
 		for (std::int32_t i = 0; i < layoutSize; i++) {
 			auto& tile = spriteLayer.Layout[i];

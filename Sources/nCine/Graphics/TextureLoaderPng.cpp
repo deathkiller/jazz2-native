@@ -25,7 +25,8 @@ namespace nCine
 		std::uint8_t internalBuffer[sizeof(PngSignature)];
 		fileHandle_->Read(internalBuffer, sizeof(PngSignature));
 		if (std::memcmp(internalBuffer, PngSignature, sizeof(PngSignature)) != 0) {
-			RETURN_MSG("Invalid PNG signature");
+			LOGE("Invalid PNG signature");
+			return;
 		}
 
 		// Load image
@@ -41,14 +42,15 @@ namespace nCine
 
 			if (!headerParsed && type != 'IHDR') {
 				// Header does not appear first
-				RETURN_MSG("Invalid IHDR signature");
+				LOGE("Invalid IHDR signature");
+				return;
 			}
 
 			std::int32_t blockEndPosition = std::int32_t(fileHandle_->GetPosition()) + length;
 
 			switch (type) {
 				case 'IHDR': {
-					RETURN_ASSERT_MSG(!headerParsed, "PNG file is corrupted");
+					DEATH_ASSERT(!headerParsed, "PNG file is corrupted", );
 
 					width_ = ReadInt32BigEndian(fileHandle_);
 					height_ = ReadInt32BigEndian(fileHandle_);
@@ -79,11 +81,13 @@ namespace nCine
 
 					if (compression != 0) {
 						// Compression method is not supported
-						RETURN_MSG("PNG file is not supported");
+						LOGE("PNG file is not supported");
+						return;
 					}
 					if (interlace != 0) {
 						// Interlacing is not supported
-						RETURN_MSG("PNG file is not supported");
+						LOGE("PNG file is not supported");
+						return;
 					}
 
 					headerParsed = true;
@@ -105,7 +109,7 @@ namespace nCine
 					MemoryStream ms(data.data() + 2, data.size() - 2);
 					DeflateStream uc(ms, dataLength);
 					uc.Read(buffer.get(), dataLength);
-					RETURN_ASSERT_MSG(uc.IsValid(), "PNG file cannot be decompressed");
+					DEATH_ASSERT(uc.IsValid(), "PNG file cannot be decompressed", );
 
 					std::int32_t o = 0;
 					std::int32_t pxStride = (isPaletted ? 1 : (is24Bit ? 3 : 4));
@@ -156,14 +160,15 @@ namespace nCine
 
 			if (fileHandle_->GetPosition() != blockEndPosition) {
 				// Block has incorrect length
-				RETURN_MSG("PNG file is corrupted");
+				LOGE("PNG file is corrupted");
+				return;
 			}
 
 			// Skip CRC
 			fileHandle_->Seek(4, SeekOrigin::Current);
 		}
 
-		RETURN_MSG("PNG file is corrupted");
+		LOGE("PNG file is corrupted");
 	}
 
 	std::int32_t TextureLoaderPng::ReadInt32BigEndian(const std::unique_ptr<Stream>& s)

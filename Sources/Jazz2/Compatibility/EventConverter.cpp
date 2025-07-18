@@ -116,7 +116,7 @@ namespace Jazz2::Compatibility
 				}
 
 				default:
-					ASSERT_MSG(false, "Unknown JJ2Param type specified");
+					DEATH_ASSERT(false, "Unknown JJ2Param type specified", );
 					break;
 			}
 		}

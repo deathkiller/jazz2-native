@@ -151,8 +151,8 @@ namespace Death { namespace Environment {
 	/**
 	 * @brief Returns the current unbiased interrupt-time count, in units of 100 nanoseconds
 	 * 
-	 * The unbiased interrupt-time count does not include time the system spends in sleep or hibernation.
-	 * Falls back to another monotonic time source if not supported.
+	 * The unbiased interrupt-time count is monotonic time source that does not include time the system
+	 * spends in sleep or hibernation. Falls back to another monotonic time source if not supported.
 	 */
 	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTime() noexcept {
 #if defined(DEATH_TARGET_WINDOWS)
@@ -171,8 +171,8 @@ namespace Death { namespace Environment {
 	/**
 	 * @brief Returns the current unbiased interrupt-time count, in milliseconds
 	 *
-	 * The unbiased interrupt-time count does not include time the system spends in sleep or hibernation.
-	 * Falls back to another monotonic time source if not supported.
+	 * The unbiased interrupt-time count is monotonic time source that does not include time the system
+	 * spends in sleep or hibernation. Falls back to another monotonic time source if not supported.
 	 */
 	DEATH_ALWAYS_INLINE std::uint64_t QueryUnbiasedInterruptTimeAsMs() noexcept {
 		return QueryUnbiasedInterruptTime() / 10000LL;

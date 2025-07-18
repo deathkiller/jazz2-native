@@ -18,9 +18,9 @@ namespace nCine
 		}
 
 		const bool headerRead = readHeader(header);
-		RETURN_ASSERT_MSG(headerRead, "KTX header cannot be read");
+		DEATH_ASSERT(headerRead, "KTX header cannot be read", );
 		const bool formatParsed = parseFormat(header);
-		RETURN_ASSERT_MSG(formatParsed, "KTX format cannot be parsed");
+		DEATH_ASSERT(formatParsed, "KTX format cannot be parsed", );
 
 		hasLoaded_ = true;
 	}
@@ -38,9 +38,9 @@ namespace nCine
 			}
 		}
 
-		RETURNF_ASSERT_MSG(checkPassed, "Invalid KTX signature");
+		DEATH_ASSERT(checkPassed, "Invalid KTX signature", false);
 		// Checking for the header identifier
-		RETURNF_ASSERT_MSG(header.endianess != 0x01020304, "File endianess doesn't match machine one");
+		DEATH_ASSERT(header.endianess != 0x01020304, "File endianess doesn't match machine one", false);
 
 		// Accounting for key-value data and `UInt32 imageSize` from first MIP level
 		headerSize_ = 64 + Stream::Uint32FromLE(header.bytesOfKeyValueData) + 4;

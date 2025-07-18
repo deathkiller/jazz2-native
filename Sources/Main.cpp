@@ -136,7 +136,7 @@ public:
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RefreshCacheLevels(bool recreateAll) override;
 #else
-	void RefreshCacheLevels(bool recreateAll) override { }
+	void RefreshCacheLevels(bool recreateAll) override {}
 #endif
 
 private:
@@ -970,7 +970,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 	}
 
 	auto& serverConfig = _networkManager->GetServerConfiguration();
-	LOGI("[MP] Creating {} server \"{}\" on port {}...", serverConfig.IsPrivate ? "private" : "public", serverConfig.ServerName, serverConfig.ServerPort);
+	LOGI("[MP] Creating {} server \"{}\" on port {}...", serverConfig.IsPrivate ? "private"_s : "public"_s, serverConfig.ServerName, serverConfig.ServerPort);
 
 	InvokeAsync([this, serverInit = std::move(serverInit)]() mutable {
 		auto levelHandler = std::make_shared<MpLevelHandler>(this,
@@ -2157,7 +2157,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdSh
 }
 #	endif
 #else
-#if defined(DEATH_TARGET_UNIX)
+#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 int PrintVersion(bool logoVisible)
 {
 	if (logoVisible) {
@@ -2204,7 +2204,7 @@ int main(int argc, char** argv)
 		}
 	}
 #	endif
-#	if defined(DEATH_TARGET_UNIX)
+#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 	for (std::size_t i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "--version") == 0) {
 			// Just print current version below the logo and quit

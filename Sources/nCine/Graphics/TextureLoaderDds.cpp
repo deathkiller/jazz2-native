@@ -14,9 +14,9 @@ namespace nCine
 		}
 
 		const bool headerRead = readHeader(header);
-		RETURN_ASSERT_MSG(headerRead, "DDS header cannot be read");
+		DEATH_ASSERT(headerRead, "DDS header cannot be read", );
 		const bool formatParsed = parseFormat(header);
-		RETURN_ASSERT_MSG(formatParsed, "DDS format cannot be parsed");
+		DEATH_ASSERT(formatParsed, "DDS format cannot be parsed", );
 
 		hasLoaded_ = true;
 	}
@@ -27,7 +27,7 @@ namespace nCine
 		fileHandle_->Read(&header, 128);
 
 		// Checking for the header presence
-		RETURNF_ASSERT_MSG(Stream::Uint32FromLE(header.dwMagic) == 0x20534444 /* "DDS " */, "Invalid DDS signature");
+		DEATH_ASSERT(Stream::Uint32FromLE(header.dwMagic) == 0x20534444 /* "DDS " */, "Invalid DDS signature", false);
 
 		headerSize_ = 128;
 		width_ = Stream::Uint32FromLE(header.dwWidth);
@@ -80,8 +80,8 @@ namespace nCine
 					break;
 #endif
 				default:
-					RETURNF_MSG("Unsupported FourCC compression code: {}", fourCC);
-					break;
+					LOGE("Unsupported FourCC compression code: {}", fourCC);
+					return false;
 			}
 
 			loadPixels(internalFormat);
@@ -121,7 +121,8 @@ namespace nCine
 				}
 #endif
 				else {
-					RETURNF_MSG("Unsupported DDPF_RGB pixel format");
+					LOGE("Unsupported DDPF_RGB pixel format");
+					return false;
 				}
 			} else if (flags & (DDPF_LUMINANCE | DDPF_ALPHAPIXELS)) {
 				// Used in some older DDS files for single channel color uncompressed data
@@ -135,7 +136,8 @@ namespace nCine
 				// dwRGBBitCount contains the alpha channel bitcount; dwABitMask contains valid data
 				internalFormat = GL_R8;
 			} else {
-				RETURNF_MSG("Unsupported DDS uncompressed pixel format: {}", flags);
+				LOGE("Unsupported DDS uncompressed pixel format: {}", flags);
+				return false;
 			}
 
 			loadPixels(internalFormat, type);

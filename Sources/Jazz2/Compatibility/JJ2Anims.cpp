@@ -20,20 +20,20 @@ namespace Jazz2::Compatibility
 		SmallVector<SampleSection, 0> samples;
 
 		auto s = fs::Open(path, FileAccess::Read);
-		ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
+		DEATH_ASSERT(s->IsValid(), "Cannot open file for reading", JJ2Version::Unknown);
 
 		bool seemsLikeCC = false;
 
 		std::uint32_t magic = s->ReadValue<std::uint32_t>();
-		ASSERT(magic == 0x42494C41);
+		DEATH_ASSERT(magic == 0x42494C41, "Invalid magic number", JJ2Version::Unknown);
 
 		std::uint32_t signature = s->ReadValue<std::uint32_t>();
-		ASSERT(signature == 0x00BEBA00);
+		DEATH_ASSERT(signature == 0x00BEBA00, "Invalid signature", JJ2Version::Unknown);
 
 		std::uint32_t headerLen = s->ReadValue<std::uint32_t>();
 
 		std::uint32_t magicUnknown = s->ReadValue<std::uint32_t>();	// Probably `uint16_t version` and `uint16_t unknown`
-		ASSERT(magicUnknown == 0x18080200);
+		DEATH_ASSERT(magicUnknown == 0x18080200, "Invalid version", JJ2Version::Unknown);
 
 		/*std::uint32_t fileLen =*/ s->ReadValue<std::uint32_t>();
 		/*std::uint32_t crc =*/ s->ReadValue<std::uint32_t>();
@@ -44,7 +44,7 @@ namespace Jazz2::Compatibility
 			setAddresses[i] = s->ReadValue<std::uint32_t>();
 		}
 
-		ASSERT(headerLen == s->GetPosition());
+		DEATH_ASSERT(headerLen == s->GetPosition(), "Invalid header size", JJ2Version::Unknown);
 
 		// Read content
 		bool isStreamComplete = true;
@@ -196,12 +196,12 @@ namespace Jazz2::Compatibility
 				std::int32_t chunkSize = sampleDataBlock.ReadInt32();
 				// "ASFF" for 1.20, "AS  " for 1.24
 				std::uint32_t format = sampleDataBlock.ReadUInt32();
-				ASSERT(format == 0x46465341 || format == 0x20205341);
+				DEATH_ASSERT(format == 0x46465341 || format == 0x20205341, "Invalid sound format", JJ2Version::Unknown);
 				bool isASFF = (format == 0x46465341);
 
 				std::uint32_t magicSAMP = sampleDataBlock.ReadUInt32();
 				/*std::uint32_t sampSize =*/ sampleDataBlock.ReadUInt32();
-				ASSERT_MSG(magicRIFF == 0x46464952 && magicSAMP == 0x504D4153, "Sample has invalid header");
+				DEATH_ASSERT(magicRIFF == 0x46464952 && magicSAMP == 0x504D4153, "Invalid sound format", JJ2Version::Unknown);
 
 				// Padding/unknown data #1
 				// For set 0 sample 0:
@@ -359,11 +359,11 @@ namespace Jazz2::Compatibility
 
 			String filename;
 			if (entry->Name.empty()) {
-				ASSERT(!entry->Name.empty());
+				LOGE("Entry name is empty");
 				continue;
-			} else {
-				filename = fs::CombinePath({ "Animations"_s, entry->Category, String(entry->Name + ".aura"_s) });
 			}
+
+			filename = fs::CombinePath({ "Animations"_s, entry->Category, String(entry->Name + ".aura"_s) });
 
 			std::int32_t stride = sizeX * anim.FrameConfigurationX;
 			std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(stride * sizeY * anim.FrameConfigurationY * 4);
@@ -445,7 +445,7 @@ namespace Jazz2::Compatibility
 			WriteImageToStream(so, pixels.get(), sizeX, sizeY, 4, anim, entry);
 			so.Seek(0, SeekOrigin::Begin);
 			bool success = pakWriter.AddFile(so, filename);
-			ASSERT_MSG(success, "Cannot add file to .pak container");
+			DEATH_ASSERT(success, "Cannot add file to .pak container", );
 
 			/*if (!string.IsNullOrEmpty(data.Name) && !data.SkipNormalMap) {
 				PngWriter normalMap = NormalMapGenerator.FromSprite(img,
@@ -475,11 +475,11 @@ namespace Jazz2::Compatibility
 
 			String filename;
 			if (entry->Name.empty()) {
-				ASSERT(!entry->Name.empty());
+				LOGE("Entry name is empty");
 				continue;
-			} else {
-				filename = fs::CombinePath({ "Animations"_s, entry->Category, String(entry->Name + ".wav"_s) });
 			}
+
+			filename = fs::CombinePath({ "Animations"_s, entry->Category, String(entry->Name + ".wav"_s) });
 
 			MemoryStream so(16384);
 
@@ -521,14 +521,14 @@ namespace Jazz2::Compatibility
 
 			so.Seek(0, SeekOrigin::Begin);
 			bool success = pakWriter.AddFile(so, filename, PakPreferredCompression::Deflate);
-			ASSERT_MSG(success, "Cannot add file to .pak container");
+			DEATH_ASSERT(success, "Cannot add file to .pak container", );
 		}
 	}
 
 	void JJ2Anims::WriteImageToFile(StringView targetPath, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry)
 	{
 		FileStream so(targetPath, FileAccess::Write);
-		ASSERT_MSG(so.IsValid(), "Cannot open file for writing");
+		DEATH_ASSERT(so.IsValid(), "Cannot open file for writing", );
 		WriteImageToStream(so, data, width, height, channelCount, anim, entry);
 	}
 

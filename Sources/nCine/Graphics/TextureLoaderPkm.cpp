@@ -19,9 +19,9 @@ namespace nCine
 		fileHandle_->Read(&header, 16); // PKM header is 16 bytes long
 
 		// Checking for the header presence
-		RETURN_ASSERT_MSG(Stream::Uint32FromBE(header.magicId) == 0x504B4D20 /* "PKM 10" */, "Invalid PKM signature");
-		RETURN_ASSERT_MSG(Stream::Uint16FromBE(header.version) == 0x3130 /* "10" */, "PKM version not supported: 0x{:.4x}", header.version);
-		RETURN_ASSERT_MSG(Stream::Uint16FromBE(header.dataType) == 0, "PKM data type not supported: 0x{:.4x}", header.dataType);
+		DEATH_ASSERT(Stream::Uint32FromBE(header.magicId) == 0x504B4D20 /* "PKM 10" */, "Invalid PKM signature", );
+		DEATH_ASSERT(Stream::Uint16FromBE(header.version) == 0x3130 /* "10" */, ("PKM version not supported: 0x{:.4x}", header.version), );
+		DEATH_ASSERT(Stream::Uint16FromBE(header.dataType) == 0, ("PKM data type not supported: 0x{:.4x}", header.dataType), );
 
 		headerSize_ = 16;
 		width_ = Stream::Uint16FromBE(header.width);

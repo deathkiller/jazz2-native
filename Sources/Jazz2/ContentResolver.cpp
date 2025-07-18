@@ -1005,7 +1005,7 @@ namespace Jazz2
 		std::uint16_t signature2 = s->ReadValue<std::uint16_t>();
 		std::uint8_t version = s->ReadValue<std::uint8_t>();
 		/*std::uint8_t flags =*/ s->ReadValue<std::uint8_t>();
-		ASSERT_MSG(signature1 == 0xB8EF8498E2BFBBEF && signature2 == 0x208F && version == 2, "Invalid file");
+		DEATH_ASSERT(signature1 == 0xB8EF8498E2BFBBEF && signature2 == 0x208F && version == 2, "Invalid file", nullptr);
 
 		// TODO: Use single channel instead
 		std::uint8_t channelCount = s->ReadValue<std::uint8_t>();
@@ -1185,7 +1185,7 @@ namespace Jazz2
 
 		std::uint64_t signature = s->ReadValue<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
-		RETURNF_ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == LevelFile, "File has invalid signature");
+		DEATH_ASSERT(signature == 0x2095A59FF0BFBBEF && fileType == LevelFile, "File has invalid signature", false);
 
 		LevelFlags flags = (LevelFlags)s->ReadValue<std::uint16_t>();
 
@@ -1363,7 +1363,7 @@ namespace Jazz2
 		descriptor.EventMap->SetPitType(pitType);
 		descriptor.EventMap->ReadEvents(uc, descriptor.TileMap, difficulty);
 
-		RETURNF_ASSERT_MSG(uc.IsValid(), "File cannot be decompressed");
+		DEATH_ASSERT(uc.IsValid(), "File cannot be decompressed", false);
 		return true;
 	}
 
@@ -1627,7 +1627,7 @@ namespace Jazz2
 		if (compileTwice) {
 			GLShaderUniformBlocks blocks(shader->getHandle(), Material::InstancesBlockName, nullptr);
 			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
-			ASSERT(block != nullptr);
+			DEATH_DEBUG_ASSERT(block != nullptr);
 			if (block != nullptr) {
 				batchSize = maxUniformBlockSize / block->GetSize();
 				LOGI("Shader \"{}\" - block size: {} + {} align bytes, max batch size: {}", shaderName,
@@ -1685,7 +1685,7 @@ namespace Jazz2
 		if (compileTwice) {
 			GLShaderUniformBlocks blocks(shader->getHandle(), Material::InstancesBlockName, nullptr);
 			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
-			ASSERT(block != nullptr);
+			DEATH_DEBUG_ASSERT(block != nullptr);
 			if (block != nullptr) {
 				batchSize = maxUniformBlockSize / block->GetSize();
 				LOGI("Shader \"{}\" - block size: {} + {} align bytes, max batch size: {}", shaderName,

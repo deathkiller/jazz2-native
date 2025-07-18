@@ -179,7 +179,7 @@ namespace nCine
 			// On iOS `alBufferDataStatic()` could be used instead
 			alBufferData(bufferId_, format, bufferPtr, bufferSize, frequency_);
 			const ALenum error = alGetError();
-			RETURNF_ASSERT_MSG(error == AL_NO_ERROR, "alBufferData() failed with error 0x{:x}", error);
+			DEATH_ASSERT(error == AL_NO_ERROR, ("alBufferData() failed with error 0x{:x}", error), false);
 
 			numSamples_ = bufferSize / (numChannels_ * bytesPerSample_);
 			duration_ = float(numSamples_) / frequency_;
@@ -193,10 +193,10 @@ namespace nCine
 	bool AudioBuffer::load(IAudioLoader& audioLoader)
 	{
 #if defined(WITH_AUDIO)
-		RETURNF_ASSERT_MSG(audioLoader.bytesPerSample() == 1 || audioLoader.bytesPerSample() == 2,
-		                     "Unsupported number of bytes per sample: {}", audioLoader.bytesPerSample());
-		RETURNF_ASSERT_MSG(audioLoader.numChannels() == 1 || audioLoader.numChannels() == 2,
-		                     "Unsupported number of channels: {}", audioLoader.numChannels());
+		DEATH_ASSERT(audioLoader.bytesPerSample() == 1 || audioLoader.bytesPerSample() == 2,
+		    ("Unsupported number of bytes per sample: {}", audioLoader.bytesPerSample()), false);
+		DEATH_ASSERT(audioLoader.numChannels() == 1 || audioLoader.numChannels() == 2,
+		    ("Unsupported number of channels: {}", audioLoader.numChannels()), false);
 
 		bytesPerSample_ = audioLoader.bytesPerSample();
 		numChannels_ = audioLoader.numChannels();
