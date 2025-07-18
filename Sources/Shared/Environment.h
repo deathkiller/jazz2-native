@@ -184,14 +184,14 @@ namespace Death { namespace Environment {
 	 * The coarse interrupt-time count is fast, monotonic time source with a resolution typically limited
 	 * to 16 milliseconds. Falls back to another monotonic time source if not supported.
 	 */
-	DEATH_ALWAYS_INLINE std::uint64_t QueryCoarseTimeAsMs() noexcept {
+	DEATH_ALWAYS_INLINE std::uint64_t QueryCoarseInterruptTimeAsMs() noexcept {
 #if defined(DEATH_TARGET_WINDOWS)
 		return ::GetTickCount64();
 #elif defined(DEATH_TARGET_APPLE)
 		return clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW) / 1000000ULL;
 #elif defined(DEATH_TARGET_SWITCH)
 		struct timespec ts;
-		clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+		clock_gettime(CLOCK_MONOTONIC, &ts);
 		return std::uint64_t(ts.tv_sec) * 1000ULL + std::uint64_t(ts.tv_nsec) / 1000000ULL;
 #else
 		struct timespec ts;
