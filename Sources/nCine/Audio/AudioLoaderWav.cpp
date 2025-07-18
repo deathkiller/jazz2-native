@@ -18,9 +18,9 @@ namespace nCine
 		WavHeader header;
 		fileHandle_->Read(&header, sizeof(WavHeader));
 
-		RETURN_ASSERT_MSG(strncmp(header.chunkId, "RIFF", 4) == 0 && strncmp(header.format, "WAVE", 4) == 0, "Invalid WAV signature");
-		RETURN_ASSERT_MSG(strncmp(header.subchunk1Id, "fmt ", 4) == 0, "Invalid WAV signature");
-		RETURN_ASSERT_MSG(Stream::Uint16FromLE(header.audioFormat) == 1, "Data is not in PCM format");
+		DEATH_ASSERT(strncmp(header.chunkId, "RIFF", 4) == 0 && strncmp(header.format, "WAVE", 4) == 0, "Invalid WAV signature", );
+		DEATH_ASSERT(strncmp(header.subchunk1Id, "fmt ", 4) == 0, "Invalid WAV signature", );
+		DEATH_ASSERT(Stream::Uint16FromLE(header.audioFormat) == 1, "Data is not in PCM format", );
 
 		bytesPerSample_ = Stream::Uint16FromLE(header.bitsPerSample) / 8;
 		numChannels_ = Stream::Uint16FromLE(header.numChannels);
@@ -29,7 +29,7 @@ namespace nCine
 		numSamples_ = Stream::Uint32FromLE(header.subchunk2Size) / (numChannels_ * bytesPerSample_);
 		duration_ = float(numSamples_) / frequency_;
 
-		RETURN_ASSERT_MSG(numChannels_ == 1 || numChannels_ == 2, "Unsupported number of channels: {}", numChannels_);
+		DEATH_ASSERT(numChannels_ == 1 || numChannels_ == 2, ("Unsupported number of channels: {}", numChannels_), );
 		LOGD("Duration: {:.2}s, channels: {}, frequency: {} Hz", duration_, numChannels_, frequency_);
 
 		hasLoaded_ = true;

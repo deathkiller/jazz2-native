@@ -193,7 +193,8 @@ namespace nCine
 		} else {
 			bytesPerSample_ = 0;
 			numChannels_ = 0;
-			RETURN_MSG("Audio stream with {} channels is not supported", numChannels_);
+			LOGE("Audio stream with {} channels is not supported", numChannels_);
+			return;
 		}
 
 		frequency_ = audioLoader.frequency();

@@ -161,7 +161,7 @@ namespace Death { namespace Trace {
 		return instance;
 	}
 
-	void ThreadContextManager::RegisterThreadContext(std::shared_ptr<ThreadContext> const& threadContext)
+	void ThreadContextManager::RegisterThreadContext(std::shared_ptr<ThreadContext> const& threadContext) noexcept
 	{
 		_spinlock.lock();
 		_threadContexts.push_back(threadContext);
@@ -194,7 +194,7 @@ namespace Death { namespace Trace {
 		return false;
 	}
 
-	void ThreadContextManager::RemoveSharedInvalidatedThreadContext(ThreadContext const* threadContext)
+	void ThreadContextManager::RemoveSharedInvalidatedThreadContext(ThreadContext const* threadContext) noexcept
 	{
 		std::unique_lock lock{_spinlock};
 
@@ -232,7 +232,7 @@ namespace Death { namespace Trace {
 	{
 	}
 
-	void BacktraceStorage::Store(TransitEvent transitEvent, StringView threadId)
+	void BacktraceStorage::Store(TransitEvent transitEvent, StringView threadId) noexcept
 	{
 		if (_storedEvents.size() < _capacity) {
 			arrayAppend(_storedEvents, InPlaceInit, threadId, Death::move(transitEvent));
@@ -249,7 +249,7 @@ namespace Death { namespace Trace {
 		}
 	}
 
-	void BacktraceStorage::Process(Function<void(TransitEvent const& event, StringView threadId)>&& callback)
+	void BacktraceStorage::Process(Function<void(TransitEvent const& event, StringView threadId)>&& callback) noexcept
 	{
 		std::uint32_t index = _index;
 
@@ -268,7 +268,7 @@ namespace Death { namespace Trace {
 		_index = 0;
 	}
 
-	void BacktraceStorage::SetCapacity(std::uint32_t capacity)
+	void BacktraceStorage::SetCapacity(std::uint32_t capacity) noexcept
 	{
 		if (_capacity != capacity) {
 			_capacity = capacity;
@@ -318,14 +318,14 @@ namespace Death { namespace Trace {
 		}
 	}
 
-	void LoggerBackend::Notify()
+	void LoggerBackend::Notify() noexcept
 	{
 #if defined(DEATH_TRACE_ASYNC)
 		_wakeUpEvent.SetEvent();
 #endif
 	}
 
-	TraceLevel LoggerBackend::GetBacktraceFlushLevel() const
+	TraceLevel LoggerBackend::GetBacktraceFlushLevel() const noexcept
 	{
 #if defined(DEATH_TRACE_ASYNC)
 		return _backtraceFlushLevel.load(std::memory_order_relaxed);
@@ -334,7 +334,7 @@ namespace Death { namespace Trace {
 #endif
 	}
 
-	void LoggerBackend::SetBacktraceFlushLevel(TraceLevel flushLevel)
+	void LoggerBackend::SetBacktraceFlushLevel(TraceLevel flushLevel) noexcept
 	{
 #if defined(DEATH_TRACE_ASYNC)
 		_backtraceFlushLevel.store(flushLevel, std::memory_order_relaxed);
@@ -396,7 +396,7 @@ namespace Death { namespace Trace {
 		return (std::this_thread::get_id() == _workerThread.get_id());
 	}
 
-	void LoggerBackend::CleanUpBeforeExit()
+	void LoggerBackend::CleanUpBeforeExit() noexcept
 	{
 		using namespace Implementation;
 
@@ -422,7 +422,7 @@ namespace Death { namespace Trace {
 		CleanUpInvalidatedThreadContexts();
 	}
 
-	void LoggerBackend::UpdateActiveThreadContextsCache()
+	void LoggerBackend::UpdateActiveThreadContextsCache() noexcept
 	{
 		ThreadContextManager& threadManager = ThreadContextManager::Get();
 
@@ -435,7 +435,7 @@ namespace Death { namespace Trace {
 		}
 	}
 
-	void LoggerBackend::CleanUpInvalidatedThreadContexts()
+	void LoggerBackend::CleanUpInvalidatedThreadContexts() noexcept
 	{
 		ThreadContextManager& threadManager = ThreadContextManager::Get();
 
@@ -482,7 +482,7 @@ namespace Death { namespace Trace {
 		}
 	}
 
-	bool LoggerBackend::PopulateTransitEventFromThreadQueue(const std::byte*& readPos, ThreadContext* threadContext, std::uint64_t tsNow)
+	bool LoggerBackend::PopulateTransitEventFromThreadQueue(const std::byte*& readPos, ThreadContext* threadContext, std::uint64_t tsNow) noexcept
 	{
 		using namespace Implementation;
 
@@ -537,7 +537,7 @@ namespace Death { namespace Trace {
 		return true;
 	}
 
-	std::size_t LoggerBackend::PopulateTransitEventsFromFrontendQueues()
+	std::size_t LoggerBackend::PopulateTransitEventsFromFrontendQueues() noexcept
 	{
 		using namespace Implementation;
 
@@ -586,7 +586,7 @@ namespace Death { namespace Trace {
 		return false;
 	}
 
-	bool LoggerBackend::CheckThreadQueuesAndCachedTransitEventsEmpty()
+	bool LoggerBackend::CheckThreadQueuesAndCachedTransitEventsEmpty() noexcept
 	{
 		UpdateActiveThreadContextsCache();
 
@@ -607,7 +607,7 @@ namespace Death { namespace Trace {
 		return allEmpty;
 	}
 
-	void LoggerBackend::ResyncRdtscClock()
+	void LoggerBackend::ResyncRdtscClock() noexcept
 	{
 		using namespace Implementation;
 
@@ -619,7 +619,7 @@ namespace Death { namespace Trace {
 		}
 	}
 
-	void LoggerBackend::DispatchTransitEventToSinks(TransitEvent const& transitEvent, StringView threadId)
+	void LoggerBackend::DispatchTransitEventToSinks(TransitEvent const& transitEvent, StringView threadId) noexcept
 	{
 		StringView functionNameView{transitEvent.FunctionName};
 		StringView contentView{transitEvent.Message};
@@ -629,14 +629,14 @@ namespace Death { namespace Trace {
 		}
 	}
 
-	void LoggerBackend::FlushActiveSinks()
+	void LoggerBackend::FlushActiveSinks() noexcept
 	{
 		for (std::size_t i = 0; i < _sinks.size(); i++) {
 			_sinks[i]->OnTraceFlushed();
 		}
 	}
 
-	void LoggerBackend::ProcessTransitEvent(ThreadContext const& threadContext, TransitEvent& transitEvent, std::atomic<bool>*& flushFlag)
+	void LoggerBackend::ProcessTransitEvent(ThreadContext const& threadContext, TransitEvent& transitEvent, std::atomic<bool>*& flushFlag) noexcept
 	{
 		using namespace Implementation;
 
@@ -682,7 +682,7 @@ namespace Death { namespace Trace {
 		}
 	}
 
-	bool LoggerBackend::ProcessLowestTimestampTransitEvent()
+	bool LoggerBackend::ProcessLowestTimestampTransitEvent() noexcept
 	{
 		// Get the lowest timestamp
 		std::uint64_t minTs = std::numeric_limits<std::uint64_t>::max();
@@ -728,7 +728,7 @@ namespace Death { namespace Trace {
 		return true;
 	}
 
-	void LoggerBackend::ProcessEvents()
+	void LoggerBackend::ProcessEvents() noexcept
 	{
 		using namespace Implementation;
 
@@ -774,7 +774,7 @@ namespace Death { namespace Trace {
 		}
 	}
 #else
-	void LoggerBackend::DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength, StringView threadId)
+	void LoggerBackend::DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength, StringView threadId) noexcept
 	{
 		using namespace Implementation;
 
@@ -794,7 +794,7 @@ namespace Death { namespace Trace {
 		}
 	}
 
-	void LoggerBackend::FlushActiveSinks()
+	void LoggerBackend::FlushActiveSinks() noexcept
 	{
 		for (std::size_t i = 0; i < _sinks.size(); i++) {
 			_sinks[i]->OnTraceFlushed();
@@ -812,7 +812,7 @@ namespace Death { namespace Trace {
 		_backtraceStorage->SetCapacity(maxCapacity);
 	}
 
-	void LoggerBackend::FlushBacktraceAsync()
+	void LoggerBackend::FlushBacktraceAsync() noexcept
 	{
 		if (_backtraceStorage) {
 			_backtraceStorage->Process(
@@ -821,7 +821,7 @@ namespace Death { namespace Trace {
 		}
 	}
 
-	void LoggerBackend::EnqueueEntryToBacktrace(std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength)
+	void LoggerBackend::EnqueueEntryToBacktrace(std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept
 	{
 		using namespace Implementation;
 
@@ -878,7 +878,7 @@ namespace Death { namespace Trace {
 		return result;
 	}
 
-	void Logger::Flush(std::uint32_t sleepDurationNs)
+	void Logger::Flush(std::uint32_t sleepDurationNs) noexcept
 	{
 		using namespace Implementation;
 
@@ -934,7 +934,7 @@ namespace Death { namespace Trace {
 #endif
 	}
 
-	void Logger::FlushBacktraceAsync()
+	void Logger::FlushBacktraceAsync() noexcept
 	{
 #if defined(DEATH_TRACE_ASYNC)
 		using namespace Implementation;
@@ -950,6 +950,34 @@ namespace Death { namespace Trace {
 	}
 
 #if defined(DEATH_TRACE_ASYNC)
+	void Logger::ShrinkThreadLocalQueue(std::size_t capacity) noexcept
+	{
+		using namespace Implementation;
+
+		if constexpr (DefaultQueueType == QueueType::UnboundedDropping || DefaultQueueType == QueueType::UnboundedBlocking) {
+			if (_threadContext != nullptr) {
+				_threadContext->GetSpscQueue<DefaultQueueType>().shrink(capacity);
+			}
+		}
+	}
+
+	std::size_t Logger::GetThreadLocalQueueCapacity() noexcept
+	{
+		using namespace Implementation;
+
+		if constexpr (DefaultQueueType == QueueType::UnboundedDropping || DefaultQueueType == QueueType::UnboundedBlocking) {
+			if (_threadContext != nullptr) {
+				return _threadContext->GetSpscQueue<DefaultQueueType>().producerCapacity();
+			}
+		} else {
+			if (_threadContext != nullptr) {
+				return _threadContext->GetSpscQueue<DefaultQueueType>().capacity();
+			}
+		}
+
+		return 0;
+	}
+
 	ThreadContext* Logger::GetLocalThreadContext() noexcept
 	{
 		using namespace Implementation;
@@ -960,14 +988,14 @@ namespace Death { namespace Trace {
 		return scopedThreadContext.GetThreadContext();
 	}
 
-	std::byte* Logger::PrepareWriteBuffer(std::size_t totalSize)
+	std::byte* Logger::PrepareWriteBuffer(std::size_t totalSize) noexcept
 	{
 		using namespace Implementation;
 
 		return _threadContext->GetSpscQueue<DefaultQueueType>().prepareWrite(totalSize);
 	}
 
-	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength)
+	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept
 	{
 		using namespace Implementation;
 
@@ -1036,7 +1064,7 @@ namespace Death { namespace Trace {
 		return true;
 	}
 #else
-	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength)
+	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept
 	{
 		if DEATH_UNLIKELY(level == TraceLevel::Deferred) {
 			_backend.EnqueueEntryToBacktrace(timestamp, functionName, content, contentLength);
@@ -1069,7 +1097,7 @@ namespace Death { namespace Trace {
 		GetMainLogger().RemoveSink(sink);
 	}
 
-	void Flush()
+	void Flush() noexcept
 	{
 		GetMainLogger().Flush();
 	}
@@ -1079,10 +1107,22 @@ namespace Death { namespace Trace {
 		GetMainLogger().InitializeBacktrace(maxCapacity, flushLevel);
 	}
 
-	void FlushBacktraceAsync()
+	void FlushBacktraceAsync() noexcept
 	{
 		GetMainLogger().FlushBacktraceAsync();
 	}
+
+#if defined(DEATH_TRACE_ASYNC) || defined(DOXYGEN_GENERATING_OUTPUT)
+	void ShrinkThreadLocalQueue(std::size_t capacity) noexcept
+	{
+		GetMainLogger().ShrinkThreadLocalQueue(capacity);
+	}
+
+	std::size_t GetThreadLocalQueueCapacity() noexcept
+	{
+		return GetMainLogger().GetThreadLocalQueueCapacity();
+	}
+#endif
 
 }}
 

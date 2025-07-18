@@ -234,7 +234,7 @@ namespace nCine
 #	endif
 #endif
 			default:
-				FATAL_MSG("MIP maps not supported for internal format: 0x{:x}", internalFormat);
+				LOGF("MIP maps not supported for internal format: 0x{:x}", internalFormat);
 				break;
 		}
 

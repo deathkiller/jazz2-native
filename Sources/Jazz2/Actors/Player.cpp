@@ -3396,7 +3396,7 @@ namespace Jazz2::Actors
 		levelHandler->SetAmbientLight(this, _checkpointLight);
 
 		std::int32_t weaponCount = src.ReadVariableInt32();
-		RETURN_ASSERT_MSG(weaponCount == std::int32_t(arraySize(_weaponAmmoCheckpoint)), "Weapon count mismatch");
+		DEATH_ASSERT(weaponCount == std::int32_t(arraySize(_weaponAmmoCheckpoint)), "Weapon count mismatch", );
 		_currentWeapon = (WeaponType)src.ReadVariableInt32();
 		src.Read(_weaponAmmoCheckpoint, sizeof(_weaponAmmoCheckpoint));
 		src.Read(_weaponUpgradesCheckpoint, sizeof(_weaponUpgradesCheckpoint));

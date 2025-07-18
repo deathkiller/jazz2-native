@@ -76,7 +76,7 @@ namespace nCine
 		duration_ = float(ov_time_total(&oggFile_, -1));
 #endif
 
-		RETURN_ASSERT_MSG(numChannels_ == 1 || numChannels_ == 2, "Unsupported number of channels: {}", numChannels_);
+		DEATH_ASSERT(numChannels_ == 1 || numChannels_ == 2, ("Unsupported number of channels: {}", numChannels_), );
 		LOGD("Duration: {:.2}s, channels: {}, frequency: {} Hz", duration_, numChannels_, frequency_);
 
 		hasLoaded_ = true;

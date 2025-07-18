@@ -21,7 +21,7 @@ namespace Jazz2::Compatibility
 	bool JJ2Level::Open(StringView path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccess::Read);
-		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
+		DEATH_ASSERT(s->IsValid(), "Cannot open file for reading", false);
 
 		// Skip copyright notice
 		s->Seek(180, SeekOrigin::Current);
@@ -32,7 +32,7 @@ namespace Jazz2::Compatibility
 		JJ2Block headerBlock(s, 262 - 180);
 
 		std::uint32_t magic = headerBlock.ReadUInt32();
-		RETURNF_ASSERT_MSG(magic == 0x4C56454C /*LEVL*/, "Invalid magic string");
+		DEATH_ASSERT(magic == 0x4C56454C /*LEVL*/, "Invalid magic string", false);
 
 		// passwordHash is 3 bytes
 		headerBlock.DiscardBytes(3);
@@ -50,7 +50,7 @@ namespace Jazz2::Compatibility
 		_waterLevel = 32767;
 
 		std::int32_t recordedSize = headerBlock.ReadInt32();
-		RETURNF_ASSERT_MSG(!strictParser || s->GetSize() == recordedSize, "Unexpected file size");
+		DEATH_ASSERT(!strictParser || s->GetSize() == recordedSize, "Unexpected file size", false);
 
 		// Get the CRC; would check here if it matches if we knew what variant it is AND what it applies to
 		// Test file across all CRC32 variants + Adler had no matches to the value obtained from the file
@@ -108,7 +108,7 @@ namespace Jazz2::Compatibility
 		/*std::int32_t headerSize =*/ block.ReadInt32();
 
 		String secondLevelName = block.ReadString(32, true);
-		//ASSERT_MSG(!strictParser || DisplayName == secondLevelName, "Level name mismatch");
+		//DEATH_ASSERT(!strictParser || DisplayName == secondLevelName, "Level name mismatch", );
 
 		Tileset = block.ReadString(32, true);
 		BonusLevel = block.ReadString(32, true);
@@ -123,7 +123,7 @@ namespace Jazz2::Compatibility
 		LoadLayerMetadata(block, strictParser);
 
 		/*uint16_t staticTilesCount =*/ block.ReadUInt16();
-		//ASSERT_MSG(!strictParser || GetMaxSupportedTiles() - _animCount == staticTilesCount, "Tile count mismatch");
+		//DEATH_ASSERT(!strictParser || GetMaxSupportedTiles() - _animCount == staticTilesCount, "Tile count mismatch", );
 
 		LoadStaticTileData(block, strictParser);
 
@@ -592,7 +592,7 @@ namespace Jazz2::Compatibility
 	void JJ2Level::Convert(StringView targetPath, EventConverter& eventConverter, Function<LevelToken(StringView)>&& levelTokenConversion)
 	{
 		auto so = fs::Open(targetPath, FileAccess::Write);
-		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
+		DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );
 
 		so->WriteValue<uint64_t>(0x2095A59FF0BFBBEF);
 		so->WriteValue<uint8_t>(ContentResolver::LevelFile);
@@ -1197,7 +1197,7 @@ namespace Jazz2::Compatibility
 
 			if (lastStringIdx >= 0) {
 				auto so = fs::Open(targetPath + ".h"_s, FileAccessMode::Write);
-				ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
+				DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );
 
 				for (std::int32_t i = 0; i <= lastStringIdx; i++) {
 					String& text = _textEventStrings[i];

@@ -43,7 +43,7 @@ namespace Jazz2::UI::Menu
 		PrepareTexturedBackground();
 
 		_metadata = resolver.RequestMetadata("UI/MainMenu"_s);
-		ASSERT_MSG(_metadata != nullptr, "Cannot load required metadata");
+		DEATH_ASSERT(_metadata != nullptr, "Cannot load required metadata", );
 
 		_smallFont = resolver.GetFont(FontType::Small);
 		_mediumFont = resolver.GetFont(FontType::Medium);

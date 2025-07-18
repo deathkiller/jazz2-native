@@ -379,11 +379,11 @@ namespace Jazz2::UI::Menu
 		}
 
 		auto s = fs::Open(levelFile, FileAccess::Read);
-		RETURN_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
+		DEATH_ASSERT(s->IsValid(), "Cannot open file for reading", );
 
 		std::uint64_t signature = s->ReadValue<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
-		RETURN_ASSERT_MSG(signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::LevelFile, "File has invalid signature");
+		DEATH_ASSERT(signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::LevelFile, "File has invalid signature", );
 
 		LevelFlags flags = (LevelFlags)s->ReadValue<std::uint16_t>();
 

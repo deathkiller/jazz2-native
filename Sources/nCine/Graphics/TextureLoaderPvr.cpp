@@ -15,9 +15,9 @@ namespace nCine
 		}
 
 		const bool headerRead = readHeader(header);
-		RETURN_ASSERT_MSG(headerRead, "PVR header cannot be read");
+		DEATH_ASSERT(headerRead, "PVR header cannot be read", );
 		const bool formatParsed = parseFormat(header);
-		RETURN_ASSERT_MSG(formatParsed, "PVR format cannot be parsed");
+		DEATH_ASSERT(formatParsed, "PVR format cannot be parsed", );
 
 		hasLoaded_ = true;
 	}
@@ -28,7 +28,7 @@ namespace nCine
 		fileHandle_->Read(&header, 52);
 
 		// Checking for the header presence ("PVR"03)
-		RETURNF_ASSERT_MSG(Stream::Uint32FromLE(header.version) == 0x03525650, "Invalid PVR3 signature");
+		DEATH_ASSERT(Stream::Uint32FromLE(header.version) == 0x03525650, "Invalid PVR3 signature", false);
 
 		headerSize_ = 52 + Stream::Uint32FromLE(header.metaDataSize);
 		width_ = Stream::Uint32FromLE(header.width);
@@ -80,7 +80,7 @@ namespace nCine
 					break;
 				case FMT_PVRTCII_2BPP:
 				case FMT_PVRTCII_4BPP:
-					FATAL_MSG("No support for PVRTC-II compression");
+					LOGF("No support for PVRTC-II compression");
 					break;
 				case FMT_ETC2_RGB:
 					internalFormat = GL_COMPRESSED_RGB8_ETC2;
@@ -143,8 +143,8 @@ namespace nCine
 #	endif
 #endif
 				default:
-					RETURNF_MSG("Unsupported PVR3 compressed format: 0x{:x}", pixelFormat);
-					break;
+					LOGE("Unsupported PVR3 compressed format: 0x{:x}", pixelFormat);
+					return false;
 			}
 
 			loadPixels(internalFormat);
@@ -194,8 +194,8 @@ namespace nCine
 					internalFormat = GL_R8;
 					break;
 				default:
-					RETURNF_MSG("Unsupported PVR3 uncompressed format: 0x{:x}", pixelFormat);
-					break;
+					LOGE("Unsupported PVR3 uncompressed format: 0x{:x}", pixelFormat);
+					return false;
 			}
 
 			loadPixels(internalFormat, type);

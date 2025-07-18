@@ -127,7 +127,7 @@ namespace Jazz2::Multiplayer
 		addr.port = port;
 
 		_host = enet_host_create(&addr, MaxPeerCount, (std::size_t)NetworkChannel::Count, 0, 0);
-		RETURNF_ASSERT_MSG(_host != nullptr, "Failed to create a server");
+		DEATH_ASSERT(_host != nullptr, "Failed to create a server", false);
 
 		_handler = handler;
 		_state = NetworkState::Listening;
@@ -595,7 +595,7 @@ namespace Jazz2::Multiplayer
 	{
 		if (++_initializeCount == 1) {
 			std::int32_t error = enet_initialize();
-			RETURN_ASSERT_MSG(error == 0, "enet_initialize() failed with error {}", error);
+			DEATH_ASSERT(error == 0, ("enet_initialize() failed with error {}", error), );
 		}
 	}
 

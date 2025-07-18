@@ -26,13 +26,14 @@ namespace nCine
 		LOGD("Initializing OpenAL audio device...");
 
 		device_ = alcOpenDevice(nullptr);
-		RETURN_ASSERT_MSG(device_ != nullptr, "alcOpenDevice() failed with error 0x{:x}", alGetError());
+		DEATH_ASSERT(device_ != nullptr, ("alcOpenDevice() failed with error 0x{:x}", alGetError()), );
 		deviceName_ = alcGetString(device_, ALC_DEVICE_SPECIFIER);
 
 		context_ = alcCreateContext(device_, nullptr);
 		if (context_ == nullptr) {
 			alcCloseDevice(device_);
-			RETURN_MSG("alcCreateContext() failed with error 0x{:x}", alGetError());
+			LOGE("alcCreateContext() failed with error 0x{:x}", alGetError());
+			return;
 		}
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -47,7 +48,8 @@ namespace nCine
 		if (!alcMakeContextCurrent(context_)) {
 			alcDestroyContext(context_);
 			alcCloseDevice(device_);
-			RETURN_MSG("alcMakeContextCurrent() failed with error 0x{:x}", alGetError());
+			LOGE("alcMakeContextCurrent() failed with error 0x{:x}", alGetError());
+			return;
 		}
 
 		alGetError();

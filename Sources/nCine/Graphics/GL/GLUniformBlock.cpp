@@ -55,8 +55,8 @@ namespace nCine
 				blockUniform.offset_ = uniformOffsets[i];
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-				ASSERT_MSG(uniformNameLengths[i] <= GLUniform::MaxNameLength, "Uniform {} name length is {}, which is more than {}",
-					i, uniformNameLengths[i], GLUniform::MaxNameLength);
+				DEATH_ASSERT(uniformNameLengths[i] <= GLUniform::MaxNameLength,
+					("Uniform {} name length is {}, which is more than {}", i, uniformNameLengths[i], GLUniform::MaxNameLength), );
 #endif
 
 #if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)

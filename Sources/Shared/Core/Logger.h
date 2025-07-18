@@ -36,6 +36,7 @@
 #endif
 
 #if defined(DEATH_TRACE_ASYNC)
+#	include "../Base/Format.h"
 #	include "../Containers/StaticArray.h"
 #	include "../Containers/StringStl.h"
 #	include "../Threading/Event.h"
@@ -176,7 +177,7 @@ namespace Death { namespace Trace {
 		}
 
 		template<typename T>
-		T NextPowerOfTwo(T n) {
+		T NextPowerOfTwo(T n) noexcept {
 			constexpr T maxPowerOf2 = MaxPowerOfTwo<T>();
 
 			if (n >= maxPowerOf2) {
@@ -319,18 +320,18 @@ namespace Death { namespace Trace {
 		public:
 			explicit BoundedSPSCQueueImpl(T capacity, bool hugesPagesEnabled = false, T readerStorePercent = 5)
 				: _capacity(NextPowerOfTwo(capacity)), _mask(_capacity - 1),
-					_bytesPerBatch(static_cast<T>(_capacity* static_cast<double>(readerStorePercent) / 100.0)),
-					_storage(static_cast<std::byte*>(allocAligned(2ull * static_cast<std::uint64_t>(_capacity), CacheLineAligned, hugesPagesEnabled))),
+					_bytesPerBatch(static_cast<T>(_capacity * static_cast<double>(readerStorePercent) / 100.0)),
+					_storage(static_cast<std::byte*>(allocAligned(2ULL * static_cast<std::uint64_t>(_capacity), CacheLineAligned, hugesPagesEnabled))),
 					_hugePagesEnabled(hugesPagesEnabled)
 			{
-				std::memset(_storage, 0, 2ull * static_cast<std::uint64_t>(_capacity));
+				std::memset(_storage, 0, 2ULL * static_cast<std::uint64_t>(_capacity));
 
 				_atomicWriterPos.store(0);
 				_atomicReaderPos.store(0);
 
 #	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
 				// Remove log memory from cache
-				for (std::uint64_t i = 0; i < (2ull * static_cast<std::uint64_t>(_capacity)); i += CacheLineSize) {
+				for (std::uint64_t i = 0; i < (2ULL * static_cast<std::uint64_t>(_capacity)); i += CacheLineSize) {
 					_mm_clflush(_storage + i);
 				}
 
@@ -344,16 +345,14 @@ namespace Death { namespace Trace {
 #	endif
 			}
 
-			~BoundedSPSCQueueImpl()
-			{
+			~BoundedSPSCQueueImpl() noexcept {
 				freeAligned(_storage);
 			}
 
 			BoundedSPSCQueueImpl(BoundedSPSCQueueImpl const&) = delete;
 			BoundedSPSCQueueImpl& operator=(BoundedSPSCQueueImpl const&) = delete;
 
-			std::byte* prepareWrite(T n) noexcept
-			{
+			std::byte* prepareWrite(T n) noexcept {
 				if ((_capacity - static_cast<T>(_writerPos - _readerPosCache)) < n) {
 					// Not enough space, we need to load reader and re-check
 					_readerPosCache = _atomicReaderPos.load(std::memory_order_acquire);
@@ -366,13 +365,11 @@ namespace Death { namespace Trace {
 				return _storage + (_writerPos & _mask);
 			}
 
-			void finishWrite(T n) noexcept
-			{
-				_writerPos += n;
+			void finishWrite(T nbytes) noexcept {
+				_writerPos += nbytes;
 			}
 
-			void commitWrite() noexcept
-			{
+			void commitWrite() noexcept {
 				// Set the atomic flag, so the reader can see write
 				_atomicWriterPos.store(_writerPos, std::memory_order_release);
 
@@ -385,14 +382,12 @@ namespace Death { namespace Trace {
 #	endif
 			}
 
-			void finishAndCommitWrite(T n) noexcept
-			{
-				finishWrite(n);
+			void finishAndCommitWrite(T nbytes) noexcept {
+				finishWrite(nbytes);
 				commitWrite();
 			}
 
-			const std::byte* prepareRead() noexcept
-			{
+			const std::byte* prepareRead() noexcept {
 				if (empty()) {
 					return nullptr;
 				}
@@ -400,13 +395,11 @@ namespace Death { namespace Trace {
 				return _storage + (_readerPos & _mask);
 			}
 
-			void finishRead(T n) noexcept
-			{
-				_readerPos += n;
+			void finishRead(T nbytes) noexcept {
+				_readerPos += nbytes;
 			}
 
-			void commitRead() noexcept
-			{
+			void commitRead() noexcept {
 				if (static_cast<T>(_readerPos - _atomicReaderPos.load(std::memory_order_relaxed)) >= _bytesPerBatch) {
 					_atomicReaderPos.store(_readerPos, std::memory_order_release);
 
@@ -417,8 +410,7 @@ namespace Death { namespace Trace {
 			}
 
 			/** @brief Checks if the queue is empty, should be called only by the reader */
-			bool empty() const noexcept
-			{
+			bool empty() const noexcept {
 				if (_writerPosCache == _readerPos) {
 					// if we think the queue is empty we also load the atomic variable to check further
 					_writerPosCache = _atomicWriterPos.load(std::memory_order_acquire);
@@ -431,13 +423,11 @@ namespace Death { namespace Trace {
 				return false;
 			}
 
-			T capacity() const noexcept
-			{
+			T capacity() const noexcept {
 				return static_cast<T>(_capacity);
 			}
 
-			bool hugePagesEnabled() const noexcept
-			{
+			bool hugePagesEnabled() const noexcept {
 				return _hugePagesEnabled;
 			}
 
@@ -462,8 +452,7 @@ namespace Death { namespace Trace {
 
 #	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
 			// _mm_clflushopt is supported only since Skylake and requires "-mclflushopt" option on GCC/clang, and is undefined on Clang-CL
-			void flushCacheLines(T& last, T offset)
-			{
+			void flushCacheLines(T& last, T offset) noexcept {
 				T lastDiff = last - (last & CacheLineMask);
 				T curDiff = offset - (offset & CacheLineMask);
 
@@ -475,15 +464,13 @@ namespace Death { namespace Trace {
 			}
 #	endif
 
-			static std::byte* alignPointer(void* pointer, std::size_t alignment) noexcept
-			{
+			static std::byte* alignPointer(void* pointer, std::size_t alignment) noexcept {
 				DEATH_DEBUG_ASSERT(IsPowerOfTwo(alignment), "alignment must be a power of two", reinterpret_cast<std::byte*>(pointer));
 				return reinterpret_cast<std::byte*>((reinterpret_cast<std::uintptr_t>(pointer) + (alignment - 1ul)) &
 													~(alignment - 1ul));
 			}
 
-			static void* allocAligned(std::size_t size, std::size_t alignment, DEATH_UNUSED bool hugesPagesEnabled)
-			{
+			static void* allocAligned(std::size_t size, std::size_t alignment, DEATH_UNUSED bool hugesPagesEnabled) noexcept {
 #	if defined(DEATH_TARGET_WINDOWS)
 				void* p = _aligned_malloc(size, alignment);
 				DEATH_DEBUG_ASSERT(p != nullptr);
@@ -531,8 +518,7 @@ namespace Death { namespace Trace {
 #	endif
 			}
 
-			static void freeAligned(void* ptr) noexcept
-			{
+			static void freeAligned(void* ptr) noexcept {
 #	if defined(DEATH_TARGET_WINDOWS)
 				_aligned_free(ptr);
 #	elif defined(DEATH_TARGET_SWITCH)
@@ -569,9 +555,7 @@ namespace Death { namespace Trace {
 			struct Node
 			{
 				explicit Node(std::size_t boundedQueueCapacity, bool hugePagesEnabled)
-					: boundedQueue(boundedQueueCapacity, hugePagesEnabled)
-				{
-				}
+					: boundedQueue(boundedQueueCapacity, hugePagesEnabled) {}
 
 				std::atomic<Node*> next{nullptr};
 				BoundedSPSCQueue boundedQueue;
@@ -589,12 +573,9 @@ namespace Death { namespace Trace {
 			};
 
 			explicit UnboundedSPSCQueue(std::size_t initialBoundedQueueCapacity, bool hugesPagesEnabled = false)
-				: _producer(new Node(initialBoundedQueueCapacity, hugesPagesEnabled)), _consumer(_producer)
-			{
-			}
+				: _producer(new Node(initialBoundedQueueCapacity, hugesPagesEnabled)), _consumer(_producer) {}
 
-			~UnboundedSPSCQueue()
-			{
+			~UnboundedSPSCQueue() noexcept {
 				// Get the current consumer node
 				Node* currentNode = _consumer;
 
@@ -609,8 +590,7 @@ namespace Death { namespace Trace {
 			UnboundedSPSCQueue(UnboundedSPSCQueue const&) = delete;
 			UnboundedSPSCQueue& operator=(UnboundedSPSCQueue const&) = delete;
 
-			std::byte* prepareWrite(std::size_t nbytes)
-			{
+			std::byte* prepareWrite(std::size_t nbytes) noexcept {
 				// Try to reserve the bounded queue
 				std::byte* writePos = _producer->boundedQueue.prepareWrite(nbytes);
 
@@ -621,24 +601,41 @@ namespace Death { namespace Trace {
 				return handleFullQueue(nbytes);
 			}
 
-			void finishWrite(std::size_t nbytes) noexcept
-			{
+			void finishWrite(std::size_t nbytes) noexcept {
 				_producer->boundedQueue.finishWrite(nbytes);
 			}
 
-			void commitWrite() noexcept
-			{
+			void commitWrite() noexcept {
 				_producer->boundedQueue.commitWrite();
 			}
 
-			void finishAndCommitWrite(std::size_t nbytes) noexcept
-			{
+			void finishAndCommitWrite(std::size_t nbytes) noexcept {
 				finishWrite(nbytes);
 				commitWrite();
 			}
 
-			ReadResult prepareRead()
-			{
+			std::size_t producerCapacity() const noexcept {
+				return _producer->boundedQueue.capacity();
+			}
+
+			void shrink(std::size_t capacity) noexcept {
+				if (capacity > (_producer->boundedQueue.capacity() >> 1)) {
+					// We should only shrink if the new capacity is less or at least equal to the previous_power_of_2
+					return;
+				}
+
+				// We want to shrink the queue, we will create a new queue with a smaller size
+				// the consumer will switch to the newer queue after emptying and deallocating the older queue
+				auto const nextNode = new Node{capacity, _producer->boundedQueue.hugePagesEnabled()};
+
+				// Store the new node pointer as next in the current node
+				_producer->next.store(nextNode, std::memory_order_release);
+
+				// Producer is now using the next node
+				_producer = nextNode;
+			}
+
+			ReadResult prepareRead() noexcept {
 				ReadResult readResult{_consumer->boundedQueue.prepareRead()};
 
 				if (readResult.readPos != nullptr) {
@@ -656,23 +653,19 @@ namespace Death { namespace Trace {
 				return readResult;
 			}
 
-			void finishRead(std::size_t nbytes) noexcept
-			{
+			void finishRead(std::size_t nbytes) noexcept {
 				_consumer->boundedQueue.finishRead(nbytes);
 			}
 
-			void commitRead() noexcept
-			{
+			void commitRead() noexcept {
 				_consumer->boundedQueue.commitRead();
 			}
 
-			std::size_t capacity() const noexcept
-			{
+			std::size_t capacity() const noexcept {
 				return _consumer->boundedQueue.capacity();
 			}
 
-			bool empty() const noexcept
-			{
+			bool empty() const noexcept {
 				return _consumer->boundedQueue.empty() && (_consumer->next.load(std::memory_order_relaxed) == nullptr);
 			}
 
@@ -681,16 +674,15 @@ namespace Death { namespace Trace {
 			alignas(CacheLineAligned) Node* _producer{nullptr};
 			alignas(CacheLineAligned) Node* _consumer{nullptr};
 
-			std::byte* handleFullQueue(std::size_t nbytes)
-			{
+			std::byte* handleFullQueue(std::size_t nbytes) noexcept {
 				// Then it means the queue doesn't have enough size
-				std::size_t capacity = _producer->boundedQueue.capacity() * 2ull;
+				std::size_t capacity = _producer->boundedQueue.capacity() * 2ULL;
 				while (capacity < (nbytes + 1)) {
-					capacity = capacity * 2ull;
+					capacity = capacity * 2ULL;
 				}
 
 				// Apply some hard limits also on UnboundedSPSCQueue
-				constexpr std::size_t MaxBoundedQueueSize = 2ull * 1024 * 1024 * 1024; // 2 GB
+				constexpr std::size_t MaxBoundedQueueSize = 2ULL * 1024 * 1024 * 1024; // 2 GB
 				if DEATH_UNLIKELY(capacity > MaxBoundedQueueSize) {
 					DEATH_DEBUG_ASSERT(nbytes <= MaxBoundedQueueSize);
 					// We reached the MaxBoundedQueueSize, we won't be allocating more, instead return nullptr to block or drop
@@ -716,8 +708,7 @@ namespace Death { namespace Trace {
 				return writePos;
 			}
 
-			ReadResult readNextQueue(Node* nextNode)
-			{
+			ReadResult readNextQueue(Node* nextNode) noexcept {
 				// New buffer was added by the producer, this happens only when we have allocated a new queue
 
 				// Try the existing buffer once more
@@ -775,9 +766,7 @@ namespace Death { namespace Trace {
 		TraceLevel Level;
 
 		TransitEvent()
-			: Timestamp(0), FunctionName(nullptr), Level(TraceLevel::Unknown)
-		{
-		}
+			: Timestamp(0), FunctionName(nullptr), Level(TraceLevel::Unknown) {}
 
 		~TransitEvent() = default;
 
@@ -785,12 +774,9 @@ namespace Death { namespace Trace {
 		TransitEvent& operator=(TransitEvent const& other) = delete;
 
 		TransitEvent(TransitEvent&& other) noexcept
-			: Timestamp(other.Timestamp), Message(Death::move(other.Message)), FlushFlag(other.FlushFlag), Level(other.Level)
-		{
-		}
+			: Timestamp(other.Timestamp), Message(Death::move(other.Message)), FlushFlag(other.FlushFlag), Level(other.Level) {}
 
-		TransitEvent& operator=(TransitEvent&& other) noexcept
-		{
+		TransitEvent& operator=(TransitEvent&& other) noexcept {
 			if (this != &other) {
 				Timestamp = other.Timestamp;
 				Message = Death::move(other.Message);
@@ -813,9 +799,7 @@ namespace Death { namespace Trace {
 	public:
 		explicit TransitEventBuffer(std::size_t initialCapacity)
 			: _capacity(Implementation::NextPowerOfTwo(initialCapacity)), _storage(std::make_unique<TransitEvent[]>(_capacity)),
-				_mask(_capacity - 1u), _readerPos(0), _writerPos(0)
-		{
-		}
+				_mask(_capacity - 1u), _readerPos(0), _writerPos(0) {}
 
 		TransitEventBuffer(TransitEventBuffer const&) = delete;
 		TransitEventBuffer& operator=(TransitEventBuffer const&) = delete;
@@ -830,8 +814,7 @@ namespace Death { namespace Trace {
 			other._writerPos = 0;
 		}
 
-		TransitEventBuffer& operator=(TransitEventBuffer&& other) noexcept
-		{
+		TransitEventBuffer& operator=(TransitEventBuffer&& other) noexcept {
 			if (this != &other) {
 				_capacity = other._capacity;
 				_storage = Death::move(other._storage);
@@ -848,8 +831,7 @@ namespace Death { namespace Trace {
 		}
 
 		/** @brief Returns a pointer to the first transit event in the buffer, or `nullptr` if the buffer is empty */
-		TransitEvent* front() noexcept
-		{
+		TransitEvent* front() noexcept {
 			if (_readerPos == _writerPos) {
 				return nullptr;
 			}
@@ -857,14 +839,12 @@ namespace Death { namespace Trace {
 		}
 
 		/** @brief Consumes the first transit event from the buffer */
-		void pop_front() noexcept
-		{
+		void pop_front() noexcept {
 			++_readerPos;
 		}
 
 		/** @brief Returns a pointer to the last transit event in the buffer, or expands the buffer if it is full */
-		TransitEvent* back() noexcept
-		{
+		TransitEvent* back() noexcept {
 			if (_capacity == size()) {
 				// Buffer is full, need to expand
 				expand();
@@ -873,26 +853,22 @@ namespace Death { namespace Trace {
 		}
 
 		/** @brief Adds a new transit event to be consumed */
-		void push_back() noexcept
-		{
+		void push_back() noexcept {
 			++_writerPos;
 		}
 
 		/** @brief Returns the number of unconsumed events */
-		std::size_t size() const noexcept
-		{
+		std::size_t size() const noexcept {
 			return _writerPos - _readerPos;
 		}
 
 		/** @brief Returns the capacity of the buffer */
-		std::size_t capacity() const noexcept
-		{
+		std::size_t capacity() const noexcept {
 			return _capacity;
 		}
 
 		/** @brief Returns `true` if the buffer is empty */
-		bool empty() const noexcept
-		{
+		bool empty() const noexcept {
 			return _readerPos == _writerPos;
 		}
 
@@ -903,8 +879,7 @@ namespace Death { namespace Trace {
 		std::size_t _readerPos;
 		std::size_t _writerPos;
 
-		void expand()
-		{
+		void expand() noexcept {
 			std::size_t newCapacity = _capacity * 2;
 			auto newStorage = std::make_unique<TransitEvent[]>(newCapacity);
 
@@ -950,7 +925,7 @@ namespace Death { namespace Trace {
 
 	public:
 		ThreadContext(Implementation::QueueType queueType, std::uint32_t initialSpscQueueCapacity, bool hugesPagesEnabled)
-			: _threadId(std::to_string(Implementation::GetNativeThreadId())), _transitEventBuffer(Implementation::TransitEventBufferInitialCapacity),
+			: _threadId(format("{}", Implementation::GetNativeThreadId())), _transitEventBuffer(Implementation::TransitEventBufferInitialCapacity),
 				_queueType(queueType), _valid{true}, _failureCounter{0}
 		{
 			if (HasUnboundedQueueType()) {
@@ -960,8 +935,7 @@ namespace Death { namespace Trace {
 			}
 		}
 
-		~ThreadContext()
-		{
+		~ThreadContext() noexcept {
 			if (HasUnboundedQueueType()) {
 				_spscQueueUnion.UnboundedSpscQueue.~UnboundedSPSCQueue();
 			} else if (HasBoundedQueueType()) {
@@ -976,13 +950,11 @@ namespace Death { namespace Trace {
 		/** @brief Returns single-producer single-consumer queue for logged entries */
 		Implementation::SPSCQueue& GetSpscQueue() noexcept;
 #else
-		SpscQueueUnion const& GetSpscQueueUnion() const noexcept
-		{
+		SpscQueueUnion const& GetSpscQueueUnion() const noexcept {
 			return _spscQueueUnion;
 		}
 
-		SpscQueueUnion& GetSpscQueueUnion() noexcept
-		{
+		SpscQueueUnion& GetSpscQueueUnion() noexcept {
 			return _spscQueueUnion;
 		}
 
@@ -1014,56 +986,47 @@ namespace Death { namespace Trace {
 #endif
 
 		/** @brief Returns `true` if a bounded queue is used */
-		bool HasBoundedQueueType() const noexcept
-		{
+		bool HasBoundedQueueType() const noexcept {
 			return (_queueType == Implementation::QueueType::BoundedBlocking) || (_queueType == Implementation::QueueType::BoundedDropping);
 		}
 
 		/** @brief Returns `true` if an unbounded queue is used */
-		bool HasUnboundedQueueType() const noexcept
-		{
+		bool HasUnboundedQueueType() const noexcept {
 			return (_queueType == Implementation::QueueType::UnboundedBlocking) || (_queueType == Implementation::QueueType::UnboundedDropping);
 		}
 
 		/** @brief Returns `true` if a dropping queue is used */
-		bool HasDroppingQueue() const noexcept
-		{
+		bool HasDroppingQueue() const noexcept {
 			return (_queueType == Implementation::QueueType::UnboundedDropping) || (_queueType == Implementation::QueueType::BoundedDropping);
 		}
 
 		/** @brief Returns `true` if a blocking queue is used */
-		bool HasBlockingQueue() const noexcept
-		{
+		bool HasBlockingQueue() const noexcept {
 			return (_queueType == Implementation::QueueType::UnboundedBlocking) || (_queueType == Implementation::QueueType::BoundedBlocking);
 		}
 
 		/** @brief Returns the thread ID of the current thread context */
-		Containers::StringView GetThreadId() const noexcept
-		{
+		Containers::StringView GetThreadId() const noexcept {
 			return _threadId;
 		}
 
 		/** @brief Marks the thread context as invalid */
-		void MarkInvalid() noexcept
-		{
+		void MarkInvalid() noexcept {
 			_valid.store(false, std::memory_order_relaxed);
 		}
 
 		/** @brief Returns `true` if the thread context is still valid */
-		bool IsValid() const noexcept
-		{
+		bool IsValid() const noexcept {
 			return _valid.load(std::memory_order_relaxed);
 		}
 
 		/** @brief Increments number of failures */
-		void IncrementFailureCounter() noexcept
-		{
+		void IncrementFailureCounter() noexcept {
 			_failureCounter.fetch_add(1, std::memory_order_relaxed);
 		}
 
 		/** @brief Returns the current number of failures and resets the counter */
-		std::size_t GetAndResetFailureCounter() noexcept
-		{
+		std::size_t GetAndResetFailureCounter() noexcept {
 			if DEATH_LIKELY(_failureCounter.load(std::memory_order_relaxed) == 0) {
 				return 0;
 			}
@@ -1072,7 +1035,7 @@ namespace Death { namespace Trace {
 
 	private:
 		SpscQueueUnion _spscQueueUnion;
-		std::string _threadId;
+		Containers::String _threadId;
 		TransitEventBuffer _transitEventBuffer;
 		Implementation::QueueType _queueType;
 		std::atomic<bool> _valid;
@@ -1095,8 +1058,7 @@ namespace Death { namespace Trace {
 
 		/** @brief Calls the specified callback for each registered thread context */
 		template<typename TCallback>
-		void ForEachThreadContext(TCallback cb)
-		{
+		void ForEachThreadContext(TCallback cb) noexcept {
 			std::unique_lock lock{_spinlock};
 
 			for (auto const& elem : _threadContexts) {
@@ -1105,7 +1067,7 @@ namespace Death { namespace Trace {
 		}
 
 		/** @brief Registers a new thread context */
-		void RegisterThreadContext(std::shared_ptr<ThreadContext> const& threadContext);
+		void RegisterThreadContext(std::shared_ptr<ThreadContext> const& threadContext) noexcept;
 		/** @brief Adds an invalid thread context */
 		void AddInvalidThreadContext() noexcept;
 		/** @brief Returns `true` if an invalid thread context is present */
@@ -1113,7 +1075,7 @@ namespace Death { namespace Trace {
 		/** @brief Returns `true` if a new thread context is present */
 		bool HasNewThreadContext() noexcept;
 		/** @brief Removes shared invalidated thread context */
-		void RemoveSharedInvalidatedThreadContext(ThreadContext const* threadContext);
+		void RemoveSharedInvalidatedThreadContext(ThreadContext const* threadContext) noexcept;
 
 	private:
 		Containers::SmallVector<std::shared_ptr<ThreadContext>, 0> _threadContexts;
@@ -1139,8 +1101,7 @@ namespace Death { namespace Trace {
 			ThreadContextManager::Get().RegisterThreadContext(_threadContext);
 		}
 
-		~ScopedThreadContext() noexcept
-		{
+		~ScopedThreadContext() noexcept {
 			// This destructor will get called when the thread that created this wrapper stops. We will only invalidate
 			// the thread context, so the backend thread will empty an invalidated ThreadContext and then remove it from
 			// the ThreadContextManager. Main thread is only exception for the thread who owns the ThreadContextManager.
@@ -1155,8 +1116,7 @@ namespace Death { namespace Trace {
 		ScopedThreadContext& operator=(ScopedThreadContext const&) = delete;
 
 		/** @brief Returns the assigned thread context */
-		ThreadContext* GetThreadContext() const noexcept
-		{
+		ThreadContext* GetThreadContext() const noexcept {
 			DEATH_DEBUG_ASSERT(_threadContext != nullptr);
 			return _threadContext.get();
 		}
@@ -1177,11 +1137,11 @@ namespace Death { namespace Trace {
 		BacktraceStorage();
 
 		/** @brief Stores the specified transit event */
-		void Store(TransitEvent transitEvent, Containers::StringView threadId);
+		void Store(TransitEvent transitEvent, Containers::StringView threadId) noexcept;
 		/** @brief Processes all stored transit events */
-		void Process(Containers::Function<void(TransitEvent const& event, Containers::StringView threadId)>&& callback);
+		void Process(Containers::Function<void(TransitEvent const& event, Containers::StringView threadId)>&& callback) noexcept;
 		/** @brief Resizes the storage to the specified capacity */
-		void SetCapacity(std::uint32_t capacity);
+		void SetCapacity(std::uint32_t capacity) noexcept;
 
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -1220,7 +1180,7 @@ namespace Death { namespace Trace {
 		void RemoveSink(ITraceSink* sink);
 
 		/** @brief Notifies the background worker about new entries in the queue */
-		void Notify();
+		void Notify() noexcept;
 
 #if defined(DEATH_TRACE_ASYNC) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Returns `true` if the background worker is alive */
@@ -1229,22 +1189,22 @@ namespace Death { namespace Trace {
 		bool IsWorkerThread() const noexcept;
 #else
 		/** @brief Dispatches the specified entry to all sinks */
-		void DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength, Containers::StringView threadId);
+		void DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength, Containers::StringView threadId) noexcept;
 		/** @brief Flushes and waits until all prior entries are written to all sinks */
-		void FlushActiveSinks();
+		void FlushActiveSinks() noexcept;
 
 		/** @brief Initializes backtrace storage to be able to use @ref TraceLevel::Deferred */
 		void InitializeBacktrace(std::uint32_t maxCapacity);
 		/** @brief Writes any stored deferred entries to all sinks asynchronously */
-		void FlushBacktraceAsync();
+		void FlushBacktraceAsync() noexcept;
 		/** @brief Enqueues the specified entry to backtrace storage */
-		void EnqueueEntryToBacktrace(std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength);
+		void EnqueueEntryToBacktrace(std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept;
 #endif
 
 		/** @brief Returns minimum trace level to trigger automatic flushing of deferred entries */
-		TraceLevel GetBacktraceFlushLevel() const;
+		TraceLevel GetBacktraceFlushLevel() const noexcept;
 		/** @brief Sets minimum trace level to trigger automatic flushing of deferred entries */
-		void SetBacktraceFlushLevel(TraceLevel flushLevel);
+		void SetBacktraceFlushLevel(TraceLevel flushLevel) noexcept;
 
 	private:
 		Containers::SmallVector<ITraceSink*, 1> _sinks;
@@ -1262,13 +1222,12 @@ namespace Death { namespace Trace {
 		Containers::SmallVector<ThreadContext*, 0> _activeThreadContextsCache;
 		std::chrono::system_clock::time_point _lastRdtscResyncTime;
 
-		void CleanUpBeforeExit();
-		void UpdateActiveThreadContextsCache();
-		void CleanUpInvalidatedThreadContexts();
-		bool PopulateTransitEventFromThreadQueue(const std::byte*& readPos, ThreadContext* threadContext, std::uint64_t tsNow);
+		void CleanUpBeforeExit() noexcept;
+		void UpdateActiveThreadContextsCache() noexcept;
+		void CleanUpInvalidatedThreadContexts() noexcept;
+		bool PopulateTransitEventFromThreadQueue(const std::byte*& readPos, ThreadContext* threadContext, std::uint64_t tsNow) noexcept;
 
-		const std::byte* ReadUnboundedThreadQueue(Implementation::UnboundedSPSCQueue& frontendQueue, ThreadContext* threadContext) const
-		{
+		const std::byte* ReadUnboundedThreadQueue(Implementation::UnboundedSPSCQueue& frontendQueue, ThreadContext* threadContext) const noexcept {
 			auto readResult = frontendQueue.prepareRead();
 
 			/*if (readResult.allocation) {
@@ -1280,8 +1239,7 @@ namespace Death { namespace Trace {
 		}
 
 		template<typename TThreadQueue>
-		std::size_t ReadAndDecodeThreadQueue(TThreadQueue& frontendQueue, ThreadContext* threadContext, std::uint64_t tsNow)
-		{
+		std::size_t ReadAndDecodeThreadQueue(TThreadQueue& frontendQueue, ThreadContext* threadContext, std::uint64_t tsNow) noexcept {
 			// Note: The producer commits only complete messages to the queue.
 			// Therefore, if even a single byte is present in the queue, it signifies a full message.
 			std::size_t queueCapacity = frontendQueue.capacity();
@@ -1323,15 +1281,15 @@ namespace Death { namespace Trace {
 			return threadContext->_transitEventBuffer.size();
 		}
 
-		std::size_t PopulateTransitEventsFromFrontendQueues();
+		std::size_t PopulateTransitEventsFromFrontendQueues() noexcept;
 		bool HasPendingEventsForCachingWhenTransitEventBufferEmpty() noexcept;
-		bool CheckThreadQueuesAndCachedTransitEventsEmpty();
-		void ResyncRdtscClock();
-		void DispatchTransitEventToSinks(TransitEvent const& transitEvent, Containers::StringView threadId);
-		void FlushActiveSinks();
-		void ProcessTransitEvent(ThreadContext const& threadContext, TransitEvent& transitEvent, std::atomic<bool>*& flushFlag);
-		bool ProcessLowestTimestampTransitEvent();
-		void ProcessEvents();
+		bool CheckThreadQueuesAndCachedTransitEventsEmpty() noexcept;
+		void ResyncRdtscClock() noexcept;
+		void DispatchTransitEventToSinks(TransitEvent const& transitEvent, Containers::StringView threadId) noexcept;
+		void FlushActiveSinks() noexcept;
+		void ProcessTransitEvent(ThreadContext const& threadContext, TransitEvent& transitEvent, std::atomic<bool>*& flushFlag) noexcept;
+		bool ProcessLowestTimestampTransitEvent() noexcept;
+		void ProcessEvents() noexcept;
 #else
 		TraceLevel _backtraceFlushLevel;
 #endif
@@ -1359,12 +1317,19 @@ namespace Death { namespace Trace {
 		/** @brief Writes the specified entry to all sinks */
 		bool Write(TraceLevel level, const char* functionName, const char* message, std::uint32_t messageLength);
 		/** @brief Flushes and waits until all prior entries are written to all sinks */
-		void Flush(std::uint32_t sleepDurationNs = 100);
+		void Flush(std::uint32_t sleepDurationNs = 100) noexcept;
 
 		/** @brief Initializes backtrace storage to be able to use @ref TraceLevel::Deferred */
 		void InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel = TraceLevel::Unknown);
 		/** @brief Writes any stored deferred entries to all sinks asynchronously */
-		void FlushBacktraceAsync();
+		void FlushBacktraceAsync() noexcept;
+
+#if defined(DEATH_TRACE_ASYNC) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief Shrinks the thread-local queue to the specified target capacity */
+		void ShrinkThreadLocalQueue(std::size_t capacity) noexcept;
+		/** @brief Returns the current capacity of the thread-local queue */
+		std::size_t GetThreadLocalQueueCapacity() noexcept;
+#endif
 
 	private:
 		LoggerBackend _backend;
@@ -1374,10 +1339,10 @@ namespace Death { namespace Trace {
 
 		static ThreadContext* GetLocalThreadContext() noexcept;
 
-		std::byte* PrepareWriteBuffer(std::size_t totalSize);
+		std::byte* PrepareWriteBuffer(std::size_t totalSize) noexcept;
 #endif
 
-		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength);
+		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept;
 	};
 
 }}

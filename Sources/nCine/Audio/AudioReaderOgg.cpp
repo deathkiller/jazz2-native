@@ -63,7 +63,7 @@ namespace nCine
 #else
 				ov_clear(&oggFile_);
 #endif
-				FATAL_MSG("Error decoding at bitstream {}", bitStream);
+				LOGE("Error decoding at bitstream {}", bitStream);
 			}
 
 			// Reset the static variable at the end of a decoding process

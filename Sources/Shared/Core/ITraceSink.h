@@ -49,7 +49,7 @@ namespace Death
 		void RemoveSink(ITraceSink* sink);
 
 		/** @brief Flushes and waits until all prior entries are written to all sinks */
-		void Flush();
+		void Flush() noexcept;
 
 		/**
 			@brief Initializes backtrace storage for @ref TraceLevel::Deferred
@@ -62,7 +62,15 @@ namespace Death
 		void InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel = TraceLevel::Unknown);
 
 		/** @brief Writes any stored deferred entries to all sinks asynchronously */
-		void FlushBacktraceAsync();
+		void FlushBacktraceAsync() noexcept;
+
+#	if defined(DEATH_TRACE_ASYNC) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief Shrinks the thread-local queue to the specified target capacity */
+		void ShrinkThreadLocalQueue(std::size_t capacity) noexcept;
+
+		/** @brief Returns the current capacity of the thread-local queue */
+		std::size_t GetThreadLocalQueueCapacity() noexcept;
+#	endif
 	}
 }
 

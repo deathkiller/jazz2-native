@@ -24,7 +24,7 @@ namespace Jazz2::UI::Multiplayer
 		auto& resolver = ContentResolver::Get();
 
 		_metadata = resolver.RequestMetadata("UI/MainMenu"_s);
-		ASSERT_MSG(_metadata != nullptr, "Cannot load required metadata");
+		DEATH_ASSERT(_metadata != nullptr, "Cannot load required metadata", );
 
 		_smallFont = resolver.GetFont(FontType::Small);
 	}

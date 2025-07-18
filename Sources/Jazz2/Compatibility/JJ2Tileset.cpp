@@ -14,7 +14,7 @@ namespace Jazz2::Compatibility
 	bool JJ2Tileset::Open(StringView path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccess::Read);
-		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
+		DEATH_ASSERT(s->IsValid(), "Cannot open file for reading", false);
 
 		// Skip copyright notice
 		s->Seek(180, SeekOrigin::Current);
@@ -22,10 +22,10 @@ namespace Jazz2::Compatibility
 		JJ2Block headerBlock(s, 262 - 180);
 
 		std::uint32_t magic = headerBlock.ReadUInt32();
-		RETURNF_ASSERT_MSG(magic == 0x454C4954 /*TILE*/, "Invalid magic string");
+		DEATH_ASSERT(magic == 0x454C4954 /*TILE*/, "Invalid magic string", false);
 
 		std::uint32_t signature = headerBlock.ReadUInt32();
-		RETURNF_ASSERT_MSG(signature == 0xAFBEADDE, "Invalid signature");
+		DEATH_ASSERT(signature == 0xAFBEADDE, "Invalid signature", false);
 
 		_name = headerBlock.ReadString(32, true);
 
@@ -33,7 +33,7 @@ namespace Jazz2::Compatibility
 		_version = (versionNum == 0x300 ? JJ2Version::PlusExtension : (versionNum <= 0x200 ? JJ2Version::BaseGame : JJ2Version::TSF));
 
 		std::int32_t recordedSize = headerBlock.ReadInt32();
-		RETURNF_ASSERT_MSG(!strictParser || s->GetSize() == recordedSize, "Unexpected file size");
+		DEATH_ASSERT(!strictParser || s->GetSize() == recordedSize, "Unexpected file size", false);
 
 		// Get the CRC; would check here if it matches if we knew what variant it is AND what it applies to
 		// Test file across all CRC32 variants + Adler had no matches to the value obtained from the file
@@ -212,7 +212,7 @@ namespace Jazz2::Compatibility
 		std::int32_t height = ((tileCount - 1) / TilesPerRow + 1) * BlockSize;
 
 		auto so = fs::Open(targetPath, FileAccess::Write);
-		ASSERT_MSG(so->IsValid(), "Cannot open file for writing");
+		DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );
 
 		constexpr std::uint8_t flags = 0x20 | 0x40; // Mask and palette included
 

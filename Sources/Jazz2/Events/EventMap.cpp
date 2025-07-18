@@ -492,7 +492,7 @@ namespace Jazz2::Events
 	{
 		std::int32_t layoutSize = src.ReadVariableInt32();
 		std::int32_t realLayoutSize = _layoutSize.X * _layoutSize.Y;
-		RETURN_ASSERT_MSG(layoutSize == realLayoutSize, "Layout size mismatch");
+		DEATH_ASSERT(layoutSize == realLayoutSize, "Layout size mismatch", );
 
 		for (std::int32_t i = 0; i < layoutSize; i++) {
 			EventTile& tile = _eventLayout[i];

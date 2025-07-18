@@ -317,7 +317,7 @@ namespace nCine
 			DWORD error = ::GetLastError();
 			delete _sharedBlock;
 			_sharedBlock = nullptr;
-			FATAL_MSG("_beginthreadex() failed with error 0x{:.8x}", error);
+			LOGF("_beginthreadex() failed with error 0x{:.8x}", error);
 			return false;
 		}
 #else
@@ -325,7 +325,7 @@ namespace nCine
 		if (error != 0) {
 			delete _sharedBlock;
 			_sharedBlock = nullptr;
-			FATAL_MSG("pthread_create() failed with error {}", error);
+			LOGF("pthread_create() failed with error {}", error);
 			return false;
 		}
 #endif

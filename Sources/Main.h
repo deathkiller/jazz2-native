@@ -17,7 +17,7 @@
 #if !defined(NCINE_BUILD_YEAR)
 #	define NCINE_BUILD_YEAR "2025"
 #endif
-/** @brief Application package name */
+/** @brief Application package name on Linux */
 #if !defined(NCINE_LINUX_PACKAGE)
 #	define NCINE_LINUX_PACKAGE NCINE_APP_NAME
 #endif
@@ -65,20 +65,18 @@
 #endif
 
 // Return assert macros
-#define RETURN_MSG(fmt, ...) do { LOGE(fmt, ##__VA_ARGS__); return; } while (false)
-#define RETURN_ASSERT_MSG(x, fmt, ...) do { if DEATH_UNLIKELY(!(x)) { LOGE(fmt, ##__VA_ARGS__); return; } } while (false)
 #define RETURN_ASSERT(x) do { if DEATH_UNLIKELY(!(x)) { LOGE("RETURN_ASSERT(" #x ")"); return; } } while (false)
 
 // Return false assert macros
-#define RETURNF_MSG(fmt, ...) do { LOGE(fmt, ##__VA_ARGS__); return false; } while (false)
-#define RETURNF_ASSERT_MSG(x, fmt, ...) do { if DEATH_UNLIKELY(!(x)) { LOGE(fmt, ##__VA_ARGS__); return false; } } while (false)
 #define RETURNF_ASSERT(x) do { if DEATH_UNLIKELY(!(x)) { LOGE("RETURNF_ASSERT(" #x ")"); return false; } } while (false)
 
 // Fatal assert macros
-#define FATAL_MSG(fmt, ...)					\
+#define FATAL_ASSERT(x)						\
 	do {									\
-		LOGF(fmt, ##__VA_ARGS__);			\
-		DEATH_ASSERT_BREAK();				\
+		if DEATH_UNLIKELY(!(x)) {			\
+			LOGF("FATAL_ASSERT(" #x ")");	\
+			DEATH_ASSERT_BREAK();			\
+		}									\
 	} while (false)
 
 #define FATAL_ASSERT_MSG(x, fmt, ...)		\
@@ -89,24 +87,8 @@
 		}									\
 	} while (false)
 
-#define FATAL_ASSERT(x)						\
-	do {									\
-		if DEATH_UNLIKELY(!(x)) {			\
-			LOGF("FATAL_ASSERT(" #x ")");	\
-			DEATH_ASSERT_BREAK();			\
-		}									\
-	} while (false)
-
 // Non-fatal assert macros
 #if defined(DEATH_TRACE)
-#	define ASSERT_MSG(x, fmt, ...)			\
-		do {								\
-			if DEATH_UNLIKELY(!(x)) {		\
-				__DEATH_ASSERT_TRACE(fmt, ##__VA_ARGS__);	\
-				DEATH_ASSERT_BREAK();		\
-			}								\
-		} while (false)
-
 #	define ASSERT(x)						\
 		do {								\
 			if DEATH_UNLIKELY(!(x)) {		\
@@ -115,6 +97,5 @@
 			}								\
 		} while (false)
 #else
-#	define ASSERT_MSG(x, fmt, ...) do { } while (false)
 #	define ASSERT(x) do { } while (false)
 #endif

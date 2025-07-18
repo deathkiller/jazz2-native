@@ -22,16 +22,16 @@ namespace Jazz2::Compatibility
 	bool JJ2Data::Open(StringView path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccess::Read);
-		RETURNF_ASSERT_MSG(s->IsValid(), "Cannot open file for reading");
+		DEATH_ASSERT(s->IsValid(), "Cannot open file for reading", false);
 
 		std::uint32_t magic = s->ReadValue<std::uint32_t>();
 		std::uint32_t signature = s->ReadValue<std::uint32_t>();
-		RETURNF_ASSERT_MSG(magic == 0x42494C50 /*PLIB*/ && signature == 0xBEBAADDE, "Invalid signature");
+		DEATH_ASSERT(magic == 0x42494C50 /*PLIB*/ && signature == 0xBEBAADDE, "Invalid signature", false);
 
 		/*std::uint32_t version =*/ s->ReadValue<std::uint32_t>();
 
 		std::uint32_t recordedSize = s->ReadValue<std::uint32_t>();
-		RETURNF_ASSERT_MSG(!strictParser || s->GetSize() == recordedSize, "Unexpected file size");
+		DEATH_ASSERT(!strictParser || s->GetSize() == recordedSize, "Unexpected file size", false);
 
 		/*uint32_t recordedCRC =*/ s->ReadValue<std::uint32_t>();
 		std::int32_t headerBlockPackedSize = s->ReadValue<std::int32_t>();
@@ -53,7 +53,7 @@ namespace Jazz2::Compatibility
 			s->Seek(baseOffset + offset, SeekOrigin::Begin);
 
 			JJ2Block fileBlock(s, filePackedSize, fileUnpackedSize);
-			RETURNF_ASSERT_MSG(fileBlock.GetLength() == fileUnpackedSize, "Unexpected item size");
+			DEATH_ASSERT(fileBlock.GetLength() == fileUnpackedSize, "Unexpected item size", false);
 
 			Item& item = Items.emplace_back();
 			item.Filename = name;
@@ -72,7 +72,10 @@ namespace Jazz2::Compatibility
 
 		for (auto& item : Items) {
 			auto so = fs::Open(fs::CombinePath(targetPath, item.Filename), FileAccess::Write);
-			ASSERT_MSG(so->IsValid(), "Cannot open file \"{}\" for writing", item.Filename);
+			if (!so->IsValid()) {
+				LOGE("Cannot open file \"{}\" for writing", item.Filename);
+				continue;
+			}
 
 			so->Write(item.Blob.get(), item.Size);
 		}
@@ -170,13 +173,13 @@ namespace Jazz2::Compatibility
 
 		so.Seek(0, SeekOrigin::Begin);
 		bool success = pakWriter.AddFile(so, targetPath, PakPreferredCompression::Deflate);
-		ASSERT_MSG(success, "Cannot add file to .pak container");
+		DEATH_ASSERT(success, "Cannot add file to .pak container", );
 	}
 
 	void JJ2Data::ConvertMenuImage(const Item& item, PakWriter& pakWriter, StringView targetPath, std::int32_t width, std::int32_t height)
 	{
 		std::int32_t pixelCount = width * height;
-		RETURN_ASSERT_MSG(item.Size == pixelCount, "Image has unexpected size");
+		DEATH_ASSERT(item.Size == pixelCount, "Image has unexpected size", );
 
 		std::unique_ptr<uint8_t[]> pixels = std::make_unique<uint8_t[]>(pixelCount * 4);
 		for (std::int32_t i = 0; i < pixelCount; i++) {
@@ -217,6 +220,6 @@ namespace Jazz2::Compatibility
 
 		so.Seek(0, SeekOrigin::Begin);
 		bool success = pakWriter.AddFile(so, targetPath);
-		ASSERT_MSG(success, "Cannot add file to .pak container");
+		DEATH_ASSERT(success, "Cannot add file to .pak container", );
 	}
 }
