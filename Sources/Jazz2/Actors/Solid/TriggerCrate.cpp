@@ -67,7 +67,7 @@ namespace Jazz2::Actors::Solid
 
 	bool TriggerCrate::CanCauseDamage(ActorBase* collider)
 	{
-		return true;
+		return _levelHandler->IsReforged() || runtime_cast<Weapons::TNT>(collider);
 	}
 
 	bool TriggerCrate::OnPerish(ActorBase* collider)

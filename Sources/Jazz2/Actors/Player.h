@@ -260,6 +260,8 @@ namespace Jazz2::Actors
 			User,				/**< Set by the user */
 			Rollback,			/**< Set due to rollback */
 			AddAmmo,			/**< Set because an ammo for a new weapon was collected */
+			AddUpgrade,			/**< Set because a new upgrade for a weapon was collected */
+			Shield				/**< Set because a shield was activated */
 		};
 
 		/** @{ @name Constants */

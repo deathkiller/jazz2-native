@@ -1,5 +1,6 @@
 ﻿#include "Stopwatch.h"
 #include "../Player.h"
+#include "../../ILevelHandler.h"
 
 #include "../../../nCine/Base/FrameTimer.h"
 
@@ -28,7 +29,9 @@ namespace Jazz2::Actors::Collectibles
 
 	void Stopwatch::OnCollect(Player* player)
 	{
-		if (player->IncreaseShieldTime(10.0f * FrameTimer::FramesPerSecond)) {
+		bool timeIncreased = player->IncreaseShieldTime(10.0f * FrameTimer::FramesPerSecond);
+		// Always collect if Reforged is disabled
+		if (timeIncreased || !_levelHandler->IsReforged()) {
 			CollectibleBase::OnCollect(player);
 		}
 	}

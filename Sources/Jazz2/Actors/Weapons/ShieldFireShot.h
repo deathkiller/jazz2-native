@@ -16,7 +16,7 @@ namespace Jazz2::Actors::Weapons
 		void OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft);
 
 		WeaponType GetWeaponType() override {
-			return WeaponType::Blaster;
+			return WeaponType::Toaster;
 		}
 
 	protected:

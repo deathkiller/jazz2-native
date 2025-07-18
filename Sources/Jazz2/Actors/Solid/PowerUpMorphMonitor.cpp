@@ -99,7 +99,7 @@ namespace Jazz2::Actors::Solid
 
 	bool PowerUpMorphMonitor::CanCauseDamage(ActorBase* collider)
 	{
-		return true;
+		return _levelHandler->IsReforged() || runtime_cast<Weapons::TNT>(collider);
 	}
 
 	bool PowerUpMorphMonitor::OnPerish(ActorBase* collider)
