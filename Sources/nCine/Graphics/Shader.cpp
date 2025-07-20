@@ -183,7 +183,7 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, strlen(shaderName));
+			ZoneText(shaderName, std::strlen(shaderName));
 		}
 
 		glShaderProgram_->Reset(); // reset before attaching new shaders
@@ -218,7 +218,7 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, strlen(shaderName));
+			ZoneText(shaderName, std::strlen(shaderName));
 		}
 
 		glShaderProgram_->Reset(); // reset before attaching new shaders
@@ -252,7 +252,7 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, strlen(shaderName));
+			ZoneText(shaderName, std::strlen(shaderName));
 		}
 
 		glShaderProgram_->Reset(); // reset before attaching new shaders
@@ -285,7 +285,7 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, strlen(shaderName));
+			ZoneText(shaderName, std::strlen(shaderName));
 		}
 
 		glShaderProgram_->Reset(); // reset before attaching new shaders
@@ -320,7 +320,7 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, strlen(shaderName));
+			ZoneText(shaderName, std::strlen(shaderName));
 		}
 
 		glShaderProgram_->Reset(); // reset before attaching new shaders
@@ -354,7 +354,7 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, strlen(shaderName));
+			ZoneText(shaderName, std::strlen(shaderName));
 		}
 
 		glShaderProgram_->Reset(); // reset before attaching new shaders
@@ -387,7 +387,7 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, strlen(shaderName));
+			ZoneText(shaderName, std::strlen(shaderName));
 		}
 
 		glShaderProgram_->Reset();

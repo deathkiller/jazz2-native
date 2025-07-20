@@ -325,13 +325,13 @@ namespace Jazz2::UI
 #if defined(DEATH_TRACE)
 		switch (level) {
 			//case MessageLevel::Info: is skipped, because these messages are usually written to the log separately
-			case MessageLevel::Echo: __WriteTraceProxy(TraceLevel::Info, {}, "> │ {}", Font::StripFormatting(line)); break;
+			case MessageLevel::Echo: __DEATH_TRACE_PROXY(TraceLevel::Info, {}, "> │ {}", Font::StripFormatting(line)); break;
 			case MessageLevel::Chat:
-			case MessageLevel::Confirm: __WriteTraceProxy(TraceLevel::Info, {}, "< │ {}", Font::StripFormatting(line)); break;
-			case MessageLevel::Warning: __WriteTraceProxy(TraceLevel::Warning, {}, "< │ {}", Font::StripFormatting(line)); break;
-			case MessageLevel::Error: __WriteTraceProxy(TraceLevel::Error, {}, "< │ {}", Font::StripFormatting(line)); break;
-			case MessageLevel::Assert: __WriteTraceProxy(TraceLevel::Assert, {}, "< │ {}", Font::StripFormatting(line)); break;
-			case MessageLevel::Fatal: __WriteTraceProxy(TraceLevel::Fatal, {}, "< │ {}", Font::StripFormatting(line)); break;
+			case MessageLevel::Confirm: __DEATH_TRACE_PROXY(TraceLevel::Info, {}, "< │ {}", Font::StripFormatting(line)); break;
+			case MessageLevel::Warning: __DEATH_TRACE_PROXY(TraceLevel::Warning, {}, "< │ {}", Font::StripFormatting(line)); break;
+			case MessageLevel::Error: __DEATH_TRACE_PROXY(TraceLevel::Error, {}, "< │ {}", Font::StripFormatting(line)); break;
+			case MessageLevel::Assert: __DEATH_TRACE_PROXY(TraceLevel::Assert, {}, "< │ {}", Font::StripFormatting(line)); break;
+			case MessageLevel::Fatal: __DEATH_TRACE_PROXY(TraceLevel::Fatal, {}, "< │ {}", Font::StripFormatting(line)); break;
 		}
 #endif
 		_logHistory.emplace_back(level, std::move(line), _smallFont);

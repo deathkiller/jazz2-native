@@ -993,9 +993,9 @@ namespace Jazz2::Scripting
 		}
 
 		if (msg.section != nullptr && msg.section[0] != '\0') {
-			__WriteTraceProxy(level, "AS!", "{}:{}({}): {}", msg.section, msg.row, msg.col, msg.message);
+			__DEATH_TRACE_PROXY(level, "AS!", "{}:{}({}): {}", msg.section, msg.row, msg.col, msg.message);
 		} else {
-			__WriteTraceProxy(level, "AS!", "{}", msg.message);
+			__DEATH_TRACE_PROXY(level, "AS!", "{}", msg.message);
 		}
 	}
 }

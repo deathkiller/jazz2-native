@@ -92,7 +92,7 @@
 #	define ASSERT(x)						\
 		do {								\
 			if DEATH_UNLIKELY(!(x)) {		\
-				__DEATH_ASSERT_TRACE("ASSERT(" #x ")");	\
+				__DEATH_TRACE_ASSERT("ASSERT(" #x ")");	\
 				DEATH_ASSERT_BREAK();		\
 			}								\
 		} while (false)

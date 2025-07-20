@@ -2653,12 +2653,12 @@ namespace Jazz2::Multiplayer
 		if (!peer.IsValid()) {
 			if (ContentResolver::Get().IsHeadless()) {
 				switch (level) {
-					default: __WriteTraceProxy(TraceLevel::Info, {}, "< │ {}", message); break;
-					case UI::MessageLevel::Echo: __WriteTraceProxy(TraceLevel::Info, {}, "> │ {}", message); break;
-					case UI::MessageLevel::Warning: __WriteTraceProxy(TraceLevel::Warning, {}, "< │ {}", message); break;
-					case UI::MessageLevel::Error: __WriteTraceProxy(TraceLevel::Error, {}, "< │ {}", message); break;
-					case UI::MessageLevel::Assert: __WriteTraceProxy(TraceLevel::Assert, {}, "< │ {}", message); break;
-					case UI::MessageLevel::Fatal: __WriteTraceProxy(TraceLevel::Fatal, {}, "< │ {}", message); break;
+					default: __DEATH_TRACE_PROXY(TraceLevel::Info, {}, "< │ {}", message); break;
+					case UI::MessageLevel::Echo: __DEATH_TRACE_PROXY(TraceLevel::Info, {}, "> │ {}", message); break;
+					case UI::MessageLevel::Warning: __DEATH_TRACE_PROXY(TraceLevel::Warning, {}, "< │ {}", message); break;
+					case UI::MessageLevel::Error: __DEATH_TRACE_PROXY(TraceLevel::Error, {}, "< │ {}", message); break;
+					case UI::MessageLevel::Assert: __DEATH_TRACE_PROXY(TraceLevel::Assert, {}, "< │ {}", message); break;
+					case UI::MessageLevel::Fatal: __DEATH_TRACE_PROXY(TraceLevel::Fatal, {}, "< │ {}", message); break;
 				}
 			} else {
 				_console->WriteLine(UI::MessageLevel::Info, message);
