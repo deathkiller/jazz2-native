@@ -13,6 +13,7 @@
 
 // Event Tracing
 #if defined(DEATH_TRACE)
+#	include <cstring>	// for strlen()
 
 // If DEATH_TRACE symbol is #defined with no value, supply internal function name
 #	if DEATH_PASTE(DEATH_TRACE, 1) == 1 || DEATH_PASTE(DEATH_TRACE, 1) == 11
@@ -41,8 +42,14 @@ enum class TraceLevel {
 void DEATH_TRACE(TraceLevel level, const char* functionName, const char* message, std::uint32_t messageLength);
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
+inline void __DEATH_TRACE_PROXY(TraceLevel level, const char* functionName, const char* format)
+{
+	DEATH_TRACE(level, functionName, format, std::uint32_t(std::strlen(format)));
+}
+
 template<class ...Args>
-void __WriteTraceProxy(TraceLevel level, const char* functionName, const char* format, const Args&... args)
+inline typename std::enable_if<(sizeof...(Args) > 0), void>::type 
+	__DEATH_TRACE_PROXY(TraceLevel level, const char* functionName, const char* format, const Args&... args)
 {
 	char formattedMessage[8192];
 	std::size_t length = Death::formatInto(formattedMessage, format, args...);
@@ -60,20 +67,20 @@ void __WriteTraceProxy(TraceLevel level, const char* functionName, const char* f
 
 /** @brief Print a formatted message with @ref TraceLevel::Debug to the event log */
 #	if defined(DEATH_DEBUG)
-#		define LOGD(fmt, ...) __WriteTraceProxy(TraceLevel::Debug, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#		define LOGD(fmt, ...) __DEATH_TRACE_PROXY(TraceLevel::Debug, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 #	else
 #		define LOGD(fmt, ...) do {} while (false)
 #	endif
 /** @brief Print a deferred formatted message with @ref TraceLevel::Deferred to the event log */
-#	define LOGB(fmt, ...) __WriteTraceProxy(TraceLevel::Deferred, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGB(fmt, ...) __DEATH_TRACE_PROXY(TraceLevel::Deferred, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Info to the event log */
-#	define LOGI(fmt, ...) __WriteTraceProxy(TraceLevel::Info, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGI(fmt, ...) __DEATH_TRACE_PROXY(TraceLevel::Info, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Warning to the event log */
-#	define LOGW(fmt, ...) __WriteTraceProxy(TraceLevel::Warning, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGW(fmt, ...) __DEATH_TRACE_PROXY(TraceLevel::Warning, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Error to the event log */
-#	define LOGE(fmt, ...) __WriteTraceProxy(TraceLevel::Error, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGE(fmt, ...) __DEATH_TRACE_PROXY(TraceLevel::Error, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Fatal to the event log */
-#	define LOGF(fmt, ...) __WriteTraceProxy(TraceLevel::Fatal, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGF(fmt, ...) __DEATH_TRACE_PROXY(TraceLevel::Fatal, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 #else
 /** @brief Print a formatted message with @ref TraceLevel::Debug to the event log */
 #	define LOGD(fmt, ...) do {} while (false)
@@ -111,8 +118,8 @@ void __WriteTraceProxy(TraceLevel level, const char* functionName, const char* f
 
 // Assertions
 #if !defined(DEATH_NO_ASSERT) && !defined(DEATH_STANDARD_ASSERT) && defined(DEATH_TRACE) && !defined(DOXYGEN_GENERATING_OUTPUT)
-#	define __DEATH_ASSERT_BASE(fmt, ...) __WriteTraceProxy(TraceLevel::Assert, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
-#	define __DEATH_ASSERT_TRACE(...) DEATH_HELPER_EXPAND(__DEATH_ASSERT_BASE(__VA_ARGS__))
+#	define __DEATH_TRACE_ASSERT_(fmt, ...) __DEATH_TRACE_PROXY(TraceLevel::Assert, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define __DEATH_TRACE_ASSERT(...) DEATH_HELPER_EXPAND(__DEATH_TRACE_ASSERT_(__VA_ARGS__))
 #endif
 
 /**
@@ -138,7 +145,7 @@ void __WriteTraceProxy(TraceLevel level, const char* functionName, const char* f
 #		define DEATH_ASSERT(condition, message, returnValue)			\
 			do {														\
 				if DEATH_UNLIKELY(!(condition)) {						\
-					__DEATH_ASSERT_TRACE(DEATH_REMOVE_PARENS(message));	\
+					__DEATH_TRACE_ASSERT(DEATH_REMOVE_PARENS(message));	\
 					DEATH_ASSERT_BREAK();								\
 					return returnValue;									\
 				}														\
@@ -165,14 +172,14 @@ void __WriteTraceProxy(TraceLevel level, const char* functionName, const char* f
 #		define __DEATH_DEBUG_ASSERT1(condition)							\
 			do {														\
 				if DEATH_UNLIKELY(!(condition)) {						\
-					__DEATH_ASSERT_TRACE("Assertion ({}) failed at \"{}:{}\"", #condition, __FILE__, __LINE__);	\
+					__DEATH_TRACE_ASSERT("Assertion ({}) failed at \"{}:{}\"", #condition, __FILE__, __LINE__);	\
 					DEATH_ASSERT_BREAK();								\
 				}														\
 			} while(false)
 #		define __DEATH_DEBUG_ASSERT3(condition, message, returnValue)	\
 			do {														\
 				if DEATH_UNLIKELY(!(condition)) {						\
-					__DEATH_ASSERT_TRACE(DEATH_REMOVE_PARENS(message));	\
+					__DEATH_TRACE_ASSERT(DEATH_REMOVE_PARENS(message));	\
 					DEATH_ASSERT_BREAK();								\
 					return returnValue;									\
 				}														\
@@ -205,7 +212,7 @@ void __WriteTraceProxy(TraceLevel level, const char* functionName, const char* f
 #	else
 #		define DEATH_CONSTEXPR_ASSERT(condition, message)				\
 			static_cast<void>((condition) ? 0 : ([&]() {				\
-				__DEATH_ASSERT_TRACE(DEATH_REMOVE_PARENS(message));		\
+				__DEATH_TRACE_ASSERT(DEATH_REMOVE_PARENS(message));		\
 				DEATH_ASSERT_BREAK();									\
 			}(), 0))
 #	endif
@@ -255,12 +262,12 @@ void __WriteTraceProxy(TraceLevel level, const char* functionName, const char* f
 #	else
 #		define __DEATH_ASSERT_UNREACHABLE0()							\
 			do {														\
-				__DEATH_ASSERT_TRACE("Reached unreachable code at \"{}:{}\"", __FILE__, __LINE__);	\
+				__DEATH_TRACE_ASSERT("Reached unreachable code at \"{}:{}\"", __FILE__, __LINE__);	\
 				DEATH_ASSERT_BREAK();									\
 			} while(false)
 #		define __DEATH_ASSERT_UNREACHABLE2(message, returnValue)		\
 			do {														\
-				__DEATH_ASSERT_TRACE(DEATH_REMOVE_PARENS(message));		\
+				__DEATH_TRACE_ASSERT(DEATH_REMOVE_PARENS(message));		\
 				DEATH_ASSERT_BREAK();									\
 				return returnValue;										\
 			} while(false)

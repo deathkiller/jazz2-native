@@ -54,8 +54,8 @@ namespace nCine
 
 		const auto& infoStrings = gfxCaps.GetGLInfoStrings();
 
-		platformHash_ += CityHash64(infoStrings.renderer, strlen(infoStrings.renderer));
-		platformHash_ += CityHash64(infoStrings.glVersion, strlen(infoStrings.glVersion));
+		platformHash_ += CityHash64(infoStrings.renderer, std::strlen(infoStrings.renderer));
+		platformHash_ += CityHash64(infoStrings.glVersion, std::strlen(infoStrings.glVersion));
 
 		char platformHashString[24];
 		std::size_t platformHashLength = formatInto(platformHashString, "{:.16x}", platformHash_);
@@ -75,7 +75,7 @@ namespace nCine
 			return { };
 		}
 
-		std::uint64_t shaderNameHash = CityHash64(shaderName, strlen(shaderName));
+		std::uint64_t shaderNameHash = CityHash64(shaderName, std::strlen(shaderName));
 
 		char filename[32];
 		std::size_t filenameLength = formatInto(filename, "{:.16x}.shader", shaderNameHash);

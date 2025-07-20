@@ -607,7 +607,7 @@ namespace Death { namespace IO {
 #	if defined(__FreeBSD__)
 				std::size_t fileNameLength = entry->d_namlen;
 #	else
-				std::size_t fileNameLength = strlen(entry->d_name);
+				std::size_t fileNameLength = std::strlen(entry->d_name);
 #	endif
 				if (fileNameLength > charsLeft) {
 					// Path is too long, skip this file
@@ -1058,10 +1058,10 @@ namespace Death { namespace IO {
 			if (::getcwd(result, sizeof(result)) == nullptr) {
 				return "."_s;
 			}
-			resultLength = strlen(result);
+			resultLength = std::strlen(result);
 			strncpy(left, path.data(), sizeof(left));
 		}
-		std::size_t leftLength = strlen(left);
+		std::size_t leftLength = std::strlen(left);
 		if (leftLength >= sizeof(left) || resultLength >= MaxPathLength) {
 			// Path is too long
 			return path;
@@ -1147,7 +1147,7 @@ namespace Death { namespace IO {
 					strncpy(nextToken + symlinkLength, left, sizeof(nextToken) - symlinkLength);
 				}
 				strncpy(left, nextToken, sizeof(left));
-				leftLength = strlen(left);
+				leftLength = std::strlen(left);
 			}
 #	endif
 		}

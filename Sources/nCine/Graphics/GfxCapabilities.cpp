@@ -209,10 +209,10 @@ namespace nCine
 
 		for (GLuint i = 0; i < static_cast<GLuint>(numExtensions); i++) {
 			const char* extension = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i));
-			const std::size_t extLength = strlen(extension);
+			const std::size_t extLength = std::strlen(extension);
 
 			for (std::uint32_t j = 0; j < numExtensionsToCheck; j++) {
-				const size_t nameLength = strlen(extensionNames[j]);
+				const size_t nameLength = std::strlen(extensionNames[j]);
 				if (!results[j] && nameLength == extLength && strncmp(extensionNames[j], extension, extLength) == 0) {
 					results[j] = true;
 				}

@@ -72,8 +72,8 @@ namespace Death {
 		putting extra options after a semicolon, following the optional placeholder
 		number, such as `{:x}` to print an integer value in hexadecimal. In general,
 		the syntax similar to the @ref std::printf() -style formatting, with the
-		addition of `{}` and `:` used instead of `%` --- for example, @cpp "%.2x" @ce
-		can be translated to @cpp "{:.2x}" @ce.
+		addition of `{}` and `:` used instead of `%` --- for example, @cpp "%.2f" @ce
+		can be translated to @cpp "{:.2f}" @ce.
 
 		The full placeholder syntax is the following, again a subset of the Python
 		[format()](https://docs.python.org/3.4/library/string.html#format-string-syntax):
