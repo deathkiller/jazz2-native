@@ -64,6 +64,8 @@
 #	define NCINE_CURRENT_FUNCTION ""
 #endif
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+
 // Return assert macros
 #define RETURN_ASSERT(x) do { if DEATH_UNLIKELY(!(x)) { LOGE("RETURN_ASSERT(" #x ")"); return; } } while (false)
 
@@ -87,15 +89,4 @@
 		}									\
 	} while (false)
 
-// Non-fatal assert macros
-#if defined(DEATH_TRACE)
-#	define ASSERT(x)						\
-		do {								\
-			if DEATH_UNLIKELY(!(x)) {		\
-				__DEATH_TRACE_ASSERT("ASSERT(" #x ")");	\
-				DEATH_ASSERT_BREAK();		\
-			}								\
-		} while (false)
-#else
-#	define ASSERT(x) do { } while (false)
 #endif

@@ -317,7 +317,7 @@ namespace nCine::Backends
 
 	bool SdlInputManager::isJoyPresent(int joyId) const
 	{
-		ASSERT(joyId >= 0);
+		DEATH_ASSERT(joyId >= 0);
 		return (joyId < MaxNumJoysticks && sdlJoysticks_[joyId] && SDL_JoystickGetAttached(sdlJoysticks_[joyId]));
 	}
 

@@ -139,7 +139,7 @@ namespace nCine
 
 	void Texture::init(const char* name, Format format, std::int32_t mipMapCount, Vector2i size)
 	{
-		ASSERT(mipMapCount > 0);
+		DEATH_ASSERT(mipMapCount > 0);
 		init(name, format, mipMapCount, size.X, size.Y);
 	}
 

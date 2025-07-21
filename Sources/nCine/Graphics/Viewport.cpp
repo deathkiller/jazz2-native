@@ -220,7 +220,7 @@ namespace nCine
 
 	Texture* Viewport::GetTexture(std::uint32_t index)
 	{
-		ASSERT(index < MaxNumTextures);
+		DEATH_ASSERT(index < MaxNumTextures);
 
 		Texture* texture = nullptr;
 		if (index < MaxNumTextures) {

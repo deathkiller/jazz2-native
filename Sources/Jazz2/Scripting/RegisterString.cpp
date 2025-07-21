@@ -40,7 +40,7 @@ namespace Jazz2::Scripting
 		~StringFactory()
 		{
 			// The script engine must release each string constant that it has requested
-			ASSERT(_stringCache.size() == 0);
+			DEATH_ASSERT(_stringCache.size() == 0);
 		}
 
 		const void* GetStringConstant(const char* data, std::uint32_t length)

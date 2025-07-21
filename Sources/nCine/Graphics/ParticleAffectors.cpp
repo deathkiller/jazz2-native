@@ -21,7 +21,7 @@ namespace nCine
 
 	void ColorAffector::affect(Particle* particle, float normalizedAge)
 	{
-		ASSERT(particle);
+		DEATH_ASSERT(particle);
 
 		// Zero steps in the affector
 		if (colorSteps_.empty()) {
@@ -68,7 +68,7 @@ namespace nCine
 
 	void SizeAffector::affect(Particle* particle, float normalizedAge)
 	{
-		ASSERT(particle);
+		DEATH_ASSERT(particle);
 
 		// Zero steps in the affector
 		if (sizeSteps_.empty()) {
@@ -113,7 +113,7 @@ namespace nCine
 
 	void RotationAffector::affect(Particle* particle, float normalizedAge)
 	{
-		ASSERT(particle);
+		DEATH_ASSERT(particle);
 
 		// Zero steps in the affector
 		if (rotationSteps_.empty()) {
@@ -156,7 +156,7 @@ namespace nCine
 
 	void PositionAffector::affect(Particle* particle, float normalizedAge)
 	{
-		ASSERT(particle);
+		DEATH_ASSERT(particle);
 
 		// Zero steps in the affector
 		if (positionSteps_.empty()) {
@@ -199,7 +199,7 @@ namespace nCine
 
 	void VelocityAffector::affect(Particle* particle, float normalizedAge)
 	{
-		ASSERT(particle);
+		DEATH_ASSERT(particle);
 
 		// Zero steps in the affector
 		if (velocitySteps_.empty()) {

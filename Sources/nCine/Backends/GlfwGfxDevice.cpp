@@ -244,10 +244,10 @@ namespace nCine::Backends
 	bool GlfwGfxDevice::setVideoMode(unsigned int modeIndex)
 	{
 		const int monitorIndex = windowMonitorIndex();
-		ASSERT(monitorIndex >= 0);
+		DEATH_ASSERT(monitorIndex >= 0);
 
 		const unsigned int numVideoModes = monitors_[monitorIndex].numVideoModes;
-		ASSERT(modeIndex < numVideoModes);
+		DEATH_ASSERT(modeIndex < numVideoModes);
 
 		if (modeIndex < numVideoModes) {
 			GLFWmonitor* monitor = monitorPointers_[monitorIndex];
@@ -376,7 +376,7 @@ namespace nCine::Backends
 
 		int monitorCount = 0;
 		GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
-		ASSERT(monitorCount >= 1);
+		DEATH_ASSERT(monitorCount >= 1);
 		numMonitors_ = (monitorCount < MaxMonitors ? monitorCount : MaxMonitors);
 
 		for (unsigned int i = 0; i < MaxMonitors; i++) {
@@ -386,7 +386,7 @@ namespace nCine::Backends
 		for (unsigned int i = 0; i < numMonitors_; i++) {
 			GLFWmonitor* monitor = monitors[i];
 			monitors_[i].name = glfwGetMonitorName(monitor);
-			ASSERT(monitors_[i].name != nullptr);
+			DEATH_ASSERT(monitors_[i].name != nullptr);
 			glfwGetMonitorPos(monitor, &monitors_[i].position.X, &monitors_[i].position.Y);
 #if GLFW_VERSION_COMBINED >= 3300
 			glfwGetMonitorContentScale(monitor, &monitors_[i].scale.X, &monitors_[i].scale.Y);

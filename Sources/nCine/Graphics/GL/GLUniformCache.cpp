@@ -14,12 +14,12 @@ namespace nCine
 	GLUniformCache::GLUniformCache(const GLUniform* uniform)
 		: uniform_(uniform), dataPointer_(nullptr), isDirty_(false)
 	{
-		ASSERT(uniform);
+		DEATH_ASSERT(uniform);
 	}
 
 	const GLfloat* GLUniformCache::GetFloatVector() const
 	{
-		ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && CheckFloat()));
+		DEATH_ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && CheckFloat()));
 		const GLfloat* vec = nullptr;
 
 		if (dataPointer_ != nullptr) {
@@ -30,7 +30,7 @@ namespace nCine
 
 	GLfloat GLUniformCache::GetFloatValue(std::uint32_t index) const
 	{
-		ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && CheckFloat() && uniform_->GetComponentCount() > index));
+		DEATH_ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && CheckFloat() && uniform_->GetComponentCount() > index));
 
 		GLfloat value = 0.0f;
 
@@ -42,7 +42,7 @@ namespace nCine
 
 	const GLint* GLUniformCache::GetIntVector() const
 	{
-		ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && CheckInt()));
+		DEATH_ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && CheckInt()));
 		const GLint* vec = nullptr;
 
 		if (dataPointer_ != nullptr) {
@@ -53,7 +53,7 @@ namespace nCine
 
 	GLint GLUniformCache::GetIntValue(std::uint32_t index) const
 	{
-		ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && CheckInt() && uniform_->GetComponentCount() > index));
+		DEATH_ASSERT(uniform_ == nullptr || (dataPointer_ != nullptr && CheckInt() && uniform_->GetComponentCount() > index));
 		GLint value = 0;
 
 		if (dataPointer_ != nullptr) {
@@ -64,7 +64,7 @@ namespace nCine
 
 	bool GLUniformCache::SetFloatVector(const GLfloat* vec)
 	{
-		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
+		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
 		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckFloat()) {
 			return false;
 		}
@@ -76,7 +76,7 @@ namespace nCine
 
 	bool GLUniformCache::SetFloatValue(GLfloat v0)
 	{
-		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
+		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
 		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckFloat() || !CheckComponents(1)) {
 			return false;
 		}
@@ -89,7 +89,7 @@ namespace nCine
 
 	bool GLUniformCache::SetFloatValue(GLfloat v0, GLfloat v1)
 	{
-		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
+		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
 		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckFloat() || !CheckComponents(2)) {
 			return false;
 		}
@@ -103,7 +103,7 @@ namespace nCine
 
 	bool GLUniformCache::SetFloatValue(GLfloat v0, GLfloat v1, GLfloat v2)
 	{
-		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
+		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
 		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckFloat() || !CheckComponents(3)) {
 			return false;
 		}
@@ -118,7 +118,7 @@ namespace nCine
 
 	bool GLUniformCache::SetFloatValue(GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3)
 	{
-		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
+		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
 		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckFloat() || !CheckComponents(4)) {
 			return false;
 		}
@@ -134,7 +134,7 @@ namespace nCine
 
 	bool GLUniformCache::SetIntVector(const GLint* vec)
 	{
-		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
+		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
 		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckInt()) {
 			return false;
 		}
@@ -146,7 +146,7 @@ namespace nCine
 
 	bool GLUniformCache::SetIntValue(GLint v0)
 	{
-		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
+		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
 		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckInt() || !CheckComponents(1)) {
 			return false;
 		}
@@ -159,7 +159,7 @@ namespace nCine
 
 	bool GLUniformCache::SetIntValue(GLint v0, GLint v1)
 	{
-		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
+		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
 		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckInt() || !CheckComponents(2)) {
 			return false;
 		}
@@ -173,7 +173,7 @@ namespace nCine
 
 	bool GLUniformCache::SetIntValue(GLint v0, GLint v1, GLint v2)
 	{
-		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
+		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
 		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckInt() || !CheckComponents(3)) {
 			return false;
 		}
@@ -188,7 +188,7 @@ namespace nCine
 
 	bool GLUniformCache::SetIntValue(GLint v0, GLint v1, GLint v2, GLint v3)
 	{
-		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
+		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
 		if (uniform_ == nullptr || dataPointer_ == nullptr || !CheckInt() || !CheckComponents(4)) {
 			return false;
 		}
@@ -204,13 +204,13 @@ namespace nCine
 
 	bool GLUniformCache::CommitValue()
 	{
-		ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
+		DEATH_ASSERT(uniform_ == nullptr || dataPointer_ != nullptr);
 		if (uniform_ == nullptr || dataPointer_ == nullptr || !isDirty_) {
 			return false;
 		}
 
 		// The uniform must not belong to any uniform block
-		ASSERT(uniform_->GetBlockIndex() == -1);
+		DEATH_ASSERT(uniform_->GetBlockIndex() == -1);
 
 		const GLint location = uniform_->GetLocation();
 		switch (uniform_->GetType()) {

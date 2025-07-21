@@ -13,13 +13,13 @@ namespace nCine
 	AudioReaderWav::AudioReaderWav(std::unique_ptr<Stream> fileHandle)
 		: fileHandle_(std::move(fileHandle))
 	{
-		ASSERT(fileHandle_->IsValid());
+		DEATH_ASSERT(fileHandle_->IsValid());
 	}
 
 	std::int32_t AudioReaderWav::read(void* buffer, std::int32_t bufferSize) const
 	{
-		ASSERT(buffer);
-		ASSERT(bufferSize > 0);
+		DEATH_ASSERT(buffer);
+		DEATH_ASSERT(bufferSize > 0);
 
 		std::int32_t bytes = 0;
 		std::int32_t bufferSeek = 0;

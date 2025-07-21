@@ -219,7 +219,7 @@ namespace nCine
 	{
 		std::uint32_t index = 0;
 		if (parent_ != nullptr) {
-			ASSERT(parent_->children_[childOrderIndex_] == this);
+			DEATH_ASSERT(parent_->children_[childOrderIndex_] == this);
 			index = childOrderIndex_;
 		}
 
@@ -321,7 +321,7 @@ namespace nCine
 	/*! \note It is faster than calling `setParent()` on the first child and `removeChildNode()` on the second one */
 	void SceneNode::swapChildPointer(SceneNode* first, SceneNode* second)
 	{
-		ASSERT(first->parent_ == second->parent_);
+		DEATH_ASSERT(first->parent_ == second->parent_);
 
 		SceneNode* parent = first->parent_;
 		if (parent != nullptr) {

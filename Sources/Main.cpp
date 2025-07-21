@@ -277,7 +277,7 @@ void GameEventHandler::OnInitialize()
 		Thread::SetCurrentName("Parallel Initialization");
 
 		auto handler = static_cast<GameEventHandler*>(arg);
-		ASSERT(handler != nullptr);
+		DEATH_ASSERT(handler != nullptr);
 
 		handler->OnAfterInitialize();
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -868,7 +868,7 @@ void GameEventHandler::StartProcessingStdin()
 {
 	Thread thread([](void* arg) {
 		auto _this = static_cast<GameEventHandler*>(arg);
-		ASSERT(_this != nullptr);
+		DEATH_ASSERT(_this != nullptr);
 
 #		if defined(DEATH_TARGET_WINDOWS)
 		wchar_t bufferW[4096];

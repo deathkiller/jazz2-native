@@ -31,7 +31,7 @@ namespace nCine
 	AudioReaderOgg::AudioReaderOgg(std::unique_ptr<Stream> fileHandle, const OggVorbis_File& oggFile)
 		: fileHandle_(std::move(fileHandle)), oggFile_(oggFile)
 	{
-		ASSERT(fileHandle_->IsValid());
+		DEATH_ASSERT(fileHandle_->IsValid());
 	}
 
 	AudioReaderOgg::~AudioReaderOgg()

@@ -248,7 +248,7 @@ namespace nCine::Backends
 
 	jclass AndroidJniClass::findClass(const char* name)
 	{
-		ASSERT(name != nullptr);
+		DEATH_ASSERT(name != nullptr);
 		jclass javaClass = AndroidJniHelper::jniEnv->FindClass(name);
 		if (AndroidJniHelper::CheckAndClearExceptions() || javaClass == nullptr) {
 			LOGE("Cannot find Java class \"{}\"", name);
@@ -261,7 +261,7 @@ namespace nCine::Backends
 	{
 		jmethodID mid = nullptr;
 
-		ASSERT(name != nullptr && signature != nullptr);
+		DEATH_ASSERT(name != nullptr && signature != nullptr);
 		if (javaClass != nullptr) {
 			mid = AndroidJniHelper::jniEnv->GetStaticMethodID(javaClass, name, signature);
 			if (AndroidJniHelper::CheckAndClearExceptions() || mid == nullptr) {
@@ -278,7 +278,7 @@ namespace nCine::Backends
 	{
 		jmethodID mid = nullptr;
 
-		ASSERT(name != nullptr && signature != nullptr);
+		DEATH_ASSERT(name != nullptr && signature != nullptr);
 		if (javaClass != nullptr) {
 			mid = AndroidJniHelper::jniEnv->GetMethodID(javaClass, name, signature);
 			if (AndroidJniHelper::CheckAndClearExceptions() || mid == nullptr) {
@@ -295,7 +295,7 @@ namespace nCine::Backends
 	{
 		jfieldID fid = nullptr;
 
-		ASSERT(name != nullptr && signature != nullptr);
+		DEATH_ASSERT(name != nullptr && signature != nullptr);
 		if (javaClass != nullptr) {
 			fid = AndroidJniHelper::jniEnv->GetStaticFieldID(javaClass, name, signature);
 			if (AndroidJniHelper::CheckAndClearExceptions() || fid == nullptr) {

@@ -60,13 +60,13 @@ namespace nCine
 
 	void MeshSprite::copyVertices(std::uint32_t numVertices, const Vertex* vertices)
 	{
-		ASSERT(texture_ != nullptr);
+		DEATH_ASSERT(texture_ != nullptr);
 		copyVertices(numVertices, sizeof(Vertex), reinterpret_cast<const float*>(vertices));
 	}
 
 	void MeshSprite::copyVertices(std::uint32_t numVertices, const VertexNoTexture* vertices)
 	{
-		ASSERT(texture_ == nullptr);
+		DEATH_ASSERT(texture_ == nullptr);
 		copyVertices(numVertices, sizeof(VertexNoTexture), reinterpret_cast<const float*>(vertices));
 	}
 
@@ -98,13 +98,13 @@ namespace nCine
 
 	void MeshSprite::setVertices(std::uint32_t numVertices, const Vertex* vertices)
 	{
-		ASSERT(texture_ != nullptr);
+		DEATH_ASSERT(texture_ != nullptr);
 		copyVertices(numVertices, sizeof(Vertex), reinterpret_cast<const void*>(vertices));
 	}
 
 	void MeshSprite::setVertices(std::uint32_t numVertices, const VertexNoTexture* vertices)
 	{
-		ASSERT(texture_ == nullptr);
+		DEATH_ASSERT(texture_ == nullptr);
 		copyVertices(numVertices, sizeof(VertexNoTexture), reinterpret_cast<const void*>(vertices));
 	}
 

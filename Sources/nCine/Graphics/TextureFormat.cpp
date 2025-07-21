@@ -242,8 +242,8 @@ namespace nCine
 		std::int32_t levelHeight = height;
 		std::uint32_t dataSizesSum = 0;
 
-		ASSERT(mipDataOffsets);
-		ASSERT(mipDataSizes);
+		DEATH_ASSERT(mipDataOffsets);
+		DEATH_ASSERT(mipDataSizes);
 
 		for (std::int32_t i = 0; i < mipMapCount; i++) {
 			mipDataOffsets[i] = dataSizesSum;

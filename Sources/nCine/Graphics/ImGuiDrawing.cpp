@@ -80,14 +80,14 @@ namespace nCine
 
 		imguiShaderProgram_ = std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate);
 #if !defined(WITH_EMBEDDED_SHADERS)
-		imguiShaderProgram_->attachShaderFromFile(GL_VERTEX_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, "imgui_vs.glsl"_s }));
-		imguiShaderProgram_->attachShaderFromFile(GL_FRAGMENT_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, "imgui_fs.glsl"_s }));
+		imguiShaderProgram_->AttachShaderFromFile(GL_VERTEX_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, "imgui_vs.glsl"_s }));
+		imguiShaderProgram_->AttachShaderFromFile(GL_FRAGMENT_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, "imgui_fs.glsl"_s }));
 #else
-		imguiShaderProgram_->attachShaderFromString(GL_VERTEX_SHADER, ShaderStrings::imgui_vs);
-		imguiShaderProgram_->attachShaderFromString(GL_FRAGMENT_SHADER, ShaderStrings::imgui_fs);
+		imguiShaderProgram_->AttachShaderFromString(GL_VERTEX_SHADER, ShaderStrings::imgui_vs);
+		imguiShaderProgram_->AttachShaderFromString(GL_FRAGMENT_SHADER, ShaderStrings::imgui_fs);
 #endif
-		imguiShaderProgram_->link(GLShaderProgram::Introspection::Enabled);
-		FATAL_ASSERT(imguiShaderProgram_->status() != GLShaderProgram::Status::LinkingFailed);
+		imguiShaderProgram_->Link(GLShaderProgram::Introspection::Enabled);
+		FATAL_ASSERT(imguiShaderProgram_->GetStatus() != GLShaderProgram::Status::LinkingFailed);
 
 		if (!withSceneGraph) {
 			setupBuffersAndShader();
@@ -217,9 +217,9 @@ namespace nCine
 		io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
 		texture_ = std::make_unique<GLTexture>(GL_TEXTURE_2D);
-		texture_->texParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		texture_->texParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		texture_->texImage2D(0, GL_RGBA, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+		texture_->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		texture_->TexParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		texture_->TexImage2D(0, GL_RGBA, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 		io.Fonts->TexID = reinterpret_cast<ImTextureID>(texture_.get());
 
 		return (pixels != nullptr);
@@ -246,9 +246,9 @@ namespace nCine
 			projectionMatrix_ = Matrix4x4f::Ortho(0.0f, io.DisplaySize.x, io.DisplaySize.y, 0.0f, -1.0f, 1.0f);
 
 			if (!withSceneGraph_) {
-				imguiShaderUniforms_->uniform(Material::GuiProjectionMatrixUniformName)->setFloatVector(projectionMatrix_.Data());
-				imguiShaderUniforms_->uniform(Material::DepthUniformName)->setFloatValue(0.0f);
-				imguiShaderUniforms_->commitUniforms();
+				imguiShaderUniforms_->GetUniform(Material::GuiProjectionMatrixUniformName)->SetFloatVector(projectionMatrix_.Data());
+				imguiShaderUniforms_->GetUniform(Material::DepthUniformName)->SetFloatValue(0.0f);
+				imguiShaderUniforms_->CommitUniforms();
 			}
 		}
 #endif
@@ -306,12 +306,12 @@ namespace nCine
 		Material& material = cmd.material();
 		material.setShaderProgram(imguiShaderProgram_.get());
 		material.reserveUniformsDataMemory();
-		material.uniform(Material::TextureUniformName)->setIntValue(0); // GL_TEXTURE0
-		imguiShaderProgram_->attribute(Material::PositionAttributeName)->setVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, pos)));
-		imguiShaderProgram_->attribute(Material::TexCoordsAttributeName)->setVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, uv)));
-		imguiShaderProgram_->attribute(Material::ColorAttributeName)->setVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, col)));
-		imguiShaderProgram_->attribute(Material::ColorAttributeName)->setType(GL_UNSIGNED_BYTE);
-		imguiShaderProgram_->attribute(Material::ColorAttributeName)->setNormalized(true);
+		material.uniform(Material::TextureUniformName)->SetIntValue(0); // GL_TEXTURE0
+		imguiShaderProgram_->GetAttribute(Material::PositionAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, pos)));
+		imguiShaderProgram_->GetAttribute(Material::TexCoordsAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, uv)));
+		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, col)));
+		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetType(GL_UNSIGNED_BYTE);
+		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetNormalized(true);
 		material.setBlendingEnabled(true);
 		material.setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -346,7 +346,7 @@ namespace nCine
 
 			RenderCommand& firstCmd = *retrieveCommandFromPool();
 
-			firstCmd.material().uniform(Material::GuiProjectionMatrixUniformName)->setFloatVector(projectionMatrix_.Data());
+			firstCmd.material().uniform(Material::GuiProjectionMatrixUniformName)->SetFloatVector(projectionMatrix_.Data());
 
 			firstCmd.geometry().shareVbo(nullptr);
 			GLfloat* vertices = firstCmd.geometry().acquireVertexPointer(imCmdList->VtxBuffer.Size * numElements, numElements);
@@ -361,7 +361,7 @@ namespace nCine
 			if (lastLayerValue_ != theApplication().GetGuiSettings().imguiLayer) {
 				// It is enough to set the uniform value once as every ImGui command share the same shader
 				const float depth = RenderCommand::calculateDepth(theApplication().GetGuiSettings().imguiLayer, -1.0f, 1.0f);
-				firstCmd.material().uniform(Material::DepthUniformName)->setFloatValue(depth);
+				firstCmd.material().uniform(Material::DepthUniformName)->SetFloatValue(depth);
 				lastLayerValue_ = theApplication().GetGuiSettings().imguiLayer;
 			}
 
@@ -403,14 +403,14 @@ namespace nCine
 		ibo_ = std::make_unique<GLBufferObject>(GL_ELEMENT_ARRAY_BUFFER);
 
 		imguiShaderUniforms_ = std::make_unique<GLShaderUniforms>(imguiShaderProgram_.get());
-		imguiShaderUniforms_->setUniformsDataPointer(uniformsBuffer_);
-		imguiShaderUniforms_->uniform(Material::TextureUniformName)->setIntValue(0); // GL_TEXTURE0
+		imguiShaderUniforms_->SetUniformsDataPointer(uniformsBuffer_);
+		imguiShaderUniforms_->GetUniform(Material::TextureUniformName)->SetIntValue(0); // GL_TEXTURE0
 
-		imguiShaderProgram_->attribute(Material::PositionAttributeName)->setVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, pos)));
-		imguiShaderProgram_->attribute(Material::TexCoordsAttributeName)->setVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, uv)));
-		imguiShaderProgram_->attribute(Material::ColorAttributeName)->setVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, col)));
-		imguiShaderProgram_->attribute(Material::ColorAttributeName)->setType(GL_UNSIGNED_BYTE);
-		imguiShaderProgram_->attribute(Material::ColorAttributeName)->setNormalized(true);
+		imguiShaderProgram_->GetAttribute(Material::PositionAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, pos)));
+		imguiShaderProgram_->GetAttribute(Material::TexCoordsAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, uv)));
+		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, col)));
+		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetType(GL_UNSIGNED_BYTE);
+		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetNormalized(true);
 	}
 
 	void ImGuiDrawing::draw()
@@ -426,23 +426,23 @@ namespace nCine
 		const ImVec2 clipOff = drawData->DisplayPos;
 		const ImVec2 clipScale = drawData->FramebufferScale;
 
-		GLBlending::State blendingState = GLBlending::state();
-		GLBlending::enable();
-		GLBlending::setBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		GLCullFace::State cullFaceState = GLCullFace::state();
-		GLCullFace::disable();
-		GLDepthTest::State depthTestState = GLDepthTest::state();
-		GLDepthTest::disable();
+		GLBlending::State blendingState = GLBlending::GetState();
+		GLBlending::Enable();
+		GLBlending::SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		GLCullFace::State cullFaceState = GLCullFace::GetState();
+		GLCullFace::Disable();
+		GLDepthTest::State depthTestState = GLDepthTest::GetState();
+		GLDepthTest::Disable();
 
 		for (std::int32_t n = 0; n < drawData->CmdListsCount; n++) {
 			const ImDrawList* imCmdList = drawData->CmdLists[n];
 			const ImDrawIdx* firstIndex = nullptr;
 
 			// Always define vertex format (and bind VAO) before uploading data to buffers
-			imguiShaderProgram_->defineVertexFormat(vbo_.get(), ibo_.get());
-			vbo_->bufferData(static_cast<GLsizeiptr>(imCmdList->VtxBuffer.Size) * sizeof(ImDrawVert), static_cast<const GLvoid*>(imCmdList->VtxBuffer.Data), GL_STREAM_DRAW);
-			ibo_->bufferData(static_cast<GLsizeiptr>(imCmdList->IdxBuffer.Size) * sizeof(ImDrawIdx), static_cast<const GLvoid*>(imCmdList->IdxBuffer.Data), GL_STREAM_DRAW);
-			imguiShaderProgram_->use();
+			imguiShaderProgram_->DefineVertexFormat(vbo_.get(), ibo_.get());
+			vbo_->BufferData(static_cast<GLsizeiptr>(imCmdList->VtxBuffer.Size) * sizeof(ImDrawVert), static_cast<const GLvoid*>(imCmdList->VtxBuffer.Data), GL_STREAM_DRAW);
+			ibo_->BufferData(static_cast<GLsizeiptr>(imCmdList->IdxBuffer.Size) * sizeof(ImDrawIdx), static_cast<const GLvoid*>(imCmdList->IdxBuffer.Data), GL_STREAM_DRAW);
+			imguiShaderProgram_->Use();
 
 			for (std::int32_t cmdIdx = 0; cmdIdx < imCmdList->CmdBuffer.Size; cmdIdx++) {
 				const ImDrawCmd* imCmd = &imCmdList->CmdBuffer[cmdIdx];
@@ -455,11 +455,11 @@ namespace nCine
 				}
 
 				// Apply scissor/clipping rectangle (Y is inverted in OpenGL)
-				GLScissorTest::enable(static_cast<GLint>(clipMin.x), static_cast<GLint>(static_cast<float>(fbHeight) - clipMax.y),
+				GLScissorTest::Enable(static_cast<GLint>(clipMin.x), static_cast<GLint>(static_cast<float>(fbHeight) - clipMax.y),
 									  static_cast<GLsizei>(clipMax.x - clipMin.x), static_cast<GLsizei>(clipMax.y - clipMin.y));
 
 				// Bind texture, Draw
-				GLTexture::bindHandle(GL_TEXTURE_2D, reinterpret_cast<GLTexture*>(imCmd->GetTexID())->glHandle());
+				GLTexture::BindHandle(GL_TEXTURE_2D, reinterpret_cast<GLTexture*>(imCmd->GetTexID())->GetGLHandle());
 #if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 				glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(imCmd->ElemCount), sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, firstIndex);
 #else
@@ -470,10 +470,10 @@ namespace nCine
 			}
 		}
 
-		GLScissorTest::disable();
-		GLDepthTest::setState(depthTestState);
-		GLCullFace::setState(cullFaceState);
-		GLBlending::setState(blendingState);
+		GLScissorTest::Disable();
+		GLDepthTest::SetState(depthTestState);
+		GLCullFace::SetState(cullFaceState);
+		GLBlending::SetState(blendingState);
 	}
 
 #if defined(IMGUI_HAS_VIEWPORT)
@@ -495,7 +495,7 @@ namespace nCine
 		glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &lastVertexArray);
 
 		// TODO: Use nCine shaders directly instead
-		auto shaderHandle = imguiShaderProgram_.get()->glHandle();
+		auto shaderHandle = imguiShaderProgram_.get()->GetGLHandle();
 
 		attribLocationTex_ = glGetUniformLocation(shaderHandle, "uTexture");
 		attribLocationProjMtx_ = glGetUniformLocation(shaderHandle, "uGuiProjection");
@@ -579,7 +579,7 @@ namespace nCine
 						static_cast<GLint>(clipMax.x - clipMin.x), static_cast<GLint>(clipMax.y - clipMin.y)));
 
 					auto* texture = reinterpret_cast<nCine::GLTexture*>(imCmd->GetTexID());
-					GL_CALL(glBindTexture(GL_TEXTURE_2D, texture->glHandle()));
+					GL_CALL(glBindTexture(GL_TEXTURE_2D, texture->GetGLHandle()));
 					GL_CALL(glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(imCmd->ElemCount), sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT,
 						reinterpret_cast<void*>(static_cast<intptr_t>(imCmd->IdxOffset * sizeof(ImDrawIdx)))));
 				}
@@ -616,7 +616,7 @@ namespace nCine
 		};
 
 		// TODO: Use nCine shaders directly instead
-		auto shaderHandle = imguiShaderProgram_.get()->glHandle();
+		auto shaderHandle = imguiShaderProgram_.get()->GetGLHandle();
 
 		glUseProgram(shaderHandle);
 		glUniform1i(attribLocationTex_, 0);

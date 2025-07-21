@@ -279,12 +279,12 @@ namespace nCine::Backends
 		LOGD("Updating list of monitors...");
 
 		const int monitorCount = SDL_GetNumVideoDisplays();
-		ASSERT(monitorCount >= 1);
+		DEATH_ASSERT(monitorCount >= 1);
 		numMonitors_ = (monitorCount < MaxMonitors) ? monitorCount : MaxMonitors;
 
 		for (unsigned int i = 0; i < numMonitors_; i++) {
 			monitors_[i].name = SDL_GetDisplayName(i);
-			ASSERT(monitors_[i].name != nullptr);
+			DEATH_ASSERT(monitors_[i].name != nullptr);
 
 			SDL_Rect bounds;
 			SDL_GetDisplayBounds(i, &bounds);

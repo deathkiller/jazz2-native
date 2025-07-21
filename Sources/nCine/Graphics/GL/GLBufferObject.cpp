@@ -80,8 +80,8 @@ namespace nCine
 
 	void GLBufferObject::BindBufferBase(GLuint index)
 	{
-		ASSERT(target_ == GL_UNIFORM_BUFFER);
-		ASSERT(index < MaxIndexBufferRange);
+		DEATH_ASSERT(target_ == GL_UNIFORM_BUFFER);
+		DEATH_ASSERT(index < MaxIndexBufferRange);
 
 		if (index >= MaxIndexBufferRange) {
 			glBindBufferBase(target_, index, glHandle_);
@@ -97,8 +97,8 @@ namespace nCine
 
 	void GLBufferObject::BindBufferRange(GLuint index, GLintptr offset, GLsizei ptrsize)
 	{
-		ASSERT(target_ == GL_UNIFORM_BUFFER);
-		ASSERT(index < MaxIndexBufferRange);
+		DEATH_ASSERT(target_ == GL_UNIFORM_BUFFER);
+		DEATH_ASSERT(index < MaxIndexBufferRange);
 
 		if (index >= MaxIndexBufferRange) {
 			glBindBufferRange(target_, index, glHandle_, offset, ptrsize);

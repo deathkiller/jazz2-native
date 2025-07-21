@@ -914,8 +914,8 @@ namespace nCine
 #	if defined(NCINE_PROFILING)
 					profileStartTime_ = TimeStamp::now();
 #	endif
-					RenderQueue* imguiRenderQueue = (guiSettings_.imguiViewport ? guiSettings_.imguiViewport->renderQueue_.get() : screenViewport_->renderQueue_.get());
-					imguiDrawing_->endFrame(*imguiRenderQueue);
+					RenderQueue& imguiRenderQueue = (guiSettings_.imguiViewport ? guiSettings_.imguiViewport->renderQueue_ : screenViewport_->renderQueue_);
+					imguiDrawing_->endFrame(imguiRenderQueue);
 #	if defined(NCINE_PROFILING)
 					timings_[(std::int32_t)Timings::ImGui] += profileStartTime_.secondsSince();
 #	endif
@@ -1274,7 +1274,7 @@ namespace nCine
 			std::int32_t length4 = 0;
 			AppendDateTime(logEntryWithColors, length4, timestamp);
 
-			debugOverlay->log(level, logEntryWithColors, threadId, content);
+			debugOverlay->log(level, logEntryWithColors, threadId, functionName, content);
 		}
 #endif
 

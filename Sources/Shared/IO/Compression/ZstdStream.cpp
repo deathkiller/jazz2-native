@@ -1,5 +1,6 @@
 #include "ZstdStream.h"
 #include "../../Asserts.h"
+#include "../../Base/Move.h"
 
 #if !defined(WITH_ZSTD)
 #	pragma message("Death::IO::ZstdStream requires `zstd` library")

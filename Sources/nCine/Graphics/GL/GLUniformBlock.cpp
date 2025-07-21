@@ -22,12 +22,12 @@ namespace nCine
 
 		glGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_DATA_SIZE, &size_);
 		glGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_NAME_LENGTH, &nameLength);
-		ASSERT(nameLength <= MaxNameLength);
+		DEATH_ASSERT(nameLength <= MaxNameLength);
 		glGetActiveUniformBlockName(program, index, MaxNameLength, &nameLength, name_);
 		glGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &uniformCount);
 
 		if (discover == DiscoverUniforms::ENABLED && uniformCount > 0) {
-			ASSERT(uniformCount <= MaxNumBlockUniforms);
+			DEATH_ASSERT(uniformCount <= MaxNumBlockUniforms);
 			GLuint uniformIndices[MaxNumBlockUniforms];
 			GLint uniformTypes[MaxNumBlockUniforms];
 			GLint uniformSizes[MaxNumBlockUniforms];
@@ -86,7 +86,7 @@ namespace nCine
 
 	void GLUniformBlock::SetBlockBinding(GLuint blockBinding)
 	{
-		ASSERT(program_ != 0);
+		DEATH_ASSERT(program_ != 0);
 
 		if (bindingIndex_ != static_cast<GLint>(blockBinding)) {
 			glUniformBlockBinding(program_, index_, blockBinding);

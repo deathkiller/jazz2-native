@@ -50,7 +50,7 @@ namespace nCine
 
 	GLfloat* Geometry::acquireVertexPointer(std::uint32_t numFloats, std::uint32_t numFloatsAlignment)
 	{
-		ASSERT(vbo_ == nullptr);
+		DEATH_ASSERT(vbo_ == nullptr);
 		hasDirtyVertices_ = true;
 
 		if (sharedVboParams_ != nullptr) {
@@ -68,7 +68,7 @@ namespace nCine
 	/*! This method can only be used when mapping of OpenGL buffers is available */
 	GLfloat* Geometry::acquireVertexPointer()
 	{
-		ASSERT(vbo_ != nullptr);
+		DEATH_ASSERT(vbo_ != nullptr);
 		hasDirtyVertices_ = true;
 
 		if (vboParams_.mapBase == nullptr) {
@@ -124,7 +124,7 @@ namespace nCine
 
 	GLushort* Geometry::acquireIndexPointer(std::uint32_t numIndices)
 	{
-		ASSERT(ibo_ == nullptr);
+		DEATH_ASSERT(ibo_ == nullptr);
 		hasDirtyIndices_ = true;
 
 		if (sharedIboParams_ != nullptr) {
@@ -142,7 +142,7 @@ namespace nCine
 	/*! This method can only be used when mapping of OpenGL buffers is available */
 	GLushort* Geometry::acquireIndexPointer()
 	{
-		ASSERT(ibo_ != nullptr);
+		DEATH_ASSERT(ibo_ != nullptr);
 		hasDirtyIndices_ = true;
 
 		if (iboParams_.mapBase == nullptr) {

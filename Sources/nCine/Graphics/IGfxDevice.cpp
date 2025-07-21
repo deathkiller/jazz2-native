@@ -133,7 +133,7 @@ namespace nCine
 
 	const IGfxDevice::Monitor& IGfxDevice::monitor(unsigned int index) const
 	{
-		ASSERT(index < numMonitors_);
+		DEATH_ASSERT(index < numMonitors_);
 		if (index >= numMonitors_) {
 			index = 0;
 		}

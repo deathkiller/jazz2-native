@@ -37,7 +37,7 @@ namespace nCine
 				uniformBlockCache.SetBlockBinding(uniformBlockCache.GetIndex());
 				const GLintptr offset = static_cast<GLintptr>(uboParams_.offset) + moreOffset;
 #if defined(DEATH_DEBUG)
-				ASSERT(offset % offsetAlignment == 0);
+				DEATH_DEBUG_ASSERT(offset % offsetAlignment == 0);
 #endif
 				uboParams_.object->BindBufferRange(uniformBlockCache.GetBindingIndex(), offset, uniformBlockCache.usedSize());
 				moreOffset += uniformBlockCache.usedSize();
@@ -47,7 +47,7 @@ namespace nCine
 
 	void GLShaderUniformBlocks::SetProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
-		ASSERT(shaderProgram);
+		DEATH_ASSERT(shaderProgram);
 
 		shaderProgram_ = shaderProgram;
 		shaderProgram_->ProcessDeferredQueries();
@@ -60,7 +60,7 @@ namespace nCine
 
 	void GLShaderUniformBlocks::SetUniformsDataPointer(GLubyte* dataPointer)
 	{
-		ASSERT(dataPointer);
+		DEATH_ASSERT(dataPointer);
 
 		if (shaderProgram_->GetStatus() != GLShaderProgram::Status::LinkedWithIntrospection) {
 			return;
@@ -76,7 +76,7 @@ namespace nCine
 
 	GLUniformBlockCache* GLShaderUniformBlocks::GetUniformBlock(const char* name)
 	{
-		ASSERT(name);
+		DEATH_ASSERT(name);
 		GLUniformBlockCache* uniformBlockCache = nullptr;
 
 		if (shaderProgram_ != nullptr) {

@@ -5,6 +5,8 @@
 
 #if defined(WITH_LZ4) || defined(DOXYGEN_GENERATING_OUTPUT)
 
+#include <memory>
+
 #if !defined(CMAKE_BUILD) && defined(__has_include)
 #	if __has_include("lz4/lz4frame.h")
 #		define __HAS_LOCAL_LZ4

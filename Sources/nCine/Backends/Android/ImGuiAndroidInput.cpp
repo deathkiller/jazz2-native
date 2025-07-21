@@ -244,7 +244,7 @@ namespace nCine::Backends
 				}
 
 				if ((eventSource & AINPUT_SOURCE_MOUSE) == AINPUT_SOURCE_MOUSE) {
-					LOGE_X("KEYCODE: %u", eventKeyCode);
+					LOGE("KEYCODE: {}", eventKeyCode);
 					if (eventKeyCode == AKEYCODE_BACK) {
 						io.AddMouseButtonEvent(1, eventAction == AKEY_EVENT_ACTION_DOWN);
 						LOGE("BACK BUTTON");

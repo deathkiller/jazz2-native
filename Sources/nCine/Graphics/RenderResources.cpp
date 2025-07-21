@@ -77,7 +77,7 @@ namespace nCine
 
 	bool RenderResources::unregisterBatchedShader(const GLShaderProgram* shader)
 	{
-		ASSERT(shader != nullptr);
+		DEATH_ASSERT(shader != nullptr);
 		return (batchedShaders_.erase(shader) > 0);
 	}
 
@@ -183,9 +183,9 @@ namespace nCine
 	void RenderResources::createMinimal()
 	{
 		// `createMinimal()` cannot be called after `create()`
-		ASSERT(binaryShaderCache_ == nullptr);
-		ASSERT(buffersManager_ == nullptr);
-		ASSERT(vaoPool_ == nullptr);
+		DEATH_ASSERT(binaryShaderCache_ == nullptr);
+		DEATH_ASSERT(buffersManager_ == nullptr);
+		DEATH_ASSERT(vaoPool_ == nullptr);
 	
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
@@ -309,8 +309,8 @@ namespace nCine
 			bool vertexCompiled = shaderToLoad.shaderProgram->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(vertexStrings, stringsCount), vertexPath);
 			bool fragmentCompiled = shaderToLoad.shaderProgram->AttachShaderFromFile(GL_FRAGMENT_SHADER, fragmentPath);
 #endif
-			ASSERT(vertexCompiled);
-			ASSERT(fragmentCompiled);
+			DEATH_ASSERT(vertexCompiled);
+			DEATH_ASSERT(fragmentCompiled);
 			
 			shaderToLoad.shaderProgram->SetObjectLabel(shaderToLoad.shaderName);
 
@@ -373,7 +373,7 @@ namespace nCine
 			shaderProgram.reset(nullptr);
 		}
 
-		ASSERT(cameraUniformDataMap_.empty());
+		DEATH_ASSERT(cameraUniformDataMap_.empty());
 
 		defaultCamera_.reset(nullptr);
 		renderBatcher_.reset(nullptr);

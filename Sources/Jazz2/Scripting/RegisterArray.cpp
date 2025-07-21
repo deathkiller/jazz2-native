@@ -175,7 +175,7 @@ namespace Jazz2::Scripting
 			// thus there is no need to garbage collect them
 			dontGarbageCollect = true;
 		} else {
-			ASSERT(typeId & asTYPEID_OBJHANDLE);
+			DEATH_ASSERT(typeId & asTYPEID_OBJHANDLE);
 
 			// It is not necessary to set the array as garbage collected for all handle types.
 			// If it is possible to determine that the handle cannot refer to an object type
@@ -322,7 +322,7 @@ namespace Jazz2::Scripting
 	CScriptArray::CScriptArray(asITypeInfo* ti, void* buf)
 	{
 		// The object type should be the template instance of the array
-		ASSERT(ti != nullptr && StringView(ti->GetName()) == "array"_s);
+		DEATH_ASSERT(ti != nullptr && StringView(ti->GetName()) == "array"_s);
 
 		refCount = 1;
 		gcFlag = false;
@@ -411,7 +411,7 @@ namespace Jazz2::Scripting
 	CScriptArray::CScriptArray(std::uint32_t length, asITypeInfo* ti)
 	{
 		// The object type should be the template instance of the array
-		ASSERT(ti != nullptr && StringView(ti->GetName()) == "array"_s);
+		DEATH_ASSERT(ti != nullptr && StringView(ti->GetName()) == "array"_s);
 
 		refCount = 1;
 		gcFlag = false;
@@ -467,7 +467,7 @@ namespace Jazz2::Scripting
 	CScriptArray::CScriptArray(std::uint32_t length, void* defVal, asITypeInfo* ti)
 	{
 		// The object type should be the template instance of the array
-		ASSERT(ti != nullptr && StringView(ti->GetName()) == "array"_s);
+		DEATH_ASSERT(ti != nullptr && StringView(ti->GetName()) == "array"_s);
 
 		refCount = 1;
 		gcFlag = false;
@@ -1080,14 +1080,14 @@ namespace Jazz2::Scripting
 			// Execute object opEquals if available
 			if (cache != nullptr && cache->eqFunc != nullptr) {
 				// TODO: Add proper error handling
-				r = ctx->Prepare(cache->eqFunc); ASSERT(r >= 0);
+				r = ctx->Prepare(cache->eqFunc); DEATH_ASSERT(r >= 0);
 
 				if (subTypeId & asTYPEID_OBJHANDLE) {
-					r = ctx->SetObject(*((void**)a)); ASSERT(r >= 0);
-					r = ctx->SetArgObject(0, *((void**)b)); ASSERT(r >= 0);
+					r = ctx->SetObject(*((void**)a)); DEATH_ASSERT(r >= 0);
+					r = ctx->SetArgObject(0, *((void**)b)); DEATH_ASSERT(r >= 0);
 				} else {
-					r = ctx->SetObject((void*)a); ASSERT(r >= 0);
-					r = ctx->SetArgObject(0, (void*)b); ASSERT(r >= 0);
+					r = ctx->SetObject((void*)a); DEATH_ASSERT(r >= 0);
+					r = ctx->SetArgObject(0, (void*)b); DEATH_ASSERT(r >= 0);
 				}
 
 				r = ctx->Execute();
@@ -1101,14 +1101,14 @@ namespace Jazz2::Scripting
 			// Execute object opCmp if available
 			if (cache != nullptr && cache->cmpFunc != nullptr) {
 				// TODO: Add proper error handling
-				r = ctx->Prepare(cache->cmpFunc); ASSERT(r >= 0);
+				r = ctx->Prepare(cache->cmpFunc); DEATH_ASSERT(r >= 0);
 
 				if (subTypeId & asTYPEID_OBJHANDLE) {
-					r = ctx->SetObject(*((void**)a)); ASSERT(r >= 0);
-					r = ctx->SetArgObject(0, *((void**)b)); ASSERT(r >= 0);
+					r = ctx->SetObject(*((void**)a)); DEATH_ASSERT(r >= 0);
+					r = ctx->SetArgObject(0, *((void**)b)); DEATH_ASSERT(r >= 0);
 				} else {
-					r = ctx->SetObject((void*)a); ASSERT(r >= 0);
-					r = ctx->SetArgObject(0, (void*)b); ASSERT(r >= 0);
+					r = ctx->SetObject((void*)a); DEATH_ASSERT(r >= 0);
+					r = ctx->SetArgObject(0, (void*)b); DEATH_ASSERT(r >= 0);
 				}
 
 				r = ctx->Execute();
@@ -1401,9 +1401,9 @@ namespace Jazz2::Scripting
 					// Execute object opCmp
 					if (cmpFunc) {
 						// TODO: Add proper error handling
-						r = cmpContext->Prepare(cmpFunc); ASSERT(r >= 0);
-						r = cmpContext->SetObject(a); ASSERT(r >= 0);
-						r = cmpContext->SetArgObject(0, b); ASSERT(r >= 0);
+						r = cmpContext->Prepare(cmpFunc); DEATH_ASSERT(r >= 0);
+						r = cmpContext->SetObject(a); DEATH_ASSERT(r >= 0);
+						r = cmpContext->SetArgObject(0, b); DEATH_ASSERT(r >= 0);
 						r = cmpContext->Execute();
 
 						if (r == asEXECUTION_FINISHED) {

@@ -136,8 +136,8 @@ namespace nCine
 		GLDebug::ScopedGroup scoped("RenderBuffersManager::remap()"_s);
 
 		for (ManagedBuffer& buffer : buffers_) {
-			ASSERT(buffer.freeSpace == buffer.size);
-			ASSERT(buffer.mapBase == nullptr);
+			DEATH_ASSERT(buffer.freeSpace == buffer.size);
+			DEATH_ASSERT(buffer.mapBase == nullptr);
 
 			if (specs_[std::int32_t(buffer.type)].mapFlags == 0) {
 				buffer.object->BufferData(buffer.size, nullptr, specs_[std::int32_t(buffer.type)].usageFlags);

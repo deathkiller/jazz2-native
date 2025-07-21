@@ -82,7 +82,7 @@ namespace nCine
 			}
 
 			const bool bindChanged = vaoPool_[index].object->Bind();
-			ASSERT(bindChanged || vaoPool_.size() == 1);
+			DEATH_ASSERT(bindChanged || vaoPool_.size() == 1);
 			// Binding a VAO changes the current bound element array buffer
 			const GLuint oldIboHandle = vaoPool_[index].format.GetIbo() ? vaoPool_[index].format.GetIbo()->GetGLHandle() : 0;
 			GLBufferObject::SetBoundHandle(GL_ELEMENT_ARRAY_BUFFER, oldIboHandle);

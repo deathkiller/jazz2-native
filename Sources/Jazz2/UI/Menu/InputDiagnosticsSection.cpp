@@ -107,9 +107,9 @@ namespace Jazz2::UI::Menu
 		std::int32_t numHats = input.joyNumHats(_selectedIndex);
 
 		char buffer[128];
-		formatString(buffer, "%s (%i axes, %i buttons, %i hats)", joyName, numAxes, numButtons, numHats);
+		std::size_t length = formatInto(buffer, "{} ({} axes, {} buttons, {} hats)", joyName, numAxes, numButtons, numHats);
 
-		std::size_t joyNameStringLength = Utf8::GetLength(buffer);
+		std::size_t joyNameStringLength = Utf8::GetLength({ buffer, length });
 		float xMultiplier = joyNameStringLength * 0.5f;
 		float easing = IMenuContainer::EaseOutElastic(_animation);
 		float x = center.X * 0.4f + xMultiplier - easing * xMultiplier;
@@ -117,72 +117,72 @@ namespace Jazz2::UI::Menu
 
 		_root->DrawElement(MenuGlow, 0, center.X * 0.4f + (joyNameStringLength + 3) * 3.2f, topLine + 20.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.36f * size), 0.6f * (joyNameStringLength + 3), 6.0f, true, true);
 
-		_root->DrawStringShadow(buffer, charOffset, x, topLine + 20.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow({ buffer, length }, charOffset, x, topLine + 20.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::RandomColor, size, 0.4f, 0.6f, 0.6f, 0.6f, 0.88f);
 
 		JoystickGuid joyGuid = input.joyGuid(_selectedIndex);
 		if (joyGuid == JoystickGuidType::Default) {
-			copyStringFirst(buffer, "GUID: default");
+			length = copyStringFirst(buffer, "GUID: default");
 		} else if (joyGuid == JoystickGuidType::Hidapi) {
-			copyStringFirst(buffer, "GUID: hidapi");
+			length = copyStringFirst(buffer, "GUID: hidapi");
 		} else if (joyGuid == JoystickGuidType::Xinput) {
-			copyStringFirst(buffer, "GUID: xinput");
+			length = copyStringFirst(buffer, "GUID: xinput");
 		} else {
 			const std::uint8_t* g = joyGuid.data;
-			formatString(buffer, "GUID: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%s",
+			length = formatInto(buffer, "GUID: {:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{}",
 				g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7],
 				g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15],
-				input.hasMappingByGuid(joyGuid) ? "" : (input.hasMappingByName(joyName) ? " (similar mapping)" : " (no mapping)"));
+				input.hasMappingByGuid(joyGuid) ? ""_s : (input.hasMappingByName(joyName) ? " (similar mapping)"_s : " (no mapping)"_s));
 		}
 
-		_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f, topLine + 40.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow({ buffer, length }, charOffset, center.X * 0.4f, topLine + 40.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
-		_root->DrawStringShadow("Mapped State", charOffset, center.X * 0.4f, topLine + 60.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("Mapped State"_s, charOffset, center.X * 0.4f, topLine + 60.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
-		PrintAxisValue("LX", mappedState.axisValue(AxisName::LeftX), center.X * 0.4f, topLine + 75.0f);
-		PrintAxisValue("LY", mappedState.axisValue(AxisName::LeftY), center.X * 0.4f + 110.0f, topLine + 75.0f);
-		PrintAxisValue("RX", mappedState.axisValue(AxisName::RightX), center.X * 0.4f + 220.0f, topLine + 75.0f);
-		PrintAxisValue("RY", mappedState.axisValue(AxisName::RightY), center.X * 0.4f + 330.0f, topLine + 75.0f);
-		PrintAxisValue("LT", mappedState.axisValue(AxisName::LeftTrigger), center.X * 0.4f, topLine + 90.0f);
-		PrintAxisValue("RT", mappedState.axisValue(AxisName::RightTrigger), center.X * 0.4f + 110.0f, topLine + 90.0f);
+		PrintAxisValue("LX"_s, mappedState.axisValue(AxisName::LeftX), center.X * 0.4f, topLine + 75.0f);
+		PrintAxisValue("LY"_s, mappedState.axisValue(AxisName::LeftY), center.X * 0.4f + 110.0f, topLine + 75.0f);
+		PrintAxisValue("RX"_s, mappedState.axisValue(AxisName::RightX), center.X * 0.4f + 220.0f, topLine + 75.0f);
+		PrintAxisValue("RY"_s, mappedState.axisValue(AxisName::RightY), center.X * 0.4f + 330.0f, topLine + 75.0f);
+		PrintAxisValue("LT"_s, mappedState.axisValue(AxisName::LeftTrigger), center.X * 0.4f, topLine + 90.0f);
+		PrintAxisValue("RT"_s, mappedState.axisValue(AxisName::RightTrigger), center.X * 0.4f + 110.0f, topLine + 90.0f);
 
-		std::int32_t buttonsLength = 0;
-		buffer[0] = '\0';
-		if (mappedState.isButtonPressed(ButtonName::A)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "A ");
-		if (mappedState.isButtonPressed(ButtonName::B)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "B ");
-		if (mappedState.isButtonPressed(ButtonName::X)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "X ");
-		if (mappedState.isButtonPressed(ButtonName::Y)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Y ");
-		if (mappedState.isButtonPressed(ButtonName::LeftBumper)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "LB ");
-		if (mappedState.isButtonPressed(ButtonName::RightBumper)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "RB ");
-		if (mappedState.isButtonPressed(ButtonName::LeftStick)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "LS ");
-		if (mappedState.isButtonPressed(ButtonName::RightStick)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "RS ");
-		if (mappedState.isButtonPressed(ButtonName::Back)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Back ");
-		if (mappedState.isButtonPressed(ButtonName::Guide)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Guide ");
-		if (mappedState.isButtonPressed(ButtonName::Start)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Start ");
-		if (mappedState.isButtonPressed(ButtonName::Up)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Up ");
-		if (mappedState.isButtonPressed(ButtonName::Down)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Down ");
-		if (mappedState.isButtonPressed(ButtonName::Left)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Left ");
-		if (mappedState.isButtonPressed(ButtonName::Right)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Right ");
-		if (mappedState.isButtonPressed(ButtonName::Misc1)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Misc1 ");
-		if (mappedState.isButtonPressed(ButtonName::Paddle1)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Paddle1 ");
-		if (mappedState.isButtonPressed(ButtonName::Paddle2)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Paddle2 ");
-		if (mappedState.isButtonPressed(ButtonName::Paddle3)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Paddle3 ");
-		if (mappedState.isButtonPressed(ButtonName::Paddle4)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Paddle4 ");
-		if (mappedState.isButtonPressed(ButtonName::Touchpad)) buttonsLength += formatString(buffer + buttonsLength, sizeof(buffer) - buttonsLength, "Touchpad ");
+		MutableStringView bufferView = { buffer, sizeof(buffer) };
+		std::size_t buttonsLength = 0;
+		if (mappedState.isButtonPressed(ButtonName::A)) AppendPressedButton(bufferView, buttonsLength, "A"_s);
+		if (mappedState.isButtonPressed(ButtonName::B)) AppendPressedButton(bufferView, buttonsLength, "B"_s);
+		if (mappedState.isButtonPressed(ButtonName::X)) AppendPressedButton(bufferView, buttonsLength, "X"_s);
+		if (mappedState.isButtonPressed(ButtonName::Y)) AppendPressedButton(bufferView, buttonsLength, "Y"_s);
+		if (mappedState.isButtonPressed(ButtonName::LeftBumper)) AppendPressedButton(bufferView, buttonsLength, "LB"_s);
+		if (mappedState.isButtonPressed(ButtonName::RightBumper)) AppendPressedButton(bufferView, buttonsLength, "RB"_s);
+		if (mappedState.isButtonPressed(ButtonName::LeftStick)) AppendPressedButton(bufferView, buttonsLength, "LS"_s);
+		if (mappedState.isButtonPressed(ButtonName::RightStick)) AppendPressedButton(bufferView, buttonsLength, "RS"_s);
+		if (mappedState.isButtonPressed(ButtonName::Back)) AppendPressedButton(bufferView, buttonsLength, "Back"_s);
+		if (mappedState.isButtonPressed(ButtonName::Guide)) AppendPressedButton(bufferView, buttonsLength, "Guide"_s);
+		if (mappedState.isButtonPressed(ButtonName::Start)) AppendPressedButton(bufferView, buttonsLength, "Start"_s);
+		if (mappedState.isButtonPressed(ButtonName::Up)) AppendPressedButton(bufferView, buttonsLength, "Up"_s);
+		if (mappedState.isButtonPressed(ButtonName::Down)) AppendPressedButton(bufferView, buttonsLength, "Down"_s);
+		if (mappedState.isButtonPressed(ButtonName::Left)) AppendPressedButton(bufferView, buttonsLength, "Left"_s);
+		if (mappedState.isButtonPressed(ButtonName::Right)) AppendPressedButton(bufferView, buttonsLength, "Right"_s);
+		if (mappedState.isButtonPressed(ButtonName::Misc1)) AppendPressedButton(bufferView, buttonsLength, "Misc1"_s);
+		if (mappedState.isButtonPressed(ButtonName::Paddle1)) AppendPressedButton(bufferView, buttonsLength, "Paddle1"_s);
+		if (mappedState.isButtonPressed(ButtonName::Paddle2)) AppendPressedButton(bufferView, buttonsLength, "Paddle2"_s);
+		if (mappedState.isButtonPressed(ButtonName::Paddle3)) AppendPressedButton(bufferView, buttonsLength, "Paddle3"_s);
+		if (mappedState.isButtonPressed(ButtonName::Paddle4)) AppendPressedButton(bufferView, buttonsLength, "Paddle4"_s);
+		if (mappedState.isButtonPressed(ButtonName::Touchpad)) AppendPressedButton(bufferView, buttonsLength, "Touchpad"_s);
 
-		_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f, topLine + 105.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow({ buffer, buttonsLength }, charOffset, center.X * 0.4f, topLine + 105.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
 		charOffset = 0;
-		_root->DrawStringShadow("Raw State", charOffset, center.X * 0.4f, topLine + 125.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("Raw State"_s, charOffset, center.X * 0.4f, topLine + 125.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 
 		float sx = 0, sy = 0;
 		for (std::int32_t i = 0; i < numAxes; i++) {
-			formatString(buffer, "a%i", i);
-			PrintAxisValue(buffer, rawState.axisValue(i), center.X * 0.4f + sx, topLine + 140.0f + sy);
+			length = formatInto(buffer, "a{}", i);
+			PrintAxisValue({ buffer, length }, rawState.axisValue(i), center.X * 0.4f + sx, topLine + 140.0f + sy);
 			sx += 110.0f;
 			if (sx >= 340.0f) {
 				sx = 0.0f;
@@ -196,8 +196,8 @@ namespace Jazz2::UI::Menu
 		}
 
 		for (std::int32_t i = 0; i < numButtons; i++) {
-			formatString(buffer, "b%i: %i", i, rawState.isButtonPressed(i) ? 1 : 0);
-			_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f + sx, topLine + 140.0f + sy, IMenuContainer::FontLayer,
+			length = formatInto(buffer, "b{}: {}", i, rawState.isButtonPressed(i) ? 1 : 0);
+			_root->DrawStringShadow({ buffer, length }, charOffset, center.X * 0.4f + sx, topLine + 140.0f + sy, IMenuContainer::FontLayer,
 				Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 			sx += 55.0f;
 			if (sx >= 340.0f) {
@@ -212,8 +212,8 @@ namespace Jazz2::UI::Menu
 		}
 
 		for (std::int32_t i = 0; i < numHats; i++) {
-			formatString(buffer, "h%i: %i", i, rawState.hatState(i));
-			_root->DrawStringShadow(buffer, charOffset, center.X * 0.4f + sx, topLine + 140.0f + sy, IMenuContainer::FontLayer,
+			length = formatInto(buffer, "h{}: {}", i, rawState.hatState(i));
+			_root->DrawStringShadow({ buffer, length }, charOffset, center.X * 0.4f + sx, topLine + 140.0f + sy, IMenuContainer::FontLayer,
 				Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
 			sx += 55.0f;
 			if (sx >= 340.0f) {
@@ -299,13 +299,25 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void InputDiagnosticsSection::PrintAxisValue(const char* name, float value, float x, float y)
+	void InputDiagnosticsSection::PrintAxisValue(StringView name, float value, float x, float y)
 	{
 		char text[64];
-		formatString(text, "%s: %0.2f", name, value);
+		std::size_t length = formatInto(text, "{}: {:.2f}", name, value);
 
 		std::int32_t charOffset = 0;
-		_root->DrawStringShadow(text, charOffset, x, y, IMenuContainer::FontLayer,
+		_root->DrawStringShadow({ text, length }, charOffset, x, y, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.88f);
+	}
+
+	void InputDiagnosticsSection::AppendPressedButton(MutableStringView output, std::size_t& offset, StringView name)
+	{
+		std::size_t length = name.size();
+		if (offset + length + 1 < output.size()) {
+			if (offset > 0) {
+				output[offset++] = ' ';
+			}
+			std::memcpy(&output[offset], name.data(), length);
+			offset += length;
+		}
 	}
 }

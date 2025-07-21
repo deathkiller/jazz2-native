@@ -35,8 +35,8 @@ namespace nCine
 			maxBatchSize = renderingSettings.maxBatchSize;
 		}
 
-		ASSERT(minBatchSize > 1);
-		ASSERT(maxBatchSize >= minBatchSize);
+		DEATH_ASSERT(minBatchSize > 1);
+		DEATH_ASSERT(maxBatchSize >= minBatchSize);
 
 		std::uint32_t lastSplit = 0;
 
@@ -115,7 +115,7 @@ namespace nCine
 		SmallVectorImpl<RenderCommand*>::const_iterator end,
 		SmallVectorImpl<RenderCommand*>::const_iterator& nextStart)
 	{
-		ASSERT(end > start);
+		DEATH_ASSERT(end > start);
 
 		const RenderCommand* refCommand = *start;
 		RenderCommand* batchCommand = nullptr;
@@ -155,7 +155,7 @@ namespace nCine
 			}
 
 			GLUniformBlockCache* batchBlock = batchCommand->material().uniformBlock(uniformBlockName);
-			ASSERT(batchBlock);
+			DEATH_ASSERT(batchBlock);
 			if (batchBlock) {
 				nonInstancesBlocksSize += uniformBlockCache.GetSize() - uniformBlockCache.GetAlignAmount();
 			}
@@ -191,7 +191,7 @@ namespace nCine
 
 			GLUniformBlockCache* batchBlock = batchCommand->material().uniformBlock(uniformBlockName);
 			const bool dataCopied = batchBlock->CopyData(uniformBlockCache.GetDataPointer());
-			ASSERT(dataCopied);
+			DEATH_ASSERT(dataCopied);
 			batchBlock->SetUsedSize(uniformBlockCache.usedSize());
 		}
 
@@ -280,7 +280,7 @@ namespace nCine
 
 			const GLUniformBlockCache* singleInstanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
 			const bool dataCopied = instancesBlock->CopyData(instancesBlockOffset, singleInstanceBlock->GetDataPointer(), singleInstanceBlockSize);
-			ASSERT(dataCopied);
+			DEATH_ASSERT(dataCopied);
 			instancesBlockOffset += singleInstanceBlockSize;
 
 			if (batchedShaderHasAttributes) {

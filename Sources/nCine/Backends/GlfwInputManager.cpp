@@ -213,7 +213,7 @@ namespace nCine::Backends
 
 	bool GlfwInputManager::isJoyPresent(int joyId) const
 	{
-		ASSERT(joyId >= 0);
+		DEATH_ASSERT(joyId >= 0);
 		return (GLFW_JOYSTICK_1 + joyId <= GLFW_JOYSTICK_LAST && glfwJoystickPresent(GLFW_JOYSTICK_1 + joyId) != 0);
 	}
 

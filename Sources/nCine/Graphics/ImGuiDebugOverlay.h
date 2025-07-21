@@ -31,7 +31,7 @@ namespace nCine
 		void updateFrameTimings() override;
 
 #if defined(DEATH_TRACE)
-		void log(TraceLevel level, StringView time, StringView threadId, StringView message) override;
+		void log(TraceLevel level, StringView time, StringView threadId, StringView functionName, StringView message) override;
 #endif
 
 	private:
@@ -79,6 +79,7 @@ namespace nCine
 			String Time;
 			String Text;
 			String ThreadId;
+			StringView FunctionName;
 			TraceLevel Level;
 		};
 #endif
