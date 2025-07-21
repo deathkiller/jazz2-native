@@ -269,7 +269,7 @@ namespace nCine::Backends
 
 		AndroidJniClass_Display displays[MaxMonitors];
 		const int monitorCount = AndroidJniWrap_DisplayManager::getDisplays(displays, MaxMonitors);
-		ASSERT(monitorCount >= 1);
+		DEATH_ASSERT(monitorCount >= 1);
 		numMonitors_ = (monitorCount < MaxMonitors) ? monitorCount : MaxMonitors;
 
 		for (unsigned int i = 0; i < numMonitors_; i++) {
