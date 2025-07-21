@@ -2636,7 +2636,7 @@ msgstr ""
 "\n"
 "\n"
 "O seu cliente não contém a fase \"{}\".\n"
-"Por favor, baixe o arquivo necessário e tente novamente."
+"Por favor, baixe os arquivos necessários e tente novamente."
 
 #~ msgid "Error"
 #~ msgstr "Erro"
