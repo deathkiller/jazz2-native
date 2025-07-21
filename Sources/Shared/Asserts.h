@@ -138,7 +138,7 @@ inline typename std::enable_if<(sizeof...(Args) > 0), void>::type
 	the @ref Asserts.h header.
 */
 #if !defined(DEATH_ASSERT)
-#	if defined(DEATH_NO_ASSERT) || (!defined(DEATH_STANDARD_ASSERT) && !defined(DEATH_TRACE))
+#	if defined(DEATH_NO_ASSERT) || (!defined(DEATH_STANDARD_ASSERT) && !defined(DEATH_TRACE)) || defined(DOXYGEN_GENERATING_OUTPUT)
 #		define DEATH_ASSERT(condition, ...) do {} while (false)
 #	elif defined(DEATH_STANDARD_ASSERT)
 #		define DEATH_ASSERT(condition, ...) assert(condition)
