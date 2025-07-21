@@ -69,11 +69,20 @@ namespace Death { namespace Trace {
 		}
 
 		RdtscClock::RdtscClock(std::chrono::nanoseconds resyncInterval)
-			: _resyncIntervalTicks(static_cast<std::int64_t>(static_cast<double>(resyncInterval.count()) *
-				RdtscTicks::instance().nanosecondsPerTick())), _resyncIntervalOriginal(_resyncIntervalTicks),
-				_nanosecondsPerTick(RdtscTicks::instance().nanosecondsPerTick()), _version(0) 
+			: _nanosecondsPerTick(RdtscTicks::instance().nanosecondsPerTick())
 
 		{
+			const double calcValue = static_cast<double>(resyncInterval.count()) * _nanosecondsPerTick;
+
+			// Check for overflow and negative values
+			if (calcValue >= static_cast<double>(std::numeric_limits<std::int64_t>::max()) || calcValue < 0) {
+				_resyncIntervalTicks = std::numeric_limits<std::int64_t>::max();
+			} else {
+				_resyncIntervalTicks = static_cast<std::int64_t>(calcValue);
+			}
+
+			_resyncIntervalOriginal = _resyncIntervalTicks;
+
 			if (!resync(2500)) {
 				// Try to resync again with higher lag
 				if (!resync(10000)) {

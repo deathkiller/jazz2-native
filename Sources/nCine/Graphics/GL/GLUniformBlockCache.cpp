@@ -12,7 +12,7 @@ namespace nCine
 	GLUniformBlockCache::GLUniformBlockCache(GLUniformBlock* uniformBlock)
 		: uniformBlock_(uniformBlock), dataPointer_(nullptr), usedSize_(0)
 	{
-		ASSERT(uniformBlock);
+		DEATH_ASSERT(uniformBlock);
 		usedSize_ = uniformBlock->GetSize();
 
 		static_assert(UniformHashSize >= GLUniformBlock::BlockUniformHashSize, "Uniform cache is smaller than the number of uniforms");

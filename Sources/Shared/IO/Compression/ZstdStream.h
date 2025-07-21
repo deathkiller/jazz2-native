@@ -5,6 +5,8 @@
 
 #if defined(WITH_ZSTD) || defined(DOXYGEN_GENERATING_OUTPUT)
 
+#include <memory>
+
 #if !defined(CMAKE_BUILD) && defined(__has_include)
 #	if __has_include("zstd/zstd.h")
 #		define __HAS_LOCAL_ZSTD

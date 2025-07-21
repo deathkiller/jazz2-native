@@ -140,14 +140,14 @@ namespace nCine
 		template<class T>
 		inline T& Vector2<T>::operator[](std::size_t index)
 		{
-			ASSERT(index < 2);
+			DEATH_ASSERT(index < 2);
 			return (&X)[index];
 		}
 
 		template<class T>
 		inline const T& Vector2<T>::operator[](std::size_t index) const
 		{
-			ASSERT(index < 2);
+			DEATH_ASSERT(index < 2);
 			return (&X)[index];
 		}
 

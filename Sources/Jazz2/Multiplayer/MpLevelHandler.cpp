@@ -2653,12 +2653,12 @@ namespace Jazz2::Multiplayer
 		if (!peer.IsValid()) {
 			if (ContentResolver::Get().IsHeadless()) {
 				switch (level) {
-					default: __DEATH_TRACE_PROXY(TraceLevel::Info, {}, "< │ {}", message); break;
-					case UI::MessageLevel::Echo: __DEATH_TRACE_PROXY(TraceLevel::Info, {}, "> │ {}", message); break;
-					case UI::MessageLevel::Warning: __DEATH_TRACE_PROXY(TraceLevel::Warning, {}, "< │ {}", message); break;
-					case UI::MessageLevel::Error: __DEATH_TRACE_PROXY(TraceLevel::Error, {}, "< │ {}", message); break;
-					case UI::MessageLevel::Assert: __DEATH_TRACE_PROXY(TraceLevel::Assert, {}, "< │ {}", message); break;
-					case UI::MessageLevel::Fatal: __DEATH_TRACE_PROXY(TraceLevel::Fatal, {}, "< │ {}", message); break;
+					default: __DEATH_TRACE(TraceLevel::Info, {}, "< │ {}", message); break;
+					case UI::MessageLevel::Echo: __DEATH_TRACE(TraceLevel::Info, {}, "> │ {}", message); break;
+					case UI::MessageLevel::Warning: __DEATH_TRACE(TraceLevel::Warning, {}, "< │ {}", message); break;
+					case UI::MessageLevel::Error: __DEATH_TRACE(TraceLevel::Error, {}, "< │ {}", message); break;
+					case UI::MessageLevel::Assert: __DEATH_TRACE(TraceLevel::Assert, {}, "< │ {}", message); break;
+					case UI::MessageLevel::Fatal: __DEATH_TRACE(TraceLevel::Fatal, {}, "< │ {}", message); break;
 				}
 			} else {
 				_console->WriteLine(UI::MessageLevel::Info, message);
@@ -5949,29 +5949,29 @@ namespace Jazz2::Multiplayer
 		ImGui::Begin("Multiplayer Debug", nullptr);
 
 		ImGui::PlotLines("Update Packet Size", _updatePacketSize, PlotValueCount, _plotIndex, nullptr, 0.0f, _updatePacketMaxSize, ImVec2(appWidth * 0.2f, 40.0f));
-		ImGui::SameLine(360.0f);
+		ImGui::SameLine(600.0f);
 		ImGui::Text("%.0f bytes", _updatePacketSize[_plotIndex]);
 
 		ImGui::PlotLines("Update Packet Size Compressed", _compressedUpdatePacketSize, PlotValueCount, _plotIndex, nullptr, 0.0f, _updatePacketMaxSize, ImVec2(appWidth * 0.2f, 40.0f));
-		ImGui::SameLine(360.0f);
+		ImGui::SameLine(600.0f);
 		ImGui::Text("%.0f bytes", _compressedUpdatePacketSize[_plotIndex]);
 
 		ImGui::Separator();
 
 		ImGui::PlotLines("Actors", _actorsCount, PlotValueCount, _plotIndex, nullptr, 0.0f, _actorsMaxCount, ImVec2(appWidth * 0.2f, 40.0f));
-		ImGui::SameLine(360.0f);
+		ImGui::SameLine(600.0f);
 		ImGui::Text("%.0f", _actorsCount[_plotIndex]);
 
 		ImGui::PlotLines("Remote Actors", _remoteActorsCount, PlotValueCount, _plotIndex, nullptr, 0.0f, _actorsMaxCount, ImVec2(appWidth * 0.2f, 40.0f));
-		ImGui::SameLine(360.0f);
+		ImGui::SameLine(600.0f);
 		ImGui::Text("%.0f", _remoteActorsCount[_plotIndex]);
 
 		ImGui::PlotLines("Mirrored Actors", _mirroredActorsCount, PlotValueCount, _plotIndex, nullptr, 0.0f, _actorsMaxCount, ImVec2(appWidth * 0.2f, 40.0f));
-		ImGui::SameLine(360.0f);
+		ImGui::SameLine(600.0f);
 		ImGui::Text("%.0f", _mirroredActorsCount[_plotIndex]);
 
 		ImGui::PlotLines("Remoting Actors", _remotingActorsCount, PlotValueCount, _plotIndex, nullptr, 0.0f, _actorsMaxCount, ImVec2(appWidth * 0.2f, 40.0f));
-		ImGui::SameLine(360.0f);
+		ImGui::SameLine(600.0f);
 		ImGui::Text("%.0f", _remotingActorsCount[_plotIndex]);
 
 		ImGui::Text("Last spawned ID: %u", _lastSpawnedActorId);
@@ -5979,62 +5979,45 @@ namespace Jazz2::Multiplayer
 		ImGui::SeparatorText("Peers");
 
 		ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInner | ImGuiTableFlags_NoPadOuterX;
-		if (ImGui::BeginTable("peers", 6, flags, ImVec2(0.0f, 0.0f))) {
+		if (ImGui::BeginTable("peers", 8, flags, ImVec2(0.0f, 0.0f))) {
 			ImGui::TableSetupColumn("Peer");
 			ImGui::TableSetupColumn("Player Index");
 			ImGui::TableSetupColumn("State");
 			ImGui::TableSetupColumn("Last Updated");
 			ImGui::TableSetupColumn("X");
 			ImGui::TableSetupColumn("Y");
-			ImGui::TableHeadersRow();
-			
-			for (auto& [peer, desc] : _peerDesc) {
-				ImGui::TableNextRow();
-
-				ImGui::TableSetColumnIndex(0);
-				ImGui::Text("0x%p", peer._enet);
-
-				ImGui::TableSetColumnIndex(1);
-				ImGui::Text("%u", desc.Player != nullptr ? desc.Player->GetPlayerIndex() : -1);
-
-				ImGui::TableSetColumnIndex(2);
-				ImGui::Text("0x%x", desc.State);
-
-				ImGui::TableSetColumnIndex(3);
-				ImGui::Text("%u", desc.LastUpdated);
-
-				ImGui::TableSetColumnIndex(4);
-				ImGui::Text("%.2f", desc.Player != nullptr ? desc.Player->GetPos().X : -1.0f);
-
-				ImGui::TableSetColumnIndex(5);
-				ImGui::Text("%.2f", desc.Player != nullptr ? desc.Player->GetPos().Y : -1.0f);
-			}
-			ImGui::EndTable();
-		}
-
-		ImGui::SeparatorText("Player States");
-
-		if (ImGui::BeginTable("playerStates", 4, flags, ImVec2(0.0f, 0.0f))) {
-			ImGui::TableSetupColumn("Player Index");
 			ImGui::TableSetupColumn("Flags");
 			ImGui::TableSetupColumn("Pressed");
-			ImGui::TableSetupColumn("Pressed (Last)");
 			ImGui::TableHeadersRow();
-
-			for (auto& [playerIdx, state] : _playerStates) {
+			
+			for (auto& [peer, desc] : *_networkManager->GetPeers()) {
 				ImGui::TableNextRow();
 
 				ImGui::TableSetColumnIndex(0);
-				ImGui::Text("%u", playerIdx);
+				ImGui::Text("0x%08x", peer._enet);
 
 				ImGui::TableSetColumnIndex(1);
-				ImGui::Text("0x%08x", state.Flags);
+				ImGui::Text("%u", desc->Player != nullptr ? desc->Player->GetPlayerIndex() : -1);
 
 				ImGui::TableSetColumnIndex(2);
-				ImGui::Text("0x%08x", state.PressedKeys);
+				ImGui::Text("0x%x", desc->LevelState);
 
 				ImGui::TableSetColumnIndex(3);
-				ImGui::Text("0x%08x", state.PressedKeysLast);
+				ImGui::Text("%u", desc->LastUpdated);
+
+				ImGui::TableSetColumnIndex(4);
+				ImGui::Text("%.2f", desc->Player != nullptr ? desc->Player->GetPos().X : -1.0f);
+
+				ImGui::TableSetColumnIndex(5);
+				ImGui::Text("%.2f", desc->Player != nullptr ? desc->Player->GetPos().Y : -1.0f);
+
+				if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(desc->Player)) {
+					ImGui::TableSetColumnIndex(6);
+					ImGui::Text("0x%02x", remotePlayerOnServer->Flags);
+
+					ImGui::TableSetColumnIndex(7);
+					ImGui::Text("0x%04x", remotePlayerOnServer->PressedKeys);
+				}
 			}
 			ImGui::EndTable();
 		}

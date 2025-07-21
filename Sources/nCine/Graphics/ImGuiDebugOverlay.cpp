@@ -222,9 +222,9 @@ namespace nCine
 	}
 
 #if defined(DEATH_TRACE)
-	void ImGuiDebugOverlay::log(TraceLevel level, StringView time, StringView threadId, StringView message)
+	void ImGuiDebugOverlay::log(TraceLevel level, StringView time, StringView threadId, StringView functionName, StringView message)
 	{
-		logBuffer_.emplace_back(LogMessage{time, message, threadId, level});
+		logBuffer_.emplace_back(LogMessage{time, message, threadId, functionName, level});
 	}
 #endif
 
@@ -507,14 +507,10 @@ namespace nCine
 						ImGui::TextUnformatted(message.ThreadId.begin(), message.ThreadId.end());
 
 						ImGui::TableSetColumnIndex(2);
-
-						auto separator = message.Text.partition(" ‡ "_s);
-						if (!separator[0].empty()) {
-							ImGui::TextInRoundedRectangle(separator[0].begin(), separator[0].end());
-							ImGui::TextUnformatted(separator[2].begin(), separator[2].end());
-						} else {
-							ImGui::TextUnformatted(message.Text.begin(), message.Text.end());
+						if (!message.FunctionName.empty()) {
+							ImGui::TextInRoundedRectangle(message.FunctionName.begin(), message.FunctionName.end());
 						}
+						ImGui::TextUnformatted(message.Text.begin(), message.Text.end());
 
 						ImGui::PopStyleColor();
 					}
@@ -531,43 +527,43 @@ namespace nCine
 		if (ImGui::CollapsingHeader("Graphics Capabilities")) {
 			const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 
-			const IGfxCapabilities::GlInfoStrings& glInfoStrings = gfxCaps.glInfoStrings();
+			const IGfxCapabilities::GLInfoStrings& glInfoStrings = gfxCaps.GetGLInfoStrings();
 			ImGui::Text("%s Vendor: %s", openglApiName, glInfoStrings.vendor);
 			ImGui::Text("%s Renderer: %s", openglApiName, glInfoStrings.renderer);
 			ImGui::Text("%s Version: %s", openglApiName, glInfoStrings.glVersion);
 			ImGui::Text("GLSL Version: %s", glInfoStrings.glslVersion);
 
 			ImGui::Text("%s parsed version: %d.%d.%d", openglApiName,
-						gfxCaps.glVersion(IGfxCapabilities::GLVersion::Major),
-						gfxCaps.glVersion(IGfxCapabilities::GLVersion::Minor),
-						gfxCaps.glVersion(IGfxCapabilities::GLVersion::Release));
+						gfxCaps.GetGLVersion(IGfxCapabilities::GLVersion::Major),
+						gfxCaps.GetGLVersion(IGfxCapabilities::GLVersion::Minor),
+						gfxCaps.GetGLVersion(IGfxCapabilities::GLVersion::Release));
 
 			ImGui::Separator();
-			ImGui::Text("GL_MAX_TEXTURE_SIZE: %d", gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_TEXTURE_SIZE));
-			ImGui::Text("GL_MAX_TEXTURE_IMAGE_UNITS: %d", gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_TEXTURE_IMAGE_UNITS));
-			ImGui::Text("GL_MAX_UNIFORM_BLOCK_SIZE: %d", gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE));
-			ImGui::Text("GL_MAX_UNIFORM_BUFFER_BINDINGS: %d", gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BUFFER_BINDINGS));
-			ImGui::Text("GL_MAX_VERTEX_UNIFORM_BLOCKS: %d", gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_VERTEX_UNIFORM_BLOCKS));
-			ImGui::Text("GL_MAX_FRAGMENT_UNIFORM_BLOCKS: %d", gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_FRAGMENT_UNIFORM_BLOCKS));
-			ImGui::Text("GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT: %d", gfxCaps.value(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT));
+			ImGui::Text("GL_MAX_TEXTURE_SIZE: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_TEXTURE_SIZE));
+			ImGui::Text("GL_MAX_TEXTURE_IMAGE_UNITS: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_TEXTURE_IMAGE_UNITS));
+			ImGui::Text("GL_MAX_UNIFORM_BLOCK_SIZE: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE));
+			ImGui::Text("GL_MAX_UNIFORM_BUFFER_BINDINGS: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BUFFER_BINDINGS));
+			ImGui::Text("GL_MAX_VERTEX_UNIFORM_BLOCKS: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_VERTEX_UNIFORM_BLOCKS));
+			ImGui::Text("GL_MAX_FRAGMENT_UNIFORM_BLOCKS: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_FRAGMENT_UNIFORM_BLOCKS));
+			ImGui::Text("GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT));
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
-			ImGui::Text("GL_MAX_VERTEX_ATTRIB_STRIDE: %d", gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_VERTEX_ATTRIB_STRIDE));
+			ImGui::Text("GL_MAX_VERTEX_ATTRIB_STRIDE: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_VERTEX_ATTRIB_STRIDE));
 #endif
-			ImGui::Text("GL_MAX_COLOR_ATTACHMENTS: %d", gfxCaps.value(IGfxCapabilities::GLIntValues::MAX_COLOR_ATTACHMENTS));
+			ImGui::Text("GL_MAX_COLOR_ATTACHMENTS: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_COLOR_ATTACHMENTS));
 
 			ImGui::Separator();
-			ImGui::Text("GL_KHR_debug: %d", gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::KHR_DEBUG));
-			ImGui::Text("GL_ARB_texture_storage: %d", gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::ARB_TEXTURE_STORAGE));
-			ImGui::Text("GL_ARB_get_program_binary: %d", gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::ARB_GET_PROGRAM_BINARY));
+			ImGui::Text("GL_KHR_debug: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::KHR_DEBUG));
+			ImGui::Text("GL_ARB_texture_storage: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::ARB_TEXTURE_STORAGE));
+			ImGui::Text("GL_ARB_get_program_binary: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::ARB_GET_PROGRAM_BINARY));
 #if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
-			ImGui::Text("GL_OES_get_program_binary: %d", gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::OES_GET_PROGRAM_BINARY));
+			ImGui::Text("GL_OES_get_program_binary: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::OES_GET_PROGRAM_BINARY));
 #endif
-			ImGui::Text("GL_EXT_texture_compression_s3tc: %d", gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::EXT_TEXTURE_COMPRESSION_S3TC));
-			ImGui::Text("GL_AMD_compressed_ATC_texture: %d", gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::AMD_COMPRESSED_ATC_TEXTURE));
-			ImGui::Text("GL_IMG_texture_compression_pvrtc: %d", gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::IMG_TEXTURE_COMPRESSION_PVRTC));
-			ImGui::Text("GL_KHR_texture_compression_astc_ldr: %d", gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR));
+			ImGui::Text("GL_EXT_texture_compression_s3tc: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::EXT_TEXTURE_COMPRESSION_S3TC));
+			ImGui::Text("GL_AMD_compressed_ATC_texture: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::AMD_COMPRESSED_ATC_TEXTURE));
+			ImGui::Text("GL_IMG_texture_compression_pvrtc: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::IMG_TEXTURE_COMPRESSION_PVRTC));
+			ImGui::Text("GL_KHR_texture_compression_astc_ldr: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR));
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
-			ImGui::Text("GL_OES_compressed_ETC1_RGB8_texture: %d", gfxCaps.hasExtension(IGfxCapabilities::GLExtensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE));
+			ImGui::Text("GL_OES_compressed_ETC1_RGB8_texture: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE));
 #endif
 		}
 	}
@@ -790,7 +786,8 @@ namespace nCine
 			for (std::uint32_t i = 0; i < numPlayers; i++) {
 				const IAudioPlayer* player = theServiceLocator().GetAudioDevice().player(i);
 				char widgetName[32];
-				formatString(widgetName, "Player %d", i);
+				std::size_t length = formatInto(widgetName, "Player {}", i);
+				widgetName[length] = '\0';
 				if (ImGui::TreeNode(widgetName)) {
 					ImGui::Text("Source Id: %u", player->sourceId());
 					ImGui::Text("Buffer Id: %u", player->bufferId());
@@ -861,7 +858,8 @@ namespace nCine
 			}
 			if (numConnectedJoysticks > 0) {
 				char widgetName[32];
-				formatString(widgetName, "%d Joystick(s)", numConnectedJoysticks);
+				std::size_t length = formatInto(widgetName, "{} Joystick(s)", numConnectedJoysticks);
+				widgetName[length] = '\0';
 				if (ImGui::TreeNode(widgetName)) {
 					ImGui::Text("Joystick mappings: %u", input.numJoyMappings());
 
@@ -869,7 +867,8 @@ namespace nCine
 						if (input.isJoyPresent(joyId) == false)
 							continue;
 
-						formatString(widgetName, "Joystick %d", joyId);
+						length = formatInto(widgetName, "Joystick {}", joyId);
+						widgetName[length] = '\0';
 						if (ImGui::TreeNode(widgetName)) {
 							ImGui::Text("Name: %s", input.joyName(joyId));
 							ImGui::Text("GUID: %s", input.joyGuid(joyId));
@@ -1123,7 +1122,7 @@ namespace nCine
 	void ImGuiDebugOverlay::guiViewports(Viewport* viewport, std::uint32_t viewportId)
 	{
 		char widgetName[64];
-		formatString(widgetName, "#%u Viewport", viewportId);
+		std::size_t length = formatInto(widgetName, "#{} Viewport", viewportId);
 		/*if (viewport->type() != Viewport::Type::NoTexture)
 			widgetName_.formatAppend(" - size: %d x %d", viewport->width(), viewport->height());*/
 		/*const Recti viewportRect = viewport->viewportRect();
@@ -1131,13 +1130,14 @@ namespace nCine
 		const Rectf cullingRect = viewport->cullingRect();
 		widgetName_.formatAppend(" - culling: pos <%.2f, %.2f>, size %.2f x %.2f", cullingRect.x, cullingRect.y, cullingRect.w, cullingRect.h);
 		widgetName_.formatAppend("###0x%x", uintptr_t(viewport));*/
+		widgetName[length] = '\0';
 
-		SceneNode* rootNode = viewport->rootNode();
+		SceneNode* rootNode = viewport->GetRootNode();
 		if (rootNode != nullptr && ImGui::TreeNode(widgetName)) {
-			if (viewport->camera() != nullptr) {
-				const Camera::ViewValues& viewValues = viewport->camera()->viewValues();
+			if (viewport->GetCamera() != nullptr) {
+				const Camera::ViewValues& viewValues = viewport->GetCamera()->GetViewValues();
 				ImGui::Text("Camera view - position: <%.2f, %.2f>, rotation: %.2f, scale: %.2f", viewValues.position.X, viewValues.position.Y, viewValues.rotation, viewValues.scale);
-				const Camera::ProjectionValues& projValues = viewport->camera()->projectionValues();
+				const Camera::ProjectionValues& projValues = viewport->GetCamera()->GetProjectionValues();
 				ImGui::Text("Camera projection - left: %.2f, right: %.2f, top: %.2f, bottom: %.2f", projValues.left, projValues.right, projValues.top, projValues.bottom);
 			}
 
@@ -1332,8 +1332,8 @@ namespace nCine
 	{
 		if (ImGui::CollapsingHeader("Node Inspector")) {
 			guiViewports(&theApplication().GetScreenViewport(), 0);
-			for (std::uint32_t i = 0; i < Viewport::chain().size(); i++)
-				guiViewports(Viewport::chain()[i], i + 1);
+			for (std::uint32_t i = 0; i < Viewport::GetChain().size(); i++)
+				guiViewports(Viewport::GetChain()[i], i + 1);
 		}
 	}
 
@@ -1399,7 +1399,7 @@ namespace nCine
 			ImGui::PlotLines("##4", plotValues_[ValuesType::UboUsed].get(), numValues_, index_, nullptr, 0.0f, uboBuffers.size / 1024.0f);
 		}
 
-		ImGui::Text("Viewport chain length: %u", Viewport::chain().size());
+		ImGui::Text("Viewport chain length: %u", Viewport::GetChain().size());
 
 		ImGui::End();
 	}

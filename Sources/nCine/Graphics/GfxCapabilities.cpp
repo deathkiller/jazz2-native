@@ -139,7 +139,7 @@ namespace nCine
 #endif
 		if (HasExtension(GLExtensions::ARB_GET_PROGRAM_BINARY)) {
 			glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &glIntValues_[(std::int32_t)GLIntValues::NUM_PROGRAM_BINARY_FORMATS]);
-			ASSERT(glIntValues_[(std::int32_t)GLIntValues::NUM_PROGRAM_BINARY_FORMATS] <= MaxProgramBinaryFormats);
+			DEATH_ASSERT(glIntValues_[(std::int32_t)GLIntValues::NUM_PROGRAM_BINARY_FORMATS] <= MaxProgramBinaryFormats);
 			glGetIntegerv(GL_PROGRAM_BINARY_FORMATS, programBinaryFormats_);
 		}
 

@@ -42,14 +42,14 @@ enum class TraceLevel {
 void DEATH_TRACE(TraceLevel level, const char* functionName, const char* message, std::uint32_t messageLength);
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-inline void __DEATH_TRACE_PROXY(TraceLevel level, const char* functionName, const char* format)
+inline void __DEATH_TRACE(TraceLevel level, const char* functionName, const char* format)
 {
 	DEATH_TRACE(level, functionName, format, std::uint32_t(std::strlen(format)));
 }
 
 template<class ...Args>
 inline typename std::enable_if<(sizeof...(Args) > 0), void>::type 
-	__DEATH_TRACE_PROXY(TraceLevel level, const char* functionName, const char* format, const Args&... args)
+	__DEATH_TRACE(TraceLevel level, const char* functionName, const char* format, const Args&... args)
 {
 	char formattedMessage[8192];
 	std::size_t length = Death::formatInto(formattedMessage, format, args...);
@@ -67,20 +67,20 @@ inline typename std::enable_if<(sizeof...(Args) > 0), void>::type
 
 /** @brief Print a formatted message with @ref TraceLevel::Debug to the event log */
 #	if defined(DEATH_DEBUG)
-#		define LOGD(fmt, ...) __DEATH_TRACE_PROXY(TraceLevel::Debug, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#		define LOGD(fmt, ...) __DEATH_TRACE(TraceLevel::Debug, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 #	else
 #		define LOGD(fmt, ...) do {} while (false)
 #	endif
 /** @brief Print a deferred formatted message with @ref TraceLevel::Deferred to the event log */
-#	define LOGB(fmt, ...) __DEATH_TRACE_PROXY(TraceLevel::Deferred, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGB(fmt, ...) __DEATH_TRACE(TraceLevel::Deferred, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Info to the event log */
-#	define LOGI(fmt, ...) __DEATH_TRACE_PROXY(TraceLevel::Info, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGI(fmt, ...) __DEATH_TRACE(TraceLevel::Info, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Warning to the event log */
-#	define LOGW(fmt, ...) __DEATH_TRACE_PROXY(TraceLevel::Warning, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGW(fmt, ...) __DEATH_TRACE(TraceLevel::Warning, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Error to the event log */
-#	define LOGE(fmt, ...) __DEATH_TRACE_PROXY(TraceLevel::Error, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGE(fmt, ...) __DEATH_TRACE(TraceLevel::Error, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 /** @brief Print a formatted message with @ref TraceLevel::Fatal to the event log */
-#	define LOGF(fmt, ...) __DEATH_TRACE_PROXY(TraceLevel::Fatal, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define LOGF(fmt, ...) __DEATH_TRACE(TraceLevel::Fatal, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 #else
 /** @brief Print a formatted message with @ref TraceLevel::Debug to the event log */
 #	define LOGD(fmt, ...) do {} while (false)
@@ -118,7 +118,7 @@ inline typename std::enable_if<(sizeof...(Args) > 0), void>::type
 
 // Assertions
 #if !defined(DEATH_NO_ASSERT) && !defined(DEATH_STANDARD_ASSERT) && defined(DEATH_TRACE) && !defined(DOXYGEN_GENERATING_OUTPUT)
-#	define __DEATH_TRACE_ASSERT_(fmt, ...) __DEATH_TRACE_PROXY(TraceLevel::Assert, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
+#	define __DEATH_TRACE_ASSERT_(fmt, ...) __DEATH_TRACE(TraceLevel::Assert, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 #	define __DEATH_TRACE_ASSERT(...) DEATH_HELPER_EXPAND(__DEATH_TRACE_ASSERT_(__VA_ARGS__))
 #endif
 
@@ -131,18 +131,26 @@ inline typename std::enable_if<(sizeof...(Args) > 0), void>::type
 	the function returns with @p returnValue instead and the execution is break (if @cpp DEATH_DEBUG @ce is defined).
 	If @cpp DEATH_STANDARD_ASSERT @ce is defined, this macro expands to @cpp assert(condition) @ce, ignoring @p message.
 	If @cpp DEATH_NO_ASSERT @ce is defined (or if both @cpp DEATH_TRACE @ce and @cpp DEATH_STANDARD_ASSERT @ce are
-	not defined), this macro expands to @cpp do{}while(false) @ce.
+	not defined), this macro expands to @cpp do{}while(false) @ce. It also allows to specify only the condition,
+	and the message will be generated automatically without @cpp return @ce statement.
 
 	You can override this implementation by placing your own @cpp #define DEATH_ASSERT @ce before including
 	the @ref Asserts.h header.
 */
 #if !defined(DEATH_ASSERT)
 #	if defined(DEATH_NO_ASSERT) || (!defined(DEATH_STANDARD_ASSERT) && !defined(DEATH_TRACE))
-#		define DEATH_ASSERT(condition, message, returnValue) do {} while (false)
+#		define DEATH_ASSERT(condition, ...) do {} while (false)
 #	elif defined(DEATH_STANDARD_ASSERT)
-#		define DEATH_ASSERT(condition, message, returnValue) assert(condition)
+#		define DEATH_ASSERT(condition, ...) assert(condition)
 #	else
-#		define DEATH_ASSERT(condition, message, returnValue)			\
+#		define __DEATH_ASSERT1(condition)							\
+			do {														\
+				if DEATH_UNLIKELY(!(condition)) {						\
+					__DEATH_TRACE_ASSERT("Assertion ({}) failed at \"{}:{}\"", #condition, __FILE__, __LINE__);	\
+					DEATH_ASSERT_BREAK();								\
+				}														\
+			} while(false)
+#		define __DEATH_ASSERT3(condition, message, returnValue)	\
 			do {														\
 				if DEATH_UNLIKELY(!(condition)) {						\
 					__DEATH_TRACE_ASSERT(DEATH_REMOVE_PARENS(message));	\
@@ -150,6 +158,7 @@ inline typename std::enable_if<(sizeof...(Args) > 0), void>::type
 					return returnValue;									\
 				}														\
 			} while(false)
+#		define DEATH_ASSERT(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT1, __DEATH_ASSERT1, )(__VA_ARGS__))
 #	endif
 #endif
 
@@ -169,22 +178,7 @@ inline typename std::enable_if<(sizeof...(Args) > 0), void>::type
 #	elif defined(DEATH_STANDARD_ASSERT)
 #		define DEATH_DEBUG_ASSERT(condition, ...) assert(condition)
 #	else
-#		define __DEATH_DEBUG_ASSERT1(condition)							\
-			do {														\
-				if DEATH_UNLIKELY(!(condition)) {						\
-					__DEATH_TRACE_ASSERT("Assertion ({}) failed at \"{}:{}\"", #condition, __FILE__, __LINE__);	\
-					DEATH_ASSERT_BREAK();								\
-				}														\
-			} while(false)
-#		define __DEATH_DEBUG_ASSERT3(condition, message, returnValue)	\
-			do {														\
-				if DEATH_UNLIKELY(!(condition)) {						\
-					__DEATH_TRACE_ASSERT(DEATH_REMOVE_PARENS(message));	\
-					DEATH_ASSERT_BREAK();								\
-					return returnValue;									\
-				}														\
-			} while(false)
-#		define DEATH_DEBUG_ASSERT(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_DEBUG_ASSERT3, __DEATH_DEBUG_ASSERT3, __DEATH_DEBUG_ASSERT3, __DEATH_DEBUG_ASSERT3, __DEATH_DEBUG_ASSERT3, __DEATH_DEBUG_ASSERT3, __DEATH_DEBUG_ASSERT1, __DEATH_DEBUG_ASSERT1, )(__VA_ARGS__))
+#		define DEATH_DEBUG_ASSERT(...) DEATH_ASSERT(__VA_ARGS__)
 #	endif
 #endif
 

@@ -39,7 +39,7 @@ namespace nCine
 		virtual void updateFrameTimings() = 0;
 
 #if defined(DEATH_TRACE)
-		virtual void log(TraceLevel level, StringView time, StringView threadId, StringView message) = 0;
+		virtual void log(TraceLevel level, StringView time, StringView threadId, StringView functionName, StringView message) = 0;
 #endif
 
 	protected:

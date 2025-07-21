@@ -92,7 +92,7 @@ namespace nCine
 	void AnimatedSprite::setAnimationIndex(std::uint32_t animIndex)
 	{
 		if (!anims_.empty()) {
-			ASSERT(animIndex < anims_.size());
+			DEATH_ASSERT(animIndex < anims_.size());
 			currentAnimIndex_ = animIndex;
 			setTexRect(anims_[currentAnimIndex_].rect());
 		}

@@ -68,8 +68,8 @@ namespace nCine
 
 	void AndroidApplication::Run(struct android_app* state, CreateAppEventHandlerDelegate createAppEventHandler)
 	{
-		ASSERT(state != nullptr);
-		ASSERT(createAppEventHandler != nullptr);
+		DEATH_ASSERT(state != nullptr);
+		DEATH_ASSERT(createAppEventHandler != nullptr);
 		AndroidApplication& app = theAndroidApplication();
 		app.state_ = state;
 		app.createAppEventHandler_ = createAppEventHandler;

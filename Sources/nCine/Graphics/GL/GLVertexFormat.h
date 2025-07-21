@@ -71,7 +71,7 @@ namespace nCine
 			inline void SetSize(GLint size) {
 				size_ = size;
 			}
-			inline void setType(GLenum type) {
+			inline void SetType(GLenum type) {
 				type_ = type;
 			}
 			inline void SetNormalized(bool normalized) {

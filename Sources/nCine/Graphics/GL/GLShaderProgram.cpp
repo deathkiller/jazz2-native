@@ -179,7 +179,7 @@ namespace nCine
 
 	GLVertexFormat::Attribute* GLShaderProgram::GetAttribute(const char* name)
 	{
-		ASSERT(name);
+		DEATH_ASSERT(name);
 		GLVertexFormat::Attribute* vertexAttribute = nullptr;
 
 		std::int32_t location = -1;

@@ -6,13 +6,13 @@ namespace nCine
 {
 	void ParticleInitializer::setAmount(std::int32_t amount)
 	{
-		ASSERT(amount > 0);
+		DEATH_ASSERT(amount > 0);
 		rndAmount.Set(amount, amount);
 	}
 
 	void ParticleInitializer::setAmount(std::int32_t minAmount, std::int32_t maxAmount)
 	{
-		ASSERT(minAmount <= maxAmount);
+		DEATH_ASSERT(minAmount <= maxAmount);
 		rndAmount.Set(minAmount, maxAmount);
 	}
 
@@ -23,7 +23,7 @@ namespace nCine
 
 	void ParticleInitializer::setLife(float minLife, float maxLife)
 	{
-		ASSERT(minLife <= maxLife);
+		DEATH_ASSERT(minLife <= maxLife);
 		rndLife.Set(minLife, maxLife);
 	}
 
@@ -35,14 +35,14 @@ namespace nCine
 
 	void ParticleInitializer::setPosition(float minX, float minY, float maxX, float maxY)
 	{
-		ASSERT(minX <= maxX && minY <= maxY);
+		DEATH_ASSERT(minX <= maxX && minY <= maxY);
 		rndPositionX.Set(minX, maxX);
 		rndPositionY.Set(minY, maxY);
 	}
 
 	void ParticleInitializer::setPositionAndRadius(float x, float y, float radius)
 	{
-		ASSERT(radius >= 0.0f);
+		DEATH_ASSERT(radius >= 0.0f);
 		rndPositionX.Set(x - radius, x + radius);
 		rndPositionY.Set(y - radius, y + radius);
 	}
@@ -75,21 +75,21 @@ namespace nCine
 
 	void ParticleInitializer::setVelocity(float minX, float minY, float maxX, float maxY)
 	{
-		ASSERT(minX <= maxX && minY <= maxY);
+		DEATH_ASSERT(minX <= maxX && minY <= maxY);
 		rndVelocityX.Set(minX, maxX);
 		rndVelocityY.Set(minY, maxY);
 	}
 
 	void ParticleInitializer::setVelocityAndRadius(float x, float y, float radius)
 	{
-		ASSERT(radius >= 0.0f);
+		DEATH_ASSERT(radius >= 0.0f);
 		rndVelocityX.Set(x - radius, x + radius);
 		rndVelocityY.Set(y - radius, y + radius);
 	}
 
 	void ParticleInitializer::setVelocityAndScale(float x, float y, float minScale, float maxScale)
 	{
-		ASSERT(minScale <= maxScale);
+		DEATH_ASSERT(minScale <= maxScale);
 		rndVelocityX.Set(x * minScale, x * maxScale);
 		rndVelocityY.Set(y * minScale, y * maxScale);
 
@@ -159,7 +159,7 @@ namespace nCine
 
 	void ParticleInitializer::setRotation(float minRot, float maxRot)
 	{
-		ASSERT(minRot <= maxRot);
+		DEATH_ASSERT(minRot <= maxRot);
 		rndRotation.Set(minRot, maxRot);
 	}
 }

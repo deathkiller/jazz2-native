@@ -85,14 +85,13 @@ namespace nCine::Backends
 	bool EglGfxDevice::setVideoMode(unsigned int modeIndex)
 	{
 		const int monitorIndex = windowMonitorIndex();
-		ASSERT(monitorIndex >= 0);
+		DEATH_ASSERT(monitorIndex >= 0);
 
 		const unsigned int numVideoModes = monitors_[monitorIndex].numVideoModes;
-		ASSERT(modeIndex < numVideoModes);
+		DEATH_ASSERT(modeIndex < numVideoModes);
 
 #if defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 30
-		if (modeIndex < monitors_[monitorIndex].numVideoModes)
-		{
+		if (modeIndex < monitors_[monitorIndex].numVideoModes) {
 			const float refreshRate = monitors_[monitorIndex].videoModes[modeIndex].refreshRate;
 			const int8_t compatibility = ANATIVEWINDOW_FRAME_RATE_COMPATIBILITY_DEFAULT;
 #	if __ANDROID_API__ >= 31

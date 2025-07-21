@@ -1,5 +1,6 @@
 #include "Lz4Stream.h"
 #include "../../Asserts.h"
+#include "../../Base/Move.h"
 
 #if !defined(WITH_LZ4)
 #	pragma message("Death::IO::Lz4Stream requires `lz4` library")

@@ -37,7 +37,7 @@ namespace nCine
 
 	void ThreadPool::EnqueueCommand(std::unique_ptr<IThreadCommand>&& threadCommand)
 	{
-		ASSERT(threadCommand);
+		DEATH_ASSERT(threadCommand);
 
 		queueMutex_.Lock();
 		queue_.push_back(std::move(threadCommand));

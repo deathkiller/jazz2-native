@@ -2473,7 +2473,7 @@ namespace Jazz2
 		auto& mainViewport = _assignedViewports[0];
 		
 		Rectf bounds = mainViewport->GetBounds();
-		Vector2i originalSize = mainViewport->_view->size();
+		Vector2i originalSize = mainViewport->_view->GetSize();
 		Vector2f upscaledSize = _upscalePass.GetTargetSize();
 		Vector2f halfView = bounds.Center();
 		return ImVec2(

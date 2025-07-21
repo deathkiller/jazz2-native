@@ -53,7 +53,7 @@ namespace nCine
 
 	void RectAnimation::setFrame(std::uint32_t frameNum)
 	{
-		ASSERT(frameNum < rects_.size());
+		DEATH_ASSERT(frameNum < rects_.size());
 		currentFrame_ = frameNum;
 	}
 

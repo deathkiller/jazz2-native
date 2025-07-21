@@ -26,7 +26,7 @@ namespace nCine
 
 	void GLShaderUniforms::SetProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
 	{
-		ASSERT(shaderProgram != nullptr);
+		DEATH_ASSERT(shaderProgram != nullptr);
 
 		shaderProgram_ = shaderProgram;
 		shaderProgram_->ProcessDeferredQueries();
@@ -39,7 +39,7 @@ namespace nCine
 
 	void GLShaderUniforms::SetUniformsDataPointer(GLubyte* dataPointer)
 	{
-		ASSERT(dataPointer != nullptr);
+		DEATH_ASSERT(dataPointer != nullptr);
 
 		if (shaderProgram_->GetStatus() != GLShaderProgram::Status::LinkedWithIntrospection) {
 			return;
@@ -65,7 +65,7 @@ namespace nCine
 
 	GLUniformCache* GLShaderUniforms::GetUniform(const char* name)
 	{
-		ASSERT(name != nullptr);
+		DEATH_ASSERT(name != nullptr);
 		GLUniformCache* uniformCache = nullptr;
 
 		if (shaderProgram_ != nullptr) {

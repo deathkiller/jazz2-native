@@ -15,7 +15,7 @@ namespace nCine
 	{
 		GLsizei length;
 		glGetActiveUniform(program, index, MaxNameLength, &length, &size_, &type_, name_);
-		ASSERT(length <= MaxNameLength);
+		DEATH_ASSERT(length <= MaxNameLength);
 
 		if (!HasReservedPrefix()) {
 			location_ = glGetUniformLocation(program, name_);

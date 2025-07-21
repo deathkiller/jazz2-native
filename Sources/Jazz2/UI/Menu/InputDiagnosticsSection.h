@@ -26,6 +26,8 @@ namespace Jazz2::UI::Menu
 		float _animation;
 
 		void OnHandleInput();
-		void PrintAxisValue(const char* name, float value, float x, float y);
+		void PrintAxisValue(StringView name, float value, float x, float y);
+
+		static void AppendPressedButton(MutableStringView output, std::size_t& offset, StringView name);
 	};
 }

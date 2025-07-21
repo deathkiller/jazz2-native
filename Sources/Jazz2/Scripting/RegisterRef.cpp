@@ -208,7 +208,7 @@ namespace Jazz2::Scripting
 		}
 
 		// It is expected that the outRef is always a handle
-		ASSERT(typeId & asTYPEID_OBJHANDLE);
+		DEATH_ASSERT(typeId & asTYPEID_OBJHANDLE);
 
 		// Compare the type id of the actual object
 		typeId &= ~asTYPEID_OBJHANDLE;
@@ -244,21 +244,21 @@ namespace Jazz2::Scripting
 
 #if AS_CAN_USE_CPP11
 		// With C++11 it is possible to use asGetTypeTraits to automatically determine the flags that represent the C++ class
-		r = engine->RegisterObjectType("ref", sizeof(CScriptHandle), asOBJ_VALUE | asOBJ_ASHANDLE | asOBJ_GC | asGetTypeTraits<CScriptHandle>()); ASSERT(r >= 0);
+		r = engine->RegisterObjectType("ref", sizeof(CScriptHandle), asOBJ_VALUE | asOBJ_ASHANDLE | asOBJ_GC | asGetTypeTraits<CScriptHandle>()); DEATH_ASSERT(r >= 0);
 #else
-		r = engine->RegisterObjectType("ref", sizeof(CScriptHandle), asOBJ_VALUE | asOBJ_ASHANDLE | asOBJ_GC | asOBJ_APP_CLASS_CDAK); ASSERT(r >= 0);
+		r = engine->RegisterObjectType("ref", sizeof(CScriptHandle), asOBJ_VALUE | asOBJ_ASHANDLE | asOBJ_GC | asOBJ_APP_CLASS_CDAK); DEATH_ASSERT(r >= 0);
 #endif
-		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_CONSTRUCT, "void f()", asFUNCTIONPR(Construct, (CScriptHandle*), void), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
-		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_CONSTRUCT, "void f(const ref &in)", asFUNCTIONPR(Construct, (CScriptHandle*, const CScriptHandle&), void), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
-		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_CONSTRUCT, "void f(const ?&in)", asFUNCTIONPR(Construct, (CScriptHandle*, void*, std::int32_t), void), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
-		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_DESTRUCT, "void f()", asFUNCTIONPR(Destruct, (CScriptHandle*), void), asCALL_CDECL_OBJFIRST); ASSERT(r >= 0);
-		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_ENUMREFS, "void f(int&in)", asMETHOD(CScriptHandle, EnumReferences), asCALL_THISCALL); ASSERT(r >= 0);
-		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_RELEASEREFS, "void f(int&in)", asMETHOD(CScriptHandle, ReleaseReferences), asCALL_THISCALL); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("ref", "void opCast(?&out)", asMETHODPR(CScriptHandle, Cast, (void**, std::int32_t), void), asCALL_THISCALL); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("ref", "ref &opHndlAssign(const ref &in)", asMETHOD(CScriptHandle, operator=), asCALL_THISCALL); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("ref", "ref &opHndlAssign(const ?&in)", asMETHOD(CScriptHandle, Assign), asCALL_THISCALL); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("ref", "bool opEquals(const ref &in) const", asMETHODPR(CScriptHandle, operator==, (const CScriptHandle&) const, bool), asCALL_THISCALL); ASSERT(r >= 0);
-		r = engine->RegisterObjectMethod("ref", "bool opEquals(const ?&in) const", asMETHODPR(CScriptHandle, Equals, (void*, std::int32_t) const, bool), asCALL_THISCALL); ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_CONSTRUCT, "void f()", asFUNCTIONPR(Construct, (CScriptHandle*), void), asCALL_CDECL_OBJFIRST); DEATH_ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_CONSTRUCT, "void f(const ref &in)", asFUNCTIONPR(Construct, (CScriptHandle*, const CScriptHandle&), void), asCALL_CDECL_OBJFIRST); DEATH_ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_CONSTRUCT, "void f(const ?&in)", asFUNCTIONPR(Construct, (CScriptHandle*, void*, std::int32_t), void), asCALL_CDECL_OBJFIRST); DEATH_ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_DESTRUCT, "void f()", asFUNCTIONPR(Destruct, (CScriptHandle*), void), asCALL_CDECL_OBJFIRST); DEATH_ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_ENUMREFS, "void f(int&in)", asMETHOD(CScriptHandle, EnumReferences), asCALL_THISCALL); DEATH_ASSERT(r >= 0);
+		r = engine->RegisterObjectBehaviour("ref", asBEHAVE_RELEASEREFS, "void f(int&in)", asMETHOD(CScriptHandle, ReleaseReferences), asCALL_THISCALL); DEATH_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("ref", "void opCast(?&out)", asMETHODPR(CScriptHandle, Cast, (void**, std::int32_t), void), asCALL_THISCALL); DEATH_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("ref", "ref &opHndlAssign(const ref &in)", asMETHOD(CScriptHandle, operator=), asCALL_THISCALL); DEATH_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("ref", "ref &opHndlAssign(const ?&in)", asMETHOD(CScriptHandle, Assign), asCALL_THISCALL); DEATH_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("ref", "bool opEquals(const ref &in) const", asMETHODPR(CScriptHandle, operator==, (const CScriptHandle&) const, bool), asCALL_THISCALL); DEATH_ASSERT(r >= 0);
+		r = engine->RegisterObjectMethod("ref", "bool opEquals(const ?&in) const", asMETHODPR(CScriptHandle, Equals, (void*, std::int32_t) const, bool), asCALL_THISCALL); DEATH_ASSERT(r >= 0);
 	}
 }
 

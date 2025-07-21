@@ -135,7 +135,7 @@ namespace nCine
 
 	void JoyMapping::Init(const IInputManager* inputManager)
 	{
-		ASSERT(inputManager != nullptr);
+		DEATH_ASSERT(inputManager != nullptr);
 		inputManager_ = inputManager;
 
 		// Add mappings from the database, without searching for duplicates
