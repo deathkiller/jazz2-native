@@ -159,7 +159,11 @@ namespace Death { namespace Trace {
 
 			// We failed to return earlier and we never resynced, but we don't really want to keep retrying on each call
 			// to timeSinceEpoch(), so we do non-accurate resync and we will increase the resync duration to resync later
-			_resyncIntervalTicks = _resyncIntervalTicks * 2;
+			constexpr std::int64_t maxHalfInt64 = std::numeric_limits<std::int64_t>::max() / 2;
+			if (_resyncIntervalTicks <= maxHalfInt64) {
+				_resyncIntervalTicks = _resyncIntervalTicks * 2;
+			}
+
 			return false;
 		}
 	}

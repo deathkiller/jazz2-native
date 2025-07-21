@@ -33,16 +33,14 @@ namespace nCine::Backends
 	public:
 		AndroidKeyboardState()
 		{
-			for (unsigned int i = 0; i < NumKeys; i++)
+			for (unsigned int i = 0; i < NumKeys; i++) {
 				keys_[i] = 0;
+			}
 		}
 
 		inline bool isKeyDown(Keys key) const override
 		{
-			if (key == Keys::Unknown)
-				return false;
-			else
-				return keys_[static_cast<unsigned int>(key)] != 0;
+			return (key != Keys::Unknown && keys_[static_cast<unsigned int>(key)] != 0);
 		}
 
 	private:

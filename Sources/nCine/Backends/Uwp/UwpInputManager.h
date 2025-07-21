@@ -102,7 +102,7 @@ namespace nCine::Backends
 
 		bool isJoyPresent(int joyId) const override
 		{
-			ASSERT(joyId >= 0);
+			DEATH_ASSERT(joyId >= 0);
 			return (joyId < MaxNumJoysticks && _gamepads[joyId].Connected);
 		}
 		
@@ -144,8 +144,8 @@ namespace nCine::Backends
 			float RumbleHighFrequency;
 			float RumbleLeftTrigger;
 			float RumbleRightTrigger;
-			uint64_t RumbleExpiration;
-			uint64_t RumbleTriggersExpiration;
+			std::uint64_t RumbleExpiration;
+			std::uint64_t RumbleTriggersExpiration;
 		};
 #endif
 
