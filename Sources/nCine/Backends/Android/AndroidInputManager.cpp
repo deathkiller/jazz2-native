@@ -227,7 +227,7 @@ namespace nCine::Backends
 
 	bool AndroidInputManager::isJoyPresent(int joyId) const
 	{
-		ASSERT(joyId >= 0);
+		DEATH_ASSERT(joyId >= 0);
 		return (joyId < MaxNumJoysticks && joystickStates_[joyId].deviceId_ != -1);
 	}
 
