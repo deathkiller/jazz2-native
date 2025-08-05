@@ -651,9 +651,11 @@ namespace nCine
 		if (suffix != nullptr) {
 			langId = langId.prefix(suffix.begin());
 		}
-		StringUtils::replaceAllInPlace(langId, '_', '-');
-		StringUtils::lowercaseInPlace(langId);
-		arrayAppend(preferred, std::move(langId));
+		if (strcasecmp(langId.data(), "C") != 0) {
+			StringUtils::replaceAllInPlace(langId, '_', '-');
+			StringUtils::lowercaseInPlace(langId);
+			arrayAppend(preferred, std::move(langId));
+		}
 #elif defined(DEATH_TARGET_WINDOWS)
 		if (Environment::IsWindows10()) {
 			// Get list of all preferred UI languages on Windows 10
