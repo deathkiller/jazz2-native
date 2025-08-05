@@ -3198,7 +3198,7 @@ namespace Death { namespace Backward {
 				filename++;
 
 			// find start of <mangled-name> from end (<file> may contain a space)
-			char* p = filename + strlen(filename) - 1;
+			char* p = filename + std::strlen(filename) - 1;
 			// skip to start of " + <offset>"
 			while (p > filename && *p != ' ')
 				p--;
@@ -3227,7 +3227,7 @@ namespace Death { namespace Backward {
 			char* filename_end = p + 1;
 			if (p == filename) {
 				// something went wrong, give up
-				filename_end = filename + strlen(filename);
+				filename_end = filename + std::strlen(filename);
 				funcname = filename_end;
 			}
 			trace.ObjectFilename.assign(filename, filename_end); // ok even if filename_end is the ending \0 (then we assign entire string)
@@ -4325,7 +4325,7 @@ namespace Death { namespace Backward {
 		Flags FeatureFlags;
 
 		ExceptionHandling(Flags flags = Flags::None)
-			: Destination(nullptr), FeatureFlags(flags), _crashedThread(NULL), _context(nullptr),
+			: Destination(nullptr), FeatureFlags(flags), _crashedThread(NULL),
 				_status(HandlerStatus::Running), _skipFrames(0) {
 			auto& current = GetSingleton();
 			if (current != nullptr) {
@@ -4350,13 +4350,13 @@ namespace Death { namespace Backward {
 //			_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
 //#endif
 
-			std::set_terminate(&Terminator);
+			std::set_terminate(Terminator);
 #	if !defined(BACKWARD_ATLEAST_CXX17)
-			std::set_unexpected(&Terminator);
+			std::set_unexpected(Terminator);
 #	endif
-			_set_purecall_handler(&Terminator);
+			_set_purecall_handler(Terminator);
 #	if _MSC_VER >= 1400
-			_set_invalid_parameter_handler(&InvalidParameterHandler);
+			_set_invalid_parameter_handler(InvalidParameterHandler);
 #	endif
 		}
 
@@ -4442,7 +4442,7 @@ namespace Death { namespace Backward {
 
 		HANDLE _reporterThread;
 		LPTOP_LEVEL_EXCEPTION_FILTER _prevExceptionFilter;
-		ExceptionContext* _context;
+		ExceptionContext _context;
 		std::mutex _lock;
 		std::condition_variable _cv;
 		HANDLE _crashedThread;
@@ -4461,14 +4461,16 @@ namespace Death { namespace Backward {
 				std::unique_lock<std::mutex> lk(_this->_lock);
 				_this->_cv.wait(lk, [_this]() { return _this->_status != HandlerStatus::Running; });
 			}
+
 			if (_this->_status == HandlerStatus::Crashed) {
 				// For some reason this must be called first, otherwise the dump is not linked to sources correctly
 				auto* current = GetSingleton();
 				if ((current->FeatureFlags & Flags::CreateMemoryDump) == Flags::CreateMemoryDump) {
-					WriteMinidumpWithException(::GetThreadId(_this->_crashedThread), _this->_context);
+					WriteMinidumpWithException(::GetThreadId(_this->_crashedThread), &_this->_context);
 				}
 				current->HandleStacktrace();
 			}
+
 			{
 				std::unique_lock<std::mutex> lk(_this->_lock);
 				_this->_status = HandlerStatus::Ending;
@@ -4514,7 +4516,7 @@ namespace Death { namespace Backward {
 
 		DEATH_NEVER_INLINE void CrashHandler(std::int32_t skip, EXCEPTION_POINTERS* info = nullptr) {
 			auto* _this = GetSingleton();
-			auto* context = _this->_context;
+			auto& context = _this->_context;
 
 			if (info == nullptr) {
 #	if (defined(_M_IX86) || defined(__i386__)) && defined(DEATH_TARGET_MSVC)
@@ -4529,14 +4531,14 @@ namespace Death { namespace Backward {
 					mov eax, [label];
 					mov[localCtx.Eip], eax;
 				}
-				std::memcpy(&(context->Context), &localCtx, sizeof(CONTEXT));
+				std::memcpy(&(context.Context), &localCtx, sizeof(CONTEXT));
 #	else
-				::RtlCaptureContext(&(context->Context));
+				::RtlCaptureContext(&(context.Context));
 #	endif
-				std::memset(&(context->ExceptionRecord), 0, sizeof(EXCEPTION_RECORD));
+				std::memset(&(context.ExceptionRecord), 0, sizeof(EXCEPTION_RECORD));
 			} else {
-				std::memcpy(&(context->Context), info->ContextRecord, sizeof(CONTEXT));
-				std::memcpy(&(context->ExceptionRecord), info->ExceptionRecord, sizeof(EXCEPTION_RECORD));
+				std::memcpy(&(context.Context), info->ContextRecord, sizeof(CONTEXT));
+				std::memcpy(&(context.ExceptionRecord), info->ExceptionRecord, sizeof(EXCEPTION_RECORD));
 			}
 			::DuplicateHandle(::GetCurrentProcess(), ::GetCurrentThread(),
 								::GetCurrentProcess(), &_this->_crashedThread,
@@ -4580,35 +4582,34 @@ namespace Death { namespace Backward {
 			StackTrace st;
 			st.SetMachineType(printer.GetResolver().GetMachineType());
 			st.SetThreadHandle(_crashedThread);
-			st.LoadHere(32 + skipFrames, _context);
+			st.LoadHere(32 + skipFrames, &_context);
 			st.SetSkipFrames(skipFrames);
 
 			if (shouldWriteToStdErr) {
 				printer.FeatureFlags = FeatureFlags;
-				printer.Print(st, std::cerr, _context->ExceptionRecord.ExceptionCode);
+				printer.Print(st, std::cerr, _context.ExceptionRecord.ExceptionCode);
 			}
 
 			if (shouldWriteToDest) {
 				printer.FeatureFlags = FeatureFlags & ~Flags::Colorized;
 				printer.PrintFilePrologue(dest);
-				printer.Print(st, dest, _context->ExceptionRecord.ExceptionCode);
+				printer.Print(st, dest, _context.ExceptionRecord.ExceptionCode);
 				dest->Flush();
 			}
 		}
 
 		static void EnableCrashingOnCrashes() {
+			// Disable swallowing of exceptions in mainly 32-bit apps, these functions are not present in the newer version of Windows anymore
 			using _GetPolicyDelegate = BOOL (WINAPI*)(LPDWORD lpFlags);
 			using _SetPolicyDelegate = BOOL (WINAPI*)(DWORD dwFlags);
 			constexpr DWORD EXCEPTION_SWALLOWING = 0x1;
 
+			DWORD dwFlags;
 			HMODULE kernel32 = ::GetModuleHandle(L"kernel32.dll");
 			_GetPolicyDelegate pGetPolicy = (_GetPolicyDelegate)::GetProcAddress(kernel32, "GetProcessUserModeExceptionPolicy");
 			_SetPolicyDelegate pSetPolicy = (_SetPolicyDelegate)::GetProcAddress(kernel32, "SetProcessUserModeExceptionPolicy");
-			if (pGetPolicy != nullptr && pSetPolicy != nullptr) {
-				DWORD dwFlags;
-				if (pGetPolicy(&dwFlags)) {
-					pSetPolicy(dwFlags & ~EXCEPTION_SWALLOWING);
-				}
+			if (pGetPolicy != nullptr && pSetPolicy != nullptr && pGetPolicy(&dwFlags)) {
+				pSetPolicy(dwFlags & ~EXCEPTION_SWALLOWING);
 			}
 		}
 
