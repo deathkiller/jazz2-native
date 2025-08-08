@@ -379,15 +379,27 @@ namespace Death { namespace Trace {
 				if (n == 17) {
 					LOGW("TEST PREPARE WRITE 6 {}", n);
 				}
+				if (n == 17) {
+					LOGW("TEST PREPARE WRITE 6.1 {} | {}", _writerPos, _mask);
+				}
+				if (n == 17) {
+					LOGW("TEST PREPARE WRITE 6.2 {}", _writerPos & _mask);
+				}
+				if (n == 17) {
+					LOGW("TEST PREPARE WRITE 6.3 {}", uintptr_t(_storage));
+				}
+				if (n == 17) {
+					LOGW("TEST PREPARE WRITE 6.4 {}", uintptr_t((char*)_storage + (_writerPos & _mask)));
+				}
 
-				auto result = _storage + (_writerPos & _mask);;
+				auto result = (char*)_storage + (_writerPos & _mask);
 				if (n == 17) {
 					LOGW("TEST PREPARE WRITE 7 {} | {}", n, uintptr_t(result));
 				}
 				if (n == 17) {
 					LOGW("TEST PREPARE WRITE 8 {} | {} | {} | {}", uintptr_t(_storage), _writerPos, _mask, _writerPos & _mask);
 				}
-				return result;
+				return (std::byte*)result;
 			}
 
 			void finishWrite(T nbytes) noexcept {
