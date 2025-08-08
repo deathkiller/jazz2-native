@@ -879,7 +879,7 @@ namespace Death { namespace Trace {
 			std::chrono::system_clock::now().time_since_epoch()).count());
 #endif
 
-		bool result = EnqueueEntry(level, timestamp, functionName, message, messageLength);
+		bool result = EnqueueEntry(level, timestamp, reinterpret_cast<std::uintptr_t>(functionName), message, messageLength);
 
 		if DEATH_UNLIKELY(level >= TraceLevel::Error) {
 			// Flush all messages with level Error or higher because of potential immediate crash/termination
@@ -907,7 +907,8 @@ namespace Death { namespace Trace {
 		std::atomic<bool>* threadFlushedPtr = &threadFlushed;
 
 		// We do not want to drop the message if a dropping queue is used
-		while (!EnqueueEntry(FlushRequested, timestamp, threadFlushedPtr, {}, 0)) {
+		while (!EnqueueEntry(FlushRequested, timestamp,
+				reinterpret_cast<std::uintptr_t>(threadFlushedPtr), {}, 0)) {
 			if (sleepDurationNs > 0) {
 				std::this_thread::sleep_for(std::chrono::nanoseconds{sleepDurationNs});
 			} else {
@@ -937,7 +938,7 @@ namespace Death { namespace Trace {
 		LOGW("TEST 1");
 
 		while (!EnqueueEntry(InitializeBacktraceRequested, 0,
-					reinterpret_cast<const void*>(static_cast<std::uintptr_t>(maxCapacity)), {}, 0)) {
+				static_cast<std::uintptr_t>(maxCapacity), {}, 0)) {
 			LOGW("TEST 1.2");
 			std::this_thread::sleep_for(std::chrono::nanoseconds{100});
 		}
@@ -960,7 +961,7 @@ namespace Death { namespace Trace {
 #if defined(DEATH_TRACE_ASYNC)
 		using namespace Implementation;
 
-		while (!EnqueueEntry(FlushBacktraceRequested, 0, nullptr, {}, 0)) {
+		while (!EnqueueEntry(FlushBacktraceRequested, 0, {}, {}, 0)) {
 			std::this_thread::sleep_for(std::chrono::nanoseconds{100});
 		}
 
@@ -1016,7 +1017,7 @@ namespace Death { namespace Trace {
 		return _threadContext->GetSpscQueue<DefaultQueueType>().prepareWrite(totalSize);
 	}
 
-	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept
+	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, std::uintptr_t functionName, const void* content, std::uint32_t contentLength) noexcept
 	{
 		using namespace Implementation;
 
@@ -1024,12 +1025,13 @@ namespace Death { namespace Trace {
 			_threadContext = GetLocalThreadContext();
 		}
 
-		if (level == InitializeBacktraceRequested) {
-			LOGW("EnqueueEntry 1");
-		}
-
 		std::size_t totalSize = /*Level*/ sizeof(std::byte) + /*Timestamp*/ sizeof(std::uint64_t) +
 			/*FunctionName*/ sizeof(std::uintptr_t) + /*Length*/ sizeof(std::uint32_t) + /*Content*/ contentLength;
+
+		if (level == InitializeBacktraceRequested) {
+			LOGW("EnqueueEntry 1 {} | {}", totalSize, functionName);
+		}
+
 		std::byte* writeBuffer = PrepareWriteBuffer(totalSize);
 
 		if (level == InitializeBacktraceRequested) {
