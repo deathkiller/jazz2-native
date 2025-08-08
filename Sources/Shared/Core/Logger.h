@@ -592,10 +592,22 @@ namespace Death { namespace Trace {
 
 			std::byte* prepareWrite(std::size_t nbytes) noexcept {
 				// Try to reserve the bounded queue
+				if (nbytes == 17) {
+					LOGW("TEST PREPARE 1 {}", nbytes);
+				}
+
 				std::byte* writePos = _producer->boundedQueue.prepareWrite(nbytes);
+
+				if (nbytes == 17) {
+					LOGW("TEST PREPARE 2 {}", nbytes);
+				}
 
 				if DEATH_LIKELY(writePos != nullptr) {
 					return writePos;
+				}
+
+				if (nbytes == 17) {
+					LOGW("TEST PREPARE 3 {}", nbytes);
 				}
 
 				return handleFullQueue(nbytes);
@@ -676,21 +688,40 @@ namespace Death { namespace Trace {
 
 			std::byte* handleFullQueue(std::size_t nbytes) noexcept {
 				// Then it means the queue doesn't have enough size
+				if (nbytes == 17) {
+					LOGW("TEST FULL 1 {}", nbytes);
+				}
+
 				std::size_t capacity = _producer->boundedQueue.capacity() * 2ULL;
 				while (capacity < (nbytes + 1)) {
 					capacity = capacity * 2ULL;
+				}
+
+				if (nbytes == 17) {
+					LOGW("TEST FULL 2 {}", nbytes);
 				}
 
 				// Apply some hard limits also on UnboundedSPSCQueue
 				constexpr std::size_t MaxBoundedQueueSize = 2ULL * 1024 * 1024 * 1024; // 2 GB
 				if DEATH_UNLIKELY(capacity > MaxBoundedQueueSize) {
 					DEATH_DEBUG_ASSERT(nbytes <= MaxBoundedQueueSize);
+					if (nbytes == 17) {
+						LOGW("TEST FULL 3 {}", nbytes);
+					}
 					// We reached the MaxBoundedQueueSize, we won't be allocating more, instead return nullptr to block or drop
 					return nullptr;
 				}
 
+				if (nbytes == 17) {
+					LOGW("TEST FULL 4 {}", nbytes);
+				}
+
 				// Commit previous write to the old queue before switching
 				_producer->boundedQueue.commitWrite();
+
+				if (nbytes == 17) {
+					LOGW("TEST FULL 5 {}", nbytes);
+				}
 
 				// We failed to reserve because the queue was full, create a new node with a new queue
 				Node* nextNode = new Node{capacity, _producer->boundedQueue.hugePagesEnabled()};
@@ -698,12 +729,20 @@ namespace Death { namespace Trace {
 				// Store the new node pointer as next in the current node
 				_producer->next.store(nextNode, std::memory_order_release);
 
+				if (nbytes == 17) {
+					LOGW("TEST FULL 6 {}", nbytes);
+				}
+
 				// Producer is now using the next node
 				_producer = nextNode;
 
 				// Reserve again, this time we know we will always succeed, cast to void* to ignore
 				std::byte* const writePos = _producer->boundedQueue.prepareWrite(nbytes);
 				DEATH_DEBUG_ASSERT(writePos != nullptr);
+
+				if (nbytes == 17) {
+					LOGW("TEST FULL 7 {}", nbytes);
+				}
 
 				return writePos;
 			}

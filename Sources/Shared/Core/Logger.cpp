@@ -874,12 +874,14 @@ namespace Death { namespace Trace {
 	{
 #if defined(DEATH_TRACE_ASYNC)
 		std::uint64_t timestamp = Implementation::rdtsc();
+
+		bool result = EnqueueEntry(level, timestamp, reinterpret_cast<std::uintptr_t>(functionName), message, messageLength);
 #else
 		std::uint64_t timestamp = static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
 			std::chrono::system_clock::now().time_since_epoch()).count());
-#endif
 
-		bool result = EnqueueEntry(level, timestamp, reinterpret_cast<std::uintptr_t>(functionName), message, messageLength);
+		bool result = EnqueueEntry(level, timestamp, functionName, message, messageLength);
+#endif
 
 		if DEATH_UNLIKELY(level >= TraceLevel::Error) {
 			// Flush all messages with level Error or higher because of potential immediate crash/termination
@@ -1106,7 +1108,7 @@ namespace Death { namespace Trace {
 		return true;
 	}
 #else
-	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept
+	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const char* functionName, const void* content, std::uint32_t contentLength) noexcept
 	{
 		if DEATH_UNLIKELY(level == TraceLevel::Deferred) {
 			_backend.EnqueueEntryToBacktrace(timestamp, functionName, content, contentLength);
