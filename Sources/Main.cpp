@@ -183,8 +183,6 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 {
 	ZoneScopedC(0x888888);
 
-	LOGI("OnPreInitialize() started");
-
 #if defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER)
 	constexpr bool isServer = true;
 #elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
@@ -217,11 +215,7 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 	constexpr bool isServer = false;
 #endif
 
-	LOGI("PreferencesCache::Initialize() started");
-
 	PreferencesCache::Initialize(config);
-
-	LOGI("PreferencesCache::Initialize() ended");
 
 	config.windowTitle = NCINE_APP_NAME;
 	if (isServer) {
