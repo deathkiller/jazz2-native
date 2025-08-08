@@ -353,53 +353,34 @@ namespace Death { namespace Trace {
 			BoundedSPSCQueueImpl& operator=(BoundedSPSCQueueImpl const&) = delete;
 
 			std::byte* prepareWrite(T n) noexcept {
-				if (n == 17) {
-					LOGW("TEST PREPARE WRITE 1 {}", n);
-				}
 				if ((_capacity - static_cast<T>(_writerPos - _readerPosCache)) < n) {
-					if (n == 17) {
-						LOGW("TEST PREPARE WRITE 2 {}", n);
-					}
 					// Not enough space, we need to load reader and re-check
 					_readerPosCache = _atomicReaderPos.load(std::memory_order_acquire);
-					if (n == 17) {
-						LOGW("TEST PREPARE WRITE 3 {}", n);
-					}
+
 					if ((_capacity - static_cast<T>(_writerPos - _readerPosCache)) < n) {
-						if (n == 17) {
-							LOGW("TEST PREPARE WRITE 4 {}", n);
-						}
 						return nullptr;
 					}
-					if (n == 17) {
-						LOGW("TEST PREPARE WRITE 5 {}", n);
-					}
 				}
 
 				if (n == 17) {
-					LOGW("TEST PREPARE WRITE 6 {}", n);
-				}
-				if (n == 17) {
-					LOGW("TEST PREPARE WRITE 6.1 {} | {}", _writerPos, _mask);
-				}
-				if (n == 17) {
-					LOGW("TEST PREPARE WRITE 6.2 {}", _writerPos & _mask);
-				}
-				if (n == 17) {
-					LOGW("TEST PREPARE WRITE 6.3 {}", uintptr_t(_storage));
-				}
-				if (n == 17) {
-					LOGW("TEST PREPARE WRITE 6.4 {}", uintptr_t((char*)_storage + (_writerPos & _mask)));
+					LOGW("PREPARE WRITE 0 | {}", _writerPos);
+					LOGW("PREPARE WRITE 1 | {}", _mask);
+					LOGW("PREPARE WRITE 2 | {}", uintptr_t(_storage));
 				}
 
-				auto result = (char*)_storage + (_writerPos & _mask);
+				std::size_t newPos = (_writerPos % (_mask + 1));
 				if (n == 17) {
-					LOGW("TEST PREPARE WRITE 7 {} | {}", n, uintptr_t(result));
+					LOGW("PREPARE WRITE 3 | {}", newPos);
 				}
+
+				std::byte* newPtr = _storage + newPos;
 				if (n == 17) {
-					LOGW("TEST PREPARE WRITE 8 {} | {} | {} | {}", uintptr_t(_storage), _writerPos, _mask, _writerPos & _mask);
+					LOGW("PREPARE WRITE 4 | {}", uintptr_t(newPos));
 				}
-				return (std::byte*)result;
+
+				return newPtr;
+
+				//return _storage + (_writerPos & _mask);
 			}
 
 			void finishWrite(T nbytes) noexcept {
@@ -629,22 +610,10 @@ namespace Death { namespace Trace {
 
 			std::byte* prepareWrite(std::size_t nbytes) noexcept {
 				// Try to reserve the bounded queue
-				if (nbytes == 17) {
-					LOGW("TEST PREPARE 1 {}", nbytes);
-				}
-
 				std::byte* writePos = _producer->boundedQueue.prepareWrite(nbytes);
-
-				if (nbytes == 17) {
-					LOGW("TEST PREPARE 2 {}", nbytes);
-				}
 
 				if DEATH_LIKELY(writePos != nullptr) {
 					return writePos;
-				}
-
-				if (nbytes == 17) {
-					LOGW("TEST PREPARE 3 {}", nbytes);
 				}
 
 				return handleFullQueue(nbytes);
@@ -725,40 +694,21 @@ namespace Death { namespace Trace {
 
 			std::byte* handleFullQueue(std::size_t nbytes) noexcept {
 				// Then it means the queue doesn't have enough size
-				if (nbytes == 17) {
-					LOGW("TEST FULL 1 {}", nbytes);
-				}
-
 				std::size_t capacity = _producer->boundedQueue.capacity() * 2ULL;
 				while (capacity < (nbytes + 1)) {
 					capacity = capacity * 2ULL;
-				}
-
-				if (nbytes == 17) {
-					LOGW("TEST FULL 2 {}", nbytes);
 				}
 
 				// Apply some hard limits also on UnboundedSPSCQueue
 				constexpr std::size_t MaxBoundedQueueSize = 2ULL * 1024 * 1024 * 1024; // 2 GB
 				if DEATH_UNLIKELY(capacity > MaxBoundedQueueSize) {
 					DEATH_DEBUG_ASSERT(nbytes <= MaxBoundedQueueSize);
-					if (nbytes == 17) {
-						LOGW("TEST FULL 3 {}", nbytes);
-					}
 					// We reached the MaxBoundedQueueSize, we won't be allocating more, instead return nullptr to block or drop
 					return nullptr;
 				}
 
-				if (nbytes == 17) {
-					LOGW("TEST FULL 4 {}", nbytes);
-				}
-
 				// Commit previous write to the old queue before switching
 				_producer->boundedQueue.commitWrite();
-
-				if (nbytes == 17) {
-					LOGW("TEST FULL 5 {}", nbytes);
-				}
 
 				// We failed to reserve because the queue was full, create a new node with a new queue
 				Node* nextNode = new Node{capacity, _producer->boundedQueue.hugePagesEnabled()};
@@ -766,20 +716,12 @@ namespace Death { namespace Trace {
 				// Store the new node pointer as next in the current node
 				_producer->next.store(nextNode, std::memory_order_release);
 
-				if (nbytes == 17) {
-					LOGW("TEST FULL 6 {}", nbytes);
-				}
-
 				// Producer is now using the next node
 				_producer = nextNode;
 
 				// Reserve again, this time we know we will always succeed, cast to void* to ignore
 				std::byte* const writePos = _producer->boundedQueue.prepareWrite(nbytes);
 				DEATH_DEBUG_ASSERT(writePos != nullptr);
-
-				if (nbytes == 17) {
-					LOGW("TEST FULL 7 {}", nbytes);
-				}
 
 				return writePos;
 			}
@@ -1416,12 +1358,9 @@ namespace Death { namespace Trace {
 		static ThreadContext* GetLocalThreadContext() noexcept;
 
 		std::byte* PrepareWriteBuffer(std::size_t totalSize) noexcept;
-		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, std::uintptr_t functionName, const void* content, std::uint32_t contentLength) noexcept;
-#else
-		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const char* functionName, const void* content, std::uint32_t contentLength) noexcept;
 #endif
 
-
+		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept;
 	};
 
 }}
