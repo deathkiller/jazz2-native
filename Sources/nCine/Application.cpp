@@ -1436,6 +1436,8 @@ namespace nCine
 #if defined(DEATH_TRACE)
 	void Application::InitializeTrace()
 	{
+		LOGI("InitializeTrace() started 1");
+
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 		char* userAgent = (char*)EM_ASM_PTR({
 			return (typeof navigator !== 'undefined' && navigator !== null &&
@@ -1509,10 +1511,17 @@ namespace nCine
 		}
 #	endif
 
+		LOGI("InitializeTrace() started 2");
+
 		Trace::AttachSink(this);
+
+		LOGI("InitializeTrace() started 3");
+
 #	if !defined(DEATH_DEBUG)
 		Trace::InitializeBacktrace(8, TraceLevel::Warning);
 #	endif
+
+		LOGI("InitializeTrace() ended");
 	}
 
 	void Application::ShutdownTrace()
