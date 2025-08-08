@@ -693,9 +693,13 @@ namespace nCine
 
 	void Application::PreInitCommon(std::unique_ptr<IAppEventHandler> appEventHandler)
 	{
+		LOGI("PreInitCommon() started");
+
 #if defined(DEATH_TRACE)
 		InitializeTrace();
 #endif
+
+		LOGI("Trace initialized");
 
 		appEventHandler_ = std::move(appEventHandler);
 		appEventHandler_->OnPreInitialize(appCfg_);
