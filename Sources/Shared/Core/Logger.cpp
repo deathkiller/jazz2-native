@@ -934,13 +934,21 @@ namespace Death { namespace Trace {
 #if defined(DEATH_TRACE_ASYNC)
 		using namespace Implementation;
 
+		LOGW("TEST 1");
+
 		while (!EnqueueEntry(InitializeBacktraceRequested, 0,
 					reinterpret_cast<const void*>(static_cast<std::uintptr_t>(maxCapacity)), {}, 0)) {
+			LOGW("TEST 1.2");
 			std::this_thread::sleep_for(std::chrono::nanoseconds{100});
 		}
 
+		LOGW("TEST 2");
+
 		_backend.SetBacktraceFlushLevel(flushLevel);
+
+		LOGW("TEST 3");
 		_backend.Notify();
+		LOGW("TEST 4");
 #else
 		_backend.InitializeBacktrace(maxCapacity);
 		_backend.SetBacktraceFlushLevel(flushLevel);
@@ -1016,15 +1024,23 @@ namespace Death { namespace Trace {
 			_threadContext = GetLocalThreadContext();
 		}
 
+		if (level == InitializeBacktraceRequested) {
+			LOGW("EnqueueEntry 1");
+		}
+
 		std::size_t totalSize = /*Level*/ sizeof(std::byte) + /*Timestamp*/ sizeof(std::uint64_t) +
 			/*FunctionName*/ sizeof(std::uintptr_t) + /*Length*/ sizeof(std::uint32_t) + /*Content*/ contentLength;
 		std::byte* writeBuffer = PrepareWriteBuffer(totalSize);
+
+		if (level == InitializeBacktraceRequested) {
+			LOGW("EnqueueEntry 2");
+		}
 
 		if constexpr (DefaultQueueType == QueueType::BoundedDropping ||
 					  DefaultQueueType == QueueType::UnboundedDropping) {
 			if DEATH_UNLIKELY(writeBuffer == nullptr) {
 				// Not enough space to push to queue, message is dropped
-				if (level != FlushRequested) {
+				if (level != FlushRequested && level != InitializeBacktraceRequested && level != FlushBacktraceRequested) {
 					_threadContext->IncrementFailureCounter();
 				}
 				return false;
@@ -1032,7 +1048,7 @@ namespace Death { namespace Trace {
 		} else if constexpr (DefaultQueueType == QueueType::BoundedBlocking ||
 							 DefaultQueueType == QueueType::UnboundedBlocking) {
 			if DEATH_UNLIKELY(writeBuffer == nullptr) {
-				if (level != FlushRequested) {
+				if (level != FlushRequested && level != InitializeBacktraceRequested && level != FlushBacktraceRequested) {
 					_threadContext->IncrementFailureCounter();
 				}
 
@@ -1045,6 +1061,10 @@ namespace Death { namespace Trace {
 					writeBuffer = PrepareWriteBuffer(totalSize);
 				} while (writeBuffer == nullptr);
 			}
+		}
+
+		if (level == InitializeBacktraceRequested) {
+			LOGW("EnqueueEntry 3");
 		}
 
 #	if defined(DEATH_DEBUG)
@@ -1072,8 +1092,15 @@ namespace Death { namespace Trace {
 		DEATH_DEBUG_ASSERT(totalSize == (static_cast<std::size_t>(writeBuffer - writeBegin)));
 #	endif
 
+		if (level == InitializeBacktraceRequested) {
+			LOGW("EnqueueEntry 4");
+		}
+
 		_threadContext->GetSpscQueue<DefaultQueueType>().finishAndCommitWrite(totalSize);
 
+		if (level == InitializeBacktraceRequested) {
+			LOGW("EnqueueEntry 5");
+		}
 		return true;
 	}
 #else
