@@ -1018,11 +1018,6 @@ namespace Death { namespace Trace {
 
 		std::size_t totalSize = /*Level*/ sizeof(std::byte) + /*Timestamp*/ sizeof(std::uint64_t) +
 			/*FunctionName*/ sizeof(std::uintptr_t) + /*Length*/ sizeof(std::uint32_t) + /*Content*/ contentLength;
-
-		if (totalSize < 21) {
-			totalSize = 21;
-		}
-
 		std::byte* writeBuffer = PrepareWriteBuffer(totalSize);
 
 		if constexpr (DefaultQueueType == QueueType::BoundedDropping ||
