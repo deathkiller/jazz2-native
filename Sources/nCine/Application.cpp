@@ -1523,7 +1523,7 @@ namespace nCine
 
 		LOGI("InitializeTrace() started 3");
 
-#	if !defined(DEATH_DEBUG)
+#	if !defined(DEATH_DEBUG) && (!defined(DEATH_TARGET_ANDROID) || !defined(DEATH_TARGET_32BIT))
 		Trace::InitializeBacktrace(8, TraceLevel::Warning);
 #	endif
 
