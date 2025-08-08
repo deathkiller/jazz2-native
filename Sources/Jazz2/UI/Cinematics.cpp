@@ -199,14 +199,18 @@ namespace Jazz2::UI
 			return false;
 		}
 
-		DEATH_ASSERT(s->GetSize() > 16 && s->GetSize() < 64 * 1024 * 1024,
-			("Cannot load SFX playlist for \"{}.j2v\" - unexpected file size", path), false);
+		if (s->GetSize() <= 16 || s->GetSize() >= 64 * 1024 * 1024) {
+			LOGE("Cannot load SFX playlist for \"{}.j2v\" - unexpected file size", path);
+			return false;
+		}
 
 		std::uint64_t signature = s->ReadValue<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		std::uint16_t version = s->ReadValue<std::uint16_t>();
-		DEATH_ASSERT(signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::SfxListFile && version <= SfxListVersion,
-			("Cannot load SFX playlist for \"{}.j2v\" - invalid signature", path), false);
+		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::SfxListFile || version > SfxListVersion) {
+			LOGE("Cannot load SFX playlist for \"{}.j2v\" - invalid signature", path);
+			return false;
+		}
 
 		std::uint32_t sampleCount = s->ReadValue<std::uint16_t>();
 		for (std::uint32_t i = 0; i < sampleCount; i++) {

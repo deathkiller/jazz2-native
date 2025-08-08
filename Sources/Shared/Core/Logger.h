@@ -1340,9 +1340,12 @@ namespace Death { namespace Trace {
 		static ThreadContext* GetLocalThreadContext() noexcept;
 
 		std::byte* PrepareWriteBuffer(std::size_t totalSize) noexcept;
+		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, std::uintptr_t functionName, const void* content, std::uint32_t contentLength) noexcept;
+#else
+		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const char* functionName, const void* content, std::uint32_t contentLength) noexcept;
 #endif
 
-		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept;
+
 	};
 
 }}
