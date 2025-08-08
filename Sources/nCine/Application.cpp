@@ -476,6 +476,7 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 		}
 	}
 
+	// Go backwards until we find the first opening parenthesis (arguments)
 	std::int32_t parethesisCount = 0;
 	for (; i >= 0; i--) {
 		if (functionName[i] == ')') {
@@ -500,6 +501,7 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 		std::int32_t end = i;
 		i--;
 	FindFunctionName:
+		// Go backwards until we find the first space
 		for (; i >= 0; i--) {
 			if (functionName[i] == ')') {
 				parethesisCount++;
@@ -523,6 +525,10 @@ static void AppendShortenedFunctionName(char* dest, std::int32_t& length, const 
 			goto FindFunctionName;
 		}
 		i++;
+		// If the return type is a pointer, the asterisk can be right before the function name, so skip it
+		if (i > 0 && functionName[i] == '*') {
+			i++;
+		}
 		AppendPart(dest, length, &functionName[i], end - i);
 		AppendPart(dest, length, "()");
 		if (isLambda) {

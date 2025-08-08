@@ -362,20 +362,30 @@ namespace Death { namespace Trace {
 					}
 				}
 
-				if (n == 17) {
-					LOGW("PREPARE WRITE 0 | {}", _writerPos);
-					LOGW("PREPARE WRITE 1 | {}", _mask);
-					LOGW("PREPARE WRITE 2 | {}", uintptr_t(_storage));
+
+				if (n == 17 || n == 21) {
+					LOGW("PREPARE WRITE 1.0 | {}", _writerPos);
+					LOGW("PREPARE WRITE 1.1 | {}", _mask);
+					LOGW("PREPARE WRITE 1.2 | {}", uintptr_t(_storage));
 				}
 
-				std::size_t newPos = (_writerPos % (_mask + 1));
-				if (n == 17) {
-					LOGW("PREPARE WRITE 3 | {}", newPos);
+				auto wp = _writerPos;
+				auto modu = _mask + 1;
+
+				if (n == 17 || n == 21) {
+					LOGW("PREPARE WRITE 2.0 | {}", wp);
+					LOGW("PREPARE WRITE 2.1 | {}", modu);
 				}
 
-				std::byte* newPtr = _storage + newPos;
-				if (n == 17) {
-					LOGW("PREPARE WRITE 4 | {}", uintptr_t(newPos));
+				auto np = wp % modu;
+
+				if (n == 17 || n == 21) {
+					LOGW("PREPARE WRITE 3.2 | {}", np);
+				}
+
+				std::byte* newPtr = _storage + np;
+				if (n == 17 || n == 21) {
+					LOGW("PREPARE WRITE 4 | {}", uintptr_t(newPtr));
 				}
 
 				return newPtr;
