@@ -375,10 +375,19 @@ namespace Death { namespace Trace {
 						LOGW("TEST PREPARE WRITE 5 {}", n);
 					}
 				}
+
 				if (n == 17) {
 					LOGW("TEST PREPARE WRITE 6 {}", n);
 				}
-				return _storage + (_writerPos & _mask);
+
+				auto result = _storage + (_writerPos & _mask);;
+				if (n == 17) {
+					LOGW("TEST PREPARE WRITE 7 {} | {}", n, uintptr_t(result));
+				}
+				if (n == 17) {
+					LOGW("TEST PREPARE WRITE 8 {} | {} | {} | {}", uintptr_t(_storage), _writerPos, _mask, _writerPos & _mask);
+				}
+				return result;
 			}
 
 			void finishWrite(T nbytes) noexcept {
