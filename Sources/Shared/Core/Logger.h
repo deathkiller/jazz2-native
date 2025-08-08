@@ -353,15 +353,31 @@ namespace Death { namespace Trace {
 			BoundedSPSCQueueImpl& operator=(BoundedSPSCQueueImpl const&) = delete;
 
 			std::byte* prepareWrite(T n) noexcept {
+				if (n == 17) {
+					LOGW("TEST PREPARE WRITE 1 {}", n);
+				}
 				if ((_capacity - static_cast<T>(_writerPos - _readerPosCache)) < n) {
+					if (n == 17) {
+						LOGW("TEST PREPARE WRITE 2 {}", n);
+					}
 					// Not enough space, we need to load reader and re-check
 					_readerPosCache = _atomicReaderPos.load(std::memory_order_acquire);
-
+					if (n == 17) {
+						LOGW("TEST PREPARE WRITE 3 {}", n);
+					}
 					if ((_capacity - static_cast<T>(_writerPos - _readerPosCache)) < n) {
+						if (n == 17) {
+							LOGW("TEST PREPARE WRITE 4 {}", n);
+						}
 						return nullptr;
 					}
+					if (n == 17) {
+						LOGW("TEST PREPARE WRITE 5 {}", n);
+					}
 				}
-
+				if (n == 17) {
+					LOGW("TEST PREPARE WRITE 6 {}", n);
+				}
 				return _storage + (_writerPos & _mask);
 			}
 
