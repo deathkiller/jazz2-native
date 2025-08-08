@@ -874,14 +874,12 @@ namespace Death { namespace Trace {
 	{
 #if defined(DEATH_TRACE_ASYNC)
 		std::uint64_t timestamp = Implementation::rdtsc();
-
-		bool result = EnqueueEntry(level, timestamp, reinterpret_cast<std::uintptr_t>(functionName), message, messageLength);
 #else
 		std::uint64_t timestamp = static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
 			std::chrono::system_clock::now().time_since_epoch()).count());
+#endif
 
 		bool result = EnqueueEntry(level, timestamp, functionName, message, messageLength);
-#endif
 
 		if DEATH_UNLIKELY(level >= TraceLevel::Error) {
 			// Flush all messages with level Error or higher because of potential immediate crash/termination
@@ -909,8 +907,7 @@ namespace Death { namespace Trace {
 		std::atomic<bool>* threadFlushedPtr = &threadFlushed;
 
 		// We do not want to drop the message if a dropping queue is used
-		while (!EnqueueEntry(FlushRequested, timestamp,
-				reinterpret_cast<std::uintptr_t>(threadFlushedPtr), {}, 0)) {
+		while (!EnqueueEntry(FlushRequested, timestamp, threadFlushedPtr, {}, 0)) {
 			if (sleepDurationNs > 0) {
 				std::this_thread::sleep_for(std::chrono::nanoseconds{sleepDurationNs});
 			} else {
@@ -937,21 +934,13 @@ namespace Death { namespace Trace {
 #if defined(DEATH_TRACE_ASYNC)
 		using namespace Implementation;
 
-		LOGW("TEST 1");
-
 		while (!EnqueueEntry(InitializeBacktraceRequested, 0,
-				static_cast<std::uintptr_t>(maxCapacity), {}, 0)) {
-			LOGW("TEST 1.2");
+					reinterpret_cast<const void*>(static_cast<std::uintptr_t>(maxCapacity)), {}, 0)) {
 			std::this_thread::sleep_for(std::chrono::nanoseconds{100});
 		}
 
-		LOGW("TEST 2");
-
 		_backend.SetBacktraceFlushLevel(flushLevel);
-
-		LOGW("TEST 3");
 		_backend.Notify();
-		LOGW("TEST 4");
 #else
 		_backend.InitializeBacktrace(maxCapacity);
 		_backend.SetBacktraceFlushLevel(flushLevel);
@@ -963,7 +952,7 @@ namespace Death { namespace Trace {
 #if defined(DEATH_TRACE_ASYNC)
 		using namespace Implementation;
 
-		while (!EnqueueEntry(FlushBacktraceRequested, 0, {}, {}, 0)) {
+		while (!EnqueueEntry(FlushBacktraceRequested, 0, nullptr, {}, 0)) {
 			std::this_thread::sleep_for(std::chrono::nanoseconds{100});
 		}
 
@@ -1019,7 +1008,7 @@ namespace Death { namespace Trace {
 		return _threadContext->GetSpscQueue<DefaultQueueType>().prepareWrite(totalSize);
 	}
 
-	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, std::uintptr_t functionName, const void* content, std::uint32_t contentLength) noexcept
+	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept
 	{
 		using namespace Implementation;
 
@@ -1029,22 +1018,13 @@ namespace Death { namespace Trace {
 
 		std::size_t totalSize = /*Level*/ sizeof(std::byte) + /*Timestamp*/ sizeof(std::uint64_t) +
 			/*FunctionName*/ sizeof(std::uintptr_t) + /*Length*/ sizeof(std::uint32_t) + /*Content*/ contentLength;
-
-		if (level == InitializeBacktraceRequested) {
-			LOGW("EnqueueEntry 1 {} | {}", totalSize, functionName);
-		}
-
 		std::byte* writeBuffer = PrepareWriteBuffer(totalSize);
-
-		if (level == InitializeBacktraceRequested) {
-			LOGW("EnqueueEntry 2");
-		}
 
 		if constexpr (DefaultQueueType == QueueType::BoundedDropping ||
 					  DefaultQueueType == QueueType::UnboundedDropping) {
 			if DEATH_UNLIKELY(writeBuffer == nullptr) {
 				// Not enough space to push to queue, message is dropped
-				if (level != FlushRequested && level != InitializeBacktraceRequested && level != FlushBacktraceRequested) {
+				if (level != FlushRequested) {
 					_threadContext->IncrementFailureCounter();
 				}
 				return false;
@@ -1052,7 +1032,7 @@ namespace Death { namespace Trace {
 		} else if constexpr (DefaultQueueType == QueueType::BoundedBlocking ||
 							 DefaultQueueType == QueueType::UnboundedBlocking) {
 			if DEATH_UNLIKELY(writeBuffer == nullptr) {
-				if (level != FlushRequested && level != InitializeBacktraceRequested && level != FlushBacktraceRequested) {
+				if (level != FlushRequested) {
 					_threadContext->IncrementFailureCounter();
 				}
 
@@ -1065,10 +1045,6 @@ namespace Death { namespace Trace {
 					writeBuffer = PrepareWriteBuffer(totalSize);
 				} while (writeBuffer == nullptr);
 			}
-		}
-
-		if (level == InitializeBacktraceRequested) {
-			LOGW("EnqueueEntry 3");
 		}
 
 #	if defined(DEATH_DEBUG)
@@ -1096,19 +1072,12 @@ namespace Death { namespace Trace {
 		DEATH_DEBUG_ASSERT(totalSize == (static_cast<std::size_t>(writeBuffer - writeBegin)));
 #	endif
 
-		if (level == InitializeBacktraceRequested) {
-			LOGW("EnqueueEntry 4");
-		}
-
 		_threadContext->GetSpscQueue<DefaultQueueType>().finishAndCommitWrite(totalSize);
 
-		if (level == InitializeBacktraceRequested) {
-			LOGW("EnqueueEntry 5");
-		}
 		return true;
 	}
 #else
-	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const char* functionName, const void* content, std::uint32_t contentLength) noexcept
+	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept
 	{
 		if DEATH_UNLIKELY(level == TraceLevel::Deferred) {
 			_backend.EnqueueEntryToBacktrace(timestamp, functionName, content, contentLength);
