@@ -350,6 +350,12 @@ namespace Death { namespace Trace {
 	void LoggerBackend::SetBacktraceFlushLevel(TraceLevel flushLevel) noexcept
 	{
 #if defined(DEATH_TRACE_ASYNC)
+		if (!_backtraceStorage) {
+			_backtraceStorage = std::make_shared<BacktraceStorage>();
+		}
+
+		_backtraceStorage->SetCapacity(8);
+
 		_backtraceFlushLevel.store(flushLevel, std::memory_order_relaxed);
 #else
 		_backtraceFlushLevel = flushLevel;
@@ -935,12 +941,12 @@ namespace Death { namespace Trace {
 #if defined(DEATH_TRACE_ASYNC)
 		using namespace Implementation;
 
-		while (!EnqueueEntry(InitializeBacktraceRequested, 0, nullptr, nullptr, 0)) {
+		/*while (!EnqueueEntry(InitializeBacktraceRequested, 0, nullptr, nullptr, 0)) {
 			std::this_thread::sleep_for(std::chrono::nanoseconds{100});
-		}
+		}*/
 
 		_backend.SetBacktraceFlushLevel(flushLevel);
-		_backend.Notify();
+		//_backend.Notify();
 #else
 		_backend.InitializeBacktrace(maxCapacity);
 		_backend.SetBacktraceFlushLevel(flushLevel);
