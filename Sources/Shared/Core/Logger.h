@@ -1320,7 +1320,7 @@ namespace Death { namespace Trace {
 		void Flush(std::uint32_t sleepDurationNs = 100) noexcept;
 
 		/** @brief Initializes backtrace storage to be able to use @ref TraceLevel::Deferred */
-		void InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel = TraceLevel::Unknown);
+		DEATH_NEVER_INLINE void InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel = TraceLevel::Unknown);
 		/** @brief Writes any stored deferred entries to all sinks asynchronously */
 		void FlushBacktraceAsync() noexcept;
 
@@ -1338,8 +1338,6 @@ namespace Death { namespace Trace {
 		static inline DEATH_THREAD_LOCAL ThreadContext* _threadContext = nullptr;
 
 		static ThreadContext* GetLocalThreadContext() noexcept;
-
-		std::uint8_t* PrepareWriteBuffer(std::size_t totalSize) noexcept;
 #endif
 
 		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept;
