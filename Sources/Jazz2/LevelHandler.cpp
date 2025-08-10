@@ -401,7 +401,7 @@ namespace Jazz2
 
 		_levelDisplayName = std::move(descriptor.DisplayName);
 
-		LOGI("Level \"{}\" (\"{}.j2l\") loaded", _levelDisplayName, _levelName);
+		LOGI("Level \"{}\" – \"{}.j2l\" loaded", _levelDisplayName, _levelName);
 
 		if (!_levelDisplayName.empty()) {
 			theApplication().GetGfxDevice().setWindowTitle(String(NCINE_APP_NAME " - " + _levelDisplayName));
