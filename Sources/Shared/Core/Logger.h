@@ -1135,6 +1135,7 @@ namespace Death { namespace Trace {
 	{
 	public:
 		BacktraceStorage();
+		BacktraceStorage(std::uint32_t capacity);
 
 		/** @brief Stores the specified transit event */
 		void Store(TransitEvent transitEvent, Containers::StringView threadId) noexcept;
@@ -1192,9 +1193,11 @@ namespace Death { namespace Trace {
 		void DispatchEntryToSinks(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength, Containers::StringView threadId) noexcept;
 		/** @brief Flushes and waits until all prior entries are written to all sinks */
 		void FlushActiveSinks() noexcept;
+#endif
 
 		/** @brief Initializes backtrace storage to be able to use @ref TraceLevel::Deferred */
-		void InitializeBacktrace(std::uint32_t maxCapacity);
+		void InitializeBacktrace(std::uint32_t capacity);
+#if !defined(DEATH_TRACE_ASYNC)
 		/** @brief Writes any stored deferred entries to all sinks asynchronously */
 		void FlushBacktraceAsync() noexcept;
 		/** @brief Enqueues the specified entry to backtrace storage */
@@ -1320,7 +1323,7 @@ namespace Death { namespace Trace {
 		void Flush(std::uint32_t sleepDurationNs = 100) noexcept;
 
 		/** @brief Initializes backtrace storage to be able to use @ref TraceLevel::Deferred */
-		DEATH_NEVER_INLINE void InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel = TraceLevel::Unknown);
+		void InitializeBacktrace(std::uint32_t capacity, TraceLevel flushLevel = TraceLevel::Unknown);
 		/** @brief Writes any stored deferred entries to all sinks asynchronously */
 		void FlushBacktraceAsync() noexcept;
 

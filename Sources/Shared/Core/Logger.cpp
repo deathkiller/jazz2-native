@@ -245,6 +245,12 @@ namespace Death { namespace Trace {
 	{
 	}
 
+	BacktraceStorage::BacktraceStorage(std::uint32_t capacity)
+		: _capacity(capacity), _index(0)
+	{
+		arrayReserve(_storedEvents, _capacity);
+	}
+
 	void BacktraceStorage::Store(TransitEvent transitEvent, StringView threadId) noexcept
 	{
 		if (_storedEvents.size() < _capacity) {
@@ -534,9 +540,9 @@ namespace Death { namespace Trace {
 			// If this is a flush event then we do not need to format anything for the TransitEvent, but we need
 			// to set the transit event's FlushFlag pointer instead
 			transitEvent->FlushFlag = reinterpret_cast<std::atomic<bool>*>(functionName);
-		} else if DEATH_UNLIKELY(transitEvent->Level == InitializeBacktraceRequested) {
+		} /*else if DEATH_UNLIKELY(transitEvent->Level == InitializeBacktraceRequested) {
 			transitEvent->Capacity = static_cast<std::uint32_t>(functionName);
-		} else if DEATH_LIKELY(transitEvent->Level != FlushBacktraceRequested) {
+		}*/ else if DEATH_LIKELY(transitEvent->Level != FlushBacktraceRequested) {
 			transitEvent->FunctionName = reinterpret_cast<const char*>(functionName);
 			transitEvent->Message.resize(length);
 			std::memcpy(&transitEvent->Message[0], readPos, length);
@@ -663,21 +669,19 @@ namespace Death { namespace Trace {
 			transitEvent.FlushFlag = nullptr;
 
 			// We defer notifying the caller until after this function completes
-		} else if DEATH_UNLIKELY(transitEvent.Level == InitializeBacktraceRequested) {
-			LOGW("Backtrace initialized");
-			if (!_backtraceStorage) {
-				_backtraceStorage = std::make_shared<BacktraceStorage>();
+		} /*else if DEATH_UNLIKELY(transitEvent.Level == InitializeBacktraceRequested) {
+			if (_backtraceStorage == nullptr) {
+				_backtraceStorage = std::make_shared<BacktraceStorage>(transitEvent.Capacity);
+			} else {
+				_backtraceStorage->SetCapacity(transitEvent.Capacity);
 			}
-
-			_backtraceStorage->SetCapacity(transitEvent.Capacity);
-			LOGW("Backtrace capacity: {}", transitEvent.Capacity);
-		} else if DEATH_UNLIKELY(transitEvent.Level == FlushBacktraceRequested) {
-			if (_backtraceStorage) {
+		}*/ else if DEATH_UNLIKELY(transitEvent.Level == FlushBacktraceRequested) {
+			if (_backtraceStorage != nullptr) {
 				_backtraceStorage->Process(
 					[this](TransitEvent const& te, StringView threadId) { DispatchTransitEventToSinks(te, threadId); });
 			}
 		} else if DEATH_UNLIKELY(transitEvent.Level == TraceLevel::Deferred) {
-			if (_backtraceStorage) {
+			if (_backtraceStorage != nullptr) {
 				_backtraceStorage->Store(Death::move(transitEvent), threadContext.GetThreadId());
 			} else {
 				// If the backtrace storage is not initialized, we dispatch the event directly to the sinks
@@ -687,7 +691,7 @@ namespace Death { namespace Trace {
 			// First, dispatch any deferred entries if the trace level is high enough
 			TraceLevel backtraceFlushLevel = _backtraceFlushLevel.load(std::memory_order_relaxed);
 			if DEATH_UNLIKELY(backtraceFlushLevel != TraceLevel::Unknown && transitEvent.Level >= backtraceFlushLevel) {
-				if (_backtraceStorage) {
+				if (_backtraceStorage != nullptr) {
 					_backtraceStorage->Process(
 						[this](TransitEvent const& te, StringView threadId) { DispatchTransitEventToSinks(te, threadId); });
 				}
@@ -815,21 +819,23 @@ namespace Death { namespace Trace {
 			_sinks[i]->OnTraceFlushed();
 		}
 	}
+#endif
 
-	void LoggerBackend::InitializeBacktrace(std::uint32_t maxCapacity)
+	void LoggerBackend::InitializeBacktrace(std::uint32_t capacity)
 	{
 		using namespace Implementation;
 
-		if (!_backtraceStorage) {
-			_backtraceStorage = std::make_shared<BacktraceStorage>();
+		if (_backtraceStorage == nullptr) {
+			_backtraceStorage = std::make_shared<BacktraceStorage>(capacity);
+		} else {
+			_backtraceStorage->SetCapacity(capacity);
 		}
-
-		_backtraceStorage->SetCapacity(maxCapacity);
 	}
 
+#if !defined(DEATH_TRACE_ASYNC)
 	void LoggerBackend::FlushBacktraceAsync() noexcept
 	{
-		if (_backtraceStorage) {
+		if (_backtraceStorage != nullptr) {
 			_backtraceStorage->Process(
 				[this](TransitEvent const& te, StringView threadId) { DispatchEntryToSinks(te.Level,
 					te.Timestamp, te.FunctionName, te.Message.data(), static_cast<std::int32_t>(te.Message.size()), threadId); });
@@ -840,7 +846,7 @@ namespace Death { namespace Trace {
 	{
 		using namespace Implementation;
 
-		if (_backtraceStorage) {
+		if (_backtraceStorage != nullptr) {
 			StringView threadId;
 			char buffer[16];
 			if (std::uint32_t tid = GetNativeThreadId()) {
@@ -930,26 +936,27 @@ namespace Death { namespace Trace {
 #endif
 	}
 
-#if defined(DEATH_TARGET_ANDROID) && defined(DEATH_TARGET_32BIT)
-	__attribute__((optnone))
-#endif
-	void Logger::InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel)
+	void Logger::InitializeBacktrace(std::uint32_t capacity, TraceLevel flushLevel)
 	{
 		// All deferred entries are logged immediately if the backtrace storage is not initialized
-#if defined(DEATH_TRACE_ASYNC)
+
+		// TODO: This piece of code doesn't work on 32-bit ARM Android for some reason,
+		//       so the backtrace needs to be initialized on the current thread instead
+
+/*#if defined(DEATH_TRACE_ASYNC)
 		using namespace Implementation;
 
 		while (!EnqueueEntry(InitializeBacktraceRequested, 0,
-					reinterpret_cast<const void*>(static_cast<std::uintptr_t>(maxCapacity)), nullptr, 0)) {
+					reinterpret_cast<const void*>(static_cast<std::uintptr_t>(capacity)), nullptr, 0)) {
 			std::this_thread::sleep_for(std::chrono::nanoseconds{100});
 		}
 
 		_backend.SetBacktraceFlushLevel(flushLevel);
 		_backend.Notify();
-#else
-		_backend.InitializeBacktrace(maxCapacity);
+#else*/
+		_backend.InitializeBacktrace(capacity);
 		_backend.SetBacktraceFlushLevel(flushLevel);
-#endif
+/*#endif*/
 	}
 
 	void Logger::FlushBacktraceAsync() noexcept

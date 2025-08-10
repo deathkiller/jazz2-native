@@ -1512,9 +1512,7 @@ namespace nCine
 #	endif
 
 		Trace::AttachSink(this);
-#	if !defined(DEATH_DEBUG) /*&& (!defined(DEATH_TARGET_ANDROID) || !defined(DEATH_TARGET_32BIT))*/
-		// TODO: Backtrace doesn't work for some reason on 32-bit Android, the initialization causes infinite
-		//       loops while writing to the queue (probably compiler bug), so disable it there for now
+#	if !defined(DEATH_DEBUG)
 		Trace::InitializeBacktrace(8, TraceLevel::Warning);
 #	endif
 	}
