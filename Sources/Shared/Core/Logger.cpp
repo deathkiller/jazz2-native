@@ -495,7 +495,7 @@ namespace Death { namespace Trace {
 		}
 	}
 
-	bool LoggerBackend::PopulateTransitEventFromThreadQueue(const std::byte*& readPos, ThreadContext* threadContext, std::uint64_t tsNow) noexcept
+	bool LoggerBackend::PopulateTransitEventFromThreadQueue(const std::uint8_t*& readPos, ThreadContext* threadContext, std::uint64_t tsNow) noexcept
 	{
 		using namespace Implementation;
 
@@ -535,7 +535,8 @@ namespace Death { namespace Trace {
 			// to set the transit event's FlushFlag pointer instead
 			transitEvent->FlushFlag = reinterpret_cast<std::atomic<bool>*>(functionName);
 		} else if DEATH_UNLIKELY(transitEvent->Level == InitializeBacktraceRequested) {
-			transitEvent->Capacity = static_cast<std::uint32_t>(functionName);
+			//transitEvent->Capacity = static_cast<std::uint32_t>(functionName);
+			transitEvent->Capacity = 8;
 		} else if DEATH_LIKELY(transitEvent->Level != FlushBacktraceRequested) {
 			transitEvent->FunctionName = reinterpret_cast<const char*>(functionName);
 			transitEvent->Message.resize(length);
@@ -907,7 +908,7 @@ namespace Death { namespace Trace {
 		std::atomic<bool>* threadFlushedPtr = &threadFlushed;
 
 		// We do not want to drop the message if a dropping queue is used
-		while (!EnqueueEntry(FlushRequested, timestamp, threadFlushedPtr, {}, 0)) {
+		while (!EnqueueEntry(FlushRequested, timestamp, threadFlushedPtr, nullptr, 0)) {
 			if (sleepDurationNs > 0) {
 				std::this_thread::sleep_for(std::chrono::nanoseconds{sleepDurationNs});
 			} else {
@@ -934,8 +935,7 @@ namespace Death { namespace Trace {
 #if defined(DEATH_TRACE_ASYNC)
 		using namespace Implementation;
 
-		while (!EnqueueEntry(InitializeBacktraceRequested, 0,
-					reinterpret_cast<const void*>(static_cast<std::uintptr_t>(maxCapacity)), {}, 0)) {
+		while (!EnqueueEntry(InitializeBacktraceRequested, 0, nullptr, nullptr, 0)) {
 			std::this_thread::sleep_for(std::chrono::nanoseconds{100});
 		}
 
@@ -952,7 +952,7 @@ namespace Death { namespace Trace {
 #if defined(DEATH_TRACE_ASYNC)
 		using namespace Implementation;
 
-		while (!EnqueueEntry(FlushBacktraceRequested, 0, nullptr, {}, 0)) {
+		while (!EnqueueEntry(FlushBacktraceRequested, 0, nullptr, nullptr, 0)) {
 			std::this_thread::sleep_for(std::chrono::nanoseconds{100});
 		}
 
@@ -1001,7 +1001,7 @@ namespace Death { namespace Trace {
 		return scopedThreadContext.GetThreadContext();
 	}
 
-	std::byte* Logger::PrepareWriteBuffer(std::size_t totalSize) noexcept
+	std::uint8_t* Logger::PrepareWriteBuffer(std::size_t totalSize) noexcept
 	{
 		using namespace Implementation;
 
@@ -1016,15 +1016,15 @@ namespace Death { namespace Trace {
 			_threadContext = GetLocalThreadContext();
 		}
 
-		std::size_t totalSize = /*Level*/ sizeof(std::byte) + /*Timestamp*/ sizeof(std::uint64_t) +
+		std::size_t totalSize = /*Level*/ sizeof(std::uint8_t) + /*Timestamp*/ sizeof(std::uint64_t) +
 			/*FunctionName*/ sizeof(std::uintptr_t) + /*Length*/ sizeof(std::uint32_t) + /*Content*/ contentLength;
-		std::byte* writeBuffer = PrepareWriteBuffer(totalSize);
+		std::uint8_t* writeBuffer = PrepareWriteBuffer(totalSize);
 
 		if constexpr (DefaultQueueType == QueueType::BoundedDropping ||
 					  DefaultQueueType == QueueType::UnboundedDropping) {
 			if DEATH_UNLIKELY(writeBuffer == nullptr) {
 				// Not enough space to push to queue, message is dropped
-				if (level != FlushRequested) {
+				if (level != FlushRequested && level != InitializeBacktraceRequested && level != FlushBacktraceRequested) {
 					_threadContext->IncrementFailureCounter();
 				}
 				return false;
@@ -1032,7 +1032,7 @@ namespace Death { namespace Trace {
 		} else if constexpr (DefaultQueueType == QueueType::BoundedBlocking ||
 							 DefaultQueueType == QueueType::UnboundedBlocking) {
 			if DEATH_UNLIKELY(writeBuffer == nullptr) {
-				if (level != FlushRequested) {
+				if (level != FlushRequested && level != InitializeBacktraceRequested && level != FlushBacktraceRequested) {
 					_threadContext->IncrementFailureCounter();
 				}
 
@@ -1048,11 +1048,11 @@ namespace Death { namespace Trace {
 		}
 
 #	if defined(DEATH_DEBUG)
-		std::byte const* const writeBegin = writeBuffer;
+		std::uint8_t* writeBegin = writeBuffer;
 		DEATH_DEBUG_ASSERT(writeBegin != nullptr);
 #	endif
 
-		writeBuffer[0] = (std::byte)level;
+		writeBuffer[0] = (std::uint8_t)level;
 		writeBuffer += 1;
 
 		std::memcpy(writeBuffer, &timestamp, sizeof(std::uint64_t));
