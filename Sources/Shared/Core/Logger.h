@@ -319,9 +319,9 @@ namespace Death { namespace Trace {
 		{
 		public:
 			explicit BoundedSPSCQueueImpl(T capacity, bool hugesPagesEnabled = false, T readerStorePercent = 5)
-				: _capacity(NextPowerOfTwo(capacity)), _mask(_capacity - 1),
+				: _capacity(NextPowerOfTwo(capacity)), _capacityMask(_capacity - 1),
 					_bytesPerBatch(static_cast<T>(_capacity * static_cast<double>(readerStorePercent) / 100.0)),
-					_storage(static_cast<std::byte*>(allocAligned(2ULL * static_cast<std::uint64_t>(_capacity), CacheLineAligned, hugesPagesEnabled))),
+					_storage(static_cast<std::uint8_t*>(allocAligned(2ULL * static_cast<std::uint64_t>(_capacity), CacheLineAligned, hugesPagesEnabled))),
 					_hugePagesEnabled(hugesPagesEnabled)
 			{
 				std::memset(_storage, 0, 2ULL * static_cast<std::uint64_t>(_capacity));
@@ -352,17 +352,17 @@ namespace Death { namespace Trace {
 			BoundedSPSCQueueImpl(BoundedSPSCQueueImpl const&) = delete;
 			BoundedSPSCQueueImpl& operator=(BoundedSPSCQueueImpl const&) = delete;
 
-			std::byte* prepareWrite(T n) noexcept {
-				if ((_capacity - static_cast<T>(_writerPos - _readerPosCache)) < n) {
+			std::uint8_t* prepareWrite(T n) noexcept {
+				if ((_capacity - static_cast<T>(_writerPos - _cachedReaderPos)) < n) {
 					// Not enough space, we need to load reader and re-check
-					_readerPosCache = _atomicReaderPos.load(std::memory_order_acquire);
+					_cachedReaderPos = _atomicReaderPos.load(std::memory_order_acquire);
 
-					if ((_capacity - static_cast<T>(_writerPos - _readerPosCache)) < n) {
+					if ((_capacity - static_cast<T>(_writerPos - _cachedReaderPos)) < n) {
 						return nullptr;
 					}
 				}
 
-				return _storage + (_writerPos & _mask);
+				return &_storage[_writerPos & _capacityMask];
 			}
 
 			void finishWrite(T nbytes) noexcept {
@@ -378,7 +378,7 @@ namespace Death { namespace Trace {
 				flushCacheLines(_lastFlushedWriterPos, _writerPos);
 
 				// Prefetch a future cache line
-				_mm_prefetch(reinterpret_cast<char const*>(_storage + (_writerPos & _mask) + (CacheLineSize * 10)), _MM_HINT_T0);
+				_mm_prefetch(reinterpret_cast<char const*>(_storage + (_writerPos & _capacityMask) + (CacheLineSize * 10)), _MM_HINT_T0);
 #	endif
 			}
 
@@ -387,12 +387,12 @@ namespace Death { namespace Trace {
 				commitWrite();
 			}
 
-			const std::byte* prepareRead() noexcept {
+			const std::uint8_t* prepareRead() noexcept {
 				if (empty()) {
 					return nullptr;
 				}
 
-				return _storage + (_readerPos & _mask);
+				return &_storage[_readerPos & _capacityMask];
 			}
 
 			void finishRead(T nbytes) noexcept {
@@ -435,14 +435,14 @@ namespace Death { namespace Trace {
 			static constexpr T CacheLineMask{CacheLineSize - 1};
 
 			const T _capacity;
-			const T _mask;
+			const T _capacityMask;
 			const T _bytesPerBatch;
-			std::byte* _storage{nullptr};
+			std::uint8_t* _storage{nullptr};
 			const bool _hugePagesEnabled;
 
 			alignas(CacheLineAligned) std::atomic<T> _atomicWriterPos{0};
 			alignas(CacheLineAligned) T _writerPos{0};
-			T _readerPosCache{0};
+			T _cachedReaderPos{0};
 			T _lastFlushedWriterPos{0};
 
 			alignas(CacheLineAligned) std::atomic<T> _atomicReaderPos{0};
@@ -457,16 +457,16 @@ namespace Death { namespace Trace {
 				T curDiff = offset - (offset & CacheLineMask);
 
 				while (curDiff > lastDiff) {
-					_mm_clflushopt(_storage + (lastDiff & _mask));
+					_mm_clflushopt(_storage + (lastDiff & _capacityMask));
 					lastDiff += CacheLineSize;
 					last = lastDiff;
 				}
 			}
 #	endif
 
-			static std::byte* alignPointer(void* pointer, std::size_t alignment) noexcept {
-				DEATH_DEBUG_ASSERT(IsPowerOfTwo(alignment), "alignment must be a power of two", reinterpret_cast<std::byte*>(pointer));
-				return reinterpret_cast<std::byte*>((reinterpret_cast<std::uintptr_t>(pointer) + (alignment - 1ul)) &
+			static std::uint8_t* alignPointer(void* pointer, std::size_t alignment) noexcept {
+				DEATH_DEBUG_ASSERT(IsPowerOfTwo(alignment), "alignment must be a power of two", reinterpret_cast<std::uint8_t*>(pointer));
+				return reinterpret_cast<std::uint8_t*>((reinterpret_cast<std::uintptr_t>(pointer) + (alignment - 1ul)) &
 													~(alignment - 1ul));
 			}
 
@@ -505,10 +505,10 @@ namespace Death { namespace Trace {
 				DEATH_DEBUG_ASSERT(mem != MAP_FAILED, ("mmap() failed with error {} ({})", errno, strerror(errno)), nullptr);
 
 				// Calculate the aligned address after the metadata
-				std::byte* alignedAddress = alignPointer(static_cast<std::byte*>(mem) + MetadataSize, alignment);
+				std::uint8_t* alignedAddress = alignPointer(static_cast<std::uint8_t*>(mem) + MetadataSize, alignment);
 
 				// Calculate the offset from the original memory location
-				std::size_t offset = static_cast<std::size_t>(alignedAddress - static_cast<std::byte*>(mem));
+				std::size_t offset = static_cast<std::size_t>(alignedAddress - static_cast<std::uint8_t*>(mem));
 
 				// Store the size and offset information in the metadata
 				std::memcpy(alignedAddress - sizeof(std::size_t), &totalSize, sizeof(totalSize));
@@ -526,13 +526,13 @@ namespace Death { namespace Trace {
 #	else
 				// Retrieve the size and offset information from the metadata
 				std::size_t offset;
-				std::memcpy(&offset, static_cast<std::byte*>(ptr) - (2u * sizeof(std::size_t)), sizeof(offset));
+				std::memcpy(&offset, static_cast<std::uint8_t*>(ptr) - (2u * sizeof(std::size_t)), sizeof(offset));
 
 				std::size_t totalSize;
-				std::memcpy(&totalSize, static_cast<std::byte*>(ptr) - sizeof(std::size_t), sizeof(totalSize));
+				std::memcpy(&totalSize, static_cast<std::uint8_t*>(ptr) - sizeof(std::size_t), sizeof(totalSize));
 
 				// Calculate the original memory block address
-				void* mem = static_cast<std::byte*>(ptr) - offset;
+				void* mem = static_cast<std::uint8_t*>(ptr) - offset;
 
 				::munmap(mem, totalSize);
 #	endif
@@ -564,9 +564,9 @@ namespace Death { namespace Trace {
 		public:
 			struct ReadResult
 			{
-				explicit ReadResult(const std::byte* readPosition) : readPos(readPosition) {}
+				explicit ReadResult(const std::uint8_t* readPosition) : readPos(readPosition) {}
 
-				const std::byte* readPos;
+				const std::uint8_t* readPos;
 				std::size_t previousCapacity{0};
 				std::size_t newCapacity{0};
 				bool allocation{false};
@@ -590,9 +590,9 @@ namespace Death { namespace Trace {
 			UnboundedSPSCQueue(UnboundedSPSCQueue const&) = delete;
 			UnboundedSPSCQueue& operator=(UnboundedSPSCQueue const&) = delete;
 
-			std::byte* prepareWrite(std::size_t nbytes) noexcept {
+			std::uint8_t* prepareWrite(std::size_t nbytes) noexcept {
 				// Try to reserve the bounded queue
-				std::byte* writePos = _producer->boundedQueue.prepareWrite(nbytes);
+				std::uint8_t* writePos = _producer->boundedQueue.prepareWrite(nbytes);
 
 				if DEATH_LIKELY(writePos != nullptr) {
 					return writePos;
@@ -674,7 +674,7 @@ namespace Death { namespace Trace {
 			alignas(CacheLineAligned) Node* _producer{nullptr};
 			alignas(CacheLineAligned) Node* _consumer{nullptr};
 
-			std::byte* handleFullQueue(std::size_t nbytes) noexcept {
+			std::uint8_t* handleFullQueue(std::size_t nbytes) noexcept {
 				// Then it means the queue doesn't have enough size
 				std::size_t capacity = _producer->boundedQueue.capacity() * 2ULL;
 				while (capacity < (nbytes + 1)) {
@@ -702,7 +702,7 @@ namespace Death { namespace Trace {
 				_producer = nextNode;
 
 				// Reserve again, this time we know we will always succeed, cast to void* to ignore
-				std::byte* const writePos = _producer->boundedQueue.prepareWrite(nbytes);
+				std::uint8_t* const writePos = _producer->boundedQueue.prepareWrite(nbytes);
 				DEATH_DEBUG_ASSERT(writePos != nullptr);
 
 				return writePos;
@@ -799,17 +799,17 @@ namespace Death { namespace Trace {
 	public:
 		explicit TransitEventBuffer(std::size_t initialCapacity)
 			: _capacity(Implementation::NextPowerOfTwo(initialCapacity)), _storage(std::make_unique<TransitEvent[]>(_capacity)),
-				_mask(_capacity - 1u), _readerPos(0), _writerPos(0) {}
+				_capacityMask(_capacity - 1u), _readerPos(0), _writerPos(0) {}
 
 		TransitEventBuffer(TransitEventBuffer const&) = delete;
 		TransitEventBuffer& operator=(TransitEventBuffer const&) = delete;
 
 		TransitEventBuffer(TransitEventBuffer&& other) noexcept
-			: _capacity(other._capacity), _storage(Death::move(other._storage)), _mask(other._mask),
+			: _capacity(other._capacity), _storage(Death::move(other._storage)), _capacityMask(other._capacityMask),
 				_readerPos(other._readerPos), _writerPos(other._writerPos)
 		{
 			other._capacity = 0;
-			other._mask = 0;
+			other._capacityMask = 0;
 			other._readerPos = 0;
 			other._writerPos = 0;
 		}
@@ -818,12 +818,12 @@ namespace Death { namespace Trace {
 			if (this != &other) {
 				_capacity = other._capacity;
 				_storage = Death::move(other._storage);
-				_mask = other._mask;
+				_capacityMask = other._capacityMask;
 				_readerPos = other._readerPos;
 				_writerPos = other._writerPos;
 
 				other._capacity = 0;
-				other._mask = 0;
+				other._capacityMask = 0;
 				other._readerPos = 0;
 				other._writerPos = 0;
 			}
@@ -835,7 +835,7 @@ namespace Death { namespace Trace {
 			if (_readerPos == _writerPos) {
 				return nullptr;
 			}
-			return &_storage[_readerPos & _mask];
+			return &_storage[_readerPos & _capacityMask];
 		}
 
 		/** @brief Consumes the first transit event from the buffer */
@@ -849,7 +849,7 @@ namespace Death { namespace Trace {
 				// Buffer is full, need to expand
 				expand();
 			}
-			return &_storage[_writerPos & _mask];
+			return &_storage[_writerPos & _capacityMask];
 		}
 
 		/** @brief Adds a new transit event to be consumed */
@@ -875,7 +875,7 @@ namespace Death { namespace Trace {
 	private:
 		std::size_t _capacity;
 		std::unique_ptr<TransitEvent[]> _storage;
-		std::size_t _mask;
+		std::size_t _capacityMask;
 		std::size_t _readerPos;
 		std::size_t _writerPos;
 
@@ -888,12 +888,12 @@ namespace Death { namespace Trace {
 			// The reader position and mask are used to handle the circular buffer's wraparound.
 			std::size_t currentSize = size();
 			for (std::size_t i = 0; i < currentSize; ++i) {
-				newStorage[i] = Death::move(_storage[(_readerPos + i) & _mask]);
+				newStorage[i] = Death::move(_storage[(_readerPos + i) & _capacityMask]);
 			}
 
 			_storage = Death::move(newStorage);
 			_capacity = newCapacity;
-			_mask = _capacity - 1;
+			_capacityMask = _capacity - 1;
 			_writerPos = currentSize;
 			_readerPos = 0;
 		}
@@ -1225,9 +1225,9 @@ namespace Death { namespace Trace {
 		void CleanUpBeforeExit() noexcept;
 		void UpdateActiveThreadContextsCache() noexcept;
 		void CleanUpInvalidatedThreadContexts() noexcept;
-		bool PopulateTransitEventFromThreadQueue(const std::byte*& readPos, ThreadContext* threadContext, std::uint64_t tsNow) noexcept;
+		bool PopulateTransitEventFromThreadQueue(const std::uint8_t*& readPos, ThreadContext* threadContext, std::uint64_t tsNow) noexcept;
 
-		const std::byte* ReadUnboundedThreadQueue(Implementation::UnboundedSPSCQueue& frontendQueue, ThreadContext* threadContext) const noexcept {
+		const std::uint8_t* ReadUnboundedThreadQueue(Implementation::UnboundedSPSCQueue& frontendQueue, ThreadContext* threadContext) const noexcept {
 			auto readResult = frontendQueue.prepareRead();
 
 			/*if (readResult.allocation) {
@@ -1246,7 +1246,7 @@ namespace Death { namespace Trace {
 			std::size_t totalBytesRead = 0;
 
 			do {
-				const std::byte* readPos;
+				const std::uint8_t* readPos;
 				if constexpr (std::is_same_v<TThreadQueue, Implementation::UnboundedSPSCQueue>) {
 					readPos = ReadUnboundedThreadQueue(frontendQueue, threadContext);
 				} else {
@@ -1258,7 +1258,7 @@ namespace Death { namespace Trace {
 					break;
 				}
 
-				std::byte const* const readBegin = readPos;
+				std::uint8_t const* const readBegin = readPos;
 
 				if (!PopulateTransitEventFromThreadQueue(readPos, threadContext, tsNow)) {
 					break;
@@ -1339,7 +1339,7 @@ namespace Death { namespace Trace {
 
 		static ThreadContext* GetLocalThreadContext() noexcept;
 
-		std::byte* PrepareWriteBuffer(std::size_t totalSize) noexcept;
+		std::uint8_t* PrepareWriteBuffer(std::size_t totalSize) noexcept;
 #endif
 
 		bool EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept;
