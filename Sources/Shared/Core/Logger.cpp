@@ -350,12 +350,6 @@ namespace Death { namespace Trace {
 	void LoggerBackend::SetBacktraceFlushLevel(TraceLevel flushLevel) noexcept
 	{
 #if defined(DEATH_TRACE_ASYNC)
-		if (!_backtraceStorage) {
-			_backtraceStorage = std::make_shared<BacktraceStorage>();
-		}
-
-		_backtraceStorage->SetCapacity(8);
-
 		_backtraceFlushLevel.store(flushLevel, std::memory_order_relaxed);
 #else
 		_backtraceFlushLevel = flushLevel;
@@ -941,12 +935,12 @@ namespace Death { namespace Trace {
 #if defined(DEATH_TRACE_ASYNC)
 		using namespace Implementation;
 
-		/*while (!EnqueueEntry(InitializeBacktraceRequested, 0, nullptr, nullptr, 0)) {
+		while (!EnqueueEntry(InitializeBacktraceRequested, 0, reinterpret_cast<const void*>(static_cast<std::uintptr_t>(maxCapacity)), nullptr, 0)) {
 			std::this_thread::sleep_for(std::chrono::nanoseconds{100});
-		}*/
+		}
 
 		_backend.SetBacktraceFlushLevel(flushLevel);
-		//_backend.Notify();
+		_backend.Notify();
 #else
 		_backend.InitializeBacktrace(maxCapacity);
 		_backend.SetBacktraceFlushLevel(flushLevel);
@@ -1007,13 +1001,6 @@ namespace Death { namespace Trace {
 		return scopedThreadContext.GetThreadContext();
 	}
 
-	std::uint8_t* Logger::PrepareWriteBuffer(std::size_t totalSize) noexcept
-	{
-		using namespace Implementation;
-
-		return _threadContext->GetSpscQueue<DefaultQueueType>().prepareWrite(totalSize);
-	}
-
 	bool Logger::EnqueueEntry(TraceLevel level, std::uint64_t timestamp, const void* functionName, const void* content, std::uint32_t contentLength) noexcept
 	{
 		using namespace Implementation;
@@ -1023,8 +1010,8 @@ namespace Death { namespace Trace {
 		}
 
 		std::size_t totalSize = /*Level*/ sizeof(std::uint8_t) + /*Timestamp*/ sizeof(std::uint64_t) +
-			/*FunctionName*/ sizeof(std::uintptr_t) + /*Length*/ sizeof(std::uint32_t) + /*Content*/ contentLength;
-		std::uint8_t* writeBuffer = PrepareWriteBuffer(totalSize);
+			/*FunctionName*/ sizeof(std::uintptr_t) + /*Length*/ sizeof(std::uint32_t) + /*Content*/ std::size_t(contentLength);
+		std::uint8_t* writeBuffer = _threadContext->GetSpscQueue<DefaultQueueType>().prepareWrite(totalSize);
 
 		if constexpr (DefaultQueueType == QueueType::BoundedDropping ||
 					  DefaultQueueType == QueueType::UnboundedDropping) {
@@ -1048,7 +1035,7 @@ namespace Death { namespace Trace {
 					}
 
 					// Not enough space to push to queue, keep trying
-					writeBuffer = PrepareWriteBuffer(totalSize);
+					writeBuffer = _threadContext->GetSpscQueue<DefaultQueueType>().prepareWrite(totalSize);
 				} while (writeBuffer == nullptr);
 			}
 		}
