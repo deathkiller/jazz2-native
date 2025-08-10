@@ -942,6 +942,7 @@ namespace Death { namespace Trace {
 
 		// TODO: This piece of code doesn't work on 32-bit ARM Android for some reason,
 		//       so the backtrace needs to be initialized on the current thread instead
+		//       and changing the capacity of already initialized storage is not so safe
 
 /*#if defined(DEATH_TRACE_ASYNC)
 		using namespace Implementation;
