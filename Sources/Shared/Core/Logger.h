@@ -1258,7 +1258,7 @@ namespace Death { namespace Trace {
 					break;
 				}
 
-				std::uint8_t const* const readBegin = readPos;
+				const std::uint8_t* readBegin = readPos;
 
 				if (!PopulateTransitEventFromThreadQueue(readPos, threadContext, tsNow)) {
 					break;

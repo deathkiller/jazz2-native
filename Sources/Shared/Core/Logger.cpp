@@ -535,8 +535,7 @@ namespace Death { namespace Trace {
 			// to set the transit event's FlushFlag pointer instead
 			transitEvent->FlushFlag = reinterpret_cast<std::atomic<bool>*>(functionName);
 		} else if DEATH_UNLIKELY(transitEvent->Level == InitializeBacktraceRequested) {
-			//transitEvent->Capacity = static_cast<std::uint32_t>(functionName);
-			transitEvent->Capacity = 8;
+			transitEvent->Capacity = static_cast<std::uint32_t>(functionName);
 		} else if DEATH_LIKELY(transitEvent->Level != FlushBacktraceRequested) {
 			transitEvent->FunctionName = reinterpret_cast<const char*>(functionName);
 			transitEvent->Message.resize(length);
@@ -665,11 +664,13 @@ namespace Death { namespace Trace {
 
 			// We defer notifying the caller until after this function completes
 		} else if DEATH_UNLIKELY(transitEvent.Level == InitializeBacktraceRequested) {
+			LOGW("Backtrace initialized");
 			if (!_backtraceStorage) {
 				_backtraceStorage = std::make_shared<BacktraceStorage>();
 			}
 
 			_backtraceStorage->SetCapacity(transitEvent.Capacity);
+			LOGW("Backtrace capacity: {}", transitEvent.Capacity);
 		} else if DEATH_UNLIKELY(transitEvent.Level == FlushBacktraceRequested) {
 			if (_backtraceStorage) {
 				_backtraceStorage->Process(
@@ -929,13 +930,17 @@ namespace Death { namespace Trace {
 #endif
 	}
 
+#if defined(DEATH_TARGET_ANDROID) && defined(DEATH_TARGET_32BIT)
+	__attribute__((optnone))
+#endif
 	void Logger::InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel)
 	{
 		// All deferred entries are logged immediately if the backtrace storage is not initialized
 #if defined(DEATH_TRACE_ASYNC)
 		using namespace Implementation;
 
-		while (!EnqueueEntry(InitializeBacktraceRequested, 0, reinterpret_cast<const void*>(static_cast<std::uintptr_t>(maxCapacity)), nullptr, 0)) {
+		while (!EnqueueEntry(InitializeBacktraceRequested, 0,
+					reinterpret_cast<const void*>(static_cast<std::uintptr_t>(maxCapacity)), nullptr, 0)) {
 			std::this_thread::sleep_for(std::chrono::nanoseconds{100});
 		}
 
