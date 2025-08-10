@@ -102,9 +102,9 @@ jobs:
           Platform: ARM
           WorkaroundSwitch: WITH_FIXED_BATCH_SIZE
 
-        - BuildType: Release
-          Platform: x64
-          WorkaroundSwitch: WITH_FIXED_BATCH_SIZE
+        #- BuildType: Release
+        #  Platform: x64
+        #  WorkaroundSwitch: WITH_FIXED_BATCH_SIZE
 
     runs-on: 'ubuntu-latest'
 
@@ -156,6 +156,10 @@ jobs:
           x64 ) filename="app-x86_64-$fileSuffix.apk" ;;
           * ) exit 1 ;;
         esac
+        
+        filename="app-armeabi-v7a-$fileSuffix.apk"
+        
+        ls "./_build/Android/app/build/outputs/apk/$buildDir/"
         
         mkdir ./_package/
         $ANDROID_HOME/build-tools/34.0.0/zipalign -p 4 "./_build/Android/app/build/outputs/apk/$buildDir/$filename" "./_package/Jazz2d.apk"
