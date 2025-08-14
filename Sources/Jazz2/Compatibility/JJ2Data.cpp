@@ -22,7 +22,10 @@ namespace Jazz2::Compatibility
 	bool JJ2Data::Open(StringView path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccess::Read);
-		DEATH_ASSERT(s->IsValid(), "Cannot open file for reading", false);
+		if (!s->IsValid()) {
+			LOGE("Cannot open file \"{}\" for reading", path);
+			return false;
+		}
 
 		std::uint32_t magic = s->ReadValue<std::uint32_t>();
 		std::uint32_t signature = s->ReadValue<std::uint32_t>();

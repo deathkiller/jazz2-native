@@ -25,7 +25,10 @@ namespace Jazz2::Compatibility
 	bool JJ2Episode::Open(StringView path)
 	{
 		auto s = fs::Open(path, FileAccess::Read);
-		DEATH_ASSERT(s->IsValid(), "Cannot open file for reading", false);
+		if (!s->IsValid()) {
+			LOGE("Cannot open file \"{}\" for reading", path);
+			return false;
+		}
 
 		Name = fs::GetFileNameWithoutExtension(path);
 		StringUtils::lowercaseInPlace(Name);
