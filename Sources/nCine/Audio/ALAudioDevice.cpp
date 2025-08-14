@@ -127,6 +127,14 @@ namespace nCine
 				LOGI("ALC_EXT_EFX Version: unsupported", hasExtEfx);
 			}
 
+			if (alIsExtensionPresent("AL_SOFT_source_resampler")) {
+				ALCint defaultResampler = alGetInteger(AL_DEFAULT_RESAMPLER_SOFT);
+				const ALchar* resamplerName = alGetStringiSOFT(AL_RESAMPLER_NAME_SOFT, defaultResampler);
+				if (resamplerName != nullptr && resamplerName[0] != '\0') {
+					LOGI("Resampler: {} ({})", resamplerName, defaultResampler);
+				}
+			}
+
 			LOGI("Sources: {} (M) / {} (S)", monoSources, stereoSources);
 
 			for (std::int32_t i = 0; i + 1 < numAttributes; i += 2) {
