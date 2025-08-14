@@ -127,6 +127,7 @@ namespace nCine
 				LOGI("ALC_EXT_EFX Version: unsupported", hasExtEfx);
 			}
 
+#if defined(AL_DEFAULT_RESAMPLER_SOFT)
 			if (alIsExtensionPresent("AL_SOFT_source_resampler")) {
 				ALCint defaultResampler = alGetInteger(AL_DEFAULT_RESAMPLER_SOFT);
 				const ALchar* resamplerName = alGetStringiSOFT(AL_RESAMPLER_NAME_SOFT, defaultResampler);
@@ -134,6 +135,7 @@ namespace nCine
 					LOGI("Resampler: {} ({})", resamplerName, defaultResampler);
 				}
 			}
+#endif
 
 			LOGI("Sources: {} (M) / {} (S)", monoSources, stereoSources);
 
