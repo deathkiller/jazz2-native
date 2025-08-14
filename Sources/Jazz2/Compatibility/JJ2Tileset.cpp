@@ -14,7 +14,10 @@ namespace Jazz2::Compatibility
 	bool JJ2Tileset::Open(StringView path, bool strictParser)
 	{
 		auto s = fs::Open(path, FileAccess::Read);
-		DEATH_ASSERT(s->IsValid(), "Cannot open file for reading", false);
+		if (!s->IsValid()) {
+			LOGE("Cannot open file \"{}\" for reading", path);
+			return false;
+		}
 
 		// Skip copyright notice
 		s->Seek(180, SeekOrigin::Current);

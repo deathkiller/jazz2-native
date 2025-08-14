@@ -20,7 +20,10 @@ namespace Jazz2::Compatibility
 		SmallVector<SampleSection, 0> samples;
 
 		auto s = fs::Open(path, FileAccess::Read);
-		DEATH_ASSERT(s->IsValid(), "Cannot open file for reading", JJ2Version::Unknown);
+		if (!s->IsValid()) {
+			LOGE("Cannot open file \"{}\" for reading", path);
+			return JJ2Version::Unknown;
+		}
 
 		bool seemsLikeCC = false;
 
