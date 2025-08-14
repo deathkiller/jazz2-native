@@ -167,7 +167,7 @@ namespace Jazz2::Compatibility
 				so.WriteValue<std::uint16_t>(0);
 			}
 
-			so.WriteValue<std::uint8_t>((std::uint8_t)std::max(sfx.Volume * 255 / 0x40, (std::uint32_t)UINT8_MAX));
+			so.WriteValue<std::uint8_t>((std::uint8_t)std::min(sfx.Volume * 255 / 0x40, (std::uint32_t)UINT8_MAX));
 			so.WriteValue<std::int8_t>((std::int8_t)std::clamp(((std::int32_t)sfx.Panning - 0x20) * INT8_MAX / /*0x20*/0x40, -(std::int32_t)INT8_MAX, (std::int32_t)INT8_MAX));
 		}
 
