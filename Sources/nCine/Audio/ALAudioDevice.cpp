@@ -3,12 +3,15 @@
 #include "AudioStreamPlayer.h"
 #include "../ServiceLocator.h"
 
+#include <Containers/StringUtils.h>
+
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 #	include <Environment.h>
 #	include <Utf8.h>
 #endif
 
 using namespace Death;
+using namespace Death::Containers::Literals;
 
 namespace nCine
 {
@@ -128,11 +131,17 @@ namespace nCine
 			}
 
 #if defined(AL_DEFAULT_RESAMPLER_SOFT)
+			bool defaultResamplerOverriden = false;
 			if (alIsExtensionPresent("AL_SOFT_source_resampler")) {
 				ALCint defaultResampler = alGetInteger(AL_DEFAULT_RESAMPLER_SOFT);
-				const ALchar* resamplerName = alGetStringiSOFT(AL_RESAMPLER_NAME_SOFT, defaultResampler);
-				if (resamplerName != nullptr && resamplerName[0] != '\0') {
+				String resamplerName = alGetStringiSOFT(AL_RESAMPLER_NAME_SOFT, defaultResampler);
+				if (!resamplerName.empty()) {
 					LOGI("Resampler: {} ({})", resamplerName, defaultResampler);
+
+					StringUtils::lowercaseInPlace(resamplerName);
+					if (resamplerName != "linear"_s) {
+						defaultResamplerOverriden = true;
+					}
 				}
 			}
 #endif
@@ -166,6 +175,12 @@ namespace nCine
 #	endif
 				}
 			}
+
+#if defined(AL_DEFAULT_RESAMPLER_SOFT)
+			if (defaultResamplerOverriden) {
+				LOGW("The default resampler has been overridden on your system, which may result in degraded sound quality");
+			}
+#endif
 		}
 #endif
 	}
