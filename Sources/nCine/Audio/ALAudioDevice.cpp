@@ -130,7 +130,7 @@ namespace nCine
 				LOGI("ALC_EXT_EFX Version: unsupported", hasExtEfx);
 			}
 
-#if defined(AL_DEFAULT_RESAMPLER_SOFT)
+#	if defined(AL_DEFAULT_RESAMPLER_SOFT)
 			bool defaultResamplerOverriden = false;
 			if (alIsExtensionPresent("AL_SOFT_source_resampler")) {
 				ALCint defaultResampler = alGetInteger(AL_DEFAULT_RESAMPLER_SOFT);
@@ -144,7 +144,7 @@ namespace nCine
 					}
 				}
 			}
-#endif
+#	endif
 
 			LOGI("Sources: {} (M) / {} (S)", monoSources, stereoSources);
 
@@ -176,11 +176,11 @@ namespace nCine
 				}
 			}
 
-#if defined(AL_DEFAULT_RESAMPLER_SOFT)
+#	if defined(AL_DEFAULT_RESAMPLER_SOFT)
 			if (defaultResamplerOverriden) {
 				LOGW("The default resampler has been overridden on your system, which may result in degraded sound quality");
 			}
-#endif
+#	endif
 		}
 #endif
 	}
