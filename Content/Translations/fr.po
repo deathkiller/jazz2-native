@@ -1904,7 +1904,7 @@ msgstr "Scripting"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:49
 msgid "Switch To New Weapon"
-msgstr ""
+msgstr "Basculer vers la nouvelle arme"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:51
@@ -2617,6 +2617,11 @@ msgid ""
 "Your client doesn't contain required assets.\n"
 "Please download the required files and try it again."
 msgstr ""
+"\f[c:#704a4a]Impossible de se connecter au serveur ![/c]\n"
+"\n"
+"\n"
+"Votre client ne contient pas les éléments requis.\n"
+"Veuillez télécharger les fichiers nécessaires et réessayez."
 
 #: Sources/Main.cpp:1106
 msgid ""
@@ -2625,6 +2630,10 @@ msgid ""
 "\n"
 "The server has disconnected you due to inactivity."
 msgstr ""
+"\f[c:#704a4a]La connexion a été interrompue ![/c]\n"
+"\n"
+"\n"
+"Le serveur vous a déconnecté pour cause d'inactivité."
 
 #: Sources/Main.cpp:1361
 #, c++-format
@@ -2635,6 +2644,11 @@ msgid ""
 "Your client doesn't contain level \"{}\".\n"
 "Please download the required files and try it again."
 msgstr ""
+"\f[c:#704a4a]Impossible de se connecter au serveur ![/c]\n"
+"\n"
+"\n"
+"Votre client ne contient pas le niveau \"{}\".\n"
+"Veuillez télécharger les fichiers nécessaires et réessayez."
 
 #~ msgid "Unknown"
 #~ msgstr "Inconnu"
