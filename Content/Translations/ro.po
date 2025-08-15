@@ -1400,30 +1400,33 @@ msgid ""
 "\n"
 "The game will begin shortly!"
 msgstr ""
+"\n"
+"\n"
+"Jocul va începe în scurt timp!"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1459
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3357
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
-msgstr ""
+msgstr "\f[c:#d0705d]{}\f[/c] a fost prăjit de \f[c:#d0705d]{}\f[/c]"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1476
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3360
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
-msgstr ""
+msgstr "\f[c:#d0705d]{}\f[/c] a fost prăjit de mediul înconjurător"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2710
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3336
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
-msgstr ""
+msgstr "\f[c:#d0705d]{}\f[/c] deconectat"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2858
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3334
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
-msgstr ""
+msgstr "\f[c:#d0705d]{}\f[/c] conectat"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5407
 #, c++-format
@@ -1432,6 +1435,9 @@ msgid ""
 "\n"
 "Winner is {}"
 msgstr ""
+"\n"
+"\n"
+"Câștigătorul este {}"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:359
 msgid "Unknown command"
@@ -1502,7 +1508,7 @@ msgstr "Continuă"
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:83
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:40
 msgid "Play Online"
-msgstr ""
+msgstr "Joacă online"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:89
@@ -1532,7 +1538,7 @@ msgstr "Ieșire"
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:202
 #, c++-format
 msgid "For more information, visit {} and  Discord!"
-msgstr ""
+msgstr "Pentru mai multe informații, vizitați {} și  Discord!"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:215
 msgid "Access to external storage has been granted!"
@@ -1702,7 +1708,7 @@ msgstr "Vânătoare de Comori"
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:225
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:30
 msgid "Team Treasure Hunt"
-msgstr ""
+msgstr "Vânătoare de comori în echipă"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:226
@@ -1724,6 +1730,11 @@ msgid ""
 "Playlist is not properly configured.\n"
 "Please review server configuration and try it again."
 msgstr ""
+"\f[c:#704a4a]Nu se poate crea serverul!\f[/c]\n"
+"\n"
+"\n"
+"Lista de joc nu este configurată corect.\n"
+"Vă rugăm să verificați configurația serverului și să încercați din nou."
 
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:411
 msgid ""
@@ -1733,6 +1744,11 @@ msgid ""
 "Please verify that no other server\n"
 "is running on that port and try it again."
 msgstr ""
+"\f[c:#704a4a]Nu se poate crea serverul!\f[/c]\n"
+"\n"
+"\n"
+"Verificați dacă niciun alt server nu rulează pe acel port și încercați din "
+"nou."
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:156
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:485
@@ -1745,19 +1761,19 @@ msgstr "Nu s-a găsit niciun nivel customizat!"
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:191
 msgid "Create server from playlist"
-msgstr ""
+msgstr "Creați un server din lista de joc"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:152
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:24
 msgid "Create Private Server"
-msgstr ""
+msgstr "Creați un server privat"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:152
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:22
 msgid "Create Public Server"
-msgstr ""
+msgstr "Creați un server public"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:164
 msgid "No episode found!"
@@ -1880,7 +1896,7 @@ msgstr "Scripturi"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:49
 msgid "Switch To New Weapon"
-msgstr ""
+msgstr "Comutați la o armă nouă"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:51
@@ -2080,7 +2096,7 @@ msgstr "Sunet"
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:30
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:168
 msgid "User Profile"
-msgstr ""
+msgstr "Profil utilizator"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:30
@@ -2090,7 +2106,7 @@ msgstr "Reluare activitate"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:35
 msgid "Spectate"
-msgstr ""
+msgstr "Spectator"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:44
@@ -2100,7 +2116,7 @@ msgstr "Salvează și Ieși"
 
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:44
 msgid "Disconnect & Exit"
-msgstr ""
+msgstr "Deconectare & Ieșire"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:20
@@ -2281,34 +2297,34 @@ msgstr "Integrare cu Discord"
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:70
 msgid "Player Name"
-msgstr ""
+msgstr "Numele Jucătorului"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:73
 msgid "Unique Player ID"
-msgstr ""
+msgstr "ID Unic al Jucătorului"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:171
 #, c++-format
 msgid "Points: {}"
-msgstr ""
+msgstr "Puncte: {}"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:185
 #, c++-format
 msgid "Game starts in {}"
-msgstr ""
+msgstr "Jocul începe în {}"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:192
 #, c++-format
 msgid "Waiting for {} more player"
 msgid_plural "Waiting for {} more players"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Se așteaptă încă {} jucător"
+msgstr[1] "Se așteaptă încă {} jucători"
+msgstr[2] "Se așteaptă încă {} jucători"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:256
 msgid "Find exit!"
-msgstr ""
+msgstr "Găsiți ieșirea!"
 
 #: Sources/Main.cpp:648 Sources/Main.cpp:709
 msgid ""
@@ -2340,7 +2356,7 @@ msgstr ""
 
 #: Sources/Main.cpp:933
 msgid "Unnamed server"
-msgstr ""
+msgstr "Server fără nume"
 
 #: Sources/Main.cpp:1087
 msgid ""
@@ -2349,6 +2365,10 @@ msgid ""
 "\n"
 "Invalid parameter specified."
 msgstr ""
+"\f[c:#704a4a]Nu se poate conecta la server!\f[/c]\n"
+"\n"
+"\n"
+"Parolă specificată nevalidă."
 
 #: Sources/Main.cpp:1088
 msgid ""
@@ -2370,6 +2390,11 @@ msgid ""
 "Authentication failed.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]Nu se poate conecta la server!\f[/c]\n"
+"\n"
+"\n"
+"Autentificarea a eșuat.\n"
+"Contactați administratorii serverului pentru mai multe informații."
 
 #: Sources/Main.cpp:1090
 msgid ""
@@ -2378,6 +2403,10 @@ msgid ""
 "\n"
 "Invalid password specified."
 msgstr ""
+"\f[c:#704a4a]Nu se poate conecta la server!\f[/c]\n"
+"\n"
+"\n"
+"Parolă specificată nevalidă."
 
 #: Sources/Main.cpp:1091
 msgid ""
@@ -2387,6 +2416,11 @@ msgid ""
 "Invalid player name specified.\n"
 "Please check your profile and try it again."
 msgstr ""
+"\f[c:#704a4a]Nu se poate conecta la server!\f[/c]\n"
+"\n"
+"\n"
+"Nume de jucător specificat nevalid.\n"
+"Te rugăm să verifici profilul și să încerci din nou."
 
 #: Sources/Main.cpp:1092
 msgid ""
@@ -2396,6 +2430,11 @@ msgid ""
 "This client is not in the server whitelist.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]Nu se poate conecta la server!\f[/c]\n"
+"\n"
+"\n"
+"Acest client nu este în lista albă a serverului.\n"
+"Contactați administratorii serverului pentru mai multe informații."
 
 #: Sources/Main.cpp:1093
 msgid ""
@@ -2405,6 +2444,11 @@ msgid ""
 "Server requires 3rd party authentication provider.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]Nu se poate conecta la server!\f[/c]\n"
+"\n"
+"\n"
+"Serverul necesită furnizorul de autentificare 3rd party.\n"
+"Contactați administratorii serverului pentru mai multe informații."
 
 #: Sources/Main.cpp:1094
 msgid ""
@@ -2553,6 +2597,10 @@ msgid ""
 "\n"
 "Cheating detected."
 msgstr ""
+"\fConexiunea a fost închisă!\f[/c]\n"
+"\n"
+"\n"
+"S-a detectat trișare."
 
 #: Sources/Main.cpp:1105
 msgid ""
@@ -2562,6 +2610,11 @@ msgid ""
 "Your client doesn't contain required assets.\n"
 "Please download the required files and try it again."
 msgstr ""
+"\f[c:#704a4a]Nu se poate conecta la server!\f[/c]\n"
+"\n"
+"\n"
+"Clientul dvs. nu conține resursele necesare.\n"
+"Vă rugăm să descărcați fișierele necesare și să încercați din nou."
 
 #: Sources/Main.cpp:1106
 msgid ""
@@ -2570,6 +2623,10 @@ msgid ""
 "\n"
 "The server has disconnected you due to inactivity."
 msgstr ""
+"\f[c:#704a4a]Conexiunea a fost întreruptă!\f[/c]\n"
+"\n"
+"\n"
+"Serverul v-a deconectat din cauza inactivității."
 
 #: Sources/Main.cpp:1361
 #, c++-format
@@ -2580,6 +2637,11 @@ msgid ""
 "Your client doesn't contain level \"{}\".\n"
 "Please download the required files and try it again."
 msgstr ""
+"\f[c:#704a4a]Nu se poate conecta la server!\f[/c]\n"
+"\n"
+"\n"
+"Clientul dvs. nu conține nivelul \"{}\".\n"
+"Vă rugăm să descărcați fișierele necesare și să încercați din nou."
 
 #~ msgid "Unknown"
 #~ msgstr "Necunoscut"
