@@ -2214,6 +2214,28 @@ namespace Jazz2::Multiplayer
 		serverConfig.GameMode = value;
 
 		ApplyGameModeToAllPlayers(serverConfig.GameMode);
+		SynchronizeGameMode();
+
+		if (serverConfig.GameMode != MpGameMode::Cooperation) {
+			_levelState = LevelState::Countdown3;
+			_gameTimeLeft = FrameTimer::FramesPerSecond;
+			SetControllableToAllPlayers(false);
+			WarpAllPlayersToStart();
+			ResetAllPlayerStats();
+			static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
+			SendLevelStateToAllPlayers();
+		}
+
+		return true;
+	}
+
+	bool MpLevelHandler::SynchronizeGameMode()
+	{
+		if (!_isServer) {
+			return false;
+		}
+
+		auto& serverConfig = _networkManager->GetServerConfiguration();
 
 		std::uint8_t flags = 0;
 		if (_isReforged) {
@@ -2244,18 +2266,6 @@ namespace Jazz2::Multiplayer
 
 			_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
 		}
-
-		if (serverConfig.GameMode != MpGameMode::Cooperation) {
-			_levelState = LevelState::Countdown3;
-			_gameTimeLeft = FrameTimer::FramesPerSecond;
-			SetControllableToAllPlayers(false);
-			WarpAllPlayersToStart();
-			ResetAllPlayerStats();
-			static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
-			SendLevelStateToAllPlayers();
-		}
-
-		return true;
 	}
 
 	MpPlayer* MpLevelHandler::GetWeaponOwner(Actors::ActorBase* actor)
@@ -2455,6 +2465,48 @@ namespace Jazz2::Multiplayer
 
 					std::size_t length = formatInto(infoBuffer, "Spawning set to \f[w:80]\f[c:#707070]{}\f[/c]\f[/w]", _enableSpawning ? "Enabled"_s : "Disabled"_s);
 					SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
+					return true;
+				} else if (variableName == "kills"_s) {
+					value = value.trimmed();
+					auto intValue = stou32(value.data(), value.size());
+					if (intValue <= 0 || intValue > INT32_MAX) {
+						SendMessage(peer, UI::MessageLevel::Confirm, "Value out of range"_s);
+						return true;
+					}
+
+					auto& serverConfig = _networkManager->GetServerConfiguration();
+
+					serverConfig.TotalKills = intValue;
+					SynchronizeGameMode();
+					SendMessage(peer, UI::MessageLevel::Confirm, "Value changed successfully"_s);
+					return true;
+				} else if (variableName == "laps"_s) {
+					value = value.trimmed();
+					auto intValue = stou32(value.data(), value.size());
+					if (intValue <= 0 || intValue > INT32_MAX) {
+						SendMessage(peer, UI::MessageLevel::Confirm, "Value out of range"_s);
+						return true;
+					}
+
+					auto& serverConfig = _networkManager->GetServerConfiguration();
+
+					serverConfig.TotalLaps = intValue;
+					SynchronizeGameMode();
+					SendMessage(peer, UI::MessageLevel::Confirm, "Value changed successfully"_s);
+					return true;
+				} else if (variableName == "treasure"_s) {
+					value = value.trimmed();
+					auto intValue = stou32(value.data(), value.size());
+					if (intValue <= 0 || intValue > INT32_MAX) {
+						SendMessage(peer, UI::MessageLevel::Confirm, "Value out of range"_s);
+						return true;
+					}
+
+					auto& serverConfig = _networkManager->GetServerConfiguration();
+
+					serverConfig.TotalTreasureCollected = intValue;
+					SynchronizeGameMode();
+					SendMessage(peer, UI::MessageLevel::Confirm, "Value changed successfully"_s);
 					return true;
 				}
 			}

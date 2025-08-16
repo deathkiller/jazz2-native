@@ -6,6 +6,7 @@
 #include "WeaponType.h"
 
 #include <Containers/ArrayView.h>
+#include <Containers/StaticArray.h>
 #include <Containers/String.h>
 
 using namespace Death::Containers;
@@ -33,11 +34,11 @@ namespace Jazz2
 		/** @brief Score */
 		std::int32_t Score;
 		/** @brief Gems collected */
-		std::int32_t Gems[4];
+		StaticArray<4, std::int32_t> Gems;
 		/** @brief Weapon ammo */
-		std::uint16_t Ammo[WeaponCount];
+		StaticArray<WeaponCount, std::uint16_t> Ammo;
 		/** @brief Weapon upgrades */
-		std::uint8_t WeaponUpgrades[WeaponCount];
+		StaticArray<WeaponCount, std::uint8_t> WeaponUpgrades;
 	};
 
 	/** @brief Level initialization parameters */
@@ -71,7 +72,7 @@ namespace Jazz2
 		std::uint64_t ElapsedMilliseconds;
 
 		/** @brief Player carry over descriptions */
-		PlayerCarryOver PlayerCarryOvers[MaxPlayerCount];
+		StaticArray<MaxPlayerCount, PlayerCarryOver> PlayerCarryOvers;
 
 		LevelInitialization();
 
