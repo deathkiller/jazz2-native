@@ -770,7 +770,8 @@ namespace Death { namespace Containers {
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	template<std::size_t size_, class T> template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type> constexpr const T& StaticArray<size_, T>::operator[](const U i) const {
-		return DEATH_DEBUG_CONSTEXPR_ASSERT(std::size_t(i) < size_, ("Index {} out of range for {} elements", std::size_t(i), size_)), this->_data[i];
+		return DEATH_DEBUG_CONSTEXPR_ASSERT(std::size_t(i) < size_,
+			("Index {} out of range for {} elements", std::size_t(i), size_)), this->_data[i];
 	}
 
 	template<std::size_t size_, class T> template<class U, typename std::enable_if<std::is_convertible<U, std::size_t>::value, int>::type> T& StaticArray<size_, T>::operator[](const U i) {

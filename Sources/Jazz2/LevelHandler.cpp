@@ -1625,7 +1625,8 @@ namespace Jazz2
 		levelInit.LastEpisodeName = p[0];
 		levelInit.ElapsedMilliseconds = _elapsedMillisecondsBegin + (std::uint64_t)(_elapsedFrames * FrameTimer::SecondsPerFrame * 1000.0f);
 
-		for (std::int32_t i = 0; i < _players.size(); i++) {
+		std::int32_t playerCount = (std::int32_t)std::min(_players.size(), arraySize(levelInit.PlayerCarryOvers));
+		for (std::int32_t i = 0; i < playerCount; i++) {
 			levelInit.PlayerCarryOvers[i] = _players[i]->PrepareLevelCarryOver();
 		}
 	}

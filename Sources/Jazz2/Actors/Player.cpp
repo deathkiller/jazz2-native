@@ -2243,7 +2243,7 @@ namespace Jazz2::Actors
 			}
 		}
 
-		if (newSuspendState != SuspendType::None && _playerType != PlayerType::Frog) {
+		if (newSuspendState != SuspendType::None && _playerType != PlayerType::Frog && _frozenTimeLeft <= 0.0f) {
 			if (_currentSpecialMove == SpecialMoveType::None) {
 				_suspendType = newSuspendState;
 				SetState(ActorState::ApplyGravitation, false);
@@ -2675,8 +2675,8 @@ namespace Jazz2::Actors
 		_keepRunningTime = 0.0f;
 		_invulnerableTime = 0.0f;
 		_lastPoleTime = 0.0f;
-		_dizzyTime = 0.0f;
 		_isAttachedToPole = false;
+		SetDizzy(0.0f);
 		SetModifier(Modifier::None);
 		SetShield(ShieldType::None, 0.0f);
 

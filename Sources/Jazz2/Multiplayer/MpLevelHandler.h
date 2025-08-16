@@ -143,6 +143,8 @@ namespace Jazz2::Multiplayer
 		MpGameMode GetGameMode() const;
 		/** @brief Sets current game mode */
 		bool SetGameMode(MpGameMode value);
+		/** @brief Synchronizes current game mode with all peers without restarting round */
+		bool SynchronizeGameMode();
 
 		/** @brief Returns owner of the specified object or the player itself */
 		static Actors::Multiplayer::MpPlayer* GetWeaponOwner(Actors::ActorBase* actor);
