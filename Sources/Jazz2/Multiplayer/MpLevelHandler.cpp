@@ -98,7 +98,9 @@ namespace Jazz2::Multiplayer
 
 		if (_isServer) {
 			// Reserve first 255 indices for players
+			auto& serverConfig = _networkManager->GetServerConfiguration();
 			_lastSpawnedActorId = UINT8_MAX;
+			_autoWeightTreasure = (serverConfig.TotalTreasureCollected == 0);
 
 			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
 				peerDesc->LevelState = PeerLevelState::ValidatingAssets;
@@ -2285,6 +2287,8 @@ namespace Jazz2::Multiplayer
 
 			_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
 		}
+
+		return true;
 	}
 
 	MpPlayer* MpLevelHandler::GetWeaponOwner(Actors::ActorBase* actor)
