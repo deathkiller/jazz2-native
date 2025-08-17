@@ -205,7 +205,7 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 			theApplication().Quit();
 			return;
 		}
-#	if defined(WITH_MULTIPLAYER) && !defined(DEATH_TARGET_WINDOWS)
+#	if defined(WITH_MULTIPLAYER) && (!defined(DEATH_TARGET_WINDOWS) || defined(DEATH_DEBUG))
 		if (arg == "/server"_s || arg == "--server"_s) {
 			isServer = true;
 		}
@@ -315,7 +315,7 @@ void GameEventHandler::OnInitialize()
 				return;
 			}
 		}
-#			if !defined(DEATH_TARGET_WINDOWS)
+#			if !defined(DEATH_TARGET_WINDOWS) || defined(DEATH_DEBUG)
 		else if (arg == "/server"_s || arg == "--server"_s) {
 			StringView configPath;
 			if (i + 1 < config.argc()) {
