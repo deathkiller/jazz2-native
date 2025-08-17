@@ -196,7 +196,7 @@ namespace Jazz2::Multiplayer
 		std::uint32_t TotalKills;
 		/** @brief Total number of laps, default is 3 (Race) */
 		std::uint32_t TotalLaps;
-		/** @brief Total number of treasure collected, default is 80 (Treasure Hunt) */
+		/** @brief Total number of treasure collected, default is 0 for automatic calculation (Treasure Hunt) */
 		std::uint32_t TotalTreasureCollected;
 
 		/** @brief Index of the current playlist entry */

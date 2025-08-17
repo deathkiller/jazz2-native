@@ -295,6 +295,7 @@ namespace Jazz2::Multiplayer
 		bool _ignorePackets;
 		bool _enableLedgeClimb;
 		bool _controllableExternal;
+		bool _autoWeightTreasure;
 		VoteType _activePoll;
 		float _activePollTimeLeft;
 		float _recalcPositionInRoundTime;
@@ -302,6 +303,7 @@ namespace Jazz2::Multiplayer
 		std::int32_t _limitCameraWidth;
 		Vector2f _lastCheckpointPos;
 		float _lastCheckpointLight;
+		std::int32_t _totalTreasureCount;
 
 		SmallVector<RequiredAsset, 0> _requiredAssets;
 
@@ -342,6 +344,7 @@ namespace Jazz2::Multiplayer
 		void EndActivePoll();
 
 		static bool ActorShouldBeMirrored(Actors::ActorBase* actor);
+		static std::int32_t GetTreasureWeight(std::uint8_t gemType);
 		static bool PlayerShouldHaveUnlimitedHealth(MpGameMode gameMode);
 		void InitializeValidateAssetsPacket(MemoryStream& packet);
 		void InitializeLoadLevelPacket(MemoryStream& packet);

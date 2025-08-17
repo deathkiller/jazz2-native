@@ -21,7 +21,7 @@ namespace Jazz2::Actors::Solid
 	{
 		Movable = true;
 
-		uint8_t eventParam = 0;
+		std::uint8_t eventParam = 0;
 		AddContent(EventType::Gem, details.Params[0], &eventParam, sizeof(eventParam));
 		eventParam = 1;
 		AddContent(EventType::Gem, details.Params[1], &eventParam, sizeof(eventParam));

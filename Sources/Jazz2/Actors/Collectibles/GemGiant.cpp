@@ -59,7 +59,7 @@ namespace Jazz2::Actors::Collectibles
 
 		PlaySfx("Break"_s);
 
-		std::int32_t count = Random().Next(5, 16);
+		std::int32_t count = Random().Next(5, 12);
 		for (int i = 0; i < count; i++) {
 			float fx = Random().NextFloat(-16.0f, 16.0f);
 			float fy = Random().NextFloat(-2.0f, 2.0f);

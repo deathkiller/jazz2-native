@@ -66,7 +66,8 @@ namespace Jazz2::Multiplayer
 		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f), _gameTimeLeft(0.0f),
 			_levelState(LevelState::InitialUpdatePending), _forceResyncPending(true), _enableSpawning(true), _lastSpawnedActorId(-1), _waitingForPlayerCount(0),
 			_lastUpdated(0), _seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _enableLedgeClimb(enableLedgeClimb),
-			_controllableExternal(true), _activePoll(VoteType::None), _activePollTimeLeft(0.0f), _recalcPositionInRoundTime(0.0f), _limitCameraLeft(0), _limitCameraWidth(0)
+			_controllableExternal(true), _autoWeightTreasure(false), _activePoll(VoteType::None), _activePollTimeLeft(0.0f), _recalcPositionInRoundTime(0.0f),
+			_limitCameraLeft(0), _limitCameraWidth(0), _totalTreasureCount(0)
 #if defined(DEATH_DEBUG)
 			, _debugAverageUpdatePacketSize(0)
 #endif
@@ -305,8 +306,10 @@ namespace Jazz2::Multiplayer
 							_gameTimeLeft = FrameTimer::FramesPerSecond;
 							SetControllableToAllPlayers(false);
 							WarpAllPlayersToStart();
+							SynchronizeGameMode();
 							ResetAllPlayerStats();
 							static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
+							LOGI("[MP] Starting round...");
 						} else {
 							_levelState = LevelState::WaitingForMinPlayers;
 							_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - (std::int32_t)_players.size();
@@ -323,9 +326,11 @@ namespace Jazz2::Multiplayer
 							_gameTimeLeft = FrameTimer::FramesPerSecond;
 							SetControllableToAllPlayers(false);
 							WarpAllPlayersToStart();
+							SynchronizeGameMode();
 							ResetAllPlayerStats();
 							static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
 							SendLevelStateToAllPlayers();
+							LOGI("[MP] Starting round...");
 						}
 					}
 					break;
@@ -1761,23 +1766,7 @@ namespace Jazz2::Multiplayer
 			if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
 				// Count gems as treasure
 				if (newCount > prevCount && _levelState == LevelState::Running) {
-					std::int32_t weightedCount;
-					switch (gemType) {
-						default:
-						case 0: // Red (+1)
-							weightedCount = 1;
-							break;
-						case 1: // Green (+5)
-							weightedCount = 5;
-							break;
-						case 2: // Blue (+10)
-							weightedCount = 10;
-							break;
-						case 3: // Purple
-							weightedCount = 1;
-							break;
-					}
-
+					std::int32_t weightedCount = GetTreasureWeight(gemType);
 					peerDesc->TreasureCollected += (newCount - prevCount) * weightedCount;
 
 					if (peerDesc->RemotePeer) {
@@ -2062,38 +2051,56 @@ namespace Jazz2::Multiplayer
 		if (_isServer) {
 			// Cache all possible multiplayer spawn points (if it's not coop level) and race checkpoints
 			_multiplayerSpawnPoints.clear();
-			_eventMap->ForEachEvent(EventType::LevelStartMultiplayer, [this](Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
-				_multiplayerSpawnPoints.emplace_back(Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize - 8), event.EventParams[0]);
-				return true;
-			});
-
 			_raceCheckpoints.clear();
-			_eventMap->ForEachEvent(EventType::WarpOrigin, [this](Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
-				if (event.EventParams[2] != 0) {
+			_totalTreasureCount = 0;
+
+			_eventMap->ForEachEvent([this](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
+				if (e.Event == EventType::LevelStartMultiplayer) {
+					_multiplayerSpawnPoints.emplace_back(Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize - 8), e.EventParams[0]);
+				} else if (e.Event == EventType::WarpOrigin) {
+					if (e.EventParams[2] != 0) {
+						_raceCheckpoints.emplace_back(Vector2i(x, y));
+					}
+				} else if (e.Event == EventType::AreaEndOfLevel) {
 					_raceCheckpoints.emplace_back(Vector2i(x, y));
+				} else if (e.Event == EventType::Gem) {
+					// GemStomp event is not counted, because it's difficult to find
+					std::uint8_t gemType = (std::uint8_t)(e.EventParams[0] & 0x03);
+					std::int32_t count = GetTreasureWeight(gemType);
+					_totalTreasureCount += count;
+				} else if (e.Event == EventType::GemGiant) {
+					// Giant gem randowly spawns between 5 and 12 red gems, so use 8 as average
+					_totalTreasureCount += 8 * GetTreasureWeight(0);
+				} else if (e.Event == EventType::GemRing) {
+					// Gems in the ring are always red
+					std::int32_t count = (e.EventParams[0] > 0 ? e.EventParams[0] : 8) * GetTreasureWeight(0);
+					_totalTreasureCount += count;
+				} else if (e.Event == EventType::CrateGem || e.Event == EventType::BarrelGem) {
+					std::int32_t count = e.EventParams[0] * GetTreasureWeight(0) +
+										 e.EventParams[1] * GetTreasureWeight(1) +
+										 e.EventParams[2] * GetTreasureWeight(2) +
+										 e.EventParams[3] * GetTreasureWeight(3);
+					_totalTreasureCount += count;
 				}
 				return true;
 			});
-			_eventMap->ForEachEvent(EventType::AreaEndOfLevel, [this](Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
-				_raceCheckpoints.emplace_back(Vector2i(x, y));
-				return true;
-			});
+
 			ConsolidateRaceCheckpoints();
 
 			const auto& serverConfig = _networkManager->GetServerConfiguration();
 			if (serverConfig.GameMode == MpGameMode::Cooperation) {
-				// Replace all 1ups with max carrots
-				// TODO: Reset it back to 1ups when starting a different mode with limited lives
-				_eventMap->ForEachEvent(EventType::OneUp, [this](Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
-					event.Event = EventType::Carrot;
-					event.EventParams[0] = 1;
-					return true;
-				});
-				// Shorten delay time of all airboard generators
-				// TODO: Reset it back when starting a different mode
-				_eventMap->ForEachEvent(EventType::AirboardGenerator, [this](Events::EventMap::EventTile& event, std::int32_t x, std::int32_t y) {
-					if (event.EventParams[0] > 4) {
-						event.EventParams[0] = 4;
+				_eventMap->ForEachEvent([this](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
+					if (e.Event == EventType::OneUp) {
+						// Replace all 1ups with max carrots
+						// TODO: Reset it back to 1ups when starting a different mode with limited lives
+						e.Event = EventType::Carrot;
+						e.EventParams[0] = 1;
+					} else if (e.Event == EventType::AirboardGenerator) {
+						// Shorten delay time of all airboard generators
+						// TODO: Reset it back when starting a different mode
+						if (e.EventParams[0] > 4) {
+							e.EventParams[0] = 4;
+						}
 					}
 					return true;
 				});
@@ -2104,30 +2111,27 @@ namespace Jazz2::Multiplayer
 				_eventMap->SetPitType(PitType::FallForever);
 			}
 
-			Vector2i size = _eventMap->GetSize();
-			for (std::int32_t y = 0; y < size.Y; y++) {
-				for (std::int32_t x = 0; x < size.X; x++) {
-					std::uint8_t* eventParams;
-					switch (_eventMap->GetEventByPosition(x, y, &eventParams)) {
-						case EventType::WarpOrigin:
-						case EventType::ModifierHurt:
-						case EventType::ModifierDeath:
-						case EventType::ModifierLimitCameraView:
-						case EventType::AreaEndOfLevel:
-						case EventType::AreaCallback:
-						case EventType::AreaActivateBoss:
-						case EventType::AreaFlyOff:
-						case EventType::AreaRevertMorph:
-						case EventType::AreaMorphToFrog:
-						case EventType::AreaNoFire:
-						case EventType::TriggerZone:
-						case EventType::RollingRockTrigger:
-							// These events are handled on server-side only
-							_eventMap->StoreTileEvent(x, y, EventType::Empty);
-							break;
-					}
+			_eventMap->ForEachEvent([this](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
+				switch (e.Event) {
+					case EventType::WarpOrigin:
+					case EventType::ModifierHurt:
+					case EventType::ModifierDeath:
+					case EventType::ModifierLimitCameraView:
+					case EventType::AreaEndOfLevel:
+					case EventType::AreaCallback:
+					case EventType::AreaActivateBoss:
+					case EventType::AreaFlyOff:
+					case EventType::AreaRevertMorph:
+					case EventType::AreaMorphToFrog:
+					case EventType::AreaNoFire:
+					case EventType::TriggerZone:
+					case EventType::RollingRockTrigger:
+						// These events are handled on server-side only
+						e.Event = EventType::Empty;
+						break;
 				}
-			}	
+				return true;
+			});
 		}
 	}
 
@@ -2210,6 +2214,8 @@ namespace Jazz2::Multiplayer
 			return false;
 		}
 
+		LOGI("[MP] Game mode set to {}", NetworkManager::GameModeToString(value));
+
 		auto& serverConfig = _networkManager->GetServerConfiguration();
 		serverConfig.GameMode = value;
 
@@ -2236,6 +2242,19 @@ namespace Jazz2::Multiplayer
 		}
 
 		auto& serverConfig = _networkManager->GetServerConfiguration();
+
+		if (_autoWeightTreasure && (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt)) {
+			std::int32_t playerCount = (std::int32_t)_players.size();
+			if (playerCount > 0) {
+				// Take 80% of all the treasure and divide it by clamped number of players
+				serverConfig.TotalTreasureCollected = (_totalTreasureCount * 8) / (10 * std::max(playerCount, 3));
+				// Round to multiples of 5
+				serverConfig.TotalTreasureCollected = (std::int32_t)roundf(serverConfig.TotalTreasureCollected / 5.0f) * 5;
+				if (serverConfig.TotalTreasureCollected < 20) {
+					serverConfig.TotalTreasureCollected = std::min(20, _totalTreasureCount);
+				}
+			}
+		}
 
 		std::uint8_t flags = 0;
 		if (_isReforged) {
@@ -2497,7 +2516,7 @@ namespace Jazz2::Multiplayer
 				} else if (variableName == "treasure"_s) {
 					value = value.trimmed();
 					auto intValue = stou32(value.data(), value.size());
-					if (intValue <= 0 || intValue > INT32_MAX) {
+					if (intValue < 0 || intValue > INT32_MAX) {
 						SendMessage(peer, UI::MessageLevel::Confirm, "Value out of range"_s);
 						return true;
 					}
@@ -2505,6 +2524,7 @@ namespace Jazz2::Multiplayer
 					auto& serverConfig = _networkManager->GetServerConfiguration();
 
 					serverConfig.TotalTreasureCollected = intValue;
+					_autoWeightTreasure = (serverConfig.TotalTreasureCollected == 0);
 					SynchronizeGameMode();
 					SendMessage(peer, UI::MessageLevel::Confirm, "Value changed successfully"_s);
 					return true;
@@ -2824,6 +2844,10 @@ namespace Jazz2::Multiplayer
 								});
 							}
 						}
+
+						if (_autoWeightTreasure) {
+							SynchronizeGameMode();
+						}
 					}
 
 					if (_activeBoss != nullptr && _nextLevelType == ExitType::None) {
@@ -3084,7 +3108,7 @@ namespace Jazz2::Multiplayer
 					}
 					
 					Thread streamingThread([_this = runtime_cast<MpLevelHandler>(shared_from_this()), peer, peerDesc = std::move(peerDesc), missingAssets = std::move(missingAssets)]() {
-						LOGI("Started streaming {} assets to peer [{:.8x}]", missingAssets.size(), std::uint64_t(peer._enet));
+						LOGI("[MP] Started streaming {} assets to peer [{:.8x}]", missingAssets.size(), std::uint64_t(peer._enet));
 						TimeStamp begin = TimeStamp::now();
 
 						for (std::uint32_t i = 0; i < (std::uint32_t)missingAssets.size(); i++) {
@@ -3130,7 +3154,7 @@ namespace Jazz2::Multiplayer
 							_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::StreamAsset, packetEnd);
 						}
 
-						LOGI("Finished streaming {} assets to peer [{:.8x}] - took {:.1f} ms",
+						LOGI("[MP] Finished streaming {} assets to peer [{:.8x}] - took {:.1f} ms",
 							missingAssets.size(), std::uint64_t(peer._enet), begin.millisecondsSince());
 
 						if (peerDesc->IsAuthenticated && !_this->_ignorePackets) {
@@ -3449,6 +3473,7 @@ namespace Jazz2::Multiplayer
 									}
 									case LevelState::Countdown3: {
 										static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
+										LOGI("Starting round...");
 										break;
 									}
 									case LevelState::Countdown2: {
@@ -4786,6 +4811,10 @@ namespace Jazz2::Multiplayer
 
 					ApplyGameModeToPlayer(serverConfig.GameMode, ptr);
 
+					if (_autoWeightTreasure && (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt)) {
+						SynchronizeGameMode();
+					}
+
 					// Spawn the player also on the remote side
 					{
 						std::uint8_t flags = 0;
@@ -5456,9 +5485,10 @@ namespace Jazz2::Multiplayer
 			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::FadeOut, packet);
 		}
 
-		if (winner) {
+		if (winner != nullptr) {
 			auto peerDesc = winner->GetPeerDescriptor();
 			ShowAlertToAllPlayers(_f("\n\nWinner is {}", peerDesc->PlayerName));
+			LOGI("[MP] Winner is {}", peerDesc->PlayerName);
 		}
 
 		for (auto* player : _players) {
@@ -5559,6 +5589,8 @@ namespace Jazz2::Multiplayer
 		serverConfig.TotalKills = playlistEntry.TotalKills;
 		serverConfig.TotalLaps = playlistEntry.TotalLaps;
 		serverConfig.TotalTreasureCollected = playlistEntry.TotalTreasureCollected;
+
+		_autoWeightTreasure = (serverConfig.TotalTreasureCollected == 0);
 
 		if (_levelName == playlistEntry.LevelName) {
 			// Level is the same, just change game mode
@@ -5726,6 +5758,21 @@ namespace Jazz2::Multiplayer
 				runtime_cast<Actors::Environment::SwingingVine>(actor) || runtime_cast<Actors::Solid::Bridge>(actor) ||
 				runtime_cast<Actors::Solid::MovingPlatform>(actor) || runtime_cast<Actors::Solid::PinballBumper>(actor) ||
 				runtime_cast<Actors::Solid::PinballPaddle>(actor) || runtime_cast<Actors::Solid::SpikeBall>(actor));
+	}
+
+	std::int32_t MpLevelHandler::GetTreasureWeight(std::uint8_t gemType)
+	{
+		switch (gemType) {
+			default:
+			case 0: // Red (+1)
+				return 1;
+			case 1: // Green (+5)
+				return 5;
+			case 2: // Blue (+10)
+				return 10;
+			case 3: // Purple
+				return 1;
+		}
 	}
 
 	bool MpLevelHandler::PlayerShouldHaveUnlimitedHealth(MpGameMode gameMode)

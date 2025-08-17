@@ -22,7 +22,7 @@ namespace Jazz2::Actors::Collectibles
 	{
 		async_await CollectibleBase::OnActivatedAsync(details);
 
-		int length = (details.Params[0] > 0 ? details.Params[0] : 8);
+		std::int32_t length = (details.Params[0] > 0 ? details.Params[0] : 8);
 		_speed = (details.Params[1] > 0 ? details.Params[1] : 8) * 0.00625f;
 		_untouched = false;
 
@@ -32,7 +32,7 @@ namespace Jazz2::Actors::Collectibles
 
 		auto& resolver = ContentResolver::Get();
 		if (!resolver.IsHeadless()) {
-			for (int i = 0; i < length; i++) {
+			for (std::int32_t i = 0; i < length; i++) {
 				ChainPiece& piece = _pieces.emplace_back();
 				piece.Scale = 0.8f;
 				piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
@@ -98,12 +98,12 @@ namespace Jazz2::Actors::Collectibles
 			if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 				Vector2i texSize = res->Base->TextureDiffuse->size();
 
-				for (int i = 0; i < _pieces.size(); i++) {
+				for (std::int32_t i = 0; i < _pieces.size(); i++) {
 					auto command = _pieces[i].Command.get();
 
-					int curAnimFrame = res->FrameOffset + (i % res->FrameCount);
-					int col = curAnimFrame % res->Base->FrameConfiguration.X;
-					int row = curAnimFrame / res->Base->FrameConfiguration.X;
+					std::int32_t curAnimFrame = res->FrameOffset + (i % res->FrameCount);
+					std::int32_t col = curAnimFrame % res->Base->FrameConfiguration.X;
+					std::int32_t row = curAnimFrame / res->Base->FrameConfiguration.X;
 					float texScaleX = (float(res->Base->FrameDimensions.X) / float(texSize.X));
 					float texBiasX = (float(res->Base->FrameDimensions.X * col) / float(texSize.X));
 					float texScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));

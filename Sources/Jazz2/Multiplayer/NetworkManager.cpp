@@ -190,7 +190,7 @@ namespace Jazz2::Multiplayer
 		serverConfig.InitialPlayerHealth = -1;
 		serverConfig.TotalKills = 10;
 		serverConfig.TotalLaps = 3;
-		serverConfig.TotalTreasureCollected = 100;
+		serverConfig.TotalTreasureCollected = 0;
 
 		FillServerConfigurationFromFile(path, serverConfig, includedFiles, 0);
 
