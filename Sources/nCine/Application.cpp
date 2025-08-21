@@ -409,70 +409,6 @@ static void OnHandleInterruptSignal(int sig)
 }
 #endif;
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
-static void AppendLogFileHeader(Stream& s)
-{
-	// Write TraceDigger metadata header
-
-	std::uint32_t flags = 0;
-#	if defined(DEATH_TARGET_32BIT)
-	flags |= 0x40;	// Is32Bit
-#	endif
-#	if defined(DEATH_TARGET_BIG_ENDIAN)
-	flags |= 0x80;	// IsBigEndian
-#	endif
-
-#	if defined(DEATH_TARGET_WINDOWS)
-	std::uint32_t processId = (std::uint32_t)::GetCurrentProcessId();
-	wchar_t hostNameW[128]; DWORD hostNameWLength = (DWORD)arraySize(hostNameW);
-	if (!::GetComputerNameW(hostNameW, &hostNameWLength)) {
-		hostNameWLength = 0;
-	}
-	char hostName[128];
-	std::int32_t hostNameLength = Utf8::FromUtf16(hostName, hostNameW, hostNameWLength);
-#	elif defined(DEATH_TARGET_ANDROID)
-	flags |= 0x20;	// RemoteDevice
-	std::uint32_t processId = (std::uint32_t)::getpid();
-	auto androidId = nCine::Backends::AndroidJniWrap_Secure::getAndroidId();
-	char hostName[128] {};
-	std::int32_t hostNameLength = (std::int32_t)formatInto(hostName, "android:{}", androidId);
-#	else
-	std::uint32_t processId = (std::uint32_t)::getpid();
-	char hostName[128] {}; std::int32_t hostNameLength = 0;
-	if (::gethostname(hostName, arraySize(hostName)) == 0) {
-		hostName[arraySize(hostName) - 1] = '\0';
-		hostNameLength = std::strlen(hostName);
-	}
-#	endif
-
-	char buffer[256];
-	MemoryStream ms(buffer, sizeof(buffer));
-	ms.WriteVariableUint32(flags);
-	ms.WriteVariableInt64(DateTime::UtcNow().ToUnixMilliseconds());
-	ms.WriteVariableUint32(processId);
-
-#	if defined(DEATH_TARGET_ANDROID)
-	auto executableFileName = nCine::Backends::AndroidJniWrap_Activity::getPackageName();
-#	else
-	auto executablePath = fs::GetExecutablePath();
-	auto executableFileName = fs::GetFileName(executablePath);
-#	endif
-	ms.WriteVariableUint32((std::uint32_t)executableFileName.size());
-	if (executableFileName) {
-		ms.Write(executableFileName.data(), (std::int64_t)executableFileName.size());
-	}
-
-	ms.WriteVariableUint32((std::uint32_t)hostNameLength);
-	ms.Write(hostName, (std::int64_t)hostNameLength);
-	auto metadataBase64 = nCine::toBase64Url(buffer, buffer + (std::size_t)ms.GetPosition());
-
-	constexpr StringView FileHeader = "#! /usr/bin/tracedigger :"_s;
-	s.Write(FileHeader.data(), (std::int64_t)FileHeader.size());
-	s.Write(metadataBase64.data(), (std::int64_t)metadataBase64.size());
-	s.Write("\n", 1);
-}
-#endif
-
 template<std::int32_t N>
 static DEATH_ALWAYS_INLINE void AppendPart(char* dest, std::int32_t& length, const char(&newPart)[N])
 {
@@ -1605,6 +1541,77 @@ namespace nCine
 		}
 #	endif
 	}
+
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+	void Application::AppendLogFileHeader(Stream& s)
+	{
+		// Write TraceDigger metadata header
+
+		std::uint64_t timestampMs = DateTime::UtcNow().ToUnixMilliseconds() - 100;
+
+		std::uint32_t flags = 0;
+#		if defined(DEATH_TARGET_32BIT)
+		flags |= 0x40;	// Is32Bit
+#		endif
+#		if defined(DEATH_TARGET_BIG_ENDIAN)
+		flags |= 0x80;	// IsBigEndian
+#		endif
+
+#		if defined(DEATH_TARGET_WINDOWS)
+		std::uint32_t processId = (std::uint32_t)::GetCurrentProcessId();
+		wchar_t hostNameW[128]; DWORD hostNameWLength = (DWORD)arraySize(hostNameW);
+		if (!::GetComputerNameW(hostNameW, &hostNameWLength)) {
+			hostNameWLength = 0;
+		}
+		char hostName[128];
+		std::int32_t hostNameLength = Utf8::FromUtf16(hostName, hostNameW, hostNameWLength);
+#		elif defined(DEATH_TARGET_ANDROID)
+		flags |= 0x20;	// RemoteDevice
+		std::uint32_t processId = (std::uint32_t)::getpid();
+		auto androidId = nCine::Backends::AndroidJniWrap_Secure::getAndroidId();
+		char hostName[128] {};
+		std::int32_t hostNameLength = (std::int32_t)formatInto(hostName, "android:{}", androidId);
+#		else
+		std::uint32_t processId = (std::uint32_t)::getpid();
+		char hostName[128] {}; std::int32_t hostNameLength = 0;
+		if (::gethostname(hostName, arraySize(hostName)) == 0) {
+			hostName[arraySize(hostName) - 1] = '\0';
+			hostNameLength = std::strlen(hostName);
+		}
+#		endif
+
+		char buffer[256];
+		MemoryStream ms(buffer, sizeof(buffer));
+		ms.WriteVariableUint32(flags);
+		ms.WriteVariableInt64(timestampMs);
+		ms.WriteVariableUint32(processId);
+
+#		if defined(DEATH_TARGET_ANDROID)
+		auto executableFileName = nCine::Backends::AndroidJniWrap_Activity::getPackageName();
+#		elif defined(DEATH_TARGET_SWITCH)
+		StringView executableFileName;
+		if (appCfg_.argc() >= 1) {
+			executableFileName = fs::GetFileName(appCfg_.argv(0));
+		}
+#		else
+		auto executablePath = fs::GetExecutablePath();
+		auto executableFileName = fs::GetFileName(executablePath);
+#		endif
+		ms.WriteVariableUint32((std::uint32_t)executableFileName.size());
+		if (executableFileName) {
+			ms.Write(executableFileName.data(), (std::int64_t)executableFileName.size());
+		}
+
+		ms.WriteVariableUint32((std::uint32_t)hostNameLength);
+		ms.Write(hostName, (std::int64_t)hostNameLength);
+		auto metadataBase64 = nCine::toBase64Url(buffer, buffer + (std::size_t)ms.GetPosition());
+
+		constexpr StringView FileHeader = "#! /usr/bin/tracedigger :"_s;
+		s.Write(FileHeader.data(), (std::int64_t)FileHeader.size());
+		s.Write(metadataBase64.data(), (std::int64_t)metadataBase64.size());
+		s.Write("\n", 1);
+	}
+#	endif
 
 #	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 	bool Application::CreateTraceConsole(StringView title, bool& hasVirtualTerminal)
