@@ -709,7 +709,7 @@ namespace Death { namespace Trace {
 
 		for (ThreadContext* tc : _activeThreadContextsCache) {
 			TransitEvent const* te = tc->_transitEventBuffer.front();
-			if (te && (minTs > te->Timestamp)) {
+			if (te != nullptr && minTs > te->Timestamp) {
 				minTs = te->Timestamp;
 				threadContext = tc;
 			}

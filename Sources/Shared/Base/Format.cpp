@@ -423,7 +423,7 @@ namespace Death { namespace Implementation {
 			for (std::size_t formatOffset = 0; formatOffset != format.size(); ) {
 				// Placeholder begin (or escaped {)
 				if (format[formatOffset] == '{') {
-					if (formatOffset + 1 < format.size() && format[formatOffset+1] == '{') {
+					if (formatOffset + 1 < format.size() && format[formatOffset + 1] == '{') {
 						writer(format.slice(formatOffset, formatOffset + 1));
 						formatOffset += 2;
 						continue;
@@ -442,7 +442,7 @@ namespace Death { namespace Implementation {
 
 				// Placeholder end (or escaped })
 				if (format[formatOffset] == '}') {
-					if (!inPlaceholder && formatOffset + 1 < format.size() && format[formatOffset+1] == '}') {
+					if (!inPlaceholder && formatOffset + 1 < format.size() && format[formatOffset + 1] == '}') {
 						writer(format.slice(formatOffset, formatOffset + 1));
 						formatOffset += 2;
 						continue;
