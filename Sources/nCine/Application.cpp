@@ -1588,14 +1588,12 @@ namespace nCine
 
 #		if defined(DEATH_TARGET_ANDROID)
 		auto executableFileName = nCine::Backends::AndroidJniWrap_Activity::getPackageName();
-#		elif defined(DEATH_TARGET_SWITCH)
-		StringView executableFileName;
-		if (appCfg_.argc() >= 1) {
-			executableFileName = fs::GetFileName(appCfg_.argv(0));
-		}
 #		else
 		auto executablePath = fs::GetExecutablePath();
 		auto executableFileName = fs::GetFileName(executablePath);
+		if (executableFileName.empty()) {
+			executableFileName = NCINE_APP;
+		}
 #		endif
 		ms.WriteVariableUint32((std::uint32_t)executableFileName.size());
 		if (executableFileName) {
