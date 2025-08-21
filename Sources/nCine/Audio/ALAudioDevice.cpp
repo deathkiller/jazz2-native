@@ -86,8 +86,11 @@ namespace nCine
 #if defined(DEATH_TRACE)
 		// Log OpenAL device info
 		LOGI("--- OpenAL device info ---");
-		const ALCchar* deviceName = alcGetString(device_, ALC_DEVICE_SPECIFIER);
-		LOGI("Device Name: {}", deviceName);
+		StringView deviceName = alcGetString(device_, ALC_DEVICE_SPECIFIER);
+		StringView renderer = alGetString(AL_RENDERER);
+		StringView version = alGetString(AL_VERSION);
+		LOGI(deviceName != renderer ? "Device Name: {} ({})" : "Device Name: {}", deviceName, renderer);
+		LOGI("OpenAL Version: {}", version);
 
 		ALCint attributesSize = 0;
 		alcGetIntegerv(device_, ALC_ATTRIBUTES_SIZE, 1, &attributesSize);
@@ -98,11 +101,9 @@ namespace nCine
 
 			alcGetIntegerv(device_, ALC_ALL_ATTRIBUTES, numAttributes, attributes);
 
-			ALCint versionMajor = 0, versionMinor = 0, monoSources = 0, stereoSources = 0, efxVersionMajor = 0, efxVersionMinor = 0, efxAuxSends = 0;
+			ALCint monoSources = 0, stereoSources = 0, efxVersionMajor = 0, efxVersionMinor = 0, efxAuxSends = 0;
 			for (std::int32_t i = 0; i + 1 < numAttributes; i += 2) {
 				switch (attributes[i]) {
-					case ALC_MAJOR_VERSION: versionMajor = attributes[i + 1]; break;
-					case ALC_MINOR_VERSION: versionMinor = attributes[i + 1]; break;
 					case ALC_MONO_SOURCES: monoSources = attributes[i + 1]; break;
 					case ALC_STEREO_SOURCES: stereoSources = attributes[i + 1]; break;
 #if defined(ALC_EFX_MAJOR_VERSION)
@@ -116,8 +117,6 @@ namespace nCine
 #endif
 				}
 			}
-
-			LOGI("OpenAL Version: {}.{}", versionMajor, versionMinor);
 
 #	if defined(ALC_EXT_EFX_NAME)
 			bool hasExtEfx = alcIsExtensionPresent(device_, ALC_EXT_EFX_NAME);
