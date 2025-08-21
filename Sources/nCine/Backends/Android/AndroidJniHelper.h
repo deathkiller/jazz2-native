@@ -278,6 +278,7 @@ namespace nCine::Backends
 	public:
 		static void init(struct android_app* state);
 		static void finishAndRemoveTask();
+		static String getPackageName();
 		static String getPreferredLanguage();
 		static bool isScreenRound();
 		static bool hasExternalStoragePermission();
@@ -290,6 +291,7 @@ namespace nCine::Backends
 	private:
 		static jobject activityObject_;
 		static jmethodID midFinishAndRemoveTask_;
+		static jmethodID midGetPackageName_;
 		static jmethodID midGetPreferredLanguage_;
 		static jmethodID midIsScreenRound_;
 		static jmethodID midHasExternalStoragePermission_;

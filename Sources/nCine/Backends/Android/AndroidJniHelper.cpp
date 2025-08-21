@@ -61,6 +61,7 @@ namespace nCine::Backends
 
 	jobject AndroidJniWrap_Activity::activityObject_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midFinishAndRemoveTask_ = nullptr;
+	jmethodID AndroidJniWrap_Activity::midGetPackageName_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midGetPreferredLanguage_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midIsScreenRound_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midHasExternalStoragePermission_ = nullptr;
@@ -763,6 +764,7 @@ namespace nCine::Backends
 		jclass nativeActivityClass = AndroidJniHelper::jniEnv->GetObjectClass(activityObject_);
 
 		midFinishAndRemoveTask_ = AndroidJniClass::getMethodID(nativeActivityClass, "finishAndRemoveTask", "()V");
+		midGetPackageName_ = AndroidJniClass::getMethodID(nativeActivityClass, "getPackageName", "()Ljava/lang/String;");
 		midGetPreferredLanguage_ = AndroidJniClass::getMethodID(nativeActivityClass, "getPreferredLanguage", "()Ljava/lang/String;");
 		midIsScreenRound_ = AndroidJniClass::getMethodID(nativeActivityClass, "isScreenRound", "()Z");
 		midHasExternalStoragePermission_ = AndroidJniClass::getMethodID(nativeActivityClass, "hasExternalStoragePermission", "()Z");
@@ -794,6 +796,22 @@ namespace nCine::Backends
 		}
 	}
 
+	String AndroidJniWrap_Activity::getPackageName()
+	{
+		jstring strPackageName = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midGetPackageName_));
+		if (!strPackageName) {
+			return {};
+		}
+
+		jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strPackageName);
+		const char* packageName = AndroidJniHelper::jniEnv->GetStringUTFChars(strPackageName, nullptr);
+		String result(NoInit, length);
+		std::memcpy(result.data(), packageName, length);
+		AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strPackageName, packageName);
+		AndroidJniHelper::jniEnv->DeleteLocalRef(strPackageName);
+		return result;
+	}
+
 	String AndroidJniWrap_Activity::getPreferredLanguage()
 	{
 		jstring strLanguage = static_cast<jstring>(AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midGetPreferredLanguage_));
@@ -803,7 +821,7 @@ namespace nCine::Backends
 
 		jsize length = AndroidJniHelper::jniEnv->GetStringUTFLength(strLanguage);
 		const char* language = AndroidJniHelper::jniEnv->GetStringUTFChars(strLanguage, nullptr);
-		String result = String(NoInit, length);
+		String result(NoInit, length);
 		std::memcpy(result.data(), language, length);
 		AndroidJniHelper::jniEnv->ReleaseStringUTFChars(strLanguage, language);
 		AndroidJniHelper::jniEnv->DeleteLocalRef(strLanguage);

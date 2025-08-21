@@ -104,6 +104,7 @@ using namespace Death::IO;
 #	include <time.h>
 #	include <unistd.h>
 #	include <android/log.h>
+#	include "Backends/Android/AndroidJniHelper.h"
 #else
 #	include <cstdarg>
 #	include <unistd.h>
@@ -406,13 +407,22 @@ static void OnHandleInterruptSignal(int sig)
 		::raise(sig);
 	}
 }
-#endif
+#endif;
 
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 static void AppendLogFileHeader(Stream& s)
 {
 	// Write TraceDigger metadata header
 
-#if defined(DEATH_TARGET_WINDOWS)
+	std::uint32_t flags = 0;
+#	if defined(DEATH_TARGET_32BIT)
+	flags |= 0x40;	// Is32Bit
+#	endif
+#	if defined(DEATH_TARGET_BIG_ENDIAN)
+	flags |= 0x80;	// IsBigEndian
+#	endif
+
+#	if defined(DEATH_TARGET_WINDOWS)
 	std::uint32_t processId = (std::uint32_t)::GetCurrentProcessId();
 	wchar_t hostNameW[128]; DWORD hostNameWLength = (DWORD)arraySize(hostNameW);
 	if (!::GetComputerNameW(hostNameW, &hostNameWLength)) {
@@ -420,24 +430,38 @@ static void AppendLogFileHeader(Stream& s)
 	}
 	char hostName[128];
 	std::int32_t hostNameLength = Utf8::FromUtf16(hostName, hostNameW, hostNameWLength);
-#else
+#	elif defined(DEATH_TARGET_ANDROID)
+	flags |= 0x20;	// RemoteDevice
+	std::uint32_t processId = (std::uint32_t)::getpid();
+	auto androidId = nCine::Backends::AndroidJniWrap_Secure::getAndroidId();
+	char hostName[128] {};
+	std::int32_t hostNameLength = (std::int32_t)formatInto(hostName, "android:{}", androidId);
+#	else
 	std::uint32_t processId = (std::uint32_t)::getpid();
 	char hostName[128] {}; std::int32_t hostNameLength = 0;
 	if (::gethostname(hostName, arraySize(hostName)) == 0) {
 		hostName[arraySize(hostName) - 1] = '\0';
 		hostNameLength = std::strlen(hostName);
 	}
-#endif
+#	endif
 
 	char buffer[256];
 	MemoryStream ms(buffer, sizeof(buffer));
-	ms.WriteVariableUint32(0); // Flags
+	ms.WriteVariableUint32(flags);
 	ms.WriteVariableInt64(DateTime::UtcNow().ToUnixMilliseconds());
 	ms.WriteVariableUint32(processId);
+
+#	if defined(DEATH_TARGET_ANDROID)
+	auto executableFileName = nCine::Backends::AndroidJniWrap_Activity::getPackageName();
+#	else
 	auto executablePath = fs::GetExecutablePath();
 	auto executableFileName = fs::GetFileName(executablePath);
+#	endif
 	ms.WriteVariableUint32((std::uint32_t)executableFileName.size());
-	ms.Write(executableFileName.data(), (std::int64_t)executableFileName.size());
+	if (executableFileName) {
+		ms.Write(executableFileName.data(), (std::int64_t)executableFileName.size());
+	}
+
 	ms.WriteVariableUint32((std::uint32_t)hostNameLength);
 	ms.Write(hostName, (std::int64_t)hostNameLength);
 	auto metadataBase64 = nCine::toBase64Url(buffer, buffer + (std::size_t)ms.GetPosition());
@@ -447,6 +471,7 @@ static void AppendLogFileHeader(Stream& s)
 	s.Write(metadataBase64.data(), (std::int64_t)metadataBase64.size());
 	s.Write("\n", 1);
 }
+#endif
 
 template<std::int32_t N>
 static DEATH_ALWAYS_INLINE void AppendPart(char* dest, std::int32_t& length, const char(&newPart)[N])
