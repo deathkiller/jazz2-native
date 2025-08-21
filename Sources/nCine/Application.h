@@ -10,6 +10,7 @@
 
 #include <Containers/StringView.h>
 #include <Core/ITraceSink.h>
+#include <IO/Stream.h>
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <CommonWindows.h>
@@ -265,6 +266,9 @@ namespace nCine
 		void InitializeTrace();
 		void ShutdownTrace();
 
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+		void AppendLogFileHeader(IO::Stream& s);
+#	endif
 #	if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		bool CreateTraceConsole(StringView title, bool& hasVirtualTerminal);
 		void DestroyTraceConsole();
