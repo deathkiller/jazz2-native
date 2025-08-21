@@ -8,6 +8,10 @@
 #include <cstring>
 #include <sys/types.h>
 
+#if !defined(DEATH_TARGET_WINDOWS)
+#	include <sys/time.h>
+#endif
+
 #if !defined(DEATH_USE_GMTOFF_IN_TM) && defined(DEATH_TARGET_APPLE)
 #	define DEATH_USE_GMTOFF_IN_TM
 #endif
