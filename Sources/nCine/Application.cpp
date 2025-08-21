@@ -1547,7 +1547,7 @@ namespace nCine
 	{
 		// Write TraceDigger metadata header
 
-		std::uint64_t timestampMs = DateTime::UtcNow().ToUnixMilliseconds() - 100;
+		std::uint64_t timestampMs = DateTime::UtcNow().ToUnixMilliseconds() - 300;
 
 		std::uint32_t flags = 0;
 #		if defined(DEATH_TARGET_32BIT)

@@ -301,7 +301,11 @@ namespace nCine
 		LOGI("Running on {} {} ({}) as arm64-v8a application", AndroidJniClass_Version::deviceBrand(), AndroidJniClass_Version::deviceModel(), AndroidJniClass_Version::deviceManufacturer());
 #	endif
 #elif defined(DEATH_TARGET_X86)
+#	if defined(DEATH_TARGET_32BIT)
 		LOGI("Running on {} {} ({}) as x86 application", AndroidJniClass_Version::deviceBrand(), AndroidJniClass_Version::deviceModel(), AndroidJniClass_Version::deviceManufacturer());
+#	else
+		LOGI("Running on {} {} ({}) as x64 application", AndroidJniClass_Version::deviceBrand(), AndroidJniClass_Version::deviceModel(), AndroidJniClass_Version::deviceManufacturer());
+#	endif
 #else
 		LOGI("Running on {} {} ({})", AndroidJniClass_Version::deviceBrand(), AndroidJniClass_Version::deviceModel(), AndroidJniClass_Version::deviceManufacturer());
 #endif
