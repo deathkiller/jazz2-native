@@ -49,7 +49,7 @@ namespace Death { namespace Containers {
 		static bool IsLeapYear(std::int32_t year) noexcept
 		{
 			if (year == -1) {
-				year = DateTime::Now().GetYear();
+				year = DateTime::UtcNow().GetYear();
 			}
 
 			return (year % 4 == 0 && ((year % 100) != 0 || (year % 400) == 0));
@@ -857,7 +857,7 @@ namespace Death { namespace Containers {
 			if (result.IsValid()) {
 				tm = result.Partitioned();
 			} else {
-				tm = DateTime::Now().ResetTime().Partitioned();
+				tm = DateTime::UtcNow().ResetTime().Partitioned();
 			}
 
 			if (haveMon) {
@@ -1034,29 +1034,16 @@ namespace Death { namespace Containers {
 		_dayOfWeek = (Implementation::GetTruncatedJDN(Day, Month, Year) + 2) % 7;
 	}
 
-	DateTime DateTime::Now() noexcept
-	{
-#if defined(DEATH_TARGET_WINDOWS)
-		SYSTEMTIME st;
-		::GetLocalTime(&st);
-		return DateTime(st);
-#else
-		time_t t = time(nullptr);
-		return DateTime(t);
-#endif
-	}
-
 	DateTime DateTime::UtcNow() noexcept
 	{
 #if defined(DEATH_TARGET_WINDOWS)
-		SYSTEMTIME st;
-		::GetSystemTime(&st);
-		return DateTime(st);
+		FILETIME ft;
+		::GetSystemTimeAsFileTime(&ft);
+		return DateTime(ft);
 #else
-		time_t t = time(nullptr);
-		DateTime dt = DateTime(t);
-		dt.AdjustToTimezone(UTC);
-		return dt;
+		struct timeval tp{};
+		gettimeofday(&tp, nullptr);
+		return DateTime::FromUnixMilliseconds((tp.tv_sec * 1000) + (tp.tv_usec / 1000));
 #endif
 	}
 

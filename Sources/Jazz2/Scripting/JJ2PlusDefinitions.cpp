@@ -2207,11 +2207,11 @@ namespace Jazz2::Scripting
 	}
 	std::uint64_t unixTimeSec() {
 		noop();
-		return Containers::DateTime::Now().ToUnixMilliseconds();
+		return Containers::DateTime::UtcNow().ToUnixMilliseconds();
 	}
 	std::uint64_t unixTimeMs() {
 		noop();
-		return Containers::DateTime::Now().ToUnixMilliseconds() / 1000;
+		return Containers::DateTime::UtcNow().ToUnixMilliseconds() / 1000;
 	}
 
 	bool jjRegexIsValid(const String& expression) {

@@ -63,7 +63,7 @@ namespace Jazz2::Multiplayer
 		std::memcpy(&_serverConfig->UniqueServerID[0], &PreferencesCache::UniqueServerID[0], arraySize(_serverConfig->UniqueServerID) - sizeof(std::uint16_t));
 		std::memcpy(&_serverConfig->UniqueServerID[_serverConfig->UniqueServerID.size() - sizeof(std::uint16_t)], &serverPort, sizeof(std::uint16_t));
 
-		_serverConfig->StartUnixTimestamp = DateTime::Now().ToUnixMilliseconds() / 1000;
+		_serverConfig->StartUnixTimestamp = DateTime::UtcNow().ToUnixMilliseconds() / 1000;
 		bool result = NetworkManagerBase::CreateServer(handler, serverPort);
 
 		if (result && !_serverConfig->IsPrivate) {

@@ -139,7 +139,8 @@ namespace nCine
 					LOGI("Resampler: {} ({})", resamplerName, defaultResampler);
 
 					StringUtils::lowercaseInPlace(resamplerName);
-					if (resamplerName != "linear"_s) {
+					// "Linear" is default in v1.22.2, "Cubic" is default in v1.23.1 and "Cubic Spline" in v1.24.2
+					if (resamplerName != "linear"_s && !resamplerName.hasPrefix("cubic"_s)) {
 						defaultResamplerOverriden = true;
 					}
 				}

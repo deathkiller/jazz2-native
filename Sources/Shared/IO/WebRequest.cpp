@@ -403,12 +403,8 @@ namespace Death { namespace IO {
 			return Result::Unauthorized(resp->GetStatusText());
 		} else if (status >= 400) {
 			char errorMessage[64];
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
-			::sprintf_s(errorMessage, "Error %i (%s)", status, resp->GetStatusText().data());
-#else
-			::snprintf(errorMessage, sizeof(errorMessage), "Error %i (%s)", status, resp->GetStatusText().data());
-#endif
-			return Result::Error(errorMessage);
+			std::size_t length = formatInto(errorMessage, "Error {} ({})", status, resp->GetStatusText());
+			return Result::Error({ errorMessage, length });
 		} else {
 			return Result::Ok(WebRequest::State::Completed);
 		}
@@ -777,12 +773,8 @@ namespace Death { namespace IO {
 			std::uint64_t hash = Environment::QueryUnbiasedInterruptTime() * 11400714819323198485ULL;
 			for (std::int32_t i = 0; i < 10; i++) {
 				char fileName[64];
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
-				::sprintf_s(fileName, "Dx-%08x-%08x", std::uint32_t((hash >> 32) & 0xffffffff), std::uint32_t(hash & 0xffffffff));
-#else
-				::snprintf(fileName, sizeof(fileName), "Dx-%08x-%08x", std::uint32_t((hash >> 32) & 0xffffffff), std::uint32_t(hash & 0xffffffff));
-#endif
-				_file = std::make_unique<FileStream>(FileSystem::CombinePath(tempDir, fileName), FileAccess::Write);
+				std::size_t length = formatInto(fileName, "Dx-{:.8x}-{:.8x}", std::uint32_t((hash >> 32) & 0xffffffff), std::uint32_t(hash & 0xffffffff));
+				_file = std::make_unique<FileStream>(FileSystem::CombinePath(tempDir, { fileName, length }), FileAccess::Write);
 				if (_file->IsValid()) {
 					break;
 				}
@@ -2021,12 +2013,8 @@ namespace Death { namespace IO {
 	WebRequest::Result WebRequestWinHTTP::Fail(StringView operation, DWORD errorCode)
 	{
 		char message[256];
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_MINGW)
-		::sprintf_s(message, "%s failed with error %08x%s", String::nullTerminatedView(operation).data(), errorCode, __GetWin32ErrorSuffix(errorCode));
-#else
-		::snprintf(message, sizeof(message), "%s failed with error %08x%s", String::nullTerminatedView(operation).data(), errorCode, __GetWin32ErrorSuffix(errorCode));
-#endif
-		return Result::Error(message);
+		std::size_t length = formatInto(message, "{} failed with error {:.8x}{}", operation, errorCode, __GetWin32ErrorSuffix(errorCode));
+		return Result::Error({ message, length });
 	}
 
 	WebRequest::Result WebRequestWinHTTP::Execute()
@@ -2549,7 +2537,7 @@ namespace Death { namespace IO {
 		{
 			CURLcode res = curl_easy_setopt(handle, option, value);
 			if (res != CURLE_OK) {
-				LOGW("curl_easy_setopt({}, {}) failed: {}", std::int32_t(option), std::size_t(value), curl_easy_strerror(res));
+				LOGW("curl_easy_setopt({}, {}) failed: {}", std::int32_t(option), std::uintptr_t(value), curl_easy_strerror(res));
 			}
 		}
 

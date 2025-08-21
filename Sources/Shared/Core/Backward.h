@@ -3815,10 +3815,11 @@ namespace Death { namespace Backward {
 
 		/** @brief Prints standard prologue of the text log file */
 		void PrintFilePrologue(IO::Stream* s) {
-			auto p = Containers::DateTime::Now().Partitioned();
+			auto p = Containers::DateTime::UtcNow().Partitioned();
 
 			char buffer[64];
-			std::int32_t length = snprintf(buffer, sizeof(buffer), "%02u:%02u:%02u.%03u [F] ", p.Hour, p.Minute, p.Second, p.Millisecond);
+			std::int32_t length = (std::int32_t)formatInto(buffer, "{:.2}:{:.2}:{:.2}.{:.3} [F] ",
+				p.Hour, p.Minute, p.Second, p.Millisecond);
 			if (length > 0) {
 				s->Write(buffer, length);
 			}
@@ -4518,6 +4519,17 @@ namespace Death { namespace Backward {
 			auto* _this = GetSingleton();
 			auto& context = _this->_context;
 
+			{
+				std::unique_lock<std::mutex> lk(_this->_lock);
+				if (_this->_status >= HandlerStatus::Crashed) {
+					// Crash handler was already called, wait until it finishes
+					while (_this->_status == HandlerStatus::Crashed) {
+						::Sleep(10);
+					}
+					return;
+				}
+			}
+
 			if (info == nullptr) {
 #	if (defined(_M_IX86) || defined(__i386__)) && defined(DEATH_TARGET_MSVC)
 				// RtlCaptureContext() doesn't work on i386
@@ -4548,6 +4560,13 @@ namespace Death { namespace Backward {
 
 			{
 				std::unique_lock<std::mutex> lk(_this->_lock);
+				if (_this->_status >= HandlerStatus::Crashed) {
+					// Crash handler was already called, wait until it finishes
+					while (_this->_status == HandlerStatus::Crashed) {
+						::Sleep(10);
+					}
+					return;
+				}
 				_this->_status = HandlerStatus::Crashed;
 			}
 

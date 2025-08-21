@@ -7,6 +7,7 @@
 #include <cmath>
 
 #include <Containers/ArrayView.h>
+#include <Containers/StaticArray.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 #include <IO/Stream.h>
@@ -386,6 +387,45 @@ namespace nCine
 			: 0);
 
 		return (patch & 0xFFFFFFFFULL) | ((minor & 0xFFFFULL) << 32) | ((major & 0xFFFFULL) << 48);
+	}
+
+	template<class Iterator>
+	static std::string toBase64Url(const Iterator begin, const Iterator end)
+	{
+		static const Containers::StaticArray<64, char> chars {
+			'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+			'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+			'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_'
+		};
+
+		std::string result;
+		std::size_t c = 0;
+		Containers::StaticArray<3, std::uint8_t> charArray;
+
+		for (auto i = begin; i != end; ++i) {
+			charArray[c++] = static_cast<std::uint8_t>(*i);
+			if (c == 3) {
+				result += chars[static_cast<std::uint8_t>((charArray[0] & 0xFC) >> 2)];
+				result += chars[static_cast<std::uint8_t>(((charArray[0] & 0x03) << 4) + ((charArray[1] & 0xF0) >> 4))];
+				result += chars[static_cast<std::uint8_t>(((charArray[1] & 0x0F) << 2) + ((charArray[2] & 0xC0) >> 6))];
+				result += chars[static_cast<std::uint8_t>(charArray[2] & 0x3f)];
+				c = 0;
+			}
+		}
+
+		if (c != 0) {
+			result += chars[static_cast<std::uint8_t>((charArray[0] & 0xFC) >> 2)];
+			if (c == 1) {
+				result += chars[static_cast<std::uint8_t>((charArray[0] & 0x03) << 4)];
+			} else { // c == 2
+				result += chars[static_cast<std::uint8_t>(((charArray[0] & 0x03) << 4) + ((charArray[1] & 0xF0) >> 4))];
+				result += chars[static_cast<std::uint8_t>((charArray[1] & 0x0F) << 2)];
+			}
+		}
+
+		return result;
 	}
 
 #if defined(WITH_ZLIB)

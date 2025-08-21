@@ -131,8 +131,6 @@ namespace Death { namespace Containers {
 			std::int32_t _dayOfWeek;
 		};
 
-		/** @brief Returns @ref DateTime that is set to the current date and time on this computer, expressed as the local time */
-		static DateTime Now() noexcept;
 		/** @brief Returns @ref DateTime that is set to the current date and time on this computer, expressed as the UTC time */
 		static DateTime UtcNow() noexcept;
 

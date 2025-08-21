@@ -95,6 +95,7 @@ using namespace Death::IO;
 
 #if defined(DEATH_TRACE)
 
+#include <IO/MemoryStream.h>
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <Environment.h>
 #	include <Utf8.h>
@@ -407,6 +408,46 @@ static void OnHandleInterruptSignal(int sig)
 }
 #endif
 
+static void AppendLogFileHeader(Stream& s)
+{
+	// Write TraceDigger metadata header
+
+#if defined(DEATH_TARGET_WINDOWS)
+	std::uint32_t processId = (std::uint32_t)::GetCurrentProcessId();
+	wchar_t hostNameW[128]; DWORD hostNameWLength = (DWORD)arraySize(hostNameW);
+	if (!::GetComputerNameW(hostNameW, &hostNameWLength)) {
+		hostNameWLength = 0;
+	}
+	char hostName[128];
+	std::int32_t hostNameLength = Utf8::FromUtf16(hostName, hostNameW, hostNameWLength);
+#else
+	std::uint32_t processId = (std::uint32_t)::getpid();
+	char hostName[128] {}; std::int32_t hostNameLength = 0;
+	if (::gethostname(hostName, arraySize(DeviceDesc)) == 0) {
+		hostName[arraySize(hostName) - 1] = '\0';
+		hostNameLength = std::strlen(DeviceDesc);
+	}
+#endif
+
+	char buffer[256];
+	MemoryStream ms(buffer, sizeof(buffer));
+	ms.WriteVariableUint32(0); // Flags
+	ms.WriteVariableInt64(DateTime::UtcNow().ToUnixMilliseconds());
+	ms.WriteVariableUint32(processId);
+	auto executablePath = fs::GetExecutablePath();
+	auto executableFileName = fs::GetFileName(executablePath);
+	ms.WriteVariableUint32((std::uint32_t)executableFileName.size());
+	ms.Write(executableFileName.data(), (std::int64_t)executableFileName.size());
+	ms.WriteVariableUint32((std::uint32_t)hostNameLength);
+	ms.Write(hostName, (std::int64_t)hostNameLength);
+	auto metadataBase64 = nCine::toBase64Url(buffer, buffer + (std::size_t)ms.GetPosition());
+
+	constexpr StringView FileHeader = "#! /usr/bin/tracedigger :"_s;
+	s.Write(FileHeader.data(), (std::int64_t)FileHeader.size());
+	s.Write(metadataBase64.data(), (std::int64_t)metadataBase64.size());
+	s.Write("\n", 1);
+}
+
 template<std::int32_t N>
 static DEATH_ALWAYS_INLINE void AppendPart(char* dest, std::int32_t& length, const char(&newPart)[N])
 {
@@ -424,8 +465,8 @@ static void AppendDateTime(char* dest, std::int32_t& length, std::uint64_t times
 	auto dt = DateTime::FromUnixMilliseconds(timestamp / 1000000ULL);
 	auto p = dt.Partitioned();
 
-	length += snprintf(dest + length, MaxLogEntryLength - length - 1,
-		"%02u:%02u:%02u.%03u", p.Hour, p.Minute, p.Second, p.Millisecond);
+	length += (std::int32_t)formatInto({ dest + length, (std::size_t)(MaxLogEntryLength - length - 1) },
+		"{:.2}:{:.2}:{:.2}.{:.3}", p.Hour, p.Minute, p.Second, p.Millisecond);
 }
 
 static void AppendLevel(char* dest, std::int32_t& length, TraceLevel level, StringView threadId)
@@ -444,7 +485,8 @@ static void AppendLevel(char* dest, std::int32_t& length, TraceLevel level, Stri
 		default:					levelIdentifier = 'D'; break;
 	}
 
-	std::int32_t partLength = snprintf(dest + length, MaxLogEntryLength - length - 1, !threadId.empty() ? "[%c]%s}" : "[%c]", levelIdentifier, threadId.data());
+	std::int32_t partLength = (std::int32_t)formatInto({ dest + length, (std::size_t)(MaxLogEntryLength - length - 1) },
+		!threadId.empty() ? "[{:c}]{}}}" : "[{:c}]", levelIdentifier, threadId);
 	length += partLength;
 
 	while (partLength < 10) {
@@ -1421,7 +1463,8 @@ namespace nCine
 
 #if defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		__logFile = fs::Open(targetPath, FileAccess::Write);
-		if (*__logFile) {
+		if (__logFile->IsValid()) {
+			AppendLogFileHeader(*__logFile);
 #	if defined(WITH_BACKWARD)
 			// Try to save crash info to log file
 			__eh.Destination = __logFile.get();

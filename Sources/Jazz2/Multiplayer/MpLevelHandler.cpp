@@ -2345,7 +2345,7 @@ namespace Jazz2::Multiplayer
 			}
 			SendMessage(peer, UI::MessageLevel::Confirm, { infoBuffer, length });
 
-			auto uptimeSecs = (DateTime::Now().ToUnixMilliseconds() / 1000) - (std::int64_t)serverConfig.StartUnixTimestamp;
+			auto uptimeSecs = (DateTime::UtcNow().ToUnixMilliseconds() / 1000) - (std::int64_t)serverConfig.StartUnixTimestamp;
 			auto hours = (std::int32_t)(uptimeSecs / 3600);
 			auto minutes = (std::int32_t)(uptimeSecs % 3600) / 60;
 			auto seconds = (std::int32_t)(uptimeSecs % 60);
