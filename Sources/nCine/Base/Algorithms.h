@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 #include <Containers/ArrayView.h>
 #include <Containers/StaticArray.h>

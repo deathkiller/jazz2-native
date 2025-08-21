@@ -423,9 +423,9 @@ static void AppendLogFileHeader(Stream& s)
 #else
 	std::uint32_t processId = (std::uint32_t)::getpid();
 	char hostName[128] {}; std::int32_t hostNameLength = 0;
-	if (::gethostname(hostName, arraySize(DeviceDesc)) == 0) {
+	if (::gethostname(hostName, arraySize(hostName)) == 0) {
 		hostName[arraySize(hostName) - 1] = '\0';
-		hostNameLength = std::strlen(DeviceDesc);
+		hostNameLength = std::strlen(hostName);
 	}
 #endif
 
