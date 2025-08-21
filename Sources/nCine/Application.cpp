@@ -1572,6 +1572,9 @@ namespace nCine
 		char hostName[128] {};
 		std::int32_t hostNameLength = (std::int32_t)formatInto(hostName, "android:{}", androidId);
 #		else
+#			if defined(DEATH_TARGET_SWITCH)
+		flags |= 0x20;	// RemoteDevice
+#			endif
 		std::uint32_t processId = (std::uint32_t)::getpid();
 		char hostName[128] {}; std::int32_t hostNameLength = 0;
 		if (::gethostname(hostName, arraySize(hostName)) == 0) {
