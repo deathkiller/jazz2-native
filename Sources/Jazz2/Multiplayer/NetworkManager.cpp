@@ -230,6 +230,7 @@ namespace Jazz2::Multiplayer
 
 		// Skip already included files to avoid infinite loops
 		if (!includedFiles.emplace(configPath, true).second) {
+			LOGW("Skipping already included configuration file \"{}\"", configPath);
 			return;
 		}
 
