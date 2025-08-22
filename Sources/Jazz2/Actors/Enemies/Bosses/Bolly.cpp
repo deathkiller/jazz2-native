@@ -84,9 +84,7 @@ namespace Jazz2::Actors::Bosses
 	bool Bolly::OnActivatedBoss()
 	{
 		SetHealthByDifficulty(42);
-
 		MoveInstantly(_originPos, MoveType::Absolute | MoveType::Force);
-
 		FollowNearestPlayer(StateFlying, 100.0f);
 		return true;
 	}

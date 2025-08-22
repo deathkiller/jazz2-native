@@ -53,7 +53,7 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
-	void EnemyBase::SetHealthByDifficulty(int health)
+	void EnemyBase::SetHealthByDifficulty(std::int32_t health)
 	{
 		switch (_levelHandler->GetDifficulty()) {
 			case GameDifficulty::Easy: health = (std::int32_t)std::round(health * 0.6f); break;
