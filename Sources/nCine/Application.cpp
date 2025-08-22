@@ -1569,8 +1569,8 @@ namespace nCine
 		flags |= 0x20;	// RemoteDevice
 		std::uint32_t processId = (std::uint32_t)::getpid();
 		auto androidId = nCine::Backends::AndroidJniWrap_Secure::getAndroidId();
-		char hostName[128] {};
-		std::int32_t hostNameLength = (std::int32_t)formatInto(hostName, "android:{}", androidId);
+		const char* hostName = androidId.data();
+		std::int32_t hostNameLength = (std::int32_t)androidId.size();
 #		else
 #			if defined(DEATH_TARGET_SWITCH)
 		flags |= 0x20;	// RemoteDevice

@@ -17,5 +17,6 @@ namespace Jazz2::Actors::Bosses
 
 	protected:
 		bool OnTileDeactivated() override;
+		void SetHealthByDifficulty(std::int32_t health) override;
 	};
 }

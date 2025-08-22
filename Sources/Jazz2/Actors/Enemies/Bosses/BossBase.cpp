@@ -29,4 +29,15 @@ namespace Jazz2::Actors::Bosses
 		// Boss cannot be deactivated
 		return false;
 	}
+
+	void BossBase::SetHealthByDifficulty(std::int32_t health)
+	{
+		// Each player adds 50% health, up to +1000% (20 players)
+		if (_levelHandler->IsReforged()) {
+			float multiplier = 1.0f + (std::clamp((std::int32_t)_levelHandler->GetPlayers().size() - 1, 0, 20) * 0.5f);
+			health = (std::int32_t)(health * multiplier);
+		}
+
+		EnemyBase::SetHealthByDifficulty(health);
+	}
 }
