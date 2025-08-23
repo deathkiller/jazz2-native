@@ -299,10 +299,45 @@ void GameEventHandler::OnInitialize()
 	}
 	RunDedicatedServer(configPath);
 #else
-#	if (defined(WITH_MULTIPLAYER) || defined(DEATH_DEBUG)) && (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)))
+#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
 	const AppConfiguration& config = theApplication().GetAppConfiguration();
 	for (std::int32_t i = 0; i < config.argc(); i++) {
 		auto arg = config.argv(i);
+		if (arg.size() > 4) {
+			String ext = arg.suffix(arg.end() - 4);
+			StringUtils::lowercaseInPlace(ext);
+			if (ext == ".j2l"_s) {
+				auto fileName = fs::GetFileNameWithoutExtension(arg);
+				String levelName = "unknown/"_s + fileName;
+				StringUtils::lowercaseInPlace(levelName);
+
+				WaitForVerify();
+				if (ContentResolver::Get().LevelExists(levelName)) {
+					LevelInitialization levelInit(levelName, (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
+						PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
+
+					ChangeLevel(std::move(levelInit));
+					return;
+				}
+			}
+		}
+#		if defined(DEATH_DEBUG)
+		if (arg == "/level"_s && i + 1 < config.argc()) {
+			String levelName = config.argv(i + 1);
+			StringUtils::lowercaseInPlace(levelName);
+			if (!levelName.contains('/')) {
+				levelName = "unknown/"_s + levelName;
+			}
+			if (!levelName.contains("/:"_s)) { // Don't allow special targets starting with ':'
+				LevelInitialization levelInit(levelName, (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
+					PreferencesCache::EnableReforgedGameplay, true, PlayerType::Jazz);
+
+				WaitForVerify();
+				ChangeLevel(std::move(levelInit));
+				return;
+			}
+		}
+#		endif
 #		if defined(WITH_MULTIPLAYER)
 		if ((arg == "/connect"_s || arg == "-c"_s) && i + 1 < config.argc()) {
 			auto endpoint = config.argv(i + 1);
@@ -323,20 +358,6 @@ void GameEventHandler::OnInitialize()
 			return;
 		}
 #			endif
-#		endif
-#		if defined(DEATH_DEBUG)
-		if (arg == "/level"_s && i + 1 < config.argc()) {
-			String levelName = config.argv(i + 1);
-			if (!levelName.contains('/')) {
-				levelName = "unknown/"_s + levelName;
-			}
-			LevelInitialization levelInit(levelName, (GameDifficulty)((std::int32_t)GameDifficulty::Normal),
-				PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
-
-			WaitForVerify();
-			ChangeLevel(std::move(levelInit));
-			return;
-		}
 #		endif
 	}
 #	endif
