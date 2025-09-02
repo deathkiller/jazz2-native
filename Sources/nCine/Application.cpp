@@ -1090,6 +1090,11 @@ namespace nCine
 
 #if defined(DEATH_TARGET_ANDROID)
 		std::int32_t length2 = 0;
+		if (level == TraceLevel::Deferred) {
+			// Provide actual timestamps only for deferred messages
+			AppendDateTime(logEntryWithColors, length2, timestamp);
+			logEntryWithColors[length2++] = ' ';
+		}
 		AppendLevel(logEntryWithColors, length2, level, threadId);
 		AppendFunctionName(logEntryWithColors, length2, functionName);
 		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
@@ -1120,6 +1125,8 @@ namespace nCine
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 		// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
 		std::int32_t length2 = 0;
+		AppendDateTime(logEntryWithColors, length2, timestamp);
+		logEntryWithColors[length2++] = ' ';
 		AppendLevel(logEntryWithColors, length2, level, threadId);
 		AppendFunctionName(logEntryWithColors, length2, functionName);
 		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
@@ -1244,6 +1251,8 @@ namespace nCine
 		} else {
 			// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
 			std::int32_t length2 = 0;
+			AppendDateTime(logEntryWithColors, length2, timestamp);
+			logEntryWithColors[length2++] = ' ';
 			AppendLevel(logEntryWithColors, length2, level, threadId);
 			AppendFunctionName(logEntryWithColors, length2, functionName);
 			AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
