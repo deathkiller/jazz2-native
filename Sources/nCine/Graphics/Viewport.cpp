@@ -306,8 +306,8 @@ namespace nCine
 
 	void Viewport::Update()
 	{
-		RenderResources::setCurrentViewport(this);
-		RenderResources::setCurrentCamera(camera_);
+		RenderResources::SetCurrentViewport(this);
+		RenderResources::SetCurrentCamera(camera_);
 
 		if (rootNode_ != nullptr) {
 			ZoneScopedC(0x81A861);
@@ -323,7 +323,7 @@ namespace nCine
 
 	void Viewport::Visit()
 	{
-		RenderResources::setCurrentViewport(this);
+		RenderResources::SetCurrentViewport(this);
 
 		CalculateCullingRect();
 
@@ -338,7 +338,7 @@ namespace nCine
 
 	void Viewport::SortAndCommitQueue()
 	{
-		RenderResources::setCurrentViewport(this);
+		RenderResources::SetCurrentViewport(this);
 
 		if (!renderQueue_.empty()) {
 			ZoneScopedC(0x81A861);
@@ -372,7 +372,7 @@ namespace nCine
 		GLDebug::ScopedGroup scoped({ debugString, length });*/
 #endif
 
-		RenderResources::setCurrentViewport(this);
+		RenderResources::SetCurrentViewport(this);
 		{
 			ZoneScopedNC("OnDrawViewport", 0x81A861);
 			theApplication().appEventHandler_->OnDrawViewport(*this);
@@ -420,8 +420,8 @@ namespace nCine
 			nextViewport->Draw(nextIndex + 1);
 		}
 
-		RenderResources::setCurrentCamera(camera_);
-		RenderResources::updateCameraUniforms();
+		RenderResources::SetCurrentCamera(camera_);
+		RenderResources::UpdateCameraUniforms();
 
 		if (!renderQueue_.empty()) {
 			const bool viewportRectNonZeroArea = (viewportRect_.W > 0 && viewportRect_.H > 0);

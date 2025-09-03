@@ -188,11 +188,18 @@ namespace Death { namespace IO {
 
 		/** @brief Returns the path to the executable file for the running application */
 		static Containers::String GetExecutablePath();
+		/** @brief Returns the path to the application-specific writable directory for saving data */
+		static Containers::String GetSavePath(Containers::StringView applicationName);
 		/** @brief Returns the path of the current working directory */
 		static Containers::String GetWorkingDirectory();
 		/** @brief Sets the current working directory, the starting point for interpreting relative paths */
 		static bool SetWorkingDirectory(Containers::StringView path);
-		/** @brief Returns the path of the user home directory */
+		/**
+		 * @brief Returns the path of the user home directory
+		 * 
+		 * On Unix and macOS, the directory is equivalent to @cb{.sh} ${HOME} @ce environment variable.
+		 * On Windows, the directory is equivalent to @cb{.bat} %USERPROFILE% @ce.
+		 */
 		static Containers::String GetHomeDirectory();
 		/** @brief Returns the path of the directory for temporary files */
 		static Containers::String GetTempDirectory();
@@ -363,14 +370,6 @@ namespace Death { namespace IO {
 		static std::unique_ptr<Stream> CreateFromMemory(std::uint8_t* bufferPtr, std::int32_t bufferSize);
 		/** @overload */
 		static std::unique_ptr<Stream> CreateFromMemory(const std::uint8_t* bufferPtr, std::int32_t bufferSize);
-
-		/** @brief Returns application-specific writable directory for saving data */
-		static const Containers::String& GetSavePath(Containers::StringView applicationName);
-
-	private:
-		static Containers::String _savePath;
-
-		static void InitializeSavePath(Containers::StringView applicationName);
 	};
 
 	/** @brief Convenient shortcut to @ref FileSystem */

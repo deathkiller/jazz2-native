@@ -256,6 +256,10 @@ void GameEventHandler::OnInitialize()
 {
 	ZoneScopedC(0x888888);
 
+	// TODO
+	auto tempDir = fs::GetTempDirectory();
+	LOGI("Temp directory: {}", tempDir);
+
 	OnBeginInitialize();
 
 #if !defined(SHAREWARE_DEMO_ONLY) && !(defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER))
