@@ -144,12 +144,12 @@ namespace nCine
 		}
 	}
 
-	void RenderResources::setCurrentCamera(Camera* camera)
+	void RenderResources::SetCurrentCamera(Camera* camera)
 	{
 		currentCamera_ = (camera != nullptr ? camera : defaultCamera_.get());
 	}
 
-	void RenderResources::updateCameraUniforms()
+	void RenderResources::UpdateCameraUniforms()
 	{
 		// The buffer is shared among every shader program. There is no need to call `setFloatVector()` as `setDirty()` is enough.
 		std::memcpy(cameraUniformsBuffer_, currentCamera_->GetProjection().Data(), 64);
@@ -174,15 +174,15 @@ namespace nCine
 		}
 	}
 
-	void RenderResources::setCurrentViewport(Viewport* viewport)
+	void RenderResources::SetCurrentViewport(Viewport* viewport)
 	{
 		FATAL_ASSERT(viewport != nullptr);
 		currentViewport_ = viewport;
 	}
 
-	void RenderResources::createMinimal()
+	void RenderResources::CreateMinimal()
 	{
-		// `createMinimal()` cannot be called after `create()`
+		// `CreateMinimal()` cannot be called after `Create()`
 		DEATH_ASSERT(binaryShaderCache_ == nullptr);
 		DEATH_ASSERT(buffersManager_ == nullptr);
 		DEATH_ASSERT(vaoPool_ == nullptr);
@@ -193,9 +193,9 @@ namespace nCine
 		vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
 	}
 	
-	void RenderResources::create()
+	void RenderResources::Create()
 	{
-		// `create()` can be called after `createMinimal()`
+		// `Create()` can be called after `CreateMinimal()`
 
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		if (binaryShaderCache_ == nullptr) {
@@ -360,14 +360,14 @@ namespace nCine
 			binaryShaderCache_->SaveToCache(shaderToLoad.shaderName, shaderVersion, shaderToLoad.shaderProgram.get());
 		}
 
-		registerDefaultBatchedShaders();
+		RegisterDefaultBatchedShaders();
 
 		// Calculating a default projection matrix for all shader programs
 		auto res = theApplication().GetResolution();
 		defaultCamera_->SetOrthoProjection(0.0f, float(res.X), 0.0f, float(res.Y));
 	}
 
-	void RenderResources::dispose()
+	void RenderResources::Dispose()
 	{
 		for (auto& shaderProgram : defaultShaderPrograms_) {
 			shaderProgram.reset(nullptr);
@@ -384,7 +384,7 @@ namespace nCine
 		LOGI("Rendering resources disposed");
 	}
 
-	void RenderResources::registerDefaultBatchedShaders()
+	void RenderResources::RegisterDefaultBatchedShaders()
 	{
 		batchedShaders_.emplace(defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::Sprite)].get(), defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSprites)].get());
 		//batchedShaders_.emplace(defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteGray)].get(), defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesGray)].get());

@@ -790,11 +790,11 @@ namespace nCine
 			LOGI("Creating rendering resources...");
 
 			// Create a minimal set of render resources before compiling the first shader
-			RenderResources::createMinimal(); // they are required for rendering even without a scenegraph
+			RenderResources::CreateMinimal(); // they are required for rendering even without a scenegraph
 
 			if (appCfg_.withScenegraph) {
 				gfxDevice_->setupGL();
-				RenderResources::create();
+				RenderResources::Create();
 				rootNode_ = std::make_unique<SceneNode>();
 				screenViewport_ = std::make_unique<ScreenViewport>();
 				screenViewport_->SetRootNode(rootNode_.get());
@@ -1054,7 +1054,7 @@ namespace nCine
 #if defined(WITH_RENDERDOC)
 			RenderDocCapture::removeHooks();
 #endif
-			RenderResources::dispose();
+			RenderResources::Dispose();
 			gfxDevice_ = nullptr;
 		}
 
@@ -1090,11 +1090,9 @@ namespace nCine
 
 #if defined(DEATH_TARGET_ANDROID)
 		std::int32_t length2 = 0;
-		if (level == TraceLevel::Deferred) {
-			// Provide actual timestamps only for deferred messages
-			AppendDateTime(logEntryWithColors, length2, timestamp);
-			logEntryWithColors[length2++] = ' ';
-		}
+		// Provide actual timestamps even though Android includes its own
+		AppendDateTime(logEntryWithColors, length2, timestamp);
+		logEntryWithColors[length2++] = ' ';
 		AppendLevel(logEntryWithColors, length2, level, threadId);
 		AppendFunctionName(logEntryWithColors, length2, functionName);
 		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());

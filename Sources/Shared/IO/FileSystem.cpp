@@ -6,14 +6,17 @@
 #include "../Environment.h"
 #include "../Utf8.h"
 #include "../Containers/DateTime.h"
-#include "../Containers/GrowableArray.h"
 #include "../Containers/StringConcatenable.h"
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <fileapi.h>
 #	include <shellapi.h>
 #	include <shlobj.h>
-#	include <timezoneapi.h>
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+#		include <winrt/Windows.Foundation.h>
+#		include <winrt/Windows.Storage.h>
+#		include <winrt/Windows.System.h>
+#	endif
 #else
 #	include <cerrno>
 #	include <cstdio>
@@ -29,11 +32,21 @@
 #	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #		include <sys/mman.h>
 #	endif
+#	if defined(DEATH_TARGET_ANDROID)
+#		include "AndroidAssetStream.h"
+#	endif
+#	if defined(DEATH_TARGET_SWITCH)
+#		include <alloca.h>
+#	endif
 #	if defined(DEATH_TARGET_UNIX)
 #		include <sys/wait.h>
 #	endif
 #	if defined(DEATH_TARGET_APPLE)
 #		include <copyfile.h>
+#		include <objc/objc-runtime.h>
+#		include <mach-o/dyld.h>
+#	elif defined(DEATH_TARGET_EMSCRIPTEN)
+#		include <emscripten/emscripten.h>
 #	elif defined(__linux__)
 #		include <sys/sendfile.h>
 #	endif
@@ -41,21 +54,6 @@
 #		include <sys/types.h>
 #		include <sys/sysctl.h>
 #	endif
-#endif
-
-#if defined(DEATH_TARGET_ANDROID)
-#	include "AndroidAssetStream.h"
-#elif defined(DEATH_TARGET_APPLE)
-#	include <objc/objc-runtime.h>
-#	include <mach-o/dyld.h>
-#elif defined(DEATH_TARGET_EMSCRIPTEN)
-#	include <emscripten/emscripten.h>
-#elif defined(DEATH_TARGET_SWITCH)
-#	include <alloca.h>
-#elif defined(DEATH_TARGET_WINDOWS_RT)
-#	include <winrt/Windows.Foundation.h>
-#	include <winrt/Windows.Storage.h>
-#	include <winrt/Windows.System.h>
 #endif
 
 using namespace Death::Containers;
@@ -393,8 +391,6 @@ namespace Death { namespace IO {
 		});
 #endif
 	}
-
-	String FileSystem::_savePath;
 
 	class FileSystem::Directory::Impl
 	{
@@ -1211,6 +1207,11 @@ namespace Death { namespace IO {
 			arrayResize(path, NoInit, path.size() * 2);
 		}
 
+		if (size == -1) {
+			LOGE("Cannot read \"{}\" with error {}{}", self, errno, __GetUnixErrorSuffix(errno));
+			return {};
+		}
+
 		// readlink() doesn't put the null terminator into the array, do it ourselves. The above loop guarantees
 		// that path.size() is always larger than size - if it would be equal, we'd try once more with a larger buffer
 		path[size] = '\0';
@@ -1226,17 +1227,84 @@ namespace Death { namespace IO {
 #endif
 	}
 
+	String FileSystem::GetSavePath(StringView applicationName)
+	{
+#if defined(DEATH_TARGET_ANDROID)
+		StringView savePath = AndroidAssetStream::GetInternalDataPath();
+		if (!DirectoryExists(savePath)) {
+			// Trying to create the data directory
+			if (!CreateDirectories(savePath)) {
+				return {};
+			}
+		}
+		return savePath;
+#elif defined(DEATH_TARGET_APPLE)
+		StringView home = ::getenv("HOME");
+		if (home.empty()) {
+			LOGE("Cannot find home directory");
+			return {};
+		}
+
+		return CombinePath({ home, "Library/Application Support"_s, applicationName });
+#elif defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_EMSCRIPTEN)
+		StringView config = ::getenv("XDG_CONFIG_HOME");
+		if (IsAbsolutePath(config)) {
+			return CombinePath(config, applicationName);
+		}
+
+		StringView home = ::getenv("HOME");
+		if (home.empty()) {
+			LOGE("Cannot find home directory");
+			return {};
+		}
+
+		return CombinePath({ home, ".config"_s, applicationName });
+#elif defined(DEATH_TARGET_WINDOWS_RT)
+		auto appData = winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path();
+		return Death::Utf8::FromUtf16(appData.data(), appData.size());
+#elif defined(DEATH_TARGET_WINDOWS)
+		String result;
+		wchar_t* path = nullptr;
+		bool success = SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_SavedGames, KF_FLAG_DEFAULT, nullptr, &path));
+		if (!success || path == nullptr || path[0] == L'\0') {
+			::CoTaskMemFree(path);
+			path = nullptr;
+			// Fallback to "%AppData%\Roaming" if "%UserProfile%\Saved Games" cannot be found
+			success = SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DEFAULT, nullptr, &path));
+		}
+		if (success && path != nullptr && path[0] != L'\0') {
+			result = CombinePath(Utf8::FromUtf16(path), applicationName);
+		} else {
+			LOGE("SHGetKnownFolderPath(FOLDERID_RoamingAppData) failed with error 0x{:.8x}", ::GetLastError());
+		}
+		::CoTaskMemFree(path);
+		return result;
+#endif
+	}
+
 	String FileSystem::GetWorkingDirectory()
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		return "/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		wchar_t buffer[MaxPathLength];
-		::GetCurrentDirectoryW(MaxPathLength, buffer);
-		return Utf8::FromUtf16(buffer);
+		DWORD length = ::GetCurrentDirectoryW(MaxPathLength, buffer);
+		if (length > DWORD(arraySize(buffer))) {
+			Array<wchar_t> pathW{NoInit, length};
+			DWORD length2 = ::GetCurrentDirectoryW(length, pathW);
+			DEATH_DEBUG_ASSERT(length2 == (length - 1));
+			return Utf8::FromUtf16(pathW, length2);
+		}
+		if (length == 0) {
+			DWORD error = ::GetLastError();
+			LOGE("GetCurrentDirectory() failed with error 0x{:.8x}{}", error, __GetWin32ErrorSuffix(error));
+			return {};
+		}
+		return Utf8::FromUtf16(buffer, length);
 #else
 		char buffer[MaxPathLength];
 		if (::getcwd(buffer, MaxPathLength) == nullptr) {
+			LOGE("getcwd() failed with error {}{}", errno, __GetUnixErrorSuffix(errno));
 			return {};
 		}
 		return buffer;
@@ -1260,12 +1328,18 @@ namespace Death { namespace IO {
 		// This method is not supported on WinRT
 		return {};
 #elif defined(DEATH_TARGET_WINDOWS)
-		wchar_t buffer[MaxPathLength];
-		::SHGetFolderPathW(HWND_DESKTOP, CSIDL_PROFILE, NULL, SHGFP_TYPE_CURRENT, buffer);
-		return Utf8::FromUtf16(buffer);
+		String result;
+		wchar_t* path = nullptr;
+		if (SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_Profile, KF_FLAG_DEFAULT, nullptr, &path))) {
+			result = Utf8::FromUtf16(path);
+		} else {
+			LOGE("SHGetKnownFolderPath(FOLDERID_Profile) failed with error 0x{:.8x}", ::GetLastError());
+		}
+		::CoTaskMemFree(path);
+		return result;
 #else
-		const char* home = ::getenv("HOME");
-		if (home != nullptr && home[0] != '\0') {
+		StringView home = ::getenv("HOME");
+		if (!home.empty()) {
 			return home;
 		}
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -1275,6 +1349,7 @@ namespace Death { namespace IO {
 			return pw->pw_dir;
 		}
 #	endif
+		LOGE("Cannot find home directory");
 		return {};
 #endif
 	}
@@ -1284,7 +1359,10 @@ namespace Death { namespace IO {
 #if defined(DEATH_TARGET_WINDOWS)
 		wchar_t buffer[MaxPathLength];
 		UINT requiredLength = ::GetTempPathW(static_cast<DWORD>(MaxPathLength), buffer);
-		if (requiredLength == 0 || requiredLength >= MaxPathLength) return "."_s;
+		if (requiredLength == 0 || requiredLength >= MaxPathLength) {
+			LOGE("Cannot find temporary directory");
+			return "."_s;
+		}
 		return Utf8::FromUtf16(buffer, requiredLength);
 #else
 		StringView tmpDir = ::getenv("TMPDIR");
@@ -1306,6 +1384,7 @@ namespace Death { namespace IO {
 			return "/tmp"_s;
 		}
 
+		LOGE("Cannot find temporary directory");
 		return "."_s;
 #endif
 	}
@@ -1328,13 +1407,13 @@ namespace Death { namespace IO {
 			return localStorage;
 		}
 
-		// Not delegating into GetHomeDirectory() as the (admittedly rare) error message would have a confusing source
 		StringView home = ::getenv("HOME");
-		if (!home.empty()) {
-			return CombinePath(home, ".local/share/"_s);
+		if (home.empty()) {
+			LOGE("Cannot find home directory");
+			return {};
 		}
 
-		return {};
+		return CombinePath(home, ".local/share/"_s);
 	}
 #endif
 #if defined(DEATH_TARGET_WINDOWS)
@@ -1342,7 +1421,10 @@ namespace Death { namespace IO {
 	{
 		wchar_t buffer[MaxPathLength];
 		UINT requiredLength = ::GetSystemWindowsDirectoryW(buffer, static_cast<UINT>(MaxPathLength));
-		if (requiredLength == 0 || requiredLength >= MaxPathLength) return {};
+		if (requiredLength == 0 || requiredLength >= MaxPathLength) {
+			LOGE("Cannot find Windows directory");
+			return {};
+		}
 		return Utf8::FromUtf16(buffer, requiredLength);
 	}
 #endif
@@ -2653,69 +2735,6 @@ namespace Death { namespace IO {
 		DEATH_ASSERT(bufferPtr != nullptr, "bufferPtr is null", nullptr);
 		DEATH_ASSERT(bufferSize > 0, "bufferSize is 0", nullptr);
 		return std::make_unique<MemoryStream>(bufferPtr, bufferSize);
-	}
-
-	const String& FileSystem::GetSavePath(StringView applicationName)
-	{
-		if (_savePath.empty()) {
-			InitializeSavePath(applicationName);
-		}
-		return _savePath;
-	}
-
-	void FileSystem::InitializeSavePath(StringView applicationName)
-	{
-#if defined(DEATH_TARGET_ANDROID)
-		_savePath = AndroidAssetStream::GetInternalDataPath();
-		if (!DirectoryExists(_savePath)) {
-			// Trying to create the data directory
-			if (!CreateDirectories(_savePath)) {
-				_savePath = {};
-			}
-		}
-#elif defined(DEATH_TARGET_APPLE)
-		// Not delegating into GetHomeDirectory() as the (admittedly rare) error message would have a confusing source
-		StringView home = ::getenv("HOME");
-		if (home.empty()) {
-			return;
-		}
-
-		_savePath = CombinePath({ home, "Library/Application Support"_s, applicationName });
-#elif defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_EMSCRIPTEN)
-		StringView config = ::getenv("XDG_CONFIG_HOME");
-		if (IsAbsolutePath(config)) {
-			_savePath = CombinePath(config, applicationName);
-			return;
-		}
-
-		// Not delegating into GetHomeDirectory() as the (admittedly rare) error message would have a confusing source
-		StringView home = ::getenv("HOME");
-		if (home.empty()) {
-			return;
-		}
-
-		_savePath = CombinePath({ home, ".config"_s, applicationName });
-#elif defined(DEATH_TARGET_WINDOWS_RT)
-		auto appData = winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path();
-		_savePath = Death::Utf8::FromUtf16(appData.data(), appData.size());
-#elif defined(DEATH_TARGET_WINDOWS)
-		wchar_t* path = nullptr;
-		bool success = (::SHGetKnownFolderPath(FOLDERID_SavedGames, KF_FLAG_DEFAULT, nullptr, &path) == S_OK);
-		if (!success || path == nullptr || path[0] == L'\0') {
-			if (path != nullptr) {
-				::CoTaskMemFree(path);
-				path = nullptr;
-			}
-
-			success = (::SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DEFAULT, nullptr, &path) == S_OK);
-		}
-		if (success && path != nullptr && path[0] != L'\0') {
-			_savePath = CombinePath(Utf8::FromUtf16(path), applicationName);
-		}
-		if (path != nullptr) {
-			::CoTaskMemFree(path);
-		}
-#endif
 	}
 
 }}

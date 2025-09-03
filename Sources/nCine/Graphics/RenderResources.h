@@ -138,14 +138,14 @@ namespace nCine
 		static std::unique_ptr<Camera> defaultCamera_;
 		static Viewport* currentViewport_;
 
-		static void setCurrentCamera(Camera* camera);
-		static void updateCameraUniforms();
-		static void setCurrentViewport(Viewport* viewport);
+		static void SetCurrentCamera(Camera* camera);
+		static void UpdateCameraUniforms();
+		static void SetCurrentViewport(Viewport* viewport);
 
-		static void createMinimal();
-		static void create();
-		static void dispose();
+		static void CreateMinimal();
+		static void Create();
+		static void Dispose();
 
-		static void registerDefaultBatchedShaders();
+		static void RegisterDefaultBatchedShaders();
 	};
 }
