@@ -30,7 +30,7 @@ namespace nCine
 		uniformBlocks_.reserve(UniformBlocksInitialSize);
 		attributes_.reserve(AttributesInitialSize);
 		
-		if (RenderResources::binaryShaderCache().IsAvailable()) {
+		if (RenderResources::GetBinaryShaderCache().IsAvailable()) {
 			glProgramParameteri(glHandle_, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
 		}
 	}
@@ -64,7 +64,7 @@ namespace nCine
 
 		glDeleteProgram(glHandle_);
 
-		RenderResources::removeCameraUniformData(this);
+		RenderResources::RemoveCameraUniformData(this);
 	}
 
 	bool GLShaderProgram::IsLinked() const
@@ -199,7 +199,7 @@ namespace nCine
 			}
 			vertexFormat_.SetIbo(ibo);
 
-			RenderResources::vaoPool().bindVao(vertexFormat_);
+			RenderResources::GetVaoPool().bindVao(vertexFormat_);
 		}
 	}
 
@@ -224,8 +224,8 @@ namespace nCine
 			attachedShaders_.clear();
 			glDeleteProgram(glHandle_);
 
-			RenderResources::removeCameraUniformData(this);
-			RenderResources::unregisterBatchedShader(this);
+			RenderResources::RemoveCameraUniformData(this);
+			RenderResources::UnregisterBatchedShader(this);
 
 			glHandle_ = glCreateProgram();
 		}

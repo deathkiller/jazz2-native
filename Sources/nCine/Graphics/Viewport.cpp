@@ -244,7 +244,7 @@ namespace nCine
 		const std::int32_t width = (width_ != 0 ? width_ : viewportRect_.W);
 		const std::int32_t height = (height_ != 0 ? height_ : viewportRect_.H);
 
-		const Camera* vieportCamera = (camera_ != nullptr ? camera_ : RenderResources::currentCamera());
+		const Camera* vieportCamera = (camera_ != nullptr ? camera_ : RenderResources::GetCurrentCamera());
 		Camera::ProjectionValues projValues = vieportCamera->GetProjectionValues();
 		if (projValues.top > projValues.bottom) std::swap(projValues.top, projValues.bottom);
 

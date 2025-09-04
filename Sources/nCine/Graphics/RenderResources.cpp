@@ -55,18 +55,18 @@ namespace nCine
 	std::unique_ptr<Camera> RenderResources::defaultCamera_;
 	Viewport* RenderResources::currentViewport_ = nullptr;
 
-	GLShaderProgram* RenderResources::shaderProgram(Material::ShaderProgramType shaderProgramType)
+	GLShaderProgram* RenderResources::GetShaderProgram(Material::ShaderProgramType shaderProgramType)
 	{
 		return (shaderProgramType != Material::ShaderProgramType::Custom ? defaultShaderPrograms_[std::int32_t(shaderProgramType)].get() : nullptr);
 	}
 
-	GLShaderProgram* RenderResources::batchedShader(const GLShaderProgram* shader)
+	GLShaderProgram* RenderResources::GetBatchedShader(const GLShaderProgram* shader)
 	{
 		auto it = batchedShaders_.find(shader);
 		return (it != batchedShaders_.end() ? it->second : nullptr);
 	}
 
-	bool RenderResources::registerBatchedShader(const GLShaderProgram* shader, GLShaderProgram* batchedShader)
+	bool RenderResources::RegisterBatchedShader(const GLShaderProgram* shader, GLShaderProgram* batchedShader)
 	{
 		FATAL_ASSERT(shader != nullptr);
 		FATAL_ASSERT(batchedShader != nullptr);
@@ -75,19 +75,19 @@ namespace nCine
 		return batchedShaders_.emplace(shader, batchedShader).second;
 	}
 
-	bool RenderResources::unregisterBatchedShader(const GLShaderProgram* shader)
+	bool RenderResources::UnregisterBatchedShader(const GLShaderProgram* shader)
 	{
 		DEATH_ASSERT(shader != nullptr);
 		return (batchedShaders_.erase(shader) > 0);
 	}
 
-	RenderResources::CameraUniformData* RenderResources::findCameraUniformData(GLShaderProgram* shaderProgram)
+	RenderResources::CameraUniformData* RenderResources::FindCameraUniformData(GLShaderProgram* shaderProgram)
 	{
 		auto it = cameraUniformDataMap_.find(shaderProgram);
 		return (it != cameraUniformDataMap_.end() ? &it->second : nullptr);
 	}
 
-	void RenderResources::insertCameraUniformData(GLShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData)
+	void RenderResources::InsertCameraUniformData(GLShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData)
 	{
 		FATAL_ASSERT(shaderProgram != nullptr);
 
@@ -97,12 +97,12 @@ namespace nCine
 		cameraUniformDataMap_.emplace(shaderProgram, std::move(cameraUniformData));
 	}
 
-	bool RenderResources::removeCameraUniformData(GLShaderProgram* shaderProgram)
+	bool RenderResources::RemoveCameraUniformData(GLShaderProgram* shaderProgram)
 	{
 		return cameraUniformDataMap_.erase(shaderProgram);
 	}
 
-	void RenderResources::setDefaultAttributesParameters(GLShaderProgram& shaderProgram)
+	void RenderResources::SetDefaultAttributesParameters(GLShaderProgram& shaderProgram)
 	{
 		if (shaderProgram.GetAttributeCount() <= 0) {
 			return;

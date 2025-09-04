@@ -77,7 +77,7 @@ namespace nCine
 
 		ZoneScopedC(0x81A861);
 
-		const Camera::ProjectionValues cameraValues = RenderResources::currentCamera()->GetProjectionValues();
+		const Camera::ProjectionValues cameraValues = RenderResources::GetCurrentCamera()->GetProjectionValues();
 		modelMatrix_[3][2] = calculateDepth(layer_, cameraValues.nearClip, cameraValues.farClip);
 
 		if (material_.shaderProgram_ && material_.shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
@@ -98,17 +98,17 @@ namespace nCine
 	{
 		ZoneScopedC(0x81A861);
 
-		RenderResources::CameraUniformData* cameraUniformData = RenderResources::findCameraUniformData(material_.shaderProgram_);
+		RenderResources::CameraUniformData* cameraUniformData = RenderResources::FindCameraUniformData(material_.shaderProgram_);
 		if (cameraUniformData == nullptr) {
 			RenderResources::CameraUniformData newCameraUniformData;
 			newCameraUniformData.shaderUniforms.SetProgram(material_.shaderProgram_, Material::ProjectionViewMatrixExcludeString, nullptr);
 			if (newCameraUniformData.shaderUniforms.GetUniformCount() == 2) {
-				newCameraUniformData.shaderUniforms.SetUniformsDataPointer(RenderResources::cameraUniformsBuffer());
+				newCameraUniformData.shaderUniforms.SetUniformsDataPointer(RenderResources::GetCameraUniformsBuffer());
 				newCameraUniformData.shaderUniforms.GetUniform(Material::ProjectionMatrixUniformName)->SetDirty(true);
 				newCameraUniformData.shaderUniforms.GetUniform(Material::ViewMatrixUniformName)->SetDirty(true);
 				newCameraUniformData.shaderUniforms.CommitUniforms();
 
-				RenderResources::insertCameraUniformData(material_.shaderProgram_, std::move(newCameraUniformData));
+				RenderResources::InsertCameraUniformData(material_.shaderProgram_, std::move(newCameraUniformData));
 			}
 		} else {
 			cameraUniformData->shaderUniforms.CommitUniforms();

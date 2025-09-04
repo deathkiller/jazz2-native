@@ -81,7 +81,7 @@ namespace nCine
 		Viewport::SortAndCommitQueue();
 
 		// Now that UBOs and VBOs have been updated, they can be flushed and unmapped
-		RenderResources::buffersManager().flushUnmap();
+		RenderResources::GetBuffersManager().flushUnmap();
 	}
 
 	void ScreenViewport::Draw()
@@ -98,8 +98,8 @@ namespace nCine
 		renderQueue_.clear();
 		stateBits_.reset();
 
-		RenderResources::buffersManager().remap();
-		RenderResources::renderCommandPool().reset();
+		RenderResources::GetBuffersManager().remap();
+		RenderResources::GetRenderCommandPool().reset();
 		GLDebug::Reset();
 	}
 }

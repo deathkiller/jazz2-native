@@ -175,7 +175,7 @@ namespace nCine
 
 	Shader::~Shader()
 	{
-		RenderResources::unregisterBatchedShader(glShaderProgram_.get());
+		RenderResources::UnregisterBatchedShader(glShaderProgram_.get());
 	}
 
 	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
@@ -392,12 +392,12 @@ namespace nCine
 
 		glShaderProgram_->Reset();
 		glShaderProgram_->SetObjectLabel(shaderName);
-		return RenderResources::binaryShaderCache().LoadFromCache(shaderName, shaderVersion, glShaderProgram_.get(), shaderToShaderProgramIntrospection(introspection));
+		return RenderResources::GetBinaryShaderCache().LoadFromCache(shaderName, shaderVersion, glShaderProgram_.get(), shaderToShaderProgramIntrospection(introspection));
 	}
 
 	bool Shader::saveToCache(const char* shaderName, std::uint64_t shaderVersion) const
 	{
-		return RenderResources::binaryShaderCache().SaveToCache(shaderName, shaderVersion, glShaderProgram_.get());
+		return RenderResources::GetBinaryShaderCache().SaveToCache(shaderName, shaderVersion, glShaderProgram_.get());
 	}
 
 	bool Shader::setAttribute(const char* name, std::int32_t stride, void* pointer)
@@ -441,7 +441,7 @@ namespace nCine
 
 	void Shader::registerBatchedShader(Shader& batchedShader)
 	{
-		RenderResources::registerBatchedShader(glShaderProgram_.get(), batchedShader.glShaderProgram_.get());
+		RenderResources::RegisterBatchedShader(glShaderProgram_.get(), batchedShader.glShaderProgram_.get());
 	}
 
 	bool Shader::loadDefaultShader(DefaultVertex vertex, int batchSize)

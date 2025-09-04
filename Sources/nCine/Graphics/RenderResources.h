@@ -77,43 +77,43 @@ namespace nCine
 			std::uint32_t updateFrameViewMatrix;
 		};
 
-		static inline BinaryShaderCache& binaryShaderCache() {
+		static inline BinaryShaderCache& GetBinaryShaderCache() {
 			return *binaryShaderCache_;
 		}
-		static inline RenderBuffersManager& buffersManager() {
+		static inline RenderBuffersManager& GetBuffersManager() {
 			return *buffersManager_;
 		}
-		static inline RenderVaoPool& vaoPool() {
+		static inline RenderVaoPool& GetVaoPool() {
 			return *vaoPool_;
 		}
-		static inline RenderCommandPool& renderCommandPool() {
+		static inline RenderCommandPool& GetRenderCommandPool() {
 			return *renderCommandPool_;
 		}
-		static inline RenderBatcher& renderBatcher() {
+		static inline RenderBatcher& GetRenderBatcher() {
 			return *renderBatcher_;
 		}
 
-		static GLShaderProgram* shaderProgram(Material::ShaderProgramType shaderProgramType);
+		static GLShaderProgram* GetShaderProgram(Material::ShaderProgramType shaderProgramType);
 
-		static GLShaderProgram* batchedShader(const GLShaderProgram* shader);
-		static bool registerBatchedShader(const GLShaderProgram* shader, GLShaderProgram* batchedShader);
-		static bool unregisterBatchedShader(const GLShaderProgram* shader);
+		static GLShaderProgram* GetBatchedShader(const GLShaderProgram* shader);
+		static bool RegisterBatchedShader(const GLShaderProgram* shader, GLShaderProgram* batchedShader);
+		static bool UnregisterBatchedShader(const GLShaderProgram* shader);
 
-		static inline std::uint8_t* cameraUniformsBuffer() {
+		static inline std::uint8_t* GetCameraUniformsBuffer() {
 			return cameraUniformsBuffer_;
 		}
-		static CameraUniformData* findCameraUniformData(GLShaderProgram* shaderProgram);
-		static void insertCameraUniformData(GLShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData);
-		static bool removeCameraUniformData(GLShaderProgram* shaderProgram);
+		static CameraUniformData* FindCameraUniformData(GLShaderProgram* shaderProgram);
+		static void InsertCameraUniformData(GLShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData);
+		static bool RemoveCameraUniformData(GLShaderProgram* shaderProgram);
 
-		static inline const Camera* currentCamera() {
+		static inline const Camera* GetCurrentCamera() {
 			return currentCamera_;
 		}
-		static inline const Viewport* currentViewport() {
+		static inline const Viewport* GetCurrentViewport() {
 			return currentViewport_;
 		}
 
-		static void setDefaultAttributesParameters(GLShaderProgram& shaderProgram);
+		static void SetDefaultAttributesParameters(GLShaderProgram& shaderProgram);
 
 	private:
 #if defined(WITH_EMBEDDED_SHADERS)

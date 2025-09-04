@@ -256,10 +256,6 @@ void GameEventHandler::OnInitialize()
 {
 	ZoneScopedC(0x888888);
 
-	// TODO
-	auto tempDir = fs::GetTempDirectory();
-	LOGI("Temp directory: {}", tempDir);
-
 	OnBeginInitialize();
 
 #if !defined(SHAREWARE_DEMO_ONLY) && !(defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER))
@@ -1584,7 +1580,7 @@ void GameEventHandler::RefreshCache()
 			WriteCacheDescriptor(cachePath, currentVersion, animsModified);
 
 			if (!resolver.IsHeadless()) {
-				std::uint32_t filesRemoved = RenderResources::binaryShaderCache().Prune();
+				std::uint32_t filesRemoved = RenderResources::GetBinaryShaderCache().Prune();
 				LOGI("Pruning binary shader cache (removed {} files)...", filesRemoved);
 			}
 		} else {
@@ -1657,7 +1653,7 @@ RecreateCache:
 	WriteCacheDescriptor(cachePath, currentVersion, animsModified);
 
 	if (!resolver.IsHeadless()) {
-		std::uint32_t filesRemoved = RenderResources::binaryShaderCache().Prune();
+		std::uint32_t filesRemoved = RenderResources::GetBinaryShaderCache().Prune();
 		LOGI("Pruning binary shader cache (removed {} files)...", filesRemoved);
 	}
 

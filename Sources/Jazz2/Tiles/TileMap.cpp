@@ -175,7 +175,7 @@ namespace Jazz2::Tiles
 	{
 		ZoneScopedC(0xA09359);
 
-		const Viewport* viewport = RenderResources::currentViewport();
+		const Viewport* viewport = RenderResources::GetCurrentViewport();
 		Rectf cullingRect = viewport->GetCullingRect();
 		Vector2f viewCenter = cullingRect.Center();
 
@@ -1358,7 +1358,7 @@ namespace Jazz2::Tiles
 
 		constexpr float MaxDebrisSize = 128.0f;
 
-		Rectf viewportRect = RenderResources::currentViewport()->GetCullingRect();
+		Rectf viewportRect = RenderResources::GetCurrentViewport()->GetCullingRect();
 		viewportRect.X -= MaxDebrisSize;
 		viewportRect.Y -= MaxDebrisSize;
 		viewportRect.W += MaxDebrisSize * 2.0f;

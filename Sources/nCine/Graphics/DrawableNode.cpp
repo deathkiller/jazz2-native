@@ -101,7 +101,7 @@ namespace nCine
 		bool overlaps = false;
 		if (cullingEnabled && lastFrameRendered_ == theApplication().GetFrameCount()) {
 			// This frame one of the viewports in the chain might overlap this node
-			const Viewport* viewport = RenderResources::currentViewport();
+			const Viewport* viewport = RenderResources::GetCurrentViewport();
 			overlaps = aabb_.Overlaps(viewport->GetCullingRect());
 		}
 
@@ -204,7 +204,7 @@ namespace nCine
 
 			// Check if at least one viewport in the chain overlaps with this node
 			if (lastFrameRendered_ < theApplication().GetFrameCount()) {
-				const Viewport* viewport = RenderResources::currentViewport();
+				const Viewport* viewport = RenderResources::GetCurrentViewport();
 				const bool overlaps = aabb_.Overlaps(viewport->GetCullingRect());
 				if (overlaps)
 					lastFrameRendered_ = theApplication().GetFrameCount();
