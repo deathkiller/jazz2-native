@@ -80,89 +80,89 @@ namespace nCine
 		Texture& operator=(Texture&&);
 
 		/// Initializes an empty texture with the specified format, MIP levels, and size
-		void init(const char* name, Format format, std::int32_t mipMapCount, std::int32_t width, std::int32_t height);
+		void Init(const char* name, Format format, std::int32_t mipMapCount, std::int32_t width, std::int32_t height);
 		/// Initializes an empty texture with the specified format, MIP levels, and size using a vector
-		void init(const char* name, Format format, std::int32_t mipMapCount, Vector2i size);
+		void Init(const char* name, Format format, std::int32_t mipMapCount, Vector2i size);
 		/// Initializes an empty texture with the specified format and size
-		void init(const char* name, Format format, std::int32_t width, std::int32_t height);
+		void Init(const char* name, Format format, std::int32_t width, std::int32_t height);
 		/// Initializes an empty texture with the specified format and size using a vector
-		void init(const char* name, Format format, Vector2i size);
+		void Init(const char* name, Format format, Vector2i size);
 
 		//bool loadFromMemory(const std::uint8_t* bufferPtr, unsigned long int bufferSize);
-		bool loadFromFile(StringView filename);
+		bool LoadFromFile(StringView filename);
 
 		/// Loads all texture texels in raw format from a memory buffer in the first mip level
-		bool loadFromTexels(const std::uint8_t* bufferPtr);
+		bool LoadFromTexels(const std::uint8_t* bufferPtr);
 		/// Loads texels in raw format from a memory buffer to a texture sub-region in the first mip level
-		bool loadFromTexels(const std::uint8_t* bufferPtr, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height);
+		bool LoadFromTexels(const std::uint8_t* bufferPtr, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height);
 		/// Loads texels in raw format from a memory buffer to a texture sub-region with a rectangle in the first mip level
-		bool loadFromTexels(const std::uint8_t* bufferPtr, Recti region);
+		bool LoadFromTexels(const std::uint8_t* bufferPtr, Recti region);
 		/// Loads texels in raw format from a memory buffer to a specific texture mip level and sub-region
-		bool loadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height);
+		bool LoadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height);
 		/// Loads texels in raw format from a memory buffer to a specific texture mip level and sub-region with a rectangle
-		bool loadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, Recti region);
+		bool LoadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, Recti region);
 
 		/// Saves all texture texels in the first mip level in raw format to a memory buffer
-		bool saveToMemory(std::uint8_t* bufferPtr);
+		bool SaveToMemory(std::uint8_t* bufferPtr);
 		/// Saves all texture texels in the specified texture mip level in raw format to a memory buffer
-		bool saveToMemory(std::uint8_t* bufferPtr, std::int32_t level);
+		bool SaveToMemory(std::uint8_t* bufferPtr, std::int32_t level);
 
 		/// Returns texture width
-		inline std::int32_t width() const {
+		inline std::int32_t GetWidth() const {
 			return width_;
 		}
 		/// Returns texture height
-		inline std::int32_t height() const {
+		inline std::int32_t GetHeight() const {
 			return height_;
 		}
 		/// Returns texture MIP map levels
-		inline std::int32_t mipMapLevels() const {
+		inline std::int32_t GetMipMapLevels() const {
 			return mipMapLevels_;
 		}
 		/// Returns texture size
-		inline Vector2i size() const {
+		inline Vector2i GetSize() const {
 			return Vector2i(width_, height_);
 		}
 		/// Returns texture rectangle
-		inline Recti rect() const {
+		inline Recti GetRect() const {
 			return Recti(0, 0, width_, height_);
 		}
 
 		/// Returns `true` if the texture holds compressed data
-		inline bool isCompressed() const {
+		inline bool IsCompressed() const {
 			return isCompressed_;
 		}
 		/// Returns the number of color channels
-		std::uint32_t numChannels() const;
+		std::uint32_t GetChannelCount() const;
 		/// Returns the amount of video memory needed to load the texture
-		inline std::uint32_t dataSize() const {
+		inline std::uint32_t GetDataSize() const {
 			return dataSize_;
 		}
 
 		/// Returns the texture filtering for minification
-		inline SamplerFilter minFiltering() const {
+		inline SamplerFilter GetMinFiltering() const {
 			return minFiltering_;
 		}
 		/// Returns the texture filtering for magnification
-		inline SamplerFilter magFiltering() const {
+		inline SamplerFilter GetMagFiltering() const {
 			return magFiltering_;
 		}
 		/// Returns texture wrap for both `s` and `t` coordinates
-		inline SamplerWrapping wrap() const {
+		inline SamplerWrapping GetWrap() const {
 			return wrapMode_;
 		}
 		/// Sets the texture filtering for minification
-		void setMinFiltering(SamplerFilter filter);
+		void SetMinFiltering(SamplerFilter filter);
 		/// Sets the texture filtering for magnification
-		void setMagFiltering(SamplerFilter filter);
+		void SetMagFiltering(SamplerFilter filter);
 		/// Sets texture wrap for both `s` and `t` coordinates
-		void setWrap(SamplerWrapping wrapMode);
+		void SetWrap(SamplerWrapping wrapMode);
 
 		/// Sets the OpenGL object label for the texture
-		void setGLTextureLabel(const char* label);
+		void SetGLTextureLabel(const char* label);
 
 		/// Returns the user data opaque pointer for ImGui's `ImTextureID`
-		void* guiTexId() const;
+		void* GetGuiTexId() const;
 
 		inline static ObjectType sType() {
 			return ObjectType::Texture;
@@ -182,9 +182,9 @@ namespace nCine
 		SamplerWrapping wrapMode_;
 
 		/// Initialize an empty texture by creating storage for it
-		void initialize(const ITextureLoader& texLoader);
+		void Initialize(const ITextureLoader& texLoader);
 		/// Loads the data in a previously initialized texture
-		void load(const ITextureLoader& texLoader);
+		void Load(const ITextureLoader& texLoader);
 	};
 
 }

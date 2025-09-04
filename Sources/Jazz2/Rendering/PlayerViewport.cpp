@@ -39,12 +39,12 @@ namespace Jazz2::Rendering
 			_view->SetRootNode(sceneNode);
 		} else {
 			_view->RemoveAllTextures();
-			_viewTexture->init(nullptr, Texture::Format::RGB8, w, h);
+			_viewTexture->Init(nullptr, Texture::Format::RGB8, w, h);
 			_view->SetTexture(_viewTexture.get());
 		}
 
-		_viewTexture->setMagFiltering(SamplerFilter::Nearest);
-		_viewTexture->setWrap(SamplerWrapping::ClampToEdge);
+		_viewTexture->SetMagFiltering(SamplerFilter::Nearest);
+		_viewTexture->SetWrap(SamplerWrapping::ClampToEdge);
 
 		_camera->SetOrthoProjection(0.0f, (float)w, (float)h, 0.0f);
 
@@ -56,12 +56,12 @@ namespace Jazz2::Rendering
 			_lightingView->SetCamera(_camera.get());
 		} else {
 			_lightingView->RemoveAllTextures();
-			_lightingBuffer->init(nullptr, Texture::Format::RG8, w, h);
+			_lightingBuffer->Init(nullptr, Texture::Format::RG8, w, h);
 			_lightingView->SetTexture(_lightingBuffer.get());
 		}
 
-		_lightingBuffer->setMagFiltering(SamplerFilter::Nearest);
-		_lightingBuffer->setWrap(SamplerWrapping::ClampToEdge);
+		_lightingBuffer->SetMagFiltering(SamplerFilter::Nearest);
+		_lightingBuffer->SetWrap(SamplerWrapping::ClampToEdge);
 
 		_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f(0.0f, 0.0f));
 		_blurPass1.Initialize(_downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f));
@@ -99,7 +99,7 @@ namespace Jazz2::Rendering
 
 	Vector2i PlayerViewport::GetViewportSize() const
 	{
-		return _viewTexture->size();
+		return _viewTexture->GetSize();
 	}
 
 	Actors::ActorBase* PlayerViewport::GetTargetActor() const

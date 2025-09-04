@@ -24,11 +24,11 @@ namespace Jazz2::Rendering
 				if (_antialiasing._target == nullptr) {
 					_antialiasing._target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, requiredWidth, requiredHeight);
 				} else {
-					_antialiasing._target->init(nullptr, Texture::Format::RGB8, requiredWidth, requiredHeight);
+					_antialiasing._target->Init(nullptr, Texture::Format::RGB8, requiredWidth, requiredHeight);
 				}
-				_antialiasing._target->setMinFiltering(SamplerFilter::Linear);
-				_antialiasing._target->setMagFiltering(SamplerFilter::Linear);
-				_antialiasing._target->setWrap(SamplerWrapping::ClampToEdge);
+				_antialiasing._target->SetMinFiltering(SamplerFilter::Linear);
+				_antialiasing._target->SetMagFiltering(SamplerFilter::Linear);
+				_antialiasing._target->SetWrap(SamplerWrapping::ClampToEdge);
 
 				_antialiasing._targetSize = _targetSize;
 				_targetSize = Vector2f((float)requiredWidth, (float)requiredHeight);
@@ -56,12 +56,12 @@ namespace Jazz2::Rendering
 			_view->SetClearMode(Viewport::ClearMode::Never);
 		} else {
 			_view->RemoveAllTextures();
-			_target->init(nullptr, Texture::Format::RGB8, width, height);
+			_target->Init(nullptr, Texture::Format::RGB8, width, height);
 			_view->SetTexture(_target.get());
 		}
-		_target->setMinFiltering(SamplerFilter::Nearest);
-		_target->setMagFiltering(SamplerFilter::Nearest);
-		_target->setWrap(SamplerWrapping::ClampToEdge);
+		_target->SetMinFiltering(SamplerFilter::Nearest);
+		_target->SetMagFiltering(SamplerFilter::Nearest);
+		_target->SetWrap(SamplerWrapping::ClampToEdge);
 
 		if (_antialiasing._target != nullptr) {
 			if (_antialiasing._camera == nullptr) {
@@ -79,13 +79,13 @@ namespace Jazz2::Rendering
 			_antialiasing.setParent(&rootNode);
 			setParent(nullptr);
 
-			if (_antialiasing._renderCommand.material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Antialiasing))) {
-				_antialiasing._renderCommand.material().reserveUniformsDataMemory();
-				_antialiasing._renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			if (_antialiasing._renderCommand.material().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Antialiasing))) {
+				_antialiasing._renderCommand.material().ReserveUniformsDataMemory();
+				_antialiasing._renderCommand.geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 				// Required to reset render command properly
 				_antialiasing._renderCommand.setTransformation(_antialiasing._renderCommand.transformation());
 
-				auto* textureUniform = _antialiasing._renderCommand.material().uniform(Material::TextureUniformName);
+				auto* textureUniform = _antialiasing._renderCommand.material().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
@@ -114,18 +114,18 @@ namespace Jazz2::Rendering
 		}
 
 		bool shaderChanged = (_resizeShader != nullptr
-			? _renderCommand.material().setShader(_resizeShader)
-			: _renderCommand.material().setShaderProgramType(Material::ShaderProgramType::Sprite));
+			? _renderCommand.material().SetShader(_resizeShader)
+			: _renderCommand.material().SetShaderProgramType(Material::ShaderProgramType::Sprite));
 #else
-		bool shaderChanged = _renderCommand.material().setShaderProgramType(Material::ShaderProgramType::Sprite);
+		bool shaderChanged = _renderCommand.material().SetShaderProgramType(Material::ShaderProgramType::Sprite);
 #endif
 		if (shaderChanged) {
-			_renderCommand.material().reserveUniformsDataMemory();
-			_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			_renderCommand.material().ReserveUniformsDataMemory();
+			_renderCommand.geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			// Required to reset render command properly
 			_renderCommand.setTransformation(_renderCommand.transformation());
 
-			auto* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
+			auto* textureUniform = _renderCommand.material().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
@@ -141,11 +141,11 @@ namespace Jazz2::Rendering
 
 	bool UpscaleRenderPass::OnDraw(RenderQueue& renderQueue)
 	{
-		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
+		auto instanceBlock = _renderCommand.material().UniformBlock(Material::InstanceBlockName);
 #if !defined(DISABLE_RESCALE_SHADERS)
 		if (_resizeShader != nullptr) {
 			// TexRectUniformName is reused for input texture size
-			Vector2i size = _target->size();
+			Vector2i size = _target->GetSize();
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue((float)size.X, (float)size.Y, 0.0f, 0.0f);
 		} else
 #endif
@@ -156,7 +156,7 @@ namespace Jazz2::Rendering
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(_targetSize.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
-		_renderCommand.material().setTexture(0, *_target);
+		_renderCommand.material().SetTexture(0, *_target);
 
 		renderQueue.addCommand(&_renderCommand);
 
@@ -177,13 +177,13 @@ namespace Jazz2::Rendering
 
 	bool UpscaleRenderPass::AntialiasingSubpass::OnDraw(RenderQueue& renderQueue)
 	{
-		Vector2i size = _target->size();
-		auto instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
+		Vector2i size = _target->GetSize();
+		auto instanceBlock = _renderCommand.material().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue((float)size.X, (float)size.Y, 0.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(_targetSize.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
-		_renderCommand.material().setTexture(0, *_target);
+		_renderCommand.material().SetTexture(0, *_target);
 
 		renderQueue.addCommand(&_renderCommand);
 

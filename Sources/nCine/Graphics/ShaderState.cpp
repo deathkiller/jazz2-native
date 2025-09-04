@@ -12,12 +12,12 @@ namespace nCine
 		{
 			GLUniformCache* uniform = nullptr;
 			if (blockName != nullptr && blockName[0] != '\0') {
-				GLUniformBlockCache* uniformBlock = material.uniformBlock(blockName);
+				GLUniformBlockCache* uniformBlock = material.UniformBlock(blockName);
 				if (uniformBlock != nullptr) {
 					uniform = uniformBlock->GetUniform(name);
 				}
 			} else {
-				uniform = material.uniform(name);
+				uniform = material.Uniform(name);
 			}
 			return uniform;
 		}
@@ -31,17 +31,17 @@ namespace nCine
 	ShaderState::ShaderState(DrawableNode* node, Shader* shader)
 		: node_(nullptr), shader_(nullptr), previousShaderType_(std::int32_t(Material::ShaderProgramType::Custom))
 	{
-		setNode(node);
-		setShader(shader);
+		SetNode(node);
+		SetShader(shader);
 	}
 
 	ShaderState::~ShaderState()
 	{
-		setNode(nullptr);
-		setShader(nullptr);
+		SetNode(nullptr);
+		SetShader(nullptr);
 	}
 
-	bool ShaderState::setNode(DrawableNode* node)
+	bool ShaderState::SetNode(DrawableNode* node)
 	{
 		bool nodeHasChanged = false;
 
@@ -49,17 +49,17 @@ namespace nCine
 			if (node_ != nullptr) {
 				Material& prevMaterial = node_->renderCommand_.material();
 				const Material::ShaderProgramType programType = static_cast<Material::ShaderProgramType>(previousShaderType_);
-				prevMaterial.setShaderProgramType(programType);
+				prevMaterial.SetShaderProgramType(programType);
 			}
 
 			if (node != nullptr) {
 				Material& material = node->renderCommand_.material();
-				previousShaderType_ = std::int32_t(material.shaderProgramType());
+				previousShaderType_ = std::int32_t(material.GetShaderProgramType());
 			}
 			node_ = node;
 
 			if (shader_ != nullptr) {
-				setShader(shader_);
+				SetShader(shader_);
 			}
 
 			nodeHasChanged = true;
@@ -68,7 +68,7 @@ namespace nCine
 		return nodeHasChanged;
 	}
 
-	bool ShaderState::setShader(Shader* shader)
+	bool ShaderState::SetShader(Shader* shader)
 	{
 		bool shaderHasChanged = false;
 
@@ -77,12 +77,12 @@ namespace nCine
 			Material& material = node_->renderCommand_.material();
 			if (shader == nullptr) {
 				const Material::ShaderProgramType programType = static_cast<Material::ShaderProgramType>(previousShaderType_);
-				material.setShaderProgramType(programType);
-			} else if (shader->isLinked()) {
-				if (material.shaderProgramType() != Material::ShaderProgramType::Custom)
-					previousShaderType_ = std::int32_t(material.shaderProgramType());
+				material.SetShaderProgramType(programType);
+			} else if (shader->IsLinked()) {
+				if (material.GetShaderProgramType() != Material::ShaderProgramType::Custom)
+					previousShaderType_ = std::int32_t(material.GetShaderProgramType());
 
-				material.setShaderProgram(shader->glShaderProgram_.get());
+				material.SetShaderProgram(shader->glShaderProgram_.get());
 			}
 
 			shader_ = shader;
@@ -94,11 +94,11 @@ namespace nCine
 	}
 
 	/*! \note Use this method when the content of the currently assigned shader changes */
-	bool ShaderState::resetShader()
+	bool ShaderState::ResetShader()
 	{
-		if (shader_ != nullptr && shader_->isLinked() && node_) {
+		if (shader_ != nullptr && shader_->IsLinked() && node_) {
 			Material& material = node_->renderCommand_.material();
-			material.setShaderProgram(shader_->glShaderProgram_.get());
+			material.SetShaderProgram(shader_->glShaderProgram_.get());
 			node_->shaderHasChanged();
 			return true;
 		}
@@ -106,19 +106,19 @@ namespace nCine
 	}
 
 	/*! \note Contrary to uniforms, there is no need to set the texture again when you reset a shader or when you set a new one */
-	bool ShaderState::setTexture(std::uint32_t unit, const Texture* texture)
+	bool ShaderState::SetTexture(std::uint32_t unit, const Texture* texture)
 	{
 		if (node_ == nullptr) {
 			return false;
 		}
 
 		Material& material = node_->renderCommand_.material();
-		const bool result = texture ? material.setTexture(unit, *texture) : material.setTexture(unit, nullptr);
+		const bool result = texture ? material.SetTexture(unit, *texture) : material.SetTexture(unit, nullptr);
 
 		return result;
 	}
 
-	bool ShaderState::setUniformInt(const char* blockName, const char* name, const std::int32_t* vector)
+	bool ShaderState::SetUniformInt(const char* blockName, const char* name, const std::int32_t* vector)
 	{
 		if (node_ == nullptr || shader_ == nullptr || name == nullptr || vector == nullptr) {
 			return false;
@@ -133,7 +133,7 @@ namespace nCine
 		return result;
 	}
 
-	bool ShaderState::setUniformInt(const char* blockName, const char* name, std::int32_t value0)
+	bool ShaderState::SetUniformInt(const char* blockName, const char* name, std::int32_t value0)
 	{
 		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
@@ -148,7 +148,7 @@ namespace nCine
 		return result;
 	}
 
-	bool ShaderState::setUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1)
+	bool ShaderState::SetUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1)
 	{
 		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
@@ -163,7 +163,7 @@ namespace nCine
 		return result;
 	}
 
-	bool ShaderState::setUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1, std::int32_t value2)
+	bool ShaderState::SetUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1, std::int32_t value2)
 	{
 		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
@@ -178,7 +178,7 @@ namespace nCine
 		return result;
 	}
 
-	bool ShaderState::setUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1, std::int32_t value2, std::int32_t value3)
+	bool ShaderState::SetUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1, std::int32_t value2, std::int32_t value3)
 	{
 		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
@@ -193,22 +193,22 @@ namespace nCine
 		return result;
 	}
 
-	bool ShaderState::setUniformInt(const char* blockName, const char* name, const Vector2i& vec)
+	bool ShaderState::SetUniformInt(const char* blockName, const char* name, const Vector2i& vec)
 	{
-		return setUniformInt(blockName, name, vec.X, vec.Y);
+		return SetUniformInt(blockName, name, vec.X, vec.Y);
 	}
 
-	bool ShaderState::setUniformInt(const char* blockName, const char* name, const Vector3i& vector)
+	bool ShaderState::SetUniformInt(const char* blockName, const char* name, const Vector3i& vector)
 	{
-		return setUniformInt(blockName, name, vector.X, vector.Y, vector.Z);
+		return SetUniformInt(blockName, name, vector.X, vector.Y, vector.Z);
 	}
 
-	bool ShaderState::setUniformInt(const char* blockName, const char* name, const Vector4i& vector)
+	bool ShaderState::SetUniformInt(const char* blockName, const char* name, const Vector4i& vector)
 	{
-		return setUniformInt(blockName, name, vector.X, vector.Y, vector.Z, vector.W);
+		return SetUniformInt(blockName, name, vector.X, vector.Y, vector.Z, vector.W);
 	}
 
-	bool ShaderState::setUniformFloat(const char* blockName, const char* name, const float* vector)
+	bool ShaderState::SetUniformFloat(const char* blockName, const char* name, const float* vector)
 	{
 		if (node_ == nullptr || shader_ == nullptr || name == nullptr || vector == nullptr) {
 			return false;
@@ -223,7 +223,7 @@ namespace nCine
 		return result;
 	}
 
-	bool ShaderState::setUniformFloat(const char* blockName, const char* name, float value0)
+	bool ShaderState::SetUniformFloat(const char* blockName, const char* name, float value0)
 	{
 		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
@@ -238,7 +238,7 @@ namespace nCine
 		return result;
 	}
 
-	bool ShaderState::setUniformFloat(const char* blockName, const char* name, float value0, float value1)
+	bool ShaderState::SetUniformFloat(const char* blockName, const char* name, float value0, float value1)
 	{
 		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
@@ -253,7 +253,7 @@ namespace nCine
 		return result;
 	}
 
-	bool ShaderState::setUniformFloat(const char* blockName, const char* name, float value0, float value1, float value2)
+	bool ShaderState::SetUniformFloat(const char* blockName, const char* name, float value0, float value1, float value2)
 	{
 		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
@@ -268,7 +268,7 @@ namespace nCine
 		return result;
 	}
 
-	bool ShaderState::setUniformFloat(const char* blockName, const char* name, float value0, float value1, float value2, float value3)
+	bool ShaderState::SetUniformFloat(const char* blockName, const char* name, float value0, float value1, float value2, float value3)
 	{
 		if (node_ == nullptr || shader_ == nullptr || name == nullptr) {
 			return false;
@@ -283,34 +283,34 @@ namespace nCine
 		return result;
 	}
 
-	bool ShaderState::setUniformFloat(const char* blockName, const char* name, const Vector2f& vector)
+	bool ShaderState::SetUniformFloat(const char* blockName, const char* name, const Vector2f& vector)
 	{
-		return setUniformFloat(blockName, name, vector.X, vector.Y);
+		return SetUniformFloat(blockName, name, vector.X, vector.Y);
 	}
 
-	bool ShaderState::setUniformFloat(const char* blockName, const char* name, const Vector3f& vector)
+	bool ShaderState::SetUniformFloat(const char* blockName, const char* name, const Vector3f& vector)
 	{
-		return setUniformFloat(blockName, name, vector.X, vector.Y, vector.Z);
+		return SetUniformFloat(blockName, name, vector.X, vector.Y, vector.Z);
 	}
 
-	bool ShaderState::setUniformFloat(const char* blockName, const char* name, const Vector4f& vector)
+	bool ShaderState::SetUniformFloat(const char* blockName, const char* name, const Vector4f& vector)
 	{
-		return setUniformFloat(blockName, name, vector.X, vector.Y, vector.Z, vector.W);
+		return SetUniformFloat(blockName, name, vector.X, vector.Y, vector.Z, vector.W);
 	}
 
-	bool ShaderState::setUniformFloat(const char* blockName, const char* name, const Colorf& color)
+	bool ShaderState::SetUniformFloat(const char* blockName, const char* name, const Colorf& color)
 	{
-		return setUniformFloat(blockName, name, color.R, color.G, color.B, color.A);
+		return SetUniformFloat(blockName, name, color.R, color.G, color.B, color.A);
 	}
 
-	std::uint32_t ShaderState::uniformBlockSize(const char* blockName)
+	std::uint32_t ShaderState::GetUniformBlockSize(const char* blockName)
 	{
 		if (node_ == nullptr || shader_ == nullptr || blockName == nullptr) {
 			return 0;
 		}
 
 		std::uint32_t size = 0;
-		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().uniformBlock(blockName);
+		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().UniformBlock(blockName);
 		if (uniformBlock != nullptr) {
 			size = static_cast<std::uint32_t>(uniformBlock->GetSize());
 		}
@@ -318,14 +318,14 @@ namespace nCine
 		return size;
 	}
 
-	bool ShaderState::copyToUniformBlock(const char* blockName, std::uint32_t destIndex, std::uint8_t* src, std::uint32_t numBytes)
+	bool ShaderState::CopyToUniformBlock(const char* blockName, std::uint32_t destIndex, std::uint8_t* src, std::uint32_t numBytes)
 	{
 		if (node_ == nullptr || shader_ == nullptr || blockName == nullptr) {
 			return false;
 		}
 
 		bool result = false;
-		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().uniformBlock(blockName);
+		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().UniformBlock(blockName);
 		if (uniformBlock != nullptr) {
 			result = uniformBlock->CopyData(destIndex, src, numBytes);
 		}
@@ -333,19 +333,19 @@ namespace nCine
 		return result;
 	}
 
-	bool ShaderState::copyToUniformBlock(const char* blockName, std::uint8_t* src, std::uint32_t numBytes)
+	bool ShaderState::CopyToUniformBlock(const char* blockName, std::uint8_t* src, std::uint32_t numBytes)
 	{
-		return copyToUniformBlock(blockName, 0, src, numBytes);
+		return CopyToUniformBlock(blockName, 0, src, numBytes);
 	}
 
-	bool ShaderState::copyToUniformBlock(const char* blockName, std::uint8_t* src)
+	bool ShaderState::CopyToUniformBlock(const char* blockName, std::uint8_t* src)
 	{
 		if (node_ == nullptr || shader_ == nullptr || blockName == nullptr) {
 			return false;
 		}
 
 		bool result = false;
-		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().uniformBlock(blockName);
+		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().UniformBlock(blockName);
 		if (uniformBlock != nullptr) {
 			result = uniformBlock->CopyData(src);
 		}

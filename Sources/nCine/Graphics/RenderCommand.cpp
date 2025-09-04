@@ -24,7 +24,7 @@ namespace nCine
 	void RenderCommand::calculateMaterialSortKey()
 	{
 		const std::uint64_t upper = std::uint64_t(layerSortKey()) << 32;
-		const std::uint32_t lower = material_.sortKey();
+		const std::uint32_t lower = material_.GetSortKey();
 		materialSortKey_ = upper | lower;
 	}
 
@@ -36,8 +36,8 @@ namespace nCine
 			return;
 		}
 
-		material_.bind();
-		material_.commitUniforms();
+		material_.Bind();
+		material_.CommitUniforms();
 
 		GLScissorTest::State scissorTestState = GLScissorTest::GetState();
 		if (scissorRect_.W > 0 && scissorRect_.H > 0) {
@@ -48,12 +48,12 @@ namespace nCine
 #if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 		// Simulating missing `glDrawElementsBaseVertex()` on OpenGL ES 3.0
 		if (geometry_.numIndices_ > 0) {
-			offset = geometry_.vboParams().offset + (geometry_.firstVertex_ * geometry_.numElementsPerVertex_ * sizeof(GLfloat));
+			offset = geometry_.GetVboParams().offset + (geometry_.firstVertex_ * geometry_.numElementsPerVertex_ * sizeof(GLfloat));
 		}
 #endif
-		material_.defineVertexFormat(geometry_.vboParams().object, geometry_.iboParams().object, offset);
-		geometry_.bind();
-		geometry_.draw(numInstances_);
+		material_.DefineVertexFormat(geometry_.GetVboParams().object, geometry_.GetIboParams().object, offset);
+		geometry_.Bind();
+		geometry_.Draw(numInstances_);
 
 		GLScissorTest::SetState(scissorTestState);
 	}
@@ -81,10 +81,10 @@ namespace nCine
 		modelMatrix_[3][2] = calculateDepth(layer_, cameraValues.nearClip, cameraValues.farClip);
 
 		if (material_.shaderProgram_ && material_.shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
-			GLUniformBlockCache* instanceBlock = material_.uniformBlock(Material::InstanceBlockName);
+			GLUniformBlockCache* instanceBlock = material_.UniformBlock(Material::InstanceBlockName);
 			GLUniformCache* matrixUniform = instanceBlock
 				? instanceBlock->GetUniform(Material::ModelMatrixUniformName)
-				: material_.uniform(Material::ModelMatrixUniformName);
+				: material_.Uniform(Material::ModelMatrixUniformName);
 			if (matrixUniform) {
 				//ZoneScopedNC("Set model matrix", 0x81A861);
 				matrixUniform->SetFloatVector(modelMatrix_.Data());
@@ -119,14 +119,14 @@ namespace nCine
 	{
 		// Copy the vertices and indices stored in host memory to video memory
 		// This step is not needed if the command uses a custom VBO or IBO or directly writes into the common one
-		geometry_.commitVertices();
-		geometry_.commitIndices();
+		geometry_.CommitVertices();
+		geometry_.CommitIndices();
 
 		// The model matrix should always be updated before committing uniform blocks
 		commitNodeTransformation();
 
 		// Commits all the uniform blocks of command's shader program
-		material_.commitUniformBlocks();
+		material_.CommitUniformBlocks();
 	}
 
 	float RenderCommand::calculateDepth(std::uint16_t layer, float nearClip, float farClip)

@@ -30,7 +30,7 @@ namespace nCine
 		// Calculating the material sorting key before adding the command to the queue
 		command->calculateMaterialSortKey();
 
-		if (!command->material().isBlendingEnabled()) {
+		if (!command->material().IsBlendingEnabled()) {
 			opaqueQueue_.push_back(command);
 		} else {
 			transparentQueue_.push_back(command);
@@ -155,7 +155,7 @@ namespace nCine
 #endif
 
 #if defined(NCINE_PROFILING)
-			RenderStatistics::gatherStatistics(*opaqueRenderCommand);
+			RenderStatistics::GatherStatistics(*opaqueRenderCommand);
 #endif
 			opaqueRenderCommand->commitCameraTransformation();
 			opaqueRenderCommand->issue();
@@ -188,9 +188,9 @@ namespace nCine
 #endif
 
 #if defined(NCINE_PROFILING)
-			RenderStatistics::gatherStatistics(*transparentRenderCommand);
+			RenderStatistics::GatherStatistics(*transparentRenderCommand);
 #endif
-			GLBlending::SetBlendFunc(transparentRenderCommand->material().srcBlendingFactor(), transparentRenderCommand->material().destBlendingFactor());
+			GLBlending::SetBlendFunc(transparentRenderCommand->material().GetSrcBlendingFactor(), transparentRenderCommand->material().GetDestBlendingFactor());
 			transparentRenderCommand->commitCameraTransformation();
 			transparentRenderCommand->issue();
 		}

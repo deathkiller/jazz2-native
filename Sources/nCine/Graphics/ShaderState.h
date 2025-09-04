@@ -21,48 +21,48 @@ namespace nCine
 		ShaderState(const ShaderState&) = delete;
 		ShaderState& operator=(const ShaderState&) = delete;
 
-		inline const DrawableNode* node() const {
+		inline const DrawableNode* GetNode() const {
 			return node_;
 		}
-		bool setNode(DrawableNode* node);
+		bool SetNode(DrawableNode* node);
 
-		inline const Shader* shader() const {
+		inline const Shader* GetShader() const {
 			return shader_;
 		}
-		bool setShader(Shader* shader);
+		bool SetShader(Shader* shader);
 		/// Triggers a shader update without setting a new shader
-		bool resetShader();
+		bool ResetShader();
 
-		bool setTexture(std::uint32_t unit, const Texture* texture);
-		inline bool setTexture(const Texture* texture) {
-			return setTexture(0, texture);
+		bool SetTexture(std::uint32_t unit, const Texture* texture);
+		inline bool SetTexture(const Texture* texture) {
+			return SetTexture(0, texture);
 		}
 
-		bool setUniformInt(const char* blockName, const char* name, const std::int32_t* vector);
-		bool setUniformInt(const char* blockName, const char* name, std::int32_t value0);
-		bool setUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1);
-		bool setUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1, std::int32_t value2);
-		bool setUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1, std::int32_t value2, std::int32_t value3);
+		bool SetUniformInt(const char* blockName, const char* name, const std::int32_t* vector);
+		bool SetUniformInt(const char* blockName, const char* name, std::int32_t value0);
+		bool SetUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1);
+		bool SetUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1, std::int32_t value2);
+		bool SetUniformInt(const char* blockName, const char* name, std::int32_t value0, std::int32_t value1, std::int32_t value2, std::int32_t value3);
 
-		bool setUniformInt(const char* blockName, const char* name, const Vector2i& vector);
-		bool setUniformInt(const char* blockName, const char* name, const Vector3i& vector);
-		bool setUniformInt(const char* blockName, const char* name, const Vector4i& vector);
+		bool SetUniformInt(const char* blockName, const char* name, const Vector2i& vector);
+		bool SetUniformInt(const char* blockName, const char* name, const Vector3i& vector);
+		bool SetUniformInt(const char* blockName, const char* name, const Vector4i& vector);
 
-		bool setUniformFloat(const char* blockName, const char* name, const float* vector);
-		bool setUniformFloat(const char* blockName, const char* name, float value0);
-		bool setUniformFloat(const char* blockName, const char* name, float value0, float value1);
-		bool setUniformFloat(const char* blockName, const char* name, float value0, float value1, float value2);
-		bool setUniformFloat(const char* blockName, const char* name, float value0, float value1, float value2, float value3);
+		bool SetUniformFloat(const char* blockName, const char* name, const float* vector);
+		bool SetUniformFloat(const char* blockName, const char* name, float value0);
+		bool SetUniformFloat(const char* blockName, const char* name, float value0, float value1);
+		bool SetUniformFloat(const char* blockName, const char* name, float value0, float value1, float value2);
+		bool SetUniformFloat(const char* blockName, const char* name, float value0, float value1, float value2, float value3);
 
-		bool setUniformFloat(const char* blockName, const char* name, const Vector2f& vector);
-		bool setUniformFloat(const char* blockName, const char* name, const Vector3f& vector);
-		bool setUniformFloat(const char* blockName, const char* name, const Vector4f& vector);
-		bool setUniformFloat(const char* blockName, const char* name, const Colorf& color);
+		bool SetUniformFloat(const char* blockName, const char* name, const Vector2f& vector);
+		bool SetUniformFloat(const char* blockName, const char* name, const Vector3f& vector);
+		bool SetUniformFloat(const char* blockName, const char* name, const Vector4f& vector);
+		bool SetUniformFloat(const char* blockName, const char* name, const Colorf& color);
 
-		std::uint32_t uniformBlockSize(const char* blockName);
-		bool copyToUniformBlock(const char* blockName, std::uint32_t destIndex, std::uint8_t* src, std::uint32_t numBytes);
-		bool copyToUniformBlock(const char* blockName, std::uint8_t* src, std::uint32_t numBytes);
-		bool copyToUniformBlock(const char* blockName, std::uint8_t* src);
+		std::uint32_t GetUniformBlockSize(const char* blockName);
+		bool CopyToUniformBlock(const char* blockName, std::uint32_t destIndex, std::uint8_t* src, std::uint32_t numBytes);
+		bool CopyToUniformBlock(const char* blockName, std::uint8_t* src, std::uint32_t numBytes);
+		bool CopyToUniformBlock(const char* blockName, std::uint8_t* src);
 
 	private:
 		DrawableNode* node_;

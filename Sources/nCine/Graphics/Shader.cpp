@@ -90,8 +90,8 @@ namespace nCine
 		: Shader()
 	{
 		const bool hasLoaded = loadMode == LoadMode::String
-			? loadFromMemory(shaderName, introspection, vertex, fragment, batchSize)
-			: loadFromFile(shaderName, introspection, vertex, fragment, batchSize);
+			? LoadFromMemory(shaderName, introspection, vertex, fragment, batchSize)
+			: LoadFromFile(shaderName, introspection, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
 			LOGE("Shader \"{}\" cannot be loaded", shaderName);
@@ -102,8 +102,8 @@ namespace nCine
 		: Shader()
 	{
 		const bool hasLoaded = loadMode == LoadMode::String
-			? loadFromMemory(shaderName, vertex, fragment, batchSize)
-			: loadFromFile(shaderName, vertex, fragment, batchSize);
+			? LoadFromMemory(shaderName, vertex, fragment, batchSize)
+			: LoadFromFile(shaderName, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
 			LOGE("Shader \"{}\" cannot be loaded", shaderName);
@@ -119,8 +119,8 @@ namespace nCine
 		: Shader()
 	{
 		const bool hasLoaded = loadMode == LoadMode::String
-			? loadFromMemory(shaderName, introspection, vertex, fragment, batchSize)
-			: loadFromFile(shaderName, introspection, vertex, fragment, batchSize);
+			? LoadFromMemory(shaderName, introspection, vertex, fragment, batchSize)
+			: LoadFromFile(shaderName, introspection, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
 			LOGE("Shader \"{}\" cannot be loaded", shaderName);
@@ -131,8 +131,8 @@ namespace nCine
 		: Shader()
 	{
 		const bool hasLoaded = loadMode == LoadMode::String
-			? loadFromMemory(shaderName, vertex, fragment, batchSize)
-			: loadFromFile(shaderName, vertex, fragment, batchSize);
+			? LoadFromMemory(shaderName, vertex, fragment, batchSize)
+			: LoadFromFile(shaderName, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
 			LOGE("Shader \"{}\" cannot be loaded", shaderName);
@@ -148,8 +148,8 @@ namespace nCine
 		: Shader()
 	{
 		const bool hasLoaded = loadMode == LoadMode::String
-			? loadFromMemory(shaderName, introspection, vertex, fragment, batchSize)
-			: loadFromFile(shaderName, introspection, vertex, fragment, batchSize);
+			? LoadFromMemory(shaderName, introspection, vertex, fragment, batchSize)
+			: LoadFromFile(shaderName, introspection, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
 			LOGE("Shader \"{}\" cannot be loaded", shaderName);
@@ -160,8 +160,8 @@ namespace nCine
 		: Shader()
 	{
 		const bool hasLoaded = loadMode == LoadMode::String
-			? loadFromMemory(shaderName, vertex, fragment, batchSize)
-			: loadFromFile(shaderName, vertex, fragment, batchSize);
+			? LoadFromMemory(shaderName, vertex, fragment, batchSize)
+			: LoadFromFile(shaderName, vertex, fragment, batchSize);
 
 		if (!hasLoaded) {
 			LOGE("Shader \"{}\" cannot be loaded", shaderName);
@@ -178,7 +178,7 @@ namespace nCine
 		RenderResources::UnregisterBatchedShader(glShaderProgram_.get());
 	}
 
-	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
+	bool Shader::LoadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
 	{
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
@@ -200,20 +200,20 @@ namespace nCine
 
 		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
-		return isLinked();
+		return IsLinked();
 	}
 
-	bool Shader::loadFromMemory(const char* shaderName, const char* vertex, const char* fragment, std::int32_t batchSize)
+	bool Shader::LoadFromMemory(const char* shaderName, const char* vertex, const char* fragment, std::int32_t batchSize)
 	{
-		return loadFromMemory(shaderName, Introspection::Enabled, vertex, fragment, batchSize);
+		return LoadFromMemory(shaderName, Introspection::Enabled, vertex, fragment, batchSize);
 	}
 
-	bool Shader::loadFromMemory(const char* vertex, const char* fragment, std::int32_t batchSize)
+	bool Shader::LoadFromMemory(const char* vertex, const char* fragment, std::int32_t batchSize)
 	{
-		return loadFromMemory(nullptr, vertex, fragment, batchSize);
+		return LoadFromMemory(nullptr, vertex, fragment, batchSize);
 	}
 
-	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
+	bool Shader::LoadFromMemory(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
 	{
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
@@ -224,7 +224,7 @@ namespace nCine
 		glShaderProgram_->Reset(); // reset before attaching new shaders
 		glShaderProgram_->SetBatchSize(batchSize);
 		glShaderProgram_->SetObjectLabel(shaderName);
-		loadDefaultShader(vertex, batchSize);
+		LoadDefaultShader(vertex, batchSize);
 
 		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
@@ -233,21 +233,21 @@ namespace nCine
 
 		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
-		return isLinked();
+		return IsLinked();
 	}
 
-	bool Shader::loadFromMemory(const char* shaderName, DefaultVertex vertex, const char* fragment, std::int32_t batchSize)
+	bool Shader::LoadFromMemory(const char* shaderName, DefaultVertex vertex, const char* fragment, std::int32_t batchSize)
 	{
 		const Introspection introspection = (isBatchedVertex(vertex) ? Introspection::NoUniformsInBlocks : Introspection::Enabled);
-		return loadFromMemory(shaderName, introspection, vertex, fragment, batchSize);
+		return LoadFromMemory(shaderName, introspection, vertex, fragment, batchSize);
 	}
 
-	bool Shader::loadFromMemory(DefaultVertex vertex, const char* fragment, std::int32_t batchSize)
+	bool Shader::LoadFromMemory(DefaultVertex vertex, const char* fragment, std::int32_t batchSize)
 	{
-		return loadFromMemory(nullptr, vertex, fragment, batchSize);
+		return LoadFromMemory(nullptr, vertex, fragment, batchSize);
 	}
 
-	bool Shader::loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
+	bool Shader::LoadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
 	{
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
@@ -264,23 +264,23 @@ namespace nCine
 		stringsCount = populateShaderStrings(strings, backingStore, vertex, batchSize, defines);
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), {});
 
-		loadDefaultShader(fragment);
+		LoadDefaultShader(fragment);
 		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
-		return isLinked();
+		return IsLinked();
 	}
 
-	bool Shader::loadFromMemory(const char* shaderName, const char* vertex, DefaultFragment fragment, std::int32_t batchSize)
+	bool Shader::LoadFromMemory(const char* shaderName, const char* vertex, DefaultFragment fragment, std::int32_t batchSize)
 	{
-		return loadFromMemory(shaderName, Introspection::Enabled, vertex, fragment, batchSize);
+		return LoadFromMemory(shaderName, Introspection::Enabled, vertex, fragment, batchSize);
 	}
 
-	bool Shader::loadFromMemory(const char* vertex, DefaultFragment fragment, std::int32_t batchSize)
+	bool Shader::LoadFromMemory(const char* vertex, DefaultFragment fragment, std::int32_t batchSize)
 	{
-		return loadFromMemory(nullptr, vertex, fragment, batchSize);
+		return LoadFromMemory(nullptr, vertex, fragment, batchSize);
 	}
 
-	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize, ArrayView<const StringView> defines)
+	bool Shader::LoadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize, ArrayView<const StringView> defines)
 	{
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
@@ -302,20 +302,20 @@ namespace nCine
 
 		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
-		return isLinked();
+		return IsLinked();
 	}
 
-	bool Shader::loadFromFile(const char* shaderName, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize)
+	bool Shader::LoadFromFile(const char* shaderName, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize)
 	{
-		return loadFromFile(shaderName, Introspection::Enabled, vertexPath, fragmentPath, batchSize);
+		return LoadFromFile(shaderName, Introspection::Enabled, vertexPath, fragmentPath, batchSize);
 	}
 
-	bool Shader::loadFromFile(StringView vertexPath, StringView fragmentPath, std::int32_t batchSize)
+	bool Shader::LoadFromFile(StringView vertexPath, StringView fragmentPath, std::int32_t batchSize)
 	{
-		return loadFromFile(nullptr, vertexPath, fragmentPath, batchSize);
+		return LoadFromFile(nullptr, vertexPath, fragmentPath, batchSize);
 	}
 
-	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize, ArrayView<const StringView> defines)
+	bool Shader::LoadFromFile(const char* shaderName, Introspection introspection, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize, ArrayView<const StringView> defines)
 	{
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
@@ -326,7 +326,7 @@ namespace nCine
 		glShaderProgram_->Reset(); // reset before attaching new shaders
 		glShaderProgram_->SetBatchSize(batchSize);
 		glShaderProgram_->SetObjectLabel(shaderName);
-		loadDefaultShader(vertex, batchSize);
+		LoadDefaultShader(vertex, batchSize);
 
 		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
@@ -335,21 +335,21 @@ namespace nCine
 
 		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
-		return isLinked();
+		return IsLinked();
 	}
 
-	bool Shader::loadFromFile(const char* shaderName, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize)
+	bool Shader::LoadFromFile(const char* shaderName, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize)
 	{
 		const Introspection introspection = (isBatchedVertex(vertex) ? Introspection::NoUniformsInBlocks : Introspection::Enabled);
-		return loadFromFile(shaderName, introspection, vertex, fragmentPath, batchSize);
+		return LoadFromFile(shaderName, introspection, vertex, fragmentPath, batchSize);
 	}
 
-	bool Shader::loadFromFile(DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize)
+	bool Shader::LoadFromFile(DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize)
 	{
-		return loadFromFile(nullptr, vertex, fragmentPath, batchSize);
+		return LoadFromFile(nullptr, vertex, fragmentPath, batchSize);
 	}
 
-	bool Shader::loadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
+	bool Shader::LoadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
 	{
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
@@ -366,23 +366,23 @@ namespace nCine
 		stringsCount = populateShaderStrings(strings, backingStore, {}, batchSize, defines);
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), vertexPath);
 
-		loadDefaultShader(fragment);
+		LoadDefaultShader(fragment);
 		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
-		return isLinked();
+		return IsLinked();
 	}
 
-	bool Shader::loadFromFile(const char* shaderName, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize)
+	bool Shader::LoadFromFile(const char* shaderName, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize)
 	{
-		return loadFromFile(shaderName, Introspection::Enabled, vertexPath, fragment, batchSize);
+		return LoadFromFile(shaderName, Introspection::Enabled, vertexPath, fragment, batchSize);
 	}
 
-	bool Shader::loadFromFile(StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize)
+	bool Shader::LoadFromFile(StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize)
 	{
-		return loadFromFile(nullptr, vertexPath, fragment, batchSize);
+		return LoadFromFile(nullptr, vertexPath, fragment, batchSize);
 	}
 
-	bool Shader::loadFromCache(const char* shaderName, std::uint64_t shaderVersion, Introspection introspection)
+	bool Shader::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Introspection introspection)
 	{
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
@@ -395,12 +395,12 @@ namespace nCine
 		return RenderResources::GetBinaryShaderCache().LoadFromCache(shaderName, shaderVersion, glShaderProgram_.get(), shaderToShaderProgramIntrospection(introspection));
 	}
 
-	bool Shader::saveToCache(const char* shaderName, std::uint64_t shaderVersion) const
+	bool Shader::SaveToCache(const char* shaderName, std::uint64_t shaderVersion) const
 	{
 		return RenderResources::GetBinaryShaderCache().SaveToCache(shaderName, shaderVersion, glShaderProgram_.get());
 	}
 
-	bool Shader::setAttribute(const char* name, std::int32_t stride, void* pointer)
+	bool Shader::SetAttribute(const char* name, std::int32_t stride, void* pointer)
 	{
 		GLVertexFormat::Attribute* attribute = glShaderProgram_->GetAttribute(name);
 		if (attribute != nullptr) {
@@ -409,42 +409,42 @@ namespace nCine
 		return (attribute != nullptr);
 	}
 
-	bool Shader::isLinked() const
+	bool Shader::IsLinked() const
 	{
 		return glShaderProgram_->IsLinked();
 	}
 
-	unsigned int Shader::retrieveInfoLogLength() const
+	unsigned int Shader::RetrieveInfoLogLength() const
 	{
 		return glShaderProgram_->RetrieveInfoLogLength();
 	}
 
-	void Shader::retrieveInfoLog(std::string& infoLog) const
+	void Shader::RetrieveInfoLog(std::string& infoLog) const
 	{
 		glShaderProgram_->RetrieveInfoLog(infoLog);
 	}
 
-	bool Shader::logOnErrors() const
+	bool Shader::GetLogOnErrors() const
 	{
 		return glShaderProgram_->GetLogOnErrors();
 	}
 
-	void Shader::setLogOnErrors(bool shouldLogOnErrors)
+	void Shader::SetLogOnErrors(bool shouldLogOnErrors)
 	{
 		glShaderProgram_->SetLogOnErrors(shouldLogOnErrors);
 	}
 
-	void Shader::setGLShaderProgramLabel(const char* label)
+	void Shader::SetGLShaderProgramLabel(const char* label)
 	{
 		glShaderProgram_->SetObjectLabel(label);
 	}
 
-	void Shader::registerBatchedShader(Shader& batchedShader)
+	void Shader::RegisterBatchedShader(Shader& batchedShader)
 	{
 		RenderResources::RegisterBatchedShader(glShaderProgram_.get(), batchedShader.glShaderProgram_.get());
 	}
 
-	bool Shader::loadDefaultShader(DefaultVertex vertex, int batchSize)
+	bool Shader::LoadDefaultShader(DefaultVertex vertex, int batchSize)
 	{
 #if !defined(WITH_EMBEDDED_SHADERS)
 		StringView vertexShader;
@@ -536,7 +536,7 @@ namespace nCine
 #endif
 	}
 
-	bool Shader::loadDefaultShader(DefaultFragment fragment)
+	bool Shader::LoadDefaultShader(DefaultFragment fragment)
 	{
 #if !defined(WITH_EMBEDDED_SHADERS)
 		StringView fragmentShader;

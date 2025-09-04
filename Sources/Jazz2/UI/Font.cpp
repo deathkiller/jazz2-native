@@ -101,9 +101,9 @@ namespace Jazz2::UI
 			}
 
 			_texture = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, w, h);
-			_texture->loadFromTexels((unsigned char*)pixels, 0, 0, w, h);
-			_texture->setMinFiltering(SamplerFilter::Linear);
-			_texture->setMagFiltering(SamplerFilter::Linear);
+			_texture->LoadFromTexels((unsigned char*)pixels, 0, 0, w, h);
+			_texture->SetMinFiltering(SamplerFilter::Linear);
+			_texture->SetMagFiltering(SamplerFilter::Linear);
 		}
 	}
 
@@ -359,7 +359,7 @@ namespace Jazz2::UI
 			case Alignment::Right: originPos.X += (totalWidth - lineWidths[0]); break;
 		}
 
-		Vector2i texSize = _texture->size();
+		Vector2i texSize = _texture->GetSize();
 		Shader* colorizeShader;
 		bool useRandomColor, isShadow;
 		float alpha;
@@ -527,30 +527,30 @@ namespace Jazz2::UI
 					auto command = canvas->RentRenderCommand();
 					command->setType(RenderCommand::Type::Text);
 					bool shaderChanged = (colorizeShader
-						? command->material().setShader(colorizeShader)
-						: command->material().setShaderProgramType(Material::ShaderProgramType::Sprite));
+						? command->material().SetShader(colorizeShader)
+						: command->material().SetShaderProgramType(Material::ShaderProgramType::Sprite));
 					if (shaderChanged) {
-						command->material().reserveUniformsDataMemory();
-						command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+						command->material().ReserveUniformsDataMemory();
+						command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 						// Required to reset render command properly
 						//command->setTransformation(command->transformation());
 
-						auto* textureUniform = command->material().uniform(Material::TextureUniformName);
+						auto* textureUniform = command->material().Uniform(Material::TextureUniformName);
 						if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 							textureUniform->SetIntValue(0); // GL_TEXTURE0
 						}
 					}
 
-					command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-					auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+					auto* instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(charWidth * scale, uvRect.H * scale);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
 
 					command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
 					command->setLayer(z - (charOffset & 1));
-					command->material().setTexture(*_texture.get());
+					command->material().SetTexture(*_texture.get());
 
 					canvas->_currentRenderQueue->addCommand(command);
 

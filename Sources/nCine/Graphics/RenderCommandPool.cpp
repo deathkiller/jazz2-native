@@ -20,7 +20,7 @@ namespace nCine
 	RenderCommand* RenderCommandPool::add(GLShaderProgram* shaderProgram)
 	{
 		RenderCommand* newCommand = add();
-		newCommand->material().setShaderProgram(shaderProgram);
+		newCommand->material().SetShaderProgram(shaderProgram);
 		return newCommand;
 	}
 
@@ -31,7 +31,7 @@ namespace nCine
 		for (std::uint32_t i = 0; i < freeCommandsPool_.size(); i++) {
 			std::uint32_t poolSize = std::uint32_t(freeCommandsPool_.size());
 			std::unique_ptr<RenderCommand>& command = freeCommandsPool_[i];
-			if (command && command->material().shaderProgram() == shaderProgram) {
+			if (command && command->material().GetShaderProgram() == shaderProgram) {
 				retrievedCommand = command.get();
 				usedCommandsPool_.push_back(std::move(command));
 				command = std::move(freeCommandsPool_[poolSize - 1]);
@@ -42,7 +42,7 @@ namespace nCine
 
 #if defined(NCINE_PROFILING)
 		if (retrievedCommand) {
-			RenderStatistics::addCommandPoolRetrieval();
+			RenderStatistics::AddCommandPoolRetrieval();
 		}
 #endif
 		return retrievedCommand;
@@ -64,7 +64,7 @@ namespace nCine
 	void RenderCommandPool::reset()
 	{
 #if defined(NCINE_PROFILING)
-		RenderStatistics::gatherCommandPoolStatistics(std::uint32_t(usedCommandsPool_.size()), std::uint32_t(freeCommandsPool_.size()));
+		RenderStatistics::GatherCommandPoolStatistics(std::uint32_t(usedCommandsPool_.size()), std::uint32_t(freeCommandsPool_.size()));
 #endif
 		for (std::unique_ptr<RenderCommand>& command : usedCommandsPool_) {
 			freeCommandsPool_.push_back(std::move(command));

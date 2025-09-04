@@ -109,7 +109,7 @@ namespace nCine
 
 		for (ManagedBuffer& buffer : buffers_) {
 #if defined(NCINE_PROFILING)
-			RenderStatistics::gatherStatistics(buffer);
+			RenderStatistics::GatherStatistics(buffer);
 #endif
 			const std::uint32_t usedSize = buffer.size - buffer.freeSpace;
 			FATAL_ASSERT(usedSize <= specs_[std::int32_t(buffer.type)].maxSize);

@@ -473,7 +473,7 @@ namespace Jazz2::Actors
 		if (effect == ParticleDebrisEffect::Fire) {
 			constexpr std::int32_t DebrisSize = 3;
 
-			Vector2i texSize = texture->size();
+			Vector2i texSize = texture->GetSize();
 
 			for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
 				for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
@@ -510,7 +510,7 @@ namespace Jazz2::Actors
 		if (effect == ParticleDebrisEffect::Lightning) {
 			constexpr std::int32_t DebrisSize = 3;
 
-			Vector2i texSize = texture->size();
+			Vector2i texSize = texture->GetSize();
 
 			for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
 				for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
@@ -548,7 +548,7 @@ namespace Jazz2::Actors
 		if (effect == ParticleDebrisEffect::Dissolve) {
 			constexpr int DebrisSize = 2;
 
-			Vector2i texSize = texture->size();
+			Vector2i texSize = texture->GetSize();
 
 			float x = _pos.X - res->Base->Hotspot.X;
 			float y = _pos.Y - res->Base->Hotspot.Y;
@@ -589,7 +589,7 @@ namespace Jazz2::Actors
 		if (effect == ParticleDebrisEffect::StandardInWater) {
 			constexpr std::int32_t DebrisSize = 3;
 
-			Vector2i texSize = texture->size();
+			Vector2i texSize = texture->GetSize();
 
 			for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
 				for (int fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
@@ -1428,20 +1428,20 @@ namespace Jazz2::Actors
 
 		bool shaderChanged;
 		switch (type) {
-			case ActorRendererType::Outline: shaderChanged = renderCommand_.material().setShader(resolver.GetShader(PrecompiledShader::Outline)); break;
-			case ActorRendererType::WhiteMask: shaderChanged = renderCommand_.material().setShader(resolver.GetShader(PrecompiledShader::WhiteMask)); break;
-			case ActorRendererType::PartialWhiteMask: shaderChanged = renderCommand_.material().setShader(resolver.GetShader(PrecompiledShader::PartialWhiteMask)); break;
-			case ActorRendererType::FrozenMask: shaderChanged = renderCommand_.material().setShader(resolver.GetShader(PrecompiledShader::FrozenMask)); break;
-			default: shaderChanged = renderCommand_.material().setShaderProgramType(Material::ShaderProgramType::Sprite); break;
+			case ActorRendererType::Outline: shaderChanged = renderCommand_.material().SetShader(resolver.GetShader(PrecompiledShader::Outline)); break;
+			case ActorRendererType::WhiteMask: shaderChanged = renderCommand_.material().SetShader(resolver.GetShader(PrecompiledShader::WhiteMask)); break;
+			case ActorRendererType::PartialWhiteMask: shaderChanged = renderCommand_.material().SetShader(resolver.GetShader(PrecompiledShader::PartialWhiteMask)); break;
+			case ActorRendererType::FrozenMask: shaderChanged = renderCommand_.material().SetShader(resolver.GetShader(PrecompiledShader::FrozenMask)); break;
+			default: shaderChanged = renderCommand_.material().SetShaderProgramType(Material::ShaderProgramType::Sprite); break;
 		}
 		if (shaderChanged) {
 			shaderHasChanged();
-			renderCommand_.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			renderCommand_.geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 			if (type == ActorRendererType::Outline || type == ActorRendererType::FrozenMask) {
 				_rendererTransition = 0.0f;
 				if (texture_ != nullptr) {
-					Vector2i texSize = texture_->size();
+					Vector2i texSize = texture_->GetSize();
 					setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 				}
 			} else {
@@ -1488,7 +1488,7 @@ namespace Jazz2::Actors
 				if (_rendererTransition < 0.8f) {
 					_rendererTransition = std::min(_rendererTransition + timeMult * 0.06f, 0.8f);
 					if (texture_ != nullptr) {
-						Vector2i texSize = texture_->size();
+						Vector2i texSize = texture_->GetSize();
 						setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 					}
 				}
@@ -1497,7 +1497,7 @@ namespace Jazz2::Actors
 				if (_rendererTransition < 1.0f) {
 					_rendererTransition = std::min(_rendererTransition + timeMult * 0.14f, 1.0f);
 					if (texture_ != nullptr) {
-						Vector2i texSize = texture_->size();
+						Vector2i texSize = texture_->GetSize();
 						setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 					}
 				}
@@ -1520,7 +1520,7 @@ namespace Jazz2::Actors
 	{
 		if (_rendererType == ActorRendererType::Outline || _rendererType == ActorRendererType::FrozenMask) {
 			if (newTexture != nullptr) {
-				Vector2i texSize = newTexture->size();
+				Vector2i texSize = newTexture->GetSize();
 				setColor(Colorf(1.0f / texSize.X, 1.0f / texSize.Y, 1.0f, _rendererTransition));
 			}
 		}

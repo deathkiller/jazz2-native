@@ -37,18 +37,18 @@ namespace Jazz2::Actors::Environment
 		auto& resolver = ContentResolver::Get();
 		if (!resolver.IsHeadless()) {
 			if (_currentAnimation != nullptr) {
-				_currentAnimation->Base->TextureDiffuse->setWrap(SamplerWrapping::Repeat);
+				_currentAnimation->Base->TextureDiffuse->SetWrap(SamplerWrapping::Repeat);
 			}
 
 			for (std::int32_t i = 0; i < ChunkCount; i++) {
 				_chunks[i] = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-				_chunks[i]->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
-				_chunks[i]->material().setBlendingEnabled(true);
-				_chunks[i]->material().reserveUniformsDataMemory();
-				_chunks[i]->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-				_chunks[i]->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				_chunks[i]->material().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+				_chunks[i]->material().SetBlendingEnabled(true);
+				_chunks[i]->material().ReserveUniformsDataMemory();
+				_chunks[i]->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				_chunks[i]->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-				auto* textureUniform = _chunks[i]->material().uniform(Material::TextureUniformName);
+				auto* textureUniform = _chunks[i]->material().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
@@ -113,7 +113,7 @@ namespace Jazz2::Actors::Environment
 	{
 		if (_currentAnimation != nullptr) {
 			auto& resBase = _currentAnimation->Base;
-			Vector2i texSize = resBase->TextureDiffuse->size();
+			Vector2i texSize = resBase->TextureDiffuse->GetSize();
 			float currentPhase = _phase + 0.04f * _levelHandler->GetElapsedFrames();
 
 			for (std::int32_t i = 0; i < ChunkCount; i++) {
@@ -122,7 +122,7 @@ namespace Jazz2::Actors::Environment
 				float chunkTexSize = ChunkSize / texSize.Y;
 				float chunkAngle = sinf(currentPhase - i * 0.08f) * 1.2f;
 
-				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+				auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
 				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, chunkTexSize, chunkTexSize * i);
 				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(texSize.X, ChunkSize);
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
@@ -131,7 +131,7 @@ namespace Jazz2::Actors::Environment
 				worldMatrix.RotateZ(chunkAngle);
 				command->setTransformation(worldMatrix);
 				command->setLayer(_renderer.layer());
-				command->material().setTexture(*resBase->TextureDiffuse);
+				command->material().SetTexture(*resBase->TextureDiffuse);
 
 				renderQueue.addCommand(command);
 			}

@@ -41,7 +41,7 @@ namespace nCine
 				}
 				binding.lastBindTime = TimeStamp::now();
 #if defined(NCINE_PROFILING)
-				RenderStatistics::addVaoPoolBinding();
+				RenderStatistics::AddVaoPoolBinding();
 #endif
 				break;
 			}
@@ -77,7 +77,7 @@ namespace nCine
 				GLDebug::MessageInsert({ debugString, length });
 #endif
 #if defined(NCINE_PROFILING)
-				RenderStatistics::addVaoPoolReuse();
+				RenderStatistics::AddVaoPoolReuse();
 #endif
 			}
 
@@ -90,12 +90,12 @@ namespace nCine
 			vaoPool_[index].format.Define();
 			vaoPool_[index].lastBindTime = TimeStamp::now();
 #if defined(NCINE_PROFILING)
-			RenderStatistics::addVaoPoolBinding();
+			RenderStatistics::AddVaoPoolBinding();
 #endif
 		}
 
 #if defined(NCINE_PROFILING)
-		RenderStatistics::gatherVaoPoolStatistics(std::uint32_t(vaoPool_.size()), std::uint32_t(vaoPool_.capacity()));
+		RenderStatistics::GatherVaoPoolStatistics(std::uint32_t(vaoPool_.size()), std::uint32_t(vaoPool_.capacity()));
 #endif
 	}
 

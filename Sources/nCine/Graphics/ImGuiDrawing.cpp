@@ -304,19 +304,19 @@ namespace nCine
 		cmd.setType(RenderCommand::Type::ImGui);
 
 		Material& material = cmd.material();
-		material.setShaderProgram(imguiShaderProgram_.get());
-		material.reserveUniformsDataMemory();
-		material.uniform(Material::TextureUniformName)->SetIntValue(0); // GL_TEXTURE0
+		material.SetShaderProgram(imguiShaderProgram_.get());
+		material.ReserveUniformsDataMemory();
+		material.Uniform(Material::TextureUniformName)->SetIntValue(0); // GL_TEXTURE0
 		imguiShaderProgram_->GetAttribute(Material::PositionAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, pos)));
 		imguiShaderProgram_->GetAttribute(Material::TexCoordsAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, uv)));
 		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, col)));
 		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetType(GL_UNSIGNED_BYTE);
 		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetNormalized(true);
-		material.setBlendingEnabled(true);
-		material.setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		material.SetBlendingEnabled(true);
+		material.SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		cmd.geometry().setNumElementsPerVertex(sizeof(ImDrawVert) / sizeof(GLfloat));
-		cmd.geometry().setDrawParameters(GL_TRIANGLES, 0, 0);
+		cmd.geometry().SetElementsPerVertex(sizeof(ImDrawVert) / sizeof(GLfloat));
+		cmd.geometry().SetDrawParameters(GL_TRIANGLES, 0, 0);
 	}
 
 	void ImGuiDrawing::draw(RenderQueue& renderQueue)
@@ -346,22 +346,22 @@ namespace nCine
 
 			RenderCommand& firstCmd = *retrieveCommandFromPool();
 
-			firstCmd.material().uniform(Material::GuiProjectionMatrixUniformName)->SetFloatVector(projectionMatrix_.Data());
+			firstCmd.material().Uniform(Material::GuiProjectionMatrixUniformName)->SetFloatVector(projectionMatrix_.Data());
 
-			firstCmd.geometry().shareVbo(nullptr);
-			GLfloat* vertices = firstCmd.geometry().acquireVertexPointer(imCmdList->VtxBuffer.Size * numElements, numElements);
+			firstCmd.geometry().ShareVbo(nullptr);
+			GLfloat* vertices = firstCmd.geometry().AcquireVertexPointer(imCmdList->VtxBuffer.Size * numElements, numElements);
 			memcpy(vertices, imCmdList->VtxBuffer.Data, imCmdList->VtxBuffer.Size * numElements * sizeof(GLfloat));
-			firstCmd.geometry().releaseVertexPointer();
+			firstCmd.geometry().ReleaseVertexPointer();
 
-			firstCmd.geometry().shareIbo(nullptr);
-			GLushort* indices = firstCmd.geometry().acquireIndexPointer(imCmdList->IdxBuffer.Size);
+			firstCmd.geometry().ShareIbo(nullptr);
+			GLushort* indices = firstCmd.geometry().AcquireIndexPointer(imCmdList->IdxBuffer.Size);
 			memcpy(indices, imCmdList->IdxBuffer.Data, imCmdList->IdxBuffer.Size * sizeof(GLushort));
-			firstCmd.geometry().releaseIndexPointer();
+			firstCmd.geometry().ReleaseIndexPointer();
 
 			if (lastLayerValue_ != theApplication().GetGuiSettings().imguiLayer) {
 				// It is enough to set the uniform value once as every ImGui command share the same shader
 				const float depth = RenderCommand::calculateDepth(theApplication().GetGuiSettings().imguiLayer, -1.0f, 1.0f);
-				firstCmd.material().uniform(Material::DepthUniformName)->SetFloatValue(depth);
+				firstCmd.material().Uniform(Material::DepthUniformName)->SetFloatValue(depth);
 				lastLayerValue_ = theApplication().GetGuiSettings().imguiLayer;
 			}
 
@@ -380,16 +380,16 @@ namespace nCine
 								   static_cast<GLsizei>(clipMax.x - clipMin.x), static_cast<GLsizei>(clipMax.y - clipMin.y));
 
 				if (cmdIdx > 0) {
-					currCmd.geometry().shareVbo(&firstCmd.geometry());
-					currCmd.geometry().shareIbo(&firstCmd.geometry());
+					currCmd.geometry().ShareVbo(&firstCmd.geometry());
+					currCmd.geometry().ShareIbo(&firstCmd.geometry());
 				}
 
-				currCmd.geometry().setNumIndices(imCmd->ElemCount);
-				currCmd.geometry().setFirstIndex(imCmd->IdxOffset);
-				currCmd.geometry().setFirstVertex(imCmd->VtxOffset);
+				currCmd.geometry().SetIndexCount(imCmd->ElemCount);
+				currCmd.geometry().SetFirstIndex(imCmd->IdxOffset);
+				currCmd.geometry().SetFirstVertex(imCmd->VtxOffset);
 				currCmd.setLayer(theApplication().GetGuiSettings().imguiLayer);
 				currCmd.setVisitOrder(numCmd);
-				currCmd.material().setTexture(reinterpret_cast<GLTexture*>(imCmd->GetTexID()));
+				currCmd.material().SetTexture(reinterpret_cast<GLTexture*>(imCmd->GetTexID()));
 
 				renderQueue.addCommand(&currCmd);
 				numCmd++;

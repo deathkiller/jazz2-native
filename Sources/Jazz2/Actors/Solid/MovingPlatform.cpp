@@ -73,12 +73,12 @@ namespace Jazz2::Actors::Solid
 			ChainPiece& piece = _pieces.emplace_back();
 			if (!resolver.IsHeadless()) {
 				piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-				piece.Command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
-				piece.Command->material().setBlendingEnabled(true);
-				piece.Command->material().reserveUniformsDataMemory();
-				piece.Command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				piece.Command->material().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+				piece.Command->material().SetBlendingEnabled(true);
+				piece.Command->material().ReserveUniformsDataMemory();
+				piece.Command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-				auto* textureUniform = piece.Command->material().uniform(Material::TextureUniformName);
+				auto* textureUniform = piece.Command->material().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
@@ -245,7 +245,7 @@ namespace Jazz2::Actors::Solid
 		if (!_pieces.empty()) {
 			auto* chainAnim = _metadata->FindAnimation((AnimState)1); // Chain
 			if (chainAnim != nullptr && chainAnim->Base->TextureDiffuse != nullptr) {
-				Vector2i texSize = chainAnim->Base->TextureDiffuse->size();
+				Vector2i texSize = chainAnim->Base->TextureDiffuse->GetSize();
 
 				for (std::int32_t i = 0; i < (std::int32_t)_pieces.size(); i++) {
 					auto* command = _pieces[i].Command.get();
@@ -258,7 +258,7 @@ namespace Jazz2::Actors::Solid
 					float texScaleY = (float(chainAnim->Base->FrameDimensions.Y) / float(texSize.Y));
 					float texBiasY = (float(chainAnim->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
-					auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+					auto* instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue((float)chainAnim->Base->FrameDimensions.X, (float)chainAnim->Base->FrameDimensions.Y);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
@@ -266,7 +266,7 @@ namespace Jazz2::Actors::Solid
 					auto pos = _pieces[i].Pos;
 					command->setTransformation(Matrix4x4f::Translation(pos.X - chainAnim->Base->FrameDimensions.X / 2, pos.Y - chainAnim->Base->FrameDimensions.Y / 2, 0.0f));
 					command->setLayer(_renderer.layer() - 2);
-					command->material().setTexture(*chainAnim->Base->TextureDiffuse.get());
+					command->material().SetTexture(*chainAnim->Base->TextureDiffuse.get());
 
 					renderQueue.addCommand(command);
 				}

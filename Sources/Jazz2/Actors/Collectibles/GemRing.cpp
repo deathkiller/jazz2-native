@@ -36,12 +36,12 @@ namespace Jazz2::Actors::Collectibles
 				ChainPiece& piece = _pieces.emplace_back();
 				piece.Scale = 0.8f;
 				piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-				piece.Command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
-				piece.Command->material().setBlendingEnabled(true);
-				piece.Command->material().reserveUniformsDataMemory();
-				piece.Command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				piece.Command->material().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+				piece.Command->material().SetBlendingEnabled(true);
+				piece.Command->material().ReserveUniformsDataMemory();
+				piece.Command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-				auto* textureUniform = piece.Command->material().uniform(Material::TextureUniformName);
+				auto* textureUniform = piece.Command->material().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
@@ -96,7 +96,7 @@ namespace Jazz2::Actors::Collectibles
 		if (!_pieces.empty()) {
 			auto* res = _metadata->FindAnimation(AnimState::Default); // GemRed
 			if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
-				Vector2i texSize = res->Base->TextureDiffuse->size();
+				Vector2i texSize = res->Base->TextureDiffuse->GetSize();
 
 				for (std::int32_t i = 0; i < _pieces.size(); i++) {
 					auto command = _pieces[i].Command.get();
@@ -109,7 +109,7 @@ namespace Jazz2::Actors::Collectibles
 					float texScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
 					float texBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
-					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+					auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(res->Base->FrameDimensions.X * _pieces[i].Scale, res->Base->FrameDimensions.Y * _pieces[i].Scale);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 0.7f).Data());
@@ -117,7 +117,7 @@ namespace Jazz2::Actors::Collectibles
 					auto& pos = _pieces[i].Pos;
 					command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f).RotateZ(_pieces[i].Angle));
 					command->setLayer(_renderer.layer() - 2);
-					command->material().setTexture(*res->Base->TextureDiffuse.get());
+					command->material().SetTexture(*res->Base->TextureDiffuse.get());
 
 					renderQueue.addCommand(command);
 				}

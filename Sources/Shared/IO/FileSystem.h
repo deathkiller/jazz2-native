@@ -189,14 +189,14 @@ namespace Death { namespace IO {
 		/** @brief Returns the path to the executable file for the running application */
 		static Containers::String GetExecutablePath();
 		/**
-		 * @brief Returns the path to the application-specific writable directory for saving game data
+		 * @brief Returns the path to the application-specific writable directory for saving game state
 		 * 
 		 * On macOS, the directory is usually equivalent to @cpp "~/Library/Application Support/<name>/" @ce. On Android,
-		 * it's the internal data directory of the package. On other Unix systems, it's usually
+		 * it's the internal data directory of the package. On other Unix systems, it usually points to
 		 * @cb{.sh} "${XDG_CONFIG_HOME}/<name>/ @ce or @cpp "~/.config/<name>/" @ce. On Windows, it's usually
-		 * @cpp "C:\\Users\\<user>\\Saved Games\\" @ce. If it doesn't exist, @cb{.bat} %APPDATA% @ce will be returned
-		 * instead. On Windows RT, the local folder of the package is returned, because the application doesn't have
-		 * access to the user directories.
+		 * @cpp "C:\Users\<user>\Saved Games\" @ce. If it doesn't exist, @cb{.bat} %APPDATA% @ce will be returned
+		 * instead. On Windows RT, the local data folder of the package is returned, because the application doesn't
+		 * have access to the user directories.
 		 */
 		static Containers::String GetSavePath(Containers::StringView applicationName);
 		/** @brief Returns the path of the current working directory */
@@ -207,7 +207,7 @@ namespace Death { namespace IO {
 		 * @brief Returns the path of the user home directory
 		 * 
 		 * On Unix and macOS, the directory is equivalent to @cb{.sh} ${HOME} @ce environment variable. On Windows,
-		 * the directory is equivalent to @cb{.bat} %USERPROFILE% @ce, which usually points to @cpp "C:\\Users\\<user>\\" @ce.
+		 * the directory is equivalent to @cb{.bat} %USERPROFILE% @ce, which usually points to @cpp "C:\Users\<user>\" @ce.
 		 */
 		static Containers::String GetHomeDirectory();
 		/**
@@ -215,7 +215,7 @@ namespace Death { namespace IO {
 		 * 
 		 * On Unix and macOS, the directory is usually equivalent to @cpp "/tmp/" @ce. On Windows, the directory is
 		 * equivalent to @cb{.bat} %TEMP% @ce. On Android, the directory is usually equivalent to the cache
-		 * directory of the package (for example @cpp "/data/user/0/package.name/cache/" @ce).
+		 * directory of the package (for example @cpp "/data/user/0/<package>/cache/" @ce).
 		 */
 		static Containers::String GetTempDirectory();
 
@@ -229,7 +229,10 @@ namespace Death { namespace IO {
 #endif
 #if defined(DEATH_TARGET_UNIX) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**
-		 * @brief Returns the path pointing to `${XDG_DATA_HOME}` (or `"~/.local/share/"` in the most cases)
+		 * @brief Returns the path pointing to `${XDG_DATA_HOME}` environment variable
+		 * 
+		 * If @cb{.sh} ${XDG_DATA_HOME} @ce environment variable is not set, @cpp "~/.local/share/" @ce
+		 * will be used instead.
 		 *
 		 * @partialsupport Available only on @ref DEATH_TARGET_UNIX "Unix" platform.
 		 */

@@ -184,7 +184,7 @@ namespace Jazz2::UI::Menu
 				float expandedAnimation3 = (expandedAnimation2 * expandedAnimation2 * (3.0f - 2.0f * expandedAnimation2));
 
 				if (item.Item.Description.TitleImage != nullptr) {
-					Vector2i titleSize = item.Item.Description.TitleImage->size() / 2;
+					Vector2i titleSize = item.Item.Description.TitleImage->GetSize() / 2;
 					_root->DrawTexture(*item.Item.Description.TitleImage, centerX, item.Y + 2.2f, IMenuContainer::FontLayer + 8, Alignment::Center, Vector2f(titleSize.X, titleSize.Y) * size * (1.0f - expandedAnimation3 * 0.2f) * 1.02f, Colorf(0.0f, 0.0f, 0.0f, 0.26f - expandedAnimation3 * 0.1f), true);
 					float alpha = 1.0f - expandedAnimation3 * 0.4f;
 					_root->DrawTexture(*item.Item.Description.TitleImage, centerX, item.Y, IMenuContainer::FontLayer + 10, Alignment::Center, Vector2f(titleSize.X, titleSize.Y) * size * (1.0f - expandedAnimation3 * 0.2f), Colorf(alpha, alpha, alpha, 1.0f), true);
@@ -275,7 +275,7 @@ namespace Jazz2::UI::Menu
 				auto& item = _items[_transitionFromEpisode];
 				if (item.Item.Description.BackgroundImage != nullptr) {
 					Vector2f center = Vector2f(canvas->ViewSize.X * 0.5f, canvas->ViewSize.Y * 0.7f);
-					Vector2i backgroundSize = item.Item.Description.BackgroundImage->size();
+					Vector2i backgroundSize = item.Item.Description.BackgroundImage->GetSize();
 
 					float expandedAnimation2 = std::min(_expandedAnimation * 6.0f, 1.0f);
 					float expandedAnimation3 = (expandedAnimation2 * expandedAnimation2 * (3.0f - 2.0f * expandedAnimation2));
@@ -293,7 +293,7 @@ namespace Jazz2::UI::Menu
 			auto& item = _items[_selectedIndex];
 			if (item.Item.Description.BackgroundImage != nullptr) {
 				Vector2f center = Vector2f(canvas->ViewSize.X * 0.5f, canvas->ViewSize.Y * 0.7f);
-				Vector2i backgroundSize = item.Item.Description.BackgroundImage->size();
+				Vector2i backgroundSize = item.Item.Description.BackgroundImage->GetSize();
 
 				float expandedAnimation2 = std::min(_expandedAnimation * 6.0f, 1.0f);
 				float expandedAnimation3 = (expandedAnimation2 * expandedAnimation2 * (3.0f - 2.0f * expandedAnimation2));
@@ -323,14 +323,14 @@ namespace Jazz2::UI::Menu
 			Vector2i viewSize = canvas->ViewSize;
 
 			auto* command = canvas->RentRenderCommand();
-			if (command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
-				command->material().reserveUniformsDataMemory();
-				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			if (command->material().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
+				command->material().ReserveUniformsDataMemory();
+				command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			}
 
-			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-			auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			auto* instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
 			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(Vector2f(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y)).Data());
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
