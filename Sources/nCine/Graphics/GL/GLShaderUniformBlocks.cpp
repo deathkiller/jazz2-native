@@ -103,7 +103,7 @@ namespace nCine
 
 				if (totalUsedSize > 0) {
 					const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::Uniform;
-					uboParams_ = RenderResources::buffersManager().acquireMemory(bufferType, totalUsedSize);
+					uboParams_ = RenderResources::GetBuffersManager().acquireMemory(bufferType, totalUsedSize);
 					if (uboParams_.mapBase != nullptr) {
 						if (hasMemoryGaps) {
 							std::int32_t offset = 0;

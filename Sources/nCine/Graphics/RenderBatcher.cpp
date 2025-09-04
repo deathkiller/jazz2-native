@@ -56,7 +56,7 @@ namespace nCine
 
 			// Split point if last command or split condition
 			if (i == srcQueue.size() - 1 || shouldSplit) {
-				const GLShaderProgram* batchedShader = RenderResources::batchedShader(prevCommand->material().shaderProgram());
+				const GLShaderProgram* batchedShader = RenderResources::GetBatchedShader(prevCommand->material().shaderProgram());
 				if (batchedShader && (endSplit - lastSplit) >= minBatchSize) {
 					// Split point for the maximum batch size
 					while (lastSplit < endSplit) {
@@ -127,11 +127,11 @@ namespace nCine
 		std::uint32_t instancesIndicesAmount = 0;
 
 		const GLShaderProgram* refShader = refCommand->material().shaderProgram();
-		GLShaderProgram* batchedShader = RenderResources::batchedShader(refShader);
+		GLShaderProgram* batchedShader = RenderResources::GetBatchedShader(refShader);
 		// The following check should never fail as it is already checked by the calling function
 		FATAL_ASSERT_MSG(batchedShader != nullptr, "Unsupported shader for batch element");
 		bool commandAdded = false;
-		batchCommand = RenderResources::renderCommandPool().retrieveOrAdd(batchedShader, commandAdded);
+		batchCommand = RenderResources::GetRenderCommandPool().retrieveOrAdd(batchedShader, commandAdded);
 
 		// Retrieving the original block instance size without the uniform buffer offset alignment
 		const GLUniformBlockCache* singleInstanceBlock = (*start)->material().uniformBlock(Material::InstanceBlockName);
@@ -210,8 +210,8 @@ namespace nCine
 			}
 		}
 
-		const std::uint32_t maxVertexDataSize = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::Array).maxSize;
-		const std::uint32_t maxIndexDataSize = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ElementArray).maxSize;
+		const std::uint32_t maxVertexDataSize = RenderResources::GetBuffersManager().specs(RenderBuffersManager::BufferTypes::Array).maxSize;
+		const std::uint32_t maxIndexDataSize = RenderResources::GetBuffersManager().specs(RenderBuffersManager::BufferTypes::ElementArray).maxSize;
 		// Sum the amount of VBO and IBO memory required by the batch
 		it = start;
 		const bool refShaderHasAttributes = (refShader->GetAttributeCount() > 0);

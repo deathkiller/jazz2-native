@@ -30,7 +30,7 @@ namespace Jazz2::UI::Menu
 				mainMenu->_root->RefreshCacheLevels(true);
 			}
 
-			std::uint32_t filesRemoved = RenderResources::binaryShaderCache().Prune();
+			std::uint32_t filesRemoved = RenderResources::GetBinaryShaderCache().Prune();
 			LOGI("Pruning binary shader cache (removed {} files)...", filesRemoved);
 
 			_this->_done = true;

@@ -90,15 +90,15 @@ namespace nCine
 		if (batchingEnabled) {
 			ZoneScopedNC("Batching", 0x81A861);
 			// Always create batches after sorting
-			RenderResources::renderBatcher().createBatches(opaqueQueue_, opaqueBatchedQueue_);
-			RenderResources::renderBatcher().createBatches(transparentQueue_, transparentBatchedQueue_);
+			RenderResources::GetRenderBatcher().createBatches(opaqueQueue_, opaqueBatchedQueue_);
+			RenderResources::GetRenderBatcher().createBatches(transparentQueue_, transparentBatchedQueue_);
 		}
 
 		// Avoid GPU stalls by uploading to VBOs, IBOs and UBOs before drawing
 		if (!opaques->empty()) {
 			ZoneScopedNC("Commit opaques", 0x81A861);
 #if defined(DEATH_DEBUG)
-			std::size_t length = formatInto(debugString, "Commit {} opaque command(s) for viewport 0x{:x}", opaques->size(), std::uintptr_t(RenderResources::currentViewport()));
+			std::size_t length = formatInto(debugString, "Commit {} opaque command(s) for viewport 0x{:x}", opaques->size(), std::uintptr_t(RenderResources::GetCurrentViewport()));
 			GLDebug::ScopedGroup scoped({ debugString, length });
 #endif
 			for (RenderCommand* opaqueRenderCommand : *opaques) {
@@ -109,7 +109,7 @@ namespace nCine
 		if (!transparents->empty()) {
 			ZoneScopedNC("Commit transparents", 0x81A861);
 #if defined(DEATH_DEBUG)
-			std::size_t length = formatInto(debugString, "Commit {} transparent command(s) for viewport 0x{:x}", transparents->size(), std::uintptr_t(RenderResources::currentViewport()));
+			std::size_t length = formatInto(debugString, "Commit {} transparent command(s) for viewport 0x{:x}", transparents->size(), std::uintptr_t(RenderResources::GetCurrentViewport()));
 			GLDebug::ScopedGroup scoped({ debugString, length });
 #endif
 			for (RenderCommand* transparentRenderCommand : *transparents) {
@@ -208,6 +208,6 @@ namespace nCine
 		transparentQueue_.clear();
 		transparentBatchedQueue_.clear();
 
-		RenderResources::renderBatcher().reset();
+		RenderResources::GetRenderBatcher().reset();
 	}
 }

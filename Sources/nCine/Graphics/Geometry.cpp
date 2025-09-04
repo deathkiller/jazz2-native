@@ -58,7 +58,7 @@ namespace nCine
 		} else {
 			const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::Array;
 			if (vboParams_.mapBase == nullptr) {
-				vboParams_ = RenderResources::buffersManager().acquireMemory(bufferType, numFloats * sizeof(GLfloat), numFloatsAlignment * sizeof(GLfloat));
+				vboParams_ = RenderResources::GetBuffersManager().acquireMemory(bufferType, numFloats * sizeof(GLfloat), numFloatsAlignment * sizeof(GLfloat));
 			}
 		}
 
@@ -72,7 +72,7 @@ namespace nCine
 		hasDirtyVertices_ = true;
 
 		if (vboParams_.mapBase == nullptr) {
-			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
+			const GLenum mapFlags = RenderResources::GetBuffersManager().specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
 			FATAL_ASSERT_MSG(mapFlags, "Mapping of OpenGL buffers is not available");
 			vboParams_.mapBase = static_cast<GLubyte*>(vbo_->MapBufferRange(0, vbo_->GetSize(), mapFlags));
 		}
@@ -132,7 +132,7 @@ namespace nCine
 		} else {
 			const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::ElementArray;
 			if (iboParams_.mapBase == nullptr) {
-				iboParams_ = RenderResources::buffersManager().acquireMemory(bufferType, numIndices * sizeof(GLushort));
+				iboParams_ = RenderResources::GetBuffersManager().acquireMemory(bufferType, numIndices * sizeof(GLushort));
 			}
 		}
 
@@ -146,7 +146,7 @@ namespace nCine
 		hasDirtyIndices_ = true;
 
 		if (iboParams_.mapBase == nullptr) {
-			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ElementArray).mapFlags;
+			const GLenum mapFlags = RenderResources::GetBuffersManager().specs(RenderBuffersManager::BufferTypes::ElementArray).mapFlags;
 			FATAL_ASSERT_MSG(mapFlags, "Mapping of OpenGL buffers is not available");
 			iboParams_.mapBase = static_cast<GLubyte*>(ibo_->MapBufferRange(0, ibo_->GetSize(), mapFlags));
 		}
@@ -223,7 +223,7 @@ namespace nCine
 	{
 		if (hostVertexPointer_ != nullptr && hasDirtyVertices_) {
 			// Checking if the common VBO is allowed to use mapping and do the same for the custom one
-			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
+			const GLenum mapFlags = RenderResources::GetBuffersManager().specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
 			const std::uint32_t numFloats = numVertices_ * numElementsPerVertex_;
 
 			if (mapFlags == 0 && vbo_ != nullptr) {
@@ -247,7 +247,7 @@ namespace nCine
 	{
 		if (hostIndexPointer_ != nullptr && hasDirtyIndices_) {
 			// Checking if the common IBO is allowed to use mapping and do the same for the custom one
-			const GLenum mapFlags = RenderResources::buffersManager().specs(RenderBuffersManager::BufferTypes::ElementArray).mapFlags;
+			const GLenum mapFlags = RenderResources::GetBuffersManager().specs(RenderBuffersManager::BufferTypes::ElementArray).mapFlags;
 
 			if (mapFlags == 0 && ibo_ != nullptr) {
 				// Using buffer orphaning + `glBufferSubData()` when having a custom IBO with no mapping available

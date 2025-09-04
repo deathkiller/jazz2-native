@@ -36,7 +36,7 @@ namespace nCine
 
 	bool Material::setShaderProgramType(ShaderProgramType shaderProgramType)
 	{
-		GLShaderProgram* shaderProgram = RenderResources::shaderProgram(shaderProgramType);
+		GLShaderProgram* shaderProgram = RenderResources::GetShaderProgram(shaderProgramType);
 		if (shaderProgram == nullptr || shaderProgram == shaderProgram_) {
 			return false;
 		}
@@ -58,7 +58,7 @@ namespace nCine
 		shaderUniforms_.SetProgram(shaderProgram_, nullptr, ProjectionViewMatrixExcludeString);
 		shaderUniformBlocks_.SetProgram(shaderProgram_);
 
-		RenderResources::setDefaultAttributesParameters(*shaderProgram_);
+		RenderResources::SetDefaultAttributesParameters(*shaderProgram_);
 	}
 
 	bool Material::setShader(Shader* shader)
@@ -74,7 +74,7 @@ namespace nCine
 
 	void Material::setDefaultAttributesParameters()
 	{
-		RenderResources::setDefaultAttributesParameters(*shaderProgram_);
+		RenderResources::SetDefaultAttributesParameters(*shaderProgram_);
 	}
 
 	void Material::reserveUniformsDataMemory()

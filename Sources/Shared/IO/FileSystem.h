@@ -188,7 +188,16 @@ namespace Death { namespace IO {
 
 		/** @brief Returns the path to the executable file for the running application */
 		static Containers::String GetExecutablePath();
-		/** @brief Returns the path to the application-specific writable directory for saving data */
+		/**
+		 * @brief Returns the path to the application-specific writable directory for saving game data
+		 * 
+		 * On macOS, the directory is usually equivalent to `"~/Library/Application Support/<name>/"`. On Android,
+		 * it's the internal data directory of the package. On other Unix systems, it's usually
+		 * @cb{.sh} "${XDG_CONFIG_HOME}/<name>/ @ce or `"~/.config/<name>/"`. On Windows, it's usually
+		 * `"C:\Users\<user>\Saved Games\"`. If it doesn't exist, @cb{.bat} %APPDATA% @ce will be returned instead.
+		 * On Windows RT, the local folder of the package is returned, because the application doesn't have access
+		 * to the user directories.
+		 */
 		static Containers::String GetSavePath(Containers::StringView applicationName);
 		/** @brief Returns the path of the current working directory */
 		static Containers::String GetWorkingDirectory();
@@ -197,11 +206,17 @@ namespace Death { namespace IO {
 		/**
 		 * @brief Returns the path of the user home directory
 		 * 
-		 * On Unix and macOS, the directory is equivalent to @cb{.sh} ${HOME} @ce environment variable.
-		 * On Windows, the directory is equivalent to @cb{.bat} %USERPROFILE% @ce.
+		 * On Unix and macOS, the directory is equivalent to @cb{.sh} ${HOME} @ce environment variable. On Windows,
+		 * the directory is equivalent to @cb{.bat} %USERPROFILE% @ce, which usually points to `"C:\Users\<user>\"`.
 		 */
 		static Containers::String GetHomeDirectory();
-		/** @brief Returns the path of the directory for temporary files */
+		/**
+		 * @brief Returns the path of the directory for temporary files
+		 * 
+		 * On Unix and macOS, the directory is usually equivalent to `"/tmp/"`. On Windows, the directory is
+		 * equivalent to @cb{.bat} %TEMP% @ce. On Android, the directory is usually equivalent to the cache
+		 * directory of the package (for example `"/data/user/0/package.name/cache/"`).
+		 */
 		static Containers::String GetTempDirectory();
 
 #if defined(DEATH_TARGET_ANDROID) || defined(DOXYGEN_GENERATING_OUTPUT)
@@ -214,7 +229,7 @@ namespace Death { namespace IO {
 #endif
 #if defined(DEATH_TARGET_UNIX) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**
-		 * @brief Returns the path pointing to `$XDG_DATA_HOME` or `"~/.local/share/"` in the most cases
+		 * @brief Returns the path pointing to `${XDG_DATA_HOME}` (or "~/.local/share/"` in the most cases)
 		 *
 		 * @partialsupport Available only on @ref DEATH_TARGET_UNIX "Unix" platform.
 		 */
