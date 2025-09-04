@@ -16,7 +16,7 @@ namespace nCine
 	RenderStatistics::VaoPool RenderStatistics::vaoPool_;
 	RenderStatistics::CommandPool RenderStatistics::commandPool_;
 
-	void RenderStatistics::reset()
+	void RenderStatistics::Reset()
 	{
 		TracyPlot("Vertices", static_cast<int64_t>(allCommands_.vertices));
 		TracyPlot("Render Commands", static_cast<int64_t>(allCommands_.commands));
@@ -38,7 +38,7 @@ namespace nCine
 		commandPool_.reset();
 	}
 
-	void RenderStatistics::gatherStatistics(const RenderCommand& command)
+	void RenderStatistics::GatherStatistics(const RenderCommand& command)
 	{
 		const GLsizei numVertices = command.geometry().numVertices();
 		const unsigned int numIndices = command.geometry().numIndices();
@@ -57,18 +57,18 @@ namespace nCine
 		const unsigned int typeIndex = (unsigned int)command.type();
 		typedCommands_[typeIndex].vertices += verticesToCount;
 		typedCommands_[typeIndex].commands++;
-		typedCommands_[typeIndex].transparents += (command.material().isBlendingEnabled()) ? 1 : 0;
+		typedCommands_[typeIndex].transparents += (command.material().IsBlendingEnabled()) ? 1 : 0;
 		typedCommands_[typeIndex].instances += command.numInstances();
 		typedCommands_[typeIndex].batchSize += command.batchSize();
 
 		allCommands_.vertices += verticesToCount;
 		allCommands_.commands++;
-		allCommands_.transparents += (command.material().isBlendingEnabled()) ? 1 : 0;
+		allCommands_.transparents += (command.material().IsBlendingEnabled()) ? 1 : 0;
 		allCommands_.instances += command.numInstances();
 		allCommands_.batchSize += command.batchSize();
 	}
 
-	void RenderStatistics::gatherStatistics(const RenderBuffersManager::ManagedBuffer& buffer)
+	void RenderStatistics::GatherStatistics(const RenderBuffersManager::ManagedBuffer& buffer)
 	{
 		const unsigned int typeIndex = (unsigned int)buffer.type;
 		typedBuffers_[typeIndex].count++;

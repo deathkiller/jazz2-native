@@ -7,7 +7,7 @@ namespace nCine
 	BaseSprite::BaseSprite(SceneNode* parent, Texture* texture, float xx, float yy)
 		: DrawableNode(parent, xx, yy), texture_(texture), texRect_(0, 0, 0, 0), flippedX_(false), flippedY_(false), instanceBlock_(nullptr)
 	{
-		renderCommand_.material().setBlendingEnabled(true);
+		renderCommand_.material().SetBlendingEnabled(true);
 	}
 
 	BaseSprite::BaseSprite(SceneNode* parent, Texture* texture, Vector2f position)
@@ -95,9 +95,9 @@ namespace nCine
 
 	void BaseSprite::shaderHasChanged()
 	{
-		renderCommand_.material().reserveUniformsDataMemory();
-		instanceBlock_ = renderCommand_.material().uniformBlock(Material::InstanceBlockName);
-		GLUniformCache* textureUniform = renderCommand_.material().uniform(Material::TextureUniformName);
+		renderCommand_.material().ReserveUniformsDataMemory();
+		instanceBlock_ = renderCommand_.material().UniformBlock(Material::InstanceBlockName);
+		GLUniformCache* textureUniform = renderCommand_.material().Uniform(Material::TextureUniformName);
 		if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
 			textureUniform->SetIntValue(0); // GL_TEXTURE0
 		}
@@ -133,11 +133,11 @@ namespace nCine
 
 		if (dirtyBits_.test(DirtyBitPositions::TextureBit)) {
 			if (texture_ != nullptr) {
-				renderCommand_.material().setTexture(*texture_);
+				renderCommand_.material().SetTexture(*texture_);
 
 				GLUniformCache* texRectUniform = instanceBlock_->GetUniform(Material::TexRectUniformName);
 				if (texRectUniform != nullptr) {
-					const Vector2i texSize = texture_->size();
+					const Vector2i texSize = texture_->GetSize();
 					const float texScaleX = texRect_.W / float(texSize.X);
 					const float texBiasX = texRect_.X / float(texSize.X);
 					const float texScaleY = texRect_.H / float(texSize.Y);
@@ -146,7 +146,7 @@ namespace nCine
 					texRectUniform->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 				}
 			} else {
-				renderCommand_.material().setTexture(nullptr);
+				renderCommand_.material().SetTexture(nullptr);
 			}
 
 			dirtyBits_.reset(DirtyBitPositions::TextureBit);

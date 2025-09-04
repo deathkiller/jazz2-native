@@ -59,20 +59,20 @@ namespace nCine
 		renderCommand_.setType(RenderCommand::Type::Sprite);
 
 		Material::ShaderProgramType shaderProgramType = (texture_ != nullptr ? Material::ShaderProgramType::Sprite : Material::ShaderProgramType::SpriteNoTexture);
-		renderCommand_.material().setShaderProgramType(shaderProgramType);
+		renderCommand_.material().SetShaderProgramType(shaderProgramType);
 		shaderHasChanged();
-		renderCommand_.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		renderCommand_.geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 		if (texture_ != nullptr) {
-			setTexRect(Recti(0, 0, texture_->width(), texture_->height()));
+			setTexRect(Recti(0, 0, texture_->GetWidth(), texture_->GetHeight()));
 		}
 	}
 
 	void Sprite::textureHasChanged(Texture* newTexture)
 	{
-		if (renderCommand_.material().shaderProgramType() != Material::ShaderProgramType::Custom) {
+		if (renderCommand_.material().GetShaderProgramType() != Material::ShaderProgramType::Custom) {
 			Material::ShaderProgramType shaderProgramType = (newTexture != nullptr ? Material::ShaderProgramType::Sprite : Material::ShaderProgramType::SpriteNoTexture);
-			const bool hasChanged = renderCommand_.material().setShaderProgramType(shaderProgramType);
+			const bool hasChanged = renderCommand_.material().SetShaderProgramType(shaderProgramType);
 			if (hasChanged) {
 				shaderHasChanged();
 			}
@@ -82,14 +82,14 @@ namespace nCine
 			if (texture_ != nullptr && texture_ != newTexture) {
 				// Trying to keep the old texture rectangle aspect ratio
 				Recti texRect = texRect_;
-				texRect.X = (int)((texRect.X / float(texture_->width())) * float(newTexture->width()));
-				texRect.Y = (int)((texRect.Y / float(texture_->height())) * float(newTexture->width()));
-				texRect.W = (int)((texRect.W / float(texture_->width())) * float(newTexture->width()));
-				texRect.H = (int)((texRect.H / float(texture_->height())) * float(newTexture->width()));
+				texRect.X = (int)((texRect.X / float(texture_->GetWidth())) * float(newTexture->GetWidth()));
+				texRect.Y = (int)((texRect.Y / float(texture_->GetHeight())) * float(newTexture->GetHeight()));
+				texRect.W = (int)((texRect.W / float(texture_->GetWidth())) * float(newTexture->GetWidth()));
+				texRect.H = (int)((texRect.H / float(texture_->GetHeight())) * float(newTexture->GetHeight()));
 				setTexRect(texRect); // it also sets width_ and height_
 			} else {
 				// Assigning a new texture where there wasn't any or reassigning the same texture (that might have changed size)
-				setTexRect(Recti(0, 0, newTexture->width(), newTexture->height()));
+				setTexRect(Recti(0, 0, newTexture->GetWidth(), newTexture->GetHeight()));
 			}
 		}
 	}

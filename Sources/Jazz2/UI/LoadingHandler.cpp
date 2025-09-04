@@ -85,7 +85,7 @@ namespace Jazz2::UI
 			Vector2f size = Vector2f(base->FrameDimensions.X, base->FrameDimensions.Y);
 			Vector2f pos = Vector2f(ViewSize.X - size.X - 50.0f, ViewSize.Y - size.Y - 40.0f);
 
-			Vector2i texSize = base->TextureDiffuse->size();
+			Vector2i texSize = base->TextureDiffuse->GetSize();
 			std::int32_t col = frame % base->FrameConfiguration.X;
 			std::int32_t row = frame / base->FrameConfiguration.X;
 			Vector4f texCoords = Vector4f(

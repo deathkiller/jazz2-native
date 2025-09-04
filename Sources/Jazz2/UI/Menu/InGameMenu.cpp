@@ -400,7 +400,7 @@ namespace Jazz2::UI::Menu
 			adjustedPos.Y = std::round(adjustedPos.Y);
 		}
 
-		Vector2i texSize = base->TextureDiffuse->size();
+		Vector2i texSize = base->TextureDiffuse->GetSize();
 		std::int32_t col = frame % base->FrameConfiguration.X;
 		std::int32_t row = frame / base->FrameConfiguration.X;
 		Vector4f texCoords = Vector4f(

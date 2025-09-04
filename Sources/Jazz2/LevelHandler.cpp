@@ -1705,7 +1705,7 @@ namespace Jazz2
 					auto* res = _commonResources->FindAnimation(Rain);
 					if (res != nullptr) {
 						auto& resBase = res->Base;
-						Vector2i texSize = resBase->TextureDiffuse->size();
+						Vector2i texSize = resBase->TextureDiffuse->GetSize();
 						float scale = Random().FastFloat(0.4f, 1.1f);
 						float speedX = Random().FastFloat(2.2f, 2.7f) * scale;
 						float speedY = Random().FastFloat(7.6f, 8.6f) * scale;
@@ -1743,7 +1743,7 @@ namespace Jazz2
 					auto* res = _commonResources->FindAnimation(Snow);
 					if (res != nullptr) {
 						auto& resBase = res->Base;
-						Vector2i texSize = resBase->TextureDiffuse->size();
+						Vector2i texSize = resBase->TextureDiffuse->GetSize();
 						float scale = Random().FastFloat(0.4f, 1.1f);
 						float speedX = Random().FastFloat(-1.6f, -1.2f) * scale;
 						float speedY = Random().FastFloat(3.0f, 4.0f) * scale;

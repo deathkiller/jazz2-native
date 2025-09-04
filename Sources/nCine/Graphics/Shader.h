@@ -69,56 +69,56 @@ namespace nCine
 		Shader(const Shader&) = delete;
 		Shader& operator=(const Shader&) = delete;
 
-		bool loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
-		bool loadFromMemory(const char* shaderName, const char* vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
-		bool loadFromMemory(const char* vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
+		bool LoadFromMemory(const char* shaderName, const char* vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(const char* vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
 
-		bool loadFromMemory(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
-		bool loadFromMemory(const char* shaderName, DefaultVertex vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
-		bool loadFromMemory(DefaultVertex vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
-		bool loadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
-		bool loadFromMemory(const char* shaderName, const char* vertex, DefaultFragment fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
-		bool loadFromMemory(const char* vertex, DefaultFragment fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
+		bool LoadFromMemory(const char* shaderName, DefaultVertex vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(DefaultVertex vertex, const char* fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
+		bool LoadFromMemory(const char* shaderName, const char* vertex, DefaultFragment fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(const char* vertex, DefaultFragment fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
 
-		bool loadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
-		bool loadFromFile(const char* shaderName, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
-		bool loadFromFile(StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
+		bool LoadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
+		bool LoadFromFile(const char* shaderName, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
+		bool LoadFromFile(StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
 
-		bool loadFromFile(const char* shaderName, Introspection introspection, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
-		bool loadFromFile(const char* shaderName, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
-		bool loadFromFile(DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
-		bool loadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
-		bool loadFromFile(const char* shaderName, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
-		bool loadFromFile(StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
+		bool LoadFromFile(const char* shaderName, Introspection introspection, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
+		bool LoadFromFile(const char* shaderName, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
+		bool LoadFromFile(DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
+		bool LoadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
+		bool LoadFromFile(const char* shaderName, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
+		bool LoadFromFile(StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize = GLShaderProgram::DefaultBatchSize);
 
-		bool loadFromCache(const char* shaderName, std::uint64_t shaderVersion, Introspection introspection);
+		bool LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Introspection introspection);
 
-		bool saveToCache(const char* shaderName, std::uint64_t shaderVersion) const;
+		bool SaveToCache(const char* shaderName, std::uint64_t shaderVersion) const;
 
 		/// Sets the VBO stride and pointer for the specified vertex attribute
-		bool setAttribute(const char* name, std::int32_t stride, void* pointer);
+		bool SetAttribute(const char* name, std::int32_t stride, void* pointer);
 
 		/// Returns `true` if the shader is linked and can therefore be used
-		bool isLinked() const;
+		bool IsLinked() const;
 
 		/// Returns the length of the information log including the null termination character
-		unsigned int retrieveInfoLogLength() const;
+		unsigned int RetrieveInfoLogLength() const;
 		/// Retrieves the information log and copies it in the provided string object
-		void retrieveInfoLog(std::string& infoLog) const;
+		void RetrieveInfoLog(std::string& infoLog) const;
 
 		/// Returns the automatic log on errors flag
-		bool logOnErrors() const;
+		bool GetLogOnErrors() const;
 		/// Sets the automatic log on errors flag
 		/*! If the flag is true the shader will automatically log compilation and linking errors. */
-		void setLogOnErrors(bool shouldLogOnErrors);
+		void SetLogOnErrors(bool shouldLogOnErrors);
 
 		/// Sets the OpenGL object label for the shader program
-		void setGLShaderProgramLabel(const char* label);
+		void SetGLShaderProgramLabel(const char* label);
 
 		/// Registers a shaders to be used for batches of render commands
-		void registerBatchedShader(Shader& batchedShader);
+		void RegisterBatchedShader(Shader& batchedShader);
 
-		GLShaderProgram* getHandle() {
+		GLShaderProgram* GetHandle() {
 			return glShaderProgram_.get();
 		}
 
@@ -130,7 +130,7 @@ namespace nCine
 		/// OpenGL shader program
 		std::unique_ptr<GLShaderProgram> glShaderProgram_;
 
-		bool loadDefaultShader(DefaultVertex vertex, int batchSize);
-		bool loadDefaultShader(DefaultFragment fragment);
+		bool LoadDefaultShader(DefaultVertex vertex, int batchSize);
+		bool LoadDefaultShader(DefaultFragment fragment);
 	};
 }

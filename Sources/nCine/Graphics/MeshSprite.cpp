@@ -53,9 +53,9 @@ namespace nCine
 
 		vertexDataPointer_ = vertices_.data();
 		numVertices_ = numVertices;
-		renderCommand_.geometry().setNumVertices(numVertices);
-		renderCommand_.geometry().setNumElementsPerVertex(floatsPerVertex);
-		renderCommand_.geometry().setHostVertexPointer(vertexDataPointer_);
+		renderCommand_.geometry().SetVertexCount(numVertices);
+		renderCommand_.geometry().SetElementsPerVertex(floatsPerVertex);
+		renderCommand_.geometry().SetHostVertexPointer(vertexDataPointer_);
 	}
 
 	void MeshSprite::copyVertices(std::uint32_t numVertices, const Vertex* vertices)
@@ -91,9 +91,9 @@ namespace nCine
 
 		vertexDataPointer_ = reinterpret_cast<const float*>(vertexData);
 		numVertices_ = numVertices;
-		renderCommand_.geometry().setNumVertices(numVertices);
-		renderCommand_.geometry().setNumElementsPerVertex(floatsPerVertex);
-		renderCommand_.geometry().setHostVertexPointer(vertexDataPointer_);
+		renderCommand_.geometry().SetVertexCount(numVertices);
+		renderCommand_.geometry().SetElementsPerVertex(floatsPerVertex);
+		renderCommand_.geometry().SetHostVertexPointer(vertexDataPointer_);
 	}
 
 	void MeshSprite::setVertices(std::uint32_t numVertices, const Vertex* vertices)
@@ -132,9 +132,9 @@ namespace nCine
 
 		vertexDataPointer_ = vertices_.data();
 		numVertices_ = numVertices;
-		renderCommand_.geometry().setNumVertices(numVertices);
-		renderCommand_.geometry().setNumElementsPerVertex(floatsPerVertex);
-		renderCommand_.geometry().setHostVertexPointer(vertexDataPointer_);
+		renderCommand_.geometry().SetVertexCount(numVertices);
+		renderCommand_.geometry().SetElementsPerVertex(floatsPerVertex);
+		renderCommand_.geometry().SetHostVertexPointer(vertexDataPointer_);
 
 		return vertices_.data();
 	}
@@ -196,9 +196,9 @@ namespace nCine
 
 		vertexDataPointer_ = vertices_.data();
 		numVertices_ = numVertices;
-		renderCommand_.geometry().setNumVertices(numVertices);
-		renderCommand_.geometry().setNumElementsPerVertex(numFloats);
-		renderCommand_.geometry().setHostVertexPointer(vertexDataPointer_);
+		renderCommand_.geometry().SetVertexCount(numVertices);
+		renderCommand_.geometry().SetElementsPerVertex(numFloats);
+		renderCommand_.geometry().SetHostVertexPointer(vertexDataPointer_);
 
 		dirtyBits_.set(DirtyBitPositions::SizeBit);
 		dirtyBits_.set(DirtyBitPositions::AabbBit);
@@ -216,8 +216,8 @@ namespace nCine
 
 		indexDataPointer_ = indices_.data();
 		numIndices_ = numIndices;
-		renderCommand_.geometry().setNumIndices(numIndices_);
-		renderCommand_.geometry().setHostIndexPointer(indexDataPointer_);
+		renderCommand_.geometry().SetIndexCount(numIndices_);
+		renderCommand_.geometry().SetHostIndexPointer(indexDataPointer_);
 	}
 
 	void MeshSprite::copyIndices(const MeshSprite& meshSprite)
@@ -231,8 +231,8 @@ namespace nCine
 
 		indexDataPointer_ = indices;
 		numIndices_ = numIndices;
-		renderCommand_.geometry().setNumIndices(numIndices_);
-		renderCommand_.geometry().setHostIndexPointer(indexDataPointer_);
+		renderCommand_.geometry().SetIndexCount(numIndices_);
+		renderCommand_.geometry().SetHostIndexPointer(indexDataPointer_);
 	}
 
 	void MeshSprite::setIndices(const MeshSprite& meshSprite)
@@ -251,8 +251,8 @@ namespace nCine
 
 		indexDataPointer_ = indices_.data();
 		numIndices_ = numIndices;
-		renderCommand_.geometry().setNumIndices(numIndices_);
-		renderCommand_.geometry().setHostIndexPointer(indexDataPointer_);
+		renderCommand_.geometry().SetIndexCount(numIndices_);
+		renderCommand_.geometry().SetHostIndexPointer(indexDataPointer_);
 
 		return indices_.data();
 	}
@@ -278,45 +278,45 @@ namespace nCine
 		renderCommand_.setType(RenderCommand::Type::MeshSprite);
 
 		const Material::ShaderProgramType shaderProgramType = (texture_ != nullptr ? Material::ShaderProgramType::MeshSprite : Material::ShaderProgramType::MeshSpriteNoTexture);
-		renderCommand_.material().setShaderProgramType(shaderProgramType);
+		renderCommand_.material().SetShaderProgramType(shaderProgramType);
 
 		shaderHasChanged();
-		renderCommand_.geometry().setPrimitiveType(GL_TRIANGLE_STRIP);
-		renderCommand_.geometry().setNumElementsPerVertex(texture_ ? VertexFloats : VertexNoTextureFloats);
-		renderCommand_.geometry().setHostVertexPointer(vertexDataPointer_);
+		renderCommand_.geometry().SetPrimitiveType(GL_TRIANGLE_STRIP);
+		renderCommand_.geometry().SetElementsPerVertex(texture_ ? VertexFloats : VertexNoTextureFloats);
+		renderCommand_.geometry().SetHostVertexPointer(vertexDataPointer_);
 
 		if (texture_ != nullptr) {
-			setTexRect(Recti(0, 0, texture_->width(), texture_->height()));
+			setTexRect(Recti(0, 0, texture_->GetWidth(), texture_->GetHeight()));
 		}
 	}
 
 	void MeshSprite::shaderHasChanged()
 	{
 		BaseSprite::shaderHasChanged();
-		renderCommand_.material().setDefaultAttributesParameters();
+		renderCommand_.material().SetDefaultAttributesParameters();
 	}
 
 	void MeshSprite::textureHasChanged(Texture* newTexture)
 	{
-		if (renderCommand_.material().shaderProgramType() != Material::ShaderProgramType::Custom) {
+		if (renderCommand_.material().GetShaderProgramType() != Material::ShaderProgramType::Custom) {
 			const Material::ShaderProgramType shaderProgramType = (newTexture != nullptr ? Material::ShaderProgramType::MeshSprite : Material::ShaderProgramType::MeshSpriteNoTexture);
-			const bool hasChanged = renderCommand_.material().setShaderProgramType(shaderProgramType);
+			const bool hasChanged = renderCommand_.material().SetShaderProgramType(shaderProgramType);
 			if (hasChanged) {
 				shaderHasChanged();
 			}
-			renderCommand_.geometry().setNumElementsPerVertex(newTexture ? VertexFloats : VertexNoTextureFloats);
+			renderCommand_.geometry().SetElementsPerVertex(newTexture ? VertexFloats : VertexNoTextureFloats);
 		}
 
 		if (texture_ != nullptr && newTexture != nullptr && texture_ != newTexture) {
 			Recti texRect = texRect_;
-			texRect.X = (texRect.X * newTexture->width() / texture_->width());
-			texRect.Y = (texRect.Y * newTexture->height() / texture_->height());
-			texRect.W = (texRect.W * newTexture->width() / texture_->width());
-			texRect.H = (texRect.H * newTexture->height() / texture_->height());
+			texRect.X = (texRect.X * newTexture->GetWidth() / texture_->GetWidth());
+			texRect.Y = (texRect.Y * newTexture->GetHeight() / texture_->GetHeight());
+			texRect.W = (texRect.W * newTexture->GetWidth() / texture_->GetWidth());
+			texRect.H = (texRect.H * newTexture->GetHeight() / texture_->GetHeight());
 			setTexRect(texRect); // it also sets width_ and height_
 		} else if (texture_ == nullptr && newTexture != nullptr) {
 			// Assigning a texture when there wasn't any
-			setTexRect(Recti(0, 0, newTexture->width(), newTexture->height()));
+			setTexRect(Recti(0, 0, newTexture->GetWidth(), newTexture->GetHeight()));
 		}
 	}
 }

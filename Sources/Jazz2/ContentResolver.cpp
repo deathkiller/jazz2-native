@@ -723,9 +723,9 @@ namespace Jazz2
 				if (!_isHeadless) {
 					// Don't load textures in headless mode, only collision masks
 					graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, w, h);
-					graphics->TextureDiffuse->loadFromTexels((unsigned char*)pixels, 0, 0, w, h);
-					graphics->TextureDiffuse->setMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
-					graphics->TextureDiffuse->setMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+					graphics->TextureDiffuse->LoadFromTexels((unsigned char*)pixels, 0, 0, w, h);
+					graphics->TextureDiffuse->SetMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+					graphics->TextureDiffuse->SetMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 				}
 
 				double animDuration;
@@ -832,9 +832,9 @@ namespace Jazz2
 		if (!_isHeadless) {
 			// Don't load textures in headless mode, only collision masks
 			graphics->TextureDiffuse = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, width, height);
-			graphics->TextureDiffuse->loadFromTexels((unsigned char*)pixels.get(), 0, 0, width, height);
-			graphics->TextureDiffuse->setMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
-			graphics->TextureDiffuse->setMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+			graphics->TextureDiffuse->LoadFromTexels((unsigned char*)pixels.get(), 0, 0, width, height);
+			graphics->TextureDiffuse->SetMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
+			graphics->TextureDiffuse->SetMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 		}
 
 		// AnimDuration is multiplied by 256 before saving, so divide it here back
@@ -1128,9 +1128,9 @@ namespace Jazz2
 			}
 
 			textureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, widthWithPadding, heightWithPadding);
-			textureDiffuse->loadFromTexels((std::uint8_t*)pixelsWithPadding.get(), 0, 0, widthWithPadding, heightWithPadding);
-			textureDiffuse->setMinFiltering(SamplerFilter::Nearest);
-			textureDiffuse->setMagFiltering(SamplerFilter::Nearest);
+			textureDiffuse->LoadFromTexels((std::uint8_t*)pixelsWithPadding.get(), 0, 0, widthWithPadding, heightWithPadding);
+			textureDiffuse->SetMinFiltering(SamplerFilter::Nearest);
+			textureDiffuse->SetMagFiltering(SamplerFilter::Nearest);
 
 			// Caption Tile
 			if (captionTileId > 0) {
@@ -1440,9 +1440,9 @@ namespace Jazz2
 				ReadImageFromFile(s, (std::uint8_t*)pixels.get(), titleWidth, titleHeight, 4);
 
 				episode.TitleImage = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, titleWidth, titleHeight);
-				episode.TitleImage->loadFromTexels((unsigned char*)pixels.get(), 0, 0, titleWidth, titleHeight);
-				episode.TitleImage->setMinFiltering(SamplerFilter::Nearest);
-				episode.TitleImage->setMagFiltering(SamplerFilter::Nearest);
+				episode.TitleImage->LoadFromTexels((unsigned char*)pixels.get(), 0, 0, titleWidth, titleHeight);
+				episode.TitleImage->SetMinFiltering(SamplerFilter::Nearest);
+				episode.TitleImage->SetMagFiltering(SamplerFilter::Nearest);
 			}
 
 			std::uint16_t backgroundWidth = s->ReadValue<std::uint16_t>();
@@ -1452,9 +1452,9 @@ namespace Jazz2
 				ReadImageFromFile(s, (std::uint8_t*)pixels.get(), backgroundWidth, backgroundHeight, 4);
 
 				episode.BackgroundImage = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, backgroundWidth, backgroundHeight);
-				episode.BackgroundImage->loadFromTexels((unsigned char*)pixels.get(), 0, 0, backgroundWidth, backgroundHeight);
-				episode.BackgroundImage->setMinFiltering(SamplerFilter::Linear);
-				episode.BackgroundImage->setMagFiltering(SamplerFilter::Linear);
+				episode.BackgroundImage->LoadFromTexels((unsigned char*)pixels.get(), 0, 0, backgroundWidth, backgroundHeight);
+				episode.BackgroundImage->SetMinFiltering(SamplerFilter::Linear);
+				episode.BackgroundImage->SetMagFiltering(SamplerFilter::Linear);
 			}
 		}
 
@@ -1537,7 +1537,7 @@ namespace Jazz2
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Lighting] = CompileShader("Lighting", Shaders::LightingVs, Shaders::LightingFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedLighting] = CompileShader("BatchedLighting", Shaders::BatchedLightingVs, Shaders::LightingFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Lighting]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedLighting]);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Lighting]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedLighting]);
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Blur] = CompileShader("Blur", Shader::DefaultVertex::SPRITE, Shaders::BlurFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Downsample] = CompileShader("Downsample", Shader::DefaultVertex::SPRITE, Shaders::DownsampleFs);
@@ -1552,35 +1552,35 @@ namespace Jazz2
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Colorized] = CompileShader("Colorized", Shader::DefaultVertex::SPRITE, Shaders::ColorizedFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedColorized] = CompileShader("BatchedColorized", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::ColorizedFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Colorized]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedColorized]);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Colorized]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedColorized]);
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Tinted] = CompileShader("Tinted", Shader::DefaultVertex::SPRITE, Shaders::TintedFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedTinted] = CompileShader("BatchedTinted", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::TintedFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Tinted]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedTinted]);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Tinted]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedTinted]);
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Outline] = CompileShader("Outline", Shader::DefaultVertex::SPRITE, Shaders::OutlineFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedOutline] = CompileShader("BatchedOutline", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::OutlineFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Outline]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedOutline]);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Outline]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedOutline]);
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::WhiteMask] = CompileShader("WhiteMask", Shader::DefaultVertex::SPRITE, Shaders::WhiteMaskFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedWhiteMask] = CompileShader("BatchedWhiteMask", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::WhiteMaskFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::WhiteMask]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedWhiteMask]);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::WhiteMask]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedWhiteMask]);
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::PartialWhiteMask] = CompileShader("PartialWhiteMask", Shader::DefaultVertex::SPRITE, Shaders::PartialWhiteMaskFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedPartialWhiteMask] = CompileShader("BatchedPartialWhiteMask", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::PartialWhiteMaskFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::PartialWhiteMask]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedPartialWhiteMask]);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::PartialWhiteMask]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedPartialWhiteMask]);
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMask] = CompileShader("FrozenMask", Shader::DefaultVertex::SPRITE, Shaders::FrozenMaskFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedFrozenMask] = CompileShader("BatchedFrozenMask", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::FrozenMaskFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMask]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedFrozenMask]);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMask]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedFrozenMask]);
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldFire] = CompileShader("ShieldFire", Shaders::ShieldVs, Shaders::ShieldFireFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedShieldFire] = CompileShader("BatchedShieldFire", Shaders::BatchedShieldVs, Shaders::ShieldFireFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldFire]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedShieldFire]);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldFire]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedShieldFire]);
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldLightning] = CompileShader("ShieldLightning", Shaders::ShieldVs, Shaders::ShieldLightningFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedShieldLightning] = CompileShader("BatchedShieldFire", Shaders::BatchedShieldVs, Shaders::ShieldLightningFs, Shader::Introspection::NoUniformsInBlocks);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldLightning]->registerBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedShieldLightning]);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldLightning]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedShieldLightning]);
 
 #if !defined(DISABLE_RESCALE_SHADERS)
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeHQ2x] = CompileShader("ResizeHQ2x", Shaders::ResizeHQ2xVs, Shaders::ResizeHQ2xFs);
@@ -1600,7 +1600,7 @@ namespace Jazz2
 	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection, std::initializer_list<StringView> defines)
 	{
 		std::unique_ptr shader = std::make_unique<Shader>();
-		if (shader->loadFromCache(shaderName, Shaders::Version, introspection)) {
+		if (shader->LoadFromCache(shaderName, Shaders::Version, introspection)) {
 			return shader;
 		}
 
@@ -1622,10 +1622,10 @@ namespace Jazz2
 			batchSize = GLShaderProgram::DefaultBatchSize;
 		}
 
-		shader->loadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
+		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
 
 		if (compileTwice) {
-			GLShaderUniformBlocks blocks(shader->getHandle(), Material::InstancesBlockName, nullptr);
+			GLShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
 			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
 			DEATH_DEBUG_ASSERT(block != nullptr);
 			if (block != nullptr) {
@@ -1635,7 +1635,7 @@ namespace Jazz2
 				
 				bool hasLinked = false;
 				while (batchSize > 0) {
-					hasLinked = shader->loadFromMemory(shaderName, introspection, vertex, fragment, batchSize, arrayView(defines));
+					hasLinked = shader->LoadFromMemory(shaderName, introspection, vertex, fragment, batchSize, arrayView(defines));
 					if (hasLinked) {
 						break;
 					}
@@ -1651,14 +1651,14 @@ namespace Jazz2
 			}
 		}
 
-		shader->saveToCache(shaderName, Shaders::Version);
+		shader->SaveToCache(shaderName, Shaders::Version);
 		return shader;
 	}
 	
 	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection, std::initializer_list<StringView> defines)
 	{
 		std::unique_ptr shader = std::make_unique<Shader>();
-		if (shader->loadFromCache(shaderName, Shaders::Version, introspection)) {
+		if (shader->LoadFromCache(shaderName, Shaders::Version, introspection)) {
 			return shader;
 		}
 
@@ -1680,10 +1680,10 @@ namespace Jazz2
 			batchSize = GLShaderProgram::DefaultBatchSize;
 		}
 
-		shader->loadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
+		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
 
 		if (compileTwice) {
-			GLShaderUniformBlocks blocks(shader->getHandle(), Material::InstancesBlockName, nullptr);
+			GLShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
 			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
 			DEATH_DEBUG_ASSERT(block != nullptr);
 			if (block != nullptr) {
@@ -1693,7 +1693,7 @@ namespace Jazz2
 
 				bool hasLinked = false;
 				while (batchSize > 0) {
-					hasLinked = shader->loadFromMemory(shaderName, introspection, vertex, fragment, batchSize, arrayView(defines));
+					hasLinked = shader->LoadFromMemory(shaderName, introspection, vertex, fragment, batchSize, arrayView(defines));
 					if (hasLinked) {
 						break;
 					}
@@ -1709,7 +1709,7 @@ namespace Jazz2
 			}
 		}
 
-		shader->saveToCache(shaderName, Shaders::Version);
+		shader->SaveToCache(shaderName, Shaders::Version);
 		return shader;
 	}
 
@@ -1727,10 +1727,10 @@ namespace Jazz2
 		}
 
 		std::unique_ptr<Texture> tex = std::make_unique<Texture>("Noise", Texture::Format::RGBA8, 64, 64);
-		tex->loadFromTexels((std::uint8_t*)texels, 0, 0, 64, 64);
-		tex->setMinFiltering(SamplerFilter::Linear);
-		tex->setMagFiltering(SamplerFilter::Linear);
-		tex->setWrap(SamplerWrapping::Repeat);
+		tex->LoadFromTexels((std::uint8_t*)texels, 0, 0, 64, 64);
+		tex->SetMinFiltering(SamplerFilter::Linear);
+		tex->SetMagFiltering(SamplerFilter::Linear);
+		tex->SetWrap(SamplerWrapping::Repeat);
 		return tex;
 	}
 

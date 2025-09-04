@@ -148,46 +148,46 @@ namespace nCine
 		};
 
 		/// Returns the aggregated command statistics for all types
-		static inline const Commands& allCommands() {
+		static inline const Commands& AllCommands() {
 			return allCommands_;
 		}
 		/// Returns the commnad statistics for the specified type
-		static inline const Commands& commands(RenderCommand::Type type) {
+		static inline const Commands& Commands(RenderCommand::Type type) {
 			return typedCommands_[(std::int32_t)type];
 		}
 
 		/// Returns the buffer statistics for the specified type
-		static inline const Buffers& buffers(RenderBuffersManager::BufferTypes type) {
+		static inline const Buffers& Buffers(RenderBuffersManager::BufferTypes type) {
 			return typedBuffers_[(std::int32_t)type];
 		}
 
 		/// Returns aggregated texture statistics
-		static inline const Textures& textures() {
+		static inline const Textures& Textures() {
 			return textures_;
 		}
 
 		/// Returns aggregated custom VBOs statistics
-		static inline const CustomBuffers& customVBOs() {
+		static inline const CustomBuffers& CustomVBOs() {
 			return customVbos_;
 		}
 
 		/// Returns aggregated custom IBOs statistics
-		static inline const CustomBuffers& customIBOs() {
+		static inline const CustomBuffers& CustomIBOs() {
 			return customIbos_;
 		}
 
 		/// Returns the number of `DrawableNodes` culled because outside of the screen
-		static inline std::uint32_t culled() {
+		static inline std::uint32_t Culled() {
 			return culledNodes_[(index_ + 1) % 2];
 		}
 
 		/// Returns statistics about the VAO pool
-		static inline const VaoPool& vaoPool() {
+		static inline const VaoPool& VaoPool() {
 			return vaoPool_;
 		}
 
 		/// Returns statistics about the render command pools
-		static inline const CommandPool& commandPool() {
+		static inline const CommandPool& CommandPool() {
 			return commandPool_;
 		}
 
@@ -203,59 +203,59 @@ namespace nCine
 		static VaoPool vaoPool_;
 		static CommandPool commandPool_;
 
-		static void reset();
-		static void gatherStatistics(const RenderCommand& command);
-		static void gatherStatistics(const RenderBuffersManager::ManagedBuffer& buffer);
-		static inline void gatherVaoPoolStatistics(std::uint32_t poolSize, std::uint32_t poolCapacity)
+		static void Reset();
+		static void GatherStatistics(const RenderCommand& command);
+		static void GatherStatistics(const RenderBuffersManager::ManagedBuffer& buffer);
+		static inline void GatherVaoPoolStatistics(std::uint32_t poolSize, std::uint32_t poolCapacity)
 		{
 			vaoPool_.size = poolSize;
 			vaoPool_.capacity = poolCapacity;
 		}
-		static inline void gatherCommandPoolStatistics(std::uint32_t usedSize, std::uint32_t freeSize)
+		static inline void GatherCommandPoolStatistics(std::uint32_t usedSize, std::uint32_t freeSize)
 		{
 			commandPool_.usedSize = usedSize;
 			commandPool_.freeSize = freeSize;
 		}
-		static inline void addTexture(std::uint32_t datasize)
+		static inline void AddTexture(std::uint32_t datasize)
 		{
 			textures_.count++;
 			textures_.dataSize += datasize;
 		}
-		static inline void removeTexture(std::uint32_t datasize)
+		static inline void RemoveTexture(std::uint32_t datasize)
 		{
 			textures_.count--;
 			textures_.dataSize -= datasize;
 		}
-		static inline void addCustomVbo(std::uint32_t datasize)
+		static inline void AddCustomVbo(std::uint32_t datasize)
 		{
 			customVbos_.count++;
 			customVbos_.dataSize += datasize;
 		}
-		static inline void removeCustomVbo(std::uint32_t datasize)
+		static inline void RemoveCustomVbo(std::uint32_t datasize)
 		{
 			customVbos_.count--;
 			customVbos_.dataSize -= datasize;
 		}
-		static inline void addCustomIbo(std::uint32_t datasize)
+		static inline void AddCustomIbo(std::uint32_t datasize)
 		{
 			customIbos_.count++;
 			customIbos_.dataSize += datasize;
 		}
-		static inline void removeCustomIbo(std::uint32_t datasize)
+		static inline void RemoveCustomIbo(std::uint32_t datasize)
 		{
 			customIbos_.count--;
 			customIbos_.dataSize -= datasize;
 		}
-		static inline void addCulledNode() {
+		static inline void AddCulledNode() {
 			culledNodes_[index_]++;
 		}
-		static inline void addVaoPoolReuse() {
+		static inline void AddVaoPoolReuse() {
 			vaoPool_.reuses++;
 		}
-		static inline void addVaoPoolBinding() {
+		static inline void AddVaoPoolBinding() {
 			vaoPool_.bindings++;
 		}
-		static inline void addCommandPoolRetrieval() {
+		static inline void AddCommandPoolRetrieval() {
 			commandPool_.retrievals++;
 		}
 	};

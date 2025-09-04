@@ -194,7 +194,7 @@ namespace Jazz2::Tiles
 					auto command = RentRenderCommand(LayerRendererType::Solid);
 					command->setType(RenderCommand::Type::TileMap);
 
-					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+					auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(w, cullingRect.H);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -208,7 +208,7 @@ namespace Jazz2::Tiles
 					auto command = RentRenderCommand(LayerRendererType::Solid);
 					command->setType(RenderCommand::Type::TileMap);
 
-					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+					auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(w, cullingRect.H);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -790,9 +790,9 @@ namespace Jazz2::Tiles
 
 					auto command = RentRenderCommand(layer.Description.RendererType);
 					command->setType(RenderCommand::Type::TileMap);
-					command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-					Vector2i texSize = tileSet->TextureDiffuse->size();
+					Vector2i texSize = tileSet->TextureDiffuse->GetSize();
 					float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
 					float texBiasX = ((tileId % tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
 					float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
@@ -808,7 +808,7 @@ namespace Jazz2::Tiles
 						texScaleY *= -1;
 					}
 
-					auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+					auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 
@@ -823,7 +823,7 @@ namespace Jazz2::Tiles
 
 					command->setTransformation(Matrix4x4f::Translation(x2r, y2r, 0.0f));
 					command->setLayer(layer.Description.Depth);
-					command->material().setTexture(*tileSet->TextureDiffuse);
+					command->material().SetTexture(*tileSet->TextureDiffuse);
 
 					renderQueue.addCommand(command);
 				}
@@ -846,22 +846,22 @@ namespace Jazz2::Tiles
 		} else {
 			command = _renderCommands.emplace_back(std::make_unique<RenderCommand>()).get();
 			_renderCommandsCount++;
-			command->material().setBlendingEnabled(true);
+			command->material().SetBlendingEnabled(true);
 		}
 
 		bool shaderChanged;
 		switch (type) {
-			case LayerRendererType::Solid: shaderChanged = command->material().setShaderProgramType(Material::ShaderProgramType::SpriteNoTexture); break;
-			case LayerRendererType::Tinted: shaderChanged = command->material().setShader(ContentResolver::Get().GetShader(PrecompiledShader::Tinted)); break;
-			case LayerRendererType::Sky: shaderChanged = command->material().setShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground)); break;
-			case LayerRendererType::Circle: shaderChanged = command->material().setShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundCircleDither : PrecompiledShader::TexturedBackgroundCircle)); break;
-			default: shaderChanged = command->material().setShaderProgramType(Material::ShaderProgramType::Sprite); break;
+			case LayerRendererType::Solid: shaderChanged = command->material().SetShaderProgramType(Material::ShaderProgramType::SpriteNoTexture); break;
+			case LayerRendererType::Tinted: shaderChanged = command->material().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Tinted)); break;
+			case LayerRendererType::Sky: shaderChanged = command->material().SetShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground)); break;
+			case LayerRendererType::Circle: shaderChanged = command->material().SetShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundCircleDither : PrecompiledShader::TexturedBackgroundCircle)); break;
+			default: shaderChanged = command->material().SetShaderProgramType(Material::ShaderProgramType::Sprite); break;
 		}
 		if (shaderChanged) {
-			command->material().reserveUniformsDataMemory();
-			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			command->material().ReserveUniformsDataMemory();
+			command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-			auto* textureUniform = command->material().uniform(Material::TextureUniformName);
+			auto* textureUniform = command->material().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
@@ -1142,7 +1142,7 @@ namespace Jazz2::Tiles
 
 		std::uint16_t z = _layers[_sprLayerIndex].Description.Depth + 80;
 
-		Vector2i texSize = tileSet->TextureDiffuse->size();
+		Vector2i texSize = tileSet->TextureDiffuse->GetSize();
 		float texScaleX = float(QuarterSize) / float(texSize.X);
 		float texBiasX = ((tileId % tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
 		float texScaleY = float(QuarterSize) / float(texSize.Y);
@@ -1196,7 +1196,7 @@ namespace Jazz2::Tiles
 
 		float x = pos.X - res->Base->Hotspot.X;
 		float y = pos.Y - res->Base->Hotspot.Y;
-		Vector2i texSize = res->Base->TextureDiffuse->size();
+		Vector2i texSize = res->Base->TextureDiffuse->GetSize();
 
 		for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
 			for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
@@ -1239,7 +1239,7 @@ namespace Jazz2::Tiles
 
 		float x = pos.X - res->Base->Hotspot.X;
 		float y = pos.Y - res->Base->Hotspot.Y;
-		Vector2i texSize = res->Base->TextureDiffuse->size();
+		Vector2i texSize = res->Base->TextureDiffuse->GetSize();
 
 		for (std::int32_t i = 0; i < count; i++) {
 			float speedX = Random().FastFloat(-1.0f, 1.0f) * Random().FastFloat(0.2f, 0.8f) * count;
@@ -1373,12 +1373,12 @@ namespace Jazz2::Tiles
 			command->setType(RenderCommand::Type::Particle);
 
 			if ((debris.Flags & DebrisFlags::AdditiveBlending) == DebrisFlags::AdditiveBlending) {
-				command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+				command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
 			} else {
-				command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			}
 
-			auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+			auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
 			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(debris.Size.X, debris.Size.Y);
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, debris.Alpha).Data());
@@ -1389,7 +1389,7 @@ namespace Jazz2::Tiles
 			worldMatrix.Translate(debris.Size.X  * -0.5f, debris.Size.Y * -0.5f, 0.0f);
 			command->setTransformation(worldMatrix);
 			command->setLayer(debris.Depth);
-			command->material().setTexture(*debris.DiffuseTexture);
+			command->material().SetTexture(*debris.DiffuseTexture);
 
 			renderQueue.addCommand(command);
 		}
@@ -1525,19 +1525,19 @@ namespace Jazz2::Tiles
 
 		auto* command = RentRenderCommand(layer.Description.RendererType);
 
-		auto* instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+		auto* instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue((float)cullingRect.W, (float)cullingRect.H);
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
-		command->material().uniform("uViewSize")->SetFloatValue((float)cullingRect.W, (float)cullingRect.H);
-		command->material().uniform("uCameraPos")->SetFloatVector(viewCenter.Data());
-		command->material().uniform("uShift")->SetFloatValue(x, y);
-		command->material().uniform("uHorizonColor")->SetFloatVector(layer.Description.Color.Data());
+		command->material().Uniform("uViewSize")->SetFloatValue((float)cullingRect.W, (float)cullingRect.H);
+		command->material().Uniform("uCameraPos")->SetFloatVector(viewCenter.Data());
+		command->material().Uniform("uShift")->SetFloatValue(x, y);
+		command->material().Uniform("uHorizonColor")->SetFloatVector(layer.Description.Color.Data());
 
 		command->setTransformation(Matrix4x4f::Translation(cullingRect.X, cullingRect.Y, 0.0f));
 		command->setLayer(layer.Description.Depth);
-		command->material().setTexture(*target);
+		command->material().SetTexture(*target);
 
 		renderQueue.addCommand(command);
 	}
@@ -1595,19 +1595,19 @@ namespace Jazz2::Tiles
 			_view->SetRootNode(this);
 			_view->SetCamera(_camera.get());
 			//_view->setClearMode(Viewport::ClearMode::Never);
-			_target->setMagFiltering(SamplerFilter::Linear);
-			_target->setWrap(SamplerWrapping::Repeat);
+			_target->SetMagFiltering(SamplerFilter::Linear);
+			_target->SetWrap(SamplerWrapping::Repeat);
 
 			// Prepare render commands
 			std::int32_t renderCommandCount = (width * height) / (TileSet::DefaultTileSize * TileSet::DefaultTileSize);
 			_renderCommands.reserve(renderCommandCount);
 			for (std::int32_t i = 0; i < renderCommandCount; i++) {
 				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
-				command->material().setShaderProgramType(Material::ShaderProgramType::Sprite);
-				command->material().reserveUniformsDataMemory();
-				command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				command->material().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+				command->material().ReserveUniformsDataMemory();
+				command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-				auto* textureUniform = command->material().uniform(Material::TextureUniformName);
+				auto* textureUniform = command->material().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
@@ -1640,7 +1640,7 @@ namespace Jazz2::Tiles
 
 				auto command = _renderCommands[renderCommandIndex++].get();
 
-				Vector2i texSize = tileSet->TextureDiffuse->size();
+				Vector2i texSize = tileSet->TextureDiffuse->GetSize();
 				float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
 				float texBiasX = ((tileId % tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
@@ -1656,13 +1656,13 @@ namespace Jazz2::Tiles
 					texScaleY *= -1;
 				}
 
-				auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+				auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
 				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 				command->setTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize, y * TileSet::DefaultTileSize, 0.0f));
-				command->material().setTexture(*tileSet->TextureDiffuse);
+				command->material().SetTexture(*tileSet->TextureDiffuse);
 
 				renderQueue.addCommand(command);
 			}

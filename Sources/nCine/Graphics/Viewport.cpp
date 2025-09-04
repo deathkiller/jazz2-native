@@ -104,8 +104,8 @@ namespace nCine
 		if (type_ != Type::NoTexture) {
 			static const std::int32_t MaxColorAttachments = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::GLIntValues::MAX_COLOR_ATTACHMENTS);
 			const bool indexOutOfRange = (index >= std::uint32_t(MaxColorAttachments) || index >= MaxNumTextures);
-			const bool widthDiffers = texture != nullptr && (width_ > 0 && texture->width() != width_);
-			const bool heightDiffers = texture != nullptr && (height_ > 0 && texture->height() != height_);
+			const bool widthDiffers = texture != nullptr && (width_ > 0 && texture->GetWidth() != width_);
+			const bool heightDiffers = texture != nullptr && (height_ > 0 && texture->GetHeight() != height_);
 			if (indexOutOfRange || textures_[index] == texture || widthDiffers || heightDiffers)
 				return false;
 		}
@@ -125,8 +125,8 @@ namespace nCine
 				numColorAttachments_++;
 
 				if (width_ == 0 || height_ == 0) {
-					width_ = texture->width();
-					height_ = texture->height();
+					width_ = texture->GetWidth();
+					height_ = texture->GetHeight();
 					viewportRect_.Set(0, 0, width_, height_);
 				}
 			}

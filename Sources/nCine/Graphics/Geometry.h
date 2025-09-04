@@ -21,94 +21,94 @@ namespace nCine
 		Geometry& operator=(const Geometry&) = delete;
 
 		/// Returns the primitive type (`GL_TRIANGLES`, `GL_TRIANGLE_STRIP`, ...)
-		inline GLenum primitiveType() const {
+		inline GLenum GetPrimitiveType() const {
 			return primitiveType_;
 		}
 		/// Returns the index of the first vertex to draw
-		inline GLint firstVertex() const {
+		inline GLint GetFirstVertex() const {
 			return firstVertex_;
 		}
 		/// Returns the number of vertices
-		inline GLsizei numVertices() const {
+		inline GLsizei GetVertexCount() const {
 			return numVertices_;
 		}
 		/// Returns the number of float elements that composes the vertex format
-		inline std::uint32_t numElementsPerVertex() const {
+		inline std::uint32_t GetElementsPerVertex() const {
 			return numElementsPerVertex_;
 		}
 
 		/// Sets all three drawing parameters
-		void setDrawParameters(GLenum primitiveType, GLint firstVertex, GLsizei numVertices);
+		void SetDrawParameters(GLenum primitiveType, GLint firstVertex, GLsizei numVertices);
 		/// Sets the primitive type (`GL_TRIANGLES`, `GL_TRIANGLE_STRIP`, ...)
-		inline void setPrimitiveType(GLenum primitiveType) {
+		inline void SetPrimitiveType(GLenum primitiveType) {
 			primitiveType_ = primitiveType;
 		}
 		/// Sets the index number of the first vertex to draw
-		inline void setFirstVertex(GLint firstVertex) {
+		inline void SetFirstVertex(GLint firstVertex) {
 			firstVertex_ = firstVertex;
 		}
 		/// Sets the number of vertices
-		inline void setNumVertices(GLsizei numVertices) {
+		inline void SetVertexCount(GLsizei numVertices) {
 			numVertices_ = numVertices;
 		}
 		/// Sets the number of float elements that composes the vertex format
-		inline void setNumElementsPerVertex(std::uint32_t numElements) {
+		inline void SetElementsPerVertex(std::uint32_t numElements) {
 			numElementsPerVertex_ = numElements;
 		}
 		/// Creates a custom VBO that is unique to this `Geometry` object
-		void createCustomVbo(std::uint32_t numFloats, GLenum usage);
+		void CreateCustomVbo(std::uint32_t numFloats, GLenum usage);
 		/// Retrieves a pointer that can be used to write vertex data from a custom VBO owned by this object
 		/*! This overloaded version allows a custom alignment specification */
-		GLfloat* acquireVertexPointer(std::uint32_t numFloats, std::uint32_t numFloatsAlignment);
+		GLfloat* AcquireVertexPointer(std::uint32_t numFloats, std::uint32_t numFloatsAlignment);
 		/// Retrieves a pointer that can be used to write vertex data from a custom VBO owned by this object
-		inline GLfloat* acquireVertexPointer(std::uint32_t numFloats) {
-			return acquireVertexPointer(numFloats, 1);
+		inline GLfloat* AcquireVertexPointer(std::uint32_t numFloats) {
+			return AcquireVertexPointer(numFloats, 1);
 		}
 		/// Retrieves a pointer that can be used to write vertex data from a VBO owned by the buffers manager
-		GLfloat* acquireVertexPointer();
+		GLfloat* AcquireVertexPointer();
 		/// Releases the pointer used to write vertex data
-		void releaseVertexPointer();
+		void ReleaseVertexPointer();
 
 		/// Returns a pointer into host memory containing vertex data to be copied into a VBO
-		inline const float* hostVertexPointer() const {
+		inline const float* GetHostVertexPointer() const {
 			return hostVertexPointer_;
 		}
 		/// Sets a pointer into host memory containing vertex data to be copied into a VBO
-		void setHostVertexPointer(const float* vertexPointer);
+		void SetHostVertexPointer(const float* vertexPointer);
 
 		/// Shares the VBO of another `Geometry` object
-		void shareVbo(const Geometry* geometry);
+		void ShareVbo(const Geometry* geometry);
 
 		/// Returns the number of indices used to render the geometry
-		inline std::uint32_t numIndices() const {
+		inline std::uint32_t GetIndexCount() const {
 			return numIndices_;
 		}
 		/// Sets the index number of the first index to draw
-		inline void setFirstIndex(GLushort firstIndex) {
+		inline void SetFirstIndex(GLushort firstIndex) {
 			firstIndex_ = firstIndex;
 		}
 		/// Sets the number of indices used to render the geometry
-		inline void setNumIndices(std::uint32_t numIndices) {
+		inline void SetIndexCount(std::uint32_t numIndices) {
 			numIndices_ = numIndices;
 		}
 		/// Creates a custom IBO that is unique to this `Geometry` object
-		void createCustomIbo(std::uint32_t numIndices, GLenum usage);
+		void CreateCustomIbo(std::uint32_t numIndices, GLenum usage);
 		/// Retrieves a pointer that can be used to write index data from a custom IBO owned by this object
-		GLushort* acquireIndexPointer(std::uint32_t numIndices);
+		GLushort* AcquireIndexPointer(std::uint32_t numIndices);
 		/// Retrieves a pointer that can be used to write index data from a IBO owned by the buffers manager
-		GLushort* acquireIndexPointer();
+		GLushort* AcquireIndexPointer();
 		/// Releases the pointer used to write index data
-		void releaseIndexPointer();
+		void ReleaseIndexPointer();
 
 		/// Returns a pointer into host memory containing index data to be copied into a IBO
-		inline const GLushort* hostIndexPointer() const {
+		inline const GLushort* GetHostIndexPointer() const {
 			return hostIndexPointer_;
 		}
 		/// Sets a pointer into host memory containing index data to be copied into a IBO
-		void setHostIndexPointer(const GLushort* indexPointer);
+		void SetHostIndexPointer(const GLushort* indexPointer);
 
 		/// Shares the IBO of another `Geometry` object
-		void shareIbo(const Geometry* geometry);
+		void ShareIbo(const Geometry* geometry);
 
 	private:
 		GLenum primitiveType_;
@@ -133,15 +133,15 @@ namespace nCine
 		bool hasDirtyVertices_;
 		bool hasDirtyIndices_;
 
-		void bind();
-		void draw(GLsizei numInstances);
-		void commitVertices();
-		void commitIndices();
+		void Bind();
+		void Draw(GLsizei numInstances);
+		void CommitVertices();
+		void CommitIndices();
 
-		inline const RenderBuffersManager::Parameters& vboParams() const {
+		inline const RenderBuffersManager::Parameters& GetVboParams() const {
 			return sharedVboParams_ ? *sharedVboParams_ : vboParams_;
 		}
-		inline const RenderBuffersManager::Parameters& iboParams() const {
+		inline const RenderBuffersManager::Parameters& GetIboParams() const {
 			return sharedIboParams_ ? *sharedIboParams_ : iboParams_;
 		}
 	};

@@ -36,25 +36,25 @@ namespace Jazz2::UI
 	void Canvas::DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending, float angle)
 	{
 		auto command = RentRenderCommand();
-		if (command->material().setShaderProgramType(Material::ShaderProgramType::Sprite)) {
-			command->material().reserveUniformsDataMemory();
-			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		if (command->material().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
+			command->material().ReserveUniformsDataMemory();
+			command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			// Required to reset render command properly
 			//command->setTransformation(command->transformation());
 
-			auto* textureUniform = command->material().uniform(Material::TextureUniformName);
+			auto* textureUniform = command->material().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
 		}
 
 		if (additiveBlending) {
-			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+			command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
 		} else {
-			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		}
 
-		auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+		auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
@@ -67,7 +67,7 @@ namespace Jazz2::UI
 		}
 		command->setTransformation(worldMatrix);
 		command->setLayer(z);
-		command->material().setTexture(texture);
+		command->material().SetTexture(texture);
 
 		_currentRenderQueue->addCommand(command);
 	}
@@ -75,20 +75,20 @@ namespace Jazz2::UI
 	void Canvas::DrawSolid(Vector2f pos, std::uint16_t z, Vector2f size, const Colorf& color, bool additiveBlending)
 	{
 		auto command = RentRenderCommand();
-		if (command->material().setShaderProgramType(Material::ShaderProgramType::SpriteNoTexture)) {
-			command->material().reserveUniformsDataMemory();
-			command->geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		if (command->material().SetShaderProgramType(Material::ShaderProgramType::SpriteNoTexture)) {
+			command->material().ReserveUniformsDataMemory();
+			command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			// Required to reset render command properly
 			//command->setTransformation(command->transformation());
 		}
 
 		if (additiveBlending) {
-			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+			command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
 		} else {
-			command->material().setBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		}
 
-		auto instanceBlock = command->material().uniformBlock(Material::InstanceBlockName);
+		auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
 
@@ -124,7 +124,7 @@ namespace Jazz2::UI
 			return command;
 		} else {
 			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::Sprite));
-			command->material().setBlendingEnabled(true);
+			command->material().SetBlendingEnabled(true);
 			_renderCommandsCount++;
 			return command.get();
 		}

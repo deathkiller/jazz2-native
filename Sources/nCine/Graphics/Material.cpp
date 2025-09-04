@@ -24,31 +24,31 @@ namespace nCine
 		textures_[0] = texture;
 
 		if (program != nullptr) {
-			setShaderProgram(program);
+			SetShaderProgram(program);
 		}
 	}
 
-	void Material::setBlendingFactors(GLenum srcBlendingFactor, GLenum destBlendingFactor)
+	void Material::SetBlendingFactors(GLenum srcBlendingFactor, GLenum destBlendingFactor)
 	{
 		srcBlendingFactor_ = srcBlendingFactor;
 		destBlendingFactor_ = destBlendingFactor;
 	}
 
-	bool Material::setShaderProgramType(ShaderProgramType shaderProgramType)
+	bool Material::SetShaderProgramType(ShaderProgramType shaderProgramType)
 	{
 		GLShaderProgram* shaderProgram = RenderResources::GetShaderProgram(shaderProgramType);
 		if (shaderProgram == nullptr || shaderProgram == shaderProgram_) {
 			return false;
 		}
 
-		setShaderProgram(shaderProgram);
+		SetShaderProgram(shaderProgram);
 
 		// Should be assigned after calling `setShaderProgram()`
 		shaderProgramType_ = shaderProgramType;
 		return true;
 	}
 
-	void Material::setShaderProgram(GLShaderProgram* program)
+	void Material::SetShaderProgram(GLShaderProgram* program)
 	{
 		// Allow self-assignment to take into account the case where the shader program loads new shaders
 
@@ -61,23 +61,23 @@ namespace nCine
 		RenderResources::SetDefaultAttributesParameters(*shaderProgram_);
 	}
 
-	bool Material::setShader(Shader* shader)
+	bool Material::SetShader(Shader* shader)
 	{
 		GLShaderProgram* shaderProgram = shader->glShaderProgram_.get();
 		if (shaderProgram == shaderProgram_) {
 			return false;
 		}
 
-		setShaderProgram(shaderProgram);
+		SetShaderProgram(shaderProgram);
 		return true;
 	}
 
-	void Material::setDefaultAttributesParameters()
+	void Material::SetDefaultAttributesParameters()
 	{
 		RenderResources::SetDefaultAttributesParameters(*shaderProgram_);
 	}
 
-	void Material::reserveUniformsDataMemory()
+	void Material::ReserveUniformsDataMemory()
 	{
 		DEATH_ASSERT(shaderProgram_);
 
@@ -92,7 +92,7 @@ namespace nCine
 		shaderUniformBlocks_.SetUniformsDataPointer(&dataPointer[shaderProgram_->GetUniformsSize()]);
 	}
 
-	void Material::setUniformsDataPointer(GLubyte* dataPointer)
+	void Material::SetUniformsDataPointer(GLubyte* dataPointer)
 	{
 		DEATH_ASSERT(shaderProgram_);
 		DEATH_ASSERT(dataPointer);
@@ -103,7 +103,7 @@ namespace nCine
 		shaderUniformBlocks_.SetUniformsDataPointer(&dataPointer[shaderProgram_->GetUniformsSize()]);
 	}
 
-	const GLTexture* Material::texture(std::uint32_t unit) const
+	const GLTexture* Material::GetTexture(std::uint32_t unit) const
 	{
 		const GLTexture* texture = nullptr;
 		if (unit < GLTexture::MaxTextureUnits) {
@@ -112,7 +112,7 @@ namespace nCine
 		return texture;
 	}
 
-	bool Material::setTexture(std::uint32_t unit, const GLTexture* texture)
+	bool Material::SetTexture(std::uint32_t unit, const GLTexture* texture)
 	{
 		bool result = false;
 		if (unit < GLTexture::MaxTextureUnits) {
@@ -122,12 +122,12 @@ namespace nCine
 		return result;
 	}
 
-	bool Material::setTexture(std::uint32_t unit, const Texture& texture)
+	bool Material::SetTexture(std::uint32_t unit, const Texture& texture)
 	{
-		return setTexture(unit, texture.glTexture_.get());
+		return SetTexture(unit, texture.glTexture_.get());
 	}
 
-	void Material::bind()
+	void Material::Bind()
 	{
 		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
 			if (textures_[i] != nullptr) {
@@ -143,7 +143,7 @@ namespace nCine
 		}
 	}
 
-	void Material::defineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, std::uint32_t vboOffset)
+	void Material::DefineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, std::uint32_t vboOffset)
 	{
 		shaderProgram_->DefineVertexFormat(vbo, ibo, vboOffset);
 	}
@@ -181,7 +181,7 @@ namespace nCine
 		};
 	}
 
-	std::uint32_t Material::sortKey()
+	std::uint32_t Material::GetSortKey()
 	{
 		constexpr std::uint32_t Seed = 1697381921;
 		// Align to 64 bits for `fasthash64()` to properly work on Emscripten without alignment faults

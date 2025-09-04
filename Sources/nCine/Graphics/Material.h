@@ -88,74 +88,74 @@ namespace nCine
 		Material();
 		Material(GLShaderProgram* program, GLTexture* texture);
 
-		inline bool isBlendingEnabled() const {
+		inline bool IsBlendingEnabled() const {
 			return isBlendingEnabled_;
 		}
-		inline void setBlendingEnabled(bool blendingEnabled) {
+		inline void SetBlendingEnabled(bool blendingEnabled) {
 			isBlendingEnabled_ = blendingEnabled;
 		}
 
-		inline GLenum srcBlendingFactor() const {
+		inline GLenum GetSrcBlendingFactor() const {
 			return srcBlendingFactor_;
 		}
-		inline GLenum destBlendingFactor() const {
+		inline GLenum GetDestBlendingFactor() const {
 			return destBlendingFactor_;
 		}
-		void setBlendingFactors(GLenum srcBlendingFactor, GLenum destBlendingFactor);
+		void SetBlendingFactors(GLenum srcBlendingFactor, GLenum destBlendingFactor);
 
-		inline ShaderProgramType shaderProgramType() const {
+		inline ShaderProgramType GetShaderProgramType() const {
 			return shaderProgramType_;
 		}
-		bool setShaderProgramType(ShaderProgramType shaderProgramType);
-		inline const GLShaderProgram* shaderProgram() const {
+		bool SetShaderProgramType(ShaderProgramType shaderProgramType);
+		inline const GLShaderProgram* GetShaderProgram() const {
 			return shaderProgram_;
 		}
-		void setShaderProgram(GLShaderProgram* program);
-		bool setShader(Shader* shader);
+		void SetShaderProgram(GLShaderProgram* program);
+		bool SetShader(Shader* shader);
 
-		void setDefaultAttributesParameters();
-		void reserveUniformsDataMemory();
-		void setUniformsDataPointer(GLubyte* dataPointer);
+		void SetDefaultAttributesParameters();
+		void ReserveUniformsDataMemory();
+		void SetUniformsDataPointer(GLubyte* dataPointer);
 
 		/// Wrapper around `GLShaderUniforms::hasUniform()`
-		inline bool hasUniform(const char* name) const {
+		inline bool HasUniform(const char* name) const {
 			return shaderUniforms_.HasUniform(name);
 		}
 		/// Wrapper around `GLShaderUniformBlocks::hasUniformBlock()`
-		inline bool hasUniformBlock(const char* name) const {
+		inline bool HasUniformBlock(const char* name) const {
 			return shaderUniformBlocks_.HasUniformBlock(name);
 		}
 
 		/// Wrapper around `GLShaderUniforms::uniform()`
-		inline GLUniformCache* uniform(const char* name) {
+		inline GLUniformCache* Uniform(const char* name) {
 			return shaderUniforms_.GetUniform(name);
 		}
 		/// Wrapper around `GLShaderUniformBlocks::uniformBlock()`
-		inline GLUniformBlockCache* uniformBlock(const char* name) {
+		inline GLUniformBlockCache* UniformBlock(const char* name) {
 			return shaderUniformBlocks_.GetUniformBlock(name);
 		}
 
 		/// Wrapper around `GLShaderUniforms::allUniforms()`
-		inline const GLShaderUniforms::UniformHashMapType allUniforms() const {
+		inline const GLShaderUniforms::UniformHashMapType GetAllUniforms() const {
 			return shaderUniforms_.GetAllUniforms();
 		}
 		/// Wrapper around `GLShaderUniformBlocks::allUniformBlocks()`
-		inline const GLShaderUniformBlocks::UniformHashMapType allUniformBlocks() const {
+		inline const GLShaderUniformBlocks::UniformHashMapType GetAllUniformBlocks() const {
 			return shaderUniformBlocks_.GetAllUniformBlocks();
 		}
 
-		const GLTexture* texture(std::uint32_t unit) const;
-		bool setTexture(std::uint32_t unit, const GLTexture* texture);
-		bool setTexture(std::uint32_t unit, const Texture& texture);
+		const GLTexture* GetTexture(std::uint32_t unit) const;
+		bool SetTexture(std::uint32_t unit, const GLTexture* texture);
+		bool SetTexture(std::uint32_t unit, const Texture& texture);
 
-		inline const GLTexture* texture() const {
-			return texture(0);
+		inline const GLTexture* GetTexture() const {
+			return GetTexture(0);
 		}
-		inline bool setTexture(const GLTexture* texture) {
-			return setTexture(0, texture);
+		inline bool SetTexture(const GLTexture* texture) {
+			return SetTexture(0, texture);
 		}
-		inline bool setTexture(const Texture& texture) {
-			return setTexture(0, texture);
+		inline bool SetTexture(const Texture& texture) {
+			return SetTexture(0, texture);
 		}
 
 	private:
@@ -174,18 +174,18 @@ namespace nCine
 		/// Memory buffer with uniform values to be sent to the GPU
 		std::unique_ptr<GLubyte[]> uniformsHostBuffer_;
 
-		void bind();
+		void Bind();
 		/// Wrapper around `GLShaderUniforms::commitUniforms()`
-		inline void commitUniforms() {
+		inline void CommitUniforms() {
 			shaderUniforms_.CommitUniforms();
 		}
 		/// Wrapper around `GLShaderUniformBlocks::commitUniformBlocks()`
-		inline void commitUniformBlocks() {
+		inline void CommitUniformBlocks() {
 			shaderUniformBlocks_.CommitUniformBlocks();
 		}
 		/// Wrapper around `GLShaderProgram::defineVertexFormat()`
-		void defineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, std::uint32_t vboOffset);
-		std::uint32_t sortKey();
+		void DefineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, std::uint32_t vboOffset);
+		std::uint32_t GetSortKey();
 	};
 
 }

@@ -10,7 +10,7 @@
 namespace nCine
 {
 	ParticleSystem::ParticleSystem(SceneNode* parent, std::uint32_t count, Texture* texture)
-		: ParticleSystem(parent, count, texture, Recti(0, 0, texture->width(), texture->height()))
+		: ParticleSystem(parent, count, texture, Recti(0, 0, texture->GetWidth(), texture->GetHeight()))
 	{
 	}
 

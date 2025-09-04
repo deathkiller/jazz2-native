@@ -70,7 +70,7 @@ namespace nCine
 	{
 #if defined(NCINE_PROFILING)
 		// Reset all rendering statistics
-		RenderStatistics::reset();
+		RenderStatistics::Reset();
 #endif
 
 		for (std::int32_t i = std::int32_t(chain_.size()) - 1; i >= 0; i--) {

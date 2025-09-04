@@ -87,7 +87,7 @@ namespace Jazz2::Actors::Weapons
 					auto* res = _metadata->FindAnimation((AnimState)1); // Particle
 					if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 						auto& resBase = res->Base;
-						Vector2i texSize = resBase->TextureDiffuse->size();
+						Vector2i texSize = resBase->TextureDiffuse->GetSize();
 
 						for (int i = 0; i < 6; i++) {
 							float angle = (_currentStep * 0.3f + i * 0.6f);

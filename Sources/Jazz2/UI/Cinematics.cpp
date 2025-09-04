@@ -293,7 +293,7 @@ namespace Jazz2::UI
 		}
 
 		// Upload new texture to GPU
-		_texture->loadFromTexels((unsigned char*)_currentFrame.get(), 0, 0, _width, _height);
+		_texture->LoadFromTexels((std::uint8_t*)_currentFrame.get(), 0, 0, _width, _height);
 
 		// Create copy of the buffer
 		std::memcpy(_lastBuffer.get(), _buffer.get(), _width * _height);
@@ -349,11 +349,11 @@ namespace Jazz2::UI
 	{
 		// Prepare output render command
 		_renderCommand.setType(RenderCommand::Type::Sprite);
-		_renderCommand.material().setShaderProgramType(Material::ShaderProgramType::Sprite);
-		_renderCommand.material().reserveUniformsDataMemory();
-		_renderCommand.geometry().setDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		_renderCommand.material().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+		_renderCommand.material().ReserveUniformsDataMemory();
+		_renderCommand.geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-		auto* textureUniform = _renderCommand.material().uniform(Material::TextureUniformName);
+		auto* textureUniform = _renderCommand.material().Uniform(Material::TextureUniformName);
 		if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 			textureUniform->SetIntValue(0); // GL_TEXTURE0
 		}
@@ -386,13 +386,13 @@ namespace Jazz2::UI
 		frameOffset.X = std::round(frameOffset.X);
 		frameOffset.Y = std::round(frameOffset.Y);
 
-		auto* instanceBlock = _renderCommand.material().uniformBlock(Material::InstanceBlockName);
+		auto* instanceBlock = _renderCommand.material().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(frameSize.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 		_renderCommand.setTransformation(Matrix4x4f::Translation(frameOffset.X, frameOffset.Y, 0.0f));
-		_renderCommand.material().setTexture(*_owner->_texture);
+		_renderCommand.material().SetTexture(*_owner->_texture);
 
 		renderQueue.addCommand(&_renderCommand);
 

@@ -8,7 +8,7 @@ namespace Jazz2::Tiles
 	{
 		// TilesPerRow is used only for rendering
 		if (TextureDiffuse != nullptr) {
-			Vector2i texSize = TextureDiffuse->size();
+			Vector2i texSize = TextureDiffuse->GetSize();
 			TilesPerRow = (texSize.X / (DefaultTileSize + 2));
 		} else {
 			TilesPerRow = 0;
@@ -58,7 +58,7 @@ namespace Jazz2::Tiles
 		std::int32_t y = (tileId / TilesPerRow) * (DefaultTileSize + 2);
 
 		// TODO: _isTileFilled is not properly set
-		return TextureDiffuse->loadFromTexels((std::uint8_t*)tileDiffuse.data(), x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+		return TextureDiffuse->LoadFromTexels((std::uint8_t*)tileDiffuse.data(), x, y, DefaultTileSize + 2, DefaultTileSize + 2);
 	}
 
 	bool TileSet::OverrideTileMask(std::int32_t tileId, StaticArrayView<DefaultTileSize * DefaultTileSize, std::uint8_t> tileMask)

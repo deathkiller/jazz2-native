@@ -114,7 +114,7 @@ namespace nCine
 			renderQueue.addCommand(&renderCommand_);
 		} else {
 #if defined(NCINE_PROFILING)
-			RenderStatistics::addCulledNode();
+			RenderStatistics::AddCulledNode();
 #endif
 			return false;
 		}
@@ -133,48 +133,48 @@ namespace nCine
 
 	bool DrawableNode::isBlendingEnabled() const
 	{
-		return renderCommand_.material().isBlendingEnabled();
+		return renderCommand_.material().IsBlendingEnabled();
 	}
 
 	void DrawableNode::setBlendingEnabled(bool blendingEnabled)
 	{
-		renderCommand_.material().setBlendingEnabled(blendingEnabled);
+		renderCommand_.material().SetBlendingEnabled(blendingEnabled);
 	}
 
 	DrawableNode::BlendingFactor DrawableNode::srcBlendingFactor() const
 	{
-		return fromGlBlendingFactor(renderCommand_.material().srcBlendingFactor());
+		return fromGlBlendingFactor(renderCommand_.material().GetSrcBlendingFactor());
 	}
 
 	DrawableNode::BlendingFactor DrawableNode::destBlendingFactor() const
 	{
-		return fromGlBlendingFactor(renderCommand_.material().destBlendingFactor());
+		return fromGlBlendingFactor(renderCommand_.material().GetDestBlendingFactor());
 	}
 
 	void DrawableNode::setBlendingPreset(BlendingPreset blendingPreset)
 	{
 		switch (blendingPreset) {
 			case BlendingPreset::DISABLED:
-				renderCommand_.material().setBlendingFactors(toGlBlendingFactor(BlendingFactor::ONE), toGlBlendingFactor(BlendingFactor::ZERO));
+				renderCommand_.material().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::ONE), toGlBlendingFactor(BlendingFactor::ZERO));
 				break;
 			case BlendingPreset::ALPHA:
-				renderCommand_.material().setBlendingFactors(toGlBlendingFactor(BlendingFactor::SRC_ALPHA), toGlBlendingFactor(BlendingFactor::ONE_MINUS_SRC_ALPHA));
+				renderCommand_.material().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::SRC_ALPHA), toGlBlendingFactor(BlendingFactor::ONE_MINUS_SRC_ALPHA));
 				break;
 			case BlendingPreset::PREMULTIPLIED_ALPHA:
-				renderCommand_.material().setBlendingFactors(toGlBlendingFactor(BlendingFactor::ONE), toGlBlendingFactor(BlendingFactor::ONE_MINUS_SRC_ALPHA));
+				renderCommand_.material().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::ONE), toGlBlendingFactor(BlendingFactor::ONE_MINUS_SRC_ALPHA));
 				break;
 			case BlendingPreset::ADDITIVE:
-				renderCommand_.material().setBlendingFactors(toGlBlendingFactor(BlendingFactor::SRC_ALPHA), toGlBlendingFactor(BlendingFactor::ONE));
+				renderCommand_.material().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::SRC_ALPHA), toGlBlendingFactor(BlendingFactor::ONE));
 				break;
 			case BlendingPreset::MULTIPLY:
-				renderCommand_.material().setBlendingFactors(toGlBlendingFactor(BlendingFactor::DST_COLOR), toGlBlendingFactor(BlendingFactor::ZERO));
+				renderCommand_.material().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::DST_COLOR), toGlBlendingFactor(BlendingFactor::ZERO));
 				break;
 		}
 	}
 
 	void DrawableNode::setBlendingFactors(BlendingFactor srcBlendingFactor, BlendingFactor destBlendingFactor)
 	{
-		renderCommand_.material().setBlendingFactors(toGlBlendingFactor(srcBlendingFactor), toGlBlendingFactor(destBlendingFactor));
+		renderCommand_.material().SetBlendingFactors(toGlBlendingFactor(srcBlendingFactor), toGlBlendingFactor(destBlendingFactor));
 	}
 
 	void DrawableNode::updateAabb()
