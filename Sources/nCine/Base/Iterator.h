@@ -1,5 +1,7 @@
 #pragma once
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+
 namespace nCine
 {
 	/// Dispatching tag for iterators that can only move forward, one element at a time
@@ -223,3 +225,5 @@ namespace nCine
 		return c.rend();
 	}
 }
+
+#endif

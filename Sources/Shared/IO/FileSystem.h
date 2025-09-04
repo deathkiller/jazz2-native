@@ -192,7 +192,7 @@ namespace Death { namespace IO {
 		 * @brief Returns the path to the application-specific writable directory for saving game state
 		 * 
 		 * On macOS, the directory is usually equivalent to @cpp "~/Library/Application Support/<name>/" @ce. On Android,
-		 * it's the internal data directory of the package. On other Unix systems, it usually points to
+		 * it's the internal data directory of the application. On other Unix systems, it usually points to
 		 * @cb{.sh} "${XDG_CONFIG_HOME}/<name>/ @ce or @cpp "~/.config/<name>/" @ce. On Windows, it's usually
 		 * @cpp "C:\\Users\\<user>\\Saved Games\\<name>\\" @ce. If the parent directory doesn't exist, @cb{.bat} %APPDATA% @ce
 		 * will be used instead. On Windows RT, the local data folder of the package is returned, because
