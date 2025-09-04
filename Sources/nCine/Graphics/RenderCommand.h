@@ -31,64 +31,64 @@ namespace nCine
 		RenderCommand();
 
 		/// Returns the number of instances collected in the command or zero if instancing is not used
-		inline std::int32_t numInstances() const {
+		inline std::int32_t GetInstanceCount() const {
 			return numInstances_;
 		}
 		/// Sets the number of instances collected in the command
-		inline void setNumInstances(std::int32_t numInstances) {
+		inline void SetInstanceCount(std::int32_t numInstances) {
 			numInstances_ = numInstances;
 		}
 
 		/// Returns the number of elements collected by the command or zero if it's not a batch
-		inline std::int32_t batchSize() const {
+		inline std::int32_t GetBatchSize() const {
 			return batchSize_;
 		}
 		/// Sets the number of batch elements collected by the command
-		inline void setBatchSize(std::int32_t batchSize) {
+		inline void SetBatchSize(std::int32_t batchSize) {
 			batchSize_ = batchSize;
 		}
 
 		/// Returns the drawing layer for this command
-		inline std::uint16_t layer() const {
+		inline std::uint16_t GetLayer() const {
 			return layer_;
 		}
 		/// Sets the drawing layer for this command
-		inline void setLayer(std::uint16_t layer) {
+		inline void SetLayer(std::uint16_t layer) {
 			layer_ = layer;
 		}
 		/// Returns the visit order index for this command
-		inline std::uint16_t visitOrder() const {
+		inline std::uint16_t GetVisitOrder() const {
 			return visitOrder_;
 		}
 		/// Sets the visit order index for this command
-		inline void setVisitOrder(std::uint16_t visitOrder) {
+		inline void SetVisitOrder(std::uint16_t visitOrder) {
 			visitOrder_ = visitOrder;
 		}
 
 		/// Returns the material sort key for the queue
-		inline std::uint64_t materialSortKey() const {
+		inline std::uint64_t GetMaterialSortKey() const {
 			return materialSortKey_;
 		}
 		/// Returns the lower part of the material sort key, used for batch splitting logic
-		inline std::uint32_t lowerMaterialSortKey() const {
+		inline std::uint32_t GetLowerMaterialSortKey() const {
 			return std::uint32_t(materialSortKey_);
 		}
 		/// Calculates a material sort key for the queue
-		void calculateMaterialSortKey();
+		void CalculateMaterialSortKey();
 		/// Returns the id based secondary sort key for the queue
-		inline std::uint32_t idSortKey() const {
+		inline std::uint32_t GetIdSortKey() const {
 			return idSortKey_;
 		}
 		/// Sets the id based secondary sort key for the queue
-		inline void setIdSortKey(std::uint32_t idSortKey) {
+		inline void SetIdSortKey(std::uint32_t idSortKey) {
 			idSortKey_ = idSortKey;
 		}
 
 		/// Issues the render command
-		void issue();
+		void Issue();
 
 		/// Gets the command type (for profiling purposes)
-		inline Type type() const {
+		inline Type GetType() const {
 #if defined(NCINE_PROFILING)
 			return type_;
 #else
@@ -96,45 +96,46 @@ namespace nCine
 #endif
 		}
 		/// Sets the command type (for profiling purposes)
-		inline void setType(Type type) {
+		inline void SetType(Type type) {
 #if defined(NCINE_PROFILING)
 			type_ = type;
 #endif
 		}
 
-		inline void setScissor(Recti scissorRect) {
+		inline void SetScissor(Recti scissorRect) {
 			scissorRect_ = scissorRect;
 		}
-		void setScissor(GLint x, GLint y, GLsizei width, GLsizei height);
+		void SetScissor(GLint x, GLint y, GLsizei width, GLsizei height);
 
-		inline const Matrix4x4f& transformation() const {
+		inline const Matrix4x4f& GetTransformation() const {
 			return modelMatrix_;
 		}
-		void setTransformation(const Matrix4x4f& modelMatrix);
-		inline const Material& material() const {
+		void SetTransformation(const Matrix4x4f& modelMatrix);
+
+		inline const Material& GetMaterial() const {
 			return material_;
 		}
-		inline const Geometry& geometry() const {
+		inline const Geometry& GetGeometry() const {
 			return geometry_;
 		}
-		inline Material& material() {
+		inline Material& GetMaterial() {
 			return material_;
 		}
-		inline Geometry& geometry() {
+		inline Geometry& GetGeometry() {
 			return geometry_;
 		}
 
 		/// Commits the model matrix uniform block
-		void commitNodeTransformation();
+		void CommitNodeTransformation();
 
 		/// Commits the projection and view matrix uniforms
-		void commitCameraTransformation();
+		void CommitCameraTransformation();
 
 		/// Calls all the commit methods except the camera uniforms commit
-		void commitAll();
+		void CommitAll();
 
 		/// Calculates the Z-depth of command layer using the specified near and far planes
-		static float calculateDepth(std::uint16_t layer, float nearClip, float farClip);
+		static float CalculateDepth(std::uint16_t layer, float nearClip, float farClip);
 
 	private:
 		/// The distance on the Z axis between adjacent layers
@@ -163,7 +164,7 @@ namespace nCine
 		Geometry geometry_;
 
 		/// Returns the final layer sort key for this command
-		inline std::uint32_t layerSortKey() const {
+		inline std::uint32_t GetLayerSortKey() const {
 			return std::uint32_t(layer_ << 16) + visitOrder_;
 		}
 	};

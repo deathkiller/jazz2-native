@@ -90,11 +90,11 @@ namespace nCine
 		FATAL_ASSERT(imguiShaderProgram_->GetStatus() != GLShaderProgram::Status::LinkingFailed);
 
 		if (!withSceneGraph) {
-			setupBuffersAndShader();
+			SetupBuffersAndShader();
 		}
 
 #if defined(IMGUI_HAS_VIEWPORT)
-		prepareForViewports();
+		PrepareForViewports();
 #endif
 
 		// Set custom style
@@ -208,7 +208,7 @@ namespace nCine
 #endif
 	}
 
-	bool ImGuiDrawing::buildFonts()
+	bool ImGuiDrawing::BuildFonts()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
@@ -225,7 +225,7 @@ namespace nCine
 		return (pixels != nullptr);
 	}
 
-	void ImGuiDrawing::newFrame()
+	void ImGuiDrawing::NewFrame()
 	{
 #if defined(WITH_GLFW)
 		ImGuiGlfwInput::newFrame();
@@ -256,7 +256,7 @@ namespace nCine
 		ImGui::NewFrame();
 	}
 
-	void ImGuiDrawing::endFrame(RenderQueue& renderQueue)
+	void ImGuiDrawing::EndFrame(RenderQueue& renderQueue)
 	{
 		ImGui::EndFrame();
 		ImGui::Render();
@@ -278,32 +278,32 @@ namespace nCine
 			}
 		}
 
-		draw(renderQueue);
+		Draw(renderQueue);
 	}
 
-	void ImGuiDrawing::endFrame()
+	void ImGuiDrawing::EndFrame()
 	{
 		ImGui::EndFrame();
 		ImGui::Render();
 
-		draw();
+		Draw();
 	}
 
-	RenderCommand* ImGuiDrawing::retrieveCommandFromPool()
+	RenderCommand* ImGuiDrawing::RetrieveCommandFromPool()
 	{
 		bool commandAdded = false;
-		RenderCommand* retrievedCommand = RenderResources::renderCommandPool().retrieveOrAdd(imguiShaderProgram_.get(), commandAdded);
+		RenderCommand* retrievedCommand = RenderResources::GetRenderCommandPool().RetrieveOrAdd(imguiShaderProgram_.get(), commandAdded);
 		if (commandAdded) {
-			setupRenderCmd(*retrievedCommand);
+			SetupRenderCommand(*retrievedCommand);
 		}
 		return retrievedCommand;
 	}
 
-	void ImGuiDrawing::setupRenderCmd(RenderCommand& cmd)
+	void ImGuiDrawing::SetupRenderCommand(RenderCommand& cmd)
 	{
-		cmd.setType(RenderCommand::Type::ImGui);
+		cmd.SetType(RenderCommand::Type::ImGui);
 
-		Material& material = cmd.material();
+		Material& material = cmd.GetMaterial();
 		material.SetShaderProgram(imguiShaderProgram_.get());
 		material.ReserveUniformsDataMemory();
 		material.Uniform(Material::TextureUniformName)->SetIntValue(0); // GL_TEXTURE0
@@ -315,11 +315,11 @@ namespace nCine
 		material.SetBlendingEnabled(true);
 		material.SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		cmd.geometry().SetElementsPerVertex(sizeof(ImDrawVert) / sizeof(GLfloat));
-		cmd.geometry().SetDrawParameters(GL_TRIANGLES, 0, 0);
+		cmd.GetGeometry().SetElementsPerVertex(sizeof(ImDrawVert) / sizeof(GLfloat));
+		cmd.GetGeometry().SetDrawParameters(GL_TRIANGLES, 0, 0);
 	}
 
-	void ImGuiDrawing::draw(RenderQueue& renderQueue)
+	void ImGuiDrawing::Draw(RenderQueue& renderQueue)
 	{
 		ImDrawData* drawData = ImGui::GetDrawData();
 
@@ -344,30 +344,30 @@ namespace nCine
 		for (std::int32_t n = 0; n < drawData->CmdListsCount; n++) {
 			const ImDrawList* imCmdList = drawData->CmdLists[n];
 
-			RenderCommand& firstCmd = *retrieveCommandFromPool();
+			RenderCommand& firstCmd = *RetrieveCommandFromPool();
 
-			firstCmd.material().Uniform(Material::GuiProjectionMatrixUniformName)->SetFloatVector(projectionMatrix_.Data());
+			firstCmd.GetMaterial().Uniform(Material::GuiProjectionMatrixUniformName)->SetFloatVector(projectionMatrix_.Data());
 
-			firstCmd.geometry().ShareVbo(nullptr);
-			GLfloat* vertices = firstCmd.geometry().AcquireVertexPointer(imCmdList->VtxBuffer.Size * numElements, numElements);
+			firstCmd.GetGeometry().ShareVbo(nullptr);
+			GLfloat* vertices = firstCmd.GetGeometry().AcquireVertexPointer(imCmdList->VtxBuffer.Size * numElements, numElements);
 			memcpy(vertices, imCmdList->VtxBuffer.Data, imCmdList->VtxBuffer.Size * numElements * sizeof(GLfloat));
-			firstCmd.geometry().ReleaseVertexPointer();
+			firstCmd.GetGeometry().ReleaseVertexPointer();
 
-			firstCmd.geometry().ShareIbo(nullptr);
-			GLushort* indices = firstCmd.geometry().AcquireIndexPointer(imCmdList->IdxBuffer.Size);
+			firstCmd.GetGeometry().ShareIbo(nullptr);
+			GLushort* indices = firstCmd.GetGeometry().AcquireIndexPointer(imCmdList->IdxBuffer.Size);
 			memcpy(indices, imCmdList->IdxBuffer.Data, imCmdList->IdxBuffer.Size * sizeof(GLushort));
-			firstCmd.geometry().ReleaseIndexPointer();
+			firstCmd.GetGeometry().ReleaseIndexPointer();
 
 			if (lastLayerValue_ != theApplication().GetGuiSettings().imguiLayer) {
 				// It is enough to set the uniform value once as every ImGui command share the same shader
-				const float depth = RenderCommand::calculateDepth(theApplication().GetGuiSettings().imguiLayer, -1.0f, 1.0f);
-				firstCmd.material().Uniform(Material::DepthUniformName)->SetFloatValue(depth);
+				const float depth = RenderCommand::CalculateDepth(theApplication().GetGuiSettings().imguiLayer, -1.0f, 1.0f);
+				firstCmd.GetMaterial().Uniform(Material::DepthUniformName)->SetFloatValue(depth);
 				lastLayerValue_ = theApplication().GetGuiSettings().imguiLayer;
 			}
 
 			for (std::int32_t cmdIdx = 0; cmdIdx < imCmdList->CmdBuffer.Size; cmdIdx++) {
 				const ImDrawCmd* imCmd = &imCmdList->CmdBuffer[cmdIdx];
-				RenderCommand& currCmd = (cmdIdx == 0) ? firstCmd : *retrieveCommandFromPool();
+				RenderCommand& currCmd = (cmdIdx == 0) ? firstCmd : *RetrieveCommandFromPool();
 
 				// Project scissor/clipping rectangles into framebuffer space
 				ImVec2 clipMin((imCmd->ClipRect.x - clipOff.x) * clipScale.x, (imCmd->ClipRect.y - clipOff.y) * clipScale.y);
@@ -376,28 +376,28 @@ namespace nCine
 					continue;
 
 				// Apply scissor/clipping rectangle (Y is inverted in OpenGL)
-				currCmd.setScissor(static_cast<GLint>(clipMin.x), static_cast<GLint>(static_cast<float>(fbHeight) - clipMax.y),
+				currCmd.SetScissor(static_cast<GLint>(clipMin.x), static_cast<GLint>(static_cast<float>(fbHeight) - clipMax.y),
 								   static_cast<GLsizei>(clipMax.x - clipMin.x), static_cast<GLsizei>(clipMax.y - clipMin.y));
 
 				if (cmdIdx > 0) {
-					currCmd.geometry().ShareVbo(&firstCmd.geometry());
-					currCmd.geometry().ShareIbo(&firstCmd.geometry());
+					currCmd.GetGeometry().ShareVbo(&firstCmd.GetGeometry());
+					currCmd.GetGeometry().ShareIbo(&firstCmd.GetGeometry());
 				}
 
-				currCmd.geometry().SetIndexCount(imCmd->ElemCount);
-				currCmd.geometry().SetFirstIndex(imCmd->IdxOffset);
-				currCmd.geometry().SetFirstVertex(imCmd->VtxOffset);
-				currCmd.setLayer(theApplication().GetGuiSettings().imguiLayer);
-				currCmd.setVisitOrder(numCmd);
-				currCmd.material().SetTexture(reinterpret_cast<GLTexture*>(imCmd->GetTexID()));
+				currCmd.GetGeometry().SetIndexCount(imCmd->ElemCount);
+				currCmd.GetGeometry().SetFirstIndex(imCmd->IdxOffset);
+				currCmd.GetGeometry().SetFirstVertex(imCmd->VtxOffset);
+				currCmd.SetLayer(theApplication().GetGuiSettings().imguiLayer);
+				currCmd.SetVisitOrder(numCmd);
+				currCmd.GetMaterial().SetTexture(reinterpret_cast<GLTexture*>(imCmd->GetTexID()));
 
-				renderQueue.addCommand(&currCmd);
+				renderQueue.AddCommand(&currCmd);
 				numCmd++;
 			}
 		}
 	}
 
-	void ImGuiDrawing::setupBuffersAndShader()
+	void ImGuiDrawing::SetupBuffersAndShader()
 	{
 		vbo_ = std::make_unique<GLBufferObject>(GL_ARRAY_BUFFER);
 		ibo_ = std::make_unique<GLBufferObject>(GL_ELEMENT_ARRAY_BUFFER);
@@ -413,7 +413,7 @@ namespace nCine
 		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetNormalized(true);
 	}
 
-	void ImGuiDrawing::draw()
+	void ImGuiDrawing::Draw()
 	{
 		ImDrawData* drawData = ImGui::GetDrawData();
 
@@ -477,13 +477,13 @@ namespace nCine
 	}
 
 #if defined(IMGUI_HAS_VIEWPORT)
-	void ImGuiDrawing::prepareForViewports()
+	void ImGuiDrawing::PrepareForViewports()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
 
 		ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
-		platformIo.Renderer_RenderWindow = onRenderPlatformWindow;
+		platformIo.Renderer_RenderWindow = OnRenderPlatformWindow;
 
 		// Backup GL state
 		GLint lastTexture, lastArrayBuffer;
@@ -515,13 +515,13 @@ namespace nCine
 		glBindVertexArray(lastVertexArray);
 	}
 
-	void ImGuiDrawing::onRenderPlatformWindow(ImGuiViewport* viewport, void*)
+	void ImGuiDrawing::OnRenderPlatformWindow(ImGuiViewport* viewport, void*)
 	{
 		ImGuiDrawing* _this = static_cast<ImGuiDrawing*>(ImGui::GetIO().BackendRendererUserData);
-		_this->drawPlatformWindow(viewport);
+		_this->DrawPlatformWindow(viewport);
 	}
 
-	void ImGuiDrawing::drawPlatformWindow(ImGuiViewport* viewport)
+	void ImGuiDrawing::DrawPlatformWindow(ImGuiViewport* viewport)
 	{
 		if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear)) {
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -542,7 +542,7 @@ namespace nCine
 		// The renderer would actually work without any VAO bound, but then our VertexAttrib calls would overwrite the default one currently bound.
 		GLuint vertexArrayObject = 0;
 		GL_CALL(glGenVertexArrays(1, &vertexArrayObject));
-		setupRenderStateForPlatformWindow(drawData, fbWidth, fbHeight, vertexArrayObject);
+		SetupRenderStateForPlatformWindow(drawData, fbWidth, fbHeight, vertexArrayObject);
 
 		// Will project scissor/clipping rectangles into framebuffer space
 		ImVec2 clipOff = drawData->DisplayPos;         // (0,0) unless using multi-viewports
@@ -562,7 +562,7 @@ namespace nCine
 					// User callback, registered via ImDrawList::AddCallback()
 					// (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
 					if (imCmd->UserCallback == ImDrawCallback_ResetRenderState) {
-						setupRenderStateForPlatformWindow(drawData, fbWidth, fbHeight, vertexArrayObject);
+						SetupRenderStateForPlatformWindow(drawData, fbWidth, fbHeight, vertexArrayObject);
 					} else {
 						imCmd->UserCallback(imCmdList, imCmd);
 					}
@@ -590,7 +590,7 @@ namespace nCine
 		GL_CALL(glDeleteVertexArrays(1, &vertexArrayObject));
 	}
 
-	void ImGuiDrawing::setupRenderStateForPlatformWindow(ImDrawData* drawData, std::int32_t fbWidth, std::int32_t fbHeight, unsigned int vertexArrayObject)
+	void ImGuiDrawing::SetupRenderStateForPlatformWindow(ImDrawData* drawData, std::int32_t fbWidth, std::int32_t fbHeight, unsigned int vertexArrayObject)
 	{
 		glEnable(GL_BLEND);
 		glBlendEquation(GL_FUNC_ADD);

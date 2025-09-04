@@ -79,13 +79,13 @@ namespace Jazz2::Rendering
 			_antialiasing.setParent(&rootNode);
 			setParent(nullptr);
 
-			if (_antialiasing._renderCommand.material().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Antialiasing))) {
-				_antialiasing._renderCommand.material().ReserveUniformsDataMemory();
-				_antialiasing._renderCommand.geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			if (_antialiasing._renderCommand.GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Antialiasing))) {
+				_antialiasing._renderCommand.GetMaterial().ReserveUniformsDataMemory();
+				_antialiasing._renderCommand.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 				// Required to reset render command properly
-				_antialiasing._renderCommand.setTransformation(_antialiasing._renderCommand.transformation());
+				_antialiasing._renderCommand.SetTransformation(_antialiasing._renderCommand.GetTransformation());
 
-				auto* textureUniform = _antialiasing._renderCommand.material().Uniform(Material::TextureUniformName);
+				auto* textureUniform = _antialiasing._renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
@@ -114,18 +114,18 @@ namespace Jazz2::Rendering
 		}
 
 		bool shaderChanged = (_resizeShader != nullptr
-			? _renderCommand.material().SetShader(_resizeShader)
-			: _renderCommand.material().SetShaderProgramType(Material::ShaderProgramType::Sprite));
+			? _renderCommand.GetMaterial().SetShader(_resizeShader)
+			: _renderCommand.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
 #else
-		bool shaderChanged = _renderCommand.material().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+		bool shaderChanged = _renderCommand.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
 #endif
 		if (shaderChanged) {
-			_renderCommand.material().ReserveUniformsDataMemory();
-			_renderCommand.geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			_renderCommand.GetMaterial().ReserveUniformsDataMemory();
+			_renderCommand.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			// Required to reset render command properly
-			_renderCommand.setTransformation(_renderCommand.transformation());
+			_renderCommand.SetTransformation(_renderCommand.GetTransformation());
 
-			auto* textureUniform = _renderCommand.material().Uniform(Material::TextureUniformName);
+			auto* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
@@ -141,7 +141,7 @@ namespace Jazz2::Rendering
 
 	bool UpscaleRenderPass::OnDraw(RenderQueue& renderQueue)
 	{
-		auto instanceBlock = _renderCommand.material().UniformBlock(Material::InstanceBlockName);
+		auto instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);
 #if !defined(DISABLE_RESCALE_SHADERS)
 		if (_resizeShader != nullptr) {
 			// TexRectUniformName is reused for input texture size
@@ -156,9 +156,9 @@ namespace Jazz2::Rendering
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(_targetSize.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
-		_renderCommand.material().SetTexture(0, *_target);
+		_renderCommand.GetMaterial().SetTexture(0, *_target);
 
-		renderQueue.addCommand(&_renderCommand);
+		renderQueue.AddCommand(&_renderCommand);
 
 		return true;
 	}
@@ -178,14 +178,14 @@ namespace Jazz2::Rendering
 	bool UpscaleRenderPass::AntialiasingSubpass::OnDraw(RenderQueue& renderQueue)
 	{
 		Vector2i size = _target->GetSize();
-		auto instanceBlock = _renderCommand.material().UniformBlock(Material::InstanceBlockName);
+		auto instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue((float)size.X, (float)size.Y, 0.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(_targetSize.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
-		_renderCommand.material().SetTexture(0, *_target);
+		_renderCommand.GetMaterial().SetTexture(0, *_target);
 
-		renderQueue.addCommand(&_renderCommand);
+		renderQueue.AddCommand(&_renderCommand);
 
 		return true;
 	}

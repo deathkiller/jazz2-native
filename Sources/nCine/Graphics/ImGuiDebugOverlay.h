@@ -27,11 +27,11 @@ namespace nCine
 		ImGuiDebugOverlay(const ImGuiDebugOverlay&) = delete;
 		ImGuiDebugOverlay& operator=(const ImGuiDebugOverlay&) = delete;
 
-		void update() override;
-		void updateFrameTimings() override;
+		void Update() override;
+		void UpdateFrameTimings() override;
 
 #if defined(DEATH_TRACE)
-		void log(TraceLevel level, StringView time, StringView threadId, StringView functionName, StringView message) override;
+		void Log(TraceLevel level, StringView time, StringView threadId, StringView functionName, StringView message) override;
 #endif
 
 	private:
@@ -135,9 +135,9 @@ namespace nCine
 		void guiBottomRight();
 		void guiPlots();
 
-		void initPlotValues();
+		void InitPlotValues();
 #if defined(NCINE_PROFILING)
-		void updateOverlayTimings();
+		void UpdateOverlayTimings();
 #endif
 	};
 }

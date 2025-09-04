@@ -20,17 +20,17 @@ namespace nCine
 		transparentBatchedQueue_.reserve(16);
 	}
 
-	bool RenderQueue::empty() const
+	bool RenderQueue::IsEmpty() const
 	{
 		return (opaqueQueue_.empty() && transparentQueue_.empty());
 	}
 
-	void RenderQueue::addCommand(RenderCommand* command)
+	void RenderQueue::AddCommand(RenderCommand* command)
 	{
 		// Calculating the material sorting key before adding the command to the queue
-		command->calculateMaterialSortKey();
+		command->CalculateMaterialSortKey();
 
-		if (!command->material().IsBlendingEnabled()) {
+		if (!command->GetMaterial().IsBlendingEnabled()) {
 			opaqueQueue_.push_back(command);
 		} else {
 			transparentQueue_.push_back(command);
@@ -41,22 +41,22 @@ namespace nCine
 	{
 		bool descendingOrder(const RenderCommand* a, const RenderCommand* b)
 		{
-			return (a->materialSortKey() != b->materialSortKey())
-				? a->materialSortKey() > b->materialSortKey()
-				: a->idSortKey() > b->idSortKey();
+			return (a->GetMaterialSortKey() != b->GetMaterialSortKey())
+				? a->GetMaterialSortKey() > b->GetMaterialSortKey()
+				: a->GetIdSortKey() > b->GetIdSortKey();
 		}
 
 		bool ascendingOrder(const RenderCommand* a, const RenderCommand* b)
 		{
-			return (a->materialSortKey() != b->materialSortKey())
-				? a->materialSortKey() < b->materialSortKey()
-				: a->idSortKey() < b->idSortKey();
+			return (a->GetMaterialSortKey() != b->GetMaterialSortKey())
+				? a->GetMaterialSortKey() < b->GetMaterialSortKey()
+				: a->GetIdSortKey() < b->GetIdSortKey();
 		}
 
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 		const char* commandTypeString(const RenderCommand& command)
 		{
-			switch (command.type()) {
+			switch (command.GetType()) {
 				case RenderCommand::Type::Unspecified: return "unspecified";
 				case RenderCommand::Type::Sprite: return "sprite";
 				case RenderCommand::Type::MeshSprite: return "mesh sprite";
@@ -73,7 +73,7 @@ namespace nCine
 #endif
 	}
 
-	void RenderQueue::sortAndCommit()
+	void RenderQueue::SortAndCommit()
 	{
 #if defined(DEATH_DEBUG)
 		static char debugString[128];
@@ -90,8 +90,8 @@ namespace nCine
 		if (batchingEnabled) {
 			ZoneScopedNC("Batching", 0x81A861);
 			// Always create batches after sorting
-			RenderResources::GetRenderBatcher().createBatches(opaqueQueue_, opaqueBatchedQueue_);
-			RenderResources::GetRenderBatcher().createBatches(transparentQueue_, transparentBatchedQueue_);
+			RenderResources::GetRenderBatcher().CreateBatches(opaqueQueue_, opaqueBatchedQueue_);
+			RenderResources::GetRenderBatcher().CreateBatches(transparentQueue_, transparentBatchedQueue_);
 		}
 
 		// Avoid GPU stalls by uploading to VBOs, IBOs and UBOs before drawing
@@ -102,7 +102,7 @@ namespace nCine
 			GLDebug::ScopedGroup scoped({ debugString, length });
 #endif
 			for (RenderCommand* opaqueRenderCommand : *opaques) {
-				opaqueRenderCommand->commitAll();
+				opaqueRenderCommand->CommitAll();
 			}
 		}
 
@@ -113,12 +113,12 @@ namespace nCine
 			GLDebug::ScopedGroup scoped({ debugString, length });
 #endif
 			for (RenderCommand* transparentRenderCommand : *transparents) {
-				transparentRenderCommand->commitAll();
+				transparentRenderCommand->CommitAll();
 			}
 		}
 	}
 
-	void RenderQueue::draw()
+	void RenderQueue::Draw()
 	{
 #if defined(DEATH_DEBUG)
 		static char debugString[128];
@@ -134,21 +134,21 @@ namespace nCine
 		for (RenderCommand* opaqueRenderCommand : *opaques) {
 			TracyGpuZone("Opaque");
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
-			const std::int32_t numInstances = opaqueRenderCommand->numInstances();
-			const std::int32_t batchSize = opaqueRenderCommand->batchSize();
-			const std::uint16_t layer = opaqueRenderCommand->layer();
-			const std::uint16_t visitOrder = opaqueRenderCommand->visitOrder();
+			const std::int32_t numInstances = opaqueRenderCommand->GetInstanceCount();
+			const std::int32_t batchSize = opaqueRenderCommand->GetBatchSize();
+			const std::uint16_t layer = opaqueRenderCommand->GetLayer();
+			const std::uint16_t visitOrder = opaqueRenderCommand->GetVisitOrder();
 
 			std::size_t length;
 			if (numInstances > 0) {
 				length = formatInto(debugString, "Opaque {} ({} {} on layer {}, visit order {}, sort key 0x{:x})",
-								    commandIndex, numInstances, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->materialSortKey());
+								    commandIndex, numInstances, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->GetMaterialSortKey());
 			} else if (batchSize > 0) {
 				length = formatInto(debugString, "Opaque {} ({} {} on layer {}, visit order {}, sort key 0x{:x})",
-								    commandIndex, batchSize, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->materialSortKey());
+								    commandIndex, batchSize, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->GetMaterialSortKey());
 			} else {
 				length = formatInto(debugString, "Opaque {} ({} {} layer {}, visit order {}, sort key 0x{:x})",
-								    commandIndex, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->materialSortKey());
+								    commandIndex, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->GetMaterialSortKey());
 			}
 			GLDebug::ScopedGroup scoped({ debugString, length });
 			commandIndex++;
@@ -157,8 +157,8 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 			RenderStatistics::GatherStatistics(*opaqueRenderCommand);
 #endif
-			opaqueRenderCommand->commitCameraTransformation();
-			opaqueRenderCommand->issue();
+			opaqueRenderCommand->CommitCameraTransformation();
+			opaqueRenderCommand->Issue();
 		}
 
 		GLBlending::Enable();
@@ -167,21 +167,21 @@ namespace nCine
 		for (RenderCommand* transparentRenderCommand : *transparents) {
 			TracyGpuZone("Transparent");
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
-			const std::int32_t numInstances = transparentRenderCommand->numInstances();
-			const std::int32_t batchSize = transparentRenderCommand->batchSize();
-			const std::uint16_t layer = transparentRenderCommand->layer();
-			const std::uint16_t visitOrder = transparentRenderCommand->visitOrder();
+			const std::int32_t numInstances = transparentRenderCommand->GetInstanceCount();
+			const std::int32_t batchSize = transparentRenderCommand->GetBatchSize();
+			const std::uint16_t layer = transparentRenderCommand->GetLayer();
+			const std::uint16_t visitOrder = transparentRenderCommand->GetVisitOrder();
 
 			std::size_t length;
 			if (numInstances > 0) {
 				length = formatInto(debugString, "Transparent {} ({} {} on layer {}, visit order {}, sort key 0x{:x})",
-								    commandIndex, numInstances, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->materialSortKey());
+								    commandIndex, numInstances, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->GetMaterialSortKey());
 			} else if (batchSize > 0) {
 				length = formatInto(debugString, "Transparent {} ({} {} on layer {}, visit order {}, sort key 0x{:x})",
-								    commandIndex, batchSize, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->materialSortKey());
+								    commandIndex, batchSize, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->GetMaterialSortKey());
 			} else {
 				length = formatInto(debugString, "Transparent {} ({} on layer {}, visit order {}, sort key 0x{:x})",
-								    commandIndex, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->materialSortKey());
+								    commandIndex, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->GetMaterialSortKey());
 			}
 			GLDebug::ScopedGroup scoped({ debugString, length });
 			commandIndex++;
@@ -190,9 +190,9 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 			RenderStatistics::GatherStatistics(*transparentRenderCommand);
 #endif
-			GLBlending::SetBlendFunc(transparentRenderCommand->material().GetSrcBlendingFactor(), transparentRenderCommand->material().GetDestBlendingFactor());
-			transparentRenderCommand->commitCameraTransformation();
-			transparentRenderCommand->issue();
+			GLBlending::SetBlendFunc(transparentRenderCommand->GetMaterial().GetSrcBlendingFactor(), transparentRenderCommand->GetMaterial().GetDestBlendingFactor());
+			transparentRenderCommand->CommitCameraTransformation();
+			transparentRenderCommand->Issue();
 		}
 		// Depth mask has to be enabled again before exiting this method or glClear(GL_DEPTH_BUFFER_BIT) won't have any effect
 		GLDepthTest::EnableDepthMask();
@@ -201,13 +201,13 @@ namespace nCine
 		GLScissorTest::Disable();
 	}
 
-	void RenderQueue::clear()
+	void RenderQueue::Clear()
 	{
 		opaqueQueue_.clear();
 		opaqueBatchedQueue_.clear();
 		transparentQueue_.clear();
 		transparentBatchedQueue_.clear();
 
-		RenderResources::GetRenderBatcher().reset();
+		RenderResources::GetRenderBatcher().Reset();
 	}
 }

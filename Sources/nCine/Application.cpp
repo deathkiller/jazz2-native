@@ -835,7 +835,7 @@ namespace nCine
 
 		if (appCfg_.withGraphics) {
 #if defined(WITH_IMGUI)
-			imguiDrawing_->buildFonts();
+			imguiDrawing_->BuildFonts();
 #endif
 			// Swapping frame now for a cleaner API trace capture when debugging
 			gfxDevice_->update();
@@ -854,7 +854,7 @@ namespace nCine
 #	if defined(NCINE_PROFILING)
 			profileStartTime_ = TimeStamp::now();
 #	endif
-			imguiDrawing_->newFrame();
+			imguiDrawing_->NewFrame();
 #	if defined(NCINE_PROFILING)
 			timings_[(std::int32_t)Timings::ImGui] = profileStartTime_.secondsSince();
 #	endif
@@ -877,7 +877,7 @@ namespace nCine
 
 #if defined(WITH_IMGUI)
 		if (debugOverlay_ != nullptr) {
-			debugOverlay_->update();
+			debugOverlay_->Update();
 		}
 #endif
 
@@ -924,7 +924,7 @@ namespace nCine
 					profileStartTime_ = TimeStamp::now();
 #	endif
 					RenderQueue& imguiRenderQueue = (guiSettings_.imguiViewport ? guiSettings_.imguiViewport->renderQueue_ : screenViewport_->renderQueue_);
-					imguiDrawing_->endFrame(imguiRenderQueue);
+					imguiDrawing_->EndFrame(imguiRenderQueue);
 #	if defined(NCINE_PROFILING)
 					timings_[(std::int32_t)Timings::ImGui] += profileStartTime_.secondsSince();
 #	endif
@@ -950,7 +950,7 @@ namespace nCine
 #	if defined(NCINE_PROFILING)
 				profileStartTime_ = TimeStamp::now();
 #	endif
-				imguiDrawing_->endFrame();
+				imguiDrawing_->EndFrame();
 #	if defined(NCINE_PROFILING)
 				timings_[(std::int32_t)Timings::ImGui] += profileStartTime_.secondsSince();
 #	endif
@@ -975,7 +975,7 @@ namespace nCine
 
 #if defined(WITH_IMGUI)
 		if (debugOverlay_ != nullptr) {
-			debugOverlay_->updateFrameTimings();
+			debugOverlay_->UpdateFrameTimings();
 		}
 #endif
 
@@ -1290,7 +1290,7 @@ namespace nCine
 			std::int32_t length4 = 0;
 			AppendDateTime(logEntryWithColors, length4, timestamp);
 
-			debugOverlay->log(level, logEntryWithColors, threadId, functionName, content);
+			debugOverlay->Log(level, logEntryWithColors, threadId, functionName, content);
 		}
 #endif
 

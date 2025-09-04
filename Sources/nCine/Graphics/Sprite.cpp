@@ -56,12 +56,12 @@ namespace nCine
 		}*/
 
 		_type = ObjectType::Sprite;
-		renderCommand_.setType(RenderCommand::Type::Sprite);
+		renderCommand_.SetType(RenderCommand::Type::Sprite);
 
 		Material::ShaderProgramType shaderProgramType = (texture_ != nullptr ? Material::ShaderProgramType::Sprite : Material::ShaderProgramType::SpriteNoTexture);
-		renderCommand_.material().SetShaderProgramType(shaderProgramType);
+		renderCommand_.GetMaterial().SetShaderProgramType(shaderProgramType);
 		shaderHasChanged();
-		renderCommand_.geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		renderCommand_.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 		if (texture_ != nullptr) {
 			setTexRect(Recti(0, 0, texture_->GetWidth(), texture_->GetHeight()));
@@ -70,9 +70,9 @@ namespace nCine
 
 	void Sprite::textureHasChanged(Texture* newTexture)
 	{
-		if (renderCommand_.material().GetShaderProgramType() != Material::ShaderProgramType::Custom) {
+		if (renderCommand_.GetMaterial().GetShaderProgramType() != Material::ShaderProgramType::Custom) {
 			Material::ShaderProgramType shaderProgramType = (newTexture != nullptr ? Material::ShaderProgramType::Sprite : Material::ShaderProgramType::SpriteNoTexture);
-			const bool hasChanged = renderCommand_.material().SetShaderProgramType(shaderProgramType);
+			const bool hasChanged = renderCommand_.GetMaterial().SetShaderProgramType(shaderProgramType);
 			if (hasChanged) {
 				shaderHasChanged();
 			}

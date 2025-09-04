@@ -40,8 +40,8 @@ namespace nCine
 
 	void RenderStatistics::GatherStatistics(const RenderCommand& command)
 	{
-		const GLsizei numVertices = command.geometry().numVertices();
-		const unsigned int numIndices = command.geometry().numIndices();
+		const GLsizei numVertices = command.GetGeometry().GetVertexCount();
+		const unsigned int numIndices = command.GetGeometry().GetIndexCount();
 
 		if (numVertices == 0 && numIndices == 0) {
 			return;
@@ -49,23 +49,23 @@ namespace nCine
 
 		unsigned int verticesToCount = 0;
 		if (numIndices > 0) {
-			verticesToCount = (command.numInstances() > 0) ? numIndices * command.numInstances() : numIndices;
+			verticesToCount = (command.GetInstanceCount() > 0) ? numIndices * command.GetInstanceCount() : numIndices;
 		} else {
-			verticesToCount = (command.numInstances() > 0) ? numVertices * command.numInstances() : numVertices;
+			verticesToCount = (command.GetInstanceCount() > 0) ? numVertices * command.GetInstanceCount() : numVertices;
 		}
 
-		const unsigned int typeIndex = (unsigned int)command.type();
+		const unsigned int typeIndex = (unsigned int)command.GetType();
 		typedCommands_[typeIndex].vertices += verticesToCount;
 		typedCommands_[typeIndex].commands++;
-		typedCommands_[typeIndex].transparents += (command.material().IsBlendingEnabled()) ? 1 : 0;
-		typedCommands_[typeIndex].instances += command.numInstances();
-		typedCommands_[typeIndex].batchSize += command.batchSize();
+		typedCommands_[typeIndex].transparents += (command.GetMaterial().IsBlendingEnabled()) ? 1 : 0;
+		typedCommands_[typeIndex].instances += command.GetInstanceCount();
+		typedCommands_[typeIndex].batchSize += command.GetBatchSize();
 
 		allCommands_.vertices += verticesToCount;
 		allCommands_.commands++;
-		allCommands_.transparents += (command.material().IsBlendingEnabled()) ? 1 : 0;
-		allCommands_.instances += command.numInstances();
-		allCommands_.batchSize += command.batchSize();
+		allCommands_.transparents += (command.GetMaterial().IsBlendingEnabled()) ? 1 : 0;
+		allCommands_.instances += command.GetInstanceCount();
+		allCommands_.batchSize += command.GetBatchSize();
 	}
 
 	void RenderStatistics::GatherStatistics(const RenderBuffersManager::ManagedBuffer& buffer)

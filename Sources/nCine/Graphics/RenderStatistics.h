@@ -148,46 +148,46 @@ namespace nCine
 		};
 
 		/// Returns the aggregated command statistics for all types
-		static inline const Commands& AllCommands() {
+		static inline const Commands& GetAllCommands() {
 			return allCommands_;
 		}
 		/// Returns the commnad statistics for the specified type
-		static inline const Commands& Commands(RenderCommand::Type type) {
+		static inline const Commands& GetCommands(RenderCommand::Type type) {
 			return typedCommands_[(std::int32_t)type];
 		}
 
 		/// Returns the buffer statistics for the specified type
-		static inline const Buffers& Buffers(RenderBuffersManager::BufferTypes type) {
+		static inline const Buffers& GetBuffers(RenderBuffersManager::BufferTypes type) {
 			return typedBuffers_[(std::int32_t)type];
 		}
 
 		/// Returns aggregated texture statistics
-		static inline const Textures& Textures() {
+		static inline const Textures& GetTextures() {
 			return textures_;
 		}
 
 		/// Returns aggregated custom VBOs statistics
-		static inline const CustomBuffers& CustomVBOs() {
+		static inline const CustomBuffers& GetCustomVBOs() {
 			return customVbos_;
 		}
 
 		/// Returns aggregated custom IBOs statistics
-		static inline const CustomBuffers& CustomIBOs() {
+		static inline const CustomBuffers& GetCustomIBOs() {
 			return customIbos_;
 		}
 
 		/// Returns the number of `DrawableNodes` culled because outside of the screen
-		static inline std::uint32_t Culled() {
+		static inline std::uint32_t GetCulled() {
 			return culledNodes_[(index_ + 1) % 2];
 		}
 
 		/// Returns statistics about the VAO pool
-		static inline const VaoPool& VaoPool() {
+		static inline const VaoPool& GetVaoPool() {
 			return vaoPool_;
 		}
 
 		/// Returns statistics about the render command pools
-		static inline const CommandPool& CommandPool() {
+		static inline const CommandPool& GetCommandPool() {
 			return commandPool_;
 		}
 
@@ -206,6 +206,7 @@ namespace nCine
 		static void Reset();
 		static void GatherStatistics(const RenderCommand& command);
 		static void GatherStatistics(const RenderBuffersManager::ManagedBuffer& buffer);
+
 		static inline void GatherVaoPoolStatistics(std::uint32_t poolSize, std::uint32_t poolCapacity)
 		{
 			vaoPool_.size = poolSize;
@@ -246,16 +247,20 @@ namespace nCine
 			customIbos_.count--;
 			customIbos_.dataSize -= datasize;
 		}
-		static inline void AddCulledNode() {
+		static inline void AddCulledNode()
+		{
 			culledNodes_[index_]++;
 		}
-		static inline void AddVaoPoolReuse() {
+		static inline void AddVaoPoolReuse()
+		{
 			vaoPool_.reuses++;
 		}
-		static inline void AddVaoPoolBinding() {
+		static inline void AddVaoPoolBinding()
+		{
 			vaoPool_.bindings++;
 		}
-		static inline void AddCommandPoolRetrieval() {
+		static inline void AddCommandPoolRetrieval()
+		{
 			commandPool_.retrievals++;
 		}
 	};

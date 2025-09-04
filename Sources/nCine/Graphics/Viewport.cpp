@@ -340,9 +340,9 @@ namespace nCine
 	{
 		RenderResources::SetCurrentViewport(this);
 
-		if (!renderQueue_.empty()) {
+		if (!renderQueue_.IsEmpty()) {
 			ZoneScopedC(0x81A861);
-			renderQueue_.sortAndCommit();
+			renderQueue_.SortAndCommit();
 		}
 
 		stateBits_.set(StateBitPositions::CommittedBit);
@@ -423,7 +423,7 @@ namespace nCine
 		RenderResources::SetCurrentCamera(camera_);
 		RenderResources::UpdateCameraUniforms();
 
-		if (!renderQueue_.empty()) {
+		if (!renderQueue_.IsEmpty()) {
 			const bool viewportRectNonZeroArea = (viewportRect_.W > 0 && viewportRect_.H > 0);
 			const GLViewport::State viewportState = GLViewport::GetState();
 			if (viewportRectNonZeroArea) {
@@ -436,7 +436,7 @@ namespace nCine
 				GLScissorTest::Enable(scissorRect_.X, scissorRect_.Y, scissorRect_.W, scissorRect_.H);
 			}
 
-			renderQueue_.draw();
+			renderQueue_.Draw();
 
 			if (scissorRectNonZeroArea) {
 				GLScissorTest::SetState(scissorTestState);

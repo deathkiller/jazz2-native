@@ -1409,7 +1409,7 @@ namespace Jazz2::Actors
 			_rendererType((ActorRendererType)-1), _rendererTransition(0.0f)
 	{
 		_type = ObjectType::Sprite;
-		renderCommand_.setType(RenderCommand::Type::Sprite);
+		renderCommand_.SetType(RenderCommand::Type::Sprite);
 		Initialize(ActorRendererType::Default);
 	}
 
@@ -1428,15 +1428,15 @@ namespace Jazz2::Actors
 
 		bool shaderChanged;
 		switch (type) {
-			case ActorRendererType::Outline: shaderChanged = renderCommand_.material().SetShader(resolver.GetShader(PrecompiledShader::Outline)); break;
-			case ActorRendererType::WhiteMask: shaderChanged = renderCommand_.material().SetShader(resolver.GetShader(PrecompiledShader::WhiteMask)); break;
-			case ActorRendererType::PartialWhiteMask: shaderChanged = renderCommand_.material().SetShader(resolver.GetShader(PrecompiledShader::PartialWhiteMask)); break;
-			case ActorRendererType::FrozenMask: shaderChanged = renderCommand_.material().SetShader(resolver.GetShader(PrecompiledShader::FrozenMask)); break;
-			default: shaderChanged = renderCommand_.material().SetShaderProgramType(Material::ShaderProgramType::Sprite); break;
+			case ActorRendererType::Outline: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(PrecompiledShader::Outline)); break;
+			case ActorRendererType::WhiteMask: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(PrecompiledShader::WhiteMask)); break;
+			case ActorRendererType::PartialWhiteMask: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(PrecompiledShader::PartialWhiteMask)); break;
+			case ActorRendererType::FrozenMask: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(PrecompiledShader::FrozenMask)); break;
+			default: shaderChanged = renderCommand_.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite); break;
 		}
 		if (shaderChanged) {
 			shaderHasChanged();
-			renderCommand_.geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			renderCommand_.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
 			if (type == ActorRendererType::Outline || type == ActorRendererType::FrozenMask) {
 				_rendererTransition = 0.0f;

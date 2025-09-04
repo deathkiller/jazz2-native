@@ -32,14 +32,14 @@ namespace nCine
 		IDebugOverlay(const IDebugOverlay&) = delete;
 		IDebugOverlay& operator=(const IDebugOverlay&) = delete;
 
-		inline DisplaySettings& settings() {
+		inline DisplaySettings& GetSettings() {
 			return settings_;
 		}
-		virtual void update() = 0;
-		virtual void updateFrameTimings() = 0;
+		virtual void Update() = 0;
+		virtual void UpdateFrameTimings() = 0;
 
 #if defined(DEATH_TRACE)
-		virtual void log(TraceLevel level, StringView time, StringView threadId, StringView functionName, StringView message) = 0;
+		virtual void Log(TraceLevel level, StringView time, StringView threadId, StringView functionName, StringView message) = 0;
 #endif
 
 	protected:

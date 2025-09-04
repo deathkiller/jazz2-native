@@ -47,13 +47,13 @@ namespace nCine
 
 		if (node != node_) {
 			if (node_ != nullptr) {
-				Material& prevMaterial = node_->renderCommand_.material();
+				Material& prevMaterial = node_->renderCommand_.GetMaterial();
 				const Material::ShaderProgramType programType = static_cast<Material::ShaderProgramType>(previousShaderType_);
 				prevMaterial.SetShaderProgramType(programType);
 			}
 
 			if (node != nullptr) {
-				Material& material = node->renderCommand_.material();
+				Material& material = node->renderCommand_.GetMaterial();
 				previousShaderType_ = std::int32_t(material.GetShaderProgramType());
 			}
 			node_ = node;
@@ -74,7 +74,7 @@ namespace nCine
 
 		// Allow shader self-assignment to take into account the case where it loads new data
 		if (node_ != nullptr) {
-			Material& material = node_->renderCommand_.material();
+			Material& material = node_->renderCommand_.GetMaterial();
 			if (shader == nullptr) {
 				const Material::ShaderProgramType programType = static_cast<Material::ShaderProgramType>(previousShaderType_);
 				material.SetShaderProgramType(programType);
@@ -97,7 +97,7 @@ namespace nCine
 	bool ShaderState::ResetShader()
 	{
 		if (shader_ != nullptr && shader_->IsLinked() && node_) {
-			Material& material = node_->renderCommand_.material();
+			Material& material = node_->renderCommand_.GetMaterial();
 			material.SetShaderProgram(shader_->glShaderProgram_.get());
 			node_->shaderHasChanged();
 			return true;
@@ -112,7 +112,7 @@ namespace nCine
 			return false;
 		}
 
-		Material& material = node_->renderCommand_.material();
+		Material& material = node_->renderCommand_.GetMaterial();
 		const bool result = texture ? material.SetTexture(unit, *texture) : material.SetTexture(unit, nullptr);
 
 		return result;
@@ -125,7 +125,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
+		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntVector(vector);
 		}
@@ -140,7 +140,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
+		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntValue(value0);
 		}
@@ -155,7 +155,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
+		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntValue(value0, value1);
 		}
@@ -170,7 +170,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
+		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntValue(value0, value1, value2);
 		}
@@ -185,7 +185,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
+		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntValue(value0, value1, value2, value3);
 		}
@@ -215,7 +215,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
+		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatVector(vector);
 		}
@@ -230,7 +230,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
+		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatValue(value0);
 		}
@@ -245,7 +245,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
+		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatValue(value0, value1);
 		}
@@ -260,7 +260,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
+		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatValue(value0, value1, value2);
 		}
@@ -275,7 +275,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.material(), blockName, name);
+		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatValue(value0, value1, value2, value3);
 		}
@@ -310,7 +310,7 @@ namespace nCine
 		}
 
 		std::uint32_t size = 0;
-		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().UniformBlock(blockName);
+		GLUniformBlockCache* uniformBlock = node_->renderCommand_.GetMaterial().UniformBlock(blockName);
 		if (uniformBlock != nullptr) {
 			size = static_cast<std::uint32_t>(uniformBlock->GetSize());
 		}
@@ -325,7 +325,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().UniformBlock(blockName);
+		GLUniformBlockCache* uniformBlock = node_->renderCommand_.GetMaterial().UniformBlock(blockName);
 		if (uniformBlock != nullptr) {
 			result = uniformBlock->CopyData(destIndex, src, numBytes);
 		}
@@ -345,7 +345,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformBlockCache* uniformBlock = node_->renderCommand_.material().UniformBlock(blockName);
+		GLUniformBlockCache* uniformBlock = node_->renderCommand_.GetMaterial().UniformBlock(blockName);
 		if (uniformBlock != nullptr) {
 			result = uniformBlock->CopyData(src);
 		}

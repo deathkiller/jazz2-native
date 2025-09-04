@@ -35,7 +35,7 @@ namespace nCine::Backends
 		height_ = height;
 		theApplication().resizeRootViewport(width, height);
 
-		QRect rect = widget_.geometry();
+		QRect rect = widget_.GetGeometry();
 		rect.setWidth(width);
 		rect.setHeight(height);
 		widget_.setGeometry(rect);
@@ -58,7 +58,7 @@ namespace nCine::Backends
 
 		theApplication().resizeRootViewport(width, height);
 
-		QRect rect = widget_.geometry();
+		QRect rect = widget_.GetGeometry();
 		rect.setWidth(width);
 		rect.setHeight(height);
 		widget_.setGeometry(rect);
@@ -91,7 +91,7 @@ namespace nCine::Backends
 
 	void Qt5GfxDevice::setWindowPosition(int x, int y)
 	{
-		QRect geometry = widget_.geometry();
+		QRect geometry = widget_.GetGeometry();
 		geometry.setX(x);
 		geometry.setY(y);
 		widget_.setGeometry(geometry);

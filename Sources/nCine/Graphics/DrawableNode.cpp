@@ -66,7 +66,7 @@ namespace nCine
 		renderCommand_(),
 		lastFrameRendered_(0)
 	{
-		renderCommand_.setIdSortKey(id());
+		renderCommand_.SetIdSortKey(id());
 	}
 
 	DrawableNode::DrawableNode(SceneNode* parent, Vector2f position)
@@ -106,12 +106,12 @@ namespace nCine
 		}
 
 		if (!cullingEnabled || overlaps) {
-			renderCommand_.setLayer(absLayer_);
-			renderCommand_.setVisitOrder(withVisitOrder_ ? visitOrderIndex_ : 0);
+			renderCommand_.SetLayer(absLayer_);
+			renderCommand_.SetVisitOrder(withVisitOrder_ ? visitOrderIndex_ : 0);
 			updateRenderCommand();
 			dirtyBits_.reset(DirtyBitPositions::TransformationUploadBit);
 			dirtyBits_.reset(DirtyBitPositions::ColorUploadBit);
-			renderQueue.addCommand(&renderCommand_);
+			renderQueue.AddCommand(&renderCommand_);
 		} else {
 #if defined(NCINE_PROFILING)
 			RenderStatistics::AddCulledNode();
@@ -133,48 +133,48 @@ namespace nCine
 
 	bool DrawableNode::isBlendingEnabled() const
 	{
-		return renderCommand_.material().IsBlendingEnabled();
+		return renderCommand_.GetMaterial().IsBlendingEnabled();
 	}
 
 	void DrawableNode::setBlendingEnabled(bool blendingEnabled)
 	{
-		renderCommand_.material().SetBlendingEnabled(blendingEnabled);
+		renderCommand_.GetMaterial().SetBlendingEnabled(blendingEnabled);
 	}
 
 	DrawableNode::BlendingFactor DrawableNode::srcBlendingFactor() const
 	{
-		return fromGlBlendingFactor(renderCommand_.material().GetSrcBlendingFactor());
+		return fromGlBlendingFactor(renderCommand_.GetMaterial().GetSrcBlendingFactor());
 	}
 
 	DrawableNode::BlendingFactor DrawableNode::destBlendingFactor() const
 	{
-		return fromGlBlendingFactor(renderCommand_.material().GetDestBlendingFactor());
+		return fromGlBlendingFactor(renderCommand_.GetMaterial().GetDestBlendingFactor());
 	}
 
 	void DrawableNode::setBlendingPreset(BlendingPreset blendingPreset)
 	{
 		switch (blendingPreset) {
 			case BlendingPreset::DISABLED:
-				renderCommand_.material().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::ONE), toGlBlendingFactor(BlendingFactor::ZERO));
+				renderCommand_.GetMaterial().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::ONE), toGlBlendingFactor(BlendingFactor::ZERO));
 				break;
 			case BlendingPreset::ALPHA:
-				renderCommand_.material().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::SRC_ALPHA), toGlBlendingFactor(BlendingFactor::ONE_MINUS_SRC_ALPHA));
+				renderCommand_.GetMaterial().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::SRC_ALPHA), toGlBlendingFactor(BlendingFactor::ONE_MINUS_SRC_ALPHA));
 				break;
 			case BlendingPreset::PREMULTIPLIED_ALPHA:
-				renderCommand_.material().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::ONE), toGlBlendingFactor(BlendingFactor::ONE_MINUS_SRC_ALPHA));
+				renderCommand_.GetMaterial().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::ONE), toGlBlendingFactor(BlendingFactor::ONE_MINUS_SRC_ALPHA));
 				break;
 			case BlendingPreset::ADDITIVE:
-				renderCommand_.material().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::SRC_ALPHA), toGlBlendingFactor(BlendingFactor::ONE));
+				renderCommand_.GetMaterial().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::SRC_ALPHA), toGlBlendingFactor(BlendingFactor::ONE));
 				break;
 			case BlendingPreset::MULTIPLY:
-				renderCommand_.material().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::DST_COLOR), toGlBlendingFactor(BlendingFactor::ZERO));
+				renderCommand_.GetMaterial().SetBlendingFactors(toGlBlendingFactor(BlendingFactor::DST_COLOR), toGlBlendingFactor(BlendingFactor::ZERO));
 				break;
 		}
 	}
 
 	void DrawableNode::setBlendingFactors(BlendingFactor srcBlendingFactor, BlendingFactor destBlendingFactor)
 	{
-		renderCommand_.material().SetBlendingFactors(toGlBlendingFactor(srcBlendingFactor), toGlBlendingFactor(destBlendingFactor));
+		renderCommand_.GetMaterial().SetBlendingFactors(toGlBlendingFactor(srcBlendingFactor), toGlBlendingFactor(destBlendingFactor));
 	}
 
 	void DrawableNode::updateAabb()
@@ -215,7 +215,7 @@ namespace nCine
 	DrawableNode::DrawableNode(const DrawableNode& other)
 		: SceneNode(other), width_(other.width_), height_(other.height_), renderCommand_(), lastFrameRendered_(0)
 	{
-		renderCommand_.setIdSortKey(id());
+		renderCommand_.SetIdSortKey(id());
 		setBlendingEnabled(other.isBlendingEnabled());
 		setBlendingFactors(other.srcBlendingFactor(), other.destBlendingFactor());
 		setLayer(other.layer());

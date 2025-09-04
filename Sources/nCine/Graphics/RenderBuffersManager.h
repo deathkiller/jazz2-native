@@ -52,15 +52,15 @@ namespace nCine
 		RenderBuffersManager(bool useBufferMapping, std::uint32_t vboMaxSize, std::uint32_t iboMaxSize);
 
 		/// Returns the specifications for a buffer of the specified type
-		inline const BufferSpecifications& specs(BufferTypes type) const {
+		inline const BufferSpecifications& Specs(BufferTypes type) const {
 			return specs_[std::int32_t(type)];
 		}
 		/// Requests an amount of bytes from the specified buffer type
-		inline Parameters acquireMemory(BufferTypes type, std::uint32_t bytes) {
-			return acquireMemory(type, bytes, specs_[std::int32_t(type)].alignment);
+		inline Parameters AcquireMemory(BufferTypes type, std::uint32_t bytes) {
+			return AcquireMemory(type, bytes, specs_[std::int32_t(type)].alignment);
 		}
 		/// Requests an amount of bytes from the specified buffer type with a custom alignment requirement
-		Parameters acquireMemory(BufferTypes type, std::uint32_t bytes, std::uint32_t alignment);
+		Parameters AcquireMemory(BufferTypes type, std::uint32_t bytes, std::uint32_t alignment);
 
 	private:
 		BufferSpecifications specs_[std::int32_t(BufferTypes::Count)];
@@ -83,9 +83,9 @@ namespace nCine
 
 		SmallVector<ManagedBuffer, 0> buffers_;
 
-		void flushUnmap();
-		void remap();
-		void createBuffer(const BufferSpecifications& specs);
+		void FlushUnmap();
+		void Remap();
+		void CreateBuffer(const BufferSpecifications& specs);
 	};
 
 }

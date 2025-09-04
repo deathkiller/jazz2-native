@@ -12,26 +12,26 @@ namespace nCine
 
 	RenderCommandPool::~RenderCommandPool() = default;
 
-	RenderCommand* RenderCommandPool::add()
+	RenderCommand* RenderCommandPool::Add()
 	{
 		return usedCommandsPool_.emplace_back(std::make_unique<RenderCommand>()).get();
 	}
 
-	RenderCommand* RenderCommandPool::add(GLShaderProgram* shaderProgram)
+	RenderCommand* RenderCommandPool::Add(GLShaderProgram* shaderProgram)
 	{
-		RenderCommand* newCommand = add();
-		newCommand->material().SetShaderProgram(shaderProgram);
+		RenderCommand* newCommand = Add();
+		newCommand->GetMaterial().SetShaderProgram(shaderProgram);
 		return newCommand;
 	}
 
-	RenderCommand* RenderCommandPool::retrieve(GLShaderProgram* shaderProgram)
+	RenderCommand* RenderCommandPool::Retrieve(GLShaderProgram* shaderProgram)
 	{
 		RenderCommand* retrievedCommand = nullptr;
 
 		for (std::uint32_t i = 0; i < freeCommandsPool_.size(); i++) {
 			std::uint32_t poolSize = std::uint32_t(freeCommandsPool_.size());
 			std::unique_ptr<RenderCommand>& command = freeCommandsPool_[i];
-			if (command && command->material().GetShaderProgram() == shaderProgram) {
+			if (command && command->GetMaterial().GetShaderProgram() == shaderProgram) {
 				retrievedCommand = command.get();
 				usedCommandsPool_.push_back(std::move(command));
 				command = std::move(freeCommandsPool_[poolSize - 1]);
@@ -48,20 +48,20 @@ namespace nCine
 		return retrievedCommand;
 	}
 
-	RenderCommand* RenderCommandPool::retrieveOrAdd(GLShaderProgram* shaderProgram, bool& commandAdded)
+	RenderCommand* RenderCommandPool::RetrieveOrAdd(GLShaderProgram* shaderProgram, bool& commandAdded)
 	{
-		RenderCommand* retrievedCommand = retrieve(shaderProgram);
+		RenderCommand* retrievedCommand = Retrieve(shaderProgram);
 
 		commandAdded = false;
 		if (retrievedCommand == nullptr) {
-			retrievedCommand = add(shaderProgram);
+			retrievedCommand = Add(shaderProgram);
 			commandAdded = true;
 		}
 
 		return retrievedCommand;
 	}
 
-	void RenderCommandPool::reset()
+	void RenderCommandPool::Reset()
 	{
 #if defined(NCINE_PROFILING)
 		RenderStatistics::GatherCommandPoolStatistics(std::uint32_t(usedCommandsPool_.size()), std::uint32_t(freeCommandsPool_.size()));

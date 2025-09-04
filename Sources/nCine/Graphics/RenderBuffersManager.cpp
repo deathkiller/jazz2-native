@@ -45,7 +45,7 @@ namespace nCine
 
 		// Create the first buffer for each type right away
 		for (std::uint32_t i = 0; i < std::uint32_t(BufferTypes::Count); i++) {
-			createBuffer(specs_[i]);
+			CreateBuffer(specs_[i]);
 		}
 	}
 
@@ -62,7 +62,7 @@ namespace nCine
 		}
 	}
 
-	RenderBuffersManager::Parameters RenderBuffersManager::acquireMemory(BufferTypes type, std::uint32_t bytes, std::uint32_t alignment)
+	RenderBuffersManager::Parameters RenderBuffersManager::AcquireMemory(BufferTypes type, std::uint32_t bytes, std::uint32_t alignment)
 	{
 		FATAL_ASSERT_MSG(bytes <= specs_[std::int32_t(type)].maxSize, "Trying to acquire {} bytes when the maximum for buffer type \"{}\" is {}",
 						   bytes, bufferTypeToString(type), specs_[std::int32_t(type)].maxSize);
@@ -91,7 +91,7 @@ namespace nCine
 		}
 
 		if (params.object == nullptr) {
-			createBuffer(specs_[std::int32_t(type)]);
+			CreateBuffer(specs_[std::int32_t(type)]);
 			params.object = buffers_.back().object.get();
 			params.offset = 0;
 			params.size = bytes;
@@ -102,7 +102,7 @@ namespace nCine
 		return params;
 	}
 
-	void RenderBuffersManager::flushUnmap()
+	void RenderBuffersManager::FlushUnmap()
 	{
 		ZoneScopedC(0x81A861);
 		GLDebug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()"_s);
@@ -130,7 +130,7 @@ namespace nCine
 		}
 	}
 
-	void RenderBuffersManager::remap()
+	void RenderBuffersManager::Remap()
 	{
 		ZoneScopedC(0x81A861);
 		GLDebug::ScopedGroup scoped("RenderBuffersManager::remap()"_s);
@@ -149,7 +149,7 @@ namespace nCine
 		}
 	}
 
-	void RenderBuffersManager::createBuffer(const BufferSpecifications& specs)
+	void RenderBuffersManager::CreateBuffer(const BufferSpecifications& specs)
 	{
 		ZoneScopedC(0x81A861);
 		ManagedBuffer& managedBuffer = buffers_.emplace_back();

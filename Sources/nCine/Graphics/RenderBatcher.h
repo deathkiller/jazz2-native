@@ -16,9 +16,9 @@ namespace nCine
 	public:
 		RenderBatcher();
 
-		void collectInstances(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue);
-		void createBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue);
-		void reset();
+		void CollectInstances(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue);
+		void CreateBatches(const SmallVectorImpl<RenderCommand*>& srcQueue, SmallVectorImpl<RenderCommand*>& destQueue);
+		void Reset();
 
 	private:
 		static std::uint32_t UboMaxSize;
@@ -40,10 +40,10 @@ namespace nCine
 		/*! \note It is a RAM buffer and cannot be handled by the `RenderBuffersManager` */
 		SmallVector<ManagedBuffer, 0> buffers_;
 
-		RenderCommand* collectCommands(SmallVectorImpl<RenderCommand*>::const_iterator start, SmallVectorImpl<RenderCommand*>::const_iterator end, SmallVectorImpl<RenderCommand*>::const_iterator& nextStart);
+		RenderCommand* CollectCommands(SmallVectorImpl<RenderCommand*>::const_iterator start, SmallVectorImpl<RenderCommand*>::const_iterator end, SmallVectorImpl<RenderCommand*>::const_iterator& nextStart);
 
-		std::uint8_t* acquireMemory(std::uint32_t bytes);
-		void createBuffer(std::uint32_t size);
+		std::uint8_t* AcquireMemory(std::uint32_t bytes);
+		void CreateBuffer(std::uint32_t size);
 	};
 
 }

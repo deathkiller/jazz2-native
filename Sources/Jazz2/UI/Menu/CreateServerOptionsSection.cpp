@@ -243,20 +243,20 @@ namespace Jazz2::UI::Menu
 	{
 		if (_shouldStart) {
 			auto command = canvas->RentRenderCommand();
-			if (command->material().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
-				command->material().ReserveUniformsDataMemory();
-				command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
+				command->GetMaterial().ReserveUniformsDataMemory();
+				command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			}
 
-			command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-			auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
+			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
 			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(Vector2f(static_cast<float>(canvas->ViewSize.X), static_cast<float>(canvas->ViewSize.Y)).Data());
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
 
-			command->setTransformation(Matrix4x4f::Identity);
-			command->setLayer(999);
+			command->SetTransformation(Matrix4x4f::Identity);
+			command->SetLayer(999);
 
 			canvas->DrawRenderCommand(command);
 		}
