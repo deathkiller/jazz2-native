@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Iterator.h"
-#include "pdqsort/pdqsort.h"
+#if !defined(NCINE_PREFER_STD_SORT)
+#	include "pdqsort/pdqsort.h"
+#endif
 
 #include <algorithm>
 #include <cmath>
@@ -17,13 +19,13 @@ using namespace Death;
 
 namespace nCine
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	// Traits
 	template<class T>
 	struct isIntegral
 	{
 		static constexpr bool value = false;
 	};
-#ifndef DOXYGEN_GENERATING_OUTPUT
 	template<>
 	struct isIntegral<bool>
 	{
@@ -79,7 +81,6 @@ namespace nCine
 	{
 		static constexpr bool value = true;
 	};
-#endif
 
 	template<class T>
 	inline bool IsLess(const T &a, const T &b)
@@ -219,13 +220,12 @@ namespace nCine
 	{
 		static constexpr bool value = false;
 	};
-#ifndef DOXYGEN_GENERATING_OUTPUT
+
 	template<class T>
 	struct isDestructible<T, decltype(Implementation::declVal<T&>().~T())>
 	{
 		static constexpr bool value = (true && !__is_union(T));
 	};
-#endif
 
 	// Use `__has_trivial_destructor()` only on GCC
 #if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER)
@@ -259,6 +259,7 @@ namespace nCine
 	{
 		Implementation::destructHelpers<isTriviallyDestructible<T>::value>::destructArray(ptr, numElements);
 	}
+#endif
 
 	inline float lerp(float a, float b, float ratio)
 	{
@@ -337,7 +338,7 @@ namespace nCine
 	template<class Iter, class Compare>
 	inline void sort(Iter begin, Iter end, Compare comp)
 	{
-#if defined(PREFER_STD_SORT)
+#if defined(NCINE_PREFER_STD_SORT)
 		std::sort(begin, end, comp);
 #else
 		pdqsort(begin, end, comp);
@@ -347,7 +348,7 @@ namespace nCine
 	template<class Iter>
 	inline void sort(Iter begin, Iter end)
 	{
-#if defined(PREFER_STD_SORT)
+#if defined(NCINE_PREFER_STD_SORT)
 		std::sort(begin, end);
 #else
 		pdqsort(begin, end);
@@ -429,7 +430,7 @@ namespace nCine
 		return result;
 	}
 
-#if defined(WITH_ZLIB)
+#if defined(WITH_ZLIB) || defined(DOXYGEN_GENERATING_OUTPUT)
 	std::uint32_t crc32(Containers::ArrayView<std::uint8_t> data);
 	std::uint32_t crc32(IO::Stream& stream);
 #endif
