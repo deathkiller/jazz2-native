@@ -348,12 +348,12 @@ namespace Jazz2::UI
 	void Cinematics::CinematicsCanvas::Initialize()
 	{
 		// Prepare output render command
-		_renderCommand.setType(RenderCommand::Type::Sprite);
-		_renderCommand.material().SetShaderProgramType(Material::ShaderProgramType::Sprite);
-		_renderCommand.material().ReserveUniformsDataMemory();
-		_renderCommand.geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		_renderCommand.SetType(RenderCommand::Type::Sprite);
+		_renderCommand.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+		_renderCommand.GetMaterial().ReserveUniformsDataMemory();
+		_renderCommand.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-		auto* textureUniform = _renderCommand.material().Uniform(Material::TextureUniformName);
+		auto* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 		if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 			textureUniform->SetIntValue(0); // GL_TEXTURE0
 		}
@@ -386,15 +386,15 @@ namespace Jazz2::UI
 		frameOffset.X = std::round(frameOffset.X);
 		frameOffset.Y = std::round(frameOffset.Y);
 
-		auto* instanceBlock = _renderCommand.material().UniformBlock(Material::InstanceBlockName);
+		auto* instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(frameSize.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
-		_renderCommand.setTransformation(Matrix4x4f::Translation(frameOffset.X, frameOffset.Y, 0.0f));
-		_renderCommand.material().SetTexture(*_owner->_texture);
+		_renderCommand.SetTransformation(Matrix4x4f::Translation(frameOffset.X, frameOffset.Y, 0.0f));
+		_renderCommand.GetMaterial().SetTexture(*_owner->_texture);
 
-		renderQueue.addCommand(&_renderCommand);
+		renderQueue.AddCommand(&_renderCommand);
 
 		return true;
 	}

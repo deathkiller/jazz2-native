@@ -21,14 +21,14 @@ namespace nCine
 	{
 	}
 
-	void RenderCommand::calculateMaterialSortKey()
+	void RenderCommand::CalculateMaterialSortKey()
 	{
-		const std::uint64_t upper = std::uint64_t(layerSortKey()) << 32;
+		const std::uint64_t upper = std::uint64_t(GetLayerSortKey()) << 32;
 		const std::uint32_t lower = material_.GetSortKey();
 		materialSortKey_ = upper | lower;
 	}
 
-	void RenderCommand::issue()
+	void RenderCommand::Issue()
 	{
 		ZoneScopedC(0x81A861);
 
@@ -58,18 +58,18 @@ namespace nCine
 		GLScissorTest::SetState(scissorTestState);
 	}
 
-	void RenderCommand::setScissor(GLint x, GLint y, GLsizei width, GLsizei height)
+	void RenderCommand::SetScissor(GLint x, GLint y, GLsizei width, GLsizei height)
 	{
 		scissorRect_.Set(x, y, width, height);
 	}
 
-	void RenderCommand::setTransformation(const Matrix4x4f& modelMatrix)
+	void RenderCommand::SetTransformation(const Matrix4x4f& modelMatrix)
 	{
 		modelMatrix_ = modelMatrix;
 		transformationCommitted_ = false;
 	}
 
-	void RenderCommand::commitNodeTransformation()
+	void RenderCommand::CommitNodeTransformation()
 	{
 		if (transformationCommitted_) {
 			return;
@@ -78,7 +78,7 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 
 		const Camera::ProjectionValues cameraValues = RenderResources::GetCurrentCamera()->GetProjectionValues();
-		modelMatrix_[3][2] = calculateDepth(layer_, cameraValues.nearClip, cameraValues.farClip);
+		modelMatrix_[3][2] = CalculateDepth(layer_, cameraValues.nearClip, cameraValues.farClip);
 
 		if (material_.shaderProgram_ && material_.shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
 			GLUniformBlockCache* instanceBlock = material_.UniformBlock(Material::InstanceBlockName);
@@ -94,7 +94,7 @@ namespace nCine
 		transformationCommitted_ = true;
 	}
 
-	void RenderCommand::commitCameraTransformation()
+	void RenderCommand::CommitCameraTransformation()
 	{
 		ZoneScopedC(0x81A861);
 
@@ -115,7 +115,7 @@ namespace nCine
 		}
 	}
 
-	void RenderCommand::commitAll()
+	void RenderCommand::CommitAll()
 	{
 		// Copy the vertices and indices stored in host memory to video memory
 		// This step is not needed if the command uses a custom VBO or IBO or directly writes into the common one
@@ -123,13 +123,13 @@ namespace nCine
 		geometry_.CommitIndices();
 
 		// The model matrix should always be updated before committing uniform blocks
-		commitNodeTransformation();
+		CommitNodeTransformation();
 
 		// Commits all the uniform blocks of command's shader program
 		material_.CommitUniformBlocks();
 	}
 
-	float RenderCommand::calculateDepth(std::uint16_t layer, float nearClip, float farClip)
+	float RenderCommand::CalculateDepth(std::uint16_t layer, float nearClip, float farClip)
 	{
 		// The layer translates to depth, from near to far
 		return nearClip + LayerStep + (farClip - nearClip - LayerStep) * layer * LayerStep;

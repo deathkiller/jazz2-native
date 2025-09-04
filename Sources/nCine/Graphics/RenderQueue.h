@@ -15,18 +15,18 @@ namespace nCine
 		RenderQueue();
 
 		/// Returns `true` if the queue does not contain any render commands
-		bool empty() const;
+		bool IsEmpty() const;
 
 		/// Adds a draw command to the queue
-		void addCommand(RenderCommand* command);
+		void AddCommand(RenderCommand* command);
 
 		/// Sorts the queues, create batches and commits commands
-		void sortAndCommit();
+		void SortAndCommit();
 		/// Issues every render command in order
-		void draw();
+		void Draw();
 
 		/// Clears all the queues and resets the render batcher
-		void clear();
+		void Clear();
 
 	private:
 		/// Array of opaque render command pointers

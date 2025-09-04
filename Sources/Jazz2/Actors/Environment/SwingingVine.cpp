@@ -42,13 +42,13 @@ namespace Jazz2::Actors::Environment
 
 			for (std::int32_t i = 0; i < ChunkCount; i++) {
 				_chunks[i] = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-				_chunks[i]->material().SetShaderProgramType(Material::ShaderProgramType::Sprite);
-				_chunks[i]->material().SetBlendingEnabled(true);
-				_chunks[i]->material().ReserveUniformsDataMemory();
-				_chunks[i]->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-				_chunks[i]->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				_chunks[i]->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+				_chunks[i]->GetMaterial().SetBlendingEnabled(true);
+				_chunks[i]->GetMaterial().ReserveUniformsDataMemory();
+				_chunks[i]->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				_chunks[i]->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-				auto* textureUniform = _chunks[i]->material().Uniform(Material::TextureUniformName);
+				auto* textureUniform = _chunks[i]->GetMaterial().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
@@ -122,18 +122,18 @@ namespace Jazz2::Actors::Environment
 				float chunkTexSize = ChunkSize / texSize.Y;
 				float chunkAngle = sinf(currentPhase - i * 0.08f) * 1.2f;
 
-				auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
+				auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, chunkTexSize, chunkTexSize * i);
 				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(texSize.X, ChunkSize);
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 				Matrix4x4f worldMatrix = Matrix4x4f::Translation(_chunkPos[i].X - texSize.X / 2, _chunkPos[i].Y - ChunkSize / 2, 0.0f);
 				worldMatrix.RotateZ(chunkAngle);
-				command->setTransformation(worldMatrix);
-				command->setLayer(_renderer.layer());
-				command->material().SetTexture(*resBase->TextureDiffuse);
+				command->SetTransformation(worldMatrix);
+				command->SetLayer(_renderer.layer());
+				command->GetMaterial().SetTexture(*resBase->TextureDiffuse);
 
-				renderQueue.addCommand(command);
+				renderQueue.AddCommand(command);
 			}
 		}
 

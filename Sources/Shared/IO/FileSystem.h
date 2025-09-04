@@ -194,9 +194,9 @@ namespace Death { namespace IO {
 		 * On macOS, the directory is usually equivalent to @cpp "~/Library/Application Support/<name>/" @ce. On Android,
 		 * it's the internal data directory of the package. On other Unix systems, it usually points to
 		 * @cb{.sh} "${XDG_CONFIG_HOME}/<name>/ @ce or @cpp "~/.config/<name>/" @ce. On Windows, it's usually
-		 * @cpp "C:\\Users\\<user>\\Saved Games\\" @ce. If it doesn't exist, @cb{.bat} %APPDATA% @ce will be returned
-		 * instead. On Windows RT, the local data folder of the package is returned, because the application doesn't
-		 * have access to the user directories.
+		 * @cpp "C:\\Users\\<user>\\Saved Games\\<name>\\" @ce. If the parent directory doesn't exist, @cb{.bat} %APPDATA% @ce
+		 * will be used instead. On Windows RT, the local data folder of the package is returned, because
+		 * the application doesn't have access to the user directories.
 		 */
 		static Containers::String GetSavePath(Containers::StringView applicationName);
 		/** @brief Returns the path of the current working directory */
@@ -368,12 +368,12 @@ namespace Death { namespace IO {
 		 * @m_class{m-block m-warning}
 		 * 
 		 * @par Reading and writing a file while it's mapped
-		 *		On @ref DEATH_TARGET_UNIX "Unix"-like systems it's possible to write to a file that's currently
+		 *		On @ref DEATH_TARGET_UNIX "Unix"-like systems, it's possible to write to a file that's currently
 		 *		mapped with this function and the changes will be reflected to the mapping. The mapped size
 		 *		however cannot change --- if the file gets longer, the additional data will not be present
 		 *		in the mapping, if it gets shorter, the suffix gets filled with @cpp '\0' @ce bytes.
 		 * @par
-		 *		On @ref DEATH_TARGET_WINDOWS "Windows" it's not possible to open a file for writing while it's
+		 *		On @ref DEATH_TARGET_WINDOWS "Windows", it's not possible to open a file for writing while it's
 		 *		mapped with this function. Doing so will result in an *Invalid Argument* error.
 		 * @par
 		 *		Opening a file for reading while it's mapped with this function works on all platforms and gives

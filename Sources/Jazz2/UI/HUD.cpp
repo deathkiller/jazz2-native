@@ -277,22 +277,22 @@ namespace Jazz2::UI
 
 		if (_transitionState >= TransitionState::WaitingForFadeIn && _transitionState <= TransitionState::FadeOut) {
 			auto command = RentRenderCommand();
-			if (command->material().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
-				command->material().ReserveUniformsDataMemory();
-				command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
+				command->GetMaterial().ReserveUniformsDataMemory();
+				command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 			}
 
-			command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-			auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
+			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
 			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y)).Data());
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
 
-			command->setTransformation(Matrix4x4f::Identity);
-			command->setLayer(600);
+			command->SetTransformation(Matrix4x4f::Identity);
+			command->SetLayer(600);
 
-			renderQueue.addCommand(command);
+			renderQueue.AddCommand(command);
 		}
 
 		return true;
@@ -1377,32 +1377,32 @@ namespace Jazz2::UI
 			state.RenderCommandsCount++;
 		} else {
 			command = state.RenderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::MeshSprite)).get();
-			command->material().SetBlendingEnabled(true);
+			command->GetMaterial().SetBlendingEnabled(true);
 		}
 
-		if (command->material().SetShaderProgramType(Material::ShaderProgramType::MeshSprite)) {
-			command->material().ReserveUniformsDataMemory();
+		if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::MeshSprite)) {
+			command->GetMaterial().ReserveUniformsDataMemory();
 
-			auto* textureUniform = command->material().Uniform(Material::TextureUniformName);
+			auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
 		}
 
-		command->geometry().SetDrawParameters(GL_LINE_STRIP, 0, vertexCount);
-		command->geometry().SetElementsPerVertex(VertexFloats);
-		command->geometry().SetHostVertexPointer((const float*)vertices);
+		command->GetGeometry().SetDrawParameters(GL_LINE_STRIP, 0, vertexCount);
+		command->GetGeometry().SetElementsPerVertex(VertexFloats);
+		command->GetGeometry().SetHostVertexPointer((const float*)vertices);
 
-		command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
+		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(1.0f, 1.0f);
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
 
-		command->setTransformation(Matrix4x4f::Identity);
-		command->setLayer(z);
-		command->material().SetTexture(texture);
+		command->SetTransformation(Matrix4x4f::Identity);
+		command->SetLayer(z);
+		command->GetMaterial().SetTexture(texture);
 
 		DrawRenderCommand(command);
 	}

@@ -39,12 +39,12 @@ namespace Jazz2::Actors::Solid
 			ChainPiece& piece = _pieces.emplace_back();
 			if (!resolver.IsHeadless()) {
 				piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-				piece.Command->material().SetShaderProgramType(Material::ShaderProgramType::Sprite);
-				piece.Command->material().SetBlendingEnabled(true);
-				piece.Command->material().ReserveUniformsDataMemory();
-				piece.Command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				piece.Command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+				piece.Command->GetMaterial().SetBlendingEnabled(true);
+				piece.Command->GetMaterial().ReserveUniformsDataMemory();
+				piece.Command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-				auto* textureUniform = piece.Command->material().Uniform(Material::TextureUniformName);
+				auto* textureUniform = piece.Command->GetMaterial().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
@@ -112,7 +112,7 @@ namespace Jazz2::Actors::Solid
 					float texScaleY = (float(chainAnim->Base->FrameDimensions.Y) / float(texSize.Y));
 					float texBiasY = (float(chainAnim->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
-					auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
+					auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue((float)chainAnim->Base->FrameDimensions.X, (float)chainAnim->Base->FrameDimensions.Y);
 					if (_shade) {
@@ -122,11 +122,11 @@ namespace Jazz2::Actors::Solid
 					}
 
 					auto& pos = _pieces[i].Pos;
-					command->setTransformation(Matrix4x4f::Translation(pos.X - chainAnim->Base->FrameDimensions.X / 2, pos.Y - chainAnim->Base->FrameDimensions.Y / 2, 0.0f));
-					command->setLayer(_originLayer + (uint16_t)(scale * 20));
-					command->material().SetTexture(*chainAnim->Base->TextureDiffuse.get());
+					command->SetTransformation(Matrix4x4f::Translation(pos.X - chainAnim->Base->FrameDimensions.X / 2, pos.Y - chainAnim->Base->FrameDimensions.Y / 2, 0.0f));
+					command->SetLayer(_originLayer + (uint16_t)(scale * 20));
+					command->GetMaterial().SetTexture(*chainAnim->Base->TextureDiffuse.get());
 
-					renderQueue.addCommand(command);
+					renderQueue.AddCommand(command);
 				}
 			}
 		}

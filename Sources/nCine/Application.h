@@ -109,7 +109,7 @@ namespace nCine
 		/** @brief Returns run-time GUI settings */
 		inline GuiSettings& GetGuiSettings() { return guiSettings_; }
 		/** @brief Returns debug overlay settings */
-		inline IDebugOverlay::DisplaySettings& GetDebugOverlaySettings() { return (debugOverlay_ != nullptr ? debugOverlay_->settings() : debugOverlayNullSettings_); }
+		inline IDebugOverlay::DisplaySettings& GetDebugOverlaySettings() { return (debugOverlay_ != nullptr ? debugOverlay_->GetSettings() : debugOverlayNullSettings_); }
 #endif
 #if defined(NCINE_PROFILING) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Returns all timings */

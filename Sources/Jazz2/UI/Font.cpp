@@ -525,34 +525,34 @@ namespace Jazz2::UI
 					);
 
 					auto command = canvas->RentRenderCommand();
-					command->setType(RenderCommand::Type::Text);
+					command->SetType(RenderCommand::Type::Text);
 					bool shaderChanged = (colorizeShader
-						? command->material().SetShader(colorizeShader)
-						: command->material().SetShaderProgramType(Material::ShaderProgramType::Sprite));
+						? command->GetMaterial().SetShader(colorizeShader)
+						: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
 					if (shaderChanged) {
-						command->material().ReserveUniformsDataMemory();
-						command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+						command->GetMaterial().ReserveUniformsDataMemory();
+						command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 						// Required to reset render command properly
-						//command->setTransformation(command->transformation());
+						//command->SetTransformation(command->transformation());
 
-						auto* textureUniform = command->material().Uniform(Material::TextureUniformName);
+						auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 						if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 							textureUniform->SetIntValue(0); // GL_TEXTURE0
 						}
 					}
 
-					command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-					auto* instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
+					auto* instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(charWidth * scale, uvRect.H * scale);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
 
-					command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
-					command->setLayer(z - (charOffset & 1));
-					command->material().SetTexture(*_texture.get());
+					command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
+					command->SetLayer(z - (charOffset & 1));
+					command->GetMaterial().SetTexture(*_texture.get());
 
-					canvas->_currentRenderQueue->addCommand(command);
+					canvas->_currentRenderQueue->AddCommand(command);
 
 					originPos.X += ((uvRect.W + _baseSpacing) * scale * charSpacing);
 					charOffset++;

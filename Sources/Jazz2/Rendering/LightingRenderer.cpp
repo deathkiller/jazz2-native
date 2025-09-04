@@ -26,13 +26,13 @@ namespace Jazz2::Rendering
 
 		for (auto& light : _emittedLightsCache) {
 			auto command = RentRenderCommand();
-			auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
+			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(light.Pos.X, light.Pos.Y, light.RadiusNear / light.RadiusFar, 0.0f);
 			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(light.RadiusFar * 2.0f, light.RadiusFar * 2.0f);
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(light.Intensity, light.Brightness, 0.0f, 0.0f);
-			command->setTransformation(Matrix4x4f::Translation(light.Pos.X, light.Pos.Y, 0));
+			command->SetTransformation(Matrix4x4f::Translation(light.Pos.X, light.Pos.Y, 0));
 
-			renderQueue.addCommand(command);
+			renderQueue.AddCommand(command);
 		}
 
 		return true;
@@ -47,13 +47,13 @@ namespace Jazz2::Rendering
 		} else {
 			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::Lighting));
 			_renderCommandsCount++;
-			command->material().SetShader(_owner->_levelHandler->_lightingShader);
-			command->material().SetBlendingEnabled(true);
-			command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
-			command->material().ReserveUniformsDataMemory();
-			command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			command->GetMaterial().SetShader(_owner->_levelHandler->_lightingShader);
+			command->GetMaterial().SetBlendingEnabled(true);
+			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+			command->GetMaterial().ReserveUniformsDataMemory();
+			command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-			auto* textureUniform = command->material().Uniform(Material::TextureUniformName);
+			auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}

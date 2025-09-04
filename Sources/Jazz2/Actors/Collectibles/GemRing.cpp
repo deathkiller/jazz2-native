@@ -36,12 +36,12 @@ namespace Jazz2::Actors::Collectibles
 				ChainPiece& piece = _pieces.emplace_back();
 				piece.Scale = 0.8f;
 				piece.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-				piece.Command->material().SetShaderProgramType(Material::ShaderProgramType::Sprite);
-				piece.Command->material().SetBlendingEnabled(true);
-				piece.Command->material().ReserveUniformsDataMemory();
-				piece.Command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				piece.Command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+				piece.Command->GetMaterial().SetBlendingEnabled(true);
+				piece.Command->GetMaterial().ReserveUniformsDataMemory();
+				piece.Command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-				auto* textureUniform = piece.Command->material().Uniform(Material::TextureUniformName);
+				auto* textureUniform = piece.Command->GetMaterial().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 					textureUniform->SetIntValue(0); // GL_TEXTURE0
 				}
@@ -109,17 +109,17 @@ namespace Jazz2::Actors::Collectibles
 					float texScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
 					float texBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
-					auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
+					auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(res->Base->FrameDimensions.X * _pieces[i].Scale, res->Base->FrameDimensions.Y * _pieces[i].Scale);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 0.7f).Data());
 
 					auto& pos = _pieces[i].Pos;
-					command->setTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f).RotateZ(_pieces[i].Angle));
-					command->setLayer(_renderer.layer() - 2);
-					command->material().SetTexture(*res->Base->TextureDiffuse.get());
+					command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f).RotateZ(_pieces[i].Angle));
+					command->SetLayer(_renderer.layer() - 2);
+					command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
 
-					renderQueue.addCommand(command);
+					renderQueue.AddCommand(command);
 				}
 			}
 		}

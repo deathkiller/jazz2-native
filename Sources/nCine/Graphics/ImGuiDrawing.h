@@ -27,13 +27,13 @@ namespace nCine
 		~ImGuiDrawing();
 
 		/// Builds the ImGui font atlas and uploads it to a texture
-		bool buildFonts();
+		bool BuildFonts();
 
-		void newFrame();
+		void NewFrame();
 		/// Renders ImGui with render commands
-		void endFrame(RenderQueue& renderQueue);
+		void EndFrame(RenderQueue& renderQueue);
 		/// Renders ImGui directly with OpenGL
-		void endFrame();
+		void EndFrame();
 
 	private:
 		bool withSceneGraph_;
@@ -62,18 +62,18 @@ namespace nCine
 		std::uint32_t elementsHandle_;
 #endif
 
-		RenderCommand* retrieveCommandFromPool();
-		void setupRenderCmd(RenderCommand& cmd);
-		void draw(RenderQueue& renderQueue);
+		RenderCommand* RetrieveCommandFromPool();
+		void SetupRenderCommand(RenderCommand& cmd);
+		void Draw(RenderQueue& renderQueue);
 
-		void setupBuffersAndShader();
-		void draw();
+		void SetupBuffersAndShader();
+		void Draw();
 
 #if defined(IMGUI_HAS_VIEWPORT)
-		void prepareForViewports();
-		static void onRenderPlatformWindow(ImGuiViewport* viewport, void*);
-		void drawPlatformWindow(ImGuiViewport* viewport);
-		void setupRenderStateForPlatformWindow(ImDrawData* drawData, std::int32_t fbWidth, std::int32_t fbHeight, std::uint32_t vertexArrayObject);
+		void PrepareForViewports();
+		static void OnRenderPlatformWindow(ImGuiViewport* viewport, void*);
+		void DrawPlatformWindow(ImGuiViewport* viewport);
+		void SetupRenderStateForPlatformWindow(ImDrawData* drawData, std::int32_t fbWidth, std::int32_t fbHeight, std::uint32_t vertexArrayObject);
 #endif
 	};
 }

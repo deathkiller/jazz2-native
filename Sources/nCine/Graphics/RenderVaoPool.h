@@ -20,7 +20,7 @@ namespace nCine
 	public:
 		explicit RenderVaoPool(std::uint32_t vaoPoolSize);
 
-		void bindVao(const GLVertexFormat& vertexFormat);
+		void BindVao(const GLVertexFormat& vertexFormat);
 
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -35,7 +35,7 @@ namespace nCine
 
 		SmallVector<VaoBinding, 0> vaoPool_;
 
-		void insertGLDebugMessage(const VaoBinding& binding);
+		void InsertGLDebugMessage(const VaoBinding& binding);
 	};
 
 }

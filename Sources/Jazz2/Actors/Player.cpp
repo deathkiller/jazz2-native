@@ -1115,16 +1115,16 @@ namespace Jazz2::Actors
 				auto& command = _weaponFlareCommand;
 				if (command == nullptr) {
 					command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-					command->material().SetBlendingEnabled(true);
+					command->GetMaterial().SetBlendingEnabled(true);
 				}
 
-				if (command->material().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
-					command->material().ReserveUniformsDataMemory();
-					command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
-					//command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-					command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
+					command->GetMaterial().ReserveUniformsDataMemory();
+					command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+					//command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-					auto* textureUniform = command->material().Uniform(Material::TextureUniformName);
+					auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 					if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 						textureUniform->SetIntValue(0); // GL_TEXTURE0
 					}
@@ -1169,7 +1169,7 @@ namespace Jazz2::Actors
 					gunspotPosY = std::floor(gunspotPosY);
 				}
 
-				auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
+				auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(res->Base->FrameDimensions.X, res->Base->FrameDimensions.Y * scaleY);
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(1.0f, 1.0f, 1.0f, 1.8f);
@@ -1179,11 +1179,11 @@ namespace Jazz2::Actors
 					worldMatrix.RotateZ(-fRadAngle90);
 				}
 				worldMatrix.Translate(res->Base->FrameDimensions.X * -0.5f, res->Base->FrameDimensions.Y * scaleY * -0.5f, 0.0f);
-				command->setTransformation(worldMatrix);
-				command->setLayer(_renderer.layer() + 2);
-				command->material().SetTexture(*res->Base->TextureDiffuse.get());
+				command->SetTransformation(worldMatrix);
+				command->SetLayer(_renderer.layer() + 2);
+				command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
 
-				renderQueue.addCommand(command.get());
+				renderQueue.AddCommand(command.get());
 			}
 		}
 
@@ -1209,63 +1209,63 @@ namespace Jazz2::Actors
 						auto& command = _shieldRenderCommands[0];
 						if (command == nullptr) {
 							command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-							command->material().SetBlendingEnabled(true);
+							command->GetMaterial().SetBlendingEnabled(true);
 						}
 
-						if (command->material().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldFire))) {
-							command->material().ReserveUniformsDataMemory();
-							command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-							command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldFire))) {
+							command->GetMaterial().ReserveUniformsDataMemory();
+							command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+							command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-							auto* textureUniform = command->material().Uniform(Material::TextureUniformName);
+							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 								textureUniform->SetIntValue(0); // GL_TEXTURE0
 							}
 						}
 
-						auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
+						auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
 							frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinf(frames * 0.006f),
 							-sinf(frames * 0.015f), frames * 0.006f + _pos.Y * PosMultiplier);
 						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
 						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
-						command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
-						command->setLayer(_renderer.layer() - 4);
-						command->material().SetTexture(*res->Base->TextureDiffuse.get());
+						command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
+						command->SetLayer(_renderer.layer() - 4);
+						command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
 
-						renderQueue.addCommand(command.get());
+						renderQueue.AddCommand(command.get());
 					}
 					{
 						auto& command = _shieldRenderCommands[1];
 						if (command == nullptr) {
 							command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-							command->material().SetBlendingEnabled(true);
+							command->GetMaterial().SetBlendingEnabled(true);
 						}
 
-						if (command->material().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldFire))) {
-							command->material().ReserveUniformsDataMemory();
-							command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-							command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldFire))) {
+							command->GetMaterial().ReserveUniformsDataMemory();
+							command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+							command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-							auto* textureUniform = command->material().Uniform(Material::TextureUniformName);
+							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 								textureUniform->SetIntValue(0); // GL_TEXTURE0
 							}
 						}
 
-						auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
+						auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
 							frames * 0.006f, sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
 							sinf(frames * 0.015f) + _pos.X * PosMultiplier, frames * -0.006f);
 						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
 						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 1.0f, 1.0f * shieldAlpha);
 
-						command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
-						command->setLayer(_renderer.layer() + 4);
-						command->material().SetTexture(*res->Base->TextureDiffuse.get());
+						command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
+						command->SetLayer(_renderer.layer() + 4);
+						command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
 
-						renderQueue.addCommand(command.get());
+						renderQueue.AddCommand(command.get());
 					}
 				}
 				break;
@@ -1280,15 +1280,15 @@ namespace Jazz2::Actors
 					auto& command = _shieldRenderCommands[1];
 					if (command == nullptr) {
 						command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-						command->material().SetBlendingEnabled(true);
+						command->GetMaterial().SetBlendingEnabled(true);
 					}
 
-					if (command->material().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
-						command->material().ReserveUniformsDataMemory();
-						command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
-						command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+					if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
+						command->GetMaterial().ReserveUniformsDataMemory();
+						command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+						command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-						auto* textureUniform = command->material().Uniform(Material::TextureUniformName);
+						auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 						if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 							textureUniform->SetIntValue(0); // GL_TEXTURE0
 						}
@@ -1311,16 +1311,16 @@ namespace Jazz2::Actors
 						shieldPosY = std::floor(shieldPosY);
 					}
 
-					auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
+					auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(res->Base->FrameDimensions.X * shieldScale, res->Base->FrameDimensions.Y * shieldScale);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(1.0f, 1.0f, 1.0f, shieldAlpha);
 
-					command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
-					command->setLayer(_renderer.layer() + 4);
-					command->material().SetTexture(*res->Base->TextureDiffuse.get());
+					command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
+					command->SetLayer(_renderer.layer() + 4);
+					command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
 
-					renderQueue.addCommand(command.get());
+					renderQueue.AddCommand(command.get());
 				}
 				break;
 			}
@@ -1345,63 +1345,63 @@ namespace Jazz2::Actors
 						auto& command = _shieldRenderCommands[0];
 						if (command == nullptr) {
 							command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-							command->material().SetBlendingEnabled(true);
+							command->GetMaterial().SetBlendingEnabled(true);
 						}
 
-						if (command->material().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldLightning))) {
-							command->material().ReserveUniformsDataMemory();
-							command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-							command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldLightning))) {
+							command->GetMaterial().ReserveUniformsDataMemory();
+							command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+							command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-							auto* textureUniform = command->material().Uniform(Material::TextureUniformName);
+							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 								textureUniform->SetIntValue(0); // GL_TEXTURE0
 							}
 						}
 
-						auto instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
+						auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
 							frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
 							-sinf(frames * 0.015f), frames * 0.006f);
 						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
 						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
-						command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
-						command->setLayer(_renderer.layer() - 4);
-						command->material().SetTexture(*res->Base->TextureDiffuse.get());
+						command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
+						command->SetLayer(_renderer.layer() - 4);
+						command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
 
-						renderQueue.addCommand(command.get());
+						renderQueue.AddCommand(command.get());
 					}
 					{
 						auto& command = _shieldRenderCommands[1];
 						if (command == nullptr) {
 							command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
-							command->material().SetBlendingEnabled(true);
+							command->GetMaterial().SetBlendingEnabled(true);
 						}
 
-						if (command->material().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldLightning))) {
-							command->material().ReserveUniformsDataMemory();
-							command->material().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-							command->geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldLightning))) {
+							command->GetMaterial().ReserveUniformsDataMemory();
+							command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+							command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-							auto* textureUniform = command->material().Uniform(Material::TextureUniformName);
+							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 								textureUniform->SetIntValue(0); // GL_TEXTURE0
 							}
 						}
 
-						auto* instanceBlock = command->material().UniformBlock(Material::InstanceBlockName);
+						auto* instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
 							frames * 0.006f + _pos.X * PosMultiplier, sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
 							sinf(frames * 0.015f), frames * -0.006f);
 						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
 						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 1.0f, shieldAlpha);
 
-						command->setTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
-						command->setLayer(_renderer.layer() + 4);
-						command->material().SetTexture(*res->Base->TextureDiffuse.get());
+						command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
+						command->SetLayer(_renderer.layer() + 4);
+						command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
 
-						renderQueue.addCommand(command.get());
+						renderQueue.AddCommand(command.get());
 					}
 				}
 				break;

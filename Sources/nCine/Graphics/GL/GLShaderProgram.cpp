@@ -199,7 +199,7 @@ namespace nCine
 			}
 			vertexFormat_.SetIbo(ibo);
 
-			RenderResources::GetVaoPool().bindVao(vertexFormat_);
+			RenderResources::GetVaoPool().BindVao(vertexFormat_);
 		}
 	}
 

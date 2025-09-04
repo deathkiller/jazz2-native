@@ -36,12 +36,12 @@ namespace Jazz2::Rendering
 		Shader* shader = _downsampleOnly ? _owner->_levelHandler->_downsampleShader : _owner->_levelHandler->_blurShader;
 
 		// Prepare render command
-		_renderCommand.material().SetShader(shader);
-		//_renderCommand.material().SetBlendingEnabled(true);
-		_renderCommand.material().ReserveUniformsDataMemory();
-		_renderCommand.geometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		_renderCommand.GetMaterial().SetShader(shader);
+		//_renderCommand.GetMaterial().SetBlendingEnabled(true);
+		_renderCommand.GetMaterial().ReserveUniformsDataMemory();
+		_renderCommand.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
 
-		auto* textureUniform = _renderCommand.material().Uniform(Material::TextureUniformName);
+		auto* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 		if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 			textureUniform->SetIntValue(0); // GL_TEXTURE0
 		}
@@ -56,18 +56,18 @@ namespace Jazz2::Rendering
 	{
 		Vector2i size = _target->GetSize();
 
-		auto* instanceBlock = _renderCommand.material().UniformBlock(Material::InstanceBlockName);
+		auto* instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(static_cast<float>(size.X), static_cast<float>(size.Y));
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
-		_renderCommand.material().Uniform("uPixelOffset")->SetFloatValue(1.0f / size.X, 1.0f / size.Y);
+		_renderCommand.GetMaterial().Uniform("uPixelOffset")->SetFloatValue(1.0f / size.X, 1.0f / size.Y);
 		if (!_downsampleOnly) {
-			_renderCommand.material().Uniform("uDirection")->SetFloatValue(_direction.X, _direction.Y);
+			_renderCommand.GetMaterial().Uniform("uDirection")->SetFloatValue(_direction.X, _direction.Y);
 		}
-		_renderCommand.material().SetTexture(0, *_source);
+		_renderCommand.GetMaterial().SetTexture(0, *_source);
 
-		renderQueue.addCommand(&_renderCommand);
+		renderQueue.AddCommand(&_renderCommand);
 
 		return true;
 	}

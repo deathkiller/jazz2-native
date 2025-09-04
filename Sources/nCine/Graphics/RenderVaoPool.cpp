@@ -14,10 +14,10 @@ namespace nCine
 
 		// Start with a VAO bound to the OpenGL context
 		GLVertexFormat format;
-		bindVao(format);
+		BindVao(format);
 	}
 
-	void RenderVaoPool::bindVao(const GLVertexFormat& vertexFormat)
+	void RenderVaoPool::BindVao(const GLVertexFormat& vertexFormat)
 	{
 #if defined(DEATH_DEBUG)
 		char debugString[128];
@@ -31,7 +31,7 @@ namespace nCine
 				const GLuint iboHandle = vertexFormat.GetIbo() ? vertexFormat.GetIbo()->GetGLHandle() : 0;
 				if (bindChanged) {
 					if (GLDebug::IsAvailable()) {
-						insertGLDebugMessage(binding);
+						InsertGLDebugMessage(binding);
 					}
 					// Binding a VAO changes the current bound element array buffer
 					GLBufferObject::SetBoundHandle(GL_ELEMENT_ARRAY_BUFFER, iboHandle);
@@ -99,7 +99,7 @@ namespace nCine
 #endif
 	}
 
-	void RenderVaoPool::insertGLDebugMessage(const VaoBinding& binding)
+	void RenderVaoPool::InsertGLDebugMessage(const VaoBinding& binding)
 	{
 #if defined(DEATH_DEBUG)
 		static char debugString[128];

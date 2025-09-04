@@ -101,10 +101,10 @@ namespace nCine
 				renderDocCapturePath_(MaxRenderDocPathLength), renderDocLastNumCaptures_(0)
 #endif
 	{
-		initPlotValues();
+		InitPlotValues();
 	}
 
-	void ImGuiDebugOverlay::update()
+	void ImGuiDebugOverlay::Update()
 	{
 		// TODO: MenuBar
 		/*if (ImGui::BeginMainMenuBar()) {
@@ -145,7 +145,7 @@ namespace nCine
 		}
 	}
 
-	void ImGuiDebugOverlay::updateFrameTimings()
+	void ImGuiDebugOverlay::UpdateFrameTimings()
 	{
 		if (lastUpdateTime_.secondsSince() > updateTime_) {
 			const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
@@ -212,7 +212,7 @@ namespace nCine
 			}
 
 			if (appCfg.withScenegraph) {
-				updateOverlayTimings();
+				UpdateOverlayTimings();
 			}
 #endif
 
@@ -222,7 +222,7 @@ namespace nCine
 	}
 
 #if defined(DEATH_TRACE)
-	void ImGuiDebugOverlay::log(TraceLevel level, StringView time, StringView threadId, StringView functionName, StringView message)
+	void ImGuiDebugOverlay::Log(TraceLevel level, StringView time, StringView threadId, StringView functionName, StringView message)
 	{
 		logBuffer_.emplace_back(LogMessage{time, message, threadId, functionName, level});
 	}
@@ -381,7 +381,7 @@ namespace nCine
 				ImGui::SameLine();
 				if (ImGui::Button("Apply") && numValues_ != static_cast<std::uint32_t>(numValues)) {
 					numValues_ = static_cast<std::uint32_t>(numValues);
-					initPlotValues();
+					InitPlotValues();
 				}
 				ImGui::TreePop();
 			}
@@ -1223,7 +1223,7 @@ namespace nCine
 					layer = 0;
 				else if (layer > 0xffff)
 					layer = 0xffff;
-				drawable->setLayer(static_cast<uint16_t>(layer));
+				drawable->SetLayer(static_cast<uint16_t>(layer));
 
 				ImGui::SameLine();
 				ASSERT(childId == node->childOrderIndex());
@@ -1344,14 +1344,14 @@ namespace nCine
 			return;
 		}
 
-		const RenderStatistics::VaoPool& vaoPool = RenderStatistics::VaoPool();
-		const RenderStatistics::CommandPool& commandPool = RenderStatistics::CommandPool();
-		const RenderStatistics::Textures& textures = RenderStatistics::Textures();
-		const RenderStatistics::CustomBuffers& customVbos = RenderStatistics::CustomVBOs();
-		const RenderStatistics::CustomBuffers& customIbos = RenderStatistics::CustomIBOs();
-		const RenderStatistics::Buffers& vboBuffers = RenderStatistics::Buffers(RenderBuffersManager::BufferTypes::Array);
-		const RenderStatistics::Buffers& iboBuffers = RenderStatistics::Buffers(RenderBuffersManager::BufferTypes::ElementArray);
-		const RenderStatistics::Buffers& uboBuffers = RenderStatistics::Buffers(RenderBuffersManager::BufferTypes::Uniform);
+		const RenderStatistics::VaoPool& vaoPool = RenderStatistics::GetVaoPool();
+		const RenderStatistics::CommandPool& commandPool = RenderStatistics::GetCommandPool();
+		const RenderStatistics::Textures& textures = RenderStatistics::GetTextures();
+		const RenderStatistics::CustomBuffers& customVbos = RenderStatistics::GetCustomVBOs();
+		const RenderStatistics::CustomBuffers& customIbos = RenderStatistics::GetCustomIBOs();
+		const RenderStatistics::Buffers& vboBuffers = RenderStatistics::GetBuffers(RenderBuffersManager::BufferTypes::Array);
+		const RenderStatistics::Buffers& iboBuffers = RenderStatistics::GetBuffers(RenderBuffersManager::BufferTypes::ElementArray);
+		const RenderStatistics::Buffers& uboBuffers = RenderStatistics::GetBuffers(RenderBuffersManager::BufferTypes::Uniform);
 
 		const ImVec2 windowPos = ImVec2(Margin, Margin);
 		const ImVec2 windowPosPivot = ImVec2(0.0f, 0.0f);
@@ -1366,7 +1366,7 @@ namespace nCine
 
 		ImGui::Begin("Top-Left Panel", nullptr, windowFlags);
 
-		ImGui::Text("Culled nodes: %u", RenderStatistics::Culled());
+		ImGui::Text("Culled nodes: %u", RenderStatistics::GetCulled());
 		if (plotOverlayValues_) {
 			ImGui::SameLine(180.0f);
 			ImGui::PlotLines("##1", plotValues_[ValuesType::CulledNodes].get(), numValues_, index_, nullptr, 0.0f, FLT_MAX);
@@ -1430,15 +1430,15 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		if (appCfg.withScenegraph) {
-			const RenderStatistics::Commands& spriteCommands = RenderStatistics::Commands(RenderCommand::Type::Sprite);
-			const RenderStatistics::Commands& meshspriteCommands = RenderStatistics::Commands(RenderCommand::Type::MeshSprite);
-			const RenderStatistics::Commands& tileMapCommands = RenderStatistics::Commands(RenderCommand::Type::TileMap);
-			const RenderStatistics::Commands& particleCommands = RenderStatistics::Commands(RenderCommand::Type::Particle);
-			const RenderStatistics::Commands& lightingCommands = RenderStatistics::Commands(RenderCommand::Type::Lighting);
-			const RenderStatistics::Commands& textCommands = RenderStatistics::Commands(RenderCommand::Type::Text);
-			const RenderStatistics::Commands& imguiCommands = RenderStatistics::Commands(RenderCommand::Type::ImGui);
-			const RenderStatistics::Commands& unspecifiedCommands = RenderStatistics::Commands(RenderCommand::Type::Unspecified);
-			const RenderStatistics::Commands& allCommands = RenderStatistics::AllCommands();
+			const RenderStatistics::Commands& spriteCommands = RenderStatistics::GetCommands(RenderCommand::Type::Sprite);
+			const RenderStatistics::Commands& meshspriteCommands = RenderStatistics::GetCommands(RenderCommand::Type::MeshSprite);
+			const RenderStatistics::Commands& tileMapCommands = RenderStatistics::GetCommands(RenderCommand::Type::TileMap);
+			const RenderStatistics::Commands& particleCommands = RenderStatistics::GetCommands(RenderCommand::Type::Particle);
+			const RenderStatistics::Commands& lightingCommands = RenderStatistics::GetCommands(RenderCommand::Type::Lighting);
+			const RenderStatistics::Commands& textCommands = RenderStatistics::GetCommands(RenderCommand::Type::Text);
+			const RenderStatistics::Commands& imguiCommands = RenderStatistics::GetCommands(RenderCommand::Type::ImGui);
+			const RenderStatistics::Commands& unspecifiedCommands = RenderStatistics::GetCommands(RenderCommand::Type::Unspecified);
+			const RenderStatistics::Commands& allCommands = RenderStatistics::GetAllCommands();
 
 			ImGui::Separator();
 			ImGui::Text("Sprites: %uV, %uDC (%u Tr), %uI/%uB", spriteCommands.vertices, spriteCommands.commands, spriteCommands.transparents, spriteCommands.instances, spriteCommands.batchSize);
@@ -1620,7 +1620,7 @@ namespace nCine
 		ImGui::End();
 	}
 
-	void ImGuiDebugOverlay::initPlotValues()
+	void ImGuiDebugOverlay::InitPlotValues()
 	{
 		for (std::uint32_t type = 0; type < ValuesType::Count; type++) {
 			plotValues_[type] = std::make_unique<float[]>(numValues_);
@@ -1632,23 +1632,23 @@ namespace nCine
 	}
 
 #if defined(NCINE_PROFILING)
-	void ImGuiDebugOverlay::updateOverlayTimings()
+	void ImGuiDebugOverlay::UpdateOverlayTimings()
 	{
-		const RenderStatistics::Buffers& vboBuffers = RenderStatistics::buffers(RenderBuffersManager::BufferTypes::Array);
-		const RenderStatistics::Buffers& iboBuffers = RenderStatistics::buffers(RenderBuffersManager::BufferTypes::ElementArray);
-		const RenderStatistics::Buffers& uboBuffers = RenderStatistics::buffers(RenderBuffersManager::BufferTypes::Uniform);
+		const RenderStatistics::Buffers& vboBuffers = RenderStatistics::GetBuffers(RenderBuffersManager::BufferTypes::Array);
+		const RenderStatistics::Buffers& iboBuffers = RenderStatistics::GetBuffers(RenderBuffersManager::BufferTypes::ElementArray);
+		const RenderStatistics::Buffers& uboBuffers = RenderStatistics::GetBuffers(RenderBuffersManager::BufferTypes::Uniform);
 
-		const RenderStatistics::Commands& spriteCommands = RenderStatistics::commands(RenderCommand::Type::Sprite);
-		const RenderStatistics::Commands& meshspriteCommands = RenderStatistics::commands(RenderCommand::Type::MeshSprite);
-		const RenderStatistics::Commands& tileMapCommands = RenderStatistics::commands(RenderCommand::Type::TileMap);
-		const RenderStatistics::Commands& particleCommands = RenderStatistics::commands(RenderCommand::Type::Particle);
-		const RenderStatistics::Commands& lightingCommands = RenderStatistics::commands(RenderCommand::Type::Lighting);
-		const RenderStatistics::Commands& textCommands = RenderStatistics::commands(RenderCommand::Type::Text);
-		const RenderStatistics::Commands& imguiCommands = RenderStatistics::commands(RenderCommand::Type::ImGui);
-		const RenderStatistics::Commands& unspecifiedCommands = RenderStatistics::commands(RenderCommand::Type::Unspecified);
-		const RenderStatistics::Commands& allCommands = RenderStatistics::AllCommands();
+		const RenderStatistics::Commands& spriteCommands = RenderStatistics::GetCommands(RenderCommand::Type::Sprite);
+		const RenderStatistics::Commands& meshspriteCommands = RenderStatistics::GetCommands(RenderCommand::Type::MeshSprite);
+		const RenderStatistics::Commands& tileMapCommands = RenderStatistics::GetCommands(RenderCommand::Type::TileMap);
+		const RenderStatistics::Commands& particleCommands = RenderStatistics::GetCommands(RenderCommand::Type::Particle);
+		const RenderStatistics::Commands& lightingCommands = RenderStatistics::GetCommands(RenderCommand::Type::Lighting);
+		const RenderStatistics::Commands& textCommands = RenderStatistics::GetCommands(RenderCommand::Type::Text);
+		const RenderStatistics::Commands& imguiCommands = RenderStatistics::GetCommands(RenderCommand::Type::ImGui);
+		const RenderStatistics::Commands& unspecifiedCommands = RenderStatistics::GetCommands(RenderCommand::Type::Unspecified);
+		const RenderStatistics::Commands& allCommands = RenderStatistics::GetAllCommands();
 
-		plotValues_[ValuesType::CulledNodes][index_] = static_cast<float>(RenderStatistics::Culled());
+		plotValues_[ValuesType::CulledNodes][index_] = static_cast<float>(RenderStatistics::GetCulled());
 		plotValues_[ValuesType::VboUsed][index_] = vboBuffers.usedSpace / 1024.0f;
 		plotValues_[ValuesType::IboUsed][index_] = iboBuffers.usedSpace / 1024.0f;
 		plotValues_[ValuesType::UboUsed][index_] = uboBuffers.usedSpace / 1024.0f;
