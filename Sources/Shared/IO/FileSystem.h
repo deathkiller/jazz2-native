@@ -194,7 +194,7 @@ namespace Death { namespace IO {
 		 * On macOS, the directory is usually equivalent to @cpp "~/Library/Application Support/<name>/" @ce. On Android,
 		 * it's the internal data directory of the package. On other Unix systems, it usually points to
 		 * @cb{.sh} "${XDG_CONFIG_HOME}/<name>/ @ce or @cpp "~/.config/<name>/" @ce. On Windows, it's usually
-		 * @cpp "C:\Users\<user>\Saved Games\" @ce. If it doesn't exist, @cb{.bat} %APPDATA% @ce will be returned
+		 * @cpp "C:\\Users\\<user>\\Saved Games\\" @ce. If it doesn't exist, @cb{.bat} %APPDATA% @ce will be returned
 		 * instead. On Windows RT, the local data folder of the package is returned, because the application doesn't
 		 * have access to the user directories.
 		 */
@@ -207,7 +207,7 @@ namespace Death { namespace IO {
 		 * @brief Returns the path of the user home directory
 		 * 
 		 * On Unix and macOS, the directory is equivalent to @cb{.sh} ${HOME} @ce environment variable. On Windows,
-		 * the directory is equivalent to @cb{.bat} %USERPROFILE% @ce, which usually points to @cpp "C:\Users\<user>\" @ce.
+		 * the directory is equivalent to @cb{.bat} %USERPROFILE% @ce, which usually points to @cpp "C:\\Users\\<user>\\" @ce.
 		 */
 		static Containers::String GetHomeDirectory();
 		/**
