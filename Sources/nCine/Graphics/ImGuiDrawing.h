@@ -3,11 +3,14 @@
 #if defined(WITH_IMGUI) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../../Main.h"
+#include "../Base/HashMap.h"
 #include "../Primitives/Matrix4x4.h"
 
 #include <memory>
 
 #include <imgui.h>
+
+struct ImTextureData;
 
 namespace nCine
 {
@@ -26,9 +29,6 @@ namespace nCine
 		explicit ImGuiDrawing(bool withSceneGraph);
 		~ImGuiDrawing();
 
-		/// Builds the ImGui font atlas and uploads it to a texture
-		bool BuildFonts();
-
 		void NewFrame();
 		/// Renders ImGui with render commands
 		void EndFrame(RenderQueue& renderQueue);
@@ -37,7 +37,10 @@ namespace nCine
 
 	private:
 		bool withSceneGraph_;
-		std::unique_ptr<GLTexture> texture_;
+		HashMap<GLTexture*, std::unique_ptr<GLTexture>> textures_;
+#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+		SmallVector<char, 0> tempTexBuffer_;
+#endif
 		std::unique_ptr<GLShaderProgram> imguiShaderProgram_;
 		std::unique_ptr<GLBufferObject> vbo_;
 		std::unique_ptr<GLBufferObject> ibo_;
@@ -62,6 +65,8 @@ namespace nCine
 		std::uint32_t elementsHandle_;
 #endif
 
+		void DestroyTexture(ImTextureData* tex);
+		void UpdateTexture(ImTextureData* tex);
 		RenderCommand* RetrieveCommandFromPool();
 		void SetupRenderCommand(RenderCommand& cmd);
 		void Draw(RenderQueue& renderQueue);

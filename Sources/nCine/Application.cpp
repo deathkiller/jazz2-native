@@ -834,9 +834,6 @@ namespace nCine
 		}
 
 		if (appCfg_.withGraphics) {
-#if defined(WITH_IMGUI)
-			imguiDrawing_->BuildFonts();
-#endif
 			// Swapping frame now for a cleaner API trace capture when debugging
 			gfxDevice_->update();
 			FrameMark;
@@ -1287,10 +1284,9 @@ namespace nCine
 #if defined(WITH_IMGUI)
 		auto* debugOverlay = theApplication().debugOverlay_.get();
 		if (debugOverlay != nullptr) {
-			std::int32_t length4 = 0;
-			AppendDateTime(logEntryWithColors, length4, timestamp);
-
-			debugOverlay->Log(level, logEntryWithColors, threadId, functionName, content);
+			std::int32_t length3 = 0;
+			AppendDateTime(logEntryWithColors, length3, timestamp);
+			debugOverlay->Log(level, { logEntryWithColors, (std::size_t)length3 }, threadId, functionName, content);
 		}
 #endif
 

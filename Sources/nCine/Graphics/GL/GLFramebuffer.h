@@ -68,5 +68,7 @@ namespace nCine
 		GLuint glHandle_;
 
 		static bool BindHandle(GLenum target, GLuint glHandle);
+		static GLuint GetBoundHandle(GLenum target);
+		static void SetBoundHandle(GLenum target, GLuint glHandle);
 	};
 }

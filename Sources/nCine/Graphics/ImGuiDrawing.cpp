@@ -77,6 +77,7 @@ namespace nCine
 #if !(defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;	// We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #endif
+		io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;	// We can honor ImGuiPlatformIO::Textures[] requests during render.
 
 		imguiShaderProgram_ = std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate);
 #if !defined(WITH_EMBEDDED_SHADERS)
@@ -187,6 +188,13 @@ namespace nCine
 
 	ImGuiDrawing::~ImGuiDrawing()
 	{
+		// Destroy all textures
+		for (ImTextureData* tex : ImGui::GetPlatformIO().Textures) {
+			if (tex->RefCount == 1) {
+				DestroyTexture(tex);
+			}
+		}
+
 #if defined(IMGUI_HAS_VIEWPORT)
 		if (vboHandle_) {
 			glDeleteBuffers(1, &vboHandle_);
@@ -199,30 +207,12 @@ namespace nCine
 #endif
 
 		ImGuiIO& io = ImGui::GetIO();
-		io.Fonts->SetTexID(0);
 		io.BackendRendererName = nullptr;
 		io.BackendRendererUserData = nullptr;
-		io.BackendFlags &= ~ImGuiBackendFlags_RendererHasVtxOffset;
+		io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures);
 #if defined(IMGUI_HAS_VIEWPORT)
 		io.BackendFlags &= ~ImGuiBackendFlags_RendererHasViewports;
 #endif
-	}
-
-	bool ImGuiDrawing::BuildFonts()
-	{
-		ImGuiIO& io = ImGui::GetIO();
-
-		std::uint8_t* pixels = nullptr;
-		std::int32_t width, height;
-		io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-
-		texture_ = std::make_unique<GLTexture>(GL_TEXTURE_2D);
-		texture_->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		texture_->TexParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		texture_->TexImage2D(0, GL_RGBA, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-		io.Fonts->TexID = reinterpret_cast<ImTextureID>(texture_.get());
-
-		return (pixels != nullptr);
 	}
 
 	void ImGuiDrawing::NewFrame()
@@ -263,6 +253,8 @@ namespace nCine
 
 #if defined(WITH_GLFW)
 		ImGuiGlfwInput::endFrame();
+#elif defined(WITH_SDL)
+		ImGuiSdlInput::endFrame();
 #endif
 
 		ImGuiIO& io = ImGui::GetIO();
@@ -287,6 +279,86 @@ namespace nCine
 		ImGui::Render();
 
 		Draw();
+	}
+
+	void ImGuiDrawing::DestroyTexture(ImTextureData* tex)
+	{
+		GLTexture* texturePtr = (GLTexture*)(intptr_t)tex->TexID;
+		textures_.erase(texturePtr);
+
+		// Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
+		tex->SetTexID(ImTextureID_Invalid);
+		tex->SetStatus(ImTextureStatus_Destroyed);
+	}
+
+	void ImGuiDrawing::UpdateTexture(ImTextureData* tex)
+	{
+		// FIXME: Consider backing up and restoring
+		if (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates) {
+#ifdef GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+#endif
+#ifdef GL_UNPACK_ALIGNMENT
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+#endif
+		}
+
+		if (tex->Status == ImTextureStatus_WantCreate) {
+			// Create and upload new texture to graphics system
+			//IMGUI_DEBUG_LOG("UpdateTexture #%03d: WantCreate %dx%d\n", tex->UniqueID, tex->Width, tex->Height);
+			IM_ASSERT(tex->TexID == 0 && tex->BackendUserData == nullptr);
+			IM_ASSERT(tex->Format == ImTextureFormat_RGBA32);
+			const void* pixels = tex->GetPixels();
+
+			// Upload texture to graphics system
+			// (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
+			GLint lastTexture = GLTexture::GetBoundHandle(GL_TEXTURE_2D);
+			std::unique_ptr<GLTexture> texture = std::make_unique<GLTexture>(GL_TEXTURE_2D);
+			texture->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			texture->TexParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			texture->TexParameteri(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			texture->TexParameteri(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			texture->TexImage2D(0, GL_RGBA, tex->Width, tex->Height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+			GLTexture* texturePtr = texture.get();
+			textures_.emplace(texturePtr, std::move(texture));
+			// Store identifiers
+			tex->SetTexID((ImTextureID)(intptr_t)texturePtr);
+			tex->SetStatus(ImTextureStatus_OK);
+
+			// Restore state
+			GLTexture::BindHandle(GL_TEXTURE_2D, lastTexture);
+		} else if (tex->Status == ImTextureStatus_WantUpdates) {
+			// Update selected blocks. We only ever write to textures regions which have never been used before!
+			// This backend choose to use tex->Updates[] but you can use tex->UpdateRect to upload a single region.
+			GLint lastTexture = GLTexture::GetBoundHandle(GL_TEXTURE_2D);
+
+			GLTexture* texturePtr = (GLTexture*)(intptr_t)tex->TexID;
+			texturePtr->Bind();
+
+#ifdef GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, tex->Width);
+			for (ImTextureRect& r : tex->Updates) {
+				texturePtr->TexSubImage2D(0, r.x, r.y, r.w, r.h, GL_RGBA, GL_UNSIGNED_BYTE, tex->GetPixelsAt(r.x, r.y));
+			}
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+#else
+			// GL ES doesn't have GL_UNPACK_ROW_LENGTH, so we need to (A) copy to a contiguous buffer or (B) upload line by line.
+			for (ImTextureRect& r : tex->Updates) {
+				const int srcPitch = r.w * tex->BytesPerPixel;
+				if (tempTexBuffer_.size() < r.h * srcPitch)
+					tempTexBuffer_.resize(r.h * srcPitch);
+				char* outP = tempTexBuffer_.data();
+				for (int y = 0; y < r.h; y++, outP += srcPitch)
+					memcpy(outP, tex->GetPixelsAt(r.x, r.y + y), srcPitch);
+				texturePtr->TexSubImage2D(0, r.x, r.y, r.w, r.h, GL_RGBA, GL_UNSIGNED_BYTE, tempTexBuffer_.data());
+			}
+#endif
+			tex->SetStatus(ImTextureStatus_OK);
+			GLTexture::BindHandle(GL_TEXTURE_2D, lastTexture); // Restore state
+		} else if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames > 0) {
+			DestroyTexture(tex);
+		}
 	}
 
 	RenderCommand* ImGuiDrawing::RetrieveCommandFromPool()
@@ -333,6 +405,14 @@ namespace nCine
 		}
 		const ImVec2 clipOff = drawData->DisplayPos;
 		const ImVec2 clipScale = drawData->FramebufferScale;
+
+		if (drawData->Textures != nullptr) {
+			for (ImTextureData* tex : *drawData->Textures) {
+				if (tex->Status != ImTextureStatus_OK) {
+					UpdateTexture(tex);
+				}
+			}
+		}
 
 #if defined(IMGUI_HAS_VIEWPORT)
 		// projectionMatrix_ must be recaltulated when the main window moves if viewports are active
@@ -426,6 +506,14 @@ namespace nCine
 		const ImVec2 clipOff = drawData->DisplayPos;
 		const ImVec2 clipScale = drawData->FramebufferScale;
 
+		if (drawData->Textures != nullptr) {
+			for (ImTextureData* tex : *drawData->Textures) {
+				if (tex->Status != ImTextureStatus_OK) {
+					UpdateTexture(tex);
+				}
+			}
+		}
+
 		GLBlending::State blendingState = GLBlending::GetState();
 		GLBlending::Enable();
 		GLBlending::SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -436,7 +524,9 @@ namespace nCine
 
 		for (std::int32_t n = 0; n < drawData->CmdListsCount; n++) {
 			const ImDrawList* imCmdList = drawData->CmdLists[n];
+#if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 			const ImDrawIdx* firstIndex = nullptr;
+#endif
 
 			// Always define vertex format (and bind VAO) before uploading data to buffers
 			imguiShaderProgram_->DefineVertexFormat(vbo_.get(), ibo_.get());
@@ -462,11 +552,11 @@ namespace nCine
 				GLTexture::BindHandle(GL_TEXTURE_2D, reinterpret_cast<GLTexture*>(imCmd->GetTexID())->GetGLHandle());
 #if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 				glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(imCmd->ElemCount), sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, firstIndex);
+				firstIndex += imCmd->ElemCount;
 #else
 				glDrawElementsBaseVertex(GL_TRIANGLES, static_cast<GLsizei>(imCmd->ElemCount), sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT,
 										 reinterpret_cast<void*>(static_cast<intptr_t>(imCmd->IdxOffset * sizeof(ImDrawIdx))), static_cast<GLint>(imCmd->VtxOffset));
 #endif
-				firstIndex += imCmd->ElemCount;
 			}
 		}
 

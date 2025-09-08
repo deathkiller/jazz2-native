@@ -66,26 +66,34 @@ namespace Death
 			in the backtrace storage and written to sinks only when the backtrace is flushed.
 			Flush can be triggered by calling @ref FlushBacktraceAsync() or automatically
 			when an entry with a level equal or higher than the flush level is enqueued.
+
+			Deferred entries in the backtrace storage may be written out of order,
+			especially when they are stored for a long time.
 		*/
 		void InitializeBacktrace(std::uint32_t maxCapacity, TraceLevel flushLevel = TraceLevel::Unknown);
 
-		/** @brief Writes any deferred entries stored in the backtrace storage to all sinks asynchronously */
+		/**
+			@brief Writes any deferred entries stored in the backtrace storage to all sinks asynchronously
+
+			The operation is performed asynchronously, so in order to immediately write these entries to sinks,
+			it is necessary to additionally call the @ref Flush() method.
+		*/
 		void FlushBacktraceAsync() noexcept;
 
 #	if defined(DEATH_TRACE_ASYNC) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**
 			@brief Shrinks the thread-local queue to the specified target capacity
 
-			This function is only available with asynchronous tracing enabled,
-			see @cpp DEATH_TRACE_ASYNC @ce in @ref building-config-params-adv.
+			This function is only available with asynchronous tracing, see @cpp DEATH_TRACE_ASYNC @ce
+			in @ref building-config-params-adv.
 		*/
 		void ShrinkThreadLocalQueue(std::size_t capacity) noexcept;
 
 		/**
 			@brief Returns the current capacity of the thread-local queue
 
-			This function is only available with asynchronous tracing enabled,
-			see @cpp DEATH_TRACE_ASYNC @ce in @ref building-config-params-adv.
+			This function is only available with asynchronous tracing, see @cpp DEATH_TRACE_ASYNC @ce
+			in @ref building-config-params-adv.
 		*/
 		std::size_t GetThreadLocalQueueCapacity() noexcept;
 #	endif

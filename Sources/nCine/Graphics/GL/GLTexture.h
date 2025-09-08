@@ -66,5 +66,10 @@ namespace nCine
 		static bool BindHandle(GLenum target, GLuint glHandle) {
 			return BindHandle(target, glHandle, 0);
 		}
+
+		static GLuint GetBoundHandle(GLenum target, unsigned int textureUnit);
+		static GLuint GetBoundHandle(GLenum target) {
+			return GetBoundHandle(target, 0);
+		}
 	};
 }

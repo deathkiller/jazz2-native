@@ -49,7 +49,7 @@
 #define GLFW_HAS_GETKEYNAME				(GLFW_VERSION_COMBINED >= 3200) // 3.2+ glfwGetKeyName()
 #define GLFW_HAS_GETERROR				(GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetError()
 
-#if defined(IMGUI_HAS_VIEWPORT)
+#if defined(IMGUI_HAS_VIEWPORT) && defined(DEATH_TARGET_WINDOWS)
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 #endif
 
@@ -545,7 +545,9 @@ namespace nCine::Backends
 	void ImGuiGlfwInput::newFrame()
 	{
 		ImGuiIO& io = ImGui::GetIO();
-		IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! Missing call to ImGuiDrawing::buildFonts() function?");
+
+		// Setup main viewport size (every frame to accommodate for window resizing)
+		getWindowSizeAndFramebufferScale(window_, &io.DisplaySize, &io.DisplayFramebufferScale);
 
 		// Setup display size (every frame to accommodate for window resizing)
 		int w, h;
@@ -1000,9 +1002,51 @@ namespace nCine::Backends
 		}
 	}
 
+	// - On Windows the process needs to be marked DPI-aware!! SDL2 doesn't do it by default. You can call ::SetProcessDPIAware() or call ImGui_ImplWin32_EnableDpiAwareness() from Win32 backend.
+	// - Apple platforms use FramebufferScale so we always return 1.0f.
+	// - Some accessibility applications are declaring virtual monitors with a DPI of 0.0f, see #7902. We preserve this value for caller to handle.
+	float ImGuiGlfwInput::getContentScaleForWindow(GLFWwindow* window)
+	{
+#if GLFW_HAS_PER_MONITOR_DPI && !(defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_ANDROID))
+		float xScale, yScale;
+		glfwGetWindowContentScale(window, &xScale, &yScale);
+		return xScale;
+#else
+		IM_UNUSED(window);
+		return 1.0f;
+#endif
+	}
+
+	float ImGuiGlfwInput::getContentScaleForMonitor(GLFWmonitor* monitor)
+	{
+#if GLFW_HAS_PER_MONITOR_DPI && !(defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_ANDROID))
+		float xScale, yScale;
+		glfwGetMonitorContentScale(monitor, &xScale, &yScale);
+		return xScale;
+#else
+		IM_UNUSED(monitor);
+		return 1.0f;
+#endif
+	}
+
+	void ImGuiGlfwInput::getWindowSizeAndFramebufferScale(GLFWwindow* window, ImVec2* outSize, ImVec2* outFramebufferScale)
+	{
+		int w, h;
+		int displayW, displayH;
+		glfwGetWindowSize(window, &w, &h);
+		glfwGetFramebufferSize(window, &displayW, &displayH);
+		if (outSize != nullptr)
+			*outSize = ImVec2((float)w, (float)h);
+		if (outFramebufferScale != nullptr) {
+			*outFramebufferScale = (w > 0 && h > 0) ? ImVec2(static_cast<float>(displayW) / static_cast<float>(w),
+															 static_cast<float>(displayH) / static_cast<float>(h))
+				: ImVec2(1.0f, 1.0f);
+		}
+	}
+
+#if defined(IMGUI_HAS_DOCK)
 	void ImGuiGlfwInput::updateMonitors()
 	{
-#if defined(IMGUI_HAS_DOCK)
 		ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
 		wantUpdateMonitors_ = false;
 
@@ -1043,8 +1087,8 @@ namespace nCine::Backends
 			monitor.PlatformHandle = static_cast<void*>(glfwMonitors[n]); // [...] GLFW doc states: "guaranteed to be valid only until the monitor configuration changes"
 			platformIo.Monitors.push_back(monitor);
 		}
-#endif
 	}
+#endif
 
 #if defined(IMGUI_HAS_VIEWPORT)
 	ImGuiViewport* ImGuiGlfwInput::getParentViewport(ImGuiViewport* viewport)
@@ -1211,6 +1255,14 @@ namespace nCine::Backends
 #	endif
 		vd->IgnoreWindowSizeEventFrame = ImGui::GetFrameCount();
 		glfwSetWindowSize(vd->Window, static_cast<std::int32_t>(size.x), static_cast<std::int32_t>(size.y));
+	}
+
+	ImVec2 ImGuiGlfwInput::onGetWindowFramebufferScale(ImGuiViewport* viewport)
+	{
+		ViewportData* vd = (ViewportData*)viewport->PlatformUserData;
+		ImVec2 framebufferScale;
+		getWindowSizeAndFramebufferScale(vd->Window, nullptr, &framebufferScale);
+		return framebufferScale;
 	}
 
 	void ImGuiGlfwInput::onSetWindowTitle(ImGuiViewport* viewport, const char* title)

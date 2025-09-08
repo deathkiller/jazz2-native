@@ -2,6 +2,8 @@
 
 #include "Iterator.h"
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+
 namespace nCine
 {
 	/// A generic reverse iterator
@@ -227,3 +229,5 @@ namespace nCine
 	}
 
 }
+
+#endif

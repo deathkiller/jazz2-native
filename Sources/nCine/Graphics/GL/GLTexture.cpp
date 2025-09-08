@@ -134,4 +134,10 @@ namespace nCine
 		}
 		return false;
 	}
+
+	GLuint GLTexture::GetBoundHandle(GLenum target, unsigned int textureUnit)
+	{
+		FATAL_ASSERT(textureUnit < MaxTextureUnits);
+		return boundTextures_[textureUnit][target];
+	}
 }

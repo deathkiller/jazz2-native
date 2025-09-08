@@ -46,7 +46,6 @@ namespace Jazz2::Scripting
 		engine->RegisterGlobalFunction("float GetWindowHeight()", asFUNCTIONPR(ImGui::GetWindowHeight, (), float), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool IsWindowCollapsed()", asFUNCTIONPR(ImGui::IsWindowCollapsed, (), bool), asCALL_CDECL);
 		engine->RegisterGlobalFunction("bool IsWindowAppearing()", asFUNCTIONPR(ImGui::IsWindowAppearing, (), bool), asCALL_CDECL);
-		engine->RegisterGlobalFunction("void SetWindowFontScale(float)", asFUNCTIONPR(ImGui::SetWindowFontScale, (float), void), asCALL_CDECL);
 
 		engine->RegisterGlobalFunction("void SetNextWindowPos(const vec2&in)", asFUNCTION(+[](const Vector2f& v) {
 			ImGui::SetNextWindowPos(v); }), asCALL_CDECL);
