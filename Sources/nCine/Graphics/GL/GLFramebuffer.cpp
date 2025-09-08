@@ -161,4 +161,25 @@ namespace nCine
 		}
 		return false;
 	}
+
+	GLuint GLFramebuffer::GetBoundHandle(GLenum target)
+	{
+		FATAL_ASSERT(target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER);
+
+		if (target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER)
+			return readBoundBuffer_;
+		else
+			return drawBoundBuffer_;
+	}
+
+	void GLFramebuffer::SetBoundHandle(GLenum target, GLuint glHandle)
+	{
+		FATAL_ASSERT(target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER);
+
+		if (target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER)
+			readBoundBuffer_ = glHandle;
+
+		if (target == GL_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER)
+			drawBoundBuffer_ = glHandle;
+	}
 }

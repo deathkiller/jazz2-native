@@ -53,7 +53,14 @@ namespace nCine::Backends
 		static void updateMouseData();
 		static void updateMouseCursor();
 		static void updateGamepads();
+
+		static float getContentScaleForWindow(GLFWwindow* window);
+		static float getContentScaleForMonitor(GLFWmonitor* monitor);
+		static void getWindowSizeAndFramebufferScale(GLFWwindow* window, ImVec2* outSize, ImVec2* outFramebufferScale);
+
+#if defined(IMGUI_HAS_DOCK)
 		static void updateMonitors();
+#endif
 
 #if defined(IMGUI_HAS_VIEWPORT)
 		static ImGuiViewport* getParentViewport(ImGuiViewport* viewport);
@@ -66,6 +73,7 @@ namespace nCine::Backends
 		static void onSetWindowPos(ImGuiViewport* viewport, ImVec2 pos);
 		static ImVec2 onGetWindowSize(ImGuiViewport* viewport);
 		static void onSetWindowSize(ImGuiViewport* viewport, ImVec2 size);
+		static ImVec2 onGetWindowFramebufferScale(ImGuiViewport* viewport);
 		static void onSetWindowTitle(ImGuiViewport* viewport, const char* title);
 		static bool onGetWindowFocus(ImGuiViewport* viewport);
 		static void onSetWindowFocus(ImGuiViewport* viewport);

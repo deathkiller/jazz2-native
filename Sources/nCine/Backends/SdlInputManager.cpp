@@ -1,6 +1,7 @@
 #if defined(WITH_SDL)
 
 #include "SdlInputManager.h"
+#include "SdlGfxDevice.h"
 #include "../Base/Algorithms.h"
 #include "../Input/IInputEventHandler.h"
 #include "../Input/JoyMapping.h"
@@ -15,7 +16,6 @@
 #include <cstring>
 
 #if defined(WITH_IMGUI)
-#	include "SdlGfxDevice.h"
 #	include "ImGuiSdlInput.h"
 #endif
 
@@ -117,7 +117,7 @@ namespace nCine::Backends
 		joyMapping_.Init(this);
 
 #if defined(WITH_IMGUI)
-		ImGuiSdlInput::init(SdlGfxDevice::windowHandle());
+		ImGuiSdlInput::init(SdlGfxDevice::windowHandle(), SdlGfxDevice::glContextHandle());
 #endif
 	}
 
@@ -178,21 +178,33 @@ namespace nCine::Backends
 		switch (event.type) {
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
+				if (!SdlGfxDevice::isMainWindow(event.key.windowID)) {
+					return;
+				}
 				keyboardEvent_.scancode = event.key.keysym.scancode;
 				keyboardEvent_.sym = SdlKeys::keySymValueToEnum(event.key.keysym.sym);
 				keyboardEvent_.mod = SdlKeys::keyModMaskToEnumMask(event.key.keysym.mod);
 				break;
 			case SDL_TEXTINPUT: {
+				if (!SdlGfxDevice::isMainWindow(event.text.windowID)) {
+					return;
+				}
 				textInputEvent_.length = copyStringFirst(textInputEvent_.text, event.text.text, 4);
 				break;
 			}
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
+				if (!SdlGfxDevice::isMainWindow(event.button.windowID)) {
+					return;
+				}
 				mouseEvent_.x = event.button.x;
 				mouseEvent_.y = event.button.y;
 				mouseEvent_.button = sdlToNcineMouseButton(event.button.button);
 				break;
 			case SDL_MOUSEMOTION:
+				if (!SdlGfxDevice::isMainWindow(event.motion.windowID)) {
+					return;
+				}
 				if (cursor_ != Cursor::HiddenLocked) {
 					mouseState_.x = event.motion.x;
 					mouseState_.y = event.motion.y;
@@ -203,6 +215,9 @@ namespace nCine::Backends
 				mouseState_.buttons_ = event.motion.state;
 				break;
 			case SDL_MOUSEWHEEL:
+				if (!SdlGfxDevice::isMainWindow(event.wheel.windowID)) {
+					return;
+				}
 				scrollEvent_.x = static_cast<float>(event.wheel.x);
 				scrollEvent_.y = static_cast<float>(event.wheel.y);
 				break;
@@ -224,6 +239,10 @@ namespace nCine::Backends
 			case SDL_FINGERDOWN:
 			case SDL_FINGERMOTION:
 			case SDL_FINGERUP:
+				if (!SdlGfxDevice::isMainWindow(event.tfinger.windowID)) {
+					return;
+				}
+
 				touchEvent_.count = SDL_GetNumTouchFingers(event.tfinger.touchId);
 				touchEvent_.actionIndex = (std::int32_t)event.tfinger.fingerId;
 
@@ -241,8 +260,6 @@ namespace nCine::Backends
 					pointer.y = finger->y;
 					pointer.pressure = finger->pressure;
 				}
-				break;
-			default:
 				break;
 		}
 

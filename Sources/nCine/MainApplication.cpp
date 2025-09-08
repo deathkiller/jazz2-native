@@ -463,24 +463,27 @@ namespace nCine
 				case SDL_DISPLAYEVENT:
 					gfxDevice_->updateMonitors();
 					break;
-				case SDL_WINDOWEVENT:
-					switch (event.window.event) {
-						case SDL_WINDOWEVENT_FOCUS_GAINED:
-							SetFocus(true);
-							break;
-						case SDL_WINDOWEVENT_FOCUS_LOST:
-							SetFocus(false);
-							break;
-						case SDL_WINDOWEVENT_SIZE_CHANGED:
-							gfxDevice_->width_ = event.window.data1;
-							gfxDevice_->height_ = event.window.data2;
-							SDL_Window* windowHandle = SDL_GetWindowFromID(event.window.windowID);
-							gfxDevice_->isFullscreen_ = (SDL_GetWindowFlags(windowHandle) & SDL_WINDOW_FULLSCREEN) != 0;
-							SDL_GL_GetDrawableSize(windowHandle, &gfxDevice_->drawableWidth_, &gfxDevice_->drawableHeight_);
-							ResizeScreenViewport(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
-							break;
+				case SDL_WINDOWEVENT: {
+					if (SdlGfxDevice::isMainWindow(event.window.windowID)) {
+						switch (event.window.event) {
+							case SDL_WINDOWEVENT_FOCUS_GAINED:
+								SetFocus(true);
+								break;
+							case SDL_WINDOWEVENT_FOCUS_LOST:
+								SetFocus(false);
+								break;
+							case SDL_WINDOWEVENT_SIZE_CHANGED:
+								gfxDevice_->width_ = event.window.data1;
+								gfxDevice_->height_ = event.window.data2;
+								SDL_Window* windowHandle = SDL_GetWindowFromID(event.window.windowID);
+								gfxDevice_->isFullscreen_ = (SDL_GetWindowFlags(windowHandle) & SDL_WINDOW_FULLSCREEN) != 0;
+								SDL_GL_GetDrawableSize(windowHandle, &gfxDevice_->drawableWidth_, &gfxDevice_->drawableHeight_);
+								ResizeScreenViewport(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
+								break;
+						}
 					}
 					break;
+				}
 				default:
 					if (appCfg_.withGraphics) {
 						SdlInputManager::parseEvent(event);

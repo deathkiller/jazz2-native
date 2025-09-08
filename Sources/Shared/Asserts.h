@@ -65,34 +65,34 @@ inline typename std::enable_if<(sizeof...(Args) > 0), void>::type
 #	endif
 #endif
 
-/** @brief Print a formatted message with @ref TraceLevel::Debug to the event log */
+/** @brief Write a formatted message with @ref TraceLevel::Debug to the event log */
 #	if defined(DEATH_DEBUG)
 #		define LOGD(fmt, ...) __DEATH_TRACE(TraceLevel::Debug, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 #	else
 #		define LOGD(fmt, ...) do {} while (false)
 #	endif
-/** @brief Print a deferred formatted message with @ref TraceLevel::Deferred to the event log */
+/** @brief Write a deferred formatted message with @ref TraceLevel::Deferred to the event log */
 #	define LOGB(fmt, ...) __DEATH_TRACE(TraceLevel::Deferred, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
-/** @brief Print a formatted message with @ref TraceLevel::Info to the event log */
+/** @brief Write a formatted message with @ref TraceLevel::Info to the event log */
 #	define LOGI(fmt, ...) __DEATH_TRACE(TraceLevel::Info, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
-/** @brief Print a formatted message with @ref TraceLevel::Warning to the event log */
+/** @brief Write a formatted message with @ref TraceLevel::Warning to the event log */
 #	define LOGW(fmt, ...) __DEATH_TRACE(TraceLevel::Warning, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
-/** @brief Print a formatted message with @ref TraceLevel::Error to the event log */
+/** @brief Write a formatted message with @ref TraceLevel::Error to the event log */
 #	define LOGE(fmt, ...) __DEATH_TRACE(TraceLevel::Error, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
-/** @brief Print a formatted message with @ref TraceLevel::Fatal to the event log */
+/** @brief Write a formatted message with @ref TraceLevel::Fatal to the event log */
 #	define LOGF(fmt, ...) __DEATH_TRACE(TraceLevel::Fatal, __DEATH_CURRENT_FUNCTION, fmt, ##__VA_ARGS__)
 #else
-/** @brief Print a formatted message with @ref TraceLevel::Debug to the event log */
+/** @brief Write a formatted message with @ref TraceLevel::Debug to the event log */
 #	define LOGD(fmt, ...) do {} while (false)
-/** @brief Print a deferred formatted message with @ref TraceLevel::Deferred to the event log */
+/** @brief Write a deferred formatted message with @ref TraceLevel::Deferred to the event log */
 #	define LOGB(fmt, ...) do {} while (false)
-/** @brief Print a formatted message with @ref TraceLevel::Info to the event log */
+/** @brief Write a formatted message with @ref TraceLevel::Info to the event log */
 #	define LOGI(fmt, ...) do {} while (false)
-/** @brief Print a formatted message with @ref TraceLevel::Warning to the event log */
+/** @brief Write a formatted message with @ref TraceLevel::Warning to the event log */
 #	define LOGW(fmt, ...) do {} while (false)
-/** @brief Print a formatted message with @ref TraceLevel::Error to the event log */
+/** @brief Write a formatted message with @ref TraceLevel::Error to the event log */
 #	define LOGE(fmt, ...) do {} while (false)
-/** @brief Print a formatted message with @ref TraceLevel::Fatal to the event log */
+/** @brief Write a formatted message with @ref TraceLevel::Fatal to the event log */
 #	define LOGF(fmt, ...) do {} while (false)
 #endif
 

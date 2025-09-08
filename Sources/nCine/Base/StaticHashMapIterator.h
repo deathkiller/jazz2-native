@@ -118,6 +118,8 @@ namespace nCine
 		friend class StaticHashMapIterator<K, T, HashFunc, Capacity, true>;
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
+
 	/// Iterator traits structure specialization for `HashMapIterator` class
 	template<class K, class T, class HashFunc, std::uint32_t Capacity>
 	struct IteratorTraits<StaticHashMapIterator<K, T, HashFunc, Capacity, false>>
@@ -149,6 +151,8 @@ namespace nCine
 			return BidirectionalIteratorTag();
 		}
 	};
+
+#endif
 
 	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst>
 	StaticHashMapIterator<K, T, HashFunc, Capacity, IsConst>::StaticHashMapIterator(typename StaticHashMapHelperTraits<K, T, HashFunc, Capacity, IsConst>::HashMapPtr hashMap, SentinelTagInit tag)

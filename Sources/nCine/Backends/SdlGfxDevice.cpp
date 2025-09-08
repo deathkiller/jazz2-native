@@ -15,6 +15,7 @@
 namespace nCine::Backends
 {
 	SDL_Window* SdlGfxDevice::windowHandle_ = nullptr;
+	SDL_GLContext SdlGfxDevice::glContextHandle_;
 
 	SdlGfxDevice::SdlGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
 		: IGfxDevice(windowMode, glContextInfo, displayMode)

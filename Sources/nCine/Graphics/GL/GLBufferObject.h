@@ -79,10 +79,12 @@ namespace nCine
 		/// Deleted assignment operator
 		GLBufferObject& operator=(const GLBufferObject&) = delete;
 
+		static bool BindHandle(GLenum target, GLuint glHandle);
+
+		static GLuint GetBoundHandle(GLenum target);
 		inline static void SetBoundHandle(GLenum target, GLuint glHandle) {
 			boundBuffers_[target] = glHandle;
 		}
-		static bool BindHandle(GLenum target, GLuint glHandle);
 	};
 
 }

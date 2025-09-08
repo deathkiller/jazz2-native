@@ -132,8 +132,8 @@ namespace Death { namespace Trace {
 		/** @brief Enables huge pages to be used for storage of underlying queue to reduce TBL misses, available only on Linux */
 		static constexpr bool HugePagesEnabled = false;
 
-		/** @brief Initial item capacity of transit event bufferper thread context, must be power of 2 */
-		static constexpr std::uint32_t TransitEventBufferInitialCapacity = 128;
+		/** @brief Initial item capacity of transit event buffer per thread context, must be power of 2 */
+		static constexpr std::uint32_t TransitEventBufferInitialCapacity = 256;
 
 		/** @brief If enabled, the worker thread will process all remaining entries before exiting */
 		static constexpr bool WaitForQueuesToEmptyBeforeExit = true;

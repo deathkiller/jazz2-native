@@ -166,4 +166,9 @@ namespace nCine
 		}
 		return false;
 	}
+
+	GLuint GLBufferObject::GetBoundHandle(GLenum target)
+	{
+		return boundBuffers_[target];
+	}
 }

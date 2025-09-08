@@ -50,8 +50,17 @@ namespace nCine::Backends
 		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
 		bool setVideoMode(unsigned int modeIndex) override;
 
+		static inline bool isMainWindow(std::uint32_t windowId) {
+			SDL_Window* windowHandle = SDL_GetWindowFromID(windowId);
+			return (windowHandle == windowHandle_);
+		}
+
 		static inline SDL_Window* windowHandle() {
 			return windowHandle_;
+		}
+
+		static inline SDL_GLContext glContextHandle() {
+			return glContextHandle_;
 		}
 
 	protected:
@@ -63,7 +72,7 @@ namespace nCine::Backends
 		/// SDL2 window handle
 		static SDL_Window* windowHandle_;
 		/// SDL2 OpenGL context handle
-		SDL_GLContext glContextHandle_;
+		static SDL_GLContext glContextHandle_;
 
 		/// Deleted copy constructor
 		SdlGfxDevice(const SdlGfxDevice&) = delete;
