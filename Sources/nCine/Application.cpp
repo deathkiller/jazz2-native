@@ -1611,12 +1611,25 @@ namespace nCine
 		}
 #		endif
 		ms.WriteVariableUint32((std::uint32_t)executableFileName.size());
-		if (executableFileName) {
+		if (!executableFileName.empty()) {
 			ms.Write(executableFileName.data(), (std::int64_t)executableFileName.size());
 		}
+
+		std::string arguments;
+		for (std::size_t i = 0; i < appCfg_.argc(); i++) {
+			if (i > 0) {
+				arguments += ' ';
+			}
+			arguments += appCfg_.argv(i);
+		}
+		ms.WriteVariableUint32((std::uint32_t)arguments.size());
+		if (!arguments.empty()) {
+			ms.Write(arguments.data(), (std::int64_t)arguments.size());
+		}
+
 		StringView executableVersion = NCINE_VERSION;
 		ms.WriteVariableUint32((std::uint32_t)executableVersion.size());
-		if (executableVersion) {
+		if (!executableVersion.empty()) {
 			ms.Write(executableVersion.data(), (std::int64_t)executableVersion.size());
 		}
 

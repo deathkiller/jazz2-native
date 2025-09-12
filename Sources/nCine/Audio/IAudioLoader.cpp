@@ -28,7 +28,7 @@ namespace nCine
 	{
 		// TODO: path cannot be null, otherwise InvalidAudioLoader will be created
 		//LOGI("Loading from memory: 0x{:x}, {} bytes", bufferPtr, bufferSize);
-		return createLoader(fs::CreateFromMemory(bufferPtr, bufferSize), { });
+		return createLoader(std::make_unique<MemoryStream>(bufferPtr, bufferSize), {});
 	}*/
 
 	std::unique_ptr<IAudioLoader> IAudioLoader::createFromFile(const StringView path)
