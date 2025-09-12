@@ -55,8 +55,8 @@ if(WIN32)
 			message(STATUS "Writing a resource file for executable icons")
 
 			set(RESOURCE_RC_FILE "${GENERATED_SOURCE_DIR}/Resources.rc")
-			set(RESOURCE_RC_CONTENT "GLFW_ICON ICON \"WindowImGui.ico\"")
-			file(COPY "${NCINE_SOURCE_DIR}/Icons/WindowImGui.ico" DESTINATION ${GENERATED_INCLUDE_DIR})
+			set(RESOURCE_RC_CONTENT "GLFW_ICON ICON \"Window.ico\"")
+			file(COPY "${NCINE_SOURCE_DIR}/Icons/Window.ico" DESTINATION ${GENERATED_INCLUDE_DIR})
 			
 			file(WRITE ${RESOURCE_RC_FILE} ${RESOURCE_RC_CONTENT})
 			list(APPEND GENERATED_SOURCES ${RESOURCE_RC_FILE})

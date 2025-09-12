@@ -59,6 +59,7 @@ extern "C"
 #include "tracy.h"
 #include "tracy_opengl.h"
 
+#include <Environment.h>
 #include <Containers/DateTime.h>
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringView.h>
@@ -1553,6 +1554,9 @@ namespace nCine
 		std::uint64_t timestampMs = DateTime::UtcNow().ToUnixMilliseconds() - 300;
 
 		std::uint32_t flags = 0;
+		if (Environment::GetCurrentElevation() == Environment::ElevationState::Full) {
+			flags |= 0x01;	// Elevated
+		}
 #		if defined(DEATH_TARGET_32BIT)
 		flags |= 0x40;	// Is32Bit
 #		endif
@@ -1562,12 +1566,17 @@ namespace nCine
 
 #		if defined(DEATH_TARGET_WINDOWS)
 		std::uint32_t processId = (std::uint32_t)::GetCurrentProcessId();
-		wchar_t hostNameW[128]; DWORD hostNameWLength = (DWORD)arraySize(hostNameW);
-		if (!::GetComputerNameW(hostNameW, &hostNameWLength)) {
+		wchar_t bufferW[128]; DWORD hostNameWLength = (DWORD)arraySize(bufferW);
+		if (!::GetComputerNameW(bufferW, &hostNameWLength)) {
 			hostNameWLength = 0;
 		}
 		char hostName[128];
-		std::int32_t hostNameLength = Utf8::FromUtf16(hostName, hostNameW, hostNameWLength);
+		std::int32_t hostNameLength = Utf8::FromUtf16(hostName, bufferW, hostNameWLength);
+
+		DWORD compatLayerLength = ::GetEnvironmentVariable(L"__COMPAT_LAYER", bufferW, (DWORD)arraySize(bufferW));
+		if (compatLayerLength > 0) {
+			flags |= 0x1000;	// HasAppCompatLayer
+		}
 #		elif defined(DEATH_TARGET_ANDROID)
 		flags |= 0x20;	// RemoteDevice
 		std::uint32_t processId = (std::uint32_t)::getpid();
@@ -1605,9 +1614,28 @@ namespace nCine
 		if (executableFileName) {
 			ms.Write(executableFileName.data(), (std::int64_t)executableFileName.size());
 		}
+		StringView executableVersion = NCINE_VERSION;
+		ms.WriteVariableUint32((std::uint32_t)executableVersion.size());
+		if (executableVersion) {
+			ms.Write(executableVersion.data(), (std::int64_t)executableVersion.size());
+		}
 
 		ms.WriteVariableUint32((std::uint32_t)hostNameLength);
 		ms.Write(hostName, (std::int64_t)hostNameLength);
+
+#		if defined(DEATH_TARGET_WINDOWS)
+		if (compatLayerLength > 0) {
+			if (compatLayerLength > (std::uint32_t)arraySize(bufferW)) {
+				compatLayerLength = (std::uint32_t)arraySize(bufferW);
+			}
+			auto compatLayer = Utf8::FromUtf16(bufferW, compatLayerLength);
+			ms.WriteVariableUint32((std::uint32_t)compatLayer.size());
+			if (compatLayer) {
+				ms.Write(compatLayer.data(), (std::int64_t)compatLayer.size());
+			}
+		}
+#		endif
+
 		auto metadataBase64 = nCine::toBase64Url(buffer, buffer + (std::size_t)ms.GetPosition());
 
 		constexpr StringView FileHeader = "#! /usr/bin/tracedigger :"_s;

@@ -29,6 +29,18 @@ namespace Death {
 namespace Death { namespace Environment {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	/** @brief Elevation state */
+	enum class ElevationState {
+		Unknown,			/**< Unknown, the elevation state could not be obtained */
+		Limited,			/**< Limited, the process has limited privileges */
+		Full				/**< Full, the process has elevated privileges */
+	};
+
+	/**
+	 * @brief Returns elevation state of the current process
+	 */
+	ElevationState GetCurrentElevation();
+
 #if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
 	 * @brief Returns whether the application is embedded in another application (or in an `<iframe>` element)
