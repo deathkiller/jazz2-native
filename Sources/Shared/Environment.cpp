@@ -16,10 +16,37 @@ namespace winrtWSP = winrt::Windows::System::Profile;
 #	include <cstdio>
 #	include <cstdlib>
 #	include <cstring>
+#	include <unistd.h>
 #endif
 
 namespace Death { namespace Environment {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+	static ElevationState _currentElevation = ElevationState::Unknown;
+
+	ElevationState GetCurrentElevation()
+	{
+		if (_currentElevation != ElevationState::Unknown) {
+			return _currentElevation;
+		}
+
+#if defined(DEATH_TARGET_WINDOWS)
+		if (Environment::IsWindowsVista()) {
+			TOKEN_ELEVATION elevation;
+			DWORD returnLength;
+			if (::GetTokenInformation(::GetCurrentProcessToken(), TokenElevation, &elevation, sizeof(elevation), &returnLength) && returnLength == sizeof(elevation)) {
+				_currentElevation = (elevation.TokenIsElevated ? ElevationState::Full : ElevationState::Limited);
+			}
+		} else {
+			_currentElevation = ElevationState::Full;;
+		}
+#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
+		uid_t uid = getuid(), euid = geteuid();
+		// Check for "suid-root" or "root" as effective user
+		_currentElevation = (uid < 0 || uid != euid || euid == 0 ? ElevationState::Full : ElevationState::Limited);
+#endif
+		return _currentElevation;
+	}
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 	bool IsEmbedded()
