@@ -96,6 +96,7 @@ using namespace Death::IO;
 
 #if defined(DEATH_TRACE)
 
+#include <Containers/StringStlView.h>
 #include <IO/MemoryStream.h>
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <Environment.h>
