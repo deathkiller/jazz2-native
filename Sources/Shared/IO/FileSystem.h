@@ -383,11 +383,6 @@ namespace Death { namespace IO {
 		 */
 		static std::optional<Containers::Array<char, MapDeleter>> OpenAsMemoryMapped(Containers::StringView path, FileAccess mode);
 #endif
-
-		/** @brief Creates a stream from a specified region of memory */
-		static std::unique_ptr<Stream> CreateFromMemory(std::uint8_t* bufferPtr, std::int32_t bufferSize);
-		/** @overload */
-		static std::unique_ptr<Stream> CreateFromMemory(const std::uint8_t* bufferPtr, std::int32_t bufferSize);
 	};
 
 	/** @brief Convenient shortcut to @ref FileSystem */
