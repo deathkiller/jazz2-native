@@ -2,8 +2,9 @@
 
 #include "../CommonWindows.h"
 #include "../Asserts.h"
-#include "../Containers/Array.h"
 #include "../Utf8.h"
+#include "../Containers/Array.h"
+#include "../Containers/SmallVector.h"
 
 #include <cstring>
 
@@ -18,6 +19,8 @@
 #	include <fcntl.h>		// for open()
 #	include <unistd.h>		// for close()
 #endif
+
+using namespace Death::Containers;
 
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -62,12 +65,12 @@ namespace Death { namespace IO {
 	}
 #endif
 
-	FileStream::FileStream(Containers::StringView path, FileAccess mode, std::int32_t bufferSize)
-		: FileStream(Containers::String{path}, mode, bufferSize)
+	FileStream::FileStream(StringView path, FileAccess mode, std::int32_t bufferSize)
+		: FileStream(String{path}, mode, bufferSize)
 	{
 	}
 
-	FileStream::FileStream(Containers::String&& path, FileAccess mode, std::int32_t bufferSize)
+	FileStream::FileStream(String&& path, FileAccess mode, std::int32_t bufferSize)
 		: _path(Death::move(path)), _size(Stream::Invalid), _filePos(0), _readPos(0), _readLength(0), _writePos(0), _bufferSize(bufferSize),
 #if defined(DEATH_TARGET_WINDOWS)
 			_fileHandle(INVALID_HANDLE_VALUE)
@@ -335,7 +338,7 @@ namespace Death { namespace IO {
 		return size;
 	}
 
-	Containers::StringView FileStream::GetPath() const
+	StringView FileStream::GetPath() const
 	{
 		return _path;
 	}
@@ -401,13 +404,19 @@ namespace Death { namespace IO {
 			params.dwFileFlags = FILE_FLAG_SEQUENTIAL_SCAN;
 		}
 		params.lpSecurityAttributes = &securityAttribs;
-		_fileHandle = ::CreateFile2FromAppW(Utf8::ToUtf16(_path), desireAccess, shareMode, creationDisposition, &params);
+
+		SmallVector<wchar_t, MAX_PATH> pathW(DefaultInit, _path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), _path.data(), std::int32_t(_path.size()));
+		_fileHandle = ::CreateFile2FromAppW(pathW.data(), desireAccess, shareMode, creationDisposition, &params);
 #	else
 		DWORD fileFlags = FILE_ATTRIBUTE_NORMAL;
 		if ((mode & FileAccess::Sequential) == FileAccess::Sequential) {
 			fileFlags |= FILE_FLAG_SEQUENTIAL_SCAN;
 		}
-		_fileHandle = ::CreateFile(Utf8::ToUtf16(_path), desireAccess, shareMode, &securityAttribs, creationDisposition, fileFlags, NULL);
+
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, _path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), _path.data(), std::int32_t(_path.size()));
+		_fileHandle = ::CreateFile(pathW.data(), desireAccess, shareMode, &securityAttribs, creationDisposition, fileFlags, NULL);
 #	endif
 		if (_fileHandle == INVALID_HANDLE_VALUE) {
 			DWORD error = ::GetLastError();

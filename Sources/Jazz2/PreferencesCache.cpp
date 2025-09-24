@@ -746,7 +746,7 @@ namespace Jazz2
 #	endif
 
 		auto osVersion = Environment::WindowsVersion;
-		wchar_t deviceNameW[128]; DWORD DeviceDescLength = (DWORD)arraySize(deviceNameW);
+		wchar_t deviceNameW[128]; DWORD DeviceDescLength = DWORD(arraySize(deviceNameW));
 		if (!::GetComputerNameW(deviceNameW, &DeviceDescLength)) {
 			DeviceDescLength = 0;
 		}
@@ -763,14 +763,14 @@ namespace Jazz2
 			case DeviceType::Xbox: deviceType = "Xbox"; break;
 			default: deviceType = "Unknown"; break;
 		}
-		DeviceDescLength += formatInto(MutableStringView(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength), "|Windows {}.{}.{} ({})||7|{}",
-			(std::int32_t)((osVersion >> 48) & 0xffffu), (std::int32_t)((osVersion >> 32) & 0xffffu), (std::int32_t)(osVersion & 0xffffffffu), deviceType, arch);
+		DeviceDescLength += DWORD(formatInto(MutableStringView(DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength), "|Windows {}.{}.{} ({})||7|{}",
+			std::int32_t((osVersion >> 48) & 0xffffu), std::int32_t((osVersion >> 32) & 0xffffu), std::int32_t(osVersion & 0xffffffffu), deviceType, arch));
 #	else
 		HMODULE hNtdll = ::GetModuleHandle(L"ntdll.dll");
 		bool isWine = (hNtdll != nullptr && ::GetProcAddress(hNtdll, "wine_get_host_version") != nullptr);
-		DeviceDescLength += formatInto({ DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength },
+		DeviceDescLength += DWORD(formatInto({ DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength },
 			isWine ? "|Windows {}.{}.{} (Wine)||3|{}" : "|Windows {}.{}.{}||3|{}",
-			(std::int32_t)((osVersion >> 48) & 0xffffu), (std::int32_t)((osVersion >> 32) & 0xffffu), (std::int32_t)(osVersion & 0xffffffffu), arch);
+			std::int32_t((osVersion >> 48) & 0xffffu), std::int32_t((osVersion >> 32) & 0xffffu), std::int32_t(osVersion & 0xffffffffu), arch));
 #	endif
 #else
 		static const char DeviceDesc[] = "||||"; std::int32_t DeviceDescLength = sizeof(DeviceDesc) - 1;

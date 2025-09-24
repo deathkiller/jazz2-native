@@ -6,6 +6,7 @@
 #include "../Environment.h"
 #include "../Utf8.h"
 #include "../Containers/DateTime.h"
+#include "../Containers/SmallVector.h"
 #include "../Containers/StringConcatenable.h"
 
 #if defined(DEATH_TARGET_WINDOWS)
@@ -145,7 +146,7 @@ namespace Death { namespace IO {
 		{
 			if (recursive) {
 				if (path.size() + 3 <= FileSystem::MaxPathLength) {
-					auto bufferExtended = Array<wchar_t>(NoInit, FileSystem::MaxPathLength);
+					Array<wchar_t> bufferExtended{NoInit, FileSystem::MaxPathLength};
 					std::memcpy(bufferExtended.data(), path.data(), path.size() * sizeof(wchar_t));
 
 					std::size_t bufferOffset = path.size();
@@ -443,20 +444,19 @@ namespace Death { namespace IO {
 					}
 				}
 
-				Array<wchar_t> buffer = Utf8::ToUtf16(_path, static_cast<std::int32_t>(_fileNamePart - _path));
-				if (buffer.size() + 2 <= MaxPathLength) {
-					auto bufferExtended = Array<wchar_t>(NoInit, buffer.size() + 2);
-					std::memcpy(bufferExtended.data(), buffer.data(), buffer.size() * sizeof(wchar_t));
-
+				std::size_t pathLength = (_fileNamePart - _path);
+				SmallVector<wchar_t, MAX_PATH + 2> pathW(DefaultInit, pathLength + 2);
+				std::int32_t pathLengthW = Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), _path, std::int32_t(pathLength));
+				if (pathLengthW + 2 <= MaxPathLength) {
 					// Adding a wildcard to list all files in the directory
-					bufferExtended[buffer.size()] = L'*';
-					bufferExtended[buffer.size() + 1] = L'\0';
+					pathW[pathLengthW] = L'*';
+					pathW[pathLengthW + 1] = L'\0';
 
 					WIN32_FIND_DATA data;
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-					_hFindFile = ::FindFirstFileExFromAppW(bufferExtended, FindExInfoBasic, &data, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
+					_hFindFile = ::FindFirstFileExFromAppW(pathW.data(), FindExInfoBasic, &data, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
 #	else
-					_hFindFile = ::FindFirstFileExW(bufferExtended, Environment::IsWindows7() ? FindExInfoBasic : FindExInfoStandard,
+					_hFindFile = ::FindFirstFileExW(pathW.data(), Environment::IsWindows7() ? FindExInfoBasic : FindExInfoStandard,
 						&data, FindExSearchNameMatch, nullptr, Environment::IsWindows7() ? FIND_FIRST_EX_LARGE_FETCH : 0);
 #	endif
 					if (_hFindFile != NULL && _hFindFile != INVALID_HANDLE_VALUE) {
@@ -466,7 +466,9 @@ namespace Death { namespace IO {
 							// Skip this file
 							Increment();
 						} else {
-							strncpy_s(_fileNamePart, sizeof(_path) - (_fileNamePart - _path), Utf8::FromUtf16(data.cFileName).data(), MaxPathLength - 1);
+							std::int32_t length = Utf8::FromUtf16(_fileNamePart, std::int32_t(sizeof(_path) - (_fileNamePart - _path)), data.cFileName);
+							// Write terminating NULL in case the string was longer and did not fit into the array
+							_path[sizeof(_path) - 1] = '\0';
 						}
 					}
 				}
@@ -556,7 +558,9 @@ namespace Death { namespace IO {
 					((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY)) {
 					goto Retry;
 				} else {
-					strncpy_s(_fileNamePart, sizeof(_path) - (_fileNamePart - _path), Utf8::FromUtf16(data.cFileName).data(), MaxPathLength - 1);
+					std::int32_t length = Utf8::FromUtf16(_fileNamePart, std::int32_t(sizeof(_path) - (_fileNamePart - _path)), data.cFileName);
+					// Write terminating NULL in case the string was longer and did not fit into the array
+					_path[sizeof(_path) - 1] = '\0';
 				}
 			} else {
 				_path[0] = '\0';
@@ -991,7 +995,7 @@ namespace Death { namespace IO {
 	{
 		// Take ownership first if not already (e.g., directly from `String::nullTerminatedView()`)
 		if (!path.isSmall() && path.deleter()) {
-			path = String { path };
+			path = String{path};
 		}
 
 		for (char& c : path) {
@@ -1025,11 +1029,15 @@ namespace Death { namespace IO {
 		if (path.empty()) return {};
 
 #if defined(DEATH_TARGET_WINDOWS)
-		wchar_t buffer[MaxPathLength];
-		DWORD length = ::GetFullPathNameW(Utf8::ToUtf16(path), DWORD(arraySize(buffer)), buffer, nullptr);
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+
+		wchar_t buffer[MaxPathLength + 1];
+		DWORD length = ::GetFullPathNameW(pathW.data(), DWORD(arraySize(buffer)), buffer, nullptr);
 		if (length == 0) {
 			return {};
 		}
+
 		return Utf8::FromUtf16(buffer, length);
 #elif defined(DEATH_TARGET_SWITCH)
 		// realpath() is missing in libnx
@@ -1264,20 +1272,23 @@ namespace Death { namespace IO {
 		return Death::Utf8::FromUtf16(appData.data(), appData.size());
 #elif defined(DEATH_TARGET_WINDOWS)
 		String result;
-		wchar_t* path = nullptr;
-		bool success = SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_SavedGames, KF_FLAG_DEFAULT, nullptr, &path));
-		if (!success || path == nullptr || path[0] == L'\0') {
-			::CoTaskMemFree(path);
-			path = nullptr;
+		wchar_t* pathW = nullptr;
+		bool success = SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_SavedGames, KF_FLAG_DEFAULT, nullptr, &pathW));
+		if (!success || pathW == nullptr || pathW[0] == L'\0') {
+			::CoTaskMemFree(pathW);
+			pathW = nullptr;
 			// Fallback to "%AppData%\Roaming" if "%UserProfile%\Saved Games" cannot be found
-			success = SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DEFAULT, nullptr, &path));
+			success = SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DEFAULT, nullptr, &pathW));
 		}
-		if (success && path != nullptr && path[0] != L'\0') {
-			result = CombinePath(Utf8::FromUtf16(path), applicationName);
+		if (success && pathW != nullptr && pathW[0] != L'\0') {
+			std::int32_t pathLengthW = std::int32_t(wcslen(pathW));
+			SmallVector<char, MAX_PATH + 1> path(DefaultInit, pathLengthW * 4 + 1);
+			std::size_t pathLength = Utf8::FromUtf16(path.data(), std::int32_t(path.size()), pathW, pathLengthW);
+			result = CombinePath({ path.data(), pathLength }, applicationName);
 		} else {
 			LOGE("SHGetKnownFolderPath(FOLDERID_RoamingAppData) failed with error 0x{:.8x}", ::GetLastError());
 		}
-		::CoTaskMemFree(path);
+		::CoTaskMemFree(pathW);
 		return result;
 #endif
 	}
@@ -1287,20 +1298,20 @@ namespace Death { namespace IO {
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		return "/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
-		wchar_t buffer[MaxPathLength];
-		DWORD length = ::GetCurrentDirectoryW(MaxPathLength, buffer);
-		if (length > DWORD(arraySize(buffer))) {
-			Array<wchar_t> pathW{NoInit, length};
-			DWORD length2 = ::GetCurrentDirectoryW(length, pathW);
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, MaxPathLength + 1);
+		DWORD length = ::GetCurrentDirectoryW(DWORD(pathW.size()), pathW.data());
+		if (length > pathW.size()) {
+			pathW.resize_for_overwrite(length);
+			DWORD length2 = ::GetCurrentDirectoryW(length, pathW.data());
 			DEATH_DEBUG_ASSERT(length2 == (length - 1));
-			return Utf8::FromUtf16(pathW, length2);
+			return Utf8::FromUtf16(pathW.data(), length2);
 		}
 		if (length == 0) {
 			DWORD error = ::GetLastError();
 			LOGE("GetCurrentDirectory() failed with error 0x{:.8x}{}", error, __GetWin32ErrorSuffix(error));
 			return {};
 		}
-		return Utf8::FromUtf16(buffer, length);
+		return Utf8::FromUtf16(pathW.data(), length);
 #else
 		char buffer[MaxPathLength];
 		if (::getcwd(buffer, MaxPathLength) == nullptr) {
@@ -1316,7 +1327,9 @@ namespace Death { namespace IO {
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		return false;
 #elif defined(DEATH_TARGET_WINDOWS)
-		return ::SetCurrentDirectoryW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		return ::SetCurrentDirectoryW(pathW.data());
 #else
 		return (::chdir(String::nullTerminatedView(path).data()) == 0);
 #endif
@@ -1357,13 +1370,20 @@ namespace Death { namespace IO {
 	String FileSystem::GetTempDirectory()
 	{
 #if defined(DEATH_TARGET_WINDOWS)
-		wchar_t buffer[MaxPathLength];
-		UINT requiredLength = ::GetTempPathW(static_cast<DWORD>(MaxPathLength), buffer);
-		if (requiredLength == 0 || requiredLength >= MaxPathLength) {
-			LOGE("Cannot find temporary directory");
-			return "."_s;
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, MaxPathLength + 1);
+		DWORD length = ::GetTempPathW(DWORD(pathW.size()), pathW.data());
+		if (length > pathW.size()) {
+			pathW.resize_for_overwrite(length);
+			DWORD length2 = ::GetTempPathW(length, pathW.data());
+			DEATH_DEBUG_ASSERT(length2 == (length - 1));
+			return Utf8::FromUtf16(pathW.data(), length2);
 		}
-		return Utf8::FromUtf16(buffer, requiredLength);
+		if (length == 0) {
+			DWORD error = ::GetLastError();
+			LOGE("GetTempPath() failed with error 0x{:.8x}{}", error, __GetWin32ErrorSuffix(error));
+			return {};
+		}
+		return Utf8::FromUtf16(pathW.data(), length);
 #else
 		StringView tmpDir = ::getenv("TMPDIR");
 		if (DirectoryExists(tmpDir)) {
@@ -1419,13 +1439,20 @@ namespace Death { namespace IO {
 #if defined(DEATH_TARGET_WINDOWS)
 	String FileSystem::GetWindowsDirectory()
 	{
-		wchar_t buffer[MaxPathLength];
-		UINT requiredLength = ::GetSystemWindowsDirectoryW(buffer, static_cast<UINT>(MaxPathLength));
-		if (requiredLength == 0 || requiredLength >= MaxPathLength) {
-			LOGE("Cannot find Windows directory");
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, MaxPathLength + 1);
+		UINT length = ::GetSystemWindowsDirectoryW(pathW.data(), UINT(pathW.size()));
+		if (length > pathW.size()) {
+			pathW.resize_for_overwrite(length);
+			UINT length2 = ::GetSystemWindowsDirectoryW(pathW.data(), length);
+			DEATH_DEBUG_ASSERT(length2 == (length - 1));
+			return Utf8::FromUtf16(pathW.data(), length2);
+		}
+		if (length == 0) {
+			DWORD error = ::GetLastError();
+			LOGE("GetSystemWindowsDirectory() failed with error 0x{:.8x}{}", error, __GetWin32ErrorSuffix(error));
 			return {};
 		}
-		return Utf8::FromUtf16(buffer, requiredLength);
+		return Utf8::FromUtf16(pathW.data(), length);
 	}
 #endif
 
@@ -1459,10 +1486,14 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
-		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY);
+		return (::GetFileAttributesExFromAppW(pathW.data(), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY);
 #elif defined(DEATH_TARGET_WINDOWS)
-		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		const DWORD attrs = ::GetFileAttributesW(pathW.data());
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
@@ -1484,10 +1515,14 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
-		return !(!::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && ::GetLastError() == ERROR_FILE_NOT_FOUND);
+		return !(!::GetFileAttributesExFromAppW(pathW.data(), GetFileExInfoStandard, &lpFileInfo) && ::GetLastError() == ERROR_FILE_NOT_FOUND);
 #elif defined(DEATH_TARGET_WINDOWS)
-		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		const DWORD attrs = ::GetFileAttributesW(pathW.data());
 		return !(attrs == INVALID_FILE_ATTRIBUTES && ::GetLastError() == ERROR_FILE_NOT_FOUND);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
@@ -1506,10 +1541,14 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
-		return ::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo);
+		return ::GetFileAttributesExFromAppW(pathW.data(), GetFileExInfoStandard, &lpFileInfo);
 #elif defined(DEATH_TARGET_WINDOWS)
-		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		const DWORD attrs = ::GetFileAttributesW(pathW.data());
 		return (attrs != INVALID_FILE_ATTRIBUTES);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
@@ -1531,10 +1570,14 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
-		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0);
+		return (::GetFileAttributesExFromAppW(pathW.data(), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0);
 #elif defined(DEATH_TARGET_WINDOWS)
-		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		const DWORD attrs = ::GetFileAttributesW(pathW.data());
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_READONLY) == 0);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
@@ -1560,7 +1603,9 @@ namespace Death { namespace IO {
 		return false;
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Assuming that every file that exists is also executable
-		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		const DWORD attrs = ::GetFileAttributesW(pathW.data());
 		// Assuming that every existing directory is accessible
 		if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
 			return true;
@@ -1587,10 +1632,14 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
-		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY);
+		return (::GetFileAttributesExFromAppW(pathW.data(), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY);
 #elif defined(DEATH_TARGET_WINDOWS)
-		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		const DWORD attrs = ::GetFileAttributesW(pathW.data());
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
@@ -1612,10 +1661,14 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
-		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY)) == 0);
+		return (::GetFileAttributesExFromAppW(pathW.data(), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY)) == 0);
 #elif defined(DEATH_TARGET_WINDOWS)
-		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		const DWORD attrs = ::GetFileAttributesW(pathW.data());
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY)) == 0);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
@@ -1638,10 +1691,14 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
-		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT);
+		return (::GetFileAttributesExFromAppW(pathW.data(), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT);
 #elif defined(DEATH_TARGET_WINDOWS)
-		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		const DWORD attrs = ::GetFileAttributesW(pathW.data());
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT);
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
@@ -1663,10 +1720,14 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
-		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN);
+		return (::GetFileAttributesExFromAppW(pathW.data(), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN);
 #elif defined(DEATH_TARGET_WINDOWS)
-		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		const DWORD attrs = ::GetFileAttributesW(pathW.data());
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN);
 #elif defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
 		auto nullTerminatedPath = String::nullTerminatedView(path);
@@ -1693,22 +1754,24 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
-		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
-		if (!::GetFileAttributesExFromAppW(nullTerminatedPath, GetFileExInfoStandard, &lpFileInfo)) {
+		if (!::GetFileAttributesExFromAppW(pathW.data(), GetFileExInfoStandard, &lpFileInfo)) {
 			return false;
 		}
 
 		if (hidden == ((lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN)) {
 			return true;
 		} else if (hidden) {
-			return ::SetFileAttributes(nullTerminatedPath, lpFileInfo.dwFileAttributes | FILE_ATTRIBUTE_HIDDEN);
+			return ::SetFileAttributes(pathW.data(), lpFileInfo.dwFileAttributes | FILE_ATTRIBUTE_HIDDEN);
 		} else {
-			return ::SetFileAttributes(nullTerminatedPath, lpFileInfo.dwFileAttributes & ~FILE_ATTRIBUTE_HIDDEN);
+			return ::SetFileAttributes(pathW.data(), lpFileInfo.dwFileAttributes & ~FILE_ATTRIBUTE_HIDDEN);
 		}
 #elif defined(DEATH_TARGET_WINDOWS)
-		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
-		DWORD attrs = ::GetFileAttributesW(nullTerminatedPath);
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		DWORD attrs = ::GetFileAttributesW(pathW.data());
 		if (attrs == INVALID_FILE_ATTRIBUTES) {
 			return false;
 		}
@@ -1716,9 +1779,9 @@ namespace Death { namespace IO {
 		if (hidden == ((attrs & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN)) {
 			return true;
 		} else if (hidden) {
-			return ::SetFileAttributesW(nullTerminatedPath, attrs | FILE_ATTRIBUTE_HIDDEN);
+			return ::SetFileAttributesW(pathW.data(), attrs | FILE_ATTRIBUTE_HIDDEN);
 		} else {
-			return ::SetFileAttributesW(nullTerminatedPath, attrs & ~FILE_ATTRIBUTE_HIDDEN);
+			return ::SetFileAttributesW(pathW.data(), attrs & ~FILE_ATTRIBUTE_HIDDEN);
 		}
 #elif defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
 		auto nullTerminatedPath = String::nullTerminatedView(path);
@@ -1766,10 +1829,14 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
-		return (::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == FILE_ATTRIBUTE_READONLY);
+		return (::GetFileAttributesExFromAppW(pathW.data(), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == FILE_ATTRIBUTE_READONLY);
 #elif defined(DEATH_TARGET_WINDOWS)
-		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		const DWORD attrs = ::GetFileAttributesW(pathW.data());
 		return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_READONLY) == FILE_ATTRIBUTE_READONLY);
 #elif defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
 		auto nullTerminatedPath = String::nullTerminatedView(path);
@@ -1785,22 +1852,24 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
-		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
-		if (!::GetFileAttributesExFromAppW(nullTerminatedPath, GetFileExInfoStandard, &lpFileInfo)) {
+		if (!::GetFileAttributesExFromAppW(pathW.data(), GetFileExInfoStandard, &lpFileInfo)) {
 			return false;
 		}
 
 		if (readonly == ((lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == FILE_ATTRIBUTE_READONLY)) {
 			return true;
 		} else if (readonly) {
-			return ::SetFileAttributes(nullTerminatedPath, lpFileInfo.dwFileAttributes | FILE_ATTRIBUTE_READONLY);
+			return ::SetFileAttributes(pathW.data(), lpFileInfo.dwFileAttributes | FILE_ATTRIBUTE_READONLY);
 		} else {
-			return ::SetFileAttributes(nullTerminatedPath, lpFileInfo.dwFileAttributes & ~FILE_ATTRIBUTE_READONLY);
+			return ::SetFileAttributes(pathW.data(), lpFileInfo.dwFileAttributes & ~FILE_ATTRIBUTE_READONLY);
 		}
 #elif defined(DEATH_TARGET_WINDOWS)
-		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
-		DWORD attrs = ::GetFileAttributesW(nullTerminatedPath);
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		DWORD attrs = ::GetFileAttributesW(pathW.data());
 		if (attrs == INVALID_FILE_ATTRIBUTES) {
 			return false;
 		}
@@ -1808,9 +1877,9 @@ namespace Death { namespace IO {
 		if (readonly == ((attrs & FILE_ATTRIBUTE_READONLY) == FILE_ATTRIBUTE_READONLY)) {
 			return true;
 		} else if (readonly) {
-			return ::SetFileAttributesW(nullTerminatedPath, attrs | FILE_ATTRIBUTE_READONLY);
+			return ::SetFileAttributesW(pathW.data(), attrs | FILE_ATTRIBUTE_READONLY);
 		} else {
-			return ::SetFileAttributesW(nullTerminatedPath, attrs & ~FILE_ATTRIBUTE_READONLY);
+			return ::SetFileAttributesW(pathW.data(), attrs & ~FILE_ATTRIBUTE_READONLY);
 		}
 #elif defined(DEATH_TARGET_APPLE) || defined(__FreeBSD__)
 		auto nullTerminatedPath = String::nullTerminatedView(path);
@@ -1835,21 +1904,21 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS)
-		Array<wchar_t> fullPath = Utf8::ToUtf16(path);
+		SmallVector<wchar_t, MAX_PATH + 1> fullPath(DefaultInit, path.size() + 1);
+		std::int32_t fullPathSize = Utf8::ToUtf16(fullPath.data(), std::int32_t(fullPath.size()), path.data(), std::int32_t(path.size()));
 		// Don't use DirectoryExists() to avoid calling Utf8::ToUtf16() twice
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
-		if (::GetFileAttributesExFromAppW(fullPath, GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
+		if (::GetFileAttributesExFromAppW(fullPath.data(), GetFileExInfoStandard, &lpFileInfo) && (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
 			return true;
 		}
 #	else
-		const DWORD attrs = ::GetFileAttributesW(fullPath);
+		const DWORD attrs = ::GetFileAttributesW(fullPath.data());
 		if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
 			return true;
 		}
 #	endif
 
-		std::int32_t fullPathSize = static_cast<std::int32_t>(fullPath.size());
 		std::int32_t startIdx = 0;
 		if (fullPathSize >= 2) {
 			if (fullPath[0] == L'\\' && fullPath[1] == L'\\') {
@@ -1869,7 +1938,8 @@ namespace Death { namespace IO {
 		}
 
 		bool slashWasLast = true;
-		for (std::int32_t i = startIdx; i < fullPathSize; i++) {
+		std::int32_t i = startIdx;
+		for (; i < fullPathSize; i++) {
 			if (fullPath[i] == L'\0') {
 				break;
 			}
@@ -1877,17 +1947,17 @@ namespace Death { namespace IO {
 			if (fullPath[i] == L'/' || fullPath[i] == L'\\') {
 				fullPath[i] = L'\0';
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-				if (!::GetFileAttributesExFromAppW(fullPath, GetFileExInfoStandard, &lpFileInfo)) {
-					if (!::CreateDirectoryFromAppW(fullPath, NULL)) {
+				if (!::GetFileAttributesExFromAppW(fullPath.data(), GetFileExInfoStandard, &lpFileInfo)) {
+					if (!::CreateDirectoryFromAppW(fullPath.data(), NULL)) {
 #	else
-				const DWORD attrs = ::GetFileAttributesW(fullPath);
+				const DWORD attrs = ::GetFileAttributesW(fullPath.data());
 				if (attrs == INVALID_FILE_ATTRIBUTES) {
-					if (!::CreateDirectoryW(fullPath, NULL)) {
+					if (!::CreateDirectoryW(fullPath.data(), NULL)) {
 #	endif
 						DWORD error = ::GetLastError();
 						if (error != ERROR_ALREADY_EXISTS) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-							LOGW("Cannot create directory \"{}\" with error 0x{:.8x}{}", Utf8::FromUtf16(fullPath), error, __GetWin32ErrorSuffix(error));
+							LOGW("Cannot create directory \"{}\" with error 0x{:.8x}{}", Utf8::FromUtf16(fullPath.data(), i), error, __GetWin32ErrorSuffix(error));
 #	endif
 							return false;
 						}
@@ -1902,14 +1972,14 @@ namespace Death { namespace IO {
 
 		if (!slashWasLast) {
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-			if (!::CreateDirectoryFromAppW(fullPath, NULL)) {
+			if (!::CreateDirectoryFromAppW(fullPath.data(), NULL)) {
 #	else
-			if (!::CreateDirectoryW(fullPath, NULL)) {
+			if (!::CreateDirectoryW(fullPath.data(), NULL)) {
 #	endif
 				DWORD error = ::GetLastError();
 				if (error != ERROR_ALREADY_EXISTS) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-					LOGW("Cannot create directory \"{}\" with error 0x{:.8x}{}", Utf8::FromUtf16(fullPath), error, __GetWin32ErrorSuffix(error));
+					LOGW("Cannot create directory \"{}\" with error 0x{:.8x}{}", Utf8::FromUtf16(fullPath.data(), i), error, __GetWin32ErrorSuffix(error));
 #	endif
 					return false;
 				}
@@ -1972,8 +2042,10 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 		WIN32_FILE_ATTRIBUTE_DATA lpFileInfo;
-		if (!::GetFileAttributesExFromAppW(Utf8::ToUtf16(path), GetFileExInfoStandard, &lpFileInfo) || (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY) {
+		if (!::GetFileAttributesExFromAppW(pathW.data(), GetFileExInfoStandard, &lpFileInfo) || (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY) {
 			return false;
 		}
 
@@ -1981,7 +2053,9 @@ namespace Death { namespace IO {
 		Array<wchar_t> absPath = Utf8::ToUtf16(GetAbsolutePath(path));
 		return DeleteDirectoryInternal(absPath, (lpFileInfo.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != FILE_ATTRIBUTE_REPARSE_POINT, 0);
 #elif defined(DEATH_TARGET_WINDOWS)
-		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(DefaultInit, path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		const DWORD attrs = ::GetFileAttributesW(pathW.data());
 		if (attrs == INVALID_FILE_ATTRIBUTES || (attrs & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY) {
 			return false;
 		}
@@ -1999,9 +2073,13 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
-		return ::DeleteFileFromAppW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		return ::DeleteFileFromAppW(pathW.data());
 #elif defined(DEATH_TARGET_WINDOWS)
-		return ::DeleteFileW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		return ::DeleteFileW(pathW.data());
 #else
 		auto nullTerminatedPath = String::nullTerminatedView(path);
 #	if defined(DEATH_TARGET_ANDROID)
@@ -2018,7 +2096,11 @@ namespace Death { namespace IO {
 		if (oldPath.empty() || newPath.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS)
-		return ::MoveFileExW(Utf8::ToUtf16(oldPath), Utf8::ToUtf16(newPath), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
+		SmallVector<wchar_t, MAX_PATH + 1> oldPathW(oldPath.size() + 1);
+		Utf8::ToUtf16(oldPathW.data(), std::int32_t(oldPathW.size()), oldPath.data(), std::int32_t(oldPath.size()));
+		SmallVector<wchar_t, MAX_PATH + 1> newPathW(newPath.size() + 1);
+		Utf8::ToUtf16(newPathW.data(), std::int32_t(newPathW.size()), newPath.data(), std::int32_t(newPath.size()));
+		return ::MoveFileExW(oldPathW.data(), newPathW.data(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 #else
 		auto nullTerminatedOldPath = String::nullTerminatedView(oldPath);
 		auto nullTerminatedNewPath = String::nullTerminatedView(newPath);
@@ -2047,12 +2129,13 @@ namespace Death { namespace IO {
 		}
 		return false;
 #elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		auto pathW = Utf8::ToUtf16(path);
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 
 		SHFILEOPSTRUCTW sf;
 		sf.hwnd = NULL;
 		sf.wFunc = FO_DELETE;
-		sf.pFrom = pathW;
+		sf.pFrom = pathW.data();
 		sf.pTo = nullptr;
 		sf.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT;
 		sf.fAnyOperationsAborted = FALSE;
@@ -2069,9 +2152,17 @@ namespace Death { namespace IO {
 		if (oldPath.empty() || newPath.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
-		return ::CopyFileFromAppW(Utf8::ToUtf16(oldPath), Utf8::ToUtf16(newPath), overwrite ? TRUE : FALSE);
+		SmallVector<wchar_t, MAX_PATH + 1> oldPathW(oldPath.size() + 1);
+		Utf8::ToUtf16(oldPathW.data(), std::int32_t(oldPathW.size()), oldPath.data(), std::int32_t(oldPath.size()));
+		SmallVector<wchar_t, MAX_PATH + 1> newPathW(newPath.size() + 1);
+		Utf8::ToUtf16(newPathW.data(), std::int32_t(newPathW.size()), newPath.data(), std::int32_t(newPath.size()));
+		return ::CopyFileFromAppW(oldPathW.data(), newPathW.data(), overwrite ? TRUE : FALSE);
 #elif defined(DEATH_TARGET_WINDOWS)
-		return ::CopyFileW(Utf8::ToUtf16(oldPath), Utf8::ToUtf16(newPath), overwrite ? TRUE : FALSE);
+		SmallVector<wchar_t, MAX_PATH + 1> oldPathW(oldPath.size() + 1);
+		Utf8::ToUtf16(oldPathW.data(), std::int32_t(oldPathW.size()), oldPath.data(), std::int32_t(oldPath.size()));
+		SmallVector<wchar_t, MAX_PATH + 1> newPathW(newPath.size() + 1);
+		Utf8::ToUtf16(newPathW.data(), std::int32_t(newPathW.size()), newPath.data(), std::int32_t(newPath.size()));
+		return ::CopyFileW(oldPathW.data(), newPathW.data(), overwrite ? TRUE : FALSE);
 #else
 		auto nullTerminatedOldPath = String::nullTerminatedView(oldPath);
 		auto nullTerminatedNewPath = String::nullTerminatedView(newPath);
@@ -2214,9 +2305,13 @@ namespace Death { namespace IO {
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-		HANDLE hFile = ::CreateFileFromAppW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		HANDLE hFile = ::CreateFileFromAppW(pathW.data(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #	else
-		HANDLE hFile = ::CreateFileW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		HANDLE hFile = ::CreateFileW(pathW.data(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #	endif
 		LARGE_INTEGER fileSize;
 		fileSize.QuadPart = 0;
@@ -2244,10 +2339,12 @@ namespace Death { namespace IO {
 
 		DateTime date;
 #if defined(DEATH_TARGET_WINDOWS)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-		HANDLE hFile = ::CreateFileFromAppW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+		HANDLE hFile = ::CreateFileFromAppW(pathW.data(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #	else
-		HANDLE hFile = ::CreateFileW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+		HANDLE hFile = ::CreateFileW(pathW.data(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #	endif
 		FILETIME fileTime;
 		if (::GetFileTime(hFile, &fileTime, nullptr, nullptr)) {
@@ -2283,10 +2380,12 @@ namespace Death { namespace IO {
 
 		DateTime date;
 #if defined(DEATH_TARGET_WINDOWS)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-		HANDLE hFile = ::CreateFileFromAppW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+		HANDLE hFile = ::CreateFileFromAppW(pathW.data(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #	else
-		HANDLE hFile = ::CreateFileW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+		HANDLE hFile = ::CreateFileW(pathW.data(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #	endif
 		FILETIME fileTime;
 		if (::GetFileTime(hFile, nullptr, nullptr, &fileTime)) {
@@ -2321,10 +2420,12 @@ namespace Death { namespace IO {
 
 		DateTime date;
 #if defined(DEATH_TARGET_WINDOWS)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-		HANDLE hFile = ::CreateFileFromAppW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+		HANDLE hFile = ::CreateFileFromAppW(pathW.data(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #	else
-		HANDLE hFile = ::CreateFileW(Utf8::ToUtf16(path), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+		HANDLE hFile = ::CreateFileW(pathW.data(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 #	endif
 		FILETIME fileTime;
 		if (::GetFileTime(hFile, nullptr, &fileTime, nullptr)) {
@@ -2358,11 +2459,13 @@ namespace Death { namespace IO {
 		if (path.empty()) return Permission::None;
 
 #if defined(DEATH_TARGET_WINDOWS)
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
 		Permission mode = Permission::Read;
 		if (IsExecutable(path)) {
 			mode |= Permission::Execute;
 		}
-		const DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		const DWORD attrs = ::GetFileAttributesW(pathW.data());
 		if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_READONLY) == 0) {
 			mode |= Permission::Write;
 		}
@@ -2393,16 +2496,18 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS)
-		DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		DWORD attrs = ::GetFileAttributesW(pathW.data());
 		if (attrs != INVALID_FILE_ATTRIBUTES) {
 			if ((mode & Permission::Write) == Permission::Write && (attrs & FILE_ATTRIBUTE_READONLY) == FILE_ATTRIBUTE_READONLY) {
 				// Adding the write permission
 				attrs &= ~FILE_ATTRIBUTE_READONLY;
-				return ::SetFileAttributesW(Utf8::ToUtf16(path), attrs);
+				return ::SetFileAttributesW(pathW.data(), attrs);
 			} else if ((mode & Permission::Write) != Permission::Write && (attrs & FILE_ATTRIBUTE_READONLY) != FILE_ATTRIBUTE_READONLY) {
 				// Removing the write permission
 				attrs |= FILE_ATTRIBUTE_READONLY;
-				return ::SetFileAttributesW(Utf8::ToUtf16(path), attrs);
+				return ::SetFileAttributesW(pathW.data(), attrs);
 			}
 			return true;
 		}
@@ -2429,12 +2534,14 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS)
-		DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		DWORD attrs = ::GetFileAttributesW(pathW.data());
 		if (attrs != INVALID_FILE_ATTRIBUTES) {
 			// Adding the write permission
 			if ((mode & Permission::Write) == Permission::Write && (attrs & FILE_ATTRIBUTE_READONLY) == FILE_ATTRIBUTE_READONLY) {
 				attrs &= ~FILE_ATTRIBUTE_READONLY;
-				return ::SetFileAttributesW(Utf8::ToUtf16(path), attrs);
+				return ::SetFileAttributesW(pathW.data(), attrs);
 			}
 			return true;
 		}
@@ -2461,12 +2568,14 @@ namespace Death { namespace IO {
 		if (path.empty()) return false;
 
 #if defined(DEATH_TARGET_WINDOWS)
-		DWORD attrs = ::GetFileAttributesW(Utf8::ToUtf16(path));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		DWORD attrs = ::GetFileAttributesW(pathW.data());
 		if (attrs != INVALID_FILE_ATTRIBUTES) {
 			// Removing the write permission
 			if ((mode & Permission::Write) == Permission::Write && (attrs & FILE_ATTRIBUTE_READONLY) != FILE_ATTRIBUTE_READONLY) {
 				attrs |= FILE_ATTRIBUTE_READONLY;
-				return ::SetFileAttributesW(Utf8::ToUtf16(path), attrs);
+				return ::SetFileAttributesW(pathW.data(), attrs);
 			}
 			return true;
 		}
@@ -2508,14 +2617,17 @@ namespace Death { namespace IO {
 		if (!DirectoryExists(path)) {
 			return false;
 		}
-		Array<wchar_t> nullTerminatedPath = Utf8::ToUtf16(path);
-		winrt::Windows::System::Launcher::LaunchFolderPathAsync(winrt::hstring(nullTerminatedPath.data(), (winrt::hstring::size_type)(nullTerminatedPath.size() - 1)));
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		std::int32_t lengthW = Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		winrt::Windows::System::Launcher::LaunchFolderPathAsync(winrt::hstring(pathW.data(), (winrt::hstring::size_type)lengthW));
 		return true;
 #elif defined(DEATH_TARGET_WINDOWS)
 		if (!DirectoryExists(path)) {
 			return false;
 		}
-		return (INT_PTR)::ShellExecuteW(NULL, nullptr, Utf8::ToUtf16(path), nullptr, nullptr, SW_SHOWNORMAL) > 32;
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		return (INT_PTR)::ShellExecuteW(NULL, nullptr, pathW.data(), nullptr, nullptr, SW_SHOWNORMAL) > 32;
 #elif defined(DEATH_TARGET_UNIX)
 		if (!DirectoryExists(path)) {
 			return false;
@@ -2679,7 +2791,9 @@ namespace Death { namespace IO {
 				return {};
 		}
 
-		HANDLE hFile = ::CreateFileW(Utf8::ToUtf16(path), fileDesiredAccess, shareMode, nullptr, OPEN_EXISTING, 0, nullptr);
+		SmallVector<wchar_t, MAX_PATH + 1> pathW(path.size() + 1);
+		Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), path.data(), std::int32_t(path.size()));
+		HANDLE hFile = ::CreateFileW(pathW.data(), fileDesiredAccess, shareMode, nullptr, OPEN_EXISTING, 0, nullptr);
 		if (hFile == INVALID_HANDLE_VALUE) {
 #		if defined(DEATH_TRACE_VERBOSE_IO)
 			DWORD error = ::GetLastError();

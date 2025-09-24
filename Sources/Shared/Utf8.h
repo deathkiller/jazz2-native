@@ -6,27 +6,32 @@
 
 #include "Containers/Array.h"
 #include "Containers/Pair.h"
+#include "Containers/StaticArray.h"
 #include "Containers/String.h"
 
 namespace Death { namespace Utf8 {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+	/** @{ @name Properties */
 
 	/**
 		@brief Lookup table mapping each possible UTF-8 lead byte (`0x00`–`0xFF`)
 		       to the expected number of bytes in the encoded UTF-8 sequence
 		
 		Each entry corresponds to one value:
-		- Values `0x00`–`0x7F`: ASCII (single-byte characters), table value
+		- Values `0x00`–`0x7F`: ASCII (single-byte characters)
 		- Values `0x80`–`0xBF`: Continuation bytes (not valid as lead bytes)
 		- Values `0xC0`–`0xDF`: Start of 2-byte sequences
 		- Values `0xE0`–`0xEF`: Start of 3-byte sequences
 		- Values `0xF0`–`0xF4`: Start of 4-byte sequences
 		- Values `0xF5`–`0xFF`: Invalid in UTF-8 (beyond Unicode range)
 		
-		This table allows @f$ \mathcal{O}(1) @f$ lookup of the sequence length given the
-		first byte of a UTF-8 encoded character.
+		This table allows @f$ \mathcal{O}(1) @f$ lookup of the sequence length given the first
+		byte of a UTF-8 encoded character.
 	*/
-	extern const std::uint8_t BytesOfLead[256];
+	extern const Containers::StaticArray<256, std::uint8_t> BytesOfLead;
+
+	/** @} */
 
 	/**
 		@brief Number of characters in a UTF-8 string
@@ -92,20 +97,34 @@ namespace Death { namespace Utf8 {
 		return ToUtf16(source.data(), std::int32_t(source.size()));
 	}
 
-	/** @overload */
-#ifdef DOXYGEN_GENERATING_OUTPUT
-	Containers::Array<wchar_t> ToUtf16(const char* source);
-#else
+#ifndef DOXYGEN_GENERATING_OUTPUT
+	/**
+		@overload
+
+		Expects that @p source is a null-terminated string.
+	*/
 	template<class T, class R = Containers::Array<wchar_t>, typename std::enable_if<std::is_same<typename std::decay<T>::type, const char*>::value || std::is_same<typename std::decay<T>::type, char*>::value, int>::type = 0>
 	inline R ToUtf16(T&& source) {
 		return ToUtf16(source, -1);
 	}
 #endif
 
-	/** @overload */
+	/**
+		@overload
+
+		This overload is suitable if the destination memory is already preallocated (e.g., on the stack). The return
+		value represents the number of converted UTF-16 characters. The required @p destinationSize is never larger
+		than @p sourceSize. If @p sourceSize is not provided, the source string must be null-terminated.
+	*/
 	std::int32_t ToUtf16(wchar_t* destination, std::int32_t destinationSize, const char* source, std::int32_t sourceSize = -1);
 
-	/** @overload */
+	/**
+		@overload
+
+		This overload is suitable if the destination memory is already preallocated (e.g., on the stack). The return
+		value represents the number of converted UTF-16 characters. The required @p destinationSize is never larger
+		than @p sourceSize. If @p sourceSize is not provided, the source string must be null-terminated.
+	*/
 	template<std::int32_t size>
 	std::int32_t ToUtf16(wchar_t (&destination)[size], const char* source, std::int32_t sourceSize = -1) {
 		return ToUtf16(destination, size, source, sourceSize);
@@ -127,20 +146,34 @@ namespace Death { namespace Utf8 {
 		return FromUtf16(source.data(), std::int32_t(source.size()));
 	}
 
-	/** @overload */
-#ifdef DOXYGEN_GENERATING_OUTPUT
-	Containers::String FromUtf16(const wchar_t* source);
-#else
+#ifndef DOXYGEN_GENERATING_OUTPUT
+	/**
+		@overload
+
+		Expects that @p source is a null-terminated string.
+	*/
 	template<class T, class R = Containers::String, typename std::enable_if<std::is_same<typename std::decay<T>::type, const wchar_t*>::value || std::is_same<typename std::decay<T>::type, wchar_t*>::value, int>::type = 0>
 	inline R FromUtf16(T&& source) {
 		return FromUtf16(source, -1);
 	}
 #endif
 
-	/** @overload */
+	/**
+		@overload
+
+		This overload is suitable if the destination memory is already preallocated (e.g., on the stack). The return
+		value represents the number of converted UTF-8 characters. The required @p destinationSize is never larger
+		than @f$ 4 * @f$ @p sourceSize. If @p sourceSize is not provided, the source string must be null-terminated.
+	*/
 	std::int32_t FromUtf16(char* destination, std::int32_t destinationSize, const wchar_t* source, std::int32_t sourceSize = -1);
 
-	/** @overload */
+	/**
+		@overload
+
+		This overload is suitable if the destination memory is already preallocated (e.g., on the stack). The return
+		value represents the number of converted UTF-8 characters. The required @p destinationSize is never larger
+		than @f$ 4 * @f$ @p sourceSize. If @p sourceSize is not provided, the source string must be null-terminated.
+	*/
 	template<std::int32_t size>
 	std::int32_t FromUtf16(char (&destination)[size], const wchar_t* source, std::int32_t sourceSize = -1) {
 		return FromUtf16(destination, size, source, sourceSize);
