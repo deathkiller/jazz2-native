@@ -12,6 +12,23 @@ namespace Death { namespace Utf8 {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	/**
+		@brief Lookup table mapping each possible UTF-8 lead byte (`0x00`–`0xFF`)
+		       to the expected number of bytes in the encoded UTF-8 sequence
+		
+		Each entry corresponds to one value:
+		- Values `0x00`–`0x7F`: ASCII (single-byte characters), table value
+		- Values `0x80`–`0xBF`: Continuation bytes (not valid as lead bytes)
+		- Values `0xC0`–`0xDF`: Start of 2-byte sequences
+		- Values `0xE0`–`0xEF`: Start of 3-byte sequences
+		- Values `0xF0`–`0xF4`: Start of 4-byte sequences
+		- Values `0xF5`–`0xFF`: Invalid in UTF-8 (beyond Unicode range)
+		
+		This table allows @f$ \mathcal{O}(1) @f$ lookup of the sequence length given the
+		first byte of a UTF-8 encoded character.
+	*/
+	extern const std::uint8_t BytesOfLead[256];
+
+	/**
 		@brief Number of characters in a UTF-8 string
 	*/
 	std::size_t GetLength(Containers::ArrayView<const char> text);
