@@ -161,13 +161,13 @@ namespace Jazz2::UI
 				// Formatting
 				cursor = Utf8::NextChar(text, cursor.second());
 				if (cursor.first() == '[') {
-					idx = cursor.second();
+					idx = std::int32_t(cursor.second());
 					do {
 						cursor = Utf8::NextChar(text, idx);
 						if (cursor.first() == ']') {
 							break;
 						}
-						idx = cursor.second();
+						idx = std::int32_t(cursor.second());
 					} while (idx < textLength);
 				}
 			} else {
@@ -177,7 +177,7 @@ namespace Jazz2::UI
 				}
 			}
 
-			idx = cursor.second();
+			idx = std::int32_t(cursor.second());
 		} while (idx < textLength);
 
 		if (totalWidth < lastWidth) {
@@ -269,14 +269,14 @@ namespace Jazz2::UI
 				// Formatting
 				cursor = Utf8::NextChar(text, cursor.second());
 				if (cursor.first() == '[') {
-					idx = cursor.second();
+					idx = std::int32_t(cursor.second());
 					cursor = Utf8::NextChar(text, idx);
 
 					if (cursor.first() == 'w') {
-						idx = cursor.second();
+						idx = std::int32_t(cursor.second());
 						cursor = Utf8::NextChar(text, idx);
 						if (cursor.first() == ':') {
-							idx = cursor.second();
+							idx = std::int32_t(cursor.second());
 							std::int32_t paramLength = 0;
 							char param[9];
 							do {
@@ -287,7 +287,7 @@ namespace Jazz2::UI
 								if (paramLength < std::int32_t(arraySize(param)) - 1) {
 									param[paramLength++] = (char)cursor.first();
 								}
-								idx = cursor.second();
+								idx = std::int32_t(cursor.second());
 							} while (idx < textLength);
 
 							if (paramLength > 0) {
@@ -307,7 +307,7 @@ namespace Jazz2::UI
 							if (cursor.first() == ']') {
 								break;
 							}
-							idx = cursor.second();
+							idx = std::int32_t(cursor.second());
 							cursor = Utf8::NextChar(text, idx);
 						} while (idx < textLength);
 					}
@@ -330,7 +330,7 @@ namespace Jazz2::UI
 				}
 			}
 
-			idx = cursor.second();
+			idx = std::int32_t(cursor.second());
 		} while (idx < textLength);
 
 		if (totalWidth < lastWidth) {
@@ -394,17 +394,17 @@ namespace Jazz2::UI
 				// Formatting
 				cursor = Utf8::NextChar(text, cursor.second());
 				if (cursor.first() == '[') {
-					idx = cursor.second();
+					idx = std::int32_t(cursor.second());
 					cursor = Utf8::NextChar(text, idx);
 					if (cursor.first() == 'c') {
-						idx = cursor.second();
+						idx = std::int32_t(cursor.second());
 						cursor = Utf8::NextChar(text, idx);
 						if (cursor.first() == ':') {
 							// Set custom color
-							idx = cursor.second();
+							idx = std::int32_t(cursor.second());
 							cursor = Utf8::NextChar(text, idx);
 							if (cursor.first() == '#') {
-								idx = cursor.second();
+								idx = std::int32_t(cursor.second());
 								std::int32_t paramLength = 0;
 								char param[9];
 								do {
@@ -415,7 +415,7 @@ namespace Jazz2::UI
 									if (paramLength < std::int32_t(arraySize(param)) - 1) {
 										param[paramLength++] = (char)cursor.first();
 									}
-									idx = cursor.second();
+									idx = std::int32_t(cursor.second());
 								} while (idx < textLength);
 
 								if (paramLength > 0 && !useRandomColor && !isShadow) {
@@ -433,10 +433,10 @@ namespace Jazz2::UI
 							}
 						}
 					} else if (cursor.first() == 'w') {
-						idx = cursor.second();
+						idx = std::int32_t(cursor.second());
 						cursor = Utf8::NextChar(text, idx);
 						if (cursor.first() == ':') {
-							idx = cursor.second();
+							idx = std::int32_t(cursor.second());
 							std::int32_t paramLength = 0;
 							char param[9];
 							do {
@@ -447,7 +447,7 @@ namespace Jazz2::UI
 								if (paramLength < std::int32_t(arraySize(param)) - 1) {
 									param[paramLength++] = (char)cursor.first();
 								}
-								idx = cursor.second();
+								idx = std::int32_t(cursor.second());
 							} while (idx < textLength);
 
 							if (paramLength > 0) {
@@ -460,7 +460,7 @@ namespace Jazz2::UI
 							}
 						}
 					} else if (cursor.first() == '/') {
-						idx = cursor.second();
+						idx = std::int32_t(cursor.second());
 						cursor = Utf8::NextChar(text, idx);
 						if (cursor.first() == 'c') {
 							// Reset color
@@ -559,7 +559,7 @@ namespace Jazz2::UI
 				}
 			}
 
-			idx = cursor.second();
+			idx = std::int32_t(cursor.second());
 		} while (idx < textLength);
 		charOffset++;
 	}
