@@ -1,6 +1,6 @@
 #include "SmallVector.h"
 
-#if (defined(_CPPUNWIND) || defined(__EXCEPTIONS)) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
+#if defined(__cpp_exceptions) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
 #	include <stdexcept>
 #endif
 
@@ -51,7 +51,7 @@ namespace Death { namespace Containers {
 		//	std::to_string(maxSize) + ")";
 		//throw std::length_error(reason);
 
-#if (defined(_CPPUNWIND) || defined(__EXCEPTIONS)) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
+#if defined(__cpp_exceptions) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
 		throw std::length_error("Containers::SmallVector capacity unable to grow");
 #endif
 	}
@@ -63,7 +63,7 @@ namespace Death { namespace Containers {
 		//	std::to_string(maxSize);
 		//throw std::length_error(reason);
 
-#if (defined(_CPPUNWIND) || defined(__EXCEPTIONS)) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
+#if defined(__cpp_exceptions) && !defined(DEATH_SUPPRESS_EXCEPTIONS)
 		throw std::length_error("Containers::SmallVector capacity already at maximum size");
 #endif
 	}

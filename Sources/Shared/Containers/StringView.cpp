@@ -76,13 +76,50 @@ namespace Death { namespace Containers {
 	{
 		const char* stringFindString(const char* data, const std::size_t size, const char* const substring, const std::size_t substringSize) {
 			// If the substring is not larger than the string we search in
-			if (substringSize <= size) {
-				if (!size) return data;
+			if (substringSize > 0 && substringSize <= size) {
+				if (size == 0) return data;
 
-				// Otherwise compare it with the string at all possible positions in the string until we have a match.
-				for (const char* const max = data + size - substringSize; data <= max; ++data) {
+				// Otherwise compare it with the string at all possible positions in the string until we have a match
+				/*for (const char* const max = data + size - substringSize; data <= max; ++data) {
 					if (std::memcmp(data, substring, substringSize) == 0)
 						return data;
+				}*/
+
+				// Simplified Boyer-Moore algorithm should be faster than std::memcmp()
+				std::size_t substringSize_1 = substringSize - 1;
+				char lastNeedle = substring[substringSize_1];
+
+				// Boyer-Moore skip value for the last char in the needle
+				// Zero is not a valid value, skip will be computed the first time it's needed
+				std::size_t skip = 0;
+				const char* begin = data;
+				const char* end = data + size - substringSize_1;
+
+				while (begin < end) {
+					// Boyer-Moore: match the last element in the needle
+					while (begin[substringSize_1] != lastNeedle) {
+						if (++begin == end) {
+							return {};
+						}
+					}
+					// Here we know that the last char matches, continue in pedestrian mode
+					for (std::size_t j = 0; ; ) {
+						if (begin[j] != substring[j]) {
+							// Not found, we can skip, compute the skip value lazily
+							if (skip == 0) {
+								skip = 1;
+								while (skip <= substringSize_1 && substring[substringSize_1 - skip] != lastNeedle) {
+									++skip;
+								}
+							}
+							begin += skip;
+							break;
+						}
+
+						if (++j == substringSize) {
+							return begin;
+						}
+					}
 				}
 			}
 
