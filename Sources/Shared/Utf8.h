@@ -162,8 +162,8 @@ namespace Death { namespace Utf8 {
 		@overload
 
 		This overload is suitable if the destination memory is already preallocated (e.g., on the stack). The return
-		value represents the number of converted UTF-8 characters. The required @p destinationSize is never larger
-		than @f$ 4 * @f$ @p sourceSize. If @p sourceSize is not provided, the source string must be null-terminated.
+		value represents the number of converted UTF-8 characters. The required @p destinationSize is never larger than
+		@f$ 4 \times @f$ @p sourceSize. If @p sourceSize is not provided, the source string must be null-terminated.
 	*/
 	std::int32_t FromUtf16(char* destination, std::int32_t destinationSize, const wchar_t* source, std::int32_t sourceSize = -1);
 
@@ -171,8 +171,8 @@ namespace Death { namespace Utf8 {
 		@overload
 
 		This overload is suitable if the destination memory is already preallocated (e.g., on the stack). The return
-		value represents the number of converted UTF-8 characters. The required @p destinationSize is never larger
-		than @f$ 4 * @f$ @p sourceSize. If @p sourceSize is not provided, the source string must be null-terminated.
+		value represents the number of converted UTF-8 characters. The required @p destinationSize is never larger than
+		@f$ 4 \times @f$ @p sourceSize. If @p sourceSize is not provided, the source string must be null-terminated.
 	*/
 	template<std::int32_t size>
 	std::int32_t FromUtf16(char (&destination)[size], const wchar_t* source, std::int32_t sourceSize = -1) {
