@@ -143,10 +143,17 @@ inline typename std::enable_if<(sizeof...(Args) > 0), void>::type
 #	elif defined(DEATH_STANDARD_ASSERT)
 #		define DEATH_ASSERT(condition, ...) assert(condition)
 #	else
-#		define __DEATH_ASSERT1(condition)							\
+#		define __DEATH_ASSERT1(condition)								\
 			do {														\
 				if DEATH_UNLIKELY(!(condition)) {						\
 					__DEATH_TRACE_ASSERT("Assertion ({}) failed at \"{}:{}\"", #condition, __FILE__, __LINE__);	\
+					DEATH_ASSERT_BREAK();								\
+				}														\
+			} while(false)
+#		define __DEATH_ASSERT2(condition, message)						\
+			do {														\
+				if DEATH_UNLIKELY(!(condition)) {						\
+					__DEATH_TRACE_ASSERT(DEATH_REMOVE_PARENS(message));	\
 					DEATH_ASSERT_BREAK();								\
 				}														\
 			} while(false)
@@ -158,7 +165,7 @@ inline typename std::enable_if<(sizeof...(Args) > 0), void>::type
 					return returnValue;									\
 				}														\
 			} while(false)
-#		define DEATH_ASSERT(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT1, __DEATH_ASSERT1, )(__VA_ARGS__))
+#		define DEATH_ASSERT(...) DEATH_HELPER_EXPAND(DEATH_HELPER_PICK(__VA_ARGS__, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT3, __DEATH_ASSERT2, __DEATH_ASSERT1, )(__VA_ARGS__))
 #	endif
 #endif
 

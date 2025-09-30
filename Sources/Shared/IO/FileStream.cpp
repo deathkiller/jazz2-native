@@ -203,8 +203,8 @@ namespace Death { namespace IO {
 
 			InitializeBuffer();
 			n = ReadInternal(&_buffer[0], _bufferSize);
-			if (n == 0) {
-				return 0;
+			if DEATH_UNLIKELY(n <= 0) {
+				return n;
 			}
 			isBlocked = (n < _bufferSize);
 			_readPos = 0;
