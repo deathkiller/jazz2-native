@@ -68,6 +68,8 @@ namespace Death { namespace IO {
 
 		/** @brief Returns stream size in bytes */
 		virtual std::int64_t GetSize() const = 0;
+		/** @brief Sets stream size in bytes */
+		virtual std::int64_t SetSize(std::int64_t size) = 0;
 
 		/** @brief Reads the bytes from the current stream and writes them to the target stream */
 		std::int64_t CopyTo(Stream& targetStream);

@@ -33,6 +33,8 @@ namespace Death { namespace IO {
 		bool IsValid() override;
 
 		std::int64_t GetSize() const override;
+		std::int64_t SetSize(std::int64_t size) override;
+
 		/** @brief Returns file name */
 		Containers::StringView GetName() const;
 

@@ -172,6 +172,11 @@ namespace Death { namespace IO { namespace Compression {
 		return _size;
 	}
 
+	std::int64_t ZstdStream::SetSize(std::int64_t size)
+	{
+		return Stream::Invalid;
+	}
+
 	void ZstdStream::Open(Stream& inputStream, std::int32_t inputSize)
 	{
 		Dispose();
@@ -394,6 +399,11 @@ namespace Death { namespace IO { namespace Compression {
 	std::int64_t ZstdWriter::GetSize() const
 	{
 		return Stream::NotSeekable;
+	}
+
+	std::int64_t ZstdWriter::SetSize(std::int64_t size)
+	{
+		return Stream::Invalid;
 	}
 
 	std::int32_t ZstdWriter::WriteInternal(const void* buffer, std::int32_t bytesToWrite, bool finish)

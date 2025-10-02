@@ -42,6 +42,7 @@ namespace Death { namespace IO {
 		bool Flush() override;
 		bool IsValid() override;
 		std::int64_t GetSize() const override;
+		std::int64_t SetSize(std::int64_t size) override;
 
 		/** @brief Reserves a capacity in growable memory stream */
 		void ReserveCapacity(std::int64_t bytes);

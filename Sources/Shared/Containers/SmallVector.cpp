@@ -95,7 +95,7 @@ namespace Death { namespace Containers {
 
 	static void* replaceAllocation(void* newElts, std::size_t typeSize, std::size_t newCapacity, std::size_t vSize = 0) {
 		void* newEltsReplace = std::malloc(newCapacity * typeSize);
-		if (vSize) {
+		if (vSize != 0) {
 			std::memcpy(newEltsReplace, newElts, vSize * typeSize);
 		}
 		std::free(newElts);

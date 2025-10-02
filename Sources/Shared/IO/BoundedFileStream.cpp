@@ -83,4 +83,9 @@ namespace Death { namespace IO {
 		return _size;
 	}
 
+	std::int64_t BoundedFileStream::SetSize(std::int64_t size)
+	{
+		return Stream::Invalid;
+	}
+
 }}

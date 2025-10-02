@@ -45,7 +45,7 @@ namespace Death { namespace IO {
 				_fileDescriptor = -1;
 			} else {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGW("Cannot close file \"{}/{}\"", Prefix, _path);
+				LOGW("Failed to close file \"{}/{}\"", Prefix, _path);
 #	endif
 			}
 		}
@@ -178,6 +178,11 @@ namespace Death { namespace IO {
 		return _size;
 	}
 
+	std::int64_t AndroidAssetStream::SetSize(std::int64_t size)
+	{
+		return Stream::Invalid;
+	}
+
 	Containers::StringView AndroidAssetStream::GetPath() const
 	{
 		return _path;
@@ -279,7 +284,7 @@ namespace Death { namespace IO {
 		FileAccess maskedMode = mode & FileAccess::ReadWrite;
 		if (maskedMode != FileAccess::Read) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Cannot open file \"{}/{}\" because of invalid mode ({})", Prefix, _path, std::uint32_t(mode));
+			LOGE("Failed to open file \"{}/{}\" because of invalid mode ({})", Prefix, _path, std::uint32_t(mode));
 #endif
 			return;
 		}
@@ -289,7 +294,7 @@ namespace Death { namespace IO {
 		AAsset* asset = AAssetManager_open(_nativeActivity->assetManager, _path.data(), AASSET_MODE_RANDOM);
 		if (asset == nullptr) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Cannot open file \"{}/{}\"", Prefix, _path);
+			LOGE("Failed to open file \"{}/{}\"", Prefix, _path);
 #	endif
 			return;
 		}
@@ -306,7 +311,7 @@ namespace Death { namespace IO {
 
 		if (_fileDescriptor < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Cannot open file \"{}/{}\"", Prefix, _path);
+			LOGE("Failed to open file \"{}/{}\"", Prefix, _path);
 #	endif
 			return;
 		}
@@ -319,7 +324,7 @@ namespace Death { namespace IO {
 		_asset = AAssetManager_open(_nativeActivity->assetManager, _path.data(), AASSET_MODE_RANDOM);
 		if (_asset == nullptr) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Cannot open file \"{}/{}\"", Prefix, _path);
+			LOGE("Failed to open file \"{}/{}\"", Prefix, _path);
 #	endif
 			return;
 		}

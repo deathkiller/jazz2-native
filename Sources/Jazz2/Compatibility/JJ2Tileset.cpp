@@ -275,7 +275,7 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		so->WriteValue<std::int32_t>(ms.GetSize());
+		so->WriteValue<std::int32_t>(std::int32_t(ms.GetSize()));
 		so->Write(ms.GetBuffer(), ms.GetSize());
 
 		// Diffuse

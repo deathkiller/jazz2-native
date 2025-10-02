@@ -275,14 +275,18 @@ namespace Death { namespace Containers {
 #ifdef DOXYGEN_GENERATING_OUTPUT
 		/*implicit*/ BasicStringView(ArrayView<T> data, StringViewFlags flags = {}) noexcept;
 #else
-		/* This has to accept any type and then delegate to a private constructor instead of directly taking ArrayView<T>, due to how
-		   overload resolution works in copy initialization as opposed to a direct constructor/function call. If it would take ArrayView<T>
-		   directly, `Array<char> -> ArrayView<const char> -> StringView` wouldn't work because it's one custom conversion sequence more than
-		   allowed in a copy initialization, and to make that work, this class would have to replicate all ArrayView constructors including
-		   conversion from Array etc., which isn't feasible.
-		   It's also explicitly disallowing T[] arguments (which are implicitly convertible to an ArrayView), because those should be picking the T*
-		   overload and rely on strlen(), consistently with how C string literals work; and disallowing construction from a StringView
-		   because it'd get preferred over the implicit copy constructor. */
+		/* This has to accept any type and then delegate to a private constructor instead
+		   of directly taking ArrayView<T>, due to how overload resolution works in copy
+		   initialization as opposed to a direct constructor/function call. If it would take
+		   ArrayView<T> directly, `Array<char> -> ArrayView<const char> -> StringView`
+		   wouldn't work because it's one custom conversion sequence more than allowed
+		   in a copy initialization, and to make that work, this class would have to
+		   replicate all ArrayView constructors including conversion from Array etc.,
+		   which isn't feasible.
+		   It's also explicitly disallowing T[] arguments (which are implicitly convertible
+		   to an ArrayView), because those should be picking the T* overload and rely on strlen(),
+		   consistently with how C string literals work; and disallowing construction from
+		   a StringView because it'd get preferred over the implicit copy constructor. */
 		template<class U, class = typename std::enable_if<!std::is_array<typename std::remove_reference<U&&>::type>::value && !std::is_same<typename std::decay<U&&>::type, BasicStringView<T>>::value && !std::is_same<typename std::decay<U&&>::type, std::nullptr_t>::value, decltype(ArrayView<T>{std::declval<U&&>()})>::type> constexpr /*implicit*/ BasicStringView(U&& data, StringViewFlags flags = {}) noexcept : BasicStringView{flags, ArrayView<T>(data)} {}
 #endif
 
@@ -316,9 +320,11 @@ namespace Death { namespace Containers {
 #endif
 
 		/** @brief Construct a view on an external type / from an external representation */
-		/* There's no restriction that would disallow creating StringView from e.g. std::string<T>&& because that would break uses like
-		   `consume(foo());`, where `consume()` expects a view but `foo()` returns a std::vector. Besides that, to simplify the implementation,
-		   there's no const-adding conversion. Instead, the implementer is supposed to add an ArrayViewConverter variant for that. */
+		/* There's no restriction that would disallow creating StringView from
+		   e.g. std::string<T>&& because that would break uses like `consume(foo());`,
+		   where `consume()` expects a view but `foo()` returns a std::vector. Besides
+		   that, to simplify the implementation, there's no const-adding conversion.
+		   Instead, the implementer is supposed to add an ArrayViewConverter variant for that. */
 		template<class U, class = decltype(Implementation::StringViewConverter<T, typename std::decay<U&&>::type>::from(std::declval<U&&>()))> constexpr /*implicit*/ BasicStringView(U&& other) noexcept : BasicStringView{Implementation::StringViewConverter<T, typename std::decay<U&&>::type>::from(Death::forward<U>(other))} {}
 
 		/** @brief Convert the view to external representation */
@@ -738,9 +744,11 @@ namespace Death { namespace Containers {
 		 * This function is equivalent to calling @relativeref{std::string,find()}
 		 * on a @ref std::string or a @ref std::string_view.
 		 */
-		/* Technically it would be enough to have just one overload with a default value for the fail parameter. But then `find(foo, pointer)`
-		   would imply "find foo after pointer", because that's what the second parameter does in most APIs. On the other hand, naming this
-		   findOr() and documenting the custom failure handling would add extra congitive load for people looking for find() and nothing else. */
+		/* Technically it would be enough to have just one overload with a default value
+		   for the fail parameter. But then `find(foo, pointer)` would imply "find foo
+		   after pointer", because that's what the second parameter does in most APIs.
+		   On the other hand, naming this findOr() and documenting the custom failure handling
+		   would add extra congitive load for people looking for find() and nothing else. */
 		BasicStringView<T> find(StringView substring) const {
 			return findOr(substring, nullptr);
 		}
@@ -751,7 +759,8 @@ namespace Death { namespace Containers {
 		 * Faster than @ref find(StringView) const if the string has just one
 		 * byte.
 		 */
-		/* Technically it would be enough to have just one overload with a default value for the fail parameter, see above why it's not */
+		/* Technically it would be enough to have just one overload with a default
+		   value for the fail parameter, see above why it's not */
 		BasicStringView<T> find(char character) const {
 			return findOr(character, nullptr);
 		}
@@ -798,7 +807,8 @@ namespace Death { namespace Containers {
 		 * This function is equivalent to calling @relativeref{std::string,rfind()}
 		 * on a @ref std::string or a @ref std::string_view.
 		 */
-		/* Technically it would be enough to have just one overload with a default value for the fail parameter, see above why it's not */
+		/* Technically it would be enough to have just one overload with a default
+		   value for the fail parameter, see above why it's not */
 		BasicStringView<T> findLast(StringView substring) const {
 			return findLastOr(substring, nullptr);
 		}
@@ -809,7 +819,8 @@ namespace Death { namespace Containers {
 		 * Faster than @ref findLast(StringView) const if the string has just
 		 * one byte.
 		 */
-		/* Technically it would be enough to have just one overload with a default value for the fail parameter, see above why it's not */
+		/* Technically it would be enough to have just one overload with a default
+		   value for the fail parameter, see above why it's not */
 		BasicStringView<T> findLast(char character) const {
 			return findLastOr(character, nullptr);
 		}
@@ -937,8 +948,9 @@ namespace Death { namespace Containers {
 		friend bool operator>(StringView, StringView);
 		friend String operator*(StringView, std::size_t);
 
-		/* Called from BasicStringView(U&&, StringViewFlags), see its comment for details; arguments in a flipped order to avoid accidental
-		   ambiguity. The ArrayView type is a template to avoid having to include ArrayView.h. */
+		/* Called from BasicStringView(U&&, StringViewFlags), see its comment for details;
+		   arguments in a flipped order to avoid accidental ambiguity. The ArrayView type
+		   is a template to avoid having to include ArrayView.h. */
 		template<class U, typename std::enable_if<std::is_same<T, U>::value, int>::type = 0> constexpr explicit BasicStringView(StringViewFlags flags, ArrayView<U> data) noexcept : BasicStringView{data.data(), data.size(), flags} {}
 
 		/* Used by the char* constructor, delinlined because it calls into std::strlen() */
@@ -993,11 +1005,11 @@ namespace Death { namespace Containers {
 
 	namespace Literals
 	{
-		// According to https://wg21.link/CWG2521, space between "" and literal name is deprecated because _Uppercase or 
-		// _double names could be treated as reserved depending on whether the space was present or not, and whitespace is
-		// not load-bearing in any other contexts. Clang 17+ adds an off-by-default warning for this; GCC 4.8 however *requires*
-		// the space there, so until GCC 4.8 support is dropped, we suppress this warning instead of removing the space.
-		// GCC 15 now has the same warning but it's enabled by default on -std=c++23.
+		// According to https://wg21.link/CWG2521, space between "" and literal name is deprecated because _Uppercase
+		// or _double names could be treated as reserved depending on whether the space was present or not,
+		// and whitespace is not load-bearing in any other contexts. Clang 17+ adds an off-by-default warning for this;
+		// GCC 4.8 however *requires* the space there, so until GCC 4.8 support is dropped, we suppress this warning
+		// instead of removing the space. GCC 15 now has the same warning but it's enabled by default on -std=c++23.
 		#if (defined(DEATH_TARGET_CLANG) && __clang_major__ >= 17) || (defined(DEATH_TARGET_GCC) && !defined(DEATH_TARGET_CLANG) && __GNUC__ >= 15)
 		#	pragma GCC diagnostic push
 		#	pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
@@ -1090,8 +1102,8 @@ namespace Death { namespace Containers {
 		if (const char* const found = Implementation::stringFindString(_data, size(), substring._data, substringSize))
 			return slice(const_cast<T*>(found), const_cast<T*>(found + substringSize));
 
-		// Using an internal assert-less constructor, the public constructor asserts would be redundant. Since it's a zero-sized
-		// view, it doesn't really make sense to try to preserve any flags.
+		// Using an internal assert-less constructor, the public constructor asserts would be redundant.
+		// Since it's a zero-sized view, it doesn't really make sense to try to preserve any flags.
 		return BasicStringView<T>{fail, 0 /* empty, no flags */, nullptr};
 	}
 
@@ -1099,8 +1111,8 @@ namespace Death { namespace Containers {
 		if (const char* const found = Implementation::stringFindCharacter(_data, size(), character))
 			return slice(const_cast<T*>(found), const_cast<T*>(found + 1));
 
-		// Using an internal assert-less constructor, the public constructor asserts would be redundant. Since it's a zero-sized
-		// view, it doesn't really make sense to try to preserve any flags.
+		// Using an internal assert-less constructor, the public constructor asserts would be redundant.
+		// Since it's a zero-sized view, it doesn't really make sense to try to preserve any flags.
 		return BasicStringView<T>{fail, 0 /* empty, no flags */, nullptr};
 	}
 
@@ -1110,8 +1122,8 @@ namespace Death { namespace Containers {
 		if (const char* const found = Implementation::stringFindLastString(_data, size(), substring._data, substringSize))
 			return slice(const_cast<T*>(found), const_cast<T*>(found + substringSize));
 
-		// Using an internal assert-less constructor, the public constructor asserts would be redundant. Since it's a zero-sized
-		// view, it doesn't really make sense to try to preserve any flags.
+		// Using an internal assert-less constructor, the public constructor asserts would be redundant.
+		// Since it's a zero-sized view, it doesn't really make sense to try to preserve any flags.
 		return BasicStringView<T>{fail, 0 /* empty, no flags */, nullptr};
 	}
 
@@ -1119,8 +1131,8 @@ namespace Death { namespace Containers {
 		if (const char* const found = Implementation::stringFindLastCharacter(_data, size(), character))
 			return slice(const_cast<T*>(found), const_cast<T*>(found + 1));
 
-		// Using an internal assert-less constructor, the public constructor asserts would be redundant. Since it's a zero-sized
-		// view, it doesn't really make sense to try to preserve any flags.
+		// Using an internal assert-less constructor, the public constructor asserts would be redundant.
+		// Since it's a zero-sized view, it doesn't really make sense to try to preserve any flags.
 		return BasicStringView<T>{fail, 0 /* empty, no flags */, nullptr};
 	}
 
@@ -1136,8 +1148,8 @@ namespace Death { namespace Containers {
 		if (const char* const found = Implementation::stringFindAny(_data, size(), characters._data, characters.size()))
 			return slice(const_cast<T*>(found), const_cast<T*>(found + 1));
 
-		// Using an internal assert-less constructor, the public constructor asserts would be redundant. Since it's a zero-sized
-		// view, it doesn't really make sense to try to preserve any flags.
+		// Using an internal assert-less constructor, the public constructor asserts would be redundant.
+		// Since it's a zero-sized view, it doesn't really make sense to try to preserve any flags.
 		return BasicStringView<T>{fail, 0 /* empty, no flags */, nullptr};
 	}
 
@@ -1145,8 +1157,8 @@ namespace Death { namespace Containers {
 		if (const char* const found = Implementation::stringFindLastAny(_data, size(), characters._data, characters.size()))
 			return slice(const_cast<T*>(found), const_cast<T*>(found + 1));
 
-		// Using an internal assert-less constructor, the public constructor asserts would be redundant. Since it's a zero-sized
-		// view, it doesn't really make sense to try to preserve any flags.
+		// Using an internal assert-less constructor, the public constructor asserts would be redundant.
+		// Since it's a zero-sized view, it doesn't really make sense to try to preserve any flags.
 		return BasicStringView<T>{fail, 0 /* empty, no flags */, nullptr};
 	}
 
