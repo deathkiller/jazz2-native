@@ -447,8 +447,8 @@ namespace Jazz2::Compatibility
 			MemoryStream so(16384);
 			WriteImageToStream(so, pixels.get(), sizeX, sizeY, 4, anim, entry);
 			so.Seek(0, SeekOrigin::Begin);
-			bool success = pakWriter.AddFile(so, filename);
-			DEATH_ASSERT(success, "Cannot add file to .pak container", );
+			bool success = pakWriter.AddFile(so, filename, PakPreferredCompression::Deflate);
+			DEATH_ASSERT(success, "Failed to add file to .pak container", );
 
 			/*if (!string.IsNullOrEmpty(data.Name) && !data.SkipNormalMap) {
 				PngWriter normalMap = NormalMapGenerator.FromSprite(img,
@@ -524,7 +524,7 @@ namespace Jazz2::Compatibility
 
 			so.Seek(0, SeekOrigin::Begin);
 			bool success = pakWriter.AddFile(so, filename, PakPreferredCompression::Deflate);
-			DEATH_ASSERT(success, "Cannot add file to .pak container", );
+			DEATH_ASSERT(success, "Failed to add file to .pak container", );
 		}
 	}
 
@@ -620,7 +620,7 @@ namespace Jazz2::Compatibility
 
 		auto pixels = (const std::uint8_t*)data;
 
-		rgba_t index[64] { };
+		rgba_t index[64] {};
 		rgba_t px, px_prev;
 
 		std::int32_t run = 0;

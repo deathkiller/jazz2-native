@@ -25,6 +25,7 @@ namespace Death { namespace IO {
 		bool Flush() override;
 		bool IsValid() override;
 		std::int64_t GetSize() const override;
+		std::int64_t SetSize(std::int64_t size) override;
 
 	private:
 		FileStream _underlyingStream;

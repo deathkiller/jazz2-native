@@ -156,6 +156,11 @@ namespace Death { namespace IO {
 		return _size;
 	}
 
+	std::int64_t EmscriptenFileStream::SetSize(std::int64_t size)
+	{
+		return Stream::Invalid;
+	}
+
 	Containers::StringView EmscriptenFileStream::GetName() const
 	{
 		if (_name.empty()) {

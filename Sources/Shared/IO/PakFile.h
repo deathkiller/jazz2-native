@@ -115,12 +115,12 @@ namespace Death { namespace IO {
 		enum class ItemFlags : std::uint32_t {
 			None = 0,
 			Directory = 0x01,
-			ZlibCompressed = 0x02,
+			DeflateCompressed = 0x02,
 			Lz4Compressed = 0x04,
 			ZstdCompressed = 0x08,
 
 			Lzma2Compressed = 0x10,		// Not implemented
-			Aes256Encrypten = 0x40,		// Not implemented
+			Aes256Encrypted = 0x40,		// Not implemented
 
 			Link = 0x80					// Not implemented
 		};
@@ -140,15 +140,13 @@ namespace Death { namespace IO {
 		};
 #endif
 
-		static constexpr std::uint64_t Signature = 0x208FA69FF0BFBBEF;
-		static constexpr std::uint16_t Version = 1;
-
 		Containers::String _path;
 		Containers::String _mountPoint;
 		Containers::Array<Item> _rootItems;
 
-		void ReadIndex(std::unique_ptr<Stream>& s, Item* parentItem);
-
+		void ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool zlibCompressed, std::uint32_t depth);
+		Containers::Array<Item>* ReadIndexFromStream(Stream& s, Item* parentItem);
+		DEATH_NEVER_INLINE Containers::Array<Item>* ReadIndexFromStreamZlibCompressed(Stream& s, Item* parentItem);
 		Item* FindItem(Containers::StringView path);
 
 		static DEATH_ALWAYS_INLINE bool HasCompressedSize(ItemFlags itemFlags);
@@ -184,9 +182,10 @@ namespace Death { namespace IO {
 		std::unique_ptr<FileStream> _outputStream;
 		Containers::Array<PakFile::Item> _rootItems;
 		bool _finalized;
+		bool _alreadyExisted;
 
 		PakFile::Item* FindOrCreateParentItem(Containers::StringView& path);
-		void WriteItemDescription(PakFile::Item& item);
+		void WriteItemDescription(Stream& s, PakFile::Item& item);
 	};
 
 }}

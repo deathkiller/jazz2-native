@@ -150,6 +150,11 @@ namespace Death { namespace IO { namespace Compression {
 		return _size;
 	}
 
+	std::int64_t DeflateStream::SetSize(std::int64_t size)
+	{
+		return Stream::Invalid;
+	}
+
 	void DeflateStream::Open(Stream& inputStream, std::int32_t inputSize, bool rawInflate)
 	{
 		Dispose();
@@ -378,6 +383,11 @@ namespace Death { namespace IO { namespace Compression {
 	std::int64_t DeflateWriter::GetSize() const
 	{
 		return Stream::NotSeekable;
+	}
+
+	std::int64_t DeflateWriter::SetSize(std::int64_t size)
+	{
+		return Stream::Invalid;
 	}
 
 	std::int32_t DeflateWriter::WriteInternal(const void* buffer, std::int32_t bytesToWrite, bool finish)

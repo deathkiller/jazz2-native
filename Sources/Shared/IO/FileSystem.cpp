@@ -2731,7 +2731,7 @@ namespace Death { namespace IO {
 				break;
 			default:
 #		if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Cannot open file \"{}\" because of invalid mode ({})", path, std::uint32_t(mode));
+				LOGE("Failed to open file \"{}\" because of invalid mode ({})", path, std::uint32_t(mode));
 #		endif
 				return {};
 		}
@@ -2739,7 +2739,7 @@ namespace Death { namespace IO {
 		const std::int32_t fd = ::open(String::nullTerminatedView(path).data(), flags);
 		if (fd == -1) {
 #		if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Cannot open file \"{}\" with error {}{}", path, errno, __GetUnixErrorSuffix(errno));
+			LOGE("Failed to open file \"{}\" with error {}{}", path, errno, __GetUnixErrorSuffix(errno));
 #		endif
 			return {};
 		}
@@ -2786,7 +2786,7 @@ namespace Death { namespace IO {
 				break;
 			default:
 #		if defined(DEATH_TRACE_VERBOSE_IO)
-				LOGE("Cannot open file \"{}\" because of invalid mode ({})", path, std::uint32_t(mode));
+				LOGE("Failed to open file \"{}\" because of invalid mode ({})", path, std::uint32_t(mode));
 #		endif
 				return {};
 		}
@@ -2797,7 +2797,7 @@ namespace Death { namespace IO {
 		if (hFile == INVALID_HANDLE_VALUE) {
 #		if defined(DEATH_TRACE_VERBOSE_IO)
 			DWORD error = ::GetLastError();
-			LOGE("Cannot open file \"{}\" with error 0x{:.8x}{}", path, error, __GetWin32ErrorSuffix(error));
+			LOGE("Failed to open file \"{}\" with error 0x{:.8x}{}", path, error, __GetWin32ErrorSuffix(error));
 #		endif
 			return {};
 		}
@@ -2815,7 +2815,7 @@ namespace Death { namespace IO {
 			if (!(hMap = ::CreateFileMappingW(hFile, nullptr, protect, 0, 0, nullptr))) {
 #		if defined(DEATH_TRACE_VERBOSE_IO)
 				DWORD error = ::GetLastError();
-				LOGE("Cannot open file \"{}\" with error 0x{:.8x}{}", path, error, __GetWin32ErrorSuffix(error));
+				LOGE("Failed to open file \"{}\" with error 0x{:.8x}{}", path, error, __GetWin32ErrorSuffix(error));
 #		endif
 				::CloseHandle(hFile);
 				return {};
@@ -2824,7 +2824,7 @@ namespace Death { namespace IO {
 			if (!(data = reinterpret_cast<char*>(::MapViewOfFile(hMap, mapDesiredAccess, 0, 0, 0)))) {
 #		if defined(DEATH_TRACE_VERBOSE_IO)
 				DWORD error = ::GetLastError();
-				LOGE("Cannot open file \"{}\" with error 0x{:.8x}{}", path, error, __GetWin32ErrorSuffix(error));
+				LOGE("Failed to open file \"{}\" with error 0x{:.8x}{}", path, error, __GetWin32ErrorSuffix(error));
 #		endif
 				::CloseHandle(hMap);
 				::CloseHandle(hFile);

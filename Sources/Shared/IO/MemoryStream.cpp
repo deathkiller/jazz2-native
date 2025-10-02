@@ -143,6 +143,23 @@ namespace Death { namespace IO {
 		return _size;
 	}
 
+	std::int64_t MemoryStream::SetSize(std::int64_t size)
+	{
+		if (_mode != AccessMode::Growable) {
+			return Stream::Invalid;
+		}
+		if (size < 0) {
+			return Stream::OutOfRange;
+		}
+
+		_size = size;
+		arrayResize(_data, Containers::NoInit, size);
+		if (_pos > _size) {
+			_pos = _size;
+		}
+		return size;
+	}
+
 	void MemoryStream::ReserveCapacity(std::int64_t bytes)
 	{
 		if (_mode == AccessMode::Growable) {

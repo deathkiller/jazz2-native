@@ -84,7 +84,8 @@ namespace Death { namespace Containers {
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	template<class T>
-	using SmallVectorSizeType = typename std::conditional<sizeof(T) < 4 && sizeof(void*) >= 8, std::uint64_t, std::uint32_t>::type;
+	using SmallVectorSizeType = typename std::conditional<sizeof(T) < 4 && sizeof(void*) >= 8,
+		std::uint64_t, std::uint32_t>::type;
 	
 	/** @brief Figure out the offset of the first element */
 	template<class T, typename = void> struct SmallVectorAlignmentAndSize {
@@ -157,7 +158,7 @@ namespace Death { namespace Containers {
 		/** @brief Returns `true` unless @p elt will be invalidated by resizing the vector to @p newSize */
 		bool isSafeToReferenceAfterResize(const void* elt, std::size_t newSize) {
 			// Past the end.
-			if (!isReferenceToStorage(elt))
+			if DEATH_LIKELY(!isReferenceToStorage(elt))
 				return true;
 
 			// Return false if Elt will be destroyed by shrinking
@@ -205,19 +206,19 @@ namespace Death { namespace Containers {
 		template<class U>
 		static const T* reserveForParamAndGetAddressImpl(U* _this, const T& elt, std::size_t n) {
 			std::size_t newSize = _this->size() + n;
-			if (newSize <= _this->capacity())
+			if DEATH_LIKELY(newSize <= _this->capacity())
 				return &elt;
 
 			bool referencesStorage = false;
 			std::int64_t index = -1;
 			if (!U::TakesParamByValue) {
-				if (_this->isReferenceToStorage(&elt)) {
+				if DEATH_UNLIKELY(_this->isReferenceToStorage(&elt)) {
 					referencesStorage = true;
 					index = &elt - _this->begin();
 				}
 			}
 			_this->grow(newSize);
-			return referencesStorage ? _this->begin() + index : &elt;
+			return (referencesStorage ? _this->begin() + index : &elt);
 		}
 
 	public:
@@ -404,7 +405,7 @@ namespace Death { namespace Containers {
 
 		/** @brief Forwards a value */
 		static T&& forwardValueParam(T&& v) {
-			return move(v);
+			return Death::move(v);
 		}
 		/** @overload */
 		static const T& forwardValueParam(const T& v) {
@@ -417,7 +418,7 @@ namespace Death { namespace Containers {
 			std::size_t newCapacity;
 			T* newElts = mallocForGrow(numElts, newCapacity);
 			std::uninitialized_fill_n(newElts, numElts, elt);
-			this->destroyRange(this->begin(), this->end());
+			destroyRange(this->begin(), this->end());
 			takeAllocationForGrow(newElts, newCapacity);
 			this->setSize(numElts);
 		}
@@ -476,7 +477,7 @@ namespace Death { namespace Containers {
 	template<typename T, bool TriviallyCopyable>
 	void SmallVectorTemplate<T, TriviallyCopyable>::moveElementsForGrow(T* newElts) {
 		// Move the elements over
-		this->uninitializedMove(this->begin(), this->end(), newElts);
+		uninitializedMove(this->begin(), this->end(), newElts);
 
 		// Destroy the original elements
 		destroyRange(this->begin(), this->end());

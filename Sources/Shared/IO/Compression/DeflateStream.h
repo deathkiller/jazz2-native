@@ -57,6 +57,7 @@ namespace Death { namespace IO { namespace Compression {
 		bool Flush() override;
 		bool IsValid() override;
 		std::int64_t GetSize() const override;
+		std::int64_t SetSize(std::int64_t size) override;
 
 		bool CeaseReading();
 
@@ -109,6 +110,7 @@ namespace Death { namespace IO { namespace Compression {
 		bool Flush() override;
 		bool IsValid() override;
 		std::int64_t GetSize() const override;
+		std::int64_t SetSize(std::int64_t size) override;
 
 		static std::int64_t GetMaxDeflatedSize(std::int64_t uncompressedSize);
 

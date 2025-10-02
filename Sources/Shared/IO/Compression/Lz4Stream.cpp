@@ -182,6 +182,11 @@ namespace Death { namespace IO { namespace Compression {
 		return _size;
 	}
 
+	std::int64_t Lz4Stream::SetSize(std::int64_t size)
+	{
+		return Stream::Invalid;
+	}
+
 	void Lz4Stream::Open(Stream& inputStream, std::int32_t inputSize)
 	{
 		Dispose();
@@ -466,6 +471,11 @@ namespace Death { namespace IO { namespace Compression {
 	std::int64_t Lz4Writer::GetSize() const
 	{
 		return Stream::NotSeekable;
+	}
+
+	std::int64_t Lz4Writer::SetSize(std::int64_t size)
+	{
+		return Stream::Invalid;
 	}
 
 	std::int32_t Lz4Writer::WriteInternal(const void* buffer, std::int32_t bytesToWrite, bool finish)
