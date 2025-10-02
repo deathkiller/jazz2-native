@@ -137,7 +137,7 @@ namespace Death { namespace IO {
 		s->Read(signature, sizeof(signature));
 		DEATH_ASSERT(std::memcmp(signature, Signature, sizeof(Signature)) == 0, "Invalid .pak file", );
 
-		std::uint16_t fileVersion = s->ReadValue<std::uint16_t>();
+		/*std::uint16_t fileVersion =*/ s->ReadValue<std::uint16_t>();
 		PakFileFlags fileFlags = (PakFileFlags)s->ReadValue<std::uint16_t>();
 		std::uint64_t rootIndexOffset = s->ReadValue<std::uint64_t>();
 

@@ -340,7 +340,9 @@ namespace Death { namespace IO {
 	std::int64_t FileStream::SetSize(std::int64_t size)
 	{
 #if defined(DEATH_TARGET_WINDOWS)
-		FILE_END_OF_FILE_INFO eofInfo{size};
+		LARGE_INTEGER liSize;
+		liSize.QuadPart = size;
+		FILE_END_OF_FILE_INFO eofInfo{liSize};
 		if (!::SetFileInformationByHandle(_fileHandle, FileEndOfFileInfo, &eofInfo, sizeof(eofInfo))) {
 			DWORD error = ::GetLastError();
 #	if defined(DEATH_TRACE_VERBOSE_IO)

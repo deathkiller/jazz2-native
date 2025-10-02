@@ -466,7 +466,7 @@ namespace Death { namespace IO {
 							// Skip this file
 							Increment();
 						} else {
-							std::int32_t length = Utf8::FromUtf16(_fileNamePart, std::int32_t(sizeof(_path) - (_fileNamePart - _path)), data.cFileName);
+							Utf8::FromUtf16(_fileNamePart, std::int32_t(sizeof(_path) - (_fileNamePart - _path)), data.cFileName);
 							// Write terminating NULL in case the string was longer and did not fit into the array
 							_path[sizeof(_path) - 1] = '\0';
 						}
@@ -558,7 +558,7 @@ namespace Death { namespace IO {
 					((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY)) {
 					goto Retry;
 				} else {
-					std::int32_t length = Utf8::FromUtf16(_fileNamePart, std::int32_t(sizeof(_path) - (_fileNamePart - _path)), data.cFileName);
+					Utf8::FromUtf16(_fileNamePart, std::int32_t(sizeof(_path) - (_fileNamePart - _path)), data.cFileName);
 					// Write terminating NULL in case the string was longer and did not fit into the array
 					_path[sizeof(_path) - 1] = '\0';
 				}
