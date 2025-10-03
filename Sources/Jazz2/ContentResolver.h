@@ -161,7 +161,13 @@ namespace Jazz2
 		bool _isHeadless;
 		bool _isLoading;
 		std::uint32_t _palettes[PaletteCount * ColorsPerPalette];
-		HashMap<Reference<const String>, std::unique_ptr<Metadata>, FNV1aHashFunc<String>, StringRefEqualTo> _cachedMetadata;
+		HashMap<Reference<const String>, std::unique_ptr<Metadata>, 
+#if defined(DEATH_TARGET_32BIT)
+			xxHash32Func<String>,
+#else
+			xxHash64Func<String>,
+#endif
+			StringRefEqualTo> _cachedMetadata;
 		HashMap<Pair<String, std::uint16_t>, std::unique_ptr<GenericGraphicResource>> _cachedGraphics;
 #if defined(WITH_AUDIO)
 		HashMap<String, std::unique_ptr<GenericSoundResource>> _cachedSounds;

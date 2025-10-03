@@ -84,6 +84,15 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Base/Task.h
 	${NCINE_SOURCE_DIR}/nCine/Base/Timer.h
 	${NCINE_SOURCE_DIR}/nCine/Base/TimeStamp.h
+	${NCINE_SOURCE_DIR}/nCine/Base/ParallelHashMap/phmap.h
+	${NCINE_SOURCE_DIR}/nCine/Base/ParallelHashMap/phmap_base.h
+	${NCINE_SOURCE_DIR}/nCine/Base/ParallelHashMap/phmap_bits.h
+	${NCINE_SOURCE_DIR}/nCine/Base/ParallelHashMap/phmap_config.h
+	${NCINE_SOURCE_DIR}/nCine/Base/ParallelHashMap/phmap_fwd_decl.h
+	${NCINE_SOURCE_DIR}/nCine/Base/ParallelHashMap/phmap_utils.h
+	${NCINE_SOURCE_DIR}/nCine/Base/pdqsort/pdqsort.h
+	${NCINE_SOURCE_DIR}/nCine/Base/xxHash/xxh_x86dispatch.h
+	${NCINE_SOURCE_DIR}/nCine/Base/xxHash/xxhash.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/AnimatedSprite.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/BaseSprite.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/BinaryShaderCache.h

@@ -289,8 +289,12 @@ namespace Death { namespace IO {
 
 	Array<PakFile::Item>* PakFile::ReadIndexFromStreamZlibCompressed(Stream& s, Item* parentItem)
 	{
+#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
 		DeflateStream ds(s);
 		return ReadIndexFromStream(ds, parentItem);
+#else
+		return nullptr;
+#endif
 	}
 
 	PakFile::Item* PakFile::FindItem(StringView path)

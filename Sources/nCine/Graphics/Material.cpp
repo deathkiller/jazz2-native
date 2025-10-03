@@ -194,6 +194,6 @@ namespace nCine
 		hashData.srcBlendingFactor = glBlendingFactorToInt(srcBlendingFactor_);
 		hashData.destBlendingFactor = glBlendingFactorToInt(destBlendingFactor_);
 
-		return fasthash32(reinterpret_cast<const void*>(&hashData), sizeof(SortHashData), Seed);
+		return (std::uint32_t)xxHash3(reinterpret_cast<const void*>(&hashData), sizeof(SortHashData), Seed);
 	}
 }

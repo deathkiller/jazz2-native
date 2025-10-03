@@ -54,8 +54,8 @@ namespace nCine
 
 		const auto& infoStrings = gfxCaps.GetGLInfoStrings();
 
-		platformHash_ += CityHash64(infoStrings.renderer, std::strlen(infoStrings.renderer));
-		platformHash_ += CityHash64(infoStrings.glVersion, std::strlen(infoStrings.glVersion));
+		platformHash_ += xxHash3(infoStrings.renderer, std::strlen(infoStrings.renderer));
+		platformHash_ += xxHash3(infoStrings.glVersion, std::strlen(infoStrings.glVersion));
 
 		char platformHashString[24];
 		std::size_t platformHashLength = formatInto(platformHashString, "{:.16x}", platformHash_);
@@ -72,10 +72,10 @@ namespace nCine
 	String BinaryShaderCache::GetCachedShaderPath(const char* shaderName)
 	{
 		if (!isAvailable_ || shaderName == nullptr || shaderName[0] == '\0') {
-			return { };
+			return {};
 		}
 
-		std::uint64_t shaderNameHash = CityHash64(shaderName, std::strlen(shaderName));
+		std::uint64_t shaderNameHash = xxHash3(shaderName, std::strlen(shaderName));
 
 		char filename[32];
 		std::size_t filenameLength = formatInto(filename, "{:.16x}.shader", shaderNameHash);
@@ -90,7 +90,7 @@ namespace nCine
 		}
 
 		std::unique_ptr<Stream> fileHandle = fs::Open(cachePath, FileAccess::Read);
-		const std::int32_t fileSize = fileHandle->GetSize();
+		std::int32_t fileSize = std::int32_t(fileHandle->GetSize());
 		if (fileSize <= 28 || fileSize > 8 * 1024 * 1024) {
 			return false;
 		}

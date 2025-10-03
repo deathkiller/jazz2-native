@@ -111,7 +111,13 @@ namespace Jazz2::Scripting
 			}
 		};
 
-		HashMap<Reference<const String>, InternalData, FNV1aHashFunc<String>, StringRefEqualTo> _stringCache;
+		HashMap<Reference<const String>, InternalData,
+#if defined(DEATH_TARGET_32BIT)
+			xxHash32Func<String>,
+#else
+			xxHash64Func<String>,
+#endif
+			StringRefEqualTo> _stringCache;
 	};
 
 	static StringFactory* _stringFactory = nullptr;
