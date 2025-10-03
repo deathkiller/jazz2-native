@@ -589,6 +589,8 @@
     <ClInclude Include="nCine\Base\Task.h" />
     <ClInclude Include="nCine\Base\Timer.h" />
     <ClInclude Include="nCine\Base\TimeStamp.h" />
+    <ClInclude Include="nCine\Base\xxHash\xxhash.h" />
+    <ClInclude Include="nCine\Base\xxHash\xxh_x86dispatch.h" />
     <ClInclude Include="nCine\CommonConstants.h" />
     <ClInclude Include="nCine\CommonHeaders.h" />
     <ClInclude Include="nCine\Graphics\AnimatedSprite.h" />
@@ -969,6 +971,7 @@
     <ClCompile Include="nCine\Base\Random.cpp" />
     <ClCompile Include="nCine\Base\Timer.cpp" />
     <ClCompile Include="nCine\Base\TimeStamp.cpp" />
+    <ClCompile Include="nCine\Base\xxHash\xxh_x86dispatch.cpp" />
     <ClCompile Include="nCine\Graphics\AnimatedSprite.cpp" />
     <ClCompile Include="nCine\Graphics\BaseSprite.cpp" />
     <ClCompile Include="nCine\Graphics\BinaryShaderCache.cpp" />

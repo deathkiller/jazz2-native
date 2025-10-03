@@ -42,6 +42,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Base/Random.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/Timer.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/TimeStamp.cpp
+	${NCINE_SOURCE_DIR}/nCine/Base/xxHash/xxh_x86dispatch.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/AnimatedSprite.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/BaseSprite.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/BinaryShaderCache.cpp

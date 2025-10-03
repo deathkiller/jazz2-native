@@ -5126,9 +5126,9 @@ namespace Jazz2::Multiplayer
 
 	struct TileCoordHash {
 #if defined(DEATH_TARGET_32BIT)
-		using IntHash = CityHash32Func<std::int32_t>;
+		using IntHash = xxHash32Func<std::int32_t>;
 #else
-		using IntHash = CityHash64Func<std::int32_t>;
+		using IntHash = xxHash64Func<std::int32_t>;
 #endif
 
 		std::size_t operator()(const Vector2i& coord) const {

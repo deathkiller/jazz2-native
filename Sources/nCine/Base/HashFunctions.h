@@ -16,154 +16,6 @@ namespace nCine
 	/** @brief Invalid hash value */
 	const hash_t NullHash = static_cast<hash_t>(~0);
 
-	/// Hash function returning always the first hashmap bucket, for debug purposes
-	template<class K>
-	class FixedHashFunc
-	{
-	public:
-		hash_t operator()(const K& key) const {
-			return static_cast<hash_t>(0);
-		}
-	};
-
-	/// Hash function returning the modulo of the key, for debug purposes
-	template<class K, unsigned int Value>
-	class ModuloHashFunc
-	{
-	public:
-		hash_t operator()(const K& key) const {
-			return static_cast<hash_t>(key % Value);
-		}
-	};
-
-	/// Hash function returning the key unchanged
-	/*! The key type should be convertible to `hash_t.` */
-	template<class K>
-	class IdentityHashFunc
-	{
-	public:
-		hash_t operator()(const K& key) const {
-			return static_cast<hash_t>(key);
-		}
-	};
-
-	/// Shift-Add-XOR hash function
-	template<class K>
-	class SaxHashFunc
-	{
-	public:
-		hash_t operator()(const K& key) const
-		{
-			const unsigned char* bytes = reinterpret_cast<const unsigned char*>(&key);
-			hash_t hash = static_cast<hash_t>(0);
-			for (unsigned int i = 0; i < sizeof(K); i++)
-				hash ^= (hash << 5) + (hash >> 2) + static_cast<hash_t>(bytes[i]);
-
-			return hash;
-		}
-	};
-
-#ifndef DOXYGEN_GENERATING_OUTPUT
-	template<>
-	class SaxHashFunc<char*>
-	{
-	public:
-		hash_t operator()(const char*& key) const
-		{
-			const unsigned int length = (unsigned int)strlen(key);
-			hash_t hash = static_cast<hash_t>(0);
-			for (unsigned int i = 0; i < length; i++)
-				hash ^= (hash << 5) + (hash >> 2) + static_cast<hash_t>(key[i]);
-
-			return hash;
-		}
-	};
-
-	template<>
-	class SaxHashFunc<String>
-	{
-	public:
-		hash_t operator()(const String& string) const
-		{
-			const unsigned int length = (unsigned int)string.size();
-			hash_t hash = static_cast<hash_t>(0);
-			for (unsigned int i = 0; i < length; i++)
-				hash ^= (hash << 5) + (hash >> 2) + static_cast<hash_t>(string[i]);
-
-			return hash;
-		}
-	};
-#endif
-
-	/// Jenkins hash function
-	/*!
-	 * For more information: http://en.wikipedia.org/wiki/Jenkins_hash_function
-	 */
-	template<class K>
-	class JenkinsHashFunc
-	{
-	public:
-		hash_t operator()(const K& key) const
-		{
-			const unsigned char* bytes = reinterpret_cast<const unsigned char*>(&key);
-			hash_t hash = static_cast<hash_t>(0);
-			for (unsigned int i = 0; i < sizeof(K); i++) {
-				hash += static_cast<hash_t>(bytes[i]);
-				hash += (hash << 10);
-				hash ^= (hash >> 6);
-			}
-			hash += (hash << 3);
-			hash ^= (hash >> 11);
-			hash += (hash << 15);
-
-			return hash;
-		}
-	};
-
-#ifndef DOXYGEN_GENERATING_OUTPUT
-	template<>
-	class JenkinsHashFunc<char*>
-	{
-	public:
-		hash_t operator()(const char*& key) const
-		{
-			const unsigned int length = (unsigned int)strlen(key);
-			hash_t hash = static_cast<hash_t>(0);
-			for (unsigned int i = 0; i < length; i++) {
-				hash += static_cast<hash_t>(key[i]);
-				hash += (hash << 10);
-				hash ^= (hash >> 6);
-			}
-			hash += (hash << 3);
-			hash ^= (hash >> 11);
-			hash += (hash << 15);
-
-			return hash;
-		}
-	};
-
-	template<>
-	class JenkinsHashFunc<String>
-	{
-	public:
-		hash_t operator()(const String& string) const
-		{
-			const unsigned int length = (unsigned int)string.size();
-			hash_t hash = static_cast<hash_t>(0);
-			for (unsigned int i = 0; i < length; i++) {
-				hash += static_cast<hash_t>(string[i]);
-				hash += (hash << 10);
-				hash ^= (hash >> 6);
-			}
-			hash += (hash << 3);
-			hash ^= (hash >> 11);
-			hash += (hash << 15);
-
-			return hash;
-		}
-	};
-#endif
-
 	/// Fowler-Noll-Vo Hash (FNV-1a)
 	/*!
 	 * For more information: http://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
@@ -176,9 +28,9 @@ namespace nCine
 		{
 			const unsigned char* bytes = reinterpret_cast<const unsigned char*>(&key);
 			hash_t hash = static_cast<hash_t>(Seed);
-			for (unsigned int i = 0; i < sizeof(K); i++)
+			for (unsigned int i = 0; i < sizeof(K); i++) {
 				hash = fnv1a(bytes[i], hash);
-
+			}
 			return hash;
 		}
 
@@ -201,9 +53,9 @@ namespace nCine
 		{
 			const unsigned int length = (unsigned int)strlen(key);
 			hash_t hash = static_cast<hash_t>(Seed);
-			for (unsigned int i = 0; i < length; i++)
+			for (unsigned int i = 0; i < length; i++) {
 				hash = fnv1a(key[i], hash);
-
+			}
 			return hash;
 		}
 
@@ -225,9 +77,9 @@ namespace nCine
 		{
 			const unsigned int length = (unsigned int)string.size();
 			hash_t hash = static_cast<hash_t>(Seed);
-			for (unsigned int i = 0; i < length; i++)
+			for (unsigned int i = 0; i < length; i++) {
 				hash = fnv1a(static_cast<hash_t>(string[i]), hash);
-
+			}
 			return hash;
 		}
 
@@ -252,138 +104,93 @@ namespace nCine
 	};
 #endif
 
-	uint64_t fasthash64(const void* buf, size_t len, uint64_t seed);
-	uint32_t fasthash32(const void* buf, size_t len, uint32_t seed);
+	std::uint64_t xxHash3(const void* data, std::size_t length);
+	std::uint64_t xxHash3(const void* data, std::size_t length, std::uint64_t seed);
 
-	/// Fast-hash
-	/*!
-	 * For more information: https://github.com/ztanml/fast-hash
-	 */
+	/// xxHash hash function (32-bit)
 	template<class K>
-	class FastHashFunc
+	class xxHash32Func
 	{
 	public:
 		hash_t operator()(const K& key) const
 		{
-			const unsigned char* bytes = reinterpret_cast<const unsigned char*>(&key);
-			const hash_t hash = fasthash32(bytes, sizeof(K), Seed);
-
-			return hash;
-		}
-
-	private:
-		static const uint64_t Seed = 0x01000193811C9DC5;
-	};
-
-#ifndef DOXYGEN_GENERATING_OUTPUT
-	/*!
-	 * \note Specialized version of the function for C-style strings
-	 *
-	 * For more information: https://github.com/ztanml/fast-hash
-	 */
-	template<>
-	class FastHashFunc<const char*>
-	{
-	public:
-		hash_t operator()(const char* key) const
-		{
-			return fasthash32(key, strlen(key), Seed);
-		}
-
-	private:
-		static const uint32_t Seed = 0x811C9DC5;
-	};
-
-	/*!
-	 * \note Specialized version of the function for String objects
-	 *
-	 * For more information: https://github.com/ztanml/fast-hash
-	 */
-	template<>
-	class FastHashFunc<String>
-	{
-	public:
-		hash_t operator()(const String& string) const
-		{
-			return fasthash32(string.data(), string.size(), Seed);
-		}
-
-	private:
-		static const uint32_t Seed = 0x811C9DC5;
-	};
-#endif
-
-	/// CityHash
-	std::uint64_t CityHash64(const char* s, std::size_t len);
-
-	std::uint64_t CityHash64WithSeed(const char* s, std::size_t len, std::uint64_t seed);
-
-	std::uint64_t CityHash64WithSeeds(const char* s, std::size_t len, std::uint64_t seed0, std::uint64_t seed1);
-
-	std::uint32_t CityHash32(const char* s, std::size_t len);
-
-	/// CityHash hash function (32-bit)
-	template<class K>
-	class CityHash32Func
-	{
-	public:
-		hash_t operator()(const K& key) const
-		{
-			return CityHash32(reinterpret_cast<const char*>(&key), sizeof(K));
+			return hash_t(xxHash3(reinterpret_cast<const char*>(&key), sizeof(K)));
 		}
 	};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	template<>
-	class CityHash32Func<String>
+	class xxHash32Func<char*>
+	{
+	public:
+		hash64_t operator()(const char*& key) const
+		{
+			const unsigned int length = (unsigned int)strlen(key);
+			return hash_t(xxHash3(key, length));
+		}
+	};
+
+	template<>
+	class xxHash32Func<String>
 	{
 	public:
 		hash_t operator()(const String& string) const
 		{
-			return CityHash32(string.data(), string.size());
+			return hash_t(xxHash3(string.data(), string.size()));
 		}
 	};
 
 	template<class F, class S>
-	class CityHash32Func<Pair<F, S>>
+	class xxHash32Func<Pair<F, S>>
 	{
 	public:
 		hash_t operator()(const Pair<F, S>& pair) const
 		{
-			return CityHash32Func<F>()(pair.first()) ^ CityHash32Func<S>()(pair.second());
+			return xxHash32Func<F>()(pair.first()) ^ xxHash32Func<S>()(pair.second());
 		}
 	};
 #endif
 
-	/// CityHash hash function (64-bit)
+	/// xxHash hash function (64-bit)
 	template<class K>
-	class CityHash64Func
+	class xxHash64Func
 	{
 	public:
 		hash64_t operator()(const K& key) const
 		{
-			return CityHash64(reinterpret_cast<const char*>(&key), sizeof(K));
+			return hash64_t(xxHash3(reinterpret_cast<const char*>(&key), sizeof(K)));
 		}
 	};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	template<>
-	class CityHash64Func<String>
+	class xxHash64Func<char*>
+	{
+	public:
+		hash64_t operator()(const char*& key) const
+		{
+			const unsigned int length = (unsigned int)strlen(key);
+			return hash64_t(xxHash3(key, length));
+		}
+	};
+
+	template<>
+	class xxHash64Func<String>
 	{
 	public:
 		hash64_t operator()(const String& string) const
 		{
-			return CityHash64(string.data(), string.size());
+			return hash64_t(xxHash3(string.data(), string.size()));
 		}
 	};
 
 	template<class F, class S>
-	class CityHash64Func<Pair<F, S>>
+	class xxHash64Func<Pair<F, S>>
 	{
 	public:
 		hash64_t operator()(const Pair<F, S>& pair) const
 		{
-			return CityHash64Func<F>()(pair.first()) ^ CityHash64Func<S>()(pair.second());
+			return xxHash64Func<F>()(pair.first()) ^ xxHash64Func<S>()(pair.second());
 		}
 	};
 #endif

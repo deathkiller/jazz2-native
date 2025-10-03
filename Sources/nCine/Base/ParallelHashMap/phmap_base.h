@@ -47,6 +47,7 @@
 #include <utility>
 #include <memory>
 #include <mutex> // for std::lock
+#include <cstdlib>
 
 #include "phmap_config.h"
 
@@ -1233,22 +1234,22 @@ using ExtractOrT = typename ExtractOr<Extract, Obj, Default, void>::type;
 
 // Extractors for the features of allocators.
 template <typename T>
-using GetPointer = typename T::pointer;
+using GetPointer = typename std::allocator_traits<T>::pointer;
 
 template <typename T>
-using GetConstPointer = typename T::const_pointer;
+using GetConstPointer = typename std::allocator_traits<T>::const_pointer;
 
 template <typename T>
-using GetVoidPointer = typename T::void_pointer;
+using GetVoidPointer = typename std::allocator_traits<T>::void_pointer;
 
 template <typename T>
-using GetConstVoidPointer = typename T::const_void_pointer;
+using GetConstVoidPointer = typename std::allocator_traits<T>::const_void_pointer;
 
 template <typename T>
-using GetDifferenceType = typename T::difference_type;
+using GetDifferenceType = typename std::allocator_traits<T>::difference_type;
 
 template <typename T>
-using GetSizeType = typename T::size_type;
+using GetSizeType = typename std::allocator_traits<T>::size_type;
 
 template <typename T>
 using GetPropagateOnContainerCopyAssignment =
@@ -2774,7 +2775,9 @@ public:
     node_handle_base& operator=(node_handle_base&& other) noexcept {
         destroy();
         if (!other.empty()) {
-            alloc_ = other.alloc_;
+            if (other.alloc_) {
+               alloc_.emplace(other.alloc_.value());
+            }
             PolicyTraits::transfer(alloc(), slot(), other.slot());
             other.reset();
         }
@@ -4189,7 +4192,7 @@ void* Allocate(Alloc* alloc, size_t n) {
   using A = typename phmap::allocator_traits<Alloc>::template rebind_alloc<M>;
   using AT = typename phmap::allocator_traits<Alloc>::template rebind_traits<M>;
   A mem_alloc(*alloc);
-  void* p = AT::allocate(mem_alloc, (n + sizeof(M) - 1) / sizeof(M));
+  void* p = &*AT::allocate(mem_alloc, (n + sizeof(M) - 1) / sizeof(M)); // `&*` to support custom pointers such as boost offset_ptr.
   assert(reinterpret_cast<uintptr_t>(p) % Alignment == 0 &&
          "allocator does not respect alignment");
   return p;
@@ -5005,10 +5008,10 @@ public:
     {
         void lock()            ABSL_EXCLUSIVE_LOCK_FUNCTION()        { this->Lock(); }
         void unlock()          ABSL_UNLOCK_FUNCTION()                { this->Unlock(); }
-        void try_lock()        ABSL_EXCLUSIVE_TRYLOCK_FUNCTION(true) { this->TryLock(); }
+        bool try_lock()        ABSL_EXCLUSIVE_TRYLOCK_FUNCTION(true) { return this->TryLock(); }
         void lock_shared()     ABSL_SHARED_LOCK_FUNCTION()           { this->ReaderLock(); }
         void unlock_shared()   ABSL_UNLOCK_FUNCTION()                { this->ReaderUnlock(); }
-        void try_lock_shared() ABSL_SHARED_TRYLOCK_FUNCTION(true)    { this->ReaderTryLock(); }
+        bool try_lock_shared() ABSL_SHARED_TRYLOCK_FUNCTION(true)    { return this->ReaderTryLock(); }
     };
     
     template <>

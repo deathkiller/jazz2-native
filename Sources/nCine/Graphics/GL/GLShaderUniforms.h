@@ -14,7 +14,8 @@ namespace nCine
 	{
 	public:
 		static constexpr std::uint32_t UniformCachesHashSize = 16;
-		using UniformHashMapType = StaticHashMap<String, GLUniformCache, UniformCachesHashSize>;
+		// TODO: Using FNV1aHashFunc because other hash functions are causing graphics glitches for some reason
+		using UniformHashMapType = StaticHashMap<String, GLUniformCache, UniformCachesHashSize, FNV1aHashFunc<String>>;
 
 		GLShaderUniforms();
 		explicit GLShaderUniforms(GLShaderProgram* shaderProgram);
