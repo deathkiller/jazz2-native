@@ -834,12 +834,12 @@ XXH3_128bits_update_dispatch(XXH_NOESCAPE XXH3_state_t* state, XXH_NOESCAPE cons
 
 namespace nCine
 {
-    std::uint64_t xxHash3(const void* data, std::size_t length)
+    DEATH_NEVER_INLINE std::uint64_t xxHash3(const void* data, std::size_t length)
     {
         return XXH3_64bits(data, length);
     }
 
-    std::uint64_t xxHash3(const void* data, std::size_t length, std::uint64_t seed)
+    DEATH_NEVER_INLINE std::uint64_t xxHash3(const void* data, std::size_t length, std::uint64_t seed)
     {
         return XXH3_64bits_withSeed(data, length, seed);
     }
