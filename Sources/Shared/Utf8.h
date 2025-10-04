@@ -42,7 +42,9 @@ namespace Death { namespace Utf8 {
 		@brief Next UTF-8 character
 
 		Returns Unicode codepoint of character on the cursor and position of the following character.
-		If an error occurs, returns position of next byte and @cpp 0xffffffffu @ce as codepoint.
+		If the character is invalid, returns @cpp 0xffffffffu @ce as the codepoint and position of
+		the next byte, it's then up to the caller whether it gets treated as a fatal error or if
+		the invalid character is simply skipped or replaced.
 	*/
 	Containers::Pair<char32_t, std::size_t> NextChar(Containers::ArrayView<const char> text, std::size_t cursor);
 
@@ -56,9 +58,10 @@ namespace Death { namespace Utf8 {
 	/**
 		@brief Previous UTF-8 character
 
-		Returns a Unicode codepoint of a character before @p cursor and its position. If an error occurs,
-		returns position of the previous byte and @cpp 0xffffffffu @ce as the codepoint, it's then up to the caller
-		whether it gets treated as a fatal error or if the invalid character is simply skipped or replaced.
+		Returns a Unicode codepoint of a character before @p cursor and its position. If the
+		character is invalid, returns @cpp 0xffffffffu @ce as the codepoint and position of the
+		previous byte, it's then up to the caller whether it gets treated as a fatal error or
+		if the invalid character is simply skipped or replaced.
 	*/
 	Containers::Pair<char32_t, std::size_t> PrevChar(Containers::ArrayView<const char> text, std::size_t cursor);
 
@@ -81,11 +84,12 @@ namespace Death { namespace Utf8 {
 #if defined(DEATH_TARGET_WINDOWS) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 	/**
-		@brief Widens a UTF-8 string to UTF-16 for use with Windows Unicode APIs
+		@brief Widens a UTF-8 string to UTF-16 for use with Windows® Unicode APIs
 		
-		Converts a UTF-8 string to a wide-string (UTF-16) representation. The primary purpose of this API
-		is easy interaction with Windows Unicode APIs. If the text is not empty, the returned array
-		contains a sentinel null terminator (i.e., not counted into its size).
+		Converts a UTF-8 string to a wide-string (UTF-16) representation. The primary purpose
+		of this API is easy interaction with Windows® Unicode APIs, thus the function doesn't
+		return @cpp char16_t @ce but rather a @cpp wchar_t @ce. If the text is not empty,
+		the returned array contains a sentinel null terminator (i.e., not counted into its size).
 		
 		@partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" to be
 			used when dealing directly with Windows Unicode APIs.
@@ -112,18 +116,20 @@ namespace Death { namespace Utf8 {
 	/**
 		@overload
 
-		This overload is suitable if the destination memory is already preallocated (e.g., on the stack). The return
-		value represents the number of converted UTF-16 characters. The required @p destinationSize is never larger
-		than @p sourceSize. If @p sourceSize is not provided, the source string must be null-terminated.
+		This overload is suitable if the destination memory is already preallocated (e.g.,
+		on the stack). The return value represents the number of converted UTF-16 characters.
+		The required @p destinationSize is never larger than @p sourceSize. If @p sourceSize
+		is not provided, the source string must be null-terminated.
 	*/
 	std::int32_t ToUtf16(wchar_t* destination, std::int32_t destinationSize, const char* source, std::int32_t sourceSize = -1);
 
 	/**
 		@overload
 
-		This overload is suitable if the destination memory is already preallocated (e.g., on the stack). The return
-		value represents the number of converted UTF-16 characters. The required @p destinationSize is never larger
-		than @p sourceSize. If @p sourceSize is not provided, the source string must be null-terminated.
+		This overload is suitable if the destination memory is already preallocated (e.g.,
+		on the stack). The return value represents the number of converted UTF-16 characters.
+		The required @p destinationSize is never larger than @p sourceSize. If @p sourceSize
+		is not provided, the source string must be null-terminated.
 	*/
 	template<std::int32_t size>
 	std::int32_t ToUtf16(wchar_t (&destination)[size], const char* source, std::int32_t sourceSize = -1) {
@@ -131,10 +137,11 @@ namespace Death { namespace Utf8 {
 	}
 
 	/**
-		@brief Narrows a UTF-16 string to UTF-8 for use with Windows Unicode APIs
+		@brief Narrows a UTF-16 string to UTF-8 for use with Windows® Unicode APIs
 		
 		Converts a wide-string (UTF-16) to a UTF-8 representation. The primary purpose is easy
-		interaction with Windows Unicode APIs.
+		interaction with Windows® Unicode APIs, thus the function doesn't take @cpp char16_t @ce
+		but rather a @cpp wchar_t @ce.
 		
 		@partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" to be
 			used when dealing directly with Windows Unicode APIs.
@@ -161,18 +168,20 @@ namespace Death { namespace Utf8 {
 	/**
 		@overload
 
-		This overload is suitable if the destination memory is already preallocated (e.g., on the stack). The return
-		value represents the number of converted UTF-8 characters. The required @p destinationSize is never larger than
-		4× @p sourceSize. If @p sourceSize is not provided, the source string must be null-terminated.
+		This overload is suitable if the destination memory is already preallocated (e.g.,
+		on the stack). The return value represents the number of converted UTF-8 characters.
+		The required @p destinationSize is never larger than 4× @p sourceSize. If @p sourceSize
+		is not provided, the source string must be null-terminated.
 	*/
 	std::int32_t FromUtf16(char* destination, std::int32_t destinationSize, const wchar_t* source, std::int32_t sourceSize = -1);
 
 	/**
 		@overload
 
-		This overload is suitable if the destination memory is already preallocated (e.g., on the stack). The return
-		value represents the number of converted UTF-8 characters. The required @p destinationSize is never larger than
-		4× @p sourceSize. If @p sourceSize is not provided, the source string must be null-terminated.
+		This overload is suitable if the destination memory is already preallocated (e.g.,
+		on the stack). The return value represents the number of converted UTF-8 characters.
+		The required @p destinationSize is never larger than 4× @p sourceSize. If @p sourceSize
+		is not provided, the source string must be null-terminated.
 	*/
 	template<std::int32_t size>
 	std::int32_t FromUtf16(char (&destination)[size], const wchar_t* source, std::int32_t sourceSize = -1) {

@@ -896,7 +896,6 @@ EXCLUDE                = CodingStyle/ \
                          ../Sources/nCine/Backends/Android/Bridge/ \
                          ../Sources/nCine/Base/ParallelHashMap/ \
                          ../Sources/nCine/Base/pdqsort/ \
-                         ../Sources/nCine/Base/xxHash/ \
                          ../Sources/Jazz2/Multiplayer/Backends/
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or

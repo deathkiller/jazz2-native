@@ -17,6 +17,12 @@ namespace nCine
 	{
 		std::int32_t bufferSize = 0;
 		std::unique_ptr<std::uint8_t[]> bufferPtr;
+
+		std::uint64_t HashCombine(std::uint64_t h1, std::uint64_t h2)
+		{
+			h1 ^= h2 + 0x9e3779b97f4a7c15ULL + (h1 << 12) + (h1 >> 4);
+			return h1;
+		}
 	}
 
 	BinaryShaderCache::BinaryShaderCache(StringView path)
@@ -54,8 +60,9 @@ namespace nCine
 
 		const auto& infoStrings = gfxCaps.GetGLInfoStrings();
 
-		platformHash_ += xxHash3(infoStrings.renderer, std::strlen(infoStrings.renderer));
-		platformHash_ += xxHash3(infoStrings.glVersion, std::strlen(infoStrings.glVersion));
+		platformHash_ = HashCombine(
+			xxHash3(infoStrings.renderer, std::strlen(infoStrings.renderer)),
+			xxHash3(infoStrings.glVersion, std::strlen(infoStrings.glVersion)));
 
 		char platformHashString[24];
 		std::size_t platformHashLength = formatInto(platformHashString, "{:.16x}", platformHash_);

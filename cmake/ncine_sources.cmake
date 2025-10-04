@@ -9,6 +9,7 @@ set(SOURCES
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringUtils.cpp
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringView.cpp
 	${NCINE_SOURCE_DIR}/Shared/Core/Logger.cpp
+	${NCINE_SOURCE_DIR}/Shared/Core/xxHash.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/BoundedFileStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/EmscriptenFileStream.cpp
@@ -42,7 +43,6 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Base/Random.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/Timer.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/TimeStamp.cpp
-	${NCINE_SOURCE_DIR}/nCine/Base/xxHash/xxh_x86dispatch.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/AnimatedSprite.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/BaseSprite.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/BinaryShaderCache.cpp

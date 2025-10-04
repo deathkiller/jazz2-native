@@ -36,6 +36,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Containers/Tags.h
 	${NCINE_SOURCE_DIR}/Shared/Core/ITraceSink.h
 	${NCINE_SOURCE_DIR}/Shared/Core/Logger.h
+	${NCINE_SOURCE_DIR}/Shared/Core/xxHash.h
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/BoundedFileStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/EmscriptenFileStream.h
@@ -91,8 +92,6 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Base/ParallelHashMap/phmap_fwd_decl.h
 	${NCINE_SOURCE_DIR}/nCine/Base/ParallelHashMap/phmap_utils.h
 	${NCINE_SOURCE_DIR}/nCine/Base/pdqsort/pdqsort.h
-	${NCINE_SOURCE_DIR}/nCine/Base/xxHash/xxh_x86dispatch.h
-	${NCINE_SOURCE_DIR}/nCine/Base/xxHash/xxhash.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/AnimatedSprite.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/BaseSprite.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/BinaryShaderCache.h

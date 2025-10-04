@@ -144,9 +144,9 @@ namespace Death { namespace IO {
 		Containers::String _mountPoint;
 		Containers::Array<Item> _rootItems;
 
-		void ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool zlibCompressed, std::uint32_t depth);
+		void ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool deflateCompressed, std::uint32_t depth);
 		Containers::Array<Item>* ReadIndexFromStream(Stream& s, Item* parentItem);
-		DEATH_NEVER_INLINE Containers::Array<Item>* ReadIndexFromStreamZlibCompressed(Stream& s, Item* parentItem);
+		DEATH_NEVER_INLINE Containers::Array<Item>* ReadIndexFromStreamDeflateCompressed(Stream& s, Item* parentItem);
 		Item* FindItem(Containers::StringView path);
 
 		static DEATH_ALWAYS_INLINE bool HasCompressedSize(ItemFlags itemFlags);

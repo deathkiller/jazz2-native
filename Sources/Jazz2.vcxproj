@@ -320,6 +320,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\WebRequest.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Containers.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Format.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Core\xxHash.h" />
     <ClInclude Include="Jazz2\Actors\Multiplayer\MpPlayer.h" />
     <ClInclude Include="Jazz2\ContentResolver.h" />
     <ClInclude Include="Jazz2\Input\ControlScheme.h" />
@@ -589,8 +590,6 @@
     <ClInclude Include="nCine\Base\Task.h" />
     <ClInclude Include="nCine\Base\Timer.h" />
     <ClInclude Include="nCine\Base\TimeStamp.h" />
-    <ClInclude Include="nCine\Base\xxHash\xxhash.h" />
-    <ClInclude Include="nCine\Base\xxHash\xxh_x86dispatch.h" />
     <ClInclude Include="nCine\CommonConstants.h" />
     <ClInclude Include="nCine\CommonHeaders.h" />
     <ClInclude Include="nCine\Graphics\AnimatedSprite.h" />
@@ -766,6 +765,7 @@
     <ClCompile Include="$(ExtensionLibraryPath)\IO\Compression\ZstdStream.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\WebRequest.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Base\Format.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\Core\xxHash.cpp" />
     <ClCompile Include="Jazz2\Actors\ActorBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.cpp" />
@@ -971,7 +971,6 @@
     <ClCompile Include="nCine\Base\Random.cpp" />
     <ClCompile Include="nCine\Base\Timer.cpp" />
     <ClCompile Include="nCine\Base\TimeStamp.cpp" />
-    <ClCompile Include="nCine\Base\xxHash\xxh_x86dispatch.cpp" />
     <ClCompile Include="nCine\Graphics\AnimatedSprite.cpp" />
     <ClCompile Include="nCine\Graphics\BaseSprite.cpp" />
     <ClCompile Include="nCine\Graphics\BinaryShaderCache.cpp" />
