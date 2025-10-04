@@ -222,19 +222,19 @@ namespace Death { namespace IO {
 		return std::make_unique<BoundedFileStream>(_path, foundItem->Offset, foundItem->UncompressedSize);
 	}
 
-	void PakFile::ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool zlibCompressed, std::uint32_t depth)
+	void PakFile::ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool deflateCompressed, std::uint32_t depth)
 	{
 		DEATH_ASSERT(depth < MaxDepth, "Maximum directory structure depth reached", );
 
-		auto* items = (zlibCompressed
-			? ReadIndexFromStreamZlibCompressed(s, parentItem)
+		auto* items = (deflateCompressed
+			? ReadIndexFromStreamDeflateCompressed(s, parentItem)
 			: ReadIndexFromStream(s, parentItem));
 
 		if (items != nullptr) {
 			for (auto& item : *items) {
 				if ((item.Flags & ItemFlags::Directory) == ItemFlags::Directory) {
 					s.Seek(std::int64_t(item.Offset), SeekOrigin::Begin);
-					ConstructsItemsFromIndex(s, &item, zlibCompressed, depth + 1);
+					ConstructsItemsFromIndex(s, &item, deflateCompressed, depth + 1);
 				}
 			}
 		}
@@ -287,7 +287,7 @@ namespace Death { namespace IO {
 		return items;
 	}
 
-	Array<PakFile::Item>* PakFile::ReadIndexFromStreamZlibCompressed(Stream& s, Item* parentItem)
+	Array<PakFile::Item>* PakFile::ReadIndexFromStreamDeflateCompressed(Stream& s, Item* parentItem)
 	{
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
 		DeflateStream ds(s);

@@ -144,7 +144,7 @@ namespace Death { namespace IO {
 				}
 			} else if (oldPos - _readPos <= pos && pos < oldPos + _readLength - _readPos) {
 				// Some part of the buffer is still valid
-				std::int32_t diff = static_cast<std::int32_t>(pos - oldPos);
+				std::int32_t diff = std::int32_t(pos - oldPos);
 				_readPos += diff;
 				// Seek after the buffered part, so the position is still correct
 				if (SeekInternal(_readLength - _readPos, SeekOrigin::Current) < 0) {
@@ -186,7 +186,7 @@ namespace Death { namespace IO {
 				_readLength = 0;
 
 				do {
-					std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? (std::int32_t)bytesToRead : INT32_MAX);
+					std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? std::int32_t(bytesToRead) : INT32_MAX);
 					std::int32_t bytesRead = ReadInternal(&typedBuffer[n], partialBytesToRead);
 					if DEATH_UNLIKELY(bytesRead < 0) {
 						return bytesRead;
@@ -214,8 +214,8 @@ namespace Death { namespace IO {
 			n = bytesToRead;
 		}
 
-		std::memcpy(typedBuffer, &_buffer[_readPos], n);
-		_readPos += (std::int32_t)n;
+		std::memcpy(typedBuffer, &_buffer[_readPos], std::size_t(n));
+		_readPos += std::int32_t(n);
 
 		bytesToRead -= n;
 		if (bytesToRead > 0 && !isBlocked) {
@@ -224,7 +224,7 @@ namespace Death { namespace IO {
 			_readLength = 0;
 
 			do {
-				std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? (std::int32_t)bytesToRead : INT32_MAX);
+				std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? std::int32_t(bytesToRead) : INT32_MAX);
 				std::int32_t bytesRead = ReadInternal(&typedBuffer[n], partialBytesToRead);
 				if DEATH_UNLIKELY(bytesRead < 0) {
 					return bytesRead;
@@ -261,8 +261,8 @@ namespace Death { namespace IO {
 			std::int32_t bufferBytesLeft = (_bufferSize - _writePos);
 			if (bufferBytesLeft > 0) {
 				if (bytesToWrite <= bufferBytesLeft) {
-					std::memcpy(&_buffer[_writePos], typedBuffer, bytesToWrite);
-					_writePos += (std::int32_t)bytesToWrite;
+					std::memcpy(&_buffer[_writePos], typedBuffer, std::size_t(bytesToWrite));
+					_writePos += std::int32_t(bytesToWrite);
 					return bytesToWrite;
 				} else {
 					std::memcpy(&_buffer[_writePos], typedBuffer, bufferBytesLeft);
@@ -288,7 +288,7 @@ namespace Death { namespace IO {
 				bytesToWrite -= moreBytesRead;
 			}
 			if DEATH_LIKELY(bytesToWrite > 0) {
-				std::int32_t moreBytesRead = WriteInternal(typedBuffer, (std::int32_t)bytesToWrite);
+				std::int32_t moreBytesRead = WriteInternal(typedBuffer, std::int32_t(bytesToWrite));
 				bytesWrittenTotal += moreBytesRead;
 			}
 			return bytesWrittenTotal;
@@ -296,8 +296,8 @@ namespace Death { namespace IO {
 
 		// Copy remaining bytes into buffer, it will be written to the file later
 		InitializeBuffer();
-		std::memcpy(&_buffer[_writePos], typedBuffer, bytesToWrite);
-		_writePos = (std::int32_t)bytesToWrite;
+		std::memcpy(&_buffer[_writePos], typedBuffer, std::size_t(bytesToWrite));
+		_writePos = std::int32_t(bytesToWrite);
 		bytesWrittenTotal += bytesToWrite;
 		return bytesWrittenTotal;
 	}
@@ -342,7 +342,8 @@ namespace Death { namespace IO {
 #if defined(DEATH_TARGET_WINDOWS)
 		LARGE_INTEGER liSize;
 		liSize.QuadPart = size;
-		FILE_END_OF_FILE_INFO eofInfo{liSize};
+
+		FILE_END_OF_FILE_INFO eofInfo = { liSize };
 		if (!::SetFileInformationByHandle(_fileHandle, FileEndOfFileInfo, &eofInfo, sizeof(eofInfo))) {
 			DWORD error = ::GetLastError();
 #	if defined(DEATH_TRACE_VERBOSE_IO)
@@ -531,7 +532,7 @@ namespace Death { namespace IO {
 		distanceToMove.QuadPart = offset;
 
 		LARGE_INTEGER newPos;
-		if (!::SetFilePointerEx(_fileHandle, distanceToMove, &newPos, (DWORD)origin)) {
+		if (!::SetFilePointerEx(_fileHandle, distanceToMove, &newPos, DWORD(origin))) {
 			DWORD error = ::GetLastError();
 			if (error != ERROR_BROKEN_PIPE) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
@@ -544,7 +545,7 @@ namespace Death { namespace IO {
 		_filePos = newPos.QuadPart;
 		return newPos.QuadPart;
 #else
-		std::int64_t newPos = ::lseek(_fileDescriptor, offset, static_cast<std::int32_t>(origin));
+		std::int64_t newPos = ::lseek(_fileDescriptor, offset, std::int32_t(origin));
 		if (newPos < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Failed to change position in file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
@@ -570,10 +571,10 @@ namespace Death { namespace IO {
 			return -1;
 		}
 
-		_filePos += static_cast<std::int32_t>(bytesRead);
-		return static_cast<std::int32_t>(bytesRead);
+		_filePos += std::int32_t(bytesRead);
+		return std::int32_t(bytesRead);
 #else
-		std::int32_t bytesRead = static_cast<std::int32_t>(::read(_fileDescriptor, destination, bytesToRead));
+		std::int32_t bytesRead = std::int32_t(::read(_fileDescriptor, destination, bytesToRead));
 		if (bytesRead < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Failed to read from file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
@@ -599,10 +600,10 @@ namespace Death { namespace IO {
 			return -1;
 		}
 
-		_filePos += static_cast<std::int32_t>(bytesWritten);
-		return static_cast<std::int32_t>(bytesWritten);
+		_filePos += std::int32_t(bytesWritten);
+		return std::int32_t(bytesWritten);
 #else
-		std::int32_t bytesWritten = static_cast<std::int32_t>(::write(_fileDescriptor, source, bytesToWrite));
+		std::int32_t bytesWritten = std::int32_t(::write(_fileDescriptor, source, bytesToWrite));
 		if (bytesWritten < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Failed to write to file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));

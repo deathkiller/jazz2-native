@@ -259,12 +259,6 @@
     <Filter Include="Source Files\Shared\Base">
       <UniqueIdentifier>{28c08749-4861-4751-a607-1c2511ec63f0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\nCine\Base\xxHash">
-      <UniqueIdentifier>{6d5506b3-15ba-419c-829a-046294b4942f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\nCine\Base\xxHash">
-      <UniqueIdentifier>{f3c9fa88-7166-4555-baa1-c1aa48554c93}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1659,11 +1653,8 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Format.h">
       <Filter>Header Files\Shared\Base</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\Base\xxHash\xxh_x86dispatch.h">
-      <Filter>Header Files\nCine\Base\xxHash</Filter>
-    </ClInclude>
-    <ClInclude Include="nCine\Base\xxHash\xxhash.h">
-      <Filter>Header Files\nCine\Base\xxHash</Filter>
+    <ClInclude Include="$(ExtensionLibraryPath)\Core\xxHash.h">
+      <Filter>Header Files\Shared\Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2699,8 +2690,8 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Base\Format.cpp">
       <Filter>Source Files\Shared\Base</Filter>
     </ClCompile>
-    <ClCompile Include="nCine\Base\xxHash\xxh_x86dispatch.cpp">
-      <Filter>Source Files\nCine\Base\xxHash</Filter>
+    <ClCompile Include="$(ExtensionLibraryPath)\Core\xxHash.cpp">
+      <Filter>Source Files\Shared\Core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
