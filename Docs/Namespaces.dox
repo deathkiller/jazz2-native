@@ -626,7 +626,7 @@ See also @ref third-party for the licenses of the libraries used.
 	@brief Interface @ref Death::ITraceSink
 */
 /** @file Shared/Core/xxHash.h
-	@brief Function @ref Death::xxHash
+	@brief Function @ref Death::xxHash3
 */
 
 /** @dir Shared/IO
