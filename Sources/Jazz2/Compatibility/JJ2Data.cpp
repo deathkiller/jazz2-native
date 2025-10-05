@@ -222,7 +222,7 @@ namespace Jazz2::Compatibility
 		JJ2Anims::WriteImageContent(so, pixels.get(), width, height, 4);
 
 		so.Seek(0, SeekOrigin::Begin);
-		bool success = pakWriter.AddFile(so, targetPath);
+		bool success = pakWriter.AddFile(so, targetPath, PakPreferredCompression::Deflate);
 		DEATH_ASSERT(success, "Cannot add file to .pak container", );
 	}
 }

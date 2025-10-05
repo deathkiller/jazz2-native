@@ -1581,7 +1581,7 @@ void GameEventHandler::RefreshCache()
 
 			if (!resolver.IsHeadless()) {
 				std::uint32_t filesRemoved = RenderResources::GetBinaryShaderCache().Prune();
-				LOGI("Pruning binary shader cache (removed {} files)...", filesRemoved);
+				LOGI("Pruning binary shader cache (removed {} directories)...", filesRemoved);
 			}
 		} else {
 			LOGI("Cache is already up-to-date");
@@ -1619,7 +1619,7 @@ RecreateCache:
 	// Create .pak file
 	{
 		std::int32_t t = 1;
-		std::unique_ptr<PakWriter> pakWriter = std::make_unique<PakWriter>(fs::CombinePath(resolver.GetCachePath(), "Source.pak"_s));
+		std::unique_ptr<PakWriter> pakWriter = std::make_unique<PakWriter>(fs::CombinePath(resolver.GetCachePath(), "Source.pak"_s), true);
 		while (!pakWriter->IsValid()) {
 			if (t > 5) {
 				LOGE("Cannot open \"…{}Cache{}Source.pak\" file for writing! Please check if this file is accessible and try again.", fs::PathSeparator, fs::PathSeparator);
@@ -1630,7 +1630,7 @@ RecreateCache:
 			pakWriter = nullptr;
 			Thread::Sleep(t * 100);
 			t++;
-			pakWriter = std::make_unique<PakWriter>(fs::CombinePath(resolver.GetCachePath(), "Source.pak"_s));
+			pakWriter = std::make_unique<PakWriter>(fs::CombinePath(resolver.GetCachePath(), "Source.pak"_s), true);
 		}
 
 		Compatibility::JJ2Version version = Compatibility::JJ2Anims::Convert(animsPath, *pakWriter);
@@ -1654,7 +1654,7 @@ RecreateCache:
 
 	if (!resolver.IsHeadless()) {
 		std::uint32_t filesRemoved = RenderResources::GetBinaryShaderCache().Prune();
-		LOGI("Pruning binary shader cache (removed {} files)...", filesRemoved);
+		LOGI("Pruning binary shader cache (removed {} directories)...", filesRemoved);
 	}
 
 	resolver.RemountPaks();

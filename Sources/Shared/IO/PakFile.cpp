@@ -5,11 +5,15 @@
 #include "Compression/Lz4Stream.h"
 #include "Compression/ZstdStream.h"
 #include "../Containers/GrowableArray.h"
+#include "../Containers/SmallVector.h"
 #include "../Containers/StringConcatenable.h"
+#include "../Containers/StringUtils.h"
+#include "../Core/xxHash.h"
 
 #include <algorithm>
 
 using namespace Death::Containers;
+using namespace Death::Containers::Literals;
 
 enum class PakFileFlags : std::uint16_t {
 	None = 0x00,
@@ -25,9 +29,38 @@ static constexpr std::uint8_t Signature[] = { 0xF0, 0x9F, 0x8C, 0xAA };
 static constexpr std::uint16_t Version = 1;
 static constexpr std::int32_t FooterSize = sizeof(Signature) + 2 + 2 + 8;
 static constexpr std::uint32_t MaxDepth = 64;
+static constexpr std::uint32_t HashIndexLength = 8;
 
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+	static std::uint64_t FileNameToHash(StringView fileName)
+	{
+		SmallVector<char, 256> normalizedFileName(DefaultInit, fileName.size());
+		bool lastWasSlash = false;
+		std::size_t i = 0;
+
+		for (char c : fileName) {
+			// Normalize slashes
+			if (c == '\\') {
+				c = '/';
+			}
+
+			// Skip consecutive slashes
+			if (c == '/') {
+				if (lastWasSlash) continue;
+				lastWasSlash = true;
+			} else {
+				lastWasSlash = false;
+			}
+
+			// Uppercase to lowercase, copied from StringUtils::lowercaseInPlace()
+			c += (std::uint8_t(c - 'A') < 26) << 5;
+			normalizedFileName[i++] = c;
+		}
+
+		return xxHash3(normalizedFileName.data(), i);
+	}
 
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ) || defined(WITH_LZ4) || defined(WITH_ZSTD)
 
@@ -122,6 +155,27 @@ namespace Death { namespace IO {
 		return Stream::Invalid;
 	}
 
+#	if defined(WITH_ZLIB) || defined(WITH_MINIZ)
+	static void CopyToDeflate(Stream& input, Stream& output, std::int64_t& uncompressedSize)
+	{
+		DeflateWriter dw(output);
+		uncompressedSize = input.CopyTo(dw);
+	}
+#	endif
+#	if defined(WITH_LZ4)
+	static void CopyToLz4(Stream& input, Stream& output, std::int64_t& uncompressedSize)
+	{
+		Lz4Writer dw(output);
+		uncompressedSize = input.CopyTo(dw);
+	}
+#	endif
+#	if defined(WITH_ZSTD)
+	static void CopyToZstd(Stream& input, Stream& output, std::int64_t& uncompressedSize)
+	{
+		ZstdWriter dw(output);
+		uncompressedSize = input.CopyTo(dw);
+	}
+#	endif
 #endif
 
 	PakFile::PakFile(StringView path)
@@ -137,15 +191,21 @@ namespace Death { namespace IO {
 		s->Read(signature, sizeof(signature));
 		DEATH_ASSERT(std::memcmp(signature, Signature, sizeof(Signature)) == 0, "Invalid .pak file", );
 
-		/*std::uint16_t fileVersion =*/ s->ReadValue<std::uint16_t>();
+		std::uint16_t fileVersion = s->ReadValue<std::uint16_t>();
+		DEATH_ASSERT(fileVersion == Version, "Unsupported .pak file version", );
+
 		PakFileFlags fileFlags = (PakFileFlags)s->ReadValue<std::uint16_t>();
 		std::uint64_t rootIndexOffset = s->ReadValue<std::uint64_t>();
 
 		DEATH_ASSERT(rootIndexOffset < std::uint64_t(s->GetSize()), "Invalid root index offset", );
 		s->Seek(static_cast<std::int64_t>(rootIndexOffset), SeekOrigin::Begin);
 
-		ConstructsItemsFromIndex(*s, nullptr, (fileFlags & PakFileFlags::DeflateCompressedIndex) == PakFileFlags::DeflateCompressedIndex, 0);
 		_path = path;
+		_useHashIndex = (fileFlags & PakFileFlags::HashIndex) == PakFileFlags::HashIndex;
+
+		ConstructsItemsFromIndex(*s, nullptr,
+			(fileFlags & PakFileFlags::DeflateCompressedIndex) == PakFileFlags::DeflateCompressedIndex,
+			0);
 	}
 
 	StringView PakFile::GetMountPoint() const
@@ -177,12 +237,12 @@ namespace Death { namespace IO {
 
 	std::unique_ptr<Stream> PakFile::OpenFile(StringView path)
 	{
-		if (path.empty() || path[path.size() - 1] == '/' || path[path.size() - 1] == '\\') {
+		if DEATH_UNLIKELY(path.empty() || path[path.size() - 1] == '/' || path[path.size() - 1] == '\\') {
 			return nullptr;
 		}
 
 		Item* foundItem = FindItem(path);
-		if (foundItem == nullptr || (foundItem->Flags & ItemFlags::Directory) == ItemFlags::Directory) {
+		if DEATH_UNLIKELY(foundItem == nullptr || (foundItem->Flags & ItemFlags::Directory) == ItemFlags::Directory) {
 			return nullptr;
 		}
 
@@ -230,7 +290,7 @@ namespace Death { namespace IO {
 			? ReadIndexFromStreamDeflateCompressed(s, parentItem)
 			: ReadIndexFromStream(s, parentItem));
 
-		if (items != nullptr) {
+		if DEATH_LIKELY(items != nullptr) {
 			for (auto& item : *items) {
 				if ((item.Flags & ItemFlags::Directory) == ItemFlags::Directory) {
 					s.Seek(std::int64_t(item.Offset), SeekOrigin::Begin);
@@ -242,10 +302,10 @@ namespace Death { namespace IO {
 
 	Array<PakFile::Item>* PakFile::ReadIndexFromStream(Stream& s, Item* parentItem)
 	{
-		if (parentItem == nullptr) {
+		if DEATH_UNLIKELY(parentItem == nullptr) {
 			// Root index contains mount point
 			std::uint32_t mountPointLength = s.ReadVariableUint32();
-			DEATH_ASSERT(mountPointLength < INT32_MAX, "Invalid mount point", nullptr);
+			DEATH_ASSERT(mountPointLength < INT16_MAX, "Invalid mount point", nullptr);
 			_mountPoint = String{NoInit, mountPointLength};
 			s.Read(_mountPoint.data(), std::int32_t(mountPointLength));
 			if (!_mountPoint.empty() && _mountPoint[_mountPoint.size() - 1] != '/' && _mountPoint[_mountPoint.size() - 1] != '\\') {
@@ -268,15 +328,22 @@ namespace Death { namespace IO {
 			Item& item = (*items)[i];
 
 			item.Flags = (ItemFlags)s.ReadVariableUint32();
+			bool isDirectory = (item.Flags & PakFile::ItemFlags::Directory) == PakFile::ItemFlags::Directory;
 
-			std::uint32_t nameLength = s.ReadVariableUint32();
-			DEATH_ASSERT(nameLength == 0 || nameLength < INT32_MAX, "Malformed .pak file", nullptr);
-			item.Name = String{NoInit, nameLength};
-			s.Read(item.Name.data(), std::int32_t(nameLength));
+			if (_useHashIndex) {
+				DEATH_DEBUG_ASSERT(!isDirectory);
+				item.Name = String{NoInit, HashIndexLength};
+				s.Read(item.Name.data(), HashIndexLength);
+			} else {
+				std::uint32_t nameLength = s.ReadVariableUint32();
+				DEATH_ASSERT(nameLength == 0 || nameLength < INT32_MAX, "Malformed .pak file", nullptr);
+				item.Name = String{NoInit, nameLength};
+				s.Read(item.Name.data(), std::int32_t(nameLength));
+			}
 
 			item.Offset = s.ReadVariableUint64();
 
-			if ((item.Flags & ItemFlags::Directory) != ItemFlags::Directory) {
+			if (!isDirectory) {
 				item.UncompressedSize = s.ReadVariableUint32();
 				if (HasCompressedSize(item.Flags)) {
 					item.Size = s.ReadVariableUint32();
@@ -301,6 +368,21 @@ namespace Death { namespace IO {
 	{
 		path = path.trimmedPrefix("/\\");
 
+		if (_useHashIndex) {
+			std::uint64_t hashedPath = FileNameToHash(path);
+
+			// Items are always sorted by PakWriter
+			Item* foundItem = std::lower_bound(_rootItems.begin(), _rootItems.end(), hashedPath, [](const PakFile::Item& a, std::uint64_t b) {
+				return std::memcmp(a.Name.data(), &b, HashIndexLength) < 0;
+			});
+
+			if DEATH_UNLIKELY(foundItem == _rootItems.end() || std::memcmp(foundItem->Name.data(), &hashedPath, HashIndexLength) != 0) {
+				return nullptr;
+			}
+
+			return foundItem;
+		}
+
 		Array<Item>* items = &_rootItems;
 		while (true) {
 			auto separator = path.findAnyOr("/\\", path.end());
@@ -317,7 +399,7 @@ namespace Death { namespace IO {
 				return a.Name < b;
 			});
 
-			if (foundItem == items->end() || foundItem->Name != name) {
+			if DEATH_UNLIKELY(foundItem == items->end() || foundItem->Name != name) {
 				return nullptr;
 			}
 
@@ -354,6 +436,14 @@ namespace Death { namespace IO {
 		bool Open(PakFile& pakFile, const StringView path, FileSystem::EnumerationOptions options)
 		{
 			_options = options;
+			_index = 0;
+
+			if (pakFile._useHashIndex) {
+				// Cannot enumerate directories when using hash index
+				_path[0] = '\0';
+				return false;
+			}
+
 			if (path.empty()) {
 				_childItems = pakFile._rootItems;
 			} else {
@@ -365,8 +455,6 @@ namespace Death { namespace IO {
 
 				_childItems = parentItem->ChildItems;
 			}
-
-			_index = 0;
 
 			if (!_childItems.empty()) {
 				std::size_t pathLength = path.size();
@@ -405,7 +493,7 @@ namespace Death { namespace IO {
 		void Increment()
 		{
 			while (true) {
-				if (_index >= _childItems.size()) {
+				if DEATH_UNLIKELY(_index >= _childItems.size()) {
 					_path[0] = '\0';
 					return;
 				}
@@ -511,8 +599,8 @@ namespace Death { namespace IO {
 		return _path;
 	}
 
-	PakWriter::PakWriter(StringView path)
-		: _finalized(false)
+	PakWriter::PakWriter(StringView path, bool useHashIndex, bool useCompressedIndex)
+		: _finalized(false), _useHashIndex(useHashIndex), _useCompressedIndex(useCompressedIndex)
 	{
 		_alreadyExisted = FileSystem::FileExists(path);
 		_outputStream = std::make_unique<FileStream>(path, FileAccess::Write);
@@ -529,45 +617,24 @@ namespace Death { namespace IO {
 		return _outputStream->IsValid();
 	}
 
-#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
-	static void CopyToDeflate(Stream& input, Stream& output, std::int64_t& uncompressedSize)
-	{
-		DeflateWriter dw(output);
-		uncompressedSize = input.CopyTo(dw);
-	}
-#endif
-#if defined(WITH_LZ4)
-	static void CopyToLz4(Stream& input, Stream& output, std::int64_t& uncompressedSize)
-	{
-		Lz4Writer dw(output);
-		uncompressedSize = input.CopyTo(dw);
-	}
-#endif
-#if defined(WITH_ZSTD)
-	static void CopyToZstd(Stream& input, Stream& output, std::int64_t& uncompressedSize)
-	{
-		ZstdWriter dw(output);
-		uncompressedSize = input.CopyTo(dw);
-	}
-#endif
-
 	bool PakWriter::AddFile(Stream& stream, StringView path, PakPreferredCompression preferredCompression)
 	{
 		DEATH_ASSERT(_outputStream->IsValid(), "Invalid output stream specified", false);
 		DEATH_ASSERT(!path.empty() && path[path.size() - 1] != '/' && path[path.size() - 1] != '\\',
 			("\"{}\" is not valid file path", String::nullTerminatedView(path).data()), false);
 
-		PakFile::Item* parentItem = FindOrCreateParentItem(path);
-		Array<PakFile::Item>* items;
-		if (parentItem != nullptr) {
-			items = &parentItem->ChildItems;
-		} else {
-			items = &_rootItems;
+		Array<PakFile::Item>* items = &_rootItems;
+		if (!_useHashIndex) {
+			PakFile::Item* parentItem = FindOrCreateParentItem(path);
+			if (parentItem != nullptr) {
+				items = &parentItem->ChildItems;
+			}
 		}
 
 		for (PakFile::Item& item : *items) {
 			if (item.Name == path) {
 				// File already exists in the .pak file
+				LOGW("File \"{}\" already exists in the .pak file", path);
 				return false;
 			}
 		}
@@ -610,7 +677,13 @@ namespace Death { namespace IO {
 		DEATH_ASSERT(uncompressedSize < UINT32_MAX && size < UINT32_MAX, "File size in .pak file exceeded the allowed range", false);
 
 		PakFile::Item* newItem = &arrayAppend(*items, PakFile::Item());
-		newItem->Name = path;
+		if (_useHashIndex) {
+			newItem->Name = String{NoInit, HashIndexLength};
+			std::uint64_t hash = FileNameToHash(path);
+			std::memcpy(newItem->Name.data(), &hash, HashIndexLength);
+		} else {
+			newItem->Name = path;
+		}
 		newItem->Flags = flags;
 		newItem->Offset = offset;
 		newItem->UncompressedSize = std::uint32_t(uncompressedSize);
@@ -628,21 +701,14 @@ namespace Death { namespace IO {
 		_finalized = true;
 
 		Array<PakFile::Item*> queuedDirectories;
+		bool hasFiles = false;
 
 		for (PakFile::Item& item : _rootItems) {
 			if ((item.Flags & PakFile::ItemFlags::Directory) == PakFile::ItemFlags::Directory) {
 				arrayAppend(queuedDirectories, &item);
+			} else {
+				hasFiles = true;
 			}
-		}
-
-		if (queuedDirectories.empty()) {
-			// No files added - close the stream and try to delete the file
-			auto path = _outputStream->GetPath();
-			_outputStream = nullptr;
-			if (!_alreadyExisted) {
-				FileSystem::RemoveFile(path);
-			}
-			return;
 		}
 
 		for (std::int32_t i = 0; i < queuedDirectories.size(); i++) {
@@ -650,77 +716,104 @@ namespace Death { namespace IO {
 			for (PakFile::Item& child : item.ChildItems) {
 				if ((child.Flags & PakFile::ItemFlags::Directory) == PakFile::ItemFlags::Directory) {
 					arrayAppend(queuedDirectories, &child);
+				} else {
+					hasFiles = true;
 				}
 			}
 		}
 
-		std::size_t i = queuedDirectories.size() - 1;
-		while (true) {
-			PakFile::Item& item = *queuedDirectories[i];
-			item.Offset = _outputStream->GetPosition();
+		if DEATH_UNLIKELY(!hasFiles) {
+			// No files added - close the stream and try to delete the file
+			String path = _outputStream->GetPath();
+			_outputStream = nullptr;
+			if (!_alreadyExisted) {
+				FileSystem::RemoveFile(path);
+			}
+			return;
+		}
 
-			// Names need to be sorted, because binary search is used to find files
-			std::sort(item.ChildItems.begin(), item.ChildItems.end(), [](const PakFile::Item& a, const PakFile::Item& b) {
-				return a.Name < b.Name;
-			});
+		if (!queuedDirectories.empty()) {
+			std::size_t i = queuedDirectories.size() - 1;
+			while (true) {
+				PakFile::Item& item = *queuedDirectories[i];
+				item.Offset = _outputStream->GetPosition();
+
+				// Names need to be sorted, because binary search is used to find files
+				std::sort(item.ChildItems.begin(), item.ChildItems.end(), [](const PakFile::Item& a, const PakFile::Item& b) {
+					return a.Name < b.Name;
+				});
 
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
-			DeflateWriter dw(*_outputStream);
-			dw.WriteVariableUint32(std::uint32_t(item.ChildItems.size()));
-			for (PakFile::Item& childItem : item.ChildItems) {
-				WriteItemDescription(dw, childItem);
-			}
-#else
-			_outputStream->WriteVariableUint32(std::uint32_t(item.ChildItems.size()));
-			for (PakFile::Item& childItem : item.ChildItems) {
-				WriteItemDescription(*_outputStream, childItem);
-			}
+				if (_useCompressedIndex) {
+					DeflateWriter dw(*_outputStream);
+					dw.WriteVariableUint32(std::uint32_t(item.ChildItems.size()));
+					for (PakFile::Item& childItem : item.ChildItems) {
+						WriteItemDescription(dw, childItem);
+					}
+				} else
 #endif
+				{
+					_outputStream->WriteVariableUint32(std::uint32_t(item.ChildItems.size()));
+					for (PakFile::Item& childItem : item.ChildItems) {
+						WriteItemDescription(*_outputStream, childItem);
+					}
+				}
 
-			if DEATH_UNLIKELY(i == 0) {
-				break;
+				if DEATH_UNLIKELY(i == 0) {
+					break;
+				}
+				i--;
 			}
-			i--;
 		}
 
 		std::int64_t rootIndexOffset = _outputStream->GetPosition();
 
 		// Root index
 		{
-
 			// Names need to be sorted, because binary search is used to find files
 			std::sort(_rootItems.begin(), _rootItems.end(), [](const PakFile::Item& a, const PakFile::Item& b) {
 				return a.Name < b.Name;
 			});
 
+			DEATH_ASSERT(MountPoint.size() < INT16_MAX, "Invalid mount point");
+
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
-			DeflateWriter dw(*_outputStream);
-			dw.WriteVariableUint32(std::uint32_t(MountPoint.size()));
-			dw.Write(MountPoint.data(), std::int32_t(MountPoint.size()));
+			if (_useCompressedIndex) {
+				DeflateWriter dw(*_outputStream);
+				dw.WriteVariableUint32(std::uint32_t(MountPoint.size()));
+				dw.Write(MountPoint.data(), std::int32_t(MountPoint.size()));
 
-			dw.WriteVariableUint32(std::uint32_t(_rootItems.size()));
-			for (PakFile::Item& item : _rootItems) {
-				WriteItemDescription(dw, item);
-			}
-#else
-			_outputStream->WriteVariableUint32(std::uint32_t(MountPoint.size()));
-			_outputStream->Write(MountPoint.data(), std::int32_t(MountPoint.size()));
-
-			_outputStream->WriteVariableUint32(std::uint32_t(_rootItems.size()));
-			for (PakFile::Item& item : _rootItems) {
-				WriteItemDescription(*_outputStream, item);
-			}
+				dw.WriteVariableUint32(std::uint32_t(_rootItems.size()));
+				for (PakFile::Item& item : _rootItems) {
+					WriteItemDescription(dw, item);
+				}
+			} else
 #endif
+			{
+				_outputStream->WriteVariableUint32(std::uint32_t(MountPoint.size()));
+				_outputStream->Write(MountPoint.data(), std::int32_t(MountPoint.size()));
+
+				_outputStream->WriteVariableUint32(std::uint32_t(_rootItems.size()));
+				for (PakFile::Item& item : _rootItems) {
+					WriteItemDescription(*_outputStream, item);
+				}
+			}
 		}
 
 		// Footer
+		PakFileFlags fileFlags = PakFileFlags::None;
+		if (_useHashIndex) {
+			fileFlags |= PakFileFlags::HashIndex;
+		}
+#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
+		if (_useCompressedIndex) {
+			fileFlags |= PakFileFlags::DeflateCompressedIndex;
+		}
+#endif
+
 		_outputStream->Write(Signature, sizeof(Signature));
 		_outputStream->WriteValue<std::uint16_t>(Version);
-#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
-		_outputStream->WriteValue<std::uint16_t>(std::uint16_t(PakFileFlags::DeflateCompressedIndex));
-#else
-		_outputStream->WriteValue<std::uint16_t>(std::uint16_t(PakFileFlags::None));
-#endif
+		_outputStream->WriteValue<std::uint16_t>(std::uint16_t(fileFlags));
 		_outputStream->WriteValue<std::uint64_t>(rootIndexOffset);
 
 		// Close the stream
@@ -729,12 +822,12 @@ namespace Death { namespace IO {
 
 	PakFile::Item* PakWriter::FindOrCreateParentItem(StringView& path)
 	{
-		path = path.trimmedPrefix("/\\");
+		path = path.trimmedPrefix("/\\"_s);
 
 		Array<PakFile::Item>* items = &_rootItems;
 		PakFile::Item* parentItem = nullptr;
 		while (true) {
-			auto separator = path.findAny("/\\");
+			auto separator = path.findAny("/\\"_s);
 			if (separator == nullptr) {
 				return parentItem;
 			}
@@ -763,14 +856,22 @@ namespace Death { namespace IO {
 
 	void PakWriter::WriteItemDescription(Stream& s, PakFile::Item& item)
 	{
+		bool isDirectory = (item.Flags & PakFile::ItemFlags::Directory) == PakFile::ItemFlags::Directory;
+
 		s.WriteVariableUint32(std::uint32_t(item.Flags));
 
-		s.WriteVariableUint32(std::uint32_t(item.Name.size()));
-		s.Write(item.Name.data(), std::int32_t(item.Name.size()));
+		if (_useHashIndex) {
+			DEATH_DEBUG_ASSERT(!isDirectory);
+			DEATH_DEBUG_ASSERT(item.Name.size() == HashIndexLength);
+			s.Write(item.Name.data(), HashIndexLength);
+		} else {
+			s.WriteVariableUint32(std::uint32_t(item.Name.size()));
+			s.Write(item.Name.data(), std::int32_t(item.Name.size()));
+		}
 
 		s.WriteVariableUint64(item.Offset);
 
-		if ((item.Flags & PakFile::ItemFlags::Directory) != PakFile::ItemFlags::Directory) {
+		if (!isDirectory) {
 			s.WriteVariableUint32(item.UncompressedSize);
 
 			if (PakFile::HasCompressedSize(item.Flags)) {

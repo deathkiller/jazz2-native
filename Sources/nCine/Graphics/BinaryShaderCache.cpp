@@ -7,22 +7,21 @@
 
 #include <IO/FileSystem.h>
 #include <IO/Stream.h>
+#include <IO/Compression/DeflateStream.h>
 
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
+using namespace Death::IO::Compression;
+
+static constexpr std::uint8_t Signature[] = { 0xEF, 0xBB, 0xBF, 0xF0, 0x9F, 0x8C, 0xAA, 0x20 };
+static constexpr std::uint16_t Version = 1 | 0x1000;
 
 namespace nCine
 {
 	namespace
 	{
-		std::int32_t bufferSize = 0;
+		std::uint32_t bufferSize = 0;
 		std::unique_ptr<std::uint8_t[]> bufferPtr;
-
-		std::uint64_t HashCombine(std::uint64_t h1, std::uint64_t h2)
-		{
-			h1 ^= h2 + 0x9e3779b97f4a7c15ULL + (h1 << 12) + (h1 >> 4);
-			return h1;
-		}
 	}
 
 	BinaryShaderCache::BinaryShaderCache(StringView path)
@@ -60,9 +59,9 @@ namespace nCine
 
 		const auto& infoStrings = gfxCaps.GetGLInfoStrings();
 
-		platformHash_ = HashCombine(
-			xxHash3(infoStrings.renderer, std::strlen(infoStrings.renderer)),
-			xxHash3(infoStrings.glVersion, std::strlen(infoStrings.glVersion)));
+		platformHash_ =
+			xxHash3(infoStrings.renderer, std::strlen(infoStrings.renderer),
+				xxHash3(infoStrings.glVersion, std::strlen(infoStrings.glVersion)));
 
 		char platformHashString[24];
 		std::size_t platformHashLength = formatInto(platformHashString, "{:.16x}", platformHash_);
@@ -96,39 +95,48 @@ namespace nCine
 			return false;
 		}
 
-		std::unique_ptr<Stream> fileHandle = fs::Open(cachePath, FileAccess::Read);
-		std::int32_t fileSize = std::int32_t(fileHandle->GetSize());
-		if (fileSize <= 28 || fileSize > 8 * 1024 * 1024) {
+		std::unique_ptr<Stream> s = fs::Open(cachePath, FileAccess::Read);
+		std::int64_t fileSize = s->GetSize();
+		if (fileSize <= 20 || fileSize > 16 * 1024 * 1024) {
+			LOGW("Invalid .shader file");
 			return false;
 		}
 
-		if (bufferSize < fileSize) {
-			bufferSize = fileSize;
+		std::uint8_t signature[sizeof(Signature)];
+		s->Read(signature, sizeof(signature));
+		if (std::memcmp(signature, Signature, sizeof(Signature)) != 0) {
+			LOGW("Invalid .shader file");
+			return false;
+		}
+
+		std::uint16_t fileVersion = s->ReadValue<std::uint16_t>();
+		if (fileVersion != Version) {
+			LOGW("Unsupported .shader file version");
+			return false;
+		}
+
+		std::uint64_t fileShaderVersion = s->ReadVariableUint64();
+		// Shader version must be the same
+		if (fileShaderVersion != shaderVersion) {
+			return false;
+		}
+
+		std::uint32_t fileBinaryFormat = s->ReadVariableUint32();
+		std::uint32_t fileBatchSize = s->ReadVariableUint32();
+		std::uint32_t fileShaderLength = s->ReadVariableUint32();
+		DEATH_ASSERT(fileShaderLength > 0, "Invalid .shader file", false);
+
+		if (bufferSize < fileShaderLength) {
+			bufferSize = fileShaderLength;
 			bufferPtr = std::make_unique<std::uint8_t[]>(bufferSize);
 		}
 
-		fileHandle->Read(bufferPtr.get(), fileSize);
-		fileHandle->Dispose();
+		DeflateStream ds(*s);
+		std::int64_t bytesRead = ds.Read(bufferPtr.get(), std::int64_t(fileShaderLength));
+		DEATH_ASSERT(bytesRead == fileShaderLength, "Failed to read binary shader data", false);
 
-		std::uint64_t signature = *(std::uint64_t*)&bufferPtr[0];
-		std::uint64_t cachedShaderVersion = *(std::uint64_t*)&bufferPtr[8];
-
-		// Shader version must be the same
-		if (signature != 0x20AA8C9FF0BFBBEF || cachedShaderVersion != shaderVersion) {
-			return false;
-		}
-
-		std::int32_t batchSize = *(std::int32_t*)&bufferPtr[16];
-		std::uint32_t binaryFormat = *(std::uint32_t*)&bufferPtr[20];
-		std::int32_t bufferLength = *(std::int32_t*)&bufferPtr[24];
-		void* buffer = &bufferPtr[28];
-
-		if (bufferLength <= 0 || bufferLength > fileSize - 28) {
-			return false;
-		}
-
-		_glProgramBinary(program->GetGLHandle(), binaryFormat, buffer, bufferLength);
-		program->SetBatchSize(batchSize);
+		_glProgramBinary(program->GetGLHandle(), fileBinaryFormat, bufferPtr.get(), std::int64_t(fileShaderLength));
+		program->SetBatchSize(fileBatchSize);
 		return program->FinalizeAfterLinking(introspection);
 	}
 
@@ -139,35 +147,38 @@ namespace nCine
 			return false;
 		}
 
-		GLint length = 0;
-		glGetProgramiv(program->GetGLHandle(), _glProgramBinaryLength, &length);
-		if (length <= 0) {
+		GLint shaderLength = 0;
+		glGetProgramiv(program->GetGLHandle(), _glProgramBinaryLength, &shaderLength);
+		if (shaderLength <= 0) {
 			return false;
 		}
 
-		if (bufferSize < length) {
-			bufferSize = length;
+		if (bufferSize < std::uint32_t(shaderLength)) {
+			bufferSize = std::uint32_t(shaderLength);
 			bufferPtr = std::make_unique<std::uint8_t[]>(bufferSize);
 		} 
 
-		length = 0;
+		shaderLength = 0;
 		unsigned int binaryFormat = 0;
-		_glGetProgramBinary(program->GetGLHandle(), bufferSize, &length, &binaryFormat, bufferPtr.get());
-		if (length <= 0 || length > bufferSize) {
+		_glGetProgramBinary(program->GetGLHandle(), bufferSize, &shaderLength, &binaryFormat, bufferPtr.get());
+		if (shaderLength <= 0 || std::uint32_t(shaderLength) > bufferSize) {
 			return false;
 		}
 
-		std::unique_ptr<Stream> fileHandle = fs::Open(cachePath, FileAccess::Write);
-		if (!fileHandle->IsValid()) {
+		std::unique_ptr<Stream> s = fs::Open(cachePath, FileAccess::Write);
+		if (!s->IsValid()) {
 			return false;
 		}
 
-		fileHandle->WriteValue<std::uint64_t>(0x20AA8C9FF0BFBBEF);
-		fileHandle->WriteValue<std::uint64_t>(shaderVersion);
-		fileHandle->WriteValue<std::int32_t>(program->GetBatchSize());
-		fileHandle->WriteValue<std::uint32_t>(binaryFormat);
-		fileHandle->WriteValue<std::int32_t>(length);
-		fileHandle->Write(bufferPtr.get(), length);
+		s->Write(Signature, sizeof(Signature));
+		s->WriteValue<std::uint16_t>(Version);
+		s->WriteVariableUint64(shaderVersion);
+		s->WriteVariableUint32(binaryFormat);
+		s->WriteVariableUint32(program->GetBatchSize());
+		s->WriteVariableUint32(shaderLength);
+
+		DeflateWriter dw(*s);
+		dw.Write(bufferPtr.get(), shaderLength);
 
 		return true;
 	}
@@ -176,21 +187,21 @@ namespace nCine
 	{
 		auto platformHashString = fs::GetFileName(path_);
 
-		std::uint32_t filesRemoved = 0;
+		std::uint32_t directoriesRemoved = 0;
 		for (auto shaderPath : fs::Directory(fs::GetDirectoryName(path_))) {
 			if (fs::DirectoryExists(shaderPath)) {
 				StringView filename = fs::GetFileName(shaderPath);
 				if (filename != platformHashString) {
 					fs::RemoveDirectoryRecursive(shaderPath);
-					filesRemoved++;
+					directoriesRemoved++;
 				}
 			} else if (fs::GetExtension(shaderPath) == "shader"_s) {
+				// Remove stray .shader files that are not in a platform directory
 				fs::RemoveFile(shaderPath);
-				filesRemoved++;
 			}
 		}
 
-		return filesRemoved;
+		return directoriesRemoved;
 	}
 
 	bool BinaryShaderCache::Clear()

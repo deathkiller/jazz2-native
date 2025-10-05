@@ -2432,13 +2432,12 @@ static void XXH_free(void* p) { free(p); }
 #endif
 
 #if (XXH_DEBUGLEVEL>=1)
-#  include <assert.h>   /* note: can still be disabled with NDEBUG */
-#  define XXH_ASSERT(c)   assert(c)
+#  define XXH_ASSERT(c)		DEATH_ASSERT(c)
 #else
 #  if defined(__INTEL_COMPILER)
-#    define XXH_ASSERT(c)   XXH_ASSUME((unsigned char) (c))
+#    define XXH_ASSERT(c)	XXH_ASSUME((unsigned char) (c))
 #  else
-#    define XXH_ASSERT(c)   XXH_ASSUME(c)
+#    define XXH_ASSERT(c)	XXH_ASSUME(c)
 #  endif
 #endif
 

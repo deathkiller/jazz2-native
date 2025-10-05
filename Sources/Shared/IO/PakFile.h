@@ -143,6 +143,7 @@ namespace Death { namespace IO {
 		Containers::String _path;
 		Containers::String _mountPoint;
 		Containers::Array<Item> _rootItems;
+		bool _useHashIndex;
 
 		void ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool deflateCompressed, std::uint32_t depth);
 		Containers::Array<Item>* ReadIndexFromStream(Stream& s, Item* parentItem);
@@ -161,7 +162,7 @@ namespace Death { namespace IO {
 		/** @brief Specifies optional mount point for the container */
 		Containers::String MountPoint;
 
-		explicit PakWriter(Containers::StringView path);
+		explicit PakWriter(Containers::StringView path, bool useHashIndex = false, bool useCompressedIndex = false);
 		~PakWriter();
 
 		PakWriter(const PakWriter&) = delete;
@@ -183,6 +184,8 @@ namespace Death { namespace IO {
 		Containers::Array<PakFile::Item> _rootItems;
 		bool _finalized;
 		bool _alreadyExisted;
+		bool _useHashIndex;
+		bool _useCompressedIndex;
 
 		PakFile::Item* FindOrCreateParentItem(Containers::StringView& path);
 		void WriteItemDescription(Stream& s, PakFile::Item& item);
