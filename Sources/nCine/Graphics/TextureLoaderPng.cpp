@@ -107,7 +107,7 @@ namespace nCine
 					auto buffer = std::make_unique<GLubyte[]>(dataLength);
 
 					MemoryStream ms(data.data() + 2, data.size() - 2);
-					DeflateStream uc(ms, dataLength);
+					DeflateStream uc(ms, std::int32_t(dataLength));
 					uc.Read(buffer.get(), dataLength);
 					DEATH_ASSERT(uc.IsValid(), "PNG file cannot be decompressed", );
 

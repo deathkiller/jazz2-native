@@ -5,9 +5,10 @@
 
 #include <Containers/Pair.h>
 #include <Containers/String.h>
-#include <Core/xxHash.h>
+#include <Cryptography/xxHash.h>
 
 using namespace Death::Containers;
+using namespace Death::Cryptography;
 
 namespace nCine
 {
@@ -112,7 +113,7 @@ namespace nCine
 	public:
 		hash_t operator()(const K& key) const
 		{
-			return hash_t(Death::xxHash3(reinterpret_cast<const char*>(&key), sizeof(K)));
+			return hash_t(xxHash3(reinterpret_cast<const char*>(&key), sizeof(K)));
 		}
 	};
 
@@ -124,7 +125,7 @@ namespace nCine
 		hash64_t operator()(const char*& key) const
 		{
 			const unsigned int length = (unsigned int)strlen(key);
-			return hash_t(Death::xxHash3(key, length));
+			return hash_t(xxHash3(key, length));
 		}
 	};
 
@@ -134,7 +135,7 @@ namespace nCine
 	public:
 		hash_t operator()(const String& string) const
 		{
-			return hash_t(Death::xxHash3(string.data(), string.size()));
+			return hash_t(xxHash3(string.data(), string.size()));
 		}
 	};
 
@@ -156,7 +157,7 @@ namespace nCine
 	public:
 		hash64_t operator()(const K& key) const
 		{
-			return hash64_t(Death::xxHash3(reinterpret_cast<const char*>(&key), sizeof(K)));
+			return hash64_t(xxHash3(reinterpret_cast<const char*>(&key), sizeof(K)));
 		}
 	};
 
@@ -168,7 +169,7 @@ namespace nCine
 		hash64_t operator()(const char*& key) const
 		{
 			const unsigned int length = (unsigned int)strlen(key);
-			return hash64_t(Death::xxHash3(key, length));
+			return hash64_t(xxHash3(key, length));
 		}
 	};
 
@@ -178,7 +179,7 @@ namespace nCine
 	public:
 		hash64_t operator()(const String& string) const
 		{
-			return hash64_t(Death::xxHash3(string.data(), string.size()));
+			return hash64_t(xxHash3(string.data(), string.size()));
 		}
 	};
 

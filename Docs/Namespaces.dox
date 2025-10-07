@@ -625,8 +625,19 @@ See also @ref third-party for the licenses of the libraries used.
 /** @file Shared/Core/ITraceSink.h
 	@brief Interface @ref Death::ITraceSink
 */
-/** @file Shared/Core/xxHash.h
-	@brief Function @ref Death::xxHash3
+
+/** @dir Shared/Cryptography
+	@brief Namespace @ref Death::Cryptography
+*/
+/** @namespace Death::Cryptography
+	@brief Cryptographic and hashing utilities
+
+	Provides cryptographic services, including secure encoding and decoding
+	of data, as well as many other operations, such as hashing, random number
+	generation, and message authentication.
+*/
+/** @file Shared/Cryptography/xxHash.h
+	@brief Function @ref Death::Cryptography::xxHash3
 */
 
 /** @dir Shared/IO
@@ -634,6 +645,9 @@ See also @ref third-party for the licenses of the libraries used.
 */
 /** @namespace Death::IO
 	@brief File system, streaming and IO-related classes
+
+	Contains types that allow reading and writing to files and data streams,
+	and types that provide basic file and directory support.
 */
 /** @file Shared/IO/AndroidAssetStream.h
 	@brief Class @ref Death::IO::AndroidAssetStream
@@ -687,6 +701,9 @@ See also @ref third-party for the licenses of the libraries used.
 */
 /** @namespace Death::Threading
 	@brief Multithreading-related classes
+
+	Provides classes that enable multithreaded programming, synchronizing
+	thread activities and access to data.
 */
 /** @file Shared/Threading/Event.h
 	@brief Class @ref Death::Threading::Event, typedef @ref Death::Threading::AutoResetEvent, @ref Death::Threading::ManualResetEvent

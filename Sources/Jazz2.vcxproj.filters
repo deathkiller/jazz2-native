@@ -259,6 +259,12 @@
     <Filter Include="Source Files\Shared\Base">
       <UniqueIdentifier>{28c08749-4861-4751-a607-1c2511ec63f0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Shared\Cryptography">
+      <UniqueIdentifier>{2fdc883a-97b8-463f-a9d4-accf54c50825}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Shared\Cryptography">
+      <UniqueIdentifier>{ed3ea44b-0e5e-4811-b0a3-a1303a3f4fa6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resources.h">
@@ -1653,8 +1659,8 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Format.h">
       <Filter>Header Files\Shared\Base</Filter>
     </ClInclude>
-    <ClInclude Include="$(ExtensionLibraryPath)\Core\xxHash.h">
-      <Filter>Header Files\Shared\Core</Filter>
+    <ClInclude Include="$(ExtensionLibraryPath)\Cryptography\xxHash.h">
+      <Filter>Header Files\Shared\Cryptography</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2690,8 +2696,8 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Base\Format.cpp">
       <Filter>Source Files\Shared\Base</Filter>
     </ClCompile>
-    <ClCompile Include="$(ExtensionLibraryPath)\Core\xxHash.cpp">
-      <Filter>Source Files\Shared\Core</Filter>
+    <ClCompile Include="$(ExtensionLibraryPath)\Cryptography\xxHash.cpp">
+      <Filter>Source Files\Shared\Cryptography</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

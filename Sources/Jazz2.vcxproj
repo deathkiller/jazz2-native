@@ -320,7 +320,7 @@
     <ClInclude Include="$(ExtensionLibraryPath)\IO\WebRequest.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Containers.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Format.h" />
-    <ClInclude Include="$(ExtensionLibraryPath)\Core\xxHash.h" />
+    <ClInclude Include="$(ExtensionLibraryPath)\Cryptography\xxHash.h" />
     <ClInclude Include="Jazz2\Actors\Multiplayer\MpPlayer.h" />
     <ClInclude Include="Jazz2\ContentResolver.h" />
     <ClInclude Include="Jazz2\Input\ControlScheme.h" />
@@ -765,7 +765,7 @@
     <ClCompile Include="$(ExtensionLibraryPath)\IO\Compression\ZstdStream.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\IO\WebRequest.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Base\Format.cpp" />
-    <ClCompile Include="$(ExtensionLibraryPath)\Core\xxHash.cpp" />
+    <ClCompile Include="$(ExtensionLibraryPath)\Cryptography\xxHash.cpp" />
     <ClCompile Include="Jazz2\Actors\ActorBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.cpp" />

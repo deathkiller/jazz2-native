@@ -399,7 +399,7 @@ namespace nCine::Backends
 		}
 
 		// Current GLFW version does not return an UTF-8 string (https://github.com/glfw/glfw/issues/837)
-		textInputEvent_.length = Utf8::FromCodePoint(c, textInputEvent_.text);
+		textInputEvent_.length = (std::int32_t)Utf8::FromCodePoint(c, textInputEvent_.text);
 		if (textInputEvent_.length > 0) {
 			inputEventHandler_->OnTextInput(textInputEvent_);
 		}

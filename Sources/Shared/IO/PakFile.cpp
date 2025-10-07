@@ -6,14 +6,13 @@
 #include "Compression/ZstdStream.h"
 #include "../Containers/GrowableArray.h"
 #include "../Containers/SmallVector.h"
-#include "../Containers/StringConcatenable.h"
-#include "../Containers/StringUtils.h"
-#include "../Core/xxHash.h"
+#include "../Cryptography/xxHash.h"
 
 #include <algorithm>
 
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
+using namespace Death::Cryptography;
 
 enum class PakFileFlags : std::uint16_t {
 	None = 0x00,
@@ -36,7 +35,7 @@ namespace Death { namespace IO {
 
 	static std::uint64_t FileNameToHash(StringView fileName)
 	{
-		SmallVector<char, 256> normalizedFileName(DefaultInit, fileName.size());
+		SmallVector<char, 512> normalizedFileName(DefaultInit, fileName.size());
 		bool lastWasSlash = false;
 		std::size_t i = 0;
 
@@ -775,13 +774,13 @@ namespace Death { namespace IO {
 				return a.Name < b.Name;
 			});
 
-			DEATH_ASSERT(MountPoint.size() < INT16_MAX, "Invalid mount point");
+			DEATH_ASSERT(_mountPoint.size() < INT16_MAX, "Invalid mount point");
 
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
 			if (_useCompressedIndex) {
 				DeflateWriter dw(*_outputStream);
-				dw.WriteVariableUint32(std::uint32_t(MountPoint.size()));
-				dw.Write(MountPoint.data(), std::int32_t(MountPoint.size()));
+				dw.WriteVariableUint32(std::uint32_t(_mountPoint.size()));
+				dw.Write(_mountPoint.data(), std::int32_t(_mountPoint.size()));
 
 				dw.WriteVariableUint32(std::uint32_t(_rootItems.size()));
 				for (PakFile::Item& item : _rootItems) {
@@ -790,8 +789,8 @@ namespace Death { namespace IO {
 			} else
 #endif
 			{
-				_outputStream->WriteVariableUint32(std::uint32_t(MountPoint.size()));
-				_outputStream->Write(MountPoint.data(), std::int32_t(MountPoint.size()));
+				_outputStream->WriteVariableUint32(std::uint32_t(_mountPoint.size()));
+				_outputStream->Write(_mountPoint.data(), std::int32_t(_mountPoint.size()));
 
 				_outputStream->WriteVariableUint32(std::uint32_t(_rootItems.size()));
 				for (PakFile::Item& item : _rootItems) {
@@ -818,6 +817,16 @@ namespace Death { namespace IO {
 
 		// Close the stream
 		_outputStream = nullptr;
+	}
+
+	Containers::StringView PakWriter::GetMountPoint() const
+	{
+		return _mountPoint;
+	}
+
+	void PakWriter::SetMountPoint(Containers::String value)
+	{
+		_mountPoint = Death::move(value);
 	}
 
 	PakFile::Item* PakWriter::FindOrCreateParentItem(StringView& path)
