@@ -36,7 +36,7 @@ set(HEADERS
 	${NCINE_SOURCE_DIR}/Shared/Containers/Tags.h
 	${NCINE_SOURCE_DIR}/Shared/Core/ITraceSink.h
 	${NCINE_SOURCE_DIR}/Shared/Core/Logger.h
-	${NCINE_SOURCE_DIR}/Shared/Core/xxHash.h
+	${NCINE_SOURCE_DIR}/Shared/Cryptography/xxHash.h
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/BoundedFileStream.h
 	${NCINE_SOURCE_DIR}/Shared/IO/EmscriptenFileStream.h

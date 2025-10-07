@@ -9,7 +9,7 @@ set(SOURCES
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringUtils.cpp
 	${NCINE_SOURCE_DIR}/Shared/Containers/StringView.cpp
 	${NCINE_SOURCE_DIR}/Shared/Core/Logger.cpp
-	${NCINE_SOURCE_DIR}/Shared/Core/xxHash.cpp
+	${NCINE_SOURCE_DIR}/Shared/Cryptography/xxHash.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/AndroidAssetStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/BoundedFileStream.cpp
 	${NCINE_SOURCE_DIR}/Shared/IO/EmscriptenFileStream.cpp

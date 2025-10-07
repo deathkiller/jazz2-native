@@ -1671,7 +1671,7 @@ namespace Jazz2::Tiles
 		if (!isAnimated && _alreadyRendered) {
 			// If it's not animated, it can be rendered only once
 			auto& chain = Viewport::GetChain();
-			for (std::int32_t i = chain.size() - 1; i >= 0; i--) {
+			for (std::int32_t i = std::int32_t(chain.size()) - 1; i >= 0; i--) {
 				auto& item = chain[i];
 				if (item == _view.get()) {
 					chain.erase(&item);

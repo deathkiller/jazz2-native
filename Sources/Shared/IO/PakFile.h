@@ -159,9 +159,6 @@ namespace Death { namespace IO {
 	class PakWriter
 	{
 	public:
-		/** @brief Specifies optional mount point for the container */
-		Containers::String MountPoint;
-
 		explicit PakWriter(Containers::StringView path, bool useHashIndex = false, bool useCompressedIndex = false);
 		~PakWriter();
 
@@ -179,7 +176,13 @@ namespace Death { namespace IO {
 		/** @brief Writes file index and finalizes the `.pak` containers */
 		void Finalize();
 
+		/** @brief Returns optional mount point for the container */
+		Containers::StringView GetMountPoint() const;
+		/** @brief Sets optional mount point for the container */
+		void SetMountPoint(Containers::String value);
+
 	private:
+		Containers::String _mountPoint;
 		std::unique_ptr<FileStream> _outputStream;
 		Containers::Array<PakFile::Item> _rootItems;
 		bool _finalized;

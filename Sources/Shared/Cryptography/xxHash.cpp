@@ -8078,7 +8078,7 @@ XXH3_128bits_update_dispatch(XXH_NOESCAPE XXH3_state_t* state, XXH_NOESCAPE cons
 #endif
 /* End of xxh_x86dispatch.h */
 
-namespace Death {
+namespace Death { namespace Cryptography {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 	DEATH_NEVER_INLINE std::uint64_t xxHash3(const void* data, std::size_t length)
@@ -8091,4 +8091,4 @@ namespace Death {
 		return XXH3_64bits_withSeed(data, length, seed);
 	}
 
-}
+}}
