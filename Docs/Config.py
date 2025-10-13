@@ -28,7 +28,6 @@ LINKS_NAVBAR2 = [
 def _doxygen_ignore(code: str):
     for macro, replace in [('DOXYGEN_ELLIPSIS(', '…'), ('DOXYGEN_IGNORE(', '')]:
         while macro in code:
-            print("REPLACE:", macro)
             i = code.index(macro)
             depth = 1
             for j in range(i + len(macro), len(code)):
@@ -39,6 +38,14 @@ def _doxygen_ignore(code: str):
             code = code[:i] + replace + code[j+1:]
     return code
 
+# Highlighting of 0x…_rgb color literals and related variants
+_doxygen_colors_src = re.compile(r"""<span class="mh">0x(?P<hex>[0-9a-f]{6})(?P<alpha>[0-9a-f]{2})?(</span><span class="n">)?(?P<literal>_s?rgba?(f|h)?)</span>""")
+_doxygen_colors_dst = r"""<span class="mh">0x\g<hex>\g<alpha>\g<literal><span class="m-code-color" style="background-color: #\g<hex>;"></span></span>"""
+
 M_CODE_FILTERS_PRE = {
     'C++': _doxygen_ignore
+}
+
+M_CODE_FILTERS_POST = {
+    'C++': lambda str: _doxygen_colors_src.sub(_doxygen_colors_dst, str)
 }

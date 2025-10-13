@@ -235,6 +235,13 @@ DEATH_ALWAYS_INLINE HMENU WINAPI LoadMenu(HINSTANCE hInstance, LPCTSTR lpMenuNam
 }
 #endif
 
+#if defined(LoadString)
+#	undef LoadString
+DEATH_ALWAYS_INLINE int WINAPI LoadString(HINSTANCE hInstance, UINT uID, LPWSTR lpBuffer, int cchBufferMax) {
+	return ::LoadStringW(hInstance, uID, lpBuffer, cchBufferMax);
+}
+#endif
+
 #if defined(MoveFile)
 #	undef MoveFile
 DEATH_ALWAYS_INLINE BOOL WINAPI MoveFile(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName) {
