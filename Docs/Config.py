@@ -1,3 +1,5 @@
+import re
+
 DOXYFILE = 'Doxyfile'
 MAIN_PROJECT_URL = 'https://deat.tk/jazz2/'
 SHOW_UNDOCUMENTED = True
