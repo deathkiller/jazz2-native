@@ -23,10 +23,10 @@ namespace nCine
 		Colorf::Colorf(const Color& color) noexcept
 		{
 			constexpr float inv = 1.0f / 255.0f;
-			R = static_cast<float>(color.R * inv);
-			G = static_cast<float>(color.G * inv);
-			B = static_cast<float>(color.B * inv);
-			A = static_cast<float>(color.A * inv);
+			R = float(color.R * inv);
+			G = float(color.G * inv);
+			B = float(color.B * inv);
+			A = float(color.A * inv);
 		}
 
 		void Colorf::Set(float red, float green, float blue)
@@ -49,10 +49,10 @@ namespace nCine
 		Colorf& Colorf::operator=(const Color& color)
 		{
 			constexpr float inv = 1.0f / 255.0f;
-			R = static_cast<float>(color.R * inv);
-			G = static_cast<float>(color.G * inv);
-			B = static_cast<float>(color.B * inv);
-			A = static_cast<float>(color.A * inv);
+			R = float(color.R * inv);
+			G = float(color.G * inv);
+			B = float(color.B * inv);
+			A = float(color.A * inv);
 
 			return *this;
 		}

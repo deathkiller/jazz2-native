@@ -23,44 +23,44 @@ namespace nCine
 			Set(hex);
 		}
 
-		Color::Color(const std::uint32_t channels[NumChannels])
+		Color::Color(const std::uint8_t channels[NumChannels])
 		{
 			SetVec(channels);
 		}
 
 		Color::Color(const Colorf& color)
 		{
-			R = static_cast<std::uint8_t>(color.R * 255);
-			G = static_cast<std::uint8_t>(color.G * 255);
-			B = static_cast<std::uint8_t>(color.B * 255);
-			A = static_cast<std::uint8_t>(color.A * 255);
+			R = std::uint8_t(color.R * 255);
+			G = std::uint8_t(color.G * 255);
+			B = std::uint8_t(color.B * 255);
+			A = std::uint8_t(color.A * 255);
 		}
 
 		std::uint32_t Color::Rgba() const
 		{
-			return (R << 24) + (G << 16) + (B << 8) + A;
+			return (R << 24) | (G << 16) | (B << 8) | A;
 		}
 
 		std::uint32_t Color::Argb() const
 		{
-			return (A << 24) + (R << 16) + (G << 8) + B;
+			return (A << 24) | (R << 16) | (G << 8) | B;
 		}
 
 		std::uint32_t Color::Abgr() const
 		{
-			return (A << 24) + (B << 16) + (G << 8) + R;
+			return (A << 24) | (B << 16) | (G << 8) | R;
 		}
 
 		std::uint32_t Color::Bgra() const
 		{
-			return (B << 24) + (G << 16) + (R << 8) + A;
+			return (B << 24) | (G << 16) | (R << 8) | A;
 		}
 
-		void Color::Set(std::uint32_t red, std::uint32_t green, std::uint32_t blue)
+		void Color::Set(std::uint8_t red, std::uint8_t green, std::uint8_t blue)
 		{
-			R = static_cast<std::uint8_t>(red);
-			G = static_cast<std::uint8_t>(green);
-			B = static_cast<std::uint8_t>(blue);
+			R = red;
+			G = green;
+			B = blue;
 		}
 
 		void Color::Set(std::uint32_t hex)
@@ -74,22 +74,22 @@ namespace nCine
 			}
 		}
 
-		void Color::SetVec(const std::uint32_t channels[NumChannels])
+		void Color::SetVec(const std::uint8_t channels[NumChannels])
 		{
 			Set(channels[0], channels[1], channels[2], channels[3]);
 		}
 
-		void Color::SetAlpha(std::uint32_t alpha)
+		void Color::SetAlpha(std::uint8_t alpha)
 		{
-			A = static_cast<std::uint8_t>(alpha);
+			A = alpha;
 		}
 
 		Color& Color::operator=(const Colorf& color)
 		{
-			R = static_cast<std::uint8_t>(color.R * 255.0f);
-			G = static_cast<std::uint8_t>(color.G * 255.0f);
-			B = static_cast<std::uint8_t>(color.B * 255.0f);
-			A = static_cast<std::uint8_t>(color.A * 255.0f);
+			R = std::uint8_t(color.R * 255.0f);
+			G = std::uint8_t(color.G * 255.0f);
+			B = std::uint8_t(color.B * 255.0f);
+			A = std::uint8_t(color.A * 255.0f);
 
 			return *this;
 		}

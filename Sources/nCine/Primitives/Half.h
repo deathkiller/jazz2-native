@@ -150,18 +150,19 @@ namespace nCine
 			static float UnpackHalf(std::uint16_t value);
 		};
 
-		namespace Literals
+		inline namespace Literals
 		{
-			// According to https://wg21.link/CWG2521, space between "" and literal name is deprecated because _Uppercase or 
-			// _double names could be treated as reserved depending on whether the space was present or not, and whitespace is
-			// not load-bearing in any other contexts. Clang 17+ adds an off-by-default warning for this; GCC 4.8 however *requires*
-			// the space there, so until GCC 4.8 support is dropped, we suppress this warning instead of removing the space.
+			// According to https://wg21.link/CWG2521, space between "" and literal name is deprecated because _Uppercase
+			// or _double names could be treated as reserved depending on whether the space was present or not,
+			// and whitespace is not load-bearing in any other contexts. Clang 17+ adds an off-by-default warning for this;
+			// GCC 4.8 however *requires* the space there, so until GCC 4.8 support is dropped, we suppress this warning
+			// instead of removing the space. GCC 15 now has the same warning but it's enabled by default on -std=c++23.
 			#if defined(DEATH_TARGET_CLANG) && __clang_major__ >= 17
 			#	pragma clang diagnostic push
 			#	pragma clang diagnostic ignored "-Wdeprecated-literal-operator"
 			#endif
 
-			/** @relatesalso nCine::Half
+			/** @relatesalso nCine::Primitives::Half
 				@brief Half-float literal
 
 				See @ref Half for more information.
