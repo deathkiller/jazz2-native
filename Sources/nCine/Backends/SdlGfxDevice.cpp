@@ -261,10 +261,32 @@ namespace nCine::Backends
 
 		LOGD("Initializing OpenGL context...");
 
+	Retry:
 		glContextHandle_ = SDL_GL_CreateContext(windowHandle_);
-		FATAL_ASSERT_MSG(glContextHandle_, "SDL_GL_CreateContext failed: {}", SDL_GetError());
 
-		const int interval = displayMode_.hasVSync() ? 1 : 0;
+		if (!glContextHandle_ && glContextInfo_.minorVersion > 0) {
+			// Retry with lower minor version
+#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+			LOGW("SDL_GL_CreateContext() with OpenGL|ES {}.{} failed, retrying with lower version: {}",
+				glContextInfo_.majorVersion, glContextInfo_.minorVersion, SDL_GetError());
+#else
+			LOGW(glContextInfo_.coreProfile ? "SDL_GL_CreateContext() with OpenGL Core {}.{} failed, retrying with lower version: {}" : "SDL_GL_CreateContext() with OpenGL {}.{} failed, retrying with lower version: {}",
+				glContextInfo_.majorVersion, glContextInfo_.minorVersion, SDL_GetError());
+#endif
+			glContextInfo_.minorVersion--;
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, glContextInfo_.minorVersion);
+			goto Retry;
+		}
+
+#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+		FATAL_ASSERT_MSG(glContextHandle_, "SDL_GL_CreateContext() with OpenGL|ES {}.{} failed: {}",
+			glContextInfo_.majorVersion, glContextInfo_.minorVersion, SDL_GetError());
+#else
+		FATAL_ASSERT_MSG(glContextHandle_, glContextInfo_.coreProfile ? "SDL_GL_CreateContext() with OpenGL Core {}.{} failed: {}" : "SDL_GL_CreateContext() with OpenGL {}.{} failed: {}",
+			glContextInfo_.majorVersion, glContextInfo_.minorVersion, SDL_GetError());
+#endif
+
+		const int interval = (displayMode_.hasVSync() ? 1 : 0);
 		SDL_GL_SetSwapInterval(interval);
 
 #if defined(WITH_GLEW)

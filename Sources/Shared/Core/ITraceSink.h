@@ -6,8 +6,9 @@
 
 #include "../Containers/StringView.h"
 
-namespace Death
-{
+namespace Death {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
 	// Forward declaration
 	namespace Trace
 	{
