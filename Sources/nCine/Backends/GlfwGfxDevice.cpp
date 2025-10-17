@@ -333,8 +333,30 @@ namespace nCine::Backends
 
 		LOGD("Initializing window...");
 
+	Retry:
 		windowHandle_ = glfwCreateWindow(width_, height_, "", monitor, nullptr);
-		FATAL_ASSERT_MSG(windowHandle_, "glfwCreateWindow() failed");
+
+		if (!windowHandle_ && glContextInfo_.minorVersion > 0) {
+			// Retry with lower minor version
+#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+			LOGW("glfwCreateWindow() with OpenGL|ES {}.{} failed, retrying with lower version",
+				glContextInfo_.majorVersion, glContextInfo_.minorVersion);
+#else
+			LOGW(glContextInfo_.coreProfile ? "glfwCreateWindow() with OpenGL Core {}.{} failed, retrying with lower version" : "glfwCreateWindow() with OpenGL {}.{} failed, retrying with lower version",
+				glContextInfo_.majorVersion, glContextInfo_.minorVersion);
+#endif
+			glContextInfo_.minorVersion--;
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, static_cast<int>(glContextInfo_.minorVersion));
+			goto Retry;
+		}
+
+#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+		FATAL_ASSERT_MSG(windowHandle_, "glfwCreateWindow() with OpenGL|ES {}.{} failed",
+			glContextInfo_.majorVersion, glContextInfo_.minorVersion);
+#else
+		FATAL_ASSERT_MSG(windowHandle_, glContextInfo_.coreProfile ? "glfwCreateWindow() with OpenGL Core {}.{} failed" : "glfwCreateWindow() with OpenGL {}.{} failed",
+			glContextInfo_.majorVersion, glContextInfo_.minorVersion);
+#endif
 
 #if GLFW_VERSION_COMBINED < 3400
 		const bool ignoreBothWindowPosition = (windowPosX == AppConfiguration::WindowPositionIgnore &&
