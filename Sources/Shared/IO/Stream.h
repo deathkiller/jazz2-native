@@ -110,7 +110,7 @@ namespace Death { namespace IO {
 
 		/** @brief Converts an integer value from big-endian to native */
 		template<typename T>
-		static constexpr T FromBE(T value) {
+		static T FromBE(T value) {
 #if !defined(DEATH_TARGET_BIG_ENDIAN)
 			return Byteswap(value);
 #else
@@ -120,7 +120,7 @@ namespace Death { namespace IO {
 
 		/** @brief Converts an integer value from little-endian to native */
 		template<typename T>
-		static constexpr T FromLE(T value) {
+		static T FromLE(T value) {
 #if defined(DEATH_TARGET_BIG_ENDIAN)
 			return Byteswap(value);
 #else
@@ -129,18 +129,35 @@ namespace Death { namespace IO {
 		}
 
 	private:
-		static constexpr std::uint16_t Byteswap16(std::uint16_t x) {
-			return static_cast<uint16_t>((x >> 8) | (x << 8));
+		DEATH_ALWAYS_INLINE static std::uint16_t Byteswap16(std::uint16_t x) {
+#if defined(DEATH_TARGET_MSVC)
+			return _byteswap_ushort(x);
+#elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+			return __builtin_bswap16(x);
+#else
+			return static_cast<std::uint16_t>((x >> 8) | (x << 8));
+#endif
 		}
 
-		static constexpr std::uint32_t Byteswap32(std::uint32_t x) {
+		DEATH_ALWAYS_INLINE static std::uint32_t Byteswap32(std::uint32_t x) {
+#if defined(DEATH_TARGET_MSVC)
+			return _byteswap_ulong(x);
+#elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+			return __builtin_bswap32(x);
+#else
 			return ((x & 0x000000FFu) << 24) |
 				((x & 0x0000FF00u) << 8) |
 				((x & 0x00FF0000u) >> 8) |
 				((x & 0xFF000000u) >> 24);
+#endif
 		}
 
-		static constexpr std::uint64_t Byteswap64(std::uint64_t x) {
+		DEATH_ALWAYS_INLINE static std::uint64_t Byteswap64(std::uint64_t x) {
+#if defined(DEATH_TARGET_MSVC)
+			return _byteswap_uint64(x);
+#elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+			return __builtin_bswap64(x);
+#else
 			return ((x & 0x00000000000000FFull) << 56) |
 				((x & 0x000000000000FF00ull) << 40) |
 				((x & 0x0000000000FF0000ull) << 24) |
@@ -149,22 +166,23 @@ namespace Death { namespace IO {
 				((x & 0x0000FF0000000000ull) >> 24) |
 				((x & 0x00FF000000000000ull) >> 40) |
 				((x & 0xFF00000000000000ull) >> 56);
+#endif
 		}
 
 		template<typename T>
-		static constexpr typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 2), T>::type Byteswap(T value) {
+		static typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 2), T>::type Byteswap(T value) {
 			std::uint16_t temp = Byteswap16(static_cast<std::uint16_t>(value));
 			return static_cast<T>(temp);
 		}
 
 		template<typename T>
-		static constexpr typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 4), T>::type Byteswap(T value) {
+		static typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 4), T>::type Byteswap(T value) {
 			std::uint32_t temp = Byteswap32(static_cast<std::uint32_t>(value));
 			return static_cast<T>(temp);
 		}
 
 		template<typename T>
-		static constexpr typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 8), T>::type Byteswap(T value) {
+		static typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 8), T>::type Byteswap(T value) {
 			std::uint64_t temp = Byteswap64(static_cast<std::uint64_t>(value));
 			return static_cast<T>(temp);
 		}
