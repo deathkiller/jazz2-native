@@ -3359,6 +3359,7 @@ namespace Jazz2::Actors
 		std::uint8_t playerIndex = src.ReadVariableInt32();
 		PlayerType playerType = (PlayerType)src.ReadValue<std::uint8_t>();
 		PlayerType playerTypeOriginal = (PlayerType)src.ReadValue<std::uint8_t>();
+		// TODO: Big endian
 		float checkpointPosX = src.ReadValue<float>();
 		float checkpointPosY = src.ReadValue<float>();
 
@@ -3371,6 +3372,7 @@ namespace Jazz2::Actors
 
 		_playerTypeOriginal = playerTypeOriginal;
 
+		// TODO: Big endian
 		_checkpointLight = src.ReadValue<float>();
 		_lives = src.ReadVariableInt32();
 		_coins = src.ReadVariableInt32();
@@ -3415,6 +3417,7 @@ namespace Jazz2::Actors
 		dest.WriteVariableInt32(_playerIndex);
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_playerType);
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_playerTypeOriginal);
+		// TODO: Big endian
 		dest.WriteValue<float>(_checkpointPos.X);
 		dest.WriteValue<float>(_checkpointPos.Y);
 		dest.WriteValue<float>(_checkpointLight);

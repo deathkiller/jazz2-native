@@ -549,9 +549,9 @@ namespace Jazz2::UI::Menu
 		auto configDir = PreferencesCache::GetDirectory();
 		auto s = fs::Open(fs::CombinePath(configDir, FileName), FileAccess::Read);
 		if (*s) {
-			std::uint64_t signature = s->ReadValue<std::uint64_t>();
+			std::uint64_t signature = Stream::FromLE(s->ReadValue<std::uint64_t>());
 			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
-			std::uint16_t version = s->ReadValue<std::uint16_t>();
+			std::uint16_t version = Stream::FromLE(s->ReadValue<std::uint16_t>());
 			if (signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::HighscoresFile && version <= FileVersion) {
 				DeflateStream uc(*s);
 				std::uint32_t seriesCount = uc.ReadVariableUint32();
@@ -598,9 +598,9 @@ namespace Jazz2::UI::Menu
 		auto configDir = PreferencesCache::GetDirectory();
 		auto s = fs::Open(fs::CombinePath(configDir, FileName), FileAccess::Write);
 		if (*s) {
-			s->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
+			s->WriteValue<std::uint64_t>(Stream::FromLE(0x2095A59FF0BFBBEF));	// Signature
 			s->WriteValue<std::uint8_t>(ContentResolver::HighscoresFile);
-			s->WriteValue<std::uint16_t>(FileVersion);
+			s->WriteValue<std::uint16_t>(Stream::FromLE(FileVersion));
 
 			DeflateWriter co(*s);
 			co.WriteVariableUint32((std::uint32_t)SeriesName::Count);

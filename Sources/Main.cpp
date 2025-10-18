@@ -765,9 +765,9 @@ void GameEventHandler::ResumeSavedState()
 		auto configDir = PreferencesCache::GetDirectory();
 		auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Read);
 		if (*s) {
-			std::uint64_t signature = s->ReadValue<std::uint64_t>();
+			std::uint64_t signature = Stream::FromLE(s->ReadValue<std::uint64_t>());
 			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
-			std::uint16_t version = s->ReadValue<std::uint16_t>();
+			std::uint16_t version = Stream::FromLE(s->ReadValue<std::uint16_t>());
 			if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::StateFile || version > StateVersion) {
 				return;
 			}
@@ -802,9 +802,9 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 			auto configDir = PreferencesCache::GetDirectory();
 			auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Write);
 			if (*s) {
-				s->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
+				s->WriteValue<std::uint64_t>(Stream::FromLE(0x2095A59FF0BFBBEF));	// Signature
 				s->WriteValue<std::uint8_t>(ContentResolver::StateFile);
-				s->WriteValue<std::uint16_t>(StateVersion);
+				s->WriteValue<std::uint16_t>(Stream::FromLE(StateVersion));
 
 				DeflateWriter co(*s);
 				if (!levelHandler->SerializeResumableToStream(co)) {
@@ -1531,9 +1531,9 @@ void GameEventHandler::RefreshCache()
 			goto RecreateCache;
 		}
 
-		std::uint64_t signature = s->ReadValue<std::uint64_t>();
+		std::uint64_t signature = Stream::FromLE(s->ReadValue<std::uint64_t>());
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
-		std::uint16_t version = s->ReadValue<std::uint16_t>();
+		std::uint16_t version = Stream::FromLE(s->ReadValue<std::uint16_t>());
 		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::CacheIndexFile || version != Compatibility::JJ2Anims::CacheVersion) {
 			goto RecreateCache;
 		}
@@ -1550,20 +1550,20 @@ void GameEventHandler::RefreshCache()
 		if (!fs::IsReadableFile(animsPath)) {
 			animsPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
 		}
-		std::int64_t animsCached = s->ReadValue<std::int64_t>();
+		std::int64_t animsCached = Stream::FromLE(s->ReadValue<std::int64_t>());
 		std::int64_t animsModified = fs::GetLastModificationTime(animsPath).ToUnixMilliseconds();
 		if (animsModified != 0 && animsCached != animsModified) {
 			goto RecreateCache;
 		}
 
 		// If some events were added, recreate cache
-		std::uint16_t eventTypeCount = s->ReadValue<std::uint16_t>();
+		std::uint16_t eventTypeCount = Stream::FromLE(s->ReadValue<std::uint16_t>());
 		if (eventTypeCount != (std::uint16_t)EventType::Count) {
 			goto RecreateCache;
 		}
 
 		// Cache is up-to-date
-		std::uint64_t lastVersion = s->ReadValue<std::uint64_t>();
+		std::uint64_t lastVersion = Stream::FromLE(s->ReadValue<std::uint64_t>());
 
 		// Close the file, so it can be writable for possible update
 		s = nullptr;
@@ -2015,13 +2015,13 @@ void GameEventHandler::HandleEndOfGame(const LevelInitialization& levelInit, boo
 void GameEventHandler::WriteCacheDescriptor(StringView path, std::uint64_t currentVersion, std::int64_t animsModified)
 {
 	auto so = fs::Open(path, FileAccess::Write);
-	so->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
+	so->WriteValue<std::uint64_t>(Stream::FromLE(0x2095A59FF0BFBBEF));	// Signature
 	so->WriteValue<std::uint8_t>(ContentResolver::CacheIndexFile);
-	so->WriteValue<std::uint16_t>(Compatibility::JJ2Anims::CacheVersion);
-	so->WriteValue<std::uint8_t>(0x00);					// Flags
-	so->WriteValue<std::int64_t>(animsModified);
-	so->WriteValue<std::uint16_t>((std::uint16_t)EventType::Count);
-	so->WriteValue<std::uint64_t>(currentVersion);
+	so->WriteValue<std::uint16_t>(Stream::FromLE(Compatibility::JJ2Anims::CacheVersion));
+	so->WriteValue<std::uint8_t>(0x00);	// Flags
+	so->WriteValue<std::int64_t>(Stream::FromLE(animsModified));
+	so->WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(EventType::Count)));
+	so->WriteValue<std::uint64_t>(Stream::FromLE(currentVersion));
 }
 
 void GameEventHandler::SaveEpisodeEnd(const LevelInitialization& levelInit)
