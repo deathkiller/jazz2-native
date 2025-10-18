@@ -642,6 +642,8 @@ namespace Jazz2
 
 	GenericGraphicResource* ContentResolver::RequestGraphics(StringView path, std::uint16_t paletteOffset)
 	{
+		constexpr std::uint32_t PixelSize = 4;
+
 		// First resources are requested, reset _isLoading flag, because palette should be already applied
 		_isLoading = false;
 
@@ -686,7 +688,7 @@ namespace Jazz2
 
 				std::int32_t w = texLoader->width();
 				std::int32_t h = texLoader->height();
-				std::uint32_t* pixels = (std::uint32_t*)texLoader->pixels();
+				std::uint8_t* pixels = (std::uint8_t*)texLoader->pixels();
 				const std::uint32_t* palette = _palettes + paletteOffset;
 				bool linearSampling = false;
 				bool needsMask = true;
@@ -710,20 +712,31 @@ namespace Jazz2
 					graphics->Mask = std::make_unique<std::uint8_t[]>(w * h);
 					for (std::int32_t i = 0; i < w * h; i++) {
 						// Save original alpha value for collision checking
-						graphics->Mask[i] = ((pixels[i] >> 24) & 0xff);
+						graphics->Mask[i] = pixels[(i * PixelSize) + 3];
 					}
 				}
 				if (palette != nullptr) {
-					for (std::int32_t i = 0; i < w * h; i++) {
-						std::uint32_t color = palette[pixels[i] & 0xff];
-						pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+					for (std::uint32_t i = 0; i < w * h; i++) {
+						std::uint32_t srcIdx = i * PixelSize;
+						std::uint32_t color = palette[pixels[srcIdx]];
+						std::uint8_t alpha = pixels[srcIdx + 3];
+
+						std::uint8_t r = (color >> 0) & 0xFF;
+						std::uint8_t g = (color >> 8) & 0xFF;
+						std::uint8_t b = (color >> 16) & 0xFF;
+						std::uint8_t a = ((color >> 24) & 0xFF) * alpha / 255;
+
+						pixels[srcIdx + 0] = r;
+						pixels[srcIdx + 1] = g;
+						pixels[srcIdx + 2] = b;
+						pixels[srcIdx + 3] = a;
 					}
 				}
 
 				if (!_isHeadless) {
 					// Don't load textures in headless mode, only collision masks
 					graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, w, h);
-					graphics->TextureDiffuse->LoadFromTexels((unsigned char*)pixels, 0, 0, w, h);
+					graphics->TextureDiffuse->LoadFromTexels(pixels, 0, 0, w, h);
 					graphics->TextureDiffuse->SetMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 					graphics->TextureDiffuse->SetMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 				}
@@ -759,6 +772,8 @@ namespace Jazz2
 
 	GenericGraphicResource* ContentResolver::RequestGraphicsAura(StringView path, std::uint16_t paletteOffset)
 	{
+		constexpr std::uint32_t PixelSize = 4;
+
 		auto s = OpenContentFile(fs::CombinePath("Animations"_s, path));
 
 		auto fileSize = s->GetSize();
@@ -797,7 +812,7 @@ namespace Jazz2
 		std::uint32_t width = frameDimensionsX * frameConfigurationX;
 		std::uint32_t height = frameDimensionsY * frameConfigurationY;
 
-		std::unique_ptr<std::uint32_t[]> pixels = std::make_unique<std::uint32_t[]>(width * height);
+		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * PixelSize);
 
 		ReadImageFromFile(s, (std::uint8_t*)pixels.get(), width, height, channelCount);
 
@@ -819,13 +834,24 @@ namespace Jazz2
 			graphics->Mask = std::make_unique<std::uint8_t[]>(width * height);
 			for (std::uint32_t i = 0; i < width * height; i++) {
 				// Save original alpha value for collision checking
-				graphics->Mask[i] = ((pixels[i] >> 24) & 0xff);
+				graphics->Mask[i] = pixels[(i * PixelSize) + 3];
 			}
 		}
 		if (palette != nullptr) {
 			for (std::uint32_t i = 0; i < width * height; i++) {
-				std::uint32_t color = palette[pixels[i] & 0xff];
-				pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+				std::uint32_t srcIdx = i * PixelSize;
+				std::uint32_t color = palette[pixels[srcIdx]];
+				std::uint8_t alpha = pixels[srcIdx + 3];
+
+				std::uint8_t r = (color >> 0) & 0xFF;
+				std::uint8_t g = (color >> 8) & 0xFF;
+				std::uint8_t b = (color >> 16) & 0xFF;
+				std::uint8_t a = ((color >> 24) & 0xFF) * alpha / 255;
+
+				pixels[srcIdx + 0] = r;
+				pixels[srcIdx + 1] = g;
+				pixels[srcIdx + 2] = b;
+				pixels[srcIdx + 3] = a;
 			}
 		}
 
@@ -932,53 +958,58 @@ namespace Jazz2
 		}
 	}
 
-	void ContentResolver::ExpandTileDiffuse(std::uint32_t* pixelsOffset, std::uint32_t widthWithPadding)
+	void ContentResolver::ExpandTileDiffuse(std::uint8_t* pixelsOffset, std::uint32_t widthWithPadding)
 	{
+		constexpr std::uint32_t PixelSize = 4;
+
 		// Top
 		for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-			std::uint32_t from = 1 * widthWithPadding + (x + 1);
-			std::uint32_t to = 0 * widthWithPadding + (x + 1);
-			pixelsOffset[to] = pixelsOffset[from];
-		}
-		// Bottom
-		for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-			std::uint32_t from = (TileSet::DefaultTileSize)*widthWithPadding + (x + 1);
-			std::uint32_t to = (TileSet::DefaultTileSize + 1) * widthWithPadding + (x + 1);
-			pixelsOffset[to] = pixelsOffset[from];
-		}
-		// Left
-		for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
-			std::uint32_t from = (y + 1) * widthWithPadding + (1);
-			std::uint32_t to = (y + 1) * widthWithPadding + (0);
-			pixelsOffset[to] = pixelsOffset[from];
-		}
-		// Right
-		for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
-			std::uint32_t from = (y + 1) * widthWithPadding + (TileSet::DefaultTileSize);
-			std::uint32_t to = (y + 1) * widthWithPadding + (TileSet::DefaultTileSize + 1);
-			pixelsOffset[to] = pixelsOffset[from];
+			std::uint32_t from = (1 * widthWithPadding + (x + 1)) * PixelSize;
+			std::uint32_t to = (0 * widthWithPadding + (x + 1)) * PixelSize;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
 		}
 
-		// Corners (TL, LR, BL, BR)
+		// Bottom
+		for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+			std::uint32_t from = (TileSet::DefaultTileSize * widthWithPadding + (x + 1)) * PixelSize;
+			std::uint32_t to = ((TileSet::DefaultTileSize + 1) * widthWithPadding + (x + 1)) * PixelSize;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
+		}
+
+		// Left
+		for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
+			std::uint32_t from = ((y + 1) * widthWithPadding + 1) * PixelSize;
+			std::uint32_t to = ((y + 1) * widthWithPadding + 0) * PixelSize;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
+		}
+
+		// Right
+		for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
+			std::uint32_t from = ((y + 1) * widthWithPadding + TileSet::DefaultTileSize) * PixelSize;
+			std::uint32_t to = ((y + 1) * widthWithPadding + (TileSet::DefaultTileSize + 1)) * PixelSize;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
+		}
+
+		// Corners (TL, TR, BL, BR)
 		{
-			std::uint32_t from = 0 * widthWithPadding + 1;
-			std::uint32_t to = 0 * widthWithPadding;
-			pixelsOffset[to] = pixelsOffset[from];
+			std::uint32_t from = (0 * widthWithPadding + 1) * PixelSize;
+			std::uint32_t to = (0 * widthWithPadding + 0) * PixelSize;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
 		}
 		{
-			std::uint32_t from = 0 * widthWithPadding + TileSet::DefaultTileSize;
-			std::uint32_t to = 0 * widthWithPadding + (TileSet::DefaultTileSize + 1);
-			pixelsOffset[to] = pixelsOffset[from];
+			std::uint32_t from = (0 * widthWithPadding + TileSet::DefaultTileSize) * PixelSize;
+			std::uint32_t to = (0 * widthWithPadding + (TileSet::DefaultTileSize + 1)) * PixelSize;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
 		}
 		{
-			std::uint32_t from = (TileSet::DefaultTileSize + 1) * widthWithPadding + 1;
-			std::uint32_t to = (TileSet::DefaultTileSize + 1) * widthWithPadding;
-			pixelsOffset[to] = pixelsOffset[from];
+			std::uint32_t from = ((TileSet::DefaultTileSize + 1) * widthWithPadding + 1) * PixelSize;
+			std::uint32_t to = ((TileSet::DefaultTileSize + 1) * widthWithPadding + 0) * PixelSize;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
 		}
 		{
-			std::uint32_t from = (TileSet::DefaultTileSize + 1) * widthWithPadding + TileSet::DefaultTileSize;
-			std::uint32_t to = (TileSet::DefaultTileSize + 1) * widthWithPadding + (TileSet::DefaultTileSize + 1);
-			pixelsOffset[to] = pixelsOffset[from];
+			std::uint32_t from = ((TileSet::DefaultTileSize + 1) * widthWithPadding + TileSet::DefaultTileSize) * PixelSize;
+			std::uint32_t to = ((TileSet::DefaultTileSize + 1) * widthWithPadding + (TileSet::DefaultTileSize + 1)) * PixelSize;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
 		}
 	}
 
@@ -1070,8 +1101,8 @@ namespace Jazz2
 		if (!_isHeadless) {
 			// Don't load textures in headless mode, only collision masks
 			// Load raw pixels from file
-			std::unique_ptr<std::uint32_t[]> pixels = std::make_unique<std::uint32_t[]>(width * height);
-			ReadImageFromFile(s, (std::uint8_t*)pixels.get(), width, height, channelCount);
+			std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * 4);
+			ReadImageFromFile(s, pixels.get(), width, height, channelCount);
 
 			// Then add 1px padding to each tile
 			std::uint32_t tilesPerRow = width / TileSet::DefaultTileSize;
@@ -1079,51 +1110,67 @@ namespace Jazz2
 
 			std::uint32_t widthWithPadding = width + (2 * tilesPerRow);
 			std::uint32_t heightWithPadding = height + (2 * tilesPerColumn);
-			std::unique_ptr<uint32_t[]> pixelsWithPadding = std::make_unique<uint32_t[]>(widthWithPadding * heightWithPadding);
+			std::unique_ptr<std::uint8_t[]> pixelsWithPadding = std::make_unique<std::uint8_t[]>(widthWithPadding * heightWithPadding * 4);
+			
 			for (uint32_t i = 0; i < tilesPerColumn; i++) {
 				std::uint32_t yf = i * TileSet::DefaultTileSize;
 				std::uint32_t yt = i * (TileSet::DefaultTileSize + 2);
-				for (std::uint32_t j = 0; j < tilesPerRow; j++) {
+
+				for (uint32_t j = 0; j < tilesPerRow; j++) {
 					std::uint32_t xf = j * TileSet::DefaultTileSize;
 					std::uint32_t xt = j * (TileSet::DefaultTileSize + 2);
-					std::uint32_t* pixelsOffset = &pixelsWithPadding[yt * widthWithPadding + xt];
 
-					std::int32_t tileIdx = (i * tilesPerRow) + j;
+					std::uint8_t* dstTile = &pixelsWithPadding[(yt * widthWithPadding + xt) * 4];
+					std::int32_t tileIdx = i * tilesPerRow + j;
+
 					if ((is32bitTile[tileIdx / 8] & (1 << (tileIdx & 7))) != 0) {
 						// 32-bit tile
 						for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
 							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-								std::uint32_t from = yf * width + xf + y * width + x;
-								std::uint32_t to = (y + 1) * widthWithPadding + (x + 1);
+								std::uint32_t srcIdx = ((yf + y) * width + (xf + x)) * 4;
+								std::uint32_t dstIdx = ((y + 1) * widthWithPadding + (x + 1)) * 4;
 
-								pixelsOffset[to] = pixels[from];
+								dstTile[dstIdx + 0] = pixels[srcIdx + 0]; // R
+								dstTile[dstIdx + 1] = pixels[srcIdx + 1]; // G
+								dstTile[dstIdx + 2] = pixels[srcIdx + 2]; // B
+								dstTile[dstIdx + 3] = pixels[srcIdx + 3]; // A
 							}
 						}
 					} else if (paletteRemapping != nullptr) {
 						// Remapped 8-bit tile
 						for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
 							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-								std::uint32_t from = yf * width + xf + y * width + x;
-								std::uint32_t to = (y + 1) * widthWithPadding + (x + 1);
+								std::uint32_t srcIdx = ((yf + y) * width + (xf + x)) * 4;
+								std::uint32_t dstIdx = ((y + 1) * widthWithPadding + (x + 1)) * 4;
 
-								std::uint32_t color = _palettes[paletteRemapping[pixels[from] & 0xff]];
-								pixelsOffset[to] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[from] >> 24) & 0xff) / 255) << 24);
+								std::uint32_t color = _palettes[paletteRemapping[pixels[srcIdx]]];
+								std::uint32_t alpha = pixels[srcIdx + 3];
+
+								dstTile[dstIdx + 0] = (color >> 0) & 0xFF;
+								dstTile[dstIdx + 1] = (color >> 8) & 0xFF;
+								dstTile[dstIdx + 2] = (color >> 16) & 0xFF;
+								dstTile[dstIdx + 3] = ((color >> 24) & 0xFF) * alpha / 255;
 							}
 						}
 					} else {
 						// Plain 8-bit tile
 						for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
 							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-								std::uint32_t from = yf * width + xf + y * width + x;
-								std::uint32_t to = (y + 1) * widthWithPadding + (x + 1);
+								std::uint32_t srcIdx = ((yf + y) * width + (xf + x)) * 4;
+								std::uint32_t dstIdx = ((y + 1) * widthWithPadding + (x + 1)) * 4;
 
-								std::uint32_t color = _palettes[pixels[from] & 0xff];
-								pixelsOffset[to] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[from] >> 24) & 0xff) / 255) << 24);
+								std::uint32_t color = _palettes[pixels[srcIdx]];
+								std::uint32_t alpha = pixels[srcIdx + 3];
+
+								dstTile[dstIdx + 0] = (color >> 0) & 0xFF;
+								dstTile[dstIdx + 1] = (color >> 8) & 0xFF;
+								dstTile[dstIdx + 2] = (color >> 16) & 0xFF;
+								dstTile[dstIdx + 3] = ((color >> 24) & 0xFF) * alpha / 255;
 							}
 						}
 					}
 
-					ExpandTileDiffuse(pixelsOffset, widthWithPadding);
+					ExpandTileDiffuse(dstTile, widthWithPadding);
 				}
 			}
 
@@ -1134,17 +1181,25 @@ namespace Jazz2
 
 			// Caption Tile
 			if (captionTileId > 0) {
-				std::uint32_t tw = (width / TileSet::DefaultTileSize);
-				std::uint32_t tx = (captionTileId % tw) * TileSet::DefaultTileSize;
-				std::uint32_t ty = (captionTileId / tw) * TileSet::DefaultTileSize;
+				std::uint32_t tilesPerRow = width / TileSet::DefaultTileSize;
+				std::uint32_t tx = (captionTileId % tilesPerRow) * TileSet::DefaultTileSize;
+				std::uint32_t ty = (captionTileId / tilesPerRow) * TileSet::DefaultTileSize;
+
 				if (tx + TileSet::DefaultTileSize <= width && ty + TileSet::DefaultTileSize <= height) {
 					captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
+
 					for (std::uint32_t y = 0; y < TileSet::DefaultTileSize / 3; y++) {
 						for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-							Color c1 = Color(pixels[((ty + y * 3) * width) + tx + x]);
-							Color c2 = Color(pixels[((ty + y * 3 + 1) * width) + tx + x]);
-							Color c3 = Color(pixels[((ty + y * 3 + 2) * width) + tx + x]);
-							captionTile[y * TileSet::DefaultTileSize + x] = Color((c1.B + c2.B + c3.B) / 3, (c1.G + c2.G + c3.G) / 3, (c1.R + c2.R + c3.R) / 3);
+							// Read 3 rows of pixels and average
+							std::uint32_t idx1 = ((ty + y * 3) * width + (tx + x)) * 4;
+							std::uint32_t idx2 = ((ty + y * 3 + 1) * width + (tx + x)) * 4;
+							std::uint32_t idx3 = ((ty + y * 3 + 2) * width + (tx + x)) * 4;
+
+							std::uint8_t r = (pixels[idx1 + 0] + pixels[idx2 + 0] + pixels[idx3 + 0]) / 3;
+							std::uint8_t g = (pixels[idx1 + 1] + pixels[idx2 + 1] + pixels[idx3 + 1]) / 3;
+							std::uint8_t b = (pixels[idx1 + 2] + pixels[idx2 + 2] + pixels[idx3 + 2]) / 3;
+
+							captionTile[y * TileSet::DefaultTileSize + x] = Color(r, g, b);
 						}
 					}
 				}
@@ -1324,7 +1379,7 @@ namespace Jazz2
 					}
 				}
 
-				ExpandTileDiffuse(tileDiffuse, TileSet::DefaultTileSize + 2);
+				ExpandTileDiffuse((std::uint8_t*)tileDiffuse, TileSet::DefaultTileSize + 2);
 				descriptor.TileMap->OverrideTileDiffuse(tileId, tileDiffuse);
 			}
 		} else {
