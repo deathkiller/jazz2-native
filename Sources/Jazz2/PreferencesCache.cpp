@@ -558,7 +558,7 @@ namespace Jazz2
 				std::uint8_t targetCount = (std::uint8_t)mapping.Targets.size();
 				co.WriteValue<std::uint8_t>(targetCount);
 				for (std::uint32_t k = 0; k < targetCount; k++) {
-					co.WriteValue<std::uint32_t>(mapping.Targets[k].Data);
+					co.WriteValue<std::uint32_t>(Stream::FromLE(mapping.Targets[k].Data));
 				}
 			}
 		}
