@@ -15,6 +15,9 @@
 #include "../Base/IDisposable.h"
 
 #include <type_traits>
+#if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
+#	include <stdlib.h>	// For _byteswap_ushort()/_byteswap_ulong()/_byteswap_uint64()
+#endif
 
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -130,20 +133,20 @@ namespace Death { namespace IO {
 
 	private:
 		DEATH_ALWAYS_INLINE static std::uint16_t Byteswap16(std::uint16_t x) {
-#if defined(DEATH_TARGET_MSVC)
-			return _byteswap_ushort(x);
-#elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
 			return __builtin_bswap16(x);
+#elif defined(DEATH_TARGET_MSVC)
+			return _byteswap_ushort(x);
 #else
 			return static_cast<std::uint16_t>((x >> 8) | (x << 8));
 #endif
 		}
 
 		DEATH_ALWAYS_INLINE static std::uint32_t Byteswap32(std::uint32_t x) {
-#if defined(DEATH_TARGET_MSVC)
-			return _byteswap_ulong(x);
-#elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
 			return __builtin_bswap32(x);
+#elif defined(DEATH_TARGET_MSVC)
+			return _byteswap_ulong(x);
 #else
 			return ((x & 0x000000FFu) << 24) |
 				((x & 0x0000FF00u) << 8) |
@@ -153,10 +156,10 @@ namespace Death { namespace IO {
 		}
 
 		DEATH_ALWAYS_INLINE static std::uint64_t Byteswap64(std::uint64_t x) {
-#if defined(DEATH_TARGET_MSVC)
-			return _byteswap_uint64(x);
-#elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
 			return __builtin_bswap64(x);
+#elif defined(DEATH_TARGET_MSVC)
+			return _byteswap_uint64(x);
 #else
 			return ((x & 0x00000000000000FFull) << 56) |
 				((x & 0x000000000000FF00ull) << 40) |
