@@ -12,7 +12,7 @@ using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
-	/** @brief Processes compressed or uncompressed blocks from original files */
+	/** @brief Processes compressed or uncompressed blocks from original files (in little endian) */
 	class JJ2Block
 	{
 	public:

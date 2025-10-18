@@ -81,11 +81,11 @@ namespace Jazz2::Compatibility
 		LoadLayers(dictBlock, dictBlockUnpackedSize / 8, layoutBlock, strictParser);
 
 		// Try to read MLLE data stream
-		std::uint32_t mlleMagic = s->ReadValue<std::uint32_t>();
+		std::uint32_t mlleMagic = Stream::FromLE(s->ReadValue<std::uint32_t>());
 		if (mlleMagic == 0x454C4C4D /*MLLE*/) {
-			std::uint32_t mlleVersion = s->ReadValue<std::uint32_t>();
-			std::int32_t mlleBlockPackedSize = s->ReadValue<std::int32_t>();
-			std::int32_t mlleBlockUnpackedSize = s->ReadValue<std::int32_t>();
+			std::uint32_t mlleVersion = Stream::FromLE(s->ReadValue<std::uint32_t>());
+			std::int32_t mlleBlockPackedSize = Stream::FromLE(s->ReadValue<std::int32_t>());
+			std::int32_t mlleBlockUnpackedSize = Stream::FromLE(s->ReadValue<std::int32_t>());
 
 			JJ2Block mlleBlock(s, mlleBlockPackedSize, mlleBlockUnpackedSize);
 			LoadMlleData(mlleBlock, mlleVersion, path, strictParser);

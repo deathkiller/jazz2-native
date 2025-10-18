@@ -38,7 +38,7 @@ namespace nCine
 
 		while (true) {
 			std::int32_t length = ReadInt32BigEndian(fileHandle_);
-			uint32_t type = ReadInt32BigEndian(fileHandle_);
+			std::uint32_t type = ReadInt32BigEndian(fileHandle_);
 
 			if (!headerParsed && type != 'IHDR') {
 				// Header does not appear first
@@ -175,7 +175,7 @@ namespace nCine
 	{
 		std::uint32_t value;
 		s->Read(&value, sizeof(value));
-		return Stream::Uint32FromBE(value);
+		return Stream::FromBE(value);
 	}
 
 	std::uint8_t TextureLoaderPng::UnapplyFilter(std::uint8_t filter, std::uint8_t x, std::uint8_t a, std::uint8_t b, std::uint8_t c)

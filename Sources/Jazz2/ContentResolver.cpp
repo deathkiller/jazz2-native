@@ -1005,7 +1005,7 @@ namespace Jazz2
 		std::uint16_t signature2 = s->ReadValue<std::uint16_t>();
 		std::uint8_t version = s->ReadValue<std::uint8_t>();
 		/*std::uint8_t flags =*/ s->ReadValue<std::uint8_t>();
-		DEATH_ASSERT(signature1 == 0xB8EF8498E2BFBBEF && signature2 == 0x208F && version == 2, "Invalid file", nullptr);
+		DEATH_ASSERT(signature1 == 0xB8EF8498E2BFBBEF && signature2 == 0x208F && version == 2, "Invalid file signature", nullptr);
 
 		// TODO: Use single channel instead
 		std::uint8_t channelCount = s->ReadValue<std::uint8_t>();

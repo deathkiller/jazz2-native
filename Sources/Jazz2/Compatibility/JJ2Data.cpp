@@ -27,18 +27,18 @@ namespace Jazz2::Compatibility
 			return false;
 		}
 
-		std::uint32_t magic = s->ReadValue<std::uint32_t>();
-		std::uint32_t signature = s->ReadValue<std::uint32_t>();
+		std::uint32_t magic = Stream::FromLE(s->ReadValue<std::uint32_t>());
+		std::uint32_t signature = Stream::FromLE(s->ReadValue<std::uint32_t>());
 		DEATH_ASSERT(magic == 0x42494C50 /*PLIB*/ && signature == 0xBEBAADDE, "Invalid signature", false);
 
-		/*std::uint32_t version =*/ s->ReadValue<std::uint32_t>();
+		/*std::uint32_t version =*/ Stream::FromLE(s->ReadValue<std::uint32_t>());
 
-		std::uint32_t recordedSize = s->ReadValue<std::uint32_t>();
+		std::uint32_t recordedSize = Stream::FromLE(s->ReadValue<std::uint32_t>());
 		DEATH_ASSERT(!strictParser || s->GetSize() == recordedSize, "Unexpected file size", false);
 
-		/*uint32_t recordedCRC =*/ s->ReadValue<std::uint32_t>();
-		std::int32_t headerBlockPackedSize = s->ReadValue<std::int32_t>();
-		std::int32_t headerBlockUnpackedSize = s->ReadValue<std::int32_t>();
+		/*uint32_t recordedCRC =*/ Stream::FromLE(s->ReadValue<std::uint32_t>());
+		std::int32_t headerBlockPackedSize = Stream::FromLE(s->ReadValue<std::int32_t>());
+		std::int32_t headerBlockUnpackedSize = Stream::FromLE(s->ReadValue<std::int32_t>());
 
 		JJ2Block headerBlock(s, headerBlockPackedSize, headerBlockUnpackedSize);
 

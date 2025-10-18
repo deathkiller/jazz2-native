@@ -53,19 +53,19 @@ namespace Jazz2::Compatibility
 		Name = fs::GetFileNameWithoutExtension(path);
 		StringUtils::lowercaseInPlace(Name);
 
-		std::uint32_t offsetArraySize = s->ReadValue<std::uint32_t>();
+		std::uint32_t offsetArraySize = Stream::FromLE(s->ReadValue<std::uint32_t>());
 
-		std::uint32_t textArraySize = s->ReadValue<std::uint32_t>();
+		std::uint32_t textArraySize = Stream::FromLE(s->ReadValue<std::uint32_t>());
 		std::unique_ptr<char[]> textArray = std::make_unique<char[]>(textArraySize);
 		s->Read(textArray.get(), textArraySize);
 
 		CommonTexts.reserve(offsetArraySize);
 		for (std::uint32_t i = 0; i < offsetArraySize; i++) {
-			std::uint32_t offset = s->ReadValue<std::uint32_t>();
+			std::uint32_t offset = Stream::FromLE(s->ReadValue<std::uint32_t>());
 			CommonTexts.emplace_back(&textArray[offset]);
 		}
 
-		std::uint32_t levelEntryCount = s->ReadValue<std::uint32_t>();
+		std::uint32_t levelEntryCount = Stream::FromLE(s->ReadValue<std::uint32_t>());
 
 		SmallVector<std::uint32_t, 0> counts, offsets;
 		counts.reserve(levelEntryCount);
@@ -82,10 +82,10 @@ namespace Jazz2::Compatibility
 
 			/*uint8_t unknown =*/ s->ReadValue<std::uint8_t>();
 			counts.emplace_back(s->ReadValue<std::uint8_t>());
-			offsets.emplace_back(s->ReadValue<std::uint16_t>());
+			offsets.emplace_back(Stream::FromLE(s->ReadValue<std::uint16_t>()));
 		}
 
-		std::uint32_t textArray2Size = s->ReadValue<std::uint32_t>();
+		std::uint32_t textArray2Size = Stream::FromLE(s->ReadValue<std::uint32_t>());
 		offsets.emplace_back(textArray2Size);
 
 		std::uint32_t k = 0;
@@ -181,7 +181,7 @@ namespace Jazz2::Compatibility
 	String JJ2Strings::RecodeString(StringView text, bool stripFormatting, bool escaped)
 	{
 		if (text.empty()) {
-			return { };
+			return {};
 		}
 
 		char buffer[1024];
