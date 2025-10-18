@@ -503,21 +503,21 @@ namespace Jazz2::Compatibility
 			// Create PCM wave file
 			// Main header
 			so.Write("RIFF", 4);
-			so.WriteValue<std::uint32_t>(36 + sample.DataSize - dataOffset); // File size
+			so.WriteValue<std::uint32_t>(Stream::FromLE(36 + sample.DataSize - dataOffset)); // File size
 			so.Write("WAVE", 4);
 
 			// Format header
 			so.Write("fmt ", 4);
-			so.WriteValue<std::uint32_t>(16); // Header remainder length
-			so.WriteValue<std::uint16_t>(1); // Format = PCM
-			so.WriteValue<std::uint16_t>(1); // Channels
-			so.WriteValue<std::uint32_t>(sample.SampleRate); // Sample rate
-			so.WriteValue<std::uint32_t>(sample.SampleRate * bytesPerSample); // Bytes per second
-			so.WriteValue<std::uint32_t>(bytesPerSample * 0x00080001);
+			so.WriteValue<std::uint32_t>(Stream::FromLE(16)); // Header remainder length
+			so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(1))); // Format = PCM
+			so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(1))); // Channels
+			so.WriteValue<std::uint32_t>(Stream::FromLE(sample.SampleRate)); // Sample rate
+			so.WriteValue<std::uint32_t>(Stream::FromLE(sample.SampleRate * bytesPerSample)); // Bytes per second
+			so.WriteValue<std::uint32_t>(Stream::FromLE(bytesPerSample * 0x00080001));
 
 			// Payload
 			so.Write("data", 4);
-			so.WriteValue<std::uint32_t>(sample.DataSize - dataOffset); // Payload size
+			so.WriteValue<std::uint32_t>(Stream::FromLE(sample.DataSize - dataOffset)); // Payload size
 			for (std::uint32_t k = dataOffset; k < sample.DataSize; k++) {
 				so.WriteValue<std::uint8_t>((bytesPerSample << 7) ^ sample.Data[k]);
 			}
@@ -555,40 +555,42 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		targetStream.WriteValue<std::uint64_t>(0xB8EF8498E2BFBBEF);
-		targetStream.WriteValue<std::uint32_t>(0x0002208F | (flags << 24)); // Version 2 is reserved for sprites (or bigger images)
+		targetStream.WriteValue<std::uint64_t>(Stream::FromLE(0xB8EF8498E2BFBBEF));
+		targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(0x208F)));
+		targetStream.WriteValue<std::uint8_t>(0x02); // Version 2 is reserved for sprites (or bigger images)
+		targetStream.WriteValue<std::uint8_t>(flags);
 
 		targetStream.WriteValue<std::uint8_t>(channelCount);
-		targetStream.WriteValue<std::uint32_t>(width);
-		targetStream.WriteValue<std::uint32_t>(height);
+		targetStream.WriteValue<std::uint32_t>(Stream::FromLE(width));
+		targetStream.WriteValue<std::uint32_t>(Stream::FromLE(height));
 
 		// Include Sprite extension
 		if (entry != nullptr) {
 			targetStream.WriteValue<std::uint8_t>(anim.FrameConfigurationX);
 			targetStream.WriteValue<std::uint8_t>(anim.FrameConfigurationY);
-			targetStream.WriteValue<std::uint16_t>(anim.FrameCount);
-			targetStream.WriteValue<std::uint16_t>((std::uint16_t)(anim.FrameRate == 0 ? 0 : 256 * 5 / anim.FrameRate));
+			targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(anim.FrameCount)));
+			targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(anim.FrameRate == 0 ? 0 : 256 * 5 / anim.FrameRate)));
 
 			if (anim.NormalizedHotspotX != 0 || anim.NormalizedHotspotY != 0) {
-				targetStream.WriteValue<std::uint16_t>(anim.NormalizedHotspotX + AddBorder);
-				targetStream.WriteValue<std::uint16_t>(anim.NormalizedHotspotY + AddBorder);
+				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(anim.NormalizedHotspotX + AddBorder)));
+				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(anim.NormalizedHotspotY + AddBorder)));
 			} else {
-				targetStream.WriteValue<std::uint16_t>(UINT16_MAX);
-				targetStream.WriteValue<std::uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX)));
+				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX)));
 			}
 			if (anim.Frames[0].ColdspotX != 0 || anim.Frames[0].ColdspotY != 0) {
-				targetStream.WriteValue<std::uint16_t>((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].ColdspotX + AddBorder);
-				targetStream.WriteValue<std::uint16_t>((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].ColdspotY + AddBorder);
+				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].ColdspotX + AddBorder)));
+				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].ColdspotY + AddBorder)));
 			} else {
-				targetStream.WriteValue<std::uint16_t>(UINT16_MAX);
-				targetStream.WriteValue<std::uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX)));
+				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX)));
 			}
 			if (anim.Frames[0].GunspotX != 0 || anim.Frames[0].GunspotY != 0) {
-				targetStream.WriteValue<std::uint16_t>((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].GunspotX + AddBorder);
-				targetStream.WriteValue<std::uint16_t>((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].GunspotY + AddBorder);
+				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].GunspotX + AddBorder)));
+				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].GunspotY + AddBorder)));
 			} else {
-				targetStream.WriteValue<std::uint16_t>(UINT16_MAX);
-				targetStream.WriteValue<std::uint16_t>(UINT16_MAX);
+				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX)));
+				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX)));
 			}
 
 			width *= anim.FrameConfigurationX;
