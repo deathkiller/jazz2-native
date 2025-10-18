@@ -1,6 +1,7 @@
 ﻿#include "JJ2Tileset.h"
 #include "JJ2Anims.h"
 #include "JJ2Block.h"
+#include "../ContentResolver.h"
 
 #include <IO/FileSystem.h>
 #include <IO/MemoryStream.h>
@@ -240,14 +241,14 @@ namespace Jazz2::Compatibility
 
 			bool hasAlphaChannel = false;
 			for (std::int32_t i = 1; i < std::int32_t(arraySize(palette)); i++) {
-				if ((palette[i] & 0xff000000) != 0) {
+				if ((palette[i] & ContentResolver::AlphaMask) != 0) {
 					hasAlphaChannel = true;
 					break;
 				}
 			}
 			if (!hasAlphaChannel) {
 				for (std::int32_t i = 1; i < std::int32_t(arraySize(palette)); i++) {
-					palette[i] |= 0xff000000;
+					palette[i] |= ContentResolver::AlphaMask;
 				}
 			}
 

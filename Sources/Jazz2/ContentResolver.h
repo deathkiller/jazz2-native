@@ -38,6 +38,12 @@ namespace Jazz2
 	public:
 		/** @{ @name Constants */
 
+		/** @brief Alpha channel mask */
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+		static constexpr std::uint32_t AlphaMask = 0x000000ff;
+#else
+		static constexpr std::uint32_t AlphaMask = 0xff000000;
+#endif
 		/** @brief Maximum number of palettes */
 		static constexpr std::int32_t PaletteCount = 256;
 		/** @brief Number of colors per palette */

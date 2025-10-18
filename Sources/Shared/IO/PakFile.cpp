@@ -190,11 +190,11 @@ namespace Death { namespace IO {
 		s->Read(signature, sizeof(signature));
 		DEATH_ASSERT(std::memcmp(signature, Signature, sizeof(Signature)) == 0, "Invalid .pak file", );
 
-		std::uint16_t fileVersion = s->ReadValue<std::uint16_t>();
+		std::uint16_t fileVersion = Stream::FromLE(s->ReadValue<std::uint16_t>());
 		DEATH_ASSERT(fileVersion == Version, "Unsupported .pak file version", );
 
-		PakFileFlags fileFlags = (PakFileFlags)s->ReadValue<std::uint16_t>();
-		std::uint64_t rootIndexOffset = s->ReadValue<std::uint64_t>();
+		PakFileFlags fileFlags = (PakFileFlags)Stream::FromLE(s->ReadValue<std::uint16_t>());
+		std::uint64_t rootIndexOffset = Stream::FromLE(s->ReadValue<std::uint64_t>());
 
 		DEATH_ASSERT(rootIndexOffset < std::uint64_t(s->GetSize()), "Invalid root index offset", );
 		s->Seek(static_cast<std::int64_t>(rootIndexOffset), SeekOrigin::Begin);
@@ -811,9 +811,9 @@ namespace Death { namespace IO {
 #endif
 
 		_outputStream->Write(Signature, sizeof(Signature));
-		_outputStream->WriteValue<std::uint16_t>(Version);
-		_outputStream->WriteValue<std::uint16_t>(std::uint16_t(fileFlags));
-		_outputStream->WriteValue<std::uint64_t>(rootIndexOffset);
+		_outputStream->WriteValue<std::uint16_t>(Stream::FromLE(Version));
+		_outputStream->WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(fileFlags)));
+		_outputStream->WriteValue<std::uint64_t>(Stream::FromLE(rootIndexOffset));
 
 		// Close the stream
 		_outputStream = nullptr;

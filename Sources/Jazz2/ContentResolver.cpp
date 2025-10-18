@@ -1723,7 +1723,7 @@ namespace Jazz2
 		std::uint32_t texels[64 * 64];
 
 		for (std::uint32_t i = 0; i < static_cast<std::uint32_t>(arraySize(texels)); i++) {
-			texels[i] = Random().Fast(0, INT32_MAX) | 0xff000000;
+			texels[i] = Random().Fast(0, INT32_MAX) | ContentResolver::AlphaMask;
 		}
 
 		std::unique_ptr<Texture> tex = std::make_unique<Texture>("Noise", Texture::Format::RGBA8, 64, 64);
