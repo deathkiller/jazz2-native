@@ -374,7 +374,11 @@ namespace Death { namespace Implementation {
 
 	std::size_t Formatter<long double>::format(const Containers::MutableStringView& buffer, long double value, FormatContext& context) {
 		std::int32_t precision = context.Precision;
-		if (precision == -1) precision = std::numeric_limits<long double>::digits10;
+#if !defined(DEATH_LONG_DOUBLE_SAME_AS_DOUBLE)
+		if (precision == -1) precision = 18;
+#else
+		if (precision == -1) precision = std::numeric_limits<double>::digits10;
+#endif
 		const char format[] { '%', '.', '*', 'L', formatTypeChar<float>(context.Type), '\0' };
 		return std::snprintf(buffer.data(), buffer.size(), format, precision, value);
 	}

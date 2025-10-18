@@ -40,7 +40,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 * Copy contents of original *Jazz Jackrabbit 2* directory to `‹Game›\Source\`
 * Run `‹Game›\Jazz2.exe`, `‹Game›\Jazz2_avx2.exe` or `‹Game›\Jazz2_sdl2.exe` application
 
-`‹Game›` *denotes path to Jazz² Resurrection. The game requires **Windows 7** (or newer) and GPU with **OpenGL 3.0** support. Game files should **not** be copied to* `Program Files`*. Cache is recreated during the intro cinematics on the first startup, so it can't be skipped. Also, the sound effects in the intro cinematics require the cache, so they will be missing the first time the game is started up.*
+`‹Game›` *denotes path to Jazz² Resurrection. The game requires **Windows 7** (or newer) and GPU with **OpenGL 3.3** support. Game files should **not** be copied to* `Program Files`*. Cache is recreated during the intro cinematics on the first startup, so it can't be skipped. Also, the sound effects in the intro cinematics require the cache, so they will be missing the first time the game is started up.*
 
 ### Linux
 * Download the game
@@ -51,7 +51,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 * Run `‹Game›/jazz2` or `‹Game›/jazz2_sdl2` application
   * If packages are used, the game should be visible in application list
 
-`‹Game›` *denotes path to Jazz² Resurrection.* `~` *denotes user's home directory. The game requires GPU with **OpenGL 3.0** or **OpenGL ES 3.0** (ARM) support. Cache is recreated during the intro cinematics on the first startup, so it can't be skipped. Also, the sound effects in the intro cinematics require the cache, so they will be missing the first time the game is started up.*
+`‹Game›` *denotes path to Jazz² Resurrection.* `~` *denotes user's home directory. The game requires GPU with **OpenGL 3.3** or **OpenGL ES 3.0** (ARM) support. Cache is recreated during the intro cinematics on the first startup, so it can't be skipped. Also, the sound effects in the intro cinematics require the cache, so they will be missing the first time the game is started up.*
 
 <sup>Alternatively, you can use package repository for your Linux distribution:</sup><br>
 [![ArchLinux](https://img.shields.io/badge/Arch%20Linux-grey?logo=archlinux&logoColor=ffffff)](https://aur.archlinux.org/packages/jazz2-bin)

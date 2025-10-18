@@ -108,72 +108,65 @@ namespace Death { namespace IO {
 		/** @brief Writes a 64-bit unsigned integer value to the stream using variable-length quantity encoding */
 		std::int64_t WriteVariableUint64(std::uint64_t value);
 
-#if defined(DEATH_TARGET_BIG_ENDIAN)
-		/** @brief Converts a 16-bit value from big-endian to native */
-		DEATH_ALWAYS_INLINE static std::uint16_t Uint16FromBE(std::uint16_t value) noexcept
+		/** @brief Converts an integer value from big-endian to native */
+		template<typename T>
+		static constexpr T FromBE(T value) {
+#if !defined(DEATH_TARGET_BIG_ENDIAN)
+			return Byteswap(value);
 #else
-		/** @brief Converts a 16-bit value from little-endian to native */
-		DEATH_ALWAYS_INLINE static std::uint16_t Uint16FromLE(std::uint16_t value) noexcept
-#endif
-		{
 			return value;
+#endif
 		}
 
+		/** @brief Converts an integer value from little-endian to native */
+		template<typename T>
+		static constexpr T FromLE(T value) {
 #if defined(DEATH_TARGET_BIG_ENDIAN)
-		/** @brief Converts a 32-bit value from big-endian to native */
-		DEATH_ALWAYS_INLINE static std::uint32_t Uint32FromBE(std::uint32_t value) noexcept
+			return Byteswap(value);
 #else
-		/** @brief Converts a 32-bit value from little-endian to native */
-		DEATH_ALWAYS_INLINE static std::uint32_t Uint32FromLE(std::uint32_t value) noexcept
-#endif
-		{
 			return value;
+#endif
 		}
 
-#if defined(DEATH_TARGET_BIG_ENDIAN)
-		/** @brief Converts a 64-bit value from big-endian to native */
-		DEATH_ALWAYS_INLINE static std::uint64_t Uint64FromBE(std::uint64_t value) noexcept
-#else
-		/** @brief Converts a 64-bit value from little-endian to native */
-		DEATH_ALWAYS_INLINE static std::uint64_t Uint64FromLE(std::uint64_t value) noexcept
-#endif
-		{
-			return value;
+	private:
+		static constexpr std::uint16_t Byteswap16(std::uint16_t x) {
+			return static_cast<uint16_t>((x >> 8) | (x << 8));
 		}
 
-#if defined(DEATH_TARGET_BIG_ENDIAN)
-		/** @brief Converts a 16-bit value from little-endian to native */
-		DEATH_ALWAYS_INLINE static std::uint16_t Uint16FromLE(std::uint16_t value) noexcept
-#else
-		/** @brief Converts a 16-bit value from big-endian to native */
-		DEATH_ALWAYS_INLINE static std::uint16_t Uint16FromBE(std::uint16_t value) noexcept
-#endif
-		{
-			return (value >> 8) | (value << 8);
+		static constexpr std::uint32_t Byteswap32(std::uint32_t x) {
+			return ((x & 0x000000FFu) << 24) |
+				((x & 0x0000FF00u) << 8) |
+				((x & 0x00FF0000u) >> 8) |
+				((x & 0xFF000000u) >> 24);
 		}
 
-#if defined(DEATH_TARGET_BIG_ENDIAN)
-		/** @brief Converts a 32-bit value from little-endian to native */
-		DEATH_ALWAYS_INLINE static std::uint32_t Uint32FromLE(std::uint32_t value) noexcept
-#else
-		/** @brief Converts a 32-bit value from big-endian to native */
-		DEATH_ALWAYS_INLINE static std::uint32_t Uint32FromBE(std::uint32_t value) noexcept
-#endif
-		{
-			return (value >> 24) | ((value << 8) & 0x00FF0000) | ((value >> 8) & 0x0000FF00) | (value << 24);
+		static constexpr std::uint64_t Byteswap64(std::uint64_t x) {
+			return ((x & 0x00000000000000FFull) << 56) |
+				((x & 0x000000000000FF00ull) << 40) |
+				((x & 0x0000000000FF0000ull) << 24) |
+				((x & 0x00000000FF000000ull) << 8) |
+				((x & 0x000000FF00000000ull) >> 8) |
+				((x & 0x0000FF0000000000ull) >> 24) |
+				((x & 0x00FF000000000000ull) >> 40) |
+				((x & 0xFF00000000000000ull) >> 56);
 		}
 
-#if defined(DEATH_TARGET_BIG_ENDIAN)
-		/** @brief Converts a 64-bit value from little-endian to native */
-		DEATH_ALWAYS_INLINE static std::uint64_t Uint64FromLE(std::uint64_t value) noexcept
-#else
-		/** @brief Converts a 64-bit value from big-endian to native */
-		DEATH_ALWAYS_INLINE static std::uint64_t Uint64FromBE(std::uint64_t value) noexcept
-#endif
-		{
-			return (value >> 56) | ((value << 40) & 0x00FF000000000000ULL) | ((value << 24) & 0x0000FF0000000000ULL) |
-				((value << 8) & 0x000000FF00000000ULL) | ((value >> 8) & 0x00000000FF000000ULL) |
-				((value >> 24) & 0x0000000000FF0000ULL) | ((value >> 40) & 0x000000000000FF00ULL) | (value << 56);
+		template<typename T>
+		static constexpr typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 2), T>::type Byteswap(T value) {
+			std::uint16_t temp = Byteswap16(static_cast<std::uint16_t>(value));
+			return static_cast<T>(temp);
+		}
+
+		template<typename T>
+		static constexpr typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 4), T>::type Byteswap(T value) {
+			std::uint32_t temp = Byteswap32(static_cast<std::uint32_t>(value));
+			return static_cast<T>(temp);
+		}
+
+		template<typename T>
+		static constexpr typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 8), T>::type Byteswap(T value) {
+			std::uint64_t temp = Byteswap64(static_cast<std::uint64_t>(value));
+			return static_cast<T>(temp);
 		}
 	};
 

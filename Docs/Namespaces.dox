@@ -33,7 +33,7 @@ matches the current implementation.
 - **Web** (WebAssembly) using [Emscripten](https://kripken.github.io/emscripten-site/)
 
 The code is mainly optimized to run on 64-bit **x86** and **ARM** processors including advanced
-instruction sets. Additionally, **OpenGL** 3.0, **OpenGL|ES** 3.0 or **WebGL** 2.0 is required
+instruction sets. Additionally, **OpenGL** 3.3, **OpenGL|ES** 3.0 or **WebGL** 2.0 is required
 to run the application. However, Google ANGLE or Mesa can be used to translate OpenGL calls to
 the native graphics API. See also @ref death-partialsupport "the list of partially supported features"
 that depend on specific platforms.

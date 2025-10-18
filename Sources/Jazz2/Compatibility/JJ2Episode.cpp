@@ -41,10 +41,10 @@ namespace Jazz2::Compatibility
 		// begins; stored as a 4-byte-long integer starting at byte 0x8)
 
 		// Header (208 bytes)
-		/*std::int32_t headerSize =*/ s->ReadValue<std::int32_t>();
-		Position = s->ReadValue<std::int32_t>();
-		/*std::uint32_t flags =*/ s->ReadValue<std::uint32_t>();	// 0x01 = Not Shareware
-		/*std::uint32_t unknown1 =*/ s->ReadValue<std::uint32_t>();
+		/*std::int32_t headerSize =*/ Stream::FromLE(s->ReadValue<std::int32_t>());
+		Position = Stream::FromLE(s->ReadValue<std::int32_t>());
+		/*std::uint32_t flags =*/ Stream::FromLE(s->ReadValue<std::uint32_t>());	// 0x01 = Not Shareware
+		/*std::uint32_t unknown1 =*/ Stream::FromLE(s->ReadValue<std::uint32_t>());
 
 		char tmpBuffer[64];
 
@@ -83,19 +83,19 @@ namespace Jazz2::Compatibility
 		FirstLevel = String(tmpBuffer, length);
 		StringUtils::lowercaseInPlace(FirstLevel);
 
-		ImageWidth = s->ReadValue<std::int32_t>();
-		ImageHeight = s->ReadValue<std::int32_t>();
-		/*std::int32_t unknown2 =*/ s->ReadValue<std::int32_t>();
-		/*std::int32_t unknown3 =*/ s->ReadValue<std::int32_t>();
+		ImageWidth = Stream::FromLE(s->ReadValue<std::int32_t>());
+		ImageHeight = Stream::FromLE(s->ReadValue<std::int32_t>());
+		/*std::int32_t unknown2 =*/ Stream::FromLE(s->ReadValue<std::int32_t>());
+		/*std::int32_t unknown3 =*/ Stream::FromLE(s->ReadValue<std::int32_t>());
 
-		TitleWidth = s->ReadValue<std::int32_t>();
-		TitleHeight = s->ReadValue<std::int32_t>();
-		/*std::int32_t unknown4 =*/ s->ReadValue<std::int32_t>();
-		/*std::int32_t unknown5 =*/ s->ReadValue<std::int32_t>();
+		TitleWidth = Stream::FromLE(s->ReadValue<std::int32_t>());
+		TitleHeight = Stream::FromLE(s->ReadValue<std::int32_t>());
+		/*std::int32_t unknown4 =*/ Stream::FromLE(s->ReadValue<std::int32_t>());
+		/*std::int32_t unknown5 =*/ Stream::FromLE(s->ReadValue<std::int32_t>());
 
 		// Background image
 		{
-			std::int32_t imagePackedSize = s->ReadValue<std::int32_t>();
+			std::int32_t imagePackedSize = Stream::FromLE(s->ReadValue<std::int32_t>());
 			std::int32_t imageUnpackedSize = ImageWidth * ImageHeight;
 			JJ2Block imageBlock(s, imagePackedSize, imageUnpackedSize);
 			ImageData = std::make_unique<std::uint8_t[]>(imageUnpackedSize);
@@ -104,16 +104,16 @@ namespace Jazz2::Compatibility
 
 		// Title image
 		{
-			std::int32_t titleLightPackedSize = s->ReadValue<std::int32_t>();
+			std::int32_t titleLightPackedSize = Stream::FromLE(s->ReadValue<std::int32_t>());
 			std::int32_t titleLightUnpackedSize = TitleWidth * TitleHeight;
 			JJ2Block titleLightBlock(s, titleLightPackedSize, titleLightUnpackedSize);
 			TitleData = std::make_unique<std::uint8_t[]>(titleLightUnpackedSize);
 			titleLightBlock.ReadRawBytes(TitleData.get(), titleLightUnpackedSize);
 		}
 		//{
-		//    std::int32_t titleDarkPackedSize = r.ReadInt32();
+		//    std::int32_t titleDarkPackedSize = Stream::FromLE(->ReadValue<std::int32_t>());
 		//    std::int32_t titleDarkUnpackedSize = titleWidth * titleHeight;
-		//    JJ2Block titleDarkBlock = new JJ2Block(s, titleDarkPackedSize, titleDarkUnpackedSize);
+		//    JJ2Block titleDarkBlock(s, titleDarkPackedSize, titleDarkUnpackedSize);
 		//    episode.titleDark = ConvertIndicesToRgbaBitmap(titleWidth, titleHeight, titleDarkBlock, true);
 		//}
 

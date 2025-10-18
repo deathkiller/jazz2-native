@@ -43,18 +43,18 @@ namespace nCine
 		DEATH_ASSERT(header.endianess != 0x01020304, "File endianess doesn't match machine one", false);
 
 		// Accounting for key-value data and `UInt32 imageSize` from first MIP level
-		headerSize_ = 64 + Stream::Uint32FromLE(header.bytesOfKeyValueData) + 4;
-		width_ = Stream::Uint32FromLE(header.pixelWidth);
-		height_ = Stream::Uint32FromLE(header.pixelHeight);
-		mipMapCount_ = Stream::Uint32FromLE(header.numberOfMipmapLevels);
+		headerSize_ = 64 + Stream::FromLE(header.bytesOfKeyValueData) + 4;
+		width_ = Stream::FromLE(header.pixelWidth);
+		height_ = Stream::FromLE(header.pixelHeight);
+		mipMapCount_ = Stream::FromLE(header.numberOfMipmapLevels);
 
 		return true;
 	}
 
 	bool TextureLoaderKtx::parseFormat(const KtxHeader& header)
 	{
-		const GLenum internalFormat = Stream::Uint32FromLE(header.glInternalFormat);
-		const GLenum type = Stream::Uint32FromLE(header.glType);
+		const GLenum internalFormat = Stream::FromLE(header.glInternalFormat);
+		const GLenum type = Stream::FromLE(header.glType);
 
 		loadPixels(internalFormat, type);
 

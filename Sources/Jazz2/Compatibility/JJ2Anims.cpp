@@ -27,24 +27,24 @@ namespace Jazz2::Compatibility
 
 		bool seemsLikeCC = false;
 
-		std::uint32_t magic = s->ReadValue<std::uint32_t>();
+		std::uint32_t magic = Stream::FromLE(s->ReadValue<std::uint32_t>());
 		DEATH_ASSERT(magic == 0x42494C41, "Invalid magic number", JJ2Version::Unknown);
 
-		std::uint32_t signature = s->ReadValue<std::uint32_t>();
+		std::uint32_t signature = Stream::FromLE(s->ReadValue<std::uint32_t>());
 		DEATH_ASSERT(signature == 0x00BEBA00, "Invalid signature", JJ2Version::Unknown);
 
-		std::uint32_t headerLen = s->ReadValue<std::uint32_t>();
+		std::uint32_t headerLen = Stream::FromLE(s->ReadValue<std::uint32_t>());
 
-		std::uint32_t magicUnknown = s->ReadValue<std::uint32_t>();	// Probably `uint16_t version` and `uint16_t unknown`
+		std::uint32_t magicUnknown = Stream::FromLE(s->ReadValue<std::uint32_t>());	// Probably `uint16_t version` and `uint16_t unknown`
 		DEATH_ASSERT(magicUnknown == 0x18080200, "Invalid version", JJ2Version::Unknown);
 
-		/*std::uint32_t fileLen =*/ s->ReadValue<std::uint32_t>();
-		/*std::uint32_t crc =*/ s->ReadValue<std::uint32_t>();
-		std::int32_t setCount = s->ReadValue<std::int32_t>();
+		/*std::uint32_t fileLen =*/ Stream::FromLE(s->ReadValue<std::uint32_t>());
+		/*std::uint32_t crc =*/ Stream::FromLE(s->ReadValue<std::uint32_t>());
+		std::int32_t setCount = Stream::FromLE(s->ReadValue<std::int32_t>());
 		SmallVector<std::uint32_t, 0> setAddresses(setCount);
 
 		for (std::int32_t i = 0; i < setCount; i++) {
-			setAddresses[i] = s->ReadValue<std::uint32_t>();
+			setAddresses[i] = Stream::FromLE(s->ReadValue<std::uint32_t>());
 		}
 
 		DEATH_ASSERT(headerLen == s->GetPosition(), "Invalid header size", JJ2Version::Unknown);
@@ -59,19 +59,19 @@ namespace Jazz2::Compatibility
 				break;
 			}
 
-			std::uint32_t magicANIM = s->ReadValue<std::uint32_t>();
+			std::uint32_t magicANIM = Stream::FromLE(s->ReadValue<std::uint32_t>());
 			std::uint8_t animCount = s->ReadValue<std::uint8_t>();
 			std::uint8_t sndCount = s->ReadValue<std::uint8_t>();
-			/*std::uint16_t frameCount =*/ s->ReadValue<std::uint16_t>();
-			/*std::uint32_t cumulativeSndIndex =*/ s->ReadValue<std::uint32_t>();
-			std::int32_t infoBlockLenC = s->ReadValue<std::int32_t>();
-			std::int32_t infoBlockLenU = s->ReadValue<std::int32_t>();
-			std::int32_t frameDataBlockLenC = s->ReadValue<std::int32_t>();
-			std::int32_t frameDataBlockLenU = s->ReadValue<std::int32_t>();
-			std::int32_t imageDataBlockLenC = s->ReadValue<std::int32_t>();
-			std::int32_t imageDataBlockLenU = s->ReadValue<std::int32_t>();
-			std::int32_t sampleDataBlockLenC = s->ReadValue<std::int32_t>();
-			std::int32_t sampleDataBlockLenU = s->ReadValue<std::int32_t>();
+			/*std::uint16_t frameCount =*/ Stream::FromLE(s->ReadValue<std::uint16_t>());
+			/*std::uint32_t cumulativeSndIndex =*/ Stream::FromLE(s->ReadValue<std::uint32_t>());
+			std::int32_t infoBlockLenC = Stream::FromLE(s->ReadValue<std::int32_t>());
+			std::int32_t infoBlockLenU = Stream::FromLE(s->ReadValue<std::int32_t>());
+			std::int32_t frameDataBlockLenC = Stream::FromLE(s->ReadValue<std::int32_t>());
+			std::int32_t frameDataBlockLenU = Stream::FromLE(s->ReadValue<std::int32_t>());
+			std::int32_t imageDataBlockLenC = Stream::FromLE(s->ReadValue<std::int32_t>());
+			std::int32_t imageDataBlockLenU = Stream::FromLE(s->ReadValue<std::int32_t>());
+			std::int32_t sampleDataBlockLenC = Stream::FromLE(s->ReadValue<std::int32_t>());
+			std::int32_t sampleDataBlockLenU = Stream::FromLE(s->ReadValue<std::int32_t>());
 
 			JJ2Block infoBlock(s, infoBlockLenC, infoBlockLenU);
 			JJ2Block frameDataBlock(s, frameDataBlockLenC, frameDataBlockLenU);
