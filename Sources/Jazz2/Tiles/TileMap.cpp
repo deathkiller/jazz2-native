@@ -893,8 +893,8 @@ namespace Jazz2::Tiles
 
 		TileMapLayer& newLayer = _layers.emplace_back();
 
-		std::int32_t width = s.ReadValue<std::int32_t>();
-		std::int32_t height = s.ReadValue<std::int32_t>();
+		std::int32_t width = Stream::FromLE(s.ReadValue<std::int32_t>());
+		std::int32_t height = Stream::FromLE(s.ReadValue<std::int32_t>());
 		newLayer.LayoutSize = Vector2i(width, height);
 		newLayer.Visible = ((layerFlags & 0x08) == 0x08);
 
@@ -903,6 +903,7 @@ namespace Jazz2::Tiles
 			newLayer.Description.SpeedModelX = (LayerSpeedModel)(combinedSpeedModels & 0x0f);
 			newLayer.Description.SpeedModelY = (LayerSpeedModel)((combinedSpeedModels >> 4) & 0x0f);
 
+			// TODO: Big endian
 			newLayer.Description.OffsetX = s.ReadValue<float>();
 			newLayer.Description.OffsetY = s.ReadValue<float>();
 			newLayer.Description.SpeedX = s.ReadValue<float>();
@@ -911,7 +912,7 @@ namespace Jazz2::Tiles
 			newLayer.Description.AutoSpeedY = s.ReadValue<float>();
 			newLayer.Description.RepeatX = ((layerFlags & 0x01) == 0x01);
 			newLayer.Description.RepeatY = ((layerFlags & 0x02) == 0x02);
-			std::int16_t depth = s.ReadValue<std::int16_t>();
+			std::int16_t depth = Stream::FromLE(s.ReadValue<std::int16_t>());
 			newLayer.Description.Depth = (std::uint16_t)(ILevelHandler::MainPlaneZ - depth);
 			newLayer.Description.UseInherentOffset = ((layerFlags & 0x04) == 0x04);
 
@@ -955,7 +956,7 @@ namespace Jazz2::Tiles
 
 		for (std::int32_t i = 0; i < (width * height); i++) {
 			std::uint8_t tileFlags = s.ReadValue<std::uint8_t>();
-			std::uint16_t tileIdx = s.ReadValue<std::uint16_t>();
+			std::uint16_t tileIdx = Stream::FromLE(s.ReadValue<std::uint16_t>());
 
 			std::uint8_t tileModifier = (std::uint8_t)(tileFlags >> 4);
 
@@ -977,9 +978,9 @@ namespace Jazz2::Tiles
 
 	void TileMap::ReadAnimatedTiles(Stream& s)
 	{
-		_animatedTilesOffset = s.ReadValue<std::uint16_t>();
+		_animatedTilesOffset = Stream::FromLE(s.ReadValue<std::uint16_t>());
 
-		std::int32_t count = s.ReadValue<std::uint16_t>();
+		std::int32_t count = Stream::FromLE(s.ReadValue<std::uint16_t>());
 
 		_animatedTiles.reserve(count);
 
@@ -992,18 +993,18 @@ namespace Jazz2::Tiles
 			AnimatedTile& animTile = _animatedTiles.emplace_back();
 
 			// FrameDuration is multiplied by 16 before saving, so divide it here back
-			animTile.FrameDuration = s.ReadValue<std::uint16_t>() / 16.0f;
-			animTile.Delay = s.ReadValue<std::uint16_t>();
-			animTile.DelayJitter = s.ReadValue<std::uint16_t>();
+			animTile.FrameDuration = Stream::FromLE(s.ReadValue<std::uint16_t>()) / 16.0f;
+			animTile.Delay = Stream::FromLE(s.ReadValue<std::uint16_t>());
+			animTile.DelayJitter = Stream::FromLE(s.ReadValue<std::uint16_t>());
 
 			animTile.IsPingPong = s.ReadValue<std::uint8_t>();
-			animTile.PingPongDelay = s.ReadValue<std::uint16_t>();
+			animTile.PingPongDelay = Stream::FromLE(s.ReadValue<std::uint16_t>());
 
 			for (std::int32_t j = 0; j < frameCount; j++) {
 				auto& frame = animTile.Tiles.emplace_back();
 				// TODO: flags
 				/*std::uint8_t flag =*/ s.ReadValue<std::uint8_t>();
-				frame.TileID = s.ReadValue<std::uint16_t>();
+				frame.TileID = Stream::FromLE(s.ReadValue<std::uint16_t>());
 			}
 		}
 	}

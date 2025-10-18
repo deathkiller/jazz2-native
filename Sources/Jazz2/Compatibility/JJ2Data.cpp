@@ -117,9 +117,9 @@ namespace Jazz2::Compatibility
 
 		MemoryStream so(16384);
 
-		so.WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
+		so.WriteValue<std::uint64_t>(Stream::FromLE(0x2095A59FF0BFBBEF));	// Signature
 		so.WriteValue<std::uint8_t>(ContentResolver::SfxListFile);
-		so.WriteValue<std::uint16_t>(1);
+		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(1)));
 
 		HashMap<std::uint32_t, std::uint32_t> sampleToIndex;
 		SmallVector<std::uint32_t> indexToSample;
@@ -144,7 +144,7 @@ namespace Jazz2::Compatibility
 			itemRealCount++;
 		}
 
-		so.WriteValue<std::uint16_t>((std::uint16_t)sampleCount);
+		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(sampleCount)));
 		for (std::int32_t i = 0; i < sampleCount; i++) {
 			auto sample = animMapping.GetByOrdinal(indexToSample[i]);
 			if (sample == nullptr) {
@@ -156,7 +156,7 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		so.WriteValue<std::uint16_t>((std::uint16_t)itemRealCount);
+		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(itemRealCount)));
 		for (std::int32_t i = 0; i < itemRealCount; i++) {
 			SoundFXList sfx;
 			std::memcpy(&sfx, &item.Blob[i * sizeof(SoundFXList)], sizeof(SoundFXList));
@@ -165,7 +165,7 @@ namespace Jazz2::Compatibility
 
 			auto it = sampleToIndex.find(sfx.Sample);
 			if (it != sampleToIndex.end()) {
-				so.WriteValue<std::uint16_t>((std::uint16_t)it->second);
+				so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(it->second)));
 			} else {
 				so.WriteValue<std::uint16_t>(0);
 			}
@@ -198,26 +198,28 @@ namespace Jazz2::Compatibility
 
 		MemoryStream so(16384);
 
-		std::uint8_t flags = 0x80 | 0x01 | 0x02;
+		constexpr std::uint8_t flags = 0x80 | 0x01 | 0x02;
 
-		so.WriteValue<std::uint64_t>(0xB8EF8498E2BFBBEF);
-		so.WriteValue<std::uint32_t>(0x0002208F | (flags << 24)); // Version 2 is reserved for sprites (or bigger images)
+		so.WriteValue<std::uint64_t>(Stream::FromLE(0xB8EF8498E2BFBBEF));
+		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(0x208F)));
+		so.WriteValue<std::uint8_t>(0x02); // Version 2 is reserved for sprites (or bigger images)
+		so.WriteValue<std::uint8_t>(flags);
 
 		so.WriteValue<std::uint8_t>(4);
-		so.WriteValue<std::uint32_t>(width);
-		so.WriteValue<std::uint32_t>(height);
+		so.WriteValue<std::uint32_t>(Stream::FromLE(width));
+		so.WriteValue<std::uint32_t>(Stream::FromLE(height));
 
 		// Include Sprite extension
 		so.WriteValue<std::uint8_t>(1); // FrameConfigurationX
 		so.WriteValue<std::uint8_t>(1); // FrameConfigurationY
-		so.WriteValue<std::uint16_t>(1); // FrameCount
-		so.WriteValue<std::uint16_t>(0); // FrameRate
-		so.WriteValue<std::uint16_t>(UINT16_MAX); // NormalizedHotspotX
-		so.WriteValue<std::uint16_t>(UINT16_MAX); // NormalizedHotspotY
-		so.WriteValue<std::uint16_t>(UINT16_MAX); // ColdspotX
-		so.WriteValue<std::uint16_t>(UINT16_MAX); // ColdspotY
-		so.WriteValue<std::uint16_t>(UINT16_MAX); // GunspotX
-		so.WriteValue<std::uint16_t>(UINT16_MAX); // GunspotY
+		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(1))); // FrameCount
+		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(0))); // FrameRate
+		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX))); // NormalizedHotspotX
+		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX))); // NormalizedHotspotY
+		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX))); // ColdspotX
+		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX))); // ColdspotY
+		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX))); // GunspotX
+		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX))); // GunspotY
 
 		JJ2Anims::WriteImageContent(so, pixels.get(), width, height, 4);
 

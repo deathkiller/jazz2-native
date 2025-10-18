@@ -219,14 +219,16 @@ namespace Jazz2::Compatibility
 
 		constexpr std::uint8_t flags = 0x20 | 0x40; // Mask and palette included
 
-		so->WriteValue<std::uint64_t>(0xB8EF8498E2BFBBEF);
-		so->WriteValue<std::uint32_t>(0x0002208F | (flags << 24)); // Version 2 is reserved for sprites (or bigger images)
+		so->WriteValue<std::uint64_t>(Stream::FromLE(0xB8EF8498E2BFBBEF));
+		so->WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(0x208F)));
+		so->WriteValue<std::uint8_t>(2); // Version 2 is reserved for sprites (or bigger images)
+		so->WriteValue<std::uint8_t>(flags); // Flags
 
 		// TODO: Use single channel instead
 		so->WriteValue<std::uint8_t>(4);
-		so->WriteValue<std::uint32_t>(width);
-		so->WriteValue<std::uint32_t>(height);
-		so->WriteValue<std::uint16_t>(tileCount);
+		so->WriteValue<std::uint32_t>(Stream::FromLE(width));
+		so->WriteValue<std::uint32_t>(Stream::FromLE(height));
+		so->WriteValue<std::uint16_t>(Stream::FromLE(tileCount));
 
 		MemoryStream ms(1024 * 1024);
 		{
@@ -268,14 +270,14 @@ namespace Jazz2::Compatibility
 			}
 
 			// Mask
-			co.WriteValue<std::uint32_t>(tileCount * sizeof(_tiles[0].Mask));
+			co.WriteValue<std::uint32_t>(Stream::FromLE(tileCount * sizeof(_tiles[0].Mask)));
 			for (std::int32_t i = 0; i < tileCount; i++) {
 				const auto& tile = _tiles[i];
 				co.Write(tile.Mask, sizeof(tile.Mask));
 			}
 		}
 
-		so->WriteValue<std::int32_t>(std::int32_t(ms.GetSize()));
+		so->WriteValue<std::int32_t>(Stream::FromLE(std::int32_t(ms.GetSize())));
 		so->Write(ms.GetBuffer(), ms.GetSize());
 
 		// Diffuse

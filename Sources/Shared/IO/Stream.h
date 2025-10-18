@@ -16,7 +16,7 @@
 
 #include <type_traits>
 #if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
-#	include <stdlib.h>	// For _byteswap_ushort()/_byteswap_ulong()/_byteswap_uint64()
+#	include <intrin.h>	// For _byteswap_ushort()/_byteswap_ulong()/_byteswap_uint64()
 #endif
 
 namespace Death { namespace IO {
@@ -174,20 +174,17 @@ namespace Death { namespace IO {
 
 		template<typename T>
 		static typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 2), T>::type Byteswap(T value) {
-			std::uint16_t temp = Byteswap16(static_cast<std::uint16_t>(value));
-			return static_cast<T>(temp);
+			return static_cast<T>(Byteswap16(static_cast<std::uint16_t>(value)));
 		}
 
 		template<typename T>
 		static typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 4), T>::type Byteswap(T value) {
-			std::uint32_t temp = Byteswap32(static_cast<std::uint32_t>(value));
-			return static_cast<T>(temp);
+			return static_cast<T>(Byteswap32(static_cast<std::uint32_t>(value)));
 		}
 
 		template<typename T>
 		static typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 8), T>::type Byteswap(T value) {
-			std::uint64_t temp = Byteswap64(static_cast<std::uint64_t>(value));
-			return static_cast<T>(temp);
+			return static_cast<T>(Byteswap64(static_cast<std::uint64_t>(value)));
 		}
 	};
 

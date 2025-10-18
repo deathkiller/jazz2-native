@@ -194,7 +194,7 @@ namespace Jazz2
 		if (!resetConfig) {
 			auto s = fs::Open(_configPath, FileAccess::Read);
 			if (s->GetSize() > 18) {
-				std::uint64_t signature = s->ReadValue<std::uint64_t>();
+				std::uint64_t signature = Stream::FromLE(s->ReadValue<std::uint64_t>());
 				std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 				std::uint8_t version = s->ReadValue<std::uint8_t>();
 				if (signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::ConfigFile && version <= FileVersion) {
@@ -206,7 +206,7 @@ namespace Jazz2
 
 					DeflateStream uc(*s);
 
-					BoolOptions boolOptions = (BoolOptions)uc.ReadValue<std::uint64_t>();
+					BoolOptions boolOptions = (BoolOptions)Stream::FromLE(uc.ReadValue<std::uint64_t>());
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 					EnableFullscreen = ((boolOptions & BoolOptions::EnableFullscreen) == BoolOptions::EnableFullscreen);
@@ -250,7 +250,7 @@ namespace Jazz2
 					}
 
 					// Bitmask of unlocked episodes, used only if compiled with SHAREWARE_DEMO_ONLY
-					UnlockedEpisodes = (UnlockableEpisodes)uc.ReadValue<std::uint32_t>();
+					UnlockedEpisodes = (UnlockableEpisodes)Stream::FromLE(uc.ReadValue<std::uint32_t>());
 
 					ActiveRescaleMode = (RescaleMode)uc.ReadValue<std::uint8_t>();
 
@@ -310,7 +310,7 @@ namespace Jazz2
 									mapping.Targets.clear();
 
 									for (std::uint32_t k = 0; k < targetCount; k++) {
-										MappingTarget target = { uc.ReadValue<std::uint32_t>() };
+										MappingTarget target = { Stream::FromLE(uc.ReadValue<std::uint32_t>()) };
 										mapping.Targets.push_back(target);
 									}
 								} else {
@@ -331,16 +331,17 @@ namespace Jazz2
 					}
 
 					// Episode End
-					std::uint16_t episodeEndSize = uc.ReadValue<std::uint16_t>();
-					std::uint16_t episodeEndCount = uc.ReadValue<std::uint16_t>();
+					std::uint16_t episodeEndSize = Stream::FromLE(uc.ReadValue<std::uint16_t>());
+					std::uint16_t episodeEndCount = Stream::FromLE(uc.ReadValue<std::uint16_t>());
 
 					for (std::uint32_t i = 0; i < episodeEndCount; i++) {
 						std::uint8_t nameLength = uc.ReadValue<std::uint8_t>();
-						String episodeName = String(NoInit, nameLength);
+						String episodeName{NoInit, nameLength};
 						uc.Read(episodeName.data(), nameLength);
 
 						EpisodeContinuationState state = {};
 						if (episodeEndSize == sizeof(EpisodeContinuationState)) {
+							// TODO: Big endian
 							uc.Read(&state, sizeof(EpisodeContinuationState));
 						} else {
 							// Struct has different size, so it's better to skip it
@@ -352,12 +353,12 @@ namespace Jazz2
 					}
 
 					// Episode Continue
-					std::uint16_t episodeContinueSize = uc.ReadValue<std::uint16_t>();
-					std::uint16_t episodeContinueCount = uc.ReadValue<std::uint16_t>();
+					std::uint16_t episodeContinueSize = Stream::FromLE(uc.ReadValue<std::uint16_t>());
+					std::uint16_t episodeContinueCount = Stream::FromLE(uc.ReadValue<std::uint16_t>());
 
 					for (std::uint32_t i = 0; i < episodeContinueCount; i++) {
 						std::uint8_t nameLength = uc.ReadValue<std::uint8_t>();
-						String episodeName = String(NoInit, nameLength);
+						String episodeName{NoInit, nameLength};
 						uc.Read(episodeName.data(), nameLength);
 
 						if (episodeContinueSize == sizeof(EpisodeContinuationState)) {
@@ -366,6 +367,7 @@ namespace Jazz2
 							stateWithLevel.LevelName = String(NoInit, nameLength);
 							uc.Read(stateWithLevel.LevelName.data(), nameLength);
 
+							// TODO: Big endian
 							uc.Read(&stateWithLevel.State, sizeof(EpisodeContinuationState));
 							_episodeContinue.emplace(std::move(episodeName), std::move(stateWithLevel));
 						} else {
@@ -483,7 +485,7 @@ namespace Jazz2
 			return;
 		}
 
-		so->WriteValue<std::uint64_t>(0x2095A59FF0BFBBEF);
+		so->WriteValue<std::uint64_t>(Stream::FromLE(0x2095A59FF0BFBBEF));
 		so->WriteValue<std::uint8_t>(ContentResolver::ConfigFile);
 		so->WriteValue<std::uint8_t>(FileVersion);
 
@@ -516,39 +518,39 @@ namespace Jazz2
 		if (AllowCheats) boolOptions |= BoolOptions::AllowCheats;
 		if (PlayStationExtendedSupport) boolOptions |= BoolOptions::PlayStationExtendedSupport;
 		if (SwitchToNewWeapon) boolOptions |= BoolOptions::SwitchToNewWeapon;
-		co.WriteValue<std::uint64_t>((std::uint64_t)boolOptions);
+		co.WriteValue<std::uint64_t>(Stream::FromLE(std::uint64_t(boolOptions)));
 
 		if (Language[0] != '\0') {
 			co.Write(Language, sizeof(Language));
 		}
 
 		// Bitmask of unlocked episodes, used only if compiled with SHAREWARE_DEMO_ONLY
-		co.WriteValue<std::uint32_t>((std::uint32_t)UnlockedEpisodes);
+		co.WriteValue<std::uint32_t>(Stream::FromLE(std::uint32_t(UnlockedEpisodes)));
 
-		co.WriteValue<std::uint8_t>((std::uint8_t)ActiveRescaleMode);
+		co.WriteValue<std::uint8_t>(std::uint8_t(ActiveRescaleMode));
 
-		co.WriteValue<std::uint8_t>((std::uint8_t)(MasterVolume * 255.0f));
-		co.WriteValue<std::uint8_t>((std::uint8_t)(SfxVolume * 255.0f));
-		co.WriteValue<std::uint8_t>((std::uint8_t)(MusicVolume * 255.0f));
+		co.WriteValue<std::uint8_t>(std::uint8_t(MasterVolume * 255.0f));
+		co.WriteValue<std::uint8_t>(std::uint8_t(SfxVolume * 255.0f));
+		co.WriteValue<std::uint8_t>(std::uint8_t(MusicVolume * 255.0f));
 
-		co.WriteValue<std::int8_t>((std::int8_t)(TouchLeftPadding.X * INT8_MAX * TouchPaddingMultiplier));
-		co.WriteValue<std::int8_t>((std::int8_t)(TouchLeftPadding.Y * INT8_MAX * TouchPaddingMultiplier));
-		co.WriteValue<std::int8_t>((std::int8_t)(TouchRightPadding.X * INT8_MAX * TouchPaddingMultiplier));
-		co.WriteValue<std::int8_t>((std::int8_t)(TouchRightPadding.Y * INT8_MAX * TouchPaddingMultiplier));
+		co.WriteValue<std::int8_t>(std::int8_t(TouchLeftPadding.X * INT8_MAX * TouchPaddingMultiplier));
+		co.WriteValue<std::int8_t>(std::int8_t(TouchLeftPadding.Y * INT8_MAX * TouchPaddingMultiplier));
+		co.WriteValue<std::int8_t>(std::int8_t(TouchRightPadding.X * INT8_MAX * TouchPaddingMultiplier));
+		co.WriteValue<std::int8_t>(std::int8_t(TouchRightPadding.Y * INT8_MAX * TouchPaddingMultiplier));
 
-		co.WriteValue<std::uint8_t>((std::uint8_t)GamepadButtonLabels);
+		co.WriteValue<std::uint8_t>(std::uint8_t(GamepadButtonLabels));
 		co.WriteValue<std::uint8_t>(GamepadRumble);
-		co.WriteValue<std::uint8_t>((std::uint8_t)OverwriteEpisodeEnd);
+		co.WriteValue<std::uint8_t>(std::uint8_t(OverwriteEpisodeEnd));
 
 		co.Write(UniquePlayerID, sizeof(UniquePlayerID));
-		co.WriteVariableUint32((std::uint32_t)PlayerName.size());
-		co.Write(PlayerName.data(), (std::int64_t)PlayerName.size());
+		co.WriteVariableUint32(std::uint32_t(PlayerName.size()));
+		co.Write(PlayerName.data(), std::int64_t(PlayerName.size()));
 
 		co.Write(UniqueServerID, sizeof(UniqueServerID));
 
 		// Controls
-		co.WriteValue<std::uint8_t>((std::uint8_t)ControlScheme::MaxSupportedPlayers);
-		co.WriteValue<std::uint8_t>((std::uint8_t)PlayerAction::Count);
+		co.WriteValue<std::uint8_t>(std::uint8_t(ControlScheme::MaxSupportedPlayers));
+		co.WriteValue<std::uint8_t>(std::uint8_t(PlayerAction::Count));
 		for (std::int32_t i = 0; i < ControlScheme::MaxSupportedPlayers; i++) {
 			auto mappings = ControlScheme::GetMappings(i);
 			for (std::uint32_t j = 0; j < mappings.size(); j++) {
@@ -562,19 +564,20 @@ namespace Jazz2
 		}
 
 		// Episode End
-		co.WriteValue<std::uint16_t>((std::uint16_t)sizeof(EpisodeContinuationState));
-		co.WriteValue<std::uint16_t>((std::uint16_t)_episodeEnd.size());
+		co.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(sizeof(EpisodeContinuationState))));
+		co.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(_episodeEnd.size())));
 
 		for (auto& pair : _episodeEnd) {
 			co.WriteValue<std::uint8_t>((std::uint8_t)pair.first.size());
 			co.Write(pair.first.data(), (std::int64_t)pair.first.size());
 
+			// TODO: Big endian
 			co.Write(&pair.second, sizeof(EpisodeContinuationState));
 		}
 
 		// Episode Continue
-		co.WriteValue<std::uint16_t>((std::uint16_t)sizeof(EpisodeContinuationState));
-		co.WriteValue<std::uint16_t>((std::uint16_t)_episodeContinue.size());
+		co.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(sizeof(EpisodeContinuationState))));
+		co.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(_episodeContinue.size())));
 
 		for (auto& pair : _episodeContinue) {
 			co.WriteValue<std::uint8_t>((std::uint8_t)pair.first.size());
@@ -583,6 +586,7 @@ namespace Jazz2
 			co.WriteValue<std::uint8_t>((std::uint8_t)pair.second.LevelName.size());
 			co.Write(pair.second.LevelName.data(), (std::int64_t)pair.second.LevelName.size());
 
+			// TODO: Big endian
 			co.Write(&pair.second.State, sizeof(EpisodeContinuationState));
 		}
 
