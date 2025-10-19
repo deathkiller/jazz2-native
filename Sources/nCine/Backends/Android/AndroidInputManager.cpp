@@ -758,7 +758,7 @@ namespace nCine::Backends
 			if (nameLower == "virtual-remote"_s || nameLower == "virtual-search"_s || nameLower == "virtual_keyboard"_s ||
 				nameLower == "shield-ask-remote"_s ||
 				nameLower == "uinput-fpc"_s /* Fingerprint Sensor */ ||
-				nameLower == "TPV_SMTRC"_s /* TP Vision (Philips TV) Smart Remote */) {
+				nameLower == "tpv_smtrc"_s || nameLower == "tpv_multirc"_s || nameLower == "tpv_mutilrc"_s /* TP Vision (Philips TV) Smart Remote */) {
 				// Marking as invalid controller
 				joyState.guid_ = JoystickGuidType::Unknown;
 				joyState.numButtons_ = 0;
