@@ -752,12 +752,18 @@ namespace nCine::Backends
 			auto& joyState = joystickStates_[joyId];
 
 			inputDevice.getName(joyState.name_, AndroidJoystickState::MaxNameLength);
-			if (StringView(joyState.name_) == "uinput-fpc"_s) {
-				// Fingerprint Sensor is sometimes incorrectly recognized as joystick, disable it
+			auto nameLower = StringUtils::lowercase(StringView(joyState.name_));
+			// Internal Android TV devices, NVIDIA Shield devices, WSA devices are not valid controllers
+			if (nameLower == "virtual-remote"_s || nameLower == "virtual-search"_s || nameLower == "virtual_keyboard"_s ||
+				nameLower == "shield-ask-remote"_s ||
+				nameLower == "uinput-fpc"_s /* Fingerprint Sensor */ ||
+				nameLower == "TPV_SMTRC"_s /* TP Vision (Philips TV) Smart Remote */) {
+				// Marking as invalid controller
 				joyState.guid_ = JoystickGuidType::Unknown;
 				joyState.numButtons_ = 0;
 				joyState.numHats_ = 0;
 				joyState.numAxes_ = 0;
+				LOGI("Device ({}, {}) - Invalid controller", deviceId, joyId);
 				return;
 			}
 

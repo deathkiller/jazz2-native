@@ -156,7 +156,7 @@ namespace nCine::Backends
 		}
 
 	private:
-		static constexpr int MaxNumJoysticks = 6;
+		static constexpr int MaxNumJoysticks = 8;
 
 		static ASensorManager* sensorManager_;
 		static const ASensor* accelerometerSensor_;

@@ -204,15 +204,15 @@ namespace Jazz2::UI
 			return false;
 		}
 
-		std::uint64_t signature = s->ReadValue<std::uint64_t>();
+		std::uint64_t signature = Stream::FromLE(s->ReadValue<std::uint64_t>());
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
-		std::uint16_t version = s->ReadValue<std::uint16_t>();
+		std::uint16_t version = Stream::FromLE(s->ReadValue<std::uint16_t>());
 		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::SfxListFile || version > SfxListVersion) {
 			LOGE("Cannot load SFX playlist for \"{}.j2v\" - invalid signature", path);
 			return false;
 		}
 
-		std::uint32_t sampleCount = s->ReadValue<std::uint16_t>();
+		std::uint32_t sampleCount = Stream::FromLE(s->ReadValue<std::uint16_t>());
 		for (std::uint32_t i = 0; i < sampleCount; i++) {
 			std::uint8_t stringSize = s->ReadValue<std::uint8_t>();
 			String samplePath = String(NoInit, stringSize);
@@ -228,11 +228,11 @@ namespace Jazz2::UI
 			}
 		}
 
-		std::uint32_t itemCount = s->ReadValue<std::uint16_t>();
+		std::uint32_t itemCount = Stream::FromLE(s->ReadValue<std::uint16_t>());
 		for (std::uint32_t i = 0; i < itemCount; i++) {
 			auto& item = _sfxPlaylist.emplace_back();
 			item.Frame = s->ReadVariableUint32();
-			item.Sample = s->ReadValue<std::uint16_t>();
+			item.Sample = Stream::FromLE(s->ReadValue<std::uint16_t>());
 			item.Gain = s->ReadValue<std::uint8_t>() / 255.0f;
 			item.Panning = s->ReadValue<std::int8_t>() / 127.0f;
 		}

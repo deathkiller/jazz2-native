@@ -642,8 +642,6 @@ namespace Jazz2
 
 	GenericGraphicResource* ContentResolver::RequestGraphics(StringView path, std::uint16_t paletteOffset)
 	{
-		constexpr std::uint32_t PixelSize = 4;
-
 		// First resources are requested, reset _isLoading flag, because palette should be already applied
 		_isLoading = false;
 
@@ -772,8 +770,6 @@ namespace Jazz2
 
 	GenericGraphicResource* ContentResolver::RequestGraphicsAura(StringView path, std::uint16_t paletteOffset)
 	{
-		constexpr std::uint32_t PixelSize = 4;
-
 		auto s = OpenContentFile(fs::CombinePath("Animations"_s, path));
 
 		auto fileSize = s->GetSize();
@@ -960,8 +956,6 @@ namespace Jazz2
 
 	void ContentResolver::ExpandTileDiffuse(std::uint8_t* pixelsOffset, std::uint32_t widthWithPadding)
 	{
-		constexpr std::uint32_t PixelSize = 4;
-
 		// Top
 		for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
 			std::uint32_t from = (1 * widthWithPadding + (x + 1)) * PixelSize;

@@ -32,7 +32,7 @@ namespace Jazz2::UI
 
 			std::int32_t w = texLoader->width();
 			std::int32_t h = texLoader->height();
-			auto pixels = (std::uint32_t*)texLoader->pixels();
+			auto* pixels = (std::uint8_t*)texLoader->pixels();
 
 			/*std::uint8_t flags =*/ s->ReadValue<std::uint8_t>();
 			std::uint16_t width = Stream::FromLE(s->ReadValue<std::uint16_t>());
@@ -95,9 +95,20 @@ namespace Jazz2::UI
 			_charSize = Vector2i(width, height);
 			_baseSpacing = spacing;
 
-			for (std::int32_t i = 0; i < w * h; i++) {
-				std::uint32_t color = palette[pixels[i] & 0xff];
-				pixels[i] = (color & 0xffffff) | ((((color >> 24) & 0xff) * ((pixels[i] >> 24) & 0xff) / 255) << 24);
+			for (std::uint32_t i = 0; i < w * h; i++) {
+				std::uint32_t srcIdx = i * ContentResolver::PixelSize;
+				std::uint32_t color = palette[pixels[srcIdx]];
+				std::uint8_t alpha = pixels[srcIdx + 3];
+
+				std::uint8_t r = (color >> 0) & 0xFF;
+				std::uint8_t g = (color >> 8) & 0xFF;
+				std::uint8_t b = (color >> 16) & 0xFF;
+				std::uint8_t a = ((color >> 24) & 0xFF) * alpha / 255;
+
+				pixels[srcIdx + 0] = r;
+				pixels[srcIdx + 1] = g;
+				pixels[srcIdx + 2] = b;
+				pixels[srcIdx + 3] = a;
 			}
 
 			_texture = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, w, h);
