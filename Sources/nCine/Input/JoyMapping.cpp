@@ -515,8 +515,8 @@ namespace nCine
 		// Never search by name on Android, it can lead to wrong mapping
 		if (!mapping.isValid) {
 			auto joyNameLower = StringUtils::lowercase(StringView(joyName));
-			// Don't assign Android default mapping to internal NVIDIA Shield devices, WSA devices and mice (detected as gamepads)
-			if (joyNameLower == "virtual-search"_s || joyNameLower == "shield-ask-remote"_s || joyNameLower == "virtual_keyboard"_s || joyNameLower.contains("mouse"_s)) {
+			// Don't assign Android default mapping to mice (detected as gamepads)
+			if (joyNameLower.contains("mouse"_s)) {
 				return false;
 			}
 

@@ -38,6 +38,8 @@ namespace Jazz2
 	public:
 		/** @{ @name Constants */
 
+		/** @brief Pixel size in bytes */
+		static constexpr std::uint32_t PixelSize = 4;
 		/** @brief Alpha channel mask */
 #if defined(DEATH_TARGET_BIG_ENDIAN)
 		static constexpr std::uint32_t AlphaMask = 0x000000ff;
