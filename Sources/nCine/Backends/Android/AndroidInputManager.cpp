@@ -10,6 +10,7 @@
 #include <cstring> // for memset()
 
 #include <Utf8.h>
+#include <Containers/StringUtils.h>
 
 using namespace Death;
 using namespace Death::Containers::Literals;

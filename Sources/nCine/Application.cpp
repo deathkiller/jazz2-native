@@ -1552,7 +1552,7 @@ namespace nCine
 	{
 		// Write TraceDigger metadata header
 
-		std::uint64_t timestampMs = DateTime::UtcNow().ToUnixMilliseconds() - 300;
+		std::int64_t timestampMs = DateTime::UtcNow().ToUnixMilliseconds() - 300;
 
 		std::uint32_t flags = 0;
 		if (Environment::GetCurrentElevation() == Environment::ElevationState::Full) {
