@@ -87,7 +87,7 @@ namespace Jazz2::UI::Menu
 						bool wasPressed = prevState.isButtonPressed((ButtonName)j);
 						bool isPressed = currentState.isButtonPressed((ButtonName)j);
 						if (isPressed != wasPressed && isPressed) {
-							newTarget = ControlScheme::CreateTarget(i, (ButtonName)j);
+							newTarget = ControlScheme::CreateTarget(joyStatesCount, (ButtonName)j);
 							PlayerAction collidingAction;
 							std::int32_t collidingAssignment;
 							if (!HasCollision(_items[_selectedIndex].Item.Type, newTarget, collidingAction, collidingAssignment)) {
@@ -108,7 +108,7 @@ namespace Jazz2::UI::Menu
 						bool wasPressed = std::abs(prevValue) > 0.5f;
 						bool isPressed = std::abs(currentValue) > 0.5f;
 						if (isPressed != wasPressed && isPressed) {
-							newTarget = ControlScheme::CreateTarget(i, (AxisName)j, currentValue < 0.0f);
+							newTarget = ControlScheme::CreateTarget(joyStatesCount, (AxisName)j, currentValue < 0.0f);
 							PlayerAction collidingAction;
 							std::int32_t collidingAssignment;
 							if (!HasCollision(_items[_selectedIndex].Item.Type, newTarget, collidingAction, collidingAssignment)) {

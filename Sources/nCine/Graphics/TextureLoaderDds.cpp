@@ -1,6 +1,9 @@
 #include "TextureLoaderDds.h"
 
+#include <Base/Memory.h>
+
 using namespace Death::IO;
+using namespace Death::Memory;
 
 namespace nCine
 {
@@ -27,12 +30,12 @@ namespace nCine
 		fileHandle_->Read(&header, 128);
 
 		// Checking for the header presence
-		DEATH_ASSERT(Stream::FromLE(header.dwMagic) == 0x20534444 /* "DDS " */, "Invalid DDS signature", false);
+		DEATH_ASSERT(AsLE(header.dwMagic) == 0x20534444 /* "DDS " */, "Invalid DDS signature", false);
 
 		headerSize_ = 128;
-		width_ = Stream::FromLE(header.dwWidth);
-		height_ = Stream::FromLE(header.dwHeight);
-		mipMapCount_ = Stream::FromLE(header.dwMipMapCount);
+		width_ = AsLE(header.dwWidth);
+		height_ = AsLE(header.dwHeight);
+		mipMapCount_ = AsLE(header.dwMipMapCount);
 
 		if (mipMapCount_ == 0) {
 			mipMapCount_ = 1;
@@ -45,11 +48,11 @@ namespace nCine
 	{
 		GLenum internalFormat = GL_RGB; // to suppress uninitialized variable warning
 
-		const uint32_t flags = Stream::FromLE(header.ddspf.dwFlags);
+		const uint32_t flags = AsLE(header.ddspf.dwFlags);
 
 		// Texture contains compressed RGB data, dwFourCC contains valid data
 		if (flags & DDPF_FOURCC) {
-			const uint32_t fourCC = Stream::FromLE(header.ddspf.dwFourCC);
+			const uint32_t fourCC = AsLE(header.ddspf.dwFourCC);
 
 			const char* fourCCchars = reinterpret_cast<const char*>(&fourCC);
 			LOGI("FourCC: \"{:c}{:c}{:c}{:c}\" (0x{:x})", fourCCchars[0], fourCCchars[1], fourCCchars[2], fourCCchars[3], fourCC);
@@ -89,11 +92,11 @@ namespace nCine
 			// Texture contains uncompressed data
 			GLenum type = GL_UNSIGNED_BYTE;
 
-			const uint32_t bitCount = Stream::FromLE(header.ddspf.dwRGBBitCount);
-			const uint32_t redMask = Stream::FromLE(header.ddspf.dwRBitMask);
-			const uint32_t greenMask = Stream::FromLE(header.ddspf.dwGBitMask);
-			const uint32_t blueMask = Stream::FromLE(header.ddspf.dwBBitMask);
-			const uint32_t alphaMask = Stream::FromLE(header.ddspf.dwABitMask);
+			const uint32_t bitCount = AsLE(header.ddspf.dwRGBBitCount);
+			const uint32_t redMask = AsLE(header.ddspf.dwRBitMask);
+			const uint32_t greenMask = AsLE(header.ddspf.dwGBitMask);
+			const uint32_t blueMask = AsLE(header.ddspf.dwBBitMask);
+			const uint32_t alphaMask = AsLE(header.ddspf.dwABitMask);
 
 			LOGI("Pixel masks ({}bit): R:0x{:x} G:0x{:x} B:0x{:x} A:0x{:x}", bitCount, redMask, greenMask, blueMask, alphaMask);
 

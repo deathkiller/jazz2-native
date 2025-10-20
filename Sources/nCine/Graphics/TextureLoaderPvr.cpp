@@ -1,7 +1,10 @@
 #include "TextureLoaderPvr.h"
 #include "../../Main.h"
 
+#include <Base/Memory.h>
+
 using namespace Death::IO;
+using namespace Death::Memory;
 
 namespace nCine
 {
@@ -28,11 +31,11 @@ namespace nCine
 		fileHandle_->Read(&header, 52);
 
 		// Checking for the header presence ("PVR"03)
-		DEATH_ASSERT(Stream::FromLE(header.version) == 0x03525650, "Invalid PVR3 signature", false);
+		DEATH_ASSERT(AsLE(header.version) == 0x03525650, "Invalid PVR3 signature", false);
 
-		headerSize_ = 52 + Stream::FromLE(header.metaDataSize);
-		width_ = Stream::FromLE(header.width);
-		height_ = Stream::FromLE(header.height);
+		headerSize_ = 52 + AsLE(header.metaDataSize);
+		width_ = AsLE(header.width);
+		height_ = AsLE(header.height);
 		mipMapCount_ = header.numMipmaps;
 
 		if (mipMapCount_ == 0) {
@@ -45,7 +48,7 @@ namespace nCine
 	{
 		GLenum internalFormat = GL_RGB8; // to suppress uninitialized variable warning
 
-		uint64_t pixelFormat = Stream::FromLE(header.pixelFormat);
+		uint64_t pixelFormat = AsLE(header.pixelFormat);
 
 		// Texture contains compressed data, most significant 4 bytes have been set to zero
 		if (pixelFormat < 0x0000000100000000ULL) {

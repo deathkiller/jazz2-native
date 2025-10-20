@@ -14,6 +14,10 @@
 #include "../Common.h"
 #include "../Base/IDisposable.h"
 
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+#	include "../Base/Memory.h"
+#endif
+
 #include <type_traits>
 #if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
 #	include <intrin.h>	// For _byteswap_ushort()/_byteswap_ulong()/_byteswap_uint64()
@@ -78,18 +82,54 @@ namespace Death { namespace IO {
 		std::int64_t CopyTo(Stream& targetStream);
 
 		/** @brief Reads a trivial value from the stream */
-		template<typename T, class = typename std::enable_if<std::is_trivially_copyable<T>::value>::type>
+		template<typename T>
 		DEATH_ALWAYS_INLINE T ReadValue()
 		{
-			T buffer = {};
-			Read(&buffer, sizeof(T));
-			return buffer;
+			static_assert(std::is_trivially_copyable<T>::value, "ReadValue() requires the source type to be trivially copyable");
+			static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value, "ReadValue() must not be used on pointer or reference types");
+
+			T value{};
+			Read(&value, sizeof(T));
+			return value;
 		}
 
 		/** @brief Writes a trivial value to the stream */
-		template<typename T, class = typename std::enable_if<std::is_trivially_copyable<T>::value>::type>
+		template<typename T>
 		DEATH_ALWAYS_INLINE void WriteValue(const T& value)
 		{
+			static_assert(std::is_trivially_copyable<T>::value, "WriteValue() requires the source type to be trivially copyable");
+			static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value, "WriteValue() must not be used on pointer or reference types");
+
+			Write(&value, sizeof(T));
+		}
+
+		/** @brief Reads a trivial value from the stream always as Little-Endian */
+		template<typename T>
+		DEATH_ALWAYS_INLINE T ReadValueAsLE()
+		{
+			static_assert(std::is_trivially_copyable<T>::value, "ReadValueAsLE() requires the source type to be trivially copyable");
+			static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value, "ReadValueAsLE() must not be used on pointer or reference types");
+			static_assert(sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "ReadValueAsLE() requires the source type to be 2, 4 or 8 bytes");
+
+			T value{};
+			Read(&value, sizeof(T));
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+			value = Memory::SwapBytes(value);
+#endif
+			return value;
+		}
+
+		/** @brief Writes a trivial value to the stream always as Little-Endian */
+		template<typename T>
+		DEATH_ALWAYS_INLINE void WriteValueAsLE(T value)
+		{
+			static_assert(std::is_trivially_copyable<T>::value, "WriteValueAsLE() requires the source type to be trivially copyable");
+			static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value, "WriteValueAsLE() must not be used on pointer or reference types");
+			static_assert(sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "WriteValueAsLE() requires the source type to be 2, 4 or 8 bytes");
+
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+			value = Memory::SwapBytes(value);
+#endif
 			Write(&value, sizeof(T));
 		}
 
@@ -110,82 +150,6 @@ namespace Death { namespace IO {
 		std::int64_t WriteVariableUint32(std::uint32_t value);
 		/** @brief Writes a 64-bit unsigned integer value to the stream using variable-length quantity encoding */
 		std::int64_t WriteVariableUint64(std::uint64_t value);
-
-		/** @brief Converts an integer value from big-endian to native */
-		template<typename T>
-		static T FromBE(T value) {
-#if !defined(DEATH_TARGET_BIG_ENDIAN)
-			return Byteswap(value);
-#else
-			return value;
-#endif
-		}
-
-		/** @brief Converts an integer value from little-endian to native */
-		template<typename T>
-		static T FromLE(T value) {
-#if defined(DEATH_TARGET_BIG_ENDIAN)
-			return Byteswap(value);
-#else
-			return value;
-#endif
-		}
-
-	private:
-		DEATH_ALWAYS_INLINE static std::uint16_t Byteswap16(std::uint16_t x) {
-#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
-			return __builtin_bswap16(x);
-#elif defined(DEATH_TARGET_MSVC)
-			return _byteswap_ushort(x);
-#else
-			return static_cast<std::uint16_t>((x >> 8) | (x << 8));
-#endif
-		}
-
-		DEATH_ALWAYS_INLINE static std::uint32_t Byteswap32(std::uint32_t x) {
-#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
-			return __builtin_bswap32(x);
-#elif defined(DEATH_TARGET_MSVC)
-			return _byteswap_ulong(x);
-#else
-			return ((x & 0x000000FFu) << 24) |
-				((x & 0x0000FF00u) << 8) |
-				((x & 0x00FF0000u) >> 8) |
-				((x & 0xFF000000u) >> 24);
-#endif
-		}
-
-		DEATH_ALWAYS_INLINE static std::uint64_t Byteswap64(std::uint64_t x) {
-#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
-			return __builtin_bswap64(x);
-#elif defined(DEATH_TARGET_MSVC)
-			return _byteswap_uint64(x);
-#else
-			return ((x & 0x00000000000000FFull) << 56) |
-				((x & 0x000000000000FF00ull) << 40) |
-				((x & 0x0000000000FF0000ull) << 24) |
-				((x & 0x00000000FF000000ull) << 8) |
-				((x & 0x000000FF00000000ull) >> 8) |
-				((x & 0x0000FF0000000000ull) >> 24) |
-				((x & 0x00FF000000000000ull) >> 40) |
-				((x & 0xFF00000000000000ull) >> 56);
-#endif
-		}
-
-		template<typename T>
-		static typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 2), T>::type Byteswap(T value) {
-			return static_cast<T>(Byteswap16(static_cast<std::uint16_t>(value)));
-		}
-
-		template<typename T>
-		static typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 4), T>::type Byteswap(T value) {
-			return static_cast<T>(Byteswap32(static_cast<std::uint32_t>(value)));
-		}
-
-		template<typename T>
-		static typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 8), T>::type Byteswap(T value) {
-			return static_cast<T>(Byteswap64(static_cast<std::uint64_t>(value)));
-		}
 	};
 
 }}

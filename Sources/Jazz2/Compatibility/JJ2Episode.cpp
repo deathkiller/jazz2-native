@@ -41,10 +41,10 @@ namespace Jazz2::Compatibility
 		// begins; stored as a 4-byte-long integer starting at byte 0x8)
 
 		// Header (208 bytes)
-		/*std::int32_t headerSize =*/ Stream::FromLE(s->ReadValue<std::int32_t>());
-		Position = Stream::FromLE(s->ReadValue<std::int32_t>());
-		/*std::uint32_t flags =*/ Stream::FromLE(s->ReadValue<std::uint32_t>());	// 0x01 = Not Shareware
-		/*std::uint32_t unknown1 =*/ Stream::FromLE(s->ReadValue<std::uint32_t>());
+		/*std::int32_t headerSize =*/ s->ReadValueAsLE<std::int32_t>();
+		Position = s->ReadValueAsLE<std::int32_t>();
+		/*std::uint32_t flags =*/ s->ReadValueAsLE<std::uint32_t>();	// 0x01 = Not Shareware
+		/*std::uint32_t unknown1 =*/ s->ReadValueAsLE<std::uint32_t>();
 
 		char tmpBuffer[64];
 
@@ -83,19 +83,19 @@ namespace Jazz2::Compatibility
 		FirstLevel = String(tmpBuffer, length);
 		StringUtils::lowercaseInPlace(FirstLevel);
 
-		ImageWidth = Stream::FromLE(s->ReadValue<std::int32_t>());
-		ImageHeight = Stream::FromLE(s->ReadValue<std::int32_t>());
-		/*std::int32_t unknown2 =*/ Stream::FromLE(s->ReadValue<std::int32_t>());
-		/*std::int32_t unknown3 =*/ Stream::FromLE(s->ReadValue<std::int32_t>());
+		ImageWidth = s->ReadValueAsLE<std::int32_t>();
+		ImageHeight = s->ReadValueAsLE<std::int32_t>();
+		/*std::int32_t unknown2 =*/ s->ReadValueAsLE<std::int32_t>();
+		/*std::int32_t unknown3 =*/ s->ReadValueAsLE<std::int32_t>();
 
-		TitleWidth = Stream::FromLE(s->ReadValue<std::int32_t>());
-		TitleHeight = Stream::FromLE(s->ReadValue<std::int32_t>());
-		/*std::int32_t unknown4 =*/ Stream::FromLE(s->ReadValue<std::int32_t>());
-		/*std::int32_t unknown5 =*/ Stream::FromLE(s->ReadValue<std::int32_t>());
+		TitleWidth = s->ReadValueAsLE<std::int32_t>();
+		TitleHeight = s->ReadValueAsLE<std::int32_t>();
+		/*std::int32_t unknown4 =*/ s->ReadValueAsLE<std::int32_t>();
+		/*std::int32_t unknown5 =*/ s->ReadValueAsLE<std::int32_t>();
 
 		// Background image
 		{
-			std::int32_t imagePackedSize = Stream::FromLE(s->ReadValue<std::int32_t>());
+			std::int32_t imagePackedSize = s->ReadValueAsLE<std::int32_t>();
 			std::int32_t imageUnpackedSize = ImageWidth * ImageHeight;
 			JJ2Block imageBlock(s, imagePackedSize, imageUnpackedSize);
 			ImageData = std::make_unique<std::uint8_t[]>(imageUnpackedSize);
@@ -104,7 +104,7 @@ namespace Jazz2::Compatibility
 
 		// Title image
 		{
-			std::int32_t titleLightPackedSize = Stream::FromLE(s->ReadValue<std::int32_t>());
+			std::int32_t titleLightPackedSize = s->ReadValueAsLE<std::int32_t>();
 			std::int32_t titleLightUnpackedSize = TitleWidth * TitleHeight;
 			JJ2Block titleLightBlock(s, titleLightPackedSize, titleLightUnpackedSize);
 			TitleData = std::make_unique<std::uint8_t[]>(titleLightUnpackedSize);
@@ -125,17 +125,17 @@ namespace Jazz2::Compatibility
 		auto so = fs::Open(targetPath, FileAccess::Write);
 		DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );
 
-		so->WriteValue<std::uint64_t>(Stream::FromLE(0x2095A59FF0BFBBEF));
+		so->WriteValueAsLE<std::uint64_t>(0x2095A59FF0BFBBEF);
 		so->WriteValue<std::uint8_t>(ContentResolver::EpisodeFile);
 
 		std::uint16_t flags = 0x00;
-		so->WriteValue<std::uint16_t>(Stream::FromLE(flags));
+		so->WriteValueAsLE<std::uint16_t>(flags);
 
 		String displayName = (episodeNameConversion ? episodeNameConversion(this) : DisplayName);
 		so->WriteValue<std::uint8_t>((std::uint8_t)displayName.size());
 		so->Write(displayName.data(), displayName.size());
 
-		so->WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(Position)));
+		so->WriteValueAsLE<std::uint16_t>(Position);
 
 		MutableStringView firstLevel = FirstLevel;
 		if (JJ2Level::StringHasSuffixIgnoreCase(firstLevel, ".j2l"_s) ||
@@ -182,8 +182,8 @@ namespace Jazz2::Compatibility
 		}
 
 		// Write episode title image
-		so->WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(TitleWidth)));
-		so->WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(TitleHeight)));
+		so->WriteValueAsLE<std::uint16_t>(TitleWidth);
+		so->WriteValueAsLE<std::uint16_t>(TitleHeight);
 
 		std::uint32_t titlePixelsCount = TitleWidth * TitleHeight;
 		std::unique_ptr<std::uint8_t[]> titlePixels = std::make_unique<std::uint8_t[]>(titlePixelsCount * 4);
@@ -205,8 +205,8 @@ namespace Jazz2::Compatibility
 		JJ2Anims::WriteImageContent(*so, titlePixels.get(), TitleWidth, TitleHeight, 4);
 
 		// Write episode background image
-		so->WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(ImageWidth)));
-		so->WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(ImageHeight)));
+		so->WriteValueAsLE<std::uint16_t>(ImageWidth);
+		so->WriteValueAsLE<std::uint16_t>(ImageHeight);
 
 		std::uint32_t imagePixelsCount = ImageWidth * ImageHeight;
 		std::unique_ptr<std::uint8_t[]> imagePixels = std::make_unique<std::uint8_t[]>(imagePixelsCount * 4);

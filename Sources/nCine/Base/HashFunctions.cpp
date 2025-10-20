@@ -104,21 +104,21 @@ namespace nCine
 
 	static std::uint64_t Fetch64(const char* p)
 	{
-		using Death::Memory;
+		using namespace Death::Memory;
 #if defined(DEATH_TARGET_BIG_ENDIAN)
-		return ByteSwap64(Memory::LoadUnaligned<std::uint64_t>(p));
+		return SwapBytes(LoadUnaligned<std::uint64_t>(p));
 #else
-		return Memory::LoadUnaligned<std::uint64_t>(p);
+		return LoadUnaligned<std::uint64_t>(p);
 #endif
 	}
 
 	static std::uint32_t Fetch32(const char* p)
 	{
-		using Death::Memory;
+		using namespace Death::Memory;
 #if defined(DEATH_TARGET_BIG_ENDIAN)
-		return ByteSwap32(Memory::LoadUnaligned<std::uint32_t>(p));
+		return SwapBytes(LoadUnaligned<std::uint32_t>(p));
 #else
-		return Memory::LoadUnaligned<std::uint32_t>(p);
+		return LoadUnaligned<std::uint32_t>(p);
 #endif
 	}
 

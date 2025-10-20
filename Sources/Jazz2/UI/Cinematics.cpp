@@ -9,9 +9,11 @@
 #include "../../nCine/Audio/AudioBufferPlayer.h"
 #include "../../nCine/Base/FrameTimer.h"
 
+#include <Base/Memory.h>
 #include <Containers/StringConcatenable.h>
 #include <IO/Compression/DeflateStream.h>
 
+using namespace Death::Memory;
 using namespace Jazz2::Input;
 
 namespace Jazz2::UI
@@ -156,11 +158,11 @@ namespace Jazz2::UI
 		DEATH_ASSERT(strncmp((const char*)internalBuffer, "CineFeed", sizeof("CineFeed") - 1) == 0,
 			("Cannot load \"{}.j2v\" - invalid signature", path), false);
 
-		_width = Stream::FromLE(s->ReadValue<std::uint32_t>());
-		_height = Stream::FromLE(s->ReadValue<std::uint32_t>());
+		_width = s->ReadValueAsLE<std::uint32_t>();
+		_height = s->ReadValueAsLE<std::uint32_t>();
 		s->Seek(2, SeekOrigin::Current); // Bits per pixel
-		_frameDelay = Stream::FromLE(s->ReadValue<std::uint16_t>()) / (FrameTimer::SecondsPerFrame * 1000); // Delay in milliseconds
-		_framesLeft = Stream::FromLE(s->ReadValue<std::uint32_t>());
+		_frameDelay = s->ReadValueAsLE<std::uint16_t>() / (FrameTimer::SecondsPerFrame * 1000); // Delay in milliseconds
+		_framesLeft = s->ReadValueAsLE<std::uint32_t>();
 		s->Seek(20, SeekOrigin::Current);
 
 		_texture = std::make_unique<Texture>("Cinematics", Texture::Format::RGBA8, _width, _height);
@@ -173,7 +175,7 @@ namespace Jazz2::UI
 
 		while (totalOffset < s->GetSize()) {
 			for (std::int32_t i = 0; i < std::int32_t(arraySize(_decompressedStreams)); i++) {
-				std::int32_t bytesLeft = Stream::FromLE(s->ReadValue<std::int32_t>());
+				std::int32_t bytesLeft = s->ReadValueAsLE<std::int32_t>();
 				totalOffset += 4 + bytesLeft;
 				_compressedStreams[i].FetchFromStream(*s, bytesLeft);
 			}
@@ -204,15 +206,15 @@ namespace Jazz2::UI
 			return false;
 		}
 
-		std::uint64_t signature = Stream::FromLE(s->ReadValue<std::uint64_t>());
+		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
-		std::uint16_t version = Stream::FromLE(s->ReadValue<std::uint16_t>());
+		std::uint16_t version = s->ReadValueAsLE<std::uint16_t>();
 		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::SfxListFile || version > SfxListVersion) {
 			LOGE("Cannot load SFX playlist for \"{}.j2v\" - invalid signature", path);
 			return false;
 		}
 
-		std::uint32_t sampleCount = Stream::FromLE(s->ReadValue<std::uint16_t>());
+		std::uint32_t sampleCount = s->ReadValueAsLE<std::uint16_t>();
 		for (std::uint32_t i = 0; i < sampleCount; i++) {
 			std::uint8_t stringSize = s->ReadValue<std::uint8_t>();
 			String samplePath = String(NoInit, stringSize);
@@ -228,11 +230,11 @@ namespace Jazz2::UI
 			}
 		}
 
-		std::uint32_t itemCount = Stream::FromLE(s->ReadValue<std::uint16_t>());
+		std::uint32_t itemCount = s->ReadValueAsLE<std::uint16_t>();
 		for (std::uint32_t i = 0; i < itemCount; i++) {
 			auto& item = _sfxPlaylist.emplace_back();
 			item.Frame = s->ReadVariableUint32();
-			item.Sample = Stream::FromLE(s->ReadValue<std::uint16_t>());
+			item.Sample = s->ReadValueAsLE<std::uint16_t>();
 			item.Gain = s->ReadValue<std::uint8_t>() / 255.0f;
 			item.Panning = s->ReadValue<std::int8_t>() / 127.0f;
 		}
@@ -258,7 +260,7 @@ namespace Jazz2::UI
 				if (c < 0x80) {
 					std::int32_t u;
 					if (c == 0x00) {
-						u = Stream::FromLE(ReadValue<std::uint16_t>(0));
+						u = AsLE(ReadValue<std::uint16_t>(0));
 					} else {
 						u = c;
 					}
@@ -272,13 +274,13 @@ namespace Jazz2::UI
 				} else {
 					std::int32_t u;
 					if (c == 0x81) {
-						u = Stream::FromLE(ReadValue<std::uint16_t>(0));
+						u = AsLE(ReadValue<std::uint16_t>(0));
 					} else {
 						u = c - 0x6A;
 					}
 
 					// Copy specified number of pixels from previous frame
-					std::int32_t n = Stream::FromLE(ReadValue<std::uint16_t>(1)) + (ReadValue<std::uint8_t>(2) + y - 127) * _width;
+					std::int32_t n = AsLE(ReadValue<std::uint16_t>(1)) + (ReadValue<std::uint8_t>(2) + y - 127) * _width;
 					for (std::int32_t i = 0; i < u; i++) {
 						DEATH_DEBUG_ASSERT(x < _width, "Frame decoding overrun");
 						_buffer[y * _width + x] = _lastBuffer[n];

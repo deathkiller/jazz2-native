@@ -24,12 +24,12 @@
 #define DEATH_PRIVATE_ENUM_FLAGS(type)
 #else
 namespace Death { namespace Implementation {
-	template<int> struct VariableSize;
-	template<> struct VariableSize<1> { using Type = std::int8_t; };
-	template<> struct VariableSize<2> { using Type = std::int16_t; };
-	template<> struct VariableSize<4> { using Type = std::int32_t; };
-	template<> struct VariableSize<8> { using Type = std::int64_t; };
-	template<typename T> using EnumSizedInteger = typename VariableSize<sizeof(T)>::Type;
+	template<std::size_t size> struct TypeFor {};
+	template<> struct TypeFor<1> { typedef std::uint8_t  Type; };
+	template<> struct TypeFor<2> { typedef std::uint16_t Type; };
+	template<> struct TypeFor<4> { typedef std::uint32_t Type; };
+	template<> struct TypeFor<8> { typedef std::uint64_t Type; };
+	template<typename T> using EnumSizedInteger = typename TypeFor<sizeof(T)>::Type;
 }}
 
 /**
