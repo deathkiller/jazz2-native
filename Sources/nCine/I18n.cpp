@@ -15,12 +15,14 @@
 
 #include <Environment.h>
 #include <Utf8.h>
+#include <Base/Memory.h>
 #include <Containers/GrowableArray.h>
 #include <Containers/StringUtils.h>
 #include <IO/FileSystem.h>
 
 using namespace Death;
 using namespace Death::Containers::Literals;
+using namespace Death::Memory;
 
 namespace nCine
 {
@@ -448,7 +450,7 @@ namespace nCine
 	bool I18n::LoadFromFile(const std::unique_ptr<Stream>& fileHandle)
 	{
 		std::int64_t fileSize = fileHandle->GetSize();
-		if (fileSize < 32 || fileSize > 16 * 1024 * 1024) {
+		if DEATH_UNLIKELY(fileSize < 32 || fileSize > 16 * 1024 * 1024) {
 			if (fileSize > 0) {
 				LOGE("Translation is corrupted");
 			}
@@ -463,7 +465,21 @@ namespace nCine
 		constexpr std::uint32_t SignatureLE = 0x950412de;
 		constexpr std::uint32_t SignatureBE = 0xde120495;
 		MoFileHeader* data = reinterpret_cast<MoFileHeader*>(_file.get());
-		if (!(data->Signature == SignatureLE || data->Signature == SignatureBE) || data->StringCount <= 0 ||
+
+		bool shouldSwapBytes = false;
+		if DEATH_UNLIKELY(data->Signature == SignatureBE) {
+			// Different endianness - swap bytes in all fields
+			data->Signature = SignatureLE;
+			data->Revision = SwapBytes(data->Revision);
+			data->StringCount = SwapBytes(data->StringCount);
+			data->OrigTableOffset = SwapBytes(data->OrigTableOffset);
+			data->TransTableOffset = SwapBytes(data->TransTableOffset);
+			data->HashTableSize = SwapBytes(data->HashTableSize);
+			data->HashTableOffset = SwapBytes(data->HashTableOffset);
+			shouldSwapBytes = true;
+		}
+
+		if DEATH_UNLIKELY(data->Signature != SignatureLE || data->StringCount <= 0 ||
 			data->OrigTableOffset + data->StringCount > fileSize || data->TransTableOffset + data->StringCount > fileSize ||
 			data->HashTableOffset + data->HashTableSize > fileSize) {
 			LOGE("Translation is corrupted");
@@ -472,10 +488,24 @@ namespace nCine
 		}
 
 		_stringCount = data->StringCount;
-		_origTable = (const StringDesc*)((char*)data + data->OrigTableOffset);
-		_transTable = (const StringDesc*)((char*)data + data->TransTableOffset);
+		_origTable = (StringDesc*)((char*)data + data->OrigTableOffset);
+		_transTable = (StringDesc*)((char*)data + data->TransTableOffset);
 		_hashSize = data->HashTableSize;
-		_hashTable = (_hashSize > 2 ? (const std::uint32_t*)((char*)data + data->HashTableOffset) : nullptr);
+		_hashTable = (_hashSize > 2 ? (std::uint32_t*)((char*)data + data->HashTableOffset) : nullptr);
+
+		if DEATH_UNLIKELY(shouldSwapBytes) {
+			for (std::uint32_t i = 0; i < _stringCount; i++) {
+				_origTable[i].Length = SwapBytes(_origTable[i].Length);
+				_origTable[i].Offset = SwapBytes(_origTable[i].Offset);
+				_transTable[i].Length = SwapBytes(_transTable[i].Length);
+				_transTable[i].Offset = SwapBytes(_transTable[i].Offset);
+			}
+			if (_hashTable != nullptr) {
+				for (std::uint32_t i = 0; i < _hashSize; i++) {
+					_hashTable[i] = SwapBytes(_hashTable[i]);
+				}
+			}
+		}
 
 		if (_pluralExpression != nullptr) {
 			delete _pluralExpression;

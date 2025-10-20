@@ -1,5 +1,6 @@
 #include "TextureLoaderPng.h"
 
+#include <Base/Memory.h>
 #include <Containers/SmallVector.h>
 #include <IO/MemoryStream.h>
 #include <IO/Compression/DeflateStream.h>
@@ -7,6 +8,7 @@
 using namespace Death::Containers;
 using namespace Death::IO;
 using namespace Death::IO::Compression;
+using namespace Death::Memory;
 
 namespace nCine
 {
@@ -175,7 +177,7 @@ namespace nCine
 	{
 		std::uint32_t value;
 		s->Read(&value, sizeof(value));
-		return Stream::FromBE(value);
+		return AsBE(value);
 	}
 
 	std::uint8_t TextureLoaderPng::UnapplyFilter(std::uint8_t filter, std::uint8_t x, std::uint8_t a, std::uint8_t b, std::uint8_t c)

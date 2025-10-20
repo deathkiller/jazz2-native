@@ -538,7 +538,10 @@ See also @ref third-party for the licenses of the libraries used.
 	@brief Interface @ref Death::IDisposable
 */
 /** @file Shared/Base/Memory.h
-	@brief Class @ref Death::Memory
+	@brief Namespace @ref Death::Memory
+*/
+/** @namespace Death::Memory
+	@brief Memory-related utilities
 */
 /** @file Shared/Base/Move.h
 	@brief Function @ref Death::forward(), @ref Death::move(), @ref Death::swap()

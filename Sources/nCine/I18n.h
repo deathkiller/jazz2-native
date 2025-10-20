@@ -63,10 +63,10 @@ namespace nCine
 		std::unique_ptr<char[]> _file;
 		std::uint32_t _fileSize;
 		std::uint32_t _stringCount;
-		const StringDesc* _origTable;
-		const StringDesc* _transTable;
+		StringDesc* _origTable;
+		StringDesc* _transTable;
 		std::uint32_t _hashSize;
-		const std::uint32_t* _hashTable;
+		std::uint32_t* _hashTable;
 		const ExpressionToken* _pluralExpression;
 
 		static const ExpressionToken* ExtractPluralExpression(StringView nullEntry);

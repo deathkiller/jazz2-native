@@ -1,6 +1,9 @@
 #include "TextureLoaderKtx.h"
 
+#include <Base/Memory.h>
+
 using namespace Death::IO;
+using namespace Death::Memory;
 
 namespace nCine
 {
@@ -43,18 +46,18 @@ namespace nCine
 		DEATH_ASSERT(header.endianess != 0x01020304, "File endianess doesn't match machine one", false);
 
 		// Accounting for key-value data and `UInt32 imageSize` from first MIP level
-		headerSize_ = 64 + Stream::FromLE(header.bytesOfKeyValueData) + 4;
-		width_ = Stream::FromLE(header.pixelWidth);
-		height_ = Stream::FromLE(header.pixelHeight);
-		mipMapCount_ = Stream::FromLE(header.numberOfMipmapLevels);
+		headerSize_ = 64 + AsLE(header.bytesOfKeyValueData) + 4;
+		width_ = AsLE(header.pixelWidth);
+		height_ = AsLE(header.pixelHeight);
+		mipMapCount_ = AsLE(header.numberOfMipmapLevels);
 
 		return true;
 	}
 
 	bool TextureLoaderKtx::parseFormat(const KtxHeader& header)
 	{
-		const GLenum internalFormat = Stream::FromLE(header.glInternalFormat);
-		const GLenum type = Stream::FromLE(header.glType);
+		const GLenum internalFormat = AsLE(header.glInternalFormat);
+		const GLenum type = AsLE(header.glType);
 
 		loadPixels(internalFormat, type);
 

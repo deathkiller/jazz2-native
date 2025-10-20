@@ -27,24 +27,24 @@ namespace Jazz2::Compatibility
 
 		bool seemsLikeCC = false;
 
-		std::uint32_t magic = Stream::FromLE(s->ReadValue<std::uint32_t>());
+		std::uint32_t magic = s->ReadValueAsLE<std::uint32_t>();
 		DEATH_ASSERT(magic == 0x42494C41, "Invalid magic number", JJ2Version::Unknown);
 
-		std::uint32_t signature = Stream::FromLE(s->ReadValue<std::uint32_t>());
+		std::uint32_t signature = s->ReadValueAsLE<std::uint32_t>();
 		DEATH_ASSERT(signature == 0x00BEBA00, "Invalid signature", JJ2Version::Unknown);
 
-		std::uint32_t headerLen = Stream::FromLE(s->ReadValue<std::uint32_t>());
+		std::uint32_t headerLen = s->ReadValueAsLE<std::uint32_t>();
 
-		std::uint32_t magicUnknown = Stream::FromLE(s->ReadValue<std::uint32_t>());	// Probably `uint16_t version` and `uint16_t unknown`
+		std::uint32_t magicUnknown = s->ReadValueAsLE<std::uint32_t>();	// Probably `uint16_t version` and `uint16_t unknown`
 		DEATH_ASSERT(magicUnknown == 0x18080200, "Invalid version", JJ2Version::Unknown);
 
-		/*std::uint32_t fileLen =*/ Stream::FromLE(s->ReadValue<std::uint32_t>());
-		/*std::uint32_t crc =*/ Stream::FromLE(s->ReadValue<std::uint32_t>());
-		std::int32_t setCount = Stream::FromLE(s->ReadValue<std::int32_t>());
+		/*std::uint32_t fileLen =*/ s->ReadValueAsLE<std::uint32_t>();
+		/*std::uint32_t crc =*/ s->ReadValueAsLE<std::uint32_t>();
+		std::int32_t setCount = s->ReadValueAsLE<std::int32_t>();
 		SmallVector<std::uint32_t, 0> setAddresses(setCount);
 
 		for (std::int32_t i = 0; i < setCount; i++) {
-			setAddresses[i] = Stream::FromLE(s->ReadValue<std::uint32_t>());
+			setAddresses[i] = s->ReadValueAsLE<std::uint32_t>();
 		}
 
 		DEATH_ASSERT(headerLen == s->GetPosition(), "Invalid header size", JJ2Version::Unknown);
@@ -59,19 +59,19 @@ namespace Jazz2::Compatibility
 				break;
 			}
 
-			std::uint32_t magicANIM = Stream::FromLE(s->ReadValue<std::uint32_t>());
+			std::uint32_t magicANIM = s->ReadValueAsLE<std::uint32_t>();
 			std::uint8_t animCount = s->ReadValue<std::uint8_t>();
 			std::uint8_t sndCount = s->ReadValue<std::uint8_t>();
-			/*std::uint16_t frameCount =*/ Stream::FromLE(s->ReadValue<std::uint16_t>());
-			/*std::uint32_t cumulativeSndIndex =*/ Stream::FromLE(s->ReadValue<std::uint32_t>());
-			std::int32_t infoBlockLenC = Stream::FromLE(s->ReadValue<std::int32_t>());
-			std::int32_t infoBlockLenU = Stream::FromLE(s->ReadValue<std::int32_t>());
-			std::int32_t frameDataBlockLenC = Stream::FromLE(s->ReadValue<std::int32_t>());
-			std::int32_t frameDataBlockLenU = Stream::FromLE(s->ReadValue<std::int32_t>());
-			std::int32_t imageDataBlockLenC = Stream::FromLE(s->ReadValue<std::int32_t>());
-			std::int32_t imageDataBlockLenU = Stream::FromLE(s->ReadValue<std::int32_t>());
-			std::int32_t sampleDataBlockLenC = Stream::FromLE(s->ReadValue<std::int32_t>());
-			std::int32_t sampleDataBlockLenU = Stream::FromLE(s->ReadValue<std::int32_t>());
+			/*std::uint16_t frameCount =*/ s->ReadValueAsLE<std::uint16_t>();
+			/*std::uint32_t cumulativeSndIndex =*/ s->ReadValueAsLE<std::uint32_t>();
+			std::int32_t infoBlockLenC = s->ReadValueAsLE<std::int32_t>();
+			std::int32_t infoBlockLenU = s->ReadValueAsLE<std::int32_t>();
+			std::int32_t frameDataBlockLenC = s->ReadValueAsLE<std::int32_t>();
+			std::int32_t frameDataBlockLenU = s->ReadValueAsLE<std::int32_t>();
+			std::int32_t imageDataBlockLenC = s->ReadValueAsLE<std::int32_t>();
+			std::int32_t imageDataBlockLenU = s->ReadValueAsLE<std::int32_t>();
+			std::int32_t sampleDataBlockLenC = s->ReadValueAsLE<std::int32_t>();
+			std::int32_t sampleDataBlockLenU = s->ReadValueAsLE<std::int32_t>();
 
 			JJ2Block infoBlock(s, infoBlockLenC, infoBlockLenU);
 			JJ2Block frameDataBlock(s, frameDataBlockLenC, frameDataBlockLenU);
@@ -503,21 +503,21 @@ namespace Jazz2::Compatibility
 			// Create PCM wave file
 			// Main header
 			so.Write("RIFF", 4);
-			so.WriteValue<std::uint32_t>(Stream::FromLE(36 + sample.DataSize - dataOffset)); // File size
+			so.WriteValueAsLE<std::uint32_t>(36 + sample.DataSize - dataOffset); // File size
 			so.Write("WAVE", 4);
 
 			// Format header
 			so.Write("fmt ", 4);
-			so.WriteValue<std::uint32_t>(Stream::FromLE(16)); // Header remainder length
-			so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(1))); // Format = PCM
-			so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(1))); // Channels
-			so.WriteValue<std::uint32_t>(Stream::FromLE(sample.SampleRate)); // Sample rate
-			so.WriteValue<std::uint32_t>(Stream::FromLE(sample.SampleRate * bytesPerSample)); // Bytes per second
-			so.WriteValue<std::uint32_t>(Stream::FromLE(bytesPerSample * 0x00080001));
+			so.WriteValueAsLE<std::uint32_t>(16); // Header remainder length
+			so.WriteValueAsLE<std::uint16_t>(1); // Format = PCM
+			so.WriteValueAsLE<std::uint16_t>(1); // Channels
+			so.WriteValueAsLE<std::uint32_t>(sample.SampleRate); // Sample rate
+			so.WriteValueAsLE<std::uint32_t>(sample.SampleRate * bytesPerSample); // Bytes per second
+			so.WriteValueAsLE<std::uint32_t>(bytesPerSample * 0x00080001);
 
 			// Payload
 			so.Write("data", 4);
-			so.WriteValue<std::uint32_t>(Stream::FromLE(sample.DataSize - dataOffset)); // Payload size
+			so.WriteValueAsLE<std::uint32_t>(sample.DataSize - dataOffset); // Payload size
 			for (std::uint32_t k = dataOffset; k < sample.DataSize; k++) {
 				so.WriteValue<std::uint8_t>((bytesPerSample << 7) ^ sample.Data[k]);
 			}
@@ -555,42 +555,42 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		targetStream.WriteValue<std::uint64_t>(Stream::FromLE(0xB8EF8498E2BFBBEF));
-		targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(0x208F)));
+		targetStream.WriteValueAsLE<std::uint64_t>(0xB8EF8498E2BFBBEF);
+		targetStream.WriteValueAsLE<std::uint16_t>(0x208F);
 		targetStream.WriteValue<std::uint8_t>(0x02); // Version 2 is reserved for sprites (or bigger images)
 		targetStream.WriteValue<std::uint8_t>(flags);
 
 		targetStream.WriteValue<std::uint8_t>(channelCount);
-		targetStream.WriteValue<std::uint32_t>(Stream::FromLE(width));
-		targetStream.WriteValue<std::uint32_t>(Stream::FromLE(height));
+		targetStream.WriteValueAsLE<std::uint32_t>(width);
+		targetStream.WriteValueAsLE<std::uint32_t>(height);
 
 		// Include Sprite extension
 		if (entry != nullptr) {
 			targetStream.WriteValue<std::uint8_t>(anim.FrameConfigurationX);
 			targetStream.WriteValue<std::uint8_t>(anim.FrameConfigurationY);
-			targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(anim.FrameCount)));
-			targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(anim.FrameRate == 0 ? 0 : 256 * 5 / anim.FrameRate)));
+			targetStream.WriteValueAsLE<std::uint16_t>(anim.FrameCount);
+			targetStream.WriteValueAsLE<std::uint16_t>(anim.FrameRate == 0 ? 0 : 256 * 5 / anim.FrameRate);
 
 			if (anim.NormalizedHotspotX != 0 || anim.NormalizedHotspotY != 0) {
-				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(anim.NormalizedHotspotX + AddBorder)));
-				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(anim.NormalizedHotspotY + AddBorder)));
+				targetStream.WriteValueAsLE<std::uint16_t>(anim.NormalizedHotspotX + AddBorder);
+				targetStream.WriteValueAsLE<std::uint16_t>(anim.NormalizedHotspotY + AddBorder);
 			} else {
-				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX)));
-				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX)));
+				targetStream.WriteValueAsLE<std::uint16_t>(UINT16_MAX);
+				targetStream.WriteValueAsLE<std::uint16_t>(UINT16_MAX);
 			}
 			if (anim.Frames[0].ColdspotX != 0 || anim.Frames[0].ColdspotY != 0) {
-				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].ColdspotX + AddBorder)));
-				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].ColdspotY + AddBorder)));
+				targetStream.WriteValueAsLE<std::uint16_t>((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].ColdspotX + AddBorder);
+				targetStream.WriteValueAsLE<std::uint16_t>((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].ColdspotY + AddBorder);
 			} else {
-				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX)));
-				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX)));
+				targetStream.WriteValueAsLE<std::uint16_t>(UINT16_MAX);
+				targetStream.WriteValueAsLE<std::uint16_t>(UINT16_MAX);
 			}
 			if (anim.Frames[0].GunspotX != 0 || anim.Frames[0].GunspotY != 0) {
-				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].GunspotX + AddBorder)));
-				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].GunspotY + AddBorder)));
+				targetStream.WriteValueAsLE<std::uint16_t>((anim.NormalizedHotspotX + anim.Frames[0].HotspotX) - anim.Frames[0].GunspotX + AddBorder);
+				targetStream.WriteValueAsLE<std::uint16_t>((anim.NormalizedHotspotY + anim.Frames[0].HotspotY) - anim.Frames[0].GunspotY + AddBorder);
 			} else {
-				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX)));
-				targetStream.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX)));
+				targetStream.WriteValueAsLE<std::uint16_t>(UINT16_MAX);
+				targetStream.WriteValueAsLE<std::uint16_t>(UINT16_MAX);
 			}
 
 			width *= anim.FrameConfigurationX;

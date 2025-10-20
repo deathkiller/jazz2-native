@@ -215,8 +215,7 @@ namespace Jazz2
 		AttachComponents(std::move(descriptor));
 
 		// All components are ready, deserialize the rest of state
-		// TODO: Big endian
-		_waterLevel = src.ReadValue<float>();
+		_waterLevel = src.ReadValueAsLE<float>();
 		_weatherType = (WeatherType)src.ReadValue<std::uint8_t>();
 		_weatherIntensity = src.ReadValue<std::uint8_t>();
 
@@ -1476,9 +1475,8 @@ namespace Jazz2
 
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_difficulty);
 		dest.WriteVariableUint64(_elapsedMillisecondsBegin);
-		// TODO: Big endian
-		dest.WriteValue<float>(_checkpointFrames);
-		dest.WriteValue<float>(_waterLevel);
+		dest.WriteValueAsLE<float>(_checkpointFrames);
+		dest.WriteValueAsLE<float>(_waterLevel);
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_weatherType);
 		dest.WriteValue<std::uint8_t>(_weatherIntensity);
 

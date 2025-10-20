@@ -35,11 +35,11 @@ namespace Jazz2::UI
 			auto* pixels = (std::uint8_t*)texLoader->pixels();
 
 			/*std::uint8_t flags =*/ s->ReadValue<std::uint8_t>();
-			std::uint16_t width = Stream::FromLE(s->ReadValue<std::uint16_t>());
-			std::uint16_t height = Stream::FromLE(s->ReadValue<std::uint16_t>());
+			std::uint16_t width = s->ReadValueAsLE<std::uint16_t>();
+			std::uint16_t height = s->ReadValueAsLE<std::uint16_t>();
 			std::uint8_t cols = s->ReadValue<std::uint8_t>();
 			std::int32_t rows = h / height;
-			std::int16_t spacing = Stream::FromLE(s->ReadValue<std::int16_t>());
+			std::int16_t spacing = s->ReadValueAsLE<std::int16_t>();
 			std::uint8_t asciiFirst = s->ReadValue<std::uint8_t>();
 			std::uint8_t asciiCount = s->ReadValue<std::uint8_t>();
 
@@ -56,7 +56,7 @@ namespace Jazz2::UI
 				);
 			}
 
-			std::int32_t unicodeCharCount = asciiCount + Stream::FromLE(s->ReadValue<std::int32_t>());
+			std::int32_t unicodeCharCount = asciiCount + s->ReadValueAsLE<std::int32_t>();
 			for (; i < unicodeCharCount; i++) {
 				char c[5] {};
 				s->Read(c, 1);
@@ -112,7 +112,7 @@ namespace Jazz2::UI
 			}
 
 			_texture = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, w, h);
-			_texture->LoadFromTexels((unsigned char*)pixels, 0, 0, w, h);
+			_texture->LoadFromTexels(pixels, 0, 0, w, h);
 			_texture->SetMinFiltering(SamplerFilter::Linear);
 			_texture->SetMagFiltering(SamplerFilter::Linear);
 		}

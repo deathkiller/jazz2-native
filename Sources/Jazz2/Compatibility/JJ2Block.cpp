@@ -2,8 +2,10 @@
 
 #include <cstring>
 
+#include <Base/Memory.h>
 #include <IO/Compression/DeflateStream.h>
 
+using namespace Death::Memory;
 using namespace Death::IO::Compression;
 
 namespace Jazz2::Compatibility
@@ -64,7 +66,7 @@ namespace Jazz2::Compatibility
 		std::int16_t result;
 		std::memcpy(&result, &_buffer[_offset], sizeof(result));
 		_offset += sizeof(result);
-		return Stream::FromLE(result);
+		return AsLE(result);
 	}
 
 	std::uint16_t JJ2Block::ReadUInt16()
@@ -77,7 +79,7 @@ namespace Jazz2::Compatibility
 		std::uint16_t result;
 		std::memcpy(&result, &_buffer[_offset], sizeof(result));
 		_offset += sizeof(result);
-		return Stream::FromLE(result);
+		return AsLE(result);
 	}
 
 	std::int32_t JJ2Block::ReadInt32()
@@ -90,7 +92,7 @@ namespace Jazz2::Compatibility
 		std::int32_t result;
 		std::memcpy(&result, &_buffer[_offset], sizeof(result));
 		_offset += sizeof(result);
-		return Stream::FromLE(result);
+		return AsLE(result);
 	}
 
 	std::uint32_t JJ2Block::ReadUInt32()
@@ -103,7 +105,7 @@ namespace Jazz2::Compatibility
 		std::uint32_t result;
 		std::memcpy(&result, &_buffer[_offset], sizeof(result));
 		_offset += sizeof(result);
-		return Stream::FromLE(result);
+		return AsLE(result);
 	}
 
 
@@ -136,22 +138,10 @@ namespace Jazz2::Compatibility
 			return false;
 		}
 
-#if defined(DEATH_TARGET_BIG_ENDIAN)
-		std::uint32_t temp;
-		std::memcpy(&temp, &_buffer[_offset], sizeof(temp));
-		_offset += sizeof(temp);
-
-		temp = Stream::FromLE(temp);
-
-		float result;
-		std::memcpy(&result, &temp, sizeof(result));
-		return result;
-#else
 		float result;
 		std::memcpy(&result, &_buffer[_offset], sizeof(result));
 		_offset += sizeof(result);
-		return result;
-#endif
+		return AsLE(result);
 	}
 
 	float JJ2Block::ReadFloatEncoded()

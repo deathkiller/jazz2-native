@@ -351,7 +351,7 @@ namespace Jazz2::Events
 
 		for (std::int32_t y = 0; y < _layoutSize.Y; y++) {
 			for (std::int32_t x = 0; x < _layoutSize.X; x++) {
-				std::uint16_t eventType = Stream::FromLE(s.ReadValue<std::uint16_t>());
+				std::uint16_t eventType = s.ReadValueAsLE<std::uint16_t>();
 				std::uint8_t eventFlags = s.ReadValue<std::uint8_t>();
 				std::uint8_t eventParams[16];
 
@@ -441,7 +441,7 @@ namespace Jazz2::Events
 			std::int32_t x = s.ReadVariableUint32();
 			std::int32_t y = s.ReadVariableUint32();
 
-			std::uint16_t eventType = Stream::FromLE(s.ReadValue<std::uint16_t>());
+			std::uint16_t eventType = s.ReadValueAsLE<std::uint16_t>();
 			std::uint8_t eventFlags = s.ReadValue<std::uint8_t>();
 			std::uint8_t eventParams[16];
 

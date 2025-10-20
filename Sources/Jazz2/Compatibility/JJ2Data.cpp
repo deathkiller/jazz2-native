@@ -27,18 +27,18 @@ namespace Jazz2::Compatibility
 			return false;
 		}
 
-		std::uint32_t magic = Stream::FromLE(s->ReadValue<std::uint32_t>());
-		std::uint32_t signature = Stream::FromLE(s->ReadValue<std::uint32_t>());
+		std::uint32_t magic = s->ReadValueAsLE<std::uint32_t>();
+		std::uint32_t signature = s->ReadValueAsLE<std::uint32_t>();
 		DEATH_ASSERT(magic == 0x42494C50 /*PLIB*/ && signature == 0xBEBAADDE, "Invalid signature", false);
 
-		/*std::uint32_t version =*/ Stream::FromLE(s->ReadValue<std::uint32_t>());
+		/*std::uint32_t version =*/ s->ReadValueAsLE<std::uint32_t>();
 
-		std::uint32_t recordedSize = Stream::FromLE(s->ReadValue<std::uint32_t>());
+		std::uint32_t recordedSize = s->ReadValueAsLE<std::uint32_t>();
 		DEATH_ASSERT(!strictParser || s->GetSize() == recordedSize, "Unexpected file size", false);
 
-		/*uint32_t recordedCRC =*/ Stream::FromLE(s->ReadValue<std::uint32_t>());
-		std::int32_t headerBlockPackedSize = Stream::FromLE(s->ReadValue<std::int32_t>());
-		std::int32_t headerBlockUnpackedSize = Stream::FromLE(s->ReadValue<std::int32_t>());
+		/*uint32_t recordedCRC =*/ s->ReadValueAsLE<std::uint32_t>();
+		std::int32_t headerBlockPackedSize = s->ReadValueAsLE<std::int32_t>();
+		std::int32_t headerBlockUnpackedSize = s->ReadValueAsLE<std::int32_t>();
 
 		JJ2Block headerBlock(s, headerBlockPackedSize, headerBlockUnpackedSize);
 
@@ -117,9 +117,9 @@ namespace Jazz2::Compatibility
 
 		MemoryStream so(16384);
 
-		so.WriteValue<std::uint64_t>(Stream::FromLE(0x2095A59FF0BFBBEF));	// Signature
+		so.WriteValueAsLE<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
 		so.WriteValue<std::uint8_t>(ContentResolver::SfxListFile);
-		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(1)));
+		so.WriteValueAsLE<std::uint16_t>(1);
 
 		HashMap<std::uint32_t, std::uint32_t> sampleToIndex;
 		SmallVector<std::uint32_t> indexToSample;
@@ -144,7 +144,7 @@ namespace Jazz2::Compatibility
 			itemRealCount++;
 		}
 
-		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(sampleCount)));
+		so.WriteValueAsLE<std::uint16_t>(sampleCount);
 		for (std::int32_t i = 0; i < sampleCount; i++) {
 			auto sample = animMapping.GetByOrdinal(indexToSample[i]);
 			if (sample == nullptr) {
@@ -156,7 +156,7 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(itemRealCount)));
+		so.WriteValueAsLE<std::uint16_t>(itemRealCount);
 		for (std::int32_t i = 0; i < itemRealCount; i++) {
 			SoundFXList sfx;
 			std::memcpy(&sfx, &item.Blob[i * sizeof(SoundFXList)], sizeof(SoundFXList));
@@ -165,9 +165,9 @@ namespace Jazz2::Compatibility
 
 			auto it = sampleToIndex.find(sfx.Sample);
 			if (it != sampleToIndex.end()) {
-				so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(it->second)));
+				so.WriteValueAsLE<std::uint16_t>(it->second);
 			} else {
-				so.WriteValue<std::uint16_t>(0);
+				so.WriteValueAsLE<std::uint16_t>(0);
 			}
 
 			so.WriteValue<std::uint8_t>((std::uint8_t)std::min(sfx.Volume * 255 / 0x40, (std::uint32_t)UINT8_MAX));
@@ -200,26 +200,26 @@ namespace Jazz2::Compatibility
 
 		constexpr std::uint8_t flags = 0x80 | 0x01 | 0x02;
 
-		so.WriteValue<std::uint64_t>(Stream::FromLE(0xB8EF8498E2BFBBEF));
-		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(0x208F)));
+		so.WriteValueAsLE<std::uint64_t>(0xB8EF8498E2BFBBEF);
+		so.WriteValueAsLE<std::uint16_t>(0x208F);
 		so.WriteValue<std::uint8_t>(0x02); // Version 2 is reserved for sprites (or bigger images)
 		so.WriteValue<std::uint8_t>(flags);
 
 		so.WriteValue<std::uint8_t>(4);
-		so.WriteValue<std::uint32_t>(Stream::FromLE(width));
-		so.WriteValue<std::uint32_t>(Stream::FromLE(height));
+		so.WriteValueAsLE<std::uint32_t>(width);
+		so.WriteValueAsLE<std::uint32_t>(height);
 
 		// Include Sprite extension
 		so.WriteValue<std::uint8_t>(1); // FrameConfigurationX
 		so.WriteValue<std::uint8_t>(1); // FrameConfigurationY
-		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(1))); // FrameCount
-		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(0))); // FrameRate
-		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX))); // NormalizedHotspotX
-		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX))); // NormalizedHotspotY
-		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX))); // ColdspotX
-		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX))); // ColdspotY
-		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX))); // GunspotX
-		so.WriteValue<std::uint16_t>(Stream::FromLE(std::uint16_t(UINT16_MAX))); // GunspotY
+		so.WriteValueAsLE<std::uint16_t>(1); // FrameCount
+		so.WriteValueAsLE<std::uint16_t>(0); // FrameRate
+		so.WriteValueAsLE<std::uint16_t>(UINT16_MAX); // NormalizedHotspotX
+		so.WriteValueAsLE<std::uint16_t>(UINT16_MAX); // NormalizedHotspotY
+		so.WriteValueAsLE<std::uint16_t>(UINT16_MAX); // ColdspotX
+		so.WriteValueAsLE<std::uint16_t>(UINT16_MAX); // ColdspotY
+		so.WriteValueAsLE<std::uint16_t>(UINT16_MAX); // GunspotX
+		so.WriteValueAsLE<std::uint16_t>(UINT16_MAX); // GunspotY
 
 		JJ2Anims::WriteImageContent(so, pixels.get(), width, height, 4);
 

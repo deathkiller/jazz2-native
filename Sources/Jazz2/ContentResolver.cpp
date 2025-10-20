@@ -778,8 +778,8 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		std::uint64_t signature1 = Stream::FromLE(s->ReadValue<std::uint64_t>());
-		std::uint32_t signature2 = Stream::FromLE(s->ReadValue<std::uint16_t>());
+		std::uint64_t signature1 = s->ReadValueAsLE<std::uint64_t>();
+		std::uint32_t signature2 = s->ReadValueAsLE<std::uint16_t>();
 		std::uint8_t version = s->ReadValue<std::uint8_t>();
 		std::uint8_t flags = s->ReadValue<std::uint8_t>();
 
@@ -788,29 +788,29 @@ namespace Jazz2
 		}
 
 		std::uint8_t channelCount = s->ReadValue<std::uint8_t>();
-		std::uint32_t frameDimensionsX = Stream::FromLE(s->ReadValue<std::uint32_t>());
-		std::uint32_t frameDimensionsY = Stream::FromLE(s->ReadValue<std::uint32_t>());
+		std::uint32_t frameDimensionsX = s->ReadValueAsLE<std::uint32_t>();
+		std::uint32_t frameDimensionsY = s->ReadValueAsLE<std::uint32_t>();
 
 		std::uint8_t frameConfigurationX = s->ReadValue<std::uint8_t>();
 		std::uint8_t frameConfigurationY = s->ReadValue<std::uint8_t>();
-		std::uint16_t frameCount = Stream::FromLE(s->ReadValue<std::uint16_t>());
-		std::uint16_t animDuration = Stream::FromLE(s->ReadValue<std::uint16_t>());
+		std::uint16_t frameCount = s->ReadValueAsLE<std::uint16_t>();
+		std::uint16_t animDuration = s->ReadValueAsLE<std::uint16_t>();
 
-		std::uint16_t hotspotX = Stream::FromLE(s->ReadValue<std::uint16_t>());
-		std::uint16_t hotspotY = Stream::FromLE(s->ReadValue<std::uint16_t>());
+		std::uint16_t hotspotX = s->ReadValueAsLE<std::uint16_t>();
+		std::uint16_t hotspotY = s->ReadValueAsLE<std::uint16_t>();
 
-		std::uint16_t coldspotX = Stream::FromLE(s->ReadValue<std::uint16_t>());
-		std::uint16_t coldspotY = Stream::FromLE(s->ReadValue<std::uint16_t>());
+		std::uint16_t coldspotX = s->ReadValueAsLE<std::uint16_t>();
+		std::uint16_t coldspotY = s->ReadValueAsLE<std::uint16_t>();
 
-		std::uint16_t gunspotX = Stream::FromLE(s->ReadValue<std::uint16_t>());
-		std::uint16_t gunspotY = Stream::FromLE(s->ReadValue<std::uint16_t>());
+		std::uint16_t gunspotX = s->ReadValueAsLE<std::uint16_t>();
+		std::uint16_t gunspotY = s->ReadValueAsLE<std::uint16_t>();
 
 		std::uint32_t width = frameDimensionsX * frameConfigurationX;
 		std::uint32_t height = frameDimensionsY * frameConfigurationY;
 
 		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * PixelSize);
 
-		ReadImageFromFile(s, (std::uint8_t*)pixels.get(), width, height, channelCount);
+		ReadImageFromFile(s, pixels.get(), width, height, channelCount);
 
 		std::unique_ptr<GenericGraphicResource> graphics = std::make_unique<GenericGraphicResource>();
 		graphics->Flags |= GenericGraphicResourceFlags::Referenced;
@@ -854,7 +854,7 @@ namespace Jazz2
 		if (!_isHeadless) {
 			// Don't load textures in headless mode, only collision masks
 			graphics->TextureDiffuse = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, width, height);
-			graphics->TextureDiffuse->LoadFromTexels((unsigned char*)pixels.get(), 0, 0, width, height);
+			graphics->TextureDiffuse->LoadFromTexels(pixels.get(), 0, 0, width, height);
 			graphics->TextureDiffuse->SetMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 			graphics->TextureDiffuse->SetMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 		}
@@ -1026,20 +1026,20 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		std::uint64_t signature1 = Stream::FromLE(s->ReadValue<std::uint64_t>());
-		std::uint16_t signature2 = Stream::FromLE(s->ReadValue<std::uint16_t>());
+		std::uint64_t signature1 = s->ReadValueAsLE<std::uint64_t>();
+		std::uint16_t signature2 = s->ReadValueAsLE<std::uint16_t>();
 		std::uint8_t version = s->ReadValue<std::uint8_t>();
 		/*std::uint8_t flags =*/ s->ReadValue<std::uint8_t>();
 		DEATH_ASSERT(signature1 == 0xB8EF8498E2BFBBEF && signature2 == 0x208F && version == 2, "Invalid file signature", nullptr);
 
 		// TODO: Use single channel instead
 		std::uint8_t channelCount = s->ReadValue<std::uint8_t>();
-		std::uint32_t width = Stream::FromLE(s->ReadValue<std::uint32_t>());
-		std::uint32_t height = Stream::FromLE(s->ReadValue<std::uint32_t>());
-		std::uint16_t tileCount = Stream::FromLE(s->ReadValue<std::uint16_t>());
+		std::uint32_t width = s->ReadValueAsLE<std::uint32_t>();
+		std::uint32_t height = s->ReadValueAsLE<std::uint32_t>();
+		std::uint16_t tileCount = s->ReadValueAsLE<std::uint16_t>();
 
 		// Read compressed palette and mask
-		std::int32_t compressedSize = Stream::FromLE(s->ReadValue<std::int32_t>());
+		std::int32_t compressedSize = s->ReadValueAsLE<std::int32_t>();
 
 		DeflateStream uc(*s, compressedSize);
 
@@ -1079,7 +1079,7 @@ namespace Jazz2
 		}
 
 		// Mask
-		std::uint32_t maskSize = Stream::FromLE(uc.ReadValue<std::uint32_t>());
+		std::uint32_t maskSize = uc.ReadValueAsLE<std::uint32_t>();
 		std::unique_ptr<uint8_t[]> mask = std::make_unique<std::uint8_t[]>(maskSize * 8);
 		for (std::uint32_t j = 0; j < maskSize; j++) {
 			std::uint8_t idx = uc.ReadValue<std::uint8_t>();
@@ -1232,14 +1232,14 @@ namespace Jazz2
 		auto s = fs::Open(descriptor.FullPath, FileAccess::Read);
 		if (!s->IsValid()) return false;
 
-		std::uint64_t signature = Stream::FromLE(s->ReadValue<std::uint64_t>());
+		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		DEATH_ASSERT(signature == 0x2095A59FF0BFBBEF && fileType == LevelFile, "File has invalid signature", false);
 
-		LevelFlags flags = (LevelFlags)Stream::FromLE(s->ReadValue<std::uint16_t>());
+		LevelFlags flags = (LevelFlags)s->ReadValueAsLE<std::uint16_t>();
 
 		// Read compressed data
-		std::int32_t compressedSize = Stream::FromLE(s->ReadValue<std::int32_t>());
+		std::int32_t compressedSize = s->ReadValueAsLE<std::int32_t>();
 
 		DeflateStream uc(*s, compressedSize);
 
@@ -1270,15 +1270,15 @@ namespace Jazz2
 		descriptor.MusicPath = String(NoInit, stringSize);
 		uc.Read(descriptor.MusicPath.data(), stringSize);
 
-		uint32_t rawAmbientColor = Stream::FromLE(uc.ReadValue<std::uint32_t>());
+		uint32_t rawAmbientColor = uc.ReadValueAsLE<std::uint32_t>();
 		descriptor.AmbientColor = Vector4f((rawAmbientColor & 0xff) / 255.0f, ((rawAmbientColor >> 8) & 0xff) / 255.0f,
 			((rawAmbientColor >> 16) & 0xff) / 255.0f, ((rawAmbientColor >> 24) & 0xff) / 255.0f);
 
 		descriptor.Weather = (WeatherType)uc.ReadValue<std::uint8_t>();
 		descriptor.WeatherIntensity = uc.ReadValue<std::uint8_t>();
-		descriptor.WaterLevel = Stream::FromLE(uc.ReadValue<std::uint16_t>());
+		descriptor.WaterLevel = uc.ReadValueAsLE<std::uint16_t>();
 
-		std::uint16_t captionTileId = Stream::FromLE(uc.ReadValue<std::uint16_t>());
+		std::uint16_t captionTileId = uc.ReadValueAsLE<std::uint16_t>();
 
 		PitType pitType;
 		if ((flags & LevelFlags::HasPit) == LevelFlags::HasPit) {
@@ -1331,8 +1331,8 @@ namespace Jazz2
 			String extraTileset{NoInit, stringSize};
 			uc.Read(extraTileset.data(), stringSize);
 
-			std::uint16_t offset = Stream::FromLE(uc.ReadValue<std::uint16_t>());
-			std::uint16_t count = Stream::FromLE(uc.ReadValue<std::uint16_t>());
+			std::uint16_t offset = uc.ReadValueAsLE<std::uint16_t>();
+			std::uint16_t count = uc.ReadValueAsLE<std::uint16_t>();
 
 			std::uint8_t paletteRemapping[ColorsPerPalette];
 			bool isRemapped = ((tilesetFlags & 0x01) == 0x01);
@@ -1358,7 +1358,7 @@ namespace Jazz2
 		std::uint32_t overridenTilesCount = uc.ReadVariableUint32();
 		if (!_isHeadless) {
 			for (std::uint32_t i = 0; i < overridenTilesCount; i++) {
-				std::uint16_t tileId = Stream::FromLE(uc.ReadValue<std::uint16_t>());
+				std::uint16_t tileId = uc.ReadValueAsLE<std::uint16_t>();
 				std::uint8_t tileDiffuseRaw[TileSet::DefaultTileSize * TileSet::DefaultTileSize];
 				uc.Read(tileDiffuseRaw, sizeof(tileDiffuseRaw));
 
@@ -1382,7 +1382,7 @@ namespace Jazz2
 
 		overridenTilesCount = uc.ReadVariableUint32();
 		for (std::uint32_t i = 0; i < overridenTilesCount; i++) {
-			std::uint16_t tileId = Stream::FromLE(uc.ReadValue<std::uint16_t>());
+			std::uint16_t tileId = uc.ReadValueAsLE<std::uint16_t>();
 			std::uint8_t tileMask[32 * 32];
 			uc.Read(tileMask, sizeof(tileMask));
 
@@ -1393,7 +1393,7 @@ namespace Jazz2
 		std::uint8_t textEventStringsCount = uc.ReadValue<std::uint8_t>();
 		descriptor.LevelTexts.reserve(textEventStringsCount);
 		for (std::uint32_t i = 0; i < textEventStringsCount; i++) {
-			std::uint16_t textLength = Stream::FromLE(uc.ReadValue<std::uint16_t>());
+			std::uint16_t textLength = uc.ReadValueAsLE<std::uint16_t>();
 			String& text = descriptor.LevelTexts.emplace_back(NoInit, textLength);
 			uc.Read(text.data(), textLength);
 		}
@@ -1452,7 +1452,7 @@ namespace Jazz2
 			return std::nullopt;
 		}
 
-		std::uint64_t signature = Stream::FromLE(s->ReadValue<std::uint64_t>());
+		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::EpisodeFile) {
 			return std::nullopt;
@@ -1461,13 +1461,13 @@ namespace Jazz2
 		Episode episode;
 		episode.Name = fs::GetFileNameWithoutExtension(path);
 
-		/*std::uint16_t flags =*/ Stream::FromLE(s->ReadValue<std::uint16_t>());
+		/*std::uint16_t flags =*/ s->ReadValueAsLE<std::uint16_t>();
 
 		std::uint8_t nameLength = s->ReadValue<std::uint8_t>();
 		episode.DisplayName = String(NoInit, nameLength);
 		s->Read(episode.DisplayName.data(), nameLength);
 
-		episode.Position = Stream::FromLE(s->ReadValue<std::uint16_t>());
+		episode.Position = s->ReadValueAsLE<std::uint16_t>();
 
 		nameLength = s->ReadValue<std::uint8_t>();
 		episode.FirstLevel = String(NoInit, nameLength);
@@ -1482,8 +1482,8 @@ namespace Jazz2
 		s->Read(episode.NextEpisode.data(), nameLength);
 
 		if (withImages && !_isHeadless) {
-			std::uint16_t titleWidth = Stream::FromLE(s->ReadValue<std::uint16_t>());
-			std::uint16_t titleHeight = Stream::FromLE(s->ReadValue<std::uint16_t>());
+			std::uint16_t titleWidth = s->ReadValueAsLE<std::uint16_t>();
+			std::uint16_t titleHeight = s->ReadValueAsLE<std::uint16_t>();
 			if (titleWidth > 0 && titleHeight > 0) {
 				std::unique_ptr<std::uint32_t[]> pixels = std::make_unique<std::uint32_t[]>(titleWidth * titleHeight);
 				ReadImageFromFile(s, (std::uint8_t*)pixels.get(), titleWidth, titleHeight, 4);
@@ -1494,8 +1494,8 @@ namespace Jazz2
 				episode.TitleImage->SetMagFiltering(SamplerFilter::Nearest);
 			}
 
-			std::uint16_t backgroundWidth = Stream::FromLE(s->ReadValue<std::uint16_t>());
-			std::uint16_t backgroundHeight = Stream::FromLE(s->ReadValue<std::uint16_t>());
+			std::uint16_t backgroundWidth = s->ReadValueAsLE<std::uint16_t>();
+			std::uint16_t backgroundHeight = s->ReadValueAsLE<std::uint16_t>();
 			if (backgroundWidth > 0 && backgroundHeight > 0) {
 				std::unique_ptr<std::uint32_t[]> pixels = std::make_unique<std::uint32_t[]>(backgroundWidth * backgroundHeight);
 				ReadImageFromFile(s, (std::uint8_t*)pixels.get(), backgroundWidth, backgroundHeight, 4);
