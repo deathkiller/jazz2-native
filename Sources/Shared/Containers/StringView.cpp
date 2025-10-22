@@ -1305,13 +1305,13 @@ namespace Death { namespace Containers {
 	namespace Implementation
 	{
 		ArrayView<char> ArrayViewConverter<char, BasicStringView<char>>::from(const BasicStringView<char>& other) {
-			return { other.data(), other.size() };
+			return {other.data(), other.size()};
 		}
 		ArrayView<const char> ArrayViewConverter<const char, BasicStringView<char>>::from(const BasicStringView<char>& other) {
-			return { other.data(), other.size() };
+			return {other.data(), other.size()};
 		}
 		ArrayView<const char> ArrayViewConverter<const char, BasicStringView<const char>>::from(const BasicStringView<const char>& other) {
-			return { other.data(), other.size() };
+			return {other.data(), other.size()};
 		}
 	}
 

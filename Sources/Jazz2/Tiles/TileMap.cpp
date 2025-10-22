@@ -785,6 +785,8 @@ namespace Jazz2::Tiles
 					}
 					TileSet* tileSet = ResolveTileSet(tileId);
 					if (tileSet == nullptr) {
+						// TODO: Debug message
+						LOGW("Unable to resolve tileset for tile ID {} on {}x{} on layer with depth {}", tile.TileID, tileX, tileY, layer.Description.Depth);
 						continue;
 					}
 
@@ -885,7 +887,7 @@ namespace Jazz2::Tiles
 	void TileMap::ReadLayerConfiguration(Stream& s)
 	{
 		LayerType layerType = (LayerType)s.ReadValue<std::uint8_t>();
-		std::uint16_t layerFlags = s.ReadValue<std::uint16_t>();
+		std::uint16_t layerFlags = s.ReadValueAsLE<std::uint16_t>();
 
 		if (layerType == LayerType::Sprite) {
 			_sprLayerIndex = (std::int32_t)_layers.size();
@@ -897,6 +899,9 @@ namespace Jazz2::Tiles
 		std::int32_t height = s.ReadValueAsLE<std::int32_t>();
 		newLayer.LayoutSize = Vector2i(width, height);
 		newLayer.Visible = ((layerFlags & 0x08) == 0x08);
+
+		// TODO: Debug message
+		LOGI("Reading layer {} (0x{:.2x}) - {}x{}", (std::uint8_t)layerType, layerFlags, width, height);
 
 		if (layerType != LayerType::Sprite) {
 			std::uint8_t combinedSpeedModels = s.ReadValue<std::uint8_t>();

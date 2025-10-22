@@ -1888,6 +1888,9 @@ void GameEventHandler::RefreshCacheLevels(bool recreateAll)
 						fullPath = fs::CombinePath({ episodesPath, "unknown"_s, String(level.LevelName + ".j2l"_s) });
 					}
 
+					// TODO: Debug message
+					LOGI("Converting level \"{}\"...", fullPath);
+
 					fs::CreateDirectories(fs::GetDirectoryName(fullPath));
 					level.Convert(fullPath, eventConverter, LevelTokenConversion);
 

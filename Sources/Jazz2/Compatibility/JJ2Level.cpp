@@ -756,7 +756,7 @@ namespace Jazz2::Compatibility
 				for (std::int32_t i = 0; i < sizeof(_levelPalette); i += 3) {
 					// Expand JJ2+ RGB palette to RGBA
 					// The first palette entry is fixed to transparent black
-					std::uint32_t color = (i != 0 ? ((std::uint32_t)_levelPalette[i] | ((std::uint32_t)_levelPalette[i + 1] << 8) | ((std::uint32_t)_levelPalette[i + 2] << 16) | ContentResolver::AlphaMask) : 0x00000000);
+					std::uint32_t color = (i != 0 ? ((std::uint32_t)_levelPalette[i] | ((std::uint32_t)_levelPalette[i + 1] << 8) | ((std::uint32_t)_levelPalette[i + 2] << 16) | 0xff000000) : 0x00000000);
 					co.WriteValueAsLE<std::uint32_t>(color);
 				}
 			}
@@ -771,7 +771,7 @@ namespace Jazz2::Compatibility
 				for (std::int32_t i = 0; i < sizeof(palette.Colors); i += 3) {
 					// Expand JJ2+ RGB palette to RGBA
 					// The first palette entry is fixed to transparent black
-					std::uint32_t color = (i != 0 ? ((std::uint32_t)palette.Colors[i] | ((std::uint32_t)palette.Colors[i + 1] << 8) | ((std::uint32_t)palette.Colors[i + 2] << 16) | ContentResolver::AlphaMask) : 0x00000000);
+					std::uint32_t color = (i != 0 ? ((std::uint32_t)palette.Colors[i] | ((std::uint32_t)palette.Colors[i + 1] << 8) | ((std::uint32_t)palette.Colors[i + 2] << 16) | 0xff000000) : 0x00000000);
 					co.WriteValueAsLE<std::uint32_t>(color);
 				}
 			}

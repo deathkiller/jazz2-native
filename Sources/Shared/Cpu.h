@@ -632,8 +632,8 @@ namespace Death { namespace Cpu {
 
 	namespace Implementation
 	{
-		template<unsigned i> struct Priority : Priority<i - 1> { };
-		template<> struct Priority<0> { };
+		template<unsigned i> struct Priority : Priority<i - 1> {};
+		template<> struct Priority<0> {};
 
 		// Count of "extra" tags that are not in the hierarchy. Should not be larger than strictly
 		// necessary as it deepens inheritance hierarchy when picking best overload candidate.

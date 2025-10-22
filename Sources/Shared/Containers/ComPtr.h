@@ -77,7 +77,7 @@ namespace Death { namespace Containers {
 		}
 
 		/** @brief Relinquishes ownership and returns the internal interface pointer */
-		/*[[nodiscard]]*/ T* detach() noexcept {
+		[[nodiscard]] T* detach() noexcept {
 			auto prev = _pointer;
 			_pointer = nullptr;
 			return prev;

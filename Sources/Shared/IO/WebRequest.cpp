@@ -2934,12 +2934,12 @@ namespace Death { namespace IO {
 			}
 		}
 
-		++_activeSessions;
+		_activeSessions++;
 	}
 
 	WebSessionBaseCURL::~WebSessionBaseCURL()
 	{
-		--_activeSessions;
+		_activeSessions--;
 		if (_activeSessions == 0) {
 			curl_global_cleanup();
 		}

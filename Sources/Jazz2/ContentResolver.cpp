@@ -1046,7 +1046,9 @@ namespace Jazz2
 		// Palette
 		if (applyPalette && !_isHeadless) {
 			std::uint32_t newPalette[ColorsPerPalette];
-			uc.Read(newPalette, ColorsPerPalette * sizeof(std::uint32_t));
+			for (std::size_t i = 0; i < arraySize(newPalette); i++) {
+				newPalette[i] = uc.ReadValueAsLE<std::uint32_t>();
+			}
 
 			if (std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(std::uint32_t)) != 0) {
 				// Palettes differs, drop all cached resources, so it will be reloaded with new palette
@@ -1290,7 +1292,9 @@ namespace Jazz2
 		bool hasCustomPalette = ((flags & LevelFlags::UseLevelPalette) == LevelFlags::UseLevelPalette);
 		if (hasCustomPalette) {
 			std::uint32_t newPalette[ColorsPerPalette];
-			uc.Read(newPalette, ColorsPerPalette * sizeof(std::uint32_t));
+			for (std::size_t i = 0; i < arraySize(newPalette); i++) {
+				newPalette[i] = uc.ReadValueAsLE<std::uint32_t>();
+			}
 
 			if (!_isHeadless && std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(std::uint32_t)) != 0) {
 				// Palettes differs, drop all cached resources, so it will be reloaded with new palette
@@ -1314,7 +1318,9 @@ namespace Jazz2
 			String name(NoInit, nameLength);
 			uc.Read(name.data(), nameLength);
 			std::uint32_t palette[ColorsPerPalette];
-			uc.Read(palette, ColorsPerPalette * sizeof(std::uint32_t));
+			for (std::size_t i = 0; i < arraySize(palette); i++) {
+				palette[i] = uc.ReadValueAsLE<std::uint32_t>();
+			}
 
 			// TODO: Store and use the palette (if not headless)
 		}
@@ -1772,7 +1778,7 @@ namespace Jazz2
 		std::uint32_t texels[64 * 64];
 
 		for (std::uint32_t i = 0; i < static_cast<std::uint32_t>(arraySize(texels)); i++) {
-			texels[i] = Random().Fast(0, INT32_MAX) | ContentResolver::AlphaMask;
+			texels[i] = Random().Fast(0, INT32_MAX) | 0xff000000;
 		}
 
 		std::unique_ptr<Texture> tex = std::make_unique<Texture>("Noise", Texture::Format::RGBA8, 64, 64);

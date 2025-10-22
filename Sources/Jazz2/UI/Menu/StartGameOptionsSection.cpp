@@ -415,6 +415,10 @@ namespace Jazz2::UI::Menu
 	void StartGameOptionsSection::OnAfterTransition()
 	{
 		bool playTutorial = (!PreferencesCache::TutorialCompleted && _levelName == "prince/01_castle1"_s);
+		if (playTutorial && !ContentResolver::Get().LevelExists("prince/trainer"_s)) {
+			LOGW("Tutorial level \"prince/trainer\" not found, skipping tutorial");
+			playTutorial = false;
+		}
 
 		SmallVector<PlayerType, ControlScheme::MaxSupportedPlayers> players(_playerCount);
 		for (std::int32_t i = 0; i < _playerCount; i++) {
