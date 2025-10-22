@@ -98,7 +98,9 @@ namespace nCine
 		std::unique_ptr<Stream> s = fs::Open(cachePath, FileAccess::Read);
 		std::int64_t fileSize = s->GetSize();
 		if (fileSize <= 20 || fileSize > 16 * 1024 * 1024) {
-			LOGW("Invalid .shader file");
+			if (s->IsValid()) {
+				LOGW("Invalid .shader file");
+			}
 			return false;
 		}
 
@@ -109,7 +111,7 @@ namespace nCine
 			return false;
 		}
 
-		std::uint16_t fileVersion = s->ReadValue<std::uint16_t>();
+		std::uint16_t fileVersion = s->ReadValueAsLE<std::uint16_t>();
 		if (fileVersion != Version) {
 			LOGW("Unsupported .shader file version");
 			return false;
@@ -171,7 +173,7 @@ namespace nCine
 		}
 
 		s->Write(Signature, sizeof(Signature));
-		s->WriteValue<std::uint16_t>(Version);
+		s->WriteValueAsLE<std::uint16_t>(Version);
 		s->WriteVariableUint64(shaderVersion);
 		s->WriteVariableUint32(binaryFormat);
 		s->WriteVariableUint32(program->GetBatchSize());

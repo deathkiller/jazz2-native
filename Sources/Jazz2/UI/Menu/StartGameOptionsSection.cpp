@@ -416,7 +416,7 @@ namespace Jazz2::UI::Menu
 	{
 		bool playTutorial = (!PreferencesCache::TutorialCompleted && _levelName == "prince/01_castle1"_s);
 		if (playTutorial && !ContentResolver::Get().LevelExists("prince/trainer"_s)) {
-			LOGW("Tutorial level \"prince/trainer\" not found, skipping tutorial");
+			LOGW("Tutorial level \"prince/trainer.j2l\" not found, skipping tutorial");
 			playTutorial = false;
 		}
 
