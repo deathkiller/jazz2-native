@@ -19,9 +19,6 @@
 #endif
 
 #include <type_traits>
-#if defined(DEATH_TARGET_MSVC) && !defined(DEATH_TARGET_CLANG_CL)
-#	include <intrin.h>	// For _byteswap_ushort()/_byteswap_ulong()/_byteswap_uint64()
-#endif
 
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -

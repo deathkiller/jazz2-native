@@ -575,12 +575,12 @@ namespace Death { namespace Containers {
 
 	constexpr std::int32_t TimeSpan::GetTotalDays() const noexcept
 	{
-		return static_cast<std::int32_t>(_value / (24 * 60 * 60 * 1000LL));
+		return std::int32_t(_value / (24 * 60 * 60 * 1000LL));
 	}
 
 	constexpr std::int32_t TimeSpan::GetTotalWeeks() const noexcept
 	{
-		return static_cast<std::int32_t>(_value / (7 * 24 * 60 * 60 * 1000LL));
+		return std::int32_t(_value / (7 * 24 * 60 * 60 * 1000LL));
 	}
 
 }}

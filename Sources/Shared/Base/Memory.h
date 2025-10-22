@@ -83,6 +83,7 @@ namespace Death { namespace Memory {
 		@brief Converts a value from/to Big-Endian
 
 		On Little-Endian systems calls @ref SwapBytes(), on Big-Endian systems returns the value unchanged.
+		Only trivial types of size 2, 4, or 8 bytes are supported.
 	*/
 	template<typename T> inline T AsBE(T value);
 
@@ -90,6 +91,7 @@ namespace Death { namespace Memory {
 		@brief Converts a value from/to Little-Endian
 
 		On Big-Endian systems calls @ref SwapBytes(), on Little-Endian systems returns the value unchanged.
+		Only trivial types of size 2, 4, or 8 bytes are supported.
 	*/
 	template<typename T> inline T AsLE(T value);
 
@@ -113,6 +115,8 @@ namespace Death { namespace Memory {
 
 	/**
 		@brief Endian-swap bytes of given value
+
+		Only trivial types of size 2, 4, or 8 bytes are supported.
 	*/
 	template<class T> inline T SwapBytes(T value);
 
@@ -155,6 +159,8 @@ namespace Death { namespace Memory {
 			return __builtin_bswap16(x);
 #elif defined(DEATH_TARGET_MSVC)
 			return _byteswap_ushort(x);
+#elif defined(DEATH_TARGET_APPLE)
+			return _OSSwapInt16(value);
 #else
 			return static_cast<std::uint16_t>((x >> 8) | (x << 8));
 #endif
@@ -165,6 +171,8 @@ namespace Death { namespace Memory {
 			return __builtin_bswap32(x);
 #elif defined(DEATH_TARGET_MSVC)
 			return _byteswap_ulong(x);
+#elif defined(DEATH_TARGET_APPLE)
+			return _OSSwapInt32(value);
 #else
 			return (x << 24) |
 				  ((x & 0x0000FF00u) << 8)  |
@@ -178,6 +186,8 @@ namespace Death { namespace Memory {
 			return __builtin_bswap64(x);
 #elif defined(DEATH_TARGET_MSVC)
 			return _byteswap_uint64(x);
+#elif defined(DEATH_TARGET_APPLE)
+			return _OSSwapInt64(value);
 #else
 			return (x << 56) |
 				  ((x & 0x000000000000FF00ull) << 40) |

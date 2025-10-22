@@ -241,21 +241,23 @@ namespace Jazz2::Compatibility
 
 			bool hasAlphaChannel = false;
 			for (std::int32_t i = 1; i < std::int32_t(arraySize(palette)); i++) {
-				if ((palette[i] & ContentResolver::AlphaMask) != 0) {
+				if ((palette[i] & 0xff000000) != 0) {
 					hasAlphaChannel = true;
 					break;
 				}
 			}
 			if (!hasAlphaChannel) {
 				for (std::int32_t i = 1; i < std::int32_t(arraySize(palette)); i++) {
-					palette[i] |= ContentResolver::AlphaMask;
+					palette[i] |= 0xff000000;
 				}
 			}
 
 			// The first palette entry is fixed to transparent black
 			palette[0] = 0x00000000;
 
-			co.Write(palette, sizeof(palette));
+			for (std::size_t i = 0; i < arraySize(palette); i++) {
+				co.WriteValueAsLE<std::uint32_t>(palette[i]);
+			}
 
 			// Mark individual tiles as 32-bit or 8-bit
 			for (std::int32_t i = 0; i < (tileCount + 7) / 8; i++) {

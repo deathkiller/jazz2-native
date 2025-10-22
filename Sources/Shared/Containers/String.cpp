@@ -93,8 +93,8 @@ namespace Death { namespace Containers {
 
 	inline String::Data String::dataInternal() const {
 		if (_small.size & Implementation::SmallStringBit)
-			return { _small.data, _small.size & ~SmallSizeMask };
-		return { _large.data, _large.size & ~LargeSizeMask };
+			return {_small.data, _small.size & ~SmallSizeMask};
+		return {_large.data, _large.size & ~LargeSizeMask};
 	}
 
 	String::String() noexcept {
@@ -289,22 +289,22 @@ namespace Death { namespace Containers {
 
 	String::operator ArrayView<const char>() const noexcept {
 		const Data data = dataInternal();
-		return { data.data, data.size };
+		return {data.data, data.size};
 	}
 
 	String::operator ArrayView<const void>() const noexcept {
 		const Data data = dataInternal();
-		return { data.data, data.size };
+		return {data.data, data.size};
 	}
 
 	String::operator ArrayView<char>() noexcept {
 		const Data data = dataInternal();
-		return { const_cast<char*>(data.data), data.size };
+		return {const_cast<char*>(data.data), data.size};
 	}
 
 	String::operator ArrayView<void>() noexcept {
 		const Data data = dataInternal();
-		return { const_cast<char*>(data.data), data.size };
+		return {const_cast<char*>(data.data), data.size};
 	}
 
 	String::operator Array<char>() && {

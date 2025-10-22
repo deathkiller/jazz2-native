@@ -59,23 +59,23 @@ namespace Death { namespace Utf8 {
 			mask = 0x07;
 		} else {
 			// Wrong sequence start
-			return { U'\xffffffff', cursor + 1 };
+			return {U'\xffffffff', cursor + 1};
 		}
 
 		// Unexpected end
-		if (text.size() < end) return { U'\xffffffff', cursor + 1 };
+		if (text.size() < end) return {U'\xffffffff', cursor + 1};
 
 		char32_t result = (character & mask);
-		for (std::size_t i = cursor + 1; i != end; ++i) {
+		for (std::size_t i = cursor + 1; i != end; i++) {
 			// Garbage in the sequence
 			if ((text[i] & 0xc0) != 0x80)
-				return { U'\xffffffff', cursor + 1 };
+				return {U'\xffffffff', cursor + 1};
 
 			result <<= 6;
 			result |= (text[i] & 0x3f);
 		}
 
-		return { result, end };
+		return {result, end};
 	}
 
 	Containers::Pair<char32_t, std::size_t> PrevChar(const Containers::ArrayView<const char> text, std::size_t cursor)
@@ -87,15 +87,15 @@ namespace Death { namespace Utf8 {
 		const std::size_t iMax = (cursor < std::size_t{4} ? cursor : std::size_t{4});
 		std::size_t i = 1;
 		while (i != iMax && (text[cursor - i] & 0xc0) == 0x80)
-			++i;
+			i++;
 
 		// Delegate to NextChar() for the actual codepoint calculation and validation. It's also invalid
 		// if the next UTF-8 character isn't *exactly* this cursor position.
 		const Containers::Pair<char32_t, std::size_t> prev = NextChar(text, cursor - i);
 		if (prev.first() == U'\xffffffff' || prev.second() != cursor)
-			return { U'\xffffffff', cursor - 1 };
+			return {U'\xffffffff', cursor - 1};
 
-		return { prev.first(), cursor - i };
+		return {prev.first(), cursor - i};
 	}
 	
 	std::size_t FromCodePoint(char32_t character, Containers::StaticArrayView<4, char> result)

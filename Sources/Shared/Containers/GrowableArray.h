@@ -1650,7 +1650,7 @@ namespace Death { namespace Containers {
 			// wouldn't be taken into account above, we may end up reading from freed memory, which is far worse.
 			relocateOffset != ~std::size_t{} ? array.data() + relocateOffset : valueData,
 			it, valueCount);
-		return { it, valueCount };
+		return {it, valueCount};
 	}
 
 	template<class T, class ...Args> inline T& arrayAppend(Array<T>& array, InPlaceInitT, Args&&... args) {
@@ -1667,7 +1667,7 @@ namespace Death { namespace Containers {
 
 	template<class T, class Allocator> ArrayView<T> arrayAppend(Array<T>& array, NoInitT, const std::size_t count) {
 		T* const it = Implementation::arrayGrowBy<T, Allocator>(array, count);
-		return { it, count };
+		return {it, count};
 	}
 
 	template<class T, class Allocator> ArrayView<T> arrayAppend(Array<T>& array, ValueInitT, const std::size_t count) {
@@ -1792,7 +1792,6 @@ namespace Death { namespace Containers {
 			arrayGuts.size += count;
 			return it;
 		}
-
 	}
 
 	template<class T, class Allocator> inline T& arrayInsert(Array<T>& array, std::size_t index, const typename std::common_type<T>::type& value) {
@@ -1835,7 +1834,7 @@ namespace Death { namespace Containers {
 			// we handle by copying potential garbage instead of accessing freed memory.
 			relocateOffset != ~std::size_t{} ? array.data() + relocateOffset : valueData,
 			it, valueCount);
-		return { it, valueCount };
+		return {it, valueCount};
 	}
 
 	template<class T, class ...Args> inline T& arrayInsert(Array<T>& array, std::size_t index, InPlaceInitT, Args&&... args) {
@@ -1852,7 +1851,7 @@ namespace Death { namespace Containers {
 
 	template<class T, class Allocator> ArrayView<T> arrayInsert(Array<T>& array, const std::size_t index, NoInitT, const std::size_t count) {
 		T* const it = Implementation::arrayGrowAtBy<T, Allocator>(array, index, count);
-		return { it, count };
+		return {it, count};
 	}
 
 	template<class T, class Allocator> ArrayView<T> arrayInsert(Array<T>& array, const std::size_t index, ValueInitT, const std::size_t count) {

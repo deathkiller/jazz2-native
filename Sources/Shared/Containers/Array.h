@@ -854,23 +854,23 @@ namespace Death { namespace Containers {
 		template<class U, class T, class D> struct ArrayViewConverter<U, Array<T, D>> {
 			template<class V = U, typename std::enable_if<std::is_convertible<T*, V*>::value, int>::type = 0> constexpr static ArrayView<U> from(Array<T, D>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
-				return { &other[0], other.size() };
+				return {&other[0], other.size()};
 			}
 			template<class V = U, typename std::enable_if<std::is_convertible<T*, V*>::value, int>::type = 0> constexpr static ArrayView<U> from(Array<T, D>&& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
-				return { &other[0], other.size() };
+				return {&other[0], other.size()};
 			}
 		};
 		template<class U, class T, class D> struct ArrayViewConverter<const U, Array<T, D>> {
 			template<class V = U, typename std::enable_if<std::is_convertible<T*, V*>::value, int>::type = 0> constexpr static ArrayView<const U> from(const Array<T, D>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
-				return { &other[0], other.size() };
+				return {&other[0], other.size()};
 			}
 		};
 		template<class U, class T, class D> struct ArrayViewConverter<const U, Array<const T, D>> {
 			template<class V = U, typename std::enable_if<std::is_convertible<T*, V*>::value, int>::type = 0> constexpr static ArrayView<const U> from(const Array<const T, D>& other) {
 				static_assert(sizeof(T) == sizeof(U), "Types are not compatible");
-				return { &other[0], other.size() };
+				return {&other[0], other.size()};
 			}
 		};
 		template<class T, class D> struct ErasedArrayViewConverter<Array<T, D>> : ArrayViewConverter<T, Array<T, D>> {};
