@@ -339,7 +339,7 @@ void GameEventHandler::OnInitialize()
 		}
 #		endif
 #		if defined(WITH_MULTIPLAYER)
-		if ((arg == "/connect"_s || arg == "-c"_s) && i + 1 < config.argc()) {
+		if ((arg == "/connect"_s || arg == "--connect"_s || arg == "-c"_s) && i + 1 < config.argc()) {
 			auto endpoint = config.argv(i + 1);
 			if (!endpoint.empty()) {
 				WaitForVerify();
@@ -879,9 +879,10 @@ void GameEventHandler::RunDedicatedServer(StringView configPath)
 	if (!CreateServer(std::move(serverInit))) {
 		LOGE("Server cannot be started because of invalid configuration");
 		theApplication().Quit();
-	} else {
-		StartProcessingStdin();
-	}
+		return;
+	} 
+
+	StartProcessingStdin();
 }
 
 #	if defined(WITH_THREADS)
@@ -996,7 +997,11 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 	InvokeAsync([this, serverInit = std::move(serverInit)]() mutable {
 		auto levelHandler = std::make_shared<MpLevelHandler>(this,
 			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending, true);
-		levelHandler->Initialize(serverInit.InitialLevel);
+		if (!levelHandler->Initialize(serverInit.InitialLevel)) {
+			LOGE("[MP] Failed to load initial level \"{}\", shutting down server", serverInit.InitialLevel.LevelName);
+			theApplication().Quit();
+			return;
+		}
 		SetStateHandler(std::move(levelHandler));
 	});
 
@@ -1503,8 +1508,12 @@ void GameEventHandler::SetStateHandler(std::shared_ptr<IStateHandler>&& handler)
 
 void GameEventHandler::WaitForVerify()
 {
-	while ((_flags & Flags::IsVerified) != Flags::IsVerified) {
-		Thread::Sleep(33);
+	if ((_flags & Flags::IsVerified) != Flags::IsVerified) {
+		LOGI("Waiting for content verification...");
+
+		while ((_flags & Flags::IsVerified) != Flags::IsVerified) {
+			Thread::Sleep(33);
+		}
 	}
 }
 
