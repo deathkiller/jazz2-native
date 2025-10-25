@@ -8,7 +8,8 @@
 	<uses-feature android:name="android.software.leanback" android:required="false" />
 	<application android:label="@string/app_name" android:isGame="true" android:appCategory="game"
 		android:hasCode="true" android:allowBackup="false" android:description="@string/app_desc"
-		android:icon="@mipmap/ic_launcher" android:banner="@mipmap/ic_foreground">
+		android:icon="@mipmap/ic_launcher" android:banner="@mipmap/ic_foreground"
+		android:enableOnBackInvokedCallback="true">
 		<meta-data android:name="com.google.android.wearable.standalone" android:value="true" />
 		<activity android:name=".MainActivity" android:label="@string/app_name"
 			android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
