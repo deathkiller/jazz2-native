@@ -720,7 +720,7 @@ namespace Death { namespace Containers {
 		}
 
 		/** @brief Removes the last element and returns it */
-		/*[[nodiscard]]*/ T pop_back_val() {
+		[[nodiscard]] T pop_back_val() {
 			T result = Death::move(this->back());
 			this->pop_back();
 			return result;
