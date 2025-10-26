@@ -77,6 +77,13 @@ DEATH_ALWAYS_INLINE HFONT WINAPI CreateFont(int cHeight, int cWidth, int cEscape
 }
 #endif
 
+#if defined(CreateNamedPipe)
+#	undef CreateNamedPipe
+DEATH_ALWAYS_INLINE HANDLE WINAPI CreateNamedPipe(LPCWSTR lpName, DWORD dwOpenMode, DWORD dwPipeMode, DWORD nMaxInstances, DWORD nOutBufferSize, DWORD nInBufferSize, DWORD nDefaultTimeOut, LPSECURITY_ATTRIBUTES lpSecurityAttributes) {
+	return ::CreateNamedPipeW(lpName, dwOpenMode, dwPipeMode, nMaxInstances, nOutBufferSize, nInBufferSize, nDefaultTimeOut, lpSecurityAttributes);
+}
+#endif
+
 #if defined(CreateWindow)
 #	undef CreateWindow
 #	if !defined(DEATH_TARGET_WINDOWS_RT)
