@@ -16,23 +16,16 @@ namespace Jazz2::UI::Menu
 	class MenuSection
 	{
 	public:
-		MenuSection() : _root(nullptr) {}
-		virtual ~MenuSection() {}
+		MenuSection();
+		virtual ~MenuSection();
 
 		/** @brief Allows to override clip rectangle of the middle layer */
-		virtual Recti GetClipRectangle(const Recti& contentBounds) {
-			return {};
-		}
+		virtual Recti GetClipRectangle(const Recti& contentBounds);
 
 		/** @brief Called when the section is shown */
-		virtual void OnShow(IMenuContainer* root) {
-			_root = root;
-		}
-
+		virtual void OnShow(IMenuContainer* root);
 		/** @brief Called when the section is hidden */
-		virtual void OnHide() {
-			_root = nullptr;
-		}
+		virtual void OnHide();
 
 		/** @brief Called when the section should be updated */
 		virtual void OnUpdate(float timeMult) = 0;
@@ -52,9 +45,7 @@ namespace Jazz2::UI::Menu
 		virtual void OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize) = 0;
 
 		/** @brief Allows to override navigation behavior */
-		virtual NavigationFlags GetNavigationFlags() const {
-			return NavigationFlags::AllowAll;
-		}
+		virtual NavigationFlags GetNavigationFlags() const;
 
 	protected:
 		/** @brief Kinetic divider for smooth touch controls */

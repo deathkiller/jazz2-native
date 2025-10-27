@@ -178,9 +178,7 @@ namespace Jazz2::UI::Menu
 				if (_selectedIndex == i) {
 					float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-					_root->DrawElement(MenuGlow, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(_items[sectionIndex].Name) + 3) * 0.5f * size, 4.0f * size, true, true);
-
-					_root->DrawStringShadow(_items[sectionIndex].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
+					_root->DrawStringGlow(_items[sectionIndex].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 						Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				} else {
 					_root->DrawStringShadow(_items[sectionIndex].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,
@@ -264,15 +262,13 @@ namespace Jazz2::UI::Menu
 		        for (std::int32_t j = 0; j < _availableCharacters; j++) {
 		            float x = center.X - offset + j * spacing;
 		            if (_selectedPlayerType[i - 1] == j) {
-		                _root->DrawElement(MenuGlow, 0, x, center.Y - 12.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(playerTypes[j]) + 3) * 0.4f, 2.2f, true, true);
-
 						if (_selectedIndex == i) {
 							float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
-							_root->DrawStringShadow(playerTypes[j], charOffset, x, center.Y - 12.0f, IMenuContainer::FontLayer,
+							_root->DrawStringGlow(playerTypes[j], charOffset, x, center.Y - 12.0f, IMenuContainer::FontLayer,
 								Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), size, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
 						} else {
-							_root->DrawStringShadow(playerTypes[j], charOffset, x, center.Y - 12.0f, IMenuContainer::FontLayer,
+							_root->DrawStringGlow(playerTypes[j], charOffset, x, center.Y - 12.0f, IMenuContainer::FontLayer,
 								Alignment::Center, playerColors[j], 1.0f, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
 						}
 		            } else {
@@ -298,9 +294,7 @@ namespace Jazz2::UI::Menu
 
 		        for (std::int32_t j = 0; j < std::int32_t(arraySize(difficultyTypes)); j++) {
 		            if (_selectedDifficulty == j) {
-		                _root->DrawElement(MenuGlow, 0, center.X + (j - 1) * spacing, center.Y + 28.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(difficultyTypes[j]) + 3) * 0.4f, 2.2f, true, true);
-
-		                _root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * spacing, center.Y + 28.0f, IMenuContainer::FontLayer,
+		                _root->DrawStringGlow(difficultyTypes[j], charOffset, center.X + (j - 1) * spacing, center.Y + 28.0f, IMenuContainer::FontLayer,
 							Alignment::Center, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 1.0f, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
 		            } else {
 		                _root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * spacing, center.Y + 28.0f, IMenuContainer::FontLayer,
