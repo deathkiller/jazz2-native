@@ -24,18 +24,6 @@ namespace Death { namespace Utf8 {
 		4, 4, 4, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0xF0 - 0xFF
 	}};
 
-	std::size_t GetLength(Containers::ArrayView<const char> text)
-	{
-		std::size_t size = text.size();
-		std::size_t result = 0;
-		for (std::size_t i = 0; i < size; i++) {
-			if ((text[i] & 0xc0) != 0x80) {
-				result++;
-			}
-		}
-		return result;
-	}
-
 	Containers::Pair<char32_t, std::size_t> NextChar(const Containers::ArrayView<const char> text, std::size_t cursor)
 	{
 		DEATH_DEBUG_ASSERT(cursor < text.size(), ("Expected cursor to be less than {} but got {}", text.size(), cursor), {});

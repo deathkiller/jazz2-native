@@ -88,7 +88,11 @@ namespace Jazz2::UI::Menu
 		void DrawSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool additiveBlending = false) override;
 		void DrawTexture(const Texture& texture, float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool unaligned = false) override;
 		Vector2f MeasureString(StringView text, float scale = 1.0f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;
+		Vector2f MeasureStringApprox(StringView text, float scale = 1.0f, float charSpacing = 1.0f) override;
 		void DrawStringShadow(StringView text, std::int32_t& charOffset, float x, float y, uint16_t z, Alignment align, const Colorf& color,
+			float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
+			float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;
+		void DrawStringGlow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
 			float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
 			float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;
 		void PlaySfx(StringView identifier, float gain = 1.0f) override;

@@ -291,6 +291,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InputDiagnosticsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/LanguageSelectSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MainMenu.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MenuSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/OptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PauseSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RefreshCacheSection.cpp

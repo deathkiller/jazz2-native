@@ -34,11 +34,6 @@ namespace Death { namespace Utf8 {
 	/** @} */
 
 	/**
-		@brief Number of characters in a UTF-8 string
-	*/
-	std::size_t GetLength(Containers::ArrayView<const char> text);
-
-	/**
 		@brief Next UTF-8 character
 
 		Returns Unicode codepoint of character on the cursor and position of the following character.

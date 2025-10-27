@@ -171,11 +171,12 @@ namespace Jazz2::UI::Menu
 
 		if ((item.Item.Flags & EpisodeDataFlags::IsMissing) == EpisodeDataFlags::IsMissing) {
 			if (isSelected) {
-				_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (Utf8::GetLength(item.Item.Description.DisplayName) + 3) * 0.5f, 4.0f, true, true);
+				_root->DrawStringGlow(item.Item.Description.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer,
+					Alignment::Center, Colorf(0.51f, 0.51f, 0.51f, 0.35f), 0.9f);
+			} else {
+				_root->DrawStringShadow(item.Item.Description.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer,
+					Alignment::Center, Colorf(0.51f, 0.51f, 0.51f, 0.35f), 0.9f);
 			}
-
-			_root->DrawStringShadow(item.Item.Description.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer,
-				Alignment::Center, Colorf(0.51f, 0.51f, 0.51f, 0.35f), 0.9f);
 		} else if (isSelected) {
 			float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
@@ -189,11 +190,9 @@ namespace Jazz2::UI::Menu
 					float alpha = 1.0f - expandedAnimation3 * 0.4f;
 					_root->DrawTexture(*item.Item.Description.TitleImage, centerX, item.Y, IMenuContainer::FontLayer + 10, Alignment::Center, Vector2f(titleSize.X, titleSize.Y) * size * (1.0f - expandedAnimation3 * 0.2f), Colorf(alpha, alpha, alpha, 1.0f), true);
 				} else {
-					_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(item.Item.Description.DisplayName) + 3) * 0.5f * size, 4.0f * size, true, true);
-
 					Colorf nameColor = Font::RandomColor;
 					nameColor.SetAlpha(0.5f - expandedAnimation3 * 0.15f);
-					_root->DrawStringShadow(item.Item.Description.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
+					_root->DrawStringGlow(item.Item.Description.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
 						Alignment::Center, nameColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				}
 
@@ -223,9 +222,7 @@ namespace Jazz2::UI::Menu
 					}
 				}
 
-				_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size), (Utf8::GetLength(item.Item.Description.DisplayName) + 3) * 0.5f * size, 4.0f * size, true, true);
-
-				_root->DrawStringShadow(item.Item.Description.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
+				_root->DrawStringGlow(item.Item.Description.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
 					Alignment::Center, Font::TransparentRandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 				if (prevEpisodeIndex != -1) {
