@@ -109,13 +109,14 @@ namespace Jazz2::UI::Menu
 		char buffer[128];
 		std::size_t length = formatInto(buffer, "{} ({} axes, {} buttons, {} hats)", joyName, numAxes, numButtons, numHats);
 
-		std::size_t joyNameStringLength = _root->MeasureStringApprox({ buffer, length }).X * 0.04f;
+		std::size_t joyNameStringLength = _root->MeasureString({buffer, length}).X * 0.05f;
 		float xMultiplier = joyNameStringLength * 0.5f;
 		float easing = IMenuContainer::EaseOutElastic(_animation);
 		float x = center.X * 0.4f + (1.0f - easing) * xMultiplier;
 		float size = 0.85f + easing * 0.12f;
 
-		_root->DrawElement(MenuGlow, 0, center.X * 0.4f + (joyNameStringLength + 3) * 3.8f, topLine + 20.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.36f * size), 0.6f * (joyNameStringLength + 3), 6.0f, true, true);
+		_root->DrawElement(MenuGlow, 0, center.X * 0.4f + (joyNameStringLength + 3) * 3.8f, topLine + 20.0f, IMenuContainer::MainLayer,
+			Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.36f * size), 0.6f * (joyNameStringLength + 3), 6.0f, true, true);
 
 		_root->DrawStringShadow({ buffer, length }, charOffset, x, topLine + 20.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::RandomColor, size, 0.4f, 0.6f, 0.6f, 0.6f, 0.88f);

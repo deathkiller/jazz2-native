@@ -199,21 +199,6 @@ namespace Jazz2::UI
 		return Vector2f(ceilf(totalWidth), ceilf(totalHeight));
 	}
 
-	Vector2f Font::MeasureStringApprox(StringView text, float scale, float charSpacing)
-	{
-		std::size_t s = text.size();
-		std::int32_t n = 0;
-		for (std::int32_t i = 0; i < s;) {
-			std::uint32_t byteCount = Utf8::BytesOfLead[std::uint8_t(text[i])];
-			i += byteCount;
-			n++;
-		}
-		
-		float width = n * ((_charSize.X * 0.25f) + (_charSize.Y * 0.5f) + _baseSpacing) * charSpacing * scale;
-		float height = (_charSize.Y * scale);
-		return Vector2f(width, height);
-	}
-
 	Vector2f Font::MeasureStringEx(StringView text, float scale, float charSpacing, float maxWidth, std::int32_t* charFit, float* charFitWidths)
 	{
 		if (charFit != nullptr) {

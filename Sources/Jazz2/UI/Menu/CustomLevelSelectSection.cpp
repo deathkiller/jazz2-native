@@ -197,10 +197,10 @@ namespace Jazz2::UI::Menu
 				}
 
 				if (_selectedIndex == i) {
-					float xMultiplier = _items[i].DisplayName.size() * 0.5f;
 					float easing = IMenuContainer::EaseOutElastic(_animation);
-					float x = column1 + xMultiplier - easing * xMultiplier;
 					float size = 0.7f + easing * 0.12f;
+					float xMultiplier = _items[i].DisplayName.size() * 0.25f;
+					float x = column1 + xMultiplier - easing * xMultiplier;
 
 					_root->DrawElement(MenuGlow, 0, centerX, center.Y, IMenuContainer::MainLayer - 200, Alignment::Center,
 						Colorf(1.0f, 1.0f, 1.0f, 0.2f), 26.0f, 3.0f, true, true);
@@ -381,11 +381,15 @@ namespace Jazz2::UI::Menu
 		auto s = fs::Open(levelFile, FileAccess::Read);
 		DEATH_ASSERT(s->IsValid(), "Cannot open file for reading", );
 
-		std::uint64_t signature = s->ReadValue<std::uint64_t>();
+		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
-		DEATH_ASSERT(signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::LevelFile, "File has invalid signature", );
 
-		LevelFlags flags = (LevelFlags)s->ReadValue<std::uint16_t>();
+		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::LevelFile) {
+			LOGW("Level \"{}\" has invalid signature", levelFile);
+			return;
+		}
+
+		LevelFlags flags = (LevelFlags)s->ReadValueAsLE<std::uint16_t>();
 
 #if !defined(DEATH_DEBUG)
 		// Don't show hidden levels in Release build if unlock cheat is not active, but show all levels in Debug build
@@ -398,13 +402,13 @@ namespace Jazz2::UI::Menu
 #endif
 
 		// Read compressed data
-		std::int32_t compressedSize = s->ReadValue<std::int32_t>();
+		std::int32_t compressedSize = s->ReadValueAsLE<std::int32_t>();
 
 		DeflateStream uc(*s, compressedSize);
 
 		// Read metadata
 		std::uint8_t nameSize = uc.ReadValue<std::uint8_t>();
-		String name(NoInit, nameSize);
+		String name{NoInit, nameSize};
 		uc.Read(name.data(), nameSize);
 
 		auto& level = _items.emplace_back();
