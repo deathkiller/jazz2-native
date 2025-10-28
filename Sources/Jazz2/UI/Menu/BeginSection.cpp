@@ -239,7 +239,7 @@ namespace Jazz2::UI::Menu
 					if (_selectedIndex == 0) {
 						float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 						_root->DrawElement(MenuGlow, 0, center.X, center.Y * 0.96f + grantPermissionY, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size),
-							(_root->MeasureStringApprox(grantPermissionText, size).X + 30.0f) * 0.045f, 4.0f * size, true, true);
+							(_root->MeasureString(grantPermissionText, size).X + 30.0f) * 0.06f, 4.0f * size, true, true);
 						_root->DrawStringShadow(grantPermissionText, charOffset, center.X + 12.0f, center.Y * 0.96f + grantPermissionY, IMenuContainer::FontLayer,
 							Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.8f);
 
@@ -266,7 +266,7 @@ namespace Jazz2::UI::Menu
 				if (i != 0 && (i != 1 || !_skipSecondItem)) {
 					if (_selectedIndex == i) {
 						_root->DrawElement(MenuGlow, 0, center.X, center.Y, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f),
-							(_root->MeasureStringApprox(_items[i].Name).X + 30.0f) * 0.045f, 4.0f, true, true);
+							(_root->MeasureString(_items[i].Name, 0.9f).X + 30.0f) * 0.06f, 4.0f, true, true);
 					}
 
 					_root->DrawStringShadow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer,

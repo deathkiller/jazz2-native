@@ -458,11 +458,6 @@ namespace Jazz2::UI::Menu
 		return _smallFont->MeasureString(text, scale, charSpacing, lineSpacing);
 	}
 
-	Vector2f InGameMenu::MeasureStringApprox(StringView text, float scale, float charSpacing)
-	{
-		return _smallFont->MeasureStringApprox(text, scale, charSpacing);
-	}
-
 	void InGameMenu::DrawStringShadow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scale,
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
@@ -478,7 +473,7 @@ namespace Jazz2::UI::Menu
 		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
 		DrawElement(MenuGlow, 0, x, y, z - 40, align, Colorf(1.0f, 1.0f, 1.0f, 0.4f * scale),
-			(MeasureStringApprox(text, scale, charSpacing).X + 30.0f) * 0.045f, 4.0f * scale, true, true);
+			(MeasureString(text, scale, charSpacing).X + 30.0f) * 0.06f, 4.0f * scale, true, true);
 
 		DrawStringShadow(text, charOffset, x, y, z, align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
 	}

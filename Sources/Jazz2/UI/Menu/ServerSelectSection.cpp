@@ -183,10 +183,10 @@ namespace Jazz2::UI::Menu
 
 			if (center.Y > topLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
 				if (_selectedIndex == i) {
-					float xMultiplier = _items[i].Desc.Name.size() * 0.5f;
 					float easing = IMenuContainer::EaseOutElastic(_animation);
-					float x = column1 + xMultiplier - easing * xMultiplier;
 					float size = 0.7f + easing * 0.12f;
+					float xMultiplier = _root->MeasureString(_items[i].Desc.Name, size, 0.9f).X * 0.125f;
+					float x = column1 + xMultiplier - easing * xMultiplier;
 
 					_root->DrawElement(MenuGlow, 0, centerX, center.Y, IMenuContainer::MainLayer - 200, Alignment::Center,
 						Colorf(1.0f, 1.0f, 1.0f, 0.2f), 28.0f, 3.0f, true, true);

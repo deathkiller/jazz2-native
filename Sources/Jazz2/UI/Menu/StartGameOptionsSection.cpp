@@ -214,7 +214,8 @@ namespace Jazz2::UI::Menu
 					stringBuffer[j + 1] = '\0';
 
 					if (_playerCount == j + 1) {
-						_root->DrawElement(MenuGlow, 0, x, center.Y + 28.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), (j + 3) * 0.4f, 2.2f, true, true);
+						_root->DrawElement(MenuGlow, 0, x, center.Y + 28.0f, IMenuContainer::MainLayer, Alignment::Center,
+							Colorf(1.0f, 1.0f, 1.0f, 0.2f), (j + 3) * 0.4f, 2.2f, true, true);
 
 						_root->DrawStringShadow(stringBuffer, charOffset, x, center.Y + 28.0f, IMenuContainer::FontLayer,
 							Alignment::Center, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 1.0f, 0.4f, 0.9f, 0.9f, 0.8f, 1.0f);

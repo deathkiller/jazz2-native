@@ -94,13 +94,11 @@ namespace Jazz2::UI::Menu
 		virtual void DrawTexture(const Texture& texture, float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool unaligned = false) = 0;
 		/** @brief Measures a string */
 		virtual Vector2f MeasureString(StringView text, float scale = 1.0f, float charSpacing = 1.0f, float lineSpacing = 1.0f) = 0;
-		/** @brief Measures a string (approximate) */
-		virtual Vector2f MeasureStringApprox(StringView text, float scale = 1.0f, float charSpacing = 1.0f) = 0;
 		/** @brief Draws a string with shadow */
 		virtual void DrawStringShadow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align,
 			const Colorf& color, float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
 			float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f) = 0;
-		/** @brief Draw a string underglow and shadow */
+		/** @brief Draw a string with underglow and shadow */
 		virtual void DrawStringGlow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
 			float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
 			float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f) = 0;

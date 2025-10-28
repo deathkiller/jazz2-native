@@ -54,8 +54,6 @@ namespace Jazz2::UI
 		Vector2f MeasureChar(char32_t c) const;
 		/** @brief Returns size of a string */
 		Vector2f MeasureString(StringView text, float scale = 1.0f, float charSpacing = 1.0f, float lineSpacing = 1.0f);
-		/** @brief Returns approximate size of a string */
-		Vector2f MeasureStringApprox(StringView text, float scale = 1.0f, float charSpacing = 1.0f);
 		/** @brief Returns size of a string and its cumulative widths */
 		Vector2f MeasureStringEx(StringView text, float scale, float charSpacing, float maxWidth, std::int32_t* charFit, float* charFitWidths);
 		/** @brief Draws a string */

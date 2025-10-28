@@ -1030,7 +1030,8 @@ namespace Jazz2
 		std::uint16_t signature2 = s->ReadValueAsLE<std::uint16_t>();
 		std::uint8_t version = s->ReadValue<std::uint8_t>();
 		/*std::uint8_t flags =*/ s->ReadValue<std::uint8_t>();
-		DEATH_ASSERT(signature1 == 0xB8EF8498E2BFBBEF && signature2 == 0x208F && version == 2, "Invalid file signature", nullptr);
+		DEATH_ASSERT(signature1 == 0xB8EF8498E2BFBBEF && signature2 == 0x208F && version == 2,
+			("Tile set \"{}\" has invalid signature", fullPath), nullptr);
 
 		// TODO: Use single channel instead
 		std::uint8_t channelCount = s->ReadValue<std::uint8_t>();
@@ -1236,7 +1237,8 @@ namespace Jazz2
 
 		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
-		DEATH_ASSERT(signature == 0x2095A59FF0BFBBEF && fileType == LevelFile, "File has invalid signature", false);
+		DEATH_ASSERT(signature == 0x2095A59FF0BFBBEF && fileType == LevelFile,
+			("Level \"{}\" has invalid signature", descriptor.FullPath), false);
 
 		LevelFlags flags = (LevelFlags)s->ReadValueAsLE<std::uint16_t>();
 

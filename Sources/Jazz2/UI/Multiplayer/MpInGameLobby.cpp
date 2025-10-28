@@ -114,8 +114,8 @@ namespace Jazz2::UI::Multiplayer
 							Colorf(1.0f, 1.0f, 1.0f, 0.2f), 3.6f, 5.0f, true, true);
 					}
 
-					DrawStringShadow(playerTypes[j], charOffset, x, center.Y + 50.0f, MainLayer,
-						Alignment::Center, Colorf(0.5f, 0.5f, 0.5f, 0.34f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.9f);
+					DrawStringShadow(playerTypes[j], charOffset, x, center.Y + 50.0f, MainLayer, Alignment::Center,
+						Colorf(0.5f, 0.5f, 0.5f, 0.34f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.9f);
 				} else if ((std::int32_t)_selectedPlayerType == j) {
 					float size = 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
