@@ -23,6 +23,6 @@ namespace Jazz2::UI::Menu
 		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
 
 	private:
-		void AddLanguage(const StringView languageFile);
+		void AddLanguage(const StringView languageFile, HashMap<String, bool>& foundLanguages, bool fromCache);
 	};
 }

@@ -456,9 +456,15 @@ namespace Death { namespace Trace {
 				T lastDiff = last - (last & CacheLineMask);
 				T curDiff = offset - (offset & CacheLineMask);
 
-				while (curDiff > lastDiff) {
-					_mm_clflushopt(_storage + (lastDiff & _capacityMask));
-					lastDiff += CacheLineSize;
+				if (curDiff > lastDiff) {
+					std::uint8_t* ptr = _storage + (lastDiff & _capacityMask);
+
+					do {
+						_mm_clflushopt(ptr);
+						ptr += CacheLineSize;
+						lastDiff += CacheLineSize;
+					} while (curDiff > lastDiff);
+
 					last = lastDiff;
 				}
 			}

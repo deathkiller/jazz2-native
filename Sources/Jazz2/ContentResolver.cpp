@@ -327,8 +327,8 @@ namespace Jazz2
 
 	std::unique_ptr<Stream> ContentResolver::OpenContentFile(StringView path)
 	{
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		// Search .paks first, then Content directory and Cache directory
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		for (std::size_t i = 0; i < _mountedPaks.size(); i++) {
 			auto mountPoint = _mountedPaks[i]->GetMountPoint();
 			if (path.hasPrefix(mountPoint)) {

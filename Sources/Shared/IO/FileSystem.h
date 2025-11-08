@@ -335,7 +335,8 @@ namespace Death { namespace IO {
 		/**
 			@brief Memory-mapped file deleter
 		
-			@partialsupport Available on all platforms except @ref DEATH_TARGET_EMSCRIPTEN "Emscripten", @ref DEATH_TARGET_SWITCH "Nintendo Switch" and @ref DEATH_TARGET_WINDOWS_RT "Windows RT".
+			@partialsupport Available on all platforms except @ref DEATH_TARGET_EMSCRIPTEN "Emscripten",
+				@ref DEATH_TARGET_SWITCH "Nintendo Switch" and @ref DEATH_TARGET_WINDOWS_RT "Windows RT".
 		*/
 		class MapDeleter
 		{
@@ -379,7 +380,8 @@ namespace Death { namespace IO {
 		 *		Opening a file for reading while it's mapped with this function works on all platforms and gives
 		 *		back the same contents as the (potentially updated) mapped memory.
 		 * 
-		 * @partialsupport Available on all platforms except @ref DEATH_TARGET_EMSCRIPTEN "Emscripten", @ref DEATH_TARGET_SWITCH "Nintendo Switch" and @ref DEATH_TARGET_WINDOWS_RT "Windows RT".
+		 * @partialsupport Available on all platforms except @ref DEATH_TARGET_EMSCRIPTEN "Emscripten",
+		 *		@ref DEATH_TARGET_SWITCH "Nintendo Switch" and @ref DEATH_TARGET_WINDOWS_RT "Windows RT".
 		 */
 		static std::optional<Containers::Array<char, MapDeleter>> OpenAsMemoryMapped(Containers::StringView path, FileAccess mode);
 #endif

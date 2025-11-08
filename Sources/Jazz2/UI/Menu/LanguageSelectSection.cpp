@@ -16,13 +16,14 @@ namespace Jazz2::UI::Menu
 		auto& defaultLanguage = _items.emplace_back();
 		defaultLanguage.Item.DisplayName = "English \f[c:#707070]· en"_s;
 
-		// Search both "Content/Translations/" and "Cache/Translations/"
-		for (auto item : fs::Directory(fs::CombinePath(resolver.GetContentPath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
-			AddLanguage(item);
+		// Search first "Cache/Translations/" and then "Content/Translations/"
+		HashMap<String, bool> foundLanguages;
+		for (auto item : fs::Directory(fs::CombinePath(resolver.GetCachePath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
+			AddLanguage(item, foundLanguages, true);
 		}
 
-		for (auto item : fs::Directory(fs::CombinePath(resolver.GetCachePath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
-			AddLanguage(item);
+		for (auto item : fs::Directory(fs::CombinePath(resolver.GetContentPath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
+			AddLanguage(item, foundLanguages, false);
 		}
 	}
 
@@ -86,7 +87,7 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void LanguageSelectSection::AddLanguage(const StringView languageFile)
+	void LanguageSelectSection::AddLanguage(const StringView languageFile, HashMap<String, bool>& foundLanguages, bool fromCache)
 	{
 		if (fs::GetExtension(languageFile) != "mo"_s) {
 			return;
@@ -97,12 +98,19 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+		// Add each language only once
+		if (!foundLanguages.try_emplace(language, true).second) {
+			return;
+		}
+
 		if (language == StringView(PreferencesCache::Language)) {
 			_selectedIndex = _items.size();
 		}
 
 		auto& episode = _items.emplace_back();
 		episode.Item.FileName = languageFile;
-		episode.Item.DisplayName = I18n::GetLanguageName(language) + " \f[c:#707070]· "_s + language;
+		episode.Item.DisplayName = fromCache
+			? String{I18n::GetLanguageName(language) + " \f[c:#707070]· "_s + language + "⁺"_s}
+			: String{I18n::GetLanguageName(language) + " \f[c:#707070]· "_s + language};
 	}
 }

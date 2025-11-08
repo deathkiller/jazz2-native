@@ -13,6 +13,8 @@
 
 using namespace Death::Containers;
 
+static constexpr std::uint32_t ResyncLagCycles = 10000;
+
 namespace Death { namespace Trace {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
@@ -83,9 +85,9 @@ namespace Death { namespace Trace {
 
 			_resyncIntervalOriginal = _resyncIntervalTicks;
 
-			if (!resync(2500)) {
+			if (!resync(ResyncLagCycles)) {
 				// Try to resync again with higher lag
-				if (!resync(10000)) {
+				if (!resync(ResyncLagCycles * 2u)) {
 #	if defined(DEATH_DEBUG)
 					LOGW("Failed to sync clock, timestamps will be incorrect");
 #	endif
@@ -105,7 +107,7 @@ namespace Death { namespace Trace {
 
 			// We need to sync after we calculated otherwise BaseTsc value will be ahead of passed tsc value
 			if (diff > _resyncIntervalTicks) {
-				resync(2500);
+				resync(ResyncLagCycles);
 				diff = static_cast<std::int64_t>(rdtscValue - _base[index].BaseTsc);
 			}
 
@@ -632,7 +634,7 @@ namespace Death { namespace Trace {
 
 		if (auto now = std::chrono::system_clock::now();
 			(now - _lastRdtscResyncTime) > RdtscResyncInterval) {
-			if (_rdtscClock.resync(2500)) {
+			if (_rdtscClock.resync(ResyncLagCycles)) {
 				_lastRdtscResyncTime = now;
 			}
 		}

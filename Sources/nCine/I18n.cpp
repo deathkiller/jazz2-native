@@ -2,8 +2,6 @@
 #include "../Main.h"
 #include "Base/Algorithms.h"
 
-#include <stdarg.h>
-
 #if defined(DEATH_TARGET_ANDROID)
 #	include "Backends/Android/AndroidJniHelper.h"
 #elif defined(DEATH_TARGET_APPLE)
@@ -444,21 +442,21 @@ namespace nCine
 
 	bool I18n::LoadFromFile(StringView path)
 	{
-		return LoadFromFile(fs::Open(path, FileAccess::Read));
+		return LoadFromFile(fs::Open(path, FileAccess::Read), path);
 	}
 
-	bool I18n::LoadFromFile(const std::unique_ptr<Stream>& fileHandle)
+	bool I18n::LoadFromFile(const std::unique_ptr<Stream>& stream, StringView displayPath)
 	{
-		std::int64_t fileSize = fileHandle->GetSize();
+		std::int64_t fileSize = stream->GetSize();
 		if DEATH_UNLIKELY(fileSize < 32 || fileSize > 16 * 1024 * 1024) {
 			if (fileSize > 0) {
-				LOGE("Translation is corrupted");
+				LOGE("Translation \"{}\" is corrupted", displayPath);
 			}
 			return false;
 		}
 
 		_file = std::make_unique<char[]>(fileSize + 1);
-		fileHandle->Read(_file.get(), fileSize);
+		stream->Read(_file.get(), fileSize);
 		_file[fileSize] = '\0';
 		_fileSize = std::uint32_t(fileSize);
 
@@ -482,7 +480,7 @@ namespace nCine
 		if DEATH_UNLIKELY(data->Signature != SignatureLE || data->StringCount <= 0 ||
 			data->OrigTableOffset + data->StringCount > fileSize || data->TransTableOffset + data->StringCount > fileSize ||
 			data->HashTableOffset + data->HashTableSize > fileSize) {
-			LOGE("Translation is corrupted");
+			LOGE("Translation \"{}\" is corrupted", displayPath);
 			Unload();
 			return false;
 		}
@@ -514,6 +512,8 @@ namespace nCine
 		StringView nullEntry = LookupTranslation("");
 		_pluralExpression = ExtractPluralExpression(nullEntry);
 
+		LOGI("Translation \"{}\" loaded", displayPath);
+
 		return true;
 	}
 
@@ -535,7 +535,7 @@ namespace nCine
 
 	StringView I18n::LookupTranslation(const char* msgid)
 	{
-		if (_hashTable != nullptr) {
+		if DEATH_LIKELY(_hashTable != nullptr) {
 			// Use the hash table for faster lookups
 			constexpr std::uint32_t HashWordBits = 32;
 
@@ -558,7 +558,7 @@ namespace nCine
 
 			while (true) {
 				std::uint32_t nstr = _hashTable[idx];
-				if (nstr == 0) {
+				if DEATH_UNLIKELY(nstr == 0) {
 					// Hash table entry is empty
 					return {};
 				}
@@ -567,7 +567,7 @@ namespace nCine
 				// Compare `msgid` with the original string at index `nstr`.
 				// We compare the lengths with `>=`, not `==`, because plural entries are represented by strings with an embedded NULL.
 				if (nstr < _stringCount && _origTable[nstr].Length >= len && (std::strcmp(msgid, _file.get() + _origTable[nstr].Offset) == 0)) {
-					if (_transTable[nstr].Offset >= _fileSize) {
+					if DEATH_UNLIKELY(_transTable[nstr].Offset >= _fileSize) {
 						return {};
 					}
 					return StringView(&_file[_transTable[nstr].Offset], _transTable[nstr].Length);
@@ -585,7 +585,7 @@ namespace nCine
 			std::size_t top = _stringCount;
 			while (bottom < top) {
 				std::size_t idx = (bottom + top) / 2;
-				if (_origTable[idx].Offset >= _fileSize) {
+				if DEATH_UNLIKELY(_origTable[idx].Offset >= _fileSize) {
 					return {};
 				}
 				std::int32_t cmpVal = std::strcmp(msgid, (_file.get() + _origTable[idx].Offset));
@@ -594,7 +594,7 @@ namespace nCine
 				} else if (cmpVal > 0) {
 					bottom = idx + 1;
 				} else {
-					if (_transTable[idx].Offset >= _fileSize) {
+					if DEATH_UNLIKELY(_transTable[idx].Offset >= _fileSize) {
 						return {};
 					}
 					return StringView(&_file[_transTable[idx].Offset], _transTable[idx].Length);
@@ -614,7 +614,7 @@ namespace nCine
 			if (index == 0) {
 				return translation.prefix(sep.begin());
 			}
-			if (sep.begin() == translation.end()) {
+			if DEATH_UNLIKELY(sep.begin() == translation.end()) {
 				return {};
 			}
 			translation = translation.suffix(sep.end());
@@ -687,33 +687,23 @@ namespace nCine
 			arrayAppend(preferred, std::move(langId));
 		}
 #elif defined(DEATH_TARGET_WINDOWS)
-		if (Environment::IsWindows10()) {
-			// Get list of all preferred UI languages on Windows 10
-			ULONG numberOfLanguages = 0;
-			ULONG bufferSize = 0;
-			if (::GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &numberOfLanguages, nullptr, &bufferSize)) {
-				Array<wchar_t> languages(NoInit, bufferSize);
-				if (::GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &numberOfLanguages, languages.data(), &bufferSize)) {
-					wchar_t* buffer = languages.data();
-					for (ULONG k = 0; k < numberOfLanguages; k++) {
-						String langId = Utf8::FromUtf16(buffer);
-						StringUtils::lowercaseInPlace(langId);
-						arrayAppend(preferred, std::move(langId));
+		// Get list of all preferred UI languages
+		ULONG numberOfLanguages = 0;
+		ULONG bufferSize = 0;
+		if (::GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &numberOfLanguages, nullptr, &bufferSize)) {
+			Array<wchar_t> languages(NoInit, bufferSize);
+			if (::GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &numberOfLanguages, languages.data(), &bufferSize)) {
+				wchar_t* buffer = languages.data();
+				for (ULONG i = 0; i < numberOfLanguages; i++) {
+					String langId = Utf8::FromUtf16(buffer);
+					StringUtils::lowercaseInPlace(langId);
+					arrayAppend(preferred, std::move(langId));
 
-						while (*buffer != L'\0') {
-							buffer++;
-						}
+					while (*buffer != L'\0') {
 						buffer++;
 					}
+					buffer++;
 				}
-			}
-		} else {
-			// Use the default user locale for Windows 8 and below
-			wchar_t buffer[LOCALE_NAME_MAX_LENGTH];
-			if (::GetUserDefaultLocaleName(buffer, LOCALE_NAME_MAX_LENGTH)) {
-				String langId = Utf8::FromUtf16(buffer);
-				StringUtils::lowercaseInPlace(langId);
-				arrayAppend(preferred, std::move(langId));
 			}
 		}
 #endif

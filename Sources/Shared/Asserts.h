@@ -127,15 +127,17 @@ inline typename std::enable_if<(sizeof...(Args) > 0), void>::type
 
 	Usable for sanity checks on user input, as it prints explanational message on error.
 
-	By default, if assertion fails, @p message is printed with @ref TraceLevel::Assert to the event log,
-	the function returns with @p returnValue instead and the execution is break (if @cpp DEATH_DEBUG @ce is defined).
-	If @cpp DEATH_STANDARD_ASSERT @ce is defined, this macro expands to @cpp assert(condition) @ce, ignoring @p message.
-	If @cpp DEATH_NO_ASSERT @ce is defined (or if both @cpp DEATH_TRACE @ce and @cpp DEATH_STANDARD_ASSERT @ce are
-	not defined), this macro expands to @cpp do{}while(false) @ce. It also allows to specify only the condition,
-	and the message will be generated automatically without @cpp return @ce statement.
+	By default, if assertion fails, @p message is printed with @ref TraceLevel::Assert
+	to the event log, the function returns with @p returnValue instead and the execution
+	is break (if @cpp DEATH_DEBUG @ce is defined). If @cpp DEATH_STANDARD_ASSERT @ce is
+	defined, this macro expands to @cpp assert(condition) @ce, ignoring @p message. If
+	@cpp DEATH_NO_ASSERT @ce is defined (or if both @cpp DEATH_TRACE @ce and
+	@cpp DEATH_STANDARD_ASSERT @ce are not defined), this macro expands to
+	@cpp do{}while(false) @ce. It also allows to specify only the condition, and the
+	message will be generated automatically without @cpp return @ce statement.
 
-	You can override this implementation by placing your own @cpp #define DEATH_ASSERT @ce before including
-	the @ref Asserts.h header.
+	You can override this implementation by placing your own @cpp #define DEATH_ASSERT @ce
+	before including the @ref Asserts.h header.
 */
 #if !defined(DEATH_ASSERT)
 #	if defined(DEATH_NO_ASSERT) || (!defined(DEATH_STANDARD_ASSERT) && !defined(DEATH_TRACE)) || defined(DOXYGEN_GENERATING_OUTPUT)
@@ -172,12 +174,13 @@ inline typename std::enable_if<(sizeof...(Args) > 0), void>::type
 /**
 	@brief Debug-only assertion macro
 
-	Unlike @ref DEATH_ASSERT() this macro expands to @cpp do{}while(false) @ce if @cpp DEATH_DEBUG @ce
-	is not defined (i.e., in release configuration). It also allows to specify only the condition,
-	and the message will be generated automatically without @cpp return @ce statement.
+	Unlike @ref DEATH_ASSERT() this macro expands to @cpp do{}while(false) @ce if
+	@cpp DEATH_DEBUG @ce is not defined (i.e., in release configuration). It also allows
+	to specify only the condition, and the message will be generated automatically without
+	@cpp return @ce statement.
 
-	You can override this implementation by placing your own @cpp #define DEATH_DEBUG_ASSERT @ce before including
-	the @ref Asserts.h header.
+	You can override this implementation by placing your own @cpp #define DEATH_DEBUG_ASSERT @ce
+	before including the @ref Asserts.h header.
 */
 #if !defined(DEATH_DEBUG_ASSERT)
 #	if defined(DEATH_NO_ASSERT) || !defined(DEATH_DEBUG) || (!defined(DEATH_STANDARD_ASSERT) && !defined(DEATH_TRACE)) || defined(DOXYGEN_GENERATING_OUTPUT)
@@ -192,15 +195,17 @@ inline typename std::enable_if<(sizeof...(Args) > 0), void>::type
 /**
 	@brief Constexpr assertion macro
 
-	Unlike @ref DEATH_ASSERT() this macro can be used in C++11 @cpp constexpr @ce functions. In a @cpp constexpr @ce
-	context, if assertion fails, the code fails to compile. In a non-@cpp constexpr @ce context, if assertion fails,
-	@p message is printed with @ref TraceLevel::Assert to the event log and the execution is break.
-	If @cpp DEATH_STANDARD_ASSERT @ce is defined, @p message is ignored and the standard @cpp assert() @ce is called
-	if condition fails. If @cpp DEATH_NO_ASSERT @ce is defined (or if both @cpp DEATH_TRACE @ce and
-	@cpp DEATH_STANDARD_ASSERT @ce are not defined), this macro expands to @cpp static_cast<void>(0) @ce.
+	Unlike @ref DEATH_ASSERT() this macro can be used in C++11 @cpp constexpr @ce functions.
+	In a @cpp constexpr @ce context, if assertion fails, the code fails to compile. In a
+	non-@cpp constexpr @ce context, if assertion fails, @p message is printed with
+	@ref TraceLevel::Assert to the event log and the execution is break. If
+	@cpp DEATH_STANDARD_ASSERT @ce is defined, @p message is ignored and the standard
+	@cpp assert() @ce is called if condition fails. If @cpp DEATH_NO_ASSERT @ce is defined
+	(or if both @cpp DEATH_TRACE @ce and @cpp DEATH_STANDARD_ASSERT @ce are not defined),
+	this macro expands to @cpp static_cast<void>(0) @ce.
 
-	You can override this implementation by placing your own @cpp #define DEATH_CONSTEXPR_ASSERT @ce before including
-	the @ref Asserts.h header.
+	You can override this implementation by placing your own @cpp #define DEATH_CONSTEXPR_ASSERT @ce
+	before including the @ref Asserts.h header.
 */
 #if !defined(DEATH_CONSTEXPR_ASSERT)
 #	if defined(DEATH_NO_ASSERT) || (!defined(DEATH_STANDARD_ASSERT) && !defined(DEATH_TRACE))
@@ -222,11 +227,11 @@ inline typename std::enable_if<(sizeof...(Args) > 0), void>::type
 /**
 	@brief Debug-only constexpr assertion macro
 
-	Unlike @ref DEATH_CONSTEXPR_ASSERT() this macro expands to @cpp static_cast<void>(0) @ce if @cpp DEATH_DEBUG @ce
-	is not defined (i.e., in release configuration).
+	Unlike @ref DEATH_CONSTEXPR_ASSERT() this macro expands to @cpp static_cast<void>(0) @ce
+	if @cpp DEATH_DEBUG @ce is not defined (i.e., in release configuration).
 
-	You can override this implementation by placing your own @cpp #define DEATH_DEBUG_CONSTEXPR_ASSERT @ce before
-	including the @ref Asserts.h header.
+	You can override this implementation by placing your own @cpp #define DEATH_DEBUG_CONSTEXPR_ASSERT @ce
+	before including the @ref Asserts.h header.
 */
 #if !defined(DEATH_DEBUG_CONSTEXPR_ASSERT)
 #	if defined(DEATH_DEBUG)
@@ -239,15 +244,16 @@ inline typename std::enable_if<(sizeof...(Args) > 0), void>::type
 /**
 	@brief Assert that the code is unreachable
 
-	By default, if code marked with this macro is reached, a hint message is printed with @ref TraceLevel::Assert
-	to the event log. and the execution is break (if @cpp DEATH_DEBUG @ce is defined). If @cpp DEATH_STANDARD_ASSERT @ce
-	is defined, the standard @cpp assert(!"Unreachable code") @ce is called. If @cpp DEATH_NO_ASSERT @ce is defined
-	(or if both @cpp DEATH_TRACE @ce and @cpp DEATH_STANDARD_ASSERT @ce are not defined), this macro hints to
-	the compiler that given code is not reachable, possibly helping the optimizer (using a compiler builtin on GCC,
-	Clang and MSVC; calling @ref std::abort() otherwise).
+	By default, if code marked with this macro is reached, a hint message is printed with
+	@ref TraceLevel::Assert to the event log. and the execution is break (if @cpp DEATH_DEBUG @ce
+	is defined). If @cpp DEATH_STANDARD_ASSERT @ce is defined, the standard
+	@cpp assert(!"Unreachable code") @ce is called. If @cpp DEATH_NO_ASSERT @ce is defined
+	(or if both @cpp DEATH_TRACE @ce and @cpp DEATH_STANDARD_ASSERT @ce are not defined), this
+	macro hints to the compiler that given code is not reachable, possibly helping the optimizer
+	(using a compiler builtin on GCC, Clang and MSVC; calling @ref std::abort() otherwise).
 
-	You can override this implementation by placing your own @cpp #define DEATH_ASSERT_UNREACHABLE @ce before
-	including the @ref Asserts.h header.
+	You can override this implementation by placing your own @cpp #define DEATH_ASSERT_UNREACHABLE @ce
+	before including the @ref Asserts.h header.
 */
 #if !defined(DEATH_ASSERT_UNREACHABLE)
 #	if defined(DEATH_NO_ASSERT) || (!defined(DEATH_STANDARD_ASSERT) && !defined(DEATH_TRACE)) || defined(DOXYGEN_GENERATING_OUTPUT)

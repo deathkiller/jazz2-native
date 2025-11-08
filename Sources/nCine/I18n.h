@@ -34,7 +34,7 @@ namespace nCine
 		/** @brief Load a catalog from file in gettext MO format, previously loaded catalog will be unloaded */
 		bool LoadFromFile(StringView path);
 		/** @brief Load a catalog from stream in gettext MO format, previously loaded catalog will be unloaded */
-		bool LoadFromFile(const std::unique_ptr<Stream>& fileHandle);
+		bool LoadFromFile(const std::unique_ptr<Stream>& stream, StringView displayPath);
 		/** @brief Unload all loaded catalogs */
 		void Unload();
 
