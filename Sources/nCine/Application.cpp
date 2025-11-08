@@ -1683,6 +1683,7 @@ namespace nCine
 				::setvbuf(stdin, NULL, _IONBF, 0);
 			}
 
+			::SetConsoleOutputCP(CP_UTF8);
 			hasVirtualTerminal = EnableVirtualTerminalProcessing(consoleHandleOut);
 
 			// Try to get command prompt to be able to reprint it when the game exits
@@ -1742,6 +1743,7 @@ namespace nCine
 			::SetStdHandle(STD_ERROR_HANDLE, consoleHandleOut);
 			::SetStdHandle(STD_INPUT_HANDLE, consoleHandleIn);
 
+			::SetConsoleOutputCP(CP_UTF8);
 			hasVirtualTerminal = EnableVirtualTerminalProcessing(consoleHandleOut);
 
 			::SetConsoleTitle(Death::Utf8::ToUtf16(title));

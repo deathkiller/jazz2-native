@@ -1478,8 +1478,8 @@ void GameEventHandler::OnAfterInitialize()
 	if (PreferencesCache::Language[0] != '\0') {
 		auto& resolver = ContentResolver::Get();
 		auto& i18n = I18n::Get();
-		if (!i18n.LoadFromFile(fs::CombinePath({ resolver.GetContentPath(), "Translations"_s, String(PreferencesCache::Language + ".mo"_s) }))) {
-			i18n.LoadFromFile(fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, String(PreferencesCache::Language + ".mo"_s) }));
+		if (!i18n.LoadFromFile(fs::CombinePath({ resolver.GetCachePath(), "Translations"_s, String(PreferencesCache::Language + ".mo"_s) }))) {
+			i18n.LoadFromFile(fs::CombinePath({ resolver.GetContentPath(), "Translations"_s, String(PreferencesCache::Language + ".mo"_s) }));
 		}
 	}
 
