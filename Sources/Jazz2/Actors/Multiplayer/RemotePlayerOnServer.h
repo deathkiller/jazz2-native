@@ -22,7 +22,9 @@ namespace Jazz2::Actors::Multiplayer
 			IsVisible = 0x20,
 			IsActivelyPushing = 0x40,
 
-			JustWarped = 0x100
+			JustWarped = 0x100,
+
+			EnableContinuousJump = 0x200
 		};
 
 		/** @brief State flags */
@@ -38,6 +40,7 @@ namespace Jazz2::Actors::Multiplayer
 
 		RemotePlayerOnServer(std::shared_ptr<PeerDescriptor> peerDesc);
 
+		bool IsContinuousJumpAllowed() const override;
 		bool IsLedgeClimbAllowed() const override;
 
 		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
@@ -64,7 +67,7 @@ namespace Jazz2::Actors::Multiplayer
 		void SetCurrentWeapon(WeaponType weaponType, SetCurrentWeaponReason reason) override;
 
 		/** @brief Synchronizes the player with server */
-		void SyncWithServer(Vector2f pos, Vector2f speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing);
+		void SyncWithServer(Vector2f pos, Vector2f speed, PlayerFlags flags);
 
 		/** @brief Forcefully resynchronizes the player with server (e.g., after respawning or warping) */
 		void ForceResyncWithServer(Vector2f pos, Vector2f speed);

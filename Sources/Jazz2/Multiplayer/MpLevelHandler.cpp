@@ -641,6 +641,9 @@ namespace Jazz2::Multiplayer
 					if (_seqNumWarped != 0) {
 						flags |= RemotePlayerOnServer::PlayerFlags::JustWarped;
 					}
+					if (PreferencesCache::EnableContinuousJump) {
+						flags |= RemotePlayerOnServer::PlayerFlags::EnableContinuousJump;
+					}
 
 					MemoryStream packet(20);
 					packet.WriteVariableUint32(_lastSpawnedActorId);
@@ -3293,10 +3296,7 @@ namespace Jazz2::Multiplayer
 					// TODO: Special move
 
 					if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player)) {
-						remotePlayerOnServer->SyncWithServer(Vector2f(posX, posY), Vector2f(speedX, speedY),
-							(flags & RemotePlayerOnServer::PlayerFlags::IsVisible) != RemotePlayerOnServer::PlayerFlags::None,
-							(flags & RemotePlayerOnServer::PlayerFlags::IsFacingLeft) != RemotePlayerOnServer::PlayerFlags::None,
-							(flags & RemotePlayerOnServer::PlayerFlags::IsActivelyPushing) != RemotePlayerOnServer::PlayerFlags::None);
+						remotePlayerOnServer->SyncWithServer(Vector2f(posX, posY), Vector2f(speedX, speedY), flags);
 					}
 					return true;
 				}

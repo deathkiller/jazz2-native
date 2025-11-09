@@ -177,6 +177,8 @@ namespace Jazz2
 		// Used to swap Android activity icons on exit/suspend
 		static bool EnableReforgedMainMenuInitial;
 #endif
+		/** @brief Whether continuous jump is enabled */
+		static bool EnableContinuousJump;
 		/** @brief Whether ledge climbing is enabled */
 		static bool EnableLedgeClimb;
 		/** @brief Current weapon wheel style */
@@ -295,12 +297,13 @@ namespace Jazz2
 			BackgroundDithering = 0x2000000,
 
 			PlayStationExtendedSupport = 0x4000000,
-			SwitchToNewWeapon = 0x8000000
+			SwitchToNewWeapon = 0x8000000,
+			EnableContinuousJump = 0x10000000
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 11;
+		static constexpr std::uint8_t FileVersion = 12;
 
 		static constexpr float TouchPaddingMultiplier = 0.003f;
 

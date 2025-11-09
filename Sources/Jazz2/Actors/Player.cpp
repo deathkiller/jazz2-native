@@ -179,6 +179,11 @@ namespace Jazz2::Actors
 		return (_inWater || _activeModifier != Modifier::None);
 	}
 
+	bool Player::IsContinuousJumpAllowed() const
+	{
+		return PreferencesCache::EnableContinuousJump;
+	}
+
 	bool Player::IsLedgeClimbAllowed() const
 	{
 		return PreferencesCache::EnableLedgeClimb;
@@ -985,24 +990,28 @@ namespace Jazz2::Actors
 							}
 						}
 					}
-				} else {
-					if (_suspendType != SuspendType::None) {
-						if (_suspendType == SuspendType::SwingingVine) {
-							CancelCarryingObject();
-							_springCooldown = 30.0f;
-						} else {
-							MoveInstantly(Vector2(0.0f, -4.0f), MoveType::Relative | MoveType::Force);
-						}
-						SetState(ActorState::CanJump, true);
-						_canDoubleJump = true;
+				}
+
+				if (_suspendType != SuspendType::None) {
+					// Drop off hook/vine
+					if (_suspendType == SuspendType::SwingingVine) {
+						CancelCarryingObject();
+						_springCooldown = 30.0f;
+					} else {
+						MoveInstantly(Vector2(0.0f, -4.0f), MoveType::Relative | MoveType::Force);
 					}
-					if (!CanJump()) {
-						// Extend copter time
-						if (_copterFramesLeft > 0.0f) {
-							_copterFramesLeft = 70.0f;
-						}
-					} else if (_currentSpecialMove == SpecialMoveType::None && !_levelHandler->PlayerActionPressed(this, PlayerAction::Down) && _jumpTime <= 0.0f) {
-						// Standard jump
+					SetState(ActorState::CanJump, true);
+					_canDoubleJump = true;
+				}
+
+				if (!CanJump()) {
+					// Extend copter time
+					if (_copterFramesLeft > 0.0f) {
+						_copterFramesLeft = 70.0f;
+					}
+				} else if (_currentSpecialMove == SpecialMoveType::None && _jumpTime <= 0.0f && !_levelHandler->PlayerActionPressed(this, PlayerAction::Down)) {
+					// Standard jump
+					if (IsContinuousJumpAllowed() || _levelHandler->PlayerActionHit(this, PlayerAction::Jump)) {
 						SetState(ActorState::CanJump, false);
 						_isFreefall = false;
 						SetAnimation(_currentAnimation->State & (~AnimState::Lookup & ~AnimState::Crouch));

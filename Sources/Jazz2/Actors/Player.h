@@ -136,6 +136,8 @@ namespace Jazz2::Actors
 		bool CanBreakSolidObjects() const;
 		/** @brief Returns `true` if the player can move vertically, i.e. not affected by gravity */
 		bool CanMoveVertically() const;
+		/** @brief Returns `true` if continuous jump is allowed */
+		virtual bool IsContinuousJumpAllowed() const;
 		/** @brief Returns `true` if ledge climbing is allowed */
 		virtual bool IsLedgeClimbAllowed() const;
 

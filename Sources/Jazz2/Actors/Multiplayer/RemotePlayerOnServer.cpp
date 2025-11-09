@@ -68,6 +68,11 @@ namespace Jazz2::Actors::Multiplayer
 		_renderer.setPosition(_displayPos);
 	}
 
+	bool RemotePlayerOnServer::IsContinuousJumpAllowed() const
+	{
+		return (Flags & PlayerFlags::EnableContinuousJump) == PlayerFlags::EnableContinuousJump;
+	}
+
 	bool RemotePlayerOnServer::IsLedgeClimbAllowed() const
 	{
 		return (_peerDesc->EnableLedgeClimb && PlayerOnServer::IsLedgeClimbAllowed());
@@ -98,7 +103,7 @@ namespace Jazz2::Actors::Multiplayer
 		return PlayerCarryOver{};
 	}
 
-	void RemotePlayerOnServer::SyncWithServer(Vector2f pos, Vector2f speed, bool isVisible, bool isFacingLeft, bool isActivelyPushing)
+	void RemotePlayerOnServer::SyncWithServer(Vector2f pos, Vector2f speed, PlayerFlags flags)
 	{
 		if (_health <= 0) {
 			// Don't sync dead players to avoid cheating
@@ -108,11 +113,13 @@ namespace Jazz2::Actors::Multiplayer
 		Clock& c = nCine::clock();
 		std::int64_t now = c.now() * 1000 / c.frequency();
 
+		Flags = flags;
+
 		bool wasVisible = _renderer.isDrawEnabled();
-		// Visibility is not synced from the client, becuase it should be already almost in sync on the server
-		//_renderer.setDrawEnabled(isVisible);
-		SetFacingLeft(isFacingLeft);
-		_isActivelyPushing = isActivelyPushing;
+		// Visibility is not synced from the client, because it should be already almost in sync on the server
+		//_renderer.setDrawEnabled((flags & PlayerFlags::IsVisible) == PlayerFlags::IsVisible);
+		SetFacingLeft((flags & PlayerFlags::IsFacingLeft) == PlayerFlags::IsFacingLeft);
+		_isActivelyPushing = (flags & PlayerFlags::IsActivelyPushing) == PlayerFlags::IsActivelyPushing;
 
 		if (wasVisible) {
 			// Actor is still visible, enable interpolation

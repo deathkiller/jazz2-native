@@ -44,7 +44,8 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowUnsignedScripts, _("Scripting"), true, isInGame });
 #endif
-
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::ContinuousJump, _("Continuous Jump"), true });
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::SwitchToNewWeapon, _("Switch To New Weapon"), true });
 		// TRANSLATORS: Menu item in Options > Gameplay section
@@ -127,6 +128,7 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_ANGELSCRIPT)
 				case GameplayOptionsItemType::AllowUnsignedScripts: enabled = PreferencesCache::AllowUnsignedScripts; break;
 #endif
+				case GameplayOptionsItemType::ContinuousJump: enabled = PreferencesCache::EnableContinuousJump; break;
 				case GameplayOptionsItemType::SwitchToNewWeapon: enabled = PreferencesCache::SwitchToNewWeapon; break;
 				// TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
 				case GameplayOptionsItemType::AllowCheats: enabled = PreferencesCache::AllowCheats; customText = (enabled ? _("Yes") : _("No")); break;
@@ -182,6 +184,12 @@ namespace Jazz2::UI::Menu
 				break;
 			}
 #endif
+			case GameplayOptionsItemType::ContinuousJump: {
+				PreferencesCache::EnableContinuousJump = !PreferencesCache::EnableContinuousJump;
+				_isDirty = true;
+				_animation = 0.0f;
+				break;
+			}
 			case GameplayOptionsItemType::SwitchToNewWeapon: {
 				PreferencesCache::SwitchToNewWeapon = !PreferencesCache::SwitchToNewWeapon;
 				_isDirty = true;
