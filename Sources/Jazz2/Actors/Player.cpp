@@ -827,13 +827,15 @@ namespace Jazz2::Actors
 					// TODO: Swinging vine
 				} else if (_suspendType != SuspendType::None) {
 					// Jump off vine/hook
-					_wasDownPressed = true;
+					if (IsContinuousJumpAllowed() || _levelHandler->PlayerActionHit(this, CanJump() ? PlayerAction::Down : PlayerAction::Buttstomp)) {
+						_wasDownPressed = true;
 
-					MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative | MoveType::Force);
-					_suspendType = SuspendType::None;
-					_suspendTime = 4.0f;
+						MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative | MoveType::Force);
+						_suspendType = SuspendType::None;
+						_suspendTime = 4.0f;
 
-					SetState(ActorState::ApplyGravitation, true);
+						SetState(ActorState::ApplyGravitation, true);
+					}
 				} else if (_dizzyTime <= 0.0f) {
 					// Check also previous CanJump to avoid animation glitches on Springs
 					if (canJumpPrev && CanJump()) {
@@ -994,14 +996,16 @@ namespace Jazz2::Actors
 
 				if (_suspendType != SuspendType::None) {
 					// Drop off hook/vine
-					if (_suspendType == SuspendType::SwingingVine) {
-						CancelCarryingObject();
-						_springCooldown = 30.0f;
-					} else {
-						MoveInstantly(Vector2(0.0f, -4.0f), MoveType::Relative | MoveType::Force);
+					if (IsContinuousJumpAllowed() || _levelHandler->PlayerActionHit(this, PlayerAction::Jump)) {
+						if (_suspendType == SuspendType::SwingingVine) {
+							CancelCarryingObject();
+							_springCooldown = 30.0f;
+						} else {
+							MoveInstantly(Vector2(0.0f, -4.0f), MoveType::Relative | MoveType::Force);
+						}
+						SetState(ActorState::CanJump, true);
+						_canDoubleJump = true;
 					}
-					SetState(ActorState::CanJump, true);
-					_canDoubleJump = true;
 				}
 
 				if (!CanJump()) {
