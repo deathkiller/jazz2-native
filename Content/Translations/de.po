@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2025-10-31 21:43+0100\n"
-"PO-Revision-Date: 2025-10-31 21:46+0100\n"
+"POT-Creation-Date: 2025-11-09 15:56+0100\n"
+"PO-Revision-Date: 2025-11-09 15:56+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: de\n"
@@ -1402,25 +1402,25 @@ msgstr ""
 "\n"
 "Das Spiel beginnt in Kürze!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1466
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1469
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3439
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
 msgstr "\f[c:#d0705d]{}\f[/c] wurde von \f[c:#d0705d]{}\f[/c] geröstet"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1483
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1486
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3442
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
 msgstr "\f[c:#d0705d]{}\f[/c] wurde von der Umgebung geröstet"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2788
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2791
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3418
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
 msgstr "\f[c:#d0705d]{}\f[/c] hat die Verbindung getrennt"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2940
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2943
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3416
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
@@ -1639,7 +1639,7 @@ msgstr "Schwach"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:142
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:160
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:162
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:153
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:382
@@ -1649,9 +1649,9 @@ msgstr "Deaktiviert"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:142
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:151
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:154
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:160
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:153
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:156
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:162
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:382
 msgid "Enabled"
@@ -1821,7 +1821,7 @@ msgstr ""
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:59
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:93
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:94
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:20
 msgid "Gameplay"
 msgstr "Gameplay"
@@ -1885,7 +1885,7 @@ msgstr "Aktiviert mit Munitionsanzeige"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:42
-#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:42
+#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:43
 msgid "Language"
 msgstr "Sprache"
 
@@ -1895,57 +1895,63 @@ msgid "Scripting"
 msgstr "Skripting"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:49
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:48
+#| msgid "Continue"
+msgid "Continuous Jump"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:50
 msgid "Switch To New Weapon"
 msgstr "Zu neuer Waffe wechseln"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:51
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:52
 msgid "Allow Cheats"
 msgstr "Cheats erlauben"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:53
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:54
 msgid "Overwrite Episode Completion"
 msgstr "Episodenabschluss überschreiben"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:57
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:58
 msgid "Razer Chroma™"
 msgstr "Razer Chroma™"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:62
 msgid "Browse \"Source\" Directory"
 msgstr "\"Source\"-Verzeichnis durchsuchen"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:66
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:67
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:76
 msgid "Refresh Cache"
 msgstr "Cache aktualisieren"
 
 #. TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:132
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:134
 msgid "Yes"
 msgstr "Ja"
 
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:132
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:134
 msgid "No"
 msgstr "Nein"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:136
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:138
 msgid "No Cheats Only"
 msgstr "Nur ohne Cheats"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:139
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:141
 msgid "Higher Score Only"
 msgstr "Nur bei höherer Punktzahl"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:141
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
 msgid "Always"
 msgstr "Immer"
 

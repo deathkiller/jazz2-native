@@ -11,6 +11,7 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_ANGELSCRIPT)
 		AllowUnsignedScripts,
 #endif
+		ContinuousJump,
 		SwitchToNewWeapon,
 		AllowCheats,
 		OverwriteEpisodeEnd,

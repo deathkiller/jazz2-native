@@ -53,6 +53,7 @@ namespace Jazz2
 	// Used to swap Android activity icons on exit/suspend
 	bool PreferencesCache::EnableReforgedMainMenuInitial = true;
 #endif
+	bool PreferencesCache::EnableContinuousJump = true;
 	bool PreferencesCache::EnableLedgeClimb = true;
 	WeaponWheelStyle PreferencesCache::WeaponWheel = WeaponWheelStyle::Enabled;
 	bool PreferencesCache::SwitchToNewWeapon = true;
@@ -337,6 +338,10 @@ namespace Jazz2
 						PlayStationExtendedSupport = ((boolOptions & BoolOptions::PlayStationExtendedSupport) == BoolOptions::PlayStationExtendedSupport);
 						SwitchToNewWeapon = ((boolOptions & BoolOptions::SwitchToNewWeapon) == BoolOptions::SwitchToNewWeapon);
 						OverwriteEpisodeEnd = (EpisodeEndOverwriteMode)uc.ReadValue<std::uint8_t>();
+					}
+
+					if (version >= 12) {
+						EnableContinuousJump = ((boolOptions & BoolOptions::EnableContinuousJump) == BoolOptions::EnableContinuousJump);
 					}
 
 					if (version >= 10) {

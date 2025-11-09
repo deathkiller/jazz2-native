@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2025-10-25 16:42+0200\n"
+"POT-Creation-Date: 2025-11-09 15:58+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: rtdsx\n"
@@ -1401,25 +1401,25 @@ msgstr ""
 "\n"
 "Spillet vil begynne straks!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1466
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1469
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3439
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
 msgstr "\f[c:#d0705d]{}\f[/c] Var stekt av \f[c:#d0705d]{}\f[/c]"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1483
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1486
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3442
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
 msgstr "\f[c:#d0705d]{}\f[/c] var stekt av miljø"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2788
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2791
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3418
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
 msgstr "\f[c:#d0705d]{}\f[/c] frakoblet"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2940
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2943
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3416
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
@@ -1623,34 +1623,34 @@ msgid "Controls"
 msgstr "Kontroller"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:128
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
 msgid "Strong"
 msgstr "Sterk"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:131
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:129
 msgid "Weak"
 msgstr "Svak"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:132
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:144
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:135
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:130
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:142
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:162
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:155
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:164
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:384
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:153
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:382
 msgid "Disabled"
 msgstr "Skrudd av"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:144
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:130
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:135
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:142
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:153
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:156
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:162
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:164
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:384
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:382
 msgid "Enabled"
 msgstr "Skrudd på"
 
@@ -1671,54 +1671,54 @@ msgid "Create Server"
 msgstr "Opprett server"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:220
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:216
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:20
 msgid "Battle"
 msgstr "Kamp"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:221
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:217
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:22
 msgid "Team Battle"
 msgstr "Lagkamp"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:222
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:218
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:24
 msgid "Race"
 msgstr "Race"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:223
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:219
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
 msgid "Team Race"
 msgstr "Lagkonkurranse"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:224
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:220
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
 msgid "Treasure Hunt"
 msgstr "Skattejakt"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:225
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:221
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:30
 msgid "Team Treasure Hunt"
 msgstr "Lagskattejakt"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:226
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:222
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:32
 msgid "Capture The Flag"
 msgstr "Fang flagget"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:227
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:223
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:34
 msgid "Cooperation"
 msgstr "Samarbeid"
 
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:372
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:368
 msgid ""
 "\f[c:#704a4a]Cannot create the server!\f[/c]\n"
 "\n"
@@ -1732,7 +1732,7 @@ msgstr ""
 "Spillelisten er ikke riktig konfigurert.\n"
 "Kontroller serverkonfigurasjonen og prøv på nytt."
 
-#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:411
+#: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:407
 msgid ""
 "\f[c:#704a4a]Cannot create the server!\f[/c]\n"
 "\n"
@@ -1747,7 +1747,7 @@ msgstr ""
 "kjører på den porten, og prøv igjen."
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:156
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:485
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:482
 msgid "Play Custom Levels"
 msgstr "Spill tilpassede nivåer"
 
@@ -1776,19 +1776,19 @@ msgid "No episode found!"
 msgstr "Ingen episoder funnet!"
 
 #. TRANSLATORS: Menu subitem in Play Story section
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:209
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:210
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:211
 msgid "Restart episode"
 msgstr "Start episode på nytt"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked because the previous episode is not complete
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:233
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:230
 #, c++-format
 msgid "You must complete \"{}\" first!"
 msgstr "Du må fullføre \"{}\" først!"
 
 #. TRANSLATORS: Information in Play Story section that episode is locked
-#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:237
+#: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:234
 msgid "Episode is locked!"
 msgstr "Episoden er låst!"
 
@@ -1817,7 +1817,7 @@ msgstr "Velkommen til \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] reimplementering!"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:59
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:93
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:94
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:20
 msgid "Gameplay"
 msgstr "Spillopplevelse"
@@ -1874,13 +1874,13 @@ msgid "You can enable enhancements that were added to this remake."
 msgstr "Du kan aktivere forbedringer som ble lagt til i denne nyutgivelsen."
 
 #. TRANSLATORS: Option for Weapon Wheel item in Options > Gameplay > Enhancements section
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:129
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:127
 msgid "Enabled With Ammo Count"
 msgstr "Aktivert med ammunisjonstelling"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:42
-#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:42
+#: Sources/Jazz2/UI/Menu/LanguageSelectSection.cpp:43
 msgid "Language"
 msgstr "Språk"
 
@@ -1890,32 +1890,38 @@ msgid "Scripting"
 msgstr "Skripting"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:49
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:48
+#| msgid "Continue"
+msgid "Continuous Jump"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > Gameplay section
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:50
 msgid "Switch To New Weapon"
 msgstr "Bytt til nytt våpen"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:51
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:52
 msgid "Allow Cheats"
 msgstr "Tillat juks"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:53
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:54
 msgid "Overwrite Episode Completion"
 msgstr "Overskriv ferdigstillelse av episode"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:57
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:58
 msgid "Razer Chroma™"
 msgstr "Razer Chroma™"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:61
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:62
 msgid "Browse \"Source\" Directory"
 msgstr "Bla gjennom \"Source\"-mappen"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:66
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:67
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:76
 msgid "Refresh Cache"
 msgstr "Oppdater cache"
@@ -2010,32 +2016,32 @@ msgstr "Ytelsesmålinger"
 msgid "Graphics"
 msgstr "Grafikk"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:150
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:148
 msgid "Low"
 msgstr "Lav"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:150
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:148
 msgid "High"
 msgstr "Høy"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:152
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:150
 msgid "Vertical"
 msgstr "Vertikal"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:152
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:150
 msgid "Horizontal"
 msgstr "Horisontal"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:155
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:153
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
 msgstr "Aktivert \f[c:#d0705d](Eksperimentell)\f[/c]"
 
 #. TRANSLATORS: Reserved for later use
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:160
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:158
 msgid "Short"
 msgstr "Kort"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:160
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:158
 msgid "Detailed"
 msgstr "Detaljert"
 
@@ -2266,15 +2272,15 @@ msgstr "Vanskelighetsgrad"
 msgid "Start"
 msgstr "Start"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:296
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:293
 msgid "Easy"
 msgstr "Lett"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:296
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:293
 msgid "Medium"
 msgstr "Middels"
 
-#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:296
+#: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:293
 msgid "Hard"
 msgstr "Vanskelig"
 
