@@ -642,7 +642,7 @@ namespace Death { namespace Trace {
 
 	void LoggerBackend::DispatchTransitEventToSinks(TransitEvent const& transitEvent, StringView threadId) noexcept
 	{
-		StringView functionNameView{transitEvent.FunctionName};
+		StringView functionNameView{transitEvent.FunctionName, StringViewFlags::Global};
 		StringView contentView{transitEvent.Message};
 
 		for (std::size_t i = 0; i < _sinks.size(); i++) {
@@ -807,7 +807,7 @@ namespace Death { namespace Trace {
 			}
 		}
 
-		StringView functionNameView{static_cast<const char*>(functionName)};
+		StringView functionNameView{static_cast<const char*>(functionName), StringViewFlags::Global};
 		StringView contentView{static_cast<const char*>(content), std::size_t(contentLength)};
 
 		for (std::size_t i = 0; i < _sinks.size(); i++) {

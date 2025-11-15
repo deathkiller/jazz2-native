@@ -7,12 +7,12 @@
 #include "Tags.h"
 #include "../Asserts.h"
 
+#include <algorithm>
+#include <cstring>
 #include <initializer_list>
 #include <limits>
-#include <cstring>
 #include <memory>
 #include <type_traits>
-#include <algorithm>
 
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
