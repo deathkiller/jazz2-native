@@ -19,15 +19,15 @@ namespace Death { namespace Threading {
 		void lock() noexcept
 		{
 			do {
-				while (_flag.load(std::memory_order_relaxed) == State::Locked) {
+				while (_state.load(std::memory_order_relaxed) == State::Locked) {
 					// Keep trying...
 				}
-			} while (_flag.exchange(State::Locked, std::memory_order_acquire) == State::Locked);
+			} while (_state.exchange(State::Locked, std::memory_order_acquire) == State::Locked);
 		}
 
 		void unlock() noexcept
 		{
-			_flag.store(State::Free, std::memory_order_release);
+			_state.store(State::Free, std::memory_order_release);
 		}
 
 	private:
@@ -36,7 +36,7 @@ namespace Death { namespace Threading {
 			Locked = 1
 		};
 
-		std::atomic<State> _flag{State::Free};
+		std::atomic<State> _state{State::Free};
 	};
 
 }}

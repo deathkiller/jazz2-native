@@ -357,7 +357,7 @@ namespace Death {
 	DEATH_ALWAYS_INLINE std::shared_ptr<T> runtime_cast(std::shared_ptr<U>&& u) noexcept {
 		auto ptr = Death::TypeInfo::Implementation::Helpers::RuntimeCast<T>(u.get(), std::is_base_of<T, U>());
 		if (ptr) {
-			return std::shared_ptr<T>(std::move(u), ptr);
+			return std::shared_ptr<T>(Death::move(u), ptr);
 		}
 		return {};
 	}
@@ -410,7 +410,7 @@ namespace Death {
 	DEATH_ALWAYS_INLINE std::shared_ptr<T> runtime_cast(std::shared_ptr<U>&& u) noexcept {
 		auto ptr = dynamic_cast<T*>(u.get());
 		if (ptr) {
-			return std::shared_ptr<T>(std::move(u), ptr);
+			return std::shared_ptr<T>(Death::move(u), ptr);
 		}
 		return {};
 	}

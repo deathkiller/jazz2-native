@@ -30,6 +30,9 @@
 #elif defined(__DragonFly__)
 #	include <sys/lwp.h>
 #	include <unistd.h>
+#elif defined(__OpenBSD__)
+#	include <pthread_np.h>
+#	include <unistd.h>
 #elif !defined(DEATH_TARGET_WINDOWS)
 #	include <pthread.h>
 #	include <unistd.h>
@@ -102,6 +105,8 @@ namespace Death { namespace Trace {
 			return static_cast<std::uint32_t>(lwpid);
 #	elif defined(__DragonFly__)
 			return static_cast<std::uint32_t>(lwp_gettid());
+#	elif defined(__OpenBSD__)
+			return static_cast<std::uint32_t>(getthrid());
 #	else
 			return reinterpret_cast<std::uintptr_t>(pthread_self());
 #	endif
