@@ -409,7 +409,7 @@ static void OnHandleInterruptSignal(int sig)
 		::raise(sig);
 	}
 }
-#endif;
+#endif
 
 template<std::int32_t N>
 static DEATH_ALWAYS_INLINE void AppendPart(char* dest, std::int32_t& length, const char(&newPart)[N])
@@ -710,7 +710,7 @@ namespace nCine
 
 		appEventHandler_ = std::move(appEventHandler);
 		appEventHandler_->OnPreInitialize(appCfg_);
-		LOGI("IAppEventHandler::OnPreInitialize() invoked");
+		LOGB("IAppEventHandler::OnPreInitialize() invoked");
 	}
 
 	void Application::InitCommon()
@@ -719,20 +719,6 @@ namespace nCine
 		ZoneScopedC(0x81A861);
 		// This timestamp is needed to initialize random number generator
 		profileStartTime_ = TimeStamp::now();
-
-		if (appCfg_.withGraphics) {
-#if defined(DEATH_TARGET_WINDOWS_RT)
-			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (UWP) initializing...");
-#elif defined(WITH_GLFW)
-			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (GLFW) initializing...");
-#elif defined(WITH_SDL)
-			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (SDL2) initializing...");
-#else
-			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing...");
-#endif
-		} else {
-			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing...");
-		}
 
 #if defined(WITH_TRACY)
 		TracyAppInfo(NCINE_APP, sizeof(NCINE_APP) - 1);
@@ -819,7 +805,7 @@ namespace nCine
 			}
 		}
 
-		LOGI("Application initialized");
+		LOGI("Core components initialized");
 #if defined(NCINE_PROFILING)
 		timings_[(std::int32_t)Timings::InitCommon] = profileStartTime_.secondsSince();
 #endif
@@ -832,7 +818,7 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 			timings_[(std::int32_t)Timings::AppInit] = profileStartTime_.secondsSince();
 #endif
-			LOGI("IAppEventHandler::OnInitialize() invoked");
+			LOGB("IAppEventHandler::OnInitialize() invoked");
 		}
 
 		if (appCfg_.withGraphics) {
@@ -1577,6 +1563,9 @@ namespace nCine
 		DWORD compatLayerLength = ::GetEnvironmentVariable(L"__COMPAT_LAYER", bufferW, (DWORD)arraySize(bufferW));
 		if (compatLayerLength > 0) {
 			flags |= 0x1000;	// HasAppCompatLayer
+		}
+		if (Environment::IsWine()) {
+			flags |= 0x2000;	// IsWine
 		}
 #		elif defined(DEATH_TARGET_ANDROID)
 		flags |= 0x20;	// RemoteDevice

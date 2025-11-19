@@ -107,7 +107,7 @@ namespace Jazz2::UI::Menu
 
 		if (item.Item.HasBooleanValue) {
 			StringView customText;
-			bool enabled;
+			bool enabled = false;
 			switch (item.Item.Type) {
 				case ControlsOptionsItemType::ToggleRunAction: enabled = PreferencesCache::ToggleRunAction; break;
 				case ControlsOptionsItemType::GamepadButtonLabels:
@@ -136,7 +136,6 @@ namespace Jazz2::UI::Menu
 #if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
 				case ControlsOptionsItemType::UseNativeBackButton: enabled = PreferencesCache::UseNativeBackButton; break;
 #endif
-				default: enabled = false; break;
 			}
 
 			_root->DrawStringShadow(!customText.empty() ? customText : (enabled ? _("Enabled") : _("Disabled")), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,

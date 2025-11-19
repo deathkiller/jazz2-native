@@ -141,7 +141,7 @@ namespace nCine
 		// Add mappings from the database, without searching for duplicates
 		for (const char* line : ControllerMappings) {
 			MappedJoystick mapping;
-			const bool parsed = ParseMappingFromString(line, mapping);
+			const bool parsed = ParseMappingFromString(line, mapping, true);
 			DEATH_DEBUG_ASSERT(parsed);
 
 			if (parsed) {
@@ -195,7 +195,7 @@ namespace nCine
 			rest = split[2];
 
 			MappedJoystick newMapping;
-			if (ParseMappingFromString(split[0], newMapping)) {
+			if (ParseMappingFromString(split[0], newMapping, false)) {
 				std::int32_t index = FindMappingByGuid(newMapping.guid);
 				// if GUID is not found then mapping has to be added, not replaced
 				if (index < 0) {
@@ -717,7 +717,7 @@ namespace nCine
 		return index;
 	}
 
-	bool JoyMapping::ParseMappingFromString(StringView mappingString, MappedJoystick& map)
+	bool JoyMapping::ParseMappingFromString(StringView mappingString, MappedJoystick& map, bool suppressErrors)
 	{
 		if (mappingString.empty() || mappingString[0] == '#') {
 			return false;
@@ -728,7 +728,12 @@ namespace nCine
 		if (sub[0].empty()) {
 			// Ignore malformed string comming from Steam Input (2024/08/13)
 			if (!mappingString.hasPrefix(",platform:"_s)) {
-				LOGE("Invalid mapping string \"{}\"", mappingString);
+#if !defined(DEATH_DEBUG)
+				if (!suppressErrors)
+#endif
+				{
+					LOGE("Invalid mapping string \"{}\"", mappingString);
+				}
 			}
 			return false;
 		}
@@ -738,7 +743,12 @@ namespace nCine
 		sub = sub[2].partition(',');
 		sub[0] = sub[0].trimmed();
 		if (sub[0].empty()) {
-			LOGE("Invalid mapping string \"{}\"", mappingString);
+#if !defined(DEATH_DEBUG)
+			if (!suppressErrors)
+#endif
+			{
+				LOGE("Invalid mapping string \"{}\"", mappingString);
+			}
 			return false;
 		}
 
@@ -751,7 +761,12 @@ namespace nCine
 			keyValue[0] = keyValue[0].trimmed();
 			keyValue[2] = keyValue[2].trimmed();
 			if (keyValue[0].empty()) {
-				LOGE("Invalid mapping string \"{}\"", mappingString);
+#if !defined(DEATH_DEBUG)
+				if (!suppressErrors)
+#endif
+				{
+					LOGE("Invalid mapping string \"{}\"", mappingString);
+				}
 				return false;
 			}
 
@@ -778,8 +793,13 @@ namespace nCine
 							map.desc.buttonAxes[buttonAxisMapping] = static_cast<AxisName>(axisIndex);
 						} else if (!keyValue[2].empty()) {
 							// It's empty sometimes
-							const uint8_t* g = map.guid.data;
-							LOGI("Unsupported assignment in mapping source \"{}\" in \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}]", keyValue[0], map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
+#if !defined(DEATH_DEBUG)
+							if (!suppressErrors)
+#endif
+							{
+								const uint8_t* g = map.guid.data;
+								LOGW("Unsupported assignment in mapping source \"{}\" in \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}]", keyValue[0], map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
+							}
 						}
 					}
 				} else {
@@ -802,19 +822,35 @@ namespace nCine
 									} else if (axis.max < 0.0f) {
 										map.desc.axes[axisMapping].buttonNameNegative = static_cast<ButtonName>(buttonIndex);
 									} else {
-										const std::uint8_t* g = map.guid.data;
-										LOGI("Unsupported axis value \"{}\" for button mapping in \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}]", keyValue[2], map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
+#if !defined(DEATH_DEBUG)
+										if (!suppressErrors)
+#endif
+										{
+											const std::uint8_t* g = map.guid.data;
+											LOGW("Unsupported axis value \"{}\" for button mapping in \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}]", keyValue[2], map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
+										}
 									}
 								} else if (!keyValue[2].empty()) { // It's empty sometimes
-									const std::uint8_t* g = map.guid.data;
-									LOGI("Unsupported assignment in mapping source \"{}\" in \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}]", keyValue[0], map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
+#if !defined(DEATH_DEBUG)
+									if (!suppressErrors)
+#endif
+									{
+										const std::uint8_t* g = map.guid.data;
+										LOGW("Unsupported assignment in mapping source \"{}\" in \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}]", keyValue[0], map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
+
+									}
 								}
 							}
 						}
 					} else {
 						// Unknown key
-						DEATH_UNUSED const std::uint8_t* g = map.guid.data;
-						LOGD("Unsupported mapping source \"{}\" in \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}]", keyValue[0], map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
+#if !defined(DEATH_DEBUG)
+						if (!suppressErrors)
+#endif
+						{
+							const std::uint8_t* g = map.guid.data;
+							LOGW("Unsupported mapping source \"{}\" in \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}]", keyValue[0], map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
+						}
 					}
 				}
 			}

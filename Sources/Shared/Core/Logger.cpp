@@ -250,13 +250,13 @@ namespace Death { namespace Trace {
 	BacktraceStorage::BacktraceStorage(std::uint32_t capacity)
 		: _capacity(capacity), _index(0)
 	{
-		arrayReserve(_storedEvents, _capacity);
+		_storedEvents.reserve(_capacity);
 	}
 
 	void BacktraceStorage::Store(TransitEvent transitEvent, StringView threadId) noexcept
 	{
 		if (_storedEvents.size() < _capacity) {
-			arrayAppend(_storedEvents, InPlaceInit, threadId, Death::move(transitEvent));
+			_storedEvents.emplace_back(threadId, Death::move(transitEvent));
 		} else {
 			StoredTransitEvent& ste = _storedEvents[_index];
 
@@ -285,7 +285,7 @@ namespace Death { namespace Trace {
 			}
 		}
 
-		arrayClear(_storedEvents);
+		_storedEvents.clear();
 		_index = 0;
 	}
 
@@ -294,8 +294,8 @@ namespace Death { namespace Trace {
 		if (_capacity != capacity) {
 			_capacity = capacity;
 			_index = 0;
-			arrayClear(_storedEvents);
-			arrayReserve(_storedEvents, _capacity);
+			_storedEvents.clear();
+			_storedEvents.reserve(_capacity);
 		}
 	}
 

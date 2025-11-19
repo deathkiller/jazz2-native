@@ -139,10 +139,10 @@ namespace Jazz2::UI
 	{
 		// Try "Content" directory first, then "Source" directory
 		auto& resolver = ContentResolver::Get();
-		auto s = resolver.OpenContentFile(fs::CombinePath("Cinematics"_s, String(path + ".j2v"_s)));
+		auto s = resolver.OpenContentFile(fs::CombinePath("Cinematics"_s, String(path + ".j2v"_s)), 64 * 1024);
 		if (!s->IsValid()) {
 			if (auto alternativePath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), String(path + ".j2v"_s)))) {
-				s = fs::Open(alternativePath, FileAccess::Read);
+				s = fs::Open(alternativePath, FileAccess::Read, 64 * 1024);
 				if (!s->IsValid()) {
 					return false;
 				}

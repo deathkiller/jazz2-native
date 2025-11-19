@@ -325,14 +325,14 @@ namespace Jazz2
 	}
 #endif
 
-	std::unique_ptr<Stream> ContentResolver::OpenContentFile(StringView path)
+	std::unique_ptr<Stream> ContentResolver::OpenContentFile(StringView path, std::int32_t bufferSize)
 	{
 		// Search .paks first, then Content directory and Cache directory
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		for (std::size_t i = 0; i < _mountedPaks.size(); i++) {
 			auto mountPoint = _mountedPaks[i]->GetMountPoint();
 			if (path.hasPrefix(mountPoint)) {
-				auto packedFile = _mountedPaks[i]->OpenFile(path.exceptPrefix(mountPoint.size()));
+				auto packedFile = _mountedPaks[i]->OpenFile(path.exceptPrefix(mountPoint.size()), bufferSize);
 				if (packedFile != nullptr && packedFile->IsValid()) {
 					return packedFile;
 				}
@@ -342,14 +342,14 @@ namespace Jazz2
 
 		String fullPath = fs::CombinePath(GetContentPath(), path);
 		if (fs::IsReadableFile(fullPath)) {
-			auto realFile = fs::Open(fullPath, FileAccess::Read);
+			auto realFile = fs::Open(fullPath, FileAccess::Read, bufferSize);
 			if (realFile->IsValid()) {
 				return realFile;
 			}
 		}
 
 		fullPath = fs::CombinePath(GetCachePath(), path);
-		return fs::Open(fullPath, FileAccess::Read);
+		return fs::Open(fullPath, FileAccess::Read, bufferSize);
 	}
 
 	void ContentResolver::BeginLoading()
@@ -1021,7 +1021,7 @@ namespace Jazz2
 			}
 		}
 
-		auto s = fs::Open(fullPath, FileAccess::Read);
+		auto s = fs::Open(fullPath, FileAccess::Read, 16 * 1024);
 		if (!s->IsValid()) {
 			return nullptr;
 		}
@@ -1232,7 +1232,7 @@ namespace Jazz2
 			}
 		}
 
-		auto s = fs::Open(descriptor.FullPath, FileAccess::Read);
+		auto s = fs::Open(descriptor.FullPath, FileAccess::Read, 16 * 1024);
 		if (!s->IsValid()) return false;
 
 		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();

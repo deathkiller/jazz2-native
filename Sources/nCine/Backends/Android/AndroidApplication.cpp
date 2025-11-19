@@ -294,6 +294,14 @@ namespace nCine
 		
 		PreInitCommon(createAppEventHandler_());
 
+#if defined(DEATH_DEBUG)
+#	define INIT_MESSAGE_SUFFIX " in debug configuration"
+#else
+#	define INIT_MESSAGE_SUFFIX ""
+#endif
+
+		LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing" INIT_MESSAGE_SUFFIX "...");
+
 #if defined(DEATH_TARGET_ARM)
 #	if defined(DEATH_TARGET_32BIT)
 		LOGI("Running on {} {} ({}) as armeabi-v7a application", AndroidJniClass_Version::deviceBrand(), AndroidJniClass_Version::deviceModel(), AndroidJniClass_Version::deviceManufacturer());

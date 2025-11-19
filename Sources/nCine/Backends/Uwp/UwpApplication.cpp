@@ -158,6 +158,14 @@ namespace nCine
 		//appCfg_.argv_ = argv;
 		PreInitCommon(_createAppEventHandler());
 
+#if defined(DEATH_DEBUG)
+#	define INIT_MESSAGE_SUFFIX " in debug configuration"
+#else
+#	define INIT_MESSAGE_SUFFIX ""
+#endif
+
+		LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (Windows RT) initializing" INIT_MESSAGE_SUFFIX "...");
+
 		winrtWUC::CoreWindow window = winrtWUC::CoreWindow::GetForCurrentThread();
 
 		//auto windowTitleW = Utf8::ToUtf16(appCfg_.windowTitle);
@@ -194,7 +202,7 @@ namespace nCine
 		DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
 		const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.windowPosition.X, appCfg_.windowPosition.Y, appCfg_.fullscreen, appCfg_.resizable, appCfg_.windowScaling);
 
-		// Graphics device should always be created before the input manager!
+		// Graphics device should always be created before the input manager
 		gfxDevice_ = std::make_unique<UwpGfxDevice>(windowMode, glContextInfo, displayMode, window);
 		inputManager_ = std::make_unique<UwpInputManager>(window);
 

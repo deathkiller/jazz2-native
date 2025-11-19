@@ -24,7 +24,7 @@ namespace Death { namespace Environment {
 
 	static ElevationState _currentElevation = ElevationState::Unknown;
 
-	ElevationState GetCurrentElevation()
+	ElevationState GetCurrentElevation() noexcept
 	{
 		if (_currentElevation != ElevationState::Unknown) {
 			return _currentElevation;
@@ -49,7 +49,7 @@ namespace Death { namespace Environment {
 	}
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
-	bool IsEmbedded()
+	bool IsEmbedded() noexcept
 	{
 		return EM_ASM_INT({
 			return window.self !== window.top;
@@ -57,7 +57,7 @@ namespace Death { namespace Environment {
 	}
 #endif
 
-	bool IsSandboxed()
+	bool IsSandboxed() noexcept
 	{
 #if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WINDOWS_RT)
 		return true;
@@ -190,7 +190,8 @@ namespace Death { namespace Environment {
 	}
 #endif
 
-#if defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS_RT)
 	static std::uint64_t GetWindowsVersion()
 	{
 		winrt::hstring versionString = winrtWSP::AnalyticsInfo::VersionInfo().DeviceFamilyVersion();
@@ -222,7 +223,7 @@ namespace Death { namespace Environment {
 
 	const std::uint64_t WindowsVersion = GetWindowsVersion();
 	const DeviceType CurrentDeviceType = GetDeviceType();
-#elif defined(DEATH_TARGET_WINDOWS)
+#	else
 	static std::uint64_t GetWindowsVersion()
 	{
 		using _RtlGetNtVersionNumbers = void (WINAPI*)(LPDWORD major, LPDWORD minor, LPDWORD build);
@@ -245,6 +246,13 @@ namespace Death { namespace Environment {
 	}
 
 	const std::uint64_t WindowsVersion = GetWindowsVersion();
+#	endif
+
+	bool IsWine() noexcept
+	{
+		HMODULE hNtdll = ::GetModuleHandle(L"ntdll.dll");
+		return (hNtdll != nullptr && ::GetProcAddress(hNtdll, "wine_get_host_version") != nullptr);
+	}
 #endif
 
 }}

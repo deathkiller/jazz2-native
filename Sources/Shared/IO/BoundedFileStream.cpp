@@ -3,13 +3,13 @@
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	BoundedFileStream::BoundedFileStream(Containers::StringView path, std::uint64_t offset, std::uint32_t size)
-		: BoundedFileStream(Containers::String{path}, offset, size)
+	BoundedFileStream::BoundedFileStream(Containers::StringView path, std::uint64_t offset, std::uint32_t size, std::int32_t bufferSize)
+		: BoundedFileStream(Containers::String{path}, offset, size, bufferSize)
 	{
 	}
 
-	BoundedFileStream::BoundedFileStream(Containers::String&& path, std::uint64_t offset, std::uint32_t size)
-		: _underlyingStream(path, FileAccess::Read), _offset(offset), _size(size)
+	BoundedFileStream::BoundedFileStream(Containers::String&& path, std::uint64_t offset, std::uint32_t size, std::int32_t bufferSize)
+		: _underlyingStream(path, FileAccess::Read, bufferSize), _offset(offset), _size(size)
 	{
 		_underlyingStream.Seek(static_cast<std::int64_t>(offset), SeekOrigin::Begin);
 	}
