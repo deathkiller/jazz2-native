@@ -84,7 +84,7 @@ namespace Jazz2
 		void RemountPaks();
 #endif
 		/** @brief Tries to find and open a file specified by the path */
-		std::unique_ptr<Stream> OpenContentFile(StringView path);
+		std::unique_ptr<Stream> OpenContentFile(StringView path, std::int32_t bufferSize = 8192);
 		
 		/** @brief Marks beginning of the loading assets */
 		void BeginLoading();

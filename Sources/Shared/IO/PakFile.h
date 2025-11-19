@@ -50,7 +50,7 @@ namespace Death { namespace IO {
 		bool DirectoryExists(Containers::StringView path);
 
 		/** @brief Opens a file stream */
-		std::unique_ptr<Stream> OpenFile(Containers::StringView path);
+		std::unique_ptr<Stream> OpenFile(Containers::StringView path, std::int32_t bufferSize = 8192);
 
 		/** @brief Handles directory traversal, should be used as iterator */
 		class Directory

@@ -353,6 +353,35 @@ namespace nCine
 			for (std::int32_t i = 1; i < argc; i++) {
 				appCfg_.argv_[i - 1] = Utf8::FromUtf16(argv[i]);
 			}
+#elif defined(DEATH_TARGET_APPLE)
+			// Cocoa supports -Key value options which set the user defaults key "Key" to the value "value",
+			// skip them here, because they are handled internally by the operating system
+			std::int32_t count = 0;
+			std::int32_t i = 1;
+			while (i < argc) {
+				const char* arg = argv[i];
+				if (arg[0] == '-' && arg[1] == 'N' && arg[2] == 'S') {
+					i += 2; // Skip key and value
+				} else {
+					count++;
+					i++;
+				}
+			}
+
+			if (count > 0) {
+				appCfg_.argv_ = Array<StringView>(count);
+				count = 0;
+				i = 1;
+				while (i < argc) {
+					const char* arg = argv[i];
+					if (arg[0] == '-' && arg[1] == 'N' && arg[2] == 'S') {
+						i += 2; // Skip key and value
+					} else {
+						appCfg_.argv_[count++] = arg;
+						i++;
+					}
+				}
+			}
 #else
 			appCfg_.argv_ = Array<StringView>(argc - 1);
 			for (std::int32_t i = 1; i < argc; i++) {
@@ -368,10 +397,24 @@ namespace nCine
 			return;
 		}
 
-		if (appCfg_.withGraphics) {
-			// Graphics device should always be created before the input manager
-			LOGD("Initializing graphics device and input manager...");
+#if defined(DEATH_DEBUG)
+#	define INIT_MESSAGE_SUFFIX " in debug configuration"
+#else
+#	define INIT_MESSAGE_SUFFIX ""
+#endif
 
+		if (appCfg_.withGraphics) {
+#if defined(WITH_GLFW)
+			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (GLFW) initializing" INIT_MESSAGE_SUFFIX "...");
+#elif defined(WITH_SDL)
+			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (SDL2) initializing" INIT_MESSAGE_SUFFIX "...");
+#else
+			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing" INIT_MESSAGE_SUFFIX "...");
+#endif
+
+			LOGB("Initializing graphics device and input manager...");
+
+			// Graphics device should always be created before the input manager
 			IGfxDevice::GLContextInfo glContextInfo(appCfg_);
 			const DisplayMode::VSync vSyncMode = (appCfg_.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
 			DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
@@ -398,6 +441,8 @@ namespace nCine
 				}
 			}
 		} else {
+			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing" INIT_MESSAGE_SUFFIX "...");
+
 			gfxDevice_ = std::make_unique<NullGfxDevice>();
 			inputManager_ = std::make_unique<NullInputManager>();
 		}

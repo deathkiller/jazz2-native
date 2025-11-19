@@ -120,7 +120,7 @@ namespace nCine
 
 	void RenderQueue::Draw()
 	{
-#if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 		static char debugString[128];
 #endif
 		const bool batchingEnabled = theApplication().GetRenderingSettings().batchingEnabled;

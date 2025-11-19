@@ -1169,7 +1169,7 @@ namespace Death { namespace Trace {
 
 		std::uint32_t _capacity;
 		std::uint32_t _index;
-		Containers::Array<StoredTransitEvent> _storedEvents;
+		Containers::SmallVector<StoredTransitEvent> _storedEvents;
 	};
 
 	/**

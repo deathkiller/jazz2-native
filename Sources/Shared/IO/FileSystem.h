@@ -329,7 +329,7 @@ namespace Death { namespace IO {
 #endif
 
 		/** @brief Opens a file stream with specified access mode */
-		static std::unique_ptr<Stream> Open(Containers::StringView path, FileAccess mode);
+		static std::unique_ptr<Stream> Open(Containers::StringView path, FileAccess mode, std::int32_t bufferSize = 8192);
 
 #	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/**

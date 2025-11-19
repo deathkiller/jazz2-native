@@ -2692,14 +2692,15 @@ namespace Death { namespace IO {
 	}
 #endif
 
-	std::unique_ptr<Stream> FileSystem::Open(StringView path, FileAccess mode)
+	std::unique_ptr<Stream> FileSystem::Open(StringView path, FileAccess mode, std::int32_t bufferSize)
 	{
 #if defined(DEATH_TARGET_ANDROID)
 		if (auto strippedPath = AndroidAssetStream::TryGetAssetPath(path)) {
+			// AndroidAssetStream is not buffered, so bufferSize is ignored here
 			return std::make_unique<AndroidAssetStream>(strippedPath, mode);
 		}
 #endif
-		return std::make_unique<FileStream>(path, mode);
+		return std::make_unique<FileStream>(path, mode, bufferSize);
 	}
 
 #if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))

@@ -115,7 +115,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		StringView customText;
-		bool enabled;
+		bool enabled = false;
 		switch (item.Item.Type) {
 			case GameplayEnhancementsItemType::ReforgedGameplay: enabled = PreferencesCache::EnableReforgedGameplay; break;
 			case GameplayEnhancementsItemType::ReforgedHUD: enabled = PreferencesCache::EnableReforgedHUD; break;
@@ -127,7 +127,6 @@ namespace Jazz2::UI::Menu
 					? _("Enabled With Ammo Count")
 					: (PreferencesCache::WeaponWheel == WeaponWheelStyle::Enabled ? _("Enabled") : _("Disabled")));
 				break;
-			default: enabled = false; break;
 		}
 
 		_root->DrawStringShadow(!customText.empty() ? customText : (enabled ? _("Enabled") : _("Disabled")), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,

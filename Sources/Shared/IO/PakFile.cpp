@@ -69,7 +69,7 @@ namespace Death { namespace IO {
 	class CompressedBoundedStream : public Stream
 	{
 	public:
-		CompressedBoundedStream(StringView path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize);
+		CompressedBoundedStream(StringView path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize, std::int32_t bufferSize);
 
 		CompressedBoundedStream(const CompressedBoundedStream&) = delete;
 		CompressedBoundedStream& operator=(const CompressedBoundedStream&) = delete;
@@ -91,8 +91,8 @@ namespace Death { namespace IO {
 	};
 
 	template<class T>
-	CompressedBoundedStream<T>::CompressedBoundedStream(StringView path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize)
-		: _underlyingStream(path, offset, compressedSize), _uncompressedSize(uncompressedSize)
+	CompressedBoundedStream<T>::CompressedBoundedStream(StringView path, std::uint64_t offset, std::uint32_t uncompressedSize, std::uint32_t compressedSize, std::int32_t bufferSize)
+		: _underlyingStream(path, offset, compressedSize, bufferSize), _uncompressedSize(uncompressedSize)
 	{
 		_compressedStream.Open(_underlyingStream, static_cast<std::int32_t>(compressedSize));
 	}
@@ -234,7 +234,7 @@ namespace Death { namespace IO {
 		return (foundItem != nullptr && (foundItem->Flags & ItemFlags::Directory) == ItemFlags::Directory);
 	}
 
-	std::unique_ptr<Stream> PakFile::OpenFile(StringView path)
+	std::unique_ptr<Stream> PakFile::OpenFile(StringView path, std::int32_t bufferSize)
 	{
 		if DEATH_UNLIKELY(path.empty() || path[path.size() - 1] == '/' || path[path.size() - 1] == '\\') {
 			return nullptr;
@@ -247,7 +247,7 @@ namespace Death { namespace IO {
 
 		if ((foundItem->Flags & ItemFlags::DeflateCompressed) == ItemFlags::DeflateCompressed) {
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
-			return std::make_unique<CompressedBoundedStream<DeflateStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
+			return std::make_unique<CompressedBoundedStream<DeflateStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
 #else
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("File \"{}\" was compressed using an unsupported compression method (Deflate)", path);
@@ -258,7 +258,7 @@ namespace Death { namespace IO {
 
 		if ((foundItem->Flags & ItemFlags::Lz4Compressed) == ItemFlags::Lz4Compressed) {
 #if defined(WITH_LZ4)
-			return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
+			return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
 #else
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("File \"{}\" was compressed using an unsupported compression method (LZ4)", path);
@@ -269,7 +269,7 @@ namespace Death { namespace IO {
 
 		if ((foundItem->Flags & ItemFlags::ZstdCompressed) == ItemFlags::ZstdCompressed) {
 #if defined(WITH_ZSTD)
-			return std::make_unique<CompressedBoundedStream<ZstdStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size);
+			return std::make_unique<CompressedBoundedStream<ZstdStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
 #else
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("File \"{}\" was compressed using an unsupported compression method (Zstd)", path);
@@ -278,7 +278,7 @@ namespace Death { namespace IO {
 #endif
 		}
 
-		return std::make_unique<BoundedFileStream>(_path, foundItem->Offset, foundItem->UncompressedSize);
+		return std::make_unique<BoundedFileStream>(_path, foundItem->Offset, foundItem->UncompressedSize, bufferSize);
 	}
 
 	void PakFile::ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool deflateCompressed, std::uint32_t depth)

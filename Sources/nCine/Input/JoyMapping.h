@@ -114,7 +114,7 @@ namespace nCine
 
 		bool AddMappingsFromStringInternal(StringView mappingString, StringView traceSource);
 		void CheckConnectedJoystics();
-		bool ParseMappingFromString(StringView mappingString, MappedJoystick& map);
+		bool ParseMappingFromString(StringView mappingString, MappedJoystick& map, bool suppressErrors);
 		bool ParsePlatformName(StringView value) const;
 		std::int32_t ParseAxisName(StringView value) const;
 		std::int32_t ParseButtonName(StringView value) const;

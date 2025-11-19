@@ -39,7 +39,7 @@ namespace Death { namespace Environment {
 	/**
 	 * @brief Returns elevation state of the current process
 	 */
-	ElevationState GetCurrentElevation();
+	ElevationState GetCurrentElevation() noexcept;
 
 #if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
@@ -47,7 +47,7 @@ namespace Death { namespace Environment {
 	 *
 	 * @partialsupport Available only on @ref DEATH_TARGET_EMSCRIPTEN "Emscripten" platform.
 	 */
-	bool IsEmbedded();
+	bool IsEmbedded() noexcept;
 #endif
 
 	/**
@@ -57,7 +57,7 @@ namespace Death { namespace Environment {
 	 * as a @ref DEATH_TARGET_APPLE "macOS" app bundle, @ref DEATH_TARGET_WINDOWS_RT "Windows Phone/Store"
 	 * application or in a browser through @ref DEATH_TARGET_EMSCRIPTEN "Emscripten", @cpp false @ce otherwise.
 	 */
-	bool IsSandboxed();
+	bool IsSandboxed() noexcept;
 	
 #if defined(DEATH_TARGET_APPLE) || defined(DOXYGEN_GENERATING_OUTPUT)
 	/**
@@ -158,6 +158,13 @@ namespace Death { namespace Environment {
 	DEATH_ALWAYS_INLINE bool IsWindows11() noexcept {
 		return WindowsVersion >= 0x0a0000000055f0; // 10.0.22000
 	}
+
+	/**
+	 * @brief Returns `true` if this application is currently running under Wine compatibility layer
+	 *
+	 * @partialsupport Available only on @ref DEATH_TARGET_WINDOWS "Windows" platform.
+	 */
+	bool IsWine() noexcept;
 #endif
 
 	/**

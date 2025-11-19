@@ -123,7 +123,7 @@ namespace Jazz2::UI::Menu
 
 		if (item.Item.HasBooleanValue) {
 			StringView customText;
-			bool enabled;
+			bool enabled = false;
 			switch (item.Item.Type) {
 #if defined(WITH_ANGELSCRIPT)
 				case GameplayOptionsItemType::AllowUnsignedScripts: enabled = PreferencesCache::AllowUnsignedScripts; break;
@@ -145,7 +145,6 @@ namespace Jazz2::UI::Menu
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
 				case GameplayOptionsItemType::EnableRgbLights: enabled = PreferencesCache::EnableRgbLights; break;
 #endif
-				default: enabled = false; break;
 			}
 
 #if defined(WITH_ANGELSCRIPT)
