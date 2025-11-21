@@ -1898,7 +1898,7 @@ msgstr "Szkriptelés"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:48
 #| msgid "Continue"
 msgid "Continuous Jump"
-msgstr ""
+msgstr "Folytonos ugrás"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:50
