@@ -35,14 +35,25 @@ namespace nCine
 
 			/** @} */
 
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+			/** @brief Alpha */
+			std::uint8_t A;  // Stored first (highest byte of std::uint32_t)
+			/** @brief Blue */
+			std::uint8_t B;
+			/** @brief Green */
+			std::uint8_t G;
 			/** @brief Red */
-			std::uint8_t R;
+			std::uint8_t R;  // Stored last (lowest byte of std::uint32_t)
+#else
+			/** @brief Red */
+			std::uint8_t R;  // Stored first (lowest byte of std::uint32_t)
 			/** @brief Green */
 			std::uint8_t G;
 			/** @brief Blue */
 			std::uint8_t B;
 			/** @brief Alpha */
-			std::uint8_t A;
+			std::uint8_t A;  // Stored last (highest byte of std::uint32_t)
+#endif
 
 			/// Default constructor (transparent color)
 			constexpr Color() noexcept
