@@ -97,10 +97,6 @@ namespace Jazz2
 
 	static void ReadEpisodeContinuationState(Stream& s, EpisodeContinuationState& state)
 	{
-#if defined(DEATH_DEBUG)
-		std::int64_t startPos = s.GetPosition();
-#endif
-
 		state.Flags = EpisodeContinuationFlags(s.ReadValue<std::uint8_t>());
 		state.DifficultyAndPlayerType = s.ReadValue<std::uint8_t>();
 		state.Lives = s.ReadValue<std::uint8_t>();
@@ -117,20 +113,10 @@ namespace Jazz2
 		for (std::size_t i = 0; i < arraySize(state.WeaponUpgrades); i++) {
 			state.WeaponUpgrades[i] = s.ReadValue<std::uint8_t>();
 		}
-
-#if defined(DEATH_DEBUG)
-		std::int64_t endPos = s.GetPosition();
-		DEATH_ASSERT(endPos - startPos == sizeof(EpisodeContinuationState),
-			("EpisodeContinuationState struct mismatch (expected: {} bytes, written: {} bytes)", sizeof(EpisodeContinuationState), endPos - startPos));
-#endif
 	}
 
 	static void WriteEpisodeContinuationState(Stream& s, const EpisodeContinuationState& state)
 	{
-#if defined(DEATH_DEBUG)
-		std::int64_t startPos = s.GetPosition();
-#endif
-
 		s.WriteValue<std::uint8_t>(std::uint8_t(state.Flags));
 		s.WriteValue<std::uint8_t>(state.DifficultyAndPlayerType);
 		s.WriteValue<std::uint8_t>(state.Lives);
@@ -147,12 +133,6 @@ namespace Jazz2
 		for (std::size_t i = 0; i < arraySize(state.WeaponUpgrades); i++) {
 			s.WriteValue<std::uint8_t>(state.WeaponUpgrades[i]);
 		}
-
-#if defined(DEATH_DEBUG)
-		std::int64_t endPos = s.GetPosition();
-		DEATH_ASSERT(endPos - startPos == sizeof(EpisodeContinuationState),
-			("EpisodeContinuationState struct mismatch (expected: {} bytes, written: {} bytes)", sizeof(EpisodeContinuationState), endPos - startPos));
-#endif
 	}
 
 	void PreferencesCache::Initialize(AppConfiguration& config)

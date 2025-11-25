@@ -19,8 +19,15 @@ namespace Death { namespace IO {
 	class FileStream : public Stream
 	{
 	public:
-		FileStream(Containers::StringView path, FileAccess mode, std::int32_t bufferSize = 8192);
-		FileStream(Containers::String&& path, FileAccess mode, std::int32_t bufferSize = 8192);
+		/** @{ @name Constants */
+
+		/** @brief Default buffer size for file access */
+		static constexpr std::int32_t DefaultBufferSize = 8192;
+
+		/** @} */
+
+		FileStream(Containers::StringView path, FileAccess mode, std::int32_t bufferSize = DefaultBufferSize);
+		FileStream(Containers::String&& path, FileAccess mode, std::int32_t bufferSize = DefaultBufferSize);
 		~FileStream() override;
 
 		FileStream(const FileStream&) = delete;
