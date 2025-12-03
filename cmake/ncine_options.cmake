@@ -2,7 +2,6 @@ include(CMakeDependentOption)
 
 # nCine options
 cmake_dependent_option(NCINE_BUILD_ANDROID "Build Android version of the game" OFF "NOT EMSCRIPTEN;NOT NINTENDO_SWITCH" OFF)
-cmake_dependent_option(NCINE_BUILD_VITA "Build Vita version of the game" OFF "NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT NCINE_BUILD_ANDROID" OFF)
 option(NCINE_PROFILING "Enable runtime profiling" OFF)
 option(NCINE_DOWNLOAD_DEPENDENCIES "Download all build dependencies" ON)
 option(NCINE_LINKTIME_OPTIMIZATION "Compile the game with link time optimization when in release" ON)
@@ -60,14 +59,12 @@ else()
 	endif()
 	
 	if((WIN32 OR NOT NCINE_WITH_OPENGLES) AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH)
-		option(NCINE_WITH_OPENGL2 "Use OpenGL 2.x compatibility mode" ${NCINE_BUILD_VITA})
-		if(NOT NCINE_BUILD_VITA)
-			option(NCINE_WITH_GLEW "Use GLEW library" ON)
-		endif()
+		option(NCINE_WITH_OPENGL2 "Use OpenGL 2.x compatibility mode" ${VITA})
+		cmake_dependent_option(NCINE_WITH_GLEW "Use GLEW library" ON "NOT VITA" OFF)
 	endif()
 endif()
 
-cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward for exception handling" ON "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID AND NOT NCINE_BUILD_VITA" OFF)
+cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward for exception handling" ON "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID AND NOT VITA" OFF)
 #option(NCINE_WITH_LZ4 "Enable LZ4 compression support" OFF)
 #option(NCINE_WITH_ZSTD "Enable Zstd compression support" OFF)
 option(NCINE_WITH_WEBP "Enable WebP image file support" OFF)
@@ -82,7 +79,7 @@ option(NCINE_WITH_TRACY "Enable integration with Tracy frame profiler" OFF)
 cmake_dependent_option(NCINE_COMPILE_OPENMPT "Compile libopenmpt from sources instead of using library" OFF "NCINE_WITH_OPENMPT" OFF)
 
 set(NCINE_CONTENT_DIR "${CMAKE_SOURCE_DIR}/Content" CACHE PATH "Set path to the game data directory")
-cmake_dependent_option(NCINE_CREATE_CONTENT_SYMLINK "Create symbolic link to the game data directory in target directory" OFF "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID AND NOT NCINE_BUILD_VITA" OFF)
+cmake_dependent_option(NCINE_CREATE_CONTENT_SYMLINK "Create symbolic link to the game data directory in target directory" OFF "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID AND NOT VITA" OFF)
 
 if(NCINE_WITH_RENDERDOC)
 	set(RENDERDOC_DIR "" CACHE PATH "Set path to RenderDoc directory")
@@ -173,4 +170,4 @@ option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF)
 
 # Multiplayer is not supported on Emscripten yet and requires multithreading
 cmake_dependent_option(WITH_MULTIPLAYER "Enable multiplayer support" OFF "NCINE_WITH_THREADS;NOT EMSCRIPTEN" OFF)
-cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT NCINE_BUILD_VITA;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
+cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT VITA;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)

@@ -33,7 +33,7 @@ elseif(OPENGL_FOUND)
 	else()
 		target_link_libraries(${NCINE_APP} PRIVATE OpenGL::GL)
 	endif()
-elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT VITA AND NOT NCINE_BUILD_VITA)
+elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT VITA)
 	message(STATUS "No graphics library found! Make sure OpenGL or OpenGL|ES library is available on your system.")
 endif()
 
@@ -624,16 +624,61 @@ else()
 			ROMFS "${NCINE_CONTENT_DIR}"
 		)
 	elseif(VITA)
-		target_link_libraries(${NCINE_APP} PUBLIC
-			SceAudio_stub SceDisplay_stub SceCtrl_stub SceSysmodule_stub
-			SceNet_stub SceNetCtl_stub SceHttp_stub SceSsl_stub
-			SceTouch_stub SceGxm_stub vitaGL)
+		include("${VITASDK}/share/vita.cmake" REQUIRED)
+
+		# Link to all required libraries and stubs
+		target_link_libraries(${NCINE_APP} PRIVATE
+			vitaGL
+			vitashark
+			SceShaccCgExt
 			
+			mathneon
+
+			-Wl,--whole-archive # --whole-archive is required, otherwise all stubs are not linked properly
+			
+			SceLibKernel_stub
+			SceAppMgr_stub
+			SceAppUtil_stub
+			SceAudio_stub
+			SceAudioIn_stub
+			SceCtrl_stub
+			SceCommonDialog_stub
+			SceDisplay_stub
+			SceGxm_stub
+			SceHid_stub
+			SceHttp_stub
+			SceKernelDmacMgr_stub
+			SceMotion_stub
+			SceNet_stub
+			SceNetCtl_stub
+			ScePower_stub
+			SceShaccCg_stub
+			SceSsl_stub
+			SceSysmodule_stub
+			SceTouch_stub
+			taihen_stub
+			
+			-Wl,--no-whole-archive
+		)
+
+		string(REGEX MATCH "^([0-9]+)\\.([0-9]+)" _ ${NCINE_VERSION})
+		string(LENGTH ${CMAKE_MATCH_1} VITA_VERSION_MAJOR_LEN)
+		if(VITA_VERSION_MAJOR_LEN EQUAL 1)
+			set(VITA_VERSION "0${CMAKE_MATCH_1}")
+		else()
+			set(VITA_VERSION "${CMAKE_MATCH_1}")
+		endif()
+		string(LENGTH ${CMAKE_MATCH_2} VITA_VERSION_MINOR_LEN)
+		if(VITA_VERSION_MINOR_LEN EQUAL 1)
+			set(VITA_VERSION "${VITA_VERSION}.0${CMAKE_MATCH_2}")
+		else()
+			set(VITA_VERSION "${VITA_VERSION}.${CMAKE_MATCH_2}")
+		endif()
 		set(VITA_TITLEID ${NCINE_APP})
-		set(VITA_VERSION "03.04") # TODO: "##.##" format is required
 		vita_create_self(${NCINE_APP}.self ${NCINE_APP})
 		vita_create_vpk(${NCINE_APP}.vpk ${VITA_TITLEID} ${NCINE_APP}.self
-			VERSION ${VITA_VERSION} NAME ${NCINE_APP_NAME})
+			VERSION ${VITA_VERSION} NAME ${NCINE_APP_NAME}
+			FILE "${NCINE_SOURCE_DIR}/Icons/128px.png" "sce_sys/icon0.png")
 	elseif(WIN32 AND NCINE_COPY_DEPENDENCIES)
 		set(WIN32_DEPENDENCIES "")
 		
