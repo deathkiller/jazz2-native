@@ -1,7 +1,9 @@
 #include <CommonBase.h>
 
 #if defined(NCINE_INCLUDE_OPENGL)
-#	if defined(WITH_OPENGLES)
+#	if defined(DEATH_TARGET_VITA)
+#		include <vitaGL.h>
+#	elif defined(WITH_OPENGLES)
 #		define GL_GLEXT_PROTOTYPES
 #		include <GLES3/gl3.h>
 #		include <GLES2/gl2ext.h>

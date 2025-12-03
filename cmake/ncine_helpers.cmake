@@ -316,6 +316,8 @@ function(ncine_apply_compiler_options target)
 
 	if(NINTENDO_SWITCH)
 		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_SWITCH")
+	elseif(VITA)
+		target_compile_definitions(${target} PUBLIC "DEATH_TARGET_VITA")
 	elseif(WIN32)
 		# Force Unicode mode on Windows
 		target_compile_definitions(${target} PRIVATE "_UNICODE" "UNICODE")

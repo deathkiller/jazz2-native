@@ -34,7 +34,7 @@ namespace nCine
 			case GL_RGB:
 				return 3;
 			case GL_RGBA:
-#if !defined(WITH_OPENGLES)
+#if !defined(WITH_OPENGLES) || defined(DEATH_TARGET_VITA)
 			case GL_BGRA:
 #else
 			case GL_BGRA_EXT:
@@ -47,7 +47,7 @@ namespace nCine
 	void TextureFormat::bgrFormat()
 	{
 		if (format_ == GL_RGBA) {
-#if !defined(WITH_OPENGLES)
+#if !defined(WITH_OPENGLES) || defined(DEATH_TARGET_VITA)
 			format_ = GL_BGRA;
 #else
 			format_ = GL_BGRA_EXT;
@@ -75,6 +75,7 @@ namespace nCine
 			case GL_RGB8:
 				bpp = 24;
 				break;
+#if !defined(DEATH_TARGET_VITA)
 			case GL_RG8:
 			case GL_RGB565:
 			case GL_RGB5_A1:
@@ -84,6 +85,7 @@ namespace nCine
 			case GL_R8:
 				bpp = 8;
 				break;
+#endif
 			case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
 			case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
 				// max(1, width / 4) x max(1, height / 4) x 8(DXT1)
@@ -102,16 +104,20 @@ namespace nCine
 				break;
 #if defined(WITH_OPENGLES)
 			case GL_ETC1_RGB8_OES:
+#	if !defined(DEATH_TARGET_VITA)
 			case GL_COMPRESSED_RGB8_ETC2:
 			case GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2:
 			case GL_COMPRESSED_R11_EAC:
+#	endif
 				blockWidth = 4;
 				blockHeight = 4;
 				bpp = 4;
 				minDataSize = 8;
 				break;
 			case GL_COMPRESSED_RGBA8_ETC2_EAC:
+#	if !defined(DEATH_TARGET_VITA)
 			case GL_COMPRESSED_RG11_EAC:
+#	endif
 				blockWidth = 4;
 				blockHeight = 4;
 				bpp = 8;
@@ -146,7 +152,7 @@ namespace nCine
 				bpp = 4;
 				minDataSize = 2 * 2 * ((blockWidth * blockHeight * bpp) / 8);
 				break;
-#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
+#	if (!defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_VITA) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
 			case GL_COMPRESSED_RGBA_ASTC_4x4_KHR:
 				blockWidth = 4;
 				blockHeight = 4;
@@ -299,11 +305,15 @@ namespace nCine
 			case 3:
 				format_ = GL_RGB;
 				break;
+#if !defined(DEATH_TARGET_VITA)
 			case GL_RG8:
+#endif
 			case 2:
 				format_ = GL_RG;
 				break;
+#if !defined(DEATH_TARGET_VITA)
 			case GL_R8:
+#endif
 			case 1:
 				format_ = GL_RED;
 				break;
@@ -328,6 +338,7 @@ namespace nCine
 		bool found = true;
 
 		switch (internalFormat_) {
+#if !defined(DEATH_TARGET_VITA)
 			case GL_RGB5_A1:
 				format_ = GL_RGBA;
 				type_ = GL_UNSIGNED_SHORT_5_5_5_1;
@@ -340,6 +351,7 @@ namespace nCine
 				format_ = GL_RGB;
 				type_ = GL_UNSIGNED_SHORT_5_6_5;
 				break;
+#endif
 			default:
 				found = false;
 				break;
@@ -354,13 +366,17 @@ namespace nCine
 
 		switch (internalFormat_) {
 			case GL_RGBA16F:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_RGBA32F:
+#endif
 				format_ = GL_RGBA;
 				break;
+#if !defined(DEATH_TARGET_VITA)
 			case GL_RGB16F:
 			case GL_RGB32F:
 				format_ = GL_RGB;
 				break;
+#endif
 			case GL_DEPTH_COMPONENT32F:
 				format_ = GL_DEPTH_COMPONENT;
 				break;
@@ -413,8 +429,10 @@ namespace nCine
 			case GL_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG:
 			case GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG:
 			case GL_COMPRESSED_RGBA8_ETC2_EAC:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2:
-#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
+#endif
+#	if (!defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_VITA) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
 			case GL_COMPRESSED_RGBA_ASTC_4x4_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_5x4_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_5x5_KHR:
@@ -433,18 +451,22 @@ namespace nCine
 				format_ = GL_RGBA;
 				break;
 			case GL_ETC1_RGB8_OES:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_COMPRESSED_RGB8_ETC2:
+#endif
 			case GL_ATC_RGB_AMD:
 			case GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG:
 			case GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG:
 				format_ = GL_RGB;
 				break;
+#if !defined(DEATH_TARGET_VITA)
 			case GL_COMPRESSED_RG11_EAC:
 				format_ = GL_RG;
 				break;
 			case GL_COMPRESSED_R11_EAC:
 				format_ = GL_RED;
 				break;
+#endif
 			default:
 				found = false;
 				break;
@@ -496,7 +518,7 @@ namespace nCine
 				FATAL_ASSERT_MSG(hasPvr, "GL_IMG_texture_compression_pvrtc not available");
 				break;
 			}
-#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
+#	if (!defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_VITA) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
 			case GL_COMPRESSED_RGBA_ASTC_4x4_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_5x4_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_5x5_KHR:

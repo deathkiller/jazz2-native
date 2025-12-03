@@ -59,12 +59,14 @@ namespace nCine
 				case GL_UNIFORM_BUFFER:
 					value = 2;
 					break;
+#if !defined(WITH_OPENGL2)
 				case GL_PIXEL_PACK_BUFFER:
 					value = 3;
 					break;
 				case GL_PIXEL_UNPACK_BUFFER:
 					value = 4;
 					break;
+#endif
 #if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
 				case GL_TEXTURE_BUFFER:
 					value = 5;
@@ -97,9 +99,11 @@ namespace nCine
 				case GL_TEXTURE_2D:
 					value = 1;
 					break;
+#if !defined(DEATH_TARGET_VITA)
 				case GL_TEXTURE_3D:
 					value = 2;
 					break;
+#endif
 #if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
 				case GL_TEXTURE_BUFFER:
 					value = 3;

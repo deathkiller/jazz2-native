@@ -8,8 +8,11 @@
 #include <optional>
 
 #if !defined(DEATH_TARGET_WINDOWS) && !defined(DOXYGEN_GENERATING_OUTPUT)
-#	include <climits> // for `PATH_MAX`
-#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH)
+#	include <limits.h> // for `PATH_MAX`
+#	if defined(DEATH_TARGET_VITA)
+#		include <dirent.h>
+#		include <sys/syslimits.h>
+#	elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH)
 #		include <dirent.h>
 #	elif defined(DEATH_TARGET_ANDROID)
 using DIR = struct DIR;

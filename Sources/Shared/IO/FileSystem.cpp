@@ -280,7 +280,7 @@ namespace Death { namespace IO {
 
 		static bool DeleteDirectoryInternal(StringView path)
 		{
-#	if defined(DEATH_TARGET_SWITCH)
+#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 			// nftw() is missing in libnx
 			auto nullTerminatedPath = String::nullTerminatedView(path);
 			DIR* d = ::opendir(nullTerminatedPath.data());
@@ -591,17 +591,26 @@ namespace Death { namespace IO {
 					goto Retry;
 				}
 
+#if defined(DEATH_TARGET_VITA)
+				if ((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && SCE_S_ISDIR(entry->d_stat.st_attr))
+					goto Retry;
+				if ((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && SCE_S_ISREG(entry->d_stat.st_attr))
+					goto Retry;
+				if ((_options & EnumerationOptions::SkipSpecial) == EnumerationOptions::SkipSpecial && !SCE_S_ISDIR(entry->d_stat.st_attr) && !SCE_S_ISREG(entry->d_stat.st_attr) && !SCE_S_ISLNK(entry->d_stat.st_attr))
+					goto Retry;
+#else
 				if ((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && entry->d_type == DT_DIR)
 					goto Retry;
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+#		if !defined(DEATH_TARGET_EMSCRIPTEN)
 				if ((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && entry->d_type == DT_REG)
 					goto Retry;
 				if ((_options & EnumerationOptions::SkipSpecial) == EnumerationOptions::SkipSpecial && entry->d_type != DT_DIR && entry->d_type != DT_REG && entry->d_type != DT_LNK)
 					goto Retry;
-#	else
+#		else
 				// Emscripten doesn't set DT_REG for files, so we treat everything that's not a DT_DIR as a file. SkipSpecial has no effect here.
 				if ((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && entry->d_type != DT_DIR)
 					goto Retry;
+#		endif
 #	endif
 				std::size_t charsLeft = sizeof(_path) - (_fileNamePart - _path) - 1;
 #	if defined(__FreeBSD__)
@@ -784,7 +793,11 @@ namespace Death { namespace IO {
 
 			struct dirent* entry = ::readdir(d);
 			while (entry != nullptr) {
+#if defined(DEATH_TARGET_VITA)
+				if (::strcmp(partialResult.begin(), entry->d_name) == 0) {
+#else
 				if (::strcasecmp(partialResult.begin(), entry->d_name) == 0) {
+#endif
 #	if defined(__FreeBSD__)
 					std::size_t fileNameLength = entry->d_namlen;
 #	else
@@ -1039,13 +1052,13 @@ namespace Death { namespace IO {
 		}
 
 		return Utf8::FromUtf16(buffer, length);
-#elif defined(DEATH_TARGET_SWITCH)
+#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 		// realpath() is missing in libnx
 		char left[MaxPathLength];
 		char nextToken[MaxPathLength];
 		char result[MaxPathLength];
 		std::size_t resultLength = 0;
-#	if !defined(DEATH_TARGET_SWITCH)
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
 		std::int32_t symlinks = 0;
 #	endif
 
@@ -1119,7 +1132,7 @@ namespace Death { namespace IO {
 				}
 				return {};
 			}
-#	if !defined(DEATH_TARGET_SWITCH)
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
 			// readlink() is missing in libnx
 			if (S_ISLNK(sb.st_mode)) {
 				if (++symlinks > 8) {
@@ -1254,7 +1267,7 @@ namespace Death { namespace IO {
 		}
 
 		return CombinePath({ home, "Library/Application Support"_s, applicationName });
-#elif defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_EMSCRIPTEN)
+#elif defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_VITA)
 		StringView config = ::getenv("XDG_CONFIG_HOME");
 		if (IsAbsolutePath(config)) {
 			return CombinePath(config, applicationName);
@@ -1355,7 +1368,7 @@ namespace Death { namespace IO {
 		if (!home.empty()) {
 			return home;
 		}
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_VITA)
 		// `getpwuid()` is not yet implemented on Emscripten
 		const struct passwd* pw = ::getpwuid(getuid());
 		if (pw != nullptr) {
@@ -2176,7 +2189,11 @@ namespace Death { namespace IO {
 		}
 
 		std::int32_t sourceFd, destFd;
+#if defined(DEATH_TARGET_VITA)
+		if ((sourceFd = ::open(nullTerminatedOldPath.data(), O_RDONLY)) == -1) {
+#else
 		if ((sourceFd = ::open(nullTerminatedOldPath.data(), O_RDONLY | O_CLOEXEC)) == -1) {
+#endif
 			return false;
 		}
 
@@ -2191,12 +2208,16 @@ namespace Death { namespace IO {
 		// Enable writing for the newly created files, needed for some file systems
 		destMode |= S_IWUSR;
 #endif
+#if defined(DEATH_TARGET_VITA)
+		if ((destFd = ::open(nullTerminatedNewPath.data(), O_WRONLY | O_CREAT | O_TRUNC, destMode)) == -1) {
+#else
 		if ((destFd = ::open(nullTerminatedNewPath.data(), O_WRONLY | O_CLOEXEC | O_CREAT | O_TRUNC, destMode)) == -1) {
+#endif
 			::close(sourceFd);
 			return false;
 		}
 
-#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(__FreeBSD__)
+#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(__FreeBSD__)
 		while (true) {
 			if (::fallocate(destFd, FALLOC_FL_KEEP_SIZE, 0, sb.st_size) == 0) {
 				break;

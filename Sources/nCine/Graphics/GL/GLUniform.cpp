@@ -36,11 +36,13 @@ namespace nCine
 			case GL_INT_VEC3:
 			case GL_INT_VEC4:
 				return GL_INT;
+#if !defined(DEATH_TARGET_VITA)
 			case GL_BOOL:
 			case GL_BOOL_VEC2:
 			case GL_BOOL_VEC3:
 			case GL_BOOL_VEC4:
 				return GL_BOOL;
+#endif
 			case GL_FLOAT_MAT2:
 			case GL_FLOAT_MAT3:
 			case GL_FLOAT_MAT4:
@@ -49,7 +51,9 @@ namespace nCine
 			case GL_SAMPLER_1D:
 #endif
 			case GL_SAMPLER_2D:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_SAMPLER_3D:
+#endif
 			case GL_SAMPLER_CUBE:
 #if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
 			case GL_SAMPLER_BUFFER:
@@ -66,19 +70,27 @@ namespace nCine
 		switch (type_) {
 			case GL_FLOAT:
 			case GL_INT:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_BOOL:
+#endif
 				return 1;
 			case GL_FLOAT_VEC2:
 			case GL_INT_VEC2:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_BOOL_VEC2:
+#endif
 				return 2;
 			case GL_FLOAT_VEC3:
 			case GL_INT_VEC3:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_BOOL_VEC3:
+#endif
 				return 3;
 			case GL_FLOAT_VEC4:
 			case GL_INT_VEC4:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_BOOL_VEC4:
+#endif
 				return 4;
 			case GL_FLOAT_MAT2:
 				return 4;
@@ -90,7 +102,9 @@ namespace nCine
 			case GL_SAMPLER_1D:
 #endif
 			case GL_SAMPLER_2D:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_SAMPLER_3D:
+#endif
 			case GL_SAMPLER_CUBE:
 #if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
 			case GL_SAMPLER_BUFFER:

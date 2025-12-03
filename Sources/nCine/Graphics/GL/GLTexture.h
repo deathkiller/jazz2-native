@@ -45,7 +45,9 @@ namespace nCine
 		void CompressedTexSubImage2D(GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void* data);
 		void TexStorage2D(GLsizei levels, GLint internalFormat, GLsizei width, GLsizei height);
 
+#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		void GetTexImage(GLint level, GLenum format, GLenum type, void* pixels);
+#endif
 
 		void TexParameterf(GLenum pname, GLfloat param);
 		void TexParameteri(GLenum pname, GLint param);

@@ -381,7 +381,9 @@ namespace nCine
 
 		if (type_ == Type::WithTexture) {
 			fbo_->Bind(GL_DRAW_FRAMEBUFFER);
+#if !defined(WITH_OPENGL2)
 			fbo_->DrawBuffers(numColorAttachments_);
+#endif
 		}
 
 		if (type_ == Type::Screen || type_ == Type::WithTexture) {
@@ -446,7 +448,7 @@ namespace nCine
 			}
 		}
 
-#if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
+#if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && !defined(WITH_OPENGL2)
 		if (type_ == Type::WithTexture && depthStencilFormat_ != DepthStencilFormat::None &&
 			!theApplication().GetAppConfiguration().withGlDebugContext) {
 			const GLenum invalidAttachment = DepthStencilFormatToGLAttachment(depthStencilFormat_);

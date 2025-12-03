@@ -17,7 +17,7 @@
 #	include <cerrno>
 #	include <sys/stat.h>	// for open()
 #	include <fcntl.h>		// for open()
-#	include <unistd.h>		// for close()
+#	include <sys/unistd.h>		// for close()
 #endif
 
 using namespace Death::Containers;
@@ -354,7 +354,8 @@ namespace Death { namespace IO {
 		if (_filePos > size) {
 			_filePos = size;
 		}
-#else
+#elif !defined(DEATH_TARGET_VITA)
+		// TODO: ftruncate is not defined on VITA
 		if (::ftruncate(_fileDescriptor, size) < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Failed to resize file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
@@ -490,9 +491,11 @@ namespace Death { namespace IO {
 #	endif
 				return;
 		}
+#	if !defined(DEATH_TARGET_VITA)
 		if ((mode & FileAccess::InheritHandle) != FileAccess::InheritHandle) {
 			openFlags |= O_CLOEXEC;
 		}
+#	endif
 
 		int defaultPermissions = (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH); // 0666
 		_fileDescriptor = ::open(_path.data(), openFlags, defaultPermissions);

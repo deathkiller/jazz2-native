@@ -42,7 +42,9 @@ namespace nCine
 		static bool Unbind(GLenum target);
 
 		inline std::uint32_t GetDrawbufferCount() const { return numDrawBuffers_; }
+#if !defined(WITH_OPENGL2)
 		bool DrawBuffers(std::uint32_t numDrawBuffers);
+#endif
 
 		inline std::uint32_t GetRenderbufferCount() const { return std::uint32_t(attachedRenderbuffers_.size()); }
 		bool AttachRenderbuffer(const char *label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment);
@@ -51,7 +53,7 @@ namespace nCine
 
 		void AttachTexture(GLTexture& texture, GLenum attachment);
 		void DetachTexture(GLenum attachment);
-#if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
+#if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && !defined(WITH_OPENGL2)
 		void Invalidate(GLsizei numAttachments, const GLenum* attachments);
 #endif
 

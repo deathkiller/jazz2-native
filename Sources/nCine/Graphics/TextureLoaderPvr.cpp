@@ -85,12 +85,15 @@ namespace nCine
 				case FMT_PVRTCII_4BPP:
 					LOGF("No support for PVRTC-II compression");
 					break;
+#	if !defined(DEATH_TARGET_VITA)
 				case FMT_ETC2_RGB:
 					internalFormat = GL_COMPRESSED_RGB8_ETC2;
 					break;
+#	endif
 				case FMT_ETC2_RGBA:
 					internalFormat = GL_COMPRESSED_RGBA8_ETC2_EAC;
 					break;
+#	if !defined(DEATH_TARGET_VITA)
 				case FMT_ETC2_RGB_A1:
 					internalFormat = GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2;
 					break;
@@ -100,7 +103,8 @@ namespace nCine
 				case FMT_EAC_RG11:
 					internalFormat = GL_COMPRESSED_RG11_EAC;
 					break;
-#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
+#	endif
+#	if (!defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_VITA) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
 				case FMT_ASTC_4x4:
 					internalFormat = GL_COMPRESSED_RGBA_ASTC_4x4_KHR;
 					break;
@@ -163,7 +167,7 @@ namespace nCine
 
 			switch (pixelFormat) {
 				case FMT_BGRA_8888:
-#if !defined(WITH_OPENGLES)
+#if !defined(WITH_OPENGLES) || defined(DEATH_TARGET_VITA)
 					internalFormat = GL_BGRA;
 #else
 					internalFormat = GL_BGRA_EXT;
@@ -183,6 +187,7 @@ namespace nCine
 					internalFormat = GL_RGB8;
 #endif
 					break;
+#if !defined(DEATH_TARGET_VITA)
 				case FMT_RGB_565:
 					internalFormat = GL_RGB565;
 					type = GL_UNSIGNED_SHORT_5_6_5;
@@ -195,6 +200,7 @@ namespace nCine
 					internalFormat = GL_RGBA4;
 					type = GL_UNSIGNED_SHORT_4_4_4_4;
 					break;
+#endif
 				case FMT_LA_88:
 #if defined(WITH_OPENGL2)
 					internalFormat = GL_LUMINANCE_ALPHA;

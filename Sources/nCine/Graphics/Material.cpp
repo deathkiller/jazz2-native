@@ -179,10 +179,12 @@ namespace nCine
 				case GL_ONE_MINUS_SRC_ALPHA: return 7;
 				case GL_DST_ALPHA: return 8;
 				case GL_ONE_MINUS_DST_ALPHA: return 9;
+#if !defined(DEATH_TARGET_VITA)
 				case GL_CONSTANT_COLOR: return 10;
 				case GL_ONE_MINUS_CONSTANT_COLOR: return 11;
 				case GL_CONSTANT_ALPHA: return 12;
 				case GL_ONE_MINUS_CONSTANT_ALPHA: return 13;
+#endif
 				case GL_SRC_ALPHA_SATURATE: return 14;
 			}
 			return 0;

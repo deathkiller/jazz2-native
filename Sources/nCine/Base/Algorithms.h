@@ -430,6 +430,19 @@ namespace nCine
 		return result;
 	}
 
+#if defined(DEATH_TARGET_VITA)
+	// strnlen() is not available on Vita
+	inline std::size_t strnlen(const char* c, std::size_t n)
+	{
+		for (std::size_t i = 0; i < n; i++) {
+			if (c[i] == '\0') {
+				return i;
+			}
+		}
+		return n;
+	}
+#endif
+
 #if defined(WITH_ZLIB) || defined(DOXYGEN_GENERATING_OUTPUT)
 	std::uint32_t crc32(Containers::ArrayView<std::uint8_t> data);
 	std::uint32_t crc32(IO::Stream& stream);

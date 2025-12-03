@@ -159,7 +159,9 @@ namespace nCine
 
 	void IGfxDevice::setupGL()
 	{
+#if !defined(DEATH_TARGET_VITA)
 		glDisable(GL_DITHER);
+#endif
 		GLBlending::SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GLDepthTest::Enable();
 	}

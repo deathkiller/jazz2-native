@@ -74,18 +74,22 @@ namespace nCine
 
 	void GLTexture::CompressedTexSubImage2D(GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void* data)
 	{
+#if !defined(WITH_OPENGL2)
 		TracyGpuZone("glCompressedTexSubImage2D");
 		Bind();
 		glCompressedTexSubImage2D(target_, level, xoffset, yoffset, width, height, format, imageSize, data);
 		GL_LOG_ERRORS();
+#endif
 	}
 
 	void GLTexture::TexStorage2D(GLsizei levels, GLint internalFormat, GLsizei width, GLsizei height)
 	{
+#if !defined(WITH_OPENGL2)
 		TracyGpuZone("glTexStorage2D");
 		Bind();
 		glTexStorage2D(target_, levels, internalFormat, width, height);
 		GL_LOG_ERRORS();
+		#endif
 	}
 
 #if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)

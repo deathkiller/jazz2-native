@@ -251,7 +251,9 @@ namespace nCine
 			case GL_SAMPLER_1D:
 #endif
 			case GL_SAMPLER_2D:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_SAMPLER_3D:
+#endif
 			case GL_SAMPLER_CUBE:
 #if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
 			case GL_SAMPLER_BUFFER:
@@ -280,12 +282,16 @@ namespace nCine
 	bool GLUniformCache::CheckInt() const
 	{
 		if (uniform_->GetBasicType() != GL_INT &&
+#if !defined(DEATH_TARGET_VITA)
 			uniform_->GetBasicType() != GL_BOOL &&
+#endif
 #if !defined(WITH_OPENGLES) // not available in OpenGL ES
 			uniform_->GetBasicType() != GL_SAMPLER_1D &&
 #endif
 			uniform_->GetBasicType() != GL_SAMPLER_2D &&
+#if !defined(DEATH_TARGET_VITA)
 			uniform_->GetBasicType() != GL_SAMPLER_3D &&
+#endif
 			uniform_->GetBasicType() != GL_SAMPLER_CUBE
 #if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
 			&& uniform_->GetBasicType() != GL_SAMPLER_BUFFER

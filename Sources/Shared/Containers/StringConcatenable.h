@@ -3,6 +3,10 @@
 #include "GrowableArray.h"
 #include "String.h"
 
+#if defined(DEATH_TARGET_VITA)
+#	include <string.h>
+#endif
+
 namespace Death { namespace Containers {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
@@ -146,7 +150,16 @@ namespace Death { namespace Containers {
 			typedef String ConvertTo;
 
 			static std::size_t size(const char a[N]) {
+#if defined(DEATH_TARGET_VITA)
+				for (std::size_t i = 0; i < N; i++) {
+					if (a[i] == '\0') {
+						return i;
+					}
+				}
+				return N;
+#else
 				return strnlen(a, N);
+#endif
 			}
 			static inline void appendTo(const char a[N], char*& out) {
 				while (*a != '\0') {

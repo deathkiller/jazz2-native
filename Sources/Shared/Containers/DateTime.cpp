@@ -20,7 +20,7 @@
 #	include <atomic>
 #endif
 
-#if defined(DEATH_TARGET_SWITCH) || (defined(__MINGW32_TOOLCHAIN__) && defined(__STRICT_ANSI__))
+#if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || (defined(__MINGW32_TOOLCHAIN__) && defined(__STRICT_ANSI__))
 // These two are excluded from headers for some reason, define them here
 extern "C" void tzset(void);
 extern long _timezone;
@@ -161,7 +161,7 @@ namespace Death { namespace Containers {
 			static bool _tzSet = (tzset(), true);
 			(void)_tzSet;
 
-#	if defined(DEATH_TARGET_MINGW) || defined(DEATH_TARGET_SWITCH)
+#	if defined(DEATH_TARGET_MINGW) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 			return _timezone;
 #	else // Unknown platform - assume it has timezone variable
 			return timezone;

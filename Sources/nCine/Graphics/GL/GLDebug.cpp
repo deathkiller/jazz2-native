@@ -9,7 +9,7 @@
 #if defined(DEATH_DEBUG) &&																				\
 	((defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21) || !defined(DEATH_TARGET_ANDROID)) &&		\
 	!defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) &&								\
-	!defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
+	!defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WINDOWS_RT)
 #	define GL_DEBUG_SUPPORTED
 #endif
 

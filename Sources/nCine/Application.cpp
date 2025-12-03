@@ -315,7 +315,7 @@ static BOOL WINAPI OnHandleConsoleEvent(DWORD signal)
 
 	return FALSE;
 }
-#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
+#elif (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)) && !defined(DEATH_TARGET_VITA)
 #	include <signal.h>
 #	include <termios.h>
 #	include <sys/select.h>
@@ -1005,7 +1005,7 @@ namespace nCine
 				}
 				nanosleep(&dueTime, &dueTime);
 			}
-#elif defined(DEATH_TARGET_UNIX)
+#elif defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_VITA)
 			// It can wait longer than necessary, so subtract 0.5 ms to compensate
 			const std::int64_t remainingTimeNs = (1'000'000'000LL / (std::int64_t)appCfg_.frameLimit) -
 				((std::int64_t)frameTimer_->GetFrameDurationAsTicks() * 1'000'000'000LL / (std::int64_t)clock().frequency()) - 500'000LL;
@@ -1452,6 +1452,9 @@ namespace nCine
 		} else {
 			__consoleType = ConsoleType::Redirect;
 		}
+#	elif defined(DEATH_TARGET_VITA)
+		// stdout and stderr are always redirected on Vita
+		__consoleType = ConsoleType::Redirect;
 #	elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #		if defined(DEATH_TARGET_UNIX)
 		::setvbuf(stdout, nullptr, _IONBF, 0);
@@ -1579,6 +1582,11 @@ namespace nCine
 		auto androidId = nCine::Backends::AndroidJniWrap_Secure::getAndroidId();
 		const char* hostName = androidId.data();
 		std::int32_t hostNameLength = (std::int32_t)androidId.size();
+#		elif defined(DEATH_TARGET_VITA)
+		flags |= 0x20;	// RemoteDevice
+		std::uint32_t processId = (std::uint32_t)::getpid();
+		// TODO: Hostname is not implemented on Vita
+		char hostName[128] {}; std::int32_t hostNameLength = 0;
 #		else
 #			if defined(DEATH_TARGET_SWITCH)
 		flags |= 0x20;	// RemoteDevice

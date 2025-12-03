@@ -105,7 +105,9 @@ namespace nCine
 		bool AttachShaderFromStringsAndFile(GLenum type, ArrayView<const StringView> strings, StringView filename);
 		bool Link(Introspection introspection);
 		void Use();
+#if !defined(WITH_OPENGL2)
 		bool Validate();
+#endif
 
 		bool FinalizeAfterLinking(Introspection introspection);
 

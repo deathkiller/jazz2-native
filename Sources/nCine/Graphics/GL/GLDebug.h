@@ -33,7 +33,7 @@ namespace nCine
 	public:
 		enum class LabelTypes
 		{
-#if defined(DEATH_TARGET_APPLE)
+#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_VITA)
 			Buffer,
 			Shader,
 			Program,

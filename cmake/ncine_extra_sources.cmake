@@ -12,6 +12,7 @@ endif()
 if(NCINE_WITH_OPENGL2)
 	message(STATUS "Using OpenGL 2.x compatibility mode")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OPENGL2")
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OPENGLES")
 endif()
 
 if(ANGLE_FOUND OR OPENGLES2_FOUND)
@@ -32,7 +33,7 @@ elseif(OPENGL_FOUND)
 	else()
 		target_link_libraries(${NCINE_APP} PRIVATE OpenGL::GL)
 	endif()
-elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID)
+elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT VITA AND NOT NCINE_BUILD_VITA)
 	message(STATUS "No graphics library found! Make sure OpenGL or OpenGL|ES library is available on your system.")
 endif()
 
@@ -623,16 +624,16 @@ else()
 			ROMFS "${NCINE_CONTENT_DIR}"
 		)
 	elseif(VITA)
-		target_link_libraries(${NCINE_APP}
-			SceDisplay_stub
-			SceCtrl_stub
-			SceNet_stub
-			SceSysmodule_stub)
+		target_link_libraries(${NCINE_APP} PUBLIC
+			SceAudio_stub SceDisplay_stub SceCtrl_stub SceSysmodule_stub
+			SceNet_stub SceNetCtl_stub SceHttp_stub SceSsl_stub
+			SceTouch_stub SceGxm_stub vitaGL)
 			
 		set(VITA_TITLEID ${NCINE_APP})
+		set(VITA_VERSION "03.04") # TODO: "##.##" format is required
 		vita_create_self(${NCINE_APP}.self ${NCINE_APP})
 		vita_create_vpk(${NCINE_APP}.vpk ${VITA_TITLEID} ${NCINE_APP}.self
-			VERSION ${NCINE_VERSION} NAME ${NCINE_APP_NAME})
+			VERSION ${VITA_VERSION} NAME ${NCINE_APP_NAME})
 	elseif(WIN32 AND NCINE_COPY_DEPENDENCIES)
 		set(WIN32_DEPENDENCIES "")
 		

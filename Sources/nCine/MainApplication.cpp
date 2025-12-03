@@ -20,6 +20,9 @@
 #	include <emscripten/emscripten.h>
 #elif defined(DEATH_TARGET_SWITCH)
 #	include <switch.h>
+#elif defined(DEATH_TARGET_VITA)
+#	include <vitasdk.h>
+#	include <vitaGL.h>
 #elif defined(DEATH_TARGET_UNIX)
 #	include <pwd.h>
 #	include <unistd.h>
@@ -101,6 +104,12 @@ namespace nCine
 		socketInitializeDefault();
 		nxlinkStdio();
 		romfsInit();
+#elif defined(DEATH_TARGET_VITA)
+		// Initializing graphics device
+		vglInitExtended(0, 960, 544, 0x1800000, SCE_GXM_MULTISAMPLE_NONE);
+	
+		// Enabling sampling for the analogs
+		sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG_WIDE);
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
 		wchar_t workingDir[fs::MaxPathLength];

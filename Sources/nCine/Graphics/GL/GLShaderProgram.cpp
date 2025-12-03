@@ -30,9 +30,11 @@ namespace nCine
 		uniformBlocks_.reserve(UniformBlocksInitialSize);
 		attributes_.reserve(AttributesInitialSize);
 		
+#if !defined(WITH_OPENGL2)
 		if (RenderResources::GetBinaryShaderCache().IsAvailable()) {
 			glProgramParameteri(glHandle_, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
 		}
+#endif
 	}
 
 	GLShaderProgram::GLShaderProgram(StringView vertexFile, StringView fragmentFile, Introspection introspection, QueryPhase queryPhase)
@@ -143,6 +145,7 @@ namespace nCine
 		}
 	}
 
+#if !defined(WITH_OPENGL2)
 	bool GLShaderProgram::Validate()
 	{
 		glValidateProgram(glHandle_);
@@ -150,6 +153,7 @@ namespace nCine
 		glGetProgramiv(glHandle_, GL_VALIDATE_STATUS, &status);
 		return (status == GL_TRUE);
 	}
+#endif
 
 	bool GLShaderProgram::FinalizeAfterLinking(Introspection introspection)
 	{
@@ -162,10 +166,12 @@ namespace nCine
 				return false;
 			}
 
+#if !defined(WITH_OPENGL2)
 			// After linking, shader objects are not needed anymore
 			for (auto& shader : attachedShaders_) {
 				glDetachShader(glHandle_, shader->GetGLHandle());
 			}
+#endif
 
 			attachedShaders_.clear();
 
@@ -217,9 +223,11 @@ namespace nCine
 				glUseProgram(0);
 			}
 
+#if !defined(WITH_OPENGL2)
 			for (auto& shader : attachedShaders_) {
 				glDetachShader(glHandle_, shader->GetGLHandle());
 			}
+#endif
 
 			attachedShaders_.clear();
 			glDeleteProgram(glHandle_);
@@ -254,10 +262,12 @@ namespace nCine
 				return false;
 			}
 
+#if !defined(WITH_OPENGL2)
 			// After linking, shader objects are not needed anymore
 			for (auto& shader : attachedShaders_) {
 				glDetachShader(glHandle_, shader->GetGLHandle());
 			}
+#endif
 
 			attachedShaders_.clear();
 
@@ -329,18 +339,23 @@ namespace nCine
 				const std::uint32_t uniformCountStep = (remainingIndices > NumIndices) ? NumIndices : remainingIndices;
 				const std::uint32_t startIndex = static_cast<std::uint32_t>(uniformCount) - remainingIndices;
 
-				for (std::uint32_t i = 0; i < uniformCountStep; i++)
+				for (std::uint32_t i = 0; i < uniformCountStep; i++) {
 					uniformIndices[i] = startIndex + i;
+					blockIndices[i] = -1;
+				}
 
+#if !defined(WITH_OPENGL2)
 				glGetActiveUniformsiv(glHandle_, uniformCountStep, uniformIndices, GL_UNIFORM_BLOCK_INDEX, blockIndices);
+#endif
 
 				for (std::uint32_t i = 0; i < uniformCountStep; i++) {
 					if (blockIndices[i] == -1) {
 						indices[uniformsOutsideBlocks] = startIndex + i;
 						uniformsOutsideBlocks++;
 					}
-					if (uniformsOutsideBlocks > MaxNumUniforms - 1)
+					if (uniformsOutsideBlocks > MaxNumUniforms - 1) {
 						break;
+					}
 				}
 
 				remainingIndices -= uniformCountStep;

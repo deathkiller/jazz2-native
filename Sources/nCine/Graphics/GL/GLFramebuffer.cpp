@@ -48,6 +48,7 @@ namespace nCine
 		return BindHandle(target, 0);
 	}
 
+#if !defined(WITH_OPENGL2)
 	bool GLFramebuffer::DrawBuffers(std::uint32_t numDrawBuffers)
 	{
 		static const GLenum drawBuffers[MaxDrawbuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3,
@@ -60,6 +61,7 @@ namespace nCine
 		}
 		return false;
 	}
+#endif
 
 	bool GLFramebuffer::AttachRenderbuffer(const char* label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment)
 	{
@@ -115,7 +117,7 @@ namespace nCine
 		GL_LOG_ERRORS();
 	}
 
-#if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
+#if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && !defined(WITH_OPENGL2)
 	void GLFramebuffer::Invalidate(GLsizei numAttachments, const GLenum* attachments)
 	{
 		Bind(GL_FRAMEBUFFER);

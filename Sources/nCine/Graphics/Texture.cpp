@@ -15,6 +15,7 @@ namespace nCine
 	GLenum ncFormatToInternal(Texture::Format format)
 	{
 		switch (format) {
+#if !defined(WITH_OPENGL2)
 			case Texture::Format::R8:
 //#if defined(WITH_OPENGL2)
 //				return GL_LUMINANCE;
@@ -27,6 +28,7 @@ namespace nCine
 //#else
 				return GL_RG8;
 //#endif
+#endif
 			case Texture::Format::RGB8:
 //#if defined(WITH_OPENGL2)
 //				return GL_RGB;
@@ -79,10 +81,12 @@ namespace nCine
 //			case GL_RGBA:
 //				return Texture::Format::RGBA8;
 //#else
+#if !defined(WITH_OPENGL2)
 			case GL_R8:
 				return Texture::Format::R8;
 			case GL_RG8:
 				return Texture::Format::RG8;
+#endif
 			case GL_RGB8:
 				return Texture::Format::RGB8;
 			case GL_RGBA8:
@@ -376,7 +380,9 @@ namespace nCine
 		GLenum format = texFormat.format();
 		std::uint32_t dataSize = texLoader.dataSize();
 
-#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(WITH_OPENGL2)
+		const bool withTexStorage = false;
+#elif (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 		const bool withTexStorage = true;
 #else
 		const bool withTexStorage = gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::ARB_TEXTURE_STORAGE);
@@ -422,8 +428,10 @@ namespace nCine
 			glTexture_->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 			magFiltering_ = SamplerFilter::Linear;
 			minFiltering_ = SamplerFilter::LinearMipmapLinear;
+#if !defined(WITH_OPENGL2)
 			// To prevent artifacts if the MIP map chain is not complete
 			glTexture_->TexParameteri(GL_TEXTURE_MAX_LEVEL, mipMapLevels_);
+#endif
 		} else {
 			glTexture_->TexParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexture_->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR);

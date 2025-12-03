@@ -33,6 +33,8 @@
 
 #if defined(DEATH_TARGET_SWITCH)
 #	include <switch.h>
+#elif defined(DEATH_TARGET_VITA)
+#	include <vitasdk.h>
 #endif
 
 #if defined(WITH_TRACY)
@@ -87,12 +89,15 @@ namespace nCine
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		emscripten_sleep(milliseconds);
 #elif defined(DEATH_TARGET_SWITCH)
-		const std::int64_t nanoseconds = static_cast<std::int64_t>(milliseconds) * 1000000;
+		std::int64_t nanoseconds = static_cast<std::int64_t>(milliseconds) * 1000000;
 		svcSleepThread(nanoseconds);
+#elif defined(DEATH_TARGET_VITA)
+		std::uint32_t microseconds = static_cast<std::uint32_t>(milliseconds) * 1000;
+		sceKernelDelayThread(microseconds);
 #elif defined(DEATH_TARGET_WINDOWS)
 		::SleepEx(static_cast<DWORD>(milliseconds), FALSE);
 #else
-		const unsigned int microseconds = static_cast<unsigned int>(milliseconds) * 1000;
+		std::uint32_t microseconds = static_cast<std::uint32_t>(milliseconds) * 1000;
 		::usleep(microseconds);
 #endif
 	}
@@ -392,7 +397,7 @@ namespace nCine
 
 #if defined(DEATH_TARGET_WINDOWS)
 		SetThreadName(_sharedBlock->_handle, name);
-#elif !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
+#elif !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
 		const auto nameLength = strnlen(name, MaxThreadNameLength);
 		if (nameLength <= MaxThreadNameLength - 1) {
 			pthread_setname_np(_sharedBlock->_handle, name);
@@ -411,7 +416,7 @@ namespace nCine
 		tracy::SetThreadName(name);
 #elif defined(DEATH_TARGET_WINDOWS)
 		SetThreadName(reinterpret_cast<HANDLE>(-1), name);
-#elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
+#elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
 		const auto nameLength = strnlen(name, MaxThreadNameLength);
 		if (nameLength <= MaxThreadNameLength - 1) {
 #	if !defined(DEATH_TARGET_APPLE)
