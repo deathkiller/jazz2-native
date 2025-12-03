@@ -31,20 +31,35 @@ namespace nCine
 		iboSpecs.maxSize = iboMaxSize;
 		iboSpecs.alignment = sizeof(GLushort);
 
+#if !defined(WITH_OPENGL2)
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		const std::int32_t offsetAlignment = gfxCaps.GetValue(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 		const std::int32_t uboMaxSize = gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
+#endif
 
 		BufferSpecifications& uboSpecs = specs_[std::int32_t(BufferTypes::Uniform)];
 		uboSpecs.type = BufferTypes::Uniform;
+#if !defined(WITH_OPENGL2)
 		uboSpecs.target = GL_UNIFORM_BUFFER;
 		uboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
 		uboSpecs.usageFlags = GL_STREAM_DRAW;
 		uboSpecs.maxSize = std::uint32_t(uboMaxSize);
 		uboSpecs.alignment = std::uint32_t(offsetAlignment);
-
-		// Create the first buffer for each type right away
+#else
+		// OpenGL 2.x doesn't support uniform buffers, but we still need to initialize the spec
+		uboSpecs.target = GL_ARRAY_BUFFER; // Dummy target
+		uboSpecs.mapFlags = 0;
+		uboSpecs.usageFlags = 0;
+		uboSpecs.maxSize = 0;
+		uboSpecs.alignment = 1;
+#endif	// Create the first buffer for each type right away
 		for (std::uint32_t i = 0; i < std::uint32_t(BufferTypes::Count); i++) {
+#if defined(WITH_OPENGL2)
+			// Skip uniform buffer creation for OpenGL 2.x
+			if (specs_[i].type == BufferTypes::Uniform) {
+				continue;
+			}
+#endif
 			CreateBuffer(specs_[i]);
 		}
 	}

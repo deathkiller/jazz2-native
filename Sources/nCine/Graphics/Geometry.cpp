@@ -30,6 +30,28 @@ namespace nCine
 		primitiveType_ = primitiveType;
 		firstVertex_ = firstVertex;
 		numVertices_ = numVertices;
+
+#if defined(WITH_OPENGL2)
+		// OpenGL 2.x: Create vertex position data for simple sprite quads (4 vertices, TRIANGLE_STRIP)
+		// In OpenGL 3.3+, positions are calculated from gl_VertexID in the vertex shader
+		if (primitiveType == GL_TRIANGLE_STRIP && numVertices == 4 && vbo_ == nullptr && hostVertexPointer_ == nullptr) {
+			// Create a simple quad: positions for a unit square (-0.5 to 0.5)
+			// These will be transformed by the model matrix
+			static const GLfloat quadPositions[] = {
+				0.0f, 0.0f,  // bottom-left
+				1.0f, 0.0f,  // bottom-right
+				0.0f,  1.0f,  // top-left
+				1.0f,  1.0f   // top-right
+			};
+
+			numElementsPerVertex_ = 2; // 2 floats per vertex (x, y)
+			const std::uint32_t numFloats = numVertices * numElementsPerVertex_;
+			GLfloat* vertices = AcquireVertexPointer(numFloats, numElementsPerVertex_);
+			if (vertices != nullptr) {
+				std::memcpy(vertices, quadPositions, numFloats * sizeof(GLfloat));
+			}
+		}
+#endif
 	}
 
 	void Geometry::CreateCustomVbo(std::uint32_t numFloats, GLenum usage)
@@ -198,7 +220,7 @@ namespace nCine
 
 		if (numInstances == 0) {
 			if (numIndices_ > 0) {
-#if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(WITH_OPENGL2) || (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 				glDrawElements(primitiveType_, numIndices_, GL_UNSIGNED_SHORT, iboOffsetPtr);
 #else
 				glDrawElementsBaseVertex(primitiveType_, numIndices_, GL_UNSIGNED_SHORT, iboOffsetPtr, vboOffset);
@@ -207,15 +229,24 @@ namespace nCine
 				glDrawArrays(primitiveType_, vboOffset, numVertices_);
 			}
 		} else if (numInstances > 0) {
+#if defined(WITH_OPENGL2)
+			// OpenGL 2.x doesn't support instanced drawing - fallback to single draw call
 			if (numIndices_ > 0) {
-#if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
-				glDrawElementsInstanced(primitiveType_, numIndices_, GL_UNSIGNED_SHORT, iboOffsetPtr, numInstances);
+				glDrawElements(primitiveType_, numIndices_, GL_UNSIGNED_SHORT, iboOffsetPtr);
+			} else {
+				glDrawArrays(primitiveType_, vboOffset, numVertices_);
+			}
 #else
+			if (numIndices_ > 0) {
+#	if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
+				glDrawElementsInstanced(primitiveType_, numIndices_, GL_UNSIGNED_SHORT, iboOffsetPtr, numInstances);
+#	else
 				glDrawElementsInstancedBaseVertex(primitiveType_, numIndices_, GL_UNSIGNED_SHORT, iboOffsetPtr, numInstances, vboOffset);
-#endif
+#	endif
 			} else {
 				glDrawArraysInstanced(primitiveType_, vboOffset, numVertices_, numInstances);
 			}
+#endif
 		}
 	}
 

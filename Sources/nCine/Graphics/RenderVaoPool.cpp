@@ -39,6 +39,12 @@ namespace nCine
 					// The VAO was already bound but it is not known if the bound element array buffer changed in the meantime
 					GLBufferObject::BindHandle(GL_ELEMENT_ARRAY_BUFFER, iboHandle);
 				}
+#if defined(WITH_OPENGL2)
+				// OpenGL 2.x: No VAO support, always define vertex format
+				// Need to make a non-const copy to call Define()
+				GLVertexFormat mutableFormat = vertexFormat;
+				mutableFormat.Define();
+#endif
 				binding.lastBindTime = TimeStamp::now();
 #if defined(NCINE_PROFILING)
 				RenderStatistics::AddVaoPoolBinding();
@@ -82,7 +88,10 @@ namespace nCine
 			}
 
 			const bool bindChanged = vaoPool_[index].object->Bind();
+#if !defined(WITH_OPENGL2)
+		// OpenGL 3.3+: VAO binding should change or this is the first VAO
 			DEATH_ASSERT(bindChanged || vaoPool_.size() == 1);
+#endif
 			// Binding a VAO changes the current bound element array buffer
 			const GLuint oldIboHandle = vaoPool_[index].format.GetIbo() ? vaoPool_[index].format.GetIbo()->GetGLHandle() : 0;
 			GLBufferObject::SetBoundHandle(GL_ELEMENT_ARRAY_BUFFER, oldIboHandle);

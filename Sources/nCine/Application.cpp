@@ -780,6 +780,12 @@ namespace nCine
 			// Create a minimal set of render resources before compiling the first shader
 			RenderResources::CreateMinimal(); // they are required for rendering even without a scenegraph
 
+#if defined(WITH_OPENGL2)
+			// Disable batching for OpenGL 2.x (uniform blocks not supported)
+			LOGW("Batching is disabled due to OpenGL 2.x compatibility mode");
+			renderingSettings_.batchingEnabled = false;
+#endif
+
 			if (appCfg_.withScenegraph) {
 				gfxDevice_->setupGL();
 				RenderResources::Create();

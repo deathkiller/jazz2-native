@@ -602,7 +602,9 @@ namespace nCine
 		glBindTexture(GL_TEXTURE_2D, lastTexture);
 		glBindBuffer(GL_ARRAY_BUFFER, lastArrayBuffer);
 
+#if !defined(WITH_OPENGL2)
 		glBindVertexArray(lastVertexArray);
+#endif
 	}
 
 	void ImGuiDrawing::OnRenderPlatformWindow(ImGuiViewport* viewport, void*)
@@ -631,7 +633,9 @@ namespace nCine
 		// Recreate the VAO every time (this is to easily allow multiple GL contexts to be rendered to. VAO are not shared among GL contexts)
 		// The renderer would actually work without any VAO bound, but then our VertexAttrib calls would overwrite the default one currently bound.
 		GLuint vertexArrayObject = 0;
+#if !defined(WITH_OPENGL2)
 		GL_CALL(glGenVertexArrays(1, &vertexArrayObject));
+#endif
 		SetupRenderStateForPlatformWindow(drawData, fbWidth, fbHeight, vertexArrayObject);
 
 		// Will project scissor/clipping rectangles into framebuffer space
@@ -677,7 +681,9 @@ namespace nCine
 		}
 
 		// Destroy the temporary VAO
+#if !defined(WITH_OPENGL2)
 		GL_CALL(glDeleteVertexArrays(1, &vertexArrayObject));
+#endif
 	}
 
 	void ImGuiDrawing::SetupRenderStateForPlatformWindow(ImDrawData* drawData, std::int32_t fbWidth, std::int32_t fbHeight, unsigned int vertexArrayObject)
@@ -712,7 +718,9 @@ namespace nCine
 		glUniform1i(attribLocationTex_, 0);
 		glUniformMatrix4fv(attribLocationProjMtx_, 1, GL_FALSE, &ortho_projection[0][0]);
 
+#if !defined(WITH_OPENGL2)
 		glBindVertexArray(vertexArrayObject);
+#endif
 
 		// Bind vertex/index buffers and setup attributes for ImDrawVert
 		GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, vboHandle_));

@@ -80,6 +80,7 @@ namespace nCine
 
 	void GLBufferObject::BindBufferBase(GLuint index)
 	{
+#if !defined(WITH_OPENGL2)
 		DEATH_ASSERT(target_ == GL_UNIFORM_BUFFER);
 		DEATH_ASSERT(index < MaxIndexBufferRange);
 
@@ -93,18 +94,20 @@ namespace nCine
 			glBindBufferBase(target_, index, glHandle_);
 		}
 		GL_LOG_ERRORS();
+#endif
 	}
 
 	void GLBufferObject::BindBufferRange(GLuint index, GLintptr offset, GLsizei ptrsize)
 	{
+#if !defined(WITH_OPENGL2)
 		DEATH_ASSERT(target_ == GL_UNIFORM_BUFFER);
 		DEATH_ASSERT(index < MaxIndexBufferRange);
 
 		if (index >= MaxIndexBufferRange) {
 			glBindBufferRange(target_, index, glHandle_, offset, ptrsize);
 		} else if (boundBufferRange_[index].glHandle != glHandle_ ||
-				 boundBufferRange_[index].offset != offset ||
-				 boundBufferRange_[index].ptrsize != ptrsize) {
+				boundBufferRange_[index].offset != offset ||
+				boundBufferRange_[index].ptrsize != ptrsize) {
 			boundIndexBase_[index] = -1;
 			boundBufferRange_[index].glHandle = glHandle_;
 			boundBufferRange_[index].offset = offset;
@@ -112,7 +115,8 @@ namespace nCine
 			glBindBufferRange(target_, index, glHandle_, offset, ptrsize);
 		}
 		GL_LOG_ERRORS();
-	}
+#endif
+	}	
 
 	void* GLBufferObject::MapBufferRange(GLintptr offset, GLsizeiptr length, GLbitfield access)
 	{

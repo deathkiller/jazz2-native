@@ -58,6 +58,11 @@ namespace nCine
 		shaderUniforms_.SetProgram(shaderProgram_, nullptr, ProjectionViewMatrixExcludeString);
 		shaderUniformBlocks_.SetProgram(shaderProgram_);
 
+#if defined(WITH_OPENGL2)
+		// Connect shader uniforms to uniform blocks for OpenGL 2.x fallback
+		shaderUniformBlocks_.SetShaderUniforms(&shaderUniforms_);
+#endif
+
 		RenderResources::SetDefaultAttributesParameters(*shaderProgram_);
 	}
 
@@ -141,6 +146,17 @@ namespace nCine
 			shaderProgram_->Use();
 			shaderUniformBlocks_.Bind();
 		}
+	}
+
+	void Material::CommitUniforms()
+	{
+#if defined(WITH_OPENGL2)
+		// OpenGL 2.x: Copy fallback cache values to shader uniforms right before committing
+		// This ensures each object's uniform values are uploaded at the correct time
+		shaderUniformBlocks_.CommitFallbackCacheToShaderUniforms();
+#endif
+
+		shaderUniforms_.CommitUniforms();
 	}
 
 	void Material::DefineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, std::uint32_t vboOffset)

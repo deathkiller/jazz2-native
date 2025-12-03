@@ -15,6 +15,7 @@ namespace nCine
 	GLUniformBlock::GLUniformBlock(GLuint program, GLuint index, DiscoverUniforms discover)
 		: GLUniformBlock()
 	{
+#if !defined(WITH_OPENGL2)
 		GLint nameLength = 0;
 		GLint uniformCount = 0;
 		program_ = program;
@@ -42,9 +43,9 @@ namespace nCine
 			glGetActiveUniformsiv(program, uniformCount, uniformIndices, GL_UNIFORM_TYPE, uniformTypes);
 			glGetActiveUniformsiv(program, uniformCount, uniformIndices, GL_UNIFORM_SIZE, uniformSizes);
 			glGetActiveUniformsiv(program, uniformCount, uniformIndices, GL_UNIFORM_OFFSET, uniformOffsets);
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
 			glGetActiveUniformsiv(program, uniformCount, uniformIndices, GL_UNIFORM_NAME_LENGTH, uniformNameLengths);
-#endif
+#	endif
 
 			for (std::int32_t i = 0; i < uniformCount; i++) {
 				GLUniform blockUniform;
@@ -54,19 +55,19 @@ namespace nCine
 				blockUniform.size_ = uniformSizes[i];
 				blockUniform.offset_ = uniformOffsets[i];
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
 				DEATH_ASSERT(uniformNameLengths[i] <= GLUniform::MaxNameLength,
 					("Uniform {} name length is {}, which is more than {}", i, uniformNameLengths[i], GLUniform::MaxNameLength), );
-#endif
+#	endif
 
-#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
 				glGetActiveUniformName(program, uniformIndices[i], MaxNameLength, &uniformNameLengths[i], blockUniform.name_);
-#else
+#	else
 				// Some drivers do not accept a `nullptr` for size and type
 				GLint unusedSize;
 				GLenum unusedType;
 				glGetActiveUniform(program, uniformIndices[i], MaxNameLength, &uniformNameLengths[i], &unusedSize, &unusedType, blockUniform.name_);
-#endif
+#	endif
 				blockUniforms_[blockUniform.name_] = blockUniform;
 			}
 		}
@@ -77,7 +78,8 @@ namespace nCine
 		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 		alignAmount_ = (offsetAlignment - size_ % offsetAlignment) % offsetAlignment;
 		size_ += alignAmount_;
-	}
+#endif
+	}	
 
 	GLUniformBlock::GLUniformBlock(GLuint program, GLuint index)
 		: GLUniformBlock(program, index, DiscoverUniforms::ENABLED)
@@ -86,6 +88,7 @@ namespace nCine
 
 	void GLUniformBlock::SetBlockBinding(GLuint blockBinding)
 	{
+#if !defined(WITH_OPENGL2)
 		DEATH_ASSERT(program_ != 0);
 
 		if (bindingIndex_ != static_cast<GLint>(blockBinding)) {
@@ -93,5 +96,6 @@ namespace nCine
 			GL_LOG_ERRORS();
 			bindingIndex_ = static_cast<GLint>(blockBinding);
 		}
+#endif
 	}
 }

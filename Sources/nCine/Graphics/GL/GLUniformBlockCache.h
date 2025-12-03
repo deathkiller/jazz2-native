@@ -12,10 +12,13 @@ namespace nCine
 {
 	class GLUniformBlock;
 	class GLBufferObject;
+	class GLShaderUniforms;
 
 	/// Caches a uniform block buffer and then updates it in the shader
 	class GLUniformBlockCache
 	{
+		friend class GLShaderUniformBlocks;
+
 	public:
 		GLUniformBlockCache();
 		explicit GLUniformBlockCache(GLUniformBlock* uniformBlock);

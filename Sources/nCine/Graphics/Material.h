@@ -176,9 +176,7 @@ namespace nCine
 
 		void Bind();
 		/// Wrapper around `GLShaderUniforms::commitUniforms()`
-		inline void CommitUniforms() {
-			shaderUniforms_.CommitUniforms();
-		}
+		void CommitUniforms();
 		/// Wrapper around `GLShaderUniformBlocks::commitUniformBlocks()`
 		inline void CommitUniformBlocks() {
 			shaderUniformBlocks_.CommitUniformBlocks();

@@ -214,14 +214,16 @@ namespace nCine::Backends
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-#else
+#elif !defined(WITH_OPENGL2)
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, glContextInfo_.coreProfile
 															 ? SDL_GL_CONTEXT_PROFILE_CORE
 															 : SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 #endif
+#if !defined(WITH_OPENGL2)
 		if (!glContextInfo_.forwardCompatible) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
 		}
+#endif
 		if (glContextInfo_.debugContext) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 		}

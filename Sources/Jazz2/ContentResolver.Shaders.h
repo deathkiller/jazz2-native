@@ -10,6 +10,15 @@ namespace Jazz2::Shaders
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifdef WITH_OPENGL2
+attribute vec2 aPosition;
+uniform mat4 modelMatrix;
+uniform vec4 color;
+uniform vec4 texRect;
+uniform vec2 spriteSize;
+varying vec4 vTexCoords;
+varying vec4 vColor;
+#else
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -17,14 +26,17 @@ layout (std140) uniform InstanceBlock
 	vec4 texRect;
 	vec2 spriteSize;
 };
-
 out vec4 vTexCoords;
 out vec4 vColor;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+#else
 	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-
+#endif
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = texRect;
 	vColor = vec4(color.x, color.y, aPosition.x * 2.0, aPosition.y * 2.0);
@@ -35,6 +47,16 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifdef WITH_OPENGL2
+attribute vec2 aPosition;
+attribute float aInstanceIndex;
+uniform mat4 modelMatrix[BATCH_SIZE];
+uniform vec4 color[BATCH_SIZE];
+uniform vec4 texRect[BATCH_SIZE];
+uniform vec2 spriteSize[BATCH_SIZE];
+varying vec4 vTexCoords;
+varying vec4 vColor;
+#else
 struct Instance
 {
 	mat4 modelMatrix;
@@ -55,14 +77,22 @@ out vec4 vTexCoords;
 out vec4 vColor;
 
 #define i block.instances[gl_VertexID / 6]
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	int idx = int(aInstanceIndex);
+	vec4 position = vec4(aPosition.x * spriteSize[idx].x, aPosition.y * spriteSize[idx].y, 0.0, 1.0);
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix[idx] * position;
+	vTexCoords = texRect[idx];
+	vColor = vec4(color[idx].x, color[idx].y, aPosition.x * 2.0, aPosition.y * 2.0);
+#else
 	vec2 aPosition = vec2(-0.5 + float(((gl_VertexID + 2) / 3) % 2), -0.5 + float(((gl_VertexID + 1) / 3) % 2));
 	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
-
 	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
 	vTexCoords = i.texRect;
 	vColor = vec4(i.color.x, i.color.y, aPosition.x * 2.0, aPosition.y * 2.0);
+#endif
 }
 )";
 
@@ -73,9 +103,14 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec4 vTexCoords;
+varying vec4 vColor;
+#else
 in vec4 vTexCoords;
 in vec4 vColor;
 out vec4 fragColor;
+#endif
 
 float lightBlend(float t) {
 	return t * t * t;
@@ -89,12 +124,16 @@ void main() {
 
 	float dist = length(vColor.zw);
 	if (dist > 1.0) {
+#ifdef WITH_OPENGL2
+		gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+#else
 		fragColor = vec4(0.0, 0.0, 0.0, 1.0);
+#endif
 		return;
 	}
 
 	// TODO: Normal maps
-	/*vec4 clrNormal = texture(uTexture, vec2(gl_FragCoord) / ViewSize);
+	/*vec4 clrNormal = texture2D(uTexture, vec2(gl_FragCoord) / ViewSize);
 	vec3 normal = normalize(clrNormal.xyz - vec3(0.5, 0.5, 0.5));
 	normal.z = -normal.z;
 
@@ -103,10 +142,14 @@ void main() {
 	// Diffuse lighting
 	float diffuseFactor = 1.0 - max(dot(normal, normalize(lightDir)), 0.0);
 	diffuseFactor = diffuseFactor * 0.8 + 0.2;*/
-	float diffuseFactor = 1.0f;
+	float diffuseFactor = 1.0;
 	
 	float strength = diffuseFactor * lightBlend(clamp(1.0 - ((dist - radiusNear) / (1.0 - radiusNear)), 0.0, 1.0));
+#ifdef WITH_OPENGL2
+	gl_FragColor = vec4(strength * intensity, strength * brightness, 0.0, 1.0);
+#else
 	fragColor = vec4(strength * intensity, strength * brightness, 0.0, 1.0);
+#endif
 }
 )";
 
@@ -119,19 +162,32 @@ uniform sampler2D uTexture;
 uniform vec2 uPixelOffset;
 uniform vec2 uDirection;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+#else
 in vec2 vTexCoords;
 out vec4 fragColor;
+#endif
 
 void main() {
 	vec4 color = vec4(0.0);
 	vec2 off1 = vec2(1.3846153846) * uPixelOffset * uDirection;
 	vec2 off2 = vec2(3.2307692308) * uPixelOffset * uDirection;
+#ifdef WITH_OPENGL2
+	color += texture2D(uTexture, vTexCoords) * 0.2270270270;
+	color += texture2D(uTexture, vTexCoords + off1) * 0.3162162162;
+	color += texture2D(uTexture, vTexCoords - off1) * 0.3162162162;
+	color += texture2D(uTexture, vTexCoords + off2) * 0.0702702703;
+	color += texture2D(uTexture, vTexCoords - off2) * 0.0702702703;
+	gl_FragColor = color;
+#else
 	color += texture(uTexture, vTexCoords) * 0.2270270270;
 	color += texture(uTexture, vTexCoords + off1) * 0.3162162162;
 	color += texture(uTexture, vTexCoords - off1) * 0.3162162162;
 	color += texture(uTexture, vTexCoords + off2) * 0.0702702703;
 	color += texture(uTexture, vTexCoords - off2) * 0.0702702703;
 	fragColor = color;
+#endif
 }
 )";
 
@@ -143,15 +199,27 @@ precision mediump float;
 uniform sampler2D uTexture;
 uniform vec2 uPixelOffset;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+#else
 in vec2 vTexCoords;
 out vec4 fragColor;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 color = texture2D(uTexture, vTexCoords);
+	color += texture2D(uTexture, vTexCoords + vec2(0.0, uPixelOffset.y));
+	color += texture2D(uTexture, vTexCoords + vec2(uPixelOffset.x, 0.0));
+	color += texture2D(uTexture, vTexCoords + uPixelOffset);
+	gl_FragColor = vec4(0.25) * color;
+#else
 	vec4 color = texture(uTexture, vTexCoords);
 	color += texture(uTexture, vTexCoords + vec2(0.0, uPixelOffset.y));
 	color += texture(uTexture, vTexCoords + vec2(uPixelOffset.x, 0.0));
 	color += texture(uTexture, vTexCoords + uPixelOffset);
 	fragColor = vec4(0.25) * color;
+#endif
 }
 )";
 
@@ -159,6 +227,16 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifdef WITH_OPENGL2
+attribute vec2 aPosition;
+uniform mat4 modelMatrix;
+uniform vec4 color;
+uniform vec4 texRect;
+uniform vec2 spriteSize;
+varying vec2 vTexCoords;
+varying vec2 vViewSize;
+varying vec2 vViewSizeInv;
+#else
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -166,17 +244,22 @@ layout (std140) uniform InstanceBlock
 	vec4 texRect;
 	vec2 spriteSize;
 };
-
 out vec2 vTexCoords;
 out vec2 vViewSize;
 out vec2 vViewSizeInv;
+#endif
 
 void main() {
-	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+#ifdef WITH_OPENGL2
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+#else
+	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+#endif
 	vViewSize = spriteSize;
 	vViewSizeInv = vec2(1.0) / spriteSize;
 }
@@ -195,10 +278,16 @@ uniform sampler2D uTextureBlurQuarter;
 uniform vec4 uAmbientColor;
 uniform float uTime;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+varying vec2 vViewSize;
+varying vec2 vViewSizeInv;
+#else
 in vec2 vTexCoords;
 in vec2 vViewSize;
 in vec2 vViewSizeInv;
 out vec4 fragColor;
+#endif
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -212,23 +301,38 @@ vec2 noiseTexCoords(vec2 position) {
 }
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 blur1 = texture2D(uTextureBlurHalf, vTexCoords);
+	vec4 blur2 = texture2D(uTextureBlurQuarter, vTexCoords);
+	vec4 main = texture2D(uTexture, vTexCoords);
+	vec4 light = texture2D(uTextureLighting, noiseTexCoords(vTexCoords));
+#else
 	vec4 blur1 = texture(uTextureBlurHalf, vTexCoords);
 	vec4 blur2 = texture(uTextureBlurQuarter, vTexCoords);
-
 	vec4 main = texture(uTexture, vTexCoords);
 	vec4 light = texture(uTextureLighting, noiseTexCoords(vTexCoords));
+#endif
 
 	vec4 blur = (blur1 + blur2) * vec4(0.5);
 
 	float gray = dot(blur.rgb, vec3(0.299, 0.587, 0.114));
 	blur = vec4(gray, gray, gray, blur.a);
 
+#ifdef WITH_OPENGL2
+	gl_FragColor = mix(mix(
+		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
+		blur,
+		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
+	), uAmbientColor, vec4(1.0 - light.r));
+	gl_FragColor.a = 1.0;
+#else
 	fragColor = mix(mix(
 		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
 	), uAmbientColor, vec4(1.0 - light.r));
 	fragColor.a = 1.0;
+#endif
 }
 )";
 
@@ -248,10 +352,16 @@ uniform float uTime;
 uniform vec2 uCameraPos;
 uniform float uWaterLevel;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+varying vec2 vViewSize;
+varying vec2 vViewSizeInv;
+#else
 in vec2 vTexCoords;
 in vec2 vViewSize;
 in vec2 vViewSizeInv;
 out vec4 fragColor;
+#endif
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -318,6 +428,17 @@ void main() {
 
 	// Displacement
 	vec2 disPos = uvWorld * vec2(0.1) + vec2(mod(uTime * 0.4, 2.0));
+#ifdef WITH_OPENGL2
+	vec2 dis = (texture2D(uTextureNoise, disPos).xy - vec2(0.5)) * vec2(0.01);
+	
+	vec2 uv = clamp(uvLocal + (vec2(0.004 * sin(uTime * 16.0 + uvWorld.y * 20.0), 0.0) + dis) * vec2(isTexelBelow), vec2(0.0), vec2(1.0));
+	vec4 main = texture2D(uTexture, uv);
+
+	// Chromatic Aberration
+	float aberration = abs(uvLocal.x - 0.5) * 0.012;
+	float red = texture2D(uTexture, vec2(uv.x - aberration, uv.y)).r;
+	float blue = texture2D(uTexture, vec2(uv.x + aberration, uv.y)).b;
+#else
 	vec2 dis = (texture(uTextureNoise, disPos).xy - vec2(0.5)) * vec2(0.01);
 	
 	vec2 uv = clamp(uvLocal + (vec2(0.004 * sin(uTime * 16.0 + uvWorld.y * 20.0), 0.0) + dis) * vec2(isTexelBelow), vec2(0.0), vec2(1.0));
@@ -327,6 +448,7 @@ void main() {
 	float aberration = abs(uvLocal.x - 0.5) * 0.012;
 	float red = texture(uTexture, vec2(uv.x - aberration, uv.y)).r;
 	float blue = texture(uTexture, vec2(uv.x + aberration, uv.y)).b;
+#endif
 	main.rgb = mix(main.rgb, waterColor * (0.4 + 1.2 * vec3(red, main.g, blue)), vec3(isTexelBelow * 0.5));
 	
 	// Rays
@@ -341,6 +463,17 @@ void main() {
 	float isVeryNearTop = 1.0 - aastep(vViewSizeInv.y * (0.8 - 100.0 * waveHeight), topDist);
 
 	float topColorBlendFac = isNearTop * isTexelBelow * 0.6;
+#ifdef WITH_OPENGL2
+	main.rgb = mix(main.rgb, texture2D(uTexture, vec2(uvLocal.x,
+		(uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 - waveHeight + vViewSizeInv.y
+	)).rgb, vec3(topColorBlendFac));
+	main.rgb += vec3(0.2 * isVeryNearTop);
+	
+	// Lighting
+	vec4 blur1 = texture2D(uTextureBlurHalf, uv);
+	vec4 blur2 = texture2D(uTextureBlurQuarter, uv);
+	vec4 light = texture2D(uTextureLighting, noiseTexCoords(uv));
+#else
 	main.rgb = mix(main.rgb, texture(uTexture, vec2(uvLocal.x,
 		(uWaterLevel - uvLocal.y + uWaterLevel) * 0.97 - waveHeight + vViewSizeInv.y
 	)).rgb, vec3(topColorBlendFac));
@@ -350,6 +483,7 @@ void main() {
 	vec4 blur1 = texture(uTextureBlurHalf, uv);
 	vec4 blur2 = texture(uTextureBlurQuarter, uv);
 	vec4 light = texture(uTextureLighting, noiseTexCoords(uv));
+#endif
 	
 	vec4 blur = (blur1 + blur2) * vec4(0.5);
 
@@ -364,12 +498,21 @@ void main() {
 		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
 	}
 
+#ifdef WITH_OPENGL2
+	gl_FragColor = mix(mix(
+		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
+		blur,
+		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
+	), uAmbientColor, vec4(darknessStrength));
+	gl_FragColor.a = 1.0;
+#else
 	fragColor = mix(mix(
 		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
 	), uAmbientColor, vec4(darknessStrength));
 	fragColor.a = 1.0;
+#endif
 }
 )";
 
@@ -388,10 +531,16 @@ uniform float uTime;
 uniform vec2 uCameraPos;
 uniform float uWaterLevel;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+varying vec2 vViewSize;
+varying vec2 vViewSizeInv;
+#else
 in vec2 vTexCoords;
 in vec2 vViewSize;
 in vec2 vViewSizeInv;
 out vec4 fragColor;
+#endif
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -415,7 +564,11 @@ void main() {
 	float isTexelAbove = 1.0 - isTexelBelow;
 
 	vec2 uv = clamp(uvLocal + vec2(0.008 * sin(uTime * 16.0 + uvWorld.y * 20.0) * isTexelBelow, 0.0), vec2(0.0), vec2(1.0));
+#ifdef WITH_OPENGL2
+	vec4 main = texture2D(uTexture, uv);
+#else
 	vec4 main = texture(uTexture, uv);
+#endif
 
 	// Waves
 	float topDist = abs(uvLocal.y - uWaterLevel);
@@ -425,9 +578,15 @@ void main() {
 	main.rgb = mix(main.rgb, waterColor, vec3(isTexelBelow * 0.4)) + vec3((isNearTop + 0.2 * isVeryNearTop) * isTexelBelow);
 
 	// Lighting
+#ifdef WITH_OPENGL2
+	vec4 blur1 = texture2D(uTextureBlurHalf, uv);
+	vec4 blur2 = texture2D(uTextureBlurQuarter, uv);
+	vec4 light = texture2D(uTextureLighting, noiseTexCoords(uv));
+#else
 	vec4 blur1 = texture(uTextureBlurHalf, uv);
 	vec4 blur2 = texture(uTextureBlurQuarter, uv);
 	vec4 light = texture(uTextureLighting, noiseTexCoords(uv));
+#endif
 	
 	vec4 blur = (blur1 + blur2) * vec4(0.5);
 
@@ -442,12 +601,21 @@ void main() {
 		darknessStrength = min(1.0, darknessStrength + aboveWaterDarkness);
 	}
 
+#ifdef WITH_OPENGL2
+	gl_FragColor = mix(mix(
+		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
+		blur,
+		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
+	), uAmbientColor, vec4(darknessStrength));
+	gl_FragColor.a = 1.0;
+#else
 	fragColor = mix(mix(
 		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
 		blur,
 		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
 	), uAmbientColor, vec4(darknessStrength));
 	fragColor.a = 1.0;
+#endif
 }
 )";
 
@@ -464,8 +632,12 @@ uniform vec2 uCameraPos;
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+#else
 in vec2 vTexCoords;
 out vec4 fragColor;
+#endif
 
 vec2 hash2D(in vec2 p) {
 	float h = dot(p, vec2(12.9898, 78.233));
@@ -520,6 +692,28 @@ void main() {
 		(uShift.y / 256.0) + (vTexCoords.y - yShift) * 1.4 * distance
 	);
 
+#ifdef WITH_OPENGL2
+	vec4 texColor = texture2D(uTexture, texturePos);
+
+#ifdef DITHER
+	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
+	texColor = mix(texColor, texture2D(uTexture, texturePos), 0.333);
+#endif
+
+	float horizonOpacity = clamp(pow(distance, 1.5) - 0.3, 0.0, 1.0);
+	
+	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
+	if (uHorizonColor.w > 0.0) {
+		vec2 samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00012;
+		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
+		
+		samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00018 + 0.5;
+		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
+	}
+
+	gl_FragColor = mix(texColor, horizonColorWithStars, horizonOpacity);
+	gl_FragColor.a = 1.0;
+#else
 	vec4 texColor = texture(uTexture, texturePos);
 
 #ifdef DITHER
@@ -540,6 +734,7 @@ void main() {
 
 	fragColor = mix(texColor, horizonColorWithStars, horizonOpacity);
 	fragColor.a = 1.0;
+#endif
 }
 )";
 
@@ -556,8 +751,12 @@ uniform vec2 uCameraPos;
 uniform vec4 uHorizonColor;
 uniform vec2 uShift;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+#else
 in vec2 vTexCoords;
 out vec4 fragColor;
+#endif
 
 #define INV_PI 0.31830988618379067153776752675
 
@@ -619,6 +818,28 @@ void main() {
 		(1.0 / distance) * 1.4 + (uShift.y * 0.002)
 	);
 
+#ifdef WITH_OPENGL2
+	vec4 texColor = texture2D(uTexture, texturePos);
+
+#ifdef DITHER
+	texturePos += hash2D(vTexCoords * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
+	texColor = mix(texColor, texture2D(uTexture, texturePos), 0.333);
+#endif
+
+	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);
+	
+	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
+	if (uHorizonColor.w > 0.0) {
+		vec2 samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00012;
+		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
+		
+		samplePosition = (vTexCoords * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00018 + 0.5;
+		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
+	}
+
+	gl_FragColor = mix(texColor, horizonColorWithStars, horizonOpacity);
+	gl_FragColor.a = 1.0;
+#else
 	vec4 texColor = texture(uTexture, texturePos);
 
 #ifdef DITHER
@@ -639,6 +860,7 @@ void main() {
 
 	fragColor = mix(texColor, horizonColorWithStars, horizonOpacity);
 	fragColor.a = 1.0;
+#endif
 }
 )";
 
@@ -649,16 +871,28 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+varying vec4 vColor;
+#else
 in vec2 vTexCoords;
 in vec4 vColor;
 out vec4 fragColor;
+#endif
 
 void main() {
 	vec4 dye = vec4(1.0) + (vColor - vec4(0.5)) * vec4(4.0);
+#ifdef WITH_OPENGL2
+	vec4 original = texture2D(uTexture, vTexCoords);
+	float average = (original.r + original.g + original.b) * 0.5;
+	vec4 gray = vec4(average, average, average, original.a);
+	gl_FragColor = gray * dye;
+#else
 	vec4 original = texture(uTexture, vTexCoords);
 	float average = (original.r + original.g + original.b) * 0.5;
 	vec4 gray = vec4(average, average, average, original.a);
 	fragColor = gray * dye;
+#endif
 }
 )";
 
@@ -669,14 +903,25 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+varying vec4 vColor;
+#else
 in vec2 vTexCoords;
 in vec4 vColor;
 out vec4 fragColor;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 original = texture2D(uTexture, vTexCoords);
+	vec3 tinted = mix(original.rgb, vColor.rgb, 0.45);
+	gl_FragColor = vec4(tinted.r, tinted.g, tinted.b, original.a * vColor.a);
+#else
 	vec4 original = texture(uTexture, vTexCoords);
 	vec3 tinted = mix(original.rgb, vColor.rgb, 0.45);
 	fragColor = vec4(tinted.r, tinted.g, tinted.b, original.a * vColor.a);
+#endif
 }
 )";
 
@@ -689,9 +934,14 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+varying vec4 vColor;
+#else
 in vec2 vTexCoords;
 in vec4 vColor;
 out vec4 fragColor;
+#endif
 
 float aastep(float threshold, float value) {
 	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
@@ -701,6 +951,32 @@ float aastep(float threshold, float value) {
 void main() {
 	vec2 size = vColor.xy;
 
+#ifdef WITH_OPENGL2
+	float outline = texture2D(uTexture, vTexCoords + vec2(-size.x, 0)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(0, size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(size.x, 0)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(0, -size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(-size.x, size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(size.x, size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(-size.x, -size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(size.x, -size.y)).a;
+	outline = aastep(1.0, outline);
+
+	float outline2 = texture2D(uTexture, vTexCoords + vec2(-2.0 * size.x, 0)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(0, 2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(2.0 * size.x, 0)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(0, -2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(-2.0 * size.x, 2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(2.0 * size.x, 2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(-2.0 * size.x, -2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(2.0 * size.x, -2.0 * size.y)).a;
+	outline2 = aastep(1.0, outline2);
+
+	vec4 color = texture2D(uTexture, vTexCoords);
+	gl_FragColor = mix(color,
+		mix(vec4(0.0, 0.0, 0.0, vColor.w * 0.5), vec4(vColor.z, vColor.z, vColor.z, vColor.w), outline),
+		max(outline, outline2) - color.a);
+#else
 	float outline = texture(uTexture, vTexCoords + vec2(-size.x, 0)).a;
 	outline += texture(uTexture, vTexCoords + vec2(0, size.y)).a;
 	outline += texture(uTexture, vTexCoords + vec2(size.x, 0)).a;
@@ -725,6 +1001,7 @@ void main() {
 	fragColor = mix(color,
 		mix(vec4(0.0, 0.0, 0.0, vColor.w * 0.5), vec4(vColor.z, vColor.z, vColor.z, vColor.w), outline),
 		max(outline, outline2) - color.a);
+#endif
 }
 )";
 
@@ -735,14 +1012,25 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+varying vec4 vColor;
+#else
 in vec2 vTexCoords;
 in vec4 vColor;
 out vec4 fragColor;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 tex = texture2D(uTexture, vTexCoords);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0, 1.0);
+	gl_FragColor = vec4(color, color, color, tex.a) * vColor;
+#else
 	vec4 tex = texture(uTexture, vTexCoords);
-	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0f, 1.0f);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0, 1.0);
 	fragColor = vec4(color, color, color, tex.a) * vColor;
+#endif
 }
 )";
 
@@ -753,14 +1041,25 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+varying vec4 vColor;
+#else
 in vec2 vTexCoords;
 in vec4 vColor;
 out vec4 fragColor;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 tex = texture2D(uTexture, vTexCoords);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 2.5, 1.0);
+	gl_FragColor = vec4(color, color, color, tex.a) * vColor;
+#else
 	vec4 tex = texture(uTexture, vTexCoords);
-	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 2.5f, 1.0f);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 2.5, 1.0);
 	fragColor = vec4(color, color, color, tex.a) * vColor;
+#endif
 }
 )";
 
@@ -771,9 +1070,14 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+varying vec4 vColor;
+#else
 in vec2 vTexCoords;
 in vec4 vColor;
 out vec4 fragColor;
+#endif
 
 float aastep(float threshold, float value) {
 	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
@@ -783,6 +1087,27 @@ float aastep(float threshold, float value) {
 void main() {
 	vec2 size = vColor.xy * vColor.a * 2.0;
 
+#ifdef WITH_OPENGL2
+	vec4 tex = texture2D(uTexture, vTexCoords);
+	vec4 tex1 = texture2D(uTexture, vTexCoords + vec2(-size.x, 0));
+	vec4 tex2 = texture2D(uTexture, vTexCoords + vec2(0, size.y));
+	vec4 tex3 = texture2D(uTexture, vTexCoords + vec2(size.x, 0));
+	vec4 tex4 = texture2D(uTexture, vTexCoords + vec2(0, -size.y));
+
+	float outline = tex1.a;
+	outline += tex2.a;
+	outline += tex3.a;
+	outline += tex4.a;
+	outline += texture2D(uTexture, vTexCoords + vec2(-size.x, size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(size.x, size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(-size.x, -size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(size.x, -size.y)).a;
+	outline = aastep(1.0, outline);
+
+	vec4 color = (tex + tex + tex1 + tex2 + tex3 + tex4) / 6.0;
+	float grey = min((0.299 * color.r + 0.587 * color.g + 0.114 * color.b) * 2.6, 1.0);
+	gl_FragColor = mix(tex, vec4(0.2 * grey, 0.2 + grey * 0.62, 0.6 + 0.2 * grey, outline * 0.95), vColor.a);
+#else
 	vec4 tex = texture(uTexture, vTexCoords);
 	vec4 tex1 = texture(uTexture, vTexCoords + vec2(-size.x, 0));
 	vec4 tex2 = texture(uTexture, vTexCoords + vec2(0, size.y));
@@ -800,8 +1125,9 @@ void main() {
 	outline = aastep(1.0, outline);
 
 	vec4 color = (tex + tex + tex1 + tex2 + tex3 + tex4) / 6.0;
-	float grey = min((0.299 * color.r + 0.587 * color.g + 0.114 * color.b) * 2.6f, 1.0f);
+	float grey = min((0.299 * color.r + 0.587 * color.g + 0.114 * color.b) * 2.6, 1.0);
 	fragColor = mix(tex, vec4(0.2 * grey, 0.2 + grey * 0.62, 0.6 + 0.2 * grey, outline * 0.95), vColor.a);
+#endif
 }
 )";
 
@@ -809,6 +1135,18 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifdef WITH_OPENGL2
+uniform mat4 modelMatrix;
+uniform vec4 color;
+uniform vec4 texRect;
+uniform vec2 spriteSize;
+
+varying vec4 vTexCoords;
+varying vec4 vColor;
+varying vec2 vPos;
+
+attribute vec2 aPosition;
+#else
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -820,10 +1158,15 @@ layout (std140) uniform InstanceBlock
 out vec4 vTexCoords;
 out vec4 vColor;
 out vec2 vPos;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+#else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+#endif
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = texRect;
@@ -836,6 +1179,23 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifndef BATCH_SIZE
+	#define BATCH_SIZE (585) // 64 Kb / 112 b
+#endif
+
+#ifdef WITH_OPENGL2
+uniform mat4 modelMatrices[BATCH_SIZE];
+uniform vec4 colors[BATCH_SIZE];
+uniform vec4 texRects[BATCH_SIZE];
+uniform vec2 spriteSizes[BATCH_SIZE];
+
+varying vec4 vTexCoords;
+varying vec4 vColor;
+varying vec2 vPos;
+
+attribute vec2 aPosition;
+attribute float aInstanceId;
+#else
 struct Instance
 {
 	mat4 modelMatrix;
@@ -846,9 +1206,6 @@ struct Instance
 
 layout (std140) uniform InstancesBlock
 {
-#ifndef BATCH_SIZE
-	#define BATCH_SIZE (585) // 64 Kb / 112 b
-#endif
 	Instance[BATCH_SIZE] instances;
 } block;
 
@@ -857,8 +1214,17 @@ out vec4 vColor;
 out vec2 vPos;
 
 #define i block.instances[gl_VertexID / 6]
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	int idx = int(aInstanceId);
+	vec4 position = vec4(aPosition.x * spriteSizes[idx].x, aPosition.y * spriteSizes[idx].y, 0.0, 1.0);
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrices[idx] * position;
+	vTexCoords = texRects[idx];
+	vColor = colors[idx];
+	vPos = aPosition * vec2(2.0) - vec2(1.0);
+#else
 	vec2 aPosition = vec2(1.0 - float(((gl_VertexID + 2) / 3) % 2), 1.0 - float(((gl_VertexID + 1) / 3) % 2));
 	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
 
@@ -866,6 +1232,7 @@ void main() {
 	vTexCoords = i.texRect;
 	vColor = i.color;
 	vPos = aPosition * vec2(2.0) - vec2(1.0);
+#endif
 }
 )";
 
@@ -876,10 +1243,16 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec4 vTexCoords;
+varying vec4 vColor;
+varying vec2 vPos;
+#else
 in vec4 vTexCoords;
 in vec4 vColor;
 in vec2 vPos;
 out vec4 fragColor;
+#endif
 
 #define PI 3.1415926
 
@@ -903,7 +1276,11 @@ void main() {
 
 	float dist = length(vPos);
 	if (dist > 1.0) {
+#ifdef WITH_OPENGL2
+		gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+#else
 		fragColor = vec4(0.0, 0.0, 0.0, 0.0);
+#endif
 		return;
 	}
 
@@ -914,6 +1291,17 @@ void main() {
 
 	float isNearBorder = 1.0 - aastep(0.96, dist);
 
+#ifdef WITH_OPENGL2
+	float mask1 = texture2D(uTexture, mod(shift1 + (q * scale), 1.0)).r;
+	float maskNormalized1 = max(1.0 - (abs(triangleWave(shift2.y + 0.5, 2.0) - mask1) * 6.0), 0.0);
+
+	float mask2 = texture2D(uTexture, mod(shift2 + (q * scale), 1.0)).r;
+	float maskNormalized2 = max(1.0 - (abs(triangleWave(shift1.x, 1.333) - mask2) * 6.0), 0.0);
+
+	float maskSum = min(maskNormalized1 + maskNormalized2, 1.0);
+
+	gl_FragColor = vec4(mix(vec3(1.0, 0.3, 0.0), vec3(1.0, 1.0, 1.0), max((maskSum * 2.0) - 1.0, 0.0)) * darkness, min(maskSum * b * isNearBorder * 1.3 + 0.1, 1.0) * alpha);
+#else
 	float mask1 = texture(uTexture, mod(shift1 + (q * scale), 1.0)).r;
 	float maskNormalized1 = max(1.0 - (abs(triangleWave(shift2.y + 0.5, 2.0) - mask1) * 6.0), 0.0);
 
@@ -923,6 +1311,7 @@ void main() {
 	float maskSum = min(maskNormalized1 + maskNormalized2, 1.0);
 
 	fragColor = vec4(mix(vec3(1.0, 0.3, 0.0), vec3(1.0, 1.0, 1.0), max((maskSum * 2.0) - 1.0, 0.0)) * darkness, min(maskSum * b * isNearBorder * 1.3 + 0.1, 1.0) * alpha);
+#endif
 }
 )";
 
@@ -933,10 +1322,16 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec4 vTexCoords;
+varying vec4 vColor;
+varying vec2 vPos;
+#else
 in vec4 vTexCoords;
 in vec4 vColor;
 in vec2 vPos;
 out vec4 fragColor;
+#endif
 
 #define PI 3.1415926
 
@@ -960,7 +1355,11 @@ void main() {
 
 	float dist = length(vPos);
 	if (dist > 1.0) {
+#ifdef WITH_OPENGL2
+		gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+#else
 		fragColor = vec4(0.0, 0.0, 0.0, 0.0);
+#endif
 		return;
 	}
 
@@ -971,6 +1370,15 @@ void main() {
 
 	float isNearBorder = 1.0 - aastep(0.96, dist);
 
+#ifdef WITH_OPENGL2
+	float mask = texture2D(uTexture, mod(shift1 + (q * scale), 1.0)).r;
+	float maskNormalized = max(1.0 - (abs(triangleWave(shift2.y + 0.5, 2.0) - mask) * 8.0), 0.0);
+
+	float isVeryNearBorder = 1.0 - aastep(0.024, abs(dist - 0.94));
+	float maskSum = max(maskNormalized, isVeryNearBorder);
+
+	gl_FragColor = vec4(mix(vec3(0.1, 1.0, 0.0), vec3(1.0, 1.0, 1.0), max((maskSum * 2.0) - 1.0, 0.0)) * darkness, min(maskSum * b * isNearBorder * 1.3 + 0.1, 1.0) * alpha);
+#else
 	float mask = texture(uTexture, mod(shift1 + (q * scale), 1.0)).r;
 	float maskNormalized = max(1.0 - (abs(triangleWave(shift2.y + 0.5, 2.0) - mask) * 8.0), 0.0);
 
@@ -978,6 +1386,7 @@ void main() {
 	float maskSum = max(maskNormalized, isVeryNearBorder);
 
 	fragColor = vec4(mix(vec3(0.1, 1.0, 0.0), vec3(1.0, 1.0, 1.0), max((maskSum * 2.0) - 1.0, 0.0)) * darkness, min(maskSum * b * isNearBorder * 1.3 + 0.1, 1.0) * alpha);
+#endif
 }
 )";
 
@@ -985,6 +1394,20 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifdef WITH_OPENGL2
+uniform mat4 modelMatrix;
+uniform vec4 color;
+uniform vec4 texRect;
+uniform vec2 spriteSize;
+
+varying vec2 vTexCoords0;
+varying vec4 vTexCoords1;
+varying vec4 vTexCoords2;
+varying vec4 vTexCoords3;
+varying vec4 vTexCoords4;
+
+attribute vec2 aPosition;
+#else
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -998,10 +1421,15 @@ out vec4 vTexCoords1;
 out vec4 vTexCoords2;
 out vec4 vTexCoords3;
 out vec4 vTexCoords4;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+#else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+#endif
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	
@@ -1037,14 +1465,34 @@ const float lum_add = 0.25;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+#define highp // Not supported in OpenGL 2.0
+varying vec2 vTexCoords0;
+varying vec4 vTexCoords1;
+varying vec4 vTexCoords2;
+varying vec4 vTexCoords3;
+varying vec4 vTexCoords4;
+#else
 in vec2 vTexCoords0;
 in vec4 vTexCoords1;
 in vec4 vTexCoords2;
 in vec4 vTexCoords3;
 in vec4 vTexCoords4;
 out vec4 fragColor;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec3 c00 = texture2D(uTexture, vTexCoords1.xy).xyz; 
+	vec3 c10 = texture2D(uTexture, vTexCoords1.zw).xyz; 
+	vec3 c20 = texture2D(uTexture, vTexCoords2.xy).xyz; 
+	vec3 c01 = texture2D(uTexture, vTexCoords4.zw).xyz; 
+	vec3 c11 = texture2D(uTexture, vTexCoords0.xy).xyz; 
+	vec3 c21 = texture2D(uTexture, vTexCoords2.zw).xyz; 
+	vec3 c02 = texture2D(uTexture, vTexCoords4.xy).xyz; 
+	vec3 c12 = texture2D(uTexture, vTexCoords3.zw).xyz; 
+	vec3 c22 = texture2D(uTexture, vTexCoords3.xy).xyz; 
+#else
 	vec3 c00 = texture(uTexture, vTexCoords1.xy).xyz; 
 	vec3 c10 = texture(uTexture, vTexCoords1.zw).xyz; 
 	vec3 c20 = texture(uTexture, vTexCoords2.xy).xyz; 
@@ -1054,6 +1502,7 @@ void main() {
 	vec3 c02 = texture(uTexture, vTexCoords4.xy).xyz; 
 	vec3 c12 = texture(uTexture, vTexCoords3.zw).xyz; 
 	vec3 c22 = texture(uTexture, vTexCoords3.xy).xyz; 
+#endif
 	vec3 dt = vec3(1.0, 1.0, 1.0);
 
 	float md1 = dot(abs(c00 - c22), dt);
@@ -1078,8 +1527,13 @@ void main() {
 	w3 = clamp(lc1 * dot(abs(cx - c12), dt) + mx, min_w, max_w);
 	w4 = clamp(lc2 * dot(abs(cx - c01), dt) + mx, min_w, max_w);
 
+#ifdef WITH_OPENGL2
+	gl_FragColor.xyz = w1 * c10 + w2 * c21 + w3 * c12 + w4 * c01 + (1.0 - w1 - w2 - w3 - w4) * cx;
+	gl_FragColor.w = 1.0;
+#else
 	fragColor.xyz = w1 * c10 + w2 * c21 + w3 * c12 + w4 * c01 + (1.0 - w1 - w2 - w3 - w4) * cx;
 	fragColor.w = 1.0;
+#endif
 }
 )";
 
@@ -1087,6 +1541,24 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifdef WITH_OPENGL2
+uniform mat4 modelMatrix;
+uniform vec4 color;
+uniform vec4 texRect;
+uniform vec2 spriteSize;
+
+varying vec2 vPixelCoords;
+varying vec2 vTexCoords0;
+varying vec4 vTexCoords1;
+varying vec4 vTexCoords2;
+varying vec4 vTexCoords3;
+varying vec4 vTexCoords4;
+varying vec4 vTexCoords5;
+varying vec4 vTexCoords6;
+varying vec4 vTexCoords7;
+
+attribute vec2 aPosition;
+#else
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -1104,10 +1576,15 @@ out vec4 vTexCoords4;
 out vec4 vTexCoords5;
 out vec4 vTexCoords6;
 out vec4 vTexCoords7;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+#else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+#endif
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	
@@ -1146,6 +1623,17 @@ const float two_third = 2.0 / 3.0;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec2 vPixelCoords;
+varying vec2 vTexCoords0;
+varying vec4 vTexCoords1;
+varying vec4 vTexCoords2;
+varying vec4 vTexCoords3;
+varying vec4 vTexCoords4;
+varying vec4 vTexCoords5;
+varying vec4 vTexCoords6;
+varying vec4 vTexCoords7;
+#else
 in vec2 vPixelCoords;
 in vec2 vTexCoords0;
 in vec4 vTexCoords1;
@@ -1156,6 +1644,7 @@ in vec4 vTexCoords5;
 in vec4 vTexCoords6;
 in vec4 vTexCoords7;
 out vec4 fragColor;
+#endif
 
 float Reduce(vec3 color) {
 	return dot(color, vec3(65536.0, 256.0, 1.0));
@@ -1210,6 +1699,29 @@ void main() {
 	vec2 f = fract(vPixelCoords);
 	vec3 src[25];
 
+#ifdef WITH_OPENGL2
+	src[21] = texture2D(uTexture, vTexCoords1.xw).rgb;
+	src[22] = texture2D(uTexture, vTexCoords1.yw).rgb;
+	src[23] = texture2D(uTexture, vTexCoords1.zw).rgb;
+	src[ 6] = texture2D(uTexture, vTexCoords2.xw).rgb;
+	src[ 7] = texture2D(uTexture, vTexCoords2.yw).rgb;
+	src[ 8] = texture2D(uTexture, vTexCoords2.zw).rgb;
+	src[ 5] = texture2D(uTexture, vTexCoords3.xw).rgb;
+	src[ 0] = texture2D(uTexture, vTexCoords3.yw).rgb;
+	src[ 1] = texture2D(uTexture, vTexCoords3.zw).rgb;
+	src[ 4] = texture2D(uTexture, vTexCoords4.xw).rgb;
+	src[ 3] = texture2D(uTexture, vTexCoords4.yw).rgb;
+	src[ 2] = texture2D(uTexture, vTexCoords4.zw).rgb;
+	src[15] = texture2D(uTexture, vTexCoords5.xw).rgb;
+	src[14] = texture2D(uTexture, vTexCoords5.yw).rgb;
+	src[13] = texture2D(uTexture, vTexCoords5.zw).rgb;
+	src[19] = texture2D(uTexture, vTexCoords6.xy).rgb;
+	src[18] = texture2D(uTexture, vTexCoords6.xz).rgb;
+	src[17] = texture2D(uTexture, vTexCoords6.xw).rgb;
+	src[ 9] = texture2D(uTexture, vTexCoords7.xy).rgb;
+	src[10] = texture2D(uTexture, vTexCoords7.xz).rgb;
+	src[11] = texture2D(uTexture, vTexCoords7.xw).rgb;
+#else
 	src[21] = texture(uTexture, vTexCoords1.xw).rgb;
 	src[22] = texture(uTexture, vTexCoords1.yw).rgb;
 	src[23] = texture(uTexture, vTexCoords1.zw).rgb;
@@ -1231,6 +1743,7 @@ void main() {
 	src[ 9] = texture(uTexture, vTexCoords7.xy).rgb;
 	src[10] = texture(uTexture, vTexCoords7.xz).rgb;
 	src[11] = texture(uTexture, vTexCoords7.xw).rgb;
+#endif
 
 	float v[9];
 	v[0] = Reduce(src[0]);
@@ -1377,7 +1890,11 @@ void main() {
 						   mix(mix(dst[5], mix(dst[0], dst[1], step(two_third, f.x)), step(one_third, f.x)),
 							   mix(dst[4], mix(dst[3], dst[2], step(two_third, f.x)), step(one_third, f.x)), step(two_third, f.y)),
 																											 step(one_third, f.y));
+#ifdef WITH_OPENGL2
+	gl_FragColor = vec4(res, 1.0);
+#else
 	fragColor = vec4(res, 1.0);
+#endif
 }
 )";
 
@@ -1385,6 +1902,24 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifdef WITH_OPENGL2
+uniform mat4 modelMatrix;
+uniform vec4 color;
+uniform vec4 texRect;
+uniform vec2 spriteSize;
+
+varying vec2 vTexSize;
+varying vec2 tc;
+varying vec4 xyp_1_2_3;
+varying vec4 xyp_5_10_15;
+varying vec4 xyp_6_7_8;
+varying vec4 xyp_9_14_9;
+varying vec4 xyp_11_12_13;
+varying vec4 xyp_16_17_18;
+varying vec4 xyp_21_22_23;
+
+attribute vec2 aPosition;
+#else
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -1402,10 +1937,15 @@ out vec4 xyp_9_14_9;
 out vec4 xyp_11_12_13;
 out vec4 xyp_16_17_18;
 out vec4 xyp_21_22_23;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+#else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+#endif
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 
@@ -1432,6 +1972,17 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexSize;
+varying vec2 tc;
+varying vec4 xyp_1_2_3;
+varying vec4 xyp_5_10_15;
+varying vec4 xyp_6_7_8;
+varying vec4 xyp_9_14_9;
+varying vec4 xyp_11_12_13;
+varying vec4 xyp_16_17_18;
+varying vec4 xyp_21_22_23;
+#else
 in vec2 vTexSize;
 in vec2 tc;
 in vec4 xyp_1_2_3;
@@ -1442,6 +1993,7 @@ in vec4 xyp_11_12_13;
 in vec4 xyp_16_17_18;
 in vec4 xyp_21_22_23;
 out vec4 fragColor;
+#endif
 
 const vec4 Ai  = vec4( 1.0, -1.0, -1.0,  1.0);
 const vec4 B45 = vec4( 1.0,  1.0, -1.0, -1.0);
@@ -1491,6 +2043,35 @@ float c_df(vec3 c1, vec3 c2) {
 
 void main() {
 	// Get mask values by performing texture lookup with the uniform sampler
+#ifdef WITH_OPENGL2
+	vec3 P1  = texture2D(uTexture, xyp_1_2_3.xw   ).rgb;
+	vec3 P2  = texture2D(uTexture, xyp_1_2_3.yw   ).rgb;
+	vec3 P3  = texture2D(uTexture, xyp_1_2_3.zw   ).rgb;
+	
+	vec3 P6  = texture2D(uTexture, xyp_6_7_8.xw   ).rgb;
+	vec3 P7  = texture2D(uTexture, xyp_6_7_8.yw   ).rgb;
+	vec3 P8  = texture2D(uTexture, xyp_6_7_8.zw   ).rgb;
+	
+	vec3 P11 = texture2D(uTexture, xyp_11_12_13.xw).rgb;
+	vec3 P12 = texture2D(uTexture, xyp_11_12_13.yw).rgb;
+	vec3 P13 = texture2D(uTexture, xyp_11_12_13.zw).rgb;
+	
+	vec3 P16 = texture2D(uTexture, xyp_16_17_18.xw).rgb;
+	vec3 P17 = texture2D(uTexture, xyp_16_17_18.yw).rgb;
+	vec3 P18 = texture2D(uTexture, xyp_16_17_18.zw).rgb;
+	
+	vec3 P21 = texture2D(uTexture, xyp_21_22_23.xw).rgb;
+	vec3 P22 = texture2D(uTexture, xyp_21_22_23.yw).rgb;
+	vec3 P23 = texture2D(uTexture, xyp_21_22_23.zw).rgb;
+	
+	vec3 P5  = texture2D(uTexture, xyp_5_10_15.xy ).rgb;
+	vec3 P10 = texture2D(uTexture, xyp_5_10_15.xz ).rgb;
+	vec3 P15 = texture2D(uTexture, xyp_5_10_15.xw ).rgb;
+	
+	vec3 P9  = texture2D(uTexture, xyp_9_14_9.xy  ).rgb;
+	vec3 P14 = texture2D(uTexture, xyp_9_14_9.xz  ).rgb;
+	vec3 P19 = texture2D(uTexture, xyp_9_14_9.xw  ).rgb;
+#else
 	vec3 P1  = texture(uTexture, xyp_1_2_3.xw   ).rgb;
 	vec3 P2  = texture(uTexture, xyp_1_2_3.yw   ).rgb;
 	vec3 P3  = texture(uTexture, xyp_1_2_3.zw   ).rgb;
@@ -1518,6 +2099,7 @@ void main() {
 	vec3 P9  = texture(uTexture, xyp_9_14_9.xy  ).rgb;
 	vec3 P14 = texture(uTexture, xyp_9_14_9.xz  ).rgb;
 	vec3 P19 = texture(uTexture, xyp_9_14_9.xw  ).rgb;
+#endif
 	
 	// Store luminance values of each point in groups of 4
 	// so that we may operate on all four corners at once
@@ -1593,7 +2175,11 @@ void main() {
 	res2 = mix(res2, mix(P7, P13, px.y), mac.y);
 	res2 = mix(res2, mix(P13, P17, px.x), mac.x);
 	
+#ifdef WITH_OPENGL2
+	gl_FragColor = vec4(mix(res1, res2, step(c_df(P12, res1), c_df(P12, res2))), 1.0);
+#else
 	fragColor = vec4(mix(res1, res2, step(c_df(P12, res1), c_df(P12, res2))), 1.0);
+#endif
 }
 )";
 
@@ -1601,6 +2187,17 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifdef WITH_OPENGL2
+uniform mat4 modelMatrix;
+uniform vec4 color;
+uniform vec4 texRect;
+uniform vec2 spriteSize;
+
+varying vec2 v_px;
+varying vec2 size;
+
+attribute vec2 aPosition;
+#else
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -1611,10 +2208,15 @@ layout (std140) uniform InstanceBlock
 
 out vec2 v_px;
 out vec2 size;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+#else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+#endif
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 
@@ -1630,9 +2232,14 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec2 v_px;
+varying vec2 size;
+#else
 in vec2 v_px;
 in vec2 size;
 out vec4 fragColor;
+#endif
 
 #define SLOPE 
 #define CLEANUP
@@ -1881,12 +2488,43 @@ void main() {
 	vec2 local = fract(v_px);
 	vec2 px = ceil(v_px);
 	
+#ifdef WITH_OPENGL2
+	vec2 pointDir = floor(local+0.5)*2.0-1.0;
+#else
 	vec2 pointDir = round(local)*2.0-1.0;
+#endif
 	
 	//neighbor pixels
 	//Up, Down, Forward, and Back
 	//relative to quadrant of current location within pixel
 	
+#ifdef WITH_OPENGL2
+	vec4 uub = texture2D(uTexture, (px+vec2(-1.0,-2.0)*pointDir)/size);
+	vec4 uu  = texture2D(uTexture, (px+vec2( 0.0,-2.0)*pointDir)/size);
+	vec4 uuf = texture2D(uTexture, (px+vec2( 1.0,-2.0)*pointDir)/size);
+	
+	vec4 ubb = texture2D(uTexture, (px+vec2(-2.0,-2.0)*pointDir)/size);
+	vec4 ub  = texture2D(uTexture, (px+vec2(-1.0,-1.0)*pointDir)/size);
+	vec4 u   = texture2D(uTexture, (px+vec2( 0.0,-1.0)*pointDir)/size);
+	vec4 uf  = texture2D(uTexture, (px+vec2( 1.0,-1.0)*pointDir)/size);
+	vec4 uff = texture2D(uTexture, (px+vec2( 2.0,-1.0)*pointDir)/size);
+	
+	vec4 bb  = texture2D(uTexture, (px+vec2(-2.0, 0.0)*pointDir)/size);
+	vec4 b   = texture2D(uTexture, (px+vec2(-1.0, 0.0)*pointDir)/size);
+	vec4 c   = texture2D(uTexture, (px+vec2( 0.0, 0.0)*pointDir)/size);
+	vec4 f   = texture2D(uTexture, (px+vec2( 1.0, 0.0)*pointDir)/size);
+	vec4 ff  = texture2D(uTexture, (px+vec2( 2.0, 0.0)*pointDir)/size);
+	
+	vec4 dbb = texture2D(uTexture, (px+vec2(-2.0, 1.0)*pointDir)/size);
+	vec4 db  = texture2D(uTexture, (px+vec2(-1.0, 1.0)*pointDir)/size);
+	vec4 d   = texture2D(uTexture, (px+vec2( 0.0, 1.0)*pointDir)/size);
+	vec4 df  = texture2D(uTexture, (px+vec2( 1.0, 1.0)*pointDir)/size);
+	vec4 dff = texture2D(uTexture, (px+vec2( 2.0, 1.0)*pointDir)/size);
+	
+	vec4 ddb = texture2D(uTexture, (px+vec2(-1.0, 2.0)*pointDir)/size);
+	vec4 dd  = texture2D(uTexture, (px+vec2( 0.0, 2.0)*pointDir)/size);
+	vec4 ddf = texture2D(uTexture, (px+vec2( 1.0, 2.0)*pointDir)/size);
+#else
 	vec4 uub = texture(uTexture, (px+vec2(-1.0,-2.0)*pointDir)/size);
 	vec4 uu  = texture(uTexture, (px+vec2( 0.0,-2.0)*pointDir)/size);
 	vec4 uuf = texture(uTexture, (px+vec2( 1.0,-2.0)*pointDir)/size);
@@ -1912,6 +2550,7 @@ void main() {
 	vec4 ddb = texture(uTexture, (px+vec2(-1.0, 2.0)*pointDir)/size);
 	vec4 dd  = texture(uTexture, (px+vec2( 0.0, 2.0)*pointDir)/size);
 	vec4 ddf = texture(uTexture, (px+vec2( 1.0, 2.0)*pointDir)/size);
+#endif
 	
 	vec4 col = c;
 	
@@ -1931,7 +2570,11 @@ void main() {
 		col = u_col;
 	}
 	
+#ifdef WITH_OPENGL2
+	gl_FragColor = col;
+#else
 	fragColor = col;
+#endif
 }
 )";
 
@@ -1939,6 +2582,19 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifdef WITH_OPENGL2
+#define highp
+uniform mat4 uModelMatrix;
+uniform vec4 uColor;
+uniform vec4 uTexRect;
+uniform vec2 uSpriteSize;
+
+varying highp vec2 vPixelCoords;
+varying vec2 vTexCoords;
+varying highp vec2 vOutputSize;
+
+attribute vec2 aPosition;
+#else
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -1950,8 +2606,17 @@ layout (std140) uniform InstanceBlock
 out highp vec2 vPixelCoords;
 out vec2 vTexCoords;
 out highp vec2 vOutputSize;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 position = vec4(aPosition.x * uSpriteSize.x, aPosition.y * uSpriteSize.y, 0.0, 1.0);
+	
+	gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * position;
+	vPixelCoords = aPosition * uSpriteSize.xy;
+	vTexCoords = aPosition;
+	vOutputSize = uSpriteSize.xy;
+#else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
@@ -1959,6 +2624,7 @@ void main() {
 	vPixelCoords = aPosition * spriteSize.xy;
 	vTexCoords = aPosition;
 	vOutputSize = spriteSize.xy;
+#endif
 }
 )";
 
@@ -1969,10 +2635,17 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+#define highp
+varying highp vec2 vPixelCoords;
+varying vec2 vTexCoords;
+varying highp vec2 vOutputSize;
+#else
 in highp vec2 vPixelCoords;
 in vec2 vTexCoords;
 in highp vec2 vOutputSize;
 out vec4 fragColor;
+#endif
 
 vec3 toYiq(vec3 value) {
 	const mat3 yiqmat = mat3(
@@ -1993,19 +2666,36 @@ vec3 fromYiq(vec3 value) {
 void main() {
 	float y = vPixelCoords.y;
 	vec2 uv0 = vec2(vTexCoords.x, y / vOutputSize.y);
+#ifdef WITH_OPENGL2
+	vec3 t0 = texture2D(uTexture, uv0).rgb;
+#else
 	vec3 t0 = texture(uTexture, uv0).rgb;
+#endif
 	float ymod = mod(vPixelCoords.y, 3.0);
 	if (ymod > 2.0) {
 		vec2 uv1 = vec2(vTexCoords.x, (y + 1.0) / vOutputSize.y);
+#ifdef WITH_OPENGL2
+		vec3 t1 = texture2D(uTexture, uv1).rgb;
+		gl_FragColor.rgb = (t0 + t1) * 0.25;
+#else
 		vec3 t1 = texture(uTexture, uv1).rgb;
 		fragColor.rgb = (t0 + t1) * 0.25;
+#endif
 	} else {
 		t0 = toYiq(t0);
 		t0.r *= 1.1;
 		t0 = fromYiq(t0);
+#ifdef WITH_OPENGL2
+		gl_FragColor.rgb = t0;
+#else
 		fragColor.rgb = t0;
+#endif
 	}
+#ifdef WITH_OPENGL2
+	gl_FragColor.a = 1.0;
+#else
 	fragColor.a = 1.0;
+#endif
 }
 )";
 
@@ -2013,6 +2703,18 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifdef WITH_OPENGL2
+uniform mat4 uModelMatrix;
+uniform vec4 uColor;
+uniform vec4 uTexRect;
+uniform vec2 uSpriteSize;
+
+varying vec2 vTexCoords;
+varying vec2 vTexSize;
+varying vec2 vViewSize;
+
+attribute vec2 aPosition;
+#else
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -2024,8 +2726,17 @@ layout (std140) uniform InstanceBlock
 out vec2 vTexCoords;
 out vec2 vTexSize;
 out vec2 vViewSize;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 position = vec4(aPosition.x * uSpriteSize.x, aPosition.y * uSpriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * position;
+	vTexCoords = aPosition;
+	vTexSize = uTexRect.xy;
+	vViewSize = uSpriteSize;
+#else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
@@ -2033,6 +2744,7 @@ void main() {
 	vTexCoords = aPosition;
 	vTexSize = texRect.xy;
 	vViewSize = spriteSize;
+#endif
 }
 )";
 
@@ -2056,10 +2768,16 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+varying vec2 vTexSize;
+varying vec2 vViewSize;
+#else
 in vec2 vTexCoords;
 in vec2 vTexSize;
 in vec2 vViewSize;
 out vec4 fragColor;
+#endif
 
 #ifdef SIMPLE_LINEAR_GAMMA
 	float ToLinear1(float c) {
@@ -2095,9 +2813,17 @@ out vec4 fragColor;
 vec3 Fetch(vec2 pos, vec2 off, vec2 texture_size) {
 	pos=(floor(pos*texture_size.xy+off)+vec2(0.5,0.5))/texture_size.xy;
 #ifdef SIMPLE_LINEAR_GAMMA
+#ifdef WITH_OPENGL2
+	return ToLinear(vec3(brightboost) * pow(texture2D(uTexture,pos.xy).rgb, 2.2));
+#else
 	return ToLinear(vec3(brightboost) * pow(texture(uTexture,pos.xy).rgb, 2.2));
+#endif
+#else
+#ifdef WITH_OPENGL2
+	return ToLinear(vec3(brightboost) * texture2D(uTexture,pos.xy).rgb);
 #else
 	return ToLinear(vec3(brightboost) * texture(uTexture,pos.xy).rgb);
+#endif
 #endif
 }
 
@@ -2240,7 +2966,11 @@ vec4 crt_lottes(vec2 texture_size, vec2 video_size, vec2 output_size, vec2 tex) 
 }
 
 void main() {
+#ifdef WITH_OPENGL2
+	gl_FragColor = crt_lottes(vTexSize, vTexSize, vViewSize, vTexCoords);
+#else
 	fragColor = crt_lottes(vTexSize, vTexSize, vViewSize, vTexCoords);
+#endif
 }
 )";
 
@@ -2264,10 +2994,16 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+varying vec2 vTexSize;
+varying vec2 vViewSize;
+#else
 in vec2 vTexCoords;
 in vec2 vTexSize;
 in vec2 vViewSize;
 out vec4 fragColor;
+#endif
 
 #ifdef SIMPLE_LINEAR_GAMMA
 	float ToLinear1(float c) {
@@ -2303,9 +3039,17 @@ out vec4 fragColor;
 vec3 Fetch(vec2 pos, vec2 off, vec2 texture_size) {
 	pos=(floor(pos*texture_size.xy+off)+vec2(0.5,0.5))/texture_size.xy;
 #ifdef SIMPLE_LINEAR_GAMMA
+#ifdef WITH_OPENGL2
+	return ToLinear(vec3(brightboost) * pow(texture2D(uTexture,pos.xy).rgb, 2.2));
+#else
 	return ToLinear(vec3(brightboost) * pow(texture(uTexture,pos.xy).rgb, 2.2));
+#endif
+#else
+#ifdef WITH_OPENGL2
+	return ToLinear(vec3(brightboost) * texture2D(uTexture,pos.xy).rgb);
 #else
 	return ToLinear(vec3(brightboost) * texture(uTexture,pos.xy).rgb);
+#endif
 #endif
 }
 
@@ -2446,7 +3190,11 @@ vec4 crt_lottes(vec2 texture_size, vec2 video_size, vec2 output_size, vec2 tex) 
 }
 
 void main() {
+#ifdef WITH_OPENGL2
+	gl_FragColor = crt_lottes(vTexSize, vTexSize, vViewSize, vTexCoords);
+#else
 	fragColor = crt_lottes(vTexSize, vTexSize, vViewSize, vTexCoords);
+#endif
 }
 )";
 
@@ -2454,6 +3202,17 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifdef WITH_OPENGL2
+uniform mat4 uModelMatrix;
+uniform vec4 uColor;
+uniform vec4 uTexRect;
+uniform vec2 uSpriteSize;
+
+varying vec2 vPixelCoords;
+varying vec2 vTexCoords;
+
+attribute vec2 aPosition;
+#else
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -2464,14 +3223,23 @@ layout (std140) uniform InstanceBlock
 
 out vec2 vPixelCoords;
 out vec2 vTexCoords;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 position = vec4(aPosition.x * uSpriteSize.x, aPosition.y * uSpriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * position;
+	vPixelCoords = aPosition * uTexRect.xy;
+	vTexCoords = aPosition;
+#else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vPixelCoords = aPosition * texRect.xy;
 	vTexCoords = aPosition;
+#endif
 }
 )";
 
@@ -2480,25 +3248,46 @@ void main() {
 precision mediump float;
 #endif
 
+uniform sampler2D uTexture;
+
+#ifdef WITH_OPENGL2
+varying vec2 vPixelCoords;
+varying vec2 vTexCoords;
+
+const float bayerIndex[16] = float[16](
+	0.0625, 0.5625, 0.1875, 0.6875,
+	0.8125, 0.3125, 0.9375, 0.4375,
+	0.25, 0.75, 0.125, 0.625,
+	1.0, 0.5, 0.875, 0.375
+);
+#else
+in vec2 vPixelCoords;
+in vec2 vTexCoords;
+out vec4 fragColor;
+
 mat4 bayerIndex = mat4(
 	vec4(0.0625, 0.5625, 0.1875, 0.6875),
 	vec4(0.8125, 0.3125, 0.9375, 0.4375),
 	vec4(0.25, 0.75, 0.125, 0.625),
 	vec4(1.0, 0.5, 0.875, 0.375));
-
-uniform sampler2D uTexture;
-
-in vec2 vPixelCoords;
-in vec2 vTexCoords;
-out vec4 fragColor;
+#endif
 
 float dither4x4(vec2 position, float brightness) {
+#ifdef WITH_OPENGL2
+    float bayerValue = bayerIndex[int(mod(position.y, 4.0)) * 4 + int(mod(position.x, 4.0))];
+    return brightness + (brightness < bayerValue ? -0.05 : 0.1);
+#else
 	float bayerValue = bayerIndex[int(position.x) % 4][int(position.y) % 4];
 	return brightness + (brightness < bayerValue ? -0.05 : 0.1);
+#endif
 }
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec3 color = texture2D(uTexture, vTexCoords).rgb;
+#else
 	vec3 color = texture(uTexture, vTexCoords).rgb;
+#endif
 	float gray = dot(((color - vec3(0.5)) * vec3(1.4, 1.2, 1.0)) + vec3(0.5), vec3(0.3, 0.7, 0.1));
 	gray = dither4x4(vPixelCoords, gray);
 	float palette = (abs(1.0 - gray) * 0.75) + 0.125;
@@ -2512,7 +3301,11 @@ void main() {
 	} else {
 		color = vec3(0.1, 0.134, 0.151);
 	}
+#ifdef WITH_OPENGL2
+	gl_FragColor = vec4(color, 1.0);
+#else
 	fragColor = vec4(color, 1.0);
+#endif
 }
 )";
 
@@ -2520,6 +3313,17 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifdef WITH_OPENGL2
+uniform mat4 uModelMatrix;
+uniform vec4 uColor;
+uniform vec4 uTexRect;
+uniform vec2 uSpriteSize;
+
+varying vec2 vPixelCoords;
+varying vec2 vTexSizeInv;
+
+attribute vec2 aPosition;
+#else
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -2530,14 +3334,23 @@ layout (std140) uniform InstanceBlock
 
 out vec2 vPixelCoords;
 out vec2 vTexSizeInv;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 position = vec4(aPosition.x * uSpriteSize.x, aPosition.y * uSpriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * position;
+	vPixelCoords = aPosition * uTexRect.xy + 0.5;
+	vTexSizeInv = 1.0 / uTexRect.xy;
+#else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vPixelCoords = aPosition * texRect.xy + 0.5;
 	vTexSizeInv = 1.0 / texRect.xy;
+#endif
 }
 )";
 
@@ -2548,9 +3361,14 @@ precision mediump float;
 
 uniform sampler2D uTexture;
 
+#ifdef WITH_OPENGL2
+varying vec2 vPixelCoords;
+varying vec2 vTexSizeInv;
+#else
 in vec2 vPixelCoords;
 in vec2 vTexSizeInv;
 out vec4 fragColor;
+#endif
 
 vec3 cubicHermite(vec3 A, vec3 B, vec3 C, vec3 D, float t) {
 	float t2 = t*t;
@@ -2567,6 +3385,27 @@ void main() {
 	vec2 pixel = floor(vPixelCoords) * vTexSizeInv - vec2(vTexSizeInv * 0.5);
 	vec2 vTexSizeInv2 = 2.0 * vTexSizeInv;
 
+#ifdef WITH_OPENGL2
+	vec3 C00 = texture2D(uTexture, pixel + vec2(-vTexSizeInv.x, -vTexSizeInv.y)).rgb;
+	vec3 C10 = texture2D(uTexture, pixel + vec2(0.0, -vTexSizeInv.y)).rgb;
+	vec3 C20 = texture2D(uTexture, pixel + vec2(vTexSizeInv.x, -vTexSizeInv.y)).rgb;
+	vec3 C30 = texture2D(uTexture, pixel + vec2(vTexSizeInv2.x, -vTexSizeInv.y)).rgb;
+
+	vec3 C01 = texture2D(uTexture, pixel + vec2(-vTexSizeInv.x, 0.0)).rgb;
+	vec3 C11 = texture2D(uTexture, pixel + vec2(0.0, 0.0)).rgb;
+	vec3 C21 = texture2D(uTexture, pixel + vec2(vTexSizeInv.x, 0.0)).rgb;
+	vec3 C31 = texture2D(uTexture, pixel + vec2(vTexSizeInv2.x, 0.0)).rgb;    
+
+	vec3 C02 = texture2D(uTexture, pixel + vec2(-vTexSizeInv.x , vTexSizeInv.y)).rgb;
+	vec3 C12 = texture2D(uTexture, pixel + vec2(0.0, vTexSizeInv.y)).rgb;
+	vec3 C22 = texture2D(uTexture, pixel + vec2(vTexSizeInv.x , vTexSizeInv.y)).rgb;
+	vec3 C32 = texture2D(uTexture, pixel + vec2(vTexSizeInv2.x, vTexSizeInv.y)).rgb;
+
+	vec3 C03 = texture2D(uTexture, pixel + vec2(-vTexSizeInv.x, vTexSizeInv2.y)).rgb;
+	vec3 C13 = texture2D(uTexture, pixel + vec2(0.0, vTexSizeInv2.y)).rgb;
+	vec3 C23 = texture2D(uTexture, pixel + vec2(vTexSizeInv.x, vTexSizeInv2.y)).rgb;
+	vec3 C33 = texture2D(uTexture, pixel + vec2(vTexSizeInv2.x, vTexSizeInv2.y)).rgb;
+#else
 	vec3 C00 = texture(uTexture, pixel + vec2(-vTexSizeInv.x, -vTexSizeInv.y)).rgb;
 	vec3 C10 = texture(uTexture, pixel + vec2(0.0, -vTexSizeInv.y)).rgb;
 	vec3 C20 = texture(uTexture, pixel + vec2(vTexSizeInv.x, -vTexSizeInv.y)).rgb;
@@ -2586,13 +3425,18 @@ void main() {
 	vec3 C13 = texture(uTexture, pixel + vec2(0.0, vTexSizeInv2.y)).rgb;
 	vec3 C23 = texture(uTexture, pixel + vec2(vTexSizeInv.x, vTexSizeInv2.y)).rgb;
 	vec3 C33 = texture(uTexture, pixel + vec2(vTexSizeInv2.x, vTexSizeInv2.y)).rgb;
+#endif
 
 	vec3 CP0X = cubicHermite(C00, C10, C20, C30, frac.x);
 	vec3 CP1X = cubicHermite(C01, C11, C21, C31, frac.x);
 	vec3 CP2X = cubicHermite(C02, C12, C22, C32, frac.x);
 	vec3 CP3X = cubicHermite(C03, C13, C23, C33, frac.x);
 
+#ifdef WITH_OPENGL2
+	gl_FragColor = vec4(cubicHermite(CP0X, CP1X, CP2X, CP3X, frac.y), 1.0);
+#else
 	fragColor = vec4(cubicHermite(CP0X, CP1X, CP2X, CP3X, frac.y), 1.0);
+#endif
 }
 )";
 
@@ -2600,6 +3444,18 @@ void main() {
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifdef WITH_OPENGL2
+uniform mat4 uModelMatrix;
+uniform vec4 uColor;
+uniform vec4 uTexRect;
+uniform vec2 uSpriteSize;
+
+varying vec2 vTexCoords;
+varying vec2 vCorrection;
+varying float vProgressTime;
+
+attribute vec2 aPosition;
+#else
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -2611,8 +3467,17 @@ layout (std140) uniform InstanceBlock
 out vec2 vTexCoords;
 out vec2 vCorrection;
 out float vProgressTime;
+#endif
 
 void main() {
+#ifdef WITH_OPENGL2
+	vec4 position = vec4(aPosition.x * uSpriteSize.x, aPosition.y * uSpriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * position;
+	vTexCoords = vec2(aPosition.x * uTexRect.x + uTexRect.y, aPosition.y * uTexRect.z + uTexRect.w);
+	vCorrection = uSpriteSize / vec2(max(uSpriteSize.x, uSpriteSize.y));
+	vProgressTime = uColor.a;
+#else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
@@ -2620,6 +3485,7 @@ void main() {
 	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
 	vCorrection = spriteSize / vec2(max(spriteSize.x, spriteSize.y));
 	vProgressTime = color.a;
+#endif
 }
 )";
 
@@ -2628,10 +3494,16 @@ void main() {
 precision mediump float;
 #endif
 
+#ifdef WITH_OPENGL2
+varying vec2 vTexCoords;
+varying vec2 vCorrection;
+varying float vProgressTime;
+#else
 in vec2 vTexCoords;
 in vec2 vCorrection;
 in float vProgressTime;
 out vec4 fragColor;
+#endif
 
 float rand(vec2 xy) {
 	return fract(sin(dot(xy.xy, vec2(12.9898,78.233))) * 43758.5453);
@@ -2656,7 +3528,11 @@ void main() {
 
 	float mixValue = ease(distance);
 	float noise = 1.0 + rand(uv) * 0.1;
+#ifdef WITH_OPENGL2
+	gl_FragColor = vec4(0.0, 0.0, 0.0, mixValue * noise);
+#else
 	fragColor = vec4(0.0, 0.0, 0.0, mixValue * noise);
+#endif
 }
 )";
 }

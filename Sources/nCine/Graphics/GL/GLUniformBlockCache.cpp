@@ -2,6 +2,10 @@
 #include "GLUniformBlock.h"
 #include "../../../Main.h"
 
+#if defined(WITH_OPENGL2)
+#	include "GLShaderUniforms.h"
+#endif
+
 namespace nCine
 {
 	GLUniformBlockCache::GLUniformBlockCache()

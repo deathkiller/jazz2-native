@@ -59,6 +59,7 @@ else()
 	endif()
 	
 	if((WIN32 OR NOT NCINE_WITH_OPENGLES) AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH)
+		option(NCINE_WITH_OPENGL2 "Use OpenGL 2.x compatibility mode" OFF)
 		option(NCINE_WITH_GLEW "Use GLEW library" ON)
 	endif()
 endif()

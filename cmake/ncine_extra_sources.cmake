@@ -9,6 +9,11 @@ if(TARGET Backward)
 	target_link_libraries(${NCINE_APP} PRIVATE Backward)
 endif()
 
+if(NCINE_WITH_OPENGL2)
+	message(STATUS "Using OpenGL 2.x compatibility mode")
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OPENGL2")
+endif()
+
 if(ANGLE_FOUND OR OPENGLES2_FOUND)
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OPENGLES")
 	target_link_libraries(${NCINE_APP} PRIVATE EGL::EGL OpenGLES2::GLES2)

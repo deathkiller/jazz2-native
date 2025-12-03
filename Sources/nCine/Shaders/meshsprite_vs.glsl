@@ -1,6 +1,16 @@
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
+#ifdef WITH_OPENGL2
+uniform mat4 modelMatrix;
+uniform vec4 color;
+uniform vec4 texRect;
+uniform vec2 spriteSize;
+attribute vec2 aPosition;
+attribute vec2 aTexCoords;
+varying vec2 vTexCoords;
+varying vec4 vColor;
+#else
 layout (std140) uniform InstanceBlock
 {
 	mat4 modelMatrix;
@@ -8,11 +18,11 @@ layout (std140) uniform InstanceBlock
 	vec4 texRect;
 	vec2 spriteSize;
 };
-
 in vec2 aPosition;
 in vec2 aTexCoords;
 out vec2 vTexCoords;
 out vec4 vColor;
+#endif
 
 void main()
 {

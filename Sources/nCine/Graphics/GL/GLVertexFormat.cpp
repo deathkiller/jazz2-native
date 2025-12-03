@@ -86,11 +86,16 @@ namespace nCine
 					case GL_UNSIGNED_SHORT:
 					case GL_INT:
 					case GL_UNSIGNED_INT:
+#if defined(WITH_OPENGL2)
+						// glVertexAttribIPointer is not available in OpenGL 2.x, fallback to regular pointer
+						glVertexAttribPointer(attributes_[i].index_, attributes_[i].size_, attributes_[i].type_, attributes_[i].normalized_, attributes_[i].stride_, pointer);
+#else
 						if (attributes_[i].normalized_) {
 							glVertexAttribPointer(attributes_[i].index_, attributes_[i].size_, attributes_[i].type_, GL_TRUE, attributes_[i].stride_, pointer);
 						} else {
 							glVertexAttribIPointer(attributes_[i].index_, attributes_[i].size_, attributes_[i].type_, attributes_[i].stride_, pointer);
 						}
+#endif
 						break;
 					default:
 						glVertexAttribPointer(attributes_[i].index_, attributes_[i].size_, attributes_[i].type_, attributes_[i].normalized_, attributes_[i].stride_, pointer);

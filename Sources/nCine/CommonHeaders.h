@@ -10,8 +10,12 @@
 #		include <GL/glew.h>
 #	elif defined(DEATH_TARGET_APPLE)
 #		define GL_SILENCE_DEPRECATION
-#		include <OpenGL/gl3.h>
-#		include <OpenGL/gl3ext.h>
+#		if defined(WITH_OPENGL2)
+#			include <OpenGL/gl.h>
+#		else
+#			include <OpenGL/gl3.h>
+#			include <OpenGL/gl3ext.h>
+#		endif
 #	else
 #		if !defined(CMAKE_BUILD) && defined(__has_include)
 #			if __has_include("GL/glew.h")

@@ -45,8 +45,8 @@ namespace nCine
 		}
 
 		std::uint32_t offset = 0;
-#if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
-		// Simulating missing `glDrawElementsBaseVertex()` on OpenGL ES 3.0
+#if defined(WITH_OPENGL2) || (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
+		// Simulating missing `glDrawElementsBaseVertex()` on OpenGL ES 3.0 and OpenGL 2.x
 		if (geometry_.numIndices_ > 0) {
 			offset = geometry_.GetVboParams().offset + (geometry_.firstVertex_ * geometry_.numElementsPerVertex_ * sizeof(GLfloat));
 		}

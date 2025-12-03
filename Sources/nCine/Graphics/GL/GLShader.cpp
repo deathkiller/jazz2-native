@@ -15,13 +15,17 @@ namespace nCine
 {
 	namespace
 	{
-#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(WITH_OPENGL2)
+		static constexpr StringView CommonShaderVersion = "#version 120\n"_s;
+#elif (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 		static constexpr StringView CommonShaderVersion = "#version 300 es\n"_s;
 #else
 		static constexpr StringView CommonShaderVersion = "#version 330\n"_s;
 #endif
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(WITH_OPENGL2)
+		static constexpr StringView CommonShaderDefines = "#define WITH_OPENGL2\n#line 0\n"_s;
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
 		static constexpr StringView CommonShaderDefines = "#define DEATH_TARGET_EMSCRIPTEN\n#line 0\n"_s;
 #elif defined(DEATH_TARGET_ANDROID)
 		static constexpr StringView CommonShaderDefines = "#define DEATH_TARGET_ANDROID\n#line 0\n"_s;
@@ -135,12 +139,11 @@ namespace nCine
 			if (logOnErrors) {
 				GLint length = 0;
 				glGetShaderiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
+				char buffer[2048];
 				if (length > 0) {
-					static char buffer[2048];
 					glGetShaderInfoLog(glHandle_, sizeof(buffer), &length, buffer);
 					// Trim whitespace - driver messages usually contain newline(s) at the end
-					*(MutableStringView(buffer).trimmed().end()) = '\0';
-					LOGW("Shader: {}", buffer);
+					LOGW("Shader: {}", StringView(buffer).trimmed());
 				}
 				DEATH_ASSERT_BREAK();
 			}

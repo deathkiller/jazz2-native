@@ -105,10 +105,18 @@ namespace nCine
 			if (flags & DDPF_RGB || flags & (DDPF_RGB | DDPF_ALPHAPIXELS)) {
 				if ((redMask == 0x00FF0000 && greenMask == 0x0000FF00 && blueMask == 0x000000FF && alphaMask == 0x0) ||
 					(blueMask == 0x00FF0000 && greenMask == 0x0000FF00 && redMask == 0x000000FF && alphaMask == 0x0)) { // 888
+#if defined(WITH_OPENGL2)
+					internalFormat = GL_RGB;
+#else
 					internalFormat = GL_RGB8;
+#endif
 				} else if ((alphaMask == 0xFF000000 && redMask == 0x00FF0000 && greenMask == 0x0000FF00 && blueMask == 0x000000FF) ||
 						 (alphaMask == 0xFF000000 && blueMask == 0x00FF0000 && greenMask == 0x0000FF00 && redMask == 0x000000FF)) { // 8888
+#if defined(WITH_OPENGL2)
+					internalFormat = GL_RGBA;
+#else
 					internalFormat = GL_RGBA8;
+#endif
 				}
 #if 0
 				// 16 bits uncompressed DDS data is not compatbile with OpenGL color channels order
@@ -131,13 +139,25 @@ namespace nCine
 				// Used in some older DDS files for single channel color uncompressed data
 				// dwRGBBitCount contains the luminance channel bit count; dwRBitMask contains the channel mask
 				// Can be combined with DDPF_ALPHAPIXELS for a two channel DDS file
+#if defined(WITH_OPENGL2)
+				internalFormat = GL_LUMINANCE_ALPHA;
+#else
 				internalFormat = GL_RG8;
+#endif
 			} else if (flags & DDPF_LUMINANCE) {
+#if defined(WITH_OPENGL2)
+				internalFormat = GL_LUMINANCE;
+#else
 				internalFormat = GL_R8;
+#endif
 			} else if (flags & DDPF_ALPHA) {
 				// Used in some older DDS files for alpha channel only uncompressed data
 				// dwRGBBitCount contains the alpha channel bitcount; dwABitMask contains valid data
+#if defined(WITH_OPENGL2)
+				internalFormat = GL_LUMINANCE;
+#else
 				internalFormat = GL_R8;
+#endif
 			} else {
 				LOGE("Unsupported DDS uncompressed pixel format: {}", flags);
 				return false;

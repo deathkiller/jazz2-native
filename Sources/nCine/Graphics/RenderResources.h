@@ -146,6 +146,8 @@ namespace nCine
 		static void Create();
 		static void Dispose();
 
+#if !defined(WITH_OPENGL2)
 		static void RegisterDefaultBatchedShaders();
+#endif
 	};
 }

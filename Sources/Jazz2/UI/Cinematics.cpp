@@ -146,6 +146,8 @@ namespace Jazz2::UI
 				if (!s->IsValid()) {
 					return false;
 				}
+			} else {
+				return false;
 			}
 		}
 		

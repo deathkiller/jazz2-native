@@ -16,14 +16,30 @@ namespace nCine
 	{
 		switch (format) {
 			case Texture::Format::R8:
+//#if defined(WITH_OPENGL2)
+//				return GL_LUMINANCE;
+//#else
 				return GL_R8;
+//#endif
 			case Texture::Format::RG8:
+//#if defined(WITH_OPENGL2)
+//				return GL_LUMINANCE_ALPHA;
+//#else
 				return GL_RG8;
+//#endif
 			case Texture::Format::RGB8:
+//#if defined(WITH_OPENGL2)
+//				return GL_RGB;
+//#else
 				return GL_RGB8;
+//#endif
 			case Texture::Format::RGBA8:
 			default:
+//#if defined(WITH_OPENGL2)
+//				return GL_RGBA;
+//#else
 				return GL_RGBA8;
+//#endif
 		}
 	}
 
@@ -31,9 +47,17 @@ namespace nCine
 	{
 		switch (format) {
 			case Texture::Format::R8:
+//#if defined(WITH_OPENGL2)
+//				return GL_LUMINANCE;
+//#else
 				return GL_RED;
+//#endif
 			case Texture::Format::RG8:
+//#if defined(WITH_OPENGL2)
+//				return GL_LUMINANCE_ALPHA;
+//#else
 				return GL_RG;
+//#endif
 			case Texture::Format::RGB8:
 				return GL_RGB;
 			case Texture::Format::RGBA8:
@@ -45,6 +69,16 @@ namespace nCine
 	Texture::Format internalFormatToNc(GLenum format)
 	{
 		switch (format) {
+//#if defined(WITH_OPENGL2)
+//			case GL_LUMINANCE:
+//				return Texture::Format::R8;
+//			case GL_LUMINANCE_ALPHA:
+//				return Texture::Format::RG8;
+//			case GL_RGB:
+//				return Texture::Format::RGB8;
+//			case GL_RGBA:
+//				return Texture::Format::RGBA8;
+//#else
 			case GL_R8:
 				return Texture::Format::R8;
 			case GL_RG8:
@@ -53,6 +87,7 @@ namespace nCine
 				return Texture::Format::RGB8;
 			case GL_RGBA8:
 				return Texture::Format::RGBA8;
+//#endif
 			default:
 				return Texture::Format::Unknown;
 		}

@@ -279,11 +279,12 @@ namespace nCine
 			if (shouldLogOnErrors_) {
 				GLint length = 0;
 				glGetProgramiv(glHandle_, GL_INFO_LOG_LENGTH, &length);
+				char buffer[2048];
 				if (length > 0) {
-					static char buffer[2048];
 					glGetProgramInfoLog(glHandle_, sizeof(buffer), &length, buffer);
-					LOGW("{}", buffer);
+					LOGW("Shader: {}", StringView(buffer).trimmed());
 				}
+				DEATH_ASSERT_BREAK();
 			}
 #endif
 			status_ = Status::LinkingFailed;
@@ -357,6 +358,8 @@ namespace nCine
 
 	void GLShaderProgram::DiscoverUniformBlocks(GLUniformBlock::DiscoverUniforms discover)
 	{
+#if !defined(WITH_OPENGL2)
+		// OpenGL 2.x doesn't support uniform blocks, skip discovery
 		ZoneScopedC(0x81A861);
 		GLint count;
 		glGetProgramiv(glHandle_, GL_ACTIVE_UNIFORM_BLOCKS, &count);
@@ -368,6 +371,7 @@ namespace nCine
 			LOGD("Shader program {} - uniform block {} : \"{}\" ({} bytes with {} align)", glHandle_, uniformBlock.GetIndex(), uniformBlock.GetName(), uniformBlock.GetSize(), uniformBlock.GetAlignAmount());
 		}
 		GL_LOG_ERRORS();
+#endif
 	}
 
 	void GLShaderProgram::DiscoverAttributes()

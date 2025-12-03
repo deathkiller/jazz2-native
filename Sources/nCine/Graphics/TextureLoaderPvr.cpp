@@ -170,10 +170,18 @@ namespace nCine
 #endif
 					break;
 				case FMT_RGBA_8888:
+#if defined(WITH_OPENGL2)
+					internalFormat = GL_RGBA;
+#else
 					internalFormat = GL_RGBA8;
+#endif
 					break;
 				case FMT_RGB_888:
+#if defined(WITH_OPENGL2)
+					internalFormat = GL_RGB;
+#else
 					internalFormat = GL_RGB8;
+#endif
 					break;
 				case FMT_RGB_565:
 					internalFormat = GL_RGB565;
@@ -188,13 +196,25 @@ namespace nCine
 					type = GL_UNSIGNED_SHORT_4_4_4_4;
 					break;
 				case FMT_LA_88:
+#if defined(WITH_OPENGL2)
+					internalFormat = GL_LUMINANCE_ALPHA;
+#else
 					internalFormat = GL_RG8;
+#endif
 					break;
 				case FMT_L_8:
+#if defined(WITH_OPENGL2)
+					internalFormat = GL_LUMINANCE;
+#else
 					internalFormat = GL_R8;
+#endif
 					break;
 				case FMT_A_8:
+#if defined(WITH_OPENGL2)
+					internalFormat = GL_LUMINANCE;
+#else
 					internalFormat = GL_R8;
+#endif
 					break;
 				default:
 					LOGE("Unsupported PVR3 uncompressed format: 0x{:x}", pixelFormat);

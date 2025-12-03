@@ -92,23 +92,37 @@ namespace nCine
 
 		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &glIntValues_[(std::int32_t)GLIntValues::MAX_TEXTURE_SIZE]);
 		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &glIntValues_[(std::int32_t)GLIntValues::MAX_TEXTURE_IMAGE_UNITS]);
+#if !defined(WITH_OPENGL2)
 		glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE]);
 		glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BUFFER_BINDINGS]);
 		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_BLOCKS, &glIntValues_[(std::int32_t)GLIntValues::MAX_VERTEX_UNIFORM_BLOCKS]);
 		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_BLOCKS, &glIntValues_[(std::int32_t)GLIntValues::MAX_FRAGMENT_UNIFORM_BLOCKS]);
 		glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &glIntValues_[(std::int32_t)GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT]);
+#else
+		// OpenGL 2.x doesn't support uniform buffers
+		glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE] = 0;
+		glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BUFFER_BINDINGS] = 0;
+		glIntValues_[(std::int32_t)GLIntValues::MAX_VERTEX_UNIFORM_BLOCKS] = 0;
+		glIntValues_[(std::int32_t)GLIntValues::MAX_FRAGMENT_UNIFORM_BLOCKS] = 0;
+		glIntValues_[(std::int32_t)GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT] = 0;
+#endif
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
 		glGetIntegerv(GL_MAX_VERTEX_ATTRIB_STRIDE, &glIntValues_[(std::int32_t)GLIntValues::MAX_VERTEX_ATTRIB_STRIDE]);
 #endif
 		glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &glIntValues_[(std::int32_t)GLIntValues::MAX_COLOR_ATTACHMENTS]);
 
 		// MAX_UNIFORM_BLOCK_SIZE is sometimes not reported correctly, so try to adjust it here
+#if !defined(WITH_OPENGL2)
 		glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE];
 		if (glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] > 64 * 1024) {
 			glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = 64 * 1024;
 		} else if (glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] <= 0) {
 			glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = 16 * 1024;
 		}
+#else
+		// OpenGL 2.x doesn't support uniform buffers
+		glIntValues_[(std::int32_t)GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = 0;
+#endif
 
 		const char* ExtensionNames[] = {
 			"GL_KHR_debug", "GL_ARB_texture_storage", "GL_ARB_get_program_binary",

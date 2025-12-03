@@ -48,15 +48,21 @@ namespace nCine
 		withVSync(true),
 		withGlDebugContext(false),
 
-		// Compile-time variables
+#if defined(WITH_OPENGL2)
+		glCoreProfile_(false),
+		glForwardCompatible_(true),
+		glMajorVersion_(2),
+		glMinorVersion_(1),
+#else
 		glCoreProfile_(true),
 		glForwardCompatible_(true),
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#	if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		glMajorVersion_(3),
 		glMinorVersion_(0),
-#else
+#	else
 		glMajorVersion_(3),
 		glMinorVersion_(3),
+#	endif
 #endif
 		argv_(nullptr)
 	{
