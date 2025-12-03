@@ -622,6 +622,17 @@ else()
 			ICON "${NCINE_SOURCE_DIR}/Icons/256px.png"
 			ROMFS "${NCINE_CONTENT_DIR}"
 		)
+	elseif(VITA)
+		target_link_libraries(${NCINE_APP}
+			SceDisplay_stub
+			SceCtrl_stub
+			SceNet_stub
+			SceSysmodule_stub)
+			
+		set(VITA_TITLEID ${NCINE_APP})
+		vita_create_self(${NCINE_APP}.self ${NCINE_APP})
+		vita_create_vpk(${NCINE_APP}.vpk ${VITA_TITLEID} ${NCINE_APP}.self
+			VERSION ${NCINE_VERSION} NAME ${NCINE_APP_NAME})
 	elseif(WIN32 AND NCINE_COPY_DEPENDENCIES)
 		set(WIN32_DEPENDENCIES "")
 		

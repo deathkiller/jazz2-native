@@ -2584,10 +2584,10 @@ uniform mat4 uViewMatrix;
 
 #ifdef WITH_OPENGL2
 #define highp
-uniform mat4 uModelMatrix;
-uniform vec4 uColor;
-uniform vec4 uTexRect;
-uniform vec2 uSpriteSize;
+uniform mat4 modelMatrix;
+uniform vec4 color;
+uniform vec4 texRect;
+uniform vec2 spriteSize;
 
 varying highp vec2 vPixelCoords;
 varying vec2 vTexCoords;
@@ -2610,12 +2610,12 @@ out highp vec2 vOutputSize;
 
 void main() {
 #ifdef WITH_OPENGL2
-	vec4 position = vec4(aPosition.x * uSpriteSize.x, aPosition.y * uSpriteSize.y, 0.0, 1.0);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 	
-	gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * position;
-	vPixelCoords = aPosition * uSpriteSize.xy;
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vPixelCoords = aPosition * spriteSize.xy;
 	vTexCoords = aPosition;
-	vOutputSize = uSpriteSize.xy;
+	vOutputSize = spriteSize.xy;
 #else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
@@ -2704,10 +2704,10 @@ uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
 #ifdef WITH_OPENGL2
-uniform mat4 uModelMatrix;
-uniform vec4 uColor;
-uniform vec4 uTexRect;
-uniform vec2 uSpriteSize;
+uniform mat4 modelMatrix;
+uniform vec4 color;
+uniform vec4 texRect;
+uniform vec2 spriteSize;
 
 varying vec2 vTexCoords;
 varying vec2 vTexSize;
@@ -2730,12 +2730,12 @@ out vec2 vViewSize;
 
 void main() {
 #ifdef WITH_OPENGL2
-	vec4 position = vec4(aPosition.x * uSpriteSize.x, aPosition.y * uSpriteSize.y, 0.0, 1.0);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
-	gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * position;
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
 	vTexCoords = aPosition;
-	vTexSize = uTexRect.xy;
-	vViewSize = uSpriteSize;
+	vTexSize = texRect.xy;
+	vViewSize = spriteSize;
 #else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
@@ -3203,10 +3203,10 @@ uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
 #ifdef WITH_OPENGL2
-uniform mat4 uModelMatrix;
-uniform vec4 uColor;
-uniform vec4 uTexRect;
-uniform vec2 uSpriteSize;
+uniform mat4 modelMatrix;
+uniform vec4 color;
+uniform vec4 texRect;
+uniform vec2 spriteSize;
 
 varying vec2 vPixelCoords;
 varying vec2 vTexCoords;
@@ -3227,10 +3227,10 @@ out vec2 vTexCoords;
 
 void main() {
 #ifdef WITH_OPENGL2
-	vec4 position = vec4(aPosition.x * uSpriteSize.x, aPosition.y * uSpriteSize.y, 0.0, 1.0);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
-	gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * position;
-	vPixelCoords = aPosition * uTexRect.xy;
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vPixelCoords = aPosition * texRect.xy;
 	vTexCoords = aPosition;
 #else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
@@ -3274,8 +3274,8 @@ mat4 bayerIndex = mat4(
 
 float dither4x4(vec2 position, float brightness) {
 #ifdef WITH_OPENGL2
-    float bayerValue = bayerIndex[int(mod(position.y, 4.0)) * 4 + int(mod(position.x, 4.0))];
-    return brightness + (brightness < bayerValue ? -0.05 : 0.1);
+	float bayerValue = bayerIndex[int(mod(position.y, 4.0)) * 4 + int(mod(position.x, 4.0))];
+	return brightness + (brightness < bayerValue ? -0.05 : 0.1);
 #else
 	float bayerValue = bayerIndex[int(position.x) % 4][int(position.y) % 4];
 	return brightness + (brightness < bayerValue ? -0.05 : 0.1);
@@ -3314,10 +3314,10 @@ uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
 #ifdef WITH_OPENGL2
-uniform mat4 uModelMatrix;
-uniform vec4 uColor;
-uniform vec4 uTexRect;
-uniform vec2 uSpriteSize;
+uniform mat4 modelMatrix;
+uniform vec4 color;
+uniform vec4 texRect;
+uniform vec2 spriteSize;
 
 varying vec2 vPixelCoords;
 varying vec2 vTexSizeInv;
@@ -3338,11 +3338,11 @@ out vec2 vTexSizeInv;
 
 void main() {
 #ifdef WITH_OPENGL2
-	vec4 position = vec4(aPosition.x * uSpriteSize.x, aPosition.y * uSpriteSize.y, 0.0, 1.0);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
-	gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * position;
-	vPixelCoords = aPosition * uTexRect.xy + 0.5;
-	vTexSizeInv = 1.0 / uTexRect.xy;
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vPixelCoords = aPosition * texRect.xy + 0.5;
+	vTexSizeInv = 1.0 / texRect.xy;
 #else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
@@ -3445,10 +3445,10 @@ uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
 #ifdef WITH_OPENGL2
-uniform mat4 uModelMatrix;
-uniform vec4 uColor;
-uniform vec4 uTexRect;
-uniform vec2 uSpriteSize;
+uniform mat4 modelMatrix;
+uniform vec4 color;
+uniform vec4 texRect;
+uniform vec2 spriteSize;
 
 varying vec2 vTexCoords;
 varying vec2 vCorrection;
@@ -3471,12 +3471,12 @@ out float vProgressTime;
 
 void main() {
 #ifdef WITH_OPENGL2
-	vec4 position = vec4(aPosition.x * uSpriteSize.x, aPosition.y * uSpriteSize.y, 0.0, 1.0);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
 
-	gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * position;
-	vTexCoords = vec2(aPosition.x * uTexRect.x + uTexRect.y, aPosition.y * uTexRect.z + uTexRect.w);
-	vCorrection = uSpriteSize / vec2(max(uSpriteSize.x, uSpriteSize.y));
-	vProgressTime = uColor.a;
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vCorrection = spriteSize / vec2(max(spriteSize.x, spriteSize.y));
+	vProgressTime = color.a;
 #else
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);

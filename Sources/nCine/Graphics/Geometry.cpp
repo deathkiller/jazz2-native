@@ -263,7 +263,7 @@ namespace nCine
 				vbo_->BufferSubData(vboParams_.offset, vboParams_.size, hostVertexPointer_);
 			} else {
 				GLfloat* vertices = vbo_ ? AcquireVertexPointer() : AcquireVertexPointer(numFloats, numElementsPerVertex_);
-				memcpy(vertices, hostVertexPointer_, numFloats * sizeof(GLfloat));
+				std::memcpy(vertices, hostVertexPointer_, numFloats * sizeof(GLfloat));
 				ReleaseVertexPointer();
 			}
 

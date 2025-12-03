@@ -67,6 +67,29 @@ namespace nCine
 
 	void GLVertexFormat::Define()
 	{
+#if defined(WITH_OPENGL2)
+		// On OpenGL 2.x, we need to disable previously enabled attributes since there's no VAO support
+		static std::uint32_t previouslyEnabledMask = 0;
+		std::uint32_t currentEnabledMask = 0;
+		
+		// Build mask of currently enabled attributes
+		for (std::uint32_t i = 0; i < MaxAttributes; i++) {
+			if (attributes_[i].enabled_) {
+				currentEnabledMask |= (1 << i);
+			}
+		}
+		
+		// Disable attributes that were previously enabled but are not in current format
+		std::uint32_t toDisable = previouslyEnabledMask & ~currentEnabledMask;
+		for (std::uint32_t i = 0; i < MaxAttributes; i++) {
+			if (toDisable & (1 << i)) {
+				glDisableVertexAttribArray(i);
+			}
+		}
+		
+		previouslyEnabledMask = currentEnabledMask;
+#endif
+
 		for (std::uint32_t i = 0; i < MaxAttributes; i++) {
 			if (attributes_[i].enabled_) {
 				attributes_[i].vbo_->Bind();

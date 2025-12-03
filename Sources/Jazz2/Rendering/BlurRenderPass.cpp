@@ -59,7 +59,8 @@ namespace Jazz2::Rendering
 		auto* instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(static_cast<float>(size.X), static_cast<float>(size.Y));
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+		// TODO: This uniform is probably unused
+		//instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 		_renderCommand.GetMaterial().Uniform("uPixelOffset")->SetFloatValue(1.0f / size.X, 1.0f / size.Y);
 		if (!_downsampleOnly) {

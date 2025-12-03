@@ -890,7 +890,8 @@ namespace Jazz2::UI::Menu
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+		// TODO: This uniform is probably unused
+		//instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
 		command->GetMaterial().Uniform("uViewSize")->SetFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
 		command->GetMaterial().Uniform("uShift")->SetFloatVector(_texturedBackgroundPos.Data());
