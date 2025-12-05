@@ -190,6 +190,11 @@ namespace Jazz2
 			_sourcePath = fs::CombinePath(dataPath, "Source/"_s);
 			_cachePath = fs::CombinePath(dataPath, "Cache/"_s);
 		}
+#elif defined(DEATH_TARGET_VITA)
+		String appRoot = fs::CombinePath("ux0:data/"_s, NCINE_APP);
+		_cachePath = fs::CombinePath(appRoot, "Cache/"_s);
+		_contentPath = fs::CombinePath(appRoot,"Content/"_s);
+		_sourcePath = fs::CombinePath(appRoot, "Source/"_s);
 #elif defined(DEATH_TARGET_APPLE)
 		// Returns local application data directory on Apple
 		const String& appData = fs::GetSavePath("Jazz² Resurrection"_s);

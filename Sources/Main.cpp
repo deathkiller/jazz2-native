@@ -53,6 +53,10 @@ using namespace Jazz2::Multiplayer;
 #	include "TermLogo.h"
 #endif
 
+#if defined(DEATH_TARGET_VITA)
+#	include <psp2/kernel/threadmgr.h>
+#endif
+
 #if defined(DEATH_TARGET_WINDOWS) && !defined(WITH_QT5)
 #	include <cstdlib> // for `__argc` and `__argv`
 #endif
@@ -2162,6 +2166,26 @@ void GameEventHandler::ExtractPakFile(StringView pakFile, StringView targetPath)
 std::unique_ptr<IAppEventHandler> CreateAppEventHandler()
 {
 	return std::make_unique<GameEventHandler>();
+}
+#elif defined(DEATH_TARGET_VITA)
+extern "C" int vita_main(unsigned int argc, void* argv)
+{
+	return MainApplication::Run([]() -> std::unique_ptr<IAppEventHandler> {
+		return std::make_unique<GameEventHandler>();
+	}, argc, (NativeArgument*)argv);
+}
+
+int main(int argc, char** argv)
+{
+	// TODO: Remove this message after testing
+	printf("Jazz2 STARTED!\n");
+
+	// We need a bigger stack to run the game, so we create a new thread with a proper stack size
+	SceUID mainThread = sceKernelCreateThread(NCINE_APP, vita_main, 0x40, 0x800000, 0, 0, NULL);
+	if (mainThread >= 0){
+		sceKernelStartThread(mainThread, 0, NULL);
+	}
+	return sceKernelExitDeleteThread(0);
 }
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)

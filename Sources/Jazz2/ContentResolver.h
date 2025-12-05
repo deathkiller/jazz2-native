@@ -181,10 +181,10 @@ namespace Jazz2
 #endif
 		Function<String(StringView)> _pathHandler;
 
-#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WINDOWS_RT)
 		String _contentPath;
 #endif
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WINDOWS_RT)
 		String _cachePath;
 		String _sourcePath;
 #endif
