@@ -383,8 +383,13 @@ float wave(float x, float time) {
 }
 
 float aastep(float threshold, float value) {
+#ifdef WITH_OPENGL2
+	// TODO: Check if this is correct on Vita
+	float afwidth = vViewSizeInv;
+#else
 	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
-	return smoothstep(threshold - afwidth, threshold + afwidth, value); 
+#endif
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
 }
 
 // Simplex Noise
@@ -396,7 +401,8 @@ float snoise(vec2 v) {
 	const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
 	vec2 i = floor(v + dot(v, C.yy));
 	vec2 x0 = v - i + dot(i, C.xx);
-	vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+	//vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+	vec2 i1 = step(vec2(x0.y, x0.x), vec2(x0.x, x0.y));
 	vec4 x12 = x0.xyxy + C.xxzz;
 	x12.xy -= i1;
 	i = mod(i, 289.0);
@@ -652,8 +658,8 @@ vec3 voronoi(in vec2 p) {
 	vec2 mg, mr;
 
 	float md = 8.0;
-	for (int j = -1; j <= 1; ++j) {
-		for (int i = -1; i <= 1; ++i) {
+	for (int j = -1; j <= 1; j++) {
+		for (int i = -1; i <= 1; i++) {
 			vec2 g = vec2(float(i), float(j));
 			vec2 o = hash2D(n + g);
 
@@ -681,15 +687,15 @@ float addStarField(vec2 samplePosition, float threshold) {
 
 void main() {
 	// Distance to center of screen from top or bottom (1: center of screen, 0: edge of screen)
-	float distance = 1.3 - abs(2.0 * vTexCoords.y - 1.0);
-	float horizonDepth = pow(distance, 1.4);
+	float dist = 1.3 - abs(2.0 * vTexCoords.y - 1.0);
+	float horizonDepth = pow(dist, 1.4);
 
-	float yShift = (vTexCoords.y > 0.5 ? 1.0 : 0.0);
+	float yShift = step(0.5, vTexCoords.y);
 	float correction = ((uViewSize.x * 9.0) / (uViewSize.y * 16.0));
 
 	vec2 texturePos = vec2(
 		(uShift.x / 256.0) + (vTexCoords.x - 0.5   ) * (0.5 + (1.5 * horizonDepth)) * correction,
-		(uShift.y / 256.0) + (vTexCoords.y - yShift) * 1.4 * distance
+		(uShift.y / 256.0) + (vTexCoords.y - yShift) * 1.4 * dist
 	);
 
 #ifdef WITH_OPENGL2
@@ -700,7 +706,7 @@ void main() {
 	texColor = mix(texColor, texture2D(uTexture, texturePos), 0.333);
 #endif
 
-	float horizonOpacity = clamp(pow(distance, 1.5) - 0.3, 0.0, 1.0);
+	float horizonOpacity = clamp(pow(dist, 1.5) - 0.3, 0.0, 1.0);
 	
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
 	if (uHorizonColor.w > 0.0) {
@@ -721,7 +727,7 @@ void main() {
 	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
 #endif
 
-	float horizonOpacity = clamp(pow(distance, 1.5) - 0.3, 0.0, 1.0);
+	float horizonOpacity = clamp(pow(dist, 1.5) - 0.3, 0.0, 1.0);
 	
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
 	if (uHorizonColor.w > 0.0) {
@@ -773,8 +779,8 @@ vec3 voronoi(in vec2 p) {
 	vec2 mg, mr;
 
 	float md = 8.0;
-	for (int j = -1; j <= 1; ++j) {
-		for (int i = -1; i <= 1; ++i) {
+	for (int j = -1; j <= 1; j++) {
+		for (int i = -1; i <= 1; i++) {
 			vec2 g = vec2(float(i), float(j));
 			vec2 o = hash2D(n + g);
 
@@ -808,14 +814,19 @@ void main() {
 	targetCoord.x *= uViewSize.x / uViewSize.y;
 
 	// Distance to center of screen
-	float distance = length(targetCoord);
+	float dist = length(targetCoord);
 
 	// x-coordinate of tunnel
-	float xShift = (targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan(targetCoord.y, targetCoord.x) * INV_PI);
+	//float xShift = (targetCoord.x == 0.0 ? sign(targetCoord.y) * 0.5 : atan(targetCoord.y, targetCoord.x) * INV_PI);
+	float xShift = mix(
+		atan(targetCoord.y, targetCoord.x) * INV_PI,
+		sign(targetCoord.y) * 0.5,
+		step(abs(targetCoord.x), 0.0001)
+	);
 
 	vec2 texturePos = vec2(
-		(xShift)         * 1.0 + (uShift.x * 0.01),
-		(1.0 / distance) * 1.4 + (uShift.y * 0.002)
+		(xShift)     * 1.0 + (uShift.x * 0.01),
+		(1.0 / dist) * 1.4 + (uShift.y * 0.002)
 	);
 
 #ifdef WITH_OPENGL2
@@ -826,7 +837,7 @@ void main() {
 	texColor = mix(texColor, texture2D(uTexture, texturePos), 0.333);
 #endif
 
-	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);
+	float horizonOpacity = 1.0 - clamp(pow(dist, 1.4) - 0.3, 0.0, 1.0);
 	
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
 	if (uHorizonColor.w > 0.0) {
@@ -847,7 +858,7 @@ void main() {
 	texColor = mix(texColor, texture(uTexture, texturePos), 0.333);
 #endif
 
-	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);
+	float horizonOpacity = 1.0 - clamp(pow(dist, 1.4) - 0.3, 0.0, 1.0);
 	
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
 	if (uHorizonColor.w > 0.0) {
@@ -944,8 +955,13 @@ out vec4 fragColor;
 #endif
 
 float aastep(float threshold, float value) {
+#ifdef WITH_OPENGL2
+	// TODO: Check if this is correct on Vita
+	return step(threshold, value);
+#else
 	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
-	return smoothstep(threshold - afwidth, threshold + afwidth, value); 
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+#endif
 }
 
 void main() {
@@ -1080,8 +1096,13 @@ out vec4 fragColor;
 #endif
 
 float aastep(float threshold, float value) {
+#ifdef WITH_OPENGL2
+	// TODO: Check if this is correct on Vita
+	return step(threshold, value);
+#else
 	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
-	return smoothstep(threshold - afwidth, threshold + afwidth, value); 
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+#endif
 }
 
 void main() {
@@ -1257,8 +1278,13 @@ out vec4 fragColor;
 #define PI 3.1415926
 
 float aastep(float threshold, float value) {
+#ifdef WITH_OPENGL2
+	// TODO: Check if this is correct on Vita
+	return step(threshold, value);
+#else
 	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
-	return smoothstep(threshold - afwidth, threshold + afwidth, value); 
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+#endif
 }
 
 float triangleWave(float x, float period) {
@@ -1336,8 +1362,13 @@ out vec4 fragColor;
 #define PI 3.1415926
 
 float aastep(float threshold, float value) {
+#ifdef WITH_OPENGL2
+	// TODO: Check if this is correct on Vita
+	return step(threshold, value);
+#else
 	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
-	return smoothstep(threshold - afwidth, threshold + afwidth, value); 
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+#endif
 }
 
 float triangleWave(float x, float period) {
@@ -3381,7 +3412,7 @@ vec3 cubicHermite(vec3 A, vec3 B, vec3 C, vec3 D, float t) {
 }
 
 void main() {
-	vec2 frac = fract(vPixelCoords);
+	vec2 fractCoord = fract(vPixelCoords);
 	vec2 pixel = floor(vPixelCoords) * vTexSizeInv - vec2(vTexSizeInv * 0.5);
 	vec2 vTexSizeInv2 = 2.0 * vTexSizeInv;
 
@@ -3427,15 +3458,15 @@ void main() {
 	vec3 C33 = texture(uTexture, pixel + vec2(vTexSizeInv2.x, vTexSizeInv2.y)).rgb;
 #endif
 
-	vec3 CP0X = cubicHermite(C00, C10, C20, C30, frac.x);
-	vec3 CP1X = cubicHermite(C01, C11, C21, C31, frac.x);
-	vec3 CP2X = cubicHermite(C02, C12, C22, C32, frac.x);
-	vec3 CP3X = cubicHermite(C03, C13, C23, C33, frac.x);
+	vec3 CP0X = cubicHermite(C00, C10, C20, C30, fractCoord.x);
+	vec3 CP1X = cubicHermite(C01, C11, C21, C31, fractCoord.x);
+	vec3 CP2X = cubicHermite(C02, C12, C22, C32, fractCoord.x);
+	vec3 CP3X = cubicHermite(C03, C13, C23, C33, fractCoord.x);
 
 #ifdef WITH_OPENGL2
-	gl_FragColor = vec4(cubicHermite(CP0X, CP1X, CP2X, CP3X, frac.y), 1.0);
+	gl_FragColor = vec4(cubicHermite(CP0X, CP1X, CP2X, CP3X, fractCoord.y), 1.0);
 #else
-	fragColor = vec4(cubicHermite(CP0X, CP1X, CP2X, CP3X, frac.y), 1.0);
+	fragColor = vec4(cubicHermite(CP0X, CP1X, CP2X, CP3X, fractCoord.y), 1.0);
 #endif
 }
 )";
@@ -3521,12 +3552,12 @@ float ease(float time) {
 
 void main() {
 	vec2 uv = (vTexCoords - vec2(0.5)) * vCorrection;
-	float distance = length(uv);
+	float dist = length(uv);
 
 	float progressInner = vProgressTime - 0.22;
-	distance = (clamp(distance, progressInner, vProgressTime) - progressInner) / (vProgressTime - progressInner);
+	dist = (clamp(dist, progressInner, vProgressTime) - progressInner) / (vProgressTime - progressInner);
 
-	float mixValue = ease(distance);
+	float mixValue = ease(dist);
 	float noise = 1.0 + rand(uv) * 0.1;
 #ifdef WITH_OPENGL2
 	gl_FragColor = vec4(0.0, 0.0, 0.0, mixValue * noise);

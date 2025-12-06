@@ -166,7 +166,7 @@ option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-depen
 
 # Jazz² Resurrection options
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)
-option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF)
+option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" ${VITA}) # Rescaling options are disabled on Vita by default
 
 # Multiplayer is not supported on Emscripten yet and requires multithreading
 cmake_dependent_option(WITH_MULTIPLAYER "Enable multiplayer support" OFF "NCINE_WITH_THREADS;NOT EMSCRIPTEN" OFF)

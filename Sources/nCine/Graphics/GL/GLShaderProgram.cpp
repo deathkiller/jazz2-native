@@ -114,15 +114,7 @@ namespace nCine
 	{
 		std::unique_ptr<GLShader> shader = std::make_unique<GLShader>(type);
 		shader->LoadFromStringsAndFile(strings, filename);
-#if defined(DEATH_TARGET_VITA)
-		// TODO: glAttachShader() is crashing emulator on Vita
-		LOGE("COMPILING SHADER BEGIN");
-#endif
 		glAttachShader(glHandle_, shader->GetGLHandle());
-#if defined(DEATH_TARGET_VITA)
-		// TODO: glAttachShader() is crashing emulator on Vita
-		LOGE("COMPILING SHADER END");
-#endif
 
 		const GLShader::ErrorChecking errorChecking = (queryPhase_ == GLShaderProgram::QueryPhase::Immediate)
 			? GLShader::ErrorChecking::Immediate

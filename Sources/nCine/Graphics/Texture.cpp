@@ -15,19 +15,17 @@ namespace nCine
 	GLenum ncFormatToInternal(Texture::Format format)
 	{
 		switch (format) {
-#if !defined(WITH_OPENGL2)
 			case Texture::Format::R8:
-//#if defined(WITH_OPENGL2)
-//				return GL_LUMINANCE;
-//#else
+#if defined(WITH_OPENGL2)
+				return GL_LUMINANCE;
+#else
 				return GL_R8;
-//#endif
+#endif
 			case Texture::Format::RG8:
-//#if defined(WITH_OPENGL2)
-//				return GL_LUMINANCE_ALPHA;
-//#else
+#if defined(WITH_OPENGL2)
+				return GL_LUMINANCE_ALPHA;
+#else
 				return GL_RG8;
-//#endif
 #endif
 			case Texture::Format::RGB8:
 //#if defined(WITH_OPENGL2)
@@ -49,17 +47,17 @@ namespace nCine
 	{
 		switch (format) {
 			case Texture::Format::R8:
-//#if defined(WITH_OPENGL2)
-//				return GL_LUMINANCE;
-//#else
+#if defined(WITH_OPENGL2)
+				return GL_LUMINANCE;
+#else
 				return GL_RED;
-//#endif
+#endif
 			case Texture::Format::RG8:
-//#if defined(WITH_OPENGL2)
-//				return GL_LUMINANCE_ALPHA;
-//#else
+#if defined(WITH_OPENGL2)
+				return GL_LUMINANCE_ALPHA;
+#else
 				return GL_RG;
-//#endif
+#endif
 			case Texture::Format::RGB8:
 				return GL_RGB;
 			case Texture::Format::RGBA8:
@@ -71,27 +69,25 @@ namespace nCine
 	Texture::Format internalFormatToNc(GLenum format)
 	{
 		switch (format) {
-//#if defined(WITH_OPENGL2)
-//			case GL_LUMINANCE:
-//				return Texture::Format::R8;
-//			case GL_LUMINANCE_ALPHA:
-//				return Texture::Format::RG8;
-//			case GL_RGB:
-//				return Texture::Format::RGB8;
-//			case GL_RGBA:
-//				return Texture::Format::RGBA8;
-//#else
-#if !defined(WITH_OPENGL2)
+#if defined(WITH_OPENGL2)
+			case GL_LUMINANCE:
+				return Texture::Format::R8;
+			case GL_LUMINANCE_ALPHA:
+				return Texture::Format::RG8;
+			case GL_RGB:
+				return Texture::Format::RGB8;
+			case GL_RGBA:
+				return Texture::Format::RGBA8;
+#else
 			case GL_R8:
 				return Texture::Format::R8;
 			case GL_RG8:
 				return Texture::Format::RG8;
-#endif
 			case GL_RGB8:
 				return Texture::Format::RGB8;
 			case GL_RGBA8:
 				return Texture::Format::RGBA8;
-//#endif
+#endif
 			default:
 				return Texture::Format::Unknown;
 		}
@@ -297,7 +293,6 @@ namespace nCine
 		}
 
 		GLenum glFilter = GL_NEAREST;
-		// clang-format off
 		switch (filter) {
 			case SamplerFilter::Nearest:				glFilter = GL_NEAREST; break;
 			case SamplerFilter::Linear:					glFilter = GL_LINEAR; break;
@@ -307,7 +302,6 @@ namespace nCine
 			case SamplerFilter::LinearMipmapLinear:		glFilter = GL_LINEAR_MIPMAP_LINEAR; break;
 			default:									glFilter = GL_NEAREST; break;
 		}
-		// clang-format on
 
 		glTexture_->Bind();
 		glTexture_->TexParameteri(GL_TEXTURE_MIN_FILTER, glFilter);
@@ -321,13 +315,11 @@ namespace nCine
 		}
 
 		GLenum glFilter = GL_NEAREST;
-		// clang-format off
 		switch (filter) {
 			case SamplerFilter::Nearest:			glFilter = GL_NEAREST; break;
 			case SamplerFilter::Linear:				glFilter = GL_LINEAR; break;
 			default:								glFilter = GL_NEAREST; break;
 		}
-		// clang-format on
 
 		glTexture_->Bind();
 		glTexture_->TexParameteri(GL_TEXTURE_MAG_FILTER, glFilter);
@@ -341,14 +333,12 @@ namespace nCine
 		}
 
 		GLenum glWrap;
-		// clang-format off
 		switch (wrapMode) {
 			default:
 			case SamplerWrapping::ClampToEdge:		glWrap = GL_CLAMP_TO_EDGE; break;
 			case SamplerWrapping::MirroredRepeat:	glWrap = GL_MIRRORED_REPEAT; break;
 			case SamplerWrapping::Repeat:			glWrap = GL_REPEAT; break;
 		}
-		// clang-format on
 
 		glTexture_->Bind();
 		glTexture_->TexParameteri(GL_TEXTURE_WRAP_S, glWrap);

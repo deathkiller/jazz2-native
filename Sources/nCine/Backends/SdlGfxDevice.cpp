@@ -241,10 +241,15 @@ namespace nCine::Backends
 		LOGD("Initializing OpenGL context...");
 		
 		// Vita OpenGL context is initialized in vglInitExtended() and doesn't use windowing system
-		vglInitExtended(0, 960, 544, 0x1800000, SCE_GXM_MULTISAMPLE_NONE);
+		std::int32_t result = vglInitExtended(0, 960, 544, 0x1800000, SCE_GXM_MULTISAMPLE_NONE);
+		DEATH_ASSERT(result >= 0, ("vglInitExtended() failed with error 0x{:.8x}", -result));
 
 		std::uint8_t interval = (displayMode_.hasVSync() ? 1 : 0);
 		vglWaitVblankStart(interval);
+
+		// Force default resolution
+		drawableWidth_ = width_ = 960;
+		drawableHeight_ = height_ = 544;
 #else
 		// Setting OpenGL attributes
 		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, displayMode_.redBits());
