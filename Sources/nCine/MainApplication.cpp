@@ -105,8 +105,9 @@ namespace nCine
 		nxlinkStdio();
 		romfsInit();
 #elif defined(DEATH_TARGET_VITA)
-		// Initializing graphics device
-		vglInitExtended(0, 960, 544, 0x1800000, SCE_GXM_MULTISAMPLE_NONE);
+		// Enable analog sampling for controllers
+		sceTouchSetSamplingState(SCE_TOUCH_PORT_FRONT, SCE_TOUCH_SAMPLING_STATE_START);
+		sceTouchSetSamplingState(SCE_TOUCH_PORT_BACK, SCE_TOUCH_SAMPLING_STATE_START);
 	
 		// Enabling sampling for the analogs
 		sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG_WIDE);
@@ -517,6 +518,7 @@ namespace nCine
 				case SDL_DISPLAYEVENT:
 					gfxDevice_->updateMonitors();
 					break;
+#	if !defined(DEATH_TARGET_VITA)
 				case SDL_WINDOWEVENT: {
 					if (SdlGfxDevice::isMainWindow(event.window.windowID)) {
 						switch (event.window.event) {
@@ -538,6 +540,7 @@ namespace nCine
 					}
 					break;
 				}
+#	endif
 				default:
 					if (appCfg_.withGraphics) {
 						SdlInputManager::parseEvent(event);

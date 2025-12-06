@@ -113,6 +113,8 @@ using namespace Death::IO;
 #	if defined(DEATH_TARGET_SWITCH)
 #		include <time.h>
 #		include <switch.h>
+#	elif defined(DEATH_TARGET_VITA)
+#		include <psp2/kernel/clib.h>
 #	endif
 #endif
 
@@ -151,7 +153,7 @@ enum class ConsoleType {
 };
 
 static ConsoleType __consoleType = ConsoleType::None;
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WINDOWS_RT)
 static bool __consoleDarkMode = true;
 static bool __consoleSixelSupported = false;
 #endif
@@ -315,7 +317,7 @@ static BOOL WINAPI OnHandleConsoleEvent(DWORD signal)
 
 	return FALSE;
 }
-#elif (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)) && !defined(DEATH_TARGET_VITA)
+#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #	include <signal.h>
 #	include <termios.h>
 #	include <sys/select.h>
@@ -749,7 +751,11 @@ namespace nCine
 			const auto& gfxCapabilities = theServiceLocator().GetGfxCapabilities();
 			GLDebug::Init(gfxCapabilities);
 
-#if !defined(WITH_ANGLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(WITH_OPENGL2)
+			// Disable batching for OpenGL 2.x (uniform blocks not supported)
+			LOGW("Batching is disabled due to OpenGL 2.x compatibility mode");
+			renderingSettings_.batchingEnabled = false;
+#elif !defined(WITH_ANGLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
 			if (appCfg_.fixedBatchSize > 0) {
 				LOGI("Using fixed batch size: {}", appCfg_.fixedBatchSize);
 			} else {
@@ -779,12 +785,6 @@ namespace nCine
 
 			// Create a minimal set of render resources before compiling the first shader
 			RenderResources::CreateMinimal(); // they are required for rendering even without a scenegraph
-
-#if defined(WITH_OPENGL2)
-			// Disable batching for OpenGL 2.x (uniform blocks not supported)
-			LOGW("Batching is disabled due to OpenGL 2.x compatibility mode");
-			renderingSettings_.batchingEnabled = false;
-#endif
 
 			if (appCfg_.withScenegraph) {
 				gfxDevice_->setupGL();
@@ -1005,7 +1005,7 @@ namespace nCine
 				}
 				nanosleep(&dueTime, &dueTime);
 			}
-#elif defined(DEATH_TARGET_UNIX) && !defined(DEATH_TARGET_VITA)
+#elif defined(DEATH_TARGET_UNIX)
 			// It can wait longer than necessary, so subtract 0.5 ms to compensate
 			const std::int64_t remainingTimeNs = (1'000'000'000LL / (std::int64_t)appCfg_.frameLimit) -
 				((std::int64_t)frameTimer_->GetFrameDurationAsTicks() * 1'000'000'000LL / (std::int64_t)clock().frequency()) - 500'000LL;
@@ -1111,6 +1111,13 @@ namespace nCine
 		AppendFunctionName(logEntryWithColors, length2, functionName);
 		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
 		svcOutputDebugString(logEntryWithColors, length2);
+#elif defined(DEATH_TARGET_VITA)
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
+		logEntryWithColors[length2] = '\0';
+		sceClibPrintf("%s", logEntryWithColors);
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 		// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
 		std::int32_t length2 = 0;
@@ -1265,13 +1272,7 @@ namespace nCine
 			AppendFunctionName(logEntryWithColors, length3, functionName);
 			AppendPart(logEntryWithColors, length3, content.data(), (std::int32_t)content.size());
 			logEntryWithColors[length3++] = '\n';
-
-#	if !defined(DEATH_TRACE_ASYNC)
-			// File needs to be locked, because messages can arrive from different threads
 			__logFile->Write(logEntryWithColors, length3);
-#	else
-			__logFile->Write(logEntryWithColors, length3);
-#	endif
 		}
 #endif
 
@@ -1452,9 +1453,6 @@ namespace nCine
 		} else {
 			__consoleType = ConsoleType::Redirect;
 		}
-#	elif defined(DEATH_TARGET_VITA)
-		// stdout and stderr are always redirected on Vita
-		__consoleType = ConsoleType::Redirect;
 #	elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #		if defined(DEATH_TARGET_UNIX)
 		::setvbuf(stdout, nullptr, _IONBF, 0);
@@ -1586,7 +1584,7 @@ namespace nCine
 		flags |= 0x20;	// RemoteDevice
 		std::uint32_t processId = (std::uint32_t)::getpid();
 		// TODO: Hostname is not implemented on Vita
-		char hostName[128] {}; std::int32_t hostNameLength = 0;
+		char hostName[32] {}; std::int32_t hostNameLength = 0;
 #		else
 #			if defined(DEATH_TARGET_SWITCH)
 		flags |= 0x20;	// RemoteDevice

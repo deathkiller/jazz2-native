@@ -526,6 +526,9 @@ function(ncine_apply_compiler_options target)
 			target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-funsafe-loop-optimizations -ftree-loop-if-convert-stores>)
 
 			if(VITA)
+				# Static variables in functions are crashing on Vita, so disable thread-safe statics
+				target_compile_options(${target} PRIVATE "-fno-threadsafe-statics")
+				# TODO: This optimization can cause issues on Vita, so it's disabled for now
 				target_compile_options(${target} PRIVATE "-fno-optimize-sibling-calls")
 			endif()
 

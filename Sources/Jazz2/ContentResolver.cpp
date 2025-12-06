@@ -85,7 +85,7 @@ namespace Jazz2
 
 	StringView ContentResolver::GetContentPath() const
 	{
-#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WINDOWS_RT)
 		return _contentPath;
 #elif defined(DEATH_TARGET_ANDROID)
 		return "assets:/"_s;
@@ -100,7 +100,7 @@ namespace Jazz2
 
 	StringView ContentResolver::GetCachePath() const
 	{
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WINDOWS_RT)
 		return _cachePath;
 #elif defined(DEATH_TARGET_SWITCH)
 		// Switch has some issues with UTF-8 characters, so use "Jazz2" instead
@@ -114,7 +114,7 @@ namespace Jazz2
 
 	StringView ContentResolver::GetSourcePath() const
 	{
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WINDOWS_RT)
 		return _sourcePath;
 #elif defined(DEATH_TARGET_SWITCH)
 		// Switch has some issues with UTF-8 characters, so use "Jazz2" instead

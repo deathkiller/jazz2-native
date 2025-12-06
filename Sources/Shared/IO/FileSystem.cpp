@@ -793,11 +793,11 @@ namespace Death { namespace IO {
 
 			struct dirent* entry = ::readdir(d);
 			while (entry != nullptr) {
-#if defined(DEATH_TARGET_VITA)
+#	if defined(DEATH_TARGET_VITA)
 				if (::strcmp(partialResult.begin(), entry->d_name) == 0) {
-#else
+#	else
 				if (::strcasecmp(partialResult.begin(), entry->d_name) == 0) {
-#endif
+#	endif
 #	if defined(__FreeBSD__)
 					std::size_t fileNameLength = entry->d_namlen;
 #	else

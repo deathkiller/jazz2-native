@@ -9,6 +9,9 @@
 #	include <CoreFoundation/CFPropertyList.h>
 #	include <CoreFoundation/CFArray.h>
 #	include <CoreFoundation/CFString.h>
+#elif defined(DEATH_TARGET_VITA)
+#	include <psp2/apputil.h>
+#	include <psp2/system_param.h>
 #endif
 
 #include <Environment.h>
@@ -662,6 +665,31 @@ namespace nCine
 				StringUtils::lowercaseInPlace(langId);
 				arrayAppend(preferred, std::move(langId));
 			}
+		}
+#elif defined(DEATH_TARGET_VITA)
+		std::int32_t language = SCE_SYSTEM_PARAM_LANG_ENGLISH_US;
+		sceAppUtilSystemParamGetInt(SCE_SYSTEM_PARAM_ID_LANG, &language);
+		switch(language) {
+			case SCE_SYSTEM_PARAM_LANG_JAPANESE:      arrayAppend(preferred, "ja"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_ENGLISH_US:    arrayAppend(preferred, "en"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_FRENCH:        arrayAppend(preferred, "fr"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_SPANISH:       arrayAppend(preferred, "es"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_GERMAN:        arrayAppend(preferred, "de"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_ITALIAN:       arrayAppend(preferred, "it"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_DUTCH:         arrayAppend(preferred, "nl"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_PORTUGUESE_PT: arrayAppend(preferred, "pt"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_RUSSIAN:       arrayAppend(preferred, "ru"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_KOREAN:        arrayAppend(preferred, "ko"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_CHINESE_T:     arrayAppend(preferred, "zh"_s); break; // Traditional
+			case SCE_SYSTEM_PARAM_LANG_CHINESE_S:     arrayAppend(preferred, "zh"_s); break; // Simplified
+			case SCE_SYSTEM_PARAM_LANG_FINNISH:       arrayAppend(preferred, "fi"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_SWEDISH:       arrayAppend(preferred, "sv"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_DANISH:        arrayAppend(preferred, "da"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_NORWEGIAN:     arrayAppend(preferred, "no"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_POLISH:        arrayAppend(preferred, "pl"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_PORTUGUESE_BR: arrayAppend(preferred, "pt"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_ENGLISH_GB:    arrayAppend(preferred, "en"_s); break;
+			case SCE_SYSTEM_PARAM_LANG_TURKISH:       arrayAppend(preferred, "tr"_s); break;
 		}
 #elif defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX)
 		char* langRaw = ::getenv("LANG");

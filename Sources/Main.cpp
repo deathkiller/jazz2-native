@@ -237,11 +237,11 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 			config.withVSync = false;
 			config.frameLimit = PreferencesCache::MaxFps;
 		}
-#if !defined(DEATH_TARGET_SWITCH)
+#if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
 		config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
 #endif
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_VITA)
 		auto& resolver = ContentResolver::Get();
 		config.shaderCachePath = fs::CombinePath(resolver.GetCachePath(), "Shaders"_s);
 #endif
@@ -1437,7 +1437,7 @@ void GameEventHandler::OnBeginInitialize()
 	if (fs::IsReadableFile(mappingsPath)) {
 		theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath);
 	}
-#elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
+#elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WINDOWS_RT)
 	// Try to load gamepad mappings from `Content` directory
 	String mappingsPath = fs::CombinePath(resolver.GetContentPath(), "gamecontrollerdb.txt"_s);
 	if (fs::IsReadableFile(mappingsPath)) {
@@ -1445,7 +1445,7 @@ void GameEventHandler::OnBeginInitialize()
 	}
 #endif
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WINDOWS_RT)
 	// Try to load gamepad mappings also from config directory
 	auto configDir = PreferencesCache::GetDirectory();
 	if (!configDir.empty()) {
@@ -2177,9 +2177,6 @@ extern "C" int vita_main(unsigned int argc, void* argv)
 
 int main(int argc, char** argv)
 {
-	// TODO: Remove this message after testing
-	printf("Jazz2 STARTED!\n");
-
 	// We need a bigger stack to run the game, so we create a new thread with a proper stack size
 	SceUID mainThread = sceKernelCreateThread(NCINE_APP, vita_main, 0x40, 0x800000, 0, 0, NULL);
 	if (mainThread >= 0){

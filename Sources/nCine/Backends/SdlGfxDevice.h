@@ -32,13 +32,10 @@ namespace nCine::Backends
 
 		void update() override;
 
-		inline void setWindowPosition(int x, int y) override { SDL_SetWindowPosition(windowHandle_, x, y); }
-
+		void setWindowPosition(int x, int y) override;
 		void setWindowSize(int width, int height) override;
 
-		inline void setWindowTitle(StringView windowTitle) override {
-			SDL_SetWindowTitle(windowHandle_, String::nullTerminatedView(windowTitle).data());
-		}
+		void setWindowTitle(StringView windowTitle) override;
 		void setWindowIcon(StringView windowIconFilename) override;
 
 		const Vector2i windowPosition() const override;
@@ -50,6 +47,7 @@ namespace nCine::Backends
 		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
 		bool setVideoMode(unsigned int modeIndex) override;
 
+#if !defined(DEATH_TARGET_VITA)
 		static inline bool isMainWindow(std::uint32_t windowId) {
 			SDL_Window* windowHandle = SDL_GetWindowFromID(windowId);
 			return (windowHandle == windowHandle_);
@@ -62,17 +60,19 @@ namespace nCine::Backends
 		static inline SDL_GLContext glContextHandle() {
 			return glContextHandle_;
 		}
+#endif
 
 	protected:
 		void setResolutionInternal(int width, int height) override;
-
 		void updateMonitors() override;
 
 	private:
+#if !defined(DEATH_TARGET_VITA)
 		/// SDL2 window handle
 		static SDL_Window* windowHandle_;
 		/// SDL2 OpenGL context handle
 		static SDL_GLContext glContextHandle_;
+#endif
 
 		/// Deleted copy constructor
 		SdlGfxDevice(const SdlGfxDevice&) = delete;
