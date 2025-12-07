@@ -261,7 +261,7 @@ namespace nCine
 				glUniform1iv(location, 1, reinterpret_cast<const GLint*>(dataPointer_));
 				break;
 			default:
-				LOGW("No available case to handle type: {}", uniform_->GetType());
+				LOGW("Uniform type {} is not supported", uniform_->GetType());
 				break;
 		}
 

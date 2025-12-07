@@ -54,8 +54,9 @@ namespace nCine
 		}
 
 		GLUniformCache* GetUniform(StringView name);
-		/// Wrapper around `GLUniformBlock::SetBlockBinding()`
+#if !defined(WITH_OPENGL2)
 		void SetBlockBinding(GLuint blockBinding);
+#endif
 
 	private:
 		GLUniformBlock* uniformBlock_;

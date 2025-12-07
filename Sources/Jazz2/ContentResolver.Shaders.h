@@ -4,7 +4,7 @@
 
 namespace Jazz2::Shaders
 {
-	constexpr std::uint64_t Version = 8;
+	constexpr std::uint64_t Version = 9;
 
 	constexpr char LightingVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
@@ -32,14 +32,22 @@ out vec4 vColor;
 
 void main() {
 #ifdef WITH_OPENGL2
-	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	// Vertices are defined with different positions on OpenGL 2.x
+	vec2 aPositionNorm = aPosition - vec2(0.5);
+	vec4 position = vec4(aPositionNorm.x * spriteSize.x, aPositionNorm.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+
+	vTexCoords = texRect;
+	vColor = vec4(color.x, color.y, aPositionNorm.x * 2.0, aPositionNorm.y * 2.0);
 #else
 	vec2 aPosition = vec2(0.5 - float(gl_VertexID >> 1), 0.5 - float(gl_VertexID % 2));
 	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
-#endif
 	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+
 	vTexCoords = texRect;
 	vColor = vec4(color.x, color.y, aPosition.x * 2.0, aPosition.y * 2.0);
+#endif
+
 }
 )";
 
@@ -385,7 +393,7 @@ float wave(float x, float time) {
 float aastep(float threshold, float value) {
 #ifdef WITH_OPENGL2
 	// TODO: Check if this is correct on Vita
-	float afwidth = vViewSizeInv;
+	float afwidth = max(vViewSizeInv.x, vViewSizeInv.y);
 #else
 	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
 #endif

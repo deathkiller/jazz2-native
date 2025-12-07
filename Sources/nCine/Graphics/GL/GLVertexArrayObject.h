@@ -1,5 +1,7 @@
 #pragma once
 
+#if !defined(WITH_OPENGL2)
+
 #include "GLHashMap.h"
 
 #include <Containers/StringView.h>
@@ -33,3 +35,5 @@ namespace nCine
 		GLuint glHandle_;
 	};
 }
+
+#endif

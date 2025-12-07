@@ -1528,7 +1528,8 @@ namespace Jazz2::Tiles
 		auto* instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue((float)cullingRect.W, (float)cullingRect.H);
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+		auto* c = instanceBlock->GetUniform(Material::ColorUniformName);
+		if (c) c->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
 		command->GetMaterial().Uniform("uViewSize")->SetFloatValue((float)cullingRect.W, (float)cullingRect.H);
 		command->GetMaterial().Uniform("uCameraPos")->SetFloatVector(viewCenter.Data());
@@ -1590,7 +1591,7 @@ namespace Jazz2::Tiles
 			_camera = std::make_unique<Camera>();
 			_camera->SetOrthoProjection(0.0f, (float)width, 0.0f, (float)height);
 			_camera->SetView(0, 0, 0, 1);
-			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGBA8, width, height);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->SetRootNode(this);
 			_view->SetCamera(_camera.get());

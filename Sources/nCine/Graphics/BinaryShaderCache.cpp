@@ -14,7 +14,7 @@ using namespace Death::IO;
 using namespace Death::IO::Compression;
 
 static constexpr std::uint8_t Signature[] = { 0xEF, 0xBB, 0xBF, 0xF0, 0x9F, 0x8C, 0xAA, 0x20 };
-static constexpr std::uint16_t Version = 1 | 0x1000;
+static constexpr std::uint16_t Version = 2 | 0x1000;
 
 namespace nCine
 {
@@ -117,6 +117,12 @@ namespace nCine
 			return false;
 		}
 
+		std::uint32_t fileShaderFlags = s->ReadValueAsLE<std::uint16_t>();
+		// Shader flags must be the same, otherwise some #defines may differ
+		if (fileShaderFlags != GetCurrentShaderFlags()) {
+			return false;
+		}
+
 		std::uint64_t fileShaderVersion = s->ReadVariableUint64();
 		// Shader version must be the same
 		if (fileShaderVersion != shaderVersion) {
@@ -174,6 +180,7 @@ namespace nCine
 
 		s->Write(Signature, sizeof(Signature));
 		s->WriteValueAsLE<std::uint16_t>(Version);
+		s->WriteValueAsLE<std::uint32_t>(GetCurrentShaderFlags());
 		s->WriteVariableUint64(shaderVersion);
 		s->WriteVariableUint32(binaryFormat);
 		s->WriteVariableUint32(program->GetBatchSize());
@@ -221,5 +228,23 @@ namespace nCine
 
 		path_ = path;
 		return true;
+	}
+
+	std::uint32_t BinaryShaderCache::GetCurrentShaderFlags()
+	{
+		std::uint32_t flags = 0;
+
+#if defined(WITH_OPENGLES)
+		flags |= 0x01;
+#endif
+#if defined(WITH_OPENGL2)
+		flags |= 0x02;
+#endif
+
+#if defined(WITH_ANGLE)
+		flags |= 0x100;
+#endif
+
+		return flags;
 	}
 }

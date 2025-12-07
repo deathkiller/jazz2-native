@@ -59,13 +59,6 @@ namespace nCine
 		return pixels;
 	}
 
-	/*std::unique_ptr<ITextureLoader> ITextureLoader::createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize)
-	{
-		// TODO: path cannot be null, otherwise InvalidAudioLoader will be created
-		//LOGI("Loading from memory: 0x{:x}, {} bytes", bufferPtr, bufferSize);
-		return createLoader(std::make_unique<MemoryStream>(bufferPtr, bufferSize), {});
-	}*/
-
 	std::unique_ptr<ITextureLoader> ITextureLoader::createFromFile(const StringView path)
 	{
 		//LOGD("Loading from file \"{}\"", path);

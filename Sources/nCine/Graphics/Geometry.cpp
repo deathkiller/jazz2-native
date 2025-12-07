@@ -94,9 +94,13 @@ namespace nCine
 		hasDirtyVertices_ = true;
 
 		if (vboParams_.mapBase == nullptr) {
+#if defined(WITH_OPENGL2)
+			DEATH_ASSERT_UNREACHABLE();
+#else
 			const GLenum mapFlags = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
-			FATAL_ASSERT_MSG(mapFlags, "Mapping of OpenGL buffers is not available");
+			FATAL_ASSERT_MSG(mapFlags != 0, "Mapping of OpenGL buffers is not available");
 			vboParams_.mapBase = static_cast<GLubyte*>(vbo_->MapBufferRange(0, vbo_->GetSize(), mapFlags));
+#endif
 		}
 
 		return reinterpret_cast<GLfloat*>(vboParams_.mapBase);
@@ -106,8 +110,12 @@ namespace nCine
 	{
 		// Don't flush and unmap if the VBO is not custom
 		if (vbo_ != nullptr && vboParams_.mapBase != nullptr) {
+#if defined(WITH_OPENGL2)
+			DEATH_ASSERT_UNREACHABLE();
+#else
 			vboParams_.object->FlushMappedBufferRange(vboParams_.offset, vboParams_.size);
 			vboParams_.object->Unmap();
+#endif
 		}
 		vboParams_.mapBase = nullptr;
 	}
@@ -168,9 +176,13 @@ namespace nCine
 		hasDirtyIndices_ = true;
 
 		if (iboParams_.mapBase == nullptr) {
+#if defined(WITH_OPENGL2)
+			DEATH_ASSERT_UNREACHABLE();
+#else
 			const GLenum mapFlags = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::ElementArray).mapFlags;
-			FATAL_ASSERT_MSG(mapFlags, "Mapping of OpenGL buffers is not available");
+			FATAL_ASSERT_MSG(mapFlags != 0, "Mapping of OpenGL buffers is not available");
 			iboParams_.mapBase = static_cast<GLubyte*>(ibo_->MapBufferRange(0, ibo_->GetSize(), mapFlags));
+#endif
 		}
 
 		return reinterpret_cast<GLushort*>(iboParams_.mapBase);
@@ -180,8 +192,12 @@ namespace nCine
 	{
 		// Don't flush and unmap if the IBO is not custom
 		if (ibo_ != nullptr && iboParams_.mapBase != nullptr) {
+#if defined(WITH_OPENGL2)
+			DEATH_ASSERT_UNREACHABLE();
+#else
 			iboParams_.object->FlushMappedBufferRange(iboParams_.offset, iboParams_.size);
 			iboParams_.object->Unmap();
+#endif
 		}
 		iboParams_.mapBase = nullptr;
 	}
@@ -262,9 +278,13 @@ namespace nCine
 				vbo_->BufferData(vboParams_.size, nullptr, vboUsageFlags_);
 				vbo_->BufferSubData(vboParams_.offset, vboParams_.size, hostVertexPointer_);
 			} else {
-				GLfloat* vertices = vbo_ ? AcquireVertexPointer() : AcquireVertexPointer(numFloats, numElementsPerVertex_);
+#if defined(WITH_OPENGL2)
+				DEATH_ASSERT_UNREACHABLE();
+#else
+				GLfloat* vertices = (vbo_ != nullptr ? AcquireVertexPointer() : AcquireVertexPointer(numFloats, numElementsPerVertex_));
 				std::memcpy(vertices, hostVertexPointer_, numFloats * sizeof(GLfloat));
 				ReleaseVertexPointer();
+#endif
 			}
 
 			// The dirty flag is only useful with a custom VBO. If the render command uses the common one, it must always copy vertices.
@@ -285,9 +305,13 @@ namespace nCine
 				ibo_->BufferData(iboParams_.size, nullptr, iboUsageFlags_);
 				ibo_->BufferSubData(iboParams_.offset, iboParams_.size, hostIndexPointer_);
 			} else {
-				GLushort* indices = ibo_ ? AcquireIndexPointer() : AcquireIndexPointer(numIndices_);
-				memcpy(indices, hostIndexPointer_, numIndices_ * sizeof(GLushort));
+#if defined(WITH_OPENGL2)
+				DEATH_ASSERT_UNREACHABLE();
+#else
+				GLushort* indices = (ibo_ != nullptr ? AcquireIndexPointer() : AcquireIndexPointer(numIndices_));
+				std::memcpy(indices, hostIndexPointer_, numIndices_ * sizeof(GLushort));
 				ReleaseIndexPointer();
+#endif
 			}
 
 			// The dirty flag is only useful with a custom IBO. If the render command uses the common one, it must always copy indices.

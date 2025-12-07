@@ -88,8 +88,10 @@ namespace Jazz2::Rendering
 		auto* instanceBlock = command.GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(_bounds.W, _bounds.H);
-		// TODO: This uniform is probably unused
+		// TODO(GL2): This uniform is probably unused
 		//instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+		auto* c = instanceBlock->GetUniform(Material::ColorUniformName);
+		if (c) c->SetFloatVector(Colorf::White.Data());
 
 		command.GetMaterial().Uniform("uAmbientColor")->SetFloatVector(_owner->_ambientLight.Data());
 		command.GetMaterial().Uniform("uTime")->SetFloatValue(_owner->_levelHandler->_elapsedFrames * 0.0018f);

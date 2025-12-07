@@ -32,16 +32,18 @@ namespace nCine
 
 		void BufferData(GLsizeiptr size, const GLvoid* data, GLenum usage);
 		void BufferSubData(GLintptr offset, GLsizeiptr size, const GLvoid* data);
-#if !defined(WITH_OPENGLES) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
+#if !defined(WITH_OPENGLES) && !defined(WITH_OPENGL2) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
 		void BufferStorage(GLsizeiptr size, const GLvoid* data, GLbitfield flags);
 #endif
 
+#if !defined(WITH_OPENGL2)
 		void BindBufferBase(GLuint index);
 		void BindBufferRange(GLuint index, GLintptr offset, GLsizei ptrsize);
 		void* MapBufferRange(GLintptr offset, GLsizeiptr length, GLbitfield access);
 		void FlushMappedBufferRange(GLintptr offset, GLsizeiptr length);
+#endif
 		GLboolean Unmap();
-#if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
+#if !defined(WITH_OPENGL2) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2))
 		void TexBuffer(GLenum internalformat);
 #endif
 

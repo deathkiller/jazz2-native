@@ -1,8 +1,11 @@
 #include "RenderVaoPool.h"
+
+#if !defined(WITH_OPENGL2)
+
 #include "RenderStatistics.h"
 #include "GL/GLBufferObject.h"
-#include "GL/GLVertexArrayObject.h"
 #include "GL/GLDebug.h"
+#include "GL/GLVertexArrayObject.h"
 #include "../Base/Algorithms.h"
 #include "../../Main.h"
 
@@ -10,27 +13,19 @@ namespace nCine
 {
 	RenderVaoPool::RenderVaoPool(std::uint32_t vaoPoolSize)
 	{
-#if !defined(WITH_OPENGL2)
 		// OpenGL 3.0+: Create a pool of actual VAO objects
 		vaoPool_.reserve(vaoPoolSize);
 
 		// Start with a VAO bound to the OpenGL context
 		GLVertexFormat format;
 		BindVao(format);
-#else
-		// OpenGL 2.x: VAOs don't exist, but we still track the last used format
-		// to avoid redundant vertex attribute setup when the format hasn't changed
-		vaoPool_.reserve(1);
-		lastFormat_ = GLVertexFormat();
-#endif
 	}
 
 	void RenderVaoPool::BindVao(const GLVertexFormat& vertexFormat)
 	{
-#if !defined(WITH_OPENGL2)
-#	if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG)
 		char debugString[128];
-#	endif
+#endif
 
 		// OpenGL 3.0+: Use actual VAOs
 		bool vaoFound = false;
@@ -50,9 +45,9 @@ namespace nCine
 					GLBufferObject::BindHandle(GL_ELEMENT_ARRAY_BUFFER, iboHandle);
 				}
 				binding.lastBindTime = TimeStamp::now();
-#	if defined(NCINE_PROFILING)
+#if defined(NCINE_PROFILING)
 				RenderStatistics::AddVaoPoolBinding();
-#	endif
+#endif
 				break;
 			}
 		}
@@ -63,7 +58,7 @@ namespace nCine
 				auto& item = vaoPool_.emplace_back();
 				item.object = std::make_unique<GLVertexArrayObject>();
 				index = std::uint32_t(vaoPool_.size() - 1);
-#	if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG)
 				if (GLDebug::IsAvailable()) {
 					std::size_t length = formatInto(debugString, "Created and defined VAO 0x{:x} ({})", std::uintptr_t(vaoPool_[index].object.get()), index);
 					GLDebug::MessageInsert({ debugString, length });
@@ -71,7 +66,7 @@ namespace nCine
 					length = formatInto(debugString, "VAO_#{}", index);
 					vaoPool_.back().object->SetObjectLabel({ debugString, length });
 				}
-#	endif
+#endif
 			} else {
 				// Find the least recently used VAO
 				TimeStamp time = vaoPool_[0].lastBindTime;
@@ -82,13 +77,13 @@ namespace nCine
 					}
 				}
 
-#	if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG)
 				std::size_t length = formatInto(debugString, "Reuse and define VAO 0x{:x} ({})", std::uintptr_t(vaoPool_[index].object.get()), index);
 				GLDebug::MessageInsert({ debugString, length });
-#	endif
-#	if defined(NCINE_PROFILING)
+#endif
+#if defined(NCINE_PROFILING)
 				RenderStatistics::AddVaoPoolReuse();
-#	endif
+#endif
 			}
 
 			const bool bindChanged = vaoPool_[index].object->Bind();
@@ -101,39 +96,19 @@ namespace nCine
 			vaoPool_[index].format = vertexFormat;
 			vaoPool_[index].format.Define();
 			vaoPool_[index].lastBindTime = TimeStamp::now();
-#	if defined(NCINE_PROFILING)
+#if defined(NCINE_PROFILING)
 			RenderStatistics::AddVaoPoolBinding();
-#	endif
+#endif
 		}
 
-#	if defined(NCINE_PROFILING)
+#if defined(NCINE_PROFILING)
 		RenderStatistics::GatherVaoPoolStatistics(std::uint32_t(vaoPool_.size()), std::uint32_t(vaoPool_.capacity()));
-#	endif
-#else
-		// OpenGL 2.x: No actual VAO support, just track format and always call Define()
-		// We only call Define() here; the check for format changes is an optimization
-		// to avoid redundant GL calls when vertex format hasn't changed
-		
-		const GLuint iboHandle = (vertexFormat.GetIbo() ? vertexFormat.GetIbo()->GetGLHandle() : 0);
-		GLBufferObject::BindHandle(GL_ELEMENT_ARRAY_BUFFER, iboHandle);
-		
-		// Always define vertex format since we don't have VAOs to cache it
-		GLVertexFormat mutableFormat = vertexFormat;
-		mutableFormat.Define();
-		
-		lastFormat_ = vertexFormat;
-		
-#	if defined(NCINE_PROFILING)
-		RenderStatistics::AddVaoPoolBinding();
-		RenderStatistics::GatherVaoPoolStatistics(1, 1);
-#	endif
 #endif
 	}
 
-#if !defined(WITH_OPENGL2)
 	void RenderVaoPool::InsertGLDebugMessage(const VaoBinding& binding)
 	{
-#	if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG)
 		static char debugString[128];
 		std::size_t length = formatInto(debugString, "Bind VAO 0x{:x}", std::uintptr_t(binding.object.get()));
 
@@ -154,7 +129,8 @@ namespace nCine
 		debugString.formatAppend(")");*/
 
 		GLDebug::MessageInsert({ debugString, length });
-#	endif
-	}
 #endif
+	}
 }
+
+#endif

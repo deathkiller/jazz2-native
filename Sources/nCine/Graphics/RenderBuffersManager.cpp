@@ -1,8 +1,8 @@
 #include "RenderBuffersManager.h"
+#include "IGfxCapabilities.h"
 #include "RenderStatistics.h"
 #include "GL/GLDebug.h"
 #include "../ServiceLocator.h"
-#include "IGfxCapabilities.h"
 #include "../../Main.h"
 #include "../tracy.h"
 
@@ -18,7 +18,7 @@ namespace nCine
 		BufferSpecifications& vboSpecs = specs_[std::int32_t(BufferTypes::Array)];
 		vboSpecs.type = BufferTypes::Array;
 		vboSpecs.target = GL_ARRAY_BUFFER;
-		vboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
+		vboSpecs.mapFlags = (useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0);
 		vboSpecs.usageFlags = GL_STREAM_DRAW;
 		vboSpecs.maxSize = vboMaxSize;
 		vboSpecs.alignment = sizeof(GLfloat);
@@ -26,7 +26,7 @@ namespace nCine
 		BufferSpecifications& iboSpecs = specs_[std::int32_t(BufferTypes::ElementArray)];
 		iboSpecs.type = BufferTypes::ElementArray;
 		iboSpecs.target = GL_ELEMENT_ARRAY_BUFFER;
-		iboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
+		iboSpecs.mapFlags = (useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0);
 		iboSpecs.usageFlags = GL_STREAM_DRAW;
 		iboSpecs.maxSize = iboMaxSize;
 		iboSpecs.alignment = sizeof(GLushort);
@@ -41,18 +41,13 @@ namespace nCine
 		uboSpecs.type = BufferTypes::Uniform;
 #if !defined(WITH_OPENGL2)
 		uboSpecs.target = GL_UNIFORM_BUFFER;
-		uboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
+		uboSpecs.mapFlags = (useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0);
 		uboSpecs.usageFlags = GL_STREAM_DRAW;
 		uboSpecs.maxSize = std::uint32_t(uboMaxSize);
 		uboSpecs.alignment = std::uint32_t(offsetAlignment);
-#else
-		// OpenGL 2.x doesn't support uniform buffers, but we still need to initialize the spec
-		uboSpecs.target = GL_ARRAY_BUFFER; // Dummy target
-		uboSpecs.mapFlags = 0;
-		uboSpecs.usageFlags = 0;
-		uboSpecs.maxSize = 0;
-		uboSpecs.alignment = 1;
-#endif	// Create the first buffer for each type right away
+#endif
+
+		// Create the first buffer for each type right away
 		for (std::uint32_t i = 0; i < std::uint32_t(BufferTypes::Count); i++) {
 #if defined(WITH_OPENGL2)
 			// Skip uniform buffer creation for OpenGL 2.x
@@ -120,7 +115,7 @@ namespace nCine
 	void RenderBuffersManager::FlushUnmap()
 	{
 		ZoneScopedC(0x81A861);
-		GLDebug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()"_s);
+		GLDebug::ScopedGroup scoped("RenderBuffersManager::FlushUnmap()"_s);
 
 		for (ManagedBuffer& buffer : buffers_) {
 #if defined(NCINE_PROFILING)
@@ -135,10 +130,14 @@ namespace nCine
 					buffer.object->BufferSubData(0, usedSize, buffer.hostBuffer.get());
 				}
 			} else {
+#if defined(WITH_OPENGL2)
+				DEATH_ASSERT_UNREACHABLE();
+#else
 				if (usedSize > 0) {
 					buffer.object->FlushMappedBufferRange(0, usedSize);
 				}
 				buffer.object->Unmap();
+#endif
 			}
 
 			buffer.mapBase = nullptr;
@@ -148,18 +147,26 @@ namespace nCine
 	void RenderBuffersManager::Remap()
 	{
 		ZoneScopedC(0x81A861);
-		GLDebug::ScopedGroup scoped("RenderBuffersManager::remap()"_s);
+		GLDebug::ScopedGroup scoped("RenderBuffersManager::Remap()"_s);
 
 		for (ManagedBuffer& buffer : buffers_) {
 			DEATH_ASSERT(buffer.freeSpace == buffer.size);
 			DEATH_ASSERT(buffer.mapBase == nullptr);
 
 			if (specs_[std::int32_t(buffer.type)].mapFlags == 0) {
+#if !defined(WITH_OPENGL2)
+				// This causes rendering glitches in OpenGL 2.x, so it's skipped there
 				buffer.object->BufferData(buffer.size, nullptr, specs_[std::int32_t(buffer.type)].usageFlags);
+#endif
 				buffer.mapBase = buffer.hostBuffer.get();
 			} else {
+#if defined(WITH_OPENGL2)
+				DEATH_ASSERT_UNREACHABLE();
+#else
 				buffer.mapBase = static_cast<GLubyte*>(buffer.object->MapBufferRange(0, buffer.size, specs_[std::int32_t(buffer.type)].mapFlags));
+#endif
 			}
+
 			FATAL_ASSERT(buffer.mapBase != nullptr);
 		}
 	}
@@ -191,7 +198,11 @@ namespace nCine
 			managedBuffer.hostBuffer = std::make_unique<GLubyte[]>(specs.maxSize);
 			managedBuffer.mapBase = managedBuffer.hostBuffer.get();
 		} else {
+#if defined(WITH_OPENGL2)
+			DEATH_ASSERT_UNREACHABLE();
+#else
 			managedBuffer.mapBase = static_cast<GLubyte*>(managedBuffer.object->MapBufferRange(0, managedBuffer.size, specs.mapFlags));
+#endif
 		}
 
 		FATAL_ASSERT(managedBuffer.mapBase != nullptr);

@@ -22,9 +22,9 @@ namespace Jazz2::Rendering
 
 			if (std::abs(requiredWidth - targetWidth) > 2 || std::abs(requiredHeight - targetHeight) > 2) {
 				if (_antialiasing._target == nullptr) {
-					_antialiasing._target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, requiredWidth, requiredHeight);
+					_antialiasing._target = std::make_unique<Texture>(nullptr, Texture::Format::RGBA8, requiredWidth, requiredHeight);
 				} else {
-					_antialiasing._target->Init(nullptr, Texture::Format::RGB8, requiredWidth, requiredHeight);
+					_antialiasing._target->Init(nullptr, Texture::Format::RGBA8, requiredWidth, requiredHeight);
 				}
 				_antialiasing._target->SetMinFiltering(SamplerFilter::Linear);
 				_antialiasing._target->SetMagFiltering(SamplerFilter::Linear);
@@ -49,14 +49,14 @@ namespace Jazz2::Rendering
 			_node = std::make_unique<SceneNode>();
 			_node->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
-			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGBA8, width, height);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->SetRootNode(_node.get());
 			_view->SetCamera(_camera.get());
 			_view->SetClearMode(Viewport::ClearMode::Never);
 		} else {
 			_view->RemoveAllTextures();
-			_target->Init(nullptr, Texture::Format::RGB8, width, height);
+			_target->Init(nullptr, Texture::Format::RGBA8, width, height);
 			_view->SetTexture(_target.get());
 		}
 		_target->SetMinFiltering(SamplerFilter::Nearest);
@@ -154,7 +154,9 @@ namespace Jazz2::Rendering
 		}
 
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(_targetSize.Data());
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+		// TODO(GL2): This uniform is probably unused
+		auto* c = instanceBlock->GetUniform(Material::ColorUniformName);
+		if (c) c->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
 		_renderCommand.GetMaterial().SetTexture(0, *_target);
 

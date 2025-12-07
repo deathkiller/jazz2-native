@@ -50,7 +50,7 @@ namespace nCine
 		{ "fr", "Français"_s },
 		{ "gl", "Galego"_s },
 		{ "gr", "Greek"_s },
-		{ "he", "Hebrew"_s },	// TODO
+		{ "he", "Hebrew"_s },
 		{ "hr", "Hrvatski"_s },
 		{ "hu", "Magyar"_s },
 		{ "it", "Italiano"_s },

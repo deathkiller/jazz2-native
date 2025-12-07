@@ -166,7 +166,7 @@ namespace nCine
 				return false;
 			}
 
-#if !defined(WITH_OPENGL2)
+#if !defined(DEATH_TARGET_VITA)
 			// After linking, shader objects are not needed anymore
 			for (auto& shader : attachedShaders_) {
 				glDetachShader(glHandle_, shader->GetGLHandle());
@@ -205,7 +205,12 @@ namespace nCine
 			}
 			vertexFormat_.SetIbo(ibo);
 
+#if defined(WITH_OPENGL2)
+			// Define vertex format every time, because VAO is not supported on OpenGL 2.x
+			vertexFormat_.Define();
+#else
 			RenderResources::GetVaoPool().BindVao(vertexFormat_);
+#endif
 		}
 	}
 
@@ -223,7 +228,7 @@ namespace nCine
 				glUseProgram(0);
 			}
 
-#if !defined(WITH_OPENGL2)
+#if !defined(DEATH_TARGET_VITA)
 			for (auto& shader : attachedShaders_) {
 				glDetachShader(glHandle_, shader->GetGLHandle());
 			}
@@ -262,7 +267,7 @@ namespace nCine
 				return false;
 			}
 
-#if !defined(WITH_OPENGL2)
+#if !defined(DEATH_TARGET_VITA)
 			// After linking, shader objects are not needed anymore
 			for (auto& shader : attachedShaders_) {
 				glDetachShader(glHandle_, shader->GetGLHandle());
@@ -336,7 +341,7 @@ namespace nCine
 			std::uint32_t remainingIndices = static_cast<std::uint32_t>(uniformCount);
 
 			while (remainingIndices > 0) {
-				const std::uint32_t uniformCountStep = (remainingIndices > NumIndices) ? NumIndices : remainingIndices;
+				const std::uint32_t uniformCountStep = (remainingIndices > NumIndices ? NumIndices : remainingIndices);
 				const std::uint32_t startIndex = static_cast<std::uint32_t>(uniformCount) - remainingIndices;
 
 				for (std::uint32_t i = 0; i < uniformCountStep; i++) {
@@ -345,6 +350,7 @@ namespace nCine
 				}
 
 #if !defined(WITH_OPENGL2)
+				// Üniform blocks are not supported on OpenGL 2.x
 				glGetActiveUniformsiv(glHandle_, uniformCountStep, uniformIndices, GL_UNIFORM_BLOCK_INDEX, blockIndices);
 #endif
 
@@ -374,7 +380,7 @@ namespace nCine
 	void GLShaderProgram::DiscoverUniformBlocks(GLUniformBlock::DiscoverUniforms discover)
 	{
 #if !defined(WITH_OPENGL2)
-		// OpenGL 2.x doesn't support uniform blocks, skip discovery
+		// Üniform blocks are not supported on OpenGL 2.x
 		ZoneScopedC(0x81A861);
 		GLint count;
 		glGetProgramiv(glHandle_, GL_ACTIVE_UNIFORM_BLOCKS, &count);

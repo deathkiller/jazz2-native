@@ -134,7 +134,7 @@ namespace Jazz2::Events
 
 		auto eventSpawner = _levelHandler->EventSpawner();
 
-		// TODO
+		// TODO: Async loading
 		//ContentResolver::Get().SuspendAsync();
 
 		// Preload all events

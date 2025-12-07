@@ -28,18 +28,18 @@ namespace nCine
 				return GL_RG8;
 #endif
 			case Texture::Format::RGB8:
-//#if defined(WITH_OPENGL2)
-//				return GL_RGB;
-//#else
+#if defined(WITH_OPENGL2)
+				return GL_RGB;
+#else
 				return GL_RGB8;
-//#endif
+#endif
 			case Texture::Format::RGBA8:
 			default:
-//#if defined(WITH_OPENGL2)
-//				return GL_RGBA;
-//#else
+#if defined(WITH_OPENGL2)
+				return GL_RGBA;
+#else
 				return GL_RGBA8;
-//#endif
+#endif
 		}
 	}
 
@@ -418,7 +418,7 @@ namespace nCine
 			glTexture_->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 			magFiltering_ = SamplerFilter::Linear;
 			minFiltering_ = SamplerFilter::LinearMipmapLinear;
-#if !defined(WITH_OPENGL2)
+#if !(defined(WITH_OPENGLES) && defined(WITH_OPENGL2))
 			// To prevent artifacts if the MIP map chain is not complete
 			glTexture_->TexParameteri(GL_TEXTURE_MAX_LEVEL, mipMapLevels_);
 #endif
@@ -432,7 +432,9 @@ namespace nCine
 
 	void Texture::Load(const ITextureLoader& texLoader)
 	{
-#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(WITH_OPENGL2)
+		const bool withTexStorage = false;
+#elif (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 		const bool withTexStorage = true;
 #else
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();

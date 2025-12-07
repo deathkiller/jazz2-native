@@ -30,7 +30,7 @@ namespace Jazz2::Rendering
 		}
 
 		if (notInitialized) {
-			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
+			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGBA8, w, h);
 			_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::None);
 
 			_camera = std::make_unique<Camera>();
@@ -39,7 +39,7 @@ namespace Jazz2::Rendering
 			_view->SetRootNode(sceneNode);
 		} else {
 			_view->RemoveAllTextures();
-			_viewTexture->Init(nullptr, Texture::Format::RGB8, w, h);
+			_viewTexture->Init(nullptr, Texture::Format::RGBA8, w, h);
 			_view->SetTexture(_viewTexture.get());
 		}
 
@@ -48,15 +48,21 @@ namespace Jazz2::Rendering
 
 		_camera->SetOrthoProjection(0.0f, (float)w, (float)h, 0.0f);
 
+#if defined(WITH_OPENGL2)
+		// RG8 uses GL_LUMINANCE_ALPHA which behaves differently on OpenGL 2
+		constexpr auto lightingTexFormat = Texture::Format::RGBA8;
+#else
+		constexpr auto lightingTexFormat = Texture::Format::RG8;
+#endif
 		if (notInitialized) {
 			_lightingRenderer = std::make_unique<LightingRenderer>(this);
-			_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
+			_lightingBuffer = std::make_unique<Texture>(nullptr, lightingTexFormat, w, h);
 			_lightingView = std::make_unique<Viewport>(_lightingBuffer.get(), Viewport::DepthStencilFormat::None);
 			_lightingView->SetRootNode(_lightingRenderer.get());
 			_lightingView->SetCamera(_camera.get());
 		} else {
 			_lightingView->RemoveAllTextures();
-			_lightingBuffer->Init(nullptr, Texture::Format::RG8, w, h);
+			_lightingBuffer->Init(nullptr, lightingTexFormat, w, h);
 			_lightingView->SetTexture(_lightingBuffer.get());
 		}
 

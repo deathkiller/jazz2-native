@@ -51,7 +51,9 @@ namespace nCine
 		inline GLUniform* GetUniform(const char* name) {
 			return blockUniforms_.find(String::nullTerminatedView(name));
 		}
+#if !defined(WITH_OPENGL2)
 		void SetBlockBinding(GLuint blockBinding);
+#endif
 
 	private:
 		/// Max number of discoverable uniforms per block

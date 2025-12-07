@@ -319,7 +319,7 @@ namespace Jazz2
 
 	bool LevelHandler::CanPlayersCollide() const
 	{
-		// TODO
+		// TODO: Implement player collision properly
 		return false;
 	}
 

@@ -282,13 +282,13 @@ namespace nCine::Backends
 
 	bool GlfwInputManager::joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs)
 	{
-		// TODO
+		// TODO: Not supported by GLFW
 		return false;
 	}
 
 	bool GlfwInputManager::joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs)
 	{
-		// TODO
+		// TODO: Not supported by GLFW
 		return false;
 	}
 

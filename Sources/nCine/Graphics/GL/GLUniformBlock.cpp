@@ -86,9 +86,9 @@ namespace nCine
 	{
 	}
 
+#if !defined(WITH_OPENGL2)
 	void GLUniformBlock::SetBlockBinding(GLuint blockBinding)
 	{
-#if !defined(WITH_OPENGL2)
 		DEATH_ASSERT(program_ != 0);
 
 		if (bindingIndex_ != static_cast<GLint>(blockBinding)) {
@@ -96,6 +96,6 @@ namespace nCine
 			GL_LOG_ERRORS();
 			bindingIndex_ = static_cast<GLint>(blockBinding);
 		}
-#endif
 	}
+#endif
 }

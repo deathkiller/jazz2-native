@@ -41,7 +41,9 @@ namespace nCine
 
 	std::unique_ptr<BinaryShaderCache> RenderResources::binaryShaderCache_;
 	std::unique_ptr<RenderBuffersManager> RenderResources::buffersManager_;
+#if !defined(WITH_OPENGL2)
 	std::unique_ptr<RenderVaoPool> RenderResources::vaoPool_;
+#endif
 	std::unique_ptr<RenderCommandPool> RenderResources::renderCommandPool_;
 	std::unique_ptr<RenderBatcher> RenderResources::renderBatcher_;
 
@@ -185,12 +187,16 @@ namespace nCine
 		// `CreateMinimal()` cannot be called after `Create()`
 		DEATH_ASSERT(binaryShaderCache_ == nullptr);
 		DEATH_ASSERT(buffersManager_ == nullptr);
+#if !defined(WITH_OPENGL2)
 		DEATH_ASSERT(vaoPool_ == nullptr);
+#endif
 	
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
 		buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.vboSize, appCfg.iboSize);
+#if !defined(WITH_OPENGL2)
 		vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
+#endif
 	}
 	
 	void RenderResources::Create()
@@ -204,9 +210,11 @@ namespace nCine
 		if (buffersManager_ == nullptr) {
 			buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.vboSize, appCfg.iboSize);
 		}
+#if !defined(WITH_OPENGL2)
 		if (vaoPool_ == nullptr) {
 			vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
 		}
+#endif
 		renderCommandPool_ = std::make_unique<RenderCommandPool>(appCfg.renderCommandPoolSize);
 		renderBatcher_ = std::make_unique<RenderBatcher>();
 		defaultCamera_ = std::make_unique<Camera>();
@@ -384,7 +392,9 @@ namespace nCine
 		defaultCamera_.reset(nullptr);
 		renderBatcher_.reset(nullptr);
 		renderCommandPool_.reset(nullptr);
+#if !defined(WITH_OPENGL2)
 		vaoPool_.reset(nullptr);
+#endif
 		buffersManager_.reset(nullptr);
 
 		LOGI("Rendering resources disposed");

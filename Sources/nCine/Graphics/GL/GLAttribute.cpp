@@ -34,12 +34,12 @@ namespace nCine
 			case GL_FLOAT_VEC3:
 			case GL_FLOAT_VEC4:
 				return GL_FLOAT;
+#if !defined(WITH_OPENGL2)
 			case GL_INT:
 			case GL_INT_VEC2:
 			case GL_INT_VEC3:
 			case GL_INT_VEC4:
 				return GL_INT;
-#if !defined(DEATH_TARGET_VITA)
 			case GL_BOOL:
 			case GL_BOOL_VEC2:
 			case GL_BOOL_VEC3:
@@ -52,7 +52,7 @@ namespace nCine
 				return GL_UNSIGNED_INT;
 #endif
 			default:
-				LOGW("No available case to handle type: {}", type_);
+				LOGW("Attribute type {} is not supported", type_);
 				return type_;
 		}
 	}
@@ -64,37 +64,36 @@ namespace nCine
 			case GL_UNSIGNED_BYTE:
 			case GL_SHORT:
 			case GL_UNSIGNED_SHORT:
-				return 1;
 			case GL_FLOAT:
+#if !defined(WITH_OPENGL2)
 			case GL_INT:
-#if !defined(DEATH_TARGET_VITA)
 			case GL_BOOL:
-#endif
 			case GL_UNSIGNED_INT:
+#endif
 				return 1;
 			case GL_FLOAT_VEC2:
+#if !defined(WITH_OPENGL2)
 			case GL_INT_VEC2:
-#if !defined(DEATH_TARGET_VITA)
 			case GL_BOOL_VEC2:
 			case GL_UNSIGNED_INT_VEC2:
 #endif
 				return 2;
 			case GL_FLOAT_VEC3:
+#if !defined(WITH_OPENGL2)
 			case GL_INT_VEC3:
-#if !defined(DEATH_TARGET_VITA)
 			case GL_BOOL_VEC3:
 			case GL_UNSIGNED_INT_VEC3:
 #endif
 				return 3;
 			case GL_FLOAT_VEC4:
+#if !defined(WITH_OPENGL2)
 			case GL_INT_VEC4:
-#if !defined(DEATH_TARGET_VITA)
 			case GL_BOOL_VEC4:
 			case GL_UNSIGNED_INT_VEC4:
 #endif
 				return 4;
 			default:
-				LOGW("No available case to handle type: {}", type_);
+				LOGW("Attribute type {} is not supported", type_);
 				return 0;
 		}
 	}

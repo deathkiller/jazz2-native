@@ -124,8 +124,8 @@ namespace nCine
 		static char debugString[128];
 #endif
 		const bool batchingEnabled = theApplication().GetRenderingSettings().batchingEnabled;
-		SmallVectorImpl<RenderCommand*>* opaques = batchingEnabled ? &opaqueBatchedQueue_ : &opaqueQueue_;
-		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_;
+		SmallVectorImpl<RenderCommand*>* opaques = (batchingEnabled ? &opaqueBatchedQueue_ : &opaqueQueue_);
+		SmallVectorImpl<RenderCommand*>* transparents = (batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_);
 
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 		std::uint32_t commandIndex = 0;

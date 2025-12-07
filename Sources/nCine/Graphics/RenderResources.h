@@ -83,9 +83,11 @@ namespace nCine
 		static inline RenderBuffersManager& GetBuffersManager() {
 			return *buffersManager_;
 		}
+#if !defined(WITH_OPENGL2)
 		static inline RenderVaoPool& GetVaoPool() {
 			return *vaoPool_;
 		}
+#endif
 		static inline RenderCommandPool& GetRenderCommandPool() {
 			return *renderCommandPool_;
 		}
@@ -117,12 +119,14 @@ namespace nCine
 
 	private:
 #if defined(WITH_EMBEDDED_SHADERS)
-		static constexpr std::uint64_t EmbeddedShadersVersion = 2ull | (1ull << 63);
+		static constexpr std::uint64_t EmbeddedShadersVersion = 3ull | (1ull << 63);
 #endif
 
 		static std::unique_ptr<BinaryShaderCache> binaryShaderCache_;
 		static std::unique_ptr<RenderBuffersManager> buffersManager_;
+#if !defined(WITH_OPENGL2)
 		static std::unique_ptr<RenderVaoPool> vaoPool_;
+#endif
 		static std::unique_ptr<RenderCommandPool> renderCommandPool_;
 		static std::unique_ptr<RenderBatcher> renderBatcher_;
 

@@ -65,5 +65,7 @@ namespace nCine
 		glGetProgramBinary_t _glGetProgramBinary;
 		glProgramBinary_t _glProgramBinary;
 		GLenum _glProgramBinaryLength;
+
+		static std::uint32_t GetCurrentShaderFlags();
 	};
 }

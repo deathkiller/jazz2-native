@@ -22,21 +22,16 @@
 namespace nCine
 {
 #if defined(WITH_OPENGL2)
-	///////////////////////////////////////////////////////////
-	// OpenGL 2.x fallback cache helpers
-	///////////////////////////////////////////////////////////
-
 	void GLShaderUniformBlocks::InitializeFallbackCache()
 	{
 		if (gl2ShaderUniforms_ == nullptr) {
 			return;
 		}
 		
-		// Set up backing store
 		gl2FallbackCache_.dataPointer_ = gl2FallbackBackingStore_;
 		std::memset(gl2FallbackBackingStore_, 0, sizeof(gl2FallbackBackingStore_));
 		
-		// Dynamically discover ALL uniforms from the shader and create caches for them
+		// Dynamically discover all uniforms from the shader and create caches for them
 		// This ensures we handle all uniforms regardless of naming conventions
 		std::uint32_t offset = 0;
 		for (const GLUniformCache& shaderUniformCache : gl2ShaderUniforms_->GetAllUniforms()) {
@@ -67,7 +62,7 @@ namespace nCine
 			ourCache.SetDataPointer(&gl2FallbackBackingStore_[offset]);
 			
 			// Store in the fallback cache's map
-			gl2FallbackCache_.uniformCaches_[name] = ourCache;
+			gl2FallbackCache_.uniformCaches_[name] = Death::move(ourCache);
 			
 			offset += uniformSize;
 		}
@@ -81,8 +76,8 @@ namespace nCine
 			return;
 		}
 		
-		// For OpenGL 2.x fallback: Copy cached uniform values from per-object backing store
-		// to shared shader uniforms. This is called right before drawing (from CommitUniforms).
+		// Copy cached uniform values from per-object backing store to shared shader uniforms
+		// This is called right before drawing (from CommitUniforms)
 		for (GLUniformCache& ourCache : gl2FallbackCache_.uniformCaches_) {
 			const GLUniform* uniform = ourCache.GetUniform();
 			if (uniform == nullptr) {
@@ -93,21 +88,13 @@ namespace nCine
 			GLUniformCache* shaderCache = gl2ShaderUniforms_->GetUniform(uniform->GetName());
 			if (shaderCache != nullptr) {
 				// Copy data from our per-object backing store to shader uniform's backing store
-				std::memcpy(
-					const_cast<GLubyte*>(shaderCache->GetDataPointer()),
-					ourCache.GetDataPointer(),
-					uniform->GetMemorySize()
-				);
+				std::memcpy(const_cast<GLubyte*>(shaderCache->GetDataPointer()), ourCache.GetDataPointer(), uniform->GetMemorySize());
 				// Mark shader uniform as dirty so CommitUniforms() will upload it
 				shaderCache->SetDirty(true);
 			}
 		}
 	}
 #endif
-
-	///////////////////////////////////////////////////////////
-	// GLShaderUniformBlocks
-	///////////////////////////////////////////////////////////
 
 	GLShaderUniformBlocks::GLShaderUniformBlocks()
 		: shaderProgram_(nullptr), dataPointer_(nullptr)
@@ -131,7 +118,7 @@ namespace nCine
 	void GLShaderUniformBlocks::Bind()
 	{
 #if !defined(WITH_OPENGL2)
-		// OpenGL 3.3+ path: Use uniform buffer objects
+		// Use uniform buffer objects on OpenGL 3.3+
 #	if defined(DEATH_DEBUG)
 		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 #	endif
@@ -150,7 +137,6 @@ namespace nCine
 			}
 		}
 #endif
-		// OpenGL 2.x: Uniform blocks aren't used, uniforms are set directly via the shader's regular uniforms
 	}
 
 	void GLShaderUniformBlocks::SetProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)
@@ -162,7 +148,7 @@ namespace nCine
 		uniformBlockCaches_.clear();
 
 #if defined(WITH_OPENGL2)
-		// Clear fallback cache when shader changes - it contains uniforms from old shader
+		// Clear fallback cache when shader changes, it contains uniforms from old shader
 		gl2FallbackCache_.uniformCaches_.clear();
 #endif
 
@@ -196,9 +182,8 @@ namespace nCine
 			uniformBlockCache = uniformBlockCaches_.find(String::nullTerminatedView(name));
 			
 #if defined(WITH_OPENGL2)
-			// OpenGL 2.x fallback: Return fallback cache for instance block
+			// Return fallback cache for instance block on OpenGL 2.x
 			if (uniformBlockCache == nullptr && strcmp(name, Material::InstanceBlockName) == 0) {
-				// Initialize the fallback cache on first access
 				if (gl2FallbackCache_.uniformCaches_.size() == 0) {
 					InitializeFallbackCache();
 				}
@@ -213,38 +198,39 @@ namespace nCine
 
 	void GLShaderUniformBlocks::CommitUniformBlocks()
 	{
-		if (shaderProgram_ != nullptr) {
-			if (shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
-				// OpenGL 2.x: Fallback cache is handled in CommitUniforms(), not here
+		if (shaderProgram_ == nullptr) {
+			LOGE("No shader program associated");
+			return;
+		}
 
-				std::int32_t totalUsedSize = 0;
-				bool hasMemoryGaps = false;
-				for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
-					// There is a gap if at least one block cache (not in last position) uses less memory than its size
-					if (uniformBlockCache.GetDataPointer() != dataPointer_ + totalUsedSize) {
-						hasMemoryGaps = true;
-					}
-					totalUsedSize += uniformBlockCache.usedSize();
+		if (shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
+			// OpenGL 2.x: Fallback cache is handled in CommitUniforms(), not here
+
+			std::int32_t totalUsedSize = 0;
+			bool hasMemoryGaps = false;
+			for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
+				// There is a gap if at least one block cache (not in last position) uses less memory than its size
+				if (uniformBlockCache.GetDataPointer() != dataPointer_ + totalUsedSize) {
+					hasMemoryGaps = true;
 				}
+				totalUsedSize += uniformBlockCache.usedSize();
+			}
 
-				if (totalUsedSize > 0) {
-					const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::Uniform;
-					uboParams_ = RenderResources::GetBuffersManager().AcquireMemory(bufferType, totalUsedSize);
-					if (uboParams_.mapBase != nullptr) {
-						if (hasMemoryGaps) {
-							std::int32_t offset = 0;
-							for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
-								std::memcpy(uboParams_.mapBase + uboParams_.offset + offset, uniformBlockCache.GetDataPointer(), uniformBlockCache.usedSize());
-								offset += uniformBlockCache.usedSize();
-							}
-						} else {
-							std::memcpy(uboParams_.mapBase + uboParams_.offset, dataPointer_, totalUsedSize);
+			if (totalUsedSize > 0) {
+				const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::Uniform;
+				uboParams_ = RenderResources::GetBuffersManager().AcquireMemory(bufferType, totalUsedSize);
+				if (uboParams_.mapBase != nullptr) {
+					if (hasMemoryGaps) {
+						std::int32_t offset = 0;
+						for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
+							std::memcpy(uboParams_.mapBase + uboParams_.offset + offset, uniformBlockCache.GetDataPointer(), uniformBlockCache.usedSize());
+							offset += uniformBlockCache.usedSize();
 						}
+					} else {
+						std::memcpy(uboParams_.mapBase + uboParams_.offset, dataPointer_, totalUsedSize);
 					}
 				}
 			}
-		} else {
-			LOGE("No shader program associated");
 		}
 	}
 

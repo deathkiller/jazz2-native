@@ -93,10 +93,12 @@ namespace nCine
 		return uniformCaches_.find(String::nullTerminatedView(name));
 	}
 
+#if !defined(WITH_OPENGL2)
 	void GLUniformBlockCache::SetBlockBinding(GLuint blockBinding)
 	{
 		if (uniformBlock_) {
 			uniformBlock_->SetBlockBinding(blockBinding);
 		}
 	}
+#endif
 }

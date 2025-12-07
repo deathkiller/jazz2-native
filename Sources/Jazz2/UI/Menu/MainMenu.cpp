@@ -890,8 +890,10 @@ namespace Jazz2::UI::Menu
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
-		// TODO: This uniform is probably unused
+		// TODO(GL2): This uniform is probably unused
 		//instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+		auto* c = instanceBlock->GetUniform(Material::ColorUniformName);
+		if (c) c->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
 		command->GetMaterial().Uniform("uViewSize")->SetFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
 		command->GetMaterial().Uniform("uShift")->SetFloatVector(_texturedBackgroundPos.Data());
@@ -1068,7 +1070,7 @@ namespace Jazz2::UI::Menu
 			_camera = std::make_unique<Camera>();
 			_camera->SetOrthoProjection(0, static_cast<float>(width), 0, static_cast<float>(height));
 			_camera->SetView(0, 0, 0, 1);
-			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGBA8, width, height);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->SetRootNode(this);
 			_view->SetCamera(_camera.get());

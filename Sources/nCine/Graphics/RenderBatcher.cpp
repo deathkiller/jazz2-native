@@ -346,7 +346,7 @@ namespace nCine
 
 		if (batchedShaderHasAttributes) {
 			batchCommand->GetGeometry().ReleaseVertexPointer();
-			if (destIdx) {
+			if (destIdx != nullptr) {
 				batchCommand->GetGeometry().ReleaseIndexPointer();
 			}
 		}

@@ -78,15 +78,16 @@ namespace nCine
 
 	void GLShaderUniforms::CommitUniforms()
 	{
-		if (shaderProgram_ != nullptr) {
-			if (shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
-				shaderProgram_->Use();
-				for (auto& uniform : uniformCaches_) {
-					uniform.CommitValue();
-				}
-			}
-		} else {
+		if (shaderProgram_ == nullptr) {
 			LOGE("No shader program associated");
+			return;
+		}
+
+		if (shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
+			shaderProgram_->Use();
+			for (auto& uniform : uniformCaches_) {
+				uniform.CommitValue();
+			}
 		}
 	}
 

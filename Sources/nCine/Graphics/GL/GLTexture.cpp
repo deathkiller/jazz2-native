@@ -89,7 +89,7 @@ namespace nCine
 		Bind();
 		glTexStorage2D(target_, levels, internalFormat, width, height);
 		GL_LOG_ERRORS();
-		#endif
+#endif
 	}
 
 #if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)

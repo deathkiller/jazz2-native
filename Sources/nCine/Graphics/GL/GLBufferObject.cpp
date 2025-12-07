@@ -67,7 +67,7 @@ namespace nCine
 		GL_LOG_ERRORS();
 	}
 
-#if !defined(WITH_OPENGLES) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
+#if !defined(WITH_OPENGLES) && !defined(WITH_OPENGL2) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
 	void GLBufferObject::BufferStorage(GLsizeiptr size, const GLvoid* data, GLbitfield flags)
 	{
 		TracyGpuZone("glBufferStorage");
@@ -78,9 +78,9 @@ namespace nCine
 	}
 #endif
 
+#if !defined(WITH_OPENGL2)
 	void GLBufferObject::BindBufferBase(GLuint index)
 	{
-#if !defined(WITH_OPENGL2)
 		DEATH_ASSERT(target_ == GL_UNIFORM_BUFFER);
 		DEATH_ASSERT(index < MaxIndexBufferRange);
 
@@ -94,12 +94,10 @@ namespace nCine
 			glBindBufferBase(target_, index, glHandle_);
 		}
 		GL_LOG_ERRORS();
-#endif
 	}
 
 	void GLBufferObject::BindBufferRange(GLuint index, GLintptr offset, GLsizei ptrsize)
 	{
-#if !defined(WITH_OPENGL2)
 		DEATH_ASSERT(target_ == GL_UNIFORM_BUFFER);
 		DEATH_ASSERT(index < MaxIndexBufferRange);
 
@@ -115,7 +113,6 @@ namespace nCine
 			glBindBufferRange(target_, index, glHandle_, offset, ptrsize);
 		}
 		GL_LOG_ERRORS();
-#endif
 	}	
 
 	void* GLBufferObject::MapBufferRange(GLintptr offset, GLsizeiptr length, GLbitfield access)
@@ -135,6 +132,7 @@ namespace nCine
 		glFlushMappedBufferRange(target_, offset, length);
 		GL_LOG_ERRORS();
 	}
+#endif
 
 	GLboolean GLBufferObject::Unmap()
 	{
@@ -146,7 +144,7 @@ namespace nCine
 		return result;
 	}
 
-#if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
+#if !defined(WITH_OPENGL2) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2))
 	void GLBufferObject::TexBuffer(GLenum internalformat)
 	{
 		FATAL_ASSERT(target_ == GL_TEXTURE_BUFFER);

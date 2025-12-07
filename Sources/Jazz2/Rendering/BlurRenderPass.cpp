@@ -20,7 +20,7 @@ namespace Jazz2::Rendering
 		_camera->SetView(0.0f, 0.0f, 0.0f, 1.0f);
 
 		if (notInitialized) {
-			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGBA8, width, height);
 			_target->SetWrap(SamplerWrapping::ClampToEdge);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->SetRootNode(this);
@@ -28,7 +28,7 @@ namespace Jazz2::Rendering
 			//_view->setClearMode(Viewport::ClearMode::Never);
 		} else {
 			_view->RemoveAllTextures();
-			_target->Init(nullptr, Texture::Format::RGB8, width, height);
+			_target->Init(nullptr, Texture::Format::RGBA8, width, height);
 			_view->SetTexture(_target.get());
 		}
 		_target->SetMagFiltering(SamplerFilter::Linear);
@@ -59,8 +59,10 @@ namespace Jazz2::Rendering
 		auto* instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(static_cast<float>(size.X), static_cast<float>(size.Y));
-		// TODO: This uniform is probably unused
+		// TODO(GL2): This uniform is probably unused
 		//instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+		auto* c = instanceBlock->GetUniform(Material::ColorUniformName);
+		if (c) c->SetFloatVector(Colorf::White.Data());
 
 		_renderCommand.GetMaterial().Uniform("uPixelOffset")->SetFloatValue(1.0f / size.X, 1.0f / size.Y);
 		if (!_downsampleOnly) {

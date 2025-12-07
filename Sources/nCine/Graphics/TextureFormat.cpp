@@ -27,8 +27,14 @@ namespace nCine
 	std::uint32_t TextureFormat::numChannels() const
 	{
 		switch (format_) {
+#if defined(WITH_OPENGL2)
+			case GL_LUMINANCE:
+#endif
 			case GL_RED:
 				return 1;
+#if defined(WITH_OPENGL2)
+			case GL_LUMINANCE_ALPHA:
+#endif
 			case GL_RG:
 				return 2;
 			case GL_RGB:
@@ -70,20 +76,32 @@ namespace nCine
 
 		switch (internalFormat) {
 			case GL_RGBA8:
+			case GL_RGBA:
 				bpp = 32;
 				break;
 			case GL_RGB8:
+			case GL_RGB:
 				bpp = 24;
 				break;
 #if !defined(DEATH_TARGET_VITA)
 			case GL_RG8:
+			case GL_RG:
 			case GL_RGB565:
 			case GL_RGB5_A1:
 			case GL_RGBA4:
 				bpp = 16;
 				break;
 			case GL_R8:
+			case GL_RED:
 				bpp = 8;
+				break;
+#endif
+#if defined(WITH_OPENGL2)
+			case GL_LUMINANCE:
+				bpp = 8;
+				break;
+			case GL_LUMINANCE_ALPHA:
+				bpp = 16;
 				break;
 #endif
 			case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
@@ -298,25 +316,37 @@ namespace nCine
 
 		switch (internalFormat_) {
 			case GL_RGBA8:
+			case GL_RGBA:
 			case 4:
 				format_ = GL_RGBA;
 				break;
 			case GL_RGB8:
+			case GL_RGB:
 			case 3:
 				format_ = GL_RGB;
 				break;
 #if !defined(DEATH_TARGET_VITA)
 			case GL_RG8:
 #endif
+			case GL_RG:
 			case 2:
 				format_ = GL_RG;
 				break;
 #if !defined(DEATH_TARGET_VITA)
 			case GL_R8:
 #endif
+			case GL_RED:
 			case 1:
 				format_ = GL_RED;
 				break;
+#if defined(WITH_OPENGL2)
+			case GL_LUMINANCE:
+				format_ = GL_LUMINANCE;
+				break;
+			case GL_LUMINANCE_ALPHA:
+				format_ = GL_LUMINANCE_ALPHA;
+				break;
+#endif
 			case GL_DEPTH_COMPONENT16:
 			case GL_DEPTH_COMPONENT24:
 				format_ = GL_DEPTH_COMPONENT;

@@ -67,7 +67,7 @@ namespace nCine
 			mipDataSizes_ = std::make_unique<std::uint32_t[]>(mipMapCount_);
 			std::uint32_t dataSizesSum = TextureFormat::calculateMipSizes(internalFormat, width_, height_, mipMapCount_, mipDataOffsets_.get(), mipDataSizes_.get());
 
-			// HACK: accounting for `UInt32 imageSize` on top of each MIP level
+			// Accounting for `UInt32 imageSize` on top of each MIP level
 			// Excluding the first one, already taken into account in header size
 			for (std::int32_t i = 1; i < mipMapCount_; i++) {
 				mipDataOffsets_[i] += 4 * i;

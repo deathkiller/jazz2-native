@@ -60,7 +60,7 @@ namespace nCine
 #endif
 				return GL_INT;
 			default:
-				LOGW("No available case to handle type: {}", type_);
+				LOGW("Uniform type {} is not supported", type_);
 				return type_;
 		}
 	}
@@ -111,7 +111,7 @@ namespace nCine
 #endif
 				return 1;
 			default:
-				LOGW("No available case to handle type: {}", type_);
+				LOGW("Uniform type {} is not supported", type_);
 				return 0;
 		}
 	}
