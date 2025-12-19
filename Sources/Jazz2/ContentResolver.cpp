@@ -346,7 +346,7 @@ namespace Jazz2
 #endif
 
 		String fullPath = fs::CombinePath(GetContentPath(), path);
-		if (fs::IsReadableFile(fullPath)) {
+		if (fs::FileExists(fullPath)) {
 			auto realFile = fs::Open(fullPath, FileAccess::Read, bufferSize);
 			if (realFile->IsValid()) {
 				return realFile;
@@ -1021,7 +1021,7 @@ namespace Jazz2
 		}
 		if (fullPath.empty()) {
 			fullPath = fs::CombinePath({ GetContentPath(), "Tilesets"_s, String(path + ".j2t"_s) });
-			if (!fs::IsReadableFile(fullPath)) {
+			if (!fs::FileExists(fullPath)) {
 				fullPath = fs::CombinePath({ GetCachePath(), "Tilesets"_s, String(path + ".j2t"_s) });
 			}
 		}
@@ -1219,8 +1219,8 @@ namespace Jazz2
 	{
 		// Try "Content" directory first, then "Cache" directory
 		auto pathNormalized = fs::ToNativeSeparators(levelName);
-		return (fs::IsReadableFile(fs::CombinePath({ GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) })) ||
-				fs::IsReadableFile(fs::CombinePath({ GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) })));
+		return (fs::FileExists(fs::CombinePath({ GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) })) ||
+				fs::FileExists(fs::CombinePath({ GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) })));
 	}
 
 	bool ContentResolver::TryLoadLevel(StringView path, GameDifficulty difficulty, LevelDescriptor& descriptor)
@@ -1232,7 +1232,7 @@ namespace Jazz2
 		}
 		if (descriptor.FullPath.empty()) {
 			descriptor.FullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
-			if (!fs::IsReadableFile(descriptor.FullPath)) {
+			if (!fs::FileExists(descriptor.FullPath)) {
 				descriptor.FullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
 			}
 		}
@@ -1452,7 +1452,7 @@ namespace Jazz2
 	std::optional<Episode> ContentResolver::GetEpisode(StringView name, bool withImages)
 	{
 		String fullPath = fs::CombinePath({ GetContentPath(), "Episodes"_s, String(name + ".j2e"_s) });
-		if (!fs::IsReadableFile(fullPath)) {
+		if (!fs::FileExists(fullPath)) {
 			fullPath = fs::CombinePath({ GetCachePath(), "Episodes"_s, String(name + ".j2e"_s) });
 		}
 		return GetEpisodeByPath(fullPath, withImages);
@@ -1537,12 +1537,12 @@ namespace Jazz2
 		}
 		if (fullPath.empty()) {
 			fullPath = fs::CombinePath({ GetContentPath(), "Music"_s, path });
-			if (!fs::IsReadableFile(fullPath)) {
+			if (!fs::FileExists(fullPath)) {
 				// "Source" directory must be case in-sensitive
 				fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(GetSourcePath(), path));
 			}
 		}
-		if (!fs::IsReadableFile(fullPath)) {
+		if (!fs::FileExists(fullPath)) {
 			return nullptr;
 		}
 		return std::make_unique<AudioStreamPlayer>(fullPath);

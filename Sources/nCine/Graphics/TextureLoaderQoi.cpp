@@ -27,7 +27,7 @@ namespace nCine
 		auto buffer = std::make_unique<char[]>(fileSize);
 		fileHandle_->Read(buffer.get(), fileSize);
 
-		qoi_desc desc = { };
+		qoi_desc desc = {};
 		void* data = qoi_decode(buffer.get(), fileSize, &desc, 4);
 		if (data == nullptr) {
 			return;
@@ -42,7 +42,11 @@ namespace nCine
 		width_ = desc.width;
 		height_ = desc.height;
 		mipMapCount_ = 1;
+#if defined(WITH_OPENGL2)
+		texFormat_ = TextureFormat(GL_RGBA);
+#else
 		texFormat_ = TextureFormat(GL_RGBA8);
+#endif
 
 		hasLoaded_ = true;
 	}

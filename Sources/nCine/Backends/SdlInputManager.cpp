@@ -43,8 +43,8 @@ namespace nCine::Backends
 
 	char SdlInputManager::joyGuidString_[33];
 
-	namespace {
-
+	namespace
+	{
 		MouseButton sdlToNcineMouseButton(int button)
 		{
 			if (button == SDL_BUTTON_LEFT)
@@ -87,8 +87,10 @@ namespace nCine::Backends
 
 	SdlInputManager::SdlInputManager()
 	{
+#if !defined(DEATH_TARGET_VITA)
 		const std::uint32_t ret = SDL_WasInit(SDL_INIT_VIDEO);
 		FATAL_ASSERT_MSG(ret != 0, "SDL video subsystem is not initialized");
+#endif
 
 		// Initializing the joystick subsystem
 		SDL_InitSubSystem(SDL_INIT_JOYSTICK);

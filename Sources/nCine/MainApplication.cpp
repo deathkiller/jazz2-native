@@ -159,6 +159,8 @@ namespace nCine
 #if defined(DEATH_TARGET_SWITCH)
 		romfsExit();
 		socketExit();
+#elif defined(DEATH_TARGET_VITA)
+		sceKernelExitProcess(0);
 #elif defined(DEATH_TARGET_WINDOWS)
 		timeEndPeriod(1);
 #endif
@@ -446,7 +448,7 @@ namespace nCine
 			gfxDevice_->setWindowTitle(appCfg_.windowTitle.data());
 			if (!appCfg_.windowIconFilename.empty()) {
 				String windowIconFilePath = fs::CombinePath(GetDataPath(), appCfg_.windowIconFilename);
-				if (fs::IsReadableFile(windowIconFilePath)) {
+				if (fs::FileExists(windowIconFilePath)) {
 					gfxDevice_->setWindowIcon(windowIconFilePath);
 				}
 			}

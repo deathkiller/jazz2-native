@@ -336,6 +336,14 @@ namespace nCine
 		glGetProgramiv(glHandle_, GL_ACTIVE_UNIFORMS, &uniformCount);
 
 		if (uniformCount > 0) {
+#if defined(WITH_OPENGL2)
+			for (std::int32_t i = 0; i < uniformCount; i++) {
+				GLUniform& uniform = uniforms_.emplace_back(glHandle_, i);
+				uniformsSize_ += uniform.GetMemorySize();
+
+				LOGD("Shader program {} - uniform {} : \"{}\"", glHandle_, uniform.GetLocation(), uniform.GetName());
+			}
+#else
 			std::uint32_t uniformsOutsideBlocks = 0;
 			GLuint indices[MaxNumUniforms];
 			std::uint32_t remainingIndices = static_cast<std::uint32_t>(uniformCount);
@@ -349,10 +357,8 @@ namespace nCine
 					blockIndices[i] = -1;
 				}
 
-#if !defined(WITH_OPENGL2)
 				// Üniform blocks are not supported on OpenGL 2.x
 				glGetActiveUniformsiv(glHandle_, uniformCountStep, uniformIndices, GL_UNIFORM_BLOCK_INDEX, blockIndices);
-#endif
 
 				for (std::uint32_t i = 0; i < uniformCountStep; i++) {
 					if (blockIndices[i] == -1) {
@@ -373,6 +379,7 @@ namespace nCine
 
 				LOGD("Shader program {} - uniform {} : \"{}\"", glHandle_, uniform.GetLocation(), uniform.GetName());
 			}
+#endif
 		}
 		GL_LOG_ERRORS();
 	}

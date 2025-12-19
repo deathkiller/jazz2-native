@@ -214,7 +214,7 @@ namespace Jazz2::Multiplayer
 		String fullPath = fs::FindPathCaseInsensitive(
 			fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
 				{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(path) }));
-		if (!fs::IsReadableFile(fullPath)) {
+		if (!fs::FileExists(fullPath)) {
 			return {};
 		}
 

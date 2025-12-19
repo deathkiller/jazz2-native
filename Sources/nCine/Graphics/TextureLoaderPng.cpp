@@ -149,7 +149,11 @@ namespace nCine
 					}
 
 					mipMapCount_ = 1;
+#if defined(WITH_OPENGL2)
+					texFormat_ = TextureFormat(GL_RGBA);
+#else
 					texFormat_ = TextureFormat(GL_RGBA8);
+#endif
 					hasLoaded_ = true;
 					return;
 				}

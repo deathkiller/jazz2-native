@@ -1434,13 +1434,13 @@ void GameEventHandler::OnBeginInitialize()
 
 	// Try to load gamepad mappings from parent directory of `Source` on Android
 	String mappingsPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "gamecontrollerdb.txt"_s);
-	if (fs::IsReadableFile(mappingsPath)) {
+	if (fs::FileExists(mappingsPath)) {
 		theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath);
 	}
 #elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WINDOWS_RT)
 	// Try to load gamepad mappings from `Content` directory
 	String mappingsPath = fs::CombinePath(resolver.GetContentPath(), "gamecontrollerdb.txt"_s);
-	if (fs::IsReadableFile(mappingsPath)) {
+	if (fs::FileExists(mappingsPath)) {
 		theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath);
 	}
 #endif
@@ -1450,7 +1450,7 @@ void GameEventHandler::OnBeginInitialize()
 	auto configDir = PreferencesCache::GetDirectory();
 	if (!configDir.empty()) {
 		String mappingsPath2 = fs::CombinePath(configDir, "gamecontrollerdb.txt"_s);
-		if (fs::IsReadableFile(mappingsPath2)) {
+		if (fs::FileExists(mappingsPath2)) {
 			theApplication().GetInputManager().addJoyMappingsFromFile(mappingsPath2);
 		}
 	}
@@ -1560,7 +1560,7 @@ void GameEventHandler::RefreshCache()
 		}
 
 		String animsPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "Anims.j2a"_s));
-		if (!fs::IsReadableFile(animsPath)) {
+		if (!fs::FileExists(animsPath)) {
 			animsPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
 		}
 		std::int64_t animsCached = s->ReadValueAsLE<std::int64_t>();
@@ -1607,9 +1607,9 @@ void GameEventHandler::RefreshCache()
 RecreateCache:
 	// "Source" directory must be case in-sensitive
 	String animsPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "Anims.j2a"_s));
-	if (!fs::IsReadableFile(animsPath)) {
+	if (!fs::FileExists(animsPath)) {
 		animsPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "AnimsSw.j2a"_s));
-		if (!fs::IsReadableFile(animsPath)) {
+		if (!fs::FileExists(animsPath)) {
 			String sourcePath = fs::GetAbsolutePath(resolver.GetSourcePath());
 			if (sourcePath.empty()) {
 				// If `Source` directory doesn't exist, GetAbsolutePath() will fail
@@ -1685,7 +1685,7 @@ void GameEventHandler::RefreshCacheLevels(bool recreateAll)
 
 	Compatibility::EventConverter eventConverter;
 
-	bool hasChristmasChronicles = fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "xmas99.j2e"_s)));
+	bool hasChristmasChronicles = fs::FileExists(fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "xmas99.j2e"_s)));
 	const HashMap<String, Pair<String, String>> knownLevels = {
 		{ "trainer"_s, { "prince"_s, {} } },
 		{ "castle1"_s, { "prince"_s, "01"_s } },
@@ -1913,7 +1913,7 @@ void GameEventHandler::RefreshCacheLevels(bool recreateAll)
 					StringView foundDot = item.findLastOr('.', item.end());
 					String scriptPath = item.prefix(foundDot.begin()) + ".j2as"_s;
 					auto adjustedPath = fs::FindPathCaseInsensitive(scriptPath);
-					if (fs::IsReadableFile(adjustedPath)) {
+					if (fs::FileExists(adjustedPath)) {
 						foundDot = fullPath.findLastOr('.', fullPath.end());
 						fs::Copy(adjustedPath, String(fullPath.prefix(foundDot.begin()) + ".j2as"_s));
 					}
@@ -1945,7 +1945,7 @@ void GameEventHandler::RefreshCacheLevels(bool recreateAll)
 		for (auto& pair : usedTilesets) {
 			String tilesetPath = fs::CombinePath(resolver.GetSourcePath(), String(pair.first + ".j2t"_s));
 			auto adjustedPath = fs::FindPathCaseInsensitive(tilesetPath);
-			if (fs::IsReadableFile(adjustedPath)) {
+			if (fs::FileExists(adjustedPath)) {
 				Compatibility::JJ2Tileset tileset;
 				if (tileset.Open(adjustedPath, false)) {
 					tileset.Convert(fs::CombinePath({ tilesetsPath, String(pair.first + ".j2t"_s) }));

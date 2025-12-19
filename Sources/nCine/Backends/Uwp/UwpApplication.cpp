@@ -215,7 +215,7 @@ namespace nCine
 		// TODO: Not supported
 		//if (!appCfg_.windowIconFilename.empty()) {
 		//	String windowIconFilePath = fs::CombinePath(GetDataPath(), appCfg_.windowIconFilename);
-		//	if (fs::IsReadableFile(windowIconFilePath)) {
+		//	if (fs::FileExists(windowIconFilePath)) {
 		//		gfxDevice_->setWindowIcon(windowIconFilePath);
 		//	}
 		//}

@@ -5884,11 +5884,11 @@ namespace Jazz2::Multiplayer
 					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
 						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(String(path + ".j2l"_s)) });
 				}
-				if (!forWrite && !fs::IsReadableFile(fullPath)) {
+				if (!forWrite && !fs::FileExists(fullPath)) {
 					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
-					if (!fs::IsReadableFile(fullPath)) {
+					if (!fs::FileExists(fullPath)) {
 						fullPath = fs::CombinePath({ resolver.GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
-						if (!fs::IsReadableFile(fullPath)) {
+						if (!fs::FileExists(fullPath)) {
 							fullPath = {};
 						}
 					}
@@ -5901,11 +5901,11 @@ namespace Jazz2::Multiplayer
 					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
 						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(String(path + ".j2t"_s)) });
 				}
-				if (!forWrite && !fs::IsReadableFile(fullPath)) {
+				if (!forWrite && !fs::FileExists(fullPath)) {
 					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Tilesets"_s, String(path + ".j2t"_s) });
-					if (!fs::IsReadableFile(fullPath)) {
+					if (!fs::FileExists(fullPath)) {
 						fullPath = fs::CombinePath({ resolver.GetCachePath(), "Tilesets"_s, String(path + ".j2t"_s) });
-						if (!fs::IsReadableFile(fullPath)) {
+						if (!fs::FileExists(fullPath)) {
 							fullPath = {};
 						}
 					}
@@ -5918,12 +5918,12 @@ namespace Jazz2::Multiplayer
 					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
 						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(path) });
 				}
-				if (!forWrite && !fs::IsReadableFile(fullPath)) {
+				if (!forWrite && !fs::FileExists(fullPath)) {
 					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Music"_s, path });
-					if (!fs::IsReadableFile(fullPath)) {
+					if (!fs::FileExists(fullPath)) {
 						// "Source" directory must be case in-sensitive
 						fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), path));
-						if (!fs::IsReadableFile(fullPath)) {
+						if (!fs::FileExists(fullPath)) {
 							fullPath = {};
 						}
 					}

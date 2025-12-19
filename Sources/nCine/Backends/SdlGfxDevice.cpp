@@ -30,16 +30,16 @@ namespace nCine::Backends
 	SdlGfxDevice::~SdlGfxDevice()
 	{
 		LOGD("Disposing OpenGL context...");
-#if !defined(DEATH_TARGET_VITA)
 
+#if !defined(DEATH_TARGET_VITA)
 		SDL_GL_DeleteContext(glContextHandle_);
 		glContextHandle_ = nullptr;
 		SDL_DestroyWindow(windowHandle_);
 		windowHandle_ = nullptr;
-#endif
-		
+
 		SDL_QuitSubSystem(SDL_INIT_VIDEO);
 		SDL_Quit();
+#endif
 	}
 
 	void SdlGfxDevice::setSwapInterval(int interval)
@@ -85,6 +85,9 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::update()
 	{
+		// TODO: Remove debug message
+		LOGW("NEW FRAME");
+		
 #if defined(DEATH_TARGET_VITA)
 		vglSwapBuffers(GL_FALSE);
 #else
@@ -225,14 +228,17 @@ namespace nCine::Backends
 		SDL_SetHint(SDL_HINT_APP_NAME, NCINE_APP_NAME);
 #endif
 
-#if SDL_VERSION_ATLEAST(2, 24, 0) && defined(SDL_HINT_WINDOWS_DPI_SCALING)
+#if !defined(DEATH_TARGET_VITA)
+#	if SDL_VERSION_ATLEAST(2, 24, 0) && defined(SDL_HINT_WINDOWS_DPI_SCALING)
 		// Scaling is handled automatically by SDL (since v2.24.0)
 		if (enableWindowScaling) {
 			SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
 		}
-#endif
+#	endif
+
 		const int err = SDL_InitSubSystem(SDL_INIT_VIDEO);
 		FATAL_ASSERT_MSG(!err, "SDL_InitSubSystem(SDL_INIT_VIDEO) failed: {}", SDL_GetError());
+#endif
 	}
 
 	void SdlGfxDevice::initDevice(int windowPosX, int windowPosY, bool isResizable)
@@ -354,6 +360,7 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::updateMonitors()
 	{
+#if !defined(DEATH_TARGET_VITA)
 		LOGD("Updating list of monitors...");
 
 		const int monitorCount = SDL_GetNumVideoDisplays();
@@ -383,6 +390,7 @@ namespace nCine::Backends
 				convertVideoModeInfo(mode, monitors_[i].videoModes[j]);
 			}
 		}
+#endif
 	}
 
 	void SdlGfxDevice::convertVideoModeInfo(const SDL_DisplayMode& sdlVideoMode, IGfxDevice::VideoMode& videoMode) const

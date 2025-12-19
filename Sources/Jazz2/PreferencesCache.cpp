@@ -170,7 +170,7 @@ namespace Jazz2
 #	endif
 
 		// If config path is not overriden and portable config doesn't exist, use common path for current user
-		if (!overrideConfigPath && !fs::IsReadableFile(_configPath)) {
+		if (!overrideConfigPath && !fs::FileExists(_configPath)) {
 #	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 			// Save config file next to `Source` directory
 			auto& resolver = ContentResolver::Get();
@@ -185,7 +185,7 @@ namespace Jazz2
 			// Save config file to external path if possible
 			auto& resolver = ContentResolver::Get();
 			auto externalConfigPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
-			if (!fs::IsReadableFile(_configPath) || fs::IsReadableFile(externalConfigPath)) {
+			if (!fs::FileExists(_configPath) || fs::FileExists(externalConfigPath)) {
 				_configPath = externalConfigPath;
 			}
 #	elif defined(DEATH_TARGET_WINDOWS_RT)
