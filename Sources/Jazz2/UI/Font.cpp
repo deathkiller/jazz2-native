@@ -26,9 +26,16 @@ namespace Jazz2::UI
 		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(path);
 		if (texLoader->hasLoaded()) {
 			auto texFormat = texLoader->texFormat().internalFormat();
+#if defined(WITH_OPENGL2)
+			// TODO: Unify texture formats
+			if (texFormat != GL_RGBA && texFormat != GL_RGB) {
+				return;
+			}
+#else
 			if (texFormat != GL_RGBA8 && texFormat != GL_RGB8) {
 				return;
 			}
+#endif
 
 			std::int32_t w = texLoader->width();
 			std::int32_t h = texLoader->height();

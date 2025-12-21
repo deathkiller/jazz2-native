@@ -106,6 +106,7 @@ namespace nCine
 				if ((redMask == 0x00FF0000 && greenMask == 0x0000FF00 && blueMask == 0x000000FF && alphaMask == 0x0) ||
 					(blueMask == 0x00FF0000 && greenMask == 0x0000FF00 && redMask == 0x000000FF && alphaMask == 0x0)) { // 888
 #if defined(WITH_OPENGL2)
+					// TODO: Unify texture formats
 					internalFormat = GL_RGB;
 #else
 					internalFormat = GL_RGB8;
@@ -113,6 +114,7 @@ namespace nCine
 				} else if ((alphaMask == 0xFF000000 && redMask == 0x00FF0000 && greenMask == 0x0000FF00 && blueMask == 0x000000FF) ||
 						 (alphaMask == 0xFF000000 && blueMask == 0x00FF0000 && greenMask == 0x0000FF00 && redMask == 0x000000FF)) { // 8888
 #if defined(WITH_OPENGL2)
+					// TODO: Unify texture formats
 					internalFormat = GL_RGBA;
 #else
 					internalFormat = GL_RGBA8;

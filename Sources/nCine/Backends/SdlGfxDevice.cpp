@@ -85,9 +85,6 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::update()
 	{
-		// TODO: Remove debug message
-		LOGW("NEW FRAME");
-		
 #if defined(DEATH_TARGET_VITA)
 		vglSwapBuffers(GL_FALSE);
 #else

@@ -150,6 +150,7 @@ namespace nCine
 
 					mipMapCount_ = 1;
 #if defined(WITH_OPENGL2)
+					// TODO: Unify texture formats
 					texFormat_ = TextureFormat(GL_RGBA);
 #else
 					texFormat_ = TextureFormat(GL_RGBA8);
