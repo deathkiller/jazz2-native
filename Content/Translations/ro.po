@@ -1897,7 +1897,7 @@ msgstr "Scripturi"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:48
 #| msgid "Continue"
 msgid "Continuous Jump"
-msgstr ""
+msgstr "Săritură continuă"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:50
