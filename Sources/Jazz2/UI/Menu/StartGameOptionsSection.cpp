@@ -452,7 +452,9 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (PreferencesCache::AllowCheatsLives) {
-			levelInit.PlayerCarryOvers[0].Lives = UINT8_MAX;
+			for (std::int32_t i = 0; i < _playerCount; i++) {
+				levelInit.PlayerCarryOvers[i].Lives = UINT8_MAX;
+			}
 			levelInit.CheatsUsed = true;
 		}
 
