@@ -39,7 +39,7 @@ enum class TraceLevel {
 	This function needs to be provided by the target application to enable the event tracing.
 	Alternatively, @relativeref{Death,ITraceSink} interface can be used instead.
 */
-void DEATH_TRACE(TraceLevel level, const char* functionName, const char* message, std::uint32_t messageLength);
+void DEATH_TRACE(TraceLevel level, const char* functionName, const char* message, std::uint32_t messageLength) noexcept;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 inline void __DEATH_TRACE(TraceLevel level, const char* functionName, const char* format)

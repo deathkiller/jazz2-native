@@ -83,7 +83,7 @@ namespace Death { namespace IO { namespace Compression {
 		std::int32_t _inputSize;
 		State _state;
 		bool _rawInflate;
-		unsigned char _buffer[BufferSize];
+		std::uint8_t _buffer[BufferSize];
 
 		void InitializeInternal();
 		std::int32_t ReadInternal(void* ptr, std::int32_t size);
@@ -131,7 +131,7 @@ namespace Death { namespace IO { namespace Compression {
 		Stream* _outputStream;
 		z_stream _strm;
 		State _state;
-		unsigned char _buffer[BufferSize];
+		std::uint8_t _buffer[BufferSize];
 
 		std::int32_t WriteInternal(const void* buffer, std::int32_t bytesToWrite, bool finish);
 	};

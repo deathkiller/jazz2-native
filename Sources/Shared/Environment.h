@@ -208,7 +208,7 @@ namespace Death { namespace Environment {
 		return ::GetTickCount64();
 #elif defined(DEATH_TARGET_APPLE)
 		return clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW) / 1000000ULL;
-#elif defined(DEATH_TARGET_SWITCH)
+#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 		struct timespec ts;
 		clock_gettime(CLOCK_MONOTONIC, &ts);
 		return std::uint64_t(ts.tv_sec) * 1000ULL + std::uint64_t(ts.tv_nsec) / 1000000ULL;

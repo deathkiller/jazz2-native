@@ -1147,7 +1147,7 @@ namespace Death { namespace Trace {
 
 }}
 
-void DEATH_TRACE(TraceLevel level, const char* functionName, const char* message, std::uint32_t messageLength)
+void DEATH_TRACE(TraceLevel level, const char* functionName, const char* message, std::uint32_t messageLength) noexcept
 {
 	using namespace Death::Trace;
 

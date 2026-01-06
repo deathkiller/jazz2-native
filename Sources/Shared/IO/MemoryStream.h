@@ -64,7 +64,7 @@ namespace Death { namespace IO {
 			if (_pos + bytes > _size) {
 				return nullptr;
 			}
-			const std::uint8_t* ptr = &_data[_pos];
+			const std::uint8_t* ptr = _data.data() + _pos;
 			_pos += bytes;
 			return ptr;
 		}

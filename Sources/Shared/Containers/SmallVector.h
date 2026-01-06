@@ -48,6 +48,9 @@ namespace Death { namespace Containers {
 		/** @brief Creates a new allocation big enough for @p minSize and pass back its size in @p newCapacity */
 		void* mallocForGrow(void* firstEl, std::size_t minSize, std::size_t typeSize, std::size_t& newCapacity);
 
+		/** @brief Creates a new allocation for shrinking operation */
+		void* mallocForShrink(void* firstEl, std::size_t newCapacity, std::size_t typeSize);
+
 		/** @brief Grows the allocated memory (without initializing new elements) for trivial types */
 		void growTrivial(void* firstEl, std::size_t minSize, std::size_t typeSize);
 
@@ -158,13 +161,13 @@ namespace Death { namespace Containers {
 		/** @brief Returns `true` unless @p elt will be invalidated by resizing the vector to @p newSize */
 		bool isSafeToReferenceAfterResize(const void* elt, std::size_t newSize) {
 			// Past the end.
-			if DEATH_LIKELY(!isReferenceToStorage(elt))
+			if DEATH_LIKELY(!isReferenceToStorage(elt)) {
 				return true;
-
+			}
 			// Return false if Elt will be destroyed by shrinking
-			if (newSize <= this->size())
+			if (newSize <= this->size()) {
 				return elt < this->begin() + newSize;
-
+			}
 			// Return false if we need to grow
 			return newSize <= this->capacity();
 		}
@@ -182,8 +185,9 @@ namespace Death { namespace Containers {
 
 		/** @brief Checks whether any part of the range will be invalidated by clearing */
 		void assertSafeToReferenceAfterClear(const T* from, const T* to) {
-			if (from == to)
+			if (from == to) {
 				return;
+			}
 			this->assertSafeToReferenceAfterResize(from, 0);
 			this->assertSafeToReferenceAfterResize(to - 1, 0);
 		}
@@ -193,8 +197,9 @@ namespace Death { namespace Containers {
 
 		/** @brief Checks whether any part of the range will be invalidated by growing */
 		void assertSafeToAddRange(const T* from, const T* to) {
-			if (from == to)
+			if (from == to) {
 				return;
+			}
 			this->assertSafeToAdd(from, to - from);
 			this->assertSafeToAdd(to - 1, to - from);
 		}
@@ -206,9 +211,9 @@ namespace Death { namespace Containers {
 		template<class U>
 		static const T* reserveForParamAndGetAddressImpl(U* _this, const T& elt, std::size_t n) {
 			std::size_t newSize = _this->size() + n;
-			if DEATH_LIKELY(newSize <= _this->capacity())
+			if DEATH_LIKELY(newSize <= _this->capacity()) {
 				return &elt;
-
+			}
 			bool referencesStorage = false;
 			std::int64_t index = -1;
 			if (!U::TakesParamByValue) {
@@ -487,9 +492,9 @@ namespace Death { namespace Containers {
 	template<typename T, bool TriviallyCopyable>
 	void SmallVectorTemplate<T, TriviallyCopyable>::takeAllocationForGrow(T* newElts, std::size_t newCapacity) {
 		// If this wasn't grown from the inline copy, deallocate the old space
-		if (!this->isSmall())
+		if (!this->isSmall()) {
 			std::free(this->begin());
-
+		}
 		this->setAllocationRange(newElts, newCapacity);
 	}
 
@@ -536,8 +541,9 @@ namespace Death { namespace Containers {
 			// Use memcpy for PODs iterated by pointers (which includes SmallVector iterators):
 			// std::uninitialized_copy optimizes to memmove, but we can use memcpy here. Note that
 			// I and E are iterators and thus might be invalid for memcpy if they are equal
-			if (i != e)
+			if (i != e) {
 				std::memcpy(reinterpret_cast<void*>(dest), i, (e - i) * sizeof(T));
+			}
 		}
 
 		/** @brief Doubles the size of the allocated memory, guaranteeing space for at least one more element or @p minSize if specified */
@@ -626,8 +632,9 @@ namespace Death { namespace Containers {
 		/** @brief Assigns the content of the specified vector */
 		void assignRemote(SmallVectorImpl&& other) {
 			this->destroyRange(this->begin(), this->end());
-			if (!this->isSmall())
+			if (!this->isSmall()) {
 				std::free(this->begin());
+			}
 			this->BeginX = other.BeginX;
 			this->Size = other.Size;
 			this->Capacity = other.Capacity;
@@ -638,8 +645,9 @@ namespace Death { namespace Containers {
 		~SmallVectorImpl() {
 			// Subclass has already destructed this vector's elements
 			// If this wasn't grown from the inline copy, deallocate the old space
-			if (!this->isSmall())
+			if (!this->isSmall()) {
 				std::free(this->begin());
+			}
 		}
 
 	public:
@@ -667,11 +675,13 @@ namespace Death { namespace Containers {
 			}
 
 			this->reserve(n);
-			for (auto i = this->end(), e = this->begin() + n; i != e; ++i)
-				if (ForOverwrite)
+			for (auto i = this->end(), e = this->begin() + n; i != e; ++i) {
+				if (ForOverwrite) {
 					new (&*i) T;
-				else
+				} else {
 					new (&*i) T();
+				}
+			}
 			this->setSize(n);
 		}
 
@@ -696,7 +706,7 @@ namespace Death { namespace Containers {
 				return;
 			}
 
-			// N > this->size(). Defer to append
+			// N > this->size() - defer to append
 			this->append(n - this->size(), nv);
 		}
 
@@ -711,6 +721,19 @@ namespace Death { namespace Containers {
 		void reserve(size_type n) {
 			if (this->capacity() < n)
 				this->grow(n);
+		}
+
+		/** @brief Try to shrink the vector to given capacity without discarding any elements */
+		void shrink(size_type newCapacity) {
+			if (newCapacity < this->Size) {
+				newCapacity = this->Size;
+			}
+			if (newCapacity >= this->capacity() || this->isSmall()) {
+				return;
+			}
+
+			void* newElts = this->mallocForShrink(this->BeginX, newCapacity, sizeof(T));
+			this->setAllocationRange(newElts, newCapacity);
 		}
 
 		/** @brief Removes the last @p n elements */
@@ -751,8 +774,8 @@ namespace Death { namespace Containers {
 			append(il.begin(), il.end());
 		}
 
-		/** @brief Appends the specified vector to the end */
-		void append(const SmallVectorImpl& other) {
+		/** @brief Appends the specified view to the end */
+		void append(ArrayView<const T> other) {
 			append(other.begin(), other.end());
 		}
 
@@ -766,10 +789,11 @@ namespace Death { namespace Containers {
 
 			// Assign over existing elements
 			std::fill_n(this->begin(), std::min(n, this->size()), elt);
-			if (n > this->size())
+			if (n > this->size()) {
 				std::uninitialized_fill_n(this->end(), n - this->size(), elt);
-			else if (n < this->size())
+			} else if (n < this->size()) {
 				this->destroyRange(this->begin() + n, this->end());
+			}
 			this->setSize(n);
 		}
 
@@ -872,9 +896,9 @@ namespace Death { namespace Containers {
 			// If we just moved the element we're inserting, be sure to update the reference (never happens if TakesParamByValue)
 			static_assert(!TakesParamByValue || std::is_same<ArgType, T>::value,
 						  "ArgType must be 'T' when taking by value");
-			if (!TakesParamByValue && this->isReferenceToRange(eltPtr, i, this->end()))
+			if (!TakesParamByValue && this->isReferenceToRange(eltPtr, i, this->end())) {
 				++eltPtr;
-
+			}
 			*i = Death::forward<ArgType>(*eltPtr);
 			return i;
 		}
@@ -919,9 +943,9 @@ namespace Death { namespace Containers {
 				std::move_backward(i, oldEnd - numToInsert, oldEnd);
 
 				// If we just moved the element we're inserting, be sure to update the reference (never happens if TakesParamByValue)
-				if (!TakesParamByValue && i <= eltPtr && eltPtr < this->end())
+				if (!TakesParamByValue && i <= eltPtr && eltPtr < this->end()) {
 					eltPtr += numToInsert;
-
+				}
 				std::fill_n(i, numToInsert, *eltPtr);
 				return i;
 			}
@@ -935,9 +959,9 @@ namespace Death { namespace Containers {
 			this->uninitializedMove(i, oldEnd, this->end() - numOverwritten);
 
 			// If we just moved the element we're inserting, be sure to update the reference (never happens if TakesParamByValue)
-			if (!TakesParamByValue && i <= eltPtr && eltPtr < this->end())
+			if (!TakesParamByValue && i <= eltPtr && eltPtr < this->end()) {
 				eltPtr += numToInsert;
-
+			}
 			// Replace the overwritten part
 			std::fill_n(i, numOverwritten, *eltPtr);
 
@@ -1010,8 +1034,9 @@ namespace Death { namespace Containers {
 		/** @brief Constructs elements in-place at the end */
 		template<typename ...ArgTypes>
 		reference emplace_back(ArgTypes&&... args) {
-			if (this->size() >= this->capacity())
+			if (this->size() >= this->capacity()) {
 				return this->growAndEmplaceBack(Death::forward<ArgTypes>(args)...);
+			}
 
 			::new ((void*)this->end()) T(Death::forward<ArgTypes>(args)...);
 			this->setSize(this->size() + 1);
@@ -1062,8 +1087,9 @@ namespace Death { namespace Containers {
 		// Swap the shared elements
 		std::size_t numShared = this->size();
 		if (numShared > other.size()) numShared = other.size();
-		for (size_type i = 0; i != numShared; ++i)
+		for (size_type i = 0; i != numShared; ++i) {
 			std::swap((*this)[i], other[i]);
+		}
 
 		// Copy over the extra elts
 		if (this->size() > other.size()) {
@@ -1092,10 +1118,11 @@ namespace Death { namespace Containers {
 		if (currentSize >= otherSize) {
 			// Assign common elements
 			iterator newEnd;
-			if (otherSize)
+			if (otherSize) {
 				newEnd = std::copy(other.begin(), other.begin() + otherSize, this->begin());
-			else
+			} else {
 				newEnd = this->begin();
+			}
 
 			// Destroy excess elements
 			this->destroyRange(newEnd, this->end());
@@ -1321,20 +1348,23 @@ namespace Death { namespace Containers {
 
 		/** @brief Copy constructor */
 		SmallVector(const SmallVector& other) : SmallVectorImpl<T>(N) {
-			if (!other.empty())
+			if (!other.empty()) {
 				SmallVectorImpl<T>::operator=(other);
+			}
 		}
 
 		/** @brief Move constructor */
 		SmallVector(SmallVector&& other) : SmallVectorImpl<T>(N) {
-			if (!other.empty())
+			if (!other.empty()) {
 				SmallVectorImpl<T>::operator=(Death::move(other));
+			}
 		}
 
 		/** @overload */
 		SmallVector(SmallVectorImpl<T>&& other) : SmallVectorImpl<T>(N) {
-			if (!other.empty())
+			if (!other.empty()) {
 				SmallVectorImpl<T>::operator=(Death::move(other));
+			}
 		}
 
 		/** @brief Destructor */
@@ -1400,6 +1430,7 @@ namespace Death { namespace Containers {
 		using SmallVectorImpl::resize_for_overwrite;
 		using SmallVectorImpl::truncate;
 		using SmallVectorImpl::reserve;
+		using SmallVectorImpl::shrink;
 		using SmallVectorTemplate::push_back;
 		using SmallVectorTemplate::pop_back;
 		using SmallVectorImpl::pop_back_n;

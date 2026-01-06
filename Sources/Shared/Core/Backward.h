@@ -295,7 +295,6 @@ typedef SSIZE_T ssize_t;
 #include <imagehlp.h>
 #pragma pack(pop, before_imagehlp)
 
-// TODO maybe these should be undefined somewhere else?
 #undef BACKWARD_HAS_UNWIND
 #undef BACKWARD_HAS_BACKTRACE
 #if !defined(BACKWARD_HAS_PDB_SYMBOL)
@@ -3556,7 +3555,7 @@ namespace Death { namespace Backward {
 				std::free(prefixesStr);
 			}
 #else
-			const char* prefixesStr = std::getenv("BACKWARD_CXX_SOURCE_PREFIXES");
+			const char* prefixesStr = ::getenv("BACKWARD_CXX_SOURCE_PREFIXES");
 			if (prefixesStr != nullptr && prefixesStr[0] != '\0') {
 				paths = Implementation::SplitSourcePrefixes(prefixesStr);
 			}

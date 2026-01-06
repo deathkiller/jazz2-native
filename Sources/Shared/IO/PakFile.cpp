@@ -4,6 +4,7 @@
 #include "Compression/DeflateStream.h"
 #include "Compression/Lz4Stream.h"
 #include "Compression/ZstdStream.h"
+#include "../Base/Memory.h"
 #include "../Containers/GrowableArray.h"
 #include "../Containers/SmallVector.h"
 #include "../Cryptography/xxHash.h"
@@ -18,7 +19,8 @@ enum class PakFileFlags : std::uint16_t {
 	None = 0x00,
 	DeflateCompressedIndex = 0x01,
 	Aes256EncryptedIndex = 0x02,
-	HashIndex = 0x04
+	HashIndex = 0x04,
+	RelativeOffsets = 0x08
 };
 
 DEATH_ENUM_FLAGS(PakFileFlags);
@@ -61,6 +63,183 @@ namespace Death { namespace IO {
 		return xxHash3(normalizedFileName.data(), i);
 	}
 
+	static std::int64_t FindRelocatedFooter(std::unique_ptr<Death::IO::Stream>& s)
+	{
+		s->Seek(0, SeekOrigin::Begin);
+
+		std::uint32_t magic = s->ReadValueAsLE<std::uint32_t>();
+
+		// Check for PE signature (MZ header)
+		if ((magic & 0xFFFF) == 0x5A4D) { // "MZ"
+			s->Seek(0x3C, SeekOrigin::Begin);
+			std::uint32_t peHeaderOffset = s->ReadValueAsLE<std::uint32_t>();
+
+			s->Seek(peHeaderOffset, SeekOrigin::Begin);
+			std::uint32_t peSignature = s->ReadValueAsLE<std::uint32_t>();
+			if (peSignature != 0x00004550) { // "PE\0\0"
+				return -1;
+			}
+
+			// Read COFF header
+			s->Seek(peHeaderOffset + 6, SeekOrigin::Begin);
+			std::uint16_t numberOfSections = s->ReadValueAsLE<std::uint16_t>();
+			s->Seek(12, SeekOrigin::Current); // Skip timestamp, symbol table pointer, number of symbols
+			std::uint16_t sizeOfOptionalHeader = s->ReadValueAsLE<std::uint16_t>();
+			s->Seek(2, SeekOrigin::Current); // Skip characteristics
+
+			// Skip optional header to get to section table
+			std::int64_t sectionTablePos = s->GetPosition() + sizeOfOptionalHeader;
+
+			// Search for "pak" section
+			for (std::uint16_t i = 0; i < numberOfSections; i++) {
+				s->Seek(sectionTablePos + i * 40, SeekOrigin::Begin);
+
+				char sectionName[9];
+				s->Read(sectionName, 8);
+				sectionName[8] = '\0';
+
+				if (std::memcmp(sectionName, "pak", 4) == 0) {
+					// Found pak section, read its file offset and size
+					s->Seek(8, SeekOrigin::Current); // Skip VirtualSize and VirtualAddress
+					std::uint32_t sizeOfRawData = s->ReadValueAsLE<std::uint32_t>();
+					std::uint32_t pointerToRawData = s->ReadValueAsLE<std::uint32_t>();
+
+					if (sizeOfRawData >= FooterSize && pointerToRawData > 0) {
+						// Calculate footer position (at the end of pak section)
+						std::int64_t footerPosition = std::int64_t(pointerToRawData) + std::int64_t(sizeOfRawData) - FooterSize;
+						
+						s->Seek(footerPosition, SeekOrigin::Begin);
+						std::uint8_t signature[sizeof(Signature)];
+						s->Read(signature, sizeof(signature));
+
+						if (std::memcmp(signature, Signature, sizeof(Signature)) == 0) {
+							return footerPosition;
+						}
+					}
+					break;
+				}
+			}
+
+			return -1;
+		}
+
+		// Check for ELF signature
+		if (magic == 0x464C457F) { // "\x7FELF"
+			// Read ELF class (32-bit or 64-bit)
+			s->Seek(4, SeekOrigin::Begin);
+			std::uint8_t elfClass = s->ReadValue<std::uint8_t>(); // 1 = 32-bit, 2 = 64-bit
+			std::uint8_t elfData = s->ReadValue<std::uint8_t>(); // 1 = little endian, 2 = big endian
+			bool is64Bit = (elfClass == 2);
+			bool isBigEndian = (elfData == 2);
+
+			// Helper lambdas for endianness-aware reading
+			auto readU16 = [&]() -> std::uint16_t {
+				std::uint16_t value = s->ReadValueAsLE<std::uint16_t>();
+				if DEATH_UNLIKELY(isBigEndian) {
+					value = Memory::SwapBytes(value);
+				}
+				return value;
+			};
+
+			auto readU32 = [&]() -> std::uint32_t {
+				std::uint32_t value = s->ReadValueAsLE<std::uint32_t>();
+				if DEATH_UNLIKELY(isBigEndian) {
+					value = Memory::SwapBytes(value);
+				}
+				return value;
+			};
+
+			auto readU64 = [&]() -> std::uint64_t {
+				std::uint64_t value = s->ReadValueAsLE<std::uint64_t>();
+				if DEATH_UNLIKELY(isBigEndian) {
+					value = Memory::SwapBytes(value);
+				}
+				return value;
+			};
+
+			// Get section header table info
+			std::int64_t sectionTablePos, sectionHeaderSize;
+			std::uint16_t numSections, stringSectionIdx;
+			if (is64Bit) {
+				sectionHeaderSize = 64;
+				s->Seek(40, SeekOrigin::Begin);
+				sectionTablePos = readU64();
+				s->Seek(60, SeekOrigin::Begin);
+				numSections = readU16();
+				stringSectionIdx = readU16();
+			} else {
+				sectionHeaderSize = 40;
+				s->Seek(32, SeekOrigin::Begin);
+				sectionTablePos = readU32();
+				s->Seek(48, SeekOrigin::Begin);
+				numSections = readU16();
+				stringSectionIdx = readU16();
+			}
+
+			// Read string table
+			s->Seek(sectionTablePos + stringSectionIdx * sectionHeaderSize, SeekOrigin::Begin);
+
+			std::int64_t stringDataPos, stringDataSize;
+			if (is64Bit) {
+				s->Seek(24, SeekOrigin::Current);
+				stringDataPos = readU64();
+				stringDataSize = readU64();
+			} else {
+				s->Seek(16, SeekOrigin::Current);
+				stringDataPos = readU32();
+				stringDataSize = readU32();
+			}
+
+			// Read string table data
+			s->Seek(stringDataPos, SeekOrigin::Begin);
+			Array<std::uint8_t> strings(NoInit, stringDataSize);
+			s->Read(strings.data(), stringDataSize);
+
+			// Search for "pak" section
+			for (std::uint16_t i = 0; i < numSections; i++) {
+				std::int64_t sectionHeaderPos = sectionTablePos + i * sectionHeaderSize;
+				s->Seek(sectionHeaderPos, SeekOrigin::Begin);
+
+				std::uint32_t nameOffset = readU32();
+				if (nameOffset < stringDataSize) {
+					const char* sectionName = reinterpret_cast<const char*>(strings.data() + nameOffset);
+					if (std::strcmp(sectionName, "pak") == 0) {
+						// Found pak section, read its offset and size
+						std::uint64_t offset, size;
+						if (is64Bit) {
+							s->Seek(sectionHeaderPos + 24, SeekOrigin::Begin);
+							offset = readU64();
+							size = readU64();
+						} else {
+							s->Seek(sectionHeaderPos + 16, SeekOrigin::Begin);
+							offset = readU32();
+							size = readU32();
+						}
+
+						if (size >= FooterSize && offset > 0) {
+							// Calculate footer position (at the end of pak section)
+							std::int64_t footerPosition = std::int64_t(offset) + std::int64_t(size) - FooterSize;
+							
+							s->Seek(footerPosition, SeekOrigin::Begin);
+							std::uint8_t signature[sizeof(Signature)];
+							s->Read(signature, sizeof(signature));
+							
+							if (std::memcmp(signature, Signature, sizeof(Signature)) == 0) {
+								return footerPosition;
+							}
+						}
+						break;
+					}
+				}
+			}
+
+			return -1;
+		}
+
+		// Unknown file format
+		return -1;
+	}
+	
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ) || defined(WITH_LZ4) || defined(WITH_ZSTD)
 
 	using namespace Death::IO::Compression;
@@ -183,12 +362,17 @@ namespace Death { namespace IO {
 		DEATH_ASSERT(s->GetSize() > FooterSize + 8, "Invalid .pak file", );
 
 		// Header size is 18 bytes
-		bool isSeekable = s->Seek(-FooterSize, SeekOrigin::End) >= 0;
-		DEATH_ASSERT(isSeekable, ".pak file must be opened from seekable stream", );
+		std::int64_t footerPosition = s->Seek(-FooterSize, SeekOrigin::End);
+		DEATH_ASSERT(footerPosition >= 0, ".pak file must be opened from seekable stream", );
 
 		std::uint8_t signature[sizeof(Signature)];
 		s->Read(signature, sizeof(signature));
-		DEATH_ASSERT(std::memcmp(signature, Signature, sizeof(Signature)) == 0, "Invalid .pak file", );
+		
+		// If signature doesn't match, try to find .pak embedded in PE/ELF executable
+		if DEATH_UNLIKELY(std::memcmp(signature, Signature, sizeof(Signature)) != 0) {
+			footerPosition = FindRelocatedFooter(s);
+			DEATH_ASSERT(footerPosition >= 0, "Invalid .pak file", );
+		}
 
 		std::uint16_t fileVersion = s->ReadValueAsLE<std::uint16_t>();
 		DEATH_ASSERT(fileVersion == Version, "Unsupported .pak file version", );
@@ -196,15 +380,20 @@ namespace Death { namespace IO {
 		PakFileFlags fileFlags = (PakFileFlags)s->ReadValueAsLE<std::uint16_t>();
 		std::uint64_t rootIndexOffset = s->ReadValueAsLE<std::uint64_t>();
 
+		bool useRelativeOffsets = (fileFlags & PakFileFlags::RelativeOffsets) == PakFileFlags::RelativeOffsets;
+		if (useRelativeOffsets) {
+			rootIndexOffset = std::uint64_t(footerPosition + std::int64_t(rootIndexOffset));
+		}
+
 		DEATH_ASSERT(rootIndexOffset < std::uint64_t(s->GetSize()), "Invalid root index offset", );
-		s->Seek(static_cast<std::int64_t>(rootIndexOffset), SeekOrigin::Begin);
+		s->Seek(std::int64_t(rootIndexOffset), SeekOrigin::Begin);
 
 		_path = path;
 		_useHashIndex = (fileFlags & PakFileFlags::HashIndex) == PakFileFlags::HashIndex;
 
 		ConstructsItemsFromIndex(*s, nullptr,
 			(fileFlags & PakFileFlags::DeflateCompressedIndex) == PakFileFlags::DeflateCompressedIndex,
-			0);
+			useRelativeOffsets, 0);
 	}
 
 	StringView PakFile::GetMountPoint() const
@@ -228,6 +417,14 @@ namespace Death { namespace IO {
 		return (foundItem != nullptr && (foundItem->Flags & ItemFlags::Directory) != ItemFlags::Directory);
 	}
 
+	bool PakFile::FileExists(std::uint64_t hashedPath)
+	{
+		DEATH_ASSERT(_useHashIndex, "Hashed path can only be used with hash-indexed .pak files", false);
+
+		Item* foundItem = FindItemByHash(hashedPath);
+		return (foundItem != nullptr && (foundItem->Flags & ItemFlags::Directory) != ItemFlags::Directory);
+	}
+
 	bool PakFile::DirectoryExists(StringView path)
 	{
 		Item* foundItem = FindItem(path);
@@ -245,61 +442,118 @@ namespace Death { namespace IO {
 			return nullptr;
 		}
 
-		if ((foundItem->Flags & ItemFlags::DeflateCompressed) == ItemFlags::DeflateCompressed) {
+		PakPreferredCompression compression = PakPreferredCompression(std::uint32_t(foundItem->Flags & ItemFlags::CompressionFlags) >> CompressionFlagsShift);
+		switch (compression) {
+			case PakPreferredCompression::None: {
+				return std::make_unique<BoundedFileStream>(_path, foundItem->Offset, foundItem->UncompressedSize, bufferSize);
+			}
+			case PakPreferredCompression::Deflate: {
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
-			return std::make_unique<CompressedBoundedStream<DeflateStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+				return std::make_unique<CompressedBoundedStream<DeflateStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
 #else
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("File \"{}\" was compressed using an unsupported compression method (Deflate)", path);
+				LOGE("File \"{}\" was compressed with an unsupported method (Deflate)", path);
 #	endif
-			return nullptr;
+				return nullptr;
 #endif
-		}
-
-		if ((foundItem->Flags & ItemFlags::Lz4Compressed) == ItemFlags::Lz4Compressed) {
+			}
+			case PakPreferredCompression::Lz4: {
 #if defined(WITH_LZ4)
-			return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+				return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
 #else
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("File \"{}\" was compressed using an unsupported compression method (LZ4)", path);
+				LOGE("File \"{}\" was compressed with an unsupported method (LZ4)", path);
 #	endif
-			return nullptr;
+				return nullptr;
 #endif
-		}
-
-		if ((foundItem->Flags & ItemFlags::ZstdCompressed) == ItemFlags::ZstdCompressed) {
+			}
+			case PakPreferredCompression::Zstd: {
 #if defined(WITH_ZSTD)
-			return std::make_unique<CompressedBoundedStream<ZstdStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+				return std::make_unique<CompressedBoundedStream<ZstdStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
 #else
 #	if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("File \"{}\" was compressed using an unsupported compression method (Zstd)", path);
+				LOGE("File \"{}\" was compressed with an unsupported method (Zstd)", path);
 #	endif
-			return nullptr;
+				return nullptr;
 #endif
+			}
+			default: {
+				DEATH_ASSERT_UNREACHABLE(("File \"{}\" was compressed with an unknown method", path), nullptr);
+			}
 		}
-
-		return std::make_unique<BoundedFileStream>(_path, foundItem->Offset, foundItem->UncompressedSize, bufferSize);
 	}
 
-	void PakFile::ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool deflateCompressed, std::uint32_t depth)
+	std::unique_ptr<Stream> PakFile::OpenFile(std::uint64_t hashedPath, std::int32_t bufferSize)
+	{
+		DEATH_ASSERT(_useHashIndex, "Hashed path can only be used with hash-indexed .pak files", nullptr);
+
+		Item* foundItem = FindItemByHash(hashedPath);
+		if DEATH_UNLIKELY(foundItem == nullptr || (foundItem->Flags & ItemFlags::Directory) == ItemFlags::Directory) {
+			return nullptr;
+		}
+
+		PakPreferredCompression compression = PakPreferredCompression(std::uint32_t(foundItem->Flags & ItemFlags::CompressionFlags) >> CompressionFlagsShift);
+		switch (compression) {
+			case PakPreferredCompression::None: {
+				return std::make_unique<BoundedFileStream>(_path, foundItem->Offset, foundItem->UncompressedSize, bufferSize);
+			}
+			case PakPreferredCompression::Deflate: {
+#if defined(WITH_ZLIB) || defined(WITH_MINIZ)
+				return std::make_unique<CompressedBoundedStream<DeflateStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+#	else
+#		if defined(DEATH_TRACE_VERBOSE_IO)
+				LOGE("File 0x{:.16x} was compressed with an unsupported method (Deflate)", hashedPath);
+#		endif
+				return nullptr;
+#	endif
+			}
+			case PakPreferredCompression::Lz4: {
+#	if defined(WITH_LZ4)
+				return std::make_unique<CompressedBoundedStream<Lz4Stream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+#	else
+#		if defined(DEATH_TRACE_VERBOSE_IO)
+				LOGE("File 0x{:.16x} was compressed with an unsupported method (LZ4)", hashedPath);
+#		endif
+				return nullptr;
+#	endif
+			}
+			case PakPreferredCompression::Zstd: {
+#	if defined(WITH_ZSTD)
+				return std::make_unique<CompressedBoundedStream<ZstdStream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+#	else
+#		if defined(DEATH_TRACE_VERBOSE_IO)
+				LOGE("File 0x{:.16x} was compressed with an unsupported method (Zstd)", hashedPath);
+#		endif
+				return nullptr;
+#	endif
+			}
+			default: {
+				DEATH_ASSERT_UNREACHABLE(("File 0x{:.16x} was compressed with an unknown method", hashedPath), nullptr);
+			}
+		}
+	}
+
+	void PakFile::ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool deflateCompressed, bool useRelativeOffsets, std::uint32_t depth)
 	{
 		DEATH_ASSERT(depth < MaxDepth, "Maximum directory structure depth reached", );
 
+		std::int64_t indexStartPosition = s.GetPosition();
+		
 		auto* items = (deflateCompressed
-			? ReadIndexFromStreamDeflateCompressed(s, parentItem)
-			: ReadIndexFromStream(s, parentItem));
+			? ReadIndexFromStreamDeflateCompressed(s, parentItem, useRelativeOffsets, indexStartPosition)
+			: ReadIndexFromStream(s, parentItem, useRelativeOffsets, indexStartPosition));
 
 		if DEATH_LIKELY(items != nullptr) {
 			for (auto& item : *items) {
 				if ((item.Flags & ItemFlags::Directory) == ItemFlags::Directory) {
 					s.Seek(std::int64_t(item.Offset), SeekOrigin::Begin);
-					ConstructsItemsFromIndex(s, &item, deflateCompressed, depth + 1);
+					ConstructsItemsFromIndex(s, &item, deflateCompressed, useRelativeOffsets, depth + 1);
 				}
 			}
 		}
 	}
 
-	Array<PakFile::Item>* PakFile::ReadIndexFromStream(Stream& s, Item* parentItem)
+	Array<PakFile::Item>* PakFile::ReadIndexFromStream(Stream& s, Item* parentItem, bool useRelativeOffsets, std::int64_t indexStartPosition)
 	{
 		if DEATH_UNLIKELY(parentItem == nullptr) {
 			// Root index contains mount point
@@ -340,7 +594,13 @@ namespace Death { namespace IO {
 				s.Read(item.Name.data(), std::int32_t(nameLength));
 			}
 
-			item.Offset = s.ReadVariableUint64();
+			if (useRelativeOffsets) {
+				// Offset is stored as signed relative offset from the index start position
+				std::int64_t relativeOffset = s.ReadVariableInt64();
+				item.Offset = std::uint64_t(indexStartPosition + relativeOffset);
+			} else {
+				item.Offset = s.ReadVariableUint64();
+			}
 
 			if (!isDirectory) {
 				item.UncompressedSize = s.ReadVariableUint32();
@@ -353,11 +613,11 @@ namespace Death { namespace IO {
 		return items;
 	}
 
-	Array<PakFile::Item>* PakFile::ReadIndexFromStreamDeflateCompressed(Stream& s, Item* parentItem)
+	Array<PakFile::Item>* PakFile::ReadIndexFromStreamDeflateCompressed(Stream& s, Item* parentItem, bool useRelativeOffsets, std::int64_t indexStartPosition)
 	{
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
 		DeflateStream ds(s);
-		return ReadIndexFromStream(ds, parentItem);
+		return ReadIndexFromStream(ds, parentItem, useRelativeOffsets, indexStartPosition);
 #else
 		return nullptr;
 #endif
@@ -369,17 +629,7 @@ namespace Death { namespace IO {
 
 		if (_useHashIndex) {
 			std::uint64_t hashedPath = FileNameToHash(path);
-
-			// Items are always sorted by PakWriter
-			Item* foundItem = std::lower_bound(_rootItems.begin(), _rootItems.end(), hashedPath, [](const PakFile::Item& a, std::uint64_t b) {
-				return std::memcmp(a.Name.data(), &b, HashIndexLength) < 0;
-			});
-
-			if DEATH_UNLIKELY(foundItem == _rootItems.end() || std::memcmp(foundItem->Name.data(), &hashedPath, HashIndexLength) != 0) {
-				return nullptr;
-			}
-
-			return foundItem;
+			return FindItemByHash(hashedPath);
 		}
 
 		Array<Item>* items = &_rootItems;
@@ -412,10 +662,23 @@ namespace Death { namespace IO {
 		}
 	}
 
+	PakFile::Item* PakFile::FindItemByHash(std::uint64_t hashedPath)
+	{
+		// Items are always sorted by PakWriter
+		Item* foundItem = std::lower_bound(_rootItems.begin(), _rootItems.end(), hashedPath, [](const PakFile::Item& a, std::uint64_t b) {
+			return std::memcmp(a.Name.data(), &b, HashIndexLength) < 0;
+		});
+
+		if DEATH_UNLIKELY(foundItem == _rootItems.end() || std::memcmp(foundItem->Name.data(), &hashedPath, HashIndexLength) != 0) {
+			return nullptr;
+		}
+
+		return foundItem;
+	}
+
 	bool PakFile::HasCompressedSize(ItemFlags itemFlags)
 	{
-		return ((itemFlags & (PakFile::ItemFlags::DeflateCompressed | PakFile::ItemFlags::Lz4Compressed |
-			PakFile::ItemFlags::Lzma2Compressed | PakFile::ItemFlags::ZstdCompressed)) != PakFile::ItemFlags::None);
+		return ((itemFlags & PakFile::ItemFlags::CompressionFlags) != PakFile::ItemFlags::None);
 	}
 
 	class PakFile::Directory::Impl
@@ -598,12 +861,32 @@ namespace Death { namespace IO {
 		return _path;
 	}
 
-	PakWriter::PakWriter(StringView path, bool useHashIndex, bool useCompressedIndex)
-		: _finalized(false), _useHashIndex(useHashIndex), _useCompressedIndex(useCompressedIndex)
+	PakWriter::PakWriter(StringView path, bool useHashIndex, bool useCompressedIndex, bool useRelativeOffsets, bool append)
+		: _finalized(false), _useHashIndex(useHashIndex), _useCompressedIndex(useCompressedIndex),
+			_useRelativeOffsets(useRelativeOffsets)
 	{
 		_alreadyExisted = FileSystem::FileExists(path);
-		_outputStream = std::make_unique<FileStream>(path, FileAccess::Write);
-		_outputStream->Write(OptionalHeader, sizeof(OptionalHeader));
+		if (append) {
+			_outputStream = std::make_unique<FileStream>(path, FileAccess::ReadWrite);
+
+			if (_outputStream->GetSize() >= FooterSize) {
+				bool isSeekable = _outputStream->Seek(-FooterSize, SeekOrigin::End) >= 0;
+				DEATH_ASSERT(isSeekable, ".pak file must be opened from seekable stream", );
+
+				std::uint8_t signature[sizeof(Signature)];
+				_outputStream->Read(signature, sizeof(signature));
+				if (std::memcmp(signature, Signature, sizeof(Signature)) == 0) {
+					LOGE("Appending to existing .pak file \"{}\" is not supported", path);
+					_outputStream = nullptr;
+					return;
+				}
+			}
+
+			_outputStream->Seek(0, SeekOrigin::End);
+		} else {
+			_outputStream = std::make_unique<FileStream>(path, FileAccess::Write);
+			_outputStream->Write(OptionalHeader, sizeof(OptionalHeader));
+		}
 	}
 
 	PakWriter::~PakWriter()
@@ -642,33 +925,39 @@ namespace Death { namespace IO {
 		std::int64_t offset = _outputStream->GetPosition();
 		std::int64_t uncompressedSize, size;
 
+		switch (preferredCompression) {
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
-		if (preferredCompression == PakPreferredCompression::Deflate) {
-			CopyToDeflate(stream, *_outputStream, uncompressedSize);
-			size = _outputStream->GetPosition() - offset;
-			DEATH_DEBUG_ASSERT(size > 0);
-			flags |= PakFile::ItemFlags::DeflateCompressed;
-		} else
+			case PakPreferredCompression::Deflate: {
+				CopyToDeflate(stream, *_outputStream, uncompressedSize);
+				size = _outputStream->GetPosition() - offset;
+				DEATH_DEBUG_ASSERT(size > 0);
+				flags |= PakFile::ItemFlags(std::uint32_t(PakPreferredCompression::Deflate) << PakFile::CompressionFlagsShift);
+				break;
+			}
 #endif
 #if defined(WITH_LZ4)
-		if (preferredCompression == PakPreferredCompression::Lz4) {
-			CopyToLz4(stream, *_outputStream, uncompressedSize);
-			size = _outputStream->GetPosition() - offset;
-			DEATH_DEBUG_ASSERT(size > 0);
-			flags |= PakFile::ItemFlags::Lz4Compressed;
-		} else
+			case PakPreferredCompression::Lz4: {
+				CopyToLz4(stream, *_outputStream, uncompressedSize);
+				size = _outputStream->GetPosition() - offset;
+				DEATH_DEBUG_ASSERT(size > 0);
+				flags |= PakFile::ItemFlags(std::uint32_t(PakPreferredCompression::Lz4) << PakFile::CompressionFlagsShift);
+				break;
+			}
 #endif
 #if defined(WITH_ZSTD)
-		if (preferredCompression == PakPreferredCompression::Zstd) {
-			CopyToZstd(stream, *_outputStream, uncompressedSize);
-			size = _outputStream->GetPosition() - offset;
-			DEATH_DEBUG_ASSERT(size > 0);
-			flags |= PakFile::ItemFlags::ZstdCompressed;
-		} else
+			case PakPreferredCompression::Zstd: {
+				CopyToZstd(stream, *_outputStream, uncompressedSize);
+				size = _outputStream->GetPosition() - offset;
+				DEATH_DEBUG_ASSERT(size > 0);
+				flags |= PakFile::ItemFlags(std::uint32_t(PakPreferredCompression::Zstd) << PakFile::CompressionFlagsShift);
+				break;
+			}
 #endif
-		{
-			uncompressedSize = stream.CopyTo(*_outputStream);
-			size = 0;
+			default: {
+				uncompressedSize = stream.CopyTo(*_outputStream);
+				size = 0;
+				break;
+			}
 		}
 
 		DEATH_ASSERT(uncompressedSize > 0, "Failed to copy stream to .pak file", false);
@@ -747,14 +1036,14 @@ namespace Death { namespace IO {
 					DeflateWriter dw(*_outputStream);
 					dw.WriteVariableUint32(std::uint32_t(item.ChildItems.size()));
 					for (PakFile::Item& childItem : item.ChildItems) {
-						WriteItemDescription(dw, childItem);
+						WriteItemDescription(dw, childItem, item.Offset);
 					}
 				} else
 #endif
 				{
 					_outputStream->WriteVariableUint32(std::uint32_t(item.ChildItems.size()));
 					for (PakFile::Item& childItem : item.ChildItems) {
-						WriteItemDescription(*_outputStream, childItem);
+						WriteItemDescription(*_outputStream, childItem, item.Offset);
 					}
 				}
 
@@ -784,7 +1073,7 @@ namespace Death { namespace IO {
 
 				dw.WriteVariableUint32(std::uint32_t(_rootItems.size()));
 				for (PakFile::Item& item : _rootItems) {
-					WriteItemDescription(dw, item);
+					WriteItemDescription(dw, item, rootIndexOffset);
 				}
 			} else
 #endif
@@ -794,7 +1083,7 @@ namespace Death { namespace IO {
 
 				_outputStream->WriteVariableUint32(std::uint32_t(_rootItems.size()));
 				for (PakFile::Item& item : _rootItems) {
-					WriteItemDescription(*_outputStream, item);
+					WriteItemDescription(*_outputStream, item, rootIndexOffset);
 				}
 			}
 		}
@@ -804,16 +1093,28 @@ namespace Death { namespace IO {
 		if (_useHashIndex) {
 			fileFlags |= PakFileFlags::HashIndex;
 		}
+		if (_useRelativeOffsets) {
+			fileFlags |= PakFileFlags::RelativeOffsets;
+		}
 #if defined(WITH_ZLIB) || defined(WITH_MINIZ)
 		if (_useCompressedIndex) {
 			fileFlags |= PakFileFlags::DeflateCompressedIndex;
 		}
 #endif
 
+		std::int64_t footerPosition = _outputStream->GetPosition();
+
 		_outputStream->Write(Signature, sizeof(Signature));
 		_outputStream->WriteValueAsLE<std::uint16_t>(Version);
 		_outputStream->WriteValueAsLE<std::uint16_t>(std::uint16_t(fileFlags));
-		_outputStream->WriteValueAsLE<std::uint64_t>(rootIndexOffset);
+		
+		if (_useRelativeOffsets) {
+			// Store root index offset as signed relative offset from footer position
+			std::int64_t relativeRootIndexOffset = rootIndexOffset - footerPosition;
+			_outputStream->WriteValueAsLE<std::int64_t>(relativeRootIndexOffset);
+		} else {
+			_outputStream->WriteValueAsLE<std::uint64_t>(rootIndexOffset);
+		}
 
 		// Close the stream
 		_outputStream = nullptr;
@@ -828,7 +1129,7 @@ namespace Death { namespace IO {
 	{
 		_mountPoint = Death::move(value);
 	}
-
+	
 	PakFile::Item* PakWriter::FindOrCreateParentItem(StringView& path)
 	{
 		path = path.trimmedPrefix("/\\"_s);
@@ -863,7 +1164,7 @@ namespace Death { namespace IO {
 		}
 	}
 
-	void PakWriter::WriteItemDescription(Stream& s, PakFile::Item& item)
+	void PakWriter::WriteItemDescription(Stream& s, PakFile::Item& item, std::int64_t indexStartPosition)
 	{
 		bool isDirectory = (item.Flags & PakFile::ItemFlags::Directory) == PakFile::ItemFlags::Directory;
 
@@ -878,7 +1179,13 @@ namespace Death { namespace IO {
 			s.Write(item.Name.data(), std::int32_t(item.Name.size()));
 		}
 
-		s.WriteVariableUint64(item.Offset);
+		if (_useRelativeOffsets) {
+			// Store offset as signed relative offset from the index start position
+			std::int64_t relativeOffset = static_cast<std::int64_t>(item.Offset) - indexStartPosition;
+			s.WriteVariableInt64(relativeOffset);
+		} else {
+			s.WriteVariableUint64(item.Offset);
+		}
 
 		if (!isDirectory) {
 			s.WriteVariableUint32(item.UncompressedSize);

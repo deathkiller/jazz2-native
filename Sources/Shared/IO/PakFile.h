@@ -17,7 +17,9 @@ namespace Death { namespace IO {
 		None,				/**< None */
 		Deflate,			/**< Deflate */
 		Lz4,				/**< LZ4 */
-		Zstd				/**< Zstandard */
+		Zstd,				/**< Zstandard */
+
+		Lzma2Compressed		/**< LZMA2 - Not implemented */
 	};
 
 	/**
@@ -46,11 +48,15 @@ namespace Death { namespace IO {
 
 		/** @brief Returns `true` if the specified path is a file */
 		bool FileExists(Containers::StringView path);
+		/** @overload */
+		bool FileExists(std::uint64_t hashedPath);
 		/** @brief Returns `true` if the specified path is a directory */
 		bool DirectoryExists(Containers::StringView path);
 
 		/** @brief Opens a file stream */
 		std::unique_ptr<Stream> OpenFile(Containers::StringView path, std::int32_t bufferSize = FileStream::DefaultBufferSize);
+		/** @overload */
+		std::unique_ptr<Stream> OpenFile(std::uint64_t hashedPath, std::int32_t bufferSize = FileStream::DefaultBufferSize);
 
 		/** @brief Handles directory traversal, should be used as iterator */
 		class Directory
@@ -115,14 +121,11 @@ namespace Death { namespace IO {
 		enum class ItemFlags : std::uint32_t {
 			None = 0,
 			Directory = 0x01,
-			DeflateCompressed = 0x02,
-			Lz4Compressed = 0x04,
-			ZstdCompressed = 0x08,
+			Link = 0x02,				// Not implemented
 
-			Lzma2Compressed = 0x10,		// Not implemented
-			Aes256Encrypted = 0x40,		// Not implemented
+			Encrypted = 0x10,			// Not implemented
 
-			Link = 0x80					// Not implemented
+			CompressionFlags = 0xF00,
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(ItemFlags);
@@ -140,15 +143,18 @@ namespace Death { namespace IO {
 		};
 #endif
 
+		static constexpr std::uint32_t CompressionFlagsShift = 8;
+
 		Containers::String _path;
 		Containers::String _mountPoint;
 		Containers::Array<Item> _rootItems;
 		bool _useHashIndex;
 
-		void ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool deflateCompressed, std::uint32_t depth);
-		Containers::Array<Item>* ReadIndexFromStream(Stream& s, Item* parentItem);
-		DEATH_NEVER_INLINE Containers::Array<Item>* ReadIndexFromStreamDeflateCompressed(Stream& s, Item* parentItem);
+		void ConstructsItemsFromIndex(Stream& s, Item* parentItem, bool deflateCompressed, bool useRelativeOffsets, std::uint32_t depth);
+		Containers::Array<Item>* ReadIndexFromStream(Stream& s, Item* parentItem, bool useRelativeOffsets, std::int64_t indexStartPosition);
+		DEATH_NEVER_INLINE Containers::Array<Item>* ReadIndexFromStreamDeflateCompressed(Stream& s, Item* parentItem, bool useRelativeOffsets, std::int64_t indexStartPosition);
 		Item* FindItem(Containers::StringView path);
+		Item* FindItemByHash(std::uint64_t hashedPath);
 
 		static DEATH_ALWAYS_INLINE bool HasCompressedSize(ItemFlags itemFlags);
 	};
@@ -159,12 +165,12 @@ namespace Death { namespace IO {
 	class PakWriter
 	{
 	public:
-		explicit PakWriter(Containers::StringView path, bool useHashIndex = false, bool useCompressedIndex = false);
+		explicit PakWriter(Containers::StringView path, bool useHashIndex = false, bool useCompressedIndex = false, bool useRelativeOffsets = false, bool append = false);
 		~PakWriter();
 
 		PakWriter(const PakWriter&) = delete;
 		PakWriter& operator=(const PakWriter&) = delete;
-		
+
 		explicit operator bool() const {
 			return IsValid();
 		}
@@ -189,9 +195,10 @@ namespace Death { namespace IO {
 		bool _alreadyExisted;
 		bool _useHashIndex;
 		bool _useCompressedIndex;
+		bool _useRelativeOffsets;
 
 		PakFile::Item* FindOrCreateParentItem(Containers::StringView& path);
-		void WriteItemDescription(Stream& s, PakFile::Item& item);
+		void WriteItemDescription(Stream& s, PakFile::Item& item, std::int64_t indexStartPosition);
 	};
 
 }}

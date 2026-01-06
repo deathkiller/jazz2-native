@@ -117,6 +117,12 @@ namespace Death { namespace Containers {
 
 	// Note: Moving this function into the header may cause performance regression.
 	template<class Size_T>
+	void* SmallVectorBase<Size_T>::mallocForShrink(void* firstEl, std::size_t newCapacity, std::size_t typeSize) {
+		return std::realloc(firstEl, newCapacity * typeSize);
+	}
+
+	// Note: Moving this function into the header may cause performance regression.
+	template<class Size_T>
 	void SmallVectorBase<Size_T>::growTrivial(void* firstEl, std::size_t minSize, std::size_t typeSize) {
 		std::size_t newCapacity = getNewCapacity<Size_T>(minSize, typeSize, this->capacity());
 		void* newElts;

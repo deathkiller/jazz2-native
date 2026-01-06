@@ -1,10 +1,11 @@
 #include "Lz4Stream.h"
-#include "../../Asserts.h"
-#include "../../Base/Move.h"
 
 #if !defined(WITH_LZ4)
 #	pragma message("Death::IO::Lz4Stream requires `lz4` library")
 #else
+
+#include "../../Asserts.h"
+#include "../../Base/Move.h"
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #	if defined(_M_X64)
@@ -137,12 +138,12 @@ namespace Death { namespace IO { namespace Compression {
 		}
 
 		DEATH_ASSERT(destination != nullptr, "destination is null", 0);
-		std::uint8_t* typedBuffer = static_cast<std::uint8_t*>(destination);
+		std::uint8_t* typedBuffer = (std::uint8_t*)destination;
 		std::int64_t bytesReadTotal = 0;
 
 		do {
 			// ReadInternal() can read only up to Lz4Stream::BufferSize bytes
-			std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? (std::int32_t)bytesToRead : INT32_MAX);
+			std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? std::int32_t(bytesToRead) : INT32_MAX);
 			std::int32_t bytesRead = ReadInternal(&typedBuffer[bytesReadTotal], partialBytesToRead);
 			if DEATH_UNLIKELY(bytesRead < 0) {
 				return bytesRead;
@@ -341,7 +342,7 @@ namespace Death { namespace IO { namespace Compression {
 		}
 
 		_state = State::Finished;
-		_size = static_cast<std::int32_t>(_outPosTotal);
+		_size = std::int32_t(_outPosTotal);
 		return true;
 	}
 
@@ -376,7 +377,7 @@ namespace Death { namespace IO { namespace Compression {
 		}
 
 		// Header needs to be written before the first frame
-		_outLength = static_cast<std::int32_t>(headerSize);
+		_outLength = std::int32_t(headerSize);
 	}
 
 	Lz4Writer::~Lz4Writer()
@@ -426,12 +427,12 @@ namespace Death { namespace IO { namespace Compression {
 		}
 
 		DEATH_ASSERT(source != nullptr, "source is null", 0);
-		const std::uint8_t* typedBuffer = static_cast<const std::uint8_t*>(source);
+		const std::uint8_t* typedBuffer = (const std::uint8_t*)source;
 		std::int64_t bytesWrittenTotal = 0;
 		_state = State::Initialized;
 
 		do {
-			std::int32_t partialBytesToWrite = (bytesToWrite < INT32_MAX ? (std::int32_t)bytesToWrite : INT32_MAX);
+			std::int32_t partialBytesToWrite = (bytesToWrite < INT32_MAX ? std::int32_t(bytesToWrite) : INT32_MAX);
 			std::int32_t bytesWritten = WriteInternal(&typedBuffer[bytesWrittenTotal], partialBytesToWrite, false);
 			if DEATH_UNLIKELY(bytesWritten < 0) {
 				return bytesWritten;
