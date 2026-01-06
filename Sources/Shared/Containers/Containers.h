@@ -55,6 +55,9 @@ namespace Death { namespace Containers {
 	typedef BasicStringView<const char> StringView;
 	typedef BasicStringView<char> MutableStringView;
 
+	class StringIterable;
+	class StringIterableIterator;
+
 	class DateTime;
 	class TimeSpan;
 

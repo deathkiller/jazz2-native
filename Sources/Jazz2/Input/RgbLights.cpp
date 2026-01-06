@@ -45,6 +45,9 @@ namespace Jazz2::Input
 		_hLib = ::LoadLibrary(L"RzChromaSDK.dll");
 #	else
 		_hLib = ::LoadLibrary(L"RzChromaSDK64.dll");
+		if (_hLib == NULL) {
+			_hLib = ::LoadLibrary(L"RzChromaSDK.dll");
+		}
 #	endif
 		if (_hLib != NULL) {
 			RzInit init = (RzInit)::GetProcAddress(_hLib, "Init");

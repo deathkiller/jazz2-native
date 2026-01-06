@@ -1,9 +1,10 @@
 #include "DeflateStream.h"
-#include "../../Asserts.h"
 
 #if !defined(WITH_ZLIB) && !defined(WITH_MINIZ)
 #	pragma message("Death::IO::DeflateStream requires `zlib` or `miniz` library")
 #else
+
+#include "../../Asserts.h"
 
 #if defined(WITH_ZLIB) && defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #	if defined(_M_X64)
@@ -77,7 +78,7 @@ namespace Death { namespace IO { namespace Compression {
 			case SeekOrigin::Current: {
 				DEATH_ASSERT(offset >= 0, "Cannot seek to negative values", Stream::OutOfRange);
 
-				char buffer[4096];
+				std::uint8_t buffer[4096];
 				while (offset > 0) {
 					std::int64_t size = (offset > sizeof(buffer) ? sizeof(buffer) : offset);
 					std::int64_t bytesRead = Read(buffer, size);
@@ -106,7 +107,7 @@ namespace Death { namespace IO { namespace Compression {
 		}
 
 		DEATH_ASSERT(destination != nullptr, "destination is null", 0);
-		std::uint8_t* typedBuffer = static_cast<std::uint8_t*>(destination);
+		std::uint8_t* typedBuffer = (std::uint8_t*)destination;
 		std::int64_t bytesReadTotal = 0;
 
 		do {
@@ -210,7 +211,7 @@ namespace Death { namespace IO { namespace Compression {
 			return 0;
 		}
 
-		_strm.next_out = static_cast<unsigned char*>(ptr);
+		_strm.next_out = (std::uint8_t*)ptr;
 		_strm.avail_out = size;
 
 		std::int32_t res = inflate(&_strm, Z_NO_FLUSH);
@@ -244,7 +245,7 @@ namespace Death { namespace IO { namespace Compression {
 			bytesRead = sizeof(_buffer);
 		}
 
-		bytesRead = (std::int32_t)_inputStream->Read(_buffer, bytesRead);
+		bytesRead = std::int32_t(_inputStream->Read(_buffer, bytesRead));
 		if (bytesRead <= 0) {
 			return false;
 		}
@@ -254,7 +255,7 @@ namespace Death { namespace IO { namespace Compression {
 		}
 
 		_strm.next_in = _buffer;
-		_strm.avail_in = static_cast<std::uint32_t>(bytesRead);
+		_strm.avail_in = std::uint32_t(bytesRead);
 		_state = State::Read;
 		return true;
 	}
@@ -265,12 +266,12 @@ namespace Death { namespace IO { namespace Compression {
 			return true;
 		}
 
-		std::int64_t seekToEnd = (_inputSize >= 0 ? _inputSize : -static_cast<std::int64_t>(_strm.avail_in));
+		std::int64_t seekToEnd = (_inputSize >= 0 ? _inputSize : -(std::int64_t)(_strm.avail_in));
 		if (seekToEnd != 0) {
 			_inputStream->Seek(seekToEnd, SeekOrigin::Current);
 		}
 
-		std::int32_t error = inflateEnd((z_stream*)&_strm);
+		std::int32_t error = inflateEnd(&_strm);
 		if (error != Z_OK) {
 #if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Failed to finalize compressed stream with error {}", error);
@@ -278,7 +279,7 @@ namespace Death { namespace IO { namespace Compression {
 		}
 
 		_state = State::Finished;
-		_size = static_cast<std::int64_t>(_strm.total_out);
+		_size = std::int64_t(_strm.total_out);
 		return (error == Z_OK);
 	}
 
@@ -351,12 +352,12 @@ namespace Death { namespace IO { namespace Compression {
 		}
 
 		DEATH_ASSERT(source != nullptr, "source is null", 0);
-		const std::uint8_t* typedBuffer = static_cast<const std::uint8_t*>(source);
+		const std::uint8_t* typedBuffer = (const std::uint8_t*)source;
 		std::int64_t bytesWrittenTotal = 0;
 		_state = State::Initialized;
 
 		do {
-			std::int32_t partialBytesToWrite = (bytesToWrite < INT32_MAX ? (std::int32_t)bytesToWrite : INT32_MAX);
+			std::int32_t partialBytesToWrite = (bytesToWrite < INT32_MAX ? std::int32_t(bytesToWrite) : INT32_MAX);
 			std::int32_t bytesWritten = WriteInternal(&typedBuffer[bytesWrittenTotal], partialBytesToWrite, false);
 			if DEATH_UNLIKELY(bytesWritten < 0) {
 				return bytesWritten;
@@ -392,19 +393,19 @@ namespace Death { namespace IO { namespace Compression {
 
 	std::int32_t DeflateWriter::WriteInternal(const void* buffer, std::int32_t bytesToWrite, bool finish)
 	{
-		_strm.next_in = (unsigned char*)buffer;
+		_strm.next_in = (std::uint8_t*)buffer;
 		_strm.avail_in = bytesToWrite;
 
 		while (_strm.avail_in > 0 || finish) {
 			std::int32_t error;
 			do {
-				_strm.next_out = static_cast<unsigned char*>(_buffer);
+				_strm.next_out = (std::uint8_t*)_buffer;
 				_strm.avail_out = sizeof(_buffer);
 				error = deflate(&_strm, finish
 					? Z_FINISH
 					: (buffer != nullptr ? Z_NO_FLUSH : Z_FULL_FLUSH));
 
-				std::int32_t bytesWritten = sizeof(_buffer) - static_cast<std::int32_t>(_strm.avail_out);
+				std::int32_t bytesWritten = sizeof(_buffer) - std::int32_t(_strm.avail_out);
 				if (bytesWritten > 0) {
 					_outputStream->Write(_buffer, bytesWritten);
 				}

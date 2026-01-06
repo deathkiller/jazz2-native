@@ -1,10 +1,11 @@
 #include "ZstdStream.h"
-#include "../../Asserts.h"
-#include "../../Base/Move.h"
 
 #if !defined(WITH_ZSTD)
 #	pragma message("Death::IO::ZstdStream requires `zstd` library")
 #else
+
+#include "../../Asserts.h"
+#include "../../Base/Move.h"
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(CMAKE_BUILD)
 #	if defined(_M_X64)

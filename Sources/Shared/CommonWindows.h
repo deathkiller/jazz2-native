@@ -298,6 +298,13 @@ DEATH_ALWAYS_INLINE LRESULT WINAPI SendMessage(HWND hWnd, UINT Msg, WPARAM wPara
 }
 #endif
 
+#if defined(SetConsoleTitle)
+#	undef SetConsoleTitle
+DEATH_ALWAYS_INLINE BOOL WINAPI SetConsoleTitle(LPCWSTR lpConsoleTitle) {
+	return ::SetConsoleTitleW(lpConsoleTitle);
+}
+#endif
+
 #if defined(StartDoc)
 #	undef StartDoc
 DEATH_ALWAYS_INLINE int WINAPI StartDoc(HDC hdc, CONST DOCINFOW* lpdi) {
@@ -309,6 +316,20 @@ DEATH_ALWAYS_INLINE int WINAPI StartDoc(HDC hdc, CONST DOCINFOW* lpdi) {
 #	undef UnregisterClass
 DEATH_ALWAYS_INLINE BOOL WINAPI UnregisterClass(LPCWSTR lpClassName, HINSTANCE hInstance) {
 	return ::UnregisterClassW(lpClassName, hInstance);
+}
+#endif
+
+#if defined(WriteConsole)
+#	undef WriteConsole
+DEATH_ALWAYS_INLINE BOOL WINAPI WriteConsole(HANDLE hConsoleOutput, CONST VOID* lpBuffer, DWORD nNumberOfCharsToWrite, LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved) {
+	return ::WriteConsoleW(hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, lpNumberOfCharsWritten, lpReserved);
+}
+#endif
+
+#if defined(WriteConsoleOutput)
+#	undef WriteConsoleOutput
+DEATH_ALWAYS_INLINE BOOL WINAPI WriteConsoleOutput(HANDLE hConsoleOutput, CONST CHAR_INFO* lpBuffer, COORD dwBufferSize, COORD dwBufferCoord, PSMALL_RECT lpWriteRegion) {
+	return ::WriteConsoleOutputW(hConsoleOutput, lpBuffer, dwBufferSize, dwBufferCoord, lpWriteRegion);
 }
 #endif
 
