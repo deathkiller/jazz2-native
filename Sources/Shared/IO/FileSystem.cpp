@@ -1174,7 +1174,7 @@ namespace Death { namespace IO {
 			return path;
 		}
 #	endif
-		char buffer[MaxPathLength];
+		char buffer[PATH_MAX]; // realpath() output parameter must be a pointer to a buffer with >= PATH_MAX bytes
 		const char* resolvedPath = ::realpath(String::nullTerminatedView(path).data(), buffer);
 		if (resolvedPath == nullptr) {
 			return {};
