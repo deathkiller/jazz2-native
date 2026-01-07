@@ -15,9 +15,10 @@
 #	endif
 #else
 #	include <cerrno>
-#	include <fcntl.h>		// for open()
-#	include <sys/stat.h>	// for open()
-#	include <sys/unistd.h>	// for close()
+#	include <fcntl.h>
+#	include <sys/stat.h>
+#	include <sys/unistd.h>
+#	include <unistd.h>
 #endif
 
 using namespace Death::Containers;
