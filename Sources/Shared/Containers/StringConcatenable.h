@@ -146,11 +146,19 @@ namespace Death { namespace Containers {
 			typedef String ConvertTo;
 
 			static std::size_t size(const char a[N]) {
-				return strnlen(a, N);
+				for (std::size_t i = 0; i < N; i++) {
+					if (a[i] == '\0') {
+						return i;
+					}
+				}
+				return N;
 			}
 			static inline void appendTo(const char a[N], char*& out) {
-				while (*a != '\0') {
-					*out++ = *a++;
+				for (std::size_t i = 0; i < N; i++) {
+					if (a[i] == '\0') {
+						break;
+					}
+					*out++ = a[i];
 				}
 			}
 		};

@@ -7,22 +7,6 @@
 #include <memory>
 #include <optional>
 
-#if !defined(DEATH_TARGET_WINDOWS) && !defined(DOXYGEN_GENERATING_OUTPUT)
-#	include <climits> // for `PATH_MAX`
-#	if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH)
-#		include <dirent.h>
-#	elif defined(DEATH_TARGET_ANDROID)
-using DIR = struct DIR;
-using AAssetDir = struct AAssetDir;
-#	elif defined(__FreeBSD__)
-struct _dirdesc;
-using DIR = struct _dirdesc;
-#	else
-struct __dirstream;
-using DIR = struct __dirstream;
-#	endif
-#endif
-
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
@@ -34,15 +18,14 @@ namespace Death { namespace IO {
 	public:
 		/** @{ @name Constants */
 
-#if defined(DEATH_TARGET_WINDOWS)
-		// Windows 10 supports long paths everywhere, so increase it a bit
+		// Windows 10 supports long paths everywhere and Unix systems usually also support at least 2048 characters
 		/** @brief Maximum path length supported */
-		static constexpr std::size_t MaxPathLength = /*MAX_PATH*/2048;
+		static constexpr std::size_t MaxPathLength = 2048;
+
+#if defined(DEATH_TARGET_WINDOWS)
 		/** @brief Native path separator */
 		static constexpr char PathSeparator[] = "\\";
 #else
-		/** @brief Maximum path length supported */
-		static constexpr std::size_t MaxPathLength = PATH_MAX;
 		/** @brief Native path separator */
 		static constexpr char PathSeparator[] = "/";
 #endif

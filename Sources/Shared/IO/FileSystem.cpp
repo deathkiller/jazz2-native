@@ -22,14 +22,14 @@
 #	include <cerrno>
 #	include <cstdio>
 #	include <cstring>
-#	include <ctime>
-#	include <unistd.h>
-#	include <sys/stat.h>
-#	include <libgen.h>
-#	include <pwd.h>
 #	include <dirent.h>
 #	include <fcntl.h>
 #	include <ftw.h>
+#	include <libgen.h>
+#	include <pwd.h>
+#	include <strings.h>
+#	include <sys/stat.h>
+#	include <unistd.h>
 #	if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #		include <sys/mman.h>
 #	endif
@@ -48,12 +48,11 @@
 #		include <mach-o/dyld.h>
 #	elif defined(DEATH_TARGET_EMSCRIPTEN)
 #		include <emscripten/emscripten.h>
-#	elif defined(__linux__)
-#		include <sys/sendfile.h>
-#	endif
-#	if defined(__FreeBSD__)
+#	elif defined(__FreeBSD__)
 #		include <sys/types.h>
 #		include <sys/sysctl.h>
+#	elif defined(__linux__)
+#		include <sys/sendfile.h>
 #	endif
 #endif
 
@@ -280,8 +279,8 @@ namespace Death { namespace IO {
 
 		static bool DeleteDirectoryInternal(StringView path)
 		{
-#	if defined(DEATH_TARGET_SWITCH)
-			// nftw() is missing in libnx
+#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+			// nftw() is missing in libnx and Vita
 			auto nullTerminatedPath = String::nullTerminatedView(path);
 			DIR* d = ::opendir(nullTerminatedPath.data());
 			std::int32_t r = -1;
@@ -591,17 +590,26 @@ namespace Death { namespace IO {
 					goto Retry;
 				}
 
+#	if defined(DEATH_TARGET_VITA)
+				if ((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && SCE_S_ISDIR(entry->d_stat.st_attr))
+					goto Retry;
+				if ((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && SCE_S_ISREG(entry->d_stat.st_attr))
+					goto Retry;
+				if ((_options & EnumerationOptions::SkipSpecial) == EnumerationOptions::SkipSpecial && !SCE_S_ISDIR(entry->d_stat.st_attr) && !SCE_S_ISREG(entry->d_stat.st_attr) && !SCE_S_ISLNK(entry->d_stat.st_attr))
+					goto Retry;
+#	else
 				if ((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && entry->d_type == DT_DIR)
 					goto Retry;
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+#		if !defined(DEATH_TARGET_EMSCRIPTEN)
 				if ((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && entry->d_type == DT_REG)
 					goto Retry;
 				if ((_options & EnumerationOptions::SkipSpecial) == EnumerationOptions::SkipSpecial && entry->d_type != DT_DIR && entry->d_type != DT_REG && entry->d_type != DT_LNK)
 					goto Retry;
-#	else
+#		else
 				// Emscripten doesn't set DT_REG for files, so we treat everything that's not a DT_DIR as a file. SkipSpecial has no effect here.
 				if ((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && entry->d_type != DT_DIR)
 					goto Retry;
+#		endif
 #	endif
 				std::size_t charsLeft = sizeof(_path) - (_fileNamePart - _path) - 1;
 #	if defined(__FreeBSD__)
@@ -1039,13 +1047,13 @@ namespace Death { namespace IO {
 		}
 
 		return Utf8::FromUtf16(buffer, length);
-#elif defined(DEATH_TARGET_SWITCH)
-		// realpath() is missing in libnx
+#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+		// realpath() is missing in libnx and Vita
 		char left[MaxPathLength];
 		char nextToken[MaxPathLength];
 		char result[MaxPathLength];
 		std::size_t resultLength = 0;
-#	if !defined(DEATH_TARGET_SWITCH)
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
 		std::int32_t symlinks = 0;
 #	endif
 
@@ -1119,8 +1127,8 @@ namespace Death { namespace IO {
 				}
 				return {};
 			}
-#	if !defined(DEATH_TARGET_SWITCH)
-			// readlink() is missing in libnx
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
+			// readlink() is missing in libnx and Vita
 			if (S_ISLNK(sb.st_mode)) {
 				if (++symlinks > 8) {
 					// Too many symlinks
@@ -1254,7 +1262,7 @@ namespace Death { namespace IO {
 		}
 
 		return CombinePath({ home, "Library/Application Support"_s, applicationName });
-#elif defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_EMSCRIPTEN)
+#elif defined(DEATH_TARGET_UNIX) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_VITA)
 		StringView config = ::getenv("XDG_CONFIG_HOME");
 		if (IsAbsolutePath(config)) {
 			return CombinePath(config, applicationName);
@@ -1355,8 +1363,8 @@ namespace Death { namespace IO {
 		if (!home.empty()) {
 			return home;
 		}
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
-		// `getpwuid()` is not yet implemented on Emscripten
+#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_VITA)
+		// `getpwuid()` is not implemented on Emscripten and Vita
 		const struct passwd* pw = ::getpwuid(getuid());
 		if (pw != nullptr) {
 			return pw->pw_dir;
@@ -2175,8 +2183,15 @@ namespace Death { namespace IO {
 			return false;
 		}
 
+#	if defined(DEATH_TARGET_VITA)
+		// O_CLOEXEC is not supported on Vita
+		const std::int32_t commonFlags = 0;
+#	else
+		const std::int32_t commonFlags = O_CLOEXEC;
+#	endif
+
 		std::int32_t sourceFd, destFd;
-		if ((sourceFd = ::open(nullTerminatedOldPath.data(), O_RDONLY | O_CLOEXEC)) == -1) {
+		if ((sourceFd = ::open(nullTerminatedOldPath.data(), O_RDONLY | commonFlags)) == -1) {
 			return false;
 		}
 
@@ -2191,12 +2206,12 @@ namespace Death { namespace IO {
 		// Enable writing for the newly created files, needed for some file systems
 		destMode |= S_IWUSR;
 #endif
-		if ((destFd = ::open(nullTerminatedNewPath.data(), O_WRONLY | O_CLOEXEC | O_CREAT | O_TRUNC, destMode)) == -1) {
+		if ((destFd = ::open(nullTerminatedNewPath.data(), O_WRONLY | O_CREAT | O_TRUNC | commonFlags, destMode)) == -1) {
 			::close(sourceFd);
 			return false;
 		}
 
-#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(__FreeBSD__)
+#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(__FreeBSD__)
 		while (true) {
 			if (::fallocate(destFd, FALLOC_FL_KEEP_SIZE, 0, sb.st_size) == 0) {
 				break;
