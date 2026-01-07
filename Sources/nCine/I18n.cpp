@@ -665,11 +665,11 @@ namespace nCine
 		}
 #elif defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_UNIX)
 		char* langRaw = ::getenv("LANG");
-		if (langRaw == nullptr || langRaw[0] == '\0' || strcasecmp(langRaw, "C") == 0) {
+		if (langRaw == nullptr || langRaw[0] == '\0' || ::strcasecmp(langRaw, "C") == 0) {
 			langRaw = ::getenv("LC_ALL");
-			if (langRaw == nullptr || langRaw[0] == '\0' || strcasecmp(langRaw, "C") == 0) {
+			if (langRaw == nullptr || langRaw[0] == '\0' || ::strcasecmp(langRaw, "C") == 0) {
 				langRaw = ::getenv("LC_MESSAGES");
-				if (langRaw == nullptr || langRaw[0] == '\0' || strcasecmp(langRaw, "C") == 0) {
+				if (langRaw == nullptr || langRaw[0] == '\0' || ::strcasecmp(langRaw, "C") == 0) {
 					// No suitable environment variable is defined
 					return preferred;
 				}
@@ -681,7 +681,7 @@ namespace nCine
 		if (suffix != nullptr) {
 			langId = langId.prefix(suffix.begin());
 		}
-		if (strcasecmp(langId.data(), "C") != 0) {
+		if (::strcasecmp(langId.data(), "C") != 0) {
 			StringUtils::replaceAllInPlace(langId, '_', '-');
 			StringUtils::lowercaseInPlace(langId);
 			arrayAppend(preferred, std::move(langId));
