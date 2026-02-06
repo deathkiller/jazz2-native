@@ -67,7 +67,7 @@ namespace nCine
 		{ "sr", "Srpski"_s },
 		{ "sv", "Svenska"_s },
 		{ "tr", "Türkçe"_s },
-		{ "uk", "УКРАЇНСЬКА"_s }
+		{ "ua", "УКРАЇНСЬКА"_s }
 	};
 
 	struct MoFileHeader

@@ -315,34 +315,34 @@ namespace Death { namespace Containers {
 		
 		/** @brief Access specified element */
 		reference operator[](size_type idx) {
-			DEATH_DEBUG_ASSERT(idx < size());
+			DEATH_DEBUG_ASSERT(idx < size(), ("Index {} out of range for {} elements", std::size_t(idx), size()));
 			return begin()[idx];
 		}
 		/** @overload */
 		const_reference operator[](size_type idx) const {
-			DEATH_DEBUG_ASSERT(idx < size());
+			DEATH_DEBUG_ASSERT(idx < size(), ("Index {} out of range for {} elements", std::size_t(idx), size()));
 			return begin()[idx];
 		}
 
 		/** @brief Access the first element */
 		reference front() {
-			DEATH_DEBUG_ASSERT(!empty());
+			DEATH_DEBUG_ASSERT(!empty(), "View is empty");
 			return begin()[0];
 		}
 		/** @overload */
 		const_reference front() const {
-			DEATH_DEBUG_ASSERT(!empty());
+			DEATH_DEBUG_ASSERT(!empty(), "View is empty");
 			return begin()[0];
 		}
 
 		/** @brief Access the last element */
 		reference back() {
-			DEATH_DEBUG_ASSERT(!empty());
+			DEATH_DEBUG_ASSERT(!empty(), "View is empty");
 			return end()[-1];
 		}
 		/** @overload */
 		const_reference back() const {
-			DEATH_DEBUG_ASSERT(!empty());
+			DEATH_DEBUG_ASSERT(!empty(), "View is empty");
 			return end()[-1];
 		}
 	};
@@ -743,7 +743,7 @@ namespace Death { namespace Containers {
 		}
 
 		/** @brief Removes the last element and returns it */
-		[[nodiscard]] T pop_back_val() {
+		DEATH_NODISCARD T pop_back_val() {
 			T result = Death::move(this->back());
 			this->pop_back();
 			return result;
