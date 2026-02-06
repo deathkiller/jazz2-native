@@ -2042,7 +2042,7 @@ msgstr "ДЕТАЛІЗОВАНЕ"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:129
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
-msgstr "РЕКОРДИ ДЛЯ [c:#d0705d]БАЗОВОЇ ГРИ[/c]"
+msgstr "РЕКОРДИ ДЛЯ \f[c:#d0705d]БАЗОВОЇ ГРИ\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:139
 #, c++-format

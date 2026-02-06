@@ -358,7 +358,7 @@
 #	define DEATH_SOURCE_LOCATION_BUILTINS_SUPPORTED
 #endif
 
-/**
+/** @hideinitializer
 	@brief Deprecation mark
 
 	Marked function, class or typedef will emit deprecation warning on supported compilers (GCC, Clang, MSVC).
@@ -373,7 +373,7 @@
 #	endif
 #endif
 
-/**
+/** @hideinitializer
 	@brief Begin code section with deprecation warnings ignored
 
 	Suppresses compiler warnings when using a deprecated API (GCC, Clang, MSVC). Useful when testing or writing
@@ -392,7 +392,7 @@
 #	endif
 #endif
 
-/**
+/** @hideinitializer
 	@brief End code section with deprecation warnings ignored
 
 	See @ref DEATH_IGNORE_DEPRECATED_PUSH for more information.
@@ -407,7 +407,7 @@
 #	endif
 #endif
 
-/**
+/** @hideinitializer
 	@brief Unused variable mark
 
 	Putting this before unused variable will suppress compiler warning about it being unused.
@@ -425,7 +425,32 @@
 #	endif
 #endif
 
-/**
+/** @hideinitializer
+	@brief Return value shouldn't be discarded
+
+	Putting this before return type of a function will cause a compiler warning if
+	the function is called without using the returned value.
+
+	Defined as the @cpp [[nodiscard]] @ce attribute if compiling as C++17 or newer,
+	with a compiler-specific variant on Clang, MSVC and GCC, empty otherwise.
+
+	Note that on MSVC the fallback [`_Check_return_` attribute](https://learn.microsoft.com/en-us/cpp/code-quality/annotating-function-behavior)
+	requires building with `/analyze`, otherwise no diagnostics is issued if the
+	return value is unused.
+*/
+#if !defined(DEATH_NODISCARD)
+#	if DEATH_CXX_STANDARD >= 201703
+#		define DEATH_NODISCARD [[nodiscard]]
+#	elif defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+#		define DEATH_NODISCARD __attribute__((warn_unused_result))
+#	elif defined(DEATH_TARGET_MSVC)
+#		define DEATH_NODISCARD _Check_return_
+#	else
+#		define DEATH_NODISCARD
+#	endif
+#endif
+
+/** @hideinitializer
 	@brief Switch case fall-through
 
 	Suppresses a warning about a @cpp case @ce fallthrough in a @cpp switch @ce.
@@ -441,7 +466,7 @@
 #	endif
 #endif
 
-/**
+/** @hideinitializer
 	@brief Thread-local annotation
 
 	Expands to C++11 @cpp thread_local @ce keyword on all compilers except old Apple Clang,
@@ -459,7 +484,7 @@
 #	endif
 #endif
 
-/**
+/** @hideinitializer
 	@brief C++14 constexpr annotation
 
 	Expands to @cpp constexpr @ce if C++14 or newer standard is enabled and if the compiler implements C++14
@@ -473,7 +498,7 @@
 #	endif
 #endif
 
-/**
+/** @hideinitializer
 	@brief C++20 constexpr annotation
 
 	Expands to @cpp constexpr @ce if C++20 or newer standard is enabled and if the compiler implements
@@ -488,7 +513,7 @@
 #	endif
 #endif
 
-/**
+/** @hideinitializer
 	@brief Always inline a function
 
 	Stronger than the standard @cpp inline @ce keyword where supported, but even then the compiler
@@ -509,7 +534,7 @@
 #	endif
 #endif
 
-/**
+/** @hideinitializer
 	@brief Never inline a function
 
 	Prevents the compiler from inlining a function during an optimization pass. Expands to @cpp __attribute__((noinline)) @ce on GCC and Clang
@@ -526,7 +551,7 @@
 #	endif
 #endif
 
-/**
+/** @hideinitializer
 	@brief Hint for compiler that a variable isn't aliased in the current scope
 
 	This macro provides a hint to the compiler that for the lifetime of the pointer, no other pointer
@@ -540,7 +565,7 @@
 #	endif
 #endif
 
-/**
+/** @hideinitializer
 	@brief Hint for compiler to assume a condition
 
 	This macro does not handle the case when the condition isn't @cpp true @ce in any way --- only
@@ -565,7 +590,7 @@
 #	endif
 #endif
 
-/**
+/** @hideinitializer
 	@brief Mark an if condition as likely to happen
 
 	Since branch predictors of contemporary CPUs do a good enough job already, the main purpose
@@ -584,7 +609,7 @@
 #	endif
 #endif
 
-/**
+/** @hideinitializer
 	@brief Mark an if condition as unlikely to happen
 
 	An inverse to @ref DEATH_LIKELY(), see its documentation for more information about suggested
@@ -600,7 +625,7 @@
 #	endif
 #endif
 
-/**
+/** @hideinitializer
 	@brief Passthrough
 
 	Expands to all arguments passed to it. Inverse of @ref DEATH_NOOP().
@@ -609,7 +634,7 @@
 #	define DEATH_PASSTHROUGH(...) __VA_ARGS__
 #endif
 
-/**
+/** @hideinitializer
 	@brief No-op
 
 	Eats all arguments passed to it. Inverse of @ref DEATH_PASSTHROUGH(). Useful on compilers that
@@ -621,14 +646,14 @@
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 // Internal macro implementation
-#define __DEATH_HELPER_STR(x) #x
-#define __DEATH_LINE_STRING_IMPLEMENTATION(...) __DEATH_HELPER_STR(__VA_ARGS__)
+#define __DEATH_HELPER_STR_INNER(x) #x
+#define __DEATH_HELPER_STR(...) __DEATH_HELPER_STR_INNER(__VA_ARGS__)
 #endif
 
-/**
+/** @hideinitializer
 	@brief Line number as a string
 
 	Turns the standard @cpp __LINE__ @ce macro into a string. Useful for example to have correct
 	line numbers when embedding GLSL shaders directly in the code.
 */
-#define DEATH_LINE_STRING __DEATH_LINE_STRING_IMPLEMENTATION(__LINE__)
+#define DEATH_LINE_STRING __DEATH_HELPER_STR(__LINE__)
