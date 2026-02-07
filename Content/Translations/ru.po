@@ -25,7 +25,7 @@ msgid ""
 "Spaz ate the dopefish."
 msgstr ""
 "\n"
-"СПЭЗ СОЖРАЛ ДОПФИША."
+"СПАЗ СОЖРАЛ ДОПФИША."
 
 #: .fake/Translations/flash/01_diam1.j2l.h:2
 msgctxt "flash/01_diam1"
@@ -91,7 +91,7 @@ msgid ""
 "Beware of chainsaw schmalz."
 msgstr ""
 "\n"
-"ОСТЕРЕГАЙТЕСЬ БЕНЗОПИЛЫ ШМАЛЬЦ!"
+"ОСТЕРЕГАЙТЕСЬ БЕНЗОПИЛЫ ШМАЛЬЦ."
 
 #: .fake/Translations/flash/02_diam3.j2l.h:4
 msgctxt "flash/02_diam3"
@@ -100,7 +100,7 @@ msgid ""
 "Dont give mark a burrito."
 msgstr ""
 "\n"
-"МАРКУ БУРРИТО НЕ ДАВАТЬ!"
+"МАРКУ БУРРИТО НЕ ДАВАТЬ."
 
 #: .fake/Translations/flash/05_medivo1.j2l.h:1
 msgctxt "flash/05_medivo1"
@@ -138,7 +138,7 @@ msgid ""
 "To Clear Your Path"
 msgstr ""
 "\n"
-"ОБРУШТЕСЬ НА СЕРЕБРЯНЫЙ ЯЩИК,\n"
+"ОБРУШЬСЯ НА СЕРЕБРЯНЫЙ ЯЩИК,\n"
 "ЧТОБЫ ОЧИСТИТЬ СЕБЕ ПУТЬ."
 
 #: .fake/Translations/flash/bonus_garglair.j2l.h:2
@@ -197,7 +197,7 @@ msgid ""
 "Long live the ice level."
 msgstr ""
 "\n"
-"ДА ЗДРАВСТВУЕТ ЛЕДЯНОЙ УРОВЕНЬ!"
+"ДА ЗДРАВСТВУЕТ ЛЕДЯНОЙ УРОВЕНЬ."
 
 #: .fake/Translations/monk/03_hell.j2l.h:2
 msgctxt "monk/03_hell"
@@ -216,8 +216,8 @@ msgid ""
 "This is NOT over!"
 msgstr ""
 "\n"
-"ЧО ЗА НАФИГ? АААА! НЕТ!\n"
-"ЭТО ЕЩЁ НЕ КОНЕЦ?!"
+"ЧТО ЗА?? АААА! НЕТ!\n"
+"ЭТО ЕЩЁ НЕ КОНЕЦ!"
 
 #: .fake/Translations/prince/01_castle1.j2l.h:1
 msgctxt "prince/01_castle1"
@@ -338,7 +338,7 @@ msgid ""
 "to open key blocks!"
 msgstr ""
 "\n"
-"ОБРУШЬТЕСЬ НА ЯЩИК, ЧТОБЫ СЛОМАТЬ ЕГО.\n"
+"ОБРУШЬСЯ НА ЯЩИК, ЧТОБЫ СЛОМАТЬ ЕГО.\n"
 "ЭТО ОТКРОЕТ БЛОКИ С ЗАМОЧНОЙ СКВАЖИНОЙ!"
 
 #: .fake/Translations/prince/03_carrot1.j2l.h:1
@@ -613,7 +613,7 @@ msgid ""
 "Buttstomp the manhole cover!"
 msgstr ""
 "\n"
-"ОБРУШЬТЕСЬ НА КРЫШКУ ЛЮКА!"
+"ОБРУШЬСЯ НА КРЫШКУ ЛЮКА!"
 
 #: .fake/Translations/rescue/03_psych1.j2l.h:1
 msgctxt "rescue/03_psych1"
@@ -634,7 +634,7 @@ msgid ""
 "so go up and around!"
 msgstr ""
 "\n"
-"ВЫ НЕ В СОССТОЯНИИ ТУТ ОБРУШИТЬСЯ\n"
+"ВЫ НЕ МОЖЕТЕ ТУТ ОБРУШИТСЯ\n"
 "ТАК ЧТО ОБХОДИТЕ ЧЕРЕЗ ВЕРХ!"
 
 #: .fake/Translations/secretf/01_easter1.j2l.h:2
@@ -1152,7 +1152,7 @@ msgid ""
 "in the pathways!"
 msgstr ""
 "\n"
-"ВЫ МОЖЕТЕ ЛОМАТЬ\n"
+"ВЫ МОЖЕТЕ ОБРУШАТЬ\n"
 "НЕКОТОРЫЕ ПРЕПЯТСТВИЯ,\n"
 "ОБРУШИВАЯСЬ НА НИХ СВЕРХУ!"
 
@@ -1214,9 +1214,9 @@ msgid ""
 "in the pathways!"
 msgstr ""
 "\n"
-"ВЫ МОЖЕТЕ ЛОМАТЬ\n"
+"ВЫ МОЖЕТЕ ОБРУШАТЬ\n"
 "НЕКОТОРЫЕ ПРЕПЯТСТВИЯ,\n"
-"ОБРУШИВАЯСЬ НА НИХ СВЕРХУ."
+"ОБРУШИВАЯСЬ НА НИХ СВЕРХУ!"
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:3
 msgctxt "xmas99/02_xmas2"
@@ -1227,7 +1227,7 @@ msgid ""
 msgstr ""
 "\n"
 "ВЫ МОЖЕТЕ ПОЛУЧИТЬ НАГРАДУ,\n"
-"РАЗРУШИВ БЛОКИ ВЫШЕ,"
+"РАЗРУШИВ БЛОКИ ВЫШЕ."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:6
 msgctxt "xmas99/02_xmas2"
@@ -1278,10 +1278,10 @@ msgid ""
 msgstr ""
 "\n"
 "\n"
-"МИШЕЛЬ,\n"
-"ТЫ ИЗМЕНИЛА МОЮ ЖИЗНЬ ВО ВСЕХ ОТНОШЕНИЯХ,\n"
+"МИШЕЛЬ:\n"
+"ТЫ ИЗМЕНИЛА МОЮ ЖИЗНЬ ВО МНОГОМ\n"
 "ПОЭТОМУ ДАННЫЙ ПРОЕКТ Я ПОСВЯЩАЮ ТЕБЕ.\n"
-"Я ТАК СИЛЬНО ТЕБЯ ЛЮБЛЮ!"
+"Я ТЕБЯ ОЧЕНЬ ЛЮБЛЮ."
 
 #: .fake/Translations/xmas99/02_xmas2.j2l.h:16
 msgctxt "xmas99/02_xmas2"
@@ -1298,7 +1298,7 @@ msgstr ""
 "КАССИ НИКОЛЬ:\n"
 "МНЕ ТАК МНОГО ХОЧЕТСЯ ТЕБЕ СКАЗАТЬ.\n"
 "НО ВСЕ СЛОВА СВОДЯТСЯ К ОДНОМУ:\n"
-"Я ЛЮБЛЮ ТЕБЯ, Я ТАК ТЕБЯ ЛЮБЛЮ!"
+"Я ЛЮБЛЮ ТЕБЯ, Я ТАК ТЕБЯ ЛЮБЛЮ."
 
 #: .fake/Translations/xmas99/03_xmas3.j2l.h:1
 msgctxt "xmas99/03_xmas3"
@@ -1378,7 +1378,7 @@ msgstr ""
 #: Sources/Jazz2/LevelHandler.cpp:162 Sources/Jazz2/LevelHandler.cpp:213
 #, c++-format
 msgid "Level \"{}\" initialized"
-msgstr ""
+msgstr "УРОВЕНЬ \"{}\" ИНИЦИАЛИЗОВАН"
 
 #. TRANSLATORS: Link to website under header text in About section
 #: Sources/Jazz2/LevelHandler.cpp:766
@@ -1393,7 +1393,7 @@ msgstr "ПОЛНАЯ ИНФОРМАЦИЯ ЕСТЬ НА ОФИЦИАЛЬНОМ �
 #: Sources/Jazz2/LevelHandler.cpp:2419 Sources/Jazz2/LevelHandler.cpp:2431
 #: Sources/Jazz2/LevelHandler.cpp:2452 Sources/Jazz2/LevelHandler.cpp:2466
 msgid "Cheats are not allowed in current context"
-msgstr ""
+msgstr "ЧИТЫ НЕ РАЗРЕШЕНЫ В ТЕКУЩЕМ КОНТЕКСТЕ"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:287
 msgid ""
@@ -1401,30 +1401,33 @@ msgid ""
 "\n"
 "The game will begin shortly!"
 msgstr ""
+"\n"
+"\n"
+"ИГРА СКОРО НАЧНЕТСЯ!"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1469
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3439
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
-msgstr ""
+msgstr "\f[c:#d0705d]{}\f[/c] БЫЛ ПОДЖАРЕН \f[c:#d0705d]{}\f[/c]"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1486
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3442
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
-msgstr ""
+msgstr "\f[c:#d0705d]{}\f[/c] БЫЛ ПРОЖАРЕН ОКРУЖАЮЩЕЙ СРЕДОЙ"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2791
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3418
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
-msgstr ""
+msgstr "\f[c:#d0705d]{}\f[/c] ОТКЛЮЧИЛСЯ"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2943
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3416
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
-msgstr ""
+msgstr "\f[c:#d0705d]{}\f[/c] ПОДКЛЮЧИЛСЯ"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5494
 #, c++-format
@@ -1433,10 +1436,13 @@ msgid ""
 "\n"
 "Winner is {}"
 msgstr ""
+"\n"
+"\n"
+"{} ПОБЕДИТЕЛЬ"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:359
 msgid "Unknown command"
-msgstr ""
+msgstr "НЕИЗВЕСТНАЯ КОМАНДА"
 
 #. TRANSLATORS: Header text in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:143
@@ -1454,17 +1460,17 @@ msgstr ""
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:147
 msgid "Developers"
-msgstr ""
+msgstr "РАЗРАБОТЧИКИ"
 
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:149
 msgid "Contributors"
-msgstr ""
+msgstr "КОНТРИБЬЮТОРЫ"
 
 #. TRANSLATORS: Label in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:151
 msgid "Translators"
-msgstr ""
+msgstr "ПЕРЕВОДЧИКИ"
 
 #. TRANSLATORS: Footer text in About section
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:153
@@ -1472,6 +1478,8 @@ msgid ""
 "This project uses modified \f[c:#9e7056]nCine\f[/c] game engine and "
 "following libraries:"
 msgstr ""
+"ЭТОТ ПРОЕКТ ИСПОЛЬЗУЕТ МОДИФИЦИРОВАННЫЙ ИГРОВОЙ ДВИЖОК \f[c:#9e7056]nCine\f[/"
+"c] И ДАННЫЕ БИБЛИОТЕКИ:"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:61
@@ -1479,7 +1487,7 @@ msgstr ""
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:152
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:154
 msgid "Play Story"
-msgstr "ИГРАТЬ [ОСНОВНАЯ ИГРА]"
+msgstr "ИГРАТЬ В СЮЖЕТ"
 
 #. TRANSLATORS: Menu item in main menu (Emscripten only)
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:64
@@ -1495,18 +1503,18 @@ msgstr "ИМПОРТ ЭПИЗОДОВ"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:74
 msgid "Continue"
-msgstr ""
+msgstr "ВОЗОБНОВИТЬ"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:83
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:40
 msgid "Play Online"
-msgstr ""
+msgstr "ИГРАТЬ ОНЛАЙН"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:89
 msgid "Highscores"
-msgstr ""
+msgstr "РЕКОРДЫ"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Subheader in First Run section
@@ -1531,7 +1539,7 @@ msgstr "ВЫХОД"
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:202
 #, c++-format
 msgid "For more information, visit {} and  Discord!"
-msgstr ""
+msgstr "БОЛЬШЕ ИНФОРМАЦИИ ЕСТЬ В {} И  Discord!"
 
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:215
 msgid "Access to external storage has been granted!"
@@ -1569,13 +1577,13 @@ msgstr "ДАТЬ ДОСТУП К ВНЕШНЕМУ ХРАНИЛИЩУ"
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:165
 #, c++-format
 msgid "Remap Controls for Player {}"
-msgstr ""
+msgstr "ПЕРЕНАЗНАЧЕНИЕ УПРАВЛЕНИЯ ДЛЯ ИГРОКА {}"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:27
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:168
 msgid "Remap Controls"
-msgstr ""
+msgstr "ПЕРЕНАЗНАЧЕНИЕ УПРАВЛЕНИЯ"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:30
@@ -1586,19 +1594,19 @@ msgstr "СЕНСОРНОЕ УПРАВЛЕНИЕ"
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:32
 msgid "Toggle Run"
-msgstr ""
+msgstr "ПЕРЕКЛЮЧЕНИЕ БЕГА"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:33
 msgid "Gamepad Button Labels"
-msgstr ""
+msgstr "МАРКИРОВКА КНОПОК ГЕЙМПАДА"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:35
 msgid "Gamepad Rumble"
-msgstr ""
+msgstr "ВИБРАЦИЯ ГЕЙМПАДА"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:38
 msgid "Extended PlayStation™ Support"
-msgstr ""
+msgstr "РАСШИРЕННАЯ ПОДДЕРЖКА PlayStation™"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:42
@@ -1608,11 +1616,11 @@ msgstr "ОРИГИНАЛЬНАЯ КНОПКА «НАЗАД»"
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:44
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:73
 msgid "Input Diagnostics"
-msgstr ""
+msgstr "ДИАГНОСТИКА ВВОДА"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:45
 msgid "Reset To Default"
-msgstr ""
+msgstr "СБРОСИТЬ НАСТРОЙКИ К \"ПО УМОЛЧАНИЮ\""
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:78
@@ -1623,12 +1631,12 @@ msgstr "УПРАВЛЕНИЕ"
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:126
 msgid "Strong"
-msgstr ""
+msgstr "СИЛЬНЫЙ"
 
 #. TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:129
 msgid "Weak"
-msgstr ""
+msgstr "СЛАБЫЙ"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:130
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:142
@@ -1661,60 +1669,60 @@ msgstr "ПЕРСОНАЖ"
 #. TRANSLATORS: Menu item to select game mode
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:38
 msgid "Game Mode"
-msgstr ""
+msgstr "РЕЖИМ ИГРЫ"
 
 #. TRANSLATORS: Menu item to create server with selected settings
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:40
 msgid "Create Server"
-msgstr ""
+msgstr "СОЗДАТЬ СЕРВЕР"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:216
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:20
 msgid "Battle"
-msgstr ""
+msgstr "БОЙ"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:217
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:22
 msgid "Team Battle"
-msgstr ""
+msgstr "КОМАНДНЫЙ БОЙ"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:218
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:24
 msgid "Race"
-msgstr ""
+msgstr "ГОНКА"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:219
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:26
 msgid "Team Race"
-msgstr ""
+msgstr "КОМАНДНАЯ ГОНКА"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:220
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:28
 msgid "Treasure Hunt"
-msgstr ""
+msgstr "ОХОТА ЗА СОКРОВИЩАМИ"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:221
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:30
 msgid "Team Treasure Hunt"
-msgstr ""
+msgstr "КОМАНДНАЯ ОХОТА ЗА СОКРОВИЩАМИ"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:222
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:32
 msgid "Capture The Flag"
-msgstr ""
+msgstr "ЗАХВАТ ФЛАГА"
 
 #. TRANSLATORS: Menu item in Select Game Mode section
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:223
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:34
 msgid "Cooperation"
-msgstr ""
+msgstr "КООПЕРАЦИЯ"
 
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:368
 msgid ""
@@ -1724,6 +1732,11 @@ msgid ""
 "Playlist is not properly configured.\n"
 "Please review server configuration and try it again."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО СОЗДАТЬ СЕРВЕР!\f[/c]\n"
+"\n"
+"\n"
+"ПЛЕЙЛИСТ НАСТРОЕН НЕПРАВИЛЬНО.\n"
+"ПРОВЕРЬТЕ КОНФИГУРАЦИЮ СЕРВЕРА И ПОПРОБУЙТЕ СНОВА."
 
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:407
 msgid ""
@@ -1733,6 +1746,11 @@ msgid ""
 "Please verify that no other server\n"
 "is running on that port and try it again."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО СОЗДАТЬ СЕРВЕР!\f[/c]\n"
+"\n"
+"\n"
+"УБЕДИТЕСЬ, ЧТО НА ЭТОМ ПОРТУ\n"
+"НЕ ЗАПУЩЕН ДРУГОЙ СЕРВЕР, И ПОПРОБУЙТЕ СНОВА."
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:156
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:482
@@ -1745,19 +1763,19 @@ msgstr "ДОП. УРОВНИ НЕ НАЙДЕНЫ!"
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:191
 msgid "Create server from playlist"
-msgstr ""
+msgstr "СОЗДАТЬ СЕРВЕР ИЗ ПЛЕЙЛИСТА"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:152
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:24
 msgid "Create Private Server"
-msgstr ""
+msgstr "СОЗДАТЬ ПРИВАТНЫЙ СЕРВЕР"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:152
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:22
 msgid "Create Public Server"
-msgstr ""
+msgstr "СОЗДАТЬ ПУБЛИЧНЫЙ СЕРВЕР"
 
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:164
 msgid "No episode found!"
@@ -1783,25 +1801,26 @@ msgstr "ЭПИЗОД ЗАБЛОКИРОВАН!"
 #. TRANSLATORS: Menu item in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:17
 msgid "Legacy"
-msgstr ""
+msgstr "КЛАССИЧЕСКИЙ"
 
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:17
 msgid "I want to play the game the way it used to be."
-msgstr ""
+msgstr "Я ХОЧУ ИГРАТЬ ТАК, КАК ОНО БЫЛО РАНЬШЕ."
 
 #. TRANSLATORS: Menu item in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:19
 msgid "Reforged"
-msgstr ""
+msgstr "ОБНОВЛЁННЫЙ"
 
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:19
 msgid "I want to play the game with something new."
-msgstr ""
+msgstr "Я ХОЧУ ПОИГРАТЬ С ЧЕМ ТО НОВЫМ."
 
 #. TRANSLATORS: Header in First Run section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:55
 msgid "Welcome to \f[c:#9e7056]Jazz Jackrabbit 2\f[/c] reimplementation!"
 msgstr ""
+"ДОБРО ПОЖАЛОВАТЬ В РЕИМПЛЕМЕНТАЦИЮ \f[c:#9e7056]Jazz Jackrabbit 2\f[/c]!"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:59
@@ -1826,21 +1845,25 @@ msgid ""
 "\f[c:#707070]{}\f[/c] > \f[c:#707070]{}\f[/c].\n"
 "For more information, visit {} and  Discord!"
 msgstr ""
+"ВЫ МОЖЕТЕ ВЫБРАТЬ ПРЕДПОЧТИТЕЛЬНЫЙ СТИЛЬ ИГРЫ.\n"
+"ЭТОТ ПАРАМЕТР МОЖЕТ БЫТЬ ИЗМЕНЕН В ЛЮБОЕ ВРЕМЯ В \f[c:#707070]{}\f[/c] > "
+"\f[c:#707070]{}\f[/c] > \f[c:#707070]{}\f[/c].\n"
+"ВСЯ ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ ЕСТЬ В {} И  Discord!"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:18
 msgid "Reforged Gameplay"
-msgstr ""
+msgstr "ОБНОВЛЁННЫЙ ГЕЙМПЛЕЙ"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:20
 msgid "Reforged HUD"
-msgstr ""
+msgstr "ОБНОВЛЁННЫЙ ИНТЕРФЕЙС"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:22
 msgid "Reforged Main Menu"
-msgstr ""
+msgstr "ОБНОВЛЁННОЕ ГЛАВНОЕ МЕНЮ"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:24
@@ -1860,7 +1883,7 @@ msgstr "ВЫ МОЖЕТЕ ВКЛЮЧИТЬ УЛУЧШЕНИЯ, КОТОРЫЕ М
 #. TRANSLATORS: Option for Weapon Wheel item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:127
 msgid "Enabled With Ammo Count"
-msgstr ""
+msgstr "ВКЛЮЧЕНО С СЧЕТОМ БОЕПРИПАСОВ"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:42
@@ -1876,22 +1899,22 @@ msgstr "СКРИПТЫ"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:48
 msgid "Continuous Jump"
-msgstr ""
+msgstr "БЕЗПРЕРЫВНЫЙ ПРЫЖОК"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:50
 msgid "Switch To New Weapon"
-msgstr ""
+msgstr "ПЕРЕКЛЮЧИТСЯ НА НОВОЕ ОРУЖИЕ"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:52
 msgid "Allow Cheats"
-msgstr ""
+msgstr "РАЗРЕШИТЬ ЧИТЫ"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:54
 msgid "Overwrite Episode Completion"
-msgstr ""
+msgstr "ПЕРЕЗАПИСАТЬ ЗАВЕРШЕНИЕ ЕПИЗОДА"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:58
@@ -1901,7 +1924,7 @@ msgstr "Razer Chroma™"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:62
 msgid "Browse \"Source\" Directory"
-msgstr ""
+msgstr "ПРОСМОТР ДИРЕКТОРИИ \"Source\""
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:67
@@ -1912,36 +1935,36 @@ msgstr "ОБНОВИТЬ КЕШ"
 #. TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:134
 msgid "Yes"
-msgstr ""
+msgstr "ДА"
 
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:134
 msgid "No"
-msgstr ""
+msgstr "НЕТ"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:138
 msgid "No Cheats Only"
-msgstr ""
+msgstr "ТОЛЬКО БЕЗ ЧИТОВ"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:141
 msgid "Higher Score Only"
-msgstr ""
+msgstr "ТОЛЬКО БОЛЕЕ ВЫСОКИЙ БАЛ"
 
 #. TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:143
 msgid "Always"
-msgstr ""
+msgstr "ВСЕГДА"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:24
 msgid "Rescale Mode"
-msgstr "ТИП  ШЕЙДЕРА"
+msgstr "ТИП ШЕЙДЕРА"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:26
 msgid "Resolution"
-msgstr ""
+msgstr "РАЗРЕШЕНИЕ"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:34
@@ -1956,27 +1979,27 @@ msgstr "СГЛАЖИВАНИЕ"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:40
 msgid "Background Dithering"
-msgstr ""
+msgstr "ДИЗЕРИНГ ФОНА"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:42
 msgid "Water Quality"
-msgstr ""
+msgstr "КАЧЕСТВО ВОДЫ"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:44
 msgid "Show Player Trails"
-msgstr ""
+msgstr "ПОКАЗЫВАТЬ СЛЕДЫ ИГРОКОВ"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:46
 msgid "Preferred Splitscreen"
-msgstr ""
+msgstr "ПРЕДПОЧТИТЕЛЬНЫЙ РЕЖИМ РАЗДЕЛЕННОГО ЭКРАНА"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:48
 msgid "Prefer Zoom Out"
-msgstr ""
+msgstr "ПРЕДПОЧИТАТЬ ОТДАЛЯТЬСЯ ОТ КАМЕРЫ"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:50
@@ -1986,7 +2009,7 @@ msgstr "СОХРАНЯТЬ ПРОПОРЦИИ ВИДЕОРОЛИКОВ"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:52
 msgid "Unaligned Viewport"
-msgstr ""
+msgstr "НЕВЫРОВНЕННЫЙ ЭКРАН ПРОСМОТРА"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:54
@@ -2001,41 +2024,41 @@ msgstr "ГРАФИКА"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:148
 msgid "Low"
-msgstr ""
+msgstr "НИЗКИЙ"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:148
 msgid "High"
-msgstr ""
+msgstr "ВЫСОКИЙ"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:150
 msgid "Vertical"
-msgstr ""
+msgstr "ВЕРТИКАЛЬНЫЙ"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:150
 msgid "Horizontal"
-msgstr ""
+msgstr "ГОРИЗОНТАЛЬНЫЙ"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:153
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
-msgstr ""
+msgstr "ВКЛЮЧЕНО \f[c:#d0705d](ЭКСПЕРИМЕНТАЛЬНЫЙ)\f[/c]"
 
 #. TRANSLATORS: Reserved for later use
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:158
 msgid "Short"
-msgstr ""
+msgstr "КОРОТКИЙ"
 
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:158
 msgid "Detailed"
-msgstr ""
+msgstr "ДЕТАЛЬНЫЙ"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:129
 msgid "Highscores for \f[c:#d0705d]Base game\f[/c]"
-msgstr ""
+msgstr "РЕКОРДЫ В \f[c:#d0705d]СЮЖЕТНОЙ ИГРЕ\f[/c]"
 
 #: Sources/Jazz2/UI/Menu/HighscoresSection.cpp:139
 #, c++-format
 msgid "Highscores for \f[c:#d0705d]{}\f[/c]"
-msgstr ""
+msgstr "РЕКОРДЫ В \f[c:#d0705d]{}\f[/c]"
 
 #. TRANSLATORS: Header in Import Episodes section
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:72
@@ -2046,9 +2069,9 @@ msgstr "ВЫБЕРИТЕ ФАЙЛЫ ОРИГИНАЛЬНОЙ ИГРЫ ДЛЯ Р�
 #, c++-format
 msgid "Processing of {} file..."
 msgid_plural "Processing of {} files..."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "ОБРАБОТКА {} ФАЙЛА..."
+msgstr[1] "ОБРАБОТКА {} ФАЙЛОВ..."
+msgstr[2] "ОБРАБОТКА {} ФАЙЛОВ..."
 
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:81
 msgid "Waiting for files..."
@@ -2064,11 +2087,11 @@ msgstr "НЕ БЫЛО ДОБАВЛЕНО НОВЫХ ЭПИЗОДОВ!"
 
 #: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:88
 msgid "No gamepads are detected!"
-msgstr ""
+msgstr "ГЕЙМПАДЫ НЕ ОБНАРУЖЕНЫ!"
 
 #: Sources/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp:65
 msgid "Select Game Mode"
-msgstr ""
+msgstr "ВЫБРАТЬ РЕЖИМ ИГРЫ"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:25
@@ -2080,7 +2103,7 @@ msgstr "ЗВУК"
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:30
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:168
 msgid "User Profile"
-msgstr ""
+msgstr "ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:30
@@ -2090,7 +2113,7 @@ msgstr "ПРОДОЛЖИТЬ"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:35
 msgid "Spectate"
-msgstr ""
+msgstr "НАБЛЮДАТЬ"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:44
@@ -2100,13 +2123,13 @@ msgstr "СОХРАНЕНИЕ И ВЫХОД"
 
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:44
 msgid "Disconnect & Exit"
-msgstr ""
+msgstr "ОТКЛЮЧИТСЯ И ВЫЙТИ"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:20
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:153
 msgid "Connect To Server"
-msgstr ""
+msgstr "ПОДКЛЮЧИТСЯ К СЕРВЕРУ"
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:79
 msgid "Processing of files in \f[c:#9e7056]\"Source\"\f[/c] directory..."
@@ -2139,7 +2162,7 @@ msgstr "ВНИЗ"
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:27
 msgid "Buttstomp"
-msgstr ""
+msgstr "ОБРУШАТЬСЯ"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:29
@@ -2170,23 +2193,23 @@ msgstr "НАЗАД"
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:39
 msgid "Toggle Console"
-msgstr ""
+msgstr "ПЕРЕКЛЮЧЕНИЕ КОНСОЛИ"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:43
 #, c++-format
 msgid "Weapon {}"
-msgstr ""
+msgstr "ОРУЖИЕ {}"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:176
 msgid "Press any key or button to assign"
-msgstr ""
+msgstr "НАЖМИ ЛЮБУЮ КЛАВИШУ ИЛИ КНОПКУ ЧТОБЫ НАЗНАЧИТЬ"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:193
 msgid "to remove assignment"
-msgstr ""
+msgstr "ЧТОБЫ УБРАТЬ НАЗНАЧЕНИЕ"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:15
@@ -2196,17 +2219,17 @@ msgstr "НЕТ / ПИКСЕЛЬ В ПИКСЕЛЬ"
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:23
 msgid "CRT Scanlines"
-msgstr ""
+msgstr "СКАН-ЛИНИИ CRT"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:25
 msgid "CRT Shadow Mask"
-msgstr ""
+msgstr "ТЕНЕВАЯ МАСКА CRT"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:27
 msgid "CRT Aperture Grille"
-msgstr ""
+msgstr "РЕШЕТКА АПЕРТУРЫ CRT"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:30
@@ -2219,12 +2242,12 @@ msgstr "ВЫБОР ШЕЙДЕРНОГО ЭФФЕКТА"
 
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:166
 msgid "No servers found, but still searchin'!"
-msgstr ""
+msgstr "СЕРВЕРОВ НЕ НАЙДЕНО, НО ВСЕ ЕЩЕ В ПОИСКАХ!"
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:48
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:144
 msgid "Press \f[c:#d0705d]Fire\f[/c] to continue"
-msgstr ""
+msgstr "НАЖМИТЕ \f[c:#d0705d]Fire\f[/c]ЧТОБЫ ПРОДОЛЖИТЬ"
 
 #. TRANSLATORS: Menu item in Options > Sounds section
 #: Sources/Jazz2/UI/Menu/SoundsOptionsSection.cpp:17
@@ -2244,7 +2267,7 @@ msgstr "ГРОМКОСТЬ МУЗЫКИ"
 #. TRANSLATORS: Menu item to select number of players
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:20
 msgid "Number of Local Players"
-msgstr ""
+msgstr "ЧИСЛО ЛОКАЛЬНЫХ ИГРОКОВ"
 
 #. TRANSLATORS: Menu item to select difficulty
 #: Sources/Jazz2/UI/Menu/StartGameOptionsSection.cpp:22
@@ -2281,34 +2304,34 @@ msgstr "ИНТЕГРАЦИЯ С Discord"
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:70
 msgid "Player Name"
-msgstr ""
+msgstr "ИМЯ ИГРОКА"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:73
 msgid "Unique Player ID"
-msgstr ""
+msgstr "УНИКАЛЬНЫЙ ID ИГРОКА"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:171
 #, c++-format
 msgid "Points: {}"
-msgstr ""
+msgstr "ОЧКИ: {}"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:185
 #, c++-format
 msgid "Game starts in {}"
-msgstr ""
+msgstr "ИГРА НАЧИНАЕТСЯ В {}"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:192
 #, c++-format
 msgid "Waiting for {} more player"
 msgid_plural "Waiting for {} more players"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "ОЖИДАНИЕ ЕЩЕ {} ИГРОКА"
+msgstr[1] "ОЖИДАНИЕ ЕЩЕ {} ИГРОКОВ"
+msgstr[2] "ОЖИДАНИЕ ЕЩЕ {} ИГРОКОВ"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:254
 msgid "Find exit!"
-msgstr ""
+msgstr "НАЙДИ ВЫХОД!"
 
 #: Sources/Main.cpp:669 Sources/Main.cpp:730
 msgid ""
@@ -2332,10 +2355,15 @@ msgid ""
 "Make sure all necessary files\n"
 "are accessible and try it again."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО ВОЗОБНОВИТЬ СОХРАНЕННОЕ СОСТОЯНИЕ!\f[/c]\n"
+"\n"
+"\n"
+"УБЕДИТЕСЬ, ЧТО ВСЕ НЕОБХОДИМЫЕ ФАЙЛЫ\n"
+"ДОСТУПНЫ, И ПОПРОБУЙТЕ ЕЩЕ РАЗ."
 
 #: Sources/Main.cpp:955
 msgid "Unnamed server"
-msgstr ""
+msgstr "НЕНАЗВАННЫЙ СЕРВЕР"
 
 #: Sources/Main.cpp:1113
 msgid ""
@@ -2344,6 +2372,10 @@ msgid ""
 "\n"
 "Invalid parameter specified."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО ПОДКЛЮЧИТСЯ К СЕРВЕРУ!\f[/c]\n"
+"\n"
+"\n"
+"УКАЗАН НЕДОПУСТИМЫЙ ПАРАМЕТР."
 
 #: Sources/Main.cpp:1114
 msgid ""
@@ -2352,6 +2384,10 @@ msgid ""
 "\n"
 "Your client version is not compatible with the server."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО ПОДКЛЮЧИТСЯ К СЕРВЕРУ!\f[/c]\n"
+"\n"
+"\n"
+"ВЕРСИЯ ВАШЕГО КЛИЕНТА НЕ СОВМЕСТИМА В СЕРВЕРОМ."
 
 #: Sources/Main.cpp:1115
 msgid ""
@@ -2361,6 +2397,11 @@ msgid ""
 "Authentication failed.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО ПОДКЛЮЧИТСЯ К СЕРВЕРУ!\f[/c]\n"
+"\n"
+"\n"
+"АУТЕНТИФИКАЦИЯ НЕ УДАЛАСЬ.\n"
+"СВЯЖИТЕСЬ С АДМИНИСТРАТОРАМИ СЕРВЕРА ЧТОБЫ ПОЛУЧИТЬ БОЛЬШЕ ИНФОРМАЦИИ."
 
 #: Sources/Main.cpp:1116
 msgid ""
@@ -2369,6 +2410,10 @@ msgid ""
 "\n"
 "Invalid password specified."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО ПОДКЛЮЧИТСЯ К СЕРВЕРУ!\f[/c]\n"
+"\n"
+"\n"
+"УКАЗАН НЕДОПУСТИМЫЙ ПАРОЛЬ."
 
 #: Sources/Main.cpp:1117
 msgid ""
@@ -2378,6 +2423,11 @@ msgid ""
 "Invalid player name specified.\n"
 "Please check your profile and try it again."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО ПОДКЛЮЧИТСЯ К СЕРВЕРУ!\f[/c]\n"
+"\n"
+"\n"
+"УКАЗАНО НЕДОПУСТИМОЕ ИМЯ ИГРОКА.\n"
+"ПРОВЕРЬТЕ ВАШ ПРОФИЛЬ И ПОПРОБУЙТЕ ЕЩЕ РАЗ."
 
 #: Sources/Main.cpp:1118
 msgid ""
@@ -2387,6 +2437,11 @@ msgid ""
 "This client is not in the server whitelist.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО ПОДКЛЮЧИТСЯ К СЕРВЕРУ!\f[/c]\n"
+"\n"
+"\n"
+"ВАШ КЛИЕНТ НЕ УКАЗАН В БЕЛОМ СПИСКЕ СЕРВЕРА.\n"
+"СВЯЖИТЕСЬ С АДМИНИСТРАТОРАМИ СЕРВЕРА ЧТОБЫ ПОЛУЧИТЬ БОЛЬШЕ ИНФОРМАЦИИ."
 
 #: Sources/Main.cpp:1119
 msgid ""
@@ -2396,6 +2451,11 @@ msgid ""
 "Server requires 3rd party authentication provider.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО ПОДКЛЮЧИТСЯ К СЕРВЕРУ!\f[/c]\n"
+"\n"
+"\n"
+"СЕРВЕР ТРЕБУЕТ АУТЕНТИФИКАЦИИ ОТ СТОРОННЕГО ПОСТАВЩИКА АУТЕНТИФИКАЦИИ.\n"
+"СВЯЖИТЕСЬ С АДМИНИСТРАТОРАМИ СЕРВЕРА ЧТОБЫ ПОЛУЧИТЬ БОЛЬШЕ ИНФОРМАЦИИ."
 
 #: Sources/Main.cpp:1120
 msgid ""
@@ -2405,6 +2465,11 @@ msgid ""
 "Server capacity is full.\n"
 "Please try it later."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО ПОДКЛЮЧИТСЯ К СЕРВЕРУ!\f[/c]\n"
+"\n"
+"\n"
+"СЕРВЕР ЗАПОЛНЕН.\n"
+"ПОПРОБУЙТЕ ПОЗЖЕ."
 
 #: Sources/Main.cpp:1121
 msgid ""
@@ -2414,6 +2479,11 @@ msgid ""
 "Server is not in a state where it can process your request.\n"
 "Please try again in a few seconds."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО ПОДКЛЮЧИТСЯ К СЕРВЕРУ!\f[/c]\n"
+"\n"
+"\n"
+"СЕРВЕР НЕ МОЖЕТ ОБРАБОТАТЬ ВАШ ЗАПРОС.\n"
+"ПОПРОБУЙТЕ СНОВА ЧЕРЕЗ НЕСКОЛЬКО СЕКУНД."
 
 #: Sources/Main.cpp:1122
 msgid ""
@@ -2423,6 +2493,11 @@ msgid ""
 "Server is shutting down.\n"
 "Please try it later."
 msgstr ""
+"\f[c:#704a4a]СОЕДИНЕНИЕ БЫЛО ЗАКРЫТО!\f[/c]\n"
+"\n"
+"\n"
+"СЕРВЕР ВЫКЛЮЧАЕТСЯ.\n"
+"ПОПРОБУЙТЕ ЕЩЕ РАЗ ПОЗЖЕ."
 
 #: Sources/Main.cpp:1123
 msgid ""
@@ -2432,6 +2507,11 @@ msgid ""
 "Server is shutting down for maintenance.\n"
 "Please try it again later."
 msgstr ""
+"\f[c:#704a4a]СОЕДИНЕНИЕ БЫЛО ЗАКРЫТО!\f[/c]\n"
+"\n"
+"\n"
+"СЕРВЕР ВЫКЛЮЧАЕТСЯ НА ТЕХ. РАБОТЫ.\n"
+"ПОПРОБУЙТЕ ЕЩЕ РАЗ ПОЗЖЕ."
 
 #: Sources/Main.cpp:1124
 msgid ""
@@ -2441,6 +2521,11 @@ msgid ""
 "Server is shutting down for reconfiguration.\n"
 "Please try it again later."
 msgstr ""
+"\f[c:#704a4a]СОЕДИНЕНИЕ БЫЛО ЗАКРЫТО!\f[/c]\n"
+"\n"
+"\n"
+"СЕРВЕР ВЫКЛЮЧАЕТСЯ НА РЕКОНФИГУРАЦИЮ.\n"
+"ПОПРОБУЙТЕ ЕЩЕ РАЗ ПОЗЖЕ."
 
 #: Sources/Main.cpp:1125
 msgid ""
@@ -2450,6 +2535,11 @@ msgid ""
 "Server is shutting down for update.\n"
 "Please check your client version and try it again in a minute."
 msgstr ""
+"\f[c:#704a4a]СОЕДИНЕНИЕ БЫЛО ЗАКРЫТО!\f[/c]\n"
+"\n"
+"\n"
+"СЕРВЕР ВЫКЛЮЧАЕТСЯ НА ОБНОВЛЕНИЕ.\n"
+"ПОЖАЛУЙСТА ПРОВЕРЬТЕ ВЕРСИЮ ВАШЕГО КЛИЕНТА И ПОПРОБУЙТЕ ЕЩЕ РАЗ ЧЕРЕЗ МИНУТУ."
 
 #: Sources/Main.cpp:1126
 msgid ""
@@ -2459,6 +2549,11 @@ msgid ""
 "Please try it again and if the problem persists,\n"
 "check your network connection."
 msgstr ""
+"\f[c:#704a4a]СОЕДИНЕНИЕ БЫЛО ПОТЕРЯНО!\f[/c]\n"
+"\n"
+"\n"
+"ПОПРОБУЙТЕ ЕЩЕ РАЗ, И ЕСЛИ ПРОБЛЕМА НЕ УХОДИТ,\n"
+"ПРОВЕРЬТЕ ВАШЕ ИНТЕРНЕТ СОЕДИНЕНИЕ."
 
 #: Sources/Main.cpp:1127
 msgid ""
@@ -2467,6 +2562,10 @@ msgid ""
 "\n"
 "The server is not responding for connection request."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО ПОДКЛЮЧИТСЯ К СЕРВЕРУ!\f[/c]\n"
+"\n"
+"\n"
+"СЕРВЕР НЕ ОТВЕЧАЕТ НА ЗАПРОС ПОДКЛЮЧЕНИЯ."
 
 #: Sources/Main.cpp:1128
 msgid ""
@@ -2476,6 +2575,11 @@ msgid ""
 "You have been \f[c:#907050]kicked\f[/c] off the server.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]СОЕДИНЕНИЕ БЫЛО ЗАКРЫТО!\f[/c]\n"
+"\n"
+"\n"
+"ВЫ БЫЛИ \f[c:#907050]КИКНУТЫ\f[/c] ИЗ СЕРВЕРА.\n"
+"СВЯЖИТЕСЬ С АДМИНИСТРАТОРАМИ СЕРВЕРА ЧТОБЫ ПОЛУЧИТЬ БОЛЬШЕ ИНФОРМАЦИИ."
 
 #: Sources/Main.cpp:1129
 msgid ""
@@ -2485,6 +2589,11 @@ msgid ""
 "You have been \f[c:#725040]banned\f[/c] off the server.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]СОЕДИНЕНИЕ БЫЛО ЗАКРЫТО!\f[/c]\n"
+"\n"
+"\n"
+"ВЫ \f[c:#725040]ЗАБАНЕНЫ\f[/c] НА СЕРВЕРЕ.\n"
+"СВЯЖИТЕСЬ С АДМИНИСТРАТОРАМИ СЕРВЕРА ЧТОБЫ ПОЛУЧИТЬ БОЛЬШЕ ИНФОРМАЦИИ."
 
 #: Sources/Main.cpp:1130
 msgid ""
@@ -2493,6 +2602,10 @@ msgid ""
 "\n"
 "Cheating detected."
 msgstr ""
+"\f[c:#704a4a]СОЕДИНЕНИЕ БЫЛО ЗАКРЫТО!\f[/c]\n"
+"\n"
+"\n"
+"ОБНАРУЖЕНЫ ЧИТЫ."
 
 #: Sources/Main.cpp:1131
 msgid ""
@@ -2502,6 +2615,11 @@ msgid ""
 "Your client doesn't contain required assets.\n"
 "Please download the required files and try it again."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО ПОДКЛЮЧИТСЯ К СЕРВЕРУ!\f[/c]\n"
+"\n"
+"\n"
+"ВАШ КЛИЕНТ НЕ СОДЕРЖИТ НЕОБХОДИМЫХ РЕСУРСОВ.\n"
+"ЗАГРУЗИТЕ НЕОБХОДИМЫЕ ФАЙЛЫ И ПОПРОБУЙТЕ ЕЩЕ РАЗ."
 
 #: Sources/Main.cpp:1132
 msgid ""
@@ -2510,6 +2628,10 @@ msgid ""
 "\n"
 "The server has disconnected you due to inactivity."
 msgstr ""
+"\f[c:#704a4a]СОЕДИНЕНИЕ БЫЛО ЗАКРЫТО!\f[/c]\n"
+"\n"
+"\n"
+"СЕРВЕР ОТКЛЮЧИЛ ВАС ЗА НЕАКТИВНОСТЬ."
 
 #: Sources/Main.cpp:1387
 #, c++-format
@@ -2520,6 +2642,11 @@ msgid ""
 "Your client doesn't contain level \"{}\".\n"
 "Please download the required files and try it again."
 msgstr ""
+"\f[c:#704a4a]НЕВОЗМОЖНО ПОДКЛЮЧИТСЯ К СЕРВЕРУ!\f[/c]\n"
+"\n"
+"\n"
+"ВАШ КЛИЕНТ НЕ СОДЕРЖИТ УРОВНЯ \"{}\".\n"
+"ЗАГРУЗИТЕ НЕОБХОДИМЫЕ ФАЙЛЫ И ПОПРОБУЙТЕ ЕЩЕ РАЗ."
 
 #~ msgid "Error"
 #~ msgstr "ОШИБКА"
