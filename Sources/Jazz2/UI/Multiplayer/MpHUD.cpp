@@ -341,7 +341,7 @@ namespace Jazz2::UI::Multiplayer
 					} else {
 						auto it = mpLevelHandler->_playerNames.find(pos.ActorID);
 						if (it != mpLevelHandler->_playerNames.end()) {
-							playerName = it->second;
+							playerName = it->second.Name;
 						}
 					}
 

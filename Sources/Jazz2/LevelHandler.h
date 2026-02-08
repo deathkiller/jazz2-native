@@ -313,9 +313,13 @@ namespace Jazz2
 		RumbleDescription* RegisterRumbleEffect(StringView name);
 
 		/** @brief Pauses the game */
-		void PauseGame();
+		virtual void PauseGame();
 		/** @brief Resumes the paused game */
-		void ResumeGame();
+		virtual void ResumeGame();
+		/** @brief Shows the in-game console */
+		virtual void ShowConsole();
+		/** @brief Hides the in-game console */
+		virtual void HideConsole();
 		
 #if defined(WITH_IMGUI)
 		ImVec2 WorldPosToScreenSpace(const Vector2f pos);

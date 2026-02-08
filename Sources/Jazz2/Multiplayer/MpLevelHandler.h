@@ -174,6 +174,11 @@ namespace Jazz2::Multiplayer
 		void BeforeActorDestroyed(Actors::ActorBase* actor) override;
 		void ProcessEvents(float timeMult) override;
 
+		void PauseGame() override;
+		void ResumeGame() override;
+		void ShowConsole() override;
+		void HideConsole() override;
+
 		/** @brief Called when a player entered a transition to change the level */
 		void HandlePlayerLevelChanging(Actors::Player* player, ExitType exitType);
 		/** @brief Called when a player interacts with a spring */
@@ -221,6 +226,11 @@ namespace Jazz2::Multiplayer
 			std::uint16_t LastScaleX;
 			std::uint16_t LastScaleY;
 			std::uint8_t LastRendererType;
+		};
+
+		struct PlayerName {
+			String Name;
+			std::uint8_t Flags;
 		};
 
 		struct PlayerPositionInRound {
@@ -281,7 +291,7 @@ namespace Jazz2::Multiplayer
 		bool _enableSpawning;
 		HashMap<std::uint32_t, std::shared_ptr<Actors::ActorBase>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
 		HashMap<Actors::ActorBase*, RemotingActorInfo> _remotingActors; // Server: Local Actor created by server -> Info
-		HashMap<std::uint32_t, String> _playerNames; // Client: Actor ID -> Player name
+		HashMap<std::uint32_t, PlayerName> _playerNames; // Client: Actor ID -> Player name (and flags)
 		SmallVector<PlayerPositionInRound, 0> _positionsInRound; // Client: Actor ID -> Position In Round
 		SmallVector<MultiplayerSpawnPoint, 0> _multiplayerSpawnPoints;
 		SmallVector<Vector2i, 0> _raceCheckpoints;
@@ -340,6 +350,7 @@ namespace Jazz2::Multiplayer
 		void ResetPeerPoints();
 		void SetWelcomeMessage(StringView message);
 		void SetPlayerReady(PlayerType playerType);
+		void BroadcastLocalPlayerIdle(bool isIdle);
 
 		void EndActivePoll();
 

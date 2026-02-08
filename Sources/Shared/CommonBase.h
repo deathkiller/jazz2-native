@@ -430,7 +430,6 @@
 
 	Putting this before return type of a function will cause a compiler warning if
 	the function is called without using the returned value.
-
 	Defined as the @cpp [[nodiscard]] @ce attribute if compiling as C++17 or newer,
 	with a compiler-specific variant on Clang, MSVC and GCC, empty otherwise.
 

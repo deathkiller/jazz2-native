@@ -23,7 +23,7 @@ namespace Jazz2::UI::Multiplayer
 		Jazz2::Multiplayer::MpLevelHandler* _levelHandler;
 		Font* _smallFont;
 
-		void DrawStringShadow(StringView text, float x, float y);
+		void DrawStringShadow(StringView text, float x, float y, Colorf color);
 	};
 }
 
