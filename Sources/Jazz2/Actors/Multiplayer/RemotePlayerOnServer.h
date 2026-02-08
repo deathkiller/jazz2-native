@@ -24,7 +24,10 @@ namespace Jazz2::Actors::Multiplayer
 
 			JustWarped = 0x100,
 
-			EnableContinuousJump = 0x200
+			EnableContinuousJump = 0x200,
+
+			InMenu = 0x1000,
+			InConsole = 0x2000
 		};
 
 		/** @brief State flags */

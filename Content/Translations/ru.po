@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2025-11-09 15:59+0100\n"
+"POT-Creation-Date: 2026-02-07 19:08+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: MAN-biker\n"
@@ -1639,22 +1639,22 @@ msgid "Weak"
 msgstr "СЛАБЫЙ"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:130
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:142
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:141
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:162
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:132
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:153
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:382
 msgid "Disabled"
 msgstr "ВЫКЛЮЧЕНО"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:142
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:141
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:153
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:156
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:162
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:132
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:152
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:155
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:382
 msgid "Enabled"

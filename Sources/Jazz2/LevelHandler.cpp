@@ -528,17 +528,17 @@ namespace Jazz2
 			bool isGamepad;
 			if (PlayerActionHit(nullptr, PlayerAction::Menu)) {
 				if (_console->IsVisible()) {
-					_console->Hide();
+					HideConsole();
 				} else if (_nextLevelType == ExitType::None) {
 					PauseGame();
 				}
 			} else if (PlayerActionHit(nullptr, PlayerAction::Console, true, isGamepad)) {
 				if (_console->IsVisible()) {
 					if (isGamepad) {
-						_console->Hide();
+						HideConsole();
 					}
 				} else {
-					_console->Show();
+					ShowConsole();
 				}
 			}
 #if defined(DEATH_DEBUG)
@@ -2300,6 +2300,16 @@ namespace Jazz2
 			input.PressedActions |= (1ull << (std::int32_t)PlayerAction::Menu);
 			input.PressedActionsLast |= (1ull << (std::int32_t)PlayerAction::Menu);
 		}
+	}
+
+	void LevelHandler::ShowConsole()
+	{
+		_console->Show();
+	}
+
+	void LevelHandler::HideConsole()
+	{
+		_console->Hide();
 	}
 
 	bool LevelHandler::CheatKill()
