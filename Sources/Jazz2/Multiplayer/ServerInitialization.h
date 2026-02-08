@@ -113,6 +113,12 @@ namespace Jazz2::Multiplayer
 		-   @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win (Battle)
 		-   @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win (Race)
 		-   @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Amount of treasure required to win (Treasure Hunt)
+		-   @cpp "OvertimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Overtime duration in seconds (Race)
+		-   @cpp "EnableSpectate" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether spectate mode is enabled (default is **true**)
+		-   @cpp "EnableFreeCamera" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether free camera is enabled in spectate mode (default is **true**)
+		-   @cpp "AllowJoinDuringRound" @ce : @m_span{m-label m-default m-flat} bool @m_endspan  Whether players can join in the middle of a round (default is **true**)
+		-   @cpp "JoinCooldownSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Cooldown duration in seconds for players who join mid-round (default is **0** seconds)
+			-   Players cannot move or shoot during this cooldown, but other players can hit them
 		-   @cpp "Playlist" @ce : @m_span{m-label m-success m-flat} array @m_endspan List of game configurations per round, each entry may contain:
 			-   @cpp "LevelName" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Name of the level in `<episode>/<level>` format
 			-   @cpp "GameMode" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Specific game mode for this round
@@ -124,6 +130,7 @@ namespace Jazz2::Multiplayer
 			-   @cpp "TotalKills" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of kills required to win this round (Battle)
 			-   @cpp "TotalLaps" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of laps required to win this round (Race)
 			-   @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Amount of treasure required to win this round (Treasure Hunt)
+			-   @cpp "OvertimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Overtime duration in seconds (Race)
 		-   @cpp "PlaylistIndex" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Index of the current playlist entry
 		
 		If a property is missing in a playlist entry, it will inherit the value from the root configuration.

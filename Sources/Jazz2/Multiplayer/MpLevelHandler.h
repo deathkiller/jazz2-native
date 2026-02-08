@@ -158,9 +158,11 @@ namespace Jazz2::Multiplayer
 		void SendMessageToAll(StringView message, bool asChatFromServer = false);
 
 		/** @brief Enables or disables spectate mode for the specified player (server-side) */
-		void SetPlayerSpectateMode(Actors::Player* player, bool enable, bool forced);
+		void SetPlayerSpectateMode(Actors::Player* player, SpectateMode mode);
 		/** @brief Client-side method to request spectate mode */
 		void RequestSpectateMode(bool enable);
+		/** @brief Returns `true` if the local player is currently spectating */
+		bool IsSpectating();
 
 		/** @brief Called when a peer disconnects from the server, see @ref INetworkHandler */
 		bool OnPeerDisconnected(const Peer& peer);
@@ -336,6 +338,7 @@ namespace Jazz2::Multiplayer
 		void SynchronizePeers(float timeMult);
 		std::uint32_t FindFreeActorId();
 		std::uint8_t FindFreePlayerId();
+		std::int32_t GetNonSpectatePlayerCount();
 		bool IsLocalPlayer(Actors::ActorBase* actor);
 		void ApplyGameModeToAllPlayers(MpGameMode gameMode);
 		void ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player);
@@ -349,8 +352,7 @@ namespace Jazz2::Multiplayer
 		void RollbackLevelState();
 		void CalculatePositionInRound(bool forceSend = false);
 		void CheckGameEnds();
-		void StartOvertime();
-		void DespawnPlayerForOvertime(Actors::Multiplayer::MpPlayer* player);
+		void BeginOvertime(Actors::Multiplayer::MpPlayer* winner);
 		void EndGame(Actors::Multiplayer::MpPlayer* winner);
 		void EndGameOnTimeOut();
 

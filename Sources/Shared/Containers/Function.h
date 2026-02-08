@@ -140,7 +140,7 @@ namespace Death { namespace Containers {
 
 			// Member functions
 			struct {
-				char data[Implementation::FunctionPointerSize*sizeof(std::size_t)];
+				std::size_t data[Implementation::FunctionPointerSize];
 				void* instance;
 			} member;
 
@@ -362,7 +362,7 @@ namespace Death { namespace Containers {
 			// everything else never allocates so using this overload makes no sense
 			, typename std::enable_if<Implementation::IsFunctor<typename std::decay<F>::type, R(Args...)>::value, int>::type = 0
 #endif
-		> explicit Function(NoAllocateInitT, F&& f) noexcept;
+		> /*implicit*/ Function(NoAllocateInitT, F&& f) noexcept;
 
 		/**
 		 * @brief Call the function pointer

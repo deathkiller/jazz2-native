@@ -519,10 +519,11 @@ namespace Jazz2::UI::Menu
 	}
 
 #if defined(WITH_MULTIPLAYER)
-	void InGameMenu::Spectate()
+	void InGameMenu::ToggleSpectate()
 	{
 		if (auto* mpLevelHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_root)) {
-			mpLevelHandler->RequestSpectateMode(true);
+			bool isSpectating = mpLevelHandler->IsSpectating();
+			mpLevelHandler->RequestSpectateMode(!isSpectating);
 		}
 
 		_root->ResumeGame();

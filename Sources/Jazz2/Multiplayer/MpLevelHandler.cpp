@@ -253,20 +253,23 @@ namespace Jazz2::Multiplayer
 				}
 			}
 
-			if (_activePoll != VoteType::None) {
+			if DEATH_UNLIKELY(_activePoll != VoteType::None) {
 				_activePollTimeLeft -= timeMult;
 				if (_activePollTimeLeft <= 0.0f) {
 					EndActivePoll();
+				}
+			}
+
+			if DEATH_UNLIKELY(_overtimeStarted) {
+				_overtimeTimeLeft -= timeMult;
+				if (_overtimeTimeLeft <= 0.0f) {
+					CheckGameEnds();
 				}
 			}
 		}
 
 		_updateTimeLeft -= timeMult;
 		_gameTimeLeft -= timeMult;
-
-		if (_overtimeStarted) {
-			_overtimeTimeLeft -= timeMult;
-		}
 
 		if (_updateTimeLeft < 0.0f) {
 			_updateTimeLeft = FrameTimer::FramesPerSecond / UpdatesPerSecond;
@@ -308,14 +311,8 @@ namespace Jazz2::Multiplayer
 				case LevelState::PreGame: {
 					if (_isServer && _gameTimeLeft <= 0.0f) {
 						// TODO: Check all players are ready
-						std::int32_t nonSpectatePlayerCount = 0;
-						for (auto* player : _players) {
-							if (player->_playerType != PlayerType::Spectate) {
-								nonSpectatePlayerCount++;
-							}
-						}
-
-						if (nonSpectatePlayerCount >= (std::int32_t)serverConfig.MinPlayerCount) {
+						std::int32_t playerCount = GetNonSpectatePlayerCount();
+						if (playerCount >= (std::int32_t)serverConfig.MinPlayerCount) {
 							_levelState = LevelState::Countdown3;
 							_gameTimeLeft = FrameTimer::FramesPerSecond;
 							SetControllableToAllPlayers(false);
@@ -326,7 +323,7 @@ namespace Jazz2::Multiplayer
 							LOGI("[MP] Starting round...");
 						} else {
 							_levelState = LevelState::WaitingForMinPlayers;
-							_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - nonSpectatePlayerCount;
+							_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - playerCount;
 						}
 						SendLevelStateToAllPlayers();
 					}
@@ -465,14 +462,8 @@ namespace Jazz2::Multiplayer
 
 			if (_isServer) {
 				if (_networkManager->HasInboundConnections()) {
-					std::uint32_t nonSpectatePlayerCount = 0;
-					for (Actors::Player* player : _players) {
-						if (player->_playerType != PlayerType::Spectate) {
-							nonSpectatePlayerCount++;
-						}
-					}
-
-					std::uint32_t actorCount = nonSpectatePlayerCount + (std::uint32_t)_remotingActors.size();
+					std::uint32_t playerCount = GetNonSpectatePlayerCount();
+					std::uint32_t actorCount = playerCount + (std::uint32_t)_remotingActors.size();
 
 					MemoryStream packet(8 + actorCount * 24);
 					packet.WriteVariableUint32(_lastUpdated);
@@ -1134,7 +1125,7 @@ namespace Jazz2::Multiplayer
 			if (canRespawn && _activeBoss != nullptr) {
 				bool anyoneAlive = false;
 				for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
-					if (peerDesc->Player && peerDesc->Player->_playerType != PlayerType::Spectate && peerDesc->Player->_health > 0) {
+					if (peerDesc->Player && peerDesc->Player->_health > 0) {
 						anyoneAlive = true;
 						break;
 					}
@@ -1700,9 +1691,11 @@ namespace Jazz2::Multiplayer
 					peerDesc->LapsElapsedFrames = _elapsedFrames;
 					peerDesc->LapStarted = now;
 
+					LOGI("[MP] Player {} finished lap ({})", mpPlayer->_playerIndex, peerDesc->Laps);
+
 					CheckGameEnds();
 				} else {
-					LOGW("Player {} attempted to increment laps twice in a row", mpPlayer->_playerIndex);
+					LOGW("[MP] Player {} attempted to increment laps twice in a row", mpPlayer->_playerIndex);
 				}
 			}
 
@@ -2206,6 +2199,7 @@ namespace Jazz2::Multiplayer
 				? serverConfig.InitialPlayerHealth
 				: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
 
+			peerDesc->PreferredPlayerType = levelInit.PlayerCarryOvers[i].Type;
 			peerDesc->LevelState = PeerLevelState::PlayerSpawned;
 			peerDesc->LapsElapsedFrames = _elapsedFrames;
 			peerDesc->LapStarted = TimeStamp::now();
@@ -2856,13 +2850,8 @@ namespace Jazz2::Multiplayer
 
 					const auto& serverConfig = _networkManager->GetServerConfiguration();
 					if (_levelState == LevelState::WaitingForMinPlayers) {
-						std::int32_t nonSpectatePlayerCount = 0;
-						for (auto* player : _players) {
-							if (player->_playerType != PlayerType::Spectate) {
-								nonSpectatePlayerCount++;
-							}
-						}
-						_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - nonSpectatePlayerCount;
+						std::int32_t playerCount = GetNonSpectatePlayerCount();
+						_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - playerCount;
 						InvokeAsync([this]() {
 							SendLevelStateToAllPlayers();
 						});
@@ -2898,7 +2887,7 @@ namespace Jazz2::Multiplayer
 						// If a boss is active and the last player left, roll everything back
 						bool anyoneAlive = false;
 						for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
-							if (peerDesc->Player && peerDesc->Player != player && peerDesc->Player->_playerType != PlayerType::Spectate && peerDesc->Player->_health > 0) {
+							if (peerDesc->Player && peerDesc->Player != player && peerDesc->Player->_health > 0) {
 								anyoneAlive = true;
 								break;
 							}
@@ -3417,12 +3406,13 @@ namespace Jazz2::Multiplayer
 					LOGD("[MP] ClientPacketType::PlayerSpectateRequest [{:.8x}] - playerIndex: {}, enable: {}", std::uint64_t(peer._enet), playerIndex, enable);
 
 					auto& serverConfig = _networkManager->GetServerConfiguration();
-					if (!serverConfig.EnableSpectate || (peerDesc->SpectateForced && enable == 0)) {
-						// Spectate mode is disabled or forced
+					if (!serverConfig.EnableSpectate || ((peerDesc->IsSpectating & SpectateMode::Mask) == SpectateMode::Forced && enable == 0)) {
+						// Spectate mode is disabled or forced, deny the request
 						return true;
 					}
 
-					SetPlayerSpectateMode(peerDesc->Player, enable != 0, false);
+					LOGI("[MP] Player {} [{:.8x}] {} spectating", playerIndex, std::uint64_t(peer._enet), enable ? "started"_s : "stopped"_s);
+					SetPlayerSpectateMode(peerDesc->Player, enable ? SpectateMode::Requested : SpectateMode::None);
 					return true;
 				}
 				case ClientPacketType::PlayerAckWarped: {
@@ -3845,7 +3835,7 @@ namespace Jazz2::Multiplayer
 					std::int32_t posX = packet.ReadVariableInt32();
 					std::int32_t posY = packet.ReadVariableInt32();
 
-					LOGI("[MP] ServerPacketType::CreateControllablePlayer - playerIndex: {}, playerType: {}, health: {}, flags: {}, team: {}, x: {}, y: {}",
+					LOGI("[MP] ServerPacketType::CreateControllablePlayer - playerIndex: {}, playerType: {}, health: {}, flags: 0x{:.2x}, team: {}, x: {}, y: {}",
 						playerIndex, playerType, health, flags, teamId, posX, posY);
 
 					_lastSpawnedActorId = playerIndex;
@@ -3875,7 +3865,9 @@ namespace Jazz2::Multiplayer
 						CommitViewports();
 
 						// TODO: Fade in should be skipped sometimes
-						_hud->BeginFadeIn(false);
+						if ((flags & 0x10) == 0) {
+							_hud->BeginFadeIn(false);
+						}
 					});
 					return true;
 				}
@@ -4265,6 +4257,17 @@ namespace Jazz2::Multiplayer
 							});
 							break;
 						}
+						case PlayerPropertyType::Spectate: {
+							SpectateMode spectateMode = (SpectateMode)packet.ReadValue<std::uint8_t>();
+
+							LOGD("[MP] ServerPacketType::PlayerSetProperty::Spectate - mode: 0x{:.2x}", spectateMode);
+
+							if (!_players.empty()) {
+								auto* player = static_cast<RemotablePlayer*>(_players[0]);
+								player->GetPeerDescriptor()->IsSpectating = spectateMode;
+							}
+							break;
+						}
 						case PlayerPropertyType::WeaponAmmo: {
 							std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
 							std::uint16_t weaponAmmo = packet.ReadValue<std::uint16_t>();
@@ -4587,35 +4590,6 @@ namespace Jazz2::Multiplayer
 							auto* player = static_cast<RemotablePlayer*>(_players[0]);
 							player->WarpIn(exitType);
 						}
-					});
-					return true;
-				}
-				case ServerPacketType::PlayerSetSpectate: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerSetSpectate - received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
-						return true;
-					}
-
-					std::uint8_t spectateMode = packet.ReadValue<std::uint8_t>();
-					std::uint8_t forced = packet.ReadValue<std::uint8_t>();
-					std::uint8_t allowFreeCamera = packet.ReadValue<std::uint8_t>();
-
-					LOGD("[MP] ServerPacketType::PlayerSetSpectate - playerIndex: {}, mode: {}, forced: {}, allowFreeCamera: {}",
-						playerIndex, spectateMode, forced, allowFreeCamera);
-
-					InvokeAsync([this, playerIndex, spectateMode, forced, allowFreeCamera]() {
-						auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer);
-						if (!peerDesc) {
-							return;
-						}
-
-						peerDesc->IsSpectating = true;
-						peerDesc->SpectateMode = spectateMode;
-						peerDesc->SpectateForced = (forced != 0);
-
-						LOGI("[MP] Spectate mode enabled - mode: {}, forced: {}", spectateMode, forced);
 					});
 					return true;
 				}
@@ -4967,10 +4941,10 @@ namespace Jazz2::Multiplayer
 
 					// Apply join cooldown if joining mid-round
 					if (_levelState == LevelState::Running && serverConfig.JoinCooldownSecs > 0) {
-						peerDesc->JoinCooldownTimeLeft = serverConfig.JoinCooldownSecs * FrameTimer::FramesPerSecond;
+						peerDesc->JoinCooldownFrames = serverConfig.JoinCooldownSecs * FrameTimer::FramesPerSecond;
 						player->_controllableExternal = false;
 					} else {
-						peerDesc->JoinCooldownTimeLeft = 0.0f;
+						peerDesc->JoinCooldownFrames = 0.0f;
 						player->_controllableExternal = _controllableExternal;
 					}
 
@@ -5085,9 +5059,10 @@ namespace Jazz2::Multiplayer
 						: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
 
 					// Set spectate mode
-					peerDesc->IsSpectating = true;
-					peerDesc->SpectateForced = true;
-					peerDesc->SpectateMode = (serverConfig.EnableFreeCamera ? 0 : 1);
+					peerDesc->IsSpectating = SpectateMode::Forced;
+					if (serverConfig.EnableFreeCamera) {
+						peerDesc->IsSpectating |= SpectateMode::FreeCamera;
+					}
 
 					Actors::Multiplayer::RemotePlayerOnServer* ptr = player.get();
 					_players.push_back(ptr);
@@ -5122,18 +5097,17 @@ namespace Jazz2::Multiplayer
 
 					// Notify client about spectate mode
 					{
-						MemoryStream packet(7);
+						MemoryStream packet(6);
+						packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Spectate);
 						packet.WriteVariableUint32(playerIndex);
-						packet.WriteValue<std::uint8_t>(peerDesc->SpectateMode);
-						packet.WriteValue<std::uint8_t>(peerDesc->SpectateForced ? 1 : 0);
-						packet.WriteValue<std::uint8_t>(serverConfig.EnableFreeCamera ? 1 : 0);
-						_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetSpectate, packet);
+						packet.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->IsSpectating);
+						_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 					}
 				}
 			} else if (peerDesc->LevelState == PeerLevelState::PlayerSpawned) {
-				if DEATH_UNLIKELY(peerDesc->Player && peerDesc->JoinCooldownTimeLeft > 0.0f) {
-					peerDesc->JoinCooldownTimeLeft -= timeMult;
-					if (peerDesc->JoinCooldownTimeLeft <= 0.0f) {
+				if DEATH_UNLIKELY(peerDesc->Player && peerDesc->JoinCooldownFrames > 0.0f) {
+					peerDesc->JoinCooldownFrames -= timeMult;
+					if (peerDesc->JoinCooldownFrames <= 0.0f) {
 						// Join cooldown expired, make the player controllable
 						peerDesc->Player->_controllableExternal = true;
 
@@ -5180,6 +5154,17 @@ namespace Jazz2::Multiplayer
 		}
 
 		return UINT8_MAX;
+	}
+
+	std::int32_t MpLevelHandler::GetNonSpectatePlayerCount()
+	{
+		std::int32_t count = 0;
+		for (auto* player : _players) {
+			if (player->_playerType != PlayerType::Spectate) {
+				count++;
+			}
+		}
+		return count;
 	}
 
 	bool MpLevelHandler::IsLocalPlayer(Actors::ActorBase* actor)
@@ -5504,8 +5489,7 @@ namespace Jazz2::Multiplayer
 			auto* mpPlayer = static_cast<MpPlayer*>(player);
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 
-			// Ignore spectate players
-			if (peerDesc->IsSpectating || mpPlayer->_playerType == PlayerType::Spectate) {
+			if (peerDesc->IsSpectating != SpectateMode::None) {
 				continue;
 			}
 
@@ -5662,8 +5646,7 @@ namespace Jazz2::Multiplayer
 				auto* mpPlayer = static_cast<MpPlayer*>(player);
 				auto peerDesc = mpPlayer->GetPeerDescriptor();
 
-				// Ignore spectate players
-				if (peerDesc->IsSpectating || mpPlayer->_playerType == PlayerType::Spectate) {
+				if (peerDesc->IsSpectating != SpectateMode::None) {
 					continue;
 				}
 
@@ -5688,8 +5671,7 @@ namespace Jazz2::Multiplayer
 						auto* mpPlayer = static_cast<MpPlayer*>(player);
 						auto peerDesc = mpPlayer->GetPeerDescriptor();
 
-						// Ignore spectate players
-						if (peerDesc->IsSpectating || mpPlayer->_playerType == PlayerType::Spectate) {
+						if (peerDesc->IsSpectating != SpectateMode::None) {
 							continue;
 						}
 
@@ -5708,21 +5690,14 @@ namespace Jazz2::Multiplayer
 					auto* mpPlayer = static_cast<MpPlayer*>(player);
 					auto peerDesc = mpPlayer->GetPeerDescriptor();
 
-					// Ignore spectate players
-					if (peerDesc->IsSpectating || mpPlayer->_playerType == PlayerType::Spectate) {
+					if (peerDesc->IsSpectating != SpectateMode::None) {
 						continue;
 					}
 
 					if (peerDesc->Laps >= serverConfig.TotalLaps) {
-						if (!_overtimeStarted && serverConfig.OvertimeSecs > 0) {
-							// First player finished - start overtime
-							StartOvertime();
-							DespawnPlayerForOvertime(mpPlayer);
-						} else if (_overtimeStarted) {
-							// Additional players finishing during overtime
-							DespawnPlayerForOvertime(mpPlayer);
+						if (serverConfig.OvertimeSecs > 0) {
+							BeginOvertime(mpPlayer);
 						} else {
-							// No overtime configured - end game immediately
 							EndGame(mpPlayer);
 							break;
 						}
@@ -5731,7 +5706,7 @@ namespace Jazz2::Multiplayer
 
 				// Check if all players finished or overtime expired
 				if (_overtimeStarted) {
-					if (_overtimeFinishers >= _players.size() || _overtimeTimeLeft <= 0.0f) {
+					if (_overtimeFinishers >= GetNonSpectatePlayerCount() || _overtimeTimeLeft <= 0.0f) {
 						// Find winner (player with best position)
 						MpPlayer* winner = nullptr;
 						std::uint32_t bestPosition = UINT32_MAX;
@@ -5766,71 +5741,24 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MpLevelHandler::StartOvertime()
+	void MpLevelHandler::BeginOvertime(MpPlayer* winner)
 	{
-		if (_overtimeStarted) {
-			return;
+		if (!_overtimeStarted) {
+			auto& serverConfig = _networkManager->GetServerConfiguration();
+			_overtimeTimeLeft = serverConfig.OvertimeSecs * FrameTimer::FramesPerSecond;
+			_overtimeStarted = true;
+			_overtimeFinishers = 0;
+
+			LOGI("[MP] Overtime started - {} seconds", serverConfig.OvertimeSecs);
+			// TODO: Localize on client
+			ShowAlertToAllPlayers(_f("\n\nOvertime! {} seconds remaining", serverConfig.OvertimeSecs));
 		}
-
-		auto& serverConfig = _networkManager->GetServerConfiguration();
-		_overtimeTimeLeft = serverConfig.OvertimeSecs * FrameTimer::FramesPerSecond;
-		_overtimeStarted = true;
-		_overtimeFinishers = 0;
-
-		LOGI("[MP] Overtime started - {} seconds", serverConfig.OvertimeSecs);
-		ShowAlertToAllPlayers(_f("\n\nOvertime! {} seconds remaining", serverConfig.OvertimeSecs));
-	}
-
-	void MpLevelHandler::DespawnPlayerForOvertime(MpPlayer* player)
-	{
-		auto peerDesc = player->GetPeerDescriptor();
-		std::uint32_t playerIndex = player->_playerIndex;
 
 		_overtimeFinishers++;
-
-		LOGI("[MP] Player {} finished lap (overtime)", playerIndex);
-
-		auto& serverConfig = _networkManager->GetServerConfiguration();
-		if (serverConfig.EnableSpectate) {
-			peerDesc->IsSpectating = true;
-			peerDesc->SpectateForced = false;
-			peerDesc->SpectateMode = (serverConfig.EnableFreeCamera ? 0 : 1); // 0=Free camera, 1=Locked to player
-
-			if (peerDesc->RemotePeer) {
-				// Notify client about spectate mode
-				MemoryStream packet(7);
-				packet.WriteVariableUint32(playerIndex);
-				packet.WriteValue<std::uint8_t>(peerDesc->SpectateMode);
-				packet.WriteValue<std::uint8_t>(peerDesc->SpectateForced ? 1 : 0);
-				packet.WriteValue<std::uint8_t>(serverConfig.EnableFreeCamera ? 1 : 0);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetSpectate, packet);
-			}
-		}
-
-		// Remove player from active players list
-		for (std::size_t i = 0; i < _players.size(); i++) {
-			if (_players[i] == player) {
-				_players.eraseUnordered(i);
-				break;
-			}
-		}
-
-		// Destroy the actor
-		player->SetState(Actors::ActorState::IsDestroyed, true);
-		peerDesc->Player = nullptr;
-
-		// Notify all clients to destroy the actor
-		MemoryStream packet(4);
-		packet.WriteVariableUint32(playerIndex);
-		_networkManager->SendTo([this](const Peer& peer) {
-			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packet);
-
-		// TODO: Send also ServerPacketType::CreateControllablePlayer to the client
+		SetPlayerSpectateMode(winner, SpectateMode::Forced);
 	}
 
-	void MpLevelHandler::SetPlayerSpectateMode(Actors::Player* player, bool enable, bool forced)
+	void MpLevelHandler::SetPlayerSpectateMode(Actors::Player* player, SpectateMode mode)
 	{
 		if (!_isServer) {
 			return;
@@ -5841,217 +5769,173 @@ namespace Jazz2::Multiplayer
 		auto peerDesc = mpPlayer->GetPeerDescriptor();
 		std::uint32_t playerIndex = mpPlayer->_playerIndex;
 
-		peerDesc->IsSpectating = enable;
-		peerDesc->SpectateForced = forced;
-
-		if (enable) {
-			peerDesc->SpectateMode = (serverConfig.EnableFreeCamera ? 0 : 1);
-
-			// Remove player from active players list
-			for (std::size_t i = 0; i < _players.size(); i++) {
-				if (_players[i] == player) {
-					_players.eraseUnordered(i);
-					break;
-				}
+		// Remove player from active players list
+		for (std::size_t i = 0; i < _players.size(); i++) {
+			if (_players[i] == player) {
+				_players.eraseUnordered(i);
+				break;
 			}
+		}
 
-			// Destroy the real player actor
-			Vector2f playerPos = player->_pos;
-			player->SetState(Actors::ActorState::IsDestroyed, true);
+		// Destroy the previous player actor
+		Vector2f playerPos = player->_pos;
+		player->SetState(Actors::ActorState::IsDestroyed, true);
 
-			// Notify all clients to destroy the actor
-			MemoryStream packetDestroy(4);
-			packetDestroy.WriteVariableUint32(playerIndex);
-			_networkManager->SendTo([this](const Peer& peer) {
-				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packetDestroy);
+		// Notify all clients to destroy the actor
+		MemoryStream packetDestroy(4);
+		packetDestroy.WriteVariableUint32(playerIndex);
+		_networkManager->SendTo([this](const Peer& peer) {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packetDestroy);
 
-			// Spawn spectate player
-			std::shared_ptr<Actors::Multiplayer::MpPlayer> spectatePlayer;
-			Actors::Multiplayer::MpPlayer* ptr;
+		// Spawn new player actor according to spectate mode
+		std::shared_ptr<MpPlayer> newPlayer;
+		MpPlayer* ptr;
 
-			if (peerDesc->RemotePeer) {
-				auto remotePlayer = std::make_shared<Actors::Multiplayer::RemotePlayerOnServer>(peerDesc);
-				spectatePlayer = remotePlayer;
-				ptr = remotePlayer.get();
-			} else {
-				auto localPlayer = std::make_shared<Actors::Multiplayer::LocalPlayerOnServer>(peerDesc);
-				spectatePlayer = localPlayer;
-				ptr = localPlayer.get();
-			}
-
-			std::uint8_t playerParams[2] = { (std::uint8_t)PlayerType::Spectate, (std::uint8_t)playerIndex };
-			ptr->OnActivated(Actors::ActorActivationDetails(
-				this,
-				Vector3i((std::int32_t)playerPos.X, (std::int32_t)playerPos.Y, PlayerZ - playerIndex),
-				playerParams
-			));
-			ptr->_controllableExternal = true;
-			
-			peerDesc->Player = ptr;
-			_players.push_back(ptr);
-
-			_suppressRemoting = true;
-			AddActor(spectatePlayer);
-			_suppressRemoting = false;
-
-			if (peerDesc->RemotePeer) {
-				// Remote client
-				std::uint8_t flags = 0;
-				if (ptr->_controllable) {
-					flags |= 0x01;
-				}
-				if (ptr->_controllableExternal) {
-					flags |= 0x02;
-				}
-
-				MemoryStream packet2(19);
-				packet2.WriteVariableUint32(playerIndex);
-				packet2.WriteValue<std::uint8_t>((std::uint8_t)ptr->_playerType);
-				packet2.WriteVariableInt32(ptr->_health);
-				packet2.WriteValue<std::uint8_t>(flags);
-				packet2.WriteValue<std::uint8_t>(peerDesc->Team);
-				packet2.WriteVariableInt32((std::int32_t)ptr->_pos.X);
-				packet2.WriteVariableInt32((std::int32_t)ptr->_pos.Y);
-
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateControllablePlayer, packet2);
-			} else {
-				// Local player
-				AssignViewport(ptr);
-				CommitViewports();
-			}
+		if (peerDesc->RemotePeer) {
+			newPlayer = std::make_shared<RemotePlayerOnServer>(peerDesc);
 		} else {
-			// Exit spectate mode - spawn real player
+			newPlayer = std::make_shared<LocalPlayerOnServer>(peerDesc);
+		}
+		ptr = newPlayer.get();
+
+		// Apply new spectating mode
+		peerDesc->IsSpectating = mode;
+
+		if ((mode & SpectateMode::Mask) != SpectateMode::None) {
+			if (serverConfig.EnableFreeCamera) {
+				peerDesc->IsSpectating |= SpectateMode::FreeCamera;
+			}
+
+			// Initialize the actor as spectator
+			std::uint8_t playerParams[2] = { (std::uint8_t)PlayerType::Spectate, (std::uint8_t)playerIndex };
+			ptr->OnActivated(Actors::ActorActivationDetails(this,
+				Vector3i((std::int32_t)playerPos.X, (std::int32_t)playerPos.Y, PlayerZ - playerIndex),
+				playerParams));
+			ptr->_controllableExternal = true;
+		} else {
+			// Initialize the actor as real player
 			Vector2f spawnPosition = GetSpawnPoint(peerDesc->PreferredPlayerType);
-
-			// Remove spectate player from active players list
-			for (std::size_t i = 0; i < _players.size(); i++) {
-				if (_players[i] == player) {
-					_players.eraseUnordered(i);
-					break;
-				}
-			}
-
-			// Destroy spectate actor
-			player->SetState(Actors::ActorState::IsDestroyed, true);
-
-			// Notify all clients to destroy the spectate actor
-			MemoryStream packet(4);
-			packet.WriteVariableUint32(playerIndex);
-			_networkManager->SendTo([this](const Peer& peer) {
-				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packet);
-
-			// Spawn real player
-			std::shared_ptr<Actors::Multiplayer::MpPlayer> newPlayer;
-			Actors::Multiplayer::MpPlayer* ptr;
-
-			if (peerDesc->RemotePeer) {
-				auto remotePlayer = std::make_shared<Actors::Multiplayer::RemotePlayerOnServer>(peerDesc);
-				newPlayer = remotePlayer;
-				ptr = remotePlayer.get();
-			} else {
-				auto localPlayer = std::make_shared<Actors::Multiplayer::LocalPlayerOnServer>(peerDesc);
-				newPlayer = localPlayer;
-				ptr = localPlayer.get();
-			}
-
 			std::uint8_t playerParams[2] = { (std::uint8_t)peerDesc->PreferredPlayerType, (std::uint8_t)playerIndex };
-			ptr->OnActivated(Actors::ActorActivationDetails(
-				this,
+			ptr->OnActivated(Actors::ActorActivationDetails(this,
 				Vector3i((std::int32_t)spawnPosition.X, (std::int32_t)spawnPosition.Y, PlayerZ - playerIndex),
-				playerParams
-			));
-			ptr->_controllableExternal = _controllableExternal;
+				playerParams));
 			ptr->_health = (serverConfig.InitialPlayerHealth > 0
 				? serverConfig.InitialPlayerHealth
 				: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
 
-			peerDesc->Player = ptr;
-			_players.push_back(ptr);
+			if (_levelState == LevelState::Running && serverConfig.JoinCooldownSecs > 0) {
+				peerDesc->JoinCooldownFrames = serverConfig.JoinCooldownSecs * FrameTimer::FramesPerSecond;
+				player->_controllableExternal = false;
+			} else {
+				peerDesc->JoinCooldownFrames = 0.0f;
+				player->_controllableExternal = _controllableExternal;
+			}
+		}
 
-			_suppressRemoting = true;
-			AddActor(newPlayer);
-			_suppressRemoting = false;
+		peerDesc->Player = ptr;
+		_players.push_back(ptr);
 
+		_suppressRemoting = true;
+		AddActor(newPlayer);
+		_suppressRemoting = false;
+
+		// First, create new controllable player if needed, then create remote actor for other clients
+		if (peerDesc->RemotePeer) {
+			// Remote client
+			std::uint8_t flags = 0x10; // Skip fade-in transition
+			if (ptr->_controllable) {
+				flags |= 0x01;
+			}
+			if (ptr->_controllableExternal) {
+				flags |= 0x02;
+			}
+
+			MemoryStream packet2(16);
+			packet2.WriteVariableUint32(playerIndex);
+			packet2.WriteValue<std::uint8_t>((std::uint8_t)ptr->_playerType);
+			packet2.WriteVariableInt32(ptr->_health);
+			packet2.WriteValue<std::uint8_t>(flags);
+			packet2.WriteValue<std::uint8_t>(peerDesc->Team);
+			packet2.WriteVariableInt32((std::int32_t)ptr->_pos.X);
+			packet2.WriteVariableInt32((std::int32_t)ptr->_pos.Y);
+
+			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateControllablePlayer, packet2);
+		} else {
+			// Local player
+			UnassignViewport(player);
+			AssignViewport(ptr);
+			CommitViewports();
+		}
+
+		MemoryStream packet3;
+		InitializeCreateRemoteActorPacket(packet3, playerIndex, ptr);
+
+		_networkManager->SendTo([this, self = peerDesc->RemotePeer](const Peer& peer) {
+			if (peer == self) {
+				return false;
+			}
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet3);
+
+		MemoryStream packet4(6 + peerDesc->PlayerName.size());
+		packet4.WriteVariableUint32(playerIndex);
+		packet4.WriteValue<std::uint8_t>(0x00);
+		packet4.WriteVariableUint32(peerDesc->PlayerName.size());
+		packet4.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
+
+		_networkManager->SendTo([this](const Peer& peer) {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::MarkRemoteActorAsPlayer, packet4);
+
+		if (peerDesc->RemotePeer) {
+			MemoryStream packet5(6);
+			packet5.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Spectate);
+			packet5.WriteVariableUint32(playerIndex);
+			packet5.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->IsSpectating);
+			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet5);
+		}
+
+		if ((mode & SpectateMode::Mask) == SpectateMode::None) {
+			// Player is now active again - apply game mode effects
 			ApplyGameModeToPlayer(serverConfig.GameMode, ptr);
 
 			// The player is invulnerable for a short time after spawning
 			ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
-
-			// Create the player on all clients
-			if (peerDesc->RemotePeer) {
-				// Remote client
-				std::uint8_t flags = 0;
-				if (ptr->_controllable) {
-					flags |= 0x01;
-				}
-				if (ptr->_controllableExternal) {
-					flags |= 0x02;
-				}
-
-				MemoryStream packet2(16);
-				packet2.WriteVariableUint32(playerIndex);
-				packet2.WriteValue<std::uint8_t>((std::uint8_t)ptr->_playerType);
-				packet2.WriteVariableInt32(ptr->_health);
-				packet2.WriteValue<std::uint8_t>(flags);
-				packet2.WriteValue<std::uint8_t>(peerDesc->Team);
-				packet2.WriteVariableInt32((std::int32_t)ptr->_pos.X);
-				packet2.WriteVariableInt32((std::int32_t)ptr->_pos.Y);
-
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateControllablePlayer, packet2);
-			} else {
-				// Local player
-				AssignViewport(ptr);
-				CommitViewports();
-			}
-
-			// Create as remote actor for other clients
-			MemoryStream packet3;
-			InitializeCreateRemoteActorPacket(packet3, playerIndex, ptr);
-
-			_networkManager->SendTo([this, self = peerDesc->RemotePeer](const Peer& peer) {
-				if (peer == self) {
-					return false;
-				}
-				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet3);
-
-			MemoryStream packet4(6 + peerDesc->PlayerName.size());
-			packet4.WriteVariableUint32(playerIndex);
-			packet4.WriteValue<std::uint8_t>(0x00);
-			packet4.WriteVariableUint32(peerDesc->PlayerName.size());
-			packet4.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
-
-			_networkManager->SendTo([this](const Peer& peer) {
-				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::MarkRemoteActorAsPlayer, packet4);
-		}
-
-		if (peerDesc->RemotePeer) {
-			MemoryStream packet(7);
-			packet.WriteVariableUint32(playerIndex);
-			packet.WriteValue<std::uint8_t>(enable ? peerDesc->SpectateMode : 0xFF);
-			packet.WriteValue<std::uint8_t>(peerDesc->SpectateForced ? 1 : 0);
-			packet.WriteValue<std::uint8_t>(serverConfig.EnableFreeCamera ? 1 : 0);
-			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetSpectate, packet);
 		}
 	}
 
 	void MpLevelHandler::RequestSpectateMode(bool enable)
 	{
-		if (_isServer) {
+		if (_players.empty()) {
 			return;
 		}
 
-		MemoryStream packet(5);
-		packet.WriteVariableUint32(_lastSpawnedActorId);
-		packet.WriteValue<std::uint8_t>(enable ? 1 : 0);
-		_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerSpectateRequest, packet);
+		if (_isServer) {
+			for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
+				if (!peerDesc->RemotePeer && peerDesc->Player) {
+					SetPlayerSpectateMode(peerDesc->Player, enable ? SpectateMode::Requested : SpectateMode::None);
+				}
+			}
+		} else {
+			MemoryStream packet(5);
+			packet.WriteVariableUint32(_lastSpawnedActorId);
+			packet.WriteValue<std::uint8_t>(enable ? 1 : 0);
+			_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerSpectateRequest, packet);
+		}
+	}
+
+	bool MpLevelHandler::IsSpectating()
+	{
+		for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
+			if (!peerDesc->RemotePeer && peerDesc->Player) {
+				return (peerDesc->IsSpectating != SpectateMode::None);
+			}
+		}
+		return false;
 	}
 
 	void MpLevelHandler::EndGame(MpPlayer* winner)

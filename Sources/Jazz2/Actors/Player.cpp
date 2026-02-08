@@ -2654,22 +2654,24 @@ namespace Jazz2::Actors
 	{
 		constexpr float SpectateSpeed = 8.0f;
 
+		Vector2f speed;
+
 		float playerMovement = _levelHandler->PlayerHorizontalMovement(this);
-		if (std::abs(playerMovement) > 0.5f) {
-			_speed.X = playerMovement * SpectateSpeed;
+		if (std::abs(playerMovement) > 0.3f) {
+			speed.X = playerMovement * SpectateSpeed;
 		} else {
-			_speed.X = 0.0f;
+			speed.X = 0.0f;
 		}
 
 		float playerMovementVert = _levelHandler->PlayerVerticalMovement(this);
-		if (std::abs(playerMovementVert) > 0.5f) {
-			_speed.Y = playerMovementVert * SpectateSpeed;
+		if (std::abs(playerMovementVert) > 0.3f) {
+			speed.Y = playerMovementVert * SpectateSpeed;
 		} else {
-			_speed.Y = 0.0f;
+			speed.Y = 0.0f;
 		}
 
-		_pos.X += _speed.X * timeMult;
-		_pos.Y += _speed.Y * timeMult;
+		_pos.X += speed.X * timeMult;
+		_pos.Y += speed.Y * timeMult;
 	}
 
 	std::shared_ptr<AudioBufferPlayer> Player::PlayPlayerSfx(StringView identifier, float gain, float pitch)

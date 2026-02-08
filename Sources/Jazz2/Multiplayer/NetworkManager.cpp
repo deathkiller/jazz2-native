@@ -27,8 +27,7 @@ namespace Jazz2::Multiplayer
 		: IsAuthenticated(false), IsAdmin(false), EnableLedgeClimb(false), Team(0), PreferredPlayerType(PlayerType::None),
 			Points(0), PointsInRound(0), PositionInRound(0), LevelState(PeerLevelState::Unknown), Player(nullptr),
 			LastUpdated(0), Deaths(0), Kills(0), Laps(0), LapStarted{}, TreasureCollected(0), IdleElapsedFrames(0.0f),
-			DeathElapsedFrames(FLT_MAX), LapsElapsedFrames(0.0f), IsSpectating(false), SpectateForced(false), SpectateMode(0),
-			JoinCooldownTimeLeft(0.0f)
+			DeathElapsedFrames(FLT_MAX), LapsElapsedFrames(0.0f), JoinCooldownFrames(0.0f), IsSpectating(SpectateMode::None)
 	{
 	}
 
