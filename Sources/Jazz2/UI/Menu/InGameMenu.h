@@ -85,6 +85,11 @@ namespace Jazz2::UI::Menu
 		/** @brief Leaves the paused game and switches back to the main menu */
 		void GoToMainMenu();
 
+#if defined(WITH_MULTIPLAYER)
+		/** @brief Enters spectate mode */
+		void Spectate();
+#endif
+
 	private:
 		LevelHandler* _root;
 

@@ -301,6 +301,10 @@ namespace Jazz2
 		void ResolveCollisions(float timeMult);
 		/** @brief Assigns viewport */
 		void AssignViewport(Actors::Player* player);
+		/** @brief Unassigns viewport */
+		void UnassignViewport(Actors::Player* player);
+		/** @brief Commits changes in assigned viewports */
+		void CommitViewports();
 		/** @brief Initializes camera for specified viewport */
 		void InitializeCamera(Rendering::PlayerViewport& viewport);
 		/** @brief Updates pressed actions */

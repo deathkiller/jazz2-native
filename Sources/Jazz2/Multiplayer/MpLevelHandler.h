@@ -157,6 +157,11 @@ namespace Jazz2::Multiplayer
 		/** @brief Sends the message to all authenticated peers */
 		void SendMessageToAll(StringView message, bool asChatFromServer = false);
 
+		/** @brief Enables or disables spectate mode for the specified player (server-side) */
+		void SetPlayerSpectateMode(Actors::Player* player, bool enable, bool forced);
+		/** @brief Client-side method to request spectate mode */
+		void RequestSpectateMode(bool enable);
+
 		/** @brief Called when a peer disconnects from the server, see @ref INetworkHandler */
 		bool OnPeerDisconnected(const Peer& peer);
 		/** @brief Called when a packet is received, see @ref INetworkHandler */
@@ -309,6 +314,9 @@ namespace Jazz2::Multiplayer
 		VoteType _activePoll;
 		float _activePollTimeLeft;
 		float _recalcPositionInRoundTime;
+		float _overtimeTimeLeft;
+		bool _overtimeStarted;
+		std::uint32_t _overtimeFinishers;
 		std::int32_t _limitCameraLeft;
 		std::int32_t _limitCameraWidth;
 		Vector2f _lastCheckpointPos;
@@ -325,7 +333,7 @@ namespace Jazz2::Multiplayer
 		std::unique_ptr<UI::Multiplayer::MpInGameLobby> _inGameLobby;
 
 		void InitializeRequiredAssets();
-		void SynchronizePeers();
+		void SynchronizePeers(float timeMult);
 		std::uint32_t FindFreeActorId();
 		std::uint8_t FindFreePlayerId();
 		bool IsLocalPlayer(Actors::ActorBase* actor);
@@ -341,6 +349,8 @@ namespace Jazz2::Multiplayer
 		void RollbackLevelState();
 		void CalculatePositionInRound(bool forceSend = false);
 		void CheckGameEnds();
+		void StartOvertime();
+		void DespawnPlayerForOvertime(Actors::Multiplayer::MpPlayer* player);
 		void EndGame(Actors::Multiplayer::MpPlayer* winner);
 		void EndGameOnTimeOut();
 

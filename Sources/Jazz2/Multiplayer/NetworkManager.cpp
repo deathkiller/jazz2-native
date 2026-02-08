@@ -27,7 +27,8 @@ namespace Jazz2::Multiplayer
 		: IsAuthenticated(false), IsAdmin(false), EnableLedgeClimb(false), Team(0), PreferredPlayerType(PlayerType::None),
 			Points(0), PointsInRound(0), PositionInRound(0), LevelState(PeerLevelState::Unknown), Player(nullptr),
 			LastUpdated(0), Deaths(0), Kills(0), Laps(0), LapStarted{}, TreasureCollected(0), IdleElapsedFrames(0.0f),
-			DeathElapsedFrames(FLT_MAX), LapsElapsedFrames(0.0f)
+			DeathElapsedFrames(FLT_MAX), LapsElapsedFrames(0.0f), IsSpectating(false), SpectateForced(false), SpectateMode(0),
+			JoinCooldownTimeLeft(0.0f)
 	{
 	}
 
@@ -191,6 +192,12 @@ namespace Jazz2::Multiplayer
 		serverConfig.TotalKills = 10;
 		serverConfig.TotalLaps = 3;
 		serverConfig.TotalTreasureCollected = 0;
+		serverConfig.OvertimeSecs = 0;
+
+		serverConfig.EnableSpectate = true;
+		serverConfig.EnableFreeCamera = true;
+		serverConfig.AllowJoinDuringRound = true;
+		serverConfig.JoinCooldownSecs = 0;
 
 		FillServerConfigurationFromFile(path, serverConfig, includedFiles, 0);
 
@@ -429,6 +436,31 @@ namespace Jazz2::Multiplayer
 					serverConfig.TotalTreasureCollected = std::uint32_t(totalTreasureCollected);
 				}
 
+				std::int64_t overtimeSecs;
+				if (doc["OvertimeSecs"].get(overtimeSecs) == Json::SUCCESS && overtimeSecs >= 0 && overtimeSecs <= INT32_MAX) {
+					serverConfig.OvertimeSecs = std::uint32_t(overtimeSecs);
+				}
+
+				bool enableSpectate;
+				if (doc["EnableSpectate"].get(enableSpectate) == Json::SUCCESS) {
+					serverConfig.EnableSpectate = enableSpectate;
+				}
+
+				bool enableFreeCamera;
+				if (doc["EnableFreeCamera"].get(enableFreeCamera) == Json::SUCCESS) {
+					serverConfig.EnableFreeCamera = enableFreeCamera;
+				}
+
+				bool allowJoinDuringRound;
+				if (doc["AllowJoinDuringRound"].get(allowJoinDuringRound) == Json::SUCCESS) {
+					serverConfig.AllowJoinDuringRound = allowJoinDuringRound;
+				}
+
+				std::int64_t joinCooldownSecs;
+				if (doc["JoinCooldownSecs"].get(joinCooldownSecs) == Json::SUCCESS && joinCooldownSecs >= 0 && joinCooldownSecs <= INT32_MAX) {
+					serverConfig.JoinCooldownSecs = std::uint32_t(joinCooldownSecs);
+				}
+
 				// Playlist
 				Json::Value& playlist = doc["Playlist"];
 				if (playlist.isArray()) {
@@ -445,6 +477,7 @@ namespace Jazz2::Multiplayer
 						playlistEntry.TotalKills = serverConfig.TotalKills;
 						playlistEntry.TotalLaps = serverConfig.TotalLaps;
 						playlistEntry.TotalTreasureCollected = serverConfig.TotalTreasureCollected;
+						playlistEntry.OvertimeSecs = serverConfig.OvertimeSecs;
 
 						std::string_view levelName;
 						if (entry["LevelName"].get(levelName) == Json::SUCCESS) {
@@ -502,6 +535,11 @@ namespace Jazz2::Multiplayer
 						std::int64_t totalTreasureCollected;
 						if (entry["TotalTreasureCollected"].get(totalTreasureCollected) == Json::SUCCESS && totalTreasureCollected >= 0 && totalTreasureCollected <= INT32_MAX) {
 							playlistEntry.TotalTreasureCollected = std::uint32_t(totalTreasureCollected);
+						}
+
+						std::int64_t overtimeSecs;
+						if (entry["OvertimeSecs"].get(overtimeSecs) == Json::SUCCESS && overtimeSecs >= 0 && overtimeSecs <= INT32_MAX) {
+							playlistEntry.OvertimeSecs = std::uint32_t(overtimeSecs);
 						}
 
 						if (!playlistEntry.LevelName.empty() && serverConfig.GameMode != MpGameMode::Unknown) {

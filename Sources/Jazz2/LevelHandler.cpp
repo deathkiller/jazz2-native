@@ -1846,6 +1846,35 @@ namespace Jazz2
 #endif
 	}
 
+	void LevelHandler::UnassignViewport(Actors::Player* player)
+	{
+		bool success = false;
+		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
+			if (_assignedViewports[i]->_targetActor == player) {
+				_assignedViewports.eraseUnordered(i);
+				success = true;
+				break;
+			}
+		}
+		
+#if defined(WITH_AUDIO)
+		if (success) {
+			for (auto& current : _playingSounds) {
+				if (auto* currentForSplitscreen = runtime_cast<AudioBufferPlayerForSplitscreen>(current.get())) {
+					currentForSplitscreen->updateViewports(_assignedViewports);
+				}
+			}
+		}
+#endif
+	}
+
+	void LevelHandler::CommitViewports()
+	{
+		Viewport::GetChain().clear();
+		Vector2i res = theApplication().GetResolution();
+		OnInitializeViewport(res.X, res.Y);
+	}
+
 	void LevelHandler::InitializeCamera(Rendering::PlayerViewport& viewport)
 	{
 		if (viewport._targetActor == nullptr) {
@@ -2150,7 +2179,7 @@ namespace Jazz2
 		}
 
 		if (richPresence.LargeImage.empty()) {
-			richPresence.Details = "Playing as "_s;
+			richPresence.Details = "Playing"_s;
 			richPresence.LargeImage = "main-transparent"_s;
 
 			if (!_players.empty())
@@ -2161,15 +2190,15 @@ namespace Jazz2
 					case PlayerType::Lori: richPresence.SmallImage = "playing-lori"_s; break;
 				}
 		} else {
-			richPresence.Details = "Playing episode as "_s;
+			richPresence.Details = "Playing episode"_s;
 		}
 
 		if (!_players.empty()) {
 			switch (_players[0]->GetPlayerType()) {
 				default:
-				case PlayerType::Jazz: richPresence.Details += "Jazz"_s; break;
-				case PlayerType::Spaz: richPresence.Details += "Spaz"_s; break;
-				case PlayerType::Lori: richPresence.Details += "Lori"_s; break;
+				case PlayerType::Jazz: richPresence.Details += " as Jazz"_s; break;
+				case PlayerType::Spaz: richPresence.Details += " as Spaz"_s; break;
+				case PlayerType::Lori: richPresence.Details += " as Lori"_s; break;
 			}
 		}
 

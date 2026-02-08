@@ -138,6 +138,15 @@ namespace Jazz2::UI::Menu
 				}
 				break;
 			}
+#if defined(WITH_MULTIPLAYER)
+			case Item::Spectate: {
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
+					inGameMenu->Spectate();
+				}
+				break;
+			}
+#endif
 			case Item::Options: {
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_root->SwitchToSection<OptionsSection>();
