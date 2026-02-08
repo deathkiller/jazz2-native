@@ -86,8 +86,8 @@ namespace Jazz2::UI::Menu
 		void GoToMainMenu();
 
 #if defined(WITH_MULTIPLAYER)
-		/** @brief Enters spectate mode */
-		void Spectate();
+		/** @brief Enters/exits spectate mode */
+		void ToggleSpectate();
 #endif
 
 	private:

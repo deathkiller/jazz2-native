@@ -32,6 +32,19 @@ namespace Jazz2::Multiplayer
 		PlayerSpawned			/**< Player is spawned */
 	};
 
+	/** @brief Spectate mode flags */
+	enum class SpectateMode : std::uint8_t {
+		None,					/**< Not spectating */
+		Forced,					/**< Spectate mode is forced by the server, the client cannot disable it */
+		Requested,				/**< Spectate mode is requested by the client, the server can accept or reject it */
+
+		FreeCamera = 0x10,		/**< Spectate with free camera, otherwise spectate with player camera */
+
+		Mask = 0x0F				/**< Mask for spectate mode flags */
+	};
+
+	DEATH_ENUM_FLAGS(SpectateMode);
+
 	/** @brief Peer descriptor */
 	struct PeerDescriptor
 	{
@@ -84,15 +97,11 @@ namespace Jazz2::Multiplayer
 		float DeathElapsedFrames;
 		/** @brief Elapsed frames of all completed laps */
 		float LapsElapsedFrames;
+		/** @brief Time remaining for join cooldown */
+		float JoinCooldownFrames;
 
 		/** @brief Whether the player is in spectate mode */
-		bool IsSpectating;
-		/** @brief Whether spectate mode is forced by the server */
-		bool SpectateForced;
-		/** @brief Current spectate mode (0=Free camera, 1=Locked to player) */
-		std::uint8_t SpectateMode;
-		/** @brief Time remaining for join cooldown */
-		float JoinCooldownTimeLeft;
+		SpectateMode IsSpectating;
 
 		PeerDescriptor();
 	};

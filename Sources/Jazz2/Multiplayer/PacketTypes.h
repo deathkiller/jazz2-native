@@ -84,8 +84,7 @@ namespace Jazz2::Multiplayer
 		PlayerChangeWeapon,
 		PlayerTakeDamage,
 		PlayerActivateSpring,
-		PlayerWarpIn,
-		PlayerSetSpectate
+		PlayerWarpIn
 	};
 
 	/** @brief Peer property type from @ref ServerPacketType::PeerSetProperty */
@@ -131,6 +130,7 @@ namespace Jazz2::Multiplayer
 		LimitCameraView,
 		OverrideCameraView,
 		ShakeCameraView,
+		Spectate,
 
 		WeaponAmmo = 30,
 		WeaponUpgrades,

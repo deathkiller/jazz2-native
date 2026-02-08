@@ -142,7 +142,7 @@ namespace Jazz2::UI::Menu
 			case Item::Spectate: {
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
-					inGameMenu->Spectate();
+					inGameMenu->ToggleSpectate();
 				}
 				break;
 			}
