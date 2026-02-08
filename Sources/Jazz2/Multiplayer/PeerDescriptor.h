@@ -85,6 +85,15 @@ namespace Jazz2::Multiplayer
 		/** @brief Elapsed frames of all completed laps */
 		float LapsElapsedFrames;
 
+		/** @brief Whether the player is in spectate mode */
+		bool IsSpectating;
+		/** @brief Whether spectate mode is forced by the server */
+		bool SpectateForced;
+		/** @brief Current spectate mode (0=Free camera, 1=Locked to player) */
+		std::uint8_t SpectateMode;
+		/** @brief Time remaining for join cooldown */
+		float JoinCooldownTimeLeft;
+
 		PeerDescriptor();
 	};
 }

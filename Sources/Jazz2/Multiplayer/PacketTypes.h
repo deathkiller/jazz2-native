@@ -33,7 +33,7 @@ namespace Jazz2::Multiplayer
 		PlayerUpdate,
 		PlayerKeyPress,
 		PlayerChangeWeaponRequest,
-		PlayerSpectate,				// TODO
+		PlayerSpectateRequest,
 		PlayerAckWarped
 	};
 
@@ -84,7 +84,8 @@ namespace Jazz2::Multiplayer
 		PlayerChangeWeapon,
 		PlayerTakeDamage,
 		PlayerActivateSpring,
-		PlayerWarpIn
+		PlayerWarpIn,
+		PlayerSetSpectate
 	};
 
 	/** @brief Peer property type from @ref ServerPacketType::PeerSetProperty */

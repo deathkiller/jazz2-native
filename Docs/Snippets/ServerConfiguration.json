@@ -52,6 +52,13 @@
 	"TotalKills": 10,
 	"TotalLaps": 3,
 	"TotalTreasureCollected": 0,
+	"OvertimeSecs": 0,
+	
+	/* Spectating */
+	"EnableSpectate": true,
+	"EnableFreeCamera": true,
+	"AllowJoinDuringRound": true,
+	"JoinCooldownSecs": 0,
 
 	/* Playlist can contain unlimited number of entries */
 	"Playlist":
@@ -66,7 +73,8 @@
 			"SpawnInvulnerableSecs": 4,
 			"TotalKills": 10,
 			"TotalLaps": 3,
-			"TotalTreasureCollected": 0
+			"TotalTreasureCollected": 0,
+			"OvertimeSecs": 60
 		},
 		{
 			"LevelName": "battle1",

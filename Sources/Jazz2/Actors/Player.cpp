@@ -129,6 +129,10 @@ namespace Jazz2::Actors
 			case PlayerType::Spaz: async_await RequestMetadataAsync("Interactive/PlayerSpaz"_s); break;
 			case PlayerType::Lori: async_await RequestMetadataAsync("Interactive/PlayerLori"_s); break;
 			case PlayerType::Frog: async_await RequestMetadataAsync("Interactive/PlayerFrog"_s); break;
+			case PlayerType::Spectate:
+				// TODO: Spectate mode - load minimal metadata for fallback, but player will be invisible
+				async_await RequestMetadataAsync("Interactive/PlayerJazz"_s);
+				break;
 		}
 
 		SetAnimation(AnimState::Fall);
@@ -141,11 +145,25 @@ namespace Jazz2::Actors
 		_weaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
 		_weaponAmmoCheckpoint[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
 
-		SetState(ActorState::PreserveOnRollback | ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects |
-			ActorState::IsSolidObject | ActorState::ExcludeSimilar, true);
+		if (_playerType == PlayerType::Spectate) {
+			// Spectate mode - no collision, no gravity, invisible
+			SetState(ActorState::PreserveOnRollback | ActorState::ExcludeSimilar, true);
+			SetState(ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects | ActorState::IsSolidObject, false);
+			_health = 0;
+			_maxHealth = 0;
+			_renderer.setDrawEnabled(false);
+			
+			// Empty hitbox for spectate mode
+			AABB = {};
+			AABBInner = {};
+		} else {
+			SetState(ActorState::PreserveOnRollback | ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjects |
+				ActorState::IsSolidObject | ActorState::ExcludeSimilar, true);
 
-		_health = 5;
-		_maxHealth = _health;
+			_health = 5;
+			_maxHealth = _health;
+		}
+
 		_currentWeapon = WeaponType::Blaster;
 
 		_checkpointPos = Vector2f((float)details.Pos.X, (float)details.Pos.Y);
@@ -216,6 +234,11 @@ namespace Jazz2::Actors
 			}
 		}
 #endif
+
+		if DEATH_UNLIKELY(_playerType == PlayerType::Spectate) {
+			OnHandleSpectate(timeMult);
+			return;
+		}
 
 		// Delayed spawning
 		if (_lastExitType != ExitType::None) {
@@ -1483,6 +1506,11 @@ namespace Jazz2::Actors
 
 	void Player::OnUpdateHitbox()
 	{
+		if (_playerType == PlayerType::Spectate) {
+			AABBInner = {};
+			return;
+		}
+
 		// The sprite is always located relative to the hotspot.
 		// The coldspot is usually located at the ground level of the sprite,
 		// but for falling sprites for some reason somewhere above the hotspot instead.
@@ -2620,6 +2648,28 @@ namespace Jazz2::Actors
 				}
 			}
 		}
+	}
+
+	void Player::OnHandleSpectate(float timeMult)
+	{
+		constexpr float SpectateSpeed = 8.0f;
+
+		float playerMovement = _levelHandler->PlayerHorizontalMovement(this);
+		if (std::abs(playerMovement) > 0.5f) {
+			_speed.X = playerMovement * SpectateSpeed;
+		} else {
+			_speed.X = 0.0f;
+		}
+
+		float playerMovementVert = _levelHandler->PlayerVerticalMovement(this);
+		if (std::abs(playerMovementVert) > 0.5f) {
+			_speed.Y = playerMovementVert * SpectateSpeed;
+		} else {
+			_speed.Y = 0.0f;
+		}
+
+		_pos.X += _speed.X * timeMult;
+		_pos.Y += _speed.Y * timeMult;
 	}
 
 	std::shared_ptr<AudioBufferPlayer> Player::PlayPlayerSfx(StringView identifier, float gain, float pitch)

@@ -217,6 +217,10 @@ namespace Jazz2::UI
 		for (std::size_t i = 0; i < _levelHandler->_assignedViewports.size(); i++) {
 			auto& viewport = _levelHandler->_assignedViewports[i];
 			if (auto* player = runtime_cast<Actors::Player>(viewport->GetTargetActor())) {
+				if DEATH_UNLIKELY(player->_playerType == PlayerType::Spectate) {
+					continue;
+				}
+
 				Rectf scopedView = viewport->GetBounds();
 				Rectf adjustedScopedView = scopedView;
 				float left = std::max(adjustedScopedView.X, adjustedView.X);

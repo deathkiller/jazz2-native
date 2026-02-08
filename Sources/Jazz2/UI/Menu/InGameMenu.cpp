@@ -12,6 +12,10 @@
 #include "../../../nCine/Base/Random.h"
 #include "../../../nCine/Input/JoyMapping.h"
 
+#if defined(WITH_MULTIPLAYER)
+#	include "../../Multiplayer/MpLevelHandler.h"
+#endif
+
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../../../nCine/Backends/Android/AndroidApplication.h"
 #endif
@@ -513,6 +517,17 @@ namespace Jazz2::UI::Menu
 #endif
 		_root->_root->GoToMainMenu(false);
 	}
+
+#if defined(WITH_MULTIPLAYER)
+	void InGameMenu::Spectate()
+	{
+		if (auto* mpLevelHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_root)) {
+			mpLevelHandler->RequestSpectateMode(true);
+		}
+
+		_root->ResumeGame();
+	}
+#endif
 
 	bool InGameMenu::ActionPressed(PlayerAction action)
 	{
