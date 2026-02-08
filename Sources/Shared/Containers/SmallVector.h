@@ -817,7 +817,11 @@ namespace Death { namespace Containers {
 		}
 
 		/** @brief Removes elements from the vector */
-		iterator erase(const_iterator ci) {
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		iterator erase(const_iterator ci);
+#else
+		template<class U, typename std::enable_if<std::is_convertible<U, const_iterator>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0>
+		iterator erase(U ci) {
 			// Just cast away constness because this is a non-const member function
 			iterator i = const_cast<iterator>(ci);
 
@@ -830,6 +834,7 @@ namespace Death { namespace Containers {
 			this->pop_back();
 			return n;
 		}
+#endif
 		/** @overload */
 		iterator erase(const_iterator cs, const_iterator ce) {
 			// Just cast away constness because this is a non-const member function
@@ -852,7 +857,11 @@ namespace Death { namespace Containers {
 		}
 
 		/** @brief Removes an element from the unordered vector */
-		iterator eraseUnordered(const_iterator ci) {
+#ifdef DOXYGEN_GENERATING_OUTPUT
+		iterator eraseUnordered(const_iterator ci);
+#else
+		template<class U, typename std::enable_if<std::is_convertible<U, const_iterator>::value && !std::is_convertible<U, std::size_t>::value, int>::type = 0>
+		iterator eraseUnordered(U ci) {
 			// Just cast away constness because this is a non-const member function
 			iterator i = const_cast<iterator>(ci);
 
@@ -866,6 +875,7 @@ namespace Death { namespace Containers {
 			this->pop_back();
 			return i;
 		}
+#endif
 		/** @overload */
 		void eraseUnordered(size_type index) {
 			eraseUnordered(this->begin() + index);
