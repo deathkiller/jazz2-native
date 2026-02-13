@@ -753,21 +753,20 @@ namespace nCine
 			if (appCfg_.fixedBatchSize > 0) {
 				LOGI("Using fixed batch size: {}", appCfg_.fixedBatchSize);
 			} else {
-#	if defined(DEATH_TARGET_ANDROID)
-				const StringView vendor = gfxCapabilities.GetGLInfoStrings().vendor;
-				const StringView renderer = gfxCapabilities.GetGLInfoStrings().renderer;
+				const auto& info = gfxCapabilities.GetGLInfoStrings();
+				const StringView vendor = info.vendor;
+				const StringView renderer = info.renderer;
 				// Some GPUs don't work with dynamic batch size, so it refuses to render VBOs (shows a black screen), disable it for them
 				if ((vendor == "Imagination Technologies"_s && (renderer == "PowerVR Rogue GE8300"_s || renderer == "PowerVR Rogue GE8320"_s)) ||
 					(vendor == "ARM"_s && renderer == "Mali-T830"_s)) {
 					const StringView vendorPrefix = vendor.findOr(' ', vendor.end());
-					if (renderer.hasPrefix(vendor.prefix(vendorPrefix.begin()))) {
+					if DEATH_UNLIKELY(renderer.hasPrefix(vendor.prefix(vendorPrefix.begin()))) {
 						LOGW("Detected {}: Using fixed batch size", renderer);
 					} else {
 						LOGW("Detected {} {}: Using fixed batch size", vendor, renderer);
 					}
 					appCfg_.fixedBatchSize = 10;
 				}
-#	endif
 			}
 #endif
 
