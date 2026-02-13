@@ -204,20 +204,33 @@ namespace Jazz2
 
 		auto configDir = fs::GetDirectoryName(_configPath);
 
+		// DEATH_TRACE_LOG_PATH overrides default log path, and on some platforms
+		// (Apple, Unix, Windows) it also forces tracing to the file even without
+		// using any command-line argument
 #	if defined(DEATH_TRACE)
 #		if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_SWITCH)
 		fs::CreateDirectories(configDir);
+#			if defined(DEATH_TRACE_LOG_PATH)
+		theApplication().AttachTraceTarget(fs::CombinePath(configDir, DEATH_TRACE_LOG_PATH));
+#			else
 		theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
+#			endif
 #		elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT))
+		DEATH_UNUSED bool logFileSpecified = false;
 		for (std::int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
 			if (arg == "/log:file"_s || arg.hasPrefix("/log:file:"_s)) {
 				fs::CreateDirectories(configDir);
 				if (arg.size() > "/log:file:"_s.size()) {
 					theApplication().AttachTraceTarget(fs::CombinePath(configDir, arg.exceptPrefix("/log:file:"_s)));
-				} else {
-					theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
+					logFileSpecified = true;
 				}
+#			if !defined(DEATH_TRACE_LOG_PATH)
+				else {
+					theApplication().AttachTraceTarget(fs::CombinePath(configDir, "Jazz2.log"_s));
+					logFileSpecified = true;
+				}
+#			endif
 			}
 #			if defined(DEATH_TARGET_WINDOWS)
 			else if (arg == "/log"_s) {
@@ -225,6 +238,12 @@ namespace Jazz2
 			}
 #			endif
 		}
+#			if defined(DEATH_TRACE_LOG_PATH)
+		if (!logFileSpecified) {
+			fs::CreateDirectories(configDir);
+			theApplication().AttachTraceTarget(fs::CombinePath(configDir, DEATH_TRACE_LOG_PATH));
+		}
+#			endif
 #		endif
 #	endif
 #endif

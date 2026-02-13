@@ -64,6 +64,42 @@ namespace Death { namespace IO {
 
 #if defined(DEATH_TARGET_WINDOWS)
 	const char* __GetWin32ErrorSuffix(DWORD error);
+
+	// NT API declarations for NtQueryDirectoryFile() function
+	typedef LONG NTSTATUS;
+
+	typedef struct _IO_STATUS_BLOCK {
+		union {
+			NTSTATUS Status;
+			PVOID Pointer;
+		};
+		ULONG_PTR Information;
+	} IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
+
+	typedef struct _FILE_FULL_DIR_INFORMATION {
+		ULONG NextEntryOffset;
+		ULONG FileIndex;
+		LARGE_INTEGER CreationTime;
+		LARGE_INTEGER LastAccessTime;
+		LARGE_INTEGER LastWriteTime;
+		LARGE_INTEGER ChangeTime;
+		LARGE_INTEGER EndOfFile;
+		LARGE_INTEGER AllocationSize;
+		ULONG FileAttributes;
+		ULONG FileNameLength;
+		ULONG EaSize;
+		WCHAR FileName[1];
+	} FILE_FULL_DIR_INFORMATION, *PFILE_FULL_DIR_INFORMATION;
+
+	typedef enum _FILE_INFORMATION_CLASS {
+		FileFullDirectoryInformation = 2
+	} FILE_INFORMATION_CLASS, *PFILE_INFORMATION_CLASS;
+
+	typedef NTSTATUS (WINAPI *_NtQueryDirectoryFile)(HANDLE FileHandle, HANDLE Event, PVOID ApcRoutine, PVOID ApcContext,
+		PIO_STATUS_BLOCK IoStatusBlock, PVOID FileInformation, ULONG Length, FILE_INFORMATION_CLASS FileInformationClass,
+		BOOLEAN ReturnSingleEntry, PVOID FileName, BOOLEAN RestartScan);
+
+	static _NtQueryDirectoryFile NtQueryDirectoryFile = nullptr;
 #else
 	const char* __GetUnixErrorSuffix(std::int32_t error);
 #endif
@@ -145,6 +181,13 @@ namespace Death { namespace IO {
 		{
 			if (recursive) {
 				if (path.size() + 3 <= FileSystem::MaxPathLength) {
+					if DEATH_UNLIKELY(NtQueryDirectoryFile == nullptr) {
+						if (HMODULE hNtdll = ::GetModuleHandle(L"ntdll.dll")) {
+							NtQueryDirectoryFile = (_NtQueryDirectoryFile)::GetProcAddress(hNtdll, "NtQueryDirectoryFile");
+							DEATH_ASSERT(NtQueryDirectoryFile != nullptr, "NtQueryDirectoryFile() cannot be found", false);
+						}
+					}
+
 					Array<wchar_t> bufferExtended{NoInit, FileSystem::MaxPathLength};
 					std::memcpy(bufferExtended.data(), path.data(), path.size() * sizeof(wchar_t));
 
@@ -156,71 +199,99 @@ namespace Death { namespace IO {
 						bufferOffset++;
 					}
 
-					// Adding a wildcard to list all files in the directory
-					bufferExtended[bufferOffset] = L'*';
-					bufferExtended[bufferOffset + 1] = L'\0';
+					// Remove trailing backslash and open directory
+					Array<wchar_t> dirPath{NoInit, bufferOffset};
+					std::memcpy(dirPath.data(), bufferExtended.data(), (bufferOffset - 1) * sizeof(wchar_t));
+					dirPath[bufferOffset - 1] = L'\0';
 
-					WIN32_FIND_DATA data;
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-					HANDLE hFindFile = ::FindFirstFileExFromAppW(bufferExtended, FindExInfoBasic, &data, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
+					HANDLE hDirectory = ::CreateFileFromAppW(dirPath, FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+						nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 #	else
-					HANDLE hFindFile = ::FindFirstFileExW(bufferExtended, Environment::IsWindows7() ? FindExInfoBasic : FindExInfoStandard,
-						&data, FindExSearchNameMatch, nullptr, Environment::IsWindows7() ? FIND_FIRST_EX_LARGE_FETCH : 0);
+					HANDLE hDirectory = ::CreateFileW(dirPath, FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+						nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 #	endif
-					if (hFindFile != NULL && hFindFile != INVALID_HANDLE_VALUE) {
-						do {
-							if (data.cFileName[0] == L'.' && (data.cFileName[1] == L'\0' || (data.cFileName[1] == L'.' && data.cFileName[2] == L'\0'))) {
-								continue;
+
+					if (hDirectory != NULL && hDirectory != INVALID_HANDLE_VALUE) {
+						constexpr ULONG BufferSize = 64 * 1024;
+						std::uint8_t* buffer = new std::uint8_t[BufferSize];
+
+						while (true) {
+							IO_STATUS_BLOCK ioStatus;
+							NTSTATUS status = NtQueryDirectoryFile(hDirectory, nullptr, nullptr, nullptr, &ioStatus,
+								buffer, BufferSize, FileFullDirectoryInformation, FALSE, nullptr, FALSE);
+
+							if (status < 0) {
+								break;
 							}
 
-							std::size_t fileNameLength = wcslen(data.cFileName);
-							std::memcpy(&bufferExtended[bufferOffset], data.cFileName, fileNameLength * sizeof(wchar_t));
+							FILE_FULL_DIR_INFORMATION* entry = reinterpret_cast<FILE_FULL_DIR_INFORMATION*>(buffer);
 
-							if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
-								// Don't follow symbolic links
-								bool shouldRecurse = ((data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != FILE_ATTRIBUTE_REPARSE_POINT);
-								if (shouldRecurse) {
-									bufferExtended[bufferOffset + fileNameLength] = L'\0';
+							while (true) {
+								ULONG fileNameLengthInChars = entry->FileNameLength / sizeof(wchar_t);
 
-									if (depth < 16 && !DeleteDirectoryInternal(bufferExtended.prefix(bufferOffset + fileNameLength), true, depth + 1)) {
-										break;
-									}
-								} else {
-									bufferExtended[bufferOffset + fileNameLength] = L'\\';
-									bufferExtended[bufferOffset + fileNameLength + 1] = L'\0';
+								// Skip "." and ".."
+								if (!((fileNameLengthInChars == 1 && entry->FileName[0] == L'.') ||
+									  (fileNameLengthInChars == 2 && entry->FileName[0] == L'.' && entry->FileName[1] == L'.'))) {
 
-									// Check to see if this is a mount point and unmount it
-									if (data.dwReserved0 == IO_REPARSE_TAG_MOUNT_POINT) {
-										// Use full path plus a trailing '\'
-										if (!::DeleteVolumeMountPointW(bufferExtended)) {
-											// Cannot unmount this mount point
-										}
-									}
+									std::memcpy(&bufferExtended[bufferOffset], entry->FileName, entry->FileNameLength);
 
-									// RemoveDirectory() on a symbolic link will remove the link itself
+									if ((entry->FileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
+										// Don't follow symbolic links
+										bool shouldRecurse = ((entry->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != FILE_ATTRIBUTE_REPARSE_POINT);
+										if (shouldRecurse) {
+											bufferExtended[bufferOffset + fileNameLengthInChars] = L'\0';
+
+											if (depth < 16 && !DeleteDirectoryInternal(bufferExtended.prefix(bufferOffset + fileNameLengthInChars), true, depth + 1)) {
+												break;
+											}
+										} else {
+											bufferExtended[bufferOffset + fileNameLengthInChars] = L'\\';
+											bufferExtended[bufferOffset + fileNameLengthInChars + 1] = L'\0';
+											// Check to see if this is a mount point and unmount it
+											// For FILE_ATTRIBUTE_REPARSE_POINT, EaSize contains the reparse point tag
+											DWORD reparsePointTag = entry->EaSize;
+											if (reparsePointTag == IO_REPARSE_TAG_MOUNT_POINT) {
+												// Use full path plus a trailing '\'
+												if (!::DeleteVolumeMountPointW(bufferExtended)) {
+													// Cannot unmount this mount point
+												}
+											}
+
+											// RemoveDirectory() on a symbolic link will remove the link itself
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-									if (!::RemoveDirectoryFromAppW(bufferExtended)) {
+											if (!::RemoveDirectoryFromAppW(bufferExtended)) {
 #	else
-									if (!::RemoveDirectoryW(bufferExtended)) {
+											if (!::RemoveDirectoryW(bufferExtended)) {
 #	endif
-										DWORD error = ::GetLastError();
-										if (error != ERROR_PATH_NOT_FOUND) {
-											// Cannot remove symbolic link
+												DWORD error = ::GetLastError();
+												if (error != ERROR_PATH_NOT_FOUND) {
+													// Cannot remove symbolic link
+												}
+											}
 										}
+									} else {
+										bufferExtended[bufferOffset + fileNameLengthInChars] = L'\0';
+
+#	if defined(DEATH_TARGET_WINDOWS_RT)
+										::DeleteFileFromAppW(bufferExtended);
+#	else
+										::DeleteFileW(bufferExtended);
+#	endif
 									}
 								}
-							} else {
-								bufferExtended[bufferOffset + fileNameLength] = L'\0';
 
-#	if defined(DEATH_TARGET_WINDOWS_RT)
-								::DeleteFileFromAppW(bufferExtended);
-#	else
-								::DeleteFileW(bufferExtended);
-#	endif
+								if (entry->NextEntryOffset == 0) {
+									break;
+								}
+
+								entry = reinterpret_cast<FILE_FULL_DIR_INFORMATION*>(
+									reinterpret_cast<std::uint8_t*>(entry) + entry->NextEntryOffset);
 							}
-						} while (::FindNextFileW(hFindFile, &data));
+						}
 
-						::FindClose(hFindFile);
+						delete[] buffer;
+						::CloseHandle(hDirectory);
 					}
 				}
 			}
@@ -400,7 +471,7 @@ namespace Death { namespace IO {
 		Impl(StringView path, EnumerationOptions options)
 			: _fileNamePart(nullptr)
 #if defined(DEATH_TARGET_WINDOWS)
-				, _hFindFile(NULL)
+				, _hDirectory(INVALID_HANDLE_VALUE), _currentEntry(nullptr)
 #else
 #	if defined(DEATH_TARGET_ANDROID)
 				, _assetDir(nullptr)
@@ -426,7 +497,14 @@ namespace Death { namespace IO {
 			_options = options;
 			_path[0] = '\0';
 #if defined(DEATH_TARGET_WINDOWS)
-			if (!path.empty() && DirectoryExists(path)) {
+			if (!path.empty()) {
+				if DEATH_UNLIKELY(NtQueryDirectoryFile == nullptr) {
+					if (HMODULE hNtdll = ::GetModuleHandle(L"ntdll.dll")) {
+						NtQueryDirectoryFile = (_NtQueryDirectoryFile)::GetProcAddress(hNtdll, "NtQueryDirectoryFile");
+						DEATH_ASSERT(NtQueryDirectoryFile != nullptr, "NtQueryDirectoryFile() cannot be found", false);
+					}
+				}
+
 				// Prepare full path to found files
 				{
 					String absPath = GetAbsolutePath(path);
@@ -446,33 +524,28 @@ namespace Death { namespace IO {
 				std::size_t pathLength = (_fileNamePart - _path);
 				SmallVector<wchar_t, MAX_PATH + 2> pathW(DefaultInit, pathLength + 2);
 				std::int32_t pathLengthW = Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), _path, std::int32_t(pathLength));
-				if (pathLengthW + 2 <= MaxPathLength) {
-					// Adding a wildcard to list all files in the directory
-					pathW[pathLengthW] = L'*';
-					pathW[pathLengthW + 1] = L'\0';
+				if (pathLengthW > 0 && pathLengthW < MaxPathLength) {
+					// Remove trailing backslash for directory handle
+					if (pathW[pathLengthW - 1] == L'\\') {
+						pathW[pathLengthW - 1] = L'\0';
+						pathLengthW--;
+					}
 
-					WIN32_FIND_DATA data;
 #	if defined(DEATH_TARGET_WINDOWS_RT)
-					_hFindFile = ::FindFirstFileExFromAppW(pathW.data(), FindExInfoBasic, &data, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
+					_hDirectory = ::CreateFileFromAppW(pathW.data(), FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+						nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 #	else
-					_hFindFile = ::FindFirstFileExW(pathW.data(), Environment::IsWindows7() ? FindExInfoBasic : FindExInfoStandard,
-						&data, FindExSearchNameMatch, nullptr, Environment::IsWindows7() ? FIND_FIRST_EX_LARGE_FETCH : 0);
+					_hDirectory = ::CreateFileW(pathW.data(), FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+						nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 #	endif
-					if (_hFindFile != NULL && _hFindFile != INVALID_HANDLE_VALUE) {
-						if ((data.cFileName[0] == L'.' && (data.cFileName[1] == L'\0' || (data.cFileName[1] == L'.' && data.cFileName[2] == L'\0'))) ||
-							((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) ||
-							((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY)) {
-							// Skip this file
-							Increment();
-						} else {
-							Utf8::FromUtf16(_fileNamePart, std::int32_t(sizeof(_path) - (_fileNamePart - _path)), data.cFileName);
-							// Write terminating NULL in case the string was longer and did not fit into the array
-							_path[sizeof(_path) - 1] = '\0';
-						}
+
+					if (_hDirectory != INVALID_HANDLE_VALUE) {
+						Increment();
+						return true;
 					}
 				}
 			}
-			return (_hFindFile != NULL && _hFindFile != INVALID_HANDLE_VALUE);
+			return false;
 #else
 			auto nullTerminatedPath = String::nullTerminatedView(path);
 			if (!nullTerminatedPath.empty()) {
@@ -493,6 +566,7 @@ namespace Death { namespace IO {
 								_path[pathLength + 1] = '\0';
 								_fileNamePart = _path + pathLength + 1;
 							}
+							Increment();
 							return true;
 						}
 					}
@@ -513,6 +587,7 @@ namespace Death { namespace IO {
 						_path[pathLength + 1] = '\0';
 						_fileNamePart = _path + pathLength + 1;
 					}
+					Increment();
 					return true;
 				}
 			}
@@ -523,9 +598,9 @@ namespace Death { namespace IO {
 		void Close()
 		{
 #if defined(DEATH_TARGET_WINDOWS)
-			if (_hFindFile != NULL && _hFindFile != INVALID_HANDLE_VALUE) {
-				::FindClose(_hFindFile);
-				_hFindFile = NULL;
+			if (_hDirectory != INVALID_HANDLE_VALUE) {
+				::CloseHandle(_hDirectory);
+				_hDirectory = INVALID_HANDLE_VALUE;
 			}
 #else
 #	if defined(DEATH_TARGET_ANDROID)
@@ -544,23 +619,55 @@ namespace Death { namespace IO {
 		void Increment()
 		{
 #if defined(DEATH_TARGET_WINDOWS)
-			if (_hFindFile == NULL || _hFindFile == INVALID_HANDLE_VALUE) {
+			if DEATH_UNLIKELY(_hDirectory == INVALID_HANDLE_VALUE) {
 				_path[0] = '\0';
 				return;
 			}
 
 		Retry:
-			WIN32_FIND_DATA data;
-			if (::FindNextFileW(_hFindFile, &data)) {
-				if ((data.cFileName[0] == L'.' && (data.cFileName[1] == L'\0' || (data.cFileName[1] == L'.' && data.cFileName[2] == L'\0'))) ||
-					((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) ||
-					((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY)) {
-					goto Retry;
+			// If current entry has a next offset, move to it
+			if DEATH_UNLIKELY(_currentEntry != nullptr) {
+				FILE_FULL_DIR_INFORMATION* entry = reinterpret_cast<FILE_FULL_DIR_INFORMATION*>(_currentEntry);
+				if (entry->NextEntryOffset != 0) {
+					_currentEntry = reinterpret_cast<std::uint8_t*>(entry) + entry->NextEntryOffset;
 				} else {
-					Utf8::FromUtf16(_fileNamePart, std::int32_t(sizeof(_path) - (_fileNamePart - _path)), data.cFileName);
-					// Write terminating NULL in case the string was longer and did not fit into the array
-					_path[sizeof(_path) - 1] = '\0';
+					_currentEntry = nullptr;
 				}
+			}
+
+			// If no current entry, query more from directory
+			if (_currentEntry == nullptr) {
+				IO_STATUS_BLOCK ioStatus;
+				NTSTATUS status = NtQueryDirectoryFile(_hDirectory, nullptr, nullptr, nullptr, &ioStatus,
+					_buffer, sizeof(_buffer), FileFullDirectoryInformation, FALSE, nullptr, FALSE);
+
+				if (status < 0) {
+					_path[0] = '\0';
+					return;
+				}
+
+				_currentEntry = _buffer;
+			}
+
+			if DEATH_LIKELY(_currentEntry != nullptr) {
+				FILE_FULL_DIR_INFORMATION* entry = reinterpret_cast<FILE_FULL_DIR_INFORMATION*>(_currentEntry);
+				ULONG fileNameLengthInChars = entry->FileNameLength / sizeof(wchar_t);
+				
+				// Skip "." and ".." and apply filters
+				if ((fileNameLengthInChars == 1 && entry->FileName[0] == L'.') ||
+					(fileNameLengthInChars == 2 && entry->FileName[0] == L'.' && entry->FileName[1] == L'.')) {
+					goto Retry;
+				}
+
+				bool isDirectory = (entry->FileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY;
+				if (((_options & EnumerationOptions::SkipDirectories) == EnumerationOptions::SkipDirectories && isDirectory) ||
+					((_options & EnumerationOptions::SkipFiles) == EnumerationOptions::SkipFiles && !isDirectory)) {
+					goto Retry;
+				}
+
+				Utf8::FromUtf16(_fileNamePart, std::int32_t(sizeof(_path) - (_fileNamePart - _path)), entry->FileName, fileNameLengthInChars);
+				// Write terminating NULL in case the string was longer and did not fit into the array
+				_path[sizeof(_path) - 1] = '\0';
 			} else {
 				_path[0] = '\0';
 			}
@@ -569,7 +676,7 @@ namespace Death { namespace IO {
 			// It does not return directory names
 			if (_assetDir != nullptr) {
 				const char* assetName = AndroidAssetStream::GetNextFileName(_assetDir);
-				if (assetName == nullptr) {
+				if DEATH_UNLIKELY(assetName == nullptr) {
 					_path[0] = '\0';
 					return;
 				}
@@ -577,7 +684,7 @@ namespace Death { namespace IO {
 				return;
 			}
 #	endif
-			if (_dirStream == nullptr) {
+			if DEATH_UNLIKELY(_dirStream == nullptr) {
 				_path[0] = '\0';
 				return;
 			}
@@ -585,7 +692,7 @@ namespace Death { namespace IO {
 			struct dirent* entry;
 		Retry:
 			entry = ::readdir(_dirStream);
-			if (entry != nullptr) {
+			if DEATH_LIKELY(entry != nullptr) {
 				if (entry->d_name[0] == L'.' && (entry->d_name[1] == L'\0' || (entry->d_name[1] == L'.' && entry->d_name[2] == L'\0'))) {
 					goto Retry;
 				}
@@ -617,7 +724,7 @@ namespace Death { namespace IO {
 #	else
 				std::size_t fileNameLength = std::strlen(entry->d_name);
 #	endif
-				if (fileNameLength > charsLeft) {
+				if DEATH_UNLIKELY(fileNameLength > charsLeft) {
 					// Path is too long, skip this file
 					goto Retry;
 				}
@@ -634,7 +741,9 @@ namespace Death { namespace IO {
 		char _path[MaxPathLength];
 		char* _fileNamePart;
 #if defined(DEATH_TARGET_WINDOWS)
-		void* _hFindFile;
+		HANDLE _hDirectory;
+		std::uint8_t _buffer[64 * 1024];
+		std::uint8_t* _currentEntry;
 #else
 #	if defined(DEATH_TARGET_ANDROID)
 		AAssetDir* _assetDir;
