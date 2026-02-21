@@ -188,6 +188,8 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Called when a player entered a transition to change the level */
 		void HandlePlayerLevelChanging(Actors::Player* player, ExitType exitType);
+		/** @brief Called when a player pushes a solid object */
+		bool HandlePlayerPush(Actors::Player* player, float pushSpeedX);
 		/** @brief Called when a player interacts with a spring */
 		bool HandlePlayerSpring(Actors::Player* player, Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY);
 		/** @brief Called when a player is going to warp */

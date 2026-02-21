@@ -164,6 +164,15 @@ namespace Jazz2::Actors::Multiplayer
 		}
 	}
 
+	void RemotePlayerOnServer::OnPushSolidObject(float timeMult, float pushSpeedX)
+	{
+		if (!static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerPush(this, pushSpeedX)) {
+			return;
+		}
+
+		PlayerOnServer::OnPushSolidObject(timeMult, pushSpeedX);
+	}
+
 	void RemotePlayerOnServer::OnHitSpring(Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove)
 	{
 		if (!static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSpring(this, pos, force, keepSpeedX, keepSpeedY)) {

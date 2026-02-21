@@ -83,6 +83,7 @@ namespace Jazz2::Multiplayer
 		PlayerEmitWeaponFlare,
 		PlayerChangeWeapon,
 		PlayerTakeDamage,
+		PlayerPush,
 		PlayerActivateSpring,
 		PlayerWarpIn
 	};

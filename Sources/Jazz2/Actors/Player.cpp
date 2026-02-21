@@ -726,24 +726,32 @@ namespace Jazz2::Actors
 			} else if (canWalk && playerMovementVelocity > 0.5f) {
 				SetAnimation(_currentAnimation->State & ~(AnimState::Lookup | AnimState::Crouch));
 
+				bool wasFacingLeft = IsFacingLeft();
+				bool isFacingLeft;
 				if (_dizzyTime > 0.0f) {
-					SetFacingLeft(playerMovement > 0.0f);
+					isFacingLeft = (playerMovement > 0.0f);
 				} else {
-					SetFacingLeft(playerMovement < 0.0f);
+					isFacingLeft = (playerMovement < 0.0f);
+				}
+
+				if (isFacingLeft != wasFacingLeft) {
+					SetFacingLeft(isFacingLeft);
+					// If player changed direction, reset push frames to prevent pushing animation
+					_pushFramesLeft = 0.0f;
 				}
 
 				_isActivelyPushing = _wasActivelyPushing = true;
 
 				float acceleration = (_levelHandler->IsReforged() ? Acceleration : Acceleration * 2.0f);
 				if (_dizzyTime > 0.0f || _playerType == PlayerType::Frog) {
-					_speed.X = std::clamp(_speed.X + acceleration * timeMult * (IsFacingLeft() ? -1 : 1), -MaxDizzySpeed * playerMovementVelocity, MaxDizzySpeed * playerMovementVelocity);
+					_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxDizzySpeed * playerMovementVelocity, MaxDizzySpeed * playerMovementVelocity);
 				} else if (_inShallowWater != -1 && _levelHandler->IsReforged() && _playerType != PlayerType::Lori) {
 					// Use lower speed in shallow water if Reforged
 					// Also, exclude Lori, because she can't ledge climb or double jump (rescue/01_colon1)
-					_speed.X = std::clamp(_speed.X + acceleration * timeMult * (IsFacingLeft() ? -1 : 1), -MaxShallowWaterSpeed * playerMovementVelocity, MaxShallowWaterSpeed * playerMovementVelocity);
+					_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxShallowWaterSpeed * playerMovementVelocity, MaxShallowWaterSpeed * playerMovementVelocity);
 				} else {
 					if (_suspendType == SuspendType::None && !_inWater && _isRunPressed) {
-						_speed.X = std::clamp(_speed.X + acceleration * timeMult * (IsFacingLeft() ? -1 : 1), -MaxDashingSpeed * playerMovementVelocity, MaxDashingSpeed * playerMovementVelocity);
+						_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxDashingSpeed * playerMovementVelocity, MaxDashingSpeed * playerMovementVelocity);
 					} else if (_suspendType == SuspendType::Vine) {
 						if (_wasFirePressed) {
 							_speed.X = 0.0f;
@@ -752,10 +760,10 @@ namespace Jazz2::Actors
 							if (_isRunPressed) {
 								playerMovementVelocity *= 1.6f;
 							}
-							_speed.X = std::clamp(_speed.X + acceleration * timeMult * (IsFacingLeft() ? -1 : 1), -MaxVineSpeed * playerMovementVelocity, MaxVineSpeed * playerMovementVelocity);
+							_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxVineSpeed * playerMovementVelocity, MaxVineSpeed * playerMovementVelocity);
 						}
 					} else if (_suspendType != SuspendType::Hook) {
-						_speed.X = std::clamp(_speed.X + acceleration * timeMult * (IsFacingLeft() ? -1 : 1), -MaxRunningSpeed * playerMovementVelocity, MaxRunningSpeed * playerMovementVelocity);
+						_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxRunningSpeed * playerMovementVelocity, MaxRunningSpeed * playerMovementVelocity);
 					}
 				}
 
@@ -1725,7 +1733,7 @@ namespace Jazz2::Actors
 	{
 		// Reset speed and show Push animation
 		_speed.X = 0.0f;
-		_pushFramesLeft = 2.0f;
+		_pushFramesLeft = 12.0f;
 		_keepRunningTime = 0.0f;
 
 		if (_levelHandler->EventMap()->IsHurting(_pos.X + (_speed.X > 0.0f ? 16.0f : -16.0f), _pos.Y, (_speed.X > 0.0f ? Direction::Left : Direction::Right))) {
@@ -1828,6 +1836,18 @@ namespace Jazz2::Actors
 					SetState(ActorState::CollideWithTilesetReduced, true);
 				}
 			}
+		}
+	}
+
+	void Player::OnPushSolidObject(float timeMult, float pushSpeedX)
+	{
+		if (std::abs(pushSpeedX) > 0.0f) {
+			_speed.X = pushSpeedX * 1.2f * timeMult;
+			_pushFramesLeft = 12.0f;
+			_fireFramesLeft = 0.0f;
+			_canPushFurther = true;
+		} else {
+			_canPushFurther = false;
 		}
 	}
 
@@ -2107,22 +2127,16 @@ namespace Jazz2::Actors
 			_canPushFurther = false;
 		}
 
-		if (CanJump() && _controllable && _controllableExternal && _isActivelyPushing && std::abs(_speed.X) > 0.0f) {
-			AABBf hitbox = AABBInner + Vector2f(_speed.X < 0.0f ? -2.0f : 2.0f, 0.0f);
+		if (CanJump() && _controllable && _controllableExternal && _isActivelyPushing /*&& std::abs(_speed.X) > 0.0f*/) {
+			float offset = (IsFacingLeft() ? -4.0f : 4.0f);
+			AABBf hitbox = { AABBInner.L + offset, AABBInner.T + 8.0f, AABBInner.R + offset, AABBInner.B - 14.0f };
 			TileCollisionParams params = { TileDestructType::None, false };
 			ActorBase* collider;
 			if (!_levelHandler->IsPositionEmpty(this, hitbox, params, &collider)) {
 				if (auto* solidObject = runtime_cast<SolidObjectBase>(collider)) {
 					SetState(ActorState::IsSolidObject, false);
 					float pushSpeedX = solidObject->Push(_speed.X < 0, timeMult);
-					if (std::abs(pushSpeedX) > 0.0f) {
-						_speed.X = pushSpeedX * 1.2f * timeMult;
-						_pushFramesLeft = 3.0f;
-						_fireFramesLeft = 0.0f;
-						_canPushFurther = true;
-					} else {
-						_canPushFurther = false;
-					}
+					OnPushSolidObject(timeMult, pushSpeedX);
 					SetState(ActorState::IsSolidObject, true);
 				}
 			}
