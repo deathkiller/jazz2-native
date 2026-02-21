@@ -46,6 +46,8 @@ namespace Death { namespace IO {
 
 		/** @brief Reserves a capacity in growable memory stream */
 		void ReserveCapacity(std::int64_t bytes);
+		/** @brief Copies all bytes from a source stream to the current position */
+		std::int64_t FetchFromStream(Stream& source);
 		/** @brief Copies a specified number of bytes from a source stream to the current position */
 		std::int64_t FetchFromStream(Stream& source, std::int64_t bytesToRead);
 

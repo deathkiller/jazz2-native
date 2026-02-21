@@ -177,6 +177,35 @@ inline void UnalignedStore64(void *p, uint64_t v) { memcpy(p, &v, sizeof v); }
 #endif
 
 #if defined(__GNUC__)
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
+#ifdef PHMAP_HAVE_INTRINSIC_INT128
+    __extension__ typedef unsigned __int128 phmap_uint128;
+    inline uint64_t umul128(uint64_t a, uint64_t b, uint64_t* high) 
+    {
+        auto result = static_cast<phmap_uint128>(a) * static_cast<phmap_uint128>(b);
+        *high = static_cast<uint64_t>(result >> 64);
+        return static_cast<uint64_t>(result);
+    }
+    #define PHMAP_HAS_UMUL128 1
+#elif (defined(_MSC_VER))
+    #if defined(_M_X64)
+        #pragma intrinsic(_umul128)
+        inline uint64_t umul128(uint64_t a, uint64_t b, uint64_t* high) 
+        {
+            return _umul128(a, b, high);
+        }
+        #define PHMAP_HAS_UMUL128 1
+    #endif
+#endif
+
+#if defined(__GNUC__)
+    #pragma GCC diagnostic pop
+#endif
+
+#if defined(__GNUC__)
     // Cache line alignment
     #if defined(__i386__) || defined(__x86_64__)
         #define PHMAP_CACHELINE_SIZE 64
@@ -239,38 +268,6 @@ inline void UnalignedStore64(void *p, uint64_t v) { memcpy(p, &v, sizeof v); }
 
 
 namespace phmap {
-
-#if defined(__GNUC__)
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wpedantic"
-#endif
-
-#ifdef PHMAP_HAVE_INTRINSIC_INT128
-    __extension__ typedef unsigned __int128 phmap_uint128;
-    inline uint64_t umul128(uint64_t a, uint64_t b, uint64_t* high)
-    {
-        auto result = static_cast<phmap_uint128>(a) * static_cast<phmap_uint128>(b);
-        *high = static_cast<uint64_t>(result >> 64);
-        return static_cast<uint64_t>(result);
-    }
-    #define PHMAP_HAS_UMUL128 1
-#elif (defined(_MSC_VER))
-    #if defined(_M_X64)
-        #if !defined(_M_ARM64EC)
-            #pragma intrinsic(_umul128)
-        #endif
-        inline uint64_t umul128(uint64_t a, uint64_t b, uint64_t* high)
-        {
-            return _umul128(a, b, high);
-        }
-        #define PHMAP_HAS_UMUL128 1
-    #endif
-#endif
-
-#if defined(__GNUC__)
-    #pragma GCC diagnostic pop
-#endif
-
 namespace base_internal {
 
 PHMAP_BASE_INTERNAL_FORCEINLINE uint32_t CountLeadingZeros64Slow(uint64_t n) {
@@ -323,7 +320,7 @@ PHMAP_BASE_INTERNAL_FORCEINLINE uint32_t CountLeadingZeros32Slow(uint64_t n) {
     if (n >> 16) zeroes -= 16, n >>= 16;
     if (n >> 8) zeroes -= 8, n >>= 8;
     if (n >> 4) zeroes -= 4, n >>= 4;
-    return static_cast<uint32_t>("\4\3\2\2\1\1\1\1\0\0\0\0\0\0\0"[n]) + zeroes;
+    return "\4\3\2\2\1\1\1\1\0\0\0\0\0\0\0"[n] + zeroes;
 }
 
 PHMAP_BASE_INTERNAL_FORCEINLINE uint32_t CountLeadingZeros32(uint32_t n) {
@@ -345,7 +342,7 @@ PHMAP_BASE_INTERNAL_FORCEINLINE uint32_t CountLeadingZeros32(uint32_t n) {
     if (n == 0) {
         return 32;
     }
-    return static_cast<uint32_t>(__builtin_clz(n));
+    return __builtin_clz(n);
 #else
     return CountLeadingZeros32Slow(n);
 #endif
@@ -379,7 +376,7 @@ PHMAP_BASE_INTERNAL_FORCEINLINE uint32_t CountTrailingZerosNonZero64(uint64_t n)
 #elif defined(__GNUC__) || defined(__clang__)
     static_assert(sizeof(unsigned long long) == sizeof(n),  // NOLINT(runtime/int)
                   "__builtin_ctzll does not take 64-bit arg");
-    return static_cast<uint32_t>(__builtin_ctzll(n));
+    return __builtin_ctzll(n);
 #else
     return CountTrailingZerosNonZero64Slow(n);
 #endif
@@ -404,7 +401,7 @@ PHMAP_BASE_INTERNAL_FORCEINLINE uint32_t CountTrailingZerosNonZero32(uint32_t n)
 #elif defined(__GNUC__) || defined(__clang__)
     static_assert(sizeof(int) == sizeof(n),
                   "__builtin_ctz does not take 32-bit arg");
-    return static_cast<uint32_t>(__builtin_ctz(n));
+    return __builtin_ctz(n);
 #else
     return CountTrailingZerosNonZero32Slow(n);
 #endif

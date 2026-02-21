@@ -61,6 +61,10 @@ namespace Jazz2::Actors::Enemies
 
 		auto players = _levelHandler->GetPlayers();
 		for (auto* player : players) {
+			if (player->GetHealth() <= 0) {
+				continue;
+			}
+
 			targetPos = player->GetPos();
 			// Fly above the player
 			targetPos.Y -= 100.0f;

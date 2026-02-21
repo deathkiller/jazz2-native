@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2026-02-06 22:28+0100\n"
+"POT-Creation-Date: 2026-02-21 17:29+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Sheff\n"
@@ -1383,16 +1383,16 @@ msgstr "РІВЕНЬ \"{}\" ІНІЦІАЛІЗОВАНИЙ"
 msgid "For more information, visit the official website:"
 msgstr "ЩОБ ОТРИМАТИ БІЛЬШЕ ІНФОРМАЦІЇ, ВІДВІДАЙТЕ ОФІЦІЙНИЙ ВЕБ-САЙТ:"
 
-#: Sources/Jazz2/LevelHandler.cpp:2313 Sources/Jazz2/LevelHandler.cpp:2326
-#: Sources/Jazz2/LevelHandler.cpp:2337 Sources/Jazz2/LevelHandler.cpp:2352
-#: Sources/Jazz2/LevelHandler.cpp:2365 Sources/Jazz2/LevelHandler.cpp:2378
-#: Sources/Jazz2/LevelHandler.cpp:2391 Sources/Jazz2/LevelHandler.cpp:2404
-#: Sources/Jazz2/LevelHandler.cpp:2419 Sources/Jazz2/LevelHandler.cpp:2431
-#: Sources/Jazz2/LevelHandler.cpp:2452 Sources/Jazz2/LevelHandler.cpp:2466
+#: Sources/Jazz2/LevelHandler.cpp:2352 Sources/Jazz2/LevelHandler.cpp:2365
+#: Sources/Jazz2/LevelHandler.cpp:2376 Sources/Jazz2/LevelHandler.cpp:2391
+#: Sources/Jazz2/LevelHandler.cpp:2404 Sources/Jazz2/LevelHandler.cpp:2417
+#: Sources/Jazz2/LevelHandler.cpp:2430 Sources/Jazz2/LevelHandler.cpp:2443
+#: Sources/Jazz2/LevelHandler.cpp:2458 Sources/Jazz2/LevelHandler.cpp:2470
+#: Sources/Jazz2/LevelHandler.cpp:2491 Sources/Jazz2/LevelHandler.cpp:2505
 msgid "Cheats are not allowed in current context"
 msgstr "ЧИТИ ЗАБОРОНЕНІ В ЦЬОМУ РЕЖИМІ"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:287
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:295
 msgid ""
 "\n"
 "\n"
@@ -1402,31 +1402,39 @@ msgstr ""
 "\n"
 "ГРА ПОЧНЕТЬСЯ ЗА МИТЬ!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1469
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3439
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1491
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3507
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
 msgstr "\f[c:#d0705d]{}\f[/c] БУВ ПІДСМАЖЕНИЙ \f[c:#d0705d]{}\f[/c]"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1486
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3442
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1508
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3510
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
 msgstr "\f[c:#d0705d]{}\f[/c] БУВ ПІДСМАЖЕНИЙ СЕРЕДОВИЩЕМ"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2791
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3418
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2816
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3486
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
 msgstr "\f[c:#d0705d]{}\f[/c] ВІДКЛЮЧИВСЯ"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2943
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3416
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2969
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3484
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
 msgstr "\f[c:#d0705d]{}\f[/c] ПІДКЛЮЧИВСЯ"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5494
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5754
+#, c++-format
+msgid ""
+"\n"
+"\n"
+"Overtime! {} seconds remaining"
+msgstr ""
+
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5966
 #, c++-format
 msgid ""
 "\n"
@@ -1436,6 +1444,11 @@ msgstr ""
 "\n"
 "\n"
 "ПЕРЕМОЖЕЦЬ - {}"
+
+#: Sources/Jazz2/UI/HUD.cpp:222
+#| msgid "Spectate"
+msgid "Spectating"
+msgstr ""
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:359
 msgid "Unknown command"
@@ -1519,7 +1532,7 @@ msgstr "РЕКОРДИ"
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:91
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:59
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:46
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:40
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:41
 msgid "Options"
 msgstr "НАЛАШТУВАННЯ"
 
@@ -1893,7 +1906,6 @@ msgstr "СКРИПТИНГ"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:48
-#| msgid "Continue"
 msgid "Continuous Jump"
 msgstr "БЕЗПЕРЕРВНИЙ СТРИБОК"
 
@@ -2103,22 +2115,26 @@ msgid "User Profile"
 msgstr "ПРОФІЛЬ КОРИСТУВАЧА"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:30
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:31
 msgid "Resume"
 msgstr "ВІДНОВИТИ"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:35
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:36
+msgid "Join Game"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:36
 msgid "Spectate"
 msgstr "СПОСТЕРІГАТИ"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:44
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:47
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:45
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:48
 msgid "Save & Exit"
 msgstr "ЗБЕРЕГТИ ТА ВИЙТИ"
 
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:44
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:45
 msgid "Disconnect & Exit"
 msgstr "ВІДКЛЮЧИТИСЬ ТА ВИЙТИ"
 

@@ -134,6 +134,8 @@ namespace Jazz2::UI
 		float _activeBossTime;
 #endif
 
+		/** @brief Called when some overview information of the player needs to be drawn */
+		virtual void OnDrawOverview(const Rectf& view, const Rectf& adjustedView, Actors::Player* player);
 		/** @brief Called when health of the player needs to be drawn */
 		virtual void OnDrawHealth(const Rectf& view, const Rectf& adjustedView, Actors::Player* player);
 		/** @brief Called when score of the player needs to be drawn */

@@ -133,7 +133,17 @@ namespace Jazz2::Actors::Bosses
 							_stateTime = Random().NextFloat(70.0f, 80.0f);
 
 							auto players = _levelHandler->GetPlayers();
-							auto* player = players[Random().Next(0, (std::uint32_t)players.size())];
+							if (players.empty()) {
+								return;
+							}
+
+							Player* player;
+							for (std::int32_t i = 0; i < 5; i++) {
+								player = players[Random().Next(0, (std::uint32_t)players.size())];
+								if (player->GetHealth() > 0) {
+									break;
+								}
+							}
 
 							std::shared_ptr<Brick> brick = std::make_shared<Brick>();
 							brick->OnActivated(ActorActivationDetails(

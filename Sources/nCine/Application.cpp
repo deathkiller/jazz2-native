@@ -1118,7 +1118,7 @@ namespace nCine
 		logEntryWithColors[length2++] = '\n';
 		logEntryWithColors[length2] = '\0';
 		::OutputDebugStringA(logEntryWithColors);
-#else
+#elif !defined(DEATH_TRACE_LOG_PATH)	// Log to stdout only if file logging is not force enabled
 #	if defined(DEATH_TARGET_WINDOWS) && defined(DEATH_DEBUG)
 		if (__consoleType >= ConsoleType::Redirect) {
 #	endif

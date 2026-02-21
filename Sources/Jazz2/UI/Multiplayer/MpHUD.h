@@ -20,6 +20,7 @@ namespace Jazz2::UI::Multiplayer
 		void ShowCountdown(std::int32_t secsLeft);
 
 	protected:
+		void OnDrawOverview(const Rectf& view, const Rectf& adjustedView, Actors::Player* player) override;
 		void OnDrawScore(const Rectf& view, Actors::Player* player) override;
 
 		void DrawPositionInRound(const Rectf& view, Actors::Player* player);
