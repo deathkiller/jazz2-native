@@ -1250,6 +1250,24 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	bool MpLevelHandler::HandlePlayerPush(Actors::Player* player, float pushSpeedX)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if (_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(8);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::int32_t>((std::int32_t)(pushSpeedX * 512.0f));
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerPush, packet);
+			}
+		}
+
+		return true;
+	}
+
 	bool MpLevelHandler::HandlePlayerSpring(Actors::Player* player, Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY)
 	{
 		// TODO: Only called by RemotePlayerOnServer
@@ -4545,6 +4563,24 @@ namespace Jazz2::Multiplayer
 					InvokeAsync([this, health, pushForce]() {
 						if (!_players.empty()) {
 							_players[0]->TakeDamage(health == 0 ? INT32_MAX : (_players[0]->_health - health), pushForce, true);
+						}
+					});
+					return true;
+				}
+				case ServerPacketType::PlayerPush: {
+					MemoryStream packet(data);
+					std::uint32_t playerIndex = packet.ReadVariableUint32();
+					if (_lastSpawnedActorId != playerIndex) {
+						LOGD("[MP] ServerPacketType::PlayerPush - received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+						return true;
+					}
+
+					float pushSpeedX = packet.ReadValue<std::int32_t>() / 512.0f;
+					InvokeAsync([this, pushSpeedX]() {
+						if (!_players.empty()) {
+							// TODO: Remove timeMult and make push speed consistent regardless of time multiplier
+							float timeMult = theApplication().GetTimeMult();
+							_players[0]->OnPushSolidObject(timeMult, pushSpeedX);
 						}
 					});
 					return true;

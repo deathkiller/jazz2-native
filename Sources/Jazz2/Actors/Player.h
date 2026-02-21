@@ -381,6 +381,8 @@ namespace Jazz2::Actors
 		void OnHitCeiling(float timeMult) override;
 		void OnHitWall(float timeMult) override;
 
+		/** @brief Called when a solid object is pushed */
+		virtual void OnPushSolidObject(float timeMult, float pushSpeedX);
 		/** @brief Called when a spring is hit */
 		virtual void OnHitSpring(Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove);
 		/** @brief Called when water should splash */

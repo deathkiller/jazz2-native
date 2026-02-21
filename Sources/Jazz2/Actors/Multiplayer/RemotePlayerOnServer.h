@@ -92,6 +92,7 @@ namespace Jazz2::Actors::Multiplayer
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
 
+		void OnPushSolidObject(float timeMult, float pushSpeedX);
 		void OnHitSpring(Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY, bool& removeSpecialMove) override;
 	};
 }
