@@ -32,6 +32,7 @@ namespace Death { namespace IO {
 			case ERROR_FILE_NOT_FOUND: return " (FILE_NOT_FOUND)"; break;
 			case ERROR_PATH_NOT_FOUND: return " (PATH_NOT_FOUND)"; break;
 			case ERROR_ACCESS_DENIED: return " (ACCESS_DENIED)"; break;
+			case ERROR_INVALID_HANDLE: return " (INVALID_HANDLE)"; break;
 			case ERROR_SHARING_VIOLATION: return " (SHARING_VIOLATION)"; break;
 			case ERROR_INVALID_PARAMETER: return " (INVALID_PARAMETER)"; break;
 			case ERROR_DISK_FULL: return " (DISK_FULL)"; break;

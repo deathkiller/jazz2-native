@@ -555,7 +555,7 @@ inline bool IsValidCapacity(size_t n) { return ((n + 1) & n) == 0 && n > 0; }
 //   FULL -> DELETED
 // --------------------------------------------------------------------------
 inline void ConvertDeletedToEmptyAndFullToDeleted(
-    ctrl_t* PHMAP_RESTRICT ctrl, size_t capacity) 
+    ctrl_t* ctrl, size_t capacity) 
 {
     assert(ctrl[capacity] == kSentinel);
     assert(IsValidCapacity(capacity));
@@ -1857,7 +1857,7 @@ private:
     friend struct phmap::priv::hashtable_debug_internal::HashtableDebugAccess;
 
     template <class K = key_type>
-    bool find_impl(const key_arg<K>& PHMAP_RESTRICT key, size_t hashval, size_t& PHMAP_RESTRICT offset) {
+    bool find_impl(const key_arg<K>& key, size_t hashval, size_t& offset) {
         PHMAP_IF_CONSTEXPR (!std_alloc_t::value) {
             // ctrl_ could be nullptr
             if (!ctrl_)
@@ -2034,7 +2034,7 @@ private:
                             std::is_same<typename Policy::is_flat, std::false_type>::value)) {
             // node map, or not trivially destructible... we  need to iterate and destroy values one by one
             // std::cout << "either this is a node map or " << type_name<typename PolicyTraits::value_type>()  << " is not trivially_destructible\n";
-            for (size_t i = 0, cnt = capacity_; i != cnt; ++i) {
+            for (size_t i = 0; i != capacity_; ++i) {
                 if (IsFull(ctrl_[i])) {
                     PolicyTraits::destroy(&alloc_ref(), slots_ + i);
                 }
@@ -2153,7 +2153,7 @@ private:
         }
     }
 
-    bool has_element(const value_type& PHMAP_RESTRICT elem, size_t hashval) const {
+    bool has_element(const value_type& elem, size_t hashval) const {
         PHMAP_IF_CONSTEXPR (!std_alloc_t::value) {
             // ctrl_ could be nullptr
             if (!ctrl_)
@@ -2220,7 +2220,7 @@ private:
 
 protected:
     template <class K>
-    size_t _find_key(const K& PHMAP_RESTRICT key, size_t hashval) {
+    size_t _find_key(const K& key, size_t hashval) {
         PHMAP_IF_CONSTEXPR (!std_alloc_t::value) {
             // ctrl_ could be nullptr
             if (!ctrl_)
@@ -3559,8 +3559,7 @@ public:
         class K = key_type,
         typename std::enable_if<!std::is_same<K, iterator>::value, int>::type = 0>
     node_type extract(const key_arg<K>& key) {
-        UniqueLock m;
-        auto it = this->template find<K, UniqueLock>(key, this->hash(key), m);
+        auto it = find(key);
         return it == end() ? node_type() : extract(const_iterator{it});
     }
 

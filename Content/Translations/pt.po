@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2025-11-09 15:58+0100\n"
+"POT-Creation-Date: 2026-02-21 17:28+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -1025,52 +1025,64 @@ msgstr ""
 msgid "For more information, visit the official website:"
 msgstr ""
 
-#: Sources/Jazz2/LevelHandler.cpp:2313 Sources/Jazz2/LevelHandler.cpp:2326
-#: Sources/Jazz2/LevelHandler.cpp:2337 Sources/Jazz2/LevelHandler.cpp:2352
-#: Sources/Jazz2/LevelHandler.cpp:2365 Sources/Jazz2/LevelHandler.cpp:2378
-#: Sources/Jazz2/LevelHandler.cpp:2391 Sources/Jazz2/LevelHandler.cpp:2404
-#: Sources/Jazz2/LevelHandler.cpp:2419 Sources/Jazz2/LevelHandler.cpp:2431
-#: Sources/Jazz2/LevelHandler.cpp:2452 Sources/Jazz2/LevelHandler.cpp:2466
+#: Sources/Jazz2/LevelHandler.cpp:2352 Sources/Jazz2/LevelHandler.cpp:2365
+#: Sources/Jazz2/LevelHandler.cpp:2376 Sources/Jazz2/LevelHandler.cpp:2391
+#: Sources/Jazz2/LevelHandler.cpp:2404 Sources/Jazz2/LevelHandler.cpp:2417
+#: Sources/Jazz2/LevelHandler.cpp:2430 Sources/Jazz2/LevelHandler.cpp:2443
+#: Sources/Jazz2/LevelHandler.cpp:2458 Sources/Jazz2/LevelHandler.cpp:2470
+#: Sources/Jazz2/LevelHandler.cpp:2491 Sources/Jazz2/LevelHandler.cpp:2505
 msgid "Cheats are not allowed in current context"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:287
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:295
 msgid ""
 "\n"
 "\n"
 "The game will begin shortly!"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1469
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3439
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1491
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3507
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1486
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3442
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1508
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3510
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2791
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3418
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2816
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3486
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2943
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3416
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2969
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3484
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5494
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5754
+#, c++-format
+msgid ""
+"\n"
+"\n"
+"Overtime! {} seconds remaining"
+msgstr ""
+
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5966
 #, c++-format
 msgid ""
 "\n"
 "\n"
 "Winner is {}"
+msgstr ""
+
+#: Sources/Jazz2/UI/HUD.cpp:222
+msgid "Spectating"
 msgstr ""
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:359
@@ -1149,7 +1161,7 @@ msgstr ""
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:91
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:59
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:46
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:40
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:41
 msgid "Options"
 msgstr "Definições"
 
@@ -1260,22 +1272,22 @@ msgid "Weak"
 msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:130
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:142
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:141
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:162
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:132
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:153
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:382
 msgid "Disabled"
 msgstr "Desativado"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:142
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:141
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:153
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:156
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:162
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:132
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:152
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:155
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:382
 msgid "Enabled"
@@ -1711,22 +1723,26 @@ msgid "User Profile"
 msgstr ""
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:30
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:31
 msgid "Resume"
 msgstr "Resumir"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:35
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:36
+msgid "Join Game"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:36
 msgid "Spectate"
 msgstr ""
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:44
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:47
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:45
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:48
 msgid "Save & Exit"
 msgstr "Salvar e Sair"
 
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:44
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:45
 msgid "Disconnect & Exit"
 msgstr ""
 

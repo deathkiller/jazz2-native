@@ -326,10 +326,10 @@ namespace Jazz2::Actors
 			Vector2f lastPos = _pos;
 			Recti levelBounds = _levelHandler->GetLevelBounds();
 			if (lastPos.X < levelBounds.X) {
-				lastPos.X = (float)levelBounds.X;
+				lastPos.X = float(levelBounds.X);
 				_pos = lastPos;
 			} else if (lastPos.X > levelBounds.X + levelBounds.W) {
-				lastPos.X = (float)(levelBounds.X + levelBounds.W);
+				lastPos.X = float(levelBounds.X + levelBounds.W);
 				_pos = lastPos;
 			}
 		}
@@ -2670,8 +2670,15 @@ namespace Jazz2::Actors
 			speed.Y = 0.0f;
 		}
 
-		_pos.X += speed.X * timeMult;
-		_pos.Y += speed.Y * timeMult;
+		if (_levelHandler->PlayerActionPressed(this, PlayerAction::Run)) {
+			speed *= 2.0f;
+		} else if (_levelHandler->PlayerActionPressed(this, PlayerAction::Jump)) {
+			speed *= 0.5f;
+		}
+
+		auto levelBounds = _levelHandler->GetLevelBounds();
+		_pos.X = std::clamp(_pos.X + speed.X * timeMult, float(levelBounds.X), float(levelBounds.X + levelBounds.W));
+		_pos.Y = std::clamp(_pos.Y + speed.Y * timeMult, float(levelBounds.Y), float(levelBounds.Y + levelBounds.H));
 	}
 
 	std::shared_ptr<AudioBufferPlayer> Player::PlayPlayerSfx(StringView identifier, float gain, float pitch)

@@ -167,6 +167,49 @@ namespace Death { namespace IO {
 		}
 	}
 
+	std::int64_t MemoryStream::FetchFromStream(Stream& source)
+	{
+		static constexpr std::int32_t BufferSize = 8192;
+
+		std::int64_t bytesReadTotal = 0;
+		if (_mode == AccessMode::Writable || _mode == AccessMode::Growable) {
+			bool shouldTrim = false;
+			while (true) {
+				std::int32_t bytesToRead = BufferSize;
+				if (_mode == AccessMode::Growable) {
+					if (_size < _pos + bytesToRead) {
+						_size = _pos + bytesToRead;
+						arrayResize(_data, Containers::NoInit, _size);
+						shouldTrim = true;
+					}
+				} else {
+					if (_size < _pos + bytesToRead) {
+						bytesToRead = static_cast<std::int32_t>(_size - _pos);
+					}
+					if DEATH_UNLIKELY(bytesToRead <= 0) {
+						// No more space to read into
+						break;
+					}
+				}
+
+				std::int64_t bytesRead = source.Read(&_data[_pos], bytesToRead);
+				if DEATH_UNLIKELY(bytesRead <= 0) {
+					break;
+				}
+				_pos += bytesRead;
+				bytesReadTotal += bytesRead;
+				bytesToRead -= bytesRead;
+			}
+
+			if (shouldTrim) {
+				// Trim the stream to the actual size read, as we might have reserved more space than needed in the last iteration
+				_size = _pos;
+				arrayResize(_data, Containers::NoInit, _size);
+			}
+		}
+		return bytesReadTotal;
+	}
+
 	std::int64_t MemoryStream::FetchFromStream(Stream& source, std::int64_t bytesToRead)
 	{
 		std::int64_t bytesReadTotal = 0;

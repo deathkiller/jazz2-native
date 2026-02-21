@@ -9,8 +9,9 @@
 #	include "../Scripting/LevelScriptLoader.h"
 #endif
 
-#include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Application.h"
+#include "../../nCine/I18n.h"
+#include "../../nCine/Graphics/RenderQueue.h"
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../../nCine/Backends/Android/AndroidApplication.h"
@@ -217,10 +218,6 @@ namespace Jazz2::UI
 		for (std::size_t i = 0; i < _levelHandler->_assignedViewports.size(); i++) {
 			auto& viewport = _levelHandler->_assignedViewports[i];
 			if (auto* player = runtime_cast<Actors::Player>(viewport->GetTargetActor())) {
-				if DEATH_UNLIKELY(player->_playerType == PlayerType::Spectate) {
-					continue;
-				}
-
 				Rectf scopedView = viewport->GetBounds();
 				Rectf adjustedScopedView = scopedView;
 				float left = std::max(adjustedScopedView.X, adjustedView.X);
@@ -234,11 +231,15 @@ namespace Jazz2::UI
 				}
 #endif
 
-				OnDrawHealth(scopedView, adjustedScopedView, player);
-				OnDrawScore(scopedView, player);
-				OnDrawWeaponAmmo(adjustedScopedView, player);
+				OnDrawOverview(scopedView, adjustedScopedView, player);
+				
+				if DEATH_UNLIKELY(player->_playerType != PlayerType::Spectate) {
+					OnDrawHealth(scopedView, adjustedScopedView, player);
+					OnDrawScore(scopedView, player);
+					OnDrawWeaponAmmo(adjustedScopedView, player);
 
-				DrawWeaponWheel(scopedView, player);
+					DrawWeaponWheel(scopedView, player);
+				}
 			}
 		}
 
@@ -471,6 +472,19 @@ namespace Jazz2::UI
 	bool HUD::IsWeaponWheelVisible(std::int32_t playerIndex) const
 	{
 		return (_weaponWheel[playerIndex].Anim > 0.0f);
+	}
+
+	void HUD::OnDrawOverview(const Rectf& view, const Rectf& adjustedView, Actors::Player* player)
+	{
+		std::int32_t charOffset = 0, charOffsetShadow = 0;
+
+		if DEATH_UNLIKELY(player->_playerType == PlayerType::Spectate) {
+			auto spectateText = _("Spectating");
+			_smallFont->DrawString(this, spectateText, charOffsetShadow, view.X + 10.0f, view.Y + 6.0f + 2.0f, FontShadowLayer,
+							Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.7f, 0.7f, 0.7f, 0.3f, 0.9f);
+			_smallFont->DrawString(this, spectateText, charOffset, view.X + 10.0f, view.Y + 6.0f, FontLayer,
+							Alignment::TopLeft, Colorf(0.45f, 0.45f, 0.45f), 0.8f, 0.7f, 0.7f, 0.7f, 0.3f, 0.9f);
+		}
 	}
 
 	void HUD::OnDrawHealth(const Rectf& view, const Rectf& adjustedView, Actors::Player* player)

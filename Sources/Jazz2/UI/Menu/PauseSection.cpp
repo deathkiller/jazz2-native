@@ -18,9 +18,10 @@ namespace Jazz2::UI::Menu
 		MenuSection::OnShow(root);
 
 #if defined(WITH_MULTIPLAYER)
-		bool isLocalSession = true;
+		bool isLocalSession = true, isSpectating = false;
 		if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
 			isLocalSession = inGameMenu->IsLocalSession();
+			isSpectating = inGameMenu->IsSpectating();
 		}
 #endif
 
@@ -32,7 +33,7 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_MULTIPLAYER)
 		if (!isLocalSession) {
 			// TRANSLATORS: Menu item in main menu
-			_items.emplace_back(Item::Spectate, _("Spectate"));
+			_items.emplace_back(Item::Spectate, isSpectating ? _("Join Game") : _("Spectate"));
 		}
 #endif
 

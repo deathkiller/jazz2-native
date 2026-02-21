@@ -71,6 +71,10 @@ namespace Jazz2::Actors::Solid
 			SmallVector<WeaponType, (std::int32_t)WeaponType::Count> weaponTypes;
 			auto players = _levelHandler->GetPlayers();
 			for (auto* player : players) {
+				if (player->GetHealth() <= 0) {
+					continue;
+				}
+
 				const auto playerAmmo = player->GetWeaponAmmo();
 				for (std::int32_t i = 1; i < (std::int32_t)WeaponType::Count; i++) {
 					if (playerAmmo[i] > 0) {

@@ -86,6 +86,8 @@ namespace Jazz2::UI::Menu
 		void GoToMainMenu();
 
 #if defined(WITH_MULTIPLAYER)
+		/** @brief Returns `true` if the player is currently spectating */
+		bool IsSpectating();
 		/** @brief Enters/exits spectate mode */
 		void ToggleSpectate();
 #endif

@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2025-11-09 15:55+0100\n"
-"PO-Revision-Date: 2025-11-09 15:56+0100\n"
+"POT-Creation-Date: 2026-02-21 17:26+0100\n"
+"PO-Revision-Date: 2026-02-21 17:27+0100\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -1379,16 +1379,16 @@ msgstr "Úroveň \"{}\" inicializována"
 msgid "For more information, visit the official website:"
 msgstr "Pro více informací můžete navštívit oficiální webové stránky:"
 
-#: Sources/Jazz2/LevelHandler.cpp:2313 Sources/Jazz2/LevelHandler.cpp:2326
-#: Sources/Jazz2/LevelHandler.cpp:2337 Sources/Jazz2/LevelHandler.cpp:2352
-#: Sources/Jazz2/LevelHandler.cpp:2365 Sources/Jazz2/LevelHandler.cpp:2378
-#: Sources/Jazz2/LevelHandler.cpp:2391 Sources/Jazz2/LevelHandler.cpp:2404
-#: Sources/Jazz2/LevelHandler.cpp:2419 Sources/Jazz2/LevelHandler.cpp:2431
-#: Sources/Jazz2/LevelHandler.cpp:2452 Sources/Jazz2/LevelHandler.cpp:2466
+#: Sources/Jazz2/LevelHandler.cpp:2352 Sources/Jazz2/LevelHandler.cpp:2365
+#: Sources/Jazz2/LevelHandler.cpp:2376 Sources/Jazz2/LevelHandler.cpp:2391
+#: Sources/Jazz2/LevelHandler.cpp:2404 Sources/Jazz2/LevelHandler.cpp:2417
+#: Sources/Jazz2/LevelHandler.cpp:2430 Sources/Jazz2/LevelHandler.cpp:2443
+#: Sources/Jazz2/LevelHandler.cpp:2458 Sources/Jazz2/LevelHandler.cpp:2470
+#: Sources/Jazz2/LevelHandler.cpp:2491 Sources/Jazz2/LevelHandler.cpp:2505
 msgid "Cheats are not allowed in current context"
 msgstr "Cheaty nejsou v současném kontextu povoleny"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:287
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:295
 msgid ""
 "\n"
 "\n"
@@ -1398,31 +1398,42 @@ msgstr ""
 "\n"
 "Hra brzy začne!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1469
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3439
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1491
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3507
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
 msgstr "\f[c:#d0705d]{}\f[/c] byl upečen hráčem \f[c:#d0705d]{}\f[/c]"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1486
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3442
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1508
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3510
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
 msgstr "\f[c:#d0705d]{}\f[/c] se upekl"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2791
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3418
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2816
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3486
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
 msgstr "\f[c:#d0705d]{}\f[/c] se odpojil"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2943
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3416
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2969
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3484
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
 msgstr "\f[c:#d0705d]{}\f[/c] se připojil"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5494
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5754
+#, c++-format
+msgid ""
+"\n"
+"\n"
+"Overtime! {} seconds remaining"
+msgstr ""
+"\n"
+"\n"
+"Prodloužení! Zbývá {} sekund"
+
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5966
 #, c++-format
 msgid ""
 "\n"
@@ -1432,6 +1443,10 @@ msgstr ""
 "\n"
 "\n"
 "Vítězem je {}"
+
+#: Sources/Jazz2/UI/HUD.cpp:222
+msgid "Spectating"
+msgstr "Sledování"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:359
 msgid "Unknown command"
@@ -1515,7 +1530,7 @@ msgstr "Síň slávy"
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:91
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:59
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:46
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:40
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:41
 msgid "Options"
 msgstr "Nastavení"
 
@@ -1631,22 +1646,22 @@ msgid "Weak"
 msgstr "Slabé"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:130
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:142
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:141
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:162
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:132
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:153
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:382
 msgid "Disabled"
 msgstr "Zakázáno"
 
-#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:142
+#: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:141
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
-#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:133
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:153
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:156
-#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:162
+#: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:132
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:152
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:155
+#: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:382
 msgid "Enabled"
@@ -1724,6 +1739,11 @@ msgid ""
 "Playlist is not properly configured.\n"
 "Please review server configuration and try it again."
 msgstr ""
+"\f[c:#704a4a]Nelze vytvořit server!\f[/c]\n"
+"\n"
+"\n"
+"Playlist není správně nakonfigurován.\n"
+"Zkontrolujte konfiguraci serveru a zkuste to znovu."
 
 #: Sources/Jazz2/UI/Menu/CreateServerOptionsSection.cpp:407
 msgid ""
@@ -1733,6 +1753,11 @@ msgid ""
 "Please verify that no other server\n"
 "is running on that port and try it again."
 msgstr ""
+"\f[c:#704a4a]Nelze vytvořit server!\f[/c]\n"
+"\n"
+"\n"
+"Zkontrolujte, zda na tomto portu neběží\n"
+"žádný jiný server, a zkuste to znovu."
 
 #: Sources/Jazz2/UI/Menu/CustomLevelSelectSection.cpp:156
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:482
@@ -2087,22 +2112,26 @@ msgid "User Profile"
 msgstr "Uživatelský profil"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:30
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:31
 msgid "Resume"
 msgstr "Pokračovat"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:35
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:36
+msgid "Join Game"
+msgstr "Připojit se do hry"
+
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:36
 msgid "Spectate"
 msgstr "Sledovat"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:44
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:47
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:45
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:48
 msgid "Save & Exit"
 msgstr "Uložit & Ukončit"
 
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:44
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:45
 msgid "Disconnect & Exit"
 msgstr "Odpojit & Ukončit"
 
@@ -2200,17 +2229,17 @@ msgstr "Žádný / Pixel-perfect"
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:23
 msgid "CRT Scanlines"
-msgstr ""
+msgstr "CRT Scanlines"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:25
 msgid "CRT Shadow Mask"
-msgstr ""
+msgstr "CRT Shadow Mask"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:27
 msgid "CRT Aperture Grille"
-msgstr ""
+msgstr "CRT Aperture Grille"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:30
@@ -2353,6 +2382,10 @@ msgid ""
 "\n"
 "Invalid parameter specified."
 msgstr ""
+"\f[c:#704a4a]Nelze se připojit k serveru!\f[/c]\n"
+"\n"
+"\n"
+"Zadaný parametr je neplatný."
 
 #: Sources/Main.cpp:1114
 msgid ""
@@ -2361,6 +2394,10 @@ msgid ""
 "\n"
 "Your client version is not compatible with the server."
 msgstr ""
+"\f[c:#704a4a]Nelze se připojit k serveru!\f[/c]\n"
+"\n"
+"\n"
+"Vaše verze klienta není kompatibilní se serverem."
 
 #: Sources/Main.cpp:1115
 msgid ""
@@ -2370,6 +2407,11 @@ msgid ""
 "Authentication failed.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]Nelze se připojit k serveru!\f[/c]\n"
+"\n"
+"\n"
+"Ověření se nezdařilo.\n"
+"Další informace získáte od správců serveru."
 
 #: Sources/Main.cpp:1116
 msgid ""
@@ -2378,6 +2420,10 @@ msgid ""
 "\n"
 "Invalid password specified."
 msgstr ""
+"\f[c:#704a4a]Nelze se připojit k serveru!\f[/c]\n"
+"\n"
+"\n"
+"Zadané heslo není správné."
 
 #: Sources/Main.cpp:1117
 msgid ""
@@ -2387,6 +2433,11 @@ msgid ""
 "Invalid player name specified.\n"
 "Please check your profile and try it again."
 msgstr ""
+"\f[c:#704a4a]Nelze se připojit k serveru!\f[/c]\n"
+"\n"
+"\n"
+"Zadané jméno hráče je neplatné.\n"
+"Zkontrolujte svůj profil a zkuste to znovu."
 
 #: Sources/Main.cpp:1118
 msgid ""
@@ -2396,6 +2447,11 @@ msgid ""
 "This client is not in the server whitelist.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]Nelze se připojit k serveru!\f[/c]\n"
+"\n"
+"\n"
+"Tento klient není na seznamu povolených klientů.\n"
+"Pro více informací kontaktujte správce serveru."
 
 #: Sources/Main.cpp:1119
 msgid ""
@@ -2405,6 +2461,11 @@ msgid ""
 "Server requires 3rd party authentication provider.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]Nelze se připojit k serveru!\f[/c]\n"
+"\n"
+"\n"
+"Server vyžaduje ověřovacího poskytovatele třetí strany.\n"
+"Další informace získáte od správců serveru."
 
 #: Sources/Main.cpp:1120
 msgid ""
@@ -2414,6 +2475,11 @@ msgid ""
 "Server capacity is full.\n"
 "Please try it later."
 msgstr ""
+"\f[c:#704a4a]Nelze se připojit k serveru!\f[/c]\n"
+"\n"
+"\n"
+"Kapacita serveru je plná.\n"
+"Zkuste to prosím později."
 
 #: Sources/Main.cpp:1121
 msgid ""
@@ -2423,6 +2489,11 @@ msgid ""
 "Server is not in a state where it can process your request.\n"
 "Please try again in a few seconds."
 msgstr ""
+"\f[c:#704a4a]Nelze se připojit k serveru!\f[/c]\n"
+"\n"
+"\n"
+"Server není ve stavu, kdy může zpracovat váš požadavek.\n"
+"Zkuste to prosím znovu za několik sekund."
 
 #: Sources/Main.cpp:1122
 msgid ""
@@ -2432,6 +2503,11 @@ msgid ""
 "Server is shutting down.\n"
 "Please try it later."
 msgstr ""
+"\f[c:#704a4a]Připojení bylo ukončeno!\f[/c]\n"
+"\n"
+"\n"
+"Server se vypíná.\n"
+"Zkuste to prosím později."
 
 #: Sources/Main.cpp:1123
 msgid ""
@@ -2441,6 +2517,11 @@ msgid ""
 "Server is shutting down for maintenance.\n"
 "Please try it again later."
 msgstr ""
+"\f[c:#704a4a]Připojení bylo ukončeno!\f[/c]\n"
+"\n"
+"\n"
+"Server je z důvodu údržby mimo provoz.\n"
+"Zkuste to prosím znovu později."
 
 #: Sources/Main.cpp:1124
 msgid ""
@@ -2450,6 +2531,11 @@ msgid ""
 "Server is shutting down for reconfiguration.\n"
 "Please try it again later."
 msgstr ""
+"\f[c:#704a4a]Připojení bylo ukončeno!\f[/c]\n"
+"\n"
+"\n"
+"Server se vypíná kvůli rekonfiguraci.\n"
+"Zkuste to prosím znovu později."
 
 #: Sources/Main.cpp:1125
 msgid ""
@@ -2459,6 +2545,11 @@ msgid ""
 "Server is shutting down for update.\n"
 "Please check your client version and try it again in a minute."
 msgstr ""
+"\f[c:#704a4a]Připojení bylo ukončeno!\f[/c]\n"
+"\n"
+"\n"
+"Server se vypíná z důvodu aktualizace.\n"
+"Zkontrolujte verzi svého klienta a zkuste to znovu za chvíli."
 
 #: Sources/Main.cpp:1126
 msgid ""
@@ -2468,6 +2559,11 @@ msgid ""
 "Please try it again and if the problem persists,\n"
 "check your network connection."
 msgstr ""
+"\f[c:#704a4a]Připojení bylo přerušeno!\f[/c]\n"
+"\n"
+"\n"
+"Zkuste to znovu a pokud problém přetrvává,\n"
+"zkontrolujte připojení k síti."
 
 #: Sources/Main.cpp:1127
 msgid ""
@@ -2476,6 +2572,10 @@ msgid ""
 "\n"
 "The server is not responding for connection request."
 msgstr ""
+"\f[c:#704a4a]Nelze se připojit k serveru!\f[/c]\n"
+"\n"
+"\n"
+"Server neodpovídá na požadavek o připojení."
 
 #: Sources/Main.cpp:1128
 msgid ""
@@ -2485,6 +2585,11 @@ msgid ""
 "You have been \f[c:#907050]kicked\f[/c] off the server.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]Připojení bylo ukončeno!\f[/c]\n"
+"\n"
+"\n"
+"Byli jste \f[c:#907050]vykopnuti\f[/c] ze serveru.\n"
+"Pro více informací kontaktujte správce serveru."
 
 #: Sources/Main.cpp:1129
 msgid ""
@@ -2494,6 +2599,11 @@ msgid ""
 "You have been \f[c:#725040]banned\f[/c] off the server.\n"
 "Contact server administrators for more information."
 msgstr ""
+"\f[c:#704a4a]Připojení bylo ukončeno!\f[/c]\n"
+"\n"
+"\n"
+"Byli jste \f[c:#725040]zablokováni\f[/c] na serveru.\n"
+"Pro více informací kontaktujte správce serveru."
 
 #: Sources/Main.cpp:1130
 msgid ""
@@ -2502,6 +2612,10 @@ msgid ""
 "\n"
 "Cheating detected."
 msgstr ""
+"\f[c:#704a4a]Připojení bylo ukončeno!\f[/c]\n"
+"\n"
+"\n"
+"Zjištěno podvádění (cheatování)."
 
 #: Sources/Main.cpp:1131
 msgid ""
@@ -2511,6 +2625,11 @@ msgid ""
 "Your client doesn't contain required assets.\n"
 "Please download the required files and try it again."
 msgstr ""
+"\f[c:#704a4a]Nelze se připojit k serveru!\f[/c]\n"
+"\n"
+"\n"
+"Váš klient neobsahuje požadované soubory.\n"
+"Stáhněte si požadované soubory a zkuste to znovu."
 
 #: Sources/Main.cpp:1132
 msgid ""
@@ -2519,6 +2638,10 @@ msgid ""
 "\n"
 "The server has disconnected you due to inactivity."
 msgstr ""
+"\f[c:#704a4a]Připojení bylo ukončeno!\f[/c]\n"
+"\n"
+"\n"
+"Server vás odpojil z důvodu nečinnosti."
 
 #: Sources/Main.cpp:1387
 #, c++-format
@@ -2529,6 +2652,11 @@ msgid ""
 "Your client doesn't contain level \"{}\".\n"
 "Please download the required files and try it again."
 msgstr ""
+"\f[c:#704a4a]Nelze se připojit k serveru!\f[/c]\n"
+"\n"
+"\n"
+"Váš klient neobsahuje úroveň \"{}\".\n"
+"Stáhněte si požadované soubory a zkuste to znovu."
 
 #~ msgid "Unknown"
 #~ msgstr "Neznámý"

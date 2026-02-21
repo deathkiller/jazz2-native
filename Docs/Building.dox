@@ -226,7 +226,8 @@ The following parameters can be used to customize the build:
     -   Enabled by default on Windows platforms
 -   `DEATH_TRACE` (default @cpp ON @ce) --- Enable runtime event tracing, see @ref Asserts.h file
 -   `DEATH_TRACE_ASYNC` (default @cpp ON @ce if `NCINE_WITH_THREADS`) --- Enable asynchronous processing of event tracing for better performance
--   `DEATH_TRACE_LOG_PATH` --- Override path to trace log file if specified (and force writing traces to file on some platforms)
+-   `DEATH_TRACE_LOG_PATH` --- Override path to trace log file if specified
+    -   Also forces writing traces to file on some platforms (except on Android/Switch where it's already forced)
 -   `DEATH_USE_RUNTIME_CAST` (default @cpp ON @ce) --- Enable @ref Death::runtime_cast() and type information optimization
 -   `NCINE_ADDRESS_SANITIZER` (default @cpp OFF @ce) --- Enable `AddressSanitizer` memory error detector
 -   `NCINE_ARCH_EXTENSIONS` --- Target CPU architecture extensions (instruction sets)
