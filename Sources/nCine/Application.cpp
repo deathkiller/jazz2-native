@@ -757,7 +757,7 @@ namespace nCine
 				const StringView vendor = info.vendor;
 				const StringView renderer = info.renderer;
 				// Some GPUs don't work with dynamic batch size, so it refuses to render VBOs (shows a black screen), disable it for them
-				if ((vendor == "Imagination Technologies"_s && (renderer == "PowerVR Rogue GE8300"_s || renderer == "PowerVR Rogue GE8320"_s)) ||
+				if ((vendor == "Imagination Technologies"_s && (renderer == "PowerVR Rogue GE8300"_s || renderer == "PowerVR Rogue GE8320"_s || renderer == "PowerVR Rogue GE9215"_s)) ||
 					(vendor == "ARM"_s && renderer == "Mali-T830"_s)) {
 					const StringView vendorPrefix = vendor.findOr(' ', vendor.end());
 					if DEATH_UNLIKELY(renderer.hasPrefix(vendor.prefix(vendorPrefix.begin()))) {
