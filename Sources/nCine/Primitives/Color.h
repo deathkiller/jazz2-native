@@ -145,6 +145,11 @@ namespace nCine
 			/** @relatesalso nCine::Primitives::Color
 				@brief 8bit-per-channel RGB color literal
 
+				@code{.cpp}
+				using namespace nCine::Primitives::Literals;
+				Color a = 0x5eb233bb_rgb;	// R: 0x5e, G: 0xb2, B: 0x33, A: 0xff
+				@endcode
+
 				See @ref Color for more information.
 			*/
 			constexpr Color operator"" _rgb(unsigned long long value) {
@@ -153,6 +158,11 @@ namespace nCine
 
 			/** @relatesalso nCine::Primitives::Color
 				@brief 8bit-per-channel RGBA color literal
+
+				@code{.cpp}
+				using namespace nCine::Primitives::Literals;
+				Color a = 0x5eb233bb_rgba;	// R: 0x5e, G: 0xb2, B: 0x33, A: 0xbb
+				@endcode
 
 				See @ref Color for more information.
 			*/

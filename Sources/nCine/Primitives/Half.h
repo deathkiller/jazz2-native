@@ -165,6 +165,11 @@ namespace nCine
 			/** @relatesalso nCine::Primitives::Half
 				@brief Half-float literal
 
+				@code{.cpp}
+				using namespace nCine::Primitives::Literals;
+				Half a = 3.1415_h;
+				@endcode
+
 				See @ref Half for more information.
 			*/
 			inline Half operator"" _h(long double value) {

@@ -1896,7 +1896,7 @@ msgstr "ВЫ МОЖЕТЕ ВКЛЮЧИТЬ УЛУЧШЕНИЯ, КОТОРЫЕ М
 #. TRANSLATORS: Option for Weapon Wheel item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:127
 msgid "Enabled With Ammo Count"
-msgstr "ВКЛЮЧЕНО С СЧЕТОМ БОЕПРИПАСОВ"
+msgstr "ВКЛЮЧЕНО СО СЧЕТОМ БОЕПРИПАСОВ"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:42
@@ -1912,7 +1912,7 @@ msgstr "СКРИПТЫ"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:48
 msgid "Continuous Jump"
-msgstr "БЕЗПРЕРЫВНЫЙ ПРЫЖОК"
+msgstr "НЕПРЕРЫВНЫЙ ПРЫЖОК"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:50
@@ -1943,7 +1943,7 @@ msgstr "ПРОСМОТР ДИРЕКТОРИИ \"Source\""
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:67
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:76
 msgid "Refresh Cache"
-msgstr "ОБНОВИТЬ КЕШ"
+msgstr "ОБНОВИТЬ КЭШ"
 
 #. TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:134
@@ -2022,7 +2022,7 @@ msgstr "СОХРАНЯТЬ ПРОПОРЦИИ ВИДЕОРОЛИКОВ"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:52
 msgid "Unaligned Viewport"
-msgstr "НЕВЫРОВНЕННЫЙ ЭКРАН ПРОСМОТРА"
+msgstr "НЕ ВЫРАВНИВАТЬ ЭКРАН"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:54
@@ -2126,7 +2126,7 @@ msgstr "ПРОДОЛЖИТЬ"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:36
 msgid "Join Game"
-msgstr ""
+msgstr "ПРИСОЕДИНИТЬСЯ К ИГРЕ"
 
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:36
 msgid "Spectate"
@@ -2179,7 +2179,7 @@ msgstr "ВНИЗ"
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:27
 msgid "Buttstomp"
-msgstr "ОБРУШАТЬСЯ"
+msgstr "ОБРУШЕНИЕ"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:29
@@ -2210,7 +2210,7 @@ msgstr "НАЗАД"
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:39
 msgid "Toggle Console"
-msgstr "ПЕРЕКЛЮЧЕНИЕ КОНСОЛИ"
+msgstr "КОНСОЛЬ"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:43
@@ -2221,7 +2221,7 @@ msgstr "ОРУЖИЕ {}"
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:176
 msgid "Press any key or button to assign"
-msgstr "НАЖМИ ЛЮБУЮ КЛАВИШУ ИЛИ КНОПКУ ЧТОБЫ НАЗНАЧИТЬ"
+msgstr "ДЛЯ ПЕРЕНАЗНАЧЕНИЯ НАЖМИТЕ НУЖНУЮ КЛАВИШУ ИЛИ КНОПКУ"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:193
@@ -2236,17 +2236,17 @@ msgstr "НЕТ / ПИКСЕЛЬ В ПИКСЕЛЬ"
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:23
 msgid "CRT Scanlines"
-msgstr "СКАН-ЛИНИИ CRT"
+msgstr "CRT - СКАН-ЛИНИИ"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:25
 msgid "CRT Shadow Mask"
-msgstr "ТЕНЕВАЯ МАСКА CRT"
+msgstr "CRT - ТЕНЕВАЯ МАСКА"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:27
 msgid "CRT Aperture Grille"
-msgstr "РЕШЕТКА АПЕРТУРЫ CRT"
+msgstr "CRT - АПЕРТУРНАЯ РЕШЕТКА"
 
 #. TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 #: Sources/Jazz2/UI/Menu/RescaleModeSection.cpp:30
@@ -2336,7 +2336,7 @@ msgstr "ОЧКИ: {}"
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:185
 #, c++-format
 msgid "Game starts in {}"
-msgstr "ИГРА НАЧИНАЕТСЯ В {}"
+msgstr "ИГРА НАЧНЕТСЯ ЧЕРЕЗ {}"
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:192
 #, c++-format
@@ -2372,7 +2372,7 @@ msgid ""
 "Make sure all necessary files\n"
 "are accessible and try it again."
 msgstr ""
-"\f[c:#704a4a]НЕВОЗМОЖНО ВОЗОБНОВИТЬ СОХРАНЕННОЕ СОСТОЯНИЕ!\f[/c]\n"
+"\f[c:#704a4a]НЕВОЗМОЖНО ЗАГРУЗИТЬ СОХРАНЕНИЕ!\f[/c]\n"
 "\n"
 "\n"
 "УБЕДИТЕСЬ, ЧТО ВСЕ НЕОБХОДИМЫЕ ФАЙЛЫ\n"
@@ -2527,8 +2527,8 @@ msgstr ""
 "\f[c:#704a4a]СОЕДИНЕНИЕ БЫЛО ЗАКРЫТО!\f[/c]\n"
 "\n"
 "\n"
-"СЕРВЕР ВЫКЛЮЧАЕТСЯ НА ТЕХ. РАБОТЫ.\n"
-"ПОПРОБУЙТЕ ЕЩЕ РАЗ ПОЗЖЕ."
+"СЕРВЕР ВЫКЛЮЧАЕТСЯ НА ТЕХОБСЛУЖИВАНИЕ.\n"
+"ПОПРОБУЙТЕ ПОДКЛЮЧИТЬСЯ ПОЗЖЕ."
 
 #: Sources/Main.cpp:1124
 msgid ""
@@ -2542,7 +2542,7 @@ msgstr ""
 "\n"
 "\n"
 "СЕРВЕР ВЫКЛЮЧАЕТСЯ НА РЕКОНФИГУРАЦИЮ.\n"
-"ПОПРОБУЙТЕ ЕЩЕ РАЗ ПОЗЖЕ."
+"ПОПРОБУЙТЕ ПОДКЛЮЧИТЬСЯ ПОЗЖЕ."
 
 #: Sources/Main.cpp:1125
 msgid ""
@@ -2622,7 +2622,7 @@ msgstr ""
 "\f[c:#704a4a]СОЕДИНЕНИЕ БЫЛО ЗАКРЫТО!\f[/c]\n"
 "\n"
 "\n"
-"ОБНАРУЖЕНЫ ЧИТЫ."
+"ОБНАРУЖЕНО ИСПОЛЬЗОВАНИЕ ЧИТОВ."
 
 #: Sources/Main.cpp:1131
 msgid ""
