@@ -206,21 +206,12 @@ namespace Jazz2
 #	if defined(NCINE_PACKAGED_CONTENT_PATH)
 		// If Content is packaged with binaries, prefer a local Source/ for portable use and
 		// fall back to standard XDG paths otherwise.
-		// AppRun cds into the AppImage mount point before launching, so CWD is useless.
-		// Check candidate base directories in order:
-		//   1. $OWD  — original working directory set by the AppImage runtime (where the user
-		//              launched the AppImage from, i.e. next to their Source/ folder)
-		//   2. dirname($APPIMAGE) — directory containing the .AppImage file itself
-		//   3. XDG data path (default)
+		// AppRun cds into the AppImage mount point before launching, so CWD is useless —
+		// use dirname($APPIMAGE) to resolve paths relative to the .AppImage file itself.
 		String localBase;
-		StringView owdEnv = ::getenv("OWD");
-		if (!owdEnv.empty()) {
-			localBase = owdEnv;
-		} else {
-			StringView appImageEnv = ::getenv("APPIMAGE");
-			if (!appImageEnv.empty()) {
-				localBase = fs::GetDirectoryName(appImageEnv);
-			}
+		StringView appImageEnv = ::getenv("APPIMAGE");
+		if (!appImageEnv.empty()) {
+			localBase = fs::GetDirectoryName(appImageEnv);
 		}
 
 		String localSourcePath = fs::CombinePath(localBase, "Source/"_s);
