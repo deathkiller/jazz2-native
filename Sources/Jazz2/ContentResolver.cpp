@@ -204,15 +204,31 @@ namespace Jazz2
 		_contentPath = NCINE_INSTALL_PREFIX "/share/" NCINE_LINUX_PACKAGE "/Content/";
 #	endif
 #	if defined(NCINE_PACKAGED_CONTENT_PATH)
-		// If Content is packaged with binaries, always use standard XDG paths for everything else
-		auto localStorage = fs::GetLocalStorage();
-		if (!localStorage.empty()) {
-			auto appData = fs::CombinePath(localStorage, NCINE_LINUX_PACKAGE);
-			_sourcePath = fs::CombinePath(appData, "Source/"_s);
-			_cachePath = fs::CombinePath(appData, "Cache/"_s);
+		// If Content is packaged with binaries, prefer a local Source/ for portable use and
+		// fall back to standard XDG paths otherwise.
+		// AppRun cds into the AppImage mount point before launching, so CWD is useless —
+		// use dirname($APPIMAGE) to resolve paths relative to the .AppImage file itself.
+		String localBase;
+		StringView appImageEnv = ::getenv("APPIMAGE");
+		if (!appImageEnv.empty()) {
+			localBase = fs::GetDirectoryName(appImageEnv);
+		}
+
+		String localSourcePath = fs::CombinePath(localBase, "Source/"_s);
+		if (fs::FindPathCaseInsensitive(fs::CombinePath(localSourcePath, "Anims.j2a"_s)) ||
+			fs::FindPathCaseInsensitive(fs::CombinePath(localSourcePath, "AnimsSw.j2a"_s))) {
+			_sourcePath = std::move(localSourcePath);
+			_cachePath = fs::CombinePath(localBase, "Cache/"_s);
 		} else {
-			_sourcePath = "Source/"_s;
-			_cachePath = "Cache/"_s;
+			auto localStorage = fs::GetLocalStorage();
+			if (!localStorage.empty()) {
+				auto appData = fs::CombinePath(localStorage, NCINE_LINUX_PACKAGE);
+				_sourcePath = fs::CombinePath(appData, "Source/"_s);
+				_cachePath = fs::CombinePath(appData, "Cache/"_s);
+			} else {
+				_sourcePath = "Source/"_s;
+				_cachePath = "Cache/"_s;
+			}
 		}
 #	else
 		if (fs::DirectoryExists(_contentPath)) {
