@@ -204,15 +204,22 @@ namespace Jazz2
 		_contentPath = NCINE_INSTALL_PREFIX "/share/" NCINE_LINUX_PACKAGE "/Content/";
 #	endif
 #	if defined(NCINE_PACKAGED_CONTENT_PATH)
-		// If Content is packaged with binaries, always use standard XDG paths for everything else
-		auto localStorage = fs::GetLocalStorage();
-		if (!localStorage.empty()) {
-			auto appData = fs::CombinePath(localStorage, NCINE_LINUX_PACKAGE);
-			_sourcePath = fs::CombinePath(appData, "Source/"_s);
-			_cachePath = fs::CombinePath(appData, "Cache/"_s);
-		} else {
+		// If Content is packaged with binaries, prefer a local Source/ next to the binary for
+		// portable use, and fall back to standard XDG paths otherwise
+		if (fs::FindPathCaseInsensitive("Source/Anims.j2a"_s) ||
+			fs::FindPathCaseInsensitive("Source/AnimsSw.j2a"_s)) {
 			_sourcePath = "Source/"_s;
 			_cachePath = "Cache/"_s;
+		} else {
+			auto localStorage = fs::GetLocalStorage();
+			if (!localStorage.empty()) {
+				auto appData = fs::CombinePath(localStorage, NCINE_LINUX_PACKAGE);
+				_sourcePath = fs::CombinePath(appData, "Source/"_s);
+				_cachePath = fs::CombinePath(appData, "Cache/"_s);
+			} else {
+				_sourcePath = "Source/"_s;
+				_cachePath = "Cache/"_s;
+			}
 		}
 #	else
 		if (fs::DirectoryExists(_contentPath)) {
