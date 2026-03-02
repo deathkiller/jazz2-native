@@ -121,6 +121,11 @@ namespace nCine
 			/** @relatesalso nCine::Primitives::Colorf
 				@brief Float RGB color literal
 
+				@code{.cpp}
+				using namespace nCine::Primitives::Literals;
+				Colorf a = 0x5eb233bb_rgbf;	// R: 0x5e, G: 0xb2, B: 0x33, A: 0xff
+				@endcode
+
 				See @ref Colorf for more information.
 			*/
 			constexpr Colorf operator"" _rgbf(unsigned long long value) {
@@ -129,6 +134,11 @@ namespace nCine
 
 			/** @relatesalso nCine::Primitives::Colorf
 				@brief Float RGBA color literal
+
+				@code{.cpp}
+				using namespace nCine::Primitives::Literals;
+				Colorf a = 0x5eb233bb_rgbaf;	// R: 0x5e, G: 0xb2, B: 0x33, A: 0xbb
+				@endcode
 
 				See @ref Colorf for more information.
 			*/
