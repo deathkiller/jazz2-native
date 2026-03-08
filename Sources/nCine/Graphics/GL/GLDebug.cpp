@@ -1,4 +1,4 @@
-#include "GLDebug.h"
+﻿#include "GLDebug.h"
 #include "../IGfxCapabilities.h"
 #include "../../Application.h"
 
@@ -64,7 +64,7 @@ namespace nCine
 	void GLDebug::Init(const IGfxCapabilities& gfxCaps)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
-		debugAvailable_ = gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::KHR_DEBUG) &&
+		debugAvailable_ = gfxCaps.HasExtension(IGfxCapabilities::Extensions::KHR_DEBUG) &&
 			theApplication().GetGfxDevice().glContextInfo().debugContext;
 
 		glGetIntegerv(GL_MAX_LABEL_LENGTH, &maxLabelLength_);

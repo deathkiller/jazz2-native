@@ -1,4 +1,4 @@
-#include "RenderBuffersManager.h"
+﻿#include "RenderBuffersManager.h"
 #include "RenderStatistics.h"
 #include "../../Main.h"
 #include "../tracy.h"
@@ -43,8 +43,8 @@ namespace nCine
 #if defined(RHI_BACKEND_GL)
 		{
 			const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-			offsetAlignment = std::uint32_t(gfxCaps.GetValue(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT));
-			uboMaxSizeBytes = std::uint32_t(gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED));
+			offsetAlignment = std::uint32_t(gfxCaps.GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT));
+			uboMaxSizeBytes = std::uint32_t(gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED));
 		}
 #endif
 

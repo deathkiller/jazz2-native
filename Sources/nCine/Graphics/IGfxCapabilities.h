@@ -4,20 +4,20 @@
 
 namespace nCine
 {
-	/// Interface to query runtime OpenGL device capabilities
+	/// Interface to query runtime graphics device capabilities
 	class IGfxCapabilities
 	{
 	public:
-		/// OpenGL version components
-		enum class GLVersion
+		/// Graphics API version components
+		enum class Version
 		{
 			Major,
 			Minor,
 			Release
 		};
 
-		/// OpenGL information strings
-		struct GLInfoStrings
+		/// Graphics device information strings
+		struct InfoStrings
 		{
 			const char* vendor = nullptr;
 			const char* renderer = nullptr;
@@ -25,8 +25,8 @@ namespace nCine
 			const char* glslVersion = nullptr;
 		};
 
-		/// OpenGL queryable runtime integer values
-		enum class GLIntValues
+		/// Queryable runtime integer capability values
+		enum class IntValues
 		{
 			MAX_TEXTURE_SIZE = 0,
 			MAX_TEXTURE_IMAGE_UNITS,
@@ -43,16 +43,16 @@ namespace nCine
 			Count
 		};
 
-		/// OpenGL queryable runtime integer array values
-		enum class GLArrayIntValues
+		/// Queryable runtime integer array capability values
+		enum class ArrayIntValues
 		{
 			PROGRAM_BINARY_FORMATS = 0,
 
 			Count
 		};
 
-		/// OpenGL queryable extensions
-		enum class GLExtensions
+		/// Queryable device extensions
+		enum class Extensions
 		{
 			KHR_DEBUG = 0,
 			ARB_TEXTURE_STORAGE,
@@ -72,16 +72,16 @@ namespace nCine
 
 		virtual ~IGfxCapabilities() = 0;
 
-		/// Returns the OpenGL version numbers
-		virtual std::int32_t GetGLVersion(GLVersion version) const = 0;
-		/// Returns the OpenGL information strings structure
-		virtual const GLInfoStrings& GetGLInfoStrings() const = 0;
-		/// Returns the value of a runtime OpenGL integer value
-		virtual std::int32_t GetValue(GLIntValues valueName) const = 0;
-		/// Returns the value of a runtime OpenGL integer value from an array
-		virtual std::int32_t GetArrayValue(GLArrayIntValues arrayValueName, std::uint32_t index) const = 0;
-		/// Returns true if the specified OpenGL extension is available
-		virtual bool HasExtension(GLExtensions extensionName) const = 0;
+		/// Returns the graphics API version numbers
+		virtual std::int32_t GetVersion(Version version) const = 0;
+		/// Returns the device information strings structure
+		virtual const InfoStrings& GetInfoStrings() const = 0;
+		/// Returns the value of a runtime integer capability
+		virtual std::int32_t GetValue(IntValues valueName) const = 0;
+		/// Returns the value of a runtime integer capability from an array
+		virtual std::int32_t GetArrayValue(ArrayIntValues arrayValueName, std::uint32_t index) const = 0;
+		/// Returns true if the specified device extension is available
+		virtual bool HasExtension(Extensions extensionName) const = 0;
 	};
 
 	inline IGfxCapabilities::~IGfxCapabilities() {}
@@ -91,24 +91,63 @@ namespace nCine
 	class NullGfxCapabilities : public IGfxCapabilities
 	{
 	public:
-		inline std::int32_t GetGLVersion(GLVersion version) const override {
+		inline std::int32_t GetVersion(Version version) const override {
 			return 0;
 		}
-		inline const GLInfoStrings& GetGLInfoStrings() const override {
-			return glInfoStrings_;
+		inline const InfoStrings& GetInfoStrings() const override {
+			return infoStrings_;
 		}
-		inline std::int32_t GetValue(GLIntValues valueName) const override {
+		inline std::int32_t GetValue(IntValues valueName) const override {
 			return 0;
 		}
-		inline std::int32_t GetArrayValue(GLArrayIntValues arrayValueName, std::uint32_t index) const override {
+		inline std::int32_t GetArrayValue(ArrayIntValues arrayValueName, std::uint32_t index) const override {
 			return 0;
 		}
-		inline bool HasExtension(GLExtensions extensionName) const override {
+		inline bool HasExtension(Extensions extensionName) const override {
 			return false;
 		}
 
 	private:
-		GLInfoStrings glInfoStrings_;
+		InfoStrings infoStrings_;
+	};
+
+	/// Software-renderer graphics capabilities — returns conservative safe defaults
+	class SWGfxCapabilities : public IGfxCapabilities
+	{
+	public:
+		SWGfxCapabilities()
+		{
+			infoStrings_.vendor = "Software";
+			infoStrings_.renderer = "Software Renderer";
+			infoStrings_.glVersion = "SW 1.0";
+			infoStrings_.glslVersion = nullptr;
+		}
+
+		inline std::int32_t GetVersion(Version version) const override {
+			return 0;
+		}
+		inline const InfoStrings& GetInfoStrings() const override {
+			return infoStrings_;
+		}
+		inline std::int32_t GetValue(IntValues valueName) const override {
+			switch (valueName) {
+				case IntValues::MAX_TEXTURE_SIZE:                return 4096;
+				case IntValues::MAX_TEXTURE_IMAGE_UNITS:         return 8;
+				case IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT: return 1;
+				case IntValues::MAX_VERTEX_ATTRIB_STRIDE:        return 1024;
+				case IntValues::MAX_COLOR_ATTACHMENTS:           return 4;
+				default:                                         return 0;
+			}
+		}
+		inline std::int32_t GetArrayValue(ArrayIntValues arrayValueName, std::uint32_t index) const override {
+			return 0;
+		}
+		inline bool HasExtension(Extensions extensionName) const override {
+			return false;
+		}
+
+	private:
+		InfoStrings infoStrings_;
 	};
 #endif
 }

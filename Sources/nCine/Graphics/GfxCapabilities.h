@@ -10,13 +10,13 @@ namespace nCine
 	public:
 		GfxCapabilities();
 
-		std::int32_t GetGLVersion(GLVersion version) const override;
-		inline const GLInfoStrings& GetGLInfoStrings() const override {
-			return glInfoStrings_;
+		std::int32_t GetVersion(Version version) const override;
+		inline const InfoStrings& GetInfoStrings() const override {
+			return infoStrings_;
 		}
-		std::int32_t GetValue(GLIntValues valueName) const override;
-		std::int32_t GetArrayValue(GLArrayIntValues valueName, std::uint32_t index) const override;
-		bool HasExtension(GLExtensions extensionName) const override;
+		std::int32_t GetValue(IntValues valueName) const override;
+		std::int32_t GetArrayValue(ArrayIntValues valueName, std::uint32_t index) const override;
+		bool HasExtension(Extensions extensionName) const override;
 
 	private:
 		std::int32_t glMajorVersion_;
@@ -24,12 +24,12 @@ namespace nCine
 		/// The OpenGL release version number (not available in OpenGL ES)
 		std::int32_t glReleaseVersion_;
 
-		GLInfoStrings glInfoStrings_;
+		InfoStrings infoStrings_;
 
 		/// Array of OpenGL integer values
-		std::int32_t glIntValues_[std::int32_t(IGfxCapabilities::GLIntValues::Count)];
+		std::int32_t glIntValues_[std::int32_t(IGfxCapabilities::IntValues::Count)];
 		/// Array of OpenGL extension availability flags
-		bool glExtensions_[std::int32_t(IGfxCapabilities::GLExtensions::Count)];
+		bool glExtensions_[std::int32_t(IGfxCapabilities::Extensions::Count)];
 
 		static constexpr std::int32_t MaxProgramBinaryFormats = 4;
 		std::int32_t programBinaryFormats_[MaxProgramBinaryFormats];

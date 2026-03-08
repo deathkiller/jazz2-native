@@ -1,4 +1,4 @@
-#include "RenderBatcher.h"
+﻿#include "RenderBatcher.h"
 #include "RenderCommand.h"
 #include "RenderCommandPool.h"
 #include "RenderResources.h"
@@ -16,7 +16,7 @@ namespace nCine
 	RenderBatcher::RenderBatcher()
 	{
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		UboMaxSize = std::uint32_t(gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED));
+		UboMaxSize = std::uint32_t(gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED));
 
 		// Create the first buffer right away
 		CreateBuffer(UboMaxSize);
@@ -115,6 +115,7 @@ namespace nCine
 		SmallVectorImpl<RenderCommand*>::const_iterator end,
 		SmallVectorImpl<RenderCommand*>::const_iterator& nextStart)
 	{
+#if defined(RHI_CAP_BATCHING)
 		DEATH_ASSERT(end > start);
 
 		const RenderCommand* refCommand = *start;
@@ -370,6 +371,11 @@ namespace nCine
 		}
 
 		return batchCommand;
+#else
+		// Non-GL backends do not use UBO batching; this path should never be reached
+		(void)start; (void)end; (void)nextStart;
+		return nullptr;
+#endif
 	}
 
 	unsigned char* RenderBatcher::AcquireMemory(std::uint32_t bytes)

@@ -1,4 +1,4 @@
-#include "GLUniformBlock.h"
+﻿#include "GLUniformBlock.h"
 #include "GLShaderProgram.h"
 #include "GLDebug.h"
 #include "../IGfxCapabilities.h"
@@ -74,7 +74,7 @@ namespace nCine
 		GL_LOG_ERRORS();
 
 		// Align to the uniform buffer offset alignment or `glBindBufferRange()` will generate an `INVALID_VALUE` error
-		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 		alignAmount_ = (offsetAlignment - size_ % offsetAlignment) % offsetAlignment;
 		size_ += alignAmount_;
 	}

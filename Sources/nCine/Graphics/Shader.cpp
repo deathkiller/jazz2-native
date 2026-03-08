@@ -1,25 +1,27 @@
-#define NCINE_INCLUDE_OPENGL
-#include "../CommonHeaders.h"
-
 #include "Shader.h"
-#include "GL/GLShaderProgram.h"
 #include "RenderResources.h"
-#include "BinaryShaderCache.h"
 #include "../Application.h"
 #include "../tracy.h"
 #include "../../Main.h"
 
-#if defined(WITH_EMBEDDED_SHADERS)
-#	include "shader_strings.h"
-#else
-#	include <IO/FileSystem.h>
+#if defined(RHI_BACKEND_GL)
+#	define NCINE_INCLUDE_OPENGL
+#	include "../CommonHeaders.h"
+#	include "GL/GLShaderProgram.h"
+#	include "BinaryShaderCache.h"
+#	if defined(WITH_EMBEDDED_SHADERS)
+#		include "shader_strings.h"
+#	else
+#		include <IO/FileSystem.h>
 using namespace Death::IO;
+#	endif
 #endif
 
 using namespace Death::Containers::Literals;
 
 namespace nCine
 {
+#if defined(RHI_BACKEND_GL)
 	namespace
 	{
 		static const char BatchSizeDefine[] = "BATCH_SIZE";
@@ -80,9 +82,15 @@ namespace nCine
 			return lastIndex;
 		}
 	}
+#endif // RHI_BACKEND_GL
 
 	Shader::Shader()
-		: Object(ObjectType::Shader), glShaderProgram_(std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate))
+		: Object(ObjectType::Shader)
+#if defined(RHI_BACKEND_GL)
+		, glShaderProgram_(std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate))
+#else
+		, glShaderProgram_(std::make_unique<Rhi::ShaderProgram>())
+#endif
 	{
 	}
 
@@ -178,6 +186,7 @@ namespace nCine
 		RenderResources::UnregisterBatchedShader(glShaderProgram_.get());
 	}
 
+#if defined(RHI_BACKEND_GL)
 	bool Shader::LoadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
 	{
 		ZoneScopedC(0x81A861);
@@ -581,4 +590,98 @@ namespace nCine
 		return glShaderProgram_->AttachShaderFromString(GL_FRAGMENT_SHADER, fragmentShader);
 #endif
 	}
+
+#else // !RHI_BACKEND_GL
+
+	bool Shader::LoadFromMemory(const char* /*shaderName*/, Introspection /*introspection*/, const char* /*vertex*/, const char* /*fragment*/, std::int32_t /*batchSize*/, ArrayView<const StringView> /*defines*/)
+	{ return true; }
+
+	bool Shader::LoadFromMemory(const char* shaderName, const char* vertex, const char* fragment, std::int32_t batchSize)
+	{ return LoadFromMemory(shaderName, Introspection::Enabled, vertex, fragment, batchSize); }
+
+	bool Shader::LoadFromMemory(const char* vertex, const char* fragment, std::int32_t batchSize)
+	{ return LoadFromMemory(nullptr, vertex, fragment, batchSize); }
+
+	bool Shader::LoadFromMemory(const char* /*shaderName*/, Introspection /*introspection*/, DefaultVertex /*vertex*/, const char* /*fragment*/, std::int32_t /*batchSize*/, ArrayView<const StringView> /*defines*/)
+	{ return true; }
+
+	bool Shader::LoadFromMemory(const char* shaderName, DefaultVertex vertex, const char* fragment, std::int32_t batchSize)
+	{ return LoadFromMemory(shaderName, Introspection::Enabled, vertex, fragment, batchSize); }
+
+	bool Shader::LoadFromMemory(DefaultVertex vertex, const char* fragment, std::int32_t batchSize)
+	{ return LoadFromMemory(nullptr, vertex, fragment, batchSize); }
+
+	bool Shader::LoadFromMemory(const char* /*shaderName*/, Introspection /*introspection*/, const char* /*vertex*/, DefaultFragment /*fragment*/, std::int32_t /*batchSize*/, ArrayView<const StringView> /*defines*/)
+	{ return true; }
+
+	bool Shader::LoadFromMemory(const char* shaderName, const char* vertex, DefaultFragment fragment, std::int32_t batchSize)
+	{ return LoadFromMemory(shaderName, Introspection::Enabled, vertex, fragment, batchSize); }
+
+	bool Shader::LoadFromMemory(const char* vertex, DefaultFragment fragment, std::int32_t batchSize)
+	{ return LoadFromMemory(nullptr, vertex, fragment, batchSize); }
+
+	bool Shader::LoadFromFile(const char* /*shaderName*/, Introspection /*introspection*/, StringView /*vertexPath*/, StringView /*fragmentPath*/, std::int32_t /*batchSize*/, ArrayView<const StringView> /*defines*/)
+	{ return true; }
+
+	bool Shader::LoadFromFile(const char* shaderName, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize)
+	{ return LoadFromFile(shaderName, Introspection::Enabled, vertexPath, fragmentPath, batchSize); }
+
+	bool Shader::LoadFromFile(StringView vertexPath, StringView fragmentPath, std::int32_t batchSize)
+	{ return LoadFromFile(nullptr, vertexPath, fragmentPath, batchSize); }
+
+	bool Shader::LoadFromFile(const char* /*shaderName*/, Introspection /*introspection*/, DefaultVertex /*vertex*/, StringView /*fragmentPath*/, std::int32_t /*batchSize*/, ArrayView<const StringView> /*defines*/)
+	{ return true; }
+
+	bool Shader::LoadFromFile(const char* shaderName, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize)
+	{ return LoadFromFile(shaderName, Introspection::Enabled, vertex, fragmentPath, batchSize); }
+
+	bool Shader::LoadFromFile(DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize)
+	{ return LoadFromFile(nullptr, vertex, fragmentPath, batchSize); }
+
+	bool Shader::LoadFromFile(const char* /*shaderName*/, Introspection /*introspection*/, StringView /*vertexPath*/, DefaultFragment /*fragment*/, std::int32_t /*batchSize*/, ArrayView<const StringView> /*defines*/)
+	{ return true; }
+
+	bool Shader::LoadFromFile(const char* shaderName, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize)
+	{ return LoadFromFile(shaderName, Introspection::Enabled, vertexPath, fragment, batchSize); }
+
+	bool Shader::LoadFromFile(StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize)
+	{ return LoadFromFile(nullptr, vertexPath, fragment, batchSize); }
+
+	bool Shader::LoadFromCache(const char* /*shaderName*/, std::uint64_t /*shaderVersion*/, Introspection /*introspection*/)
+	{ return false; }
+
+	bool Shader::SaveToCache(const char* /*shaderName*/, std::uint64_t /*shaderVersion*/) const
+	{ return false; }
+
+	bool Shader::SetAttribute(const char* /*name*/, std::int32_t /*stride*/, void* /*pointer*/)
+	{ return false; }
+
+	bool Shader::IsLinked() const
+	{ return true; }
+
+	unsigned int Shader::RetrieveInfoLogLength() const
+	{ return 0; }
+
+	void Shader::RetrieveInfoLog(std::string& /*infoLog*/) const
+	{}
+
+	bool Shader::GetLogOnErrors() const
+	{ return false; }
+
+	void Shader::SetLogOnErrors(bool /*shouldLogOnErrors*/)
+	{}
+
+	void Shader::SetGLShaderProgramLabel(const char* /*label*/)
+	{}
+
+	void Shader::RegisterBatchedShader(Shader& /*batchedShader*/)
+	{}
+
+	bool Shader::LoadDefaultShader(DefaultVertex /*vertex*/, int /*batchSize*/)
+	{ return true; }
+
+	bool Shader::LoadDefaultShader(DefaultFragment /*fragment*/)
+	{ return true; }
+
+#endif // RHI_BACKEND_GL
 }

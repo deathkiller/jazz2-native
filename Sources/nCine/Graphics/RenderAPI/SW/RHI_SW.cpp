@@ -4,6 +4,7 @@
 #include <cassert>
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace Rhi
 {
@@ -232,6 +233,32 @@ namespace Rhi
 		g_state.scissorH = state.h;
 	}
 
+	ViewportState GetViewportState()
+	{
+		return { g_state.viewportX, g_state.viewportY, g_state.viewportW, g_state.viewportH };
+	}
+
+	void SetViewportState(const ViewportState& s)
+	{
+		g_state.viewportX = s.x;
+		g_state.viewportY = s.y;
+		g_state.viewportW = s.w;
+		g_state.viewportH = s.h;
+	}
+
+	ClearColorState GetClearColorState()
+	{
+		return { g_state.clearR, g_state.clearG, g_state.clearB, g_state.clearA };
+	}
+
+	void SetClearColorState(const ClearColorState& s)
+	{
+		g_state.clearR = s.r;
+		g_state.clearG = s.g;
+		g_state.clearB = s.b;
+		g_state.clearA = s.a;
+	}
+
 	// =========================================================================
 	// Blending helper — applies source-over (or other configured blend) for
 	// a single pixel.
@@ -401,10 +428,10 @@ namespace Rhi
 
 						if (tex != nullptr) {
 							const nCine::Colorf texel = tex->Sample(u, v, 0);
-							r *= texel.R();
-							g *= texel.G();
-							b *= texel.B();
-							a *= texel.A();
+							r *= texel.R;
+							g *= texel.G;
+							b *= texel.B;
+							a *= texel.A;
 						}
 
 						WriteFragment(px, py, r, g, b, a);

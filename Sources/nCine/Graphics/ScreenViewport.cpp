@@ -100,6 +100,8 @@ namespace nCine
 
 		RenderResources::GetBuffersManager().Remap();
 		RenderResources::GetRenderCommandPool().Reset();
+#if defined(RHI_BACKEND_GL)
 		GLDebug::Reset();
+#endif
 	}
 }

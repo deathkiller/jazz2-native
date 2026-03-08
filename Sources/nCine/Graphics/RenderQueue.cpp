@@ -2,11 +2,10 @@
 #include "RenderBatcher.h"
 #include "RenderResources.h"
 #include "RenderStatistics.h"
+#if defined(DEATH_DEBUG) && defined(RHI_BACKEND_GL)
 #include "GL/GLDebug.h"
+#endif
 #include "../Application.h"
-#include "GL/GLScissorTest.h"
-#include "GL/GLDepthTest.h"
-#include "GL/GLBlending.h"
 #include "../Base/Algorithms.h"
 #include "../tracy_opengl.h"
 
@@ -97,7 +96,7 @@ namespace nCine
 		// Avoid GPU stalls by uploading to VBOs, IBOs and UBOs before drawing
 		if (!opaques->empty()) {
 			ZoneScopedNC("Commit opaques", 0x81A861);
-#if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG) && defined(RHI_BACKEND_GL)
 			std::size_t length = formatInto(debugString, "Commit {} opaque command(s) for viewport 0x{:x}", opaques->size(), std::uintptr_t(RenderResources::GetCurrentViewport()));
 			GLDebug::ScopedGroup scoped({ debugString, length });
 #endif
@@ -108,7 +107,7 @@ namespace nCine
 
 		if (!transparents->empty()) {
 			ZoneScopedNC("Commit transparents", 0x81A861);
-#if defined(DEATH_DEBUG)
+#if defined(DEATH_DEBUG) && defined(RHI_BACKEND_GL)
 			std::size_t length = formatInto(debugString, "Commit {} transparent command(s) for viewport 0x{:x}", transparents->size(), std::uintptr_t(RenderResources::GetCurrentViewport()));
 			GLDebug::ScopedGroup scoped({ debugString, length });
 #endif
@@ -133,7 +132,7 @@ namespace nCine
 		// Rendering opaque nodes front to back
 		for (RenderCommand* opaqueRenderCommand : *opaques) {
 			TracyGpuZone("Opaque");
-#if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
+#if defined(DEATH_DEBUG) && defined(NCINE_PROFILING) && defined(RHI_BACKEND_GL)
 			const std::int32_t numInstances = opaqueRenderCommand->GetInstanceCount();
 			const std::int32_t batchSize = opaqueRenderCommand->GetBatchSize();
 			const std::uint16_t layer = opaqueRenderCommand->GetLayer();
@@ -159,14 +158,14 @@ namespace nCine
 #endif
 			opaqueRenderCommand->CommitCameraTransformation();
 			opaqueRenderCommand->Issue();
-		}
+	}
 
-		GLBlending::Enable();
-		GLDepthTest::DisableDepthMask();
+		Rhi::SetBlending(true, Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+		Rhi::SetDepthMask(false);
 		// Rendering transparent nodes back to front
 		for (RenderCommand* transparentRenderCommand : *transparents) {
 			TracyGpuZone("Transparent");
-#if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
+#if defined(DEATH_DEBUG) && defined(NCINE_PROFILING) && defined(RHI_BACKEND_GL)
 			const std::int32_t numInstances = transparentRenderCommand->GetInstanceCount();
 			const std::int32_t batchSize = transparentRenderCommand->GetBatchSize();
 			const std::uint16_t layer = transparentRenderCommand->GetLayer();
@@ -190,15 +189,15 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 			RenderStatistics::GatherStatistics(*transparentRenderCommand);
 #endif
-			GLBlending::SetBlendFunc(Rhi::ToGLenum(transparentRenderCommand->GetMaterial().GetSrcBlendingFactor()), Rhi::ToGLenum(transparentRenderCommand->GetMaterial().GetDestBlendingFactor()));
+			Rhi::SetBlending(true, transparentRenderCommand->GetMaterial().GetSrcBlendingFactor(),
+			                       transparentRenderCommand->GetMaterial().GetDestBlendingFactor());
 			transparentRenderCommand->CommitCameraTransformation();
 			transparentRenderCommand->Issue();
 		}
-		// Depth mask has to be enabled again before exiting this method or glClear(GL_DEPTH_BUFFER_BIT) won't have any effect
-		GLDepthTest::EnableDepthMask();
-		GLBlending::Disable();
-
-		GLScissorTest::Disable();
+		// Depth mask must be re-enabled before exiting or clearing the depth buffer won't have any effect
+		Rhi::SetDepthMask(true);
+		Rhi::SetBlending(false, Rhi::BlendFactor::One, Rhi::BlendFactor::Zero);
+		Rhi::SetScissorTest(false, 0, 0, 0, 0);
 	}
 
 	void RenderQueue::Clear()

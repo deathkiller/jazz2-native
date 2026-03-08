@@ -1,16 +1,11 @@
-#include "Viewport.h"
+﻿#include "Viewport.h"
 #include "RenderQueue.h"
 #include "RenderResources.h"
 #include "../Application.h"
 #include "../IAppEventHandler.h"
 #include "DrawableNode.h"
 #include "Camera.h"
-#include "GL/GLFramebuffer.h"
 #include "Texture.h"
-#include "GL/GLClearColor.h"
-#include "GL/GLViewport.h"
-#include "GL/GLScissorTest.h"
-#include "GL/GLDebug.h"
 #include "../ServiceLocator.h"
 #include "../tracy.h"
 #include "../../Main.h"
@@ -21,6 +16,7 @@
 
 namespace nCine
 {
+#if defined(RHI_BACKEND_GL)
 	static GLenum DepthStencilFormatToGLFormat(Viewport::DepthStencilFormat format)
 	{
 		switch (format) {
@@ -45,13 +41,15 @@ namespace nCine
 				return GL_DEPTH_STENCIL_ATTACHMENT;
 		}
 	}
+#endif
 
 	SmallVector<Viewport*> Viewport::chain_;
 
 	Viewport::Viewport(const char* name, Texture* texture, DepthStencilFormat depthStencilFormat)
 		: type_(Type::NoTexture), width_(0), height_(0), viewportRect_(0, 0, 0, 0), scissorRect_(0, 0, 0, 0),
 			depthStencilFormat_(DepthStencilFormat::None), lastFrameCleared_(0), clearMode_(ClearMode::EveryFrame),
-			clearColor_(Colorf::Black), fbo_(nullptr), rootNode_(nullptr),
+			clearColor_(Colorf::Black),
+			rootNode_(nullptr),
 			camera_(nullptr), stateBits_(0), numColorAttachments_(0)
 	{
 		for (std::uint32_t i = 0; i < MaxNumTextures; i++) {
@@ -61,7 +59,7 @@ namespace nCine
 		if (texture != nullptr) {
 			const bool texAdded = SetTexture(texture);
 			if (texAdded) {
-				fbo_->SetObjectLabel(name);
+				Rhi::FramebufferSetLabel(*framebuffer_, name);
 				if (depthStencilFormat != DepthStencilFormat::None) {
 					const bool depthStencilAdded = SetDepthStencilFormat(depthStencilFormat);
 					if (!depthStencilAdded) {
@@ -102,7 +100,7 @@ namespace nCine
 		}
 
 		if (type_ != Type::NoTexture) {
-			static const std::int32_t MaxColorAttachments = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::GLIntValues::MAX_COLOR_ATTACHMENTS);
+			static const std::int32_t MaxColorAttachments = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::IntValues::MAX_COLOR_ATTACHMENTS);
 			const bool indexOutOfRange = (index >= std::uint32_t(MaxColorAttachments) || index >= MaxNumTextures);
 			const bool widthDiffers = texture != nullptr && (width_ > 0 && texture->GetWidth() != width_);
 			const bool heightDiffers = texture != nullptr && (height_ > 0 && texture->GetHeight() != height_);
@@ -113,12 +111,12 @@ namespace nCine
 		bool result = false;
 		if (texture != nullptr) {
 			// Adding a new texture
-			if (fbo_ == nullptr) {
-				fbo_ = std::make_unique<GLFramebuffer>();
+			if (framebuffer_ == nullptr) {
+				framebuffer_ = std::make_unique<Rhi::Framebuffer>();
 			}
 
-			fbo_->AttachTexture(*texture->gfxTexture_, GL_COLOR_ATTACHMENT0 + index);
-			const bool isStatusComplete = fbo_->IsStatusComplete();
+			Rhi::FramebufferAttachTexture(*framebuffer_, *texture->texture_, index);
+			const bool isStatusComplete = Rhi::FramebufferIsComplete(*framebuffer_);
 			if (isStatusComplete) {
 				type_ = Type::WithTexture;
 				textures_[index] = texture;
@@ -133,18 +131,21 @@ namespace nCine
 			result = isStatusComplete;
 		} else {
 			// Remove an existing texture
-			if (fbo_ != nullptr) {
-				fbo_->DetachTexture(GL_COLOR_ATTACHMENT0 + index);
+			if (framebuffer_ != nullptr) {
+				Rhi::FramebufferDetachTexture(*framebuffer_, index);
 				textures_[index] = nullptr;
 				numColorAttachments_--;
 
 				if (numColorAttachments_ == 0) {
 					// Removing the depth/stencil render target
+#if defined(RHI_BACKEND_GL)
 					if (depthStencilFormat_ != DepthStencilFormat::None) {
-						fbo_->DetachRenderbuffer(DepthStencilFormatToGLAttachment(depthStencilFormat_));
+						framebuffer_->DetachRenderbuffer(DepthStencilFormatToGLAttachment(depthStencilFormat_));
 						depthStencilFormat_ = Viewport::DepthStencilFormat::None;
 					}
-
+#else
+					depthStencilFormat_ = Viewport::DepthStencilFormat::None;
+#endif
 					type_ = Type::NoTexture;
 					width_ = 0;
 					height_ = 0;
@@ -163,30 +164,38 @@ namespace nCine
 			return false;
 
 		bool result = false;
+#if defined(RHI_BACKEND_GL)
 		if (depthStencilFormat != Viewport::DepthStencilFormat::None) {
 			// Adding a depth/stencil render target
-			if (fbo_ == nullptr) {
-				fbo_ = std::make_unique<GLFramebuffer>();
+			if (framebuffer_ == nullptr) {
+				framebuffer_ = std::make_unique<Rhi::Framebuffer>();
 			}
 			if (depthStencilFormat_ != Viewport::DepthStencilFormat::None) {
-				fbo_->DetachRenderbuffer(DepthStencilFormatToGLAttachment(depthStencilFormat_));
+				framebuffer_->DetachRenderbuffer(DepthStencilFormatToGLAttachment(depthStencilFormat_));
 			}
-			fbo_->AttachRenderbuffer(DepthStencilFormatToGLFormat(depthStencilFormat), width_, height_, DepthStencilFormatToGLAttachment(depthStencilFormat));
+			framebuffer_->AttachRenderbuffer(DepthStencilFormatToGLFormat(depthStencilFormat), width_, height_, DepthStencilFormatToGLAttachment(depthStencilFormat));
 
-			const bool isStatusComplete = fbo_->IsStatusComplete();
+			const bool isStatusComplete = framebuffer_->IsStatusComplete();
 			if (isStatusComplete) {
 				depthStencilFormat_ = depthStencilFormat;
 			}
 			result = isStatusComplete;
 		} else {
 			// Removing the depth/stencil render target
-			if (fbo_ != nullptr) {
-				fbo_->DetachRenderbuffer(DepthStencilFormatToGLAttachment(depthStencilFormat_));
+			if (framebuffer_ != nullptr) {
+				framebuffer_->DetachRenderbuffer(DepthStencilFormatToGLAttachment(depthStencilFormat_));
 				depthStencilFormat_ = Viewport::DepthStencilFormat::None;
 			}
 
 			result = true;
 		}
+#else
+		// Depth/stencil not supported in SW mode
+		if (depthStencilFormat == Viewport::DepthStencilFormat::None) {
+			depthStencilFormat_ = Viewport::DepthStencilFormat::None;
+			result = true;
+		}
+#endif
 
 		return result;
 	}
@@ -197,20 +206,28 @@ namespace nCine
 			return false;
 		}
 
-		if (fbo_ != nullptr) {
+#if defined(RHI_BACKEND_GL)
+		if (framebuffer_ != nullptr) {
 			for (std::uint32_t i = 0; i < MaxNumTextures; i++) {
 				if (textures_[i] != nullptr) {
-					fbo_->DetachTexture(GL_COLOR_ATTACHMENT0 + i);
+					Rhi::FramebufferDetachTexture(*framebuffer_, i);
 					textures_[i] = nullptr;
 				}
 			}
 			numColorAttachments_ = 0;
 
 			if (depthStencilFormat_ != DepthStencilFormat::None) {
-				fbo_->DetachRenderbuffer(DepthStencilFormatToGLAttachment(depthStencilFormat_));
+				framebuffer_->DetachRenderbuffer(DepthStencilFormatToGLAttachment(depthStencilFormat_));
 				depthStencilFormat_ = DepthStencilFormat::None;
 			}
 		}
+#else
+		for (std::uint32_t i = 0; i < MaxNumTextures; i++) {
+			textures_[i] = nullptr;
+		}
+		numColorAttachments_ = 0;
+		depthStencilFormat_ = DepthStencilFormat::None;
+#endif
 
 		type_ = Type::NoTexture;
 		width_ = 0;
@@ -230,10 +247,10 @@ namespace nCine
 		return texture;
 	}
 
-	void Viewport::SetGLFramebufferLabel(const char* label)
+	void Viewport::SetFramebufferLabel(const char* label)
 	{
-		if (fbo_ != nullptr) {
-			fbo_->SetObjectLabel(label);
+		if (framebuffer_ != nullptr) {
+			Rhi::FramebufferSetLabel(*framebuffer_, label);
 		}
 	}
 
@@ -380,33 +397,33 @@ namespace nCine
 		}
 
 		if (type_ == Type::WithTexture) {
-			fbo_->Bind(GL_DRAW_FRAMEBUFFER);
-			fbo_->DrawBuffers(numColorAttachments_);
+			Rhi::FramebufferBind(*framebuffer_);
+			Rhi::FramebufferSetDrawBuffers(*framebuffer_, numColorAttachments_);
 		}
 
 		if (type_ == Type::Screen || type_ == Type::WithTexture) {
 			const unsigned long int numFrames = theApplication().GetFrameCount();
 			if ((lastFrameCleared_ < numFrames && (clearMode_ == ClearMode::EveryFrame || clearMode_ == ClearMode::ThisFrameOnly)) ||
 				 clearMode_ == ClearMode::EveryDraw) {
-				const GLClearColor::State clearColorState = GLClearColor::GetState();
-				GLClearColor::SetColor(clearColor_);
+				const Rhi::ClearColorState clearColorState = Rhi::GetClearColorState();
+				Rhi::SetClearColor(clearColor_.R, clearColor_.G, clearColor_.B, clearColor_.A);
 
 				switch (depthStencilFormat_) {
 					default:
 					case DepthStencilFormat::Depth24_Stencil8:
-						glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+						Rhi::Clear(Rhi::ClearFlags::Color | Rhi::ClearFlags::Depth | Rhi::ClearFlags::Stencil);
 						break;
 					case DepthStencilFormat::Depth24:
 					case DepthStencilFormat::Depth16:
-						glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+						Rhi::Clear(Rhi::ClearFlags::Color | Rhi::ClearFlags::Depth);
 						break;
 					case DepthStencilFormat::None:
-						glClear(GL_COLOR_BUFFER_BIT);
+						Rhi::Clear(Rhi::ClearFlags::Color);
 						break;
 				}
 				lastFrameCleared_ = numFrames;
 
-				GLClearColor::SetState(clearColorState);
+				Rhi::SetClearColorState(clearColorState);
 			}
 		}
 
@@ -425,32 +442,30 @@ namespace nCine
 
 		if (!renderQueue_.IsEmpty()) {
 			const bool viewportRectNonZeroArea = (viewportRect_.W > 0 && viewportRect_.H > 0);
-			const GLViewport::State viewportState = GLViewport::GetState();
+			const Rhi::ViewportState viewportState = Rhi::GetViewportState();
 			if (viewportRectNonZeroArea) {
-				GLViewport::SetRect(viewportRect_.X, viewportRect_.Y, viewportRect_.W, viewportRect_.H);
+				Rhi::SetViewport(viewportRect_.X, viewportRect_.Y, viewportRect_.W, viewportRect_.H);
 			}
 
 			const bool scissorRectNonZeroArea = (scissorRect_.W > 0 && scissorRect_.H > 0);
-			GLScissorTest::State scissorTestState = GLScissorTest::GetState();
+			Rhi::ScissorState scissorTestState = Rhi::GetScissorState();
 			if (scissorRectNonZeroArea) {
-				GLScissorTest::Enable(scissorRect_.X, scissorRect_.Y, scissorRect_.W, scissorRect_.H);
+				Rhi::SetScissorTest(true, scissorRect_.X, scissorRect_.Y, scissorRect_.W, scissorRect_.H);
 			}
-
 			renderQueue_.Draw();
-
 			if (scissorRectNonZeroArea) {
-				GLScissorTest::SetState(scissorTestState);
+				Rhi::SetScissorState(scissorTestState);
 			}
 			if (viewportRectNonZeroArea) {
-				GLViewport::SetState(viewportState);
+				Rhi::SetViewportState(viewportState);
 			}
 		}
 
-#if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
+#if defined(RHI_BACKEND_GL) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
 		if (type_ == Type::WithTexture && depthStencilFormat_ != DepthStencilFormat::None &&
 			!theApplication().GetAppConfiguration().withGlDebugContext) {
 			const GLenum invalidAttachment = DepthStencilFormatToGLAttachment(depthStencilFormat_);
-			fbo_->Invalidate(1, &invalidAttachment);
+			framebuffer_->Invalidate(1, &invalidAttachment);
 		}
 #endif
 
@@ -461,12 +476,12 @@ namespace nCine
 		}
 
 		if (type_ == Type::WithTexture) {
-#if defined(WITH_QT5)
+#	if defined(WITH_QT5)
 			Qt5GfxDevice& gfxDevice = static_cast<Qt5GfxDevice&>(theApplication().gfxDevice());
 			gfxDevice.bindDefaultDrawFramebufferObject();
-#else
-			fbo_->Unbind(GL_DRAW_FRAMEBUFFER);
-#endif
+#	else
+			Rhi::FramebufferUnbind();
+#	endif
 		}
 	}
 

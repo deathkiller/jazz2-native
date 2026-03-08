@@ -10,6 +10,7 @@
 // --- Capability flags -------------------------------------------------------
 // Code guarded by these flags compiles only for this backend.
 
+#define RHI_CAP_BATCHING          // Batched draw calls via VBO + shader uniform blocks
 #define RHI_CAP_SHADERS          // Programmable vertex + fragment shaders
 #define RHI_CAP_UNIFORM_BLOCKS   // Uniform Buffer Objects (UBO)
 #define RHI_CAP_INSTANCING       // Instanced drawing (glDraw*Instanced)
@@ -73,6 +74,8 @@ namespace Rhi
 	using Framebuffer          = nCine::GLFramebuffer;
 	using Renderbuffer         = nCine::GLRenderbuffer;
 	using ScissorState         = nCine::GLScissorTest::State;
+	using ViewportState        = nCine::GLViewport::State;
+	using ClearColorState      = nCine::GLClearColor::State;
 
 	static constexpr std::int32_t MaxTextureUnits = nCine::GLTexture::MaxTextureUnits;
 
@@ -435,6 +438,75 @@ namespace Rhi
 		if (static_cast<std::uint32_t>(flags & ClearFlags::Depth)   != 0) mask |= GL_DEPTH_BUFFER_BIT;
 		if (static_cast<std::uint32_t>(flags & ClearFlags::Stencil) != 0) mask |= GL_STENCIL_BUFFER_BIT;
 		if (mask) glClear(mask);
+	}
+
+	inline void SetDepthMask(bool enabled)
+	{
+		if (enabled) {
+			nCine::GLDepthTest::EnableDepthMask();
+		} else {
+			nCine::GLDepthTest::DisableDepthMask();
+		}
+	}
+
+	inline ViewportState GetViewportState()
+	{
+		return nCine::GLViewport::GetState();
+	}
+
+	inline void SetViewportState(const ViewportState& s)
+	{
+		nCine::GLViewport::SetState(s);
+	}
+
+	inline ClearColorState GetClearColorState()
+	{
+		return nCine::GLClearColor::GetState();
+	}
+
+	inline void SetClearColorState(const ClearColorState& s)
+	{
+		nCine::GLClearColor::SetState(s);
+	}
+
+	// -------------------------------------------------------------------------
+	// Framebuffer helpers — thin wrappers hiding backend-specific API
+	// -------------------------------------------------------------------------
+
+	inline void FramebufferBind(Framebuffer& fbo)
+	{
+		fbo.Bind(GL_DRAW_FRAMEBUFFER);
+	}
+
+	inline void FramebufferUnbind()
+	{
+		Framebuffer::Unbind(GL_DRAW_FRAMEBUFFER);
+	}
+
+	inline void FramebufferSetDrawBuffers(Framebuffer& fbo, std::uint32_t n)
+	{
+		fbo.DrawBuffers(n);
+	}
+
+	inline void FramebufferAttachTexture(Framebuffer& fbo, Texture& texture, std::uint32_t colorIndex)
+	{
+		fbo.AttachTexture(texture, GLenum(GL_COLOR_ATTACHMENT0 + colorIndex));
+	}
+
+	inline void FramebufferDetachTexture(Framebuffer& fbo, std::uint32_t colorIndex)
+	{
+		fbo.DetachTexture(GLenum(GL_COLOR_ATTACHMENT0 + colorIndex));
+	}
+
+	inline bool FramebufferIsComplete(Framebuffer& fbo)
+	{
+		return fbo.IsStatusComplete();
+	}
+
+	template<typename StringViewType>
+	inline void FramebufferSetLabel(Framebuffer& fbo, StringViewType label)
+	{
+		fbo.SetObjectLabel(label);
 	}
 
 } // namespace Rhi

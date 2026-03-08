@@ -3,8 +3,12 @@
 #include "RenderAPI/RHI.h"
 #include "../Base/Object.h"
 
+#include <Containers/StringView.h>
+#include <Containers/ArrayView.h>
 #include <memory>
 #include <string>
+
+using namespace Death::Containers;
 
 namespace nCine
 {

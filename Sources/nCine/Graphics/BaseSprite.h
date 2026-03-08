@@ -6,7 +6,6 @@
 namespace nCine
 {
 	class Texture;
-	class GLUniformBlockCache;
 
 	/// Base class for sprites
 	/*! \note Users cannot create instances of this class */
@@ -66,7 +65,7 @@ namespace nCine
 		/// A flag indicating if the sprite texture is vertically flipped
 		bool flippedY_;
 
-		GLUniformBlockCache* instanceBlock_;
+		Rhi::UniformBlockCache* instanceBlock_;
 #endif
 
 		/// Protected constructor accessible only by derived sprite classes

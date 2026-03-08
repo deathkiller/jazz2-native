@@ -50,8 +50,10 @@ namespace nCine
 		bool SetPath(StringView path);
 
 	private:
+#if defined(RHI_BACKEND_GL)
 		using glGetProgramBinary_t = void(__GLAPIENTRY*)(GLuint program, GLsizei bufSize, GLsizei* length, GLenum* binaryFormat, void* binary);
 		using glProgramBinary_t = void(__GLAPIENTRY*)(GLuint program, GLenum binaryFormat, const void* binary, GLsizei length);
+#endif
 
 		/// A flag that indicates if the OpenGL context supports binary shaders and the cache is available
 		bool isAvailable_;
@@ -62,8 +64,10 @@ namespace nCine
 		/// The cache directory containing the binary shaders
 		String path_;
 
+#if defined(RHI_BACKEND_GL)
 		glGetProgramBinary_t _glGetProgramBinary;
 		glProgramBinary_t _glProgramBinary;
 		GLenum _glProgramBinaryLength;
+#endif
 	};
 }

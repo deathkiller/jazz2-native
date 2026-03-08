@@ -1,4 +1,4 @@
-#include "Material.h"
+﻿#include "Material.h"
 #include "RenderResources.h"
 #include "Texture.h"
 
@@ -121,7 +121,7 @@ namespace nCine
 
 	bool Material::SetTexture(std::uint32_t unit, const Texture& texture)
 	{
-		return SetTexture(unit, texture.gfxTexture_.get());
+		return SetTexture(unit, texture.texture_.get());
 	}
 
 	void Material::Bind()

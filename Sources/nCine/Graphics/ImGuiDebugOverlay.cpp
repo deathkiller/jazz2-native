@@ -1,4 +1,4 @@
-#if defined(WITH_IMGUI)
+﻿#if defined(WITH_IMGUI)
 
 #include "ImGuiDebugOverlay.h"
 #include "../Application.h"
@@ -527,43 +527,43 @@ namespace nCine
 		if (ImGui::CollapsingHeader("Graphics Capabilities")) {
 			const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 
-			const IGfxCapabilities::GLInfoStrings& glInfoStrings = gfxCaps.GetGLInfoStrings();
+			const IGfxCapabilities::InfoStrings& glInfoStrings = gfxCaps.GetInfoStrings();
 			ImGui::Text("%s Vendor: %s", openglApiName, glInfoStrings.vendor);
 			ImGui::Text("%s Renderer: %s", openglApiName, glInfoStrings.renderer);
 			ImGui::Text("%s Version: %s", openglApiName, glInfoStrings.glVersion);
 			ImGui::Text("GLSL Version: %s", glInfoStrings.glslVersion);
 
 			ImGui::Text("%s parsed version: %d.%d.%d", openglApiName,
-						gfxCaps.GetGLVersion(IGfxCapabilities::GLVersion::Major),
-						gfxCaps.GetGLVersion(IGfxCapabilities::GLVersion::Minor),
-						gfxCaps.GetGLVersion(IGfxCapabilities::GLVersion::Release));
+						gfxCaps.GetVersion(IGfxCapabilities::Version::Major),
+						gfxCaps.GetVersion(IGfxCapabilities::Version::Minor),
+						gfxCaps.GetVersion(IGfxCapabilities::Version::Release));
 
 			ImGui::Separator();
-			ImGui::Text("GL_MAX_TEXTURE_SIZE: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_TEXTURE_SIZE));
-			ImGui::Text("GL_MAX_TEXTURE_IMAGE_UNITS: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_TEXTURE_IMAGE_UNITS));
-			ImGui::Text("GL_MAX_UNIFORM_BLOCK_SIZE: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE));
-			ImGui::Text("GL_MAX_UNIFORM_BUFFER_BINDINGS: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BUFFER_BINDINGS));
-			ImGui::Text("GL_MAX_VERTEX_UNIFORM_BLOCKS: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_VERTEX_UNIFORM_BLOCKS));
-			ImGui::Text("GL_MAX_FRAGMENT_UNIFORM_BLOCKS: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_FRAGMENT_UNIFORM_BLOCKS));
-			ImGui::Text("GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT));
+			ImGui::Text("GL_MAX_TEXTURE_SIZE: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_TEXTURE_SIZE));
+			ImGui::Text("GL_MAX_TEXTURE_IMAGE_UNITS: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_TEXTURE_IMAGE_UNITS));
+			ImGui::Text("GL_MAX_UNIFORM_BLOCK_SIZE: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE));
+			ImGui::Text("GL_MAX_UNIFORM_BUFFER_BINDINGS: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BUFFER_BINDINGS));
+			ImGui::Text("GL_MAX_VERTEX_UNIFORM_BLOCKS: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_VERTEX_UNIFORM_BLOCKS));
+			ImGui::Text("GL_MAX_FRAGMENT_UNIFORM_BLOCKS: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS));
+			ImGui::Text("GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT));
 #if !defined(DEATH_TARGET_EMSCRIPTEN) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
-			ImGui::Text("GL_MAX_VERTEX_ATTRIB_STRIDE: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_VERTEX_ATTRIB_STRIDE));
+			ImGui::Text("GL_MAX_VERTEX_ATTRIB_STRIDE: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_VERTEX_ATTRIB_STRIDE));
 #endif
-			ImGui::Text("GL_MAX_COLOR_ATTACHMENTS: %d", gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_COLOR_ATTACHMENTS));
+			ImGui::Text("GL_MAX_COLOR_ATTACHMENTS: %d", gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_COLOR_ATTACHMENTS));
 
 			ImGui::Separator();
-			ImGui::Text("GL_KHR_debug: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::KHR_DEBUG));
-			ImGui::Text("GL_ARB_texture_storage: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::ARB_TEXTURE_STORAGE));
-			ImGui::Text("GL_ARB_get_program_binary: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::ARB_GET_PROGRAM_BINARY));
+			ImGui::Text("GL_KHR_debug: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::KHR_DEBUG));
+			ImGui::Text("GL_ARB_texture_storage: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_TEXTURE_STORAGE));
+			ImGui::Text("GL_ARB_get_program_binary: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_GET_PROGRAM_BINARY));
 #if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
-			ImGui::Text("GL_OES_get_program_binary: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::OES_GET_PROGRAM_BINARY));
+			ImGui::Text("GL_OES_get_program_binary: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::OES_GET_PROGRAM_BINARY));
 #endif
-			ImGui::Text("GL_EXT_texture_compression_s3tc: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::EXT_TEXTURE_COMPRESSION_S3TC));
-			ImGui::Text("GL_AMD_compressed_ATC_texture: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::AMD_COMPRESSED_ATC_TEXTURE));
-			ImGui::Text("GL_IMG_texture_compression_pvrtc: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::IMG_TEXTURE_COMPRESSION_PVRTC));
-			ImGui::Text("GL_KHR_texture_compression_astc_ldr: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR));
+			ImGui::Text("GL_EXT_texture_compression_s3tc: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::EXT_TEXTURE_COMPRESSION_S3TC));
+			ImGui::Text("GL_AMD_compressed_ATC_texture: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::AMD_COMPRESSED_ATC_TEXTURE));
+			ImGui::Text("GL_IMG_texture_compression_pvrtc: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::IMG_TEXTURE_COMPRESSION_PVRTC));
+			ImGui::Text("GL_KHR_texture_compression_astc_ldr: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR));
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
-			ImGui::Text("GL_OES_compressed_ETC1_RGB8_texture: %d", gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE));
+			ImGui::Text("GL_OES_compressed_ETC1_RGB8_texture: %d", gfxCaps.HasExtension(IGfxCapabilities::Extensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE));
 #endif
 		}
 	}

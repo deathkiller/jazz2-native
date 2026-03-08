@@ -745,15 +745,21 @@ namespace nCine
 #endif
 
 		if (appCfg_.withGraphics) {
+#if defined(RHI_BACKEND_GL)
 			theServiceLocator().RegisterGfxCapabilities(std::make_unique<GfxCapabilities>());
+#else
+			theServiceLocator().RegisterGfxCapabilities(std::make_unique<SWGfxCapabilities>());
+#endif
 			const auto& gfxCapabilities = theServiceLocator().GetGfxCapabilities();
+#if defined(RHI_BACKEND_GL)
 			GLDebug::Init(gfxCapabilities);
+#endif
 
-#if !defined(WITH_ANGLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(RHI_BACKEND_GL) && !defined(WITH_ANGLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
 			if (appCfg_.fixedBatchSize > 0) {
 				LOGI("Using fixed batch size: {}", appCfg_.fixedBatchSize);
 			} else {
-				const auto& info = gfxCapabilities.GetGLInfoStrings();
+				const auto& info = gfxCapabilities.GetInfoStrings();
 				const StringView vendor = info.vendor;
 				const StringView renderer = info.renderer;
 				// Some GPUs don't work with dynamic batch size, so it refuses to render VBOs (shows a black screen), disable it for them

@@ -1680,7 +1680,7 @@ namespace Jazz2
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
+		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
 		// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
 		bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && introspection == Shader::Introspection::NoUniformsInBlocks);
@@ -1692,11 +1692,12 @@ namespace Jazz2
 			// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
 			batchSize = 1;
 		} else {
-			batchSize = GLShaderProgram::DefaultBatchSize;
+			batchSize = Rhi::ShaderProgram::DefaultBatchSize;
 		}
 
 		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
 
+#if defined(RHI_BACKEND_GL)
 		if (compileTwice) {
 			GLShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
 			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
@@ -1723,6 +1724,7 @@ namespace Jazz2
 				}
 			}
 		}
+#endif
 
 		shader->SaveToCache(shaderName, Shaders::Version);
 		return shader;
@@ -1738,7 +1740,7 @@ namespace Jazz2
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
+		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
 		// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
 		bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && introspection == Shader::Introspection::NoUniformsInBlocks);
@@ -1750,11 +1752,12 @@ namespace Jazz2
 			// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
 			batchSize = 1;
 		} else {
-			batchSize = GLShaderProgram::DefaultBatchSize;
+			batchSize = Rhi::ShaderProgram::DefaultBatchSize;
 		}
 
 		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
 
+#if defined(RHI_BACKEND_GL)
 		if (compileTwice) {
 			GLShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
 			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
@@ -1781,6 +1784,7 @@ namespace Jazz2
 				}
 			}
 		}
+#endif
 
 		shader->SaveToCache(shaderName, Shaders::Version);
 		return shader;

@@ -1589,8 +1589,10 @@ void GameEventHandler::RefreshCache()
 			WriteCacheDescriptor(cachePath, currentVersion, animsModified);
 
 			if (!resolver.IsHeadless()) {
+#if defined(RHI_BACKEND_GL)
 				std::uint32_t filesRemoved = RenderResources::GetBinaryShaderCache().Prune();
 				LOGI("Pruning binary shader cache (removed {} directories)...", filesRemoved);
+#endif
 			}
 		} else {
 			LOGI("Cache is already up-to-date");
@@ -1662,8 +1664,10 @@ RecreateCache:
 	WriteCacheDescriptor(cachePath, currentVersion, animsModified);
 
 	if (!resolver.IsHeadless()) {
+#if defined(RHI_BACKEND_GL)
 		std::uint32_t filesRemoved = RenderResources::GetBinaryShaderCache().Prune();
 		LOGI("Pruning binary shader cache (removed {} directories)...", filesRemoved);
+#endif
 	}
 
 	resolver.RemountPaks();

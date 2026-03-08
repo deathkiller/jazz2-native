@@ -23,9 +23,12 @@
 #define RHI_FF_TINTED_SPRITE      // Sprite multiply-tint without shaders
 #define RHI_FF_ALPHA_BLEND        // Source-over alpha compositing
 
-#include "../../Primitives/Rect.h"
-#include "../../Primitives/Vector2.h"
-#include "../../Primitives/Color.h"
+#include "../RenderTypes.h"
+
+#include "../../../Primitives/Rect.h"
+#include "../../../Primitives/Vector2.h"
+#include "../../../Primitives/Color.h"
+#include "../../../Primitives/Colorf.h"
 
 #include <memory>
 #include <cstdint>
@@ -179,9 +182,14 @@ namespace Rhi
 	// =========================================================================
 	// ShaderUniforms stub — fixed-function: just stores named float values
 	// =========================================================================
+	class UniformCache; // forward decl for UniformHashMapType
+
 	class ShaderUniforms
 	{
 	public:
+		// Dummy map type — the SW backend has no real per-uniform storage
+		using UniformHashMapType = int;
+
 		ShaderUniforms() = default;
 
 		// Stub API to match GLShaderUniforms usage pattern
@@ -190,6 +198,10 @@ namespace Rhi
 		inline void SetDirty(bool /*isDirty*/) {}
 		inline bool HasUniform(const char* /*name*/) const { return false; }
 		inline void CommitUniforms() {}
+
+		inline std::int32_t GetUniformCount() const { return 0; }
+		inline UniformCache* GetUniform(const char* /*name*/) { return nullptr; }
+		inline UniformHashMapType GetAllUniforms() const { return 0; }
 
 		FFState& GetFFState() { return ffState_; }
 		const FFState& GetFFState() const { return ffState_; }
@@ -201,15 +213,24 @@ namespace Rhi
 	// =========================================================================
 	// ShaderUniformBlocks stub
 	// =========================================================================
+	class UniformBlockCache; // forward decl for UniformHashMapType
+
 	class ShaderUniformBlocks
 	{
 	public:
+		// Dummy map type — the SW backend has no real per-block storage
+		using UniformHashMapType = int;
+
 		ShaderUniformBlocks() = default;
 
 		inline void SetProgram(void* /*program*/) {}
 		inline void SetUniformsDataPointer(std::uint8_t* /*ptr*/) {}
 		inline bool HasUniformBlock(const char* /*name*/) const { return false; }
 		inline void Bind() {}
+		inline void CommitUniformBlocks() {}
+
+		inline UniformBlockCache* GetUniformBlock(const char* /*name*/) { return nullptr; }
+		inline UniformHashMapType GetAllUniformBlocks() const { return 0; }
 	};
 
 	// =========================================================================
@@ -218,15 +239,40 @@ namespace Rhi
 	class UniformCache
 	{
 	public:
-		inline void SetFloatVector(const float* /*values*/) {}
-		inline void SetFloatValue(float /*v0*/) {}
-		inline void SetIntValue(std::int32_t /*v0*/) {}
+		// Float setters
+		inline bool SetFloatVector(const float* /*values*/) { return true; }
+		inline bool SetFloatValue(float /*v0*/) { return true; }
+		inline bool SetFloatValue(float /*v0*/, float /*v1*/) { return true; }
+		inline bool SetFloatValue(float /*v0*/, float /*v1*/, float /*v2*/) { return true; }
+		inline bool SetFloatValue(float /*v0*/, float /*v1*/, float /*v2*/, float /*v3*/) { return true; }
+		// Integer setters
+		inline bool SetIntVector(const std::int32_t* /*values*/) { return true; }
+		inline bool SetIntValue(std::int32_t /*v0*/) { return true; }
+		inline bool SetIntValue(std::int32_t /*v0*/, std::int32_t /*v1*/) { return true; }
+		inline bool SetIntValue(std::int32_t /*v0*/, std::int32_t /*v1*/, std::int32_t /*v2*/) { return true; }
+		inline bool SetIntValue(std::int32_t /*v0*/, std::int32_t /*v1*/, std::int32_t /*v2*/, std::int32_t /*v3*/) { return true; }
+		// Getter
+		inline std::int32_t GetIntValue(std::int32_t /*componentIdx*/) const { return 0; }
+		// Dirty flag — no-op for the SW backend
+		inline void SetDirty(bool /*isDirty*/) {}
 	};
 
 	class UniformBlockCache
 	{
 	public:
 		UniformCache* GetUniform(const char* /*name*/) { return nullptr; }
+
+		// Size / alignment — always 0 for the SW backend (no UBO)
+		inline std::uint32_t GetSize()        const { return 0; }
+		inline std::uint32_t GetAlignAmount() const { return 0; }
+
+		// Data pointer — not backed by real memory in SW
+		inline const std::uint8_t* GetDataPointer() const { return nullptr; }
+
+		// Copy operations — no-ops
+		inline bool CopyData(const std::uint8_t* /*src*/)                                           { return false; }
+		inline bool CopyData(std::uint32_t /*destIndex*/, const std::uint8_t* /*src*/, std::uint32_t /*bytes*/) { return false; }
+		inline void SetUsedSize(std::uint32_t /*size*/) {}
 	};
 
 	// =========================================================================
@@ -242,12 +288,16 @@ namespace Rhi
 
 		ShaderProgram() = default;
 		Status GetStatus() const { return Status::LinkedWithIntrospection; }
-		std::int32_t GetUniformsSize() const { return 0; }
+		std::int32_t GetUniformsSize()      const { return 0; }
 		std::int32_t GetUniformBlocksSize() const { return 0; }
-		std::int32_t GetAttributeCount() const { return 0; }
+		std::int32_t GetAttributeCount()    const { return 0; }
+		std::int32_t GetBatchSize()         const { return 0; }
 		UniformCache* GetUniform(const char* /*name*/) { return nullptr; }
 		bool IsLinked() const { return true; }
 		void Use() {}
+
+		/// Vertex-format binding — no-op for the fixed-function SW pipeline
+		void DefineVertexFormat(const Buffer* /*vbo*/, const Buffer* /*ibo*/, std::uint32_t /*vboOffset*/) {}
 
 		FFState ffState; // direct parameter access for fixed-function draws
 	};
@@ -413,7 +463,7 @@ namespace Rhi
 		return std::make_unique<Texture>();
 	}
 
-	inline void BindTexture(Texture& /*tex*/, std::uint32_t /*unit*/)
+	inline void BindTexture(const Texture& /*tex*/, std::uint32_t /*unit*/)
 	{
 		// SW renderer doesn't need explicit binding — textures are accessed via DrawContext
 	}
@@ -461,6 +511,44 @@ namespace Rhi
 	struct ScissorState { bool enabled; std::int32_t x, y, w, h; };
 	ScissorState GetScissorState();
 	void         SetScissorState(const ScissorState& state);
+
+	struct ViewportState { std::int32_t x, y, w, h; };
+	ViewportState GetViewportState();
+	void          SetViewportState(const ViewportState& s);
+
+	struct ClearColorState { float r, g, b, a; };
+	ClearColorState GetClearColorState();
+	void            SetClearColorState(const ClearColorState& s);
+
+	/// Depth mask is a no-op in software rendering (no GPU depth buffer).
+	inline void SetDepthMask(bool /*enabled*/) {}
+
+	// -------------------------------------------------------------------------
+	// Framebuffer helpers — mirrors the RHI_GL.h interface, SW implementations
+	// -------------------------------------------------------------------------
+
+	inline void FramebufferBind(Framebuffer& /*fbo*/) {}   // no-op: no GPU binding
+	inline void FramebufferUnbind() {}                     // no-op
+
+	inline void FramebufferSetDrawBuffers(Framebuffer& /*fbo*/, std::uint32_t /*n*/) {}  // no-op
+
+	inline void FramebufferAttachTexture(Framebuffer& fbo, Texture& texture, std::uint32_t colorIndex)
+	{
+		fbo.AttachTexture(FramebufferAttachment(colorIndex), &texture);
+	}
+
+	inline void FramebufferDetachTexture(Framebuffer& fbo, std::uint32_t colorIndex)
+	{
+		fbo.AttachTexture(FramebufferAttachment(colorIndex), nullptr);
+	}
+
+	inline bool FramebufferIsComplete(Framebuffer& fbo)
+	{
+		return fbo.IsComplete();
+	}
+
+	template<typename StringViewType>
+	inline void FramebufferSetLabel(Framebuffer& /*fbo*/, StringViewType /*label*/) {}  // no-op
 
 	// =========================================================================
 	// Framebuffer management — used by desktop presenters (GLFW/SDL2 blit)

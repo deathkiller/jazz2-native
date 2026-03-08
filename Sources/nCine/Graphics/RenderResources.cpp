@@ -1,4 +1,4 @@
-#include "RenderResources.h"
+﻿#include "RenderResources.h"
 #include "BinaryShaderCache.h"
 #include "RenderBuffersManager.h"
 #include "RenderVaoPool.h"
@@ -104,6 +104,7 @@ namespace nCine
 
 	void RenderResources::SetDefaultAttributesParameters(Rhi::ShaderProgram& shaderProgram)
 	{
+#if defined(RHI_CAP_SHADERS)
 		if (shaderProgram.GetAttributeCount() <= 0) {
 			return;
 		}
@@ -142,6 +143,7 @@ namespace nCine
 				positionAttribute->SetVboParameters(sizeof(VertexFormatPos2), reinterpret_cast<void*>(offsetof(VertexFormatPos2, position)));
 			}
 		}
+#endif // RHI_CAP_SHADERS
 	}
 
 	void RenderResources::SetCurrentCamera(Camera* camera)
@@ -188,9 +190,13 @@ namespace nCine
 		DEATH_ASSERT(vaoPool_ == nullptr);
 	
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
+#if defined(RHI_BACKEND_GL)
 		binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
+#endif
 		buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.vboSize, appCfg.iboSize);
+#if defined(RHI_BACKEND_GL)
 		vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
+#endif
 	}
 	
 	void RenderResources::Create()
@@ -198,20 +204,25 @@ namespace nCine
 		// `Create()` can be called after `CreateMinimal()`
 
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
+#if defined(RHI_BACKEND_GL)
 		if (binaryShaderCache_ == nullptr) {
 			binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
 		}
+#endif
 		if (buffersManager_ == nullptr) {
 			buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.vboSize, appCfg.iboSize);
 		}
+#if defined(RHI_BACKEND_GL)
 		if (vaoPool_ == nullptr) {
 			vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
 		}
+#endif
 		renderCommandPool_ = std::make_unique<RenderCommandPool>(appCfg.renderCommandPoolSize);
 		renderBatcher_ = std::make_unique<RenderBatcher>();
 		defaultCamera_ = std::make_unique<Camera>();
 		currentCamera_ = defaultCamera_.get();
 
+#if defined(RHI_BACKEND_GL)
 		ShaderLoad shadersToLoad[] = {
 #if defined(WITH_EMBEDDED_SHADERS)
 			// Skipping the initial new line character of the raw string literal
@@ -252,7 +263,7 @@ namespace nCine
 		};
 
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		std::int32_t maxUniformBlockSize = gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
+		std::int32_t maxUniformBlockSize = gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
 
 		char sourceString[64];
 		StringView vertexStrings[3];
@@ -361,6 +372,7 @@ namespace nCine
 		}
 
 		RegisterDefaultBatchedShaders();
+#endif // RHI_BACKEND_GL
 
 		// Calculating a default projection matrix for all shader programs
 		auto res = theApplication().GetResolution();

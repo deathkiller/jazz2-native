@@ -154,13 +154,17 @@ namespace nCine
 
 	void IGfxDevice::initGLViewport()
 	{
+#if defined(RHI_BACKEND_GL)
 		GLViewport::InitRect(0, 0, drawableWidth_, drawableHeight_);
+#endif
 	}
 
 	void IGfxDevice::setupGL()
 	{
+#if defined(RHI_BACKEND_GL)
 		glDisable(GL_DITHER);
 		GLBlending::SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GLDepthTest::Enable();
+#endif
 	}
 }

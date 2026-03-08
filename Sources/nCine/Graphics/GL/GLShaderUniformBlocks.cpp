@@ -1,4 +1,4 @@
-#include "GLShaderUniformBlocks.h"
+﻿#include "GLShaderUniformBlocks.h"
 #include "GLShaderProgram.h"
 #include "../RenderBuffersManager.h"
 #include "../RenderResources.h"
@@ -28,7 +28,7 @@ namespace nCine
 	void GLShaderUniformBlocks::Bind()
 	{
 #if defined(DEATH_DEBUG)
-		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 #endif
 		if (uboParams_.object) {
 			uboParams_.object->Bind();

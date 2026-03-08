@@ -97,7 +97,7 @@ namespace nCine
 	{
 		renderCommand_.GetMaterial().ReserveUniformsDataMemory();
 		instanceBlock_ = renderCommand_.GetMaterial().UniformBlock(Material::InstanceBlockName);
-		GLUniformCache* textureUniform = renderCommand_.GetMaterial().Uniform(Material::TextureUniformName);
+		Rhi::UniformCache* textureUniform = renderCommand_.GetMaterial().Uniform(Material::TextureUniformName);
 		if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
 			textureUniform->SetIntValue(0); // GL_TEXTURE0
 		}
@@ -117,14 +117,14 @@ namespace nCine
 			//dirtyBits_.reset(DirtyBitPositions::TransformationUploadBit);
 		}
 		if (dirtyBits_.test(DirtyBitPositions::ColorUploadBit)) {
-			GLUniformCache* colorUniform = instanceBlock_->GetUniform(Material::ColorUniformName);
+			Rhi::UniformCache* colorUniform = instanceBlock_->GetUniform(Material::ColorUniformName);
 			if (colorUniform != nullptr) {
 				colorUniform->SetFloatVector(absColor().Data());
 			}
 			//dirtyBits_.reset(DirtyBitPositions::ColorUploadBit);
 		}
 		if (dirtyBits_.test(DirtyBitPositions::SizeBit)) {
-			GLUniformCache* spriteSizeUniform = instanceBlock_->GetUniform(Material::SpriteSizeUniformName);
+			Rhi::UniformCache* spriteSizeUniform = instanceBlock_->GetUniform(Material::SpriteSizeUniformName);
 			if (spriteSizeUniform != nullptr) {
 				spriteSizeUniform->SetFloatValue(width_, height_);
 			}
@@ -135,7 +135,7 @@ namespace nCine
 			if (texture_ != nullptr) {
 				renderCommand_.GetMaterial().SetTexture(*texture_);
 
-				GLUniformCache* texRectUniform = instanceBlock_->GetUniform(Material::TexRectUniformName);
+				Rhi::UniformCache* texRectUniform = instanceBlock_->GetUniform(Material::TexRectUniformName);
 				if (texRectUniform != nullptr) {
 					const Vector2i texSize = texture_->GetSize();
 					const float texScaleX = texRect_.W / float(texSize.X);

@@ -79,8 +79,8 @@ namespace nCine
 		modelMatrix_[3][2] = CalculateDepth(layer_, cameraValues.nearClip, cameraValues.farClip);
 
 		if (material_.shaderProgram_ && material_.shaderProgram_->GetStatus() == Rhi::ShaderProgram::Status::LinkedWithIntrospection) {
-			GLUniformBlockCache* instanceBlock = material_.UniformBlock(Material::InstanceBlockName);
-			GLUniformCache* matrixUniform = instanceBlock
+			Rhi::UniformBlockCache* instanceBlock = material_.UniformBlock(Material::InstanceBlockName);
+			Rhi::UniformCache* matrixUniform = instanceBlock
 				? instanceBlock->GetUniform(Material::ModelMatrixUniformName)
 				: material_.Uniform(Material::ModelMatrixUniformName);
 			if (matrixUniform) {

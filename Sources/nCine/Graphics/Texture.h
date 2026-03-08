@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "../Base/Object.h"
 #include "../Primitives/Rect.h"
@@ -160,7 +160,7 @@ namespace nCine
 		void SetWrap(SamplerWrapping wrapMode);
 
 		/// Sets the OpenGL object label for the texture
-		void SetGLTextureLabel(const char* label);
+		void SetTextureLabel(const char* label);
 
 		/// Returns the user data opaque pointer for ImGui's `ImTextureID`
 		void* GetGuiTexId() const;
@@ -170,7 +170,7 @@ namespace nCine
 		}
 
 	private:
-		std::unique_ptr<Rhi::Texture> gfxTexture_;
+		std::unique_ptr<Rhi::Texture> texture_;
 		std::int32_t width_;
 		std::int32_t height_;
 		std::int32_t mipMapLevels_;

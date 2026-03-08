@@ -16,7 +16,6 @@ namespace nCine
 {
 	class SceneNode;
 	class Camera;
-	class GLFramebuffer;
 	class Texture;
 
 	/// Handles a viewport and its corresponding render target texture
@@ -204,8 +203,8 @@ namespace nCine
 			camera_ = camera;
 		}
 
-		/// Sets the OpenGL object label for the viewport framebuffer object
-		void SetGLFramebufferLabel(const char* label);
+		/// Sets the object label for the viewport framebuffer object
+		void SetFramebufferLabel(const char* label);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -238,7 +237,7 @@ namespace nCine
 		/// Render queue of commands for this viewport/RT
 		RenderQueue renderQueue_;
 
-		std::unique_ptr<GLFramebuffer> fbo_;
+		std::unique_ptr<Rhi::Framebuffer> framebuffer_;
 
 		static const std::uint32_t MaxNumTextures = 4;
 		Texture* textures_[MaxNumTextures];
