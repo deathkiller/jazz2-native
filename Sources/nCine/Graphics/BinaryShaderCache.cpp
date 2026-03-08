@@ -88,7 +88,7 @@ namespace nCine
 		return fs::CombinePath(path_, { filename, filenameLength });
 	}
 
-	bool BinaryShaderCache::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program, GLShaderProgram::Introspection introspection)
+	bool BinaryShaderCache::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program, Rhi::ShaderProgram::Introspection introspection)
 	{
 		String cachePath = GetCachedShaderPath(shaderName);
 		if (cachePath.empty()) {
@@ -142,7 +142,7 @@ namespace nCine
 		return program->FinalizeAfterLinking(introspection);
 	}
 
-	bool BinaryShaderCache::SaveToCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program)
+	bool BinaryShaderCache::SaveToCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program)
 	{
 		String cachePath = GetCachedShaderPath(shaderName);
 		if (cachePath.empty()) {

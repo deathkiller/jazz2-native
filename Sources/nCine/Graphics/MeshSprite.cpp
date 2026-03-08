@@ -281,7 +281,7 @@ namespace nCine
 		renderCommand_.GetMaterial().SetShaderProgramType(shaderProgramType);
 
 		shaderHasChanged();
-		renderCommand_.GetGeometry().SetPrimitiveType(GL_TRIANGLE_STRIP);
+		renderCommand_.GetGeometry().SetPrimitiveType(Rhi::PrimitiveType::TriangleStrip);
 		renderCommand_.GetGeometry().SetElementsPerVertex(texture_ ? VertexFloats : VertexNoTextureFloats);
 		renderCommand_.GetGeometry().SetHostVertexPointer(vertexDataPointer_);
 

@@ -3,7 +3,6 @@
 
 #include "Texture.h"
 #include "TextureLoaderRaw.h"
-#include "GL/GLTexture.h"
 #include "RenderStatistics.h"
 #include "../ServiceLocator.h"
 #include "../tracy.h"
@@ -59,7 +58,7 @@ namespace nCine
 	}
 
 	Texture::Texture()
-		: Object(ObjectType::Texture), glTexture_(std::make_unique<GLTexture>(GL_TEXTURE_2D)), width_(0), height_(0),
+		: Object(ObjectType::Texture), gfxTexture_(Rhi::CreateTexture()), width_(0), height_(0),
 			mipMapLevels_(0), isCompressed_(false), format_(Format::Unknown), dataSize_(0), minFiltering_(SamplerFilter::Nearest),
 			magFiltering_(SamplerFilter::Nearest), wrapMode_(SamplerWrapping::ClampToEdge)
 	{
@@ -103,7 +102,7 @@ namespace nCine
 	{
 #if defined(NCINE_PROFILING)
 		// Don't remove data from statistics if this is a moved out object
-		if (dataSize_ > 0 && glTexture_ != nullptr) {
+		if (dataSize_ > 0 && gfxTexture_ != nullptr) {
 			RenderStatistics::RemoveTexture(dataSize_);
 		}
 #endif
@@ -128,8 +127,8 @@ namespace nCine
 			RenderStatistics::RemoveTexture(dataSize_);
 		}
 #endif
-		glTexture_->Bind();
-		glTexture_->SetObjectLabel(name);
+		gfxTexture_->Bind();
+		gfxTexture_->SetObjectLabel(name);
 		Initialize(texLoader);
 
 #if defined(NCINE_PROFILING)
@@ -167,8 +166,8 @@ namespace nCine
 			RenderStatistics::RemoveTexture(dataSize_);
 		}
 #endif
-		glTexture_->Bind();
-		glTexture_->SetObjectLabel(filename);
+		gfxTexture_->Bind();
+		gfxTexture_->SetObjectLabel(filename);
 		Initialize(*texLoader);
 		Load(*texLoader);
 
@@ -203,7 +202,7 @@ namespace nCine
 
 		const GLenum format = ncFormatToNonInternal(format_);
 		glGetError();
-		glTexture_->TexSubImage2D(level, x, y, width, height, format, GL_UNSIGNED_BYTE, data);
+		gfxTexture_->TexSubImage2D(level, x, y, width, height, format, GL_UNSIGNED_BYTE, data);
 		const GLenum error = glGetError();
 
 		return (error == GL_NO_ERROR);
@@ -225,7 +224,7 @@ namespace nCine
 #if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		const GLenum format = ncFormatToNonInternal(format_);
 		glGetError();
-		glTexture_->GetTexImage(level, format, GL_UNSIGNED_BYTE, bufferPtr);
+		gfxTexture_->GetTexImage(level, format, GL_UNSIGNED_BYTE, bufferPtr);
 		const GLenum error = glGetError();
 
 		return (error == GL_NO_ERROR);
@@ -270,8 +269,8 @@ namespace nCine
 		}
 		// clang-format on
 
-		glTexture_->Bind();
-		glTexture_->TexParameteri(GL_TEXTURE_MIN_FILTER, glFilter);
+		gfxTexture_->Bind();
+		gfxTexture_->TexParameteri(GL_TEXTURE_MIN_FILTER, glFilter);
 		minFiltering_ = filter;
 	}
 
@@ -290,8 +289,8 @@ namespace nCine
 		}
 		// clang-format on
 
-		glTexture_->Bind();
-		glTexture_->TexParameteri(GL_TEXTURE_MAG_FILTER, glFilter);
+		gfxTexture_->Bind();
+		gfxTexture_->TexParameteri(GL_TEXTURE_MAG_FILTER, glFilter);
 		magFiltering_ = filter;
 	}
 
@@ -311,22 +310,22 @@ namespace nCine
 		}
 		// clang-format on
 
-		glTexture_->Bind();
-		glTexture_->TexParameteri(GL_TEXTURE_WRAP_S, glWrap);
-		glTexture_->TexParameteri(GL_TEXTURE_WRAP_T, glWrap);
+		gfxTexture_->Bind();
+		gfxTexture_->TexParameteri(GL_TEXTURE_WRAP_S, glWrap);
+		gfxTexture_->TexParameteri(GL_TEXTURE_WRAP_T, glWrap);
 		wrapMode_ = wrapMode;
 	}
 
 	void Texture::SetGLTextureLabel(const char* label)
 	{
-		glTexture_->SetObjectLabel(label);
+		gfxTexture_->SetObjectLabel(label);
 	}
 
 	/*! The pointer is an opaque handle to be used only by ImGui.
 	 *  It is considered immutable from an user point of view and thus retrievable by a constant method. */
 	void* Texture::GetGuiTexId() const
 	{
-		return const_cast<void*>(reinterpret_cast<const void*>(glTexture_.get()));
+		return const_cast<void*>(reinterpret_cast<const void*>(gfxTexture_.get()));
 	}
 
 	void Texture::Initialize(const ITextureLoader& texLoader)
@@ -351,20 +350,20 @@ namespace nCine
 		if (dataSize_ == 0 || (width_ != texLoader.width() || height_ != texLoader.height() || ncFormatToInternal(format_) != internalFormat)) {
 			if (withTexStorage) {
 				if (dataSize_ > 0) {
-					// The OpenGL texture needs to be recreated as its storage is immutable
-					glTexture_ = std::make_unique<GLTexture>(GL_TEXTURE_2D);
+					// The texture needs to be recreated as its storage is immutable
+					gfxTexture_ = Rhi::CreateTexture();
 					dataSize_ = 0;
 				}
 
 				if (dataSize_ == 0) {
-					glTexture_->TexStorage2D(texLoader.mipMapCount(), internalFormat, texLoader.width(), texLoader.height());
+					gfxTexture_->TexStorage2D(texLoader.mipMapCount(), internalFormat, texLoader.width(), texLoader.height());
 				}
 			} else if (!texFormat.isCompressed()) {
 				std::int32_t levelWidth = texLoader.width();
 				std::int32_t levelHeight = texLoader.height();
 
 				for (std::int32_t i = 0; i < texLoader.mipMapCount(); i++) {
-					glTexture_->TexImage2D(i, internalFormat, levelWidth, levelHeight, format, texFormat.type(), nullptr);
+					gfxTexture_->TexImage2D(i, internalFormat, levelWidth, levelHeight, format, texFormat.type(), nullptr);
 					levelWidth /= 2;
 					levelHeight /= 2;
 				}
@@ -378,20 +377,20 @@ namespace nCine
 		format_ = internalFormatToNc(internalFormat);
 		dataSize_ = dataSize;
 
-		glTexture_->TexParameteri(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexture_->TexParameteri(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		gfxTexture_->TexParameteri(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		gfxTexture_->TexParameteri(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		wrapMode_ = SamplerWrapping::ClampToEdge;
 
 		if (mipMapLevels_ > 1) {
-			glTexture_->TexParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexture_->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			gfxTexture_->TexParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			gfxTexture_->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 			magFiltering_ = SamplerFilter::Linear;
 			minFiltering_ = SamplerFilter::LinearMipmapLinear;
 			// To prevent artifacts if the MIP map chain is not complete
-			glTexture_->TexParameteri(GL_TEXTURE_MAX_LEVEL, mipMapLevels_);
+			gfxTexture_->TexParameteri(GL_TEXTURE_MAX_LEVEL, mipMapLevels_);
 		} else {
-			glTexture_->TexParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexture_->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			gfxTexture_->TexParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			gfxTexture_->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			magFiltering_ = SamplerFilter::Linear;
 			minFiltering_ = SamplerFilter::Linear;
 		}
@@ -417,13 +416,13 @@ namespace nCine
 
 			if (texFormat.isCompressed()) {
 				if (withTexStorage) {
-					glTexture_->CompressedTexSubImage2D(mipIdx, 0, 0, levelWidth, levelHeight, texFormat.internalFormat(), texLoader.dataSize(mipIdx), texLoader.pixels(mipIdx));
+					gfxTexture_->CompressedTexSubImage2D(mipIdx, 0, 0, levelWidth, levelHeight, texFormat.internalFormat(), texLoader.dataSize(mipIdx), texLoader.pixels(mipIdx));
 				} else {
-					glTexture_->CompressedTexImage2D(mipIdx, texFormat.internalFormat(), levelWidth, levelHeight, texLoader.dataSize(mipIdx), texLoader.pixels(mipIdx));
+					gfxTexture_->CompressedTexImage2D(mipIdx, texFormat.internalFormat(), levelWidth, levelHeight, texLoader.dataSize(mipIdx), texLoader.pixels(mipIdx));
 				}
 			} else {
 				// Storage has already been created at this point
-				glTexture_->TexSubImage2D(mipIdx, 0, 0, levelWidth, levelHeight, format, texFormat.type(), data);
+				gfxTexture_->TexSubImage2D(mipIdx, 0, 0, levelWidth, levelHeight, format, texFormat.type(), data);
 			}
 
 			levelWidth /= 2;

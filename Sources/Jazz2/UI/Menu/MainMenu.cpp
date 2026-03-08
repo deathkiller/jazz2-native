@@ -760,7 +760,7 @@ namespace Jazz2::UI::Menu
 			command->SetType(RenderCommand::Type::Particle);
 			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				//command->SetTransformation(command->transformation());
 
@@ -770,7 +770,7 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
 
 			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
@@ -929,7 +929,7 @@ namespace Jazz2::UI::Menu
 			command->SetType(RenderCommand::Type::TileMap);
 			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				//command->SetTransformation(command->transformation());
 
@@ -939,7 +939,7 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
 
 			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(repeats, 0.0f, repeats, 0.0f);
@@ -975,7 +975,7 @@ namespace Jazz2::UI::Menu
 			command->SetType(RenderCommand::Type::TileMap);
 			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				//command->SetTransformation(command->transformation());
 
@@ -985,7 +985,7 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
 
 			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(repeats, 0.0f, repeats, 0.0f);
@@ -1021,7 +1021,7 @@ namespace Jazz2::UI::Menu
 			command->SetType(RenderCommand::Type::TileMap);
 			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				//command->SetTransformation(command->transformation());
 
@@ -1031,7 +1031,7 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
 
 			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(repeats, 0.0f, repeats, 0.0f);
@@ -1057,6 +1057,9 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::TexturedBackgroundPass::Initialize()
 	{
+#if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
+		return; // Textured background requires shader support and framebuffers
+#endif
 		bool notInitialized = (_view == nullptr);
 
 		if (notInitialized) {
@@ -1082,7 +1085,7 @@ namespace Jazz2::UI::Menu
 				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::TileMap));
 				command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 
 				auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1095,7 +1098,7 @@ namespace Jazz2::UI::Menu
 		bool shaderChanged = _outputRenderCommand.GetMaterial().SetShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground));
 		if (shaderChanged) {
 			_outputRenderCommand.GetMaterial().ReserveUniformsDataMemory();
-			_outputRenderCommand.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			_outputRenderCommand.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 
 			auto* textureUniform = _outputRenderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1103,11 +1106,16 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		Viewport::GetChain().push_back(_view.get());
+		if (_view != nullptr) {
+			Viewport::GetChain().push_back(_view.get());
+		}
 	}
 
 	bool MainMenu::TexturedBackgroundPass::OnDraw(RenderQueue& renderQueue)
 	{
+#if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
+		return true; // Textured background requires shader support and framebuffers
+#endif
 		TileMapLayer& layer = _owner->_texturedBackgroundLayer;
 		Vector2i layoutSize = layer.LayoutSize;
 

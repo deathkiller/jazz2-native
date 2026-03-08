@@ -70,7 +70,7 @@ namespace Jazz2::Rendering
 
 	private:
 		std::unique_ptr<SceneNode> _node;
-#if !defined(DISABLE_RESCALE_SHADERS)
+#if defined(RHI_CAP_SHADERS)
 		Shader* _resizeShader;
 #endif
 		RenderCommand _renderCommand;

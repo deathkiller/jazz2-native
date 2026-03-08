@@ -17,6 +17,10 @@
 #	include <SDL.h>
 #endif
 
+#if defined(RHI_BACKEND_SW)
+#	include "../Graphics/RenderAPI/RHI.h"
+#endif
+
 namespace nCine::Backends
 {
 	/// The SDL based graphics device
@@ -73,6 +77,13 @@ namespace nCine::Backends
 		static SDL_Window* windowHandle_;
 		/// SDL2 OpenGL context handle
 		static SDL_GLContext glContextHandle_;
+
+#if defined(RHI_BACKEND_SW)
+		/// SDL2 hardware-accelerated renderer used to present the SW color buffer
+		SDL_Renderer* swRenderer_ = nullptr;
+		/// Streaming SDL_Texture that receives the SW color buffer each frame
+		SDL_Texture* swTexture_ = nullptr;
+#endif
 
 		/// Deleted copy constructor
 		SdlGfxDevice(const SdlGfxDevice&) = delete;

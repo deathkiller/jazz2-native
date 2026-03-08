@@ -1,4 +1,4 @@
-﻿#include "Bridge.h"
+#include "Bridge.h"
 #include "../../ContentResolver.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
@@ -71,7 +71,7 @@ namespace Jazz2::Actors::Solid
 				piece.Command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
 				piece.Command->GetMaterial().SetBlendingEnabled(true);
 				piece.Command->GetMaterial().ReserveUniformsDataMemory();
-				piece.Command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				piece.Command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 
 				auto* textureUniform = piece.Command->GetMaterial().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {

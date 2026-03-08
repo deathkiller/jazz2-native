@@ -4,6 +4,7 @@
 #include "../Primitives/Rect.h"
 #include "../Primitives/Color.h"
 #include "../Primitives/Colorf.h"
+#include "RenderAPI/RHI.h"
 
 #include <memory>
 
@@ -13,8 +14,6 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	class ITextureLoader;
-	class GLTexture;
 
 	/// Texture filtering modes
 	enum class SamplerFilter
@@ -28,6 +27,8 @@ namespace nCine
 		NearestMipmapLinear,
 		LinearMipmapLinear
 	};
+
+	class ITextureLoader;
 
 	/// Texture wrap modes
 	enum class SamplerWrapping
@@ -169,7 +170,7 @@ namespace nCine
 		}
 
 	private:
-		std::unique_ptr<GLTexture> glTexture_;
+		std::unique_ptr<Rhi::Texture> gfxTexture_;
 		std::int32_t width_;
 		std::int32_t height_;
 		std::int32_t mipMapLevels_;

@@ -1,6 +1,4 @@
 #include "RenderCommand.h"
-#include "GL/GLShaderProgram.h"
-#include "GL/GLScissorTest.h"
 #include "RenderResources.h"
 #include "Camera.h"
 #include "DrawableNode.h"
@@ -39,26 +37,26 @@ namespace nCine
 		material_.Bind();
 		material_.CommitUniforms();
 
-		GLScissorTest::State scissorTestState = GLScissorTest::GetState();
+		Rhi::ScissorState scissorTestState = Rhi::GetScissorState();
 		if (scissorRect_.W > 0 && scissorRect_.H > 0) {
-			GLScissorTest::Enable(scissorRect_);
+			Rhi::SetScissorTest(true, scissorRect_.X, scissorRect_.Y, scissorRect_.W, scissorRect_.H);
 		}
 
 		std::uint32_t offset = 0;
 #if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 		// Simulating missing `glDrawElementsBaseVertex()` on OpenGL ES 3.0
 		if (geometry_.numIndices_ > 0) {
-			offset = geometry_.GetVboParams().offset + (geometry_.firstVertex_ * geometry_.numElementsPerVertex_ * sizeof(GLfloat));
+			offset = geometry_.GetVboParams().offset + (geometry_.firstVertex_ * geometry_.numElementsPerVertex_ * sizeof(float));
 		}
 #endif
 		material_.DefineVertexFormat(geometry_.GetVboParams().object, geometry_.GetIboParams().object, offset);
 		geometry_.Bind();
 		geometry_.Draw(numInstances_);
 
-		GLScissorTest::SetState(scissorTestState);
+		Rhi::SetScissorState(scissorTestState);
 	}
 
-	void RenderCommand::SetScissor(GLint x, GLint y, GLsizei width, GLsizei height)
+	void RenderCommand::SetScissor(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
 		scissorRect_.Set(x, y, width, height);
 	}
@@ -80,7 +78,7 @@ namespace nCine
 		const Camera::ProjectionValues cameraValues = RenderResources::GetCurrentCamera()->GetProjectionValues();
 		modelMatrix_[3][2] = CalculateDepth(layer_, cameraValues.nearClip, cameraValues.farClip);
 
-		if (material_.shaderProgram_ && material_.shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
+		if (material_.shaderProgram_ && material_.shaderProgram_->GetStatus() == Rhi::ShaderProgram::Status::LinkedWithIntrospection) {
 			GLUniformBlockCache* instanceBlock = material_.UniformBlock(Material::InstanceBlockName);
 			GLUniformCache* matrixUniform = instanceBlock
 				? instanceBlock->GetUniform(Material::ModelMatrixUniformName)

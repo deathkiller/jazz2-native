@@ -1,7 +1,6 @@
 #include "RenderVaoPool.h"
 #include "RenderStatistics.h"
 #include "GL/GLBufferObject.h"
-#include "GL/GLVertexArrayObject.h"
 #include "GL/GLDebug.h"
 #include "../Base/Algorithms.h"
 #include "../../Main.h"
@@ -13,11 +12,11 @@ namespace nCine
 		vaoPool_.reserve(vaoPoolSize);
 
 		// Start with a VAO bound to the OpenGL context
-		GLVertexFormat format;
+		Rhi::VertexFormat format;
 		BindVao(format);
 	}
 
-	void RenderVaoPool::BindVao(const GLVertexFormat& vertexFormat)
+	void RenderVaoPool::BindVao(const Rhi::VertexFormat& vertexFormat)
 	{
 #if defined(DEATH_DEBUG)
 		char debugString[128];
@@ -51,7 +50,7 @@ namespace nCine
 			std::uint32_t index = 0;
 			if (vaoPool_.size() < vaoPool_.capacity()) {
 				auto& item = vaoPool_.emplace_back();
-				item.object = std::make_unique<GLVertexArrayObject>();
+				item.object = std::make_unique<Rhi::VertexArrayObject>();
 				index = std::uint32_t(vaoPool_.size() - 1);
 #if defined(DEATH_DEBUG)
 				if (GLDebug::IsAvailable()) {

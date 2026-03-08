@@ -1,6 +1,7 @@
 #pragma once
 
-#include "GL/GLBufferObject.h"
+#include "RenderAPI/RHI.h"
+#include "RenderAPI/RenderBufferParams.h"
 
 #include <memory>
 
@@ -10,7 +11,7 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// Handles the memory mapping in multiple OpenGL Buffer Objects
+	/// Handles the memory mapping in multiple GPU Buffer Objects
 	class RenderBuffersManager
 	{
 		friend class ScreenViewport;
@@ -30,24 +31,16 @@ namespace nCine
 
 		struct BufferSpecifications
 		{
-			BufferTypes type;
-			GLenum target;
-			GLenum mapFlags;
-			GLenum usageFlags;
-			std::uint32_t maxSize;
-			GLuint alignment;
+			BufferTypes       type;
+			Rhi::BufferType  bufferType;
+			Rhi::MapFlags    mapFlags;
+			Rhi::BufferUsage usageFlags;
+			std::uint32_t     maxSize;
+			std::uint32_t     alignment;
 		};
 
-		struct Parameters
-		{
-			Parameters()
-				: object(nullptr), size(0), offset(0), mapBase(nullptr) {}
-
-			GLBufferObject* object;
-			std::uint32_t size;
-			std::uint32_t offset;
-			GLubyte* mapBase;
-		};
+		/// Alias for backward compatibility — see BufferParams in RenderBufferParams.h
+		using Parameters = BufferParams;
 
 		RenderBuffersManager(bool useBufferMapping, std::uint32_t vboMaxSize, std::uint32_t iboMaxSize);
 
@@ -70,14 +63,14 @@ namespace nCine
 		struct ManagedBuffer
 		{
 			ManagedBuffer()
-				: type(BufferTypes::Array), size(0), freeSpace(0), object(nullptr), mapBase(nullptr), hostBuffer(nullptr) {}
+				: type(BufferTypes::Array), size(0), freeSpace(0), object(nullptr), mapBase(nullptr) {}
 
 			BufferTypes type;
-			std::unique_ptr<GLBufferObject> object;
+			std::unique_ptr<Rhi::Buffer> object;
 			std::uint32_t size;
 			std::uint32_t freeSpace;
-			GLubyte* mapBase;
-			std::unique_ptr<GLubyte[]> hostBuffer;
+			std::uint8_t* mapBase;
+			std::unique_ptr<std::uint8_t[]> hostBuffer;
 		};
 #endif
 

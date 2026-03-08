@@ -1,4 +1,4 @@
-﻿#include "BlurRenderPass.h"
+#include "BlurRenderPass.h"
 #include "PlayerViewport.h"
 
 #include "../../nCine/Graphics/RenderQueue.h"
@@ -7,6 +7,9 @@ namespace Jazz2::Rendering
 {
 	void BlurRenderPass::Initialize(Texture* source, std::int32_t width, std::int32_t height, Vector2f direction)
 	{
+#if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
+		return; // Blur post-processing requires shader support and framebuffers
+#endif
 		_source = source;
 		_downsampleOnly = (direction.X <= std::numeric_limits<float>::epsilon() && direction.Y <= std::numeric_limits<float>::epsilon());
 		_direction = direction;
@@ -39,7 +42,7 @@ namespace Jazz2::Rendering
 		_renderCommand.GetMaterial().SetShader(shader);
 		//_renderCommand.GetMaterial().SetBlendingEnabled(true);
 		_renderCommand.GetMaterial().ReserveUniformsDataMemory();
-		_renderCommand.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		_renderCommand.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 
 		auto* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 		if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -49,11 +52,16 @@ namespace Jazz2::Rendering
 
 	void BlurRenderPass::Register()
 	{
-		Viewport::GetChain().push_back(_view.get());
+		if (_view != nullptr) {
+			Viewport::GetChain().push_back(_view.get());
+		}
 	}
 
 	bool BlurRenderPass::OnDraw(RenderQueue& renderQueue)
 	{
+#if !defined(RHI_CAP_SHADERS)
+		return true; // Blur post-processing requires programmable shaders
+#endif
 		Vector2i size = _target->GetSize();
 
 		auto* instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);

@@ -4,6 +4,7 @@
 #include "RenderQueue.h"
 #include "RenderCommandPool.h"
 #include "RenderResources.h"
+#include "RenderAPI/RHI.h"
 #include "GL/GLTexture.h"
 #include "GL/GLShaderProgram.h"
 #include "GL/GLScissorTest.h"
@@ -385,17 +386,17 @@ namespace nCine
 		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetType(GL_UNSIGNED_BYTE);
 		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetNormalized(true);
 		material.SetBlendingEnabled(true);
-		material.SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		material.SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
 
-		cmd.GetGeometry().SetElementsPerVertex(sizeof(ImDrawVert) / sizeof(GLfloat));
-		cmd.GetGeometry().SetDrawParameters(GL_TRIANGLES, 0, 0);
+		cmd.GetGeometry().SetElementsPerVertex(sizeof(ImDrawVert) / sizeof(float));
+		cmd.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::Triangles, 0, 0);
 	}
 
 	void ImGuiDrawing::Draw(RenderQueue& renderQueue)
 	{
 		ImDrawData* drawData = ImGui::GetDrawData();
 
-		const std::uint32_t numElements = sizeof(ImDrawVert) / sizeof(GLfloat);
+		const std::uint32_t numElements = sizeof(ImDrawVert) / sizeof(float);
 
 		ImGuiIO& io = ImGui::GetIO();
 		const std::int32_t fbWidth = std::int32_t(drawData->DisplaySize.x * drawData->FramebufferScale.x);

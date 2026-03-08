@@ -1,4 +1,4 @@
-﻿#include "ActorBase.h"
+#include "ActorBase.h"
 #include "../ContentResolver.h"
 #include "../ILevelHandler.h"
 #include "../PreferencesCache.h"
@@ -1436,7 +1436,7 @@ namespace Jazz2::Actors
 		}
 		if (shaderChanged) {
 			shaderHasChanged();
-			renderCommand_.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			renderCommand_.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 
 			if (type == ActorRendererType::Outline || type == ActorRendererType::FrozenMask) {
 				_rendererTransition = 0.0f;

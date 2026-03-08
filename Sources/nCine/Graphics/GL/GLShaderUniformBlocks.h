@@ -3,7 +3,7 @@
 #include "../../Base/StaticHashMap.h"
 
 #include "GLUniformBlockCache.h"
-#include "../RenderBuffersManager.h"
+#include "../RenderAPI/RenderBufferParams.h"
 
 namespace nCine
 {
@@ -47,7 +47,7 @@ namespace nCine
 		GLubyte* dataPointer_;
 
 		/// Uniform buffer parameters for binding
-		RenderBuffersManager::Parameters uboParams_;
+		BufferParams uboParams_;
 
 		UniformHashMapType uniformBlockCaches_;
 

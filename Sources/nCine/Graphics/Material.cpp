@@ -1,8 +1,5 @@
 #include "Material.h"
 #include "RenderResources.h"
-#include "GL/GLShaderProgram.h"
-#include "GL/GLUniform.h"
-#include "GL/GLTexture.h"
 #include "Texture.h"
 
 #include <cstddef> // for offsetof()
@@ -14,11 +11,11 @@ namespace nCine
 	{
 	}
 
-	Material::Material(GLShaderProgram* program, GLTexture* texture)
-		: isBlendingEnabled_(false), srcBlendingFactor_(GL_SRC_ALPHA), destBlendingFactor_(GL_ONE_MINUS_SRC_ALPHA),
+	Material::Material(Rhi::ShaderProgram* program, Rhi::Texture* texture)
+		: isBlendingEnabled_(false), srcBlendingFactor_(Rhi::BlendFactor::SrcAlpha), destBlendingFactor_(Rhi::BlendFactor::OneMinusSrcAlpha),
 			shaderProgramType_(ShaderProgramType::Custom), shaderProgram_(program), uniformsHostBufferSize_(0)
 	{
-		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
+		for (std::uint32_t i = 0; i < MaxTextureUnits; i++) {
 			textures_[i] = nullptr;
 		}
 		textures_[0] = texture;
@@ -28,7 +25,7 @@ namespace nCine
 		}
 	}
 
-	void Material::SetBlendingFactors(GLenum srcBlendingFactor, GLenum destBlendingFactor)
+	void Material::SetBlendingFactors(Rhi::BlendFactor srcBlendingFactor, Rhi::BlendFactor destBlendingFactor)
 	{
 		srcBlendingFactor_ = srcBlendingFactor;
 		destBlendingFactor_ = destBlendingFactor;
@@ -36,7 +33,7 @@ namespace nCine
 
 	bool Material::SetShaderProgramType(ShaderProgramType shaderProgramType)
 	{
-		GLShaderProgram* shaderProgram = RenderResources::GetShaderProgram(shaderProgramType);
+		Rhi::ShaderProgram* shaderProgram = RenderResources::GetShaderProgram(shaderProgramType);
 		if (shaderProgram == nullptr || shaderProgram == shaderProgram_) {
 			return false;
 		}
@@ -48,7 +45,7 @@ namespace nCine
 		return true;
 	}
 
-	void Material::SetShaderProgram(GLShaderProgram* program)
+	void Material::SetShaderProgram(Rhi::ShaderProgram* program)
 	{
 		// Allow self-assignment to take into account the case where the shader program loads new shaders
 
@@ -63,7 +60,7 @@ namespace nCine
 
 	bool Material::SetShader(Shader* shader)
 	{
-		GLShaderProgram* shaderProgram = shader->glShaderProgram_.get();
+		Rhi::ShaderProgram* shaderProgram = shader->glShaderProgram_.get();
 		if (shaderProgram == shaderProgram_) {
 			return false;
 		}
@@ -84,15 +81,15 @@ namespace nCine
 		// Total memory size for all uniforms and uniform blocks
 		const std::uint32_t uniformsSize = shaderProgram_->GetUniformsSize() + shaderProgram_->GetUniformBlocksSize();
 		if (uniformsSize > uniformsHostBufferSize_) {
-			uniformsHostBuffer_ = std::make_unique<GLubyte[]>(uniformsSize);
+			uniformsHostBuffer_ = std::make_unique<std::uint8_t[]>(uniformsSize);
 			uniformsHostBufferSize_ = uniformsSize;
 		}
-		GLubyte* dataPointer = uniformsHostBuffer_.get();
+		std::uint8_t* dataPointer = uniformsHostBuffer_.get();
 		shaderUniforms_.SetUniformsDataPointer(dataPointer);
 		shaderUniformBlocks_.SetUniformsDataPointer(&dataPointer[shaderProgram_->GetUniformsSize()]);
 	}
 
-	void Material::SetUniformsDataPointer(GLubyte* dataPointer)
+	void Material::SetUniformsDataPointer(std::uint8_t* dataPointer)
 	{
 		DEATH_ASSERT(shaderProgram_);
 		DEATH_ASSERT(dataPointer);
@@ -103,19 +100,19 @@ namespace nCine
 		shaderUniformBlocks_.SetUniformsDataPointer(&dataPointer[shaderProgram_->GetUniformsSize()]);
 	}
 
-	const GLTexture* Material::GetTexture(std::uint32_t unit) const
+	const Rhi::Texture* Material::GetTexture(std::uint32_t unit) const
 	{
-		const GLTexture* texture = nullptr;
-		if (unit < GLTexture::MaxTextureUnits) {
+		const Rhi::Texture* texture = nullptr;
+		if (unit < MaxTextureUnits) {
 			texture = textures_[unit];
 		}
 		return texture;
 	}
 
-	bool Material::SetTexture(std::uint32_t unit, const GLTexture* texture)
+	bool Material::SetTexture(std::uint32_t unit, const Rhi::Texture* texture)
 	{
 		bool result = false;
-		if (unit < GLTexture::MaxTextureUnits) {
+		if (unit < MaxTextureUnits) {
 			textures_[unit] = texture;
 			result = true;
 		}
@@ -124,16 +121,16 @@ namespace nCine
 
 	bool Material::SetTexture(std::uint32_t unit, const Texture& texture)
 	{
-		return SetTexture(unit, texture.glTexture_.get());
+		return SetTexture(unit, texture.gfxTexture_.get());
 	}
 
 	void Material::Bind()
 	{
-		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
+		for (std::uint32_t i = 0; i < MaxTextureUnits; i++) {
 			if (textures_[i] != nullptr) {
-				textures_[i]->Bind(i);
+				Rhi::BindTexture(*textures_[i], i);
 			} else {
-				GLTexture::Unbind(i);
+				Rhi::UnbindTexture(i);
 			}
 		}
 
@@ -143,39 +140,39 @@ namespace nCine
 		}
 	}
 
-	void Material::DefineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, std::uint32_t vboOffset)
+	void Material::DefineVertexFormat(const Rhi::Buffer* vbo, const Rhi::Buffer* ibo, std::uint32_t vboOffset)
 	{
 		shaderProgram_->DefineVertexFormat(vbo, ibo, vboOffset);
 	}
 
 	namespace
 	{
-		uint8_t glBlendingFactorToInt(GLenum blendingFactor)
+		std::uint8_t blendingFactorToInt(Rhi::BlendFactor blendingFactor)
 		{
 			switch (blendingFactor) {
-				case GL_ZERO: return 0;
-				case GL_ONE: return 1;
-				case GL_SRC_COLOR: return 2;
-				case GL_ONE_MINUS_SRC_COLOR: return 3;
-				case GL_DST_COLOR: return 4;
-				case GL_ONE_MINUS_DST_COLOR: return 5;
-				case GL_SRC_ALPHA: return 6;
-				case GL_ONE_MINUS_SRC_ALPHA: return 7;
-				case GL_DST_ALPHA: return 8;
-				case GL_ONE_MINUS_DST_ALPHA: return 9;
-				case GL_CONSTANT_COLOR: return 10;
-				case GL_ONE_MINUS_CONSTANT_COLOR: return 11;
-				case GL_CONSTANT_ALPHA: return 12;
-				case GL_ONE_MINUS_CONSTANT_ALPHA: return 13;
-				case GL_SRC_ALPHA_SATURATE: return 14;
+				case Rhi::BlendFactor::Zero:                 return 0;
+				case Rhi::BlendFactor::One:                  return 1;
+				case Rhi::BlendFactor::SrcColor:             return 2;
+				case Rhi::BlendFactor::OneMinusSrcColor:     return 3;
+				case Rhi::BlendFactor::DstColor:             return 4;
+				case Rhi::BlendFactor::OneMinusDstColor:     return 5;
+				case Rhi::BlendFactor::SrcAlpha:             return 6;
+				case Rhi::BlendFactor::OneMinusSrcAlpha:     return 7;
+				case Rhi::BlendFactor::DstAlpha:             return 8;
+				case Rhi::BlendFactor::OneMinusDstAlpha:     return 9;
+				case Rhi::BlendFactor::ConstantColor:        return 10;
+				case Rhi::BlendFactor::OneMinusConstantColor:return 11;
+				case Rhi::BlendFactor::ConstantAlpha:        return 12;
+				case Rhi::BlendFactor::OneMinusConstantAlpha:return 13;
+				case Rhi::BlendFactor::SrcAlphaSaturate:     return 14;
+				default:                                      return 0;
 			}
-			return 0;
 		}
 
 		struct SortHashData
 		{
-			GLuint textures[GLTexture::MaxTextureUnits];
-			GLuint shaderProgram;
+			std::uintptr_t textures[Material::MaxTextureUnits];
+			std::uintptr_t shaderProgram;
 			std::uint8_t srcBlendingFactor;
 			std::uint8_t destBlendingFactor;
 		};
@@ -187,12 +184,20 @@ namespace nCine
 		// Align to 64 bits for `fasthash64()` to properly work on Emscripten without alignment faults
 		static SortHashData hashData alignas(8);
 
-		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
+		for (std::uint32_t i = 0; i < MaxTextureUnits; i++) {
+#if defined(RHI_BACKEND_GL)
 			hashData.textures[i] = (textures_[i] != nullptr) ? textures_[i]->GetGLHandle() : 0;
+#else
+			hashData.textures[i] = reinterpret_cast<std::uintptr_t>(textures_[i]);
+#endif
 		}
+#if defined(RHI_BACKEND_GL)
 		hashData.shaderProgram = shaderProgram_->GetGLHandle();
-		hashData.srcBlendingFactor = glBlendingFactorToInt(srcBlendingFactor_);
-		hashData.destBlendingFactor = glBlendingFactorToInt(destBlendingFactor_);
+#else
+		hashData.shaderProgram = reinterpret_cast<std::uintptr_t>(shaderProgram_);
+#endif
+		hashData.srcBlendingFactor = blendingFactorToInt(srcBlendingFactor_);
+		hashData.destBlendingFactor = blendingFactorToInt(destBlendingFactor_);
 
 		return (std::uint32_t)xxHash3(reinterpret_cast<const void*>(&hashData), sizeof(SortHashData), Seed);
 	}

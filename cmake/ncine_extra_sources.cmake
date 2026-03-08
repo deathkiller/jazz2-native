@@ -1,5 +1,199 @@
 target_include_directories(${NCINE_APP} PRIVATE "${NCINE_SOURCE_DIR}/Shared")
 
+# ============================================================================
+# RHI backend selection
+# Adds the compile-time define that makes RenderAPI/RHI.h pull in the right
+# backend header.  Also conditionally include/exclude backend-specific sources.
+# ============================================================================
+if(NCINE_RHI STREQUAL "GL")
+	target_compile_definitions(${NCINE_APP} PRIVATE "RHI_BACKEND_GL")
+	message(STATUS "Graphics API backend: OpenGL (GL)")
+elseif(NCINE_RHI STREQUAL "SW")
+	target_compile_definitions(${NCINE_APP} PRIVATE "RHI_BACKEND_SW")
+	message(STATUS "Graphics API backend: Software renderer (SW)")
+
+	# Remove OpenGL-specific low-level wrapper sources (the GAPI/GL/ layer is gone)
+	list(REMOVE_ITEM SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLAttribute.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLBlending.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLBufferObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLClearColor.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLCullFace.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLDebug.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLDepthTest.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLFramebuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLRenderbuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLScissorTest.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShader.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderUniformBlocks.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniform.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformBlock.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformBlockCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLVertexArrayObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLVertexFormat.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLViewport.cpp
+		# Binary shader cache and VAO pool are GL-only
+		${NCINE_SOURCE_DIR}/nCine/Graphics/BinaryShaderCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RenderVaoPool.cpp
+	)
+
+	# Add software renderer sources
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RenderAPI/SW/RHI_SW.cpp
+	)
+elseif(NCINE_RHI STREQUAL "DC")
+	target_compile_definitions(${NCINE_APP} PRIVATE "RHI_BACKEND_DC")
+	message(STATUS "Graphics API backend: Dreamcast PVR (DC)")
+
+	# Remove OpenGL-specific low-level wrapper sources
+	list(REMOVE_ITEM SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLAttribute.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLBlending.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLBufferObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLClearColor.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLCullFace.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLDebug.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLDepthTest.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLFramebuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLRenderbuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLScissorTest.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShader.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderUniformBlocks.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniform.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformBlock.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformBlockCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLVertexArrayObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLVertexFormat.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLViewport.cpp
+		# Binary shader cache and VAO pool are GL-only
+		${NCINE_SOURCE_DIR}/nCine/Graphics/BinaryShaderCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RenderVaoPool.cpp
+	)
+
+	# Add Dreamcast PVR sources
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RenderAPI/DC/RHI_DC.cpp
+	)
+elseif(NCINE_RHI STREQUAL "N64")
+	target_compile_definitions(${NCINE_APP} PRIVATE "RHI_BACKEND_N64")
+	message(STATUS "Graphics API backend: Nintendo 64 rdpq (N64)")
+
+	# Remove OpenGL-specific low-level wrapper sources
+	list(REMOVE_ITEM SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLAttribute.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLBlending.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLBufferObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLClearColor.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLCullFace.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLDebug.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLDepthTest.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLFramebuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLRenderbuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLScissorTest.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShader.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderUniformBlocks.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniform.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformBlock.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformBlockCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLVertexArrayObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLVertexFormat.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLViewport.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/BinaryShaderCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RenderVaoPool.cpp
+	)
+
+	# Add Nintendo 64 rdpq sources
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RenderAPI/N64/RHI_N64.cpp
+	)
+elseif(NCINE_RHI STREQUAL "PS1")
+	target_compile_definitions(${NCINE_APP} PRIVATE "RHI_BACKEND_PS1")
+	message(STATUS "Graphics API backend: PlayStation 1 GPU (PS1)")
+
+	# Remove OpenGL-specific low-level wrapper sources
+	list(REMOVE_ITEM SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLAttribute.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLBlending.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLBufferObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLClearColor.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLCullFace.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLDebug.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLDepthTest.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLFramebuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLRenderbuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLScissorTest.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShader.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderUniformBlocks.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniform.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformBlock.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformBlockCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLVertexArrayObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLVertexFormat.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLViewport.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/BinaryShaderCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RenderVaoPool.cpp
+	)
+
+	# Add PlayStation 1 GPU sources
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RenderAPI/PS1/RHI_PS1.cpp
+	)
+elseif(NCINE_RHI STREQUAL "SAT")
+	target_compile_definitions(${NCINE_APP} PRIVATE "RHI_BACKEND_SAT")
+	message(STATUS "Graphics API backend: Sega Saturn VDP1 (SAT)")
+
+	# Remove OpenGL-specific low-level wrapper sources
+	list(REMOVE_ITEM SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLAttribute.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLBlending.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLBufferObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLClearColor.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLCullFace.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLDebug.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLDepthTest.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLFramebuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLRenderbuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLScissorTest.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShader.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderUniformBlocks.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniform.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformBlock.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformBlockCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLUniformCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLVertexArrayObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLVertexFormat.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLViewport.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/BinaryShaderCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RenderVaoPool.cpp
+	)
+
+	# Add Sega Saturn VDP1 sources
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RenderAPI/SAT/RHI_SAT.cpp
+	)
+else()
+	message(FATAL_ERROR "Unknown RHI backend \"${NCINE_RHI}\". Valid choices: GL, SW, DX11, VK, METAL, DC, N64, PS1, SAT")
+endif()
+
 if(ATOMIC_FOUND)
 	target_link_libraries(${NCINE_APP} PRIVATE Atomic::Atomic)
 endif()

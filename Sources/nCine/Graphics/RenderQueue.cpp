@@ -190,7 +190,7 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 			RenderStatistics::GatherStatistics(*transparentRenderCommand);
 #endif
-			GLBlending::SetBlendFunc(transparentRenderCommand->GetMaterial().GetSrcBlendingFactor(), transparentRenderCommand->GetMaterial().GetDestBlendingFactor());
+			GLBlending::SetBlendFunc(Rhi::ToGLenum(transparentRenderCommand->GetMaterial().GetSrcBlendingFactor()), Rhi::ToGLenum(transparentRenderCommand->GetMaterial().GetDestBlendingFactor()));
 			transparentRenderCommand->CommitCameraTransformation();
 			transparentRenderCommand->Issue();
 		}

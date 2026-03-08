@@ -27,20 +27,35 @@ namespace nCine::Backends
 
 	SdlGfxDevice::~SdlGfxDevice()
 	{
-		LOGD("Disposing OpenGL context...");
+		LOGD("Disposing graphics context...");
 
+#if defined(RHI_BACKEND_SW)
+		if (swTexture_ != nullptr) {
+			SDL_DestroyTexture(swTexture_);
+			swTexture_ = nullptr;
+		}
+		if (swRenderer_ != nullptr) {
+			SDL_DestroyRenderer(swRenderer_);
+			swRenderer_ = nullptr;
+		}
+#else
 		SDL_GL_DeleteContext(glContextHandle_);
 		glContextHandle_ = nullptr;
+#endif
 		SDL_DestroyWindow(windowHandle_);
 		windowHandle_ = nullptr;
-		
+
 		SDL_QuitSubSystem(SDL_INIT_VIDEO);
 		SDL_Quit();
 	}
 
 	void SdlGfxDevice::setSwapInterval(int interval)
 	{
+#if !defined(RHI_BACKEND_SW)
 		SDL_GL_SetSwapInterval(interval);
+#else
+		(void)interval;
+#endif
 	}
 
 	void SdlGfxDevice::setResolution(bool fullscreen, int width, int height)
@@ -79,7 +94,20 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::update()
 	{
+#if defined(RHI_BACKEND_SW)
+		if (swRenderer_ != nullptr && swTexture_ != nullptr) {
+			const std::int32_t w   = Rhi::GetColorBufferWidth();
+			const std::int32_t h   = Rhi::GetColorBufferHeight();
+			const std::uint8_t* buf = Rhi::GetColorBuffer();
+			if (buf != nullptr && w > 0 && h > 0) {
+				SDL_UpdateTexture(swTexture_, nullptr, buf, w * 4);
+			}
+			SDL_RenderCopy(swRenderer_, swTexture_, nullptr, nullptr);
+			SDL_RenderPresent(swRenderer_);
+		}
+#else
 		SDL_GL_SwapWindow(windowHandle_);
+#endif
 	}
 
 	void SdlGfxDevice::setResolutionInternal(int width, int height)
@@ -87,6 +115,17 @@ namespace nCine::Backends
 		width_ = width;
 		height_ = height;
 		SDL_SetWindowSize(windowHandle_, width, height);
+#if defined(RHI_BACKEND_SW)
+		// Recreate the streaming texture for the new size
+		if (swRenderer_ != nullptr) {
+			if (swTexture_ != nullptr) {
+				SDL_DestroyTexture(swTexture_);
+			}
+			swTexture_ = SDL_CreateTexture(swRenderer_, SDL_PIXELFORMAT_RGBA32,
+			                               SDL_TEXTUREACCESS_STREAMING, width, height);
+			Rhi::ResizeColorBuffer(width, height);
+		}
+#endif
 	}
 
 	void SdlGfxDevice::setWindowIcon(StringView windowIconFilename)
@@ -199,6 +238,7 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::initDevice(int windowPosX, int windowPosY, bool isResizable)
 	{
+#if !defined(RHI_BACKEND_SW)
 		// Setting OpenGL attributes
 		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, displayMode_.redBits());
 		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, displayMode_.greenBits());
@@ -209,26 +249,31 @@ namespace nCine::Backends
 		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, displayMode_.stencilBits());
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, glContextInfo_.majorVersion);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, glContextInfo_.minorVersion);
-#if defined(WITH_OPENGLES)
+#	if defined(WITH_OPENGLES)
 		SDL_SetHint(SDL_HINT_OPENGL_ES_DRIVER, "1");
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-#elif defined(DEATH_TARGET_EMSCRIPTEN)
+#	elif defined(DEATH_TARGET_EMSCRIPTEN)
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-#else
+#	else
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, glContextInfo_.coreProfile
 															 ? SDL_GL_CONTEXT_PROFILE_CORE
 															 : SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
-#endif
+#	endif
 		if (!glContextInfo_.forwardCompatible) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
 		}
 		if (glContextInfo_.debugContext) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 		}
+#endif // !RHI_BACKEND_SW
 
 		LOGD("Initializing window...");
 
+#if defined(RHI_BACKEND_SW)
+		Uint32 flags = 0;
+#else
 		Uint32 flags = SDL_WINDOW_OPENGL;
+#endif
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 #endif
@@ -249,8 +294,13 @@ namespace nCine::Backends
 		// Creating a window with SDL2
 		windowHandle_ = SDL_CreateWindow("", windowPosX, windowPosY, width_, height_, flags);
 		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: {}", SDL_GetError());
+
+#if defined(RHI_BACKEND_SW)
+		SDL_GetWindowSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+#else
 		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
 		initGLViewport();
+#endif
 
 		SDL_SetWindowResizable(windowHandle_, isResizable ? SDL_TRUE : SDL_FALSE);
 
@@ -259,6 +309,21 @@ namespace nCine::Backends
 			SDL_GetWindowSize(windowHandle_, &width_, &height_);
 		}
 
+#if defined(RHI_BACKEND_SW)
+		LOGD("Initializing SDL2 software renderer...");
+
+		swRenderer_ = SDL_CreateRenderer(windowHandle_, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		if (swRenderer_ == nullptr) {
+			swRenderer_ = SDL_CreateRenderer(windowHandle_, -1, SDL_RENDERER_SOFTWARE);
+		}
+		FATAL_ASSERT_MSG(swRenderer_, "SDL_CreateRenderer failed: {}", SDL_GetError());
+
+		swTexture_ = SDL_CreateTexture(swRenderer_, SDL_PIXELFORMAT_RGBA32,
+		                               SDL_TEXTUREACCESS_STREAMING, drawableWidth_, drawableHeight_);
+		FATAL_ASSERT_MSG(swTexture_, "SDL_CreateTexture failed: {}", SDL_GetError());
+
+		Rhi::ResizeColorBuffer(drawableWidth_, drawableHeight_);
+#else
 		LOGD("Initializing OpenGL context...");
 
 	Retry:
@@ -266,35 +331,36 @@ namespace nCine::Backends
 
 		if (!glContextHandle_ && glContextInfo_.minorVersion > 0) {
 			// Retry with lower minor version
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#	if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 			LOGW("SDL_GL_CreateContext() with OpenGL|ES {}.{} failed, retrying with lower version: {}",
 				glContextInfo_.majorVersion, glContextInfo_.minorVersion, SDL_GetError());
-#else
+#	else
 			LOGW(glContextInfo_.coreProfile ? "SDL_GL_CreateContext() with OpenGL Core {}.{} failed, retrying with lower version: {}" : "SDL_GL_CreateContext() with OpenGL {}.{} failed, retrying with lower version: {}",
 				glContextInfo_.majorVersion, glContextInfo_.minorVersion, SDL_GetError());
-#endif
+#	endif
 			glContextInfo_.minorVersion--;
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, glContextInfo_.minorVersion);
 			goto Retry;
 		}
 
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#	if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		FATAL_ASSERT_MSG(glContextHandle_, "SDL_GL_CreateContext() with OpenGL|ES {}.{} failed: {}",
 			glContextInfo_.majorVersion, glContextInfo_.minorVersion, SDL_GetError());
-#else
+#	else
 		FATAL_ASSERT_MSG(glContextHandle_, glContextInfo_.coreProfile ? "SDL_GL_CreateContext() with OpenGL Core {}.{} failed: {}" : "SDL_GL_CreateContext() with OpenGL {}.{} failed: {}",
 			glContextInfo_.majorVersion, glContextInfo_.minorVersion, SDL_GetError());
-#endif
+#	endif
 
 		const int interval = (displayMode_.hasVSync() ? 1 : 0);
 		SDL_GL_SetSwapInterval(interval);
 
-#if defined(WITH_GLEW)
+#	if defined(WITH_GLEW)
 		const GLenum err = glewInit();
 		FATAL_ASSERT_MSG(err == GLEW_OK, "GLEW error: {}", (const char*)glewGetErrorString(err));
 
 		glContextInfo_.debugContext = (glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output"));
-#endif
+#	endif
+#endif // RHI_BACKEND_SW
 	}
 
 	void SdlGfxDevice::updateMonitors()

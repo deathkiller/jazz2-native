@@ -1,4 +1,4 @@
-﻿#include "CombineRenderer.h"
+#include "CombineRenderer.h"
 #include "PlayerViewport.h"
 #include "../PreferencesCache.h"
 
@@ -16,9 +16,10 @@ namespace Jazz2::Rendering
 	{
 		_bounds = Rectf(static_cast<float>(x), static_cast<float>(y), static_cast<float>(width), static_cast<float>(height));
 
+#if defined(RHI_CAP_SHADERS)
 		if (_renderCommand.GetMaterial().SetShader(_owner->_levelHandler->_combineShader)) {
 			_renderCommand.GetMaterial().ReserveUniformsDataMemory();
-			_renderCommand.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			_renderCommand.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 			auto* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
@@ -39,7 +40,7 @@ namespace Jazz2::Rendering
 
 		if (_renderCommandWithWater.GetMaterial().SetShader(_owner->_levelHandler->_combineWithWaterShader)) {
 			_renderCommandWithWater.GetMaterial().ReserveUniformsDataMemory();
-			_renderCommandWithWater.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			_renderCommandWithWater.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 			auto* textureUniform = _renderCommandWithWater.GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
@@ -61,6 +62,7 @@ namespace Jazz2::Rendering
 				noiseTexUniform->SetIntValue(4); // GL_TEXTURE4
 			}
 		}
+#endif // defined(RHI_CAP_SHADERS)
 
 		_renderCommand.SetTransformation(Matrix4x4f::Translation((float)x, (float)y, 0.0f));
 		_renderCommandWithWater.SetTransformation(Matrix4x4f::Translation((float)x, (float)y, 0.0f));
@@ -73,6 +75,9 @@ namespace Jazz2::Rendering
 
 	bool CombineRenderer::OnDraw(RenderQueue& renderQueue)
 	{
+#if !defined(RHI_CAP_SHADERS)
+		return true; // Combine renderer requires programmable shaders
+#endif
 		float viewWaterLevel = _owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y + _bounds.H * 0.5f;
 		bool viewHasWater = (viewWaterLevel < _bounds.H);
 		auto& command = (viewHasWater ? _renderCommandWithWater : _renderCommand);

@@ -1655,7 +1655,7 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedShieldLightning] = CompileShader("BatchedShieldFire", Shaders::BatchedShieldVs, Shaders::ShieldLightningFs, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldLightning]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedShieldLightning]);
 
-#if !defined(DISABLE_RESCALE_SHADERS)
+#if defined(RHI_CAP_SHADERS)
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeHQ2x] = CompileShader("ResizeHQ2x", Shaders::ResizeHQ2xVs, Shaders::ResizeHQ2xFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Resize3xBrz] = CompileShader("Resize3xBrz", Shaders::Resize3xBrzVs, Shaders::Resize3xBrzFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCrtScanlines] = CompileShader("ResizeCrtScanlines", Shaders::ResizeCrtScanlinesVs, Shaders::ResizeCrtScanlinesFs);

@@ -1,4 +1,4 @@
-﻿#include "Canvas.h"
+#include "Canvas.h"
 
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Base/Random.h"
@@ -38,7 +38,7 @@ namespace Jazz2::UI
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 			// Required to reset render command properly
 			//command->SetTransformation(command->transformation());
 
@@ -49,9 +49,9 @@ namespace Jazz2::UI
 		}
 
 		if (additiveBlending) {
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::One);
 		} else {
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
 		}
 
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
@@ -77,15 +77,15 @@ namespace Jazz2::UI
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::SpriteNoTexture)) {
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 			// Required to reset render command properly
 			//command->SetTransformation(command->transformation());
 		}
 
 		if (additiveBlending) {
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::One);
 		} else {
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
 		}
 
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);

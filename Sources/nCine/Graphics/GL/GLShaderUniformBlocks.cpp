@@ -1,5 +1,6 @@
 #include "GLShaderUniformBlocks.h"
 #include "GLShaderProgram.h"
+#include "../RenderBuffersManager.h"
 #include "../RenderResources.h"
 #include "../../ServiceLocator.h"
 #include "../../../Main.h"

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GL/GLBufferObject.h"
+#include "RenderAPI/RHI.h"
 #include "RenderBuffersManager.h"
 
 #include <memory>
@@ -20,16 +20,16 @@ namespace nCine
 		Geometry(const Geometry&) = delete;
 		Geometry& operator=(const Geometry&) = delete;
 
-		/// Returns the primitive type (`GL_TRIANGLES`, `GL_TRIANGLE_STRIP`, ...)
-		inline GLenum GetPrimitiveType() const {
+		/// Returns the primitive type (Triangles, TriangleStrip, ...)
+		inline Rhi::PrimitiveType GetPrimitiveType() const {
 			return primitiveType_;
 		}
 		/// Returns the index of the first vertex to draw
-		inline GLint GetFirstVertex() const {
+		inline std::int32_t GetFirstVertex() const {
 			return firstVertex_;
 		}
 		/// Returns the number of vertices
-		inline GLsizei GetVertexCount() const {
+		inline std::int32_t GetVertexCount() const {
 			return numVertices_;
 		}
 		/// Returns the number of float elements that composes the vertex format
@@ -38,17 +38,17 @@ namespace nCine
 		}
 
 		/// Sets all three drawing parameters
-		void SetDrawParameters(GLenum primitiveType, GLint firstVertex, GLsizei numVertices);
-		/// Sets the primitive type (`GL_TRIANGLES`, `GL_TRIANGLE_STRIP`, ...)
-		inline void SetPrimitiveType(GLenum primitiveType) {
+		void SetDrawParameters(Rhi::PrimitiveType primitiveType, std::int32_t firstVertex, std::int32_t numVertices);
+		/// Sets the primitive type
+		inline void SetPrimitiveType(Rhi::PrimitiveType primitiveType) {
 			primitiveType_ = primitiveType;
 		}
 		/// Sets the index number of the first vertex to draw
-		inline void SetFirstVertex(GLint firstVertex) {
+		inline void SetFirstVertex(std::int32_t firstVertex) {
 			firstVertex_ = firstVertex;
 		}
 		/// Sets the number of vertices
-		inline void SetVertexCount(GLsizei numVertices) {
+		inline void SetVertexCount(std::int32_t numVertices) {
 			numVertices_ = numVertices;
 		}
 		/// Sets the number of float elements that composes the vertex format
@@ -56,16 +56,16 @@ namespace nCine
 			numElementsPerVertex_ = numElements;
 		}
 		/// Creates a custom VBO that is unique to this `Geometry` object
-		void CreateCustomVbo(std::uint32_t numFloats, GLenum usage);
+		void CreateCustomVbo(std::uint32_t numFloats, Rhi::BufferUsage usage);
 		/// Retrieves a pointer that can be used to write vertex data from a custom VBO owned by this object
 		/*! This overloaded version allows a custom alignment specification */
-		GLfloat* AcquireVertexPointer(std::uint32_t numFloats, std::uint32_t numFloatsAlignment);
+		float* AcquireVertexPointer(std::uint32_t numFloats, std::uint32_t numFloatsAlignment);
 		/// Retrieves a pointer that can be used to write vertex data from a custom VBO owned by this object
-		inline GLfloat* AcquireVertexPointer(std::uint32_t numFloats) {
+		inline float* AcquireVertexPointer(std::uint32_t numFloats) {
 			return AcquireVertexPointer(numFloats, 1);
 		}
 		/// Retrieves a pointer that can be used to write vertex data from a VBO owned by the buffers manager
-		GLfloat* AcquireVertexPointer();
+		float* AcquireVertexPointer();
 		/// Releases the pointer used to write vertex data
 		void ReleaseVertexPointer();
 
@@ -84,7 +84,7 @@ namespace nCine
 			return numIndices_;
 		}
 		/// Sets the index number of the first index to draw
-		inline void SetFirstIndex(GLushort firstIndex) {
+		inline void SetFirstIndex(std::uint16_t firstIndex) {
 			firstIndex_ = firstIndex;
 		}
 		/// Sets the number of indices used to render the geometry
@@ -92,49 +92,49 @@ namespace nCine
 			numIndices_ = numIndices;
 		}
 		/// Creates a custom IBO that is unique to this `Geometry` object
-		void CreateCustomIbo(std::uint32_t numIndices, GLenum usage);
+		void CreateCustomIbo(std::uint32_t numIndices, Rhi::BufferUsage usage);
 		/// Retrieves a pointer that can be used to write index data from a custom IBO owned by this object
-		GLushort* AcquireIndexPointer(std::uint32_t numIndices);
+		std::uint16_t* AcquireIndexPointer(std::uint32_t numIndices);
 		/// Retrieves a pointer that can be used to write index data from a IBO owned by the buffers manager
-		GLushort* AcquireIndexPointer();
+		std::uint16_t* AcquireIndexPointer();
 		/// Releases the pointer used to write index data
 		void ReleaseIndexPointer();
 
 		/// Returns a pointer into host memory containing index data to be copied into a IBO
-		inline const GLushort* GetHostIndexPointer() const {
+		inline const std::uint16_t* GetHostIndexPointer() const {
 			return hostIndexPointer_;
 		}
 		/// Sets a pointer into host memory containing index data to be copied into a IBO
-		void SetHostIndexPointer(const GLushort* indexPointer);
+		void SetHostIndexPointer(const std::uint16_t* indexPointer);
 
 		/// Shares the IBO of another `Geometry` object
 		void ShareIbo(const Geometry* geometry);
 
 	private:
-		GLenum primitiveType_;
-		GLint firstVertex_;
-		GLsizei numVertices_;
-		std::uint32_t numElementsPerVertex_;
-		GLushort firstIndex_;
-		std::uint32_t numIndices_;
-		const float* hostVertexPointer_;
-		const GLushort* hostIndexPointer_;
+		Rhi::PrimitiveType primitiveType_;
+		std::int32_t        firstVertex_;
+		std::int32_t        numVertices_;
+		std::uint32_t       numElementsPerVertex_;
+		std::uint16_t       firstIndex_;
+		std::uint32_t       numIndices_;
+		const float*            hostVertexPointer_;
+		const std::uint16_t*    hostIndexPointer_;
 
-		std::unique_ptr<GLBufferObject> vbo_;
-		GLenum vboUsageFlags_;
-		RenderBuffersManager::Parameters vboParams_;
+		std::unique_ptr<Rhi::Buffer> vbo_;
+		Rhi::BufferUsage             vboUsageFlags_;
+		RenderBuffersManager::Parameters  vboParams_;
 		const RenderBuffersManager::Parameters* sharedVboParams_;
 
-		std::unique_ptr<GLBufferObject> ibo_;
-		GLenum iboUsageFlags_;
-		RenderBuffersManager::Parameters iboParams_;
+		std::unique_ptr<Rhi::Buffer> ibo_;
+		Rhi::BufferUsage             iboUsageFlags_;
+		RenderBuffersManager::Parameters  iboParams_;
 		const RenderBuffersManager::Parameters* sharedIboParams_;
 
 		bool hasDirtyVertices_;
 		bool hasDirtyIndices_;
 
 		void Bind();
-		void Draw(GLsizei numInstances);
+		void Draw(std::int32_t numInstances);
 		void CommitVertices();
 		void CommitIndices();
 

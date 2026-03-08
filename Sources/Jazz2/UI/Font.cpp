@@ -1,4 +1,4 @@
-﻿#include "Font.h"
+#include "Font.h"
 
 #include "../ContentResolver.h"
 
@@ -542,7 +542,7 @@ namespace Jazz2::UI
 						: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
 					if (shaderChanged) {
 						command->GetMaterial().ReserveUniformsDataMemory();
-						command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+						command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 						// Required to reset render command properly
 						//command->SetTransformation(command->transformation());
 
@@ -552,7 +552,7 @@ namespace Jazz2::UI
 						}
 					}
 
-					command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
 
 					auto* instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());

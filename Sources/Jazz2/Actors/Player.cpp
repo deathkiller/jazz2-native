@@ -1,4 +1,4 @@
-﻿#include "Player.h"
+#include "Player.h"
 #include "../ContentResolver.h"
 #include "../ILevelHandler.h"
 #include "../Events/EventMap.h"
@@ -1164,9 +1164,9 @@ namespace Jazz2::Actors
 
 				if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 					command->GetMaterial().ReserveUniformsDataMemory();
-					command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
-					//command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-					command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+					command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::One);
+					//command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+					command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 
 					auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 					if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1258,8 +1258,8 @@ namespace Jazz2::Actors
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldFire))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-							command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+							command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1289,8 +1289,8 @@ namespace Jazz2::Actors
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldFire))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-							command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+							command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1329,8 +1329,8 @@ namespace Jazz2::Actors
 
 					if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 						command->GetMaterial().ReserveUniformsDataMemory();
-						command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
-						command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::One);
+					command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 
 						auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 						if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1394,8 +1394,8 @@ namespace Jazz2::Actors
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldLightning))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-							command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+							command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1425,8 +1425,8 @@ namespace Jazz2::Actors
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldLightning))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-							command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+							command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {

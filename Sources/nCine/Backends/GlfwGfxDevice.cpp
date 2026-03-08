@@ -29,6 +29,13 @@ namespace nCine::Backends
 	{
 		LOGD("Disposing OpenGL context...");
 
+#if defined(RHI_BACKEND_SW)
+		if (swBlitTexture_ != 0) {
+			glDeleteTextures(1, &swBlitTexture_);
+			swBlitTexture_ = 0;
+		}
+#endif
+
 		glfwDestroyWindow(windowHandle_);
 		windowHandle_ = nullptr;
 		glfwTerminate();
@@ -115,6 +122,9 @@ namespace nCine::Backends
 
 	void GlfwGfxDevice::update()
 	{
+#if defined(RHI_BACKEND_SW)
+		blitSwBuffer();
+#endif
 #if !defined(DEATH_TARGET_EMSCRIPTEN) // Buffers are swapped implicitly in WebGL
 		glfwSwapBuffers(windowHandle_);
 #endif
@@ -125,8 +135,58 @@ namespace nCine::Backends
 		glfwSetWindowSize(windowHandle_, width, height);
 		glfwGetWindowSize(windowHandle_, &width_, &height_);
 		glfwGetFramebufferSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+#if defined(RHI_BACKEND_SW)
+		Rhi::ResizeColorBuffer(drawableWidth_, drawableHeight_);
+#endif
 	}
+#if defined(RHI_BACKEND_SW)
+	void GlfwGfxDevice::blitSwBuffer()
+	{
+		const std::int32_t w   = Rhi::GetColorBufferWidth();
+		const std::int32_t h   = Rhi::GetColorBufferHeight();
+		const std::uint8_t* buf = Rhi::GetColorBuffer();
 
+		if (buf == nullptr || w <= 0 || h <= 0) {
+			return;
+		}
+
+		// Upload the SW color buffer to a GL texture (RGBA8, top-down)
+		if (swBlitTexture_ == 0) {
+			glGenTextures(1, &swBlitTexture_);
+			glBindTexture(GL_TEXTURE_2D, swBlitTexture_);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		} else {
+			glBindTexture(GL_TEXTURE_2D, swBlitTexture_);
+		}
+		// GL_TEXTURE_2D origin is bottom-left; use GL_BGRA or GL_RGBA depending on SW buffer layout
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, buf);
+
+		// Set up an identity ortho projection sized to the drawable framebuffer
+		glViewport(0, 0, drawableWidth_, drawableHeight_);
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glOrtho(0.0, static_cast<double>(drawableWidth_), 0.0, static_cast<double>(drawableHeight_), -1.0, 1.0);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_BLEND);
+		glDisable(GL_SCISSOR_TEST);
+		glEnable(GL_TEXTURE_2D);
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+		// Draw a fullscreen quad; UV v-axis is flipped so the top-down SW buffer shows correctly
+		glBegin(GL_QUADS);
+			glTexCoord2f(0.0f, 1.0f); glVertex2i(0,              0);
+			glTexCoord2f(1.0f, 1.0f); glVertex2i(drawableWidth_, 0);
+			glTexCoord2f(1.0f, 0.0f); glVertex2i(drawableWidth_, drawableHeight_);
+			glTexCoord2f(0.0f, 0.0f); glVertex2i(0,              drawableHeight_);
+		glEnd();
+	}
+#endif
 	void GlfwGfxDevice::setWindowIcon(StringView windowIconFilename)
 	{
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
@@ -297,9 +357,16 @@ namespace nCine::Backends
 
 		// Setting window hints and creating a window with GLFW
 		glfwWindowHint(GLFW_RESIZABLE, isResizable ? GLFW_TRUE : GLFW_FALSE);
+#if defined(RHI_BACKEND_SW)
+		// SW backend: minimal compat GL 1.1 context used only for the pixel-blit presenter
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 1);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_FALSE);
+#else
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, static_cast<int>(glContextInfo_.majorVersion));
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, static_cast<int>(glContextInfo_.minorVersion));
 		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, glContextInfo_.debugContext ? GLFW_TRUE : GLFW_FALSE);
+#endif
 		glfwWindowHint(GLFW_RED_BITS, static_cast<int>(displayMode_.redBits()));
 		glfwWindowHint(GLFW_GREEN_BITS, static_cast<int>(displayMode_.greenBits()));
 		glfwWindowHint(GLFW_BLUE_BITS, static_cast<int>(displayMode_.blueBits()));
@@ -312,7 +379,7 @@ namespace nCine::Backends
 #elif defined(WITH_OPENGLES)
 		glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-#else
+#elif !defined(RHI_BACKEND_SW)
 		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, glContextInfo_.forwardCompatible ? GLFW_TRUE : GLFW_FALSE);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, glContextInfo_.coreProfile ? GLFW_OPENGL_CORE_PROFILE : GLFW_OPENGL_COMPAT_PROFILE);
 #endif
@@ -384,11 +451,16 @@ namespace nCine::Backends
 		const int interval = (displayMode_.hasVSync() ? 1 : 0);
 		glfwSwapInterval(interval);
 
-#if defined(WITH_GLEW)
+#if defined(WITH_GLEW) && !defined(RHI_BACKEND_SW)
 		const GLenum err = glewInit();
 		FATAL_ASSERT_MSG(err == GLEW_OK, "GLEW error: {}", (const char*)glewGetErrorString(err));
 
 		glContextInfo_.debugContext = (glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output"));
+#endif
+
+#if defined(RHI_BACKEND_SW)
+		Rhi::ResizeColorBuffer(drawableWidth_, drawableHeight_);
+		LOGD("SW renderer color buffer allocated ({} x {})", drawableWidth_, drawableHeight_);
 #endif
 	}
 

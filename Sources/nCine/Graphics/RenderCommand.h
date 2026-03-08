@@ -105,7 +105,7 @@ namespace nCine
 		inline void SetScissor(Recti scissorRect) {
 			scissorRect_ = scissorRect;
 		}
-		void SetScissor(GLint x, GLint y, GLsizei width, GLsizei height);
+		void SetScissor(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height);
 
 		inline const Matrix4x4f& GetTransformation() const {
 			return modelMatrix_;

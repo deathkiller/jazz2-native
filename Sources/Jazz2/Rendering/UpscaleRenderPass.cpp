@@ -1,4 +1,4 @@
-﻿#include "UpscaleRenderPass.h"
+#include "UpscaleRenderPass.h"
 #include "../ContentResolver.h"
 #include "../PreferencesCache.h"
 
@@ -81,7 +81,7 @@ namespace Jazz2::Rendering
 
 			if (_antialiasing._renderCommand.GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Antialiasing))) {
 				_antialiasing._renderCommand.GetMaterial().ReserveUniformsDataMemory();
-				_antialiasing._renderCommand.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				_antialiasing._renderCommand.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				_antialiasing._renderCommand.SetTransformation(_antialiasing._renderCommand.GetTransformation());
 
@@ -100,7 +100,7 @@ namespace Jazz2::Rendering
 		}
 
 		// Prepare render command
-#if !defined(DISABLE_RESCALE_SHADERS)
+#if defined(RHI_CAP_SHADERS)
 		switch (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask) {
 			case RescaleMode::HQ2x: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeHQ2x); break;
 			case RescaleMode::_3xBrz: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::Resize3xBrz); break;
@@ -121,7 +121,7 @@ namespace Jazz2::Rendering
 #endif
 		if (shaderChanged) {
 			_renderCommand.GetMaterial().ReserveUniformsDataMemory();
-			_renderCommand.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			_renderCommand.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 			// Required to reset render command properly
 			_renderCommand.SetTransformation(_renderCommand.GetTransformation());
 
@@ -142,7 +142,7 @@ namespace Jazz2::Rendering
 	bool UpscaleRenderPass::OnDraw(RenderQueue& renderQueue)
 	{
 		auto instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);
-#if !defined(DISABLE_RESCALE_SHADERS)
+#if defined(RHI_CAP_SHADERS)
 		if (_resizeShader != nullptr) {
 			// TexRectUniformName is reused for input texture size
 			Vector2i size = _target->GetSize();

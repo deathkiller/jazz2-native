@@ -205,7 +205,7 @@ namespace Jazz2::Resources
 		ShieldLightning,
 		BatchedShieldLightning,
 
-#if !defined(DISABLE_RESCALE_SHADERS)
+#if defined(RHI_CAP_SHADERS)
 		ResizeHQ2x,
 		Resize3xBrz,
 		ResizeCrtScanlines,

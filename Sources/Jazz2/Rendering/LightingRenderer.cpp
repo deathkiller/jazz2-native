@@ -1,4 +1,4 @@
-﻿#include "LightingRenderer.h"
+#include "LightingRenderer.h"
 #include "PlayerViewport.h"
 
 #include "../../nCine/Graphics/RenderQueue.h"
@@ -14,6 +14,9 @@ namespace Jazz2::Rendering
 		
 	bool LightingRenderer::OnDraw(RenderQueue& renderQueue)
 	{
+#if !defined(RHI_CAP_SHADERS)
+		return true; // Lighting rendering requires programmable shaders
+#endif
 		_renderCommandsCount = 0;
 		_emittedLightsCache.clear();
 
@@ -49,9 +52,9 @@ namespace Jazz2::Rendering
 			_renderCommandsCount++;
 			command->GetMaterial().SetShader(_owner->_levelHandler->_lightingShader);
 			command->GetMaterial().SetBlendingEnabled(true);
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::One);
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
 
 			auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {

@@ -117,7 +117,7 @@ namespace nCine
 				fbo_ = std::make_unique<GLFramebuffer>();
 			}
 
-			fbo_->AttachTexture(*texture->glTexture_, GL_COLOR_ATTACHMENT0 + index);
+			fbo_->AttachTexture(*texture->gfxTexture_, GL_COLOR_ATTACHMENT0 + index);
 			const bool isStatusComplete = fbo_->IsStatusComplete();
 			if (isStatusComplete) {
 				type_ = Type::WithTexture;
