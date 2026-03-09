@@ -96,9 +96,9 @@ namespace nCine::Backends
 	{
 #if defined(WITH_RHI_SW)
 		if (swRenderer_ != nullptr && swTexture_ != nullptr) {
-			const std::int32_t w   = nCine::RHI::GetColorBufferWidth();
-			const std::int32_t h   = nCine::RHI::GetColorBufferHeight();
-			const std::uint8_t* buf = nCine::RHI::GetColorBuffer();
+			const std::int32_t w   = RHI::GetColorBufferWidth();
+			const std::int32_t h   = RHI::GetColorBufferHeight();
+			const std::uint8_t* buf = RHI::GetColorBuffer();
 			if (buf != nullptr && w > 0 && h > 0) {
 				SDL_UpdateTexture(swTexture_, nullptr, buf, w * 4);
 			}
@@ -116,17 +116,22 @@ namespace nCine::Backends
 		height_ = height;
 		SDL_SetWindowSize(windowHandle_, width, height);
 #if defined(WITH_RHI_SW)
-		// Recreate the streaming texture for the new size
-		if (swRenderer_ != nullptr) {
-			if (swTexture_ != nullptr) {
-				SDL_DestroyTexture(swTexture_);
-			}
-			swTexture_ = SDL_CreateTexture(swRenderer_, SDL_PIXELFORMAT_RGBA32,
-			                               SDL_TEXTUREACCESS_STREAMING, width, height);
-			nCine::RHI::ResizeColorBuffer(width, height);
-		}
+		resizeSwBuffer(width, height);
 #endif
 	}
+
+#if defined(WITH_RHI_SW)
+	void SdlGfxDevice::resizeSwBuffer(int width, int height)
+	{
+		if (swRenderer_ == nullptr) return;
+		if (swTexture_ != nullptr) {
+			SDL_DestroyTexture(swTexture_);
+		}
+		swTexture_ = SDL_CreateTexture(swRenderer_, SDL_PIXELFORMAT_RGBA32,
+		                               SDL_TEXTUREACCESS_STREAMING, width, height);
+		RHI::ResizeColorBuffer(width, height);
+	}
+#endif
 
 	void SdlGfxDevice::setWindowIcon(StringView windowIconFilename)
 	{
@@ -265,7 +270,7 @@ namespace nCine::Backends
 		if (glContextInfo_.debugContext) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 		}
-#endif // !WITH_RHI_SW
+#endif
 
 		LOGD("Initializing window...");
 
@@ -322,7 +327,7 @@ namespace nCine::Backends
 		                               SDL_TEXTUREACCESS_STREAMING, drawableWidth_, drawableHeight_);
 		FATAL_ASSERT_MSG(swTexture_, "SDL_CreateTexture failed: {}", SDL_GetError());
 
-		nCine::RHI::ResizeColorBuffer(drawableWidth_, drawableHeight_);
+		RHI::ResizeColorBuffer(drawableWidth_, drawableHeight_);
 #else
 		LOGD("Initializing OpenGL context...");
 
@@ -360,7 +365,7 @@ namespace nCine::Backends
 
 		glContextInfo_.debugContext = (glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output"));
 #	endif
-#endif // WITH_RHI_SW
+#endif
 	}
 
 	void SdlGfxDevice::updateMonitors()

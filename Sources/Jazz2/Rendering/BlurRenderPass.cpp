@@ -9,7 +9,7 @@ namespace Jazz2::Rendering
 	{
 #if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
 		return; // Blur post-processing requires shader support and framebuffers
-#endif
+#else
 		_source = source;
 		_downsampleOnly = (direction.X <= std::numeric_limits<float>::epsilon() && direction.Y <= std::numeric_limits<float>::epsilon());
 		_direction = direction;
@@ -42,26 +42,31 @@ namespace Jazz2::Rendering
 		_renderCommand.GetMaterial().SetShader(shader);
 		//_renderCommand.GetMaterial().SetBlendingEnabled(true);
 		_renderCommand.GetMaterial().ReserveUniformsDataMemory();
-		_renderCommand.GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+		_renderCommand.GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 		auto* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 		if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 			textureUniform->SetIntValue(0); // GL_TEXTURE0
 		}
+#endif
 	}
 
 	void BlurRenderPass::Register()
 	{
+#if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
+		// Blur post-processing requires shader support and framebuffers
+#else
 		if (_view != nullptr) {
 			Viewport::GetChain().push_back(_view.get());
 		}
+#endif
 	}
 
 	bool BlurRenderPass::OnDraw(RenderQueue& renderQueue)
 	{
-#if !defined(RHI_CAP_SHADERS)
-		return true; // Blur post-processing requires programmable shaders
-#endif
+#if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
+		return true; // Blur post-processing requires shader support and framebuffers
+#else
 		Vector2i size = _target->GetSize();
 
 		auto* instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);
@@ -78,5 +83,6 @@ namespace Jazz2::Rendering
 		renderQueue.AddCommand(&_renderCommand);
 
 		return true;
+#endif
 	}
 }

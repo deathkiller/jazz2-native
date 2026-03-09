@@ -25,9 +25,6 @@
     <Filter Include="Header Files\nCine\Input">
       <UniqueIdentifier>{d0ce4523-b7b4-45ed-9184-c39300bbef9b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\nCine\Graphics\GL">
-      <UniqueIdentifier>{1b08075b-21c1-4f64-a742-4ecbe22879fb}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\nCine\Audio">
       <UniqueIdentifier>{1251ca81-4f8c-41dd-b37d-03cd22b356c8}</UniqueIdentifier>
     </Filter>
@@ -271,8 +268,38 @@
     <Filter Include="Source Files\nCine\Graphics\RHI\GL">
       <UniqueIdentifier>{d7e1e9f3-42df-4596-b27f-390b2371e81f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\nCine\Graphics\SW">
+    <Filter Include="Header Files\nCine\Graphics\RHI">
+      <UniqueIdentifier>{3ee05e4a-f4e6-43f0-a345-ccd69d0024b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Graphics\RHI\GL">
+      <UniqueIdentifier>{1b08075b-21c1-4f64-a742-4ecbe22879fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Graphics\RHI\SW">
       <UniqueIdentifier>{6bb7ddf5-6173-4b81-b469-abedfd535359}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Graphics\RHI\DC">
+      <UniqueIdentifier>{5cb303b4-15bd-4f85-a32b-31053aa7eb76}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Graphics\RHI\SAT">
+      <UniqueIdentifier>{8c32b918-d414-46c3-b439-ec3f54717cb4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Graphics\RHI\PS1">
+      <UniqueIdentifier>{b308941a-94ad-44f5-9c34-bc8b677a140c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\nCine\Graphics\RHI\N64">
+      <UniqueIdentifier>{8c90c004-660f-4bbe-b5eb-6e10203fc50c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Graphics\RHI\DC">
+      <UniqueIdentifier>{5ddd0d29-4a6c-4854-8eb3-920fb9d3fc17}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Graphics\RHI\SAT">
+      <UniqueIdentifier>{1aa502bf-7c5d-49d4-8edd-069127124e1a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Graphics\RHI\PS1">
+      <UniqueIdentifier>{4ca5b83d-ab00-465c-9ca4-6a4f73e2ccd9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Graphics\RHI\N64">
+      <UniqueIdentifier>{80e29776-53b4-4582-b48b-77aa07c914d4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -418,73 +445,73 @@
       <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLDepthTest.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLFramebuffer.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLHashMap.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLRenderbuffer.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLScissorTest.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLShader.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLShaderProgram.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLShaderUniformBlocks.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLShaderUniforms.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLTexture.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLUniform.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLUniformBlock.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLUniformBlockCache.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLUniformCache.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLVertexArrayObject.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLVertexFormat.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLViewport.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLAttribute.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLBlending.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLBufferObject.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLClearColor.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLCullFace.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\GL\GLDebug.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Input\JoyMapping.h">
       <Filter>Header Files\nCine\Input</Filter>
@@ -1672,10 +1699,31 @@
       <Filter>Header Files\Shared\Cryptography</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\RHI\GL\RHI_GL.h">
-      <Filter>Header Files\nCine\Graphics\GL</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
     <ClInclude Include="nCine\Graphics\RHI\SW\RHI_SW.h">
-      <Filter>Header Files\nCine\Graphics\SW</Filter>
+      <Filter>Header Files\nCine\Graphics\RHI\SW</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RHI\RHI.h">
+      <Filter>Header Files\nCine\Graphics\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RHI\RenderTypes.h">
+      <Filter>Header Files\nCine\Graphics\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RHI\RenderBufferParams.h">
+      <Filter>Header Files\nCine\Graphics\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RHI\SAT\RHI_SAT.h">
+      <Filter>Header Files\nCine\Graphics\RHI\SAT</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RHI\PS1\RHI_PS1.h">
+      <Filter>Header Files\nCine\Graphics\RHI\PS1</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RHI\N64\RHI_N64.h">
+      <Filter>Header Files\nCine\Graphics\RHI\N64</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RHI\DC\RHI_DC.h">
+      <Filter>Header Files\nCine\Graphics\RHI\DC</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2719,6 +2767,18 @@
     </ClCompile>
     <ClCompile Include="nCine\Graphics\RHI\GL\GLVertexArrayObject.cpp">
       <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\DC\RHI_DC.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\DC</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\N64\RHI_N64.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\N64</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\PS1\RHI_PS1.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\PS1</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\SAT\RHI_SAT.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\SAT</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

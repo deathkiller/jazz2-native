@@ -3,7 +3,7 @@
 #if defined(WITH_RHI_PS1)
 
 // ============================================================================
-// PlayStation 1 backend — PSn00bSDK GPU API
+// PlayStation 1 backend - PSn00bSDK GPU API
 // Provides the Rhi interface for the original PlayStation (PsyQ / PSn00bSDK).
 //
 // The PS1 GPU hardware offers:
@@ -27,15 +27,15 @@
 //         RHI_CAP_DEPTHSTENCIL, RHI_CAP_INSTANCING, RHI_CAP_VAO,
 //         RHI_CAP_TEXTURE_FLOAT
 
-#define RHI_CAP_BUFFER_MAPPING    // All vertex data resides in main RAM
+#define RHI_CAP_BUFFER_MAPPING		// All vertex data resides in main RAM
 
 // Fixed-function feature flags
-#define RHI_FF_TINTED_SPRITE      // Per-vertex RGB modulation (POLY_FT4 RGB0-3)
-#define RHI_FF_ALPHA_BLEND        // Semi-transparency via setABRMode
-#define RHI_FF_TEXTURING          // Texture page + CLUT mapping
+#define RHI_FF_TINTED_SPRITE		// Per-vertex RGB modulation (POLY_FT4 RGB0-3)
+#define RHI_FF_ALPHA_BLEND			// Semi-transparency via setABRMode
+#define RHI_FF_TEXTURING			// Texture page + CLUT mapping
 
 // ---------------------------------------------------------------------------
-// PSn00bSDK headers — only available when targeting PlayStation 1
+// PSn00bSDK headers - only available when targeting PlayStation 1
 // ---------------------------------------------------------------------------
 #include <psxgpu.h>
 #include <psxgte.h>
@@ -53,11 +53,11 @@ namespace nCine::RHI
 	// =========================================================================
 	// Ordering-table configuration
 	// PS1 has no hardware Z-buffer; instead draw calls are sorted into a
-	// linked list (OT) keyed by depth.  A larger OT produces finer depth
+	// linked list (OT) keyed by depth. A larger OT produces finer depth
 	// granularity at the cost of more memory + CPU time to clear it.
 	// =========================================================================
-	static constexpr std::int32_t kOtLen      = 512;    // ordering table entries
-	static constexpr std::int32_t kPrimBufSz  = 32768;  // primitive work buffer per frame (bytes)
+	static constexpr std::int32_t kOtLen      = 512;	// ordering table entries
+	static constexpr std::int32_t kPrimBufSz  = 32768;	// primitive work buffer per frame (bytes)
 
 	// =========================================================================
 	// Buffer — host-side vertex / index storage
@@ -116,7 +116,7 @@ namespace nCine::RHI
 	};
 
 	// =========================================================================
-	// VRAM region — describes an area in the 1024×512 PlayStation VRAM
+	// VRAM region - describes an area in the 1024×512 PlayStation VRAM
 	// PS1 textures are uploaded into VRAM via DMA (LoadImage / StoreImage).
 	// =========================================================================
 	struct VramRegion
@@ -129,7 +129,7 @@ namespace nCine::RHI
 	};
 
 	// =========================================================================
-	// Texture — wraps a VRAM allocation + texture-page + CLUT descriptor
+	// Texture - wraps a VRAM allocation + texture-page + CLUT descriptor
 	// =========================================================================
 	class Texture
 	{
@@ -486,7 +486,7 @@ namespace nCine::RHI
 	inline void SetTextureLabel(Texture& /*tex*/, StringViewType /*label*/) {}
 
 	// =========================================================================
-	// Draw call declarations — implemented in RHI_PS1.cpp
+	// Draw call declarations
 	// =========================================================================
 	void Draw(PrimitiveType type, std::int32_t firstVertex, std::int32_t count);
 	void DrawInstanced(PrimitiveType type, std::int32_t firstVertex, std::int32_t count, std::int32_t instanceCount);
@@ -508,6 +508,6 @@ namespace nCine::RHI
 	ScissorState GetScissorState();
 	void         SetScissorState(const ScissorState& state);
 
-} // namespace nCine::RHI
+}
 
 #endif

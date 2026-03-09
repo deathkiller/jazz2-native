@@ -25,7 +25,7 @@ namespace nCine
 #if defined(WITH_RHI_GL)
 		GLBufferObject* object;
 #else
-		nCine::RHI::Buffer*    object;
+		RHI::Buffer*    object;
 #endif
 		std::uint32_t   size;
 		std::uint32_t   offset;

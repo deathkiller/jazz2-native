@@ -12,17 +12,17 @@
 // --- Capability flags -------------------------------------------------------
 // Code guarded by these flags compiles only for this backend.
 
-#define RHI_CAP_BATCHING         // Batched draw calls via VBO + shader uniform blocks
-#define RHI_CAP_SHADERS          // Programmable vertex + fragment shaders
-#define RHI_CAP_UNIFORM_BLOCKS   // Uniform Buffer Objects (UBO)
-#define RHI_CAP_INSTANCING       // Instanced drawing (glDraw*Instanced)
-#define RHI_CAP_FRAMEBUFFERS     // Off-screen render targets (FBO)
-#define RHI_CAP_DEPTHSTENCIL     // Depth and stencil renderbuffers (FBO attachments)
-#define RHI_CAP_MIPMAPS          // Mipmap generation / sampling
-#define RHI_CAP_TEXTURE_FLOAT    // Float-format textures
-#define RHI_CAP_BUFFER_MAPPING   // glMapBufferRange / persistent mapping
-#define RHI_CAP_VAO              // Vertex Array Objects
-#define RHI_CAP_BINARY_SHADERS   // GL_ARB_get_program_binary
+#define RHI_CAP_BATCHING			// Batched draw calls via VBO + shader uniform blocks
+#define RHI_CAP_SHADERS				// Programmable vertex + fragment shaders
+#define RHI_CAP_UNIFORM_BLOCKS		// Uniform Buffer Objects (UBO)
+#define RHI_CAP_INSTANCING			// Instanced drawing (glDraw*Instanced)
+#define RHI_CAP_FRAMEBUFFERS		// Off-screen render targets (FBO)
+#define RHI_CAP_DEPTHSTENCIL		// Depth and stencil renderbuffers (FBO attachments)
+#define RHI_CAP_MIPMAPS				// Mipmap generation / sampling
+#define RHI_CAP_TEXTURE_FLOAT		// Float-format textures
+#define RHI_CAP_BUFFER_MAPPING		// glMapBufferRange / persistent mapping
+#define RHI_CAP_VAO					// Vertex Array Objects
+#define RHI_CAP_BINARY_SHADERS		// GL_ARB_get_program_binary
 
 // Some sub-flags are determined at run-time (see GfxCapabilities).
 // Use the flags above only for compile-time code-paths.
@@ -62,7 +62,7 @@
 namespace nCine::RHI
 {
 	// -------------------------------------------------------------------------
-	// Type aliases — zero overhead: these ARE the GL objects
+	// Type aliases
 	// -------------------------------------------------------------------------
 
 	using Buffer               = nCine::GLBufferObject;
@@ -374,7 +374,7 @@ namespace nCine::RHI
 	}
 
 	// -------------------------------------------------------------------------
-	// Render-state helpers — thin wrappers over the existing GL* singletons
+	// Render-state helpers - thin wrappers over the existing GL* singletons
 	// -------------------------------------------------------------------------
 
 	inline void SetBlending(bool enabled, BlendFactor src, BlendFactor dst)
@@ -473,7 +473,7 @@ namespace nCine::RHI
 	}
 
 	// -------------------------------------------------------------------------
-	// Framebuffer helpers — thin wrappers hiding backend-specific API
+	// Framebuffer helpers - thin wrappers hiding backend-specific API
 	// -------------------------------------------------------------------------
 
 	inline void FramebufferBind(Framebuffer& fbo)
@@ -512,6 +512,6 @@ namespace nCine::RHI
 		fbo.SetObjectLabel(label);
 	}
 
-} // namespace nCine::RHI
+}
 
-#endif // defined(WITH_RHI_GL)
+#endif

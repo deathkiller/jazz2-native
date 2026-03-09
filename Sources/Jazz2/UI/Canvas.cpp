@@ -38,7 +38,7 @@ namespace Jazz2::UI
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+			command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 			// Required to reset render command properly
 			//command->SetTransformation(command->transformation());
 
@@ -49,9 +49,9 @@ namespace Jazz2::UI
 		}
 
 		if (additiveBlending) {
-			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::One);
+			command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::One);
 		} else {
-			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
 		}
 
 		command->GetMaterial().SetSpriteData(texCoords.Data(), size.Data(), color.Data());
@@ -74,15 +74,15 @@ namespace Jazz2::UI
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::SpriteNoTexture)) {
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+			command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 			// Required to reset render command properly
 			//command->SetTransformation(command->transformation());
 		}
 
 		if (additiveBlending) {
-			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::One);
+			command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::One);
 		} else {
-			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
 		}
 
 		command->GetMaterial().SetInstSpriteSize(size.X, size.Y);

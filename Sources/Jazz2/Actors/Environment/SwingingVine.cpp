@@ -45,8 +45,8 @@ namespace Jazz2::Actors::Environment
 				_chunks[i]->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
 				_chunks[i]->GetMaterial().SetBlendingEnabled(true);
 				_chunks[i]->GetMaterial().ReserveUniformsDataMemory();
-				_chunks[i]->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
-				_chunks[i]->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+				_chunks[i]->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
+				_chunks[i]->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
 
 				auto* textureUniform = _chunks[i]->GetMaterial().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {

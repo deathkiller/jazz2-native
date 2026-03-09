@@ -26,6 +26,8 @@ namespace nCine::Backends
 	/// The SDL based graphics device
 	class SdlGfxDevice : public IGfxDevice
 	{
+		friend class SdlInputManager;
+
 	public:
 		SdlGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode);
 		~SdlGfxDevice() override;
@@ -67,6 +69,11 @@ namespace nCine::Backends
 			return glContextHandle_;
 		}
 
+#if defined(WITH_RHI_SW)
+		/// Recreates the streaming texture and resizes the SW color buffer after a window resize
+		void resizeSwBuffer(int width, int height);
+#endif
+
 	protected:
 		void setResolutionInternal(int width, int height) override;
 
@@ -96,8 +103,6 @@ namespace nCine::Backends
 		void initDevice(int windowPosX, int windowPosY, bool isResizable);
 
 		void convertVideoModeInfo(const SDL_DisplayMode& sdlVideoMode, IGfxDevice::VideoMode& videoMode) const;
-
-		friend class SdlInputManager;
 	};
 }
 

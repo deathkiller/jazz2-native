@@ -8,22 +8,22 @@
 // This backend targets low-end devices, retro consoles without a fixed-
 // function or programmable 3-D GPU, and testing/reference builds.
 //
-// Feature set deliberately minimal — no programmable shaders.
+// Feature set deliberately minimal - no programmable shaders.
 // The renderer implements the same visual output as the GL backend via
 // a fixed pipeline: transform → clip → rasterize → shade (fixed) → blit.
 // ============================================================================
 
 // --- Capability flags -------------------------------------------------------
 // Absent flags: RHI_CAP_SHADERS, RHI_CAP_UNIFORM_BLOCKS, RHI_CAP_BINARY_SHADERS
-// RHI_CAP_INSTANCING, RHI_CAP_VAO, RHI_CAP_TEXTURE_FLOAT
+// RHI_CAP_DEPTHSTENCIL, RHI_CAP_INSTANCING, RHI_CAP_VAO, RHI_CAP_TEXTURE_FLOAT
 
-#define RHI_CAP_FRAMEBUFFERS      // CPU-side offscreen surfaces
-#define RHI_CAP_MIPMAPS           // Software mipmap lookup
-#define RHI_CAP_BUFFER_MAPPING    // All buffers are always host-mapped
+#define RHI_CAP_FRAMEBUFFERS		// CPU-side offscreen surfaces
+#define RHI_CAP_MIPMAPS				// Software mipmap lookup
+#define RHI_CAP_BUFFER_MAPPING		// All buffers are always host-mapped
 
 // Fixed-function configuration constants (replaces what shaders would do)
-#define RHI_FF_TINTED_SPRITE      // Sprite multiply-tint without shaders
-#define RHI_FF_ALPHA_BLEND        // Source-over alpha compositing
+#define RHI_FF_TINTED_SPRITE		// Sprite multiply-tint without shaders
+#define RHI_FF_ALPHA_BLEND			// Source-over alpha compositing
 
 #include "../RenderTypes.h"
 
@@ -33,13 +33,11 @@
 #include "../../../Primitives/Colorf.h"
 
 #include <memory>
-#include <cstdint>
-#include <cstring>
 
 namespace nCine::RHI
 {
 	// =========================================================================
-	// Buffer — host memory buffer standing in for a GPU buffer object
+	// Buffer - host memory buffer standing in for a GPU buffer object
 	// =========================================================================
 	class Buffer
 	{
@@ -101,7 +99,7 @@ namespace nCine::RHI
 	class Texture
 	{
 	public:
-		static constexpr std::int32_t MaxTextureUnitsConst = 8;
+		static constexpr std::int32_t MaxTextureUnitsConst = 4;
 
 		Texture() = default;
 		~Texture() = default;
@@ -150,7 +148,7 @@ namespace nCine::RHI
 			std::unique_ptr<std::uint8_t[]> data;
 		};
 
-		static constexpr std::int32_t MaxMips = 16;
+		static constexpr std::int32_t MaxMips = 4;
 		MipLevel mips_[MaxMips];
 		std::int32_t  mipCount_  = 0;
 		std::int32_t  width_     = 0;
@@ -177,9 +175,9 @@ namespace nCine::RHI
 			0, 0, 0, 1
 		};
 
-		float color[4] = { 1, 1, 1, 1 };         // tint / solid colour
-		float texRect[4] = { 0, 0, 1, 1 };        // UV sub-rect (x, y, w, h)
-		float spriteSize[2] = { 1, 1 };            // sprite pixel size
+		float color[4] = { 1, 1, 1, 1 };		// Tint / solid colour
+		float texRect[4] = { 0, 0, 1, 1 };		// UV sub-rect (x, y, w, h)
+		float spriteSize[2] = { 1, 1 };			// Sprite pixel size
 		float depth = 0.0f;
 		bool  hasTexture = false;
 		std::int32_t textureUnit = 0;
@@ -581,6 +579,6 @@ namespace nCine::RHI
 	/// Returns the current color buffer height in pixels.
 	std::int32_t GetColorBufferHeight();
 
-} // namespace nCine::RHI
+}
 
 #endif

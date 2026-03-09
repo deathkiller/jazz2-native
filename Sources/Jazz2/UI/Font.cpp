@@ -542,7 +542,7 @@ namespace Jazz2::UI
 						: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
 					if (shaderChanged) {
 						command->GetMaterial().ReserveUniformsDataMemory();
-						command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+						command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 						// Required to reset render command properly
 						//command->SetTransformation(command->transformation());
 
@@ -552,7 +552,7 @@ namespace Jazz2::UI
 						}
 					}
 
-					command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+					command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
 
 					command->GetMaterial().SetInstTexRect(texCoords.X, texCoords.Y, texCoords.Z, texCoords.W);
 					command->GetMaterial().SetInstSpriteSize(charWidth * scale, uvRect.H * scale);

@@ -2,11 +2,9 @@
 
 #include "RHI_SW.h"
 
-#include <cstring>
-#include <cassert>
-#include <algorithm>
-#include <cmath>
-#include <vector>
+#include <Containers/SmallVector.h>
+
+using namespace Death::Containers;
 
 namespace nCine::RHI
 {
@@ -17,7 +15,7 @@ namespace nCine::RHI
 	{
 		struct SWState
 		{
-			// Active (current) colour buffer — may point to mainColorBuffer or a bound texture
+			// Active (current) colour buffer - may point to mainColorBuffer or a bound texture
 			std::uint8_t* colorBuffer   = nullptr;
 			std::int32_t  bufferWidth   = 0;
 			std::int32_t  bufferHeight  = 0;
@@ -612,8 +610,7 @@ namespace nCine::RHI
 			}
 		}
 
-		void DrawPrimitive(const DrawContext& ctx, PrimitiveType type,
-		                   const std::vector<std::int32_t>& indices)
+		void DrawPrimitive(const DrawContext& ctx, PrimitiveType type, const SmallVectorImpl<std::int32_t>& indices)
 		{
 			switch (type) {
 				case PrimitiveType::Triangles: {
@@ -731,7 +728,7 @@ namespace nCine::RHI
 			}
 		}
 
-		std::vector<std::int32_t> indices(static_cast<std::size_t>(count));
+		SmallVector<std::int32_t> indices(static_cast<std::size_t>(count));
 		for (std::int32_t i = 0; i < count; ++i) indices[i] = firstVertex + i;
 		DrawPrimitive(*g_state.drawCtx, type, indices);
 	}
@@ -747,7 +744,7 @@ namespace nCine::RHI
 	{
 		if (g_state.drawCtx == nullptr) return;
 		const std::uint16_t* iboPtr = static_cast<const std::uint16_t*>(indexOffset);
-		std::vector<std::int32_t> indices(static_cast<std::size_t>(count));
+		SmallVector<std::int32_t> indices(static_cast<std::size_t>(count));
 		for (std::int32_t i = 0; i < count; ++i) {
 			indices[i] = static_cast<std::int32_t>(iboPtr[i]) + baseVertex;
 		}

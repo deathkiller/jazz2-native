@@ -788,7 +788,7 @@ namespace Jazz2::Tiles
 
 					auto command = RentRenderCommand(layer.Description.RendererType);
 					command->SetType(RenderCommand::Type::TileMap);
-					command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+					command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
 
 					Vector2i texSize = tileSet->TextureDiffuse->GetSize();
 					float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
@@ -856,7 +856,7 @@ namespace Jazz2::Tiles
 		}
 		if (shaderChanged) {
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+			command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 			auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1370,9 +1370,9 @@ namespace Jazz2::Tiles
 			command->SetType(RenderCommand::Type::Particle);
 
 			if ((debris.Flags & DebrisFlags::AdditiveBlending) == DebrisFlags::AdditiveBlending) {
-				command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::One);
+				command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::One);
 			} else {
-				command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+				command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
 			}
 
 			command->GetMaterial().SetInstTexRect(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
@@ -1600,7 +1600,7 @@ namespace Jazz2::Tiles
 				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
 				command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+				command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 				auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {

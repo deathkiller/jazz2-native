@@ -82,14 +82,14 @@ namespace nCine
 			return lastIndex;
 		}
 	}
-#endif // WITH_RHI_GL
+#endif
 
 	Shader::Shader()
 		: Object(ObjectType::Shader)
 #if defined(WITH_RHI_GL)
-		, glShaderProgram_(std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate))
+			, glShaderProgram_(std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate))
 #else
-		, glShaderProgram_(std::make_unique<RHI::ShaderProgram>())
+			, glShaderProgram_(std::make_unique<RHI::ShaderProgram>())
 #endif
 	{
 	}
@@ -455,7 +455,7 @@ namespace nCine
 
 	bool Shader::LoadDefaultShader(DefaultVertex vertex, int batchSize)
 	{
-#if !defined(WITH_EMBEDDED_SHADERS)
+#	if !defined(WITH_EMBEDDED_SHADERS)
 		StringView vertexShader;
 		switch (vertex) {
 			case DefaultVertex::SPRITE:
@@ -498,7 +498,7 @@ namespace nCine
 		} else {
 			return glShaderProgram_->AttachShaderFromFile(GL_VERTEX_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, vertexShader }));
 		}
-#else
+#	else
 		const char* vertexShader = nullptr;
 		// Skipping the initial new line character of the raw string literal
 		switch (vertex) {
@@ -542,12 +542,12 @@ namespace nCine
 		} else {
 			return glShaderProgram_->AttachShaderFromString(GL_VERTEX_SHADER, vertexShader);
 		}
-#endif
+#	endif
 	}
 
 	bool Shader::LoadDefaultShader(DefaultFragment fragment)
 	{
-#if !defined(WITH_EMBEDDED_SHADERS)
+#	if !defined(WITH_EMBEDDED_SHADERS)
 		StringView fragmentShader;
 		switch (fragment) {
 			case DefaultFragment::SPRITE:
@@ -567,7 +567,7 @@ namespace nCine
 			//	break;
 		}
 		return glShaderProgram_->AttachShaderFromFile(GL_FRAGMENT_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, fragmentShader }));
-#else
+#	else
 		const char* fragmentShader = nullptr;
 		// Skipping the initial new line character of the raw string literal
 		switch (fragment) {
@@ -588,10 +588,10 @@ namespace nCine
 			//	break;
 		}
 		return glShaderProgram_->AttachShaderFromString(GL_FRAGMENT_SHADER, fragmentShader);
-#endif
+#	endif
 	}
 
-#else // !WITH_RHI_GL
+#else
 
 	bool Shader::LoadFromMemory(const char* /*shaderName*/, Introspection /*introspection*/, const char* /*vertex*/, const char* /*fragment*/, std::int32_t /*batchSize*/, ArrayView<const StringView> /*defines*/)
 	{ return true; }
@@ -683,5 +683,6 @@ namespace nCine
 	bool Shader::LoadDefaultShader(DefaultFragment /*fragment*/)
 	{ return true; }
 
-#endif // WITH_RHI_GL
+#endif
+
 }

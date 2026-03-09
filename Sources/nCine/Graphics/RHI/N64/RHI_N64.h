@@ -3,7 +3,7 @@
 #if defined(WITH_RHI_N64)
 
 // ============================================================================
-// Nintendo 64 backend — libdragon rdpq API
+// Nintendo 64 backend - libdragon rdpq API
 // Provides the Rhi interface for the N64 Reality Display Processor (RDP).
 //
 // The RDP hardware offers:
@@ -23,16 +23,16 @@
 //         RHI_CAP_BINARY_SHADERS, RHI_CAP_DEPTHSTENCIL, RHI_CAP_INSTANCING,
 //         RHI_CAP_VAO, RHI_CAP_TEXTURE_FLOAT
 
-#define RHI_CAP_MIPMAPS           // RDP hardware mip-map support (power-of-2 only)
-#define RHI_CAP_BUFFER_MAPPING    // All vertex buffers reside in host RAM (RDRAM)
+#define RHI_CAP_MIPMAPS				// RDP hardware mip-map support (power-of-2 only)
+#define RHI_CAP_BUFFER_MAPPING		// All vertex buffers reside in host RAM (RDRAM)
 
 // Fixed-function feature flags
-#define RHI_FF_TINTED_SPRITE      // Per-primitive shade colour (combine mode)
-#define RHI_FF_ALPHA_BLEND        // Blender unit alpha blending
-#define RHI_FF_TEXTURING          // RDP texture mapping via tiled TMEM
+#define RHI_FF_TINTED_SPRITE		// Per-primitive shade colour (combine mode)
+#define RHI_FF_ALPHA_BLEND			// Blender unit alpha blending
+#define RHI_FF_TEXTURING			// RDP texture mapping via tiled TMEM
 
 // ---------------------------------------------------------------------------
-// libdragon headers — only available when targeting Nintendo 64
+// libdragon headers - only available when targeting Nintendo 64
 // ---------------------------------------------------------------------------
 #include <libdragon.h>
 
@@ -48,7 +48,7 @@
 namespace nCine::RHI
 {
 	// =========================================================================
-	// Buffer — host-side vertex / index storage (RDRAM, no GPU object on N64)
+	// Buffer - host-side vertex / index storage (RDRAM, no GPU object on N64)
 	// Vertex data is processed by the RSP microcode and sent to the RDP.
 	// =========================================================================
 	class Buffer
@@ -106,7 +106,7 @@ namespace nCine::RHI
 	};
 
 	// =========================================================================
-	// Texture — wraps a libdragon sprite / surface in RDRAM + TMEM
+	// Texture - wraps a libdragon sprite / surface in RDRAM + TMEM
 	//
 	// The RDP uses TMEM (4 KB texture memory tile cache) with hardware-managed
 	// loading via LOAD_TILE.  Textures must be power-of-2 in each dimension.
@@ -334,7 +334,7 @@ namespace nCine::RHI
 	};
 
 	// =========================================================================
-	// ShaderProgram stub — no GPU shaders on N64 (RSP microcodes not exposed here)
+	// ShaderProgram stub - no GPU shaders on N64 (RSP microcodes not exposed here)
 	// =========================================================================
 	class ShaderProgram
 	{
@@ -356,7 +356,7 @@ namespace nCine::RHI
 	};
 
 	// =========================================================================
-	// VertexFormat — describes the vertex attribute layout in a Buffer
+	// VertexFormat - describes the vertex attribute layout in a Buffer
 	// =========================================================================
 	struct VertexFormatAttribute
 	{
@@ -501,7 +501,7 @@ namespace nCine::RHI
 	inline void SetTextureLabel(Texture& /*tex*/, StringViewType /*label*/) {}
 
 	// =========================================================================
-	// Draw call declarations — implemented in RHI_N64.cpp
+	// Draw call declarations
 	// =========================================================================
 	void Draw(PrimitiveType type, std::int32_t firstVertex, std::int32_t count);
 	void DrawInstanced(PrimitiveType type, std::int32_t firstVertex, std::int32_t count, std::int32_t instanceCount);
@@ -523,6 +523,6 @@ namespace nCine::RHI
 	ScissorState GetScissorState();
 	void         SetScissorState(const ScissorState& state);
 
-} // namespace nCine::RHI
+}
 
 #endif

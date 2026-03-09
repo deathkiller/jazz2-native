@@ -760,7 +760,7 @@ namespace Jazz2::UI::Menu
 			command->SetType(RenderCommand::Type::Particle);
 			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+				command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				//command->SetTransformation(command->transformation());
 
@@ -770,7 +770,7 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
 
 			command->GetMaterial().SetInstTexRect(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
 			command->GetMaterial().SetInstSpriteSize(debris.Size.X, debris.Size.Y);
@@ -927,7 +927,7 @@ namespace Jazz2::UI::Menu
 			command->SetType(RenderCommand::Type::TileMap);
 			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+				command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				//command->SetTransformation(command->transformation());
 
@@ -937,7 +937,7 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
 
 			command->GetMaterial().SetInstTexRect(repeats, 0.0f, repeats, 0.0f);
 			command->GetMaterial().SetInstSpriteSize(size.X, size.Y);
@@ -972,7 +972,7 @@ namespace Jazz2::UI::Menu
 			command->SetType(RenderCommand::Type::TileMap);
 			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+				command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				//command->SetTransformation(command->transformation());
 
@@ -982,7 +982,7 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
 
 			command->GetMaterial().SetInstTexRect(repeats, 0.0f, repeats, 0.0f);
 			command->GetMaterial().SetInstSpriteSize(size.X, size.Y);
@@ -1017,7 +1017,7 @@ namespace Jazz2::UI::Menu
 			command->SetType(RenderCommand::Type::TileMap);
 			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+				command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				//command->SetTransformation(command->transformation());
 
@@ -1027,7 +1027,7 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
 
 			command->GetMaterial().SetInstTexRect(repeats, 0.0f, repeats, 0.0f);
 			command->GetMaterial().SetInstSpriteSize(size.X, size.Y);
@@ -1080,7 +1080,7 @@ namespace Jazz2::UI::Menu
 				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::TileMap));
 				command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+				command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 				auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1093,7 +1093,7 @@ namespace Jazz2::UI::Menu
 		bool shaderChanged = _outputRenderCommand.GetMaterial().SetShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground));
 		if (shaderChanged) {
 			_outputRenderCommand.GetMaterial().ReserveUniformsDataMemory();
-			_outputRenderCommand.GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+			_outputRenderCommand.GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 			auto* textureUniform = _outputRenderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {

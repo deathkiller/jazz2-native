@@ -284,10 +284,10 @@ namespace Jazz2::UI
 			auto command = RentRenderCommand();
 			if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+				command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 			}
 
-			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
 
 			command->GetMaterial().SetInstTexRect(1.0f, 0.0f, 1.0f, 0.0f);
 			command->GetMaterial().SetInstSpriteSize(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y));
@@ -1406,11 +1406,11 @@ namespace Jazz2::UI
 			}
 		}
 
-		command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::LineStrip, 0, vertexCount);
+		command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::LineStrip, 0, vertexCount);
 		command->GetGeometry().SetElementsPerVertex(VertexFloats);
 		command->GetGeometry().SetHostVertexPointer((const float*)vertices);
 
-		command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+		command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
 
 		command->GetMaterial().SetInstTexRect(1.0f, 0.0f, 1.0f, 0.0f);
 		command->GetMaterial().SetInstSpriteSize(1.0f, 1.0f);

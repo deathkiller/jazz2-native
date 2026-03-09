@@ -74,7 +74,7 @@ namespace nCine
 
 #if !defined(RHI_CAP_SHADERS)
 		{
-			// Build a DrawContext for the SW rasterizer. Combine stored model matrix
+			// Build a DrawContext for the software rasterizer. Combine stored model matrix
 			// with camera projection+view to produce the final MVP.
 			const Camera* cam = RenderResources::GetCurrentCamera();
 			const float* proj = cam->GetProjection().Data();

@@ -3,7 +3,7 @@
 #if defined(WITH_RHI_SAT)
 
 // ============================================================================
-// Sega Saturn backend — libyaul VDP1 API
+// Sega Saturn backend - libyaul VDP1 API
 // Provides the Rhi interface for the Sega Saturn VDP1 sprite processor.
 //
 // The Saturn VDP1 hardware offers:
@@ -28,15 +28,15 @@
 //         RHI_CAP_DEPTHSTENCIL, RHI_CAP_INSTANCING, RHI_CAP_VAO,
 //         RHI_CAP_TEXTURE_FLOAT
 
-#define RHI_CAP_BUFFER_MAPPING    // All vertex data resides in host RAM (SH2 LWRAM/HWRAM)
+#define RHI_CAP_BUFFER_MAPPING		// All vertex data resides in host RAM (SH2 LWRAM/HWRAM)
 
 // Fixed-function feature flags
-#define RHI_FF_TINTED_SPRITE      // Gouraud shading / flat colour modulation
-#define RHI_FF_ALPHA_BLEND        // Semi-transparency modes
-#define RHI_FF_TEXTURING          // VDP1 VRAM sprite texturing
+#define RHI_FF_TINTED_SPRITE		// Gouraud shading / flat colour modulation
+#define RHI_FF_ALPHA_BLEND			// Semi-transparency modes
+#define RHI_FF_TEXTURING			// VDP1 VRAM sprite texturing
 
 // ---------------------------------------------------------------------------
-// libyaul headers — only available when targeting Sega Saturn
+// libyaul headers - only available when targeting Sega Saturn
 // ---------------------------------------------------------------------------
 #include <yaul.h>
 
@@ -67,7 +67,7 @@ namespace nCine::RHI
 	static constexpr std::int32_t kScreenCY    = kScreenH / 2;
 
 	// =========================================================================
-	// Buffer — host-side vertex / index storage
+	// Buffer - host-side vertex / index storage
 	// =========================================================================
 	class Buffer
 	{
@@ -123,7 +123,7 @@ namespace nCine::RHI
 	};
 
 	// =========================================================================
-	// Texture — wraps a VDP1 VRAM allocation for textured sprites
+	// Texture - wraps a VDP1 VRAM allocation for textured sprites
 	//
 	// VDP1 textures must be stored in VDP1 VRAM (0x25C00000..0x25C7FFFF).
 	// The address is expressed as a character base address (offset / 8).
@@ -476,7 +476,7 @@ namespace nCine::RHI
 	inline void SetTextureLabel(Texture& /*tex*/, StringViewType /*label*/) {}
 
 	// =========================================================================
-	// Draw call declarations — implemented in RHI_SAT.cpp
+	// Draw call declarations
 	// =========================================================================
 	void Draw(PrimitiveType type, std::int32_t firstVertex, std::int32_t count);
 	void DrawInstanced(PrimitiveType type, std::int32_t firstVertex, std::int32_t count, std::int32_t instanceCount);
@@ -498,6 +498,6 @@ namespace nCine::RHI
 	ScissorState GetScissorState();
 	void         SetScissorState(const ScissorState& state);
 
-} // namespace nCine::RHI
+}
 
 #endif

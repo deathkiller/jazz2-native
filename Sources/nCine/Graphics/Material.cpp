@@ -78,7 +78,7 @@ namespace nCine
 	void Material::ReserveUniformsDataMemory()
 	{
 		if (shaderProgram_ == nullptr) {
-			return; // No shader program — SW backend or uninitialised custom material
+			return; // No shader program - Software renderer or uninitialised custom material
 		}
 
 		// Total memory size for all uniforms and uniform blocks

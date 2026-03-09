@@ -48,9 +48,7 @@ namespace nCine
 	Viewport::Viewport(const char* name, Texture* texture, DepthStencilFormat depthStencilFormat)
 		: type_(Type::NoTexture), width_(0), height_(0), viewportRect_(0, 0, 0, 0), scissorRect_(0, 0, 0, 0),
 			depthStencilFormat_(DepthStencilFormat::None), lastFrameCleared_(0), clearMode_(ClearMode::EveryFrame),
-			clearColor_(Colorf::Black),
-			rootNode_(nullptr),
-			camera_(nullptr), stateBits_(0), numColorAttachments_(0)
+			clearColor_(Colorf::Black), rootNode_(nullptr), camera_(nullptr), stateBits_(0), numColorAttachments_(0)
 	{
 		for (std::uint32_t i = 0; i < MaxNumTextures; i++) {
 			textures_[i] = nullptr;

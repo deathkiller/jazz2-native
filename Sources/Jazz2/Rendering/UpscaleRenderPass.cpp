@@ -84,7 +84,7 @@ namespace Jazz2::Rendering
 
 			if (_antialiasing._renderCommand.GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Antialiasing))) {
 				_antialiasing._renderCommand.GetMaterial().ReserveUniformsDataMemory();
-				_antialiasing._renderCommand.GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+				_antialiasing._renderCommand.GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				_antialiasing._renderCommand.SetTransformation(_antialiasing._renderCommand.GetTransformation());
 
@@ -128,7 +128,7 @@ namespace Jazz2::Rendering
 #endif
 		if (shaderChanged) {
 			_renderCommand.GetMaterial().ReserveUniformsDataMemory();
-			_renderCommand.GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+			_renderCommand.GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 			// Required to reset render command properly
 			_renderCommand.SetTransformation(_renderCommand.GetTransformation());
 

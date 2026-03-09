@@ -136,15 +136,15 @@ namespace nCine::Backends
 		glfwGetWindowSize(windowHandle_, &width_, &height_);
 		glfwGetFramebufferSize(windowHandle_, &drawableWidth_, &drawableHeight_);
 #if defined(WITH_RHI_SW)
-		nCine::RHI::ResizeColorBuffer(drawableWidth_, drawableHeight_);
+		RHI::ResizeColorBuffer(drawableWidth_, drawableHeight_);
 #endif
 	}
 #if defined(WITH_RHI_SW)
 	void GlfwGfxDevice::blitSwBuffer()
 	{
-		const std::int32_t w   = nCine::RHI::GetColorBufferWidth();
-		const std::int32_t h   = nCine::RHI::GetColorBufferHeight();
-		const std::uint8_t* buf = nCine::RHI::GetColorBuffer();
+		const std::int32_t w   = RHI::GetColorBufferWidth();
+		const std::int32_t h   = RHI::GetColorBufferHeight();
+		const std::uint8_t* buf = RHI::GetColorBuffer();
 
 		if (buf == nullptr || w <= 0 || h <= 0) {
 			return;
@@ -459,8 +459,8 @@ namespace nCine::Backends
 #endif
 
 #if defined(WITH_RHI_SW)
-		nCine::RHI::ResizeColorBuffer(drawableWidth_, drawableHeight_);
-		LOGD("SW renderer color buffer allocated ({} x {})", drawableWidth_, drawableHeight_);
+		RHI::ResizeColorBuffer(drawableWidth_, drawableHeight_);
+		//LOGD("Software renderer color buffer allocated ({} x {})", drawableWidth_, drawableHeight_);
 #endif
 	}
 

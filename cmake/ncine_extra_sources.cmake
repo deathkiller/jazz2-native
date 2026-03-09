@@ -3,16 +3,16 @@ target_include_directories(${NCINE_APP} PRIVATE "${NCINE_SOURCE_DIR}/Shared")
 # ============================================================================
 # RHI backend selection
 # Adds the compile-time define that makes RHI/RHI.h pull in the right
-# backend header.  Also conditionally include/exclude backend-specific sources.
+# backend header. Also conditionally include/exclude backend-specific sources.
 # ============================================================================
 if(NCINE_RHI STREQUAL "GL")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GL")
-	message(STATUS "Graphics API backend: OpenGL (GL)")
+	message(STATUS "Rendering Hardware Interface: OpenGL (GL)")
 elseif(NCINE_RHI STREQUAL "SW")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_SW")
-	message(STATUS "Graphics API backend: Software renderer (SW)")
+	message(STATUS "Rendering Hardware Interface: Software renderer (SW)")
 
-	# Remove OpenGL-specific low-level wrapper sources (the GAPI/GL/ layer is gone)
+	# Remove OpenGL-specific low-level wrapper sources
 	list(REMOVE_ITEM SOURCES
 		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLAttribute.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/GL/GLBlending.cpp
@@ -47,7 +47,7 @@ elseif(NCINE_RHI STREQUAL "SW")
 	)
 elseif(NCINE_RHI STREQUAL "DC")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_DC")
-	message(STATUS "Graphics API backend: Dreamcast PVR (DC)")
+	message(STATUS "Rendering Hardware Interface: Dreamcast PVR (DC)")
 
 	# Remove OpenGL-specific low-level wrapper sources
 	list(REMOVE_ITEM SOURCES
@@ -84,7 +84,7 @@ elseif(NCINE_RHI STREQUAL "DC")
 	)
 elseif(NCINE_RHI STREQUAL "N64")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_N64")
-	message(STATUS "Graphics API backend: Nintendo 64 rdpq (N64)")
+	message(STATUS "Rendering Hardware Interface: Nintendo 64 rdpq (N64)")
 
 	# Remove OpenGL-specific low-level wrapper sources
 	list(REMOVE_ITEM SOURCES
@@ -120,7 +120,7 @@ elseif(NCINE_RHI STREQUAL "N64")
 	)
 elseif(NCINE_RHI STREQUAL "PS1")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_PS1")
-	message(STATUS "Graphics API backend: PlayStation 1 GPU (PS1)")
+	message(STATUS "Rendering Hardware Interface: PlayStation 1 GPU (PS1)")
 
 	# Remove OpenGL-specific low-level wrapper sources
 	list(REMOVE_ITEM SOURCES
@@ -156,7 +156,7 @@ elseif(NCINE_RHI STREQUAL "PS1")
 	)
 elseif(NCINE_RHI STREQUAL "SAT")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_SAT")
-	message(STATUS "Graphics API backend: Sega Saturn VDP1 (SAT)")
+	message(STATUS "Rendering Hardware Interface: Sega Saturn VDP1 (SAT)")
 
 	# Remove OpenGL-specific low-level wrapper sources
 	list(REMOVE_ITEM SOURCES
@@ -191,7 +191,7 @@ elseif(NCINE_RHI STREQUAL "SAT")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/SAT/RHI_SAT.cpp
 	)
 else()
-	message(FATAL_ERROR "Unknown RHI backend \"${NCINE_RHI}\". Valid choices: GL, SW, DX11, VK, METAL, DC, N64, PS1, SAT")
+	message(FATAL_ERROR "Unknown Rendering Hardware Interface \"${NCINE_RHI}\". Valid choices: GL, SW, DX11, VK, METAL, DC, N64, PS1, SAT")
 endif()
 
 if(ATOMIC_FOUND)

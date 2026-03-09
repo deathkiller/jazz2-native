@@ -377,7 +377,7 @@ namespace nCine::Backends
 		gfxDevice.drawableHeight_ = height;
 
 #if defined(WITH_RHI_SW)
-		nCine::RHI::ResizeColorBuffer(width, height);
+		RHI::ResizeColorBuffer(width, height);
 #endif
 		theApplication().ResizeScreenViewport(width, height);
 	}

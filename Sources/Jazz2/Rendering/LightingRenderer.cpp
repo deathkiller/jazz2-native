@@ -14,9 +14,9 @@ namespace Jazz2::Rendering
 		
 	bool LightingRenderer::OnDraw(RenderQueue& renderQueue)
 	{
-#if !defined(RHI_CAP_SHADERS)
-		return true; // Lighting rendering requires programmable shaders
-#endif
+#if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
+		return true; // Blur post-processing requires shader support and framebuffers
+#else
 		_renderCommandsCount = 0;
 		_emittedLightsCache.clear();
 
@@ -39,6 +39,7 @@ namespace Jazz2::Rendering
 		}
 
 		return true;
+#endif
 	}
 
 	RenderCommand* LightingRenderer::RentRenderCommand()
@@ -52,9 +53,9 @@ namespace Jazz2::Rendering
 			_renderCommandsCount++;
 			command->GetMaterial().SetShader(_owner->_levelHandler->_lightingShader);
 			command->GetMaterial().SetBlendingEnabled(true);
-			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::One);
+			command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::One);
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+			command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 			auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {

@@ -1164,9 +1164,9 @@ namespace Jazz2::Actors
 
 				if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 					command->GetMaterial().ReserveUniformsDataMemory();
-					command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::One);
-					//command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
-					command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+					command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::One);
+					//command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
+					command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 					auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 					if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1257,8 +1257,8 @@ namespace Jazz2::Actors
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldFire))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
-							command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+							command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1287,8 +1287,8 @@ command->GetMaterial().SetInstTexRect(
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldFire))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
-							command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+							command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1326,8 +1326,8 @@ command->GetMaterial().SetInstTexRect(
 
 					if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 						command->GetMaterial().ReserveUniformsDataMemory();
-command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::One);
-					command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+						command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::One);
+						command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 						auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 						if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1390,8 +1390,8 @@ command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCi
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldLightning))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
-							command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+							command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1420,8 +1420,8 @@ command->GetMaterial().SetInstTexRect(
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldLightning))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
-							command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+							command->GetMaterial().SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {

@@ -155,8 +155,8 @@ namespace Jazz2::UI::Menu
 			if (blurTarget != nullptr) {
 				DrawTexture(*blurTarget, scopedView.GetLocation(), 500, scopedView.GetSize(), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));
 			} else {
-				// SW fallback: no blur available — dim the screen with a dark overlay
-				DrawSolid(scopedView.GetLocation(), 500, scopedView.GetSize(), Colorf(0.0f, 0.0f, 0.0f, std::min(AnimTime * 8.0f, 0.5f)));
+				// SW fallback: no blur available - dim the screen with a dark overlay
+				DrawSolid(scopedView.GetLocation(), 500, scopedView.GetSize(), Colorf(0.0f, 0.0f, 0.0f, std::min(AnimTime * 8.0f, 0.7f)));
 			}
 
 			Vector4f ambientColor = viewport->_ambientLight;

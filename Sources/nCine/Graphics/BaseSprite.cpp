@@ -96,7 +96,7 @@ namespace nCine
 	void BaseSprite::shaderHasChanged()
 	{
 		renderCommand_.GetMaterial().ReserveUniformsDataMemory();
-		// Texture unit 0 is the default, only reset if a non-zero value leaked in
+
 		RHI::UniformCache* textureUniform = renderCommand_.GetMaterial().Uniform(Material::TextureUniformName);
 		if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
 			textureUniform->SetIntValue(0); // GL_TEXTURE0

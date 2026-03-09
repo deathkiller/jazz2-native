@@ -3,7 +3,7 @@
 #if defined(WITH_RHI_DC)
 
 // ============================================================================
-// Sega Dreamcast backend — KallistiOS PVR API
+// Sega Dreamcast backend - KallistiOS PVR API
 // Provides the Rhi interface for the Dreamcast PowerVR2 (CLX2) GPU.
 //
 // The PVR hardware offers:
@@ -21,16 +21,16 @@
 //         RHI_CAP_BINARY_SHADERS, RHI_CAP_DEPTHSTENCIL, RHI_CAP_INSTANCING,
 //         RHI_CAP_VAO, RHI_CAP_TEXTURE_FLOAT
 
-#define RHI_CAP_MIPMAPS           // PVR hardware mip-map support (power-of-2 only)
-#define RHI_CAP_BUFFER_MAPPING    // All vertex buffers reside in host RAM
+#define RHI_CAP_MIPMAPS				// PVR hardware mip-map support (power-of-2 only)
+#define RHI_CAP_BUFFER_MAPPING		// All vertex buffers reside in host RAM
 
 // Fixed-function feature flags
-#define RHI_FF_TINTED_SPRITE      // Per-vertex colour multiply (ARGB in pvr_vertex_t)
-#define RHI_FF_ALPHA_BLEND        // Hardware alpha blending via PVR_BLEND_*
-#define RHI_FF_TEXTURING          // PVR texture mapping
+#define RHI_FF_TINTED_SPRITE		// Per-vertex colour multiply (ARGB in pvr_vertex_t)
+#define RHI_FF_ALPHA_BLEND			// Hardware alpha blending via PVR_BLEND_*
+#define RHI_FF_TEXTURING			// PVR texture mapping
 
 // ---------------------------------------------------------------------------
-// KallistiOS PVR headers — only available when targeting Dreamcast
+// KallistiOS PVR headers
 // ---------------------------------------------------------------------------
 #include <kos.h>
 #include <dc/pvr.h>
@@ -47,7 +47,7 @@
 namespace nCine::RHI
 {
 	// =========================================================================
-	// Buffer — host-side vertex / index storage (no GPU object on DC)
+	// Buffer - host-side vertex / index storage (no GPU object on DC)
 	// Vertex data is DMA'd to the PVR display list at draw time.
 	// =========================================================================
 	class Buffer
@@ -88,7 +88,7 @@ namespace nCine::RHI
 			}
 		}
 
-		/// Always host-mapped — return pointer directly.
+		/// Always host-mapped - return pointer directly.
 		void* MapRange(std::size_t offset, std::size_t /*length*/, MapFlags /*flags*/)
 		{
 			return (data_.get() != nullptr && offset < size_) ? data_.get() + offset : nullptr;
@@ -105,7 +105,7 @@ namespace nCine::RHI
 	};
 
 	// =========================================================================
-	// Texture — wraps a VRAM allocation via pvr_ptr_t
+	// Texture - wraps a VRAM allocation via pvr_ptr_t
 	//
 	// The PVR hardware only supports power-of-2 textures in twiddled format.
 	// Callers must ensure dimensions satisfy these constraints.
@@ -274,7 +274,6 @@ namespace nCine::RHI
 	};
 
 	// =========================================================================
-	// =========================================================================
 	// ShaderUniforms stub
 	// =========================================================================
 	class UniformCache; // forward decl for UniformHashMapType
@@ -304,7 +303,6 @@ namespace nCine::RHI
 	};
 
 	// =========================================================================
-	// =========================================================================
 	// ShaderUniformBlocks stub
 	// =========================================================================
 	class UniformBlockCache; // forward decl for UniformHashMapType
@@ -326,7 +324,6 @@ namespace nCine::RHI
 		inline UniformHashMapType GetAllUniformBlocks() const { return 0; }
 	};
 
-	// =========================================================================
 	// =========================================================================
 	// UniformCache / UniformBlockCache stubs
 	// =========================================================================
@@ -362,7 +359,7 @@ namespace nCine::RHI
 	};
 
 	// =========================================================================
-	// ShaderProgram stub — no GPU shaders on Dreamcast
+	// ShaderProgram stub - no GPU shaders on Dreamcast
 	// =========================================================================
 	class ShaderProgram
 	{
@@ -388,7 +385,7 @@ namespace nCine::RHI
 	};
 
 	// =========================================================================
-	// VertexFormat — describes the vertex attribute layout in a Buffer
+	// VertexFormat - describes the vertex attribute layout in a Buffer
 	// =========================================================================
 	struct VertexFormatAttribute
 	{
@@ -600,7 +597,7 @@ namespace nCine::RHI
 	}
 
 	// =========================================================================
-	// Draw call declarations — implemented in RHI_DC.cpp
+	// Draw call declarations
 	// =========================================================================
 
 	/// Submit vertices from the host buffer to the active PVR display list.
@@ -624,6 +621,6 @@ namespace nCine::RHI
 	ScissorState GetScissorState();
 	void         SetScissorState(const ScissorState& state);
 
-} // namespace nCine::RHI
+}
 
 #endif

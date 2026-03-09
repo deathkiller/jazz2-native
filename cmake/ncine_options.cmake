@@ -3,12 +3,12 @@ include(CMakeDependentOption)
 # nCine options
 cmake_dependent_option(NCINE_BUILD_ANDROID "Build Android version of the game" OFF "NOT EMSCRIPTEN;NOT NINTENDO_SWITCH" OFF)
 
-# Graphics API backend selection ─ exactly one backend is compiled per build.
+# Graphics API backend selection - exactly one backend is compiled per build
 # GL   : OpenGL / OpenGL ES (default, all desktop + mobile platforms)
-# SW   : Pure software rasteriser (low-end, retro consoles, reference builds)
-# DX11 : Direct3D 11 (Windows only, future)
-# VK   : Vulkan (future)
-# METAL: Metal (Apple, future)
+# SW   : Pure software rasterizer (low-end, retro consoles, reference builds)
+# DX11 : Direct3D 11 (Windows only)
+# VK   : Vulkan
+# METAL: Metal (Apple)
 # DC   : Sega Dreamcast / KallistiOS PowerVR2
 # N64  : Nintendo 64 / libdragon rdpq
 # PS1  : PlayStation 1 / PSn00bSDK GPU

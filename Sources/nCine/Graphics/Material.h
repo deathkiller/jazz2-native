@@ -113,7 +113,7 @@ namespace nCine
 		void ReserveUniformsDataMemory();
 		void SetUniformsDataPointer(std::uint8_t* dataPointer);
 
-		/** @{ @name Unified sprite instance data — work on all backends */
+		/** @{ @name Unified sprite instance data */
 
 		/// Sets all three sprite instance parameters at once (texRect, spriteSize, color).
 		/// On GL routes through the InstanceBlock uniform; on SW updates FFState directly.
@@ -132,11 +132,11 @@ namespace nCine
 		/** @} */
 
 #if !defined(RHI_CAP_SHADERS)
-		/// Returns the fixed-function state (SW backend only — used by the rasterizer).
+		/// Returns the fixed-function state (Software renderer only - used by the rasterizer).
 		inline const RHI::FFState& GetFFState() const {
 			return shaderUniforms_.GetFFState();
 		}
-		/// Returns a mutable fixed-function state (SW backend only).
+		/// Returns a mutable fixed-function state (Software renderer only).
 		inline RHI::FFState& GetFFState() {
 			return shaderUniforms_.GetFFState();
 		}

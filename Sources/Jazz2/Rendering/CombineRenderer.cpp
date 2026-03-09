@@ -16,10 +16,12 @@ namespace Jazz2::Rendering
 	{
 		_bounds = Rectf(static_cast<float>(x), static_cast<float>(y), static_cast<float>(width), static_cast<float>(height));
 
-#if defined(RHI_CAP_SHADERS)
+#if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
+		// Blur post-processing requires shader support and framebuffers
+#else
 		if (_renderCommand.GetMaterial().SetShader(_owner->_levelHandler->_combineShader)) {
 			_renderCommand.GetMaterial().ReserveUniformsDataMemory();
-			_renderCommand.GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+			_renderCommand.GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 			auto* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
@@ -40,7 +42,7 @@ namespace Jazz2::Rendering
 
 		if (_renderCommandWithWater.GetMaterial().SetShader(_owner->_levelHandler->_combineWithWaterShader)) {
 			_renderCommandWithWater.GetMaterial().ReserveUniformsDataMemory();
-			_renderCommandWithWater.GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+			_renderCommandWithWater.GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 			auto* textureUniform = _renderCommandWithWater.GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
@@ -62,7 +64,7 @@ namespace Jazz2::Rendering
 				noiseTexUniform->SetIntValue(4); // GL_TEXTURE4
 			}
 		}
-#endif // defined(RHI_CAP_SHADERS)
+#endif
 
 		_renderCommand.SetTransformation(Matrix4x4f::Translation((float)x, (float)y, 0.0f));
 		_renderCommandWithWater.SetTransformation(Matrix4x4f::Translation((float)x, (float)y, 0.0f));
@@ -75,11 +77,11 @@ namespace Jazz2::Rendering
 
 	bool CombineRenderer::OnDraw(RenderQueue& renderQueue)
 	{
-#if !defined(RHI_CAP_SHADERS)
+#if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
 		// SW fallback: blit the scene texture directly, skipping lighting and post-processing
 		if (_renderCommand.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 			_renderCommand.GetMaterial().ReserveUniformsDataMemory();
-			_renderCommand.GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+			_renderCommand.GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 		}
 		_renderCommand.GetMaterial().SetInstTexRect(1.0f, 0.0f, 1.0f, 0.0f);
 		_renderCommand.GetMaterial().SetInstSpriteSize(_bounds.W, _bounds.H);

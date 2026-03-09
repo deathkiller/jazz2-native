@@ -39,7 +39,7 @@ namespace Jazz2::Actors::Collectibles
 				piece.Command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
 				piece.Command->GetMaterial().SetBlendingEnabled(true);
 				piece.Command->GetMaterial().ReserveUniformsDataMemory();
-				piece.Command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+				piece.Command->GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 				auto* textureUniform = piece.Command->GetMaterial().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {

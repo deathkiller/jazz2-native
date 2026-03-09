@@ -648,7 +648,14 @@
     <ClInclude Include="nCine\Graphics\RenderResources.h" />
     <ClInclude Include="nCine\Graphics\RenderStatistics.h" />
     <ClInclude Include="nCine\Graphics\RenderVaoPool.h" />
+    <ClInclude Include="nCine\Graphics\RHI\DC\RHI_DC.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\RHI_GL.h" />
+    <ClInclude Include="nCine\Graphics\RHI\N64\RHI_N64.h" />
+    <ClInclude Include="nCine\Graphics\RHI\PS1\RHI_PS1.h" />
+    <ClInclude Include="nCine\Graphics\RHI\RenderBufferParams.h" />
+    <ClInclude Include="nCine\Graphics\RHI\RenderTypes.h" />
+    <ClInclude Include="nCine\Graphics\RHI\RHI.h" />
+    <ClInclude Include="nCine\Graphics\RHI\SAT\RHI_SAT.h" />
     <ClInclude Include="nCine\Graphics\RHI\SW\RHI_SW.h" />
     <ClInclude Include="nCine\Graphics\SceneNode.h" />
     <ClInclude Include="nCine\Graphics\ScreenViewport.h" />
@@ -995,6 +1002,7 @@
     <ClCompile Include="nCine\Graphics\ParticleInitializer.cpp" />
     <ClCompile Include="nCine\Graphics\ParticleSystem.cpp" />
     <ClCompile Include="nCine\Graphics\RectAnimation.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\DC\RHI_DC.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLAttribute.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLBlending.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLBufferObject.cpp" />
@@ -1017,6 +1025,9 @@
     <ClCompile Include="nCine\Graphics\RHI\GL\GLVertexArrayObject.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLVertexFormat.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLViewport.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\N64\RHI_N64.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\PS1\RHI_PS1.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\SAT\RHI_SAT.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\SW\RHI_SW.cpp" />
     <ClCompile Include="nCine\Graphics\RenderBatcher.cpp" />
     <ClCompile Include="nCine\Graphics\RenderBuffersManager.cpp" />

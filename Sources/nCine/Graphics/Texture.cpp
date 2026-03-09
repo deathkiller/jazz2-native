@@ -392,11 +392,11 @@ namespace nCine
 		GLenum format = texFormat.format();
 		std::uint32_t dataSize = texLoader.dataSize();
 
-#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
+#	if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 		const bool withTexStorage = true;
-#else
+#	else
 		const bool withTexStorage = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_TEXTURE_STORAGE);
-#endif
+#	endif
 
 		// Specify texture storage because it's either the very first time or there have been a change in size or format
 		if (dataSize_ == 0 || (width_ != texLoader.width() || height_ != texLoader.height() || ncFormatToInternal(format_) != internalFormat)) {
@@ -447,7 +447,7 @@ namespace nCine
 			minFiltering_ = SamplerFilter::Linear;
 		}
 #else
-		// SW backend: store dimensions and format metadata; pixel data is uploaded in Load()
+		// Software renderer: store dimensions and format metadata; pixel data is uploaded in Load()
 		const TextureFormat& texFormat = texLoader.texFormat();
 		const GLenum internalFormat = texFormat.internalFormat();
 		width_ = texLoader.width();
@@ -472,12 +472,12 @@ namespace nCine
 	void Texture::Load(const ITextureLoader& texLoader)
 	{
 #if defined(WITH_RHI_GL)
-#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
+#	if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 		const bool withTexStorage = true;
-#else
+#	else
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		const bool withTexStorage = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_TEXTURE_STORAGE);
-#endif
+#	endif
 
 		const TextureFormat& texFormat = texLoader.texFormat();
 		std::int32_t levelWidth = width_;
@@ -503,7 +503,7 @@ namespace nCine
 			levelHeight /= 2;
 		}
 #else
-		// SW backend: upload raw pixel data to CPU-side surfaces
+		// Software renderer: upload raw pixel data to CPU-side surfaces
 		const TextureFormat& texFormat = texLoader.texFormat();
 		std::int32_t levelWidth = width_;
 		std::int32_t levelHeight = height_;

@@ -1692,7 +1692,7 @@ namespace Jazz2
 			// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
 			batchSize = 1;
 		} else {
-			batchSize = nCine::RHI::ShaderProgram::DefaultBatchSize;
+			batchSize = RHI::ShaderProgram::DefaultBatchSize;
 		}
 
 		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
@@ -1752,7 +1752,7 @@ namespace Jazz2
 			// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
 			batchSize = 1;
 		} else {
-			batchSize = nCine::RHI::ShaderProgram::DefaultBatchSize;
+			batchSize = RHI::ShaderProgram::DefaultBatchSize;
 		}
 
 		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
