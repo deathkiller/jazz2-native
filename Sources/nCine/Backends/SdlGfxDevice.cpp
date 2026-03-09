@@ -29,7 +29,7 @@ namespace nCine::Backends
 	{
 		LOGD("Disposing graphics context...");
 
-#if defined(RHI_BACKEND_SW)
+#if defined(WITH_RHI_SW)
 		if (swTexture_ != nullptr) {
 			SDL_DestroyTexture(swTexture_);
 			swTexture_ = nullptr;
@@ -51,7 +51,7 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::setSwapInterval(int interval)
 	{
-#if !defined(RHI_BACKEND_SW)
+#if !defined(WITH_RHI_SW)
 		SDL_GL_SetSwapInterval(interval);
 #else
 		(void)interval;
@@ -94,11 +94,11 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::update()
 	{
-#if defined(RHI_BACKEND_SW)
+#if defined(WITH_RHI_SW)
 		if (swRenderer_ != nullptr && swTexture_ != nullptr) {
-			const std::int32_t w   = Rhi::GetColorBufferWidth();
-			const std::int32_t h   = Rhi::GetColorBufferHeight();
-			const std::uint8_t* buf = Rhi::GetColorBuffer();
+			const std::int32_t w   = nCine::RHI::GetColorBufferWidth();
+			const std::int32_t h   = nCine::RHI::GetColorBufferHeight();
+			const std::uint8_t* buf = nCine::RHI::GetColorBuffer();
 			if (buf != nullptr && w > 0 && h > 0) {
 				SDL_UpdateTexture(swTexture_, nullptr, buf, w * 4);
 			}
@@ -115,7 +115,7 @@ namespace nCine::Backends
 		width_ = width;
 		height_ = height;
 		SDL_SetWindowSize(windowHandle_, width, height);
-#if defined(RHI_BACKEND_SW)
+#if defined(WITH_RHI_SW)
 		// Recreate the streaming texture for the new size
 		if (swRenderer_ != nullptr) {
 			if (swTexture_ != nullptr) {
@@ -123,7 +123,7 @@ namespace nCine::Backends
 			}
 			swTexture_ = SDL_CreateTexture(swRenderer_, SDL_PIXELFORMAT_RGBA32,
 			                               SDL_TEXTUREACCESS_STREAMING, width, height);
-			Rhi::ResizeColorBuffer(width, height);
+			nCine::RHI::ResizeColorBuffer(width, height);
 		}
 #endif
 	}
@@ -238,7 +238,7 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::initDevice(int windowPosX, int windowPosY, bool isResizable)
 	{
-#if !defined(RHI_BACKEND_SW)
+#if !defined(WITH_RHI_SW)
 		// Setting OpenGL attributes
 		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, displayMode_.redBits());
 		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, displayMode_.greenBits());
@@ -265,11 +265,11 @@ namespace nCine::Backends
 		if (glContextInfo_.debugContext) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 		}
-#endif // !RHI_BACKEND_SW
+#endif // !WITH_RHI_SW
 
 		LOGD("Initializing window...");
 
-#if defined(RHI_BACKEND_SW)
+#if defined(WITH_RHI_SW)
 		Uint32 flags = 0;
 #else
 		Uint32 flags = SDL_WINDOW_OPENGL;
@@ -295,7 +295,7 @@ namespace nCine::Backends
 		windowHandle_ = SDL_CreateWindow("", windowPosX, windowPosY, width_, height_, flags);
 		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: {}", SDL_GetError());
 
-#if defined(RHI_BACKEND_SW)
+#if defined(WITH_RHI_SW)
 		SDL_GetWindowSize(windowHandle_, &drawableWidth_, &drawableHeight_);
 #else
 		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
@@ -309,7 +309,7 @@ namespace nCine::Backends
 			SDL_GetWindowSize(windowHandle_, &width_, &height_);
 		}
 
-#if defined(RHI_BACKEND_SW)
+#if defined(WITH_RHI_SW)
 		LOGD("Initializing SDL2 software renderer...");
 
 		swRenderer_ = SDL_CreateRenderer(windowHandle_, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -322,7 +322,7 @@ namespace nCine::Backends
 		                               SDL_TEXTUREACCESS_STREAMING, drawableWidth_, drawableHeight_);
 		FATAL_ASSERT_MSG(swTexture_, "SDL_CreateTexture failed: {}", SDL_GetError());
 
-		Rhi::ResizeColorBuffer(drawableWidth_, drawableHeight_);
+		nCine::RHI::ResizeColorBuffer(drawableWidth_, drawableHeight_);
 #else
 		LOGD("Initializing OpenGL context...");
 
@@ -360,7 +360,7 @@ namespace nCine::Backends
 
 		glContextInfo_.debugContext = (glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output"));
 #	endif
-#endif // RHI_BACKEND_SW
+#endif // WITH_RHI_SW
 	}
 
 	void SdlGfxDevice::updateMonitors()

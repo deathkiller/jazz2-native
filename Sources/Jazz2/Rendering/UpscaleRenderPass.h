@@ -37,10 +37,15 @@ namespace Jazz2::Rendering
 		}
 
 		Vector2f GetTargetSize() const {
+#if defined(RHI_CAP_SHADERS)
 			return (_antialiasing._target != nullptr ? _antialiasing._targetSize : _targetSize);
+#else
+			return _targetSize;
+#endif
 		}
 
 	protected:
+#if defined(RHI_CAP_SHADERS)
 		/** @brief Optional antialiasing subpass */
 		class AntialiasingSubpass : public SceneNode
 		{
@@ -60,6 +65,7 @@ namespace Jazz2::Rendering
 			RenderCommand _renderCommand;
 			Vector2f _targetSize;
 		};
+#endif
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Hide these members from documentation before refactoring
@@ -67,7 +73,9 @@ namespace Jazz2::Rendering
 		std::unique_ptr<Camera> _camera;
 		std::unique_ptr<Texture> _target;
 		Vector2f _targetSize;
+#if defined(RHI_CAP_SHADERS)
 		AntialiasingSubpass _antialiasing;
+#endif
 #endif
 
 	private:

@@ -87,7 +87,7 @@ namespace Jazz2::UI
 	HUD::HUD(LevelHandler* levelHandler)
 		: _levelHandler(levelHandler), _metadata(nullptr), _levelTextTime(-1.0f), _coins(0), _gems(0), _coinsTime(-1.0f), _gemsTime(-1.0f),
 			_activeBossTime(0.0f), _touchButtonsTimer(0.0f), _rgbAmbientLight(0.0f), _rgbHealthLast(0.0f), _rgbLightsAnim(0.0f),
-			_rgbLightsTime(0.0f), _transitionState(TransitionState::WaitingForFadeIn), _transitionTime(1.0f)
+			_rgbLightsTime(0.0f), _transitionState(TransitionState::WaitingForFadeIn), _transitionTime(0.0f)
 	{
 		auto& resolver = ContentResolver::Get();
 
@@ -140,16 +140,16 @@ namespace Jazz2::UI
 
 		switch (_transitionState) {
 			case TransitionState::FadeIn:
-				_transitionTime += 0.025f * timeMult;
-				if (_transitionTime >= 1.0f) {
+				_transitionTime -= 0.025f * timeMult;
+				if (_transitionTime <= 0.0f) {
 					_transitionState = TransitionState::None;
 				}
 				break;
 			case TransitionState::FadeOut:
-				if (_transitionTime > 0.0f) {
-					_transitionTime -= 0.025f * timeMult;
-					if (_transitionTime < 0.0f) {
-						_transitionTime = 0.0f;
+				if (_transitionTime < 1.0f) {
+					_transitionTime += 0.025f * timeMult;
+					if (_transitionTime > 1.0f) {
+						_transitionTime = 1.0f;
 					}
 				}
 				break;
@@ -284,15 +284,14 @@ namespace Jazz2::UI
 			auto command = RentRenderCommand();
 			if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+				command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 			}
 
-			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
 
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
-			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y)).Data());
-			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
+			command->GetMaterial().SetInstTexRect(1.0f, 0.0f, 1.0f, 0.0f);
+			command->GetMaterial().SetInstSpriteSize(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y));
+			command->GetMaterial().SetInstColor(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
 
 			command->SetTransformation(Matrix4x4f::Identity);
 			command->SetLayer(600);
@@ -455,14 +454,14 @@ namespace Jazz2::UI
 	void HUD::BeginFadeIn(bool skip)
 	{
 		_transitionState = TransitionState::FadeIn;
-		_transitionTime = 0.0f;
+		_transitionTime = 1.0f;
 	}
 
 	void HUD::BeginFadeOut(float delay)
 	{
 		if (delay <= 0.0f) {
 			_transitionState = TransitionState::FadeOut;
-			_transitionTime = 1.0f;
+			_transitionTime = 0.0f;
 		} else {
 			_transitionState = TransitionState::WaitingForFadeOut;
 			_transitionTime = delay;
@@ -1407,16 +1406,15 @@ namespace Jazz2::UI
 			}
 		}
 
-		command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::LineStrip, 0, vertexCount);
+		command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::LineStrip, 0, vertexCount);
 		command->GetGeometry().SetElementsPerVertex(VertexFloats);
 		command->GetGeometry().SetHostVertexPointer((const float*)vertices);
 
-		command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+		command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
 
-		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
-		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(1.0f, 1.0f);
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+		command->GetMaterial().SetInstTexRect(1.0f, 0.0f, 1.0f, 0.0f);
+		command->GetMaterial().SetInstSpriteSize(1.0f, 1.0f);
+		command->GetMaterial().SetInstColor(color.Data());
 
 		command->SetTransformation(Matrix4x4f::Identity);
 		command->SetLayer(z);

@@ -1,4 +1,4 @@
-﻿#include "ContentResolver.h"
+#include "ContentResolver.h"
 #include "ContentResolver.Shaders.h"
 #include "Compatibility/JJ2Anims.Palettes.h"
 #include "LevelFlags.h"
@@ -1692,12 +1692,12 @@ namespace Jazz2
 			// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
 			batchSize = 1;
 		} else {
-			batchSize = Rhi::ShaderProgram::DefaultBatchSize;
+			batchSize = nCine::RHI::ShaderProgram::DefaultBatchSize;
 		}
 
 		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
 
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		if (compileTwice) {
 			GLShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
 			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
@@ -1752,12 +1752,12 @@ namespace Jazz2
 			// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
 			batchSize = 1;
 		} else {
-			batchSize = Rhi::ShaderProgram::DefaultBatchSize;
+			batchSize = nCine::RHI::ShaderProgram::DefaultBatchSize;
 		}
 
 		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
 
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		if (compileTwice) {
 			GLShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
 			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);

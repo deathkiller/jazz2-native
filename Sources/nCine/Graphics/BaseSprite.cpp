@@ -5,7 +5,7 @@
 namespace nCine
 {
 	BaseSprite::BaseSprite(SceneNode* parent, Texture* texture, float xx, float yy)
-		: DrawableNode(parent, xx, yy), texture_(texture), texRect_(0, 0, 0, 0), flippedX_(false), flippedY_(false), instanceBlock_(nullptr)
+		: DrawableNode(parent, xx, yy), texture_(texture), texRect_(0, 0, 0, 0), flippedX_(false), flippedY_(false)
 	{
 		renderCommand_.GetMaterial().SetBlendingEnabled(true);
 	}
@@ -89,15 +89,15 @@ namespace nCine
 
 	BaseSprite::BaseSprite(const BaseSprite& other)
 		: DrawableNode(other), texture_(other.texture_), texRect_(other.texRect_),
-			flippedX_(other.flippedX_), flippedY_(other.flippedY_), instanceBlock_(nullptr)
+			flippedX_(other.flippedX_), flippedY_(other.flippedY_)
 	{
 	}
 
 	void BaseSprite::shaderHasChanged()
 	{
 		renderCommand_.GetMaterial().ReserveUniformsDataMemory();
-		instanceBlock_ = renderCommand_.GetMaterial().UniformBlock(Material::InstanceBlockName);
-		Rhi::UniformCache* textureUniform = renderCommand_.GetMaterial().Uniform(Material::TextureUniformName);
+		// Texture unit 0 is the default, only reset if a non-zero value leaked in
+		RHI::UniformCache* textureUniform = renderCommand_.GetMaterial().Uniform(Material::TextureUniformName);
 		if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
 			textureUniform->SetIntValue(0); // GL_TEXTURE0
 		}
@@ -117,17 +117,11 @@ namespace nCine
 			//dirtyBits_.reset(DirtyBitPositions::TransformationUploadBit);
 		}
 		if (dirtyBits_.test(DirtyBitPositions::ColorUploadBit)) {
-			Rhi::UniformCache* colorUniform = instanceBlock_->GetUniform(Material::ColorUniformName);
-			if (colorUniform != nullptr) {
-				colorUniform->SetFloatVector(absColor().Data());
-			}
+			renderCommand_.GetMaterial().SetInstColor(absColor().Data());
 			//dirtyBits_.reset(DirtyBitPositions::ColorUploadBit);
 		}
 		if (dirtyBits_.test(DirtyBitPositions::SizeBit)) {
-			Rhi::UniformCache* spriteSizeUniform = instanceBlock_->GetUniform(Material::SpriteSizeUniformName);
-			if (spriteSizeUniform != nullptr) {
-				spriteSizeUniform->SetFloatValue(width_, height_);
-			}
+			renderCommand_.GetMaterial().SetInstSpriteSize(width_, height_);
 			dirtyBits_.reset(DirtyBitPositions::SizeBit);
 		}
 
@@ -135,16 +129,12 @@ namespace nCine
 			if (texture_ != nullptr) {
 				renderCommand_.GetMaterial().SetTexture(*texture_);
 
-				Rhi::UniformCache* texRectUniform = instanceBlock_->GetUniform(Material::TexRectUniformName);
-				if (texRectUniform != nullptr) {
-					const Vector2i texSize = texture_->GetSize();
-					const float texScaleX = texRect_.W / float(texSize.X);
-					const float texBiasX = texRect_.X / float(texSize.X);
-					const float texScaleY = texRect_.H / float(texSize.Y);
-					const float texBiasY = texRect_.Y / float(texSize.Y);
-
-					texRectUniform->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-				}
+				const Vector2i texSize = texture_->GetSize();
+				const float texScaleX = texRect_.W / float(texSize.X);
+				const float texBiasX = texRect_.X / float(texSize.X);
+				const float texScaleY = texRect_.H / float(texSize.Y);
+				const float texBiasY = texRect_.Y / float(texSize.Y);
+				renderCommand_.GetMaterial().SetInstTexRect(texScaleX, texBiasX, texScaleY, texBiasY);
 			} else {
 				renderCommand_.GetMaterial().SetTexture(nullptr);
 			}

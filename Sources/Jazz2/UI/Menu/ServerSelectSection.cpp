@@ -130,8 +130,8 @@ namespace Jazz2::UI::Menu
 				_touchTime += timeMult;
 			}
 		} else {
-			_transitionTime -= 0.025f * timeMult;
-			if (_transitionTime <= 0.0f) {
+			_transitionTime += 0.025f * timeMult;
+			if (_transitionTime >= 1.0f) {
 				OnAfterTransition();
 			}
 		}
@@ -246,15 +246,14 @@ namespace Jazz2::UI::Menu
 			auto command = canvas->RentRenderCommand();
 			if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+				command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 			}
 
-			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
 
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
-			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(Vector2f(static_cast<float>(canvas->ViewSize.X), static_cast<float>(canvas->ViewSize.Y)).Data());
-			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
+			command->GetMaterial().SetInstTexRect(1.0f, 0.0f, 1.0f, 0.0f);
+			command->GetMaterial().SetInstSpriteSize(static_cast<float>(canvas->ViewSize.X), static_cast<float>(canvas->ViewSize.Y));
+			command->GetMaterial().SetInstColor(0.0f, 0.0f, 0.0f, _transitionTime);
 
 			command->SetTransformation(Matrix4x4f::Identity);
 			command->SetLayer(999);
@@ -365,7 +364,7 @@ namespace Jazz2::UI::Menu
 		auto& selectedItem = _items[_selectedIndex];
 		_selectedServer = selectedItem.Desc;
 		_shouldStart = true;
-		_transitionTime = 1.0f;
+		_transitionTime = 0.0f;
 	}
 
 	void ServerSelectSection::OnAfterTransition()

@@ -4,7 +4,7 @@
 
 namespace Jazz2::Shaders
 {
-	constexpr std::uint64_t Version = 8;
+	constexpr std::uint64_t Version = 9;
 
 	constexpr char LightingVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
@@ -2651,8 +2651,9 @@ void main() {
 	vec2 uv = (vTexCoords - vec2(0.5)) * vCorrection;
 	float distance = length(uv);
 
-	float progressInner = vProgressTime - 0.22;
-	distance = (clamp(distance, progressInner, vProgressTime) - progressInner) / (vProgressTime - progressInner);
+	float t = 1.0 - vProgressTime;
+	float progressInner = t - 0.22;
+	distance = (clamp(distance, progressInner, t) - progressInner) / (t - progressInner);
 
 	float mixValue = ease(distance);
 	float noise = 1.0 + rand(uv) * 0.1;

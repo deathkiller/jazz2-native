@@ -17,14 +17,14 @@ namespace nCine
 		return usedCommandsPool_.emplace_back(std::make_unique<RenderCommand>()).get();
 	}
 
-	RenderCommand* RenderCommandPool::Add(Rhi::ShaderProgram* shaderProgram)
+	RenderCommand* RenderCommandPool::Add(RHI::ShaderProgram* shaderProgram)
 	{
 		RenderCommand* newCommand = Add();
 		newCommand->GetMaterial().SetShaderProgram(shaderProgram);
 		return newCommand;
 	}
 
-	RenderCommand* RenderCommandPool::Retrieve(Rhi::ShaderProgram* shaderProgram)
+	RenderCommand* RenderCommandPool::Retrieve(RHI::ShaderProgram* shaderProgram)
 	{
 		RenderCommand* retrievedCommand = nullptr;
 
@@ -48,7 +48,7 @@ namespace nCine
 		return retrievedCommand;
 	}
 
-	RenderCommand* RenderCommandPool::RetrieveOrAdd(Rhi::ShaderProgram* shaderProgram, bool& commandAdded)
+	RenderCommand* RenderCommandPool::RetrieveOrAdd(RHI::ShaderProgram* shaderProgram, bool& commandAdded)
 	{
 		RenderCommand* retrievedCommand = Retrieve(shaderProgram);
 

@@ -1,7 +1,10 @@
 #pragma once
 
+#include "RHI/RHI.h"
+
+#if defined(RHI_CAP_VAO)
+
 #include "../Base/TimeStamp.h"
-#include "RenderAPI/RHI.h"
 
 #include <memory>
 
@@ -17,15 +20,15 @@ namespace nCine
 	public:
 		explicit RenderVaoPool(std::uint32_t vaoPoolSize);
 
-		void BindVao(const Rhi::VertexFormat& vertexFormat);
+		void BindVao(const RHI::VertexFormat& vertexFormat);
 
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct VaoBinding
 		{
-			std::unique_ptr<Rhi::VertexArrayObject> object;
-			Rhi::VertexFormat format;
+			std::unique_ptr<RHI::VertexArrayObject> object;
+			RHI::VertexFormat format;
 			TimeStamp lastBindTime;
 		};
 #endif
@@ -36,3 +39,5 @@ namespace nCine
 	};
 
 }
+
+#endif

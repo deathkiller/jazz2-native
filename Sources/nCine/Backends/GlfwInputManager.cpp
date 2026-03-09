@@ -5,6 +5,10 @@
 #include "../Input/JoyMapping.h"
 #include "../Application.h"
 
+#if defined(WITH_RHI_SW)
+#	include "../Graphics/RHI/RHI.h"
+#endif
+
 #include <cstring>	// for memset() and memcpy()
 #include <cmath>	// for fabsf()
 
@@ -372,6 +376,9 @@ namespace nCine::Backends
 		gfxDevice.drawableWidth_ = width;
 		gfxDevice.drawableHeight_ = height;
 
+#if defined(WITH_RHI_SW)
+		nCine::RHI::ResizeColorBuffer(width, height);
+#endif
 		theApplication().ResizeScreenViewport(width, height);
 	}
 

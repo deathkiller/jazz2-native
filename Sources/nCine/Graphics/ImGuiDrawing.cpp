@@ -4,13 +4,13 @@
 #include "RenderQueue.h"
 #include "RenderCommandPool.h"
 #include "RenderResources.h"
-#include "RenderAPI/RHI.h"
-#include "GL/GLTexture.h"
-#include "GL/GLShaderProgram.h"
-#include "GL/GLScissorTest.h"
-#include "GL/GLBlending.h"
-#include "GL/GLDepthTest.h"
-#include "GL/GLCullFace.h"
+#include "RHI/RHI.h"
+#include "RHI/GL/GLTexture.h"
+#include "RHI/GL/GLShaderProgram.h"
+#include "RHI/GL/GLScissorTest.h"
+#include "RHI/GL/GLBlending.h"
+#include "RHI/GL/GLDepthTest.h"
+#include "RHI/GL/GLCullFace.h"
 #include "../Application.h"
 #include "../Input/IInputManager.h"
 
@@ -386,10 +386,10 @@ namespace nCine
 		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetType(GL_UNSIGNED_BYTE);
 		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetNormalized(true);
 		material.SetBlendingEnabled(true);
-		material.SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+		material.SetBlendingFactors(RHI::BlendFactor::SrcAlpha, RHI::BlendFactor::OneMinusSrcAlpha);
 
 		cmd.GetGeometry().SetElementsPerVertex(sizeof(ImDrawVert) / sizeof(float));
-		cmd.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::Triangles, 0, 0);
+		cmd.GetGeometry().SetDrawParameters(RHI::PrimitiveType::Triangles, 0, 0);
 	}
 
 	void ImGuiDrawing::Draw(RenderQueue& renderQueue)

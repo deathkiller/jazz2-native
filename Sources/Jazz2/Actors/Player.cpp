@@ -1164,9 +1164,9 @@ namespace Jazz2::Actors
 
 				if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 					command->GetMaterial().ReserveUniformsDataMemory();
-					command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::One);
-					//command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
-					command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+					command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::One);
+					//command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+					command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 					auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 					if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1213,10 +1213,9 @@ namespace Jazz2::Actors
 					gunspotPosY = std::floor(gunspotPosY);
 				}
 
-				auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(res->Base->FrameDimensions.X, res->Base->FrameDimensions.Y * scaleY);
-				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(1.0f, 1.0f, 1.0f, 1.8f);
+				command->GetMaterial().SetInstTexRect(texScaleX, texBiasX, texScaleY, texBiasY);
+				command->GetMaterial().SetInstSpriteSize(res->Base->FrameDimensions.X, res->Base->FrameDimensions.Y * scaleY);
+				command->GetMaterial().SetInstColor(1.0f, 1.0f, 1.0f, 1.8f);
 
 				Matrix4x4f worldMatrix = Matrix4x4f::Translation(gunspotPosX, gunspotPosY, 0.0f);
 				if (lookUp) {
@@ -1258,8 +1257,8 @@ namespace Jazz2::Actors
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldFire))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
-							command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+							command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1267,12 +1266,11 @@ namespace Jazz2::Actors
 							}
 						}
 
-						auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
-							frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinf(frames * 0.006f),
-							-sinf(frames * 0.015f), frames * 0.006f + _pos.Y * PosMultiplier);
-						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
-						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
+command->GetMaterial().SetInstTexRect(
+						frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinf(frames * 0.006f),
+						-sinf(frames * 0.015f), frames * 0.006f + _pos.Y * PosMultiplier);
+					command->GetMaterial().SetInstSpriteSize(shieldSize, shieldSize);
+					command->GetMaterial().SetInstColor(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
 						command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 						command->SetLayer(_renderer.layer() - 4);
@@ -1289,8 +1287,8 @@ namespace Jazz2::Actors
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldFire))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
-							command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+							command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1298,12 +1296,11 @@ namespace Jazz2::Actors
 							}
 						}
 
-						auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
-							frames * 0.006f, sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
-							sinf(frames * 0.015f) + _pos.X * PosMultiplier, frames * -0.006f);
-						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
-						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 1.0f, 1.0f * shieldAlpha);
+command->GetMaterial().SetInstTexRect(
+						frames * 0.006f, sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
+						sinf(frames * 0.015f) + _pos.X * PosMultiplier, frames * -0.006f);
+					command->GetMaterial().SetInstSpriteSize(shieldSize, shieldSize);
+					command->GetMaterial().SetInstColor(2.0f, 2.0f, 1.0f, 1.0f * shieldAlpha);
 
 						command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 						command->SetLayer(_renderer.layer() + 4);
@@ -1329,8 +1326,8 @@ namespace Jazz2::Actors
 
 					if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 						command->GetMaterial().ReserveUniformsDataMemory();
-command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::One);
-					command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::One);
+					command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 						auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 						if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1355,10 +1352,9 @@ command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::Blend
 						shieldPosY = std::floor(shieldPosY);
 					}
 
-					auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(res->Base->FrameDimensions.X * shieldScale, res->Base->FrameDimensions.Y * shieldScale);
-					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(1.0f, 1.0f, 1.0f, shieldAlpha);
+					command->GetMaterial().SetInstTexRect(texScaleX, texBiasX, texScaleY, texBiasY);
+					command->GetMaterial().SetInstSpriteSize(res->Base->FrameDimensions.X * shieldScale, res->Base->FrameDimensions.Y * shieldScale);
+					command->GetMaterial().SetInstColor(1.0f, 1.0f, 1.0f, shieldAlpha);
 
 					command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 					command->SetLayer(_renderer.layer() + 4);
@@ -1394,8 +1390,8 @@ command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::Blend
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldLightning))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
-							command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+							command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1403,12 +1399,11 @@ command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::Blend
 							}
 						}
 
-						auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
-							frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
-							-sinf(frames * 0.015f), frames * 0.006f);
-						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
-						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
+command->GetMaterial().SetInstTexRect(
+						frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
+						-sinf(frames * 0.015f), frames * 0.006f);
+					command->GetMaterial().SetInstSpriteSize(shieldSize, shieldSize);
+					command->GetMaterial().SetInstColor(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
 						command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 						command->SetLayer(_renderer.layer() - 4);
@@ -1425,8 +1420,8 @@ command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::Blend
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldLightning))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
-							command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+							command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1434,12 +1429,11 @@ command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::Blend
 							}
 						}
 
-						auto* instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
-							frames * 0.006f + _pos.X * PosMultiplier, sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
-							sinf(frames * 0.015f), frames * -0.006f);
-						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(shieldSize, shieldSize);
-						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 1.0f, shieldAlpha);
+command->GetMaterial().SetInstTexRect(
+						frames * 0.006f + _pos.X * PosMultiplier, sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
+						sinf(frames * 0.015f), frames * -0.006f);
+					command->GetMaterial().SetInstSpriteSize(shieldSize, shieldSize);
+					command->GetMaterial().SetInstColor(2.0f, 2.0f, 1.0f, shieldAlpha);
 
 						command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 						command->SetLayer(_renderer.layer() + 4);

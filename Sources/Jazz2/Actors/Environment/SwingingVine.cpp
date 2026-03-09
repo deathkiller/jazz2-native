@@ -45,8 +45,8 @@ namespace Jazz2::Actors::Environment
 				_chunks[i]->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
 				_chunks[i]->GetMaterial().SetBlendingEnabled(true);
 				_chunks[i]->GetMaterial().ReserveUniformsDataMemory();
-				_chunks[i]->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
-				_chunks[i]->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+				_chunks[i]->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+				_chunks[i]->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
 
 				auto* textureUniform = _chunks[i]->GetMaterial().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -122,10 +122,9 @@ namespace Jazz2::Actors::Environment
 				float chunkTexSize = ChunkSize / texSize.Y;
 				float chunkAngle = sinf(currentPhase - i * 0.08f) * 1.2f;
 
-				auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, chunkTexSize, chunkTexSize * i);
-				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(texSize.X, ChunkSize);
-				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+				command->GetMaterial().SetInstTexRect(1.0f, 0.0f, chunkTexSize, chunkTexSize * i);
+				command->GetMaterial().SetInstSpriteSize(texSize.X, ChunkSize);
+				command->GetMaterial().SetInstColor(Colorf::White.Data());
 
 				Matrix4x4f worldMatrix = Matrix4x4f::Translation(_chunkPos[i].X - texSize.X / 2, _chunkPos[i].Y - ChunkSize / 2, 0.0f);
 				worldMatrix.RotateZ(chunkAngle);

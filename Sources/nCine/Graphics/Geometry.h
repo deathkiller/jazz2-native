@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RenderAPI/RHI.h"
+#include "RHI/RHI.h"
 #include "RenderBuffersManager.h"
 
 #include <memory>
@@ -21,7 +21,7 @@ namespace nCine
 		Geometry& operator=(const Geometry&) = delete;
 
 		/// Returns the primitive type (Triangles, TriangleStrip, ...)
-		inline Rhi::PrimitiveType GetPrimitiveType() const {
+		inline RHI::PrimitiveType GetPrimitiveType() const {
 			return primitiveType_;
 		}
 		/// Returns the index of the first vertex to draw
@@ -38,9 +38,9 @@ namespace nCine
 		}
 
 		/// Sets all three drawing parameters
-		void SetDrawParameters(Rhi::PrimitiveType primitiveType, std::int32_t firstVertex, std::int32_t numVertices);
+		void SetDrawParameters(RHI::PrimitiveType primitiveType, std::int32_t firstVertex, std::int32_t numVertices);
 		/// Sets the primitive type
-		inline void SetPrimitiveType(Rhi::PrimitiveType primitiveType) {
+		inline void SetPrimitiveType(RHI::PrimitiveType primitiveType) {
 			primitiveType_ = primitiveType;
 		}
 		/// Sets the index number of the first vertex to draw
@@ -56,7 +56,7 @@ namespace nCine
 			numElementsPerVertex_ = numElements;
 		}
 		/// Creates a custom VBO that is unique to this `Geometry` object
-		void CreateCustomVbo(std::uint32_t numFloats, Rhi::BufferUsage usage);
+		void CreateCustomVbo(std::uint32_t numFloats, RHI::BufferUsage usage);
 		/// Retrieves a pointer that can be used to write vertex data from a custom VBO owned by this object
 		/*! This overloaded version allows a custom alignment specification */
 		float* AcquireVertexPointer(std::uint32_t numFloats, std::uint32_t numFloatsAlignment);
@@ -92,7 +92,7 @@ namespace nCine
 			numIndices_ = numIndices;
 		}
 		/// Creates a custom IBO that is unique to this `Geometry` object
-		void CreateCustomIbo(std::uint32_t numIndices, Rhi::BufferUsage usage);
+		void CreateCustomIbo(std::uint32_t numIndices, RHI::BufferUsage usage);
 		/// Retrieves a pointer that can be used to write index data from a custom IBO owned by this object
 		std::uint16_t* AcquireIndexPointer(std::uint32_t numIndices);
 		/// Retrieves a pointer that can be used to write index data from a IBO owned by the buffers manager
@@ -111,7 +111,7 @@ namespace nCine
 		void ShareIbo(const Geometry* geometry);
 
 	private:
-		Rhi::PrimitiveType primitiveType_;
+		RHI::PrimitiveType primitiveType_;
 		std::int32_t        firstVertex_;
 		std::int32_t        numVertices_;
 		std::uint32_t       numElementsPerVertex_;
@@ -120,13 +120,13 @@ namespace nCine
 		const float*            hostVertexPointer_;
 		const std::uint16_t*    hostIndexPointer_;
 
-		std::unique_ptr<Rhi::Buffer> vbo_;
-		Rhi::BufferUsage             vboUsageFlags_;
+		std::unique_ptr<RHI::Buffer> vbo_;
+		RHI::BufferUsage             vboUsageFlags_;
 		RenderBuffersManager::Parameters  vboParams_;
 		const RenderBuffersManager::Parameters* sharedVboParams_;
 
-		std::unique_ptr<Rhi::Buffer> ibo_;
-		Rhi::BufferUsage             iboUsageFlags_;
+		std::unique_ptr<RHI::Buffer> ibo_;
+		RHI::BufferUsage             iboUsageFlags_;
 		RenderBuffersManager::Parameters  iboParams_;
 		const RenderBuffersManager::Parameters* sharedIboParams_;
 

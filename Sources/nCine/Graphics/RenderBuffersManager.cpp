@@ -1,10 +1,10 @@
-﻿#include "RenderBuffersManager.h"
+#include "RenderBuffersManager.h"
 #include "RenderStatistics.h"
 #include "../../Main.h"
 #include "../tracy.h"
 
-#if defined(RHI_BACKEND_GL)
-#	include "GL/GLDebug.h"
+#if defined(WITH_RHI_GL)
+#	include "RHI/GL/GLDebug.h"
 #	include "../ServiceLocator.h"
 #	include "IGfxCapabilities.h"
 using namespace Death::Containers::Literals;
@@ -18,29 +18,29 @@ namespace nCine
 	{
 		buffers_.reserve(4);
 
-		const Rhi::MapFlags streamMapFlags = useBufferMapping
-			? (Rhi::MapFlags::Write | Rhi::MapFlags::InvalidateBuffer | Rhi::MapFlags::FlushExplicit)
-			: Rhi::MapFlags::None;
+		const RHI::MapFlags streamMapFlags = useBufferMapping
+			? (RHI::MapFlags::Write | RHI::MapFlags::InvalidateBuffer | RHI::MapFlags::FlushExplicit)
+			: RHI::MapFlags::None;
 
 		BufferSpecifications& vboSpecs = specs_[std::int32_t(BufferTypes::Array)];
 		vboSpecs.type       = BufferTypes::Array;
-		vboSpecs.bufferType = Rhi::BufferType::Vertex;
+		vboSpecs.bufferType = RHI::BufferType::Vertex;
 		vboSpecs.mapFlags   = streamMapFlags;
-		vboSpecs.usageFlags = Rhi::BufferUsage::Stream;
+		vboSpecs.usageFlags = RHI::BufferUsage::Stream;
 		vboSpecs.maxSize    = vboMaxSize;
 		vboSpecs.alignment  = sizeof(float);
 
 		BufferSpecifications& iboSpecs = specs_[std::int32_t(BufferTypes::ElementArray)];
 		iboSpecs.type       = BufferTypes::ElementArray;
-		iboSpecs.bufferType = Rhi::BufferType::Index;
+		iboSpecs.bufferType = RHI::BufferType::Index;
 		iboSpecs.mapFlags   = streamMapFlags;
-		iboSpecs.usageFlags = Rhi::BufferUsage::Stream;
+		iboSpecs.usageFlags = RHI::BufferUsage::Stream;
 		iboSpecs.maxSize    = iboMaxSize;
 		iboSpecs.alignment  = sizeof(std::uint16_t);
 
 		std::uint32_t offsetAlignment  = 256;  // safe default
 		std::uint32_t uboMaxSizeBytes  = 16 * 1024; // 16 KiB default
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		{
 			const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 			offsetAlignment = std::uint32_t(gfxCaps.GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT));
@@ -50,9 +50,9 @@ namespace nCine
 
 		BufferSpecifications& uboSpecs = specs_[std::int32_t(BufferTypes::Uniform)];
 		uboSpecs.type       = BufferTypes::Uniform;
-		uboSpecs.bufferType = Rhi::BufferType::Uniform;
+		uboSpecs.bufferType = RHI::BufferType::Uniform;
 		uboSpecs.mapFlags   = streamMapFlags;
-		uboSpecs.usageFlags = Rhi::BufferUsage::Stream;
+		uboSpecs.usageFlags = RHI::BufferUsage::Stream;
 		uboSpecs.maxSize    = uboMaxSizeBytes;
 		uboSpecs.alignment  = offsetAlignment;
 
@@ -118,7 +118,7 @@ namespace nCine
 	void RenderBuffersManager::FlushUnmap()
 	{
 		ZoneScopedC(0x81A861);
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		GLDebug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()"_s);
 #endif
 
@@ -130,15 +130,15 @@ namespace nCine
 			FATAL_ASSERT(usedSize <= specs_[std::int32_t(buffer.type)].maxSize);
 			buffer.freeSpace = buffer.size;
 
-			if (specs_[std::int32_t(buffer.type)].mapFlags == Rhi::MapFlags::None) {
+			if (specs_[std::int32_t(buffer.type)].mapFlags == RHI::MapFlags::None) {
 				if (usedSize > 0) {
-					Rhi::BufferSubData(*buffer.object, 0, usedSize, buffer.hostBuffer.get());
+					RHI::BufferSubData(*buffer.object, 0, usedSize, buffer.hostBuffer.get());
 				}
 			} else {
 				if (usedSize > 0) {
-					Rhi::FlushMappedBufferRange(*buffer.object, 0, usedSize);
+					RHI::FlushMappedBufferRange(*buffer.object, 0, usedSize);
 				}
-				Rhi::UnmapBuffer(*buffer.object);
+				RHI::UnmapBuffer(*buffer.object);
 			}
 
 			buffer.mapBase = nullptr;
@@ -148,7 +148,7 @@ namespace nCine
 	void RenderBuffersManager::Remap()
 	{
 		ZoneScopedC(0x81A861);
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		GLDebug::ScopedGroup scoped("RenderBuffersManager::remap()"_s);
 #endif
 
@@ -156,12 +156,12 @@ namespace nCine
 			DEATH_ASSERT(buffer.freeSpace == buffer.size);
 			DEATH_ASSERT(buffer.mapBase == nullptr);
 
-			const Rhi::MapFlags mapFlags = specs_[std::int32_t(buffer.type)].mapFlags;
-			if (mapFlags == Rhi::MapFlags::None) {
-				Rhi::BufferData(*buffer.object, buffer.size, nullptr, specs_[std::int32_t(buffer.type)].usageFlags);
+			const RHI::MapFlags mapFlags = specs_[std::int32_t(buffer.type)].mapFlags;
+			if (mapFlags == RHI::MapFlags::None) {
+				RHI::BufferData(*buffer.object, buffer.size, nullptr, specs_[std::int32_t(buffer.type)].usageFlags);
 				buffer.mapBase = buffer.hostBuffer.get();
 			} else {
-				buffer.mapBase = static_cast<std::uint8_t*>(Rhi::MapBufferRange(*buffer.object, 0, buffer.size, mapFlags));
+				buffer.mapBase = static_cast<std::uint8_t*>(RHI::MapBufferRange(*buffer.object, 0, buffer.size, mapFlags));
 			}
 			FATAL_ASSERT(buffer.mapBase != nullptr);
 		}
@@ -173,35 +173,35 @@ namespace nCine
 		ManagedBuffer& managedBuffer = buffers_.emplace_back();
 		managedBuffer.type   = specs.type;
 		managedBuffer.size   = specs.maxSize;
-		managedBuffer.object = Rhi::CreateBuffer(specs.bufferType);
-		Rhi::BufferData(*managedBuffer.object, managedBuffer.size, nullptr, specs.usageFlags);
+		managedBuffer.object = RHI::CreateBuffer(specs.bufferType);
+		RHI::BufferData(*managedBuffer.object, managedBuffer.size, nullptr, specs.usageFlags);
 		managedBuffer.freeSpace = managedBuffer.size;
 
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		switch (managedBuffer.type) {
 			default:
 			case BufferTypes::Array:
-				Rhi::SetBufferLabel(*managedBuffer.object, "Vertex_ManagedBuffer"_s);
+				RHI::SetBufferLabel(*managedBuffer.object, "Vertex_ManagedBuffer"_s);
 				break;
 			case BufferTypes::ElementArray:
-				Rhi::SetBufferLabel(*managedBuffer.object, "Index_ManagedBuffer"_s);
+				RHI::SetBufferLabel(*managedBuffer.object, "Index_ManagedBuffer"_s);
 				break;
 			case BufferTypes::Uniform:
-				Rhi::SetBufferLabel(*managedBuffer.object, "Uniform_ManagedBuffer"_s);
+				RHI::SetBufferLabel(*managedBuffer.object, "Uniform_ManagedBuffer"_s);
 				break;
 		}
 #endif
 
-		if (specs.mapFlags == Rhi::MapFlags::None) {
+		if (specs.mapFlags == RHI::MapFlags::None) {
 			managedBuffer.hostBuffer = std::make_unique<std::uint8_t[]>(specs.maxSize);
 			managedBuffer.mapBase    = managedBuffer.hostBuffer.get();
 		} else {
-			managedBuffer.mapBase = static_cast<std::uint8_t*>(Rhi::MapBufferRange(*managedBuffer.object, 0, managedBuffer.size, specs.mapFlags));
+			managedBuffer.mapBase = static_cast<std::uint8_t*>(RHI::MapBufferRange(*managedBuffer.object, 0, managedBuffer.size, specs.mapFlags));
 		}
 
 		FATAL_ASSERT(managedBuffer.mapBase != nullptr);
 
-#if defined(RHI_BACKEND_GL) && defined(DEATH_DEBUG)
+#if defined(WITH_RHI_GL) && defined(DEATH_DEBUG)
 		if (GLDebug::IsAvailable()) {
 			char debugString[128];
 			std::size_t length = formatInto(debugString, "Create {} buffer 0x{:x}", bufferTypeToString(specs.type), std::uintptr_t(buffers_.back().object.get()));

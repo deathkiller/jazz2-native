@@ -4,12 +4,12 @@
 #include "RenderCommand.h"
 #include "Material.h"
 
-#if !defined(RHI_BACKEND_GL)
+#if !defined(WITH_RHI_GL)
 // Provide GL-named aliases so the uniform-cache code compiles against any backend
 namespace nCine
 {
-	using GLUniformCache      = Rhi::UniformCache;
-	using GLUniformBlockCache = Rhi::UniformBlockCache;
+	using GLUniformCache      = RHI::UniformCache;
+	using GLUniformBlockCache = RHI::UniformBlockCache;
 }
 #endif
 

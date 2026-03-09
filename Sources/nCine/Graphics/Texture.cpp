@@ -1,4 +1,4 @@
-﻿#define NCINE_INCLUDE_OPENGL
+#define NCINE_INCLUDE_OPENGL
 #include "../CommonHeaders.h"
 
 #include "Texture.h"
@@ -58,7 +58,7 @@ namespace nCine
 	}
 
 	Texture::Texture()
-		: Object(ObjectType::Texture), texture_(Rhi::CreateTexture()), width_(0), height_(0),
+		: Object(ObjectType::Texture), texture_(RHI::CreateTexture()), width_(0), height_(0),
 			mipMapLevels_(0), isCompressed_(false), format_(Format::Unknown), dataSize_(0), minFiltering_(SamplerFilter::Nearest),
 			magFiltering_(SamplerFilter::Nearest), wrapMode_(SamplerWrapping::ClampToEdge)
 	{
@@ -120,29 +120,32 @@ namespace nCine
 			return;
 		}
 
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		TextureLoaderRaw texLoader(width, height, mipMapCount, ncFormatToInternal(format));
 
-#if defined(NCINE_PROFILING)
+#	if defined(NCINE_PROFILING)
 		if (dataSize_ > 0) {
 			RenderStatistics::RemoveTexture(dataSize_);
 		}
-#endif
+#	endif
 		texture_->Bind();
 		texture_->SetObjectLabel(name);
 		Initialize(texLoader);
 
-#if defined(NCINE_PROFILING)
+#	if defined(NCINE_PROFILING)
 		RenderStatistics::AddTexture(dataSize_);
-#endif
+#	endif
 #else
 		width_ = width;
 		height_ = height;
 		mipMapLevels_ = mipMapCount;
 		format_ = format;
 		dataSize_ = static_cast<std::uint32_t>(width * height) * GetChannelCount();
-		texture_->SetFilter(static_cast<Rhi::SamplerFilter>(minFiltering_), static_cast<Rhi::SamplerFilter>(magFiltering_));
-		texture_->SetWrapping(static_cast<Rhi::SamplerWrapping>(wrapMode_), static_cast<Rhi::SamplerWrapping>(wrapMode_));
+		texture_->SetFilter(static_cast<RHI::SamplerFilter>(minFiltering_), static_cast<RHI::SamplerFilter>(magFiltering_));
+		texture_->SetWrapping(static_cast<RHI::SamplerWrapping>(wrapMode_), static_cast<RHI::SamplerWrapping>(wrapMode_));
+		// Allocate mip-0 storage so that render-target usage and pixel sampling work on SW.
+		// (RHI::Texture::width_/height_ are only set via UploadMip, not by the above field assignments.)
+		texture_->UploadMip(0, width, height, RHI::TextureFormat::RGBA8, nullptr, static_cast<std::size_t>(width) * height * 4);
 #endif
 	}
 
@@ -176,7 +179,7 @@ namespace nCine
 			RenderStatistics::RemoveTexture(dataSize_);
 		}
 #endif
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		texture_->Bind();
 		texture_->SetObjectLabel(filename);
 #endif
@@ -210,7 +213,7 @@ namespace nCine
 	/*! \note It loads uncompressed pixel data from memory using the `Format` specified in the constructor */
 	bool Texture::LoadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		const std::uint8_t* data = bufferPtr;
 
 		const GLenum format = ncFormatToNonInternal(format_);
@@ -223,7 +226,7 @@ namespace nCine
 		if (x == 0 && y == 0) {
 			const std::int32_t mipW = std::max(1, width_ >> level);
 			const std::int32_t mipH = std::max(1, height_ >> level);
-			texture_->UploadMip(level, mipW, mipH, Rhi::TextureFormat::RGBA8, bufferPtr, static_cast<std::size_t>(mipW) * mipH * GetChannelCount());
+			texture_->UploadMip(level, mipW, mipH, RHI::TextureFormat::RGBA8, bufferPtr, static_cast<std::size_t>(mipW) * mipH * GetChannelCount());
 			return true;
 		}
 		return false;
@@ -243,14 +246,14 @@ namespace nCine
 
 	bool Texture::SaveToMemory(std::uint8_t* bufferPtr, std::int32_t level)
 	{
-#if defined(RHI_BACKEND_GL) && !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(WITH_RHI_GL) && !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		const GLenum format = ncFormatToNonInternal(format_);
 		glGetError();
 		texture_->GetTexImage(level, format, GL_UNSIGNED_BYTE, bufferPtr);
 		const GLenum error = glGetError();
 
 		return (error == GL_NO_ERROR);
-#elif !defined(RHI_BACKEND_GL)
+#elif !defined(WITH_RHI_GL)
 		const std::uint8_t* pixels = texture_->GetPixels(level);
 		if (pixels != nullptr && bufferPtr != nullptr) {
 			const std::int32_t mipW = std::max(1, width_ >> level);
@@ -300,13 +303,13 @@ namespace nCine
 		}
 		// clang-format on
 
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		texture_->Bind();
 		texture_->TexParameteri(GL_TEXTURE_MIN_FILTER, glFilter);
 		minFiltering_ = filter;
 #else
 		minFiltering_ = filter;
-		texture_->SetFilter(static_cast<Rhi::SamplerFilter>(minFiltering_), static_cast<Rhi::SamplerFilter>(magFiltering_));
+		texture_->SetFilter(static_cast<RHI::SamplerFilter>(minFiltering_), static_cast<RHI::SamplerFilter>(magFiltering_));
 #endif
 	}
 
@@ -325,13 +328,13 @@ namespace nCine
 		}
 		// clang-format on
 
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		texture_->Bind();
 		texture_->TexParameteri(GL_TEXTURE_MAG_FILTER, glFilter);
 		magFiltering_ = filter;
 #else
 		magFiltering_ = filter;
-		texture_->SetFilter(static_cast<Rhi::SamplerFilter>(minFiltering_), static_cast<Rhi::SamplerFilter>(magFiltering_));
+		texture_->SetFilter(static_cast<RHI::SamplerFilter>(minFiltering_), static_cast<RHI::SamplerFilter>(magFiltering_));
 #endif
 	}
 
@@ -351,20 +354,20 @@ namespace nCine
 		}
 		// clang-format on
 
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		texture_->Bind();
 		texture_->TexParameteri(GL_TEXTURE_WRAP_S, glWrap);
 		texture_->TexParameteri(GL_TEXTURE_WRAP_T, glWrap);
 		wrapMode_ = wrapMode;
 #else
 		wrapMode_ = wrapMode;
-		texture_->SetWrapping(static_cast<Rhi::SamplerWrapping>(wrapMode_), static_cast<Rhi::SamplerWrapping>(wrapMode_));
+		texture_->SetWrapping(static_cast<RHI::SamplerWrapping>(wrapMode_), static_cast<RHI::SamplerWrapping>(wrapMode_));
 #endif
 	}
 
 	void Texture::SetTextureLabel(const char* label)
 	{
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		texture_->SetObjectLabel(label);
 #endif
 	}
@@ -378,7 +381,7 @@ namespace nCine
 
 	void Texture::Initialize(const ITextureLoader& texLoader)
 	{
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		const std::int32_t maxTextureSize = gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_TEXTURE_SIZE);
 		FATAL_ASSERT_MSG(texLoader.width() <= maxTextureSize, "Texture width {} is bigger than device maximum {}", texLoader.width(), maxTextureSize);
@@ -400,7 +403,7 @@ namespace nCine
 			if (withTexStorage) {
 				if (dataSize_ > 0) {
 					// The texture needs to be recreated as its storage is immutable
-					texture_ = Rhi::CreateTexture();
+					texture_ = RHI::CreateTexture();
 					dataSize_ = 0;
 				}
 
@@ -461,14 +464,14 @@ namespace nCine
 			magFiltering_ = SamplerFilter::Linear;
 			minFiltering_ = SamplerFilter::Linear;
 		}
-		texture_->SetFilter(static_cast<Rhi::SamplerFilter>(minFiltering_), static_cast<Rhi::SamplerFilter>(magFiltering_));
-		texture_->SetWrapping(static_cast<Rhi::SamplerWrapping>(wrapMode_), static_cast<Rhi::SamplerWrapping>(wrapMode_));
+		texture_->SetFilter(static_cast<RHI::SamplerFilter>(minFiltering_), static_cast<RHI::SamplerFilter>(magFiltering_));
+		texture_->SetWrapping(static_cast<RHI::SamplerWrapping>(wrapMode_), static_cast<RHI::SamplerWrapping>(wrapMode_));
 #endif
 	}
 
 	void Texture::Load(const ITextureLoader& texLoader)
 	{
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 #if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 		const bool withTexStorage = true;
 #else
@@ -509,7 +512,7 @@ namespace nCine
 			for (std::int32_t mipIdx = 0; mipIdx < texLoader.mipMapCount(); mipIdx++) {
 				const std::uint8_t* data = texLoader.pixels(mipIdx);
 				if (data != nullptr) {
-					texture_->UploadMip(mipIdx, levelWidth, levelHeight, Rhi::TextureFormat::RGBA8, data, texLoader.dataSize(mipIdx));
+					texture_->UploadMip(mipIdx, levelWidth, levelHeight, RHI::TextureFormat::RGBA8, data, texLoader.dataSize(mipIdx));
 				}
 				levelWidth = std::max(1, levelWidth / 2);
 				levelHeight = std::max(1, levelHeight / 2);

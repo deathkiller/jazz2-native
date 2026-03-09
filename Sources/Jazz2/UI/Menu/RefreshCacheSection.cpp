@@ -1,4 +1,4 @@
-﻿#include "RefreshCacheSection.h"
+#include "RefreshCacheSection.h"
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 
@@ -30,7 +30,7 @@ namespace Jazz2::UI::Menu
 				mainMenu->_root->RefreshCacheLevels(true);
 			}
 
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 			std::uint32_t filesRemoved = RenderResources::GetBinaryShaderCache().Prune();
 			LOGI("Pruning binary shader cache (removed {} directories)...", filesRemoved);
 #endif

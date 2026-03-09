@@ -1,4 +1,4 @@
-﻿#include "RenderResources.h"
+#include "RenderResources.h"
 #include "BinaryShaderCache.h"
 #include "RenderBuffersManager.h"
 #include "RenderVaoPool.h"
@@ -31,42 +31,46 @@ namespace nCine
 
 		struct ShaderLoad
 		{
-			std::unique_ptr<Rhi::ShaderProgram>& shaderProgram;
+			std::unique_ptr<RHI::ShaderProgram>& shaderProgram;
 			const char* vertexShader;
 			const char* fragmentShader;
-			Rhi::ShaderProgram::Introspection introspection;
+			RHI::ShaderProgram::Introspection introspection;
 			const char* shaderName;
 		};
 	}
 
+#if defined(RHI_CAP_BINARY_SHADERS)
 	std::unique_ptr<BinaryShaderCache> RenderResources::binaryShaderCache_;
+#endif
 	std::unique_ptr<RenderBuffersManager> RenderResources::buffersManager_;
+#if defined(RHI_CAP_VAO)
 	std::unique_ptr<RenderVaoPool> RenderResources::vaoPool_;
+#endif
 	std::unique_ptr<RenderCommandPool> RenderResources::renderCommandPool_;
 	std::unique_ptr<RenderBatcher> RenderResources::renderBatcher_;
 
-	std::unique_ptr<Rhi::ShaderProgram> RenderResources::defaultShaderPrograms_[DefaultShaderProgramsCount];
-	HashMap<const Rhi::ShaderProgram*, Rhi::ShaderProgram*> RenderResources::batchedShaders_(32);
+	std::unique_ptr<RHI::ShaderProgram> RenderResources::defaultShaderPrograms_[DefaultShaderProgramsCount];
+	HashMap<const RHI::ShaderProgram*, RHI::ShaderProgram*> RenderResources::batchedShaders_(32);
 
 	std::uint8_t RenderResources::cameraUniformsBuffer_[UniformsBufferSize];
-	HashMap<Rhi::ShaderProgram*, RenderResources::CameraUniformData> RenderResources::cameraUniformDataMap_(32);
+	HashMap<RHI::ShaderProgram*, RenderResources::CameraUniformData> RenderResources::cameraUniformDataMap_(32);
 
 	Camera* RenderResources::currentCamera_ = nullptr;
 	std::unique_ptr<Camera> RenderResources::defaultCamera_;
 	Viewport* RenderResources::currentViewport_ = nullptr;
 
-	Rhi::ShaderProgram* RenderResources::GetShaderProgram(Material::ShaderProgramType shaderProgramType)
+	RHI::ShaderProgram* RenderResources::GetShaderProgram(Material::ShaderProgramType shaderProgramType)
 	{
 		return (shaderProgramType != Material::ShaderProgramType::Custom ? defaultShaderPrograms_[std::int32_t(shaderProgramType)].get() : nullptr);
 	}
 
-	Rhi::ShaderProgram* RenderResources::GetBatchedShader(const Rhi::ShaderProgram* shader)
+	RHI::ShaderProgram* RenderResources::GetBatchedShader(const RHI::ShaderProgram* shader)
 	{
 		auto it = batchedShaders_.find(shader);
 		return (it != batchedShaders_.end() ? it->second : nullptr);
 	}
 
-	bool RenderResources::RegisterBatchedShader(const Rhi::ShaderProgram* shader, Rhi::ShaderProgram* batchedShader)
+	bool RenderResources::RegisterBatchedShader(const RHI::ShaderProgram* shader, RHI::ShaderProgram* batchedShader)
 	{
 		FATAL_ASSERT(shader != nullptr);
 		FATAL_ASSERT(batchedShader != nullptr);
@@ -75,19 +79,19 @@ namespace nCine
 		return batchedShaders_.emplace(shader, batchedShader).second;
 	}
 
-	bool RenderResources::UnregisterBatchedShader(const Rhi::ShaderProgram* shader)
+	bool RenderResources::UnregisterBatchedShader(const RHI::ShaderProgram* shader)
 	{
 		DEATH_ASSERT(shader != nullptr);
 		return (batchedShaders_.erase(shader) > 0);
 	}
 
-	RenderResources::CameraUniformData* RenderResources::FindCameraUniformData(Rhi::ShaderProgram* shaderProgram)
+	RenderResources::CameraUniformData* RenderResources::FindCameraUniformData(RHI::ShaderProgram* shaderProgram)
 	{
 		auto it = cameraUniformDataMap_.find(shaderProgram);
 		return (it != cameraUniformDataMap_.end() ? &it->second : nullptr);
 	}
 
-	void RenderResources::InsertCameraUniformData(Rhi::ShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData)
+	void RenderResources::InsertCameraUniformData(RHI::ShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData)
 	{
 		FATAL_ASSERT(shaderProgram != nullptr);
 
@@ -97,21 +101,21 @@ namespace nCine
 		cameraUniformDataMap_.emplace(shaderProgram, std::move(cameraUniformData));
 	}
 
-	bool RenderResources::RemoveCameraUniformData(Rhi::ShaderProgram* shaderProgram)
+	bool RenderResources::RemoveCameraUniformData(RHI::ShaderProgram* shaderProgram)
 	{
 		return cameraUniformDataMap_.erase(shaderProgram);
 	}
 
-	void RenderResources::SetDefaultAttributesParameters(Rhi::ShaderProgram& shaderProgram)
+	void RenderResources::SetDefaultAttributesParameters(RHI::ShaderProgram& shaderProgram)
 	{
 #if defined(RHI_CAP_SHADERS)
 		if (shaderProgram.GetAttributeCount() <= 0) {
 			return;
 		}
 
-		Rhi::VertexFormat::Attribute* positionAttribute = shaderProgram.GetAttribute(Material::PositionAttributeName);
-		Rhi::VertexFormat::Attribute* texCoordsAttribute = shaderProgram.GetAttribute(Material::TexCoordsAttributeName);
-		Rhi::VertexFormat::Attribute* meshIndexAttribute = shaderProgram.GetAttribute(Material::MeshIndexAttributeName);
+		RHI::VertexFormat::Attribute* positionAttribute = shaderProgram.GetAttribute(Material::PositionAttributeName);
+		RHI::VertexFormat::Attribute* texCoordsAttribute = shaderProgram.GetAttribute(Material::TexCoordsAttributeName);
+		RHI::VertexFormat::Attribute* meshIndexAttribute = shaderProgram.GetAttribute(Material::MeshIndexAttributeName);
 
 		// The stride check avoid overwriting VBO parameters for custom mesh shaders attributes
 		if (positionAttribute != nullptr && texCoordsAttribute != nullptr && meshIndexAttribute != nullptr) {
@@ -185,16 +189,20 @@ namespace nCine
 	void RenderResources::CreateMinimal()
 	{
 		// `CreateMinimal()` cannot be called after `Create()`
+#if defined(RHI_CAP_BINARY_SHADERS)
 		DEATH_ASSERT(binaryShaderCache_ == nullptr);
+#endif
 		DEATH_ASSERT(buffersManager_ == nullptr);
+#if defined(RHI_CAP_VAO)
 		DEATH_ASSERT(vaoPool_ == nullptr);
+#endif
 	
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
 #endif
 		buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.vboSize, appCfg.iboSize);
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
 #endif
 	}
@@ -204,7 +212,7 @@ namespace nCine
 		// `Create()` can be called after `CreateMinimal()`
 
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		if (binaryShaderCache_ == nullptr) {
 			binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
 		}
@@ -212,7 +220,7 @@ namespace nCine
 		if (buffersManager_ == nullptr) {
 			buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.vboSize, appCfg.iboSize);
 		}
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		if (vaoPool_ == nullptr) {
 			vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
 		}
@@ -222,43 +230,53 @@ namespace nCine
 		defaultCamera_ = std::make_unique<Camera>();
 		currentCamera_ = defaultCamera_.get();
 
-#if defined(RHI_BACKEND_GL)
+#if !defined(RHI_CAP_SHADERS)
+		// Create non-null stub programs for fixed-function backends.
+		// This ensures SetShaderProgramType() succeeds and materials can be set up normally.
+		for (std::int32_t i = 0; i < static_cast<std::int32_t>(DefaultShaderProgramsCount); i++) {
+			if (defaultShaderPrograms_[i] == nullptr) {
+				defaultShaderPrograms_[i] = std::make_unique<RHI::ShaderProgram>();
+			}
+		}
+#endif
+
+#if defined(WITH_RHI_GL)
 		ShaderLoad shadersToLoad[] = {
 #if defined(WITH_EMBEDDED_SHADERS)
 			// Skipping the initial new line character of the raw string literal
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::Sprite)], ShaderStrings::sprite_vs + 1, ShaderStrings::sprite_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "Sprite" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteGray)], ShaderStrings::sprite_vs + 1, ShaderStrings::sprite_gray_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "Sprite_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteNoTexture)], ShaderStrings::sprite_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSprite)], ShaderStrings::meshsprite_vs + 1, ShaderStrings::sprite_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteGray)], ShaderStrings::meshsprite_vs + 1, ShaderStrings::sprite_gray_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteNoTexture)], ShaderStrings::meshsprite_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite_NoTexture" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::TextNodeAlpha)], ShaderStrings::textnode_vs + 1, ShaderStrings::textnode_alpha_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "TextNode_Alpha" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::TextNodeRed)], ShaderStrings::textnode_vs + 1, ShaderStrings::textnode_red_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "TextNode_Red" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSprites)], ShaderStrings::batched_sprites_vs + 1, ShaderStrings::sprite_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesGray)], ShaderStrings::batched_sprites_vs + 1, ShaderStrings::sprite_gray_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesNoTexture)], ShaderStrings::batched_sprites_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSprites)], ShaderStrings::batched_meshsprites_vs + 1, ShaderStrings::sprite_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesGray)], ShaderStrings::batched_meshsprites_vs + 1, ShaderStrings::sprite_gray_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesNoTexture)], ShaderStrings::batched_meshsprites_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedTextNodesAlpha)], ShaderStrings::batched_textnodes_vs + 1, ShaderStrings::textnode_alpha_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Alpha" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedTextNodesRed)], ShaderStrings::batched_textnodes_vs + 1, ShaderStrings::textnode_red_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Red" }
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::Sprite)], ShaderStrings::sprite_vs + 1, ShaderStrings::sprite_fs + 1, RHI::ShaderProgram::Introspection::Enabled, "Sprite" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteGray)], ShaderStrings::sprite_vs + 1, ShaderStrings::sprite_gray_fs + 1, RHI::ShaderProgram::Introspection::Enabled, "Sprite_Gray" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteNoTexture)], ShaderStrings::sprite_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, RHI::ShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSprite)], ShaderStrings::meshsprite_vs + 1, ShaderStrings::sprite_fs + 1, RHI::ShaderProgram::Introspection::Enabled, "MeshSprite" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteGray)], ShaderStrings::meshsprite_vs + 1, ShaderStrings::sprite_gray_fs + 1, RHI::ShaderProgram::Introspection::Enabled, "MeshSprite_Gray" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteNoTexture)], ShaderStrings::meshsprite_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, RHI::ShaderProgram::Introspection::Enabled, "MeshSprite_NoTexture" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::TextNodeAlpha)], ShaderStrings::textnode_vs + 1, ShaderStrings::textnode_alpha_fs + 1, RHI::ShaderProgram::Introspection::Enabled, "TextNode_Alpha" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::TextNodeRed)], ShaderStrings::textnode_vs + 1, ShaderStrings::textnode_red_fs + 1, RHI::ShaderProgram::Introspection::Enabled, "TextNode_Red" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSprites)], ShaderStrings::batched_sprites_vs + 1, ShaderStrings::sprite_fs + 1, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesGray)], ShaderStrings::batched_sprites_vs + 1, ShaderStrings::sprite_gray_fs + 1, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_Gray" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesNoTexture)], ShaderStrings::batched_sprites_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_NoTexture" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSprites)], ShaderStrings::batched_meshsprites_vs + 1, ShaderStrings::sprite_fs + 1, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesGray)], ShaderStrings::batched_meshsprites_vs + 1, ShaderStrings::sprite_gray_fs + 1, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_Gray" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesNoTexture)], ShaderStrings::batched_meshsprites_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedTextNodesAlpha)], ShaderStrings::batched_textnodes_vs + 1, ShaderStrings::textnode_alpha_fs + 1, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Alpha" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedTextNodesRed)], ShaderStrings::batched_textnodes_vs + 1, ShaderStrings::textnode_red_fs + 1, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Red" }
 #else
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::Sprite)], "sprite_vs.glsl", "sprite_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "Sprite" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteGray)], "sprite_vs.glsl", "sprite_gray_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "Sprite_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteNoTexture)], "sprite_notexture_vs.glsl", "sprite_notexture_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSprite)], "meshsprite_vs.glsl", "sprite_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteGray)], "meshsprite_vs.glsl", "sprite_gray_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteNoTexture)], "meshsprite_notexture_vs.glsl", "sprite_notexture_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite_NoTexture" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::TextNodeAlpha)], "textnode_vs.glsl", "textnode_alpha_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "TextNode_Alpha" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::TextNodeRed)], "textnode_vs.glsl", "textnode_red_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "TextNode_Red" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSprites)], "batched_sprites_vs.glsl", "sprite_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesGray)], "batched_sprites_vs.glsl", "sprite_gray_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesNoTexture)], "batched_sprites_notexture_vs.glsl", "sprite_notexture_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSprites)], "batched_meshsprites_vs.glsl", "sprite_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesGray)], "batched_meshsprites_vs.glsl", "sprite_gray_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesNoTexture)], "batched_meshsprites_notexture_vs.glsl", "sprite_notexture_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedTextNodesAlpha)], "batched_textnodes_vs.glsl", "textnode_alpha_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Alpha" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedTextNodesRed)], "batched_textnodes_vs.glsl", "textnode_red_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Red" }
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::Sprite)], "sprite_vs.glsl", "sprite_fs.glsl", RHI::ShaderProgram::Introspection::Enabled, "Sprite" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteGray)], "sprite_vs.glsl", "sprite_gray_fs.glsl", RHI::ShaderProgram::Introspection::Enabled, "Sprite_Gray" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteNoTexture)], "sprite_notexture_vs.glsl", "sprite_notexture_fs.glsl", RHI::ShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSprite)], "meshsprite_vs.glsl", "sprite_fs.glsl", RHI::ShaderProgram::Introspection::Enabled, "MeshSprite" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteGray)], "meshsprite_vs.glsl", "sprite_gray_fs.glsl", RHI::ShaderProgram::Introspection::Enabled, "MeshSprite_Gray" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteNoTexture)], "meshsprite_notexture_vs.glsl", "sprite_notexture_fs.glsl", RHI::ShaderProgram::Introspection::Enabled, "MeshSprite_NoTexture" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::TextNodeAlpha)], "textnode_vs.glsl", "textnode_alpha_fs.glsl", RHI::ShaderProgram::Introspection::Enabled, "TextNode_Alpha" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::TextNodeRed)], "textnode_vs.glsl", "textnode_red_fs.glsl", RHI::ShaderProgram::Introspection::Enabled, "TextNode_Red" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSprites)], "batched_sprites_vs.glsl", "sprite_fs.glsl", RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesGray)], "batched_sprites_vs.glsl", "sprite_gray_fs.glsl", RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_Gray" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesNoTexture)], "batched_sprites_notexture_vs.glsl", "sprite_notexture_fs.glsl", RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_NoTexture" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSprites)], "batched_meshsprites_vs.glsl", "sprite_fs.glsl", RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesGray)], "batched_meshsprites_vs.glsl", "sprite_gray_fs.glsl", RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_Gray" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesNoTexture)], "batched_meshsprites_notexture_vs.glsl", "sprite_notexture_fs.glsl", RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedTextNodesAlpha)], "batched_textnodes_vs.glsl", "textnode_alpha_fs.glsl", RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Alpha" },
+			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedTextNodesRed)], "batched_textnodes_vs.glsl", "textnode_red_fs.glsl", RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Red" }
 #endif
 		};
 
@@ -279,7 +297,7 @@ namespace nCine
 			std::uint64_t shaderVersion = (std::uint64_t)std::max(fs::GetLastModificationTime(vertexPath).ToUnixMilliseconds(), fs::GetLastModificationTime(fragmentPath).ToUnixMilliseconds());
 #endif
 
-			shaderToLoad.shaderProgram = std::make_unique<Rhi::ShaderProgram>(Rhi::ShaderProgram::QueryPhase::Immediate);
+			shaderToLoad.shaderProgram = std::make_unique<RHI::ShaderProgram>(RHI::ShaderProgram::QueryPhase::Immediate);
 			if (binaryShaderCache_->LoadFromCache(shaderToLoad.shaderName, shaderVersion, shaderToLoad.shaderProgram.get(), shaderToLoad.introspection)) {
 				// Shader is already compiled and up-to-date
 				continue;
@@ -289,7 +307,7 @@ namespace nCine
 			bool compileTwice = false;
 			std::int32_t stringsCount = 0;
 
-			if (appCfg.fixedBatchSize > 0 && shaderToLoad.introspection == Rhi::ShaderProgram::Introspection::NoUniformsInBlocks) {
+			if (appCfg.fixedBatchSize > 0 && shaderToLoad.introspection == RHI::ShaderProgram::Introspection::NoUniformsInBlocks) {
 				// If fixed batch size is used, it's compiled only once with specified batch size
 				shaderToLoad.shaderProgram->SetBatchSize(appCfg.fixedBatchSize);
 
@@ -298,7 +316,7 @@ namespace nCine
 #if defined(WITH_EMBEDDED_SHADERS)
 				vertexStrings[stringsCount++] = shaderToLoad.vertexShader;
 #endif
-			} else if (shaderToLoad.introspection == Rhi::ShaderProgram::Introspection::NoUniformsInBlocks && maxUniformBlockSize < 64 * 1024) {
+			} else if (shaderToLoad.introspection == RHI::ShaderProgram::Introspection::NoUniformsInBlocks && maxUniformBlockSize < 64 * 1024) {
 				compileTwice = true;
 
 				// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
@@ -326,11 +344,11 @@ namespace nCine
 			shaderToLoad.shaderProgram->SetObjectLabel(shaderToLoad.shaderName);
 
 			if (compileTwice) {
-				bool hasLinked = shaderToLoad.shaderProgram->Link(Rhi::ShaderProgram::Introspection::Enabled);
+				bool hasLinked = shaderToLoad.shaderProgram->Link(RHI::ShaderProgram::Introspection::Enabled);
 				FATAL_ASSERT(hasLinked);
 
-				Rhi::ShaderUniformBlocks blocks(shaderToLoad.shaderProgram.get(), Material::InstancesBlockName, nullptr);
-				Rhi::UniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
+				RHI::ShaderUniformBlocks blocks(shaderToLoad.shaderProgram.get(), Material::InstancesBlockName, nullptr);
+				RHI::UniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
 				if (block != nullptr) {
 					std::int32_t batchSize = maxUniformBlockSize / block->GetSize();
 					LOGI("Shader \"{}\" - block size: {} + {} align bytes, max batch size: {}", shaderToLoad.shaderName,
@@ -372,7 +390,7 @@ namespace nCine
 		}
 
 		RegisterDefaultBatchedShaders();
-#endif // RHI_BACKEND_GL
+#endif // WITH_RHI_GL
 
 		// Calculating a default projection matrix for all shader programs
 		auto res = theApplication().GetResolution();
@@ -390,7 +408,9 @@ namespace nCine
 		defaultCamera_.reset(nullptr);
 		renderBatcher_.reset(nullptr);
 		renderCommandPool_.reset(nullptr);
+#if defined(RHI_CAP_VAO)
 		vaoPool_.reset(nullptr);
+#endif
 		buffersManager_.reset(nullptr);
 
 		LOGI("Rendering resources disposed");

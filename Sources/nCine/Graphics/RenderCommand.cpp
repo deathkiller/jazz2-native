@@ -4,6 +4,26 @@
 #include "DrawableNode.h"
 #include "../tracy.h"
 
+#if !defined(RHI_CAP_SHADERS)
+#include <cstring>
+namespace
+{
+	/// Column-major 4×4 matrix multiply: result = a * b.
+	void MatMul4(float* result, const float* a, const float* b)
+	{
+		for (std::int32_t col = 0; col < 4; col++) {
+			for (std::int32_t row = 0; row < 4; row++) {
+				float sum = 0.0f;
+				for (std::int32_t k = 0; k < 4; k++) {
+					sum += a[k * 4 + row] * b[col * 4 + k];
+				}
+				result[col * 4 + row] = sum;
+			}
+		}
+	}
+}
+#endif
+
 namespace nCine
 {
 	RenderCommand::RenderCommand(Type type)
@@ -37,9 +57,9 @@ namespace nCine
 		material_.Bind();
 		material_.CommitUniforms();
 
-		Rhi::ScissorState scissorTestState = Rhi::GetScissorState();
+		RHI::ScissorState scissorTestState = RHI::GetScissorState();
 		if (scissorRect_.W > 0 && scissorRect_.H > 0) {
-			Rhi::SetScissorTest(true, scissorRect_.X, scissorRect_.Y, scissorRect_.W, scissorRect_.H);
+			RHI::SetScissorTest(true, scissorRect_.X, scissorRect_.Y, scissorRect_.W, scissorRect_.H);
 		}
 
 		std::uint32_t offset = 0;
@@ -51,9 +71,49 @@ namespace nCine
 #endif
 		material_.DefineVertexFormat(geometry_.GetVboParams().object, geometry_.GetIboParams().object, offset);
 		geometry_.Bind();
+
+#if !defined(RHI_CAP_SHADERS)
+		{
+			// Build a DrawContext for the SW rasterizer. Combine stored model matrix
+			// with camera projection+view to produce the final MVP.
+			const Camera* cam = RenderResources::GetCurrentCamera();
+			const float* proj = cam->GetProjection().Data();
+			const float* view = cam->GetView().Data();
+			const RHI::FFState& matFF = material_.GetFFState();
+
+			float vm[16], mvp[16];
+			MatMul4(vm, view, matFF.mvpMatrix);
+			MatMul4(mvp, proj, vm);
+
+			RHI::DrawContext ctx;
+			ctx.ff = matFF;
+			std::memcpy(ctx.ff.mvpMatrix, mvp, 16 * sizeof(float));
+			for (std::uint32_t i = 0; i < RHI::MaxTextureUnits; i++) {
+				ctx.textures[i] = const_cast<RHI::Texture*>(material_.GetTexture(i));
+			}
+			ctx.ff.hasTexture = (ctx.textures[0] != nullptr);
+			ctx.ff.textureUnit = 0;
+			// Procedural sprites: vertices synthesised inside FetchVertex from FFState.
+			// VBO-based meshes may set vertexFormat via DefineVertexFormat in the future.
+			ctx.vertexFormat = nullptr;
+			ctx.vboByteOffset = 0;
+			ctx.blendingEnabled = material_.IsBlendingEnabled();
+			ctx.blendSrc = material_.GetSrcBlendingFactor();
+			ctx.blendDst = material_.GetDestBlendingFactor();
+			const RHI::ScissorState sc = RHI::GetScissorState();
+			ctx.scissorEnabled = sc.enabled;
+			ctx.scissorRect.Set(sc.x, sc.y, sc.w, sc.h);
+			RHI::SetDrawContext(ctx);
+		}
+#endif
+
 		geometry_.Draw(numInstances_);
 
-		Rhi::SetScissorState(scissorTestState);
+#if !defined(RHI_CAP_SHADERS)
+		RHI::ClearDrawContext();
+#endif
+
+		RHI::SetScissorState(scissorTestState);
 	}
 
 	void RenderCommand::SetScissor(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
@@ -78,16 +138,7 @@ namespace nCine
 		const Camera::ProjectionValues cameraValues = RenderResources::GetCurrentCamera()->GetProjectionValues();
 		modelMatrix_[3][2] = CalculateDepth(layer_, cameraValues.nearClip, cameraValues.farClip);
 
-		if (material_.shaderProgram_ && material_.shaderProgram_->GetStatus() == Rhi::ShaderProgram::Status::LinkedWithIntrospection) {
-			Rhi::UniformBlockCache* instanceBlock = material_.UniformBlock(Material::InstanceBlockName);
-			Rhi::UniformCache* matrixUniform = instanceBlock
-				? instanceBlock->GetUniform(Material::ModelMatrixUniformName)
-				: material_.Uniform(Material::ModelMatrixUniformName);
-			if (matrixUniform) {
-				//ZoneScopedNC("Set model matrix", 0x81A861);
-				matrixUniform->SetFloatVector(modelMatrix_.Data());
-			}
-		}
+		material_.SetModelMatrixUniform(modelMatrix_.Data());
 
 		transformationCommitted_ = true;
 	}

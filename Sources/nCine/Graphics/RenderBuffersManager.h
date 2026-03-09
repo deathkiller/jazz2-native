@@ -1,7 +1,7 @@
 #pragma once
 
-#include "RenderAPI/RHI.h"
-#include "RenderAPI/RenderBufferParams.h"
+#include "RHI/RHI.h"
+#include "RHI/RenderBufferParams.h"
 
 #include <memory>
 
@@ -32,9 +32,9 @@ namespace nCine
 		struct BufferSpecifications
 		{
 			BufferTypes       type;
-			Rhi::BufferType  bufferType;
-			Rhi::MapFlags    mapFlags;
-			Rhi::BufferUsage usageFlags;
+			RHI::BufferType  bufferType;
+			RHI::MapFlags    mapFlags;
+			RHI::BufferUsage usageFlags;
 			std::uint32_t     maxSize;
 			std::uint32_t     alignment;
 		};
@@ -66,7 +66,7 @@ namespace nCine
 				: type(BufferTypes::Array), size(0), freeSpace(0), object(nullptr), mapBase(nullptr) {}
 
 			BufferTypes type;
-			std::unique_ptr<Rhi::Buffer> object;
+			std::unique_ptr<RHI::Buffer> object;
 			std::uint32_t size;
 			std::uint32_t freeSpace;
 			std::uint8_t* mapBase;

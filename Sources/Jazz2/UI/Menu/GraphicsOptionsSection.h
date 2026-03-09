@@ -6,19 +6,25 @@ namespace Jazz2::UI::Menu
 {
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	enum class GraphicsOptionsItemType {
+#if defined(RHI_CAP_SHADERS)
 		RescaleMode,
+#endif
 		Resolution,
 #if defined(NCINE_HAS_WINDOWS)
 		Fullscreen,
 #endif
+#if defined(RHI_CAP_SHADERS)
 		Antialiasing,
+#endif
 		BackgroundDithering,
 		LowWaterQuality,
 		ShowPlayerTrails,
 		PreferVerticalSplitscreen,
 		PreferZoomOut,
 		KeepAspectRatioInCinematics,
+#if defined(RHI_CAP_SHADERS)
 		UnalignedViewport,
+#endif
 		ShowPerformanceMetrics
 	};
 

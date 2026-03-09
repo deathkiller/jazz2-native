@@ -19,7 +19,7 @@ namespace Jazz2::Rendering
 #if defined(RHI_CAP_SHADERS)
 		if (_renderCommand.GetMaterial().SetShader(_owner->_levelHandler->_combineShader)) {
 			_renderCommand.GetMaterial().ReserveUniformsDataMemory();
-			_renderCommand.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+			_renderCommand.GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 			auto* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
@@ -40,7 +40,7 @@ namespace Jazz2::Rendering
 
 		if (_renderCommandWithWater.GetMaterial().SetShader(_owner->_levelHandler->_combineWithWaterShader)) {
 			_renderCommandWithWater.GetMaterial().ReserveUniformsDataMemory();
-			_renderCommandWithWater.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+			_renderCommandWithWater.GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 			auto* textureUniform = _renderCommandWithWater.GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
@@ -76,8 +76,18 @@ namespace Jazz2::Rendering
 	bool CombineRenderer::OnDraw(RenderQueue& renderQueue)
 	{
 #if !defined(RHI_CAP_SHADERS)
-		return true; // Combine renderer requires programmable shaders
-#endif
+		// SW fallback: blit the scene texture directly, skipping lighting and post-processing
+		if (_renderCommand.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
+			_renderCommand.GetMaterial().ReserveUniformsDataMemory();
+			_renderCommand.GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
+		}
+		_renderCommand.GetMaterial().SetInstTexRect(1.0f, 0.0f, 1.0f, 0.0f);
+		_renderCommand.GetMaterial().SetInstSpriteSize(_bounds.W, _bounds.H);
+		_renderCommand.GetMaterial().SetInstColor(1.0f, 1.0f, 1.0f, 1.0f);
+		_renderCommand.GetMaterial().SetTexture(*_owner->_viewTexture);
+		renderQueue.AddCommand(&_renderCommand);
+		return true;
+#else
 		float viewWaterLevel = _owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y + _bounds.H * 0.5f;
 		bool viewHasWater = (viewWaterLevel < _bounds.H);
 		auto& command = (viewHasWater ? _renderCommandWithWater : _renderCommand);
@@ -104,7 +114,7 @@ namespace Jazz2::Rendering
 		}
 
 		renderQueue.AddCommand(&command);
-
 		return true;
+#endif
 	}
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RenderAPI/RHI.h"
+#include "RHI/RHI.h"
 #include "../Base/Object.h"
 
 #include <Containers/StringView.h>
@@ -57,43 +57,43 @@ namespace nCine
 
 		Shader();
 
-		Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		Shader(const char* shaderName, LoadMode loadMode, const char* vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		Shader(LoadMode loadMode, const char* vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
+		Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		Shader(const char* shaderName, LoadMode loadMode, const char* vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		Shader(LoadMode loadMode, const char* vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
 
-		Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, DefaultVertex vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		Shader(const char* shaderName, LoadMode loadMode, DefaultVertex vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		Shader(LoadMode loadMode, DefaultVertex vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, const char* vertex, DefaultFragment fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		Shader(const char* shaderName, LoadMode loadMode, const char* vertex, DefaultFragment fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		Shader(LoadMode loadMode, const char* vertex, DefaultFragment fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
+		Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, DefaultVertex vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		Shader(const char* shaderName, LoadMode loadMode, DefaultVertex vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		Shader(LoadMode loadMode, DefaultVertex vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, const char* vertex, DefaultFragment fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		Shader(const char* shaderName, LoadMode loadMode, const char* vertex, DefaultFragment fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		Shader(LoadMode loadMode, const char* vertex, DefaultFragment fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
 
 		~Shader() override;
 
 		Shader(const Shader&) = delete;
 		Shader& operator=(const Shader&) = delete;
 
-		bool LoadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
-		bool LoadFromMemory(const char* shaderName, const char* vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		bool LoadFromMemory(const char* vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
+		bool LoadFromMemory(const char* shaderName, const char* vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(const char* vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
 
-		bool LoadFromMemory(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
-		bool LoadFromMemory(const char* shaderName, DefaultVertex vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		bool LoadFromMemory(DefaultVertex vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		bool LoadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
-		bool LoadFromMemory(const char* shaderName, const char* vertex, DefaultFragment fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		bool LoadFromMemory(const char* vertex, DefaultFragment fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
+		bool LoadFromMemory(const char* shaderName, DefaultVertex vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(DefaultVertex vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
+		bool LoadFromMemory(const char* shaderName, const char* vertex, DefaultFragment fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(const char* vertex, DefaultFragment fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
 
-		bool LoadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
-		bool LoadFromFile(const char* shaderName, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		bool LoadFromFile(StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
+		bool LoadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
+		bool LoadFromFile(const char* shaderName, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		bool LoadFromFile(StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
 
-		bool LoadFromFile(const char* shaderName, Introspection introspection, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
-		bool LoadFromFile(const char* shaderName, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		bool LoadFromFile(DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		bool LoadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
-		bool LoadFromFile(const char* shaderName, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		bool LoadFromFile(StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
+		bool LoadFromFile(const char* shaderName, Introspection introspection, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
+		bool LoadFromFile(const char* shaderName, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		bool LoadFromFile(DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		bool LoadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
+		bool LoadFromFile(const char* shaderName, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		bool LoadFromFile(StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
 
 		bool LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Introspection introspection);
 
@@ -122,7 +122,7 @@ namespace nCine
 		/// Registers a shaders to be used for batches of render commands
 		void RegisterBatchedShader(Shader& batchedShader);
 
-		Rhi::ShaderProgram* GetHandle() {
+		RHI::ShaderProgram* GetHandle() {
 			return glShaderProgram_.get();
 		}
 
@@ -132,7 +132,7 @@ namespace nCine
 
 	private:
 		/// Shader program
-		std::unique_ptr<Rhi::ShaderProgram> glShaderProgram_;
+		std::unique_ptr<RHI::ShaderProgram> glShaderProgram_;
 
 		bool LoadDefaultShader(DefaultVertex vertex, int batchSize);
 		bool LoadDefaultShader(DefaultFragment fragment);

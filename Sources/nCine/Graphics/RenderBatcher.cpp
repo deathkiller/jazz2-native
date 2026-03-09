@@ -1,8 +1,8 @@
-﻿#include "RenderBatcher.h"
+#include "RenderBatcher.h"
 #include "RenderCommand.h"
 #include "RenderCommandPool.h"
 #include "RenderResources.h"
-#include "RenderAPI/RHI.h"
+#include "RHI/RHI.h"
 #include "../Application.h"
 #include "../ServiceLocator.h"
 #include "../Base/StaticHashMapIterator.h"
@@ -42,21 +42,21 @@ namespace nCine
 
 		for (std::uint32_t i = 1; i < srcQueue.size(); i++) {
 			const RenderCommand* command = srcQueue[i];
-			const Rhi::PrimitiveType primitive = command->GetGeometry().GetPrimitiveType();
+			const RHI::PrimitiveType primitive = command->GetGeometry().GetPrimitiveType();
 
 			const RenderCommand* prevCommand = srcQueue[i - 1];
-			const Rhi::PrimitiveType prevPrimitive = prevCommand->GetGeometry().GetPrimitiveType();
+			const RHI::PrimitiveType prevPrimitive = prevCommand->GetGeometry().GetPrimitiveType();
 
 			// Should split if material sort key (that takes into account shader program, textures and blending) or primitive type differs
 			// LineStrip is split always, because it cannot be batched
-			const bool shouldSplit = (command->GetLowerMaterialSortKey() != prevCommand->GetLowerMaterialSortKey() || prevPrimitive != primitive || primitive == Rhi::PrimitiveType::LineStrip);
+			const bool shouldSplit = (command->GetLowerMaterialSortKey() != prevCommand->GetLowerMaterialSortKey() || prevPrimitive != primitive || primitive == RHI::PrimitiveType::LineStrip);
 
 			// Also collect the very last command if it can be batched with the previous one
 			std::uint32_t endSplit = (i == srcQueue.size() - 1 && !shouldSplit ? i + 1 : i);
 
 			// Split point if last command or split condition
 			if (i == srcQueue.size() - 1 || shouldSplit) {
-				const Rhi::ShaderProgram* batchedShader = RenderResources::GetBatchedShader(prevCommand->GetMaterial().GetShaderProgram());
+				const RHI::ShaderProgram* batchedShader = RenderResources::GetBatchedShader(prevCommand->GetMaterial().GetShaderProgram());
 				if (batchedShader && (endSplit - lastSplit) >= minBatchSize) {
 					// Split point for the maximum batch size
 					while (lastSplit < endSplit) {
@@ -120,22 +120,22 @@ namespace nCine
 
 		const RenderCommand* refCommand = *start;
 		RenderCommand* batchCommand = nullptr;
-		Rhi::UniformBlockCache* instancesBlock = nullptr;
+		RHI::UniformBlockCache* instancesBlock = nullptr;
 
 		// Tracking the amount of memory required by uniform blocks, vertices and indices of all instances
 		std::uint32_t instancesBlockSize = 0;
 		std::uint32_t instancesVertexDataSize = 0;
 		std::uint32_t instancesIndicesAmount = 0;
 
-		const Rhi::ShaderProgram* refShader = refCommand->GetMaterial().GetShaderProgram();
-		Rhi::ShaderProgram* batchedShader = RenderResources::GetBatchedShader(refShader);
+		const RHI::ShaderProgram* refShader = refCommand->GetMaterial().GetShaderProgram();
+		RHI::ShaderProgram* batchedShader = RenderResources::GetBatchedShader(refShader);
 		// The following check should never fail as it is already checked by the calling function
 		FATAL_ASSERT_MSG(batchedShader != nullptr, "Unsupported shader for batch element");
 		bool commandAdded = false;
 		batchCommand = RenderResources::GetRenderCommandPool().RetrieveOrAdd(batchedShader, commandAdded);
 
 		// Retrieving the original block instance size without the uniform buffer offset alignment
-		const Rhi::UniformBlockCache* singleInstanceBlock = (*start)->GetMaterial().UniformBlock(Material::InstanceBlockName);
+		const RHI::UniformBlockCache* singleInstanceBlock = (*start)->GetMaterial().UniformBlock(Material::InstanceBlockName);
 		const std::uint32_t singleInstanceBlockSizePacked = singleInstanceBlock->GetSize() - singleInstanceBlock->GetAlignAmount(); // remove the uniform buffer offset alignment
 		const std::uint32_t singleInstanceBlockSize = singleInstanceBlockSizePacked + (16 - singleInstanceBlockSizePacked % 16) % 16; // but add the std140 vec4 layout alignment
 
@@ -367,7 +367,7 @@ namespace nCine
 			batchCommand->GetGeometry().SetElementsPerVertex(NumFloatsVertexFormatAndIndex);
 			batchCommand->GetGeometry().SetIndexCount(instancesIndicesAmount);
 		} else {
-			batchCommand->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::Triangles, 0, 6 * std::int32_t(nextStart - start));
+			batchCommand->GetGeometry().SetDrawParameters(RHI::PrimitiveType::Triangles, 0, 6 * std::int32_t(nextStart - start));
 		}
 
 		return batchCommand;

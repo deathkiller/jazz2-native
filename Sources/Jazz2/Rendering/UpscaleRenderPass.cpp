@@ -12,6 +12,7 @@ namespace Jazz2::Rendering
 	{
 		_targetSize = Vector2f((float)targetWidth, (float)targetHeight);
 
+#if defined(RHI_CAP_SHADERS)
 		if ((PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing) {
 			float widthRatio, heightRatio;
 			float widthFrac = modff((float)targetWidth / width, &widthRatio);
@@ -38,6 +39,7 @@ namespace Jazz2::Rendering
 		} else {
 			_antialiasing._target = nullptr;
 		}
+#endif
 
 		if (_camera == nullptr) {
 			_camera = std::make_unique<Camera>();
@@ -63,6 +65,7 @@ namespace Jazz2::Rendering
 		_target->SetMagFiltering(SamplerFilter::Nearest);
 		_target->SetWrap(SamplerWrapping::ClampToEdge);
 
+#if defined(RHI_CAP_SHADERS)
 		if (_antialiasing._target != nullptr) {
 			if (_antialiasing._camera == nullptr) {
 				_antialiasing._camera = std::make_unique<Camera>();
@@ -81,7 +84,7 @@ namespace Jazz2::Rendering
 
 			if (_antialiasing._renderCommand.GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Antialiasing))) {
 				_antialiasing._renderCommand.GetMaterial().ReserveUniformsDataMemory();
-				_antialiasing._renderCommand.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+				_antialiasing._renderCommand.GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				_antialiasing._renderCommand.SetTransformation(_antialiasing._renderCommand.GetTransformation());
 
@@ -94,10 +97,14 @@ namespace Jazz2::Rendering
 			_antialiasing._camera = nullptr;
 			_antialiasing._view = nullptr;
 
-			SceneNode& rootNode = theApplication().GetRootNode();
 			_antialiasing.setParent(nullptr);
+			SceneNode& rootNode = theApplication().GetRootNode();
 			setParent(&rootNode);
 		}
+#else
+		SceneNode& rootNode = theApplication().GetRootNode();
+		setParent(&rootNode);
+#endif
 
 		// Prepare render command
 #if defined(RHI_CAP_SHADERS)
@@ -121,7 +128,7 @@ namespace Jazz2::Rendering
 #endif
 		if (shaderChanged) {
 			_renderCommand.GetMaterial().ReserveUniformsDataMemory();
-			_renderCommand.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+			_renderCommand.GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 			// Required to reset render command properly
 			_renderCommand.SetTransformation(_renderCommand.GetTransformation());
 
@@ -134,28 +141,28 @@ namespace Jazz2::Rendering
 
 	void UpscaleRenderPass::Register()
 	{
+#if defined(RHI_CAP_SHADERS)
 		_antialiasing.Register();
+#endif
 
 		Viewport::GetChain().push_back(_view.get());
 	}
 
 	bool UpscaleRenderPass::OnDraw(RenderQueue& renderQueue)
 	{
-		auto instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);
 #if defined(RHI_CAP_SHADERS)
 		if (_resizeShader != nullptr) {
 			// TexRectUniformName is reused for input texture size
 			Vector2i size = _target->GetSize();
-			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue((float)size.X, (float)size.Y, 0.0f, 0.0f);
+			_renderCommand.GetMaterial().SetInstTexRect((float)size.X, (float)size.Y, 0.0f, 0.0f);
 		} else
 #endif
 		{
-			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+			_renderCommand.GetMaterial().SetInstTexRect(1.0f, 0.0f, 1.0f, 0.0f);
 		}
 
-		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(_targetSize.Data());
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
-
+		_renderCommand.GetMaterial().SetInstSpriteSize(_targetSize.X, _targetSize.Y);
+		_renderCommand.GetMaterial().SetInstColor(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 		_renderCommand.GetMaterial().SetTexture(0, *_target);
 
 		renderQueue.AddCommand(&_renderCommand);
@@ -163,6 +170,7 @@ namespace Jazz2::Rendering
 		return true;
 	}
 
+#if defined(RHI_CAP_SHADERS)
 	UpscaleRenderPass::AntialiasingSubpass::AntialiasingSubpass()
 	{
 		setVisitOrderState(SceneNode::VisitOrderState::Disabled);
@@ -178,17 +186,16 @@ namespace Jazz2::Rendering
 	bool UpscaleRenderPass::AntialiasingSubpass::OnDraw(RenderQueue& renderQueue)
 	{
 		Vector2i size = _target->GetSize();
-		auto instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);
-		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue((float)size.X, (float)size.Y, 0.0f, 0.0f);
-		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(_targetSize.Data());
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
-
+		_renderCommand.GetMaterial().SetInstTexRect((float)size.X, (float)size.Y, 0.0f, 0.0f);
+		_renderCommand.GetMaterial().SetInstSpriteSize(_targetSize.X, _targetSize.Y);
+		_renderCommand.GetMaterial().SetInstColor(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 		_renderCommand.GetMaterial().SetTexture(0, *_target);
 
 		renderQueue.AddCommand(&_renderCommand);
 
 		return true;
 	}
+#endif
 
 	UpscaleRenderPassWithClipping::UpscaleRenderPassWithClipping()
 		: UpscaleRenderPass()
@@ -233,7 +240,9 @@ namespace Jazz2::Rendering
 
 	void UpscaleRenderPassWithClipping::Register()
 	{
+#if defined(RHI_CAP_SHADERS)
 		_antialiasing.Register();
+#endif
 
 		auto& chain = Viewport::GetChain();
 		chain.push_back(_overlayView.get());

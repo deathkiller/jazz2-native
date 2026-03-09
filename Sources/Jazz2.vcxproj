@@ -187,7 +187,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;__WITH_GLFW;WITH_SDL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WITH_RHI_GL;_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;__WITH_GLFW;WITH_SDL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -209,7 +209,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WITH_RHI_GL;_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -232,13 +232,12 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WITH_RHI_GL;_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
-      <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -258,7 +257,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WITH_RHI_GL;_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -649,6 +648,8 @@
     <ClInclude Include="nCine\Graphics\RenderResources.h" />
     <ClInclude Include="nCine\Graphics\RenderStatistics.h" />
     <ClInclude Include="nCine\Graphics\RenderVaoPool.h" />
+    <ClInclude Include="nCine\Graphics\RHI\GL\RHI_GL.h" />
+    <ClInclude Include="nCine\Graphics\RHI\SW\RHI_SW.h" />
     <ClInclude Include="nCine\Graphics\SceneNode.h" />
     <ClInclude Include="nCine\Graphics\ScreenViewport.h" />
     <ClInclude Include="nCine\Graphics\Shader.h" />
@@ -979,29 +980,7 @@
     <ClCompile Include="nCine\Graphics\DrawableNode.cpp" />
     <ClCompile Include="nCine\Graphics\Geometry.cpp" />
     <ClCompile Include="nCine\Graphics\GfxCapabilities.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLAttribute.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLBlending.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLBufferObject.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLClearColor.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLCullFace.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLDebug.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLDepthTest.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLFramebuffer.cpp" />
     <ClCompile Include="nCine\Backends\GlfwGfxDevice.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLRenderbuffer.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLScissorTest.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLShader.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLShaderProgram.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLShaderUniformBlocks.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLShaderUniforms.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLTexture.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLUniform.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLUniformBlock.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLUniformBlockCache.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLUniformCache.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLVertexArrayObject.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLVertexFormat.cpp" />
-    <ClCompile Include="nCine\Graphics\GL\GLViewport.cpp" />
     <ClCompile Include="nCine\Backends\Qt5GfxDevice.cpp" />
     <ClCompile Include="nCine\Backends\SdlGfxDevice.cpp" />
     <ClCompile Include="nCine\Graphics\IGfxDevice.cpp" />
@@ -1016,6 +995,29 @@
     <ClCompile Include="nCine\Graphics\ParticleInitializer.cpp" />
     <ClCompile Include="nCine\Graphics\ParticleSystem.cpp" />
     <ClCompile Include="nCine\Graphics\RectAnimation.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLAttribute.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLBlending.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLBufferObject.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLClearColor.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLCullFace.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLDebug.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLDepthTest.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLFramebuffer.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLRenderbuffer.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLScissorTest.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLShader.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderProgram.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderUniformBlocks.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderUniforms.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLTexture.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniform.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniformBlock.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniformBlockCache.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniformCache.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLVertexArrayObject.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLVertexFormat.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLViewport.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\SW\RHI_SW.cpp" />
     <ClCompile Include="nCine\Graphics\RenderBatcher.cpp" />
     <ClCompile Include="nCine\Graphics\RenderBuffersManager.cpp" />
     <ClCompile Include="nCine\Graphics\RenderCommand.cpp" />

@@ -7,9 +7,9 @@
 namespace nCine
 {
 	Geometry::Geometry()
-		: primitiveType_(Rhi::PrimitiveType::Triangles), firstVertex_(0), numVertices_(0), numElementsPerVertex_(2), firstIndex_(0), numIndices_(0),
-			hostVertexPointer_(nullptr), hostIndexPointer_(nullptr), vboUsageFlags_(Rhi::BufferUsage::Dynamic), sharedVboParams_(nullptr),
-			iboUsageFlags_(Rhi::BufferUsage::Dynamic), sharedIboParams_(nullptr), hasDirtyVertices_(true), hasDirtyIndices_(true)
+		: primitiveType_(RHI::PrimitiveType::Triangles), firstVertex_(0), numVertices_(0), numElementsPerVertex_(2), firstIndex_(0), numIndices_(0),
+			hostVertexPointer_(nullptr), hostIndexPointer_(nullptr), vboUsageFlags_(RHI::BufferUsage::Dynamic), sharedVboParams_(nullptr),
+			iboUsageFlags_(RHI::BufferUsage::Dynamic), sharedIboParams_(nullptr), hasDirtyVertices_(true), hasDirtyIndices_(true)
 	{
 	}
 
@@ -25,17 +25,17 @@ namespace nCine
 #endif
 	}
 
-	void Geometry::SetDrawParameters(Rhi::PrimitiveType primitiveType, std::int32_t firstVertex, std::int32_t numVertices)
+	void Geometry::SetDrawParameters(RHI::PrimitiveType primitiveType, std::int32_t firstVertex, std::int32_t numVertices)
 	{
 		primitiveType_ = primitiveType;
 		firstVertex_   = firstVertex;
 		numVertices_   = numVertices;
 	}
 
-	void Geometry::CreateCustomVbo(std::uint32_t numFloats, Rhi::BufferUsage usage)
+	void Geometry::CreateCustomVbo(std::uint32_t numFloats, RHI::BufferUsage usage)
 	{
-		vbo_ = Rhi::CreateBuffer(Rhi::BufferType::Vertex);
-		Rhi::BufferData(*vbo_, numFloats * sizeof(float), nullptr, usage);
+		vbo_ = RHI::CreateBuffer(RHI::BufferType::Vertex);
+		RHI::BufferData(*vbo_, numFloats * sizeof(float), nullptr, usage);
 
 		vboUsageFlags_     = usage;
 		vboParams_.object  = vbo_.get();
@@ -72,9 +72,9 @@ namespace nCine
 		hasDirtyVertices_ = true;
 
 		if (vboParams_.mapBase == nullptr) {
-			const Rhi::MapFlags mapFlags = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
-			FATAL_ASSERT_MSG(mapFlags != Rhi::MapFlags::None, "Mapping of GPU buffers is not available");
-			vboParams_.mapBase = static_cast<std::uint8_t*>(Rhi::MapBufferRange(*vbo_, 0, vbo_->GetSize(), mapFlags));
+			const RHI::MapFlags mapFlags = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
+			FATAL_ASSERT_MSG(mapFlags != RHI::MapFlags::None, "Mapping of GPU buffers is not available");
+			vboParams_.mapBase = static_cast<std::uint8_t*>(RHI::MapBufferRange(*vbo_, 0, vbo_->GetSize(), mapFlags));
 		}
 
 		return reinterpret_cast<float*>(vboParams_.mapBase);
@@ -84,8 +84,8 @@ namespace nCine
 	{
 		// Don't flush and unmap if the VBO is not custom
 		if (vbo_ != nullptr && vboParams_.mapBase != nullptr) {
-			Rhi::FlushMappedBufferRange(*vboParams_.object, vboParams_.offset, vboParams_.size);
-			Rhi::UnmapBuffer(*vboParams_.object);
+			RHI::FlushMappedBufferRange(*vboParams_.object, vboParams_.offset, vboParams_.size);
+			RHI::UnmapBuffer(*vboParams_.object);
 		}
 		vboParams_.mapBase = nullptr;
 	}
@@ -106,10 +106,10 @@ namespace nCine
 		}
 	}
 
-	void Geometry::CreateCustomIbo(std::uint32_t numIndices, Rhi::BufferUsage usage)
+	void Geometry::CreateCustomIbo(std::uint32_t numIndices, RHI::BufferUsage usage)
 	{
-		ibo_ = Rhi::CreateBuffer(Rhi::BufferType::Index);
-		Rhi::BufferData(*ibo_, numIndices * sizeof(std::uint16_t), nullptr, usage);
+		ibo_ = RHI::CreateBuffer(RHI::BufferType::Index);
+		RHI::BufferData(*ibo_, numIndices * sizeof(std::uint16_t), nullptr, usage);
 
 		iboUsageFlags_     = usage;
 		iboParams_.object  = ibo_.get();
@@ -146,9 +146,9 @@ namespace nCine
 		hasDirtyIndices_ = true;
 
 		if (iboParams_.mapBase == nullptr) {
-			const Rhi::MapFlags mapFlags = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::ElementArray).mapFlags;
-			FATAL_ASSERT_MSG(mapFlags != Rhi::MapFlags::None, "Mapping of GPU buffers is not available");
-			iboParams_.mapBase = static_cast<std::uint8_t*>(Rhi::MapBufferRange(*ibo_, 0, ibo_->GetSize(), mapFlags));
+			const RHI::MapFlags mapFlags = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::ElementArray).mapFlags;
+			FATAL_ASSERT_MSG(mapFlags != RHI::MapFlags::None, "Mapping of GPU buffers is not available");
+			iboParams_.mapBase = static_cast<std::uint8_t*>(RHI::MapBufferRange(*ibo_, 0, ibo_->GetSize(), mapFlags));
 		}
 
 		return reinterpret_cast<std::uint16_t*>(iboParams_.mapBase);
@@ -158,8 +158,8 @@ namespace nCine
 	{
 		// Don't flush and unmap if the IBO is not custom
 		if (ibo_ != nullptr && iboParams_.mapBase != nullptr) {
-			Rhi::FlushMappedBufferRange(*iboParams_.object, iboParams_.offset, iboParams_.size);
-			Rhi::UnmapBuffer(*iboParams_.object);
+			RHI::FlushMappedBufferRange(*iboParams_.object, iboParams_.offset, iboParams_.size);
+			RHI::UnmapBuffer(*iboParams_.object);
 		}
 		iboParams_.mapBase = nullptr;
 	}
@@ -183,7 +183,7 @@ namespace nCine
 	void Geometry::Bind()
 	{
 		if (vboParams_.object != nullptr) {
-			Rhi::BindBuffer(*vboParams_.object);
+			RHI::BindBuffer(*vboParams_.object);
 		}
 	}
 
@@ -198,15 +198,15 @@ namespace nCine
 
 		if (numInstances == 0) {
 			if (numIndices_ > 0) {
-				Rhi::DrawIndexed(primitiveType_, numIndices_, iboOffsetPtr, vboOffset);
+				RHI::DrawIndexed(primitiveType_, numIndices_, iboOffsetPtr, vboOffset);
 			} else {
-				Rhi::Draw(primitiveType_, vboOffset, numVertices_);
+				RHI::Draw(primitiveType_, vboOffset, numVertices_);
 			}
 		} else if (numInstances > 0) {
 			if (numIndices_ > 0) {
-				Rhi::DrawIndexedInstanced(primitiveType_, numIndices_, iboOffsetPtr, numInstances, vboOffset);
+				RHI::DrawIndexedInstanced(primitiveType_, numIndices_, iboOffsetPtr, numInstances, vboOffset);
 			} else {
-				Rhi::DrawInstanced(primitiveType_, vboOffset, numVertices_, numInstances);
+				RHI::DrawInstanced(primitiveType_, vboOffset, numVertices_, numInstances);
 			}
 		}
 	}
@@ -215,13 +215,13 @@ namespace nCine
 	{
 		if (hostVertexPointer_ != nullptr && hasDirtyVertices_) {
 			// Checking if the common VBO is allowed to use mapping and do the same for the custom one
-			const Rhi::MapFlags mapFlags = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
+			const RHI::MapFlags mapFlags = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::Array).mapFlags;
 			const std::uint32_t numFloats = numVertices_ * numElementsPerVertex_;
 
-			if (mapFlags == Rhi::MapFlags::None && vbo_ != nullptr) {
+			if (mapFlags == RHI::MapFlags::None && vbo_ != nullptr) {
 				// Using buffer orphaning + sub-data update when mapping is unavailable
-				Rhi::BufferData(*vbo_, vboParams_.size, nullptr, vboUsageFlags_);
-				Rhi::BufferSubData(*vbo_, vboParams_.offset, vboParams_.size, hostVertexPointer_);
+				RHI::BufferData(*vbo_, vboParams_.size, nullptr, vboUsageFlags_);
+				RHI::BufferSubData(*vbo_, vboParams_.offset, vboParams_.size, hostVertexPointer_);
 			} else {
 				float* vertices = vbo_ ? AcquireVertexPointer() : AcquireVertexPointer(numFloats, numElementsPerVertex_);
 				memcpy(vertices, hostVertexPointer_, numFloats * sizeof(float));
@@ -238,11 +238,11 @@ namespace nCine
 	void Geometry::CommitIndices()
 	{
 		if (hostIndexPointer_ != nullptr && hasDirtyIndices_) {
-			const Rhi::MapFlags mapFlags = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::ElementArray).mapFlags;
+			const RHI::MapFlags mapFlags = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::ElementArray).mapFlags;
 
-			if (mapFlags == Rhi::MapFlags::None && ibo_ != nullptr) {
-				Rhi::BufferData(*ibo_, iboParams_.size, nullptr, iboUsageFlags_);
-				Rhi::BufferSubData(*ibo_, iboParams_.offset, iboParams_.size, hostIndexPointer_);
+			if (mapFlags == RHI::MapFlags::None && ibo_ != nullptr) {
+				RHI::BufferData(*ibo_, iboParams_.size, nullptr, iboUsageFlags_);
+				RHI::BufferSubData(*ibo_, iboParams_.offset, iboParams_.size, hostIndexPointer_);
 			} else {
 				std::uint16_t* indices = ibo_ ? AcquireIndexPointer() : AcquireIndexPointer(numIndices_);
 				memcpy(indices, hostIndexPointer_, numIndices_ * sizeof(std::uint16_t));

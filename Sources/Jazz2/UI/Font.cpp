@@ -542,7 +542,7 @@ namespace Jazz2::UI
 						: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
 					if (shaderChanged) {
 						command->GetMaterial().ReserveUniformsDataMemory();
-						command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+						command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 						// Required to reset render command properly
 						//command->SetTransformation(command->transformation());
 
@@ -552,12 +552,11 @@ namespace Jazz2::UI
 						}
 					}
 
-					command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+					command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
 
-					auto* instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
-					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(charWidth * scale, uvRect.H * scale);
-					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+					command->GetMaterial().SetInstTexRect(texCoords.X, texCoords.Y, texCoords.Z, texCoords.W);
+					command->GetMaterial().SetInstSpriteSize(charWidth * scale, uvRect.H * scale);
+					command->GetMaterial().SetInstColor(color.Data());
 
 					command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
 					command->SetLayer(z - (charOffset & 1));

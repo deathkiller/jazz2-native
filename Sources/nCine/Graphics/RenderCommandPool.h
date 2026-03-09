@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RenderAPI/RHI.h"
+#include "RHI/RHI.h"
 #include "Material.h"
 
 #include <memory>
@@ -25,13 +25,13 @@ namespace nCine
 		RenderCommand* Add();
 		/// Adds a new command with the specified shader program to the used pool and returns its pointer
 		/*! \note It is usually called after checking that the retrieve method fails */
-		RenderCommand* Add(Rhi::ShaderProgram* shaderProgram);
+		RenderCommand* Add(RHI::ShaderProgram* shaderProgram);
 
 		/// Retrieves a command with the specified shader program
-		RenderCommand* Retrieve(Rhi::ShaderProgram* shaderProgram);
+		RenderCommand* Retrieve(RHI::ShaderProgram* shaderProgram);
 
 		/// Retrieves (or adds) a command with the specified shader program
-		RenderCommand* RetrieveOrAdd(Rhi::ShaderProgram* shaderProgram, bool& commandAdded);
+		RenderCommand* RetrieveOrAdd(RHI::ShaderProgram* shaderProgram, bool& commandAdded);
 
 		/// Releases all used commands and returnsi them in the free array
 		void Reset();

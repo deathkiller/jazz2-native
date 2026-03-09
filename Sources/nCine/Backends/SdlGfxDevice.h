@@ -17,8 +17,8 @@
 #	include <SDL.h>
 #endif
 
-#if defined(RHI_BACKEND_SW)
-#	include "../Graphics/RenderAPI/RHI.h"
+#if defined(WITH_RHI_SW)
+#	include "../Graphics/RHI/RHI.h"
 #endif
 
 namespace nCine::Backends
@@ -78,7 +78,7 @@ namespace nCine::Backends
 		/// SDL2 OpenGL context handle
 		static SDL_GLContext glContextHandle_;
 
-#if defined(RHI_BACKEND_SW)
+#if defined(WITH_RHI_SW)
 		/// SDL2 hardware-accelerated renderer used to present the SW color buffer
 		SDL_Renderer* swRenderer_ = nullptr;
 		/// Streaming SDL_Texture that receives the SW color buffer each frame

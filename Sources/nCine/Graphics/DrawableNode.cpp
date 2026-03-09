@@ -10,46 +10,46 @@ namespace nCine
 {
 	namespace
 	{
-		Rhi::BlendFactor toGapiBlendFactor(DrawableNode::BlendingFactor blendingFactor)
+		RHI::BlendFactor toGapiBlendFactor(DrawableNode::BlendingFactor blendingFactor)
 		{
 			switch (blendingFactor) {
-				case DrawableNode::BlendingFactor::ZERO:                  return Rhi::BlendFactor::Zero;
-				case DrawableNode::BlendingFactor::ONE:                   return Rhi::BlendFactor::One;
-				case DrawableNode::BlendingFactor::SRC_COLOR:             return Rhi::BlendFactor::SrcColor;
-				case DrawableNode::BlendingFactor::ONE_MINUS_SRC_COLOR:   return Rhi::BlendFactor::OneMinusSrcColor;
-				case DrawableNode::BlendingFactor::DST_COLOR:             return Rhi::BlendFactor::DstColor;
-				case DrawableNode::BlendingFactor::ONE_MINUS_DST_COLOR:   return Rhi::BlendFactor::OneMinusDstColor;
-				case DrawableNode::BlendingFactor::SRC_ALPHA:             return Rhi::BlendFactor::SrcAlpha;
-				case DrawableNode::BlendingFactor::ONE_MINUS_SRC_ALPHA:   return Rhi::BlendFactor::OneMinusSrcAlpha;
-				case DrawableNode::BlendingFactor::DST_ALPHA:             return Rhi::BlendFactor::DstAlpha;
-				case DrawableNode::BlendingFactor::ONE_MINUS_DST_ALPHA:   return Rhi::BlendFactor::OneMinusDstAlpha;
-				case DrawableNode::BlendingFactor::CONSTANT_COLOR:        return Rhi::BlendFactor::ConstantColor;
-				case DrawableNode::BlendingFactor::ONE_MINUS_CONSTANT_COLOR: return Rhi::BlendFactor::OneMinusConstantColor;
-				case DrawableNode::BlendingFactor::CONSTANT_ALPHA:        return Rhi::BlendFactor::ConstantAlpha;
-				case DrawableNode::BlendingFactor::ONE_MINUS_CONSTANT_ALPHA: return Rhi::BlendFactor::OneMinusConstantAlpha;
-				case DrawableNode::BlendingFactor::SRC_ALPHA_SATURATE:    return Rhi::BlendFactor::SrcAlphaSaturate;
+				case DrawableNode::BlendingFactor::ZERO:                  return RHI::BlendFactor::Zero;
+				case DrawableNode::BlendingFactor::ONE:                   return RHI::BlendFactor::One;
+				case DrawableNode::BlendingFactor::SRC_COLOR:             return RHI::BlendFactor::SrcColor;
+				case DrawableNode::BlendingFactor::ONE_MINUS_SRC_COLOR:   return RHI::BlendFactor::OneMinusSrcColor;
+				case DrawableNode::BlendingFactor::DST_COLOR:             return RHI::BlendFactor::DstColor;
+				case DrawableNode::BlendingFactor::ONE_MINUS_DST_COLOR:   return RHI::BlendFactor::OneMinusDstColor;
+				case DrawableNode::BlendingFactor::SRC_ALPHA:             return RHI::BlendFactor::SrcAlpha;
+				case DrawableNode::BlendingFactor::ONE_MINUS_SRC_ALPHA:   return RHI::BlendFactor::OneMinusSrcAlpha;
+				case DrawableNode::BlendingFactor::DST_ALPHA:             return RHI::BlendFactor::DstAlpha;
+				case DrawableNode::BlendingFactor::ONE_MINUS_DST_ALPHA:   return RHI::BlendFactor::OneMinusDstAlpha;
+				case DrawableNode::BlendingFactor::CONSTANT_COLOR:        return RHI::BlendFactor::ConstantColor;
+				case DrawableNode::BlendingFactor::ONE_MINUS_CONSTANT_COLOR: return RHI::BlendFactor::OneMinusConstantColor;
+				case DrawableNode::BlendingFactor::CONSTANT_ALPHA:        return RHI::BlendFactor::ConstantAlpha;
+				case DrawableNode::BlendingFactor::ONE_MINUS_CONSTANT_ALPHA: return RHI::BlendFactor::OneMinusConstantAlpha;
+				case DrawableNode::BlendingFactor::SRC_ALPHA_SATURATE:    return RHI::BlendFactor::SrcAlphaSaturate;
 			}
-			return Rhi::BlendFactor::Zero;
+			return RHI::BlendFactor::Zero;
 		}
 
-		DrawableNode::BlendingFactor fromGapiBlendFactor(Rhi::BlendFactor blendFactor)
+		DrawableNode::BlendingFactor fromGapiBlendFactor(RHI::BlendFactor blendFactor)
 		{
 			switch (blendFactor) {
-				case Rhi::BlendFactor::Zero:                  return DrawableNode::BlendingFactor::ZERO;
-				case Rhi::BlendFactor::One:                   return DrawableNode::BlendingFactor::ONE;
-				case Rhi::BlendFactor::SrcColor:              return DrawableNode::BlendingFactor::SRC_COLOR;
-				case Rhi::BlendFactor::OneMinusSrcColor:      return DrawableNode::BlendingFactor::ONE_MINUS_SRC_COLOR;
-				case Rhi::BlendFactor::DstColor:              return DrawableNode::BlendingFactor::DST_COLOR;
-				case Rhi::BlendFactor::OneMinusDstColor:      return DrawableNode::BlendingFactor::ONE_MINUS_DST_COLOR;
-				case Rhi::BlendFactor::SrcAlpha:              return DrawableNode::BlendingFactor::SRC_ALPHA;
-				case Rhi::BlendFactor::OneMinusSrcAlpha:      return DrawableNode::BlendingFactor::ONE_MINUS_SRC_ALPHA;
-				case Rhi::BlendFactor::DstAlpha:              return DrawableNode::BlendingFactor::DST_ALPHA;
-				case Rhi::BlendFactor::OneMinusDstAlpha:      return DrawableNode::BlendingFactor::ONE_MINUS_DST_ALPHA;
-				case Rhi::BlendFactor::ConstantColor:         return DrawableNode::BlendingFactor::CONSTANT_COLOR;
-				case Rhi::BlendFactor::OneMinusConstantColor: return DrawableNode::BlendingFactor::ONE_MINUS_CONSTANT_COLOR;
-				case Rhi::BlendFactor::ConstantAlpha:         return DrawableNode::BlendingFactor::CONSTANT_ALPHA;
-				case Rhi::BlendFactor::OneMinusConstantAlpha: return DrawableNode::BlendingFactor::ONE_MINUS_CONSTANT_ALPHA;
-				case Rhi::BlendFactor::SrcAlphaSaturate:      return DrawableNode::BlendingFactor::SRC_ALPHA_SATURATE;
+				case RHI::BlendFactor::Zero:                  return DrawableNode::BlendingFactor::ZERO;
+				case RHI::BlendFactor::One:                   return DrawableNode::BlendingFactor::ONE;
+				case RHI::BlendFactor::SrcColor:              return DrawableNode::BlendingFactor::SRC_COLOR;
+				case RHI::BlendFactor::OneMinusSrcColor:      return DrawableNode::BlendingFactor::ONE_MINUS_SRC_COLOR;
+				case RHI::BlendFactor::DstColor:              return DrawableNode::BlendingFactor::DST_COLOR;
+				case RHI::BlendFactor::OneMinusDstColor:      return DrawableNode::BlendingFactor::ONE_MINUS_DST_COLOR;
+				case RHI::BlendFactor::SrcAlpha:              return DrawableNode::BlendingFactor::SRC_ALPHA;
+				case RHI::BlendFactor::OneMinusSrcAlpha:      return DrawableNode::BlendingFactor::ONE_MINUS_SRC_ALPHA;
+				case RHI::BlendFactor::DstAlpha:              return DrawableNode::BlendingFactor::DST_ALPHA;
+				case RHI::BlendFactor::OneMinusDstAlpha:      return DrawableNode::BlendingFactor::ONE_MINUS_DST_ALPHA;
+				case RHI::BlendFactor::ConstantColor:         return DrawableNode::BlendingFactor::CONSTANT_COLOR;
+				case RHI::BlendFactor::OneMinusConstantColor: return DrawableNode::BlendingFactor::ONE_MINUS_CONSTANT_COLOR;
+				case RHI::BlendFactor::ConstantAlpha:         return DrawableNode::BlendingFactor::CONSTANT_ALPHA;
+				case RHI::BlendFactor::OneMinusConstantAlpha: return DrawableNode::BlendingFactor::ONE_MINUS_CONSTANT_ALPHA;
+				case RHI::BlendFactor::SrcAlphaSaturate:      return DrawableNode::BlendingFactor::SRC_ALPHA_SATURATE;
 			}
 			return DrawableNode::BlendingFactor::ZERO;
 		}

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RenderAPI/RHI.h"
+#include "RHI/RHI.h"
 #include "Shader.h"
 
 namespace nCine
@@ -82,7 +82,7 @@ namespace nCine
 
 		/// Default constructor
 		Material();
-		Material(Rhi::ShaderProgram* program, Rhi::Texture* texture);
+		Material(RHI::ShaderProgram* program, RHI::Texture* texture);
 
 		inline bool IsBlendingEnabled() const {
 			return isBlendingEnabled_;
@@ -91,27 +91,56 @@ namespace nCine
 			isBlendingEnabled_ = blendingEnabled;
 		}
 
-		inline Rhi::BlendFactor GetSrcBlendingFactor() const {
+		inline RHI::BlendFactor GetSrcBlendingFactor() const {
 			return srcBlendingFactor_;
 		}
-		inline Rhi::BlendFactor GetDestBlendingFactor() const {
+		inline RHI::BlendFactor GetDestBlendingFactor() const {
 			return destBlendingFactor_;
 		}
-		void SetBlendingFactors(Rhi::BlendFactor srcBlendingFactor, Rhi::BlendFactor destBlendingFactor);
+		void SetBlendingFactors(RHI::BlendFactor srcBlendingFactor, RHI::BlendFactor destBlendingFactor);
 
 		inline ShaderProgramType GetShaderProgramType() const {
 			return shaderProgramType_;
 		}
 		bool SetShaderProgramType(ShaderProgramType shaderProgramType);
-		inline const Rhi::ShaderProgram* GetShaderProgram() const {
+		inline const RHI::ShaderProgram* GetShaderProgram() const {
 			return shaderProgram_;
 		}
-		void SetShaderProgram(Rhi::ShaderProgram* program);
+		void SetShaderProgram(RHI::ShaderProgram* program);
 		bool SetShader(Shader* shader);
 
 		void SetDefaultAttributesParameters();
 		void ReserveUniformsDataMemory();
 		void SetUniformsDataPointer(std::uint8_t* dataPointer);
+
+		/** @{ @name Unified sprite instance data — work on all backends */
+
+		/// Sets all three sprite instance parameters at once (texRect, spriteSize, color).
+		/// On GL routes through the InstanceBlock uniform; on SW updates FFState directly.
+		void SetSpriteData(const float* texRect, const float* spriteSize, const float* color);
+		/// Sets the color/tint component of the sprite instance data.
+		void SetInstColor(const float* rgba4);
+		/// Sets the color/tint component of the sprite instance data (convenience overload).
+		void SetInstColor(float r, float g, float b, float a);
+		/// Sets the sprite-size component of the sprite instance data.
+		void SetInstSpriteSize(float w, float h);
+		/// Sets the texRect component: (xScale, xBias, yScale, yBias).
+		void SetInstTexRect(float sx, float bx, float sy, float by);
+		/// Sets the model matrix uniform (used by CommitNodeTransformation).
+		void SetModelMatrixUniform(const float* matrix44);
+
+		/** @} */
+
+#if !defined(RHI_CAP_SHADERS)
+		/// Returns the fixed-function state (SW backend only — used by the rasterizer).
+		inline const RHI::FFState& GetFFState() const {
+			return shaderUniforms_.GetFFState();
+		}
+		/// Returns a mutable fixed-function state (SW backend only).
+		inline RHI::FFState& GetFFState() {
+			return shaderUniforms_.GetFFState();
+		}
+#endif
 
 		/// Wrapper around `ShaderUniforms::HasUniform()`
 		inline bool HasUniform(const char* name) const {
@@ -123,31 +152,31 @@ namespace nCine
 		}
 
 		/// Wrapper around `ShaderUniforms::GetUniform()`
-		inline Rhi::UniformCache* Uniform(const char* name) {
+		inline RHI::UniformCache* Uniform(const char* name) {
 			return shaderUniforms_.GetUniform(name);
 		}
 		/// Wrapper around `ShaderUniformBlocks::GetUniformBlock()`
-		inline Rhi::UniformBlockCache* UniformBlock(const char* name) {
+		inline RHI::UniformBlockCache* UniformBlock(const char* name) {
 			return shaderUniformBlocks_.GetUniformBlock(name);
 		}
 
 		/// Wrapper around `ShaderUniforms::GetAllUniforms()`
-		inline const Rhi::ShaderUniforms::UniformHashMapType GetAllUniforms() const {
+		inline const RHI::ShaderUniforms::UniformHashMapType GetAllUniforms() const {
 			return shaderUniforms_.GetAllUniforms();
 		}
 		/// Wrapper around `ShaderUniformBlocks::GetAllUniformBlocks()`
-		inline const Rhi::ShaderUniformBlocks::UniformHashMapType GetAllUniformBlocks() const {
+		inline const RHI::ShaderUniformBlocks::UniformHashMapType GetAllUniformBlocks() const {
 			return shaderUniformBlocks_.GetAllUniformBlocks();
 		}
 
-		const Rhi::Texture* GetTexture(std::uint32_t unit) const;
-		bool SetTexture(std::uint32_t unit, const Rhi::Texture* texture);
+		const RHI::Texture* GetTexture(std::uint32_t unit) const;
+		bool SetTexture(std::uint32_t unit, const RHI::Texture* texture);
 		bool SetTexture(std::uint32_t unit, const Texture& texture);
 
-		inline const Rhi::Texture* GetTexture() const {
+		inline const RHI::Texture* GetTexture() const {
 			return GetTexture(0);
 		}
-		inline bool SetTexture(const Rhi::Texture* texture) {
+		inline bool SetTexture(const RHI::Texture* texture) {
 			return SetTexture(0, texture);
 		}
 		inline bool SetTexture(const Texture& texture) {
@@ -156,14 +185,14 @@ namespace nCine
 
 	private:
 		bool isBlendingEnabled_;
-		Rhi::BlendFactor srcBlendingFactor_;
-		Rhi::BlendFactor destBlendingFactor_;
+		RHI::BlendFactor srcBlendingFactor_;
+		RHI::BlendFactor destBlendingFactor_;
 
 		ShaderProgramType shaderProgramType_;
-		Rhi::ShaderProgram* shaderProgram_;
-		Rhi::ShaderUniforms shaderUniforms_;
-		Rhi::ShaderUniformBlocks shaderUniformBlocks_;
-		const Rhi::Texture* textures_[MaxTextureUnits];
+		RHI::ShaderProgram* shaderProgram_;
+		RHI::ShaderUniforms shaderUniforms_;
+		RHI::ShaderUniformBlocks shaderUniformBlocks_;
+		const RHI::Texture* textures_[MaxTextureUnits];
 
 		/// The size of the memory buffer containing uniform values
 		std::uint32_t uniformsHostBufferSize_;
@@ -180,7 +209,7 @@ namespace nCine
 			shaderUniformBlocks_.CommitUniformBlocks();
 		}
 		/// Wrapper around `Program::DefineVertexFormat()`
-		void DefineVertexFormat(const Rhi::Buffer* vbo, const Rhi::Buffer* ibo, std::uint32_t vboOffset);
+		void DefineVertexFormat(const RHI::Buffer* vbo, const RHI::Buffer* ibo, std::uint32_t vboOffset);
 		std::uint32_t GetSortKey();
 	};
 

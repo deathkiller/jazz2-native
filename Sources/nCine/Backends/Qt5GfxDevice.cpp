@@ -6,8 +6,8 @@
 #endif
 
 #include "../../Main.h"
-#include "../Graphics/GL/GLTexture.h"
-#include "../Graphics/GL/GLFramebuffer.h"
+#include "../Graphics/RHI/GL/GLTexture.h"
+#include "../Graphics/RHI/GL/GLFramebuffer.h"
 #include "Qt5GfxDevice.h"
 #include "../MainApplication.h"
 #include "Qt5Widget.h"

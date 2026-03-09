@@ -1436,7 +1436,7 @@ namespace Jazz2::Actors
 		}
 		if (shaderChanged) {
 			shaderHasChanged();
-			renderCommand_.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+			renderCommand_.GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 			if (type == ActorRendererType::Outline || type == ActorRendererType::FrozenMask) {
 				_rendererTransition = 0.0f;

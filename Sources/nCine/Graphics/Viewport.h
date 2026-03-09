@@ -237,7 +237,7 @@ namespace nCine
 		/// Render queue of commands for this viewport/RT
 		RenderQueue renderQueue_;
 
-		std::unique_ptr<Rhi::Framebuffer> framebuffer_;
+		std::unique_ptr<RHI::Framebuffer> framebuffer_;
 
 		static const std::uint32_t MaxNumTextures = 4;
 		Texture* textures_[MaxNumTextures];

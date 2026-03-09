@@ -117,10 +117,9 @@ namespace nCine
 	public:
 		SWGfxCapabilities()
 		{
-			infoStrings_.vendor = "Software";
 			infoStrings_.renderer = "Software Renderer";
-			infoStrings_.glVersion = "SW 1.0";
-			infoStrings_.glslVersion = nullptr;
+
+			LOGI("The application is using software renderer");
 		}
 
 		inline std::int32_t GetVersion(Version version) const override {

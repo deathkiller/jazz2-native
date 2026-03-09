@@ -4,10 +4,10 @@
 #include "../tracy.h"
 #include "../../Main.h"
 
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 #	define NCINE_INCLUDE_OPENGL
 #	include "../CommonHeaders.h"
-#	include "GL/GLShaderProgram.h"
+#	include "RHI/GL/GLShaderProgram.h"
 #	include "BinaryShaderCache.h"
 #	if defined(WITH_EMBEDDED_SHADERS)
 #		include "shader_strings.h"
@@ -21,7 +21,7 @@ using namespace Death::Containers::Literals;
 
 namespace nCine
 {
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 	namespace
 	{
 		static const char BatchSizeDefine[] = "BATCH_SIZE";
@@ -82,14 +82,14 @@ namespace nCine
 			return lastIndex;
 		}
 	}
-#endif // RHI_BACKEND_GL
+#endif // WITH_RHI_GL
 
 	Shader::Shader()
 		: Object(ObjectType::Shader)
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		, glShaderProgram_(std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate))
 #else
-		, glShaderProgram_(std::make_unique<Rhi::ShaderProgram>())
+		, glShaderProgram_(std::make_unique<RHI::ShaderProgram>())
 #endif
 	{
 	}
@@ -186,7 +186,7 @@ namespace nCine
 		RenderResources::UnregisterBatchedShader(glShaderProgram_.get());
 	}
 
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 	bool Shader::LoadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
 	{
 		ZoneScopedC(0x81A861);
@@ -591,7 +591,7 @@ namespace nCine
 #endif
 	}
 
-#else // !RHI_BACKEND_GL
+#else // !WITH_RHI_GL
 
 	bool Shader::LoadFromMemory(const char* /*shaderName*/, Introspection /*introspection*/, const char* /*vertex*/, const char* /*fragment*/, std::int32_t /*batchSize*/, ArrayView<const StringView> /*defines*/)
 	{ return true; }
@@ -683,5 +683,5 @@ namespace nCine
 	bool Shader::LoadDefaultShader(DefaultFragment /*fragment*/)
 	{ return true; }
 
-#endif // RHI_BACKEND_GL
+#endif // WITH_RHI_GL
 }

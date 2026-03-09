@@ -9,8 +9,8 @@
 #	include <GL/glew.h>
 #endif
 
-#if defined(RHI_BACKEND_SW)
-#	include "../Graphics/RenderAPI/RHI.h"
+#if defined(WITH_RHI_SW)
+#	include "../Graphics/RHI/RHI.h"
 #endif
 
 #if !defined(CMAKE_BUILD) && defined(__has_include)
@@ -94,7 +94,7 @@ namespace nCine::Backends
 		/// Deleted assignment operator
 		GlfwGfxDevice& operator=(const GlfwGfxDevice&) = delete;
 
-#if defined(RHI_BACKEND_SW)
+#if defined(WITH_RHI_SW)
 		/// GL texture used to blit the SW color buffer each frame
 		GLuint swBlitTexture_ = 0;
 		/// Uploads the SW color buffer to a GL texture and draws a fullscreen quad

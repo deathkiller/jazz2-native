@@ -1,6 +1,8 @@
 #pragma once
 
-#include "RenderAPI/RHI.h"
+#include "RHI/RHI.h"
+
+#if defined(RHI_CAP_BINARY_SHADERS)
 
 #include <Containers/String.h>
 #include <Containers/StringView.h>
@@ -34,8 +36,8 @@ namespace nCine
 
 		String GetCachedShaderPath(const char* shaderName);
 
-		bool LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program, Rhi::ShaderProgram::Introspection introspection);
-		bool SaveToCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program);
+		bool LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, RHI::ShaderProgram* program, RHI::ShaderProgram::Introspection introspection);
+		bool SaveToCache(const char* shaderName, std::uint64_t shaderVersion, RHI::ShaderProgram* program);
 
 		/// Deletes all binary shaders that not belong to this platform from the cache directory
 		std::uint32_t Prune();
@@ -50,7 +52,7 @@ namespace nCine
 		bool SetPath(StringView path);
 
 	private:
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		using glGetProgramBinary_t = void(__GLAPIENTRY*)(GLuint program, GLsizei bufSize, GLsizei* length, GLenum* binaryFormat, void* binary);
 		using glProgramBinary_t = void(__GLAPIENTRY*)(GLuint program, GLenum binaryFormat, const void* binary, GLsizei length);
 #endif
@@ -64,10 +66,12 @@ namespace nCine
 		/// The cache directory containing the binary shaders
 		String path_;
 
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		glGetProgramBinary_t _glGetProgramBinary;
 		glProgramBinary_t _glProgramBinary;
 		GLenum _glProgramBinaryLength;
 #endif
 	};
 }
+
+#endif

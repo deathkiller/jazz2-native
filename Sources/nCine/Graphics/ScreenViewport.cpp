@@ -5,9 +5,9 @@
 #include "RenderStatistics.h"
 #include "../Application.h"
 #include "DisplayMode.h"
-#include "GL/GLClearColor.h"
-#include "GL/GLViewport.h"
-#include "GL/GLDebug.h"
+#include "RHI/GL/GLClearColor.h"
+#include "RHI/GL/GLViewport.h"
+#include "RHI/GL/GLDebug.h"
 #include "Camera.h"
 
 namespace nCine
@@ -100,7 +100,7 @@ namespace nCine
 
 		RenderResources::GetBuffersManager().Remap();
 		RenderResources::GetRenderCommandPool().Reset();
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		GLDebug::Reset();
 #endif
 	}

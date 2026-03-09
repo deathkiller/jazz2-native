@@ -64,8 +64,6 @@ namespace nCine
 		bool flippedX_;
 		/// A flag indicating if the sprite texture is vertically flipped
 		bool flippedY_;
-
-		Rhi::UniformBlockCache* instanceBlock_;
 #endif
 
 		/// Protected constructor accessible only by derived sprite classes

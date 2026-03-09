@@ -1,4 +1,4 @@
-﻿#include "Main.h"
+#include "Main.h"
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "nCine/Backends/Android/AndroidApplication.h"
@@ -1589,7 +1589,7 @@ void GameEventHandler::RefreshCache()
 			WriteCacheDescriptor(cachePath, currentVersion, animsModified);
 
 			if (!resolver.IsHeadless()) {
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 				std::uint32_t filesRemoved = RenderResources::GetBinaryShaderCache().Prune();
 				LOGI("Pruning binary shader cache (removed {} directories)...", filesRemoved);
 #endif
@@ -1664,7 +1664,7 @@ RecreateCache:
 	WriteCacheDescriptor(cachePath, currentVersion, animsModified);
 
 	if (!resolver.IsHeadless()) {
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 		std::uint32_t filesRemoved = RenderResources::GetBinaryShaderCache().Prune();
 		LOGI("Pruning binary shader cache (removed {} directories)...", filesRemoved);
 #endif

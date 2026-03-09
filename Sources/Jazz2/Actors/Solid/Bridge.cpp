@@ -71,7 +71,7 @@ namespace Jazz2::Actors::Solid
 				piece.Command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
 				piece.Command->GetMaterial().SetBlendingEnabled(true);
 				piece.Command->GetMaterial().ReserveUniformsDataMemory();
-				piece.Command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+				piece.Command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 				auto* textureUniform = piece.Command->GetMaterial().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -207,10 +207,9 @@ namespace Jazz2::Actors::Solid
 				float texScaleY = (float(_currentAnimation->Base->FrameDimensions.Y) / float(texSize.Y));
 				float texBiasY = (float(_currentAnimation->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
-				auto* instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue((float)_currentAnimation->Base->FrameDimensions.X, (float)_currentAnimation->Base->FrameDimensions.Y);
-				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+				command->GetMaterial().SetInstTexRect(texScaleX, texBiasX, texScaleY, texBiasY);
+				command->GetMaterial().SetInstSpriteSize((float)_currentAnimation->Base->FrameDimensions.X, (float)_currentAnimation->Base->FrameDimensions.Y);
+				command->GetMaterial().SetInstColor(Colorf::White.Data());
 
 				auto pos = _pieces[i].Pos;
 				command->SetTransformation(Matrix4x4f::Translation(pos.X - _currentAnimation->Base->FrameDimensions.X / 2, pos.Y - _currentAnimation->Base->FrameDimensions.Y / 2, 0.0f));

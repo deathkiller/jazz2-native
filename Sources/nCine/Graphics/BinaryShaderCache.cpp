@@ -1,4 +1,7 @@
-﻿#include "BinaryShaderCache.h"
+#include "BinaryShaderCache.h"
+
+#if defined(RHI_CAP_BINARY_SHADERS)
+
 #include "IGfxCapabilities.h"
 #include "../ServiceLocator.h"
 #include "../Base/Algorithms.h"
@@ -88,7 +91,7 @@ namespace nCine
 		return fs::CombinePath(path_, { filename, filenameLength });
 	}
 
-	bool BinaryShaderCache::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program, Rhi::ShaderProgram::Introspection introspection)
+	bool BinaryShaderCache::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, RHI::ShaderProgram* program, RHI::ShaderProgram::Introspection introspection)
 	{
 		String cachePath = GetCachedShaderPath(shaderName);
 		if (cachePath.empty()) {
@@ -142,7 +145,7 @@ namespace nCine
 		return program->FinalizeAfterLinking(introspection);
 	}
 
-	bool BinaryShaderCache::SaveToCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program)
+	bool BinaryShaderCache::SaveToCache(const char* shaderName, std::uint64_t shaderVersion, RHI::ShaderProgram* program)
 	{
 		String cachePath = GetCachedShaderPath(shaderName);
 		if (cachePath.empty()) {
@@ -223,3 +226,5 @@ namespace nCine
 		return true;
 	}
 }
+
+#endif

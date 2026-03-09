@@ -38,7 +38,7 @@ namespace Jazz2::UI
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+			command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 			// Required to reset render command properly
 			//command->SetTransformation(command->transformation());
 
@@ -49,15 +49,12 @@ namespace Jazz2::UI
 		}
 
 		if (additiveBlending) {
-			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::One);
+			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::One);
 		} else {
-			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
 		}
 
-		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
-		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+		command->GetMaterial().SetSpriteData(texCoords.Data(), size.Data(), color.Data());
 
 		Matrix4x4f worldMatrix = Matrix4x4f::Translation(pos.X, pos.Y, 0.0f);
 		if (std::abs(angle) > 0.01f) {
@@ -77,20 +74,19 @@ namespace Jazz2::UI
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::SpriteNoTexture)) {
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+			command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 			// Required to reset render command properly
 			//command->SetTransformation(command->transformation());
 		}
 
 		if (additiveBlending) {
-			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::One);
+			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::One);
 		} else {
-			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
 		}
 
-		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+		command->GetMaterial().SetInstSpriteSize(size.X, size.Y);
+		command->GetMaterial().SetInstColor(color.Data());
 
 		command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
 		command->SetLayer(z);

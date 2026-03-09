@@ -1,10 +1,10 @@
-﻿#pragma once
+#pragma once
 
 #include "../Base/Object.h"
 #include "../Primitives/Rect.h"
 #include "../Primitives/Color.h"
 #include "../Primitives/Colorf.h"
-#include "RenderAPI/RHI.h"
+#include "RHI/RHI.h"
 
 #include <memory>
 
@@ -170,7 +170,7 @@ namespace nCine
 		}
 
 	private:
-		std::unique_ptr<Rhi::Texture> texture_;
+		std::unique_ptr<RHI::Texture> texture_;
 		std::int32_t width_;
 		std::int32_t height_;
 		std::int32_t mipMapLevels_;

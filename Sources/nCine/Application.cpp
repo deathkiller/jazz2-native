@@ -1,4 +1,4 @@
-﻿#include "Application.h"
+#include "Application.h"
 
 #if defined(DEATH_TARGET_WINDOWS)
 extern "C"
@@ -49,7 +49,7 @@ extern "C"
 #include "Graphics/RenderResources.h"
 #include "Graphics/RenderQueue.h"
 #include "Graphics/ScreenViewport.h"
-#include "Graphics/GL/GLDebug.h"
+#include "Graphics/RHI/GL/GLDebug.h"
 #include "Base/FrameTimer.h"
 #include "Graphics/SceneNode.h"
 #include "Input/IInputManager.h"
@@ -745,17 +745,17 @@ namespace nCine
 #endif
 
 		if (appCfg_.withGraphics) {
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 			theServiceLocator().RegisterGfxCapabilities(std::make_unique<GfxCapabilities>());
 #else
 			theServiceLocator().RegisterGfxCapabilities(std::make_unique<SWGfxCapabilities>());
 #endif
 			const auto& gfxCapabilities = theServiceLocator().GetGfxCapabilities();
-#if defined(RHI_BACKEND_GL)
+#if defined(WITH_RHI_GL)
 			GLDebug::Init(gfxCapabilities);
 #endif
 
-#if defined(RHI_BACKEND_GL) && !defined(WITH_ANGLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(WITH_RHI_GL) && !defined(WITH_ANGLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
 			if (appCfg_.fixedBatchSize > 0) {
 				LOGI("Using fixed batch size: {}", appCfg_.fixedBatchSize);
 			} else {

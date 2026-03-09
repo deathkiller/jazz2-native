@@ -1,4 +1,4 @@
-﻿#include "MainMenu.h"
+#include "MainMenu.h"
 #include "MenuResources.h"
 #include "../../ContentResolver.h"
 #include "../../PreferencesCache.h"
@@ -760,7 +760,7 @@ namespace Jazz2::UI::Menu
 			command->SetType(RenderCommand::Type::Particle);
 			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+				command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				//command->SetTransformation(command->transformation());
 
@@ -770,12 +770,11 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
 
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
-			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(debris.Size.X, debris.Size.Y);
-			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, debris.Alpha).Data());
+			command->GetMaterial().SetInstTexRect(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
+			command->GetMaterial().SetInstSpriteSize(debris.Size.X, debris.Size.Y);
+			command->GetMaterial().SetInstColor(1.0f, 1.0f, 1.0f, debris.Alpha);
 
 			Matrix4x4f worldMatrix = Matrix4x4f::Translation(debris.Pos.X, debris.Pos.Y, 0.0f);
 			worldMatrix.RotateZ(debris.Angle);
@@ -887,10 +886,9 @@ namespace Jazz2::UI::Menu
 		Vector2i viewSize = _canvasBackground->ViewSize;
 		auto command = &_texturedBackgroundPass._outputRenderCommand;
 
-		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
-		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+		command->GetMaterial().SetInstTexRect(1.0f, 0.0f, 1.0f, 0.0f);
+		command->GetMaterial().SetInstSpriteSize(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
+		command->GetMaterial().SetInstColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 		command->GetMaterial().Uniform("uViewSize")->SetFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
 		command->GetMaterial().Uniform("uShift")->SetFloatVector(_texturedBackgroundPos.Data());
@@ -929,7 +927,7 @@ namespace Jazz2::UI::Menu
 			command->SetType(RenderCommand::Type::TileMap);
 			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+				command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				//command->SetTransformation(command->transformation());
 
@@ -939,12 +937,11 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
 
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(repeats, 0.0f, repeats, 0.0f);
-			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
-			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+			command->GetMaterial().SetInstTexRect(repeats, 0.0f, repeats, 0.0f);
+			command->GetMaterial().SetInstSpriteSize(size.X, size.Y);
+			command->GetMaterial().SetInstColor(Colorf::White.Data());
 
 			Matrix4x4f worldMatrix = Matrix4x4f::Translation(center.X, center.Y, 0.0f);
 			worldMatrix.RotateZ(animTime * -0.2f);
@@ -975,7 +972,7 @@ namespace Jazz2::UI::Menu
 			command->SetType(RenderCommand::Type::TileMap);
 			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+				command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				//command->SetTransformation(command->transformation());
 
@@ -985,12 +982,11 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
 
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(repeats, 0.0f, repeats, 0.0f);
-			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
-			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+			command->GetMaterial().SetInstTexRect(repeats, 0.0f, repeats, 0.0f);
+			command->GetMaterial().SetInstSpriteSize(size.X, size.Y);
+			command->GetMaterial().SetInstColor(Colorf::White.Data());
 
 			Matrix4x4f worldMatrix = Matrix4x4f::Translation(centerBg.X, centerBg.Y, 0.0f);
 			worldMatrix.RotateZ(animTime * 0.4f);
@@ -1021,7 +1017,7 @@ namespace Jazz2::UI::Menu
 			command->SetType(RenderCommand::Type::TileMap);
 			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+				command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				//command->SetTransformation(command->transformation());
 
@@ -1031,12 +1027,11 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
-			command->GetMaterial().SetBlendingFactors(Rhi::BlendFactor::SrcAlpha, Rhi::BlendFactor::OneMinusSrcAlpha);
+			command->GetMaterial().SetBlendingFactors(nCine::RHI::BlendFactor::SrcAlpha, nCine::RHI::BlendFactor::OneMinusSrcAlpha);
 
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(repeats, 0.0f, repeats, 0.0f);
-			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
-			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+			command->GetMaterial().SetInstTexRect(repeats, 0.0f, repeats, 0.0f);
+			command->GetMaterial().SetInstSpriteSize(size.X, size.Y);
+			command->GetMaterial().SetInstColor(Colorf::White.Data());
 
 			Matrix4x4f worldMatrix = Matrix4x4f::Translation(centerBg.X, centerBg.Y, 0.0f);
 			worldMatrix.RotateZ(animTime * 0.3f);
@@ -1085,7 +1080,7 @@ namespace Jazz2::UI::Menu
 				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::TileMap));
 				command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+				command->GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 				auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1098,7 +1093,7 @@ namespace Jazz2::UI::Menu
 		bool shaderChanged = _outputRenderCommand.GetMaterial().SetShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground));
 		if (shaderChanged) {
 			_outputRenderCommand.GetMaterial().ReserveUniformsDataMemory();
-			_outputRenderCommand.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+			_outputRenderCommand.GetGeometry().SetDrawParameters(nCine::RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 			auto* textureUniform = _outputRenderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1134,10 +1129,9 @@ namespace Jazz2::UI::Menu
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
 				float texBiasY = ((tile.TileID / _owner->_tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.Y);
 
-				auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
-				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+				command->GetMaterial().SetInstTexRect(texScaleX, texBiasX, texScaleY, texBiasY);
+				command->GetMaterial().SetInstSpriteSize(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
+				command->GetMaterial().SetInstColor(Colorf::White.Data());
 				
 				command->SetTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize, y * TileSet::DefaultTileSize, 0.0f));
 				command->GetMaterial().SetTexture(*_owner->_tileSet->TextureDiffuse);

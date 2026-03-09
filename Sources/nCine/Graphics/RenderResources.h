@@ -8,9 +8,13 @@
 
 namespace nCine
 {
+#if defined(RHI_CAP_BINARY_SHADERS)
 	class BinaryShaderCache;
+#endif
 	class RenderBuffersManager;
+#if defined(RHI_CAP_VAO)
 	class RenderVaoPool;
+#endif
 	class RenderCommandPool;
 	class RenderBatcher;
 	class Camera;
@@ -64,21 +68,25 @@ namespace nCine
 			CameraUniformData()
 				: camera(nullptr), updateFrameProjectionMatrix(0), updateFrameViewMatrix(0) {}
 
-			Rhi::ShaderUniforms shaderUniforms;
+			RHI::ShaderUniforms shaderUniforms;
 			Camera* camera;
 			std::uint32_t updateFrameProjectionMatrix;
 			std::uint32_t updateFrameViewMatrix;
 		};
 
+#if defined(RHI_CAP_BINARY_SHADERS)
 		static inline BinaryShaderCache& GetBinaryShaderCache() {
 			return *binaryShaderCache_;
 		}
+#endif
 		static inline RenderBuffersManager& GetBuffersManager() {
 			return *buffersManager_;
 		}
+#if defined(RHI_CAP_VAO)
 		static inline RenderVaoPool& GetVaoPool() {
 			return *vaoPool_;
 		}
+#endif
 		static inline RenderCommandPool& GetRenderCommandPool() {
 			return *renderCommandPool_;
 		}
@@ -86,18 +94,18 @@ namespace nCine
 			return *renderBatcher_;
 		}
 
-		static Rhi::ShaderProgram* GetShaderProgram(Material::ShaderProgramType shaderProgramType);
+		static RHI::ShaderProgram* GetShaderProgram(Material::ShaderProgramType shaderProgramType);
 
-		static Rhi::ShaderProgram* GetBatchedShader(const Rhi::ShaderProgram* shader);
-		static bool RegisterBatchedShader(const Rhi::ShaderProgram* shader, Rhi::ShaderProgram* batchedShader);
-		static bool UnregisterBatchedShader(const Rhi::ShaderProgram* shader);
+		static RHI::ShaderProgram* GetBatchedShader(const RHI::ShaderProgram* shader);
+		static bool RegisterBatchedShader(const RHI::ShaderProgram* shader, RHI::ShaderProgram* batchedShader);
+		static bool UnregisterBatchedShader(const RHI::ShaderProgram* shader);
 
 		static inline std::uint8_t* GetCameraUniformsBuffer() {
 			return cameraUniformsBuffer_;
 		}
-		static CameraUniformData* FindCameraUniformData(Rhi::ShaderProgram* shaderProgram);
-		static void InsertCameraUniformData(Rhi::ShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData);
-		static bool RemoveCameraUniformData(Rhi::ShaderProgram* shaderProgram);
+		static CameraUniformData* FindCameraUniformData(RHI::ShaderProgram* shaderProgram);
+		static void InsertCameraUniformData(RHI::ShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData);
+		static bool RemoveCameraUniformData(RHI::ShaderProgram* shaderProgram);
 
 		static inline const Camera* GetCurrentCamera() {
 			return currentCamera_;
@@ -106,26 +114,30 @@ namespace nCine
 			return currentViewport_;
 		}
 
-		static void SetDefaultAttributesParameters(Rhi::ShaderProgram& shaderProgram);
+		static void SetDefaultAttributesParameters(RHI::ShaderProgram& shaderProgram);
 
 	private:
 #if defined(WITH_EMBEDDED_SHADERS)
 		static constexpr std::uint64_t EmbeddedShadersVersion = 2ull | (1ull << 63);
 #endif
 
+#if defined(RHI_CAP_BINARY_SHADERS)
 		static std::unique_ptr<BinaryShaderCache> binaryShaderCache_;
+#endif
 		static std::unique_ptr<RenderBuffersManager> buffersManager_;
+#if defined(RHI_CAP_VAO)
 		static std::unique_ptr<RenderVaoPool> vaoPool_;
+#endif
 		static std::unique_ptr<RenderCommandPool> renderCommandPool_;
 		static std::unique_ptr<RenderBatcher> renderBatcher_;
 
 		static constexpr std::uint32_t DefaultShaderProgramsCount = std::uint32_t(Material::ShaderProgramType::Custom);
-		static std::unique_ptr<Rhi::ShaderProgram> defaultShaderPrograms_[DefaultShaderProgramsCount];
-		static HashMap<const Rhi::ShaderProgram*, Rhi::ShaderProgram*> batchedShaders_;
+		static std::unique_ptr<RHI::ShaderProgram> defaultShaderPrograms_[DefaultShaderProgramsCount];
+		static HashMap<const RHI::ShaderProgram*, RHI::ShaderProgram*> batchedShaders_;
 
 		static constexpr std::uint32_t UniformsBufferSize = 128; // two 4x4 float matrices
 		static std::uint8_t cameraUniformsBuffer_[UniformsBufferSize];
-		static HashMap<Rhi::ShaderProgram*, CameraUniformData> cameraUniformDataMap_;
+		static HashMap<RHI::ShaderProgram*, CameraUniformData> cameraUniformDataMap_;
 
 		static Camera* currentCamera_;
 		static std::unique_ptr<Camera> defaultCamera_;

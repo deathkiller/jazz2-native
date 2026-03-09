@@ -61,7 +61,7 @@ namespace nCine
 		Material::ShaderProgramType shaderProgramType = (texture_ != nullptr ? Material::ShaderProgramType::Sprite : Material::ShaderProgramType::SpriteNoTexture);
 		renderCommand_.GetMaterial().SetShaderProgramType(shaderProgramType);
 		shaderHasChanged();
-		renderCommand_.GetGeometry().SetDrawParameters(Rhi::PrimitiveType::TriangleStrip, 0, 4);
+		renderCommand_.GetGeometry().SetDrawParameters(RHI::PrimitiveType::TriangleStrip, 0, 4);
 
 		if (texture_ != nullptr) {
 			setTexRect(Recti(0, 0, texture_->GetWidth(), texture_->GetHeight()));

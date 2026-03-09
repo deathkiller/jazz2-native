@@ -20,8 +20,10 @@ namespace Jazz2::UI::Menu
 	GraphicsOptionsSection::GraphicsOptionsSection()
 		: _isDirty(false)
 	{
+#if defined(RHI_CAP_SHADERS)
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::RescaleMode, _("Rescale Mode") });
+#endif
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::Resolution, _("Resolution") });
 #if defined(NCINE_HAS_WINDOWS)
@@ -34,8 +36,10 @@ namespace Jazz2::UI::Menu
 			_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::Fullscreen, _("Fullscreen"), true });
 		}
 #endif
+#if defined(RHI_CAP_SHADERS)
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::Antialiasing, _("Antialiasing"), true });
+#endif
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::BackgroundDithering, _("Background Dithering"), true });
 		// TRANSLATORS: Menu item in Options > Graphics section
@@ -48,8 +52,10 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::PreferZoomOut, _("Prefer Zoom Out"), true });
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::KeepAspectRatioInCinematics, _("Keep Aspect Ratio In Cinematics"), true });
+#if defined(RHI_CAP_SHADERS)
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::UnalignedViewport, _("Unaligned Viewport"), true });
+#endif
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::ShowPerformanceMetrics, _("Performance Metrics"), true });
 	}
@@ -143,14 +149,18 @@ namespace Jazz2::UI::Menu
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 				case GraphicsOptionsItemType::Fullscreen: enabled = PreferencesCache::EnableFullscreen; break;
 #endif
+#if defined(RHI_CAP_SHADERS)
 				case GraphicsOptionsItemType::Antialiasing: enabled = (PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing; break;
+#endif
 				case GraphicsOptionsItemType::BackgroundDithering: enabled = PreferencesCache::BackgroundDithering; break;
 				case GraphicsOptionsItemType::LowWaterQuality: enabled = PreferencesCache::LowWaterQuality; customText = (enabled ? _("Low") : _("High")); break;
 				case GraphicsOptionsItemType::ShowPlayerTrails: enabled = PreferencesCache::ShowPlayerTrails; break;
 				case GraphicsOptionsItemType::PreferVerticalSplitscreen: enabled = PreferencesCache::PreferVerticalSplitscreen; customText = (enabled ? _("Vertical") : _("Horizontal"));  break;
 				case GraphicsOptionsItemType::PreferZoomOut: enabled = PreferencesCache::PreferZoomOut; break;
 				case GraphicsOptionsItemType::KeepAspectRatioInCinematics: enabled = PreferencesCache::KeepAspectRatioInCinematics; break;
+#if defined(RHI_CAP_SHADERS)
 				case GraphicsOptionsItemType::UnalignedViewport: enabled = PreferencesCache::UnalignedViewport; customText = (enabled ? _("Enabled \f[c:#d0705d](Experimental)\f[/c]") : _("Disabled")); break;
+#endif
 				case GraphicsOptionsItemType::ShowPerformanceMetrics:
 					enabled = PreferencesCache::ShowPerformanceMetrics;
 					// TODO
@@ -167,10 +177,12 @@ namespace Jazz2::UI::Menu
 	void GraphicsOptionsSection::OnExecuteSelected()
 	{
 		switch (_items[_selectedIndex].Item.Type) {
+#if defined(RHI_CAP_SHADERS)
 			case GraphicsOptionsItemType::RescaleMode:
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_root->SwitchToSection<RescaleModeSection>();
 				break;
+#endif
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 			case GraphicsOptionsItemType::Fullscreen:
 #	if defined(DEATH_TARGET_WINDOWS_RT)
@@ -192,6 +204,7 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
 #endif
+#if defined(RHI_CAP_SHADERS)
 			case GraphicsOptionsItemType::Antialiasing: {
 				RescaleMode newMode = (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask);
 				if ((PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) != RescaleMode::UseAntialiasing) {
@@ -204,6 +217,7 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
 			}
+#endif
 			case GraphicsOptionsItemType::BackgroundDithering:
 				PreferencesCache::BackgroundDithering = !PreferencesCache::BackgroundDithering;
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
@@ -244,12 +258,14 @@ namespace Jazz2::UI::Menu
 				_animation = 0.0f;
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
+#if defined(RHI_CAP_SHADERS)
 			case GraphicsOptionsItemType::UnalignedViewport:
 				PreferencesCache::UnalignedViewport = !PreferencesCache::UnalignedViewport;
 				_isDirty = true;
 				_animation = 0.0f;
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
+#endif
 			case GraphicsOptionsItemType::ShowPerformanceMetrics:
 				PreferencesCache::ShowPerformanceMetrics = !PreferencesCache::ShowPerformanceMetrics;
 				_isDirty = true;
