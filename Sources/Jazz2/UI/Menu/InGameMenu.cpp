@@ -151,7 +151,12 @@ namespace Jazz2::UI::Menu
 		for (std::size_t i = 0; i < viewports.size(); i++) {
 			auto& viewport = viewports[i];
 			Rectf scopedView = viewport->GetBounds();
-			DrawTexture(*viewport->_blurPass4.GetTarget(), scopedView.GetLocation(), 500, scopedView.GetSize(), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));
+			Texture* blurTexture = viewport->_blurPass4.GetTarget();
+			if DEATH_LIKELY(blurTexture != nullptr) {
+				DrawTexture(*blurTexture, scopedView.GetLocation(), 500, scopedView.GetSize(), Vector4f(1.0f, 0.0f, 1.0f, 0.0f), Colorf(0.5f, 0.5f, 0.5f, std::min(AnimTime * 8.0f, 1.0f)));
+			} else {
+				DrawSolid(scopedView.GetLocation(), 500, scopedView.GetSize(), Colorf(0.0f, 0.0f, 0.0f, std::min(AnimTime * 8.0f, 0.7f)));
+			}
 
 			Vector4f ambientColor = viewport->_ambientLight;
 			if (ambientColor.W < 1.0f) {

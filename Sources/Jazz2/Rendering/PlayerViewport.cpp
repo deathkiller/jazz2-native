@@ -50,24 +50,34 @@ namespace Jazz2::Rendering
 
 		if (notInitialized) {
 			_lightingRenderer = std::make_unique<LightingRenderer>(this);
-			_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8, w, h);
+			_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8,
+				w * PreferencesCache::LightingResolutionPercent / 100, h * PreferencesCache::LightingResolutionPercent / 100);
 			_lightingView = std::make_unique<Viewport>(_lightingBuffer.get(), Viewport::DepthStencilFormat::None);
 			_lightingView->SetRootNode(_lightingRenderer.get());
 			_lightingView->SetCamera(_camera.get());
 		} else {
 			_lightingView->RemoveAllTextures();
-			_lightingBuffer->Init(nullptr, Texture::Format::RG8, w, h);
+			_lightingBuffer->Init(nullptr, Texture::Format::RG8,
+				w * PreferencesCache::LightingResolutionPercent / 100, h * PreferencesCache::LightingResolutionPercent / 100);
 			_lightingView->SetTexture(_lightingBuffer.get());
 		}
 
 		_lightingBuffer->SetMagFiltering(SamplerFilter::Nearest);
 		_lightingBuffer->SetWrap(SamplerWrapping::ClampToEdge);
 
-		_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f(0.0f, 0.0f));
-		_blurPass1.Initialize(_downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f));
-		_blurPass2.Initialize(_blurPass1.GetTarget(), w / 2, h / 2, Vector2f(0.0f, 1.0f));
-		_blurPass3.Initialize(_blurPass2.GetTarget(), w / 4, h / 4, Vector2f(1.0f, 0.0f));
-		_blurPass4.Initialize(_blurPass3.GetTarget(), w / 4, h / 4, Vector2f(0.0f, 1.0f));
+		if (PreferencesCache::BlurEffects) {
+			_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f(0.0f, 0.0f));
+			_blurPass1.Initialize(_downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f));
+			_blurPass2.Initialize(_blurPass1.GetTarget(), w / 2, h / 2, Vector2f(0.0f, 1.0f));
+			_blurPass3.Initialize(_blurPass2.GetTarget(), w / 4, h / 4, Vector2f(1.0f, 0.0f));
+			_blurPass4.Initialize(_blurPass3.GetTarget(), w / 4, h / 4, Vector2f(0.0f, 1.0f));
+		} else {
+			_downsamplePass.Dispose();
+			_blurPass1.Dispose();
+			_blurPass2.Dispose();
+			_blurPass3.Dispose();
+			_blurPass4.Dispose();
+		}
 
 		if (notInitialized) {
 			_combineRenderer = std::make_unique<CombineRenderer>(this);
@@ -81,11 +91,13 @@ namespace Jazz2::Rendering
 
 	void PlayerViewport::Register()
 	{
-		_blurPass4.Register();
-		_blurPass3.Register();
-		_blurPass2.Register();
-		_blurPass1.Register();
-		_downsamplePass.Register();
+		if (PreferencesCache::BlurEffects) {
+			_blurPass4.Register();
+			_blurPass3.Register();
+			_blurPass2.Register();
+			_blurPass1.Register();
+			_downsamplePass.Register();
+		}
 
 		auto& chain = Viewport::GetChain();
 		chain.push_back(_lightingView.get());

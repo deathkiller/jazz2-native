@@ -67,7 +67,7 @@ namespace Jazz2::UI
 		}
 		command->SetTransformation(worldMatrix);
 		command->SetLayer(z);
-		command->GetMaterial().SetTexture(texture);
+		command->GetMaterial().SetTexture(0, texture);
 
 		_currentRenderQueue->AddCommand(command);
 	}
@@ -94,6 +94,7 @@ namespace Jazz2::UI
 
 		command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
 		command->SetLayer(z);
+		command->GetMaterial().SetTexture(0, nullptr);
 
 		_currentRenderQueue->AddCommand(command);
 	}

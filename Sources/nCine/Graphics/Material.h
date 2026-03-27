@@ -147,6 +147,7 @@ namespace nCine
 		const GLTexture* GetTexture(std::uint32_t unit) const;
 		bool SetTexture(std::uint32_t unit, const GLTexture* texture);
 		bool SetTexture(std::uint32_t unit, const Texture& texture);
+		bool SetTexture(std::uint32_t unit, std::nullptr_t);
 
 		inline const GLTexture* GetTexture() const {
 			return GetTexture(0);

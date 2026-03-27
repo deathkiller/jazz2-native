@@ -79,8 +79,13 @@ namespace Jazz2::Rendering
 
 		command.GetMaterial().SetTexture(0, *_owner->_viewTexture);
 		command.GetMaterial().SetTexture(1, *_owner->_lightingBuffer);
-		command.GetMaterial().SetTexture(2, *_owner->_blurPass2.GetTarget());
-		command.GetMaterial().SetTexture(3, *_owner->_blurPass4.GetTarget());
+		if (PreferencesCache::BlurEffects) {
+			command.GetMaterial().SetTexture(2, *_owner->_blurPass2.GetTarget());
+			command.GetMaterial().SetTexture(3, *_owner->_blurPass4.GetTarget());
+		} else {
+			command.GetMaterial().SetTexture(2, nullptr);
+			command.GetMaterial().SetTexture(3, nullptr);
+		}
 		if (viewHasWater && !PreferencesCache::LowWaterQuality) {
 			command.GetMaterial().SetTexture(4, *_owner->_levelHandler->_noiseTexture);
 		}
