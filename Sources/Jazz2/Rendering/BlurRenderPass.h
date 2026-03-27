@@ -27,6 +27,7 @@ namespace Jazz2::Rendering
 
 		void Initialize(Texture* source, std::int32_t width, std::int32_t height, Vector2f direction);
 		void Register();
+		void Dispose();
 
 		bool OnDraw(RenderQueue& renderQueue) override;
 

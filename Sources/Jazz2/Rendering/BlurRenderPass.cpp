@@ -33,7 +33,7 @@ namespace Jazz2::Rendering
 		}
 		_target->SetMagFiltering(SamplerFilter::Linear);
 
-		Shader* shader = _downsampleOnly ? _owner->_levelHandler->_downsampleShader : _owner->_levelHandler->_blurShader;
+		Shader* shader = (_downsampleOnly ? _owner->_levelHandler->_downsampleShader : _owner->_levelHandler->_blurShader);
 
 		// Prepare render command
 		_renderCommand.GetMaterial().SetShader(shader);
@@ -50,6 +50,14 @@ namespace Jazz2::Rendering
 	void BlurRenderPass::Register()
 	{
 		Viewport::GetChain().push_back(_view.get());
+	}
+
+	void BlurRenderPass::Dispose()
+	{
+		_target = nullptr;
+		_view = nullptr;
+		_camera = nullptr;
+		_source = nullptr;
 	}
 
 	bool BlurRenderPass::OnDraw(RenderQueue& renderQueue)

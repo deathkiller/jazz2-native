@@ -46,6 +46,8 @@ namespace Jazz2
 	bool PreferencesCache::PreferVerticalSplitscreen = false;
 	bool PreferencesCache::PreferZoomOut = false;
 	bool PreferencesCache::BackgroundDithering = true;
+	bool PreferencesCache::BlurEffects = true;
+	std::uint8_t PreferencesCache::LightingResolutionPercent = 100;
 	bool PreferencesCache::EnableReforgedGameplay = true;
 	bool PreferencesCache::EnableReforgedHUD = true;
 	bool PreferencesCache::EnableReforgedMainMenu = true;
@@ -339,10 +341,6 @@ namespace Jazz2
 						OverwriteEpisodeEnd = (EpisodeEndOverwriteMode)uc.ReadValue<std::uint8_t>();
 					}
 
-					if (version >= 12) {
-						EnableContinuousJump = ((boolOptions & BoolOptions::EnableContinuousJump) == BoolOptions::EnableContinuousJump);
-					}
-
 					if (version >= 10) {
 						uc.Read(UniquePlayerID, sizeof(UniquePlayerID));
 						std::uint32_t playerNameLength = uc.ReadVariableUint32();
@@ -358,6 +356,16 @@ namespace Jazz2
 					} else {
 						// Generate a new UUID when upgrading from older version
 						Random().Uuid(UniqueServerID);
+					}
+
+					if (version >= 12) {
+						EnableContinuousJump = ((boolOptions & BoolOptions::EnableContinuousJump) == BoolOptions::EnableContinuousJump);
+					}
+
+					if (version >= 13) {
+						// These 2 new options needs to be enabled by default
+						BlurEffects = ((boolOptions & BoolOptions::BlurEffects) == BoolOptions::BlurEffects);
+						LightingResolutionPercent = std::clamp(uc.ReadValue<std::uint8_t>(), std::uint8_t(10), std::uint8_t(100));
 					}
 
 					// Controls
@@ -581,6 +589,8 @@ namespace Jazz2
 		if (AllowCheats) boolOptions |= BoolOptions::AllowCheats;
 		if (PlayStationExtendedSupport) boolOptions |= BoolOptions::PlayStationExtendedSupport;
 		if (SwitchToNewWeapon) boolOptions |= BoolOptions::SwitchToNewWeapon;
+		if (EnableContinuousJump) boolOptions |= BoolOptions::EnableContinuousJump;
+		if (BlurEffects) boolOptions |= BoolOptions::BlurEffects;
 		co.WriteValueAsLE<std::uint64_t>(std::uint64_t(boolOptions));
 
 		if (Language[0] != '\0') {
@@ -610,6 +620,8 @@ namespace Jazz2
 		co.Write(PlayerName.data(), std::int64_t(PlayerName.size()));
 
 		co.Write(UniqueServerID, sizeof(UniqueServerID));
+
+		co.WriteValue<std::uint8_t>(LightingResolutionPercent);
 
 		// Controls
 		co.WriteValue<std::uint8_t>(std::uint8_t(ControlScheme::MaxSupportedPlayers));

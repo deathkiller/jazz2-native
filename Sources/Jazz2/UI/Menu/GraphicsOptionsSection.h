@@ -13,6 +13,8 @@ namespace Jazz2::UI::Menu
 #endif
 		Antialiasing,
 		BackgroundDithering,
+		BlurEffects,
+		LightingResolution,
 		LowWaterQuality,
 		ShowPlayerTrails,
 		PreferVerticalSplitscreen,

@@ -165,6 +165,10 @@ namespace Jazz2
 		static bool PreferZoomOut;
 		/** @brief Whether background dithering should be used */
 		static bool BackgroundDithering;
+		/** @brief Whether blur effects are allowed */
+		static bool BlurEffects;
+		/** @brief Lighting resolution percent */
+		static std::uint8_t LightingResolutionPercent;
 
 		// Gameplay
 		/** @brief Whether reforged gameplay is enabled */
@@ -265,7 +269,7 @@ namespace Jazz2
 		static void RemoveEpisodeContinue(StringView episodeName);
 
 	private:
-		enum class BoolOptions : uint64_t {
+		enum class BoolOptions : std::uint64_t {
 			None = 0x00,
 
 			EnableFullscreen = 0x01,
@@ -298,12 +302,14 @@ namespace Jazz2
 
 			PlayStationExtendedSupport = 0x4000000,
 			SwitchToNewWeapon = 0x8000000,
-			EnableContinuousJump = 0x10000000
+			EnableContinuousJump = 0x10000000,
+
+			BlurEffects = 0x20000000
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 12;
+		static constexpr std::uint8_t FileVersion = 13;
 
 		static constexpr float TouchPaddingMultiplier = 0.003f;
 
