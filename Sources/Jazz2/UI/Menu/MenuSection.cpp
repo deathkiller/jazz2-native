@@ -1,6 +1,4 @@
-﻿#pragma once
-
-#include "MenuSection.h"
+﻿#include "MenuSection.h"
 
 using namespace Jazz2::Input;
 
