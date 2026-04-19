@@ -4308,18 +4308,12 @@ namespace Death { namespace Backward {
 		Flags FeatureFlags;
 
 		ExceptionHandling(Flags flags = Flags::None)
-			: Destination(nullptr), FeatureFlags(flags), _loaded(false),
-			  _reporterThread(), _crashSignalNumber(0) {
+			: Destination(nullptr), FeatureFlags(flags), _loaded(false) {
 			auto& current = GetSingleton();
 			if (current != nullptr) {
 				return;
 			}
 			current = this;
-
-			_signalPipe[0] = -1;
-			_signalPipe[1] = -1;
-			_responsePipe[0] = -1;
-			_responsePipe[1] = -1;
 
 			bool success = true;
 
@@ -4335,23 +4329,6 @@ namespace Death { namespace Backward {
 				}
 			} else {
 				success = false;
-			}
-
-			// Create pipes for communication between signal handler and reporter thread
-			if (::pipe(_signalPipe) < 0 || ::pipe(_responsePipe) < 0) {
-				success = false;
-			}
-
-			// Create the reporter thread that will handle symbol resolution and printing
-			if (success) {
-				pthread_attr_t attr;
-				pthread_attr_init(&attr);
-				pthread_attr_setstacksize(&attr, 64 * 1024);
-				if (pthread_create(&_reporterThread, &attr, OnReporterThread, this) != 0) {
-					success = false;
-					_reporterThread = pthread_t();
-				}
-				pthread_attr_destroy(&attr);
 			}
 
 			for (std::int32_t i = 0; i < PosixSignalsCount; ++i) {
@@ -4378,31 +4355,16 @@ namespace Death { namespace Backward {
 			_loaded = success;
 		}
 
-		~ExceptionHandling() {
-			// Signal the reporter thread to exit normally
-			if (_signalPipe[1] >= 0) {
-				char cmd = ReporterQuit;
-				(void)::write(_signalPipe[1], &cmd, 1);
-			}
-			if (_reporterThread) {
-				pthread_join(_reporterThread, nullptr);
-				_reporterThread = pthread_t();
-			}
-			if (_signalPipe[0] >= 0) ::close(_signalPipe[0]);
-			if (_signalPipe[1] >= 0) ::close(_signalPipe[1]);
-			if (_responsePipe[0] >= 0) ::close(_responsePipe[0]);
-			if (_responsePipe[1] >= 0) ::close(_responsePipe[1]);
-		}
-
 		/** @brief Returns `true` if the exception handling is successfully initialized */
 		bool IsLoaded() const {
 			return _loaded;
 		}
 
-		/** @brief Handles a given Unix signal (called from the signal handler) */
+		/** @brief Handles a given Unix signal */
 		void HandleSignal(int sig, siginfo_t* info, void* _ctx) {
 			ucontext_t* uctx = static_cast<ucontext_t*>(_ctx);
 
+			StackTrace st;
 			void* errorAddr = nullptr;
 #	if defined(REG_RIP)		// 64-bit x86
 			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_RIP]);
@@ -4437,29 +4399,39 @@ namespace Death { namespace Backward {
 #		warning "Unsupported CPU architecture"
 #	endif
 
-			// Stack unwinding is done here in the signal handler (on the alt stack) so we have
-			// the correct context. _Unwind_Backtrace and backtrace() only work on the current thread.
 			if (errorAddr != nullptr) {
-				_crashStackTrace.LoadFrom(errorAddr, 32, reinterpret_cast<void*>(uctx), info->si_addr);
+				st.LoadFrom(errorAddr, 32, reinterpret_cast<void*>(uctx), info->si_addr);
 			} else {
-				_crashStackTrace.LoadHere(32, reinterpret_cast<void*>(uctx), info->si_addr);
+				st.LoadHere(32, reinterpret_cast<void*>(uctx), info->si_addr);
 			}
-			_crashSignalNumber = static_cast<std::uint32_t>(info->si_signo);
 
-			// Signal the reporter thread to resolve and print the stack trace.
-			// write() and read() on pipes are async-signal-safe.
-			char cmd = ReporterCrash;
-			(void)::write(_signalPipe[1], &cmd, 1);
+			bool shouldWriteToStdErr = (FeatureFlags & Flags::UseStdError) == Flags::UseStdError;
 
-			// Wait for the reporter thread to finish
-			char response = 0;
-			(void)::read(_responsePipe[0], &response, 1);
+			IO::Stream* dest = Destination;
+			bool shouldWriteToDest = (dest != nullptr);
+
+			if (!shouldWriteToStdErr && !shouldWriteToDest) {
+				return;
+			}
+
+			Printer printer;
+			printer.Address = true;
+
+			if (shouldWriteToStdErr) {
+				printer.FeatureFlags = FeatureFlags;
+				printer.Print(st, std::cerr, std::uint32_t(info->si_signo));
+			}
+
+			if (shouldWriteToDest) {
+				printer.FeatureFlags = FeatureFlags & ~Flags::Colorized;
+				printer.PrintFilePrologue(dest);
+				printer.Print(st, dest, std::uint32_t(info->si_signo));
+				dest->Flush();
+			}
 		}
 
 	private:
 		static constexpr std::int32_t ExceptionExitCode = 0xDEADBEEF;
-		static constexpr char ReporterCrash = 0;
-		static constexpr char ReporterQuit = 1;
 
 		static constexpr std::int32_t PosixSignals[] = {
 			// Signals for which the default action is "Core".
@@ -4488,60 +4460,6 @@ namespace Death { namespace Backward {
 
 		Implementation::Handle<char*> _stackContent;
 		bool _loaded;
-
-		pthread_t _reporterThread;
-		int _signalPipe[2];			// Signal handler writes, reporter thread reads
-		int _responsePipe[2];		// Reporter thread writes, signal handler reads
-
-		// Shared state: populated by signal handler, consumed by reporter thread
-		StackTrace _crashStackTrace;
-		std::uint32_t _crashSignalNumber;
-
-		static void* OnReporterThread(void* arg) {
-			// Reporter thread: waits for a crash signal, then does symbol resolution and printing
-			// (which involves malloc, dladdr, file I/O - none of which are async-signal-safe).
-			auto* _this = static_cast<ExceptionHandling*>(arg);
-
-			char cmd = 0;
-			while (::read(_this->_signalPipe[0], &cmd, 1) == 1) {
-				if (cmd == ReporterQuit) {
-					break;
-				}
-				if (cmd == ReporterCrash) {
-					_this->HandleStacktrace();
-				}
-				// Signal the handler that we're done
-				char response = 1;
-				(void)::write(_this->_responsePipe[1], &response, 1);
-			}
-			return nullptr;
-		}
-
-		void HandleStacktrace() {
-			bool shouldWriteToStdErr = (FeatureFlags & Flags::UseStdError) == Flags::UseStdError;
-
-			IO::Stream* dest = Destination;
-			bool shouldWriteToDest = (dest != nullptr);
-
-			if (!shouldWriteToStdErr && !shouldWriteToDest) {
-				return;
-			}
-
-			Printer printer;
-			printer.Address = true;
-
-			if (shouldWriteToStdErr) {
-				printer.FeatureFlags = FeatureFlags;
-				printer.Print(_crashStackTrace, std::cerr, _crashSignalNumber);
-			}
-
-			if (shouldWriteToDest) {
-				printer.FeatureFlags = FeatureFlags & ~Flags::Colorized;
-				printer.PrintFilePrologue(dest);
-				printer.Print(_crashStackTrace, dest, _crashSignalNumber);
-				dest->Flush();
-			}
-		}
 
 #	if defined(__GNUC__)
 		__attribute__((noreturn))
