@@ -1,5 +1,5 @@
 // Copyright © 2013-2024 Google Inc. All Rights Reserved.
-// Copyright © 2024 Dan R.
+// Copyright © 2024-2026 Dan R.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -25,10 +25,6 @@
 #include "../CommonBase.h"
 #include "../Containers/DateTime.h"
 #include "../IO/Stream.h"
-
-#if DEATH_CXX_STANDARD >= 201703L
-#	define BACKWARD_ATLEAST_CXX17
-#endif
 
 #if !(defined(BACKWARD_TARGET_LINUX) || defined(BACKWARD_TARGET_APPLE) || defined(BACKWARD_TARGET_WINDOWS))
 #	if defined(__linux) || defined(__linux__)
@@ -157,6 +153,7 @@
 // Linux kernel header required for the struct pt_regs definition to access the NIP (Next Instruction Pointer) register value
 #	include <asm/ptrace.h>
 #endif
+#include <pthread.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <syscall.h>
@@ -398,8 +395,9 @@ namespace Death { namespace Backward {
 
 			explicit Handle() : _val(), _empty(true) {}
 			explicit Handle(T val) : _val(val), _empty(false) {
-				if (!_val)
+				if (!_val) {
 					_empty = true;
+				}
 			}
 
 			Handle(Handle&& from) noexcept : _empty(true) {
@@ -410,34 +408,33 @@ namespace Death { namespace Backward {
 				return *this;
 			}
 
-			void reset(T newValue) {
+			void reset(T newValue) noexcept {
 				Handle tmp(newValue);
 				swap(tmp);
 			}
 
-			void update(T newValue) {
+			void update(T newValue) noexcept {
 				_val = newValue;
 				_empty = !static_cast<bool>(newValue);
 			}
 
-			operator const dummy* () const {
+			operator const dummy* () const noexcept {
 				if (_empty) {
 					return nullptr;
 				}
 				return reinterpret_cast<const dummy*>(_val);
 			}
-			T get() {
+			T get() noexcept {
 				return _val;
 			}
-			T release() {
+			T release() noexcept {
 				_empty = true;
 				return _val;
 			}
-			void swap(Handle& b) {
-				using std::swap;
-				swap(b._val, _val);     // can throw, we are safe here.
-				swap(b._empty, _empty); // should not throw: if you cannot swap two
-				// bools without throwing... It's a lost cause anyway!
+			void swap(Handle& b) noexcept {
+				using Death::swap;
+				swap(b._val, _val);
+				swap(b._empty, _empty);
 			}
 
 			T& operator->() {
@@ -517,6 +514,169 @@ namespace Death { namespace Backward {
 				out.push_back(s.substr(last));
 			}
 			return out;
+		}
+
+		inline void ReplaceAll(std::string& s, const char* oldVal, const char* newVal) {
+			std::size_t oldLen = std::strlen(oldVal);
+			std::size_t newLen = std::strlen(newVal);
+			std::size_t pos = 0;
+			while ((pos = s.find(oldVal, pos)) != std::string::npos) {
+				s.replace(pos, oldLen, newVal, newLen);
+				pos += newLen;
+			}
+		}
+
+		// Finds the matching closing bracket '>' for the template argument list starting at pos.
+		// pos should point to the character after '<'. Returns npos if not found.
+		inline std::size_t FindMatchingBracket(const std::string& s, std::size_t pos) {
+			std::int32_t depth = 1;
+			while (pos < s.size() && depth > 0) {
+				if (s[pos] == '<') depth++;
+				else if (s[pos] == '>') depth--;
+				if (depth > 0) pos++;
+			}
+			return (depth == 0) ? pos : std::string::npos;
+		}
+
+		// Replaces "std::basic_XXX<charT, std::char_traits<charT>, std::allocator<charT>>" with "std::XXXstring"
+		// and "std::basic_XXX<charT, std::char_traits<charT>>" with "std::XXXstring_view" etc.
+		inline void SimplifyBasicType(std::string& s, const char* prefix, const char* charType, const char* replacement) {
+			std::size_t prefixLen = std::strlen(prefix);
+			std::size_t pos = 0;
+			while ((pos = s.find(prefix, pos)) != std::string::npos) {
+				std::size_t openBracket = pos + prefixLen;
+				if (openBracket >= s.size() || s[openBracket] != '<') {
+					pos += prefixLen;
+					continue;
+				}
+				std::size_t closeBracket = FindMatchingBracket(s, openBracket + 1);
+				if (closeBracket == std::string::npos) {
+					pos += prefixLen;
+					continue;
+				}
+				// Check the content between < and >
+				std::string content = s.substr(openBracket + 1, closeBracket - openBracket - 1);
+				// Verify it starts with the expected char type
+				std::size_t charTypeLen = std::strlen(charType);
+				if (content.compare(0, charTypeLen, charType) != 0) {
+					pos += prefixLen;
+					continue;
+				}
+				// Check if remainder is ", std::char_traits<charT>" or ", std::char_traits<charT>, std::allocator<charT>"
+				std::string trailingA = std::string(", std::char_traits<") + charType + ">";
+				std::string trailingB = trailingA + ", std::allocator<" + charType + ">";
+				std::string trailingC = trailingA + ", std::allocator<" + charType + " >";
+				std::string justCharType(charType);
+				bool match = (content == justCharType + trailingB) ||
+							 (content == justCharType + trailingA) ||
+							 (content == justCharType + trailingC);
+				if (match) {
+					std::size_t replLen = std::strlen(replacement);
+					s.replace(pos, closeBracket - pos + 1, replacement, replLen);
+					pos += replLen;
+				} else {
+					pos += prefixLen;
+				}
+			}
+		}
+
+		// Removes trailing default allocator/comparator/hash args from container type template args
+		inline void RemoveDefaultContainerArgs(std::string& s, const char* prefix,
+				const char* defaultArgPrefix, std::int32_t firstArgIndex) {
+			std::size_t prefixLen = std::strlen(prefix);
+			std::size_t pos = 0;
+			while ((pos = s.find(prefix, pos)) != std::string::npos) {
+				std::size_t openBracket = pos + prefixLen;
+				if (openBracket >= s.size() || s[openBracket] != '<') {
+					pos += prefixLen;
+					continue;
+				}
+				std::size_t closeBracket = FindMatchingBracket(s, openBracket + 1);
+				if (closeBracket == std::string::npos) {
+					pos += prefixLen;
+					continue;
+				}
+				// Find the position of the default arg prefix (e.g. ", std::allocator<")
+				// Only search at the right nesting level
+				std::size_t searchPos = openBracket + 1;
+				std::int32_t argIndex = 0;
+				std::size_t argStart = searchPos;
+				std::size_t removeFrom = std::string::npos;
+				std::int32_t depth = 0;
+				for (std::size_t i = searchPos; i < closeBracket; i++) {
+					if (s[i] == '<') depth++;
+					else if (s[i] == '>') depth--;
+					else if (s[i] == ',' && depth == 0) {
+						argIndex++;
+						if (argIndex == firstArgIndex) {
+							// Check if the rest starts with ", <defaultArgPrefix>"
+							std::string remaining = s.substr(i, closeBracket - i);
+							if (remaining.find(defaultArgPrefix) == 2 ||
+								(remaining.size() > 2 && remaining[1] == ' ' && remaining.find(defaultArgPrefix) == 2)) {
+								removeFrom = i;
+								break;
+							}
+						}
+					}
+				}
+				if (removeFrom != std::string::npos) {
+					s.erase(removeFrom, closeBracket - removeFrom);
+				}
+				pos = openBracket + 1;
+			}
+		}
+
+		/** @brief Prettifies demangled C++ symbol names for display */
+		inline std::string PrettifySymbol(std::string s) {
+			// Remove internal namespace qualifiers
+			//ReplaceAll(s, "std::__cxx11::", "std::");
+			//ReplaceAll(s, "std::__1::", "std::");
+			//ReplaceAll(s, "std::__2::", "std::");
+
+			// Simplify basic_string variants
+			//SimplifyBasicType(s, "std::basic_string", "char", "std::string");
+			//SimplifyBasicType(s, "std::basic_string", "wchar_t", "std::wstring");
+			//SimplifyBasicType(s, "std::basic_string", "char8_t", "std::u8string");
+			//SimplifyBasicType(s, "std::basic_string", "char16_t", "std::u16string");
+			//SimplifyBasicType(s, "std::basic_string", "char32_t", "std::u32string");
+
+			// Simplify basic_string_view variants
+			//SimplifyBasicType(s, "std::basic_string_view", "char", "std::string_view");
+			//SimplifyBasicType(s, "std::basic_string_view", "wchar_t", "std::wstring_view");
+			//SimplifyBasicType(s, "std::basic_string_view", "char16_t", "std::u16string_view");
+			//SimplifyBasicType(s, "std::basic_string_view", "char32_t", "std::u32string_view");
+
+			// Simplify stream types
+			//SimplifyBasicType(s, "std::basic_ostream", "char", "std::ostream");
+			//SimplifyBasicType(s, "std::basic_istream", "char", "std::istream");
+			//SimplifyBasicType(s, "std::basic_iostream", "char", "std::iostream");
+			//SimplifyBasicType(s, "std::basic_ofstream", "char", "std::ofstream");
+			//SimplifyBasicType(s, "std::basic_ifstream", "char", "std::ifstream");
+			//SimplifyBasicType(s, "std::basic_fstream", "char", "std::fstream");
+			//SimplifyBasicType(s, "std::basic_ostringstream", "char", "std::ostringstream");
+			//SimplifyBasicType(s, "std::basic_istringstream", "char", "std::istringstream");
+			//SimplifyBasicType(s, "std::basic_stringstream", "char", "std::stringstream");
+			//SimplifyBasicType(s, "std::basic_streambuf", "char", "std::streambuf");
+			//SimplifyBasicType(s, "std::basic_filebuf", "char", "std::filebuf");
+
+			// Remove default allocators from common containers
+			RemoveDefaultContainerArgs(s, "std::vector", "std::allocator<", 1);
+			RemoveDefaultContainerArgs(s, "std::deque", "std::allocator<", 1);
+			RemoveDefaultContainerArgs(s, "std::list", "std::allocator<", 1);
+			RemoveDefaultContainerArgs(s, "std::forward_list", "std::allocator<", 1);
+			RemoveDefaultContainerArgs(s, "std::set", "std::less<", 1);
+			//RemoveDefaultContainerArgs(s, "std::multiset", "std::less<", 1);
+			RemoveDefaultContainerArgs(s, "std::map", "std::less<", 2);
+			//RemoveDefaultContainerArgs(s, "std::multimap", "std::less<", 2);
+			RemoveDefaultContainerArgs(s, "std::unordered_set", "std::hash<", 1);
+			//RemoveDefaultContainerArgs(s, "std::unordered_multiset", "std::hash<", 1);
+			RemoveDefaultContainerArgs(s, "std::unordered_map", "std::hash<", 2);
+			//RemoveDefaultContainerArgs(s, "std::unordered_multimap", "std::hash<", 2);
+
+			// Clean up "> >" → ">>" (pre-C++11 style from some demanglers)
+			ReplaceAll(s, "> >", ">>");
+
+			return s;
 		}
 
 	} // namespace Implementation
@@ -921,13 +1081,13 @@ namespace Death { namespace Backward {
 			return size();
 		}
 
-		std::size_t LoadLrom(void* addr, std::size_t depth = 32, void* context = nullptr, void* errorAddr = nullptr) {
+		std::size_t LoadFrom(void* addr, std::size_t depth = 32, void* context = nullptr, void* errorAddr = nullptr) {
 			LoadHere(depth + 8, context, errorAddr);
 
-			for (std::size_t i = 0; i < _stacktrace.size(); ++i) {
+			for (std::size_t i = 0; i < _stacktrace.size(); i++) {
 				if (_stacktrace[i] == addr) {
 					SetSkipFrames(i);
-					_stacktrace[i] = (void*)((std::uintptr_t)_stacktrace[i]);
+					_stacktrace[i] = (void*)((std::uintptr_t)_stacktrace[i] + 1);
 					break;
 				}
 			}
@@ -1355,7 +1515,7 @@ namespace Death { namespace Backward {
 					// this time we get the name of the function where the code is located, instead of the function were
 					// the address is located. In short, if the code was inlined, we get the function corresponding
 					// to the code. Else we already got in trace.function.
-					trace.source.function = Demangle(details_selected->funcname);
+					trace.Source.Function = Demangle(details_selected->funcname);
 
 					if (!symbol_info.dli_sname) {
 						// for the case dladdr failed to find the symbol name of the function, we might as well try
@@ -1386,14 +1546,14 @@ namespace Death { namespace Backward {
 						find_sym_result details = find_symbol_details(fobj, symbol_info.dli_saddr, symbol_info.dli_fbase);
 						if (details.found) {
 							ResolvedTrace::SourceLoc diy_inliner;
-							diy_inliner.Line = details.Line;
-							if (details.Filename) {
-								diy_inliner.Filename = details.Filename;
+							diy_inliner.Line = details.line;
+							if (details.filename) {
+								diy_inliner.Filename = details.filename;
 							}
 							if (details.funcname) {
 								diy_inliner.Function = Demangle(details.funcname);
 							} else {
-								diy_inliner.Function = trace.source.function;
+								diy_inliner.Function = trace.Source.Function;
 							}
 							if (diy_inliner != trace.Source) {
 								trace.Inliners.push_back(diy_inliner);
@@ -1582,12 +1742,12 @@ namespace Death { namespace Backward {
 
 				if (result.found) {
 					ResolvedTrace::SourceLoc src_loc;
-					src_loc.line = result.line;
+					src_loc.Line = result.line;
 					if (result.filename) {
-						src_loc.filename = result.filename;
+						src_loc.Filename = result.filename;
 					}
 					if (result.funcname) {
-						src_loc.function = Demangle(result.funcname);
+						src_loc.Function = Demangle(result.funcname);
 					}
 					results.push_back(src_loc);
 				}
@@ -1984,7 +2144,7 @@ namespace Death { namespace Backward {
 							--it;
 						}
 					}
-					trace.object_function = Demangle(it->second.c_str());
+					trace.ObjectFunction = Demangle(it->second.c_str());
 				}
 			}
 
@@ -3656,7 +3816,7 @@ namespace Death { namespace Backward {
 				return traits_type::eof();
 			}
 			int_type overflow(int_type ch) override {
-				if (traits_type::not_eof(ch) && _sink->Write(&ch, sizeof(ch) > 0)) {
+				if (traits_type::not_eof(ch) && _sink->Write(&ch, sizeof(ch)) > 0) {
 					return ch;
 				}
 				return traits_type::eof();
@@ -4058,7 +4218,7 @@ namespace Death { namespace Backward {
 				if (!trace.ObjectFunction.empty()) {
 					os << ", in ";
 					colorize.SetColor(Implementation::Color::Bold);
-					os << trace.ObjectFunction;
+					os << Implementation::PrettifySymbol(trace.ObjectFunction);
 					colorize.SetColor(Implementation::Color::Reset);
 				}
 				os << " [0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
@@ -4126,7 +4286,7 @@ namespace Death { namespace Backward {
 			if (!sourceLoc.Function.empty()) {
 				os << ", in ";
 				colorize.SetColor(Implementation::Color::Bold);
-				os << sourceLoc.Function;
+				os << Implementation::PrettifySymbol(sourceLoc.Function);
 				colorize.SetColor(Implementation::Color::Reset);
 			}
 			if (Address && addr != nullptr) {
@@ -4148,12 +4308,18 @@ namespace Death { namespace Backward {
 		Flags FeatureFlags;
 
 		ExceptionHandling(Flags flags = Flags::None)
-			: Destination(nullptr), FeatureFlags(flags), _loaded(false) {
+			: Destination(nullptr), FeatureFlags(flags), _loaded(false),
+			  _reporterThread(), _crashSignalNumber(0) {
 			auto& current = GetSingleton();
 			if (current != nullptr) {
 				return;
 			}
 			current = this;
+
+			_signalPipe[0] = -1;
+			_signalPipe[1] = -1;
+			_responsePipe[0] = -1;
+			_responsePipe[1] = -1;
 
 			bool success = true;
 
@@ -4169,6 +4335,23 @@ namespace Death { namespace Backward {
 				}
 			} else {
 				success = false;
+			}
+
+			// Create pipes for communication between signal handler and reporter thread
+			if (::pipe(_signalPipe) < 0 || ::pipe(_responsePipe) < 0) {
+				success = false;
+			}
+
+			// Create the reporter thread that will handle symbol resolution and printing
+			if (success) {
+				pthread_attr_t attr;
+				pthread_attr_init(&attr);
+				pthread_attr_setstacksize(&attr, 64 * 1024);
+				if (pthread_create(&_reporterThread, &attr, OnReporterThread, this) != 0) {
+					success = false;
+					_reporterThread = pthread_t();
+				}
+				pthread_attr_destroy(&attr);
 			}
 
 			for (std::int32_t i = 0; i < PosixSignalsCount; ++i) {
@@ -4195,16 +4378,31 @@ namespace Death { namespace Backward {
 			_loaded = success;
 		}
 
+		~ExceptionHandling() {
+			// Signal the reporter thread to exit normally
+			if (_signalPipe[1] >= 0) {
+				char cmd = ReporterQuit;
+				(void)::write(_signalPipe[1], &cmd, 1);
+			}
+			if (_reporterThread) {
+				pthread_join(_reporterThread, nullptr);
+				_reporterThread = pthread_t();
+			}
+			if (_signalPipe[0] >= 0) ::close(_signalPipe[0]);
+			if (_signalPipe[1] >= 0) ::close(_signalPipe[1]);
+			if (_responsePipe[0] >= 0) ::close(_responsePipe[0]);
+			if (_responsePipe[1] >= 0) ::close(_responsePipe[1]);
+		}
+
 		/** @brief Returns `true` if the exception handling is successfully initialized */
 		bool IsLoaded() const {
 			return _loaded;
 		}
 
-		/** @brief Handles a given Unix signal */
+		/** @brief Handles a given Unix signal (called from the signal handler) */
 		void HandleSignal(int sig, siginfo_t* info, void* _ctx) {
 			ucontext_t* uctx = static_cast<ucontext_t*>(_ctx);
 
-			StackTrace st;
 			void* errorAddr = nullptr;
 #	if defined(REG_RIP)		// 64-bit x86
 			errorAddr = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_RIP]);
@@ -4238,39 +4436,30 @@ namespace Death { namespace Backward {
 #	else
 #		warning "Unsupported CPU architecture"
 #	endif
+
+			// Stack unwinding is done here in the signal handler (on the alt stack) so we have
+			// the correct context. _Unwind_Backtrace and backtrace() only work on the current thread.
 			if (errorAddr != nullptr) {
-				st.LoadFrom(errorAddr, 32, reinterpret_cast<void*>(uctx), info->si_addr);
+				_crashStackTrace.LoadFrom(errorAddr, 32, reinterpret_cast<void*>(uctx), info->si_addr);
 			} else {
-				st.LoadHere(32, reinterpret_cast<void*>(uctx), info->si_addr);
+				_crashStackTrace.LoadHere(32, reinterpret_cast<void*>(uctx), info->si_addr);
 			}
+			_crashSignalNumber = static_cast<std::uint32_t>(info->si_signo);
 
-			bool shouldWriteToStdErr = (FeatureFlags & Flags::UseStdError) == Flags::UseStdError;
+			// Signal the reporter thread to resolve and print the stack trace.
+			// write() and read() on pipes are async-signal-safe.
+			char cmd = ReporterCrash;
+			(void)::write(_signalPipe[1], &cmd, 1);
 
-			IO::Stream* dest = Destination;
-			bool shouldWriteToDest = (dest != nullptr);
-
-			if (!shouldWriteToStdErr && !shouldWriteToDest) {
-				return;
-			}
-
-			Printer printer;
-			printer.Address = true;
-
-			if (shouldWriteToStdErr) {
-				printer.FeatureFlags = FeatureFlags;
-				printer.Print(st, std::cerr, std::uint32_t(info->si_signo));
-			}
-
-			if (shouldWriteToDest) {
-				printer.FeatureFlags = FeatureFlags & ~Flags::Colorized;
-				printer.PrintFilePrologue(dest);
-				printer.Print(st, dest, std::uint32_t(info->si_signo));
-				dest->Flush();
-			}
+			// Wait for the reporter thread to finish
+			char response = 0;
+			(void)::read(_responsePipe[0], &response, 1);
 		}
 
 	private:
 		static constexpr std::int32_t ExceptionExitCode = 0xDEADBEEF;
+		static constexpr char ReporterCrash = 0;
+		static constexpr char ReporterQuit = 1;
 
 		static constexpr std::int32_t PosixSignals[] = {
 			// Signals for which the default action is "Core".
@@ -4299,6 +4488,60 @@ namespace Death { namespace Backward {
 
 		Implementation::Handle<char*> _stackContent;
 		bool _loaded;
+
+		pthread_t _reporterThread;
+		int _signalPipe[2];			// Signal handler writes, reporter thread reads
+		int _responsePipe[2];		// Reporter thread writes, signal handler reads
+
+		// Shared state: populated by signal handler, consumed by reporter thread
+		StackTrace _crashStackTrace;
+		std::uint32_t _crashSignalNumber;
+
+		static void* OnReporterThread(void* arg) {
+			// Reporter thread: waits for a crash signal, then does symbol resolution and printing
+			// (which involves malloc, dladdr, file I/O - none of which are async-signal-safe).
+			auto* _this = static_cast<ExceptionHandling*>(arg);
+
+			char cmd = 0;
+			while (::read(_this->_signalPipe[0], &cmd, 1) == 1) {
+				if (cmd == ReporterQuit) {
+					break;
+				}
+				if (cmd == ReporterCrash) {
+					_this->HandleStacktrace();
+				}
+				// Signal the handler that we're done
+				char response = 1;
+				(void)::write(_this->_responsePipe[1], &response, 1);
+			}
+			return nullptr;
+		}
+
+		void HandleStacktrace() {
+			bool shouldWriteToStdErr = (FeatureFlags & Flags::UseStdError) == Flags::UseStdError;
+
+			IO::Stream* dest = Destination;
+			bool shouldWriteToDest = (dest != nullptr);
+
+			if (!shouldWriteToStdErr && !shouldWriteToDest) {
+				return;
+			}
+
+			Printer printer;
+			printer.Address = true;
+
+			if (shouldWriteToStdErr) {
+				printer.FeatureFlags = FeatureFlags;
+				printer.Print(_crashStackTrace, std::cerr, _crashSignalNumber);
+			}
+
+			if (shouldWriteToDest) {
+				printer.FeatureFlags = FeatureFlags & ~Flags::Colorized;
+				printer.PrintFilePrologue(dest);
+				printer.Print(_crashStackTrace, dest, _crashSignalNumber);
+				dest->Flush();
+			}
+		}
 
 #	if defined(__GNUC__)
 		__attribute__((noreturn))
@@ -4351,7 +4594,7 @@ namespace Death { namespace Backward {
 //#endif
 
 			std::set_terminate(Terminator);
-#	if !defined(BACKWARD_ATLEAST_CXX17)
+#	if DEATH_CXX_STANDARD < 201703L
 			std::set_unexpected(Terminator);
 #	endif
 			_set_purecall_handler(Terminator);
@@ -4578,10 +4821,6 @@ namespace Death { namespace Backward {
 		}
 
 		void HandleStacktrace() {
-			// Printer creates the TraceResolver, which can supply us a machine type for stack walking. Without this,
-			// StackTrace can only guess using some macros. StackTrace also requires that the PDBs are already loaded,
-			// which is done in the constructor of TraceResolver.
-
 			HANDLE hStdError = ::GetStdHandle(STD_ERROR_HANDLE);
 			bool shouldWriteToStdErr = ((FeatureFlags & Flags::UseStdError) == Flags::UseStdError && ::GetFileType(hStdError) != FILE_TYPE_UNKNOWN);
 
@@ -4811,6 +5050,6 @@ namespace Death { namespace Backward {
 
 #endif // BACKWARD_TARGET_WINDOWS
 
-}} // namespace Death::Backward
+}}
 
 #endif

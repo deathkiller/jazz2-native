@@ -70,7 +70,7 @@ Jazz² Resurrection is reimplementation of the game **Jazz Jackrabbit 2** releas
 
 `~` *denotes user's home directory. Cache is recreated during the intro cinematics on the first startup, so it can't be skipped. Also, the sound effects in the intro cinematics require the cache, so they will be missing the first time the game is started up.*
 
-Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shields.io/homebrew/cask/v/jazz2-resurrection?logo=homebrew&logoColor=ffffff&label=Homebrew&color=b56b2b)](https://formulae.brew.sh/cask/jazz2-resurrection)</sub></sub> `brew install --cask jazz2-resurrection`
+Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shields.io/badge/brew-grey?logo=homebrew&logoColor=ffffff&label=Home&color=b56b2b)](https://formulae.brew.sh/cask/jazz2-resurrection)</sub></sub> `brew install deathkiller/jazz2/jazz2`
 
 ### Android
 * Download the game

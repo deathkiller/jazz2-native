@@ -63,7 +63,7 @@ else()
 	endif()
 endif()
 
-cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward for exception handling" ON "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID" OFF)
+cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward library for exception handling" ON "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID" OFF)
 #option(NCINE_WITH_LZ4 "Enable LZ4 compression support" OFF)
 #option(NCINE_WITH_ZSTD "Enable Zstd compression support" OFF)
 option(NCINE_WITH_WEBP "Enable WebP image file support" OFF)
