@@ -117,8 +117,8 @@ namespace Death { namespace Containers {
 		: _large{}
 	{
 #if defined(DEATH_TARGET_32BIT)
-		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
-		// is rare but possible and thus worth checking even in release
+		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB
+		// on 32-bit is rare but possible and thus worth checking even in release
 		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^{} bytes, got {}", sizeof(std::size_t) * 8 - 2, size), );
 #endif
 		DEATH_ASSERT(data != nullptr || size == 0, ("Received a null string of size {}", size), );
@@ -139,9 +139,11 @@ namespace Death { namespace Containers {
 	String::String(AllocatedInitT, const char* const data, const std::size_t size)
 		: _large{}
 	{
-		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
-		// is rare but possible and thus worth checking even in release
+#if defined(DEATH_TARGET_32BIT)
+		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB
+		// on 32-bit is rare but possible and thus worth checking even in release
 		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^{} bytes, got {}", sizeof(std::size_t) * 8 - 2, size), );
+#endif
 		DEATH_ASSERT(data != nullptr || size == 0, ("Received a null string of size {}", size), );
 
 		_large.data = new char[size + 1];
@@ -189,10 +191,15 @@ namespace Death { namespace Containers {
 	String::String(char* const data, const std::size_t size, void(*deleter)(char*, std::size_t)) noexcept
 		: _large{}
 	{
-		// Compared to StringView construction which happens a lot this shouldn't, the chance of strings > 1 GB on 32-bit
-		// is rare but possible and thus worth checking even in release; but most importantly checking for null
-		// termination outweighs potential speed issues
+#if defined(DEATH_TARGET_32BIT)
+		// Compared to StringView construction which happens a lot this shouldn't, the chance of strings > 1 GB
+		// on 32-bit is rare but possible and thus worth checking even in release; but most importantly checking
+		// for null termination outweighs potential speed issues
 		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^{} bytes, got {}", sizeof(std::size_t) * 8 - 2, size), );
+#endif
+		// This *may* cause a potential OOB access if the string is not actually null-terminated, on the other hand
+		// not checking for this would just defer the problem to a point where it'd cause something a lot nastier;
+		// same check (although debug-only) is in the StringView data + size + flags constructor
 		DEATH_ASSERT(data != nullptr && !data[size], "Can only take ownership of a non-null null-terminated array", );
 
 		_large.data = data;
@@ -210,9 +217,11 @@ namespace Death { namespace Containers {
 	String::String(ValueInitT, const std::size_t size)
 		: _large{}
 	{
-		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
-		// is rare but possible and thus  worth checking even in release
+#if defined(DEATH_TARGET_32BIT)
+		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB
+		// on 32-bit is rare but possible and thus  worth checking even in release
 		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^{} bytes, got {}", sizeof(std::size_t) * 8 - 2, size), );
+#endif
 
 		if (size < Implementation::SmallStringSize) {
 			// Everything already zero-init'd in the constructor init list
@@ -226,9 +235,11 @@ namespace Death { namespace Containers {
 
 	String::String(NoInitT, const std::size_t size)
 	{
-		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB on 32-bit
-		// is rare but possible and thus worth checking even in release
+#if defined(DEATH_TARGET_32BIT)
+		// Compared to StringView construction which happens a lot this shouldn't, and the chance of strings > 1 GB
+		// on 32-bit is rare but possible and thus worth checking even in release
 		DEATH_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2), ("String expected to be smaller than 2^{} bytes, got {}", sizeof(std::size_t) * 8 - 2, size), );
+#endif
 
 		construct(NoInit, size);
 	}

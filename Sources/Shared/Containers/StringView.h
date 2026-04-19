@@ -232,10 +232,23 @@ namespace Death { namespace Containers {
 		 * global and null-terminated --- for those, the recommended way is to
 		 * use the @link operator""_s() @endlink literal instead.
 		 */
-		constexpr /*implicit*/ BasicStringView(T* data, std::size_t size, StringViewFlags flags = {}) noexcept : _data{data}, _sizePlusFlags{
+		constexpr /*implicit*/ BasicStringView(T* data, std::size_t size, StringViewFlags flags = {}) noexcept : _data{data}, _sizePlusFlags{(
+			// This ends up being called from BasicStringView(T*, Flags), so basically on every implicit conversion
+			// from a C string, thus the release build perf aspect wins over safety. Additionally, it makes little
+			// sense to check the size constraint on 64-bit, if 64-bit code happens to go over then it's got bigger
+			// problems than this assert.
+#if defined(DEATH_TARGET_32BIT)
+			DEATH_DEBUG_CONSTEXPR_ASSERT(size < std::size_t{1} << (sizeof(std::size_t) * 8 - 2),
+				("String expected to be smaller than 2^{} bytes, got {}", sizeof(std::size_t) * 8 - 2, size)),
+#endif
+			// This *may* cause a potential OOB access if the string is not actually null-terminated, on the other hand
+			// not checking for this would just defer the problem to a point where it'd cause something a lot nastier;
+			// same check (although not debug-only) is in the String data + size + deleter constructor
+			DEATH_DEBUG_CONSTEXPR_ASSERT((flags & StringViewFlags::NullTerminated) != StringViewFlags::NullTerminated || (data && !data[size]),
+				"StringViewFlags::NullTerminated expects non-null null-terminated data"),
 			// This ends up being called from BasicStringView(T*, Flags), so basically on every implicit conversion
 			// from a C string, thus the release build perf aspect wins over safety
-			(size | (std::size_t(flags) & Implementation::StringViewSizeMask))} {}
+			size | (std::size_t(flags) & Implementation::StringViewSizeMask))} {}
 
 		/**
 		 * @brief Construct from a @ref String
@@ -1031,6 +1044,7 @@ namespace Death { namespace Containers {
 	}
 
 	template<class T> constexpr T& BasicStringView<T>::operator[](const std::size_t i) const {
+		// Accessing the null terminator is fine, if it's there
 		return DEATH_DEBUG_CONSTEXPR_ASSERT(i < size() + ((flags() & StringViewFlags::NullTerminated) == StringViewFlags::NullTerminated ? 1 : 0),
 					("Index {} out of range for {} {}", i, size(), ((flags() & StringViewFlags::NullTerminated) == StringViewFlags::NullTerminated ? "null-terminated bytes" : "bytes"))),
 				_data[i];
