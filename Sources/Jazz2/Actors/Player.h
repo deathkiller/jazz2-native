@@ -345,6 +345,8 @@ namespace Jazz2::Actors
 		float _inTubeTime;
 		float _dizzyTime;
 		std::shared_ptr<Environment::Bird> _spawnedBird;
+		std::uint8_t _birdColorVariant;
+		float _birdChargeFramesLeft;
 		std::shared_ptr<ActorBase> _activeModifierDecor;
 		SmallVector<LightEmitter, 0> _trail;
 		Vector2f _trailLastPos;
@@ -372,6 +374,7 @@ namespace Jazz2::Actors
 		bool OnTileDeactivated() override;
 		bool OnPerish(ActorBase* collider) override;
 		void OnUpdate(float timeMult) override;
+		void OnAnimationFinished() override;
 		void OnUpdateHitbox() override;
 		bool OnDraw(RenderQueue& renderQueue) override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
