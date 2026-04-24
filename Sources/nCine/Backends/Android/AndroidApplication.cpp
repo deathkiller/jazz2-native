@@ -154,7 +154,7 @@ namespace nCine
 			case APP_CMD_WINDOW_RESIZED: {
 				LOGI("APP_CMD_WINDOW_RESIZED event received");
 				Vector2i size = eglGfxDevice->querySurfaceSize();
-				ResizeScreenViewport(size.X, size.Y);
+				theAndroidApplication().ResizeScreenViewport(size.X, size.Y);
 				break;
 			}
 			case APP_CMD_WINDOW_REDRAW_NEEDED: {
