@@ -11,6 +11,7 @@ namespace Jazz2::Actors
 	{
 		PlayerType playerType = (PlayerType)details.Params[0];
 		SetFacingLeft(details.Params[1] != 0);
+		std::uint8_t birdColorVariant = details.Params[2];
 
 		SetState(ActorState::PreserveOnRollback, true);
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithOtherActors, false);
@@ -25,6 +26,16 @@ namespace Jazz2::Actors
 				break;
 			case PlayerType::Lori:
 				async_await RequestMetadataAsync("Interactive/PlayerLori"_s);
+				break;
+			case PlayerType::Frog:
+				async_await RequestMetadataAsync("Interactive/PlayerFrog"_s);
+				break;
+			case PlayerType::Bird:
+				if (birdColorVariant == 0) {
+					async_await RequestMetadataAsync("Interactive/PlayerBird"_s);
+				} else {
+					async_await RequestMetadataAsync("Interactive/PlayerBirdYellow"_s);
+				}
 				break;
 		}
 

@@ -50,7 +50,10 @@
 			"FrameRate": 6,
 			"States": [ 2048, 1073741839 ]
 		},
-		
+		"Corpse": {
+			"Path": "Frog/hurt.aura",
+			"States": [ 536870912 ]
+		},
 		"FallToIdle": {
 			"Path": "Frog/fall_land.aura",
 			"States": [ 1073741826 ],

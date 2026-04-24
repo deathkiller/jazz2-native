@@ -91,6 +91,8 @@ namespace Jazz2::Actors
 		_lastPoleTime(0.0f),
 		_inTubeTime(0.0f),
 		_dizzyTime(0.0f),
+		_birdColorVariant(1),
+		_birdChargeFramesLeft(0.0f),
 		_activeShield(ShieldType::None),
 		_activeShieldTime(0.0f),
 		_weaponFlareTime(0.0f),
@@ -129,10 +131,16 @@ namespace Jazz2::Actors
 			case PlayerType::Spaz: async_await RequestMetadataAsync("Interactive/PlayerSpaz"_s); break;
 			case PlayerType::Lori: async_await RequestMetadataAsync("Interactive/PlayerLori"_s); break;
 			case PlayerType::Frog: async_await RequestMetadataAsync("Interactive/PlayerFrog"_s); break;
+			case PlayerType::Bird: async_await RequestMetadataAsync("Interactive/PlayerBird"_s); break;
 			case PlayerType::Spectate:
 				// TODO: Spectate mode - load minimal metadata for fallback, but player will be invisible
 				async_await RequestMetadataAsync("Interactive/PlayerJazz"_s);
 				break;
+		}
+
+		if (_playerType == PlayerType::Bird) {
+			SetState(ActorState::ApplyGravitation, false);
+			SetAnimation(AnimState::Idle);
 		}
 
 		SetAnimation(AnimState::Fall);
@@ -298,7 +306,7 @@ namespace Jazz2::Actors
 		OnHandleMovement(timeMult, areaWeaponAllowed, canJumpPrev);
 
 		// Handle weapon switching
-		if (((_controllable && _controllableExternal) || !_levelHandler->IsReforged()) && _playerType != PlayerType::Frog) {
+		if (((_controllable && _controllableExternal) || !_levelHandler->IsReforged()) && _playerType != PlayerType::Frog && _playerType != PlayerType::Bird) {
 			bool isGamepad;
 			if (_levelHandler->PlayerActionHit(this, PlayerAction::ChangeWeapon, true, isGamepad)) {
 				if (!isGamepad || PreferencesCache::WeaponWheel == WeaponWheelStyle::Disabled) {
@@ -811,7 +819,54 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		if (_inWater || _activeModifier != Modifier::None) {
+		if (_playerType == PlayerType::Bird) {
+			float playerMovement = _levelHandler->PlayerHorizontalMovement(this);
+			float playerMovementVert = _levelHandler->PlayerVerticalMovement(this);
+
+			if (std::abs(playerMovement) <= 0.3f) {
+				playerMovement = 0.0f;
+			}
+			if (std::abs(playerMovementVert) <= 0.3f) {
+				playerMovementVert = 0.0f;
+			}
+
+			TileCollisionParams params = { TileDestructType::None, true };
+			AABBf groundProbe = AABBf(AABBInner.L + 2.0f, AABBInner.B + 1.0f, AABBInner.R - 2.0f, AABBInner.B + 3.0f);
+			bool hasGroundBelow = !_levelHandler->IsPositionEmpty(this, groundProbe, params);
+
+			constexpr float BirdFlySpeedX = 5.0f;
+			constexpr float BirdFlySpeedYDown = 5.0f;
+			constexpr float BirdFlySpeedYUp = 2.0f;
+			constexpr float BirdHorizontalResponse = 0.35f;
+			constexpr float BirdVerticalResponse = 0.10f;
+
+			float targetSpeedX = playerMovement * BirdFlySpeedX;
+			float targetSpeedY;
+			if (hasGroundBelow && playerMovementVert == 0.0f) {
+				targetSpeedY = 0.0f;
+			} else if (playerMovementVert < 0.0f) {
+				targetSpeedY = playerMovementVert * BirdFlySpeedYUp;
+			} else if (playerMovementVert > 0.0f) {
+				targetSpeedY = playerMovementVert * BirdFlySpeedYDown;
+			} else {
+				targetSpeedY = 0.0f;
+			}
+			float horizontalLerp = std::min(1.0f, BirdHorizontalResponse * timeMult);
+			float verticalLerp = std::min(1.0f, BirdVerticalResponse * timeMult);
+
+			_speed.X = lerp(_speed.X, targetSpeedX, horizontalLerp);
+			_speed.Y = lerp(_speed.Y, targetSpeedY, verticalLerp);
+
+			if (_levelHandler->PlayerActionHit(this, PlayerAction::Jump)) {
+				_birdChargeFramesLeft = 30.0f;
+			}
+			if (_birdChargeFramesLeft > 0.0f) {
+				_birdChargeFramesLeft -= timeMult;
+			}
+
+			_isFreefall = false;
+			SetState(ActorState::ApplyGravitation, false);
+		} else if (_inWater || _activeModifier != Modifier::None) {
 			float playerMovement = _levelHandler->PlayerVerticalMovement(this);
 			float playerMovementVelocity = std::abs(playerMovement);
 			if (playerMovementVelocity > 0.3f) {
@@ -929,20 +984,20 @@ namespace Jazz2::Actors
 							});
 						} else {
 							switch (_playerType) {
-								case PlayerType::Jazz: {
+									case PlayerType::Jazz: {
 									if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
 										_controllable = false;
 										SetAnimation(AnimState::Uppercut);
-										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Uppercut, [this]() {
-											_externalForce.Y = (_levelHandler->IsReforged() ? -1.4f : -1.2f);
-											_speed.Y = -2.0f;
-											SetState(ActorState::CanJump, false);
-											SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
-										});
+											SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Uppercut, [this]() {
+												_externalForce.Y = (_levelHandler->IsReforged() ? -1.4f : -1.2f);
+												_speed.Y = -2.0f;
+												SetState(ActorState::CanJump, false);
+												SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
+											});
 									} else {
-										if (_speed.Y > 0.01f && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
+											if (_speed.Y > 0.01f && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
 											SetState(ActorState::ApplyGravitation, false);
-											_speed.Y = 1.5f;
+												_speed.Y = 1.5f;
 											_externalForce.Y = 0.0f;
 											if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
 												SetAnimation(AnimState::Copter);
@@ -960,6 +1015,37 @@ namespace Jazz2::Actors
 									}
 									break;
 								}
+									case PlayerType::Lori: {
+										if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
+											_controllable = false;
+											_controllableTimeout = 40.0f;
+											SetAnimation(AnimState::Uppercut);
+											SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
+												_externalForce.X = 4.0f * (IsFacingLeft() ? -1.0f : 1.0f);
+												_speed.X = 9.3f * (IsFacingLeft() ? -1.0f : 1.0f);
+												SetState(ActorState::ApplyGravitation, false);
+											});
+										} else {
+											if (_speed.Y > 0.01f && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
+												SetState(ActorState::ApplyGravitation, false);
+												_speed.Y = 1.5f;
+												_externalForce.Y = 0.0f;
+												if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
+													SetAnimation(AnimState::Copter);
+												}
+												_copterFramesLeft = 70.0f;
+#if defined(WITH_AUDIO)
+												if (_copterSound == nullptr) {
+													_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
+													if (_copterSound != nullptr) {
+														_copterSound->setLooping(true);
+													}
+												}
+#endif
+											}
+										}
+										break;
+									}
 								case PlayerType::Spaz: {
 									if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
 										_controllable = false;
@@ -985,37 +1071,6 @@ namespace Jazz2::Actors
 											PlayPlayerSfx("DoubleJump"_s);
 
 											SetTransition(AnimState::Spring, false);
-										}
-									}
-									break;
-								}
-								case PlayerType::Lori: {
-									if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
-										_controllable = false;
-										_controllableTimeout = 40.0f;
-										SetAnimation(AnimState::Uppercut);
-										SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
-											_externalForce.X = 4.0f * (IsFacingLeft() ? -1.0f : 1.0f);
-											_speed.X = 9.3f * (IsFacingLeft() ? -1.0f : 1.0f);
-											SetState(ActorState::ApplyGravitation, false);
-										});
-									} else {
-										if (_speed.Y > 0.01f && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
-											SetState(ActorState::ApplyGravitation, false);
-											_speed.Y = 1.5f;
-											_externalForce.Y = 0.0f;
-											if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
-												SetAnimation(AnimState::Copter);
-											}
-											_copterFramesLeft = 70.0f;
-#if defined(WITH_AUDIO)
-											if (_copterSound == nullptr) {
-												_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
-												if (_copterSound != nullptr) {
-													_copterSound->setLooping(true);
-												}
-											}
-#endif
 										}
 									}
 									break;
@@ -1101,7 +1156,29 @@ namespace Jazz2::Actors
 							_controllableTimeout = 0.0f;
 						});
 					}
-				} else if (_weaponAmmo[(std::int32_t)_currentWeapon] != 0) {
+				} else if (_playerType == PlayerType::Bird) {
+					if (_weaponAmmo[(std::int32_t)WeaponType::Blaster] != 0) {
+						_wasFirePressed = true;
+						_pushFramesLeft = 0.0f;
+
+						bool weaponCooledDown = (_weaponCooldown <= 0.0f);
+						weaponInUse = FireCurrentWeapon(WeaponType::Blaster);
+						if (weaponInUse) {
+							if (_currentTransition != nullptr && (_currentTransition->State == AnimState::Spring || _currentTransition->State == AnimState::TransitionShootToIdle)) {
+								ForceCancelTransition();
+							}
+							SetAnimation(_currentAnimation->State | AnimState::Shoot);
+							if (weaponCooledDown) {
+								if (_currentAnimation->LoopMode == AnimationLoopMode::Once) {
+									_renderer.AnimTime = 0.0f;
+								}
+								_levelHandler->PlayerExecuteRumble(this, "Fire"_s);
+							}
+							_fireFramesLeft = 20.0f;
+						}
+					}
+				}
+				else if (_weaponAmmo[(std::int32_t)_currentWeapon] != 0) {
 					_wasFirePressed = true;
 
 					// Shooting has higher priority than pushing if object can't be moved further anymore
@@ -1951,7 +2028,21 @@ namespace Jazz2::Actors
 
 		AnimState oldState = _currentAnimation->State;
 		AnimState newState;
-		if (_inWater) {
+		if (_playerType == PlayerType::Bird) {
+			TileCollisionParams params = { TileDestructType::None, true };
+			AABBf groundProbe = AABBf(AABBInner.L + 2.0f, AABBInner.B + 1.0f, AABBInner.R - 2.0f, AABBInner.B + 3.0f);
+			bool hasGroundBelow = !_levelHandler->IsPositionEmpty(this, groundProbe, params);
+
+			if (_fireFramesLeft > 0.0f) {
+				newState = AnimState::Shoot;
+			} else if (_birdChargeFramesLeft > 0.0f) {
+				newState = AnimState::Jump;
+			} else if (hasGroundBelow && std::abs(_speed.X) < 0.1f && std::abs(_speed.Y) < 0.1f) {
+				newState = AnimState::Idle;
+			} else {
+				newState = AnimState::Walk;
+			}
+		} else if (_inWater) {
 			newState = AnimState::Swim;
 		} else if (_activeModifier == Modifier::Airboard) {
 			newState = AnimState::Airboard;
@@ -2090,6 +2181,9 @@ namespace Jazz2::Actors
 						SetTransition(AnimState::TransitionIdleToJump, true);
 					} else if (newState != AnimState::Idle) {
 						_inLedgeTransition = false;
+						if (_playerType == PlayerType::Bird && newState == AnimState::Walk) {
+							PlayPlayerSfx("Fly"_s, 0.3f);
+						}
 						if (_currentTransition != nullptr && _currentTransition->State == AnimState::TransitionLedge) {
 							CancelTransition();
 						}
@@ -2695,6 +2789,15 @@ namespace Jazz2::Actors
 		_pos.Y = std::clamp(_pos.Y + speed.Y * timeMult, float(levelBounds.Y), float(levelBounds.Y + levelBounds.H));
 	}
 
+	void Player::OnAnimationFinished()
+	{
+		ActorBase::OnAnimationFinished();
+
+		if (_playerType == PlayerType::Bird && _currentAnimation != nullptr && _currentAnimation->State == AnimState::Walk) {
+			PlayPlayerSfx("Fly"_s, 0.3f);
+		}
+	}
+
 	std::shared_ptr<AudioBufferPlayer> Player::PlayPlayerSfx(StringView identifier, float gain, float pitch)
 	{
 		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
@@ -2807,7 +2910,7 @@ namespace Jazz2::Actors
 
 				// Spawn corpse
 				std::shared_ptr<PlayerCorpse> corpse = std::make_shared<PlayerCorpse>();
-				std::uint8_t playerParams[2] = { (std::uint8_t)_playerType, (std::uint8_t)(IsFacingLeft() ? 1 : 0) };
+				std::uint8_t playerParams[3] = { (std::uint8_t)_playerType, (std::uint8_t)(IsFacingLeft() ? 1 : 0), _birdColorVariant };
 				corpse->OnActivated(ActorActivationDetails(
 					_levelHandler,
 					Vector3i(_pos.X, _pos.Y, _renderer.layer() - 40),
@@ -3090,7 +3193,26 @@ namespace Jazz2::Actors
 						break;
 					}
 					default: {
-						FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(30.0f, 2.76f, true);
+						if (_playerType == PlayerType::Bird) {
+							std::shared_ptr<Weapons::BlasterShot> shot = std::make_shared<Weapons::BlasterShot>();
+							std::uint8_t shotParams[1] = { _weaponUpgrades[(std::int32_t)WeaponType::Blaster] };
+							Vector3i initialPos((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2);
+							Vector2f gunspotPos = _pos + Vector2f(IsFacingLeft() ? -10.0f : 10.0f, -4.0f);
+
+							shot->OnActivated(ActorActivationDetails(
+								_levelHandler,
+								initialPos,
+								shotParams
+							));
+							shot->OnFire(shared_from_this(), gunspotPos, _speed, 0.0f, IsFacingLeft());
+							_levelHandler->AddActor(shot);
+
+							std::int32_t fastFire = (_weaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
+							_weaponCooldown = 30.0f - (fastFire * 2.76f);
+							EmitWeaponFlare();
+						} else {
+							FireWeapon<Weapons::BlasterShot, WeaponType::Blaster>(30.0f, 2.76f, true);
+						}
 						PlayPlayerSfx("WeaponBlaster"_s);
 						break;
 					}
@@ -3618,7 +3740,7 @@ namespace Jazz2::Actors
 
 	void Player::InitialPoleStage(bool horizontal)
 	{
-		if (_isAttachedToPole || _playerType == PlayerType::Frog) {
+		if (_isAttachedToPole || _playerType == PlayerType::Frog || _playerType == PlayerType::Bird) {
 			return;
 		}
 		
@@ -4165,6 +4287,24 @@ namespace Jazz2::Actors
 			case PlayerType::Spaz: RequestMetadata("Interactive/PlayerSpaz"); break;
 			case PlayerType::Lori: RequestMetadata("Interactive/PlayerLori"); break;
 			case PlayerType::Frog: RequestMetadata("Interactive/PlayerFrog"); break;
+			case PlayerType::Bird:
+					_birdColorVariant = 1 - _birdColorVariant;
+					if (_birdColorVariant == 0) {
+						RequestMetadata("Interactive/PlayerBird");
+					} else {
+						RequestMetadata("Interactive/PlayerBirdYellow");
+					}
+					break;
+		}
+
+		if (type == PlayerType::Bird) {
+			_isFreefall = false;
+			_speed.Y = 0.0f;
+			_externalForce.Y = 0.0f;
+			_internalForceY = 0.0f;
+			SetState(ActorState::ApplyGravitation, false);
+		} else if (playerTypePrevious == PlayerType::Bird) {
+			SetState(ActorState::ApplyGravitation, true);
 		}
 
 		// Refresh animation state

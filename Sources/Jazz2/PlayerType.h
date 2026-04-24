@@ -13,6 +13,7 @@ namespace Jazz2
 		Spaz,					/**< Spaz */
 		Lori,					/**< Lori */
 		Frog,					/**< Frog */
+		Bird,					/**< Bird */
 
 		Spectate = UINT8_MAX	/**< Spectate mode */
 	};
