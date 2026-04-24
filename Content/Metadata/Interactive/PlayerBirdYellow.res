@@ -39,9 +39,9 @@
 	},
 
 	"Sounds": {
-	"Fly": {
-			"Paths": [ "Birdy/fly_1.wav", "Birdy/fly_2.wav" ]
-		},
+		"Fly": {
+				"Paths": [ "Birdy/fly_1.wav", "Birdy/fly_2.wav" ]
+			},
 		"WeaponBlaster": {
 			"Paths": [ "Weapon/bullet_blaster_jazz_4.wav" ]
 		}
