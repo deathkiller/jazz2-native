@@ -71,7 +71,7 @@ namespace Jazz2::Actors
 		_activeModifier(Modifier::None),
 		_externalForceCooldown(0.0f),
 		_springCooldown(0.0f),
-		_inIdleTransition(false), _inLedgeTransition(false), _canDoubleJump(true),
+		_inIdleTransition(false), _inLedgeTransition(false), _canDoubleJump(true), _pendingCopter(false),
 		_carryingObject(nullptr),
 		_lives(0), _coins(0), _coinsCheckpoint(0), _foodEaten(0), _foodEatenCheckpoint(0), _score(0),
 		_checkpointLight(1.0f),
@@ -104,10 +104,6 @@ namespace Jazz2::Actors
 
 	Player::~Player()
 	{
-		if (_spawnedBird != nullptr) {
-			_spawnedBird->FlyAway();
-			_spawnedBird = nullptr;
-		}
 #if defined(WITH_AUDIO)
 		if (_copterSound != nullptr) {
 			_copterSound->stop();
@@ -984,68 +980,34 @@ namespace Jazz2::Actors
 							});
 						} else {
 							switch (_playerType) {
-									case PlayerType::Jazz: {
+								case PlayerType::Jazz:
+								case PlayerType::Lori: {									
 									if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
 										_controllable = false;
 										SetAnimation(AnimState::Uppercut);
+										
+										if (_playerType == PlayerType::Jazz) {
 											SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Uppercut, [this]() {
 												_externalForce.Y = (_levelHandler->IsReforged() ? -1.4f : -1.2f);
 												_speed.Y = -2.0f;
 												SetState(ActorState::CanJump, false);
 												SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
 											});
-									} else {
-											if (_speed.Y > 0.01f && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
-											SetState(ActorState::ApplyGravitation, false);
-												_speed.Y = 1.5f;
-											_externalForce.Y = 0.0f;
-											if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
-												SetAnimation(AnimState::Copter);
-											}
-											_copterFramesLeft = 70.0f;
-#if defined(WITH_AUDIO)
-											if (_copterSound == nullptr) {
-												_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
-												if (_copterSound != nullptr) {
-													_copterSound->setLooping(true);
-												}
-											}
-#endif
-										}
-									}
-									break;
-								}
-									case PlayerType::Lori: {
-										if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
-											_controllable = false;
+										} else {
 											_controllableTimeout = 40.0f;
-											SetAnimation(AnimState::Uppercut);
 											SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
 												_externalForce.X = 4.0f * (IsFacingLeft() ? -1.0f : 1.0f);
 												_speed.X = 9.3f * (IsFacingLeft() ? -1.0f : 1.0f);
 												SetState(ActorState::ApplyGravitation, false);
 											});
-										} else {
-											if (_speed.Y > 0.01f && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
-												SetState(ActorState::ApplyGravitation, false);
-												_speed.Y = 1.5f;
-												_externalForce.Y = 0.0f;
-												if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
-													SetAnimation(AnimState::Copter);
-												}
-												_copterFramesLeft = 70.0f;
-#if defined(WITH_AUDIO)
-												if (_copterSound == nullptr) {
-													_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
-													if (_copterSound != nullptr) {
-														_copterSound->setLooping(true);
-													}
-												}
-#endif
-											}
 										}
-										break;
+									} else {
+										if (!CanJump() && _canDoubleJump) {
+											_pendingCopter = true;
+										}
 									}
+									break;
+								}
 								case PlayerType::Spaz: {
 									if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
 										_controllable = false;
@@ -1059,6 +1021,7 @@ namespace Jazz2::Actors
 										});
 
 										PlayPlayerSfx("Sidekick"_s);
+										_pendingCopter = false;
 									} else {
 										if (!CanJump() && _canDoubleJump) {
 											_canDoubleJump = false;
@@ -1138,6 +1101,27 @@ namespace Jazz2::Actors
 					}
 				}
 			}
+		}
+
+		if (!CanJump() && _pendingCopter && _canDoubleJump && (_playerType == PlayerType::Jazz || _playerType == PlayerType::Lori) &&
+			_speed.Y > 0.1f && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
+			_pendingCopter = false;
+			_canDoubleJump = false;
+			SetState(ActorState::ApplyGravitation, false);
+			_speed.Y = 1.0f;
+			_externalForce.Y = 0.0f;
+			if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
+				SetAnimation(AnimState::Copter);
+			}
+			_copterFramesLeft = 70.0f;
+#if defined(WITH_AUDIO)
+			if (_copterSound == nullptr) {
+				_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
+				if (_copterSound != nullptr) {
+					_copterSound->setLooping(true);
+				}
+			}
+#endif
 		}
 
 		// Fire
@@ -1782,6 +1766,7 @@ namespace Jazz2::Actors
 		}
 
 		_canDoubleJump = true;
+		_pendingCopter = false;
 		_isFreefall = false;
 
 		SetState(ActorState::IsSolidObject, true);
@@ -4498,6 +4483,7 @@ namespace Jazz2::Actors
 		_carryingObject = actor;
 
 		_canDoubleJump = true;
+		_pendingCopter = false;
 
 		if (suspendType == SuspendType::SwingingVine) {
 			_suspendType = suspendType;
