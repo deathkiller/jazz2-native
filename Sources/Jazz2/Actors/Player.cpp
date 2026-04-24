@@ -137,9 +137,9 @@ namespace Jazz2::Actors
 		if (_playerType == PlayerType::Bird) {
 			SetState(ActorState::ApplyGravitation, false);
 			SetAnimation(AnimState::Idle);
+		} else {
+			SetAnimation(AnimState::Fall);
 		}
-
-		SetAnimation(AnimState::Fall);
 
 		std::memset(_weaponAmmo, 0, sizeof(_weaponAmmo));
 		std::memset(_weaponAmmoCheckpoint, 0, sizeof(_weaponAmmoCheckpoint));
