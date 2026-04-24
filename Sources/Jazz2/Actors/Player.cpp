@@ -3894,14 +3894,14 @@ namespace Jazz2::Actors
 
 				_copterFramesLeft = 10.0f * FrameTimer::FramesPerSecond;
 
-#if defined(WITH_AUDIO)
-				if (_copterSound == nullptr) {
-					_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
-					if (_copterSound != nullptr) {
-						_copterSound->setLooping(true);
+				#if defined(WITH_AUDIO)
+					if (_copterSound == nullptr) {
+						_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
+						if (_copterSound != nullptr) {
+							_copterSound->setLooping(true);
+						}
 					}
-				}
-#endif
+				#endif
 				break;
 			}
 			case Modifier::LizardCopter: {
