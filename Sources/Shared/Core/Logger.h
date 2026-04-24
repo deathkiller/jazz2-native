@@ -204,17 +204,15 @@ namespace Death { namespace Trace {
 		}
 
 		/** @brief Returns value of timestamp counter on current thread (if supported) */
-#	if defined(__aarch64__)
 		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept {
+#	if defined(__aarch64__)
 			// System timer of ARMv8 runs at a different frequency than the CPU's.
 			// The frequency is fixed, typically in the range 1-50MHz.  It can be
 			// read at CNTFRQ special register.  We assume the OS has set up the virtual timer properly.
 			std::int64_t virtualTimerValue;
 			__asm__ volatile("mrs %0, cntvct_el0" : "=r"(virtualTimerValue));
 			return static_cast<uint64_t>(virtualTimerValue);
-		}
 #	elif (defined(__ARM_ARCH) && !defined(DEATH_TARGET_MSVC))
-		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept {
 #		if (__ARM_ARCH >= 6)
 			// V6 is the earliest arch that has a standard cyclecount
 			std::uint32_t pmccntr;
@@ -232,34 +230,24 @@ namespace Death { namespace Trace {
 #		endif
 
 			return static_cast<std::uint64_t>(std::chrono::system_clock::now().time_since_epoch().count());
-		}
 #	elif defined(__riscv)
-		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept {
 			std::uint64_t tsc;
 			__asm__ volatile("rdtime %0" : "=r"(tsc));
 			return tsc;
-		}
 #	elif defined(__loongarch64)
-		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept {
 			std::uint64_t tsc;
 			__asm__ volatile("rdtime.d %0,$r0" : "=r" (tsc));
 			return tsc;
-		}
 #	elif defined(__s390x__)
-		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept {
 			std::uint64_t tsc;
 			__asm__ volatile("stck %0" : "=Q" (tsc) : : "cc");
 			return tsc;
-		}
-#	elif (defined(_M_ARM) || defined(_M_ARM64) || defined(__PPC64__))
-		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept {
+#	elif (defined(_M_ARM) || defined(_M_ARM64) || defined(__PPC__) || defined(__PPC64__))
 			return static_cast<std::uint64_t>(std::chrono::system_clock::now().time_since_epoch().count());
-		}
 #	else
-		DEATH_ALWAYS_INLINE std::uint64_t rdtsc() noexcept {
 			return __rdtsc();
-		}
 #	endif
+		}
 
 		/** @brief Allows to convert timestamp counter values to Unix nanoseconds */
 		class RdtscClock
@@ -437,7 +425,9 @@ namespace Death { namespace Trace {
 			}
 
 		private:
+#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
 			static constexpr T CacheLineMask{CacheLineSize - 1};
+#	endif
 
 			const T _capacity;
 			const T _capacityMask;
@@ -448,12 +438,16 @@ namespace Death { namespace Trace {
 			alignas(CacheLineAligned) std::atomic<T> _atomicWriterPos{0};
 			alignas(CacheLineAligned) T _writerPos{0};
 			T _cachedReaderPos{0};
+#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
 			T _lastFlushedWriterPos{0};
+#	endif
 
 			alignas(CacheLineAligned) std::atomic<T> _atomicReaderPos{0};
 			alignas(CacheLineAligned) T _readerPos{0};
 			mutable T _writerPosCache{0};
+#	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
 			T _lastFlushedReaderPos{0};
+#	endif
 
 #	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)
 			// _mm_clflushopt is supported only since Skylake and requires "-mclflushopt" option on GCC/clang, and is undefined on Clang-CL

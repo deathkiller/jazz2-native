@@ -41,7 +41,7 @@ namespace nCine::Backends
 		/// Unbinds the current context
 		void unbindContext();
 		/// Queries the size of the current surface
-		void querySurfaceSize();
+		Vector2i querySurfaceSize();
 
 		/// Checks if the desired pixel format is supported
 		static bool isModeSupported(struct android_app* state, const GLContextInfo& glContextInfo, const DisplayMode& mode);
