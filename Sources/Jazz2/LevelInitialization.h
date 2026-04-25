@@ -33,6 +33,8 @@ namespace Jazz2
 		std::uint8_t FoodEaten;
 		/** @brief Score */
 		std::int32_t Score;
+		/** @brief Bird color variant (0 or 1) */
+		std::uint8_t BirdColorVariant;
 		/** @brief Gems collected */
 		StaticArray<4, std::int32_t> Gems;
 		/** @brief Weapon ammo */
