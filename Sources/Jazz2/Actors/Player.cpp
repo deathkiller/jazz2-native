@@ -55,7 +55,7 @@ namespace Jazz2::Actors
 
 	static float GetCheckpointYOffsetForPlayerType(PlayerType playerType)
 	{
-		return (playerType == PlayerType::Bird ? 0.0f : GroundedCheckpointYOffset);
+		return (IsBirdMorphType(playerType) ? 0.0f : GroundedCheckpointYOffset);
 	}
 
 	Player::Player()
@@ -98,7 +98,6 @@ namespace Jazz2::Actors
 		_lastPoleTime(0.0f),
 		_inTubeTime(0.0f),
 		_dizzyTime(0.0f),
-		_birdColorVariant(1),
 		_birdChargeFramesLeft(0.0f),
 		_activeShield(ShieldType::None),
 		_activeShieldTime(0.0f),
@@ -135,7 +134,7 @@ namespace Jazz2::Actors
 			case PlayerType::Lori: async_await RequestMetadataAsync("Interactive/PlayerLori"_s); break;
 			case PlayerType::Frog: async_await RequestMetadataAsync("Interactive/PlayerFrog"_s); break;
 			case PlayerType::Bird:
-				// Use centralized Bird metadata configuration (variant is already set from carry over or defaults to 1)
+			case PlayerType::BirdYellow:
 				async_await SetBirdMetadataAsync();
 				break;
 			case PlayerType::Spectate:
@@ -144,7 +143,7 @@ namespace Jazz2::Actors
 				break;
 		}
 
-		if (_playerType == PlayerType::Bird) {
+		if (IsBirdMorphType(_playerType)) {
 			SetState(ActorState::ApplyGravitation, false);
 			SetAnimation(AnimState::Idle);
 		} else {
@@ -312,7 +311,7 @@ namespace Jazz2::Actors
 		OnHandleMovement(timeMult, areaWeaponAllowed, canJumpPrev);
 
 		// Handle weapon switching
-		if (((_controllable && _controllableExternal) || !_levelHandler->IsReforged()) && _playerType != PlayerType::Frog && _playerType != PlayerType::Bird) {
+		if (((_controllable && _controllableExternal) || !_levelHandler->IsReforged()) && _playerType != PlayerType::Frog && !IsBirdMorphType(_playerType)) {
 			bool isGamepad;
 			if (_levelHandler->PlayerActionHit(this, PlayerAction::ChangeWeapon, true, isGamepad)) {
 				if (!isGamepad || PreferencesCache::WeaponWheel == WeaponWheelStyle::Disabled) {
@@ -731,7 +730,7 @@ namespace Jazz2::Actors
 
 		if (_keepRunningTime <= 0.0f) {
 			bool canWalk = (_controllable && _controllableExternal && !_isLifting && _suspendType != SuspendType::SwingingVine &&
-				((_playerType != PlayerType::Frog && _playerType != PlayerType::Bird) || !_levelHandler->PlayerActionPressed(this, PlayerAction::Fire)));
+				((_playerType != PlayerType::Frog && !IsBirdMorphType(_playerType)) || !_levelHandler->PlayerActionPressed(this, PlayerAction::Fire)));
 
 			float playerMovement = _levelHandler->PlayerHorizontalMovement(this);
 			float playerMovementVelocity = std::abs(playerMovement);
@@ -828,7 +827,7 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		if (_playerType == PlayerType::Bird) {
+		if (IsBirdMorphType(_playerType)) {
 			float playerMovement = _levelHandler->PlayerHorizontalMovement(this);
 			float playerMovementVert = _levelHandler->PlayerVerticalMovement(this);
 
@@ -942,7 +941,7 @@ namespace Jazz2::Actors
 								SetAnimation(AnimState::Crouch);
 							}
 						}
-					} else if (!CanJump() && !_wasDownPressed && _playerType != PlayerType::Frog && _playerType != PlayerType::Bird) {
+					} else if (!CanJump() && !_wasDownPressed && _playerType != PlayerType::Frog && !IsBirdMorphType(_playerType)) {
 						_wasDownPressed = true;
 
 						_speed.X = 0.0f;
@@ -1153,7 +1152,7 @@ namespace Jazz2::Actors
 							_controllableTimeout = 0.0f;
 						});
 					}
-				} else if (_playerType == PlayerType::Bird) {
+				} else if (IsBirdMorphType(_playerType)) {
 					if (_weaponAmmo[(std::int32_t)WeaponType::Blaster] != 0) {
 						_wasFirePressed = true;
 						_pushFramesLeft = 0.0f;
@@ -1564,7 +1563,8 @@ namespace Jazz2::Actors
 				case PlayerType::Jazz: RequestMetadata("Interactive/PlayerJazz"_s); break;
 				case PlayerType::Spaz: RequestMetadata("Interactive/PlayerSpaz"_s); break;
 				case PlayerType::Lori: RequestMetadata("Interactive/PlayerLori"_s); break;
-				case PlayerType::Bird: SetBirdMetadata(); break;
+				case PlayerType::Bird:
+				case PlayerType::BirdYellow: SetBirdMetadata(); break;
 				case PlayerType::Frog: RequestMetadata("Interactive/PlayerFrog"_s); break;
 			}
 
@@ -2027,7 +2027,7 @@ namespace Jazz2::Actors
 
 		AnimState oldState = _currentAnimation->State;
 		AnimState newState;
-		if (_playerType == PlayerType::Bird) {
+		if (IsBirdMorphType(_playerType)) {
 			TileCollisionParams params = { TileDestructType::None, true };
 			AABBf groundProbe = AABBf(AABBInner.L + 2.0f, AABBInner.B + 1.0f, AABBInner.R - 2.0f, AABBInner.B + 3.0f);
 			bool hasGroundBelow = !_levelHandler->IsPositionEmpty(this, groundProbe, params);
@@ -2180,7 +2180,7 @@ namespace Jazz2::Actors
 						SetTransition(AnimState::TransitionIdleToJump, true);
 					} else if (newState != AnimState::Idle) {
 						_inLedgeTransition = false;
-						if (_playerType == PlayerType::Bird && newState == AnimState::Walk) {
+						if (IsBirdMorphType(_playerType) && newState == AnimState::Walk) {
 							PlayPlayerSfx("Fly"_s, 0.3f);
 						}
 						if (_currentTransition != nullptr && _currentTransition->State == AnimState::TransitionLedge) {
@@ -2391,7 +2391,7 @@ namespace Jazz2::Actors
 			}
 		}
 
-		if (newSuspendState != SuspendType::None && _playerType != PlayerType::Frog && _playerType != PlayerType::Bird && _frozenTimeLeft <= 0.0f) {
+		if (newSuspendState != SuspendType::None && _playerType != PlayerType::Frog && !IsBirdMorphType(_playerType) && _frozenTimeLeft <= 0.0f) {
 			if (_currentSpecialMove == SpecialMoveType::None) {
 				_suspendType = newSuspendState;
 				SetState(ActorState::ApplyGravitation, false);
@@ -2430,8 +2430,7 @@ namespace Jazz2::Actors
 
 	void Player::SetBirdMetadata()
 	{
-		// Centralize Bird metadata configuration with correct variant
-		if (_birdColorVariant == 0) {
+		if (_playerType == PlayerType::Bird) {
 			RequestMetadata("Interactive/PlayerBird");
 		} else {
 			RequestMetadata("Interactive/PlayerBirdYellow");
@@ -2440,8 +2439,7 @@ namespace Jazz2::Actors
 
 	Task<bool> Player::SetBirdMetadataAsync()
 	{
-		// Async version for OnActivatedAsync
-		if (_birdColorVariant == 0) {
+		if (_playerType == PlayerType::Bird) {
 			async_await RequestMetadataAsync("Interactive/PlayerBird"_s);
 		} else {
 			async_await RequestMetadataAsync("Interactive/PlayerBirdYellow"_s);
@@ -2813,7 +2811,7 @@ namespace Jazz2::Actors
 	{
 		ActorBase::OnAnimationFinished();
 
-		if (_playerType == PlayerType::Bird && _currentAnimation != nullptr && _currentAnimation->State == AnimState::Walk) {
+		if (IsBirdMorphType(_playerType) && _currentAnimation != nullptr && _currentAnimation->State == AnimState::Walk) {
 			PlayPlayerSfx("Fly"_s, 0.3f);
 		}
 	}
@@ -2930,7 +2928,7 @@ namespace Jazz2::Actors
 
 				// Spawn corpse
 				std::shared_ptr<PlayerCorpse> corpse = std::make_shared<PlayerCorpse>();
-				std::uint8_t playerParams[3] = { (std::uint8_t)_playerType, (std::uint8_t)(IsFacingLeft() ? 1 : 0), _birdColorVariant };
+				std::uint8_t playerParams[2] = { (std::uint8_t)_playerType, (std::uint8_t)(IsFacingLeft() ? 1 : 0) };
 				corpse->OnActivated(ActorActivationDetails(
 					_levelHandler,
 					Vector3i(_pos.X, _pos.Y, _renderer.layer() - 40),
@@ -3213,7 +3211,7 @@ namespace Jazz2::Actors
 						break;
 					}
 					default: {
-						if (_playerType == PlayerType::Bird) {
+						if (IsBirdMorphType(_playerType)) {
 							std::shared_ptr<Weapons::BlasterShot> shot = std::make_shared<Weapons::BlasterShot>();
 							std::uint8_t shotParams[1] = { _weaponUpgrades[(std::int32_t)WeaponType::Blaster] };
 							Vector3i initialPos((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2);
@@ -3481,7 +3479,7 @@ namespace Jazz2::Actors
 
 		_controllable = false;
 		SetState(ActorState::IsInvulnerable, true);
-		if (_playerType != PlayerType::Bird) {
+		if (!IsBirdMorphType(_playerType)) {
 			SetState(ActorState::ApplyGravitation, true);
 		}
 		_fireFramesLeft = 0.0f;
@@ -3535,8 +3533,7 @@ namespace Jazz2::Actors
 		_foodEaten = (std::int32_t)carryOver.FoodEaten;
 		_foodEatenCheckpoint = _foodEaten;
 		_currentWeapon = carryOver.CurrentWeapon;
-		_birdColorVariant = carryOver.BirdColorVariant;
-		if (_playerType == PlayerType::Bird) {
+		if (IsBirdMorphType(_playerType)) {
 			SetBirdMetadata();
 		}
 
@@ -3578,7 +3575,6 @@ namespace Jazz2::Actors
 		carryOver.Score = _score;
 		carryOver.FoodEaten = (_foodEaten > UINT8_MAX ? UINT8_MAX : (std::uint8_t)_foodEaten);
 		carryOver.CurrentWeapon = _currentWeapon;
-		carryOver.BirdColorVariant = _birdColorVariant;
 
 		for (std::size_t i = 0; i < arraySize(carryOver.Gems); i++) {
 			carryOver.Gems[i] = _gemsTotal[i] + _gems[i];
@@ -3595,9 +3591,14 @@ namespace Jazz2::Actors
 		std::uint8_t playerIndex = src.ReadVariableInt32();
 		PlayerType playerType = (PlayerType)src.ReadValue<std::uint8_t>();
 		PlayerType playerTypeOriginal = (PlayerType)src.ReadValue<std::uint8_t>();
-		std::uint8_t birdColorVariant = (_birdColorVariant & 0x01);
-		if (version >= 4) {
-			birdColorVariant = src.ReadValue<std::uint8_t>();
+		if (version == 4) {
+			std::uint8_t birdColorVariant = src.ReadValue<std::uint8_t>();
+			if (playerType == PlayerType::Bird && birdColorVariant == 0) {
+				playerType = PlayerType::BirdYellow;
+			}
+			if (playerTypeOriginal == PlayerType::Bird && birdColorVariant == 0) {
+				playerTypeOriginal = PlayerType::BirdYellow;
+			}
 		}
 		float checkpointPosX = src.ReadValueAsLE<float>();
 		float checkpointPosY = src.ReadValueAsLE<float>();
@@ -3609,15 +3610,14 @@ namespace Jazz2::Actors
 			playerParams
 		));
 
-		if (playerType == PlayerType::Bird) {
+		if (IsBirdMorphType(playerType)) {
 			// Bird keeps gravity disabled on spawn, so align Y to the grounded checkpoint baseline.
 			MoveInstantly(Vector2f(0.0f, GroundedCheckpointYOffset), MoveType::Relative | MoveType::Force);
 			_checkpointPos.Y += GroundedCheckpointYOffset;
 		}
 
 		_playerTypeOriginal = playerTypeOriginal;
-		_birdColorVariant = birdColorVariant;
-		if (_playerType == PlayerType::Bird) {
+		if (IsBirdMorphType(_playerType)) {
 			SetBirdMetadata();
 		}
 
@@ -3665,7 +3665,6 @@ namespace Jazz2::Actors
 		dest.WriteVariableInt32(_playerIndex);
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_playerType);
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_playerTypeOriginal);
-		dest.WriteValue<std::uint8_t>(_birdColorVariant);
 		dest.WriteValueAsLE<float>(_checkpointPos.X);
 		dest.WriteValueAsLE<float>(_checkpointPos.Y);
 		dest.WriteValueAsLE<float>(_checkpointLight);
@@ -3761,7 +3760,7 @@ namespace Jazz2::Actors
 		SetPlayerTransition(_isFreefall ? AnimState::TransitionWarpOutFreefall : AnimState::TransitionWarpOut, false, true, SpecialMoveType::None, [this, flags]() {
 			SetState(ActorState::IsInvulnerable, false);
 			// Don't re-enable gravity if any modifier is active, and keep Bird in flying mode
-			if (_activeModifier == Modifier::None && _playerType != PlayerType::Bird) {
+			if (_activeModifier == Modifier::None && !IsBirdMorphType(_playerType)) {
 				SetState(ActorState::ApplyGravitation, true);
 			}
 
@@ -3783,7 +3782,7 @@ namespace Jazz2::Actors
 
 	void Player::InitialPoleStage(bool horizontal)
 	{
-		if (_isAttachedToPole || _playerType == PlayerType::Frog || _playerType == PlayerType::Bird) {
+		if (_isAttachedToPole || _playerType == PlayerType::Frog || IsBirdMorphType(_playerType)) {
 			return;
 		}
 		
@@ -4338,20 +4337,18 @@ namespace Jazz2::Actors
 			case PlayerType::Lori: RequestMetadata("Interactive/PlayerLori"); break;
 			case PlayerType::Frog: RequestMetadata("Interactive/PlayerFrog"); break;
 			case PlayerType::Bird:
-					// Toggle variant when morphing to Bird to allow switching between variants
-					_birdColorVariant = 1 - _birdColorVariant;
-					// Use centralized Bird metadata configuration with toggled variant
+			case PlayerType::BirdYellow:
 					SetBirdMetadata();
 					break;
 		}
 
-		if (type == PlayerType::Bird) {
+		if (IsBirdMorphType(type)) {
 			_isFreefall = false;
 			_speed.Y = 0.0f;
 			_externalForce.Y = 0.0f;
 			_internalForceY = 0.0f;
 			SetState(ActorState::ApplyGravitation, false);
-		} else if (playerTypePrevious == PlayerType::Bird) {
+		} else if (IsBirdMorphType(playerTypePrevious)) {
 			SetState(ActorState::ApplyGravitation, true);
 		}
 
