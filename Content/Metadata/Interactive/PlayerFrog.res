@@ -60,6 +60,11 @@
 			"FrameRate": 28
 		},
 
+		"SugarRush": {
+			"Path": "Common/sugar_rush_stars.aura",
+			"States": [ 536870913 ]
+		},
+
 		"Shield": {
 			"Path": "Common/player_shield.aura",
 			"States": [ 536870928 ]

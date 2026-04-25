@@ -36,6 +36,26 @@
 			"Path": "BirdyYellow/corpse.aura",
 			"States": [ 536870912 ]
 		},
+		"SugarRush": {
+			"Path": "Common/sugar_rush_stars.aura",
+			"States": [ 536870913 ]
+		},
+		"Shield": {
+			"Path": "Common/player_shield.aura",
+			"States": [ 536870928 ]
+		},
+		"ShieldFire": {
+			"Path": "Common/shield_fire.aura",
+			"States": [ 536870929 ]
+		},
+		"ShieldWater": {
+			"Path": "Common/shield_water.aura",
+			"States": [ 536870930 ]
+		},
+		"ShieldLightning": {
+			"Path": "Common/shield_lightning.aura",
+			"States": [ 536870931 ]
+		},
 		"WarpIn": {
 			"Path": "Spaz/warp_in.aura",
 			"States": [ 1073741843 ],
