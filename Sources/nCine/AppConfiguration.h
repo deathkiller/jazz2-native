@@ -21,14 +21,17 @@ namespace nCine
 		AppConfiguration();
 
 		// User configurable compile-time variables
-		/** @brief Interval for frame timer accumulation average and log */
-		float frameTimerLogInterval;
-
 		/** @brief The screen resolution */
 		Vector2i resolution;
 
 		/** @brief Window position coordinates in the virtual screen made of all the connected monitors */
 		Vector2i windowPosition;
+		
+		/** @brief Maximum number of frames to render per second or 0 for no limit */
+		std::uint32_t frameLimit;
+
+		/** @brief Interval for frame timer accumulation average and log */
+		float frameTimerLogInterval;
 
 		/** @brief Whether the screen is going to be in fullscreen mode */
 		bool fullscreen;
@@ -36,13 +39,6 @@ namespace nCine
 		bool resizable;
 		/** @brief Whether the window size is automatically scaled by the display factor */
 		bool windowScaling;
-		/** @brief Maximum number of frames to render per second or 0 for no limit */
-		std::uint32_t frameLimit;
-
-		/** @brief Window title */
-		String windowTitle;
-		/** @brief Window icon filename */
-		String windowIconFilename;
 
 		/** @brief Whether mapping is used to update OpenGL buffers */
 		bool useBufferMapping;
@@ -50,6 +46,11 @@ namespace nCine
 		std::uint32_t fixedBatchSize;
 		/** @brief Path for the binary shaders cache (or empty to disable binary shader cache) */
 		String shaderCachePath;
+
+		/** @brief Window title */
+		String windowTitle;
+		/** @brief Window icon filename */
+		String windowIconFilename;
 
 		/** @brief Maximum size in bytes for each VBO collecting geometry data */
 		std::uint32_t vboSize;

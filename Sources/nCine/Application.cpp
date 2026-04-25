@@ -97,6 +97,7 @@ using namespace Death::IO;
 #if defined(DEATH_TRACE)
 
 #include <Containers/StringStlView.h>
+#include <Core/Logger.h>
 #include <IO/MemoryStream.h>
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <Environment.h>
@@ -649,6 +650,9 @@ namespace nCine
 {
 	Application::Application()
 		: isSuspended_(false), autoSuspension_(false), hasFocus_(true), shouldQuit_(false)
+#if defined(DEATH_TRACE)
+			, _mainThreadId(Death::Trace::Implementation::GetNativeThreadId())
+#endif
 	{
 	}
 
@@ -1567,14 +1571,17 @@ namespace nCine
 			flags |= 0x2000;	// IsWine
 		}
 #		elif defined(DEATH_TARGET_ANDROID)
-		flags |= 0x20;	// RemoteDevice
+		flags |= 0x04 | 0x20;	// ProcessIdEqualsToMainThreadId | RemoteDevice
 		std::uint32_t processId = (std::uint32_t)::getpid();
 		auto androidId = nCine::Backends::AndroidJniWrap_Secure::getAndroidId();
 		const char* hostName = androidId.data();
 		std::int32_t hostNameLength = (std::int32_t)androidId.size();
 #		else
+#			if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN)
+			flags |= 0x04;	// ProcessIdEqualsToMainThreadId
+#			endif
 #			if defined(DEATH_TARGET_SWITCH)
-		flags |= 0x20;	// RemoteDevice
+			flags |= 0x20;	// RemoteDevice
 #			endif
 		std::uint32_t processId = (std::uint32_t)::getpid();
 		char hostName[128] {}; std::int32_t hostNameLength = 0;
@@ -1586,9 +1593,11 @@ namespace nCine
 
 		char buffer[256];
 		MemoryStream ms(buffer, sizeof(buffer));
+		ms.WriteVariableUint32(1);	// Version
 		ms.WriteVariableUint32(flags);
 		ms.WriteVariableInt64(timestampMs);
 		ms.WriteVariableUint32(processId);
+		ms.WriteVariableUint32(_mainThreadId);
 
 #		if defined(DEATH_TARGET_ANDROID)
 		auto executableFileName = nCine::Backends::AndroidJniWrap_Activity::getPackageName();

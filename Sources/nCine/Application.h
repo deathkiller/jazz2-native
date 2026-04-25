@@ -221,6 +221,9 @@ namespace nCine
 		std::unique_ptr<IDebugOverlay> debugOverlay_;
 		std::unique_ptr<ImGuiDrawing> imguiDrawing_;
 #endif
+#if defined(DEATH_TRACE)
+		std::uint32_t _mainThreadId;
+#endif
 #endif
 
 		Application();
