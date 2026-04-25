@@ -415,6 +415,8 @@ namespace Jazz2::Actors
 		void PushSolidObjects(float timeMult);
 		void CheckEndOfSpecialMoves(float timeMult);
 		void CheckSuspendState(float timeMult);
+		void SetBirdMetadata();
+		Task<bool> SetBirdMetadataAsync();
 		void OnUpdatePhysics(float timeMult);
 		void OnUpdateTimers(float timeMult);
 		void OnHandleMovement(float timeMult, bool areaWeaponAllowed, bool canJumpPrev);

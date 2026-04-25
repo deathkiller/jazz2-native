@@ -9,6 +9,10 @@ namespace Jazz2
 		: IsLocalSession(true), Difficulty(GameDifficulty::Normal), IsReforged(true), CheatsUsed(false),
 			LastExitType(ExitType::None), ElapsedMilliseconds(0), PlayerCarryOvers{}
 	{
+		for (std::int32_t i = 0; i < MaxPlayerCount; i++) {
+			PlayerCarryOvers[i].Type = PlayerType::None;
+			PlayerCarryOvers[i].BirdColorVariant = 1;
+		}
 	}
 
 	LevelInitialization::LevelInitialization(StringView level, GameDifficulty difficulty, bool isReforged)
@@ -17,6 +21,7 @@ namespace Jazz2
 	{
 		for (std::int32_t i = 0; i < MaxPlayerCount; i++) {
 			PlayerCarryOvers[i].Type = PlayerType::None;
+			PlayerCarryOvers[i].BirdColorVariant = 1;
 		}
 	}
 
@@ -26,9 +31,11 @@ namespace Jazz2
 	{
 		PlayerCarryOvers[0].Type = playerType;
 		PlayerCarryOvers[0].Lives = DefaultLives;
+		PlayerCarryOvers[0].BirdColorVariant = 1;
 
 		for (std::int32_t i = 1; i < MaxPlayerCount; i++) {
 			PlayerCarryOvers[i].Type = PlayerType::None;
+			PlayerCarryOvers[i].BirdColorVariant = 1;
 		}
 	}
 
@@ -40,10 +47,12 @@ namespace Jazz2
 		for (std::int32_t i = 0; i < playerCount; i++) {
 			PlayerCarryOvers[i].Type = playerTypes[i];
 			PlayerCarryOvers[i].Lives = DefaultLives;
+			PlayerCarryOvers[i].BirdColorVariant = 1;
 		}
 
 		for (std::int32_t i = playerCount; i < MaxPlayerCount; i++) {
 			PlayerCarryOvers[i].Type = PlayerType::None;
+			PlayerCarryOvers[i].BirdColorVariant = 1;
 		}
 	}
 

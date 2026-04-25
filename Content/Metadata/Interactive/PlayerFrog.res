@@ -107,6 +107,34 @@
 			"_Path": "Lori/transform_frog_end.aura",
 			"States": [ 1610612741 ],
 			"FrameRate": 3
+		},
+		"WarpInFreefall": {
+			"Path": "Frog/jump_start.aura",
+			"States": [ 1073741847 ]
+		},
+		"WarpOutFreefall": {
+			"Path": "Frog/fall.aura",
+			"States": [ 1073741848 ]
+		},
+		"WarpIn": {
+			"Path": "Jazz/warp_in.aura",
+			"States": [ 1073741843 ],
+			"FrameOffset": 2,
+		},
+		"WarpOut": {
+			"Path": "Jazz/warp_out.aura",
+			"States": [ 1073741844 ],
+			"FrameCount": 5,
+		},
+		"WarpInFreefall": {
+			"Path": "Jazz/warp_in.aura",
+			"States": [ 1073741843 ],
+			"FrameOffset": 2,
+		},
+		"WarpOutFreefall": {
+			"Path": "Jazz/warp_out.aura",
+			"States": [ 1073741844 ],
+			"FrameCount": 5,
 		}
 	},
 
@@ -149,6 +177,12 @@
 		},
 		"PickupMaxCarrot": {
 			"Paths": [ "Pickup/food_edible_1.wav" ]
+		},
+		"WarpIn": {
+			"Paths": [ "Common/warp_in.wav" ]
+		},
+		"WarpOut": {
+			"Paths": [ "Common/warp_out.wav" ]
 		},
 		
 		"BonusWarpNotEnoughCoins": {
