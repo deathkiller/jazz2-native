@@ -1015,7 +1015,7 @@ namespace Jazz2::Actors
 										}
 									} else {
 										if (!CanJump() && _canDoubleJump) {
-											_pendingCopterFramesLeft = 8.0f;
+											_pendingCopterFramesLeft = 32.0f;
 										}
 									}
 									break;
