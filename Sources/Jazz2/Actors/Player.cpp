@@ -865,6 +865,11 @@ namespace Jazz2::Actors
 			_speed.X = lerp(_speed.X, targetSpeedX, horizontalLerp);
 			_speed.Y = lerp(_speed.Y, targetSpeedY, verticalLerp);
 
+			// Update facing based on movement direction
+			if (std::abs(_speed.X) > 0.3f) {
+				SetFacingLeft(_speed.X < 0.0f);
+			}
+
 			if (_levelHandler->PlayerActionHit(this, PlayerAction::Jump)) {
 				_birdChargeFramesLeft = 30.0f;
 			}
@@ -3609,12 +3614,6 @@ namespace Jazz2::Actors
 			Vector3i((std::int32_t)checkpointPosX, (std::int32_t)checkpointPosY, ILevelHandler::PlayerZ - playerIndex),
 			playerParams
 		));
-
-		if (IsBirdMorphType(playerType)) {
-			// Bird keeps gravity disabled on spawn, so align Y to the grounded checkpoint baseline.
-			MoveInstantly(Vector2f(0.0f, GroundedCheckpointYOffset), MoveType::Relative | MoveType::Force);
-			_checkpointPos.Y += GroundedCheckpointYOffset;
-		}
 
 		_playerTypeOriginal = playerTypeOriginal;
 		if (IsBirdMorphType(_playerType)) {
