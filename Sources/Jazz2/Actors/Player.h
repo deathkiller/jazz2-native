@@ -312,7 +312,7 @@ namespace Jazz2::Actors
 		Modifier _activeModifier;
 		bool _inIdleTransition, _inLedgeTransition;
 		bool _canDoubleJump;
-		bool _pendingCopter;
+		float _pendingCopterFramesLeft;
 		ActorBase* _carryingObject;
 		float _externalForceCooldown;
 		float _springCooldown;

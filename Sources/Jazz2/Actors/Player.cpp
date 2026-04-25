@@ -78,7 +78,7 @@ namespace Jazz2::Actors
 		_activeModifier(Modifier::None),
 		_externalForceCooldown(0.0f),
 		_springCooldown(0.0f),
-		_inIdleTransition(false), _inLedgeTransition(false), _canDoubleJump(true), _pendingCopter(false),
+		_inIdleTransition(false), _inLedgeTransition(false), _canDoubleJump(true), _pendingCopterFramesLeft(0.0f),
 		_carryingObject(nullptr),
 		_lives(0), _coins(0), _coinsCheckpoint(0), _foodEaten(0), _foodEatenCheckpoint(0), _score(0),
 		_checkpointLight(1.0f),
@@ -498,6 +498,9 @@ namespace Jazz2::Actors
 
 		if (_jumpTime > 0.0f) {
 			_jumpTime -= timeMult;
+		}
+		if (_pendingCopterFramesLeft > 0.0f) {
+			_pendingCopterFramesLeft = std::max(0.0f, _pendingCopterFramesLeft - timeMult);
 		}
 		if (_externalForceCooldown > 0.0f) {
 			_externalForceCooldown -= timeMult;
@@ -1013,7 +1016,7 @@ namespace Jazz2::Actors
 										}
 									} else {
 										if (!CanJump() && _canDoubleJump) {
-											_pendingCopter = true;
+											_pendingCopterFramesLeft = 8.0f;
 										}
 									}
 									break;
@@ -1031,7 +1034,7 @@ namespace Jazz2::Actors
 										});
 
 										PlayPlayerSfx("Sidekick"_s);
-										_pendingCopter = false;
+										_pendingCopterFramesLeft = 0.0f;
 									} else {
 										if (!CanJump() && _canDoubleJump) {
 											_canDoubleJump = false;
@@ -1113,9 +1116,9 @@ namespace Jazz2::Actors
 			}
 		}
 
-		if (!CanJump() && _pendingCopter && _canDoubleJump && (_playerType == PlayerType::Jazz || _playerType == PlayerType::Lori) &&
+		if (!CanJump() && _pendingCopterFramesLeft > 0.0f && _canDoubleJump && (_playerType == PlayerType::Jazz || _playerType == PlayerType::Lori) &&
 			_speed.Y > 0.1f && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
-			_pendingCopter = false;
+			_pendingCopterFramesLeft = 0.0f;
 			_canDoubleJump = false;
 			SetState(ActorState::ApplyGravitation, false);
 			_speed.Y = 1.0f;
@@ -1556,15 +1559,16 @@ namespace Jazz2::Actors
 		ForceCancelTransition();
 
 		if (_playerType == PlayerType::Frog) {
-			_playerType = _playerTypeOriginal;
-
 			// Load original metadata
-			switch (_playerType) {
+			switch (_playerTypeOriginal) {
 				case PlayerType::Jazz: RequestMetadata("Interactive/PlayerJazz"_s); break;
 				case PlayerType::Spaz: RequestMetadata("Interactive/PlayerSpaz"_s); break;
 				case PlayerType::Lori: RequestMetadata("Interactive/PlayerLori"_s); break;
+				case PlayerType::Bird: SetBirdMetadata(); break;
 				case PlayerType::Frog: RequestMetadata("Interactive/PlayerFrog"_s); break;
 			}
+
+			_playerType = _playerTypeOriginal;
 
 			// Refresh animation state
 			AnimState prevState = _currentAnimation->State;
@@ -1776,7 +1780,7 @@ namespace Jazz2::Actors
 		}
 
 		_canDoubleJump = true;
-		_pendingCopter = false;
+		_pendingCopterFramesLeft = 0.0f;
 		_isFreefall = false;
 
 		SetState(ActorState::IsSolidObject, true);
@@ -3591,7 +3595,10 @@ namespace Jazz2::Actors
 		std::uint8_t playerIndex = src.ReadVariableInt32();
 		PlayerType playerType = (PlayerType)src.ReadValue<std::uint8_t>();
 		PlayerType playerTypeOriginal = (PlayerType)src.ReadValue<std::uint8_t>();
-		std::uint8_t birdColorVariant = src.ReadValue<std::uint8_t>();
+		std::uint8_t birdColorVariant = (_birdColorVariant & 0x01);
+		if (version >= 4) {
+			birdColorVariant = src.ReadValue<std::uint8_t>();
+		}
 		float checkpointPosX = src.ReadValueAsLE<float>();
 		float checkpointPosY = src.ReadValueAsLE<float>();
 
@@ -4549,7 +4556,7 @@ namespace Jazz2::Actors
 		_carryingObject = actor;
 
 		_canDoubleJump = true;
-		_pendingCopter = false;
+		_pendingCopterFramesLeft = 0.0f;
 
 		if (suspendType == SuspendType::SwingingVine) {
 			_suspendType = suspendType;
