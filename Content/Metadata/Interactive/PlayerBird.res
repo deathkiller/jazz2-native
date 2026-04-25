@@ -68,8 +68,38 @@
 		"WarpOut": {
 			"Paths": [ "Common/warp_out.wav" ]
 		},
+		"EndOfLevel": {
+			"Paths": [ "Jazz/level_complete.wav" ]
+		},
+		"EndOfLevel2": {
+			"Paths": [ "Weapon/ricochet_bullet_3.wav" ]
+		},
 		"WeaponBlaster": {
 			"Paths": [ "Weapon/bullet_blaster_jazz_4.wav" ]
+		},
+		"PickupAmmo": {
+			"Paths": [ "Pickup/ammo.wav" ]
+		},
+		"PickupCoin": {
+			"Paths": [ "Pickup/coin.wav" ]
+		},
+		"PickupGem": {
+			"Paths": [ "Pickup/gem.wav" ]
+		},
+		"PickupOneUp": {
+			"Paths": [ "Pickup/1up.wav" ]
+		},
+		"PickupDrink": {
+			"Paths": [ "Pickup/food_drink_1.wav", "Pickup/food_drink_2.wav", "Pickup/food_drink_3.wav", "Pickup/food_drink_4.wav" ]
+		},
+		"PickupFood": {
+			"Paths": [ "Pickup/food_edible_1.wav", "Pickup/food_edible_2.wav", "Pickup/food_edible_3.wav", "Pickup/food_edible_4.wav" ]
+		},
+		"PickupMaxCarrot": {
+			"Paths": [ "Jazz/carrot.wav" ]
+		},
+		"BonusWarpNotEnoughCoins": {
+			"Paths": [ "Object/bonus_not_enough_coins.wav" ]
 		}
 	}
 }
