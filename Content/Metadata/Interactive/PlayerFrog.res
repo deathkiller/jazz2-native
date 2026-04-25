@@ -157,6 +157,12 @@
 		"HurtSoft": {
 			"Paths": [ "Frog/noise_4.wav" ]
 		},
+		"EndOfLevel": {
+			"Paths": [ "Jazz/level_complete.wav" ]
+		},
+		"EndOfLevel2": {
+			"Paths": [ "Weapon/ricochet_bullet_3.wav" ]
+		},
 		"PickupAmmo": {
 			"Paths": [ "Pickup/ammo.wav" ]
 		},
@@ -184,7 +190,6 @@
 		"WarpOut": {
 			"Paths": [ "Common/warp_out.wav" ]
 		},
-		
 		"BonusWarpNotEnoughCoins": {
 			"Paths": [ "Object/bonus_not_enough_coins.wav" ]
 		}
