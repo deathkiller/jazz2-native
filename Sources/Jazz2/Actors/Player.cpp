@@ -879,7 +879,7 @@ namespace Jazz2::Actors
 
 			_isFreefall = false;
 			SetState(ActorState::ApplyGravitation, false);
-		} else if (_inWater || _activeModifier != Modifier::None) {
+		} else if ((_inWater && _playerType != PlayerType::Frog) || _activeModifier != Modifier::None) {
 			float playerMovement = _levelHandler->PlayerVerticalMovement(this);
 			float playerMovementVelocity = std::abs(playerMovement);
 			if (playerMovementVelocity > 0.3f) {
@@ -2046,7 +2046,7 @@ namespace Jazz2::Actors
 			} else {
 				newState = AnimState::Walk;
 			}
-		} else if (_inWater) {
+		} else if (_inWater && _playerType != PlayerType::Frog) {
 			newState = AnimState::Swim;
 		} else if (_activeModifier == Modifier::Airboard) {
 			newState = AnimState::Airboard;
@@ -2454,6 +2454,36 @@ namespace Jazz2::Actors
 
 	void Player::OnHandleWater()
 	{
+		if (_playerType == PlayerType::Frog) {
+			// Frog has no swim animation or physics: gravity stays on, only play splash on entry/exit
+			if (_inWater) {
+				if (_pos.Y < _levelHandler->GetWaterLevel() && _waterCooldownLeft <= 0.0f) {
+					// Frog exited water
+					_inWater = false;
+					_waterCooldownLeft = 20.0f;
+					OnWaterSplash(Vector2f(_pos.X, _levelHandler->GetWaterLevel()), false);
+				} else {
+					// Cap upward speed to prevent exaggerated jumps while in water
+					if (_speed.Y < -2.5f) {
+						_speed.Y = -2.5f;
+					}
+				}
+			} else {
+				if (_pos.Y >= _levelHandler->GetWaterLevel() && _waterCooldownLeft <= 0.0f) {
+					// Frog entered water
+					_inWater = true;
+					_waterCooldownLeft = 20.0f;
+					_controllable = true;
+					EndDamagingMove();
+					OnWaterSplash(Vector2f(_pos.X, _levelHandler->GetWaterLevel()), true);
+				}
+			}
+			// Always keep gravity and normal movement active for Frog in water
+			SetState(ActorState::ApplyGravitation, true);
+			_renderer.setRotation(0.0f);
+			return;
+		}
+
 		if (_inWater) {
 			if (_pos.Y >= _levelHandler->GetWaterLevel()) {
 				SetState(ActorState::ApplyGravitation, false);
@@ -2489,10 +2519,11 @@ namespace Jazz2::Actors
 				_waterCooldownLeft = 20.0f;
 
 				SetState(ActorState::ApplyGravitation | ActorState::CanJump, true);
-				_externalForce.Y = -0.6f;
+				if (!IsBirdMorphType(_playerType)) {
+					_externalForce.Y = -0.6f;
+					SetAnimation(AnimState::Jump);
+				}
 				_renderer.setRotation(0.0f);
-
-				SetAnimation(AnimState::Jump);
 
 				OnWaterSplash(Vector2f(_pos.X, _levelHandler->GetWaterLevel()), false);
 			}
