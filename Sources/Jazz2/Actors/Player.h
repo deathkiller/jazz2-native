@@ -346,7 +346,6 @@ namespace Jazz2::Actors
 		float _inTubeTime;
 		float _dizzyTime;
 		std::shared_ptr<Environment::Bird> _spawnedBird;
-		std::uint8_t _birdColorVariant;
 		float _birdChargeFramesLeft;
 		std::shared_ptr<ActorBase> _activeModifierDecor;
 		SmallVector<LightEmitter, 0> _trail;

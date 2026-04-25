@@ -500,7 +500,8 @@ namespace Jazz2::UI
 			case PlayerType::Spaz: playerIcon = CharacterSpaz; break;
 			case PlayerType::Lori: playerIcon = CharacterLori; break;
 			case PlayerType::Frog: playerIcon = CharacterFrog; break;
-			case PlayerType::Bird: playerIcon = (player->_birdColorVariant == 0 ? CharacterBird : CharacterBirdYellow); break;
+			case PlayerType::Bird: playerIcon = CharacterBird; break;
+			case PlayerType::BirdYellow: playerIcon = CharacterBirdYellow; break;
 		}
 
 		std::int32_t health = player->GetHealth();
@@ -639,7 +640,7 @@ namespace Jazz2::UI
 		}
 #endif
 
-		if (!player->_weaponAllowed || player->_playerType == PlayerType::Frog || player->_playerType == PlayerType::Bird) {
+		if (!player->_weaponAllowed || player->_playerType == PlayerType::Frog || IsBirdMorphType(player->_playerType)) {
 			return;
 		}
 

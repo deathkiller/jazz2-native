@@ -14,6 +14,7 @@ namespace Jazz2
 		Lori,					/**< Lori */
 		Frog,					/**< Frog */
 		Bird,					/**< Bird */
+		BirdYellow,			/**< Bird (Yellow) */
 
 		Spectate = UINT8_MAX	/**< Spectate mode */
 	};
@@ -28,7 +29,13 @@ namespace Jazz2
 		}
 	}
 
-	/** @brief Returns next type in cheat morph cycle (Jazz -> Spaz -> Lori -> Frog -> Bird -> Jazz) */
+	/** @brief Returns `true` if the type is one of Bird morph variants */
+	inline constexpr bool IsBirdMorphType(PlayerType playerType)
+	{
+		return (playerType == PlayerType::Bird || playerType == PlayerType::BirdYellow);
+	}
+
+	/** @brief Returns next type in cheat morph cycle (Jazz -> Spaz -> Lori -> Frog -> Bird -> BirdYellow -> Jazz) */
 	inline constexpr PlayerType GetNextCheatMorphType(PlayerType currentType)
 	{
 		switch (currentType) {
@@ -36,6 +43,7 @@ namespace Jazz2
 			case PlayerType::Spaz: return PlayerType::Lori;
 			case PlayerType::Lori: return PlayerType::Frog;
 			case PlayerType::Frog: return PlayerType::Bird;
+			case PlayerType::Bird: return PlayerType::BirdYellow;
 			default: return PlayerType::Jazz;
 		}
 	}

@@ -85,7 +85,7 @@ class GameEventHandler : public IAppEventHandler, public IInputEventHandler, pub
 #endif
 {
 public:
-	static constexpr std::uint16_t StateVersion = 4;
+	static constexpr std::uint16_t StateVersion = 5;
 	static constexpr StringView StateFileName = "Jazz2.resume"_s;
 
 #if defined(WITH_MULTIPLAYER)

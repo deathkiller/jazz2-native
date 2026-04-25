@@ -11,7 +11,6 @@ namespace Jazz2
 	{
 		for (std::int32_t i = 0; i < MaxPlayerCount; i++) {
 			PlayerCarryOvers[i].Type = PlayerType::None;
-			PlayerCarryOvers[i].BirdColorVariant = 1;
 		}
 	}
 
@@ -21,7 +20,6 @@ namespace Jazz2
 	{
 		for (std::int32_t i = 0; i < MaxPlayerCount; i++) {
 			PlayerCarryOvers[i].Type = PlayerType::None;
-			PlayerCarryOvers[i].BirdColorVariant = 1;
 		}
 	}
 
@@ -31,11 +29,9 @@ namespace Jazz2
 	{
 		PlayerCarryOvers[0].Type = playerType;
 		PlayerCarryOvers[0].Lives = DefaultLives;
-		PlayerCarryOvers[0].BirdColorVariant = 1;
 
 		for (std::int32_t i = 1; i < MaxPlayerCount; i++) {
 			PlayerCarryOvers[i].Type = PlayerType::None;
-			PlayerCarryOvers[i].BirdColorVariant = 1;
 		}
 	}
 
@@ -47,12 +43,10 @@ namespace Jazz2
 		for (std::int32_t i = 0; i < playerCount; i++) {
 			PlayerCarryOvers[i].Type = playerTypes[i];
 			PlayerCarryOvers[i].Lives = DefaultLives;
-			PlayerCarryOvers[i].BirdColorVariant = 1;
 		}
 
 		for (std::int32_t i = playerCount; i < MaxPlayerCount; i++) {
 			PlayerCarryOvers[i].Type = PlayerType::None;
-			PlayerCarryOvers[i].BirdColorVariant = 1;
 		}
 	}
 
