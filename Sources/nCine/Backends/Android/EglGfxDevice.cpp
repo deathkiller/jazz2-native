@@ -126,12 +126,13 @@ namespace nCine::Backends
 		FATAL_ASSERT_MSG(ret != EGL_FALSE, "eglMakeCurrent() returned EGL_FALSE");
 	}
 
-	void EglGfxDevice::querySurfaceSize()
+	Vector2i EglGfxDevice::querySurfaceSize()
 	{
 		eglQuerySurface(display_, surface_, EGL_WIDTH, &width_);
 		eglQuerySurface(display_, surface_, EGL_HEIGHT, &height_);
 		drawableWidth_ = width_;
 		drawableHeight_ = height_;
+		return Vector2i(width_, height_);
 	}
 
 	bool EglGfxDevice::isModeSupported(struct android_app* state, const GLContextInfo& glContextInfo, const DisplayMode& mode)
@@ -238,7 +239,7 @@ namespace nCine::Backends
 		FATAL_ASSERT_MSG(context_ != EGL_NO_CONTEXT, "eglCreateContext() returned EGL_NO_CONTEXT");
 
 		bindContext();
-		querySurfaceSize();
+		Vector2i size = querySurfaceSize();
 
 #if !defined(DEATH_TARGET_ANDROID)
 		const EGLint swapInterval = mode_.hasVSync() ? 1 : 0;
@@ -254,7 +255,7 @@ namespace nCine::Backends
 		eglGetConfigAttrib(display_, config_, EGL_STENCIL_SIZE, &stencil);
 		eglGetConfigAttrib(display_, config_, EGL_SAMPLES, &samples);
 
-		LOGI("Surface configuration is size:{}x{}, RGBA:{}{}{}{}, depth:{}, stencil:{}, samples:{}", width_, height_, red, green, blue, alpha, depth, stencil, samples);
+		LOGI("Surface configuration is size:{}x{}, RGBA:{}{}{}{}, depth:{}, stencil:{}, samples:{}", size.X, size.Y, red, green, blue, alpha, depth, stencil, samples);
 	}
 
 	void EglGfxDevice::updateMonitors()
