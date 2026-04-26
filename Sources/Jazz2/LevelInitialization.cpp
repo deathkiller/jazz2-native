@@ -9,6 +9,9 @@ namespace Jazz2
 		: IsLocalSession(true), Difficulty(GameDifficulty::Normal), IsReforged(true), CheatsUsed(false),
 			LastExitType(ExitType::None), ElapsedMilliseconds(0), PlayerCarryOvers{}
 	{
+		for (std::int32_t i = 0; i < MaxPlayerCount; i++) {
+			PlayerCarryOvers[i].Type = PlayerType::None;
+		}
 	}
 
 	LevelInitialization::LevelInitialization(StringView level, GameDifficulty difficulty, bool isReforged)

@@ -48,6 +48,11 @@ namespace Jazz2::Actors::Solid
 					case PlayerType::Jazz: PreloadMetadataAsync("Interactive/PlayerJazz"_s); break;
 					case PlayerType::Spaz: PreloadMetadataAsync("Interactive/PlayerSpaz"_s); break;
 					case PlayerType::Lori: PreloadMetadataAsync("Interactive/PlayerLori"_s); break;
+					case PlayerType::Bird:
+					case PlayerType::BirdYellow:
+						PreloadMetadataAsync("Interactive/PlayerBird"_s);
+						PreloadMetadataAsync("Interactive/PlayerBirdYellow"_s);
+						break;
 				}
 			}
 		}
@@ -132,16 +137,12 @@ namespace Jazz2::Actors::Solid
 					return PlayerType::Spaz;
 				}
 			case MorphType::Swap3:
-				if (currentType == PlayerType::Spaz) {
-					return PlayerType::Lori;
-				} else if (currentType == PlayerType::Lori) {
-					return PlayerType::Jazz;
-				} else {
-					return PlayerType::Spaz;
-				}
+				return GetNextBaseMorphType(currentType);
 
 			case MorphType::ToBird:
-				// TODO: Implement Birds
+				if (!IsBirdMorphType(currentType)) {
+					return PlayerType::Bird;
+				}
 				return std::nullopt;
 
 			default:

@@ -312,6 +312,7 @@ namespace Jazz2::Actors
 		Modifier _activeModifier;
 		bool _inIdleTransition, _inLedgeTransition;
 		bool _canDoubleJump;
+		float _pendingCopterFramesLeft;
 		ActorBase* _carryingObject;
 		float _externalForceCooldown;
 		float _springCooldown;
@@ -345,6 +346,7 @@ namespace Jazz2::Actors
 		float _inTubeTime;
 		float _dizzyTime;
 		std::shared_ptr<Environment::Bird> _spawnedBird;
+		float _birdChargeFramesLeft;
 		std::shared_ptr<ActorBase> _activeModifierDecor;
 		SmallVector<LightEmitter, 0> _trail;
 		Vector2f _trailLastPos;
@@ -372,6 +374,7 @@ namespace Jazz2::Actors
 		bool OnTileDeactivated() override;
 		bool OnPerish(ActorBase* collider) override;
 		void OnUpdate(float timeMult) override;
+		void OnAnimationFinished() override;
 		void OnUpdateHitbox() override;
 		bool OnDraw(RenderQueue& renderQueue) override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
@@ -411,6 +414,8 @@ namespace Jazz2::Actors
 		void PushSolidObjects(float timeMult);
 		void CheckEndOfSpecialMoves(float timeMult);
 		void CheckSuspendState(float timeMult);
+		void SetBirdMetadata();
+		Task<bool> SetBirdMetadataAsync();
 		void OnUpdatePhysics(float timeMult);
 		void OnUpdateTimers(float timeMult);
 		void OnHandleMovement(float timeMult, bool areaWeaponAllowed, bool canJumpPrev);

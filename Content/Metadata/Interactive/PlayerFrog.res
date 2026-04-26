@@ -50,11 +50,19 @@
 			"FrameRate": 6,
 			"States": [ 2048, 1073741839 ]
 		},
-		
+		"Corpse": {
+			"Path": "Frog/hurt.aura",
+			"States": [ 536870912 ]
+		},
 		"FallToIdle": {
 			"Path": "Frog/fall_land.aura",
 			"States": [ 1073741826 ],
 			"FrameRate": 28
+		},
+
+		"SugarRush": {
+			"Path": "Common/sugar_rush_stars.aura",
+			"States": [ 536870913 ]
 		},
 
 		"Shield": {
@@ -104,6 +112,34 @@
 			"_Path": "Lori/transform_frog_end.aura",
 			"States": [ 1610612741 ],
 			"FrameRate": 3
+		},
+		"WarpInFreefall": {
+			"Path": "Frog/jump_start.aura",
+			"States": [ 1073741847 ]
+		},
+		"WarpOutFreefall": {
+			"Path": "Frog/fall.aura",
+			"States": [ 1073741848 ]
+		},
+		"WarpIn": {
+			"Path": "Jazz/warp_in.aura",
+			"States": [ 1073741843 ],
+			"FrameOffset": 2,
+		},
+		"WarpOut": {
+			"Path": "Jazz/warp_out.aura",
+			"States": [ 1073741844 ],
+			"FrameCount": 5,
+		},
+		"WarpInFreefall": {
+			"Path": "Jazz/warp_in.aura",
+			"States": [ 1073741843 ],
+			"FrameOffset": 2,
+		},
+		"WarpOutFreefall": {
+			"Path": "Jazz/warp_out.aura",
+			"States": [ 1073741844 ],
+			"FrameCount": 5,
 		}
 	},
 
@@ -126,6 +162,12 @@
 		"HurtSoft": {
 			"Paths": [ "Frog/noise_4.wav" ]
 		},
+		"EndOfLevel": {
+			"Paths": [ "Jazz/level_complete.wav" ]
+		},
+		"EndOfLevel2": {
+			"Paths": [ "Weapon/ricochet_bullet_3.wav" ]
+		},
 		"PickupAmmo": {
 			"Paths": [ "Pickup/ammo.wav" ]
 		},
@@ -147,7 +189,12 @@
 		"PickupMaxCarrot": {
 			"Paths": [ "Pickup/food_edible_1.wav" ]
 		},
-		
+		"WarpIn": {
+			"Paths": [ "Common/warp_in.wav" ]
+		},
+		"WarpOut": {
+			"Paths": [ "Common/warp_out.wav" ]
+		},
 		"BonusWarpNotEnoughCoins": {
 			"Paths": [ "Object/bonus_not_enough_coins.wav" ]
 		}

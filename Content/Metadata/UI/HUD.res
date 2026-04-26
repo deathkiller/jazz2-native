@@ -128,7 +128,16 @@
 			"FrameRate": 2,
 			"States": [ 63 ]
 		},
-
+		"CharacterBird": {
+			"Path": "UI/icon_birdy.aura",
+			"FrameRate": 2,
+			"States": [ 64 ]
+		},
+		"CharacterBirdYellow": {
+			"Path": "UI/icon_birdy_yellow.aura",
+			"FrameRate": 2,
+			"States": [ 65 ]
+		},
 		"Heart": {
 			"Path": "UI/heart.aura",
 			"States": [ 70 ]

@@ -60,6 +60,8 @@ namespace Jazz2::UI
 		static constexpr AnimState CharacterSpaz = (AnimState)61;
 		static constexpr AnimState CharacterLori = (AnimState)62;
 		static constexpr AnimState CharacterFrog = (AnimState)63;
+		static constexpr AnimState CharacterBird = (AnimState)64;
+		static constexpr AnimState CharacterBirdYellow = (AnimState)65;
 		static constexpr AnimState Heart = (AnimState)70;
 		static constexpr AnimState PickupGemRed = (AnimState)71;
 		static constexpr AnimState PickupGemGreen = (AnimState)72;
@@ -498,6 +500,8 @@ namespace Jazz2::UI
 			case PlayerType::Spaz: playerIcon = CharacterSpaz; break;
 			case PlayerType::Lori: playerIcon = CharacterLori; break;
 			case PlayerType::Frog: playerIcon = CharacterFrog; break;
+			case PlayerType::Bird: playerIcon = CharacterBird; break;
+			case PlayerType::BirdYellow: playerIcon = CharacterBirdYellow; break;
 		}
 
 		std::int32_t health = player->GetHealth();
@@ -636,7 +640,7 @@ namespace Jazz2::UI
 		}
 #endif
 
-		if (!player->_weaponAllowed || player->_playerType == PlayerType::Frog) {
+		if (!player->_weaponAllowed || player->_playerType == PlayerType::Frog || IsBirdMorphType(player->_playerType)) {
 			return;
 		}
 

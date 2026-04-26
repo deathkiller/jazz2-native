@@ -2477,12 +2477,7 @@ namespace Jazz2
 		if (IsCheatingAllowed() && !_players.empty()) {
 			_cheatsUsed = true;
 
-			PlayerType newType;
-			switch (_players[0]->GetPlayerType()) {
-				case PlayerType::Jazz: newType = PlayerType::Spaz; break;
-				case PlayerType::Spaz: newType = PlayerType::Lori; break;
-				default: newType = PlayerType::Jazz; break;
-			}
+			PlayerType newType = GetNextCheatMorphType(_players[0]->GetPlayerType());
 
 			if (!_players[0]->MorphTo(newType)) {
 				_players[0]->MorphTo(PlayerType::Jazz);
