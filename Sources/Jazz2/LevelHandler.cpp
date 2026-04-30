@@ -1081,7 +1081,7 @@ namespace Jazz2
 						HandleBossActivated(_activeBoss.get(), initiator);
 
 						if (eventParams != nullptr) {
-							size_t musicPathLength = strnlen((const char*)eventParams, 16);
+							size_t musicPathLength = ::strnlen((const char*)eventParams, 16);
 							StringView musicPath((const char*)eventParams, musicPathLength);
 							BeginPlayMusic(musicPath);
 						}

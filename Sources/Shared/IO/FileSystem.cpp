@@ -171,6 +171,22 @@ namespace Death { namespace IO {
 			if (path.hasPrefix(SdmcPrefix)) {
 				return SdmcPrefix.size();
 			}
+#	elif defined(DEATH_TARGET_VITA)
+			// Vita mount points: ux0:, os0:, vs0:, ur0:, sa0:, tm0:, etc.
+			for (std::size_t i = 0; i < 5 && i < path.size(); ++i) {
+				if (path.data()[i] == ':') {
+					// Include trailing slash if present (e.g., ux0:/ → length 5)
+					if (i + 1 < path.size() && (path.data()[i + 1] == '/' || path.data()[i + 1] == '\\')) {
+						return i + 2;
+					}
+					return i + 1;
+				}
+				if (!((path.data()[i] >= 'a' && path.data()[i] <= 'z') ||
+				      (path.data()[i] >= 'A' && path.data()[i] <= 'Z') ||
+				      (path.data()[i] >= '0' && path.data()[i] <= '9'))) {
+					break;
+				}
+			}
 #	endif
 			return (path[0] == '/' || path[0] == '\\' ? 1 : 0);
 #endif

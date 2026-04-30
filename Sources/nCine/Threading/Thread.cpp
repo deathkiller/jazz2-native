@@ -326,7 +326,15 @@ namespace nCine
 			return false;
 		}
 #else
+#	if defined(DEATH_TARGET_VITA)
+		pthread_attr_t attr;
+		pthread_attr_init(&attr);
+		pthread_attr_setstacksize(&attr, 512 * 1024);
+		const int error = pthread_create(&_sharedBlock->_handle, &attr, Thread::Process, _sharedBlock);
+		pthread_attr_destroy(&attr);
+#	else
 		const int error = pthread_create(&_sharedBlock->_handle, nullptr, Thread::Process, _sharedBlock);
+#	endif
 		if (error != 0) {
 			delete _sharedBlock;
 			_sharedBlock = nullptr;
