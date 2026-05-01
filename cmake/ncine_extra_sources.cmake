@@ -853,11 +853,36 @@ else()
 			-Wl,--no-whole-archive
 		)
 
-		set(VITA_TITLEID "JAZZ00002")
-		vita_create_self(${NCINE_APP}.self ${NCINE_APP})
-		vita_create_vpk(${NCINE_APP}.vpk ${VITA_TITLEID} ${NCINE_APP}.self
-			VERSION "03.50" NAME ${NCINE_APP_NAME}
-			FILE "${NCINE_SOURCE_DIR}/Icons/128px.png" "sce_sys/icon0.png")
+			
+			# 1. Extract the major and minor version numbers from the dynamic NCINE_VERSION
+string(REGEX MATCH "^([0-9]+)\\.([0-9]+)" _ ${NCINE_VERSION})
+
+# 2. Vita requires exactly two digits for the Major version (e.g., "01" instead of "1")
+string(LENGTH "${CMAKE_MATCH_1}" VITA_VERSION_MAJOR_LEN)
+if(VITA_VERSION_MAJOR_LEN EQUAL 1)
+    set(VITA_VERSION "0${CMAKE_MATCH_1}")
+else()
+    set(VITA_VERSION "${CMAKE_MATCH_1}")
+endif()
+
+# 3. Vita requires exactly two digits for the Minor version (e.g., "05" instead of "5")
+string(LENGTH "${CMAKE_MATCH_2}" VITA_VERSION_MINOR_LEN)
+if(VITA_VERSION_MINOR_LEN EQUAL 1)
+    set(VITA_VERSION "${VITA_VERSION}.0${CMAKE_MATCH_2}")
+else()
+    set(VITA_VERSION "${VITA_VERSION}.${CMAKE_MATCH_2}")
+endif()
+
+# 4. Set the unique Vita Title ID
+set(VITA_TITLEID "JAZZ00002")
+
+# 5. Generate the executable and the VPK using the dynamic VITA_VERSION
+vita_create_self(${NCINE_APP}.self ${NCINE_APP})
+vita_create_vpk(${NCINE_APP}.vpk ${VITA_TITLEID} ${NCINE_APP}.self
+    VERSION ${VITA_VERSION} 
+	FILE "${NCINE_SOURCE_DIR}/Icons/128px.png" "sce_sys/icon0.png")
+    NAME ${NCINE_APP_NAME}
+)
 	elseif(WIN32 AND NCINE_COPY_DEPENDENCIES)
 		set(WIN32_DEPENDENCIES "")
 		
