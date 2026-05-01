@@ -329,7 +329,7 @@ namespace nCine
 #	if defined(DEATH_TARGET_VITA)
 		pthread_attr_t attr;
 		pthread_attr_init(&attr);
-		pthread_attr_setstacksize(&attr, 512 * 1024);
+		pthread_attr_setstacksize(&attr, 256 * 1024);
 		const int error = pthread_create(&_sharedBlock->_handle, &attr, Thread::Process, _sharedBlock);
 		pthread_attr_destroy(&attr);
 #	else

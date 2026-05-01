@@ -1,5 +1,4 @@
 #include "Stream.h"
-#include <vector>
 
 namespace Death { namespace IO {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
@@ -12,16 +11,16 @@ namespace Death { namespace IO {
 		constexpr std::int32_t BufferSize = 16384;
 #endif
 
-		std::vector<char> buffer(BufferSize);
+		char buffer[BufferSize];
 		std::int64_t bytesWrittenTotal = 0;
 
 		while (true) {
-			std::int64_t bytesRead = Read(buffer.data(), BufferSize);
+			std::int64_t bytesRead = Read(buffer, BufferSize);
 			if (bytesRead <= 0) {
 				break;
 			}
 
-			std::int64_t bytesWritten = targetStream.Write(buffer.data(), bytesRead);
+			std::int64_t bytesWritten = targetStream.Write(buffer, bytesRead);
 			bytesWrittenTotal += bytesWritten;
 			if (bytesWritten < bytesRead) {
 				break;

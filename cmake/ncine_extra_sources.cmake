@@ -852,37 +852,29 @@ else()
 
 			-Wl,--no-whole-archive
 		)
-
-			
-# 1. Extract the major and minor version numbers from the dynamic NCINE_VERSION
-string(REGEX MATCH "^([0-9]+)\\.([0-9]+)" _ ${NCINE_VERSION})
-
-# 2. Vita requires exactly two digits for the Major version
-string(LENGTH "${CMAKE_MATCH_1}" VITA_VERSION_MAJOR_LEN)
-if(VITA_VERSION_MAJOR_LEN EQUAL 1)
-    set(VITA_VERSION "0${CMAKE_MATCH_1}")
-else()
-    set(VITA_VERSION "${CMAKE_MATCH_1}")
-endif()
-
-# 3. Vita requires exactly two digits for the Minor version
-string(LENGTH "${CMAKE_MATCH_2}" VITA_VERSION_MINOR_LEN)
-if(VITA_VERSION_MINOR_LEN EQUAL 1)
-    set(VITA_VERSION "${VITA_VERSION}.0${CMAKE_MATCH_2}")
-else()
-    set(VITA_VERSION "${VITA_VERSION}.${CMAKE_MATCH_2}")
-endif()
-
-# 4. Set the unique Vita Title ID (Hardcoded to 9 characters for safety)
-set(VITA_TITLEID "JAZZ00002")
-
-# 5. Generate the executable and the VPK
-vita_create_self(${NCINE_APP}.self ${NCINE_APP})
-vita_create_vpk(${NCINE_APP}.vpk ${VITA_TITLEID} ${NCINE_APP}.self
-    VERSION ${VITA_VERSION} 
-    NAME ${NCINE_APP_NAME}
-    FILE "${NCINE_SOURCE_DIR}/Icons/128px.png" "sce_sys/icon0.png"
-)
+		string(REGEX MATCH "^([0-9]+)\\.([0-9]+)" _ ${NCINE_VERSION})
+		string(LENGTH ${CMAKE_MATCH_1} VITA_VERSION_MAJOR_LEN)
+		if(VITA_VERSION_MAJOR_LEN EQUAL 1)
+			set(VITA_VERSION "0${CMAKE_MATCH_1}")
+		else()
+			set(VITA_VERSION "${CMAKE_MATCH_1}")
+		endif()
+		string(LENGTH ${CMAKE_MATCH_2} VITA_VERSION_MINOR_LEN)
+		if(VITA_VERSION_MINOR_LEN EQUAL 1)
+			set(VITA_VERSION "${VITA_VERSION}.0${CMAKE_MATCH_2}")
+		else()
+			set(VITA_VERSION "${VITA_VERSION}.${CMAKE_MATCH_2}")
+		endif()
+		set(VITA_TITLEID ${NCINE_APP})
+		string(LENGTH ${VITA_TITLEID} _TITLEID_LEN)
+		while(_TITLEID_LEN LESS 9)
+			set(VITA_TITLEID "${VITA_TITLEID}0")
+			string(LENGTH ${VITA_TITLEID} _TITLEID_LEN)
+		endwhile()
+		vita_create_self(${NCINE_APP}.self ${NCINE_APP})
+		vita_create_vpk(${NCINE_APP}.vpk ${VITA_TITLEID} ${NCINE_APP}.self
+			VERSION ${VITA_VERSION} NAME ${NCINE_APP_NAME}
+			FILE "${NCINE_SOURCE_DIR}/Icons/128px.png" "sce_sys/icon0.png")
 	elseif(WIN32 AND NCINE_COPY_DEPENDENCIES)
 		set(WIN32_DEPENDENCIES "")
 		
