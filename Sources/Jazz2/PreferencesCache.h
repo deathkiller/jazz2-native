@@ -167,9 +167,11 @@ namespace Jazz2
 		static bool BackgroundDithering;
 		/** @brief Whether blur effects are allowed */
 		static bool BlurEffects;
+		/** @brief Rendering resolution percent */
+		static std::uint8_t RenderingResolutionPercent;
 		/** @brief Lighting resolution percent */
 		static std::uint8_t LightingResolutionPercent;
-
+		
 		// Gameplay
 		/** @brief Whether reforged gameplay is enabled */
 		static bool EnableReforgedGameplay;

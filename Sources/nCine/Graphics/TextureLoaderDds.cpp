@@ -74,10 +74,14 @@ namespace nCine
 					format = RHI::TextureFormat::RGB_ETC1;
 					break;
 				case DDS_ATC:
+					format = RHI::TextureFormat::RGB_ATC;
+					break;
 				case DDS_ATCA:
+					format = RHI::TextureFormat::RGBA_ATC_Explicit;
+					break;
 				case DDS_ATCI:
-					LOGE("Unsupported ATC compression");
-					return false;
+					format = RHI::TextureFormat::RGBA_ATC_Interpolated;
+					break;
 #endif
 				default:
 					LOGE("Unsupported FourCC compression code: {}", fourCC);

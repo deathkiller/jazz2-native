@@ -155,16 +155,19 @@ namespace Jazz2::UI::Menu
 		constexpr float defaultRatio = (float)DefaultWidth / DefaultHeight;
 		float currentRatio = (float)width / height;
 
+		std::int32_t maxW = DefaultWidth * PreferencesCache::RenderingResolutionPercent / 100;
+		std::int32_t maxH = DefaultHeight * PreferencesCache::RenderingResolutionPercent / 100;
+
 		std::int32_t w, h;
 		if (currentRatio > defaultRatio) {
-			w = std::min(DefaultWidth, width);
+			w = std::min(maxW, width);
 			h = (std::int32_t)roundf(w / currentRatio);
 		} else if (currentRatio < defaultRatio) {
-			h = std::min(DefaultHeight, height);
+			h = std::min(maxH, height);
 			w = (std::int32_t)roundf(h * currentRatio);
 		} else {
-			w = std::min(DefaultWidth, width);
-			h = std::min(DefaultHeight, height);
+			w = std::min(maxW, width);
+			h = std::min(maxH, height);
 		}
 
 		_upscalePass.Initialize(w, h, width, height);

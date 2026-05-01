@@ -99,7 +99,6 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Graphics/DisplayMode.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/DrawableNode.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Geometry.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/GfxCapabilities.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IDebugOverlay.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IGfxCapabilities.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IGfxDevice.h
@@ -135,29 +134,30 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderRaw.h
 	#${NCINE_SOURCE_DIR}/nCine/Graphics/TextureSaverPng.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Viewport.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLAttribute.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLBlending.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLBufferObject.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLClearColor.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLCullFace.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLDebug.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLDepthTest.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLFramebuffer.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLHashMap.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLRenderbuffer.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLScissorTest.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShader.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderProgram.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderUniformBlocks.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderUniforms.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLTexture.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniform.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformBlock.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformBlockCache.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformCache.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLVertexArrayObject.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLVertexFormat.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLViewport.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Attribute.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Blending.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Buffer.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/ClearColor.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/CullFace.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Debug.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/DepthTest.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Framebuffer.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GfxCapabilities.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/HashMap.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Renderbuffer.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/ScissorTest.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Shader.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/ShaderProgram.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/ShaderUniformBlocks.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/ShaderUniforms.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Texture.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Uniform.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/UniformBlock.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/UniformBlockCache.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/UniformCache.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/VertexArrayObject.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/VertexFormat.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Viewport.h
 	${NCINE_SOURCE_DIR}/nCine/Input/IInputEventHandler.h
 	${NCINE_SOURCE_DIR}/nCine/Input/IInputManager.h
 	${NCINE_SOURCE_DIR}/nCine/Input/InputEvents.h

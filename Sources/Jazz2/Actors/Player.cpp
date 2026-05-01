@@ -649,7 +649,7 @@ namespace Jazz2::Actors
 				part.Intensity -= timeMult * 0.04f;
 				part.Brightness -= timeMult * 0.04f;
 				part.RadiusFar -= timeMult * 0.4f;
-				if (part.RadiusFar <= 0.0f) {
+				if (part.Brightness <= 0.0f) {
 					_trail.eraseUnordered(i);
 					i--;
 				}

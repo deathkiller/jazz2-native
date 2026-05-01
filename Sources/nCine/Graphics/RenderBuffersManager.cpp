@@ -4,7 +4,7 @@
 #include "../tracy.h"
 
 #if defined(WITH_RHI_GL)
-#	include "RHI/GL/GLDebug.h"
+#	include "RHI/GL/Debug.h"
 #	include "../ServiceLocator.h"
 #	include "IGfxCapabilities.h"
 using namespace Death::Containers::Literals;
@@ -119,7 +119,7 @@ namespace nCine
 	{
 		ZoneScopedC(0x81A861);
 #if defined(WITH_RHI_GL)
-		GLDebug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()"_s);
+		RHI::Debug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()"_s);
 #endif
 
 		for (ManagedBuffer& buffer : buffers_) {
@@ -149,7 +149,7 @@ namespace nCine
 	{
 		ZoneScopedC(0x81A861);
 #if defined(WITH_RHI_GL)
-		GLDebug::ScopedGroup scoped("RenderBuffersManager::remap()"_s);
+		RHI::Debug::ScopedGroup scoped("RenderBuffersManager::remap()"_s);
 #endif
 
 		for (ManagedBuffer& buffer : buffers_) {
@@ -202,10 +202,10 @@ namespace nCine
 		FATAL_ASSERT(managedBuffer.mapBase != nullptr);
 
 #if defined(WITH_RHI_GL) && defined(DEATH_DEBUG)
-		if (GLDebug::IsAvailable()) {
+		if (RHI::Debug::IsAvailable()) {
 			char debugString[128];
 			std::size_t length = formatInto(debugString, "Create {} buffer 0x{:x}", bufferTypeToString(specs.type), std::uintptr_t(buffers_.back().object.get()));
-			GLDebug::MessageInsert({ debugString, length });
+			RHI::Debug::MessageInsert({ debugString, length });
 		}
 #endif
 	}

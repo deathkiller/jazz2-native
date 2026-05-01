@@ -9,16 +9,17 @@ namespace Jazz2::UI::Menu
 #if defined(RHI_CAP_SHADERS)
 		RescaleMode,
 #endif
-		Resolution,
 #if defined(NCINE_HAS_WINDOWS)
 		Fullscreen,
 #endif
+		ScreenResolution,
+		RenderingResolution,
+		LightingResolution,
 #if defined(RHI_CAP_SHADERS)
 		Antialiasing,
 #endif
 		BackgroundDithering,
 		BlurEffects,
-		LightingResolution,
 		LowWaterQuality,
 		ShowPlayerTrails,
 		PreferVerticalSplitscreen,

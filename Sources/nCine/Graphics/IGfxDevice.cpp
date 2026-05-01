@@ -4,10 +4,10 @@
 #include "../../Main.h"
 #include "IGfxDevice.h"
 #include "../Primitives/Colorf.h"
-#include "RHI/GL/GLDepthTest.h"
-#include "RHI/GL/GLBlending.h"
-#include "RHI/GL/GLClearColor.h"
-#include "RHI/GL/GLViewport.h"
+#include "RHI/GL/DepthTest.h"
+#include "RHI/GL/Blending.h"
+#include "RHI/GL/ClearColor.h"
+#include "RHI/GL/Viewport.h"
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <emscripten/html5.h>
@@ -155,7 +155,7 @@ namespace nCine
 	void IGfxDevice::initGLViewport()
 	{
 #if defined(WITH_RHI_GL)
-		GLViewport::InitRect(0, 0, drawableWidth_, drawableHeight_);
+		RHI::Viewport::InitRect(0, 0, drawableWidth_, drawableHeight_);
 #endif
 	}
 
@@ -163,8 +163,8 @@ namespace nCine
 	{
 #if defined(WITH_RHI_GL)
 		glDisable(GL_DITHER);
-		GLBlending::SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		GLDepthTest::Enable();
+		RHI::Blending::SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		RHI::DepthTest::Enable();
 #endif
 	}
 }

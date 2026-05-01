@@ -5,12 +5,12 @@
 #include "RenderCommandPool.h"
 #include "RenderResources.h"
 #include "RHI/RHI.h"
-#include "RHI/GL/GLTexture.h"
-#include "RHI/GL/GLShaderProgram.h"
-#include "RHI/GL/GLScissorTest.h"
-#include "RHI/GL/GLBlending.h"
-#include "RHI/GL/GLDepthTest.h"
-#include "RHI/GL/GLCullFace.h"
+#include "RHI/GL/Texture.h"
+#include "RHI/GL/ShaderProgram.h"
+#include "RHI/GL/ScissorTest.h"
+#include "RHI/GL/Blending.h"
+#include "RHI/GL/DepthTest.h"
+#include "RHI/GL/CullFace.h"
 #include "../Application.h"
 #include "../Input/IInputManager.h"
 
@@ -80,7 +80,7 @@ namespace nCine
 #endif
 		io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;	// We can honor ImGuiPlatformIO::Textures[] requests during render.
 
-		imguiShaderProgram_ = std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate);
+		imguiShaderProgram_ = std::make_unique<RHI::ShaderProgram>(RHI::ShaderProgram::QueryPhase::Immediate);
 #if !defined(WITH_EMBEDDED_SHADERS)
 		imguiShaderProgram_->AttachShaderFromFile(GL_VERTEX_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, "imgui_vs.glsl"_s }));
 		imguiShaderProgram_->AttachShaderFromFile(GL_FRAGMENT_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, "imgui_fs.glsl"_s }));
@@ -88,8 +88,8 @@ namespace nCine
 		imguiShaderProgram_->AttachShaderFromString(GL_VERTEX_SHADER, ShaderStrings::imgui_vs);
 		imguiShaderProgram_->AttachShaderFromString(GL_FRAGMENT_SHADER, ShaderStrings::imgui_fs);
 #endif
-		imguiShaderProgram_->Link(GLShaderProgram::Introspection::Enabled);
-		FATAL_ASSERT(imguiShaderProgram_->GetStatus() != GLShaderProgram::Status::LinkingFailed);
+		imguiShaderProgram_->Link(RHI::ShaderProgram::Introspection::Enabled);
+		FATAL_ASSERT(imguiShaderProgram_->GetStatus() != RHI::ShaderProgram::Status::LinkingFailed);
 
 		if (!withSceneGraph) {
 			SetupBuffersAndShader();
@@ -284,7 +284,7 @@ namespace nCine
 
 	void ImGuiDrawing::DestroyTexture(ImTextureData* tex)
 	{
-		GLTexture* texturePtr = (GLTexture*)(intptr_t)tex->TexID;
+		RHI::Texture* texturePtr = (RHI::Texture*)(intptr_t)tex->TexID;
 		textures_.erase(texturePtr);
 
 		// Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
@@ -313,28 +313,28 @@ namespace nCine
 
 			// Upload texture to graphics system
 			// (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
-			GLint lastTexture = GLTexture::GetBoundHandle(GL_TEXTURE_2D);
-			std::unique_ptr<GLTexture> texture = std::make_unique<GLTexture>(GL_TEXTURE_2D);
+			GLint lastTexture = RHI::Texture::GetBoundHandle(GL_TEXTURE_2D);
+			std::unique_ptr<RHI::Texture> texture = std::make_unique<RHI::Texture>(GL_TEXTURE_2D);
 			texture->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			texture->TexParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			texture->TexParameteri(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			texture->TexParameteri(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			texture->TexImage2D(0, GL_RGBA, tex->Width, tex->Height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
-			GLTexture* texturePtr = texture.get();
+			RHI::Texture* texturePtr = texture.get();
 			textures_.emplace(texturePtr, std::move(texture));
 			// Store identifiers
 			tex->SetTexID((ImTextureID)(intptr_t)texturePtr);
 			tex->SetStatus(ImTextureStatus_OK);
 
 			// Restore state
-			GLTexture::BindHandle(GL_TEXTURE_2D, lastTexture);
+			RHI::Texture::BindHandle(GL_TEXTURE_2D, lastTexture);
 		} else if (tex->Status == ImTextureStatus_WantUpdates) {
 			// Update selected blocks. We only ever write to textures regions which have never been used before!
 			// This backend choose to use tex->Updates[] but you can use tex->UpdateRect to upload a single region.
-			GLint lastTexture = GLTexture::GetBoundHandle(GL_TEXTURE_2D);
+			GLint lastTexture = RHI::Texture::GetBoundHandle(GL_TEXTURE_2D);
 
-			GLTexture* texturePtr = (GLTexture*)(intptr_t)tex->TexID;
+			RHI::Texture* texturePtr = (RHI::Texture*)(intptr_t)tex->TexID;
 			texturePtr->Bind();
 
 #ifdef GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
@@ -356,7 +356,7 @@ namespace nCine
 			}
 #endif
 			tex->SetStatus(ImTextureStatus_OK);
-			GLTexture::BindHandle(GL_TEXTURE_2D, lastTexture); // Restore state
+			RHI::Texture::BindHandle(GL_TEXTURE_2D, lastTexture); // Restore state
 		} else if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames > 0) {
 			DestroyTexture(tex);
 		}
@@ -470,7 +470,7 @@ namespace nCine
 				currCmd.GetGeometry().SetFirstVertex(imCmd->VtxOffset);
 				currCmd.SetLayer(theApplication().GetGuiSettings().imguiLayer);
 				currCmd.SetVisitOrder(numCmd);
-				currCmd.GetMaterial().SetTexture(reinterpret_cast<GLTexture*>(imCmd->GetTexID()));
+				currCmd.GetMaterial().SetTexture(reinterpret_cast<RHI::Texture*>(imCmd->GetTexID()));
 
 				renderQueue.AddCommand(&currCmd);
 				numCmd++;
@@ -480,10 +480,10 @@ namespace nCine
 
 	void ImGuiDrawing::SetupBuffersAndShader()
 	{
-		vbo_ = std::make_unique<GLBufferObject>(GL_ARRAY_BUFFER);
-		ibo_ = std::make_unique<GLBufferObject>(GL_ELEMENT_ARRAY_BUFFER);
+		vbo_ = std::make_unique<RHI::Buffer>(GL_ARRAY_BUFFER);
+		ibo_ = std::make_unique<RHI::Buffer>(GL_ELEMENT_ARRAY_BUFFER);
 
-		imguiShaderUniforms_ = std::make_unique<GLShaderUniforms>(imguiShaderProgram_.get());
+		imguiShaderUniforms_ = std::make_unique<RHI::ShaderUniforms>(imguiShaderProgram_.get());
 		imguiShaderUniforms_->SetUniformsDataPointer(uniformsBuffer_);
 		imguiShaderUniforms_->GetUniform(Material::TextureUniformName)->SetIntValue(0); // GL_TEXTURE0
 
@@ -515,13 +515,13 @@ namespace nCine
 			}
 		}
 
-		GLBlending::State blendingState = GLBlending::GetState();
-		GLBlending::Enable();
-		GLBlending::SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		GLCullFace::State cullFaceState = GLCullFace::GetState();
-		GLCullFace::Disable();
-		GLDepthTest::State depthTestState = GLDepthTest::GetState();
-		GLDepthTest::Disable();
+		RHI::Blending::State blendingState = RHI::Blending::GetState();
+		RHI::Blending::Enable();
+		RHI::Blending::SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		RHI::CullFace::State cullFaceState = RHI::CullFace::GetState();
+		RHI::CullFace::Disable();
+		RHI::DepthTest::State depthTestState = RHI::DepthTest::GetState();
+		RHI::DepthTest::Disable();
 
 		for (std::int32_t n = 0; n < drawData->CmdListsCount; n++) {
 			const ImDrawList* imCmdList = drawData->CmdLists[n];
@@ -546,11 +546,11 @@ namespace nCine
 				}
 
 				// Apply scissor/clipping rectangle (Y is inverted in OpenGL)
-				GLScissorTest::Enable(static_cast<GLint>(clipMin.x), static_cast<GLint>(static_cast<float>(fbHeight) - clipMax.y),
+				RHI::ScissorTest::Enable(static_cast<GLint>(clipMin.x), static_cast<GLint>(static_cast<float>(fbHeight) - clipMax.y),
 									  static_cast<GLsizei>(clipMax.x - clipMin.x), static_cast<GLsizei>(clipMax.y - clipMin.y));
 
 				// Bind texture, Draw
-				GLTexture::BindHandle(GL_TEXTURE_2D, reinterpret_cast<GLTexture*>(imCmd->GetTexID())->GetGLHandle());
+				RHI::Texture::BindHandle(GL_TEXTURE_2D, reinterpret_cast<RHI::Texture*>(imCmd->GetTexID())->GetGLHandle());
 #if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 				glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(imCmd->ElemCount), sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, firstIndex);
 				firstIndex += imCmd->ElemCount;
@@ -561,10 +561,10 @@ namespace nCine
 			}
 		}
 
-		GLScissorTest::Disable();
-		GLDepthTest::SetState(depthTestState);
-		GLCullFace::SetState(cullFaceState);
-		GLBlending::SetState(blendingState);
+		RHI::ScissorTest::Disable();
+		RHI::DepthTest::SetState(depthTestState);
+		RHI::CullFace::SetState(cullFaceState);
+		RHI::Blending::SetState(blendingState);
 	}
 
 #if defined(IMGUI_HAS_VIEWPORT)
@@ -595,7 +595,7 @@ namespace nCine
 		attribLocationVtxColor_ = (GLuint)glGetAttribLocation(shaderHandle, "aColor");
 
 		// Create buffers
-		// TODO: Use nCine GLBufferObject directly
+		// TODO: Use nCine RHI::Buffer directly
 		glGenBuffers(1, &vboHandle_);
 		glGenBuffers(1, &elementsHandle_);
 
@@ -652,7 +652,7 @@ namespace nCine
 				if (imCmd->UserCallback != nullptr) {
 					// User callback, registered via ImDrawList::AddCallback()
 					// (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-					if (imCmd->UserCallback == ImDrawCallback_ResetRenderState) {
+					if (imCmd->UserCallback == ImGui::GetPlatformIO().DrawCallback_ResetRenderState) {
 						SetupRenderStateForPlatformWindow(drawData, fbWidth, fbHeight, vertexArrayObject);
 					} else {
 						imCmd->UserCallback(imCmdList, imCmd);
@@ -669,7 +669,7 @@ namespace nCine
 					GL_CALL(glScissor(static_cast<GLint>(clipMin.x), static_cast<GLint>(static_cast<float>(fbHeight) - clipMax.y),
 						static_cast<GLint>(clipMax.x - clipMin.x), static_cast<GLint>(clipMax.y - clipMin.y)));
 
-					auto* texture = reinterpret_cast<nCine::GLTexture*>(imCmd->GetTexID());
+					auto* texture = reinterpret_cast<nCine::RHI::Texture*>(imCmd->GetTexID());
 					GL_CALL(glBindTexture(GL_TEXTURE_2D, texture->GetGLHandle()));
 					GL_CALL(glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(imCmd->ElemCount), sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT,
 						reinterpret_cast<void*>(static_cast<intptr_t>(imCmd->IdxOffset * sizeof(ImDrawIdx)))));

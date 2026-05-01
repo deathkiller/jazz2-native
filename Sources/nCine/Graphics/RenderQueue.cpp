@@ -7,7 +7,7 @@
 #include "../tracy_opengl.h"
 
 #if defined(DEATH_DEBUG) && defined(WITH_RHI_GL)
-#	include "RHI/GL/GLDebug.h"
+#	include "RHI/GL/Debug.h"
 #endif
 
 namespace nCine
@@ -78,14 +78,17 @@ namespace nCine
 #if defined(DEATH_DEBUG)
 		static char debugString[128];
 #endif
+#if defined(RHI_CAP_BATCHING)
 		const bool batchingEnabled = theApplication().GetRenderingSettings().batchingEnabled;
+#endif
 
 		// Sorting the queues with the relevant orders
 		sort(opaqueQueue_.begin(), opaqueQueue_.end(), descendingOrder);
 		sort(transparentQueue_.begin(), transparentQueue_.end(), ascendingOrder);
 
-		SmallVectorImpl<RenderCommand*>* opaques = batchingEnabled ? &opaqueBatchedQueue_ : &opaqueQueue_;
-		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_;
+#if defined(RHI_CAP_BATCHING)
+		SmallVectorImpl<RenderCommand*>* opaques = (batchingEnabled ? &opaqueBatchedQueue_ : &opaqueQueue_);
+		SmallVectorImpl<RenderCommand*>* transparents = (batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_);
 
 		if (batchingEnabled) {
 			ZoneScopedNC("Batching", 0x81A861);
@@ -93,13 +96,17 @@ namespace nCine
 			RenderResources::GetRenderBatcher().CreateBatches(opaqueQueue_, opaqueBatchedQueue_);
 			RenderResources::GetRenderBatcher().CreateBatches(transparentQueue_, transparentBatchedQueue_);
 		}
+#else
+		SmallVectorImpl<RenderCommand*>* opaques = &opaqueQueue_;
+		SmallVectorImpl<RenderCommand*>* transparents = &transparentQueue_;
+#endif
 
 		// Avoid GPU stalls by uploading to VBOs, IBOs and UBOs before drawing
 		if (!opaques->empty()) {
 			ZoneScopedNC("Commit opaques", 0x81A861);
 #if defined(DEATH_DEBUG) && defined(WITH_RHI_GL)
 			std::size_t length = formatInto(debugString, "Commit {} opaque command(s) for viewport 0x{:x}", opaques->size(), std::uintptr_t(RenderResources::GetCurrentViewport()));
-			GLDebug::ScopedGroup scoped({ debugString, length });
+			RHI::Debug::ScopedGroup scoped({ debugString, length });
 #endif
 			for (RenderCommand* opaqueRenderCommand : *opaques) {
 				opaqueRenderCommand->CommitAll();
@@ -110,7 +117,7 @@ namespace nCine
 			ZoneScopedNC("Commit transparents", 0x81A861);
 #if defined(DEATH_DEBUG) && defined(WITH_RHI_GL)
 			std::size_t length = formatInto(debugString, "Commit {} transparent command(s) for viewport 0x{:x}", transparents->size(), std::uintptr_t(RenderResources::GetCurrentViewport()));
-			GLDebug::ScopedGroup scoped({ debugString, length });
+			RHI::Debug::ScopedGroup scoped({ debugString, length });
 #endif
 			for (RenderCommand* transparentRenderCommand : *transparents) {
 				transparentRenderCommand->CommitAll();
@@ -123,9 +130,14 @@ namespace nCine
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 		static char debugString[128];
 #endif
+#if defined(RHI_CAP_BATCHING)
 		const bool batchingEnabled = theApplication().GetRenderingSettings().batchingEnabled;
-		SmallVectorImpl<RenderCommand*>* opaques = batchingEnabled ? &opaqueBatchedQueue_ : &opaqueQueue_;
-		SmallVectorImpl<RenderCommand*>* transparents = batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_;
+		SmallVectorImpl<RenderCommand*>* opaques = (batchingEnabled ? &opaqueBatchedQueue_ : &opaqueQueue_);
+		SmallVectorImpl<RenderCommand*>* transparents = (batchingEnabled ? &transparentBatchedQueue_ : &transparentQueue_);
+#else
+		SmallVectorImpl<RenderCommand*>* opaques = &opaqueQueue_;
+		SmallVectorImpl<RenderCommand*>* transparents = &transparentQueue_;
+#endif
 
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 		std::uint32_t commandIndex = 0;
@@ -150,7 +162,7 @@ namespace nCine
 				length = formatInto(debugString, "Opaque {} ({} {} layer {}, visit order {}, sort key 0x{:x})",
 								    commandIndex, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->GetMaterialSortKey());
 			}
-			GLDebug::ScopedGroup scoped({ debugString, length });
+			RHI::Debug::ScopedGroup scoped({ debugString, length });
 			commandIndex++;
 #endif
 
@@ -183,7 +195,7 @@ namespace nCine
 				length = formatInto(debugString, "Transparent {} ({} on layer {}, visit order {}, sort key 0x{:x})",
 								    commandIndex, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->GetMaterialSortKey());
 			}
-			GLDebug::ScopedGroup scoped({ debugString, length });
+			RHI::Debug::ScopedGroup scoped({ debugString, length });
 			commandIndex++;
 #endif
 

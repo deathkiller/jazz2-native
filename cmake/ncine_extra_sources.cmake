@@ -43,7 +43,9 @@ elseif(NCINE_RHI STREQUAL "SW")
 
 	# Add software renderer sources
 	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/SW/GfxCapabilities.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/SW/RHI_SW.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/SW/Texture.cpp
 	)
 elseif(NCINE_RHI STREQUAL "DC")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_DC")

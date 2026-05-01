@@ -76,32 +76,40 @@ namespace nCine
 					format = RHI::TextureFormat::RGBA_ETC2;
 					break;
 				case FMT_PVRTC_2BPP_RGB:
+					format = RHI::TextureFormat::RGB_PVRTC_2BPP;
+					break;
 				case FMT_PVRTC_2BPP_RGBA:
+					format = RHI::TextureFormat::RGBA_PVRTC_2BPP;
+					break;
 				case FMT_PVRTC_4BPP_RGB:
+					format = RHI::TextureFormat::RGB_PVRTC_4BPP;
+					break;
 				case FMT_PVRTC_4BPP_RGBA:
+					format = RHI::TextureFormat::RGBA_PVRTC_4BPP;
+					break;
 				case FMT_PVRTCII_2BPP:
 				case FMT_PVRTCII_4BPP:
 				case FMT_ETC2_RGB_A1:
 				case FMT_EAC_R11:
 				case FMT_EAC_RG11:
-#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
-				case FMT_ASTC_4x4:
-				case FMT_ASTC_5x4:
-				case FMT_ASTC_5x5:
-				case FMT_ASTC_6x5:
-				case FMT_ASTC_6x6:
-				case FMT_ASTC_8x5:
-				case FMT_ASTC_8x6:
-				case FMT_ASTC_8x8:
-				case FMT_ASTC_10x5:
-				case FMT_ASTC_10x6:
-				case FMT_ASTC_10x8:
-				case FMT_ASTC_10x10:
-				case FMT_ASTC_12x10:
-				case FMT_ASTC_12x12:
-#	endif
 					LOGE("Unsupported PVR3 compressed format: 0x{:x}", pixelFormat);
 					return false;
+#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
+				case FMT_ASTC_4x4:  format = RHI::TextureFormat::RGBA_ASTC_4x4;  break;
+				case FMT_ASTC_5x4:  format = RHI::TextureFormat::RGBA_ASTC_5x4;  break;
+				case FMT_ASTC_5x5:  format = RHI::TextureFormat::RGBA_ASTC_5x5;  break;
+				case FMT_ASTC_6x5:  format = RHI::TextureFormat::RGBA_ASTC_6x5;  break;
+				case FMT_ASTC_6x6:  format = RHI::TextureFormat::RGBA_ASTC_6x6;  break;
+				case FMT_ASTC_8x5:  format = RHI::TextureFormat::RGBA_ASTC_8x5;  break;
+				case FMT_ASTC_8x6:  format = RHI::TextureFormat::RGBA_ASTC_8x6;  break;
+				case FMT_ASTC_8x8:  format = RHI::TextureFormat::RGBA_ASTC_8x8;  break;
+				case FMT_ASTC_10x5: format = RHI::TextureFormat::RGBA_ASTC_10x5; break;
+				case FMT_ASTC_10x6: format = RHI::TextureFormat::RGBA_ASTC_10x6; break;
+				case FMT_ASTC_10x8: format = RHI::TextureFormat::RGBA_ASTC_10x8; break;
+				case FMT_ASTC_10x10: format = RHI::TextureFormat::RGBA_ASTC_10x10; break;
+				case FMT_ASTC_12x10: format = RHI::TextureFormat::RGBA_ASTC_12x10; break;
+				case FMT_ASTC_12x12: format = RHI::TextureFormat::RGBA_ASTC_12x12; break;
+#	endif
 #endif
 				default:
 					LOGE("Unsupported PVR3 compressed format: 0x{:x}", pixelFormat);

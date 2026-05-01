@@ -384,7 +384,7 @@ namespace nCine
 		} else {
 			length = formatInto(debugString, "Draw viewport (0x{:x})", std::uintptr_t(this));
 		}
-		GLDebug::ScopedGroup scoped({ debugString, length });*/
+		RHI::Debug::ScopedGroup scoped({ debugString, length });*/
 #endif
 
 		RenderResources::SetCurrentViewport(this);

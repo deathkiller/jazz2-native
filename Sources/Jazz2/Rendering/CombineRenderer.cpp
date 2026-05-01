@@ -27,16 +27,13 @@ namespace Jazz2::Rendering
 	{
 		std::uint8_t* rgba = input.rgba;
 		auto* data = static_cast<const CombineShaderData*>(input.userData);
-		const RHI::Texture* lightTex = input.textures[1];
-		if (lightTex == nullptr) return;
 
-		std::int32_t texH = lightTex->GetHeight();
 		float yNorm = input.v;
 		bool isBelowWater = data->hasWater && (yNorm > data->waterLevelNorm);
 
-		float mainR = rgba[0] * (1.0f / 255.0f);
-		float mainG = rgba[1] * (1.0f / 255.0f);
-		float mainB = rgba[2] * (1.0f / 255.0f);
+		std::int32_t mainR = rgba[0];
+		std::int32_t mainG = rgba[1];
+		std::int32_t mainB = rgba[2];
 
 		// Water displacement: re-sample view texture at displaced X
 		if (isBelowWater) {
@@ -47,65 +44,123 @@ namespace Jazz2::Rendering
 			const RHI::Texture* viewTex = input.textures[0];
 			if (viewTex != nullptr) {
 				std::uint8_t displaced[4];
-				// TODO: Y-coords need to be flipped when accessing pixels
-				SampleTexel(viewTex, srcX, texH - input.y - 1, displaced);
-				mainR = displaced[0] * (1.0f / 255.0f);
-				mainG = displaced[1] * (1.0f / 255.0f);
-				mainB = displaced[2] * (1.0f / 255.0f);
+				SampleTexel(viewTex, srcX, input.texHeight - input.y - 1, displaced);
+				mainR = displaced[0];
+				mainG = displaced[1];
+				mainB = displaced[2];
 			}
 		}
 
-		// Sample lighting texture at the same position
-		std::uint8_t lightSample[4];
-		// TODO: Y-coords need to be flipped when accessing pixels
-		SampleTexel(lightTex, input.x, texH - input.y - 1, lightSample);
-		float lightR = lightSample[0] * (1.0f / 255.0f);
-		float lightG = lightSample[1] * (1.0f / 255.0f);
+		// Sample lighting texture using pre-computed data from CombineShaderData
+		std::int32_t lightIntensity, lightBrightness;  // 0-255 range
+		if (!data->lightNeedsBilinear) {
+			// Same resolution: direct lookup (fast path)
+			std::int32_t lx = input.x;
+			std::int32_t ly = data->lightH - input.y - 1;
+			if (lx < 0) lx = 0; else if (lx >= data->lightW) lx = data->lightW - 1;
+			if (ly < 0) ly = 0; else if (ly >= data->lightH) ly = data->lightH - 1;
+			const std::uint8_t* lp = data->lightPixels + (ly * data->lightW + lx) * 4;
+			lightIntensity = lp[0];
+			lightBrightness = lp[1];
+		} else {
+			// Fixed-point bilinear interpolation (8.8 weights)
+			// Map view pixel to lighting texel coordinates using 16.16 fixed-point scale
+			std::int32_t fxRaw = (std::int32_t)((std::int64_t)input.x * data->lightScaleX_fp >> 16);
+			std::int32_t fyRaw = (std::int32_t)((std::int64_t)(input.texHeight - 1 - input.y) * data->lightScaleY_fp >> 16);
 
-		// Water color tinting
+			// Split into integer + 8-bit fraction (mapping half-texel offset)
+			std::int32_t fx16 = (std::int32_t)((std::int64_t)input.x * data->lightScaleX_fp) - 0x8000;
+			std::int32_t fy16 = (std::int32_t)((std::int64_t)(input.texHeight - 1 - input.y) * data->lightScaleY_fp) - 0x8000;
+
+			std::int32_t x0 = fx16 >> 16;
+			std::int32_t y0 = fy16 >> 16;
+			std::int32_t fracX = (fx16 >> 8) & 0xFF;  // 8-bit fraction
+			std::int32_t fracY = (fy16 >> 8) & 0xFF;
+
+			if (fx16 < 0) { x0 = 0; fracX = 0; }
+			if (fy16 < 0) { y0 = 0; fracY = 0; }
+
+			std::int32_t x1 = x0 + 1;
+			std::int32_t y1 = y0 + 1;
+			std::int32_t lw = data->lightW;
+			std::int32_t lh = data->lightH;
+			if (x0 >= lw) x0 = lw - 1;
+			if (x1 >= lw) x1 = lw - 1;
+			if (y0 >= lh) y0 = lh - 1;
+			if (y1 >= lh) y1 = lh - 1;
+
+			const std::uint8_t* p00 = data->lightPixels + (y0 * lw + x0) * 4;
+			const std::uint8_t* p10 = data->lightPixels + (y0 * lw + x1) * 4;
+			const std::uint8_t* p01 = data->lightPixels + (y1 * lw + x0) * 4;
+			const std::uint8_t* p11 = data->lightPixels + (y1 * lw + x1) * 4;
+
+			// Bilinear blend using 8.8 fixed-point weights
+			std::int32_t ifx = 256 - fracX;
+			std::int32_t ify = 256 - fracY;
+			std::int32_t w00 = ifx * ify;  // max 65536
+			std::int32_t w10 = fracX * ify;
+			std::int32_t w01 = ifx * fracY;
+			std::int32_t w11 = fracX * fracY;
+
+			lightIntensity = (p00[0] * w00 + p10[0] * w10 + p01[0] * w01 + p11[0] * w11) >> 16;
+			lightBrightness = (p00[1] * w00 + p10[1] * w10 + p01[1] * w01 + p11[1] * w11) >> 16;
+		}
+
+		// Water color tinting (integer math, 0-255 range)
 		if (isBelowWater) {
-			mainR = mainR * 0.7f + 0.4f * 0.3f;
-			mainG = mainG * 0.7f + 0.6f * 0.3f;
-			mainB = mainB * 0.7f + 0.8f * 0.3f;
+			// main * 0.7 + tint * 0.3 (using 179/256 and 77/256 approximations)
+			mainR = (mainR * 179 + 102 * 77) >> 8;  // tint = 0.4*255 = 102
+			mainG = (mainG * 179 + 153 * 77) >> 8;  // tint = 0.6*255 = 153
+			mainB = (mainB * 179 + 204 * 77) >> 8;  // tint = 0.8*255 = 204
 
 			float invH = 1.0f / (float)input.texHeight;
 			float topDist = std::abs(yNorm - data->waterLevelNorm);
 			if (topDist < invH * 2.0f) {
-				mainR = std::min(mainR + 0.2f, 1.0f);
-				mainG = std::min(mainG + 0.2f, 1.0f);
-				mainB = std::min(mainB + 0.2f, 1.0f);
+				mainR = std::min(mainR + 51, 255);  // +0.2*255
+				mainG = std::min(mainG + 51, 255);
+				mainB = std::min(mainB + 51, 255);
 			}
 		}
 
-		// Combine formula (simplified, no blur):
-		// lit = main * (1 + light.g) + max(light.g - 0.7, 0)
-		float litR = mainR * (1.0f + lightG) + std::max(lightG - 0.7f, 0.0f);
-		float litG = mainG * (1.0f + lightG) + std::max(lightG - 0.7f, 0.0f);
-		float litB = mainB * (1.0f + lightG) + std::max(lightG - 0.7f, 0.0f);
+		// Combine formula (integer-optimized):
+		// lit = main * (1 + brightness/255) + max(brightness - 179, 0)  [179 = 0.7*255]
+		// Using: lit = main + main*brightness/256 + max(brightness-179, 0)
+		std::int32_t brightnessBoost = std::max(lightBrightness - 179, 0);
+		std::int32_t litR = mainR + ((mainR * lightBrightness) >> 8) + brightnessBoost;
+		std::int32_t litG = mainG + ((mainG * lightBrightness) >> 8) + brightnessBoost;
+		std::int32_t litB = mainB + ((mainB * lightBrightness) >> 8) + brightnessBoost;
 
-		// Darkness: darken lit toward black, then mix with ambient
-		float darkness = (1.0f - lightR) * data->invDarknessDiv;
-		if (darkness > 1.0f) darkness = 1.0f;
-		else if (darkness < 0.0f) darkness = 0.0f;
-		float darkened_R = litR * (1.0f - darkness);
-		float darkened_G = litG * (1.0f - darkness);
-		float darkened_B = litB * (1.0f - darkness);
+		// Darkness: darken lit by (1-intensity) scaled by invDarknessDiv
+		// darkness = clamp((255 - lightIntensity) * invDarknessDiv / 255, 0, 1)
+		float darknessFrac = (float)(255 - lightIntensity) * data->invDarknessDiv * (1.0f / 255.0f);
+		if (darknessFrac > 1.0f) darknessFrac = 1.0f;
+		else if (darknessFrac < 0.0f) darknessFrac = 0.0f;
+		std::int32_t darkMul = (std::int32_t)((1.0f - darknessFrac) * 256.0f);  // 0..256
 
-		float ambientStrength = 1.0f - lightR;
+		std::int32_t darkenedR = (litR * darkMul) >> 8;
+		std::int32_t darkenedG = (litG * darkMul) >> 8;
+		std::int32_t darkenedB = (litB * darkMul) >> 8;
 
-		// Water: extra darkness above water surface
+		// Ambient blend: out = darkened * (1-ambientStrength) + ambient * ambientStrength
+		float ambientStrength = (float)(255 - lightIntensity) * (1.0f / 255.0f);
 		if (data->hasWater && data->waterLevelNorm < 0.4f && !isBelowWater) {
-			float aboveWaterDarkness = 0.4f - data->waterLevelNorm;
-			ambientStrength = std::min(1.0f, ambientStrength + aboveWaterDarkness);
+			ambientStrength = std::min(1.0f, ambientStrength + 0.4f - data->waterLevelNorm);
 		}
 
-		float outR = darkened_R * (1.0f - ambientStrength) + data->ambientR * ambientStrength;
-		float outG = darkened_G * (1.0f - ambientStrength) + data->ambientG * ambientStrength;
-		float outB = darkened_B * (1.0f - ambientStrength) + data->ambientB * ambientStrength;
+		std::int32_t ambMul = (std::int32_t)(ambientStrength * 256.0f);  // 0..256
+		std::int32_t invAmbMul = 256 - ambMul;
+		// Pre-scaled ambient (0..255 * 256 = up to 65280)
+		std::int32_t ambR256 = (std::int32_t)(data->ambientR * 255.0f * 256.0f);
+		std::int32_t ambG256 = (std::int32_t)(data->ambientG * 255.0f * 256.0f);
+		std::int32_t ambB256 = (std::int32_t)(data->ambientB * 255.0f * 256.0f);
 
-		rgba[0] = (std::uint8_t)(std::min(outR, 1.0f) * 255.0f + 0.5f);
-		rgba[1] = (std::uint8_t)(std::min(outG, 1.0f) * 255.0f + 0.5f);
-		rgba[2] = (std::uint8_t)(std::min(outB, 1.0f) * 255.0f + 0.5f);
+		std::int32_t outR = (darkenedR * invAmbMul + ambR256 * ambMul / 256) >> 8;
+		std::int32_t outG = (darkenedG * invAmbMul + ambG256 * ambMul / 256) >> 8;
+		std::int32_t outB = (darkenedB * invAmbMul + ambB256 * ambMul / 256) >> 8;
+
+		rgba[0] = (std::uint8_t)(outR > 255 ? 255 : (outR < 0 ? 0 : outR));
+		rgba[1] = (std::uint8_t)(outG > 255 ? 255 : (outG < 0 ? 0 : outG));
+		rgba[2] = (std::uint8_t)(outB > 255 ? 255 : (outB < 0 ? 0 : outB));
 		rgba[3] = 255;
 	}
 #endif
@@ -205,6 +260,17 @@ namespace Jazz2::Rendering
 		_combineData.waterLevelNorm = viewWaterLevel / _bounds.H;
 		_combineData.time = _owner->_levelHandler->_elapsedFrames * 0.0018f;
 		_combineData.camY = _owner->_cameraPos.Y;
+
+		// Pre-compute lighting texture info to avoid per-pixel virtual calls
+		auto* lightTex = _owner->_lightingBuffer.get();
+		_combineData.lightPixels = lightTex->GetPixels(0);
+		_combineData.lightW = lightTex->GetWidth();
+		_combineData.lightH = lightTex->GetHeight();
+		std::int32_t viewW = _owner->_viewTexture->GetWidth();
+		std::int32_t viewH = _owner->_viewTexture->GetHeight();
+		_combineData.lightNeedsBilinear = (_combineData.lightW != viewW || _combineData.lightH != viewH);
+		_combineData.lightScaleX_fp = (std::uint32_t)(((std::int64_t)_combineData.lightW << 16) / std::max(viewW, 1));
+		_combineData.lightScaleY_fp = (std::uint32_t)(((std::int64_t)_combineData.lightH << 16) / std::max(viewH, 1));
 
 		_renderCommand.GetMaterial().SetFragmentShader(FragmentCombine, &_combineData);
 		renderQueue.AddCommand(&_renderCommand);

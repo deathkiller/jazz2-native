@@ -598,31 +598,31 @@
     <ClInclude Include="nCine\Graphics\DisplayMode.h" />
     <ClInclude Include="nCine\Graphics\DrawableNode.h" />
     <ClInclude Include="nCine\Graphics\Geometry.h" />
-    <ClInclude Include="nCine\Graphics\GfxCapabilities.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLAttribute.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLBlending.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLBufferObject.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLClearColor.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLCullFace.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLDebug.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLDepthTest.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLFramebuffer.h" />
+    <ClInclude Include="nCine\Graphics\RHI\GL\GfxCapabilities.h" />
+    <ClInclude Include="nCine\Graphics\GL\Attribute.h" />
+    <ClInclude Include="nCine\Graphics\GL\Blending.h" />
+    <ClInclude Include="nCine\Graphics\GL\Buffer.h" />
+    <ClInclude Include="nCine\Graphics\GL\ClearColor.h" />
+    <ClInclude Include="nCine\Graphics\GL\CullFace.h" />
+    <ClInclude Include="nCine\Graphics\GL\Debug.h" />
+    <ClInclude Include="nCine\Graphics\GL\DepthTest.h" />
+    <ClInclude Include="nCine\Graphics\GL\Framebuffer.h" />
     <ClInclude Include="nCine\Backends\GlfwGfxDevice.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLHashMap.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLRenderbuffer.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLScissorTest.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLShader.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLShaderProgram.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLShaderUniformBlocks.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLShaderUniforms.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLTexture.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLUniform.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLUniformBlock.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLUniformBlockCache.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLUniformCache.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLVertexArrayObject.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLVertexFormat.h" />
-    <ClInclude Include="nCine\Graphics\GL\GLViewport.h" />
+    <ClInclude Include="nCine\Graphics\GL\HashMap.h" />
+    <ClInclude Include="nCine\Graphics\GL\Renderbuffer.h" />
+    <ClInclude Include="nCine\Graphics\GL\ScissorTest.h" />
+    <ClInclude Include="nCine\Graphics\GL\Shader.h" />
+    <ClInclude Include="nCine\Graphics\GL\ShaderProgram.h" />
+    <ClInclude Include="nCine\Graphics\GL\ShaderUniformBlocks.h" />
+    <ClInclude Include="nCine\Graphics\GL\ShaderUniforms.h" />
+    <ClInclude Include="nCine\Graphics\GL\Texture.h" />
+    <ClInclude Include="nCine\Graphics\GL\Uniform.h" />
+    <ClInclude Include="nCine\Graphics\GL\UniformBlock.h" />
+    <ClInclude Include="nCine\Graphics\GL\UniformBlockCache.h" />
+    <ClInclude Include="nCine\Graphics\GL\UniformCache.h" />
+    <ClInclude Include="nCine\Graphics\GL\VertexArrayObject.h" />
+    <ClInclude Include="nCine\Graphics\GL\VertexFormat.h" />
+    <ClInclude Include="nCine\Graphics\GL\Viewport.h" />
     <ClInclude Include="nCine\Backends\Qt5GfxDevice.h" />
     <ClInclude Include="nCine\Backends\SdlGfxDevice.h" />
     <ClInclude Include="nCine\Graphics\IDebugOverlay.h" />
@@ -648,15 +648,32 @@
     <ClInclude Include="nCine\Graphics\RenderResources.h" />
     <ClInclude Include="nCine\Graphics\RenderStatistics.h" />
     <ClInclude Include="nCine\Graphics\RenderVaoPool.h" />
+    <ClInclude Include="nCine\Graphics\RHI\DC\Buffers.h" />
     <ClInclude Include="nCine\Graphics\RHI\DC\RHI_DC.h" />
+    <ClInclude Include="nCine\Graphics\RHI\DC\Shaders.h" />
+    <ClInclude Include="nCine\Graphics\RHI\DC\Texture.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\RHI_GL.h" />
+    <ClInclude Include="nCine\Graphics\RHI\N64\Buffers.h" />
     <ClInclude Include="nCine\Graphics\RHI\N64\RHI_N64.h" />
+    <ClInclude Include="nCine\Graphics\RHI\N64\Shaders.h" />
+    <ClInclude Include="nCine\Graphics\RHI\N64\Texture.h" />
+    <ClInclude Include="nCine\Graphics\RHI\PS1\Buffers.h" />
     <ClInclude Include="nCine\Graphics\RHI\PS1\RHI_PS1.h" />
+    <ClInclude Include="nCine\Graphics\RHI\PS1\Shaders.h" />
+    <ClInclude Include="nCine\Graphics\RHI\PS1\Texture.h" />
     <ClInclude Include="nCine\Graphics\RHI\RenderBufferParams.h" />
     <ClInclude Include="nCine\Graphics\RHI\RenderTypes.h" />
     <ClInclude Include="nCine\Graphics\RHI\RHI.h" />
+    <ClInclude Include="nCine\Graphics\RHI\SAT\Buffers.h" />
     <ClInclude Include="nCine\Graphics\RHI\SAT\RHI_SAT.h" />
+    <ClInclude Include="nCine\Graphics\RHI\SAT\Shaders.h" />
+    <ClInclude Include="nCine\Graphics\RHI\SAT\Texture.h" />
+    <ClInclude Include="nCine\Graphics\RHI\SW\Buffers.h" />
+    <ClInclude Include="nCine\Graphics\RHI\SW\Framebuffer.h" />
+    <ClInclude Include="nCine\Graphics\RHI\SW\GfxCapabilities.h" />
     <ClInclude Include="nCine\Graphics\RHI\SW\RHI_SW.h" />
+    <ClInclude Include="nCine\Graphics\RHI\SW\Shaders.h" />
+    <ClInclude Include="nCine\Graphics\RHI\SW\Texture.h" />
     <ClInclude Include="nCine\Graphics\SceneNode.h" />
     <ClInclude Include="nCine\Graphics\ScreenViewport.h" />
     <ClInclude Include="nCine\Graphics\Shader.h" />
@@ -986,7 +1003,7 @@
     <ClCompile Include="nCine\Graphics\Camera.cpp" />
     <ClCompile Include="nCine\Graphics\DrawableNode.cpp" />
     <ClCompile Include="nCine\Graphics\Geometry.cpp" />
-    <ClCompile Include="nCine\Graphics\GfxCapabilities.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GfxCapabilities.cpp" />
     <ClCompile Include="nCine\Backends\GlfwGfxDevice.cpp" />
     <ClCompile Include="nCine\Backends\Qt5GfxDevice.cpp" />
     <ClCompile Include="nCine\Backends\SdlGfxDevice.cpp" />
@@ -1003,32 +1020,34 @@
     <ClCompile Include="nCine\Graphics\ParticleSystem.cpp" />
     <ClCompile Include="nCine\Graphics\RectAnimation.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\DC\RHI_DC.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLAttribute.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLBlending.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLBufferObject.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLClearColor.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLCullFace.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLDebug.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLDepthTest.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLFramebuffer.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLRenderbuffer.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLScissorTest.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLShader.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderProgram.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderUniformBlocks.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderUniforms.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLTexture.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniform.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniformBlock.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniformBlockCache.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniformCache.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLVertexArrayObject.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLVertexFormat.cpp" />
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLViewport.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\Attribute.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\Blending.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\Buffer.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\ClearColor.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\CullFace.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\Debug.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\DepthTest.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\Framebuffer.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\Renderbuffer.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\ScissorTest.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\Shader.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\ShaderProgram.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\ShaderUniformBlocks.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\ShaderUniforms.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\Texture.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\Uniform.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\UniformBlock.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\UniformBlockCache.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\UniformCache.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\VertexArrayObject.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\VertexFormat.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\Viewport.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\N64\RHI_N64.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\PS1\RHI_PS1.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\SAT\RHI_SAT.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\SW\GfxCapabilities.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\SW\RHI_SW.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\SW\Texture.cpp" />
     <ClCompile Include="nCine\Graphics\RenderBatcher.cpp" />
     <ClCompile Include="nCine\Graphics\RenderBuffersManager.cpp" />
     <ClCompile Include="nCine\Graphics\RenderCommand.cpp" />
@@ -1118,4 +1137,21 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <!-- Save .obj files to mirrored relative paths -->
+  <Target Name="FixObjectFileNames" AfterTargets="PrepareForBuild">
+    <ItemGroup>
+      <ClCompile>
+        <_Dir>$([System.IO.Path]::GetDirectoryName('%(FullPath)'))</_Dir>
+      </ClCompile>
+      <ClCompile Condition="$([System.String]::Copy('%(_Dir)').StartsWith('$(SolutionDir)'))">
+        <_DirClean>$([System.String]::Copy('%(_Dir)').Replace('$(SolutionDir)', '').TrimStart('\'))</_DirClean>
+      </ClCompile>
+      <ClCompile Condition="!$([System.String]::Copy('%(_Dir)').StartsWith('$(SolutionDir)'))">
+        <_DirClean>$([System.String]::Copy('%(_Dir)').Substring(3).TrimStart('\'))</_DirClean>
+      </ClCompile>
+      <ClCompile>
+        <ObjectFileName>$(IntDir)%(_DirClean)\</ObjectFileName>
+      </ClCompile>
+    </ItemGroup>
+  </Target>
 </Project>
