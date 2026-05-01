@@ -49,29 +49,29 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Camera.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/DrawableNode.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Geometry.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/GfxCapabilities.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLAttribute.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLBlending.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLBufferObject.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLClearColor.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLCullFace.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLDebug.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLDepthTest.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLFramebuffer.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLRenderbuffer.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLScissorTest.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShader.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderProgram.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderUniformBlocks.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderUniforms.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLTexture.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniform.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformBlock.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformBlockCache.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformCache.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLVertexArrayObject.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLVertexFormat.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLViewport.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GfxCapabilities.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Attribute.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Blending.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Buffer.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/ClearColor.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/CullFace.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Debug.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/DepthTest.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Framebuffer.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Renderbuffer.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/ScissorTest.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Shader.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/ShaderProgram.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/ShaderUniformBlocks.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/ShaderUniforms.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Texture.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Uniform.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/UniformBlock.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/UniformBlockCache.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/UniformCache.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/VertexArrayObject.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/VertexFormat.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/Viewport.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IGfxDevice.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureLoader.cpp
 	#${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureSaver.cpp

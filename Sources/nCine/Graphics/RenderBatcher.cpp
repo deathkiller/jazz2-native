@@ -148,14 +148,14 @@ namespace nCine
 		const std::uint32_t nonBlockUniformsSize = batchCommand->GetMaterial().GetShaderProgram()->GetUniformsSize();
 		// Determine how much memory is needed by uniform blocks that are not for instances
 		std::uint32_t nonInstancesBlocksSize = 0;
-		const GLShaderUniformBlocks::UniformHashMapType allUniformBlocks = refCommand->GetMaterial().GetAllUniformBlocks();
-		for (const GLUniformBlockCache& uniformBlockCache : allUniformBlocks) {
+		const RHI::ShaderUniformBlocks::UniformHashMapType allUniformBlocks = refCommand->GetMaterial().GetAllUniformBlocks();
+		for (const RHI::UniformBlockCache& uniformBlockCache : allUniformBlocks) {
 			const char* uniformBlockName = uniformBlockCache.uniformBlock()->GetName();
 			if (strcmp(uniformBlockName, Material::InstanceBlockName) == 0) {
 				continue;
 			}
 
-			GLUniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockName);
+			RHI::UniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockName);
 			DEATH_ASSERT(batchBlock);
 			if (batchBlock) {
 				nonInstancesBlocksSize += uniformBlockCache.GetSize() - uniformBlockCache.GetAlignAmount();
@@ -184,23 +184,23 @@ namespace nCine
 
 		batchCommand->GetMaterial().SetUniformsDataPointer(AcquireMemory(nonBlockUniformsSize + nonInstancesBlocksSize + instancesBlockSize));
 		// Copying data for non-instances uniform blocks from the first command in the batch
-		for (const GLUniformBlockCache& uniformBlockCache : allUniformBlocks) {
+		for (const RHI::UniformBlockCache& uniformBlockCache : allUniformBlocks) {
 			const char* uniformBlockName = uniformBlockCache.uniformBlock()->GetName();
 			if (strcmp(uniformBlockName, Material::InstanceBlockName) == 0) {
 				continue;
 			}
 
-			GLUniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockName);
+			RHI::UniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockName);
 			const bool dataCopied = batchBlock->CopyData(uniformBlockCache.GetDataPointer());
 			DEATH_ASSERT(dataCopied);
 			batchBlock->SetUsedSize(uniformBlockCache.usedSize());
 		}
 
 		// Setting sampler uniforms for GL_TEXTURE* units
-		const GLShaderUniforms::UniformHashMapType allUniforms = refCommand->GetMaterial().GetAllUniforms();
-		for (const GLUniformCache& uniformCache : allUniforms) {
+		const RHI::ShaderUniforms::UniformHashMapType allUniforms = refCommand->GetMaterial().GetAllUniforms();
+		for (const RHI::UniformCache& uniformCache : allUniforms) {
 			if (uniformCache.GetUniform()->GetType() == GL_SAMPLER_2D) {
-				GLUniformCache* batchUniformCache = batchCommand->GetMaterial().Uniform(uniformCache.GetUniform()->GetName());
+				RHI::UniformCache* batchUniformCache = batchCommand->GetMaterial().Uniform(uniformCache.GetUniform()->GetName());
 				const std::int32_t refValue = uniformCache.GetIntValue(0);
 				const std::int32_t batchValue = batchUniformCache->GetIntValue(0);
 				// Also checking if the command has just been added, as the memory at the
@@ -279,7 +279,7 @@ namespace nCine
 			RenderCommand* command = *it;
 			command->CommitNodeTransformation();
 
-			const GLUniformBlockCache* singleInstanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+			const RHI::UniformBlockCache* singleInstanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 			const bool dataCopied = instancesBlock->CopyData(instancesBlockOffset, singleInstanceBlock->GetDataPointer(), singleInstanceBlockSize);
 			DEATH_ASSERT(dataCopied);
 			instancesBlockOffset += singleInstanceBlockSize;
@@ -352,7 +352,7 @@ namespace nCine
 			}
 		}
 
-		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
+		for (std::uint32_t i = 0; i < RHI::Texture::MaxTextureUnits; i++) {
 			batchCommand->GetMaterial().SetTexture(i, refCommand->GetMaterial().GetTexture(i));
 		}
 		batchCommand->GetMaterial().SetBlendingEnabled(refCommand->GetMaterial().IsBlendingEnabled());

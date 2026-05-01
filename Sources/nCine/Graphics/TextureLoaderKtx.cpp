@@ -73,6 +73,30 @@ namespace nCine
 			case 0x9278: format = RHI::TextureFormat::RGBA_ETC2; break;   // GL_COMPRESSED_RGBA8_ETC2_EAC
 			case 0x822D: format = RHI::TextureFormat::R_Float16; break;   // GL_R16F
 			case 0x881A: format = RHI::TextureFormat::RGBA_Float16; break; // GL_RGBA16F
+			// ATC (Adreno)
+			case 0x8C92: format = RHI::TextureFormat::RGB_ATC; break;             // GL_ATC_RGB_AMD
+			case 0x8C93: format = RHI::TextureFormat::RGBA_ATC_Explicit; break;   // GL_ATC_RGBA_EXPLICIT_ALPHA_AMD
+			case 0x87EE: format = RHI::TextureFormat::RGBA_ATC_Interpolated; break; // GL_ATC_RGBA_INTERPOLATED_ALPHA_AMD
+			// PVRTC
+			case 0x8C00: format = RHI::TextureFormat::RGB_PVRTC_2BPP; break;   // GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG
+			case 0x8C01: format = RHI::TextureFormat::RGB_PVRTC_4BPP; break;   // GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG
+			case 0x8C02: format = RHI::TextureFormat::RGBA_PVRTC_2BPP; break;  // GL_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG
+			case 0x8C03: format = RHI::TextureFormat::RGBA_PVRTC_4BPP; break;  // GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG
+			// ASTC
+			case 0x93B0: format = RHI::TextureFormat::RGBA_ASTC_4x4; break;    // GL_COMPRESSED_RGBA_ASTC_4x4_KHR
+			case 0x93B1: format = RHI::TextureFormat::RGBA_ASTC_5x4; break;    // GL_COMPRESSED_RGBA_ASTC_5x4_KHR
+			case 0x93B2: format = RHI::TextureFormat::RGBA_ASTC_5x5; break;    // GL_COMPRESSED_RGBA_ASTC_5x5_KHR
+			case 0x93B3: format = RHI::TextureFormat::RGBA_ASTC_6x5; break;    // GL_COMPRESSED_RGBA_ASTC_6x5_KHR
+			case 0x93B4: format = RHI::TextureFormat::RGBA_ASTC_6x6; break;    // GL_COMPRESSED_RGBA_ASTC_6x6_KHR
+			case 0x93B5: format = RHI::TextureFormat::RGBA_ASTC_8x5; break;    // GL_COMPRESSED_RGBA_ASTC_8x5_KHR
+			case 0x93B6: format = RHI::TextureFormat::RGBA_ASTC_8x6; break;    // GL_COMPRESSED_RGBA_ASTC_8x6_KHR
+			case 0x93B7: format = RHI::TextureFormat::RGBA_ASTC_8x8; break;    // GL_COMPRESSED_RGBA_ASTC_8x8_KHR
+			case 0x93B8: format = RHI::TextureFormat::RGBA_ASTC_10x5; break;   // GL_COMPRESSED_RGBA_ASTC_10x5_KHR
+			case 0x93B9: format = RHI::TextureFormat::RGBA_ASTC_10x6; break;   // GL_COMPRESSED_RGBA_ASTC_10x6_KHR
+			case 0x93BA: format = RHI::TextureFormat::RGBA_ASTC_10x8; break;   // GL_COMPRESSED_RGBA_ASTC_10x8_KHR
+			case 0x93BB: format = RHI::TextureFormat::RGBA_ASTC_10x10; break;  // GL_COMPRESSED_RGBA_ASTC_10x10_KHR
+			case 0x93BC: format = RHI::TextureFormat::RGBA_ASTC_12x10; break;  // GL_COMPRESSED_RGBA_ASTC_12x10_KHR
+			case 0x93BD: format = RHI::TextureFormat::RGBA_ASTC_12x12; break;  // GL_COMPRESSED_RGBA_ASTC_12x12_KHR
 			default:
 				LOGE("Unsupported KTX internal format: 0x{:x}", glInternalFormat);
 				return false;

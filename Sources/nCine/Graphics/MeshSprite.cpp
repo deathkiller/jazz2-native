@@ -271,7 +271,7 @@ namespace nCine
 		// TODO
 		/*if (texture_ != nullptr && texture_->name() != nullptr) {
 			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(texture_->name(), nctl::strnlen(texture_->name(), Object::MaxNameLength));
+			ZoneText(texture_->name(), strnlen(texture_->name(), Object::MaxNameLength));
 		}*/
 
 		_type = ObjectType::MeshSprite;

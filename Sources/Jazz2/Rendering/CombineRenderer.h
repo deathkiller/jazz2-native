@@ -23,6 +23,13 @@ namespace Jazz2::Rendering
 		bool hasWater;
 		float time;
 		float camY;
+
+		// Pre-computed lighting texture info
+		const std::uint8_t* lightPixels;
+		std::int32_t lightW, lightH;
+		std::uint32_t lightScaleX_fp;	// 16.16 fixed-point scale: lightW / texW
+		std::uint32_t lightScaleY_fp;	// 16.16 fixed-point scale: lightH / texH
+		bool lightNeedsBilinear;		// true if lighting res differs from view res
 	};
 #endif
 

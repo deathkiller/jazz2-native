@@ -4,24 +4,15 @@
 #include "RenderCommand.h"
 #include "Material.h"
 
-#if !defined(WITH_RHI_GL)
-// Provide GL-named aliases so the uniform-cache code compiles against any backend
-namespace nCine
-{
-	using GLUniformCache      = RHI::UniformCache;
-	using GLUniformBlockCache = RHI::UniformBlockCache;
-}
-#endif
-
 namespace nCine
 {
 	namespace
 	{
-		GLUniformCache* retrieveUniform(Material& material, const char* blockName, const char* name)
+		RHI::UniformCache* retrieveUniform(Material& material, const char* blockName, const char* name)
 		{
-			GLUniformCache* uniform = nullptr;
+			RHI::UniformCache* uniform = nullptr;
 			if (blockName != nullptr && blockName[0] != '\0') {
-				GLUniformBlockCache* uniformBlock = material.UniformBlock(blockName);
+				RHI::UniformBlockCache* uniformBlock = material.UniformBlock(blockName);
 				if (uniformBlock != nullptr) {
 					uniform = uniformBlock->GetUniform(name);
 				}
@@ -134,7 +125,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntVector(vector);
 		}
@@ -149,7 +140,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntValue(value0);
 		}
@@ -164,7 +155,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntValue(value0, value1);
 		}
@@ -179,7 +170,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntValue(value0, value1, value2);
 		}
@@ -194,7 +185,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetIntValue(value0, value1, value2, value3);
 		}
@@ -224,7 +215,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatVector(vector);
 		}
@@ -239,7 +230,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatValue(value0);
 		}
@@ -254,7 +245,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatValue(value0, value1);
 		}
@@ -269,7 +260,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatValue(value0, value1, value2);
 		}
@@ -284,7 +275,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
+		RHI::UniformCache* uniform = retrieveUniform(node_->renderCommand_.GetMaterial(), blockName, name);
 		if (uniform != nullptr) {
 			result = uniform->SetFloatValue(value0, value1, value2, value3);
 		}
@@ -319,7 +310,7 @@ namespace nCine
 		}
 
 		std::uint32_t size = 0;
-		GLUniformBlockCache* uniformBlock = node_->renderCommand_.GetMaterial().UniformBlock(blockName);
+		RHI::UniformBlockCache* uniformBlock = node_->renderCommand_.GetMaterial().UniformBlock(blockName);
 		if (uniformBlock != nullptr) {
 			size = static_cast<std::uint32_t>(uniformBlock->GetSize());
 		}
@@ -334,7 +325,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformBlockCache* uniformBlock = node_->renderCommand_.GetMaterial().UniformBlock(blockName);
+		RHI::UniformBlockCache* uniformBlock = node_->renderCommand_.GetMaterial().UniformBlock(blockName);
 		if (uniformBlock != nullptr) {
 			result = uniformBlock->CopyData(destIndex, src, numBytes);
 		}
@@ -354,7 +345,7 @@ namespace nCine
 		}
 
 		bool result = false;
-		GLUniformBlockCache* uniformBlock = node_->renderCommand_.GetMaterial().UniformBlock(blockName);
+		RHI::UniformBlockCache* uniformBlock = node_->renderCommand_.GetMaterial().UniformBlock(blockName);
 		if (uniformBlock != nullptr) {
 			result = uniformBlock->CopyData(src);
 		}

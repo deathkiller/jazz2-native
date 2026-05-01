@@ -1853,8 +1853,8 @@ namespace Jazz2
 
 #if defined(WITH_RHI_GL)
 		if (compileTwice) {
-			GLShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
-			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
+			RHI::ShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
+			RHI::UniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
 			DEATH_DEBUG_ASSERT(block != nullptr);
 			if (block != nullptr) {
 				batchSize = maxUniformBlockSize / block->GetSize();
@@ -1913,8 +1913,8 @@ namespace Jazz2
 
 #if defined(WITH_RHI_GL)
 		if (compileTwice) {
-			GLShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
-			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
+			RHI::ShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
+			RHI::UniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
 			DEATH_DEBUG_ASSERT(block != nullptr);
 			if (block != nullptr) {
 				batchSize = maxUniformBlockSize / block->GetSize();

@@ -45,11 +45,11 @@ extern "C"
 #include "Base/Algorithms.h"
 #include "Base/Random.h"
 #include "IAppEventHandler.h"
-#include "Graphics/GfxCapabilities.h"
+#include "Graphics/RHI/GL/GfxCapabilities.h"
 #include "Graphics/RenderResources.h"
 #include "Graphics/RenderQueue.h"
 #include "Graphics/ScreenViewport.h"
-#include "Graphics/RHI/GL/GLDebug.h"
+#include "Graphics/RHI/GL/Debug.h"
 #include "Base/FrameTimer.h"
 #include "Graphics/SceneNode.h"
 #include "Input/IInputManager.h"
@@ -751,15 +751,10 @@ namespace nCine
 #endif
 
 		if (appCfg_.withGraphics) {
-#if defined(WITH_RHI_GL)
-			// TODO: Move GfxCapabilities to RHI namespace
-			theServiceLocator().RegisterGfxCapabilities(std::make_unique<GfxCapabilities>());
-#else
-			theServiceLocator().RegisterGfxCapabilities(std::make_unique<RHI::SWGfxCapabilities>());
-#endif
+			theServiceLocator().RegisterGfxCapabilities(std::make_unique<RHI::GfxCapabilities>());
 			const auto& gfxCapabilities = theServiceLocator().GetGfxCapabilities();
 #if defined(WITH_RHI_GL)
-			GLDebug::Init(gfxCapabilities);
+			RHI::Debug::Init(gfxCapabilities);
 #endif
 
 #if defined(WITH_RHI_GL) && !defined(WITH_ANGLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)

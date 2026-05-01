@@ -33,26 +33,26 @@
 #	include "../../../CommonHeaders.h"
 #endif
 
-// --- Existing GL wrapper classes --------------------------------------------
-#include "GLBufferObject.h"
-#include "GLTexture.h"
-#include "GLShaderProgram.h"
-#include "GLShaderUniforms.h"
-#include "GLUniformCache.h"
-#include "GLUniformBlockCache.h"
-#include "GLShaderUniformBlocks.h"
-#include "GLAttribute.h"
-#include "GLVertexFormat.h"
-#include "GLVertexArrayObject.h"
-#include "GLFramebuffer.h"
-#include "GLRenderbuffer.h"
-#include "GLBlending.h"
-#include "GLDepthTest.h"
-#include "GLScissorTest.h"
-#include "GLCullFace.h"
-#include "GLClearColor.h"
-#include "GLViewport.h"
-#include "GLDebug.h"
+// --- RHI class headers ------------------------------------------------------
+#include "Buffer.h"
+#include "Texture.h"
+#include "ShaderProgram.h"
+#include "ShaderUniforms.h"
+#include "UniformCache.h"
+#include "UniformBlockCache.h"
+#include "ShaderUniformBlocks.h"
+#include "Attribute.h"
+#include "VertexFormat.h"
+#include "VertexArrayObject.h"
+#include "Framebuffer.h"
+#include "Renderbuffer.h"
+#include "Blending.h"
+#include "DepthTest.h"
+#include "ScissorTest.h"
+#include "CullFace.h"
+#include "ClearColor.h"
+#include "Viewport.h"
+#include "Debug.h"
 
 #include "../../../../Main.h"
 #include "../../../Primitives/Rect.h"
@@ -62,25 +62,14 @@
 namespace nCine::RHI
 {
 	// -------------------------------------------------------------------------
-	// Type aliases
+	// Type aliases for state structs
 	// -------------------------------------------------------------------------
 
-	using Buffer               = nCine::GLBufferObject;
-	using Texture              = nCine::GLTexture;
-	using ShaderProgram        = nCine::GLShaderProgram;
-	using ShaderUniforms       = nCine::GLShaderUniforms;
-	using ShaderUniformBlocks  = nCine::GLShaderUniformBlocks;
-	using UniformCache         = nCine::GLUniformCache;
-	using UniformBlockCache    = nCine::GLUniformBlockCache;
-	using VertexFormat         = nCine::GLVertexFormat;
-	using VertexArrayObject    = nCine::GLVertexArrayObject;
-	using Framebuffer          = nCine::GLFramebuffer;
-	using Renderbuffer         = nCine::GLRenderbuffer;
-	using ScissorState         = nCine::GLScissorTest::State;
-	using ViewportState        = nCine::GLViewport::State;
-	using ClearColorState      = nCine::GLClearColor::State;
+	using ScissorState    = ScissorTest::State;
+	using ViewportState   = Viewport::State;
+	using ClearColorState = ClearColor::State;
 
-	static constexpr std::int32_t MaxTextureUnits = nCine::GLTexture::MaxTextureUnits;
+	static constexpr std::int32_t MaxTextureUnits = Texture::MaxTextureUnits;
 
 	// -------------------------------------------------------------------------
 	// Enum → GLenum conversion helpers
@@ -261,12 +250,12 @@ namespace nCine::RHI
 
 	inline std::unique_ptr<Buffer> CreateBuffer(BufferType type)
 	{
-		return std::make_unique<nCine::GLBufferObject>(ToGLenum(type));
+		return std::make_unique<Buffer>(ToGLenum(type));
 	}
 
 	// -------------------------------------------------------------------------
 	// Buffer operation wrappers
-	// High-level code calls these instead of GLBufferObject methods directly,
+	// High-level code calls these instead of Buffer methods directly,
 	// so SW / DC backends can substitute their own implementations.
 	// -------------------------------------------------------------------------
 
@@ -321,7 +310,7 @@ namespace nCine::RHI
 
 	inline std::unique_ptr<Texture> CreateTexture(GLenum target = GL_TEXTURE_2D)
 	{
-		return std::make_unique<nCine::GLTexture>(target);
+		return std::make_unique<Texture>(target);
 	}
 
 	inline void BindTexture(const Texture& tex, std::uint32_t unit)
@@ -331,7 +320,7 @@ namespace nCine::RHI
 
 	inline void UnbindTexture(std::uint32_t unit)
 	{
-		nCine::GLTexture::Unbind(unit);
+		Texture::Unbind(unit);
 	}
 
 	// -------------------------------------------------------------------------
@@ -380,58 +369,58 @@ namespace nCine::RHI
 	inline void SetBlending(bool enabled, BlendFactor src, BlendFactor dst)
 	{
 		if (enabled) {
-			nCine::GLBlending::Enable();
-			nCine::GLBlending::SetBlendFunc(ToGLenum(src), ToGLenum(dst));
+			Blending::Enable();
+			Blending::SetBlendFunc(ToGLenum(src), ToGLenum(dst));
 		} else {
-			nCine::GLBlending::Disable();
+			Blending::Disable();
 		}
 	}
 
 	inline void SetDepthTest(bool enabled)
 	{
 		if (enabled) {
-			nCine::GLDepthTest::Enable();
+			DepthTest::Enable();
 		} else {
-			nCine::GLDepthTest::Disable();
+			DepthTest::Disable();
 		}
 	}
 
 	inline void SetScissorTest(bool enabled, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
 		if (enabled) {
-			nCine::GLScissorTest::Enable(x, y, width, height);
+			ScissorTest::Enable(x, y, width, height);
 		} else {
-			nCine::GLScissorTest::Disable();
+			ScissorTest::Disable();
 		}
 	}
 
 	inline void SetScissorTest(bool enabled, const nCine::Recti& rect)
 	{
 		if (enabled) {
-			nCine::GLScissorTest::Enable(rect);
+			ScissorTest::Enable(rect);
 		} else {
-			nCine::GLScissorTest::Disable();
+			ScissorTest::Disable();
 		}
 	}
 
-	inline nCine::GLScissorTest::State GetScissorState()
+	inline ScissorTest::State GetScissorState()
 	{
-		return nCine::GLScissorTest::GetState();
+		return ScissorTest::GetState();
 	}
 
-	inline void SetScissorState(const nCine::GLScissorTest::State& state)
+	inline void SetScissorState(const ScissorTest::State& state)
 	{
-		nCine::GLScissorTest::SetState(state);
+		ScissorTest::SetState(state);
 	}
 
 	inline void SetViewport(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
-		nCine::GLViewport::SetRect(x, y, width, height);
+		Viewport::SetRect(x, y, width, height);
 	}
 
 	inline void SetClearColor(float r, float g, float b, float a)
 	{
-		nCine::GLClearColor::SetColor(r, g, b, a);
+		ClearColor::SetColor(r, g, b, a);
 	}
 
 	inline void Clear(ClearFlags flags)
@@ -446,30 +435,30 @@ namespace nCine::RHI
 	inline void SetDepthMask(bool enabled)
 	{
 		if (enabled) {
-			nCine::GLDepthTest::EnableDepthMask();
+			DepthTest::EnableDepthMask();
 		} else {
-			nCine::GLDepthTest::DisableDepthMask();
+			DepthTest::DisableDepthMask();
 		}
 	}
 
 	inline ViewportState GetViewportState()
 	{
-		return nCine::GLViewport::GetState();
+		return Viewport::GetState();
 	}
 
 	inline void SetViewportState(const ViewportState& s)
 	{
-		nCine::GLViewport::SetState(s);
+		Viewport::SetState(s);
 	}
 
 	inline ClearColorState GetClearColorState()
 	{
-		return nCine::GLClearColor::GetState();
+		return ClearColor::GetState();
 	}
 
 	inline void SetClearColorState(const ClearColorState& s)
 	{
-		nCine::GLClearColor::SetState(s);
+		ClearColor::SetState(s);
 	}
 
 	// -------------------------------------------------------------------------

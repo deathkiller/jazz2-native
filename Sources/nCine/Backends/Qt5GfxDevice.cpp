@@ -6,8 +6,8 @@
 #endif
 
 #include "../../Main.h"
-#include "../Graphics/RHI/GL/GLTexture.h"
-#include "../Graphics/RHI/GL/GLFramebuffer.h"
+#include "../Graphics/RHI/GL/Texture.h"
+#include "../Graphics/RHI/GL/Framebuffer.h"
 #include "Qt5GfxDevice.h"
 #include "../MainApplication.h"
 #include "Qt5Widget.h"
@@ -142,13 +142,13 @@ namespace nCine::Backends
 
 	void Qt5GfxDevice::resetTextureBinding()
 	{
-		GLTexture::bindHandle(GL_TEXTURE_2D, 0);
+		RHI::Texture::bindHandle(GL_TEXTURE_2D, 0);
 	}
 
 	void Qt5GfxDevice::bindDefaultDrawFramebufferObject()
 	{
 		const GLuint glHandle = widget_.defaultFramebufferObject();
-		GLFramebuffer::bindHandle(GL_DRAW_FRAMEBUFFER, glHandle);
+		RHI::Framebuffer::bindHandle(GL_DRAW_FRAMEBUFFER, glHandle);
 	}
 
 	void Qt5GfxDevice::initDevice(bool isFullscreen)

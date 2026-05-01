@@ -65,6 +65,29 @@ namespace nCine
 			case RHI::TextureFormat::RGB_ETC1:     return GL_ETC1_RGB8_OES;
 			case RHI::TextureFormat::RGB_ETC2:     return GL_COMPRESSED_RGB8_ETC2;
 			case RHI::TextureFormat::RGBA_ETC2:    return GL_COMPRESSED_RGBA8_ETC2_EAC;
+			case RHI::TextureFormat::RGB_ATC:                return GL_ATC_RGB_AMD;
+			case RHI::TextureFormat::RGBA_ATC_Explicit:      return GL_ATC_RGBA_EXPLICIT_ALPHA_AMD;
+			case RHI::TextureFormat::RGBA_ATC_Interpolated:  return GL_ATC_RGBA_INTERPOLATED_ALPHA_AMD;
+			case RHI::TextureFormat::RGB_PVRTC_2BPP:   return GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG;
+			case RHI::TextureFormat::RGBA_PVRTC_2BPP:  return GL_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG;
+			case RHI::TextureFormat::RGB_PVRTC_4BPP:   return GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG;
+			case RHI::TextureFormat::RGBA_PVRTC_4BPP:  return GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG;
+#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
+			case RHI::TextureFormat::RGBA_ASTC_4x4:    return GL_COMPRESSED_RGBA_ASTC_4x4_KHR;
+			case RHI::TextureFormat::RGBA_ASTC_5x4:    return GL_COMPRESSED_RGBA_ASTC_5x4_KHR;
+			case RHI::TextureFormat::RGBA_ASTC_5x5:    return GL_COMPRESSED_RGBA_ASTC_5x5_KHR;
+			case RHI::TextureFormat::RGBA_ASTC_6x5:    return GL_COMPRESSED_RGBA_ASTC_6x5_KHR;
+			case RHI::TextureFormat::RGBA_ASTC_6x6:    return GL_COMPRESSED_RGBA_ASTC_6x6_KHR;
+			case RHI::TextureFormat::RGBA_ASTC_8x5:    return GL_COMPRESSED_RGBA_ASTC_8x5_KHR;
+			case RHI::TextureFormat::RGBA_ASTC_8x6:    return GL_COMPRESSED_RGBA_ASTC_8x6_KHR;
+			case RHI::TextureFormat::RGBA_ASTC_8x8:    return GL_COMPRESSED_RGBA_ASTC_8x8_KHR;
+			case RHI::TextureFormat::RGBA_ASTC_10x5:   return GL_COMPRESSED_RGBA_ASTC_10x5_KHR;
+			case RHI::TextureFormat::RGBA_ASTC_10x6:   return GL_COMPRESSED_RGBA_ASTC_10x6_KHR;
+			case RHI::TextureFormat::RGBA_ASTC_10x8:   return GL_COMPRESSED_RGBA_ASTC_10x8_KHR;
+			case RHI::TextureFormat::RGBA_ASTC_10x10:  return GL_COMPRESSED_RGBA_ASTC_10x10_KHR;
+			case RHI::TextureFormat::RGBA_ASTC_12x10:  return GL_COMPRESSED_RGBA_ASTC_12x10_KHR;
+			case RHI::TextureFormat::RGBA_ASTC_12x12:  return GL_COMPRESSED_RGBA_ASTC_12x12_KHR;
+#	endif
 #endif
 			default:                               return GL_RGBA8;
 		}

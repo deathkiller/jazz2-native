@@ -31,80 +31,6 @@ using namespace Death::Containers::Literals;
 
 namespace nCine::RHI
 {
-	SWGfxCapabilities::SWGfxCapabilities()
-	{
-		infoStrings_.renderer = "Software Renderer";
-
-#if defined(DEATH_CPU_USE_RUNTIME_DISPATCH)
-		auto features = Cpu::runtimeFeatures();
-#else
-		auto features = Cpu::compiledFeatures();
-#endif
-
-		StringView featureName;
-#if defined(DEATH_TARGET_X86)
-		if (features & Cpu::Avx2) {
-			featureName = "AVX2"_s;
-		} else if (features & Cpu::Sse2) {
-			featureName = "SSE2"_s;
-		} else {
-			featureName = "Scalar"_s;
-		}
-#elif defined(DEATH_TARGET_ARM)
-		if (features & Cpu::Neon) {
-			featureName = "Neon"_s;
-		} else {
-			featureName = "Scalar"_s;
-		}
-#elif defined(DEATH_TARGET_WASM)
-		if (features & Cpu::Simd128) {
-			featureName = "SIMD128"_s;
-		} else {
-			featureName = "Scalar"_s;
-		}
-#else
-		featureName = "Scalar"_s;
-#endif
-
-#if defined(DEATH_CPU_USE_RUNTIME_DISPATCH)
-		LOGI("The application is using software renderer ({}+)", featureName);
-#else
-		LOGI("The application is using software renderer ({})", featureName);
-#endif
-	}
-
-	std::int32_t SWGfxCapabilities::GetVersion(Version version) const
-	{
-		return 0;
-	}
-
-	const IGfxCapabilities::InfoStrings& SWGfxCapabilities::GetInfoStrings() const
-	{
-		return infoStrings_;
-	}
-
-	std::int32_t SWGfxCapabilities::GetValue(IntValues valueName) const
-	{
-		switch (valueName) {
-			case IntValues::MAX_TEXTURE_SIZE:					return 4096;
-			case IntValues::MAX_TEXTURE_IMAGE_UNITS:			return 8;
-			case IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT:	return 1;
-			case IntValues::MAX_VERTEX_ATTRIB_STRIDE:			return 1024;
-			case IntValues::MAX_COLOR_ATTACHMENTS:				return 4;
-			default:											return 0;
-		}
-	}
-
-	std::int32_t SWGfxCapabilities::GetArrayValue(ArrayIntValues arrayValueName, std::uint32_t index) const
-	{
-		return 0;
-	}
-
-	bool SWGfxCapabilities::HasExtension(Extensions extensionName) const
-	{
-		return false;
-	}
-
 	// =========================================================================
 	// Global SW render state
 	// =========================================================================
@@ -149,124 +75,6 @@ namespace nCine::RHI
 		};
 
 		SWState g_state;
-	}
-
-	// =========================================================================
-	// Texture implementation
-	// =========================================================================
-	void Texture::UploadMip(std::int32_t mipLevel, std::int32_t width, std::int32_t height, TextureFormat format,
-	                        const void* data, std::size_t size)
-	{
-		if (mipLevel < 0 || mipLevel >= MaxMips) return;
-
-		mips_[mipLevel].width  = width;
-		mips_[mipLevel].height = height;
-
-		std::size_t byteSize = size;
-		// Only RGBA8 is directly stored; other formats converted at upload
-		if (format == TextureFormat::RGBA8) {
-			byteSize = static_cast<std::size_t>(width) * height * 4;
-		} else if (format == TextureFormat::RGB8) {
-			byteSize = static_cast<std::size_t>(width) * height * 4;
-		}
-
-		mips_[mipLevel].data = std::make_unique<std::uint8_t[]>(byteSize);
-
-		if (data != nullptr) {
-			if (format == TextureFormat::RGBA8) {
-				std::memcpy(mips_[mipLevel].data.get(), data, byteSize);
-			} else if (format == TextureFormat::RGB8) {
-				// Convert RGB8 → RGBA8
-				const std::uint8_t* src  = static_cast<const std::uint8_t*>(data);
-				std::uint8_t*       dst  = mips_[mipLevel].data.get();
-				std::int32_t pixels = width * height;
-				for (std::int32_t i = 0; i < pixels; ++i) {
-					dst[0] = src[0];
-					dst[1] = src[1];
-					dst[2] = src[2];
-					dst[3] = 255;
-					src += 3;
-					dst += 4;
-				}
-			} else {
-				// Generic fallback: copy raw bytes
-				std::memcpy(mips_[mipLevel].data.get(), data, size);
-			}
-		}
-
-		if (mipLevel == 0) {
-			width_    = width;
-			height_   = height;
-			format_   = format;
-		}
-		if (mipLevel + 1 > mipCount_) {
-			mipCount_ = mipLevel + 1;
-		}
-	}
-
-	const std::uint8_t* Texture::GetPixels(std::int32_t mipLevel) const
-	{
-		if (mipLevel < 0 || mipLevel >= mipCount_) return nullptr;
-		return mips_[mipLevel].data.get();
-	}
-
-	std::uint8_t* Texture::GetMutablePixels(std::int32_t mipLevel)
-	{
-		if (mipLevel < 0 || mipLevel >= mipCount_) return nullptr;
-		return mips_[mipLevel].data.get();
-	}
-
-	void Texture::EnsureRenderTarget()
-	{
-		if (width_ <= 0 || height_ <= 0) return;
-		MipLevel& m = mips_[0];
-		if (m.data == nullptr || m.width != width_ || m.height != height_) {
-			m.width  = width_;
-			m.height = height_;
-			m.data   = std::make_unique<std::uint8_t[]>(static_cast<std::size_t>(width_) * height_ * 4);
-			if (mipCount_ < 1) mipCount_ = 1;
-		}
-	}
-
-	Colorf Texture::Sample(float u, float v, std::int32_t mipLevel) const
-	{
-		if (mipLevel < 0 || mipLevel >= mipCount_) {
-			return Colorf(1, 1, 1, 1);
-		}
-
-		const MipLevel& mip = mips_[mipLevel];
-		if (mip.data == nullptr || mip.width == 0 || mip.height == 0) {
-			return Colorf(1, 1, 1, 1);
-		}
-
-		// Apply wrapping
-		auto wrapCoord = [](float t, SamplerWrapping mode) -> float {
-			switch (mode) {
-				case SamplerWrapping::Repeat:
-					t -= std::floor(t);
-					return t;
-				case SamplerWrapping::MirroredRepeat: {
-					float f = std::floor(t);
-					t -= f;
-					if (static_cast<std::int32_t>(f) & 1) t = 1.0f - t;
-					return t;
-				}
-				case SamplerWrapping::ClampToEdge:
-				default:
-					return std::fmax(0.0f, std::fmin(1.0f, t));
-			}
-		};
-
-		u = wrapCoord(u, wrapS_);
-		v = wrapCoord(v, wrapT_);
-
-		const std::int32_t px = static_cast<std::int32_t>(u * (mip.width  - 1) + 0.5f);
-		const std::int32_t py = static_cast<std::int32_t>(v * (mip.height - 1) + 0.5f);
-		const std::int32_t clampedX = std::max(0, std::min(mip.width  - 1, px));
-		const std::int32_t clampedY = std::max(0, std::min(mip.height - 1, py));
-
-		const std::uint8_t* pixel = mip.data.get() + (clampedY * mip.width + clampedX) * 4;
-		return Colorf(pixel[0] / 255.0f, pixel[1] / 255.0f, pixel[2] / 255.0f, pixel[3] / 255.0f);
 	}
 
 	// =========================================================================
@@ -388,11 +196,11 @@ namespace nCine::RHI
 		g_state.clearA = s.a;
 	}
 
-	// =========================================================================
-	// SIMD-dispatched scanline blending (SrcAlpha / OneMinusSrcAlpha)
-	// =========================================================================
 	namespace
 	{
+		// =========================================================================
+		// SIMD-dispatched scanline blending (SrcAlpha / OneMinusSrcAlpha)
+		// =========================================================================
 		extern void DEATH_CPU_DISPATCHED_DECLARATION(blendScanlineSrcAlpha)(std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT src, std::int32_t count);
 		DEATH_CPU_DISPATCHER_DECLARATION(blendScanlineSrcAlpha)
 
@@ -617,6 +425,160 @@ namespace nCine::RHI
 		DEATH_CPU_DISPATCHER_BASE(blendScanlineSrcAlphaImplementation)
 		DEATH_CPU_DISPATCHED(blendScanlineSrcAlphaImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(blendScanlineSrcAlpha)(std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT src, std::int32_t count))({
 			return blendScanlineSrcAlphaImplementation(Cpu::DefaultBase)(dst, src, count);
+		})
+
+		// =====================================================================
+		// CPU-dispatched scanline tint (multiply RGBA by constant color)
+		// =====================================================================
+		extern void DEATH_CPU_DISPATCHED_DECLARATION(tintScanline)(std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA);
+		DEATH_CPU_DISPATCHER_DECLARATION(tintScanline)
+
+		// Scalar fallback
+		DEATH_CPU_MAYBE_UNUSED typename std::decay<decltype(tintScanline)>::type tintScanlineImplementation(Cpu::ScalarT) {
+			return [](std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA) {
+				for (std::int32_t i = 0; i < count; ++i, buf += 4) {
+					buf[0] = static_cast<std::uint8_t>((buf[0] * tR) >> 8);
+					buf[1] = static_cast<std::uint8_t>((buf[1] * tG) >> 8);
+					buf[2] = static_cast<std::uint8_t>((buf[2] * tB) >> 8);
+					buf[3] = static_cast<std::uint8_t>((buf[3] * tA) >> 8);
+				}
+			};
+		}
+
+#if defined(DEATH_ENABLE_SSE2)
+		DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_SSE2 typename std::decay<decltype(tintScanline)>::type tintScanlineImplementation(Cpu::Sse2T) {
+			return [](std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA) DEATH_ENABLE_SSE2 {
+				const __m128i zero = _mm_setzero_si128();
+				// Pack tint as 16-bit multipliers: [tR, tG, tB, tA, tR, tG, tB, tA]
+				const __m128i tint = _mm_set_epi16((std::int16_t)tA, (std::int16_t)tB, (std::int16_t)tG, (std::int16_t)tR,
+				                                   (std::int16_t)tA, (std::int16_t)tB, (std::int16_t)tG, (std::int16_t)tR);
+
+				std::int32_t i = 0;
+				for (; i + 4 <= count; i += 4, buf += 16) {
+					__m128i px = _mm_loadu_si128(reinterpret_cast<const __m128i*>(buf));
+
+					// Process low 2 pixels
+					__m128i lo = _mm_unpacklo_epi8(px, zero);
+					lo = _mm_srli_epi16(_mm_mullo_epi16(lo, tint), 8);
+
+					// Process high 2 pixels
+					__m128i hi = _mm_unpackhi_epi8(px, zero);
+					hi = _mm_srli_epi16(_mm_mullo_epi16(hi, tint), 8);
+
+					_mm_storeu_si128(reinterpret_cast<__m128i*>(buf), _mm_packus_epi16(lo, hi));
+				}
+				// Scalar tail
+				for (; i < count; i++, buf += 4) {
+					buf[0] = static_cast<std::uint8_t>((buf[0] * tR) >> 8);
+					buf[1] = static_cast<std::uint8_t>((buf[1] * tG) >> 8);
+					buf[2] = static_cast<std::uint8_t>((buf[2] * tB) >> 8);
+					buf[3] = static_cast<std::uint8_t>((buf[3] * tA) >> 8);
+				}
+			};
+		}
+#endif
+
+#if defined(DEATH_ENABLE_AVX2)
+		DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_AVX2 typename std::decay<decltype(tintScanline)>::type tintScanlineImplementation(Cpu::Avx2T) {
+			return [](std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA) DEATH_ENABLE_AVX2 {
+				const __m256i zero = _mm256_setzero_si256();
+				const __m256i tint = _mm256_set_epi16(
+					(std::int16_t)tA, (std::int16_t)tB, (std::int16_t)tG, (std::int16_t)tR,
+					(std::int16_t)tA, (std::int16_t)tB, (std::int16_t)tG, (std::int16_t)tR,
+					(std::int16_t)tA, (std::int16_t)tB, (std::int16_t)tG, (std::int16_t)tR,
+					(std::int16_t)tA, (std::int16_t)tB, (std::int16_t)tG, (std::int16_t)tR);
+
+				std::int32_t i = 0;
+				for (; i + 8 <= count; i += 8, buf += 32) {
+					__m256i px = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(buf));
+
+					__m256i lo = _mm256_unpacklo_epi8(px, zero);
+					lo = _mm256_srli_epi16(_mm256_mullo_epi16(lo, tint), 8);
+
+					__m256i hi = _mm256_unpackhi_epi8(px, zero);
+					hi = _mm256_srli_epi16(_mm256_mullo_epi16(hi, tint), 8);
+
+					_mm256_storeu_si256(reinterpret_cast<__m256i*>(buf), _mm256_packus_epi16(lo, hi));
+				}
+				// SSE2 tail for remaining 4-pixel groups
+				const __m128i tint128 = _mm_set_epi16((std::int16_t)tA, (std::int16_t)tB, (std::int16_t)tG, (std::int16_t)tR,
+				                                      (std::int16_t)tA, (std::int16_t)tB, (std::int16_t)tG, (std::int16_t)tR);
+				const __m128i zero128 = _mm_setzero_si128();
+				for (; i + 4 <= count; i += 4, buf += 16) {
+					__m128i px = _mm_loadu_si128(reinterpret_cast<const __m128i*>(buf));
+					__m128i lo = _mm_srli_epi16(_mm_mullo_epi16(_mm_unpacklo_epi8(px, zero128), tint128), 8);
+					__m128i hi = _mm_srli_epi16(_mm_mullo_epi16(_mm_unpackhi_epi8(px, zero128), tint128), 8);
+					_mm_storeu_si128(reinterpret_cast<__m128i*>(buf), _mm_packus_epi16(lo, hi));
+				}
+				// Scalar tail
+				for (; i < count; i++, buf += 4) {
+					buf[0] = static_cast<std::uint8_t>((buf[0] * tR) >> 8);
+					buf[1] = static_cast<std::uint8_t>((buf[1] * tG) >> 8);
+					buf[2] = static_cast<std::uint8_t>((buf[2] * tB) >> 8);
+					buf[3] = static_cast<std::uint8_t>((buf[3] * tA) >> 8);
+				}
+			};
+		}
+#endif
+
+#if defined(DEATH_ENABLE_NEON)
+		DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_NEON typename std::decay<decltype(tintScanline)>::type tintScanlineImplementation(Cpu::NeonT) {
+			return [](std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA) DEATH_ENABLE_NEON {
+				const uint8x8_t vtR = vdup_n_u8((std::uint8_t)tR);
+				const uint8x8_t vtG = vdup_n_u8((std::uint8_t)tG);
+				const uint8x8_t vtB = vdup_n_u8((std::uint8_t)tB);
+				const uint8x8_t vtA = vdup_n_u8((std::uint8_t)tA);
+
+				std::int32_t i = 0;
+				for (; i + 8 <= count; i += 8, buf += 32) {
+					uint8x8x4_t px = vld4_u8(buf);
+					// Multiply and shift: (val * tint) >> 8
+					px.val[0] = vshrn_n_u16(vmull_u8(px.val[0], vtR), 8);
+					px.val[1] = vshrn_n_u16(vmull_u8(px.val[1], vtG), 8);
+					px.val[2] = vshrn_n_u16(vmull_u8(px.val[2], vtB), 8);
+					px.val[3] = vshrn_n_u16(vmull_u8(px.val[3], vtA), 8);
+					vst4_u8(buf, px);
+				}
+				// Scalar tail
+				for (; i < count; ++i, buf += 4) {
+					buf[0] = static_cast<std::uint8_t>((buf[0] * tR) >> 8);
+					buf[1] = static_cast<std::uint8_t>((buf[1] * tG) >> 8);
+					buf[2] = static_cast<std::uint8_t>((buf[2] * tB) >> 8);
+					buf[3] = static_cast<std::uint8_t>((buf[3] * tA) >> 8);
+				}
+			};
+		}
+#endif
+
+#if defined(DEATH_ENABLE_SIMD128)
+		DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_SIMD128 typename std::decay<decltype(tintScanline)>::type tintScanlineImplementation(Cpu::Simd128T) {
+			return [](std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA) DEATH_ENABLE_SIMD128 {
+				const v128_t zero = wasm_i32x4_splat(0);
+				const v128_t tint = wasm_i16x8_make(tR, tG, tB, tA, tR, tG, tB, tA);
+
+				std::int32_t i = 0;
+				for (; i + 4 <= count; i += 4, buf += 16) {
+					v128_t px = wasm_v128_load(buf);
+
+					v128_t lo = wasm_i16x8_shr(wasm_i16x8_mul(wasm_u16x8_extend_low_u8x16(px), tint), 8);
+					v128_t hi = wasm_i16x8_shr(wasm_i16x8_mul(wasm_u16x8_extend_high_u8x16(px), tint), 8);
+
+					wasm_v128_store(buf, wasm_u8x16_narrow_i16x8(lo, hi));
+				}
+				// Scalar tail
+				for (; i < count; ++i, buf += 4) {
+					buf[0] = static_cast<std::uint8_t>((buf[0] * tR) >> 8);
+					buf[1] = static_cast<std::uint8_t>((buf[1] * tG) >> 8);
+					buf[2] = static_cast<std::uint8_t>((buf[2] * tB) >> 8);
+					buf[3] = static_cast<std::uint8_t>((buf[3] * tA) >> 8);
+				}
+			};
+		}
+#endif
+
+		DEATH_CPU_DISPATCHER_BASE(tintScanlineImplementation)
+		DEATH_CPU_DISPATCHED(tintScanlineImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(tintScanline)(std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA))({
+			return tintScanlineImplementation(Cpu::DefaultBase)(buf, count, tR, tG, tB, tA);
 		})
 	}
 
@@ -1005,13 +967,13 @@ namespace nCine::RHI
 			if (xMin > xMax || yMin > yMax) return;
 
 			// Texture info
-			Texture* tex = (ctx.ff.hasTexture && ctx.ff.textureUnit < MaxTextureUnits)
-			             ? ctx.textures[ctx.ff.textureUnit] : nullptr;
-			const std::uint8_t* texPixels = (tex != nullptr) ? tex->GetPixels(0) : nullptr;
-			const std::int32_t texW = (tex != nullptr) ? tex->GetWidth()  : 0;
-			const std::int32_t texH = (tex != nullptr) ? tex->GetHeight() : 0;
-			const SamplerWrapping wrapS = (tex != nullptr) ? tex->GetWrapS() : SamplerWrapping::ClampToEdge;
-			const SamplerWrapping wrapT = (tex != nullptr) ? tex->GetWrapT() : SamplerWrapping::ClampToEdge;
+			Texture* tex = (ctx.ff.hasTexture && ctx.ff.textureUnit < MaxTextureUnits
+							? ctx.textures[ctx.ff.textureUnit] : nullptr);
+			const std::uint8_t* texPixels = (tex != nullptr ? tex->GetPixels(0) : nullptr);
+			const std::int32_t texW = (tex != nullptr ? tex->GetWidth()  : 0);
+			const std::int32_t texH = (tex != nullptr ? tex->GetHeight() : 0);
+			const SamplerWrapping wrapS = (tex != nullptr ? tex->GetWrapS() : SamplerWrapping::ClampToEdge);
+			const SamplerWrapping wrapT = (tex != nullptr ? tex->GetWrapT() : SamplerWrapping::ClampToEdge);
 			const bool useLinear = (tex != nullptr && tex->GetMagFilter() == SamplerFilter::Linear && texW > 1 && texH > 1);
 
 			// Tint color as [0..255]
@@ -1022,38 +984,38 @@ namespace nCine::RHI
 			const bool whiteTint = (tR >= 255 && tG >= 255 && tB >= 255 && tA >= 255);
 
 			const bool useBlend = g_state.blendingEnabled;
-			const bool useFastBlend = useBlend &&
+			const bool useFastBlend = (useBlend &&
 				g_state.blendSrc == BlendFactor::SrcAlpha &&
-				g_state.blendDst == BlendFactor::OneMinusSrcAlpha;
+				g_state.blendDst == BlendFactor::OneMinusSrcAlpha);
 
 			// 16.16 fixed-point UV steps
 			const std::int32_t texWFix = texW << 16;
 			const std::int32_t texHFix = texH << 16;
-			const std::int32_t dtxFix = (texPixels != nullptr) ? static_cast<std::int32_t>((uRight - uLeft) * texW * 65536.0f / fullW) : 0;
-			const std::int32_t dtyFix = (texPixels != nullptr) ? static_cast<std::int32_t>((vBot - vTop) * texH * 65536.0f / fullH) : 0;
+			const std::int32_t dtxFix = (texPixels != nullptr ? static_cast<std::int32_t>((uRight - uLeft) * texW * 65536.0f / fullW) : 0);
+			const std::int32_t dtyFix = (texPixels != nullptr ? static_cast<std::int32_t>((vBot - vTop) * texH * 65536.0f / fullH) : 0);
 
-			const std::int32_t txBase = (texPixels != nullptr) ? static_cast<std::int32_t>((uLeft + (xMin + 0.5f - fxMin) * (uRight - uLeft) / fullW) * texW * 65536.0f) : 0;
-			std::int32_t tyFix = (texPixels != nullptr) ? static_cast<std::int32_t>((vTop + (yMin + 0.5f - fyMin) * (vBot - vTop) / fullH) * texH * 65536.0f) : 0;
+			const std::int32_t txBase = (texPixels != nullptr ? static_cast<std::int32_t>((uLeft + (xMin + 0.5f - fxMin) * (uRight - uLeft) / fullW) * texW * 65536.0f) : 0);
+			std::int32_t tyFix = (texPixels != nullptr ? static_cast<std::int32_t>((vTop + (yMin + 0.5f - fyMin) * (vBot - vTop) / fullH) * texH * 65536.0f) : 0);
 
 			const bool useRepeatS = (wrapS == SamplerWrapping::Repeat);
 			const bool useRepeatT = (wrapT == SamplerWrapping::Repeat);
 			const bool useClampS = (wrapS == SamplerWrapping::ClampToEdge);
 			// Check if all UVs are safely within texture bounds (skip per-pixel wrapping)
-			const bool uvSafeX = useClampS && txBase >= 0 && (txBase + dtxFix * (xMax - xMin)) >= 0 &&
-			                     (txBase >> 16) < texW && ((txBase + dtxFix * (xMax - xMin)) >> 16) < texW;
+			const bool uvSafeX = (useClampS && txBase >= 0 && (txBase + dtxFix * (xMax - xMin)) >= 0 &&
+									(txBase >> 16) < texW && ((txBase + dtxFix * (xMax - xMin)) >> 16) < texW);
 
 			const std::int32_t scanWidth = xMax - xMin + 1;
 
 			// Stack-allocated scanline buffer for SIMD blending or direct copy
 			constexpr std::int32_t MaxScanBuf = 4096;
 			alignas(32) std::uint8_t scanBuf[MaxScanBuf * 4];
-			const bool useScanBuf = (useFastBlend || !useBlend) && scanWidth <= MaxScanBuf && texPixels != nullptr;
+			const bool useScanBuf = ((useFastBlend || !useBlend) && scanWidth <= MaxScanBuf && texPixels != nullptr);
 
-			for (std::int32_t py = yMin; py <= yMax; ++py, tyFix += dtyFix) {
+			for (std::int32_t py = yMin; py <= yMax; py++, tyFix += dtyFix) {
 				// TODO: Y-coords need to be flipped when accessing pixels
 				//std::uint8_t* dstRow = g_state.colorBuffer + (py * g_state.bufferWidth + xMin) * 4;
-				const std::int32_t storeY = g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py;
-				std::uint8_t* dstRow = g_state.colorBuffer + (storeY * g_state.bufferWidth + xMin) * 4;
+				const std::int32_t storeY = (g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py);
+				std::uint8_t* dstRow = (g_state.colorBuffer + (storeY * g_state.bufferWidth + xMin) * 4);
 
 				// Get source Y with wrapping
 				std::int32_t srcY;
@@ -1066,7 +1028,7 @@ namespace nCine::RHI
 				} else {
 					srcY = 0;
 				}
-				const std::uint8_t* texRow = (texPixels != nullptr) ? texPixels + static_cast<std::size_t>(srcY) * texW * 4 : nullptr;
+				const std::uint8_t* texRow = (texPixels != nullptr ? texPixels + static_cast<std::size_t>(srcY) * texW * 4 : nullptr);
 
 				if DEATH_LIKELY(useScanBuf) {
 					// === Scanline buffer path: gather raw texels → callback/tint → SIMD blend ===
@@ -1084,20 +1046,25 @@ namespace nCine::RHI
 							txFix += dtxFix;
 						}
 					} else if DEATH_LIKELY(texRow != nullptr) {
-						if (uvSafeX) {
-							for (std::int32_t i = 0; i < scanWidth; ++i) {
+						if (uvSafeX && dtxFix == 65536) {
+							// 1:1 texel mapping - direct memcpy
+							const std::int32_t srcX = txFix >> 16;
+							std::memcpy(scanBuf, &texRow[srcX * 4], static_cast<std::size_t>(scanWidth) * 4);
+							txFix += dtxFix * scanWidth;
+						} else if (uvSafeX) {
+							for (std::int32_t i = 0; i < scanWidth; i++) {
 								const std::int32_t srcX = txFix >> 16;
 								std::memcpy(&scanBuf[i * 4], &texRow[srcX * 4], 4);
 								txFix += dtxFix;
 							}
 						} else if (useRepeatS) {
-							for (std::int32_t i = 0; i < scanWidth; ++i) {
+							for (std::int32_t i = 0; i < scanWidth; i++) {
 								const std::int32_t srcX = txFix >> 16;
 								std::memcpy(&scanBuf[i * 4], &texRow[srcX * 4], 4);
 								txFix = AdvanceRepeatFix(txFix, dtxFix, texWFix);
 							}
 						} else {
-							for (std::int32_t i = 0; i < scanWidth; ++i) {
+							for (std::int32_t i = 0; i < scanWidth; i++) {
 								const std::int32_t srcX = WrapTexelFix(txFix, texW, wrapS);
 								std::memcpy(&scanBuf[i * 4], &texRow[srcX * 4], 4);
 								txFix += dtxFix;
@@ -1116,7 +1083,7 @@ namespace nCine::RHI
 						fsInput.userData = ctx.fragmentShaderUserData;
 						const float invTexW = 1.0f / static_cast<float>(texW > 0 ? texW : 1);
 						std::int32_t txFixShader = txBase;
-						for (std::int32_t i = 0; i < scanWidth; ++i) {
+						for (std::int32_t i = 0; i < scanWidth; i++) {
 							fsInput.rgba = &scanBuf[i * 4];
 							fsInput.u = txFixShader / 65536.0f * invTexW;
 							fsInput.x = xMin + i;
@@ -1124,13 +1091,8 @@ namespace nCine::RHI
 							ctx.fragmentShader(fsInput);
 							txFixShader += dtxFix;
 						}
-					} else if (!whiteTint) {
-						for (std::int32_t i = 0; i < scanWidth; ++i) {
-							scanBuf[i * 4 + 0] = static_cast<std::uint8_t>((scanBuf[i * 4 + 0] * tR) >> 8);
-							scanBuf[i * 4 + 1] = static_cast<std::uint8_t>((scanBuf[i * 4 + 1] * tG) >> 8);
-							scanBuf[i * 4 + 2] = static_cast<std::uint8_t>((scanBuf[i * 4 + 2] * tB) >> 8);
-							scanBuf[i * 4 + 3] = static_cast<std::uint8_t>((scanBuf[i * 4 + 3] * tA) >> 8);
-						}
+					} else if DEATH_UNLIKELY(!whiteTint) {
+						tintScanline(scanBuf, scanWidth, tR, tG, tB, tA);
 					}
 
 					// Phase 3: blend or direct copy to framebuffer
@@ -1147,7 +1109,7 @@ namespace nCine::RHI
 						txFix = NormalizeRepeatFix(txFix, texWFix);
 					}
 
-					for (std::int32_t px = xMin; px <= xMax; ++px, dstRow += 4) {
+					for (std::int32_t px = xMin; px <= xMax; px++, dstRow += 4) {
 						std::int32_t sR, sG, sB, sA;
 						if (useLinear && texPixels != nullptr) {
 							std::uint8_t raw[4];
@@ -1192,7 +1154,7 @@ namespace nCine::RHI
 							fsInput.userData = ctx.fragmentShaderUserData;
 							ctx.fragmentShader(fsInput);
 							sR = px4[0]; sG = px4[1]; sB = px4[2]; sA = px4[3];
-						} else if (!whiteTint) {
+						} else if DEATH_UNLIKELY(!whiteTint) {
 							sR = (sR * tR) >> 8;
 							sG = (sG * tG) >> 8;
 							sB = (sB * tB) >> 8;
@@ -1200,7 +1162,10 @@ namespace nCine::RHI
 						}
 
 						if (useBlend) {
-							if (sA == 0) continue;
+							if (sA == 0) {
+								continue;
+							}
+
 							if (useFastBlend) {
 								if (sA >= 255) {
 									dstRow[0] = static_cast<std::uint8_t>(sR);
@@ -1276,13 +1241,13 @@ namespace nCine::RHI
 			float w1_row = (v0.x - v2.x) * (py0 - v2.y) - (v0.y - v2.y) * (px0 - v2.x);
 			float w2_row = (v1.x - v0.x) * (py0 - v0.y) - (v1.y - v0.y) * (px0 - v0.x);
 
-			Texture* tex = (ctx.ff.hasTexture && ctx.ff.textureUnit < MaxTextureUnits)
-			             ? ctx.textures[ctx.ff.textureUnit] : nullptr;
-			const std::uint8_t* texPixels = (tex != nullptr) ? tex->GetPixels(0) : nullptr;
-			const std::int32_t texW = (tex != nullptr) ? tex->GetWidth()  : 0;
-			const std::int32_t texH = (tex != nullptr) ? tex->GetHeight() : 0;
-			const SamplerWrapping wrapS = (tex != nullptr) ? tex->GetWrapS() : SamplerWrapping::ClampToEdge;
-			const SamplerWrapping wrapT = (tex != nullptr) ? tex->GetWrapT() : SamplerWrapping::ClampToEdge;
+			Texture* tex = (ctx.ff.hasTexture && ctx.ff.textureUnit < MaxTextureUnits
+							? ctx.textures[ctx.ff.textureUnit] : nullptr);
+			const std::uint8_t* texPixels = (tex != nullptr ? tex->GetPixels(0) : nullptr);
+			const std::int32_t texW = (tex != nullptr ? tex->GetWidth() : 0);
+			const std::int32_t texH = (tex != nullptr ? tex->GetHeight() : 0);
+			const SamplerWrapping wrapS = (tex != nullptr ? tex->GetWrapS() : SamplerWrapping::ClampToEdge);
+			const SamplerWrapping wrapT = (tex != nullptr ? tex->GetWrapT() : SamplerWrapping::ClampToEdge);
 			const bool useLinear = (tex != nullptr && tex->GetMagFilter() == SamplerFilter::Linear && texW > 1 && texH > 1);
 
 			const std::int32_t tR = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[0]) * 255.0f + 0.5f);
@@ -1291,16 +1256,16 @@ namespace nCine::RHI
 			const std::int32_t tA = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[3]) * 255.0f + 0.5f);
 
 			const bool useBlend = g_state.blendingEnabled;
-			const bool useFastBlend = useBlend &&
+			const bool useFastBlend = (useBlend &&
 				g_state.blendSrc == BlendFactor::SrcAlpha &&
-				g_state.blendDst == BlendFactor::OneMinusSrcAlpha;
+				g_state.blendDst == BlendFactor::OneMinusSrcAlpha);
 
-			for (std::int32_t py = minY; py <= maxY; ++py) {
+			for (std::int32_t py = minY; py <= maxY; py++) {
 				float w0 = w0_row, w1 = w1_row, w2 = w2_row;
 				// TODO: Y-coords need to be flipped when accessing pixels
 				//std::uint8_t* dstRow = g_state.colorBuffer + (py * g_state.bufferWidth + minX) * 4;
-				const std::int32_t storeY = g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py;
-				std::uint8_t* dstRow = g_state.colorBuffer + (storeY * g_state.bufferWidth + minX) * 4;
+				const std::int32_t storeY = (g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py);
+				std::uint8_t* dstRow = (g_state.colorBuffer + (storeY * g_state.bufferWidth + minX) * 4);
 
 				for (std::int32_t px = minX; px <= maxX; ++px, dstRow += 4, w0 += w0_dx, w1 += w1_dx, w2 += w2_dx) {
 					if ((w0 >= 0.0f) != signPos || (w1 >= 0.0f) != signPos || (w2 >= 0.0f) != signPos)
@@ -1358,7 +1323,10 @@ namespace nCine::RHI
 					}
 
 					if (useBlend) {
-						if (sA == 0) continue;
+						if (sA == 0) {
+							continue;
+						}
+
 						if (useFastBlend) {
 							if (sA >= 255) {
 								dstRow[0] = static_cast<std::uint8_t>(sR);
@@ -1389,6 +1357,380 @@ namespace nCine::RHI
 			}
 		}
 
+		// =====================================================================
+		// Affine quad rasterizer - scanline-based for rotated/scaled quads.
+		// Rasterizes a convex quad defined by 4 vertices with UV interpolation
+		// per-scanline, enabling SIMD blending. Much faster than splitting into
+		// two triangles with per-pixel barycentric tests.
+		// =====================================================================
+		void DrawAffineQuad(const DrawContext& ctx, Vertex2D v0, Vertex2D v1, Vertex2D v2, Vertex2D v3)
+		{
+			if DEATH_UNLIKELY(g_state.colorBuffer == nullptr) return;
+
+			// Reorder vertices as a quad: triangle strip (v0,v1,v2,v3) forms quad
+			// with edges v0-v1, v1-v3, v3-v2, v2-v0 (or equivalently, the two triangles
+			// share edge v1-v2, forming quad v0,v1,v3,v2 in CCW/CW order).
+			// Reorder to sorted array by Y for scanline processing.
+			struct QVert { float x, y, u, v; };
+			QVert quad[4] = {
+				{ v0.x, v0.y, v0.u, v0.v },
+				{ v1.x, v1.y, v1.u, v1.v },
+				{ v2.x, v2.y, v2.u, v2.v },
+				{ v3.x, v3.y, v3.u, v3.v }
+			};
+
+			// Sort by Y (insertion sort on 4 elements)
+			for (std::int32_t i = 1; i < 4; i++) {
+				QVert tmp = quad[i];
+				std::int32_t j = i - 1;
+				while (j >= 0 && quad[j].y > tmp.y) {
+					quad[j + 1] = quad[j];
+					j--;
+				}
+				quad[j + 1] = tmp;
+			}
+
+			// Build edge list: find the left and right edges at each scanline.
+			// For a convex quad sorted by Y, we have at most 3 horizontal bands.
+			// We'll use the general approach: maintain active edges on left/right.
+
+			// Instead of complex edge tracking, use the simpler approach:
+			// For each scanline, compute the X-intersections of all 4 edges and find min/max.
+			// This is still much faster than barycentric per-pixel because we get
+			// linear UV interpolation along scanlines.
+
+			// Get bounding box
+			float fxMin = std::min({quad[0].x, quad[1].x, quad[2].x, quad[3].x});
+			float fxMax = std::max({quad[0].x, quad[1].x, quad[2].x, quad[3].x});
+			float fyMin = quad[0].y;
+			float fyMax = quad[3].y;
+
+			std::int32_t yMin = std::max(0, static_cast<std::int32_t>(fyMin));
+			std::int32_t yMax = std::min(g_state.bufferHeight - 1, static_cast<std::int32_t>(fyMax));
+			std::int32_t xMinClamp = std::max(0, static_cast<std::int32_t>(fxMin));
+			std::int32_t xMaxClamp = std::min(g_state.bufferWidth - 1, static_cast<std::int32_t>(fxMax));
+
+			// Scissor clamp
+			if (g_state.scissorEnabled) {
+				if (g_state.isFboTarget) {
+					const std::int32_t pyMin = g_state.bufferHeight - g_state.scissorY - g_state.scissorH;
+					const std::int32_t pyMax = g_state.bufferHeight - 1 - g_state.scissorY;
+					xMinClamp = std::max(xMinClamp, g_state.scissorX);
+					xMaxClamp = std::min(xMaxClamp, g_state.scissorX + g_state.scissorW - 1);
+					yMin = std::max(yMin, pyMin);
+					yMax = std::min(yMax, pyMax);
+				} else {
+					xMinClamp = std::max(xMinClamp, g_state.scissorX);
+					xMaxClamp = std::min(xMaxClamp, g_state.scissorX + g_state.scissorW - 1);
+					yMin = std::max(yMin, g_state.scissorY);
+					yMax = std::min(yMax, g_state.scissorY + g_state.scissorH - 1);
+				}
+			}
+			if (yMin > yMax || xMinClamp > xMaxClamp) return;
+
+			// Texture info
+			Texture* tex = (ctx.ff.hasTexture && ctx.ff.textureUnit < MaxTextureUnits
+							? ctx.textures[ctx.ff.textureUnit] : nullptr);
+			const std::uint8_t* texPixels = (tex != nullptr ? tex->GetPixels(0) : nullptr);
+			const std::int32_t texW = (tex != nullptr ? tex->GetWidth() : 0);
+			const std::int32_t texH = (tex != nullptr ? tex->GetHeight() : 0);
+			const SamplerWrapping wrapS = (tex != nullptr ? tex->GetWrapS() : SamplerWrapping::ClampToEdge);
+			const SamplerWrapping wrapT = (tex != nullptr ? tex->GetWrapT() : SamplerWrapping::ClampToEdge);
+			const bool useLinear = (tex != nullptr && tex->GetMagFilter() == SamplerFilter::Linear && texW > 1 && texH > 1);
+
+			const std::int32_t tR = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[0]) * 255.0f + 0.5f);
+			const std::int32_t tG = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[1]) * 255.0f + 0.5f);
+			const std::int32_t tB = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[2]) * 255.0f + 0.5f);
+			const std::int32_t tA = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[3]) * 255.0f + 0.5f);
+			const bool whiteTint = (tR >= 255 && tG >= 255 && tB >= 255 && tA >= 255);
+
+			const bool useBlend = g_state.blendingEnabled;
+			const bool useFastBlend = (useBlend &&
+				g_state.blendSrc == BlendFactor::SrcAlpha &&
+				g_state.blendDst == BlendFactor::OneMinusSrcAlpha);
+
+			// Use inverse bilinear interpolation to map screen coords to UV.
+			// For a quad with vertices q0,q1,q2,q3 (in triangle-strip order: 0=TL,1=BL,2=TR,3=BR),
+			// UV is defined by bilinear interpolation:
+			//   P(s,t) = (1-s)(1-t)*v0 + (1-s)*t*v1 + s*(1-t)*v2 + s*t*v3
+			// We invert this per-pixel. For affine (no perspective), this simplifies to:
+			// compute s,t from screen position, then UV = lerp of vertex UVs.
+			//
+			// For better performance, we use edge-walking with linear UV interpolation per scanline.
+			// This works because affine quads have linear UV variation along any horizontal line.
+
+			// Build edges of the quad in winding order for scanline traversal.
+			// Triangle strip order: v0, v1, v2, v3 forms two triangles (v0,v1,v2) and (v2,v1,v3).
+			// The quad boundary is: v0→v2→v3→v1→v0 (or v0→v1→v3→v2→v0 depending on winding).
+			// For our rasterizer, we'll use the two-triangle approach but with scanline output.
+
+			// Actually, let's use the most practical approach for rotated sprites:
+			// compute the UV at start and end of each scanline using inverse mapping.
+			// Since this is an affine (non-perspective) transform, the relationship between
+			// screen coordinates and UVs is a 2D affine map: UV = A * screenXY + B.
+			// We can compute A and B from 3 vertices (any non-degenerate triangle from the quad).
+
+			// Compute affine UV mapping from the first triangle (v0, v1, v2) in the original strip order
+			float e1x = v2.x - v0.x, e1y = v2.y - v0.y;
+			float e2x = v1.x - v0.x, e2y = v1.y - v0.y;
+			float det = e1x * e2y - e1y * e2x;
+			if (std::fabs(det) < 1e-6f) return; // Degenerate quad
+
+			float invDet = 1.0f / det;
+			// For point P, barycentric-like coords: s = ((P-v0) x e2) / det, t = (e1 x (P-v0)) / det
+			// UV = v0.uv + s*(v2.uv - v0.uv) + t*(v1.uv - v0.uv)
+			// This gives us: dU/dx, dU/dy, dV/dx, dV/dy (constant for entire quad)
+
+			float du_s = v2.u - v0.u, du_t = v1.u - v0.u;
+			float dv_s = v2.v - v0.v, dv_t = v1.v - v0.v;
+
+			// ds/dx = e2y * invDet, ds/dy = -e2x * invDet
+			// dt/dx = -e1y * invDet, dt/dy = e1x * invDet
+			float ds_dx = e2y * invDet, ds_dy = -e2x * invDet;
+			float dt_dx = -e1y * invDet, dt_dy = e1x * invDet;
+
+			float dudx = du_s * ds_dx + du_t * dt_dx;
+			float dudy = du_s * ds_dy + du_t * dt_dy;
+			float dvdx = dv_s * ds_dx + dv_t * dt_dx;
+			float dvdy = dv_s * ds_dy + dv_t * dt_dy;
+
+			// Scanline buffer for SIMD blending
+			constexpr std::int32_t MaxScanBuf = 4096;
+			alignas(32) std::uint8_t scanBuf[MaxScanBuf * 4];
+
+			// For each scanline, find left/right X intersection with the quad.
+			// Use the two-triangle coverage test (cheaper than full quad edge walking):
+			// A pixel is inside the quad if it's inside either triangle.
+
+			// Edge functions for triangle 1 (v0, v1, v2)
+			const float t1_w0_dx = v1.y - v2.y, t1_w0_dy = v2.x - v1.x;
+			const float t1_w1_dx = v2.y - v0.y, t1_w1_dy = v0.x - v2.x;
+			const float t1_w2_dx = v0.y - v1.y, t1_w2_dy = v1.x - v0.x;
+			const float area1 = (v2.x - v1.x) * (v0.y - v1.y) - (v2.y - v1.y) * (v0.x - v1.x);
+
+			// Edge functions for triangle 2 (v2, v1, v3)
+			const float t2_w0_dx = v1.y - v3.y, t2_w0_dy = v3.x - v1.x;
+			const float t2_w1_dx = v3.y - v2.y, t2_w1_dy = v2.x - v3.x;
+			const float t2_w2_dx = v2.y - v1.y, t2_w2_dy = v1.x - v2.x;
+			const float area2 = (v3.x - v1.x) * (v2.y - v1.y) - (v3.y - v1.y) * (v2.x - v1.x);
+
+			if (std::fabs(area1) < 1e-6f && std::fabs(area2) < 1e-6f) return;
+			const bool sign1 = (area1 > 0.0f);
+			const bool sign2 = (area2 > 0.0f);
+
+			// 16.16 fixed-point UV steps for scanline
+			const std::int32_t dudxFix = (texPixels != nullptr ? static_cast<std::int32_t>(dudx * texW * 65536.0f) : 0);
+			const std::int32_t dvdxFix = (texPixels != nullptr ? static_cast<std::int32_t>(dvdx * texH * 65536.0f) : 0);
+
+			for (std::int32_t py = yMin; py <= yMax; py++) {
+				const float pyCtr = py + 0.5f;
+				const std::int32_t storeY = (g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py);
+
+				// Find leftmost and rightmost X inside the quad for this scanline
+				// by scanning from the bounding box edges inward using edge functions
+				// Initial edge function values at (xMinClamp+0.5, pyCtr)
+				float px0 = xMinClamp + 0.5f;
+
+				float t1_w0 = (v2.x - v1.x) * (pyCtr - v1.y) - (v2.y - v1.y) * (px0 - v1.x);
+				float t1_w1 = (v0.x - v2.x) * (pyCtr - v2.y) - (v0.y - v2.y) * (px0 - v2.x);
+				float t1_w2 = (v1.x - v0.x) * (pyCtr - v0.y) - (v1.y - v0.y) * (px0 - v0.x);
+
+				float t2_w0 = (v3.x - v1.x) * (pyCtr - v1.y) - (v3.y - v1.y) * (px0 - v1.x);
+				float t2_w1 = (v2.x - v3.x) * (pyCtr - v3.y) - (v2.y - v3.y) * (px0 - v3.x);
+				float t2_w2 = (v1.x - v2.x) * (pyCtr - v2.y) - (v1.y - v2.y) * (px0 - v2.x);
+
+				// Find left edge: first pixel inside either triangle
+				std::int32_t xLeft = xMaxClamp + 1;
+				std::int32_t xRight = xMinClamp - 1;
+
+				float w1_0 = t1_w0, w1_1 = t1_w1, w1_2 = t1_w2;
+				float w2_0 = t2_w0, w2_1 = t2_w1, w2_2 = t2_w2;
+
+				for (std::int32_t px = xMinClamp; px <= xMaxClamp; px++) {
+					bool in1 = (std::fabs(area1) >= 1e-6f) &&
+						((w1_0 >= 0.0f) == sign1) && ((w1_1 >= 0.0f) == sign1) && ((w1_2 >= 0.0f) == sign1);
+					bool in2 = (std::fabs(area2) >= 1e-6f) &&
+						((w2_0 >= 0.0f) == sign2) && ((w2_1 >= 0.0f) == sign2) && ((w2_2 >= 0.0f) == sign2);
+					if (in1 || in2) {
+						xLeft = px;
+						break;
+					}
+					w1_0 += t1_w0_dx; w1_1 += t1_w1_dx; w1_2 += t1_w2_dx;
+					w2_0 += t2_w0_dx; w2_1 += t2_w1_dx; w2_2 += t2_w2_dx;
+				}
+				if (xLeft > xMaxClamp) continue;
+
+				// Find right edge from the right
+				float rpx0 = xMaxClamp + 0.5f;
+				float rt1_w0 = (v2.x - v1.x) * (pyCtr - v1.y) - (v2.y - v1.y) * (rpx0 - v1.x);
+				float rt1_w1 = (v0.x - v2.x) * (pyCtr - v2.y) - (v0.y - v2.y) * (rpx0 - v2.x);
+				float rt1_w2 = (v1.x - v0.x) * (pyCtr - v0.y) - (v1.y - v0.y) * (rpx0 - v0.x);
+				float rt2_w0 = (v3.x - v1.x) * (pyCtr - v1.y) - (v3.y - v1.y) * (rpx0 - v1.x);
+				float rt2_w1 = (v2.x - v3.x) * (pyCtr - v3.y) - (v2.y - v3.y) * (rpx0 - v3.x);
+				float rt2_w2 = (v1.x - v2.x) * (pyCtr - v2.y) - (v1.y - v2.y) * (rpx0 - v2.x);
+
+				for (std::int32_t px = xMaxClamp; px >= xLeft; px--) {
+					bool in1 = (std::fabs(area1) >= 1e-6f) &&
+						((rt1_w0 >= 0.0f) == sign1) && ((rt1_w1 >= 0.0f) == sign1) && ((rt1_w2 >= 0.0f) == sign1);
+					bool in2 = (std::fabs(area2) >= 1e-6f) &&
+						((rt2_w0 >= 0.0f) == sign2) && ((rt2_w1 >= 0.0f) == sign2) && ((rt2_w2 >= 0.0f) == sign2);
+					if (in1 || in2) {
+						xRight = px;
+						break;
+					}
+					rt1_w0 -= t1_w0_dx; rt1_w1 -= t1_w1_dx; rt1_w2 -= t1_w2_dx;
+					rt2_w0 -= t2_w0_dx; rt2_w1 -= t2_w1_dx; rt2_w2 -= t2_w2_dx;
+				}
+				if (xRight < xLeft) continue;
+
+				std::int32_t scanWidth = xRight - xLeft + 1;
+
+				// Compute UV at the left edge using the affine mapping
+				float leftCtrX = xLeft + 0.5f;
+				float relX = leftCtrX - v0.x;
+				float relY = pyCtr - v0.y;
+				float uStart = v0.u + dudx * relX + dudy * relY;
+				float vStart = v0.v + dvdx * relX + dvdy * relY;
+
+				// Use scanline buffer when possible (fits + common blend mode)
+				bool useScanBuf = ((useFastBlend || !useBlend) && scanWidth <= MaxScanBuf && texPixels != nullptr);
+
+				if (useScanBuf) {
+					// Fixed-point UV interpolation along scanline
+					std::int32_t uFix = static_cast<std::int32_t>(uStart * texW * 65536.0f);
+					std::int32_t vFix = static_cast<std::int32_t>(vStart * texH * 65536.0f);
+
+					// Gather texels into scanline buffer
+					if (useLinear) {
+						for (std::int32_t i = 0; i < scanWidth; i++) {
+							SampleBilinearFix(texPixels, texW, texH, uFix, vFix, wrapS, wrapT, &scanBuf[i * 4]);
+							uFix += dudxFix;
+							vFix += dvdxFix;
+						}
+					} else {
+						for (std::int32_t i = 0; i < scanWidth; i++) {
+							std::int32_t srcX = WrapTexelFix(uFix, texW, wrapS);
+							std::int32_t srcY = WrapTexelFix(vFix, texH, wrapT);
+							const std::uint8_t* src = texPixels + (static_cast<std::size_t>(srcY) * texW + srcX) * 4;
+							std::memcpy(&scanBuf[i * 4], src, 4);
+							uFix += dudxFix;
+							vFix += dvdxFix;
+						}
+					}
+
+					// Apply fragment shader or tint
+					if DEATH_UNLIKELY(ctx.fragmentShader != nullptr) {
+						FragmentShaderInput fsInput;
+						fsInput.texWidth = texW;
+						fsInput.texHeight = texH;
+						fsInput.textures = ctx.textures;
+						fsInput.color = ctx.ff.color;
+						fsInput.userData = ctx.fragmentShaderUserData;
+						std::int32_t uFixShader = static_cast<std::int32_t>(uStart * texW * 65536.0f);
+						std::int32_t vFixShader = static_cast<std::int32_t>(vStart * texH * 65536.0f);
+						const float invTexW = 1.0f / static_cast<float>(texW > 0 ? texW : 1);
+						const float invTexH = 1.0f / static_cast<float>(texH > 0 ? texH : 1);
+						for (std::int32_t i = 0; i < scanWidth; i++) {
+							fsInput.rgba = &scanBuf[i * 4];
+							fsInput.u = uFixShader / 65536.0f * invTexW;
+							fsInput.v = vFixShader / 65536.0f * invTexH;
+							fsInput.x = xLeft + i;
+							fsInput.y = py;
+							ctx.fragmentShader(fsInput);
+							uFixShader += dudxFix;
+							vFixShader += dvdxFix;
+						}
+					} else if DEATH_UNLIKELY(!whiteTint) {
+						tintScanline(scanBuf, scanWidth, tR, tG, tB, tA);
+					}
+
+					// Blend or copy to framebuffer
+					std::uint8_t* dstRow = g_state.colorBuffer + (storeY * g_state.bufferWidth + xLeft) * 4;
+					if (useFastBlend) {
+						blendScanlineSrcAlpha(dstRow, scanBuf, scanWidth);
+					} else {
+						std::memcpy(dstRow, scanBuf, static_cast<std::size_t>(scanWidth) * 4);
+					}
+				} else {
+					// Per-pixel path (generic blend modes or no texture)
+					std::uint8_t* dstRow = g_state.colorBuffer + (storeY * g_state.bufferWidth + xLeft) * 4;
+					float u = uStart, vv = vStart;
+
+					for (std::int32_t px = xLeft; px <= xRight; px++, dstRow += 4) {
+						std::int32_t sR, sG, sB, sA;
+						if (texPixels != nullptr && useLinear) {
+							float wu = WrapUV(u, wrapS);
+							float wv = WrapUV(vv, wrapT);
+							std::uint8_t raw[4];
+							SampleBilinearFloat(texPixels, texW, texH, wu, wv, wrapS, wrapT, raw);
+							sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
+						} else if (texPixels != nullptr) {
+							float wu = WrapUV(u, wrapS);
+							float wv = WrapUV(vv, wrapT);
+							std::int32_t srcX = std::max(0, std::min(texW - 1, static_cast<std::int32_t>(wu * (texW - 1) + 0.5f)));
+							std::int32_t srcY = std::max(0, std::min(texH - 1, static_cast<std::int32_t>(wv * (texH - 1) + 0.5f)));
+							const std::uint8_t* src = texPixels + (srcY * texW + srcX) * 4;
+							sR = src[0]; sG = src[1]; sB = src[2]; sA = src[3];
+						} else {
+							sR = 255; sG = 255; sB = 255; sA = 255;
+						}
+						u += dudx;
+						vv += dvdx;
+
+						if DEATH_UNLIKELY(ctx.fragmentShader != nullptr) {
+							std::uint8_t px4[4] = {
+								static_cast<std::uint8_t>(sR), static_cast<std::uint8_t>(sG),
+								static_cast<std::uint8_t>(sB), static_cast<std::uint8_t>(sA)
+							};
+							FragmentShaderInput fsInput;
+							fsInput.rgba = px4;
+							fsInput.u = u - dudx;
+							fsInput.v = vv - dvdx;
+							fsInput.x = px;
+							fsInput.y = py;
+							fsInput.texWidth = texW;
+							fsInput.texHeight = texH;
+							fsInput.textures = ctx.textures;
+							fsInput.color = ctx.ff.color;
+							fsInput.userData = ctx.fragmentShaderUserData;
+							ctx.fragmentShader(fsInput);
+							sR = px4[0]; sG = px4[1]; sB = px4[2]; sA = px4[3];
+						} else if DEATH_UNLIKELY(!whiteTint) {
+							sR = (sR * tR) >> 8;
+							sG = (sG * tG) >> 8;
+							sB = (sB * tB) >> 8;
+							sA = (sA * tA) >> 8;
+						}
+
+						if (useBlend) {
+							if (sA == 0) continue;
+							if (useFastBlend) {
+								if (sA >= 255) {
+									dstRow[0] = static_cast<std::uint8_t>(sR);
+									dstRow[1] = static_cast<std::uint8_t>(sG);
+									dstRow[2] = static_cast<std::uint8_t>(sB);
+									dstRow[3] = static_cast<std::uint8_t>(sA);
+								} else {
+									const std::int32_t inv = 255 - sA;
+									dstRow[0] = static_cast<std::uint8_t>((sR * sA + dstRow[0] * inv) >> 8);
+									dstRow[1] = static_cast<std::uint8_t>((sG * sA + dstRow[1] * inv) >> 8);
+									dstRow[2] = static_cast<std::uint8_t>((sB * sA + dstRow[2] * inv) >> 8);
+									dstRow[3] = static_cast<std::uint8_t>((sA * 255 + dstRow[3] * inv) >> 8);
+								}
+							} else {
+								BlendPixelGeneric(dstRow, sR, sG, sB, sA, g_state.blendSrc, g_state.blendDst);
+							}
+						} else {
+							dstRow[0] = static_cast<std::uint8_t>(sR);
+							dstRow[1] = static_cast<std::uint8_t>(sG);
+							dstRow[2] = static_cast<std::uint8_t>(sB);
+							dstRow[3] = static_cast<std::uint8_t>(sA);
+						}
+					}
+				}
+			}
+		}
+
 		void DrawPrimitive(const DrawContext& ctx, PrimitiveType type, const SmallVectorImpl<std::int32_t>& indices)
 		{
 			switch (type) {
@@ -1402,7 +1744,7 @@ namespace nCine::RHI
 					break;
 				}
 				case PrimitiveType::TriangleStrip: {
-					for (std::size_t i = 0; i + 2 < indices.size(); ++i) {
+					for (std::size_t i = 0; i + 2 < indices.size(); i++) {
 						if (i & 1) {
 							RasterizeTriangle(ctx,
 							    FetchVertex(ctx, indices[i]),
@@ -1418,7 +1760,7 @@ namespace nCine::RHI
 					break;
 				}
 				case PrimitiveType::TriangleFan: {
-					for (std::size_t i = 1; i + 1 < indices.size(); ++i) {
+					for (std::size_t i = 1; i + 1 < indices.size(); i++) {
 						RasterizeTriangle(ctx,
 						    FetchVertex(ctx, indices[0]),
 						    FetchVertex(ctx, indices[i]),
@@ -1489,27 +1831,32 @@ namespace nCine::RHI
 		if DEATH_UNLIKELY(g_state.drawCtx == nullptr) return;
 
 		// Fast path: procedural 4-vertex quad (TriangleStrip, no VBO)
-		if (type == PrimitiveType::TriangleStrip && count == 4 && firstVertex == 0 &&
+		if DEATH_LIKELY(type == PrimitiveType::TriangleStrip && count == 4 && firstVertex == 0 &&
 		    g_state.drawCtx->vertexFormat == nullptr) {
 			const DrawContext& ctx = *g_state.drawCtx;
 			Vertex2D v0 = FetchVertex(ctx, 0), v1 = FetchVertex(ctx, 1);
 			Vertex2D v2 = FetchVertex(ctx, 2), v3 = FetchVertex(ctx, 3);
 			// Verify axis-aligned (no rotation: same x for vertical pairs, same y for horizontal pairs)
-			if (std::fabs(v0.x - v1.x) < 0.5f && std::fabs(v2.x - v3.x) < 0.5f &&
-			    std::fabs(v0.y - v2.y) < 0.5f && std::fabs(v1.y - v3.y) < 0.5f) {
+			if DEATH_LIKELY(std::fabs(v0.x - v1.x) < 0.5f && std::fabs(v2.x - v3.x) < 0.5f &&
+							std::fabs(v0.y - v2.y) < 0.5f && std::fabs(v1.y - v3.y) < 0.5f) {
 				DrawAxisAlignedQuad(ctx, v0, v1, v2, v3);
 				return;
 			}
+			// Rotated/scaled quad: use affine scanline rasterizer
+			DrawAffineQuad(ctx, v0, v1, v2, v3);
+			return;
 		}
 
 		SmallVector<std::int32_t> indices(static_cast<std::size_t>(count));
-		for (std::int32_t i = 0; i < count; ++i) indices[i] = firstVertex + i;
+		for (std::int32_t i = 0; i < count; ++i) {
+			indices[i] = firstVertex + i;
+		}
 		DrawPrimitive(*g_state.drawCtx, type, indices);
 	}
 
 	void DrawInstanced(PrimitiveType type, std::int32_t firstVertex, std::int32_t count, std::int32_t instanceCount)
 	{
-		for (std::int32_t inst = 0; inst < instanceCount; ++inst) {
+		for (std::int32_t inst = 0; inst < instanceCount; inst++) {
 			Draw(type, firstVertex, count);
 		}
 	}
@@ -1520,7 +1867,7 @@ namespace nCine::RHI
 
 		const std::uint16_t* iboPtr = static_cast<const std::uint16_t*>(indexOffset);
 		SmallVector<std::int32_t> indices(static_cast<std::size_t>(count));
-		for (std::int32_t i = 0; i < count; ++i) {
+		for (std::int32_t i = 0; i < count; i++) {
 			indices[i] = static_cast<std::int32_t>(iboPtr[i]) + baseVertex;
 		}
 		DrawPrimitive(*g_state.drawCtx, type, indices);
@@ -1529,7 +1876,7 @@ namespace nCine::RHI
 	void DrawIndexedInstanced(PrimitiveType type, std::int32_t count, const void* indexOffset,
 	                          std::int32_t instanceCount, std::int32_t baseVertex)
 	{
-		for (std::int32_t inst = 0; inst < instanceCount; ++inst) {
+		for (std::int32_t inst = 0; inst < instanceCount; inst++) {
 			DrawIndexed(type, count, indexOffset, baseVertex);
 		}
 	}

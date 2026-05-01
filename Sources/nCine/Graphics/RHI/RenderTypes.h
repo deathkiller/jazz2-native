@@ -157,6 +157,33 @@ namespace nCine::RHI
 		RGB_ETC2,
 		RGBA_ETC2,
 
+		// ATC (Adreno)
+		RGB_ATC,
+		RGBA_ATC_Explicit,
+		RGBA_ATC_Interpolated,
+
+		// PVRTC (PowerVR)
+		RGB_PVRTC_2BPP,
+		RGBA_PVRTC_2BPP,
+		RGB_PVRTC_4BPP,
+		RGBA_PVRTC_4BPP,
+
+		// ASTC (all 128 bits per block, varying block footprint)
+		RGBA_ASTC_4x4,
+		RGBA_ASTC_5x4,
+		RGBA_ASTC_5x5,
+		RGBA_ASTC_6x5,
+		RGBA_ASTC_6x6,
+		RGBA_ASTC_8x5,
+		RGBA_ASTC_8x6,
+		RGBA_ASTC_8x8,
+		RGBA_ASTC_10x5,
+		RGBA_ASTC_10x6,
+		RGBA_ASTC_10x8,
+		RGBA_ASTC_10x10,
+		RGBA_ASTC_12x10,
+		RGBA_ASTC_12x12,
+
 		// Float formats (availability: RHI_CAP_TEXTURE_FLOAT)
 		R_Float16,
 		RGBA_Float16
@@ -231,12 +258,33 @@ namespace nCine::RHI
 			case TextureFormat::RGB_DXT1:
 			case TextureFormat::RGB_ETC1:
 			case TextureFormat::RGB_ETC2:
+			case TextureFormat::RGB_ATC:
+			case TextureFormat::RGB_PVRTC_2BPP:
+			case TextureFormat::RGB_PVRTC_4BPP:
 				return 3;
 			case TextureFormat::RGBA8:
 			case TextureFormat::RGBA_Float16:
 			case TextureFormat::RGBA_DXT3:
 			case TextureFormat::RGBA_DXT5:
 			case TextureFormat::RGBA_ETC2:
+			case TextureFormat::RGBA_ATC_Explicit:
+			case TextureFormat::RGBA_ATC_Interpolated:
+			case TextureFormat::RGBA_PVRTC_2BPP:
+			case TextureFormat::RGBA_PVRTC_4BPP:
+			case TextureFormat::RGBA_ASTC_4x4:
+			case TextureFormat::RGBA_ASTC_5x4:
+			case TextureFormat::RGBA_ASTC_5x5:
+			case TextureFormat::RGBA_ASTC_6x5:
+			case TextureFormat::RGBA_ASTC_6x6:
+			case TextureFormat::RGBA_ASTC_8x5:
+			case TextureFormat::RGBA_ASTC_8x6:
+			case TextureFormat::RGBA_ASTC_8x8:
+			case TextureFormat::RGBA_ASTC_10x5:
+			case TextureFormat::RGBA_ASTC_10x6:
+			case TextureFormat::RGBA_ASTC_10x8:
+			case TextureFormat::RGBA_ASTC_10x10:
+			case TextureFormat::RGBA_ASTC_12x10:
+			case TextureFormat::RGBA_ASTC_12x12:
 				return 4;
 			default:
 				return 0;
@@ -253,6 +301,27 @@ namespace nCine::RHI
 			case TextureFormat::RGB_ETC1:
 			case TextureFormat::RGB_ETC2:
 			case TextureFormat::RGBA_ETC2:
+			case TextureFormat::RGB_ATC:
+			case TextureFormat::RGBA_ATC_Explicit:
+			case TextureFormat::RGBA_ATC_Interpolated:
+			case TextureFormat::RGB_PVRTC_2BPP:
+			case TextureFormat::RGBA_PVRTC_2BPP:
+			case TextureFormat::RGB_PVRTC_4BPP:
+			case TextureFormat::RGBA_PVRTC_4BPP:
+			case TextureFormat::RGBA_ASTC_4x4:
+			case TextureFormat::RGBA_ASTC_5x4:
+			case TextureFormat::RGBA_ASTC_5x5:
+			case TextureFormat::RGBA_ASTC_6x5:
+			case TextureFormat::RGBA_ASTC_6x6:
+			case TextureFormat::RGBA_ASTC_8x5:
+			case TextureFormat::RGBA_ASTC_8x6:
+			case TextureFormat::RGBA_ASTC_8x8:
+			case TextureFormat::RGBA_ASTC_10x5:
+			case TextureFormat::RGBA_ASTC_10x6:
+			case TextureFormat::RGBA_ASTC_10x8:
+			case TextureFormat::RGBA_ASTC_10x10:
+			case TextureFormat::RGBA_ASTC_12x10:
+			case TextureFormat::RGBA_ASTC_12x12:
 				return true;
 			default:
 				return false;
@@ -278,6 +347,14 @@ namespace nCine::RHI
 			case TextureFormat::RGB_ETC1:   return 4;
 			case TextureFormat::RGB_ETC2:   return 4;
 			case TextureFormat::RGBA_ETC2:  return 8;
+			case TextureFormat::RGB_ATC:    return 4;
+			case TextureFormat::RGBA_ATC_Explicit:       return 8;
+			case TextureFormat::RGBA_ATC_Interpolated:   return 8;
+			case TextureFormat::RGB_PVRTC_2BPP:   return 2;
+			case TextureFormat::RGBA_PVRTC_2BPP:  return 2;
+			case TextureFormat::RGB_PVRTC_4BPP:   return 4;
+			case TextureFormat::RGBA_PVRTC_4BPP:  return 4;
+			case TextureFormat::RGBA_ASTC_4x4:    return 8;
 			default:                        return 0;
 		}
 	}
@@ -286,23 +363,47 @@ namespace nCine::RHI
 	inline std::uint32_t CalculateMipSizes(TextureFormat format, std::int32_t width, std::int32_t height, std::int32_t mipMapCount, std::uint32_t* mipDataOffsets, std::uint32_t* mipDataSizes)
 	{
 		std::uint32_t blockWidth = 1, blockHeight = 1;
+		std::uint32_t blockBytes = 0;	// If non-zero, use fixed block size instead of bpp
 		std::uint32_t bpp = BitsPerPixel(format);
 		std::uint32_t minDataSize = 1;
 
 		if (IsCompressed(format)) {
-			blockWidth = 4;
-			blockHeight = 4;
 			switch (format) {
 				case TextureFormat::RGB_DXT1:
 				case TextureFormat::RGB_ETC1:
 				case TextureFormat::RGB_ETC2:
-					minDataSize = 8;
+				case TextureFormat::RGB_ATC:
+					blockWidth = 4; blockHeight = 4; minDataSize = 8;
 					break;
 				case TextureFormat::RGBA_DXT3:
 				case TextureFormat::RGBA_DXT5:
 				case TextureFormat::RGBA_ETC2:
-					minDataSize = 16;
+				case TextureFormat::RGBA_ATC_Explicit:
+				case TextureFormat::RGBA_ATC_Interpolated:
+					blockWidth = 4; blockHeight = 4; minDataSize = 16;
 					break;
+				case TextureFormat::RGB_PVRTC_2BPP:
+				case TextureFormat::RGBA_PVRTC_2BPP:
+					blockWidth = 8; blockHeight = 4; minDataSize = 2 * 2 * ((8 * 4 * 2) / 8);
+					break;
+				case TextureFormat::RGB_PVRTC_4BPP:
+				case TextureFormat::RGBA_PVRTC_4BPP:
+					blockWidth = 4; blockHeight = 4; minDataSize = 2 * 2 * ((4 * 4 * 4) / 8);
+					break;
+				case TextureFormat::RGBA_ASTC_4x4:   blockWidth = 4;  blockHeight = 4;  blockBytes = 16; minDataSize = 16; break;
+				case TextureFormat::RGBA_ASTC_5x4:   blockWidth = 5;  blockHeight = 4;  blockBytes = 16; minDataSize = 16; break;
+				case TextureFormat::RGBA_ASTC_5x5:   blockWidth = 5;  blockHeight = 5;  blockBytes = 16; minDataSize = 16; break;
+				case TextureFormat::RGBA_ASTC_6x5:   blockWidth = 6;  blockHeight = 5;  blockBytes = 16; minDataSize = 16; break;
+				case TextureFormat::RGBA_ASTC_6x6:   blockWidth = 6;  blockHeight = 6;  blockBytes = 16; minDataSize = 16; break;
+				case TextureFormat::RGBA_ASTC_8x5:   blockWidth = 8;  blockHeight = 5;  blockBytes = 16; minDataSize = 16; break;
+				case TextureFormat::RGBA_ASTC_8x6:   blockWidth = 8;  blockHeight = 6;  blockBytes = 16; minDataSize = 16; break;
+				case TextureFormat::RGBA_ASTC_8x8:   blockWidth = 8;  blockHeight = 8;  blockBytes = 16; minDataSize = 16; break;
+				case TextureFormat::RGBA_ASTC_10x5:  blockWidth = 10; blockHeight = 5;  blockBytes = 16; minDataSize = 16; break;
+				case TextureFormat::RGBA_ASTC_10x6:  blockWidth = 10; blockHeight = 6;  blockBytes = 16; minDataSize = 16; break;
+				case TextureFormat::RGBA_ASTC_10x8:  blockWidth = 10; blockHeight = 8;  blockBytes = 16; minDataSize = 16; break;
+				case TextureFormat::RGBA_ASTC_10x10: blockWidth = 10; blockHeight = 10; blockBytes = 16; minDataSize = 16; break;
+				case TextureFormat::RGBA_ASTC_12x10: blockWidth = 12; blockHeight = 10; blockBytes = 16; minDataSize = 16; break;
+				case TextureFormat::RGBA_ASTC_12x12: blockWidth = 12; blockHeight = 12; blockBytes = 16; minDataSize = 16; break;
 				default: break;
 			}
 		}
@@ -315,7 +416,9 @@ namespace nCine::RHI
 			std::uint32_t blocksX = (levelWidth + blockWidth - 1) / blockWidth;
 			std::uint32_t blocksY = (levelHeight + blockHeight - 1) / blockHeight;
 			mipDataOffsets[i] = dataSizesSum;
-			mipDataSizes[i] = blocksX * blocksY * ((blockWidth * blockHeight * bpp) / 8);
+			mipDataSizes[i] = (blockBytes > 0)
+				? blocksX * blocksY * blockBytes
+				: blocksX * blocksY * ((blockWidth * blockHeight * bpp) / 8);
 
 			if (mipDataSizes[i] < minDataSize) {
 				mipDataSizes[i] = minDataSize;

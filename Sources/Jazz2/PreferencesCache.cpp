@@ -47,6 +47,7 @@ namespace Jazz2
 	bool PreferencesCache::PreferZoomOut = false;
 	bool PreferencesCache::BackgroundDithering = true;
 	bool PreferencesCache::BlurEffects = true;
+	std::uint8_t PreferencesCache::RenderingResolutionPercent = 100;
 	std::uint8_t PreferencesCache::LightingResolutionPercent = 100;
 	bool PreferencesCache::EnableReforgedGameplay = true;
 	bool PreferencesCache::EnableReforgedHUD = true;
@@ -361,6 +362,7 @@ namespace Jazz2
 					if (version >= 13) {
 						// These 2 new options needs to be enabled by default
 						BlurEffects = ((boolOptions & BoolOptions::BlurEffects) == BoolOptions::BlurEffects);
+						RenderingResolutionPercent = std::clamp(uc.ReadValue<std::uint8_t>(), std::uint8_t(10), std::uint8_t(100));
 						LightingResolutionPercent = std::clamp(uc.ReadValue<std::uint8_t>(), std::uint8_t(10), std::uint8_t(100));
 					}
 
@@ -623,6 +625,7 @@ namespace Jazz2
 
 		co.Write(UniqueServerID, sizeof(UniqueServerID));
 
+		co.WriteValue<std::uint8_t>(RenderingResolutionPercent);
 		co.WriteValue<std::uint8_t>(LightingResolutionPercent);
 
 		// Controls

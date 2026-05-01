@@ -12,12 +12,16 @@
 
 struct ImTextureData;
 
+namespace nCine::RHI
+{
+	class Texture;
+	class ShaderProgram;
+	class ShaderUniforms;
+	class Buffer;
+}
+
 namespace nCine
 {
-	class GLTexture;
-	class GLShaderProgram;
-	class GLShaderUniforms;
-	class GLBufferObject;
 	class RenderCommand;
 	class RenderQueue;
 	class IInputEventHandler;
@@ -37,17 +41,17 @@ namespace nCine
 
 	private:
 		bool withSceneGraph_;
-		HashMap<GLTexture*, std::unique_ptr<GLTexture>> textures_;
+		HashMap<RHI::Texture*, std::unique_ptr<RHI::Texture>> textures_;
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		SmallVector<char, 0> tempTexBuffer_;
 #endif
-		std::unique_ptr<GLShaderProgram> imguiShaderProgram_;
-		std::unique_ptr<GLBufferObject> vbo_;
-		std::unique_ptr<GLBufferObject> ibo_;
+		std::unique_ptr<RHI::ShaderProgram> imguiShaderProgram_;
+		std::unique_ptr<RHI::Buffer> vbo_;
+		std::unique_ptr<RHI::Buffer> ibo_;
 
 		static const std::int32_t UniformsBufferSize = 65;
 		std::uint8_t uniformsBuffer_[UniformsBufferSize];
-		std::unique_ptr<GLShaderUniforms> imguiShaderUniforms_;
+		std::unique_ptr<RHI::ShaderUniforms> imguiShaderUniforms_;
 		IInputEventHandler* appInputHandler_;
 
 		std::int32_t lastFrameWidth_;

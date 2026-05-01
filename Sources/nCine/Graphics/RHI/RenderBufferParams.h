@@ -2,17 +2,11 @@
 
 #include <cstdint>
 
-// Forward-declare the buffer object type.
-// For the GL backend a GLBufferObject is used; the circular-include chain
-//   RenderBuffersManager.h -> RHI.h -> RHI_GL.h -> GLShaderUniformBlocks.h -> RenderBuffersManager.h
-// means we cannot include RHI.h here for GL — we use a forward declaration instead.
-// For all other backends nCine::RHI::Buffer is a concrete class; RHI.h is guaranteed to be
-// already included before this header in that case (via RenderBuffersManager.h -> RHI.h).
-#if defined(WITH_RHI_GL)
-namespace nCine { class GLBufferObject; }
-#else
-namespace nCine::RHI { class Buffer; }
-#endif
+// Forward-declare the buffer object type
+namespace nCine::RHI
+{
+	class Buffer;
+}
 
 namespace nCine
 {
@@ -22,13 +16,9 @@ namespace nCine
 		BufferParams()
 			: object(nullptr), size(0), offset(0), mapBase(nullptr) {}
 
-#if defined(WITH_RHI_GL)
-		GLBufferObject* object;
-#else
-		RHI::Buffer*    object;
-#endif
-		std::uint32_t   size;
-		std::uint32_t   offset;
-		std::uint8_t*   mapBase;
+		RHI::Buffer* object;
+		std::uint32_t size;
+		std::uint32_t offset;
+		std::uint8_t* mapBase;
 	};
 }

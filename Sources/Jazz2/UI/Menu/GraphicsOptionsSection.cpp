@@ -26,8 +26,6 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::RescaleMode, _("Rescale Mode") });
 #endif
-		// TRANSLATORS: Menu item in Options > Graphics section
-		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::Resolution, _("Resolution") });
 #if defined(NCINE_HAS_WINDOWS)
 #	if defined(DEATH_TARGET_WINDOWS_RT)
 		// Xbox is always fullscreen
@@ -38,6 +36,12 @@ namespace Jazz2::UI::Menu
 			_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::Fullscreen, _("Fullscreen"), true });
 		}
 #endif
+		// TRANSLATORS: Menu item in Options > Graphics section
+		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::ScreenResolution, _("Screen Resolution") });
+		// TRANSLATORS: Menu item in Options > Graphics section
+		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::RenderingResolution, _("Rendering Resolution"), true });
+		// TRANSLATORS: Menu item in Options > Graphics section
+		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::LightingResolution, _("Lighting Resolution"), true });
 #if defined(RHI_CAP_SHADERS)
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::Antialiasing, _("Antialiasing"), true });
@@ -46,8 +50,6 @@ namespace Jazz2::UI::Menu
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::BackgroundDithering, _("Background Dithering"), true });
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::BlurEffects, _("Blur Effects"), true });
-		// TRANSLATORS: Menu item in Options > Graphics section
-		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::LightingResolution, _("Lighting Resolution"), true });
 		// TRANSLATORS: Menu item in Options > Graphics section
 		_items.emplace_back(GraphicsOptionsItem { GraphicsOptionsItemType::LowWaterQuality, _("Water Quality"), true });
 		// TRANSLATORS: Menu item in Options > Graphics section
@@ -74,11 +76,53 @@ namespace Jazz2::UI::Menu
 
 	void GraphicsOptionsSection::OnHandleInput()
 	{
-		if (!_items.empty() && _items[_selectedIndex].Item.HasBooleanValue && (_root->ActionHit(PlayerAction::Left) || _root->ActionHit(PlayerAction::Right))) {
-			OnExecuteSelected();
-		} else {
-			ScrollableMenuSection::OnHandleInput();
+		if (!_items.empty()) {
+			auto& currentItem = _items[_selectedIndex].Item;
+			if (currentItem.Type == GraphicsOptionsItemType::RenderingResolution ||
+				currentItem.Type == GraphicsOptionsItemType::LightingResolution) {
+				bool isLeft = _root->ActionHit(PlayerAction::Left);
+				bool isRight = _root->ActionHit(PlayerAction::Right);
+				if (isLeft || isRight) {
+					bool changed = false;
+					if (currentItem.Type == GraphicsOptionsItemType::RenderingResolution) {
+						auto& pct = PreferencesCache::RenderingResolutionPercent;
+						if (isLeft) {
+							if (pct > 85) { pct = 85; changed = true; }
+							else if (pct > 70) { pct = 70; changed = true; }
+							else if (pct > 60) { pct = 60; changed = true; }
+						} else {
+							if (pct < 70) { pct = 70; changed = true; }
+							else if (pct < 85) { pct = 85; changed = true; }
+							else if (pct < 100) { pct = 100; changed = true; }
+						}
+					} else {
+						auto& pct = PreferencesCache::LightingResolutionPercent;
+						if (isLeft) {
+							if (pct > 75) { pct = 75; changed = true; }
+							else if (pct > 50) { pct = 50; changed = true; }
+							else if (pct > 25) { pct = 25; changed = true; }
+							else if (pct > 12) { pct = 12; changed = true; }
+						} else {
+							if (pct < 25) { pct = 25; changed = true; }
+							else if (pct < 50) { pct = 50; changed = true; }
+							else if (pct < 75) { pct = 75; changed = true; }
+							else if (pct < 100) { pct = 100; changed = true; }
+						}
+					}
+					if (changed) {
+						_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
+						_isDirty = true;
+						_animation = 0.0f;
+						_root->PlaySfx("MenuSelect"_s, 0.6f);
+					}
+					return;
+				}
+			} else if (currentItem.HasBooleanValue && (_root->ActionHit(PlayerAction::Left) || _root->ActionHit(PlayerAction::Right))) {
+				OnExecuteSelected();
+				return;
+			}
 		}
+		ScrollableMenuSection::OnHandleInput();
 	}
 
 	void GraphicsOptionsSection::OnDraw(Canvas* canvas)
@@ -116,7 +160,7 @@ namespace Jazz2::UI::Menu
 
 	void GraphicsOptionsSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
 	{
-		item.Height = (item.Item.HasBooleanValue || item.Item.Type == GraphicsOptionsItemType::Resolution ? 52 : ItemHeight);
+		item.Height = (item.Item.HasBooleanValue || item.Item.Type == GraphicsOptionsItemType::ScreenResolution ? 52 : ItemHeight);
 	}
 
 	void GraphicsOptionsSection::OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected)
@@ -140,7 +184,7 @@ namespace Jazz2::UI::Menu
 				Alignment::Center, Font::DefaultColor, 0.9f);
 		}
 
-		if (item.Item.Type == GraphicsOptionsItemType::Resolution) {
+		if (item.Item.Type == GraphicsOptionsItemType::ScreenResolution) {
 			Vector2i res = theApplication().GetGfxDevice().drawableResolution();
 			char customText[64];
 			std::size_t length = formatInto(customText, "{}x{}", res.X, res.Y);
@@ -153,6 +197,18 @@ namespace Jazz2::UI::Menu
 #if defined(NCINE_HAS_WINDOWS)
 				case GraphicsOptionsItemType::Fullscreen: enabled = PreferencesCache::EnableFullscreen; break;
 #endif
+				case GraphicsOptionsItemType::RenderingResolution:
+					customTextBuffer = format("{}% ({}x{})", PreferencesCache::RenderingResolutionPercent,
+						LevelHandler::DefaultWidth * PreferencesCache::RenderingResolutionPercent / 100,
+						LevelHandler::DefaultHeight * PreferencesCache::RenderingResolutionPercent / 100);
+					customText = customTextBuffer;
+					break;
+				case GraphicsOptionsItemType::LightingResolution:
+					customTextBuffer = format("{}% ({}x{})", PreferencesCache::LightingResolutionPercent,
+						LevelHandler::DefaultWidth * PreferencesCache::RenderingResolutionPercent * PreferencesCache::LightingResolutionPercent / (100 * 100),
+						LevelHandler::DefaultHeight * PreferencesCache::RenderingResolutionPercent * PreferencesCache::LightingResolutionPercent / (100 * 100));
+					customText = customTextBuffer;
+					break;
 #if defined(RHI_CAP_SHADERS)
 				case GraphicsOptionsItemType::Antialiasing: enabled = (PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing; break;
 #endif
@@ -163,12 +219,6 @@ namespace Jazz2::UI::Menu
 #else
 					enabled = false; customTextBuffer = format("{} \f[c:#d0705d]({})", _("Disabled"), _("Forced")); customText = customTextBuffer;
 #endif		
-					break;
-				case GraphicsOptionsItemType::LightingResolution:
-					customTextBuffer = format("{}% ({}x{})", PreferencesCache::LightingResolutionPercent,
-						LevelHandler::DefaultWidth * PreferencesCache::LightingResolutionPercent / 100,
-						LevelHandler::DefaultHeight * PreferencesCache::LightingResolutionPercent / 100);
-					customText = customTextBuffer;
 					break;
 				case GraphicsOptionsItemType::LowWaterQuality:
 #if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
@@ -230,6 +280,39 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
 #endif
+			case GraphicsOptionsItemType::RenderingResolution:
+				if (PreferencesCache::RenderingResolutionPercent >= 100) {
+					PreferencesCache::RenderingResolutionPercent = 85;
+				} else if (PreferencesCache::RenderingResolutionPercent >= 85) {
+					PreferencesCache::RenderingResolutionPercent = 70;
+				} else if (PreferencesCache::RenderingResolutionPercent >= 70) {
+					PreferencesCache::RenderingResolutionPercent = 60;
+				} else {
+					PreferencesCache::RenderingResolutionPercent = 100;
+				}
+				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
+				_isDirty = true;
+				_animation = 0.0f;
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				break;
+			case GraphicsOptionsItemType::LightingResolution:
+				if (PreferencesCache::LightingResolutionPercent >= 100) {
+					PreferencesCache::LightingResolutionPercent = 75;
+				} else if (PreferencesCache::LightingResolutionPercent >= 75) {
+					PreferencesCache::LightingResolutionPercent = 50;
+				} else if (PreferencesCache::LightingResolutionPercent >= 50) {
+					PreferencesCache::LightingResolutionPercent = 25;
+				} else if (PreferencesCache::LightingResolutionPercent >= 25) {
+					PreferencesCache::LightingResolutionPercent = 12;
+				} else {
+					PreferencesCache::LightingResolutionPercent = 100;
+				}
+				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
+				_isDirty = true;
+				_animation = 0.0f;
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				break;
+
 #if defined(RHI_CAP_SHADERS)
 			case GraphicsOptionsItemType::Antialiasing: {
 				RescaleMode newMode = (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask);
@@ -260,23 +343,6 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				break;
 #endif
-			case GraphicsOptionsItemType::LightingResolution:
-				if (PreferencesCache::LightingResolutionPercent >= 100) {
-					PreferencesCache::LightingResolutionPercent = 75;
-				} else if (PreferencesCache::LightingResolutionPercent >= 75) {
-					PreferencesCache::LightingResolutionPercent = 50;
-				} else if (PreferencesCache::LightingResolutionPercent >= 50) {
-					PreferencesCache::LightingResolutionPercent = 25;
-				} else if (PreferencesCache::LightingResolutionPercent >= 25) {
-					PreferencesCache::LightingResolutionPercent = 12;
-				} else {
-					PreferencesCache::LightingResolutionPercent = 100;
-				}
-				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
-				_isDirty = true;
-				_animation = 0.0f;
-				_root->PlaySfx("MenuSelect"_s, 0.6f);
-				break;
 #if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
 			case GraphicsOptionsItemType::LowWaterQuality:
 				PreferencesCache::LowWaterQuality = !PreferencesCache::LowWaterQuality;
