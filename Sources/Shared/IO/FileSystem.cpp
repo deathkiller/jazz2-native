@@ -2390,7 +2390,15 @@ namespace Death { namespace IO {
 #		else
 		constexpr std::size_t BufferSize = 128 * 1024;
 #		endif
-		char buffer[BufferSize];
+		char* buffer;
+#		if defined(DEATH_TARGET_SWITCH)
+		// On Switch, large stack buffers are not supported. Use a heap buffer instead to avoid performance loss due to multiple small reads/writes with a small buffer.
+		auto heapBuffer = std::make_unique<char[]>(BufferSize);
+		buffer = heapBuffer.get();
+#		else
+		char stackBuffer[BufferSize];
+		buffer = stackBuffer;
+#		endif
 		bool success = true;
 		while (true) {
 			ssize_t bytesRead = ::read(sourceFd, buffer, BufferSize);
