@@ -302,7 +302,7 @@ namespace Jazz2::Actors
 
 		bool _wasUpPressed, _wasDownPressed, _wasJumpPressed, _wasFirePressed, _isRunPressed;
 
-		PlayerType _playerType, _playerTypeOriginal;
+		PlayerType _playerType;
 		SpecialMoveType _currentSpecialMove;
 		bool _isAttachedToPole, _canPushFurther;
 		float _copterFramesLeft, _fireFramesLeft, _pushFramesLeft, _waterCooldownLeft;

@@ -969,7 +969,7 @@ namespace Jazz2::Multiplayer
 			if (mpPlayer->_currentTransition == nullptr ||
 				(mpPlayer->_currentTransition->State != AnimState::TransitionWarpIn && mpPlayer->_currentTransition->State != AnimState::TransitionWarpOut &&
 					mpPlayer->_currentTransition->State != AnimState::TransitionWarpInFreefall && mpPlayer->_currentTransition->State != AnimState::TransitionWarpOutFreefall)) {
-				Vector2f spawnPosition = GetSpawnPoint(mpPlayer->_playerTypeOriginal);
+				Vector2f spawnPosition = GetSpawnPoint(mpPlayer->_playerType);
 				mpPlayer->WarpToPosition(spawnPosition, WarpFlags::IncrementLaps);
 			}
 			return;
@@ -5466,7 +5466,7 @@ namespace Jazz2::Multiplayer
 	{
 		// TODO: Reset ambient lighting
 		for (auto* player : _players) {
-			Vector2f spawnPosition = GetSpawnPoint(player->_playerTypeOriginal);
+			Vector2f spawnPosition = GetSpawnPoint(player->_playerType);
 			player->SetModifier(Actors::Player::Modifier::None);
 			player->SetShield(ShieldType::None, 0.0f);
 			player->SetDizzy(0.0f);
