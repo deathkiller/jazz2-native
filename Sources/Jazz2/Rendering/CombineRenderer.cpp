@@ -10,8 +10,9 @@
 namespace Jazz2::Rendering
 {
 #if !defined(RHI_CAP_SHADERS)
+	// TODO: Disabled lighting for now
 	/// Samples a pixel from a texture at integer coordinates, clamped to bounds
-	static inline void SampleTexel(const RHI::Texture* tex, std::int32_t x, std::int32_t y, std::uint8_t out[4])
+	/*static inline void SampleTexel(const RHI::Texture* tex, std::int32_t x, std::int32_t y, std::uint8_t out[4])
 	{
 		const std::uint8_t* pixels = tex->GetPixels(0);
 		std::int32_t w = tex->GetWidth();
@@ -162,7 +163,7 @@ namespace Jazz2::Rendering
 		rgba[1] = (std::uint8_t)(outG > 255 ? 255 : (outG < 0 ? 0 : outG));
 		rgba[2] = (std::uint8_t)(outB > 255 ? 255 : (outB < 0 ? 0 : outB));
 		rgba[3] = 255;
-	}
+	}*/
 #endif
 
 	CombineRenderer::CombineRenderer(PlayerViewport* owner)
@@ -247,7 +248,8 @@ namespace Jazz2::Rendering
 		_renderCommand.GetMaterial().SetInstSpriteSize(_bounds.W, _bounds.H);
 		_renderCommand.GetMaterial().SetInstColor(1.0f, 1.0f, 1.0f, 1.0f);
 		_renderCommand.GetMaterial().SetTexture(*_owner->_viewTexture);
-		_renderCommand.GetMaterial().SetTexture(1, *_owner->_lightingBuffer);
+		// TODO: Disabled lighting for now
+		/*_renderCommand.GetMaterial().SetTexture(1, *_owner->_lightingBuffer);
 
 		// Populate combine shader uniform data
 		float viewWaterLevel = _owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y + _bounds.H * 0.5f;
@@ -272,7 +274,7 @@ namespace Jazz2::Rendering
 		_combineData.lightScaleX_fp = (std::uint32_t)(((std::int64_t)_combineData.lightW << 16) / std::max(viewW, 1));
 		_combineData.lightScaleY_fp = (std::uint32_t)(((std::int64_t)_combineData.lightH << 16) / std::max(viewH, 1));
 
-		_renderCommand.GetMaterial().SetFragmentShader(FragmentCombine, &_combineData);
+		_renderCommand.GetMaterial().SetFragmentShader(FragmentCombine, &_combineData);*/
 		renderQueue.AddCommand(&_renderCommand);
 		return true;
 #else

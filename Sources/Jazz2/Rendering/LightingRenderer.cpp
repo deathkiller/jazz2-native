@@ -470,8 +470,12 @@ namespace Jazz2::Rendering
 	bool LightingRenderer::OnDraw(RenderQueue& renderQueue)
 	{
 #if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
+		// TODO: Disabled lighting for now
+		return true;
+
+		// TODO: Disabled lighting for now
 		// SW path: render lights directly into _lightingBuffer pixels
-		_emittedLightsCache.clear();
+		/*_emittedLightsCache.clear();
 
 		auto actors = _owner->_levelHandler->GetActors();
 		std::size_t actorsCount = actors.size();
@@ -608,7 +612,7 @@ namespace Jazz2::Rendering
 			}
 		}
 
-		return true;
+		return true;*/
 #else
 		_renderCommandsCount = 0;
 		_emittedLightsCache.clear();

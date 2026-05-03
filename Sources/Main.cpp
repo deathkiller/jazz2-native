@@ -1965,17 +1965,21 @@ void GameEventHandler::CheckUpdates()
 	ZoneScopedC(0x888888);
 
 	String url = "https://deat.tk/downloads/games/jazz2/updates?v=" NCINE_VERSION "&d=" + PreferencesCache::GetDeviceID();
-	auto request = WebSession::GetDefault().CreateRequest(url);
-	auto result = request.Execute();
-	if (result) {
-		auto s = request.GetResponse().AsString();
-		constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
-		std::uint64_t latestVersion = parseVersion(s);
-		if (currentVersion < latestVersion) {
-			_newestVersion = s;
+	if (auto session = WebSession::GetDefault()) {
+		auto request = session.CreateRequest(url);
+		auto result = request.Execute();
+		if (result) {
+			auto s = request.GetResponse().AsString();
+			constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
+			std::uint64_t latestVersion = parseVersion(s);
+			if (currentVersion < latestVersion) {
+				_newestVersion = s;
+			}
+		} else {
+			LOGW("Failed to check for updates: {}", result.error);
 		}
 	} else {
-		LOGW("Failed to check for updates: {}", result.error);
+		LOGW("Failed to check for updates: Cannot create HTTP session");
 	}
 #endif
 }

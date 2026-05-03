@@ -782,6 +782,12 @@ namespace nCine
 			RenderDocCapture::init();
 #endif
 
+#if defined(DEATH_TRACE)
+			std::size_t stackSize, stackRemaining;
+			Thread::GetCurrentStackInfo(stackSize, stackRemaining);
+			LOGI("Current thread stack size: {}/{} bytes", stackSize - stackRemaining, stackSize);
+#endif
+
 			LOGI("Creating rendering resources...");
 
 			// Create a minimal set of render resources before compiling the first shader
@@ -842,7 +848,7 @@ namespace nCine
 
 #if defined(WITH_IMGUI)
 		if (appCfg_.withGraphics) {
-			ZoneScopedN("ImGui newFrame");
+			ZoneScopedN("ImGui NewFrame");
 #	if defined(NCINE_PROFILING)
 			profileStartTime_ = TimeStamp::now();
 #	endif
@@ -911,7 +917,7 @@ namespace nCine
 
 #if defined(WITH_IMGUI)
 				{
-					ZoneScopedN("ImGui endFrame");
+					ZoneScopedN("ImGui EndFrame");
 #	if defined(NCINE_PROFILING)
 					profileStartTime_ = TimeStamp::now();
 #	endif
@@ -938,7 +944,7 @@ namespace nCine
 		} else {
 #if defined(WITH_IMGUI)
 			if (appCfg_.withGraphics) {
-				ZoneScopedN("ImGui endFrame");
+				ZoneScopedN("ImGui EndFrame");
 #	if defined(NCINE_PROFILING)
 				profileStartTime_ = TimeStamp::now();
 #	endif

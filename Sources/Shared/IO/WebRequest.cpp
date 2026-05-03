@@ -15,7 +15,7 @@
 
 #if defined(DEATH_TARGET_WINDOWS)
 #	include <winhttp.h>
-#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
+#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_UNIX)
 #	include <thread>
 #	include <unordered_map>
 #	include <unistd.h>
@@ -1221,7 +1221,7 @@ namespace Death { namespace IO {
 		}
 	};
 
-#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
+#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_UNIX)
 
 	class WebAuthChallengeCURL;
 	class WebRequestCURL;
@@ -1466,7 +1466,7 @@ namespace Death { namespace IO {
 				return nullptr;
 			}
 			_factory = Death::move(factory);
-#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
+#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_UNIX)
 			std::unique_ptr<WebSessionFactory> factory = std::make_unique<WebSessionFactoryCURL>();
 			if (!factory->Initialize()) {
 				return nullptr;
@@ -2447,7 +2447,7 @@ namespace Death { namespace IO {
 		return WebSessionImpl::SetProxy(proxy);
 	}
 
-#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_UNIX)
+#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_UNIX)
 
 	class WebAuthChallengeCURL : public WebAuthChallengeImpl
 	{

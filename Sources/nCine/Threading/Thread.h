@@ -62,7 +62,7 @@ namespace nCine
 	{
 	public:
 		/** @brief Puts the current thread to sleep for the specified number of milliseconds */
-		static void Sleep(std::uint32_t milliseconds);
+		static void Sleep(std::uint32_t milliseconds) noexcept;
 
 #if defined(WITH_THREADS) || defined(DOXYGEN_GENERATING_OUTPUT)
 		using ThreadFuncDelegate = void (*)(void*);
@@ -87,15 +87,15 @@ namespace nCine
 		Thread& operator=(Thread&& other) noexcept;
 
 		/** @brief Whether the thread is running */
-		explicit operator bool() const;
+		explicit operator bool() const noexcept;
 
 		/** @brief Returns the number of processors in the machine */
-		static std::uint32_t GetProcessorCount();
+		static std::uint32_t GetProcessorCount() noexcept;
 
 		/** @brief Joins the thread */
-		bool Join();
+		bool Join() noexcept;
 		/** @brief Detaches the running thread from the object */
-		void Detach();
+		void Detach() noexcept;
 
 		/** @brief Sets the thread name (not supported on Apple, Emscripten and Switch) */
 		void SetName(const char* name);
@@ -111,11 +111,13 @@ namespace nCine
 #	endif
 
 		/** @brief Returns the calling thread ID */
-		static std::uintptr_t GetCurrentId();
+		static std::uintptr_t GetCurrentId() noexcept;
+		/** @brief Returns stack information of the calling thread */
+		static void GetCurrentStackInfo(std::size_t& stackSize, std::size_t& stackRemaining) noexcept;
 		/** @brief Terminates the calling thread */
-		[[noreturn]] static void Exit();
+		[[noreturn]] static void Exit() noexcept;
 		/** @brief Yields the calling thread in favour of another one with the same priority */
-		static void YieldExecution();
+		static void YieldExecution() noexcept;
 
 		/** @brief Tries to cancel or terminate the thread (depending on operating system) */
 		bool Abort();

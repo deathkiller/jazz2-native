@@ -534,6 +534,12 @@ function(ncine_apply_compiler_options target)
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-Ofast>)
 			endif()
 			target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-funsafe-loop-optimizations -ftree-loop-if-convert-stores>)
+			
+			if(VITA)
+				# Fixes linker error about section overlap on Vita
+				target_compile_options(${target} PRIVATE -ffunction-sections -fdata-sections)
+				target_link_options(${target} PRIVATE -Wl,--gc-sections)
+			endif()
 
 			if(NCINE_LINKTIME_OPTIMIZATION AND NOT (MINGW OR MSYS OR ANDROID OR VITA))
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-flto=auto>)
