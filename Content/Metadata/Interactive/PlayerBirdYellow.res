@@ -16,7 +16,7 @@
 		"Attack": {
 			"Path": "BirdyYellow/fly.aura",
 			"States": [ 16, 144 ],
-  			"Flags": 1
+			"Flags": 1
 		},
 		"Jump": {
 			"Path": "BirdyYellow/charge_ver.aura",

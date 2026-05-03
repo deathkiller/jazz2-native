@@ -52,6 +52,12 @@ namespace Jazz2::Actors
 	static constexpr AnimState TransformFrogFromLori = (AnimState)0x60000002;
 
 	static constexpr float GroundedCheckpointYOffset = 20.0f;
+	static constexpr float kBirdFlySpeedX = 5.0f;
+	static constexpr float kBirdFlySpeedYDown = 5.0f;
+	static constexpr float kBirdFlySpeedYUp = 2.0f;
+	static constexpr float kBirdHorizontalResponse = 0.35f;
+	static constexpr float kBirdVerticalResponse = 0.10f;
+	static constexpr float kBirdChargeFramesInitial = 30.0f;
 
 	static float GetCheckpointYOffsetForPlayerType(PlayerType playerType)
 	{
@@ -842,25 +848,19 @@ namespace Jazz2::Actors
 			AABBf groundProbe = AABBf(AABBInner.L + 2.0f, AABBInner.B + 1.0f, AABBInner.R - 2.0f, AABBInner.B + 3.0f);
 			bool hasGroundBelow = !_levelHandler->IsPositionEmpty(this, groundProbe, params);
 
-			constexpr float BirdFlySpeedX = 5.0f;
-			constexpr float BirdFlySpeedYDown = 5.0f;
-			constexpr float BirdFlySpeedYUp = 2.0f;
-			constexpr float BirdHorizontalResponse = 0.35f;
-			constexpr float BirdVerticalResponse = 0.10f;
-
-			float targetSpeedX = playerMovement * BirdFlySpeedX;
+			float targetSpeedX = playerMovement * kBirdFlySpeedX;
 			float targetSpeedY;
 			if (hasGroundBelow && playerMovementVert == 0.0f) {
 				targetSpeedY = 0.0f;
 			} else if (playerMovementVert < 0.0f) {
-				targetSpeedY = playerMovementVert * BirdFlySpeedYUp;
+				targetSpeedY = playerMovementVert * kBirdFlySpeedYUp;
 			} else if (playerMovementVert > 0.0f) {
-				targetSpeedY = playerMovementVert * BirdFlySpeedYDown;
+				targetSpeedY = playerMovementVert * kBirdFlySpeedYDown;
 			} else {
 				targetSpeedY = 0.0f;
 			}
-			float horizontalLerp = std::min(1.0f, BirdHorizontalResponse * timeMult);
-			float verticalLerp = std::min(1.0f, BirdVerticalResponse * timeMult);
+			float horizontalLerp = std::min(1.0f, kBirdHorizontalResponse * timeMult);
+			float verticalLerp = std::min(1.0f, kBirdVerticalResponse * timeMult);
 
 			_speed.X = lerp(_speed.X, targetSpeedX, horizontalLerp);
 			_speed.Y = lerp(_speed.Y, targetSpeedY, verticalLerp);
@@ -871,7 +871,7 @@ namespace Jazz2::Actors
 			}
 
 			if (_levelHandler->PlayerActionHit(this, PlayerAction::Jump)) {
-				_birdChargeFramesLeft = 30.0f;
+				_birdChargeFramesLeft = kBirdChargeFramesInitial;
 			}
 			if (_birdChargeFramesLeft > 0.0f) {
 				_birdChargeFramesLeft -= timeMult;
