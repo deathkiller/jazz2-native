@@ -2341,6 +2341,14 @@ namespace Jazz2::Actors
 
 	void Player::CheckSuspendState(float timeMult)
 	{
+		if (IsBirdMorphType(_playerType)) {
+			if (_suspendType != SuspendType::None) {
+				_suspendType = SuspendType::None;
+				_suspendTime = 8.0f;
+			}
+			return;
+		}
+
 		if (_suspendTime > 0.0f) {
 			_suspendTime -= timeMult;
 			return;
@@ -3649,6 +3657,19 @@ namespace Jazz2::Actors
 		_playerTypeOriginal = playerTypeOriginal;
 		if (IsBirdMorphType(_playerType)) {
 			SetBirdMetadata();
+
+			// Bird can be restored slightly inside geometry from resumable saves,
+			// so nudge it upward until the hitbox no longer overlaps solid tiles.
+			TileCollisionParams params = { TileDestructType::None, true };
+			constexpr std::int32_t MaxLiftPixels = 32;
+			std::int32_t movedUp = 0;
+			while (!_levelHandler->IsPositionEmpty(this, AABBInner, params) && movedUp < MaxLiftPixels) {
+				MoveInstantly(Vector2f(0.0f, -1.0f), MoveType::Relative | MoveType::Force);
+				movedUp++;
+			}
+			if (movedUp > 0) {
+				_checkpointPos.Y -= (float)movedUp;
+			}
 		}
 
 		_checkpointLight = src.ReadValueAsLE<float>();
@@ -4373,6 +4394,9 @@ namespace Jazz2::Actors
 		}
 
 		if (IsBirdMorphType(type)) {
+			_suspendType = SuspendType::None;
+			_suspendTime = 8.0f;
+			_carryingObject = nullptr;
 			_isFreefall = false;
 			_speed.Y = 0.0f;
 			_externalForce.Y = 0.0f;
@@ -4585,7 +4609,7 @@ namespace Jazz2::Actors
 		_canDoubleJump = true;
 		_pendingCopterFramesLeft = 0.0f;
 
-		if (suspendType == SuspendType::SwingingVine) {
+		if (suspendType == SuspendType::SwingingVine && _playerType != PlayerType::Frog && !IsBirdMorphType(_playerType)) {
 			_suspendType = suspendType;
 			SetState(ActorState::ApplyGravitation, false);
 		} else if (_suspendType == SuspendType::SwingingVine) {
