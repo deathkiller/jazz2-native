@@ -582,9 +582,6 @@
     <ClInclude Include="nCine\Threading\IThreadCommand.h">
       <Filter>Header Files\nCine\Threading</Filter>
     </ClInclude>
-    <ClInclude Include="nCine\Graphics\GfxCapabilities.h">
-      <Filter>Header Files\nCine\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="nCine\Base\BitSet.h">
       <Filter>Header Files\nCine\Base</Filter>
     </ClInclude>
@@ -1719,6 +1716,9 @@
     <ClInclude Include="nCine\Graphics\RHI\SW\Texture.h">
       <Filter>Header Files\nCine\Graphics\RHI\SW</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\Graphics\RHI\SW\TileRenderer.h">
+      <Filter>Header Files\nCine\Graphics\RHI\SW</Filter>
+    </ClInclude>
     <ClInclude Include="nCine\Graphics\RHI\RHI.h">
       <Filter>Header Files\nCine\Graphics\RHI</Filter>
     </ClInclude>
@@ -1775,6 +1775,9 @@
     </ClInclude>
     <ClInclude Include="nCine\Graphics\RHI\DC\Texture.h">
       <Filter>Header Files\nCine\Graphics\RHI\DC</Filter>
+    </ClInclude>
+    <ClInclude Include="nCine\Graphics\RHI\GL\GfxCapabilities.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1917,9 +1920,6 @@
       <Filter>Source Files\nCine\Primitives</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Graphics\Geometry.cpp">
-      <Filter>Source Files\nCine\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\GfxCapabilities.cpp">
       <Filter>Source Files\nCine\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Audio\IAudioLoader.cpp">
@@ -2759,6 +2759,12 @@
     <ClCompile Include="nCine\Graphics\RHI\SW\Texture.cpp">
       <Filter>Source Files\nCine\Graphics\RHI\SW</Filter>
     </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\SW\TileRasterizer.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\SW</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\SW\TileRenderer.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\SW</Filter>
+    </ClCompile>
     <ClCompile Include="nCine\Graphics\RHI\GL\VertexFormat.cpp">
       <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
     </ClCompile>
@@ -2836,6 +2842,9 @@
     </ClCompile>
     <ClCompile Include="nCine\Graphics\RHI\SAT\RHI_SAT.cpp">
       <Filter>Source Files\nCine\Graphics\RHI\SAT</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GfxCapabilities.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

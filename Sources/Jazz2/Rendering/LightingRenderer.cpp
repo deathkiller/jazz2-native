@@ -489,15 +489,10 @@ namespace Jazz2::Rendering
 		std::int32_t texW = lightTex->GetWidth();
 		std::int32_t texH = lightTex->GetHeight();
 
-		// Clear with ambient light: R = ambient * 255, G = 0, B = 0, A = 255
+		// Ambient clear color
 		float ambient = _owner->_ambientLight.W;
 		std::uint8_t ambientR = (std::uint8_t)std::min((std::int32_t)(ambient * 255.0f + 0.5f), 255);
 		std::uint32_t clearPixel = ambientR | (0x00u << 8) | (0x00u << 16) | (0xFFu << 24);
-		std::uint32_t* pixels32 = reinterpret_cast<std::uint32_t*>(pixels);
-		std::int32_t totalPixels = texW * texH;
-		for (std::int32_t i = 0; i < totalPixels; i++) {
-			pixels32[i] = clearPixel;
-		}
 
 		// Resolution scale factor: world pixels → lighting buffer pixels
 		float resScale = (float)PreferencesCache::LightingResolutionPercent / 100.0f;
@@ -508,63 +503,108 @@ namespace Jazz2::Rendering
 		float camOriginX = _owner->_cameraPos.X * resScale - halfViewW;
 		float camOriginY = _owner->_cameraPos.Y * resScale - halfViewH;
 
+		// Precompute per-light data (bounding boxes, parameters)
+		struct LightData {
+			float cx, cy, radiusFar, invRadiusFar;
+			float nearDiv, intensityScaled, brightnessScaled;
+			std::int32_t x0, y0, x1, y1;
+			bool nearFull;
+		};
+
+		SmallVector<LightData, 64> lightDataCache;
+		lightDataCache.reserve(_emittedLightsCache.size());
+
 		for (auto& light : _emittedLightsCache) {
 			float radiusFar = light.RadiusFar * resScale;
 			if (radiusFar <= 0.0f) continue;
 
-			float radiusNearRatio = light.RadiusNear / light.RadiusFar;
 			float intensity = std::max(light.Intensity, 0.0f);
 			float brightness = std::max(light.Brightness, 0.0f);
 			if (intensity <= 0.0f && brightness <= 0.0f) continue;
 
-			// Light center in lighting buffer pixel coordinates
 			float cx = light.Pos.X * resScale - camOriginX;
 			float cy = light.Pos.Y * resScale - camOriginY;
 
-			// Early rejection: light entirely outside buffer
 			if (cx + radiusFar < 0.0f || cx - radiusFar >= (float)texW ||
 				cy + radiusFar < 0.0f || cy - radiusFar >= (float)texH) {
 				continue;
 			}
 
-			// Bounding box in pixels, clamped to buffer
-			std::int32_t x0 = std::max((std::int32_t)(cx - radiusFar), 0);
-			std::int32_t y0 = std::max((std::int32_t)(cy - radiusFar), 0);
-			std::int32_t x1 = std::min((std::int32_t)(cx + radiusFar + 1.0f), texW);
-			std::int32_t y1 = std::min((std::int32_t)(cy + radiusFar + 1.0f), texH);
+			LightData ld;
+			ld.cx = cx;
+			ld.cy = cy;
+			ld.radiusFar = radiusFar;
+			ld.invRadiusFar = 1.0f / radiusFar;
+			ld.x0 = std::max((std::int32_t)(cx - radiusFar), 0);
+			ld.y0 = std::max((std::int32_t)(cy - radiusFar), 0);
+			ld.x1 = std::min((std::int32_t)(cx + radiusFar + 1.0f), texW);
+			ld.y1 = std::min((std::int32_t)(cy + radiusFar + 1.0f), texH);
 
-			if (x0 >= x1 || y0 >= y1) continue;
+			if (ld.x0 >= ld.x1 || ld.y0 >= ld.y1) continue;
 
-			float invRadiusFar = 1.0f / radiusFar;
+			float radiusNearRatio = light.RadiusNear / light.RadiusFar;
+			ld.nearFull = (radiusNearRatio >= 1.0f);
+			ld.nearDiv = ld.nearFull ? 1.0f : 1.0f / (1.0f - radiusNearRatio);
+			ld.intensityScaled = intensity * 255.0f;
+			ld.brightnessScaled = brightness * 255.0f;
+			lightDataCache.push_back(ld);
+		}
 
-			// Pre-compute parameters for the dispatched scanline function
-			float nearDiv = (radiusNearRatio >= 1.0f) ? 1.0f : 1.0f / (1.0f - radiusNearRatio);
-			bool nearFull = (radiusNearRatio >= 1.0f);
-			float intensityScaled = intensity * 255.0f;
-			float brightnessScaled = brightness * 255.0f;
+		// Process lighting in 32x32 tile blocks for L1 cache efficiency
+		static constexpr std::int32_t LightTileSize = 32;
 
-			for (std::int32_t py = y0; py < y1; py++) {
-				float dy = (float)py + 0.5f - cy;
-				float dyNorm = dy * invRadiusFar;
-				float dy2Norm = dyNorm * dyNorm;
+		std::int32_t tilesX = (texW + LightTileSize - 1) / LightTileSize;
+		std::int32_t tilesY = (texH + LightTileSize - 1) / LightTileSize;
 
-				// Early row skip: if dy² alone exceeds radius, entire row is outside
-				if (dy2Norm > 1.0f) continue;
+		for (std::int32_t tileRow = 0; tileRow < tilesY; tileRow++) {
+			std::int32_t tileY0 = tileRow * LightTileSize;
+			std::int32_t tileY1 = std::min(tileY0 + LightTileSize, texH);
 
-				// Tighter horizontal bounds from circle intersection
-				float maxDxNorm = std::sqrt(1.0f - dy2Norm);
-				float maxDxAbs = radiusFar * maxDxNorm;
-				std::int32_t rowX0 = std::max(x0, (std::int32_t)(cx - maxDxAbs));
-				std::int32_t rowX1 = std::min(x1, (std::int32_t)(cx + maxDxAbs + 1.0f));
-				std::int32_t rowCount = rowX1 - rowX0;
-				if (rowCount <= 0) continue;
+			for (std::int32_t tileCol = 0; tileCol < tilesX; tileCol++) {
+				std::int32_t tileX0 = tileCol * LightTileSize;
+				std::int32_t tileX1 = std::min(tileX0 + LightTileSize, texW);
 
-				std::uint8_t* row = pixels + (py * texW + rowX0) * 4;
-				float dxStart = ((float)rowX0 + 0.5f - cx) * invRadiusFar;
-				float dxStep = invRadiusFar;
+				// Clear this tile with ambient color
+				for (std::int32_t py = tileY0; py < tileY1; py++) {
+					std::uint32_t* row32 = reinterpret_cast<std::uint32_t*>(pixels + py * texW * 4) + tileX0;
+					std::int32_t rowPixels = tileX1 - tileX0;
+					for (std::int32_t px = 0; px < rowPixels; px++) {
+						row32[px] = clearPixel;
+					}
+				}
 
-				renderLightScanline(row, rowCount, dxStart, dxStep, dy2Norm,
-					nearDiv, nearFull, intensityScaled, brightnessScaled);
+				// Render all lights that overlap this tile
+				for (const auto& ld : lightDataCache) {
+					if (ld.x0 >= tileX1 || ld.x1 <= tileX0 ||
+						ld.y0 >= tileY1 || ld.y1 <= tileY0) {
+						continue;
+					}
+
+					std::int32_t ly0 = std::max(ld.y0, tileY0);
+					std::int32_t ly1 = std::min(ld.y1, tileY1);
+
+					for (std::int32_t py = ly0; py < ly1; py++) {
+						float dy = (float)py + 0.5f - ld.cy;
+						float dyNorm = dy * ld.invRadiusFar;
+						float dy2Norm = dyNorm * dyNorm;
+
+						if (dy2Norm > 1.0f) continue;
+
+						float maxDxNorm = std::sqrt(1.0f - dy2Norm);
+						float maxDxAbs = ld.radiusFar * maxDxNorm;
+						std::int32_t rowX0 = std::max(std::max(ld.x0, (std::int32_t)(ld.cx - maxDxAbs)), tileX0);
+						std::int32_t rowX1 = std::min(std::min(ld.x1, (std::int32_t)(ld.cx + maxDxAbs + 1.0f)), tileX1);
+						std::int32_t rowCount = rowX1 - rowX0;
+						if (rowCount <= 0) continue;
+
+						std::uint8_t* row = pixels + (py * texW + rowX0) * 4;
+						float dxStart = ((float)rowX0 + 0.5f - ld.cx) * ld.invRadiusFar;
+						float dxStep = ld.invRadiusFar;
+
+						renderLightScanline(row, rowCount, dxStart, dxStep, dy2Norm,
+							ld.nearDiv, ld.nearFull, ld.intensityScaled, ld.brightnessScaled);
+					}
+				}
 			}
 		}
 

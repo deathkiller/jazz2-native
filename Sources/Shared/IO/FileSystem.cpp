@@ -162,28 +162,20 @@ namespace Death { namespace IO {
 			if (path.hasPrefix(AndroidAssetStream::Prefix)) {
 				return AndroidAssetStream::Prefix.size();
 			}
-#	elif defined(DEATH_TARGET_SWITCH)
-			constexpr StringView RomfsPrefix = "romfs:/"_s;
-			constexpr StringView SdmcPrefix = "sdmc:/"_s;
-			if (path.hasPrefix(RomfsPrefix)) {
-				return RomfsPrefix.size();
-			}
-			if (path.hasPrefix(SdmcPrefix)) {
-				return SdmcPrefix.size();
-			}
-#	elif defined(DEATH_TARGET_VITA)
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+			// Switch mount points: romfs:, sdmc:, etc.
 			// Vita mount points: ux0:, os0:, vs0:, ur0:, sa0:, tm0:, etc.
-			for (std::size_t i = 0; i < 5 && i < path.size(); ++i) {
-				if (path.data()[i] == ':') {
-					// Include trailing slash if present (e.g., ux0:/ → length 5)
+			for (std::size_t i = 0; i < 5 && i < path.size(); i++) {
+				char c = path.data()[i];
+				if (c == ':') {
 					if (i + 1 < path.size() && (path.data()[i + 1] == '/' || path.data()[i + 1] == '\\')) {
 						return i + 2;
 					}
 					return i + 1;
 				}
-				if (!((path.data()[i] >= 'a' && path.data()[i] <= 'z') ||
-				      (path.data()[i] >= 'A' && path.data()[i] <= 'Z') ||
-				      (path.data()[i] >= '0' && path.data()[i] <= '9'))) {
+				if (!((c >= 'a' && c <= 'z') ||
+				      (c >= 'A' && c <= 'Z') ||
+				      (c >= '0' && c <= '9'))) {
 					break;
 				}
 			}
@@ -2390,14 +2382,12 @@ namespace Death { namespace IO {
 #		else
 		constexpr std::size_t BufferSize = 128 * 1024;
 #		endif
-		char* buffer;
-#		if defined(DEATH_TARGET_SWITCH)
-		// On Switch, large stack buffers are not supported. Use a heap buffer instead to avoid performance loss due to multiple small reads/writes with a small buffer.
+#		if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+		// On devices with smaller stack size, use heap buffer instead to avoid performance loss due to multiple small reads/writes with small buffer
 		auto heapBuffer = std::make_unique<char[]>(BufferSize);
-		buffer = heapBuffer.get();
+		char* buffer = heapBuffer.get();
 #		else
-		char stackBuffer[BufferSize];
-		buffer = stackBuffer;
+		char buffer[BufferSize];
 #		endif
 		bool success = true;
 		while (true) {

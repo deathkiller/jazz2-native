@@ -153,7 +153,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f) : (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor)), 0.8f);
 
 				Vector2f textSize = _root->MeasureString(_("Enabled"), 0.8f);
-				_root->DrawElement(Uac, 0, ceil(centerX - textSize.X * 0.5f - 6.0f), item.Y + 22.0f - 1.0f, IMenuContainer::MainLayer + 10,
+				_root->DrawElement(Uac, 0, ceil(centerX - textSize.X * 0.5f - 5.0f), item.Y + 22.0f, IMenuContainer::MainLayer + 10,
 					Alignment::Center, (item.Item.IsReadOnly ? Colorf(1.0f, 1.0f, 1.0f, 0.5f) : Colorf::White));
 			} else
 #endif

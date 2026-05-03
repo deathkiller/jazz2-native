@@ -674,6 +674,7 @@
     <ClInclude Include="nCine\Graphics\RHI\SW\RHI_SW.h" />
     <ClInclude Include="nCine\Graphics\RHI\SW\Shaders.h" />
     <ClInclude Include="nCine\Graphics\RHI\SW\Texture.h" />
+    <ClInclude Include="nCine\Graphics\RHI\SW\TileRenderer.h" />
     <ClInclude Include="nCine\Graphics\SceneNode.h" />
     <ClInclude Include="nCine\Graphics\ScreenViewport.h" />
     <ClInclude Include="nCine\Graphics\Shader.h" />
@@ -1048,6 +1049,8 @@
     <ClCompile Include="nCine\Graphics\RHI\SW\GfxCapabilities.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\SW\RHI_SW.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\SW\Texture.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\SW\TileRasterizer.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\SW\TileRenderer.cpp" />
     <ClCompile Include="nCine\Graphics\RenderBatcher.cpp" />
     <ClCompile Include="nCine\Graphics\RenderBuffersManager.cpp" />
     <ClCompile Include="nCine\Graphics\RenderCommand.cpp" />

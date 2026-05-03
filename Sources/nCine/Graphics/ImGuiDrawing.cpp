@@ -60,6 +60,8 @@ namespace nCine
 #endif
 #if defined(IMGUI_HAS_VIEWPORT)
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;		// Enable Multi-Viewport / Platform Windows
+		io.ConfigDpiScaleFonts = true;
+		io.ConfigDpiScaleViewports = true;
 #endif
 
 		io.BackendRendererUserData = this;

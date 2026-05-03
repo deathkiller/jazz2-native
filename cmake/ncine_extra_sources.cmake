@@ -46,6 +46,8 @@ elseif(NCINE_RHI STREQUAL "SW")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/SW/GfxCapabilities.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/SW/RHI_SW.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/SW/Texture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/SW/TileRasterizer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/SW/TileRenderer.cpp
 	)
 elseif(NCINE_RHI STREQUAL "DC")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_DC")
