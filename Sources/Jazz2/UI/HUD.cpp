@@ -304,6 +304,10 @@ namespace Jazz2::UI
 
 	void HUD::OnTouchEvent(const TouchEvent& event, uint32_t& overrideActions)
 	{
+		#if defined(DEATH_TARGET_VITA)
+    	// Touch disabled for Vita performance
+			return; 
+		#endif
 		_touchButtonsTimer = 1200.0f;
 
 		if (event.type == TouchEventType::Down || event.type == TouchEventType::PointerDown) {

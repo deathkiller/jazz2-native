@@ -124,6 +124,8 @@ namespace nCine::Backends
 					SDL_UnlockTexture(swTexture_);
 				}
 			}
+			// SW buffer is top-down (row 0 = screen top) but SDL uploads textures
+			// bottom-up, so flip vertically when presenting.
 			SDL_RenderCopyEx(swRenderer_, swTexture_, nullptr, nullptr, 0.0, nullptr, SDL_FLIP_VERTICAL);
 			SDL_RenderPresent(swRenderer_);
 		}
@@ -160,21 +162,7 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::resizeSwBufferToLogical(int logicalWidth, int logicalHeight)
 	{
-		if (swRenderer_ == nullptr) return;
-		if (logicalWidth <= 0 || logicalHeight <= 0) return;
-
-		// Only resize if different from current buffer
-		if (RHI::GetColorBufferWidth() == logicalWidth && RHI::GetColorBufferHeight() == logicalHeight) {
-			return;
-		}
-
-		if (swTexture_ != nullptr) {
-			SDL_DestroyTexture(swTexture_);
-		}
-		// Create SDL texture at logical resolution - SDL_RenderCopy stretches to window
-		swTexture_ = SDL_CreateTexture(swRenderer_, SDL_PIXELFORMAT_RGBA32,
-		                               SDL_TEXTUREACCESS_STREAMING, logicalWidth, logicalHeight);
-		RHI::ResizeColorBuffer(logicalWidth, logicalHeight);
+		resizeSwBuffer(logicalWidth, logicalHeight);
 	}
 #endif
 
@@ -326,9 +314,12 @@ namespace nCine::Backends
 		std::uint8_t interval = (displayMode_.hasVSync() ? 1 : 0);
 		vglWaitVblankStart(interval);*/
 
-		// Force default resolution
-		drawableWidth_ = width_ = 960;
-		drawableHeight_ = height_ = 544;
+		// Force Vita rendering resolution to 480x272 (50% scale) for performance
+		// BUT create the window at full native resolution for proper scaling
+		drawableWidth_ = 480;
+		drawableHeight_ = 272;
+		width_ = 960;   // Physical window width (Vita native)
+		height_ = 544;  // Physical window height (Vita native)
 
 		LOGD("Initializing SDL2 software renderer...");
 
@@ -339,6 +330,9 @@ namespace nCine::Backends
 			swRenderer_ = SDL_CreateRenderer(windowHandle_, -1, SDL_RENDERER_SOFTWARE);
 		}
 		FATAL_ASSERT_MSG(swRenderer_, "SDL_CreateRenderer failed: {}", SDL_GetError());
+
+		// Scale internal 480x272 buffer to fill the Vita's 960x544 display
+		SDL_RenderSetLogicalSize(swRenderer_, 480, 272);
 
 		swTexture_ = SDL_CreateTexture(swRenderer_, SDL_PIXELFORMAT_RGBA32,
 									   SDL_TEXTUREACCESS_STREAMING, drawableWidth_, drawableHeight_);

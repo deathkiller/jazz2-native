@@ -11,6 +11,11 @@
 #include <algorithm>
 #include <atomic>
 #include <cstring>
+#if defined(WITH_THREADS)
+#	include <pthread.h>
+#	include <time.h>
+#	include <errno.h>
+#endif
 
 using namespace Death::Containers;
 
@@ -59,17 +64,19 @@ namespace nCine::RHI
 #if defined(WITH_THREADS)
 				static constexpr std::int32_t MaxWorkers = 3; // 3 workers + main thread = 4 cores
 				Thread workers[MaxWorkers];
-				Mutex mutex;
-				CondVariable workReady;
-				CondVariable workDone;
-				std::int32_t workersActive = 0;
+				// Use raw pthreads so we can use pthread_cond_timedwait for a
+				// safety timeout — CondVariable has no timed-wait API.
+				pthread_mutex_t mutex;
+				pthread_cond_t workReady;
+				pthread_cond_t workDone;
+				std::atomic<std::int32_t> workersActive{0};
+				std::int32_t numSpawnedWorkers = 0; // Actual threads created — may be < MaxWorkers if spawn fails
 				bool shutdownRequested = false;
 
 				// Work distribution
 				std::atomic<std::int32_t> nextTileIndex{0};
 				std::int32_t flushGeneration = 0; // Incremented each Flush to prevent worker re-entry
 				std::int32_t workerGeneration[MaxWorkers] = {}; // Last generation each worker processed
-				float clearR = 0, clearG = 0, clearB = 0, clearA = 1;
 #endif
 			};
 
@@ -78,35 +85,6 @@ namespace nCine::RHI
 			// Per-tile scratch buffer (thread-local concept - each worker uses its own slice)
 			// 32x32x4 = 4096 bytes per tile
 			alignas(64) std::uint8_t g_tileScratch[4][TileSize * TileSize * 4];
-
-			// =====================================================================
-			// Tile clear using NEON
-			// =====================================================================
-			inline void ClearTileBuffer(std::uint8_t* tile, std::int32_t pixelCount, std::uint32_t clearColor)
-			{
-#if defined(DEATH_ENABLE_NEON)
-				uint32x4_t pattern = vdupq_n_u32(clearColor);
-				std::int32_t i = 0;
-				std::uint32_t* dst32 = reinterpret_cast<std::uint32_t*>(tile);
-				for (; i + 16 <= pixelCount; i += 16) {
-					vst1q_u32(dst32 + i, pattern);
-					vst1q_u32(dst32 + i + 4, pattern);
-					vst1q_u32(dst32 + i + 8, pattern);
-					vst1q_u32(dst32 + i + 12, pattern);
-				}
-				for (; i + 4 <= pixelCount; i += 4) {
-					vst1q_u32(dst32 + i, pattern);
-				}
-				for (; i < pixelCount; i++) {
-					dst32[i] = clearColor;
-				}
-#else
-				std::uint32_t* dst32 = reinterpret_cast<std::uint32_t*>(tile);
-				for (std::int32_t i = 0; i < pixelCount; i++) {
-					dst32[i] = clearColor;
-				}
-#endif
-			}
 
 			// =====================================================================
 			// Copy tile buffer back to framebuffer
@@ -169,32 +147,25 @@ namespace nCine::RHI
 
 				const auto& bin = g_tile.tileBins[tileIndex];
 				if (bin.empty()) {
-					return; // No commands touch this tile - nothing to do
+					return;
 				}
 
 				// Get thread-local scratch buffer
 				std::uint8_t* tileBuf = g_tileScratch[workerIndex];
 
 				// Optimization: skip reading framebuffer if the first command fully covers
-				// this tile with an opaque draw (no blending needed for background)
+				// this tile with an opaque draw (no blending needed for background).
 				const DeferredCommand& firstCmd = g_tile.commands[bin[0]];
-				bool needsReadBack = true;
-				if (!firstCmd.ctx.blendingEnabled &&
-				    firstCmd.screenMinX <= tileX && firstCmd.screenMinY <= tileY &&
-				    firstCmd.screenMaxX >= tileX + tileW - 1 && firstCmd.screenMaxY >= tileY + tileH - 1) {
-					// First command covers entire tile and is opaque - no need to read framebuffer
-					needsReadBack = false;
-				}
+				const bool needsReadBack = (firstCmd.ctx.blendingEnabled ||
+				    firstCmd.screenMinX > tileX || firstCmd.screenMinY > tileY ||
+				    firstCmd.screenMaxX < tileX + tileW - 1 || firstCmd.screenMaxY < tileY + tileH - 1);
 
 				if (needsReadBack) {
-					// Initialize tile with current framebuffer contents
-					// (needed for correct blending with existing content)
 					CopyFramebufferToTile(tileBuf, g_tile.targetBuffer,
 					                      tileX, tileY, tileW, tileH,
 					                      g_tile.fbWidth, g_tile.fbHeight, g_tile.isFboTarget);
 				}
 
-				// Render all commands binned to this tile
 				for (std::uint16_t cmdIdx : bin) {
 					const DeferredCommand& cmd = g_tile.commands[cmdIdx];
 					TileInternal::RenderCommandToTile(
@@ -203,7 +174,6 @@ namespace nCine::RHI
 						cmd.viewportW, cmd.viewportH);
 				}
 
-				// Copy tile back to framebuffer
 				CopyTileToFramebuffer(tileBuf, g_tile.targetBuffer,
 				                      tileX, tileY, tileW, tileH,
 				                      g_tile.fbWidth, g_tile.fbHeight, g_tile.isFboTarget);
@@ -219,16 +189,16 @@ namespace nCine::RHI
 
 				while (true) {
 					// Wait for new work (generation must advance)
-					g_tile.mutex.Lock();
+					pthread_mutex_lock(&g_tile.mutex);
 					while (g_tile.workerGeneration[workerIndex] == g_tile.flushGeneration && !g_tile.shutdownRequested) {
-						g_tile.workReady.Wait(g_tile.mutex);
+						pthread_cond_wait(&g_tile.workReady, &g_tile.mutex);
 					}
 					if DEATH_UNLIKELY(g_tile.shutdownRequested) {
-						g_tile.mutex.Unlock();
+						pthread_mutex_unlock(&g_tile.mutex);
 						return;
 					}
 					g_tile.workerGeneration[workerIndex] = g_tile.flushGeneration;
-					g_tile.mutex.Unlock();
+					pthread_mutex_unlock(&g_tile.mutex);
 
 					// Process tiles using atomic counter (work-stealing pattern)
 					while (true) {
@@ -240,12 +210,13 @@ namespace nCine::RHI
 					}
 
 					// Signal completion
-					g_tile.mutex.Lock();
+					std::atomic_thread_fence(std::memory_order_release); // Ensure all tile writes are pushed out
+					pthread_mutex_lock(&g_tile.mutex);
 					g_tile.workersActive--;
 					if (g_tile.workersActive == 0) {
-						g_tile.workDone.Signal();
+						pthread_cond_signal(&g_tile.workDone);
 					}
-					g_tile.mutex.Unlock();
+					pthread_mutex_unlock(&g_tile.mutex);
 				}
 			}
 #endif
@@ -261,16 +232,31 @@ namespace nCine::RHI
 			if (!g_tile.initialized) {
 				g_tile.shutdownRequested = false;
 				g_tile.workersActive = 0;
+				g_tile.numSpawnedWorkers = 0;
 				g_tile.flushGeneration = 0;
+				std::memset(g_tile.workerGeneration, 0, sizeof(g_tile.workerGeneration));
+
+				pthread_mutex_init(&g_tile.mutex, nullptr);
+				pthread_cond_init(&g_tile.workReady, nullptr);
+				pthread_cond_init(&g_tile.workDone, nullptr);
 
 				// Spawn worker threads
+#if defined(DEATH_TARGET_VITA)
+				// Vita has 4 cores: core 0 (OS) + cores 1-3 (app). Force 3 workers.
+				const std::int32_t numWorkers = 3;
+#else
 				const std::int32_t numWorkers = std::min(
 					static_cast<std::int32_t>(Thread::GetProcessorCount()) - 1,
 					static_cast<std::int32_t>(TileState::MaxWorkers));
+#endif
 
 				for (std::int32_t i = 0; i < numWorkers; i++) {
 					g_tile.workers[i] = Thread(WorkerThreadFunc,
 						reinterpret_cast<void*>(static_cast<std::intptr_t>(i)));
+					// Only count workers that actually started
+					if (static_cast<bool>(g_tile.workers[i])) {
+						g_tile.numSpawnedWorkers++;
+					}
 				}
 			}
 #endif
@@ -290,10 +276,10 @@ namespace nCine::RHI
 
 #if defined(WITH_THREADS)
 			// Signal workers to exit
-			g_tile.mutex.Lock();
+			pthread_mutex_lock(&g_tile.mutex);
 			g_tile.shutdownRequested = true;
-			g_tile.workReady.Broadcast();
-			g_tile.mutex.Unlock();
+			pthread_cond_broadcast(&g_tile.workReady);
+			pthread_mutex_unlock(&g_tile.mutex);
 
 			// Join all workers
 			for (std::int32_t i = 0; i < TileState::MaxWorkers; i++) {
@@ -301,6 +287,10 @@ namespace nCine::RHI
 					g_tile.workers[i].Join();
 				}
 			}
+
+			pthread_cond_destroy(&g_tile.workDone);
+			pthread_cond_destroy(&g_tile.workReady);
+			pthread_mutex_destroy(&g_tile.mutex);
 #endif
 			g_tile.initialized = false;
 		}
@@ -410,10 +400,16 @@ namespace nCine::RHI
 				screenMaxY = vpH - 1;
 			}
 
-			// Scissor clip (Y always flipped — buffer is bottom-up for presentation)
+			// Scissor clip (Y must be flipped for FBO targets, matching immediate path)
 			if DEATH_UNLIKELY(ctx.scissorEnabled) {
-				std::int32_t scY0 = g_tile.fbHeight - ctx.scissorRect.Y - ctx.scissorRect.H;
-				std::int32_t scY1 = g_tile.fbHeight - 1 - ctx.scissorRect.Y;
+				std::int32_t scY0, scY1;
+				if (g_tile.isFboTarget) {
+					scY0 = g_tile.fbHeight - ctx.scissorRect.Y - ctx.scissorRect.H;
+					scY1 = g_tile.fbHeight - 1 - ctx.scissorRect.Y;
+				} else {
+					scY0 = ctx.scissorRect.Y;
+					scY1 = ctx.scissorRect.Y + ctx.scissorRect.H - 1;
+				}
 				screenMinX = std::max(screenMinX, ctx.scissorRect.X);
 				screenMinY = std::max(screenMinY, scY0);
 				screenMaxX = std::min(screenMaxX, ctx.scissorRect.X + ctx.scissorRect.W - 1);
@@ -428,8 +424,8 @@ namespace nCine::RHI
 			const std::int32_t cmdIdx = g_tile.commandCount;
 			DeferredCommand& cmd = g_tile.commands[cmdIdx];
 			cmd.ctx = ctx;
-			// Store scissor in screen-space (Y flipped)
-			if DEATH_UNLIKELY(ctx.scissorEnabled) {
+			// Store scissor in screen-space (Y already flipped for FBO)
+			if DEATH_UNLIKELY(ctx.scissorEnabled && g_tile.isFboTarget) {
 				cmd.ctx.scissorRect.Y = g_tile.fbHeight - ctx.scissorRect.Y - ctx.scissorRect.H;
 			}
 			cmd.primType = type;
@@ -475,16 +471,12 @@ namespace nCine::RHI
 			// Multi-threaded tile processing using atomic work counter
 			g_tile.nextTileIndex.store(0, std::memory_order_relaxed);
 
-			// Wake workers with new generation
-			const std::int32_t numWorkers = std::min(
-				static_cast<std::int32_t>(Thread::GetProcessorCount()) - 1,
-				static_cast<std::int32_t>(TileState::MaxWorkers));
-
-			g_tile.mutex.Lock();
+			pthread_mutex_lock(&g_tile.mutex);
 			g_tile.flushGeneration++;
-			g_tile.workersActive = numWorkers;
-			g_tile.workReady.Broadcast();
-			g_tile.mutex.Unlock();
+			// Set active count based on successfully spawned threads
+			g_tile.workersActive.store(g_tile.numSpawnedWorkers, std::memory_order_release);
+			pthread_cond_broadcast(&g_tile.workReady);
+			pthread_mutex_unlock(&g_tile.mutex);
 
 			// Main thread also processes tiles (worker slot 0)
 			while (true) {
@@ -493,12 +485,26 @@ namespace nCine::RHI
 				ProcessTile(idx, 0);
 			}
 
-			// Wait for workers to finish
-			g_tile.mutex.Lock();
-			while (g_tile.workersActive > 0) {
-				g_tile.workDone.Wait(g_tile.mutex);
+			// Wait for workers with a 1-second safety timeout to avoid a permanent
+			// hang if a worker thread crashes and never signals workDone.
+			pthread_mutex_lock(&g_tile.mutex);
+			if (g_tile.workersActive.load(std::memory_order_acquire) > 0) {
+				struct timespec ts;
+				clock_gettime(CLOCK_REALTIME, &ts);
+				ts.tv_sec += 1;
+				while (g_tile.workersActive.load(std::memory_order_acquire) > 0) {
+					if (pthread_cond_timedwait(&g_tile.workDone, &g_tile.mutex, &ts) == ETIMEDOUT) {
+						// Force reset so the next frame is not also stuck
+						g_tile.workersActive.store(0, std::memory_order_relaxed);
+						break;
+					}
+				}
 			}
-			g_tile.mutex.Unlock();
+			pthread_mutex_unlock(&g_tile.mutex);
+
+			// Ensure all worker pixel writes are globally visible before the engine
+			// moves on to DiscardPending or flipping buffers.
+			std::atomic_thread_fence(std::memory_order_acquire);
 #else
 			// Single-threaded fallback: process tiles sequentially
 			for (std::int32_t i = 0; i < g_tile.totalTiles; i++) {
