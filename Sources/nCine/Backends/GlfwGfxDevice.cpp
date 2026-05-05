@@ -189,13 +189,12 @@ namespace nCine::Backends
 		glEnable(GL_TEXTURE_2D);
 		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-		// Draw a fullscreen quad; buffer is top-down, GL texture row 0 = bottom.
-		// Flip the texture coordinates vertically to present correctly.
+		// Draw a fullscreen quad; buffer is bottom-up, GL texture row 0 = bottom, standard UV mapping
 		glBegin(GL_QUADS);
-			glTexCoord2f(0.0f, 1.0f); glVertex2i(0,              0);
-			glTexCoord2f(1.0f, 1.0f); glVertex2i(drawableWidth_, 0);
-			glTexCoord2f(1.0f, 0.0f); glVertex2i(drawableWidth_, drawableHeight_);
-			glTexCoord2f(0.0f, 0.0f); glVertex2i(0,              drawableHeight_);
+			glTexCoord2f(0.0f, 0.0f); glVertex2i(0,              0);
+			glTexCoord2f(1.0f, 0.0f); glVertex2i(drawableWidth_, 0);
+			glTexCoord2f(1.0f, 1.0f); glVertex2i(drawableWidth_, drawableHeight_);
+			glTexCoord2f(0.0f, 1.0f); glVertex2i(0,              drawableHeight_);
 		glEnd();
 	}
 #endif
