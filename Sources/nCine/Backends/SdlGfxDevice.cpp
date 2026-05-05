@@ -124,7 +124,9 @@ namespace nCine::Backends
 					SDL_UnlockTexture(swTexture_);
 				}
 			}
-			SDL_RenderCopy(swRenderer_, swTexture_, nullptr, nullptr);
+			// SW buffer is top-down (row 0 = screen top) but SDL uploads textures
+			// bottom-up, so flip vertically when presenting.
+			SDL_RenderCopyEx(swRenderer_, swTexture_, nullptr, nullptr, 0.0, nullptr, SDL_FLIP_VERTICAL);
 			SDL_RenderPresent(swRenderer_);
 		}
 #elif defined(DEATH_TARGET_VITA)
