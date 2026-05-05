@@ -54,6 +54,8 @@ namespace nCine::RHI
 		std::uint8_t* GetMutablePixels(std::int32_t mipLevel = 0);
 		/// Ensures mip 0 is allocated as a render target (RGBA8) at the texture's current width/height.
 		void EnsureRenderTarget();
+		/// Returns true if this texture was used as an FBO render target (stored bottom-up)
+		inline bool IsRenderTarget() const { return isRenderTarget_; }
 
 	private:
 		struct MipLevel
@@ -73,6 +75,7 @@ namespace nCine::RHI
 		SamplerFilter magFilter_ = SamplerFilter::Nearest;
 		SamplerWrapping wrapS_   = SamplerWrapping::ClampToEdge;
 		SamplerWrapping wrapT_   = SamplerWrapping::ClampToEdge;
+		bool isRenderTarget_     = false;
 	};
 }
 

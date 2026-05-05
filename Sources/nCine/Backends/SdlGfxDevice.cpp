@@ -157,6 +157,11 @@ namespace nCine::Backends
 		                               SDL_TEXTUREACCESS_STREAMING, width, height);
 		RHI::ResizeColorBuffer(width, height);
 	}
+
+	void SdlGfxDevice::resizeSwBufferToLogical(int logicalWidth, int logicalHeight)
+	{
+		resizeSwBuffer(logicalWidth, logicalHeight);
+	}
 #endif
 
 	void SdlGfxDevice::setWindowTitle(StringView windowTitle)

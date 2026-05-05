@@ -21,11 +21,13 @@ namespace Jazz2::Rendering
 		std::unique_ptr<Viewport> _lightingView;
 		std::unique_ptr<Texture> _lightingBuffer;
 
+#if defined(RHI_CAP_SHADERS)
 		BlurRenderPass _downsamplePass;
 		BlurRenderPass _blurPass2;
 		BlurRenderPass _blurPass1;
 		BlurRenderPass _blurPass3;
 		BlurRenderPass _blurPass4;
+#endif
 
 		std::unique_ptr<Viewport> _view;
 		std::unique_ptr<Texture> _viewTexture;

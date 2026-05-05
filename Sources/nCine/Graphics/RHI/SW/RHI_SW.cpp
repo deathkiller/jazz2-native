@@ -850,6 +850,129 @@ namespace nCine::RHI
 		}
 
 		// =====================================================================
+		// Fast blit: bypasses tile renderer for simple fullscreen texture copies
+		// Returns true if the draw was handled as a fast blit.
+		// =====================================================================
+		bool TryFastBlit(const DrawContext& ctx, PrimitiveType type, std::int32_t firstVertex, std::int32_t count)
+		{
+			// Only handles procedural fullscreen quads
+			if (type != PrimitiveType::TriangleStrip || count != 4 || firstVertex != 0) return false;
+			if (ctx.vertexFormat != nullptr) return false;
+			if (ctx.fragmentShader != nullptr) return false;
+			if (ctx.scissorEnabled) return false;
+
+			// Must be textured with white tint (pure blit)
+			if (!ctx.ff.hasTexture) return false;
+			if (ctx.ff.color[0] < 0.999f || ctx.ff.color[1] < 0.999f ||
+			    ctx.ff.color[2] < 0.999f || ctx.ff.color[3] < 0.999f) return false;
+
+			// Must cover full texRect
+			if (ctx.ff.texRect[0] < 0.999f || ctx.ff.texRect[2] < 0.999f) return false;
+
+			// No blending (opaque copy)
+			if (ctx.blendingEnabled) return false;
+
+			Texture* tex = ctx.textures[ctx.ff.textureUnit];
+			if (tex == nullptr) return false;
+			const std::uint8_t* srcPixels = tex->GetPixels(0);
+			if (srcPixels == nullptr) return false;
+
+			const std::int32_t srcW = tex->GetWidth();
+			const std::int32_t srcH = tex->GetHeight();
+			if (srcW <= 0 || srcH <= 0) return false;
+
+			// Check that spriteSize covers the full viewport (± 1 pixel tolerance)
+			const std::int32_t vpW = g_state.viewportW;
+			const std::int32_t vpH = g_state.viewportH;
+			if (std::abs(static_cast<std::int32_t>(ctx.ff.spriteSize[0]) - vpW) > 1) return false;
+			if (std::abs(static_cast<std::int32_t>(ctx.ff.spriteSize[1]) - vpH) > 1) return false;
+
+			// Verify the MVP maps (0,0)-(spriteSize) to cover the viewport
+			// For a standard fullscreen sprite, m[0]*spriteSize[0] should map to +1 or -1 in NDC
+			const float* m = ctx.ff.mvpMatrix;
+			// After viewport transform: x = (ndcX + 1) * 0.5 * vpW + vpX
+			// For full coverage: NDC x ranges from -1 to +1 → screen 0 to vpW
+			// That means m[0]*spriteSize[0] + m[12] should be ~+1 (right edge)
+			// and m[12] should be ~-1 (left edge in NDC)
+			float ndcLeft = m[12];
+			float ndcRight = m[0] * ctx.ff.spriteSize[0] + m[12];
+			float ndcTop = m[5] * ctx.ff.spriteSize[1] + m[13];
+			float ndcBottom = m[13];
+			if (std::fabs(ndcLeft - (-1.0f)) > 0.01f || std::fabs(ndcRight - 1.0f) > 0.01f) return false;
+			// Allow both normal (bottom=-1, top=+1) and Y-flipped (bottom=+1, top=-1) quads
+			if (std::fabs(ndcBottom - (-1.0f)) < 0.01f && std::fabs(ndcTop - 1.0f) < 0.01f) {
+				// Normal orientation
+			} else if (std::fabs(ndcBottom - 1.0f) < 0.01f && std::fabs(ndcTop - (-1.0f)) < 0.01f) {
+				// Y-flipped quad (common for top-down game coordinate projections)
+			} else {
+				return false;
+			}
+			// No rotation
+			if (std::fabs(m[1]) > 0.001f || std::fabs(m[4]) > 0.001f) return false;
+
+			std::uint8_t* dstBuffer = g_state.colorBuffer;
+			const std::int32_t dstW = g_state.bufferWidth;
+			const std::int32_t dstH = g_state.bufferHeight;
+			if (dstBuffer == nullptr) return false;
+
+			// Flush any pending tile commands first
+			TileRenderer::Flush();
+
+			// Y-flip needed when source and destination have different row orders:
+			// - FBO textures/buffers are stored bottom-up (row 0 = bottom)
+			// - Regular textures and screen buffer are stored top-down (row 0 = top)
+			// The quad's Y orientation in NDC is irrelevant — it's just the coordinate system,
+			// not an intentional "flip the image" instruction.
+			const bool sourceIsFbo = tex->IsRenderTarget();
+			const bool flipY = (sourceIsFbo != g_state.isFboTarget);
+
+			if (srcW == dstW && srcH == dstH) {
+				// Identity blit: direct memcpy (fastest path)
+				if (!flipY) {
+					std::memcpy(dstBuffer, srcPixels, static_cast<std::size_t>(srcW) * srcH * 4);
+				} else {
+					// FBO target: flip Y during copy
+					const std::int32_t rowBytes = srcW * 4;
+					for (std::int32_t y = 0; y < srcH; y++) {
+						const std::uint8_t* srcRow = srcPixels + y * rowBytes;
+						std::uint8_t* dstRow = dstBuffer + (dstH - 1 - y) * rowBytes;
+						std::memcpy(dstRow, srcRow, rowBytes);
+					}
+				}
+			} else {
+				// Nearest-neighbor stretch blit
+				const std::int32_t dstRowBytes = dstW * 4;
+				// Fixed-point scale factors (16.16)
+				const std::uint32_t scaleX_fp = (static_cast<std::uint32_t>(srcW) << 16) / static_cast<std::uint32_t>(dstW);
+				const std::uint32_t scaleY_fp = (static_cast<std::uint32_t>(srcH) << 16) / static_cast<std::uint32_t>(dstH);
+
+				for (std::int32_t dy = 0; dy < dstH; dy++) {
+					const std::int32_t sy = static_cast<std::int32_t>((static_cast<std::uint32_t>(dy) * scaleY_fp) >> 16);
+					const std::int32_t actualDstY = flipY ? (dstH - 1 - dy) : dy;
+					std::uint8_t* dstRow = dstBuffer + actualDstY * dstRowBytes;
+					const std::uint8_t* srcRow = srcPixels + sy * srcW * 4;
+
+					if (srcW == dstW) {
+						// Same width, different height: row copy
+						std::memcpy(dstRow, srcRow, dstRowBytes);
+					} else {
+						// Different width: nearest-neighbor horizontal stretch
+						std::uint32_t srcX_fp = 0;
+						const std::uint32_t* srcRow32 = reinterpret_cast<const std::uint32_t*>(srcRow);
+						std::uint32_t* dstRow32 = reinterpret_cast<std::uint32_t*>(dstRow);
+						for (std::int32_t dx = 0; dx < dstW; dx++) {
+							const std::int32_t sx = static_cast<std::int32_t>(srcX_fp >> 16);
+							dstRow32[dx] = srcRow32[sx];
+							srcX_fp += scaleX_fp;
+						}
+					}
+				}
+			}
+
+			return true;
+		}
+
+		// =====================================================================
 		// Vertex fetch (screen-space, after MVP + viewport transform)
 		// =====================================================================
 		struct Vertex2D { float x, y, u, v, r, g, b, a; };
@@ -955,20 +1078,14 @@ namespace nCine::RHI
 			std::int32_t yMin = std::max(0, static_cast<std::int32_t>(fyMin));
 			std::int32_t yMax = std::min(g_state.bufferHeight - 1, static_cast<std::int32_t>(fyMax - 0.5f));
 
-			// Scissor pre-clip
+			// Scissor pre-clip (Y always flipped — buffer is bottom-up for presentation)
 			if DEATH_UNLIKELY(g_state.scissorEnabled) {
 				xMin = std::max(xMin, g_state.scissorX);
 				xMax = std::min(xMax, g_state.scissorX + g_state.scissorW - 1);
-				if (g_state.isFboTarget) {
-					// TODO: Y-coords need to be flipped when accessing pixels
-					const std::int32_t pyMin = g_state.bufferHeight - g_state.scissorY - g_state.scissorH;
-					const std::int32_t pyMax = g_state.bufferHeight - 1 - g_state.scissorY;
-					yMin = std::max(yMin, pyMin);
-					yMax = std::min(yMax, pyMax);
-				} else {
-					yMin = std::max(yMin, g_state.scissorY);
-					yMax = std::min(yMax, g_state.scissorY + g_state.scissorH - 1);
-				}
+				const std::int32_t pyMin = g_state.bufferHeight - g_state.scissorY - g_state.scissorH;
+				const std::int32_t pyMax = g_state.bufferHeight - 1 - g_state.scissorY;
+				yMin = std::max(yMin, pyMin);
+				yMax = std::min(yMax, pyMax);
 			}
 			if DEATH_UNLIKELY(xMin > xMax || yMin > yMax) {
 				return;
@@ -1213,22 +1330,14 @@ namespace nCine::RHI
 			std::int32_t minY = std::max(0, static_cast<std::int32_t>(std::min({v0.y, v1.y, v2.y})));
 			std::int32_t maxY = std::min(g_state.bufferHeight - 1, static_cast<std::int32_t>(std::max({v0.y, v1.y, v2.y})));
 
-			// Pre-clip to scissor
+			// Pre-clip to scissor (Y always flipped — buffer is bottom-up for presentation)
 			if DEATH_UNLIKELY(g_state.scissorEnabled) {
-				if (g_state.isFboTarget) {
-					// TODO: Y-coords need to be flipped when accessing pixels
-					const std::int32_t pyMin = g_state.bufferHeight - g_state.scissorY - g_state.scissorH;
-					const std::int32_t pyMax = g_state.bufferHeight - 1 - g_state.scissorY;
-					minX = std::max(minX, g_state.scissorX);
-					maxX = std::min(maxX, g_state.scissorX + g_state.scissorW - 1);
-					minY = std::max(minY, pyMin);
-					maxY = std::min(maxY, pyMax);
-				} else {
-					minX = std::max(minX, g_state.scissorX);
-					maxX = std::min(maxX, g_state.scissorX + g_state.scissorW - 1);
-					minY = std::max(minY, g_state.scissorY);
-					maxY = std::min(maxY, g_state.scissorY + g_state.scissorH - 1);
-				}
+				const std::int32_t pyMin = g_state.bufferHeight - g_state.scissorY - g_state.scissorH;
+				const std::int32_t pyMax = g_state.bufferHeight - 1 - g_state.scissorY;
+				minX = std::max(minX, g_state.scissorX);
+				maxX = std::min(maxX, g_state.scissorX + g_state.scissorW - 1);
+				minY = std::max(minY, pyMin);
+				maxY = std::min(maxY, pyMax);
 			}
 			if DEATH_UNLIKELY(minX > maxX || minY > maxY) {
 				return;
@@ -1420,21 +1529,14 @@ namespace nCine::RHI
 			std::int32_t xMinClamp = std::max(0, static_cast<std::int32_t>(fxMin));
 			std::int32_t xMaxClamp = std::min(g_state.bufferWidth - 1, static_cast<std::int32_t>(fxMax));
 
-			// Scissor clamp
+			// Scissor clamp (Y always flipped — buffer is bottom-up for presentation)
 			if DEATH_UNLIKELY(g_state.scissorEnabled) {
-				if (g_state.isFboTarget) {
-					const std::int32_t pyMin = g_state.bufferHeight - g_state.scissorY - g_state.scissorH;
-					const std::int32_t pyMax = g_state.bufferHeight - 1 - g_state.scissorY;
-					xMinClamp = std::max(xMinClamp, g_state.scissorX);
-					xMaxClamp = std::min(xMaxClamp, g_state.scissorX + g_state.scissorW - 1);
-					yMin = std::max(yMin, pyMin);
-					yMax = std::min(yMax, pyMax);
-				} else {
-					xMinClamp = std::max(xMinClamp, g_state.scissorX);
-					xMaxClamp = std::min(xMaxClamp, g_state.scissorX + g_state.scissorW - 1);
-					yMin = std::max(yMin, g_state.scissorY);
-					yMax = std::min(yMax, g_state.scissorY + g_state.scissorH - 1);
-				}
+				const std::int32_t pyMin = g_state.bufferHeight - g_state.scissorY - g_state.scissorH;
+				const std::int32_t pyMax = g_state.bufferHeight - 1 - g_state.scissorY;
+				xMinClamp = std::max(xMinClamp, g_state.scissorX);
+				xMaxClamp = std::min(xMaxClamp, g_state.scissorX + g_state.scissorW - 1);
+				yMin = std::max(yMin, pyMin);
+				yMax = std::min(yMax, pyMax);
 			}
 			if DEATH_UNLIKELY(yMin > yMax || xMinClamp > xMaxClamp) {
 				return;
@@ -1851,6 +1953,11 @@ namespace nCine::RHI
 	{
 		if DEATH_UNLIKELY(g_state.drawCtx == nullptr) return;
 
+		// Fast path: detect fullscreen texture blits and handle with direct memcpy/stretch
+		if (TryFastBlit(*g_state.drawCtx, type, firstVertex, count)) {
+			return;
+		}
+
 //#if defined(DEATH_TARGET_VITA)
 		// Defer draw commands for tile-based rendering
 		if (TileRenderer::IsActive()) {
@@ -1938,6 +2045,8 @@ namespace nCine::RHI
 		g_state.colorBuffer  = g_state.mainColorBuffer;
 		g_state.bufferWidth  = width;
 		g_state.bufferHeight = height;
+		g_state.mainBufferWidth  = width;
+		g_state.mainBufferHeight = height;
 
 		// Clear depth to far plane
 		const float farValue = 1.0f;
@@ -1971,12 +2080,17 @@ namespace nCine::RHI
 
 	std::int32_t GetColorBufferWidth()
 	{
-		return g_state.bufferWidth;
+		return g_state.mainBufferWidth;
 	}
 
 	std::int32_t GetColorBufferHeight()
 	{
-		return g_state.bufferHeight;
+		return g_state.mainBufferHeight;
+	}
+
+	std::uint8_t* GetMutableColorBuffer()
+	{
+		return g_state.mainColorBuffer;
 	}
 
 }

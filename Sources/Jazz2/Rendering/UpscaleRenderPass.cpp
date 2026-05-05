@@ -6,6 +6,14 @@
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Graphics/Viewport.h"
 
+#if defined(WITH_RHI_SW)
+#	if defined(WITH_SDL)
+#		include "../../nCine/Backends/SdlGfxDevice.h"
+#	else
+#		include "../../nCine/Graphics/RHI/RHI.h"
+#	endif
+#endif
+
 namespace Jazz2::Rendering
 {
 	void UpscaleRenderPass::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight)
@@ -47,6 +55,28 @@ namespace Jazz2::Rendering
 		_camera->SetOrthoProjection(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f);
 		_camera->SetView(0, 0, 0, 1);
 
+#if defined(WITH_RHI_SW)
+		// For SW renderer, resize the screen buffer to internal resolution and use NoTexture viewport
+		// (children render directly to screen buffer, presentation layer stretches to window)
+#	if defined(WITH_SDL)
+		static_cast<Backends::SdlGfxDevice&>(theApplication().GetGfxDevice()).resizeSwBufferToLogical(width, height);
+#	else
+		RHI::ResizeColorBuffer(width, height);
+#	endif
+
+		if (_view == nullptr) {
+			_node = std::make_unique<SceneNode>();
+			_node->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+
+			_view = std::make_unique<Viewport>();
+			_view->SetRootNode(_node.get());
+			_view->SetCamera(_camera.get());
+			_view->SetClearMode(Viewport::ClearMode::Never);
+		}
+		_view->SetViewportRect(Recti(0, 0, width, height));
+
+		// No need to parent this node — OnDraw is a no-op for SW renderer
+#else
 		if (_view == nullptr) {
 			_node = std::make_unique<SceneNode>();
 			_node->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
@@ -105,8 +135,10 @@ namespace Jazz2::Rendering
 		SceneNode& rootNode = theApplication().GetRootNode();
 		setParent(&rootNode);
 #endif
+#endif // !WITH_RHI_SW
 
 		// Prepare render command
+#if !defined(WITH_RHI_SW)
 #if !defined(DISABLE_RESCALE_SHADERS) && defined(RHI_CAP_SHADERS)
 		switch (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask) {
 			case RescaleMode::HQ2x: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeHQ2x); break;
@@ -137,6 +169,7 @@ namespace Jazz2::Rendering
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
 		}
+#endif // !WITH_RHI_SW
 	}
 
 	void UpscaleRenderPass::Register()
@@ -150,6 +183,10 @@ namespace Jazz2::Rendering
 
 	bool UpscaleRenderPass::OnDraw(RenderQueue& renderQueue)
 	{
+#if defined(WITH_RHI_SW)
+		// SW renderer renders directly to screen buffer, no blit needed
+		return false;
+#else
 #if !defined(DISABLE_RESCALE_SHADERS) && defined(RHI_CAP_SHADERS)
 		if (_resizeShader != nullptr) {
 			// TexRectUniformName is reused for input texture size
@@ -168,6 +205,7 @@ namespace Jazz2::Rendering
 		renderQueue.AddCommand(&_renderCommand);
 
 		return true;
+#endif // !WITH_RHI_SW
 	}
 
 #if !defined(DISABLE_RESCALE_SHADERS) && defined(RHI_CAP_SHADERS)
@@ -204,15 +242,41 @@ namespace Jazz2::Rendering
 
 	void UpscaleRenderPassWithClipping::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight)
 	{
+#if !defined(WITH_RHI_SW)
 		if (_clippedView != nullptr) {
 			_clippedView->RemoveAllTextures();
 		}
 		if (_overlayView != nullptr) {
 			_overlayView->RemoveAllTextures();
 		}
+#endif
 
 		UpscaleRenderPass::Initialize(width, height, targetWidth, targetHeight);
 
+#if defined(WITH_RHI_SW)
+		// For SW renderer, use NoTexture viewports (render directly to screen buffer)
+		if (_clippedView == nullptr) {
+			_clippedNode = std::make_unique<SceneNode>();
+			_clippedNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+
+			_clippedView = std::make_unique<Viewport>();
+			_clippedView->SetRootNode(_clippedNode.get());
+			_clippedView->SetCamera(_camera.get());
+			_clippedView->SetClearMode(Viewport::ClearMode::Never);
+		}
+		_clippedView->SetViewportRect(Recti(0, 0, width, height));
+
+		if (_overlayView == nullptr) {
+			_overlayNode = std::make_unique<SceneNode>();
+			_overlayNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+
+			_overlayView = std::make_unique<Viewport>();
+			_overlayView->SetRootNode(_overlayNode.get());
+			_overlayView->SetCamera(_camera.get());
+			_overlayView->SetClearMode(Viewport::ClearMode::Never);
+		}
+		_overlayView->SetViewportRect(Recti(0, 0, width, height));
+#else
 		if (_clippedView == nullptr) {
 			_clippedNode = std::make_unique<SceneNode>();
 			_clippedNode->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
@@ -236,6 +300,7 @@ namespace Jazz2::Rendering
 		} else {
 			_overlayView->SetTexture(_target.get());
 		}
+#endif
 	}
 
 	void UpscaleRenderPassWithClipping::Register()

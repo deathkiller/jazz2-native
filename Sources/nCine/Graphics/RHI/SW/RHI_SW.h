@@ -207,6 +207,9 @@ namespace nCine::RHI
 	/// Valid until the next ResizeColorBuffer() call.
 	const std::uint8_t* GetColorBuffer();
 
+	/// Returns a mutable pointer to the current RGBA8 color buffer.
+	std::uint8_t* GetMutableColorBuffer();
+
 	/// Returns the current color buffer width in pixels.
 	std::int32_t GetColorBufferWidth();
 

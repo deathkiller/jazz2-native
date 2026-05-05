@@ -80,6 +80,7 @@ namespace nCine::RHI
 			m.data   = std::make_unique<std::uint8_t[]>(static_cast<std::size_t>(width_) * height_ * 4);
 			if (mipCount_ < 1) mipCount_ = 1;
 		}
+		isRenderTarget_ = true;
 	}
 
 	Colorf Texture::Sample(float u, float v, std::int32_t mipLevel) const

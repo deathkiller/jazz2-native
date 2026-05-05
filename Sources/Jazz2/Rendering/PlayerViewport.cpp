@@ -10,7 +10,9 @@ namespace Jazz2::Rendering
 {
 	PlayerViewport::PlayerViewport(LevelHandler* levelHandler, Actors::ActorBase* targetActor)
 		: _levelHandler(levelHandler), _targetActor(targetActor),
+#if defined(RHI_CAP_SHADERS)
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
+#endif
 			_cameraResponsiveness(ResponsivenessMax, ResponsivenessMax), _shakeDuration(0.0f)
 	{
 		_ambientLight = levelHandler->_defaultAmbientLight;
@@ -30,21 +32,33 @@ namespace Jazz2::Rendering
 		}
 
 		if (notInitialized) {
+#if !defined(RHI_CAP_SHADERS)
+			// SW renderer: scene renders directly to screen buffer (no intermediate FBO)
+			_view = std::make_unique<Viewport>();
+			_view->SetViewportRect(Recti(0, 0, w, h));
+#else
 			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
 			_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::None);
+#endif
 
 			_camera = std::make_unique<Camera>();
 
 			_view->SetCamera(_camera.get());
 			_view->SetRootNode(sceneNode);
 		} else {
+#if !defined(RHI_CAP_SHADERS)
+			_view->SetViewportRect(Recti(0, 0, w, h));
+#else
 			_view->RemoveAllTextures();
 			_viewTexture->Init(nullptr, Texture::Format::RGB8, w, h);
 			_view->SetTexture(_viewTexture.get());
+#endif
 		}
 
+#if defined(RHI_CAP_SHADERS)
 		_viewTexture->SetMagFiltering(SamplerFilter::Nearest);
 		_viewTexture->SetWrap(SamplerWrapping::ClampToEdge);
+#endif
 
 		_camera->SetOrthoProjection(0.0f, (float)w, (float)h, 0.0f);
 
@@ -65,11 +79,7 @@ namespace Jazz2::Rendering
 		_lightingBuffer->SetMagFiltering(SamplerFilter::Nearest);
 		_lightingBuffer->SetWrap(SamplerWrapping::ClampToEdge);
 
-#if !defined(RHI_CAP_SHADERS)
-		// SW renderer handles lighting clear and fill manually in LightingRenderer::OnDraw()
-		_lightingView->SetClearMode(Viewport::ClearMode::Never);
-#endif
-
+#if defined(RHI_CAP_SHADERS)
 		if (PreferencesCache::BlurEffects) {
 			_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f(0.0f, 0.0f));
 			_blurPass1.Initialize(_downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f));
@@ -83,6 +93,10 @@ namespace Jazz2::Rendering
 			_blurPass3.Dispose();
 			_blurPass4.Dispose();
 		}
+#else
+		// SW renderer handles lighting clear and fill manually in LightingRenderer::OnDraw()
+		_lightingView->SetClearMode(Viewport::ClearMode::Never);
+#endif
 
 		if (notInitialized) {
 			_combineRenderer = std::make_unique<CombineRenderer>(this);
@@ -96,6 +110,7 @@ namespace Jazz2::Rendering
 
 	void PlayerViewport::Register()
 	{
+#if defined(RHI_CAP_SHADERS)
 		if (PreferencesCache::BlurEffects) {
 			_blurPass4.Register();
 			_blurPass3.Register();
@@ -103,10 +118,17 @@ namespace Jazz2::Rendering
 			_blurPass1.Register();
 			_downsamplePass.Register();
 		}
+#endif
 
 		auto& chain = Viewport::GetChain();
+#if !defined(RHI_CAP_SHADERS)
+		// SW: scene view is NoTexture (renders to screen buffer), must come before lighting
+		chain.push_back(_view.get());
+		chain.push_back(_lightingView.get());
+#else
 		chain.push_back(_lightingView.get());
 		chain.push_back(_view.get());
+#endif
 	}
 
 	Rectf PlayerViewport::GetBounds() const
@@ -116,7 +138,12 @@ namespace Jazz2::Rendering
 
 	Vector2i PlayerViewport::GetViewportSize() const
 	{
+#if !defined(RHI_CAP_SHADERS)
+		auto vr = _view->GetViewportRect();
+		return Vector2i(vr.W, vr.H);
+#else
 		return _viewTexture->GetSize();
+#endif
 	}
 
 	Actors::ActorBase* PlayerViewport::GetTargetActor() const
@@ -156,7 +183,7 @@ namespace Jazz2::Rendering
 		}
 
 		// The position to focus on
-		Vector2i halfView = _view->GetSize() / 2;
+		Vector2i halfView = GetViewportSize() / 2;
 		Vector2f focusPos = _targetActor->GetPos();
 
 		bool overridePosX = false, overridePosY = false;

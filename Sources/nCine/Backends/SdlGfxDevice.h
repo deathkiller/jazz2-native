@@ -71,6 +71,8 @@ namespace nCine::Backends
 #if defined(WITH_RHI_SW)
 		/// Recreates the streaming texture and resizes the SW color buffer after a window resize
 		void resizeSwBuffer(int width, int height);
+		/// Resizes the SW color buffer to a logical resolution (SDL stretches to window)
+		void resizeSwBufferToLogical(int logicalWidth, int logicalHeight);
 #endif
 
 	protected:

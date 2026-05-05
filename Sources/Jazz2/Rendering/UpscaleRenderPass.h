@@ -33,7 +33,12 @@ namespace Jazz2::Rendering
 		}
 
 		Vector2i GetViewSize() const {
+#if defined(WITH_RHI_SW)
+			Recti rect = _view->GetViewportRect();
+			return Vector2i(rect.W, rect.H);
+#else
 			return _view->GetSize();
+#endif
 		}
 
 		Vector2f GetTargetSize() const {
