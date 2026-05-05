@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "MenuSection.h"
+#include "TextInputBuffer.h"
 #include "../../Multiplayer/ServerDiscovery.h"
 
 namespace Jazz2::UI::Menu
@@ -20,7 +21,10 @@ namespace Jazz2::UI::Menu
 		void OnDraw(Canvas* canvas) override;
 		void OnDrawClipped(Canvas* canvas) override;
 		void OnDrawOverlay(Canvas* canvas) override;
+		void OnKeyPressed(const nCine::KeyboardEvent& event) override;
+		void OnTextInput(const nCine::TextInputEvent& event) override;
 		void OnTouchEvent(const TouchEvent& event, Vector2i viewSize) override;
+		NavigationFlags GetNavigationFlags() const override;
 
 		void OnServerFound(Jazz2::Multiplayer::ServerDescription&& desc) override;
 
@@ -58,10 +62,19 @@ namespace Jazz2::UI::Menu
 		float _transitionTime;
 		bool _shouldStart;
 		bool _isConnecting;
+		bool _waitForIpInput;
+		bool _keyboardVisible;
+		TextInputBuffer _ipInput;
+#if defined(DEATH_TARGET_ANDROID)
+		Vector2i _initialVisibleSize;
+		Recti _currentVisibleBounds;
+		float _recalcVisibleBoundsTimeLeft;
+#endif
 
 		void ExecuteSelected();
 		void OnAfterTransition();
 		void EnsureVisibleSelected(std::int32_t offset = 0);
+		void RecalcLayoutForScreenKeyboard();
 	};
 }
 

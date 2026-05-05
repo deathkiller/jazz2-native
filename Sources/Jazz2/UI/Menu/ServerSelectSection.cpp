@@ -8,8 +8,14 @@
 #include "SimpleMessageSection.h"
 #include "../../PreferencesCache.h"
 
+#include "../../../nCine/Application.h"
 #include "../../../nCine/I18n.h"
 #include "../../../nCine/Base/FrameTimer.h"
+
+#if defined(DEATH_TARGET_ANDROID)
+#	include "../../../nCine/Backends/Android/AndroidApplication.h"
+#	include "../../../nCine/Backends/Android/AndroidJniHelper.h"
+#endif
 
 #include <Containers/StringConcatenable.h>
 
@@ -26,9 +32,18 @@ namespace Jazz2::UI::Menu
 
 	ServerSelectSection::ServerSelectSection()
 		: _selectedIndex(0), _animation(0.0f), _y(0.0f), _height(0.0f), _availableHeight(0.0f), _pressedCount(0),
-			_touchTime(0.0f), _touchSpeed(0.0f), _noiseCooldown(0.0f), _discovery(this),
-			_touchDirection(0), _transitionTime(0.0f), _shouldStart(false), _isConnecting(false)
+		_touchTime(0.0f), _touchSpeed(0.0f), _noiseCooldown(0.0f), _discovery(this),
+		_touchDirection(0), _transitionTime(0.0f), _shouldStart(false), _isConnecting(false),
+		_waitForIpInput(false), _keyboardVisible(false), _ipInput(64)
+#if defined(DEATH_TARGET_ANDROID)
+		, _recalcVisibleBoundsTimeLeft(30.0f)
+#endif
 	{
+#if defined(DEATH_TARGET_ANDROID)
+		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+		_initialVisibleSize.X = _currentVisibleBounds.W;
+		_initialVisibleSize.Y = _currentVisibleBounds.H;
+#endif
 	}
 
 	ServerSelectSection::~ServerSelectSection()
@@ -76,7 +91,57 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (!_shouldStart) {
-			if (_root->ActionHit(PlayerAction::Menu)) {
+			if (_waitForIpInput) {
+				_ipInput.Update(timeMult);
+
+#if defined(DEATH_TARGET_ANDROID)
+				_recalcVisibleBoundsTimeLeft -= timeMult;
+				if (_recalcVisibleBoundsTimeLeft <= 0.0f) {
+					_recalcVisibleBoundsTimeLeft = 60.0f;
+					_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+				}
+#endif
+
+				if (_root->ActionHit(PlayerAction::ChangeWeapon) && theApplication().CanShowScreenKeyboard()) {
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
+					if (_keyboardVisible) {
+						theApplication().HideScreenKeyboard();
+						_keyboardVisible = false;
+					} else {
+						theApplication().ShowScreenKeyboard();
+						_keyboardVisible = true;
+					}
+					RecalcLayoutForScreenKeyboard();
+				} else if (_root->ActionHit(PlayerAction::Menu)) {
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
+					if (_keyboardVisible) {
+						theApplication().HideScreenKeyboard();
+						_keyboardVisible = false;
+						RecalcLayoutForScreenKeyboard();
+					} else {
+						_waitForIpInput = false;
+						_ipInput.Deactivate();
+					}
+				} else if (_root->ActionHit(PlayerAction::Fire)) {
+					if (!_ipInput.GetText().empty()) {
+						_root->PlaySfx("MenuSelect"_s, 0.6f);
+						_selectedServer = {};
+						_selectedServer.EndpointString = _ipInput.GetText();
+						theApplication().HideScreenKeyboard();
+						_keyboardVisible = false;
+						RecalcLayoutForScreenKeyboard();
+						_transitionTime = 1.0f;
+					}
+				}
+				return;
+			}
+
+			if (_root->ActionHit(PlayerAction::ChangeWeapon)) {
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				_waitForIpInput = true;
+				_ipInput.Activate({});
+				return;
+			} else if (_root->ActionHit(PlayerAction::Menu)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_root->LeaveSection();
 				return;
@@ -177,6 +242,9 @@ namespace Jazz2::UI::Menu
 		float column1 = contentBounds.X + (contentBounds.W >= 690 ? (contentBounds.W * 0.2f) : (contentBounds.W >= 440 ? (contentBounds.W * 0.1f) : 20.0f));
 		float column2 = contentBounds.X + (contentBounds.W >= 600 ? (contentBounds.W * 0.66f) : (contentBounds.W * 0.74f));
 
+		Colorf defaultColor = (_waitForIpInput ? Font::TransparentDefaultColor : Font::DefaultColor);
+		Colorf randomColor = (_waitForIpInput ? Font::TransparentRandomColor : Font::RandomColor);
+
 		std::size_t itemsCount = _items.size();
 		for (std::int32_t i = 0; i < itemsCount; i++) {
 			_items[i].Y = center.Y;
@@ -192,22 +260,22 @@ namespace Jazz2::UI::Menu
 						Colorf(1.0f, 1.0f, 1.0f, 0.2f), 28.0f, 3.0f, true, true);
 
 					_root->DrawStringShadow(_items[i].Desc.Name, charOffset, x, center.Y, IMenuContainer::FontLayer + 10,
-						Alignment::Left, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+						Alignment::Left, randomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				} else {
 					_root->DrawStringShadow(_items[i].Desc.Name, charOffset, column1, center.Y, IMenuContainer::FontLayer,
-						Alignment::Left, Font::DefaultColor, 0.7f);
+						Alignment::Left, defaultColor, 0.7f);
 				}
 
 				if (_items[i].Desc.MaxPlayerCount > 0) {
 					char playerCount[32];
 					std::size_t length = formatInto(playerCount, "{}/{}", _items[i].Desc.CurrentPlayerCount, _items[i].Desc.MaxPlayerCount);
 					_root->DrawStringShadow({ playerCount, length }, charOffset, column2 - 90.0f, center.Y, IMenuContainer::FontLayer + 10 - 2,
-						Alignment::Right, Font::DefaultColor, 0.7f);
+						Alignment::Right, defaultColor, 0.7f);
 				}
 
 				if (!_items[i].Desc.Version.empty()) {
 					_root->DrawStringShadow(StringView("v"_s + _items[i].Desc.Version), charOffset, column2 - 78.0f, center.Y, IMenuContainer::FontLayer + 10 - 2,
-						Alignment::Left, _items[i].Desc.IsCompatible ? Font::DefaultColor : Colorf(0.7f, 0.44f, 0.44f, 0.5f), 0.7f);
+						Alignment::Left, _items[i].Desc.IsCompatible ? defaultColor : Colorf(0.7f, 0.44f, 0.44f, _waitForIpInput ? 0.36f : 0.5f), 0.7f);
 				}
 
 				StringView firstEndpoint = _items[i].Desc.EndpointString;
@@ -224,7 +292,7 @@ namespace Jazz2::UI::Menu
 				}
 
 				_root->DrawStringShadow(firstEndpoint, charOffset, column2, center.Y, IMenuContainer::FontLayer + 10 - 2,
-					Alignment::Left, Font::DefaultColor, 0.7f);
+					Alignment::Left, defaultColor, 0.7f);
 			}
 
 			center.Y += spacing;
@@ -242,6 +310,128 @@ namespace Jazz2::UI::Menu
 
 	void ServerSelectSection::OnDrawOverlay(Canvas* canvas)
 	{
+		char stringBuffer[64];
+		Recti contentBounds = _root->GetContentBounds();
+		float centerX = contentBounds.X + contentBounds.W * 0.5f;
+		float topLine = contentBounds.Y + TopLine;
+		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
+		std::int32_t charOffset = 0;
+
+		if (_waitForIpInput) {
+			float midY = (topLine + bottomLine) * 0.5f;
+
+			// Semi-transparent overlay to dim the server list
+			_root->DrawSolid(contentBounds.X, topLine - 1.0f, IMenuContainer::MainLayer + 100, Alignment::TopLeft,
+				Vector2f(contentBounds.W, bottomLine - topLine + 2.0f), Colorf(1.0f, 1.0f, 1.0f, 0.2f));
+
+			// Input box background
+			_root->DrawElement(MenuDim, centerX, midY, IMenuContainer::MainLayer + 110,
+				Alignment::Center, Colorf(0.1f, 0.1f, 0.4f, 0.9f), Vector2f(440.0f, 70.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
+
+			// Label
+			// TRANSLATORS: Label in Connect To Server > IP Address input field
+			_root->DrawStringShadow(_("IP Address:"), charOffset, centerX, midY - 16.0f, IMenuContainer::FontLayer + 110,
+				Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.8f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
+
+			// Input text or placeholder
+			StringView ipText = _ipInput.GetText();
+			if (ipText.empty()) {
+				// TRANSLATORS: Placeholder in Connect To Server > IP Address input field
+				_root->DrawStringShadow(_("<ip> or <ip>:<port>"), charOffset, centerX, midY + 6.0f, IMenuContainer::FontLayer + 110,
+					Alignment::Center, Colorf(0.5f, 0.5f, 0.5f, 0.3f), 0.9f);
+			} else {
+				Vector2f textSize = _root->MeasureString(ipText, 0.9f);
+				_root->DrawStringShadow(ipText, charOffset, centerX, midY + 6.0f, IMenuContainer::FontLayer + 110,
+					Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 0.9f);
+
+				// Cursor
+				Vector2f textToCursorSize = _root->MeasureString(ipText.prefix(_ipInput.GetCursor()), 0.9f);
+				_root->DrawSolid(centerX - textSize.X * 0.5f + textToCursorSize.X + 1.0f, midY + 6.0f - 1.0f,
+					IMenuContainer::FontLayer + 120, Alignment::Center, Vector2f(1.0f, 14.0f),
+					Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_ipInput.GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+			}
+
+			// Bottom hints
+			float hintY = contentBounds.Y + contentBounds.H - 18.0f;
+
+			/*if (theApplication().CanShowScreenKeyboard()) {
+				_root->DrawElement(ShowKeyboard, -1, centerX - 100.0f, hintY + 2.0f, IMenuContainer::MainLayer + 110, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f));
+				_root->DrawElement(ShowKeyboard, -1, centerX - 100.0f, hintY, IMenuContainer::MainLayer + 120, Alignment::Center, Colorf::White);
+				// TRANSLATORS: Bottom hint in Connect To Server > IP Address input field
+				_root->DrawStringShadow(_("Keyboard"), charOffset, centerX - 84.0f, hintY, IMenuContainer::FontLayer + 110,
+					Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
+			}*/
+
+			std::size_t length = formatInto(stringBuffer, "\f[c:#d0705d]{}\f[/c] │", _("Change Weapon"));
+			_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX + 4.0f, hintY, IMenuContainer::FontLayer + 110,
+				Alignment::Right, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
+
+			_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX + 18.0f, hintY + 2.0f, IMenuContainer::MainLayer + 110, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.8f, 0.8f);
+			_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX + 18.0f, hintY, IMenuContainer::MainLayer + 120, Alignment::Center, Colorf::White, 0.8f, 0.8f);
+
+			// TRANSLATORS: Bottom hint in Connect To Server > IP Address input field, prefixed with key/button to press
+			_root->DrawStringShadow(_("to show keyboard"), charOffset, centerX + 32.0f, hintY, IMenuContainer::FontLayer + 110,
+				Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
+		} else {
+			std::size_t length = formatInto(stringBuffer, "\f[c:#d0705d]{}\f[/c] │", _("Change Weapon"));
+
+			_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX - 15.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
+				Alignment::Right, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
+
+			_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, contentBounds.Y + contentBounds.H - 18.0f + 2.0f,
+				IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.8f, 0.8f);
+			_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, contentBounds.Y + contentBounds.H - 18.0f,
+				IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.8f, 0.8f);
+
+			// TRANSLATORS: Bottom hint in Connect To Server section, prefixed with key/button to press
+			_root->DrawStringShadow(_("to connect to IP address"), charOffset, centerX + 8.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
+				Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
+		}
+
+#if !defined(DEATH_TARGET_ANDROID)
+		if (_waitForIpInput && _keyboardVisible) {
+			auto contentBounds2 = _root->GetContentBounds();
+			float titleY = contentBounds2.Y - (canvas->ViewSize.Y >= 300 ? 30.0f : 12.0f) - 2.0f;
+
+			// Dark overlay covering the whole screen
+			_root->DrawSolid(0.0f, 0.0f, IMenuContainer::MainLayer - 10, Alignment::TopLeft,
+				Vector2f(canvas->ViewSize.X, canvas->ViewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.6f));
+
+			// Show input text at the top of the screen, above the keyboard
+			StringView ipText2 = _ipInput.GetText();
+			_root->DrawStringShadow(ipText2.empty() ? StringView("<ip> or <ip>:<port>"_s) : ipText2, charOffset, 120.0f, titleY, IMenuContainer::MainLayer,
+				Alignment::Left, ipText2.empty() ? Colorf(0.5f, 0.5f, 0.5f, 0.3f) : Colorf(0.62f, 0.44f, 0.34f, 0.5f), 1.0f);
+
+			if (!ipText2.empty()) {
+				Vector2f textToCursorSize = _root->MeasureString(ipText2.prefix(_ipInput.GetCursor()), 1.0f);
+				_root->DrawSolid(120.0f + textToCursorSize.X + 1.0f, titleY - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Left, Vector2f(1.0f, 14.0f),
+					Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_ipInput.GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+			}
+		}
+#endif
+
+#if defined(DEATH_TARGET_ANDROID)
+		if (_waitForIpInput && (_currentVisibleBounds.W < _initialVisibleSize.X || _currentVisibleBounds.H < _initialVisibleSize.Y)) {
+			Vector2i viewSizeLocal = _root->GetViewSize();
+			if (_currentVisibleBounds.Y * viewSizeLocal.Y / _initialVisibleSize.Y < 32.0f) {
+				float titleY = contentBounds.Y - (canvas->ViewSize.Y >= 300 ? 30.0f : 12.0f) - 2.0f;
+
+				_root->DrawSolid(0.0f, 0.0f, IMenuContainer::MainLayer - 10, Alignment::TopLeft,
+					Vector2f(canvas->ViewSize.X, canvas->ViewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.6f));
+
+				StringView ipText2 = _ipInput.GetText();
+				_root->DrawStringShadow(ipText2.empty() ? StringView("<ip> or <ip>:<port>"_s) : ipText2, charOffset, 120.0f, titleY, IMenuContainer::MainLayer,
+					Alignment::Left, ipText2.empty() ? Colorf(0.5f, 0.5f, 0.5f, 0.3f) : Colorf(0.62f, 0.44f, 0.34f, 0.5f), 1.0f);
+
+				if (!ipText2.empty()) {
+					Vector2f textToCursorSize = _root->MeasureString(ipText2.prefix(_ipInput.GetCursor()), 1.0f);
+					_root->DrawSolid(120.0f + textToCursorSize.X + 1.0f, titleY - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Left, Vector2f(1.0f, 14.0f),
+						Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_ipInput.GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+				}
+			}
+		}
+#endif
+
 		if (_shouldStart) {
 			auto command = canvas->RentRenderCommand();
 			if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
@@ -263,6 +453,57 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	NavigationFlags ServerSelectSection::GetNavigationFlags() const
+	{
+		return (_waitForIpInput ? NavigationFlags::AllowGamepads : NavigationFlags::AllowAll);
+	}
+
+	void ServerSelectSection::OnKeyPressed(const KeyboardEvent& event)
+	{
+		if (_waitForIpInput) {
+			switch (event.sym) {
+				case Keys::Escape: {
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
+					if (_keyboardVisible) {
+						theApplication().HideScreenKeyboard();
+						_keyboardVisible = false;
+						RecalcLayoutForScreenKeyboard();
+					} else {
+						_waitForIpInput = false;
+						_ipInput.Deactivate();
+					}
+					break;
+				}
+				case Keys::Return: {
+					if (!_ipInput.GetText().empty()) {
+						_root->PlaySfx("MenuSelect"_s, 0.6f);
+						_selectedServer = {};
+						_selectedServer.EndpointString = _ipInput.GetText();
+						theApplication().HideScreenKeyboard();
+						_keyboardVisible = false;
+						RecalcLayoutForScreenKeyboard();
+						_waitForIpInput = false;
+						_ipInput.Deactivate();
+						_shouldStart = true;
+						_transitionTime = 1.0f;
+					}
+					break;
+				}
+				default: {
+					_ipInput.OnKeyPressed(event);
+					break;
+				}
+			}
+		}
+	}
+
+	void ServerSelectSection::OnTextInput(const TextInputEvent& event)
+	{
+		if (_waitForIpInput) {
+			_ipInput.OnTextInput(event);
+		}
+	}
+
 	void ServerSelectSection::OnTouchEvent(const TouchEvent& event, Vector2i viewSize)
 	{
 		if (_shouldStart) {
@@ -276,7 +517,18 @@ namespace Jazz2::UI::Menu
 					float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 					if (y < 80.0f) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
-						_root->LeaveSection();
+						if (_waitForIpInput) {
+							if (_keyboardVisible) {
+								theApplication().HideScreenKeyboard();
+								_keyboardVisible = false;
+								RecalcLayoutForScreenKeyboard();
+							} else {
+								_waitForIpInput = false;
+								_ipInput.Deactivate();
+							}
+						} else {
+							_root->LeaveSection();
+						}
 						return;
 					}
 
@@ -291,7 +543,7 @@ namespace Jazz2::UI::Menu
 					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 					if (pointerIndex != -1) {
 						Vector2f touchMove = Vector2f(event.pointers[pointerIndex].x * viewSize.X, event.pointers[pointerIndex].y * viewSize.Y);
-						if (_availableHeight < _height) {
+						if (!_waitForIpInput && _availableHeight < _height) {
 							float delta = touchMove.Y - _touchLast.Y;
 							if (delta != 0.0f) {
 								_y += delta;
@@ -314,6 +566,33 @@ namespace Jazz2::UI::Menu
 				bool alreadyMoved = (_touchStart == Vector2f::Zero || (_touchStart - _touchLast).Length() > 10.0f || _touchTime > FrameTimer::FramesPerSecond);
 				_touchStart = Vector2f::Zero;
 				if (alreadyMoved) {
+					return;
+				}
+
+				Recti contentBounds = _root->GetContentBounds();
+				float hintY = contentBounds.Y + contentBounds.H - 18.0f;
+
+				if (_waitForIpInput) {
+					// Keyboard toggle hint tap
+					if (theApplication().CanShowScreenKeyboard() && std::abs(_touchLast.Y - hintY) < 20.0f) {
+						_root->PlaySfx("MenuSelect"_s, 0.5f);
+						if (_keyboardVisible) {
+							theApplication().HideScreenKeyboard();
+							_keyboardVisible = false;
+						} else {
+							theApplication().ShowScreenKeyboard();
+							_keyboardVisible = true;
+						}
+						RecalcLayoutForScreenKeyboard();
+					}
+					return;
+				}
+
+				// Connect to IP hint tap
+				if (std::abs(_touchLast.Y - hintY) < 20.0f) {
+					_root->PlaySfx("MenuSelect"_s, 0.5f);
+					_waitForIpInput = true;
+					_ipInput.Activate({});
 					return;
 				}
 
@@ -395,6 +674,17 @@ namespace Jazz2::UI::Menu
 	ServerSelectSection::ItemData::ItemData(Jazz2::Multiplayer::ServerDescription&& desc)
 		: Desc(std::move(desc))
 	{
+	}
+
+	void ServerSelectSection::RecalcLayoutForScreenKeyboard()
+	{
+#if defined(DEATH_TARGET_ANDROID)
+		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+
+		if (_recalcVisibleBoundsTimeLeft > 30.0f) {
+			_recalcVisibleBoundsTimeLeft = 30.0f;
+		}
+#endif
 	}
 }
 
