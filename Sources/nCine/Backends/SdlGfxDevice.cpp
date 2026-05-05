@@ -307,9 +307,12 @@ namespace nCine::Backends
 		std::uint8_t interval = (displayMode_.hasVSync() ? 1 : 0);
 		vglWaitVblankStart(interval);*/
 
-		// Force default resolution
-		drawableWidth_ = width_ = 960;
-		drawableHeight_ = height_ = 544;
+		// Force Vita rendering resolution to 480x272 (50% scale) for performance
+		// BUT create the window at full native resolution for proper scaling
+		drawableWidth_ = 480;
+		drawableHeight_ = 272;
+		width_ = 960;   // Physical window width (Vita native)
+		height_ = 544;  // Physical window height (Vita native)
 
 		LOGD("Initializing SDL2 software renderer...");
 
@@ -320,6 +323,9 @@ namespace nCine::Backends
 			swRenderer_ = SDL_CreateRenderer(windowHandle_, -1, SDL_RENDERER_SOFTWARE);
 		}
 		FATAL_ASSERT_MSG(swRenderer_, "SDL_CreateRenderer failed: {}", SDL_GetError());
+
+		// Scale internal 480x272 buffer to fill the Vita's 960x544 display
+		SDL_RenderSetLogicalSize(swRenderer_, 480, 272);
 
 		swTexture_ = SDL_CreateTexture(swRenderer_, SDL_PIXELFORMAT_RGBA32,
 									   SDL_TEXTUREACCESS_STREAMING, drawableWidth_, drawableHeight_);

@@ -300,11 +300,13 @@ namespace nCine::RHI
 					const std::uint8_t* ptr = base + ctx.vboByteOffset + static_cast<std::size_t>(index) * stride + attr.offset;
 
 					if (i == 0 && attr.size >= 2) {
-						const float* f = reinterpret_cast<const float*>(ptr);
-						out.x = f[0]; out.y = f[1];
+						// Use memcpy — ptr may not be 4-byte aligned; on ARM a direct
+						// float* dereference of an unaligned address causes a Data Abort.
+						std::memcpy(&out.x, ptr,            sizeof(float));
+						std::memcpy(&out.y, ptr + sizeof(float), sizeof(float));
 					} else if (i == 1 && attr.size >= 2) {
-						const float* f = reinterpret_cast<const float*>(ptr);
-						out.u = f[0]; out.v = f[1];
+						std::memcpy(&out.u, ptr,            sizeof(float));
+						std::memcpy(&out.v, ptr + sizeof(float), sizeof(float));
 					}
 				}
 
@@ -379,6 +381,12 @@ namespace nCine::RHI
 			const SamplerWrapping wrapT = (tex != nullptr ? tex->GetWrapT() : SamplerWrapping::ClampToEdge);
 			const bool useLinear = (tex != nullptr && tex->GetMagFilter() == SamplerFilter::Linear && texW > 1 && texH > 1);
 
+			// PARANOID GUARD: zero-dimension texture causes % 0 (division by zero) in
+			// WrapTexelFix / NormalizeRepeatFix, which kills the worker thread on ARM.
+			if DEATH_UNLIKELY(texPixels != nullptr && (texW <= 0 || texH <= 0)) {
+				return; // malformed texture — skip entire draw call
+			}
+
 			// Tint color
 			const std::int32_t tR = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[0]) * 255.0f + 0.5f);
 			const std::int32_t tG = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[1]) * 255.0f + 0.5f);
@@ -412,10 +420,17 @@ namespace nCine::RHI
 			alignas(16) std::uint8_t scanBuf[TileRenderer::TileSize * 4];
 			const bool useScanBuf = ((useFastBlend || !useBlend) && texPixels != nullptr);
 
+			// Cache in a local — compiler may re-read ctx.fragmentShader every iteration
+			// due to aliasing from fsInput.textures, causing a null-ptr call if ctx is
+			// overwritten by the next frame before workers finish.
+			const FragmentShaderFn cachedShader = ctx.fragmentShader;
+
 			for (std::int32_t py = yMin; py <= yMax; py++, tyFix += dtyFix) {
 				// Tile-local row offset
 				const std::int32_t localRow = py - tileY;
 				const std::int32_t localCol = xMin - tileX;
+				// PARANOID: float→int rounding can push these just outside the tile
+				if DEATH_UNLIKELY(localRow < 0 || localRow >= tileH || localCol < 0 || localCol >= tileW) continue;
 				std::uint8_t* dstRow = tileBuf + (localRow * TileRenderer::TileSize + localCol) * 4;
 
 				// Get source Y
@@ -449,11 +464,14 @@ namespace nCine::RHI
 						}
 					} else if (texRow != nullptr) {
 						if (uvSafeX && dtxFix == 65536) {
-							const std::int32_t srcX = txFix >> 16;
-							std::memcpy(scanBuf, &texRow[srcX * 4], static_cast<std::size_t>(scanWidth) * 4);
+							const std::int32_t srcX = std::max(0, std::min(texW - 1, txFix >> 16));
+							const std::int32_t safeScan = std::min(scanWidth, texW - srcX);
+							if DEATH_LIKELY(safeScan > 0) {
+								std::memcpy(scanBuf, &texRow[srcX * 4], static_cast<std::size_t>(safeScan) * 4);
+							}
 						} else if (uvSafeX) {
 							for (std::int32_t i = 0; i < scanWidth; i++) {
-								const std::int32_t srcX = txFix >> 16;
+								const std::int32_t srcX = std::max(0, std::min(texW - 1, txFix >> 16));
 								std::memcpy(&scanBuf[i * 4], &texRow[srcX * 4], 4);
 								txFix += dtxFix;
 							}
@@ -473,7 +491,7 @@ namespace nCine::RHI
 					}
 
 					// Phase 2: fragment shader or tint
-					if DEATH_UNLIKELY(ctx.fragmentShader != nullptr) {
+					if DEATH_UNLIKELY(cachedShader != nullptr) {
 						FragmentShaderInput fsInput;
 						fsInput.v = tyFix / 65536.0f / static_cast<float>(texH > 0 ? texH : 1);
 						fsInput.texWidth = texW;
@@ -488,7 +506,7 @@ namespace nCine::RHI
 							fsInput.u = txFixShader / 65536.0f * invTexW;
 							fsInput.x = xMin + i;
 							fsInput.y = py;
-							ctx.fragmentShader(fsInput);
+							cachedShader(fsInput);
 							txFixShader += dtxFix;
 						}
 					} else if DEATH_UNLIKELY(!whiteTint) {
@@ -534,7 +552,7 @@ namespace nCine::RHI
 							txFix += dtxFix;
 						}
 
-						if DEATH_UNLIKELY(ctx.fragmentShader != nullptr) {
+						if DEATH_UNLIKELY(cachedShader != nullptr) {
 							std::uint8_t px4[4] = {
 								static_cast<std::uint8_t>(sR), static_cast<std::uint8_t>(sG),
 								static_cast<std::uint8_t>(sB), static_cast<std::uint8_t>(sA)
@@ -550,7 +568,7 @@ namespace nCine::RHI
 							fsInput.textures = ctx.textures;
 							fsInput.color = ctx.ff.color;
 							fsInput.userData = ctx.fragmentShaderUserData;
-							ctx.fragmentShader(fsInput);
+							cachedShader(fsInput);
 							sR = px4[0]; sG = px4[1]; sB = px4[2]; sA = px4[3];
 						} else if (!whiteTint) {
 							sR = (sR * tR) >> 8;
@@ -680,6 +698,11 @@ namespace nCine::RHI
 			const SamplerWrapping wrapT = (tex != nullptr ? tex->GetWrapT() : SamplerWrapping::ClampToEdge);
 			const bool useLinear = (tex != nullptr && tex->GetMagFilter() == SamplerFilter::Linear && texW > 1 && texH > 1);
 
+			// PARANOID GUARD: zero-dimension texture causes % 0 in WrapTexelFix → thread kill
+			if DEATH_UNLIKELY(texPixels != nullptr && (texW <= 0 || texH <= 0)) {
+				return;
+			}
+
 			const std::int32_t tR = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[0]) * 255.0f + 0.5f);
 			const std::int32_t tG = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[1]) * 255.0f + 0.5f);
 			const std::int32_t tB = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[2]) * 255.0f + 0.5f);
@@ -693,6 +716,8 @@ namespace nCine::RHI
 
 			const std::int32_t dudxFix = (texPixels != nullptr ? static_cast<std::int32_t>(dudx * texW * 65536.0f) : 0);
 			const std::int32_t dvdxFix = (texPixels != nullptr ? static_cast<std::int32_t>(dvdx * texH * 65536.0f) : 0);
+
+			const FragmentShaderFn cachedShader = ctx.fragmentShader;
 
 			for (std::int32_t py = yMin; py <= yMax; py++) {
 				const float pyCtr = py + 0.5f;
@@ -724,6 +749,8 @@ namespace nCine::RHI
 
 					if (in1 || in2) {
 						const std::int32_t localCol = px - tileX;
+						// PARANOID: float→int rounding can push these just outside the tile
+						if DEATH_UNLIKELY(localRow < 0 || localRow >= tileH || localCol < 0 || localCol >= tileW) goto NextPixel;
 						std::uint8_t* dstPx = tileBuf + (localRow * TileRenderer::TileSize + localCol) * 4;
 
 						std::int32_t sR, sG, sB, sA;
@@ -733,8 +760,8 @@ namespace nCine::RHI
 								SampleBilinearFix(texPixels, texW, texH, uFix, vFix, wrapS, wrapT, raw);
 								sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 							} else {
-								std::int32_t srcX = WrapTexelFix(uFix, texW, wrapS);
-								std::int32_t srcY = WrapTexelFix(vFix, texH, wrapT);
+								std::int32_t srcX = std::max(0, std::min(texW - 1, WrapTexelFix(uFix, texW, wrapS)));
+								std::int32_t srcY = std::max(0, std::min(texH - 1, WrapTexelFix(vFix, texH, wrapT)));
 								const std::uint8_t* src = texPixels + (static_cast<std::size_t>(srcY) * texW + srcX) * 4;
 								sR = src[0]; sG = src[1]; sB = src[2]; sA = src[3];
 							}
@@ -743,7 +770,7 @@ namespace nCine::RHI
 						}
 
 						// Tint or shader
-						if DEATH_UNLIKELY(ctx.fragmentShader != nullptr) {
+						if DEATH_UNLIKELY(cachedShader != nullptr) {
 							std::uint8_t px4[4] = {
 								static_cast<std::uint8_t>(sR), static_cast<std::uint8_t>(sG),
 								static_cast<std::uint8_t>(sB), static_cast<std::uint8_t>(sA)
@@ -759,7 +786,7 @@ namespace nCine::RHI
 							fsInput.textures = ctx.textures;
 							fsInput.color = ctx.ff.color;
 							fsInput.userData = ctx.fragmentShaderUserData;
-							ctx.fragmentShader(fsInput);
+							cachedShader(fsInput);
 							sR = px4[0]; sG = px4[1]; sB = px4[2]; sA = px4[3];
 						} else if DEATH_UNLIKELY(!whiteTint) {
 							sR = (sR * tR) >> 8;
