@@ -169,7 +169,7 @@ private:
 #if defined(DEATH_TARGET_ANDROID)
 	void ApplyActivityIcon();
 #endif
-#if defined(WITH_MULTIPLAYER) && defined(WITH_THREADS)
+#if defined(WITH_MULTIPLAYER) && defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RunDedicatedServer(StringView configPath);
 	void StartProcessingStdin();
 #endif
@@ -348,7 +348,7 @@ void GameEventHandler::OnInitialize()
 				return;
 			}
 		}
-#			if !defined(DEATH_TARGET_WINDOWS) || defined(DEATH_DEBUG)
+#			if (!defined(DEATH_TARGET_WINDOWS) || defined(DEATH_DEBUG)) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		else if (arg == "/server"_s || arg == "--server"_s) {
 			StringView configPath;
 			if (i + 1 < config.argc()) {
@@ -849,7 +849,7 @@ void GameEventHandler::ApplyActivityIcon()
 }
 #endif
 
-#if defined(WITH_MULTIPLAYER)
+#if defined(WITH_MULTIPLAYER) && defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 void GameEventHandler::RunDedicatedServer(StringView configPath)
 {
 	if (PreferencesCache::FirstRun) {
@@ -885,7 +885,6 @@ void GameEventHandler::RunDedicatedServer(StringView configPath)
 	StartProcessingStdin();
 }
 
-#	if defined(WITH_THREADS)
 void GameEventHandler::StartProcessingStdin()
 {
 	Thread thread([](void* arg) {
@@ -934,8 +933,9 @@ void GameEventHandler::StartProcessingStdin()
 		}
 	}, this);
 }
-#	endif
+#endif
 
+#if defined(WITH_MULTIPLAYER)
 void GameEventHandler::ConnectToServer(StringView endpoint, std::uint16_t defaultPort, StringView password)
 {
 	LOGI("[MP] Preparing connection to {}...", endpoint);
@@ -949,6 +949,10 @@ void GameEventHandler::ConnectToServer(StringView endpoint, std::uint16_t defaul
 
 bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 {
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+	// Creating a server is not supported on Emscripten
+	return false;
+#	else
 	_networkManager = std::make_unique<NetworkManager>();
 
 	if (serverInit.Configuration.ServerName.empty()) {
@@ -1006,6 +1010,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 	});
 
 	return true;
+#	endif
 }
 
 ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
@@ -1047,21 +1052,21 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 		packet.WriteValue<std::uint8_t>((std::uint8_t)playerName.size());
 		packet.Write(playerName.data(), (std::uint32_t)playerName.size());
 
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		auto androidId = Backends::AndroidJniWrap_Secure::getAndroidId();
 		std::size_t androidIdLength = std::min(androidId.size(), (std::size_t)UINT8_MAX);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)androidIdLength);
 		packet.Write(androidId.data(), (std::uint32_t)androidIdLength);
-#else
+#	else
 		packet.WriteValue<std::uint8_t>(0);	// Device ID
-#endif
+#	endif
 
 		std::uint64_t playerUserId = 0;
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+#	if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 		if (PreferencesCache::EnableDiscordIntegration && UI::DiscordRpcClient::Get().IsSupported()) {
 			playerUserId = UI::DiscordRpcClient::Get().GetUserId();
 		}
-#endif
+#	endif
 		packet.WriteVariableUint64(playerUserId);
 
 		_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ClientPacketType::Auth, packet);
@@ -1090,13 +1095,11 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 
 	if (_networkManager != nullptr && _networkManager->GetState() != NetworkState::Listening) {
 		InvokeAsync([this, reason]() {
-#if defined(WITH_MULTIPLAYER)
 			if (_networkManager != nullptr) {
 				_networkManager->Dispose();
 				_networkManager = nullptr;
 				_streamedAsset = nullptr;
 			}
-#endif
 			InGameConsole::Clear();
 			Menu::MainMenu* mainMenu;
 			if (mainMenu = runtime_cast<Menu::MainMenu>(_currentHandler.get())) {
