@@ -6,6 +6,11 @@
 	"$include": "BaseConfig.json",
 	
 	"ServerName": "{PlayerName}'s Server",
+	
+	"ServerPort": 7438,
+	"WsPort": 7439,
+	"WsCertPath": "cert.pem",
+	"WsKeyPath": "key.pem",
 
 	/* "ServerAddressOverride" allows to specify alternative public server address */
 	/*"ServerAddressOverride": "123.123.123.123",*/
@@ -13,7 +18,6 @@
 	"WelcomeMessage": "Welcome to the {PlayerName}'s server!",
 	"MaxPlayerCount": 16,
 	"MinPlayerCount": 1,
-	"ServerPort": 7438,
 	"IsPrivate": false,
 	"RequiresDiscordAuth": false,
 	"AllowedPlayerTypes": 7, /* Jazz + Spaz + Lori */

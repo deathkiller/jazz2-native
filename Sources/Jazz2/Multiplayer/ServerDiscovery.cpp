@@ -8,7 +8,6 @@
 #include "../../nCine/Application.h"
 #include "../../nCine/Base/Algorithms.h"
 #include "../../nCine/Base/FrameTimer.h"
-#include "../../nCine/Threading/Thread.h"
 
 #include <Containers/String.h>
 #include <Containers/StringConcatenable.h>
@@ -16,7 +15,11 @@
 #include <Containers/StringStlView.h>
 #include <Containers/StringUtils.h>
 #include <IO/MemoryStream.h>
-#include <IO/WebRequest.h>
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	include "../../nCine/Threading/Thread.h"
+#	include <IO/WebRequest.h>
+#endif
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "Backends/ifaddrs-android.h"
@@ -26,7 +29,7 @@ struct ipv6_mreq {
 	struct in6_addr ipv6mr_multiaddr; /* IPv6 multicast address */
 	unsigned int    ipv6mr_interface; /* Interface index */
 };
-#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
+#elif (defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)) && !defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <ifaddrs.h>
 #	include <net/if.h>
 #elif defined(DEATH_TARGET_WINDOWS)
@@ -37,7 +40,9 @@ struct ipv6_mreq {
 #include "../../jsoncpp/json.h"
 
 using namespace Death::Containers::Literals;
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 using namespace Death::IO;
+#endif
 using namespace nCine;
 
 using namespace std::string_view_literals;
@@ -104,11 +109,40 @@ namespace Jazz2::Multiplayer
 	{
 		DEATH_DEBUG_ASSERT(server != nullptr, "server is null", );
 
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		_thread = Thread(ServerDiscovery::OnServerThread, this);
+#endif
 	}
 
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+
 	ServerDiscovery::ServerDiscovery(IServerObserver* observer)
-		: _server(nullptr), _observer(observer)
+		: _server(nullptr), _observer(observer), _onlineSuccess(false), _pendingFetch(nullptr), _refreshTimerId(0)
+	{
+		DEATH_DEBUG_ASSERT(observer != nullptr, "observer is null", );
+
+		DownloadPublicServerListAsync();
+	}
+
+	ServerDiscovery::~ServerDiscovery()
+	{
+		_server = nullptr;
+		_observer = nullptr;
+
+		if (_refreshTimerId != 0) {
+			emscripten_clear_timeout(_refreshTimerId);
+			_refreshTimerId = 0;
+		}
+		if (_pendingFetch != nullptr) {
+			emscripten_fetch_close(_pendingFetch);
+			_pendingFetch = nullptr;
+		}
+	}
+
+#else
+
+	ServerDiscovery::ServerDiscovery(IServerObserver* observer)
+		: _server(nullptr), _observer(observer), _onlineSuccess(false)
 	{
 		DEATH_DEBUG_ASSERT(observer != nullptr, "observer is null", );
 
@@ -125,23 +159,27 @@ namespace Jazz2::Multiplayer
 		NetworkManagerBase::ReleaseBackend();
 	}
 
+#endif
+
 	void ServerDiscovery::SetStatusProvider(std::weak_ptr<IServerStatusProvider> statusProvider)
 	{
-		_statusProvider = std::move(statusProvider);
+		_statusProvider = Death::move(statusProvider);
 	}
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 
 	ENetSocket ServerDiscovery::TryCreateLocalSocket(const char* multicastAddress, ENetAddress& parsedAddress)
 	{
-#if ENET_IPV6
+#	if ENET_IPV6
 		std::int32_t ifidx = GetDefaultIPv6MulticastIfIndex();
 
 		ENetSocket socket = enet_socket_create(ENET_SOCKET_TYPE_DATAGRAM);
 		if (socket == ENET_SOCKET_NULL) {
-#	if defined(DEATH_TARGET_WINDOWS)
+#		if defined(DEATH_TARGET_WINDOWS)
 			std::int32_t error = ::WSAGetLastError();
-#	else
+#		else
 			std::int32_t error = errno;
-#	endif
+#		endif
 			LOGE("[MP] Failed to create socket for local server discovery (error: {})", error);
 			return ENET_SOCKET_NULL;
 		}
@@ -151,11 +189,11 @@ namespace Jazz2::Multiplayer
 			setsockopt(socket, IPPROTO_IPV6, IPV6_MULTICAST_IF, (const char*)&ifidx, sizeof(ifidx)) != 0 ||
 			setsockopt(socket, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, (const char*)&hops, sizeof(hops)) != 0 ||
 			setsockopt(socket, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, (const char*)&on, sizeof(on)) != 0) {
-#	if defined(DEATH_TARGET_WINDOWS)
+#		if defined(DEATH_TARGET_WINDOWS)
 			std::int32_t error = ::WSAGetLastError();
-#	else
+#		else
 			std::int32_t error = errno;
-#	endif
+#		endif
 			LOGE("[MP] Failed to enable multicast on socket for local server discovery (error: {})", error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
@@ -168,11 +206,11 @@ namespace Jazz2::Multiplayer
 		saddr.sin6_addr = in6addr_any;
 
 		if (bind(socket, (struct sockaddr*)&saddr, sizeof(saddr))) {
-#	if defined(DEATH_TARGET_WINDOWS)
+#		if defined(DEATH_TARGET_WINDOWS)
 			std::int32_t error = ::WSAGetLastError();
-#	else
+#		else
 			std::int32_t error = errno;
-#	endif
+#		endif
 			LOGE("[MP] Failed to bind socket for local server discovery (error: {})", error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
@@ -180,11 +218,11 @@ namespace Jazz2::Multiplayer
 
 		std::int32_t result = inet_pton(AF_INET6, multicastAddress, &parsedAddress.host);
 		if (result != 1) {
-#	if defined(DEATH_TARGET_WINDOWS)
+#		if defined(DEATH_TARGET_WINDOWS)
 			std::int32_t error = ::WSAGetLastError();
-#	else
+#		else
 			std::int32_t error = errno;
-#	endif
+#		endif
 			LOGE("[MP] Failed to parse multicast address for local server discovery (result: {}, error: {})", result, error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
@@ -198,20 +236,20 @@ namespace Jazz2::Multiplayer
 		mreq.ipv6mr_interface = ifidx;
 
 		if (setsockopt(socket, IPPROTO_IPV6, IPV6_JOIN_GROUP, (char*)&mreq, sizeof(mreq))) {
-#	if defined(DEATH_TARGET_WINDOWS)
+#		if defined(DEATH_TARGET_WINDOWS)
 			std::int32_t error = ::WSAGetLastError();
-#	else
+#		else
 			std::int32_t error = errno;
-#	endif
+#		endif
 			LOGE("[MP] Failed to join multicast group on socket for local server discovery (error: {})", error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
-#else
+#	else
 		// TODO: Use broadcast on IPv4
 		LOGW("[MP] Local server discovery is not supported on IPv4");
 		ENetSocket socket = ENET_SOCKET_NULL;
-#endif
+#	endif
 
 		return socket;
 	}
@@ -231,11 +269,11 @@ namespace Jazz2::Multiplayer
 		sendbuf.dataLength = packet.GetSize();
 		std::int32_t result = enet_socket_send(socket, &address, &sendbuf, 1);
 		if (result != (std::int32_t)sendbuf.dataLength) {
-#if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS)
 			std::int32_t error = ::WSAGetLastError();
-#else
+#	else
 			std::int32_t error = errno;
-#endif
+#	endif
 			LOGE("[MP] Failed to send local discovery request (result: {}, error: {})", result, error);
 		}
 	}
@@ -279,7 +317,14 @@ namespace Jazz2::Multiplayer
 						discoveredServer.Name = serverName;
 						discoveredServer.CurrentPlayerCount = (std::uint32_t)currentPlayers;
 						discoveredServer.MaxPlayerCount = (std::uint32_t)maxPlayers;
-
+#	if defined(WITH_WEBSOCKET)
+						std::int64_t wsPort = 0;
+						serverItem["w"].get(wsPort);
+						discoveredServer.WsPort = (std::uint16_t)wsPort;
+						bool wsSecure = false;
+						serverItem["wss"].get(wsSecure);
+						discoveredServer.WsSecure = wsSecure;
+#	endif
 						LOGD("[MP] -\tFound server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
 						observer->OnServerFound(std::move(discoveredServer));
 					}
@@ -348,6 +393,16 @@ namespace Jazz2::Multiplayer
 		nameLength = packet.ReadValue<std::uint8_t>();
 		discoveredServer.LevelName = String(NoInit, nameLength);
 		packet.Read(discoveredServer.LevelName.data(), nameLength);
+
+#	if defined(WITH_WEBSOCKET)
+		if (packet.GetSize() - packet.GetPosition() >= 2) {
+			discoveredServer.WsPort = packet.ReadValue<std::uint16_t>();
+			if (discoveredServer.WsPort != 0 && packet.GetSize() - packet.GetPosition() >= 1) {
+				std::uint8_t wsFlags = packet.ReadValue<std::uint8_t>();
+				discoveredServer.WsSecure = (wsFlags & 0x01) != 0;
+			}
+		}
+#	endif
 
 		LOGD("[MP] Found local server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
 		return true;
@@ -432,16 +487,27 @@ namespace Jazz2::Multiplayer
 				packet.WriteValue<std::uint8_t>(0);
 			}
 
+#	if defined(WITH_WEBSOCKET)
+			packet.WriteValue<std::uint16_t>(serverConfig.WsPort);
+			if (serverConfig.WsPort != 0) {
+				std::uint8_t wsFlags = 0;
+				if (!serverConfig.WsCertPath.empty()) {
+					wsFlags |= 0x01;	// TLS/WSS
+				}
+				packet.WriteValue<std::uint8_t>(wsFlags);
+			}
+#	endif
+
 			ENetBuffer sendbuf;
 			sendbuf.data = (void*)packet.GetBuffer();
 			sendbuf.dataLength = packet.GetSize();
 			std::int32_t result = enet_socket_send(socket, &_localMulticastAddress, &sendbuf, 1);
 			if (result != (std::int32_t)sendbuf.dataLength) {
-#if defined(DEATH_TARGET_WINDOWS)
+#	if defined(DEATH_TARGET_WINDOWS)
 				std::int32_t error = ::WSAGetLastError();
-#else
+#	else
 				std::int32_t error = errno;
-#endif
+#	endif
 				LOGE("[MP] Failed to send local discovery response (result: {}, error: {})", result, error);
 			}
 		}
@@ -506,9 +572,19 @@ namespace Jazz2::Multiplayer
 		}
 
 		length += formatInto({ input + length, sizeof(input) - length },
-			"\",\"v\":\"{}\",\"d\":\"{}\",\"p\":{},\"m\":{},\"s\":{},\"l\":{},\"g\":{},\"f\":\"{}\"}}",
+			"\",\"v\":\"{}\",\"d\":\"{}\",\"p\":{},\"m\":{},\"s\":{},\"l\":{},\"g\":{},\"f\":\"{}\"",
 			NCINE_VERSION, PreferencesCache::GetDeviceID(), server->GetPeerCount(), serverConfig.MaxPlayerCount,
 			serverConfig.StartUnixTimestamp, serverLoad, serverConfig.GameMode, levelDisplayName);
+
+#	if defined(WITH_WEBSOCKET)
+		if (serverConfig.WsPort != 0) {
+			bool wsSecure = !serverConfig.WsCertPath.empty();
+			length += formatInto({ input + length, sizeof(input) - length },
+				",\"w\":{},\"wss\":{}", serverConfig.WsPort, wsSecure ? "true" : "false");
+		}
+#	endif
+
+		length += formatInto({ input + length, sizeof(input) - length }, "}}");
 
 		auto request = WebSession::GetDefault().CreateRequest("https://deat.tk/jazz2/servers"_s);
 		request.SetMethod("POST"_s);
@@ -672,6 +748,120 @@ namespace Jazz2::Multiplayer
 
 		LOGD("[MP] Server discovery thread exited");
 	}
+
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
+
+	void ServerDiscovery::DownloadPublicServerListAsync()
+	{
+		if (_observer == nullptr) {
+			return;
+		}
+
+		LOGD("[MP] Downloading public server list asynchronously...");
+
+		String url = "https://deat.tk/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
+		String urlNt = String::nullTerminatedView(url);
+
+		emscripten_fetch_attr_t attr;
+		emscripten_fetch_attr_init(&attr);
+		std::strcpy(attr.requestMethod, "GET");
+		attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
+		attr.onsuccess = OnFetchSuccess;
+		attr.onerror = OnFetchError;
+		attr.userData = this;
+
+		if (_pendingFetch != nullptr) {
+			emscripten_fetch_close(_pendingFetch);
+		}
+		_pendingFetch = emscripten_fetch(&attr, urlNt.data());
+	}
+
+	void ServerDiscovery::OnFetchSuccess(emscripten_fetch_t* fetch)
+	{
+		ServerDiscovery* _this = static_cast<ServerDiscovery*>(fetch->userData);
+		_this->_pendingFetch = nullptr;
+
+		IServerObserver* observer = _this->_observer;
+		if (observer != nullptr && fetch->numBytes > 0) {
+			Json::CharReaderBuilder builder;
+			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
+			Json::Value doc; std::string errors;
+			if (reader->parse(fetch->data, fetch->data + fetch->numBytes, &doc, &errors)) {
+				LOGI("[MP] Downloaded public server list with {} entries ({} bytes)",
+					(std::uint32_t)doc["s"].size(), (std::uint32_t)fetch->numBytes);
+
+				for (auto serverItem : doc["s"]) {
+					std::string_view serverName, serverUuid, serverEndpoints;
+					if (serverItem["n"].get(serverName) == Json::SUCCESS && !serverName.empty() &&
+						serverItem["u"].get(serverUuid) == Json::SUCCESS && !serverUuid.empty() &&
+						serverItem["e"].get(serverEndpoints) == Json::SUCCESS && !serverEndpoints.empty()) {
+
+						std::int64_t currentPlayers = 0, maxPlayers = 0;
+						serverItem["c"].get(currentPlayers);
+						serverItem["m"].get(maxPlayers);
+
+						std::string_view version;
+						serverItem["v"].get(version);
+
+						ServerDescription discoveredServer{};
+						discoveredServer.Version = version;
+						discoveredServer.Name = serverName;
+						discoveredServer.EndpointString = serverEndpoints;
+						discoveredServer.CurrentPlayerCount = (std::uint32_t)currentPlayers;
+						discoveredServer.MaxPlayerCount = (std::uint32_t)maxPlayers;
+
+						std::int64_t wsPort = 0;
+						serverItem["w"].get(wsPort);
+						discoveredServer.WsPort = (std::uint16_t)wsPort;
+						bool wsSecure = false;
+						serverItem["wss"].get(wsSecure);
+						discoveredServer.WsSecure = wsSecure;
+
+						LOGD("[MP] -\tFound server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
+						observer->OnServerFound(std::move(discoveredServer));
+					}
+				}
+			} else {
+				LOGE("[MP] Failed to parse public server list: {}", StringView(errors));
+			}
+		} else if (fetch->numBytes == 0) {
+			LOGE("[MP] Failed to download public server list (empty response)");
+		}
+
+		emscripten_fetch_close(fetch);
+
+		// Schedule next refresh after 60 seconds
+		if (_this->_observer != nullptr) {
+			_this->_refreshTimerId = emscripten_set_timeout(OnRefreshTimer, 60000.0, _this);
+		}
+	}
+
+	void ServerDiscovery::OnFetchError(emscripten_fetch_t* fetch)
+	{
+		ServerDiscovery* _this = static_cast<ServerDiscovery*>(fetch->userData);
+		_this->_pendingFetch = nullptr;
+
+		LOGE("[MP] Failed to download public server list (HTTP {})", (std::int32_t)fetch->status);
+
+		emscripten_fetch_close(fetch);
+
+		// Retry after 60 seconds
+		if (_this->_observer != nullptr) {
+			_this->_refreshTimerId = emscripten_set_timeout(OnRefreshTimer, 60000.0, _this);
+		}
+	}
+
+	void ServerDiscovery::OnRefreshTimer(void* userData)
+	{
+		ServerDiscovery* _this = static_cast<ServerDiscovery*>(userData);
+		_this->_refreshTimerId = 0;
+		if (_this->_observer != nullptr) {
+			_this->DownloadPublicServerListAsync();
+		}
+	}
+
+#endif
+
 }
 
 #endif

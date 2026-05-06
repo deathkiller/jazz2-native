@@ -884,6 +884,7 @@
     <ClCompile Include="Jazz2\Multiplayer\MpLevelHandler.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\NetworkManagerBase.cpp" />
+    <ClCompile Include="Jazz2\Multiplayer\Peer.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\ServerDiscovery.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
     <ClCompile Include="Jazz2\Rendering\BlurRenderPass.cpp" />

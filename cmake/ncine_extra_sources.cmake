@@ -738,6 +738,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MpLevelHandler.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManager.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManagerBase.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Peer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp
@@ -747,4 +748,67 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameCanvasLayer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameLobby.cpp
 	)
+
+	if(WITH_WEBSOCKET)
+		message(STATUS "Building the game with WebSocket transport support")
+		target_compile_definitions(${NCINE_APP} PUBLIC "WITH_WEBSOCKET")
+
+		if(EMSCRIPTEN)
+			# Emscripten uses the browser's native WebSocket via <emscripten/websocket.h>
+			message(STATUS "Using Emscripten native WebSocket API")
+		else()
+			# IXWebSocket library for all other platforms
+			set(USE_WS OFF CACHE BOOL "" FORCE)
+			set(IXWEBSOCKET_INSTALL OFF CACHE BOOL "" FORCE)
+
+			if(WITH_WEBSOCKET_TLS_BACKEND STREQUAL "OpenSSL")
+				find_package(OpenSSL QUIET)
+				if(OPENSSL_FOUND)
+					message(STATUS "WebSocket TLS: Using OpenSSL")
+					set(USE_TLS ON CACHE BOOL "" FORCE)
+					set(USE_OPEN_SSL ON CACHE BOOL "" FORCE)
+					set(USE_MBED_TLS OFF CACHE BOOL "" FORCE)
+					target_compile_definitions(${NCINE_APP} PUBLIC "WITH_WEBSOCKET_TLS")
+				else()
+					message(WARNING "OpenSSL not found, building WebSocket without TLS support")
+					set(USE_TLS OFF CACHE BOOL "" FORCE)
+				endif()
+			elseif(WITH_WEBSOCKET_TLS_BACKEND STREQUAL "mbedTLS")
+				find_package(MbedTLS QUIET)
+				if(MbedTLS_FOUND OR MBEDTLS_FOUND)
+					message(STATUS "WebSocket TLS: Using mbedTLS")
+					set(USE_TLS ON CACHE BOOL "" FORCE)
+					set(USE_OPEN_SSL OFF CACHE BOOL "" FORCE)
+					set(USE_MBED_TLS ON CACHE BOOL "" FORCE)
+					target_compile_definitions(${NCINE_APP} PUBLIC "WITH_WEBSOCKET_TLS")
+				else()
+					message(WARNING "mbedTLS not found, building WebSocket without TLS support")
+					set(USE_TLS OFF CACHE BOOL "" FORCE)
+				endif()
+			else()
+				message(STATUS "WebSocket TLS: Disabled")
+				set(USE_TLS OFF CACHE BOOL "" FORCE)
+			endif()
+
+			include(FetchContent)
+			FetchContent_Declare(
+				IXWebSocket
+				GIT_REPOSITORY https://github.com/machinezone/IXWebSocket.git
+				GIT_TAG        v11.4.5
+				GIT_SHALLOW    TRUE
+			)
+			FetchContent_MakeAvailable(IXWebSocket)
+
+			set_target_properties(ixwebsocket PROPERTIES FOLDER "Dependencies")
+			ncine_apply_compiler_options(ixwebsocket)
+
+			target_link_libraries(${NCINE_APP} PRIVATE ixwebsocket)
+
+			if(USE_TLS AND OPENSSL_FOUND)
+				target_link_libraries(${NCINE_APP} PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+			elseif(USE_TLS AND (MbedTLS_FOUND OR MBEDTLS_FOUND))
+				target_link_libraries(${NCINE_APP} PRIVATE MbedTLS::mbedtls)
+			endif()
+		endif()
+	endif()
 endif()

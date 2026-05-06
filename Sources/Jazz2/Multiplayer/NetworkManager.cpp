@@ -56,6 +56,10 @@ namespace Jazz2::Multiplayer
 
 	bool NetworkManager::CreateServer(INetworkHandler* handler, ServerConfiguration&& serverConfig)
 	{
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		// Creating a server is not supported on Emscripten
+		return false;
+#else
 		_peerDesc.emplace(Peer{}, std::make_shared<PeerDescriptor>());
 		_serverConfig = std::make_unique<ServerConfiguration>(std::move(serverConfig));
 
@@ -66,11 +70,19 @@ namespace Jazz2::Multiplayer
 		_serverConfig->StartUnixTimestamp = DateTime::UtcNow().ToUnixMilliseconds() / 1000;
 		bool result = NetworkManagerBase::CreateServer(handler, serverPort);
 
-		if (result && !_serverConfig->IsPrivate) {
-			_discovery = std::make_unique<ServerDiscovery>(this);
+		if (result) {
+#	if defined(WITH_WEBSOCKET)
+			if (_serverConfig->WsPort != 0) {
+				StartWsServer(_serverConfig->WsPort, _serverConfig->WsCertPath, _serverConfig->WsKeyPath);
+			}
+#	endif
+			if (!_serverConfig->IsPrivate) {
+				_discovery = std::make_unique<ServerDiscovery>(this);
+			}
 		}
 
 		return result;
+#endif
 	}
 
 	void NetworkManager::Dispose()
@@ -310,6 +322,23 @@ namespace Jazz2::Multiplayer
 				if (doc["ServerPort"].get(serverPort) == Json::SUCCESS && serverPort > 0 && serverPort <= UINT16_MAX) {
 					serverConfig.ServerPort = std::uint16_t(serverPort);
 				}
+
+#if defined(WITH_WEBSOCKET)
+				std::int64_t wsPort;
+				if (doc["WsPort"].get(wsPort) == Json::SUCCESS && wsPort > 0 && wsPort <= UINT16_MAX) {
+					serverConfig.WsPort = std::uint16_t(wsPort);
+				}
+
+				std::string_view wsCertPath;
+				if (doc["WsCertPath"].get(wsCertPath) == Json::SUCCESS && !wsCertPath.empty()) {
+					serverConfig.WsCertPath = wsCertPath;
+				}
+
+				std::string_view wsKeyPath;
+				if (doc["WsKeyPath"].get(wsKeyPath) == Json::SUCCESS && !wsKeyPath.empty()) {
+					serverConfig.WsKeyPath = wsKeyPath;
+				}
+#endif
 
 				bool isPrivate;
 				if (doc["IsPrivate"].get(isPrivate) == Json::SUCCESS) {
@@ -647,7 +676,7 @@ namespace Jazz2::Multiplayer
 		bool isListening = (GetState() == NetworkState::Listening);
 
 		if (isListening) {
-			auto address = NetworkManagerBase::AddressToString(peer);
+			auto address = GetPeerAddress(peer);
 			if (_serverConfig->BannedIPAddresses.contains(address)) {
 				LOGI("[MP] Peer kicked \"<unknown>\" ({}): Banned by IP address", address);
 				return Reason::Banned;

@@ -7,6 +7,7 @@
 #include "MenuResources.h"
 #include "SimpleMessageSection.h"
 #include "../../PreferencesCache.h"
+#include "../../Multiplayer/NetworkManagerBase.h"
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/I18n.h"
@@ -621,6 +622,13 @@ namespace Jazz2::UI::Menu
 		std::uint64_t serverVersion = parseVersion(desc.Version);
 		desc.IsCompatible = ((serverVersion & VersionMask) == (CurrentVersion & VersionMask));
 
+#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
+		// On Emscripten (WS-only client), mark servers without WebSocket support as unavailable
+		if (desc.WsPort == 0) {
+			desc.IsCompatible = false;
+		}
+#endif
+
 		for (auto& item : _items) {
 			if (item.Desc.EndpointString == desc.EndpointString) {
 				std::uint32_t prevFlags = (item.Desc.Flags & 0x80000000u /*Local*/);
@@ -639,6 +647,13 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
+#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
+		// On Emscripten, only WebSocket-capable servers can be joined
+		if (_items[_selectedIndex].Desc.WsPort == 0) {
+			return;
+		}
+#endif
+
 		_root->PlaySfx("MenuSelect"_s, 0.6f);
 
 		auto& selectedItem = _items[_selectedIndex];
@@ -654,7 +669,35 @@ namespace Jazz2::UI::Menu
 		}
 
 		_isConnecting = true;
+
+#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
+		// On Emscripten, always connect via WebSocket
+		StringView firstEndpoint = _selectedServer.EndpointString;
+		firstEndpoint = firstEndpoint.prefix(firstEndpoint.findOr('|', firstEndpoint.end()).begin());
+
+		String wsUrl;
+		if (_selectedServer.WsPort != 0) {
+			// Server from list: construct ws[s]://host:WsPort from the ENet endpoint
+			StringView host; std::uint16_t enetPort;
+			if (Jazz2::Multiplayer::NetworkManagerBase::TrySplitAddressAndPort(firstEndpoint, host, enetPort)) {
+				StringView protocol = _selectedServer.WsSecure ? "wss://"_s : "ws://"_s;
+				char portBuf[8];
+				std::size_t portLen = formatInto(portBuf, "{}", (int)_selectedServer.WsPort);
+				wsUrl = protocol + host + ":"_s + StringView(portBuf, portLen);
+			}
+		}
+		if (wsUrl.empty()) {
+			// Manual IP entry or fallback: wrap in ws:// if not already a WebSocket URL
+			if (!firstEndpoint.hasPrefix("ws://"_s) && !firstEndpoint.hasPrefix("wss://"_s)) {
+				wsUrl = "ws://"_s + firstEndpoint;
+			} else {
+				wsUrl = String(firstEndpoint);
+			}
+		}
+		_root->ConnectToServer(wsUrl, 0);
+#else
 		_root->ConnectToServer(_selectedServer.EndpointString, 0);
+#endif
 	}
 
 	void ServerSelectSection::EnsureVisibleSelected(std::int32_t offset)
