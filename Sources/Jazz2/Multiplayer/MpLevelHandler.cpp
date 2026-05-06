@@ -3160,6 +3160,8 @@ namespace Jazz2::Multiplayer
 					
 #if defined(WITH_THREADS)
 					Thread streamingThread([_this = runtime_cast<MpLevelHandler>(shared_from_this()), peer, peerDesc = std::move(peerDesc), missingAssets = std::move(missingAssets)]() {
+#else
+					auto* _this = this;
 #endif
 						LOGI("[MP] Started streaming {} assets to peer [{:.8x}]", missingAssets.size(), peer.GetId());
 						TimeStamp begin = TimeStamp::now();

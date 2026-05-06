@@ -569,6 +569,10 @@ namespace Jazz2::Multiplayer
 
 	String NetworkManagerBase::AddressToString(const struct in_addr& address, std::uint16_t port)
 	{
+#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
+		// TODO: Implement this properly on Emscripten
+		return {};
+#else
 		char addressString[64];
 
 		if (inet_ntop(AF_INET, &address, addressString, sizeof(addressString) - 1) == NULL) {
@@ -580,11 +584,16 @@ namespace Jazz2::Multiplayer
 			addressLength = addressLength + formatInto({ &addressString[addressLength], sizeof(addressString) - addressLength }, ":{}", port);
 		}
 		return String(addressString, addressLength);
+#endif
 	}
 
 #if ENET_IPV6
 	String NetworkManagerBase::AddressToString(const struct in6_addr& address, std::uint16_t scopeId, std::uint16_t port)
 	{
+#	if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
+		// TODO: Implement this properly on Emscripten
+		return {};
+#	else
 		char addressString[92];
 		std::size_t addressLength = 0;
 
@@ -617,6 +626,7 @@ namespace Jazz2::Multiplayer
 			addressLength += formatInto({ &addressString[addressLength], sizeof(addressString) - addressLength }, ":{}", port);
 		}
 		return String(addressString, addressLength);
+#	endif
 	}
 #endif
 
