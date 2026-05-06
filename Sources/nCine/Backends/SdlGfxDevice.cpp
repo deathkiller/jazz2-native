@@ -162,7 +162,22 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::resizeSwBufferToLogical(int logicalWidth, int logicalHeight)
 	{
-		resizeSwBuffer(logicalWidth, logicalHeight);
+		if (swRenderer_ == nullptr) return;
+		if (logicalWidth <= 0 || logicalHeight <= 0) return;
+
+		// Only resize if different from current buffer
+		if (RHI::GetColorBufferWidth() == logicalWidth && RHI::GetColorBufferHeight() == logicalHeight) {
+			return;
+		}
+
+		if (swTexture_ != nullptr) {
+			SDL_DestroyTexture(swTexture_);
+		}
+		// Create SDL texture at logical resolution - SDL_RenderCopy stretches to window
+		swTexture_ = SDL_CreateTexture(swRenderer_, SDL_PIXELFORMAT_RGBA32,
+		                               SDL_TEXTUREACCESS_STREAMING, logicalWidth, logicalHeight);
+		RHI::ResizeColorBuffer(logicalWidth, logicalHeight);
+		//resizeSwBuffer(logicalWidth, logicalHeight);
 	}
 #endif
 
@@ -314,10 +329,11 @@ namespace nCine::Backends
 		std::uint8_t interval = (displayMode_.hasVSync() ? 1 : 0);
 		vglWaitVblankStart(interval);*/
 
-		// Force Vita rendering resolution to 480x272 (50% scale) for performance
-		// BUT create the window at full native resolution for proper scaling
-		drawableWidth_ = 480;
-		drawableHeight_ = 272;
+		// Use full native Vita resolution so menu layout uses the proper (non-compact)
+		// code path (viewSize.Y >= 300). The SW color buffer will be resized to the
+		// logical resolution by UpscaleRenderPass via resizeSwBufferToLogical().
+		drawableWidth_ = 960;
+		drawableHeight_ = 544;
 		width_ = 960;   // Physical window width (Vita native)
 		height_ = 544;  // Physical window height (Vita native)
 
@@ -331,8 +347,8 @@ namespace nCine::Backends
 		}
 		FATAL_ASSERT_MSG(swRenderer_, "SDL_CreateRenderer failed: {}", SDL_GetError());
 
-		// Scale internal 480x272 buffer to fill the Vita's 960x544 display
-		SDL_RenderSetLogicalSize(swRenderer_, 480, 272);
+		// Logical size matches window; SDL_RenderCopyEx will stretch the SW texture to fill it
+		SDL_RenderSetLogicalSize(swRenderer_, drawableWidth_, drawableHeight_);
 
 		swTexture_ = SDL_CreateTexture(swRenderer_, SDL_PIXELFORMAT_RGBA32,
 									   SDL_TEXTUREACCESS_STREAMING, drawableWidth_, drawableHeight_);
