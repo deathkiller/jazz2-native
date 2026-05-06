@@ -329,11 +329,10 @@ namespace nCine::Backends
 		std::uint8_t interval = (displayMode_.hasVSync() ? 1 : 0);
 		vglWaitVblankStart(interval);*/
 
-		// Use full native Vita resolution so menu layout uses the proper (non-compact)
-		// code path (viewSize.Y >= 300). The SW color buffer will be resized to the
-		// logical resolution by UpscaleRenderPass via resizeSwBufferToLogical().
-		drawableWidth_ = 960;
-		drawableHeight_ = 544;
+		// Force Vita rendering resolution to 480x272 (50% scale) for performance.
+		// The SW color buffer is later resized to the logical resolution via resizeSwBufferToLogical().
+		drawableWidth_ = 480;
+		drawableHeight_ = 272;
 		width_ = 960;   // Physical window width (Vita native)
 		height_ = 544;  // Physical window height (Vita native)
 
@@ -347,7 +346,7 @@ namespace nCine::Backends
 		}
 		FATAL_ASSERT_MSG(swRenderer_, "SDL_CreateRenderer failed: {}", SDL_GetError());
 
-		// Logical size matches window; SDL_RenderCopyEx will stretch the SW texture to fill it
+		// Scale internal 480x272 buffer to fill the Vita's 960x544 display
 		SDL_RenderSetLogicalSize(swRenderer_, drawableWidth_, drawableHeight_);
 
 		swTexture_ = SDL_CreateTexture(swRenderer_, SDL_PIXELFORMAT_RGBA32,

@@ -631,7 +631,18 @@ namespace Jazz2::UI::Menu
 	void MainMenu::UpdateContentBounds(Vector2i viewSize)
 	{
 		float headerY = (viewSize.Y >= 300 ? std::clamp((200.0f * viewSize.Y / viewSize.X) - 40.0f, 30.0f, 70.0f) : 8.0f);
-		float footerY = (viewSize.Y >= 300 ? 30.0f : 14.0f);
+		float footerY;
+		if (viewSize.Y >= 300) {
+			footerY = 30.0f;
+		} else {
+#if defined(DEATH_TARGET_VITA)
+			// Compact mode: size content area for exactly 3 visible items (3 * 40px + TopLine 31 + BottomLine 42 = 193)
+			// so that menus with more items become scrollable rather than overflowing the viewport.
+			footerY = std::max(14.0f, (float)viewSize.Y - headerY - 193.0f);
+#else
+			footerY = 14.0f;
+#endif
+		}
 		_contentBounds = Recti(0, headerY + 30, viewSize.X, viewSize.Y - (headerY + footerY));
 	}
 

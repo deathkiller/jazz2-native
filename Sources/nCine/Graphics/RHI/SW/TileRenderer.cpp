@@ -87,6 +87,34 @@ namespace nCine::RHI
 			alignas(64) std::uint8_t g_tileScratch[4][TileSize * TileSize * 4];
 
 			// =====================================================================
+			// Tile clear using NEON
+			// =====================================================================
+			inline void ClearTileBuffer(std::uint8_t* tile, std::int32_t pixelCount, std::uint32_t clearColor)
+			{
+#if defined(DEATH_ENABLE_NEON)
+				uint32x4_t pattern = vdupq_n_u32(clearColor);
+				std::int32_t i = 0;
+				std::uint32_t* dst32 = reinterpret_cast<std::uint32_t*>(tile);
+				for (; i + 16 <= pixelCount; i += 16) {
+					vst1q_u32(dst32 + i, pattern);
+					vst1q_u32(dst32 + i + 4, pattern);
+					vst1q_u32(dst32 + i + 8, pattern);
+					vst1q_u32(dst32 + i + 12, pattern);
+				}
+				for (; i + 4 <= pixelCount; i += 4) {
+					vst1q_u32(dst32 + i, pattern);
+				}
+				for (; i < pixelCount; i++) {
+					dst32[i] = clearColor;
+				}
+#else
+				std::uint32_t* dst32 = reinterpret_cast<std::uint32_t*>(tile);
+				for (std::int32_t i = 0; i < pixelCount; i++) {
+					dst32[i] = clearColor;
+				}
+#endif
+			}
+			// =====================================================================
 			// Copy tile buffer back to framebuffer
 			// =====================================================================
 			inline void CopyTileToFramebuffer(const std::uint8_t* tile, std::uint8_t* fb,
@@ -147,25 +175,28 @@ namespace nCine::RHI
 
 				const auto& bin = g_tile.tileBins[tileIndex];
 				if (bin.empty()) {
-					return;
+					return; // No commands touch this tile - nothing to do
 				}
 
 				// Get thread-local scratch buffer
 				std::uint8_t* tileBuf = g_tileScratch[workerIndex];
 
 				// Optimization: skip reading framebuffer if the first command fully covers
-				// this tile with an opaque draw (no blending needed for background).
+				// this tile with an opaque draw (no blending needed for background)
 				const DeferredCommand& firstCmd = g_tile.commands[bin[0]];
 				const bool needsReadBack = (firstCmd.ctx.blendingEnabled ||
 				    firstCmd.screenMinX > tileX || firstCmd.screenMinY > tileY ||
 				    firstCmd.screenMaxX < tileX + tileW - 1 || firstCmd.screenMaxY < tileY + tileH - 1);
 
 				if (needsReadBack) {
+					// Initialize tile with current framebuffer contents
+					// (needed for correct blending with existing content)
 					CopyFramebufferToTile(tileBuf, g_tile.targetBuffer,
 					                      tileX, tileY, tileW, tileH,
 					                      g_tile.fbWidth, g_tile.fbHeight, g_tile.isFboTarget);
 				}
 
+				// Render all commands binned to this tile
 				for (std::uint16_t cmdIdx : bin) {
 					const DeferredCommand& cmd = g_tile.commands[cmdIdx];
 					TileInternal::RenderCommandToTile(
@@ -173,7 +204,8 @@ namespace nCine::RHI
 						tileBuf, tileX, tileY, tileW, tileH,
 						cmd.viewportW, cmd.viewportH);
 				}
-
+				
+				// Copy tile back to framebuffer
 				CopyTileToFramebuffer(tileBuf, g_tile.targetBuffer,
 				                      tileX, tileY, tileW, tileH,
 				                      g_tile.fbWidth, g_tile.fbHeight, g_tile.isFboTarget);
@@ -400,16 +432,11 @@ namespace nCine::RHI
 				screenMaxY = vpH - 1;
 			}
 
-			// Scissor clip (Y must be flipped for FBO targets, matching immediate path)
+			// Scissor clip — Y always flipped for tile culling because tile rows are
+			// indexed top-down in screen space but the framebuffer stores rows bottom-up.
 			if DEATH_UNLIKELY(ctx.scissorEnabled) {
-				std::int32_t scY0, scY1;
-				if (g_tile.isFboTarget) {
-					scY0 = g_tile.fbHeight - ctx.scissorRect.Y - ctx.scissorRect.H;
-					scY1 = g_tile.fbHeight - 1 - ctx.scissorRect.Y;
-				} else {
-					scY0 = ctx.scissorRect.Y;
-					scY1 = ctx.scissorRect.Y + ctx.scissorRect.H - 1;
-				}
+				std::int32_t scY0 = g_tile.fbHeight - ctx.scissorRect.Y - ctx.scissorRect.H;
+				std::int32_t scY1 = g_tile.fbHeight - 1 - ctx.scissorRect.Y;
 				screenMinX = std::max(screenMinX, ctx.scissorRect.X);
 				screenMinY = std::max(screenMinY, scY0);
 				screenMaxX = std::min(screenMaxX, ctx.scissorRect.X + ctx.scissorRect.W - 1);
