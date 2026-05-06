@@ -3158,7 +3158,9 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 					
+#if defined(WITH_THREADS)
 					Thread streamingThread([_this = runtime_cast<MpLevelHandler>(shared_from_this()), peer, peerDesc = std::move(peerDesc), missingAssets = std::move(missingAssets)]() {
+#endif
 						LOGI("[MP] Started streaming {} assets to peer [{:.8x}]", missingAssets.size(), peer.GetId());
 						TimeStamp begin = TimeStamp::now();
 
@@ -3212,7 +3214,9 @@ namespace Jazz2::Multiplayer
 							_this->InitializeLoadLevelPacket(packet);
 							_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LoadLevel, packet);
 						}
+#if defined(WITH_THREADS)
 					});
+#endif
 
 					return true;
 				}

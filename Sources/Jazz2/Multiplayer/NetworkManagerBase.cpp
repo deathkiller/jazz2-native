@@ -660,15 +660,20 @@ namespace Jazz2::Multiplayer
 
 	bool NetworkManagerBase::IsAddressValid(StringView address)
 	{
+#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
+		// TODO: Implement this properly on Emscripten
+		return true;
+#else
 		auto nullTerminatedAddress = String::nullTerminatedView(address);
-#if ENET_IPV6
+#	if ENET_IPV6
 		struct sockaddr_in sa;
 		struct sockaddr_in6 sa6;
 		return (inet_pton(AF_INET6, nullTerminatedAddress.data(), &(sa6.sin6_addr)) == 1)
 			|| (inet_pton(AF_INET, nullTerminatedAddress.data(), &(sa.sin_addr)) == 1);
-#else
+#	else
 		struct sockaddr_in sa;
 		return (inet_pton(AF_INET, nullTerminatedAddress.data(), &(sa.sin_addr)) == 1);
+#	endif
 #endif
 	}
 
