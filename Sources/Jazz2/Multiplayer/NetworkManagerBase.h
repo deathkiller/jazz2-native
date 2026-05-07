@@ -193,9 +193,11 @@ namespace Jazz2::Multiplayer
 		/** @brief Queued event from WebSocket callbacks to the main processing thread */
 		struct WsQueuedEvent {
 			enum class Type : std::uint8_t { Open, Close, Message };
-			Type type;
-			std::uint64_t peerId;
+			Type type = Type::Open;
+			std::uint64_t peerId = 0;
 			std::string data;
+			std::uint32_t clientData = 0;	/**< For Open: client data value to pass to OnPeerConnected */
+			std::uint16_t closeCode = 0;	/**< For Close: WebSocket close code */
 		};
 
 		std::unique_ptr<ix::WebSocketServer> _wsServer;
@@ -226,6 +228,9 @@ namespace Jazz2::Multiplayer
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		static void OnClientThread(void* param);
 		static void OnServerThread(void* param);
+#	if defined(WITH_WEBSOCKET)
+		static void OnClientWsThread(void* param);
+#	endif
 #endif
 	};
 }

@@ -12,6 +12,7 @@
 
 #include <Containers/GrowableArray.h>
 #include <Containers/String.h>
+#include <Containers/StringConcatenable.h>
 #include <Containers/StringStl.h>
 #include <Containers/StringStlView.h>
 
@@ -35,6 +36,42 @@ using namespace Death::Containers::Literals;
 namespace Jazz2::Multiplayer
 {
 	static std::atomic_int32_t _initializeCount{0};
+
+	/** @brief Appends ?clientData=N (or &clientData=N) query parameter to a WebSocket URL */
+	static String AppendClientDataToUrl(StringView url, std::uint32_t clientData)
+	{
+		bool hasQuery = (url.findOr('?', url.end()).begin() != url.end());
+		char buf[12];
+		std::size_t len = formatInto(buf, "{}", clientData);
+		return url + (hasQuery ? "&clientData="_s : "?clientData="_s) + StringView(buf, len);
+	}
+
+#if defined(WITH_WEBSOCKET)
+	/** @brief Parses a uint32_t query parameter from a URI string (e.g. /?clientData=123) */
+	static std::uint32_t ParseQueryParamUInt32(StringView uri, StringView paramName)
+	{
+		auto qParts = uri.partition('?');
+		if (qParts[1].empty()) return 0;
+
+		StringView query = qParts[2];
+		while (!query.empty()) {
+			auto p = query.partition('&');
+			StringView pair = p[0];
+			query = p[2];
+
+			if (pair.hasPrefix(paramName) && pair.size() > paramName.size() && pair[paramName.size()] == '=') {
+				StringView valueStr = pair.exceptPrefix(paramName.size() + 1);
+				std::uint32_t result = 0;
+				for (char c : valueStr) {
+					if (c < '0' || c > '9') break;
+					result = result * 10 + (c - '0');
+				}
+				return result;
+			}
+		}
+		return 0;
+	}
+#endif
 
 	NetworkManagerBase::NetworkManagerBase()
 		:
@@ -66,10 +103,11 @@ namespace Jazz2::Multiplayer
 #if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
 		StringView firstEndpoint = endpoints.prefix(endpoints.findOr('|', endpoints.end()).begin());
 
+		String wsUrl = AppendClientDataToUrl(firstEndpoint, clientData);
+
 		EmscriptenWebSocketCreateAttributes attrs;
 		emscripten_websocket_init_create_attributes(&attrs);
-		String urlCopy = String::nullTerminatedView(firstEndpoint);
-		attrs.url = urlCopy.data();
+		attrs.url = wsUrl.data();
 		attrs.createOnMainThread = EM_TRUE;
 
 		_emWsSocket = emscripten_websocket_new(&attrs);
@@ -81,13 +119,49 @@ namespace Jazz2::Multiplayer
 		}
 
 		_emWsUrl = String(firstEndpoint);
-		LOGI("[MP] Connecting to \"{}\"", firstEndpoint);
+		LOGI("[MP] Connecting to \"{}\"", wsUrl);
 
 		emscripten_websocket_set_onopen_callback(_emWsSocket, this, OnEmWsOpen);
 		emscripten_websocket_set_onmessage_callback(_emWsSocket, this, OnEmWsMessage);
 		emscripten_websocket_set_onerror_callback(_emWsSocket, this, OnEmWsError);
 		emscripten_websocket_set_onclose_callback(_emWsSocket, this, OnEmWsClose);
 #else
+#	if defined(WITH_WEBSOCKET)
+		{
+			// If the first endpoint looks like a WebSocket URL, use IXWebSocket client
+			StringView firstEndpoint = endpoints.prefix(endpoints.findOr('|', endpoints.end()).begin());
+			if (firstEndpoint.hasPrefix("ws://"_s) || firstEndpoint.hasPrefix("wss://"_s)) {
+				String wsUrl = AppendClientDataToUrl(firstEndpoint, clientData);
+				LOGI("[MP] Connecting to \"{}\" via WebSocket", wsUrl);
+
+				_wsClient = std::make_unique<ix::WebSocket>();
+				_wsClient->setUrl(std::string(wsUrl.data(), wsUrl.size()));
+				_wsClient->disableAutomaticReconnection();
+				_wsClient->setOnMessageCallback([this](const ix::WebSocketMessagePtr& msg) {
+					if (msg->type == ix::WebSocketMessageType::Open) {
+						std::unique_lock<Spinlock> lock(_wsLock);
+						_wsPeers.emplace(std::uint64_t(1), WsPeerInfo{_wsClient.get(), {}});
+						_wsPendingEvents.push_back({WsQueuedEvent::Type::Open, 1, {}, _clientData, 0});
+					} else if (msg->type == ix::WebSocketMessageType::Close) {
+						std::unique_lock<Spinlock> lock(_wsLock);
+						_wsPeers.erase(std::uint64_t(1));
+						_wsPendingEvents.push_back({WsQueuedEvent::Type::Close, 1, {}, 0, msg->closeInfo.code});
+					} else if (msg->type == ix::WebSocketMessageType::Message && msg->binary) {
+						if (!msg->str.empty()) {
+							std::unique_lock<Spinlock> lock(_wsLock);
+							_wsPendingEvents.push_back({WsQueuedEvent::Type::Message, 1, msg->str, 0, 0});
+						}
+					} else if (msg->type == ix::WebSocketMessageType::Error) {
+						LOGE("[MP] WebSocket client error: {}", StringView{msg->errorInfo.reason});
+					}
+				});
+				_wsClient->start();
+				_thread = Thread(NetworkManagerBase::OnClientWsThread, this);
+				return;
+			}
+		}
+#	endif
+
 		_desiredEndpoints.clear();
 
 #	if defined(DEATH_TARGET_ANDROID)
@@ -195,7 +269,11 @@ namespace Jazz2::Multiplayer
 		}
 		_handler = nullptr;
 #else
-		if (_host == nullptr) {
+		if (_host == nullptr
+#	if defined(WITH_WEBSOCKET)
+			&& _wsClient == nullptr
+#	endif
+		) {
 			return;
 		}
 
@@ -837,7 +915,7 @@ namespace Jazz2::Multiplayer
 
 		DEATH_ASSERT(_wsServer == nullptr, "WebSocket server already started", false);
 
-		_wsServer = std::make_unique<ix::WebSocketServer>(wsPort);
+		_wsServer = std::make_unique<ix::WebSocketServer>(wsPort, "0.0.0.0");
 
 #	if defined(WITH_WEBSOCKET_TLS)
 		if (!certPath.empty() && !keyPath.empty()) {
@@ -861,12 +939,14 @@ namespace Jazz2::Multiplayer
 				const std::uint64_t id = _nextWsId.fetch_add(1, std::memory_order_relaxed) + 1;
 				const std::string stateId = state->getId();
 				const std::string remoteIp = state->getRemoteIp();
+				const std::uint32_t peerClientData = ParseQueryParamUInt32(
+					StringView(msg->openInfo.uri.data(), msg->openInfo.uri.size()), "clientData"_s);
 
 				{
 					std::unique_lock<Spinlock> lock(_wsLock);
 					_wsPeers.emplace(id, WsPeerInfo{&ws, String(remoteIp.data(), remoteIp.size())});
 					_wsConnectionIds.emplace(stateId, id);
-					_wsPendingEvents.push_back({WsQueuedEvent::Type::Open, id, {}});
+					_wsPendingEvents.push_back({WsQueuedEvent::Type::Open, id, {}, peerClientData, 0});
 				}
 				LOGD("[MP] WebSocket client connected [{:.8x}] from {}", id, StringView{remoteIp});
 
@@ -930,7 +1010,7 @@ namespace Jazz2::Multiplayer
 			switch (ev.type) {
 				case WsQueuedEvent::Type::Open: {
 					Peer wsPeer = Peer::FromWebSocket(ev.peerId);
-					ConnectionResult result = OnPeerConnected(wsPeer, 0);
+					ConnectionResult result = OnPeerConnected(wsPeer, ev.clientData);
 					if (!result.IsSuccessful()) {
 						// Reject the connection: close the WS socket
 						ix::WebSocket* ws = nullptr;
@@ -1063,6 +1143,85 @@ namespace Jazz2::Multiplayer
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
+
+#if defined(WITH_WEBSOCKET)
+	void NetworkManagerBase::OnClientWsThread(void* param)
+	{
+		Thread::SetCurrentName("Multiplayer WS client");
+
+		NetworkManagerBase* _this = static_cast<NetworkManagerBase*>(param);
+		INetworkHandler* handler = _this->_handler;
+
+		bool wasConnected = false;
+		Reason disconnectReason = Reason::ConnectionTimedOut;
+
+		while (_this->_state != NetworkState::None) {
+			Thread::Sleep(ProcessingIntervalMs);
+
+			SmallVector<WsQueuedEvent, 0> pending;
+			{
+				std::unique_lock<Spinlock> lock(_this->_wsLock);
+				std::swap(pending, _this->_wsPendingEvents);
+			}
+
+			for (auto& ev : pending) {
+				switch (ev.type) {
+					case WsQueuedEvent::Type::Open: {
+						wasConnected = true;
+						disconnectReason = Reason::Unknown;
+						_this->_state = NetworkState::Connected;
+						Peer serverPeer = Peer::FromWebSocket(ev.peerId);
+						ConnectionResult result = _this->OnPeerConnected(serverPeer, ev.clientData);
+						if (!result.IsSuccessful()) {
+							ix::WebSocket* ws = nullptr;
+							{
+								std::unique_lock<Spinlock> lock(_this->_wsLock);
+								auto it = _this->_wsPeers.find(ev.peerId);
+								if (it != _this->_wsPeers.end()) {
+									ws = it->second.webSocket;
+								}
+							}
+							if (ws != nullptr) {
+								ws->close(std::uint16_t(1008), ReasonToString(result.FailureReason));
+							}
+						}
+						break;
+					}
+					case WsQueuedEvent::Type::Close: {
+						if (ev.closeCode == 1008) {
+							disconnectReason = Reason::Kicked;
+						} else if (wasConnected) {
+							disconnectReason = (ev.closeCode == 1000) ? Reason::Disconnected : Reason::ConnectionLost;
+						}
+						_this->_state = NetworkState::None;
+						break;
+					}
+					case WsQueuedEvent::Type::Message: {
+						if (ev.data.size() >= 1) {
+							handler->OnPacketReceived(
+								Peer::FromWebSocket(ev.peerId),
+								0,
+								(std::uint8_t)ev.data[0],
+								arrayView((const std::uint8_t*)ev.data.data() + 1, ev.data.size() - 1));
+						}
+						break;
+					}
+				}
+			}
+		}
+
+		if (wasConnected) {
+			_this->OnPeerDisconnected(Peer::FromWebSocket(1), disconnectReason);
+		} else {
+			_this->OnPeerDisconnected({}, disconnectReason);
+		}
+
+		_this->_handler = nullptr;
+		_this->_thread.Detach();
+
+		LOGD("[MP] WS client thread exited");
+	}
+#endif
 
 	void NetworkManagerBase::OnClientThread(void* param)
 	{

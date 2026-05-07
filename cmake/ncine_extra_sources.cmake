@@ -756,7 +756,7 @@ if(WITH_MULTIPLAYER)
 		if(EMSCRIPTEN)
 			# Emscripten uses the browser's native WebSocket via <emscripten/websocket.h>
 			message(STATUS "Using Emscripten native WebSocket API")
-			target_link_options(${NCINE_APP} PRIVATE -sFETCH=1)
+			target_link_options(${NCINE_APP} PUBLIC -sFETCH=1)
 		else()
 			# IXWebSocket library for all other platforms
 			set(USE_WS OFF CACHE BOOL "" FORCE)

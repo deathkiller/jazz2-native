@@ -393,17 +393,18 @@ namespace Jazz2::UI::Menu
 				}
 #endif
 				break;
-#if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
-			case Item::Import:
-				_root->PlaySfx("MenuSelect"_s, 0.6f);
-				_root->SwitchToSection<ImportSection>();
-				break;
-#elif defined(WITH_MULTIPLAYER)
+#if defined(WITH_MULTIPLAYER)
 			case Item::PlayMultiplayer:
 				if (_isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 					_root->SwitchToSection<PlayMultiplayerSection>();
 				}
+				break;
+#endif
+#if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
+			case Item::Import:
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				_root->SwitchToSection<ImportSection>();
 				break;
 #endif
 			case Item::Highscores:

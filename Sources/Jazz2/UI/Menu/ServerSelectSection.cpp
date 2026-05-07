@@ -291,6 +291,10 @@ namespace Jazz2::UI::Menu
 					firstEndpointShort = firstEndpoint + " ^"_s;
 					firstEndpoint = firstEndpointShort;
 				}
+				if (_items[i].Desc.WsPort != 0) {
+					firstEndpointShort = firstEndpoint + " ws"_s;
+					firstEndpoint = firstEndpointShort;
+				}
 
 				_root->DrawStringShadow(firstEndpoint, charOffset, column2, center.Y, IMenuContainer::FontLayer + 10 - 2,
 					Alignment::Left, defaultColor, 0.7f);

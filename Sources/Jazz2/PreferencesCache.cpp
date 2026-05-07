@@ -794,8 +794,8 @@ namespace Jazz2
 		DeviceDescLength += formatInto({ DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength },
 			"|macOS {}||5|{}", appleVersion, arch);
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
-		DeviceDescLength += formatInto({ DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength },
-			"|WASM||8|{}", arch);
+		char DeviceDesc[128];
+		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|WASM||8|{}", arch);
 #elif defined(DEATH_TARGET_SWITCH)
 		std::uint32_t switchVersion = Environment::GetSwitchVersion();
 		bool isAtmosphere = Environment::HasSwitchAtmosphere();

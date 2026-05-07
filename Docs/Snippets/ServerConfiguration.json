@@ -8,7 +8,7 @@
 	"ServerName": "{PlayerName}'s Server",
 	
 	"ServerPort": 7438,
-	"WsPort": 7439,
+	"WsPort": 7438,
 	"WsCertPath": "cert.pem",
 	"WsKeyPath": "key.pem",
 

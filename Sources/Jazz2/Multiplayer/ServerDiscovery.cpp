@@ -771,7 +771,7 @@ namespace Jazz2::Multiplayer
 		attr.userData = this;
 
 		if (_pendingFetch != nullptr) {
-			emscripten_fetch_close(_pendingFetch);
+			_pendingFetch->userData = nullptr;
 		}
 		_pendingFetch = emscripten_fetch(&attr, urlNt.data());
 	}
@@ -779,6 +779,11 @@ namespace Jazz2::Multiplayer
 	void ServerDiscovery::OnFetchSuccess(emscripten_fetch_t* fetch)
 	{
 		ServerDiscovery* _this = static_cast<ServerDiscovery*>(fetch->userData);
+		fetch->userData = nullptr;
+		if (_this == nullptr) {
+			return;
+		}
+
 		_this->_pendingFetch = nullptr;
 
 		IServerObserver* observer = _this->_observer;
@@ -828,17 +833,25 @@ namespace Jazz2::Multiplayer
 			LOGE("[MP] Failed to download public server list (empty response)");
 		}
 
-		emscripten_fetch_close(fetch);
+		// TODO: It seems that the callback is triggered only with readyState==4
+		//if (fetch->readyState == 4 /*DONE*/) {
+			emscripten_fetch_close(fetch);
+		//}
 
 		// Schedule next refresh after 60 seconds
-		/*if (_this->_observer != nullptr && _this->_refreshTimerId == 0) {
+		if (_this->_observer != nullptr && _this->_refreshTimerId == 0) {
 			_this->_refreshTimerId = emscripten_set_timeout(OnRefreshTimer, 60000.0, _this);
-		}*/
+		}
 	}
 
 	void ServerDiscovery::OnFetchError(emscripten_fetch_t* fetch)
 	{
 		ServerDiscovery* _this = static_cast<ServerDiscovery*>(fetch->userData);
+		fetch->userData = nullptr;
+		if (_this == nullptr || fetch->status == 65535) {
+			return;
+		}
+
 		_this->_pendingFetch = nullptr;
 
 		LOGE("[MP] Failed to download public server list (HTTP {})", (std::int32_t)fetch->status);
@@ -846,9 +859,9 @@ namespace Jazz2::Multiplayer
 		emscripten_fetch_close(fetch);
 
 		// Retry after 60 seconds
-		/*if (_this->_observer != nullptr && _this->_refreshTimerId == 0) {
+		if (_this->_observer != nullptr && _this->_refreshTimerId == 0) {
 			_this->_refreshTimerId = emscripten_set_timeout(OnRefreshTimer, 60000.0, _this);
-		}*/
+		}
 	}
 
 	void ServerDiscovery::OnRefreshTimer(void* userData)
