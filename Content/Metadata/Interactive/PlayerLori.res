@@ -301,6 +301,16 @@
 			"FrameRate": 2,
 			"States": [ 536870946 ]
 		},
+		"IdleBored4": {
+			"Path": "Lori/idle_flavor_5.aura",
+			"FrameRate": 3,
+			"States": [ 536870947 ]
+		},
+		"IdleBored5": {
+			"Path": "Lori/idle_flavor_1.aura",
+			"FrameRate": 1,
+			"States": [ 536870948 ]
+		},
 		
 		"TransformFromFrog": {
 			"Path": "Lori/transform_frog_end.aura",

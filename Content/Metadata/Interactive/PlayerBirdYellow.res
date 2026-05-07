@@ -4,7 +4,7 @@
 	},
 
 	"Animations": {
-		"Fly": {
+		"Walk": {
 			"Path": "BirdyYellow/fly.aura",
 			"States": [ 1, 2, 3 ],
 			"FrameRate": 7
@@ -13,14 +13,44 @@
 			"Path": "BirdyYellow/idle.aura",
 			"States": [ 0 ]
 		},
-		"Attack": {
-			"Path": "BirdyYellow/fly.aura",
-			"States": [ 16, 144 ],
-			"Flags": 1
+		"IdleBored1": {
+			"Path": "BirdyYellow/idle_worm.aura",
+			"FrameRate": 15,
+			"States": [ 536870944 ]
 		},
-		"Jump": {
+		"IdleBored2": {
+			"Path": "BirdyYellow/idle_turn_head_left.aura",
+			"FrameRate": 5,
+			"States": [ 536870945 ]
+		},
+		"IdleBored3": {
+			"Path": "BirdyYellow/idle_look_left.aura",
+			"FrameRate": 5,
+			"States": [ 536870946 ]
+		},
+		"IdleBored4": {
+			"Path": "BirdyYellow/idle_turn_head_left_back.aura",
+			"FrameRate": 5,
+			"States": [ 536870947 ]
+		},
+		"IdleBored5": {
+			"Path": "BirdyYellow/idle_turn_head_right.aura",
+			"FrameRate": 5,
+			"States": [ 536870948 ]
+		},
+		"IdleBored6": {
+			"Path": "BirdyYellow/idle_look_right.aura",
+			"FrameRate": 5,
+			"States": [ 536870949 ]
+		},
+		"IdleBored7": {
+			"Path": "BirdyYellow/idle_turn_head_right_back.aura",
+			"FrameRate": 5,
+			"States": [ 536870950 ]
+		},
+		"Shoot": {
 			"Path": "BirdyYellow/charge_ver.aura",
-			"States": [ 4 ]
+			"States": [ 16 ]
 		},
 		"Hurt": {
 			"Path": "BirdyYellow/hurt.aura",
@@ -59,22 +89,22 @@
 		"WarpIn": {
 			"Path": "Spaz/warp_in.aura",
 			"States": [ 1073741843 ],
-			"FrameOffset": 2,
+			"FrameOffset": 2
 		},
 		"WarpOut": {
 			"Path": "Spaz/warp_out.aura",
 			"States": [ 1073741844 ],
-			"FrameCount": 5,
+			"FrameCount": 5
 		},
 		"WarpInFreefall": {
 			"Path": "Spaz/warp_in.aura",
 			"States": [ 1073741843 ],
-			"FrameOffset": 2,
+			"FrameOffset": 2
 		},
 		"WarpOutFreefall": {
 			"Path": "Spaz/warp_out.aura",
 			"States": [ 1073741844 ],
-			"FrameCount": 5,
+			"FrameCount": 5
 		}
 	},
 

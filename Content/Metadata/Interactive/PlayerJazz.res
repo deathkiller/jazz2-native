@@ -6,6 +6,7 @@
 	"Animations": {
 		"Idle": {
 			"Path": "Jazz/idle.aura",
+			"FrameRate": 4,
 			"States": [ 0 ]
 		},
 		"Walk": {

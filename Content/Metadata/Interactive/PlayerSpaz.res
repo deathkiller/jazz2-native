@@ -308,6 +308,11 @@
 			"FrameRate": 3,
 			"States": [ 536870947 ]
 		},
+		"IdleBored5": {
+			"Path": "Spaz/idle_flavor_1.aura",
+			"FrameRate": 2,
+			"States": [ 536870948 ]
+		},
 
 		"TransformFromFrog": {
 			"Path": "Spaz/transform_frog_end.aura",

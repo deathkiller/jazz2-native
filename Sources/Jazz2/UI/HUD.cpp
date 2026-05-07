@@ -640,7 +640,7 @@ namespace Jazz2::UI
 		}
 #endif
 
-		if (!player->_weaponAllowed || player->_playerType == PlayerType::Frog || IsBirdMorphType(player->_playerType)) {
+		if (!player->_weaponAllowed || player->_playerType == PlayerType::Frog || player->_playerType == PlayerType::BirdYellow) {
 			return;
 		}
 

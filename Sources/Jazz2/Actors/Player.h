@@ -318,6 +318,7 @@ namespace Jazz2::Actors
 		float _springCooldown;
 #if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _copterSound;
+		std::shared_ptr<AudioBufferPlayer> _birdFlySound;
 #endif
 
 		std::int32_t _lives, _coins, _coinsCheckpoint, _foodEaten, _foodEatenCheckpoint, _score;
@@ -414,6 +415,7 @@ namespace Jazz2::Actors
 		void PushSolidObjects(float timeMult);
 		void CheckEndOfSpecialMoves(float timeMult);
 		void CheckSuspendState(float timeMult);
+		bool HasGroundBelowForBird();
 		void SetBirdMetadata();
 		Task<bool> SetBirdMetadataAsync();
 		void OnUpdatePhysics(float timeMult);

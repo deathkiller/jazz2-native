@@ -99,17 +99,17 @@
 		},
 		
 		"TransformToJazz": {
-			"_Path": "Jazz/transform_frog_end.aura",
+			"Path": "Jazz/transform_frog_end.aura",
 			"States": [ 1610612739 ],
 			"FrameRate": 3
 		},
 		"TransformToSpaz": {
-			"_Path": "Spaz/transform_frog_end.aura",
+			"Path": "Spaz/transform_frog_end.aura",
 			"States": [ 1610612740 ],
 			"FrameRate": 3
 		},
 		"TransformToLori": {
-			"_Path": "Lori/transform_frog_end.aura",
+			"Path": "Lori/transform_frog_end.aura",
 			"States": [ 1610612741 ],
 			"FrameRate": 3
 		},
@@ -124,22 +124,12 @@
 		"WarpIn": {
 			"Path": "Jazz/warp_in.aura",
 			"States": [ 1073741843 ],
-			"FrameOffset": 2,
+			"FrameOffset": 2
 		},
 		"WarpOut": {
 			"Path": "Jazz/warp_out.aura",
 			"States": [ 1073741844 ],
-			"FrameCount": 5,
-		},
-		"WarpInFreefall": {
-			"Path": "Jazz/warp_in.aura",
-			"States": [ 1073741843 ],
-			"FrameOffset": 2,
-		},
-		"WarpOutFreefall": {
-			"Path": "Jazz/warp_out.aura",
-			"States": [ 1073741844 ],
-			"FrameCount": 5,
+			"FrameCount": 5
 		}
 	},
 
