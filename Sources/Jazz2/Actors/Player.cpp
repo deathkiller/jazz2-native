@@ -52,11 +52,12 @@ namespace Jazz2::Actors
 	static constexpr AnimState TransformFrogFromLori = (AnimState)0x60000002;
 
 	static constexpr float GroundedCheckpointYOffset = 20.0f;
-	static constexpr float birdFlySpeedX = 5.0f;
-	static constexpr float birdFlySpeedYDown = 5.0f;
+	static constexpr float birdFlySpeedX = 4.0f;
+	static constexpr float birdFlySpeedYDown = 3.5f;
 	static constexpr float birdFlySpeedYUp = 2.0f;
-	static constexpr float birdHorizontalResponse = 0.35f;
-	static constexpr float birdVerticalResponse = 0.10f;
+	static constexpr float birdSinkSpeed = 0.6f;
+	static constexpr float birdHorizontalResponse = 0.12f;
+	static constexpr float birdVerticalResponse = 0.06f;
 	static constexpr float birdChargeFramesInitial = 30.0f;
 
 	static float GetCheckpointYOffsetForPlayerType(PlayerType playerType)
@@ -739,7 +740,8 @@ namespace Jazz2::Actors
 
 		if (_keepRunningTime <= 0.0f) {
 			bool canWalk = (_controllable && _controllableExternal && !_isLifting && _suspendType != SuspendType::SwingingVine &&
-				((_playerType != PlayerType::Frog && !IsBirdMorphType(_playerType)) || !_levelHandler->PlayerActionPressed(this, PlayerAction::Fire)));
+				!IsBirdMorphType(_playerType) &&
+				(_playerType != PlayerType::Frog || !_levelHandler->PlayerActionPressed(this, PlayerAction::Fire)));
 
 			float playerMovement = _levelHandler->PlayerHorizontalMovement(this);
 			float playerMovementVelocity = std::abs(playerMovement);
@@ -795,7 +797,7 @@ namespace Jazz2::Actors
 				if (CanJump()) {
 					_wasUpPressed = _wasDownPressed = false;
 				}
-			} else if (_inTubeTime <= 0.0f) {
+			} else if (_inTubeTime <= 0.0f && !IsBirdMorphType(_playerType)) {
 				_speed.X = std::max((std::abs(_speed.X) - Deceleration * timeMult), 0.0f) * (_speed.X < 0.0f ? -1.0f : 1.0f);
 				_isActivelyPushing = false;
 
@@ -806,7 +808,7 @@ namespace Jazz2::Actors
 					_wasActivelyPushing = false;
 				}
 			}
-		} else {
+		} else if (!IsBirdMorphType(_playerType)) {
 			_keepRunningTime -= timeMult;
 
 			_isActivelyPushing = _wasActivelyPushing = true;
@@ -868,21 +870,23 @@ namespace Jazz2::Actors
 				targetSpeedY = playerMovementVert * birdFlySpeedYUp;
 			} else if (playerMovementVert > 0.0f) {
 				targetSpeedY = playerMovementVert * birdFlySpeedYDown;
-			} else {
+			} else if (hasGroundBelow) {
 				targetSpeedY = 0.0f;
+			} else {
+				targetSpeedY = birdSinkSpeed;
 			}
 			_speed.Y = lerp(_speed.Y, targetSpeedY, verticalLerp);
 		} else {
-			// Normal Bird movement: lerp-based
+			// Normal Bird movement: sink slowly when no vertical input and not on ground
 			float targetSpeedY;
-			if (hasGroundBelow && playerMovementVert == 0.0f) {
-				targetSpeedY = 0.0f;
-			} else if (playerMovementVert < 0.0f) {
+			if (playerMovementVert < 0.0f) {
 				targetSpeedY = playerMovementVert * birdFlySpeedYUp;
 			} else if (playerMovementVert > 0.0f) {
 				targetSpeedY = playerMovementVert * birdFlySpeedYDown;
-			} else {
+			} else if (hasGroundBelow) {
 				targetSpeedY = 0.0f;
+			} else {
+				targetSpeedY = birdSinkSpeed;
 			}
 			_speed.Y = lerp(_speed.Y, targetSpeedY, verticalLerp);
 		}
