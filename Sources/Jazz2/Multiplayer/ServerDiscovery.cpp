@@ -831,9 +831,9 @@ namespace Jazz2::Multiplayer
 		emscripten_fetch_close(fetch);
 
 		// Schedule next refresh after 60 seconds
-		if (_this->_observer != nullptr) {
+		/*if (_this->_observer != nullptr && _this->_refreshTimerId == 0) {
 			_this->_refreshTimerId = emscripten_set_timeout(OnRefreshTimer, 60000.0, _this);
-		}
+		}*/
 	}
 
 	void ServerDiscovery::OnFetchError(emscripten_fetch_t* fetch)
@@ -846,9 +846,9 @@ namespace Jazz2::Multiplayer
 		emscripten_fetch_close(fetch);
 
 		// Retry after 60 seconds
-		if (_this->_observer != nullptr) {
+		/*if (_this->_observer != nullptr && _this->_refreshTimerId == 0) {
 			_this->_refreshTimerId = emscripten_set_timeout(OnRefreshTimer, 60000.0, _this);
-		}
+		}*/
 	}
 
 	void ServerDiscovery::OnRefreshTimer(void* userData)

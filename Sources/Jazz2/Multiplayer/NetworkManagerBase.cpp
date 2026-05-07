@@ -74,14 +74,14 @@ namespace Jazz2::Multiplayer
 
 		_emWsSocket = emscripten_websocket_new(&attrs);
 		if (_emWsSocket <= 0) {
-			LOGE("[MP] Failed to create WebSocket connection to {}", firstEndpoint);
+			LOGE("[MP] Failed to create WebSocket connection to \"{}\"", firstEndpoint);
 			_state = NetworkState::None;
 			_handler = nullptr;
 			return;
 		}
 
 		_emWsUrl = String(firstEndpoint);
-		LOGI("[MP] Connecting to {}", firstEndpoint);
+		LOGI("[MP] Connecting to \"{}\"", firstEndpoint);
 
 		emscripten_websocket_set_onopen_callback(_emWsSocket, this, OnEmWsOpen);
 		emscripten_websocket_set_onmessage_callback(_emWsSocket, this, OnEmWsMessage);
@@ -995,6 +995,8 @@ namespace Jazz2::Multiplayer
 
 	EM_BOOL NetworkManagerBase::OnEmWsOpen(int eventType, const EmscriptenWebSocketOpenEvent* e, void* userData)
 	{
+		LOGI("[MP] WebSocket connection opened");
+
 		NetworkManagerBase* _this = static_cast<NetworkManagerBase*>(userData);
 		if (_this->_emWsSocket <= 0 || _this->_handler == nullptr) {
 			return EM_TRUE;
@@ -1076,7 +1078,7 @@ namespace Jazz2::Multiplayer
 		ENetEvent ev{};
 		for (std::int32_t i = 0; i < std::int32_t(_this->_desiredEndpoints.size()) && _this->_state != NetworkState::None; i++) {
 			ENetAddress& addr = _this->_desiredEndpoints[i];
-			LOGI("[MP] Connecting to {} ({}/{})", AddressToString(addr, true), i + 1, _this->_desiredEndpoints.size());
+			LOGI("[MP] Connecting to \"{}\" ({}/{})", AddressToString(addr, true), i + 1, _this->_desiredEndpoints.size());
 			
 			if (host != nullptr) {
 				enet_host_destroy(host);

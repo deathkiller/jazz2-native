@@ -2774,6 +2774,7 @@ namespace Jazz2::Multiplayer
 	{
 		if (!peer.IsValid()) {
 			if (ContentResolver::Get().IsHeadless()) {
+#if defined(DEATH_TRACE)
 				switch (level) {
 					default: __DEATH_TRACE(TraceLevel::Info, {}, "< │ {}", message); break;
 					case UI::MessageLevel::Echo: __DEATH_TRACE(TraceLevel::Info, {}, "> │ {}", message); break;
@@ -2782,6 +2783,7 @@ namespace Jazz2::Multiplayer
 					case UI::MessageLevel::Assert: __DEATH_TRACE(TraceLevel::Assert, {}, "< │ {}", message); break;
 					case UI::MessageLevel::Fatal: __DEATH_TRACE(TraceLevel::Fatal, {}, "< │ {}", message); break;
 				}
+#endif
 			} else {
 				_console->WriteLine(UI::MessageLevel::Info, message);
 			}

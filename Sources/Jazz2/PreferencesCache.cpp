@@ -793,6 +793,9 @@ namespace Jazz2
 		String appleVersion = Environment::GetAppleVersion();
 		DeviceDescLength += formatInto({ DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength },
 			"|macOS {}||5|{}", appleVersion, arch);
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
+		DeviceDescLength += formatInto({ DeviceDesc + DeviceDescLength, arraySize(DeviceDesc) - DeviceDescLength },
+			"|WASM||8|{}", arch);
 #elif defined(DEATH_TARGET_SWITCH)
 		std::uint32_t switchVersion = Environment::GetSwitchVersion();
 		bool isAtmosphere = Environment::HasSwitchAtmosphere();

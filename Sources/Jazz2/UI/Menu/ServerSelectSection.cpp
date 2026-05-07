@@ -680,7 +680,7 @@ namespace Jazz2::UI::Menu
 			// Server from list: construct ws[s]://host:WsPort from the ENet endpoint
 			StringView host; std::uint16_t enetPort;
 			if (Jazz2::Multiplayer::NetworkManagerBase::TrySplitAddressAndPort(firstEndpoint, host, enetPort)) {
-				StringView protocol = _selectedServer.WsSecure ? "wss://"_s : "ws://"_s;
+				StringView protocol = (_selectedServer.WsSecure ? "wss://"_s : "ws://"_s);
 				char portBuf[8];
 				std::size_t portLen = formatInto(portBuf, "{}", (int)_selectedServer.WsPort);
 				wsUrl = protocol + host + ":"_s + StringView(portBuf, portLen);
@@ -689,7 +689,7 @@ namespace Jazz2::UI::Menu
 		if (wsUrl.empty()) {
 			// Manual IP entry or fallback: wrap in ws:// if not already a WebSocket URL
 			if (!firstEndpoint.hasPrefix("ws://"_s) && !firstEndpoint.hasPrefix("wss://"_s)) {
-				wsUrl = "ws://"_s + firstEndpoint;
+				wsUrl = "wss://"_s + firstEndpoint;
 			} else {
 				wsUrl = String(firstEndpoint);
 			}

@@ -59,6 +59,11 @@ namespace Jazz2::UI::Menu
 		if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
 			// TRANSLATORS: Menu item in main menu
 			_items.emplace_back(Item::PlaySingleplayer, _("Play Story"));
+
+#	if defined(WITH_MULTIPLAYER)
+			// TRANSLATORS: Menu item in main menu
+			_items.emplace_back(Item::PlayMultiplayer, _("Play Online"));
+#	endif
 		} else {
 			// TRANSLATORS: Menu item in main menu (Emscripten only)
 			_items.emplace_back(Item::PlaySingleplayer, _("Play Shareware Demo"));
