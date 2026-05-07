@@ -1200,19 +1200,19 @@ namespace Jazz2::Actors
 					bool weaponCooledDown = (_weaponCooldown <= 0.0f);
 					weaponInUse = FireCurrentWeapon(_currentWeapon);
 					if (weaponInUse) {
-						// Bird fires without charge animation, so zero out charge frames
 						if (_playerType == PlayerType::Bird) {
+							// Bird fires without charge animation
 							_birdChargeFramesLeft = 0.0f;
-							// Keep _fireFramesLeft alive to maintain shoot state through animation
 							_fireFramesLeft = 20.0f;
 							_idleTime = 0.0f;
 							_currentTransitionCallback = nullptr;
-						}
-						
-
-						// Set proper animation for shooting - birds don't use animation override
-						if (_playerType != PlayerType::Bird && _playerType != PlayerType::BirdYellow) {
+						} else if (!IsBirdMorphType(_playerType)) {
+							// Regular players: cancel spring/shoot-to-idle transitions and set fire frames
+							if (_currentTransition != nullptr && (_currentTransition->State == AnimState::Spring || _currentTransition->State == AnimState::TransitionShootToIdle)) {
+								ForceCancelTransition();
+							}
 							SetAnimation(_currentAnimation->State | AnimState::Shoot);
+							_fireFramesLeft = 20.0f;
 						}
 						// Rewind the animation, if it should be played only once
 						if (weaponCooledDown) {
