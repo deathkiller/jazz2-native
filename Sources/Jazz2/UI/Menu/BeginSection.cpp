@@ -9,6 +9,7 @@
 
 #if defined(WITH_MULTIPLAYER)
 #	include "PlayMultiplayerSection.h"
+#	include "ServerSelectSection.h"
 #endif
 
 #if defined(SHAREWARE_DEMO_ONLY)
@@ -397,7 +398,11 @@ namespace Jazz2::UI::Menu
 			case Item::PlayMultiplayer:
 				if (_isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+					_root->SwitchToSection<ServerSelectSection>();
+#	else
 					_root->SwitchToSection<PlayMultiplayerSection>();
+#	endif
 				}
 				break;
 #endif

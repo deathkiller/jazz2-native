@@ -287,12 +287,14 @@ namespace Jazz2::UI::Menu
 					firstEndpointShort = "<"_s + firstEndpoint.slice(firstEndpoint.size() - 23, firstEndpoint.size());
 					firstEndpoint = firstEndpointShort;
 				}
-				if (_items[i].Desc.Flags & 0x80000000u /*Local*/) {
-					firstEndpointShort = firstEndpoint + " ^"_s;
-					firstEndpoint = firstEndpointShort;
-				}
+#if defined(WITH_WEBSOCKET)
 				if (_items[i].Desc.WsPort != 0) {
 					firstEndpointShort = firstEndpoint + " ws"_s;
+					firstEndpoint = firstEndpointShort;
+				}
+#endif
+				if (_items[i].Desc.Flags & 0x80000000u /*Local*/) {
+					firstEndpointShort = firstEndpoint + " ^"_s;
 					firstEndpoint = firstEndpointShort;
 				}
 
