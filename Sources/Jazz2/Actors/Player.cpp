@@ -298,13 +298,15 @@ namespace Jazz2::Actors
 
 		UpdateAnimation(timeMult);
 		
-		// Correct Y position for bird idle/bored animations to prevent vertical drifting from sprite offsets
-		if (IsBirdMorphType(_playerType) && (_currentAnimation->State & AnimState::Idle) == AnimState::Idle && std::abs(_speed.Y) < 0.1f) {
-			// Save baseline Y position when entering idle and not shooting
+		// Correct Y position for bird bored animations to prevent vertical drifting from sprite offsets
+		// Only apply to bored animations (IdleBored1-7), not normal Idle, charge state, or when firing
+		if (IsBirdMorphType(_playerType) && (_currentAnimation->State & AnimState::Idle) == AnimState::Idle && 
+			_currentAnimation->State != AnimState::Idle && std::abs(_speed.Y) < 0.1f && _birdChargeFramesLeft <= 0.0f && _fireFramesLeft <= 0.0f) {
+			// Save baseline Y position when entering bored animation and not shooting
 			if (((_currentAnimation->State & AnimState::Shoot) != AnimState::Shoot)) {
 				_birdIdleBaseY = _pos.Y;
 			}
-			// Correct any vertical drift during idle animation
+			// Correct any vertical drift during bored animation
 			_pos.Y = _birdIdleBaseY;
 		}
 		
