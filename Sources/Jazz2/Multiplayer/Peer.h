@@ -4,6 +4,8 @@
 
 #include "../../Main.h"
 
+#include <Containers/StringView.h>
+
 #if !defined(DEATH_TARGET_EMSCRIPTEN) || defined(DOXYGEN_GENERATING_OUTPUT)
 struct _ENetPeer;
 #endif
@@ -17,10 +19,10 @@ namespace Jazz2::Multiplayer
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 			: _enet(nullptr)
 #	if defined(WITH_WEBSOCKET)
-			, _wsId(0), _backend(0)
+			, _wsId(0)
 #	endif
 #else
-			: _wsId(0), _backend(0)
+			: _wsId(0)
 #endif
 		{
 		}
@@ -29,7 +31,7 @@ namespace Jazz2::Multiplayer
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		Peer(_ENetPeer* peer) : _enet(peer)
 #	if defined(WITH_WEBSOCKET)
-			, _wsId(0), _backend(0)
+			, _wsId(0)
 #	endif
 		{
 		}
@@ -43,26 +45,21 @@ namespace Jazz2::Multiplayer
 			p._enet = nullptr;
 #	endif
 			p._wsId = wsId;
-			p._backend = 1;
 			return p;
 		}
 
 		/** @brief Returns `true` if the peer uses the WebSocket transport */
 		bool IsWebSocket() const {
-			return _backend != 0;
-		}
-
-		/** @brief Returns the WebSocket connection identifier */
-		std::uint64_t GetWebSocketId() const {
-			return _wsId;
+			return _enet == nullptr;
 		}
 #endif
 #endif
 
 		inline bool operator==(const Peer& other) const {
 #if defined(WITH_WEBSOCKET)
-			if (_backend != other._backend) return false;
-			if (_backend != 0) return (_wsId == other._wsId);
+			if (_enet == nullptr && _wsId == other._wsId) {
+				return true;
+			}
 #endif
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 			return (_enet == other._enet);
@@ -81,7 +78,9 @@ namespace Jazz2::Multiplayer
 		/** @brief Returns `true` if the peer is valid */
 		bool IsValid() const {
 #if defined(WITH_WEBSOCKET)
-			if (_backend != 0) return (_wsId != 0);
+			if (_wsId != 0) {
+				return true;
+			}
 #endif
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 			return (_enet != nullptr);
@@ -93,7 +92,9 @@ namespace Jazz2::Multiplayer
 		/** @brief Returns a unique numeric identifier for logging and serialization */
 		std::uint64_t GetId() const {
 #if defined(WITH_WEBSOCKET)
-			if (_backend != 0) return _wsId;
+			if DEATH_UNLIKELY(_enet == nullptr) {
+				return _wsId;
+			}
 #endif
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 			return reinterpret_cast<std::uint64_t>(_enet);
@@ -111,32 +112,16 @@ namespace Jazz2::Multiplayer
 #endif
 #if defined(WITH_WEBSOCKET) || defined(DEATH_TARGET_EMSCRIPTEN)
 		std::uint64_t _wsId;
-		std::uint8_t _backend;		// 0 = ENet, 1 = WebSocket
-		std::uint8_t _pad[7] = {};	// Explicit padding, zero-initialized for consistent hashing
 #endif
 #endif
 	};
 }
 
-#if defined(WITH_WEBSOCKET) || defined(DEATH_TARGET_EMSCRIPTEN)
-
-#include "../../nCine/Base/HashFunctions.h"
-
-namespace nCine
+namespace Death::Implementation
 {
-	/** @brief Custom hash for Peer using the WebSocket connection identifier */
-	template<>
-	class xxHash64Func<Jazz2::Multiplayer::Peer>
-	{
-	public:
-		hash64_t operator()(const Jazz2::Multiplayer::Peer& peer) const
-		{
-			std::uint64_t key = peer.GetId() ^ (static_cast<std::uint64_t>(peer._backend) << 56);
-			return hash64_t(xxHash3(reinterpret_cast<const char*>(&key), sizeof(key)));
-		}
+	template<> struct Formatter<Jazz2::Multiplayer::Peer> {
+		static std::size_t format(const Containers::MutableStringView& buffer, const Jazz2::Multiplayer::Peer& value, FormatContext& context);
 	};
 }
-
-#endif
 
 #endif

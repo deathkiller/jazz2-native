@@ -39,13 +39,12 @@ struct ipv6_mreq {
 
 #include "../../jsoncpp/json.h"
 
+using namespace std::string_view_literals;
 using namespace Death::Containers::Literals;
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 using namespace Death::IO;
 #endif
 using namespace nCine;
-
-using namespace std::string_view_literals;
 
 /** @brief @ref Death::Containers::StringView from @ref NCINE_VERSION */
 #define NCINE_VERSION_s DEATH_PASTE(NCINE_VERSION, _s)
@@ -114,14 +113,19 @@ namespace Jazz2::Multiplayer
 #endif
 	}
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-
 	ServerDiscovery::ServerDiscovery(IServerObserver* observer)
-		: _server(nullptr), _observer(observer), _onlineSuccess(false), _pendingFetch(nullptr), _refreshTimerId(0)
+		: _server(nullptr), _observer(observer), _onlineSuccess(false)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			, _pendingFetch(nullptr), _refreshTimerId(0)
+#endif
 	{
 		DEATH_DEBUG_ASSERT(observer != nullptr, "observer is null", );
 
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 		DownloadPublicServerListAsync();
+#else
+		_thread = Thread(ServerDiscovery::OnClientThread, this);
+#endif
 	}
 
 	ServerDiscovery::~ServerDiscovery()
@@ -129,6 +133,7 @@ namespace Jazz2::Multiplayer
 		_server = nullptr;
 		_observer = nullptr;
 
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 		if (_refreshTimerId != 0) {
 			emscripten_clear_timeout(_refreshTimerId);
 			_refreshTimerId = 0;
@@ -137,36 +142,143 @@ namespace Jazz2::Multiplayer
 			emscripten_fetch_close(_pendingFetch);
 			_pendingFetch = nullptr;
 		}
-	}
-
 #else
-
-	ServerDiscovery::ServerDiscovery(IServerObserver* observer)
-		: _server(nullptr), _observer(observer), _onlineSuccess(false)
-	{
-		DEATH_DEBUG_ASSERT(observer != nullptr, "observer is null", );
-
-		_thread = Thread(ServerDiscovery::OnClientThread, this);
-	}
-
-	ServerDiscovery::~ServerDiscovery()
-	{
-		_server = nullptr;
-		_observer = nullptr;
-
 		_thread.Join();
 
 		NetworkManagerBase::ReleaseBackend();
-	}
-
 #endif
+	}
 
 	void ServerDiscovery::SetStatusProvider(std::weak_ptr<IServerStatusProvider> statusProvider)
 	{
 		_statusProvider = Death::move(statusProvider);
 	}
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+
+	void ServerDiscovery::DownloadPublicServerListAsync()
+	{
+		if (_observer == nullptr) {
+			return;
+		}
+
+		LOGD("[MP] Downloading public server list…");
+
+		String url = "https://deat.tk/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
+		String urlNt = String::nullTerminatedView(url);
+
+		emscripten_fetch_attr_t attr;
+		emscripten_fetch_attr_init(&attr);
+		std::strcpy(attr.requestMethod, "GET");
+		attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
+		attr.onsuccess = OnFetchSuccess;
+		attr.onerror = OnFetchError;
+		attr.userData = this;
+
+		if (_pendingFetch != nullptr) {
+			_pendingFetch->userData = nullptr;
+		}
+		_pendingFetch = emscripten_fetch(&attr, urlNt.data());
+	}
+
+	void ServerDiscovery::OnFetchSuccess(emscripten_fetch_t* fetch)
+	{
+		ServerDiscovery* _this = static_cast<ServerDiscovery*>(fetch->userData);
+		fetch->userData = nullptr;
+		if (_this == nullptr) {
+			return;
+		}
+
+		_this->_pendingFetch = nullptr;
+
+		IServerObserver* observer = _this->_observer;
+		if (observer != nullptr && fetch->numBytes > 0) {
+			Json::CharReaderBuilder builder;
+			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
+			Json::Value doc; std::string errors;
+			if (reader->parse(fetch->data, fetch->data + fetch->numBytes, &doc, &errors)) {
+				LOGI("[MP] Downloaded public server list with {} entries ({} bytes)",
+					(std::uint32_t)doc["s"].size(), (std::uint32_t)fetch->numBytes);
+
+				for (auto serverItem : doc["s"]) {
+					std::string_view serverName, serverUuid, serverEndpoints;
+					if (serverItem["n"].get(serverName) == Json::SUCCESS && !serverName.empty() &&
+						serverItem["u"].get(serverUuid) == Json::SUCCESS && !serverUuid.empty() &&
+						serverItem["e"].get(serverEndpoints) == Json::SUCCESS && !serverEndpoints.empty()) {
+
+						std::int64_t currentPlayers = 0, maxPlayers = 0;
+						serverItem["c"].get(currentPlayers);
+						serverItem["m"].get(maxPlayers);
+
+						std::string_view version;
+						serverItem["v"].get(version);
+
+						ServerDescription discoveredServer {};
+						discoveredServer.Version = version;
+						discoveredServer.Name = serverName;
+						discoveredServer.EndpointString = serverEndpoints;
+						discoveredServer.CurrentPlayerCount = (std::uint32_t)currentPlayers;
+						discoveredServer.MaxPlayerCount = (std::uint32_t)maxPlayers;
+
+						std::int64_t wsPort = 0;
+						serverItem["w"].get(wsPort);
+						discoveredServer.WsPort = (std::uint16_t)wsPort;
+						bool wsSecure = false;
+						serverItem["wss"].get(wsSecure);
+						discoveredServer.WsSecure = wsSecure;
+
+						LOGD("[MP] -\tFound server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
+						observer->OnServerFound(std::move(discoveredServer));
+					}
+				}
+			} else {
+				LOGE("[MP] Failed to parse public server list: {}", StringView(errors));
+			}
+		} else if (fetch->numBytes == 0) {
+			LOGE("[MP] Failed to download public server list (empty response)");
+		}
+
+		// TODO: It seems that the callback is triggered only with readyState==4
+		//if (fetch->readyState == 4 /*DONE*/) {
+			emscripten_fetch_close(fetch);
+		//}
+
+		// Schedule next refresh after 60 seconds
+		if (_this->_observer != nullptr && _this->_refreshTimerId == 0) {
+			_this->_refreshTimerId = emscripten_set_timeout(OnRefreshTimer, 60000.0, _this);
+		}
+	}
+
+	void ServerDiscovery::OnFetchError(emscripten_fetch_t* fetch)
+	{
+		ServerDiscovery* _this = static_cast<ServerDiscovery*>(fetch->userData);
+		fetch->userData = nullptr;
+		if (_this == nullptr || fetch->status == 0xFFFF) {
+			return;
+		}
+
+		_this->_pendingFetch = nullptr;
+
+		LOGE("[MP] Failed to download public server list (HTTP {})", (std::int32_t)fetch->status);
+
+		emscripten_fetch_close(fetch);
+
+		// Retry after 60 seconds
+		if (_this->_observer != nullptr && _this->_refreshTimerId == 0) {
+			_this->_refreshTimerId = emscripten_set_timeout(OnRefreshTimer, 60000.0, _this);
+		}
+	}
+
+	void ServerDiscovery::OnRefreshTimer(void* userData)
+	{
+		ServerDiscovery* _this = static_cast<ServerDiscovery*>(userData);
+		_this->_refreshTimerId = 0;
+		if (_this->_observer != nullptr) {
+			_this->DownloadPublicServerListAsync();
+		}
+	}
+
+#else
 
 	ENetSocket ServerDiscovery::TryCreateLocalSocket(const char* multicastAddress, ENetAddress& parsedAddress)
 	{
@@ -747,130 +859,6 @@ namespace Jazz2::Multiplayer
 		}
 
 		LOGD("[MP] Server discovery thread exited");
-	}
-
-#elif defined(DEATH_TARGET_EMSCRIPTEN)
-
-	void ServerDiscovery::DownloadPublicServerListAsync()
-	{
-		if (_observer == nullptr) {
-			return;
-		}
-
-		LOGD("[MP] Downloading public server list asynchronously...");
-
-		String url = "https://deat.tk/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
-		String urlNt = String::nullTerminatedView(url);
-
-		emscripten_fetch_attr_t attr;
-		emscripten_fetch_attr_init(&attr);
-		std::strcpy(attr.requestMethod, "GET");
-		attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
-		attr.onsuccess = OnFetchSuccess;
-		attr.onerror = OnFetchError;
-		attr.userData = this;
-
-		if (_pendingFetch != nullptr) {
-			_pendingFetch->userData = nullptr;
-		}
-		_pendingFetch = emscripten_fetch(&attr, urlNt.data());
-	}
-
-	void ServerDiscovery::OnFetchSuccess(emscripten_fetch_t* fetch)
-	{
-		ServerDiscovery* _this = static_cast<ServerDiscovery*>(fetch->userData);
-		fetch->userData = nullptr;
-		if (_this == nullptr) {
-			return;
-		}
-
-		_this->_pendingFetch = nullptr;
-
-		IServerObserver* observer = _this->_observer;
-		if (observer != nullptr && fetch->numBytes > 0) {
-			Json::CharReaderBuilder builder;
-			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
-			Json::Value doc; std::string errors;
-			if (reader->parse(fetch->data, fetch->data + fetch->numBytes, &doc, &errors)) {
-				LOGI("[MP] Downloaded public server list with {} entries ({} bytes)",
-					(std::uint32_t)doc["s"].size(), (std::uint32_t)fetch->numBytes);
-
-				for (auto serverItem : doc["s"]) {
-					std::string_view serverName, serverUuid, serverEndpoints;
-					if (serverItem["n"].get(serverName) == Json::SUCCESS && !serverName.empty() &&
-						serverItem["u"].get(serverUuid) == Json::SUCCESS && !serverUuid.empty() &&
-						serverItem["e"].get(serverEndpoints) == Json::SUCCESS && !serverEndpoints.empty()) {
-
-						std::int64_t currentPlayers = 0, maxPlayers = 0;
-						serverItem["c"].get(currentPlayers);
-						serverItem["m"].get(maxPlayers);
-
-						std::string_view version;
-						serverItem["v"].get(version);
-
-						ServerDescription discoveredServer{};
-						discoveredServer.Version = version;
-						discoveredServer.Name = serverName;
-						discoveredServer.EndpointString = serverEndpoints;
-						discoveredServer.CurrentPlayerCount = (std::uint32_t)currentPlayers;
-						discoveredServer.MaxPlayerCount = (std::uint32_t)maxPlayers;
-
-						std::int64_t wsPort = 0;
-						serverItem["w"].get(wsPort);
-						discoveredServer.WsPort = (std::uint16_t)wsPort;
-						bool wsSecure = false;
-						serverItem["wss"].get(wsSecure);
-						discoveredServer.WsSecure = wsSecure;
-
-						LOGD("[MP] -\tFound server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
-						observer->OnServerFound(std::move(discoveredServer));
-					}
-				}
-			} else {
-				LOGE("[MP] Failed to parse public server list: {}", StringView(errors));
-			}
-		} else if (fetch->numBytes == 0) {
-			LOGE("[MP] Failed to download public server list (empty response)");
-		}
-
-		// TODO: It seems that the callback is triggered only with readyState==4
-		//if (fetch->readyState == 4 /*DONE*/) {
-			emscripten_fetch_close(fetch);
-		//}
-
-		// Schedule next refresh after 60 seconds
-		if (_this->_observer != nullptr && _this->_refreshTimerId == 0) {
-			_this->_refreshTimerId = emscripten_set_timeout(OnRefreshTimer, 60000.0, _this);
-		}
-	}
-
-	void ServerDiscovery::OnFetchError(emscripten_fetch_t* fetch)
-	{
-		ServerDiscovery* _this = static_cast<ServerDiscovery*>(fetch->userData);
-		fetch->userData = nullptr;
-		if (_this == nullptr || fetch->status == 65535) {
-			return;
-		}
-
-		_this->_pendingFetch = nullptr;
-
-		LOGE("[MP] Failed to download public server list (HTTP {})", (std::int32_t)fetch->status);
-
-		emscripten_fetch_close(fetch);
-
-		// Retry after 60 seconds
-		if (_this->_observer != nullptr && _this->_refreshTimerId == 0) {
-			_this->_refreshTimerId = emscripten_set_timeout(OnRefreshTimer, 60000.0, _this);
-		}
-	}
-
-	void ServerDiscovery::OnRefreshTimer(void* userData)
-	{
-		ServerDiscovery* _this = static_cast<ServerDiscovery*>(userData);
-		_this->_refreshTimerId = 0;
-		if (_this->_observer != nullptr) {
-			_this->DownloadPublicServerListAsync();
-		}
 	}
 
 #endif

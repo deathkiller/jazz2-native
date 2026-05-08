@@ -688,16 +688,31 @@ namespace Jazz2::UI::Menu
 			if (Jazz2::Multiplayer::NetworkManagerBase::TrySplitAddressAndPort(firstEndpoint, host, enetPort)) {
 				StringView protocol = (_selectedServer.WsSecure ? "wss://"_s : "ws://"_s);
 				char portBuf[8];
-				std::size_t portLen = formatInto(portBuf, "{}", (int)_selectedServer.WsPort);
-				wsUrl = protocol + host + ":"_s + StringView(portBuf, portLen);
+				std::size_t portLen = formatInto(portBuf, "{}", (std::int32_t)_selectedServer.WsPort);
+				bool isIpv6 = host.contains(':');
+				if (isIpv6) {
+					wsUrl = protocol + "["_s + host + "]:"_s + StringView(portBuf, portLen);
+				} else {
+					wsUrl = protocol + host + ":"_s + StringView(portBuf, portLen);
+				}
 			}
 		}
 		if (wsUrl.empty()) {
 			// Manual IP entry or fallback: wrap in ws:// if not already a WebSocket URL
 			if (!firstEndpoint.hasPrefix("ws://"_s) && !firstEndpoint.hasPrefix("wss://"_s)) {
-				wsUrl = "wss://"_s + firstEndpoint;
+				// Bare IPv6 (more than one colon, no brackets yet) needs to be enclosed in [...]
+				StringView host; std::uint16_t port;
+				Jazz2::Multiplayer::NetworkManagerBase::TrySplitAddressAndPort(firstEndpoint, host, port);
+				bool isIpv6 = host.contains(':');
+				if (isIpv6) {
+					char portBuf[12] {};
+					std::size_t portLen = (port != 0 ? formatInto(portBuf, ":{}", (std::int32_t)port) : 0);
+					wsUrl = "wss://["_s + host + "]"_s + StringView(portBuf, portLen);
+				} else {
+					wsUrl = "wss://"_s + firstEndpoint;
+				}
 			} else {
-				wsUrl = String(firstEndpoint);
+				wsUrl = firstEndpoint;
 			}
 		}
 		_root->ConnectToServer(wsUrl, 0);

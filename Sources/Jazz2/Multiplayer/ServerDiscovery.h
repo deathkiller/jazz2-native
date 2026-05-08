@@ -57,15 +57,16 @@ namespace Jazz2::Multiplayer
 		std::uint32_t MaxPlayerCount;
 		/** @brief Current level name */
 		String LevelName;
-		/** @brief Whether the server is compatible with the local client */
-		bool IsCompatible;
 
 #if defined(WITH_WEBSOCKET) || defined(DOXYGEN_GENERATING_OUTPUT)
-		/** @brief WebSocket port (0 = no WebSocket support) */
+		/** @brief WebSocket port (`0` = no WebSocket transport support) */
 		std::uint16_t WsPort;
-		/** @brief Whether the WebSocket server uses TLS (WSS) */
+		/** @brief Whether the WebSocket transport uses TLS (WSS) */
 		bool WsSecure;
 #endif
+
+		/** @brief Whether the server is compatible with the local client */
+		bool IsCompatible;
 
 		// TODO: LastPingTime
 		//bool IsLost;
@@ -133,7 +134,16 @@ namespace Jazz2::Multiplayer
 		TimeStamp _lastOnlineRequestTime;
 		bool _onlineSuccess;
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		emscripten_fetch_t* _pendingFetch;
+		long _refreshTimerId;
+
+		void DownloadPublicServerListAsync();
+
+		static void OnFetchSuccess(emscripten_fetch_t* fetch);
+		static void OnFetchError(emscripten_fetch_t* fetch);
+		static void OnRefreshTimer(void* userData);
+#else
 		static constexpr std::uint64_t PacketSignature = 0x2095A59FF0BFBBEF;
 
 		ENetSocket _socket;
@@ -153,15 +163,6 @@ namespace Jazz2::Multiplayer
 
 		static void OnClientThread(void* param);
 		static void OnServerThread(void* param);
-#else
-		emscripten_fetch_t* _pendingFetch;
-		long _refreshTimerId;
-
-		void DownloadPublicServerListAsync();
-
-		static void OnFetchSuccess(emscripten_fetch_t* fetch);
-		static void OnFetchError(emscripten_fetch_t* fetch);
-		static void OnRefreshTimer(void* userData);
 #endif
 	};
 }

@@ -676,7 +676,7 @@ namespace Jazz2::Multiplayer
 		bool isListening = (GetState() == NetworkState::Listening);
 
 		if (isListening) {
-			auto address = GetPeerAddress(peer);
+			auto address = AddressToString(peer);
 			if (_serverConfig->BannedIPAddresses.contains(address)) {
 				LOGI("[MP] Peer kicked \"<unknown>\" ({}): Banned by IP address", address);
 				return Reason::Banned;

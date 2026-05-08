@@ -399,6 +399,7 @@ namespace Jazz2::UI::Menu
 				if (_isPlayable) {
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
+					// Creating a server is not supported on Emscripten
 					_root->SwitchToSection<ServerSelectSection>();
 #	else
 					_root->SwitchToSection<PlayMultiplayerSection>();

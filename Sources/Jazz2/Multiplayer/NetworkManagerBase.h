@@ -146,9 +146,8 @@ namespace Jazz2::Multiplayer
 		static String AddressToString(const ENetAddress& address, bool includePort = false);
 #endif
 		/** @brief Converts the endpoint of the specified peer to the string representation */
-		static String AddressToString(const Peer& peer);
-		/** @brief Returns the address string for the specified peer, supporting both ENet and WebSocket peers */
-		String GetPeerAddress(const Peer& peer);
+		String AddressToString(const Peer& peer) const;
+
 		/** @brief Returns `true` if the specified string representation of the address is valid */
 		static bool IsAddressValid(StringView address);
 		/** @brief Returns `true` if the specified string representation of the domain name is valid */
@@ -183,7 +182,15 @@ namespace Jazz2::Multiplayer
 		INetworkHandler* _handler;
 		Spinlock _lock;
 
-#if defined(WITH_WEBSOCKET) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		EMSCRIPTEN_WEBSOCKET_T _emWsSocket{0};
+		String _emWsUrl;
+
+		static EM_BOOL OnEmWsOpen(int eventType, const EmscriptenWebSocketOpenEvent* e, void* userData);
+		static EM_BOOL OnEmWsMessage(int eventType, const EmscriptenWebSocketMessageEvent* e, void* userData);
+		static EM_BOOL OnEmWsError(int eventType, const EmscriptenWebSocketErrorEvent* e, void* userData);
+		static EM_BOOL OnEmWsClose(int eventType, const EmscriptenWebSocketCloseEvent* e, void* userData);
+#elif defined(WITH_WEBSOCKET)
 		/** @brief Represents a connected WebSocket peer */
 		struct WsPeerInfo {
 			ix::WebSocket* webSocket;
@@ -205,21 +212,11 @@ namespace Jazz2::Multiplayer
 		HashMap<std::uint64_t, WsPeerInfo> _wsPeers;
 		HashMap<std::string, std::uint64_t> _wsConnectionIds;
 		SmallVector<WsQueuedEvent, 0> _wsPendingEvents;
-		Spinlock _wsLock;
+		mutable Spinlock _wsLock;
 		std::atomic_uint64_t _nextWsId{1};
 
 		void ProcessWsQueue(INetworkHandler* handler);
 		bool SendToWsPeer(std::uint64_t peerId, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
-#elif defined(WITH_WEBSOCKET) && defined(DEATH_TARGET_EMSCRIPTEN)
-		/** @brief Emscripten WebSocket handle (0 = not connected) */
-		EMSCRIPTEN_WEBSOCKET_T _emWsSocket{0};
-		/** @brief URL of the WebSocket server being connected to */
-		String _emWsUrl;
-
-		static EM_BOOL OnEmWsOpen(int eventType, const EmscriptenWebSocketOpenEvent* e, void* userData);
-		static EM_BOOL OnEmWsMessage(int eventType, const EmscriptenWebSocketMessageEvent* e, void* userData);
-		static EM_BOOL OnEmWsError(int eventType, const EmscriptenWebSocketErrorEvent* e, void* userData);
-		static EM_BOOL OnEmWsClose(int eventType, const EmscriptenWebSocketCloseEvent* e, void* userData);
 #endif
 
 		static void InitializeBackend();

@@ -2643,7 +2643,7 @@ namespace Jazz2::Multiplayer
 							std::size_t length;
 							if (peerDesc->RemotePeer) {
 								length = formatInto(infoBuffer, "{} ({}) is connected from {}", peerDesc->PlayerName,
-									NetworkManager::UuidToString(peerDesc->UniquePlayerID), _networkManager->GetPeerAddress(peerDesc->RemotePeer));
+									NetworkManager::UuidToString(peerDesc->UniquePlayerID), _networkManager->AddressToString(peerDesc->RemotePeer));
 							} else {
 								length = formatInto(infoBuffer, "{} is connected locally", peerDesc->PlayerName);
 							}
@@ -2972,13 +2972,13 @@ namespace Jazz2::Multiplayer
 					std::unique_lock lock(_lock);
 					for (const auto& [remotingActor, remotingActorInfo] : _remotingActors) {
 						if (remotingActorInfo.ActorID == actorId) {
-							LOGD("[MP] ClientPacketType::Rpc [{:.8x}] - id: {}, {} bytes", peer.GetId(), actorId, data.size() - packet.GetPosition());
+							LOGD("[MP] ClientPacketType::Rpc [{}] - id: {}, {} bytes", peer, actorId, data.size() - packet.GetPosition());
 							remotingActor->OnPacketReceived(packet);
 							return true;
 						}
 					}
 
-					LOGW("[MP] ClientPacketType::Rpc [{:.8x}] - id: {}, {} bytes - ACTOR NOT FOUND", peer.GetId(), actorId, data.size() - packet.GetPosition());
+					LOGW("[MP] ClientPacketType::Rpc [{}] - id: {}, {} bytes - ACTOR NOT FOUND", peer, actorId, data.size() - packet.GetPosition());
 					return true;
 				}
 				case ClientPacketType::Auth: {
@@ -3009,7 +3009,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 
-					LOGD("[MP] ClientPacketType::LevelReady [{:.8x}] - flags: 0x{:.2x}", peer.GetId(), flags);
+					LOGD("[MP] ClientPacketType::LevelReady [{}] - flags: 0x{:.2x}", peer, flags);
 
 					if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
 						bool enableLedgeClimb = (flags & 0x02) != 0;
@@ -3042,7 +3042,7 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::ChatMessage [{:.8x}] - invalid playerIndex ({})", peer.GetId(), playerIndex);
+						LOGD("[MP] ClientPacketType::ChatMessage [{}] - invalid playerIndex ({})", peer, playerIndex);
 						return true;
 					}
 
@@ -3050,7 +3050,7 @@ namespace Jazz2::Multiplayer
 
 					std::uint32_t lineLength = packet.ReadVariableUint32();
 					if (lineLength == 0 || lineLength > 1024) {
-						LOGD("[MP] ClientPacketType::ChatMessage [{:.8x}] - length out of bounds ({})", peer.GetId(), lineLength);
+						LOGD("[MP] ClientPacketType::ChatMessage [{}] - length out of bounds ({})", peer, lineLength);
 						return true;
 					}
 
@@ -3090,7 +3090,7 @@ namespace Jazz2::Multiplayer
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->LevelState != PeerLevelState::ValidatingAssets) {
 						// Packet received when the peer is in different state
-						LOGW("[MP] ClientPacketType::ValidateAssetsResponse [{:.8x}] - invalid state ({})", peer.GetId(), peerDesc->LevelState);
+						LOGW("[MP] ClientPacketType::ValidateAssetsResponse [{}] - invalid state ({})", peer, peerDesc->LevelState);
 						return true;
 					}
 
@@ -3102,7 +3102,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					std::uint32_t assetCount = packet.ReadVariableUint32();
 
-					LOGD("[MP] ClientPacketType::ValidateAssetsResponse [{:.8x}] - {}/{} assets", peer.GetId(), assetCount, _requiredAssets.size());
+					LOGD("[MP] ClientPacketType::ValidateAssetsResponse [{}] - {}/{} assets", peer, assetCount, _requiredAssets.size());
 
 					if (assetCount == _requiredAssets.size()) {
 						for (std::uint32_t i = 0; i < assetCount; i++) {
@@ -3118,8 +3118,8 @@ namespace Jazz2::Multiplayer
 								if (type == _requiredAssets[j].Type && path == _requiredAssets[j].Path) {
 									found = true;
 									if (size != _requiredAssets[j].Size || crc32 != _requiredAssets[j].Crc32) {
-										LOGD("[MP] ClientPacketType::ValidateAssetsResponse [{:.8x}] - \"{}\":{:.8x} is missing",
-											peer.GetId(), _requiredAssets[j].Path, _requiredAssets[j].Crc32);
+										LOGD("[MP] ClientPacketType::ValidateAssetsResponse [{}] - \"{}\":{:.8x} is missing",
+											peer, _requiredAssets[j].Path, _requiredAssets[j].Crc32);
 										missingAssets.push_back(&_requiredAssets[j]);
 									}
 									break;
@@ -3138,12 +3138,12 @@ namespace Jazz2::Multiplayer
 
 					if (!success) {
 						// Peer response is corrupted
-						LOGW("[MP] ClientPacketType::ValidateAssetsResponse [{:.8x}] - malformed packet", peer.GetId());
+						LOGW("[MP] ClientPacketType::ValidateAssetsResponse [{}] - malformed packet", peer);
 						_networkManager->Kick(peer, Reason::InvalidParameter);
 						return true;
 					}
 
-					LOGI("[MP] ClientPacketType::ValidateAssetsResponse [{:.8x}] - {} missing assets", peer.GetId(), missingAssets.size());
+					LOGI("[MP] ClientPacketType::ValidateAssetsResponse [{}] - {} missing assets", peer, missingAssets.size());
 
 					if (missingAssets.empty()) {
 						// All assets are already ready
@@ -3165,7 +3165,7 @@ namespace Jazz2::Multiplayer
 #else
 					auto* _this = this;
 #endif
-						LOGI("[MP] Started streaming {} assets to peer [{:.8x}]", missingAssets.size(), peer.GetId());
+						LOGI("[MP] Started streaming {} assets to peer [{}]", missingAssets.size(), peer);
 						TimeStamp begin = TimeStamp::now();
 
 						for (std::uint32_t i = 0; i < (std::uint32_t)missingAssets.size(); i++) {
@@ -3211,8 +3211,8 @@ namespace Jazz2::Multiplayer
 							_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::StreamAsset, packetEnd);
 						}
 
-						LOGI("[MP] Finished streaming {} assets to peer [{:.8x}] - took {:.1f} ms",
-						missingAssets.size(), peer.GetId(), begin.millisecondsSince());
+						LOGI("[MP] Finished streaming {} assets to peer [{}] - took {:.1f} ms",
+						missingAssets.size(), peer, begin.millisecondsSince());
 						if (peerDesc->IsAuthenticated && !_this->_ignorePackets) {
 							MemoryStream packet;
 							_this->InitializeLoadLevelPacket(packet);
@@ -3231,23 +3231,23 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->LevelState != PeerLevelState::LevelLoaded && peerDesc->LevelState != PeerLevelState::LevelSynchronized) {
-						LOGW("[MP] ClientPacketType::PlayerReady [{:.8x}] - invalid state", peer.GetId());
+						LOGW("[MP] ClientPacketType::PlayerReady [{}] - invalid state", peer);
 						return true;
 					}
 
 					if (preferredPlayerType != PlayerType::Jazz && preferredPlayerType != PlayerType::Spaz && preferredPlayerType != PlayerType::Lori) {
-						LOGW("[MP] ClientPacketType::PlayerReady [{:.8x}] - invalid preferred player type", peer.GetId());
+						LOGW("[MP] ClientPacketType::PlayerReady [{}] - invalid preferred player type", peer);
 						return true;
 					}
 
 					peerDesc->PreferredPlayerType = preferredPlayerType;
 
-					LOGI("[MP] ClientPacketType::PlayerReady [{:.8x}] - type: {}, team: {}", peer.GetId(), preferredPlayerType, preferredTeam);
+					LOGI("[MP] ClientPacketType::PlayerReady [{}] - type: {}, team: {}", peer, preferredPlayerType, preferredTeam);
 
 					InvokeAsync([this, peer]() {
 						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 						if (!peerDesc || peerDesc->LevelState < PeerLevelState::LevelLoaded || peerDesc->LevelState > PeerLevelState::LevelSynchronized) {
-							LOGW("[MP] ClientPacketType::PlayerReady [{:.8x}] - invalid state", peer.GetId());
+							LOGW("[MP] ClientPacketType::PlayerReady [{}] - invalid state", peer);
 							return;
 						}
 						if (peerDesc->LevelState == PeerLevelState::LevelSynchronized) {
@@ -3257,7 +3257,7 @@ namespace Jazz2::Multiplayer
 					return true;
 				}
 				case ClientPacketType::ForceResyncActors: {
-					LOGD("[MP] ClientPacketType::ForceResyncActors [{:.8x}] - update: {}", peer.GetId(), _lastUpdated);
+					LOGD("[MP] ClientPacketType::ForceResyncActors [{}] - update: {}", peer, _lastUpdated);
 					_forceResyncPending = true;
 					return true;
 				}
@@ -3267,7 +3267,7 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::PlayerUpdate [{:.8x}] - invalid playerIndex ({})", peer.GetId(), playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerUpdate [{}] - invalid playerIndex ({})", peer, playerIndex);
 						return true;
 					}
 
@@ -3397,17 +3397,17 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{:.8x}] - invalid playerIndex ({})", peer.GetId(), playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{}] - invalid playerIndex ({})", peer, playerIndex);
 						return true;
 					}
 
 					std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
 
-					LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{:.8x}] - playerIndex: {}, weaponType: {}", peer.GetId(), playerIndex, weaponType);
+					LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{}] - playerIndex: {}, weaponType: {}", peer, playerIndex, weaponType);
 
 					const auto& playerAmmo = peerDesc->Player->GetWeaponAmmo();
 					if (weaponType >= playerAmmo.size() || playerAmmo[weaponType] == 0) {
-						LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{:.8x}] - playerIndex: {}, no ammo in selected weapon", peer.GetId(), playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{}] - playerIndex: {}, no ammo in selected weapon", peer, playerIndex);
 
 						// Request is denied, send the current weapon back to the client
 						HandlePlayerWeaponChanged(peerDesc->Player, Actors::Player::SetCurrentWeaponReason::Rollback);
@@ -3424,11 +3424,11 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::PlayerSpectateRequest [{:.8x}] - invalid playerIndex ({})", peer.GetId(), playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerSpectateRequest [{}] - invalid playerIndex ({})", peer, playerIndex);
 						return true;
 					}
 
-					LOGD("[MP] ClientPacketType::PlayerSpectateRequest [{:.8x}] - playerIndex: {}, enable: {}", peer.GetId(), playerIndex, enable);
+					LOGD("[MP] ClientPacketType::PlayerSpectateRequest [{}] - playerIndex: {}, enable: {}", peer, playerIndex, enable);
 
 					auto& serverConfig = _networkManager->GetServerConfiguration();
 					if (!serverConfig.EnableSpectate || ((peerDesc->IsSpectating & SpectateMode::Mask) == SpectateMode::Forced && enable == 0)) {
@@ -3436,7 +3436,7 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 
-					LOGI("[MP] Player {} [{:.8x}] {} spectating", playerIndex, peer.GetId(), enable ? "started"_s : "stopped"_s);
+					LOGI("[MP] Player {} [{}] {} spectating", playerIndex, peer, enable ? "started"_s : "stopped"_s);
 					SetPlayerSpectateMode(peerDesc->Player, enable ? SpectateMode::Requested : SpectateMode::None);
 					return true;
 				}
@@ -3451,12 +3451,12 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::PlayerAckWarped [{:.8x}] - invalid playerIndex ({})", peer.GetId(), playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerAckWarped [{}] - invalid playerIndex ({})", peer, playerIndex);
 						return true;
 					}
 
-					LOGD("[MP] ClientPacketType::PlayerAckWarped [{:.8x}] - playerIndex: {}, seqNum: {}, x: {}, y: {}",
-						peer.GetId(), playerIndex, seqNum, posX, posY);
+					LOGD("[MP] ClientPacketType::PlayerAckWarped [{}] - playerIndex: {}, seqNum: {}, x: {}, y: {}",
+						peer, playerIndex, seqNum, posX, posY);
 
 					peerDesc->LastUpdated = seqNum;
 					if (auto* mpPlayer = static_cast<RemotePlayerOnServer*>(peerDesc->Player)) {
@@ -4870,7 +4870,7 @@ namespace Jazz2::Multiplayer
 					peerDesc->LevelState = PeerLevelState::LevelSynchronized;
 				}
 
-				LOGI("[MP] Syncing peer [{:.8x}]", peer.GetId());
+				LOGI("[MP] Syncing peer [{}]", peer);
 
 				// TODO: Send positions only to the newly connected player
 				CalculatePositionInRound(true);
@@ -4969,7 +4969,7 @@ namespace Jazz2::Multiplayer
 					// TODO: Send ambient light (_lastCheckpointLight)
 
 					std::uint8_t playerIndex = FindFreePlayerId();
-					LOGI("[MP] Spawning player {} [{:.8x}]", playerIndex, peer.GetId());
+					LOGI("[MP] Spawning player {} [{}]", playerIndex, peer);
 
 					std::shared_ptr<Actors::Multiplayer::RemotePlayerOnServer> player = std::make_shared<Actors::Multiplayer::RemotePlayerOnServer>(peerDesc);
 					std::uint8_t playerParams[2] = { (std::uint8_t)peerDesc->PreferredPlayerType, (std::uint8_t)playerIndex };
@@ -5087,7 +5087,7 @@ namespace Jazz2::Multiplayer
 					Vector2f spawnPosition = GetSpawnPoint(peerDesc->PreferredPlayerType);
 
 					std::uint8_t playerIndex = FindFreePlayerId();
-					LOGI("[MP] Spawning player {} [{:.8x}] as spectator", playerIndex, peer.GetId());
+					LOGI("[MP] Spawning player {} [{}] as spectator", playerIndex, peer);
 
 					std::shared_ptr<Actors::Multiplayer::RemotePlayerOnServer> player = std::make_shared<Actors::Multiplayer::RemotePlayerOnServer>(peerDesc);
 					std::uint8_t playerParams[2] = { (std::uint8_t)PlayerType::Spectate, (std::uint8_t)playerIndex };
