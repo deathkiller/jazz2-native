@@ -26,8 +26,34 @@
 #	include <ifaddrs.h>
 #endif
 
-#if defined(WITH_WEBSOCKET) && !defined(DEATH_TARGET_EMSCRIPTEN)
-#	include <ixwebsocket/IXNetSystem.h>
+#if defined(WITH_WEBSOCKET)
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+#		define EM_WS_ERR_SECURITY -1001
+#		define EM_WS_ERR_DOM -1002
+#		define EM_WS_ERR_MALFORMED_URL -1003
+#		define EM_WS_ERR_UNKNOWN -1004
+
+// emscripten_websocket_new doesn't correctly catch exceptions in Emscripten 5.0.7, so this wrapper
+// handles it and returns error codes instead of throwing, to avoid crashing the entire application
+EM_JS(EMSCRIPTEN_WEBSOCKET_T, safe_websocket_new, (const EmscriptenWebSocketCreateAttributes* attrs), {
+	try {
+		return _emscripten_websocket_new(attrs);
+	} catch (e) {
+		if (e instanceof DOMException) {
+			// SecurityError: ws:// from https://
+			if (e.name == 'SecurityError') return -1001;
+			return -1002;
+		} else if (e instanceof SyntaxError) {
+			// Malformed URL
+			return -1003;
+		} else {
+			return -1004;
+		}
+	}
+});
+#	else
+#		include <ixwebsocket/IXNetSystem.h>
+#	endif
 #endif
 
 using namespace Death;
@@ -152,9 +178,31 @@ namespace Jazz2::Multiplayer
 		attrs.url = wsUrl.data();
 		attrs.createOnMainThread = EM_TRUE;
 
-		_emWsSocket = emscripten_websocket_new(&attrs);
+		// emscripten_websocket_new doesn't correctly catches exceptions in Emscripten 5.0.7
+		//_emWsSocket = emscripten_websocket_new(&attrs);
+		_emWsSocket = safe_websocket_new(&attrs);
 		if (_emWsSocket <= 0) {
-			LOGE("[MP] Failed to create WebSocket connection to \"{}\"", firstEndpoint);
+			Reason reason;
+			switch (_emWsSocket) {
+				case EM_WS_ERR_SECURITY:
+					LOGE("[MP] WebSocket connection to \"{}\" failed due to security error (e.g., \"ws://\" from \"https://\")", firstEndpoint);
+					reason = Reason::SecurityPolicyViolation;
+					break;
+				case EM_WS_ERR_DOM:
+					LOGE("[MP] WebSocket connection to \"{}\" failed due to DOM error (e.g., browser blocked the connection)", firstEndpoint);
+					reason = Reason::SecurityPolicyViolation;
+					break;
+				case EM_WS_ERR_MALFORMED_URL:
+					LOGE("[MP] WebSocket connection to \"{}\" failed due to malformed URL", firstEndpoint);
+					reason = Reason::InvalidParameter;
+					break;
+				default:
+					LOGE("[MP] WebSocket connection to \"{}\" failed due to unknown error", firstEndpoint);
+					reason = Reason::Unknown;
+					break;
+			}
+
+			OnPeerDisconnected({}, reason);
 			_state = NetworkState::None;
 			_handler = nullptr;
 			return;
