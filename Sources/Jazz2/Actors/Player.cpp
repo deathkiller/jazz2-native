@@ -68,7 +68,7 @@ namespace Jazz2::Actors
 	Player::Player()
 		:
 		_playerIndex(0),
-		_playerType(PlayerType::Jazz),
+		_playerType(PlayerType::Jazz), _playerTypeOriginal(PlayerType::Jazz),
 		_isActivelyPushing(false),
 		_wasActivelyPushing(false),
 		_controllable(true),
@@ -136,7 +136,8 @@ namespace Jazz2::Actors
 
 	Task<bool> Player::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_playerType = (PlayerType)details.Params[0];
+		_playerTypeOriginal = (PlayerType)details.Params[0];
+		_playerType = _playerTypeOriginal;
 		_playerIndex = details.Params[1];
 
 		switch (_playerType) {
@@ -2784,7 +2785,7 @@ namespace Jazz2::Actors
 				break;
 			}
 			case EventType::AreaRevertMorph: {
-				if (_playerType != _playerType) {
+				if (_playerType != _playerTypeOriginal) {
 					MorphRevert();
 				}
 				break;
@@ -4544,7 +4545,7 @@ namespace Jazz2::Actors
 
 	void Player::MorphRevert()
 	{
-		MorphTo(_playerType);
+		MorphTo(_playerTypeOriginal);
 	}
 
 	bool Player::SetDizzy(float timeLeft)
