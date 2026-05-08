@@ -37,7 +37,7 @@ namespace Jazz2::Multiplayer
 		}
 #endif
 
-#if defined(WITH_WEBSOCKET) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if defined(WITH_WEBSOCKET)
 		/** @brief Creates a WebSocket peer from a numeric connection identifier */
 		static Peer FromWebSocket(std::uint64_t wsId) {
 			Peer p;
@@ -50,21 +50,25 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Returns `true` if the peer uses the WebSocket transport */
 		bool IsWebSocket() const {
-			return _enet == nullptr;
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+			return true;
+#	else
+			return (_enet == nullptr);
+#	endif
 		}
 #endif
 #endif
 
 		inline bool operator==(const Peer& other) const {
-#if defined(WITH_WEBSOCKET)
-			if (_enet == nullptr && _wsId == other._wsId) {
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			return (_wsId == other._wsId);
+#else
+#	if defined(WITH_WEBSOCKET)
+			if DEATH_UNLIKELY(_enet == nullptr && _wsId == other._wsId) {
 				return true;
 			}
-#endif
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	endif
 			return (_enet == other._enet);
-#else
-			return false;
 #endif
 		}
 		inline bool operator!=(const Peer& other) const {
@@ -77,29 +81,29 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Returns `true` if the peer is valid */
 		bool IsValid() const {
-#if defined(WITH_WEBSOCKET)
-			if (_wsId != 0) {
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			return (_wsId != 0);
+#else
+#	if defined(WITH_WEBSOCKET)
+			if DEATH_UNLIKELY(_wsId != 0) {
 				return true;
 			}
-#endif
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	endif
 			return (_enet != nullptr);
-#else
-			return false;
 #endif
 		}
 
 		/** @brief Returns a unique numeric identifier for logging and serialization */
 		std::uint64_t GetId() const {
-#if defined(WITH_WEBSOCKET)
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			return _wsId;
+#else
+#	if defined(WITH_WEBSOCKET)
 			if DEATH_UNLIKELY(_enet == nullptr) {
 				return _wsId;
 			}
-#endif
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	endif
 			return reinterpret_cast<std::uint64_t>(_enet);
-#else
-			return 0;
 #endif
 		}
 

@@ -319,23 +319,6 @@ namespace Jazz2::Multiplayer
 		_state = NetworkState::None;
 		_thread.Join();
 
-#	if defined(WITH_WEBSOCKET)
-		if (_wsServer != nullptr) {
-			_wsServer->stop();
-			_wsServer = nullptr;
-		}
-		if (_wsClient != nullptr) {
-			_wsClient->stop();
-			_wsClient = nullptr;
-		}
-		{
-			std::unique_lock<Spinlock> lock(_wsLock);
-			_wsPeers.clear();
-			_wsConnectionIds.clear();
-			_wsPendingEvents.clear();
-		}
-#	endif
-
 		_host = nullptr;
 #endif
 
@@ -1447,6 +1430,23 @@ namespace Jazz2::Multiplayer
 		enet_host_destroy(_this->_host);
 		_this->_host = nullptr;
 		_this->_handler = nullptr;
+
+#	if defined(WITH_WEBSOCKET)
+		if (_this->_wsServer != nullptr) {
+			_this->_wsServer->stop();
+			_this->_wsServer = nullptr;
+		}
+		if (_this->_wsClient != nullptr) {
+			_this->_wsClient->stop();
+			_this->_wsClient = nullptr;
+		}
+		{
+			std::unique_lock<Spinlock> lock(_this->_wsLock);
+			_this->_wsPeers.clear();
+			_this->_wsConnectionIds.clear();
+			_this->_wsPendingEvents.clear();
+		}
+#	endif
 
 		_this->_thread.Detach();
 

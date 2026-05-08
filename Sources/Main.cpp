@@ -938,7 +938,7 @@ void GameEventHandler::StartProcessingStdin()
 #if defined(WITH_MULTIPLAYER)
 void GameEventHandler::ConnectToServer(StringView endpoint, std::uint16_t defaultPort, StringView password)
 {
-	LOGI("[MP] Preparing connection to {}...", endpoint);
+	LOGI("[MP] Preparing connection to \"{}\"...", endpoint);
 
 	_networkManager = std::make_unique<NetworkManager>();
 	_networkManager->CreateClient(this, endpoint, defaultPort, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
