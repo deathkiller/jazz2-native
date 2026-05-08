@@ -169,7 +169,7 @@ private:
 #if defined(DEATH_TARGET_ANDROID)
 	void ApplyActivityIcon();
 #endif
-#if defined(WITH_MULTIPLAYER) && defined(WITH_THREADS)
+#if defined(WITH_MULTIPLAYER) && defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RunDedicatedServer(StringView configPath);
 	void StartProcessingStdin();
 #endif
@@ -348,7 +348,7 @@ void GameEventHandler::OnInitialize()
 				return;
 			}
 		}
-#			if !defined(DEATH_TARGET_WINDOWS) || defined(DEATH_DEBUG)
+#			if (!defined(DEATH_TARGET_WINDOWS) || defined(DEATH_DEBUG)) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		else if (arg == "/server"_s || arg == "--server"_s) {
 			StringView configPath;
 			if (i + 1 < config.argc()) {
@@ -849,7 +849,7 @@ void GameEventHandler::ApplyActivityIcon()
 }
 #endif
 
-#if defined(WITH_MULTIPLAYER)
+#if defined(WITH_MULTIPLAYER) && defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 void GameEventHandler::RunDedicatedServer(StringView configPath)
 {
 	if (PreferencesCache::FirstRun) {
@@ -885,7 +885,6 @@ void GameEventHandler::RunDedicatedServer(StringView configPath)
 	StartProcessingStdin();
 }
 
-#	if defined(WITH_THREADS)
 void GameEventHandler::StartProcessingStdin()
 {
 	Thread thread([](void* arg) {
@@ -934,11 +933,12 @@ void GameEventHandler::StartProcessingStdin()
 		}
 	}, this);
 }
-#	endif
+#endif
 
+#if defined(WITH_MULTIPLAYER)
 void GameEventHandler::ConnectToServer(StringView endpoint, std::uint16_t defaultPort, StringView password)
 {
-	LOGI("[MP] Preparing connection to {}...", endpoint);
+	LOGI("[MP] Preparing connection to \"{}\"...", endpoint);
 
 	_networkManager = std::make_unique<NetworkManager>();
 	_networkManager->CreateClient(this, endpoint, defaultPort, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
@@ -949,6 +949,10 @@ void GameEventHandler::ConnectToServer(StringView endpoint, std::uint16_t defaul
 
 bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 {
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+	// Creating a server is not supported on Emscripten
+	return false;
+#	else
 	_networkManager = std::make_unique<NetworkManager>();
 
 	if (serverInit.Configuration.ServerName.empty()) {
@@ -1006,16 +1010,17 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 	});
 
 	return true;
+#	endif
 }
 
 ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
 {
-	LOGI("[MP] Peer connected ({}) [{:.8x}]", NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
+	LOGI("[MP] Peer connected ({}) [{}]", _networkManager->AddressToString(peer), peer);
 
 	if (_networkManager->GetState() == NetworkState::Listening) {
 		if ((clientData & 0xFFF00000) != 0xDEA00000 || (clientData & 0x000FFFFF) > MultiplayerProtocolVersion) {
 			// Connected client is newer than server, reject it
-			LOGI("[MP] Peer kicked ({}) [{:.8x}]: Incompatible protocol version", NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
+			LOGI("[MP] Peer kicked ({}) [{}]: Incompatible protocol version", _networkManager->AddressToString(peer), peer);
 			return Reason::IncompatibleVersion;
 		}
 
@@ -1047,21 +1052,21 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 		packet.WriteValue<std::uint8_t>((std::uint8_t)playerName.size());
 		packet.Write(playerName.data(), (std::uint32_t)playerName.size());
 
-#if defined(DEATH_TARGET_ANDROID)
+#	if defined(DEATH_TARGET_ANDROID)
 		auto androidId = Backends::AndroidJniWrap_Secure::getAndroidId();
 		std::size_t androidIdLength = std::min(androidId.size(), (std::size_t)UINT8_MAX);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)androidIdLength);
 		packet.Write(androidId.data(), (std::uint32_t)androidIdLength);
-#else
+#	else
 		packet.WriteValue<std::uint8_t>(0);	// Device ID
-#endif
+#	endif
 
 		std::uint64_t playerUserId = 0;
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
+#	if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 		if (PreferencesCache::EnableDiscordIntegration && UI::DiscordRpcClient::Get().IsSupported()) {
 			playerUserId = UI::DiscordRpcClient::Get().GetUserId();
 		}
-#endif
+#	endif
 		packet.WriteVariableUint64(playerUserId);
 
 		_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ClientPacketType::Auth, packet);
@@ -1073,13 +1078,13 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 {
 	if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
-		LOGI("[MP] Peer disconnected \"{}\" ({}) [{:.8x}]: {} ({})", peerDesc->PlayerName.data(),
-			NetworkManagerBase::AddressToString(peer).data(), std::uint64_t(peer._enet), NetworkManagerBase::ReasonToString(reason), reason);
+		LOGI("[MP] Peer disconnected \"{}\" ({}) [{}]: {} ({})", peerDesc->PlayerName.data(),
+			_networkManager->AddressToString(peer), peer, NetworkManagerBase::ReasonToString(reason), reason);
 	} else if (peer) {
-		LOGI("[MP] Peer disconnected ({}) [{:.8x}]: {} ({})", NetworkManagerBase::AddressToString(peer),
-			std::uint64_t(peer._enet), NetworkManagerBase::ReasonToString(reason), reason);
+		LOGI("[MP] Peer disconnected ({}) [{}]: {} ({})", _networkManager->AddressToString(peer), peer,
+			NetworkManagerBase::ReasonToString(reason), reason);
 	} else {
-		LOGI("[MP] Peer disconnected [{:.8x}]: {} ({})", std::uint64_t(peer._enet), NetworkManagerBase::ReasonToString(reason), reason);
+		LOGI("[MP] Peer disconnected [{}]: {} ({})", peer, NetworkManagerBase::ReasonToString(reason), reason);
 	}
 
 	if (auto multiLevelHandler = runtime_cast<MpLevelHandler>(_currentHandler)) {
@@ -1090,13 +1095,11 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 
 	if (_networkManager != nullptr && _networkManager->GetState() != NetworkState::Listening) {
 		InvokeAsync([this, reason]() {
-#if defined(WITH_MULTIPLAYER)
 			if (_networkManager != nullptr) {
 				_networkManager->Dispose();
 				_networkManager = nullptr;
 				_streamedAsset = nullptr;
 			}
-#endif
 			InGameConsole::Clear();
 			Menu::MainMenu* mainMenu;
 			if (mainMenu = runtime_cast<Menu::MainMenu>(_currentHandler.get())) {
@@ -1112,6 +1115,7 @@ void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 			switch (reason) {
 				case Reason::InvalidParameter: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nInvalid parameter specified."), true); break;
 				case Reason::IncompatibleVersion: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nYour client version is not compatible with the server."), true); break;
+				case Reason::SecurityPolicyViolation: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nThe connection was denied by the web browser.\nOne of the reasons may be connecting to an unsecured WebSocket."), true); break;
 				case Reason::AuthFailed: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nAuthentication failed.\nContact server administrators for more information."), true); break;
 				case Reason::InvalidPassword: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nInvalid password specified."), true); break;
 				case Reason::InvalidPlayerName: mainMenu->SwitchToSection<Menu::SimpleMessageSection>(_("\f[c:#704a4a]Cannot connect to the server!\f[/c]\n\n\nInvalid player name specified.\nPlease check your profile and try it again."), true); break;
@@ -1154,7 +1158,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
 
 				if (strncmp("J2R ", gameID, sizeof("J2R ") - 1) != 0 || (gameVersion & VersionMask) != (currentVersion & VersionMask)) {
-					LOGI("[MP] Peer kicked ({}) [{:.8x}]: Incompatible game version", NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
+					LOGI("[MP] Peer kicked ({}) [{}]: Incompatible game version", _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::IncompatibleVersion);
 					return;
 				}
@@ -1163,8 +1167,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				packet.Read(uuid.data(), uuid.size());
 				String uniquePlayerId = NetworkManager::UuidToString(uuid);
 
-				LOGD("[MP] ClientPacketType::Auth [{:.8x}] - gameID: \"{}\", gameVersion: 0x{:x}, uuid: \"{}\"",
-					std::uint64_t(peer._enet), StringView(gameID, 4), gameVersion, uniquePlayerId);
+				LOGD("[MP] ClientPacketType::Auth [{}] - gameID: \"{}\", gameVersion: 0x{:x}, uuid: \"{}\"",
+					peer, StringView(gameID, 4), gameVersion, uniquePlayerId);
 
 				std::uint32_t passwordLength = packet.ReadVariableUint32();
 				String password{NoInit, passwordLength};
@@ -1174,7 +1178,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				// TODO: Sanitize (\n,\r,\t) and strip formatting (\f) from player name
 				if (playerNameLength == 0 || playerNameLength > MaxPlayerNameLength) {
-					LOGI("[MP] Peer kicked ({}) [{:.8x}]: Invalid player name", NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
+					LOGI("[MP] Peer kicked ({}) [{}]: Invalid player name", _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::InvalidPlayerName);
 					return;
 				}
@@ -1184,18 +1188,18 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				const auto& serverConfig = _networkManager->GetServerConfiguration();
 				if (serverConfig.BannedUniquePlayerIDs.contains(uniquePlayerId)) {
-					LOGI("[MP] Peer kicked \"{}\" ({}) [{:.8x}]: Banned by unique player ID", playerName, NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
+					LOGI("[MP] Peer kicked \"{}\" ({}) [{}]: Banned by unique player ID", playerName, _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::Banned);
 					return;
 				}
 				if (!serverConfig.WhitelistedUniquePlayerIDs.empty() && !serverConfig.WhitelistedUniquePlayerIDs.contains(uniquePlayerId)) {
-					LOGI("[MP] Peer kicked \"{}\" ({}) [{:.8x}]: Not in whitelist", playerName, NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
+					LOGI("[MP] Peer kicked \"{}\" ({}) [{}]: Not in whitelist", playerName, _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::NotInWhitelist);
 					return;
 				}
 
 				if (!serverConfig.ServerPassword.empty() && password != serverConfig.ServerPassword) {
-					LOGI("[MP] Peer kicked \"{}\" ({}) [{:.8x}]: Invalid password", playerName, NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
+					LOGI("[MP] Peer kicked \"{}\" ({}) [{}]: Invalid password", playerName, _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::InvalidPassword);
 					return;
 				}
@@ -1206,7 +1210,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				std::uint64_t playerUserId = packet.ReadVariableUint64();
 				if (serverConfig.RequiresDiscordAuth && playerUserId == 0) {
-					LOGI("[MP] Peer kicked \"{}\" ({}) [{:.8x}]: Discord authentication is required", playerName, NetworkManagerBase::AddressToString(peer), std::uint64_t(peer._enet));
+					LOGI("[MP] Peer kicked \"{}\" ({}) [{}]: Discord authentication is required", playerName, _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::Requires3rdPartyAuthProvider);
 					return;
 				}
@@ -1221,8 +1225,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						peerDesc->IsAdmin = true;
 					}
 
-					LOGI("[MP] Peer authenticated as \"{}\" ({}){} [{:.8x}]", peerDesc->PlayerName, NetworkManagerBase::AddressToString(peer),
-						peerDesc->IsAdmin ? " [Admin]" : "", std::uint64_t(peer._enet));
+					LOGI("[MP] Peer authenticated as \"{}\" ({}){} [{}]", peerDesc->PlayerName, _networkManager->AddressToString(peer),
+						peerDesc->IsAdmin ? " [Admin]" : "", peer);
 
 					MemoryStream packet(17);
 					packet.WriteValue<std::uint8_t>(0);	// Flags

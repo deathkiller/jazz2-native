@@ -1596,6 +1596,9 @@
     <ClInclude Include="Jazz2\UI\Menu\UserProfileOptionsSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\TextInputBuffer.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
     <ClInclude Include="nCine\Primitives\Half.h">
       <Filter>Header Files\nCine\Primitives</Filter>
     </ClInclude>
@@ -2670,6 +2673,9 @@
       <Filter>Source Files\Jazz2\Multiplayer</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\UserProfileOptionsSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\TextInputBuffer.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Primitives\Half.cpp">

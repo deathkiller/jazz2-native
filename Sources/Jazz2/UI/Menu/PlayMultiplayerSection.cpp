@@ -18,10 +18,12 @@ namespace Jazz2::UI::Menu
 	{
 		// TRANSLATORS: Menu item in Play Multiplayer section
 		_items.emplace_back(PlayMultiplayerItem { PlayMultiplayerItemType::ConnectToServer, _("Connect To Server") });
+#if !defined(DEATH_TARGET_EMSCRIPTEN)
 		// TRANSLATORS: Menu item in Play Multiplayer section
 		_items.emplace_back(PlayMultiplayerItem { PlayMultiplayerItemType::CreatePublicServer, _("Create Public Server") });
 		// TRANSLATORS: Menu item in Play Multiplayer section
 		_items.emplace_back(PlayMultiplayerItem { PlayMultiplayerItemType::CreatePrivateServer, _("Create Private Server") });
+#endif
 	}
 
 	void PlayMultiplayerSection::OnDraw(Canvas* canvas)

@@ -22,10 +22,11 @@ namespace Jazz2::UI::Menu
 			Continue,
 #endif
 			PlaySingleplayer,
+#if defined(WITH_MULTIPLAYER)
+			PlayMultiplayer,
+#endif
 #if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
 			Import,
-#elif defined(WITH_MULTIPLAYER)
-			PlayMultiplayer,
 #endif
 			Highscores,
 			Options,

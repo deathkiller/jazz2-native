@@ -336,6 +336,7 @@
     <ClInclude Include="Jazz2\Rendering\PlayerViewport.h" />
     <ClInclude Include="Jazz2\Rendering\UpscaleRenderPass.h" />
     <ClInclude Include="Jazz2\UI\Menu\UserProfileOptionsSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\TextInputBuffer.h" />
     <ClInclude Include="Jazz2\UI\Multiplayer\MpHUD.h" />
     <ClInclude Include="Jazz2\UI\Multiplayer\MpInGameCanvasLayer.h" />
     <ClInclude Include="Jazz2\UI\Multiplayer\MpInGameLobby.h" />
@@ -883,6 +884,7 @@
     <ClCompile Include="Jazz2\Multiplayer\MpLevelHandler.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\NetworkManagerBase.cpp" />
+    <ClCompile Include="Jazz2\Multiplayer\Peer.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\ServerDiscovery.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
     <ClCompile Include="Jazz2\Rendering\BlurRenderPass.cpp" />
@@ -940,6 +942,7 @@
     <ClCompile Include="Jazz2\UI\Menu\StartGameOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\TouchControlsOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\UserProfileOptionsSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\TextInputBuffer.cpp" />
     <ClCompile Include="Jazz2\UI\Multiplayer\MpHUD.cpp" />
     <ClCompile Include="Jazz2\UI\Multiplayer\MpInGameCanvasLayer.cpp" />
     <ClCompile Include="Jazz2\UI\Multiplayer\MpInGameLobby.cpp" />

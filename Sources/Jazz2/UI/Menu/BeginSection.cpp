@@ -9,6 +9,7 @@
 
 #if defined(WITH_MULTIPLAYER)
 #	include "PlayMultiplayerSection.h"
+#	include "ServerSelectSection.h"
 #endif
 
 #if defined(SHAREWARE_DEMO_ONLY)
@@ -59,6 +60,11 @@ namespace Jazz2::UI::Menu
 		if (PreferencesCache::UnlockedEpisodes != UnlockableEpisodes::None) {
 			// TRANSLATORS: Menu item in main menu
 			_items.emplace_back(Item::PlaySingleplayer, _("Play Story"));
+
+#	if defined(WITH_MULTIPLAYER)
+			// TRANSLATORS: Menu item in main menu
+			_items.emplace_back(Item::PlayMultiplayer, _("Play Online"));
+#	endif
 		} else {
 			// TRANSLATORS: Menu item in main menu (Emscripten only)
 			_items.emplace_back(Item::PlaySingleplayer, _("Play Shareware Demo"));
@@ -388,17 +394,23 @@ namespace Jazz2::UI::Menu
 				}
 #endif
 				break;
+#if defined(WITH_MULTIPLAYER)
+			case Item::PlayMultiplayer:
+				if (_isPlayable) {
+					_root->PlaySfx("MenuSelect"_s, 0.6f);
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+					// Creating a server is not supported on Emscripten
+					_root->SwitchToSection<ServerSelectSection>();
+#	else
+					_root->SwitchToSection<PlayMultiplayerSection>();
+#	endif
+				}
+				break;
+#endif
 #if defined(SHAREWARE_DEMO_ONLY) && defined(DEATH_TARGET_EMSCRIPTEN)
 			case Item::Import:
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				_root->SwitchToSection<ImportSection>();
-				break;
-#elif defined(WITH_MULTIPLAYER)
-			case Item::PlayMultiplayer:
-				if (_isPlayable) {
-					_root->PlaySfx("MenuSelect"_s, 0.6f);
-					_root->SwitchToSection<PlayMultiplayerSection>();
-				}
 				break;
 #endif
 			case Item::Highscores:

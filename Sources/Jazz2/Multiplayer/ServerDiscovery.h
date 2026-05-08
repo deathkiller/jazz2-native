@@ -6,19 +6,24 @@
 #include "../PreferencesCache.h"
 
 #include "../../nCine/Base/TimeStamp.h"
-#include "../../nCine/Threading/Thread.h"
 
+#if !defined(DEATH_TARGET_EMSCRIPTEN) || defined(DOXYGEN_GENERATING_OUTPUT)
+#	include "../../nCine/Threading/Thread.h"
 // <mmeapi.h> included by "enet.h" still uses `far` macro
-#define far
+#	define far
 
-#define ENET_FEATURE_ADDRESS_MAPPING
+#	define ENET_FEATURE_ADDRESS_MAPPING
 //#if defined(DEATH_DEBUG)
 #	define ENET_DEBUG
 //#endif
-#include "Backends/enet.h"
+#	include "Backends/enet.h"
 
 // Undefine it again after include
-#undef far
+#	undef far
+#else
+#	include <emscripten/fetch.h>
+#	include <emscripten/html5.h>
+#endif
 
 #include <Base/TypeInfo.h>
 #include <Containers/String.h>
@@ -52,6 +57,14 @@ namespace Jazz2::Multiplayer
 		std::uint32_t MaxPlayerCount;
 		/** @brief Current level name */
 		String LevelName;
+
+#if defined(WITH_WEBSOCKET) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief WebSocket port (`0` = no WebSocket transport support) */
+		std::uint16_t WsPort;
+		/** @brief Whether the WebSocket transport uses TLS (WSS) */
+		bool WsSecure;
+#endif
+
 		/** @brief Whether the server is compatible with the local client */
 		bool IsCompatible;
 
@@ -115,17 +128,28 @@ namespace Jazz2::Multiplayer
 		ServerDiscovery(const ServerDiscovery&) = delete;
 		ServerDiscovery& operator=(const ServerDiscovery&) = delete;
 
-		static constexpr std::uint64_t PacketSignature = 0x2095A59FF0BFBBEF;
-
 		NetworkManager* _server;
 		IServerObserver* _observer;
 		std::weak_ptr<IServerStatusProvider> _statusProvider;
+		TimeStamp _lastOnlineRequestTime;
+		bool _onlineSuccess;
+
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+		emscripten_fetch_t* _pendingFetch;
+		long _refreshTimerId;
+
+		void DownloadPublicServerListAsync();
+
+		static void OnFetchSuccess(emscripten_fetch_t* fetch);
+		static void OnFetchError(emscripten_fetch_t* fetch);
+		static void OnRefreshTimer(void* userData);
+#else
+		static constexpr std::uint64_t PacketSignature = 0x2095A59FF0BFBBEF;
+
 		ENetSocket _socket;
 		Thread _thread;
 		TimeStamp _lastLocalRequestTime;
-		TimeStamp _lastOnlineRequestTime;
 		ENetAddress _localMulticastAddress;
-		bool _onlineSuccess;
 
 		static ENetSocket TryCreateLocalSocket(const char* multicastAddress, ENetAddress& parsedAddress);
 
@@ -139,6 +163,7 @@ namespace Jazz2::Multiplayer
 
 		static void OnClientThread(void* param);
 		static void OnServerThread(void* param);
+#endif
 	};
 }
 

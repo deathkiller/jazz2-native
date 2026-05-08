@@ -12,7 +12,6 @@
 #	include "../../../nCine/Backends/Android/AndroidJniHelper.h"
 #endif
 
-#include <Utf8.h>
 #include <Containers/StringConcatenable.h>
 
 using namespace Jazz2::UI::Menu::Resources;
@@ -20,7 +19,7 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	UserProfileOptionsSection::UserProfileOptionsSection()
-		: _isDirty(false), _waitForInput(false), _textCursor(0), _carretAnim(0.0f)
+		: _isDirty(false), _waitForInput(false), _textInput(MaxPlayerNameLength)
 #if defined(DEATH_TARGET_ANDROID)
 			, _recalcVisibleBoundsTimeLeft(30.0f)
 #endif
@@ -137,18 +136,20 @@ namespace Jazz2::UI::Menu
 			} else if (_root->ActionHit(PlayerAction::Menu) || _root->ActionHit(PlayerAction::Run)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_waitForInput = false;
-				_localPlayerName = std::move(_prevPlayerName);
+				_textInput.Deactivate();
 			} else if (_root->ActionHit(PlayerAction::Fire)) {
-				if (!_localPlayerName.empty()) {
+				if (!_textInput.GetText().empty()) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
+					_localPlayerName = _textInput.GetText();
 					_waitForInput = false;
+					_textInput.Deactivate();
 					_isDirty = true;
 				}
 			}
 
 			EnsureVisibleSelected();
 
-			_carretAnim += timeMult;
+			_textInput.Update(timeMult);
 		}
 	}
 
@@ -188,12 +189,12 @@ namespace Jazz2::UI::Menu
 					_root->DrawSolid(0.0f, 0.0f, IMenuContainer::MainLayer - 10, Alignment::TopLeft, Vector2f(viewSize.X, viewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.6f));
 
 					std::int32_t charOffset = 0;
-					_root->DrawStringShadow(_localPlayerName, charOffset, 120.0f, titleY, IMenuContainer::MainLayer,
+					_root->DrawStringShadow(_textInput.GetText(), charOffset, 120.0f, titleY, IMenuContainer::MainLayer,
 						Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 1.0f);
 
-					Vector2f textToCursorSize = _root->MeasureString(_localPlayerName.prefix(_textCursor), 1.0f);
+					Vector2f textToCursorSize = _root->MeasureString(_textInput.GetText().prefix(_textInput.GetCursor()), 1.0f);
 					_root->DrawSolid(120.0f + textToCursorSize.X + 1.0f, titleY - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Left, Vector2f(1.0f, 14.0f),
-						Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+						Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_textInput.GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 				}
 			}
 #endif
@@ -207,52 +208,25 @@ namespace Jazz2::UI::Menu
 				case Keys::Escape: {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_waitForInput = false;
-					_localPlayerName = std::move(_prevPlayerName);
+					_textInput.Deactivate();
 					theApplication().HideScreenKeyboard();
 					RecalcLayoutForScreenKeyboard();
 					break;
 				}
 				case Keys::Return: {
-					if (!_localPlayerName.empty()) {
+					if (!_textInput.GetText().empty()) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
+						_localPlayerName = _textInput.GetText();
 						_waitForInput = false;
+						_textInput.Deactivate();
 						_isDirty = true;
 						theApplication().HideScreenKeyboard();
 						RecalcLayoutForScreenKeyboard();
 					}
 					break;
 				}
-				case Keys::Backspace: {
-					if (_textCursor > 0) {
-						auto [_, prevPos] = Utf8::PrevChar(_localPlayerName, _textCursor);
-						_localPlayerName = _localPlayerName.prefix(prevPos) + _localPlayerName.exceptPrefix(_textCursor);
-						_textCursor = prevPos;
-						_carretAnim = 0.0f;
-					}
-					break;
-				}
-				case Keys::Delete: {
-					if (_textCursor < _localPlayerName.size()) {
-						auto [_, nextPos] = Utf8::NextChar(_localPlayerName, _textCursor);
-						_localPlayerName = _localPlayerName.prefix(_textCursor) + _localPlayerName.exceptPrefix(nextPos);
-						_carretAnim = 0.0f;
-					}
-					break;
-				}
-				case Keys::Left: {
-					if (_textCursor > 0) {
-						auto [c, prevPos] = Utf8::PrevChar(_localPlayerName, _textCursor);
-						_textCursor = prevPos;
-						_carretAnim = 0.0f;
-					}
-					break;
-				}
-				case Keys::Right: {
-					if (_textCursor < _localPlayerName.size()) {
-						auto [c, nextPos] = Utf8::NextChar(_localPlayerName, _textCursor);
-						_textCursor = nextPos;
-						_carretAnim = 0.0f;
-					}
+				default: {
+					_textInput.OnKeyPressed(event);
 					break;
 				}
 			}
@@ -262,13 +236,7 @@ namespace Jazz2::UI::Menu
 	void UserProfileOptionsSection::OnTextInput(const nCine::TextInputEvent& event)
 	{
 		if (_waitForInput) {
-			if (_localPlayerName.size() + event.length <= MaxPlayerNameLength) {
-				_localPlayerName = _localPlayerName.prefix(_textCursor)
-					+ StringView(event.text, event.length)
-					+ _localPlayerName.exceptPrefix(_textCursor);
-				_textCursor += event.length;
-				_carretAnim = 0.0f;
-			}
+			_textInput.OnTextInput(event);
 		}
 	}
 
@@ -325,7 +293,7 @@ namespace Jazz2::UI::Menu
 			}
 #endif
 			if (playerName.empty()) {
-				playerName = _localPlayerName;
+				playerName = (_waitForInput ? String(_textInput.GetText()) : _localPlayerName);
 			}
 
 			Vector2f textSize = _root->MeasureString(playerName, 0.8f);
@@ -339,9 +307,9 @@ namespace Jazz2::UI::Menu
 			}
 
 			if (isSelected && _waitForInput) {
-				Vector2f textToCursorSize = _root->MeasureString(playerName.prefix(_textCursor), 0.8f);
+				Vector2f textToCursorSize = _root->MeasureString(playerName.prefix(_textInput.GetCursor()), 0.8f);
 				_root->DrawSolid(centerX - textSize.X * 0.5f + textToCursorSize.X + 1.0f, item.Y + 22.0f - 1.0f, IMenuContainer::FontLayer + 10, Alignment::Center, Vector2f(1.0f, 12.0f),
-					Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+					Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_textInput.GetCaretAnim() * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 			}
 		}
 #if defined(WITH_MULTIPLAYER)
@@ -412,9 +380,7 @@ namespace Jazz2::UI::Menu
 				}
 #endif
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
-				_carretAnim = 0.0f;
-				_prevPlayerName = _localPlayerName;
-				_textCursor = _localPlayerName.size();
+				_textInput.Activate(_localPlayerName);
 				_waitForInput = true;
 				RecalcLayoutForScreenKeyboard();
 				break;
@@ -440,7 +406,7 @@ namespace Jazz2::UI::Menu
 		if (_waitForInput) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_waitForInput = false;
-			_localPlayerName = std::move(_prevPlayerName);
+			_textInput.Deactivate();
 
 			theApplication().HideScreenKeyboard();
 			RecalcLayoutForScreenKeyboard();

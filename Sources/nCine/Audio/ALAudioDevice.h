@@ -72,8 +72,8 @@ namespace nCine
 
 	private:
 		/// Maximum number of OpenAL sources
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS)
-		static const std::int32_t MaxSources = 32;
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+		static const std::int32_t MaxSources = 48;
 #else
 		static const std::int32_t MaxSources = 64;
 #endif

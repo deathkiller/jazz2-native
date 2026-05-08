@@ -256,6 +256,9 @@ The following parameters can be used to customize the build:
 -   `DISABLE_RESCALE_SHADERS` (default @cpp OFF @ce) --- Disable rescale shaders and use only nearest neighbor
 -   `SHAREWARE_DEMO_ONLY` (default @cpp OFF @ce) --- Shareware Demo only, usually used on **Emscripten** platform
 -   `WITH_MULTIPLAYER` (default @cpp OFF @ce) --- Enable experimental online multiplayer support
+-   `WITH_WEBSOCKET` (default @cpp OFF @ce except on Emscripten) --- Enable WebSocket transport for online multiplayer
+-   `WITH_WEBSOCKET_TLS_BACKEND` (default @cpp OpenSSL @ce) --- TLS backend for WebSocket transport
+    -   Possible values: `OpenSSL`, `mbedTLS`, `None`
 -   `DEDICATED_SERVER` (default @cpp OFF @ce) --- Build the application as dedicated server only, `WITH_MULTIPLAYER` must be enabled
 
 */

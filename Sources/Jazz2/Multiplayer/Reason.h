@@ -13,6 +13,7 @@ namespace Jazz2::Multiplayer
 		Disconnected,							/**< Client disconnected by user */
 		InvalidParameter,						/**< Invalid parameter specified */
 		IncompatibleVersion,					/**< Incompatible client version */
+		SecurityPolicyViolation,				/**< Security policy violation (e.g., "ws://" from "https://") */
 		AuthFailed,								/**< Authentication failed */
 		InvalidPassword,						/**< Invalid password specified */
 		InvalidPlayerName,						/**< Invalid player name specified */

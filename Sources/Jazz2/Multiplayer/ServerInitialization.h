@@ -67,6 +67,12 @@ namespace Jazz2::Multiplayer
 		-   @cpp "MaxPlayerCount" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum number of players allowed to join
 		-   @cpp "MinPlayerCount" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Minimum number of players required to start a round
 		-   @cpp "ServerPort" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan UDP port number on which the server runs
+		-   @cpp "WsPort" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan WebSocket port number on which server runs
+			-   If specified, the server will also listen on this port for WebSocket connections, which can be used by web browsers and other clients that don't support UDP
+			-   WebSocket connections have a higher latency and lower performance than UDP, but can be used for better compatibility
+		-   @cpp "WsCertPath" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Path to TLS certificate for WebSocket server
+		-   @cpp "WsKeyPath" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Path to TLS private key for WebSocket server
+			-   If specified, the WebSocket server will use secure connections (wss://) and require clients to support TLS
 		-   @cpp "IsPrivate" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether the server is private and hidden in the server list (default is **false**)
 		-   @cpp "AllowAssetStreaming" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether clients are allowed to download assets from the server (default is **true**)
 		-   @cpp "RequiresDiscordAuth" @ce : @m_span{m-label m-default m-flat} bool @m_endspan If `true`, the server requires Discord authentication (default is **false**)
@@ -162,6 +168,14 @@ namespace Jazz2::Multiplayer
 		MpGameMode GameMode;
 		/** @brief Server port */
 		std::uint16_t ServerPort;
+#if defined(WITH_WEBSOCKET) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief WebSocket server port (0 = disabled) */
+		std::uint16_t WsPort;
+		/** @brief Path to the TLS certificate file for secure WebSocket (WSS), empty = insecure WS */
+		String WsCertPath;
+		/** @brief Path to the TLS private key file for secure WebSocket (WSS) */
+		String WsKeyPath;
+#endif
 		/** @brief Whether the server is private (i.e. not visible in the server list) */
 		bool IsPrivate;
 		/** @brief Whether clients are allowed to automatically download missing assets from the server */

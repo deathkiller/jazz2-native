@@ -91,6 +91,8 @@ namespace Death { namespace Trace {
 			return static_cast<std::uint32_t>(::GetCurrentThreadId());
 #	elif defined(DEATH_TARGET_ANDROID)
 			return static_cast<std::uint32_t>(::syscall(__NR_gettid));
+#	elif defined(DEATH_TARGET_EMSCRIPTEN)
+			return static_cast<std::uint32_t>(::gettid());
 #	elif defined(__linux__)
 			return static_cast<std::uint32_t>(::syscall(SYS_gettid));
 #	elif defined(DEATH_TARGET_APPLE)

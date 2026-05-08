@@ -12,13 +12,13 @@ namespace nCine
 {
 	AppConfiguration::AppConfiguration()
 		:
-		frameTimerLogInterval(5.0f),
 		resolution(0, 0),
-		fullscreen(false),
 		windowPosition(WindowPositionIgnore, WindowPositionIgnore),
+		frameLimit(0),
+		frameTimerLogInterval(5.0f),
+		fullscreen(false),
 		resizable(true),
 		windowScaling(true),
-		frameLimit(0),
 		useBufferMapping(false),
 #if defined(WITH_FIXED_BATCH_SIZE) && WITH_FIXED_BATCH_SIZE > 0
 		fixedBatchSize(WITH_FIXED_BATCH_SIZE),

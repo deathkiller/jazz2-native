@@ -117,10 +117,13 @@ namespace Jazz2::UI::Multiplayer
 					200, Alignment::TopRight, Font::DefaultColor, 0.8f);
 #endif
 			} else {
-				char debugBuffer[64];
-				std::size_t length = formatInto(debugBuffer, "{} ms |", mpLevelHandler->_networkManager->GetRoundTripTimeMs());
-				_smallFont->DrawString(this, { debugBuffer, length }, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
-					200, Alignment::TopRight, Font::DefaultColor, 0.8f);
+				auto rtt = mpLevelHandler->_networkManager->GetRoundTripTimeMs();
+				if (rtt > 0) {
+					char debugBuffer[64];
+					std::size_t length = formatInto(debugBuffer, "{} ms |", rtt);
+					_smallFont->DrawString(this, { debugBuffer, length }, debugCharOffset, ViewSize.X - 44.0f, 1.0f,
+						200, Alignment::TopRight, Font::DefaultColor, 0.8f);
+				}
 			}
 		}
 

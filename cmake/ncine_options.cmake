@@ -170,6 +170,14 @@ option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-depen
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)
 option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF)
 
-# Multiplayer is not supported on Emscripten yet and requires multithreading
-cmake_dependent_option(WITH_MULTIPLAYER "Enable multiplayer support" OFF "NCINE_WITH_THREADS;NOT EMSCRIPTEN" OFF)
+cmake_dependent_option(WITH_MULTIPLAYER "Enable multiplayer support" OFF "NCINE_WITH_THREADS OR EMSCRIPTEN" OFF)
 cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
+cmake_dependent_option(WITH_WEBSOCKET "Enable WebSocket transport for multiplayer" OFF "WITH_MULTIPLAYER;NOT EMSCRIPTEN" OFF)
+# Emscripten always uses the browser's native WebSocket, so WITH_WEBSOCKET is forced ON
+if(EMSCRIPTEN AND WITH_MULTIPLAYER)
+	set(WITH_WEBSOCKET ON CACHE BOOL "Enable WebSocket transport for multiplayer" FORCE)
+endif()
+if(WITH_WEBSOCKET AND NOT EMSCRIPTEN)
+	set(WITH_WEBSOCKET_TLS_BACKEND "OpenSSL" CACHE STRING "TLS backend for WebSocket transport (None, OpenSSL, mbedTLS)")
+	set_property(CACHE WITH_WEBSOCKET_TLS_BACKEND PROPERTY STRINGS "None" "OpenSSL" "mbedTLS")
+endif()

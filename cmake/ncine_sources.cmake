@@ -302,4 +302,5 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/StartGameOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/UserProfileOptionsSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/TextInputBuffer.cpp
 )

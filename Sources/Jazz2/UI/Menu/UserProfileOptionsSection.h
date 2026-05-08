@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "ScrollableMenuSection.h"
+#include "TextInputBuffer.h"
 
 namespace Jazz2::UI::Menu
 {
@@ -51,10 +52,8 @@ namespace Jazz2::UI::Menu
 
 		bool _isDirty;
 		bool _waitForInput;
-		std::size_t _textCursor;
-		float _carretAnim;
+		TextInputBuffer _textInput;
 		String _localPlayerName;
-		String _prevPlayerName;
 #if defined(DEATH_TARGET_ANDROID)
 		String _deviceId;
 		Vector2i _initialVisibleSize;
