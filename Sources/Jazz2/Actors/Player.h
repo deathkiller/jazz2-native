@@ -348,6 +348,8 @@ namespace Jazz2::Actors
 		float _dizzyTime;
 		std::shared_ptr<Environment::Bird> _spawnedBird;
 		float _birdChargeFramesLeft;
+		AnimState _birdPreviousAnimState;
+		float _birdIdleBaseY;
 		std::shared_ptr<ActorBase> _activeModifierDecor;
 		SmallVector<LightEmitter, 0> _trail;
 		Vector2f _trailLastPos;
@@ -416,6 +418,7 @@ namespace Jazz2::Actors
 		void CheckEndOfSpecialMoves(float timeMult);
 		void CheckSuspendState(float timeMult);
 		bool HasGroundBelowForBird();
+		void UpdateSwimmingRotationAndAnimation();
 		void SetBirdMetadata();
 		Task<bool> SetBirdMetadataAsync();
 		void OnUpdatePhysics(float timeMult);
