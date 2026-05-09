@@ -498,17 +498,10 @@ namespace nCine::RHI
 				ProcessTile(idx, 0);
 			}
 
-			// Wait for workers with a 1-second safety timeout to avoid a permanent
-			// hang if a worker thread crashes and never signals workDone.
+			// Wait for all workers to finish
 			g_tile.mutex.Lock();
-			if (g_tile.workersActive.load(std::memory_order_acquire) > 0) {
-				while (g_tile.workersActive.load(std::memory_order_acquire) > 0) {
-					if (!g_tile.workDone.WaitTimed(g_tile.mutex, 1000)) {
-						// Timed out — force reset so the next frame is not also stuck
-						g_tile.workersActive.store(0, std::memory_order_relaxed);
-						break;
-					}
-				}
+			while (g_tile.workersActive.load(std::memory_order_acquire) > 0) {
+				g_tile.workDone.Wait(g_tile.mutex);
 			}
 			g_tile.mutex.Unlock();
 
