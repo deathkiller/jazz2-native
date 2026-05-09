@@ -175,9 +175,11 @@ namespace nCine::RHI
 				std::uint8_t* tileBuf = g_tileScratch[workerIndex];
 
 				// Optimization: skip reading framebuffer if the first command fully covers
-				// this tile with an opaque draw (no blending needed for background)
+				// this tile with an opaque draw (no blending needed for background).
+				// Only safe when boundsAreAccurate — conservative full-frame bounds would
+				// match any tile even if the geometry doesn't actually cover it.
 				const DeferredCommand& firstCmd = g_tile.commands[bin[0]];
-				const bool needsReadBack = (firstCmd.ctx.blendingEnabled ||
+				const bool needsReadBack = (firstCmd.ctx.blendingEnabled || !firstCmd.boundsAreAccurate ||
 				    firstCmd.screenMinX > tileX || firstCmd.screenMinY > tileY ||
 				    firstCmd.screenMaxX < tileX + tileW - 1 || firstCmd.screenMaxY < tileY + tileH - 1);
 
@@ -367,6 +369,7 @@ namespace nCine::RHI
 
 			// Compute screen-space AABB from the draw command
 			std::int32_t screenMinX, screenMinY, screenMaxX, screenMaxY;
+			bool accurateBounds;
 
 			if DEATH_LIKELY(type == PrimitiveType::TriangleStrip && count == 4 && firstVertex == 0 && ctx.vertexFormat == nullptr) {
 				// Procedural sprite quad - compute bounds from MVP + sprite size
@@ -410,12 +413,14 @@ namespace nCine::RHI
 				screenMinY = std::max(0, static_cast<std::int32_t>(fMinY));
 				screenMaxX = std::min(vpW - 1, static_cast<std::int32_t>(fMaxX));
 				screenMaxY = std::min(vpH - 1, static_cast<std::int32_t>(fMaxY));
+				accurateBounds = true;
 			} else {
 				// For non-procedural quads, use full framebuffer bounds (conservative)
 				screenMinX = 0;
 				screenMinY = 0;
 				screenMaxX = vpW - 1;
 				screenMaxY = vpH - 1;
+				accurateBounds = false;
 			}
 
 			// Scissor clip — Y always flipped for tile culling because tile rows are
@@ -437,8 +442,10 @@ namespace nCine::RHI
 			const std::int32_t cmdIdx = g_tile.commandCount;
 			DeferredCommand& cmd = g_tile.commands[cmdIdx];
 			cmd.ctx = ctx;
-			// Store scissor in screen-space (Y already flipped for FBO)
-			if DEATH_UNLIKELY(ctx.scissorEnabled && g_tile.isFboTarget) {
+			// scissorRect.Y is stored in top-down screen space so TileRasterizer
+			// can use it directly as a pixel-row clip. ctx.scissorRect.Y is bottom-up
+			// (same convention as the RHI scissor API), so always flip it here.
+			if DEATH_UNLIKELY(ctx.scissorEnabled) {
 				cmd.ctx.scissorRect.Y = g_tile.fbHeight - ctx.scissorRect.Y - ctx.scissorRect.H;
 			}
 			cmd.primType = type;
@@ -450,6 +457,7 @@ namespace nCine::RHI
 			cmd.screenMinY = screenMinY;
 			cmd.screenMaxX = screenMaxX;
 			cmd.screenMaxY = screenMaxY;
+			cmd.boundsAreAccurate = accurateBounds;
 			g_tile.commandCount++;
 
 			// Bin into overlapping tiles (clamp to valid tile range)

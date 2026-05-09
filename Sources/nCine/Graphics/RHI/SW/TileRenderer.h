@@ -49,6 +49,11 @@ namespace nCine::RHI
 			std::int32_t screenMinY;
 			std::int32_t screenMaxX;
 			std::int32_t screenMaxY;
+
+			// True only when screenMin/Max were computed from actual geometry (procedural
+			// sprite path). False for non-procedural commands that get conservative
+			// full-frame bounds. The readback-skip optimization may only fire when true.
+			bool boundsAreAccurate;
 		};
 
 		/// Initialize the tile renderer (called once at startup)
