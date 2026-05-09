@@ -124,8 +124,6 @@ namespace nCine::Backends
 					SDL_UnlockTexture(swTexture_);
 				}
 			}
-			// SW buffer is top-down (row 0 = screen top) but SDL uploads textures
-			// bottom-up, so flip vertically when presenting.
 			SDL_RenderCopyEx(swRenderer_, swTexture_, nullptr, nullptr, 0.0, nullptr, SDL_FLIP_VERTICAL);
 			SDL_RenderPresent(swRenderer_);
 		}
@@ -177,7 +175,6 @@ namespace nCine::Backends
 		swTexture_ = SDL_CreateTexture(swRenderer_, SDL_PIXELFORMAT_RGBA32,
 		                               SDL_TEXTUREACCESS_STREAMING, logicalWidth, logicalHeight);
 		RHI::ResizeColorBuffer(logicalWidth, logicalHeight);
-		//resizeSwBuffer(logicalWidth, logicalHeight);
 	}
 #endif
 
