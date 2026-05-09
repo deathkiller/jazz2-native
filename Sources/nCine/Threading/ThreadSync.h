@@ -53,6 +53,8 @@ namespace nCine
 		CondVariable& operator=(const CondVariable&) = delete;
 
 		void Wait(Mutex& mutex);
+		/// Waits up to @p milliseconds for a signal. Returns true if signaled, false if timed out.
+		bool WaitTimed(Mutex& mutex, std::uint32_t milliseconds);
 		void Signal();
 		void Broadcast();
 
@@ -63,6 +65,7 @@ namespace nCine
 		CRITICAL_SECTION waitersCountLock_;
 
 		void WaitEvents();
+		bool WaitEventsTimed(DWORD milliseconds);
 #else
 		pthread_cond_t cond_;
 #endif

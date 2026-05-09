@@ -1,6 +1,8 @@
 #if defined(WITH_THREADS)
 
 #include "ThreadSync.h"
+#include <errno.h>
+#include <time.h>
 
 #if !defined(DEATH_TARGET_WINDOWS)
 
@@ -62,6 +64,19 @@ namespace nCine
 	void CondVariable::Broadcast()
 	{
 		pthread_cond_broadcast(&cond_);
+	}
+
+	bool CondVariable::WaitTimed(Mutex& mutex, std::uint32_t milliseconds)
+	{
+		struct timespec ts;
+		clock_gettime(CLOCK_REALTIME, &ts);
+		ts.tv_sec += static_cast<time_t>(milliseconds / 1000);
+		ts.tv_nsec += static_cast<long>((milliseconds % 1000) * 1000000L);
+		if (ts.tv_nsec >= 1000000000L) {
+			ts.tv_sec++;
+			ts.tv_nsec -= 1000000000L;
+		}
+		return (pthread_cond_timedwait(&cond_, &(mutex.mutex_), &ts) != ETIMEDOUT);
 	}
 
 	///////////////////////////////////////////////////////////

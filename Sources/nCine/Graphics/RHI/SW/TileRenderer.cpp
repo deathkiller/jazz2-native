@@ -11,11 +11,6 @@
 #include <algorithm>
 #include <atomic>
 #include <cstring>
-#if defined(WITH_THREADS)
-#	include <pthread.h>
-#	include <time.h>
-#	include <errno.h>
-#endif
 
 using namespace Death::Containers;
 
@@ -64,11 +59,9 @@ namespace nCine::RHI
 #if defined(WITH_THREADS)
 				static constexpr std::int32_t MaxWorkers = 3; // 3 workers + main thread = 4 cores
 				Thread workers[MaxWorkers];
-				// Use raw pthreads so we can use pthread_cond_timedwait for a
-				// safety timeout — CondVariable has no timed-wait API.
-				pthread_mutex_t mutex;
-				pthread_cond_t workReady;
-				pthread_cond_t workDone;
+				Mutex mutex;
+				CondVariable workReady;
+				CondVariable workDone;
 				std::atomic<std::int32_t> workersActive{0};
 				std::int32_t numSpawnedWorkers = 0; // Actual threads created — may be < MaxWorkers if spawn fails
 				bool shutdownRequested = false;
@@ -221,16 +214,16 @@ namespace nCine::RHI
 
 				while (true) {
 					// Wait for new work (generation must advance)
-					pthread_mutex_lock(&g_tile.mutex);
+					g_tile.mutex.Lock();
 					while (g_tile.workerGeneration[workerIndex] == g_tile.flushGeneration && !g_tile.shutdownRequested) {
-						pthread_cond_wait(&g_tile.workReady, &g_tile.mutex);
+						g_tile.workReady.Wait(g_tile.mutex);
 					}
 					if DEATH_UNLIKELY(g_tile.shutdownRequested) {
-						pthread_mutex_unlock(&g_tile.mutex);
+						g_tile.mutex.Unlock();
 						return;
 					}
 					g_tile.workerGeneration[workerIndex] = g_tile.flushGeneration;
-					pthread_mutex_unlock(&g_tile.mutex);
+					g_tile.mutex.Unlock();
 
 					// Process tiles using atomic counter (work-stealing pattern)
 					while (true) {
@@ -243,12 +236,12 @@ namespace nCine::RHI
 
 					// Signal completion
 					std::atomic_thread_fence(std::memory_order_release); // Ensure all tile writes are pushed out
-					pthread_mutex_lock(&g_tile.mutex);
+					g_tile.mutex.Lock();
 					g_tile.workersActive--;
 					if (g_tile.workersActive == 0) {
-						pthread_cond_signal(&g_tile.workDone);
+						g_tile.workDone.Signal();
 					}
-					pthread_mutex_unlock(&g_tile.mutex);
+					g_tile.mutex.Unlock();
 				}
 			}
 #endif
@@ -267,10 +260,6 @@ namespace nCine::RHI
 				g_tile.numSpawnedWorkers = 0;
 				g_tile.flushGeneration = 0;
 				std::memset(g_tile.workerGeneration, 0, sizeof(g_tile.workerGeneration));
-
-				pthread_mutex_init(&g_tile.mutex, nullptr);
-				pthread_cond_init(&g_tile.workReady, nullptr);
-				pthread_cond_init(&g_tile.workDone, nullptr);
 
 				// Spawn worker threads
 #if defined(DEATH_TARGET_VITA)
@@ -308,10 +297,10 @@ namespace nCine::RHI
 
 #if defined(WITH_THREADS)
 			// Signal workers to exit
-			pthread_mutex_lock(&g_tile.mutex);
+			g_tile.mutex.Lock();
 			g_tile.shutdownRequested = true;
-			pthread_cond_broadcast(&g_tile.workReady);
-			pthread_mutex_unlock(&g_tile.mutex);
+			g_tile.workReady.Broadcast();
+			g_tile.mutex.Unlock();
 
 			// Join all workers
 			for (std::int32_t i = 0; i < TileState::MaxWorkers; i++) {
@@ -319,10 +308,7 @@ namespace nCine::RHI
 					g_tile.workers[i].Join();
 				}
 			}
-
-			pthread_cond_destroy(&g_tile.workDone);
-			pthread_cond_destroy(&g_tile.workReady);
-			pthread_mutex_destroy(&g_tile.mutex);
+			// mutex/workReady/workDone are destroyed automatically by their destructors
 #endif
 			g_tile.initialized = false;
 		}
@@ -498,12 +484,12 @@ namespace nCine::RHI
 			// Multi-threaded tile processing using atomic work counter
 			g_tile.nextTileIndex.store(0, std::memory_order_relaxed);
 
-			pthread_mutex_lock(&g_tile.mutex);
+			g_tile.mutex.Lock();
 			g_tile.flushGeneration++;
 			// Set active count based on successfully spawned threads
 			g_tile.workersActive.store(g_tile.numSpawnedWorkers, std::memory_order_release);
-			pthread_cond_broadcast(&g_tile.workReady);
-			pthread_mutex_unlock(&g_tile.mutex);
+			g_tile.workReady.Broadcast();
+			g_tile.mutex.Unlock();
 
 			// Main thread also processes tiles (worker slot 0)
 			while (true) {
@@ -514,20 +500,17 @@ namespace nCine::RHI
 
 			// Wait for workers with a 1-second safety timeout to avoid a permanent
 			// hang if a worker thread crashes and never signals workDone.
-			pthread_mutex_lock(&g_tile.mutex);
+			g_tile.mutex.Lock();
 			if (g_tile.workersActive.load(std::memory_order_acquire) > 0) {
-				struct timespec ts;
-				clock_gettime(CLOCK_REALTIME, &ts);
-				ts.tv_sec += 1;
 				while (g_tile.workersActive.load(std::memory_order_acquire) > 0) {
-					if (pthread_cond_timedwait(&g_tile.workDone, &g_tile.mutex, &ts) == ETIMEDOUT) {
-						// Force reset so the next frame is not also stuck
+					if (!g_tile.workDone.WaitTimed(g_tile.mutex, 1000)) {
+						// Timed out — force reset so the next frame is not also stuck
 						g_tile.workersActive.store(0, std::memory_order_relaxed);
 						break;
 					}
 				}
 			}
-			pthread_mutex_unlock(&g_tile.mutex);
+			g_tile.mutex.Unlock();
 
 			// Ensure all worker pixel writes are globally visible before the engine
 			// moves on to DiscardPending or flipping buffers.

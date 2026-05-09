@@ -65,6 +65,18 @@ namespace nCine
 		mutex.Lock();
 	}
 
+	bool CondVariable::WaitTimed(Mutex& mutex, std::uint32_t milliseconds)
+	{
+		::EnterCriticalSection(&waitersCountLock_);
+		waitersCount_++;
+		::LeaveCriticalSection(&waitersCountLock_);
+
+		mutex.Unlock();
+		const bool signaled = WaitEventsTimed(static_cast<DWORD>(milliseconds));
+		mutex.Lock();
+		return signaled;
+	}
+
 	void CondVariable::Signal()
 	{
 		::EnterCriticalSection(&waitersCountLock_);
@@ -99,6 +111,21 @@ namespace nCine
 		if (isLastWaiter) {
 			::ResetEvent(events_[1]); // Broadcast
 		}
+	}
+
+	bool CondVariable::WaitEventsTimed(DWORD milliseconds)
+	{
+		const DWORD result = ::WaitForMultipleObjects(2, events_, FALSE, milliseconds);
+
+		::EnterCriticalSection(&waitersCountLock_);
+		waitersCount_--;
+		const bool isLastWaiter = (result == (WAIT_OBJECT_0 + 1)) && (waitersCount_ == 0);
+		::LeaveCriticalSection(&waitersCountLock_);
+
+		if (isLastWaiter) {
+			::ResetEvent(events_[1]); // Broadcast
+		}
+		return (result != WAIT_TIMEOUT);
 	}
 
 
