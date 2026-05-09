@@ -64,12 +64,12 @@
 		},
 		"WarpInFreefall": {
 			"Path": "Jazz/warp_in.aura",
-			"States": [ 1073741843 ],
+			"States": [ 1073741847 ],
 			"FrameOffset": 2
 		},
 		"WarpOutFreefall": {
 			"Path": "Jazz/warp_out.aura",
-			"States": [ 1073741844 ],
+			"States": [ 1073741848 ],
 			"FrameCount": 5
 		}
 	},

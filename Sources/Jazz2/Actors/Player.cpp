@@ -59,6 +59,7 @@ namespace Jazz2::Actors
 	static constexpr float birdHorizontalResponse = 0.08f;
 	static constexpr float birdVerticalResponse = 0.04f;
 	static constexpr float birdChargeFramesInitial = 30.0f;
+	static constexpr float birdChargeSpeedMultiplier = 1.15f;
 
 	static float GetCheckpointYOffsetForPlayerType(PlayerType playerType)
 	{
@@ -298,10 +299,10 @@ namespace Jazz2::Actors
 
 		UpdateAnimation(timeMult);
 		
-		// Correct Y position for bird bored animations to prevent vertical drifting from sprite offsets
-		// Only apply to bored animations (IdleBored1-7), not normal Idle, charge state, or when firing
-		if (IsBirdMorphType(_playerType) && (_currentAnimation->State & AnimState::Idle) == AnimState::Idle && 
-			_currentAnimation->State != AnimState::Idle && std::abs(_speed.Y) < 0.1f && _birdChargeFramesLeft <= 0.0f && _fireFramesLeft <= 0.0f) {
+		// Correct Y position for bird bored animations to prevent vertical drifting from sprite offsets.
+		const std::uint32_t animStateValue = (std::uint32_t)_currentAnimation->State;
+		const bool isBirdBoredIdle = (animStateValue >= 536870944u && animStateValue <= 536870950u);
+		if (IsBirdMorphType(_playerType) && isBirdBoredIdle && std::abs(_speed.Y) < 0.1f && _birdChargeFramesLeft <= 0.0f && _fireFramesLeft <= 0.0f) {
 			// Save baseline Y position when entering bored animation and not shooting
 			if (((_currentAnimation->State & AnimState::Shoot) != AnimState::Shoot)) {
 				_birdIdleBaseY = _pos.Y;
@@ -857,6 +858,7 @@ namespace Jazz2::Actors
 			float playerMovement = _levelHandler->PlayerHorizontalMovement(this);
 			float playerMovementVert = _levelHandler->PlayerVerticalMovement(this);
 			bool birdYellowChargingActive = (_playerType == PlayerType::BirdYellow && (_levelHandler->PlayerActionPressed(this, PlayerAction::Fire) || _birdChargeFramesLeft > 0.0f || _wasFirePressed));
+			float chargeSpeedMultiplier = (birdYellowChargingActive ? birdChargeSpeedMultiplier : 1.0f);
 
 			if (std::abs(playerMovement) <= 0.3f) {
 				playerMovement = 0.0f;
@@ -872,7 +874,7 @@ namespace Jazz2::Actors
 
 		bool hasGroundBelow = HasGroundBelowForBird();
 
-		float targetSpeedX = playerMovement * birdFlySpeedX;
+		float targetSpeedX = playerMovement * birdFlySpeedX * chargeSpeedMultiplier;
 		float horizontalLerp = std::min(1.0f, birdHorizontalResponse * timeMult);
 		float verticalLerp = std::min(1.0f, birdVerticalResponse * timeMult);
 
@@ -886,7 +888,7 @@ namespace Jazz2::Actors
 			// Move like in water during charge
 			float playerMovementVelocity = std::abs(playerMovementVert);
 			if (playerMovementVelocity > 0.3f) {
-				_speed.Y = std::clamp(_speed.Y + Acceleration * timeMult * (playerMovementVert > 0.0f ? 1.0f : -1.0f), -MaxRunningSpeed * playerMovementVelocity, MaxRunningSpeed * playerMovementVelocity);
+				_speed.Y = std::clamp(_speed.Y + Acceleration * chargeSpeedMultiplier * timeMult * (playerMovementVert > 0.0f ? 1.0f : -1.0f), -MaxRunningSpeed * chargeSpeedMultiplier * playerMovementVelocity, MaxRunningSpeed * chargeSpeedMultiplier * playerMovementVelocity);
 			} else {
 				_speed.Y = std::max((std::abs(_speed.Y) - Deceleration * timeMult), 0.0f) * (_speed.Y < 0.0f ? -1.0f : 1.0f);
 			}
@@ -923,6 +925,8 @@ namespace Jazz2::Actors
 
 		if (_playerType == PlayerType::BirdYellow && _birdChargeFramesLeft > 0.0f) {
 			_birdChargeFramesLeft -= timeMult;
+		} else if (_playerType == PlayerType::BirdYellow && !_levelHandler->PlayerActionPressed(this, PlayerAction::Fire) && !_wasFirePressed) {
+			_currentSpecialMove = SpecialMoveType::None;
 		} else if (_playerType == PlayerType::Bird) {
 			_birdChargeFramesLeft = 0.0f;
 		}
@@ -1219,6 +1223,7 @@ namespace Jazz2::Actors
 					weaponInUse = true;
 					_birdChargeFramesLeft = birdChargeFramesInitial;
 					_fireFramesLeft = 20.0f;  // Maintain fire animation while charging
+					_currentSpecialMove = SpecialMoveType::None;
 				}
 				else if (_weaponAmmo[(std::int32_t)_currentWeapon] != 0) {
 					_wasFirePressed = true;
@@ -1612,7 +1617,7 @@ namespace Jazz2::Actors
 
 		if (_playerType == PlayerType::Frog) {
 			// Load original metadata
-			switch (_playerType) {
+			switch (_playerTypeOriginal) {
 				case PlayerType::Jazz: RequestMetadata("Interactive/PlayerJazz"_s); break;
 				case PlayerType::Spaz: RequestMetadata("Interactive/PlayerSpaz"_s); break;
 				case PlayerType::Lori: RequestMetadata("Interactive/PlayerLori"_s); break;
@@ -2117,9 +2122,9 @@ namespace Jazz2::Actors
 			// Only certain ones don't need to be preserved from earlier state, others should be set as expected
 			AnimState composite = (_currentAnimation->State & CompositeAnimMask);
 
-			// Reset to Idle if player is essentially stationary and on ground
+			// Reset to Idle if player is essentially stationary and on ground (preserve Lookup so shooting upward still works)
 			if (CanJump() && std::abs(_speed.X) < 0.01f && std::abs(_speed.Y) < 0.01f) {
-				composite = AnimState::Idle;
+				composite = AnimState::Idle | (composite & AnimState::Lookup);
 			}
 
 			if (_isActivelyPushing == _wasActivelyPushing) {
@@ -3700,11 +3705,9 @@ namespace Jazz2::Actors
 	{
 		std::uint8_t playerIndex = src.ReadVariableInt32();
 		PlayerType playerType = (PlayerType)src.ReadValue<std::uint8_t>();
+		PlayerType playerTypeOriginal = (PlayerType)src.ReadValue<std::uint8_t>();
 		float checkpointPosX = src.ReadValueAsLE<float>();
 		float checkpointPosY = src.ReadValueAsLE<float>();
-		if (!IsBirdMorphType(playerType)) {
-			checkpointPosY += GroundedCheckpointYOffset;
-		}
 
 		std::uint8_t playerParams[2] = { (std::uint8_t)playerType, (std::uint8_t)playerIndex };
 		OnActivated(Actors::ActorActivationDetails(
@@ -3712,6 +3715,7 @@ namespace Jazz2::Actors
 			Vector3i((std::int32_t)checkpointPosX, (std::int32_t)checkpointPosY, ILevelHandler::PlayerZ - playerIndex),
 			playerParams
 		));
+		_playerTypeOriginal = playerTypeOriginal;
 
 		if (IsBirdMorphType(_playerType)) {
 			SetBirdMetadata();
@@ -3721,9 +3725,11 @@ namespace Jazz2::Actors
 			TileCollisionParams params = { TileDestructType::None, true };
 			constexpr std::int32_t MaxLiftPixels = 32;
 			std::int32_t movedUp = 0;
+			OnUpdateHitbox();
 			while (!_levelHandler->IsPositionEmpty(this, AABBInner, params) && movedUp < MaxLiftPixels) {
 				MoveInstantly(Vector2f(0.0f, -1.0f), MoveType::Relative | MoveType::Force);
 				movedUp++;
+				OnUpdateHitbox();
 			}
 			if (movedUp > 0) {
 				_checkpointPos.Y -= (float)movedUp;
@@ -3773,6 +3779,7 @@ namespace Jazz2::Actors
 	{
 		dest.WriteVariableInt32(_playerIndex);
 		dest.WriteValue<std::uint8_t>((std::uint8_t)_playerType);
+		dest.WriteValue<std::uint8_t>((std::uint8_t)_playerTypeOriginal);
 		dest.WriteValueAsLE<float>(_checkpointPos.X);
 		dest.WriteValueAsLE<float>(_checkpointPos.Y);
 		dest.WriteValueAsLE<float>(_checkpointLight);
