@@ -420,9 +420,12 @@ namespace nCine::RHI
 			alignas(16) std::uint8_t scanBuf[TileRenderer::TileSize * 4];
 			const bool useScanBuf = ((useFastBlend || !useBlend) && texPixels != nullptr);
 
-			// Cache in a local — compiler may re-read ctx.fragmentShader every iteration
-			// due to aliasing from fsInput.textures, causing a null-ptr call if ctx is
-			// overwritten by the next frame before workers finish.
+			// Cache ctx.fragmentShader into a local to defeat compiler aliasing pessimism:
+			// fsInput.textures aliases with ctx through the FragmentShaderInput struct, so the
+			// compiler may otherwise re-read ctx.fragmentShader on every loop iteration,
+			// producing unnecessary loads and (in pathological cases) stale or null reads.
+			// This is NOT a frame-boundary race fix — Flush() already waits on workersActive
+			// before returning, so ctx is guaranteed not to be overwritten while workers run.
 			const FragmentShaderFn cachedShader = ctx.fragmentShader;
 
 			for (std::int32_t py = yMin; py <= yMax; py++, tyFix += dtyFix) {
@@ -464,11 +467,10 @@ namespace nCine::RHI
 						}
 					} else if (texRow != nullptr) {
 						if (uvSafeX && dtxFix == 65536) {
+							// uvSafeX guarantees (srcX + scanWidth - 1) < texW, so the full
+							// scanline is in-bounds and we can copy scanWidth texels directly.
 							const std::int32_t srcX = std::max(0, std::min(texW - 1, txFix >> 16));
-							const std::int32_t safeScan = std::min(scanWidth, texW - srcX);
-							if DEATH_LIKELY(safeScan > 0) {
-								std::memcpy(scanBuf, &texRow[srcX * 4], static_cast<std::size_t>(safeScan) * 4);
-							}
+							std::memcpy(scanBuf, &texRow[srcX * 4], static_cast<std::size_t>(scanWidth) * 4);
 						} else if (uvSafeX) {
 							for (std::int32_t i = 0; i < scanWidth; i++) {
 								const std::int32_t srcX = std::max(0, std::min(texW - 1, txFix >> 16));
