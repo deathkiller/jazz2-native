@@ -52,14 +52,16 @@ namespace Jazz2::Actors
 	static constexpr AnimState TransformFrogFromLori = (AnimState)0x60000002;
 
 	static constexpr float GroundedCheckpointYOffset = 20.0f;
-	static constexpr float birdFlySpeedX = 2.8f;
-	static constexpr float birdFlySpeedYDown = 2.4f;
-	static constexpr float birdFlySpeedYUp = 1.4f;
-	static constexpr float birdSinkSpeed = 0.6f;
-	static constexpr float birdHorizontalResponse = 0.08f;
-	static constexpr float birdVerticalResponse = 0.04f;
-	static constexpr float birdChargeFramesInitial = 30.0f;
-	static constexpr float birdChargeSpeedMultiplier = 1.15f;
+	static constexpr float BirdFlySpeedX = 2.8f;
+	static constexpr float BirdFlySpeedYDown = 2.4f;
+	static constexpr float BirdFlySpeedYUp = 1.4f;
+	static constexpr float BirdSinkSpeed = 0.6f;
+	static constexpr float BirdHorizontalResponse = 0.08f;
+	static constexpr float BirdVerticalResponse = 0.04f;
+	static constexpr float BirdChargeFramesInitial = 30.0f;
+	static constexpr float BirdChargeSpeedMultiplier = 1.15f;
+	static constexpr std::uint32_t IdleBoredBase = 536870944u;
+	static constexpr std::uint32_t IdleBoredCount = 7;
 
 	static float GetCheckpointYOffsetForPlayerType(PlayerType playerType)
 	{
@@ -301,7 +303,7 @@ namespace Jazz2::Actors
 		
 		// Correct Y position for bird bored animations to prevent vertical drifting from sprite offsets.
 		const std::uint32_t animStateValue = (std::uint32_t)_currentAnimation->State;
-		const bool isBirdBoredIdle = (animStateValue >= 536870944u && animStateValue <= 536870950u);
+		const bool isBirdBoredIdle = (animStateValue >= IdleBoredBase && animStateValue < IdleBoredBase + IdleBoredCount);
 		if (IsBirdMorphType(_playerType) && isBirdBoredIdle && std::abs(_speed.Y) < 0.1f && _birdChargeFramesLeft <= 0.0f && _fireFramesLeft <= 0.0f) {
 			// Save baseline Y position when entering bored animation and not shooting
 			if (((_currentAnimation->State & AnimState::Shoot) != AnimState::Shoot)) {
@@ -858,7 +860,7 @@ namespace Jazz2::Actors
 			float playerMovement = _levelHandler->PlayerHorizontalMovement(this);
 			float playerMovementVert = _levelHandler->PlayerVerticalMovement(this);
 			bool birdYellowChargingActive = (_playerType == PlayerType::BirdYellow && (_levelHandler->PlayerActionPressed(this, PlayerAction::Fire) || _birdChargeFramesLeft > 0.0f || _wasFirePressed));
-			float chargeSpeedMultiplier = (birdYellowChargingActive ? birdChargeSpeedMultiplier : 1.0f);
+			float chargeSpeedMultiplier = (birdYellowChargingActive ? BirdChargeSpeedMultiplier : 1.0f);
 
 			if (std::abs(playerMovement) <= 0.3f) {
 				playerMovement = 0.0f;
@@ -867,80 +869,79 @@ namespace Jazz2::Actors
 				playerMovementVert = 0.0f;
 			}
 
-		// Jump button acts as Up arrow for Bird
-		if (_levelHandler->PlayerActionPressed(this, PlayerAction::Jump)) {
-			playerMovementVert = std::min(playerMovementVert, -1.0f);
-		}
+			// Jump button acts as Up arrow for Bird
+			if (_levelHandler->PlayerActionPressed(this, PlayerAction::Jump)) {
+				playerMovementVert = std::min(playerMovementVert, -1.0f);
+			}
 
-		bool hasGroundBelow = HasGroundBelowForBird();
+			bool hasGroundBelow = HasGroundBelowForBird();
 
-		float targetSpeedX = playerMovement * birdFlySpeedX * chargeSpeedMultiplier;
-		float horizontalLerp = std::min(1.0f, birdHorizontalResponse * timeMult);
-		float verticalLerp = std::min(1.0f, birdVerticalResponse * timeMult);
+			float targetSpeedX = playerMovement * BirdFlySpeedX * chargeSpeedMultiplier;
+			float horizontalLerp = std::min(1.0f, BirdHorizontalResponse * timeMult);
+			float verticalLerp = std::min(1.0f, BirdVerticalResponse * timeMult);
 
-		_speed.X = lerp(_speed.X, targetSpeedX, horizontalLerp);
+			_speed.X = lerp(_speed.X, targetSpeedX, horizontalLerp);
 
-		_birdPreviousAnimState = _currentAnimation->State;
+			_birdPreviousAnimState = _currentAnimation->State;
 
+			if (birdYellowChargingActive) {
+				SetAnimation(AnimState::Swim);
+				// Move like in water during charge
+				float playerMovementVelocity = std::abs(playerMovementVert);
+				if (playerMovementVelocity > 0.3f) {
+					_speed.Y = std::clamp(_speed.Y + Acceleration * chargeSpeedMultiplier * timeMult * (playerMovementVert > 0.0f ? 1.0f : -1.0f), -MaxRunningSpeed * chargeSpeedMultiplier * playerMovementVelocity, MaxRunningSpeed * chargeSpeedMultiplier * playerMovementVelocity);
+				} else {
+					_speed.Y = std::max((std::abs(_speed.Y) - Deceleration * timeMult), 0.0f) * (_speed.Y < 0.0f ? -1.0f : 1.0f);
+				}
+				UpdateSwimmingRotationAndAnimation();
 
-		if (birdYellowChargingActive) {
-			SetAnimation(AnimState::Swim);
-			// Move like in water during charge
-			float playerMovementVelocity = std::abs(playerMovementVert);
-			if (playerMovementVelocity > 0.3f) {
-				_speed.Y = std::clamp(_speed.Y + Acceleration * chargeSpeedMultiplier * timeMult * (playerMovementVert > 0.0f ? 1.0f : -1.0f), -MaxRunningSpeed * chargeSpeedMultiplier * playerMovementVelocity, MaxRunningSpeed * chargeSpeedMultiplier * playerMovementVelocity);
+				// Match animation speed to when moving moderately
+				if (_currentTransition == nullptr && std::abs(_speed.Y) < 0.5f && std::abs(_speed.X) < 0.5f) {
+					// Simulate moderate movement speed for animation when stationary
+					_renderer.AnimDuration = std::max(_currentAnimation->AnimDuration + 1.0f - 2.5f * 0.26f, 0.4f);
+				}
 			} else {
-				_speed.Y = std::max((std::abs(_speed.Y) - Deceleration * timeMult), 0.0f) * (_speed.Y < 0.0f ? -1.0f : 1.0f);
-			}
-			UpdateSwimmingRotationAndAnimation();
-			
-			// Match animation speed to when moving moderately
-			if (_currentTransition == nullptr && std::abs(_speed.Y) < 0.5f && std::abs(_speed.X) < 0.5f) {
-				// Simulate moderate movement speed for animation when stationary
-				_renderer.AnimDuration = std::max(_currentAnimation->AnimDuration + 1.0f - 2.5f * 0.26f, 0.4f);
-			}
-		} else {
-			// Normal Bird movement: restore previous animation state
-			SetAnimation(_birdPreviousAnimState);
-			_renderer.setRotation(0.0f);
-			
-			// sink slowly when no vertical input and not on ground
-			float targetSpeedY;
-			if (playerMovementVert < 0.0f) {
-				targetSpeedY = playerMovementVert * birdFlySpeedYUp;
-			} else if (playerMovementVert > 0.0f) {
-				targetSpeedY = playerMovementVert * birdFlySpeedYDown;
-			} else if (hasGroundBelow) {
-				targetSpeedY = 0.0f;
-			} else {
-				targetSpeedY = birdSinkSpeed;
-			}
-			_speed.Y = lerp(_speed.Y, targetSpeedY, verticalLerp);
-		}
+				// Normal Bird movement: restore previous animation state
+				SetAnimation(_birdPreviousAnimState);
+				_renderer.setRotation(0.0f);
 
-		// Update facing based on movement direction
-		if (std::abs(_speed.X) > 0.3f) {
-			SetFacingLeft(_speed.X < 0.0f);
-		}
+				// sink slowly when no vertical input and not on ground
+				float targetSpeedY;
+				if (playerMovementVert < 0.0f) {
+					targetSpeedY = playerMovementVert * BirdFlySpeedYUp;
+				} else if (playerMovementVert > 0.0f) {
+					targetSpeedY = playerMovementVert * BirdFlySpeedYDown;
+				} else if (hasGroundBelow) {
+					targetSpeedY = 0.0f;
+				} else {
+					targetSpeedY = BirdSinkSpeed;
+				}
+				_speed.Y = lerp(_speed.Y, targetSpeedY, verticalLerp);
+			}
 
-		if (_playerType == PlayerType::BirdYellow && _birdChargeFramesLeft > 0.0f) {
-			_birdChargeFramesLeft -= timeMult;
-		} else if (_playerType == PlayerType::BirdYellow && !_levelHandler->PlayerActionPressed(this, PlayerAction::Fire) && !_wasFirePressed) {
-			_currentSpecialMove = SpecialMoveType::None;
-		} else if (_playerType == PlayerType::Bird) {
-			_birdChargeFramesLeft = 0.0f;
-		}
+			// Update facing based on movement direction
+			if (std::abs(_speed.X) > 0.3f) {
+				SetFacingLeft(_speed.X < 0.0f);
+			}
+
+			if (_playerType == PlayerType::BirdYellow && _birdChargeFramesLeft > 0.0f) {
+				_birdChargeFramesLeft -= timeMult;
+			} else if (_playerType == PlayerType::BirdYellow && !_levelHandler->PlayerActionPressed(this, PlayerAction::Fire) && !_wasFirePressed) {
+				_currentSpecialMove = SpecialMoveType::None;
+			} else if (_playerType == PlayerType::Bird) {
+				_birdChargeFramesLeft = 0.0f;
+			}
 
 #if defined(WITH_AUDIO)
-		if (hasGroundBelow && std::abs(_speed.X) < 0.1f && std::abs(_speed.Y) < 0.1f && _birdFlySound != nullptr) {
-			_birdFlySound->stop();
-			_birdFlySound = nullptr;
-		}
+			if (hasGroundBelow && std::abs(_speed.X) < 0.1f && std::abs(_speed.Y) < 0.1f && _birdFlySound != nullptr) {
+				_birdFlySound->stop();
+				_birdFlySound = nullptr;
+			}
 #endif
 
-		_isFreefall = false;
-		SetState(ActorState::ApplyGravitation, false);
-	} else if ((_inWater && _playerType != PlayerType::Frog) || _activeModifier != Modifier::None) {
+			_isFreefall = false;
+			SetState(ActorState::ApplyGravitation, false);
+		} else if ((_inWater && _playerType != PlayerType::Frog) || _activeModifier != Modifier::None) {
 			float playerMovement = _levelHandler->PlayerVerticalMovement(this);
 			float playerMovementVelocity = std::abs(playerMovement);
 			if (playerMovementVelocity > 0.3f) {
@@ -1221,7 +1222,7 @@ namespace Jazz2::Actors
 				} else if (_playerType == PlayerType::BirdYellow) {
 					_wasFirePressed = true;
 					weaponInUse = true;
-					_birdChargeFramesLeft = birdChargeFramesInitial;
+					_birdChargeFramesLeft = BirdChargeFramesInitial;
 					_fireFramesLeft = 20.0f;  // Maintain fire animation while charging
 					_currentSpecialMove = SpecialMoveType::None;
 				}
@@ -2196,7 +2197,7 @@ namespace Jazz2::Actors
 					}
 					if (maxIdx > 0) {
 						std::int32_t selectedIdx = Random().Fast(0, maxIdx);
-						if (SetTransition((AnimState)(536870944 + selectedIdx), true)) {
+						if (SetTransition((AnimState)(IdleBoredBase + selectedIdx), true)) {
 							PlayPlayerSfx(IdleBored[selectedIdx]);
 						}
 					}
