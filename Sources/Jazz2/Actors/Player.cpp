@@ -739,6 +739,13 @@ namespace Jazz2::Actors
 #endif
 			}
 		}
+
+#if defined(WITH_AUDIO)
+		// Cleanup bird fly sound if it has stopped playing
+		if (_birdFlySound != nullptr && _birdFlySound->isStopped()) {
+			_birdFlySound = nullptr;
+		}
+#endif
 	}
 
 	void Player::OnHandleMovement(float timeMult, bool areaWeaponAllowed, bool canJumpPrev)
@@ -2929,11 +2936,12 @@ namespace Jazz2::Actors
 		ActorBase::OnAnimationFinished();
 
 		if (IsBirdMorphType(_playerType)) {
-			if (!HasGroundBelowForBird()) {
+			bool birdFiringActive = (_birdChargeFramesLeft > 0.0f || _fireFramesLeft > 0.0f);
+			if ((!HasGroundBelowForBird() || birdFiringActive) && (_birdFlySound == nullptr)) {
 #if defined(WITH_AUDIO)
-				_birdFlySound = PlayPlayerSfx("Fly"_s, 0.3f);
+				_birdFlySound = PlayPlayerSfx("Fly"_s, 0.5f);
 #else
-				PlayPlayerSfx("Fly"_s, 0.3f);
+				PlayPlayerSfx("Fly"_s, 0.5f);
 #endif
 			}
 		}
