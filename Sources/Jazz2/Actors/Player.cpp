@@ -3156,13 +3156,20 @@ namespace Jazz2::Actors
 		_levelHandler->AddActor(shot);
 
 		if (_playerType == PlayerType::Bird) {
+			bool birdInFlight = !HasGroundBelowForBird();
+			bool birdDescending = (_speed.Y > 0.1f || _levelHandler->PlayerVerticalMovement(this) > 0.0f);
+			float diagonalOffset = (IsFacingLeft() ? -0.18f : 0.18f);
+			if (birdInFlight && birdDescending) {
+				diagonalOffset = -diagonalOffset;
+			}
+
 			std::shared_ptr<T> shot2 = std::make_shared<T>();
 			shot2->OnActivated(ActorActivationDetails(
 				_levelHandler,
 				initialPos,
 				shotParams
 			));
-			shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle + (IsFacingLeft() ? -0.18f : 0.18f), IsFacingLeft());
+			shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle + diagonalOffset, IsFacingLeft());
 			_levelHandler->AddActor(shot2);
 		}
 
