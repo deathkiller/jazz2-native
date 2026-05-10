@@ -15,6 +15,7 @@
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringStl.h>
 #include <Containers/StringStlView.h>
+#include <IO/FileSystem.h>
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "Backends/ifaddrs-android.h"
@@ -1044,11 +1045,27 @@ namespace Jazz2::Multiplayer
 
 		_wsServer = std::make_unique<ix::WebSocketServer>(wsPort, "0.0.0.0");
 
+		
+
 #		if defined(WITH_WEBSOCKET_TLS)
+		bool useTls = false;
 		if (!certPath.empty() && !keyPath.empty()) {
+			useTls = true;
+			if (!fs::FileExists(certPath)) {
+				LOGE("Cannot find TLS certificate file at \"{}\", falling back to non-TLS WebSocket transport", certPath);
+				useTls = false;
+			}
+			if (!fs::FileExists(keyPath)) {
+				LOGE("Cannot find TLS key file at \"{}\", falling back to non-TLS WebSocket transport", keyPath);
+				useTls = false;
+			}
+		}
+
+		if (useTls) {
 			ix::SocketTLSOptions tlsOptions;
 			tlsOptions.certFile = certPath;
 			tlsOptions.keyFile = keyPath;
+			tlsOptions.caFile = "NONE";
 			tlsOptions.tls = true;
 			_wsServer->setTLSOptions(tlsOptions);
 			LOGI("[MP] WebSocket transport starting with TLS on port {}", wsPort);
