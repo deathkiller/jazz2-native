@@ -1017,7 +1017,6 @@ namespace nCine::Backends
 		// WindowInsets.Type.statusBars() == 1
 		AndroidJniHelper::jniEnv->CallVoidMethod(insetsControllerObject_, midInsetsShow_, (jint)1);
 		AndroidJniHelper::CheckAndClearExceptions();
-		statusBarVisible_ = true;
 	}
 
 	void AndroidJniWrap_Activity::hideStatusBar()
@@ -1029,7 +1028,6 @@ namespace nCine::Backends
 		// WindowInsets.Type.statusBars() == 1
 		AndroidJniHelper::jniEnv->CallVoidMethod(insetsControllerObject_, midInsetsHide_, (jint)1);
 		AndroidJniHelper::CheckAndClearExceptions();
-		statusBarVisible_ = false;
 	}
 
 	// ------------------- AndroidJniWrap_InputMethodManager -------------------
