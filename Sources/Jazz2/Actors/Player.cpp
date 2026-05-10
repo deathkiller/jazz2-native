@@ -59,7 +59,7 @@ namespace Jazz2::Actors
 	static constexpr float BirdHorizontalResponse = 0.08f;
 	static constexpr float BirdVerticalResponse = 0.04f;
 	static constexpr float BirdChargeFramesInitial = 30.0f;
-	static constexpr float BirdChargeSpeedMultiplier = 1.15f;
+	static constexpr float BirdChargeSpeedMultiplier = 1.4f;
 	static constexpr std::uint32_t IdleBoredBase = 536870944u;
 	static constexpr std::uint32_t IdleBoredCount = 7;
 
@@ -935,8 +935,6 @@ namespace Jazz2::Actors
 				_birdChargeFramesLeft -= timeMult;
 			} else if (_playerType == PlayerType::BirdYellow && !_levelHandler->PlayerActionPressed(this, PlayerAction::Fire) && !_wasFirePressed) {
 				_currentSpecialMove = SpecialMoveType::None;
-			} else if (_playerType == PlayerType::Bird) {
-				_birdChargeFramesLeft = 0.0f;
 			}
 
 #if defined(WITH_AUDIO)
@@ -1242,18 +1240,12 @@ namespace Jazz2::Actors
 					bool weaponCooledDown = (_weaponCooldown <= 0.0f);
 					weaponInUse = FireCurrentWeapon(_currentWeapon);
 					if (weaponInUse) {
-						if (_playerType == PlayerType::Bird) {
-							// Bird fires without charge animation
-							_birdChargeFramesLeft = 0.0f;
-							_fireFramesLeft = 20.0f;
-							_idleTime = 0.0f;
-							_currentTransitionCallback = nullptr;
-						} else if (!IsBirdMorphType(_playerType)) {
-							// Regular players: cancel spring/shoot-to-idle transitions and set fire frames
+						if (_playerType != PlayerType::BirdYellow) {
 							if (_currentTransition != nullptr && (_currentTransition->State == AnimState::Spring || _currentTransition->State == AnimState::TransitionShootToIdle)) {
 								ForceCancelTransition();
 							}
-							SetAnimation(_currentAnimation->State | AnimState::Shoot);
+							AnimState shootState = (_playerType == PlayerType::Bird ? (AnimState)(AnimState::Walk | AnimState::Shoot) : (_currentAnimation->State | AnimState::Shoot));
+							SetAnimation(shootState);
 							_fireFramesLeft = 20.0f;
 						}
 						// Rewind the animation, if it should be played only once
@@ -1292,7 +1284,7 @@ namespace Jazz2::Actors
 
 	bool Player::OnDraw(RenderQueue& renderQueue)
 	{
-		if (_weaponFlareTime > 0.0f && !_inWater && _currentTransition == nullptr) {
+		if (_weaponFlareTime > 0.0f && !_inWater && _currentTransition == nullptr && !IsBirdMorphType(_playerType)) {
 			auto* res = _metadata->FindAnimation(WeaponFlare);
 			if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 				auto& command = _weaponFlareCommand;
@@ -2199,6 +2191,7 @@ namespace Jazz2::Actors
 						case PlayerType::Jazz: maxIdx = 5; break;
 						case PlayerType::Spaz: maxIdx = 5; break;
 						case PlayerType::Lori: maxIdx = 5; break;
+						case PlayerType::Bird:
 						case PlayerType::BirdYellow: maxIdx = 7; break;
 						default: maxIdx = 0; break;
 					}
@@ -3447,7 +3440,15 @@ namespace Jazz2::Actors
 			ForceCancelTransition();
 		}
 
-		SetAnimation(_currentAnimation->State | AnimState::Shoot);
+		AnimState shootState;
+		if (_playerType == PlayerType::Bird) {
+			shootState = (AnimState)(AnimState::Walk | AnimState::Shoot);
+		} else if (_playerType == PlayerType::BirdYellow) {
+			shootState = AnimState::Shoot;
+		} else {
+			shootState = _currentAnimation->State | AnimState::Shoot;
+		}
+		SetAnimation(shootState);
 
 		initialPos = Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer() - 2);
 		gunspotPos = _pos;
@@ -3727,8 +3728,6 @@ namespace Jazz2::Actors
 		_playerTypeOriginal = playerTypeOriginal;
 
 		if (IsBirdMorphType(_playerType)) {
-			SetBirdMetadata();
-
 			// Bird can be restored slightly inside geometry from resumable saves,
 			// so nudge it upward until the hitbox no longer overlaps solid tiles.
 			TileCollisionParams params = { TileDestructType::None, true };

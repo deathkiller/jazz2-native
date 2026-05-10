@@ -6,7 +6,7 @@
 	"Animations": {
 		"Walk": {
 			"Path": "BirdyYellow/fly.aura",
-			"States": [ 1, 2, 3 ],
+			"States": [ 1, 17 ],
 			"FrameRate": 7
 		},
 		"Idle": {
