@@ -87,6 +87,7 @@ namespace Jazz2
 	bool PreferencesCache::PlayStationExtendedSupport = false;
 	bool PreferencesCache::UseNativeBackButton = false;
 	bool PreferencesCache::EnableTouchJoystick = false;
+	bool PreferencesCache::EnableTouchVibration = true;
 	TouchButtonLayout PreferencesCache::TouchButtons[(std::size_t)TouchButtonSlot::Count] = {};
 	Uuid PreferencesCache::UniquePlayerID;
 	Uuid PreferencesCache::UniqueServerID;
@@ -390,6 +391,7 @@ namespace Jazz2
 
 					// Touch button per-slot configuration (v14+)
 					EnableTouchJoystick = ((boolOptions & BoolOptions::EnableTouchJoystick) == BoolOptions::EnableTouchJoystick);
+					EnableTouchVibration = ((boolOptions & BoolOptions::EnableTouchVibration) == BoolOptions::EnableTouchVibration);
 					if (version >= 14) {
 						for (std::size_t i = 0; i < (std::size_t)TouchButtonSlot::Count; i++) {
 							TouchButtons[i].EdgeOffset.X = (float)uc.ReadValueAsLE<std::int16_t>();
@@ -634,6 +636,7 @@ namespace Jazz2
 		if (EnableContinuousJump) boolOptions |= BoolOptions::EnableContinuousJump;
 		if (BlurEffects) boolOptions |= BoolOptions::BlurEffects;
 		if (EnableTouchJoystick) boolOptions |= BoolOptions::EnableTouchJoystick;
+		if (EnableTouchVibration) boolOptions |= BoolOptions::EnableTouchVibration;
 		co.WriteValueAsLE<std::uint64_t>(std::uint64_t(boolOptions));
 
 		if (Language[0] != '\0') {

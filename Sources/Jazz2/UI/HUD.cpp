@@ -293,7 +293,7 @@ namespace Jazz2::UI
 		return true;
 	}
 
-	void HUD::OnTouchEvent(const TouchEvent& event, uint32_t& overrideActions)
+	void HUD::OnTouchEvent(const TouchEvent& event, uint32_t& overrideActions, Vector2f& overrideMovement)
 	{
 		_touchButtonsTimer = 1200.0f;
 
@@ -330,6 +330,9 @@ namespace Jazz2::UI
 							if (button.Action == PlayerAction::Down) {
 								overrideActions |= (1 << (std::int32_t)PlayerAction::Buttstomp);
 							}
+							if (PreferencesCache::EnableTouchVibration) {
+								theApplication().Vibrate(15);
+							}
 						}
 					}
 				}
@@ -348,10 +351,7 @@ namespace Jazz2::UI
 					float magnitude = std::min(dist / _joystickMaxRadius, 1.0f);
 					Vector2f movement = dir * magnitude;
 
-					auto players = _levelHandler->GetPlayers();
-					if (!players.empty()) {
-						_levelHandler->_playerInputs[players[0]->_playerIndex].RequiredMovement = movement;
-					}
+					overrideMovement = movement;
 
 					overrideActions &= ~DpadMask;
 					if (movement.X < -0.3f) overrideActions |= (1 << (std::int32_t)PlayerAction::Left);
@@ -407,10 +407,7 @@ namespace Jazz2::UI
 			if (PreferencesCache::EnableTouchJoystick && _joystickActive) {
 				_joystickActive = false;
 				_joystickPointerId = -1;
-				auto players = _levelHandler->GetPlayers();
-				if (!players.empty()) {
-					_levelHandler->_playerInputs[players[0]->_playerIndex].RequiredMovement = Vector2f(0.0f, 0.0f);
-				}
+				overrideMovement = Vector2f(0.0f, 0.0f);
 				overrideActions &= ~DpadMask;
 			}
 
@@ -432,10 +429,7 @@ namespace Jazz2::UI
 			if (PreferencesCache::EnableTouchJoystick && _joystickActive && event.actionIndex == _joystickPointerId) {
 				_joystickActive = false;
 				_joystickPointerId = -1;
-				auto players = _levelHandler->GetPlayers();
-				if (!players.empty()) {
-					_levelHandler->_playerInputs[players[0]->_playerIndex].RequiredMovement = Vector2f(0.0f, 0.0f);
-				}
+				overrideMovement = Vector2f(0.0f, 0.0f);
 				overrideActions &= ~DpadMask;
 			}
 

@@ -287,6 +287,9 @@ namespace nCine::Backends
 		static bool openUrl(StringView url);
 		static jobject getDecorView();
 		static Recti getVisibleBounds();
+		static void vibrate(std::int32_t milliseconds);
+		static void showStatusBar();
+		static void hideStatusBar();
 
 	private:
 		static jobject activityObject_;
@@ -299,6 +302,12 @@ namespace nCine::Backends
 		static jmethodID midSetActivityEnabled_;
 		static jmethodID midOpenUrl_;
 		static jmethodID midGetWindow_;
+		static jmethodID midGetSystemService_;
+
+		static jobject vibratorObject_;
+		static jobject insetsControllerObject_;
+		static jmethodID midInsetsShow_;
+		static jmethodID midInsetsHide_;
 
 		static jmethodID midGetDecorView_;
 		static jclass rectClass_;

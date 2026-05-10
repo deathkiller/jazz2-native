@@ -191,6 +191,14 @@ namespace nCine
 		/** @brief Adds the specified target as a sink for tracing */
 		void AttachTraceTarget(Containers::StringView targetPath);
 
+		/** @brief Vibrates the device for the specified duration in milliseconds; no-op if not supported */
+		virtual void Vibrate(std::int32_t milliseconds);
+
+		/** @brief Shows the system status bar (if supported) */
+		virtual void ShowStatusBar();
+		/** @brief Hides the system status bar (if supported) */
+		virtual void HideStatusBar();
+
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		AppConfiguration appCfg_;

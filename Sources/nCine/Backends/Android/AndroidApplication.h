@@ -42,6 +42,9 @@ namespace nCine
 		bool ToggleScreenKeyboard() override;
 		bool ShowScreenKeyboard() override;
 		bool HideScreenKeyboard() override;
+		void Vibrate(std::int32_t milliseconds) override;
+		void ShowStatusBar() override;
+		void HideStatusBar() override;
 
 	private:
 		bool isInitialized_;

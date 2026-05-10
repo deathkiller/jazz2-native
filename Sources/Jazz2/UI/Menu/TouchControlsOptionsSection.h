@@ -68,6 +68,5 @@ namespace Jazz2::UI::Menu
 		Vector2f GetCornerHandlePos(Jazz2::TouchButtonSlot slot, Vector2i viewSize);
 
 		void DrawButtonPreview(Canvas* canvas, Jazz2::TouchButtonSlot slot, Vector2i viewSize, bool isFocused) const;
-		void DrawOutlineRect(float cx, float cy, float hw, float hh, std::uint16_t z, float thickness, Colorf color);
-	};
+		void DrawOutlineRect(float cx, float cy, float hw, float hh, std::uint16_t z, float thickness, Colorf color);		void DrawToggle(float left, float top, float w, float h, bool on);	};
 }

@@ -111,7 +111,7 @@ namespace Jazz2
 			_cheatsUsed(false), _checkpointCreated(false), _nextLevelType(ExitType::None),
 			_nextLevelTime(0.0f), _elapsedMillisecondsBegin(0), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
 			_waterLevel(FLT_MAX), _weatherType(WeatherType::None), _pressedKeys(ValueInit, (std::size_t)Keys::Count),
-			_overrideActions(0)
+			_overrideActions(0), _overrideMovement(0.0f, 0.0f)
 	{
 	}
 
@@ -838,7 +838,7 @@ namespace Jazz2
 		if (_pauseMenu != nullptr) {
 			_pauseMenu->OnTouchEvent(event);
 		} else {
-			_hud->OnTouchEvent(event, _overrideActions);
+			_hud->OnTouchEvent(event, _overrideActions, _overrideMovement);
 		}
 	}
 
@@ -2109,15 +2109,21 @@ namespace Jazz2
 			auto& input = _playerInputs[0];
 			input.PressedActions |= _overrideActions;
 
-			if ((_overrideActions & (1 << (std::int32_t)PlayerAction::Right)) != 0) {
-				input.RequiredMovement.X = 1.0f;
-			} else if ((_overrideActions & (1 << (std::int32_t)PlayerAction::Left)) != 0) {
-				input.RequiredMovement.X = -1.0f;
-			}
-			if ((_overrideActions & (1 << (std::int32_t)PlayerAction::Down)) != 0) {
-				input.RequiredMovement.Y = 1.0f;
-			} else if ((_overrideActions & (1 << (std::int32_t)PlayerAction::Up)) != 0) {
-				input.RequiredMovement.Y = -1.0f;
+			// overrideMovement is non-zero when a floating joystick is active — use it directly
+			if (_overrideMovement.X != 0.0f || _overrideMovement.Y != 0.0f) {
+				input.RequiredMovement = _overrideMovement;
+			} else {
+				// Fallback: derive movement from D-pad override actions
+				if ((_overrideActions & (1 << (std::int32_t)PlayerAction::Right)) != 0) {
+					input.RequiredMovement.X = 1.0f;
+				} else if ((_overrideActions & (1 << (std::int32_t)PlayerAction::Left)) != 0) {
+					input.RequiredMovement.X = -1.0f;
+				}
+				if ((_overrideActions & (1 << (std::int32_t)PlayerAction::Down)) != 0) {
+					input.RequiredMovement.Y = 1.0f;
+				} else if ((_overrideActions & (1 << (std::int32_t)PlayerAction::Up)) != 0) {
+					input.RequiredMovement.Y = -1.0f;
+				}
 			}
 		}
 	}

@@ -4,6 +4,7 @@
 #include "../../PreferencesCache.h"
 #include "../../LevelHandler.h"
 
+#include "../../../nCine/Application.h"
 #include "../../../nCine/I18n.h"
 
 using namespace Jazz2::UI::Menu::Resources;
@@ -71,46 +72,73 @@ namespace Jazz2::UI::Menu
 
 		// Dark full-screen background
 		_root->DrawSolid(0.0f, 0.0f, IMenuContainer::FontLayer + 225, Alignment::TopLeft,
-			Vector2f((float)viewSize.X, (float)viewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.6f));
+			Vector2f((float)viewSize.X, (float)viewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.5f));
 
 		// Top bar
 		_root->DrawSolid(0.0f, 0.0f, IMenuContainer::FontLayer + 230, Alignment::TopLeft,
-			Vector2f((float)viewSize.X, 68.0f), Colorf(0.0f, 0.0f, 0.0f, 0.6f));
+			Vector2f((float)viewSize.X, 96.0f), Colorf(0.0f, 0.0f, 0.0f, 0.5f));
+
+		_root->DrawElement(MenuLine, 0, viewSize.X / 2, 99.0f, IMenuContainer::FontLayer + 235, Alignment::Center, Colorf::White, 1.6f);
 
 		std::int32_t charOffset = 0;
 
 		// Title (centered, tap to go back)
-		_root->DrawStringShadow(_("Touch Controls"), charOffset, (float)viewSize.X * 0.5f, 14.0f,
+		_root->DrawStringShadow(_("Touch Controls"), charOffset, (float)viewSize.X * 0.5f, 12.0f,
 			IMenuContainer::FontLayer + 235, Alignment::Center,
 			Colorf(0.46f, 0.46f, 0.46f, 0.9f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
-		// Reset and Joystick buttons — centered horizontally, below title
-		// Layout: [Reset 60px] [8px gap] [Joystick 96px]  total = 164px
+		// Row 1: [Save 76px] [8px gap] [Reset 76px] — centered
 		float btnCenterX = (float)viewSize.X * 0.5f;
-		float resetLeft = btnCenterX - 82.0f;
-		float joyLeft   = btnCenterX - 82.0f + 68.0f;	// 60 + 8 gap
-		constexpr float BtnY = 30.0f;
-		constexpr float BtnH = 16.0f;
+		constexpr float BtnW = 76.0f;
+		constexpr float BtnGap = 8.0f;
+		constexpr float Row1Y = 28.0f;
+		constexpr float Row2Y = 54.0f;
+		constexpr float Row3Y = 74.0f;
+		constexpr float BtnH = 20.0f;
+		constexpr float ToggleW = 30.0f;
+		constexpr float ToggleH = 16.0f;
+		// Toggles: text right-aligned at center, toggle starts just right of center
+		constexpr float ToggleGap = 6.0f;
 
-		_root->DrawSolid(resetLeft, BtnY, IMenuContainer::FontLayer + 240, Alignment::TopLeft,
-			Vector2f(60.0f, BtnH), Colorf(0.7f, 0.2f, 0.2f, 0.85f));
-		_root->DrawStringShadow(_("Reset"), charOffset, resetLeft + 30.0f, BtnY + BtnH * 0.5f + 1.0f,
+		float saveLeft  = btnCenterX - BtnW - BtnGap * 0.5f;
+		float resetLeft = btnCenterX + BtnGap * 0.5f;
+
+		// Save button (green)
+		_root->DrawSolid(saveLeft, Row1Y, IMenuContainer::FontLayer + 240, Alignment::TopLeft,
+			Vector2f(BtnW, BtnH), Colorf(0.2f, 0.6f, 0.2f, 0.85f));
+		_root->DrawStringShadow(_("Save"), charOffset, saveLeft + BtnW * 0.5f, Row1Y + BtnH * 0.5f + 1.0f,
 			IMenuContainer::FontLayer + 245, Alignment::Center,
-			Colorf(0.6f, 0.46f, 0.46f, 0.5f), 0.72f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			Colorf(0.5f, 0.7f, 0.5f, 0.6f), 0.82f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
-		bool joystickMode = PreferencesCache::EnableTouchJoystick;
-		Colorf joyCol = joystickMode ? Colorf(0.2f, 0.65f, 0.2f, 0.85f) : Colorf(0.28f, 0.28f, 0.28f, 0.85f);
-		_root->DrawSolid(joyLeft, BtnY, IMenuContainer::FontLayer + 240, Alignment::TopLeft,
-			Vector2f(96.0f, BtnH), joyCol);
-		StringView joyLabel = joystickMode ? _("Joystick ON") : _("Joystick OFF");
-		_root->DrawStringShadow(joyLabel, charOffset, joyLeft + 48.0f, BtnY + BtnH * 0.5f + 1.0f,
+		// Reset button (red)
+		_root->DrawSolid(resetLeft, Row1Y, IMenuContainer::FontLayer + 240, Alignment::TopLeft,
+			Vector2f(BtnW, BtnH), Colorf(0.7f, 0.2f, 0.2f, 0.85f));
+		_root->DrawStringShadow(_("Reset"), charOffset, resetLeft + BtnW * 0.5f, Row1Y + BtnH * 0.5f + 1.0f,
 			IMenuContainer::FontLayer + 245, Alignment::Center,
-			Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.72f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			Colorf(0.7f, 0.5f, 0.5f, 0.6f), 0.82f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
-		// Hint
+		// Row 2: Joystick label + sliding toggle (label right-aligned to center, toggle just right of center)
+		{
+			bool on = PreferencesCache::EnableTouchJoystick;
+			_root->DrawStringShadow(_("Joystick"), charOffset, btnCenterX - ToggleGap,
+				Row2Y + ToggleH * 0.5f + 1.0f, IMenuContainer::FontLayer + 245, Alignment::Right,
+				Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.80f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			DrawToggle(btnCenterX + ToggleGap, Row2Y, ToggleW, ToggleH, on);
+		}
+
+		// Row 3: Vibration label + sliding toggle
+		{
+			bool on = PreferencesCache::EnableTouchVibration;
+			_root->DrawStringShadow(_("Vibration"), charOffset, btnCenterX - ToggleGap,
+				Row3Y + ToggleH * 0.5f + 1.0f, IMenuContainer::FontLayer + 245, Alignment::Right,
+				Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.80f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			DrawToggle(btnCenterX + ToggleGap, Row3Y, ToggleW, ToggleH, on);
+		}
+
+		// Hint (just below top bar)
 		_root->DrawStringShadow(_("Drag to move · Pinch or corner to resize"), charOffset,
-			(float)viewSize.X * 0.5f, 64.0f, IMenuContainer::FontLayer + 235,
-			Alignment::Bottom, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.66f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			(float)viewSize.X * 0.5f, 100.0f, IMenuContainer::FontLayer + 235,
+			Alignment::Top, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.66f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 		// Draw all button previews
 		float pulseAlpha = 0.5f + 0.5f * sinf(_pulseTime * fPiOver2);
@@ -133,10 +161,13 @@ namespace Jazz2::UI::Menu
 			// Corner resize handle (smaller)
 			_root->DrawSolid(_cornerHandleX - 6.0f, _cornerHandleY - 6.0f,
 				IMenuContainer::FontLayer + 265, Alignment::TopLeft,
-				Vector2f(12.0f, 12.0f), Colorf(1.0f, 1.0f, 1.0f, 0.95f));
+				Vector2f(12.0f, 12.0f), Colorf(0.0f, 0.0f, 0.0f, 0.3f));
 			_root->DrawSolid(_cornerHandleX - 4.0f, _cornerHandleY - 4.0f,
+				IMenuContainer::FontLayer + 265, Alignment::TopLeft,
+				Vector2f(8.0f, 8.0f), Colorf::White);
+			_root->DrawSolid(_cornerHandleX - 2.0f, _cornerHandleY - 2.0f,
 				IMenuContainer::FontLayer + 267, Alignment::TopLeft,
-				Vector2f(8.0f, 8.0f), Colorf(0.35f, 0.65f, 1.0f, 0.95f));
+				Vector2f(4.0f, 4.0f), Colorf(0.35f, 0.65f, 1.0f, 0.95f));
 		}
 	}
 
@@ -150,7 +181,7 @@ namespace Jazz2::UI::Menu
 
 		// Bounce scale
 		float bAnim = _bounceAnim[(std::int32_t)slot];
-		float bs = 1.0f + 0.12f * sinf(bAnim * fPi) * bAnim;
+		float bs = 1.0f + 0.25f * sinf(bAnim * fPi) * bAnim;
 		float hw = r.HalfW * bs;
 
 		// Map slot to the matching touch button animation in MenuResources
@@ -179,6 +210,21 @@ namespace Jazz2::UI::Menu
 		_root->DrawSolid(cx - hw, cy + hh - thickness, z, Alignment::TopLeft, Vector2f(hw * 2.0f, thickness), color);
 		_root->DrawSolid(cx - hw, cy - hh + thickness,          z, Alignment::TopLeft, Vector2f(thickness, (hh - thickness) * 2.0f), color);
 		_root->DrawSolid(cx + hw - thickness, cy - hh + thickness, z, Alignment::TopLeft, Vector2f(thickness, (hh - thickness) * 2.0f), color);
+	}
+
+	void TouchControlsOptionsSection::DrawToggle(float left, float top, float w, float h, bool on)
+	{
+		// Background rect
+		Colorf bgColor = on ? Colorf(0.2f, 0.6f, 0.2f, 0.85f) : Colorf(0.25f, 0.25f, 0.25f, 0.85f);
+		_root->DrawSolid(left, top, IMenuContainer::FontLayer + 240, Alignment::TopLeft,
+			Vector2f(w, h), bgColor);
+
+		// Sliding circle (white)
+		float circleR = h * 0.3f;
+		float circleX = (on ? (left + w - circleR - 2.0f) : (left + circleR + 2.0f));
+		float circleY = top + h * 0.5f;
+		_root->DrawSolid(circleX - circleR, circleY - circleR, IMenuContainer::FontLayer + 242,
+			Alignment::TopLeft, Vector2f(circleR * 2.0f, circleR * 2.0f), Colorf(1.0f, 1.0f, 1.0f, 0.9f));
 	}
 
 	TouchControlsOptionsSection::ButtonRect TouchControlsOptionsSection::GetButtonRect(
@@ -274,10 +320,17 @@ namespace Jazz2::UI::Menu
 	{
 		// Layout constants mirrored from OnDraw
 		float btnCenterX = (float)viewSize.X * 0.5f;
-		float resetLeft = btnCenterX - 82.0f;
-		float joyLeft   = btnCenterX - 82.0f + 68.0f;
-		constexpr float BtnY = 30.0f;
-		constexpr float BtnH = 16.0f;
+		constexpr float BtnW = 76.0f;
+		constexpr float BtnGap = 8.0f;
+		constexpr float Row1Y = 28.0f;
+		constexpr float Row2Y = 54.0f;
+		constexpr float Row3Y = 74.0f;
+		constexpr float BtnH = 20.0f;
+		constexpr float ToggleW = 30.0f;
+		constexpr float ToggleH = 16.0f;
+
+		float saveLeft  = btnCenterX - BtnW - BtnGap * 0.5f;
+		float resetLeft = btnCenterX + BtnGap * 0.5f;
 
 		switch (event.type) {
 			case TouchEventType::Down:
@@ -354,15 +407,22 @@ namespace Jazz2::UI::Menu
 				if (_primaryPointerId != -1) break;	// consumed by a button
 
 				// Fixed UI - only if no touch button was hit
-				// Back: tap title row (center portion, top of bar)
-				if (py < 26.0f && std::fabs(px - (float)viewSize.X * 0.5f) < (float)viewSize.X * 0.25f) {
+				// Back: tap title row (top area, center portion)
+				if (py < Row1Y && std::fabs(px - (float)viewSize.X * 0.5f) < (float)viewSize.X * 0.25f) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_root->LeaveSection();
 					return;
 				}
 
-				// Reset button
-				if (py >= BtnY && py <= BtnY + BtnH && px >= resetLeft && px <= resetLeft + 60.0f) {
+				// Save button (Row 1, left side)
+				if (py >= Row1Y && py <= Row1Y + BtnH && px >= saveLeft && px <= saveLeft + BtnW) {
+					_root->PlaySfx("MenuSelect"_s, 0.6f);
+					_root->LeaveSection();
+					return;
+				}
+
+				// Reset button (Row 1, right side)
+				if (py >= Row1Y && py <= Row1Y + BtnH && px >= resetLeft && px <= resetLeft + BtnW) {
 					PreferencesCache::ResetTouchButtons();
 					_isDirty = true;
 					_focusedSlot = -1;
@@ -370,9 +430,19 @@ namespace Jazz2::UI::Menu
 					break;
 				}
 
-				// Joystick toggle
-				if (py >= BtnY && py <= BtnY + BtnH && px >= joyLeft && px <= joyLeft + 96.0f) {
+				// Joystick toggle (Row 2) — tapping anywhere across the row toggles it
+				if (py >= Row2Y && py <= Row2Y + ToggleH + 4.0f &&
+					px >= saveLeft && px <= resetLeft + BtnW) {
 					PreferencesCache::EnableTouchJoystick = !PreferencesCache::EnableTouchJoystick;
+					_isDirty = true;
+					_root->PlaySfx("MenuSelect"_s, 0.6f);
+					break;
+				}
+
+				// Vibration toggle (Row 3) — tapping anywhere across the row toggles it
+				if (py >= Row3Y && py <= Row3Y + ToggleH + 4.0f &&
+					px >= saveLeft && px <= resetLeft + BtnW) {
+					PreferencesCache::EnableTouchVibration = !PreferencesCache::EnableTouchVibration;
 					_isDirty = true;
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 					break;
@@ -398,6 +468,10 @@ namespace Jazz2::UI::Menu
 						PreferencesCache::TouchButtons[_focusedSlot].Scale =
 							std::clamp(_pinchStartScale * (newDist / _pinchStartDist), MinScale, MaxScale);
 						_isDirty = true;
+
+						Vector2f ch = GetCornerHandlePos((TouchButtonSlot)_focusedSlot, viewSize);
+						_cornerHandleX = ch.X;
+						_cornerHandleY = ch.Y;
 					}
 				} else if (_editMode == EditMode::Resizing && _resizingViaCorner) {
 					// Corner drag resize — use the center saved at gesture start to avoid feedback loop
@@ -407,6 +481,10 @@ namespace Jazz2::UI::Menu
 					PreferencesCache::TouchButtons[_focusedSlot].Scale =
 						std::clamp(_pinchStartScale * (newDist / _pinchStartDist), MinScale, MaxScale);
 					_isDirty = true;
+
+					Vector2f ch = GetCornerHandlePos((TouchButtonSlot)_focusedSlot, viewSize);
+					_cornerHandleX = ch.X;
+					_cornerHandleY = ch.Y;
 				} else if (_editMode == EditMode::Dragging && _focusedSlot >= 0) {
 					auto& layout = PreferencesCache::TouchButtons[_focusedSlot];
 					float halfSize = GetDefaultHalfSize((TouchButtonSlot)_focusedSlot) * layout.Scale;
@@ -459,6 +537,9 @@ namespace Jazz2::UI::Menu
 				if (_tapDownTime >= 0.0f && _tapDownTime < 30.0f && _focusedSlot >= 0) {
 					_bounceAnim[_focusedSlot] = 1.0f;
 					_root->PlaySfx("MenuSelect"_s, 0.35f);
+					if (PreferencesCache::EnableTouchVibration) {
+						theApplication().Vibrate(12);
+					}
 				}
 				_primaryPointerId = -1;
 				_secondaryPointerId = -1;
@@ -478,6 +559,9 @@ namespace Jazz2::UI::Menu
 					if (_tapDownTime >= 0.0f && _tapDownTime < 30.0f && _focusedSlot >= 0) {
 						_bounceAnim[_focusedSlot] = 1.0f;
 						_root->PlaySfx("MenuSelect"_s, 0.35f);
+						if (PreferencesCache::EnableTouchVibration) {
+							theApplication().Vibrate(12);
+						}
 					}
 					_primaryPointerId = -1;
 					_resizingViaCorner = false;

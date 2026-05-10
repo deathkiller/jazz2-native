@@ -69,6 +69,11 @@ namespace nCine::Backends
 	jmethodID AndroidJniWrap_Activity::midSetActivityEnabled_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midOpenUrl_ = nullptr;
 	jmethodID AndroidJniWrap_Activity::midGetWindow_ = nullptr;
+	jmethodID AndroidJniWrap_Activity::midGetSystemService_ = nullptr;
+	jobject AndroidJniWrap_Activity::vibratorObject_ = nullptr;
+	jobject AndroidJniWrap_Activity::insetsControllerObject_ = nullptr;
+	jmethodID AndroidJniWrap_Activity::midInsetsShow_ = nullptr;
+	jmethodID AndroidJniWrap_Activity::midInsetsHide_ = nullptr;
 
 	jmethodID AndroidJniWrap_Activity::midGetDecorView_ = nullptr;
 	jclass AndroidJniWrap_Activity::rectClass_ = nullptr;
@@ -773,6 +778,7 @@ namespace nCine::Backends
 		midSetActivityEnabled_ = AndroidJniClass::getMethodID(nativeActivityClass, "setActivityEnabled", "(Ljava/lang/String;Z)V");
 		midOpenUrl_ = AndroidJniClass::getMethodID(nativeActivityClass, "openUrl", "(Ljava/lang/String;)Z");
 		midGetWindow_ = AndroidJniClass::getMethodID(nativeActivityClass, "getWindow", "()Landroid/view/Window;");
+		midGetSystemService_ = AndroidJniClass::getMethodID(nativeActivityClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
 
 		jclass windowClass = AndroidJniClass::findClass("android/view/Window");
 		midGetDecorView_ = AndroidJniClass::getMethodID(windowClass, "getDecorView", "()Landroid/view/View;");
@@ -786,6 +792,55 @@ namespace nCine::Backends
 
 		jclass viewClass = AndroidJniClass::findClass("android/view/View");
 		midGetWindowVisibleDisplayFrame_ = AndroidJniClass::getMethodID(viewClass, "getWindowVisibleDisplayFrame", "(Landroid/graphics/Rect;)V");
+
+		// Cache the device vibrator for reuse
+		{
+			jstring svcName = AndroidJniHelper::jniEnv->NewStringUTF("vibrator");
+			jobject vibObj = AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midGetSystemService_, svcName);
+			AndroidJniHelper::jniEnv->DeleteLocalRef(svcName);
+			if (vibObj != nullptr) {
+				vibratorObject_ = AndroidJniHelper::jniEnv->NewGlobalRef(vibObj);
+				AndroidJniHelper::jniEnv->DeleteLocalRef(vibObj);
+			}
+		}
+
+		// Set up transparent status bar and cache WindowInsetsController (API 30+)
+		if (midGetWindow_ != nullptr && AndroidJniHelper::SdkVersion() >= 30) {
+			jobject windowObj = AndroidJniHelper::jniEnv->CallObjectMethod(activityObject_, midGetWindow_);
+			if (windowObj != nullptr) {
+				jclass windowClass = AndroidJniHelper::jniEnv->GetObjectClass(windowObj);
+
+				// Edge-to-edge: content draws behind system bars
+				jmethodID midSetDecorFitsSystemWindows = AndroidJniClass::getMethodID(windowClass, "setDecorFitsSystemWindows", "(Z)V");
+				if (midSetDecorFitsSystemWindows != nullptr) {
+					AndroidJniHelper::jniEnv->CallVoidMethod(windowObj, midSetDecorFitsSystemWindows, JNI_FALSE);
+				}
+
+				// Fully transparent status bar color
+				jmethodID midSetStatusBarColor = AndroidJniClass::getMethodID(windowClass, "setStatusBarColor", "(I)V");
+				if (midSetStatusBarColor != nullptr) {
+					AndroidJniHelper::jniEnv->CallVoidMethod(windowObj, midSetStatusBarColor, (jint)0x00000000);
+				}
+
+				// Cache WindowInsetsController
+				jmethodID midGetInsetsController = AndroidJniClass::getMethodID(windowClass, "getInsetsController", "()Landroid/view/WindowInsetsController;");
+				if (midGetInsetsController != nullptr) {
+					jobject controller = AndroidJniHelper::jniEnv->CallObjectMethod(windowObj, midGetInsetsController);
+					if (controller != nullptr) {
+						insetsControllerObject_ = AndroidJniHelper::jniEnv->NewGlobalRef(controller);
+						AndroidJniHelper::jniEnv->DeleteLocalRef(controller);
+
+						jclass controllerClass = AndroidJniHelper::jniEnv->GetObjectClass(insetsControllerObject_);
+						midInsetsShow_ = AndroidJniClass::getMethodID(controllerClass, "show", "(I)V");
+						midInsetsHide_ = AndroidJniClass::getMethodID(controllerClass, "hide", "(I)V");
+						AndroidJniHelper::jniEnv->DeleteLocalRef(controllerClass);
+					}
+				}
+
+				AndroidJniHelper::jniEnv->DeleteLocalRef(windowClass);
+				AndroidJniHelper::jniEnv->DeleteLocalRef(windowObj);
+			}
+		}
 	}
 
 	void AndroidJniWrap_Activity::finishAndRemoveTask()
@@ -936,7 +991,47 @@ namespace nCine::Backends
 
 		return result;
 	}
-	
+
+	void AndroidJniWrap_Activity::vibrate(std::int32_t milliseconds)
+	{
+		if (vibratorObject_ == nullptr || milliseconds <= 0) {
+			return;
+		}
+
+		if (AndroidJniHelper::SdkVersion() >= 26) {
+			// Android 8+ — use VibrationEffect::createOneShot
+			const AndroidJniClass_VibrationEffect effect = AndroidJniClass_VibrationEffect::createOneShot(
+				static_cast<long>(milliseconds), -1 /* DEFAULT_AMPLITUDE */);
+			AndroidJniClass_Vibrator vibrator(vibratorObject_);
+			vibrator.vibrate(effect);
+		}
+		AndroidJniHelper::CheckAndClearExceptions();
+	}
+
+	void AndroidJniWrap_Activity::showStatusBar()
+	{
+		if (insetsControllerObject_ == nullptr || midInsetsShow_ == nullptr) {
+			return;
+		}
+
+		// WindowInsets.Type.statusBars() == 1
+		AndroidJniHelper::jniEnv->CallVoidMethod(insetsControllerObject_, midInsetsShow_, (jint)1);
+		AndroidJniHelper::CheckAndClearExceptions();
+		statusBarVisible_ = true;
+	}
+
+	void AndroidJniWrap_Activity::hideStatusBar()
+	{
+		if (insetsControllerObject_ == nullptr || midInsetsHide_ == nullptr) {
+			return;
+		}
+
+		// WindowInsets.Type.statusBars() == 1
+		AndroidJniHelper::jniEnv->CallVoidMethod(insetsControllerObject_, midInsetsHide_, (jint)1);
+		AndroidJniHelper::CheckAndClearExceptions();
+		statusBarVisible_ = false;
+	}
+
 	// ------------------- AndroidJniWrap_InputMethodManager -------------------
 
 	void AndroidJniWrap_InputMethodManager::init(struct android_app* state)

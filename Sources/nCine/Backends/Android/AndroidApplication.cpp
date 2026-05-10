@@ -284,6 +284,27 @@ namespace nCine
 		return isInitialized_ && AndroidJniWrap_InputMethodManager::hideSoftInput();
 	}
 
+	void AndroidApplication::Vibrate(std::int32_t milliseconds)
+	{
+		if (isInitialized_) {
+			AndroidJniWrap_Activity::vibrate(milliseconds);
+		}
+	}
+
+	void AndroidApplication::ShowStatusBar()
+	{
+		if (isInitialized_) {
+			AndroidJniWrap_Activity::showStatusBar();
+		}
+	}
+
+	void AndroidApplication::HideStatusBar()
+	{
+		if (isInitialized_) {
+			AndroidJniWrap_Activity::hideStatusBar();
+		}
+	}
+
 	void AndroidApplication::PreInit()
 	{
 		profileStartTime_ = TimeStamp::now();

@@ -47,7 +47,7 @@ namespace Jazz2::UI
 
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
-		void OnTouchEvent(const TouchEvent& event, std::uint32_t& overrideActions);
+		void OnTouchEvent(const TouchEvent& event, std::uint32_t& overrideActions, Vector2f& overrideMovement);
 
 		/** @brief Shows a text notification */
 		void ShowLevelText(StringView text);

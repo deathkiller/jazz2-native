@@ -262,6 +262,7 @@ namespace Jazz2
 
 		BitArray _pressedKeys;
 		std::uint32_t _overrideActions;
+		Vector2f _overrideMovement;
 		PlayerInput _playerInputs[ControlScheme::MaxSupportedPlayers];
 
 #if defined(NCINE_HAS_GAMEPAD_RUMBLE)

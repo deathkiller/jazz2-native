@@ -1380,6 +1380,21 @@ namespace nCine
 		return false;
 	}
 
+	void Application::Vibrate(std::int32_t milliseconds)
+	{
+		// Not implemented in base class
+	}
+
+	void Application::ShowStatusBar()
+	{
+		// Not implemented in base class
+	}
+
+	void Application::HideStatusBar()
+	{
+		// Not implemented in base class
+	}
+
 	void Application::AttachTraceTarget(Containers::StringView targetPath)
 	{
 #if defined(DEATH_TRACE) && defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)

@@ -266,6 +266,8 @@ namespace Jazz2
 		static bool UseNativeBackButton;
 		/** @brief Whether D-pad is replaced by a floating analog joystick */
 		static bool EnableTouchJoystick;
+		/** @brief Whether device vibration is used for touch button press feedback */
+		static bool EnableTouchVibration;
 		/** @brief Per-button layout configuration for all configurable touch buttons */
 		static TouchButtonLayout TouchButtons[(std::size_t)TouchButtonSlot::Count];
 
@@ -338,7 +340,8 @@ namespace Jazz2
 			EnableContinuousJump = 0x10000000,
 
 			BlurEffects = 0x20000000,
-			EnableTouchJoystick = 0x40000000
+			EnableTouchJoystick = 0x40000000,
+			EnableTouchVibration = 0x80000000
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
