@@ -50,7 +50,8 @@
 		},
 		"Shoot": {
 			"Path": "Birdy/fly.aura",
-			"States": [ 17 ]
+			"States": [ 17 ],
+			"FrameRate": 7
 		},
 		"Hurt": {
 			"Path": "Birdy/hurt.aura",
