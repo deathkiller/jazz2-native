@@ -113,7 +113,7 @@ namespace Jazz2::UI::Menu
 			Alignment::Bottom, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.66f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 		// Draw all button previews
-		float pulseAlpha = 0.5f + 0.5f * sinf(_pulseTime * fTwoPi);
+		float pulseAlpha = 0.5f + 0.5f * sinf(_pulseTime * fPiOver2);
 		for (std::int32_t i = 0; i < (std::int32_t)TouchButtonSlot::Count; i++) {
 			DrawButtonPreview(canvas, (TouchButtonSlot)i, viewSize, (i == _focusedSlot));
 		}
@@ -128,15 +128,15 @@ namespace Jazz2::UI::Menu
 				IMenuContainer::FontLayer + 260, 2.0f, outlineColor);
 			// Outer glow ring
 			DrawOutlineRect(r.CenterX, r.CenterY, r.HalfW + 4.0f, r.HalfH + 4.0f,
-				IMenuContainer::FontLayer + 258, 1.0f, Colorf(1.0f, 1.0f, 1.0f, 0.10f * pulseAlpha));
+				IMenuContainer::FontLayer + 258, 4.0f, Colorf(1.0f, 1.0f, 1.0f, 0.2f * pulseAlpha));
 
 			// Corner resize handle (smaller)
-			_root->DrawSolid(_cornerHandleX - 7.0f, _cornerHandleY - 7.0f,
+			_root->DrawSolid(_cornerHandleX - 6.0f, _cornerHandleY - 6.0f,
 				IMenuContainer::FontLayer + 265, Alignment::TopLeft,
-				Vector2f(14.0f, 14.0f), Colorf(1.0f, 1.0f, 1.0f, 0.95f));
-			_root->DrawSolid(_cornerHandleX - 5.0f, _cornerHandleY - 5.0f,
+				Vector2f(12.0f, 12.0f), Colorf(1.0f, 1.0f, 1.0f, 0.95f));
+			_root->DrawSolid(_cornerHandleX - 4.0f, _cornerHandleY - 4.0f,
 				IMenuContainer::FontLayer + 267, Alignment::TopLeft,
-				Vector2f(10.0f, 10.0f), Colorf(0.35f, 0.65f, 1.0f, 0.95f));
+				Vector2f(8.0f, 8.0f), Colorf(0.35f, 0.65f, 1.0f, 0.95f));
 		}
 	}
 
@@ -157,17 +157,17 @@ namespace Jazz2::UI::Menu
 		AnimState anim;
 		float nativeHalf;	// half of the sprite's native pixel size
 		switch (slot) {
-			case TouchButtonSlot::Fire:        anim = TouchFire;   nativeHalf = 35.0f; break;
-			case TouchButtonSlot::Jump:        anim = TouchJump;   nativeHalf = 35.0f; break;
-			case TouchButtonSlot::Run:         anim = TouchRun;    nativeHalf = 35.0f; break;
-			case TouchButtonSlot::ChangeWeapon: anim = TouchChange; nativeHalf = 20.0f; break;
-			case TouchButtonSlot::Menu:        anim = TouchPause;  nativeHalf = 20.0f; break;
-			case TouchButtonSlot::Console:     anim = TouchClose;  nativeHalf = 17.5f; break;
-			default: /* Dpad */                anim = TouchDpad;   nativeHalf = 46.0f; break;
+			case TouchButtonSlot::Fire:			anim = TouchFire;   nativeHalf = 35.0f; break;
+			case TouchButtonSlot::Jump:			anim = TouchJump;   nativeHalf = 35.0f; break;
+			case TouchButtonSlot::Run:			anim = TouchRun;    nativeHalf = 35.0f; break;
+			case TouchButtonSlot::ChangeWeapon:	anim = TouchChange; nativeHalf = 20.0f; break;
+			case TouchButtonSlot::Menu:			anim = TouchPause;  nativeHalf = 20.0f; break;
+			case TouchButtonSlot::Console:		anim = TouchClose;  nativeHalf = 17.5f; break;
+			default: /* D-pad */				anim = TouchDpad;   nativeHalf = 46.0f; break;
 		}
 
 		float spriteScale = hw / nativeHalf;
-		float alpha = (isFocused ? 0.90f : 0.70f);
+		float alpha = (isFocused ? 1.0f : 0.9f);
 		_root->DrawElement(anim, -1, r.CenterX, r.CenterY, IMenuContainer::FontLayer + 250,
 			Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, alpha), spriteScale, spriteScale);
 	}
@@ -177,8 +177,8 @@ namespace Jazz2::UI::Menu
 	{
 		_root->DrawSolid(cx - hw, cy - hh,          z, Alignment::TopLeft, Vector2f(hw * 2.0f, thickness), color);
 		_root->DrawSolid(cx - hw, cy + hh - thickness, z, Alignment::TopLeft, Vector2f(hw * 2.0f, thickness), color);
-		_root->DrawSolid(cx - hw, cy - hh,          z, Alignment::TopLeft, Vector2f(thickness, hh * 2.0f), color);
-		_root->DrawSolid(cx + hw - thickness, cy - hh, z, Alignment::TopLeft, Vector2f(thickness, hh * 2.0f), color);
+		_root->DrawSolid(cx - hw, cy - hh + thickness,          z, Alignment::TopLeft, Vector2f(thickness, (hh - thickness) * 2.0f), color);
+		_root->DrawSolid(cx + hw - thickness, cy - hh + thickness, z, Alignment::TopLeft, Vector2f(thickness, (hh - thickness) * 2.0f), color);
 	}
 
 	TouchControlsOptionsSection::ButtonRect TouchControlsOptionsSection::GetButtonRect(

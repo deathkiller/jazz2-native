@@ -1640,12 +1640,12 @@ namespace Jazz2::UI
 		};
 
 		// Outer ring (translucent white ring)
-		drawCircle(centerX, centerY, outerRadius, 0.78f, Colorf(1.0f, 1.0f, 1.0f, 0.35f));
+		drawCircle(centerX, centerY, outerRadius, 0.78f, Colorf(1.0f, 1.0f, 1.0f, 0.2f));
 		// Outer ring border highlight
-		drawCircle(centerX, centerY, outerRadius, 0.90f, Colorf(1.0f, 1.0f, 1.0f, 0.55f));
+		drawCircle(centerX, centerY, outerRadius, 0.90f, Colorf(1.0f, 1.0f, 1.0f, 0.4f));
 		// Thumb (filled circle)
 		float thumbRadius = outerRadius * 0.28f;
-		drawCircle(thumbX, thumbY, thumbRadius, 0.0f, Colorf(1.0f, 1.0f, 1.0f, 0.80f));
+		drawCircle(thumbX, thumbY, thumbRadius, 0.0f, Colorf(1.0f, 1.0f, 1.0f, 0.6f));
 	}
 
 	void HUD::UpdateRgbLights(float timeMult, Rendering::PlayerViewport* viewport)
