@@ -318,11 +318,17 @@ namespace Jazz2::UI::Menu
 	void ServerSelectSection::OnDrawOverlay(Canvas* canvas)
 	{
 		char stringBuffer[64];
+		Vector2i viewSize = canvas->ViewSize;
 		Recti contentBounds = _root->GetContentBounds();
 		float centerX = contentBounds.X + contentBounds.W * 0.5f;
 		float topLine = contentBounds.Y + TopLine;
 		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
 		std::int32_t charOffset = 0;
+
+		float hintY = contentBounds.Y + contentBounds.H - 18.0f;
+		if (viewSize.Y < 300) {
+			hintY -= 9.0f;
+		}
 
 		if (_waitForIpInput) {
 			float midY = (topLine + bottomLine) * 0.5f;
@@ -359,8 +365,6 @@ namespace Jazz2::UI::Menu
 			}
 
 			// Bottom hints
-			float hintY = contentBounds.Y + contentBounds.H - 18.0f;
-
 			/*if (theApplication().CanShowScreenKeyboard()) {
 				_root->DrawElement(ShowKeyboard, -1, centerX - 100.0f, hintY + 2.0f, IMenuContainer::MainLayer + 110, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f));
 				_root->DrawElement(ShowKeyboard, -1, centerX - 100.0f, hintY, IMenuContainer::MainLayer + 120, Alignment::Center, Colorf::White);
@@ -382,16 +386,16 @@ namespace Jazz2::UI::Menu
 		} else {
 			std::size_t length = formatInto(stringBuffer, "\f[c:#d0705d]{}\f[/c] │", _("Change Weapon"));
 
-			_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX - 15.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
+			_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX - 15.0f, hintY, IMenuContainer::FontLayer,
 				Alignment::Right, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 
-			_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, contentBounds.Y + contentBounds.H - 18.0f + 2.0f,
+			_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, hintY + 2.0f,
 				IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.8f, 0.8f);
-			_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, contentBounds.Y + contentBounds.H - 18.0f,
+			_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, hintY,
 				IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.8f, 0.8f);
 
 			// TRANSLATORS: Bottom hint in Connect To Server section, prefixed with key/button to press
-			_root->DrawStringShadow(_("to connect to IP address"), charOffset, centerX + 8.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
+			_root->DrawStringShadow(_("to connect to IP address"), charOffset, centerX + 8.0f, hintY, IMenuContainer::FontLayer,
 				Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 		}
 

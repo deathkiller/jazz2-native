@@ -147,7 +147,7 @@ namespace Jazz2::Multiplayer
 #endif
 		/** @brief Converts the endpoint of the specified peer to the string representation */
 		String AddressToString(const Peer& peer) const;
-
+		
 		/** @brief Returns `true` if the specified string representation of the address is valid */
 		static bool IsAddressValid(StringView address);
 		/** @brief Returns `true` if the specified string representation of the domain name is valid */
@@ -174,7 +174,7 @@ namespace Jazz2::Multiplayer
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		_ENetHost* _host;
 		Thread _thread;
-		SmallVector<_ENetPeer*, 1> _peers;
+		SmallVector<Peer, 1> _connectedPeers;
 		SmallVector<ENetAddress, 0> _desiredEndpoints;
 #endif
 		NetworkState _state;
@@ -182,26 +182,12 @@ namespace Jazz2::Multiplayer
 		INetworkHandler* _handler;
 		Spinlock _lock;
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-		EMSCRIPTEN_WEBSOCKET_T _emWsSocket{0};
-		String _emWsUrl;
-
-		static EM_BOOL OnEmWsOpen(int eventType, const EmscriptenWebSocketOpenEvent* e, void* userData);
-		static EM_BOOL OnEmWsMessage(int eventType, const EmscriptenWebSocketMessageEvent* e, void* userData);
-		static EM_BOOL OnEmWsError(int eventType, const EmscriptenWebSocketErrorEvent* e, void* userData);
-		static EM_BOOL OnEmWsClose(int eventType, const EmscriptenWebSocketCloseEvent* e, void* userData);
-#elif defined(WITH_WEBSOCKET)
-		/** @brief Represents a connected WebSocket peer */
-		struct WsPeerInfo {
-			ix::WebSocket* webSocket;
-			String address;
-		};
-
+#if defined(WITH_WEBSOCKET) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		/** @brief Queued event from WebSocket callbacks to the main processing thread */
 		struct WsQueuedEvent {
 			enum class Type : std::uint8_t { Open, Close, Message };
 			Type type = Type::Open;
-			std::uint64_t peerId = 0;
+			ix::WebSocket* peer = nullptr;
 			std::string data;
 			std::uint32_t clientData = 0;	/**< For Open: client data value to pass to OnPeerConnected */
 			std::uint16_t closeCode = 0;	/**< For Close: WebSocket close code */
@@ -209,14 +195,22 @@ namespace Jazz2::Multiplayer
 
 		std::unique_ptr<ix::WebSocketServer> _wsServer;
 		std::unique_ptr<ix::WebSocket> _wsClient;
-		HashMap<std::uint64_t, WsPeerInfo> _wsPeers;
-		HashMap<String, std::uint64_t> _wsConnectionIds;
+		HashMap<ix::WebSocket*, String> _wsPeers;	/**< Maps ix::WebSocket* → remote address string; also acts as lifetime guard */
 		SmallVector<WsQueuedEvent, 0> _wsPendingEvents;
 		mutable Spinlock _wsLock;
-		std::atomic_uint64_t _nextWsId{1};
 
 		void ProcessWsQueue(INetworkHandler* handler);
-		bool SendToWsPeer(std::uint64_t peerId, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
+		bool SendToWsPeer(ix::WebSocket* ws, std::uint8_t packetType, ArrayView<const std::uint8_t> data);
+#elif defined(WITH_WEBSOCKET) && defined(DEATH_TARGET_EMSCRIPTEN)
+		/** @brief Emscripten WebSocket handle (0 = not connected) */
+		EMSCRIPTEN_WEBSOCKET_T _emWsSocket{0};
+		/** @brief URL of the WebSocket server being connected to */
+		String _emWsUrl;
+
+		static EM_BOOL OnEmWsOpen(int eventType, const EmscriptenWebSocketOpenEvent* e, void* userData);
+		static EM_BOOL OnEmWsMessage(int eventType, const EmscriptenWebSocketMessageEvent* e, void* userData);
+		static EM_BOOL OnEmWsError(int eventType, const EmscriptenWebSocketErrorEvent* e, void* userData);
+		static EM_BOOL OnEmWsClose(int eventType, const EmscriptenWebSocketCloseEvent* e, void* userData);
 #endif
 
 		static void InitializeBackend();

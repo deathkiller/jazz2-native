@@ -228,18 +228,19 @@ namespace Jazz2::Multiplayer
 			_wsClient->setUrl(std::string(wsUrl.data(), wsUrl.size()));
 			_wsClient->disableAutomaticReconnection();
 			_wsClient->setOnMessageCallback([this](const ix::WebSocketMessagePtr& msg) {
+				ix::WebSocket* ws = _wsClient.get();
 				if (msg->type == ix::WebSocketMessageType::Open) {
 					std::unique_lock<Spinlock> lock(_wsLock);
-					_wsPeers.emplace(std::uint64_t(1), WsPeerInfo{_wsClient.get(), {}});
-					_wsPendingEvents.push_back({WsQueuedEvent::Type::Open, 1, {}, _clientData, 0});
+					_wsPeers.emplace(ws, String{});
+					_wsPendingEvents.push_back({WsQueuedEvent::Type::Open, ws, {}, _clientData, 0});
 				} else if (msg->type == ix::WebSocketMessageType::Close) {
 					std::unique_lock<Spinlock> lock(_wsLock);
-					_wsPeers.erase(std::uint64_t(1));
-					_wsPendingEvents.push_back({WsQueuedEvent::Type::Close, 1, {}, 0, msg->closeInfo.code});
+					_wsPeers.erase(ws);
+					_wsPendingEvents.push_back({WsQueuedEvent::Type::Close, ws, {}, 0, msg->closeInfo.code});
 				} else if (msg->type == ix::WebSocketMessageType::Message && msg->binary) {
 					if (!msg->str.empty()) {
 						std::unique_lock<Spinlock> lock(_wsLock);
-						_wsPendingEvents.push_back({WsQueuedEvent::Type::Message, 1, msg->str, 0, 0});
+						_wsPendingEvents.push_back({WsQueuedEvent::Type::Message, ws, msg->str, 0, 0});
 					}
 				} else if (msg->type == ix::WebSocketMessageType::Error) {
 					LOGE("[MP] WebSocket transport error: {}", StringView{msg->errorInfo.reason});
@@ -385,7 +386,11 @@ namespace Jazz2::Multiplayer
 		// TODO: Implement round trip time measurement for WebSocket connections
 		return 0;
 #else
-		return (_state == NetworkState::Connected && !_peers.empty() ? _peers[0]->roundTripTime : 0);
+		return (_state == NetworkState::Connected && !_connectedPeers.empty()
+#	if defined(WITH_WEBSOCKET)
+			&& !_connectedPeers[0].IsWebSocket()
+#	endif
+			? _connectedPeers[0]._enet->roundTripTime : 0);
 #endif
 	}
 
@@ -498,8 +503,12 @@ namespace Jazz2::Multiplayer
 			}
 #	endif
 		} else {
-			if (!_peers.empty()) {
-				String addressString = AddressToString(_peers[0]->address, true);
+			if (!_connectedPeers.empty()
+#	if defined(WITH_WEBSOCKET)
+				&& !_connectedPeers[0].IsWebSocket()
+#	endif
+			) {
+				String addressString = AddressToString(_connectedPeers[0]._enet->address, true);
 				if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
 					arrayAppend(result, std::move(addressString));
 				}
@@ -518,8 +527,12 @@ namespace Jazz2::Multiplayer
 #else
 		if (_state == NetworkState::Listening) {
 			return _host->address.port;
-		} else if (!_peers.empty()) {
-			return _peers[0]->address.port;
+		} else if (!_connectedPeers.empty()
+#	if defined(WITH_WEBSOCKET)
+			&& !_connectedPeers[0].IsWebSocket()
+#	endif
+		) {
+			return _connectedPeers[0]._enet->address.port;
 		} else {
 			return 0;
 		}
@@ -540,17 +553,21 @@ namespace Jazz2::Multiplayer
 #else
 #	if defined(WITH_WEBSOCKET)
 		if DEATH_UNLIKELY(peer.IsWebSocket()) {
-			SendToWsPeer(peer.GetId(), packetType, data);
+			SendToWsPeer(peer._ws, packetType, data);
 			return;
 		}
 #	endif
 
 		ENetPeer* target;
 		if (peer == nullptr) {
-			if (_state != NetworkState::Connected || _peers.empty()) {
+			if (_state != NetworkState::Connected || _connectedPeers.empty()
+#	if defined(WITH_WEBSOCKET)
+				|| _connectedPeers[0].IsWebSocket()
+#	endif
+			) {
 				return;
 			}
-			target = _peers[0];
+			target = _connectedPeers[0]._enet;
 		} else {
 			target = peer._enet;
 		}
@@ -570,7 +587,7 @@ namespace Jazz2::Multiplayer
 			success = enet_peer_send(target, std::uint8_t(channel), packet) >= 0;
 		}
 
-		if (!success) {
+		if DEATH_UNLIKELY(!success) {
 			enet_packet_destroy(packet);
 		}
 #endif
@@ -598,38 +615,53 @@ namespace Jazz2::Multiplayer
 			flags = ENET_PACKET_FLAG_UNSEQUENCED;
 		}
 
-		if (!_peers.empty()) {
-			ENetPacket* packet = enet_packet_create(packetType, data.data(), data.size(), flags);
+		ENetPacket* enetPacket = nullptr;
+		bool enetPacketSent = false;
+#	if defined(WITH_WEBSOCKET)
+		SmallVector<ix::WebSocket*, 16> wsTargets;
+#	endif
 
-			bool success = false;
-			{
-				std::unique_lock lock(_lock);
-				for (ENetPeer* peer : _peers) {
-					if (predicate(Peer(peer))) {
-						if (enet_peer_send(peer, std::uint8_t(channel), packet) >= 0) {
-							success = true;
+		{
+			std::unique_lock lock(_lock);
+			for (const Peer& p : _connectedPeers) {
+				if (predicate(p)) {
+#	if defined(WITH_WEBSOCKET)
+					if DEATH_UNLIKELY(p.IsWebSocket()) {
+						wsTargets.push_back(p._ws);
+					} else
+#	endif
+					{
+						if DEATH_UNLIKELY(enetPacket == nullptr) {
+							enetPacket = enet_packet_create(packetType, data.data(), data.size(), flags);
+						}
+						if DEATH_LIKELY(enet_peer_send(p._enet, std::uint8_t(channel), enetPacket) >= 0) {
+							enetPacketSent = true;
 						}
 					}
 				}
 			}
+		}
 
-			if (!success) {
-				enet_packet_destroy(packet);
-			}
+		if (enetPacket != nullptr && !enetPacketSent) {
+			enet_packet_destroy(enetPacket);
 		}
 
 #	if defined(WITH_WEBSOCKET)
-		SmallVector<std::uint64_t, 16> wsTargets;
-		{
-			std::unique_lock<Spinlock> lock(_wsLock);
-			for (auto& [id, info] : _wsPeers) {
-				if (predicate(Peer::FromWebSocket(id))) {
-					wsTargets.push_back(id);
-				}
+		if (!wsTargets.empty()) {
+			std::string wsPacket(1 + data.size(), '\0');
+			wsPacket[0] = (char)packetType;
+			if (!data.empty()) {
+				std::memcpy(&wsPacket[1], data.data(), data.size());
 			}
-		}
-		for (auto id : wsTargets) {
-			SendToWsPeer(id, packetType, data);
+			for (ix::WebSocket* ws : wsTargets) {
+				{
+					std::unique_lock<Spinlock> wslock(_wsLock);
+					if DEATH_UNLIKELY(_wsPeers.find(ws) == _wsPeers.end()) {
+						continue;
+					}
+				}
+				ws->sendBinary(wsPacket);
+			}
 		}
 #	endif
 #endif
@@ -654,34 +686,51 @@ namespace Jazz2::Multiplayer
 			flags = ENET_PACKET_FLAG_UNSEQUENCED;
 		}
 
-		if (!_peers.empty()) {
-			ENetPacket* packet = enet_packet_create(packetType, data.data(), data.size(), flags);
+		ENetPacket* enetPacket = nullptr;
+		bool enetPacketSent = false;
+#	if defined(WITH_WEBSOCKET)
+		SmallVector<ix::WebSocket*, 16> wsTargets;
+#	endif
 
-			bool success = false;
-			{
-				std::unique_lock lock(_lock);
-				for (ENetPeer* peer : _peers) {
-					if (enet_peer_send(peer, std::uint8_t(channel), packet) >= 0) {
-						success = true;
+		{
+			std::unique_lock lock(_lock);
+			for (const Peer& p : _connectedPeers) {
+#	if defined(WITH_WEBSOCKET)
+				if DEATH_UNLIKELY(p.IsWebSocket()) {
+					wsTargets.push_back(p._ws);
+				} else
+#	endif
+				{
+					if DEATH_UNLIKELY(enetPacket == nullptr) {
+						enetPacket = enet_packet_create(packetType, data.data(), data.size(), flags);
+					}
+					if DEATH_LIKELY(enet_peer_send(p._enet, std::uint8_t(channel), enetPacket) >= 0) {
+						enetPacketSent = true;
 					}
 				}
 			}
+		}
 
-			if (!success) {
-				enet_packet_destroy(packet);
-			}
+		if (enetPacket != nullptr && !enetPacketSent) {
+			enet_packet_destroy(enetPacket);
 		}
 
 #	if defined(WITH_WEBSOCKET)
-		SmallVector<std::uint64_t, 16> wsTargets;
-		{
-			std::unique_lock<Spinlock> lock(_wsLock);
-			for (auto& [id, info] : _wsPeers) {
-				wsTargets.push_back(id);
+		if (!wsTargets.empty()) {
+			std::string wsPacket(1 + data.size(), '\0');
+			wsPacket[0] = (char)packetType;
+			if (!data.empty()) {
+				std::memcpy(&wsPacket[1], data.data(), data.size());
 			}
-		}
-		for (auto id : wsTargets) {
-			SendToWsPeer(id, packetType, data);
+			for (ix::WebSocket* ws : wsTargets) {
+				{
+					std::unique_lock<Spinlock> wslock(_wsLock);
+					if DEATH_UNLIKELY(_wsPeers.find(ws) == _wsPeers.end()) {
+						continue;
+					}
+				}
+				ws->sendBinary(wsPacket);
+			}
 		}
 #	endif
 #endif
@@ -691,22 +740,18 @@ namespace Jazz2::Multiplayer
 	{
 #if defined(WITH_WEBSOCKET) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		if DEATH_UNLIKELY(peer.IsWebSocket()) {
-			ix::WebSocket* ws = nullptr;
 			{
 				std::unique_lock<Spinlock> lock(_wsLock);
-				auto it = _wsPeers.find(peer.GetId());
-				if (it != _wsPeers.end()) {
-					ws = it->second.webSocket;
+				if DEATH_UNLIKELY(_wsPeers.find(peer._ws) == _wsPeers.end()) {
+					return;
 				}
 			}
-			if (ws != nullptr) {
-				ws->close(ReasonToWsCloseCode(reason), ReasonToString(reason));
-			}
+			peer._ws->close(ReasonToWsCloseCode(reason), ReasonToString(reason));
 			return;
 		}
 #endif
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-		if (peer != nullptr) {
+		if DEATH_LIKELY(peer != nullptr) {
 			std::unique_lock lock(_lock);
 			enet_peer_disconnect(peer._enet, std::uint32_t(reason));
 		}
@@ -796,9 +841,9 @@ namespace Jazz2::Multiplayer
 #	if defined(WITH_WEBSOCKET)
 		if DEATH_UNLIKELY(peer.IsWebSocket()) {
 			std::unique_lock<Spinlock> lock(_wsLock);
-			auto it = _wsPeers.find(peer.GetId());
-			if (it != _wsPeers.end()) {
-				return it->second.address;
+			auto it = _wsPeers.find(peer._ws);
+			if DEATH_LIKELY(it != _wsPeers.end()) {
+				return it->second;
 			}
 			return {};
 		}
@@ -942,9 +987,9 @@ namespace Jazz2::Multiplayer
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		if (peer && _state == NetworkState::Listening) {
 			std::unique_lock lock(_lock);
-			for (std::size_t i = 0; i < _peers.size(); i++) {
-				if (peer == _peers[i]) {
-					_peers.eraseUnordered(i);
+			for (std::size_t i = 0; i < _connectedPeers.size(); i++) {
+				if (peer == _connectedPeers[i]) {
+					_connectedPeers.eraseUnordered(i);
 					break;
 				}
 			}
@@ -1079,45 +1124,28 @@ namespace Jazz2::Multiplayer
 			ix::WebSocket& ws, const ix::WebSocketMessagePtr& msg) {
 
 			if (msg->type == ix::WebSocketMessageType::Open) {
-				const std::uint64_t id = _nextWsId.fetch_add(1, std::memory_order_relaxed) + 1;
-				const std::string stateId = state->getId();
 				const std::string remoteIp = state->getRemoteIp();
 				const std::uint32_t peerClientData = ParseQueryParamUInt32(
 					StringView(msg->openInfo.uri.data(), msg->openInfo.uri.size()), "clientData"_s);
 
 				{
 					std::unique_lock<Spinlock> lock(_wsLock);
-					_wsPeers.emplace(id, WsPeerInfo{&ws, String(remoteIp.data(), remoteIp.size())});
-					_wsConnectionIds.emplace(stateId, id);
-					_wsPendingEvents.push_back({WsQueuedEvent::Type::Open, id, {}, peerClientData, 0});
+					_wsPeers.emplace(&ws, String(remoteIp.data(), remoteIp.size()));
+					_wsPendingEvents.push_back({WsQueuedEvent::Type::Open, &ws, {}, peerClientData, 0});
 				}
-				LOGD("[MP] WebSocket client connected [W|{:.6x}] from {}", id, StringView{remoteIp});
+				LOGD("[MP] WebSocket client connected [{}] from {}", Peer::FromWebSocket(&ws), StringView{remoteIp});
 
 			} else if (msg->type == ix::WebSocketMessageType::Close) {
-				const std::string stateId = state->getId();
-				std::uint64_t id = 0;
 				{
 					std::unique_lock<Spinlock> lock(_wsLock);
-					auto it = _wsConnectionIds.find(stateId);
-					if (it != _wsConnectionIds.end()) {
-						id = it->second;
-						_wsPeers.erase(id);
-						_wsConnectionIds.erase(it);
-						_wsPendingEvents.push_back({WsQueuedEvent::Type::Close, id, {}, 0, std::uint16_t(msg->closeInfo.code)});
-					}
+					_wsPeers.erase(&ws);
+					_wsPendingEvents.push_back({WsQueuedEvent::Type::Close, &ws, {}, 0, std::uint16_t(msg->closeInfo.code)});
 				}
-				if (id != 0) {
-					LOGD("[MP] WebSocket client disconnected [W{:.7x}]", id);
-				}
-
+				LOGD("[MP] WebSocket client disconnected [{}]", Peer::FromWebSocket(&ws));
 			} else if (msg->type == ix::WebSocketMessageType::Message && msg->binary) {
-				const std::string stateId = state->getId();
 				if (!msg->str.empty()) {
 					std::unique_lock<Spinlock> lock(_wsLock);
-					auto it = _wsConnectionIds.find(stateId);
-					if (it != _wsConnectionIds.end()) {
-						_wsPendingEvents.push_back({WsQueuedEvent::Type::Message, it->second, msg->str});
-					}
+					_wsPendingEvents.push_back({WsQueuedEvent::Type::Message, &ws, msg->str});
 				}
 
 			} else if (msg->type == ix::WebSocketMessageType::Error) {
@@ -1147,31 +1175,24 @@ namespace Jazz2::Multiplayer
 		for (auto& ev : pending) {
 			switch (ev.type) {
 				case WsQueuedEvent::Type::Open: {
-					Peer wsPeer = Peer::FromWebSocket(ev.peerId);
+					Peer wsPeer = Peer::FromWebSocket(ev.peer);
 					ConnectionResult result = OnPeerConnected(wsPeer, ev.clientData);
-					if (!result.IsSuccessful()) {
+					if (result.IsSuccessful()) {
+						std::unique_lock lock(_lock);
+						_connectedPeers.push_back(wsPeer);
+					} else {
 						// Reject the connection
-						ix::WebSocket* ws = nullptr;
-						{
-							std::unique_lock<Spinlock> lock(_wsLock);
-							auto it = _wsPeers.find(ev.peerId);
-							if (it != _wsPeers.end()) {
-								ws = it->second.webSocket;
-							}
-						}
-						if (ws != nullptr) {
-							ws->close(ReasonToWsCloseCode(result.FailureReason), ReasonToString(result.FailureReason));
-						}
+						ev.peer->close(ReasonToWsCloseCode(result.FailureReason), ReasonToString(result.FailureReason));
 					}
 					break;
 				}
 				case WsQueuedEvent::Type::Close: {
-					OnPeerDisconnected(Peer::FromWebSocket(ev.peerId), WsCloseCodeToReason(ev.closeCode, true));
+					OnPeerDisconnected(Peer::FromWebSocket(ev.peer), WsCloseCodeToReason(ev.closeCode, true));
 					break;
 				}
 				case WsQueuedEvent::Type::Message: {
-					if (ev.data.size() >= 1) {
-						handler->OnPacketReceived(Peer::FromWebSocket(ev.peerId), 0,
+					if DEATH_LIKELY(ev.data.size() >= 1) {
+						handler->OnPacketReceived(Peer::FromWebSocket(ev.peer), 0,
 							(std::uint8_t)ev.data[0], arrayView((const std::uint8_t*)ev.data.data() + 1, ev.data.size() - 1));
 					}
 					break;
@@ -1180,17 +1201,13 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	bool NetworkManagerBase::SendToWsPeer(std::uint64_t peerId, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
+	bool NetworkManagerBase::SendToWsPeer(ix::WebSocket* ws, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
 	{
-		ix::WebSocket* ws = nullptr;
 		{
 			std::unique_lock<Spinlock> lock(_wsLock);
-			auto it = _wsPeers.find(peerId);
-			if DEATH_UNLIKELY(it == _wsPeers.end()) {
+			if DEATH_UNLIKELY(_wsPeers.find(ws) == _wsPeers.end()) {
 				return false;
 			}
-
-			ws = it->second.webSocket;
 		}
 
 		std::string packet(1 + data.size(), '\0');
@@ -1210,6 +1227,7 @@ namespace Jazz2::Multiplayer
 		INetworkHandler* handler = _this->_handler;
 
 		bool wasConnected = false;
+		ix::WebSocket* serverPeer = nullptr;
 		Reason disconnectReason = Reason::ConnectionTimedOut;
 
 		while (_this->_state != NetworkState::None) {
@@ -1225,22 +1243,17 @@ namespace Jazz2::Multiplayer
 				switch (ev.type) {
 					case WsQueuedEvent::Type::Open: {
 						wasConnected = true;
+						serverPeer = ev.peer;
 						disconnectReason = Reason::Unknown;
 						_this->_state = NetworkState::Connected;
-						Peer serverPeer = Peer::FromWebSocket(ev.peerId);
-						ConnectionResult result = _this->OnPeerConnected(serverPeer, ev.clientData);
+						Peer connectedPeer = Peer::FromWebSocket(ev.peer);
+						{
+							std::unique_lock lock(_this->_lock);
+							_this->_connectedPeers.push_back(connectedPeer);
+						}
+						ConnectionResult result = _this->OnPeerConnected(connectedPeer, ev.clientData);
 						if (!result.IsSuccessful()) {
-							ix::WebSocket* ws = nullptr;
-							{
-								std::unique_lock<Spinlock> lock(_this->_wsLock);
-								auto it = _this->_wsPeers.find(ev.peerId);
-								if (it != _this->_wsPeers.end()) {
-									ws = it->second.webSocket;
-								}
-							}
-							if (ws != nullptr) {
-								ws->close(ReasonToWsCloseCode(result.FailureReason), ReasonToString(result.FailureReason));
-							}
+							ev.peer->close(ReasonToWsCloseCode(result.FailureReason), ReasonToString(result.FailureReason));
 						}
 						break;
 					}
@@ -1251,7 +1264,7 @@ namespace Jazz2::Multiplayer
 					}
 					case WsQueuedEvent::Type::Message: {
 						if (ev.data.size() >= 1) {
-							handler->OnPacketReceived(Peer::FromWebSocket(ev.peerId), 0,
+							handler->OnPacketReceived(Peer::FromWebSocket(ev.peer), 0,
 								(std::uint8_t)ev.data[0], arrayView((const std::uint8_t*)ev.data.data() + 1, ev.data.size() - 1));
 						}
 						break;
@@ -1260,8 +1273,13 @@ namespace Jazz2::Multiplayer
 			}
 		}
 
+		{
+			std::unique_lock lock(_this->_lock);
+			_this->_connectedPeers.clear();
+		}
+
 		if (wasConnected) {
-			_this->OnPeerDisconnected(Peer::FromWebSocket(1), disconnectReason);
+			_this->OnPeerDisconnected(Peer::FromWebSocket(serverPeer), disconnectReason);
 		} else {
 			_this->OnPeerDisconnected({}, disconnectReason);
 		}
@@ -1322,13 +1340,13 @@ namespace Jazz2::Multiplayer
 			}
 
 			if (n != 0) {
-				_this->_peers.push_back(ev.peer);
+				_this->_connectedPeers.push_back(Peer(ev.peer));
 				break;
 			}
 		}
 
 		Reason reason;
-		if (_this->_peers.empty()) {
+		if (_this->_connectedPeers.empty()) {
 			LOGE("[MP] Failed to connect to the server");
 			_this->_state = NetworkState::None;
 			reason = Reason::ConnectionTimedOut;
@@ -1373,13 +1391,13 @@ namespace Jazz2::Multiplayer
 			}
 		}
 
-		if (!_this->_peers.empty()) {
-			_this->OnPeerDisconnected(_this->_peers[0], reason);
+		if DEATH_UNLIKELY(!_this->_connectedPeers.empty()) {
+			_this->OnPeerDisconnected(_this->_connectedPeers[0], reason);
 
-			for (ENetPeer* peer : _this->_peers) {
-				enet_peer_disconnect_now(peer, (std::uint32_t)Reason::Disconnected);
+			for (const Peer& p : _this->_connectedPeers) {
+				enet_peer_disconnect_now(p._enet, (std::uint32_t)Reason::Disconnected);
 			}
-			_this->_peers.clear();
+			_this->_connectedPeers.clear();
 		} else {
 			_this->OnPeerDisconnected({}, reason);
 		}
@@ -1401,7 +1419,7 @@ namespace Jazz2::Multiplayer
 		INetworkHandler* handler = _this->_handler;
 		ENetHost* host = _this->_host;
 
-		_this->_peers.reserve(16);
+		_this->_connectedPeers.reserve(16);
 
 		ENetEvent ev{};
 		while DEATH_LIKELY(_this->_state != NetworkState::None) {
@@ -1416,11 +1434,19 @@ namespace Jazz2::Multiplayer
 					LOGE("[MP] enet_host_service() returned {}", result);
 
 					// Server failed, try to recreate it
-					for (auto& peer : _this->_peers) {
-						_this->OnPeerDisconnected(peer, Reason::ConnectionLost);
+					SmallVector<Peer, 1> peersSnapshot;
+					{
+						std::unique_lock lock(_this->_lock);
+						std::swap(peersSnapshot, _this->_connectedPeers);
 					}
-					_this->_peers.clear();
-
+					for (const Peer& p : peersSnapshot) {
+#if defined(WITH_WEBSOCKET)
+						if DEATH_LIKELY(!p.IsWebSocket())
+#endif
+						{
+							_this->OnPeerDisconnected(p, Reason::ConnectionLost);
+						}
+					}
 					ENetAddress addr = host->address;
 					{
 						std::unique_lock lock(_this->_lock);
@@ -1447,8 +1473,8 @@ namespace Jazz2::Multiplayer
 					if DEATH_LIKELY(result.IsSuccessful()) {
 						std::unique_lock lock(_this->_lock);
 						bool alreadyExists = false;
-						for (std::size_t i = 0; i < _this->_peers.size(); i++) {
-							if (ev.peer == _this->_peers[i]) {
+						for (std::size_t i = 0; i < _this->_connectedPeers.size(); i++) {
+							if (Peer(ev.peer) == _this->_connectedPeers[i]) {
 								alreadyExists = true;
 								break;
 							}
@@ -1456,7 +1482,7 @@ namespace Jazz2::Multiplayer
 						if DEATH_UNLIKELY(alreadyExists) {
 							LOGW("Peer is already connected [{:.8x}]", std::uint64_t(ev.peer));
 						} else {
-							_this->_peers.push_back(ev.peer);
+							_this->_connectedPeers.push_back(Peer(ev.peer));
 						}
 					} else {
 						std::unique_lock lock(_this->_lock);
@@ -1483,10 +1509,15 @@ namespace Jazz2::Multiplayer
 #	endif
 		}
 
-		for (ENetPeer* peer : _this->_peers) {
-			enet_peer_disconnect_now(peer, std::uint32_t(Reason::ServerStopped));
+		for (const Peer& p : _this->_connectedPeers) {
+#	if defined(WITH_WEBSOCKET)
+			if DEATH_LIKELY(!p.IsWebSocket())
+#	endif
+			{
+				enet_peer_disconnect_now(p._enet, std::uint32_t(Reason::ServerStopped));
+			}
 		}
-		_this->_peers.clear();
+		_this->_connectedPeers.clear();
 
 		enet_host_destroy(_this->_host);
 		_this->_host = nullptr;
@@ -1504,7 +1535,6 @@ namespace Jazz2::Multiplayer
 		{
 			std::unique_lock<Spinlock> lock(_this->_wsLock);
 			_this->_wsPeers.clear();
-			_this->_wsConnectionIds.clear();
 			_this->_wsPendingEvents.clear();
 		}
 #	endif

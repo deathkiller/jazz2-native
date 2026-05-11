@@ -61,6 +61,7 @@ namespace Jazz2::UI::Menu
 
 	void InputDiagnosticsSection::OnDraw(Canvas* canvas)
 	{
+		Vector2i viewSize = canvas->ViewSize;
 		Recti contentBounds = _root->GetContentBounds();
 		Vector2f center = Vector2f(contentBounds.X + contentBounds.W * 0.5f, (contentBounds.Y + contentBounds.H) * 0.5f);
 		float topLine = contentBounds.Y + 31.0f;
@@ -223,20 +224,25 @@ namespace Jazz2::UI::Menu
 			}
 		}
 
-		_root->DrawElement(GetResourceForButtonName(ButtonName::Back), 0, center.X - 37.0f, contentBounds.Y + contentBounds.H - 17.0f + 2.0f,
+		float hintY = contentBounds.Y + contentBounds.H - 18.0f;
+		if (viewSize.Y < 300) {
+			hintY -= 9.0f;
+		}
+
+		_root->DrawElement(GetResourceForButtonName(ButtonName::Back), 0, center.X - 37.0f, hintY + 3.0f,
 			IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.9f, 0.9f);
-		_root->DrawElement(GetResourceForButtonName(ButtonName::Back), 0, center.X - 37.0f, contentBounds.Y + contentBounds.H - 17.0f,
+		_root->DrawElement(GetResourceForButtonName(ButtonName::Back), 0, center.X - 37.0f, hintY + 1.0f,
 			IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
 		
-		_root->DrawStringShadow("+"_s, charOffset, center.X - 28.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("+"_s, charOffset, center.X - 28.0f, hintY, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.6f, 0.4f, 0.0f, 0.0f, 0.46f, 0.88f);
 
-		_root->DrawElement(GetResourceForButtonName(ButtonName::Start), 0, center.X - 11.0f, contentBounds.Y + contentBounds.H - 17.0f + 2.0f,
+		_root->DrawElement(GetResourceForButtonName(ButtonName::Start), 0, center.X - 11.0f, hintY + 3.0f,
 			IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.9f, 0.9f);
-		_root->DrawElement(GetResourceForButtonName(ButtonName::Start), 0, center.X - 11.0f, contentBounds.Y + contentBounds.H - 17.0f,
+		_root->DrawElement(GetResourceForButtonName(ButtonName::Start), 0, center.X - 11.0f, hintY + 1.0f,
 			IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.9f, 0.9f);
 		
-		_root->DrawStringShadow("to exit"_s, charOffset, center.X, contentBounds.Y + contentBounds.H - 17.0f, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("to exit"_s, charOffset, center.X, hintY + 1.0f, IMenuContainer::FontLayer,
 			Alignment::Left, Font::DefaultColor, 0.8f, 0.4f, 0.0f, 0.0f, 0.46f, 0.8f);
 	}
 

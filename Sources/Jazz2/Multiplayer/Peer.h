@@ -9,6 +9,9 @@
 #if !defined(DEATH_TARGET_EMSCRIPTEN) || defined(DOXYGEN_GENERATING_OUTPUT)
 struct _ENetPeer;
 #endif
+#if defined(WITH_WEBSOCKET) && !defined(DEATH_TARGET_EMSCRIPTEN)
+namespace ix { class WebSocket; }
+#endif
 
 namespace Jazz2::Multiplayer
 {
@@ -19,7 +22,7 @@ namespace Jazz2::Multiplayer
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 			: _enet(nullptr)
 #	if defined(WITH_WEBSOCKET)
-			, _wsId(0)
+			, _ws(nullptr)
 #	endif
 #else
 			: _wsId(0)
@@ -31,20 +34,28 @@ namespace Jazz2::Multiplayer
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		Peer(_ENetPeer* peer) : _enet(peer)
 #	if defined(WITH_WEBSOCKET)
-			, _wsId(0)
+			, _ws(nullptr)
 #	endif
 		{
 		}
 #endif
 
 #if defined(WITH_WEBSOCKET)
-		/** @brief Creates a WebSocket peer from a numeric connection identifier */
-		static Peer FromWebSocket(std::uint64_t wsId) {
+		/** @brief Creates a WebSocket peer from a native WebSocket pointer */
+		static Peer FromWebSocket(
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+			ix::WebSocket* ws
+#	else
+			std::uint64_t wsId
+#	endif
+		) {
 			Peer p;
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
 			p._enet = nullptr;
-#	endif
+			p._ws = ws;
+#	else
 			p._wsId = wsId;
+#	endif
 			return p;
 		}
 
@@ -64,8 +75,8 @@ namespace Jazz2::Multiplayer
 			return (_wsId == other._wsId);
 #else
 #	if defined(WITH_WEBSOCKET)
-			if DEATH_UNLIKELY(_enet == nullptr && _wsId == other._wsId) {
-				return true;
+			if DEATH_UNLIKELY(_enet == nullptr) {
+				return (_ws == other._ws);
 			}
 #	endif
 			return (_enet == other._enet);
@@ -85,7 +96,7 @@ namespace Jazz2::Multiplayer
 			return (_wsId != 0);
 #else
 #	if defined(WITH_WEBSOCKET)
-			if DEATH_UNLIKELY(_wsId != 0) {
+			if DEATH_UNLIKELY(_ws != nullptr) {
 				return true;
 			}
 #	endif
@@ -100,7 +111,7 @@ namespace Jazz2::Multiplayer
 #else
 #	if defined(WITH_WEBSOCKET)
 			if DEATH_UNLIKELY(_enet == nullptr) {
-				return _wsId;
+				return reinterpret_cast<std::uint64_t>(_ws);
 			}
 #	endif
 			return reinterpret_cast<std::uint64_t>(_enet);
@@ -114,7 +125,9 @@ namespace Jazz2::Multiplayer
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		_ENetPeer* _enet;
 #endif
-#if defined(WITH_WEBSOCKET) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(WITH_WEBSOCKET) && !defined(DEATH_TARGET_EMSCRIPTEN)
+		ix::WebSocket* _ws;
+#elif defined(WITH_WEBSOCKET) || defined(DEATH_TARGET_EMSCRIPTEN)
 		std::uint64_t _wsId;
 #endif
 #endif

@@ -323,7 +323,7 @@ namespace Jazz2::UI
 					auto& button = _touchButtons[i];
 					if (PreferencesCache::EnableTouchJoystick && i <= 4) {
 						continue;  // D-pad managed by joystick
-					}
+					} 
 					if (button.Action != PlayerAction::None) {
 						if (button.CurrentPointerId == -1 && IsOnButton(button, x, y)) {
 							button.CurrentPointerId = event.actionIndex;
@@ -355,14 +355,17 @@ namespace Jazz2::UI
 					Vector2f movement = dir * magnitude;
 
 					overrideMovement = movement;
-
 					overrideActions &= ~DpadMask;
+
 					if (movement.X < -0.2f) overrideActions |= (1 << (std::int32_t)PlayerAction::Left);
 					else if (movement.X > 0.2f) overrideActions |= (1 << (std::int32_t)PlayerAction::Right);
-					if (movement.Y < -0.2f) overrideActions |= (1 << (std::int32_t)PlayerAction::Up);
-					else if (movement.Y > 0.2f) {
+					
+					if (movement.Y < -0.4f) overrideActions |= (1 << (std::int32_t)PlayerAction::Up);
+					else if (movement.Y > 0.4f) {
 						overrideActions |= (1 << (std::int32_t)PlayerAction::Down);
-						overrideActions |= (1 << (std::int32_t)PlayerAction::Buttstomp);
+						if (movement.Y > 0.6f) {
+							overrideActions |= (1 << (std::int32_t)PlayerAction::Buttstomp);
+						}
 					}
 				}
 			}
@@ -1640,12 +1643,12 @@ namespace Jazz2::UI
 		};
 
 		// Outer ring (translucent white ring)
-		drawCircle(centerX, centerY, outerRadius, 0.78f, Colorf(1.0f, 1.0f, 1.0f, 0.2f));
+		drawCircle(centerX, centerY, outerRadius, 0.78f, Colorf(1.0f, 1.0f, 1.0f, 0.14f));
 		// Outer ring border highlight
 		drawCircle(centerX, centerY, outerRadius, 0.90f, Colorf(1.0f, 1.0f, 1.0f, 0.4f));
 		// Thumb (filled circle)
 		float thumbRadius = outerRadius * 0.28f;
-		drawCircle(thumbX, thumbY, thumbRadius, 0.0f, Colorf(1.0f, 1.0f, 1.0f, 0.4f));
+		drawCircle(thumbX, thumbY, thumbRadius, 0.0f, Colorf(1.0f, 1.0f, 1.0f, 0.32f));
 	}
 
 	void HUD::UpdateRgbLights(float timeMult, Rendering::PlayerViewport* viewport)

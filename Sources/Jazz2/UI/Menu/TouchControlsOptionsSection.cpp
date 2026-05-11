@@ -72,11 +72,11 @@ namespace Jazz2::UI::Menu
 
 		// Dark full-screen background
 		_root->DrawSolid(0.0f, 0.0f, IMenuContainer::FontLayer + 225, Alignment::TopLeft,
-			Vector2f((float)viewSize.X, (float)viewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.5f));
+			Vector2f((float)viewSize.X, (float)viewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.2f));
 
 		// Top bar
 		_root->DrawSolid(0.0f, 0.0f, IMenuContainer::FontLayer + 230, Alignment::TopLeft,
-			Vector2f((float)viewSize.X, 96.0f), Colorf(0.0f, 0.0f, 0.0f, 0.5f));
+			Vector2f((float)viewSize.X, 96.0f), Colorf(0.0f, 0.0f, 0.0f, 0.3f));
 
 		_root->DrawElement(MenuLine, 0, viewSize.X / 2, 99.0f, IMenuContainer::FontLayer + 235, Alignment::Center, Colorf::White, 1.6f);
 
@@ -208,9 +208,9 @@ namespace Jazz2::UI::Menu
 	void TouchControlsOptionsSection::DrawOutlineRect(float cx, float cy, float hw, float hh,
 		std::uint16_t z, float thickness, Colorf color)
 	{
-		_root->DrawSolid(cx - hw, cy - hh,          z, Alignment::TopLeft, Vector2f(hw * 2.0f, thickness), color);
-		_root->DrawSolid(cx - hw, cy + hh - thickness, z, Alignment::TopLeft, Vector2f(hw * 2.0f, thickness), color);
-		_root->DrawSolid(cx - hw, cy - hh + thickness,          z, Alignment::TopLeft, Vector2f(thickness, (hh - thickness) * 2.0f), color);
+		_root->DrawSolid(cx - hw, cy - hh,				z, Alignment::TopLeft, Vector2f(hw * 2.0f, thickness), color);
+		_root->DrawSolid(cx - hw, cy + hh - thickness,	z, Alignment::TopLeft, Vector2f(hw * 2.0f, thickness), color);
+		_root->DrawSolid(cx - hw, cy - hh + thickness,	z, Alignment::TopLeft, Vector2f(thickness, (hh - thickness) * 2.0f), color);
 		_root->DrawSolid(cx + hw - thickness, cy - hh + thickness, z, Alignment::TopLeft, Vector2f(thickness, (hh - thickness) * 2.0f), color);
 	}
 
@@ -559,7 +559,7 @@ namespace Jazz2::UI::Menu
 					_root->PlaySfx("MenuSelect"_s, 0.35f);
 #if defined(NCINE_HAS_VIBRATIONS)
 					if (PreferencesCache::EnableTouchVibration) {
-						theApplication().Vibrate(10);
+						theApplication().Vibrate(8);
 					}
 #endif
 				}
@@ -583,7 +583,7 @@ namespace Jazz2::UI::Menu
 						_root->PlaySfx("MenuSelect"_s, 0.35f);
 #if defined(NCINE_HAS_VIBRATIONS)
 						if (PreferencesCache::EnableTouchVibration) {
-							theApplication().Vibrate(10);
+							theApplication().Vibrate(8);
 						}
 #endif
 					}

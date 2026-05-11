@@ -150,6 +150,7 @@ namespace Jazz2::UI::Menu
 
 	void RemapControlsSection::OnDraw(Canvas* canvas)
 	{
+		Vector2i viewSize = canvas->ViewSize;
 		Recti contentBounds = _root->GetContentBounds();
 		float centerX = contentBounds.X + contentBounds.W * 0.5f;
 		float topLine = contentBounds.Y + TopLine;
@@ -169,11 +170,16 @@ namespace Jazz2::UI::Menu
 				Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 		}
 
+		float hintY = contentBounds.Y + contentBounds.H;
+		if (viewSize.Y < 300) {
+			hintY -= 9.0f;
+		}
+
 		if (_waitForInput) {
 			Colorf textColor = Font::DefaultColor;
 			textColor.SetAlpha(_hintAnimation);
 			// TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
-			_root->DrawStringShadow(_("Press any key or button to assign"), charOffset, centerX, contentBounds.Y + contentBounds.H - 18.0f * IMenuContainer::EaseOutCubic(_hintAnimation), IMenuContainer::FontLayer,
+			_root->DrawStringShadow(_("Press any key or button to assign"), charOffset, centerX, hintY - 18.0f * IMenuContainer::EaseOutCubic(_hintAnimation), IMenuContainer::FontLayer,
 				Alignment::Center, textColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 		} else {
 			auto& mapping = ControlScheme::GetMappings(_playerIndex)[_selectedIndex];
@@ -181,16 +187,16 @@ namespace Jazz2::UI::Menu
 				char stringBuffer[64];
 				std::size_t length = formatInto(stringBuffer, "\f[c:#d0705d]{}\f[/c] │", _("Change Weapon"));
 
-				_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX - 15.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
+				_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX - 15.0f, hintY - 18.0f, IMenuContainer::FontLayer,
 					Alignment::Right, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 
-				_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, contentBounds.Y + contentBounds.H - 18.0f + 2.0f,
+				_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, hintY - 18.0f + 2.0f,
 					IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.16f), 0.8f, 0.8f);
-				_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, contentBounds.Y + contentBounds.H - 18.0f,
+				_root->DrawElement(GetResourceForButtonName(ButtonName::Y), 0, centerX - 2.0f, hintY - 18.0f,
 					IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 0.8f, 0.8f);
 				
 				// TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
-				_root->DrawStringShadow(_("to remove assignment"), charOffset, centerX + 8.0f, contentBounds.Y + contentBounds.H - 18.0f, IMenuContainer::FontLayer,
+				_root->DrawStringShadow(_("to remove assignment"), charOffset, centerX + 8.0f, hintY - 18.0f, IMenuContainer::FontLayer,
 					Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 			}
 		}

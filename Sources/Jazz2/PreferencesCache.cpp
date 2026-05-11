@@ -920,6 +920,11 @@ namespace Jazz2
 			playerName = PreferencesCache::PlayerName;
 			if (playerName.empty()) {
 				playerName = theApplication().GetUserName();
+				if (playerName.empty()) {
+					// Fallback to "Player XXXX" using the last 4 hex digits of the unique player ID
+					playerName = format("Player {:.2x}{:.2x}",
+						PreferencesCache::UniquePlayerID[14], PreferencesCache::UniquePlayerID[15]);
+				}
 			}
 		}
 
