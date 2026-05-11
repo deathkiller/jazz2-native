@@ -52,6 +52,10 @@
 #if defined(DEATH_TARGET_ANDROID) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define NCINE_HAS_NATIVE_BACK_BUTTON
 #endif
+/** @brief Whether the current platform supports vibrations of the device */
+#if defined(DEATH_TARGET_ANDROID)
+#	define NCINE_HAS_VIBRATIONS
+#endif
 /** @brief Whether the current platform has non-fullscreen windows */
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
 #	define NCINE_HAS_WINDOWS

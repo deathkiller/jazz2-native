@@ -108,14 +108,14 @@ namespace Jazz2::UI::Menu
 			Vector2f(BtnW, BtnH), Colorf(0.2f, 0.6f, 0.2f, 0.85f));
 		_root->DrawStringShadow(_("Save"), charOffset, saveLeft + BtnW * 0.5f, Row1Y + BtnH * 0.5f + 1.0f,
 			IMenuContainer::FontLayer + 245, Alignment::Center,
-			Colorf(0.5f, 0.7f, 0.5f, 0.6f), 0.82f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			Colorf(0.46f, 0.66f, 0.46f, 0.6f), 0.82f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 		// Reset button (red)
 		_root->DrawSolid(resetLeft, Row1Y, IMenuContainer::FontLayer + 240, Alignment::TopLeft,
 			Vector2f(BtnW, BtnH), Colorf(0.7f, 0.2f, 0.2f, 0.85f));
 		_root->DrawStringShadow(_("Reset"), charOffset, resetLeft + BtnW * 0.5f, Row1Y + BtnH * 0.5f + 1.0f,
 			IMenuContainer::FontLayer + 245, Alignment::Center,
-			Colorf(0.7f, 0.5f, 0.5f, 0.6f), 0.82f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			Colorf(0.66f, 0.46f, 0.46f, 0.6f), 0.82f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 		// Row 2: Joystick label + sliding toggle (label right-aligned to center, toggle just right of center)
 		{
@@ -126,6 +126,7 @@ namespace Jazz2::UI::Menu
 			DrawToggle(btnCenterX + ToggleGap, Row2Y, ToggleW, ToggleH, on);
 		}
 
+#if defined(NCINE_HAS_VIBRATIONS)
 		// Row 3: Vibration label + sliding toggle
 		{
 			bool on = PreferencesCache::EnableTouchVibration;
@@ -134,6 +135,7 @@ namespace Jazz2::UI::Menu
 				Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.80f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			DrawToggle(btnCenterX + ToggleGap, Row3Y, ToggleW, ToggleH, on);
 		}
+#endif
 
 		// Hint (just below top bar)
 		_root->DrawStringShadow(_("Drag to move · Pinch or corner to resize"), charOffset,
@@ -215,13 +217,16 @@ namespace Jazz2::UI::Menu
 	void TouchControlsOptionsSection::DrawToggle(float left, float top, float w, float h, bool on)
 	{
 		// Background rect
-		Colorf bgColor = on ? Colorf(0.2f, 0.6f, 0.2f, 0.85f) : Colorf(0.25f, 0.25f, 0.25f, 0.85f);
-		_root->DrawSolid(left, top, IMenuContainer::FontLayer + 240, Alignment::TopLeft,
-			Vector2f(w, h), bgColor);
+		_root->DrawSolid(left, top, IMenuContainer::FontLayer + 238, Alignment::TopLeft,
+			Vector2f(w, h), Colorf(1.0f, 1.0f, 1.0f, 0.4f));
+
+		Colorf bgColor = (on ? Colorf(0.2f, 0.6f, 0.2f, 0.85f) : Colorf(0.25f, 0.25f, 0.25f, 0.85f));
+		_root->DrawSolid(left + 1.0f, top + 1.0f, IMenuContainer::FontLayer + 240, Alignment::TopLeft,
+			Vector2f(w - 2.0f, h - 2.0f), bgColor);
 
 		// Sliding circle (white)
 		float circleR = h * 0.3f;
-		float circleX = (on ? (left + w - circleR - 2.0f) : (left + circleR + 2.0f));
+		float circleX = (on ? (left + w - circleR - 3.0f) : (left + circleR + 3.0f));
 		float circleY = top + h * 0.5f;
 		_root->DrawSolid(circleX - circleR, circleY - circleR, IMenuContainer::FontLayer + 242,
 			Alignment::TopLeft, Vector2f(circleR * 2.0f, circleR * 2.0f), Colorf(1.0f, 1.0f, 1.0f, 0.9f));
@@ -355,7 +360,9 @@ namespace Jazz2::UI::Menu
 					break;
 				}
 
-				if (_primaryPointerId != -1) break;
+				if (_primaryPointerId != -1) {
+					break;
+				}
 
 				// Corner handle hit on focused button (any position, including top bar)
 				if (_focusedSlot >= 0) {
@@ -401,10 +408,18 @@ namespace Jazz2::UI::Menu
 						_tapDownTime = 0.0f;
 						_tapDownX = px;
 						_tapDownY = py;
+
+#if defined(NCINE_HAS_VIBRATIONS)
+						if (PreferencesCache::EnableTouchVibration) {
+							theApplication().Vibrate(12);
+						}
+#endif
 						break;
 					}
 				}
-				if (_primaryPointerId != -1) break;	// consumed by a button
+				if (_primaryPointerId != -1) {
+					break;	// Consumed by a button
+				}
 
 				// Fixed UI - only if no touch button was hit
 				// Back: tap title row (top area, center portion)
@@ -439,14 +454,19 @@ namespace Jazz2::UI::Menu
 					break;
 				}
 
+#if defined(NCINE_HAS_VIBRATIONS)
 				// Vibration toggle (Row 3) — tapping anywhere across the row toggles it
 				if (py >= Row3Y && py <= Row3Y + ToggleH + 4.0f &&
 					px >= saveLeft && px <= resetLeft + BtnW) {
 					PreferencesCache::EnableTouchVibration = !PreferencesCache::EnableTouchVibration;
 					_isDirty = true;
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
+					if (PreferencesCache::EnableTouchVibration) {
+						theApplication().Vibrate(12);
+					}
 					break;
 				}
+#endif
 				break;
 			}
 
@@ -537,9 +557,11 @@ namespace Jazz2::UI::Menu
 				if (_tapDownTime >= 0.0f && _tapDownTime < 30.0f && _focusedSlot >= 0) {
 					_bounceAnim[_focusedSlot] = 1.0f;
 					_root->PlaySfx("MenuSelect"_s, 0.35f);
+#if defined(NCINE_HAS_VIBRATIONS)
 					if (PreferencesCache::EnableTouchVibration) {
-						theApplication().Vibrate(12);
+						theApplication().Vibrate(10);
 					}
+#endif
 				}
 				_primaryPointerId = -1;
 				_secondaryPointerId = -1;
@@ -559,9 +581,11 @@ namespace Jazz2::UI::Menu
 					if (_tapDownTime >= 0.0f && _tapDownTime < 30.0f && _focusedSlot >= 0) {
 						_bounceAnim[_focusedSlot] = 1.0f;
 						_root->PlaySfx("MenuSelect"_s, 0.35f);
+#if defined(NCINE_HAS_VIBRATIONS)
 						if (PreferencesCache::EnableTouchVibration) {
-							theApplication().Vibrate(12);
+							theApplication().Vibrate(10);
 						}
+#endif
 					}
 					_primaryPointerId = -1;
 					_resizingViaCorner = false;

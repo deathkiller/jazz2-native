@@ -2109,7 +2109,7 @@ namespace Jazz2
 			auto& input = _playerInputs[0];
 			input.PressedActions |= _overrideActions;
 
-			// overrideMovement is non-zero when a floating joystick is active — use it directly
+			// overrideMovement is non-zero when a floating joystick is active - use it directly
 			if (_overrideMovement.X != 0.0f || _overrideMovement.Y != 0.0f) {
 				input.RequiredMovement = _overrideMovement;
 			} else {

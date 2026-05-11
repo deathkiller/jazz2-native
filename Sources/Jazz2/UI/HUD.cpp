@@ -331,9 +331,11 @@ namespace Jazz2::UI
 							if (button.Action == PlayerAction::Down) {
 								overrideActions |= (1 << (std::int32_t)PlayerAction::Buttstomp);
 							}
+#if defined(NCINE_HAS_VIBRATIONS)
 							if (PreferencesCache::EnableTouchVibration) {
-								theApplication().Vibrate(15);
+								theApplication().Vibrate(12);
 							}
+#endif
 						}
 					}
 				}
@@ -1643,7 +1645,7 @@ namespace Jazz2::UI
 		drawCircle(centerX, centerY, outerRadius, 0.90f, Colorf(1.0f, 1.0f, 1.0f, 0.4f));
 		// Thumb (filled circle)
 		float thumbRadius = outerRadius * 0.28f;
-		drawCircle(thumbX, thumbY, thumbRadius, 0.0f, Colorf(1.0f, 1.0f, 1.0f, 0.6f));
+		drawCircle(thumbX, thumbY, thumbRadius, 0.0f, Colorf(1.0f, 1.0f, 1.0f, 0.4f));
 	}
 
 	void HUD::UpdateRgbLights(float timeMult, Rendering::PlayerViewport* viewport)

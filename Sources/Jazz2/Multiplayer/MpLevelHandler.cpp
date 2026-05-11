@@ -117,9 +117,11 @@ namespace Jazz2::Multiplayer
 		resolver.PreloadMetadataAsync("Interactive/PlayerSpaz"_s);
 		resolver.PreloadMetadataAsync("Interactive/PlayerLori"_s);
 
-		_inGameCanvasLayer = std::make_unique<UI::Multiplayer::MpInGameCanvasLayer>(this);
-		_inGameCanvasLayer->setParent(_rootNode.get());
-		_inGameLobby = std::make_unique<UI::Multiplayer::MpInGameLobby>(this);
+		if (!ContentResolver::Get().IsHeadless()) {
+			_inGameCanvasLayer = std::make_unique<UI::Multiplayer::MpInGameCanvasLayer>(this);
+			_inGameCanvasLayer->setParent(_rootNode.get());
+			_inGameLobby = std::make_unique<UI::Multiplayer::MpInGameLobby>(this);
+		}
 
 		return true;
 	}
@@ -823,7 +825,7 @@ namespace Jazz2::Multiplayer
 	{
 		LevelHandler::OnTouchEvent(event);
 
-		if (_inGameLobby->IsVisible() && _pauseMenu == nullptr && !_console->IsVisible()) {
+		if (_inGameLobby != nullptr && _inGameLobby->IsVisible() && _pauseMenu == nullptr && !_console->IsVisible()) {
 			_inGameLobby->OnTouchEvent(event);
 		}
 	}
@@ -3668,11 +3670,13 @@ namespace Jazz2::Multiplayer
 
 					if (flags & 0x01) {
 						InvokeAsync([this, flags, allowedPlayerTypes]() {
-							_inGameLobby->SetAllowedPlayerTypes(allowedPlayerTypes);
-							if (flags & 0x02) {
-								_inGameLobby->Show();
-							} else {
-								_inGameLobby->Hide();
+							if (_inGameLobby != nullptr) {
+								_inGameLobby->SetAllowedPlayerTypes(allowedPlayerTypes);
+								if (flags & 0x02) {
+									_inGameLobby->Show();
+								} else {
+									_inGameLobby->Hide();
+								}
 							}
 						});
 					}
@@ -6213,7 +6217,9 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
-		_inGameLobby->Hide();
+		if (_inGameLobby != nullptr) {
+			_inGameLobby->Hide();
+		}
 
 		MemoryStream packet(2);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)playerType);

@@ -723,7 +723,7 @@ namespace Jazz2::Actors
 				if (_isRunPressed) {
 					_speed.X *= 2.6f;
 				}
-			} else if (canWalk && playerMovementVelocity > 0.5f) {
+			} else if (canWalk && playerMovementVelocity > 0.4f) {
 				SetAnimation(_currentAnimation->State & ~(AnimState::Lookup | AnimState::Crouch));
 
 				bool wasFacingLeft = IsFacingLeft();
