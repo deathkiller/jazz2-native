@@ -210,7 +210,7 @@ namespace Jazz2::Multiplayer
 		std::unique_ptr<ix::WebSocketServer> _wsServer;
 		std::unique_ptr<ix::WebSocket> _wsClient;
 		HashMap<std::uint64_t, WsPeerInfo> _wsPeers;
-		HashMap<std::string, std::uint64_t> _wsConnectionIds;
+		HashMap<String, std::uint64_t> _wsConnectionIds;
 		SmallVector<WsQueuedEvent, 0> _wsPendingEvents;
 		mutable Spinlock _wsLock;
 		std::atomic_uint64_t _nextWsId{1};
