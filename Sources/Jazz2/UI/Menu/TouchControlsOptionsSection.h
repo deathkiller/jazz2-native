@@ -27,7 +27,7 @@ namespace Jazz2::UI::Menu
 			float CenterX, CenterY, HalfW, HalfH;
 		};
 
-		static constexpr float MinScale = 0.3f;
+		static constexpr float MinScale = 0.5f;
 		static constexpr float MaxScale = 3.0f;
 
 		// Focused slot state

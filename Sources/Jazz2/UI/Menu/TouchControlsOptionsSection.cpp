@@ -161,7 +161,7 @@ namespace Jazz2::UI::Menu
 			// Corner resize handle (smaller)
 			_root->DrawSolid(_cornerHandleX - 6.0f, _cornerHandleY - 6.0f,
 				IMenuContainer::FontLayer + 265, Alignment::TopLeft,
-				Vector2f(12.0f, 12.0f), Colorf(0.0f, 0.0f, 0.0f, 0.3f));
+				Vector2f(12.0f, 12.0f), Colorf(0.0f, 0.0f, 0.0f, 0.2f));
 			_root->DrawSolid(_cornerHandleX - 4.0f, _cornerHandleY - 4.0f,
 				IMenuContainer::FontLayer + 265, Alignment::TopLeft,
 				Vector2f(8.0f, 8.0f), Colorf::White);

@@ -1112,17 +1112,12 @@ namespace Jazz2::Multiplayer
 
 			} else if (msg->type == ix::WebSocketMessageType::Message && msg->binary) {
 				const std::string stateId = state->getId();
-				std::uint64_t id = 0;
-				{
+				if (!msg->str.empty()) {
 					std::unique_lock<Spinlock> lock(_wsLock);
 					auto it = _wsConnectionIds.find(stateId);
 					if (it != _wsConnectionIds.end()) {
-						id = it->second;
+						_wsPendingEvents.push_back({WsQueuedEvent::Type::Message, it->second, msg->str});
 					}
-				}
-				if (id != 0 && !msg->str.empty()) {
-					std::unique_lock<Spinlock> lock(_wsLock);
-					_wsPendingEvents.push_back({WsQueuedEvent::Type::Message, id, msg->str});
 				}
 
 			} else if (msg->type == ix::WebSocketMessageType::Error) {

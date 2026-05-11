@@ -999,10 +999,12 @@ namespace nCine::Backends
 		}
 
 		if (AndroidJniHelper::SdkVersion() >= 26) {
-			// Android 8+ — use VibrationEffect::createOneShot
+			// Android 8+ - use VibrationEffect::createOneShot
 			const AndroidJniClass_VibrationEffect effect = AndroidJniClass_VibrationEffect::createOneShot(
 				static_cast<long>(milliseconds), -1 /* DEFAULT_AMPLITUDE */);
-			AndroidJniClass_Vibrator vibrator(vibratorObject_);
+			// vibratorObject_ is a global ref; wrap it via a local ref so AndroidJniClass ctor can DeleteLocalRef safely
+			jobject localRef = AndroidJniHelper::jniEnv->NewLocalRef(vibratorObject_);
+			AndroidJniClass_Vibrator vibrator(localRef);
 			vibrator.vibrate(effect);
 		}
 		AndroidJniHelper::CheckAndClearExceptions();

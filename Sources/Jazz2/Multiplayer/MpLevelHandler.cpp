@@ -2968,7 +2968,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					std::uint32_t actorId = packet.ReadVariableUint32();
 
-					// TODO: remotingActor-> OnPacketReceived() is also locked here, which is not good
+					// TODO: remotingActor->OnPacketReceived() is also locked here, which is not good
 					std::unique_lock lock(_lock);
 					for (const auto& [remotingActor, remotingActorInfo] : _remotingActors) {
 						if (remotingActorInfo.ActorID == actorId) {
@@ -3570,7 +3570,7 @@ namespace Jazz2::Multiplayer
 									}
 									case LevelState::Countdown3: {
 										static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
-										LOGI("Starting round...");
+										LOGI("[MP] Starting round...");
 										break;
 									}
 									case LevelState::Countdown2: {

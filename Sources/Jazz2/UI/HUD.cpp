@@ -300,7 +300,8 @@ namespace Jazz2::UI
 		constexpr std::uint32_t DpadMask = (1 << (std::int32_t)PlayerAction::Left)
 			| (1 << (std::int32_t)PlayerAction::Right)
 			| (1 << (std::int32_t)PlayerAction::Up)
-			| (1 << (std::int32_t)PlayerAction::Down);
+			| (1 << (std::int32_t)PlayerAction::Down)
+			| (1 << (std::int32_t)PlayerAction::Buttstomp);
 
 		if (event.type == TouchEventType::Down || event.type == TouchEventType::PointerDown) {
 			int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
@@ -347,17 +348,20 @@ namespace Jazz2::UI
 
 					Vector2f diff = _joystickCurrent - _joystickOrigin;
 					float dist = diff.Length();
-					Vector2f dir = (dist > 1.0f) ? diff / dist : Vector2f(0.0f, 0.0f);
+					Vector2f dir = (dist > 1.0f ? diff / dist : Vector2f(0.0f, 0.0f));
 					float magnitude = std::min(dist / _joystickMaxRadius, 1.0f);
 					Vector2f movement = dir * magnitude;
 
 					overrideMovement = movement;
 
 					overrideActions &= ~DpadMask;
-					if (movement.X < -0.3f) overrideActions |= (1 << (std::int32_t)PlayerAction::Left);
-					else if (movement.X > 0.3f) overrideActions |= (1 << (std::int32_t)PlayerAction::Right);
-					if (movement.Y < -0.3f) overrideActions |= (1 << (std::int32_t)PlayerAction::Up);
-					else if (movement.Y > 0.3f) overrideActions |= (1 << (std::int32_t)PlayerAction::Down);
+					if (movement.X < -0.2f) overrideActions |= (1 << (std::int32_t)PlayerAction::Left);
+					else if (movement.X > 0.2f) overrideActions |= (1 << (std::int32_t)PlayerAction::Right);
+					if (movement.Y < -0.2f) overrideActions |= (1 << (std::int32_t)PlayerAction::Up);
+					else if (movement.Y > 0.2f) {
+						overrideActions |= (1 << (std::int32_t)PlayerAction::Down);
+						overrideActions |= (1 << (std::int32_t)PlayerAction::Buttstomp);
+					}
 				}
 			}
 
