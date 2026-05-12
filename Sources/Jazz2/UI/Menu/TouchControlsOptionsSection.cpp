@@ -557,17 +557,18 @@ namespace Jazz2::UI::Menu
 				if (_tapDownTime >= 0.0f && _tapDownTime < 30.0f && _focusedSlot >= 0) {
 					_bounceAnim[_focusedSlot] = 1.0f;
 					_root->PlaySfx("MenuSelect"_s, 0.35f);
-#if defined(NCINE_HAS_VIBRATIONS)
-					if (PreferencesCache::EnableTouchVibration) {
-						theApplication().Vibrate(8);
-					}
-#endif
 				}
 				_primaryPointerId = -1;
 				_secondaryPointerId = -1;
 				_editMode = EditMode::None;
 				_resizingViaCorner = false;
 				_tapDownTime = -1.0f;
+
+#if defined(NCINE_HAS_VIBRATIONS)
+				if (PreferencesCache::EnableTouchVibration) {
+					theApplication().Vibrate(6);
+				}
+#endif
 				break;
 			}
 
@@ -581,16 +582,17 @@ namespace Jazz2::UI::Menu
 					if (_tapDownTime >= 0.0f && _tapDownTime < 30.0f && _focusedSlot >= 0) {
 						_bounceAnim[_focusedSlot] = 1.0f;
 						_root->PlaySfx("MenuSelect"_s, 0.35f);
-#if defined(NCINE_HAS_VIBRATIONS)
-						if (PreferencesCache::EnableTouchVibration) {
-							theApplication().Vibrate(8);
-						}
-#endif
 					}
 					_primaryPointerId = -1;
 					_resizingViaCorner = false;
 					_editMode = EditMode::None;
 					_tapDownTime = -1.0f;
+
+#if defined(NCINE_HAS_VIBRATIONS)
+					if (PreferencesCache::EnableTouchVibration) {
+						theApplication().Vibrate(6);
+					}
+#endif
 				}
 				break;
 			}

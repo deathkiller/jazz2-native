@@ -363,7 +363,7 @@ namespace Jazz2::UI
 					if (movement.Y < -0.4f) overrideActions |= (1 << (std::int32_t)PlayerAction::Up);
 					else if (movement.Y > 0.4f) {
 						overrideActions |= (1 << (std::int32_t)PlayerAction::Down);
-						if (movement.Y > 0.6f) {
+						if (movement.Y > 0.75f) {
 							overrideActions |= (1 << (std::int32_t)PlayerAction::Buttstomp);
 						}
 					}
@@ -1643,9 +1643,9 @@ namespace Jazz2::UI
 		};
 
 		// Outer ring (translucent white ring)
-		drawCircle(centerX, centerY, outerRadius, 0.78f, Colorf(1.0f, 1.0f, 1.0f, 0.14f));
+		drawCircle(centerX, centerY, outerRadius, 0.78f, Colorf(1.0f, 1.0f, 1.0f, 0.24f));
 		// Outer ring border highlight
-		drawCircle(centerX, centerY, outerRadius, 0.90f, Colorf(1.0f, 1.0f, 1.0f, 0.4f));
+		drawCircle(centerX, centerY, outerRadius, 0.90f, Colorf(1.0f, 1.0f, 1.0f, 0.44f));
 		// Thumb (filled circle)
 		float thumbRadius = outerRadius * 0.28f;
 		drawCircle(thumbX, thumbY, thumbRadius, 0.0f, Colorf(1.0f, 1.0f, 1.0f, 0.32f));
