@@ -139,6 +139,10 @@ namespace Jazz2::Actors
 			_copterSound->stop();
 			_copterSound = nullptr;
 		}
+		if (_birdFlySound != nullptr) {
+			_birdFlySound->stop();
+			_birdFlySound = nullptr;
+		}
 		if (_weaponSound != nullptr) {
 			_weaponSound->stop();
 			_weaponSound = nullptr;

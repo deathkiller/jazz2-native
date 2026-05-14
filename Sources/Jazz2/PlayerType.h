@@ -41,9 +41,9 @@ namespace Jazz2
 		switch (currentType) {
 			case PlayerType::Jazz: return PlayerType::Spaz;
 			case PlayerType::Spaz: return PlayerType::Lori;
-			case PlayerType::Lori: return PlayerType::Frog;
+			case PlayerType::Lori: return PlayerType::BirdYellow;
+			case PlayerType::BirdYellow: return PlayerType::Frog;
 			case PlayerType::Frog: return PlayerType::Bird;
-			case PlayerType::Bird: return PlayerType::BirdYellow;
 			default: return PlayerType::Jazz;
 		}
 	}

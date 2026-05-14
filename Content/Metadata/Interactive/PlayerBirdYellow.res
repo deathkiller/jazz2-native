@@ -50,7 +50,7 @@
 		},
 		"Shoot": {
 			"Path": "BirdyYellow/charge_ver.aura",
-			"States": [ 16, 144 ],
+			"States": [ 16, 144 ]
 		},
 		"Hurt": {
 			"Path": "BirdyYellow/hurt.aura",
