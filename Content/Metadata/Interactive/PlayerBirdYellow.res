@@ -1,0 +1,158 @@
+{
+	"Version": {
+		"Target": "Jazz² Resurrection"
+	},
+
+	"Animations": {
+		"Walk": {
+			"Path": "BirdyYellow/fly.aura",
+			"States": [ 1 ],
+			"FrameRate": 7
+		},
+		"Idle": {
+			"Path": "BirdyYellow/idle.aura",
+			"States": [ 0 ]
+		},
+		"IdleBored1": {
+			"Path": "BirdyYellow/idle_worm.aura",
+			"FrameRate": 5,
+			"States": [ 536870944 ]
+		},
+		"IdleBored2": {
+			"Path": "BirdyYellow/idle_turn_head_left.aura",
+			"FrameRate": 5,
+			"States": [ 536870945 ]
+		},
+		"IdleBored3": {
+			"Path": "BirdyYellow/idle_look_left.aura",
+			"FrameRate": 5,
+			"States": [ 536870946 ]
+		},
+		"IdleBored4": {
+			"Path": "BirdyYellow/idle_turn_head_left_back.aura",
+			"FrameRate": 5,
+			"States": [ 536870947 ]
+		},
+		"IdleBored5": {
+			"Path": "BirdyYellow/idle_turn_head_right.aura",
+			"FrameRate": 5,
+			"States": [ 536870948 ]
+		},
+		"IdleBored6": {
+			"Path": "BirdyYellow/idle_look_right.aura",
+			"FrameRate": 5,
+			"States": [ 536870949 ]
+		},
+		"IdleBored7": {
+			"Path": "BirdyYellow/idle_turn_head_right_back.aura",
+			"FrameRate": 5,
+			"States": [ 536870950 ]
+		},
+		"Shoot": {
+			"Path": "BirdyYellow/charge_ver.aura",
+			"States": [ 16, 144 ],
+		},
+		"Hurt": {
+			"Path": "BirdyYellow/hurt.aura",
+			"FrameRate": 6,
+			"States": [ 2048 ]
+		},
+		"Death": {
+			"Path": "BirdyYellow/die.aura",
+			"FrameRate": 3,
+			"States": [ 1073741839 ]
+		},
+		"Corpse": {
+			"Path": "BirdyYellow/corpse.aura",
+			"States": [ 536870912 ]
+		},
+		"SugarRush": {
+			"Path": "Common/sugar_rush_stars.aura",
+			"States": [ 536870913 ]
+		},
+		"Shield": {
+			"Path": "Common/player_shield.aura",
+			"States": [ 536870928 ]
+		},
+		"ShieldFire": {
+			"Path": "Common/shield_fire.aura",
+			"States": [ 536870929 ]
+		},
+		"ShieldWater": {
+			"Path": "Common/shield_water.aura",
+			"States": [ 536870930 ]
+		},
+		"ShieldLightning": {
+			"Path": "Common/shield_lightning.aura",
+			"States": [ 536870931 ]
+		},
+		"WarpIn": {
+			"Path": "Spaz/warp_in.aura",
+			"States": [ 1073741843 ],
+			"FrameOffset": 2
+		},
+		"WarpOut": {
+			"Path": "Spaz/warp_out.aura",
+			"States": [ 1073741844 ],
+			"FrameCount": 5
+		},
+		"WarpInFreefall": {
+			"Path": "Spaz/warp_in.aura",
+			"States": [ 1073741847 ],
+			"FrameOffset": 2
+		},
+		"WarpOutFreefall": {
+			"Path": "Spaz/warp_out.aura",
+			"States": [ 1073741848 ],
+			"FrameCount": 5
+		}
+	},
+
+	"Sounds": {
+		"Fly": {
+			"Paths": [ "Birdy/fly_1.wav", "Birdy/fly_2.wav" ]
+		},
+		"EndOfLevel": {
+			"Paths": [ "Jazz/level_complete.wav" ]
+		},
+		"WarpIn": {
+			"Paths": [ "Common/warp_in.wav" ]
+		},
+		"WarpOut": {
+			"Paths": [ "Common/warp_out.wav" ]
+		},
+		"Die": {
+			"Paths": [ "Common/gunsm1.wav" ]
+		},
+		"PickupAmmo": {
+			"Paths": [ "Pickup/ammo.wav" ]
+		},
+		"PickupCoin": {
+			"Paths": [ "Pickup/coin.wav" ]
+		},
+		"PickupGem": {
+			"Paths": [ "Pickup/gem.wav" ]
+		},
+		"PickupOneUp": {
+			"Paths": [ "Pickup/1up.wav" ]
+		},
+		"PickupDrink": {
+			"Paths": [ "Pickup/food_drink_1.wav", "Pickup/food_drink_2.wav", "Pickup/food_drink_3.wav", "Pickup/food_drink_4.wav" ]
+		},
+		"PickupFood": {
+			"Paths": [ "Pickup/food_edible_1.wav", "Pickup/food_edible_2.wav", "Pickup/food_edible_3.wav", "Pickup/food_edible_4.wav" ]
+		},
+		"PickupMaxCarrot": {
+			"Paths": [ "Jazz/carrot.wav" ]
+		},
+		"EndOfLevel1": {
+			"Paths": [ "Common/char_revup.wav" ]
+		},
+		"EndOfLevel2": {
+			"Paths": [ "Weapon/ricochet_bullet_3.wav" ]
+		},
+		"BonusWarpNotEnoughCoins": {
+			"Paths": [ "Object/bonus_not_enough_coins.wav" ]
+		}
+	}
+}
