@@ -892,11 +892,8 @@ RECURSIVE              = YES
 
 EXCLUDE                = CodingStyle/ \
                          Snippets/ \
-                         ../Sources/jsoncpp/ \
-                         ../Sources/nCine/Backends/Android/Bridge/ \
-                         ../Sources/nCine/Base/ParallelHashMap/ \
-                         ../Sources/nCine/Base/pdqsort/ \
-                         ../Sources/Jazz2/Multiplayer/Backends/
+                         ../Sources/Dependencies/ \
+                         ../Sources/nCine/Backends/Android/Bridge/
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded

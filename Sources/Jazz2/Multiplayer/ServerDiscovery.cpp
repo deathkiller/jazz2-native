@@ -22,7 +22,7 @@
 #endif
 
 #if defined(DEATH_TARGET_ANDROID)
-#	include "Backends/ifaddrs-android.h"
+#	include <enet/ifaddrs-android.h>
 #elif defined(DEATH_TARGET_SWITCH) && ENET_IPV6
 // `ipv6_mreq` is not defined in Switch SDK, but it doesn't work well anyway
 struct ipv6_mreq {
