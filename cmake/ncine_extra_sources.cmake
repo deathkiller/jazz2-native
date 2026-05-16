@@ -700,6 +700,13 @@ if(WITH_MULTIPLAYER)
 		# Link to IP Helper API library and Windows Sockets 2 library
 		target_link_libraries(${NCINE_APP} PRIVATE iphlpapi ws2_32)
 	endif()
+	
+	if(NOT EMSCRIPTEN)
+		list(APPEND HEADERS
+			${NCINE_SOURCE_DIR}/Dependencies/enet/enet.h
+			${NCINE_SOURCE_DIR}/Dependencies/enet/ifaddrs-android.h
+		)
+	endif()
 
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/LocalPlayerOnServer.h
@@ -720,7 +727,6 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Reason.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerInitialization.h
-		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Backends/enet.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayMultiplayerSection.h

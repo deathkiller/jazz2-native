@@ -2,9 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER)
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
-#	include "Backends/enet.h"
-#endif
+#include "ServerDiscovery.h"
 
 namespace Jazz2::Multiplayer
 {

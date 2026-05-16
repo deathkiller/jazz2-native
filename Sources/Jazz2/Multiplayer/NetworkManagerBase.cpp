@@ -18,7 +18,7 @@
 #include <IO/FileSystem.h>
 
 #if defined(DEATH_TARGET_ANDROID)
-#	include "Backends/ifaddrs-android.h"
+#	include <enet/ifaddrs-android.h>
 #elif defined(DEATH_TARGET_SWITCH)
 #	include <net/if.h>
 #elif defined(DEATH_TARGET_WINDOWS)
@@ -65,40 +65,35 @@ namespace Jazz2::Multiplayer
 	static std::atomic_int32_t _initializeCount{0};
 
 #if defined(WITH_WEBSOCKET)
-	/** @brief Appends `?clientData=N` (or `&clientData=N`) query parameter to a WebSocket URL */
-	static String AppendClientDataToUrl(StringView url, std::uint32_t clientData)
+	/** @brief Formats client data as a WebSocket sub-protocol string: "death-v0x<hex>" */
+	static String MakeClientSubProtocol(std::uint32_t clientData)
 	{
-		bool hasQuery = (url.findOr('?', url.end()).begin() != url.end());
-		char buffer[12];
-		std::size_t length = formatInto(buffer, "{}", clientData);
-		return url + (hasQuery ? "&clientData="_s : "?clientData="_s) + StringView(buffer, length);
+		return format("death-v0x{:x}", clientData);
 	}
 
-	/** @brief Parses a uint32_t query parameter from a URI string (e.g. /?clientData=123) */
-	static std::uint32_t ParseQueryParamUInt32(StringView uri, StringView paramName)
+	/** @brief Parses client data from a sub-protocol string of the form "death-v0x<hex>" */
+	static std::uint32_t ParseProtocolClientData(StringView protocol)
 	{
-		auto parts = uri.partition('?');
-		if (parts[1].empty()) {
+		const StringView prefix = "death-v0x"_s;
+		if (!protocol.hasPrefix(prefix)) {
 			return 0;
 		}
 
-		StringView query = parts[2];
-		while (!query.empty()) {
-			auto p = query.partition('&');
-			StringView pair = p[0];
-			query = p[2];
-
-			if (pair.hasPrefix(paramName) && pair.size() > paramName.size() && pair[paramName.size()] == '=') {
-				StringView valueStr = pair.exceptPrefix(paramName.size() + 1);
-				std::uint32_t result = 0;
-				for (char c : valueStr) {
-					if (c < '0' || c > '9') break;
-					result = result * 10 + (c - '0');
-				}
-				return result;
-			}
+		StringView hexPart = protocol.exceptPrefix(prefix.size());
+		if (hexPart.empty()) {
+			return 0;
 		}
-		return 0;
+
+		std::uint32_t result = 0;
+		for (char c : hexPart) {
+			int val = -1;
+			if (c >= '0' && c <= '9') val = c - '0';
+			else if (c >= 'a' && c <= 'f') val = c - 'a' + 10;
+			else if (c >= 'A' && c <= 'F') val = c - 'A' + 10;
+			else return 0;
+			result = result * 16 + static_cast<std::uint32_t>(val);
+		}
+		return result;
 	}
 
 	/** @brief Extracts only the host[:port] from a WebSocket URL, stripping protocol prefix, path, and query string */
@@ -171,17 +166,18 @@ namespace Jazz2::Multiplayer
 		_handler = handler;
 
 #if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
-		StringView firstEndpoint = endpoints.prefix(endpoints.findOr('|', endpoints.end()).begin());
-		String wsUrl = AppendClientDataToUrl(firstEndpoint, clientData);
+	StringView firstEndpoint = endpoints.prefix(endpoints.findOr('|', endpoints.end()).begin());
+	String proto = MakeClientSubProtocol(clientData);
 
-		EmscriptenWebSocketCreateAttributes attrs;
-		emscripten_websocket_init_create_attributes(&attrs);
-		attrs.url = wsUrl.data();
-		attrs.createOnMainThread = EM_TRUE;
+	EmscriptenWebSocketCreateAttributes attrs;
+	emscripten_websocket_init_create_attributes(&attrs);
+	attrs.url = firstEndpoint.data();
+	attrs.protocols = proto.data();
+	attrs.createOnMainThread = EM_TRUE;
 
-		// emscripten_websocket_new doesn't correctly catches exceptions in Emscripten 5.0.7
-		//_emWsSocket = emscripten_websocket_new(&attrs);
-		_emWsSocket = safe_websocket_new(&attrs);
+	// emscripten_websocket_new doesn't correctly catches exceptions in Emscripten 5.0.7
+	//_emWsSocket = emscripten_websocket_new(&attrs);
+	_emWsSocket = safe_websocket_new(&attrs);
 		if (_emWsSocket <= 0) {
 			Reason reason;
 			switch (_emWsSocket) {
@@ -221,11 +217,14 @@ namespace Jazz2::Multiplayer
 		// If the first endpoint looks like a WebSocket URL, use IXWebSocket client
 		StringView firstEndpoint = endpoints.prefix(endpoints.findOr('|', endpoints.end()).begin());
 		if (firstEndpoint.hasPrefix("ws://"_s) || firstEndpoint.hasPrefix("wss://"_s)) {
-			String wsUrl = AppendClientDataToUrl(firstEndpoint, clientData);
-			LOGI("[MP] Connecting to \"{}\" via WebSocket transport", wsUrl);
+			LOGI("[MP] Connecting to \"{}\" via WebSocket transport", firstEndpoint);
 
 			_wsClient = std::make_unique<ix::WebSocket>();
-			_wsClient->setUrl(std::string(wsUrl.data(), wsUrl.size()));
+			_wsClient->setUrl(firstEndpoint);
+			_wsClient->addSubProtocol(MakeClientSubProtocol(clientData));
+			_wsClient->setExtraHeaders({
+				{"User-Agent", "Jazz2 Resurrection"}
+			});
 			_wsClient->disableAutomaticReconnection();
 			_wsClient->setOnMessageCallback([this](const ix::WebSocketMessagePtr& msg) {
 				ix::WebSocket* ws = _wsClient.get();
@@ -1089,8 +1088,7 @@ namespace Jazz2::Multiplayer
 		DEATH_ASSERT(_wsServer == nullptr, "WebSocket transport already started", false);
 
 		_wsServer = std::make_unique<ix::WebSocketServer>(wsPort, "0.0.0.0");
-
-		
+		_wsServer->setServerName("Jazz2 Resurrection");
 
 #		if defined(WITH_WEBSOCKET_TLS)
 		bool useTls = false;
@@ -1120,13 +1118,25 @@ namespace Jazz2::Multiplayer
 			LOGI("[MP] WebSocket transport starting on port {}", wsPort);
 		}
 
+		// Select the application-level sub-protocol carrying client data if present
+		_wsServer->setProtocolSelectionCallback([](const std::vector<std::string>& requestedProtocols,
+			std::string& selectedProtocol) -> bool {
+			for (const auto& p : requestedProtocols) {
+				if (p.rfind("death-v0x", 0) == 0) {
+					selectedProtocol = p;
+					return true;
+				}
+			}
+			// No specific protocol requested, reject the connection
+			return false;
+		});
+
 		_wsServer->setOnClientMessageCallback([this](std::shared_ptr<ix::ConnectionState> state,
 			ix::WebSocket& ws, const ix::WebSocketMessagePtr& msg) {
 
 			if (msg->type == ix::WebSocketMessageType::Open) {
 				const std::string remoteIp = state->getRemoteIp();
-				const std::uint32_t peerClientData = ParseQueryParamUInt32(
-					StringView(msg->openInfo.uri.data(), msg->openInfo.uri.size()), "clientData"_s);
+				std::uint32_t peerClientData = ParseProtocolClientData(msg->openInfo.protocol);
 
 				{
 					std::unique_lock<Spinlock> lock(_wsLock);
