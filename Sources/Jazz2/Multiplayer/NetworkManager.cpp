@@ -7,7 +7,7 @@
 #include "../PreferencesCache.h"
 #include "../../nCine/I18n.h"
 
-#include "../../jsoncpp/json.h"
+#include <jsoncpp/json.h>
 
 #include <float.h>
 

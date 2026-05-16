@@ -1,4 +1,7 @@
-target_include_directories(${NCINE_APP} PRIVATE "${NCINE_SOURCE_DIR}/Shared")
+target_include_directories(${NCINE_APP} PRIVATE
+	"${NCINE_SOURCE_DIR}/Dependencies"
+	"${NCINE_SOURCE_DIR}/Shared"
+)
 
 if(ATOMIC_FOUND)
 	target_link_libraries(${NCINE_APP} PRIVATE Atomic::Atomic)
@@ -759,9 +762,6 @@ if(WITH_MULTIPLAYER)
 			target_link_options(${NCINE_APP} PUBLIC -sFETCH=1)
 		else()
 			# IXWebSocket library for all other platforms
-			set(USE_WS OFF CACHE BOOL "" FORCE)
-			set(IXWEBSOCKET_INSTALL OFF CACHE BOOL "" FORCE)
-
 			if(WITH_WEBSOCKET_TLS_BACKEND STREQUAL "OpenSSL")
 				find_package(OpenSSL QUIET)
 				if(OPENSSL_FOUND)
@@ -791,24 +791,8 @@ if(WITH_MULTIPLAYER)
 				set(USE_TLS OFF CACHE BOOL "" FORCE)
 			endif()
 
-			include(FetchContent)
-			FetchContent_Declare(
-				IXWebSocket
-				GIT_REPOSITORY https://github.com/machinezone/IXWebSocket.git
-				GIT_SHALLOW    TRUE
-			)
-			FetchContent_MakeAvailable(IXWebSocket)
-
-			set_target_properties(ixwebsocket PROPERTIES FOLDER "Dependencies")
-			ncine_apply_compiler_options(ixwebsocket)
-
-			target_link_libraries(${NCINE_APP} PRIVATE ixwebsocket)
-
-			if(USE_TLS AND OPENSSL_FOUND)
-				target_link_libraries(${NCINE_APP} PRIVATE OpenSSL::SSL OpenSSL::Crypto)
-			elseif(USE_TLS AND (MbedTLS_FOUND OR MBEDTLS_FOUND))
-				target_link_libraries(${NCINE_APP} PRIVATE MbedTLS::mbedtls)
-			endif()
+			find_package(IXWebSocket REQUIRED)
+			target_link_libraries(${NCINE_APP} PRIVATE IXWebSocket)
 		endif()
 	endif()
 endif()

@@ -56,6 +56,28 @@ set(HEADERS
 )
 
 list(APPEND HEADERS
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/allocator.h
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/assertions.h
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/config.h
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/forwards.h
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/json.h
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/json_features.h
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/json_tool.h
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/json_valueiterator.h
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/reader.h
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/value.h
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/version.h
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/writer.h
+	${NCINE_SOURCE_DIR}/Dependencies/parallel_hashmap/phmap.h
+	${NCINE_SOURCE_DIR}/Dependencies/parallel_hashmap/phmap_base.h
+	${NCINE_SOURCE_DIR}/Dependencies/parallel_hashmap/phmap_bits.h
+	${NCINE_SOURCE_DIR}/Dependencies/parallel_hashmap/phmap_config.h
+	${NCINE_SOURCE_DIR}/Dependencies/parallel_hashmap/phmap_fwd_decl.h
+	${NCINE_SOURCE_DIR}/Dependencies/parallel_hashmap/phmap_utils.h
+	${NCINE_SOURCE_DIR}/Dependencies/pdqsort/pdqsort.h
+)
+
+list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/AppConfiguration.h
 	${NCINE_SOURCE_DIR}/nCine/Application.h
 	${NCINE_SOURCE_DIR}/nCine/CommonConstants.h
@@ -85,13 +107,6 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Base/Task.h
 	${NCINE_SOURCE_DIR}/nCine/Base/Timer.h
 	${NCINE_SOURCE_DIR}/nCine/Base/TimeStamp.h
-	${NCINE_SOURCE_DIR}/nCine/Base/ParallelHashMap/phmap.h
-	${NCINE_SOURCE_DIR}/nCine/Base/ParallelHashMap/phmap_base.h
-	${NCINE_SOURCE_DIR}/nCine/Base/ParallelHashMap/phmap_bits.h
-	${NCINE_SOURCE_DIR}/nCine/Base/ParallelHashMap/phmap_config.h
-	${NCINE_SOURCE_DIR}/nCine/Base/ParallelHashMap/phmap_fwd_decl.h
-	${NCINE_SOURCE_DIR}/nCine/Base/ParallelHashMap/phmap_utils.h
-	${NCINE_SOURCE_DIR}/nCine/Base/pdqsort/pdqsort.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/AnimatedSprite.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/BaseSprite.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/BinaryShaderCache.h
@@ -179,21 +194,6 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Threading/LockedPtr.h
 	${NCINE_SOURCE_DIR}/nCine/Threading/Thread.h
 	${NCINE_SOURCE_DIR}/nCine/Threading/ThreadSync.h
-)
-
-list(APPEND HEADERS
-	${NCINE_SOURCE_DIR}/jsoncpp/allocator.h
-	${NCINE_SOURCE_DIR}/jsoncpp/assertions.h
-	${NCINE_SOURCE_DIR}/jsoncpp/config.h
-	${NCINE_SOURCE_DIR}/jsoncpp/forwards.h
-	${NCINE_SOURCE_DIR}/jsoncpp/json.h
-	${NCINE_SOURCE_DIR}/jsoncpp/json_features.h
-	${NCINE_SOURCE_DIR}/jsoncpp/json_tool.h
-	${NCINE_SOURCE_DIR}/jsoncpp/json_valueiterator.h
-	${NCINE_SOURCE_DIR}/jsoncpp/reader.h
-	${NCINE_SOURCE_DIR}/jsoncpp/value.h
-	${NCINE_SOURCE_DIR}/jsoncpp/version.h
-	${NCINE_SOURCE_DIR}/jsoncpp/writer.h
 )
 
 list(APPEND HEADERS

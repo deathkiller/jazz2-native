@@ -28,7 +28,7 @@
 #include <IO/MemoryStream.h>
 #include <IO/Compression/DeflateStream.h>
 
-#include "../jsoncpp/json.h"
+#include <jsoncpp/json.h>
 
 using namespace Death::IO::Compression;
 using namespace Jazz2::Tiles;

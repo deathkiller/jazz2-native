@@ -146,7 +146,7 @@
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;$(ProjectDir)Dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -170,7 +170,7 @@
       <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;$(ProjectDir)Dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -195,7 +195,7 @@
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;$(ProjectDir)Dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -216,7 +216,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;$(ProjectDir)Dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -240,7 +240,7 @@
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;$(ProjectDir)Dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -265,7 +265,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FloatingPointModel>Fast</FloatingPointModel>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtensionLibraryPath);$(ProjectDir)..\Libs\Includes;$(ProjectDir)Dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -321,6 +321,25 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Containers.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Format.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Cryptography\xxHash.h" />
+    <ClInclude Include="Dependencies\jsoncpp\allocator.h" />
+    <ClInclude Include="Dependencies\jsoncpp\assertions.h" />
+    <ClInclude Include="Dependencies\jsoncpp\config.h" />
+    <ClInclude Include="Dependencies\jsoncpp\forwards.h" />
+    <ClInclude Include="Dependencies\jsoncpp\json.h" />
+    <ClInclude Include="Dependencies\jsoncpp\json_features.h" />
+    <ClInclude Include="Dependencies\jsoncpp\json_tool.h" />
+    <ClInclude Include="Dependencies\jsoncpp\json_valueiterator.h" />
+    <ClInclude Include="Dependencies\jsoncpp\reader.h" />
+    <ClInclude Include="Dependencies\jsoncpp\value.h" />
+    <ClInclude Include="Dependencies\jsoncpp\version.h" />
+    <ClInclude Include="Dependencies\jsoncpp\writer.h" />
+    <ClInclude Include="Dependencies\parallel_hashmap\phmap.h" />
+    <ClInclude Include="Dependencies\parallel_hashmap\phmap_base.h" />
+    <ClInclude Include="Dependencies\parallel_hashmap\phmap_bits.h" />
+    <ClInclude Include="Dependencies\parallel_hashmap\phmap_config.h" />
+    <ClInclude Include="Dependencies\parallel_hashmap\phmap_fwd_decl.h" />
+    <ClInclude Include="Dependencies\parallel_hashmap\phmap_utils.h" />
+    <ClInclude Include="Dependencies\pdqsort\pdqsort.h" />
     <ClInclude Include="Jazz2\Actors\Multiplayer\MpPlayer.h" />
     <ClInclude Include="Jazz2\ContentResolver.h" />
     <ClInclude Include="Jazz2\Input\ControlScheme.h" />
@@ -340,18 +359,6 @@
     <ClInclude Include="Jazz2\UI\Multiplayer\MpHUD.h" />
     <ClInclude Include="Jazz2\UI\Multiplayer\MpInGameCanvasLayer.h" />
     <ClInclude Include="Jazz2\UI\Multiplayer\MpInGameLobby.h" />
-    <ClInclude Include="jsoncpp\allocator.h" />
-    <ClInclude Include="jsoncpp\assertions.h" />
-    <ClInclude Include="jsoncpp\config.h" />
-    <ClInclude Include="jsoncpp\forwards.h" />
-    <ClInclude Include="jsoncpp\json.h" />
-    <ClInclude Include="jsoncpp\json_features.h" />
-    <ClInclude Include="jsoncpp\json_tool.h" />
-    <ClInclude Include="jsoncpp\json_valueiterator.h" />
-    <ClInclude Include="jsoncpp\reader.h" />
-    <ClInclude Include="jsoncpp\value.h" />
-    <ClInclude Include="jsoncpp\version.h" />
-    <ClInclude Include="jsoncpp\writer.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="Jazz2\Actors\ActorBase.h" />
     <ClInclude Include="Jazz2\Actors\Collectibles\CarrotCollectible.h" />
@@ -577,13 +584,6 @@
     <ClInclude Include="nCine\Base\HashMap.h" />
     <ClInclude Include="nCine\Base\Iterator.h" />
     <ClInclude Include="nCine\Base\Object.h" />
-    <ClInclude Include="nCine\Base\ParallelHashMap\phmap.h" />
-    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_base.h" />
-    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_bits.h" />
-    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_config.h" />
-    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_fwd_decl.h" />
-    <ClInclude Include="nCine\Base\ParallelHashMap\phmap_utils.h" />
-    <ClInclude Include="nCine\Base\pdqsort\pdqsort.h" />
     <ClInclude Include="nCine\Base\Random.h" />
     <ClInclude Include="nCine\Base\ReverseIterator.h" />
     <ClInclude Include="nCine\Base\StaticHashMap.h" />
@@ -767,6 +767,9 @@
     <ClCompile Include="$(ExtensionLibraryPath)\IO\WebRequest.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Base\Format.cpp" />
     <ClCompile Include="$(ExtensionLibraryPath)\Cryptography\xxHash.cpp" />
+    <ClCompile Include="Dependencies\jsoncpp\reader.cpp" />
+    <ClCompile Include="Dependencies\jsoncpp\value.cpp" />
+    <ClCompile Include="Dependencies\jsoncpp\writer.cpp" />
     <ClCompile Include="Jazz2\Actors\ActorBase.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotCollectible.cpp" />
     <ClCompile Include="Jazz2\Actors\Collectibles\CarrotFlyCollectible.cpp" />
@@ -946,9 +949,6 @@
     <ClCompile Include="Jazz2\UI\Multiplayer\MpHUD.cpp" />
     <ClCompile Include="Jazz2\UI\Multiplayer\MpInGameCanvasLayer.cpp" />
     <ClCompile Include="Jazz2\UI\Multiplayer\MpInGameLobby.cpp" />
-    <ClCompile Include="jsoncpp\reader.cpp" />
-    <ClCompile Include="jsoncpp\value.cpp" />
-    <ClCompile Include="jsoncpp\writer.cpp" />
     <ClCompile Include="nCine\AppConfiguration.cpp" />
     <ClCompile Include="nCine\Application.cpp" />
     <ClCompile Include="nCine\Audio\ALAudioDevice.cpp" />

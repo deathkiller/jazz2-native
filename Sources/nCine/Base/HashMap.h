@@ -1,7 +1,7 @@
 #pragma once
 
 #include "HashFunctions.h"
-#include "ParallelHashMap/phmap.h"
+#include "parallel_hashmap/phmap.h"
 
 namespace nCine
 {

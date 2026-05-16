@@ -2708,6 +2708,9 @@
     <ClCompile Include="Jazz2\UI\Menu\MenuSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\Peer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resources.rc">

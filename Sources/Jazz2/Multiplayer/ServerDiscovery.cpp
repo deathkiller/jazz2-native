@@ -37,7 +37,7 @@ struct ipv6_mreq {
 #	include <Utf8.h>
 #endif
 
-#include "../../jsoncpp/json.h"
+#include <jsoncpp/json.h>
 
 using namespace std::string_view_literals;
 using namespace Death::Containers::Literals;

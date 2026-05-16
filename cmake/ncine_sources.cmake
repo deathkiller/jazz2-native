@@ -26,6 +26,12 @@ set(SOURCES
 )
 
 list(APPEND SOURCES
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/reader.cpp
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/value.cpp
+	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/writer.cpp
+)
+
+list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/AppConfiguration.cpp
 	${NCINE_SOURCE_DIR}/nCine/Application.cpp
 	${NCINE_SOURCE_DIR}/nCine/I18n.cpp
@@ -110,12 +116,6 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Colorf.cpp
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Half.cpp
 	${NCINE_SOURCE_DIR}/nCine/Threading/Thread.cpp
-)
-
-list(APPEND SOURCES
-	${NCINE_SOURCE_DIR}/jsoncpp/reader.cpp
-	${NCINE_SOURCE_DIR}/jsoncpp/value.cpp
-	${NCINE_SOURCE_DIR}/jsoncpp/writer.cpp
 )
 
 list(APPEND SOURCES

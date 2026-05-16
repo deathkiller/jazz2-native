@@ -4,7 +4,7 @@
 
 #include "../../nCine/Base/Algorithms.h"
 
-#include "../../jsoncpp/json.h"
+#include <jsoncpp/json.h>
 
 #include <Containers/StringStlView.h>
 
