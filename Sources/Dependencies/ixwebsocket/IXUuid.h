@@ -9,9 +9,9 @@
 
 namespace ix
 {
-    /**
-     * Generate a random uuid
-     */
-    std::string uuid4();
-
-} // namespace ix
+	/**
+		@brief Generate a random UUID (version 4).
+		@return Random UUID string.
+	*/
+	std::string uuid4();
+}

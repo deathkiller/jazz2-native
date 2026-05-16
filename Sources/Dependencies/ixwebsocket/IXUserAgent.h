@@ -10,5 +10,9 @@
 
 namespace ix
 {
-    std::string userAgent();
-} // namespace ix
+	/**
+		@brief Utility for generating a user agent string for HTTP/WebSocket requests.
+		@return String identifying the client library and version.
+	*/
+	std::string userAgent();
+}

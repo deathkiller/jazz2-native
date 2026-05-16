@@ -1110,6 +1110,7 @@ namespace Jazz2::Multiplayer
 			tlsOptions.keyFile = keyPath;
 			tlsOptions.caFile = "NONE";
 			tlsOptions.tls = true;
+			tlsOptions.autoDetect = true;
 			_wsServer->setTLSOptions(tlsOptions);
 			LOGI("[MP] WebSocket transport starting with TLS on port {}", wsPort);
 		} else

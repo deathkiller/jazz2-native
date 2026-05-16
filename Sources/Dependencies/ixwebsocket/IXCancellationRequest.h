@@ -11,8 +11,19 @@
 
 namespace ix
 {
-    using CancellationRequest = std::function<bool()>;
+	/**
+		@brief Function type for cancellation requests (returns true if cancelled).
 
-    CancellationRequest makeCancellationRequestWithTimeout(
-        int seconds, std::atomic<bool>& requestInitCancellation);
-} // namespace ix
+		Used to signal cancellation of asynchronous operations.
+	*/
+	using CancellationRequest = std::function<bool()>;
+
+	/**
+		@brief Create a cancellation request with a timeout.
+		@param seconds Timeout in seconds.
+		@param requestInitCancellation Atomic flag for cancellation.
+		@return @ref CancellationRequest functor.
+	*/
+	CancellationRequest makeCancellationRequestWithTimeout(
+		int seconds, std::atomic<bool>& requestInitCancellation);
+}

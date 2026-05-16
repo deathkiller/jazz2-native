@@ -17,49 +17,91 @@
 
 namespace ix
 {
-    class WebSocketPerMessageDeflateCompressor
-    {
-    public:
-        WebSocketPerMessageDeflateCompressor();
-        ~WebSocketPerMessageDeflateCompressor();
+	/**
+		@brief Compressor for per-message deflate (RFC 7692) in WebSocket frames.
+	
+		Used by @ref ix::WebSocketPerMessageDeflate to compress outgoing WebSocket messages.
+	*/
+	class WebSocketPerMessageDeflateCompressor
+	{
+	public:
+		/** @brief Constructor */
+		WebSocketPerMessageDeflateCompressor();
+		/** @brief Destructor */
+		~WebSocketPerMessageDeflateCompressor();
 
-        bool init(uint8_t deflateBits, bool clientNoContextTakeOver);
-        bool compress(const IXWebSocketSendData& in, std::string& out);
-        bool compress(const std::string& in, std::string& out);
-        bool compress(const std::string& in, std::vector<uint8_t>& out);
-        bool compress(const std::vector<uint8_t>& in, std::string& out);
-        bool compress(const std::vector<uint8_t>& in, std::vector<uint8_t>& out);
+		/**
+		 * @brief Initialize compressor state.
+		 * @param deflateBits Window bits for deflate.
+		 * @param clientNoContextTakeOver No context takeover flag.
+		 * @return True on success.
+		 */
+		bool init(uint8_t deflateBits, bool clientNoContextTakeOver);
 
-    private:
-        template<typename T, typename S>
-        bool compressData(const T& in, S& out);
-        template<typename T>
-        bool endsWithEmptyUnCompressedBlock(const T& value);
+		/**
+		 * @brief Compress input data to string.
+		 * @param in Input data.
+		 * @param out Output string.
+		 * @return True on success.
+		 */
+		bool compress(const IXWebSocketSendData& in, std::string& out);
+		bool compress(const std::string& in, std::string& out);
+		bool compress(const std::string& in, std::vector<uint8_t>& out);
+		bool compress(const std::vector<uint8_t>& in, std::string& out);
+		bool compress(const std::vector<uint8_t>& in, std::vector<uint8_t>& out);
 
-        int _flush;
-        std::array<unsigned char, 1 << 14> _compressBuffer;
+	private:
+		/** @brief Compress data (internal template). */
+		template<typename T, typename S>
+		bool compressData(const T& in, S& out);
+		/** @brief Check for empty uncompressed block (internal). */
+		template<typename T>
+		bool endsWithEmptyUnCompressedBlock(const T& value);
+
+		int _flush; /**< Flush mode for zlib. */
+		std::array<unsigned char, 1 << 14> _compressBuffer; /**< Compression buffer. */
 
 #ifdef IXWEBSOCKET_USE_ZLIB
-        z_stream _deflateState;
+		z_stream _deflateState; /**< zlib deflate state. */
 #endif
-    };
+	};
 
-    class WebSocketPerMessageDeflateDecompressor
-    {
-    public:
-        WebSocketPerMessageDeflateDecompressor();
-        ~WebSocketPerMessageDeflateDecompressor();
+	/**
+		@brief Decompressor for per-message deflate (RFC 7692) in WebSocket frames.
+	
+		Used by @ref ix::WebSocketPerMessageDeflate to decompress incoming WebSocket messages.
+	*/
+	class WebSocketPerMessageDeflateDecompressor
+	{
+	public:
+		/** @brief Constructor */
+		WebSocketPerMessageDeflateDecompressor();
+		/** @brief Destructor */
+		~WebSocketPerMessageDeflateDecompressor();
 
-        bool init(uint8_t inflateBits, bool clientNoContextTakeOver);
-        bool decompress(const std::string& in, std::string& out);
+		/**
+		 * @brief Initialize decompressor state.
+		 * @param inflateBits Window bits for inflate.
+		 * @param clientNoContextTakeOver No context takeover flag.
+		 * @return True on success.
+		 */
+		bool init(uint8_t inflateBits, bool clientNoContextTakeOver);
 
-    private:
-        int _flush;
-        std::array<unsigned char, 1 << 14> _compressBuffer;
+		/**
+		 * @brief Decompress input string to output string.
+		 * @param in Input compressed string.
+		 * @param out Output decompressed string.
+		 * @return True on success.
+		 */
+		bool decompress(const std::string& in, std::string& out);
+
+	private:
+		int _flush; /**< Flush mode for zlib. */
+		std::array<unsigned char, 1 << 14> _compressBuffer; /**< Decompression buffer. */
 
 #ifdef IXWEBSOCKET_USE_ZLIB
-        z_stream _inflateState;
+		z_stream _inflateState; /**< zlib inflate state. */
 #endif
-    };
+	};
 
-} // namespace ix
+}

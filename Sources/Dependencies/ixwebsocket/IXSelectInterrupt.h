@@ -12,24 +12,47 @@
 
 namespace ix
 {
-    class SelectInterrupt
-    {
-    public:
-        SelectInterrupt();
-        virtual ~SelectInterrupt();
+	/**
+		@brief Abstraction for interrupting select/poll system calls.
 
-        virtual bool init(std::string& errorMsg);
+		Allows waking up a thread blocked on select/poll, used for network event notification.
+	*/
+	class SelectInterrupt
+	{
+	public:
+		/** @brief Construct a new SelectInterrupt. */
+		SelectInterrupt();
+		/** @brief Destructor. */
+		virtual ~SelectInterrupt();
 
-        virtual bool notify(uint64_t value);
-        virtual bool clear();
-        virtual uint64_t read();
-        virtual int getFd() const;
-        virtual void* getEvent() const;
+		/**
+		 * @brief Initialize the interrupt object.
+		 * @param errorMsg Output error message.
+		 * @return True on success.
+		 */
+		virtual bool init(std::string& errorMsg);
 
-        // Used as special codes for pipe communication
-        static const uint64_t kSendRequest;
-        static const uint64_t kCloseRequest;
-    };
+		/**
+		 * @brief Notify the interrupt with a value.
+		 * @param value Notification value.
+		 * @return True on success.
+		 */
+		virtual bool notify(uint64_t value);
+		/** @brief Clear the interrupt. */
+		virtual bool clear();
+		/** @brief Read the interrupt value. */
+		virtual uint64_t read();
+		/** @brief Get the file descriptor for the interrupt. */
+		virtual int getFd() const;
+		/** @brief Get the event handle (platform-specific). */
+		virtual void* getEvent() const;
 
-    using SelectInterruptPtr = std::unique_ptr<SelectInterrupt>;
-} // namespace ix
+		/** @brief Special code for send request. */
+		static const uint64_t kSendRequest;
+		/** @brief Special code for close request. */
+		static const uint64_t kCloseRequest;
+	};
+
+	/** @brief Unique pointer to a @ref SelectInterrupt */
+	using SelectInterruptPtr = std::unique_ptr<SelectInterrupt>;
+}

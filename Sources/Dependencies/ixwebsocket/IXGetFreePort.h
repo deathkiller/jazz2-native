@@ -8,5 +8,10 @@
 
 namespace ix
 {
-    int getFreePort();
-} // namespace ix
+	/**
+		@brief Get a free TCP port on the local machine.
+
+		Returns an available port number for use in network tests or dynamic server startup.
+	*/
+	int getFreePort();
+}

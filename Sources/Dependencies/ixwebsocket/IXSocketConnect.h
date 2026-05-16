@@ -13,19 +13,41 @@ struct addrinfo;
 
 namespace ix
 {
-    class SocketConnect
-    {
-    public:
-        static int connect(const std::string& hostname,
-                           int port,
-                           std::string& errMsg,
-                           const CancellationRequest& isCancellationRequested);
+	/**
+		@brief Utility for connecting sockets to remote hosts.
+	*/
+	class SocketConnect
+	{
+	public:
+		/**
+		 * @brief Connect to a remote host.
+		 * @param hostname Hostname to connect to.
+		 * @param port Port number.
+		 * @param errMsg Output error message.
+		 * @param isCancellationRequested Cancellation request callback.
+		 * @return Socket file descriptor or -1 on error.
+		 */
+		static int connect(const std::string& hostname,
+						   int port,
+						   std::string& errMsg,
+						   const CancellationRequest& isCancellationRequested);
 
-        static void configure(int sockfd);
+		/**
+		 * @brief Configure socket options after connect.
+		 * @param sockfd Socket file descriptor.
+		 */
+		static void configure(int sockfd);
 
-    private:
-        static int connectToAddress(const struct addrinfo* address,
-                                    std::string& errMsg,
-                                    const CancellationRequest& isCancellationRequested);
-    };
-} // namespace ix
+	private:
+		/**
+		 * @brief Connect to a specific address (internal).
+		 * @param address Address info.
+		 * @param errMsg Output error message.
+		 * @param isCancellationRequested Cancellation request callback.
+		 * @return Socket file descriptor or -1 on error.
+		 */
+		static int connectToAddress(const struct addrinfo* address,
+									std::string& errMsg,
+									const CancellationRequest& isCancellationRequested);
+	};
+}

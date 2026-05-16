@@ -25,40 +25,40 @@
 
 namespace ix
 {
-    std::unique_ptr<Socket> createSocket(bool tls,
-                                         int fd,
-                                         std::string& errorMsg,
-                                         const SocketTLSOptions& tlsOptions)
-    {
-        (void) tlsOptions;
-        errorMsg.clear();
-        std::unique_ptr<Socket> socket;
+	std::unique_ptr<Socket> createSocket(bool tls,
+										 int fd,
+										 std::string& errorMsg,
+										 const SocketTLSOptions& tlsOptions)
+	{
+		(void) tlsOptions;
+		errorMsg.clear();
+		std::unique_ptr<Socket> socket;
 
-        if (!tls)
-        {
-            socket = ix::make_unique<Socket>(fd);
-        }
-        else
-        {
+		if (!tls)
+		{
+			socket = ix::make_unique<Socket>(fd);
+		}
+		else
+		{
 #ifdef IXWEBSOCKET_USE_TLS
 #if defined(IXWEBSOCKET_USE_MBED_TLS)
-            socket = ix::make_unique<SocketMbedTLS>(tlsOptions, fd);
+			socket = ix::make_unique<SocketMbedTLS>(tlsOptions, fd);
 #elif defined(IXWEBSOCKET_USE_OPEN_SSL) || defined(IXWEBSOCKET_USE_LIBRE_SSL)
-            socket = ix::make_unique<SocketOpenSSL>(tlsOptions, fd);
+			socket = ix::make_unique<SocketOpenSSL>(tlsOptions, fd);
 #elif defined(__APPLE__)
-            socket = ix::make_unique<SocketAppleSSL>(tlsOptions, fd);
+			socket = ix::make_unique<SocketAppleSSL>(tlsOptions, fd);
 #endif
 #else
-            errorMsg = "TLS support is not enabled on this platform.";
-            return nullptr;
+			errorMsg = "TLS support is not enabled on this platform.";
+			return nullptr;
 #endif
-        }
+		}
 
-        if (!socket->init(errorMsg))
-        {
-            socket.reset();
-        }
+		if (!socket->init(errorMsg))
+		{
+			socket.reset();
+		}
 
-        return socket;
-    }
+		return socket;
+	}
 } // namespace ix

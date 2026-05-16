@@ -14,41 +14,67 @@
 
 namespace ix
 {
-    using OnSetTerminatedCallback = std::function<void()>;
+	/**
+		@brief Callback type for connection termination events.
+	*/
+	using OnSetTerminatedCallback = std::function<void()>;
 
-    class ConnectionState
-    {
-    public:
-        ConnectionState();
-        virtual ~ConnectionState() = default;
+	/**
+		@brief Represents the state of a network connection.
 
-        virtual void computeId();
-        virtual const std::string& getId() const;
+		Tracks termination, remote address, and unique ID for @ref SocketServer and related classes.
+	*/
+	class ConnectionState
+	{
+	public:
+		/** @brief Construct a new ConnectionState. */
+		ConnectionState();
+		/** @brief Destructor. */
+		virtual ~ConnectionState() = default;
 
-        void setTerminated();
-        bool isTerminated() const;
+		/** @brief Compute a unique connection ID. */
+		virtual void computeId();
+		/** @brief Get the connection ID. */
+		virtual const std::string& getId() const;
 
-        const std::string& getRemoteIp();
-        int getRemotePort();
+		/** @brief Mark the connection as terminated. */
+		void setTerminated();
+		/** @brief Check if the connection is terminated. */
+		bool isTerminated() const;
 
-        static std::shared_ptr<ConnectionState> createConnectionState();
+		/** @brief Get the remote IP address. */
+		const std::string& getRemoteIp();
+		/** @brief Get the remote port number. */
+		int getRemotePort();
 
-    private:
-        void setOnSetTerminatedCallback(const OnSetTerminatedCallback& callback);
+		/** @brief Create a new shared ConnectionState instance. */
+		static std::shared_ptr<ConnectionState> createConnectionState();
 
-        void setRemoteIp(const std::string& remoteIp);
-        void setRemotePort(int remotePort);
+	private:
+		/** @brief Set the termination callback. */
+		void setOnSetTerminatedCallback(const OnSetTerminatedCallback& callback);
 
-    protected:
-        std::atomic<bool> _terminated;
-        std::string _id;
-        OnSetTerminatedCallback _onSetTerminatedCallback;
+		/** @brief Set the remote IP address. */
+		void setRemoteIp(const std::string& remoteIp);
+		/** @brief Set the remote port number. */
+		void setRemotePort(int remotePort);
 
-        static std::atomic<uint64_t> _globalId;
+	protected:
+		/** @brief True if the connection is terminated. */
+		std::atomic<bool> _terminated;
+		/** @brief Unique connection ID. */
+		std::string _id;
+		/** @brief Callback for termination event. */
+		OnSetTerminatedCallback _onSetTerminatedCallback;
 
-        std::string _remoteIp;
-        int _remotePort;
+		/** @brief Global connection ID counter. */
+		static std::atomic<uint64_t> _globalId;
 
-        friend class SocketServer;
-    };
-} // namespace ix
+		/** @brief Remote IP address. */
+		std::string _remoteIp;
+		/** @brief Remote port number. */
+		int _remotePort;
+
+		friend class SocketServer;
+	};
+}

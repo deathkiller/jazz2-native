@@ -40,25 +40,57 @@
 
 namespace ix
 {
-    class WebSocketPerMessageDeflateOptions;
-    class WebSocketPerMessageDeflateCompressor;
-    class WebSocketPerMessageDeflateDecompressor;
+	class WebSocketPerMessageDeflateOptions;
+	class WebSocketPerMessageDeflateCompressor;
+	class WebSocketPerMessageDeflateDecompressor;
 
-    class WebSocketPerMessageDeflate
-    {
-    public:
-        WebSocketPerMessageDeflate();
-        ~WebSocketPerMessageDeflate();
+	/**
+		@brief Implements per-message deflate compression for WebSocket frames (RFC 7692).
 
-        bool init(const WebSocketPerMessageDeflateOptions& perMessageDeflateOptions);
-        bool compress(const IXWebSocketSendData& in, std::string& out);
-        bool compress(const std::string& in, std::string& out);
-        bool decompress(const std::string& in, std::string& out);
+		Used by @ref WebSocket and @ref WebSocketHandshake for compression negotiation and processing.
+	*/
+	class WebSocketPerMessageDeflate
+	{
+	public:
+		/** @brief Construct a new WebSocketPerMessageDeflate. */
+		WebSocketPerMessageDeflate();
+		/** @brief Destructor. */
+		~WebSocketPerMessageDeflate();
 
-    private:
-        std::unique_ptr<WebSocketPerMessageDeflateCompressor> _compressor;
-        std::unique_ptr<WebSocketPerMessageDeflateDecompressor> _decompressor;
-    };
+		/**
+		 * @brief Initialize per-message deflate settings.
+		 * @param perMessageDeflateOptions Deflate options.
+		 * @return True on success.
+		 */
+		bool init(const WebSocketPerMessageDeflateOptions& perMessageDeflateOptions);
+		/**
+		 * @brief Compress a WebSocket frame payload.
+		 * @param in Input data.
+		 * @param out Output compressed string.
+		 * @return True on success.
+		 */
+		bool compress(const IXWebSocketSendData& in, std::string& out);
+		/**
+		 * @brief Compress a WebSocket frame payload from string.
+		 * @param in Input string.
+		 * @param out Output compressed string.
+		 * @return True on success.
+		 */
+		bool compress(const std::string& in, std::string& out);
+		/**
+		 * @brief Decompress a WebSocket frame payload.
+		 * @param in Input compressed string.
+		 * @param out Output decompressed string.
+		 * @return True on success.
+		 */
+		bool decompress(const std::string& in, std::string& out);
 
-    using WebSocketPerMessageDeflatePtr = std::unique_ptr<WebSocketPerMessageDeflate>;
-} // namespace ix
+	private:
+		/** @brief Compressor implementation. */
+		std::unique_ptr<WebSocketPerMessageDeflateCompressor> _compressor;
+		/** @brief Decompressor implementation. */
+		std::unique_ptr<WebSocketPerMessageDeflateDecompressor> _decompressor;
+	};
+
+	using WebSocketPerMessageDeflatePtr = std::unique_ptr<WebSocketPerMessageDeflate>;
+}

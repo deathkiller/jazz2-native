@@ -32,270 +32,468 @@
 
 namespace ix
 {
-    class Socket;
+	class Socket;
 
-    enum class SendMessageKind
-    {
-        Text,
-        Binary,
-        Ping
-    };
+	/**
+		@brief Kind of message to send (text, binary, ping)
+	*/
+	enum class SendMessageKind
+	{
+		Text,   /**< Text message */
+		Binary, /**< Binary message */
+		Ping    /**< Ping message */
+	};
 
-    class WebSocketTransport
-    {
-    public:
-        enum class ReadyState
-        {
-            CLOSING,
-            CLOSED,
-            CONNECTING,
-            OPEN
-        };
+	/**
+		@brief WebSocket transport implementation for sending and receiving WebSocket frames.
+		
+		Handles connection state, message fragmentation, compression, and ping/pong heartbeats.
+		Used internally by @ref ix::WebSocket and @ref ix::WebSocketServer.
+	*/
+	class WebSocketTransport
+	{
+	public:
+		/**
+		 * @brief WebSocket ready state (connection lifecycle)
+		 */
+		enum class ReadyState
+		{
+			CLOSING,    /**< Connection is closing */
+			CLOSED,     /**< Connection is closed */
+			CONNECTING, /**< Connection is being established */
+			OPEN        /**< Connection is open */
+		};
 
-        enum class MessageKind
-        {
-            MSG_TEXT,
-            MSG_BINARY,
-            PING,
-            PONG,
-            FRAGMENT
-        };
+		/**
+		 * @brief Kind of message received or sent
+		 */
+		enum class MessageKind
+		{
+			MSG_TEXT,   /**< Text message */
+			MSG_BINARY, /**< Binary message */
+			PING,       /**< Ping frame */
+			PONG,       /**< Pong frame */
+			FRAGMENT    /**< Fragmented message */
+		};
 
-        enum class PollResult
-        {
-            Succeeded,
-            AbnormalClose,
-            CannotFlushSendBuffer
-        };
+		/**
+		 * @brief Result of polling the socket for events
+		 */
+		enum class PollResult
+		{
+			Succeeded,              /**< Poll succeeded */
+			AbnormalClose,          /**< Abnormal close detected */
+			CannotFlushSendBuffer   /**< Could not flush send buffer */
+		};
 
-        using OnMessageCallback =
-            std::function<void(const std::string&, size_t, bool, MessageKind)>;
-        using OnCloseCallback = std::function<void(uint16_t, const std::string&, size_t, bool)>;
+		/**
+		 * @brief Callback for received messages
+		 * @param message Message data
+		 * @param size Message size
+		 * @param compressed True if message is compressed
+		 * @param kind Message kind (see @ref MessageKind)
+		 */
+		using OnMessageCallback = std::function<void(const std::string&, size_t, bool, MessageKind)>;
 
-        WebSocketTransport();
-        ~WebSocketTransport();
+		/**
+		 * @brief Callback for connection close events
+		 * @param code Close code
+		 * @param reason Close reason
+		 * @param wireSize Size of close frame on wire
+		 * @param remote True if closed by remote peer
+		 */
+		using OnCloseCallback = std::function<void(uint16_t, const std::string&, size_t, bool)>;
 
-        void configure(const WebSocketPerMessageDeflateOptions& perMessageDeflateOptions,
-                       const SocketTLSOptions& socketTLSOptions,
-                       bool enablePong,
-                       int pingIntervalSecs);
+		/** @brief Constructor */
+		WebSocketTransport();
+		/** @brief Destructor */
+		~WebSocketTransport();
 
-        // Client
-        WebSocketInitResult connectToUrl(const std::string& url,
-                                         const WebSocketHttpHeaders& headers,
-                                         int timeoutSecs);
+		/**
+		 * @brief Configure compression, TLS, pong, and ping interval
+		 * @param perMessageDeflateOptions Per-message deflate options
+		 * @param socketTLSOptions TLS options
+		 * @param enablePong Enable pong auto-response
+		 * @param pingIntervalSecs Ping interval in seconds
+		 */
+		void configure(const WebSocketPerMessageDeflateOptions& perMessageDeflateOptions,
+					   const SocketTLSOptions& socketTLSOptions,
+					   bool enablePong,
+					   int pingIntervalSecs);
 
-        // Server
-        WebSocketInitResult connectToSocket(std::unique_ptr<Socket> socket,
-                                            int timeoutSecs,
-                                            bool enablePerMessageDeflate,
-                                            const std::string& serverName = std::string(),
-                                            const ProtocolSelectionCallback& protocolSelectionCallback = nullptr,
-                                            HttpRequestPtr request = nullptr,
-                                            int sendTimeoutSecs = -1);
+		/**
+		 * @brief Connect to a WebSocket URL (client mode)
+		 * @param url Target URL
+		 * @param headers HTTP headers
+		 * @param timeoutSecs Timeout in seconds
+		 * @return @ref WebSocketInitResult
+		 */
+		WebSocketInitResult connectToUrl(const std::string& url,
+											 const WebSocketHttpHeaders& headers,
+											 int timeoutSecs);
 
-        PollResult poll();
-        WebSocketSendInfo sendBinary(const IXWebSocketSendData& message,
-                                     const OnProgressCallback& onProgressCallback);
-        WebSocketSendInfo sendText(const IXWebSocketSendData& message,
-                                   const OnProgressCallback& onProgressCallback);
-        WebSocketSendInfo sendPing(const IXWebSocketSendData& message);
+		/**
+		 * @brief Connect to an existing socket (server mode)
+		 * @param socket TCP socket
+		 * @param timeoutSecs Timeout in seconds
+		 * @param enablePerMessageDeflate Enable per-message deflate
+		 * @param serverName Optional server name
+		 * @param protocolSelectionCallback Protocol selection callback
+		 * @param request Optional HTTP request
+		 * @param sendTimeoutSecs Send timeout in seconds
+		 * @return @ref WebSocketInitResult
+		 */
+		WebSocketInitResult connectToSocket(std::unique_ptr<Socket> socket,
+											   int timeoutSecs,
+											   bool enablePerMessageDeflate,
+											   const std::string& serverName = std::string(),
+											   const ProtocolSelectionCallback& protocolSelectionCallback = nullptr,
+											   HttpRequestPtr request = nullptr,
+											   int sendTimeoutSecs = -1);
 
-        void close(uint16_t code = WebSocketCloseConstants::kNormalClosureCode,
-                   const std::string& reason = WebSocketCloseConstants::kNormalClosureMessage,
-                   size_t closeWireSize = 0,
-                   bool remote = false);
+		/**
+		 * @brief Poll the socket for events
+		 * @return @ref PollResult
+		 */
+		PollResult poll();
 
-        void closeSocket();
+		/**
+		 * @brief Send binary data
+		 * @param message Data to send (see @ref IXWebSocketSendData)
+		 * @param onProgressCallback Progress callback
+		 * @return @ref WebSocketSendInfo
+		 */
+		WebSocketSendInfo sendBinary(const IXWebSocketSendData& message,
+									   const OnProgressCallback& onProgressCallback);
 
-        ReadyState getReadyState() const;
-        void setReadyState(ReadyState readyState);
-        void setOnCloseCallback(const OnCloseCallback& onCloseCallback);
-        void dispatch(PollResult pollResult, const OnMessageCallback& onMessageCallback);
-        size_t bufferedAmount() const;
+		/**
+		 * @brief Send text data
+		 * @param message Data to send (see @ref IXWebSocketSendData)
+		 * @param onProgressCallback Progress callback
+		 * @return @ref WebSocketSendInfo
+		 */
+		WebSocketSendInfo sendText(const IXWebSocketSendData& message,
+								  const OnProgressCallback& onProgressCallback);
 
-        // set ping heartbeat message
-        void setPingMessage(const std::string& message, SendMessageKind pingType);
+		/**
+		 * @brief Send ping frame
+		 * @param message Data to send (see @ref IXWebSocketSendData)
+		 * @return @ref WebSocketSendInfo
+		 */
+		WebSocketSendInfo sendPing(const IXWebSocketSendData& message);
 
-        // internal
-        // send any type of ping packet, not only 'ping' type
-        WebSocketSendInfo sendHeartBeat(SendMessageKind pingType);
+		/**
+		 * @brief Close the connection
+		 * @param code Close code (see @ref WebSocketCloseConstants)
+		 * @param reason Close reason
+		 * @param closeWireSize Size of close frame on wire
+		 * @param remote True if closed by remote peer
+		 */
+		void close(uint16_t code = WebSocketCloseConstants::kNormalClosureCode,
+				  const std::string& reason = WebSocketCloseConstants::kNormalClosureMessage,
+				  size_t closeWireSize = 0,
+				  bool remote = false);
 
-    private:
-        std::string _url;
+		/** @brief Close the underlying socket */
+		void closeSocket();
 
-        struct wsheader_type
-        {
-            unsigned header_size;
-            bool fin;
-            bool rsv1;
-            bool rsv2;
-            bool rsv3;
-            bool mask;
-            enum opcode_type
-            {
-                CONTINUATION = 0x0,
-                TEXT_FRAME = 0x1,
-                BINARY_FRAME = 0x2,
-                CLOSE = 8,
-                PING = 9,
-                PONG = 0xa,
-            } opcode;
-            int N0;
-            uint64_t N;
-            uint8_t masking_key[4];
-        };
+		/** @brief Get current ready state */
+		ReadyState getReadyState() const;
+		/** @brief Set ready state */
+		void setReadyState(ReadyState readyState);
+		/** @brief Set close callback */
+		void setOnCloseCallback(const OnCloseCallback& onCloseCallback);
+		/** @brief Dispatch a message to callback */
+		void dispatch(PollResult pollResult, const OnMessageCallback& onMessageCallback);
+		/** @brief Get amount of buffered data */
+		size_t bufferedAmount() const;
 
-        // Tells whether we should mask the data we send.
-        // client should mask but server should not
-        std::atomic<bool> _useMask;
+		/**
+		 * @brief Set ping heartbeat message
+		 * @param message Ping message
+		 * @param pingType Kind of ping (see @ref SendMessageKind)
+		 */
+		void setPingMessage(const std::string& message, SendMessageKind pingType);
 
-        // Tells whether we should flush the send buffer before
-        // saying that a send is complete. This is the mode for server code.
-        std::atomic<bool> _blockingSend;
+		/**
+		 * @brief Send any type of ping packet (internal)
+		 * @param pingType Kind of ping (see @ref SendMessageKind)
+		 * @return @ref WebSocketSendInfo
+		 */
+		WebSocketSendInfo sendHeartBeat(SendMessageKind pingType);
 
-        // A configurable timeout for how long flushSendBuffer() may block
-        // before forcefully closing the client socket with a "Send timeout"
-        // message. This is useful when a client doesn't read from its socket
-        // and the server stalls on trying to send more data.
-        int _sendTimeoutSecs = -1;
+	private:
+		/** @brief Target URL */
+		std::string _url;
 
-        // Buffer for reading from our socket. That buffer is never resized.
-        std::vector<uint8_t> _readbuf;
+		/**
+		 * @brief WebSocket frame header structure
+		 */
+		struct wsheader_type
+		{
+			unsigned header_size; /**< Header size */
+			bool fin;            /**< Final fragment */
+			bool rsv1;           /**< Reserved bit 1 */
+			bool rsv2;           /**< Reserved bit 2 */
+			bool rsv3;           /**< Reserved bit 3 */
+			bool mask;           /**< Masked frame */
+			/**
+			 * @brief WebSocket opcode type
+			 */
+			enum opcode_type
+			{
+				CONTINUATION = 0x0, /**< Continuation frame */
+				TEXT_FRAME = 0x1,   /**< Text frame */
+				BINARY_FRAME = 0x2, /**< Binary frame */
+				CLOSE = 8,          /**< Close frame */
+				PING = 9,           /**< Ping frame */
+				PONG = 0xa,         /**< Pong frame */
+			} opcode;
+			int N0;              /**< Payload length (short) */
+			uint64_t N;          /**< Payload length (long) */
+			uint8_t masking_key[4]; /**< Masking key */
+		};
 
-        // Contains all messages that were fetched in the last socket read.
-        // This could be a mix of control messages (Close, Ping, etc...) and
-        // data messages. That buffer is resized
-        std::vector<uint8_t> _rxbuf;
+		/**
+		 * @brief Whether to mask outgoing data (client only)
+		 */
+		std::atomic<bool> _useMask;
 
-        // If set to a positive value, only read bytes from the socket until
-        // _rxbuf has reached this size to avoid unnecessary erase churn.
-        uint64_t _rxbufWanted = 0;
+		/**
+		 * @brief Whether to block on send buffer flush (server mode)
+		 */
+		std::atomic<bool> _blockingSend;
 
-        // Contains all messages that are waiting to be sent
-        std::vector<uint8_t> _txbuf;
-        mutable std::mutex _txbufMutex;
+		/**
+		 * @brief Send buffer flush timeout (seconds)
+		 */
+		int _sendTimeoutSecs = -1;
 
-        // Hold fragments for multi-fragments messages in a list. We support receiving very large
-        // messages (tested messages up to 700M) and we cannot put them in a single
-        // buffer that is resized, as this operation can be slow when a buffer has its
-        // size increased 2 fold, while appending to a list has a fixed cost.
-        std::list<std::string> _chunks;
+		/**
+		 * @brief Read buffer (never resized)
+		 */
+		std::vector<uint8_t> _readbuf;
 
-        // Record the message kind (will be TEXT or BINARY) for a fragmented
-        // message, present in the first chunk, since the final chunk will be a
-        // CONTINUATION opcode and doesn't tell the full message kind
-        MessageKind _fragmentedMessageKind;
+		/**
+		 * @brief Receive buffer (resized as needed)
+		 */
+		std::vector<uint8_t> _rxbuf;
 
-        // Ditto for whether a message is compressed
-        bool _receivedMessageCompressed;
+		/**
+		 * @brief Max receive buffer size (0 = unlimited)
+		 */
+		uint64_t _rxbufWanted = 0;
 
-        // Fragments are 32K long
-        static constexpr size_t kChunkSize = 1 << 15;
+		/**
+		 * @brief Send buffer (pending messages)
+		 */
+		std::vector<uint8_t> _txbuf;
+		mutable std::mutex _txbufMutex;
 
-        // Underlying TCP socket
-        std::unique_ptr<Socket> _socket;
-        std::mutex _socketMutex;
+		/**
+		 * @brief List of message fragments (for large messages)
+		 */
+		std::list<std::string> _chunks;
 
-        // Hold the state of the connection (OPEN, CLOSED, etc...)
-        std::atomic<ReadyState> _readyState;
-        // Mutex to serialize setReadyState() execution.
-        std::mutex _setReadyStateMutex;
+		/**
+		 * @brief Kind of fragmented message (text or binary)
+		 */
+		MessageKind _fragmentedMessageKind;
 
-        OnCloseCallback _onCloseCallback;
-        std::string _closeReason;
-        mutable std::mutex _closeReasonMutex;
-        std::atomic<uint16_t> _closeCode;
-        std::atomic<size_t> _closeWireSize;
-        std::atomic<bool> _closeRemote;
+		/**
+		 * @brief Whether received message is compressed
+		 */
+		bool _receivedMessageCompressed;
 
-        // Data used for Per Message Deflate compression (with zlib)
-        WebSocketPerMessageDeflatePtr _perMessageDeflate;
-        WebSocketPerMessageDeflateOptions _perMessageDeflateOptions;
-        std::atomic<bool> _enablePerMessageDeflate;
+		/**
+		 * @brief Fragment size (32K)
+		 */
+		static constexpr size_t kChunkSize = 1 << 15;
 
-        std::string _decompressedMessage;
-        std::string _compressedMessage;
+		/**
+		 * @brief Underlying TCP socket
+		 */
+		std::unique_ptr<Socket> _socket;
+		std::mutex _socketMutex;
 
-        // Used to control TLS connection behavior
-        SocketTLSOptions _socketTLSOptions;
+		/**
+		 * @brief Current connection state
+		 */
+		std::atomic<ReadyState> _readyState;
+		std::mutex _setReadyStateMutex;
 
-        // Used to cancel dns lookup + socket connect + http upgrade
-        std::atomic<bool> _requestInitCancellation;
+		/**
+		 * @brief Close callback and reason
+		 */
+		OnCloseCallback _onCloseCallback;
+		std::string _closeReason;
+		mutable std::mutex _closeReasonMutex;
+		std::atomic<uint16_t> _closeCode;
+		std::atomic<size_t> _closeWireSize;
+		std::atomic<bool> _closeRemote;
 
-        mutable std::mutex _closingTimePointMutex;
-        std::chrono::time_point<std::chrono::steady_clock> _closingTimePoint;
-        static const int kClosingMaximumWaitingDelayInMs;
+		/**
+		 * @brief Per-message deflate compression
+		 */
+		WebSocketPerMessageDeflatePtr _perMessageDeflate;
+		WebSocketPerMessageDeflateOptions _perMessageDeflateOptions;
+		std::atomic<bool> _enablePerMessageDeflate;
 
-        // enable auto response to ping
-        std::atomic<bool> _enablePong;
-        static const bool kDefaultEnablePong;
+		/**
+		 * @brief Decompressed and compressed message buffers
+		 */
+		std::string _decompressedMessage;
+		std::string _compressedMessage;
 
-        // Optional ping and pong timeout
-        int _pingIntervalSecs;
-        std::atomic<bool> _pongReceived;
+		/**
+		 * @brief TLS options
+		 */
+		SocketTLSOptions _socketTLSOptions;
 
-        static const int kDefaultPingIntervalSecs;
+		/**
+		 * @brief Cancel DNS/connection/upgrade
+		 */
+		std::atomic<bool> _requestInitCancellation;
 
-        bool _setCustomMessage;
-        std::string _kPingMessage;
-        SendMessageKind _pingType;
-        std::atomic<uint64_t> _pingCount;
+		/**
+		 * @brief Closing time tracking
+		 */
+		mutable std::mutex _closingTimePointMutex;
+		std::chrono::time_point<std::chrono::steady_clock> _closingTimePoint;
+		static const int kClosingMaximumWaitingDelayInMs;
 
-        // We record when ping are being sent so that we can know when to send the next one
-        mutable std::mutex _lastSendPingTimePointMutex;
-        std::chrono::time_point<std::chrono::steady_clock> _lastSendPingTimePoint;
+		/**
+		 * @brief Enable pong auto-response
+		 */
+		std::atomic<bool> _enablePong;
+		static const bool kDefaultEnablePong;
 
-        // If this function returns true, it is time to send a new ping
-        bool pingIntervalExceeded();
-        void initTimePointsAfterConnect();
+		/**
+		 * @brief Ping/pong interval and state
+		 */
+		int _pingIntervalSecs;
+		std::atomic<bool> _pongReceived;
+		static const int kDefaultPingIntervalSecs;
 
-        // after calling close(), if no CLOSE frame answer is received back from the remote, we
-        // should close the connexion
-        bool closingDelayExceeded();
+		/**
+		 * @brief Custom ping message and type
+		 */
+		bool _setCustomMessage;
+		std::string _kPingMessage;
+		SendMessageKind _pingType;
+		std::atomic<uint64_t> _pingCount;
 
-        void sendCloseFrame(uint16_t code, const std::string& reason);
+		/**
+		 * @brief Last ping send time tracking
+		 */
+		mutable std::mutex _lastSendPingTimePointMutex;
+		std::chrono::time_point<std::chrono::steady_clock> _lastSendPingTimePoint;
 
-        void closeSocketAndSwitchToClosedState(uint16_t code,
-                                               const std::string& reason,
-                                               size_t closeWireSize,
-                                               bool remote);
+		/**
+		 * @brief Check if ping interval exceeded
+		 * @return True if time to send new ping
+		 */
+		bool pingIntervalExceeded();
+		/** @brief Initialize time points after connect */
+		void initTimePointsAfterConnect();
 
-        bool wakeUpFromPoll(uint64_t wakeUpCode);
+		/**
+		 * @brief Check if closing delay exceeded (after close())
+		 * @return True if should force close
+		 */
+		bool closingDelayExceeded();
 
-        bool flushSendBuffer();
-        bool sendOnSocket();
-        bool receiveFromSocket();
+		/** @brief Send close frame */
+		void sendCloseFrame(uint16_t code, const std::string& reason);
 
-        WebSocketSendInfo sendData(wsheader_type::opcode_type type,
-                                   const IXWebSocketSendData& message,
-                                   bool compress,
-                                   const OnProgressCallback& onProgressCallback = nullptr);
+		/**
+		 * @brief Close socket and switch to closed state
+		 * @param code Close code
+		 * @param reason Close reason
+		 * @param closeWireSize Size of close frame
+		 * @param remote True if closed by remote peer
+		 */
+		void closeSocketAndSwitchToClosedState(uint16_t code,
+												   const std::string& reason,
+												   size_t closeWireSize,
+												   bool remote);
 
-        template<class Iterator>
-        bool sendFragment(
-            wsheader_type::opcode_type type, bool fin, Iterator begin, Iterator end, bool compress);
+		/** @brief Wake up from poll */
+		bool wakeUpFromPoll(uint64_t wakeUpCode);
 
-        void emitMessage(MessageKind messageKind,
-                         const std::string& message,
-                         bool compressedMessage,
-                         const OnMessageCallback& onMessageCallback);
+		/** @brief Flush send buffer */
+		bool flushSendBuffer();
+		/** @brief Send data on socket */
+		bool sendOnSocket();
+		/** @brief Receive data from socket */
+		bool receiveFromSocket();
 
-        bool isSendBufferEmpty() const;
+		/**
+		 * @brief Send data (internal)
+		 * @param type Opcode type
+		 * @param message Data to send
+		 * @param compress Compress data
+		 * @param onProgressCallback Progress callback
+		 * @return @ref WebSocketSendInfo
+		 */
+		WebSocketSendInfo sendData(wsheader_type::opcode_type type,
+								   const IXWebSocketSendData& message,
+								   bool compress,
+								   const OnProgressCallback& onProgressCallback = nullptr);
 
-        template<class Iterator>
-        void appendToSendBuffer(const std::vector<uint8_t>& header,
-                                Iterator begin,
-                                Iterator end,
-                                uint64_t message_size,
-                                uint8_t masking_key[4]);
+		/**
+		 * @brief Send a message fragment (internal)
+		 * @param type Opcode type
+		 * @param fin Final fragment
+		 * @param begin Iterator to start
+		 * @param end Iterator to end
+		 * @param compress Compress data
+		 * @return True if sent
+		 */
+		template<class Iterator>
+		bool sendFragment(wsheader_type::opcode_type type, bool fin, Iterator begin, Iterator end, bool compress);
 
-        unsigned getRandomUnsigned();
-        void unmaskReceiveBuffer(const wsheader_type& ws);
+		/**
+		 * @brief Emit a message to callback (internal)
+		 * @param messageKind Kind of message
+		 * @param message Message data
+		 * @param compressedMessage True if compressed
+		 * @param onMessageCallback Callback
+		 */
+		void emitMessage(MessageKind messageKind,
+					   const std::string& message,
+					   bool compressedMessage,
+					   const OnMessageCallback& onMessageCallback);
 
-        std::string getMergedChunks() const;
+		/** @brief Check if send buffer is empty */
+		bool isSendBufferEmpty() const;
 
-        void setCloseReason(const std::string& reason);
-        const std::string& getCloseReason() const;
-    };
-} // namespace ix
+		/**
+		 * @brief Append data to send buffer (internal)
+		 * @param header Frame header
+		 * @param begin Iterator to start
+		 * @param end Iterator to end
+		 * @param message_size Message size
+		 * @param masking_key Masking key
+		 */
+		template<class Iterator>
+		void appendToSendBuffer(const std::vector<uint8_t>& header,
+								 Iterator begin,
+								 Iterator end,
+								 uint64_t message_size,
+								 uint8_t masking_key[4]);
+
+		/** @brief Get random unsigned integer */
+		unsigned getRandomUnsigned();
+		/** @brief Unmask receive buffer */
+		void unmaskReceiveBuffer(const wsheader_type& ws);
+
+		/** @brief Merge message fragments into single string */
+		std::string getMergedChunks() const;
+
+		/** @brief Set close reason */
+		void setCloseReason(const std::string& reason);
+		/** @brief Get close reason */
+		const std::string& getCloseReason() const;
+	};
+}

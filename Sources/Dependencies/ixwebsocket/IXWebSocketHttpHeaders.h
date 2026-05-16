@@ -14,10 +14,21 @@
 
 namespace ix
 {
-    class Socket;
+	class Socket;
 
-    using WebSocketHttpHeaders = std::map<std::string, std::string, CaseInsensitiveLess>;
+	/**
+		@brief Case-insensitive map for storing WebSocket HTTP headers.
 
-    std::pair<bool, WebSocketHttpHeaders> parseHttpHeaders(
-        std::unique_ptr<Socket>& socket, const CancellationRequest& isCancellationRequested);
-} // namespace ix
+		Used by @ref WebSocket and @ref WebSocketHandshake for header management.
+	*/
+	using WebSocketHttpHeaders = std::map<std::string, std::string, CaseInsensitiveLess>;
+
+	/**
+		@brief Parse HTTP headers from a socket stream.
+		@param socket Socket to read from.
+		@param isCancellationRequested Cancellation request callback.
+		@return Pair of (`bool` success, @ref WebSocketHttpHeaders).
+	*/
+	std::pair<bool, WebSocketHttpHeaders> parseHttpHeaders(
+		std::unique_ptr<Socket>& socket, const CancellationRequest& isCancellationRequested);
+}

@@ -13,12 +13,12 @@
 
 namespace ix
 {
-    using RemoteUrlsMapping = std::map<std::string, std::string>;
+	using RemoteUrlsMapping = std::map<std::string, std::string>;
 
-    int websocket_proxy_server_main(int port,
-                                    const std::string& hostname,
-                                    const ix::SocketTLSOptions& tlsOptions,
-                                    const std::string& remoteUrl,
-                                    const RemoteUrlsMapping& remoteUrlsMapping,
-                                    bool verbose);
-} // namespace ix
+	int websocket_proxy_server_main(int port,
+									const std::string& hostname,
+									const ix::SocketTLSOptions& tlsOptions,
+									const std::string& remoteUrl,
+									const RemoteUrlsMapping& remoteUrlsMapping,
+									bool verbose);
+}

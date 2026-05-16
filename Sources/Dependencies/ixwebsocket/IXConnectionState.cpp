@@ -8,66 +8,66 @@
 
 namespace ix
 {
-    std::atomic<uint64_t> ConnectionState::_globalId(0);
+	std::atomic<uint64_t> ConnectionState::_globalId(0);
 
-    ConnectionState::ConnectionState()
-        : _terminated(false)
-    {
-        computeId();
-    }
+	ConnectionState::ConnectionState()
+		: _terminated(false)
+	{
+		computeId();
+	}
 
-    void ConnectionState::computeId()
-    {
-        _id = std::to_string(_globalId++);
-    }
+	void ConnectionState::computeId()
+	{
+		_id = std::to_string(_globalId++);
+	}
 
-    const std::string& ConnectionState::getId() const
-    {
-        return _id;
-    }
+	const std::string& ConnectionState::getId() const
+	{
+		return _id;
+	}
 
-    std::shared_ptr<ConnectionState> ConnectionState::createConnectionState()
-    {
-        return std::make_shared<ConnectionState>();
-    }
+	std::shared_ptr<ConnectionState> ConnectionState::createConnectionState()
+	{
+		return std::make_shared<ConnectionState>();
+	}
 
-    void ConnectionState::setOnSetTerminatedCallback(const OnSetTerminatedCallback& callback)
-    {
-        _onSetTerminatedCallback = callback;
-    }
+	void ConnectionState::setOnSetTerminatedCallback(const OnSetTerminatedCallback& callback)
+	{
+		_onSetTerminatedCallback = callback;
+	}
 
-    bool ConnectionState::isTerminated() const
-    {
-        return _terminated;
-    }
+	bool ConnectionState::isTerminated() const
+	{
+		return _terminated;
+	}
 
-    void ConnectionState::setTerminated()
-    {
-        _terminated = true;
+	void ConnectionState::setTerminated()
+	{
+		_terminated = true;
 
-        if (_onSetTerminatedCallback)
-        {
-            _onSetTerminatedCallback();
-        }
-    }
+		if (_onSetTerminatedCallback)
+		{
+			_onSetTerminatedCallback();
+		}
+	}
 
-    const std::string& ConnectionState::getRemoteIp()
-    {
-        return _remoteIp;
-    }
+	const std::string& ConnectionState::getRemoteIp()
+	{
+		return _remoteIp;
+	}
 
-    int ConnectionState::getRemotePort()
-    {
-        return _remotePort;
-    }
+	int ConnectionState::getRemotePort()
+	{
+		return _remotePort;
+	}
 
-    void ConnectionState::setRemoteIp(const std::string& remoteIp)
-    {
-        _remoteIp = remoteIp;
-    }
+	void ConnectionState::setRemoteIp(const std::string& remoteIp)
+	{
+		_remoteIp = remoteIp;
+	}
 
-    void ConnectionState::setRemotePort(int remotePort)
-    {
-        _remotePort = remotePort;
-    }
+	void ConnectionState::setRemotePort(int remotePort)
+	{
+		_remotePort = remotePort;
+	}
 } // namespace ix

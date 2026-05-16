@@ -22,46 +22,74 @@ struct addrinfo;
 
 namespace ix
 {
-    class DNSLookup : public std::enable_shared_from_this<DNSLookup>
-    {
-    public:
-        using AddrInfoPtr = std::shared_ptr<addrinfo>;
-        DNSLookup(const std::string& hostname, int port, int64_t wait = DNSLookup::kDefaultWait);
-        ~DNSLookup() = default;
+	/**
+		@brief Performs asynchronous DNS lookups with cancellation support.
 
-        AddrInfoPtr resolve(std::string& errMsg,
-                                 const CancellationRequest& isCancellationRequested,
-                                 bool cancellable = true);
+		Resolves hostnames to addresses in a background thread, supporting cancellation via @ref CancellationRequest.
+	*/
+	class DNSLookup : public std::enable_shared_from_this<DNSLookup>
+	{
+	public:
+		/** @brief Shared pointer to addrinfo struct. */
+		using AddrInfoPtr = std::shared_ptr<addrinfo>;
+		/**
+		 * @brief Construct a new DNSLookup.
+		 * @param hostname Hostname to resolve.
+		 * @param port Port number.
+		 * @param wait Optional wait time.
+		 */
+		DNSLookup(const std::string& hostname, int port, int64_t wait = DNSLookup::kDefaultWait);
+		/** @brief Destructor */
+		~DNSLookup() = default;
 
-    private:
-        AddrInfoPtr resolveCancellable(std::string& errMsg,
-                                            const CancellationRequest& isCancellationRequested);
-        AddrInfoPtr resolveUnCancellable(std::string& errMsg,
-                                              const CancellationRequest& isCancellationRequested);
+		/**
+		 * @brief Resolve the hostname to an address.
+		 * @param errMsg Output error message.
+		 * @param isCancellationRequested Cancellation request functor.
+		 * @param cancellable True if operation can be cancelled.
+		 * @return Shared pointer to addrinfo.
+		 */
+		AddrInfoPtr resolve(std::string& errMsg,
+								 const CancellationRequest& isCancellationRequested,
+								 bool cancellable = true);
 
-        AddrInfoPtr getAddrInfo(const std::string& hostname,
-                                            int port,
-                                            std::string& errMsg);
+	private:
+		/** @brief Resolve with cancellation support. */
+		AddrInfoPtr resolveCancellable(std::string& errMsg,
+											const CancellationRequest& isCancellationRequested);
+		/** @brief Resolve without cancellation support. */
+		AddrInfoPtr resolveUnCancellable(std::string& errMsg,
+											  const CancellationRequest& isCancellationRequested);
 
-        void run(std::weak_ptr<DNSLookup> self, std::string hostname, int port); // thread runner
+		/** @brief Get addrinfo for hostname and port. */
+		AddrInfoPtr getAddrInfo(const std::string& hostname,
+											int port,
+											std::string& errMsg);
 
-        void setErrMsg(const std::string& errMsg);
-        const std::string& getErrMsg();
+		/** @brief Thread runner for DNS lookup. */
+		void run(std::weak_ptr<DNSLookup> self, std::string hostname, int port);
 
-        void setRes(AddrInfoPtr addr);
-        AddrInfoPtr getRes();
+		/** @brief Set error message. */
+		void setErrMsg(const std::string& errMsg);
+		/** @brief Get error message. */
+		const std::string& getErrMsg();
 
-        std::string _hostname;
-        int _port;
-        int64_t _wait;
-        const static int64_t kDefaultWait;
+		/** @brief Set resolved address. */
+		void setRes(AddrInfoPtr addr);
+		/** @brief Get resolved address. */
+		AddrInfoPtr getRes();
 
-        AddrInfoPtr _res;
-        std::mutex _resMutex;
+		std::string _hostname;
+		int _port;
+		int64_t _wait;
+		const static int64_t kDefaultWait;
 
-        std::string _errMsg;
-        std::mutex _errMsgMutex;
+		AddrInfoPtr _res;
+		std::mutex _resMutex;
 
-        std::atomic<bool> _done;
-    };
-} // namespace ix
+		std::string _errMsg;
+		std::mutex _errMsgMutex;
+
+		std::atomic<bool> _done;
+	};
+}

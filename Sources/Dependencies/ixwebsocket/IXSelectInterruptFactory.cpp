@@ -15,12 +15,12 @@
 
 namespace ix
 {
-    SelectInterruptPtr createSelectInterrupt()
-    {
+	SelectInterruptPtr createSelectInterrupt()
+	{
 #ifdef _WIN32
-        return ix::make_unique<SelectInterruptEvent>();
+		return ix::make_unique<SelectInterruptEvent>();
 #else
-        return ix::make_unique<SelectInterruptPipe>();
+		return ix::make_unique<SelectInterruptPipe>();
 #endif
-    }
+	}
 } // namespace ix

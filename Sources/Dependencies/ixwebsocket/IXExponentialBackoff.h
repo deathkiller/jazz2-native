@@ -10,7 +10,12 @@
 
 namespace ix
 {
-    uint32_t calculateRetryWaitMilliseconds(uint32_t retryCount,
-                                            uint32_t maxWaitBetweenReconnectionRetries,
-                                            uint32_t minWaitBetweenReconnectionRetries);
-} // namespace ix
+	/**
+		@brief Calculate exponential backoff wait time for reconnection attempts.
+
+		Used to determine wait time between retries in network operations.
+	*/
+	uint32_t calculateRetryWaitMilliseconds(uint32_t retryCount,
+											uint32_t maxWaitBetweenReconnectionRetries,
+											uint32_t minWaitBetweenReconnectionRetries);
+}

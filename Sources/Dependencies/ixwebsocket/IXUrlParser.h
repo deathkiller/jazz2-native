@@ -10,22 +10,46 @@
 
 namespace ix
 {
-    class UrlParser
-    {
-    public:
-        static bool parse(const std::string& url,
-                          std::string& protocol,
-                          std::string& host,
-                          std::string& path,
-                          std::string& query,
-                          int& port);
+	/**
+		@brief URL parser utility for extracting components from a URL string.
+	*/
+	class UrlParser
+	{
+	public:
+		/**
+		 * @brief Parse a URL into its components.
+		 * @param url Input URL string.
+		 * @param protocol Output protocol.
+		 * @param host Output host.
+		 * @param path Output path.
+		 * @param query Output query string.
+		 * @param port Output port number.
+		 * @return True on success.
+		 */
+		static bool parse(const std::string& url,
+						  std::string& protocol,
+						  std::string& host,
+						  std::string& path,
+						  std::string& query,
+						  int& port);
 
-        static bool parse(const std::string& url,
-                          std::string& protocol,
-                          std::string& host,
-                          std::string& path,
-                          std::string& query,
-                          int& port,
-                          bool& isProtocolDefaultPort);
-    };
-} // namespace ix
+		/**
+		 * @brief Parse a URL into its components, with protocol default port detection.
+		 * @param url Input URL string.
+		 * @param protocol Output protocol.
+		 * @param host Output host.
+		 * @param path Output path.
+		 * @param query Output query string.
+		 * @param port Output port number.
+		 * @param isProtocolDefaultPort Output flag for default port.
+		 * @return True on success.
+		 */
+		static bool parse(const std::string& url,
+						  std::string& protocol,
+						  std::string& host,
+						  std::string& path,
+						  std::string& query,
+						  int& port,
+						  bool& isProtocolDefaultPort);
+	};
+}

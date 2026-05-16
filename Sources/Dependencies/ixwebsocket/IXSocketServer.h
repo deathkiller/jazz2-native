@@ -2,6 +2,7 @@
  *  IXSocketServer.h
  *  Author: Benjamin Sergeant
  *  Copyright (c) 2018 Machine Zone, Inc. All rights reserved.
+ *  Copyright (c) 2026 Dan R.
  */
 
 #pragma once
@@ -23,109 +24,176 @@
 
 namespace ix
 {
-    class Socket;
+	class Socket;
 
-    class SocketServer
-    {
-    public:
-        using ConnectionStateFactory = std::function<std::shared_ptr<ConnectionState>()>;
+	/**
+		@brief TCP socket server for handling multiple client connections.
 
-        // Each connection is handled by its own worker thread.
-        // We use a list as we only care about remove and append operations.
-        using ConnectionThreads =
-            std::list<std::pair<std::shared_ptr<ConnectionState>, std::thread>>;
+		Each connection is managed by a separate worker thread. Provides methods to start, stop,
+		and manage connections, as well as TLS support and connection state customization.
+		
+		See also: @ref ConnectionState, @ref Socket, @ref SocketTLSOptions
+	*/
+	class SocketServer
+	{
+	public:
+		/**
+		 * @brief Factory type for creating custom @ref ConnectionState objects.
+		 */
+		using ConnectionStateFactory = std::function<std::shared_ptr<ConnectionState>()>;
 
-        SocketServer(int port = SocketServer::kDefaultPort,
-                     const std::string& host = SocketServer::kDefaultHost,
-                     int backlog = SocketServer::kDefaultTcpBacklog,
-                     size_t maxConnections = SocketServer::kDefaultMaxConnections,
-                     int addressFamily = SocketServer::kDefaultAddressFamily);
-        virtual ~SocketServer();
-        virtual void stop();
+		/**
+		 * @brief List of (@ref ConnectionState, `std::thread`) pairs for managing active connections.
+		 */
+		using ConnectionThreads =
+			std::list<std::pair<std::shared_ptr<ConnectionState>, std::thread>>;
 
-        // It is possible to override ConnectionState through inheritance
-        // this method allows user to change the factory by returning an object
-        // that inherits from ConnectionState but has its own methods.
-        void setConnectionStateFactory(const ConnectionStateFactory& connectionStateFactory);
+		/**
+		 * @brief Construct a new SocketServer.
+		 * @param port Listening port.
+		 * @param host Host address to bind.
+		 * @param backlog TCP backlog size.
+		 * @param maxConnections Maximum allowed simultaneous connections.
+		 * @param addressFamily Address family (e.g., `AF_INET`).
+		 */
+		SocketServer(int port = kDefaultPort,
+			 const std::string& host = kDefaultHost,
+			 int backlog = kDefaultTcpBacklog,
+			 size_t maxConnections = kDefaultMaxConnections,
+			 int addressFamily = kDefaultAddressFamily);
 
-        const static int kDefaultPort;
-        const static std::string kDefaultHost;
-        const static int kDefaultTcpBacklog;
-        const static size_t kDefaultMaxConnections;
-        const static int kDefaultAddressFamily;
+		/** @brief Destructor. */
+		virtual ~SocketServer();
 
-        void start();
-        std::pair<bool, std::string> listen();
-        void wait();
+		/** @brief Stop the server and all connections. */
+		virtual void stop();
 
-        void setTLSOptions(const SocketTLSOptions& socketTLSOptions);
+		/**
+		 * @brief Set a custom factory for @ref ConnectionState objects.
+		 * @param connectionStateFactory Factory function.
+		 */
+		void setConnectionStateFactory(const ConnectionStateFactory& connectionStateFactory);
 
-        int  getPort();
-        std::string getHost();
-        int getBacklog();
-        std::size_t getMaxConnections();
-        int getAddressFamily();
-    protected:
-        // Logging
-        void logError(const std::string& str);
-        void logInfo(const std::string& str);
+		/** @brief Default port number. */
+		const static int kDefaultPort;
+		/** @brief Default host address. */
+		const static std::string kDefaultHost;
+		/** @brief Default TCP backlog size. */
+		const static int kDefaultTcpBacklog;
+		/** @brief Default maximum number of connections. */
+		const static size_t kDefaultMaxConnections;
+		/** @brief Default address family. */
+		const static int kDefaultAddressFamily;
 
-        void stopAcceptingConnections();
+		/** @brief Start the server. */
+		void start();
+		/**
+		 * @brief Begin listening for incoming connections.
+		 * @return Pair of (`bool` success, `std::string` error message).
+		 */
+		std::pair<bool, std::string> listen();
+		/** @brief Wait for the server to finish. */
+		void wait();
 
-    private:
-        // Member variables
-        int _port;
-        std::string _host;
-        int _backlog;
-        size_t _maxConnections;
-        int _addressFamily;
+		/**
+		 * @brief Set TLS options for secure connections.
+		 * @param socketTLSOptions TLS configuration (@ref SocketTLSOptions).
+		 */
+		void setTLSOptions(const SocketTLSOptions& socketTLSOptions);
 
-        // socket for accepting connections
-        socket_t _serverFd;
+		/** @brief Get the server port. */
+		int  getPort();
+		/** @brief Get the server host. */
+		std::string getHost();
+		/** @brief Get the TCP backlog size. */
+		int getBacklog();
+		/** @brief Get the maximum number of connections. */
+		std::size_t getMaxConnections();
+		/** @brief Get the address family. */
+		int getAddressFamily();
+	protected:
+		/** @brief Log an error message. */
+		void logError(const std::string& str);
+		/** @brief Log an informational message. */
+		void logInfo(const std::string& str);
 
-        std::atomic<bool> _stop;
+		/** @brief Stop accepting new connections. */
+		void stopAcceptingConnections();
 
-        std::mutex _logMutex;
+	private:
+		/** @brief Listening port. */
+		int _port;
+		/** @brief Host address. */
+		std::string _host;
+		/** @brief TCP backlog size. */
+		int _backlog;
+		/** @brief Maximum allowed connections. */
+		size_t _maxConnections;
+		/** @brief Address family. */
+		int _addressFamily;
 
-        // background thread to wait for incoming connections
-        std::thread _thread;
-        void run();
-        void onSetTerminatedCallback();
+		/** @brief Socket file descriptor for accepting connections. */
+		socket_t _serverFd;
 
-        // background thread to cleanup (join) terminated threads
-        std::atomic<bool> _stopGc;
-        std::thread _gcThread;
-        void runGC();
+		/** @brief Flag to stop the server. */
+		std::atomic<bool> _stop;
 
-        // the list of (connectionState, threads) for each connections
-        ConnectionThreads _connectionsThreads;
-        std::mutex _connectionsThreadsMutex;
+		/** @brief Mutex for logging. */
+		std::mutex _logMutex;
 
-        // used to have the main control thread for a server
-        // wait for a 'terminate' notification without busy polling
-        std::condition_variable _conditionVariable;
-        std::mutex _conditionVariableMutex;
+		/** @brief Thread for accepting incoming connections. */
+		std::thread _thread;
+		/** @brief Main server loop. */
+		void run();
+		/** @brief Callback for when a connection is terminated. */
+		void onSetTerminatedCallback();
 
-        // the factory to create ConnectionState objects
-        ConnectionStateFactory _connectionStateFactory;
+		/** @brief Flag to stop the garbage collector thread. */
+		std::atomic<bool> _stopGc;
+		/** @brief Garbage collector thread for cleaning up terminated connections. */
+		std::thread _gcThread;
+		/** @brief Garbage collector loop. */
+		void runGC();
 
-        virtual void handleConnection(std::unique_ptr<Socket>,
-                                      std::shared_ptr<ConnectionState> connectionState) = 0;
-        virtual size_t getConnectedClientsCount() = 0;
+		/** @brief List of active connection threads. */
+		ConnectionThreads _connectionsThreads;
+		/** @brief Mutex for connection threads list. */
+		std::mutex _connectionsThreadsMutex;
 
-        // Returns true if all connection threads are joined
-        void closeTerminatedThreads();
-        size_t getConnectionsThreadsCount();
+		/** @brief Condition variable for server control thread. */
+		std::condition_variable _conditionVariable;
+		/** @brief Mutex for server control thread. */
+		std::mutex _conditionVariableMutex;
 
-        SocketTLSOptions _socketTLSOptions;
+		/** @brief Factory for creating @ref ConnectionState objects. */
+		ConnectionStateFactory _connectionStateFactory;
 
-        // to wake up from select
-        SelectInterruptPtr _acceptSelectInterrupt;
+		/**
+		 * @brief Handle a new client connection (to be implemented by derived classes).
+		 * @param socket The client socket.
+		 * @param connectionState The connection state object.
+		 */
+		virtual void handleConnection(std::unique_ptr<Socket>,
+									  std::shared_ptr<ConnectionState> connectionState) = 0;
+		/** @brief Get the number of currently connected clients. */
+		virtual size_t getConnectedClientsCount() = 0;
 
-        // used by the gc thread, to know that a thread needs to be garbage collected
-        // as a connection
-        std::condition_variable _conditionVariableGC;
-        std::mutex _conditionVariableMutexGC;
-        bool _canContinueGC{ false };
-    };
-} // namespace ix
+		/** @brief Close and join all terminated connection threads. */
+		void closeTerminatedThreads();
+		/** @brief Get the number of connection threads. */
+		size_t getConnectionsThreadsCount();
+
+		/** @brief TLS options for secure connections. */
+		SocketTLSOptions _socketTLSOptions;
+
+		/** @brief Interrupt object to wake up from `select`. */
+		SelectInterruptPtr _acceptSelectInterrupt;
+
+		/** @brief Condition variable for garbage collector thread. */
+		std::condition_variable _conditionVariableGC;
+		/** @brief Mutex for garbage collector thread. */
+		std::mutex _conditionVariableMutexGC;
+		/** @brief Flag to allow garbage collector to continue. */
+		bool _canContinueGC{ false };
+	};
+}

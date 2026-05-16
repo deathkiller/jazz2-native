@@ -19,39 +19,65 @@
 
 namespace ix
 {
-    class HttpServer final : public WebSocketServer
-    {
-    public:
-        using OnConnectionCallback =
-            std::function<HttpResponsePtr(HttpRequestPtr, std::shared_ptr<ConnectionState>)>;
+	/**
+		@brief HTTP server implementation based on @ref WebSocketServer.
+	*/
+	class HttpServer final : public WebSocketServer
+	{
+	public:
+		/**
+		 * @brief Callback type for handling HTTP connections.
+		 */
+		using OnConnectionCallback =
+			std::function<HttpResponsePtr(HttpRequestPtr, std::shared_ptr<ConnectionState>)>;
 
-        HttpServer(int port = SocketServer::kDefaultPort,
-                   const std::string& host = SocketServer::kDefaultHost,
-                   int backlog = SocketServer::kDefaultTcpBacklog,
-                   size_t maxConnections = SocketServer::kDefaultMaxConnections,
-                   int addressFamily = SocketServer::kDefaultAddressFamily,
-                   int timeoutSecs = HttpServer::kDefaultTimeoutSecs,
-                   int handshakeTimeoutSecs = WebSocketServer::kDefaultHandShakeTimeoutSecs);
+		/**
+		 * @brief Construct a new HttpServer.
+		 */
+		HttpServer(int port = SocketServer::kDefaultPort,
+				   const std::string& host = SocketServer::kDefaultHost,
+				   int backlog = SocketServer::kDefaultTcpBacklog,
+				   size_t maxConnections = SocketServer::kDefaultMaxConnections,
+				   int addressFamily = SocketServer::kDefaultAddressFamily,
+				   int timeoutSecs = HttpServer::kDefaultTimeoutSecs,
+				   int handshakeTimeoutSecs = WebSocketServer::kDefaultHandShakeTimeoutSecs);
 
-        void setOnConnectionCallback(const OnConnectionCallback& callback);
+		/**
+		 * @brief Set the connection callback for HTTP requests.
+		 */
+		void setOnConnectionCallback(const OnConnectionCallback& callback);
 
-        void makeRedirectServer(const std::string& redirectUrl);
+		/**
+		 * @brief Make this server a redirect server.
+		 * @param redirectUrl The URL to redirect to.
+		 */
+		void makeRedirectServer(const std::string& redirectUrl);
 
-        void makeDebugServer();
+		/**
+		 * @brief Enable debug server mode.
+		 */
+		void makeDebugServer();
 
-        int getTimeoutSecs();
+		/**
+		 * @brief Get the HTTP timeout in seconds.
+		 */
+		int getTimeoutSecs();
 
-    private:
-        // Member variables
-        OnConnectionCallback _onConnectionCallback;
+	private:
+		OnConnectionCallback _onConnectionCallback; /**< Connection callback. */
 
-        const static int kDefaultTimeoutSecs;
-        int _timeoutSecs;
+		const static int kDefaultTimeoutSecs; /**< Default timeout in seconds. */
+		int _timeoutSecs; /**< Timeout in seconds. */
 
-        // Methods
-        virtual void handleConnection(std::unique_ptr<Socket>,
-                                      std::shared_ptr<ConnectionState> connectionState) final;
+		/**
+		 * @brief Handle an incoming connection.
+		 */
+		virtual void handleConnection(std::unique_ptr<Socket>,
+									  std::shared_ptr<ConnectionState> connectionState) final;
 
-        void setDefaultConnectionCallback();
-    };
-} // namespace ix
+		/**
+		 * @brief Set the default connection callback.
+		 */
+		void setDefaultConnectionCallback();
+	};
+}

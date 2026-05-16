@@ -56,34 +56,34 @@
 
 namespace ix
 {
-    std::string userAgent()
-    {
-        std::stringstream ss;
+	std::string userAgent()
+	{
+		std::stringstream ss;
 
-        // IXWebSocket Version
-        ss << "ixwebsocket/" << IX_WEBSOCKET_VERSION;
+		// IXWebSocket Version
+		ss << "ixwebsocket/" << IX_WEBSOCKET_VERSION;
 
-        // Platform
-        ss << " " << PLATFORM_NAME;
+		// Platform
+		ss << " " << PLATFORM_NAME;
 
-        // TLS
+		// TLS
 #ifdef IXWEBSOCKET_USE_TLS
 #ifdef IXWEBSOCKET_USE_MBED_TLS
-        ss << " ssl/mbedtls " << MBEDTLS_VERSION_STRING;
+		ss << " ssl/mbedtls " << MBEDTLS_VERSION_STRING;
 #elif defined(IXWEBSOCKET_USE_OPEN_SSL)
-        ss << " ssl/OpenSSL " << OPENSSL_VERSION_TEXT;
+		ss << " ssl/OpenSSL " << OPENSSL_VERSION_TEXT;
 #elif __APPLE__
-        ss << " ssl/SecureTransport";
+		ss << " ssl/SecureTransport";
 #endif
 #else
-        ss << " nossl";
+		ss << " nossl";
 #endif
 
 #ifdef IXWEBSOCKET_USE_ZLIB
-        // Zlib version
-        ss << " zlib " << ZLIB_VERSION;
+		// Zlib version
+		ss << " zlib " << ZLIB_VERSION;
 #endif
 
-        return ss.str();
-    }
+		return ss.str();
+	}
 } // namespace ix
