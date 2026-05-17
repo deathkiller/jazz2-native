@@ -327,7 +327,7 @@ namespace Jazz2
 		virtual void HideConsole();
 		
 #if defined(WITH_IMGUI)
-		ImVec2 WorldPosToScreenSpace(const Vector2f pos);
+		ImVec2 WorldPosToScreenSpace(const Vector2f pos, const Rendering::PlayerViewport& viewport);
 #endif
 
 	private:

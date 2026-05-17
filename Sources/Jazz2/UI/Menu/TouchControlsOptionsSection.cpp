@@ -374,13 +374,13 @@ namespace Jazz2::UI::Menu
 					float dy = py - _cornerHandleY;
 					if (dx * dx + dy * dy <= HandleRadius * HandleRadius) {
 						ButtonRect r = GetButtonRect((TouchButtonSlot)_focusedSlot, viewSize);
-						float cdx = _cornerHandleX - r.CenterX;
-						float cdy = _cornerHandleY - r.CenterY;
+					float fdx = px - r.CenterX;
+					float fdy = py - r.CenterY;
 
-						_primaryPointerId = event.actionIndex;
-						_primaryStartX = px;
-						_primaryStartY = py;
-						_pinchStartDist = std::max(1.0f, std::sqrt(cdx * cdx + cdy * cdy));
+					_primaryPointerId = event.actionIndex;
+					_primaryStartX = px;
+					_primaryStartY = py;
+					_pinchStartDist = std::max(1.0f, std::sqrt(fdx * fdx + fdy * fdy));
 						_pinchStartScale = PreferencesCache::TouchButtons[_focusedSlot].Scale;
 						_resizeCenterX = r.CenterX;
 						_resizeCenterY = r.CenterY;

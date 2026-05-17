@@ -642,18 +642,19 @@ namespace Jazz2
 			}
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
-			if (PreferencesCache::ShowPerformanceMetrics) {
+			if (PreferencesCache::ShowPerformanceMetrics && !_assignedViewports.empty()) {
 				ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+				const auto& mainViewport = *_assignedViewports[0];
 
 				std::size_t actorsCount = _actors.size();
 				for (std::size_t i = 0; i < actorsCount; i++) {
 					auto* actor = _actors[i].get();
 
-					auto pos = WorldPosToScreenSpace(actor->_pos);
-					auto aabbMin = WorldPosToScreenSpace({ actor->AABB.L, actor->AABB.T });
-					auto aabbMax = WorldPosToScreenSpace({ actor->AABB.R, actor->AABB.B });
-					auto aabbInnerMin = WorldPosToScreenSpace({ actor->AABBInner.L, actor->AABBInner.T });
-					auto aabbInnerMax = WorldPosToScreenSpace({ actor->AABBInner.R, actor->AABBInner.B });
+					auto pos = WorldPosToScreenSpace(actor->_pos, mainViewport);
+					auto aabbMin = WorldPosToScreenSpace({ actor->AABB.L, actor->AABB.T }, mainViewport);
+					auto aabbMax = WorldPosToScreenSpace({ actor->AABB.R, actor->AABB.B }, mainViewport);
+					auto aabbInnerMin = WorldPosToScreenSpace({ actor->AABBInner.L, actor->AABBInner.T }, mainViewport);
+					auto aabbInnerMax = WorldPosToScreenSpace({ actor->AABBInner.R, actor->AABBInner.B }, mainViewport);
 
 					drawList->AddRect(ImVec2(pos.x - 2.4f, pos.y - 2.4f), ImVec2(pos.x + 2.4f, pos.y + 2.4f), ImColor(0, 0, 0, 220));
 					drawList->AddRect(ImVec2(pos.x - 1.0f, pos.y - 1.0f), ImVec2(pos.x + 1.0f, pos.y + 1.0f), ImColor(120, 255, 200, 220));
@@ -2514,17 +2515,15 @@ namespace Jazz2
 	}
 
 #if defined(WITH_IMGUI)
-	ImVec2 LevelHandler::WorldPosToScreenSpace(const Vector2f pos)
+	ImVec2 LevelHandler::WorldPosToScreenSpace(Vector2f pos, const Rendering::PlayerViewport& viewport)
 	{
-		auto& mainViewport = _assignedViewports[0];
-		
-		Rectf bounds = mainViewport->GetBounds();
-		Vector2i originalSize = mainViewport->_view->GetSize();
+		Rectf bounds = viewport.GetBounds();
+		Vector2i originalSize = viewport._view->GetSize();
 		Vector2f upscaledSize = _upscalePass.GetTargetSize();
 		Vector2f halfView = bounds.Center();
 		return ImVec2(
-			(pos.X - mainViewport->_cameraPos.X + halfView.X) * upscaledSize.X / originalSize.X,
-			(pos.Y - mainViewport->_cameraPos.Y + halfView.Y) * upscaledSize.Y / originalSize.Y
+			(pos.X - viewport._cameraPos.X + halfView.X) * upscaledSize.X / originalSize.X,
+			(pos.Y - viewport._cameraPos.Y + halfView.Y) * upscaledSize.Y / originalSize.Y
 		);
 	}
 #endif

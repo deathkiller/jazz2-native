@@ -2432,21 +2432,21 @@ namespace Jazz2::Multiplayer
 				std::size_t length;
 				if (_levelState < LevelState::Running) {
 					length = formatInto(infoBuffer, "{}.\t{}\t │ {} ms\t │ P: {}\t │ I: {}\f[w:50] s\f[/w]",
-						peerDesc->PositionInRound, playerName, peerDesc->RemotePeer ? peerDesc->RemotePeer.GetRoundTripTime() : 0,
+						peerDesc->PositionInRound, playerName, _networkManager->GetRoundTripTimeMs(peerDesc->RemotePeer),
 						peerDesc->Points, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1);
 				} else if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::Race) {
 					length = formatInto(infoBuffer, "{}.\t{}\t │ {} ms\t │ P: {}\t │ K: {}\t │ D: {}\t │ I: {}\f[w:50] s\f[/w]\t│ Laps: {}/{}",
-						peerDesc->PositionInRound, playerName, peerDesc->RemotePeer ? peerDesc->RemotePeer.GetRoundTripTime() : 0,
+						peerDesc->PositionInRound, playerName, _networkManager->GetRoundTripTimeMs(peerDesc->RemotePeer),
 						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1, 
 						peerDesc->Laps + 1, serverConfig.TotalLaps);
 				} else if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
 					length = formatInto(infoBuffer, "{}.\t{}\t │ {} ms\t │ P: {}\t │ K: {}\t │ D: {}\t │ I: {}\f[w:50] s\f[/w]\t│ Treasure: {}",
-						peerDesc->PositionInRound, playerName, peerDesc->RemotePeer ? peerDesc->RemotePeer.GetRoundTripTime() : 0,
+						peerDesc->PositionInRound, playerName, _networkManager->GetRoundTripTimeMs(peerDesc->RemotePeer),
 						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths, peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1,
 						peerDesc->TreasureCollected);
 				} else {
 					length = formatInto(infoBuffer, "{}.\t{}\t │ {} ms\t │ P: {}\t │ K: {}\t │ D: {}\t │ I: {}\f[w:50] s\f[/w]",
-						peerDesc->PositionInRound, playerName, peerDesc->RemotePeer ? peerDesc->RemotePeer.GetRoundTripTime() : 0,
+						peerDesc->PositionInRound, playerName, _networkManager->GetRoundTripTimeMs(peerDesc->RemotePeer),
 						peerDesc->Points, peerDesc->Kills, peerDesc->Deaths,
 						peerDesc->Player ? (std::int32_t)(peerDesc->IdleElapsedFrames * FrameTimer::SecondsPerFrame) : -1);
 				}
@@ -6627,10 +6627,11 @@ namespace Jazz2::Multiplayer
 		ImGui::SeparatorText("Peers");
 
 		ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInner | ImGuiTableFlags_NoPadOuterX;
-		if (ImGui::BeginTable("peers", 8, flags, ImVec2(0.0f, 0.0f))) {
+		if (ImGui::BeginTable("peers", 9, flags, ImVec2(0.0f, 0.0f))) {
 			ImGui::TableSetupColumn("Peer");
 			ImGui::TableSetupColumn("Player Index");
 			ImGui::TableSetupColumn("State");
+			ImGui::TableSetupColumn("Ping");
 			ImGui::TableSetupColumn("Last Updated");
 			ImGui::TableSetupColumn("X");
 			ImGui::TableSetupColumn("Y");
@@ -6648,22 +6649,25 @@ namespace Jazz2::Multiplayer
 				ImGui::Text("%u", desc->Player != nullptr ? desc->Player->GetPlayerIndex() : -1);
 
 				ImGui::TableSetColumnIndex(2);
-				ImGui::Text("0x%x", desc->LevelState);
+				ImGui::Text("%u", _networkManager->GetRoundTripTimeMs(desc->RemotePeer));
 
 				ImGui::TableSetColumnIndex(3);
 				ImGui::Text("%u", desc->LastUpdated);
 
 				ImGui::TableSetColumnIndex(4);
-				ImGui::Text("%.2f", desc->Player != nullptr ? desc->Player->GetPos().X : -1.0f);
+				ImGui::Text("%u", desc->RemotePeer);
 
 				ImGui::TableSetColumnIndex(5);
+				ImGui::Text("%.2f", desc->Player != nullptr ? desc->Player->GetPos().X : -1.0f);
+
+				ImGui::TableSetColumnIndex(6);
 				ImGui::Text("%.2f", desc->Player != nullptr ? desc->Player->GetPos().Y : -1.0f);
 
 				if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(desc->Player)) {
-					ImGui::TableSetColumnIndex(6);
+					ImGui::TableSetColumnIndex(7);
 					ImGui::Text("0x%02x", remotePlayerOnServer->Flags);
 
-					ImGui::TableSetColumnIndex(7);
+					ImGui::TableSetColumnIndex(8);
 					ImGui::Text("0x%04x", remotePlayerOnServer->PressedKeys);
 				}
 			}

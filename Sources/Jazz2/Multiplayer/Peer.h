@@ -118,9 +118,6 @@ namespace Jazz2::Multiplayer
 #endif
 		}
 
-		/** @brief Returns mean round trip time to the peer in milliseconds (0 for WebSocket peers) */
-		std::uint32_t GetRoundTripTime() const;
-
 #ifndef DOXYGEN_GENERATING_OUTPUT
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		_ENetPeer* _enet;

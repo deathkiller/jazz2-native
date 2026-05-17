@@ -192,6 +192,14 @@ namespace Death {
 #undef DEATH_TARGET_SWITCH
 
 /**
+	@brief PlayStation Vita target
+
+	Defined if the library is built for PlayStation Vita.
+*/
+#define DEATH_TARGET_VITA
+#undef DEATH_TARGET_VITA
+
+/**
 	@brief x86 target
 
 	Defined if the library is built for x86 platforms (32 or 64-bit). Note that

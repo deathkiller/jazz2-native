@@ -121,6 +121,8 @@ namespace Jazz2::Multiplayer
 		NetworkState GetState() const;
 		/** @brief Returns mean round trip time to the server, in milliseconds */
 		std::uint32_t GetRoundTripTimeMs() const;
+		/** @brief Returns mean round trip time to the server for specified peer, in milliseconds */
+		std::uint32_t GetRoundTripTimeMs(const Peer& peer) const;
 		/** @brief Returns all IPv4 and IPv6 addresses along with ports of the server */
 		Array<String> GetServerEndpoints() const;
 		/** @brief Returns port of the server */
@@ -193,10 +195,18 @@ namespace Jazz2::Multiplayer
 			std::uint16_t closeCode = 0;	/**< For Close: WebSocket close code */
 		};
 
+		/** @brief Per-peer info stored by the WebSocket transport */
+		struct WsPeerInfo {
+			String address;			/**< Remote address string */
+			std::uint32_t rtt = 0;	/**< Last reported round trip time in milliseconds */
+		};
+
 		std::unique_ptr<ix::WebSocketServer> _wsServer;
 		std::unique_ptr<ix::WebSocket> _wsClient;
-		HashMap<ix::WebSocket*, String> _wsPeers;	/**< Maps ix::WebSocket* → remote address string; also acts as lifetime guard */
+		HashMap<ix::WebSocket*, WsPeerInfo> _wsPeers;	/**< Maps ix::WebSocket* → peer info; also acts as lifetime guard */
 		SmallVector<WsQueuedEvent, 0> _wsPendingEvents;
+		std::uint64_t _wsPingLastTime = 0;		/**< Timestamp (ms) of the last outgoing Ping on the client thread */
+		std::atomic<std::uint32_t> _wsRtt{0};	/**< Client-side measured RTT for the WebSocket server connection */
 		mutable Spinlock _wsLock;
 
 		void ProcessWsQueue(INetworkHandler* handler);
@@ -206,11 +216,16 @@ namespace Jazz2::Multiplayer
 		EMSCRIPTEN_WEBSOCKET_T _emWsSocket{0};
 		/** @brief URL of the WebSocket server being connected to */
 		String _emWsUrl;
+		/** @brief Client-side measured RTT for the Emscripten WebSocket connection */
+		std::uint32_t _emWsRtt = 0;
+		/** @brief Handle of the scheduled ping timer (0 = not scheduled) */
+		long _emWsPingTimerId = 0;
 
 		static EM_BOOL OnEmWsOpen(int eventType, const EmscriptenWebSocketOpenEvent* e, void* userData);
 		static EM_BOOL OnEmWsMessage(int eventType, const EmscriptenWebSocketMessageEvent* e, void* userData);
 		static EM_BOOL OnEmWsError(int eventType, const EmscriptenWebSocketErrorEvent* e, void* userData);
 		static EM_BOOL OnEmWsClose(int eventType, const EmscriptenWebSocketCloseEvent* e, void* userData);
+		static void OnEmWsPingTimer(void* userData);
 #endif
 
 		static void InitializeBackend();

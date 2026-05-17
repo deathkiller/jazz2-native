@@ -2,20 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER)
 
-#include "ServerDiscovery.h"
-
-namespace Jazz2::Multiplayer
-{
-	std::uint32_t Peer::GetRoundTripTime() const
-	{
-		// WebSocket transport does not provide round trip time information
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
-		return (_enet != nullptr ? _enet->roundTripTime : 0);
-#else
-		return 0;
-#endif
-	}
-}
+#include "NetworkManagerBase.h"
 
 namespace Death::Implementation
 {

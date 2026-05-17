@@ -4,12 +4,14 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "INetworkHandler.h"
+#include "PacketTypes.h"
 #include "../../nCine/Base/Algorithms.h"
 #include "../../nCine/Threading/Thread.h"
 
 #include <atomic>
 #include <mutex>
 
+#include <Environment.h>
 #include <Containers/GrowableArray.h>
 #include <Containers/String.h>
 #include <Containers/StringConcatenable.h>
@@ -65,6 +67,14 @@ namespace Jazz2::Multiplayer
 	static std::atomic_int32_t _initializeCount{0};
 
 #if defined(WITH_WEBSOCKET)
+	static constexpr std::uint32_t WsPingIntervalMs = 10000;
+
+	/** @brief Returns the current monotonic time in milliseconds */
+	static DEATH_ALWAYS_INLINE std::uint64_t GetCurrentTimeMs()
+	{
+		return Environment::QueryUnbiasedInterruptTimeAsMs();
+	}
+
 	/** @brief Formats client data as a WebSocket sub-protocol string: "death-v0x<hex>" */
 	static String MakeClientSubProtocol(std::uint32_t clientData)
 	{
@@ -240,7 +250,7 @@ namespace Jazz2::Multiplayer
 				ix::WebSocket* ws = _wsClient.get();
 				if (msg->type == ix::WebSocketMessageType::Open) {
 					std::unique_lock<Spinlock> lock(_wsLock);
-					_wsPeers.emplace(ws, String{});
+					_wsPeers.emplace(ws, WsPeerInfo{});
 					_wsPendingEvents.push_back({WsQueuedEvent::Type::Open, ws, {}, _clientData, 0});
 				} else if (msg->type == ix::WebSocketMessageType::Close) {
 					std::unique_lock<Spinlock> lock(_wsLock);
@@ -253,6 +263,7 @@ namespace Jazz2::Multiplayer
 					}
 				} else if (msg->type == ix::WebSocketMessageType::Error) {
 					LOGE("[MP] WebSocket transport error: {}", StringView{msg->errorInfo.reason});
+					_wsPendingEvents.push_back({WsQueuedEvent::Type::Close, ws, {}, 0, 0});
 				}
 			});
 			_wsClient->start();
@@ -356,9 +367,14 @@ namespace Jazz2::Multiplayer
 		if (_emWsSocket <= 0) {
 			return;
 		}
+		if (_emWsPingTimerId != 0) {
+			emscripten_clear_timeout(_emWsPingTimerId);
+			_emWsPingTimerId = 0;
+		}
 		EMSCRIPTEN_WEBSOCKET_T socket = _emWsSocket;
 		bool wasConnected = (_state == NetworkState::Connected);
 		_emWsSocket = 0;
+		_emWsRtt = 0;
 		_state = NetworkState::None;
 		// Delete before calling OnPeerDisconnected to prevent any callbacks firing
 		emscripten_websocket_close(socket, 1000, "Client disconnecting");
@@ -392,14 +408,36 @@ namespace Jazz2::Multiplayer
 	std::uint32_t NetworkManagerBase::GetRoundTripTimeMs() const
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
-		// TODO: Implement round trip time measurement for WebSocket connections
+		return _emWsRtt;
+#else
+		if (_state == NetworkState::Connected && !_connectedPeers.empty()) {
+#	if defined(WITH_WEBSOCKET)
+			if DEATH_UNLIKELY(_connectedPeers[0].IsWebSocket()) {
+				return _wsRtt.load(std::memory_order_relaxed);
+			}
+#	endif
+			return _connectedPeers[0]._enet->roundTripTime;
+		}
+		return 0;
+#endif
+	}
+
+	std::uint32_t NetworkManagerBase::GetRoundTripTimeMs(const Peer& peer) const
+	{
+#if defined(DEATH_TARGET_EMSCRIPTEN)
 		return 0;
 #else
-		return (_state == NetworkState::Connected && !_connectedPeers.empty()
 #	if defined(WITH_WEBSOCKET)
-			&& !_connectedPeers[0].IsWebSocket()
+		if DEATH_UNLIKELY(peer.IsWebSocket()) {
+			std::unique_lock<Spinlock> lock(_wsLock);
+			auto it = _wsPeers.find(peer._ws);
+			if DEATH_LIKELY(it != _wsPeers.end()) {
+				return it->second.rtt;
+			}
+			return 0;
+		}
 #	endif
-			? _connectedPeers[0]._enet->roundTripTime : 0);
+		return (peer._enet != nullptr ? peer._enet->roundTripTime : 0);
 #endif
 	}
 
@@ -852,7 +890,7 @@ namespace Jazz2::Multiplayer
 			std::unique_lock<Spinlock> lock(_wsLock);
 			auto it = _wsPeers.find(peer._ws);
 			if DEATH_LIKELY(it != _wsPeers.end()) {
-				return it->second;
+				return it->second.address;
 			}
 			return {};
 		}
@@ -1046,6 +1084,9 @@ namespace Jazz2::Multiplayer
 			emscripten_websocket_close(socket, ReasonToWsCloseCode(result.FailureReason), ReasonToString(result.FailureReason));
 			emscripten_websocket_delete(socket);
 			_this->_handler = nullptr;
+		} else {
+			// Schedule the first periodic Ping
+			_this->_emWsPingTimerId = emscripten_set_timeout(OnEmWsPingTimer, (double)WsPingIntervalMs, _this);
 		}
 		return EM_TRUE;
 	}
@@ -1057,8 +1098,17 @@ namespace Jazz2::Multiplayer
 			return EM_TRUE;
 		}
 		if (!e->isText && e->numBytes >= 1) {
-			_this->_handler->OnPacketReceived(Peer::FromWebSocket(1), 0,
-				(std::uint8_t)e->data[0], arrayView((const std::uint8_t*)e->data + 1, e->numBytes - 1));
+			std::uint8_t pktType = (std::uint8_t)e->data[0];
+			if DEATH_UNLIKELY(pktType == (std::uint8_t)ServerPacketType::Pong && e->numBytes >= 1 + 8) {
+				// Intercept Pong: compute RTT from echoed timestamp
+				std::uint64_t sentTime;
+				std::memcpy(&sentTime, e->data + 1, 8);
+				std::uint64_t rtt = GetCurrentTimeMs() - sentTime;
+				_this->_emWsRtt = (std::uint32_t)rtt;
+			} else {
+				_this->_handler->OnPacketReceived(Peer::FromWebSocket(1), 0,
+					pktType, arrayView((const std::uint8_t*)e->data + 1, e->numBytes - 1));
+			}
 		}
 		return EM_TRUE;
 	}
@@ -1075,9 +1125,14 @@ namespace Jazz2::Multiplayer
 		if (_this->_emWsSocket <= 0 || _this->_handler == nullptr) {
 			return EM_TRUE;
 		}
+		if (_this->_emWsPingTimerId != 0) {
+			emscripten_clear_timeout(_this->_emWsPingTimerId);
+			_this->_emWsPingTimerId = 0;
+		}
 		EMSCRIPTEN_WEBSOCKET_T socket = _this->_emWsSocket;
 		bool wasConnected = (_this->_state == NetworkState::Connected);
 		_this->_emWsSocket = 0;
+		_this->_emWsRtt = 0;
 		_this->_state = NetworkState::None;
 		emscripten_websocket_delete(socket);
 		_this->OnPeerDisconnected(
@@ -1085,6 +1140,26 @@ namespace Jazz2::Multiplayer
 			WsCloseCodeToReason(e->code, wasConnected));
 		_this->_handler = nullptr;
 		return EM_TRUE;
+	}
+
+	void NetworkManagerBase::OnEmWsPingTimer(void* userData)
+	{
+		NetworkManagerBase* _this = static_cast<NetworkManagerBase*>(userData);
+		_this->_emWsPingTimerId = 0;
+		if (_this->_emWsSocket <= 0 || _this->_state != NetworkState::Connected) {
+			return;
+		}
+
+		std::uint64_t now = GetCurrentTimeMs();
+		std::uint32_t lastRtt = _this->_emWsRtt;
+		std::uint8_t pingBuf[1 + 8 + 4];
+		pingBuf[0] = (std::uint8_t)ClientPacketType::Ping;
+		std::memcpy(pingBuf + 1, &now, 8);
+		std::memcpy(pingBuf + 9, &lastRtt, 4);
+		emscripten_websocket_send_binary(_this->_emWsSocket, pingBuf, sizeof(pingBuf));
+
+		// Reschedule
+		_this->_emWsPingTimerId = emscripten_set_timeout(OnEmWsPingTimer, (double)WsPingIntervalMs, _this);
 	}
 
 #else
@@ -1152,7 +1227,7 @@ namespace Jazz2::Multiplayer
 
 				{
 					std::unique_lock<Spinlock> lock(_wsLock);
-					_wsPeers.emplace(&ws, String(remoteIp.data(), remoteIp.size()));
+					_wsPeers.emplace(&ws, WsPeerInfo{String(remoteIp.data(), remoteIp.size()), 0});
 					_wsPendingEvents.push_back({WsQueuedEvent::Type::Open, &ws, {}, peerClientData, 0});
 				}
 				LOGD("[MP] WebSocket client connected [{}] from {}", Peer::FromWebSocket(&ws), StringView{remoteIp});
@@ -1214,8 +1289,29 @@ namespace Jazz2::Multiplayer
 				}
 				case WsQueuedEvent::Type::Message: {
 					if DEATH_LIKELY(ev.data.size() >= 1) {
-						handler->OnPacketReceived(Peer::FromWebSocket(ev.peer), 0,
-							(std::uint8_t)ev.data[0], arrayView((const std::uint8_t*)ev.data.data() + 1, ev.data.size() - 1));
+						std::uint8_t pktType = (std::uint8_t)ev.data[0];
+						if DEATH_UNLIKELY(pktType == (std::uint8_t)ClientPacketType::Ping && ev.data.size() >= 1 + 8 + 4) {
+							// Intercept Ping: read timestamp + reported RTT, update per-peer RTT, echo Pong
+							std::uint64_t timestamp;
+							std::uint32_t reportedRtt;
+							std::memcpy(&timestamp, ev.data.data() + 1, 8);
+							std::memcpy(&reportedRtt, ev.data.data() + 9, 4);
+							{
+								std::unique_lock<Spinlock> lock(_wsLock);
+								auto it = _wsPeers.find(ev.peer);
+								if DEATH_LIKELY(it != _wsPeers.end()) {
+									it->second.rtt = reportedRtt;
+								}
+							}
+							// Echo timestamp back as Pong
+							std::uint8_t pong[1 + 8];
+							pong[0] = (std::uint8_t)ServerPacketType::Pong;
+							std::memcpy(pong + 1, &timestamp, 8);
+							ev.peer->sendBinary(std::string(reinterpret_cast<const char*>(pong), sizeof(pong)));
+						} else {
+							handler->OnPacketReceived(Peer::FromWebSocket(ev.peer), 0,
+								pktType, arrayView((const std::uint8_t*)ev.data.data() + 1, ev.data.size() - 1));
+						}
 					}
 					break;
 				}
@@ -1251,6 +1347,7 @@ namespace Jazz2::Multiplayer
 		bool wasConnected = false;
 		ix::WebSocket* serverPeer = nullptr;
 		Reason disconnectReason = Reason::ConnectionTimedOut;
+		_this->_wsPingLastTime = 0;
 
 		while (_this->_state != NetworkState::None) {
 			Thread::Sleep(ProcessingIntervalMs);
@@ -1268,6 +1365,7 @@ namespace Jazz2::Multiplayer
 						serverPeer = ev.peer;
 						disconnectReason = Reason::Unknown;
 						_this->_state = NetworkState::Connected;
+						_this->_wsPingLastTime = GetCurrentTimeMs();
 						Peer connectedPeer = Peer::FromWebSocket(ev.peer);
 						{
 							std::unique_lock lock(_this->_lock);
@@ -1286,11 +1384,34 @@ namespace Jazz2::Multiplayer
 					}
 					case WsQueuedEvent::Type::Message: {
 						if (ev.data.size() >= 1) {
-							handler->OnPacketReceived(Peer::FromWebSocket(ev.peer), 0,
-								(std::uint8_t)ev.data[0], arrayView((const std::uint8_t*)ev.data.data() + 1, ev.data.size() - 1));
+							std::uint8_t pktType = (std::uint8_t)ev.data[0];
+							if DEATH_UNLIKELY(pktType == (std::uint8_t)ServerPacketType::Pong && ev.data.size() >= 1 + 8) {
+								// Intercept Pong: compute RTT from echoed timestamp
+								std::uint64_t sentTime;
+								std::memcpy(&sentTime, ev.data.data() + 1, 8);
+								std::uint64_t rtt = GetCurrentTimeMs() - sentTime;
+								_this->_wsRtt.store((std::uint32_t)rtt, std::memory_order_relaxed);
+							} else {
+								handler->OnPacketReceived(Peer::FromWebSocket(ev.peer), 0,
+									pktType, arrayView((const std::uint8_t*)ev.data.data() + 1, ev.data.size() - 1));
+							}
 						}
 						break;
 					}
+				}
+			}
+
+			// Send periodic Ping to the server while connected
+			if (wasConnected && serverPeer != nullptr && _this->_state == NetworkState::Connected) {
+				std::uint64_t now = GetCurrentTimeMs();
+				if DEATH_UNLIKELY(now - _this->_wsPingLastTime >= WsPingIntervalMs) {
+					_this->_wsPingLastTime = now;
+					std::uint32_t lastRtt = _this->_wsRtt.load(std::memory_order_relaxed);
+					std::uint8_t pingBuf[1 + 8 + 4];
+					pingBuf[0] = (std::uint8_t)ClientPacketType::Ping;
+					std::memcpy(pingBuf + 1, &now, 8);
+					std::memcpy(pingBuf + 9, &lastRtt, 4);
+					serverPeer->sendBinary(std::string(reinterpret_cast<const char*>(pingBuf), sizeof(pingBuf)));
 				}
 			}
 		}
@@ -1306,6 +1427,7 @@ namespace Jazz2::Multiplayer
 			_this->OnPeerDisconnected({}, disconnectReason);
 		}
 
+		_this->_wsRtt.store(0, std::memory_order_relaxed);
 		_this->_handler = nullptr;
 		_this->_thread.Detach();
 

@@ -360,8 +360,8 @@ namespace Jazz2::UI
 					if (movement.X < -0.2f) overrideActions |= (1 << (std::int32_t)PlayerAction::Left);
 					else if (movement.X > 0.2f) overrideActions |= (1 << (std::int32_t)PlayerAction::Right);
 					
-					if (movement.Y < -0.4f) overrideActions |= (1 << (std::int32_t)PlayerAction::Up);
-					else if (movement.Y > 0.4f) {
+					if (movement.Y < -0.6f) overrideActions |= (1 << (std::int32_t)PlayerAction::Up);
+					else if (movement.Y > 0.6f) {
 						overrideActions |= (1 << (std::int32_t)PlayerAction::Down);
 						if (movement.Y > 0.75f) {
 							overrideActions |= (1 << (std::int32_t)PlayerAction::Buttstomp);
