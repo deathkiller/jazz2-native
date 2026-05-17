@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2026-02-21 17:28+0100\n"
+"POT-Creation-Date: 2026-05-17 15:00+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: thatcakepiece\n"
@@ -10,7 +10,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 3.8\n"
+"X-Generator: Poedit 3.9\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-KeywordsList: _;_n:1,2;_x:1c,2;_nx:1c,2,3;_f;_fn:1,2\n"
 "X-Poedit-SearchPath-0: Sources/Jazz2\n"
@@ -1382,16 +1382,16 @@ msgstr "A(z) „{}” pálya betöltve"
 msgid "For more information, visit the official website:"
 msgstr "További információért látogass el a hivatalos weboldalra:"
 
-#: Sources/Jazz2/LevelHandler.cpp:2352 Sources/Jazz2/LevelHandler.cpp:2365
-#: Sources/Jazz2/LevelHandler.cpp:2376 Sources/Jazz2/LevelHandler.cpp:2391
-#: Sources/Jazz2/LevelHandler.cpp:2404 Sources/Jazz2/LevelHandler.cpp:2417
-#: Sources/Jazz2/LevelHandler.cpp:2430 Sources/Jazz2/LevelHandler.cpp:2443
-#: Sources/Jazz2/LevelHandler.cpp:2458 Sources/Jazz2/LevelHandler.cpp:2470
-#: Sources/Jazz2/LevelHandler.cpp:2491 Sources/Jazz2/LevelHandler.cpp:2505
+#: Sources/Jazz2/LevelHandler.cpp:2358 Sources/Jazz2/LevelHandler.cpp:2371
+#: Sources/Jazz2/LevelHandler.cpp:2382 Sources/Jazz2/LevelHandler.cpp:2397
+#: Sources/Jazz2/LevelHandler.cpp:2410 Sources/Jazz2/LevelHandler.cpp:2423
+#: Sources/Jazz2/LevelHandler.cpp:2436 Sources/Jazz2/LevelHandler.cpp:2449
+#: Sources/Jazz2/LevelHandler.cpp:2464 Sources/Jazz2/LevelHandler.cpp:2476
+#: Sources/Jazz2/LevelHandler.cpp:2497 Sources/Jazz2/LevelHandler.cpp:2511
 msgid "Cheats are not allowed in current context"
 msgstr "A csalások nem engedélyezettek a jelenlegi helyzetben"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:295
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:297
 msgid ""
 "\n"
 "\n"
@@ -1401,31 +1401,31 @@ msgstr ""
 "\n"
 "A játék hamarosan kezdődik!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1491
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3507
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1511
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3534
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
 msgstr "\f[c:#d0705d]{}\f[/c] megsütötte \f[c:#d0705d]{}\f[/c] játékost"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1508
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3510
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1528
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3537
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
 msgstr "\f[c:#d0705d]{}\f[/c] játékost a környezet kiütötte"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2816
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3486
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2838
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3513
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
 msgstr "\f[c:#d0705d]{}\f[/c] kilépett"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2969
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3484
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2991
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3511
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
 msgstr "\f[c:#d0705d]{}\f[/c] csatlakozott"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5754
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5801
 #, c++-format
 msgid ""
 "\n"
@@ -1433,7 +1433,7 @@ msgid ""
 "Overtime! {} seconds remaining"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5966
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:6013
 #, c++-format
 msgid ""
 "\n"
@@ -1444,8 +1444,7 @@ msgstr ""
 "\n"
 "A nyertes {}"
 
-#: Sources/Jazz2/UI/HUD.cpp:222
-#| msgid "Spectate"
+#: Sources/Jazz2/UI/HUD.cpp:543
 msgid "Spectating"
 msgstr ""
 
@@ -1491,44 +1490,45 @@ msgstr ""
 "könyvtárakat használja:"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:61
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:78
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:62
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:84
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:152
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:154
 msgid "Play Story"
 msgstr "Új játék"
 
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:66
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:89
+#: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:42
+msgid "Play Online"
+msgstr "Online mód"
+
 #. TRANSLATORS: Menu item in main menu (Emscripten only)
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:64
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:70
 msgid "Play Shareware Demo"
 msgstr "Shareware változat indítása"
 
 #. TRANSLATORS: Menu item in main menu (Emscripten only)
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:69
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:75
 #: Sources/Jazz2/UI/Menu/ImportSection.cpp:68
 msgid "Import Episodes"
 msgstr "Epizódok importálása"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:74
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:80
 msgid "Continue"
 msgstr "Folytatás"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:83
-#: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:40
-msgid "Play Online"
-msgstr "Online mód"
-
-#. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:89
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:95
 msgid "Highscores"
 msgstr "Ranglétra"
 
 #. TRANSLATORS: Menu item in main menu
 #. TRANSLATORS: Subheader in First Run section
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:91
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:97
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:59
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:46
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:41
@@ -1536,27 +1536,27 @@ msgid "Options"
 msgstr "Beállítások"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:93
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:99
 msgid "About"
 msgstr "Névjegy"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:100
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:106
 msgid "Quit"
 msgstr "Kilépés"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:202
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:208
 #, c++-format
 msgid "For more information, visit {} and  Discord!"
 msgstr ""
 "További információért látogass el a {} weboldalra és a  Discord "
 "szerverünkre!"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:215
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:221
 msgid "Access to external storage has been granted!"
 msgstr "A külső tárhelyhez való hozzáférés engedélyezve lett!"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:217
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:223
 msgid ""
 "\f[c:#337233]Restart the game to read \f[c:#9e7056]Jazz Jackrabbit "
 "2\f[c:#337233] files correctly."
@@ -1564,7 +1564,7 @@ msgstr ""
 "\f[c:#337233]Indítsd újra a játékot a \f[c:#9e7056]Jazz Jackrabbit "
 "2\f[c:#337233] fájlok beolvasásához."
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:227
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:233
 msgid ""
 "\f[c:#704a4a]This game requires original \f[c:#9e7056]Jazz Jackrabbit "
 "2\f[c:#704a4a] files!"
@@ -1572,33 +1572,33 @@ msgstr ""
 "\f[c:#704a4a]Ez a játék az eredeti \f[c:#9e7056]Jazz Jackrabbit "
 "2\f[c:#704a4a] fájlokat igényli!"
 
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:229
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:235
 msgid "Make sure Jazz Jackrabbit 2 files are present in following path:"
 msgstr ""
 "Győződj meg róla, hogy a Jazz Jackrabbit 2 fájljai megtalálhatók a következő "
 "elérési útvonalon:"
 
 #. TRANSLATORS: Menu item in main menu (Android 11+ only)
-#: Sources/Jazz2/UI/Menu/BeginSection.cpp:237
+#: Sources/Jazz2/UI/Menu/BeginSection.cpp:243
 msgid "Allow access to external storage"
 msgstr "Külső tárhely elérésének engedélyezése"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:23
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:165
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:166
 #, c++-format
 msgid "Remap Controls for Player {}"
 msgstr "{}. játékos"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:27
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:168
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:169
 msgid "Remap Controls"
 msgstr "Gombkiosztás módosítása"
 
 #. TRANSLATORS: Menu item in Options > Controls section
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:30
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:47
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:86
 msgid "Touch Controls"
 msgstr "Érintőképernyős vezérlés"
 
@@ -1625,7 +1625,7 @@ msgid "Native Back Button"
 msgstr "Beépített vissza gomb"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:44
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:73
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:74
 msgid "Input Diagnostics"
 msgstr "Beviteli diagnosztika"
 
@@ -1654,9 +1654,9 @@ msgstr "Gyenge"
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:128
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:132
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:153
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:382
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:165
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:174
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:350
 msgid "Disabled"
 msgstr "Letiltva"
 
@@ -1666,8 +1666,8 @@ msgstr "Letiltva"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:152
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:155
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:382
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:174
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:350
 msgid "Enabled"
 msgstr "Engedélyezve"
 
@@ -1778,13 +1778,13 @@ msgstr "Szerver létrehozása lejátszási listából"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:152
-#: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:24
+#: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:25
 msgid "Create Private Server"
 msgstr "Privát szerver létrehozása"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:152
-#: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:22
+#: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:23
 msgid "Create Public Server"
 msgstr "Nyilvános szerver létrehozása"
 
@@ -1968,97 +1968,108 @@ msgid "Always"
 msgstr "Minden alkalommal"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:24
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:25
 msgid "Rescale Mode"
 msgstr "Átméretezési mód"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:26
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:27
 msgid "Resolution"
 msgstr "Felbontás"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:34
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:35
 msgid "Fullscreen"
 msgstr "Teljes képernyős ablak"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:38
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:39
 msgid "Antialiasing"
 msgstr "Élsimítás"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:40
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:41
 msgid "Background Dithering"
 msgstr "Háttér zajszórása"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:42
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:43
+msgid "Blur Effects"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:45
+#| msgid "Resolution"
+msgid "Lighting Resolution"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > Graphics section
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:47
 msgid "Water Quality"
 msgstr "Vízminőség"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:44
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:49
 msgid "Show Player Trails"
 msgstr "Játékos nyomvonalainak megjelenítése"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:46
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:51
 msgid "Preferred Splitscreen"
 msgstr "Osztott képernyő elrendezése"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:48
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:53
 msgid "Prefer Zoom Out"
 msgstr "Kicsinyítés előnyben részesítése"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:50
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:55
 msgid "Keep Aspect Ratio In Cinematics"
 msgstr "Képarány megtartása az átvezető videókban"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:52
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:57
 msgid "Unaligned Viewport"
 msgstr "Eltolt nézetablak"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:54
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:59
 msgid "Performance Metrics"
 msgstr "Teljesítménymérők"
 
 #. TRANSLATORS: Menu item in Options section
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:89
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:94
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:22
 msgid "Graphics"
 msgstr "Grafika"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:148
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:160
 msgid "Low"
 msgstr "Alacsony"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:148
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:160
 msgid "High"
 msgstr "Magas"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:150
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
 msgid "Vertical"
 msgstr "Függőleges"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:150
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:162
 msgid "Horizontal"
 msgstr "Vízszintes"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:153
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:165
 msgid "Enabled \f[c:#d0705d](Experimental)\f[/c]"
 msgstr "Engedélyezve \f[c:#d0705d](Kísérleti)\f[/c]"
 
 #. TRANSLATORS: Reserved for later use
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:158
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:170
 msgid "Short"
 msgstr "Rövid"
 
-#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:158
+#: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:170
 msgid "Detailed"
 msgstr "Részletes"
 
@@ -2096,7 +2107,7 @@ msgstr "Nem választottál ki fájlt!"
 msgid "No new episodes were imported!"
 msgstr "Nem lett importálva új epizód!"
 
-#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:88
+#: Sources/Jazz2/UI/Menu/InputDiagnosticsSection.cpp:89
 msgid "No gamepads are detected!"
 msgstr "Nincs csatlakoztatott játékvezérlő!"
 
@@ -2112,7 +2123,7 @@ msgstr "Hangok"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:30
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:168
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:169
 msgid "User Profile"
 msgstr "Felhasználói profil"
 
@@ -2142,7 +2153,7 @@ msgstr "Kapcsolat bontása"
 
 #. TRANSLATORS: Menu item in Play Multiplayer section
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:20
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:153
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:219
 msgid "Connect To Server"
 msgstr "Csatlakozás a szerverhez"
 
@@ -2197,8 +2208,14 @@ msgid "Run"
 msgstr "Futás"
 
 #. TRANSLATORS: Menu item in Options > Controls > Remap Controls section
+#. TRANSLATORS: Bottom hint in Connect To Server > IP Address input field
+#. _root->DrawStringShadow(_("Keyboard"), charOffset, centerX - 84.0f, hintY, IMenuContainer::FontLayer + 110,
+#. Alignment::Left, Font::DefaultColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
+#. }
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:35
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:182
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:188
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:376
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:387
 msgid "Change Weapon"
 msgstr "Fegyverváltás"
 
@@ -2219,12 +2236,12 @@ msgid "Weapon {}"
 msgstr "{}. fegyver"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:176
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:182
 msgid "Press any key or button to assign"
 msgstr "Nyomj meg bármilyen billentyűt vagy gombot a hozzárendeléshez"
 
 #. TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:193
+#: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:199
 msgid "to remove assignment"
 msgstr "a hozzárendelés eltávolításához"
 
@@ -2257,9 +2274,29 @@ msgstr "Monokróm"
 msgid "Select Rescale Mode"
 msgstr "Átméretezési mód kiválasztása"
 
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:166
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:232
 msgid "No servers found, but still searchin'!"
 msgstr "Nem találtunk szervereket, de még nyomozunk!"
+
+#. TRANSLATORS: Label in Connect To Server > IP Address input field
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:346
+msgid "IP Address:"
+msgstr ""
+
+#. TRANSLATORS: Placeholder in Connect To Server > IP Address input field
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:353
+msgid "<ip> or <ip>:<port>"
+msgstr ""
+
+#. TRANSLATORS: Bottom hint in Connect To Server > IP Address input field, prefixed with key/button to press
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:384
+msgid "to show keyboard"
+msgstr ""
+
+#. TRANSLATORS: Bottom hint in Connect To Server section, prefixed with key/button to press
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:398
+msgid "to connect to IP address"
+msgstr ""
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:48
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:144
@@ -2308,44 +2345,60 @@ msgstr "Közepes"
 msgid "Hard"
 msgstr "Nehéz"
 
-#. TRANSLATORS: Header in Options > Controls > Touch Controls section
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:51
-msgid "You can adjust position of the touch zones by drag and drop."
-msgstr "Az érintési zónák helyzetét a dobozok húzásával állíthatod be."
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:109
+msgid "Save"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:116
+msgid "Reset"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:123
+msgid "Joystick"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:133
+#| msgid "Cooperation"
+msgid "Vibration"
+msgstr ""
+
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:141
+msgid "Drag to move · Pinch or corner to resize"
+msgstr ""
 
 #. TRANSLATORS: Menu item in Options > User Profile section
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:67
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:66
 msgid "Discord Integration"
 msgstr "Discord integráció"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:70
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:69
 msgid "Player Name"
 msgstr "Játékos neve"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:73
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:72
 msgid "Unique Player ID"
 msgstr "Játékosazonosító"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:171
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:169
 #, c++-format
 msgid "Points: {}"
 msgstr "Pontszám: {}"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:185
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:183
 #, c++-format
 msgid "Game starts in {}"
 msgstr "A játék {} másodpercen belül kezdődik"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:192
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:189
 #, c++-format
 msgid "Waiting for {} more player"
 msgid_plural "Waiting for {} more players"
 msgstr[0] "{} játékosra várunk"
 msgstr[1] "{} játékosra várunk"
 
-#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:254
+#: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:269
 msgid "Find exit!"
 msgstr "Keress kijáratot!"
 
@@ -2377,11 +2430,11 @@ msgstr ""
 "Győződj meg róla, hogy \n"
 "az összes szükséges fájl elérhető, és próbáld újra."
 
-#: Sources/Main.cpp:955
+#: Sources/Main.cpp:959
 msgid "Unnamed server"
 msgstr "Névtelen szerver"
 
-#: Sources/Main.cpp:1113
+#: Sources/Main.cpp:1116
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2393,7 +2446,7 @@ msgstr ""
 "\n"
 "Hibás paraméter."
 
-#: Sources/Main.cpp:1114
+#: Sources/Main.cpp:1117
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2405,7 +2458,34 @@ msgstr ""
 "\n"
 "A kliensed verziója nem kompatibilis a szerverrel."
 
-#: Sources/Main.cpp:1115
+#: Sources/Main.cpp:1118
+#| msgid ""
+#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
+#| "\n"
+#| "\n"
+#| "The server has disconnected you due to inactivity."
+msgid ""
+"\f[c:#704a4a]Connection has been closed!\f[/c]\n"
+"\n"
+"\n"
+"The client was rejected due to malformed communication protocol."
+msgstr ""
+
+#: Sources/Main.cpp:1119
+#| msgid ""
+#| "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
+#| "\n"
+#| "\n"
+#| "The server is not responding for connection request."
+msgid ""
+"\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
+"\n"
+"\n"
+"The connection was denied by the web browser.\n"
+"One of the reasons may be connecting to an unsecured WebSocket."
+msgstr ""
+
+#: Sources/Main.cpp:1120
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2419,7 +2499,7 @@ msgstr ""
 "Sikertelen hitelesítés!\n"
 "További információért vedd fel a kapcsolatot a szerver adminisztrátoraival."
 
-#: Sources/Main.cpp:1116
+#: Sources/Main.cpp:1121
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2431,7 +2511,7 @@ msgstr ""
 "\n"
 "Helytelen jelszó."
 
-#: Sources/Main.cpp:1117
+#: Sources/Main.cpp:1122
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2445,7 +2525,7 @@ msgstr ""
 "Helytelen felhasználónév.\n"
 "Kérlek ellenőrizd a profilodat, majd probáld újra."
 
-#: Sources/Main.cpp:1118
+#: Sources/Main.cpp:1123
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2459,7 +2539,7 @@ msgstr ""
 "Ez a kilens nincs jelen a szerver fehérlistájában\n"
 "További információért vedd fel a kapcsolatot a szerver adminisztrátoraival."
 
-#: Sources/Main.cpp:1119
+#: Sources/Main.cpp:1124
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2473,7 +2553,7 @@ msgstr ""
 "Ez a szerver harmadik feltől származó azonosítást vár.\n"
 "További információért vedd fel a kapcsolatot a szerver adminisztrátoraival."
 
-#: Sources/Main.cpp:1120
+#: Sources/Main.cpp:1125
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2487,7 +2567,7 @@ msgstr ""
 "A szerver kapacitása megtelt.\n"
 "Kérlek, próbáld újra később."
 
-#: Sources/Main.cpp:1121
+#: Sources/Main.cpp:1126
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2501,7 +2581,7 @@ msgstr ""
 "A szerver nincs olyan állapotban, hogy feldolgozhassa a kérésedet.\n"
 "Kérlek, próbáld újra néhány másodperc múlva."
 
-#: Sources/Main.cpp:1122
+#: Sources/Main.cpp:1127
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2515,7 +2595,7 @@ msgstr ""
 "A szerver éppen leáll.\n"
 "Kérjük, próbálja meg később."
 
-#: Sources/Main.cpp:1123
+#: Sources/Main.cpp:1128
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2529,7 +2609,7 @@ msgstr ""
 "A szerver karbantartás miatt leáll.\n"
 "Kérlek, próbáld újra később."
 
-#: Sources/Main.cpp:1124
+#: Sources/Main.cpp:1129
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2543,7 +2623,7 @@ msgstr ""
 "A szerver újrakonfigurálás miatt leáll.\n"
 "Kérlek, próbáld újra később."
 
-#: Sources/Main.cpp:1125
+#: Sources/Main.cpp:1130
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2557,7 +2637,7 @@ msgstr ""
 "A szerver frissítés miatt leáll.\n"
 "Kérlek, ellenőrizd a kliens verzióját, és próbáld újra egy percen belül."
 
-#: Sources/Main.cpp:1126
+#: Sources/Main.cpp:1131
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2571,7 +2651,7 @@ msgstr ""
 "Kérlek, próbálja meg újra, és ha a probléma továbbra is fennáll,\n"
 "ellenőrizd a hálózati kapcsolatot."
 
-#: Sources/Main.cpp:1127
+#: Sources/Main.cpp:1132
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2583,7 +2663,7 @@ msgstr ""
 "\n"
 "A szerver nem válaszol a csatlakozási kérelemre."
 
-#: Sources/Main.cpp:1128
+#: Sources/Main.cpp:1133
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2597,7 +2677,7 @@ msgstr ""
 "Ki lettél \f[c:#907050]rúgva\f[/c] a szerverről.\n"
 "További információkért fordulj a szerveradminisztrátorokhoz."
 
-#: Sources/Main.cpp:1129
+#: Sources/Main.cpp:1134
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2611,7 +2691,7 @@ msgstr ""
 "\f[c:#907050]Ki lettél tiltva\f[/c] a szerverről.\n"
 "További információért vedd fel a kapcsolatot a szerver adminisztrátoraival."
 
-#: Sources/Main.cpp:1130
+#: Sources/Main.cpp:1135
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2623,7 +2703,7 @@ msgstr ""
 "\n"
 "Csalás észlelve."
 
-#: Sources/Main.cpp:1131
+#: Sources/Main.cpp:1136
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2637,7 +2717,7 @@ msgstr ""
 "A kliensed nem tartalmazza a szükséges fájlokat. \n"
 "Töltsd le a szükséges fájlokat, majd próbáld újra."
 
-#: Sources/Main.cpp:1132
+#: Sources/Main.cpp:1137
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2649,7 +2729,7 @@ msgstr ""
 "\n"
 "A szerver bontotta a kapcsolatot tétlenség miatt."
 
-#: Sources/Main.cpp:1387
+#: Sources/Main.cpp:1392
 #, c++-format
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
@@ -2663,6 +2743,9 @@ msgstr ""
 "\n"
 "A kliensed nem tartalmazza a(z) \"{}\" szintet.\n"
 "Töltsd le a szükséges fájlokat, majd próbáld újra."
+
+#~ msgid "You can adjust position of the touch zones by drag and drop."
+#~ msgstr "Az érintési zónák helyzetét a dobozok húzásával állíthatod be."
 
 #~ msgid "Unknown"
 #~ msgstr "Ismeretlen"

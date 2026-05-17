@@ -112,13 +112,12 @@ namespace Jazz2::Multiplayer
 	static std::uint16_t ReasonToWsCloseCode(Reason reason)
 	{
 		switch (reason) {
-			case Reason::Disconnected: return 1000;
-			case Reason::ServerStopped:
-			case Reason::ServerStoppedForMaintenance:
-			case Reason::ServerStoppedForReconfiguration:
-			case Reason::ServerStoppedForUpdate: return 1001;
-			case Reason::Kicked: return 1008;
-			default: return std::uint16_t(4000) + std::uint16_t(reason);
+			case Reason::Disconnected:
+				return 1000;	// Normal Closure
+			case Reason::Kicked:
+				return 1008;	// Policy Violation
+			default:
+				return std::uint16_t(4000) + std::uint16_t(reason);
 		}
 	}
 
@@ -126,14 +125,25 @@ namespace Jazz2::Multiplayer
 	static Reason WsCloseCodeToReason(std::uint16_t code, bool wasConnected)
 	{
 		switch (code) {
-			case 1000: return Reason::Disconnected;
-			case 1001: return Reason::ServerStopped;
-			case 1008: return Reason::Kicked;
+			case 1000:	// Normal Closure
+			case 1001:	// Going Away
+				return Reason::Disconnected;
+			case 1002:	// Protocol Error
+			case 1003:	// Unsupported Data
+			case 1007:	// Invalid Payload Data
+			case 1010:	// Mandatory Extension
+			case 1015:	// TLS Handshake Failed
+				return Reason::ProtocolViolation;
+			case 1008:	// Policy Violation
+				return Reason::Kicked;
+			case 1012:	// Service Restart
+			case 1013:	// Try Again Later
+				return Reason::ServerNotReady;
 			default:
 				if (code >= 4000 && code < std::uint16_t(4000 + std::uint32_t(Reason::Idle) + 1)) {
 					return Reason(code - 4000);
 				}
-				return wasConnected ? Reason::ConnectionLost : Reason::ConnectionTimedOut;
+				return (wasConnected ? Reason::ConnectionLost : Reason::ConnectionTimedOut);
 		}
 	}
 #endif
@@ -951,6 +961,7 @@ namespace Jazz2::Multiplayer
 			case Reason::Disconnected: return "Client disconnected by user"; break;
 			case Reason::InvalidParameter: return "Invalid parameter specified"; break;
 			case Reason::IncompatibleVersion: return "Incompatible client version"; break;
+			case Reason::ProtocolViolation: return "Protocol violation"; break;
 			case Reason::SecurityPolicyViolation: return "Security policy violation"; break;
 			case Reason::AuthFailed: return "Authentication failed"; break;
 			case Reason::InvalidPassword: return "Invalid password specified"; break;

@@ -105,14 +105,18 @@ namespace Jazz2::UI::Menu
 
 		// Save button (green)
 		_root->DrawSolid(saveLeft, Row1Y, IMenuContainer::FontLayer + 240, Alignment::TopLeft,
-			Vector2f(BtnW, BtnH), Colorf(0.2f, 0.6f, 0.2f, 0.85f));
+			Vector2f(BtnW, BtnH), Colorf(0.2f, 0.58f, 0.16f, 0.85f));
+		DrawOutlineRect(saveLeft + BtnW * 0.5f, Row1Y + BtnH * 0.5f, BtnW * 0.5f, BtnH * 0.5f,
+			IMenuContainer::FontLayer + 242, 1.0f, Colorf(1.0f, 1.0f, 1.0f, 0.3f));
 		_root->DrawStringShadow(_("Save"), charOffset, saveLeft + BtnW * 0.5f, Row1Y + BtnH * 0.5f + 1.0f,
 			IMenuContainer::FontLayer + 245, Alignment::Center,
-			Colorf(0.46f, 0.66f, 0.46f, 0.6f), 0.82f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			Colorf(0.44f, 0.63f, 0.42f, 0.6f), 0.82f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 		// Reset button (red)
 		_root->DrawSolid(resetLeft, Row1Y, IMenuContainer::FontLayer + 240, Alignment::TopLeft,
 			Vector2f(BtnW, BtnH), Colorf(0.7f, 0.2f, 0.2f, 0.85f));
+		DrawOutlineRect(resetLeft + BtnW * 0.5f, Row1Y + BtnH * 0.5f, BtnW * 0.5f, BtnH * 0.5f,
+			IMenuContainer::FontLayer + 242, 1.0f, Colorf(1.0f, 1.0f, 1.0f, 0.3f));
 		_root->DrawStringShadow(_("Reset"), charOffset, resetLeft + BtnW * 0.5f, Row1Y + BtnH * 0.5f + 1.0f,
 			IMenuContainer::FontLayer + 245, Alignment::Center,
 			Colorf(0.66f, 0.46f, 0.46f, 0.6f), 0.82f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
@@ -423,11 +427,11 @@ namespace Jazz2::UI::Menu
 
 				// Fixed UI - only if no touch button was hit
 				// Back: tap title row (top area, center portion)
-				if (py < Row1Y && std::fabs(px - (float)viewSize.X * 0.5f) < (float)viewSize.X * 0.25f) {
+				/*if (py < Row1Y && std::fabs(px - (float)viewSize.X * 0.5f) < (float)viewSize.X * 0.25f) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_root->LeaveSection();
 					return;
-				}
+				}*/
 
 				// Save button (Row 1, left side)
 				if (py >= Row1Y && py <= Row1Y + BtnH && px >= saveLeft && px <= saveLeft + BtnW) {

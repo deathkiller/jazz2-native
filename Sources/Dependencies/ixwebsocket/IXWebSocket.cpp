@@ -20,7 +20,7 @@
 namespace
 {
 	const std::string emptyMsg;
-} // namespace
+}
 
 
 namespace ix
@@ -641,4 +641,4 @@ namespace ix
 	{
 		_autoThreadName = enabled;
 	}
-} // namespace ix
+}
