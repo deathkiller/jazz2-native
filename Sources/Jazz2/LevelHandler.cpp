@@ -2487,6 +2487,10 @@ namespace Jazz2
 			switch (_players[0]->GetPlayerType()) {
 				case PlayerType::Jazz: newType = PlayerType::Spaz; break;
 				case PlayerType::Spaz: newType = PlayerType::Lori; break;
+				case PlayerType::Lori: newType = PlayerType::BirdYellow; break;
+				case PlayerType::BirdYellow: newType = PlayerType::Frog; break;
+				case PlayerType::Frog: newType = PlayerType::Bird; break;
+					case PlayerType::Bird: newType = PlayerType::Jazz; break;
 				default: newType = PlayerType::Jazz; break;
 			}
 
