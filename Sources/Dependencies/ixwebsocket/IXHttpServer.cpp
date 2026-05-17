@@ -63,8 +63,7 @@ namespace
 		else
 			return "application/octet-stream";
 	}
-
-} // namespace
+}
 
 namespace ix
 {
@@ -241,4 +240,4 @@ namespace ix
 		return _timeoutSecs;
 	}
 
-} // namespace ix
+}

@@ -1315,4 +1315,4 @@ namespace ix
 		std::lock_guard<std::mutex> lock(_closeReasonMutex);
 		return _closeReason;
 	}
-} // namespace ix
+}

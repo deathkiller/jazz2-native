@@ -58,4 +58,4 @@ namespace ix
 	{
 		return _duration;
 	}
-} // namespace ix
+}

@@ -198,4 +198,4 @@ namespace ix
 		std::lock_guard<std::mutex> lock(_resMutex);
 		return _res;
 	}
-} // namespace ix
+}

@@ -134,4 +134,4 @@ namespace ix
 
 		return 0;
 	}
-} // namespace ix
+}

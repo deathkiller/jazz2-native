@@ -123,4 +123,4 @@ namespace ix
 		return (ssize_t)::recvfrom(
 			_sockfd, buffer, length, 0, (struct sockaddr*) &_server, &addressLen);
 	}
-} // namespace ix
+}

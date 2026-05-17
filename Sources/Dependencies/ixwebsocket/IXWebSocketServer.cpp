@@ -260,4 +260,4 @@ namespace ix
 	{
 		return _enablePerMessageDeflate;
 	}
-} // namespace ix
+}

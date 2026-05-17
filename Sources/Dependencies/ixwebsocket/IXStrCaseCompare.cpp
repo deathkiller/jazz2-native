@@ -34,4 +34,4 @@ namespace ix
 	{
 		return CaseInsensitiveLess::cmp(s1, s2);
 	}
-} // namespace ix
+}

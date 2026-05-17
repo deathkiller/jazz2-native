@@ -22,7 +22,6 @@
 #include <sstream>
 #include <string>
 
-
 namespace ix
 {
 	class Uuid
@@ -73,4 +72,4 @@ namespace ix
 		Uuid id;
 		return id.toString();
 	}
-} // namespace ix
+}

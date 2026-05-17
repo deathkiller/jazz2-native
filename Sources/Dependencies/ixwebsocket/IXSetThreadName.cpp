@@ -84,4 +84,4 @@ namespace ix
 		// ... assert here ?
 #endif
 	}
-} // namespace ix
+}

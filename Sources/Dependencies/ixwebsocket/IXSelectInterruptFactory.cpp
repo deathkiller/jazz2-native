@@ -23,4 +23,4 @@ namespace ix
 		return ix::make_unique<SelectInterruptPipe>();
 #endif
 	}
-} // namespace ix
+}

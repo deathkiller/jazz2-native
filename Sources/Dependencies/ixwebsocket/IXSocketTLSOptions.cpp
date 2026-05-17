@@ -92,4 +92,4 @@ namespace ix
 		ss << "  autoDetect = " << autoDetect << std::endl;
 		return ss.str();
 	}
-} // namespace ix
+}

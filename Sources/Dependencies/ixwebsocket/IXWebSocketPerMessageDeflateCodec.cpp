@@ -16,7 +16,7 @@ namespace
 	// is treated as a char* and the null termination (\x00) makes it
 	// look like an empty string.
 	const std::string kEmptyUncompressedBlock = std::string("\x00\x00\xff\xff", 4);
-} // namespace
+}
 
 namespace ix
 {
@@ -249,4 +249,4 @@ namespace ix
 		return false;
 #endif
 	}
-} // namespace ix
+}

@@ -377,6 +377,6 @@ namespace ix
         }
     }
 
-} // namespace ix
+}
 
-#endif // IXWEBSOCKET_USE_MBED_TLS
+#endif

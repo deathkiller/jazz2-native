@@ -146,4 +146,4 @@ namespace ix
 		setsockopt(sockfd, SOL_SOCKET, SO_NOSIGPIPE, (void*) &value, sizeof(value));
 #endif
 	}
-} // namespace ix
+}

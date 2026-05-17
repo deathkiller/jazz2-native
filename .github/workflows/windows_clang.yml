@@ -52,12 +52,12 @@ jobs:
 
     steps:
     - name: 'Checkout Repository'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
         
     - name: 'Setup MSBuild'
-      uses: microsoft/setup-msbuild@v1.3.2
+      uses: microsoft/setup-msbuild@v3
 
     - name: 'Download Build Dependencies'
       run: |
@@ -104,7 +104,7 @@ jobs:
         Move-Item -Path ".\LICENSE" -Destination ".\_package\LICENSE"
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Jazz2_Windows_${{ matrix.Platform }}_${{ matrix.ArchExts }}_${{ matrix.Backend }}_Clang
         path: ./_package/

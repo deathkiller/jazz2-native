@@ -541,4 +541,4 @@ namespace ix
 	{
 		return _addressFamily;
 	}
-} // namespace ix
+}

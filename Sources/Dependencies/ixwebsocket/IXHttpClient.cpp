@@ -782,4 +782,4 @@ namespace ix
 
 		return str;
 	}
-} // namespace ix
+}

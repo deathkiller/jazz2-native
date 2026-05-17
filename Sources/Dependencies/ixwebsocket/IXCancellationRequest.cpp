@@ -32,4 +32,4 @@ namespace ix
 
 		return isCancellationRequested;
 	}
-} // namespace ix
+}

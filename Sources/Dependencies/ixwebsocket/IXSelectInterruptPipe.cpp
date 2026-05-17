@@ -159,6 +159,6 @@ namespace ix
 
 		return _fildes[kPipeReadIndex];
 	}
-} // namespace ix
+}
 
-#endif // !_WIN32
+#endif

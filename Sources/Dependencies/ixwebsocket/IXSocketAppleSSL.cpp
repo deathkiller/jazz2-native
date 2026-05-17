@@ -310,6 +310,6 @@ namespace ix
         return -1;
     }
 
-} // namespace ix
+}
 
-#endif // IXWEBSOCKET_USE_SECURE_TRANSPORT
+#endif

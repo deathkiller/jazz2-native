@@ -435,4 +435,4 @@ namespace ix
 		result.protocol = selectedProtocol;
 		return result;
 	}
-} // namespace ix
+}

@@ -60,7 +60,7 @@ namespace ix
 		deflateEnd(&zs);
 
 		return outstring;
-#endif // IXWEBSOCKET_USE_ZLIB
+#endif
 	}
 
 #ifdef IXWEBSOCKET_USE_DEFLATE
@@ -115,6 +115,6 @@ namespace ix
 
 		inflateEnd(&inflateState);
 		return true;
-#endif // IXWEBSOCKET_USE_ZLIB
+#endif
 	}
-} // namespace ix
+}

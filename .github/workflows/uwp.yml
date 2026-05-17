@@ -42,12 +42,12 @@ jobs:
 
     steps:
     - name: 'Checkout Repository'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
         
     - name: 'Setup MSBuild'
-      uses: microsoft/setup-msbuild@v1.3.2
+      uses: microsoft/setup-msbuild@v3
         
     - name: 'Configure CMake'
       run: |
@@ -104,7 +104,7 @@ jobs:
         Add-Content -Path $env:GITHUB_ENV -Value "artifactPath=$artifactPath"
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ env.artifactPath }}
         path: ./_package/
@@ -125,12 +125,12 @@ jobs:
 
     steps:
     - name: 'Checkout Repository'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
         
     - name: 'Setup MSBuild'
-      uses: microsoft/setup-msbuild@v1.3.2
+      uses: microsoft/setup-msbuild@v3
         
     - name: 'Configure CMake'
       run: |
@@ -187,7 +187,7 @@ jobs:
         Add-Content -Path $env:GITHUB_ENV -Value "artifactPath=$artifactPath"
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ env.artifactPath }}
         path: ./_package/

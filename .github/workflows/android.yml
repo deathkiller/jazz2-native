@@ -28,7 +28,7 @@ jobs:
 
     steps:
     - name: 'Checkout Repository'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
@@ -86,7 +86,7 @@ jobs:
         fi
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Jazz2_Android_${{ matrix.Platform }}
         path: ./_package/
@@ -110,7 +110,7 @@ jobs:
 
     steps:
     - name: 'Checkout Repository'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
@@ -169,7 +169,7 @@ jobs:
         fi
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Jazz2_Android_DEBUG_${{ matrix.Platform }}
         path: ./_package/
@@ -192,7 +192,7 @@ jobs:
 
     steps:
     - name: 'Checkout Repository'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
@@ -250,7 +250,7 @@ jobs:
         fi
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Jazz2_Android_MultiplayerPreview_${{ matrix.Platform }}
         path: ./_package/

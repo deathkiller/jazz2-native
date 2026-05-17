@@ -13,12 +13,10 @@ namespace ix
 
 	SelectInterrupt::SelectInterrupt()
 	{
-		;
 	}
 
 	SelectInterrupt::~SelectInterrupt()
 	{
-		;
 	}
 
 	bool SelectInterrupt::init(std::string& /*errorMsg*/)
@@ -50,4 +48,4 @@ namespace ix
 	{
 		return nullptr;
 	}
-} // namespace ix
+}

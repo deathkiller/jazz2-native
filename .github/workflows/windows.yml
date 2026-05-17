@@ -52,12 +52,12 @@ jobs:
 
     steps:
     - name: 'Checkout Repository'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
         
     - name: 'Setup MSBuild'
-      uses: microsoft/setup-msbuild@v1.3.2
+      uses: microsoft/setup-msbuild@v3
 
     - if: matrix.Platform != 'ARM64'
       name: 'Download Build Dependencies'
@@ -108,7 +108,7 @@ jobs:
         Move-Item -Path ".\LICENSE" -Destination ".\_package\LICENSE"
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Jazz2_Windows_${{ matrix.Platform }}_${{ matrix.ArchExts }}_${{ matrix.Backend }}
         path: ./_package/
@@ -129,12 +129,12 @@ jobs:
 
     steps:
     - name: 'Checkout Repository'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
         
     - name: 'Setup MSBuild'
-      uses: microsoft/setup-msbuild@v1.3.2
+      uses: microsoft/setup-msbuild@v3
 
     - if: matrix.Platform != 'ARM64'
       name: 'Download Build Dependencies'
@@ -218,7 +218,7 @@ jobs:
         Move-Item -Path ".\Docs\Snippets\ServerConfiguration.json" -Destination ".\_package\Jazz2.Server.config"
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Jazz2_Windows_MultiplayerPreview_${{ matrix.Platform }}_${{ matrix.ArchExts }}_${{ matrix.Backend }}
         path: ./_package/

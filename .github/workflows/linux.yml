@@ -47,7 +47,7 @@ jobs:
 
     steps:
     - name: 'Checkout Repository'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
@@ -93,7 +93,7 @@ jobs:
         echo "artifactPath=$artifactPath" >> $GITHUB_ENV
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ env.artifactPath }}
         path: ./_package/
@@ -119,7 +119,7 @@ jobs:
 
     steps:
     - name: 'Checkout Repository'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
@@ -159,7 +159,7 @@ jobs:
         echo "artifactPath=$artifactPath" >> $GITHUB_ENV
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ env.artifactPath }}
         path: ./_build/jazz2.AppImage
@@ -176,12 +176,12 @@ jobs:
 
     steps:
     - name: 'Checkout Repository'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
     - name: 'Initialize CodeQL'
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@v4
       with:
         languages: cpp
 
@@ -199,7 +199,7 @@ jobs:
         make -j $(nproc) -C ./_build/
         
     - name: 'Perform CodeQL Analysis'
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@v4
 
 
   # Testing builds with online multiplayer
@@ -219,7 +219,7 @@ jobs:
 
     steps:
     - name: 'Checkout Repository'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
@@ -267,7 +267,7 @@ jobs:
         echo "artifactPath=$artifactPath" >> $GITHUB_ENV
         
     - name: 'Upload Package'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ env.artifactPath }}
         path: ./_package/

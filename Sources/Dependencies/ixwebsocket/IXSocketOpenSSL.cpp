@@ -78,7 +78,7 @@ namespace
 
         return true;
     }
-} // namespace
+}
 #endif
 
 namespace ix
@@ -858,6 +858,6 @@ namespace ix
         }
     }
 
-} // namespace ix
+}
 
-#endif // defined(IXWEBSOCKET_USE_OPEN_SSL) || defined(IXWEBSOCKET_USE_LIBRE_SSL)
+#endif

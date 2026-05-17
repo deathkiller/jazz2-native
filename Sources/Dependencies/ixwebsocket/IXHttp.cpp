@@ -224,4 +224,4 @@ namespace ix
 
 		return response->body.empty() ? true : socket->writeBytes(response->body, nullptr);
 	}
-} // namespace ix
+}

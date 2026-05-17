@@ -95,4 +95,4 @@ namespace ix
 		return _decompressor->decompress(in, out);
 	}
 
-} // namespace ix
+}

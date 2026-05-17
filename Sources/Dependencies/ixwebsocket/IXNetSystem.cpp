@@ -449,14 +449,14 @@ namespace ix
 	// Convert network bytes to host bytes. Copied from the ASIO library
 	unsigned short network_to_host_short(unsigned short value)
 	{
-		#if defined(_WIN32)
+#if defined(_WIN32)
 		  unsigned char* value_p = reinterpret_cast<unsigned char*>(&value);
 		  unsigned short result = (static_cast<unsigned short>(value_p[0]) << 8)
 			| static_cast<unsigned short>(value_p[1]);
 		  return result;
-		#else // defined(_WIN32)
+#else
 		  return ntohs(value);
-		#endif // defined(_WIN32)
+#endif
 	}
 
-} // namespace ix
+}

@@ -449,4 +449,4 @@ namespace ix
 
 		return std::make_pair(true, std::string(output.begin(), output.end()));
 	}
-} // namespace ix
+}
