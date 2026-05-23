@@ -1473,7 +1473,11 @@ namespace nCine
 		// Xcode's console reports that it is a TTY, but it doesn't support colors, TERM is not defined in this case
 		__consoleType = ConsoleType::Redirect;
 
-		if (::isatty(1)) {
+		StringView NO_COLOR = ::getenv("NO_COLOR");
+		StringView FORCE_COLOR = ::getenv("FORCE_COLOR");
+		if (NO_COLOR) {
+			// Don't use colors if NO_COLOR is set, even if the console supports it
+		} else if (::isatty(1)) {
 			StringView COLORTERM = ::getenv("COLORTERM");
 			StringView TERM = ::getenv("TERM");
 
@@ -1493,28 +1497,44 @@ namespace nCine
 					__consoleType = ConsoleType::EscapeCodes;
 				}
 			}
+		} else if (FORCE_COLOR) {
+			// Use colors if FORCE_COLOR is set, even if the console doesn't report support for it (e.g.,
+			// when piping to a file), this is useful when the output is later viewed in a compatible viewer
+			__consoleType = ConsoleType::EscapeCodes24bit;
 		}
 
 		::signal(SIGINT, OnHandleInterruptSignal);
 #	elif defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		HANDLE hStdOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
-		switch (::GetFileType(hStdOut)) {
-			case FILE_TYPE_CHAR: {
-				bool hasVirtualTerminal = EnableVirtualTerminalProcessing(hStdOut);
-				__consoleType = (hasVirtualTerminal ? ConsoleType::EscapeCodes24bit : ConsoleType::WinApi);
-				if (hasVirtualTerminal) {
-					CheckConsoleCapabilities();	
-				}
+		DWORD NO_COLOR = ::GetEnvironmentVariable(L"NO_COLOR", nullptr, 0);
+		if (NO_COLOR) {
+			// Don't use colors if NO_COLOR is set, even if the console supports it
+		} else {
+			HANDLE hStdOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
+			switch (::GetFileType(hStdOut)) {
+				case FILE_TYPE_CHAR: {
+					bool hasVirtualTerminal = EnableVirtualTerminalProcessing(hStdOut);
+					__consoleType = (hasVirtualTerminal ? ConsoleType::EscapeCodes24bit : ConsoleType::WinApi);
+					if (hasVirtualTerminal) {
+						CheckConsoleCapabilities();
+					}
 
-				::SetConsoleCtrlHandler(OnHandleConsoleEvent, TRUE);
-				break;
+					::SetConsoleCtrlHandler(OnHandleConsoleEvent, TRUE);
+					break;
+				}
+				case FILE_TYPE_UNKNOWN:
+					// Nothing is attached to stdout
+					break;
+				default:
+					__consoleType = ConsoleType::Redirect;
+
+					DWORD FORCE_COLOR = ::GetEnvironmentVariable(L"FORCE_COLOR", nullptr, 0);
+					if (FORCE_COLOR) {
+						// Use colors if FORCE_COLOR is set, even if the console doesn't report support for it (e.g.,
+						// when piping to a file), this is useful when the output is later viewed in a compatible viewer
+						__consoleType = ConsoleType::EscapeCodes24bit;
+					}
+					break;
 			}
-			case FILE_TYPE_UNKNOWN:
-				// Nothing is attached to stdout
-				break;
-			default:
-				__consoleType = ConsoleType::Redirect;
-				break;
 		}
 #	endif
 
