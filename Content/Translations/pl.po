@@ -1440,6 +1440,9 @@ msgid ""
 "\n"
 "Overtime! {} seconds remaining"
 msgstr ""
+"\n"
+"\n"
+"Dogrywka! Pozostało {} sekund"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:6013
 #, c++-format
@@ -1454,7 +1457,7 @@ msgstr ""
 
 #: Sources/Jazz2/UI/HUD.cpp:543
 msgid "Spectating"
-msgstr ""
+msgstr "Bierne oglądanie"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:359
 msgid "Unknown command"
@@ -1914,7 +1917,7 @@ msgstr "Skrypty"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:48
 msgid "Continuous Jump"
-msgstr ""
+msgstr "Ciągły skok"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:50
@@ -1999,13 +2002,13 @@ msgstr "Wygładzanie tła"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:43
 msgid "Blur Effects"
-msgstr ""
+msgstr "Efekty rozmycia"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:45
 #| msgid "Resolution"
 msgid "Lighting Resolution"
-msgstr ""
+msgstr "Rozdzielczość oświetlenia"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:47
@@ -2139,7 +2142,7 @@ msgstr "Wznów"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:36
 msgid "Join Game"
-msgstr ""
+msgstr "Dołącz do gry"
 
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:36
 msgid "Spectate"
@@ -2283,22 +2286,22 @@ msgstr "Póki co nie znaleziono żadnych serwerów, ale ciągle szukam!"
 #. TRANSLATORS: Label in Connect To Server > IP Address input field
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:346
 msgid "IP Address:"
-msgstr ""
+msgstr "Adres IP:"
 
 #. TRANSLATORS: Placeholder in Connect To Server > IP Address input field
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:353
 msgid "<ip> or <ip>:<port>"
-msgstr ""
+msgstr "<ip> lub <ip>:<port>"
 
 #. TRANSLATORS: Bottom hint in Connect To Server > IP Address input field, prefixed with key/button to press
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:384
 msgid "to show keyboard"
-msgstr ""
+msgstr "aby pokazać klawiaturę"
 
 #. TRANSLATORS: Bottom hint in Connect To Server section, prefixed with key/button to press
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:398
 msgid "to connect to IP address"
-msgstr ""
+msgstr "aby połączyć się z adresem IP"
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:48
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:144
@@ -2349,24 +2352,26 @@ msgstr "Trudny"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:109
 msgid "Save"
-msgstr ""
+msgstr "Zapisz"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:116
 msgid "Reset"
-msgstr ""
+msgstr "Zresetuj"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:123
 msgid "Joystick"
-msgstr ""
+msgstr "Kontroler"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:133
 #| msgid "Cooperation"
 msgid "Vibration"
-msgstr ""
+msgstr "Wibracje"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:141
 msgid "Drag to move · Pinch or corner to resize"
 msgstr ""
+"Przeciągnij, aby przesunąć · \"Uszczypnij\" lub przesuń do rogu, aby zmienić "
+"rozmiar"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:66
@@ -2473,6 +2478,10 @@ msgid ""
 "\n"
 "The client was rejected due to malformed communication protocol."
 msgstr ""
+"\f[c:#704a4a]Połączenie zostało zerwane!\f[/c]\n"
+"\n"
+"\n"
+"Klient został odrzucony z powodu nieprawidłowego protokołu komunikacyjnego."
 
 #: Sources/Main.cpp:1119
 #| msgid ""
@@ -2487,6 +2496,12 @@ msgid ""
 "The connection was denied by the web browser.\n"
 "One of the reasons may be connecting to an unsecured WebSocket."
 msgstr ""
+"\f[c:#704a4a]Nie można połączyć się z serwerem!\f[/c]\n"
+"\n"
+"\n"
+"Przeglądarka internetowa zablokowała połączenie.\n"
+"Jedną z przyczyn może być próba połączenia się z niezabezpieczonym portem "
+"WebSocket."
 
 #: Sources/Main.cpp:1120
 msgid ""
