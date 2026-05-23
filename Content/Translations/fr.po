@@ -1440,6 +1440,9 @@ msgid ""
 "\n"
 "Overtime! {} seconds remaining"
 msgstr ""
+"\n"
+"\n"
+"Prolongations ! Il reste {} secondes"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:6013
 #, c++-format
@@ -1454,7 +1457,7 @@ msgstr ""
 
 #: Sources/Jazz2/UI/HUD.cpp:543
 msgid "Spectating"
-msgstr ""
+msgstr "Spectateur"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:359
 msgid "Unknown command"
@@ -1917,7 +1920,7 @@ msgstr "Scripting"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:48
 msgid "Continuous Jump"
-msgstr ""
+msgstr "Saut continu"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:50
@@ -2002,13 +2005,13 @@ msgstr "Tramage en arrière-plan"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:43
 msgid "Blur Effects"
-msgstr ""
+msgstr "Effets de flou"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:45
 #| msgid "Resolution"
 msgid "Lighting Resolution"
-msgstr ""
+msgstr "Résolution de l'éclairage"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:47
@@ -2143,7 +2146,7 @@ msgstr "Reprendre"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:36
 msgid "Join Game"
-msgstr ""
+msgstr "Rejoindre la partie"
 
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:36
 msgid "Spectate"
@@ -2288,22 +2291,22 @@ msgstr "Aucun serveur trouvé, mais la recherche continue !"
 #. TRANSLATORS: Label in Connect To Server > IP Address input field
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:346
 msgid "IP Address:"
-msgstr ""
+msgstr "Adresse IP :"
 
 #. TRANSLATORS: Placeholder in Connect To Server > IP Address input field
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:353
 msgid "<ip> or <ip>:<port>"
-msgstr ""
+msgstr "<ip> ou <ip>:<port>"
 
 #. TRANSLATORS: Bottom hint in Connect To Server > IP Address input field, prefixed with key/button to press
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:384
 msgid "to show keyboard"
-msgstr ""
+msgstr "pour afficher le clavier"
 
 #. TRANSLATORS: Bottom hint in Connect To Server section, prefixed with key/button to press
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:398
 msgid "to connect to IP address"
-msgstr ""
+msgstr "pour se connecter à l'adresse IP"
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:48
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:144
@@ -2354,24 +2357,25 @@ msgstr "Difficile"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:109
 msgid "Save"
-msgstr ""
+msgstr "Sauver"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:116
 msgid "Reset"
-msgstr ""
+msgstr "Réinitialiser"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:123
 msgid "Joystick"
-msgstr ""
+msgstr "Joystick"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:133
 #| msgid "Cooperation"
 msgid "Vibration"
-msgstr ""
+msgstr "Vibration"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:141
 msgid "Drag to move · Pinch or corner to resize"
 msgstr ""
+"Faites glisser pour déplacer · Pincez ou touchez un coin pour redimensionner"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:66
@@ -2477,6 +2481,10 @@ msgid ""
 "\n"
 "The client was rejected due to malformed communication protocol."
 msgstr ""
+"\f[c:#704a4a]La connexion a été interrompue !\f[/c]\n"
+"\n"
+"\n"
+"Le client a été rejeté en raison d'un protocole de communication incorrect."
 
 #: Sources/Main.cpp:1119
 #| msgid ""
@@ -2491,6 +2499,11 @@ msgid ""
 "The connection was denied by the web browser.\n"
 "One of the reasons may be connecting to an unsecured WebSocket."
 msgstr ""
+"\f[c:#704a4a]Impossible de se connecter au serveur !\f[/c]\n"
+"\n"
+"\n"
+"La connexion a été refusée par le navigateur Web.\n"
+"Cela peut notamment être dû à une connexion à un WebSocket non sécurisé."
 
 #: Sources/Main.cpp:1120
 msgid ""
@@ -2718,7 +2731,7 @@ msgid ""
 "Your client doesn't contain required assets.\n"
 "Please download the required files and try it again."
 msgstr ""
-"\f[c:#704a4a]Impossible de se connecter au serveur ![/c]\n"
+"\f[c:#704a4a]Impossible de se connecter au serveur !\f[/c]\n"
 "\n"
 "\n"
 "Votre client ne contient pas les éléments requis.\n"
@@ -2731,7 +2744,7 @@ msgid ""
 "\n"
 "The server has disconnected you due to inactivity."
 msgstr ""
-"\f[c:#704a4a]La connexion a été interrompue ![/c]\n"
+"\f[c:#704a4a]La connexion a été interrompue !\f[/c]\n"
 "\n"
 "\n"
 "Le serveur vous a déconnecté pour cause d'inactivité."
@@ -2745,7 +2758,7 @@ msgid ""
 "Your client doesn't contain level \"{}\".\n"
 "Please download the required files and try it again."
 msgstr ""
-"\f[c:#704a4a]Impossible de se connecter au serveur ![/c]\n"
+"\f[c:#704a4a]Impossible de se connecter au serveur !\f[/c]\n"
 "\n"
 "\n"
 "Votre client ne contient pas le niveau \"{}\".\n"
