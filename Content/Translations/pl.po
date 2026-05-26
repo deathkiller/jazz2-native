@@ -1457,7 +1457,7 @@ msgstr ""
 
 #: Sources/Jazz2/UI/HUD.cpp:543
 msgid "Spectating"
-msgstr "Bierne oglądanie"
+msgstr "Bierne obserwowanie"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:359
 msgid "Unknown command"
