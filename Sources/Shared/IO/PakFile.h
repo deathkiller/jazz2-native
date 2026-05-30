@@ -17,9 +17,8 @@ namespace Death { namespace IO {
 		None,				/**< None */
 		Deflate,			/**< Deflate */
 		Lz4,				/**< LZ4 */
-		Zstd,				/**< Zstandard */
-
-		Lzma2Compressed		/**< LZMA2 - Not implemented */
+		Lzma2Compressed,	/**< LZMA2 */
+		Zstd				/**< Zstandard */
 	};
 
 	/**

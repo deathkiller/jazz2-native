@@ -10,6 +10,9 @@
 
 #if !defined(DEATH_TARGET_WINDOWS)
 #	include <sys/time.h>
+#	if defined(DEATH_TARGET_VITA)
+#		include <psp2/rtc.h>
+#	endif
 #endif
 
 #if !defined(DEATH_USE_GMTOFF_IN_TM) && defined(DEATH_TARGET_APPLE)
@@ -1044,6 +1047,14 @@ namespace Death { namespace Containers {
 		FILETIME ft;
 		::GetSystemTimeAsFileTime(&ft);
 		return DateTime(ft);
+#elif defined(DEATH_TARGET_VITA)
+		SceDateTime dt {};
+		sceRtcGetCurrentClock(&dt, 0);
+		SceRtcTick tick {};
+		sceRtcGetTick(&dt, &tick);
+
+		constexpr std::uint64_t VitaToUnixEpochMs = 62135596800000ULL;
+		return DateTime::FromUnixMilliseconds((std::int64_t)((tick.tick / 1000ULL) - VitaToUnixEpochMs));
 #else
 		struct timeval tp{};
 		gettimeofday(&tp, nullptr);
@@ -1148,6 +1159,7 @@ namespace Death { namespace Containers {
 			return {};
 		}
 
+#if !defined(DEATH_TARGET_VITA)
 		time_t time = GetTicks();
 		if (time != (time_t)-1) {
 			struct tm temp;
@@ -1158,6 +1170,7 @@ namespace Death { namespace Containers {
 				return tm2;
 			}
 		}
+#endif
 
 		// If standard library functions cannot be used, try to guess it
 		std::int32_t secDiff = tz.GetOffset();

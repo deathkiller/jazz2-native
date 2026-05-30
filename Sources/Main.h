@@ -11,11 +11,11 @@
 #endif
 /** @brief Application version */
 #if !defined(NCINE_VERSION)
-#	define NCINE_VERSION "3.4.0"
+#	define NCINE_VERSION "3.6.0"
 #endif
 /** @brief Application build year */
 #if !defined(NCINE_BUILD_YEAR)
-#	define NCINE_BUILD_YEAR "2025"
+#	define NCINE_BUILD_YEAR "2026"
 #endif
 /** @brief Application package name on Linux */
 #if !defined(NCINE_LINUX_PACKAGE)

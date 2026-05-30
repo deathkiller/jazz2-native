@@ -3,6 +3,7 @@
 #include "FileSystem.h"
 #include "Compression/DeflateStream.h"
 #include "Compression/Lz4Stream.h"
+#include "Compression/Lzma2Stream.h"
 #include "Compression/ZstdStream.h"
 #include "../Base/Memory.h"
 #include "../Containers/GrowableArray.h"
@@ -240,7 +241,7 @@ namespace Death { namespace IO {
 		return -1;
 	}
 	
-#if defined(WITH_ZLIB) || defined(WITH_MINIZ) || defined(WITH_LZ4) || defined(WITH_ZSTD)
+#if defined(WITH_ZLIB) || defined(WITH_MINIZ) || defined(WITH_LZ4) || defined(WITH_LZMA2) || defined(WITH_ZSTD)
 
 	using namespace Death::IO::Compression;
 
@@ -344,6 +345,13 @@ namespace Death { namespace IO {
 	static void CopyToLz4(Stream& input, Stream& output, std::int64_t& uncompressedSize)
 	{
 		Lz4Writer dw(output);
+		uncompressedSize = input.CopyTo(dw);
+	}
+#	endif
+#	if defined(WITH_LZMA2)
+	static void CopyToLzma2(Stream& input, Stream& output, std::int64_t& uncompressedSize)
+	{
+		Lzma2Writer dw(output);
 		uncompressedSize = input.CopyTo(dw);
 	}
 #	endif
@@ -477,6 +485,16 @@ namespace Death { namespace IO {
 				return nullptr;
 #endif
 			}
+			case PakPreferredCompression::Lzma2Compressed: {
+#if defined(WITH_LZMA2)
+				return std::make_unique<CompressedBoundedStream<Lzma2Stream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+#else
+#	if defined(DEATH_TRACE_VERBOSE_IO)
+				LOGE("File \"{}\" was compressed with an unsupported method (LZMA2)", path);
+#	endif
+				return nullptr;
+#endif
+			}
 			default: {
 				DEATH_ASSERT_UNREACHABLE(("File \"{}\" was compressed with an unknown method", path), nullptr);
 			}
@@ -523,6 +541,16 @@ namespace Death { namespace IO {
 #	else
 #		if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("File 0x{:.16x} was compressed with an unsupported method (Zstd)", hashedPath);
+#		endif
+				return nullptr;
+#	endif
+			}
+			case PakPreferredCompression::Lzma2Compressed: {
+#	if defined(WITH_LZMA2)
+				return std::make_unique<CompressedBoundedStream<Lzma2Stream>>(_path, foundItem->Offset, foundItem->UncompressedSize, foundItem->Size, bufferSize);
+#	else
+#		if defined(DEATH_TRACE_VERBOSE_IO)
+				LOGE("File 0x{:.16x} was compressed with an unsupported method (LZMA2)", hashedPath);
 #		endif
 				return nullptr;
 #	endif
@@ -950,6 +978,15 @@ namespace Death { namespace IO {
 				size = _outputStream->GetPosition() - offset;
 				DEATH_DEBUG_ASSERT(size > 0);
 				flags |= PakFile::ItemFlags(std::uint32_t(PakPreferredCompression::Zstd) << PakFile::CompressionFlagsShift);
+				break;
+			}
+#endif
+#if defined(WITH_LZMA2)
+			case PakPreferredCompression::Lzma2Compressed: {
+				CopyToLzma2(stream, *_outputStream, uncompressedSize);
+				size = _outputStream->GetPosition() - offset;
+				DEATH_DEBUG_ASSERT(size > 0);
+				flags |= PakFile::ItemFlags(std::uint32_t(PakPreferredCompression::Lzma2Compressed) << PakFile::CompressionFlagsShift);
 				break;
 			}
 #endif

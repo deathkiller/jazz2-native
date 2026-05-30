@@ -266,11 +266,11 @@ namespace Death { namespace Containers {
 		to fit any free or member function pointer. But because member function
 		pointers can increase in size if multiple inheritance and/or virtual
 		inheritance is involved, that space can be repurposed also for saving up to 24
-		bytes of stateful lambda / functor data on 64-bit platforms (and up to 16 bytes
-		on 32-bit platforms). If larger, the data is allocated on heap instead. For
-		implementation simplicity reasons the state is also allocated if isn't
-		trivially copyable. You can use @ref isAllocated() to check whether the
-		function state needed a heap allocation or not.
+		bytes of stateful lambda / functor data on 64-bit platforms, up to 12 bytes
+		on 32-bit platforms, and up to 16 bytes on 32-bit Windows. If larger, the data
+		is allocated on heap instead. For implementation simplicity reasons the state
+		is also allocated if isn't trivially copyable. You can use @ref isAllocated()
+		to check whether the function state needed a heap allocation or not.
 		If heap allocation is undesirable, the @ref Function(NoAllocateInitT, F&&)
 		overload can be used to prevent wrapping any function with state that would
 		need to be allocated.
