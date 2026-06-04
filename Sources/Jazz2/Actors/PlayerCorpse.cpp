@@ -26,6 +26,15 @@ namespace Jazz2::Actors
 			case PlayerType::Lori:
 				async_await RequestMetadataAsync("Interactive/PlayerLori"_s);
 				break;
+			case PlayerType::Frog:
+				async_await RequestMetadataAsync("Interactive/PlayerFrog"_s);
+				break;
+			case PlayerType::Bird:
+				async_await RequestMetadataAsync("Interactive/PlayerBird"_s);
+				break;
+			case PlayerType::BirdYellow:
+				async_await RequestMetadataAsync("Interactive/PlayerBirdYellow"_s);
+				break;
 		}
 
 		SetAnimation((AnimState)536870912);
