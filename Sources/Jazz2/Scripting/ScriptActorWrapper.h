@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #if defined(WITH_ANGELSCRIPT) || defined(DOXYGEN_GENERATING_OUTPUT)
 
@@ -39,7 +39,7 @@ namespace Jazz2::Scripting
 			return *this;
 		}
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -101,7 +101,7 @@ namespace Jazz2::Scripting
 	public:
 		ScriptCollectibleWrapper(LevelScriptLoader* levelScripts, asIScriptObject* obj);
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 
 	protected:
 		Task<bool> OnActivatedAsync(const Actors::ActorActivationDetails& details) override;

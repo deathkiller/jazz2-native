@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../ActorBase.h"
 #include "../../Direction.h"
@@ -16,7 +16,7 @@ namespace Jazz2::Actors::Enemies
 		/** @brief Whether the enemy should collide with player shots */
 		bool CanCollideWithShots;
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 		bool CanCauseDamage(ActorBase* collider) override;
 
 		/** @brief Whether the enemy can hurt player */

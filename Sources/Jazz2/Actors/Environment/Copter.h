@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../ActorBase.h"
 
@@ -15,7 +15,7 @@ namespace Jazz2::Actors::Environment
 
 		static void Preload(const ActorActivationDetails& details);
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 
 		/** @brief Unmounts from the assigned actor */
 		void Unmount(float timeLeft);

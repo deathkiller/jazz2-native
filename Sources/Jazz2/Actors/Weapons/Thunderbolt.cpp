@@ -1,4 +1,4 @@
-﻿#include "Thunderbolt.h"
+#include "Thunderbolt.h"
 #include "../../ILevelHandler.h"
 #include "../Player.h"
 #include "../Enemies/EnemyBase.h"
@@ -148,9 +148,9 @@ namespace Jazz2::Actors::Weapons
 		DecreaseHealth(INT32_MAX);
 	}
 
-	bool Thunderbolt::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Thunderbolt::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase>(other.get())) {
+		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase>(other)) {
 			if (enemyBase->CanCollideWithShots) {
 				_hit = true;
 			}

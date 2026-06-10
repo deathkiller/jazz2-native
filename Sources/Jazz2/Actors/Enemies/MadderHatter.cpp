@@ -1,4 +1,4 @@
-﻿#include "MadderHatter.h"
+#include "MadderHatter.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
@@ -170,7 +170,7 @@ namespace Jazz2::Actors::Enemies
 		UpdateHitbox(8, 8);
 	}
 
-	bool MadderHatter::BulletSpit::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool MadderHatter::BulletSpit::OnHandleCollision(ActorBase* other)
 	{
 		return false;
 	}

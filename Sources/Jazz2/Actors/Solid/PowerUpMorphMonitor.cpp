@@ -1,4 +1,4 @@
-﻿#include "PowerUpMorphMonitor.h"
+#include "PowerUpMorphMonitor.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
@@ -64,13 +64,13 @@ namespace Jazz2::Actors::Solid
 		AABBInner.R -= 2.0f;
 	}
 
-	bool PowerUpMorphMonitor::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool PowerUpMorphMonitor::OnHandleCollision(ActorBase* other)
 	{
 		if (_health == 0) {
 			return SolidObjectBase::OnHandleCollision(other);
 		}
 
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 			Player* owner = shotBase->GetOwner();
 			WeaponType weaponType = shotBase->GetWeaponType();
 			if (owner != nullptr && shotBase->GetStrength() > 0) {
@@ -81,20 +81,20 @@ namespace Jazz2::Actors::Solid
 				shotBase->DecreaseHealth(INT32_MAX);
 			}
 			return true;
-		} else if (auto* tnt = runtime_cast<Weapons::TNT>(other.get())) {
+		} else if (auto* tnt = runtime_cast<Weapons::TNT>(other)) {
 			Player* owner = tnt->GetOwner();
 			if (owner != nullptr) {
 				DestroyAndApplyToPlayer(owner);
 			}
 			return true;
-		} else if (auto* player = runtime_cast<Player>(other.get())) {
+		} else if (auto* player = runtime_cast<Player>(other)) {
 			if (player->CanBreakSolidObjects()) {
 				DestroyAndApplyToPlayer(player);
 				return true;
 			}
 		}
 
-		return SolidObjectBase::OnHandleCollision(std::move(other));
+		return SolidObjectBase::OnHandleCollision(other);
 	}
 
 	bool PowerUpMorphMonitor::CanCauseDamage(ActorBase* collider)

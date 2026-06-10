@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../EventType.h"
 #include "../LightEmitter.h"
@@ -200,7 +200,7 @@ namespace Jazz2::Actors
 		/** @brief Called after the object is created */
 		Task<bool> OnActivated(const ActorActivationDetails& details);
 		/** @brief Called when the object collides with another object */
-		virtual bool OnHandleCollision(std::shared_ptr<ActorBase> other);
+		virtual bool OnHandleCollision(ActorBase* other);
 		/** @brief Called to check whether @p collider can cause damage to the object */
 		virtual bool CanCauseDamage(ActorBase* collider);
 

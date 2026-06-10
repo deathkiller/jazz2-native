@@ -1,4 +1,4 @@
-﻿#include "Queen.h"
+#include "Queen.h"
 #include "../../../ILevelHandler.h"
 #include "../../Player.h"
 #include "../../Environment/Spring.h"
@@ -242,9 +242,9 @@ namespace Jazz2::Actors::Bosses
 		_stateTime -= timeMult;
 	}
 
-	bool Queen::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Queen::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* spring = runtime_cast<Environment::Spring>(other.get())) {
+		if (auto* spring = runtime_cast<Environment::Spring>(other)) {
 			// Collide only with hitbox
 			if (AABBInner.Overlaps(spring->AABBInner)) {
 				Vector2f force = spring->Activate();
@@ -256,7 +256,7 @@ namespace Jazz2::Actors::Bosses
 					_speed.Y = (4.0f + std::abs(force.Y)) * sign;
 					_externalForce.Y = force.Y;
 				} else {
-					return BossBase::OnHandleCollision(std::move(other));
+					return BossBase::OnHandleCollision(other);
 				}
 				SetState(ActorState::CanJump, false);
 
@@ -273,7 +273,7 @@ namespace Jazz2::Actors::Bosses
 			}
 		}
 
-		return BossBase::OnHandleCollision(std::move(other));
+		return BossBase::OnHandleCollision(other);
 	}
 
 	Task<bool> Queen::Brick::OnActivatedAsync(const ActorActivationDetails& details)

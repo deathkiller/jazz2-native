@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "ActorBase.h"
 #include "../LevelInitialization.h"
@@ -376,7 +376,7 @@ namespace Jazz2::Actors
 		bool OnDraw(RenderQueue& renderQueue) override;
 		void OnEmitLights(SmallVectorImpl<LightEmitter>& lights) override;
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 		void OnHitFloor(float timeMult) override;
 		void OnHitCeiling(float timeMult) override;
 		void OnHitWall(float timeMult) override;

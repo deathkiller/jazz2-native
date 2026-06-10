@@ -1,4 +1,4 @@
-﻿#include "Bolly.h"
+#include "Bolly.h"
 #include "../../../ILevelHandler.h"
 #include "../Crab.h"
 #include "../../Player.h"
@@ -369,13 +369,13 @@ namespace Jazz2::Actors::Bosses
 		light.RadiusFar = 12.0f;
 	}
 
-	bool Bolly::Rocket::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Bolly::Rocket::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* player = runtime_cast<Player>(other.get())) {
+		if (auto* player = runtime_cast<Player>(other)) {
 			DecreaseHealth(INT32_MAX);
 		}
 
-		return ActorBase::OnHandleCollision(std::move(other));
+		return ActorBase::OnHandleCollision(other);
 	}
 
 	bool Bolly::Rocket::OnPerish(ActorBase* collider)

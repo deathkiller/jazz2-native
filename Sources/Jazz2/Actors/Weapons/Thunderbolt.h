@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "ShotBase.h"
 
@@ -15,7 +15,7 @@ namespace Jazz2::Actors::Weapons
 		/** @brief Called when the shot is fired */
 		void OnFire(const std::shared_ptr<ActorBase>& owner, Vector2f gunspotPos, Vector2f speed, float angle, bool isFacingLeft);
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 
 		WeaponType GetWeaponType() override {
 			return WeaponType::Thunderbolt;

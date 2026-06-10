@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../SolidObjectBase.h"
 
@@ -12,7 +12,7 @@ namespace Jazz2::Actors::Solid
 	public:
 		PowerUpWeaponMonitor();
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 		bool CanCauseDamage(ActorBase* collider) override;
 
 		static void Preload(const ActorActivationDetails& details);

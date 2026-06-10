@@ -1,4 +1,4 @@
-﻿#include "GemCrate.h"
+#include "GemCrate.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
@@ -37,29 +37,29 @@ namespace Jazz2::Actors::Solid
 		async_return true;
 	}
 
-	bool GemCrate::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool GemCrate::OnHandleCollision(ActorBase* other)
 	{
 		if (_health == 0) {
 			return GenericContainer::OnHandleCollision(other);
 		}
 
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 			if (shotBase->GetStrength() > 0) {
 				DecreaseHealth(shotBase->GetStrength(), shotBase);
 				shotBase->DecreaseHealth(1);
 				return true;
 			}
-		} else if (auto* tnt = runtime_cast<Weapons::TNT>(other.get())) {
+		} else if (auto* tnt = runtime_cast<Weapons::TNT>(other)) {
 			DecreaseHealth(INT32_MAX, tnt);
 			return true;
-		} else if (auto* player = runtime_cast<Player>(other.get())) {
+		} else if (auto* player = runtime_cast<Player>(other)) {
 			if (player->CanBreakSolidObjects()) {
 				DecreaseHealth(INT32_MAX, player);
 				return true;
 			}
 		}
 
-		return GenericContainer::OnHandleCollision(std::move(other));
+		return GenericContainer::OnHandleCollision(other);
 	}
 
 	bool GemCrate::OnPerish(ActorBase* collider)

@@ -1,4 +1,4 @@
-﻿#include "Bilsy.h"
+#include "Bilsy.h"
 #include "../../../ILevelHandler.h"
 #include "../../Player.h"
 #include "../../Explosion.h"
@@ -276,13 +276,13 @@ namespace Jazz2::Actors::Bosses
 		light.RadiusFar = 30.0f;
 	}
 
-	bool Bilsy::Fireball::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Bilsy::Fireball::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* player = runtime_cast<Player>(other.get())) {
+		if (auto* player = runtime_cast<Player>(other)) {
 			DecreaseHealth(INT32_MAX);
 		}
 
-		return ActorBase::OnHandleCollision(std::move(other));
+		return ActorBase::OnHandleCollision(other);
 	}
 
 	bool Bilsy::Fireball::OnPerish(ActorBase* collider)

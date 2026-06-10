@@ -1,4 +1,4 @@
-﻿#include "ActorBase.h"
+#include "ActorBase.h"
 #include "../ContentResolver.h"
 #include "../ILevelHandler.h"
 #include "../PreferencesCache.h"
@@ -170,10 +170,10 @@ namespace Jazz2::Actors
 		// Objects should override this if they need to.
 	}
 
-	bool ActorBase::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool ActorBase::OnHandleCollision(ActorBase* other)
 	{
 		if (GetState(ActorState::CanBeFrozen)) {
-			HandleFrozenStateChange(other.get());
+			HandleFrozenStateChange(other);
 		}
 		return false;
 	}

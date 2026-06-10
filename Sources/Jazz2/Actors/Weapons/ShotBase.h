@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../ActorBase.h"
 #include "../../WeaponType.h"
@@ -20,7 +20,7 @@ namespace Jazz2::Actors::Weapons
 	public:
 		ShotBase();
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 
 		/** @brief Returns strength (damage) */
 		inline std::int32_t GetStrength() {

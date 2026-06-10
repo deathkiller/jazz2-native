@@ -1,4 +1,4 @@
-﻿#include "Copter.h"
+#include "Copter.h"
 #include "../../ILevelHandler.h"
 #include "../Player.h"
 
@@ -80,10 +80,10 @@ namespace Jazz2::Actors::Environment
 		PreloadMetadataAsync("Enemy/LizardFloat"_s);
 	}
 
-	bool Copter::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Copter::OnHandleCollision(ActorBase* other)
 	{
 		if (_state == State::Free || _state == State::Unmounted) {
-			if (auto* player = runtime_cast<Player>(other.get())) {
+			if (auto* player = runtime_cast<Player>(other)) {
 				if (player->GetModifier() == Player::Modifier::None && player->SetModifier(Player::Modifier::LizardCopter, shared_from_this())) {
 					_state = State::Mounted;
 					_renderer.setAlphaF(1.0f);
@@ -94,7 +94,7 @@ namespace Jazz2::Actors::Environment
 			}
 		}
 
-		return ActorBase::OnHandleCollision(std::move(other));
+		return ActorBase::OnHandleCollision(other);
 	}
 
 	void Copter::Unmount(float timeLeft)

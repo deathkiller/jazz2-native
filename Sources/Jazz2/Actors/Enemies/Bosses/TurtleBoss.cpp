@@ -1,4 +1,4 @@
-﻿#include "TurtleBoss.h"
+#include "TurtleBoss.h"
 #include "../../../ILevelHandler.h"
 #include "../../Player.h"
 #include "../../Explosion.h"
@@ -117,10 +117,10 @@ namespace Jazz2::Actors::Bosses
 		_stateTime -= timeMult;
 	}
 
-	bool TurtleBoss::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool TurtleBoss::OnHandleCollision(ActorBase* other)
 	{
 		if (_state == StateAttacking && _stateTime <= 0.0f) {
-			if (auto* mace = runtime_cast<Mace>(other.get())) {
+			if (auto* mace = runtime_cast<Mace>(other)) {
 				if (mace == _mace.get()) {
 					_mace->DecreaseHealth(INT32_MAX);
 					_mace = nullptr;
@@ -135,7 +135,7 @@ namespace Jazz2::Actors::Bosses
 			}
 		}
 
-		return EnemyBase::OnHandleCollision(std::move(other));
+		return EnemyBase::OnHandleCollision(other);
 	}
 
 	bool TurtleBoss::OnPerish(ActorBase* collider)

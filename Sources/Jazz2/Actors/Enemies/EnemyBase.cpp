@@ -1,4 +1,4 @@
-﻿#include "EnemyBase.h"
+#include "EnemyBase.h"
 #include "../../ILevelHandler.h"
 #include "../../Events/EventMap.h"
 #include "../../Tiles/TileMap.h"
@@ -149,19 +149,19 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
-	bool EnemyBase::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool EnemyBase::OnHandleCollision(ActorBase* other)
 	{
 		if (!GetState(ActorState::IsInvulnerable)) {
-			if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
+			if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 				if (shotBase->GetStrength() > 0) {
 					DecreaseHealth(shotBase->GetStrength(), shotBase);
 				}
 				// Collision must also be processed by the shot
 				//return true;
-			} else if (auto* tnt = runtime_cast<Weapons::TNT>(other.get())) {
+			} else if (auto* tnt = runtime_cast<Weapons::TNT>(other)) {
 				DecreaseHealth(5, tnt);
 				return true;
-			} else if (auto* pole = runtime_cast<Solid::Pole>(other.get())) {
+			} else if (auto* pole = runtime_cast<Solid::Pole>(other)) {
 				if (_levelHandler->IsReforged()) {
 					bool hit;
 					switch (pole->GetFallDirection()) {
@@ -174,7 +174,7 @@ namespace Jazz2::Actors::Enemies
 						return true;
 					}
 				}
-			} else if (auto* pushableBox = runtime_cast<Solid::PushableBox>(other.get())) {
+			} else if (auto* pushableBox = runtime_cast<Solid::PushableBox>(other)) {
 				if (_levelHandler->IsReforged() && pushableBox->GetSpeed().Y > 0.0f && pushableBox->AABBInner.B < _pos.Y) {
 					DecreaseHealth(10, pushableBox);
 					return true;
@@ -182,7 +182,7 @@ namespace Jazz2::Actors::Enemies
 			}
 		}
 
-		return ActorBase::OnHandleCollision(std::move(other));
+		return ActorBase::OnHandleCollision(other);
 	}
 
 	bool EnemyBase::CanCauseDamage(ActorBase* collider)

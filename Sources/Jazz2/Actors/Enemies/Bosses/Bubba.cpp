@@ -1,4 +1,4 @@
-﻿#include "Bubba.h"
+#include "Bubba.h"
 #include "../../../ILevelHandler.h"
 #include "../../Player.h"
 #include "../../Explosion.h"
@@ -326,13 +326,13 @@ namespace Jazz2::Actors::Bosses
 		light.RadiusFar = 30.0f;
 	}
 
-	bool Bubba::Fireball::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Bubba::Fireball::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* player = runtime_cast<Player>(other.get())) {
+		if (auto* player = runtime_cast<Player>(other)) {
 			DecreaseHealth(INT32_MAX);
 		}
 
-		return ActorBase::OnHandleCollision(std::move(other));
+		return ActorBase::OnHandleCollision(other);
 	}
 
 	bool Bubba::Fireball::OnPerish(ActorBase* collider)

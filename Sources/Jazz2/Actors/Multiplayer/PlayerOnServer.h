@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
@@ -18,7 +18,7 @@ namespace Jazz2::Actors::Multiplayer
 	public:
 		PlayerOnServer();
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 		bool CanCauseDamage(ActorBase* collider) override;
 		bool TakeDamage(std::int32_t amount, float pushForce = 0.0f, bool ignoreInvulnerable = false) override;
 		bool AddLives(std::int32_t count) override;

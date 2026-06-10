@@ -1,4 +1,4 @@
-﻿#include "Bird.h"
+#include "Bird.h"
 #include "../../ILevelHandler.h"
 #include "../Player.h"
 #include "../Enemies/EnemyBase.h"
@@ -117,10 +117,10 @@ namespace Jazz2::Actors::Environment
 		PlaySfx("Fly"_s, 0.3f);
 	}
 
-	bool Bird::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Bird::OnHandleCollision(ActorBase* other)
 	{
 		if (_attackTime > 0.0f && !other->IsInvulnerable()) {
-			if (auto* enemy = runtime_cast<Enemies::EnemyBase>(other.get())) {
+			if (auto* enemy = runtime_cast<Enemies::EnemyBase>(other)) {
 				enemy->DecreaseHealth(1, this);
 
 				SetAnimation(AnimState::Idle);
@@ -131,7 +131,7 @@ namespace Jazz2::Actors::Environment
 			}
 		}
 
-		return ActorBase::OnHandleCollision(std::move(other));
+		return ActorBase::OnHandleCollision(other);
 	}
 
 	void Bird::FlyAway()

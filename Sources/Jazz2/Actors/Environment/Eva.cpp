@@ -1,4 +1,4 @@
-﻿#include "Eva.h"
+#include "Eva.h"
 #include "../../ILevelHandler.h"
 #include "../Player.h"
 
@@ -36,9 +36,9 @@ namespace Jazz2::Actors::Environment
 		}
 	}
 
-	bool Eva::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Eva::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* player = runtime_cast<Player>(other.get())) {
+		if (auto* player = runtime_cast<Player>(other)) {
 			if (player->GetPlayerType() == PlayerType::Frog && player->DisableControllable(160.0f)) {
 				SetTransition(AnimState::TransitionAttack, false, [this, player]() {
 					player->MorphRevert();
@@ -50,7 +50,7 @@ namespace Jazz2::Actors::Environment
 			return true;
 		}
 
-		return ActorBase::OnHandleCollision(std::move(other));
+		return ActorBase::OnHandleCollision(other);
 	}
 
 	void Eva::Preload(const ActorActivationDetails& details)

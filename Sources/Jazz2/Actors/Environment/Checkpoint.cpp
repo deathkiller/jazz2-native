@@ -1,4 +1,4 @@
-﻿#include "Checkpoint.h"
+#include "Checkpoint.h"
 #include "../../ILevelHandler.h"
 #include "../../Events/EventMap.h"
 #include "../Player.h"
@@ -65,13 +65,13 @@ namespace Jazz2::Actors::Environment
 		UpdateHitbox(20, 20);
 	}
 
-	bool Checkpoint::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Checkpoint::OnHandleCollision(ActorBase* other)
 	{
 		if (_activated) {
 			return true;
 		}
 
-		if (auto* player = runtime_cast<Player>(other.get())) {
+		if (auto* player = runtime_cast<Player>(other)) {
 			_activated = true;
 
 			SetAnimation((AnimState)1);

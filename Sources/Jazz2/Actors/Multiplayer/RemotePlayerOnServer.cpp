@@ -1,4 +1,4 @@
-﻿#include "RemotePlayerOnServer.h"
+#include "RemotePlayerOnServer.h"
 
 #if defined(WITH_MULTIPLAYER)
 
@@ -78,7 +78,7 @@ namespace Jazz2::Actors::Multiplayer
 		return (_peerDesc->EnableLedgeClimb && PlayerOnServer::IsLedgeClimbAllowed());
 	}
 
-	bool RemotePlayerOnServer::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool RemotePlayerOnServer::OnHandleCollision(ActorBase* other)
 	{
 		// TODO: Remove this override
 		return PlayerOnServer::OnHandleCollision(other);

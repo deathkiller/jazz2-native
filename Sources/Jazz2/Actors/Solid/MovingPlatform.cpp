@@ -1,4 +1,4 @@
-﻿#include "MovingPlatform.h"
+#include "MovingPlatform.h"
 #include "../../ContentResolver.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
@@ -174,10 +174,10 @@ namespace Jazz2::Actors::Solid
 		}
 	}
 
-	bool MovingPlatform::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool MovingPlatform::OnHandleCollision(ActorBase* other)
 	{
 		if (_type == PlatformType::SpikeBall && _health > 0) {
-			if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
+			if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 				if (shotBase->GetStrength() > 0) {
 					DecreaseHealth(shotBase->GetStrength(), shotBase);
 					shotBase->DecreaseHealth(INT32_MAX);
@@ -186,7 +186,7 @@ namespace Jazz2::Actors::Solid
 			}
 		}
 
-		return SolidObjectBase::OnHandleCollision(std::move(other));
+		return SolidObjectBase::OnHandleCollision(other);
 	}
 
 	bool MovingPlatform::OnPerish(ActorBase* collider)

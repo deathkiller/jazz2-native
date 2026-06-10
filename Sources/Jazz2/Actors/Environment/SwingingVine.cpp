@@ -1,4 +1,4 @@
-﻿#include "SwingingVine.h"
+#include "SwingingVine.h"
 #include "../../ContentResolver.h"
 #include "../../ILevelHandler.h"
 #include "../../Events/EventMap.h"
@@ -140,9 +140,9 @@ namespace Jazz2::Actors::Environment
 		return true;
 	}
 
-	bool SwingingVine::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool SwingingVine::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* player = runtime_cast<Player>(other.get())) {
+		if (auto* player = runtime_cast<Player>(other)) {
 			if (player->_springCooldown <= 0.0f) {
 				player->UpdateCarryingObject(this, SuspendType::SwingingVine);
 			}

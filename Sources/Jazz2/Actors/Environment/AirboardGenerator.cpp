@@ -1,4 +1,4 @@
-﻿#include "AirboardGenerator.h"
+#include "AirboardGenerator.h"
 #include "../../ILevelHandler.h"
 #include "../Player.h"
 #include "../Explosion.h"
@@ -36,9 +36,9 @@ namespace Jazz2::Actors::Environment
 		}
 	}
 
-	bool AirboardGenerator::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool AirboardGenerator::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* player = runtime_cast<Player>(other.get())) {
+		if (auto* player = runtime_cast<Player>(other)) {
 			if (_active && player->SetModifier(Player::Modifier::Airboard)) {
 				_active = false;
 				_renderer.setDrawEnabled(false);
@@ -50,7 +50,7 @@ namespace Jazz2::Actors::Environment
 			return true;
 		}
 
-		return ActorBase::OnHandleCollision(std::move(other));
+		return ActorBase::OnHandleCollision(other);
 	}
 
 	void AirboardGenerator::Preload(const ActorActivationDetails& details)

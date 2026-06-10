@@ -1,4 +1,4 @@
-﻿#include "Uterus.h"
+#include "Uterus.h"
 #include "../../../ILevelHandler.h"
 #include "../../Player.h"
 #include "../../Explosion.h"
@@ -254,9 +254,9 @@ namespace Jazz2::Actors::Bosses
 		UpdateHitbox(6, 6);
 	}
 
-	bool Uterus::ShieldPart::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Uterus::ShieldPart::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 			DecreaseHealth(shotBase->GetStrength(), shotBase);
 
 			FallTime = 400.0f;
@@ -269,7 +269,7 @@ namespace Jazz2::Actors::Bosses
 			return true;
 		}
 
-		return EnemyBase::OnHandleCollision(std::move(other));
+		return EnemyBase::OnHandleCollision(other);
 	}
 
 	bool Uterus::ShieldPart::OnPerish(ActorBase* collider)

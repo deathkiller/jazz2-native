@@ -1110,6 +1110,8 @@ namespace Jazz2
 
 		std::unique_ptr<Texture> textureDiffuse;
 		std::unique_ptr<Color[]> captionTile;
+		// Per-tile flag (1 = fully opaque diffuse); only computed when rendering, used to cull hidden debris
+		std::unique_ptr<std::uint8_t[]> tileDiffuseOpaque;
 
 		if (!_isHeadless) {
 			// Don't load textures in headless mode, only collision masks
@@ -1124,7 +1126,8 @@ namespace Jazz2
 			std::uint32_t widthWithPadding = width + (2 * tilesPerRow);
 			std::uint32_t heightWithPadding = height + (2 * tilesPerColumn);
 			std::unique_ptr<std::uint8_t[]> pixelsWithPadding = std::make_unique<std::uint8_t[]>(widthWithPadding * heightWithPadding * 4);
-			
+			tileDiffuseOpaque = std::make_unique<std::uint8_t[]>(tileCount);
+
 			for (uint32_t i = 0; i < tilesPerColumn; i++) {
 				std::uint32_t yf = i * TileSet::DefaultTileSize;
 				std::uint32_t yt = i * (TileSet::DefaultTileSize + 2);
@@ -1183,6 +1186,20 @@ namespace Jazz2
 						}
 					}
 
+					// Record whether the tile's diffuse is fully opaque (every interior pixel alpha == 255)
+					if (tileIdx < (std::int32_t)tileCount) {
+						bool opaque = true;
+						for (std::uint32_t y = 0; y < TileSet::DefaultTileSize && opaque; y++) {
+							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+								if (dstTile[(((y + 1) * widthWithPadding) + (x + 1)) * 4 + 3] != 255) {
+									opaque = false;
+									break;
+								}
+							}
+						}
+						tileDiffuseOpaque[tileIdx] = (opaque ? 1 : 0);
+					}
+
 					ExpandTileDiffuse(dstTile, widthWithPadding);
 				}
 			}
@@ -1223,7 +1240,7 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		return std::make_unique<Tiles::TileSet>(path, tileCount, std::move(textureDiffuse), std::move(mask), maskSize * 8, std::move(captionTile));
+		return std::make_unique<Tiles::TileSet>(path, tileCount, std::move(textureDiffuse), std::move(mask), maskSize * 8, std::move(captionTile), tileDiffuseOpaque.get());
 	}
 
 	bool ContentResolver::LevelExists(StringView levelName)

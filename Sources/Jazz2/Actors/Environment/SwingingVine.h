@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../ActorBase.h"
 
@@ -13,7 +13,7 @@ namespace Jazz2::Actors::Environment
 		SwingingVine();
 		~SwingingVine();
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 
 		static void Preload(const ActorActivationDetails& details);
 

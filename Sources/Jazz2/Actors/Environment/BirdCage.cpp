@@ -1,4 +1,4 @@
-﻿#include "BirdCage.h"
+#include "BirdCage.h"
 #include "../../ILevelHandler.h"
 #include "../../Events/EventMap.h"
 #include "../Explosion.h"
@@ -52,10 +52,10 @@ namespace Jazz2::Actors::Environment
 		async_return true;
 	}
 
-	bool BirdCage::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool BirdCage::OnHandleCollision(ActorBase* other)
 	{
 		if (!_activated) {
-			if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
+			if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 				if (shotBase->GetStrength() > 0) {
 					auto owner = shotBase->GetOwner();
 					if (owner != nullptr && TryApplyToPlayer(owner)) {
@@ -63,19 +63,19 @@ namespace Jazz2::Actors::Environment
 						return true;
 					}
 				}
-			} else if (auto* tnt = runtime_cast<Weapons::TNT>(other.get())) {
+			} else if (auto* tnt = runtime_cast<Weapons::TNT>(other)) {
 				auto owner = tnt->GetOwner();
 				if (owner != nullptr && TryApplyToPlayer(owner)) {
 					return true;
 				}
-			} else if (auto* player = runtime_cast<Player>(other.get())) {
+			} else if (auto* player = runtime_cast<Player>(other)) {
 				if (player->CanBreakSolidObjects() && TryApplyToPlayer(player)) {
 					return true;
 				}
 			}
 		}
 
-		return ActorBase::OnHandleCollision(std::move(other));
+		return ActorBase::OnHandleCollision(other);
 	}
 
 	bool BirdCage::CanCauseDamage(ActorBase* collider)

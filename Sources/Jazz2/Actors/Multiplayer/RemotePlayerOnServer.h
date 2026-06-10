@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
@@ -46,7 +46,7 @@ namespace Jazz2::Actors::Multiplayer
 		bool IsContinuousJumpAllowed() const override;
 		bool IsLedgeClimbAllowed() const override;
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 		bool OnLevelChanging(Actors::ActorBase* initiator, ExitType exitType) override;
 		PlayerCarryOver PrepareLevelCarryOver() override;
 

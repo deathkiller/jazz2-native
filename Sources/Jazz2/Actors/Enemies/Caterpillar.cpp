@@ -1,4 +1,4 @@
-﻿#include "Caterpillar.h"
+#include "Caterpillar.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
@@ -86,9 +86,9 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
-	bool Caterpillar::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Caterpillar::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 			if (_state != StateDisoriented) {
 				Disoriented(Random().Next(8, 13));
 			}
@@ -146,9 +146,9 @@ namespace Jazz2::Actors::Enemies
 		}
 	}
 
-	bool Caterpillar::Smoke::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Caterpillar::Smoke::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* player = runtime_cast<Player>(other.get())) {
+		if (auto* player = runtime_cast<Player>(other)) {
 			if (player->SetDizzy(180.0f)) {
 				// TODO: Add fade-out
 				PlaySfx("Dizzy"_s);

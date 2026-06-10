@@ -2,7 +2,7 @@
 
 namespace Jazz2::Tiles
 {
-	TileSet::TileSet(StringView path, std::uint16_t tileCount, std::unique_ptr<Texture> textureDiffuse, std::unique_ptr<uint8_t[]> mask, std::uint32_t maskSize, std::unique_ptr<Color[]> captionTile)
+	TileSet::TileSet(StringView path, std::uint16_t tileCount, std::unique_ptr<Texture> textureDiffuse, std::unique_ptr<uint8_t[]> mask, std::uint32_t maskSize, std::unique_ptr<Color[]> captionTile, const std::uint8_t* tileDiffuseOpaque)
 		: FilePath(path), TextureDiffuse(std::move(textureDiffuse)), _mask(std::move(mask)), _captionTile(std::move(captionTile)),
 			_isMaskEmpty(), _isMaskFilled(), _isTileFilled(), _isColumnContiguous()
 	{
@@ -44,8 +44,10 @@ namespace Jazz2::Tiles
 				_isMaskFilled.set(i);
 			}
 
-			// TODO: _isTileFilled is not properly set
-			if (/*tileFilled ||*/ !maskEmpty) {
+			// A tile is "filled" for rendering when its diffuse is fully opaque (used to cull hidden debris).
+			// The flag is computed from the diffuse alpha by the content loader; it is absent in headless
+			// mode, where rendering - and therefore this optimization - does not run.
+			if (tileDiffuseOpaque != nullptr && tileDiffuseOpaque[i] != 0) {
 				_isTileFilled.set(i);
 			}
 

@@ -963,9 +963,7 @@ namespace Jazz2
 
 				auto* solidObject = runtime_cast<Actors::SolidObjectBase>(actor);
 				if (solidObject == nullptr || !solidObject->IsOneWay || params.Downwards) {
-					std::shared_ptr selfShared = self->shared_from_this();
-					std::shared_ptr actorShared = actor->shared_from_this();
-					if (!selfShared->OnHandleCollision(actorShared) && !actorShared->OnHandleCollision(selfShared)) {
+					if (!self->OnHandleCollision(actor) && !actor->OnHandleCollision(self)) {
 						colliderActor = actor;
 						return false;
 					}
@@ -1822,10 +1820,8 @@ namespace Jazz2
 				}
 
 				if (actorA->IsCollidingWith(actorB)) {
-					std::shared_ptr<Actors::ActorBase> actorSharedA = actorA->shared_from_this();
-					std::shared_ptr<Actors::ActorBase> actorSharedB = actorB->shared_from_this();
-					if (!actorSharedA->OnHandleCollision(actorSharedB)) {
-						actorSharedB->OnHandleCollision(actorSharedA);
+					if (!actorA->OnHandleCollision(actorB)) {
+						actorB->OnHandleCollision(actorA);
 					}
 				}
 			}

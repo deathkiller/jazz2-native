@@ -1,4 +1,4 @@
-﻿#include "Player.h"
+#include "Player.h"
 #include "../ContentResolver.h"
 #include "../ILevelHandler.h"
 #include "../Events/EventMap.h"
@@ -1531,13 +1531,13 @@ namespace Jazz2::Actors
 		}
 	}
 
-	bool Player::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Player::OnHandleCollision(ActorBase* other)
 	{
 		ZoneScoped;
 
 		bool handled = false;
 		bool removeSpecialMove = false;
-		if (auto* turtleShell = runtime_cast<Enemies::TurtleShell>(other.get())) {
+		if (auto* turtleShell = runtime_cast<Enemies::TurtleShell>(other)) {
 			if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f) {
 				// Buttstomp is probably in starting transition, do nothing yet unless sugar rush is active
 			} else if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f) {
@@ -1550,7 +1550,7 @@ namespace Jazz2::Actors
 					SetState(ActorState::CanJump, false);
 				}
 			}
-		} else if (auto* enemy = runtime_cast<Enemies::EnemyBase>(other.get())) {
+		} else if (auto* enemy = runtime_cast<Enemies::EnemyBase>(other)) {
 			if (_currentSpecialMove == SpecialMoveType::Buttstomp && _currentTransition != nullptr && _sugarRushLeft <= 0.0f) {
 				// Buttstomp is probably in starting transition, do nothing yet unless sugar rush or shield is active
 			} else if (_currentSpecialMove != SpecialMoveType::None || _sugarRushLeft > 0.0f || (enemy->IsFrozen() && _speed.Length() >= 9.0f)) {
@@ -1608,7 +1608,7 @@ namespace Jazz2::Actors
 					}
 				}
 			}
-		} else if (auto* spring = runtime_cast<Environment::Spring>(other.get())) {
+		} else if (auto* spring = runtime_cast<Environment::Spring>(other)) {
 			// Collide only with hitbox here
 			if (_controllableExternal && (_currentTransition == nullptr || _currentTransition->State != AnimState::TransitionLedgeClimb) && _springCooldown <= 0.0f && spring->AABBInner.Overlaps(AABBInner)) {
 				Vector2f force = spring->Activate();
@@ -1616,7 +1616,7 @@ namespace Jazz2::Actors
 			}
 
 			handled = true;
-		} else if (auto* bonusWarp = runtime_cast<Environment::BonusWarp>(other.get())) {
+		} else if (auto* bonusWarp = runtime_cast<Environment::BonusWarp>(other)) {
 			if (_currentTransition == nullptr || _currentTransitionCancellable) {
 				auto cost = bonusWarp->GetCost();
 				if (cost <= _coins) {
@@ -1636,7 +1636,7 @@ namespace Jazz2::Actors
 			}
 
 			handled = true;
-		} else if (auto* otherPlayer = runtime_cast<Player>(other.get())) {
+		} else if (auto* otherPlayer = runtime_cast<Player>(other)) {
 			if (_levelHandler->CanPlayersCollide() &&
 				(_currentTransition == nullptr ||
 				 (_currentTransition->State != AnimState::TransitionWarpIn && _currentTransition->State != AnimState::TransitionWarpInFreefall &&

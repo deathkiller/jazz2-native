@@ -1,4 +1,4 @@
-﻿#include "Doggy.h"
+#include "Doggy.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Weapons/ShotBase.h"
@@ -106,9 +106,9 @@ namespace Jazz2::Actors::Enemies
 		UpdateHitbox(50, 30);
 	}
 
-	bool Doggy::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Doggy::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 			DecreaseHealth(shotBase->GetStrength(), shotBase);
 
 			if (_health <= 0.0f) {

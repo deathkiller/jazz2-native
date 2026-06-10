@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "BossBase.h"
 #include "../Crab.h"
@@ -41,7 +41,7 @@ namespace Jazz2::Actors::Bosses
 			float Phase;
 			float FallTime;
 
-			bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+			bool OnHandleCollision(ActorBase* other) override;
 
 			void Recover(float phase);
 

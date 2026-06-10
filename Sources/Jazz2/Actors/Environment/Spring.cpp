@@ -1,4 +1,4 @@
-﻿#include "Spring.h"
+#include "Spring.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Weapons/ShieldFireShot.h"
@@ -169,10 +169,10 @@ namespace Jazz2::Actors::Environment
 		}
 	}
 
-	bool Spring::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Spring::OnHandleCollision(ActorBase* other)
 	{
 		if (_state == State::Frozen) {
-			ActorBase* actorBase = other.get();
+			ActorBase* actorBase = other;
 			if (runtime_cast<Weapons::ToasterShot>(actorBase) || runtime_cast<Weapons::Thunderbolt>(actorBase) ||
 				runtime_cast<Weapons::ShieldFireShot>(actorBase)) {
 				_state = State::Heated;
@@ -180,6 +180,6 @@ namespace Jazz2::Actors::Environment
 			}
 		}
 
-		return ActorBase::OnHandleCollision(std::move(other));
+		return ActorBase::OnHandleCollision(other);
 	}
 }

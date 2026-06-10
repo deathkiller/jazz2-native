@@ -89,7 +89,9 @@ namespace Jazz2::Tiles
 		FlipX = 0x01,			/**< Flipped horizontally */
 		FlipY = 0x02,			/**< Flipped vertically */
 
-		OneWay = 0x10			/**< One-way collision */
+		OneWay = 0x10,			/**< One-way collision */
+
+		Collapsing = 0x80		/**< Runtime-only: tile is already queued in the active collapsing list */
 	};
 
 	DEATH_ENUM_FLAGS(LayerTileFlags);

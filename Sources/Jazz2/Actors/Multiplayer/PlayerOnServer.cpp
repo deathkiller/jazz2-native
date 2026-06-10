@@ -1,4 +1,4 @@
-﻿#include "PlayerOnServer.h"
+#include "PlayerOnServer.h"
 
 #if defined(WITH_MULTIPLAYER)
 
@@ -40,23 +40,23 @@ namespace Jazz2::Actors::Multiplayer
 		}
 	}
 
-	bool PlayerOnServer::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool PlayerOnServer::OnHandleCollision(ActorBase* other)
 	{
 		// Players physically bump each other (team-independent). Attacking players deal damage instead
 		// (handled below), so they don't bump. Separation runs every overlapping frame so players can't
 		// pass through each other; only the network resync is throttled (see _bumpCooldown).
-		if (auto* anotherPlayer = runtime_cast<PlayerOnServer>(other.get())) {
+		if (auto* anotherPlayer = runtime_cast<PlayerOnServer>(other)) {
 			if (_health > 0 && anotherPlayer->_health > 0 && !IsAttacking() && !anotherPlayer->IsAttacking()) {
 				ApplyPlayerBump(*anotherPlayer);
 			}
 		}
 
 		// TODO: Check player special move here
-		if (auto* weaponOwner = MpLevelHandler::GetWeaponOwner(other.get())) {
+		if (auto* weaponOwner = MpLevelHandler::GetWeaponOwner(other)) {
 			auto* otherPlayerOnServer = static_cast<PlayerOnServer*>(weaponOwner);
 			if (_health > 0 && GetPeerDescriptor()->Team != otherPlayerOnServer->GetPeerDescriptor()->Team) {
 				bool otherIsPlayer = false;
-				if (auto* anotherPlayer = runtime_cast<PlayerOnServer>(other.get())) {
+				if (auto* anotherPlayer = runtime_cast<PlayerOnServer>(other)) {
 					bool isAttacking = IsAttacking();
 					if (!isAttacking && !anotherPlayer->IsAttacking()) {
 						return true;
@@ -73,7 +73,7 @@ namespace Jazz2::Actors::Multiplayer
 				// Decrease remaining shield time by 5 secs
 				if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
 					_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
-				} else if (auto* freezerShot = runtime_cast<Weapons::FreezerShot>(other.get())) {
+				} else if (auto* freezerShot = runtime_cast<Weapons::FreezerShot>(other)) {
 					Freeze(3.0f * FrameTimer::FramesPerSecond);
 				} else {
 					TakeDamage(1, 4.0f * (_pos.X > other->GetPos().X ? 1.0f : -1.0f));
@@ -85,7 +85,7 @@ namespace Jazz2::Actors::Multiplayer
 			}
 		}
 
-		return Player::OnHandleCollision(std::move(other));
+		return Player::OnHandleCollision(other);
 	}
 
 	void PlayerOnServer::ApplyPlayerBump(PlayerOnServer& other)

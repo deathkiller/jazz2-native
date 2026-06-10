@@ -321,15 +321,9 @@ namespace Jazz2::Tiles
 						goto RecheckTile;
 					}
 				} else if (tile.DestructType == TileDestructType::Collapse && (params.DestructType & TileDestructType::Collapse) == TileDestructType::Collapse) {
-					bool found = false;
-					for (auto& current : _activeCollapsingTiles) {
-						if (current == Vector2i(x, y)) {
-							found = true;
-							break;
-						}
-					}
-
-					if (!found) {
+					// O(1) membership check via a runtime tile flag instead of scanning _activeCollapsingTiles
+					if ((tile.Flags & LayerTileFlags::Collapsing) != LayerTileFlags::Collapsing) {
+						tile.Flags |= LayerTileFlags::Collapsing;
 						_activeCollapsingTiles.emplace_back(x, y);
 						params.TilesDestroyed++;
 					}
@@ -456,15 +450,7 @@ namespace Jazz2::Tiles
 						return true;
 					}
 				} else if ((tile.DestructType & TileDestructType::Collapse) == TileDestructType::Collapse && (params.DestructType & TileDestructType::Collapse) == TileDestructType::Collapse) {
-					bool found = false;
-					for (auto& current : _activeCollapsingTiles) {
-						if (current == Vector2i(x, y)) {
-							found = true;
-							break;
-						}
-					}
-
-					if (!found) {
+					if ((tile.Flags & LayerTileFlags::Collapsing) != LayerTileFlags::Collapsing) {
 						return true;
 					}
 				}
@@ -666,6 +652,7 @@ namespace Jazz2::Tiles
 				std::int32_t amount = 1;
 				if (!AdvanceDestructibleTileAnimation(tile, tilePos.X, tilePos.Y, amount, "SceneryCollapse"_s)) {
 					tile.DestructType = TileDestructType::None;
+					tile.Flags = tile.Flags & ~LayerTileFlags::Collapsing;
 					it = _activeCollapsingTiles.eraseUnordered(it);
 					continue;
 				} else {

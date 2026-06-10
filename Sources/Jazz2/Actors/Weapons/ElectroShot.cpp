@@ -1,4 +1,4 @@
-﻿#include "ElectroShot.h"
+#include "ElectroShot.h"
 #include "../../ILevelHandler.h"
 #include "../../Events/EventMap.h"
 #include "../../Tiles/TileMap.h"
@@ -150,15 +150,15 @@ namespace Jazz2::Actors::Weapons
 		}
 	}
 
-	bool ElectroShot::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool ElectroShot::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase>(other.get())) {
+		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase>(other)) {
 			if (enemyBase->IsInvulnerable() || !enemyBase->CanCollideWithShots) {
 				return false;
 			}
 		}
 
-		return ShotBase::OnHandleCollision(std::move(other));
+		return ShotBase::OnHandleCollision(other);
 	}
 
 	bool ElectroShot::OnPerish(ActorBase* collider)

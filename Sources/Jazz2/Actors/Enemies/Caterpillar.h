@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "EnemyBase.h"
 
@@ -14,7 +14,7 @@ namespace Jazz2::Actors::Enemies
 
 		static void Preload(const ActorActivationDetails& details);
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
@@ -32,7 +32,7 @@ namespace Jazz2::Actors::Enemies
 			DEATH_RUNTIME_OBJECT(EnemyBase);
 
 		public:
-			bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+			bool OnHandleCollision(ActorBase* other) override;
 
 		protected:
 			Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

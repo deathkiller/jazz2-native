@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "EnemyBase.h"
 
@@ -19,7 +19,7 @@ namespace Jazz2::Actors::Enemies
 		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
 		bool OnPerish(ActorBase* collider) override;
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 		void OnHitFloor(float timeMult) override;
 
 	private:

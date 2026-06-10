@@ -1,4 +1,4 @@
-﻿#include "Pole.h"
+#include "Pole.h"
 #include "../../ILevelHandler.h"
 #include "../Weapons/ShotBase.h"
 #include "../Weapons/FreezerShot.h"
@@ -122,9 +122,9 @@ namespace Jazz2::Actors::Solid
 		Fall(fall);
 	}
 
-	bool Pole::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Pole::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 			if (shotBase->GetStrength() > 0) {
 				FallDirection fallDirection;
 				if (auto* thunderbolt = runtime_cast<Weapons::Thunderbolt>(shotBase)) {
@@ -139,7 +139,7 @@ namespace Jazz2::Actors::Solid
 				shotBase->DecreaseHealth(INT32_MAX);
 				return true;
 			}
-		} else if (auto* tnt = runtime_cast<Weapons::TNT>(other.get())) {
+		} else if (auto* tnt = runtime_cast<Weapons::TNT>(other)) {
 			Fall(tnt->GetPos().X > _pos.X ? FallDirection::Left : FallDirection::Right);
 			return true;
 		}

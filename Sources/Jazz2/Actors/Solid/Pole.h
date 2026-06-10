@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../ActorBase.h"
 
@@ -19,7 +19,7 @@ namespace Jazz2::Actors::Solid
 
 		Pole();
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 		bool CanCauseDamage(ActorBase* collider) override;
 
 		FallDirection GetFallDirection() const {

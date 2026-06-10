@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "GenericContainer.h"
 
@@ -12,7 +12,7 @@ namespace Jazz2::Actors::Solid
 	public:
 		AmmoCrate();
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 
 		static void Preload(const ActorActivationDetails& details);
 

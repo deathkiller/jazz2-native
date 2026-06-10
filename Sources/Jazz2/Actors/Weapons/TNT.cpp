@@ -1,4 +1,4 @@
-﻿#include "TNT.h"
+#include "TNT.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
@@ -47,15 +47,15 @@ namespace Jazz2::Actors::Weapons
 		async_return true;
 	}
 
-	bool TNT::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool TNT::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* tnt = runtime_cast<TNT>(other.get())) {
+		if (auto* tnt = runtime_cast<TNT>(other)) {
 			if (tnt->_isExploded && _timeLeft > 35.0f) {
 				_timeLeft = 35.0f;
 			}
 		}
 
-		return ActorBase::OnHandleCollision(std::move(other));
+		return ActorBase::OnHandleCollision(other);
 	}
 
 	Player* TNT::GetOwner()
@@ -109,7 +109,7 @@ namespace Jazz2::Actors::Weapons
 			PlaySfx("Explosion"_s);
 
 			_levelHandler->FindCollisionActorsByRadius(_pos.X, _pos.Y, 96.0f, [this](ActorBase* actor) {
-				actor->OnHandleCollision(shared_from_this());
+				actor->OnHandleCollision(this);
 				return true;
 			});
 

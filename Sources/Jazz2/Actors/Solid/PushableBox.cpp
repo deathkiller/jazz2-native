@@ -1,4 +1,4 @@
-﻿#include "PushableBox.h"
+#include "PushableBox.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 
@@ -42,9 +42,9 @@ namespace Jazz2::Actors::Solid
 		async_return true;
 	}
 
-	bool PushableBox::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool PushableBox::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 			WeaponType weaponType = shotBase->GetWeaponType();
 			if (weaponType == WeaponType::Blaster || weaponType == WeaponType::RF ||
 				weaponType == WeaponType::Seeker || weaponType == WeaponType::Pepper) {

@@ -1,4 +1,4 @@
-﻿#include "GemGiant.h"
+#include "GemGiant.h"
 #include "../../ILevelHandler.h"
 #include "../../Events/EventSpawner.h"
 #include "../Player.h"
@@ -32,18 +32,18 @@ namespace Jazz2::Actors::Collectibles
 		async_return true;
 	}
 
-	bool GemGiant::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool GemGiant::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 			if (shotBase->GetStrength() > 0) {
 				DecreaseHealth(shotBase->GetStrength(), shotBase);
 				shotBase->DecreaseHealth(1);
 				return true;
 			}
-		} else if (auto* tnt = runtime_cast<Weapons::TNT>(other.get())) {
+		} else if (auto* tnt = runtime_cast<Weapons::TNT>(other)) {
 			DecreaseHealth(INT32_MAX, tnt);
 			return true;
-		} else if (auto* player = runtime_cast<Player>(other.get())) {
+		} else if (auto* player = runtime_cast<Player>(other)) {
 			if (player->CanBreakSolidObjects()) {
 				DecreaseHealth(INT32_MAX, player);
 				return true;

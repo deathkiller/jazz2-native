@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../ActorBase.h"
 
@@ -17,7 +17,7 @@ namespace Jazz2::Actors::Collectibles
 	public:
 		CollectibleBase();
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 
 	protected:
 		/** @{ @name Constants */

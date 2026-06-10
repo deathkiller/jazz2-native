@@ -1,4 +1,4 @@
-﻿#include "Witch.h"
+#include "Witch.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
@@ -172,9 +172,9 @@ namespace Jazz2::Actors::Enemies
 		UpdateHitbox(10, 10);
 	}
 
-	bool Witch::MagicBullet::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool Witch::MagicBullet::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* player = runtime_cast<Player>(other.get())) {
+		if (auto* player = runtime_cast<Player>(other)) {
 			DecreaseHealth(INT32_MAX);
 			_owner->OnPlayerHit();
 

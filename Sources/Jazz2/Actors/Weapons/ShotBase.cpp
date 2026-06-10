@@ -1,4 +1,4 @@
-﻿#include "ShotBase.h"
+#include "ShotBase.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../../Events/EventMap.h"
@@ -64,9 +64,9 @@ namespace Jazz2::Actors::Weapons
 		}
 	}
 
-	bool ShotBase::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool ShotBase::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase>(other.get())) {
+		if (auto* enemyBase = runtime_cast<Enemies::EnemyBase>(other)) {
 			if (enemyBase->CanCollideWithShots) {
 				DecreaseHealth(INT32_MAX);
 			}

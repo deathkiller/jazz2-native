@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "ShotBase.h"
 
@@ -19,7 +19,7 @@ namespace Jazz2::Actors::Weapons
 			return WeaponType::Electro;
 		}
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

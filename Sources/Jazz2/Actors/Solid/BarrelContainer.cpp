@@ -1,4 +1,4 @@
-﻿#include "BarrelContainer.h"
+#include "BarrelContainer.h"
 #include "../../ILevelHandler.h"
 #include "../../Tiles/TileMap.h"
 #include "../Player.h"
@@ -33,13 +33,13 @@ namespace Jazz2::Actors::Solid
 		async_return true;
 	}
 
-	bool BarrelContainer::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool BarrelContainer::OnHandleCollision(ActorBase* other)
 	{
 		if (_health == 0) {
 			return GenericContainer::OnHandleCollision(other);
 		}
 
-		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other.get())) {
+		if (auto* shotBase = runtime_cast<Weapons::ShotBase>(other)) {
 			WeaponType weaponType = shotBase->GetWeaponType();
 			if (_levelHandler->IsReforged() &&
 				(weaponType == WeaponType::RF || weaponType == WeaponType::Seeker ||
@@ -50,17 +50,17 @@ namespace Jazz2::Actors::Solid
 				shotBase->TriggerRicochet(this);
 			}
 			return true;
-		} else if (auto* tnt = runtime_cast<Weapons::TNT>(other.get())) {
+		} else if (auto* tnt = runtime_cast<Weapons::TNT>(other)) {
 			DecreaseHealth(INT32_MAX, tnt);
 			return true;
-		} else if (auto* player = runtime_cast<Player>(other.get())) {
+		} else if (auto* player = runtime_cast<Player>(other)) {
 			if (player->CanBreakSolidObjects()) {
 				DecreaseHealth(INT32_MAX, player);
 				return true;
 			}
 		}
 
-		return GenericContainer::OnHandleCollision(std::move(other));
+		return GenericContainer::OnHandleCollision(other);
 	}
 
 	bool BarrelContainer::OnPerish(ActorBase* collider)

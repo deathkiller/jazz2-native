@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../ActorBase.h"
 
@@ -12,7 +12,7 @@ namespace Jazz2::Actors::Weapons
 	public:
 		TNT();
 
-		bool OnHandleCollision(std::shared_ptr<ActorBase> other) override;
+		bool OnHandleCollision(ActorBase* other) override;
 
 		/** @brief Returns owner of the TNT */
 		Player* GetOwner();

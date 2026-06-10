@@ -1,4 +1,4 @@
-﻿#include "CollectibleBase.h"
+#include "CollectibleBase.h"
 #include "../Player.h"
 #include "../Explosion.h"
 #include "../Weapons/ShotBase.h"
@@ -89,14 +89,14 @@ namespace Jazz2::Actors::Collectibles
 		}
 	}
 
-	bool CollectibleBase::OnHandleCollision(std::shared_ptr<ActorBase> other)
+	bool CollectibleBase::OnHandleCollision(ActorBase* other)
 	{
-		if (auto* player = runtime_cast<Player>(other.get())) {
+		if (auto* player = runtime_cast<Player>(other)) {
 			OnCollect(player);
 			return true;
 		} else {
-			bool shouldDrop = _untouched && (runtime_cast<Weapons::ShotBase>(other.get()) ||
-				runtime_cast<Weapons::TNT>(other.get()) || runtime_cast<Enemies::TurtleShell>(other.get()));
+			bool shouldDrop = _untouched && (runtime_cast<Weapons::ShotBase>(other) ||
+				runtime_cast<Weapons::TNT>(other) || runtime_cast<Enemies::TurtleShell>(other));
 			if (shouldDrop) {
 				Vector2f speed = other->GetSpeed();
 				_externalForce.X += speed.X / 2.0f * (0.9f + Random().NextFloat(0.0f, 0.2f));
