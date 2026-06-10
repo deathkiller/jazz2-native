@@ -343,6 +343,13 @@ namespace Jazz2::Tiles
 						continue;
 					}
 
+					// The clipped pixel window below is always non-empty for a covered tile, so a fully
+					// filled mask is guaranteed to collide - skip the per-pixel scan (flips don't matter
+					// for a fully filled mask)
+					if (tileSet->IsTileMaskFilled(tileId)) {
+						return false;
+					}
+
 					std::int32_t tx = x * TileSet::DefaultTileSize;
 					std::int32_t ty = y * TileSet::DefaultTileSize;
 
@@ -360,6 +367,22 @@ namespace Jazz2::Tiles
 						std::int32_t top2 = top;
 						top = (TileSet::DefaultTileSize - 1 - bottom);
 						bottom = (TileSet::DefaultTileSize - 1 - top2);
+					}
+
+					// Fast path: for tiles whose every column is vertically contiguous, an exact
+					// per-column span overlap test replaces the per-pixel scan. left/right/top/bottom
+					// are already flip-adjusted into mask space, and top/bottom are still row indices here.
+					if (tileSet->IsColumnContiguous(tileId)) {
+						const std::uint8_t* spans = tileSet->GetColumnSpans(tileId);
+						for (std::int32_t rx = left; rx <= right; rx++) {
+							std::int32_t spanTop = spans[rx * 2];
+							std::int32_t spanBottom = spans[rx * 2 + 1];
+							// Empty columns have spanTop == 0xFF, which never satisfies spanTop <= bottom
+							if (spanTop <= bottom && spanBottom >= top) {
+								return false;
+							}
+						}
+						continue;
 					}
 
 					top *= TileSet::DefaultTileSize;
@@ -454,6 +477,13 @@ namespace Jazz2::Tiles
 						continue;
 					}
 
+					// The clipped pixel window below is always non-empty for a covered tile, so a fully
+					// filled mask is guaranteed to collide - skip the per-pixel scan (flips don't matter
+					// for a fully filled mask)
+					if (tileSet->IsTileMaskFilled(tileId)) {
+						return false;
+					}
+
 					std::int32_t tx = x * TileSet::DefaultTileSize;
 					std::int32_t ty = y * TileSet::DefaultTileSize;
 
@@ -471,6 +501,22 @@ namespace Jazz2::Tiles
 						std::int32_t top2 = top;
 						top = (TileSet::DefaultTileSize - 1 - bottom);
 						bottom = (TileSet::DefaultTileSize - 1 - top2);
+					}
+
+					// Fast path: for tiles whose every column is vertically contiguous, an exact
+					// per-column span overlap test replaces the per-pixel scan. left/right/top/bottom
+					// are already flip-adjusted into mask space, and top/bottom are still row indices here.
+					if (tileSet->IsColumnContiguous(tileId)) {
+						const std::uint8_t* spans = tileSet->GetColumnSpans(tileId);
+						for (std::int32_t rx = left; rx <= right; rx++) {
+							std::int32_t spanTop = spans[rx * 2];
+							std::int32_t spanBottom = spans[rx * 2 + 1];
+							// Empty columns have spanTop == 0xFF, which never satisfies spanTop <= bottom
+							if (spanTop <= bottom && spanBottom >= top) {
+								return false;
+							}
+						}
+						continue;
 					}
 
 					top *= TileSet::DefaultTileSize;

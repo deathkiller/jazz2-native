@@ -64,6 +64,29 @@ namespace Jazz2::Tiles
 			return _isMaskFilled[tileId];
 		}
 
+		/**
+		 * @brief Returns `true` if every column of the tile's mask is vertically contiguous (no gaps),
+		 * which allows replacing the per-pixel collision scan with an exact per-column span test
+		 */
+		bool IsColumnContiguous(std::int32_t tileId) const
+		{
+			if (tileId >= TileCount) {
+				return false;
+			}
+
+			return _isColumnContiguous[tileId];
+		}
+
+		/**
+		 * @brief Returns per-column solid spans for a tile (2 bytes per column: first solid row, last
+		 * solid row; a first row of `0xFF` marks an empty column). Only meaningful when
+		 * @ref IsColumnContiguous() returns `true`
+		 */
+		const std::uint8_t* GetColumnSpans(std::int32_t tileId) const
+		{
+			return &_columnSpans[tileId * DefaultTileSize * 2];
+		}
+
 		/** @brief Returns `true` if the texture of a tile is completely opaque (non-transparent) */
 		bool IsTileFilled(std::int32_t tileId) const
 		{
@@ -87,9 +110,11 @@ namespace Jazz2::Tiles
 
 	private:
 		std::unique_ptr<uint8_t[]> _mask;
+		std::unique_ptr<std::uint8_t[]> _columnSpans;
 		std::unique_ptr<Color[]> _captionTile;
 		BitArray _isMaskEmpty;
 		BitArray _isMaskFilled;
 		BitArray _isTileFilled;
+		BitArray _isColumnContiguous;
 	};
 }

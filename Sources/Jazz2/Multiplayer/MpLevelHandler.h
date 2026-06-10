@@ -208,6 +208,8 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerSetLives(Actors::Player* player, std::int32_t count);
 		/** @brief Called when a player takes a damage */
 		void HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce);
+		/** @brief Called when a player is bumped by another player to synchronize the resulting knockback */
+		void HandlePlayerBumped(Actors::Player* player);
 		/** @brief Called when a player requests to synchronize weapon ammo */
 		void HandlePlayerRefreshAmmo(Actors::Player* player, WeaponType weaponType);
 		/** @brief Called when a player requests to synchronize weapon upgrades */

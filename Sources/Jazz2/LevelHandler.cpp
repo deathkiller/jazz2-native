@@ -1824,8 +1824,8 @@ namespace Jazz2
 				if (actorA->IsCollidingWith(actorB)) {
 					std::shared_ptr<Actors::ActorBase> actorSharedA = actorA->shared_from_this();
 					std::shared_ptr<Actors::ActorBase> actorSharedB = actorB->shared_from_this();
-					if (!actorSharedA->OnHandleCollision(actorSharedB->shared_from_this())) {
-						actorSharedB->OnHandleCollision(actorSharedA->shared_from_this());
+					if (!actorSharedA->OnHandleCollision(actorSharedB)) {
+						actorSharedB->OnHandleCollision(actorSharedA);
 					}
 				}
 			}

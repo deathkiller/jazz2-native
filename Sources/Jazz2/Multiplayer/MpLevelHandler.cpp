@@ -1435,6 +1435,27 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::HandlePlayerBumped(Actors::Player* player)
+	{
+		// TODO: Only called by PlayerOnServer
+		if (_isServer) {
+			auto* mpPlayer = static_cast<PlayerOnServer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			// The owning client simulates its own physics, so resync the post-bump position and velocity;
+			// reuses the existing PlayerMoveInstantly packet.
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(16);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.X * 512.0f));
+				packet.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.Y * 512.0f));
+				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.X * 512.0f));
+				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.Y * 512.0f));
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet);
+			}
+		}
+	}
+
 	void MpLevelHandler::HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce)
 	{
 		// TODO: Only called by PlayerOnServer
@@ -3349,6 +3370,43 @@ namespace Jazz2::Multiplayer
 					// TODO: Special move
 
 					if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player)) {
+						// Anti-cheat: reject client-reported movement that is physically impossible
+						// (speedhack / teleport). Bounds are intentionally generous so latency, springs, sugar
+						// rush and similar legitimate bursts never trip them; only gross violations are corrected.
+						constexpr float MaxPlausibleSpeed = 32.0f;	// Per axis; normal clamp is 16, boosted states stay well under
+						constexpr float MaxPlausibleStep = 600.0f;	// Max accepted position change in a single update (px)
+
+						bool corrected = false;
+						if (std::abs(speedX) > MaxPlausibleSpeed || std::abs(speedY) > MaxPlausibleSpeed) {
+							LOGW("[MP] Clamped implausible speed from player {} ({:.1f}, {:.1f})", playerIndex, speedX, speedY);
+							speedX = std::clamp(speedX, -MaxPlausibleSpeed, MaxPlausibleSpeed);
+							speedY = std::clamp(speedY, -MaxPlausibleSpeed, MaxPlausibleSpeed);
+							corrected = true;
+						}
+
+						// Skip the teleport check while warping, which legitimately moves a player far at once
+						if (!remotePlayerOnServer->_justWarped) {
+							float stepDistSqr = (Vector2f(posX, posY) - remotePlayerOnServer->_pos).SqrLength();
+							if (stepDistSqr > MaxPlausibleStep * MaxPlausibleStep) {
+								LOGW("[MP] Rejected implausible teleport from player {} ({} px in one update)",
+									playerIndex, (std::int32_t)std::sqrt(stepDistSqr));
+								posX = remotePlayerOnServer->_pos.X;
+								posY = remotePlayerOnServer->_pos.Y;
+								corrected = true;
+							}
+						}
+
+						if (corrected) {
+							// Snap the offending client back to the accepted authoritative state
+							MemoryStream packet2(16);
+							packet2.WriteVariableUint32(remotePlayerOnServer->_playerIndex);
+							packet2.WriteValue<std::int32_t>((std::int32_t)(posX * 512.0f));
+							packet2.WriteValue<std::int32_t>((std::int32_t)(posY * 512.0f));
+							packet2.WriteValue<std::int16_t>((std::int16_t)(speedX * 512.0f));
+							packet2.WriteValue<std::int16_t>((std::int16_t)(speedY * 512.0f));
+							_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet2);
+						}
+
 						bool wasIdle = (remotePlayerOnServer->Flags & (RemotePlayerOnServer::PlayerFlags::InMenu | RemotePlayerOnServer::PlayerFlags::InMenu)) != RemotePlayerOnServer::PlayerFlags::None;
 						bool isIdle = (flags & (RemotePlayerOnServer::PlayerFlags::InMenu | RemotePlayerOnServer::PlayerFlags::InMenu)) != RemotePlayerOnServer::PlayerFlags::None;
 
