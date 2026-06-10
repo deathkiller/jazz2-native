@@ -64,7 +64,7 @@ namespace Jazz2::Multiplayer
 	// TODO: levelState is unused, it needs to be set after LevelState::InitialUpdatePending is processed
 	MpLevelHandler::MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpLevelHandler::LevelState levelState, bool enableLedgeClimb)
 		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f), _gameTimeLeft(0.0f),
-			_levelState(LevelState::InitialUpdatePending), _forceResyncPending(true), _enableSpawning(true), _lastSpawnedActorId(-1), _waitingForPlayerCount(0),
+			_levelState(LevelState::InitialUpdatePending), _forceResyncPending(true), _enableSpawning(true), _enqueuedPlaylistChange(false), _lastSpawnedActorId(-1), _waitingForPlayerCount(0),
 			_lastUpdated(0), _seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _enableLedgeClimb(enableLedgeClimb),
 			_controllableExternal(true), _autoWeightTreasure(false), _activePoll(VoteType::None), _activePollTimeLeft(0.0f), _recalcPositionInRoundTime(0.0f),
 			_overtimeTimeLeft(0.0f), _overtimeStarted(false), _overtimeFinishers(0),
@@ -1004,10 +1004,9 @@ namespace Jazz2::Multiplayer
 					Random().Shuffle<PlaylistEntry>(serverConfig.Playlist);
 				}
 			}
-			// TODO: Implement transition
-			if (ApplyFromPlaylist()) {
-				return;
-			}
+			// Don't switch immediately - play the warp-out transition first (like a normal level change) and
+			// apply the playlist entry once it finishes (see HandleLevelChange)
+			_enqueuedPlaylistChange = true;
 		}
 
 		LevelHandler::BeginLevelChange(initiator, exitType, nextLevel);
@@ -1093,6 +1092,15 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::HandleLevelChange(LevelInitialization&& levelInit)
 	{
+		// End-of-episode playlist change was deferred until the warp-out transition finished (see BeginLevelChange).
+		// ApplyFromPlaylist() builds its own initialization and re-enters this method with the flag cleared.
+		if (_enqueuedPlaylistChange) {
+			_enqueuedPlaylistChange = false;
+			if (ApplyFromPlaylist()) {
+				return;
+			}
+		}
+
 		levelInit.IsLocalSession = false;
 		LevelHandler::HandleLevelChange(std::move(levelInit));
 	}
@@ -1435,6 +1443,13 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::HandlePlayerPushed(Actors::Player* player)
+	{
+		// A server-side force was applied to the player (boss attack, explosion, bumper, ...). Resync the
+		// resulting position/velocity to the owning client so it isn't overwritten by the client's own state.
+		HandlePlayerBumped(player);
+	}
+
 	void MpLevelHandler::HandlePlayerBumped(Actors::Player* player)
 	{
 		// TODO: Only called by PlayerOnServer
@@ -1445,12 +1460,14 @@ namespace Jazz2::Multiplayer
 			// The owning client simulates its own physics, so resync the post-bump position and velocity;
 			// reuses the existing PlayerMoveInstantly packet.
 			if (peerDesc->RemotePeer) {
-				MemoryStream packet(16);
+				MemoryStream packet(20);
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
 				packet.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.X * 512.0f));
 				packet.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.Y * 512.0f));
 				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.X * 512.0f));
 				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.Y * 512.0f));
+				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.X * 512.0f));
+				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.Y * 512.0f));
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet);
 			}
 		}
@@ -1752,12 +1769,14 @@ namespace Jazz2::Multiplayer
 					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
 				}
 
-				MemoryStream packet(16);
+				MemoryStream packet(20);
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
 				packet.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.X * 512.0f));
 				packet.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.Y * 512.0f));
 				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.X * 512.0f));
 				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.Y * 512.0f));
+				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.X * 512.0f));
+				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.Y * 512.0f));
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet);
 			}
 		} else {
@@ -3338,12 +3357,14 @@ namespace Jazz2::Multiplayer
 
 						if (corrected) {
 							// Snap the offending client back to the accepted authoritative state
-							MemoryStream packet2(16);
+							MemoryStream packet2(20);
 							packet2.WriteVariableUint32(remotePlayerOnServer->_playerIndex);
 							packet2.WriteValue<std::int32_t>((std::int32_t)(posX * 512.0f));
 							packet2.WriteValue<std::int32_t>((std::int32_t)(posY * 512.0f));
 							packet2.WriteValue<std::int16_t>((std::int16_t)(speedX * 512.0f));
 							packet2.WriteValue<std::int16_t>((std::int16_t)(speedY * 512.0f));
+							packet2.WriteValue<std::int16_t>((std::int16_t)(remotePlayerOnServer->_externalForce.X * 512.0f));
+							packet2.WriteValue<std::int16_t>((std::int16_t)(remotePlayerOnServer->_externalForce.Y * 512.0f));
 							_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet2);
 						}
 
@@ -4488,14 +4509,16 @@ namespace Jazz2::Multiplayer
 					float posY = packet.ReadValue<std::int32_t>() / 512.0f;
 					float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
 					float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
+					float externalForceX = packet.ReadValue<std::int16_t>() / 512.0f;
+					float externalForceY = packet.ReadValue<std::int16_t>() / 512.0f;
 
 					LOGD("[MP] ServerPacketType::PlayerMoveInstantly - playerIndex: {}, x: {}, y: {}, sx: {}, sy: {}",
 						playerIndex, posX, posY, speedX, speedY);
 
-					InvokeAsync([this, posX, posY, speedX, speedY]() {
+					InvokeAsync([this, posX, posY, speedX, speedY, externalForceX, externalForceY]() {
 						if (!_players.empty()) {
 							auto* player = static_cast<RemotablePlayer*>(_players[0]);
-							player->MoveRemotely(Vector2f(posX, posY), Vector2f(speedX, speedY));
+							player->MoveRemotely(Vector2f(posX, posY), Vector2f(speedX, speedY), Vector2f(externalForceX, externalForceY));
 						}
 					});
 					return true;

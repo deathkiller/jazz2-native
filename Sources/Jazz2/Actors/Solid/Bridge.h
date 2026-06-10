@@ -20,6 +20,8 @@ namespace Jazz2::Actors::Solid
 		void OnUpdate(float timeMult) override;
 		void OnUpdateHitbox() override;
 		bool OnDraw(RenderQueue& renderQueue) override;
+		/** @brief Applies authoritative sag state received from the server (clients only, in multiplayer) */
+		void OnPacketReceived(MemoryStream& packet) override;
 
 	private:
 		enum class BridgeType {
@@ -60,9 +62,15 @@ namespace Jazz2::Actors::Solid
 		std::int32_t _widthOffset;
 
 		float _leftX, _leftHeight, _rightX, _rightHeight;
+		// Server-authoritative sag (accounts for all players including remote ones); used on clients for
+		// rendering in addition to the locally-computed sag so the bridge bends under remote players too
+		float _syncLeftX, _syncLeftHeight, _syncRightX, _syncRightHeight;
+		float _sagSyncTimer;
+		bool _sagWasActive;
 
 		SmallVector<BridgePiece, 0> _pieces;
 
 		float GetSectionHeight(float x) const;
+		float GetDropAt(float widthCovered, float leftX, float leftHeight, float rightX, float rightHeight) const;
 	};
 }

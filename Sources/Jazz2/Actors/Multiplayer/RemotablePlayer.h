@@ -26,7 +26,7 @@ namespace Jazz2::Actors::Multiplayer
 		/** @brief Warps the player in */
 		void WarpIn(ExitType exitType);
 		/** @brief Moves the player remotely */
-		void MoveRemotely(Vector2f pos, Vector2f speed);
+		void MoveRemotely(Vector2f pos, Vector2f speed, Vector2f externalForce = Vector2f::Zero);
 
 		bool Respawn(Vector2f pos) override;
 

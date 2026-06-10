@@ -6,10 +6,15 @@
 
 #include "../../../nCine/Graphics/RenderQueue.h"
 
+#include <IO/MemoryStream.h>
+
+using namespace Death::IO;
+
 namespace Jazz2::Actors::Solid
 {
 	Bridge::Bridge()
-		: _widths(nullptr), _widthsCount(0), _widthOffset(0), _leftX(0.0f), _leftHeight(0.0f), _rightX(0.0f), _rightHeight(0.0f)
+		: _widths(nullptr), _widthsCount(0), _widthOffset(0), _leftX(0.0f), _leftHeight(0.0f), _rightX(0.0f), _rightHeight(0.0f),
+			_syncLeftX(0.0f), _syncLeftHeight(0.0f), _syncRightX(0.0f), _syncRightHeight(0.0f), _sagSyncTimer(0.0f), _sagWasActive(false)
 	{
 	}
 
@@ -154,36 +159,65 @@ namespace Jazz2::Actors::Solid
 			_rightHeight = lerpByTime(_rightHeight, 0.0f, 0.1f, timeMult);
 		}
 
-		auto& resolver = ContentResolver::Get();
-		if (!resolver.IsHeadless()) {
-			if (_leftHeight <= 0.001f && _rightHeight <= 0.001f) {
-				// Render straight bridge
-				std::int32_t widthCovered = _widths[0] / 2 - _widthOffset;
-				for (std::int32_t i = 0; widthCovered <= _bridgeWidth + 4; i++) {
-					BridgePiece& piece = _pieces[i];
-					piece.Pos = Vector2f(_pos.X + widthCovered - 16, _pos.Y);
-					widthCovered += (_widths[i % _widthsCount] + _widths[(i + 1) % _widthsCount]) / 2;
-				}
-			} else {
-				// Render deformed bridge
-				std::int32_t widthCovered = _widths[0] / 2 - _widthOffset;
-				for (std::int32_t i = 0; widthCovered <= _bridgeWidth + 4; i++) {
-					float drop;
-					if (widthCovered < _leftX) {
-						drop = _leftHeight * sinf(fPiOver2 * widthCovered / _leftX);
-					} else if (_rightX < widthCovered) {
-						drop = _rightHeight * sinf(fPiOver2 * (_bridgeWidth - widthCovered) / (_bridgeWidth - _rightX));
-					} else {
-						drop = lerp(_leftHeight, _rightHeight, (widthCovered - _leftX) / (_rightX - _leftX));
-					}
+		// The server sees all players and computes the authoritative sag; broadcast it via the actor RPC so
+		// clients render the bridge bending under remote players too (a client only sees its local player).
+		// Local/single-player sessions take no action here (SendPacket is a no-op) and render from local sag.
+		if (_levelHandler->IsServer() && !_levelHandler->IsLocalSession()) {
+			bool active = (_leftHeight > 0.001f || _rightHeight > 0.001f);
+			if (active || _sagWasActive) {
+				_sagSyncTimer -= timeMult;
+				if (_sagSyncTimer <= 0.0f) {
+					_sagSyncTimer = 3.0f;
+					_sagWasActive = active;
 
-					BridgePiece& piece = _pieces[i];
-					piece.Pos.Y = _pos.Y + drop;
-
-					widthCovered += (_widths[i % _widthsCount] + _widths[(i + 1) % _widthsCount]) / 2;
+					MemoryStream packet(12);
+					packet.WriteValue<std::int32_t>((std::int32_t)(_leftX * 512.0f));
+					packet.WriteValue<std::int16_t>((std::int16_t)(_leftHeight * 256.0f));
+					packet.WriteValue<std::int32_t>((std::int32_t)(_rightX * 512.0f));
+					packet.WriteValue<std::int16_t>((std::int16_t)(_rightHeight * 256.0f));
+					SendPacket(arrayView(packet.GetBuffer(), packet.GetSize()));
 				}
 			}
 		}
+
+		auto& resolver = ContentResolver::Get();
+		if (!resolver.IsHeadless()) {
+			// Render each piece at the deeper of the locally-computed sag and the server-synced sag (the latter
+			// is zero except on multiplayer clients), so the bridge reflects the weight of all players
+			std::int32_t widthCovered = _widths[0] / 2 - _widthOffset;
+			for (std::int32_t i = 0; widthCovered <= _bridgeWidth + 4; i++) {
+				float drop = std::max(GetDropAt((float)widthCovered, _leftX, _leftHeight, _rightX, _rightHeight),
+					GetDropAt((float)widthCovered, _syncLeftX, _syncLeftHeight, _syncRightX, _syncRightHeight));
+
+				BridgePiece& piece = _pieces[i];
+				piece.Pos = Vector2f(_pos.X + widthCovered - 16, _pos.Y + drop);
+
+				widthCovered += (_widths[i % _widthsCount] + _widths[(i + 1) % _widthsCount]) / 2;
+			}
+		}
+	}
+
+	float Bridge::GetDropAt(float widthCovered, float leftX, float leftHeight, float rightX, float rightHeight) const
+	{
+		if (leftHeight <= 0.001f && rightHeight <= 0.001f) {
+			return 0.0f;
+		}
+		if (widthCovered < leftX) {
+			return (leftX > 0.0f ? leftHeight * sinf(fPiOver2 * widthCovered / leftX) : leftHeight);
+		} else if (rightX < widthCovered) {
+			return (_bridgeWidth > rightX ? rightHeight * sinf(fPiOver2 * (_bridgeWidth - widthCovered) / (_bridgeWidth - rightX)) : rightHeight);
+		} else {
+			return (rightX > leftX ? lerp(leftHeight, rightHeight, (widthCovered - leftX) / (rightX - leftX)) : leftHeight);
+		}
+	}
+
+	void Bridge::OnPacketReceived(MemoryStream& packet)
+	{
+		// Authoritative sag from the server (clients only); used together with the locally-computed sag when rendering
+		_syncLeftX = packet.ReadValue<std::int32_t>() / 512.0f;
+		_syncLeftHeight = packet.ReadValue<std::int16_t>() / 256.0f;
+		_syncRightX = packet.ReadValue<std::int32_t>() / 512.0f;
+		_syncRightHeight = packet.ReadValue<std::int16_t>() / 256.0f;
 	}
 
 	void Bridge::OnUpdateHitbox()

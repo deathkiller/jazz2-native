@@ -118,6 +118,7 @@ namespace Jazz2::Actors::Weapons
 			if (auto* player = runtime_cast<Player>(actor)) {
 				bool pushLeft = (_pos.X > player->GetPos().X);
 				player->AddExternalForce(pushLeft ? -4.0f : 4.0f, 0.0f);
+				_levelHandler->HandlePlayerPushed(player);
 			}
 			return true;
 		});

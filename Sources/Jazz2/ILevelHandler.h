@@ -147,6 +147,9 @@ namespace Jazz2
 		virtual bool HandlePlayerDied(Actors::Player* player) = 0;
 		/** @brief Called when a player warps */
 		virtual void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) = 0;
+		/** @brief Called after a server-side force/knockback is applied to a player so the change can be
+			synchronized to the owning client in a non-local session (no-op in local/single-player sessions) */
+		virtual void HandlePlayerPushed(Actors::Player* player) {}
 		/** @brief Called when a player collects or losts coins */
 		virtual void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) = 0;
 		/** @brief Called when a player collects or losts gems */

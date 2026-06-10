@@ -96,11 +96,12 @@ namespace Jazz2::Actors::Multiplayer
 		});
 	}
 
-	void RemotablePlayer::MoveRemotely(Vector2f pos, Vector2f speed)
+	void RemotablePlayer::MoveRemotely(Vector2f pos, Vector2f speed, Vector2f externalForce)
 	{
 		Vector2f posPrev = _pos;
 		MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 		_speed = speed;
+		_externalForce = externalForce;
 
 		if (_warpPending) {
 			_warpPending = false;

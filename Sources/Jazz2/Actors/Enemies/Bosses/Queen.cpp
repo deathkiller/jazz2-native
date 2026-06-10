@@ -232,8 +232,9 @@ namespace Jazz2::Actors::Bosses
 						continue;
 					}
 
-					//player->AddExternalForce(-1.5f * timeMult, 0.0f);
 					player->MoveInstantly(Vector2f(-1.5f * timeMult, 0.0f), MoveType::Relative);
+					// Resync the push to the owning client, otherwise remote players aren't affected in multiplayer
+					_levelHandler->HandlePlayerPushed(player);
 				}
 				break;
 			}

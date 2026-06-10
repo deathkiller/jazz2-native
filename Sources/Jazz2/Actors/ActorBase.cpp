@@ -306,9 +306,25 @@ namespace Jazz2::Actors
 					// First, attempt to move horizontally as much as possible
 					float maxDiff = std::abs(effectiveSpeedX);
 					float xDiff = maxDiff;
-					for (; xDiff > std::numeric_limits<float>::epsilon(); xDiff -= CollisionCheckStep) {
-						if (MoveInstantly(Vector2f(std::copysign(xDiff, effectiveSpeedX), 0.0f), MoveType::Relative, params)) {
-							break;
+					// For mostly-horizontal airborne movement (e.g. Spaz/Lori sidekick), climb gentle upslopes
+					// instead of stopping at their foot: if the straight horizontal step is blocked, retry the
+					// full step with an increasing upward offset. Flat ground / open air succeed on the straight
+					// step, so there is no upward drift, and steep walls still block (xDiff stays full on success).
+					bool movedHorizontally = MoveInstantly(Vector2f(effectiveSpeedX, 0.0f), MoveType::Relative, params);
+					if (!movedHorizontally && std::abs(effectiveSpeedX) > std::abs(effectiveSpeedY)) {
+						float maxClimb = std::abs(effectiveSpeedX) + 2.5f;
+						for (float yUp = CollisionCheckStep; yUp <= maxClimb; yUp += CollisionCheckStep) {
+							if (MoveInstantly(Vector2f(effectiveSpeedX, -yUp), MoveType::Relative, params)) {
+								movedHorizontally = true;
+								break;
+							}
+						}
+					}
+					if (!movedHorizontally) {
+						for (; xDiff > std::numeric_limits<float>::epsilon(); xDiff -= CollisionCheckStep) {
+							if (MoveInstantly(Vector2f(std::copysign(xDiff, effectiveSpeedX), 0.0f), MoveType::Relative, params)) {
+								break;
+							}
 						}
 					}
 

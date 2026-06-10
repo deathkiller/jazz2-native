@@ -84,6 +84,9 @@ namespace Jazz2::Actors::Solid
 
 					// TODO: Check this
 					player->AddScore(500);
+
+					// Resync the knockback to the owning client, otherwise remote players aren't affected in multiplayer
+					_levelHandler->HandlePlayerPushed(player);
 				}
 				return true;
 			});

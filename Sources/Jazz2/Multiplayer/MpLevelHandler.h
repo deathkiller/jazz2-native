@@ -109,6 +109,7 @@ namespace Jazz2::Multiplayer
 		void HandleGameOver(Actors::Player* player) override;
 		bool HandlePlayerDied(Actors::Player* player) override;
 		void HandlePlayerWarped(Actors::Player* player, Vector2f prevPos, WarpFlags flags) override;
+		void HandlePlayerPushed(Actors::Player* player) override;
 		void HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount) override;
 		void HandlePlayerGems(Actors::Player* player, std::uint8_t gemType, std::int32_t prevCount, std::int32_t newCount) override;
 		void SetCheckpoint(Actors::Player* player, Vector2f pos) override;
@@ -300,6 +301,7 @@ namespace Jazz2::Multiplayer
 		bool _isServer;
 		bool _forceResyncPending;
 		bool _enableSpawning;
+		bool _enqueuedPlaylistChange; // Server: apply the next playlist entry once the end-of-level transition finishes
 		HashMap<std::uint32_t, std::shared_ptr<Actors::ActorBase>> _remoteActors; // Client: Actor ID -> Remote Actor created by server
 		HashMap<Actors::ActorBase*, RemotingActorInfo> _remotingActors; // Server: Local Actor created by server -> Info
 		HashMap<std::uint32_t, PlayerName> _playerNames; // Client: Actor ID -> Player name (and flags)
