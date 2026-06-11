@@ -57,7 +57,7 @@ namespace Jazz2
 #if defined(WITH_AUDIO)
 			_cachedSounds(192),
 #endif
-			_palettes{}
+			_palettes{}, _defaultPaletteDirty(true)
 	{
 		InitializePaths();
 	}
@@ -469,10 +469,14 @@ namespace Jazz2
 		RequestMetadata(path);
 	}
 
-	Metadata* ContentResolver::RequestMetadata(StringView path)
+	Metadata* ContentResolver::RequestMetadata(StringView path, bool forceIndexed)
 	{
 		String pathNormalized = fs::ToNativeSeparators(path);
-		auto it = _cachedMetadata.find(pathNormalized);
+		// Indexed metadata (animations loaded with keepIndexed for runtime recoloring) is cached under a separate
+		// key - "*" can't appear in a real path - so a baked load of the same path can't shadow the indexed variant
+		// the player needs (and vice versa). Without this, whichever variant loads first wins for everyone.
+		String cacheKey = (forceIndexed ? String(pathNormalized + "*"_s) : String(pathNormalized));
+		auto it = _cachedMetadata.find(cacheKey);
 		if (it != _cachedMetadata.end()) {
 			// Already loaded - Mark as referenced
 			it->second->Flags |= MetadataFlags::Referenced;
@@ -507,6 +511,8 @@ namespace Jazz2
 
 		std::unique_ptr<Metadata> metadata = std::make_unique<Metadata>();
 		metadata->Path = std::move(pathNormalized);
+		// The cache key references this string (the map key is a non-owning Reference), so it lives inside the value
+		metadata->CacheKey = std::move(cacheKey);
 		metadata->Flags |= MetadataFlags::Referenced;
 
 		Json::CharReaderBuilder builder;
@@ -530,25 +536,24 @@ namespace Jazz2
 					GraphicResource graphics;
 					graphics.LoopMode = AnimationLoopMode::Loop;
 
-					//bool keepIndexed = false;
+					bool keepIndexed = forceIndexed;
 
 					std::int64_t flags;
 					if ((*it)["Flags"].get(flags) == Json::SUCCESS) {
 						if ((flags & 0x01) == 0x01) {
 							graphics.LoopMode = AnimationLoopMode::Once;
 						}
-						//if ((flags & 0x02) == 0x02) {
-						//	keepIndexed = true;
-						//}
+						if ((flags & 0x02) == 0x02) {
+							keepIndexed = true;
+						}
 					}
 
-					// TODO: Implement true indexed sprites
 					std::int64_t paletteOffset;
 					if ((*it)["PaletteOffset"].get(paletteOffset) != Json::SUCCESS || paletteOffset < 0) {
 						paletteOffset = 0;
 					}
 
-					graphics.Base = RequestGraphics(assetPath, (std::uint16_t)paletteOffset);
+					graphics.Base = RequestGraphics(assetPath, (std::uint16_t)paletteOffset, keepIndexed);
 					if (graphics.Base == nullptr) {
 						continue;
 					}
@@ -653,16 +658,19 @@ namespace Jazz2
 			}
 		}
 
-		return _cachedMetadata.emplace(metadata->Path, std::move(metadata)).first->second.get();
+		return _cachedMetadata.emplace(metadata->CacheKey, std::move(metadata)).first->second.get();
 	}
 
-	GenericGraphicResource* ContentResolver::RequestGraphics(StringView path, std::uint16_t paletteOffset)
+	GenericGraphicResource* ContentResolver::RequestGraphics(StringView path, std::uint16_t paletteOffset, bool keepIndexed)
 	{
 		// First resources are requested, reset _isLoading flag, because palette should be already applied
 		_isLoading = false;
 
+		// Indexed sprites don't bake a palette, so they're cached under a dedicated key (independent of paletteOffset)
+		std::uint16_t cacheKeyOffset = (keepIndexed ? IndexedGraphicsCacheKey : paletteOffset);
+
 		auto pathNormalized = fs::ToNativeSeparators(path);
-		auto it = _cachedGraphics.find(Pair(String::nullTerminatedView(pathNormalized), paletteOffset));
+		auto it = _cachedGraphics.find(Pair(String::nullTerminatedView(pathNormalized), cacheKeyOffset));
 		if (it != _cachedGraphics.end()) {
 			// Already loaded - Mark as referenced
 			it->second->Flags |= GenericGraphicResourceFlags::Referenced;
@@ -670,7 +678,7 @@ namespace Jazz2
 		}
 
 		if (fs::GetExtension(pathNormalized) == "aura"_s) {
-			return RequestGraphicsAura(pathNormalized, paletteOffset);
+			return RequestGraphicsAura(pathNormalized, paletteOffset, keepIndexed);
 		}
 
 		auto s = fs::Open(fs::CombinePath({ GetContentPath(), "Animations"_s, String(pathNormalized + ".res"_s) }), FileAccess::Read);
@@ -720,6 +728,13 @@ namespace Jazz2
 					if ((flags & 0x08) == 0x08) {
 						needsMask = false;
 					}
+				}
+
+				// Keep the raw palette indices in the texture (red channel) instead of baking colors, so it can be
+				// recolored at draw time by the PaletteRemap shader. Only meaningful for actually-indexed sprites.
+				if (keepIndexed && palette != nullptr) {
+					palette = nullptr;
+					graphics->Flags |= GenericGraphicResourceFlags::Indexed;
 				}
 
 				if (needsMask) {
@@ -777,14 +792,14 @@ namespace Jazz2
 #if defined(DEATH_DEBUG)
 				MigrateGraphics(pathNormalized);
 #endif
-				return _cachedGraphics.emplace(Pair(String(pathNormalized), paletteOffset), std::move(graphics)).first->second.get();
+				return _cachedGraphics.emplace(Pair(String(pathNormalized), cacheKeyOffset), std::move(graphics)).first->second.get();
 			}
 		}
 
 		return nullptr;
 	}
 
-	GenericGraphicResource* ContentResolver::RequestGraphicsAura(StringView path, std::uint16_t paletteOffset)
+	GenericGraphicResource* ContentResolver::RequestGraphicsAura(StringView path, std::uint16_t paletteOffset, bool keepIndexed)
 	{
 		auto s = OpenContentFile(fs::CombinePath("Animations"_s, path));
 
@@ -840,6 +855,13 @@ namespace Jazz2
 		}
 		if ((flags & 0x02) == 0x02) {
 			needsMask = false;
+		}
+
+		// Keep the raw palette indices in the texture (red channel) instead of baking colors, so the sprite can be
+		// recolored at draw time by the PaletteRemap shader. Only meaningful for actually palette-based sprites.
+		if (keepIndexed && palette != nullptr) {
+			palette = nullptr;
+			graphics->Flags |= GenericGraphicResourceFlags::Indexed;
 		}
 
 		if (needsMask) {
@@ -899,7 +921,10 @@ namespace Jazz2
 			graphics->Gunspot = Vector2i(InvalidValue, InvalidValue);
 		}
 
-		return _cachedGraphics.emplace(Pair(String(path), paletteOffset), std::move(graphics)).first->second.get();
+		// Indexed sprites are cached under a dedicated key (matching the lookup in RequestGraphics) so they don't
+		// collide with the baked variant of the same sprite
+		std::uint16_t cacheKeyOffset = (keepIndexed ? IndexedGraphicsCacheKey : paletteOffset);
+		return _cachedGraphics.emplace(Pair(String(path), cacheKeyOffset), std::move(graphics)).first->second.get();
 	}
 
 	void ContentResolver::ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount)
@@ -1664,6 +1689,15 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedFrozenMask] = CompileShader("BatchedFrozenMask", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::FrozenMaskFs, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMask]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedFrozenMask]);
 
+		// No batched variant: each recolored player needs its own palette texture, so they can't be batched together
+		_precompiledShaders[(std::int32_t)PrecompiledShader::PaletteRemap] = CompileShader("PaletteRemap", Shader::DefaultVertex::SPRITE, Shaders::PaletteRemapFs);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::OutlinePalette] = CompileShader("OutlinePalette", Shader::DefaultVertex::SPRITE, Shaders::OutlinePaletteFs);
+		// Palette-aware variants of the mask shaders, so a recolored (indexed) player keeps correct colors while
+		// hit-flashing, frozen, or in sugar rush. No batched variants - per-player palettes can't be batched.
+		_precompiledShaders[(std::int32_t)PrecompiledShader::WhiteMaskPalette] = CompileShader("WhiteMaskPalette", Shader::DefaultVertex::SPRITE, Shaders::WhiteMaskFs, Shader::Introspection::Enabled, { "USE_PALETTE"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::PartialWhiteMaskPalette] = CompileShader("PartialWhiteMaskPalette", Shader::DefaultVertex::SPRITE, Shaders::PartialWhiteMaskFs, Shader::Introspection::Enabled, { "USE_PALETTE"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMaskPalette] = CompileShader("FrozenMaskPalette", Shader::DefaultVertex::SPRITE, Shaders::FrozenMaskFs, Shader::Introspection::Enabled, { "USE_PALETTE"_s });
+
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldFire] = CompileShader("ShieldFire", Shaders::ShieldVs, Shaders::ShieldFireFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedShieldFire] = CompileShader("BatchedShieldFire", Shaders::BatchedShieldVs, Shaders::ShieldFireFs, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldFire]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedShieldFire]);
@@ -1862,6 +1896,66 @@ namespace Jazz2
 				}
 			}
 		}
+
+		// The active sprite palette just changed - the shared default-palette texture must be rebuilt on next use
+		_defaultPaletteDirty = true;
+	}
+
+	void ContentResolver::BuildPlayerColorPalette(std::uint32_t furColor, std::uint32_t* outPalette) const
+	{
+		// Start from the default sprite palette (first row of _palettes), then recolor the fur sections.
+		std::memcpy(outPalette, _palettes, ColorsPerPalette * sizeof(std::uint32_t));
+
+		// The fur color packs one byte per section (as in the original game). Each non-zero byte is the starting
+		// palette index of an 8-color gradient in the sprite palette; copy those 8 colors into the section's range.
+		for (std::int32_t section = 0; section < FurSectionCount; section++) {
+			std::uint32_t base = (furColor >> (section * 8)) & 0xFF;
+			if (base == 0) {
+				// Keep the original colors for this section
+				continue;
+			}
+
+			std::int32_t dst = FurSectionStarts[section];
+			for (std::int32_t i = 0; i < FurSectionSize; i++) {
+				std::int32_t srcIdx = (std::int32_t)base + i;
+				std::int32_t dstIdx = dst + i;
+				if (srcIdx < ColorsPerPalette && dstIdx > 0 && dstIdx < ColorsPerPalette) {
+					outPalette[dstIdx] = _palettes[srcIdx];
+				}
+			}
+		}
+	}
+
+	Texture* ContentResolver::ApplyPlayerColorPalette(std::unique_ptr<Texture>& texture, std::uint32_t furColor)
+	{
+		if (_isHeadless) {
+			return nullptr;
+		}
+
+		std::uint32_t palette[ColorsPerPalette];
+		BuildPlayerColorPalette(furColor, palette);
+
+		if (texture == nullptr) {
+			texture = std::make_unique<Texture>("PlayerColorPalette", Texture::Format::RGBA8, ColorsPerPalette, 1);
+			texture->SetMinFiltering(SamplerFilter::Nearest);
+			texture->SetMagFiltering(SamplerFilter::Nearest);
+		}
+		texture->LoadFromTexels((std::uint8_t*)palette, 0, 0, ColorsPerPalette, 1);
+		return texture.get();
+	}
+
+	Texture* ContentResolver::GetDefaultPaletteTexture()
+	{
+		if (_isHeadless) {
+			return nullptr;
+		}
+
+		// Rebuild from the current palette only when it changed (furColor 0 = unmodified palette)
+		if (_defaultPaletteDirty || _defaultPaletteTexture == nullptr) {
+			ApplyPlayerColorPalette(_defaultPaletteTexture, 0);
+			_defaultPaletteDirty = false;
+		}
+		return _defaultPaletteTexture.get();
 	}
 
 #if defined(DEATH_DEBUG)

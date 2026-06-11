@@ -25,7 +25,10 @@ namespace Jazz2::Resources
 	{
 		None = 0x00,
 
-		Referenced = 0x01
+		Referenced = 0x01,
+		/** @brief The diffuse texture stores raw palette indices (in the red channel) instead of baked colors, so it
+			must be rendered with the @ref PrecompiledShader::PaletteRemap shader and a palette texture */
+		Indexed = 0x02
 	};
 
 	DEATH_ENUM_FLAGS(GenericGraphicResourceFlags);
@@ -124,6 +127,8 @@ namespace Jazz2::Resources
 	{
 		/** @brief Metadata path */
 		String Path;
+		/** @brief Key this metadata is cached under (usually equals @ref Path, but indexed variants use a distinct key); the cache stores a reference to this string, so it must not be modified after insertion */
+		String CacheKey;
 		/** @brief Metadata flags */
 		MetadataFlags Flags;
 		/** @brief Animations */
@@ -200,6 +205,11 @@ namespace Jazz2::Resources
 		BatchedPartialWhiteMask,
 		FrozenMask,
 		BatchedFrozenMask,
+		PaletteRemap,
+		OutlinePalette,
+		WhiteMaskPalette,
+		PartialWhiteMaskPalette,
+		FrozenMaskPalette,
 		ShieldFire,
 		BatchedShieldFire,
 		ShieldLightning,

@@ -26,6 +26,8 @@ namespace Jazz2::UI
 
 		/** @brief Draws a textured rectangle */
 		void DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending = false, float angle = 0.0f);
+		/** @brief Draws an indexed textured rectangle recolored through a 256x1 palette (PaletteRemap shader) */
+		void DrawTextureWithPalette(const Texture& texture, const Texture& palette, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color);
 		/** @brief Draws a solid rectangle */
 		void DrawSolid(Vector2f pos, std::uint16_t z, Vector2f size, const Colorf& color, bool additiveBlending = false);
 		

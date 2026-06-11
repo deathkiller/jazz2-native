@@ -3,6 +3,21 @@
 #include "ScrollableMenuSection.h"
 #include "TextInputBuffer.h"
 
+namespace nCine
+{
+	class Texture;
+}
+
+namespace Jazz2
+{
+	enum class PlayerColorMode : std::uint8_t;
+
+	namespace Resources
+	{
+		struct Metadata;
+	}
+}
+
 namespace Jazz2::UI::Menu
 {
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -11,6 +26,11 @@ namespace Jazz2::UI::Menu
 		EnableDiscordIntegration,
 #endif
 		PlayerName,
+		FurColor1,
+		FurColor2,
+		FurColor3,
+		FurColor4,
+		ColorMode,
 #if defined(WITH_MULTIPLAYER)
 		UniquePlayerID
 #endif
@@ -54,6 +74,13 @@ namespace Jazz2::UI::Menu
 		bool _waitForInput;
 		TextInputBuffer _textInput;
 		String _localPlayerName;
+		std::uint32_t _furColor;
+		PlayerColorMode _colorMode;
+		// Live character preview (recolored idle frames of Jazz/Spaz/Lori): indexed metadata + the shared palette
+		Jazz2::Resources::Metadata* _previewMetadata[3];
+		bool _previewLoaded;
+		std::unique_ptr<nCine::Texture> _previewPalette;
+		std::uint32_t _previewPaletteColor;
 #if defined(DEATH_TARGET_ANDROID)
 		String _deviceId;
 		Vector2i _initialVisibleSize;
@@ -62,5 +89,9 @@ namespace Jazz2::UI::Menu
 #endif
 
 		void RecalcLayoutForScreenKeyboard();
+		// Returns the fur section index (0..3) for a FurColor* item type, or -1 if it's not a color item
+		static std::int32_t GetFurSectionIndex(UserProfileOptionsItemType type);
+		void CycleFurSection(std::int32_t section, std::int32_t direction);
+		void CycleColorMode(std::int32_t direction);
 	};
 }

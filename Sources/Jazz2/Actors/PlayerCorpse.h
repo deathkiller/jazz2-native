@@ -14,5 +14,8 @@ namespace Jazz2::Actors
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
+
+	private:
+		std::unique_ptr<Texture> _colorPalette;
 	};
 }

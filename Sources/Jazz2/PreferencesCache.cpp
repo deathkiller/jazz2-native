@@ -92,6 +92,8 @@ namespace Jazz2
 	Uuid PreferencesCache::UniquePlayerID;
 	Uuid PreferencesCache::UniqueServerID;
 	String PreferencesCache::PlayerName;
+	std::uint32_t PreferencesCache::PlayerFurColor = 0;
+	PlayerColorMode PreferencesCache::PlayerColors = PlayerColorMode::OnlineOnly;
 	bool PreferencesCache::EnableDiscordIntegration = true;
 
 	String PreferencesCache::_configPath;
@@ -490,6 +492,12 @@ namespace Jazz2
 							uc.Seek(nameLength + episodeContinueSize, SeekOrigin::Current);
 						}
 					}
+
+					// Player character recolor
+					if (version >= 15) {
+						PlayerFurColor = uc.ReadValueAsLE<std::uint32_t>();
+						PlayerColors = (PlayerColorMode)uc.ReadValue<std::uint8_t>();
+					}
 				} else {
 					// The file is too new or corrupted
 					resetConfig = true;
@@ -711,6 +719,10 @@ namespace Jazz2
 			co.Write(pair.second.LevelName.data(), (std::int64_t)pair.second.LevelName.size());
 			WriteEpisodeContinuationState(co, pair.second.State);
 		}
+
+		// Player character recolor and recolor scope (v15+)
+		co.WriteValueAsLE<std::uint32_t>(PlayerFurColor);
+		co.WriteValue<std::uint8_t>((std::uint8_t)PlayerColors);
 
 		co.Dispose();
 		so->Dispose();

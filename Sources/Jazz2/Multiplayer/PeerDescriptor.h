@@ -68,6 +68,8 @@ namespace Jazz2::Multiplayer
 		PlayerType PreferredPlayerType;
 		/** @brief Player display name */
 		String PlayerName;
+		/** @brief Player character recolor (packed 4-byte fur color; 0 = default colors), as chosen by the peer */
+		std::uint32_t FurColor;
 		/** @brief Earned points in the current session (championship) */
 		std::uint32_t Points;
 		/** @brief Game mode specific points held by the player in a round */

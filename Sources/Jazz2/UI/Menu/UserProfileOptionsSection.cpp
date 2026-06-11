@@ -2,6 +2,7 @@
 #include "InGameMenu.h"
 #include "MenuResources.h"
 #include "../DiscordRpcClient.h"
+#include "../../ContentResolver.h"
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/Application.h"
@@ -18,6 +19,18 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
+	namespace
+	{
+		// Standard fur gradient starting indices the player can choose for each of the 4 sections (0 = original
+		// colors). 0x38 is intentionally omitted - it has no proper gradient in the original game.
+		static const std::uint8_t FurGradientStarts[] = { 0x00, 0x10, 0x18, 0x20, 0x28, 0x30, 0x40, 0x48, 0x50, 0x58 };
+
+		static Colorf ColorFromPacked(std::uint32_t c)
+		{
+			return Colorf((c & 0xFF) / 255.0f, ((c >> 8) & 0xFF) / 255.0f, ((c >> 16) & 0xFF) / 255.0f, ((c >> 24) & 0xFF) / 255.0f);
+		}
+	}
+
 	UserProfileOptionsSection::UserProfileOptionsSection()
 		: _isDirty(false), _waitForInput(false), _textInput(MaxPlayerNameLength)
 #if defined(DEATH_TARGET_ANDROID)
@@ -31,6 +44,12 @@ namespace Jazz2::UI::Menu
 				_localPlayerName = "Unknown"_s;
 			}
 		}
+
+		_furColor = PreferencesCache::PlayerFurColor;
+		_colorMode = PreferencesCache::PlayerColors;
+		_previewMetadata[0] = _previewMetadata[1] = _previewMetadata[2] = nullptr;
+		_previewLoaded = false;
+		_previewPaletteColor = 0;
 
 #if defined(DEATH_TARGET_ANDROID)
 		auto androidId = Backends::AndroidJniWrap_Secure::getAndroidId();
@@ -49,6 +68,8 @@ namespace Jazz2::UI::Menu
 		if (_isDirty) {
 			_isDirty = false;
 			PreferencesCache::PlayerName = std::move(_localPlayerName);
+			PreferencesCache::PlayerFurColor = _furColor;
+			PreferencesCache::PlayerColors = _colorMode;
 			PreferencesCache::Save();
 		}
 	}
@@ -67,6 +88,16 @@ namespace Jazz2::UI::Menu
 #endif
 		// TRANSLATORS: Menu item in Options > User Profile section
 		_items.emplace_back(UserProfileOptionsItem { UserProfileOptionsItemType::PlayerName, _("Player Name"), false, isInGame });
+		// TRANSLATORS: Menu item in Options > User Profile section
+		_items.emplace_back(UserProfileOptionsItem { UserProfileOptionsItemType::FurColor1, _("Character Color 1"), true, isInGame });
+		// TRANSLATORS: Menu item in Options > User Profile section
+		_items.emplace_back(UserProfileOptionsItem { UserProfileOptionsItemType::FurColor2, _("Character Color 2"), true, isInGame });
+		// TRANSLATORS: Menu item in Options > User Profile section
+		_items.emplace_back(UserProfileOptionsItem { UserProfileOptionsItemType::FurColor3, _("Character Color 3"), true, isInGame });
+		// TRANSLATORS: Menu item in Options > User Profile section
+		_items.emplace_back(UserProfileOptionsItem { UserProfileOptionsItemType::FurColor4, _("Character Color 4"), true, isInGame });
+		// TRANSLATORS: Menu item in Options > User Profile section
+		_items.emplace_back(UserProfileOptionsItem { UserProfileOptionsItemType::ColorMode, _("Apply Colors"), true, isInGame });
 #if defined(WITH_MULTIPLAYER)
 		// TRANSLATORS: Menu item in Options > User Profile section
 		_items.emplace_back(UserProfileOptionsItem { UserProfileOptionsItemType::UniquePlayerID, _("Unique Player ID") });
@@ -77,6 +108,30 @@ namespace Jazz2::UI::Menu
 	{
 		if (_waitForInput) {
 			return;
+		}
+
+		// Color items cycle through gradient presets (and the apply-mode cycles its values) with Left/Right -
+		// direction matters here, unlike boolean toggles
+		if (!_items.empty() && !_items[_selectedIndex].Item.IsReadOnly) {
+			UserProfileOptionsItemType type = _items[_selectedIndex].Item.Type;
+			std::int32_t section = GetFurSectionIndex(type);
+			if (section >= 0) {
+				if (_root->ActionHit(PlayerAction::Left)) {
+					CycleFurSection(section, -1);
+					return;
+				} else if (_root->ActionHit(PlayerAction::Right)) {
+					CycleFurSection(section, 1);
+					return;
+				}
+			} else if (type == UserProfileOptionsItemType::ColorMode) {
+				if (_root->ActionHit(PlayerAction::Left)) {
+					CycleColorMode(-1);
+					return;
+				} else if (_root->ActionHit(PlayerAction::Right)) {
+					CycleColorMode(1);
+					return;
+				}
+			}
 		}
 
 		if (!_items.empty() && _items[_selectedIndex].Item.HasBooleanValue && (_root->ActionHit(PlayerAction::Left) || _root->ActionHit(PlayerAction::Right))) {
@@ -168,6 +223,64 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(_("User Profile"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+
+		// Live recolored character preview (Jazz/Spaz/Lori idle, those available) in a row on the right side of the
+		// panel, reflecting the chosen colors
+		if (!_previewLoaded) {
+			_previewLoaded = true;
+			_previewMetadata[0] = ContentResolver::Get().RequestMetadata("Interactive/PlayerJazz"_s, true);
+			_previewMetadata[1] = ContentResolver::Get().RequestMetadata("Interactive/PlayerSpaz"_s, true);
+			_previewMetadata[2] = ContentResolver::Get().RequestMetadata("Interactive/PlayerLori"_s, true);
+		}
+
+		if (_previewPalette == nullptr || _previewPaletteColor != _furColor) {
+			ContentResolver::Get().ApplyPlayerColorPalette(_previewPalette, _furColor);
+			_previewPaletteColor = _furColor;
+		}
+
+		if (_previewPalette != nullptr) {
+			std::int32_t available = 0;
+			for (std::int32_t i = 0; i < 3; i++) {
+				if (_previewMetadata[i] != nullptr) {
+					available++;
+				}
+			}
+
+			if (available > 0) {
+				constexpr float scale = 1.0f;
+				constexpr float step = 32.0f;
+				float rowY = (topLine + bottomLine) * 0.5f;
+				float slotX = centerX + 200.0f - step * (available - 1) * 0.5f;
+
+				for (std::int32_t i = 0; i < 3; i++) {
+					if (_previewMetadata[i] == nullptr) {
+						continue;
+					}
+
+					auto* res = _previewMetadata[i]->FindAnimation(AnimState::Idle);
+					if (res != nullptr && res->Base != nullptr && res->Base->TextureDiffuse != nullptr) {
+						GenericGraphicResource* base = res->Base;
+						std::int32_t frameCount = (res->FrameCount > 0 ? res->FrameCount : 1);
+						float animDuration = (res->AnimDuration > 0.0f ? res->AnimDuration : 1.0f);
+						std::int32_t frame = res->FrameOffset + ((std::int32_t)(canvas->AnimTime * frameCount / animDuration) % frameCount);
+						Vector2i texSize = base->TextureDiffuse->GetSize();
+						std::int32_t col = frame % base->FrameConfiguration.X;
+						std::int32_t row = frame / base->FrameConfiguration.X;
+						Vector4f texCoords = Vector4f(
+							(float)base->FrameDimensions.X / texSize.X,
+							(float)(base->FrameDimensions.X * col) / texSize.X,
+							(float)base->FrameDimensions.Y / texSize.Y,
+							(float)(base->FrameDimensions.Y * row) / texSize.Y);
+
+						Vector2f size = Vector2f(base->FrameDimensions.X * scale, base->FrameDimensions.Y * scale);
+						Vector2f pos = Canvas::ApplyAlignment(Alignment::Center, Vector2f(slotX, rowY), size);
+						canvas->DrawTextureWithPalette(*base->TextureDiffuse, *_previewPalette, pos, IMenuContainer::MainLayer, size, texCoords, Colorf::White);
+					}
+
+					slotX += step;
+				}
+			}
+		}
 	}
 
 	void UserProfileOptionsSection::OnDrawOverlay(Canvas* canvas)
@@ -337,6 +450,27 @@ namespace Jazz2::UI::Menu
 #	endif
 		}
 #endif
+		else if (GetFurSectionIndex(item.Item.Type) >= 0) {
+			std::int32_t section = GetFurSectionIndex(item.Item.Type);
+			std::uint32_t base = (_furColor >> (section * 8)) & 0xFF;
+			Colorf labelColor = (isSelected
+				? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f)
+				: (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor));
+
+			if (base == 0) {
+				_root->DrawStringShadow(_("Default"), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10, Alignment::Center, labelColor, 0.8f);
+			} else {
+				// Preview the chosen gradient: draw its 8 sprite-palette colors as a small strip
+				auto palettes = ContentResolver::Get().GetPalettes();
+				constexpr float swatchW = 10.0f;
+				float startX = centerX - (ContentResolver::FurSectionSize * swatchW) * 0.5f;
+				for (std::int32_t i = 0; i < ContentResolver::FurSectionSize; i++) {
+					std::uint32_t color = palettes[(base + i) & 0xFF];
+					_root->DrawSolid(startX + i * swatchW, item.Y + 22.0f, IMenuContainer::FontLayer - 10, Alignment::Left,
+						Vector2f(swatchW, 14.0f), ColorFromPacked(color | 0xFF000000u), false);
+				}
+			}
+		}
 		else if (item.Item.HasBooleanValue) {
 			StringView customText;
 			bool enabled;
@@ -344,6 +478,18 @@ namespace Jazz2::UI::Menu
 #if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
 				case UserProfileOptionsItemType::EnableDiscordIntegration: enabled = PreferencesCache::EnableDiscordIntegration; break;
 #endif
+				case UserProfileOptionsItemType::ColorMode:
+					switch (_colorMode) {
+						default:
+						// TRANSLATORS: Value of "Apply Colors" in Options > User Profile
+						case PlayerColorMode::OnlineOnly: customText = _("Online only"); break;
+						// TRANSLATORS: Value of "Apply Colors" in Options > User Profile
+						case PlayerColorMode::FirstLocalPlayer: customText = _("Online and first local player"); break;
+						// TRANSLATORS: Value of "Apply Colors" in Options > User Profile
+						case PlayerColorMode::AllLocalPlayers: customText = _("Online and all local players"); break;
+					}
+					enabled = false;
+					break;
 				default: enabled = false; break;
 			}
 
@@ -385,6 +531,17 @@ namespace Jazz2::UI::Menu
 				RecalcLayoutForScreenKeyboard();
 				break;
 			}
+			case UserProfileOptionsItemType::FurColor1:
+			case UserProfileOptionsItemType::FurColor2:
+			case UserProfileOptionsItemType::FurColor3:
+			case UserProfileOptionsItemType::FurColor4: {
+				CycleFurSection(GetFurSectionIndex(_items[_selectedIndex].Item.Type), 1);
+				break;
+			}
+			case UserProfileOptionsItemType::ColorMode: {
+				CycleColorMode(1);
+				break;
+			}
 #if defined(WITH_MULTIPLAYER)
 			case UserProfileOptionsItemType::UniquePlayerID: {
 				auto& uuid = PreferencesCache::UniquePlayerID;
@@ -416,6 +573,49 @@ namespace Jazz2::UI::Menu
 		ScrollableMenuSection::OnBackPressed();
 	}
 
+
+	std::int32_t UserProfileOptionsSection::GetFurSectionIndex(UserProfileOptionsItemType type)
+	{
+		switch (type) {
+			case UserProfileOptionsItemType::FurColor1: return 0;
+			case UserProfileOptionsItemType::FurColor2: return 1;
+			case UserProfileOptionsItemType::FurColor3: return 2;
+			case UserProfileOptionsItemType::FurColor4: return 3;
+			default: return -1;
+		}
+	}
+
+	void UserProfileOptionsSection::CycleFurSection(std::int32_t section, std::int32_t direction)
+	{
+		std::uint32_t shift = (std::uint32_t)(section * 8);
+		std::uint8_t current = (std::uint8_t)((_furColor >> shift) & 0xFF);
+
+		std::int32_t count = (std::int32_t)arraySize(FurGradientStarts);
+		std::int32_t index = 0;
+		for (std::int32_t i = 0; i < count; i++) {
+			if (FurGradientStarts[i] == current) {
+				index = i;
+				break;
+			}
+		}
+
+		index = (index + direction + count) % count;
+		std::uint8_t value = FurGradientStarts[index];
+		_furColor = (_furColor & ~(0xFFu << shift)) | ((std::uint32_t)value << shift);
+		_isDirty = true;
+		_animation = 0.0f;
+		_root->PlaySfx("MenuSelect"_s, 0.5f);
+	}
+
+	void UserProfileOptionsSection::CycleColorMode(std::int32_t direction)
+	{
+		constexpr std::int32_t count = 3; // PlayerColorMode: OnlineOnly, FirstLocalPlayer, AllLocalPlayers
+		std::int32_t index = (((std::int32_t)_colorMode + direction) % count + count) % count;
+		_colorMode = (PlayerColorMode)index;
+		_isDirty = true;
+		_animation = 0.0f;
+		_root->PlaySfx("MenuSelect"_s, 0.5f);
+	}
 
 	void UserProfileOptionsSection::RecalcLayoutForScreenKeyboard()
 	{

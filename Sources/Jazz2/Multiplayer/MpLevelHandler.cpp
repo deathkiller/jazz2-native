@@ -2355,6 +2355,8 @@ namespace Jazz2::Multiplayer
 			peerDesc->LapsElapsedFrames = _elapsedFrames;
 			peerDesc->LapStarted = TimeStamp::now();
 			peerDesc->PlayerName = PreferencesCache::GetEffectivePlayerName();
+			// Local players use the host's configured color so remote clients see it (sent via MarkRemoteActorAsPlayer)
+			peerDesc->FurColor = PreferencesCache::PlayerFurColor;
 
 			Actors::Multiplayer::LocalPlayerOnServer* ptr = player.get();
 			_players.push_back(ptr);
@@ -4152,6 +4154,14 @@ namespace Jazz2::Multiplayer
 
 						std::shared_ptr<Actors::Multiplayer::RemoteActor> remoteActor = std::make_shared<Actors::Multiplayer::RemoteActor>();
 						remoteActor->OnActivated(Actors::ActorActivationDetails(this, Vector3i(posX, posY, posZ)));
+
+						// If this actor was already marked as a player with a custom color, apply it before assigning
+						// metadata so the sprites load indexed and the palette is set
+						auto pnIt = _playerNames.find(actorId);
+						if (pnIt != _playerNames.end() && pnIt->second.FurColor != 0) {
+							remoteActor->SetPlayerColor(pnIt->second.FurColor);
+						}
+
 						remoteActor->AssignMetadata(flags, state, metadataPath, anim, rotation, scaleX, scaleY, rendererType);
 
 						{
@@ -4326,7 +4336,7 @@ namespace Jazz2::Multiplayer
 						auto it = _remoteActors.find(actorId);
 						if (it != _remoteActors.end()) {
 							if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(it->second.get())) {
-								remoteActor->RequestMetadata(metadataPath);
+								remoteActor->ChangeMetadata(metadataPath);
 							}
 						}
 					});
@@ -4341,9 +4351,14 @@ namespace Jazz2::Multiplayer
 					String playerName = String(NoInit, playerNameLength);
 					packet.Read(playerName.data(), playerNameLength);
 
+					// Per-player recolor is only present when the HasFurColor flag is set (the idle-state broadcast
+					// reuses this packet type with no color)
+					bool hasFurColor = (flags & 0x02) != 0;
+					std::uint32_t furColor = (hasFurColor ? packet.ReadValueAsLE<std::uint32_t>() : 0);
+
 					LOGD("[MP] ServerPacketType::MarkRemoteActorAsPlayer - actorId: {}, flags: 0x{:.2x}, name: \"{}\"", actorId, flags, playerName);
 
-					InvokeAsync([this, actorId, flags, playerName = std::move(playerName)]() mutable {
+					InvokeAsync([this, actorId, flags, hasFurColor, furColor, playerName = std::move(playerName)]() mutable {
 						if (actorId == _lastSpawnedActorId) {
 							if (!playerName.empty()) {
 								// Player name is optional, so only set it if it's not empty
@@ -4357,6 +4372,24 @@ namespace Jazz2::Multiplayer
 								it.first->second.Name = std::move(playerName);
 							}
 							it.first->second.Flags = flags;
+
+							if (hasFurColor) {
+								it.first->second.FurColor = furColor;
+
+								// Apply the color now if the actor already exists (otherwise CreateRemoteActor will
+								// pick it up from _playerNames)
+								std::shared_ptr<Actors::ActorBase> actor;
+								{
+									std::unique_lock lock(_lock);
+									auto actorIt = _remoteActors.find(actorId);
+									if (actorIt != _remoteActors.end()) {
+										actor = actorIt->second;
+									}
+								}
+								if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(actor.get())) {
+									remoteActor->SetPlayerColor(furColor);
+								}
+							}
 						}
 					});
 					return true;
@@ -5148,11 +5181,12 @@ namespace Jazz2::Multiplayer
 
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet);
 					
-					MemoryStream packet2(6 + otherPeerDesc->PlayerName.size());
+					MemoryStream packet2(10 + otherPeerDesc->PlayerName.size());
 					packet2.WriteVariableUint32(mpOtherPlayer->_playerIndex);
-					packet2.WriteValue<std::uint8_t>(0x00);
+					packet2.WriteValue<std::uint8_t>(0x02); // HasFurColor
 					packet2.WriteVariableUint32(otherPeerDesc->PlayerName.size());
 					packet2.Write(otherPeerDesc->PlayerName.data(), (std::uint32_t)otherPeerDesc->PlayerName.size());
+					packet2.WriteValueAsLE<std::uint32_t>(otherPeerDesc->FurColor);
 
 					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::MarkRemoteActorAsPlayer, packet2);
 				}
@@ -5306,11 +5340,12 @@ namespace Jazz2::Multiplayer
 					}
 
 					{
-						MemoryStream packet(6 + peerDesc->PlayerName.size());
+						MemoryStream packet(10 + peerDesc->PlayerName.size());
 						packet.WriteVariableUint32(playerIndex);
-						packet.WriteValue<std::uint8_t>(0x00);
+						packet.WriteValue<std::uint8_t>(0x02); // HasFurColor
 						packet.WriteVariableUint32(peerDesc->PlayerName.size());
 						packet.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
+						packet.WriteValueAsLE<std::uint32_t>(peerDesc->FurColor);
 
 						_networkManager->SendTo([this](const Peer& peer) {
 							auto peerDesc = _networkManager->GetPeerDescriptor(peer);
@@ -6182,11 +6217,12 @@ namespace Jazz2::Multiplayer
 			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
 		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet3);
 
-		MemoryStream packet4(6 + peerDesc->PlayerName.size());
+		MemoryStream packet4(10 + peerDesc->PlayerName.size());
 		packet4.WriteVariableUint32(playerIndex);
-		packet4.WriteValue<std::uint8_t>(0x00);
+		packet4.WriteValue<std::uint8_t>(0x02); // HasFurColor
 		packet4.WriteVariableUint32(peerDesc->PlayerName.size());
 		packet4.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
+		packet4.WriteValueAsLE<std::uint32_t>(peerDesc->FurColor);
 
 		_networkManager->SendTo([this](const Peer& peer) {
 			auto peerDesc = _networkManager->GetPeerDescriptor(peer);

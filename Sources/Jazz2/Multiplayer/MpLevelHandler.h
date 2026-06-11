@@ -253,6 +253,7 @@ namespace Jazz2::Multiplayer
 		struct PlayerName {
 			String Name;
 			std::uint8_t Flags;
+			std::uint32_t FurColor;
 		};
 
 		struct PlayerPositionInRound {

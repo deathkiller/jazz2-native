@@ -25,7 +25,7 @@ namespace Jazz2::Multiplayer
 {
 	PeerDescriptor::PeerDescriptor()
 		: IsAuthenticated(false), IsAdmin(false), EnableLedgeClimb(false), Team(0), PreferredPlayerType(PlayerType::None),
-			Points(0), PointsInRound(0), PositionInRound(0), LevelState(PeerLevelState::Unknown), Player(nullptr),
+			FurColor(0), Points(0), PointsInRound(0), PositionInRound(0), LevelState(PeerLevelState::Unknown), Player(nullptr),
 			LastUpdated(0), Deaths(0), Kills(0), Laps(0), LapStarted{}, TreasureCollected(0), IdleElapsedFrames(0.0f),
 			DeathElapsedFrames(FLT_MAX), LapsElapsedFrames(0.0f), JoinCooldownFrames(0.0f), IsSpectating(SpectateMode::None),
 			CarryOver{}, HasCarryOver(false)

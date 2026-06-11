@@ -47,6 +47,20 @@ namespace Jazz2
 		/** @brief Invalid value */
 		static constexpr std::int32_t InvalidValue = INT_MAX;
 
+		/** @{ @name Player recolor palette sections
+
+			The player's fur color is 4 bytes (one per section, as in the original game). Each byte is the starting
+			palette index of an 8-color gradient in the sprite palette; those 8 colors are copied into the section's
+			fixed range in the per-player palette (a byte of 0 keeps the original colors for that section).
+			@b TODO: @ref FurSectionStarts are best-guess placeholders - adjust them to the real player sprite palette. */
+		/** @brief Number of recolorable fur sections */
+		static constexpr std::int32_t FurSectionCount = 4;
+		/** @brief Number of consecutive palette indices per fur section */
+		static constexpr std::int32_t FurSectionSize = 8;
+		/** @brief Starting palette index of each fur section in the per-player palette */
+		static constexpr std::int32_t FurSectionStarts[FurSectionCount] = { 0x10, 0x18, 0x20, 0x28 };
+		/** @} */
+
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		static constexpr std::uint8_t LevelFile = 1;
 		static constexpr std::uint8_t EpisodeFile = 2;
@@ -96,10 +110,23 @@ namespace Jazz2
 
 		/** @brief Preloads specified metadata and its linked assets to cache */
 		void PreloadMetadataAsync(StringView path);
-		/** @brief Loads specified metadata and its linked assets if not in cache already and returns it */
-		Metadata* RequestMetadata(StringView path);
-		/** @brief Loads specified graphics asset if not in cache already and returns it */
-		GenericGraphicResource* RequestGraphics(StringView path, std::uint16_t paletteOffset);
+		/** @brief Loads specified metadata and its linked assets if not in cache already and returns it
+			@param forceIndexed Load all linked graphics as indexed (palette not baked) so they can be recolored at
+				draw time - used for the player so each player can have a custom color scheme */
+		Metadata* RequestMetadata(StringView path, bool forceIndexed = false);
+		/** @brief Loads specified graphics asset if not in cache already and returns it
+			@param keepIndexed Keep raw palette indices in the texture (don't bake the palette) for shader recoloring */
+		GenericGraphicResource* RequestGraphics(StringView path, std::uint16_t paletteOffset, bool keepIndexed = false);
+
+		/** @brief Builds a 256-color palette for a player from a packed 4-byte fur color (one section per byte, each
+			byte a gradient start in the sprite palette; 0 = original); see @ref FurSectionStarts */
+		void BuildPlayerColorPalette(std::uint32_t furColor, std::uint32_t* outPalette) const;
+		/** @brief Builds/updates a 256x1 palette texture for a player fur color into `texture` (created on first use)
+			and returns it for @ref Actors::ActorBase::ActorRenderer::SetPalette; returns `nullptr` in headless mode */
+		Texture* ApplyPlayerColorPalette(std::unique_ptr<Texture>& texture, std::uint32_t furColor);
+		/** @brief Returns a shared 256x1 texture of the current (unmodified) sprite palette, for drawing indexed
+			sprites that must not be recolored (e.g. a recolored player's weapon flare); `nullptr` in headless mode */
+		Texture* GetDefaultPaletteTexture();
 
 		/** @brief Loads specified tile set and its palette */
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping = nullptr);
@@ -148,7 +175,11 @@ namespace Jazz2
 
 		void InitializePaths();
 
-		GenericGraphicResource* RequestGraphicsAura(StringView path, std::uint16_t paletteOffset);
+		// Cache key offset for indexed graphics (palette indices kept in the texture instead of baked), distinct
+		// from any real paletteOffset so indexed and baked variants of the same sprite are cached separately
+		static constexpr std::uint16_t IndexedGraphicsCacheKey = UINT16_MAX;
+
+		GenericGraphicResource* RequestGraphicsAura(StringView path, std::uint16_t paletteOffset, bool keepIndexed = false);
 		static void ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount);
 		static void ExpandTileDiffuse(std::uint8_t* pixelsOffset, std::uint32_t widthWithPadding);
 
@@ -163,6 +194,8 @@ namespace Jazz2
 		bool _isHeadless;
 		bool _isLoading;
 		std::uint32_t _palettes[PaletteCount * ColorsPerPalette];
+		std::unique_ptr<Texture> _defaultPaletteTexture;
+		bool _defaultPaletteDirty;
 		HashMap<Reference<const String>, std::unique_ptr<Metadata>, 
 #if defined(DEATH_TARGET_32BIT)
 			xxHash32Func<String>,

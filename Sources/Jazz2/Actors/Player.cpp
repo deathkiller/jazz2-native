@@ -73,6 +73,9 @@ namespace Jazz2::Actors
 		_springCooldown(0.0f),
 		_inIdleTransition(false), _inLedgeTransition(false), _canDoubleJump(true),
 		_carryingObject(nullptr),
+		// Per-player recolor; 0 = use the original colors. The local player defaults to the user's profile color;
+		// remote players get their color from the network (see MpLevelHandler).
+		_furColor(PreferencesCache::PlayerFurColor),
 		_lives(0), _coins(0), _coinsCheckpoint(0), _foodEaten(0), _foodEatenCheckpoint(0), _score(0),
 		_checkpointLight(1.0f),
 		_sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
@@ -118,24 +121,74 @@ namespace Jazz2::Actors
 #endif
 	}
 
+	std::uint32_t Player::GetEffectiveFurColor() const
+	{
+		// Online multiplayer always recolors the local player; local games depend on the "Apply Colors" preference
+		// (and the player index for the "first player only" mode).
+		if (_furColor == 0) {
+			return 0;
+		}
+		if (!_levelHandler->IsLocalSession()) {
+			return _furColor;
+		}
+		switch (PreferencesCache::PlayerColors) {
+			case PlayerColorMode::FirstLocalPlayer: return (_playerIndex == 0 ? _furColor : 0);
+			case PlayerColorMode::AllLocalPlayers: return _furColor;
+			default: return 0; // OnlineOnly
+		}
+	}
+
+	void Player::RefreshColorPalette()
+	{
+		auto& resolver = ContentResolver::Get();
+		if (resolver.IsHeadless()) {
+			return;
+		}
+
+		std::uint32_t furColor = GetEffectiveFurColor();
+		if (furColor == 0) {
+			_renderer.SetPalette(nullptr);
+			return;
+		}
+
+		// Recoloring needs indexed sprites (palette index in the red channel); otherwise the PaletteRemap shader
+		// would treat the already-baked colors as palette indices and corrupt the sprite, so fall back to normal
+		// rendering. If this warns, the player .res animations aren't being loaded indexed.
+		bool isIndexed = (_metadata != nullptr && !_metadata->Animations.empty() && _metadata->Animations[0].Base != nullptr &&
+			(_metadata->Animations[0].Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
+		if (!isIndexed) {
+			LOGW("[Player] Player sprites are not indexed - recoloring disabled");
+			_renderer.SetPalette(nullptr);
+			return;
+		}
+
+		_renderer.SetPalette(resolver.ApplyPlayerColorPalette(_colorPalette, furColor));
+	}
+
 	Task<bool> Player::OnActivatedAsync(const ActorActivationDetails& details)
 	{
 		_playerTypeOriginal = (PlayerType)details.Params[0];
 		_playerType = _playerTypeOriginal;
 		_playerIndex = details.Params[1];
 
+		// Load the anim set as indexed ONLY when this player is actually being recolored, so it can be recolored at
+		// draw time. Loading indexed without applying a palette would render raw palette indices (glitched sprites).
+		bool useIndexed = (GetEffectiveFurColor() != 0);
 		switch (_playerType) {
-			case PlayerType::Jazz: async_await RequestMetadataAsync("Interactive/PlayerJazz"_s); break;
-			case PlayerType::Spaz: async_await RequestMetadataAsync("Interactive/PlayerSpaz"_s); break;
-			case PlayerType::Lori: async_await RequestMetadataAsync("Interactive/PlayerLori"_s); break;
-			case PlayerType::Frog: async_await RequestMetadataAsync("Interactive/PlayerFrog"_s); break;
+			case PlayerType::Jazz: async_await RequestMetadataAsync("Interactive/PlayerJazz"_s, useIndexed); break;
+			case PlayerType::Spaz: async_await RequestMetadataAsync("Interactive/PlayerSpaz"_s, useIndexed); break;
+			case PlayerType::Lori: async_await RequestMetadataAsync("Interactive/PlayerLori"_s, useIndexed); break;
+			case PlayerType::Frog: async_await RequestMetadataAsync("Interactive/PlayerFrog"_s, useIndexed); break;
 			case PlayerType::Spectate:
 				// TODO: Spectate mode - load minimal metadata for fallback, but player will be invisible
-				async_await RequestMetadataAsync("Interactive/PlayerJazz"_s);
+				async_await RequestMetadataAsync("Interactive/PlayerJazz"_s, useIndexed);
 				break;
 		}
 
 		SetAnimation(AnimState::Fall);
+
+		// Build and bind the per-player recolor palette now that the renderer has a texture
+		RefreshColorPalette();
 
 		std::memset(_weaponAmmo, 0, sizeof(_weaponAmmo));
 		std::memset(_weaponAmmoCheckpoint, 0, sizeof(_weaponAmmoCheckpoint));
@@ -1156,13 +1209,20 @@ namespace Jazz2::Actors
 		if (_weaponFlareTime > 0.0f && !_inWater && _currentTransition == nullptr) {
 			auto* res = _metadata->FindAnimation(WeaponFlare);
 			if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
+				// When the player is recolored its anims (incl. the flare) are indexed, so the flare must go through
+				// the PaletteRemap shader too. Its colors aren't in the fur range, so it still renders yellow.
+				bool flareIndexed = ((res->Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
+
 				auto& command = _weaponFlareCommand;
 				if (command == nullptr) {
 					command = std::make_unique<RenderCommand>(RenderCommand::Type::Sprite);
 					command->GetMaterial().SetBlendingEnabled(true);
 				}
 
-				if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
+				bool shaderChanged = (flareIndexed
+					? command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::PaletteRemap))
+					: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
+				if (shaderChanged) {
 					command->GetMaterial().ReserveUniformsDataMemory();
 					command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
 					//command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1171,6 +1231,12 @@ namespace Jazz2::Actors
 					auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 					if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 						textureUniform->SetIntValue(0); // GL_TEXTURE0
+					}
+					if (flareIndexed) {
+						auto* paletteUniform = command->GetMaterial().Uniform("uTexturePalette");
+						if (paletteUniform != nullptr) {
+							paletteUniform->SetIntValue(1); // GL_TEXTURE1
+						}
 					}
 				}
 
@@ -1226,6 +1292,14 @@ namespace Jazz2::Actors
 				command->SetTransformation(worldMatrix);
 				command->SetLayer(_renderer.layer() + 2);
 				command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
+				if (flareIndexed) {
+					// Use the DEFAULT palette (not the player's) so the flare keeps its original colors even when the
+					// fur recolor would otherwise overlap the flare's palette indices
+					Texture* defaultPalette = ContentResolver::Get().GetDefaultPaletteTexture();
+					if (defaultPalette != nullptr) {
+						command->GetMaterial().SetTexture(1, *defaultPalette);
+					}
+				}
 
 				renderQueue.AddCommand(command.get());
 			}
@@ -1487,12 +1561,13 @@ namespace Jazz2::Actors
 		if (_playerType == PlayerType::Frog) {
 			_playerType = _playerTypeOriginal;
 
-			// Load original metadata
+			// Load original metadata, indexed only when recolored (must match the renderer's current palette state)
+			bool useIndexed = (GetEffectiveFurColor() != 0);
 			switch (_playerType) {
-				case PlayerType::Jazz: RequestMetadata("Interactive/PlayerJazz"_s); break;
-				case PlayerType::Spaz: RequestMetadata("Interactive/PlayerSpaz"_s); break;
-				case PlayerType::Lori: RequestMetadata("Interactive/PlayerLori"_s); break;
-				case PlayerType::Frog: RequestMetadata("Interactive/PlayerFrog"_s); break;
+				case PlayerType::Jazz: RequestMetadata("Interactive/PlayerJazz"_s, useIndexed); break;
+				case PlayerType::Spaz: RequestMetadata("Interactive/PlayerSpaz"_s, useIndexed); break;
+				case PlayerType::Lori: RequestMetadata("Interactive/PlayerLori"_s, useIndexed); break;
+				case PlayerType::Frog: RequestMetadata("Interactive/PlayerFrog"_s, useIndexed); break;
 			}
 
 			// Refresh animation state
@@ -2805,9 +2880,12 @@ namespace Jazz2::Actors
 					_renderer.Initialize(ActorRendererType::Default);
 				}
 
-				// Spawn corpse
+				// Spawn corpse - pass the effective fur color (bytes 2..5) so the corpse is recolored like the player
+				std::uint32_t furColor = GetEffectiveFurColor();
+				std::uint8_t playerParams[6] = { (std::uint8_t)_playerType, (std::uint8_t)(IsFacingLeft() ? 1 : 0),
+					(std::uint8_t)(furColor & 0xFF), (std::uint8_t)((furColor >> 8) & 0xFF),
+					(std::uint8_t)((furColor >> 16) & 0xFF), (std::uint8_t)((furColor >> 24) & 0xFF) };
 				std::shared_ptr<PlayerCorpse> corpse = std::make_shared<PlayerCorpse>();
-				std::uint8_t playerParams[2] = { (std::uint8_t)_playerType, (std::uint8_t)(IsFacingLeft() ? 1 : 0) };
 				corpse->OnActivated(ActorActivationDetails(
 					_levelHandler,
 					Vector3i(_pos.X, _pos.Y, _renderer.layer() - 40),
@@ -4159,12 +4237,13 @@ namespace Jazz2::Actors
 
 		_playerType = type;
 
-		// Load new metadata
+		// Load new metadata, indexed only when recolored (must match the renderer's current palette state)
+		bool useIndexed = (GetEffectiveFurColor() != 0);
 		switch (type) {
-			case PlayerType::Jazz: RequestMetadata("Interactive/PlayerJazz"); break;
-			case PlayerType::Spaz: RequestMetadata("Interactive/PlayerSpaz"); break;
-			case PlayerType::Lori: RequestMetadata("Interactive/PlayerLori"); break;
-			case PlayerType::Frog: RequestMetadata("Interactive/PlayerFrog"); break;
+			case PlayerType::Jazz: RequestMetadata("Interactive/PlayerJazz", useIndexed); break;
+			case PlayerType::Spaz: RequestMetadata("Interactive/PlayerSpaz", useIndexed); break;
+			case PlayerType::Lori: RequestMetadata("Interactive/PlayerLori", useIndexed); break;
+			case PlayerType::Frog: RequestMetadata("Interactive/PlayerFrog", useIndexed); break;
 		}
 
 		// Refresh animation state

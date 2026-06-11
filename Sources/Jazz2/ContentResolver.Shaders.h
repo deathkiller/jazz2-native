@@ -728,19 +728,90 @@ void main() {
 }
 )";
 
+	// Same as Outline, but the sprite interior is an indexed sprite recolored through a palette (texture unit 1).
+	// Used to highlight a recolored player (e.g. weapon wheel) while keeping its custom colors.
+	constexpr char OutlinePaletteFs[] = "#line " DEATH_LINE_STRING "\n" R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform sampler2D uTexture;
+uniform sampler2D uTexturePalette;
+
+in vec2 vTexCoords;
+in vec4 vColor;
+out vec4 fragColor;
+
+float aastep(float threshold, float value) {
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+vec4 palette(vec2 uv) {
+	vec4 src = texture(uTexture, uv);
+	float palX = (src.r * 255.0 + 0.5) / 256.0;
+	vec4 c = texture(uTexturePalette, vec2(palX, 0.5));
+	return vec4(c.rgb, c.a * src.a);
+}
+
+void main() {
+	vec2 size = vColor.xy;
+
+	float outline = texture(uTexture, vTexCoords + vec2(-size.x, 0)).a;
+	outline += texture(uTexture, vTexCoords + vec2(0, size.y)).a;
+	outline += texture(uTexture, vTexCoords + vec2(size.x, 0)).a;
+	outline += texture(uTexture, vTexCoords + vec2(0, -size.y)).a;
+	outline += texture(uTexture, vTexCoords + vec2(-size.x, size.y)).a;
+	outline += texture(uTexture, vTexCoords + vec2(size.x, size.y)).a;
+	outline += texture(uTexture, vTexCoords + vec2(-size.x, -size.y)).a;
+	outline += texture(uTexture, vTexCoords + vec2(size.x, -size.y)).a;
+	outline = aastep(1.0, outline);
+
+	float outline2 = texture(uTexture, vTexCoords + vec2(-2.0 * size.x, 0)).a;
+	outline2 += texture(uTexture, vTexCoords + vec2(0, 2.0 * size.y)).a;
+	outline2 += texture(uTexture, vTexCoords + vec2(2.0 * size.x, 0)).a;
+	outline2 += texture(uTexture, vTexCoords + vec2(0, -2.0 * size.y)).a;
+	outline2 += texture(uTexture, vTexCoords + vec2(-2.0 * size.x, 2.0 * size.y)).a;
+	outline2 += texture(uTexture, vTexCoords + vec2(2.0 * size.x, 2.0 * size.y)).a;
+	outline2 += texture(uTexture, vTexCoords + vec2(-2.0 * size.x, -2.0 * size.y)).a;
+	outline2 += texture(uTexture, vTexCoords + vec2(2.0 * size.x, -2.0 * size.y)).a;
+	outline2 = aastep(1.0, outline2);
+
+	vec4 color = palette(vTexCoords);
+	fragColor = mix(color,
+		mix(vec4(0.0, 0.0, 0.0, vColor.w * 0.5), vec4(vColor.z, vColor.z, vColor.z, vColor.w), outline),
+		max(outline, outline2) - color.a);
+}
+)";
+
 	constexpr char WhiteMaskFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
 #endif
 
 uniform sampler2D uTexture;
+#ifdef USE_PALETTE
+uniform sampler2D uTexturePalette;
+#endif
 
 in vec2 vTexCoords;
 in vec4 vColor;
 out vec4 fragColor;
 
+// Resolves the diffuse color, looking the palette index up in the palette texture when the sprite is indexed
+vec4 maskSample(vec2 uv) {
+	vec4 src = texture(uTexture, uv);
+#ifdef USE_PALETTE
+	float palX = (src.r * 255.0 + 0.5) / 256.0;
+	vec4 c = texture(uTexturePalette, vec2(palX, 0.5));
+	return vec4(c.rgb, c.a * src.a);
+#else
+	return src;
+#endif
+}
+
 void main() {
-	vec4 tex = texture(uTexture, vTexCoords);
+	vec4 tex = maskSample(vTexCoords);
 	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0f, 1.0f);
 	fragColor = vec4(color, color, color, tex.a) * vColor;
 }
@@ -752,15 +823,52 @@ precision mediump float;
 #endif
 
 uniform sampler2D uTexture;
+#ifdef USE_PALETTE
+uniform sampler2D uTexturePalette;
+#endif
+
+in vec2 vTexCoords;
+in vec4 vColor;
+out vec4 fragColor;
+
+vec4 maskSample(vec2 uv) {
+	vec4 src = texture(uTexture, uv);
+#ifdef USE_PALETTE
+	float palX = (src.r * 255.0 + 0.5) / 256.0;
+	vec4 c = texture(uTexturePalette, vec2(palX, 0.5));
+	return vec4(c.rgb, c.a * src.a);
+#else
+	return src;
+#endif
+}
+
+void main() {
+	vec4 tex = maskSample(vTexCoords);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 2.5f, 1.0f);
+	fragColor = vec4(color, color, color, tex.a) * vColor;
+}
+)";
+
+	// Renders an indexed sprite (palette index stored in the red channel) by looking the color up in a 256x1
+	// palette texture bound to texture unit 1. Used for per-player recoloring.
+	constexpr char PaletteRemapFs[] = "#line " DEATH_LINE_STRING "\n" R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform sampler2D uTexture;
+uniform sampler2D uTexturePalette;
 
 in vec2 vTexCoords;
 in vec4 vColor;
 out vec4 fragColor;
 
 void main() {
-	vec4 tex = texture(uTexture, vTexCoords);
-	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 2.5f, 1.0f);
-	fragColor = vec4(color, color, color, tex.a) * vColor;
+	vec4 src = texture(uTexture, vTexCoords);
+	// src.r is the palette index normalized to 0..1 (index/255); sample the matching palette texel (nearest)
+	float palX = (src.r * 255.0 + 0.5) / 256.0;
+	vec4 color = texture(uTexturePalette, vec2(palX, 0.5));
+	fragColor = vec4(color.rgb, color.a * src.a) * vColor;
 }
 )";
 
@@ -770,6 +878,9 @@ precision mediump float;
 #endif
 
 uniform sampler2D uTexture;
+#ifdef USE_PALETTE
+uniform sampler2D uTexturePalette;
+#endif
 
 in vec2 vTexCoords;
 in vec4 vColor;
@@ -777,26 +888,37 @@ out vec4 fragColor;
 
 float aastep(float threshold, float value) {
 	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
-	return smoothstep(threshold - afwidth, threshold + afwidth, value); 
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+vec4 maskSample(vec2 uv) {
+	vec4 src = texture(uTexture, uv);
+#ifdef USE_PALETTE
+	float palX = (src.r * 255.0 + 0.5) / 256.0;
+	vec4 c = texture(uTexturePalette, vec2(palX, 0.5));
+	return vec4(c.rgb, c.a * src.a);
+#else
+	return src;
+#endif
 }
 
 void main() {
 	vec2 size = vColor.xy * vColor.a * 2.0;
 
-	vec4 tex = texture(uTexture, vTexCoords);
-	vec4 tex1 = texture(uTexture, vTexCoords + vec2(-size.x, 0));
-	vec4 tex2 = texture(uTexture, vTexCoords + vec2(0, size.y));
-	vec4 tex3 = texture(uTexture, vTexCoords + vec2(size.x, 0));
-	vec4 tex4 = texture(uTexture, vTexCoords + vec2(0, -size.y));
+	vec4 tex = maskSample(vTexCoords);
+	vec4 tex1 = maskSample(vTexCoords + vec2(-size.x, 0));
+	vec4 tex2 = maskSample(vTexCoords + vec2(0, size.y));
+	vec4 tex3 = maskSample(vTexCoords + vec2(size.x, 0));
+	vec4 tex4 = maskSample(vTexCoords + vec2(0, -size.y));
 
 	float outline = tex1.a;
 	outline += tex2.a;
 	outline += tex3.a;
 	outline += tex4.a;
-	outline += texture(uTexture, vTexCoords + vec2(-size.x, size.y)).a;
-	outline += texture(uTexture, vTexCoords + vec2(size.x, size.y)).a;
-	outline += texture(uTexture, vTexCoords + vec2(-size.x, -size.y)).a;
-	outline += texture(uTexture, vTexCoords + vec2(size.x, -size.y)).a;
+	outline += maskSample(vTexCoords + vec2(-size.x, size.y)).a;
+	outline += maskSample(vTexCoords + vec2(size.x, size.y)).a;
+	outline += maskSample(vTexCoords + vec2(-size.x, -size.y)).a;
+	outline += maskSample(vTexCoords + vec2(size.x, -size.y)).a;
 	outline = aastep(1.0, outline);
 
 	vec4 color = (tex + tex + tex1 + tex2 + tex3 + tex4) / 6.0;

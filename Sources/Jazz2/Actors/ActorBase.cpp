@@ -23,6 +23,7 @@
 #include "../../nCine/Primitives/Matrix4x4.h"
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"
+#include "../../nCine/Graphics/GL/GLUniformCache.h"
 
 using namespace Jazz2::Tiles;
 using namespace nCine;
@@ -1298,15 +1299,15 @@ namespace Jazz2::Actors
 		ContentResolver::Get().PreloadMetadataAsync(path);
 	}
 
-	void ActorBase::RequestMetadata(StringView path)
+	void ActorBase::RequestMetadata(StringView path, bool forceIndexed)
 	{
-		_metadata = ContentResolver::Get().RequestMetadata(path);
+		_metadata = ContentResolver::Get().RequestMetadata(path, forceIndexed);
 	}
-	
+
 #if !defined(WITH_COROUTINES)
-	void ActorBase::RequestMetadataAsync(StringView path)
+	void ActorBase::RequestMetadataAsync(StringView path, bool forceIndexed)
 	{
-		_metadata = ContentResolver::Get().RequestMetadata(path);
+		_metadata = ContentResolver::Get().RequestMetadata(path, forceIndexed);
 	}
 #endif
 
@@ -1422,7 +1423,7 @@ namespace Jazz2::Actors
 	ActorBase::ActorRenderer::ActorRenderer(ActorBase* owner)
 		: BaseSprite(nullptr, nullptr, 0.0f, 0.0f), AnimPaused(false), LoopMode(AnimationLoopMode::Loop), FirstFrame(0),
 			FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f), CurrentFrame(0), _owner(owner),
-			_rendererType((ActorRendererType)-1), _rendererTransition(0.0f)
+			_rendererType((ActorRendererType)-1), _rendererTransition(0.0f), _paletteTexture(nullptr)
 	{
 		_type = ObjectType::Sprite;
 		renderCommand_.SetType(RenderCommand::Type::Sprite);
@@ -1442,13 +1443,22 @@ namespace Jazz2::Actors
 			return;
 		}
 
+		// Each render type picks the palette-aware shader variant when a recolor palette is set (so the effect is
+		// computed from the real colors - an indexed sprite would otherwise read raw palette indices as near-black);
+		// the palette texture itself is bound below, after shaderHasChanged().
+		bool hasPalette = (_paletteTexture != nullptr);
 		bool shaderChanged;
 		switch (type) {
-			case ActorRendererType::Outline: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(PrecompiledShader::Outline)); break;
-			case ActorRendererType::WhiteMask: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(PrecompiledShader::WhiteMask)); break;
-			case ActorRendererType::PartialWhiteMask: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(PrecompiledShader::PartialWhiteMask)); break;
-			case ActorRendererType::FrozenMask: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(PrecompiledShader::FrozenMask)); break;
-			default: shaderChanged = renderCommand_.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite); break;
+			case ActorRendererType::Outline: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(hasPalette ? PrecompiledShader::OutlinePalette : PrecompiledShader::Outline)); break;
+			case ActorRendererType::WhiteMask: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(hasPalette ? PrecompiledShader::WhiteMaskPalette : PrecompiledShader::WhiteMask)); break;
+			case ActorRendererType::PartialWhiteMask: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(hasPalette ? PrecompiledShader::PartialWhiteMaskPalette : PrecompiledShader::PartialWhiteMask)); break;
+			case ActorRendererType::FrozenMask: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(hasPalette ? PrecompiledShader::FrozenMaskPalette : PrecompiledShader::FrozenMask)); break;
+			default:
+				// Default state has no precompiled "palette-off" shader - it uses the built-in Sprite program instead
+				shaderChanged = (hasPalette
+					? renderCommand_.GetMaterial().SetShader(resolver.GetShader(PrecompiledShader::PaletteRemap))
+					: renderCommand_.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
+				break;
 		}
 		if (shaderChanged) {
 			shaderHasChanged();
@@ -1463,6 +1473,35 @@ namespace Jazz2::Actors
 			} else {
 				setColor(Colorf::White);
 			}
+		}
+
+		// Bind the recolor palette to texture unit 1 for the palette-aware shaders (PaletteRemap / OutlinePalette /
+		// the *MaskPalette variants). Done after shaderHasChanged() (which (re)allocates the uniform data and resets
+		// uTexture to unit 0) so the sampler/texture binding sticks. Every render type has a palette variant now.
+		if (hasPalette) {
+			GLUniformCache* paletteUniform = renderCommand_.GetMaterial().Uniform("uTexturePalette");
+			if (paletteUniform != nullptr) {
+				paletteUniform->SetIntValue(1); // GL_TEXTURE1
+			}
+			renderCommand_.GetMaterial().SetTexture(1, *_paletteTexture);
+		}
+	}
+
+	void ActorBase::ActorRenderer::SetPalette(Texture* paletteTexture)
+	{
+		if (_paletteTexture == paletteTexture) {
+			return;
+		}
+
+		_paletteTexture = paletteTexture;
+
+		// Re-run the current state's setup so the shader switches to/from its palette-aware variant (with the proper
+		// shaderHasChanged() handling) and the palette texture is (un)bound. Every render type has a palette variant
+		// now, so this works whether the renderer is in Default or in a mask state (hit flash, frozen, sugar rush).
+		if (_rendererType != (ActorRendererType)-1 && !ContentResolver::Get().IsHeadless()) {
+			ActorRendererType current = _rendererType;
+			_rendererType = (ActorRendererType)-1;
+			Initialize(current);
 		}
 	}
 

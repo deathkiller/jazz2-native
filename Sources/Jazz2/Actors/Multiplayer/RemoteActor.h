@@ -15,6 +15,10 @@ namespace Jazz2::Actors::Multiplayer
 		RemoteActor();
 
 		void AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType);
+		/** @brief Sets the per-player recolor (0 = none); reloads the sprites indexed and (re)applies the palette */
+		void SetPlayerColor(std::uint32_t furColor);
+		/** @brief Changes the metadata (e.g. on character change), keeping the current recolor applied */
+		void ChangeMetadata(StringView path);
 		void SyncPositionWithServer(Vector2f pos);
 		void SyncAnimationWithServer(AnimState anim, float rotation, float scaleX, float scaleY, Actors::ActorRendererType rendererType);
 		void SyncMiscWithServer(std::uint8_t flags);
@@ -32,6 +36,8 @@ namespace Jazz2::Actors::Multiplayer
 		std::int32_t _stateBufferPos;
 		AnimState _lastAnim;
 		bool _isAttachedLocally;
+		std::uint32_t _furColor;
+		std::unique_ptr<Texture> _colorPalette;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

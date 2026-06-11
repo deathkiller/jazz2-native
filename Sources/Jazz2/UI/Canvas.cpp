@@ -1,4 +1,5 @@
 ﻿#include "Canvas.h"
+#include "../ContentResolver.h"
 
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Base/Random.h"
@@ -68,6 +69,45 @@ namespace Jazz2::UI
 		command->SetTransformation(worldMatrix);
 		command->SetLayer(z);
 		command->GetMaterial().SetTexture(0, texture);
+
+		_currentRenderQueue->AddCommand(command);
+	}
+
+	void Canvas::DrawTextureWithPalette(const Texture& texture, const Texture& palette, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color)
+	{
+		auto* shader = ContentResolver::Get().GetShader(PrecompiledShader::PaletteRemap);
+		if (shader == nullptr) {
+			// No palette shader - fall back to a plain textured draw
+			DrawTexture(texture, pos, z, size, texCoords, color);
+			return;
+		}
+
+		auto command = RentRenderCommand();
+		if (command->GetMaterial().SetShader(shader)) {
+			command->GetMaterial().ReserveUniformsDataMemory();
+			command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+			auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
+			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+				textureUniform->SetIntValue(0); // GL_TEXTURE0
+			}
+			auto* paletteUniform = command->GetMaterial().Uniform("uTexturePalette");
+			if (paletteUniform != nullptr) {
+				paletteUniform->SetIntValue(1); // GL_TEXTURE1
+			}
+		}
+
+		command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
+		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
+		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+
+		command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
+		command->SetLayer(z);
+		command->GetMaterial().SetTexture(0, texture);
+		command->GetMaterial().SetTexture(1, palette);
 
 		_currentRenderQueue->AddCommand(command);
 	}

@@ -42,6 +42,13 @@ namespace Jazz2
 		EnabledWithAmmoCount		/**< Enabled with Ammo count */
 	};
 
+	/** @brief When the custom player character color is applied */
+	enum class PlayerColorMode : std::uint8_t {
+		OnlineOnly,					/**< Only in online multiplayer */
+		FirstLocalPlayer,			/**< Online, and the first player in local games */
+		AllLocalPlayers				/**< Online, and all players in local games */
+	};
+
 	/** @brief Gamepad button labels */
 	enum class GamepadType : std::uint8_t {
 		Xbox,						/**< Xbox */
@@ -278,6 +285,11 @@ namespace Jazz2
 		static Uuid UniqueServerID;
 		/** @brief Player display name */
 		static String PlayerName;
+		/** @brief Player character recolor: 4 packed bytes (one per fur section), each a sprite-palette gradient
+			start; 0x00000000 means "use the original colors" (see @ref ContentResolver::BuildPlayerColorPalette) */
+		static std::uint32_t PlayerFurColor;
+		/** @brief When the custom player character color is applied (see @ref PlayerColorMode) */
+		static PlayerColorMode PlayerColors;
 		/** @brief Whether Discord integration is enabled */
 		static bool EnableDiscordIntegration;
 
@@ -346,7 +358,7 @@ namespace Jazz2
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 14;
+		static constexpr std::uint8_t FileVersion = 15;
 
 		PreferencesCache(const PreferencesCache&) = delete;
 		PreferencesCache& operator=(const PreferencesCache&) = delete;

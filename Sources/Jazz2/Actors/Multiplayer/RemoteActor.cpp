@@ -2,12 +2,13 @@
 
 #if defined(WITH_MULTIPLAYER)
 
+#include "../../ContentResolver.h"
 #include "../../../nCine/Base/Clock.h"
 
 namespace Jazz2::Actors::Multiplayer
 {
 	RemoteActor::RemoteActor()
-		: _stateBufferPos(0), _lastAnim(AnimState::Idle), _isAttachedLocally(false)
+		: _stateBufferPos(0), _lastAnim(AnimState::Idle), _isAttachedLocally(false), _furColor(0)
 	{
 	}
 
@@ -85,14 +86,59 @@ namespace Jazz2::Actors::Multiplayer
 			ActorState::CollideWithOtherActors | ActorState::CollideWithSolidObjects | ActorState::IsSolidObject |
 			ActorState::CollideWithTilesetReduced | ActorState::CollideWithSolidObjectsBelow | ActorState::ExcludeSimilar;
 
-		RequestMetadata(path);
+		// Load indexed sprites when this remote player has a custom color, so they can be recolored at draw time
+		RequestMetadata(path, _furColor != 0);
 		SetAnimation(anim);
 		SetState((GetState() & ~RemotedFlags) | (state & RemotedFlags));
 
 		_renderer.Initialize(rendererType);
 		_renderer.setRotation(rotation);
-		
+
+		if (_furColor != 0) {
+			_renderer.SetPalette(ContentResolver::Get().ApplyPlayerColorPalette(_colorPalette, _furColor));
+		} else {
+			_renderer.SetPalette(nullptr);
+		}
+
 		SyncMiscWithServer(flags);
+	}
+
+	void RemoteActor::SetPlayerColor(std::uint32_t furColor)
+	{
+		if (_furColor == furColor) {
+			return;
+		}
+		_furColor = furColor;
+
+		// Not assigned yet - AssignMetadata will pick up _furColor when it runs
+		if (_metadata == nullptr) {
+			return;
+		}
+
+		// Reload the current metadata with matching indexed-ness and re-resolve the animation (the metadata pointer
+		// changes), then (re)apply or clear the palette
+		String path = _metadata->Path;
+		AnimState currentState = (_currentAnimation != nullptr ? _currentAnimation->State : _lastAnim);
+		RequestMetadata(path, furColor != 0);
+		_currentAnimation = nullptr;
+		SetAnimation(currentState);
+
+		if (furColor != 0) {
+			_renderer.SetPalette(ContentResolver::Get().ApplyPlayerColorPalette(_colorPalette, furColor));
+		} else {
+			_renderer.SetPalette(nullptr);
+		}
+	}
+
+	void RemoteActor::ChangeMetadata(StringView path)
+	{
+		// Keep the recolor: load indexed when colored, and (re)apply or clear the palette
+		RequestMetadata(path, _furColor != 0);
+		if (_furColor != 0) {
+			_renderer.SetPalette(ContentResolver::Get().ApplyPlayerColorPalette(_colorPalette, _furColor));
+		} else {
+			_renderer.SetPalette(nullptr);
+		}
 	}
 
 	void RemoteActor::SyncPositionWithServer(Vector2f pos)

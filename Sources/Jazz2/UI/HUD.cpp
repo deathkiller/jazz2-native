@@ -85,7 +85,7 @@ namespace Jazz2::UI
 	using namespace Jazz2::UI::Resources;
 
 	HUD::HUD(LevelHandler* levelHandler)
-		: _levelHandler(levelHandler), _metadata(nullptr), _levelTextTime(-1.0f), _coins(0), _gems(0), _coinsTime(-1.0f), _gemsTime(-1.0f),
+		: _levelHandler(levelHandler), _metadata(nullptr), _metadataIndexed(nullptr), _levelTextTime(-1.0f), _coins(0), _gems(0), _coinsTime(-1.0f), _gemsTime(-1.0f),
 			_activeBossTime(0.0f), _touchButtonsTimer(0.0f), _rgbAmbientLight(0.0f), _rgbHealthLast(0.0f), _rgbLightsAnim(0.0f),
 			_rgbLightsTime(0.0f), _transitionState(TransitionState::WaitingForFadeIn), _transitionTime(1.0f),
 			_joystickActive(false), _joystickOrigin(0.0f, 0.0f), _joystickCurrent(0.0f, 0.0f),
@@ -573,7 +573,19 @@ namespace Jazz2::UI
 #endif
 		if (shouldDrawLives) {
 			DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
-			DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f, MainLayer, Alignment::BottomRight, Colorf::White);
+
+			// Recolor the character icon to match the player when it's being recolored; fall back to the plain icon
+			Texture* palette = player->GetColorPaletteTexture();
+			bool drawn = false;
+			if (palette != nullptr) {
+				if (_metadataIndexed == nullptr) {
+					_metadataIndexed = ContentResolver::Get().RequestMetadata("UI/HUD"_s, true);
+				}
+				drawn = DrawElementWithPalette(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f, MainLayer, Alignment::BottomRight, Colorf::White, *palette);
+			}
+			if (!drawn) {
+				DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f, MainLayer, Alignment::BottomRight, Colorf::White);
+			}
 		}
 
 		char stringBuffer[32];
@@ -1095,6 +1107,74 @@ namespace Jazz2::UI
 		);
 
 		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending, angle);
+	}
+
+	bool HUD::DrawElementWithPalette(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, const Texture& palette, float scaleX, float scaleY)
+	{
+		if (_metadataIndexed == nullptr) {
+			return false;
+		}
+		auto* res = _metadataIndexed->FindAnimation(state);
+		if (res == nullptr || res->Base == nullptr || res->Base->TextureDiffuse == nullptr) {
+			return false;
+		}
+
+		GenericGraphicResource* base = res->Base;
+		// Only the PaletteRemap shader makes sense here - the diffuse must hold palette indices, not baked colors
+		if ((base->Flags & GenericGraphicResourceFlags::Indexed) != GenericGraphicResourceFlags::Indexed) {
+			return false;
+		}
+
+		auto* shader = ContentResolver::Get().GetShader(PrecompiledShader::PaletteRemap);
+		if (shader == nullptr) {
+			return false;
+		}
+
+		if (frame < 0) {
+			frame = res->FrameOffset + ((std::int32_t)(AnimTime * res->FrameCount / res->AnimDuration) % res->FrameCount);
+		}
+
+		Vector2f size = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
+		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x, y), size);
+
+		Vector2i texSize = base->TextureDiffuse->GetSize();
+		std::int32_t col = frame % base->FrameConfiguration.X;
+		std::int32_t row = frame / base->FrameConfiguration.X;
+		Vector4f texCoords = Vector4f(
+			float(base->FrameDimensions.X) / float(texSize.X),
+			float(base->FrameDimensions.X * col) / float(texSize.X),
+			float(base->FrameDimensions.Y) / float(texSize.Y),
+			float(base->FrameDimensions.Y * row) / float(texSize.Y)
+		);
+
+		auto command = RentRenderCommand();
+		if (command->GetMaterial().SetShader(shader)) {
+			command->GetMaterial().ReserveUniformsDataMemory();
+			command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		}
+		command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
+		if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
+			textureUniform->SetIntValue(0); // GL_TEXTURE0
+		}
+		auto* paletteUniform = command->GetMaterial().Uniform("uTexturePalette");
+		if (paletteUniform != nullptr) {
+			paletteUniform->SetIntValue(1); // GL_TEXTURE1
+		}
+
+		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
+		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
+		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+
+		command->SetTransformation(Matrix4x4f::Translation(adjustedPos.X, adjustedPos.Y, 0.0f));
+		command->SetLayer(z);
+		command->GetMaterial().SetTexture(0, *base->TextureDiffuse.get());
+		command->GetMaterial().SetTexture(1, palette);
+
+		DrawRenderCommand(command);
+		return true;
 	}
 
 	void HUD::DrawElementClipped(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float clipX, float clipY)

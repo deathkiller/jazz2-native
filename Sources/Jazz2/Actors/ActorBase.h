@@ -287,6 +287,10 @@ namespace Jazz2::Actors
 			/** @brief Initializes the renderer to the specified renderer type */
 			void Initialize(ActorRendererType type);
 
+			/** @brief Sets the palette texture used to recolor indexed sprites (256x1 RGBA), or `nullptr` for none.
+				When set, the @ref ActorRendererType::Default state renders via @ref PrecompiledShader::PaletteRemap. */
+			void SetPalette(Texture* paletteTexture);
+
 			void OnUpdate(float timeMult) override;
 			bool OnDraw(RenderQueue& renderQueue) override;
 
@@ -302,6 +306,7 @@ namespace Jazz2::Actors
 			ActorBase* _owner;
 			ActorRendererType _rendererType;
 			float _rendererTransition;
+			Texture* _paletteTexture;
 
 			void UpdateVisibleFrames();
 			static std::int32_t NormalizeFrame(std::int32_t frame, std::int32_t min, std::int32_t max);
@@ -423,32 +428,34 @@ namespace Jazz2::Actors
 
 		/** @brief Preloads specified metadata and its linked assets to cache */
 		static void PreloadMetadataAsync(StringView path);
-		/** @brief Loads specified metadata and its linked assets */
-		void RequestMetadata(StringView path);
+		/** @brief Loads specified metadata and its linked assets
+			@param forceIndexed Load linked graphics as indexed (for shader-based recoloring, e.g. the player) */
+		void RequestMetadata(StringView path, bool forceIndexed = false);
 
 		/** @brief Loads specified metadata and its linked assets asynchronously if supported */
 #if defined(WITH_COROUTINES)
-		auto RequestMetadataAsync(StringView path)
+		auto RequestMetadataAsync(StringView path, bool forceIndexed = false)
 		{
 			struct awaitable {
 				ActorBase* actor;
 				const StringView& path;
+				bool forceIndexed;
 
 				bool await_ready() {
 					return false;
 				}
 				void await_suspend(std::coroutine_handle<> handle) {
 					// TODO: implement async
-					auto metadata = ContentResolver::Get().RequestMetadata(path);
+					auto metadata = ContentResolver::Get().RequestMetadata(path, forceIndexed);
 					actor->_metadata = metadata;
 					handle();
 				}
 				void await_resume() { }
 			};
-			return awaitable{this, path};
+			return awaitable{this, path, forceIndexed};
 		}
 #else
-		void RequestMetadataAsync(StringView path);
+		void RequestMetadataAsync(StringView path, bool forceIndexed = false);
 #endif
 
 		/** @brief Sets actor state */

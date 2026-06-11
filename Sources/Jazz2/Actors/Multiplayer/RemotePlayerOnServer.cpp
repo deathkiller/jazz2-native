@@ -14,6 +14,8 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		_peerDesc = std::move(peerDesc);
 		_peerDesc->Player = this;
+		// Use the peer's chosen fur color (the base Player ctor defaulted it to the local/host PreferencesCache value)
+		_furColor = _peerDesc->FurColor;
 	}
 
 	Task<bool> RemotePlayerOnServer::OnActivatedAsync(const ActorActivationDetails& details)

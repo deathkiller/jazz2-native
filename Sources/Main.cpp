@@ -1069,6 +1069,9 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 #	endif
 		packet.WriteVariableUint64(playerUserId);
 
+		// Player character recolor (so other peers see the correct colors)
+		packet.WriteValueAsLE<std::uint32_t>(PreferencesCache::PlayerFurColor);
+
 		_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ClientPacketType::Auth, packet);
 	}
 
@@ -1217,9 +1220,12 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				}
 				// TODO: Check playerUserId for whitelist (Reason::NotInWhitelist)
 
+				std::uint32_t furColor = packet.ReadValueAsLE<std::uint32_t>();
+
 				if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
 					peerDesc->UniquePlayerID = std::move(uuid);
 					peerDesc->PlayerName = std::move(playerName);
+					peerDesc->FurColor = furColor;
 					peerDesc->IsAuthenticated = true;
 
 					if (serverConfig.AdminUniquePlayerIDs.contains(uniquePlayerId)) {
