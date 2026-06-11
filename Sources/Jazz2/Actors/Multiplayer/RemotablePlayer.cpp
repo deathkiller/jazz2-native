@@ -17,7 +17,14 @@ namespace Jazz2::Actors::Multiplayer
 
 	Task<bool> RemotablePlayer::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		async_return async_await Player::OnActivatedAsync(details);
+		// Go through MpPlayer so any carried-over progression (set on the local peer descriptor from the
+		// CreateControllablePlayer packet) is applied after the base reset. Clear the flag afterwards so a
+		// later in-level respawn doesn't re-apply the stale carryover.
+		bool success = async_await MpPlayer::OnActivatedAsync(details);
+		if (_peerDesc != nullptr) {
+			_peerDesc->HasCarryOver = false;
+		}
+		async_return success;
 	}
 
 	bool RemotablePlayer::OnPerish(ActorBase* collider)

@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "Peer.h"
+#include "../LevelInitialization.h"
 #include "../PlayerType.h"
 #include "../PreferencesCache.h"
 #include "../../nCine/Base/TimeStamp.h"
@@ -102,6 +103,13 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Whether the player is in spectate mode */
 		SpectateMode IsSpectating;
+
+		/** @brief Player state (weapons, lives, score, ...) to apply on the next (re)spawn, see @ref HasCarryOver */
+		PlayerCarryOver CarryOver;
+		/** @brief Whether @ref CarryOver holds state to apply on the next spawn (level change or reconnect) */
+		bool HasCarryOver;
+		/** @brief Time when the peer disconnected, used for the reconnect window (invalid while connected) */
+		TimeStamp DisconnectedSince;
 
 		PeerDescriptor();
 	};

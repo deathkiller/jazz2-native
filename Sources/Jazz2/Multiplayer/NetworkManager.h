@@ -51,6 +51,13 @@ namespace Jazz2::Multiplayer
 		/** @brief Returns session peer descriptor for the specified connected remote peer */
 		std::shared_ptr<PeerDescriptor> GetPeerDescriptor(const Peer& peer);
 
+		/** @brief Tries to reclaim a recently disconnected peer's descriptor by unique player ID, so a
+			reconnecting player can resume; returns the retained descriptor (with restorable state) or `nullptr`
+			if there is none within the reconnect window */
+		std::shared_ptr<PeerDescriptor> ReclaimDisconnectedPeer(StaticArrayView<Uuid::Size, Uuid::Type> uuid);
+		/** @brief Clears the restorable state of all retained disconnected peers (e.g. when a new round starts) */
+		void ClearDisconnectedPeerStates();
+
 		/** @brief Returns `true` if there are any inbound connections */
 		bool HasInboundConnections() const;
 
@@ -95,6 +102,7 @@ namespace Jazz2::Multiplayer
 		std::unique_ptr<ServerConfiguration> _serverConfig;
 		std::unique_ptr<ServerDiscovery> _discovery;
 		HashMap<Peer, std::shared_ptr<PeerDescriptor>> _peerDesc;
+		HashMap<String, std::shared_ptr<PeerDescriptor>> _disconnectedPeers; // Retained for reconnect, keyed by unique player ID
 		Spinlock _lock;
 
 		String OnOverrideContentPath(StringView path);

@@ -18,10 +18,11 @@ namespace Jazz2::UI::Menu
 		MenuSection::OnShow(root);
 
 #if defined(WITH_MULTIPLAYER)
-		bool isLocalSession = true, isSpectating = false;
+		bool isLocalSession = true, isSpectating = false, isSpectateAvailable = false;
 		if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
 			isLocalSession = inGameMenu->IsLocalSession();
 			isSpectating = inGameMenu->IsSpectating();
+			isSpectateAvailable = inGameMenu->IsSpectateAvailable();
 		}
 #endif
 
@@ -32,8 +33,18 @@ namespace Jazz2::UI::Menu
 
 #if defined(WITH_MULTIPLAYER)
 		if (!isLocalSession) {
-			// TRANSLATORS: Menu item in main menu
-			_items.emplace_back(Item::Spectate, isSpectating ? _("Join Game") : _("Spectate"));
+			if (isSpectating) {
+				// Leaving spectate returns to the lobby so the player can pick a (possibly different) character
+				// TRANSLATORS: Menu item in main menu
+				_items.emplace_back(Item::ChangeCharacter, _("Join Game"));
+			} else if (isSpectateAvailable) {
+				// TRANSLATORS: Menu item in main menu
+				_items.emplace_back(Item::Spectate, _("Spectate"));
+			} else {
+				// Spectate is disabled by the server; offer returning to the lobby to change character instead
+				// TRANSLATORS: Menu item in main menu
+				_items.emplace_back(Item::ChangeCharacter, _("Change Character"));
+			}
 		}
 #endif
 
@@ -143,7 +154,14 @@ namespace Jazz2::UI::Menu
 			case Item::Spectate: {
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 				if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
-					inGameMenu->ToggleSpectate();
+					inGameMenu->EnterSpectate();
+				}
+				break;
+			}
+			case Item::ChangeCharacter: {
+				_root->PlaySfx("MenuSelect"_s, 0.6f);
+				if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
+					inGameMenu->ShowCharacterSelect();
 				}
 				break;
 			}

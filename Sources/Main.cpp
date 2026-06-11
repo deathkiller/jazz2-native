@@ -1226,6 +1226,19 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						peerDesc->IsAdmin = true;
 					}
 
+					// Reconnect: if this player disconnected recently (and no new round invalidated it), restore
+					// their progression (weapons, lives, score, gems) and championship points so they resume
+					if (auto previous = _networkManager->ReclaimDisconnectedPeer(peerDesc->UniquePlayerID)) {
+						if (previous->HasCarryOver) {
+							peerDesc->CarryOver = previous->CarryOver;
+							peerDesc->HasCarryOver = true;
+							peerDesc->Points = previous->Points;
+							peerDesc->Team = previous->Team;
+							peerDesc->PreferredPlayerType = previous->CarryOver.Type;
+							LOGI("[MP] Peer \"{}\" [{}] reconnected, restoring progression", peerDesc->PlayerName, peer);
+						}
+					}
+
 					LOGI("[MP] Peer authenticated as \"{}\" ({}){} [{}]", peerDesc->PlayerName, _networkManager->AddressToString(peer),
 						peerDesc->IsAdmin ? " [Admin]" : "", peer);
 
@@ -1343,13 +1356,15 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				std::uint32_t totalKills = packet.ReadVariableUint32();
 				std::uint32_t totalLaps = packet.ReadVariableUint32();
 				std::uint32_t totalTreasureCollected = packet.ReadVariableUint32();
+				std::uint8_t allowedPlayerTypes = packet.ReadValue<std::uint8_t>();
 
 				LOGI("[MP] ServerPacketType::LoadLevel - flags: 0x{:.2x}, gameMode: {}, level: \"{}\"", flags, gameMode, levelName);
 
-				InvokeAsync([this, flags, levelState, gameMode, lastExitType, levelName = std::move(levelName), initialPlayerHealth, maxGameTimeSecs, totalKills, totalLaps, totalTreasureCollected]() {
+				InvokeAsync([this, flags, levelState, gameMode, lastExitType, levelName = std::move(levelName), initialPlayerHealth, maxGameTimeSecs, totalKills, totalLaps, totalTreasureCollected, allowedPlayerTypes]() {
 					bool isReforged = (flags & 0x01) != 0;
 					bool enableLedgeClimb = (flags & 0x02) != 0;
 					bool elimination = (flags & 0x04) != 0;
+					bool enableSpectate = (flags & 0x08) != 0;
 
 					LevelInitialization levelInit(levelName, GameDifficulty::Normal, isReforged);
 					levelInit.IsLocalSession = false;
@@ -1359,6 +1374,8 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					serverConfig.GameMode = gameMode;
 					serverConfig.ReforgedGameplay = isReforged;
 					serverConfig.Elimination = elimination;
+						serverConfig.EnableSpectate = enableSpectate;
+						serverConfig.AllowedPlayerTypes = allowedPlayerTypes;
 					serverConfig.InitialPlayerHealth = initialPlayerHealth;
 					serverConfig.MaxGameTimeSecs = maxGameTimeSecs;
 					serverConfig.TotalKills = totalKills;

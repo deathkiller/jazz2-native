@@ -20,6 +20,7 @@ namespace Jazz2::UI::Menu
 			Resume,
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 			Spectate,
+			ChangeCharacter,
 #endif
 			Options,
 			Exit,

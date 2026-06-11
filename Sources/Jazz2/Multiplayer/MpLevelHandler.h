@@ -164,6 +164,10 @@ namespace Jazz2::Multiplayer
 		void RequestSpectateMode(bool enable);
 		/** @brief Returns `true` if the local player is currently spectating */
 		bool IsSpectating();
+		/** @brief Returns `true` if spectate mode is enabled by the server */
+		bool IsSpectateAvailable() const;
+		/** @brief Shows the in-game lobby so the local player can (re)select a character, (re)joining the game on confirmation */
+		void ShowCharacterSelectLobby();
 
 		/** @brief Called when a peer disconnects from the server, see @ref INetworkHandler */
 		bool OnPeerDisconnected(const Peer& peer);
@@ -177,6 +181,7 @@ namespace Jazz2::Multiplayer
 		void AttachComponents(LevelDescriptor&& descriptor) override;
 		std::unique_ptr<UI::HUD> CreateHUD() override;
 		void SpawnPlayers(const LevelInitialization& levelInit) override;
+		void PrepareNextLevelInitialization(LevelInitialization& levelInit) override;
 		bool IsCheatingAllowed() override;
 
 		void BeforeActorDestroyed(Actors::ActorBase* actor) override;
@@ -339,6 +344,7 @@ namespace Jazz2::Multiplayer
 
 		std::unique_ptr<UI::Multiplayer::MpInGameCanvasLayer> _inGameCanvasLayer;
 		std::unique_ptr<UI::Multiplayer::MpInGameLobby> _inGameLobby;
+		bool _changingCharacterInLobby; // Client: lobby was opened to re-pick a character mid-game (not initial join)
 
 		void InitializeRequiredAssets();
 		void SynchronizePeers(float timeMult);

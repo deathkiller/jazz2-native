@@ -88,8 +88,12 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_MULTIPLAYER)
 		/** @brief Returns `true` if the player is currently spectating */
 		bool IsSpectating();
-		/** @brief Enters/exits spectate mode */
-		void ToggleSpectate();
+		/** @brief Returns `true` if spectate mode is enabled by the server */
+		bool IsSpectateAvailable();
+		/** @brief Enters spectate mode */
+		void EnterSpectate();
+		/** @brief Opens the in-game lobby to (re)select a character, (re)joining the game on confirmation */
+		void ShowCharacterSelect();
 #endif
 
 	private:

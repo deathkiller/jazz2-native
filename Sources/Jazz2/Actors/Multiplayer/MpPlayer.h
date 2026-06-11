@@ -30,6 +30,8 @@ namespace Jazz2::Actors::Multiplayer
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		std::shared_ptr<PeerDescriptor> _peerDesc;
+
+		Task<bool> OnActivatedAsync(const Actors::ActorActivationDetails& details) override;
 #endif
 	};
 }

@@ -34,7 +34,8 @@ namespace Jazz2::Multiplayer
 		PlayerKeyPress,
 		PlayerChangeWeaponRequest,
 		PlayerSpectateRequest,
-		PlayerAckWarped
+		PlayerAckWarped,
+		PlayerChangeCharacter
 	};
 
 	/** @brief Packet type going from server to client */

@@ -27,7 +27,8 @@ namespace Jazz2::Multiplayer
 		: IsAuthenticated(false), IsAdmin(false), EnableLedgeClimb(false), Team(0), PreferredPlayerType(PlayerType::None),
 			Points(0), PointsInRound(0), PositionInRound(0), LevelState(PeerLevelState::Unknown), Player(nullptr),
 			LastUpdated(0), Deaths(0), Kills(0), Laps(0), LapStarted{}, TreasureCollected(0), IdleElapsedFrames(0.0f),
-			DeathElapsedFrames(FLT_MAX), LapsElapsedFrames(0.0f), JoinCooldownFrames(0.0f), IsSpectating(SpectateMode::None)
+			DeathElapsedFrames(FLT_MAX), LapsElapsedFrames(0.0f), JoinCooldownFrames(0.0f), IsSpectating(SpectateMode::None),
+			CarryOver{}, HasCarryOver(false)
 	{
 	}
 
@@ -192,6 +193,7 @@ namespace Jazz2::Multiplayer
 		serverConfig.GameMode = MpGameMode::Cooperation;
 		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
 		serverConfig.IdleKickTimeSecs = -1;
+		serverConfig.ReconnectWindowSecs = 600;
 		serverConfig.MinPlayerCount = 1;
 		serverConfig.ReforgedGameplay = PreferencesCache::EnableReforgedGameplay;
 		serverConfig.PreGameSecs = 60;
@@ -363,6 +365,11 @@ namespace Jazz2::Multiplayer
 				std::int64_t idleKickTimeSecs;
 				if (doc["IdleKickTimeSecs"].get(idleKickTimeSecs) == Json::SUCCESS && idleKickTimeSecs >= INT32_MIN && idleKickTimeSecs <= INT32_MAX) {
 					serverConfig.IdleKickTimeSecs = std::int16_t(idleKickTimeSecs);
+				}
+
+				std::int64_t reconnectWindowSecs;
+				if (doc["ReconnectWindowSecs"].get(reconnectWindowSecs) == Json::SUCCESS && reconnectWindowSecs >= INT32_MIN && reconnectWindowSecs <= INT32_MAX) {
+					serverConfig.ReconnectWindowSecs = std::int32_t(reconnectWindowSecs);
 				}
 
 				Json::Value& adminUniquePlayerIDs = doc["AdminUniquePlayerIDs"];
@@ -702,9 +709,56 @@ namespace Jazz2::Multiplayer
 			std::unique_lock<Spinlock> l(_lock);
 			auto it = _peerDesc.find(peer);
 			if (it != _peerDesc.end()) {
-				it->second->RemotePeer = {};
+				std::shared_ptr<PeerDescriptor> peerDesc = it->second;
+				peerDesc->RemotePeer = {};
 				_peerDesc.erase(it);
+
+				std::int32_t reconnectWindowSecs = (_serverConfig != nullptr ? _serverConfig->ReconnectWindowSecs : 0);
+
+				// Drop any retained descriptors that have outlived the reconnect window
+				SmallVector<String, 0> expired;
+				for (auto& [uuid, desc] : _disconnectedPeers) {
+					if (desc->DisconnectedSince.secondsSince() > reconnectWindowSecs) {
+						expired.push_back(uuid);
+					}
+				}
+				for (auto& uuid : expired) {
+					_disconnectedPeers.erase(uuid);
+				}
+
+				// Retain this descriptor so the player can reconnect and resume within the window. HasCarryOver
+				// is set by the level handler only when the peer had an active player, so spectators aren't kept.
+				// A window of zero (or less) disables reconnect resume entirely.
+				if (peerDesc->HasCarryOver && reconnectWindowSecs > 0) {
+					peerDesc->DisconnectedSince = TimeStamp::now();
+					_disconnectedPeers[UuidToString(peerDesc->UniquePlayerID)] = Death::move(peerDesc);
+				}
 			}
+		}
+	}
+
+	std::shared_ptr<PeerDescriptor> NetworkManager::ReclaimDisconnectedPeer(StaticArrayView<Uuid::Size, Uuid::Type> uuid)
+	{
+		std::unique_lock<Spinlock> l(_lock);
+		auto it = _disconnectedPeers.find(UuidToString(uuid));
+		if (it == _disconnectedPeers.end()) {
+			return nullptr;
+		}
+
+		std::shared_ptr<PeerDescriptor> peerDesc = it->second;
+		_disconnectedPeers.erase(it);
+		std::int32_t reconnectWindowSecs = (_serverConfig != nullptr ? _serverConfig->ReconnectWindowSecs : 0);
+		if (reconnectWindowSecs <= 0 || peerDesc->DisconnectedSince.secondsSince() > reconnectWindowSecs) {
+			return nullptr;
+		}
+		return peerDesc;
+	}
+
+	void NetworkManager::ClearDisconnectedPeerStates()
+	{
+		std::unique_lock<Spinlock> l(_lock);
+		for (auto& [uuid, peerDesc] : _disconnectedPeers) {
+			peerDesc->HasCarryOver = false;
 		}
 	}
 }

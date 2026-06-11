@@ -80,6 +80,7 @@ namespace Jazz2::Multiplayer
 			-   Supported platforms are Linux, macOS and Windows, players from other platforms won't be able to join
 		-   @cpp "AllowedPlayerTypes" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Bitmask for allowed player types (@cpp 1 @ce - Jazz, @cpp 2 @ce - Spaz, @cpp 4 @ce - Lori)
 		-   @cpp "IdleKickTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time in seconds after idle players are kicked (default is **never**)
+		-   @cpp "ReconnectWindowSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time window in seconds during which a disconnected player can reconnect and resume their progression (weapons, lives, score, gems), @cpp 0 @ce or less to disable (default is **600**, i.e. 10 minutes)
 		-   @cpp "AdminUniquePlayerIDs" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of admin player IDs
 			-   Key specifies player ID, value contains privileges
 		-   @cpp "WhitelistedUniquePlayerIDs" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of whitelisted player IDs
@@ -186,6 +187,8 @@ namespace Jazz2::Multiplayer
 		std::uint8_t AllowedPlayerTypes;
 		/** @brief Time after which inactive players will be kicked, in seconds, -1 to disable */
 		std::int32_t IdleKickTimeSecs;
+		/** @brief Time window in seconds during which a disconnected player can reconnect and resume their progression, 0 or less to disable */
+		std::int32_t ReconnectWindowSecs;
 		/** @brief List of unique player IDs with admin rights, value contains list of privileges, or `*` for all privileges */
 		HashMap<String, String> AdminUniquePlayerIDs;
 		/** @brief List of whitelisted unique player IDs, value can contain user-defined comment */

@@ -540,11 +540,28 @@ namespace Jazz2::UI::Menu
 		return false;
 	}
 
-	void InGameMenu::ToggleSpectate()
+	bool InGameMenu::IsSpectateAvailable()
 	{
 		if (auto* mpLevelHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_root)) {
-			bool isSpectating = mpLevelHandler->IsSpectating();
-			mpLevelHandler->RequestSpectateMode(!isSpectating);
+			return mpLevelHandler->IsSpectateAvailable();
+		}
+
+		return false;
+	}
+
+	void InGameMenu::EnterSpectate()
+	{
+		if (auto* mpLevelHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_root)) {
+			mpLevelHandler->RequestSpectateMode(true);
+		}
+
+		_root->ResumeGame();
+	}
+
+	void InGameMenu::ShowCharacterSelect()
+	{
+		if (auto* mpLevelHandler = runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_root)) {
+			mpLevelHandler->ShowCharacterSelectLobby();
 		}
 
 		_root->ResumeGame();

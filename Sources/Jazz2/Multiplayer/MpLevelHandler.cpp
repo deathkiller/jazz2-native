@@ -65,7 +65,7 @@ namespace Jazz2::Multiplayer
 	MpLevelHandler::MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpLevelHandler::LevelState levelState, bool enableLedgeClimb)
 		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f), _gameTimeLeft(0.0f),
 			_levelState(LevelState::InitialUpdatePending), _forceResyncPending(true), _enableSpawning(true), _enqueuedPlaylistChange(false), _lastSpawnedActorId(-1), _waitingForPlayerCount(0),
-			_lastUpdated(0), _seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _enableLedgeClimb(enableLedgeClimb),
+			_lastUpdated(0), _seqNumWarped(0), _suppressRemoting(false), _ignorePackets(false), _changingCharacterInLobby(false), _enableLedgeClimb(enableLedgeClimb),
 			_controllableExternal(true), _autoWeightTreasure(false), _activePoll(VoteType::None), _activePollTimeLeft(0.0f), _recalcPositionInRoundTime(0.0f),
 			_overtimeTimeLeft(0.0f), _overtimeStarted(false), _overtimeFinishers(0),
 			_limitCameraLeft(0), _limitCameraWidth(0), _totalTreasureCount(0)
@@ -2229,6 +2229,29 @@ namespace Jazz2::Multiplayer
 		return std::make_unique<UI::Multiplayer::MpHUD>(this);
 	}
 
+	void MpLevelHandler::PrepareNextLevelInitialization(LevelInitialization& levelInit)
+	{
+		LevelHandler::PrepareNextLevelInitialization(levelInit);
+
+		// Online co-op: capture each remote player's state into its (persistent) peer descriptor so weapons,
+		// lives, score and gems carry over to the next level - the host already carries over via levelInit.
+		// The snapshot is applied on (re)spawn in PlayerOnServer::OnActivatedAsync.
+		if (_isServer) {
+			for (auto* player : _players) {
+				if (auto* mpPlayer = runtime_cast<Actors::Multiplayer::MpPlayer>(player)) {
+					auto peerDesc = mpPlayer->GetPeerDescriptor();
+					if (peerDesc != nullptr && peerDesc->RemotePeer) {
+						// Call the base implementation explicitly: RemotePlayerOnServer::PrepareLevelCarryOver() is
+						// overridden to return an empty struct (so remotes stay out of levelInit's local-spawn list),
+						// but the server does track the real score/lives/weapons/gems for it, so capture those here.
+						peerDesc->CarryOver = mpPlayer->Player::PrepareLevelCarryOver();
+						peerDesc->HasCarryOver = true;
+					}
+				}
+			}
+		}
+	}
+
 	void MpLevelHandler::SpawnPlayers(const LevelInitialization& levelInit)
 	{
 		if (!_isServer) {
@@ -2356,17 +2379,21 @@ namespace Jazz2::Multiplayer
 		if (serverConfig.Elimination) {
 			flags |= 0x04;
 		}
+		if (serverConfig.EnableSpectate) {
+			flags |= 0x08;
+		}
 
 		for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
 			if (peerDesc->LevelState < PeerLevelState::LevelSynchronized) {
 				continue;
 			}
 
-			MemoryStream packet(24);
+			MemoryStream packet(25);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::GameMode);
 			packet.WriteValue<std::uint8_t>(flags);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
 			packet.WriteValue<std::uint8_t>(peerDesc->Team);
+			packet.WriteValue<std::uint8_t>(serverConfig.AllowedPlayerTypes);
 			packet.WriteVariableInt32(serverConfig.InitialPlayerHealth);
 			packet.WriteVariableUint32(serverConfig.MaxGameTimeSecs);
 			packet.WriteVariableUint32(serverConfig.TotalKills);
@@ -2892,6 +2919,14 @@ namespace Jazz2::Multiplayer
 					std::int32_t playerIndex = player->_playerIndex;
 					Vector2f pos = player->_pos;
 
+					// Snapshot the player's progression so it can be restored if the peer reconnects within the
+					// retention window (NetworkManager keeps the descriptor by unique player ID after disconnect).
+					// Call Player::PrepareLevelCarryOver() directly - RemotePlayerOnServer overrides it to return an
+					// empty struct, but the server tracks the real score/lives/weapons for it.
+					peerDesc->CarryOver = player->Player::PrepareLevelCarryOver();
+					peerDesc->HasCarryOver = true;
+					peerDesc->DisconnectedSince = TimeStamp::now();
+
 					for (std::size_t i = 0; i < _players.size(); i++) {
 						if (_players[i] == player) {
 							_players.eraseUnordered(i);
@@ -2995,6 +3030,48 @@ namespace Jazz2::Multiplayer
 		}
 
 		return false;
+	}
+
+	namespace
+	{
+		// Serializes the player progression appended to ServerPacketType::CreateControllablePlayer so a
+		// reconnecting / level-changing client restores the same state the server holds (otherwise it starts fresh)
+		static void WriteCarryOver(MemoryStream& packet, const PlayerCarryOver& c)
+		{
+			packet.WriteValue<std::uint8_t>((std::uint8_t)c.CurrentWeapon);
+			packet.WriteValue<std::uint8_t>(c.Lives);
+			packet.WriteValue<std::uint8_t>(c.FoodEaten);
+			packet.WriteVariableInt32(c.Score);
+			for (std::int32_t i = 0; i < 4; i++) {
+				packet.WriteVariableInt32(c.Gems[i]);
+			}
+			for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
+				packet.WriteValue<std::uint16_t>(c.Ammo[i]);
+			}
+			for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
+				packet.WriteValue<std::uint8_t>(c.WeaponUpgrades[i]);
+			}
+		}
+
+		static PlayerCarryOver ReadCarryOver(MemoryStream& packet, PlayerType type)
+		{
+			PlayerCarryOver c;
+			c.Type = type;
+			c.CurrentWeapon = (WeaponType)packet.ReadValue<std::uint8_t>();
+			c.Lives = packet.ReadValue<std::uint8_t>();
+			c.FoodEaten = packet.ReadValue<std::uint8_t>();
+			c.Score = packet.ReadVariableInt32();
+			for (std::int32_t i = 0; i < 4; i++) {
+				c.Gems[i] = packet.ReadVariableInt32();
+			}
+			for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
+				c.Ammo[i] = packet.ReadValue<std::uint16_t>();
+			}
+			for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
+				c.WeaponUpgrades[i] = packet.ReadValue<std::uint8_t>();
+			}
+			return c;
+		}
 	}
 
 	bool MpLevelHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
@@ -3461,6 +3538,42 @@ namespace Jazz2::Multiplayer
 					SetPlayerSpectateMode(peerDesc->Player, enable ? SpectateMode::Requested : SpectateMode::None);
 					return true;
 				}
+				case ClientPacketType::PlayerChangeCharacter: {
+					MemoryStream packet(data);
+					std::uint32_t playerIndex = packet.ReadVariableUint32();
+					PlayerType playerType = (PlayerType)packet.ReadValue<std::uint8_t>();
+
+					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
+						LOGD("[MP] ClientPacketType::PlayerChangeCharacter [{}] - invalid playerIndex ({})", peer, playerIndex);
+						return true;
+					}
+
+					if (playerType != PlayerType::Jazz && playerType != PlayerType::Spaz && playerType != PlayerType::Lori) {
+						LOGW("[MP] ClientPacketType::PlayerChangeCharacter [{}] - invalid player type", peer);
+						return true;
+					}
+
+					auto& serverConfig = _networkManager->GetServerConfiguration();
+					if ((peerDesc->IsSpectating & SpectateMode::Mask) == SpectateMode::Forced) {
+						// Forced spectators (e.g. winner, eliminated) can't rejoin by changing character
+						LOGD("[MP] ClientPacketType::PlayerChangeCharacter [{}] - forced to spectate", peer);
+						return true;
+					}
+
+					std::uint8_t typeBit = (std::uint8_t)(1 << ((std::int32_t)playerType - (std::int32_t)PlayerType::Jazz));
+					if ((serverConfig.AllowedPlayerTypes & typeBit) == 0) {
+						LOGW("[MP] ClientPacketType::PlayerChangeCharacter [{}] - player type {} not allowed", peer, playerType);
+						return true;
+					}
+
+					LOGI("[MP] Player {} [{}] changing character to {}", playerIndex, peer, playerType);
+
+					// Respawn the player with the chosen character (also leaves spectate mode if currently spectating)
+					peerDesc->PreferredPlayerType = playerType;
+					SetPlayerSpectateMode(peerDesc->Player, SpectateMode::None);
+					return true;
+				}
 				case ClientPacketType::PlayerAckWarped: {
 					MemoryStream packet(data);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
@@ -3617,6 +3730,7 @@ namespace Jazz2::Multiplayer
 							std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 							MpGameMode gameMode = (MpGameMode)packet.ReadValue<std::uint8_t>();
 							std::uint8_t teamId = packet.ReadValue<std::uint8_t>();
+							std::uint8_t allowedPlayerTypes = packet.ReadValue<std::uint8_t>();
 							std::int32_t initialPlayerHealth = packet.ReadVariableInt32();
 							std::uint32_t maxGameTimeSecs = packet.ReadVariableUint32();
 							std::uint32_t totalKills = packet.ReadVariableUint32();
@@ -3629,6 +3743,8 @@ namespace Jazz2::Multiplayer
 							serverConfig.GameMode = gameMode;
 							serverConfig.ReforgedGameplay = (flags & 0x01) != 0;
 							serverConfig.Elimination = (flags & 0x04) != 0;
+							serverConfig.EnableSpectate = (flags & 0x08) != 0;
+							serverConfig.AllowedPlayerTypes = allowedPlayerTypes;
 							serverConfig.InitialPlayerHealth = initialPlayerHealth;
 							serverConfig.MaxGameTimeSecs = maxGameTimeSecs;
 							serverConfig.TotalKills = totalKills;
@@ -3690,6 +3806,7 @@ namespace Jazz2::Multiplayer
 					if (flags & 0x01) {
 						InvokeAsync([this, flags, allowedPlayerTypes]() {
 							if (_inGameLobby != nullptr) {
+								_changingCharacterInLobby = false; // Server-driven lobby is the initial join, not a player-initiated change
 								_inGameLobby->SetAllowedPlayerTypes(allowedPlayerTypes);
 								if (flags & 0x02) {
 									_inGameLobby->Show();
@@ -3882,14 +3999,27 @@ namespace Jazz2::Multiplayer
 					std::uint8_t teamId = packet.ReadValue<std::uint8_t>();
 					std::int32_t posX = packet.ReadVariableInt32();
 					std::int32_t posY = packet.ReadVariableInt32();
+					bool hasCarryOver = (packet.ReadValue<std::uint8_t>() != 0);
+					PlayerCarryOver carryOver{};
+					if (hasCarryOver) {
+						carryOver = ReadCarryOver(packet, playerType);
+					}
 
 					LOGI("[MP] ServerPacketType::CreateControllablePlayer - playerIndex: {}, playerType: {}, health: {}, flags: 0x{:.2x}, team: {}, x: {}, y: {}",
 						playerIndex, playerType, health, flags, teamId, posX, posY);
 
 					_lastSpawnedActorId = playerIndex;
 
-					InvokeAsync([this, playerType, health, flags, teamId, posX, posY]() {
+					InvokeAsync([this, playerType, health, flags, teamId, posX, posY, hasCarryOver, carryOver]() {
 						auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer);
+						// Stash the carried-over progression (online co-op level change / reconnect) on the descriptor
+						// before activating the player, so MpPlayer::OnActivatedAsync applies it after the base reset
+						// (with coroutines the base activation finishes asynchronously and would otherwise overwrite a
+						// value applied here at the call site). RemotablePlayer clears the flag once it's applied.
+						if (hasCarryOver) {
+							peerDesc->CarryOver = carryOver;
+							peerDesc->HasCarryOver = true;
+						}
 						std::shared_ptr<Actors::Multiplayer::RemotablePlayer> player = std::make_shared<Actors::Multiplayer::RemotablePlayer>(peerDesc);
 						std::uint8_t playerParams[2] = { (std::uint8_t)playerType, 0 };
 						player->OnActivated(Actors::ActorActivationDetails(
@@ -3897,7 +4027,7 @@ namespace Jazz2::Multiplayer
 							Vector3i(posX, posY, PlayerZ),
 							playerParams
 						));
-						
+
 						player->SetHealth(health);
 						player->_controllable = (flags & 0x01) != 0;
 						player->_controllableExternal = (flags & 0x02) != 0;
@@ -5050,6 +5180,15 @@ namespace Jazz2::Multiplayer
 						packet.WriteValue<std::uint8_t>(peerDesc->Team);
 						packet.WriteVariableInt32((std::int32_t)player->_pos.X);
 						packet.WriteVariableInt32((std::int32_t)player->_pos.Y);
+						// Forward carried-over progression (co-op level change / reconnect) to the client so it doesn't
+						// start fresh; for a normal join there is none (flag = 0). The server-side player applies it in
+						// MpPlayer::OnActivatedAsync (after the base reset); clear the flag once it has been serialized
+						// so a later in-level respawn doesn't re-send/re-apply it.
+						packet.WriteValue<std::uint8_t>(peerDesc->HasCarryOver ? 1 : 0);
+						if (peerDesc->HasCarryOver) {
+							WriteCarryOver(packet, peerDesc->CarryOver);
+						}
+						peerDesc->HasCarryOver = false;
 
 						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateControllablePlayer, packet);
 					}
@@ -5159,6 +5298,15 @@ namespace Jazz2::Multiplayer
 						packet.WriteValue<std::uint8_t>(peerDesc->Team);
 						packet.WriteVariableInt32((std::int32_t)player->_pos.X);
 						packet.WriteVariableInt32((std::int32_t)player->_pos.Y);
+						// Forward carried-over progression (co-op level change / reconnect) to the client so it doesn't
+						// start fresh; for a normal join there is none (flag = 0). The server-side player applies it in
+						// MpPlayer::OnActivatedAsync (after the base reset); clear the flag once it has been serialized
+						// so a later in-level respawn doesn't re-send/re-apply it.
+						packet.WriteValue<std::uint8_t>(peerDesc->HasCarryOver ? 1 : 0);
+						if (peerDesc->HasCarryOver) {
+							WriteCarryOver(packet, peerDesc->CarryOver);
+						}
+						peerDesc->HasCarryOver = false;
 
 						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateControllablePlayer, packet);
 					}
@@ -5372,6 +5520,9 @@ namespace Jazz2::Multiplayer
 	void MpLevelHandler::ResetAllPlayerStats()
 	{
 		auto& serverConfig = _networkManager->GetServerConfiguration();
+
+		// A new round invalidates any retained reconnect state, so reconnecting players reset like everyone else
+		_networkManager->ClearDisconnectedPeerStates();
 
 		for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
 			peerDesc->PositionInRound = 0;
@@ -5928,6 +6079,13 @@ namespace Jazz2::Multiplayer
 			packet2.WriteValue<std::uint8_t>(peerDesc->Team);
 			packet2.WriteVariableInt32((std::int32_t)ptr->_pos.X);
 			packet2.WriteVariableInt32((std::int32_t)ptr->_pos.Y);
+			// Forward carried-over progression to the client (flag = 0 if none). The server-side player applies
+			// it in MpPlayer::OnActivatedAsync (after the base reset); clear the flag once serialized.
+			packet2.WriteValue<std::uint8_t>(peerDesc->HasCarryOver ? 1 : 0);
+			if (peerDesc->HasCarryOver) {
+				WriteCarryOver(packet2, peerDesc->CarryOver);
+			}
+			peerDesc->HasCarryOver = false;
 
 			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateControllablePlayer, packet2);
 		} else {
@@ -6004,6 +6162,24 @@ namespace Jazz2::Multiplayer
 			}
 		}
 		return false;
+	}
+
+	bool MpLevelHandler::IsSpectateAvailable() const
+	{
+		return _networkManager->GetServerConfiguration().EnableSpectate;
+	}
+
+	void MpLevelHandler::ShowCharacterSelectLobby()
+	{
+		if (_inGameLobby == nullptr) {
+			return;
+		}
+
+		// Open the lobby so the player can pick a (possibly different) character; SetPlayerReady() then (re)joins
+		// the game with the selected type instead of treating it as the initial join.
+		_changingCharacterInLobby = true;
+		_inGameLobby->SetAllowedPlayerTypes(_networkManager->GetServerConfiguration().AllowedPlayerTypes);
+		_inGameLobby->Show();
 	}
 
 	void MpLevelHandler::EndGame(MpPlayer* winner)
@@ -6234,12 +6410,35 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::SetPlayerReady(PlayerType playerType)
 	{
-		if (_isServer) {
-			return;
-		}
+		bool changingCharacter = _changingCharacterInLobby;
+		_changingCharacterInLobby = false;
 
 		if (_inGameLobby != nullptr) {
 			_inGameLobby->Hide();
+		}
+
+		if (_isServer) {
+			// Host re-picks a character mid-game: respawn the local player with the selected type directly.
+			// (The initial host spawn doesn't use the lobby, so this only applies to a deliberate change.)
+			if (changingCharacter) {
+				for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
+					if (!peerDesc->RemotePeer && peerDesc->Player) {
+						peerDesc->PreferredPlayerType = playerType;
+						SetPlayerSpectateMode(peerDesc->Player, SpectateMode::None);
+						break;
+					}
+				}
+			}
+			return;
+		}
+
+		if (changingCharacter) {
+			// Already in the game (real player or spectator): ask the server to respawn us as the chosen character
+			MemoryStream packet(6);
+			packet.WriteVariableUint32(_lastSpawnedActorId);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)playerType);
+			_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerChangeCharacter, packet);
+			return;
 		}
 
 		MemoryStream packet(2);
@@ -6378,8 +6577,11 @@ namespace Jazz2::Multiplayer
 		if (serverConfig.Elimination) {
 			flags |= 0x04;
 		}
+		if (serverConfig.EnableSpectate) {
+			flags |= 0x08;
+		}
 
-		packet.ReserveCapacity(28 + _levelName.size());
+		packet.ReserveCapacity(29 + _levelName.size());
 		packet.WriteVariableUint32(flags);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)_levelState);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
@@ -6391,6 +6593,7 @@ namespace Jazz2::Multiplayer
 		packet.WriteVariableUint32(serverConfig.TotalKills);
 		packet.WriteVariableUint32(serverConfig.TotalLaps);
 		packet.WriteVariableUint32(serverConfig.TotalTreasureCollected);
+		packet.WriteValue<std::uint8_t>(serverConfig.AllowedPlayerTypes);
 	}
 
 	void MpLevelHandler::InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, const Actors::ActorBase* actor)
