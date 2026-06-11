@@ -1409,6 +1409,74 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	bool MpLevelHandler::IsPlayerStackingEnabled() const
+	{
+		return _networkManager->GetServerConfiguration().PlayerStacking;
+	}
+
+	Actors::ActorBase* MpLevelHandler::FindPlayerToStandOn(Actors::Player* player, float timeMult)
+	{
+		// Minimum horizontal overlap required to count as "on top of" the other player (not brushing its side)
+		constexpr float MinHorizontalOverlap = 4.0f;
+		// How close the feet must be to the other player's head to count as standing/landing on it
+		constexpr float StandThreshold = 6.0f;
+
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+		if (!serverConfig.PlayerStacking) {
+			return nullptr;
+		}
+
+		// Only grab onto another player while falling or already resting, never while moving up (jumping off)
+		if (player->_speed.Y < -0.1f) {
+			return nullptr;
+		}
+
+		const AABBf& self = player->AABBInner;
+		float feet = self.B;
+		float nextFeet = feet + player->_speed.Y * timeMult;
+		// Locate the other player's head from its position plus OUR collision head-offset (players are the same
+		// size), not its AABB top: a client's RemoteActor uses the sprite box (taller than the collision box),
+		// which would report the head ~16px too high and leave us floating.
+		float headOffset = self.T - player->_pos.Y;
+
+		// Treat the other player as a one-way platform: stand on it if our feet are at (or about to cross) its head
+		// this frame, with enough horizontal overlap that we're really on top of it (not just brushing its side).
+		auto isStandingOn = [&](Actors::ActorBase* actor) -> bool {
+			const AABBf& o = actor->AABBInner;
+			if (self.R - o.L < MinHorizontalOverlap || o.R - self.L < MinHorizontalOverlap) {
+				return false;
+			}
+			float top = actor->_pos.Y + headOffset;
+			return (feet <= top + StandThreshold && nextFeet >= top - StandThreshold);
+		};
+
+		if (_isServer) {
+			for (auto* other : _players) {
+				if (other == player) {
+					continue;
+				}
+				auto* mpOther = static_cast<MpPlayer*>(other);
+				if (mpOther->GetPeerDescriptor()->IsSpectating != SpectateMode::None) {
+					continue;
+				}
+				if (isStandingOn(other)) {
+					return other;
+				}
+			}
+		} else {
+			std::unique_lock lock(_lock);
+			for (auto& [actorId, remoteActor] : _remoteActors) {
+				if (_playerNames.find(actorId) == _playerNames.end()) {
+					continue;
+				}
+				if (isStandingOn(remoteActor.get())) {
+					return remoteActor.get();
+				}
+			}
+		}
+		return nullptr;
+	}
+
 	void MpLevelHandler::HandlePlayerSetHealth(Actors::Player* player, std::int32_t count)
 	{
 		// TODO: Only called by RemotePlayerOnServer
@@ -2381,6 +2449,9 @@ namespace Jazz2::Multiplayer
 		}
 		if (serverConfig.EnableSpectate) {
 			flags |= 0x08;
+		}
+		if (serverConfig.PlayerStacking) {
+			flags |= 0x10;
 		}
 
 		for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
@@ -3744,6 +3815,7 @@ namespace Jazz2::Multiplayer
 							serverConfig.ReforgedGameplay = (flags & 0x01) != 0;
 							serverConfig.Elimination = (flags & 0x04) != 0;
 							serverConfig.EnableSpectate = (flags & 0x08) != 0;
+							serverConfig.PlayerStacking = (flags & 0x10) != 0;
 							serverConfig.AllowedPlayerTypes = allowedPlayerTypes;
 							serverConfig.InitialPlayerHealth = initialPlayerHealth;
 							serverConfig.MaxGameTimeSecs = maxGameTimeSecs;
@@ -4149,6 +4221,10 @@ namespace Jazz2::Multiplayer
 
 						auto it = _remoteActors.find(actorId);
 						if (it != _remoteActors.end()) {
+							// If the local player was standing on this actor, stop carrying it before it's gone
+							if (!_players.empty()) {
+								_players[0]->CancelCarryingObject(it->second.get());
+							}
 							it->second->SetState(Actors::ActorState::IsDestroyed, true);
 							_remoteActors.erase(it);
 							_playerNames.erase(actorId);
@@ -6309,6 +6385,7 @@ namespace Jazz2::Multiplayer
 		serverConfig.TotalKills = playlistEntry.TotalKills;
 		serverConfig.TotalLaps = playlistEntry.TotalLaps;
 		serverConfig.TotalTreasureCollected = playlistEntry.TotalTreasureCollected;
+		serverConfig.PlayerStacking = playlistEntry.PlayerStacking;
 
 		_autoWeightTreasure = (serverConfig.TotalTreasureCollected == 0);
 
@@ -6579,6 +6656,9 @@ namespace Jazz2::Multiplayer
 		}
 		if (serverConfig.EnableSpectate) {
 			flags |= 0x08;
+		}
+		if (serverConfig.PlayerStacking) {
+			flags |= 0x10;
 		}
 
 		packet.ReserveCapacity(29 + _levelName.size());

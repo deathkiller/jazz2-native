@@ -45,6 +45,8 @@ namespace Jazz2::Multiplayer
 		std::uint32_t TotalTreasureCollected;
 		/** @brief Duration of overtime in seconds after first player finishes (Race only) */
 		std::uint32_t OvertimeSecs;
+		/** @brief Whether players can stand on top of each other; if disabled, they bump apart on every axis */
+		bool PlayerStacking;
 	};
 
 	/**
@@ -122,6 +124,7 @@ namespace Jazz2::Multiplayer
 		-   @cpp "TotalTreasureCollected" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Amount of treasure required to win (Treasure Hunt)
 		-   @cpp "OvertimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Overtime duration in seconds (Race)
 		-   @cpp "EnableSpectate" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether spectate mode is enabled (default is **true**)
+		-   @cpp "PlayerStacking" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players can stand on top of each other (and jump off); if disabled, they bump apart on every axis as before (default is **true**)
 		-   @cpp "EnableFreeCamera" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether free camera is enabled in spectate mode (default is **true**)
 		-   @cpp "AllowJoinDuringRound" @ce : @m_span{m-label m-default m-flat} bool @m_endspan  Whether players can join in the middle of a round (default is **true**)
 		-   @cpp "JoinCooldownSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Cooldown duration in seconds for players who join mid-round (default is **0** seconds)
@@ -229,6 +232,8 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Whether spectate mode is enabled */
 		bool EnableSpectate;
+		/** @brief Whether players can stand on top of each other; if disabled, they bump apart on every axis */
+		bool PlayerStacking;
 		/** @brief Whether free camera is enabled in spectate mode */
 		bool EnableFreeCamera;
 		/** @brief Whether players can join in the middle of a round */

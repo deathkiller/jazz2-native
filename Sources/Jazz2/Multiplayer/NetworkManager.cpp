@@ -208,6 +208,7 @@ namespace Jazz2::Multiplayer
 		serverConfig.OvertimeSecs = 0;
 
 		serverConfig.EnableSpectate = true;
+		serverConfig.PlayerStacking = true;
 		serverConfig.EnableFreeCamera = true;
 		serverConfig.AllowJoinDuringRound = true;
 		serverConfig.JoinCooldownSecs = 0;
@@ -428,6 +429,11 @@ namespace Jazz2::Multiplayer
 					serverConfig.Elimination = elimination;
 				}
 
+				bool playerStacking;
+				if (doc["PlayerStacking"].get(playerStacking) == Json::SUCCESS) {
+					serverConfig.PlayerStacking = playerStacking;
+				}
+
 				std::int64_t totalPlayerPoints;
 				if (doc["TotalPlayerPoints"].get(totalPlayerPoints) == Json::SUCCESS && totalPlayerPoints >= 0 && totalPlayerPoints <= INT32_MAX) {
 					serverConfig.TotalPlayerPoints = std::uint32_t(totalPlayerPoints);
@@ -513,6 +519,7 @@ namespace Jazz2::Multiplayer
 						playlistEntry.TotalLaps = serverConfig.TotalLaps;
 						playlistEntry.TotalTreasureCollected = serverConfig.TotalTreasureCollected;
 						playlistEntry.OvertimeSecs = serverConfig.OvertimeSecs;
+						playlistEntry.PlayerStacking = serverConfig.PlayerStacking;
 
 						std::string_view levelName;
 						if (entry["LevelName"].get(levelName) == Json::SUCCESS) {
@@ -532,6 +539,11 @@ namespace Jazz2::Multiplayer
 						bool elimination;
 						if (entry["Elimination"].get(elimination) == Json::SUCCESS) {
 							playlistEntry.Elimination = elimination;
+						}
+
+						bool entryPlayerStacking;
+						if (entry["PlayerStacking"].get(entryPlayerStacking) == Json::SUCCESS) {
+							playlistEntry.PlayerStacking = entryPlayerStacking;
 						}
 
 						std::int64_t initialPlayerHealth;

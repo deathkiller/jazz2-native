@@ -34,6 +34,9 @@ namespace Jazz2::Actors::Multiplayer
 
 	void RemotablePlayer::OnUpdate(float timeMult)
 	{
+		// Resolve standing on another player before the base update, so jump input sees CanJump() == true
+		UpdatePlayerStacking(timeMult, /*snap:*/ true);
+
 		Player::OnUpdate(timeMult);
 
 		if (_levelExiting != LevelExitingState::None) {

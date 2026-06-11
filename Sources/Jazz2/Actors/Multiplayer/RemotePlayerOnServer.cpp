@@ -63,6 +63,10 @@ namespace Jazz2::Actors::Multiplayer
 			}
 		}
 
+		// Ground this server-side shadow on the player it stands on (if any) so it doesn't apply gravity and play a
+		// falling animation - its position comes from the owning client, so don't reposition it (snap = false).
+		UpdatePlayerStacking(timeMult, /*snap:*/ false);
+
 		PlayerOnServer::OnUpdate(timeMult);
 
 		_renderer.setPosition(_displayPos);

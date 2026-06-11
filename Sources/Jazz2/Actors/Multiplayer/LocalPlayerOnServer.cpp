@@ -12,6 +12,15 @@ namespace Jazz2::Actors::Multiplayer
 		_peerDesc->Player = this;
 	}
 
+	void LocalPlayerOnServer::OnUpdate(float timeMult)
+	{
+		// Host is simulated on the server - resolve standing on another player locally before the base update,
+		// so jump input sees CanJump() == true (same as the client does for its own player)
+		UpdatePlayerStacking(timeMult, /*snap:*/ true);
+
+		PlayerOnServer::OnUpdate(timeMult);
+	}
+
 	void LocalPlayerOnServer::SetCurrentWeapon(WeaponType weaponType, SetCurrentWeaponReason reason)
 	{
 		if (reason == SetCurrentWeaponReason::AddAmmo && !PreferencesCache::SwitchToNewWeapon) {

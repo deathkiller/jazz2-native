@@ -1365,6 +1365,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					bool enableLedgeClimb = (flags & 0x02) != 0;
 					bool elimination = (flags & 0x04) != 0;
 					bool enableSpectate = (flags & 0x08) != 0;
+					bool playerStacking = (flags & 0x10) != 0;
 
 					LevelInitialization levelInit(levelName, GameDifficulty::Normal, isReforged);
 					levelInit.IsLocalSession = false;
@@ -1376,6 +1377,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 					serverConfig.Elimination = elimination;
 						serverConfig.EnableSpectate = enableSpectate;
 						serverConfig.AllowedPlayerTypes = allowedPlayerTypes;
+						serverConfig.PlayerStacking = playerStacking;
 					serverConfig.InitialPlayerHealth = initialPlayerHealth;
 					serverConfig.MaxGameTimeSecs = maxGameTimeSecs;
 					serverConfig.TotalKills = totalKills;

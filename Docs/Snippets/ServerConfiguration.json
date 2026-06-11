@@ -46,6 +46,7 @@
 	"ReforgedGameplay": true,
 	"RandomizePlaylist": false,
 	"TotalPlayerPoints": 100,
+	"PlayerStacking": true,
 	
 	/* These properties are redundant, because they are overriden by the playlist */
 	"GameMode": "battle",

@@ -40,6 +40,7 @@ namespace Jazz2::Multiplayer
 #if defined(WITH_ANGELSCRIPT)
 		friend class Scripting::LevelScriptLoader;
 #endif
+		friend class Actors::Multiplayer::MpPlayer;
 		friend class Actors::Multiplayer::PlayerOnServer;
 		friend class Actors::Multiplayer::RemotablePlayer;
 		friend class Actors::Multiplayer::RemotePlayerOnServer;
@@ -216,6 +217,10 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce);
 		/** @brief Called when a player is bumped by another player to synchronize the resulting knockback */
 		void HandlePlayerBumped(Actors::Player* player);
+		/** @brief Returns `true` if players can stand on top of each other (per-level @ref ServerConfiguration::PlayerStacking) */
+		bool IsPlayerStackingEnabled() const;
+		/** @brief Returns the player actor the given player is standing/landing on (one-way platform check), or `nullptr` */
+		Actors::ActorBase* FindPlayerToStandOn(Actors::Player* player, float timeMult);
 		/** @brief Called when a player requests to synchronize weapon ammo */
 		void HandlePlayerRefreshAmmo(Actors::Player* player, WeaponType weaponType);
 		/** @brief Called when a player requests to synchronize weapon upgrades */

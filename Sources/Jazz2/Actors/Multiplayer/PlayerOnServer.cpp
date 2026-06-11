@@ -101,6 +101,20 @@ namespace Jazz2::Actors::Multiplayer
 			return;
 		}
 
+		// Resolve along the axis of least penetration (minimum translation vector). MoveInstantly checks the
+		// tilemap, so a player is never pushed into a wall (it just stays put if blocked).
+		auto* mpHandler = static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler);
+		if (overlapY <= overlapX && mpHandler->IsPlayerStackingEnabled()) {
+			// Vertical overlap with stacking enabled = one player is standing/landing on the other. This is resolved
+			// locally by whichever side owns each player (it treats the player below as a one-way platform via the
+			// carrying object - see MpPlayer::UpdatePlayerStacking), so the server must NOT bump them apart or resync
+			// the position here; doing so fought the local simulation and caused the falling/jitter.
+			return;
+		}
+
+		// Equal-mass elastic bump along the least-penetration axis, applied only while the two are approaching so it
+		// can't compound across frames. This is the "bump apart" behavior (always for side-to-side contact, and for
+		// vertical contact too when player stacking is disabled).
 		Vector2f normal;
 		float penetration;
 		if (overlapX < overlapY) {
@@ -111,15 +125,10 @@ namespace Jazz2::Actors::Multiplayer
 			penetration = overlapY;
 		}
 
-		// Positional separation so the players can't pass through each other. MoveInstantly checks the
-		// tilemap, so a player is never pushed into a wall (it just stays put if blocked). Capped per frame
-		// to avoid a jarring jump when the overlap is large.
 		float push = std::min(penetration * 0.5f, MaxSeparationPerFrame);
 		MoveInstantly(Vector2f(normal.X * push, normal.Y * push), MoveType::Relative);
 		other.MoveInstantly(Vector2f(-normal.X * push, -normal.Y * push), MoveType::Relative);
 
-		// Equal-mass elastic impulse along the same axis, applied only while the two are approaching so it
-		// can't compound across frames. Restitution and the minimum are gameplay feel knobs.
 		Vector2f relativeSpeed = _speed - other._speed;
 		float approachSpeed = relativeSpeed.X * normal.X + relativeSpeed.Y * normal.Y;
 		if (approachSpeed < 0.0f) {
@@ -128,13 +137,12 @@ namespace Jazz2::Actors::Multiplayer
 			other._speed += normal * (-impulse);
 		}
 
-		// Server is authoritative: resync the post-bump position/velocity to the owning clients so they
-		// don't overwrite it with their own (stale) state. Throttled so sustained contact doesn't spam.
+		// Server is authoritative: resync the post-bump position/velocity to the owning clients so they don't
+		// overwrite it with their own (stale) state. Throttled so sustained contact doesn't spam.
 		if (_bumpCooldown <= 0.0f) {
 			_bumpCooldown = BumpSyncIntervalFrames;
 			other._bumpCooldown = BumpSyncIntervalFrames;
 
-			auto* mpHandler = static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler);
 			mpHandler->HandlePlayerBumped(this);
 			mpHandler->HandlePlayerBumped(&other);
 		}
