@@ -4,7 +4,7 @@
 
 namespace Jazz2::Shaders
 {
-	constexpr std::uint64_t Version = 10;
+	constexpr std::uint64_t Version = 11;
 
 	constexpr char LightingVs[] = "#line " DEATH_LINE_STRING "\n" R"(
 uniform mat4 uProjectionMatrix;
@@ -675,16 +675,16 @@ uniform sampler2D uTexturePalette;
 in vec2 vTexCoords;
 in vec4 vColor;
 #ifdef USE_PALETTE
-in float vPaletteOffset;
+in highp float vPaletteOffset;
 #endif
 out vec4 fragColor;
 
 void main() {
 #ifdef USE_PALETTE
 	vec4 src = texture(uTexture, vTexCoords);
-	float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
+	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
+	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 original = texture(uTexturePalette, vec2(palX, palY));
 	original.a *= src.a;
 #else
@@ -755,7 +755,7 @@ uniform sampler2D uTexturePalette;
 
 in vec2 vTexCoords;
 in vec4 vColor;
-in float vPaletteOffset;
+in highp float vPaletteOffset;
 out vec4 fragColor;
 
 float aastep(float threshold, float value) {
@@ -765,9 +765,9 @@ float aastep(float threshold, float value) {
 
 vec4 palette(vec2 uv) {
 	vec4 src = texture(uTexture, uv);
-	float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
+	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
+	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 c = texture(uTexturePalette, vec2(palX, palY));
 	return vec4(c.rgb, c.a * src.a);
 }
@@ -815,7 +815,7 @@ uniform sampler2D uTexturePalette;
 in vec2 vTexCoords;
 in vec4 vColor;
 #ifdef USE_PALETTE
-in float vPaletteOffset;
+in highp float vPaletteOffset;
 #endif
 out vec4 fragColor;
 
@@ -823,9 +823,9 @@ out vec4 fragColor;
 vec4 maskSample(vec2 uv) {
 	vec4 src = texture(uTexture, uv);
 #ifdef USE_PALETTE
-	float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
+	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
+	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 c = texture(uTexturePalette, vec2(palX, palY));
 	return vec4(c.rgb, c.a * src.a);
 #else
@@ -853,16 +853,16 @@ uniform sampler2D uTexturePalette;
 in vec2 vTexCoords;
 in vec4 vColor;
 #ifdef USE_PALETTE
-in float vPaletteOffset;
+in highp float vPaletteOffset;
 #endif
 out vec4 fragColor;
 
 vec4 maskSample(vec2 uv) {
 	vec4 src = texture(uTexture, uv);
 #ifdef USE_PALETTE
-	float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
+	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
+	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 c = texture(uTexturePalette, vec2(palX, palY));
 	return vec4(c.rgb, c.a * src.a);
 #else
@@ -891,15 +891,15 @@ uniform sampler2D uTexturePalette;
 
 in vec2 vTexCoords;
 in vec4 vColor;
-in float vPaletteOffset;
+in highp float vPaletteOffset;
 out vec4 fragColor;
 
 void main() {
 	vec4 src = texture(uTexture, vTexCoords);
 	// Flat palette position = per-instance offset + the per-pixel index (red channel), mapped into the 256x256 texture
-	float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
+	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
+	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 color = texture(uTexturePalette, vec2(palX, palY));
 	fragColor = vec4(color.rgb, color.a * src.a) * vColor;
 }
@@ -918,7 +918,7 @@ uniform sampler2D uTexturePalette;
 in vec2 vTexCoords;
 in vec4 vColor;
 #ifdef USE_PALETTE
-in float vPaletteOffset;
+in highp float vPaletteOffset;
 #endif
 out vec4 fragColor;
 
@@ -930,9 +930,9 @@ float aastep(float threshold, float value) {
 vec4 maskSample(vec2 uv) {
 	vec4 src = texture(uTexture, uv);
 #ifdef USE_PALETTE
-	float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
-	float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
-	float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
+	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
+	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 c = texture(uTexturePalette, vec2(palX, palY));
 	return vec4(c.rgb, c.a * src.a);
 #else

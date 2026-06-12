@@ -10,6 +10,19 @@
 
 #include <Containers/String.h>
 
+#ifndef GL_TEXTURE_SWIZZLE_R
+#	define GL_TEXTURE_SWIZZLE_R 0x8E42
+#endif
+#ifndef GL_TEXTURE_SWIZZLE_G
+#	define GL_TEXTURE_SWIZZLE_G 0x8E43
+#endif
+#ifndef GL_TEXTURE_SWIZZLE_B
+#	define GL_TEXTURE_SWIZZLE_B 0x8E44
+#endif
+#ifndef GL_TEXTURE_SWIZZLE_A
+#	define GL_TEXTURE_SWIZZLE_A 0x8E45
+#endif
+
 namespace nCine
 {
 	GLenum ncFormatToInternal(Texture::Format format)
@@ -202,8 +215,22 @@ namespace nCine
 		const std::uint8_t* data = bufferPtr;
 
 		const GLenum format = ncFormatToNonInternal(format_);
+		// Tightly-packed single-/dual-/triple-channel rows may not meet the default 4-byte unpack alignment
+		GLint alignment;
+		switch (format_) {
+			case Format::R8:	alignment = 1; break;
+			case Format::RG8:	alignment = 2; break;
+			case Format::RGB8:	alignment = 1; break;
+			default:			alignment = 4; break;
+		}
 		glGetError();
+		if (alignment != 4) {
+			glPixelStorei(GL_UNPACK_ALIGNMENT, alignment);
+		}
 		glTexture_->TexSubImage2D(level, x, y, width, height, format, GL_UNSIGNED_BYTE, data);
+		if (alignment != 4) {
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+		}
 		const GLenum error = glGetError();
 
 		return (error == GL_NO_ERROR);
@@ -315,6 +342,30 @@ namespace nCine
 		glTexture_->TexParameteri(GL_TEXTURE_WRAP_S, glWrap);
 		glTexture_->TexParameteri(GL_TEXTURE_WRAP_T, glWrap);
 		wrapMode_ = wrapMode;
+	}
+
+	static GLint SwizzleChannelToGL(SwizzleChannel channel)
+	{
+		switch (channel) {
+			default:
+			case SwizzleChannel::Red:	return GL_RED;
+			case SwizzleChannel::Green:	return GL_GREEN;
+			case SwizzleChannel::Blue:	return GL_BLUE;
+			case SwizzleChannel::Alpha:	return GL_ALPHA;
+			case SwizzleChannel::Zero:	return GL_ZERO;
+			case SwizzleChannel::One:	return GL_ONE;
+		}
+	}
+
+	void Texture::SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a)
+	{
+		// Channels are set individually because GL_TEXTURE_SWIZZLE_RGBA (a single glTexParameteriv) is desktop-only
+		// and absent on GLES/WebGL. Requires GL 3.3+ / GLES 3.0+.
+		glTexture_->Bind();
+		glTexture_->TexParameteri(GL_TEXTURE_SWIZZLE_R, SwizzleChannelToGL(r));
+		glTexture_->TexParameteri(GL_TEXTURE_SWIZZLE_G, SwizzleChannelToGL(g));
+		glTexture_->TexParameteri(GL_TEXTURE_SWIZZLE_B, SwizzleChannelToGL(b));
+		glTexture_->TexParameteri(GL_TEXTURE_SWIZZLE_A, SwizzleChannelToGL(a));
 	}
 
 	void Texture::SetGLTextureLabel(const char* label)

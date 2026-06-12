@@ -21,7 +21,7 @@ layout (std140) uniform InstancesBlock
 
 out vec2 vTexCoords;
 out vec4 vColor;
-out float vPaletteOffset;
+out highp float vPaletteOffset;
 
 #define i block.instances[gl_VertexID / 6]
 

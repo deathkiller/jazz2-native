@@ -99,8 +99,29 @@ namespace Jazz2::Tiles
 		std::int32_t x = (tileId % TilesPerRow) * (DefaultTileSize + 2);
 		std::int32_t y = (tileId / TilesPerRow) * (DefaultTileSize + 2);
 
+		// The incoming tile is RGBA (palette index in red, alpha in alpha). Repack it to match the atlas format,
+		// which may have been reduced to R8 (index only) or RG8 (index + alpha) to save VRAM (see CreateIndexedTexture)
+		constexpr std::int32_t Count = (DefaultTileSize + 2) * (DefaultTileSize + 2);
+		std::uint32_t channels = TextureDiffuse->GetChannelCount();
 		// TODO: _isTileFilled is not properly set
-		return TextureDiffuse->LoadFromTexels((std::uint8_t*)tileDiffuse.data(), x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+		if (channels == 1) {
+			std::uint8_t packed[Count];
+			for (std::int32_t i = 0; i < Count; i++) {
+				std::uint32_t c = tileDiffuse[i];
+				packed[i] = (((c >> 24) & 0xFF) == 0 ? 0 : (std::uint8_t)(c & 0xFF));
+			}
+			return TextureDiffuse->LoadFromTexels(packed, x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+		} else if (channels == 2) {
+			std::uint8_t packed[Count * 2];
+			for (std::int32_t i = 0; i < Count; i++) {
+				std::uint32_t c = tileDiffuse[i];
+				packed[(i * 2) + 0] = (std::uint8_t)(c & 0xFF);
+				packed[(i * 2) + 1] = (std::uint8_t)((c >> 24) & 0xFF);
+			}
+			return TextureDiffuse->LoadFromTexels(packed, x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+		} else {
+			return TextureDiffuse->LoadFromTexels((std::uint8_t*)tileDiffuse.data(), x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+		}
 	}
 
 	bool TileSet::OverrideTileMask(std::int32_t tileId, StaticArrayView<DefaultTileSize * DefaultTileSize, std::uint8_t> tileMask)

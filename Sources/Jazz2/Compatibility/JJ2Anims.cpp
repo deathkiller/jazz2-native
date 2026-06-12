@@ -443,9 +443,40 @@ namespace Jazz2::Compatibility
 				anim.NormalizedHotspotY = 4;
 			}
 
-			// TODO: Use single channel instead
 			MemoryStream so(16384);
-			WriteImageToStream(so, pixels.get(), sizeX, sizeY, 4, anim, entry);
+			std::int32_t totalPixels = stride * sizeY * anim.FrameConfigurationY;
+			std::int32_t outChannels = 4;
+			std::unique_ptr<std::uint8_t[]> packed;
+			const std::uint8_t* outData = pixels.get();
+			// Indexed sprites (default Sprite palette) keep the palette index in the red channel and are recolored
+			// in-game through the palette texture. Save them with the fewest channels so no per-pixel work is
+			// needed at load: 1 (index only), or 2 (index + alpha) when any pixel is partially transparent
+			// (DrawTransparent). True-color palettes (e.g. Menu) stay RGBA.
+			if (entry->Palette == JJ2DefaultPalette::Sprite) {
+				bool hasPartialAlpha = false;
+				for (std::int32_t i = 0; i < totalPixels; i++) {
+					std::uint8_t a = pixels[(i * 4) + 3];
+					if (a != 0 && a != 255) {
+						hasPartialAlpha = true;
+						break;
+					}
+				}
+				outChannels = (hasPartialAlpha ? 2 : 1);
+				packed = std::make_unique<std::uint8_t[]>(totalPixels * outChannels);
+				if (outChannels == 2) {
+					for (std::int32_t i = 0; i < totalPixels; i++) {
+						packed[(i * 2) + 0] = pixels[(i * 4) + 0]; // palette index (red channel)
+						packed[(i * 2) + 1] = pixels[(i * 4) + 3]; // alpha
+					}
+				} else {
+					for (std::int32_t i = 0; i < totalPixels; i++) {
+						packed[i] = pixels[(i * 4) + 0]; // palette index (red channel)
+					}
+				}
+				outData = packed.get();
+			}
+
+			WriteImageToStream(so, outData, sizeX, sizeY, outChannels, anim, entry);
 			so.Seek(0, SeekOrigin::Begin);
 			bool success = pakWriter.AddFile(so, filename, PakPreferredCompression::Deflate);
 			DEATH_ASSERT(success, "Failed to add file to .pak container", );
@@ -636,12 +667,14 @@ namespace Jazz2::Compatibility
 		std::int32_t px_end = px_len - channelCount;
 
 		for (std::int32_t px_pos = 0; px_pos < px_len; px_pos += channelCount) {
-			if (channelCount == 4) {
+			if (channelCount >= 4) {
 				px = *(rgba_t*)(pixels + px_pos);
 			} else {
+				// Fewer channels (1 = palette index, 2 = index + alpha) are packed into r/g; b stays 0, a stays 255
 				px.rgba.r = pixels[px_pos + 0];
-				px.rgba.g = pixels[px_pos + 1];
-				px.rgba.b = pixels[px_pos + 2];
+				px.rgba.g = (channelCount >= 2 ? pixels[px_pos + 1] : 0);
+				px.rgba.b = (channelCount >= 3 ? pixels[px_pos + 2] : 0);
+				px.rgba.a = 255;
 			}
 
 			if (px.v == px_prev.v) {
@@ -689,8 +722,12 @@ namespace Jazz2::Compatibility
 						} else {
 							so.WriteValue<std::uint8_t>(QOI_OP_RGB);
 							so.WriteValue<std::uint8_t>(px.rgba.r);
-							so.WriteValue<std::uint8_t>(px.rgba.g);
-							so.WriteValue<std::uint8_t>(px.rgba.b);
+							if (channelCount >= 2) {
+								so.WriteValue<std::uint8_t>(px.rgba.g);
+							}
+							if (channelCount >= 3) {
+								so.WriteValue<std::uint8_t>(px.rgba.b);
+							}
 						}
 					} else {
 						so.WriteValue<std::uint8_t>(QOI_OP_RGBA);

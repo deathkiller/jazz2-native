@@ -97,7 +97,7 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in Options > User Profile section
 		_items.emplace_back(UserProfileOptionsItem { UserProfileOptionsItemType::FurColor4, _("Character Color 4"), true, isInGame });
 		// TRANSLATORS: Menu item in Options > User Profile section
-		_items.emplace_back(UserProfileOptionsItem { UserProfileOptionsItemType::ColorMode, _("Apply Colors"), true, isInGame });
+		_items.emplace_back(UserProfileOptionsItem { UserProfileOptionsItemType::ColorMode, _("Apply Custom Colors"), true, isInGame });
 #if defined(WITH_MULTIPLAYER)
 		// TRANSLATORS: Menu item in Options > User Profile section
 		_items.emplace_back(UserProfileOptionsItem { UserProfileOptionsItemType::UniquePlayerID, _("Unique Player ID") });

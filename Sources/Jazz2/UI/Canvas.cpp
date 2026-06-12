@@ -185,6 +185,10 @@ namespace Jazz2::UI
 		if (_renderCommandsCount < _renderCommands.size()) {
 			RenderCommand* command = _renderCommands[_renderCommandsCount].get();
 			command->SetType(RenderCommand::Type::Sprite);
+			// A pooled command may still reference a palette texture at unit 1 from a previous frame; that texture
+			// can have been freed since (e.g. a menu section's preview palette that was destroyed on navigating
+			// back), so clear it to avoid binding a dangling pointer. Palette draws re-bind unit 1 after renting.
+			command->GetMaterial().SetTexture(1, nullptr);
 			_renderCommandsCount++;
 			return command;
 		} else {

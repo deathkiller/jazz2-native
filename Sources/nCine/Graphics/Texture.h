@@ -39,6 +39,17 @@ namespace nCine
 		Repeat
 	};
 
+	/// Source for a sampled texture channel (see @ref Texture::SetSwizzle)
+	enum class SwizzleChannel
+	{
+		Red,
+		Green,
+		Blue,
+		Alpha,
+		Zero,
+		One
+	};
+
 	/// Texture
 	class Texture : public Object
 	{
@@ -157,6 +168,10 @@ namespace nCine
 		void SetMagFiltering(SamplerFilter filter);
 		/// Sets texture wrap for both `s` and `t` coordinates
 		void SetWrap(SamplerWrapping wrapMode);
+
+		/// Remaps the channels returned when the texture is sampled (default is `Red, Green, Blue, Alpha`); lets a
+		/// reduced-channel texture (e.g. an RG8 sprite holding palette index + alpha) sample like RGBA8 in the shader
+		void SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a);
 
 		/// Sets the OpenGL object label for the texture
 		void SetGLTextureLabel(const char* label);

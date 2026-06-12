@@ -16,8 +16,13 @@ namespace nCine
 
 	GLTexture::~GLTexture()
 	{
-		if (boundTextures_[boundUnit_][target_] == glHandle_) {
-			Unbind();
+		// Remove this texture from the bound-texture tracking on every unit it may be bound to, not just the
+		// currently active one - otherwise the freed handle lingers in the cache and a later texture that reuses
+		// the same GL handle would be considered already bound (its bind skipped -> wrong texture sampled).
+		for (std::uint32_t textureUnit = 0; textureUnit < MaxTextureUnits; textureUnit++) {
+			if (boundTextures_[textureUnit][target_] == glHandle_) {
+				BindHandle(target_, 0, textureUnit);
+			}
 		}
 
 		glDeleteTextures(1, &glHandle_);

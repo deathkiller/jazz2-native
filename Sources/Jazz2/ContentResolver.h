@@ -214,6 +214,13 @@ namespace Jazz2
 		GenericGraphicResource* RequestGraphicsAura(StringView path, std::uint16_t paletteOffset, bool keepIndexed = false);
 		static void ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount);
 		static void ExpandTileDiffuse(std::uint8_t* pixelsOffset, std::uint32_t widthWithPadding);
+		// Packs an indexed sprite/tile (palette index in the red/first channel) into the smallest texture format: R8
+		// when alpha is on/off only (4x less VRAM than RGBA8), or RG8 keeping the per-pixel alpha in green (sampled
+		// into .a via swizzle) when alpha is partial. `srcChannels` is the bytes-per-pixel of `pixels`: 1 (index
+		// only) or 2 (index + alpha) are pre-packed and upload directly, 4 (RGBA) is scanned and repacked.
+		// `paletteBaseTransparent` must be true if the sprite's palette entry 0 (its row base) is transparent - only
+		// then can on/off transparency be dropped and reproduced by the palette (false e.g. for gems, which keep RG8)
+		static std::unique_ptr<Texture> CreateIndexedTexture(const char* name, const std::uint8_t* pixels, std::int32_t width, std::int32_t height, std::int32_t srcChannels, bool paletteBaseTransparent);
 
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled, std::initializer_list<StringView> defines = {});
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled, std::initializer_list<StringView> defines = {});

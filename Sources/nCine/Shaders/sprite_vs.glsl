@@ -14,7 +14,7 @@ layout (std140) uniform InstanceBlock
 
 out vec2 vTexCoords;
 out vec4 vColor;
-out float vPaletteOffset;
+out highp float vPaletteOffset;
 
 void main()
 {

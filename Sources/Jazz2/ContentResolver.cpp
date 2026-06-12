@@ -771,8 +771,13 @@ namespace Jazz2
 
 				if (!_isHeadless) {
 					// Don't load textures in headless mode, only collision masks
-					graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, w, h);
-					graphics->TextureDiffuse->LoadFromTexels(pixels, 0, 0, w, h);
+					if ((graphics->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) {
+						bool paletteBaseTransparent = (((_palettes[paletteOffset] >> 24) & 0xFF) == 0);
+						graphics->TextureDiffuse = CreateIndexedTexture(fullPath.data(), pixels, w, h, PixelSize, paletteBaseTransparent);
+					} else {
+						graphics->TextureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, w, h);
+						graphics->TextureDiffuse->LoadFromTexels(pixels, 0, 0, w, h);
+					}
 					graphics->TextureDiffuse->SetMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 					graphics->TextureDiffuse->SetMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 				}
@@ -874,8 +879,16 @@ namespace Jazz2
 		if (needsMask) {
 			graphics->Mask = std::make_unique<std::uint8_t[]>(width * height);
 			for (std::uint32_t i = 0; i < width * height; i++) {
-				// Save original alpha value for collision checking
-				graphics->Mask[i] = pixels[(i * PixelSize) + 3];
+				// Save the original alpha for collision checking. The decoded buffer is tightly packed to
+				// `channelCount` bytes/pixel: a 1-channel (index-only) sprite is opaque except index 0 (transparent),
+				// a 2-channel sprite has explicit alpha in green, anything wider keeps alpha in the 4th byte.
+				if (channelCount == 1) {
+					graphics->Mask[i] = (pixels[i] != 0 ? 255 : 0);
+				} else if (channelCount == 2) {
+					graphics->Mask[i] = pixels[(i * 2) + 1];
+				} else {
+					graphics->Mask[i] = pixels[(i * channelCount) + 3];
+				}
 			}
 		}
 		if (palette != nullptr) {
@@ -898,8 +911,13 @@ namespace Jazz2
 
 		if (!_isHeadless) {
 			// Don't load textures in headless mode, only collision masks
-			graphics->TextureDiffuse = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, width, height);
-			graphics->TextureDiffuse->LoadFromTexels(pixels.get(), 0, 0, width, height);
+			if ((graphics->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) {
+				bool paletteBaseTransparent = (((_palettes[paletteOffset] >> 24) & 0xFF) == 0);
+				graphics->TextureDiffuse = CreateIndexedTexture(path.data(), pixels.get(), width, height, channelCount, paletteBaseTransparent);
+			} else {
+				graphics->TextureDiffuse = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, width, height);
+				graphics->TextureDiffuse->LoadFromTexels(pixels.get(), 0, 0, width, height);
+			}
 			graphics->TextureDiffuse->SetMinFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 			graphics->TextureDiffuse->SetMagFiltering(linearSampling ? SamplerFilter::Linear : SamplerFilter::Nearest);
 		}
@@ -972,8 +990,8 @@ namespace Jazz2
 
 				if (b1 == QOI_OP_RGB) {
 					px.rgba.r = s->ReadValue<std::uint8_t>();
-					px.rgba.g = s->ReadValue<std::uint8_t>();
-					px.rgba.b = s->ReadValue<std::uint8_t>();
+					px.rgba.g = (channelCount >= 2 ? s->ReadValue<std::uint8_t>() : 0);
+					px.rgba.b = (channelCount >= 3 ? s->ReadValue<std::uint8_t>() : 0);
 				} else if (b1 == QOI_OP_RGBA) {
 					px.rgba.r = s->ReadValue<std::uint8_t>();
 					px.rgba.g = s->ReadValue<std::uint8_t>();
@@ -1053,6 +1071,70 @@ namespace Jazz2
 			std::uint32_t to = ((TileSet::DefaultTileSize + 1) * widthWithPadding + (TileSet::DefaultTileSize + 1)) * PixelSize;
 			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
 		}
+	}
+
+	std::unique_ptr<Texture> ContentResolver::CreateIndexedTexture(const char* name, const std::uint8_t* pixels, std::int32_t width, std::int32_t height, std::int32_t srcChannels, bool paletteBaseTransparent)
+	{
+		// `pixels` holds the palette index in the red (first) channel. The smallest lossless texture format is R8
+		// (index only) when transparency is on/off and reproducible by the palette base (entry 0 transparent), or
+		// RG8 (index + alpha sampled into .a via swizzle) when alpha is partial or the palette base is opaque (gems).
+		// 1/2-channel input is already pre-packed (by the asset converter) and uploads directly with no scan/repack.
+		std::int32_t count = width * height;
+		std::unique_ptr<Texture> texture;
+
+		if (srcChannels == 2) {
+			// Pre-packed (index, alpha) - upload directly as RG8
+			texture = std::make_unique<Texture>(name, Texture::Format::RG8, width, height);
+			texture->LoadFromTexels(pixels, 0, 0, width, height);
+			texture->SetSwizzle(SwizzleChannel::Red, SwizzleChannel::Green, SwizzleChannel::Blue, SwizzleChannel::Green);
+		} else if (srcChannels == 1) {
+			if (paletteBaseTransparent) {
+				// Pre-packed index only, transparency via palette entry 0 - upload directly as R8
+				texture = std::make_unique<Texture>(name, Texture::Format::R8, width, height);
+				texture->LoadFromTexels(pixels, 0, 0, width, height);
+			} else {
+				// Opaque palette base (e.g. gems): synthesize on/off alpha from the index so transparency survives
+				std::unique_ptr<std::uint8_t[]> packed = std::make_unique<std::uint8_t[]>(count * 2);
+				for (std::int32_t i = 0; i < count; i++) {
+					packed[(i * 2) + 0] = pixels[i];
+					packed[(i * 2) + 1] = (pixels[i] == 0 ? 0 : 255);
+				}
+				texture = std::make_unique<Texture>(name, Texture::Format::RG8, width, height);
+				texture->LoadFromTexels(packed.get(), 0, 0, width, height);
+				texture->SetSwizzle(SwizzleChannel::Red, SwizzleChannel::Green, SwizzleChannel::Blue, SwizzleChannel::Green);
+			}
+		} else {
+			// RGBA source (PNG / legacy .aura): scan the alpha to choose R8 vs RG8, then repack
+			bool needsAlpha = false;
+			for (std::int32_t i = 0; i < count; i++) {
+				std::uint8_t a = pixels[(i * srcChannels) + 3];
+				if (a == 255 || (a == 0 && paletteBaseTransparent)) {
+					continue;
+				}
+				needsAlpha = true;
+				break;
+			}
+
+			if (needsAlpha) {
+				std::unique_ptr<std::uint8_t[]> packed = std::make_unique<std::uint8_t[]>(count * 2);
+				for (std::int32_t i = 0; i < count; i++) {
+					packed[(i * 2) + 0] = pixels[(i * srcChannels) + 0];
+					packed[(i * 2) + 1] = pixels[(i * srcChannels) + 3];
+				}
+				texture = std::make_unique<Texture>(name, Texture::Format::RG8, width, height);
+				texture->LoadFromTexels(packed.get(), 0, 0, width, height);
+				texture->SetSwizzle(SwizzleChannel::Red, SwizzleChannel::Green, SwizzleChannel::Blue, SwizzleChannel::Green);
+			} else {
+				// R8: fully transparent pixels collapse to index 0 (the transparent palette entry)
+				std::unique_ptr<std::uint8_t[]> packed = std::make_unique<std::uint8_t[]>(count);
+				for (std::int32_t i = 0; i < count; i++) {
+					packed[i] = (pixels[(i * srcChannels) + 3] == 0 ? 0 : pixels[(i * srcChannels) + 0]);
+				}
+				texture = std::make_unique<Texture>(name, Texture::Format::R8, width, height);
+				texture->LoadFromTexels(packed.get(), 0, 0, width, height);
+			}
+		}
+		return texture;
 	}
 
 	std::unique_ptr<Tiles::TileSet> ContentResolver::RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping)
@@ -1244,8 +1326,16 @@ namespace Jazz2
 				}
 			}
 
-			textureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, widthWithPadding, heightWithPadding);
-			textureDiffuse->LoadFromTexels((std::uint8_t*)pixelsWithPadding.get(), 0, 0, widthWithPadding, heightWithPadding);
+			if (indexTiles) {
+				// The atlas holds palette indices (red channel) - pack it to R8/RG8 like indexed sprites; the
+				// per-tile alpha was expanded into the padding above, so it carries over correctly. Tiles draw at
+				// palette offset 0 (row 0), whose entry 0 is transparent, so on/off transparency can drop to R8
+				bool paletteBaseTransparent = (((_palettes[0] >> 24) & 0xFF) == 0);
+				textureDiffuse = CreateIndexedTexture(fullPath.data(), pixelsWithPadding.get(), widthWithPadding, heightWithPadding, PixelSize, paletteBaseTransparent);
+			} else {
+				textureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, widthWithPadding, heightWithPadding);
+				textureDiffuse->LoadFromTexels((std::uint8_t*)pixelsWithPadding.get(), 0, 0, widthWithPadding, heightWithPadding);
+			}
 			textureDiffuse->SetMinFiltering(SamplerFilter::Nearest);
 			textureDiffuse->SetMagFiltering(SamplerFilter::Nearest);
 
