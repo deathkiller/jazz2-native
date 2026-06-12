@@ -17,6 +17,8 @@
 #include "../PreferencesCache.h"
 #include "../Actors/ActorBase.h"
 #include "../Actors/Player.h"
+#include "../Compatibility/AnimSetMapping.h"
+#include "../Compatibility/EventConverter.h"
 #include "../Compatibility/JJ2Strings.h"
 #include "../UI/InGameConsole.h"
 
@@ -171,6 +173,23 @@ namespace Jazz2::Scripting
 				_onLevelUpdate = GetMainModule()->GetFunctionByDecl("void onLevelUpdate(float)");
 				// TODO: Add draw callbacks
 				break;
+		}
+
+		// Snapshot the level's palette so scripts see it via jjPalette and can restore it via jjPAL::reset()
+		CaptureLevelPalette();
+	}
+
+	void LevelScriptLoader::CaptureLevelPalette()
+	{
+		auto palettes = ContentResolver::Get().GetPalettes();
+		for (std::int32_t i = 0; i < ContentResolver::ColorsPerPalette; i++) {
+			std::uint32_t c = palettes[i];
+			jjPALCOLOR col;
+			col.red = (std::uint8_t)(c & 0xFF);
+			col.green = (std::uint8_t)((c >> 8) & 0xFF);
+			col.blue = (std::uint8_t)((c >> 16) & 0xFF);
+			jjPalette.setColorEntry((std::uint8_t)i, col);
+			jjBackupPalette.setColorEntry((std::uint8_t)i, col);
 		}
 	}
 
@@ -384,6 +403,9 @@ namespace Jazz2::Scripting
 				}
 			}
 		}
+
+		// Push any script-modified jjLAYER properties into the engine layer descriptions (no-op if no jjLayers accessed)
+		SyncLayerProperties();
 	}
 
 	void LevelScriptLoader::OnLevelCallback(Actors::ActorBase* initiator, uint8_t* eventParams)
@@ -1498,7 +1520,7 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectMethod("jjPLAYER", "bool doesCollide(const jjOBJ@ object, bool always = false) const", asMETHOD(jjPLAYER, doesCollide), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "int getObjectHitForce(const jjOBJ@ target = null) const", asMETHOD(jjPLAYER, getObjectHitForce), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjPLAYER", "bool objectHit(jjOBJ@ target, int force, HANDLING::Player playerHandling)", asMETHOD(jjPLAYER, objectHit), asCALL_THISCALL);
-		engine->RegisterObjectMethod("jjOBJ", "void objectHit(jjOBJ@ target, HANDLING::Player playerHandling)", asMETHOD(jjOBJ, objectHit), asCALL_THISCALL);
+		engine->RegisterObjectMethod("jjOBJ", "jjOBJ@ objectHit(jjOBJ@ target, HANDLING::Player playerHandling)", asMETHOD(jjOBJ, objectHit), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjOBJ", "void blast(int maxDistance, bool blastObjects)", asMETHOD(jjOBJ, blast), asCALL_THISCALL);
 
 		engine->RegisterObjectMethod("jjPLAYER", "bool isEnemy(const jjPLAYER &in victim) const", asMETHOD(jjPLAYER, isEnemy), asCALL_THISCALL);
@@ -1830,7 +1852,7 @@ namespace Jazz2::Scripting
 		engine->RegisterObjectBehaviour("jjANIMSET", asBEHAVE_ADDREF, "void f()", asMETHOD(jjANIMSET, AddRef), asCALL_THISCALL);
 		engine->RegisterObjectBehaviour("jjANIMSET", asBEHAVE_RELEASE, "void f()", asMETHOD(jjANIMSET, Release), asCALL_THISCALL);
 		engine->RegisterGlobalFunction("jjANIMSET @get_jjAnimSets(uint)", asFUNCTION(jjANIMSET::get_jjAnimSets), asCALL_CDECL);
-		engine->RegisterObjectProperty("jjANIMSET", "uint firstAnim", 0);
+		engine->RegisterObjectProperty("jjANIMSET", "uint firstAnim", asOFFSET(jjANIMSET, firstAnim));
 		engine->RegisterObjectMethod("jjANIMSET", "uint opImplConv() const", asMETHOD(jjANIMSET, convertAnimSetToUint), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjANIMSET", "jjANIMSET @load(uint fileSetID = 2048, const string &in filename = '', int firstAnimToOverwrite = -1, int firstFrameToOverwrite = -1)", asMETHOD(jjANIMSET, load), asCALL_THISCALL);
 		engine->RegisterObjectMethod("jjANIMSET", "jjANIMSET @allocate(const array<uint> &in frameCounts)", asMETHOD(jjANIMSET, allocate), asCALL_THISCALL);

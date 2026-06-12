@@ -12,6 +12,22 @@ namespace Jazz2::UI
 	class HUD;
 }
 
+namespace nCine
+{
+	class AudioBuffer;
+}
+
+namespace Jazz2::Compatibility
+{
+	class AnimSetMapping;
+	class EventConverter;
+}
+
+namespace Jazz2::Resources
+{
+	struct GenericGraphicResource;
+}
+
 namespace Jazz2::Scripting
 {
 	namespace Legacy
@@ -38,9 +54,46 @@ namespace Jazz2::Scripting
 	class LevelScriptLoader : public ScriptLoader
 	{
 		friend class Legacy::jjPLAYER;
+		friend class Legacy::jjPAL;
 
 	public:
 		LevelScriptLoader(LevelHandler* levelHandler, StringView scriptPath);
+		~LevelScriptLoader();
+
+		/** @brief Returns the level handler this script is bound to */
+		LevelHandler* GetLevelHandler() const {
+			return _levelHandler;
+		}
+
+		/** @brief Plays a sound sample by its original sample index (see `SOUND::Sample`), loading and caching it on
+			first use; returns the player, or `nullptr` if the sample couldn't be played */
+		std::shared_ptr<AudioBufferPlayer> PlaySample(const Vector2f& pos, std::int32_t sampleId, std::int32_t volume, std::int32_t frequency, bool sourceRelative, std::int32_t loopChannel);
+		/** @brief Returns `true` if the given built-in sample is available (loading it on first query) */
+		bool IsSampleLoaded(std::int32_t sampleId);
+		/** @brief Loads a custom sample from the given content path, overriding the sample at the given index */
+		bool LoadSample(std::int32_t sampleId, StringView path);
+
+		/** @brief Resolves the graphic resource for an original JJ2 animation set + animation index (via the anim
+			mapping and the converted assets), loading and caching it on first use; returns `nullptr` if unavailable.
+			Used by the canvas sprite-drawing functions. */
+		Resources::GenericGraphicResource* ResolveSpriteGraphic(std::int32_t setID, std::int32_t animation);
+
+		/** @brief Spawns an object from an original JJ2 event ID at the given pixel position (converting the event to a
+			native type), registers it, and returns a script object ID (or 0 on failure). Used by `jjAddObject`. */
+		std::int32_t AddObjectFromEvent(std::uint8_t eventId, float xPixel, float yPixel);
+		/** @brief Returns the live actor for a script object ID previously returned by @ref AddObjectFromEvent, or
+			`nullptr` if it no longer exists. Used by `jjObjects`. */
+		Actors::ActorBase* GetScriptObject(std::int32_t objectId);
+
+		/** @brief Spawns a script-controlled object whose behavior function drives it each frame (a host actor applies
+			its velocity, calls the behavior over the jjOBJ, and syncs the position back). Returns a script object ID.
+			Used by `jjAddObject` when a custom behavior function is supplied. */
+		std::int32_t AddScriptControlledObject(std::uint8_t eventId, float xPixel, float yPixel, asIScriptFunction* behaviorFunc);
+
+		/** @brief Returns the persistent `jjLAYER` proxy bound to the given level layer index, creating and populating it
+			from the engine layer on first access (or `nullptr` if the index is out of range). The returned handle is
+			AddRef'd for the caller. Used by `jjLayers`. */
+		Legacy::jjLAYER* GetLayerProxy(std::int32_t index);
 
 		/** @brief Returns list of players */
 		ArrayView<Actors::Player* const> GetPlayers() const;
@@ -87,6 +140,41 @@ namespace Jazz2::Scripting
 		HashMap<std::int32_t, asITypeInfo*> _eventTypeToTypeInfo;
 		BitArray _enabledCallbacks;
 		HashMap<std::uint8_t, std::unique_ptr<jjPLAYER>> _playerBackingStore;
+
+		// Lazily-built mapping of original JJ2 sample indices to converted asset paths (only allocated once a script
+		// actually plays a sample, so non-scripting and silent sessions pay nothing)
+		std::unique_ptr<Compatibility::AnimSetMapping> _sampleMapping;
+		// Cache of loaded sample buffers keyed by sample index (a null entry marks a sample that failed to load, to
+		// avoid repeatedly trying to open a missing file)
+		HashMap<std::int32_t, std::unique_ptr<nCine::AudioBuffer>> _scriptSamples;
+		// Currently playing looped samples keyed by their channel, so a later call on the same channel can replace them
+		HashMap<std::int32_t, std::shared_ptr<AudioBufferPlayer>> _loopedSamples;
+
+		// Lazily-built mapping of original JJ2 (animation set, animation) indices to converted graphics assets (only
+		// allocated once a script draws a sprite, so non-drawing sessions pay nothing)
+		std::unique_ptr<Compatibility::AnimSetMapping> _animMapping;
+
+		// Lazily-built converter from original JJ2 event IDs to native event types (for script object spawning), and a
+		// registry of script-spawned objects keyed by a generated ID (weak, since the level owns the actor)
+		std::unique_ptr<Compatibility::EventConverter> _eventConverter;
+		HashMap<std::int32_t, std::weak_ptr<Actors::ActorBase>> _scriptObjects;
+		std::int32_t _nextScriptObjectId = 1;
+
+		// Persistent jjLAYER proxies keyed by engine layer index, created lazily when a script first accesses jjLayers[i].
+		// Each holds one AddRef'd reference (released in the destructor); SyncLayerProperties pushes their writable fields
+		// into the engine layer descriptions every frame so direct property writes (e.g. layer.xSpeed = N) take effect.
+		HashMap<std::int32_t, Legacy::jjLAYER*> _layerProxies;
+
+		// Pushes every cached jjLAYER proxy's writable properties (speeds, offsets, repeat, speed models) into the engine
+		// tile-map layer descriptions; called once per frame from OnLevelUpdate. No proxies = no cost.
+		void SyncLayerProperties();
+
+		// Resolves (loading and caching on first use) the sample buffer for the given index, or `nullptr` if unavailable
+		nCine::AudioBuffer* ResolveSampleBuffer(std::int32_t sampleId);
+
+		// Captures the level's loaded palette into jjPalette/jjBackupPalette (called once at construction, before any
+		// script runs, so scripts see the level palette and can restore it via jjPAL::reset())
+		void CaptureLevelPalette();
 
 		// Global scripting variables
 		static constexpr std::int32_t FLAG_HFLIPPED_TILE = 0x1000;

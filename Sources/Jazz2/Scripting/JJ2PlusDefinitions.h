@@ -1258,7 +1258,7 @@ namespace Jazz2::Scripting
 			jjPAL();
 			~jjPAL();
 
-			static jjPAL* Create(jjPAL* self);
+			static jjPAL* Create();
 
 			void AddRef();
 
@@ -1380,6 +1380,14 @@ namespace Jazz2::Scripting
 			static jjBEHAVIOR* CreateFromBehavior(std::uint32_t behavior, jjBEHAVIOR* self);
 			static void Destroy(jjBEHAVIOR* self);
 
+			// Releases the held function/object reference. Runs both when AngelScript destroys a value (via Destroy)
+			// and when an embedding object (jjOBJ::behavior) is destroyed.
+			~jjBEHAVIOR();
+
+			jjBEHAVIOR() = default;
+			// Copy must add a reference to the held function/object (rule of three, since the destructor releases)
+			jjBEHAVIOR(const jjBEHAVIOR& other);
+
 			jjBEHAVIOR& operator=(const jjBEHAVIOR& other);
 			jjBEHAVIOR& operator=(std::uint32_t other);
 			jjBEHAVIOR& operator=(asIScriptFunction* other);
@@ -1390,6 +1398,13 @@ namespace Jazz2::Scripting
 			operator std::uint32_t();
 			operator asIScriptFunction* ();
 			operator asIScriptObject* ();
+
+			// A behavior is one of: a built-in behavior id (BEHAVIOR::Behavior), a custom script behavior function
+			// (jjVOIDFUNCOBJ), or a script object implementing jjBEHAVIORINTERFACE. The function/object hold an
+			// AngelScript reference (managed in Create/Destroy/operator=).
+			std::uint32_t behaviorId = 0;
+			asIScriptFunction* function = nullptr;
+			asIScriptObject* object = nullptr;
 		};
 
 		class jjANIMFRAME
@@ -1467,6 +1482,10 @@ namespace Jazz2::Scripting
 			jjANIMSET* load(std::uint32_t fileSetID, const String& filename, int32_t firstAnimToOverwrite, int32_t firstFrameToOverwrite);
 			jjANIMSET* allocate(const CScriptArray& frameCounts);
 
+			// Index of the first jjANIMATION belonging to this set (exposed as the `firstAnim` script property). Stored
+			// explicitly so the property has real backing storage instead of aliasing the reference count.
+			std::uint32_t firstAnim = 0;
+
 		private:
 			std::int32_t _refCount;
 			std::uint32_t _index;
@@ -1503,11 +1522,15 @@ namespace Jazz2::Scripting
 
 		class jjOBJ;
 		class jjPLAYER;
+		// Native actor that hosts a script-controlled jjOBJ (defined in JJ2PlusDefinitions.cpp)
+		class ScriptLegacyObject;
 
 		using jjVOIDFUNCOBJ = void(*)(jjOBJ* obj);
 
 		class jjOBJ
 		{
+			friend class ScriptLegacyObject;
+
 		public:
 			jjOBJ();
 			~jjOBJ();
@@ -1628,6 +1651,25 @@ namespace Jazz2::Scripting
 
 		private:
 			std::int32_t _refCount;
+			// The hosting actor while this is a live script-controlled object (null once despawned); set by the wrapper
+			ScriptLegacyObject* _wrapper = nullptr;
+
+			// Script-facing per-object state. The native engine doesn't act on most of these for script-spawned objects,
+			// but scripts read/write them constantly (state machines lean on var[]), so they're stored for round-trip use.
+			static constexpr std::int32_t MaxVars = 16;
+			std::int32_t _vars[MaxVars] = {};
+			// Mutable: set_creatorID/set_creatorType are declared const (to match the JJ2+ registration) but still store
+			mutable std::uint16_t _creatorID = 0;
+			mutable std::uint32_t _creatorType = 0;
+			std::uint32_t _bulletHandling = 0;
+			std::uint32_t _playerHandling = 0;
+			bool _ricochetProp = false;
+			bool _freezable = true;
+			bool _blastable = true;
+			bool _isTarget = false;
+			bool _triggersTNT = false;
+			bool _deactivates = true;
+			bool _scriptedCollisions = false;
 		};
 
 		struct jjPARTICLEPIXEL
@@ -1754,6 +1796,7 @@ namespace Jazz2::Scripting
 		class jjPLAYER
 		{
 			friend class LevelScriptLoader;
+			friend class jjLAYER;	// jjLAYER::getXPosition/getYPosition read the player's camera
 
 		public:
 			jjPLAYER(LevelScriptLoader* levelScripts, Actors::Player* player);
@@ -2156,11 +2199,20 @@ namespace Jazz2::Scripting
 			void generateSettableTileArea(int xTile, int yTile, int width, int height);
 			void generateSettableTileAreaAll();
 
-			std::int32_t SpeedModeX;
-			std::int32_t SpeedModeY;
+			std::int32_t SpeedModeX = 0;
+			std::int32_t SpeedModeY = 0;
 
 		private:
 			std::int32_t _refCount;
+			// The engine tile-map layer this proxy is bound to (-1 = a standalone layer not part of the level). The loader
+			// caches one proxy per level layer and pushes the writable fields into the engine each frame (see SyncLayerProperties).
+			std::int32_t _layerIndex = -1;
+			// Last-synced offsets, used to tell a script write apart from the engine's auto-scroll (which advances OffsetX/Y
+			// itself): if the proxy value still equals this, the engine's value is authoritative; otherwise the script changed it.
+			float _syncedOffsetX = 0.0f;
+			float _syncedOffsetY = 0.0f;
+
+			friend class LevelScriptLoader;
 		};
 
 		struct jjPLAYERDRAW
@@ -2271,7 +2323,7 @@ namespace Jazz2::Scripting
 	std::int32_t getBorderWidth();
 	std::int32_t getBorderHeight();
 	bool getSplitscreenType();
-	bool setSplitscreenType();
+	bool setSplitscreenType(bool value);
 
 	// TODO
 
@@ -2287,13 +2339,13 @@ namespace Jazz2::Scripting
 	void jjSetFadeColorsFromPalcolor(jjPALCOLOR color);
 	jjPALCOLOR jjGetFadeColors();
 	void jjUpdateTexturedBG();
-	std::int32_t get_jjTexturedBGTexture(jjPALCOLOR color);
+	std::int32_t get_jjTexturedBGTexture();
 	std::int32_t set_jjTexturedBGTexture(std::int32_t texture);
 	std::int32_t get_jjTexturedBGStyle();
 	std::int32_t set_jjTexturedBGStyle(std::int32_t style);
-	bool get_jjTexturedBGUsed(jjPALCOLOR color);
+	bool get_jjTexturedBGUsed();
 	bool set_jjTexturedBGUsed(bool used);
-	bool get_jjTexturedBGStars(bool used);
+	bool get_jjTexturedBGStars();
 	bool set_jjTexturedBGStars(bool used);
 	float get_jjTexturedBGFadePositionX();
 	float set_jjTexturedBGFadePositionX(float value);
@@ -2307,7 +2359,7 @@ namespace Jazz2::Scripting
 	std::int32_t getCursorY();
 
 	void playSample(float xPixel, float yPixel, std::int32_t sample, std::int32_t volume, std::int32_t frequency);
-	std::int32_t playLoopedSample(float xPixel, float yPixel, std::int32_t sample, std::int32_t volume, std::int32_t frequency);
+	std::int32_t playLoopedSample(float xPixel, float yPixel, std::int32_t sample, std::int32_t channel, std::int32_t volume, std::int32_t frequency);
 	void playPrioritySample(std::int32_t sample);
 	bool isSampleLoaded(std::int32_t sample);
 	bool loadSample(std::int32_t sample, const String& filename);

@@ -1486,6 +1486,74 @@ namespace Jazz2::Tiles
 		}
 	}
 
+	Vector2i TileMap::GetLayerSize(std::int32_t layerIndex) const
+	{
+		if (layerIndex < 0 || layerIndex >= (std::int32_t)_layers.size()) {
+			return {};
+		}
+		return _layers[layerIndex].LayoutSize;
+	}
+
+	std::uint16_t TileMap::GetTile(std::int32_t layerIndex, std::int32_t x, std::int32_t y) const
+	{
+		if (layerIndex < 0 || layerIndex >= (std::int32_t)_layers.size()) {
+			return 0;
+		}
+
+		const TileMapLayer& layer = _layers[layerIndex];
+		if (x < 0 || y < 0 || x >= layer.LayoutSize.X || y >= layer.LayoutSize.Y) {
+			return 0;
+		}
+
+		const LayerTile& tile = layer.Layout[y * layer.LayoutSize.X + x];
+
+		std::uint16_t result;
+		if (tile.TileID >= (std::int32_t)_animatedTilesOffset) {
+			result = (std::uint16_t)((tile.TileID - _animatedTilesOffset) & TileIndexMask) | TileFlagAnimated;
+		} else {
+			result = (std::uint16_t)(tile.TileID & TileIndexMask);
+		}
+		if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
+			result |= TileFlagFlipX;
+		}
+		if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
+			result |= TileFlagFlipY;
+		}
+		return result;
+	}
+
+	bool TileMap::SetTile(std::int32_t layerIndex, std::int32_t x, std::int32_t y, std::uint16_t tileValue)
+	{
+		if (layerIndex < 0 || layerIndex >= (std::int32_t)_layers.size()) {
+			return false;
+		}
+
+		TileMapLayer& layer = _layers[layerIndex];
+		if (x < 0 || y < 0 || x >= layer.LayoutSize.X || y >= layer.LayoutSize.Y) {
+			return false;
+		}
+
+		LayerTile& tile = layer.Layout[y * layer.LayoutSize.X + x];
+
+		std::int32_t tileIndex = (tileValue & TileIndexMask);
+		if ((tileValue & TileFlagAnimated) == TileFlagAnimated) {
+			tile.TileID = _animatedTilesOffset + tileIndex;
+		} else {
+			tile.TileID = tileIndex;
+		}
+
+		// Replace just the flip flags, preserving collision/other flags (e.g. OneWay)
+		std::uint8_t flags = (std::uint8_t)tile.Flags & ~(std::uint8_t)(LayerTileFlags::FlipX | LayerTileFlags::FlipY);
+		if ((tileValue & TileFlagFlipX) == TileFlagFlipX) {
+			flags |= (std::uint8_t)LayerTileFlags::FlipX;
+		}
+		if ((tileValue & TileFlagFlipY) == TileFlagFlipY) {
+			flags |= (std::uint8_t)LayerTileFlags::FlipY;
+		}
+		tile.Flags = (LayerTileFlags)flags;
+		return true;
+	}
+
 	void TileMap::CreateCheckpointForRollback()
 	{
 		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;

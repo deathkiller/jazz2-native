@@ -121,6 +121,8 @@ namespace Jazz2::Actors::Weapons
 				debris.TexBiasY = (((float)(_renderer.CurrentFrame / resBase->FrameConfiguration.X) / resBase->FrameConfiguration.Y) + (((resBase->FrameDimensions.Y * 0.5f) + dy) / float(texSize.Y)));
 
 				debris.DiffuseTexture = resBase->TextureDiffuse.get();
+				// Recolor through the palette when the sprite is indexed (-1 = baked/RGBA, behavior unchanged)
+				debris.PaletteOffset = (((resBase->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) ? (std::int32_t)_currentAnimation->PaletteOffset : -1);
 				debris.Flags = Tiles::TileMap::DebrisFlags::Disappear;
 
 				tileMap->CreateDebris(debris);

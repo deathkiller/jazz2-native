@@ -85,6 +85,8 @@ namespace Jazz2::Actors::Environment
 					debris.TexBiasY = ((float)(frame / frameConf.X) / frameConf.Y);
 
 					debris.DiffuseTexture = res->Base->TextureDiffuse.get();
+					// Recolor through the palette when the sprite is indexed (-1 = baked/RGBA, behavior unchanged)
+					debris.PaletteOffset = (((res->Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) ? (std::int32_t)res->PaletteOffset : -1);
 
 					tilemap->CreateDebris(debris);
 				}

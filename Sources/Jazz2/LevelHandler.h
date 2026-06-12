@@ -117,6 +117,19 @@ namespace Jazz2
 		ArrayView<const std::shared_ptr<Actors::ActorBase>> GetActors() const override;
 		ArrayView<Actors::Player* const> GetPlayers() const override;
 
+		/** @brief Returns the internal name (path) of the current level */
+		StringView GetLevelName() const {
+			return _levelName;
+		}
+		/** @brief Returns the display (title) name of the current level */
+		StringView GetLevelDisplayName() const {
+			return _levelDisplayName;
+		}
+		/** @brief Overrides the display (title) name of the current level */
+		void SetLevelDisplayName(StringView value) {
+			_levelDisplayName = value;
+		}
+
 		float GetDefaultAmbientLight() const override;
 		float GetAmbientLight(Actors::Player* player) const override;
 		void SetAmbientLight(Actors::Player* player, float value) override;

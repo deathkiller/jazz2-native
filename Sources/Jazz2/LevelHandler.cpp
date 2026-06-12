@@ -1705,6 +1705,8 @@ namespace Jazz2
 					if (res != nullptr) {
 						auto& resBase = res->Base;
 						Vector2i texSize = resBase->TextureDiffuse->GetSize();
+						// The rain sprite is loaded indexed now, so the debris must recolor through its palette offset (-1 = baked)
+						std::int32_t paletteOffset = (((resBase->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) ? (std::int32_t)res->PaletteOffset : -1);
 						float scale = Random().FastFloat(0.4f, 1.1f);
 						float speedX = Random().FastFloat(2.2f, 2.7f) * scale;
 						float speedY = Random().FastFloat(7.6f, 8.6f) * scale;
@@ -1734,6 +1736,7 @@ namespace Jazz2
 						debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
 
 						debris.DiffuseTexture = resBase->TextureDiffuse.get();
+						debris.PaletteOffset = paletteOffset;
 						debris.Flags = debrisFlags;
 
 						_tileMap->CreateDebris(debris);
@@ -1743,6 +1746,8 @@ namespace Jazz2
 					if (res != nullptr) {
 						auto& resBase = res->Base;
 						Vector2i texSize = resBase->TextureDiffuse->GetSize();
+						// The snow sprite is loaded indexed now, so the debris must recolor through its palette offset (-1 = baked)
+						std::int32_t paletteOffset = (((resBase->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) ? (std::int32_t)res->PaletteOffset : -1);
 						float scale = Random().FastFloat(0.4f, 1.1f);
 						float speedX = Random().FastFloat(-1.6f, -1.2f) * scale;
 						float speedY = Random().FastFloat(3.0f, 4.0f) * scale;
@@ -1773,6 +1778,7 @@ namespace Jazz2
 						debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
 
 						debris.DiffuseTexture = resBase->TextureDiffuse.get();
+						debris.PaletteOffset = paletteOffset;
 						debris.Flags = debrisFlags;
 
 						_tileMap->CreateDebris(debris);

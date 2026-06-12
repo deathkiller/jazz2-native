@@ -369,6 +369,12 @@ namespace Jazz2
 		return fs::Open(fullPath, FileAccess::Read, bufferSize);
 	}
 
+	std::unique_ptr<Stream> ContentResolver::OpenSourceFile(StringView path, std::int32_t bufferSize)
+	{
+		String fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(GetSourcePath(), path));
+		return fs::Open(fullPath, FileAccess::Read, bufferSize);
+	}
+
 	void ContentResolver::BeginLoading()
 	{
 		_isLoading = true;
@@ -1607,6 +1613,20 @@ namespace Jazz2
 			std::memcpy(_palettes, SpritePalette, ColorsPerPalette * sizeof(std::uint32_t));
 			RecreateGemPalettes();
 		}
+	}
+
+	void ContentResolver::SetSpritePalette(ArrayView<const std::uint32_t> palette)
+	{
+		std::int32_t paletteSize = (std::int32_t)palette.size();
+		std::int32_t count = (paletteSize < ColorsPerPalette ? paletteSize : ColorsPerPalette);
+		if (count <= 0) {
+			return;
+		}
+
+		std::memcpy(_palettes, palette.data(), count * sizeof(std::uint32_t));
+		// Rebuilds the gem gradient rows from the new base palette, then marks rows 0..gems dirty and refreshes the
+		// per-player recolor rows (which are also derived from the base palette)
+		RecreateGemPalettes();
 	}
 
 	std::optional<Episode> ContentResolver::GetEpisode(StringView name, bool withImages)

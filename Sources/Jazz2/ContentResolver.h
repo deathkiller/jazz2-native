@@ -108,6 +108,9 @@ namespace Jazz2
 #endif
 		/** @brief Tries to find and open a file specified by the path */
 		std::unique_ptr<Stream> OpenContentFile(StringView path, std::int32_t bufferSize = 8192);
+		/** @brief Tries to open a file from the `"Source"` directory (original/custom game files, case-insensitive);
+			the returned stream is invalid if the file wasn't found */
+		std::unique_ptr<Stream> OpenSourceFile(StringView path, std::int32_t bufferSize = 8192);
 		
 		/** @brief Marks beginning of the loading assets */
 		void BeginLoading();
@@ -168,6 +171,10 @@ namespace Jazz2
 		bool TryLoadLevel(StringView path, GameDifficulty difficulty, LevelDescriptor& descriptor);
 		/** @brief Loads default (sprite) palette */
 		void ApplyDefaultPalette();
+		/** @brief Overrides the active sprite palette (row 0 of the shared palette) with up to @ref ColorsPerPalette
+			packed colors (`0xAABBGGRR`) and refreshes everything derived from it (gem gradients and per-player recolor
+			rows) so the change takes effect on the next frame. Has no visible effect in headless mode. */
+		void SetSpritePalette(ArrayView<const std::uint32_t> palette);
 
 		/** @brief Returns specified episode by name */
 		std::optional<Episode> GetEpisode(StringView name, bool withImages = false);

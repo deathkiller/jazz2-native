@@ -171,6 +171,15 @@ namespace Jazz2::Tiles
 		/** @brief Hardcoded offset for layer positioning */
 		static constexpr std::int32_t HardcodedOffset = 70;
 
+		/** @brief Mask of the tile index inside a packed tile value (see @ref GetTile()) */
+		static constexpr std::uint16_t TileIndexMask = 0x0FFF;
+		/** @brief Flag of a packed tile value that is flipped horizontally */
+		static constexpr std::uint16_t TileFlagFlipX = 0x1000;
+		/** @brief Flag of a packed tile value that is flipped vertically */
+		static constexpr std::uint16_t TileFlagFlipY = 0x2000;
+		/** @brief Flag of a packed tile value that refers to an animated tile (index is relative to the first animated tile) */
+		static constexpr std::uint16_t TileFlagAnimated = 0x4000;
+
 		/** @} */
 
 		/** @brief Flags that modify behaviour of @ref DestructibleDebris, supports a bitwise combination of its member values */
@@ -303,6 +312,20 @@ namespace Jazz2::Tiles
 		bool GetTrigger(std::uint8_t triggerId);
 		/** @brief Sets state of a given trigger */
 		void SetTrigger(std::uint8_t triggerId, bool newState);
+
+		/** @brief Returns number of layers */
+		std::int32_t GetLayerCount() const {
+			return (std::int32_t)_layers.size();
+		}
+		/** @brief Returns size of a given layer in tiles, or an empty vector if the layer doesn't exist */
+		Vector2i GetLayerSize(std::int32_t layerIndex) const;
+		/** @brief Returns the tile at the given coordinates on a given layer as a packed value (low 12 bits are the tile
+			index, see @ref TileIndexMask; combined with @ref TileFlagFlipX / @ref TileFlagFlipY / @ref TileFlagAnimated),
+			or `0` if the layer or coordinates are out of range */
+		std::uint16_t GetTile(std::int32_t layerIndex, std::int32_t x, std::int32_t y) const;
+		/** @brief Sets the tile at the given coordinates on a given layer from a packed value (see @ref GetTile()),
+			preserving unrelated tile state (transparency, collision flags); returns `false` if out of range */
+		bool SetTile(std::int32_t layerIndex, std::int32_t x, std::int32_t y, std::uint16_t tileValue);
 
 		/** @brief Creates a checkpoint for eventual rollback */
 		void CreateCheckpointForRollback();
