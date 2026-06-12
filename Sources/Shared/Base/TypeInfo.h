@@ -331,6 +331,9 @@ namespace Death {
 	*/
 	template<typename T, typename U>
 	DEATH_ALWAYS_INLINE T* runtime_cast(U* u) noexcept {
+		static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
+			"T must be a plain value type - pointers (T*) and references (T&, T&&) are not allowed");
+
 		return Death::TypeInfo::Implementation::Helpers::RuntimeCast<T>(u, std::is_base_of<T, U>());
 	}
 
@@ -338,6 +341,9 @@ namespace Death {
 	/** @overload */
 	template<typename T, typename U>
 	DEATH_ALWAYS_INLINE const T* runtime_cast(const U* u) noexcept {
+		static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
+			"T must be a plain value type - pointers (T*) and references (T&, T&&) are not allowed");
+
 		return Death::TypeInfo::Implementation::Helpers::RuntimeCast<T>(u, std::is_base_of<T, U>());
 	}
 #endif
@@ -345,6 +351,9 @@ namespace Death {
 	/** @overload */
 	template<class T, class U>
 	DEATH_ALWAYS_INLINE std::shared_ptr<T> runtime_cast(const std::shared_ptr<U>& u) noexcept {
+		static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
+			"T must be a plain value type - pointers (T*) and references (T&, T&&) are not allowed");
+
 		auto ptr = Death::TypeInfo::Implementation::Helpers::RuntimeCast<T>(u.get(), std::is_base_of<T, U>());
 		if (ptr) {
 			return std::shared_ptr<T>(u, ptr);
@@ -355,6 +364,9 @@ namespace Death {
 	/** @overload */
 	template<class T, class U>
 	DEATH_ALWAYS_INLINE std::shared_ptr<T> runtime_cast(std::shared_ptr<U>&& u) noexcept {
+		static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
+			"T must be a plain value type - pointers (T*) and references (T&, T&&) are not allowed");
+
 		auto ptr = Death::TypeInfo::Implementation::Helpers::RuntimeCast<T>(u.get(), std::is_base_of<T, U>());
 		if (ptr) {
 			return std::shared_ptr<T>(Death::move(u), ptr);
@@ -384,6 +396,9 @@ namespace Death {
 	*/
 	template<typename T, typename U>
 	DEATH_ALWAYS_INLINE T* runtime_cast(U* u) noexcept {
+		static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
+			"T must be a plain value type - pointers (T*) and references (T&, T&&) are not allowed");
+
 		return dynamic_cast<T*>(u);
 	}
 
@@ -391,6 +406,9 @@ namespace Death {
 	/** @overload */
 	template<typename T, typename U>
 	DEATH_ALWAYS_INLINE const T* runtime_cast(const U* u) noexcept {
+		static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
+			"T must be a plain value type - pointers (T*) and references (T&, T&&) are not allowed");
+
 		return dynamic_cast<const T*>(u);
 	}
 #endif
@@ -398,6 +416,9 @@ namespace Death {
 	/** @overload */
 	template<class T, class U>
 	DEATH_ALWAYS_INLINE std::shared_ptr<T> runtime_cast(const std::shared_ptr<U>& u) noexcept {
+		static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
+			"T must be a plain value type - pointers (T*) and references (T&, T&&) are not allowed");
+
 		auto ptr = dynamic_cast<T*>(u.get());
 		if (ptr) {
 			return std::shared_ptr<T>(u, ptr);
@@ -408,6 +429,9 @@ namespace Death {
 	/** @overload */
 	template<class T, class U>
 	DEATH_ALWAYS_INLINE std::shared_ptr<T> runtime_cast(std::shared_ptr<U>&& u) noexcept {
+		static_assert(!std::is_pointer<T>::value && !std::is_reference<T>::value,
+			"T must be a plain value type - pointers (T*) and references (T&, T&&) are not allowed");
+
 		auto ptr = dynamic_cast<T*>(u.get());
 		if (ptr) {
 			return std::shared_ptr<T>(Death::move(u), ptr);

@@ -287,9 +287,16 @@ namespace Jazz2::Actors
 			/** @brief Initializes the renderer to the specified renderer type */
 			void Initialize(ActorRendererType type);
 
-			/** @brief Sets the palette texture used to recolor indexed sprites (256x1 RGBA), or `nullptr` for none.
-				When set, the @ref ActorRendererType::Default state renders via @ref PrecompiledShader::PaletteRemap. */
-			void SetPalette(Texture* paletteTexture);
+			/** @brief Selects a recolor palette override: a flat offset into the shared palette texture (e.g.
+				paletteRow * @ref ContentResolver::ColorsPerPalette), or -1 for no override. Takes precedence over the
+				base palette used for plain (non-recolored) indexed sprites; see @ref SetIndexed. */
+			void SetPalette(std::int32_t paletteOffset);
+
+			/** @brief Marks whether the current graphic is indexed (palette index in the red channel) and which palette
+				region it samples (basePaletteOffset = the animation's palette offset; 0 = default sprite palette, the
+				gem-gradient rows for gems). Indexed sprites render through the palette shader unless a recolor override
+				is set via @ref SetPalette. Set automatically from the current animation by @ref ActorBase::RefreshAnimation. */
+			void SetIndexed(bool indexed, std::int32_t basePaletteOffset);
 
 			void OnUpdate(float timeMult) override;
 			bool OnDraw(RenderQueue& renderQueue) override;
@@ -306,9 +313,16 @@ namespace Jazz2::Actors
 			ActorBase* _owner;
 			ActorRendererType _rendererType;
 			float _rendererTransition;
-			Texture* _paletteTexture;
+			// Recolor palette override: flat offset into the shared palette texture, or -1 for none
+			std::int32_t _paletteOffset;
+			// Whether the current graphic is indexed (uses the palette shader even without a recolor override)
+			bool _baseIndexed;
+			// Palette offset of the current indexed graphic (the animation's PaletteOffset; 0 = default sprite palette)
+			std::int32_t _basePaletteOffset;
 
 			void UpdateVisibleFrames();
+			// Re-applies the current renderer type so a palette/indexed change swaps the shader and (re)binds the palette
+			void ReinitializeCurrentType();
 			static std::int32_t NormalizeFrame(std::int32_t frame, std::int32_t min, std::int32_t max);
 		};
 

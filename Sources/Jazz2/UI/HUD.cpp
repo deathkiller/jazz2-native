@@ -575,13 +575,13 @@ namespace Jazz2::UI
 			DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
 
 			// Recolor the character icon to match the player when it's being recolored; fall back to the plain icon
-			Texture* palette = player->GetColorPaletteTexture();
+			std::int32_t paletteOffset = player->GetPaletteOffset();
 			bool drawn = false;
-			if (palette != nullptr) {
+			if (paletteOffset >= 0) {
 				if (_metadataIndexed == nullptr) {
 					_metadataIndexed = ContentResolver::Get().RequestMetadata("UI/HUD"_s, true);
 				}
-				drawn = DrawElementWithPalette(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f, MainLayer, Alignment::BottomRight, Colorf::White, *palette);
+				drawn = DrawElementWithPalette(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f, MainLayer, Alignment::BottomRight, Colorf::White, (float)paletteOffset);
 			}
 			if (!drawn) {
 				DrawElement(playerIcon, -1, adjustedView.X + 38.0f, bottom - 1.0f, MainLayer, Alignment::BottomRight, Colorf::White);
@@ -1106,10 +1106,11 @@ namespace Jazz2::UI
 			float(base->FrameDimensions.Y * row) / float(texSize.Y)
 		);
 
-		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending, angle);
+		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
+		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending, angle, paletteOffset);
 	}
 
-	bool HUD::DrawElementWithPalette(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, const Texture& palette, float scaleX, float scaleY)
+	bool HUD::DrawElementWithPalette(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float paletteOffset, float scaleX, float scaleY)
 	{
 		if (_metadataIndexed == nullptr) {
 			return false;
@@ -1127,6 +1128,10 @@ namespace Jazz2::UI
 
 		auto* shader = ContentResolver::Get().GetShader(PrecompiledShader::PaletteRemap);
 		if (shader == nullptr) {
+			return false;
+		}
+		Texture* palette = ContentResolver::Get().GetPaletteTexture();
+		if (palette == nullptr) {
 			return false;
 		}
 
@@ -1167,11 +1172,15 @@ namespace Jazz2::UI
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+		auto* palOffsetUniform = instanceBlock->GetUniform(Material::PaletteOffsetUniformName);
+		if (palOffsetUniform != nullptr) {
+			palOffsetUniform->SetFloatValue(paletteOffset);
+		}
 
 		command->SetTransformation(Matrix4x4f::Translation(adjustedPos.X, adjustedPos.Y, 0.0f));
 		command->SetLayer(z);
 		command->GetMaterial().SetTexture(0, *base->TextureDiffuse.get());
-		command->GetMaterial().SetTexture(1, palette);
+		command->GetMaterial().SetTexture(1, *palette);
 
 		DrawRenderCommand(command);
 		return true;
@@ -1202,7 +1211,8 @@ namespace Jazz2::UI
 			float(base->FrameDimensions.Y * row) / float(texSize.Y)
 		);
 
-		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color);
+		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
+		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false, 0.0f, paletteOffset);
 	}
 
 	AnimState HUD::GetCurrentWeapon(Actors::Player* player, WeaponType weapon, Vector2f& offset)

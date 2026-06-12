@@ -44,7 +44,7 @@ namespace Jazz2::UI::Menu
 	{
 		ScrollableMenuSection::OnShow(root);
 
-		_isInGame = runtime_cast<InGameMenu*>(_root);
+		_isInGame = runtime_cast<InGameMenu>(_root);
 	}
 
 	void GameplayEnhancementsSection::OnUpdate(float timeMult)

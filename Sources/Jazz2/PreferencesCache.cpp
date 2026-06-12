@@ -93,7 +93,7 @@ namespace Jazz2
 	Uuid PreferencesCache::UniqueServerID;
 	String PreferencesCache::PlayerName;
 	std::uint32_t PreferencesCache::PlayerFurColor = 0;
-	PlayerColorMode PreferencesCache::PlayerColors = PlayerColorMode::OnlineOnly;
+	PlayerColorMode PreferencesCache::PlayerColors = PlayerColorMode::AllLocalPlayers;
 	bool PreferencesCache::EnableDiscordIntegration = true;
 
 	String PreferencesCache::_configPath;

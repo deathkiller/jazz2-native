@@ -113,11 +113,9 @@ namespace Jazz2::Actors
 		/** @brief Returns the fur color to actually use for this player (the configured color, or 0 = none when the
 			"Apply Colors" preference disables recoloring in the current session/for this player index) */
 		std::uint32_t GetEffectiveFurColor() const;
-		/** @brief Returns this player's recolor palette texture (for the palette-aware shader), or `nullptr` if the
-			player is not being recolored */
-		Texture* GetColorPaletteTexture() const {
-			return _colorPalette.get();
-		}
+		/** @brief Returns this player's flat offset into the shared palette texture (for the palette-aware shader),
+			or -1 if the player is not being recolored */
+		std::int32_t GetPaletteOffset() const;
 
 		/** @brief Returns current special move */
 		SpecialMoveType GetSpecialMove() const {
@@ -324,12 +322,15 @@ namespace Jazz2::Actors
 		ActorBase* _carryingObject;
 		float _externalForceCooldown;
 		float _springCooldown;
-		// Per-player recoloring: packed 4-byte fur color (one section per byte) and the generated 256x1 palette texture
+		// Per-player recoloring: packed 4-byte fur color (one section per byte) and the allocated row in the shared
+		// palette texture (-1 = none). The renderer samples this row via a per-instance palette offset.
 		std::uint32_t _furColor;
-		std::unique_ptr<Texture> _colorPalette;
+		std::int32_t _paletteRow;
 
-		// Rebuilds the recolor palette texture from the chosen fur colors and binds it to the renderer
+		// Rebuilds the recolor palette in the player's palette row and selects it on the renderer
 		void RefreshColorPalette();
+		// Releases the player's palette row back to the shared pool (if any)
+		void ReleasePaletteRow();
 #if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _copterSound;
 #endif

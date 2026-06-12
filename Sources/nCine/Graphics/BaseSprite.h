@@ -54,6 +54,13 @@ namespace nCine
 		/// Flips the texture rect vertically
 		void setFlippedY(bool flippedY);
 
+		/// Returns the flat palette offset (added to the per-pixel index by palette shaders)
+		inline float paletteOffset() const {
+			return paletteOffset_;
+		}
+		/// Sets the flat palette offset used by palette shaders (no effect on non-palette shaders)
+		void setPaletteOffset(float paletteOffset);
+
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		/// The sprite texture
@@ -65,6 +72,8 @@ namespace nCine
 		bool flippedX_;
 		/// A flag indicating if the sprite texture is vertically flipped
 		bool flippedY_;
+		/// Flat index into the palette texture, uploaded per-instance for palette shaders (0 = first palette row)
+		float paletteOffset_;
 
 		GLUniformBlockCache* instanceBlock_;
 #endif

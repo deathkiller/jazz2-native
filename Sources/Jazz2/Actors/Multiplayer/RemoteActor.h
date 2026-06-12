@@ -13,6 +13,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	public:
 		RemoteActor();
+		~RemoteActor();
 
 		void AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType);
 		/** @brief Sets the per-player recolor (0 = none); reloads the sprites indexed and (re)applies the palette */
@@ -37,13 +38,17 @@ namespace Jazz2::Actors::Multiplayer
 		AnimState _lastAnim;
 		bool _isAttachedLocally;
 		std::uint32_t _furColor;
-		std::unique_ptr<Texture> _colorPalette;
+		// Allocated row in the shared palette texture for this player's recolor (-1 = none)
+		std::int32_t _paletteRow;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
 		void OnAttach(ActorBase* parent) override;
 		void OnDetach(ActorBase* parent) override;
+
+		// Allocates/updates/releases this player's palette row from _furColor and selects it on the renderer
+		void RefreshColorPalette();
 	};
 }
 

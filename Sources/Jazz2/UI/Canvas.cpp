@@ -34,18 +34,26 @@ namespace Jazz2::UI
 		_currentRenderQueue->AddCommand(command);
 	}
 
-	void Canvas::DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending, float angle)
+	void Canvas::DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending, float angle, std::int32_t paletteOffset)
 	{
+		// An indexed texture (palette index in the red channel) is recolored at draw time through the shared palette
+		// texture; paletteOffset selects the palette region (0 = default sprite palette). -1 = a plain RGBA texture.
+		bool indexed = (paletteOffset >= 0);
 		auto command = RentRenderCommand();
-		if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
+		bool shaderChanged = (indexed
+			? command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::PaletteRemap))
+			: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
+		if (shaderChanged) {
 			command->GetMaterial().ReserveUniformsDataMemory();
 			command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-			// Required to reset render command properly
-			//command->SetTransformation(command->transformation());
 
 			auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
+			}
+			auto* paletteUniform = command->GetMaterial().Uniform("uTexturePalette");
+			if (paletteUniform != nullptr) {
+				paletteUniform->SetIntValue(1); // GL_TEXTURE1
 			}
 		}
 
@@ -59,6 +67,12 @@ namespace Jazz2::UI
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+		if (indexed) {
+			auto* palOffsetUniform = instanceBlock->GetUniform(Material::PaletteOffsetUniformName);
+			if (palOffsetUniform != nullptr) {
+				palOffsetUniform->SetFloatValue((float)paletteOffset);
+			}
+		}
 
 		Matrix4x4f worldMatrix = Matrix4x4f::Translation(pos.X, pos.Y, 0.0f);
 		if (std::abs(angle) > 0.01f) {
@@ -69,11 +83,17 @@ namespace Jazz2::UI
 		command->SetTransformation(worldMatrix);
 		command->SetLayer(z);
 		command->GetMaterial().SetTexture(0, texture);
+		if (indexed) {
+			Texture* palette = ContentResolver::Get().GetPaletteTexture();
+			if (palette != nullptr) {
+				command->GetMaterial().SetTexture(1, *palette);
+			}
+		}
 
 		_currentRenderQueue->AddCommand(command);
 	}
 
-	void Canvas::DrawTextureWithPalette(const Texture& texture, const Texture& palette, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color)
+	void Canvas::DrawTextureWithPalette(const Texture& texture, const Texture& palette, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, float paletteOffset)
 	{
 		auto* shader = ContentResolver::Get().GetShader(PrecompiledShader::PaletteRemap);
 		if (shader == nullptr) {
@@ -103,6 +123,10 @@ namespace Jazz2::UI
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+		auto* palOffsetUniform = instanceBlock->GetUniform(Material::PaletteOffsetUniformName);
+		if (palOffsetUniform != nullptr) {
+			palOffsetUniform->SetFloatValue(paletteOffset);
+		}
 
 		command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
 		command->SetLayer(z);

@@ -229,9 +229,12 @@ namespace Jazz2::Actors::Solid
 	{
 		if (_currentAnimation != nullptr) {
 			Vector2i texSize = _currentAnimation->Base->TextureDiffuse->GetSize();
+			auto& resolver = ContentResolver::Get();
+			bool indexed = ((_currentAnimation->Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
 
 			for (std::int32_t i = 0; i < _pieces.size(); i++) {
 				auto* command = _pieces[i].Command.get();
+				resolver.ConfigureSpriteShader(*command, indexed);
 
 				std::int32_t curAnimFrame = _currentAnimation->FrameOffset + (i % _currentAnimation->FrameCount);
 				std::int32_t col = curAnimFrame % _currentAnimation->Base->FrameConfiguration.X;
@@ -249,7 +252,7 @@ namespace Jazz2::Actors::Solid
 				auto pos = _pieces[i].Pos;
 				command->SetTransformation(Matrix4x4f::Translation(pos.X - _currentAnimation->Base->FrameDimensions.X / 2, pos.Y - _currentAnimation->Base->FrameDimensions.Y / 2, 0.0f));
 				command->SetLayer(_renderer.layer());
-				command->GetMaterial().SetTexture(*_currentAnimation->Base->TextureDiffuse.get());
+				resolver.BindSpritePalette(*command, *instanceBlock, *_currentAnimation->Base->TextureDiffuse.get(), indexed, _currentAnimation->PaletteOffset);
 
 				renderQueue.AddCommand(command);
 			}

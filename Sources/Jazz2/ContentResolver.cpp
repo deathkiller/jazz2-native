@@ -14,6 +14,7 @@
 #include "../nCine/tracy.h"
 #include "../nCine/Graphics/ITextureLoader.h"
 #include "../nCine/Graphics/RenderResources.h"
+#include "../nCine/Graphics/RenderCommand.h"
 #include "../nCine/Base/Random.h"
 
 #if defined(DEATH_TARGET_ANDROID)
@@ -57,7 +58,7 @@ namespace Jazz2
 #if defined(WITH_AUDIO)
 			_cachedSounds(192),
 #endif
-			_palettes{}, _defaultPaletteDirty(true)
+			_palettes{}, _paletteDirtyFirstRow(0), _paletteDirtyLastRow(PaletteCount - 1), _paletteRowRefCount{}, _paletteRowColor{}
 	{
 		InitializePaths();
 	}
@@ -536,16 +537,19 @@ namespace Jazz2
 					GraphicResource graphics;
 					graphics.LoopMode = AnimationLoopMode::Loop;
 
-					bool keepIndexed = forceIndexed;
+					// Index all palette-based sprites (including UI) so they're recolored at draw time through the shared
+					// palette texture - no baking, palette changes stay cheap, and nothing goes stale. Pre-RGBA (true-
+					// color) graphics are kept as-is by the `palette != nullptr` guard inside RequestGraphics.
+					bool keepIndexed = true;
 
 					std::int64_t flags;
 					if ((*it)["Flags"].get(flags) == Json::SUCCESS) {
 						if ((flags & 0x01) == 0x01) {
 							graphics.LoopMode = AnimationLoopMode::Once;
 						}
-						if ((flags & 0x02) == 0x02) {
+						/*if ((flags & 0x02) == 0x02) {
 							keepIndexed = true;
-						}
+						}*/
 					}
 
 					std::int64_t paletteOffset;
@@ -554,6 +558,9 @@ namespace Jazz2
 					}
 
 					graphics.Base = RequestGraphics(assetPath, (std::uint16_t)paletteOffset, keepIndexed);
+						// Remember the palette offset so the renderer/manual draws sample the right palette region for
+						// an indexed sprite (0 = default sprite palette; gems use the gem-gradient rows)
+						graphics.PaletteOffset = (std::uint16_t)paletteOffset;
 					if (graphics.Base == nullptr) {
 						continue;
 					}
@@ -1093,14 +1100,9 @@ namespace Jazz2
 			}
 
 			if (std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(std::uint32_t)) != 0) {
-				// Palettes differs, drop all cached resources, so it will be reloaded with new palette
+				// The sprite palette changed. Indexed sprites/tiles recolor from the live palette texture, so they
+				// don't need reloading; only the baked fonts are dropped so they rebake with the new palette.
 				if (_isLoading) {
-#if defined(DEATH_DEBUG)
-					LOGW("Releasing all animations because of different palette - Metadata: 0|{}, Animations: 0|{}", _cachedMetadata.size(), _cachedGraphics.size());
-#endif
-					_cachedMetadata.clear();
-					_cachedGraphics.clear();
-
 					for (std::int32_t i = 0; i < (std::int32_t)FontType::Count; i++) {
 						_fonts[i] = nullptr;
 					}
@@ -1137,9 +1139,19 @@ namespace Jazz2
 		std::unique_ptr<Color[]> captionTile;
 		// Per-tile flag (1 = fully opaque diffuse); only computed when rendering, used to cull hidden debris
 		std::unique_ptr<std::uint8_t[]> tileDiffuseOpaque;
+		// Keep raw palette indices in the atlas (recolor tiles at draw time) unless any tile is 32-bit true-color
+		bool indexTiles = false;
 
 		if (!_isHeadless) {
 			// Don't load textures in headless mode, only collision masks
+			// 32-bit (true-color) tiles have no palette index, so a tileset containing any must stay baked
+			indexTiles = true;
+			for (std::int32_t t = 0; t < (std::int32_t)tileCount; t++) {
+				if ((is32bitTile[t / 8] & (1 << (t & 7))) != 0) {
+					indexTiles = false;
+					break;
+				}
+			}
 			// Load raw pixels from file
 			std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * 4);
 			ReadImageFromFile(s, pixels.get(), width, height, channelCount);
@@ -1184,7 +1196,9 @@ namespace Jazz2
 								std::uint32_t srcIdx = ((yf + y) * width + (xf + x)) * 4;
 								std::uint32_t dstIdx = ((y + 1) * widthWithPadding + (x + 1)) * 4;
 
-								std::uint32_t color = _palettes[paletteRemapping[pixels[srcIdx]]];
+								// When indexing, store the (remapped) palette index in the red channel with full alpha so the
+								// existing writes below produce [index, 0, 0, srcAlpha]; the palette is applied at draw time
+								std::uint32_t color = (indexTiles ? ((std::uint32_t)paletteRemapping[pixels[srcIdx]] | 0xFF000000u) : _palettes[paletteRemapping[pixels[srcIdx]]]);
 								std::uint32_t alpha = pixels[srcIdx + 3];
 
 								dstTile[dstIdx + 0] = (color >> 0) & 0xFF;
@@ -1200,7 +1214,8 @@ namespace Jazz2
 								std::uint32_t srcIdx = ((yf + y) * width + (xf + x)) * 4;
 								std::uint32_t dstIdx = ((y + 1) * widthWithPadding + (x + 1)) * 4;
 
-								std::uint32_t color = _palettes[pixels[srcIdx]];
+								// When indexing, store the palette index in the red channel with full alpha (see remapped branch)
+								std::uint32_t color = (indexTiles ? ((std::uint32_t)pixels[srcIdx] | 0xFF000000u) : _palettes[pixels[srcIdx]]);
 								std::uint32_t alpha = pixels[srcIdx + 3];
 
 								dstTile[dstIdx + 0] = (color >> 0) & 0xFF;
@@ -1265,7 +1280,9 @@ namespace Jazz2
 			return nullptr;
 		}
 
-		return std::make_unique<Tiles::TileSet>(path, tileCount, std::move(textureDiffuse), std::move(mask), maskSize * 8, std::move(captionTile), tileDiffuseOpaque.get());
+		auto tileSet = std::make_unique<Tiles::TileSet>(path, tileCount, std::move(textureDiffuse), std::move(mask), maskSize * 8, std::move(captionTile), tileDiffuseOpaque.get());
+		tileSet->IsIndexed = indexTiles;
+		return tileSet;
 	}
 
 	bool ContentResolver::LevelExists(StringView levelName)
@@ -1359,9 +1376,8 @@ namespace Jazz2
 			if (!_isHeadless && std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(std::uint32_t)) != 0) {
 				// Palettes differs, drop all cached resources, so it will be reloaded with new palette
 				if (_isLoading) {
-					_cachedMetadata.clear();
-					_cachedGraphics.clear();
-
+					// Indexed sprites/tiles recolor from the live palette texture and need no reload; only the baked
+					// fonts are dropped to rebake with the new palette
 					for (std::int32_t i = 0; i < (std::int32_t)FontType::Count; i++) {
 						_fonts[i] = nullptr;
 					}
@@ -1428,13 +1444,15 @@ namespace Jazz2
 				std::uint8_t tileDiffuseRaw[TileSet::DefaultTileSize * TileSet::DefaultTileSize];
 				uc.Read(tileDiffuseRaw, sizeof(tileDiffuseRaw));
 
-				std::uint32_t tileDiffuse[(TileSet::DefaultTileSize + 2) * (TileSet::DefaultTileSize + 2)];
+				bool overrideIndexed = descriptor.TileMap->IsTileSetIndexed(tileId);
+					std::uint32_t tileDiffuse[(TileSet::DefaultTileSize + 2) * (TileSet::DefaultTileSize + 2)];
 				for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
 					for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
 						std::uint32_t from = y * TileSet::DefaultTileSize + x;
 						std::uint32_t to = (y + 1) * (TileSet::DefaultTileSize + 2) + (x + 1);
 
-						std::uint32_t color = _palettes[tileDiffuseRaw[from]];
+						// Store the palette index (with full alpha) for an indexed tileset; otherwise bake the color
+						std::uint32_t color = (overrideIndexed ? ((std::uint32_t)tileDiffuseRaw[from] | 0xFF000000u) : _palettes[tileDiffuseRaw[from]]);
 						tileDiffuse[to] = color;
 					}
 				}
@@ -1489,9 +1507,8 @@ namespace Jazz2
 		if (!_isHeadless && std::memcmp(_palettes, SpritePalette, ColorsPerPalette * sizeof(std::uint32_t)) != 0) {
 			// Palettes differs, drop all cached resources, so it will be reloaded with new palette
 			if (_isLoading) {
-				_cachedMetadata.clear();
-				_cachedGraphics.clear();
-
+				// Indexed sprites/tiles recolor from the live palette texture and need no reload; only the baked
+				// fonts are dropped to rebake with the new palette
 				for (std::int32_t i = 0; i < (std::int32_t)FontType::Count; i++) {
 					_fonts[i] = nullptr;
 				}
@@ -1673,6 +1690,11 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedTinted] = CompileShader("BatchedTinted", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::TintedFs, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Tinted]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedTinted]);
 
+		// Palette-aware Tinted, for tinted tile layers drawn from an indexed tileset
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TintedPalette] = CompileShader("TintedPalette", Shader::DefaultVertex::SPRITE, Shaders::TintedFs, Shader::Introspection::Enabled, { "USE_PALETTE"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedTintedPalette] = CompileShader("BatchedTintedPalette", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::TintedFs, Shader::Introspection::NoUniformsInBlocks, { "USE_PALETTE"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TintedPalette]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedTintedPalette]);
+
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Outline] = CompileShader("Outline", Shader::DefaultVertex::SPRITE, Shaders::OutlineFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedOutline] = CompileShader("BatchedOutline", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::OutlineFs, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Outline]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedOutline]);
@@ -1689,21 +1711,37 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedFrozenMask] = CompileShader("BatchedFrozenMask", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::FrozenMaskFs, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMask]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedFrozenMask]);
 
-		// No batched variant: each recolored player needs its own palette texture, so they can't be batched together
+		// Palette-based rendering: indexed sprites/tiles are recolored at draw time through a palette texture bound
+		// at unit 1. Batched variants let many indexed sprites that share the same palette texture (e.g. all actors
+		// using the default sprite palette) collapse into a single draw call, exactly like the non-palette shaders.
 		_precompiledShaders[(std::int32_t)PrecompiledShader::PaletteRemap] = CompileShader("PaletteRemap", Shader::DefaultVertex::SPRITE, Shaders::PaletteRemapFs);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedPaletteRemap] = CompileShader("BatchedPaletteRemap", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::PaletteRemapFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::PaletteRemap]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedPaletteRemap]);
+
 		_precompiledShaders[(std::int32_t)PrecompiledShader::OutlinePalette] = CompileShader("OutlinePalette", Shader::DefaultVertex::SPRITE, Shaders::OutlinePaletteFs);
-		// Palette-aware variants of the mask shaders, so a recolored (indexed) player keeps correct colors while
-		// hit-flashing, frozen, or in sugar rush. No batched variants - per-player palettes can't be batched.
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedOutlinePalette] = CompileShader("BatchedOutlinePalette", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::OutlinePaletteFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::OutlinePalette]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedOutlinePalette]);
+
+		// Palette-aware variants of the mask shaders, so a recolored (indexed) actor keeps correct colors while
+		// hit-flashing, frozen, or in sugar rush.
 		_precompiledShaders[(std::int32_t)PrecompiledShader::WhiteMaskPalette] = CompileShader("WhiteMaskPalette", Shader::DefaultVertex::SPRITE, Shaders::WhiteMaskFs, Shader::Introspection::Enabled, { "USE_PALETTE"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedWhiteMaskPalette] = CompileShader("BatchedWhiteMaskPalette", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::WhiteMaskFs, Shader::Introspection::NoUniformsInBlocks, { "USE_PALETTE"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::WhiteMaskPalette]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedWhiteMaskPalette]);
+
 		_precompiledShaders[(std::int32_t)PrecompiledShader::PartialWhiteMaskPalette] = CompileShader("PartialWhiteMaskPalette", Shader::DefaultVertex::SPRITE, Shaders::PartialWhiteMaskFs, Shader::Introspection::Enabled, { "USE_PALETTE"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedPartialWhiteMaskPalette] = CompileShader("BatchedPartialWhiteMaskPalette", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::PartialWhiteMaskFs, Shader::Introspection::NoUniformsInBlocks, { "USE_PALETTE"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::PartialWhiteMaskPalette]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedPartialWhiteMaskPalette]);
+
 		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMaskPalette] = CompileShader("FrozenMaskPalette", Shader::DefaultVertex::SPRITE, Shaders::FrozenMaskFs, Shader::Introspection::Enabled, { "USE_PALETTE"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedFrozenMaskPalette] = CompileShader("BatchedFrozenMaskPalette", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::FrozenMaskFs, Shader::Introspection::NoUniformsInBlocks, { "USE_PALETTE"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMaskPalette]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedFrozenMaskPalette]);
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldFire] = CompileShader("ShieldFire", Shaders::ShieldVs, Shaders::ShieldFireFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedShieldFire] = CompileShader("BatchedShieldFire", Shaders::BatchedShieldVs, Shaders::ShieldFireFs, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldFire]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedShieldFire]);
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldLightning] = CompileShader("ShieldLightning", Shaders::ShieldVs, Shaders::ShieldLightningFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedShieldLightning] = CompileShader("BatchedShieldFire", Shaders::BatchedShieldVs, Shaders::ShieldLightningFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedShieldLightning] = CompileShader("BatchedShieldLightning", Shaders::BatchedShieldVs, Shaders::ShieldLightningFs, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldLightning]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedShieldLightning]);
 
 #if !defined(DISABLE_RESCALE_SHADERS)
@@ -1897,8 +1935,12 @@ namespace Jazz2
 			}
 		}
 
-		// The active sprite palette just changed - the shared default-palette texture must be rebuilt on next use
-		_defaultPaletteDirty = true;
+		// The base palette (row 0) and the gem palette rows just changed - mark them for re-upload. `dst` is the
+		// first index past the last gem color written, so (dst - 1) is the last touched palette index.
+		MarkPaletteDirty(0, (dst - 1) / ColorsPerPalette);
+
+		// Per-player recolor rows are derived from the (now changed) base palette, so rebuild them too
+		RefreshDynamicPaletteRows();
 	}
 
 	void ContentResolver::BuildPlayerColorPalette(std::uint32_t furColor, std::uint32_t* outPalette) const
@@ -1944,18 +1986,138 @@ namespace Jazz2
 		return texture.get();
 	}
 
-	Texture* ContentResolver::GetDefaultPaletteTexture()
+	Texture* ContentResolver::GetPaletteTexture()
 	{
 		if (_isHeadless) {
 			return nullptr;
 		}
 
-		// Rebuild from the current palette only when it changed (furColor 0 = unmodified palette)
-		if (_defaultPaletteDirty || _defaultPaletteTexture == nullptr) {
-			ApplyPlayerColorPalette(_defaultPaletteTexture, 0);
-			_defaultPaletteDirty = false;
+		if (_paletteTexture == nullptr) {
+			_paletteTexture = std::make_unique<Texture>("Palettes", Texture::Format::RGBA8, ColorsPerPalette, PaletteCount);
+			_paletteTexture->SetMinFiltering(SamplerFilter::Nearest);
+			_paletteTexture->SetMagFiltering(SamplerFilter::Nearest);
+			_paletteTexture->SetWrap(SamplerWrapping::ClampToEdge);
+			// Force a full upload on first use
+			_paletteDirtyFirstRow = 0;
+			_paletteDirtyLastRow = PaletteCount - 1;
 		}
-		return _defaultPaletteTexture.get();
+
+		// Upload only the rows changed since the last call - cheap enough to support per-frame palette cycling
+		if (_paletteDirtyFirstRow <= _paletteDirtyLastRow) {
+			std::int32_t rowCount = _paletteDirtyLastRow - _paletteDirtyFirstRow + 1;
+			_paletteTexture->LoadFromTexels((std::uint8_t*)(_palettes + _paletteDirtyFirstRow * ColorsPerPalette),
+				0, _paletteDirtyFirstRow, ColorsPerPalette, rowCount);
+			_paletteDirtyFirstRow = PaletteCount;
+			_paletteDirtyLastRow = -1;
+		}
+
+		return _paletteTexture.get();
+	}
+
+	Texture* ContentResolver::GetDefaultPaletteTexture()
+	{
+		// The default sprite palette lives in row 0 of the shared texture; callers sample it with a palette offset of 0
+		return GetPaletteTexture();
+	}
+
+	void ContentResolver::MarkPaletteDirty(std::int32_t firstRow, std::int32_t lastRow)
+	{
+		if (firstRow < 0) {
+			firstRow = 0;
+		}
+		if (lastRow >= PaletteCount) {
+			lastRow = PaletteCount - 1;
+		}
+		if (firstRow > lastRow) {
+			return;
+		}
+		if (firstRow < _paletteDirtyFirstRow) {
+			_paletteDirtyFirstRow = firstRow;
+		}
+		if (lastRow > _paletteDirtyLastRow) {
+			_paletteDirtyLastRow = lastRow;
+		}
+	}
+
+	std::int32_t ContentResolver::AcquirePaletteRow(std::uint32_t furColor)
+	{
+		// Reuse the row already holding this fur color (shared, reference-counted) while noting the first free row
+		std::int32_t freeRow = -1;
+		for (std::int32_t row = FirstDynamicPaletteRow; row < PaletteCount; row++) {
+			if (_paletteRowRefCount[row] == 0) {
+				if (freeRow < 0) {
+					freeRow = row;
+				}
+			} else if (_paletteRowColor[row] == furColor) {
+				_paletteRowRefCount[row]++;
+				return row;
+			}
+		}
+
+		if (freeRow < 0) {
+			// All dynamic rows are in use (would need more than (PaletteCount - FirstDynamicPaletteRow) distinct colors)
+			return -1;
+		}
+
+		_paletteRowRefCount[freeRow] = 1;
+		_paletteRowColor[freeRow] = furColor;
+		BuildPlayerColorPalette(furColor, _palettes + freeRow * ColorsPerPalette);
+		MarkPaletteDirty(freeRow, freeRow);
+		return freeRow;
+	}
+
+	void ContentResolver::ReleasePaletteRow(std::int32_t row)
+	{
+		if (row >= FirstDynamicPaletteRow && row < PaletteCount && _paletteRowRefCount[row] > 0) {
+			_paletteRowRefCount[row]--;
+			// When the count hits 0 the row is free for reuse; its contents are overwritten on the next acquire
+		}
+	}
+
+	void ContentResolver::RefreshDynamicPaletteRows()
+	{
+		for (std::int32_t row = FirstDynamicPaletteRow; row < PaletteCount; row++) {
+			if (_paletteRowRefCount[row] > 0) {
+				BuildPlayerColorPalette(_paletteRowColor[row], _palettes + row * ColorsPerPalette);
+				MarkPaletteDirty(row, row);
+			}
+		}
+	}
+
+	bool ContentResolver::ConfigureSpriteShader(RenderCommand& command, bool indexed)
+	{
+		bool shaderChanged = (indexed
+			? command.GetMaterial().SetShader(GetShader(PrecompiledShader::PaletteRemap))
+			: command.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
+		if (shaderChanged) {
+			command.GetMaterial().ReserveUniformsDataMemory();
+			command.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+
+			GLUniformCache* textureUniform = command.GetMaterial().Uniform(Material::TextureUniformName);
+			if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
+				textureUniform->SetIntValue(0); // GL_TEXTURE0
+			}
+			GLUniformCache* paletteUniform = command.GetMaterial().Uniform("uTexturePalette");
+			if (paletteUniform != nullptr) {
+				paletteUniform->SetIntValue(1); // GL_TEXTURE1
+			}
+		}
+		return shaderChanged;
+	}
+
+	void ContentResolver::BindSpritePalette(RenderCommand& command, GLUniformBlockCache& instanceBlock, const Texture& diffuse, bool indexed, std::uint16_t paletteOffset)
+	{
+		command.GetMaterial().SetTexture(0, diffuse);
+		if (indexed) {
+			Texture* palette = GetPaletteTexture();
+			if (palette != nullptr) {
+				command.GetMaterial().SetTexture(1, *palette);
+			}
+			GLUniformCache* palOffsetUniform = instanceBlock.GetUniform(Material::PaletteOffsetUniformName);
+			if (palOffsetUniform != nullptr) {
+				palOffsetUniform->SetFloatValue((float)paletteOffset);
+			}
+		}
 	}
 
 #if defined(DEATH_DEBUG)

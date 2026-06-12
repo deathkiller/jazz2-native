@@ -115,9 +115,12 @@ namespace Jazz2::Actors::Environment
 			auto& resBase = _currentAnimation->Base;
 			Vector2i texSize = resBase->TextureDiffuse->GetSize();
 			float currentPhase = _phase + 0.04f * _levelHandler->GetElapsedFrames();
+			auto& resolver = ContentResolver::Get();
+			bool indexed = ((resBase->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
 
 			for (std::int32_t i = 0; i < ChunkCount; i++) {
 				auto command = _chunks[i].get();
+				resolver.ConfigureSpriteShader(*command, indexed);
 
 				float chunkTexSize = ChunkSize / texSize.Y;
 				float chunkAngle = sinf(currentPhase - i * 0.08f) * 1.2f;
@@ -131,7 +134,7 @@ namespace Jazz2::Actors::Environment
 				worldMatrix.RotateZ(chunkAngle);
 				command->SetTransformation(worldMatrix);
 				command->SetLayer(_renderer.layer());
-				command->GetMaterial().SetTexture(*resBase->TextureDiffuse);
+				resolver.BindSpritePalette(*command, *instanceBlock, *resBase->TextureDiffuse, indexed, _currentAnimation->PaletteOffset);
 
 				renderQueue.AddCommand(command);
 			}

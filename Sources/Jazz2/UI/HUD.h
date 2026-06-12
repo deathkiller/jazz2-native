@@ -168,7 +168,7 @@ namespace Jazz2::UI
 		/** @brief Draws a textured element recolored through a player palette (PaletteRemap shader); returns `false`
 			if it can't (no indexed metadata or the element isn't an indexed sprite) so the caller can fall back */
 		bool DrawElementWithPalette(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align,
-			const Colorf& color, const Texture& palette, float scaleX = 1.0f, float scaleY = 1.0f);
+			const Colorf& color, float paletteOffset, float scaleX = 1.0f, float scaleY = 1.0f);
 		/** @brief Draws a textured element with clipping */
 		void DrawElementClipped(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align,
 			const Colorf& color, float clipX, float clipY);

@@ -7,6 +7,8 @@ struct Instance
 	vec4 color;
 	vec4 texRect;
 	vec2 spriteSize;
+	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
+	float palOffset;
 };
 
 layout (std140) uniform InstancesBlock
@@ -19,6 +21,7 @@ layout (std140) uniform InstancesBlock
 
 out vec2 vTexCoords;
 out vec4 vColor;
+out float vPaletteOffset;
 
 #define i block.instances[gl_VertexID / 6]
 
@@ -30,4 +33,5 @@ void main()
 	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
 	vTexCoords = vec2(aPosition.x * i.texRect.x + i.texRect.y, aPosition.y * i.texRect.z + i.texRect.w);
 	vColor = i.color;
+	vPaletteOffset = i.palOffset;
 }

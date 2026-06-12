@@ -495,7 +495,8 @@ namespace Jazz2::UI::Menu
 			float(base->FrameDimensions.Y * row) / float(texSize.Y)
 		);
 		
-		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending);
+		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
+		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending, 0.0f, paletteOffset);
 	}
 
 	void MainMenu::DrawElement(AnimState state, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, Vector2f size, const Vector4f& texCoords, bool unaligned)
@@ -513,7 +514,8 @@ namespace Jazz2::UI::Menu
 			adjustedPos.Y = std::round(adjustedPos.Y);
 		}
 
-		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false);
+		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
+		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false, 0.0f, paletteOffset);
 	}
 
 	void MainMenu::DrawSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool additiveBlending)
@@ -714,6 +716,7 @@ namespace Jazz2::UI::Menu
 					debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
 
 					debris.DiffuseTexture = resBase->TextureDiffuse.get();
+					debris.PaletteOffset = ((resBase->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
 
 					_debrisList.push_back(debris);
 				}
@@ -758,17 +761,8 @@ namespace Jazz2::UI::Menu
 		for (auto& debris : _debrisList) {
 			auto command = _canvasOverlay->RentRenderCommand();
 			command->SetType(RenderCommand::Type::Particle);
-			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
-				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-				// Required to reset render command properly
-				//command->SetTransformation(command->transformation());
-
-				auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
-				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
-					textureUniform->SetIntValue(0); // GL_TEXTURE0
-				}
-			}
+			// Menu debris draws a (now indexed) UI sprite - recolor it through the palette shader at draw time
+			ContentResolver::Get().ConfigureSpriteShader(*command, debris.PaletteOffset >= 0);
 
 			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -783,7 +777,7 @@ namespace Jazz2::UI::Menu
 			worldMatrix.Translate(debris.Size.X * -0.5f, debris.Size.Y * -0.5f, 0.0f);
 			command->SetTransformation(worldMatrix);
 			command->SetLayer(debris.Depth);
-			command->GetMaterial().SetTexture(*debris.DiffuseTexture);
+			ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *debris.DiffuseTexture, debris.PaletteOffset >= 0, (std::uint16_t)(debris.PaletteOffset >= 0 ? debris.PaletteOffset : 0));
 
 			renderQueue.AddCommand(command);
 		}
@@ -927,17 +921,8 @@ namespace Jazz2::UI::Menu
 
 			auto command = _canvasBackground->RentRenderCommand();
 			command->SetType(RenderCommand::Type::TileMap);
-			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
-				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-				// Required to reset render command properly
-				//command->SetTransformation(command->transformation());
-
-				auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
-				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
-					textureUniform->SetIntValue(0); // GL_TEXTURE0
-				}
-			}
+			bool indexed = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
+			ContentResolver::Get().ConfigureSpriteShader(*command, indexed);
 
 			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -951,7 +936,7 @@ namespace Jazz2::UI::Menu
 			worldMatrix.Translate(size.X * -0.5f, size.Y * -0.5f, 0.0f);
 			command->SetTransformation(worldMatrix);
 			command->SetLayer(100);
-			command->GetMaterial().SetTexture(*base->TextureDiffuse.get());
+			ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *base->TextureDiffuse.get(), indexed, 0);
 
 			renderQueue.AddCommand(command);
 		}
@@ -973,17 +958,8 @@ namespace Jazz2::UI::Menu
 
 			auto command = _canvasBackground->RentRenderCommand();
 			command->SetType(RenderCommand::Type::TileMap);
-			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
-				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-				// Required to reset render command properly
-				//command->SetTransformation(command->transformation());
-
-				auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
-				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
-					textureUniform->SetIntValue(0); // GL_TEXTURE0
-				}
-			}
+			bool indexed = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
+			ContentResolver::Get().ConfigureSpriteShader(*command, indexed);
 
 			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -997,7 +973,7 @@ namespace Jazz2::UI::Menu
 			worldMatrix.Translate(size.X * -0.5f, size.Y * -0.5f, 0.0f);
 			command->SetTransformation(worldMatrix);
 			command->SetLayer(110);
-			command->GetMaterial().SetTexture(*base->TextureDiffuse.get());
+			ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *base->TextureDiffuse.get(), indexed, 0);
 
 			renderQueue.AddCommand(command);
 		}
@@ -1019,17 +995,8 @@ namespace Jazz2::UI::Menu
 
 			auto command = _canvasBackground->RentRenderCommand();
 			command->SetType(RenderCommand::Type::TileMap);
-			if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
-				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-				// Required to reset render command properly
-				//command->SetTransformation(command->transformation());
-
-				auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
-				if (textureUniform && textureUniform->GetIntValue(0) != 0) {
-					textureUniform->SetIntValue(0); // GL_TEXTURE0
-				}
-			}
+			bool indexed = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
+			ContentResolver::Get().ConfigureSpriteShader(*command, indexed);
 
 			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -1043,7 +1010,7 @@ namespace Jazz2::UI::Menu
 			worldMatrix.Translate(size.X * -0.5f, size.Y * -0.5f, 0.0f);
 			command->SetTransformation(worldMatrix);
 			command->SetLayer(120);
-			command->GetMaterial().SetTexture(*base->TextureDiffuse.get());
+			ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *base->TextureDiffuse.get(), indexed, 0);
 
 			renderQueue.AddCommand(command);
 		}
@@ -1119,6 +1086,8 @@ namespace Jazz2::UI::Menu
 				LayerTile& tile = layer.Layout[y * layer.LayoutSize.X + x];
 
 				auto command = _renderCommands[renderCommandIndex++].get();
+				// The menu tileset is indexed too - bake it into the background render target through the palette shader
+				ContentResolver::Get().ConfigureSpriteShader(*command, _owner->_tileSet->IsIndexed);
 
 				Vector2i texSize = _owner->_tileSet->TextureDiffuse->GetSize();
 				float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
@@ -1132,7 +1101,7 @@ namespace Jazz2::UI::Menu
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 				
 				command->SetTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize, y * TileSet::DefaultTileSize, 0.0f));
-				command->GetMaterial().SetTexture(*_owner->_tileSet->TextureDiffuse);
+				ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *_owner->_tileSet->TextureDiffuse, _owner->_tileSet->IsIndexed, 0);
 
 				renderQueue.AddCommand(command);
 			}

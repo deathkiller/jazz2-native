@@ -75,7 +75,7 @@ namespace Jazz2::Actors
 		_carryingObject(nullptr),
 		// Per-player recolor; 0 = use the original colors. The local player defaults to the user's profile color;
 		// remote players get their color from the network (see MpLevelHandler).
-		_furColor(PreferencesCache::PlayerFurColor),
+		_furColor(PreferencesCache::PlayerFurColor), _paletteRow(-1),
 		_lives(0), _coins(0), _coinsCheckpoint(0), _foodEaten(0), _foodEatenCheckpoint(0), _score(0),
 		_checkpointLight(1.0f),
 		_sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
@@ -119,6 +119,8 @@ namespace Jazz2::Actors
 			_weaponSound = nullptr;
 		}
 #endif
+		// Release the shared palette row back to the pool (e.g. on disconnect/level end)
+		ReleasePaletteRow();
 	}
 
 	std::uint32_t Player::GetEffectiveFurColor() const
@@ -138,6 +140,11 @@ namespace Jazz2::Actors
 		}
 	}
 
+	std::int32_t Player::GetPaletteOffset() const
+	{
+		return (_paletteRow >= 0 ? _paletteRow * ContentResolver::ColorsPerPalette : -1);
+	}
+
 	void Player::RefreshColorPalette()
 	{
 		auto& resolver = ContentResolver::Get();
@@ -146,23 +153,32 @@ namespace Jazz2::Actors
 		}
 
 		std::uint32_t furColor = GetEffectiveFurColor();
-		if (furColor == 0) {
-			_renderer.SetPalette(nullptr);
-			return;
-		}
 
 		// Recoloring needs indexed sprites (palette index in the red channel); otherwise the PaletteRemap shader
 		// would treat the already-baked colors as palette indices and corrupt the sprite, so fall back to normal
 		// rendering. If this warns, the player .res animations aren't being loaded indexed.
-		bool isIndexed = (_metadata != nullptr && !_metadata->Animations.empty() && _metadata->Animations[0].Base != nullptr &&
+		bool isIndexed = (furColor != 0 && _metadata != nullptr && !_metadata->Animations.empty() && _metadata->Animations[0].Base != nullptr &&
 			(_metadata->Animations[0].Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
-		if (!isIndexed) {
-			LOGW("[Player] Player sprites are not indexed - recoloring disabled");
-			_renderer.SetPalette(nullptr);
-			return;
+		if (furColor != 0 && !isIndexed) {
+			LOGW("Player sprites are not indexed - recoloring disabled");
 		}
 
-		_renderer.SetPalette(resolver.ApplyPlayerColorPalette(_colorPalette, furColor));
+		// Acquire the new (shared, reference-counted) row before releasing the old one, so an unchanged fur color
+		// keeps its row instead of being freed and immediately rebuilt
+		std::int32_t newRow = (isIndexed ? resolver.AcquirePaletteRow(furColor) : -1);
+		if (_paletteRow >= 0) {
+			resolver.ReleasePaletteRow(_paletteRow);
+		}
+		_paletteRow = newRow;
+		_renderer.SetPalette(_paletteRow >= 0 ? _paletteRow * ContentResolver::ColorsPerPalette : -1);
+	}
+
+	void Player::ReleasePaletteRow()
+	{
+		if (_paletteRow >= 0) {
+			ContentResolver::Get().ReleasePaletteRow(_paletteRow);
+			_paletteRow = -1;
+		}
 	}
 
 	Task<bool> Player::OnActivatedAsync(const ActorActivationDetails& details)
@@ -1293,11 +1309,15 @@ namespace Jazz2::Actors
 				command->SetLayer(_renderer.layer() + 2);
 				command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
 				if (flareIndexed) {
-					// Use the DEFAULT palette (not the player's) so the flare keeps its original colors even when the
-					// fur recolor would otherwise overlap the flare's palette indices
+					// Use the DEFAULT palette (row 0, palette offset 0) so the flare keeps its original colors even
+					// when the player's fur recolor would otherwise overlap the flare's palette indices
 					Texture* defaultPalette = ContentResolver::Get().GetDefaultPaletteTexture();
 					if (defaultPalette != nullptr) {
 						command->GetMaterial().SetTexture(1, *defaultPalette);
+					}
+					GLUniformCache* palOffsetUniform = instanceBlock->GetUniform(Material::PaletteOffsetUniformName);
+					if (palOffsetUniform != nullptr) {
+						palOffsetUniform->SetFloatValue(0.0f);
 					}
 				}
 
@@ -1401,15 +1421,10 @@ namespace Jazz2::Actors
 						command->GetMaterial().SetBlendingEnabled(true);
 					}
 
-					if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)) {
-						command->GetMaterial().ReserveUniformsDataMemory();
+					bool shieldIndexed = ((res->Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
+					if (ContentResolver::Get().ConfigureSpriteShader(*command, shieldIndexed)) {
+						// Water shield blends additively
 						command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
-						command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
-
-						auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
-						if (textureUniform && textureUniform->GetIntValue(0) != 0) {
-							textureUniform->SetIntValue(0); // GL_TEXTURE0
-						}
 					}
 
 					Vector2i texSize = res->Base->TextureDiffuse->GetSize();
@@ -1436,7 +1451,8 @@ namespace Jazz2::Actors
 
 					command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 					command->SetLayer(_renderer.layer() + 4);
-					command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
+					// Use the default palette (offset 0) so the shield keeps its own colors, not the player's fur recolor
+					ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *res->Base->TextureDiffuse.get(), shieldIndexed, res->PaletteOffset);
 
 					renderQueue.AddCommand(command.get());
 				}

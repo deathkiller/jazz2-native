@@ -96,7 +96,8 @@ namespace Jazz2::UI
 			);
 
 			Colorf color = Colorf(1.0f, 1.0f, 1.0f, (_owner->_darkMode ? 0.8f : 1.0f) * _owner->_transition);
-			DrawTexture(*base->TextureDiffuse.get(), pos, 960, size, texCoords, color, false);
+			std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? loadingRes->PaletteOffset : -1);
+			DrawTexture(*base->TextureDiffuse.get(), pos, 960, size, texCoords, color, false, 0.0f, paletteOffset);
 		}
 
 		return true;

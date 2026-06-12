@@ -25,9 +25,9 @@ namespace Jazz2::UI::Menu
 		// colors). 0x38 is intentionally omitted - it has no proper gradient in the original game.
 		static const std::uint8_t FurGradientStarts[] = { 0x00, 0x10, 0x18, 0x20, 0x28, 0x30, 0x40, 0x48, 0x50, 0x58 };
 
-		static Colorf ColorFromPacked(std::uint32_t c)
+		static Colorf ColorFromPacked(std::uint32_t c, float alpha)
 		{
-			return Colorf((c & 0xFF) / 255.0f, ((c >> 8) & 0xFF) / 255.0f, ((c >> 16) & 0xFF) / 255.0f, ((c >> 24) & 0xFF) / 255.0f);
+			return Colorf((c & 0xFF) / 255.0f, ((c >> 8) & 0xFF) / 255.0f, ((c >> 16) & 0xFF) / 255.0f, alpha * ((c >> 24) & 0xFF) / 255.0f);
 		}
 	}
 
@@ -78,7 +78,7 @@ namespace Jazz2::UI::Menu
 	{
 		MenuSection::OnShow(root);
 
-		bool isInGame = runtime_cast<InGameMenu*>(_root);
+		bool isInGame = runtime_cast<InGameMenu>(_root);
 
 		_items.clear();
 
@@ -464,10 +464,11 @@ namespace Jazz2::UI::Menu
 				auto palettes = ContentResolver::Get().GetPalettes();
 				constexpr float swatchW = 10.0f;
 				float startX = centerX - (ContentResolver::FurSectionSize * swatchW) * 0.5f;
+				float alpha = (item.Item.IsReadOnly ? 0.6f : 1.0f);
 				for (std::int32_t i = 0; i < ContentResolver::FurSectionSize; i++) {
 					std::uint32_t color = palettes[(base + i) & 0xFF];
 					_root->DrawSolid(startX + i * swatchW, item.Y + 22.0f, IMenuContainer::FontLayer - 10, Alignment::Left,
-						Vector2f(swatchW, 14.0f), ColorFromPacked(color | 0xFF000000u), false);
+						Vector2f(swatchW, 14.0f), ColorFromPacked(color | 0xFF000000u, alpha), false);
 				}
 			}
 		}

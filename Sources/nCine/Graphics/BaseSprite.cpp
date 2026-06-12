@@ -5,7 +5,7 @@
 namespace nCine
 {
 	BaseSprite::BaseSprite(SceneNode* parent, Texture* texture, float xx, float yy)
-		: DrawableNode(parent, xx, yy), texture_(texture), texRect_(0, 0, 0, 0), flippedX_(false), flippedY_(false), instanceBlock_(nullptr)
+		: DrawableNode(parent, xx, yy), texture_(texture), texRect_(0, 0, 0, 0), flippedX_(false), flippedY_(false), paletteOffset_(0.0f), instanceBlock_(nullptr)
 	{
 		renderCommand_.GetMaterial().SetBlendingEnabled(true);
 	}
@@ -89,8 +89,17 @@ namespace nCine
 
 	BaseSprite::BaseSprite(const BaseSprite& other)
 		: DrawableNode(other), texture_(other.texture_), texRect_(other.texRect_),
-			flippedX_(other.flippedX_), flippedY_(other.flippedY_), instanceBlock_(nullptr)
+			flippedX_(other.flippedX_), flippedY_(other.flippedY_), paletteOffset_(other.paletteOffset_), instanceBlock_(nullptr)
 	{
+	}
+
+	void BaseSprite::setPaletteOffset(float paletteOffset)
+	{
+		if (paletteOffset_ != paletteOffset) {
+			paletteOffset_ = paletteOffset;
+			// Uploaded together with the sprite size (see updateRenderCommand)
+			dirtyBits_.set(DirtyBitPositions::SizeBit);
+		}
 	}
 
 	void BaseSprite::shaderHasChanged()
@@ -127,6 +136,11 @@ namespace nCine
 			GLUniformCache* spriteSizeUniform = instanceBlock_->GetUniform(Material::SpriteSizeUniformName);
 			if (spriteSizeUniform != nullptr) {
 				spriteSizeUniform->SetFloatValue(width_, height_);
+			}
+			// Present only in palette shaders (sprite_vs/batched_sprites_vs); null elsewhere
+			GLUniformCache* palOffsetUniform = instanceBlock_->GetUniform(Material::PaletteOffsetUniformName);
+			if (palOffsetUniform != nullptr) {
+				palOffsetUniform->SetFloatValue(paletteOffset_);
 			}
 			dirtyBits_.reset(DirtyBitPositions::SizeBit);
 		}

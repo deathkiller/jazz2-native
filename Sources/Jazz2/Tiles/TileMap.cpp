@@ -821,7 +821,7 @@ namespace Jazz2::Tiles
 						continue;
 					}
 
-					auto command = RentRenderCommand(layer.Description.RendererType);
+					auto command = RentRenderCommand(layer.Description.RendererType, tileSet->IsIndexed);
 					command->SetType(RenderCommand::Type::TileMap);
 					command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -856,7 +856,8 @@ namespace Jazz2::Tiles
 
 					command->SetTransformation(Matrix4x4f::Translation(x2r, y2r, 0.0f));
 					command->SetLayer(layer.Description.Depth);
-					command->GetMaterial().SetTexture(*tileSet->TextureDiffuse);
+					// Tiles use the default sprite palette (row 0, offset 0); binds the shared palette texture when indexed
+					ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *tileSet->TextureDiffuse, tileSet->IsIndexed, 0);
 
 					renderQueue.AddCommand(command);
 				}
@@ -870,7 +871,7 @@ namespace Jazz2::Tiles
 		return (coordinate * speed + offset + alignment * (speed - 1.0f));
 	}
 
-	RenderCommand* TileMap::RentRenderCommand(LayerRendererType type)
+	RenderCommand* TileMap::RentRenderCommand(LayerRendererType type, bool indexed)
 	{
 		RenderCommand* command;
 		if (_renderCommandsCount < _renderCommands.size()) {
@@ -885,10 +886,12 @@ namespace Jazz2::Tiles
 		bool shaderChanged;
 		switch (type) {
 			case LayerRendererType::Solid: shaderChanged = command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::SpriteNoTexture); break;
-			case LayerRendererType::Tinted: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Tinted)); break;
+			case LayerRendererType::Tinted: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(indexed ? PrecompiledShader::TintedPalette : PrecompiledShader::Tinted)); break;
 			case LayerRendererType::Sky: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground)); break;
 			case LayerRendererType::Circle: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundCircleDither : PrecompiledShader::TexturedBackgroundCircle)); break;
-			default: shaderChanged = command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite); break;
+			default: shaderChanged = (indexed
+				? command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::PaletteRemap))
+				: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)); break;
 		}
 		if (shaderChanged) {
 			command->GetMaterial().ReserveUniformsDataMemory();
@@ -897,6 +900,11 @@ namespace Jazz2::Tiles
 			auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
+			}
+			// Palette shaders (PaletteRemap / TintedPalette) sample the shared palette texture on unit 1
+			auto* paletteUniform = command->GetMaterial().Uniform("uTexturePalette");
+			if (paletteUniform != nullptr) {
+				paletteUniform->SetIntValue(1); // GL_TEXTURE1
 			}
 		}
 
@@ -1085,6 +1093,12 @@ namespace Jazz2::Tiles
 		return tileSet->OverrideTileDiffuse(tileId, tileDiffuse);
 	}
 
+	bool TileMap::IsTileSetIndexed(std::int32_t tileId)
+	{
+		TileSet* tileSet = ResolveTileSet(tileId);
+		return (tileSet != nullptr && tileSet->IsIndexed);
+	}
+
 	/** @brief Overrides the collision mask of the specified tile */
 	bool TileMap::OverrideTileMask(std::int32_t tileId, StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, std::uint8_t> tileMask)
 	{
@@ -1215,6 +1229,8 @@ namespace Jazz2::Tiles
 			debris.TexBiasY = texBiasY + ((i / 2) * QuarterSize / float(texSize.Y));
 
 			debris.DiffuseTexture = tileSet->TextureDiffuse.get();
+			// The tileset atlas is indexed now, so recolor tile debris through palette row 0 (or -1 if baked)
+			debris.PaletteOffset = (tileSet->IsIndexed ? 0 : -1);
 			debris.Flags = DebrisFlags::None;
 		}
 	}
@@ -1259,6 +1275,8 @@ namespace Jazz2::Tiles
 				debris.TexBiasY = (((float)(currentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
 
 				debris.DiffuseTexture = res->Base->TextureDiffuse.get();
+				// Indexed sprite debris is recolored at draw time; -1 keeps a baked (e.g. tileset) texture on plain Sprite
+				debris.PaletteOffset = (((res->Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) ? (std::int32_t)res->PaletteOffset : -1);
 				debris.Flags = DebrisFlags::Bounce;
 			}
 		}
@@ -1303,6 +1321,8 @@ namespace Jazz2::Tiles
 			debris.TexBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
 			debris.DiffuseTexture = res->Base->TextureDiffuse.get();
+			// Indexed sprite debris is recolored at draw time; -1 keeps a baked texture on the plain Sprite shader
+			debris.PaletteOffset = (((res->Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) ? (std::int32_t)res->PaletteOffset : -1);
 			debris.Flags = DebrisFlags::Bounce;
 		}
 	}
@@ -1325,7 +1345,9 @@ namespace Jazz2::Tiles
 
 			debris.Time -= timeMult;
 			if (debris.Time <= 0.0f) {
-				debris.Alpha = -std::min(0.02f, debris.Alpha);
+				// Time's up - fade out smoothly instead of popping while still partly visible (e.g. the Fire/Lightning
+				// death effects, whose own AlphaSpeed is too slow to reach zero within their lifetime)
+				debris.AlphaSpeed = std::min(debris.AlphaSpeed, -0.08f);
 			}
 
 			if ((debris.Flags & (DebrisFlags::Disappear | DebrisFlags::Bounce)) != DebrisFlags::None) {
@@ -1405,6 +1427,10 @@ namespace Jazz2::Tiles
 			auto command = RentRenderCommand(LayerRendererType::Default);
 			command->SetType(RenderCommand::Type::Particle);
 
+			// Indexed sprite debris is recolored at draw time through the palette shader; baked debris stays on Sprite
+			bool debrisIndexed = (debris.PaletteOffset >= 0);
+			ContentResolver::Get().ConfigureSpriteShader(*command, debrisIndexed);
+
 			if ((debris.Flags & DebrisFlags::AdditiveBlending) == DebrisFlags::AdditiveBlending) {
 				command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
 			} else {
@@ -1422,7 +1448,7 @@ namespace Jazz2::Tiles
 			worldMatrix.Translate(debris.Size.X  * -0.5f, debris.Size.Y * -0.5f, 0.0f);
 			command->SetTransformation(worldMatrix);
 			command->SetLayer(debris.Depth);
-			command->GetMaterial().SetTexture(*debris.DiffuseTexture);
+			ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *debris.DiffuseTexture, debrisIndexed, (std::uint16_t)(debrisIndexed ? debris.PaletteOffset : 0));
 
 			renderQueue.AddCommand(command);
 		}
@@ -1672,6 +1698,8 @@ namespace Jazz2::Tiles
 				}
 
 				auto command = _renderCommands[renderCommandIndex++].get();
+				// Indexed tilesets bake their colors into the background render target through the palette shader
+				ContentResolver::Get().ConfigureSpriteShader(*command, tileSet->IsIndexed);
 
 				Vector2i texSize = tileSet->TextureDiffuse->GetSize();
 				float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
@@ -1695,7 +1723,7 @@ namespace Jazz2::Tiles
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 				command->SetTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize, y * TileSet::DefaultTileSize, 0.0f));
-				command->GetMaterial().SetTexture(*tileSet->TextureDiffuse);
+				ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *tileSet->TextureDiffuse, tileSet->IsIndexed, 0);
 
 				renderQueue.AddCommand(command);
 			}

@@ -483,6 +483,8 @@ namespace Jazz2::Actors
 		if (texture == nullptr) {
 			return;
 		}
+		// The death sprite's texture is indexed now; recolor the manually-built debris through its palette offset (-1 = baked)
+		std::int32_t paletteDebrisOffset = (((res->Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) ? (std::int32_t)res->PaletteOffset : -1);
 
 		float x = _pos.X - res->Base->Hotspot.X;
 		float y = _pos.Y - res->Base->Hotspot.Y;
@@ -516,6 +518,7 @@ namespace Jazz2::Actors
 					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
 
 					debris.DiffuseTexture = texture;
+					debris.PaletteOffset = paletteDebrisOffset;
 					debris.Flags = Tiles::TileMap::DebrisFlags::Bounce;
 
 					tilemap->CreateDebris(debris);
@@ -554,6 +557,7 @@ namespace Jazz2::Actors
 					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
 
 					debris.DiffuseTexture = texture;
+					debris.PaletteOffset = paletteDebrisOffset;
 					debris.Flags = Tiles::TileMap::DebrisFlags::Disappear;
 
 					tilemap->CreateDebris(debris);
@@ -595,6 +599,7 @@ namespace Jazz2::Actors
 					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
 
 					debris.DiffuseTexture = texture;
+					debris.PaletteOffset = paletteDebrisOffset;
 					debris.Flags = Tiles::TileMap::DebrisFlags::Disappear;
 
 					tilemap->CreateDebris(debris);
@@ -632,6 +637,7 @@ namespace Jazz2::Actors
 					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
 
 					debris.DiffuseTexture = texture;
+					debris.PaletteOffset = paletteDebrisOffset;
 					debris.Flags = Tiles::TileMap::DebrisFlags::Disappear;
 
 					tilemap->CreateDebris(debris);
@@ -1285,6 +1291,10 @@ namespace Jazz2::Actors
 		_renderer.Hotspot.Y = static_cast<float>(res->Base->Hotspot.Y);
 
 		_renderer.setTexture(res->Base->TextureDiffuse.get());
+		// Indexed graphics must be drawn through the palette shader (recolored at draw time); plain ones keep the
+		// default sprite path. The animation's palette offset selects the palette region (0 for most, gem rows for
+		// gems); a recolor override set via SetPalette still takes precedence.
+		_renderer.SetIndexed((res->Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed, res->PaletteOffset);
 		_renderer.UpdateVisibleFrames();
 
 		OnAnimationStarted();
@@ -1423,7 +1433,7 @@ namespace Jazz2::Actors
 	ActorBase::ActorRenderer::ActorRenderer(ActorBase* owner)
 		: BaseSprite(nullptr, nullptr, 0.0f, 0.0f), AnimPaused(false), LoopMode(AnimationLoopMode::Loop), FirstFrame(0),
 			FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f), CurrentFrame(0), _owner(owner),
-			_rendererType((ActorRendererType)-1), _rendererTransition(0.0f), _paletteTexture(nullptr)
+			_rendererType((ActorRendererType)-1), _rendererTransition(0.0f), _paletteOffset(-1), _baseIndexed(false), _basePaletteOffset(0)
 	{
 		_type = ObjectType::Sprite;
 		renderCommand_.SetType(RenderCommand::Type::Sprite);
@@ -1443,10 +1453,10 @@ namespace Jazz2::Actors
 			return;
 		}
 
-		// Each render type picks the palette-aware shader variant when a recolor palette is set (so the effect is
-		// computed from the real colors - an indexed sprite would otherwise read raw palette indices as near-black);
-		// the palette texture itself is bound below, after shaderHasChanged().
-		bool hasPalette = (_paletteTexture != nullptr);
+		// Each render type picks the palette-aware shader variant when the sprite is indexed (a recolor override or
+		// an indexed graphic) - otherwise an indexed sprite would read raw palette indices as near-black. The shared
+		// palette texture and per-instance offset are bound below, after shaderHasChanged().
+		bool hasPalette = (_paletteOffset >= 0 || _baseIndexed);
 		bool shaderChanged;
 		switch (type) {
 			case ActorRendererType::Outline: shaderChanged = renderCommand_.GetMaterial().SetShader(resolver.GetShader(hasPalette ? PrecompiledShader::OutlinePalette : PrecompiledShader::Outline)); break;
@@ -1475,29 +1485,53 @@ namespace Jazz2::Actors
 			}
 		}
 
-		// Bind the recolor palette to texture unit 1 for the palette-aware shaders (PaletteRemap / OutlinePalette /
-		// the *MaskPalette variants). Done after shaderHasChanged() (which (re)allocates the uniform data and resets
-		// uTexture to unit 0) so the sampler/texture binding sticks. Every render type has a palette variant now.
+		// Bind the shared palette texture to unit 1 for the palette-aware shaders (PaletteRemap / OutlinePalette /
+		// the *MaskPalette variants) and upload the per-instance palette offset (which palette row to sample). Done
+		// after shaderHasChanged() (which (re)allocates the uniform data and resets uTexture to unit 0) so the
+		// sampler/texture binding sticks. Every render type has a palette variant now.
 		if (hasPalette) {
 			GLUniformCache* paletteUniform = renderCommand_.GetMaterial().Uniform("uTexturePalette");
 			if (paletteUniform != nullptr) {
 				paletteUniform->SetIntValue(1); // GL_TEXTURE1
 			}
-			renderCommand_.GetMaterial().SetTexture(1, *_paletteTexture);
+			Texture* paletteTexture = resolver.GetPaletteTexture();
+			if (paletteTexture != nullptr) {
+				renderCommand_.GetMaterial().SetTexture(1, *paletteTexture);
+			}
+			// A recolor override (>= 0) wins; otherwise the sprite samples its own palette region (offset 0 for most
+			// sprites, the gem-gradient rows for gems)
+			setPaletteOffset((float)(_paletteOffset >= 0 ? _paletteOffset : _basePaletteOffset));
+		} else {
+			setPaletteOffset(0.0f);
 		}
 	}
 
-	void ActorBase::ActorRenderer::SetPalette(Texture* paletteTexture)
+	void ActorBase::ActorRenderer::SetPalette(std::int32_t paletteOffset)
 	{
-		if (_paletteTexture == paletteTexture) {
+		if (_paletteOffset == paletteOffset) {
 			return;
 		}
 
-		_paletteTexture = paletteTexture;
+		_paletteOffset = paletteOffset;
+		ReinitializeCurrentType();
+	}
 
+	void ActorBase::ActorRenderer::SetIndexed(bool indexed, std::int32_t basePaletteOffset)
+	{
+		if (_baseIndexed == indexed && _basePaletteOffset == basePaletteOffset) {
+			return;
+		}
+
+		_baseIndexed = indexed;
+		_basePaletteOffset = basePaletteOffset;
+		ReinitializeCurrentType();
+	}
+
+	void ActorBase::ActorRenderer::ReinitializeCurrentType()
+	{
 		// Re-run the current state's setup so the shader switches to/from its palette-aware variant (with the proper
-		// shaderHasChanged() handling) and the palette texture is (un)bound. Every render type has a palette variant
-		// now, so this works whether the renderer is in Default or in a mask state (hit flash, frozen, sugar rush).
+		// shaderHasChanged() handling) and the palette texture is (un)bound / the offset re-uploaded. Every render
+		// type has a palette variant now, so this works whether the renderer is in Default or a mask state.
 		if (_rendererType != (ActorRendererType)-1 && !ContentResolver::Get().IsHeadless()) {
 			ActorRendererType current = _rendererType;
 			_rendererType = (ActorRendererType)-1;

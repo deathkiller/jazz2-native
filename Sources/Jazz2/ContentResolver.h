@@ -19,6 +19,12 @@
 #include <IO/PakFile.h>
 #include <IO/Stream.h>
 
+namespace nCine
+{
+	class RenderCommand;
+	class GLUniformBlockCache;
+}
+
 using namespace Death::Containers;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
@@ -44,6 +50,9 @@ namespace Jazz2
 		static constexpr std::int32_t PaletteCount = 256;
 		/** @brief Number of colors per palette */
 		static constexpr std::int32_t ColorsPerPalette = 256;
+		/** @brief First palette row in the shared palette texture available for dynamic per-player allocation; lower
+			rows are reserved for the sprite palette (row 0) and the generated gem palettes (rows 1-2) */
+		static constexpr std::int32_t FirstDynamicPaletteRow = 8;
 		/** @brief Invalid value */
 		static constexpr std::int32_t InvalidValue = INT_MAX;
 
@@ -121,12 +130,35 @@ namespace Jazz2
 		/** @brief Builds a 256-color palette for a player from a packed 4-byte fur color (one section per byte, each
 			byte a gradient start in the sprite palette; 0 = original); see @ref FurSectionStarts */
 		void BuildPlayerColorPalette(std::uint32_t furColor, std::uint32_t* outPalette) const;
-		/** @brief Builds/updates a 256x1 palette texture for a player fur color into `texture` (created on first use)
-			and returns it for @ref Actors::ActorBase::ActorRenderer::SetPalette; returns `nullptr` in headless mode */
+		/** @brief Builds/updates a standalone 256x1 palette texture for a player fur color into `texture` (created on
+			first use) and returns it; used for off-screen previews (e.g. the profile menu). Returns `nullptr` in
+			headless mode. In-game recoloring uses @ref AcquirePaletteRow instead. */
 		Texture* ApplyPlayerColorPalette(std::unique_ptr<Texture>& texture, std::uint32_t furColor);
-		/** @brief Returns a shared 256x1 texture of the current (unmodified) sprite palette, for drawing indexed
-			sprites that must not be recolored (e.g. a recolored player's weapon flare); `nullptr` in headless mode */
+		/** @brief Returns the shared 256x256 palette texture (row 0 = sprite palette, rows 1-2 = gems, rows
+			@ref FirstDynamicPaletteRow+ = dynamically allocated per-player palettes), uploading any rows changed
+			since the last call; bound to texture unit 1 for palette shaders. Returns `nullptr` in headless mode. */
+		Texture* GetPaletteTexture();
+		/** @brief Returns the shared palette texture; indexed sprites that must not be recolored sample row 0 (the
+			default sprite palette) by using a palette offset of 0. Returns `nullptr` in headless mode. */
 		Texture* GetDefaultPaletteTexture();
+		/** @brief Acquires a palette row for the given packed fur color, reference-counted: callers with the same fur
+			color share one row (so e.g. many corpses of the same character cost a single palette). Builds the
+			recolored palette on first use. Returns the row (>= @ref FirstDynamicPaletteRow), or -1 if none are free.
+			Release it with @ref ReleasePaletteRow when the holder disconnects/despawns. */
+		std::int32_t AcquirePaletteRow(std::uint32_t furColor);
+		/** @brief Releases one reference to a palette row previously returned by @ref AcquirePaletteRow; the row is
+			returned to the pool only when the last holder releases it */
+		void ReleasePaletteRow(std::int32_t row);
+
+		/** @brief Configures a manually-built sprite render command for a (possibly indexed) sprite: selects the
+			@ref PrecompiledShader::PaletteRemap shader when `indexed` (recolored at draw time via the shared palette),
+			else the plain Sprite program; when the shader changes it also reserves uniform memory, sets triangle-strip
+			draw params, and points the diffuse/palette samplers at units 0/1. Returns whether the shader changed (use
+			it to gate one-time per-command setup). For drawing game-world graphics outside the standard ActorRenderer. */
+		bool ConfigureSpriteShader(RenderCommand& command, bool indexed);
+		/** @brief Binds `diffuse` to texture unit 0 and, when `indexed`, the shared palette texture to unit 1 plus the
+			per-instance palette offset on `instanceBlock`. Call at draw time after the other instance uniforms. */
+		void BindSpritePalette(RenderCommand& command, GLUniformBlockCache& instanceBlock, const Texture& diffuse, bool indexed, std::uint16_t paletteOffset);
 
 		/** @brief Loads specified tile set and its palette */
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping = nullptr);
@@ -187,6 +219,10 @@ namespace Jazz2
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled, std::initializer_list<StringView> defines = {});
 		
 		void RecreateGemPalettes();
+		// Expands the dirty palette-row range so the next GetPaletteTexture re-uploads at least rows [firstRow, lastRow]
+		void MarkPaletteDirty(std::int32_t firstRow, std::int32_t lastRow);
+		// Rebuilds every in-use dynamic palette row from the current base palette (after the sprite palette changes)
+		void RefreshDynamicPaletteRows();
 #if defined(DEATH_DEBUG)
 		void MigrateGraphics(StringView path);
 #endif
@@ -194,8 +230,14 @@ namespace Jazz2
 		bool _isHeadless;
 		bool _isLoading;
 		std::uint32_t _palettes[PaletteCount * ColorsPerPalette];
-		std::unique_ptr<Texture> _defaultPaletteTexture;
-		bool _defaultPaletteDirty;
+		// Shared palette texture (256x256: one palette per row). Rows changed since the last upload are tracked by
+		// the dirty range below and re-uploaded lazily. Dynamically allocated per-player rows are reference-counted
+		// (_paletteRowRefCount > 0 = in use) and keyed by fur color (_paletteRowColor) so identical colors share a row.
+		std::unique_ptr<Texture> _paletteTexture;
+		std::int32_t _paletteDirtyFirstRow;
+		std::int32_t _paletteDirtyLastRow;
+		std::int32_t _paletteRowRefCount[PaletteCount];
+		std::uint32_t _paletteRowColor[PaletteCount];
 		HashMap<Reference<const String>, std::unique_ptr<Metadata>, 
 #if defined(DEATH_TARGET_32BIT)
 			xxHash32Func<String>,

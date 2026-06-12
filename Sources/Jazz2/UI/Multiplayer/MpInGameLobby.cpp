@@ -256,7 +256,8 @@ namespace Jazz2::UI::Multiplayer
 			float(base->FrameDimensions.Y * row) / float(texSize.Y)
 		);
 
-		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending);
+		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
+		DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending, 0.0f, paletteOffset);
 	}
 
 	void MpInGameLobby::DrawStringShadow(StringView text, int& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scale,

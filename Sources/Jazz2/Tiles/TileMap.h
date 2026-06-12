@@ -226,6 +226,9 @@ namespace Jazz2::Tiles
 
 			/** @brief Diffuse texture */
 			Texture* DiffuseTexture;
+			/** @brief Flat palette offset when @ref DiffuseTexture is an indexed sprite (recolored at draw time), or
+				-1 when it holds baked colors (e.g. a tileset texture) and must use the plain Sprite shader */
+			std::int32_t PaletteOffset = -1;
 
 			/** @brief Behavior flags */
 			DebrisFlags Flags;
@@ -273,6 +276,9 @@ namespace Jazz2::Tiles
 		void SetTileEventFlags(std::int32_t x, std::int32_t y, EventType tileEvent, std::uint8_t* tileParams);
 		/** @brief Overrides the diffuse texture of the specified tile */
 		bool OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<(TileSet::DefaultTileSize + 2) * (TileSet::DefaultTileSize + 2), std::uint32_t> tileDiffuse);
+		/** @brief Returns `true` if the tileset containing the given tile stores indexed (palette) diffuse, so an
+			overridden tile must be supplied as palette indices (red channel) rather than baked colors */
+		bool IsTileSetIndexed(std::int32_t tileId);
 		/** @brief Overrides the collision mask of the specified tile */
 		bool OverrideTileMask(std::int32_t tileId, StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, std::uint8_t> tileMask);
 
@@ -373,7 +379,7 @@ namespace Jazz2::Tiles
 
 		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, Vector2f viewCenter);
 		static float TranslateCoordinate(float coordinate, float speed, float offset, std::int32_t viewSize, bool isY);
-		RenderCommand* RentRenderCommand(LayerRendererType type);
+		RenderCommand* RentRenderCommand(LayerRendererType type, bool indexed = false);
 
 		bool AdvanceDestructibleTileAnimation(LayerTile& tile, std::int32_t tx, std::int32_t ty, std::int32_t& amount, StringView soundName);
 		void AdvanceCollapsingTileTimers(float timeMult);

@@ -8,8 +8,34 @@
 namespace Jazz2::Actors::Multiplayer
 {
 	RemoteActor::RemoteActor()
-		: _stateBufferPos(0), _lastAnim(AnimState::Idle), _isAttachedLocally(false), _furColor(0)
+		: _stateBufferPos(0), _lastAnim(AnimState::Idle), _isAttachedLocally(false), _furColor(0), _paletteRow(-1)
 	{
+	}
+
+	RemoteActor::~RemoteActor()
+	{
+		// Release the shared palette row back to the pool when the remote player disconnects/despawns
+		if (_paletteRow >= 0) {
+			ContentResolver::Get().ReleasePaletteRow(_paletteRow);
+			_paletteRow = -1;
+		}
+	}
+
+	void RemoteActor::RefreshColorPalette()
+	{
+		auto& resolver = ContentResolver::Get();
+		if (resolver.IsHeadless()) {
+			return;
+		}
+
+		// Acquire the new (shared, reference-counted) row before releasing the old one, so an unchanged fur color
+		// keeps its row; players with the same color share a single palette
+		std::int32_t newRow = (_furColor != 0 ? resolver.AcquirePaletteRow(_furColor) : -1);
+		if (_paletteRow >= 0) {
+			resolver.ReleasePaletteRow(_paletteRow);
+		}
+		_paletteRow = newRow;
+		_renderer.SetPalette(_paletteRow >= 0 ? _paletteRow * ContentResolver::ColorsPerPalette : -1);
 	}
 
 	Task<bool> RemoteActor::OnActivatedAsync(const ActorActivationDetails& details)
@@ -94,11 +120,7 @@ namespace Jazz2::Actors::Multiplayer
 		_renderer.Initialize(rendererType);
 		_renderer.setRotation(rotation);
 
-		if (_furColor != 0) {
-			_renderer.SetPalette(ContentResolver::Get().ApplyPlayerColorPalette(_colorPalette, _furColor));
-		} else {
-			_renderer.SetPalette(nullptr);
-		}
+		RefreshColorPalette();
 
 		SyncMiscWithServer(flags);
 	}
@@ -123,22 +145,14 @@ namespace Jazz2::Actors::Multiplayer
 		_currentAnimation = nullptr;
 		SetAnimation(currentState);
 
-		if (furColor != 0) {
-			_renderer.SetPalette(ContentResolver::Get().ApplyPlayerColorPalette(_colorPalette, furColor));
-		} else {
-			_renderer.SetPalette(nullptr);
-		}
+		RefreshColorPalette();
 	}
 
 	void RemoteActor::ChangeMetadata(StringView path)
 	{
 		// Keep the recolor: load indexed when colored, and (re)apply or clear the palette
 		RequestMetadata(path, _furColor != 0);
-		if (_furColor != 0) {
-			_renderer.SetPalette(ContentResolver::Get().ApplyPlayerColorPalette(_colorPalette, _furColor));
-		} else {
-			_renderer.SetPalette(nullptr);
-		}
+		RefreshColorPalette();
 	}
 
 	void RemoteActor::SyncPositionWithServer(Vector2f pos)

@@ -8,6 +8,7 @@ namespace Jazz2::Resources
 	}
 
 	GraphicResource::GraphicResource() noexcept
+		: PaletteOffset(0)
 	{
 	}
 

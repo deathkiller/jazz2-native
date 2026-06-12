@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2026-05-17 15:01+0200\n"
+"POT-Creation-Date: 2026-06-11 22:01+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Consul\n"
@@ -1371,17 +1371,17 @@ msgid "Level \"{}\" initialized"
 msgstr "\"{}\" bölümü başlatıldı"
 
 #. TRANSLATORS: Link to website under header text in About section
-#: Sources/Jazz2/LevelHandler.cpp:766
+#: Sources/Jazz2/LevelHandler.cpp:767
 #: Sources/Jazz2/UI/Menu/AboutSection.cpp:145
 msgid "For more information, visit the official website:"
 msgstr "Daha fazla bilgi için, resmi web sitesini ziyaret edin:"
 
-#: Sources/Jazz2/LevelHandler.cpp:2358 Sources/Jazz2/LevelHandler.cpp:2371
-#: Sources/Jazz2/LevelHandler.cpp:2382 Sources/Jazz2/LevelHandler.cpp:2397
-#: Sources/Jazz2/LevelHandler.cpp:2410 Sources/Jazz2/LevelHandler.cpp:2423
-#: Sources/Jazz2/LevelHandler.cpp:2436 Sources/Jazz2/LevelHandler.cpp:2449
-#: Sources/Jazz2/LevelHandler.cpp:2464 Sources/Jazz2/LevelHandler.cpp:2476
-#: Sources/Jazz2/LevelHandler.cpp:2497 Sources/Jazz2/LevelHandler.cpp:2511
+#: Sources/Jazz2/LevelHandler.cpp:2355 Sources/Jazz2/LevelHandler.cpp:2368
+#: Sources/Jazz2/LevelHandler.cpp:2379 Sources/Jazz2/LevelHandler.cpp:2394
+#: Sources/Jazz2/LevelHandler.cpp:2407 Sources/Jazz2/LevelHandler.cpp:2420
+#: Sources/Jazz2/LevelHandler.cpp:2433 Sources/Jazz2/LevelHandler.cpp:2446
+#: Sources/Jazz2/LevelHandler.cpp:2461 Sources/Jazz2/LevelHandler.cpp:2473
+#: Sources/Jazz2/LevelHandler.cpp:2494 Sources/Jazz2/LevelHandler.cpp:2508
 msgid "Cheats are not allowed in current context"
 msgstr "Mevcut bağlamda hile kullanılması yasaktır"
 
@@ -1395,31 +1395,31 @@ msgstr ""
 "\n"
 "Oyun kısa süre içerisinde başlıyor!"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1511
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3534
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1617
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3739
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]"
 msgstr "\f[c:#d0705d]{}\f[/c],  \f[c:#d0705d]{}\f[/c] tarafından yakıldı."
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1528
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3537
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:1634
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3742
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] was roasted by environment"
 msgstr "\f[c:#d0705d]{}\f[/c], çevre tarafından yakıldı"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2838
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3513
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2978
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3718
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] disconnected"
 msgstr "\f[c:#d0705d]{}\f[/c] ayrıldı"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2991
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3511
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3181
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3716
 #, c++-format
 msgid "\f[c:#d0705d]{}\f[/c] connected"
 msgstr "\f[c:#d0705d]{}\f[/c] bağlandı"
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:5801
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:6084
 #, c++-format
 msgid ""
 "\n"
@@ -1427,7 +1427,7 @@ msgid ""
 "Overtime! {} seconds remaining"
 msgstr ""
 
-#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:6013
+#: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:6322
 #, c++-format
 msgid ""
 "\n"
@@ -1525,7 +1525,7 @@ msgstr "Yüksek puanlar"
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:97
 #: Sources/Jazz2/UI/Menu/FirstRunSection.cpp:59
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:46
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:41
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:52
 msgid "Options"
 msgstr "Ayarlar"
 
@@ -1646,7 +1646,7 @@ msgstr "Zayıf"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:165
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:174
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:350
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:496
 msgid "Disabled"
 msgstr "Kapalı"
 
@@ -1657,7 +1657,7 @@ msgstr "Kapalı"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:155
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:174
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:350
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:496
 msgid "Enabled"
 msgstr "Açık"
 
@@ -1988,7 +1988,6 @@ msgstr ""
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:45
-#| msgid "Resolution"
 msgid "Lighting Resolution"
 msgstr ""
 
@@ -2111,31 +2110,38 @@ msgstr "Ses Ayarları"
 
 #. TRANSLATORS: Menu item in Options section
 #: Sources/Jazz2/UI/Menu/OptionsSection.cpp:30
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:169
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:224
 msgid "User Profile"
 msgstr "Kullanıcı Profili"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:31
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:32
 msgid "Resume"
 msgstr "Devam Et"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:36
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:39
 msgid "Join Game"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:36
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:42
 msgid "Spectate"
 msgstr "İzle"
 
 #. TRANSLATORS: Menu item in main menu
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:45
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:48
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:46
+#| msgid "Character"
+msgid "Change Character"
+msgstr ""
+
+#. TRANSLATORS: Menu item in main menu
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:56
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:59
 msgid "Save & Exit"
 msgstr "Kaydet & Çık"
 
-#: Sources/Jazz2/UI/Menu/PauseSection.cpp:45
+#: Sources/Jazz2/UI/Menu/PauseSection.cpp:56
 msgid "Disconnect & Exit"
 msgstr "Bağlantıyı Kes ve Çık"
 
@@ -2331,41 +2337,89 @@ msgstr "Orta"
 msgid "Hard"
 msgstr "Zor"
 
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:109
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:111
 msgid "Save"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:116
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:120
 msgid "Reset"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:123
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:127
 msgid "Joystick"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:133
-#| msgid "Cooperation"
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:137
 msgid "Vibration"
 msgstr ""
 
-#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:141
+#: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:145
 msgid "Drag to move · Pinch or corner to resize"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > User Profile section
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:66
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:87
 msgid "Discord Integration"
 msgstr "Discord Entegrasyonu"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:69
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:90
 msgid "Player Name"
 msgstr "Oyuncu Adı"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:72
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:92
+#| msgid "Character"
+msgid "Character Color 1"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > User Profile section
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:94
+#| msgid "Character"
+msgid "Character Color 2"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > User Profile section
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:96
+#| msgid "Character"
+msgid "Character Color 3"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > User Profile section
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:98
+#| msgid "Character"
+msgid "Character Color 4"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > User Profile section
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:100
+msgid "Apply Colors"
+msgstr ""
+
+#. TRANSLATORS: Menu item in Options > User Profile section
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:103
 msgid "Unique Player ID"
 msgstr "Benzersiz Oyuncu Kimliği"
+
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:461
+#| msgid "Reset To Default"
+msgid "Default"
+msgstr ""
+
+#. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:485
+msgid "Online only"
+msgstr ""
+
+#. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:487
+msgid "Online and first local player"
+msgstr ""
+
+#. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:489
+msgid "Online and all local players"
+msgstr ""
 
 #: Sources/Jazz2/UI/Multiplayer/MpHUD.cpp:169
 #, c++-format
@@ -2420,7 +2474,7 @@ msgstr ""
 msgid "Unnamed server"
 msgstr "İsimsiz sunucu"
 
-#: Sources/Main.cpp:1116
+#: Sources/Main.cpp:1119
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2432,7 +2486,7 @@ msgstr ""
 "\n"
 "Geçersiz parametre belirtildi."
 
-#: Sources/Main.cpp:1117
+#: Sources/Main.cpp:1120
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2444,12 +2498,7 @@ msgstr ""
 "\n"
 "Oyun sürümünüz sunucuyla uyumlu değil."
 
-#: Sources/Main.cpp:1118
-#| msgid ""
-#| "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "The server has disconnected you due to inactivity."
+#: Sources/Main.cpp:1121
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2457,12 +2506,7 @@ msgid ""
 "The client was rejected due to malformed communication protocol."
 msgstr ""
 
-#: Sources/Main.cpp:1119
-#| msgid ""
-#| "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
-#| "\n"
-#| "\n"
-#| "The server is not responding for connection request."
+#: Sources/Main.cpp:1122
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2471,7 +2515,7 @@ msgid ""
 "One of the reasons may be connecting to an unsecured WebSocket."
 msgstr ""
 
-#: Sources/Main.cpp:1120
+#: Sources/Main.cpp:1123
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2485,7 +2529,7 @@ msgstr ""
 "Kimlik doğrulama başarısız oldu.\n"
 "Daha fazla bilgi için sunucu yöneticileriyle iletişime geçin."
 
-#: Sources/Main.cpp:1121
+#: Sources/Main.cpp:1124
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2497,7 +2541,7 @@ msgstr ""
 "\n"
 "Geçersiz parola belirtildi."
 
-#: Sources/Main.cpp:1122
+#: Sources/Main.cpp:1125
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2511,7 +2555,7 @@ msgstr ""
 "Geçersiz oyuncu adı belirtildi.\n"
 "Lütfen profilinizi kontrol edin ve tekrar deneyin."
 
-#: Sources/Main.cpp:1123
+#: Sources/Main.cpp:1126
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2525,7 +2569,7 @@ msgstr ""
 "Bu istemci sunucu beyaz listede değil.\n"
 "Daha fazla bilgi için sunucu yöneticileriyle iletişime geçin."
 
-#: Sources/Main.cpp:1124
+#: Sources/Main.cpp:1127
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2539,7 +2583,7 @@ msgstr ""
 "Sunucu 3. taraf kimlik doğrulama sağlayıcısı gerektiriyor.\n"
 "Daha fazla bilgi için sunucu yöneticileriyle iletişime geçin."
 
-#: Sources/Main.cpp:1125
+#: Sources/Main.cpp:1128
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2553,7 +2597,7 @@ msgstr ""
 "Kapasite dolu.\n"
 "Lütfen tekrar deneyin."
 
-#: Sources/Main.cpp:1126
+#: Sources/Main.cpp:1129
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2567,7 +2611,7 @@ msgstr ""
 "Sunucu isteğinizi gerçekleştirebilecek durumda değil.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:1127
+#: Sources/Main.cpp:1130
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2581,7 +2625,7 @@ msgstr ""
 "Sunucu kapanıyor.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:1128
+#: Sources/Main.cpp:1131
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2595,7 +2639,7 @@ msgstr ""
 "Sunucu kapanıyor.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:1129
+#: Sources/Main.cpp:1132
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2609,7 +2653,7 @@ msgstr ""
 "Sunucu kapanıyor.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:1130
+#: Sources/Main.cpp:1133
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2623,7 +2667,7 @@ msgstr ""
 "Sunucu kapanıyor.\n"
 "Lütfen daha sonra tekrar deneyin."
 
-#: Sources/Main.cpp:1131
+#: Sources/Main.cpp:1134
 msgid ""
 "\f[c:#704a4a]Connection has been lost!\f[/c]\n"
 "\n"
@@ -2637,7 +2681,7 @@ msgstr ""
 "Lütfen daha sonra tekrar deneyin. Problem devam ediyorsa,\n"
 "internet bağlantınızı gözden geçirin."
 
-#: Sources/Main.cpp:1132
+#: Sources/Main.cpp:1135
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2649,7 +2693,7 @@ msgstr ""
 "\n"
 "Sunucu bağlantı isteğine cevap vermiyor."
 
-#: Sources/Main.cpp:1133
+#: Sources/Main.cpp:1136
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2663,7 +2707,7 @@ msgstr ""
 "Sunucudan \f[c:#907050]atıldınız\f[/c].\n"
 "Daha fazla bilgi için sunucu yöneticileri ile iletişime geçin."
 
-#: Sources/Main.cpp:1134
+#: Sources/Main.cpp:1137
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2677,7 +2721,7 @@ msgstr ""
 "Sunucudan \f[c:#725040]yasaklandınız\f[/c].\n"
 "Daha fazla bilgi için sunucu yöneticileri ile iletişime geçin."
 
-#: Sources/Main.cpp:1135
+#: Sources/Main.cpp:1138
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2689,7 +2733,7 @@ msgstr ""
 "\n"
 "Hile tespit edildi."
 
-#: Sources/Main.cpp:1136
+#: Sources/Main.cpp:1139
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"
 "\n"
@@ -2703,7 +2747,7 @@ msgstr ""
 "İstemcinizde gerekli dosyalar bulunmuyor.\n"
 "Lütfen gerekli dosyaları indirin ve tekrar deneyin."
 
-#: Sources/Main.cpp:1137
+#: Sources/Main.cpp:1140
 msgid ""
 "\f[c:#704a4a]Connection has been closed!\f[/c]\n"
 "\n"
@@ -2715,7 +2759,7 @@ msgstr ""
 "\n"
 "Sunucu, etkin olmadığınız için bağlantınızı kesti."
 
-#: Sources/Main.cpp:1392
+#: Sources/Main.cpp:1417
 #, c++-format
 msgid ""
 "\f[c:#704a4a]Cannot connect to the server!\f[/c]\n"

@@ -33,6 +33,9 @@ namespace Jazz2::Tiles
 		std::int32_t TileCount;
 		/** @brief Number of tiles per row */
 		std::int32_t TilesPerRow;
+		/** @brief Whether @ref TextureDiffuse stores raw palette indices (red channel) recolored at draw time through
+			the palette shaders, instead of baked colors (false for tilesets containing 32-bit true-color tiles) */
+		bool IsIndexed = false;
 
 		/** @brief Returns mask for specified tile */
 		std::uint8_t* GetTileMask(std::int32_t tileId) const

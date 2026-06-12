@@ -99,9 +99,12 @@ namespace Jazz2::Actors::Solid
 			auto* chainAnim = _metadata->FindAnimation((AnimState)1);
 			if (chainAnim != nullptr && chainAnim->Base->TextureDiffuse != nullptr) {
 				Vector2i texSize = chainAnim->Base->TextureDiffuse->GetSize();
+				auto& resolver = ContentResolver::Get();
+				bool chainIndexed = ((chainAnim->Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
 
 				for (std::int32_t i = 0; i < _pieces.size(); i++) {
 					auto command = _pieces[i].Command.get();
+					resolver.ConfigureSpriteShader(*command, chainIndexed);
 					float scale = _pieces[i].Scale;
 
 					std::int32_t curAnimFrame = chainAnim->FrameOffset + (i % chainAnim->FrameCount);
@@ -124,7 +127,7 @@ namespace Jazz2::Actors::Solid
 					auto& pos = _pieces[i].Pos;
 					command->SetTransformation(Matrix4x4f::Translation(pos.X - chainAnim->Base->FrameDimensions.X / 2, pos.Y - chainAnim->Base->FrameDimensions.Y / 2, 0.0f));
 					command->SetLayer(_originLayer + (uint16_t)(scale * 20));
-					command->GetMaterial().SetTexture(*chainAnim->Base->TextureDiffuse.get());
+					resolver.BindSpritePalette(*command, *instanceBlock, *chainAnim->Base->TextureDiffuse.get(), chainIndexed, chainAnim->PaletteOffset);
 
 					renderQueue.AddCommand(command);
 				}

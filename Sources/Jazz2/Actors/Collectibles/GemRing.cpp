@@ -97,9 +97,12 @@ namespace Jazz2::Actors::Collectibles
 			auto* res = _metadata->FindAnimation(AnimState::Default); // GemRed
 			if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 				Vector2i texSize = res->Base->TextureDiffuse->GetSize();
+				auto& resolver = ContentResolver::Get();
+				bool indexed = ((res->Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
 
 				for (std::int32_t i = 0; i < _pieces.size(); i++) {
 					auto command = _pieces[i].Command.get();
+					resolver.ConfigureSpriteShader(*command, indexed);
 
 					std::int32_t curAnimFrame = res->FrameOffset + (i % res->FrameCount);
 					std::int32_t col = curAnimFrame % res->Base->FrameConfiguration.X;
@@ -117,7 +120,7 @@ namespace Jazz2::Actors::Collectibles
 					auto& pos = _pieces[i].Pos;
 					command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f).RotateZ(_pieces[i].Angle));
 					command->SetLayer(_renderer.layer() - 2);
-					command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
+					resolver.BindSpritePalette(*command, *instanceBlock, *res->Base->TextureDiffuse.get(), indexed, res->PaletteOffset);
 
 					renderQueue.AddCommand(command);
 				}

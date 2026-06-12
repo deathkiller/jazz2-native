@@ -76,6 +76,7 @@ namespace nCine
 		static constexpr char TextureUniformName[] = "uTexture";
 		static constexpr char ColorUniformName[] = "color";
 		static constexpr char SpriteSizeUniformName[] = "spriteSize";
+		static constexpr char PaletteOffsetUniformName[] = "palOffset";
 		static constexpr char TexRectUniformName[] = "texRect";
 		static constexpr char PositionAttributeName[] = "aPosition";
 		static constexpr char TexCoordsAttributeName[] = "aTexCoords";

@@ -11,11 +11,13 @@ namespace Jazz2::Actors
 
 	public:
 		PlayerCorpse();
+		~PlayerCorpse();
 
 	protected:
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 
 	private:
-		std::unique_ptr<Texture> _colorPalette;
+		// Allocated row in the shared palette texture for the corpse recolor (-1 = none)
+		std::int32_t _paletteRow;
 	};
 }

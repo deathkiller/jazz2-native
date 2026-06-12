@@ -76,6 +76,9 @@ namespace Jazz2::Resources
 		std::int32_t FrameOffset;
 		/** @brief Animation loop mode */
 		AnimationLoopMode LoopMode;
+		/** @brief Flat palette offset for an indexed sprite (from the metadata `PaletteOffset`); selects which palette
+			region the @ref PrecompiledShader::PaletteRemap shader samples at draw time (e.g. the gem gradient rows) */
+		std::uint16_t PaletteOffset;
 
 		GraphicResource() noexcept;
 
@@ -206,10 +209,17 @@ namespace Jazz2::Resources
 		FrozenMask,
 		BatchedFrozenMask,
 		PaletteRemap,
+		BatchedPaletteRemap,
 		OutlinePalette,
+		BatchedOutlinePalette,
 		WhiteMaskPalette,
+		BatchedWhiteMaskPalette,
 		PartialWhiteMaskPalette,
+		BatchedPartialWhiteMaskPalette,
 		FrozenMaskPalette,
+		BatchedFrozenMaskPalette,
+		TintedPalette,
+		BatchedTintedPalette,
 		ShieldFire,
 		BatchedShieldFire,
 		ShieldLightning,
