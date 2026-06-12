@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2026-06-11 21:58+0200\n"
-"PO-Revision-Date: 2026-06-11 21:58+0200\n"
+"POT-Creation-Date: 2026-06-12 16:16+0200\n"
+"PO-Revision-Date: 2026-06-12 16:17+0200\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: de\n"
@@ -1658,7 +1658,7 @@ msgstr "Schwach"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:165
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:174
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:496
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:497
 msgid "Disabled"
 msgstr "Deaktiviert"
 
@@ -1669,7 +1669,7 @@ msgstr "Deaktiviert"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:155
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:174
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:496
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:497
 msgid "Enabled"
 msgstr "Aktiviert"
 
@@ -2003,7 +2003,7 @@ msgstr "Weichzeichner-Effekte"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:45
 msgid "Lighting Resolution"
-msgstr ""
+msgstr "Auflösung der Beleuchtung"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:47
@@ -2147,9 +2147,8 @@ msgstr "Zuschauen"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:46
-#| msgid "Character"
 msgid "Change Character"
-msgstr ""
+msgstr "Charakter wechseln"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:56
@@ -2359,15 +2358,15 @@ msgstr "Speichern"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:120
 msgid "Reset"
-msgstr ""
+msgstr "Reset"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:127
 msgid "Joystick"
-msgstr ""
+msgstr "Joystick"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:137
 msgid "Vibration"
-msgstr ""
+msgstr "Vibration"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:145
 msgid "Drag to move · Pinch or corner to resize"
@@ -2385,31 +2384,28 @@ msgstr "Spielername"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:92
-#| msgid "Character"
 msgid "Character Color 1"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:94
-#| msgid "Character"
 msgid "Character Color 2"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:96
-#| msgid "Character"
 msgid "Character Color 3"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:98
-#| msgid "Character"
 msgid "Character Color 4"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:100
-msgid "Apply Colors"
+#| msgid "Play Custom Levels"
+msgid "Apply Custom Colors"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > User Profile section
@@ -2418,22 +2414,21 @@ msgid "Unique Player ID"
 msgstr "Eindeutige Spieler-ID"
 
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:461
-#| msgid "Reset To Default"
 msgid "Default"
-msgstr ""
+msgstr "Standard"
 
 #. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:485
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:486
 msgid "Online only"
 msgstr ""
 
 #. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:487
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:488
 msgid "Online and first local player"
 msgstr ""
 
 #. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:489
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:490
 msgid "Online and all local players"
 msgstr ""
 

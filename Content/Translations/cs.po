@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2026-06-11 21:57+0200\n"
-"PO-Revision-Date: 2026-06-11 22:09+0200\n"
+"POT-Creation-Date: 2026-06-12 16:16+0200\n"
+"PO-Revision-Date: 2026-06-12 16:16+0200\n"
 "Last-Translator: \n"
 "Language-Team: Dan R.\n"
 "Language: cs\n"
@@ -1653,7 +1653,7 @@ msgstr "Slabé"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:165
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:174
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:496
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:497
 msgid "Disabled"
 msgstr "Zakázáno"
 
@@ -1664,7 +1664,7 @@ msgstr "Zakázáno"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:155
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:174
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:496
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:497
 msgid "Enabled"
 msgstr "Povoleno"
 
@@ -2396,8 +2396,8 @@ msgstr "Barva postavy 4"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:100
-msgid "Apply Colors"
-msgstr "Aplikovat barvy"
+msgid "Apply Custom Colors"
+msgstr "Aplikovat vlastní barvy"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:103
@@ -2409,17 +2409,17 @@ msgid "Default"
 msgstr "Výchozí"
 
 #. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:485
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:486
 msgid "Online only"
 msgstr "Pouze online"
 
 #. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:487
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:488
 msgid "Online and first local player"
 msgstr "Online i lokálně pro 1. hráče"
 
 #. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:489
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:490
 msgid "Online and all local players"
 msgstr "Online i lokálně"
 

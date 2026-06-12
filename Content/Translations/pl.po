@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2026-06-11 22:00+0200\n"
+"POT-Creation-Date: 2026-06-12 16:18+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Patrxgt\n"
 "Language-Team: Patrxgt & Klodizaur\n"
@@ -1663,7 +1663,7 @@ msgstr "Słabe"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:165
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:174
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:496
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:497
 msgid "Disabled"
 msgstr "Wyłączono"
 
@@ -1674,7 +1674,7 @@ msgstr "Wyłączono"
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:155
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:161
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:174
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:496
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:497
 msgid "Enabled"
 msgstr "Włączono"
 
@@ -2150,7 +2150,6 @@ msgstr "Obserwuj"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:46
-#| msgid "Character"
 msgid "Change Character"
 msgstr ""
 
@@ -2390,31 +2389,28 @@ msgstr "Pseudonim gracza"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:92
-#| msgid "Character"
 msgid "Character Color 1"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:94
-#| msgid "Character"
 msgid "Character Color 2"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:96
-#| msgid "Character"
 msgid "Character Color 3"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:98
-#| msgid "Character"
 msgid "Character Color 4"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:100
-msgid "Apply Colors"
+#| msgid "Play Custom Levels"
+msgid "Apply Custom Colors"
 msgstr ""
 
 #. TRANSLATORS: Menu item in Options > User Profile section
@@ -2423,22 +2419,21 @@ msgid "Unique Player ID"
 msgstr "Unikalne ID gracza"
 
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:461
-#| msgid "Reset To Default"
 msgid "Default"
 msgstr ""
 
 #. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:485
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:486
 msgid "Online only"
 msgstr ""
 
 #. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:487
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:488
 msgid "Online and first local player"
 msgstr ""
 
 #. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
-#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:489
+#: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:490
 msgid "Online and all local players"
 msgstr ""
 
