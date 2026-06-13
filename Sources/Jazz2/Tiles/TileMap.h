@@ -13,6 +13,13 @@
 
 using namespace Death::IO;
 
+// Tilemap rendering path toggle (A/B switch). When defined, each eligible tile layer (default renderer, single
+// tileset) is drawn as one mesh = one draw call per layer (or a few <=64 KB chunks), trading a slightly higher
+// draw-call count for much less per-frame CPU (no per-tile render command + no RenderBatcher pass). When commented
+// out, the original path is used: one render command per visible tile, which RenderBatcher merges into ~2 commands.
+// Layers that aren't eligible (tinted/solid/sky/circle renderers, multi-tileset levels) always use the original path.
+//#define TILEMAP_USE_SINGLE_DRAW
+
 namespace Jazz2
 {
 	class LevelHandler;
@@ -397,12 +404,32 @@ namespace Jazz2::Tiles
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 		std::int32_t _renderCommandsCount;
 
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+		// Per-frame pools for whole-layer tile meshes, replacing the per-tile commands. One vertex buffer is filled
+		// per drawn tile layer; each layer mesh is then split into chunks that individually fit the shared array
+		// buffer limit (64 KB), so a layer emits one command per chunk (usually just one). Both pools grow on demand
+		// and reset in OnEndFrame(); host vertex pointers reference the buffers until the render queue is flushed, so
+		// a buffer is never reused within a frame (across viewports the counts simply keep growing).
+		SmallVector<SmallVector<float, 0>, 0> _layerMeshVertices;
+		std::int32_t _layerMeshVerticesCount = 0;
+		SmallVector<std::unique_ptr<RenderCommand>, 0> _layerMeshCommands;
+		std::int32_t _layerMeshCommandCount = 0;
+#endif
+
 		std::int32_t _texturedBackgroundLayer;
 		TexturedBackgroundPass _texturedBackgroundPass;
 
 		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, Vector2f viewCenter);
 		static float TranslateCoordinate(float coordinate, float speed, float offset, std::int32_t viewSize, bool isY);
 		RenderCommand* RentRenderCommand(LayerRendererType type, bool indexed = false);
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+		// Appends one tile's two triangles (6 vertices, 8 floats each: position.xy, texcoords.xy, color.rgba) to a
+		// layer mesh buffer. Color is (1,1,1,alpha); the layer tint is applied via the command's instance color.
+		static void AppendTileQuad(SmallVector<float, 0>& vertices, float x, float y, float size,
+			float texScaleX, float texBiasX, float texScaleY, float texBiasY, float alpha);
+		// Emits the accumulated tile-layer mesh as one or more render commands (split into <=64 KB chunks)
+		void EmitLayerMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, TileSet* tileSet, const Vector4f& layerColor, std::uint16_t depth);
+#endif
 
 		bool AdvanceDestructibleTileAnimation(LayerTile& tile, std::int32_t tx, std::int32_t ty, std::int32_t& amount, StringView soundName);
 		void AdvanceCollapsingTileTimers(float timeMult);

@@ -470,7 +470,7 @@ namespace Jazz2::UI::Menu
 				for (std::int32_t i = 0; i < ContentResolver::FurSectionSize; i++) {
 					std::uint32_t color = palettes[(base + i) & 0xFF];
 					if (hueShift) {
-						color = ContentResolver::ShiftHue(color, ContentResolver::FurHueShiftDegrees);
+						color = ContentResolver::ShiftHue(color, ContentResolver::HueShiftDegreesForGradient((std::int32_t)base));
 					}
 					_root->DrawSolid(startX + i * swatchW, item.Y + 22.0f, IMenuContainer::FontLayer - 10, Alignment::Left,
 						Vector2f(swatchW, 14.0f), ColorFromPacked(color | 0xFF000000u, alpha), false);
@@ -594,14 +594,15 @@ namespace Jazz2::UI::Menu
 	void UserProfileOptionsSection::CycleFurSection(std::int32_t section, std::int32_t direction)
 	{
 		// Build the ordered list of selectable values: Default (0) and all base gradients first, then their
-		// 180°-hue-shifted twins (high bit set) grouped at the end. Default has no twin.
+		// hue-shifted twins (high bit set) grouped at the end. Default has no twin, and gradients that carry no hue
+		// rotation (the near-neutral ones - see HueShiftDegreesForGradient) get no twin either, as it would look identical.
 		std::uint8_t variants[arraySize(FurGradientStarts) * 2];
 		std::int32_t count = 0;
 		for (std::int32_t i = 0; i < (std::int32_t)arraySize(FurGradientStarts); i++) {
 			variants[count++] = FurGradientStarts[i];
 		}
 		for (std::int32_t i = 0; i < (std::int32_t)arraySize(FurGradientStarts); i++) {
-			if (FurGradientStarts[i] != 0x00) {
+			if (FurGradientStarts[i] != 0x00 && ContentResolver::HueShiftDegreesForGradient(FurGradientStarts[i]) != 0.0f) {
 				variants[count++] = (std::uint8_t)(FurGradientStarts[i] | ContentResolver::FurHueShiftFlag);
 			}
 		}

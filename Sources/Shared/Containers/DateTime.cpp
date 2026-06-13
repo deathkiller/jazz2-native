@@ -1119,7 +1119,7 @@ namespace Death { namespace Containers {
 	{
 		DEATH_ASSERT(month >= 0 && month < 12 && day > 0 && day <= Implementation::GetNumberOfDaysInMonth(month, year) &&
 			hour >= 0 && hour < 24 && minute >= 0 && minute < 60 && second >= 0 && second < 61 /* with leap second */ &&
-			millisec >= 0 && millisec < 1000, "Invalid date specified", *this);
+			millisec >= 0 && millisec < 1000, ("Invalid date \"{:.4}/{:.2}/{:.2} {:.2}:{:.2}:{:.2}.{:.3}\" specified", year, month, day, hour, minute, second, millisec), *this);
 
 		// The range of time_t type (inclusive)
 		constexpr std::int32_t YearMinInRange = 1970;

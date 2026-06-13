@@ -61,8 +61,8 @@ namespace Jazz2
 			The player's fur color is 4 bytes (one per section, as in the original game). The low 7 bits of each byte
 			are the starting palette index of an 8-color gradient in the sprite palette; those 8 colors are copied into
 			the section's fixed range in the per-player palette (a byte of 0 keeps the original colors for that section).
-			If @ref FurHueShiftFlag is also set, the gradient's hue is rotated by @ref FurHueShiftDegrees first (see
-			@ref ShiftHue), which roughly doubles the selectable color variants without extra gradients in the palette.
+			If @ref FurHueShiftFlag is also set, the gradient's hue is rotated by @ref HueShiftDegreesForGradient first
+			(see @ref ShiftHue), which roughly doubles the selectable color variants without extra gradients in the palette.
 			@b TODO: @ref FurSectionStarts are best-guess placeholders - adjust them to the real player sprite palette. */
 		/** @brief Number of recolorable fur sections */
 		static constexpr std::int32_t FurSectionCount = 4;
@@ -70,14 +70,9 @@ namespace Jazz2
 		static constexpr std::int32_t FurSectionSize = 8;
 		/** @brief Starting palette index of each fur section in the per-player palette */
 		static constexpr std::int32_t FurSectionStarts[FurSectionCount] = { 0x10, 0x18, 0x20, 0x28 };
-		/** @brief High bit of a fur section byte requesting its gradient be hue-shifted by @ref FurHueShiftDegrees;
+		/** @brief High bit of a fur section byte requesting its gradient be hue-shifted by @ref HueShiftDegreesForGradient;
 			the low 7 bits stay the gradient start index (gradient starts never exceed 0x58, so this bit is always free) */
 		static constexpr std::uint8_t FurHueShiftFlag = 0x80;
-		/** @brief Hue rotation (in degrees) applied to a gradient when @ref FurHueShiftFlag is set. The sprite palette's
-			fur gradients are warm-heavy (red/orange/yellow) with few cyan/green/blue tones; ~150° spreads those warm
-			gradients into the hues the palette lacks (rather than just their 180° complements, which would map several
-			of them back onto existing hues), maximizing the variety of selectable colors while staying harmonious. */
-		static constexpr float FurHueShiftDegrees = 150.0f;
 		/** @} */
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -145,8 +140,16 @@ namespace Jazz2
 		void BuildPlayerColorPalette(std::uint32_t furColor, std::uint32_t* outPalette) const;
 		/** @brief Rotates the hue of a packed `0xAABBGGRR` color by `degrees` in YIQ space, preserving its perceived
 			brightness (luma) and chroma - so the result keeps the original's lightness and saturation and only the
-			hue changes (alpha is kept untouched). Used to derive the 180°-hue-shifted fur variants */
+			hue changes (alpha is kept untouched). Used to derive the per-gradient hue-shifted fur variants */
 		static std::uint32_t ShiftHue(std::uint32_t color, float degrees);
+		/** @brief Returns the hue rotation (in degrees) applied to the gradient that starts at `gradientStart` in the
+			sprite palette when @ref FurHueShiftFlag is set. Each selectable gradient gets its own angle, chosen so its
+			hue-shifted twin lands in a part of the hue wheel the base gradients leave sparse (the sprite palette clusters
+			into a warm wedge ~0-73° and a cool wedge ~207-335°, leaving green/cyan/indigo underrepresented). A single
+			global angle would push ~2 of the cool gradients back onto hues that already exist; per-gradient angles spread
+			all twins evenly instead. Returns `0` for the near-neutral gradients (and any unrecognized start), which barely
+			change under any rotation and so get no twin. */
+		static float HueShiftDegreesForGradient(std::int32_t gradientStart);
 		/** @brief Builds/updates a standalone 256x1 palette texture for a player fur color into `texture` (created on
 			first use) and returns it; used for off-screen previews (e.g. the profile menu). Returns `nullptr` in
 			headless mode. In-game recoloring uses @ref AcquirePaletteOffset instead. */
@@ -239,12 +242,14 @@ namespace Jazz2
 		// Packs an indexed sprite/tile (palette index in the red/first channel) into the smallest texture format: R8
 		// when alpha is on/off only (4x less VRAM than RGBA8), or RG8 keeping the per-pixel alpha in green (sampled
 		// into .a via swizzle) when alpha is partial. `srcChannels` is the bytes-per-pixel of `pixels`: 1 (index
-		// only) or 2 (index + alpha) are pre-packed and upload directly, 4 (RGBA) is scanned and repacked.
+		// only) or 2 (index + alpha) are pre-packed and upload directly with no scan; 4 (RGBA, e.g. a user-supplied
+		// PNG using the indexed pipeline) is packed straight to RG8 in a single pass (correct but unoptimized).
 		// `paletteBaseTransparent` must be true if the sprite's palette entry 0 (its row base) is transparent - only
 		// then can on/off transparency be dropped and reproduced by the palette (false e.g. for gems, which keep RG8)
 		static std::unique_ptr<Texture> CreateIndexedTexture(const char* name, const std::uint8_t* pixels, std::int32_t width, std::int32_t height, std::int32_t srcChannels, bool paletteBaseTransparent);
 
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled, std::initializer_list<StringView> defines = {});
+		std::unique_ptr<Shader> CompileShader(const char* shaderName, const char* vertex, Shader::DefaultFragment fragment, Shader::Introspection introspection = Shader::Introspection::Enabled, std::initializer_list<StringView> defines = {});
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled, std::initializer_list<StringView> defines = {});
 		
 		void RecreateGemPalettes();

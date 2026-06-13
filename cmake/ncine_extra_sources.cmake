@@ -683,6 +683,11 @@ if(DISABLE_RESCALE_SHADERS)
 	target_compile_definitions(${NCINE_APP} PUBLIC "DISABLE_RESCALE_SHADERS")
 endif()
 
+if(TILEMAP_USE_SINGLE_DRAW)
+	message(STATUS "Building the game with tilemap layer draw call aggregation")
+	target_compile_definitions(${NCINE_APP} PUBLIC "TILEMAP_USE_SINGLE_DRAW")
+endif()
+
 if(WITH_MULTIPLAYER)
 	target_compile_definitions(${NCINE_APP} PUBLIC "WITH_MULTIPLAYER")
 	if(DEDICATED_SERVER)

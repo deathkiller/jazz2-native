@@ -7,6 +7,7 @@
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Graphics/RenderResources.h"
+#include "../../nCine/Graphics/RenderBuffersManager.h"
 
 #include <Containers/GrowableArray.h>
 
@@ -169,6 +170,10 @@ namespace Jazz2::Tiles
 		// The command cache must be reset every frame,
 		// OnDraw() is called multiple times if multiple viewports are active
 		_renderCommandsCount = 0;
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+		_layerMeshVerticesCount = 0;
+		_layerMeshCommandCount = 0;
+#endif
 	}
 
 	bool TileMap::OnDraw(RenderQueue& renderQueue)
@@ -787,6 +792,21 @@ namespace Jazz2::Tiles
 			float x3 = x1 + (TileSet::DefaultTileSize * 2) + cullingRect.W;
 			float y3 = y1 + (TileSet::DefaultTileSize * 2) + cullingRect.H;
 
+			// Standard tile layers backed by a single tileset are drawn as one mesh (one draw call for the whole
+			// visible layer). Other renderer types (tinted/solid) and multi-tileset levels fall back to one command
+			// per tile below.
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+			bool meshMode = (layer.Description.RendererType == LayerRendererType::Default && _tileSets.size() == 1);
+			SmallVector<float, 0>* layerVertices = nullptr;
+			if DEATH_LIKELY(meshMode) {
+				if (_layerMeshVerticesCount >= (std::int32_t)_layerMeshVertices.size()) {
+					_layerMeshVertices.emplace_back();
+				}
+				layerVertices = &_layerMeshVertices[_layerMeshVerticesCount++];
+				layerVertices->clear();
+			}
+#endif
+
 			std::int32_t tile_xo = -1;
 			for (float x2 = x1; x2 <= x3; x2 += TileSet::DefaultTileSize) {
 				tileX = (tileX + 1) % tileCount.X;
@@ -821,10 +841,6 @@ namespace Jazz2::Tiles
 						continue;
 					}
 
-					auto command = RentRenderCommand(layer.Description.RendererType, tileSet->IsIndexed);
-					command->SetType(RenderCommand::Type::TileMap);
-					command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 					Vector2i texSize = tileSet->TextureDiffuse->GetSize();
 					float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
 					float texBiasX = ((tileId % tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
@@ -841,6 +857,25 @@ namespace Jazz2::Tiles
 						texScaleY *= -1;
 					}
 
+					float x2r = x2, y2r = y2;
+					if (!PreferencesCache::UnalignedViewport) {
+						x2r = std::floor(x2r); y2r = std::floor(y2r);
+					}
+
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+					if DEATH_LIKELY(meshMode) {
+						// Accumulate this tile into the layer mesh; the layer tint and palette are applied once per
+						// layer in EmitLayerMesh(). The per-tile alpha rides along in the vertex color.
+						AppendTileQuad(*layerVertices, x2r, y2r, (float)TileSet::DefaultTileSize,
+							texScaleX, texBiasX, texScaleY, texBiasY, tile.Alpha / 255.0f);
+						continue;
+					}
+#endif
+
+					auto command = RentRenderCommand(layer.Description.RendererType, tileSet->IsIndexed);
+					command->SetType(RenderCommand::Type::TileMap);
+					command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 					auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
@@ -848,11 +883,6 @@ namespace Jazz2::Tiles
 					Vector4f color = layer.Description.Color;
 					color.W *= tile.Alpha / 255.0f;
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
-
-					float x2r = x2, y2r = y2;
-					if (!PreferencesCache::UnalignedViewport) {
-						x2r = std::floor(x2r); y2r = std::floor(y2r);
-					}
 
 					command->SetTransformation(Matrix4x4f::Translation(x2r, y2r, 0.0f));
 					command->SetLayer(layer.Description.Depth);
@@ -862,6 +892,13 @@ namespace Jazz2::Tiles
 					renderQueue.AddCommand(command);
 				}
 			}
+
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+			if DEATH_LIKELY(meshMode && layerVertices != nullptr && !layerVertices->empty()) {
+				// Whole visible layer is submitted as one command (or a few <=64 KB chunks for very large layers)
+				EmitLayerMesh(renderQueue, *layerVertices, _tileSets[0].Data.get(), layer.Description.Color, layer.Description.Depth);
+			}
+#endif
 		}
 	}
 
@@ -910,6 +947,95 @@ namespace Jazz2::Tiles
 
 		return command;
 	}
+
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+	void TileMap::AppendTileQuad(SmallVector<float, 0>& vertices, float x, float y, float size,
+		float texScaleX, float texBiasX, float texScaleY, float texBiasY, float alpha)
+	{
+		// UVs at the quad corners: u = px * texScaleX + texBiasX (px in {0,1}), same for v. Any flip is already
+		// folded into the scale/bias by the caller.
+		float u0 = texBiasX, v0 = texBiasY;
+		float u1 = texScaleX + texBiasX, v1 = texScaleY + texBiasY;
+		float xr = x + size, yr = y + size;
+
+		// Two triangles, 8 floats per vertex: position.xy, texcoords.uv, color.rgba (white * per-tile alpha; the
+		// layer tint is applied via the command's instance color in EmitLayerMesh)
+		std::size_t base = vertices.size();
+		vertices.resize(base + 6 * 8);
+		float* v = vertices.data() + base;
+		auto put = [&](float px, float py, float pu, float pv) {
+			*v++ = px; *v++ = py; *v++ = pu; *v++ = pv;
+			*v++ = 1.0f; *v++ = 1.0f; *v++ = 1.0f; *v++ = alpha;
+		};
+		put(x,  y,  u0, v0);
+		put(xr, y,  u1, v0);
+		put(xr, yr, u1, v1);
+		put(x,  y,  u0, v0);
+		put(xr, yr, u1, v1);
+		put(x,  yr, u0, v1);
+	}
+
+	void TileMap::EmitLayerMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, TileSet* tileSet, const Vector4f& layerColor, std::uint16_t depth)
+	{
+		constexpr std::uint32_t FloatsPerVertex = 8;
+		// Cap vertices per command to whatever the shared array buffer can actually hold, queried at runtime from the
+		// buffer manager (same source RenderBatcher uses) instead of a fixed size - so it adapts to the configured VBO
+		// size rather than assuming 64 KB. Rounded down to a multiple of 6 (one tile = two triangles = 6 vertices) so
+		// chunk boundaries fall on tile boundaries.
+		const std::uint32_t maxVertexDataSize = RenderResources::GetBuffersManager().Specs(RenderBuffersManager::BufferTypes::Array).maxSize;
+		std::uint32_t maxVerticesPerChunk = maxVertexDataSize / (FloatsPerVertex * sizeof(float));
+		maxVerticesPerChunk -= (maxVerticesPerChunk % 6);
+		bool indexed = tileSet->IsIndexed;
+
+		std::uint32_t totalVertices = (std::uint32_t)(vertices.size() / FloatsPerVertex);
+		for (std::uint32_t firstVertex = 0; firstVertex < totalVertices; firstVertex += maxVerticesPerChunk) {
+			std::uint32_t count = std::min(maxVerticesPerChunk, totalVertices - firstVertex);
+
+			if (_layerMeshCommandCount >= (std::int32_t)_layerMeshCommands.size()) {
+				auto& newCommand = _layerMeshCommands.emplace_back(std::make_unique<RenderCommand>());
+				newCommand->GetMaterial().SetBlendingEnabled(true);
+			}
+			RenderCommand* command = _layerMeshCommands[_layerMeshCommandCount++].get();
+
+			command->SetType(RenderCommand::Type::TileMap);
+			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			bool shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(
+				indexed ? PrecompiledShader::TileMapMeshPalette : PrecompiledShader::TileMapMesh));
+			if (shaderChanged) {
+				command->GetMaterial().ReserveUniformsDataMemory();
+
+				auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
+				if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
+					textureUniform->SetIntValue(0); // GL_TEXTURE0
+				}
+				// Palette shaders sample the shared palette texture on unit 1
+				auto* paletteUniform = command->GetMaterial().Uniform("uTexturePalette");
+				if (paletteUniform != nullptr) {
+					paletteUniform->SetIntValue(1); // GL_TEXTURE1
+				}
+			}
+
+			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+			// Layer tint goes in the instance color; the per-vertex color carries each tile's alpha. palOffset stays 0.
+			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(layerColor.Data());
+
+			auto& geometry = command->GetGeometry();
+			geometry.SetElementsPerVertex(FloatsPerVertex);
+			geometry.SetVertexCount(count);
+			geometry.SetHostVertexPointer(vertices.data() + firstVertex * FloatsPerVertex);
+			geometry.SetDrawParameters(GL_TRIANGLES, 0, count);
+
+			// Vertex positions are already in world space, so the model matrix is identity
+			command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
+			command->SetLayer(depth);
+			// Tiles use the default sprite palette (row 0, offset 0); binds diffuse on unit 0, palette on unit 1
+			ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *tileSet->TextureDiffuse, indexed, 0);
+
+			renderQueue.AddCommand(command);
+		}
+	}
+#endif
 
 	void TileMap::AddTileSet(StringView tileSetPath, std::uint16_t offset, std::uint16_t count, const std::uint8_t* paletteRemapping)
 	{

@@ -480,7 +480,7 @@ namespace Jazz2
 
 	Metadata* ContentResolver::RequestMetadata(StringView path, bool forceIndexed)
 	{
-		String pathNormalized = fs::ToNativeSeparators(path);
+		auto pathNormalized = fs::ToNativeSeparators(path);
 		// Indexed metadata (animations loaded with keepIndexed for runtime recoloring) is cached under a separate
 		// key - "*" can't appear in a real path - so a baked load of the same path can't shadow the indexed variant
 		// the player needs (and vice versa). Without this, whichever variant loads first wins for everyone.
@@ -1112,35 +1112,18 @@ namespace Jazz2
 				texture->SetSwizzle(SwizzleChannel::Red, SwizzleChannel::Green, SwizzleChannel::Blue, SwizzleChannel::Green);
 			}
 		} else {
-			// RGBA source (PNG / legacy .aura): scan the alpha to choose R8 vs RG8, then repack
-			bool needsAlpha = false;
+			// RGBA source that isn't pre-packed (e.g. a user-supplied PNG using the indexed pipeline). We can't pick
+			// the optimal R8/RG8 format without an extra scan, so this fallback just packs (index, alpha) into RG8 in a
+			// single pass: it's always correct (fully-opaque sprites merely waste the alpha byte) and never crashes on
+			// user content. The optimized R8/RG8 selection is reserved for pre-packed Aura assets above.
+			std::unique_ptr<std::uint8_t[]> packed = std::make_unique<std::uint8_t[]>(count * 2);
 			for (std::int32_t i = 0; i < count; i++) {
-				std::uint8_t a = pixels[(i * srcChannels) + 3];
-				if (a == 255 || (a == 0 && paletteBaseTransparent)) {
-					continue;
-				}
-				needsAlpha = true;
-				break;
+				packed[(i * 2) + 0] = pixels[(i * srcChannels) + 0];
+				packed[(i * 2) + 1] = pixels[(i * srcChannels) + 3];
 			}
-
-			if (needsAlpha) {
-				std::unique_ptr<std::uint8_t[]> packed = std::make_unique<std::uint8_t[]>(count * 2);
-				for (std::int32_t i = 0; i < count; i++) {
-					packed[(i * 2) + 0] = pixels[(i * srcChannels) + 0];
-					packed[(i * 2) + 1] = pixels[(i * srcChannels) + 3];
-				}
-				texture = std::make_unique<Texture>(name, Texture::Format::RG8, width, height);
-				texture->LoadFromTexels(packed.get(), 0, 0, width, height);
-				texture->SetSwizzle(SwizzleChannel::Red, SwizzleChannel::Green, SwizzleChannel::Blue, SwizzleChannel::Green);
-			} else {
-				// R8: fully transparent pixels collapse to index 0 (the transparent palette entry)
-				std::unique_ptr<std::uint8_t[]> packed = std::make_unique<std::uint8_t[]>(count);
-				for (std::int32_t i = 0; i < count; i++) {
-					packed[i] = (pixels[(i * srcChannels) + 3] == 0 ? 0 : pixels[(i * srcChannels) + 0]);
-				}
-				texture = std::make_unique<Texture>(name, Texture::Format::R8, width, height);
-				texture->LoadFromTexels(packed.get(), 0, 0, width, height);
-			}
+			texture = std::make_unique<Texture>(name, Texture::Format::RG8, width, height);
+			texture->LoadFromTexels(packed.get(), 0, 0, width, height);
+			texture->SetSwizzle(SwizzleChannel::Red, SwizzleChannel::Green, SwizzleChannel::Blue, SwizzleChannel::Green);
 		}
 		return texture;
 	}
@@ -1856,6 +1839,21 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedShieldLightning] = CompileShader("BatchedShieldLightning", Shaders::BatchedShieldVs, Shaders::ShieldLightningFs, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldLightning]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedShieldLightning]);
 
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+		// Tile-layer mesh shaders (used by TileMap when TILEMAP_USE_SINGLE_DRAW is enabled; cheap to keep compiled
+		// either way). Define the interleaved per-vertex format (position.xy, texcoords.xy, color.rgba = 8 floats /
+		// 32 bytes) shared by both, filled in TileMap::DrawLayer.
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMesh] = CompileShader("TileMapMesh", Shaders::TileMapVs, Shader::DefaultFragment::SPRITE);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMeshPalette] = CompileShader("TileMapMeshPalette", Shaders::TileMapVs, Shaders::PaletteRemapFs);
+		for (PrecompiledShader meshShader : { PrecompiledShader::TileMapMesh, PrecompiledShader::TileMapMeshPalette }) {
+			Shader* shader = _precompiledShaders[(std::int32_t)meshShader].get();
+			constexpr std::int32_t Stride = 8 * sizeof(float);
+			shader->SetAttribute(Material::PositionAttributeName, Stride, reinterpret_cast<void*>(0 * sizeof(float)));
+			shader->SetAttribute(Material::TexCoordsAttributeName, Stride, reinterpret_cast<void*>(2 * sizeof(float)));
+			shader->SetAttribute(Material::ColorAttributeName, Stride, reinterpret_cast<void*>(4 * sizeof(float)));
+		}
+#endif
+
 #if !defined(DISABLE_RESCALE_SHADERS)
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeHQ2x] = CompileShader("ResizeHQ2x", Shaders::ResizeHQ2xVs, Shaders::ResizeHQ2xFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Resize3xBrz] = CompileShader("Resize3xBrz", Shaders::Resize3xBrzVs, Shaders::Resize3xBrzFs);
@@ -1930,6 +1928,64 @@ namespace Jazz2
 		return shader;
 	}
 	
+	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, const char* vertex, Shader::DefaultFragment fragment, Shader::Introspection introspection, std::initializer_list<StringView> defines)
+	{
+		std::unique_ptr shader = std::make_unique<Shader>();
+		if (shader->LoadFromCache(shaderName, Shaders::Version, introspection)) {
+			return shader;
+		}
+
+		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
+		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
+		// Clamping the value as some drivers report a maximum size similar to SSBO one
+		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
+
+		// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
+		bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && introspection == Shader::Introspection::NoUniformsInBlocks);
+
+		std::int32_t batchSize;
+		if (appCfg.fixedBatchSize > 0 && introspection == Shader::Introspection::NoUniformsInBlocks) {
+			batchSize = appCfg.fixedBatchSize;
+		} else if (compileTwice) {
+			// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
+			batchSize = 1;
+		} else {
+			batchSize = GLShaderProgram::DefaultBatchSize;
+		}
+
+		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
+
+		if (compileTwice) {
+			GLShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
+			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
+			DEATH_DEBUG_ASSERT(block != nullptr);
+			if (block != nullptr) {
+				batchSize = maxUniformBlockSize / block->GetSize();
+				LOGI("Shader \"{}\" - block size: {} + {} align bytes, max batch size: {}", shaderName,
+					block->GetSize() - block->GetAlignAmount(), block->GetAlignAmount(), batchSize);
+
+				bool hasLinked = false;
+				while (batchSize > 0) {
+					hasLinked = shader->LoadFromMemory(shaderName, introspection, vertex, fragment, batchSize, arrayView(defines));
+					if (hasLinked) {
+						break;
+					}
+
+					batchSize--;
+					LOGW("Failed to compile the shader, recompiling with batch size: {}", batchSize);
+				}
+
+				if (!hasLinked) {
+					// Don't save to cache if it cannot be linked
+					return shader;
+				}
+			}
+		}
+
+		shader->SaveToCache(shaderName, Shaders::Version);
+		return shader;
+	}
+
 	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection, std::initializer_list<StringView> defines)
 	{
 		std::unique_ptr shader = std::make_unique<Shader>();
@@ -2069,7 +2125,10 @@ namespace Jazz2
 		float i = 0.596f * r - 0.274f * g - 0.322f * b;
 		float q = 0.211f * r - 0.523f * g + 0.312f * b;
 
-		float rad = degrees * 0.01745329252f; // degrees -> radians
+		// YIQ's chroma angle runs opposite to the conventional HSV hue direction, so negate `degrees` here: this makes
+		// a positive argument increase the HSV hue (e.g. red 0deg + 60 -> yellow), matching what the per-gradient
+		// angles in HueShiftDegreesForGradient assume.
+		float rad = -degrees * 0.01745329252f; // degrees -> radians
 		float cs = std::cos(rad), sn = std::sin(rad);
 		float i2 = i * cs - q * sn;
 		float q2 = i * sn + q * cs;
@@ -2089,6 +2148,22 @@ namespace Jazz2
 		return (color & 0xFF000000u) | ((std::uint32_t)bi << 16) | ((std::uint32_t)gi << 8) | (std::uint32_t)ri;
 	}
 
+	float ContentResolver::HueShiftDegreesForGradient(std::int32_t gradientStart)
+	{
+		// Per-gradient rotations. The combined base+twin hues land roughly evenly around the wheel:
+		// base {0, 35, 73, 158, 207, 287, 335} + twins below fill the green/cyan/indigo gaps.
+		switch (gradientStart) {
+			case 0x10: return 42.0f;	// chartreuse ~73°  -> green ~115°
+			case 0x18: return 200.0f;	// red ~0°          -> blue ~200°
+			case 0x20: return 104.0f;	// azure ~207°      -> magenta ~311°
+			case 0x28: return 145.0f;	// orange ~35°      -> cyan ~180°
+			case 0x30: return 65.0f;	// rose ~335°       -> gold ~40°
+			case 0x50: return 218.0f;	// spring-green ~158° -> crimson ~16°
+			case 0x58: return 168.0f;	// purple ~287°     -> lime ~95°
+			default: return 190.0f;		// neutrals (0x40, 0x48) and anything unrecognized -> ~190°
+		}
+	}
+
 	void ContentResolver::BuildPlayerColorPalette(std::uint32_t furColor, std::uint32_t* outPalette) const
 	{
 		// Start from the default sprite palette (first row of _palettes), then recolor the fur sections.
@@ -2096,7 +2171,7 @@ namespace Jazz2
 
 		// The fur color packs one byte per section (as in the original game). The low 7 bits of each non-zero byte
 		// are the starting palette index of an 8-color gradient in the sprite palette; copy those 8 colors into the
-		// section's range. If FurHueShiftFlag is set, rotate their hue by FurHueShiftDegrees first (a color variant).
+		// section's range. If FurHueShiftFlag is set, rotate their hue by the gradient's angle first (a color variant).
 		for (std::int32_t section = 0; section < FurSectionCount; section++) {
 			std::uint32_t packed = (furColor >> (section * 8)) & 0xFF;
 			std::int32_t base = (std::int32_t)(packed & ~(std::uint32_t)FurHueShiftFlag);
@@ -2106,14 +2181,15 @@ namespace Jazz2
 			}
 
 			bool hueShift = (packed & FurHueShiftFlag) != 0;
+			float hueDegrees = HueShiftDegreesForGradient(base);
 			std::int32_t dst = FurSectionStarts[section];
 			for (std::int32_t i = 0; i < FurSectionSize; i++) {
 				std::int32_t srcIdx = base + i;
 				std::int32_t dstIdx = dst + i;
 				if (srcIdx < ColorsPerPalette && dstIdx > 0 && dstIdx < ColorsPerPalette) {
 					std::uint32_t color = _palettes[srcIdx];
-					if (hueShift) {
-						color = ShiftHue(color, FurHueShiftDegrees);
+					if (hueShift && hueDegrees != 0.0f) {
+						color = ShiftHue(color, hueDegrees);
 					}
 					outPalette[dstIdx] = color;
 				}

@@ -225,6 +225,13 @@ namespace Jazz2::Resources
 		ShieldLightning,
 		BatchedShieldLightning,
 
+#if defined(TILEMAP_USE_SINGLE_DRAW)
+		// Whole-layer tile mesh: one draw call per tile layer instead of one per visible tile. Reads per-vertex
+		// position/texcoords/alpha; `TileMapMeshPalette` additionally recolors indexed tilesets via the palette texture.
+		TileMapMesh,
+		TileMapMeshPalette,
+#endif
+
 #if !defined(DISABLE_RESCALE_SHADERS)
 		ResizeHQ2x,
 		Resize3xBrz,

@@ -772,27 +772,38 @@ vec4 palette(vec2 uv) {
 	return vec4(c.rgb, c.a * src.a);
 }
 
+// A texel's real opacity comes from its palette entry's alpha (index 0 is transparent), not the raw texture alpha:
+// an R8 index texture reports .a == 1 everywhere, which would make the whole sprite read as opaque and the outline
+// would fill its entire bounding box. Resolve through the palette here too (matches palette()'s alpha).
+float alphaAt(vec2 uv) {
+	vec4 src = texture(uTexture, uv);
+	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
+	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
+	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	return texture(uTexturePalette, vec2(palX, palY)).a * src.a;
+}
+
 void main() {
 	vec2 size = vColor.xy;
 
-	float outline = texture(uTexture, vTexCoords + vec2(-size.x, 0)).a;
-	outline += texture(uTexture, vTexCoords + vec2(0, size.y)).a;
-	outline += texture(uTexture, vTexCoords + vec2(size.x, 0)).a;
-	outline += texture(uTexture, vTexCoords + vec2(0, -size.y)).a;
-	outline += texture(uTexture, vTexCoords + vec2(-size.x, size.y)).a;
-	outline += texture(uTexture, vTexCoords + vec2(size.x, size.y)).a;
-	outline += texture(uTexture, vTexCoords + vec2(-size.x, -size.y)).a;
-	outline += texture(uTexture, vTexCoords + vec2(size.x, -size.y)).a;
+	float outline = alphaAt(vTexCoords + vec2(-size.x, 0));
+	outline += alphaAt(vTexCoords + vec2(0, size.y));
+	outline += alphaAt(vTexCoords + vec2(size.x, 0));
+	outline += alphaAt(vTexCoords + vec2(0, -size.y));
+	outline += alphaAt(vTexCoords + vec2(-size.x, size.y));
+	outline += alphaAt(vTexCoords + vec2(size.x, size.y));
+	outline += alphaAt(vTexCoords + vec2(-size.x, -size.y));
+	outline += alphaAt(vTexCoords + vec2(size.x, -size.y));
 	outline = aastep(1.0, outline);
 
-	float outline2 = texture(uTexture, vTexCoords + vec2(-2.0 * size.x, 0)).a;
-	outline2 += texture(uTexture, vTexCoords + vec2(0, 2.0 * size.y)).a;
-	outline2 += texture(uTexture, vTexCoords + vec2(2.0 * size.x, 0)).a;
-	outline2 += texture(uTexture, vTexCoords + vec2(0, -2.0 * size.y)).a;
-	outline2 += texture(uTexture, vTexCoords + vec2(-2.0 * size.x, 2.0 * size.y)).a;
-	outline2 += texture(uTexture, vTexCoords + vec2(2.0 * size.x, 2.0 * size.y)).a;
-	outline2 += texture(uTexture, vTexCoords + vec2(-2.0 * size.x, -2.0 * size.y)).a;
-	outline2 += texture(uTexture, vTexCoords + vec2(2.0 * size.x, -2.0 * size.y)).a;
+	float outline2 = alphaAt(vTexCoords + vec2(-2.0 * size.x, 0));
+	outline2 += alphaAt(vTexCoords + vec2(0, 2.0 * size.y));
+	outline2 += alphaAt(vTexCoords + vec2(2.0 * size.x, 0));
+	outline2 += alphaAt(vTexCoords + vec2(0, -2.0 * size.y));
+	outline2 += alphaAt(vTexCoords + vec2(-2.0 * size.x, 2.0 * size.y));
+	outline2 += alphaAt(vTexCoords + vec2(2.0 * size.x, 2.0 * size.y));
+	outline2 += alphaAt(vTexCoords + vec2(-2.0 * size.x, -2.0 * size.y));
+	outline2 += alphaAt(vTexCoords + vec2(2.0 * size.x, -2.0 * size.y));
 	outline2 = aastep(1.0, outline2);
 
 	vec4 color = palette(vTexCoords);
@@ -902,6 +913,40 @@ void main() {
 	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
 	vec4 color = texture(uTexturePalette, vec2(palX, palY));
 	fragColor = vec4(color.rgb, color.a * src.a) * vColor;
+}
+)";
+
+	// Vertex shader for whole-layer tile meshes. Unlike the per-sprite shaders (which generate a unit quad from
+	// gl_VertexID and a per-instance texRect/spriteSize), this reads explicit per-vertex world position, atlas
+	// texcoords and color, so an entire tile layer can be drawn with a single command. The InstanceBlock is kept
+	// identical to the sprite shaders so the standard command setup (modelMatrix, color, palOffset) still applies:
+	// `color` carries the layer tint, the per-vertex `aColor` carries each tile's alpha, `palOffset` stays 0.
+	constexpr char TileMapVs[] = "#line " DEATH_LINE_STRING "\n" R"(
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+layout (std140) uniform InstanceBlock
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+	float palOffset;
+};
+
+in vec2 aPosition;
+in vec2 aTexCoords;
+in vec4 aColor;
+out vec2 vTexCoords;
+out vec4 vColor;
+out highp float vPaletteOffset;
+
+void main()
+{
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * vec4(aPosition.x, aPosition.y, 0.0, 1.0);
+	vTexCoords = aTexCoords;
+	vColor = aColor * color;
+	vPaletteOffset = palOffset;
 }
 )";
 
