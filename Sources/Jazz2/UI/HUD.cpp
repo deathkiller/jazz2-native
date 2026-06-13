@@ -744,7 +744,22 @@ namespace Jazz2::UI
 			}
 
 			DrawElement(currentWeaponAnim, -1, pos.X, pos.Y + 1.6f, ShadowLayer, Alignment::BottomRight, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
-			DrawElement(currentWeaponAnim, -1, pos.X, pos.Y, MainLayer, Alignment::BottomRight, Colorf::White);
+
+			// The Blaster icon is tinted with the player's colors (like the character icon), so recolor it to match
+			// when the player is being recolored; every other weapon has fixed colors and uses the plain (baked) icon.
+			bool drawn = false;
+			if (weapon == WeaponType::Blaster) {
+				std::int32_t paletteOffset = player->GetPaletteOffset();
+				if (paletteOffset >= 0) {
+					if (_metadataIndexed == nullptr) {
+						_metadataIndexed = ContentResolver::Get().RequestMetadata("UI/HUD"_s, true);
+					}
+					drawn = DrawElementWithPalette(currentWeaponAnim, -1, pos.X, pos.Y, MainLayer, Alignment::BottomRight, Colorf::White, (float)paletteOffset);
+				}
+			}
+			if (!drawn) {
+				DrawElement(currentWeaponAnim, -1, pos.X, pos.Y, MainLayer, Alignment::BottomRight, Colorf::White);
+			}
 		}
 	}
 

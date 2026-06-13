@@ -452,7 +452,9 @@ namespace Jazz2::UI::Menu
 #endif
 		else if (GetFurSectionIndex(item.Item.Type) >= 0) {
 			std::int32_t section = GetFurSectionIndex(item.Item.Type);
-			std::uint32_t base = (_furColor >> (section * 8)) & 0xFF;
+			std::uint32_t packed = (_furColor >> (section * 8)) & 0xFF;
+			std::uint32_t base = packed & ~(std::uint32_t)ContentResolver::FurHueShiftFlag;
+			bool hueShift = (packed & ContentResolver::FurHueShiftFlag) != 0;
 			Colorf labelColor = (isSelected
 				? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f)
 				: (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor));
@@ -460,13 +462,16 @@ namespace Jazz2::UI::Menu
 			if (base == 0) {
 				_root->DrawStringShadow(_("Default"), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10, Alignment::Center, labelColor, 0.8f);
 			} else {
-				// Preview the chosen gradient: draw its 8 sprite-palette colors as a small strip
+				// Preview the chosen gradient: draw its 8 sprite-palette colors (hue-shifted to match the variant) as a small strip
 				auto palettes = ContentResolver::Get().GetPalettes();
 				constexpr float swatchW = 10.0f;
 				float startX = centerX - (ContentResolver::FurSectionSize * swatchW) * 0.5f;
 				float alpha = (item.Item.IsReadOnly ? 0.6f : 1.0f);
 				for (std::int32_t i = 0; i < ContentResolver::FurSectionSize; i++) {
 					std::uint32_t color = palettes[(base + i) & 0xFF];
+					if (hueShift) {
+						color = ContentResolver::ShiftHue(color, ContentResolver::FurHueShiftDegrees);
+					}
 					_root->DrawSolid(startX + i * swatchW, item.Y + 22.0f, IMenuContainer::FontLayer - 10, Alignment::Left,
 						Vector2f(swatchW, 14.0f), ColorFromPacked(color | 0xFF000000u, alpha), false);
 				}
@@ -588,20 +593,32 @@ namespace Jazz2::UI::Menu
 
 	void UserProfileOptionsSection::CycleFurSection(std::int32_t section, std::int32_t direction)
 	{
+		// Build the ordered list of selectable values: Default (0) and all base gradients first, then their
+		// 180°-hue-shifted twins (high bit set) grouped at the end. Default has no twin.
+		std::uint8_t variants[arraySize(FurGradientStarts) * 2];
+		std::int32_t count = 0;
+		for (std::int32_t i = 0; i < (std::int32_t)arraySize(FurGradientStarts); i++) {
+			variants[count++] = FurGradientStarts[i];
+		}
+		for (std::int32_t i = 0; i < (std::int32_t)arraySize(FurGradientStarts); i++) {
+			if (FurGradientStarts[i] != 0x00) {
+				variants[count++] = (std::uint8_t)(FurGradientStarts[i] | ContentResolver::FurHueShiftFlag);
+			}
+		}
+
 		std::uint32_t shift = (std::uint32_t)(section * 8);
 		std::uint8_t current = (std::uint8_t)((_furColor >> shift) & 0xFF);
 
-		std::int32_t count = (std::int32_t)arraySize(FurGradientStarts);
 		std::int32_t index = 0;
 		for (std::int32_t i = 0; i < count; i++) {
-			if (FurGradientStarts[i] == current) {
+			if (variants[i] == current) {
 				index = i;
 				break;
 			}
 		}
 
 		index = (index + direction + count) % count;
-		std::uint8_t value = FurGradientStarts[index];
+		std::uint8_t value = variants[index];
 		_furColor = (_furColor & ~(0xFFu << shift)) | ((std::uint32_t)value << shift);
 		_isDirty = true;
 		_animation = 0.0f;

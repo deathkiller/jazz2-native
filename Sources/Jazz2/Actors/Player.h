@@ -322,15 +322,15 @@ namespace Jazz2::Actors
 		ActorBase* _carryingObject;
 		float _externalForceCooldown;
 		float _springCooldown;
-		// Per-player recoloring: packed 4-byte fur color (one section per byte) and the allocated row in the shared
-		// palette texture (-1 = none). The renderer samples this row via a per-instance palette offset.
+		// Per-player recoloring: packed 4-byte fur color (one section per byte) and the allocated palette offset into
+		// the shared palette texture (-1 = none). The renderer samples this palette via a per-instance offset.
 		std::uint32_t _furColor;
-		std::int32_t _paletteRow;
+		std::int32_t _paletteOffset;
 
-		// Rebuilds the recolor palette in the player's palette row and selects it on the renderer
+		// Rebuilds the recolor palette in the player's palette slot and selects it on the renderer
 		void RefreshColorPalette();
-		// Releases the player's palette row back to the shared pool (if any)
-		void ReleasePaletteRow();
+		// Releases the player's palette offset back to the shared pool (if any)
+		void ReleasePaletteOffset();
 #if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _copterSound;
 #endif

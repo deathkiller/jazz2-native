@@ -58,9 +58,11 @@ namespace Jazz2
 
 		/** @{ @name Player recolor palette sections
 
-			The player's fur color is 4 bytes (one per section, as in the original game). Each byte is the starting
-			palette index of an 8-color gradient in the sprite palette; those 8 colors are copied into the section's
-			fixed range in the per-player palette (a byte of 0 keeps the original colors for that section).
+			The player's fur color is 4 bytes (one per section, as in the original game). The low 7 bits of each byte
+			are the starting palette index of an 8-color gradient in the sprite palette; those 8 colors are copied into
+			the section's fixed range in the per-player palette (a byte of 0 keeps the original colors for that section).
+			If @ref FurHueShiftFlag is also set, the gradient's hue is rotated by @ref FurHueShiftDegrees first (see
+			@ref ShiftHue), which roughly doubles the selectable color variants without extra gradients in the palette.
 			@b TODO: @ref FurSectionStarts are best-guess placeholders - adjust them to the real player sprite palette. */
 		/** @brief Number of recolorable fur sections */
 		static constexpr std::int32_t FurSectionCount = 4;
@@ -68,6 +70,14 @@ namespace Jazz2
 		static constexpr std::int32_t FurSectionSize = 8;
 		/** @brief Starting palette index of each fur section in the per-player palette */
 		static constexpr std::int32_t FurSectionStarts[FurSectionCount] = { 0x10, 0x18, 0x20, 0x28 };
+		/** @brief High bit of a fur section byte requesting its gradient be hue-shifted by @ref FurHueShiftDegrees;
+			the low 7 bits stay the gradient start index (gradient starts never exceed 0x58, so this bit is always free) */
+		static constexpr std::uint8_t FurHueShiftFlag = 0x80;
+		/** @brief Hue rotation (in degrees) applied to a gradient when @ref FurHueShiftFlag is set. The sprite palette's
+			fur gradients are warm-heavy (red/orange/yellow) with few cyan/green/blue tones; ~150° spreads those warm
+			gradients into the hues the palette lacks (rather than just their 180° complements, which would map several
+			of them back onto existing hues), maximizing the variety of selectable colors while staying harmonious. */
+		static constexpr float FurHueShiftDegrees = 150.0f;
 		/** @} */
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -133,9 +143,13 @@ namespace Jazz2
 		/** @brief Builds a 256-color palette for a player from a packed 4-byte fur color (one section per byte, each
 			byte a gradient start in the sprite palette; 0 = original); see @ref FurSectionStarts */
 		void BuildPlayerColorPalette(std::uint32_t furColor, std::uint32_t* outPalette) const;
+		/** @brief Rotates the hue of a packed `0xAABBGGRR` color by `degrees` in YIQ space, preserving its perceived
+			brightness (luma) and chroma - so the result keeps the original's lightness and saturation and only the
+			hue changes (alpha is kept untouched). Used to derive the 180°-hue-shifted fur variants */
+		static std::uint32_t ShiftHue(std::uint32_t color, float degrees);
 		/** @brief Builds/updates a standalone 256x1 palette texture for a player fur color into `texture` (created on
 			first use) and returns it; used for off-screen previews (e.g. the profile menu). Returns `nullptr` in
-			headless mode. In-game recoloring uses @ref AcquirePaletteRow instead. */
+			headless mode. In-game recoloring uses @ref AcquirePaletteOffset instead. */
 		Texture* ApplyPlayerColorPalette(std::unique_ptr<Texture>& texture, std::uint32_t furColor);
 		/** @brief Returns the shared 256x256 palette texture (row 0 = sprite palette, rows 1-2 = gems, rows
 			@ref FirstDynamicPaletteRow+ = dynamically allocated per-player palettes), uploading any rows changed
@@ -144,14 +158,15 @@ namespace Jazz2
 		/** @brief Returns the shared palette texture; indexed sprites that must not be recolored sample row 0 (the
 			default sprite palette) by using a palette offset of 0. Returns `nullptr` in headless mode. */
 		Texture* GetDefaultPaletteTexture();
-		/** @brief Acquires a palette row for the given packed fur color, reference-counted: callers with the same fur
-			color share one row (so e.g. many corpses of the same character cost a single palette). Builds the
-			recolored palette on first use. Returns the row (>= @ref FirstDynamicPaletteRow), or -1 if none are free.
-			Release it with @ref ReleasePaletteRow when the holder disconnects/despawns. */
-		std::int32_t AcquirePaletteRow(std::uint32_t furColor);
-		/** @brief Releases one reference to a palette row previously returned by @ref AcquirePaletteRow; the row is
-			returned to the pool only when the last holder releases it */
-		void ReleasePaletteRow(std::int32_t row);
+		/** @brief Acquires a palette offset (the flat offset into the shared palette texture passed to
+			@ref ActorBase::ActorRenderer::SetPalette and the palette-aware shaders) for the given packed fur color,
+			reference-counted: callers with the same fur color share one palette (so e.g. many corpses of the same
+			character cost a single row). Builds the recolored palette on first use. Returns the offset, or -1 if none
+			are free. Release it with @ref ReleasePaletteOffset when the holder disconnects/despawns. */
+		std::int32_t AcquirePaletteOffset(std::uint32_t furColor);
+		/** @brief Releases one reference to a palette offset previously returned by @ref AcquirePaletteOffset; the
+			underlying palette is returned to the pool only when the last holder releases it */
+		void ReleasePaletteOffset(std::int32_t paletteOffset);
 
 		/** @brief Configures a manually-built sprite render command for a (possibly indexed) sprite: selects the
 			@ref PrecompiledShader::PaletteRemap shader when `indexed` (recolored at draw time via the shared palette),

@@ -38,8 +38,8 @@ namespace Jazz2::Actors::Multiplayer
 		AnimState _lastAnim;
 		bool _isAttachedLocally;
 		std::uint32_t _furColor;
-		// Allocated row in the shared palette texture for this player's recolor (-1 = none)
-		std::int32_t _paletteRow;
+		// Allocated palette offset into the shared palette texture for this player's recolor (-1 = none)
+		std::int32_t _paletteOffset;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

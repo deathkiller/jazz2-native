@@ -75,7 +75,7 @@ namespace Jazz2::Actors
 		_carryingObject(nullptr),
 		// Per-player recolor; 0 = use the original colors. The local player defaults to the user's profile color;
 		// remote players get their color from the network (see MpLevelHandler).
-		_furColor(PreferencesCache::PlayerFurColor), _paletteRow(-1),
+		_furColor(PreferencesCache::PlayerFurColor), _paletteOffset(-1),
 		_lives(0), _coins(0), _coinsCheckpoint(0), _foodEaten(0), _foodEatenCheckpoint(0), _score(0),
 		_checkpointLight(1.0f),
 		_sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
@@ -119,8 +119,8 @@ namespace Jazz2::Actors
 			_weaponSound = nullptr;
 		}
 #endif
-		// Release the shared palette row back to the pool (e.g. on disconnect/level end)
-		ReleasePaletteRow();
+		// Release the shared palette offset back to the pool (e.g. on disconnect/level end)
+		ReleasePaletteOffset();
 	}
 
 	std::uint32_t Player::GetEffectiveFurColor() const
@@ -142,7 +142,7 @@ namespace Jazz2::Actors
 
 	std::int32_t Player::GetPaletteOffset() const
 	{
-		return (_paletteRow >= 0 ? _paletteRow * ContentResolver::ColorsPerPalette : -1);
+		return _paletteOffset;
 	}
 
 	void Player::RefreshColorPalette()
@@ -163,21 +163,21 @@ namespace Jazz2::Actors
 			LOGW("Player sprites are not indexed - recoloring disabled");
 		}
 
-		// Acquire the new (shared, reference-counted) row before releasing the old one, so an unchanged fur color
-		// keeps its row instead of being freed and immediately rebuilt
-		std::int32_t newRow = (isIndexed ? resolver.AcquirePaletteRow(furColor) : -1);
-		if (_paletteRow >= 0) {
-			resolver.ReleasePaletteRow(_paletteRow);
+		// Acquire the new (shared, reference-counted) palette before releasing the old one, so an unchanged fur color
+		// keeps its slot instead of being freed and immediately rebuilt
+		std::int32_t newOffset = (isIndexed ? resolver.AcquirePaletteOffset(furColor) : -1);
+		if (_paletteOffset >= 0) {
+			resolver.ReleasePaletteOffset(_paletteOffset);
 		}
-		_paletteRow = newRow;
-		_renderer.SetPalette(_paletteRow >= 0 ? _paletteRow * ContentResolver::ColorsPerPalette : -1);
+		_paletteOffset = newOffset;
+		_renderer.SetPalette(_paletteOffset);
 	}
 
-	void Player::ReleasePaletteRow()
+	void Player::ReleasePaletteOffset()
 	{
-		if (_paletteRow >= 0) {
-			ContentResolver::Get().ReleasePaletteRow(_paletteRow);
-			_paletteRow = -1;
+		if (_paletteOffset >= 0) {
+			ContentResolver::Get().ReleasePaletteOffset(_paletteOffset);
+			_paletteOffset = -1;
 		}
 	}
 

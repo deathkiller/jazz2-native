@@ -24,6 +24,8 @@
 #	include <Environment.h>
 #endif
 
+#include <cmath>
+
 #include <Containers/StringConcatenable.h>
 #include <Containers/StringStlView.h>
 #include <IO/MemoryStream.h>
@@ -2053,26 +2055,67 @@ namespace Jazz2
 		RefreshDynamicPaletteRows();
 	}
 
+	std::uint32_t ContentResolver::ShiftHue(std::uint32_t color, float degrees)
+	{
+		// Packed color is 0xAABBGGRR
+		float r = (color & 0xFF) / 255.0f;
+		float g = ((color >> 8) & 0xFF) / 255.0f;
+		float b = ((color >> 16) & 0xFF) / 255.0f;
+
+		// Rotate the hue in YIQ space: this keeps the perceived luma (Y) and the chroma magnitude constant, so the
+		// recolored result keeps the original's brightness and saturation and only its hue changes. (Rotating in
+		// HSL/HSV instead preserves the *nominal* S/L but often looks much stronger, as those aren't perceptual.)
+		float y = 0.299f * r + 0.587f * g + 0.114f * b;
+		float i = 0.596f * r - 0.274f * g - 0.322f * b;
+		float q = 0.211f * r - 0.523f * g + 0.312f * b;
+
+		float rad = degrees * 0.01745329252f; // degrees -> radians
+		float cs = std::cos(rad), sn = std::sin(rad);
+		float i2 = i * cs - q * sn;
+		float q2 = i * sn + q * cs;
+
+		// YIQ -> RGB (inverse of the matrix above)
+		float r2 = y + 0.956f * i2 + 0.621f * q2;
+		float g2 = y - 0.272f * i2 - 0.647f * q2;
+		float b2 = y - 1.106f * i2 + 1.703f * q2;
+
+		std::int32_t ri = (std::int32_t)(r2 * 255.0f + 0.5f);
+		std::int32_t gi = (std::int32_t)(g2 * 255.0f + 0.5f);
+		std::int32_t bi = (std::int32_t)(b2 * 255.0f + 0.5f);
+		ri = (ri < 0 ? 0 : (ri > 255 ? 255 : ri));
+		gi = (gi < 0 ? 0 : (gi > 255 ? 255 : gi));
+		bi = (bi < 0 ? 0 : (bi > 255 ? 255 : bi));
+
+		return (color & 0xFF000000u) | ((std::uint32_t)bi << 16) | ((std::uint32_t)gi << 8) | (std::uint32_t)ri;
+	}
+
 	void ContentResolver::BuildPlayerColorPalette(std::uint32_t furColor, std::uint32_t* outPalette) const
 	{
 		// Start from the default sprite palette (first row of _palettes), then recolor the fur sections.
 		std::memcpy(outPalette, _palettes, ColorsPerPalette * sizeof(std::uint32_t));
 
-		// The fur color packs one byte per section (as in the original game). Each non-zero byte is the starting
-		// palette index of an 8-color gradient in the sprite palette; copy those 8 colors into the section's range.
+		// The fur color packs one byte per section (as in the original game). The low 7 bits of each non-zero byte
+		// are the starting palette index of an 8-color gradient in the sprite palette; copy those 8 colors into the
+		// section's range. If FurHueShiftFlag is set, rotate their hue by FurHueShiftDegrees first (a color variant).
 		for (std::int32_t section = 0; section < FurSectionCount; section++) {
-			std::uint32_t base = (furColor >> (section * 8)) & 0xFF;
+			std::uint32_t packed = (furColor >> (section * 8)) & 0xFF;
+			std::int32_t base = (std::int32_t)(packed & ~(std::uint32_t)FurHueShiftFlag);
 			if (base == 0) {
-				// Keep the original colors for this section
+				// Keep the original colors for this section (the hue-shift flag on a 0 index is a no-op)
 				continue;
 			}
 
+			bool hueShift = (packed & FurHueShiftFlag) != 0;
 			std::int32_t dst = FurSectionStarts[section];
 			for (std::int32_t i = 0; i < FurSectionSize; i++) {
-				std::int32_t srcIdx = (std::int32_t)base + i;
+				std::int32_t srcIdx = base + i;
 				std::int32_t dstIdx = dst + i;
 				if (srcIdx < ColorsPerPalette && dstIdx > 0 && dstIdx < ColorsPerPalette) {
-					outPalette[dstIdx] = _palettes[srcIdx];
+					std::uint32_t color = _palettes[srcIdx];
+					if (hueShift) {
+						color = ShiftHue(color, FurHueShiftDegrees);
+					}
+					outPalette[dstIdx] = color;
 				}
 			}
 		}
@@ -2149,7 +2192,7 @@ namespace Jazz2
 		}
 	}
 
-	std::int32_t ContentResolver::AcquirePaletteRow(std::uint32_t furColor)
+	std::int32_t ContentResolver::AcquirePaletteOffset(std::uint32_t furColor)
 	{
 		// Reuse the row already holding this fur color (shared, reference-counted) while noting the first free row
 		std::int32_t freeRow = -1;
@@ -2160,7 +2203,7 @@ namespace Jazz2
 				}
 			} else if (_paletteRowColor[row] == furColor) {
 				_paletteRowRefCount[row]++;
-				return row;
+				return row * ColorsPerPalette;
 			}
 		}
 
@@ -2173,11 +2216,14 @@ namespace Jazz2
 		_paletteRowColor[freeRow] = furColor;
 		BuildPlayerColorPalette(furColor, _palettes + freeRow * ColorsPerPalette);
 		MarkPaletteDirty(freeRow, freeRow);
-		return freeRow;
+		return freeRow * ColorsPerPalette;
 	}
 
-	void ContentResolver::ReleasePaletteRow(std::int32_t row)
+	void ContentResolver::ReleasePaletteOffset(std::int32_t paletteOffset)
 	{
+		// The public API deals in flat palette offsets; map back to the texture row that backs it (a negative offset,
+		// i.e. "no palette", maps to row 0 and is rejected by the bounds check below)
+		std::int32_t row = paletteOffset / ColorsPerPalette;
 		if (row >= FirstDynamicPaletteRow && row < PaletteCount && _paletteRowRefCount[row] > 0) {
 			_paletteRowRefCount[row]--;
 			// When the count hits 0 the row is free for reuse; its contents are overwritten on the next acquire

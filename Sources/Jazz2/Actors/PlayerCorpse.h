@@ -17,7 +17,7 @@ namespace Jazz2::Actors
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 
 	private:
-		// Allocated row in the shared palette texture for the corpse recolor (-1 = none)
-		std::int32_t _paletteRow;
+		// Allocated palette offset into the shared palette texture for the corpse recolor (-1 = none)
+		std::int32_t _paletteOffset;
 	};
 }

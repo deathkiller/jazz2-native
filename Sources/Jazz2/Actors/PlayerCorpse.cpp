@@ -5,15 +5,15 @@
 namespace Jazz2::Actors
 {
 	PlayerCorpse::PlayerCorpse()
-		: _paletteRow(-1)
+		: _paletteOffset(-1)
 	{
 	}
 
 	PlayerCorpse::~PlayerCorpse()
 	{
-		if (_paletteRow >= 0) {
-			ContentResolver::Get().ReleasePaletteRow(_paletteRow);
-			_paletteRow = -1;
+		if (_paletteOffset >= 0) {
+			ContentResolver::Get().ReleasePaletteOffset(_paletteOffset);
+			_paletteOffset = -1;
 		}
 	}
 
@@ -46,10 +46,10 @@ namespace Jazz2::Actors
 		SetAnimation((AnimState)536870912);
 
 		if (recolor) {
-			// Share a reference-counted palette row with the player and any other corpses of the same color
-			_paletteRow = ContentResolver::Get().AcquirePaletteRow(furColor);
-			if (_paletteRow >= 0) {
-				_renderer.SetPalette(_paletteRow * ContentResolver::ColorsPerPalette);
+			// Share a reference-counted palette with the player and any other corpses of the same color
+			_paletteOffset = ContentResolver::Get().AcquirePaletteOffset(furColor);
+			if (_paletteOffset >= 0) {
+				_renderer.SetPalette(_paletteOffset);
 			}
 		}
 
