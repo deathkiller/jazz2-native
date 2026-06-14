@@ -5,15 +5,19 @@
 
 namespace nCine
 {
-	/// Audio stream player
+	/**
+		@brief Plays back an @ref AudioStream decoded on the fly
+		
+		Suitable for long sounds such as music. Owns the @ref AudioStream it plays and forwards
+		most queries to it.
+	*/
 	class AudioStreamPlayer : public IAudioPlayer
 	{
 		DEATH_RUNTIME_OBJECT(IAudioPlayer);
 
 	public:
-		/// Default constructor
 		AudioStreamPlayer();
-		/// A constructor creating a player from a file
+		/** @brief Creates a player and loads the stream from the specified file */
 		explicit AudioStreamPlayer(StringView filename);
 		~AudioStreamPlayer() override;
 
@@ -22,6 +26,7 @@ namespace nCine
 		AudioStreamPlayer(AudioStreamPlayer&&) = default;
 		AudioStreamPlayer& operator=(AudioStreamPlayer&&) = default;
 
+		/** @brief Loads the stream from the specified file */
 		bool loadFromFile(const char* filename);
 
 		inline std::uint32_t bufferId() const override {
@@ -49,9 +54,11 @@ namespace nCine
 			return audioStream_.bufferSize();
 		}
 
+		/** @brief Returns the number of samples held by a single streaming buffer */
 		inline std::int32_t numStreamSamples() const {
 			return audioStream_.numStreamSamples();
 		}
+		/** @brief Returns the size of a single streaming buffer in bytes */
 		inline std::int32_t streamBufferSize() const {
 			return audioStream_.streamBufferSize();
 		}
@@ -61,9 +68,9 @@ namespace nCine
 		void stop() override;
 		void setLooping(bool value) override;
 
-		/// Updates the player state and the stream buffer queue
 		void updateState() override;
 
+		/** @brief Returns the static object type of this class */
 		inline static ObjectType sType() {
 			return ObjectType::AudioStreamPlayer;
 		}

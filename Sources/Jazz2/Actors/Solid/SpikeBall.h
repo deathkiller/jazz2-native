@@ -5,11 +5,11 @@
 namespace Jazz2::Actors::Solid
 {
 	/**
-	 * @brief Spike ball
-	 *
-	 * A hazardous spiked ball hanging from a chain that swings or circles back and forth, hurting the player
-	 * on contact. It is invulnerable and acts as a moving environmental hazard to be avoided.
-	 */
+		@brief Spike ball
+		
+		A hazardous spiked ball hanging from a chain that swings or circles back and forth, hurting the player
+		on contact. It is invulnerable and acts as a moving environmental hazard to be avoided.
+	*/
 	class SpikeBall : public Enemies::EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(Enemies::EnemyBase);

@@ -30,6 +30,11 @@ namespace Jazz2::Multiplayer
 {
 	/**
 		@brief Level handler of an online multiplayer game session
+		
+		Subclass of @ref LevelHandler that drives a networked match on top of a @ref NetworkManager. On the
+		server it owns the authoritative game state, spawns and remotes actors to clients, and processes
+		incoming packets and commands; on the client it applies state updates and forwards local input. It
+		also manages the game mode, round flow, asset validation/streaming and the in-game lobby.
 
 		@experimental
 	*/

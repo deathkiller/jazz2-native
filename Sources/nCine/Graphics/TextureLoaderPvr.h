@@ -6,7 +6,9 @@
 
 namespace nCine
 {
-	/// PVR texture loader
+	/**
+		@brief Texture loader for the PowerVR (`.pvr`) format
+	*/
 	class TextureLoaderPvr : public ITextureLoader
 	{
 	public:
@@ -15,7 +17,7 @@ namespace nCine
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
-		/// Header for the PVR3 format
+		/** @brief Header of a PVR3 file */
 		struct Pvr3Header
 		{
 			std::uint32_t version;
@@ -74,9 +76,9 @@ namespace nCine
 		static const std::uint64_t FMT_L_8 = 0x000000080000006cULL;
 		static const std::uint64_t FMT_A_8 = 0x0000000800000061ULL;
 
-		/// Reads the PVR3 header and fills the corresponding structure
+		/** @brief Reads the PVR3 header and fills the corresponding structure */
 		bool readHeader(Pvr3Header& header);
-		/// Parses the PVR3 header to determine its format
+		/** @brief Parses the PVR3 header to determine the texture format */
 		bool parseFormat(const Pvr3Header& header);
 	};
 

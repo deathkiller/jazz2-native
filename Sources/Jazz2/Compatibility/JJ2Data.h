@@ -14,7 +14,13 @@ using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
-	/** @brief Parses original `.j2d` data files */
+	/**
+		@brief Parses original `.j2d` data files
+		
+		Opens an original game data archive (`.j2d`), exposing its embedded items, and either extracts
+		them verbatim or converts the recognized ones (such as the SFX list and menu images) into the
+		engine's `.pak` format.
+	*/
 	class JJ2Data
 	{
 	public:

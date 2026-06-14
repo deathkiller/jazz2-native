@@ -5,7 +5,12 @@ namespace nCine
 	class AppConfiguration;
 	class Viewport;
 
-	/** @brief Interface for handling nCine application events */
+	/**
+		@brief Interface for handling nCine application lifecycle and frame events
+		
+		User code derives from this interface and overrides the callbacks of interest. The instance is
+		created by the @ref CreateAppEventHandlerDelegate passed to @ref MainApplication::Run().
+	*/
 	class IAppEventHandler
 	{
 	public:

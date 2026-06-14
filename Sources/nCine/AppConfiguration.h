@@ -9,7 +9,12 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/** @brief Stores initialization settings for an nCine application */
+	/**
+		@brief Initialization settings for an nCine application
+		
+		Populated in @ref IAppEventHandler::OnPreInitialize() to configure the window, renderer and
+		enabled subsystems before the engine starts up.
+	*/
 	class AppConfiguration
 	{
 		friend class MainApplication;

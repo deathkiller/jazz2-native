@@ -6,11 +6,11 @@
 namespace Jazz2::Actors::Environment
 {
 	/**
-	 * @brief End of level sign
-	 *
-	 * The level-exit sign post. When the player reaches and touches it, the level is completed
-	 * and the game proceeds to the next stage according to the configured exit type.
-	 */
+		@brief End of level sign
+		
+		The level-exit sign post. When the player reaches and touches it, the level is completed
+		and the game proceeds to the next stage according to the configured exit type.
+	*/
 	class EndOfLevel : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

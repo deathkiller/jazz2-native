@@ -8,7 +8,13 @@ using namespace Jazz2::Multiplayer;
 
 namespace Jazz2::Actors::Multiplayer
 {
-	/** @brief Player on the server in online session */
+	/**
+		@brief Player on the server in online session
+		
+		Server-side base for a player simulated on the host, adding server-authoritative behavior on top of @ref
+		MpPlayer. It handles damage, lives and morphing as the authority, and player-vs-player collisions (keeping
+		overlapping players apart and applying bump impulses).
+	*/
 	class PlayerOnServer : public MpPlayer
 	{
 		DEATH_RUNTIME_OBJECT(MpPlayer);

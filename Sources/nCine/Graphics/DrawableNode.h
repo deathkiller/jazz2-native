@@ -9,7 +9,14 @@ namespace nCine
 	class RenderCommand;
 	class RenderQueue;
 
-	/// Object that can be drawn through the render queue
+	/**
+		@brief Base class for scene nodes that can be drawn through the render queue
+		
+		Extends @ref SceneNode with everything needed to issue a draw: a node area (width and height), an
+		anchor point for its transform, blending state and a @ref RenderCommand. On @ref OnDraw the node
+		updates its render command and submits it to the render queue. Concrete drawables (sprites, particles)
+		derive from this class.
+	*/
 	class DrawableNode : public SceneNode
 	{
 		friend class ShaderState;
@@ -27,17 +34,21 @@ namespace nCine
 
 		/** @} */
 
-		/// Presets for blending factors
+		/**
+		 * @brief Presets for source and destination blending factors
+		 */
 		enum class BlendingPreset
 		{
-			DISABLED,					///< uses `GL_ONE` and `GL_ZERO`
-			ALPHA,						///< uses `GL_SRC_ALPHA` and `GL_ONE_MINUS_SRC_ALPHA`
-			PREMULTIPLIED_ALPHA,		///< uses `GL_ONE` and `GL_ONE_MINUS_SRC_ALPHA`
-			ADDITIVE,					///< uses `GL_SRC_ALPHA` and `GL_ONE`
-			MULTIPLY					///< uses `GL_DST_COLOR` and `GL_ZERO`
+			DISABLED,					/**< Uses `GL_ONE` and `GL_ZERO` */
+			ALPHA,						/**< Uses `GL_SRC_ALPHA` and `GL_ONE_MINUS_SRC_ALPHA` */
+			PREMULTIPLIED_ALPHA,		/**< Uses `GL_ONE` and `GL_ONE_MINUS_SRC_ALPHA` */
+			ADDITIVE,					/**< Uses `GL_SRC_ALPHA` and `GL_ONE` */
+			MULTIPLY					/**< Uses `GL_DST_COLOR` and `GL_ZERO` */
 		};
 
-		/// OpenGL blending factors
+		/**
+		 * @brief OpenGL blending factors
+		 */
 		enum class BlendingFactor
 		{
 			ZERO,
@@ -57,13 +68,13 @@ namespace nCine
 			SRC_ALPHA_SATURATE,
 		};
 
-		/// Constructor for a drawable node with a parent and a specified relative position
+		/** @brief Creates a node as a child of @p parent at the relative position (@p xx, @p yy) */
 		DrawableNode(SceneNode* parent, float xx, float yy);
-		/// Constructor for a drawable node with a parent and a specified relative position as a vector
+		/** @brief Creates a node as a child of @p parent at the relative position @p position */
 		DrawableNode(SceneNode* parent, Vector2f position);
-		/// Constructor for a drawable node with a parent and positioned in the relative origin
+		/** @brief Creates a node as a child of @p parent, positioned at the relative origin */
 		explicit DrawableNode(SceneNode* parent);
-		/// Constructor for a drawable node with no parent and positioned in the origin
+		/** @brief Creates a node with no parent, positioned at the origin */
 		DrawableNode();
 		~DrawableNode() override;
 
@@ -71,95 +82,94 @@ namespace nCine
 		DrawableNode(DrawableNode&&);
 		DrawableNode& operator=(DrawableNode&&);
 
-		/// Updates the draw command and adds it to the queue
 		bool OnDraw(RenderQueue& renderQueue) override;
 
-		/// Returns the width of the node area
+		/** @brief Returns the width of the node area */
 		inline virtual float width() const {
 			return width_ * scaleFactor_.X;
 		}
-		/// Returns the height of the node area
+		/** @brief Returns the height of the node area */
 		inline virtual float height() const {
 			return height_ * scaleFactor_.Y;
 		}
-		/// Returns the size of the node area
+		/** @brief Returns the size of the node area */
 		inline Vector2f size() const {
 			return Vector2f(width(), height());
 		}
 
-		/// Returns the absolute width of the node area
+		/** @brief Returns the absolute width of the node area */
 		inline virtual float absWidth() const {
 			return width_ * absScaleFactor_.X;
 		}
-		/// Returns the absolute height of the node area
+		/** @brief Returns the absolute height of the node area */
 		inline virtual float absHeight() const {
 			return height_ * absScaleFactor_.Y;
 		}
-		/// Returns the absolute size of the node area
+		/** @brief Returns the absolute size of the node area */
 		inline Vector2f absSize() const {
 			return Vector2f(absWidth(), absHeight());
 		}
 
-		/// Gets the transformation anchor point
+		/** @brief Returns the transformation anchor point */
 		inline Vector2f anchorPoint() const {
 			return (anchorPoint_ / size()) + 0.5f;
 		}
-		/// Sets the transformation anchor point
+		/** @brief Sets the transformation anchor point */
 		void setAnchorPoint(float xx, float yy);
-		/// Sets the transformation anchor point with a `Vector2f`
+		/** @brief Sets the transformation anchor point from a `Vector2f` */
 		inline void setAnchorPoint(Vector2f point) {
 			setAnchorPoint(point.X, point.Y);
 		}
 
-		/// Returns true if the node renders with blending enabled
+		/** @brief Returns whether the node renders with blending enabled */
 		bool isBlendingEnabled() const;
-		/// Sets the blending state for node rendering
+		/** @brief Sets the blending state for node rendering */
 		void setBlendingEnabled(bool blendingEnabled);
 
-		/// Returns the source blending factor
+		/** @brief Returns the source blending factor */
 		BlendingFactor srcBlendingFactor() const;
-		/// Returns the destination blending factor
+		/** @brief Returns the destination blending factor */
 		BlendingFactor destBlendingFactor() const;
 
-		/// Sets a blending preset for source and destination blending factors
+		/** @brief Sets source and destination blending factors from a preset */
 		void setBlendingPreset(BlendingPreset blendingPreset);
-		/// Sets a specific source and destination blending factors
+		/** @brief Sets specific source and destination blending factors */
 		void setBlendingFactors(BlendingFactor srcBlendingFactor, BlendingFactor destBlendingFactor);
 
-		/// Returns the last frame in which any of the viewports have rendered this node (node was not culled)
+		/** @brief Returns the last frame in which any viewport rendered this node (i.e. it was not culled) */
 		inline std::uint32_t lastFrameRendered() const {
 			return lastFrameRendered_;
 		}
-		/// Returns the axis-aligned bounding box of the node area in the last frame
+		/** @brief Returns the axis-aligned bounding box of the node area in the last frame */
 		inline Rectf aabb() const {
 			return aabb_;
 		}
 
 	protected:
-		/// Node width in pixel
+		/** @brief Node width in pixels */
 		float width_;
-		/// Node height in pixel
+		/** @brief Node height in pixels */
 		float height_;
 
-		/// The render command class associated with this node
+		/** @brief The render command associated with this node */
 		RenderCommand renderCommand_;
 
-		/// The last frame any viewports rendered this node
+		/** @brief The last frame in which any viewport rendered this node */
 		std::uint32_t lastFrameRendered_;
-		/// Axis-aligned bounding box of the node area
+		/** @brief Axis-aligned bounding box of the node area */
 		Rectf aabb_;
-		/// Calculates updated values for the AABB
+		/** @brief Recalculates the axis-aligned bounding box */
 		virtual void updateAabb();
-		/// Called by each viewport update method to update a node culling state
+		/** @brief Called by each viewport update to refresh this node's culling state */
 		void updateCulling();
 
-		/// Protected copy constructor used to clone objects
+		/** @brief Protected copy constructor used to clone objects */
 		DrawableNode(const DrawableNode& other);
 
-		/// Performs the required tasks upon a change to the shader
+		/** @brief Performs the required tasks upon a change to the shader */
 		virtual void shaderHasChanged() = 0;
 
-		/// Updates the render command
+		/** @brief Updates the render command before the node is drawn */
 		virtual void updateRenderCommand() = 0;
 	};
 

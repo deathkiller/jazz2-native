@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Bosses
 {
 	/**
-	 * @brief Turtle (boss)
-	 *
-	 * The Tuf Turtle boss, an oversized turtle that walks back and forth toward the nearest player. It
-	 * periodically stops to swing a tethered spiked mace that arcs out at the player and returns. It is
-	 * defeated by depleting its health, after which its shell is flung loose.
-	 */
+		@brief Turtle (boss)
+		
+		The Tuf Turtle boss, an oversized turtle that walks back and forth toward the nearest player. It
+		periodically stops to swing a tethered spiked mace that arcs out at the player and returns. It is
+		defeated by depleting its health, after which its shell is flung loose.
+	*/
 	class TurtleBoss : public BossBase
 	{
 		DEATH_RUNTIME_OBJECT(BossBase);

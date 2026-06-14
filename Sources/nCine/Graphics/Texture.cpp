@@ -78,26 +78,26 @@ namespace nCine
 	{
 	}
 
-	/*! \note It specifies a pixel format and it is intended to be used with `loadFromTexels()` */
+	/** @note Specifies a pixel format and is intended to be used with `LoadFromTexels()` */
 	Texture::Texture(const char* name, Format format, std::int32_t mipMapCount, std::int32_t width, std::int32_t height)
 		: Texture()
 	{
 		Init(name, format, mipMapCount, width, height);
 	}
 
-	/*! \note It specifies a pixel format and it is intended to be used with `loadFromTexels()` */
+	/** @note Specifies a pixel format and is intended to be used with `LoadFromTexels()` */
 	Texture::Texture(const char* name, Format format, std::int32_t mipMapCount, Vector2i size)
 		: Texture(name, format, mipMapCount, size.X, size.Y)
 	{
 	}
 
-	/*! \note It specifies a pixel format and it is intended to be used with `loadFromTexels()` */
+	/** @note Specifies a pixel format and is intended to be used with `LoadFromTexels()` */
 	Texture::Texture(const char* name, Format format, std::int32_t width, std::int32_t height)
 		: Texture(name, format, 1, width, height)
 	{
 	}
 
-	/*! \note It specifies a pixel format and it is intended to be used with `loadFromTexels()` */
+	/** @note Specifies a pixel format and is intended to be used with `LoadFromTexels()` */
 	Texture::Texture(const char* name, Format format, Vector2i size)
 		: Texture(name, format, 1, size.X, size.Y)
 	{
@@ -191,25 +191,25 @@ namespace nCine
 		return true;
 	}
 
-	/*! \note It loads uncompressed pixel data from memory using the `Format` specified in the constructor */
+	/** @note Loads uncompressed pixel data from memory using the `Format` specified in the constructor */
 	bool Texture::LoadFromTexels(const std::uint8_t* bufferPtr)
 	{
 		return LoadFromTexels(bufferPtr, 0, 0, 0, width_, height_);
 	}
 
-	/*! \note It loads uncompressed pixel data from memory using the `Format` specified in the constructor */
+	/** @note Loads uncompressed pixel data from memory using the `Format` specified in the constructor */
 	bool Texture::LoadFromTexels(const std::uint8_t* bufferPtr, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
 		return LoadFromTexels(bufferPtr, 0, x, y, width, height);
 	}
 
-	/*! \note It loads uncompressed pixel data from memory using the `Format` specified in the constructor */
+	/** @note Loads uncompressed pixel data from memory using the `Format` specified in the constructor */
 	bool Texture::LoadFromTexels(const std::uint8_t* bufferPtr, Recti region)
 	{
 		return LoadFromTexels(bufferPtr, 0, region.X, region.Y, region.W, region.H);
 	}
 
-	/*! \note It loads uncompressed pixel data from memory using the `Format` specified in the constructor */
+	/** @note Loads uncompressed pixel data from memory using the `Format` specified in the constructor */
 	bool Texture::LoadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
 		const std::uint8_t* data = bufferPtr;
@@ -236,7 +236,7 @@ namespace nCine
 		return (error == GL_NO_ERROR);
 	}
 
-	/*! It loads uncompressed pixel data from memory using the `Format` specified in the constructor */
+	/** @note Loads uncompressed pixel data from memory using the `Format` specified in the constructor */
 	bool Texture::LoadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, Recti region)
 	{
 		return LoadFromTexels(bufferPtr, level, region.X, region.Y, region.W, region.H);
@@ -373,8 +373,10 @@ namespace nCine
 		glTexture_->SetObjectLabel(label);
 	}
 
-	/*! The pointer is an opaque handle to be used only by ImGui.
-	 *  It is considered immutable from an user point of view and thus retrievable by a constant method. */
+	/**
+	 * @note The pointer is an opaque handle to be used only by ImGui. It is considered immutable
+	 * from the user's point of view and thus retrievable by a constant method.
+	 */
 	void* Texture::GetGuiTexId() const
 	{
 		return const_cast<void*>(reinterpret_cast<const void*>(glTexture_.get()));

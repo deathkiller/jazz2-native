@@ -12,12 +12,12 @@ namespace Jazz2::Actors::Solid
 	};
 
 	/**
-	 * @brief Trigger crate
-	 *
-	 * A wooden crate that, when destroyed by a shot, TNT or a charged player, sets, clears or toggles a
-	 * numbered level trigger. Triggers in turn switch trigger-zone tiles on or off, opening or blocking paths
-	 * elsewhere in the level.
-	 */
+		@brief Trigger crate
+		
+		A wooden crate that, when destroyed by a shot, TNT or a charged player, sets, clears or toggles a
+		numbered level trigger. Triggers in turn switch trigger-zone tiles on or off, opening or blocking paths
+		elsewhere in the level.
+	*/
 	class TriggerCrate : public SolidObjectBase
 	{
 		DEATH_RUNTIME_OBJECT(SolidObjectBase);

@@ -4,18 +4,24 @@
 
 namespace nCine
 {
-	/// System clock
+	/**
+		@brief High-resolution monotonic system clock
+		
+		Wraps the highest-resolution monotonic timer available on the platform. The single instance
+		is accessed through @ref clock().
+	*/
 	class Clock
 	{
 	public:
+		/** @brief Returns the current counter value */
 		inline std::uint64_t now() const {
 			return counter();
 		}
 
-		/// Returns current value of the counter
+		/** @brief Returns the current counter value */
 		std::uint64_t counter() const;
 
-		/// Returns the counter frequency in counts per second
+		/** @brief Returns the counter frequency in counts per second */
 		inline std::uint32_t frequency() const {
 			return _frequency;
 		}
@@ -33,7 +39,7 @@ namespace nCine
 		friend Clock& clock();
 	};
 
-	/// Returns system clock instance
+	/** @brief Returns the shared system clock instance */
 	extern Clock& clock();
 
 }

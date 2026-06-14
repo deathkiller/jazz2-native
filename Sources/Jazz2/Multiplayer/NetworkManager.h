@@ -17,6 +17,10 @@ namespace Jazz2::Multiplayer
 {
 	/**
 		@brief Manages game-specific network connections
+		
+		Extends @ref NetworkManagerBase with the game session layer: holds the @ref ServerConfiguration, owns
+		the per-peer @ref PeerDescriptor map (including retained descriptors for reconnecting players), drives
+		LAN @ref ServerDiscovery, and overrides the connect/disconnect hooks to enforce server policy.
 
 		@experimental
 	*/

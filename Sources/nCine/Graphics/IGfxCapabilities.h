@@ -4,11 +4,17 @@
 
 namespace nCine
 {
-	/// Interface to query runtime OpenGL device capabilities
+	/**
+		@brief Interface to query runtime OpenGL device capabilities
+		
+		Abstracts access to the version numbers, information strings, integer limits and extension availability
+		flags of the active OpenGL context, so renderer code can adapt to the device without issuing driver
+		queries directly. @ref GfxCapabilities is the concrete implementation.
+	*/
 	class IGfxCapabilities
 	{
 	public:
-		/// OpenGL version components
+		/** @brief OpenGL version component */
 		enum class GLVersion
 		{
 			Major,
@@ -16,7 +22,7 @@ namespace nCine
 			Release
 		};
 
-		/// OpenGL information strings
+		/** @brief OpenGL information strings */
 		struct GLInfoStrings
 		{
 			const char* vendor = nullptr;
@@ -25,7 +31,7 @@ namespace nCine
 			const char* glslVersion = nullptr;
 		};
 
-		/// OpenGL queryable runtime integer values
+		/** @brief OpenGL queryable runtime integer value */
 		enum class GLIntValues
 		{
 			MAX_TEXTURE_SIZE = 0,
@@ -43,7 +49,7 @@ namespace nCine
 			Count
 		};
 
-		/// OpenGL queryable runtime integer array values
+		/** @brief OpenGL queryable runtime integer array value */
 		enum class GLArrayIntValues
 		{
 			PROGRAM_BINARY_FORMATS = 0,
@@ -51,7 +57,7 @@ namespace nCine
 			Count
 		};
 
-		/// OpenGL queryable extensions
+		/** @brief OpenGL queryable extension */
 		enum class GLExtensions
 		{
 			KHR_DEBUG = 0,
@@ -72,22 +78,27 @@ namespace nCine
 
 		virtual ~IGfxCapabilities() = 0;
 
-		/// Returns the OpenGL version numbers
+		/** @brief Returns the specified OpenGL version component */
 		virtual std::int32_t GetGLVersion(GLVersion version) const = 0;
-		/// Returns the OpenGL information strings structure
+		/** @brief Returns the OpenGL information strings */
 		virtual const GLInfoStrings& GetGLInfoStrings() const = 0;
-		/// Returns the value of a runtime OpenGL integer value
+		/** @brief Returns a runtime OpenGL integer value */
 		virtual std::int32_t GetValue(GLIntValues valueName) const = 0;
-		/// Returns the value of a runtime OpenGL integer value from an array
+		/** @brief Returns an element of a runtime OpenGL integer array value */
 		virtual std::int32_t GetArrayValue(GLArrayIntValues arrayValueName, std::uint32_t index) const = 0;
-		/// Returns true if the specified OpenGL extension is available
+		/** @brief Returns `true` if the specified OpenGL extension is available */
 		virtual bool HasExtension(GLExtensions extensionName) const = 0;
 	};
 
 	inline IGfxCapabilities::~IGfxCapabilities() {}
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-	/// A fake graphics capabilities class that reports no available capabilities
+	/**
+		@brief Fake graphics capabilities that reports no available capabilities
+		
+		Null implementation of @ref IGfxCapabilities used when no OpenGL context is present (for example in
+		headless or server builds); every query returns zero, an empty set of strings or no extension support.
+	*/
 	class NullGfxCapabilities : public IGfxCapabilities
 	{
 	public:

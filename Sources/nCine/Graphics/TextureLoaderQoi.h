@@ -8,7 +8,9 @@
 
 namespace nCine
 {
-	/// QOI texture loader
+	/**
+		@brief Texture loader for the Quite OK Image (`.qoi`) format
+	*/
 	class TextureLoaderQoi : public ITextureLoader
 	{
 	public:

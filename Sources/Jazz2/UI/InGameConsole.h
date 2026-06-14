@@ -24,7 +24,12 @@ namespace Jazz2::UI
 		Fatal			/**< Fatal */
 	};
 
-	/** @brief In-game console */
+	/**
+		@brief In-game console
+		
+		Developer/cheat console overlaid on the level. It shows a scrollable log of messages classified by
+		@ref MessageLevel and accepts typed commands with a navigable input history.
+	*/
 	class InGameConsole : public Canvas
 	{
 	public:

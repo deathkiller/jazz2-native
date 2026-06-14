@@ -23,41 +23,47 @@ namespace nCine
 	class Camera;
 	class Viewport;
 
-	/// Creates and handles application common OpenGL rendering resources
+	/**
+		@brief Creates and holds the OpenGL rendering resources shared by the whole application
+		
+		Owns the global singletons of the render pipeline (binary shader cache, buffers manager,
+		VAO pool, render command pool, batcher), the built-in default shader programs and the
+		default camera. Lifetime is driven by @ref Application; it cannot be instantiated.
+	*/
 	class RenderResources
 	{
-		/// The `Application` class needs to create and dispose the resources
+		/** @brief The `Application` class needs to create and dispose the resources */
 		friend class Application;
-		/// The `Viewport` class needs to set the current camera
+		/** @brief The `Viewport` class needs to set the current camera */
 		friend class Viewport;
-		/// The `ScreenViewport` class needs to change the projection of the default camera
+		/** @brief The `ScreenViewport` class needs to change the projection of the default camera */
 		friend class ScreenViewport;
 
 	public:
 		RenderResources() = delete;
 		~RenderResources() = delete;
 
-		/// Vertex format structure for vertices with positions only
+		/** @brief Vertex format for vertices with positions only */
 		struct VertexFormatPos2
 		{
 			GLfloat position[2];
 		};
 
-		/// Vertex format structure for vertices with positions and texture coordinates
+		/** @brief Vertex format for vertices with positions and texture coordinates */
 		struct VertexFormatPos2Tex2
 		{
 			GLfloat position[2];
 			GLfloat texcoords[2];
 		};
 
-		/// Vertex format structure for vertices with positions and draw indices
+		/** @brief Vertex format for vertices with positions and draw indices */
 		struct VertexFormatPos2Index
 		{
 			GLfloat position[2];
 			std::int32_t drawindex;
 		};
 
-		/// Vertex format structure for vertices with positions, texture coordinates and draw indices
+		/** @brief Vertex format for vertices with positions, texture coordinates and draw indices */
 		struct VertexFormatPos2Tex2Index
 		{
 			GLfloat position[2];
@@ -65,7 +71,7 @@ namespace nCine
 			std::int32_t drawindex;
 		};
 
-		/// Camera uniform data structure
+		/** @brief Per-shader camera uniform data and the frames its matrices were last updated */
 		struct CameraUniformData
 		{
 			CameraUniformData()

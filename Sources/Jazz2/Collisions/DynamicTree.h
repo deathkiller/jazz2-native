@@ -49,7 +49,7 @@ namespace Jazz2::Collisions
 
 	/**
 		@brief Node in the dynamic tree
-
+		
 		The client does not interact with this directly.
 	*/
 	struct TreeNode
@@ -88,7 +88,7 @@ namespace Jazz2::Collisions
 
 	/**
 		@brief Dynamic AABB tree broad-phase
-
+		
 		A dynamic tree arranges data in a binary tree to accelerate
 		queries such as volume queries and ray casts. Leafs are proxies
 		with an AABB. In the tree we expand the proxy AABB by @ref AabbExtension

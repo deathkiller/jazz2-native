@@ -12,7 +12,13 @@ namespace nCine
 	{
 		using Death::Containers::NoInitT;
 
-		/// Two-component vector
+		/**
+			@brief Two-component vector
+			
+			Stores a pair of values @ref X and @ref Y. Provides component-wise arithmetic,
+			scalar arithmetic, length and normalization, dot product, linear interpolation
+			and construction from an angle and a length.
+		*/
 		template<class T>
 		class Vector2
 		{
@@ -73,7 +79,9 @@ namespace nCine
 			Vector2 Normalized() const;
 			Vector2& Normalize();
 
-			/// Converts elements of the vector to a specified type
+			/**
+			 * @brief Converts the components to a different element type
+			 */
 			template<class S>
 			Vector2<S> As() {
 				return Vector2<S>(static_cast<S>(X), static_cast<S>(Y));
@@ -85,19 +93,19 @@ namespace nCine
 
 			/** @{ @name Constants */
 
-			/// A vector with all zero elements
+			/** @brief Vector with all components set to zero */
 			static const Vector2 Zero;
-			/// A unit vector on the X axis
+			/** @brief Unit vector along the X axis */
 			static const Vector2 XAxis;
-			/// A unit vector on the Y axis
+			/** @brief Unit vector along the Y axis */
 			static const Vector2 YAxis;
 
 			/** @} */
 		};
 
-		/// Two-component vector of floats
+		/** @brief Two-component vector of floats */
 		using Vector2f = Vector2<float>;
-		/// Two-component vector of 32-bit integers
+		/** @brief Two-component vector of 32-bit integers */
 		using Vector2i = Vector2<int>;
 
 		template<class T>

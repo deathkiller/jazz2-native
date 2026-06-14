@@ -5,11 +5,11 @@
 namespace Jazz2::Actors::Collectibles
 {
 	/**
-	 * @brief Invincible carrot (collectible)
-	 *
-	 * The invincibility carrot from JJ2. Collecting it makes the player invulnerable to damage for a fixed
-	 * duration and awards points.
-	 */
+		@brief Invincible carrot (collectible)
+		
+		The invincibility carrot from JJ2. Collecting it makes the player invulnerable to damage for a fixed
+		duration and awards points.
+	*/
 	class CarrotInvincibleCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

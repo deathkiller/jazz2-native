@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Bosses
 {
 	/**
-	 * @brief Robot (boss)
-	 *
-	 * A giant robot, piloted by Devan in his remote-control battle. It descends by helicopter rotor, then
-	 * runs back and forth chasing the player and firing bouncing spike balls in bursts. It is defeated by
-	 * depleting its health, shedding sprite debris as it takes damage.
-	 */
+		@brief Robot (boss)
+		
+		A giant robot, piloted by Devan in his remote-control battle. It descends by helicopter rotor, then
+		runs back and forth chasing the player and firing bouncing spike balls in bursts. It is defeated by
+		depleting its health, shedding sprite debris as it takes damage.
+	*/
 	class Robot : public Enemies::EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(Enemies::EnemyBase);

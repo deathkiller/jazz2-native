@@ -9,68 +9,75 @@
 
 namespace nCine
 {
-	/// Audio loader interface
+	/**
+		@brief Interface for an audio loader
+		
+		Opens an audio file, reads its header and exposes the format metadata. Use one of the
+		`create*()` factory methods to obtain the loader matching a given file, then call
+		@ref createReader() to decode the actual samples.
+	*/
 	class IAudioLoader
 	{
 	public:
 		virtual ~IAudioLoader() { }
 
-		/// Returns true if the audio has been correctly loaded
+		/** @brief Returns `true` if the audio file was loaded successfully */
 		inline bool hasLoaded() const {
 			return hasLoaded_;
 		}
 
-		/// Returns number of bytes per sample
+		/** @brief Returns the number of bytes per sample */
 		inline std::int32_t bytesPerSample() const {
 			return bytesPerSample_;
 		}
-		/// Returns number of channels
+		/** @brief Returns the number of channels */
 		inline std::int32_t numChannels() const {
 			return numChannels_;
 		}
-		/// Returns samples frequency
+		/** @brief Returns the sample frequency */
 		inline std::int32_t frequency() const {
 			return frequency_;
 		}
 
-		/// Returns number of samples
+		/** @brief Returns the total number of samples */
 		inline std::int32_t numSamples() const {
 			return numSamples_;
 		}
-		/// Returns the duration in seconds
+		/** @brief Returns the duration in seconds */
 		inline float duration() const {
 			return duration_;
 		}
 
-		/// Returns the decoded buffer size in bytes
+		/** @brief Returns the decoded buffer size in bytes */
 		inline std::int32_t bufferSize() const {
 			return numSamples_ * numChannels_ * bytesPerSample_;
 		}
 
-		/// Returns the proper audio loader according to the file extension
+		/** @brief Creates the loader matching the extension of the specified file */
 		static std::unique_ptr<IAudioLoader> createFromFile(const Death::Containers::StringView path);
+		/** @brief Creates the loader matching the specified file for an already opened stream */
 		static std::unique_ptr<IAudioLoader> createFromStream(std::unique_ptr<Death::IO::Stream> fileHandle, Death::Containers::StringView path);
 
-		/// Returns the proper audio reader according to the loader instance
+		/** @brief Creates the audio reader matching this loader */
 		virtual std::unique_ptr<IAudioReader> createReader() = 0;
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		/// A flag indicating if the loading process has been successful
+		/** @brief Whether the loading process was successful */
 		bool hasLoaded_;
-		/// Audio file handle
+		/** @brief Audio file handle */
 		std::unique_ptr<Death::IO::Stream> fileHandle_;
 
-		/// Number of bytes per sample
+		/** @brief Number of bytes per sample */
 		std::int32_t bytesPerSample_;
-		/// Number of channels
+		/** @brief Number of channels */
 		std::int32_t numChannels_;
-		/// Samples frequency
+		/** @brief Sample frequency */
 		std::int32_t frequency_;
 
-		/// Number of samples
+		/** @brief Number of samples */
 		std::int32_t numSamples_;
-		/// Duration in seconds
+		/** @brief Duration in seconds */
 		float duration_;
 #endif
 
@@ -80,7 +87,7 @@ namespace nCine
 	};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-	/// A class created when the audio file extension is not recognized
+	// Fallback loader used when the audio file extension is not recognized
 	class InvalidAudioLoader : public IAudioLoader
 	{
 	public:

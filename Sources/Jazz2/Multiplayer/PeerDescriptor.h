@@ -46,7 +46,13 @@ namespace Jazz2::Multiplayer
 
 	DEATH_ENUM_FLAGS(SpectateMode);
 
-	/** @brief Peer descriptor */
+	/**
+	 * @brief Peer descriptor
+	 *
+	 * Holds all per-peer session state tracked by @ref NetworkManager and @ref MpLevelHandler: identity and
+	 * authentication, chosen player type/team/name, the spawned player actor and its per-round statistics,
+	 * and the carry-over state retained so a reconnecting player can resume.
+	 */
 	struct PeerDescriptor
 	{
 		/** @brief Remote peer if the peer is connected remotely */

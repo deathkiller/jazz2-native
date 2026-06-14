@@ -6,7 +6,13 @@
 
 namespace nCine
 {
-	/// Gathers statistics about the rendering subsystem
+	/**
+		@brief Gathers statistics about the rendering subsystem
+		
+		Accumulates per-frame counters for render commands, buffers, textures, custom VBOs/IBOs,
+		culled nodes, the VAO pool and the command pool. The various rendering classes are friends
+		so they can feed it data; only compiled when profiling is enabled.
+	*/
 	class RenderStatistics
 	{
 		friend class ScreenViewport;
@@ -19,6 +25,7 @@ namespace nCine
 		friend class RenderCommandPool;
 
 	public:
+		/** @brief Counters for render commands of a single type or aggregated across all types */
 		class Commands
 		{
 		public:
@@ -44,6 +51,7 @@ namespace nCine
 			friend RenderStatistics;
 		};
 
+		/** @brief Counters for the managed buffers of a single type */
 		class Buffers
 		{
 		public:
@@ -65,6 +73,7 @@ namespace nCine
 			friend RenderStatistics;
 		};
 
+		/** @brief Counters for textures and their total video memory usage */
 		class Textures
 		{
 		public:
@@ -84,6 +93,7 @@ namespace nCine
 			friend RenderStatistics;
 		};
 
+		/** @brief Counters for custom VBOs or IBOs and their total memory usage */
 		class CustomBuffers
 		{
 		public:
@@ -103,6 +113,7 @@ namespace nCine
 			friend RenderStatistics;
 		};
 
+		/** @brief Counters for the VAO pool size, capacity, reuses and bindings */
 		class VaoPool
 		{
 		public:
@@ -126,6 +137,7 @@ namespace nCine
 			friend RenderStatistics;
 		};
 
+		/** @brief Counters for the render command pool used/free sizes and retrievals */
 		class CommandPool
 		{
 		public:
@@ -147,46 +159,46 @@ namespace nCine
 			friend RenderStatistics;
 		};
 
-		/// Returns the aggregated command statistics for all types
+		/** @brief Returns the command statistics aggregated across all types */
 		static inline const Commands& GetAllCommands() {
 			return allCommands_;
 		}
-		/// Returns the commnad statistics for the specified type
+		/** @brief Returns the command statistics for the specified type */
 		static inline const Commands& GetCommands(RenderCommand::Type type) {
 			return typedCommands_[(std::int32_t)type];
 		}
 
-		/// Returns the buffer statistics for the specified type
+		/** @brief Returns the buffer statistics for the specified type */
 		static inline const Buffers& GetBuffers(RenderBuffersManager::BufferTypes type) {
 			return typedBuffers_[(std::int32_t)type];
 		}
 
-		/// Returns aggregated texture statistics
+		/** @brief Returns the aggregated texture statistics */
 		static inline const Textures& GetTextures() {
 			return textures_;
 		}
 
-		/// Returns aggregated custom VBOs statistics
+		/** @brief Returns the aggregated custom VBOs statistics */
 		static inline const CustomBuffers& GetCustomVBOs() {
 			return customVbos_;
 		}
 
-		/// Returns aggregated custom IBOs statistics
+		/** @brief Returns the aggregated custom IBOs statistics */
 		static inline const CustomBuffers& GetCustomIBOs() {
 			return customIbos_;
 		}
 
-		/// Returns the number of `DrawableNodes` culled because outside of the screen
+		/** @brief Returns the number of `DrawableNode` objects culled for being off-screen */
 		static inline std::uint32_t GetCulled() {
 			return culledNodes_[(index_ + 1) % 2];
 		}
 
-		/// Returns statistics about the VAO pool
+		/** @brief Returns the statistics about the VAO pool */
 		static inline const VaoPool& GetVaoPool() {
 			return vaoPool_;
 		}
 
-		/// Returns statistics about the render command pools
+		/** @brief Returns the statistics about the render command pool */
 		static inline const CommandPool& GetCommandPool() {
 			return commandPool_;
 		}

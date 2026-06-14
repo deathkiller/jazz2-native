@@ -8,7 +8,12 @@
 
 namespace nCine::Backends
 {
-	/// The class that handles GLFW input for ImGui
+	/**
+		@brief Handles GLFW input for ImGui
+		
+		Bridges GLFW window, keyboard, mouse and gamepad events into the ImGui input state,
+		optionally installing GLFW callbacks and supporting multi-viewport platform windows.
+	*/
 	class ImGuiGlfwInput
 	{
 	public:

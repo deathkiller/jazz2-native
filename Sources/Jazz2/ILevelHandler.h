@@ -36,7 +36,13 @@ namespace Jazz2
 		class Player;
 	}
 
-	/** @brief Base interface of a level handler */
+	/**
+		@brief Base interface of a level handler
+		
+		Abstracts the running level for the rest of the engine, exposing the tile map, event map, event spawner and
+		difficulty, together with queries about the session (local, server, pausable, reforged). Implemented by
+		@ref LevelHandler for local play and by the multiplayer variants.
+	*/
 	class ILevelHandler
 	{
 		DEATH_RUNTIME_OBJECT();

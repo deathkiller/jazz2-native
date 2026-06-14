@@ -6,7 +6,12 @@ using namespace nCine;
 
 namespace Jazz2
 {
-	/** @brief Allows objects to emit light */
+	/**
+		@brief Allows objects to emit light
+		
+		Per-object light description (position, intensity, brightness and near/far radii) collected each frame and fed
+		to the lighting renderer to illuminate the scene.
+	*/
 	struct LightEmitter
 	{
 		/** @brief Light position */

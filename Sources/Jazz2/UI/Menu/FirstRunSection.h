@@ -17,7 +17,11 @@ namespace Jazz2::UI::Menu
 	};
 #endif
 
-	/** @brief First run menu section */
+	/**
+		@brief First run menu section
+		
+		Shown on the first launch to let the player choose between the Legacy and Reforged gameplay presets.
+	*/
 	class FirstRunSection : public ScrollableMenuSection<FirstRunItem>
 	{
 	public:

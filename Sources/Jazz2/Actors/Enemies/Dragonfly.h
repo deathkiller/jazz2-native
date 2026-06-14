@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Enemies
 {
 	/**
-	 * @brief Dragonfly
-	 *
-	 * Flying insect that hovers and drifts erratically, then periodically buzzes and darts in a
-	 * straight line toward a nearby player before braking to a stop, staying above the water surface.
-	 * Defeated by a single hit.
-	 */
+		@brief Dragonfly
+		
+		Flying insect that hovers and drifts erratically, then periodically buzzes and darts in a
+		straight line toward a nearby player before braking to a stop, staying above the water surface.
+		Defeated by a single hit.
+	*/
 	class Dragonfly : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

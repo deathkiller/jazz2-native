@@ -63,7 +63,13 @@ namespace Jazz2
 		class InGameMenu;
 	}
 
-	/** @brief Level handler of a local game session */
+	/**
+		@brief Level handler of a local game session
+		
+		Concrete state handler that runs a single-player or local-multiplayer level: it loads the level descriptor,
+		owns the tile map, event map and collision broad-phase, spawns and updates actors and players, drives
+		rendering, lighting and audio, and serializes resumable state.
+	*/
 	class LevelHandler : public ILevelHandler, public IStateHandler, public IResumable, public Tiles::ITileMapOwner
 	{
 		DEATH_RUNTIME_OBJECT(ILevelHandler, IStateHandler);

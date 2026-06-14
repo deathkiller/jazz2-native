@@ -7,6 +7,11 @@
 
 namespace Jazz2::UI::Menu
 {
+	/**
+		@brief Create server options menu section
+		
+		Lets the player configure the character and game mode for a hosted multiplayer server before starting it.
+	*/
 	class CreateServerOptionsSection : public MenuSection
 	{
 	public:

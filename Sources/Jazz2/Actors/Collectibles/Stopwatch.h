@@ -5,11 +5,11 @@
 namespace Jazz2::Actors::Collectibles
 {
 	/**
-	 * @brief Stopwatch
-	 *
-	 * The stopwatch power-up from JJ2, which manipulates the level timer. Collecting it extends the
-	 * player's active power-up (shield) time.
-	 */
+		@brief Stopwatch
+		
+		The stopwatch power-up from JJ2, which manipulates the level timer. Collecting it extends the
+		player's active power-up (shield) time.
+	*/
 	class Stopwatch : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

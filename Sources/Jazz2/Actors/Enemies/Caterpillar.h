@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Enemies
 {
 	/**
-	 * @brief Caterpillar
-	 *
-	 * Stationary, invulnerable creature that inhales and then exhales clouds of smoke; the smoke
-	 * drifts upward and leaves the player dizzy on contact. It cannot be killed, only briefly
-	 * disoriented by shooting it, which interrupts its attack.
-	 */
+		@brief Caterpillar
+		
+		Stationary, invulnerable creature that inhales and then exhales clouds of smoke; the smoke
+		drifts upward and leaves the player dizzy on contact. It cannot be killed, only briefly
+		disoriented by shooting it, which interrupts its attack.
+	*/
 	class Caterpillar : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

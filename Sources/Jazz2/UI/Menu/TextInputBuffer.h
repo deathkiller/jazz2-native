@@ -9,7 +9,12 @@ using namespace Death::Containers;
 
 namespace Jazz2::UI::Menu
 {
-	/** @brief Helper class that manages text editing state for text input fields */
+	/**
+		@brief Helper class that manages text editing state for text input fields
+		
+		Holds the current text, cursor position, and caret blink animation for an editable field, and translates
+		keyboard and text input events into edits. Reused by menu sections that need text entry.
+	*/
 	class TextInputBuffer
 	{
 	public:

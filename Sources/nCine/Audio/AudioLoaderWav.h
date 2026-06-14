@@ -4,7 +4,9 @@
 
 namespace nCine
 {
-	/// WAVE audio loader
+	/**
+		@brief Audio loader for the WAVE (`.wav`) format
+	*/
 	class AudioLoaderWav : public IAudioLoader
 	{
 	public:
@@ -18,7 +20,7 @@ namespace nCine
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
-		/// Header for the RIFF WAVE format
+		// Header of a RIFF WAVE file
 		struct WavHeader
 		{
 			char chunkId[4];
@@ -42,6 +44,7 @@ namespace nCine
 	public:
 		/** @{ @name Constants */
 
+		/** @brief Size of the RIFF WAVE header in bytes */
 		static const std::uint32_t HeaderSize = sizeof(WavHeader);
 
 		/** @} */

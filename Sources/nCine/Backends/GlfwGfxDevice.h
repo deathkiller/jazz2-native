@@ -28,7 +28,12 @@
 
 namespace nCine::Backends
 {
-	/// The GLFW based graphics device
+	/**
+		@brief GLFW-based graphics device
+		
+		Creates and manages the application window and OpenGL context using the cross-platform
+		GLFW library, and handles resolution, video modes and monitor enumeration.
+	*/
 	class GlfwGfxDevice : public IGfxDevice
 	{
 		friend class GlfwInputManager;
@@ -70,29 +75,32 @@ namespace nCine::Backends
 		void updateMonitors() override;
 
 	private:
-		/// GLFW3 window handle
+		/** @brief GLFW3 window handle */
 		static GLFWwindow* windowHandle_;
 
-		/// GLFW3 monitor pointers
-		/*! \note Used to retrieve the index in the monitors array */
+		/**
+		 * @brief GLFW3 monitor pointers
+		 *
+		 * @note Used to retrieve the index in the monitors array
+		 */
 		static GLFWmonitor* monitorPointers_[MaxMonitors];
 
-		/// Monitor index to use in full screen
+		/** @brief Monitor index to use in full screen */
 		static int fsMonitorIndex_;
-		/// Video mode index to use in full screen
+		/** @brief Video mode index to use in full screen */
 		static int fsModeIndex_;
 
 		int lastWindowWidth_;
 		int lastWindowHeight_;
 
-		/// Deleted copy constructor
+		/** @brief Deleted copy constructor */
 		GlfwGfxDevice(const GlfwGfxDevice&) = delete;
-		/// Deleted assignment operator
+		/** @brief Deleted assignment operator */
 		GlfwGfxDevice& operator=(const GlfwGfxDevice&) = delete;
 
-		/// Initilizes the video subsystem (GLFW)
+		/** @brief Initializes the video subsystem (GLFW) */
 		void initGraphics();
-		/// Initilizes the OpenGL graphic context
+		/** @brief Initializes the OpenGL graphics context */
 		void initDevice(int windowPosX, int windowPosY, bool isResizable, bool enableWindowScaling);
 
 		void updateMonitorScaling(unsigned int monitorIndex);
@@ -100,12 +108,12 @@ namespace nCine::Backends
 		int retrieveMonitorIndex(GLFWmonitor* monitor) const;
 		void convertVideoModeInfo(const GLFWvidmode& glfwVideoMode, IGfxDevice::VideoMode& videoMode) const;
 
-		/// Returns the window handle used by GLFW3
+		/** @brief Returns the window handle used by GLFW3 */
 		static GLFWwindow* windowHandle() {
 			return windowHandle_;
 		}
 
-		/// Callback for `glfwSetErrorCallback()`
+		/** @brief Callback for `glfwSetErrorCallback()` */
 		static void errorCallback(int error, const char* description);
 	};
 

@@ -5,7 +5,7 @@
 
 namespace nCine
 {
-	/*! \param parent The parent can be `nullptr` */
+	/** @param parent The parent can be `nullptr` */
 	SceneNode::SceneNode(SceneNode* parent, float x, float y)
 		: Object(ObjectType::SceneNode),
 		updateEnabled_(true), drawEnabled_(true), parent_(nullptr),
@@ -20,13 +20,13 @@ namespace nCine
 		setParent(parent);
 	}
 
-	/*! \param parent The parent can be `nullptr` */
+	/** @param parent The parent can be `nullptr` */
 	SceneNode::SceneNode(SceneNode* parent, Vector2f position)
 		: SceneNode(parent, position.X, position.Y)
 	{
 	}
 
-	/*! \param parent The parent can be `nullptr` */
+	/** @param parent The parent can be `nullptr` */
 	SceneNode::SceneNode(SceneNode* parent)
 		: SceneNode(parent, 0.0f, 0.0f)
 	{
@@ -90,7 +90,7 @@ namespace nCine
 		return *this;
 	}
 
-	/*! \return True if the parent has been set */
+	/** @return `true` if the parent has been set */
 	bool SceneNode::setParent(SceneNode* parentNode)
 	{
 		// Can't set yourself or your parent as parent
@@ -113,7 +113,7 @@ namespace nCine
 		return true;
 	}
 
-	/*! \return True if the node has been added */
+	/** @return `true` if the node has been added */
 	bool SceneNode::addChildNode(SceneNode* childNode)
 	{
 		// Can't add yourself or one of your children as a child
@@ -131,7 +131,7 @@ namespace nCine
 		return true;
 	}
 
-	/*! \return True if the node has been removed */
+	/** @return `true` if the node has been removed */
 	bool SceneNode::removeChildNode(SceneNode* childNode)
 	{
 		// Can't remove yourself or a `nullptr` from your children
@@ -154,7 +154,7 @@ namespace nCine
 		return hasBeenRemoved;
 	}
 
-	/*! \return True if the node has been removed */
+	/** @return `true` if the node has been removed */
 	bool SceneNode::removeChildNodeAt(std::uint32_t index)
 	{
 		// Can't remove at an index past the number of children
@@ -172,7 +172,7 @@ namespace nCine
 		return true;
 	}
 
-	/*! \return True if there were at least one node to remove */
+	/** @return `true` if there was at least one node to remove */
 	bool SceneNode::removeAllChildrenNodes()
 	{
 		if (children_.empty()) {
@@ -189,7 +189,7 @@ namespace nCine
 		return true;
 	}
 
-	/*!	\return True if the node has been unlinked */
+	/** @return `true` if the node has been unlinked */
 	bool SceneNode::unlinkChildNode(SceneNode* childNode)
 	{
 		// Can't unlink yourself or a `nullptr` from your children
@@ -214,7 +214,7 @@ namespace nCine
 		return hasBeenUnlinked;
 	}
 
-	/*! \return If the node has no parent then 0 is returned */
+	/** @return The order index among the siblings, or 0 if the node has no parent */
 	std::uint32_t SceneNode::childOrderIndex() const
 	{
 		std::uint32_t index = 0;
@@ -226,7 +226,7 @@ namespace nCine
 		return index;
 	}
 
-	/*!	\return True if the two nodes have been swapped  */
+	/** @return `true` if the two nodes have been swapped */
 	bool SceneNode::swapChildrenNodes(std::uint32_t firstIndex, std::uint32_t secondIndex)
 	{
 		// Check if there are at least two children and if the indices are different and valid
@@ -241,7 +241,7 @@ namespace nCine
 		return true;
 	}
 
-	/*!	\return True if the node has been brought one position forward */
+	/** @return `true` if the node has been moved one position forward */
 	bool SceneNode::swapNodeForward()
 	{
 		if (parent_ == nullptr) {
@@ -251,7 +251,7 @@ namespace nCine
 		return parent_->swapChildrenNodes(childOrderIndex_, childOrderIndex_ + 1);
 	}
 
-	/*!	\return True if the node has been brought one position back */
+	/** @return `true` if the node has been moved one position back */
 	bool SceneNode::swapNodeBack()
 	{
 		if (parent_ == nullptr || childOrderIndex_ == 0) {
@@ -318,7 +318,7 @@ namespace nCine
 		setParent(other.parent_);
 	}
 
-	/*! \note It is faster than calling `setParent()` on the first child and `removeChildNode()` on the second one */
+	/** @note Faster than calling `setParent()` on the first child and `removeChildNode()` on the second one */
 	void SceneNode::swapChildPointer(SceneNode* first, SceneNode* second)
 	{
 		DEATH_ASSERT(first->parent_ == second->parent_);

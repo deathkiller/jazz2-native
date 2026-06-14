@@ -13,7 +13,13 @@ using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
-	/** @brief Parses original `.j2e`/`.j2pe` episode files */
+	/**
+		@brief Parses original `.j2e`/`.j2pe` episode files
+		
+		Reads an original episode definition, including its ordering, level chain and title/preview
+		images, and writes the converted episode metadata and images to the target path. Level and
+		episode names can be remapped through the supplied conversion callbacks.
+	*/
 	class JJ2Episode
 	{
 	public:

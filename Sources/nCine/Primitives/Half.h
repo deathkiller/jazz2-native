@@ -34,7 +34,7 @@ namespace nCine
 
 		/**
 			@brief Half-precision float literal
-
+			
 			Represents a floating-point value in the `binary16` [format](https://en.wikipedia.org/wiki/Half-precision_floating-point_format).
 
 			The sole purpose of this type is to make creation, conversion and visualization
@@ -126,7 +126,7 @@ namespace nCine
 
 			/**
 				@brief Pack 32-bit float value into 16-bit half-float representation
-
+				
 				See [Wikipedia](https://en.wikipedia.org/wiki/Half-precision_floating-point_format)
 				for more information about half floats. NaNs are converted to NaNs and
 				infinities to infinities, though their exact bit pattern is not preserved. Note
@@ -139,7 +139,7 @@ namespace nCine
 
 			/**
 				@brief Unpack 16-bit half-float value into 32-bit float representation
-
+				
 				See [Wikipedia](https://en.wikipedia.org/wiki/Half-precision_floating-point_format)
 				for more information about half floats. NaNs are converted to NaNs and
 				infinities to infinities, though their exact bit pattern is not preserved.
@@ -164,7 +164,7 @@ namespace nCine
 
 			/** @relatesalso nCine::Primitives::Half
 				@brief Half-float literal
-
+				
 				@code{.cpp}
 				using namespace nCine::Primitives::Literals;
 				Half a = 3.1415_h;

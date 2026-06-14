@@ -11,7 +11,13 @@ using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
-	/** @brief Parses original `.j2s` localization files */
+	/**
+		@brief Parses original `.j2s` localization files
+		
+		Reads an original localization file containing the shared and per-level text strings, recodes
+		them from the original encoding, and writes the converted localization to the target path. Level
+		names can be remapped through the supplied conversion callback.
+	*/
 	class JJ2Strings
 	{
 	public:

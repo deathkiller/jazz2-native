@@ -16,7 +16,10 @@ using namespace Death::IO;
 namespace nCine
 {
 	/**
-		@brief Provides support for internationalization and translations
+		@brief Provides internationalization and translation support
+		
+		Loads a gettext MO catalog and looks up singular and plural translations. The primary instance is
+		accessed through @ref Get() and the @ref _() family of free functions.
 	*/
 	class I18n
 	{
@@ -40,7 +43,7 @@ namespace nCine
 
 		/** @brief Looks up raw translation by @p msgid */
 		StringView LookupTranslation(const char* msgid);
-		/** @brief Looks up plural variant of translation returned by @ref LookupTranslation()  */
+		/** @brief Looks up the plural variant for count @p n of a translation returned by @ref LookupTranslation() */
 		StringView LookupPlural(std::int32_t n, StringView translation);
 
 		/** @brief Returns description of currently loaded catalog */
@@ -72,9 +75,10 @@ namespace nCine
 		static const ExpressionToken* ExtractPluralExpression(StringView nullEntry);
 	};
 
-	/** @relates I18n
-		@brief Translates text in singular form using primary translation catalog
-	*/
+	/**
+	 * @relates I18n
+	 * @brief Translates text in singular form using the primary translation catalog
+	 */
 	inline StringView _(const char* text)
 	{
 		I18n& i18n = I18n::Get();
@@ -82,9 +86,10 @@ namespace nCine
 		return (result ? result : StringView(text));
 	}
 	
-	/** @relates I18n
-		@brief Translates text in singular form using primary translation catalog and specified @p context
-	*/
+	/**
+	 * @relates I18n
+	 * @brief Translates text in singular form using the primary translation catalog and the specified @p context
+	 */
 	inline StringView _x(StringView context, const char* text)
 	{
 		I18n& i18n = I18n::Get();
@@ -93,9 +98,10 @@ namespace nCine
 		return (result ? result : textView);
 	}
 
-	/** @relates I18n
-		@brief Translates text in singular or plural form using primary translation catalog
-	*/
+	/**
+	 * @relates I18n
+	 * @brief Translates text in singular or plural form (selected by count @p n) using the primary translation catalog
+	 */
 	inline StringView _n(const char* singular, const char* plural, std::int32_t n)
 	{
 		I18n& i18n = I18n::Get();
@@ -105,9 +111,10 @@ namespace nCine
 		return (n == 1 ? singular : plural);
 	}
 
-	/** @relates I18n
-		@brief Translates text in singular or plural form using primary translation catalog and specified @p context
-	*/
+	/**
+	 * @relates I18n
+	 * @brief Translates text in singular or plural form (selected by count @p n) using the primary translation catalog and the specified @p context
+	 */
 	inline StringView _nx(StringView context, const char* singular, const char* plural, std::int32_t n)
 	{
 		I18n& i18n = I18n::Get();
@@ -118,9 +125,10 @@ namespace nCine
 		return (n == 1 ? singular : plural);
 	}
 
-	/** @relates I18n
-		@brief Translates formatted text in singular form using primary translation catalog
-	*/
+	/**
+	 * @relates I18n
+	 * @brief Translates and formats text in singular form using the primary translation catalog
+	 */
 	template<class ...Args>
 	String _f(const char* text, const Args&... args)
 	{
@@ -129,9 +137,10 @@ namespace nCine
 		return format(translated ? translated.data() : text, args...);
 	}
 
-	/** @relates I18n
-		@brief Translates formatted text in singular or plural form using primary translation catalog
-	*/
+	/**
+	 * @relates I18n
+	 * @brief Translates and formats text in singular or plural form (selected by count @p n) using the primary translation catalog
+	 */
 	template<class ...Args>
 	String _fn(const char* textSingular, const char* textPlural, std::int32_t n, const Args&... args)
 	{

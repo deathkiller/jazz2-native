@@ -17,7 +17,13 @@ using namespace Death::IO;
 
 namespace Jazz2::UI
 {
-	/** @brief Handler that plays a cinematic video */
+	/**
+		@brief Handler that plays a cinematic video
+		
+		State handler that plays the original intro and ending cutscenes, decompressing the custom frame format,
+		applying the palette, and synchronizing the accompanying music and sound effects. Playback can be skipped,
+		after which the supplied callback is invoked.
+	*/
 	class Cinematics : public IStateHandler
 	{
 	public:

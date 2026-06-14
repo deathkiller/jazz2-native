@@ -6,7 +6,13 @@
 
 namespace Jazz2::Actors::Multiplayer
 {
-	/** @brief Remote player in online session */
+	/**
+		@brief Remote player in online session
+		
+		A connected client's player as simulated and shadowed on the server. Its input (pressed keys) and state are
+		received from the owning client and applied here, with the reported position buffered and interpolated to
+		smooth out network delay.
+	*/
 	class RemotePlayerOnServer : public PlayerOnServer
 	{
 		DEATH_RUNTIME_OBJECT(PlayerOnServer);

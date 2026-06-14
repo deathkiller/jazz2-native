@@ -6,12 +6,12 @@
 namespace Jazz2::Actors::Environment
 {
 	/**
-	 * @brief Bonus warp
-	 *
-	 * Warp portal that transports the player to a bonus stage, but only once they have collected
-	 * enough coins to cover its cost. The required coin amount is shown on the warp, and entering
-	 * it teleports the rabbit to the linked warp target.
-	 */
+		@brief Bonus warp
+		
+		Warp portal that transports the player to a bonus stage, but only once they have collected
+		enough coins to cover its cost. The required coin amount is shown on the warp, and entering
+		it teleports the rabbit to the linked warp target.
+	*/
 	class BonusWarp : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

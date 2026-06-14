@@ -7,107 +7,119 @@
 
 namespace nCine
 {
-	/// Contains geometric data for a drawable node
+	/**
+		@brief Contains the vertex and index buffer data for a drawable node
+		
+		Owns (or shares) the vertex buffer object and optional index buffer object that back a single render
+		command, together with the draw parameters (primitive type, first vertex, vertex/index counts). Vertex
+		and index data can either be supplied through host pointers or written directly into mapped buffer
+		memory acquired from the @ref RenderBuffersManager.
+	*/
 	class Geometry
 	{
 		friend class RenderCommand;
 
 	public:
-		/// Default constructor
 		Geometry();
 		~Geometry();
 
 		Geometry(const Geometry&) = delete;
 		Geometry& operator=(const Geometry&) = delete;
 
-		/// Returns the primitive type (`GL_TRIANGLES`, `GL_TRIANGLE_STRIP`, ...)
+		/** @brief Returns the primitive type (`GL_TRIANGLES`, `GL_TRIANGLE_STRIP`, ...) */
 		inline GLenum GetPrimitiveType() const {
 			return primitiveType_;
 		}
-		/// Returns the index of the first vertex to draw
+		/** @brief Returns the index of the first vertex to draw */
 		inline GLint GetFirstVertex() const {
 			return firstVertex_;
 		}
-		/// Returns the number of vertices
+		/** @brief Returns the number of vertices */
 		inline GLsizei GetVertexCount() const {
 			return numVertices_;
 		}
-		/// Returns the number of float elements that composes the vertex format
+		/** @brief Returns the number of float elements that compose the vertex format */
 		inline std::uint32_t GetElementsPerVertex() const {
 			return numElementsPerVertex_;
 		}
 
-		/// Sets all three drawing parameters
+		/** @brief Sets all three drawing parameters at once */
 		void SetDrawParameters(GLenum primitiveType, GLint firstVertex, GLsizei numVertices);
-		/// Sets the primitive type (`GL_TRIANGLES`, `GL_TRIANGLE_STRIP`, ...)
+		/** @brief Sets the primitive type (`GL_TRIANGLES`, `GL_TRIANGLE_STRIP`, ...) */
 		inline void SetPrimitiveType(GLenum primitiveType) {
 			primitiveType_ = primitiveType;
 		}
-		/// Sets the index number of the first vertex to draw
+		/** @brief Sets the index of the first vertex to draw */
 		inline void SetFirstVertex(GLint firstVertex) {
 			firstVertex_ = firstVertex;
 		}
-		/// Sets the number of vertices
+		/** @brief Sets the number of vertices */
 		inline void SetVertexCount(GLsizei numVertices) {
 			numVertices_ = numVertices;
 		}
-		/// Sets the number of float elements that composes the vertex format
+		/** @brief Sets the number of float elements that compose the vertex format */
 		inline void SetElementsPerVertex(std::uint32_t numElements) {
 			numElementsPerVertex_ = numElements;
 		}
-		/// Creates a custom VBO that is unique to this `Geometry` object
+		/** @brief Creates a custom VBO that is unique to this object */
 		void CreateCustomVbo(std::uint32_t numFloats, GLenum usage);
-		/// Retrieves a pointer that can be used to write vertex data from a custom VBO owned by this object
-		/*! This overloaded version allows a custom alignment specification */
+		/**
+		 * @brief Acquires a pointer for writing vertex data into a custom VBO owned by this object
+		 *
+		 * This overload allows a custom alignment to be specified.
+		 *
+		 * @param numFloats           Number of floats to be written
+		 * @param numFloatsAlignment  Alignment in floats
+		 */
 		GLfloat* AcquireVertexPointer(std::uint32_t numFloats, std::uint32_t numFloatsAlignment);
-		/// Retrieves a pointer that can be used to write vertex data from a custom VBO owned by this object
+		/** @brief Acquires a pointer for writing vertex data into a custom VBO owned by this object */
 		inline GLfloat* AcquireVertexPointer(std::uint32_t numFloats) {
 			return AcquireVertexPointer(numFloats, 1);
 		}
-		/// Retrieves a pointer that can be used to write vertex data from a VBO owned by the buffers manager
+		/** @brief Acquires a pointer for writing vertex data into a VBO owned by the buffers manager */
 		GLfloat* AcquireVertexPointer();
-		/// Releases the pointer used to write vertex data
+		/** @brief Releases the pointer used to write vertex data */
 		void ReleaseVertexPointer();
 
-		/// Returns a pointer into host memory containing vertex data to be copied into a VBO
+		/** @brief Returns a pointer into host memory containing vertex data to be copied into a VBO */
 		inline const float* GetHostVertexPointer() const {
 			return hostVertexPointer_;
 		}
-		/// Sets a pointer into host memory containing vertex data to be copied into a VBO
+		/** @brief Sets a pointer into host memory containing vertex data to be copied into a VBO */
 		void SetHostVertexPointer(const float* vertexPointer);
 
-		/// Shares the VBO of another `Geometry` object
+		/** @brief Shares the VBO of another object */
 		void ShareVbo(const Geometry* geometry);
 
-		/// Returns the number of indices used to render the geometry
+		/** @brief Returns the number of indices used to render the geometry */
 		inline std::uint32_t GetIndexCount() const {
 			return numIndices_;
 		}
-		/// Sets the index number of the first index to draw
+		/** @brief Sets the index of the first index to draw */
 		inline void SetFirstIndex(GLushort firstIndex) {
 			firstIndex_ = firstIndex;
 		}
-		/// Sets the number of indices used to render the geometry
+		/** @brief Sets the number of indices used to render the geometry */
 		inline void SetIndexCount(std::uint32_t numIndices) {
 			numIndices_ = numIndices;
 		}
-		/// Creates a custom IBO that is unique to this `Geometry` object
+		/** @brief Creates a custom IBO that is unique to this object */
 		void CreateCustomIbo(std::uint32_t numIndices, GLenum usage);
-		/// Retrieves a pointer that can be used to write index data from a custom IBO owned by this object
+		/** @brief Acquires a pointer for writing index data into a custom IBO owned by this object */
 		GLushort* AcquireIndexPointer(std::uint32_t numIndices);
-		/// Retrieves a pointer that can be used to write index data from a IBO owned by the buffers manager
+		/** @brief Acquires a pointer for writing index data into an IBO owned by the buffers manager */
 		GLushort* AcquireIndexPointer();
-		/// Releases the pointer used to write index data
+		/** @brief Releases the pointer used to write index data */
 		void ReleaseIndexPointer();
 
-		/// Returns a pointer into host memory containing index data to be copied into a IBO
+		/** @brief Returns a pointer into host memory containing index data to be copied into an IBO */
 		inline const GLushort* GetHostIndexPointer() const {
 			return hostIndexPointer_;
 		}
-		/// Sets a pointer into host memory containing index data to be copied into a IBO
+		/** @brief Sets a pointer into host memory containing index data to be copied into an IBO */
 		void SetHostIndexPointer(const GLushort* indexPointer);
 
-		/// Shares the IBO of another `Geometry` object
+		/** @brief Shares the IBO of another object */
 		void ShareIbo(const Geometry* geometry);
 
 	private:

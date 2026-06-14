@@ -9,7 +9,13 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	/** @brief Simplifies creation of unified scrollable menu sections */
+	/**
+		@brief Simplifies creation of unified scrollable menu sections
+		
+		Base class for menu sections that present a vertically scrollable list of items. It handles selection, keyboard
+		and kinetic touch scrolling, and layout within the clipped middle layer, leaving subclasses to provide and draw
+		the individual items and react to their execution.
+	*/
 	template<class TItem>
 	class ScrollableMenuSection : public MenuSection
 	{

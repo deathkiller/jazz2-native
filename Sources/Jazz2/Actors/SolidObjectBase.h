@@ -4,7 +4,12 @@
 
 namespace Jazz2::Actors
 {
-	/** @brief Base class of a (pushable) solid object */
+	/**
+		@brief Base class of a (pushable) solid object
+		
+		Base for solid objects that the player and other actors can stand on and that block movement. Depending on
+		its flags, a solid object can act as a one-way platform and can be pushed horizontally by the player.
+	*/
 	class SolidObjectBase : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

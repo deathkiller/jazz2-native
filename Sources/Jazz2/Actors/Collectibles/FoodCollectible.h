@@ -46,12 +46,12 @@ namespace Jazz2::Actors::Collectibles
 	};
 
 	/**
-	 * @brief Food (collectible)
-	 *
-	 * The assorted food and drink items scattered throughout JJ2 levels (fruit, sweets, fast food, sodas,
-	 * etc.). Each item awards a small amount of points and counts toward the player's food tally; eating
-	 * enough food triggers the Sugar Rush power-up.
-	 */
+		@brief Food (collectible)
+		
+		The assorted food and drink items scattered throughout JJ2 levels (fruit, sweets, fast food, sodas,
+		etc.). Each item awards a small amount of points and counts toward the player's food tally; eating
+		enough food triggers the Sugar Rush power-up.
+	*/
 	class FoodCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

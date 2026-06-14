@@ -21,7 +21,13 @@ namespace Jazz2::Compatibility
 		Menu
 	};
 
-	/** @brief Maps indices from original data file to organized entries */
+	/**
+		@brief Maps indices from original data file to organized entries
+		
+		Provides the lookup tables used during animation and audio import that translate the original
+		game's set/item indices (from `Anims.j2a`) into named categories, asset names and palette
+		settings for the converted output. The mapping is built per @ref JJ2Version.
+	*/
 	class AnimSetMapping
 	{
 	public:

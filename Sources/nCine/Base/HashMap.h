@@ -5,8 +5,12 @@
 
 namespace nCine
 {
-	// Use `flat_hash_map` from Parallel Hashmap library
-	/** @brief Generic hash map */
+	/**
+		@brief Generic hash map
+		
+		Alias for `phmap::flat_hash_map` from the Parallel Hashmap library, defaulting to the xxHash3
+		hash function sized to the target architecture.
+	*/
 	template <class K, class V,
 #if defined(DEATH_TARGET_32BIT)
 		class Hash = xxHash32Func<K>,

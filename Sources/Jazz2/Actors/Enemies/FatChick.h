@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Enemies
 {
 	/**
-	 * @brief Fat chick
-	 *
-	 * Plump bird that waddles back and forth on the ground, turning at walls and ledges and homing in
-	 * when a player draws close. When the player is right in front of it, it performs a short melee
-	 * peck attack. Takes several hits to defeat.
-	 */
+		@brief Fat chick
+		
+		Plump bird that waddles back and forth on the ground, turning at walls and ledges and homing in
+		when a player draws close. When the player is right in front of it, it performs a short melee
+		peck attack. Takes several hits to defeat.
+	*/
 	class FatChick : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

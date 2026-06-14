@@ -12,6 +12,12 @@ namespace Jazz2::UI::Menu
 	};
 #endif
 
+	/**
+		@brief Rescale mode selection menu section
+		
+		Lists the available screen rescaling and upscaling filter modes (such as pixel-perfect, the upscaling filters,
+		and the CRT effects) and lets the player choose one.
+	*/
 	class RescaleModeSection : public ScrollableMenuSection<RescaleModeItem>
 	{
 	public:

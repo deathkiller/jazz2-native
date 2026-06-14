@@ -172,7 +172,14 @@ namespace Jazz2::Actors
 		Lightning				/**< Lightning (for electrocuting) */
 	};
 
-	/** @brief Base class of an object */
+	/**
+		@brief Base class of an object
+		
+		Common base of every object that lives in the game world. It provides the shared lifecycle and behavior of
+		an actor: activation from the event map, per-frame update, movement and collisions (with tiles, other actors
+		and solid objects), rendering and light emission, and health and perishing. Concrete actors derive from it
+		and override the relevant virtual callbacks.
+	*/
 	class ActorBase : public std::enable_shared_from_this<ActorBase>
 	{
 		DEATH_RUNTIME_OBJECT();

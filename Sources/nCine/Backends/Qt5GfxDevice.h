@@ -10,7 +10,12 @@ namespace nCine::Backends
 {
 	class Qt5Widget;
 
-	/// The Qt5 based graphics device
+	/**
+		@brief Graphics device that wraps a Qt5 @ref Qt5Widget
+		
+		Drives an `IGfxDevice` whose surface and OpenGL context are owned by the
+		hosting `QOpenGLWidget`, so most window operations are delegated to Qt5.
+	*/
 	class Qt5GfxDevice : public IGfxDevice
 	{
 	public:
@@ -39,9 +44,12 @@ namespace nCine::Backends
 		void updateVideoModes() override;
 
 #if defined(WITH_GLEW)
+		/** @brief Initializes the GLEW OpenGL extension loader */
 		void initGlew();
 #endif
+		/** @brief Clears the engine's cached texture binding so Qt5's GL state is not assumed */
 		void resetTextureBinding();
+		/** @brief Binds the widget's default draw framebuffer object */
 		void bindDefaultDrawFramebufferObject();
 
 	protected:
@@ -51,12 +59,12 @@ namespace nCine::Backends
 		Qt5Widget& widget_;
 		bool isResizable_;
 
-		/// Deleted copy constructor
+		/** @brief Deleted copy constructor */
 		Qt5GfxDevice(const Qt5GfxDevice&) = delete;
-		/// Deleted assignment operator
+		/** @brief Deleted assignment operator */
 		Qt5GfxDevice& operator=(const Qt5GfxDevice&) = delete;
 
-		/// Initilizes the OpenGL graphic context
+		/** @brief Initializes the OpenGL graphics context */
 		void initDevice(bool isFullscreen);
 
 		friend class Qt5InputManager;

@@ -24,7 +24,14 @@ namespace Jazz2::Scripting::Legacy
 
 namespace Jazz2::UI
 {
-	/** @brief Player HUD */
+	/**
+		@brief Player HUD
+		
+		In-game heads-up display drawn on top of the level. It renders the player's health, score, collected coins and
+		gems, active weapon and ammo, boss health, transient level text notifications, and the weapon wheel, as well as
+		on-screen touch controls and fade transitions. Individual elements are drawn through overridable `OnDraw*`
+		methods so subclasses (e.g. multiplayer) can customize them.
+	*/
 	class HUD : public Canvas
 	{
 #if defined(WITH_ANGELSCRIPT)

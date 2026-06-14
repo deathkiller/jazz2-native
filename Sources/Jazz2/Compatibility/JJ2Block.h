@@ -12,7 +12,13 @@ using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
-	/** @brief Processes compressed or uncompressed blocks from original files (in little endian) */
+	/**
+		@brief Processes compressed or uncompressed blocks from original files (in little endian)
+		
+		Buffers a single (optionally zlib-compressed) data block from an original game file and exposes
+		sequential little-endian readers for the primitive types used by the format parsers. Used as the
+		low-level building block by @ref JJ2Level, @ref JJ2Tileset and related importers.
+	*/
 	class JJ2Block
 	{
 	public:

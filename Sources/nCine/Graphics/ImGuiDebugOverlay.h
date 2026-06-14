@@ -18,7 +18,13 @@ namespace nCine
 	class Viewport;
 	class SceneNode;
 
-	/// Overlay debug ImGui interface
+	/**
+		@brief Debug overlay implemented with the ImGui interface
+		
+		Concrete @ref IDebugOverlay that uses ImGui to draw the diagnostic windows: corner overlays with frame
+		timings and rendering statistics, profiler plots, a trace log, and inspector panels for the application
+		configuration, graphics capabilities, viewports and scene-graph nodes.
+	*/
 	class ImGuiDebugOverlay : public IDebugOverlay
 	{
 	public:

@@ -8,40 +8,45 @@ using namespace Death;
 
 namespace nCine
 {
-	/// Random number generator (PCG32)
+	/**
+		@brief PCG32 pseudo-random number generator
+		
+		Generates uniformly distributed integers, floats and booleans from a 64-bit state and sequence.
+		The @ref Fast() and @ref FastFloat() variants trade statistical uniformity for speed.
+	*/
 	class RandomGenerator
 	{
 	public:
-		/// Creates a new generator with default seeds
+		/** @brief Creates a generator seeded with default values */
 		RandomGenerator() noexcept;
-		/// Creates a new generator with the specified seeds
+		/** @brief Creates a generator seeded with the specified state and sequence */
 		RandomGenerator(std::uint64_t initState, std::uint64_t initSequence) noexcept;
 
-		/// Initializes the generator with the specified seeds
+		/** @brief Reseeds the generator with the specified state and sequence */
 		void Init(std::uint64_t initState, std::uint64_t initSequence) noexcept;
 
-		/// Generates a uniformly distributed 32-bit number
+		/** @brief Returns a uniformly distributed 32-bit number */
 		std::uint32_t Next() noexcept;
-		/// Generates a uniformly distributed 32-bit number, r, where min <= r < max
+		/** @brief Returns a uniformly distributed 32-bit number `r` where `min <= r < max` */
 		std::uint32_t Next(std::uint32_t min, std::uint32_t max) noexcept;
-		/// Generates a uniformly distributed float number, r, where 0 <= r < 1
+		/** @brief Returns a uniformly distributed float `r` where `0 <= r < 1` */
 		float NextFloat() noexcept;
-		/// Generates a uniformly distributed float number, r, where min <= r < max
+		/** @brief Returns a uniformly distributed float `r` where `min <= r < max` */
 		float NextFloat(float min, float max) noexcept;
-		/// Generates a uniformly distributed boolean
+		/** @brief Returns a uniformly distributed boolean */
 		bool NextBool() noexcept;
 
-		/// Faster but less uniform version of @ref Next()
+		/** @brief Faster but less uniform version of @ref Next(std::uint32_t, std::uint32_t) */
 		std::uint32_t Fast(std::uint32_t min, std::uint32_t max) noexcept;
-		/// Faster but less uniform version of @ref NextFloat()
+		/** @brief Faster but less uniform version of @ref NextFloat() */
 		float FastFloat() noexcept;
-		/// Faster but less uniform version of @ref NextFloat()
+		/** @brief Faster but less uniform version of @ref NextFloat(float, float) */
 		float FastFloat(float min, float max) noexcept;
 
-		/// Gnerates a 128-bit unique identifier
+		/** @brief Fills the buffer with a 128-bit unique identifier */
 		void Uuid(Containers::StaticArrayView<16, std::uint8_t> result);
 
-		/// Shuffles the specified array
+		/** @brief Shuffles the elements of the specified array in place */
 		template<class T>
 		void Shuffle(Containers::ArrayView<T> data) noexcept
 		{
@@ -55,7 +60,7 @@ namespace nCine
 		std::uint64_t _increment;
 	};
 
-	/// Returns random number generator instance
+	/** @brief Returns the shared random number generator instance */
 	extern RandomGenerator& Random() noexcept;
 
 }

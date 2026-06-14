@@ -5,7 +5,9 @@
 
 namespace nCine
 {
-	/// KTX texture loader
+	/**
+		@brief Texture loader for the Khronos Texture (`.ktx`) format
+	*/
 	class TextureLoaderKtx : public ITextureLoader
 	{
 	public:
@@ -17,7 +19,7 @@ namespace nCine
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
-		/// Header for the KTX format
+		/** @brief Header of a KTX file */
 		struct KtxHeader
 		{
 			std::uint8_t identifier[KtxIdentifierLength];
@@ -37,9 +39,9 @@ namespace nCine
 		};
 #endif
 
-		/// Reads the KTX header and fills the corresponding structure
+		/** @brief Reads the KTX header and fills the corresponding structure */
 		bool readHeader(KtxHeader& header);
-		/// Parses the KTX header to determine its format
+		/** @brief Parses the KTX header to determine the texture format */
 		bool parseFormat(const KtxHeader& header);
 	};
 

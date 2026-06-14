@@ -19,7 +19,12 @@ class QWindow;
 
 namespace nCine::Backends
 {
-	/// The Qt5 nCine widget
+	/**
+		@brief `QOpenGLWidget`-derived widget that hosts the engine
+		
+		Embeds an nCine `MainApplication` inside a Qt5 OpenGL widget, driving the
+		engine from the widget's GL callbacks and forwarding Qt5 events to it.
+	*/
 	class Qt5Widget : public QOpenGLWidget
 	{
 		Q_OBJECT
@@ -32,11 +37,12 @@ namespace nCine::Backends
 		Qt5Widget(QWidget* parent, std::unique_ptr<IAppEventHandler>(*createAppEventHandler)(), int argc, char** argv);
 		~Qt5Widget();
 
-		/// If set to false the widget will stop to automatically update each frame
+		/** @brief If set to `false` the widget will stop automatically updating each frame */
 		inline void setShouldUpdate(bool shouldUpdate) {
 			shouldUpdate_ = shouldUpdate;
 		}
 
+		/** @brief Returns the application event handler driving the embedded engine */
 		IAppEventHandler& appEventHandler();
 
 	protected:
@@ -50,7 +56,7 @@ namespace nCine::Backends
 		QSize sizeHint() const override;
 
 	private slots:
-		/// The function slot called at each `frameSwapped` signal
+		/** @brief The function slot called at each `frameSwapped` signal */
 		void autoUpdate();
 
 	private:
@@ -61,9 +67,9 @@ namespace nCine::Backends
 
 		void shutdown();
 
-		/// Deleted copy constructor
+		/** @brief Deleted copy constructor */
 		Qt5Widget(const Qt5Widget&) = delete;
-		/// Deleted assignment operator
+		/** @brief Deleted assignment operator */
 		Qt5Widget& operator=(const Qt5Widget&) = delete;
 	};
 }

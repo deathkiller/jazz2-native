@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Enemies
 {
 	/**
-	 * @brief Fencer
-	 *
-	 * Sword-wielding enemy that stands its ground until a player comes near, then faces them and
-	 * lunges with a hopping thrust, springing either forward or backward unpredictably between
-	 * attacks. Takes several hits to defeat.
-	 */
+		@brief Fencer
+		
+		Sword-wielding enemy that stands its ground until a player comes near, then faces them and
+		lunges with a hopping thrust, springing either forward or backward unpredictably between
+		attacks. Takes several hits to defeat.
+	*/
 	class Fencer : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

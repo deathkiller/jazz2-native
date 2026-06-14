@@ -10,6 +10,12 @@
 
 namespace Jazz2::UI::Menu
 {
+	/**
+		@brief Refresh cache menu section
+		
+		Rebuilds the asset cache by re-indexing the cached levels and pruning the binary shader cache, then returns
+		once finished.
+	*/
 	class RefreshCacheSection : public MenuSection
 	{
 	public:

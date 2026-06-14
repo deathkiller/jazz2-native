@@ -20,7 +20,13 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// OpenAL audio device backend implementation
+	/**
+		@brief OpenAL implementation of @ref IAudioDevice
+		
+		Owns the OpenAL device and context, manages a fixed pool of sources and tracks the active
+		players. On desktop Windows it also listens for default device changes and recreates the
+		device when needed.
+	*/
 	class ALAudioDevice : public IAudioDevice
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		, public IMMNotificationClient
@@ -71,31 +77,31 @@ namespace nCine
 		void resumeDevice() override;
 
 	private:
-		/// Maximum number of OpenAL sources
+		/** @brief Maximum number of OpenAL sources */
 #if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 		static const std::int32_t MaxSources = 48;
 #else
 		static const std::int32_t MaxSources = 64;
 #endif
 
-		/// The OpenAL device
+		/** @brief OpenAL device */
 		ALCdevice* device_;
-		/// The OpenAL context for the device
+		/** @brief OpenAL context for the device */
 		ALCcontext* context_;
-		/// The listener gain value (master volume)
+		/** @brief Listener gain (master volume) */
 		ALfloat gain_;
-		/// The array of all audio sources
+		/** @brief Array of all audio sources */
 		ALuint sources_[MaxSources];
-		/// The array of currently inactive audio sources
+		/** @brief Pool of currently inactive audio sources */
 		SmallVector<ALuint, MaxSources> sourcePool_;
-		/// The array of currently active audio players
+		/** @brief Currently active audio players */
 		SmallVector<IAudioPlayer*, MaxSources> players_;
-		/// Listener position
+		/** @brief Listener position */
 		Vector3f _listenerPos;
-		/// native device frequency
+		/** @brief Native device sample frequency */
 		std::int32_t nativeFreq_;
 
-		/// The OpenAL device name string
+		/** @brief OpenAL device name */
 		const char* deviceName_;
 
 		void Init();

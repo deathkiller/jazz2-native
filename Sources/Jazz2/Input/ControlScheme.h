@@ -56,7 +56,13 @@ namespace Jazz2::Input
 		Vector2f Movement;
 	};
 
-	/** @brief Provides access to a user configured control scheme */
+	/**
+		@brief Provides access to a user configured control scheme
+		
+		Holds the global keyboard and gamepad bindings for all local players and translates raw key and
+		gamepad state into processed per-player input and menu navigation. Bindings can be reset to
+		defaults and individual mapping targets created for keys, buttons and axes.
+	*/
 	class ControlScheme
 	{
 		friend class UI::Menu::RemapControlsSection;

@@ -13,49 +13,48 @@ namespace nCine
 	class GLUniformCache;
 	class GLAttribute;
 
-	/// Contains material data for a drawable node
+	/**
+		@brief Contains material data for a drawable node
+		
+		Describes how a drawable node is rendered: the shader program (one of the predefined types or a custom
+		one), the bound textures, the blending state and the per-draw uniform values. @ref RenderCommand uses
+		this state to configure the GPU pipeline and to build the sort key for a draw call.
+	*/
 	class Material
 	{
 		friend class RenderCommand;
 
 	public:
-		/// One of the predefined shader programs
+		/**
+		 * @brief One of the predefined shader programs
+		 */
 		enum class ShaderProgramType
 		{
-			/// Shader program for Sprite classes
-			Sprite = 0,
+			Sprite = 0,								/**< Shader program for `Sprite` classes */
 			// Shader program for Sprite classes with grayscale font texture
 			//SpriteGray,
-			/// Shader program for Sprite classes with a solid color and no texture
-			SpriteNoTexture,
-			/// Shader program for MeshSprite classes
-			MeshSprite,
+			SpriteNoTexture,						/**< Shader program for `Sprite` classes with a solid color and no texture */
+			MeshSprite,								/**< Shader program for `MeshSprite` classes */
 			// Shader program for MeshSprite classes with grayscale font texture
 			//MeshSpriteGray,
-			/// Shader program for MeshSprite classes with a solid color and no texture
-			MeshSpriteNoTexture,
+			MeshSpriteNoTexture,					/**< Shader program for `MeshSprite` classes with a solid color and no texture */
 			// Shader program for TextNode classes with glyph data in alpha channel
 			//TextNodeAlpha,
 			// Shader program for TextNode classes with glyph data in red channel
 			//TextNodeRed,
-			/// Shader program for a batch of Sprite classes
-			BatchedSprites,
+			BatchedSprites,							/**< Shader program for a batch of `Sprite` classes */
 			// Shader program for a batch of Sprite classes with grayscale font texture
 			//BatchedSpritesGray,
-			/// Shader program for a batch of Sprite classes with solid colors and no texture
-			BatchedSpritesNoTexture,
-			/// Shader program for a batch of MeshSprite classes
-			BatchedMeshSprites,
+			BatchedSpritesNoTexture,				/**< Shader program for a batch of `Sprite` classes with solid colors and no texture */
+			BatchedMeshSprites,						/**< Shader program for a batch of `MeshSprite` classes */
 			// Shader program for a batch of MeshSprite classes with grayscale font texture
 			//BatchedMeshSpritesGray,
-			/// Shader program for a batch of MeshSprite classes with solid colors and no texture
-			BatchedMeshSpritesNoTexture,
+			BatchedMeshSpritesNoTexture,			/**< Shader program for a batch of `MeshSprite` classes with solid colors and no texture */
 			// Shader program for a batch of TextNode classes with color font texture
 			//BatchedTextNodesAlpha,
 			// Shader program for a batch of TextNode classes with grayscale font texture
 			//BatchedTextNodesRed,
-			/// A custom shader program
-			Custom
+			Custom									/**< A custom shader program */
 		};
 
 		/** @{ @name Constants */
@@ -85,7 +84,7 @@ namespace nCine
 
 		/** @} */
 
-		/// Default constructor
+		/** @brief Default constructor */
 		Material();
 		Material(GLShaderProgram* program, GLTexture* texture);
 
@@ -118,29 +117,29 @@ namespace nCine
 		void ReserveUniformsDataMemory();
 		void SetUniformsDataPointer(GLubyte* dataPointer);
 
-		/// Wrapper around `GLShaderUniforms::hasUniform()`
+		/** @brief Wrapper around `GLShaderUniforms::HasUniform()` */
 		inline bool HasUniform(const char* name) const {
 			return shaderUniforms_.HasUniform(name);
 		}
-		/// Wrapper around `GLShaderUniformBlocks::hasUniformBlock()`
+		/** @brief Wrapper around `GLShaderUniformBlocks::HasUniformBlock()` */
 		inline bool HasUniformBlock(const char* name) const {
 			return shaderUniformBlocks_.HasUniformBlock(name);
 		}
 
-		/// Wrapper around `GLShaderUniforms::uniform()`
+		/** @brief Wrapper around `GLShaderUniforms::GetUniform()` */
 		inline GLUniformCache* Uniform(const char* name) {
 			return shaderUniforms_.GetUniform(name);
 		}
-		/// Wrapper around `GLShaderUniformBlocks::uniformBlock()`
+		/** @brief Wrapper around `GLShaderUniformBlocks::GetUniformBlock()` */
 		inline GLUniformBlockCache* UniformBlock(const char* name) {
 			return shaderUniformBlocks_.GetUniformBlock(name);
 		}
 
-		/// Wrapper around `GLShaderUniforms::allUniforms()`
+		/** @brief Wrapper around `GLShaderUniforms::GetAllUniforms()` */
 		inline const GLShaderUniforms::UniformHashMapType GetAllUniforms() const {
 			return shaderUniforms_.GetAllUniforms();
 		}
-		/// Wrapper around `GLShaderUniformBlocks::allUniformBlocks()`
+		/** @brief Wrapper around `GLShaderUniformBlocks::GetAllUniformBlocks()` */
 		inline const GLShaderUniformBlocks::UniformHashMapType GetAllUniformBlocks() const {
 			return shaderUniformBlocks_.GetAllUniformBlocks();
 		}
@@ -171,21 +170,21 @@ namespace nCine
 		GLShaderUniformBlocks shaderUniformBlocks_;
 		const GLTexture* textures_[GLTexture::MaxTextureUnits];
 
-		/// The size of the memory buffer containing uniform values
+		/** @brief The size of the memory buffer containing uniform values */
 		std::uint32_t uniformsHostBufferSize_;
-		/// Memory buffer with uniform values to be sent to the GPU
+		/** @brief Memory buffer with uniform values to be sent to the GPU */
 		std::unique_ptr<GLubyte[]> uniformsHostBuffer_;
 
 		void Bind();
-		/// Wrapper around `GLShaderUniforms::commitUniforms()`
+		/** @brief Wrapper around `GLShaderUniforms::CommitUniforms()` */
 		inline void CommitUniforms() {
 			shaderUniforms_.CommitUniforms();
 		}
-		/// Wrapper around `GLShaderUniformBlocks::commitUniformBlocks()`
+		/** @brief Wrapper around `GLShaderUniformBlocks::CommitUniformBlocks()` */
 		inline void CommitUniformBlocks() {
 			shaderUniformBlocks_.CommitUniformBlocks();
 		}
-		/// Wrapper around `GLShaderProgram::defineVertexFormat()`
+		/** @brief Wrapper around `GLShaderProgram::DefineVertexFormat()` */
 		void DefineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, std::uint32_t vboOffset);
 		std::uint32_t GetSortKey();
 	};

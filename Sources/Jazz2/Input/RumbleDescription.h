@@ -8,7 +8,12 @@ namespace Jazz2::Input
 {
 	class RumbleProcessor;
 
-	/** @brief Describes a gamepad rumble effect */
+	/**
+		@brief Describes a gamepad rumble effect
+		
+		Stores a rumble effect as a timeline of frames, each specifying the low/high frequency motor and
+		trigger intensities up to a given end time. Instances are played back by @ref RumbleProcessor.
+	*/
 	class RumbleDescription
 	{
 		friend class RumbleProcessor;

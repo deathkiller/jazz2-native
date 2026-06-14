@@ -17,7 +17,13 @@ using namespace nCine;
 
 namespace Jazz2::Compatibility
 {
-	/** @brief Parses original `.j2a` animation files */
+	/**
+		@brief Parses original `.j2a` animation files
+		
+		Reads the original game's combined animation archive (`Anims.j2a`), decoding its animation sets,
+		frames and embedded audio samples, and writes the converted sprites and sounds into the engine's
+		`.pak` format. Asset naming and palette handling are driven by @ref AnimSetMapping.
+	*/
 	class JJ2Anims
 	{
 	public:

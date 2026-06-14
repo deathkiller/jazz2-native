@@ -22,17 +22,35 @@ namespace nCine
 	class RenderQueue;
 	class IInputEventHandler;
 
-	/// Handles ImGui drawing
+	/**
+		@brief Handles ImGui drawing
+		
+		Bridges the ImGui debug overlay to the engine renderer. Owns the ImGui shader program, vertex and
+		index buffers and the GPU textures backing the ImGui font and user atlases. Depending on the mode
+		selected at construction, it either submits @ref RenderCommand instances through the scene-graph
+		@ref RenderQueue or issues the OpenGL draw calls directly.
+	*/
 	class ImGuiDrawing
 	{
 	public:
 		explicit ImGuiDrawing(bool withSceneGraph);
 		~ImGuiDrawing();
 
+		/**
+		 * @brief Begins a new ImGui frame
+		 *
+		 * Forwards input from the active backend and updates the projection matrix when the display size changes.
+		 */
 		void NewFrame();
-		/// Renders ImGui with render commands
+		/**
+		 * @brief Ends the frame and submits ImGui draw data as render commands
+		 *
+		 * @param renderQueue  Queue that receives the generated render commands
+		 */
 		void EndFrame(RenderQueue& renderQueue);
-		/// Renders ImGui directly with OpenGL
+		/**
+		 * @brief Ends the frame and draws ImGui directly with OpenGL
+		 */
 		void EndFrame();
 
 	private:

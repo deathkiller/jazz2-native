@@ -14,7 +14,13 @@ namespace Jazz2::Multiplayer
 
 namespace Jazz2::Actors::Multiplayer
 {
-	/** @brief Player in online session */
+	/**
+		@brief Player in online session
+		
+		Base for any player participating in a multiplayer session. It extends the single-player @ref Player with a
+		peer descriptor identifying the connected peer the player belongs to, and with shared networked behavior such
+		as resolving standing on top of another player.
+	*/
 	class MpPlayer : public Player
 	{
 		DEATH_RUNTIME_OBJECT(Player);

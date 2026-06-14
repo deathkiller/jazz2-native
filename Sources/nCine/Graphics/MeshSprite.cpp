@@ -43,7 +43,9 @@ namespace nCine
 	{
 	}
 
-	/*! \note If used directly, it requires a custom shader that understands the specified data format */
+	/**
+	 * @note If used directly, it requires a custom shader that understands the specified data format.
+	 */
 	void MeshSprite::copyVertices(std::uint32_t numVertices, std::uint32_t bytesPerVertex, const void* vertexData)
 	{
 		std::uint32_t floatsPerVertex = (bytesPerVertex / sizeof(float));
@@ -82,7 +84,9 @@ namespace nCine
 		dirtyBits_.set(DirtyBitPositions::TextureBit);
 	}
 
-	/*! \note If used directly, it requires a custom shader that understands the specified data format. */
+	/**
+	 * @note If used directly, it requires a custom shader that understands the specified data format.
+	 */
 	void MeshSprite::setVertices(std::uint32_t numVertices, std::uint32_t bytesPerVertex, const void* vertexData)
 	{
 		std::uint32_t floatsPerVertex = (bytesPerVertex / sizeof(float));

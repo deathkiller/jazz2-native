@@ -93,7 +93,7 @@ namespace nCine
 		return shaderHasChanged;
 	}
 
-	/*! \note Use this method when the content of the currently assigned shader changes */
+	/** @note Use this method when the content of the currently assigned shader changes */
 	bool ShaderState::ResetShader()
 	{
 		if (shader_ != nullptr && shader_->IsLinked() && node_) {
@@ -105,7 +105,7 @@ namespace nCine
 		return false;
 	}
 
-	/*! \note Contrary to uniforms, there is no need to set the texture again when you reset a shader or when you set a new one */
+	/** @note Contrary to uniforms, there is no need to set the texture again when resetting or replacing the shader */
 	bool ShaderState::SetTexture(std::uint32_t unit, const Texture* texture)
 	{
 		if (node_ == nullptr) {

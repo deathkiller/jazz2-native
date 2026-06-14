@@ -144,7 +144,13 @@ namespace Jazz2::Resources
 
 	DEATH_ENUM_FLAGS(MetadataFlags);
 
-	/** @brief Contains assets for specific object type */
+	/**
+		@brief Contains assets for specific object type
+		
+		Loaded from a metadata file and cached by @ref ContentResolver, it groups the animations and sounds used by
+		one object type together with its bounding box, and resolves an @ref AnimState to the matching
+		@ref GraphicResource at runtime.
+	*/
 	struct Metadata
 	{
 		/** @brief Metadata path */

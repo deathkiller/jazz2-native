@@ -16,7 +16,9 @@ namespace nCine
 	class ITextureLoader;
 	class GLTexture;
 
-	/// Texture filtering modes
+	/**
+		@brief Texture minification and magnification filtering modes
+	*/
 	enum class SamplerFilter
 	{
 		Unknown,
@@ -29,7 +31,9 @@ namespace nCine
 		LinearMipmapLinear
 	};
 
-	/// Texture wrap modes
+	/**
+		@brief Texture coordinate wrapping modes
+	*/
 	enum class SamplerWrapping
 	{
 		Unknown,
@@ -39,7 +43,9 @@ namespace nCine
 		Repeat
 	};
 
-	/// Source for a sampled texture channel (see @ref Texture::SetSwizzle)
+	/**
+		@brief Source for a sampled texture channel (see @ref Texture::SetSwizzle())
+	*/
 	enum class SwizzleChannel
 	{
 		Red,
@@ -50,14 +56,20 @@ namespace nCine
 		One
 	};
 
-	/// Texture
+	/**
+		@brief Image data uploaded to the GPU and sampled by shaders
+		
+		Wraps an OpenGL texture object. It can be created empty with a given format and size, loaded
+		from an image file or filled from raw texels, and configured with filtering, wrapping and
+		channel swizzling before being bound by a material.
+	*/
 	class Texture : public Object
 	{
 		friend class Material;
 		friend class Viewport;
 
 	public:
-		/// Texture formats
+		/** @brief Pixel formats for an empty texture */
 		enum class Format
 		{
 			Unknown,
@@ -68,19 +80,19 @@ namespace nCine
 			RGBA8
 		};
 
-		/// Creates an OpenGL texture name
+		/** @brief Creates an OpenGL texture name */
 		Texture();
 
-		/// Creates an empty texture with the specified format, MIP levels, and size
+		/** @brief Creates an empty texture with the specified format, MIP levels and size */
 		Texture(const char* name, Format format, std::int32_t mipMapCount, std::int32_t width, std::int32_t height);
-		/// Creates an empty texture with the specified format, MIP levels, and size using a vector
+		/** @brief Creates an empty texture with the specified format, MIP levels and size given as a vector */
 		Texture(const char* name, Format format, std::int32_t mipMapCount, Vector2i size);
-		/// Creates an empty texture with the specified format and size
+		/** @brief Creates an empty texture with the specified format and size */
 		Texture(const char* name, Format format, std::int32_t width, std::int32_t height);
-		/// Creates an empty texture with the specified format and size using a vector
+		/** @brief Creates an empty texture with the specified format and size given as a vector */
 		Texture(const char* name, Format format, Vector2i size);
 
-		/// Creates a texture from an image file
+		/** @brief Creates a texture from an image file */
 		explicit Texture(StringView filename);
 
 		~Texture() override;
@@ -90,93 +102,99 @@ namespace nCine
 		Texture(Texture&&);
 		Texture& operator=(Texture&&);
 
-		/// Initializes an empty texture with the specified format, MIP levels, and size
+		/** @brief Initializes an empty texture with the specified format, MIP levels and size */
 		void Init(const char* name, Format format, std::int32_t mipMapCount, std::int32_t width, std::int32_t height);
-		/// Initializes an empty texture with the specified format, MIP levels, and size using a vector
+		/** @brief Initializes an empty texture with the specified format, MIP levels and size given as a vector */
 		void Init(const char* name, Format format, std::int32_t mipMapCount, Vector2i size);
-		/// Initializes an empty texture with the specified format and size
+		/** @brief Initializes an empty texture with the specified format and size */
 		void Init(const char* name, Format format, std::int32_t width, std::int32_t height);
-		/// Initializes an empty texture with the specified format and size using a vector
+		/** @brief Initializes an empty texture with the specified format and size given as a vector */
 		void Init(const char* name, Format format, Vector2i size);
 
 		//bool loadFromMemory(const std::uint8_t* bufferPtr, unsigned long int bufferSize);
+		/** @brief Loads the texture from an image file */
 		bool LoadFromFile(StringView filename);
 
-		/// Loads all texture texels in raw format from a memory buffer in the first mip level
+		/** @brief Loads all texels in raw format from a memory buffer into the first MIP level */
 		bool LoadFromTexels(const std::uint8_t* bufferPtr);
-		/// Loads texels in raw format from a memory buffer to a texture sub-region in the first mip level
+		/** @brief Loads texels in raw format from a memory buffer into a sub-region of the first MIP level */
 		bool LoadFromTexels(const std::uint8_t* bufferPtr, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height);
-		/// Loads texels in raw format from a memory buffer to a texture sub-region with a rectangle in the first mip level
+		/** @brief Loads texels in raw format from a memory buffer into a rectangular sub-region of the first MIP level */
 		bool LoadFromTexels(const std::uint8_t* bufferPtr, Recti region);
-		/// Loads texels in raw format from a memory buffer to a specific texture mip level and sub-region
+		/** @brief Loads texels in raw format from a memory buffer into a sub-region of the specified MIP level */
 		bool LoadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height);
-		/// Loads texels in raw format from a memory buffer to a specific texture mip level and sub-region with a rectangle
+		/** @brief Loads texels in raw format from a memory buffer into a rectangular sub-region of the specified MIP level */
 		bool LoadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, Recti region);
 
-		/// Saves all texture texels in the first mip level in raw format to a memory buffer
+		/** @brief Saves all texels of the first MIP level in raw format to a memory buffer */
 		bool SaveToMemory(std::uint8_t* bufferPtr);
-		/// Saves all texture texels in the specified texture mip level in raw format to a memory buffer
+		/** @brief Saves all texels of the specified MIP level in raw format to a memory buffer */
 		bool SaveToMemory(std::uint8_t* bufferPtr, std::int32_t level);
 
-		/// Returns texture width
+		/** @brief Returns the texture width */
 		inline std::int32_t GetWidth() const {
 			return width_;
 		}
-		/// Returns texture height
+		/** @brief Returns the texture height */
 		inline std::int32_t GetHeight() const {
 			return height_;
 		}
-		/// Returns texture MIP map levels
+		/** @brief Returns the number of texture MIP map levels */
 		inline std::int32_t GetMipMapLevels() const {
 			return mipMapLevels_;
 		}
-		/// Returns texture size
+		/** @brief Returns the texture size */
 		inline Vector2i GetSize() const {
 			return Vector2i(width_, height_);
 		}
-		/// Returns texture rectangle
+		/** @brief Returns the texture rectangle */
 		inline Recti GetRect() const {
 			return Recti(0, 0, width_, height_);
 		}
 
-		/// Returns `true` if the texture holds compressed data
+		/** @brief Returns `true` if the texture holds compressed data */
 		inline bool IsCompressed() const {
 			return isCompressed_;
 		}
-		/// Returns the number of color channels
+		/** @brief Returns the number of color channels */
 		std::uint32_t GetChannelCount() const;
-		/// Returns the amount of video memory needed to load the texture
+		/** @brief Returns the amount of video memory needed to load the texture */
 		inline std::uint32_t GetDataSize() const {
 			return dataSize_;
 		}
 
-		/// Returns the texture filtering for minification
+		/** @brief Returns the texture filtering for minification */
 		inline SamplerFilter GetMinFiltering() const {
 			return minFiltering_;
 		}
-		/// Returns the texture filtering for magnification
+		/** @brief Returns the texture filtering for magnification */
 		inline SamplerFilter GetMagFiltering() const {
 			return magFiltering_;
 		}
-		/// Returns texture wrap for both `s` and `t` coordinates
+		/** @brief Returns the texture wrapping for both `s` and `t` coordinates */
 		inline SamplerWrapping GetWrap() const {
 			return wrapMode_;
 		}
-		/// Sets the texture filtering for minification
+		/** @brief Sets the texture filtering for minification */
 		void SetMinFiltering(SamplerFilter filter);
-		/// Sets the texture filtering for magnification
+		/** @brief Sets the texture filtering for magnification */
 		void SetMagFiltering(SamplerFilter filter);
-		/// Sets texture wrap for both `s` and `t` coordinates
+		/** @brief Sets the texture wrapping for both `s` and `t` coordinates */
 		void SetWrap(SamplerWrapping wrapMode);
 
-		/// Remaps the channels returned when the texture is sampled (default is `Red, Green, Blue, Alpha`); lets a
-		/// reduced-channel texture (e.g. an RG8 sprite holding palette index + alpha) sample like RGBA8 in the shader
+		/**
+		 * @brief Remaps the channels returned when the texture is sampled
+		 *
+		 * The default mapping is `Red, Green, Blue, Alpha`. Swizzling lets a reduced-channel
+		 * texture (e.g. an RG8 sprite holding a palette index plus alpha) be sampled as if it
+		 * were RGBA8 in the shader.
+		 */
 		void SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a);
 
-		/// Sets the OpenGL object label for the texture
+		/** @brief Sets the OpenGL object label for the texture */
 		void SetGLTextureLabel(const char* label);
 
-		/// Returns the user data opaque pointer for ImGui's `ImTextureID`
+		/** @brief Returns the opaque user data pointer used as ImGui's `ImTextureID` */
 		void* GetGuiTexId() const;
 
 		inline static ObjectType sType() {
@@ -196,9 +214,9 @@ namespace nCine
 		SamplerFilter magFiltering_;
 		SamplerWrapping wrapMode_;
 
-		/// Initialize an empty texture by creating storage for it
+		/** @brief Initializes an empty texture by creating storage for it */
 		void Initialize(const ITextureLoader& texLoader);
-		/// Loads the data in a previously initialized texture
+		/** @brief Loads the data into a previously initialized texture */
 		void Load(const ITextureLoader& texLoader);
 	};
 

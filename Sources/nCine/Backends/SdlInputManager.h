@@ -23,7 +23,9 @@ using namespace Death::Containers;
 
 namespace nCine::Backends
 {
-	/// Utility functions to convert between engine key enumerations and SDL ones
+	/**
+		@brief Utility functions to convert between engine key enumerations and SDL2 ones
+	*/
 	class SdlKeys
 	{
 	public:
@@ -33,7 +35,9 @@ namespace nCine::Backends
 		static int enumToScancode(Keys keysym);
 	};
 
-	/// Information about SDL mouse state
+	/**
+		@brief Information about SDL2 mouse state
+	*/
 	class SdlMouseState : public MouseState
 	{
 	public:
@@ -47,7 +51,9 @@ namespace nCine::Backends
 		friend class SdlInputManager;
 	};
 
-	/// Information about an SDL scroll event
+	/**
+		@brief Information about an SDL2 scroll event
+	*/
 	class SdlScrollEvent : public ScrollEvent
 	{
 	public:
@@ -56,7 +62,9 @@ namespace nCine::Backends
 		friend class SdlInputManager;
 	};
 
-	/// Information about SDL keyboard state
+	/**
+		@brief Information about SDL2 keyboard state
+	*/
 	class SdlKeyboardState : public KeyboardState
 	{
 	public:
@@ -81,13 +89,16 @@ namespace nCine::Backends
 		const unsigned char *keyState_;
 	};
 
-	/// Information about SDL joystick state
+	/**
+		@brief Information about SDL2 joystick state
+	*/
 	class SdlJoystickState : public JoystickState
 	{
 	public:
 		SdlJoystickState()
 			: sdlJoystick_(nullptr) {}
 
+		/** @brief Maximum absolute value reported by a joystick axis */
 		static constexpr short int MaxAxisValue = 32767;
 
 		bool isButtonPressed(int buttonId) const override;
@@ -100,16 +111,26 @@ namespace nCine::Backends
 		friend class SdlInputManager;
 	};
 
-	/// Class for parsing and dispatching SDL input events
+	/**
+		@brief SDL2-based input manager
+		
+		Parses and dispatches SDL2 input events for keyboard, mouse, touch and joysticks.
+	*/
 	class SdlInputManager : public IInputManager
 	{
 	public:
-		/// The constructor takes care of opening available joysticks
+		/** @brief The constructor takes care of opening available joysticks */
 		SdlInputManager();
-		/// The destructor releases every opened joystick
+		/** @brief The destructor releases every opened joystick */
 		~SdlInputManager();
 
+		/** @brief Returns `true` if the application should quit in response to a quit request */
 		static bool shouldQuitOnRequest();
+		/**
+		 * @brief Parses a single SDL2 event and dispatches it to the registered input handler
+		 *
+		 * @param event		SDL2 event to process
+		 */
 		static void parseEvent(const SDL_Event &event);
 
 		inline const MouseState& mouseState() const override
@@ -156,9 +177,9 @@ namespace nCine::Backends
 
 		static char joyGuidString_[33];
 
-		/// Deleted copy constructor
+		/** @brief Deleted copy constructor */
 		SdlInputManager(const SdlInputManager &) = delete;
-		/// Deleted assignment operator
+		/** @brief Deleted assignment operator */
 		SdlInputManager &operator=(const SdlInputManager &) = delete;
 
 		static void handleJoyDeviceEvent(const SDL_Event &event);

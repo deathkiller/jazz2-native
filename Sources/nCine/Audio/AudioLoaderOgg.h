@@ -8,7 +8,9 @@
 
 namespace nCine
 {
-	/// Ogg Vorbis audio loader using `libvorbis` library
+	/**
+		@brief Audio loader for the Ogg Vorbis format, backed by `libvorbis`
+	*/
 	class AudioLoaderOgg : public IAudioLoader
 	{
 	public:
@@ -21,7 +23,7 @@ namespace nCine
 		std::unique_ptr<IAudioReader> createReader() override;
 
 	private:
-		/// Vorbisfile handle
+		/** @brief Vorbisfile decoder handle */
 		OggVorbis_File oggFile_;
 	};
 }

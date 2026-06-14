@@ -16,7 +16,13 @@ using namespace nCine;
 
 namespace Jazz2::Tiles
 {
-	/** @brief Represents tile set used by tile map, consists of texture and collision mask */
+	/**
+		@brief Represents tile set used by tile map, consists of texture and collision mask
+		
+		Holds the source texture and the per-tile collision masks for a single tile set, providing lookups for a
+		tile's mask and texture coordinates. A tile map references one or more of these to render and collide its
+		layers; textures may be true-color or indexed for palette recoloring.
+	*/
 	class TileSet
 	{
 	public:

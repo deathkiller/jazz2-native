@@ -33,7 +33,12 @@ namespace nCine
 
 namespace nCine::Backends
 {
-	/// The UWP graphics device (ANGLE/Mesa)
+	/**
+		@brief The UWP graphics device
+		
+		Renders through OpenGL ES via ANGLE/Mesa using an EGL surface bound to the UWP `CoreWindow`.
+		The EGL/OpenGL ES code paths are guarded by the `WITH_OPENGLES` build option.
+	*/
 	class UwpGfxDevice : public IGfxDevice
 	{
 		friend class UwpApplication;

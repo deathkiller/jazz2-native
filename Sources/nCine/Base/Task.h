@@ -8,7 +8,14 @@
 
 namespace nCine
 {
-	/// Represents an asynchronous operation
+	/**
+		@brief Awaitable result of an asynchronous coroutine operation
+		
+		When coroutine support is enabled, wraps a `std::coroutine_handle` and acts as both an awaiter
+		and a coroutine return object yielding a value of type `T`, with @ref one_step() driving the
+		coroutine chain manually. When coroutines are unavailable, it degrades to a plain holder that is
+		implicitly convertible to its stored `T` value.
+	*/
 	template <typename T>
 	struct Task
 	{
@@ -63,7 +70,11 @@ namespace nCine
 			return *m_handle.promise().m_value;
 		}
 
-		// Manualy wait for finish
+		/**
+		 * @brief Advances the coroutine chain by one step
+		 *
+		 * @return `true` if the task has more work to do, `false` once it has finished
+		 */
 		bool one_step()
 		{
 			auto curr = m_handle;

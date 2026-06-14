@@ -7,7 +7,11 @@
 
 namespace Jazz2::UI::Menu
 {
-	/** @brief Section showing a simple message */
+	/**
+		@brief Section showing a simple message
+		
+		Displays a single centered message and waits for the player to confirm or go back, dismissing the screen.
+	*/
 	class SimpleMessageSection : public MenuSection
 	{
 	public:

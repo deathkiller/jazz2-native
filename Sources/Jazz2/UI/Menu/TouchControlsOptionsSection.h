@@ -5,6 +5,12 @@
 
 namespace Jazz2::UI::Menu
 {
+	/**
+		@brief Touch controls options menu section
+		
+		Lets the player configure the on-screen touch controls layout by dragging, resizing, and re-anchoring the
+		individual buttons in a live preview.
+	*/
 	class TouchControlsOptionsSection : public MenuSection
 	{
 	public:

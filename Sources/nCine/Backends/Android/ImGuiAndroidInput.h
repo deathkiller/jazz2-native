@@ -7,7 +7,7 @@ struct ANativeWindow;
 
 namespace nCine::Backends
 {
-	/// The class that handles Android input for ImGui
+	/** @brief Handles Android input for ImGui */
 	class ImGuiAndroidInput
 	{
 	public:

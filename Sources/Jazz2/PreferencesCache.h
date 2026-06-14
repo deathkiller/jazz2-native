@@ -121,7 +121,12 @@ namespace Jazz2
 
 #	pragma pack(push, 1)
 
-	/** @brief Continuation state between two episodes */
+	/**
+		@brief Continuation state between two episodes
+		
+		Persisted per-episode progress (flags, difficulty/player type, lives, score, elapsed time, gems, ammo and
+		weapon upgrades) carried over when starting the next episode. Stored in @ref PreferencesCache.
+	*/
 	// These structures are aligned manually, because they are serialized and it should work cross-platform
 	struct EpisodeContinuationState {
 		/** @brief Flags */
@@ -156,7 +161,13 @@ namespace Jazz2
 
 #	pragma pack(pop)
 
-	/** @brief Provides access to a user preferences */
+	/**
+		@brief Provides access to a user preferences
+		
+		Static, process-wide store of all persisted settings (graphics, gameplay, input, language) plus per-episode
+		continuation states. Loaded on startup and written back to the configuration file, it is queried throughout
+		the engine to read the current configuration.
+	*/
 	class PreferencesCache
 	{
 	public:

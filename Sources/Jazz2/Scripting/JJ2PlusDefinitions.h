@@ -1279,7 +1279,13 @@ namespace Jazz2::Scripting
 			bool operator==(const jjPALCOLOR& other);
 		};
 
-		/** @brief A 256-color palette */
+		/**
+		 * @brief A 256-color palette
+		 *
+		 * Reference-counted wrapper around 256 @ref jjPALCOLOR entries, mirroring the original JJ2+ palette object.
+		 * Scripts use it to read and edit individual colors and to fill, tint, gradient or copy ranges, then `apply()`
+		 * the result to the screen (or `reset()` back to the level default). Backs the global `jjPalette`.
+		 */
 		class jjPAL
 		{
 		public:
@@ -1335,7 +1341,13 @@ namespace Jazz2::Scripting
 			jjPALCOLOR _palette[256];
 		};
 
-		/** @brief A binary data stream for serialization and file I/O */
+		/**
+		 * @brief A binary data stream for serialization and file I/O
+		 *
+		 * Reference-counted growable byte buffer that scripts use to serialize values. Typed `push`/`pop` and `get`
+		 * helpers append and consume primitives and strings from either end, and the whole stream can be saved to or
+		 * loaded from a file. Also used as the payload of networking packets sent via `jjSendPacket`.
+		 */
 		class jjSTREAM
 		{
 		public:
@@ -1469,7 +1481,14 @@ namespace Jazz2::Scripting
 			RandomGenerator _random;
 		};
 
-		/** @brief Holds the behavior assigned to an object: a built-in id, a script function, or a script object */
+		/**
+		 * @brief Holds the behavior assigned to an object: a built-in id, a script function, or a script object
+		 *
+		 * Tagged-union-style value assigned to @ref jjOBJ::behavior that selects what drives an object each frame:
+		 * a built-in behavior id, a custom script function, or a script object implementing the behavior interface.
+		 * Assignment and conversion operators accept each form, and the held function/object reference is reference-
+		 * counted so it survives as long as the behavior does.
+		 */
 		struct jjBEHAVIOR
 		{
 			/** @brief Constructs an empty behavior in place */
@@ -1507,7 +1526,13 @@ namespace Jazz2::Scripting
 			asIScriptObject* object = nullptr;
 		};
 
-		/** @brief A single frame of a sprite animation */
+		/**
+		 * @brief A single frame of a sprite animation
+		 *
+		 * Reference-counted handle to one frame within the global animation frame table, exposing its dimensions and
+		 * the hotspot, coldspot and gun-muzzle offsets used when the frame is drawn or aimed. Also provides
+		 * pixel-perfect collision testing against another frame. Obtained via `jjAnimFrames[index]`.
+		 */
 		class jjANIMFRAME
 		{
 		public:
@@ -1553,7 +1578,13 @@ namespace Jazz2::Scripting
 			std::int32_t _refCount;
 		};
 
-		/** @brief A sprite animation consisting of a sequence of frames */
+		/**
+		 * @brief A sprite animation consisting of a sequence of frames
+		 *
+		 * Reference-counted handle to one animation within the global animation table, exposing its frame count,
+		 * playback speed and the index of its first @ref jjANIMFRAME. Scripts can load frames from a file into it or
+		 * save it out. Obtained via `jjAnimations[index]`.
+		 */
 		class jjANIMATION
 		{
 		public:
@@ -1594,7 +1625,13 @@ namespace Jazz2::Scripting
 			std::uint32_t _index;
 		};
 
-		/** @brief A set of related sprite animations */
+		/**
+		 * @brief A set of related sprite animations
+		 *
+		 * Reference-counted handle to one animation set (e.g. an original JJ2 sprite set) within the global table,
+		 * grouping a contiguous run of @ref jjANIMATION starting at `firstAnim`. Scripts can allocate empty animations
+		 * or load them from a file into the set. Obtained via `jjAnimSets[index]`.
+		 */
 		class jjANIMSET
 		{
 		public:
@@ -1627,7 +1664,13 @@ namespace Jazz2::Scripting
 			std::uint32_t _index;
 		};
 
-		/** @brief Drawing surface used by scripts to render onto the HUD */
+		/**
+		 * @brief Drawing surface used by scripts to render onto the HUD
+		 *
+		 * Short-lived surface handed to draw callbacks, bound to a @ref UI::HUD and a view rectangle. Its methods draw
+		 * pixels, rectangles, tiles, sprites (plain, resized, rotated, vine) and text into that frame's HUD layer.
+		 * Mirrors the original JJ2+ `jjCANVAS` passed to `onDraw*` hooks.
+		 */
 		struct jjCANVAS {
 			/** @brief The HUD this canvas draws onto */
 			UI::HUD* Hud;
@@ -1684,7 +1727,14 @@ namespace Jazz2::Scripting
 
 		using jjVOIDFUNCOBJ = void(*)(jjOBJ* obj);
 
-		/** @brief A level object (actor) controllable from scripts */
+		/**
+		 * @brief A level object (actor) controllable from scripts
+		 *
+		 * Reference-counted script view of an in-level object (enemy, pickup, projectile, etc.), mirroring the original
+		 * JJ2+ `jjOBJ`. Exposes position, speed, acceleration, animation, energy, lighting and the handling flags that
+		 * govern collisions with players, bullets and blasts, plus its @ref jjBEHAVIOR. Static helpers spawn, delete
+		 * and kill objects; live ones are reached through `jjObjects[id]`.
+		 */
 		class jjOBJ
 		{
 			friend class ScriptLegacyObject;
@@ -2103,7 +2153,14 @@ namespace Jazz2::Scripting
 			std::int32_t _refCount;
 		};
 
-		/** @brief A player in the level */
+		/**
+		 * @brief A player in the level
+		 *
+		 * Primary script interface to a player, wrapping an engine @ref Actors::Player and mirroring the original JJ2+
+		 * `jjPLAYER`. Exposes position, speed, health, lives, score, weapons/ammo, the active character and a large set
+		 * of state queries and actions (freeze, morph, sugar rush, warps, etc.). The level loader owns one backing
+		 * instance per player (see @ref LevelScriptLoader::GetPlayerBackingStore), reached from script via `jjPlayers`.
+		 */
 		class jjPLAYER
 		{
 			friend class LevelScriptLoader;
@@ -2532,7 +2589,13 @@ namespace Jazz2::Scripting
 			void SyncPropertiesFromBackingStore();
 		};
 
-		/** @brief Settings for a weapon type */
+		/**
+		 * @brief Settings for a weapon type
+		 *
+		 * Holds the tunable parameters of one of the game's weapon slots: ammo limits and multipliers, firing style and
+		 * spread, what the weapon is replaced by (shield, bubbles) and where its ammo comes from (crates, birds), and
+		 * whether it and its powered-up form are allowed. Indexed by weapon type and edited from script.
+		 */
 		class jjWEAPON
 		{
 		public:
@@ -2602,7 +2665,13 @@ namespace Jazz2::Scripting
 
 		class jjLAYER;
 
-		/** @brief A rectangular buffer of palette-indexed pixels */
+		/**
+		 * @brief A rectangular buffer of palette-indexed pixels
+		 *
+		 * Reference-counted, editable image of 8-bit palette indices that scripts read and write per pixel. It can be
+		 * built from a tile, an animation frame, a texture, a region of a tile layer, an image file or a blank size,
+		 * and saved back into a tile, an animation frame or an image file. The bridge for procedural graphics editing.
+		 */
 		class jjPIXELMAP
 		{
 		public:
@@ -2681,7 +2750,14 @@ namespace Jazz2::Scripting
 			std::int32_t _refCount;
 		};
 
-		/** @brief A tilemap layer of the level */
+		/**
+		 * @brief A tilemap layer of the level
+		 *
+		 * Reference-counted proxy for one of the level's parallax tile layers, mirroring the original JJ2+ `jjLAYER`.
+		 * Exposes the layer's size, scrolling speeds and offsets, parallax/auto-speed and texture-background modes, and
+		 * per-tile get/set access. The level loader keeps one proxy per engine layer and pushes writable fields back
+		 * each frame (see @ref LevelScriptLoader::GetLayerProxy); reached from script via `jjLayers`.
+		 */
 		class jjLAYER
 		{
 		public:

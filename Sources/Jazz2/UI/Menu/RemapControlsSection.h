@@ -15,6 +15,12 @@ namespace Jazz2::UI::Menu
 	};
 #endif
 
+	/**
+		@brief Remap controls menu section
+		
+		Lists the player actions and lets the player rebind the individual control mappings for a given player by
+		assigning new keyboard, gamepad, or touch inputs.
+	*/
 	class RemapControlsSection : public ScrollableMenuSection<RemapControlsItem>
 	{
 	public:

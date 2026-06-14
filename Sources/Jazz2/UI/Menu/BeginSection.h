@@ -4,7 +4,12 @@
 
 namespace Jazz2::UI::Menu
 {
-	/** @brief Main menu root section */
+	/**
+		@brief Main menu root section
+		
+		Top-level main menu screen listing the primary entries (continue, play, multiplayer, highscores, options,
+		about, and quit) that lead into the rest of the menu.
+	*/
 	class BeginSection : public MenuSection
 	{
 	public:

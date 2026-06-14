@@ -6,11 +6,11 @@
 namespace Jazz2::Actors::Solid
 {
 	/**
-	 * @brief Power-up morph monitor
-	 *
-	 * A floating monitor that, when broken by the player, transforms them into another character, cycling
-	 * between Jazz, Spaz and Lori (or, in the original game, morphing into a bird).
-	 */
+		@brief Power-up morph monitor
+		
+		A floating monitor that, when broken by the player, transforms them into another character, cycling
+		between Jazz, Spaz and Lori (or, in the original game, morphing into a bird).
+	*/
 	class PowerUpMorphMonitor : public SolidObjectBase
 	{
 		DEATH_RUNTIME_OBJECT(SolidObjectBase);

@@ -4,82 +4,97 @@
 
 namespace nCine
 {
-	/// Frame interval and average FPS calculator
+	/**
+		@brief Tracks per-frame timing and computes the average FPS and frame time multiplier
+		
+		Call @ref AddFrame() once per rendered frame to measure the interval since the previous one.
+		The class derives the last frame duration, a periodically updated average FPS, and a time
+		multiplier (@ref GetTimeMult()) expressing how long the last frame took relative to the
+		nominal frame time, used to keep updates frame-rate independent.
+	*/
 	class FrameTimer
 	{
 	public:
-		/** @brief Frames per second */
+		/** @brief Nominal frames per second */
 		static constexpr float FramesPerSecond = 60.0f;
-		/** @brief Seconds per frame */
+		/** @brief Nominal seconds per frame */
 		static constexpr float SecondsPerFrame = 1.0f / FramesPerSecond;
 
-		/// Constructor
+		/**
+		 * @brief Constructor
+		 *
+		 * @param logInterval	Seconds between two logging events
+		 * @param avgInterval	Seconds between two average FPS calculations
+		 */
 		FrameTimer(float logInterval, float avgInterval);
 
-		/// Adds a frame to the counter and calculates the interval since the previous one
+		/** @brief Adds a frame to the counter and calculates the interval since the previous one */
 		void AddFrame();
 
-		/// Starts counting the suspension time
+		/** @brief Starts counting the suspension time */
 		void Suspend();
-		/// Drifts timers by the duration of last suspension
-		/*! \return A timestamp with last suspension duration */
+		/**
+		 * @brief Drifts the timers by the duration of the last suspension and resumes counting
+		 *
+		 * @return Time stamp holding the duration of the last suspension
+		 */
 		TimeStamp Resume();
 
-		/// Returns the total number of frames counted
+		/** @brief Returns the total number of frames counted */
 		inline std::uint32_t GetTotalNumberFrames() const {
 			return _totNumFrames;
 		}
-		/// Returns the last frame duration in seconds between the last two subsequent calls to `addFrame()`
+		/** @brief Returns the duration in seconds between the last two calls to @ref AddFrame() */
 		inline float GetLastFrameDuration() const {
 			return _frameDuration;
 		}
-		/// Returns current frame duration in seconds since the last call to `addFrame()`
+		/** @brief Returns the duration in seconds since the last call to @ref AddFrame() */
 		inline float GetFrameDuration() const {
 			return _frameStart.secondsSince();
 		}
-		/// Returns current frame duration in ticks since the last call to `addFrame()`
+		/** @brief Returns the duration in ticks since the last call to @ref AddFrame() */
 		inline std::uint64_t GetFrameDurationAsTicks() const {
 			return _frameStart.timeSince().ticks();
 		}
-		/// Returns the average FPS during the update interval
+		/** @brief Returns the average FPS measured over the averaging interval */
 		inline float GetAverageFps() const {
 			return _avgFps;
 		}
 
-		/// Returns a factor that represents how long the last frame took relative to the desired frame time
+		/** @brief Returns the factor expressing how long the last frame took relative to the nominal frame time */
 		inline float GetTimeMult() const {
 			return _timeMults[0];
 		}
 
 	private:
-		/// Number of seconds between two average FPS calculations (user defined)
+		// Number of seconds between two average FPS calculations (user defined)
 		float _averageInterval;
-		/// Number of seconds between two logging events (user defined)
+		// Number of seconds between two logging events (user defined)
 		float _loggingInterval;
 
-		/// Timestamp at the beginning of a frame
+		// Time stamp at the beginning of a frame
 		TimeStamp _frameStart;
-		/// Last frame duration in seconds
+		// Last frame duration in seconds
 		float _frameDuration;
-		/// Timestamp at the begininng of application suspension
+		// Time stamp at the beginning of application suspension
 		TimeStamp _suspensionStart;
 
-		/// Total number of frames counted
+		// Total number of frames counted
 		std::uint32_t _totNumFrames;
-		/// Frame counter for average FPS calculation
+		// Frame counter for average FPS calculation
 		std::uint32_t _avgNumFrames;
-		/// Frame counter for logging
+		// Frame counter for logging
 		std::uint32_t _logNumFrames;
 
-		/// Time stamp at last average FPS calculation
+		// Time stamp at last average FPS calculation
 		TimeStamp _lastAvgUpdate;
-		/// Time stamp at last log event
+		// Time stamp at last log event
 		TimeStamp _lastLogUpdate;
 
-		/// Average FPS calulated during the specified interval
+		// Average FPS calculated during the averaging interval
 		float _avgFps;
 
-		/// Factor that represents how long the last frame took relative to the desired frame time
+		// Factors expressing how long the last frames took relative to the nominal frame time
 		float _timeMults[3];
 	};
 }

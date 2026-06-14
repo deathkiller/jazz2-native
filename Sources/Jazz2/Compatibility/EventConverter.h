@@ -35,7 +35,13 @@ namespace Jazz2::Compatibility
 	/** @brief Parameter is a signed integer value */
 	constexpr std::int32_t JJ2ParamInt = 3;
 
-	/** @brief Maps original events to extended event descriptions */
+	/**
+		@brief Maps original events to extended event descriptions
+		
+		Holds a registry of per-event conversion functions that turn an original JJ2 event ID and its
+		packed parameter integer into the engine's native @ref EventType with unpacked parameters. Default
+		converters are registered on construction and can be extended or overridden.
+	*/
 	class EventConverter
 	{
 	public:

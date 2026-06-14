@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Environment
 {
 	/**
-	 * @brief Eva
-	 *
-	 * Eva Earlong, the rabbit who waits at the end of certain levels. When a player who has been
-	 * turned into a frog reaches her, she gives a kiss that reverts the frog morph back to the
-	 * normal rabbit form.
-	 */
+		@brief Eva
+		
+		Eva Earlong, the rabbit who waits at the end of certain levels. When a player who has been
+		turned into a frog reaches her, she gives a kiss that reverts the frog morph back to the
+		normal rabbit form.
+	*/
 	class Eva : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

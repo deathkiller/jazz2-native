@@ -8,34 +8,40 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// Sorts and issues the render commands collected by the scenegraph visit
+	/**
+		@brief Sorts and issues the render commands collected during a scene graph visit
+		
+		Drawable nodes append their commands during the visit phase. @ref SortAndCommit() then
+		separates opaque from transparent commands, sorts each group, builds batches and uploads
+		their data, and @ref Draw() finally issues them to OpenGL in the proper order.
+	*/
 	class RenderQueue
 	{
 	public:
 		RenderQueue();
 
-		/// Returns `true` if the queue does not contain any render commands
+		/** @brief Returns `true` if the queue does not contain any render commands */
 		bool IsEmpty() const;
 
-		/// Adds a draw command to the queue
+		/** @brief Adds a draw command to the queue */
 		void AddCommand(RenderCommand* command);
 
-		/// Sorts the queues, create batches and commits commands
+		/** @brief Sorts the queues, builds batches and commits the commands */
 		void SortAndCommit();
-		/// Issues every render command in order
+		/** @brief Issues every render command in order */
 		void Draw();
 
-		/// Clears all the queues and resets the render batcher
+		/** @brief Clears all the queues and resets the render batcher */
 		void Clear();
 
 	private:
-		/// Array of opaque render command pointers
+		/** @brief Array of opaque render command pointers */
 		SmallVector<RenderCommand*, 0> opaqueQueue_;
-		/// Array of opaque batched render command pointers
+		/** @brief Array of opaque batched render command pointers */
 		SmallVector<RenderCommand*, 0> opaqueBatchedQueue_;
-		/// Array of transparent render command pointers
+		/** @brief Array of transparent render command pointers */
 		SmallVector<RenderCommand*, 0> transparentQueue_;
-		/// Array of transparent batched render command pointers
+		/** @brief Array of transparent batched render command pointers */
 		SmallVector<RenderCommand*, 0> transparentBatchedQueue_;
 	};
 

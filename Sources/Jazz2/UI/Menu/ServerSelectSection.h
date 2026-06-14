@@ -8,6 +8,12 @@
 
 namespace Jazz2::UI::Menu
 {
+	/**
+		@brief Server selection menu section
+		
+		Browses the discovered public and LAN servers and lets the player join one or connect directly by entering an
+		address.
+	*/
 	class ServerSelectSection : public MenuSection, public Jazz2::Multiplayer::IServerObserver
 	{
 	public:

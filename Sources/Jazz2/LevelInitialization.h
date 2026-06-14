@@ -13,7 +13,12 @@ using namespace Death::Containers;
 
 namespace Jazz2
 {
-	/** @brief Player carry over between levels */
+	/**
+		@brief Player carry over between levels
+		
+		Snapshot of a single player's persistent progress (type, current weapon, lives, food, score, gems, ammo and
+		weapon upgrades) handed from a finished level to the next one through @ref LevelInitialization.
+	*/
 	struct PlayerCarryOver
 	{
 		/** @{ @name Constants */
@@ -41,7 +46,13 @@ namespace Jazz2
 		StaticArray<WeaponCount, std::uint8_t> WeaponUpgrades;
 	};
 
-	/** @brief Level initialization parameters */
+	/**
+		@brief Level initialization parameters
+		
+		Describes which level to start and under what conditions --- target level name, difficulty, session/reforged
+		flags, last exit type, elapsed time and the per-player @ref PlayerCarryOver entries. Passed to the root
+		controller to change level and consumed by the level handler when spawning players.
+	*/
 	struct LevelInitialization
 	{
 		/** @{ @name Constants */

@@ -6,7 +6,12 @@
 
 namespace Jazz2::Actors::Multiplayer
 {
-	/** @brief Remotable player in online session */
+	/**
+		@brief Remotable player in online session
+		
+		A client-side player whose control can be driven remotely by the server. The server can move it, warp it in
+		and queue respawns, while local input and weapon changes are reconciled with the authoritative server state.
+	*/
 	class RemotablePlayer : public MpPlayer
 	{
 		DEATH_RUNTIME_OBJECT(MpPlayer);

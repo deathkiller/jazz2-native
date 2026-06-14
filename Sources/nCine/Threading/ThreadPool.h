@@ -12,17 +12,21 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// Thread pool
+	/**
+		@brief Thread pool
+		
+		Maintains a fixed set of worker threads that pull queued @ref IThreadCommand instances off a
+		shared queue and execute them. Implements the @ref IThreadPool interface and is non-copyable.
+	*/
 	class ThreadPool : public IThreadPool
 	{
 	public:
-		/// Creates a thread pool with as many threads as available processors
+		/** @brief Creates a thread pool with as many worker threads as available processors */
 		ThreadPool();
-		/// Creates a thread pool with a specified number of threads
+		/** @brief Creates a thread pool with the given number of worker threads */
 		explicit ThreadPool(std::size_t numThreads);
 		~ThreadPool() override;
 
-		/// Enqueues a command request for a worker thread
 		void EnqueueCommand(std::unique_ptr<IThreadCommand>&& threadCommand) override;
 
 	private:
@@ -47,9 +51,9 @@ namespace nCine
 		ThreadStruct threadStruct_;
 		static void WorkerFunction(void* arg);
 
-		/// Deleted copy constructor
+		/** @brief Deleted copy constructor */
 		ThreadPool(const ThreadPool&) = delete;
-		/// Deleted assignment operator
+		/** @brief Deleted assignment operator */
 		ThreadPool& operator=(const ThreadPool&) = delete;
 	};
 }

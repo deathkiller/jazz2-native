@@ -5,11 +5,11 @@
 namespace Jazz2::Actors::Solid
 {
 	/**
-	 * @brief Power-up weapon monitor
-	 *
-	 * A floating monitor that, when broken by the player, permanently upgrades the matching weapon to its
-	 * powered-up version and tops up its ammunition.
-	 */
+		@brief Power-up weapon monitor
+		
+		A floating monitor that, when broken by the player, permanently upgrades the matching weapon to its
+		powered-up version and tops up its ammunition.
+	*/
 	class PowerUpWeaponMonitor : public SolidObjectBase
 	{
 		DEATH_RUNTIME_OBJECT(SolidObjectBase);

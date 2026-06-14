@@ -11,6 +11,12 @@ namespace Jazz2::UI::Menu
 	};
 #endif
 
+	/**
+		@brief Language selection menu section
+		
+		Lists the available interface languages found in the content and cache directories and lets the player choose
+		one.
+	*/
 	class LanguageSelectSection : public ScrollableMenuSection<LanguageData>
 	{
 	public:

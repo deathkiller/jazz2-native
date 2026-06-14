@@ -13,11 +13,15 @@ namespace nCine::Backends
 {
 	class AndroidJniClass_DisplayMode;
 
-	/// The EGL based graphics device
+	/**
+		@brief The EGL-based graphics device
+		
+		Manages the EGL display connection, drawing surface and rendering context for the Android backend.
+	*/
 	class EglGfxDevice : public IGfxDevice
 	{
 	public:
-		/// Constructor taking a `DisplayMode` object
+		/** @brief Constructor taking a `DisplayMode` object */
 		EglGfxDevice(struct android_app* state, const GLContextInfo& glContextInfo, const DisplayMode& displayMode);
 		~EglGfxDevice() override;
 
@@ -34,20 +38,20 @@ namespace nCine::Backends
 		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
 		bool setVideoMode(unsigned int modeIndex) override;
 	
-		/// Recreates a surface from a native window
+		/** @brief Recreates the drawing surface from the native window */
 		void createSurface();
-		/// Binds the current context
+		/** @brief Makes the EGL context current on the calling thread */
 		void bindContext();
-		/// Unbinds the current context
+		/** @brief Releases the EGL context from the calling thread */
 		void unbindContext();
-		/// Queries the size of the current surface
+		/** @brief Queries the size of the current drawing surface */
 		Vector2i querySurfaceSize();
 
-		/// Checks if the desired pixel format is supported
+		/** @brief Checks if the desired pixel format is supported */
 		static bool isModeSupported(struct android_app* state, const GLContextInfo& glContextInfo, const DisplayMode& mode);
-		
+
 #if defined(DEATH_TARGET_ANDROID)
-		/// Used only for the JNI native function
+		/** @brief Refreshes the monitor list from JNI, called only by the JNI native function */
 		static void updateMonitorsFromJni();
 #endif
 
@@ -55,13 +59,13 @@ namespace nCine::Backends
 		void setResolutionInternal(int width, int height) override { }
 
 	private:
-		/// The EGL display connection
+		/** @brief The EGL display connection */
 		EGLDisplay display_;
-		/// The EGL drawing surface
+		/** @brief The EGL drawing surface */
 		EGLSurface surface_;
-		/// The EGL context
+		/** @brief The EGL rendering context */
 		EGLContext context_;
-		/// The EGL config used to create the first surface
+		/** @brief The EGL config used to create the first surface */
 		EGLConfig config_;
 
 		struct android_app* state_;
@@ -69,7 +73,7 @@ namespace nCine::Backends
 		static const unsigned int MaxMonitorNameLength = 128;
 		static char monitorNames_[MaxMonitors][MaxMonitorNameLength];
 
-		/// Initializes the OpenGL graphic context
+		/** @brief Initializes the OpenGL graphics context */
 		void initDevice();
 
 		void updateMonitors() override;

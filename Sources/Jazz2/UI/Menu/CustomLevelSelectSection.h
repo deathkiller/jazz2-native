@@ -8,6 +8,12 @@
 
 namespace Jazz2::UI::Menu
 {
+	/**
+		@brief Custom level selection menu section
+		
+		Lists the installed custom (standalone) levels and lets the player pick one to play or host as a multiplayer
+		server.
+	*/
 	class CustomLevelSelectSection : public MenuSection
 	{
 	public:

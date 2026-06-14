@@ -6,7 +6,12 @@
 
 namespace nCine
 {
-	/** @brief Provides base services to requesting classes */
+	/**
+		@brief Central registry that provides engine services to requesting classes
+		
+		Holds the active audio device, thread pool and graphics capabilities providers. Null implementations
+		are used until a real provider is registered, so callers can always obtain a valid reference.
+	*/
 	class ServiceLocator
 	{
 	public:
@@ -34,7 +39,7 @@ namespace nCine
 		}
 		/** @brief Registers a graphics capabilities provider */
 		void RegisterGfxCapabilities(std::unique_ptr<IGfxCapabilities> service);
-		/** @brief Unregisters the graphics capabilitiesprovider and reinstates the null one */
+		/** @brief Unregisters the graphics capabilities provider and reinstates the null one */
 		void UnregisterGfxCapabilities();
 
 		/** @brief Unregisters every registered service and reinstates null ones */
@@ -61,6 +66,7 @@ namespace nCine
 		friend ServiceLocator& theServiceLocator();
 	};
 
+	/** @brief Returns the singleton service locator instance */
 	ServiceLocator& theServiceLocator();
 
 }

@@ -5,13 +5,13 @@
 namespace Jazz2::Actors::Enemies
 {
 	/**
-	 * @brief Turtle
-	 *
-	 * Walks back and forth on the ground, withdrawing into its shell to turn at walls and, on harder
-	 * difficulties, to dodge incoming shots, and snapping at players that get directly in front of it.
-	 * An ordinary hit knocks it out of its shell, leaving a sliding @ref TurtleShell behind; a Xmas
-	 * variant is available.
-	 */
+		@brief Turtle
+		
+		Walks back and forth on the ground, withdrawing into its shell to turn at walls and, on harder
+		difficulties, to dodge incoming shots, and snapping at players that get directly in front of it.
+		An ordinary hit knocks it out of its shell, leaving a sliding @ref TurtleShell behind; a Xmas
+		variant is available.
+	*/
 	class Turtle : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

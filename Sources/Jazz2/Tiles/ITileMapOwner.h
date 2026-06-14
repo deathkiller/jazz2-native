@@ -4,7 +4,12 @@
 
 namespace Jazz2::Tiles
 {
-	/** @brief Interface used to notify tile map owner of various events */
+	/**
+		@brief Interface used to notify tile map owner of various events
+		
+		Implemented by the level handler so the tile map can call back into it --- to play common sound effects and to
+		report destructible-tile animation progress and tile freezing.
+	*/
 	class ITileMapOwner
 	{
 	public:

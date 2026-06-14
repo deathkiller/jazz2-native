@@ -7,87 +7,96 @@
 
 namespace nCine
 {
-	/// Wraps all the information needed for issuing a draw command
+	/**
+		@brief Holds all the state needed to issue a single draw call
+		
+		Bundles the material, geometry, model transformation and sort keys for one renderable. The render
+		queue sorts commands by their material sort key to minimize state changes, optionally merges them
+		via @ref RenderBatcher, and finally calls @ref Issue() to bind the state and draw.
+	*/
 	class RenderCommand
 	{
 	public:
-		/// Command types
-		/*! Its sole purpose is to allow separated profiling counters in the `RenderStatistics` class. */
+		/**
+		 * @brief Command type
+		 *
+		 * Its sole purpose is to allow separated profiling counters in the `RenderStatistics` class.
+		 */
 		enum class Type
 		{
-			Unspecified = 0,
-			Sprite,
-			MeshSprite,
-			TileMap,
-			Particle,
-			Lighting,
-			Text,
-			ImGui,
+			Unspecified = 0,	/**< Unspecified or non-profiled command */
+			Sprite,				/**< Sprite draw command */
+			MeshSprite,			/**< Mesh sprite draw command */
+			TileMap,			/**< Tile map draw command */
+			Particle,			/**< Particle draw command */
+			Lighting,			/**< Lighting draw command */
+			Text,				/**< Text draw command */
+			ImGui,				/**< ImGui draw command */
 
-			Count
+			Count				/**< Number of command types */
 		};
 
 		explicit RenderCommand(Type type);
 		RenderCommand();
 
-		/// Returns the number of instances collected in the command or zero if instancing is not used
+		/** @brief Returns the number of instances collected in the command or zero if instancing is not used */
 		inline std::int32_t GetInstanceCount() const {
 			return numInstances_;
 		}
-		/// Sets the number of instances collected in the command
+		/** @brief Sets the number of instances collected in the command */
 		inline void SetInstanceCount(std::int32_t numInstances) {
 			numInstances_ = numInstances;
 		}
 
-		/// Returns the number of elements collected by the command or zero if it's not a batch
+		/** @brief Returns the number of elements collected by the command or zero if it's not a batch */
 		inline std::int32_t GetBatchSize() const {
 			return batchSize_;
 		}
-		/// Sets the number of batch elements collected by the command
+		/** @brief Sets the number of batch elements collected by the command */
 		inline void SetBatchSize(std::int32_t batchSize) {
 			batchSize_ = batchSize;
 		}
 
-		/// Returns the drawing layer for this command
+		/** @brief Returns the drawing layer for this command */
 		inline std::uint16_t GetLayer() const {
 			return layer_;
 		}
-		/// Sets the drawing layer for this command
+		/** @brief Sets the drawing layer for this command */
 		inline void SetLayer(std::uint16_t layer) {
 			layer_ = layer;
 		}
-		/// Returns the visit order index for this command
+		/** @brief Returns the visit order index for this command */
 		inline std::uint16_t GetVisitOrder() const {
 			return visitOrder_;
 		}
-		/// Sets the visit order index for this command
+		/** @brief Sets the visit order index for this command */
 		inline void SetVisitOrder(std::uint16_t visitOrder) {
 			visitOrder_ = visitOrder;
 		}
 
-		/// Returns the material sort key for the queue
+		/** @brief Returns the material sort key for the queue */
 		inline std::uint64_t GetMaterialSortKey() const {
 			return materialSortKey_;
 		}
-		/// Returns the lower part of the material sort key, used for batch splitting logic
+		/** @brief Returns the lower part of the material sort key, used for batch splitting logic */
 		inline std::uint32_t GetLowerMaterialSortKey() const {
 			return std::uint32_t(materialSortKey_);
 		}
-		/// Calculates a material sort key for the queue
+		/** @brief Calculates the material sort key for the queue */
 		void CalculateMaterialSortKey();
-		/// Returns the id based secondary sort key for the queue
+		/** @brief Returns the id based secondary sort key for the queue */
 		inline std::uint32_t GetIdSortKey() const {
 			return idSortKey_;
 		}
-		/// Sets the id based secondary sort key for the queue
+		/** @brief Sets the id based secondary sort key for the queue */
 		inline void SetIdSortKey(std::uint32_t idSortKey) {
 			idSortKey_ = idSortKey;
 		}
 
-		/// Issues the render command
+		/** @brief Binds the command state and issues the draw call */
 		void Issue();
 
-		/// Gets the command type (for profiling purposes)
+		/** @brief Returns the command type (for profiling purposes) */
 		inline Type GetType() const {
 #if defined(NCINE_PROFILING)
 			return type_;
@@ -95,59 +104,67 @@ namespace nCine
 			return Type::Unspecified;
 #endif
 		}
-		/// Sets the command type (for profiling purposes)
+		/** @brief Sets the command type (for profiling purposes) */
 		inline void SetType(Type type) {
 #if defined(NCINE_PROFILING)
 			type_ = type;
 #endif
 		}
 
+		/** @brief Sets the scissor rectangle for this command */
 		inline void SetScissor(Recti scissorRect) {
 			scissorRect_ = scissorRect;
 		}
+		/** @brief Sets the scissor rectangle for this command */
 		void SetScissor(GLint x, GLint y, GLsizei width, GLsizei height);
 
+		/** @brief Returns the model transformation matrix */
 		inline const Matrix4x4f& GetTransformation() const {
 			return modelMatrix_;
 		}
+		/** @brief Sets the model transformation matrix and marks it for re-committing */
 		void SetTransformation(const Matrix4x4f& modelMatrix);
 
+		/** @brief Returns the material (read-only) */
 		inline const Material& GetMaterial() const {
 			return material_;
 		}
+		/** @brief Returns the geometry (read-only) */
 		inline const Geometry& GetGeometry() const {
 			return geometry_;
 		}
+		/** @brief Returns the material */
 		inline Material& GetMaterial() {
 			return material_;
 		}
+		/** @brief Returns the geometry */
 		inline Geometry& GetGeometry() {
 			return geometry_;
 		}
 
-		/// Commits the model matrix uniform block
+		/** @brief Commits the model matrix uniform block */
 		void CommitNodeTransformation();
 
-		/// Commits the projection and view matrix uniforms
+		/** @brief Commits the projection and view matrix uniforms */
 		void CommitCameraTransformation();
 
-		/// Calls all the commit methods except the camera uniforms commit
+		/** @brief Calls all the commit methods except the camera uniforms commit */
 		void CommitAll();
 
-		/// Calculates the Z-depth of command layer using the specified near and far planes
+		/** @brief Calculates the Z-depth of a command layer using the specified near and far planes */
 		static float CalculateDepth(std::uint16_t layer, float nearClip, float farClip);
 
 	private:
-		/// The distance on the Z axis between adjacent layers
+		/** @brief Distance on the Z axis between adjacent layers */
 		static constexpr float LayerStep = 1.0f / static_cast<float>(0xFFFF);
 
-		/// The material sort key minimizes state changes when rendering commands
+		/** @brief Material sort key that minimizes state changes when rendering commands */
 		std::uint64_t materialSortKey_;
-		/// The id based secondary sort key stabilizes render commands sorting
+		/** @brief Id based secondary sort key that stabilizes render command sorting */
 		std::uint32_t idSortKey_;
-		/// The drawing layer for this command
+		/** @brief Drawing layer for this command */
 		std::uint16_t layer_;
-		/// The visit order index for this command
+		/** @brief Visit order index for this command */
 		std::uint16_t visitOrder_;
 		std::int32_t numInstances_;
 		std::int32_t batchSize_;
@@ -163,7 +180,7 @@ namespace nCine
 		Material material_;
 		Geometry geometry_;
 
-		/// Returns the final layer sort key for this command
+		/** @brief Returns the final layer sort key for this command */
 		inline std::uint32_t GetLayerSortKey() const {
 			return std::uint32_t(layer_ << 16) + visitOrder_;
 		}

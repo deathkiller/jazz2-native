@@ -34,6 +34,12 @@ namespace Jazz2::UI::Menu
 	};
 #endif
 
+	/**
+		@brief Gameplay options menu section
+		
+		Lists the gameplay-related settings, such as enhancements, language, continuous jump, and cheats, and leads
+		into the related sub-screens.
+	*/
 	class GameplayOptionsSection : public ScrollableMenuSection<GameplayOptionsItem>
 	{
 	public:

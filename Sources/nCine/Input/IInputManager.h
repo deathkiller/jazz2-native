@@ -13,7 +13,11 @@ namespace nCine
 	class IInputEventHandler;
 	class JoyMapping;
 
-	/** @brief Well-known joystick types */
+	/**
+		@brief Well-known joystick GUID layouts
+		
+		Identifies how the bytes of a @ref JoystickGuid are laid out so they can be parsed accordingly.
+	*/
 	enum class JoystickGuidType {
 		Unknown,
 		Standard,
@@ -22,7 +26,11 @@ namespace nCine
 		Xinput
 	};
 
-	/** @brief Parsed GUID of a joystick */
+	/**
+		@brief Parsed 16-byte GUID that identifies a joystick model
+		
+		Used to match a connected joystick against a mapping configuration.
+	*/
 	class JoystickGuid
 	{
 	public:
@@ -33,28 +41,34 @@ namespace nCine
 		inline JoystickGuid(StringView string) {
 			fromString(string);
 		}
+		/** @brief Fills the GUID for a well-known layout type */
 		void fromType(JoystickGuidType type);
+		/** @brief Parses the GUID from its hexadecimal string representation */
 		void fromString(StringView string);
+		/** @brief Returns `true` if the GUID is not all zeros */
 		bool isValid() const;
 
 		bool operator==(const JoystickGuid& guid) const;
 
+		/** @brief Raw GUID bytes */
 		std::uint8_t data[16];
 	};
 
-	/// Interface for parsing and dispatching input events
+	/**
+		@brief Interface for querying input state and dispatching input events
+		
+		Provides access to mouse, keyboard and joystick state, manages the active @ref IInputEventHandler
+		and exposes the joystick mapping layer. Backends derive from it to supply platform-specific input.
+	*/
 	class IInputManager
 	{
 	public:
+		/** @brief Mouse cursor mode */
 		enum class Cursor
 		{
-			/// Mouse cursor behaves normally with default Arrow
-			Arrow,
-			/// Mouse cursor is hidden but behaves normally
-			Hidden,
-			/// Mouse cursor is hidden and locked to the window
-			/*! \note Mouse movement will be relative if supported (with no acceleration and no scaling) */
-			HiddenLocked
+			Arrow,			/**< Cursor is shown and behaves normally */
+			Hidden,			/**< Cursor is hidden but behaves normally */
+			HiddenLocked	/**< Cursor is hidden and locked to the window; movement is relative if supported (no acceleration or scaling) */
 		};
 
 		/** @{ @name Constants */
@@ -63,78 +77,89 @@ namespace nCine
 		static const std::int32_t MaxNumJoysticks;
 
 		// From `XInput.h` in DirectX SDK
+		/** @brief Dead zone radius applied to the left analog stick */
 		static constexpr float LeftStickDeadZone = 7849 / 32767.0f;
+		/** @brief Dead zone radius applied to the right analog stick */
 		static constexpr float RightStickDeadZone = 8689 / 32767.0f;
+		/** @brief Dead zone applied to analog triggers */
 		static constexpr float TriggerDeadZone = 30 / 32767.0f;
+		/** @brief Threshold above which an analog input is reported as a pressed button */
 		static constexpr float AnalogInButtonDeadZone = 0.85f;
+		/** @brief Threshold below which an analog input is reported as a released button */
 		static constexpr float AnalogOutButtonDeadZone = 0.4f;
+		/** @brief Threshold above which an analog trigger is reported as a pressed button */
 		static constexpr float TriggerButtonDeadZone = 0.02f;
 
 		/** @} */
 
 		IInputManager() {}
 		virtual ~IInputManager() {}
-		/// Gets the current input event handler for the manager
+		/** @brief Returns the current input event handler */
 		static inline IInputEventHandler* handler() {
 			return inputEventHandler_;
 		}
-		/// Sets the input event handler for the manager
+		/** @brief Sets the input event handler */
 		static void setHandler(IInputEventHandler* inputEventHandler);
 
-		/// Returns current mouse state
+		/** @brief Returns the current mouse state */
 		virtual const MouseState& mouseState() const = 0;
-		/// Returns current keyboard state
+		/** @brief Returns the current keyboard state */
 		virtual const KeyboardState& keyboardState() const = 0;
 
-		/// Returns text from the clipboard if any
+		/** @brief Returns the clipboard text, or empty if none */
 		virtual String getClipboardText() const;
-		/// Sets the clipboard to the specified text
+		/** @brief Sets the clipboard text */
 		virtual bool setClipboardText(StringView text);
-		/// Returns display name of the specified key
+		/** @brief Returns the display name of the specified key */
 		virtual StringView getKeyName(Keys key) const;
 
-		/// Returns true if the specified joystick is connected
+		/** @brief Returns `true` if the specified joystick is connected */
 		virtual bool isJoyPresent(int joyId) const = 0;
-		/// Returns the name of the specified joystick
+		/** @brief Returns the name of the specified joystick */
 		virtual const char* joyName(int joyId) const = 0;
-		/// Returns the GUID of the specified joystick
+		/** @brief Returns the GUID of the specified joystick */
 		virtual const JoystickGuid joyGuid(int joyId) const = 0;
-		/// Returns the number of available buttons for the specified joystick
+		/** @brief Returns the number of buttons of the specified joystick */
 		virtual int joyNumButtons(int joyId) const = 0;
-		/// Returns the number of available hats for the specified joystick
+		/** @brief Returns the number of hats of the specified joystick */
 		virtual int joyNumHats(int joyId) const = 0;
-		/// Returns the number of available axes for the specified joystick
+		/** @brief Returns the number of axes of the specified joystick */
 		virtual int joyNumAxes(int joyId) const = 0;
-		/// Returns the state of the joystick
+		/** @brief Returns the raw state of the specified joystick */
 		virtual const JoystickState& joystickState(int joyId) const = 0;
-		/// Starts a main rumble effect with specified duration
+		/** @brief Starts a low/high frequency rumble effect for the specified duration in milliseconds */
 		virtual bool joystickRumble(int joyId, float lowFreqIntensity, float highFreqIntensity, uint32_t durationMs) = 0;
-		/// Starts a rumble effect on triggers with specified duration
+		/** @brief Starts a left/right trigger rumble effect for the specified duration in milliseconds */
 		virtual bool joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs) = 0;
 
-		/// Returns `true` if the joystick has a valid mapping configuration
+		/**
+			@brief Returns `true` if the joystick has a valid mapping configuration
+			
+			@note A joystick stays mapped in the @ref IInputEventHandler::OnJoyConnected() and
+			@ref IInputEventHandler::OnJoyDisconnected() callbacks.
+		*/
 		bool isJoyMapped(int joyId) const;
-		/// Returns the state of the mapped joystick
+		/** @brief Returns the unified mapped state of the specified joystick */
 		const JoyMappedState& joyMappedState(int joyId) const;
-		/// Modify the joystick axis vector to account for a dead zone
+		/** @brief Normalizes a joystick axis vector, clamping values within the dead zone to zero */
 		void deadZoneNormalize(Vector2f& joyVector, float deadZoneValue) const;
 
-		/// Adds joystick mapping configurations from a text file
+		/** @brief Adds joystick mapping configurations from a text file */
 		void addJoyMappingsFromFile(StringView path);
-		/// Adds joystick mapping configurations from a string
+		/** @brief Adds joystick mapping configurations from a string */
 		void addJoyMappingsFromString(StringView mappingStrings);
-		/// Returns the current number of valid joystick mappings
+		/** @brief Returns the current number of valid joystick mappings */
 		unsigned int numJoyMappings() const;
-		/// Returns true if mapping exists for specified joystick by GUID
+		/** @brief Returns `true` if a mapping exists for the specified joystick GUID */
 		bool hasMappingByGuid(const JoystickGuid& guid) const;
-		/// Returns true if mapping exists for specified joystick by name
+		/** @brief Returns `true` if a mapping exists for the specified joystick name */
 		bool hasMappingByName(const char* name) const;
 
-		/// Returns current mouse cursor mode
+		/** @brief Returns the current mouse cursor mode */
 		inline Cursor cursor() const {
 			return cursor_;
 		}
-		/// Sets the mouse cursor mode
+		/** @brief Sets the mouse cursor mode */
 		virtual void setCursor(Cursor cursor);
 
 	protected:

@@ -13,7 +13,12 @@ using namespace Death::IO;
 
 namespace Jazz2::UI::Menu
 {
-	/** @brief Import Episodes menu section (Emscripten only) */
+	/**
+		@brief Import Episodes menu section (Emscripten only)
+		
+		Lets the player pick original game files through the browser file picker and imports the episodes and levels
+		found in them.
+	*/
 	class ImportSection : public MenuSection
 	{
 	public:

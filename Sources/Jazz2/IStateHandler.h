@@ -10,7 +10,12 @@
 
 namespace Jazz2
 {
-	/** @brief Base interface of a state handler, only one handler runs at a time */
+	/**
+		@brief Base interface of a state handler, only one handler runs at a time
+		
+		Represents one top-level application state (main menu, in-game level, cinematic, etc.). The root controller
+		keeps a single active handler and forwards per-frame, viewport and input callbacks to it.
+	*/
 	class IStateHandler : public std::enable_shared_from_this<IStateHandler>
 	{
 		DEATH_RUNTIME_OBJECT();

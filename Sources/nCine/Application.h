@@ -30,10 +30,19 @@ namespace nCine
 	class ImGuiDrawing;
 #endif
 
-	/** @brief Delegate type that creates an instance of @ref IAppEventHandler */
+	/**
+		@brief Delegate that creates an instance of @ref IAppEventHandler
+		
+		Passed to @ref MainApplication::Run() so the engine can instantiate the user's event handler.
+	*/
 	using CreateAppEventHandlerDelegate = std::unique_ptr<IAppEventHandler>(*)();
 
-	/** @brief Base class for main entry points of nCine applications */
+	/**
+		@brief Base class for the main entry point of an nCine application
+		
+		Owns the engine subsystems (graphics device, scene graph, input manager, viewport) and drives
+		the game loop. Backend-specific subclasses such as @ref MainApplication provide the platform glue.
+	*/
 	class Application
 #if defined(DEATH_TRACE)
 		: public ITraceSink
@@ -68,10 +77,10 @@ namespace nCine
 			std::uint16_t imguiLayer;
 
 			/**
-				@brief ImGui viewport
-			
-				The viewport should mirror the screen dimensions or mouse input would not work. Setting `nullptr` is the same as setting the screen
-			*/
+			 * @brief ImGui viewport
+			 *
+			 * The viewport should mirror the screen dimensions or mouse input would not work. Setting `nullptr` is the same as setting the screen.
+			 */
 			Viewport* imguiViewport;
 		};
 #endif

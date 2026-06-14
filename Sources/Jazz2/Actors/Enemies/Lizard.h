@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Enemies
 {
 	/**
-	 * @brief Lizard
-	 *
-	 * Grounded reptile that walks back and forth, hissing occasionally and turning around at walls and
-	 * ledges. It can also drop in from above after losing its copter, harming the player only on
-	 * contact. Defeated by a single hit, with a festive Xmas variant available.
-	 */
+		@brief Lizard
+		
+		Grounded reptile that walks back and forth, hissing occasionally and turning around at walls and
+		ledges. It can also drop in from above after losing its copter, harming the player only on
+		contact. Defeated by a single hit, with a festive Xmas variant available.
+	*/
 	class Lizard : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

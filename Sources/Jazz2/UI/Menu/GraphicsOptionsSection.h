@@ -31,6 +31,11 @@ namespace Jazz2::UI::Menu
 	};
 #endif
 
+	/**
+		@brief Graphics options menu section
+		
+		Lists the graphics and video settings, such as rescale mode, resolution, antialiasing, and lighting quality.
+	*/
 	class GraphicsOptionsSection : public ScrollableMenuSection<GraphicsOptionsItem>
 	{
 	public:

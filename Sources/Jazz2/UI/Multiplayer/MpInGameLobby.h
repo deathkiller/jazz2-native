@@ -8,7 +8,12 @@
 
 namespace Jazz2::UI::Multiplayer
 {
-	/** @brief In-game lobby screen for multiplayer */
+	/**
+		@brief In-game lobby screen for multiplayer
+		
+		Overlay shown while in a multiplayer session that lets the player pick a character from the server's allowed
+		player types before (re)joining the game. It handles its own input and is shown or hidden on demand.
+	*/
 	class MpInGameLobby : public Canvas
 	{
 	public:

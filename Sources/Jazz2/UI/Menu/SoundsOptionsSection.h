@@ -4,6 +4,11 @@
 
 namespace Jazz2::UI::Menu
 {
+	/**
+		@brief Sounds options menu section
+		
+		Lets the player adjust the audio settings, namely the master, sound effects, and music volumes.
+	*/
 	class SoundsOptionsSection : public MenuSection
 	{
 	public:

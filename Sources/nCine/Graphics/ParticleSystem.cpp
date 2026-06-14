@@ -90,7 +90,7 @@ namespace nCine
 			float rotation = 0.0f;
 			if (init.emitterRotation) {
 				// Particles are rotated towards the emission vector
-				rotation = (atan2f(velocity.X, velocity.X) - atan2f(1.0f, 0.0f)) * 180.0f / fPi;
+				rotation = (atan2f(velocity.Y, velocity.X) - atan2f(1.0f, 0.0f)) * 180.0f / fPi;
 				if (rotation < 0.0f) {
 					rotation += 360.0f;
 				}

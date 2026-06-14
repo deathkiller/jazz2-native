@@ -2,7 +2,12 @@
 
 namespace nCine
 {
-	/** @brief Keys */
+	/**
+		@brief Keyboard key symbols
+		
+		Platform-independent key codes. Not every value is produced by every backend; comments mark
+		values specific to SDL, GLFW or Android.
+	*/
 	enum class Keys
 	{
 		// Common keysyms
@@ -252,7 +257,12 @@ namespace nCine
 		Unknown = Count
 	};
 
-	/** @brief Key modifiers */
+	/**
+		@brief Keyboard modifier flags
+		
+		Bit flags reported in @ref KeyboardEvent::mod. The combined values (@ref Ctrl, @ref Shift, etc.)
+		match either the left or the right modifier.
+	*/
 	enum KeyMod
 	{
 		None = 0x0000,

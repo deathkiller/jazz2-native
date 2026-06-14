@@ -6,7 +6,9 @@
 
 namespace nCine
 {
-	/// DDS texture loader
+	/**
+		@brief Texture loader for the DirectDraw Surface (`.dds`) format
+	*/
 	class TextureLoaderDds : public ITextureLoader
 	{
 	public:
@@ -15,7 +17,7 @@ namespace nCine
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
-		/// Header for the DDS pixel format
+		/** @brief Pixel format descriptor inside the DDS header */
 		struct DdsPixelformat
 		{
 			std::uint32_t dwSize;
@@ -28,7 +30,7 @@ namespace nCine
 			std::uint32_t dwABitMask;
 		};
 
-		/// Header for the DDS format
+		/** @brief Header of a DDS file */
 		struct DdsHeader
 		{
 			std::uint32_t dwMagic;
@@ -69,9 +71,9 @@ namespace nCine
 		static const std::uint32_t DDS_ATCA = 0x41435441; // "ATCA"
 		static const std::uint32_t DDS_ATCI = 0x49435441; // "ATCI"
 
-		/// Reads the DDS header and fills the corresponding structure
+		/** @brief Reads the DDS header and fills the corresponding structure */
 		bool readHeader(DdsHeader& header);
-		/// Parses the DDS header to determine its format
+		/** @brief Parses the DDS header to determine the texture format */
 		bool parseFormat(const DdsHeader& header);
 	};
 

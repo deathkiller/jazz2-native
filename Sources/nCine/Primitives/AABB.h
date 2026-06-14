@@ -12,18 +12,25 @@ namespace nCine
 	{
 		using Death::Containers::NoInitT;
 
-		/// Axis-Aligned Bounding Box in a two dimensional space
+		/**
+			@brief Axis-aligned bounding box in a two-dimensional space
+			
+			Stored as the left, top, right and bottom edges (@ref L, @ref T, @ref R, @ref B).
+			Provides width and height accessors, center, extents and perimeter queries,
+			containment and overlap tests, intersection and combination of two boxes, and
+			translation by a @ref Vector2.
+		*/
 		template<class S>
 		class AABB
 		{
 		public:
-			/// Top-left X coordinate
+			/** @brief Left edge X coordinate */
 			S L;
-			/// Top-left Y coordinate
+			/** @brief Top edge Y coordinate */
 			S T;
-			/// Bottom-right X coordinate
+			/** @brief Right edge X coordinate */
 			S R;
-			/// Bottom-right Y coordinate
+			/** @brief Bottom edge Y coordinate */
 			S B;
 
 			constexpr AABB() noexcept
@@ -37,42 +44,46 @@ namespace nCine
 			constexpr AABB(const Vector2<S>& min, const Vector2<S>& max) noexcept
 				: L(std::min(min.X, max.X)), T(std::min(min.Y, max.Y)), R(std::max(min.X, max.X)), B(std::max(min.Y, max.Y)) {}
 
+			/**
+			 * @brief Converts the bounding box to a different element type
+			 */
 			template<class U>
 			constexpr AABB<U> As() {
 				return AABB<S>(static_cast<U>(L), static_cast<U>(T), static_cast<U>(R), static_cast<U>(B));
 			}
 
+			/** @brief Returns the width of the box */
 			constexpr S GetWidth() const {
 				return R - L;
 			}
+			/** @brief Returns the height of the box */
 			constexpr S GetHeight() const {
 				return B - T;
 			}
 
-			/// Calculates the center of the rectangle
+			/** @brief Returns the center of the box */
 			Vector2<S> GetCenter() const;
-			/// Returns extents
+			/** @brief Returns the half-width and half-height of the box */
 			Vector2<S> GetExtents() const;
-			/// Returns perimeter
+			/** @brief Returns the perimeter of the box */
 			S GetPerimeter() const;
 
-			/// Returns `true` if the point is inside this rectangle
+			/** @brief Returns `true` if the point is inside the box */
 			bool Contains(S px, S py) const;
-			/// Returns `true` if the point vector is inside this rectangle
+			/** @brief Returns `true` if the point vector is inside the box */
 			bool Contains(const Vector2<S>& p) const;
 
-			/// Returns `true` if the other rectangle is contained inside this one
+			/** @brief Returns `true` if the other box is fully contained within this one */
 			bool Contains(const AABB<S>& aabb) const;
-			/// Returns `true` if this rect does overlap the other rectangle in any way
+			/** @brief Returns `true` if this box overlaps the other one in any way */
 			bool Overlaps(const AABB<S>& aabb) const;
 
-			/// Intersects this AABB with the other AABB
+			/** @brief Returns the intersection of two boxes, or an empty box if they do not overlap */
 			static AABB<S> Intersect(const AABB<S>& a, const AABB<S>& b);
 
-			/// Combines two AABBs
+			/** @brief Returns the smallest box that contains both boxes */
 			static AABB<S> Combine(const AABB<S>& a, const AABB<S>& b);
 
-			/// Eqality operator
 			bool operator==(const AABB& aabb) const;
 			bool operator!=(const AABB& aabb) const;
 
@@ -83,9 +94,9 @@ namespace nCine
 			AABB operator-(const Vector2<S>& v) const;
 		};
 
-		/// Axis-Aligned Bounding Box in a two dimensional space of floats
+		/** @brief Axis-aligned bounding box in a two-dimensional space of floats */
 		using AABBf = AABB<float>;
-		/// Axis-Aligned Bounding Box in a two dimensional space of 32-bit integers
+		/** @brief Axis-aligned bounding box in a two-dimensional space of 32-bit integers */
 		using AABBi = AABB<int>;
 
 		template<class S>

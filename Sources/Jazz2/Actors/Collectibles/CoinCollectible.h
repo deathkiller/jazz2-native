@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Collectibles
 {
 	/**
-	 * @brief Coin (collectible)
-	 *
-	 * Silver and gold coins from JJ2, worth one and five coins respectively. Coins accumulate in the
-	 * player's coin total (separate from the gem/score total) and are spent at bonus warps to access
-	 * secret areas. Awards points on pickup.
-	 */
+		@brief Coin (collectible)
+		
+		Silver and gold coins from JJ2, worth one and five coins respectively. Coins accumulate in the
+		player's coin total (separate from the gem/score total) and are spent at bonus warps to access
+		secret areas. Awards points on pickup.
+	*/
 	class CoinCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

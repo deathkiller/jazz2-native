@@ -5,11 +5,11 @@
 namespace Jazz2::Actors::Solid
 {
 	/**
-	 * @brief Crate container
-	 *
-	 * A wooden crate that breaks open when hit by a shot, TNT or a charged player, releasing the
-	 * event-specified contents (any collectible the level designer placed inside) for the player to grab.
-	 */
+		@brief Crate container
+		
+		A wooden crate that breaks open when hit by a shot, TNT or a charged player, releasing the
+		event-specified contents (any collectible the level designer placed inside) for the player to grab.
+	*/
 	class CrateContainer : public GenericContainer
 	{
 		DEATH_RUNTIME_OBJECT(GenericContainer);

@@ -148,7 +148,7 @@ namespace nCine::Backends
 		return (axisId >= 0 && axisId < numAxesMapped_ ? axesValues_[axisId] : 0.0f);
 	}
 
-	/*! This method is called by `enableAccelerometer()` and when the application gains focus */
+	/** @brief Enables the accelerometer sensor; called by `enableAccelerometer()` and when the application gains focus */
 	void AndroidInputManager::enableAccelerometerSensor()
 	{
 		if (accelerometerEnabled_ && accelerometerSensor_ != nullptr) {
@@ -158,7 +158,7 @@ namespace nCine::Backends
 		}
 	}
 
-	/*! This method is called by `enableAccelerometer()` and when the application loses focus */
+	/** @brief Disables the accelerometer sensor; called by `enableAccelerometer()` and when the application loses focus */
 	void AndroidInputManager::disableAccelerometerSensor()
 	{
 		if (accelerometerEnabled_ && accelerometerSensor_ != nullptr) {
@@ -166,7 +166,7 @@ namespace nCine::Backends
 		}
 	}
 
-	/*! Activates the sensor and raises the flag needed for application focus handling */
+	/** @brief Activates the sensor and raises the flag needed for application focus handling */
 	void AndroidInputManager::enableAccelerometer(bool enabled)
 	{
 		if (enabled) {

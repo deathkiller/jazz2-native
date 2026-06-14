@@ -13,7 +13,14 @@ namespace nCine
 	{
 		using Death::Containers::NoInitT;
 
-		/// Four-by-four matrix
+		/**
+			@brief Four-by-four matrix
+			
+			Column-major 4×4 matrix stored as four @ref Vector4 columns. Provides component-wise
+			and scalar arithmetic, matrix and vector multiplication, transposition and inversion,
+			in-place and standalone transform builders (translation, rotation, scaling) and the
+			@ref Ortho(), @ref Frustum() and @ref Perspective() projection builders.
+		*/
 		template<class T>
 		class Matrix4x4
 		{
@@ -68,37 +75,59 @@ namespace nCine
 			template<class S>
 			friend Matrix4x4<S> operator*(S s, const Matrix4x4<S>& m);
 
+			/** @brief Returns the transpose of the matrix */
 			Matrix4x4 Transposed() const;
+			/** @brief Transposes the matrix in place and returns it */
 			Matrix4x4& Transpose();
+			/** @brief Returns the inverse of the matrix */
 			Matrix4x4 Inverse() const;
 
+			/** @brief Applies a translation to the matrix in place */
 			Matrix4x4& Translate(T xx, T yy, T zz);
+			/** @overload */
 			Matrix4x4& Translate(const Vector3<T>& v);
+			/** @brief Applies a rotation around the X axis to the matrix in place */
 			Matrix4x4& RotateX(T radians);
+			/** @brief Applies a rotation around the Y axis to the matrix in place */
 			Matrix4x4& RotateY(T radians);
+			/** @brief Applies a rotation around the Z axis to the matrix in place */
 			Matrix4x4& RotateZ(T radians);
+			/** @brief Applies a non-uniform scaling to the matrix in place */
 			Matrix4x4& Scale(T xx, T yy, T zz);
+			/** @overload */
 			Matrix4x4& Scale(const Vector3<T>& v);
+			/** @brief Applies a uniform scaling to the matrix in place */
 			Matrix4x4& Scale(T s);
 
+			/** @brief Creates a translation matrix */
 			static Matrix4x4 Translation(T xx, T yy, T zz);
+			/** @overload */
 			static Matrix4x4 Translation(const Vector3<T>& v);
+			/** @brief Creates a rotation matrix around the X axis */
 			static Matrix4x4 RotationX(T radians);
+			/** @brief Creates a rotation matrix around the Y axis */
 			static Matrix4x4 RotationY(T radians);
+			/** @brief Creates a rotation matrix around the Z axis */
 			static Matrix4x4 RotationZ(T radians);
+			/** @brief Creates a non-uniform scaling matrix */
 			static Matrix4x4 Scaling(T xx, T yy, T zz);
+			/** @overload */
 			static Matrix4x4 Scaling(const Vector3<T>& v);
+			/** @brief Creates a uniform scaling matrix */
 			static Matrix4x4 Scaling(T s);
 
+			/** @brief Creates an orthographic projection matrix */
 			static Matrix4x4 Ortho(T left, T right, T bottom, T top, T near, T far);
+			/** @brief Creates a perspective projection matrix from frustum boundaries */
 			static Matrix4x4 Frustum(T left, T right, T bottom, T top, T near, T far);
+			/** @brief Creates a perspective projection matrix from a vertical field of view and aspect ratio */
 			static Matrix4x4 Perspective(T fovY, T aspect, T near, T far);
 
 			/** @{ @name Constants */
 
-			/// A matrix with all zero elements
+			/** @brief Matrix with all elements set to zero */
 			static const Matrix4x4 Zero;
-			/// An identity matrix
+			/** @brief Identity matrix */
 			static const Matrix4x4 Identity;
 
 			/** @} */
@@ -107,7 +136,7 @@ namespace nCine
 			Vector4<T> vecs_[4];
 		};
 
-		/// Four-by-four matrix of floats
+		/** @brief Four-by-four matrix of floats */
 		using Matrix4x4f = Matrix4x4<float>;
 
 		template<class T>
@@ -498,7 +527,7 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::Translate(const Vector3<T>& v)
 		{
-			return translate(v.X, v.Y, v.Z);
+			return Translate(v.X, v.Y, v.Z);
 		}
 
 		template<class T>
@@ -611,13 +640,13 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::Scale(const Vector3<T>& v)
 		{
-			return scale(v.X, v.Y, v.Z);
+			return Scale(v.X, v.Y, v.Z);
 		}
 
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::Scale(T s)
 		{
-			return scale(s, s, s);
+			return Scale(s, s, s);
 		}
 
 		template<class T>
@@ -632,7 +661,7 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T> Matrix4x4<T>::Translation(const Vector3<T>& v)
 		{
-			return translation(v.X, v.Y, v.Z);
+			return Translation(v.X, v.Y, v.Z);
 		}
 
 		template<class T>
@@ -683,13 +712,13 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T> Matrix4x4<T>::Scaling(const Vector3<T>& v)
 		{
-			return scaling(v.X, v.Y, v.Z);
+			return Scaling(v.X, v.Y, v.Z);
 		}
 
 		template<class T>
 		inline Matrix4x4<T> Matrix4x4<T>::Scaling(T s)
 		{
-			return scaling(s, s, s);
+			return Scaling(s, s, s);
 		}
 
 		template<class T>
@@ -722,7 +751,7 @@ namespace nCine
 			const T xMin = yMin * aspect;
 			const T xMax = yMax * aspect;
 
-			return frustum(xMin, xMax, yMin, yMax, near, far);
+			return Frustum(xMin, xMax, yMin, yMax, near, far);
 		}
 
 		template<class T>

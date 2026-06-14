@@ -11,7 +11,15 @@ namespace nCine
 
 		using Death::Containers::NoInitT;
 
-		/// Four-channel color with 8-bit integers per component
+		/**
+			@brief Four-channel color with 8-bit integers per component
+			
+			Stores the red, green, blue and alpha channels as @cpp std::uint8_t @ce values in the
+			range 0-255 (member order follows the host endianness so that the channels pack into a
+			single 32-bit integer). Provides packing into RGBA/ARGB/ABGR/BGRA integers, hexadecimal
+			and array construction, channel-wise and scalar arithmetic, and conversion to and from
+			the normalized floating-point @ref Colorf.
+		*/
 		class Color
 		{
 		public:
@@ -55,43 +63,43 @@ namespace nCine
 			std::uint8_t A;  // Stored last (highest byte of std::uint32_t)
 #endif
 
-			/// Default constructor (transparent color)
+			/** @brief Default constructor, creates a fully transparent black color */
 			constexpr Color() noexcept
 				: Color(0, 0, 0, 0) {}
 
 			explicit Color(NoInitT) noexcept {}
 
-			/// Three channels constructor
+			/** @brief Constructs an opaque color from three channels */
 			constexpr Color(std::uint8_t red, std::uint8_t green, std::uint8_t blue) noexcept
 				: Color(red, green, blue, 255) {}
-			/// Four channels constructor
+			/** @brief Constructs a color from four channels */
 			constexpr Color(std::uint8_t red, std::uint8_t green, std::uint8_t blue, std::uint8_t alpha) noexcept
 				: R(red), G(green), B(blue), A(alpha) {}
-			/// Three channels constructor from a hexadecimal code
+			/** @brief Constructs an opaque color from a 24-bit hexadecimal RGB code */
 			explicit Color(std::uint32_t hex);
-			/// Four channels constructor from an array
+			/** @brief Constructs a color from a four-channel array */
 			explicit Color(const std::uint8_t channels[NumChannels]);
 			explicit Color(const Colorf& color);
 
-			/// Returns the color as a single RGBA unsigned integer
+			/** @brief Returns the color packed as a single RGBA integer */
 			std::uint32_t Rgba() const;
-			/// Returns the color as a single RGBA unsigned integer
+			/** @brief Returns the color packed as a single ARGB integer */
 			std::uint32_t Argb() const;
-			/// Returns the color as a single ABGR unsigned integer
+			/** @brief Returns the color packed as a single ABGR integer */
 			std::uint32_t Abgr() const;
-			/// Returns the color as a single BGRA unsigned integer
+			/** @brief Returns the color packed as a single BGRA integer */
 			std::uint32_t Bgra() const;
 
-			/// Returns color array
+			/** @brief Returns a pointer to the channel array */
 			inline const std::uint8_t* Data() const {
 				return &R;
 			}
-			/// @overload
+			/** @overload */
 			inline std::uint8_t* Data() {
 				return &R;
 			}
 
-			/// Sets four color channels
+			/** @brief Sets all four channels */
 			constexpr void Set(std::uint8_t red, std::uint8_t green, std::uint8_t blue, std::uint8_t alpha)
 			{
 				R = red;
@@ -99,17 +107,17 @@ namespace nCine
 				B = blue;
 				A = alpha;
 			}
-			/// Sets three color channels
+			/** @brief Sets the three color channels, keeping the alpha unchanged */
 			void Set(std::uint8_t red, std::uint8_t green, std::uint8_t blue);
-			/// Sets three color channels from a hexadecimal code
+			/** @brief Sets the channels from a 24-bit hexadecimal RGB code */
 			void Set(std::uint32_t hex);
-			/// Sets four color channels from an array
+			/** @brief Sets all four channels from an array */
 			void SetVec(const std::uint8_t channels[NumChannels]);
 
-			/// Sets the alpha channel
+			/** @brief Sets the alpha channel */
 			void SetAlpha(std::uint8_t alpha);
 
-			/// Assigns operator from a normalized float color
+			/** @brief Assigns from a normalized floating-point color */
 			Color& operator=(const Colorf& color);
 
 			bool operator==(const Color& color) const;
@@ -119,14 +127,14 @@ namespace nCine
 			Color& operator-=(const Color& v);
 
 			Color& operator*=(const Color& color);
-			/// Multiplies by a constant scalar
+			/** @brief Multiplies all channels by a scalar */
 			Color& operator*=(float scalar);
 
 			Color operator+(const Color& color) const;
 			Color operator-(const Color& color) const;
 
 			Color operator*(const Color& color) const;
-			/// Multiplies by a constant scalar
+			/** @brief Multiplies all channels by a scalar */
 			Color operator*(float scalar) const;
 		};
 
@@ -144,7 +152,7 @@ namespace nCine
 
 			/** @relatesalso nCine::Primitives::Color
 				@brief 8bit-per-channel RGB color literal
-
+				
 				@code{.cpp}
 				using namespace nCine::Primitives::Literals;
 				Color a = 0x5eb233bb_rgb;	// R: 0x5e, G: 0xb2, B: 0x33, A: 0xff
@@ -158,7 +166,7 @@ namespace nCine
 
 			/** @relatesalso nCine::Primitives::Color
 				@brief 8bit-per-channel RGBA color literal
-
+				
 				@code{.cpp}
 				using namespace nCine::Primitives::Literals;
 				Color a = 0x5eb233bb_rgba;	// R: 0x5e, G: 0xb2, B: 0x33, A: 0xbb

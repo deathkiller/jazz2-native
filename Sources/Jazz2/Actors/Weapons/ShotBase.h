@@ -13,11 +13,11 @@ namespace Jazz2::Actors
 namespace Jazz2::Actors::Weapons
 {
 	/**
-	 * @brief Base class of a shot from a player's weapon
-	 *
-	 * Common base for the weapon projectiles fired by the player, providing shared damage, ownership, lifetime,
-	 * movement and ricochet handling.
-	 */
+		@brief Base class of a shot from a player's weapon
+		
+		Common base for the weapon projectiles fired by the player, providing shared damage, ownership, lifetime,
+		movement and ricochet handling.
+	*/
 	class ShotBase : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

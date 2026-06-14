@@ -4,7 +4,13 @@
 
 namespace nCine
 {
-	/// Stores and retrieves runtime OpenGL device capabilities
+	/**
+		@brief Stores and retrieves runtime OpenGL device capabilities
+		
+		Concrete @ref IGfxCapabilities implementation that queries the active OpenGL context once at startup and
+		caches the version numbers, information strings, integer limits and extension availability flags so that
+		the rest of the renderer can look them up without further driver calls.
+	*/
 	class GfxCapabilities : public IGfxCapabilities
 	{
 	public:
@@ -21,23 +27,23 @@ namespace nCine
 	private:
 		std::int32_t glMajorVersion_;
 		std::int32_t glMinorVersion_;
-		/// The OpenGL release version number (not available in OpenGL ES)
+		/** @brief OpenGL release version number (not available in OpenGL ES) */
 		std::int32_t glReleaseVersion_;
 
 		GLInfoStrings glInfoStrings_;
 
-		/// Array of OpenGL integer values
+		/** @brief Cached values of the queryable OpenGL integer limits */
 		std::int32_t glIntValues_[std::int32_t(IGfxCapabilities::GLIntValues::Count)];
-		/// Array of OpenGL extension availability flags
+		/** @brief Cached availability flags of the queryable OpenGL extensions */
 		bool glExtensions_[std::int32_t(IGfxCapabilities::GLExtensions::Count)];
 
 		static constexpr std::int32_t MaxProgramBinaryFormats = 4;
 		std::int32_t programBinaryFormats_[MaxProgramBinaryFormats];
 
-		/// Queries the device about its runtime graphics capabilities
+		/** @brief Queries the device about its runtime graphics capabilities and caches the results */
 		void Init();
 
-		/// Checks for OpenGL extensions availability
+		/** @brief Checks availability of the specified OpenGL extensions */
 		void CheckGLExtensions(const char* extensionNames[], bool results[], std::uint32_t numExtensionsToCheck) const;
 	};
 }

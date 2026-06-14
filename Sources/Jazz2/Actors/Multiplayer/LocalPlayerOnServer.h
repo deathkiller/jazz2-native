@@ -6,7 +6,12 @@
 
 namespace Jazz2::Actors::Multiplayer
 {
-	/** @brief Local player in online session */
+	/**
+		@brief Local player in online session
+		
+		The host's own locally-controlled player on the server. It is a @ref PlayerOnServer driven directly by local
+		input rather than synchronized from a remote peer.
+	*/
 	class LocalPlayerOnServer : public PlayerOnServer
 	{
 		DEATH_RUNTIME_OBJECT(PlayerOnServer);

@@ -65,7 +65,11 @@ namespace nCine
 		return reinterpret_cast<GLfloat*>(vboParams_.mapBase + vboParams_.offset);
 	}
 
-	/*! This method can only be used when mapping of OpenGL buffers is available */
+	/**
+	 * @brief Acquires a pointer for writing vertex data into a VBO owned by the buffers manager
+	 *
+	 * This method can only be used when mapping of OpenGL buffers is available.
+	 */
 	GLfloat* Geometry::AcquireVertexPointer()
 	{
 		DEATH_ASSERT(vbo_ != nullptr);
@@ -139,7 +143,11 @@ namespace nCine
 		return reinterpret_cast<GLushort*>(iboParams_.mapBase + iboParams_.offset);
 	}
 
-	/*! This method can only be used when mapping of OpenGL buffers is available */
+	/**
+	 * @brief Acquires a pointer for writing index data into an IBO owned by the buffers manager
+	 *
+	 * This method can only be used when mapping of OpenGL buffers is available.
+	 */
 	GLushort* Geometry::AcquireIndexPointer()
 	{
 		DEATH_ASSERT(ibo_ != nullptr);

@@ -20,7 +20,13 @@ namespace Jazz2::Compatibility
 {
 	class JJ2Episode;
 
-	/** @brief Parses original `.j2l` level files */
+	/**
+		@brief Parses original `.j2l` level files
+		
+		Reads an original level layout, including its tile layers, per-tile events, animated tiles,
+		palettes and MLLE extension data, and writes the converted level to the target path. Events are
+		translated to the engine's native types via an @ref EventConverter during conversion.
+	*/
 	class JJ2Level
 	{
 		friend class JJ2Episode;

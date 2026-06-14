@@ -19,6 +19,12 @@ namespace Jazz2::UI::Menu
 	};
 #endif
 
+	/**
+		@brief Gameplay enhancements menu section
+		
+		Lets the player toggle the individual "Reforged" gameplay enhancements, such as the Reforged gameplay, HUD,
+		main menu, ledge climbing, and weapon wheel.
+	*/
 	class GameplayEnhancementsSection : public ScrollableMenuSection<GameplayEnhancementsItem>
 	{
 	public:

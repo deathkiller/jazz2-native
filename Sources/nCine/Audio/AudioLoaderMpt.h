@@ -8,7 +8,9 @@
 
 namespace nCine
 {
-	/// Module audio loader using `libopenmpt` library
+	/**
+		@brief Audio loader for tracker module formats, backed by `libopenmpt`
+	*/
 	class AudioLoaderMpt : public IAudioLoader
 	{
 	public:

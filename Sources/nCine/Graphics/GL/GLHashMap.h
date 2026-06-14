@@ -9,16 +9,25 @@
 
 namespace nCine
 {
+	/** @brief Key type, an OpenGL target enum */
 	using key_t = GLenum;
+	/** @brief Value type, an OpenGL object id */
 	using value_t = GLuint;
 
-	/// Naive implementation of a hashmap for storing pairs of OpenGL targets and object IDs
+	/**
+		@brief Naive fixed-size hashmap of OpenGL targets to object ids
+		
+		Stores one object id per bucket, where `MappingFunc` maps an OpenGL target
+		(the key) to a bucket index. Used to cache the currently bound object id for
+		each target. The number of buckets `S` must match the range of the mapping
+		function.
+	*/
 	template<std::uint32_t S, class MappingFunc>
 	class GLHashMap
 	{
 	public:
 		GLHashMap();
-		/// Returns the bucket index using the mapping function on the key
+		/** @brief Returns the bucket for a target, mapping the key through the mapping function */
 		value_t& operator[](key_t key);
 
 	private:
@@ -40,11 +49,18 @@ namespace nCine
 		return buckets_[mappingFunc(key)];
 	}
 
-	/// Performs a mapping between OpenGL buffer object targets and array indices
+	/**
+		@brief Maps OpenGL buffer object targets to bucket indices
+		
+		Mapping function for @ref GLHashMap that turns buffer object targets
+		(`GL_ARRAY_BUFFER`, `GL_ELEMENT_ARRAY_BUFFER`, ...) into contiguous indices.
+	*/
 	class GLBufferObjectMappingFunc
 	{
 	public:
+		/** @brief Number of distinct buffer object targets, i.e. the required bucket count */
 		static const std::uint32_t Size = 6;
+		/** @brief Returns the bucket index for a buffer object target */
 		inline std::uint32_t operator()(key_t key) const
 		{
 			std::uint32_t value = 0;
@@ -79,11 +95,18 @@ namespace nCine
 		}
 	};
 
-	/// Performs a mapping between OpenGL texture targets and array indices
+	/**
+		@brief Maps OpenGL texture targets to bucket indices
+		
+		Mapping function for @ref GLHashMap that turns texture targets
+		(`GL_TEXTURE_2D`, `GL_TEXTURE_3D`, ...) into contiguous indices.
+	*/
 	class GLTextureMappingFunc
 	{
 	public:
+		/** @brief Number of distinct texture targets, i.e. the required bucket count */
 		static const std::uint32_t Size = 4;
+		/** @brief Returns the bucket index for a texture target */
 		inline std::uint32_t operator()(key_t key) const
 		{
 			std::uint32_t value = 0;

@@ -10,60 +10,94 @@
 
 namespace nCine
 {
-	/// Texture loader interface class
+	/**
+		@brief Texture loader interface class
+		
+		Common base for all texture file loaders. Decodes a texture file into raw pixel data together with
+		its dimensions, pixel format and MIP map chain, ready to be uploaded to the GPU by @ref Texture.
+		Concrete subclasses handle individual file formats and are instantiated through the @ref createFromFile()
+		factory according to the file extension.
+	*/
 	class ITextureLoader
 	{
 	public:
 		virtual ~ITextureLoader() { }
 
-		/// Returns true if the texture has been correctly loaded
+		/**
+		 * @brief Returns `true` if the texture has been correctly loaded
+		 */
 		inline bool hasLoaded() const {
 			return hasLoaded_;
 		}
 
-		/// Returns texture width
+		/**
+		 * @brief Returns texture width in pixels
+		 */
 		inline std::int32_t width() const {
 			return width_;
 		}
-		/// Returns texture height
+		/**
+		 * @brief Returns texture height in pixels
+		 */
 		inline std::int32_t height() const {
 			return height_;
 		}
-		/// Returns texture size as a `Vector2<int>` class
+		/**
+		 * @brief Returns texture size as a `Vector2i`
+		 */
 		inline Vector2i size() const {
 			return Vector2i(width_, height_);
 		}
-		/// Returns the number of MIP maps stored in the texture file
+		/**
+		 * @brief Returns the number of MIP maps stored in the texture file
+		 */
 		inline std::int32_t mipMapCount() const {
 			return mipMapCount_;
 		}
-		/// Returns texture data size in bytes
+		/**
+		 * @brief Returns texture data size in bytes
+		 */
 		inline std::uint32_t dataSize() const {
 			return dataSize_;
 		}
-		/// Returns the texture data size in bytes for the specified MIP map level
+		/**
+		 * @brief Returns the texture data size in bytes for the specified MIP map level
+		 *
+		 * @param mipMapLevel  Zero-based MIP map level
+		 */
 		std::int32_t dataSize(std::uint32_t mipMapLevel) const;
-		/// Returns the texture format object
+		/**
+		 * @brief Returns the texture format object
+		 */
 		inline const TextureFormat& texFormat() const {
 			return texFormat_;
 		}
-		/// Returns the pointer to pixel data
+		/**
+		 * @brief Returns the pointer to pixel data
+		 */
 		inline const GLubyte* pixels() const {
 			return pixels_.get();
 		}
-		/// Returns the pointer to pixel data for the specified MIP map level
+		/**
+		 * @brief Returns the pointer to pixel data for the specified MIP map level
+		 *
+		 * @param mipMapLevel  Zero-based MIP map level
+		 */
 		const GLubyte* pixels(std::uint32_t mipMapLevel) const;
 
-		/// Returns the proper texture loader according to the memory buffer name extension
 		//static std::unique_ptr<ITextureLoader> createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
-		/// Returns the proper texture loader according to the file extension
+		/**
+		 * @brief Returns the proper texture loader according to the file extension
+		 *
+		 * @param filename  Path of the texture file to load
+		 */
 		static std::unique_ptr<ITextureLoader> createFromFile(const Death::Containers::StringView filename);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		/// A flag indicating if the loading process has been successful
+		/** @brief Whether the loading process has been successful */
 		bool hasLoaded_;
-		/// Texture file handle
+		/** @brief Texture file handle */
 		std::unique_ptr<Death::IO::Stream> fileHandle_;
 
 		std::int32_t width_;
@@ -77,19 +111,28 @@ namespace nCine
 		std::unique_ptr<GLubyte[]> pixels_;
 #endif
 
-		/// An empty constructor only used by `TextureLoaderRaw`
+		/** @brief An empty constructor only used by `TextureLoaderRaw` */
 		ITextureLoader();
 		explicit ITextureLoader(std::unique_ptr<Death::IO::Stream> fileHandle);
 
 		static std::unique_ptr<ITextureLoader> createLoader(std::unique_ptr<Death::IO::Stream> fileHandle, const Death::Containers::StringView path);
-		/// Loads pixel data from a texture file holding either compressed or uncompressed data
+		/**
+		 * @brief Loads pixel data from a texture file holding either compressed or uncompressed data
+		 *
+		 * @param internalFormat  OpenGL internal format describing the decoded pixels
+		 */
 		void loadPixels(GLenum internalFormat);
-		/// Loads pixel data from a texture file holding either compressed or uncompressed data, overriding pixel type
+		/**
+		 * @brief Loads pixel data from a texture file holding either compressed or uncompressed data, overriding pixel type
+		 *
+		 * @param internalFormat  OpenGL internal format describing the decoded pixels
+		 * @param type            OpenGL pixel type that overrides the format default
+		 */
 		void loadPixels(GLenum internalFormat, GLenum type);
 	};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-	/// A class created when the texture file extension is not recognized
+	/** @brief A loader created when the texture file extension is not recognized */
 	class InvalidTextureLoader : public ITextureLoader
 	{
 	public:

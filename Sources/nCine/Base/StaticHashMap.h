@@ -12,18 +12,24 @@ namespace nCine
 	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst> class StaticHashMapIterator;
 	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst> struct StaticHashMapHelperTraits;
 
-	/// Static hashmap implementation with open addressing and leapfrog probing (version with static allocation)
+	/**
+		@brief Statically allocated hashmap with open addressing and leapfrog probing
+		
+		Stores up to `Capacity` key/value pairs in fixed-size buffers embedded in the object, so no
+		heap allocation occurs. Collisions are resolved with open addressing using a leapfrog probing
+		scheme based on per-bucket delta offsets.
+	*/
 	template<class K, class T, std::uint32_t Capacity, class HashFunc = xxHash32Func<K>>
 	class StaticHashMap
 	{
 	public:
-		/// Iterator type
+		/** @brief Iterator type */
 		using Iterator = StaticHashMapIterator<K, T, HashFunc, Capacity, false>;
-		/// Constant iterator type
+		/** @brief Constant iterator type */
 		using ConstIterator = StaticHashMapIterator<K, T, HashFunc, Capacity, true>;
-		/// Reverse iterator type
+		/** @brief Reverse iterator type */
 		using ReverseIterator = nCine::ReverseIterator<Iterator>;
-		/// Reverse constant iterator type
+		/** @brief Constant reverse iterator type */
 		using ConstReverseIterator = nCine::ReverseIterator<ConstIterator>;
 
 		inline StaticHashMap()
@@ -34,89 +40,85 @@ namespace nCine
 			destructNodes();
 		}
 
-		/// Copy constructor
 		StaticHashMap(const StaticHashMap& other);
-		/// Move constructor
 		StaticHashMap(StaticHashMap&& other);
-		/// Aassignment operator
 		StaticHashMap& operator=(const StaticHashMap& other);
-		/// Move aassignment operator
 		StaticHashMap& operator=(StaticHashMap&& other);
 
-		/// Returns an iterator to the first element
+		/** @brief Returns an iterator to the first element */
 		Iterator begin();
-		/// Returns a reverse iterator to the last element
+		/** @brief Returns a reverse iterator to the last element */
 		ReverseIterator rbegin();
-		/// Returns an iterator to past the last element
+		/** @brief Returns an iterator past the last element */
 		Iterator end();
-		/// Returns a reverse iterator to prior the first element
+		/** @brief Returns a reverse iterator before the first element */
 		ReverseIterator rend();
 
-		/// Returns a constant iterator to the first element
+		/** @brief Returns a constant iterator to the first element */
 		ConstIterator begin() const;
-		/// Returns a constant reverse iterator to the last element
+		/** @brief Returns a constant reverse iterator to the last element */
 		ConstReverseIterator rbegin() const;
-		/// Returns a constant iterator to past the last lement
+		/** @brief Returns a constant iterator past the last element */
 		ConstIterator end() const;
-		/// Returns a constant reverse iterator to prior the first element
+		/** @brief Returns a constant reverse iterator before the first element */
 		ConstReverseIterator rend() const;
 
-		/// Returns a constant iterator to the first element
+		/** @brief Returns a constant iterator to the first element */
 		inline ConstIterator cbegin() const {
 			return begin();
 		}
-		/// Returns a constant reverse iterator to the last element
+		/** @brief Returns a constant reverse iterator to the last element */
 		inline ConstReverseIterator crbegin() const {
 			return rbegin();
 		}
-		/// Returns a constant iterator to past the last lement
+		/** @brief Returns a constant iterator past the last element */
 		inline ConstIterator cend() const {
 			return end();
 		}
-		/// Returns a constant reverse iterator to prior the first element
+		/** @brief Returns a constant reverse iterator before the first element */
 		inline ConstReverseIterator crend() const {
 			return rend();
 		}
 
-		/// Subscript operator
+		/** @brief Returns a reference to the value of the given key, inserting a default-constructed one if absent */
 		T& operator[](const K& key);
-		/// Inserts an element if no other has the same key
+		/** @brief Inserts a copy of the value if no element with the same key exists */
 		bool insert(const K& key, const T& value);
-		/// Moves an element if no other has the same key
+		/** @brief Inserts the value by move if no element with the same key exists */
 		bool insert(const K& key, T&& value);
-		/// Constructs an element if no other has the same key
+		/** @brief Constructs the value in place if no element with the same key exists */
 		template <typename... Args> bool emplace(const K& key, Args &&... args);
 
-		/// Returns the capacity of the hashmap
+		/** @brief Returns the maximum number of elements the hashmap can hold */
 		inline std::uint32_t capacity() const {
 			return Capacity;
 		}
-		/// Returns true if the hashmap is empty
+		/** @brief Returns `true` if the hashmap contains no elements */
 		inline bool empty() const {
 			return size_ == 0;
 		}
-		/// Returns the number of elements in the hashmap
+		/** @brief Returns the number of elements in the hashmap */
 		inline std::uint32_t size() const {
 			return size_;
 		}
-		/// Returns the ratio between used and total buckets
+		/** @brief Returns the ratio between used and total buckets */
 		inline float loadFactor() const {
 			return size_ / float(Capacity);
 		}
-		/// Returns the hash of a given key
+		/** @brief Returns the hash of the given key */
 		inline hash_t hash(const K& key) const {
 			return hashFunc_(key);
 		}
 
-		/// Clears the hashmap
+		/** @brief Removes all elements from the hashmap */
 		void clear();
-		/// Checks whether an element is in the hashmap or not
+		/** @brief Copies the value for the given key into `returnedValue` if present, returning whether it was found */
 		bool contains(const K& key, T& returnedValue) const;
-		/// Checks whether an element is in the hashmap or not
+		/** @brief Returns a pointer to the value for the given key, or `nullptr` if not found */
 		T* find(const K& key);
-		/// Checks whether an element is in the hashmap or not (read-only)
+		/** @brief Returns a read-only pointer to the value for the given key, or `nullptr` if not found */
 		const T* find(const K& key) const;
-		/// Removes a key from the hashmap, if it exists
+		/** @brief Removes the element with the given key if it exists */
 		bool remove(const K& key);
 
 	private:
@@ -341,7 +343,7 @@ namespace nCine
 		}
 	}
 
-	/*! \return True if the element has been inserted */
+	/** @return `true` if the element has been inserted */
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	bool StaticHashMap<K, T, Capacity, HashFunc>::insert(const K& key, const T& value)
 	{
@@ -387,7 +389,7 @@ namespace nCine
 		}
 	}
 
-	/*! \return True if the element has been inserted */
+	/** @return `true` if the element has been inserted */
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	bool StaticHashMap<K, T, Capacity, HashFunc>::insert(const K& key, T&& value)
 	{
@@ -433,7 +435,7 @@ namespace nCine
 		}
 	}
 
-	/*! \return True if the element has been emplaced */
+	/** @return `true` if the element has been emplaced */
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	template<typename... Args>
 	bool StaticHashMap<K, T, Capacity, HashFunc>::emplace(const K& key, Args &&... args)
@@ -499,7 +501,7 @@ namespace nCine
 		return found;
 	}
 
-	/*! \note Prefer this method if copying `T` is expensive, but always check the validity of returned pointer. */
+	/** @note Prefer this method if copying `T` is expensive, but always check the validity of the returned pointer */
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	T* StaticHashMap<K, T, Capacity, HashFunc>::find(const K& key)
 	{
@@ -513,7 +515,7 @@ namespace nCine
 		return returnedPtr;
 	}
 
-	/*! \note Prefer this method if copying `T` is expensive, but always check the validity of returned pointer. */
+	/** @note Prefer this method if copying `T` is expensive, but always check the validity of the returned pointer */
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	const T* StaticHashMap<K, T, Capacity, HashFunc>::find(const K& key) const
 	{
@@ -527,7 +529,7 @@ namespace nCine
 		return returnedPtr;
 	}
 
-	/*! \return True if the element has been found and removed */
+	/** @return `true` if the element has been found and removed */
 	template<class K, class T, std::uint32_t Capacity, class HashFunc>
 	bool StaticHashMap<K, T, Capacity, HashFunc>::remove(const K& key)
 	{

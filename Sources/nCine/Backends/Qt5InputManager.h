@@ -19,15 +19,23 @@ namespace nCine::Backends
 {
 	class Qt5Widget;
 
-	/// Utility functions to convert between engine key enumerations and Qt5 ones
+	/**
+		@brief Utility functions to convert between engine key enumerations and Qt5 ones
+	*/
 	class Qt5Keys
 	{
 	public:
+		/** @brief Maps a Qt5 key symbol to the matching engine @ref Keys value */
 		static Keys keySymValueToEnum(int keysym);
+		/** @brief Maps Qt5 keyboard modifier flags to the engine modifier mask */
 		static int keyModMaskToEnumMask(Qt::KeyboardModifiers keymod);
 	};
 
-	/// Information about Qt5 mouse state
+	/**
+		@brief Information about Qt5 mouse state
+		
+		Wraps the `Qt::MouseButtons` flags last reported by the widget.
+	*/
 	class Qt5MouseState : public MouseState
 	{
 	public:
@@ -56,7 +64,11 @@ namespace nCine::Backends
 		friend class Qt5InputManager;
 	};
 
-	/// Information about a Qt5 mouse event
+	/**
+		@brief Information about a Qt5 mouse event
+		
+		Wraps the single `Qt::MouseButton` that triggered the event.
+	*/
 	class Qt5MouseEvent : public MouseEvent
 	{
 	public:
@@ -85,7 +97,9 @@ namespace nCine::Backends
 		friend class Qt5InputManager;
 	};
 
-	/// Information about a Qt5 scroll event
+	/**
+		@brief Information about a Qt5 scroll event
+	*/
 	class Qt5ScrollEvent : public ScrollEvent
 	{
 	public:
@@ -94,7 +108,13 @@ namespace nCine::Backends
 		friend class Qt5InputManager;
 	};
 
-	//// Simulated information about Qt5 keyboard state
+	/**
+		@brief Simulated information about Qt5 keyboard state
+		
+		Qt5 delivers key press and release events rather than exposing a pollable
+		keyboard array, so the down state of every key is tracked in a simulated
+		array updated from those events.
+	*/
 	class Qt5KeyboardState : public KeyboardState
 	{
 	public:
@@ -119,7 +139,12 @@ namespace nCine::Backends
 		friend class Qt5InputManager;
 	};
 
-	/// Information about Qt5 joystick state
+	/**
+		@brief Information about Qt5 joystick state
+		
+		Backed by a `QGamepad` when @ref WITH_QT5GAMEPAD is enabled; otherwise a
+		no-op stub that always reports no input.
+	*/
 #ifdef WITH_QT5GAMEPAD
 	class Qt5JoystickState : public JoystickState
 	{
@@ -134,7 +159,7 @@ namespace nCine::Backends
 		static const unsigned int MaxNameLength = 256;
 		static const unsigned int NumButtons = 12;
 		static const unsigned int NumAxes = 6;
-		/// Minimum difference between two axis readings in order to trigger an event
+		/** @brief Minimum difference between two axis readings in order to trigger an event */
 		static const float AxisEventTolerance;
 		bool buttonState_[NumButtons];
 		unsigned char hatState_;
@@ -166,29 +191,47 @@ namespace nCine::Backends
 	};
 #endif
 
-	/// Class for parsing and dispatching Qt5 input events
+	/**
+		@brief Parses and dispatches Qt5 input events
+		
+		Translates the Qt5 events forwarded by @ref Qt5Widget into engine input
+		state and events. Joystick support is provided through Qt5Gamepad when
+		@ref WITH_QT5GAMEPAD is enabled.
+	*/
 	class Qt5InputManager : public IInputManager
 	{
 	public:
-		/// The constructor takes care of opening available joysticks
+		/** @brief The constructor takes care of opening available joysticks */
 		Qt5InputManager(Qt5Widget& widget);
-		/// The destructor releases every opened joystick
+		/** @brief The destructor releases every opened joystick */
 		~Qt5InputManager();
 
 #ifdef WITH_QT5GAMEPAD
+		/** @brief Polls every connected gamepad and emits state-change events */
 		void updateJoystickStates();
 #endif
 
+		/** @brief Returns `true` if the application should quit on a close request */
 		bool shouldQuitOnRequest();
+		/** @brief Handles a generic Qt5 event, returning `true` if it was consumed */
 		bool event(QEvent* event);
+		/** @brief Handles a Qt5 key press event */
 		void keyPressEvent(QKeyEvent* event);
+		/** @brief Handles a Qt5 key release event */
 		void keyReleaseEvent(QKeyEvent* event);
+		/** @brief Handles a Qt5 mouse button press event */
 		void mousePressEvent(QMouseEvent* event);
+		/** @brief Handles a Qt5 mouse button release event */
 		void mouseReleaseEvent(QMouseEvent* event);
+		/** @brief Handles a Qt5 mouse move event */
 		void mouseMoveEvent(QMouseEvent* event);
+		/** @brief Handles the start of a Qt5 touch sequence */
 		void touchBeginEvent(QTouchEvent* event);
+		/** @brief Handles an update within a Qt5 touch sequence */
 		void touchUpdateEvent(QTouchEvent* event);
+		/** @brief Handles the end of a Qt5 touch sequence */
 		void touchEndEvent(QTouchEvent* event);
+		/** @brief Handles a Qt5 mouse wheel event */
 		void wheelEvent(QWheelEvent* event);
 
 		inline const MouseState& mouseState() const override {
@@ -263,9 +306,9 @@ namespace nCine::Backends
 
 		void updateTouchEvent(const QTouchEvent* event);
 
-		/// Deleted copy constructor
+		/** @brief Deleted copy constructor */
 		Qt5InputManager(const Qt5InputManager&) = delete;
-		/// Deleted assignment operator
+		/** @brief Deleted assignment operator */
 		Qt5InputManager& operator=(const Qt5InputManager&) = delete;
 	};
 

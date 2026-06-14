@@ -19,7 +19,15 @@ namespace Jazz2::Scripting
 {
 	class LevelScriptLoader;
 
-	/** @brief Wraps a player actor for access from **AngelScript** */
+	/**
+		@brief Wraps a player actor for access from **AngelScript**
+		
+		Reference-counted bridge object that exposes a live @ref Actors::Player to script as a set of readable and
+		writable properties (position, speed, health, lives, score, ammo, rendering layer) and actions (move, warp,
+		morph, play sound, set animation state). Created through the registered AngelScript factory from a player index.
+		
+		@experimental
+	*/
 	class ScriptPlayerWrapper
 	{
 	public:

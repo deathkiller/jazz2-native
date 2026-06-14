@@ -25,7 +25,9 @@ namespace nCine
 {
 	class IFile;
 
-	/// Module audio reader using `libopenmpt` library
+	/**
+		@brief Audio reader for tracker module formats, backed by `libopenmpt`
+	*/
 	class AudioReaderMpt : public IAudioReader
 	{
 	public:
@@ -40,7 +42,7 @@ namespace nCine
 		void setLooping(bool value) override;
 
 	private:
-		/// Audio file handle
+		/** @brief Audio file handle */
 		std::unique_ptr<Death::IO::Stream> _fileHandle;
 		std::int32_t _frequency;
 		openmpt_module* _module;

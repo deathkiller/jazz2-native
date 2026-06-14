@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Enemies
 {
 	/**
-	 * @brief Madder hatter
-	 *
-	 * Top-hatted enemy that strolls back and forth, turning at walls and ledges, and faces nearby
-	 * players to spit a fast projectile from its drinking cup. Takes several hits to defeat and
-	 * scatters its hat and cup as debris when destroyed.
-	 */
+		@brief Madder hatter
+		
+		Top-hatted enemy that strolls back and forth, turning at walls and ledges, and faces nearby
+		players to spit a fast projectile from its drinking cup. Takes several hits to defeat and
+		scatters its hat and cup as debris when destroyed.
+	*/
 	class MadderHatter : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Environment
 {
 	/**
-	 * @brief Moth
-	 *
-	 * Small decorative moth that rests on surfaces until a player brushes against it, at which
-	 * point it flutters away in a randomized direction before settling again. It is purely
-	 * ambient and does not harm the player.
-	 */
+		@brief Moth
+		
+		Small decorative moth that rests on surfaces until a player brushes against it, at which
+		point it flutters away in a randomized direction before settling again. It is purely
+		ambient and does not harm the player.
+	*/
 	class Moth : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

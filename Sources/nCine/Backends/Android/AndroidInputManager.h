@@ -19,7 +19,9 @@ namespace nCine
 
 namespace nCine::Backends
 {
-	/// Utility functions to convert between engine key enumerations and Android ones
+	/**
+		@brief Utility functions to convert between engine key enumerations and Android ones
+	*/
 	class AndroidKeys
 	{
 	public:
@@ -27,7 +29,12 @@ namespace nCine::Backends
 		static int keyModMaskToEnumMask(int keymod);
 	};
 
-	/// Simulated information about Android keyboard state
+	/**
+		@brief Simulated information about Android keyboard state
+		
+		Android does not expose a global keyboard state, so the pressed-key table is reconstructed
+		from the parsed key events instead of being queried from the system.
+	*/
 	class AndroidKeyboardState : public KeyboardState
 	{
 	public:
@@ -50,7 +57,9 @@ namespace nCine::Backends
 		friend class AndroidInputManager;
 	};
 
-	/// Information about Android mouse state
+	/**
+		@brief Information about Android mouse state
+	*/
 	class AndroidMouseState : public MouseState
 	{
 	public:
@@ -64,11 +73,13 @@ namespace nCine::Backends
 		friend class AndroidInputManager;
 	};
 
-	/// Information about Android joystick state
+	/**
+		@brief Information about Android joystick state
+	*/
 	class AndroidJoystickState : JoystickState
 	{
 	public:
-		/// Supporting no more than a left and a right vibrator
+		/** @brief Maximum number of vibrators, supporting no more than a left and a right one */
 		static const int MaxVibrators = 2;
 
 		AndroidJoystickState();
@@ -79,7 +90,7 @@ namespace nCine::Backends
 
 	private:
 		static constexpr unsigned int MaxNameLength = 256;
-		/// All AKEYCODE_BUTTON_* plus AKEYCODE_BACK
+		/** @brief Maximum number of buttons, covering all `AKEYCODE_BUTTON_*` plus `AKEYCODE_BACK` */
 		static constexpr int MaxButtons = AKEYCODE_ESCAPE - AKEYCODE_BUTTON_A + 1;
 		static constexpr int MaxAxes = 10;
 		static constexpr int NumAxesToMap = 12;
@@ -98,11 +109,11 @@ namespace nCine::Backends
 		short int buttonsMapping_[MaxButtons];
 		short int axesMapping_[MaxAxes];
 		bool buttons_[MaxButtons];
-		/// Normalized value in the -1..1 range
+		/** @brief Normalized value in the -1..1 range for every available axis */
 		float axesValues_[MaxAxes];
-		/// Minimum value for every available axis (used for -1..1 range remapping)
+		/** @brief Minimum value for every available axis (used for -1..1 range remapping) */
 		float axesMinValues_[MaxAxes];
-		/// Range value for every available axis (used for -1..1 range remapping)
+		/** @brief Range value for every available axis (used for -1..1 range remapping) */
 		float axesRangeValues_[MaxAxes];
 		unsigned char hatState_; // no more than one hat is supported
 		int numVibrators_;
@@ -112,7 +123,12 @@ namespace nCine::Backends
 		friend class AndroidInputManager;
 	};
 
-	/// Class for parsing and dispatching Android input events
+	/**
+		@brief Parses and dispatches Android input events
+		
+		Reads NDK input events (touch, keyboard, mouse and gamepad) plus the accelerometer sensor,
+		then translates them into engine events forwarded to the registered input event handler.
+	*/
 	class AndroidInputManager : public IInputManager
 	{
 		friend class nCine::AndroidApplication;
@@ -121,12 +137,12 @@ namespace nCine::Backends
 		explicit AndroidInputManager(struct android_app* state);
 		~AndroidInputManager() override;
 
-		/// Enables the accelerometer sensor
+		/** @brief Enables the accelerometer sensor */
 		static void enableAccelerometerSensor();
-		/// Disables the accelerometer sensor
+		/** @brief Disables the accelerometer sensor */
 		static void disableAccelerometerSensor();
 
-		/// Allows the application to make use of the accelerometer
+		/** @brief Allows the application to make use of the accelerometer */
 		static void enableAccelerometer(bool enabled);
 
 		inline const MouseState& mouseState() const override {
@@ -136,9 +152,9 @@ namespace nCine::Backends
 			return keyboardState_;
 		}
 
-		/// Parses an Android sensor event related to the accelerometer
+		/** @brief Parses an Android sensor event related to the accelerometer */
 		static void parseAccelerometerEvent();
-		/// Parses an Android input event
+		/** @brief Parses an Android input event */
 		static bool parseEvent(const AInputEvent* event);
 
 		bool isJoyPresent(int joyId) const override;
@@ -171,7 +187,7 @@ namespace nCine::Backends
 		static AndroidMouseState mouseState_;
 		static MouseEvent mouseEvent_;
 		static ScrollEvent scrollEvent_;
-		/// Back and forward key events triggered by the mouse are simulated as right and middle button
+		/** @brief Back and forward key events triggered by the mouse, simulated as right and middle button */
 		static int simulatedMouseButtonState_;
 
 		static AndroidJoystickState nullJoystickState_;
@@ -180,29 +196,29 @@ namespace nCine::Backends
 		static JoyHatEvent joyHatEvent_;
 		static JoyAxisEvent joyAxisEvent_;
 		static JoyConnectionEvent joyConnectionEvent_;
-		/// Update rate of `updateJoystickConnections()` in seconds
+		/** @brief Update rate of @ref updateJoystickConnections() in seconds */
 		static constexpr float JoyCheckRateSecs = 2.0f;
 		static Timer joyCheckTimer_;
 
-		/// Processes a gamepad event
+		/** @brief Processes a gamepad event */
 		static bool processGamepadEvent(const AInputEvent* event);
-		/// Processes a keyboard event
+		/** @brief Processes a keyboard event */
 		static bool processKeyboardEvent(const AInputEvent* event);
-		/// Processes a touch event
+		/** @brief Processes a touch event */
 		static bool processTouchEvent(const AInputEvent* event);
-		/// Processes a mouse event
+		/** @brief Processes a mouse event */
 		static bool processMouseEvent(const AInputEvent* event);
-		/// Processes a keycode event generated by the mouse, like the back key on right mouse click
+		/** @brief Processes a keycode event generated by the mouse, like the back key on right mouse click */
 		static bool processMouseKeyEvent(const AInputEvent* event);
 
-		/// Initializes the accelerometer sensor
+		/** @brief Initializes the accelerometer sensor */
 		static void initAccelerometerSensor(struct android_app* state);
 
-		/// Updates joystick states after connections and disconnections
+		/** @brief Updates joystick states after connections and disconnections */
 		static void updateJoystickConnections();
-		/// Checks if a previously connected joystick has been disconnected
+		/** @brief Checks if a previously connected joystick has been disconnected */
 		static void checkDisconnectedJoysticks();
-		/// Checks if a new joystick has been connected
+		/** @brief Checks if a new joystick has been connected */
 		static void checkConnectedJoysticks();
 
 		static int findJoyId(int deviceId);

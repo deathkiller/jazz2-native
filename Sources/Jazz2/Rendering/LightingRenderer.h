@@ -15,7 +15,12 @@ namespace Jazz2::Rendering
 {
 	class PlayerViewport;
 
-	/** @brief Processes all lights in a scene into an intermediate target */
+	/**
+		@brief Processes all lights in a scene into an intermediate target
+		
+		Collects the lights emitted by every actor in the level and renders each as an additive blended quad
+		into a @ref PlayerViewport's lighting buffer, which the @ref CombineRenderer later applies to the scene.
+	*/
 	class LightingRenderer : public SceneNode
 	{
 	public:

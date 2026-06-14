@@ -4,19 +4,24 @@
 
 namespace nCine
 {
-	/// Handles the screen viewport
+	/**
+		@brief Viewport that renders directly to the screen
+		
+		The final viewport in the chain, drawing to the default framebuffer instead of a texture.
+		It is created and driven by @ref Application, which resizes it to follow the window.
+	*/
 	class ScreenViewport : public Viewport
 	{
 		friend class Application;
 
 	public:
-		/// Creates the screen viewport
+		/** @brief Creates the screen viewport */
 		ScreenViewport();
 
 		ScreenViewport(const ScreenViewport&) = delete;
 		ScreenViewport& operator=(const ScreenViewport&) = delete;
 
-		/// Changes the size, viewport rectangle and projection matrix of the screen viewport
+		/** @brief Changes the size, viewport rectangle and projection matrix of the screen viewport */
 		void Resize(std::int32_t width, std::int32_t height);
 
 	private:

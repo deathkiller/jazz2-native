@@ -24,7 +24,9 @@ namespace nCine
 {
 	class AudioLoaderOgg;
 
-	/// Ogg Vorbis audio reader using `libvorbis` library
+	/**
+		@brief Audio reader for the Ogg Vorbis format, backed by `libvorbis`
+	*/
 	class AudioReaderOgg : public IAudioReader
 	{
 		friend class AudioLoaderOgg;
@@ -40,9 +42,9 @@ namespace nCine
 		void rewind() const override;
 
 	private:
-		/// Audio file handle
+		/** @brief Audio file handle */
 		std::unique_ptr<Death::IO::Stream> fileHandle_;
-		/// Vorbisfile handle
+		/** @brief Vorbisfile decoder handle */
 		mutable OggVorbis_File oggFile_;
 
 #if defined(WITH_VORBIS_DYNAMIC)

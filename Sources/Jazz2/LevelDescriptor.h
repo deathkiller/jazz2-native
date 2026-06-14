@@ -23,7 +23,13 @@ namespace Jazz2
 		class TileMap;
 	}
 
-	/** @brief Contains all components to fully initialize a level instance */
+	/**
+		@brief Contains all components to fully initialize a level instance
+		
+		Produced when a level file is loaded and consumed by the level handler during setup. Bundles the parsed tile
+		map and event map together with metadata such as display name, next/secret level names, music, ambient color,
+		weather, water level and level texts.
+	*/
 	struct LevelDescriptor
 	{
 		/** @brief Full path */

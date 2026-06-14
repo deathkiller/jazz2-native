@@ -261,52 +261,84 @@ namespace nCine
 	}
 #endif
 
+	/** @brief Linearly interpolates between two values by the given ratio */
 	inline float lerp(float a, float b, float ratio)
 	{
 		return a + ratio * (b - a);
 	}
 
+	/** @brief Linearly interpolates between two integers by the given ratio, rounding the result */
 	inline std::int32_t lerp(std::int32_t a, std::int32_t b, float ratio)
 	{
 		return (std::int32_t)std::round(a + ratio * (float)(b - a));
 	}
 
+	/**
+	 * @brief Frame-rate independent interpolation between two values
+	 *
+	 * Applies @p ratio per nominal frame and scales it by @p timeMult so the result is independent of
+	 * the actual frame duration.
+	 */
 	inline float lerpByTime(float a, float b, float ratio, float timeMult)
 	{
 		float normalizedRatio = 1.0f - powf(1.0f - ratio, timeMult);
 		return a + normalizedRatio * (b - a);
 	}
 
+	/**
+	 * @brief Copies the beginning of a string into a fixed-size buffer, always null-terminating it
+	 *
+	 * @param dest		Destination buffer
+	 * @param destSize	Size of the destination buffer in bytes
+	 * @param source	Source string
+	 * @param count		Maximum number of characters to copy, or `-1` to copy the whole source
+	 * @return Number of characters written, excluding the null terminator
+	 */
 	std::int32_t copyStringFirst(char* dest, std::int32_t destSize, const char* source, std::int32_t count = -1);
 
+	/** @brief Copies the beginning of a string into a fixed-size array, deducing its size */
 	template<std::size_t size>
 	inline std::int32_t copyStringFirst(char(&dest)[size], const char* source, std::int32_t count = -1) {
 		return copyStringFirst(dest, size, source, count);
 	}
 
+	/** @brief Copies the beginning of a string view into a fixed-size array, deducing its size */
 	template<std::size_t size>
 	inline std::int32_t copyStringFirst(char(&dest)[size], Containers::StringView source) {
 		return copyStringFirst(dest, size, source.data(), (std::int32_t)source.size());
 	}
 
+	/**
+	 * @brief Writes a `printf`-style formatted string into a buffer
+	 *
+	 * @return Number of characters written, excluding the null terminator
+	 */
 	std::int32_t formatString(char* buffer, std::size_t maxLen, const char* format, ...);
 
+	/** @brief Writes a `printf`-style formatted string into a fixed-size array, deducing its size */
 	template<std::size_t size, class ...TArg>
 	inline std::int32_t formatString(char(&dest)[size], const char* format, const TArg& ...args) {
 		return formatString(dest, size, format, args...);
 	}
 
+	/** @brief Writes an unsigned 32-bit integer to a buffer as a decimal string */
 	void u32tos(std::uint32_t value, char* buffer);
+	/** @brief Writes a signed 32-bit integer to a buffer as a decimal string */
 	void i32tos(std::int32_t value, char* buffer);
+	/** @brief Writes an unsigned 64-bit integer to a buffer as a decimal string */
 	void u64tos(std::uint64_t value, char* buffer);
+	/** @brief Writes a signed 64-bit integer to a buffer as a decimal string */
 	void i64tos(std::int64_t value, char* buffer);
+	/** @brief Writes a floating-point value to a buffer as a decimal string */
 	void ftos(double value, char* buffer, std::int32_t bufferSize);
 
+	/** @brief Returns `true` if the character is a decimal digit */
 	constexpr bool isDigit(char c)
 	{
 		return (c >= '0' && c <= '9');
 	}
 
+	/** @brief Parses up to @p length leading decimal digits into an unsigned 32-bit integer */
 	constexpr std::uint32_t stou32(const char* str, std::size_t length)
 	{
 		std::uint32_t n = 0;
@@ -321,6 +353,7 @@ namespace nCine
 		return n;
 	}
 
+	/** @brief Parses up to @p length leading decimal digits into an unsigned 64-bit integer */
 	constexpr std::uint64_t stou64(const char* str, std::size_t length)
 	{
 		std::uint64_t n = 0;
@@ -335,6 +368,7 @@ namespace nCine
 		return n;
 	}
 
+	/** @brief Sorts the range in place using the given comparator */
 	template<class Iter, class Compare>
 	inline void sort(Iter begin, Iter end, Compare comp)
 	{
@@ -345,6 +379,7 @@ namespace nCine
 #endif
 	}
 
+	/** @brief Sorts the range in place into ascending order */
 	template<class Iter>
 	inline void sort(Iter begin, Iter end)
 	{
@@ -355,9 +390,19 @@ namespace nCine
 #endif
 	}
 
+	/** @brief Converts a 16-bit half-precision value to a single-precision float */
 	float halfToFloat(std::uint16_t value);
+	/** @brief Converts a single-precision float to a 16-bit half-precision value */
 	std::uint16_t floatToHalf(float value);
 
+	/**
+	 * @brief Packs a dotted version string into a single 64-bit number
+	 *
+	 * Parses a `"major.minor.patch"` string into a 64-bit value with the major part in bits 48-63,
+	 * the minor part in bits 32-47 and the patch part in the low 32 bits. A patch part beginning with
+	 * `'r'` (a Git revision) is encoded with a special maximum value so it always compares as the
+	 * latest.
+	 */
 	constexpr std::uint64_t parseVersion(Containers::StringView version)
 	{
 		std::size_t versionLength = version.size();
@@ -391,6 +436,7 @@ namespace nCine
 		return (patch & 0xFFFFFFFFULL) | ((minor & 0xFFFFULL) << 32) | ((major & 0xFFFFULL) << 48);
 	}
 
+	/** @brief Encodes the byte range into a URL-safe Base64 string (without padding) */
 	template<class Iterator>
 	static std::string toBase64Url(const Iterator begin, const Iterator end)
 	{
@@ -431,7 +477,9 @@ namespace nCine
 	}
 
 #if defined(WITH_ZLIB) || defined(DOXYGEN_GENERATING_OUTPUT)
+	/** @brief Returns the CRC-32 checksum of the given byte buffer */
 	std::uint32_t crc32(Containers::ArrayView<std::uint8_t> data);
+	/** @brief Returns the CRC-32 checksum of the remaining contents of the given stream */
 	std::uint32_t crc32(IO::Stream& stream);
 #endif
 }

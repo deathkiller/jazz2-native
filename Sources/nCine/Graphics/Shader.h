@@ -8,7 +8,13 @@
 
 namespace nCine
 {
-	/// Shader
+	/**
+		@brief GPU shader program usable by materials and drawable nodes
+		
+		Wraps an OpenGL shader program built from a vertex and a fragment shader. The sources can
+		come from memory, a file, one of the built-in default shaders or the binary cache, and a
+		matching variant can be registered for rendering batched draw commands.
+	*/
 	class Shader : public Object
 	{
 		friend class ShaderState;
@@ -95,27 +101,30 @@ namespace nCine
 
 		bool SaveToCache(const char* shaderName, std::uint64_t shaderVersion) const;
 
-		/// Sets the VBO stride and pointer for the specified vertex attribute
+		/** @brief Sets the VBO stride and pointer for the specified vertex attribute */
 		bool SetAttribute(const char* name, std::int32_t stride, void* pointer);
 
-		/// Returns `true` if the shader is linked and can therefore be used
+		/** @brief Returns `true` if the shader is linked and can therefore be used */
 		bool IsLinked() const;
 
-		/// Returns the length of the information log including the null termination character
+		/** @brief Returns the length of the information log, including the null terminator */
 		unsigned int RetrieveInfoLogLength() const;
-		/// Retrieves the information log and copies it in the provided string object
+		/** @brief Retrieves the information log and copies it into the provided string object */
 		void RetrieveInfoLog(std::string& infoLog) const;
 
-		/// Returns the automatic log on errors flag
+		/** @brief Returns the automatic log on errors flag */
 		bool GetLogOnErrors() const;
-		/// Sets the automatic log on errors flag
-		/*! If the flag is true the shader will automatically log compilation and linking errors. */
+		/**
+		 * @brief Sets the automatic log on errors flag
+		 *
+		 * When the flag is `true` the shader automatically logs compilation and linking errors.
+		 */
 		void SetLogOnErrors(bool shouldLogOnErrors);
 
-		/// Sets the OpenGL object label for the shader program
+		/** @brief Sets the OpenGL object label for the shader program */
 		void SetGLShaderProgramLabel(const char* label);
 
-		/// Registers a shaders to be used for batches of render commands
+		/** @brief Registers a shader to be used when rendering batches of render commands */
 		void RegisterBatchedShader(Shader& batchedShader);
 
 		GLShaderProgram* GetHandle() {
@@ -127,7 +136,7 @@ namespace nCine
 		}
 
 	private:
-		/// OpenGL shader program
+		/** @brief Underlying OpenGL shader program */
 		std::unique_ptr<GLShaderProgram> glShaderProgram_;
 
 		bool LoadDefaultShader(DefaultVertex vertex, int batchSize);

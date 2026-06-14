@@ -5,11 +5,11 @@
 namespace Jazz2::Actors::Bosses
 {
 	/**
-	 * @brief Base class of an enemy boss
-	 *
-	 * A boss is a powerful, level-ending enemy with a large health pool shown on a dedicated health bar.
-	 * Defeating it typically completes the level and shows the level's end text.
-	 */
+		@brief Base class of an enemy boss
+		
+		A boss is a powerful, level-ending enemy with a large health pool shown on a dedicated health bar.
+		Defeating it typically completes the level and shows the level's end text.
+	*/
 	class BossBase : public Enemies::EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(Enemies::EnemyBase);

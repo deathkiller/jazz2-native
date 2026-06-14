@@ -125,7 +125,11 @@ namespace nCine
 		currentVideoMode_.blueBits = displayMode.blueBits();
 	}
 
-	/*! \internal Having this method inlined does not seem to work correctly with Qt5 on Linux */
+	/**
+	 * @brief Returns the number of connected monitors
+	 *
+	 * @internal Having this method inlined does not seem to work correctly with Qt5 on Linux.
+	 */
 	unsigned int IGfxDevice::numMonitors() const
 	{
 		return numMonitors_;

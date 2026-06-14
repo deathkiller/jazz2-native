@@ -5,11 +5,11 @@
 namespace Jazz2::Actors::Collectibles
 {
 	/**
-	 * @brief Fast fire (collectible)
-	 *
-	 * The fast-fire power-up from JJ2, depicted as the player's blaster. Collecting it increases the
-	 * player's blaster fire rate (cumulative up to a maximum) and awards points.
-	 */
+		@brief Fast fire (collectible)
+		
+		The fast-fire power-up from JJ2, depicted as the player's blaster. Collecting it increases the
+		player's blaster fire rate (cumulative up to a maximum) and awards points.
+	*/
 	class FastFireCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

@@ -20,7 +20,16 @@ namespace Jazz2::Scripting
 {
 	class LevelScriptLoader;
 
-	/** @brief Wraps a scripted actor, forwarding engine callbacks to the **AngelScript** object */
+	/**
+		@brief Wraps a scripted actor, forwarding engine callbacks to the **AngelScript** object
+		
+		Engine-side @ref Actors::ActorBase subclass that backs a custom actor type implemented in script. Engine
+		lifecycle and event callbacks (activation, update, draw, collision, hit, animation) are dispatched to the
+		matching methods on the backing script object, and a set of helper methods expose the actor's state back to
+		script. Instances are reference-counted and created through the registered AngelScript factory.
+		
+		@experimental
+	*/
 	class ScriptActorWrapper : public Actors::ActorBase
 	{
 	public:
@@ -118,7 +127,14 @@ namespace Jazz2::Scripting
 		asIScriptFunction* _onAnimationFinished;
 	};
 
-	/** @brief Wraps a scripted collectible actor, forwarding engine callbacks to the **AngelScript** object */
+	/**
+		@brief Wraps a scripted collectible actor, forwarding engine callbacks to the **AngelScript** object
+		
+		Specialization of @ref ScriptActorWrapper for collectible items, adding the bobbing/floating behavior and an
+		`OnCollect` callback dispatched to the backing script object when a player picks the item up.
+		
+		@experimental
+	*/
 	class ScriptCollectibleWrapper : public ScriptActorWrapper
 	{
 	public:

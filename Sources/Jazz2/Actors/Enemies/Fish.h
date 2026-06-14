@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Enemies
 {
 	/**
-	 * @brief Fish
-	 *
-	 * Underwater enemy that drifts idly while submerged and, when a player swims within range, darts at
-	 * them in a quick lunge before braking and returning to its starting spot. Stays below the water
-	 * surface and is defeated by a single hit.
-	 */
+		@brief Fish
+		
+		Underwater enemy that drifts idly while submerged and, when a player swims within range, darts at
+		them in a quick lunge before braking and returning to its starting spot. Stays below the water
+		surface and is defeated by a single hit.
+	*/
 	class Fish : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

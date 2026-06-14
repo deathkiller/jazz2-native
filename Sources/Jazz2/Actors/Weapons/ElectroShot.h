@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Weapons
 {
 	/**
-	 * @brief Electro (shot)
-	 *
-	 * Projectile of the electro blaster, a high-strength energy ball that passes through solid tiles instead of
-	 * stopping at walls and trails an expanding swirl of electric particles as it travels. The powered-up variant
-	 * is slightly faster.
-	 */
+		@brief Electro (shot)
+		
+		Projectile of the electro blaster, a high-strength energy ball that passes through solid tiles instead of
+		stopping at walls and trails an expanding swirl of electric particles as it travels. The powered-up variant
+		is slightly faster.
+	*/
 	class ElectroShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);

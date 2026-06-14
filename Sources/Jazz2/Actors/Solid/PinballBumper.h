@@ -5,11 +5,11 @@
 namespace Jazz2::Actors::Solid
 {
 	/**
-	 * @brief Pinball bumper
-	 *
-	 * A round bumper found in pinball-themed levels that flashes and forcefully knocks the player away in the
-	 * direction they struck it, awarding score, much like the bumpers on a real pinball table.
-	 */
+		@brief Pinball bumper
+		
+		A round bumper found in pinball-themed levels that flashes and forcefully knocks the player away in the
+		direction they struck it, awarding score, much like the bumpers on a real pinball table.
+	*/
 	class PinballBumper : public SolidObjectBase
 	{
 		DEATH_RUNTIME_OBJECT(SolidObjectBase);

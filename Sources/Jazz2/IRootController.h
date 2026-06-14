@@ -13,7 +13,13 @@ using namespace Death::Containers;
 
 namespace Jazz2
 {
-	/** @brief Base interface of a root controller */
+	/**
+		@brief Base interface of a root controller
+		
+		Top-level application controller that owns the active state handler and drives transitions between them
+		(main menu, levels), manages resumable state, exposes async invocation, and on supported builds connects to
+		or hosts a multiplayer server.
+	*/
 	class IRootController
 	{
 	public:

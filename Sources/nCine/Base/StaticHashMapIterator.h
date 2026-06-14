@@ -5,12 +5,19 @@
 
 namespace nCine
 {
-	/// Base helper structure for type traits used in the hashmap iterator
+	/**
+		@brief Primary template for the @ref StaticHashMapIterator type traits helper
+		
+		Specialized on the `IsConst` flag to expose the hashmap pointer and node reference types with
+		the appropriate constness.
+	*/
 	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst>
 	struct StaticHashMapHelperTraits
 	{};
 
-	/// Helper structure providing type traits used in the non constant hashmap iterator
+	/**
+		@brief Type traits used by the non-constant @ref StaticHashMapIterator
+	*/
 	template<class K, class T, class HashFunc, std::uint32_t Capacity>
 	struct StaticHashMapHelperTraits<K, T, HashFunc, Capacity, false>
 	{
@@ -18,7 +25,9 @@ namespace nCine
 		using NodeReference = typename StaticHashMap<K, T, Capacity, HashFunc>::Node&;
 	};
 
-	/// Helper structure providing type traits used in the constant hashmap iterator
+	/**
+		@brief Type traits used by the constant @ref StaticHashMapIterator
+	*/
 	template<class K, class T, class HashFunc, std::uint32_t Capacity>
 	struct StaticHashMapHelperTraits<K, T, HashFunc, Capacity, true>
 	{
@@ -26,21 +35,26 @@ namespace nCine
 		using NodeReference = const typename StaticHashMap<K, T, Capacity, HashFunc>::Node&;
 	};
 
-	/// Static hashmap iterator
+	/**
+		@brief Bidirectional iterator over the elements of a @ref StaticHashMap
+		
+		Iterates over occupied buckets, skipping empty ones. The `IsConst` template parameter selects
+		between a mutable and a read-only iterator.
+	*/
 	template<class K, class T, class HashFunc, std::uint32_t Capacity, bool IsConst>
 	class StaticHashMapIterator
 	{
 	public:
-		/// Reference type which respects iterator constness
+		/** @brief Reference type that respects the iterator constness */
 		using Reference = typename IteratorTraits<StaticHashMapIterator>::Reference;
 
-		/// Sentinel tags to initialize the iterator at the beginning and end
+		/**
+		 * @brief Sentinel tag used to initialize the iterator before the first or past the last element
+		 */
 		enum class SentinelTagInit
 		{
-			/// Iterator at the beginning, next element is the first one
-			BEGINNING,
-			/// Iterator at the end, previous element is the last one
-			END
+			BEGINNING,	/**< Iterator before the first element; the next element is the first one */
+			END			/**< Iterator past the last element; the previous element is the last one */
 		};
 
 		StaticHashMapIterator(typename StaticHashMapHelperTraits<K, T, HashFunc, Capacity, IsConst>::HashMapPtr hashMap, std::uint32_t bucketIndex)
@@ -48,24 +62,24 @@ namespace nCine
 
 		StaticHashMapIterator(typename StaticHashMapHelperTraits<K, T, HashFunc, Capacity, IsConst>::HashMapPtr hashMap, SentinelTagInit tag);
 
-		/// Copy constructor to implicitly convert a non constant iterator to a constant one
+		/** @brief Implicitly converts a non-constant iterator to a constant one */
 		StaticHashMapIterator(const StaticHashMapIterator<K, T, HashFunc, Capacity, false>& it)
 			: hashMap_(it.hashMap_), bucketIndex_(it.bucketIndex_), tag_(SentinelTag(it.tag_)) {}
 
-		/// Deferencing operator
+		/** @brief Dereferences the iterator, returning the value of the pointed element */
 		Reference operator*() const;
 
-		/// Iterates to the next element (prefix)
+		/** @brief Advances to the next element (prefix) */
 		StaticHashMapIterator& operator++();
-		/// Iterates to the next element (postfix)
+		/** @brief Advances to the next element (postfix) */
 		StaticHashMapIterator operator++(int);
 
-		/// Iterates to the previous element (prefix)
+		/** @brief Moves to the previous element (prefix) */
 		StaticHashMapIterator& operator--();
-		/// Iterates to the previous element (postfix)
+		/** @brief Moves to the previous element (postfix) */
 		StaticHashMapIterator operator--(int);
 
-		/// Equality operator
+		/** @brief Returns `true` if both iterators point to the same element */
 		friend inline bool operator==(const StaticHashMapIterator& lhs, const StaticHashMapIterator& rhs)
 		{
 			if (lhs.tag_ == SentinelTag::REGULAR && rhs.tag_ == SentinelTag::REGULAR) {
@@ -75,7 +89,7 @@ namespace nCine
 			}
 		}
 
-		/// Inequality operator
+		/** @brief Returns `true` if the iterators point to different elements */
 		friend inline bool operator!=(const StaticHashMapIterator& lhs, const StaticHashMapIterator& rhs)
 		{
 			if (lhs.tag_ == SentinelTag::REGULAR && rhs.tag_ == SentinelTag::REGULAR) {
@@ -85,36 +99,33 @@ namespace nCine
 			}
 		}
 
-		/// Returns the hashmap node currently pointed by the iterator
+		/** @brief Returns the hashmap node currently pointed to by the iterator */
 		typename StaticHashMapHelperTraits<K, T, HashFunc, Capacity, IsConst>::NodeReference node() const;
-		/// Returns the value associated to the currently pointed node
+		/** @brief Returns the value of the currently pointed node */
 		const T& value() const;
-		/// Returns the key associated to the currently pointed node
+		/** @brief Returns the key of the currently pointed node */
 		const K& key() const;
-		/// Returns the hash associated to the currently pointed node
+		/** @brief Returns the hash of the currently pointed node */
 		hash_t hash() const;
 
 	private:
-		/// Sentinel tags to detect begin and end conditions
+		// Sentinel tag used to detect the begin and end conditions
 		enum SentinelTag {
-			/// Iterator poiting to a real element
-			REGULAR,
-			/// Iterator at the beginning, next element is the first one
-			BEGINNING,
-			/// Iterator at the end, previous element is the last one
-			END
+			REGULAR,	// Iterator pointing to a real element
+			BEGINNING,	// Iterator before the first element
+			END			// Iterator past the last element
 		};
 
 		typename StaticHashMapHelperTraits<K, T, HashFunc, Capacity, IsConst>::HashMapPtr hashMap_;
 		std::uint32_t bucketIndex_;
 		SentinelTag tag_;
 
-		/// Makes the iterator point to the next element in the hashmap
+		// Makes the iterator point to the next non-empty element in the hashmap
 		void next();
-		/// Makes the iterator point to the previous element in the hashmap
+		// Makes the iterator point to the previous non-empty element in the hashmap
 		void previous();
 
-		/// For non constant to constant iterator implicit conversion
+		// Grants the constant iterator access for the non-constant to constant conversion
 		friend class StaticHashMapIterator<K, T, HashFunc, Capacity, true>;
 	};
 

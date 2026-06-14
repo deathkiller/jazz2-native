@@ -8,121 +8,125 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// Contains data for a rectangles based animation
+	/**
+		@brief Sequence of texture rectangles forming a sprite animation
+		
+		Stores an ordered list of source rectangles and their per-frame durations, advancing the current
+		frame over time according to the configured @ref LoopMode. A sprite samples the @ref rect() of its
+		animation each frame to display the matching region of its texture.
+	*/
 	class RectAnimation
 	{
 	public:
-		/// Loop modes
+		/** @brief Animation loop modes */
 		enum class LoopMode
 		{
-			NoRepeat,
-			/// When the animation reaches the last frame it begins again from start
-			FromStart,
-			/// When the animation reaches the last frame it goes backward
-			Backward
+			NoRepeat,	/**< When the animation reaches the last frame it stops and pauses */
+			FromStart,	/**< When the animation reaches the last frame it begins again from start */
+			Backward	/**< When the animation reaches the last frame it plays in reverse, ping-ponging */
 		};
 
-		/// Default constructor
+		/** @brief Default constructor */
 		RectAnimation()
 			: RectAnimation(1.0f / 60.0f, LoopMode::NoRepeat) {}
-		/// Constructor for an animation with a specified default frame duration, loop and rewind mode
+		/** @brief Constructs an animation with the specified default frame duration and loop mode */
 		RectAnimation(float defaultFrameDuration, LoopMode loopMode);
 
-		/// Returns `true` if the animation is paused
+		/** @brief Returns whether the animation is paused */
 		inline bool isPaused() const {
 			return isPaused_;
 		}
-		/// Sets the pause flag
+		/** @brief Sets the pause flag */
 		inline void setPaused(bool isPaused) {
 			isPaused_ = isPaused;
 		}
 
-		/// Updates current frame based on time passed
+		/** @brief Advances the current frame by the time elapsed since the last update */
 		void updateFrame(float interval);
 
-		/// Returns current frame
+		/** @brief Returns the current frame index */
 		inline std::uint32_t frame() const {
 			return currentFrame_;
 		}
-		/// Sets current frame
+		/** @brief Sets the current frame index */
 		void setFrame(std::uint32_t frameNum);
 
-		/// Returns the default frame duration in seconds
+		/** @brief Returns the default frame duration in seconds */
 		float defaultFrameDuration() const {
 			return defaultFrameDuration_;
 		}
-		/// Sets the default frame duration in seconds
+		/** @brief Sets the default frame duration in seconds */
 		inline void setDefaultFrameDuration(float defaultFrameDuration) {
 			defaultFrameDuration_ = defaultFrameDuration;
 		}
 
-		/// Returns the loop mode
+		/** @brief Returns the loop mode */
 		LoopMode loopMode() const {
 			return loopMode_;
 		}
-		/// Sets the loop mode
+		/** @brief Sets the loop mode */
 		inline void setLoopMode(LoopMode loopMode) {
 			loopMode_ = loopMode;
 		}
 
-		/// Adds a rectangle to the array specifying the frame duration
+		/** @brief Appends a rectangle with the specified frame duration */
 		void addRect(const Recti& rect, float frameTime);
-		/// Creates a rectangle from origin and size and then adds it to the array, specifying the frame duration
+		/** @brief Creates a rectangle from origin and size and appends it with the specified frame duration */
 		void addRect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h, float frameTime);
 
-		/// Adds a rectangle to the array with the default frame duration
+		/** @brief Appends a rectangle with the default frame duration */
 		inline void addRect(const Recti& rect) {
 			addRect(rect, defaultFrameDuration_);
 		}
-		/// Creates a rectangle from origin and size and then adds it to the array, with the default frame duration
+		/** @brief Creates a rectangle from origin and size and appends it with the default frame duration */
 		inline void addRect(std::int32_t x, std::int32_t y, std::int32_t w, std::int32_t h) {
 			addRect(x, y, w, h, defaultFrameDuration_);
 		}
 
-		/// Returns the current rectangle
+		/** @brief Returns the current rectangle */
 		inline const Recti& rect() const {
 			return rects_[currentFrame_];
 		}
-		/// Returns the current frame duration in seconds
+		/** @brief Returns the current frame duration in seconds */
 		inline float frameDuration() const {
 			return frameDurations_[currentFrame_];
 		}
 
-		/// Returns the array of all rectangles
+		/** @brief Returns the array of all rectangles */
 		inline SmallVectorImpl<Recti>& rectangles() {
 			return rects_;
 		}
-		/// Returns the constant array of all rectangles
+		/** @brief Returns the array of all rectangles (read-only) */
 		inline const SmallVectorImpl<Recti>& rectangles() const {
 			return rects_;
 		}
 
-		/// Returns the array of all frame durations
+		/** @brief Returns the array of all frame durations */
 		inline SmallVectorImpl<float>& frameDurations() {
 			return frameDurations_;
 		}
-		/// Returns the constant array of all frame durations
+		/** @brief Returns the array of all frame durations (read-only) */
 		inline const SmallVectorImpl<float>& frameDurations() const {
 			return frameDurations_;
 		}
 
 	private:
-		/// The default frame duratin if a custom one is not specified when adding a rectangle
+		/** @brief Default frame duration used when a custom one is not specified when adding a rectangle */
 		float defaultFrameDuration_;
-		/// The looping mode
+		/** @brief Looping mode */
 		LoopMode loopMode_;
 
-		/// The rectangles array
+		/** @brief Array of frame rectangles */
 		SmallVector<Recti, 0> rects_;
-		/// The frame durations array
+		/** @brief Array of per-frame durations */
 		SmallVector<float, 0> frameDurations_;
-		/// Current frame
+		/** @brief Current frame index */
 		std::uint32_t currentFrame_;
-		/// Elapsed time since the last frame change
+		/** @brief Elapsed time since the last frame change */
 		float elapsedFrameTime_;
-		/// The flag about the frame advance direction
+		/** @brief Whether the animation is currently advancing forward (for @ref LoopMode::Backward) */
 		bool goingForward_;
-		/// The pause flag
+		/** @brief Pause flag */
 		bool isPaused_;
 	};
 

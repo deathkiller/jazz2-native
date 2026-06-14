@@ -5,11 +5,11 @@
 namespace Jazz2::Actors::Weapons
 {
 	/**
-	 * @brief Lightning shield (shot)
-	 *
-	 * Projectile emitted by the lightning shield power-up. It flies straight while emitting a continuous crackling
-	 * noise that tracks its position, and dissipates on hitting a wall.
-	 */
+		@brief Lightning shield (shot)
+		
+		Projectile emitted by the lightning shield power-up. It flies straight while emitting a continuous crackling
+		noise that tracks its position, and dissipates on hitting a wall.
+	*/
 	class ShieldLightningShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);

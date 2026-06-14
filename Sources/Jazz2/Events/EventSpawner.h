@@ -7,7 +7,13 @@
 
 namespace Jazz2::Events
 {
-	/** @brief Spawns objects in a level */
+	/**
+		@brief Spawns objects in a level
+		
+		Maps each @ref EventType to a registered factory and preload delegate, and uses them to create
+		actor instances (or preload their assets) from an event type and its spawn parameters. The known
+		spawnable actors are registered on construction.
+	*/
 	class EventSpawner
 	{
 	public:

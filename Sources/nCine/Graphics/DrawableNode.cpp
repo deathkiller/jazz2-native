@@ -122,8 +122,10 @@ namespace nCine
 		return true;
 	}
 
-	/*! \note This method sets the anchor point relative to the node width and height.
-	 * To set the anchor point in pixels use `setAbsAnchorPoint()` instead. */
+	/**
+	 * @note Sets the anchor point relative to the node width and height. To set the anchor point in
+	 * pixels use `setAbsAnchorPoint()` instead.
+	 */
 	void DrawableNode::setAnchorPoint(float xx, float yy)
 	{
 		const float clampedX = std::clamp(xx, 0.0f, 1.0f);

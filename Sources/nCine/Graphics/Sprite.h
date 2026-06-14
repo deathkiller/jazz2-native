@@ -4,30 +4,36 @@
 
 namespace nCine
 {
-	/// Scene node representing a regular sprite
+	/**
+		@brief Scene node that draws a single textured quad
+		
+		A drawable node that renders a rectangular sprite from a texture (or an untextured solid
+		quad). Its size defaults to the texture dimensions and the whole texture is used as the
+		source rectangle.
+	*/
 	class Sprite : public BaseSprite
 	{
 	public:
-		/// Default constructor for a sprite with no parent and no texture, positioned in the origin
+		/** @brief Constructs a sprite with no parent and no texture, positioned at the origin */
 		Sprite();
-		/// Constructor for a sprite with a parent and texture, positioned in the relative origin
+		/** @brief Constructs a sprite with a parent and a texture, positioned at the relative origin */
 		Sprite(SceneNode* parent, Texture* texture);
-		/// Constructor for a sprite with a texture but no parent, positioned in the origin
+		/** @brief Constructs a sprite with a texture but no parent, positioned at the origin */
 		explicit Sprite(Texture* texture);
-		/// Constructor for a sprite with a parent, a texture and a specified relative position
+		/** @brief Constructs a sprite with a parent, a texture and a relative position given as two coordinates */
 		Sprite(SceneNode* parent, Texture* texture, float xx, float yy);
-		/// Constructor for a sprite with a parent, a texture and a specified relative position as a vector
+		/** @brief Constructs a sprite with a parent, a texture and a relative position given as a vector */
 		Sprite(SceneNode* parent, Texture* texture, Vector2f position);
-		/// Constructor for a sprite with a texture and a specified position but no parent
+		/** @brief Constructs a sprite with a texture and a position given as two coordinates but no parent */
 		Sprite(Texture* texture, float xx, float yy);
-		/// Constructor for a sprite with a texture and a specified position as a vector but no parent
+		/** @brief Constructs a sprite with a texture and a position given as a vector but no parent */
 		Sprite(Texture* texture, Vector2f position);
 
 		Sprite& operator=(const Sprite&) = delete;
 		Sprite(Sprite&&) = default;
 		Sprite& operator=(Sprite&&) = default;
 
-		/// Returns a copy of this object
+		/** @brief Returns a copy of this object */
 		inline Sprite clone() const {
 			return Sprite(*this);
 		}
@@ -37,13 +43,13 @@ namespace nCine
 		}
 
 	protected:
-		/// Protected copy constructor used to clone objects
+		/** @brief Protected copy constructor used to clone objects */
 		Sprite(const Sprite& other);
 
 		void textureHasChanged(Texture* newTexture) override;
 
 	private:
-		/// Initializer method for constructors and the copy constructor
+		/** @brief Common initialization for the constructors and the copy constructor */
 		void init();
 	};
 }

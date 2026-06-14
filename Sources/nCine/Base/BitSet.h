@@ -6,7 +6,12 @@
 
 namespace nCine
 {
-	/// A sequence of bits to be manipulated with logical operators
+	/**
+		@brief Fixed-size sequence of bits backed by an unsigned integer
+		
+		Wraps an unsigned integral type `T` and exposes per-bit query and manipulation methods as well
+		as the usual bitwise and shift operators. The number of bits equals `sizeof(T) * 8`.
+	*/
 	template<class T>
 	class BitSet
 	{
@@ -17,20 +22,20 @@ namespace nCine
 		bool operator==(const BitSet& other) const;
 		bool operator!=(const BitSet& other) const;
 
-		/// \returns True if the bit at the specified position is set
+		/** @brief Returns `true` if the bit at the specified position is set */
 		bool test(std::uint32_t pos) const;
 
-		/// \returns True if all bits are set
+		/** @brief Returns `true` if all bits are set */
 		bool all() const;
-		/// \returns True if at least one bit is set
+		/** @brief Returns `true` if at least one bit is set */
 		bool any() const;
-		/// \returns True if all bits are not set
+		/** @brief Returns `true` if no bit is set */
 		bool none() const;
 
-		/// \returns The number of bits that are set
+		/** @brief Returns the number of bits that are set */
 		std::uint32_t count() const;
 
-		/// \returns The total number of bits in the bitset
+		/** @brief Returns the total number of bits in the bitset */
 		std::uint32_t size() const;
 
 		BitSet& operator&=(const BitSet& other);
@@ -45,27 +50,30 @@ namespace nCine
 		BitSet operator<<(std::uint32_t pos) const;
 		BitSet operator>>(std::uint32_t pos) const;
 
-		/// Sets all bits in the bitset
+		/** @brief Sets all bits in the bitset */
 		void set();
-		/// Sets the bit at the specified position
+		/** @brief Sets the bit at the specified position */
 		void set(std::uint32_t pos);
-		/// Sets the bit at the specified position with the specified value
+		/** @brief Sets or clears the bit at the specified position */
 		void set(std::uint32_t pos, bool value);
 
-		/// Resets all bits in the bitset
+		/** @brief Clears all bits in the bitset */
 		void reset();
-		/// Resets the bit at the specified position
+		/** @brief Clears the bit at the specified position */
 		void reset(std::uint32_t pos);
 
-		/// Flips the bit at the specified position
+		/** @brief Flips the bit at the specified position */
 		void flip(std::uint32_t pos);
 
+		/** @brief Returns the bitwise AND of two bitsets */
 		friend BitSet operator&(const BitSet& lhs, const BitSet& rhs) {
 			return BitSet(lhs.bits_ & rhs.bits_);
 		}
+		/** @brief Returns the bitwise OR of two bitsets */
 		friend BitSet operator|(const BitSet& lhs, const BitSet& rhs) {
 			return BitSet(lhs.bits_ | rhs.bits_);
 		}
+		/** @brief Returns the bitwise XOR of two bitsets */
 		friend BitSet operator^(const BitSet& lhs, const BitSet& rhs) {
 			return BitSet(lhs.bits_ ^ rhs.bits_);
 		}

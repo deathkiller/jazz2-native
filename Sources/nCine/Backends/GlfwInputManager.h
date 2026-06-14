@@ -20,7 +20,9 @@ namespace nCine::Backends
 {
 	class GlfwInputManager;
 
-	/// Utility functions to convert between engine key enumerations and GLFW ones
+	/**
+		@brief Utility functions to convert between engine key enumerations and GLFW ones
+	*/
 	class GlfwKeys
 	{
 	public:
@@ -29,7 +31,9 @@ namespace nCine::Backends
 		static int enumToKeysValue(Keys keysym);
 	};
 
-	/// Information about GLFW mouse state
+	/**
+		@brief Information about GLFW mouse state
+	*/
 	class GlfwMouseState : public MouseState
 	{
 	public:
@@ -38,7 +42,9 @@ namespace nCine::Backends
 		bool isButtonDown(MouseButton button) const override;
 	};
 
-	/// Information about a GLFW scroll event
+	/**
+		@brief Information about a GLFW scroll event
+	*/
 	class GlfwScrollEvent : public ScrollEvent
 	{
 	public:
@@ -47,7 +53,9 @@ namespace nCine::Backends
 		friend class GlfwInputManager;
 	};
 
-	/// Information about GLFW keyboard state
+	/**
+		@brief Information about GLFW keyboard state
+	*/
 	class GlfwKeyboardState : public KeyboardState
 	{
 	public:
@@ -63,7 +71,9 @@ namespace nCine::Backends
 		friend class GlfwInputManager;
 	};
 
-	/// Information about GLFW joystick state
+	/**
+		@brief Information about GLFW joystick state
+	*/
 	class GlfwJoystickState : public JoystickState
 	{
 	public:
@@ -86,16 +96,21 @@ namespace nCine::Backends
 		friend class GlfwInputManager;
 	};
 
-	/// Slass for parsing and dispatching GLFW input events
+	/**
+		@brief GLFW-based input manager
+		
+		Parses GLFW window, keyboard, mouse and joystick events and dispatches them to the
+		registered input event handler, and exposes the current input device states.
+	*/
 	class GlfwInputManager : public IInputManager
 	{
 	public:
 		GlfwInputManager();
 		~GlfwInputManager() override;
 
-		/// Detects window focus gain/loss events
+		/** @brief Returns `true` if the window currently has input focus */
 		static bool hasFocus();
-		/// Updates joystick state structures and simulates events
+		/** @brief Updates joystick state structures and simulates events */
 		static void updateJoystickStates();
 
 		const MouseState& mouseState() const override;
@@ -136,14 +151,14 @@ namespace nCine::Backends
 			static const unsigned int MaxNumButtons = 16;
 			static const unsigned int MaxNumHats = 4;
 			static const unsigned int MaxNumAxes = 10;
-			/// Minimum difference between two axis readings in order to trigger an event
+			/** @brief Minimum difference between two axis readings in order to trigger an event */
 			static const float AxisEventTolerance;
 
-			/// Old state used to simulate joystick buttons events
+			/** @brief Old state used to simulate joystick buttons events */
 			unsigned char buttonsState_[MaxNumJoysticks][MaxNumButtons];
-			/// Old state used to simulate joystick hats events
+			/** @brief Old state used to simulate joystick hats events */
 			unsigned char hatsState_[MaxNumJoysticks][MaxNumHats];
-			/// Old state used to simulate joystick axes events
+			/** @brief Old state used to simulate joystick axes events */
 			float axesValuesState_[MaxNumJoysticks][MaxNumAxes];
 		};
 #endif
@@ -163,11 +178,11 @@ namespace nCine::Backends
 		static JoyConnectionEvent joyConnectionEvent_;
 		static JoystickEventsSimulator joyEventsSimulator_;
 
-		/// The window width before a window content scale event
+		/** @brief The window width before a window content scale event */
 		static int preScalingWidth_;
-		/// The window height before a window content scale event
+		/** @brief The window height before a window content scale event */
 		static int preScalingHeight_;
-		/// The last frame a window size callback was called
+		/** @brief The last frame a window size callback was called */
 		static unsigned long int lastFrameWindowSizeChanged_;
 
 		static void monitorCallback(GLFWmonitor* monitor, int event);

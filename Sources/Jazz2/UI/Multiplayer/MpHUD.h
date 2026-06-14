@@ -7,7 +7,13 @@
 
 namespace Jazz2::UI::Multiplayer
 {
-	/** @brief Player HUD for multiplayer */
+	/**
+		@brief Player HUD for multiplayer
+		
+		Multiplayer-specific extension of @ref HUD. It overrides the overview and score drawing to show
+		multiplayer information such as the player's position in the current round, and adds a centered countdown
+		display.
+	*/
 	class MpHUD : public HUD
 	{
 	public:

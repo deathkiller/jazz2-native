@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Weapons
 {
 	/**
-	 * @brief Toaster (shot)
-	 *
-	 * Short-range flamethrower projectile that drifts slowly outward with randomized spread, is extinguished on
-	 * contact with water, and normally dies when it hits a wall. The powered-up variant lives longer and slides
-	 * along walls instead of being extinguished by them.
-	 */
+		@brief Toaster (shot)
+		
+		Short-range flamethrower projectile that drifts slowly outward with randomized spread, is extinguished on
+		contact with water, and normally dies when it hits a wall. The powered-up variant lives longer and slides
+		along walls instead of being extinguished by them.
+	*/
 	class ToasterShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);

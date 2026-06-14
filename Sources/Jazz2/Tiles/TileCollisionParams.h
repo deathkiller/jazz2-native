@@ -6,7 +6,12 @@
 
 namespace Jazz2::Tiles
 {
-	/** @brief Describes how the object interacts and collides with the environment */
+	/**
+		@brief Describes how the object interacts and collides with the environment
+		
+		In/out parameter bundle passed to tile-map collision tests: it supplies the destruction type, movement
+		direction/speed and weapon type/strength, and on return reports the number of tiles destroyed.
+	*/
 	struct TileCollisionParams
 	{
 		/** @brief Destruction type */

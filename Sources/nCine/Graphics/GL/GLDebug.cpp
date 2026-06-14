@@ -121,7 +121,9 @@ namespace nCine
 	}
 
 #if defined(GL_DEBUG_SUPPORTED)
-	/// Callback for `glDebugMessageCallback()`
+	/**
+	 * @brief Callback for `glDebugMessageCallback()` that logs OpenGL debug messages
+	 */
 	void
 #	if defined(DEATH_TARGET_WINDOWS)
 		__stdcall

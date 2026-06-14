@@ -6,12 +6,12 @@
 namespace Jazz2::Actors::Collectibles
 {
 	/**
-	 * @brief Ammo (collectible)
-	 *
-	 * Weapon ammunition pickup found throughout levels and dropped by enemies. Collecting it replenishes
-	 * the player's stock of the matching weapon (Bouncer, Freezer, Seeker, RF, Toaster, TNT, Pepper, etc.)
-	 * and awards points. Crates and barrels in JJ2 break open to scatter several of these.
-	 */
+		@brief Ammo (collectible)
+		
+		Weapon ammunition pickup found throughout levels and dropped by enemies. Collecting it replenishes
+		the player's stock of the matching weapon (Bouncer, Freezer, Seeker, RF, Toaster, TNT, Pepper, etc.)
+		and awards points. Crates and barrels in JJ2 break open to scatter several of these.
+	*/
 	class AmmoCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

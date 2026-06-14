@@ -5,11 +5,19 @@
 
 namespace nCine
 {
-	/// Camera that handles matrices for shaders
+	/**
+		@brief Provides the projection and view matrices used by shaders
+		
+		Holds an orthographic projection and a 2D view transform (position, rotation, scale) together with the
+		matrices they produce. A viewport uses the camera matrices when rendering its scene; the frame in which
+		each matrix last changed is tracked so dependent uniforms can be refreshed only when needed.
+	*/
 	class Camera
 	{
 	public:
-		/// Values for the projection matrix
+		/**
+		 * @brief Values describing the orthographic projection matrix
+		 */
 		struct ProjectionValues
 		{
 			float left;
@@ -26,7 +34,9 @@ namespace nCine
 				: left(ll), right(rr), top(tt), bottom(bb), nearClip(-1.0f), farClip(1.0f) {}
 		};
 
-		/// Values for the view matrix
+		/**
+		 * @brief Values describing the 2D view matrix
+		 */
 		struct ViewValues
 		{
 			Vector2f position;
@@ -40,7 +50,7 @@ namespace nCine
 				: position(xx, yy), rotation(rr), scale(ss) {}
 		};
 
-		/// Creates a camera with default matrices
+		/** @brief Creates a camera with default (identity-like) matrices */
 		Camera();
 
 		inline const ProjectionValues& GetProjectionValues() const {
@@ -76,9 +86,9 @@ namespace nCine
 		ViewValues viewValues_;
 		Matrix4x4f projection_;
 		Matrix4x4f view_;
-		/// Last frame when the projection matrix was changed
+		/** @brief Last frame in which the projection matrix was changed */
 		std::uint32_t updateFrameProjectionMatrix_;
-		/// Last frame when the model matrix was changed
+		/** @brief Last frame in which the view matrix was changed */
 		std::uint32_t updateFrameViewMatrix_;
 	};
 

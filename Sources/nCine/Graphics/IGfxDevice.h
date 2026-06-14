@@ -18,7 +18,14 @@ class EmscriptenFocusEvent;
 
 namespace nCine
 {
-	/// Represents the interface to the graphics device where everything is rendered
+	/**
+		@brief Represents the interface to the graphics device where everything is rendered
+		
+		Abstracts the platform window and OpenGL context: it owns the window mode, the chosen display mode and
+		the context creation attributes, exposes the window/drawable resolution used to set up the viewport, and
+		enumerates the connected monitors and their video modes. Concrete back-ends (SDL, GLFW, Qt5, Android, ...)
+		implement the platform-specific operations such as resolution changes and buffer swapping.
+	*/
 	class IGfxDevice
 	{
 		friend class Application;
@@ -37,7 +44,7 @@ namespace nCine
 		static constexpr std::uint32_t MaxVideoModes = 128;
 #endif
 
-		/// A structure used to initialize window properties
+		/** @brief Initial properties of the application window */
 		struct WindowMode
 		{
 			WindowMode()
@@ -54,7 +61,7 @@ namespace nCine
 			bool hasWindowScaling;
 		};
 
-		/// A structure representing a video mode supported by a monitor
+		/** @brief Video mode supported by a monitor */
 		struct VideoMode
 		{
 			VideoMode()
@@ -77,23 +84,23 @@ namespace nCine
 			std::uint32_t blueBits;
 		};
 
-		/// A structure representing a connected monitor
+		/** @brief Connected monitor */
 		struct Monitor
 		{
-			/// The monitor name
+			/** @brief Monitor name */
 			const char* name;
-			/// The position of the monitor's viewport on the virtual screen
+			/** @brief Position of the monitor's viewport on the virtual screen */
 			Vector2i position;
-			/// The content scale factor
+			/** @brief Content scale factor */
 			Vector2f scale;
 
-			/// The number of video modes in the array
+			/** @brief Number of valid entries in @ref videoModes */
 			std::int32_t numVideoModes;
-			/// The array of video modes supported by the monitor
+			/** @brief Video modes supported by the monitor */
 			VideoMode videoModes[MaxVideoModes];
 		};
 
-		/// Contains the attributes to create an OpenGL context
+		/** @brief Attributes used to create an OpenGL context */
 		struct GLContextInfo
 		{
 			GLContextInfo()
@@ -114,124 +121,139 @@ namespace nCine
 		IGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode);
 		virtual ~IGfxDevice() { }
 
-		/// Sets the number of vertical blanks to occur before a buffer swap
-		/*! An interval of `-1` will enable adaptive v-sync if available */
+		/**
+		 * @brief Sets the number of vertical blanks to occur before a buffer swap
+		 *
+		 * An interval of `-1` will enable adaptive v-sync if available.
+		 */
 		virtual void setSwapInterval(int interval) = 0;
 
-		/// Returns true if the device renders in full screen
+		/** @brief Returns `true` if the device renders in full screen */
 		inline bool isFullscreen() const { return isFullscreen_; }
-		/// Sets screen resolution with two integers
+		/** @brief Sets the screen resolution with two integers */
 		virtual void setResolution(bool fullscreen, int width = 0, int height = 0) = 0;
 
-		/// Sets the position of the application window with two integers
+		/** @brief Sets the position of the application window with two integers */
 		virtual void setWindowPosition(int x, int y) = 0;
-		/// Sets the position of the application window with a `Vector2<int>` object
+		/** @brief Sets the position of the application window with a `Vector2i` object */
 		inline void setWindowPosition(Vector2i position) {
 			setWindowPosition(position.X, position.Y);
 		}
-		/// Sets the application window title
+		/** @brief Sets the application window title */
 		virtual void setWindowTitle(StringView windowTitle) = 0;
-		/// Sets the application window icon
+		/** @brief Sets the application window icon */
 		virtual void setWindowIcon(StringView iconFilename) = 0;
 
-		/// Returns the window or video mode width in screen coordinates
+		/** @brief Returns the window or video mode width in screen coordinates */
 		inline int width() const { return width_; }
-		/// Returns the window or video mode height in screen coordinates
+		/** @brief Returns the window or video mode height in screen coordinates */
 		inline int height() const { return height_; }
-		/// Returns the window or video mode resolution in screen coordinates as a `Vector2i` object
+		/** @brief Returns the window or video mode resolution in screen coordinates as a `Vector2i` object */
 		inline Vector2i resolution() const { return Vector2i(width_, height_); }
-		/// Returns the window or video mode resolution in screen coordinates as a `Rectf` object
+		/** @brief Returns the window or video mode resolution in screen coordinates as a `Rectf` object */
 		inline Rectf screenRect() const { return Rectf(0.0f, 0.0f, static_cast<float>(width_), static_cast<float>(height_)); }
-		/// Returns the window or video mode resolution aspect ratio
+		/** @brief Returns the window or video mode resolution aspect ratio */
 		inline float aspect() const { return width_ / static_cast<float>(height_); }
-		/// Sets the window size with two integers
-		/*! \note If the application is in full screen this method will have no effect. */
+		/**
+		 * @brief Sets the window size with two integers
+		 *
+		 * @note If the application is in full screen this method will have no effect.
+		 */
 		virtual void setWindowSize(int width, int height) = 0;
 
-		/// Returns window position as a `Vector2i` object
+		/** @brief Returns the window position as a `Vector2i` object */
 		inline virtual const Vector2i windowPosition() const { return Vector2i(0, 0); }
 
-		/// Returns the window width in pixels
-		/*! It may differs from `width()` on HiDPI screens */
+		/**
+		 * @brief Returns the window width in pixels
+		 *
+		 * It may differ from @ref width() on HiDPI screens.
+		 */
 		inline int drawableWidth() const { return drawableWidth_; }
-		/// Returns the window height in pixels
-		/*! It may differs from `height()` on HiDPI screens */
+		/**
+		 * @brief Returns the window height in pixels
+		 *
+		 * It may differ from @ref height() on HiDPI screens.
+		 */
 		inline int drawableHeight() const { return drawableHeight_; }
-		/// Returns the window resolution in pixels as a `Vector2i` object
+		/** @brief Returns the window resolution in pixels as a `Vector2i` object */
 		inline Vector2i drawableResolution() const { return Vector2i(drawableWidth_, drawableHeight_); }
-		/// Returns the window resolution in pixels as a `Rectf` object
+		/** @brief Returns the window resolution in pixels as a `Rectf` object */
 		inline Rectf drawableScreenRect() const { return Rectf(0.0f, 0.0f, static_cast<float>(drawableWidth_), static_cast<float>(drawableHeight_)); }
-		/// Returns the window drawable resolution aspect ratio
+		/** @brief Returns the window drawable resolution aspect ratio */
 		inline float drawableAspect() const { return drawableWidth_ / static_cast<float>(drawableHeight_); }
 
-		/// Highlights the application window to notify the user
+		/** @brief Highlights the application window to notify the user */
 		inline virtual void flashWindow() const { }
 
-		/// Returns the OpenGL context creation attributes
+		/** @brief Returns the OpenGL context creation attributes */
 		inline const GLContextInfo& glContextInfo() const { return glContextInfo_; }
-		/// Returns display mode
+		/** @brief Returns the display mode */
 		inline const DisplayMode& displayMode() const { return displayMode_; }
 
-		/// Returns the number of connected monitors
+		/** @brief Returns the number of connected monitors */
 		unsigned int numMonitors() const;
-		/// Returns the array index of the primary monitor
+		/** @brief Returns the array index of the primary monitor */
 		inline virtual unsigned int primaryMonitorIndex() const { return 0; }
-		/// Returns the array index of the monitor associated with the window
+		/** @brief Returns the array index of the monitor associated with the window */
 		inline virtual unsigned int windowMonitorIndex() const { return 0; }
-		/// Returns the specified monitor
+		/** @brief Returns the specified monitor */
 		const Monitor &monitor(unsigned int index) const;
-		/// Returns the monitor that hosts the window
+		/** @brief Returns the monitor that hosts the window */
 		inline const Monitor& monitor() const { return monitor(windowMonitorIndex()); }
 
-		/// Returns the current video mode for the specified monitor
+		/** @brief Returns the current video mode for the specified monitor */
 		virtual const VideoMode& currentVideoMode(unsigned int monitorIndex) const = 0;
-		/// Returns the current video mode for the monitor that hosts the window
+		/** @brief Returns the current video mode for the monitor that hosts the window */
 		inline const VideoMode& currentVideoMode() const { return currentVideoMode(windowMonitorIndex()); }
-		/// Sets the video mode that will be used in full screen by the monitor that hosts the window
-		/*! \note Call this method <b>before</b> enabling full screen */
+		/**
+		 * @brief Sets the video mode used in full screen by the monitor that hosts the window
+		 *
+		 * @note Call this method <b>before</b> enabling full screen.
+		 */
 		inline virtual bool setVideoMode(unsigned int modeIndex) { return false; }
 
-		/// Returns the scaling factor for application window
+		/** @brief Returns the scaling factor for the application window */
 		float windowScalingFactor() const;
 
 	protected:
 		static constexpr float DefaultDPI = 96.0f;
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		/// Window width in screen coordinates
+		/** @brief Window width in screen coordinates */
 		std::int32_t width_;
-		/// Window height in screen coordinates
+		/** @brief Window height in screen coordinates */
 		std::int32_t height_;
-		/// Window width in pixels (for HiDPI screens)
+		/** @brief Window width in pixels (for HiDPI screens) */
 		std::int32_t drawableWidth_;
-		/// Window height in pixels (for HiDPI screens)
+		/** @brief Window height in pixels (for HiDPI screens) */
 		std::int32_t drawableHeight_;
-		/// Whether rendering occurs in full screen
+		/** @brief Whether rendering occurs in full screen */
 		bool isFullscreen_;
-		/// OpenGL context creation attributes
+		/** @brief OpenGL context creation attributes */
 		GLContextInfo glContextInfo_;
-		/// Display properties
+		/** @brief Display properties */
 		DisplayMode displayMode_;
 
 		Monitor monitors_[MaxMonitors];
 		std::uint32_t numMonitors_;
-		/// Used as a cache to avoid searching the current video mode in a monitor's array
+		/** @brief Cache to avoid searching the current video mode in a monitor's array */
 		mutable VideoMode currentVideoMode_;
 #endif
 
-		/// Inits the OpenGL viewport based on the drawable resolution
+		/** @brief Initializes the OpenGL viewport based on the drawable resolution */
 		void initGLViewport();
 
-		/// Updates the array of connected monitors
+		/** @brief Updates the array of connected monitors */
 		inline virtual void updateMonitors() { }
 
 		virtual void setResolutionInternal(int width, int height) = 0;
 
 	private:
-		/// Sets up the initial OpenGL state for the scenegraph
+		/** @brief Sets up the initial OpenGL state for the scene graph */
 		virtual void setupGL();
 
-		/// Updates the screen swapping back and front buffers
+		/** @brief Updates the screen by swapping the back and front buffers */
 		virtual void update() = 0;
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
@@ -245,7 +267,12 @@ namespace nCine
 	};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-	/// A fake graphics device which doesn't render anything
+	/**
+		@brief Fake graphics device which doesn't render anything
+		
+		Null implementation of @ref IGfxDevice used when no real window or OpenGL context is available (for
+		example in headless or server builds); all operations are no-ops.
+	*/
 	class NullGfxDevice : public IGfxDevice
 	{
 	public:

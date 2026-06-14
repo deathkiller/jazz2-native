@@ -13,7 +13,13 @@ namespace Jazz2::Rendering
 {
 	class PlayerViewport;
 
-	/** @brief Combines all previous passes of a scene into a resulting image */
+	/**
+		@brief Combines all previous passes of a scene into a resulting image
+		
+		Final compositing pass of a @ref PlayerViewport that blends the rendered scene with the lighting buffer
+		and the blur targets, applying ambient light and an optional underwater shader variant, and emits the
+		result into the viewport's output region.
+	*/
 	class CombineRenderer : public SceneNode
 	{
 	public:

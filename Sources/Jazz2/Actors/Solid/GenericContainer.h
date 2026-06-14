@@ -6,11 +6,11 @@
 namespace Jazz2::Actors::Solid
 {
 	/**
-	 * @brief Base class of an item container
-	 *
-	 * Shared base for the game's destructible containers (crates and barrels). A container holds a list of
-	 * contents that are spawned and scattered outward when it is destroyed.
-	 */
+		@brief Base class of an item container
+		
+		Shared base for the game's destructible containers (crates and barrels). A container holds a list of
+		contents that are spawned and scattered outward when it is destroyed.
+	*/
 	class GenericContainer : public SolidObjectBase
 	{
 		DEATH_RUNTIME_OBJECT(SolidObjectBase);

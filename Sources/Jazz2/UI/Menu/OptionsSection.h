@@ -19,7 +19,12 @@ namespace Jazz2::UI::Menu
 	};
 #endif
 
-	/** @brief Options menu section */
+	/**
+		@brief Options menu section
+		
+		Top-level options screen listing the settings categories (gameplay, graphics, sounds, controls, and user
+		profile).
+	*/
 	class OptionsSection : public ScrollableMenuSection<OptionsItem>
 	{
 	public:

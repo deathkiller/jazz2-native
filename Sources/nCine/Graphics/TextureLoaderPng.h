@@ -4,7 +4,9 @@
 
 namespace nCine {
 
-	/// PNG texture loader
+	/**
+		@brief Texture loader for the Portable Network Graphics (`.png`) format
+	*/
 	class TextureLoaderPng : public ITextureLoader
 	{
 	public:

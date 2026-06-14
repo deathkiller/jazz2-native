@@ -19,7 +19,11 @@
 
 namespace nCine::Backends
 {
-	/// The SDL based graphics device
+	/**
+		@brief SDL2-based graphics device
+		
+		Manages the application window and OpenGL context using the SDL2 library.
+	*/
 	class SdlGfxDevice : public IGfxDevice
 	{
 	public:
@@ -50,15 +54,22 @@ namespace nCine::Backends
 		const VideoMode& currentVideoMode(unsigned int monitorIndex) const override;
 		bool setVideoMode(unsigned int modeIndex) override;
 
+		/**
+		 * @brief Returns `true` if the specified window ID refers to the main window
+		 *
+		 * @param windowId	SDL2 window identifier to compare against the main window
+		 */
 		static inline bool isMainWindow(std::uint32_t windowId) {
 			SDL_Window* windowHandle = SDL_GetWindowFromID(windowId);
 			return (windowHandle == windowHandle_);
 		}
 
+		/** @brief Returns the SDL2 handle of the main window */
 		static inline SDL_Window* windowHandle() {
 			return windowHandle_;
 		}
 
+		/** @brief Returns the SDL2 OpenGL context handle */
 		static inline SDL_GLContext glContextHandle() {
 			return glContextHandle_;
 		}
@@ -69,19 +80,19 @@ namespace nCine::Backends
 		void updateMonitors() override;
 
 	private:
-		/// SDL2 window handle
+		/** @brief SDL2 window handle */
 		static SDL_Window* windowHandle_;
-		/// SDL2 OpenGL context handle
+		/** @brief SDL2 OpenGL context handle */
 		static SDL_GLContext glContextHandle_;
 
-		/// Deleted copy constructor
+		/** @brief Deleted copy constructor */
 		SdlGfxDevice(const SdlGfxDevice&) = delete;
-		/// Deleted assignment operator
+		/** @brief Deleted assignment operator */
 		SdlGfxDevice& operator=(const SdlGfxDevice&) = delete;
 
-		/// Initilizes the video subsystem (SDL)
+		/** @brief Initializes the SDL2 video subsystem */
 		void initGraphics(bool enableWindowScaling);
-		/// Initilizes the OpenGL graphic context
+		/** @brief Initializes the OpenGL graphics context */
 		void initDevice(int windowPosX, int windowPosY, bool isResizable);
 
 		void convertVideoModeInfo(const SDL_DisplayMode& sdlVideoMode, IGfxDevice::VideoMode& videoMode) const;

@@ -7,7 +7,12 @@
 namespace nCine
 {
 	/**
-		@brief Pointer wrapper that keeps the object locked for the duration of its existence.
+		@brief Pointer wrapper that keeps the object locked for the duration of its existence
+		
+		Holds a raw pointer together with a `std::unique_lock` over a lockable of type `TLock`.
+		The lock is acquired before the wrapper is constructed and released when it is destroyed,
+		so the pointed-to object can be accessed safely through @ref operator*() and
+		@ref operator->() for the lifetime of the wrapper.
 	*/
 	template<class T, class TLock>
 	class LockedPtr

@@ -12,7 +12,7 @@ namespace Jazz2::UI
 {
 	/**
 		@brief Bitmap font renderer
-
+		
 		The renderer loads a bitmap font from a custom file format with full Unicode support and renders it to a canvas.
 		It can also measure the size of a string without rendering it.
 

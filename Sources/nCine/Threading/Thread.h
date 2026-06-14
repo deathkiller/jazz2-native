@@ -19,7 +19,12 @@ namespace nCine
 {
 #if (defined(WITH_THREADS) && !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-	/** @brief CPU affinity mask for a thread */
+	/**
+		@brief CPU affinity mask for a thread
+		
+		Selects the set of logical processors a thread is allowed to run on. Pass an instance to
+		@ref Thread::SetAffinityMask(). Unavailable on Android, Emscripten and Switch.
+	*/
 	class ThreadAffinityMask
 	{
 		friend class Thread;
@@ -57,14 +62,23 @@ namespace nCine
 
 #endif
 
-	/** @brief Thread */
+	/**
+		@brief Operating system thread
+		
+		Owns and runs a thread of execution. A thread can be created from a plain
+		@ref ThreadFuncDelegate with a user argument or from any callable and its arguments, and is
+		started immediately on construction. Provides joining and detaching, naming, priority and
+		affinity control and various static helpers for the calling thread. Most functionality
+		requires `WITH_THREADS`; otherwise only @ref Sleep() is available.
+	*/
 	class Thread
 	{
 	public:
-		/** @brief Puts the current thread to sleep for the specified number of milliseconds */
+		/** @brief Puts the calling thread to sleep for the given number of milliseconds */
 		static void Sleep(std::uint32_t milliseconds);
 
 #if defined(WITH_THREADS) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief Plain function pointer used as a thread entry point */
 		using ThreadFuncDelegate = void (*)(void*);
 
 		/** @brief Default constructor */
@@ -123,7 +137,7 @@ namespace nCine
 #	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
 		/** @brief Gets the thread affinity mask */
 		ThreadAffinityMask GetAffinityMask() const;
-		/** @brief Sets the thread affinity mask*/ 
+		/** @brief Sets the thread affinity mask */
 		void SetAffinityMask(ThreadAffinityMask affinityMask);
 #	endif
 

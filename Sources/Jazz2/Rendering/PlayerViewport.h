@@ -7,7 +7,14 @@
 
 namespace Jazz2::Rendering
 {
-	/** @brief Player viewport */
+	/**
+		@brief Player viewport
+		
+		Owns the on-screen region rendered for a single player together with its full render pipeline: the
+		scene viewport and camera that follows a target actor, the @ref LightingRenderer, the chain of
+		@ref BlurRenderPass passes, and the @ref CombineRenderer. Also drives per-frame camera movement,
+		shake, overrides and ambient light.
+	*/
 	class PlayerViewport
 	{
 	public:

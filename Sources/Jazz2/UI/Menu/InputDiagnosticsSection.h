@@ -6,6 +6,12 @@
 
 namespace Jazz2::UI::Menu
 {
+	/**
+		@brief Input diagnostics menu section
+		
+		Shows live diagnostics for the connected input devices, displaying the current button and axis states of each
+		mapped gamepad.
+	*/
 	class InputDiagnosticsSection : public MenuSection
 	{
 	public:

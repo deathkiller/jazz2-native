@@ -5,7 +5,13 @@
 
 namespace Jazz2::Actors::Enemies
 {
-	/** @brief Base class of an enemy */
+	/**
+		@brief Base class of an enemy
+		
+		Base for hostile creatures that hurt the player on contact. It provides the behavior shared by all enemies:
+		collisions with the player and player shots, taking damage, freezing, awarding score, dropping random
+		collectibles on death, and the white-mask hit-blinking effect.
+	*/
 	class EnemyBase : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

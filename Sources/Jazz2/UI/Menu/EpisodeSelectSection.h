@@ -25,7 +25,11 @@ namespace Jazz2::UI::Menu
 	};
 #endif
 
-	/** @brief Episode selection menu section */
+	/**
+		@brief Episode selection menu section
+		
+		Lists the installed episodes and lets the player pick one to start or continue.
+	*/
 	class EpisodeSelectSection : public ScrollableMenuSection<EpisodeData>
 	{
 	public:

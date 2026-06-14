@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Solid
 {
 	/**
-	 * @brief Pole
-	 *
-	 * An upright tree trunk or vine (Diamondus, Carrotus, Jungle, etc.) that the player can shoot or blow up
-	 * with TNT to make it topple over, where it falls in the hit direction and bounces a few times before
-	 * coming to rest, often forming a bridge or clearing a path.
-	 */
+		@brief Pole
+		
+		An upright tree trunk or vine (Diamondus, Carrotus, Jungle, etc.) that the player can shoot or blow up
+		with TNT to make it topple over, where it falls in the hit direction and bounces a few times before
+		coming to rest, often forming a bridge or clearing a path.
+	*/
 	class Pole : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

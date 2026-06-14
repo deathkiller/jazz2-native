@@ -20,7 +20,7 @@ namespace winrtWUTC = winrt::Windows::UI::Text::Core;
 
 namespace nCine::Backends
 {
-	/// Information about UWP mouse state
+	/** @brief Information about UWP mouse state */
 	class UwpMouseState : public MouseState
 	{
 	public:
@@ -31,7 +31,7 @@ namespace nCine::Backends
 		}
 	};
 
-	/// Information about UWP keyboard state
+	/** @brief Information about UWP keyboard state */
 	class UwpKeyboardState : public KeyboardState
 	{
 		friend class UwpInputManager;
@@ -49,7 +49,7 @@ namespace nCine::Backends
 		bool _pressedKeys[(int)Keys::Count];
 	};
 
-	/// Information about UWP joystick state
+	/** @brief Information about UWP joystick state */
 	class UwpJoystickState : public JoystickState
 	{
 	public:
@@ -69,7 +69,7 @@ namespace nCine::Backends
 		void simulateAxisEvent(int axisId, float value);
 
 	private:
-		/// Minimum difference between two axis readings in order to trigger an event
+		/** @brief Minimum difference between two axis readings in order to trigger an event */
 		static constexpr float AxisEventTolerance = 0.001f;
 
 		static JoyButtonEvent joyButtonEvent_;
@@ -77,15 +77,20 @@ namespace nCine::Backends
 		static JoyAxisEvent joyAxisEvent_;
 
 		int joyId_;
-		/// Old state used to simulate joystick buttons events
+		/** @brief Old state used to simulate joystick buttons events */
 		bool buttonsState_[MaxNumButtons];
-		/// Old state used to simulate joystick hats events
+		/** @brief Old state used to simulate joystick hats events */
 		unsigned char hatsState_[MaxNumHats];
-		/// Old state used to simulate joystick axes events
+		/** @brief Old state used to simulate joystick axes events */
 		float axesValuesState_[MaxNumAxes];
 	};
 
-	/// Class for dispatching UWP input events
+	/**
+		@brief Class for dispatching UWP input events
+		
+		Handles keyboard and mouse events through the `CoreWindow` and gamepads through
+		the `Windows.Gaming.Input` API.
+	*/
 	class UwpInputManager : public IInputManager
 	{
 		friend class UwpJoystickState;
@@ -94,7 +99,7 @@ namespace nCine::Backends
 		UwpInputManager(winrtWUC::CoreWindow window);
 		~UwpInputManager() override;
 
-		/// Updates joystick state structures and simulates events
+		/** @brief Updates joystick state structures and simulates events */
 		static void updateJoystickStates();
 
 		const MouseState& mouseState() const override { return mouseState_; }

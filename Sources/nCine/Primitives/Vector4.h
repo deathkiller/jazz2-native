@@ -14,7 +14,14 @@ namespace nCine
 	{
 		using Death::Containers::NoInitT;
 
-		/// Four-component vector
+		/**
+			@brief Four-component vector
+			
+			Stores four values @ref X, @ref Y, @ref Z and @ref W. Provides component-wise
+			arithmetic, scalar arithmetic, length and normalization, dot product and linear
+			interpolation. Can be constructed from a @ref Vector2 or @ref Vector3 plus the
+			remaining components and converted back with @ref ToVector2() and @ref ToVector3().
+		*/
 		template<class T>
 		class Vector4
 		{
@@ -83,7 +90,9 @@ namespace nCine
 			Vector4 Normalized() const;
 			Vector4& Normalize();
 
-			/// Converts elements of the vector to a specified type
+			/**
+			 * @brief Converts the components to a different element type
+			 */
 			template<class S>
 			Vector4<S> As() {
 				return Vector4<S>(static_cast<S>(X), static_cast<S>(Y), static_cast<S>(Z), static_cast<S>(W));
@@ -97,23 +106,23 @@ namespace nCine
 
 			/** @{ @name Constants */
 
-			/// A vector with all zero elements
+			/** @brief Vector with all components set to zero */
 			static const Vector4 Zero;
-			/// A unit vector on the X axis
+			/** @brief Unit vector along the X axis */
 			static const Vector4 XAxis;
-			/// A unit vector on the Y axis
+			/** @brief Unit vector along the Y axis */
 			static const Vector4 YAxis;
-			/// A unit vector on the Z axis
+			/** @brief Unit vector along the Z axis */
 			static const Vector4 ZAxis;
-			/// A unit vector on the W axis
+			/** @brief Unit vector along the W axis */
 			static const Vector4 WAxis;
 
 			/** @} */
 		};
 
-		/// Four-component vector of floats
+		/** @brief Four-component vector of floats */
 		using Vector4f = Vector4<float>;
-		/// Four-component vector of 32-bit integers
+		/** @brief Four-component vector of 32-bit integers */
 		using Vector4i = Vector4<int>;
 
 		template<class T>

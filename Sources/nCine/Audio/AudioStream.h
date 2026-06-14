@@ -12,7 +12,12 @@ namespace nCine
 	class IAudioReader;
 	class IAudioLoader;
 
-	/// OpenAL audio stream
+	/**
+		@brief Streams audio decoded on the fly into a rotating set of OpenAL buffers
+		
+		Used for long sounds such as music, where decoding the whole file into memory would be
+		wasteful. Owned by @ref AudioStreamPlayer, which feeds it through @ref enqueue().
+	*/
 	class AudioStream
 	{
 		friend class AudioStreamPlayer;
@@ -20,95 +25,99 @@ namespace nCine
 	public:
 		~AudioStream();
 
-		/// Returns the OpenAL id of the currently playing buffer, or 0 if not
+		/** @brief Returns the OpenAL id of the currently playing buffer, or `0` if none */
 		inline std::uint32_t bufferId() const {
 			return currentBufferId_;
 		}
 
-		/// Returns the number of bytes per sample
+		/** @brief Returns the number of bytes per sample */
 		inline std::int32_t bytesPerSample() const {
 			return bytesPerSample_;
 		}
-		/// Returns the number of audio channels
+		/** @brief Returns the number of audio channels */
 		inline std::int32_t numChannels() const {
 			return numChannels_;
 		}
-		/// Returns the samples frequency
+		/** @brief Returns the sample frequency */
 		inline std::int32_t frequency() const {
 			return frequency_;
 		}
 
-		/// Returns number of samples
+		/** @brief Returns the total number of samples, or `-1` if unknown */
 		inline std::int32_t numSamples() const {
 			return numSamples_;
 		}
-		/// Returns the duration in seconds
+		/** @brief Returns the duration in seconds */
 		inline float duration() const {
 			return duration_;
 		}
 
-		/// Returns the size of the loaded buffer in bytes
+		/** @brief Returns the total decoded size in bytes, or `-1` if unknown */
 		inline std::int32_t bufferSize() const {
 			return (numSamples_ == -1 ? -1 : (numSamples_ * numChannels_ * bytesPerSample_));
 		}
 
-		/// Returns the number of samples in the streaming buffer
+		/** @brief Returns the number of samples held by a single streaming buffer */
 		std::int32_t numStreamSamples() const;
-		/// Returns the size of the streaming buffer in bytes
+		/** @brief Returns the size of a single streaming buffer in bytes */
 		inline std::int32_t streamBufferSize() const {
 			return BufferSize;
 		}
 
-		/// Enqueues new buffers and unqueues processed ones
+		/**
+		 * @brief Decodes and enqueues new buffers and unqueues processed ones
+		 *
+		 * @return `false` once the stream has been entirely decoded and played
+		 */
 		bool enqueue(std::uint32_t source, bool looping);
-		/// Unqueues any left buffer and rewinds the loader
+		/** @brief Unqueues any remaining buffers and rewinds the reader */
 		void stop(std::uint32_t source);
 
-		/// Queries the looping property of the stream
+		/** @brief Returns `true` if the stream is looping */
 		inline bool isLooping() const {
 			return isLooping_;
 		}
-		/// Sets stream looping property
+		/** @brief Sets whether the stream should loop */
 		void setLooping(bool value);
 
 	private:
-		/// Number of buffers for streaming
+		/** @brief Number of buffers used for streaming */
 		static const std::int32_t NumBuffers = 3;
-		/// OpenAL buffer queue for streaming
+		/** @brief OpenAL buffer queue used for streaming */
 		SmallVector<std::uint32_t, NumBuffers> buffersIds_;
-		/// Index of the next available OpenAL buffer
+		/** @brief Index of the next available OpenAL buffer */
 		std::int32_t nextAvailableBufferIndex_;
 
-		/// Size in bytes of each streaming buffer
+		/** @brief Size in bytes of each streaming buffer */
 		static const std::int32_t BufferSize = 16 * 1024;
-		/// Memory buffer to feed OpenAL ones
+		/** @brief Intermediate memory buffer feeding the OpenAL buffers */
 		std::unique_ptr<char[]> memBuffer_;
 
-		/// OpenAL id of the currently playing buffer, or 0 if not
+		/** @brief OpenAL id of the currently playing buffer, or 0 if none */
 		std::uint32_t currentBufferId_;
 
-		/// Number of bytes per sample
+		/** @brief Number of bytes per sample */
 		std::int32_t bytesPerSample_;
-		/// Number of channels
+		/** @brief Number of channels */
 		std::int32_t numChannels_;
-		/// Samples frequency
+		/** @brief Sample frequency */
 		std::int32_t frequency_;
 
-		/// Number of samples
+		/** @brief Number of samples */
 		std::int32_t numSamples_;
-		/// Duration in seconds
+		/** @brief Duration in seconds */
 		float duration_;
 
+		/** @brief Whether the stream loops */
 		bool isLooping_;
 
-		/// OpenAL channel format enumeration
+		/** @brief OpenAL channel format enumeration */
 		std::int32_t format_;
-		/// The associated reader to continuosly stream decoded data
+		/** @brief Reader that continuously streams decoded data */
 		std::unique_ptr<IAudioReader> audioReader_;
 
-		/// Default constructor
+		// Private constructors called only by AudioStreamPlayer
 		AudioStream();
-		/// Constructor creating an audio stream from an audio file
 		explicit AudioStream(StringView filename);
 
 		AudioStream(AudioStream&&);

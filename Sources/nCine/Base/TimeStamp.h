@@ -4,13 +4,20 @@
 
 namespace nCine
 {
-	/// Represents a point in time or a duration
+	/**
+		@brief Wraps a clock counter value representing a point in time or a duration
+		
+		Stores a raw counter value obtained from the system @ref Clock. The same type is used both for
+		absolute time points (e.g. @ref now()) and for durations (e.g. the result of subtracting two
+		time stamps). Conversion methods are provided to read the stored value, or the time elapsed
+		since it, in seconds, milliseconds, microseconds or nanoseconds.
+	*/
 	class TimeStamp
 	{
 	public:
 		TimeStamp();
 
-		/// Returns a new time stamp initialized to the current clock value
+		/** @brief Returns a new time stamp initialized to the current clock value */
 		inline static TimeStamp now() {
 			return TimeStamp(clock().now());
 		}
@@ -22,36 +29,36 @@ namespace nCine
 		TimeStamp operator+(const TimeStamp& other) const;
 		TimeStamp operator-(const TimeStamp& other) const;
 
-		/// Returns a new time stamp with the time elapsed since this one
+		/** @brief Returns a new time stamp holding the duration elapsed since this one */
 		TimeStamp timeSince() const;
 
-		/// Returns the time elapsed since the timestamp, as seconds in a `float` number
+		/** @brief Returns the time elapsed since this time stamp, in seconds */
 		float secondsSince() const;
 
-		/// Returns the time elapsed since the timestamp, as milliseconds in a `float` number
+		/** @brief Returns the time elapsed since this time stamp, in milliseconds */
 		float millisecondsSince() const;
 
-		/// Returns the time elapsed since the timestamp, as microseconds in a `float` number
+		/** @brief Returns the time elapsed since this time stamp, in microseconds */
 		float microsecondsSince() const;
 
-		/// Returns the time elapsed since the timestamp, as seconds in a `nanoseconds` number
+		/** @brief Returns the time elapsed since this time stamp, in nanoseconds */
 		float nanosecondsSince() const;
 
-		// Returns the number of elapsed ticks
+		/** @brief Returns the raw counter value in ticks */
 		inline std::uint64_t ticks() const {
 			return _counter;
 		}
 
-		/// Returns the timestamp counter value as seconds in a `float` number
+		/** @brief Returns the stored counter value as seconds */
 		float seconds() const;
 
-		/// Returns the timestamp counter value as milliseconds in a `float` number
+		/** @brief Returns the stored counter value as milliseconds */
 		float milliseconds() const;
 
-		/// Returns the timestamp counter value as microseconds in a `float` number
+		/** @brief Returns the stored counter value as microseconds */
 		float microseconds() const;
 
-		/// Returns the timestamp counter value as nanoseconds in a `float` number
+		/** @brief Returns the stored counter value as nanoseconds */
 		float nanoseconds() const;
 
 	private:

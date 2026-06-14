@@ -14,6 +14,12 @@ namespace Jazz2::UI::Menu
 	};
 #endif
 
+	/**
+		@brief Multiplayer game mode selection menu section
+		
+		Lists the available multiplayer game modes (such as Battle, Race, Treasure Hunt, and Cooperation) and lets the
+		player choose one for the server being configured.
+	*/
 	class MultiplayerGameModeSelectSection : public ScrollableMenuSection<MultiplayerGameModeItem>
 	{
 	public:

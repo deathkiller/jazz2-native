@@ -9,7 +9,14 @@ namespace nCine
 	{
 		using Death::Containers::NoInitT;
 
-		/// Quaternion
+		/**
+			@brief Quaternion
+			
+			Represents a rotation as four components @ref X, @ref Y, @ref Z and @ref W. Provides
+			component-wise and scalar arithmetic, quaternion multiplication (rotation composition),
+			magnitude and normalization, conjugation, conversion to a rotation @ref Matrix4x4 and
+			construction from an axis and an angle.
+		*/
 		template<class T>
 		class Quaternion
 		{
@@ -19,7 +26,7 @@ namespace nCine
 			constexpr Quaternion() noexcept
 				: X(T(0)), Y(T(0)), Z(T(0)), W(T(1)) {}
 			explicit Quaternion(NoInitT) noexcept {}
-			constexprQuaternion(T x, T y, T z, T w) noexcept
+			constexpr Quaternion(T x, T y, T z, T w) noexcept
 				: X(x), Y(y), Z(z), W(w) {}
 			explicit Quaternion(const Vector4<T>& v) noexcept
 				: X(v.X), Y(v.Y), Z(v.Z), W(v.W) {}
@@ -53,31 +60,43 @@ namespace nCine
 			Quaternion operator*(T s) const;
 			Quaternion operator/(T s) const;
 
+			/** @brief Returns the magnitude (norm) of the quaternion */
 			T Magnitude() const;
+			/** @brief Returns the squared magnitude of the quaternion */
 			T SqrMagnitude() const;
+			/** @brief Returns a normalized copy of the quaternion */
 			Quaternion Normalized() const;
+			/** @brief Normalizes the quaternion in place and returns it */
 			Quaternion& Normalize();
+			/** @brief Returns the conjugate of the quaternion */
 			Quaternion Conjugated() const;
+			/** @brief Conjugates the quaternion in place and returns it */
 			Quaternion& Conjugate();
 
+			/** @brief Converts the quaternion to an equivalent rotation matrix */
 			Matrix4x4<T> ToMatrix4x4() const;
+			/** @brief Creates a quaternion from a rotation axis and an angle in degrees */
 			static Quaternion FromAxisAngle(T xx, T yy, T zz, T degrees);
+			/** @overload */
 			static Quaternion FromAxisAngle(const Vector3<T>& axis, T degrees);
+			/** @brief Creates a quaternion representing a rotation around the X axis */
 			static Quaternion FromXAxisAngle(T degrees);
+			/** @brief Creates a quaternion representing a rotation around the Y axis */
 			static Quaternion FromYAxisAngle(T degrees);
+			/** @brief Creates a quaternion representing a rotation around the Z axis */
 			static Quaternion FromZAxisAngle(T degrees);
 
 			/** @{ @name Constants */
 
-			/// A quaternion with all zero elements
+			/** @brief Quaternion with all components set to zero */
 			static const Quaternion Zero;
-			/// An identity quaternion
+			/** @brief Identity quaternion (no rotation) */
 			static const Quaternion Identity;
 
 			/** @} */
 		};
 
-		/// Quaternion of floats
+		/** @brief Quaternion of floats */
 		using Quaternionf = Quaternion<float>;
 
 		template<class T>

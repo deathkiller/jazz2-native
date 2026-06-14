@@ -11,7 +11,13 @@ using namespace nCine;
 
 namespace Jazz2::Rendering
 {
-	/** @brief Upscales input image usually to a native resolution */
+	/**
+		@brief Upscales input image usually to a native resolution
+		
+		Final output pass that renders the low-resolution scene through a rescale shader to the native output
+		resolution, optionally routing it through an @ref AntialiasingSubpass. Exposes the input scene node
+		that the rest of the rendering attaches to.
+	*/
 	class UpscaleRenderPass : public SceneNode
 	{
 	public:
@@ -52,7 +58,12 @@ namespace Jazz2::Rendering
 		}
 
 	protected:
-		/** @brief Optional antialiasing subpass */
+		/**
+		 * @brief Optional antialiasing subpass
+		 *
+		 * Extra pass inserted after upscaling that renders the upscaled target through an antialiasing shader
+		 * into its own target, smoothing the final image when enabled.
+		 */
 		class AntialiasingSubpass : public SceneNode
 		{
 			friend class UpscaleRenderPass;
@@ -91,7 +102,13 @@ namespace Jazz2::Rendering
 		RenderCommand _renderCommand;
 	};
 
-	/** @brief Upscales input image usually to a native resolution, additionaly supports 3 independent layers (background layer, clipped main layer, overlay layer) */
+	/**
+		@brief Upscales input image usually to a native resolution, additionaly supports 3 independent layers (background layer, clipped main layer, overlay layer)
+		
+		Variant of @ref UpscaleRenderPass that upscales three separate scene nodes (background, scissor-clipped
+		main layer, and overlay) so the main layer can be clipped to a rectangle independently of the
+		surrounding content.
+	*/
 	class UpscaleRenderPassWithClipping : public UpscaleRenderPass
 	{
 	public:

@@ -31,6 +31,12 @@ namespace Jazz2::UI::Menu
 	};
 #endif
 
+	/**
+		@brief Controls options menu section
+		
+		Lists the input and control-related settings, such as control remapping, touch controls, and gamepad
+		options, with entries that lead into the more specific control screens.
+	*/
 	class ControlsOptionsSection : public ScrollableMenuSection<ControlsOptionsItem>
 	{
 	public:

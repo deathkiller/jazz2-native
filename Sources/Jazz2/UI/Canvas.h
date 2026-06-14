@@ -8,7 +8,12 @@ using namespace nCine;
 
 namespace Jazz2::UI
 {
-	/** @brief Canvas */
+	/**
+		@brief Canvas
+		
+		Base drawing surface for on-screen UI rendering. It collects textured and solid rectangle draw calls as render
+		commands and submits them to the render queue, also providing alignment helpers and palette-based recoloring.
+	*/
 	class Canvas : public SceneNode
 	{
 		friend class Font;

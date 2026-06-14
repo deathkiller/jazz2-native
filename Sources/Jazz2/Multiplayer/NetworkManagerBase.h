@@ -79,7 +79,7 @@ namespace Jazz2::Multiplayer
 
 	/**
 		@brief All connected peers tag
-
+		
 		Use in @ref NetworkManagerBase::SendTo() to send to all connected peers or the remote server peer.
 	*/
 	constexpr AllPeersT AllPeers{AllPeersT::Init{}};
@@ -91,6 +91,11 @@ namespace Jazz2::Multiplayer
 
 	/**
 		@brief Allows to create generic network clients and servers
+		
+		Wraps the ENet (and optional WebSocket) transport to run either a client or a server on a background
+		thread, tracks connected peers and the connection state, and dispatches connect, disconnect and
+		received-packet events to an @ref INetworkHandler. Provides the low-level send and kick primitives
+		that @ref NetworkManager builds the game-specific session on top of.
 	*/
 	class NetworkManagerBase : public Death::IDisposable
 	{

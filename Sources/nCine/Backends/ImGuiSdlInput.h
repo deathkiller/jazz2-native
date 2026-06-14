@@ -13,16 +13,36 @@ typedef void* SDL_GLContext;
 
 namespace nCine::Backends
 {
-	/// The class that handles SDL2 input for ImGui
+	/**
+		@brief Handles SDL2 input for ImGui
+		
+		Bridges SDL2 window and input events into the ImGui backend.
+	*/
 	class ImGuiSdlInput
 	{
 	public:
+		/**
+		 * @brief Initializes the ImGui SDL2 input backend
+		 *
+		 * @param window			SDL2 window to receive input from
+		 * @param glContextHandle	OpenGL context associated with the window
+		 */
 		static void init(SDL_Window* window, SDL_GLContext glContextHandle);
+		/** @brief Shuts down the ImGui SDL2 input backend */
 		static void shutdown();
+		/** @brief Begins a new ImGui input frame */
 		static void newFrame();
+		/** @brief Ends the current ImGui input frame */
 		static void endFrame();
+		/**
+		 * @brief Processes a single SDL2 event for ImGui
+		 *
+		 * @param event		SDL2 event to process
+		 * @return `true` if the event was consumed by ImGui
+		 */
 		static bool processEvent(const SDL_Event* event);
 
+		/** @brief Enables or disables input processing */
 		static inline void setInputEnabled(bool inputEnabled) {
 			inputEnabled_ = inputEnabled;
 		}

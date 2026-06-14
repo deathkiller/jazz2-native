@@ -8,7 +8,9 @@
 
 namespace nCine
 {
-	/// PKM texture loader
+	/**
+		@brief Texture loader for the ETC1 PKM (`.pkm`) format
+	*/
 	class TextureLoaderPkm : public ITextureLoader
 	{
 	public:
@@ -17,9 +19,11 @@ namespace nCine
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
-		/// Header for the PKM header
-		/*! The extended width and height are the dimensions rounded up to a multiple of 4.
-		 *  The total data size in bytes is (extendedWidth / 4) * (extendedHeight / 4) * 8
+		/**
+		 * @brief Header of a PKM file
+		 *
+		 * The extended width and height are the dimensions rounded up to a multiple of 4. The total
+		 * data size in bytes is `(extendedWidth / 4) * (extendedHeight / 4) * 8`.
 		 */
 		struct PkmHeader
 		{

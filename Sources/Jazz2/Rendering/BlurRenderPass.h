@@ -15,7 +15,13 @@ namespace Jazz2::Rendering
 {
 	class PlayerViewport;
 	
-	/** @brief Applies blur to a scene */
+	/**
+		@brief Applies blur to a scene
+		
+		Post-processing pass that renders a source texture through a downsample or directional Gaussian blur
+		shader into its own off-screen target. Several instances are chained per @ref PlayerViewport to build
+		the half- and quarter-resolution blur buffers used for bloom and underwater effects.
+	*/
 	class BlurRenderPass : public SceneNode
 	{
 	public:

@@ -4,7 +4,13 @@
 
 namespace Jazz2::Actors::Lighting
 {
-	/** @brief Static radial light */
+	/**
+		@brief Static radial light
+		
+		Invisible light-emitter actor placed in a level that contributes a constant circular light to the dynamic
+		lighting layer. It has no sprite and disables all collisions; its intensity, brightness and near/far radii
+		stay fixed for its lifetime.
+	*/
 	class StaticRadialLight : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

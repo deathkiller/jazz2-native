@@ -4,7 +4,12 @@
 
 namespace Jazz2::UI::Menu
 {
-	/** @brief In-game menu root section */
+	/**
+		@brief In-game menu root section
+		
+		Root screen of the in-game (pause) menu listing entries to resume the game, open options, exit, and, in
+		multiplayer, spectate or change character.
+	*/
 	class PauseSection : public MenuSection
 	{
 	public:

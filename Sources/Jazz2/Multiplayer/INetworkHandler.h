@@ -14,7 +14,11 @@ namespace Jazz2::Multiplayer
 {
 	/**
 		@brief Interface to handle incomming network requests
-	
+		
+		Callback interface that a @ref NetworkManagerBase invokes from its processing thread to report peer
+		connections and disconnections and to deliver received packets, letting the owner accept or reject
+		connections and react to incoming data.
+
 		@experimental
 	*/
 	class INetworkHandler

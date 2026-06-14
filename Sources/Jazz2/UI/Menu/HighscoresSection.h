@@ -33,7 +33,12 @@ namespace Jazz2::UI::Menu
 	};
 #endif
 
-	/** @brief Highscores menu section */
+	/**
+		@brief Highscores menu section
+		
+		Displays the saved highscore tables per series and lets the player enter a name when a completed run qualifies
+		for a new entry.
+	*/
 	class HighscoresSection : public ScrollableMenuSection<HighscoreItem*>
 	{
 	public:

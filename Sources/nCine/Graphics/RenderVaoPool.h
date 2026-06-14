@@ -14,12 +14,19 @@ namespace nCine
 {
 	class GLVertexArrayObject;
 
-	/// Creates and handles the pool of VAOs
+	/**
+		@brief Pool of reusable Vertex Array Objects
+		
+		Caches VAOs keyed by their vertex format so the same configuration can be rebound across
+		frames instead of recreated. When the pool is full the least recently used binding is
+		recycled.
+	*/
 	class RenderVaoPool
 	{
 	public:
 		explicit RenderVaoPool(std::uint32_t vaoPoolSize);
 
+		/** @brief Binds a VAO matching the specified vertex format, reusing a pooled one or creating it */
 		void BindVao(const GLVertexFormat& vertexFormat);
 
 	private:

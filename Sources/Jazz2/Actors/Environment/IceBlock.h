@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Environment
 {
 	/**
-	 * @brief Ice block
-	 *
-	 * Block of ice that blocks the player's path and shatters after a short time, scattering ice
-	 * shrapnel. It disappears early if the tile it occupies is cleared, and its timer can be
-	 * refreshed to keep it solid.
-	 */
+		@brief Ice block
+		
+		Block of ice that blocks the player's path and shatters after a short time, scattering ice
+		shrapnel. It disappears early if the tile it occupies is cleared, and its timer can be
+		refreshed to keep it solid.
+	*/
 	class IceBlock : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

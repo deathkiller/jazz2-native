@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Weapons
 {
 	/**
-	 * @brief Seeker (shot)
-	 *
-	 * Homing missile that periodically searches for the nearest enemy within range and steers toward it, exploding on
-	 * impact with a wall or after its lifetime and pushing nearby players away with the blast. The powered-up variant
-	 * is stronger, longer-lived and re-targets more frequently.
-	 */
+		@brief Seeker (shot)
+		
+		Homing missile that periodically searches for the nearest enemy within range and steers toward it, exploding on
+		impact with a wall or after its lifetime and pushing nearby players away with the blast. The powered-up variant
+		is stronger, longer-lived and re-targets more frequently.
+	*/
 	class SeekerShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);

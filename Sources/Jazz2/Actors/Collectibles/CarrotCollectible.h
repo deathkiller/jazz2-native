@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Collectibles
 {
 	/**
-	 * @brief Carrot (collectible)
-	 *
-	 * The classic Jazz Jackrabbit health pickup. A regular carrot restores a single unit of health, while
-	 * the full (max) carrot heals the player to full health and grants brief invulnerability. Awards points
-	 * on pickup.
-	 */
+		@brief Carrot (collectible)
+		
+		The classic Jazz Jackrabbit health pickup. A regular carrot restores a single unit of health, while
+		the full (max) carrot heals the player to full health and grants brief invulnerability. Awards points
+		on pickup.
+	*/
 	class CarrotCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

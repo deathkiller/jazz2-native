@@ -79,7 +79,13 @@ namespace Jazz2::Input
 		Unknown = -1					/**< Unknown light */
 	};
 
-	/** @brief Provides access to RGB lights from various peripherals */
+	/**
+		@brief Provides access to RGB lights from various peripherals
+		
+		Drives the per-key and accent RGB lighting of supported peripherals (such as Razer Chroma
+		keyboards, or a browser bridge on Emscripten), pushing updated colors and clearing them on
+		shutdown. Exposed as a single shared instance via @ref Get().
+	*/
 	class RgbLights
 	{
 	public:

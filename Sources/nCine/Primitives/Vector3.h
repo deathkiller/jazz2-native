@@ -13,7 +13,14 @@ namespace nCine
 	{
 		using Death::Containers::NoInitT;
 
-		/// Three-component vector
+		/**
+			@brief Three-component vector
+			
+			Stores three values @ref X, @ref Y and @ref Z. Provides component-wise arithmetic,
+			scalar arithmetic, length and normalization, dot and cross products and linear
+			interpolation. Can be constructed from a @ref Vector2 plus a Z component and
+			converted back with @ref ToVector2().
+		*/
 		template<class T>
 		class Vector3
 		{
@@ -78,7 +85,9 @@ namespace nCine
 			Vector3 Normalized() const;
 			Vector3& Normalize();
 
-			/// Converts elements of the vector to a specified type
+			/**
+			 * @brief Converts the components to a different element type
+			 */
 			template<class S>
 			Vector3<S> As() {
 				return Vector3<S>(static_cast<S>(X), static_cast<S>(Y), static_cast<S>(Z));
@@ -92,21 +101,21 @@ namespace nCine
 
 			/** @{ @name Constants */
 
-			/// A vector with all zero elements
+			/** @brief Vector with all components set to zero */
 			static const Vector3 Zero;
-			/// A unit vector on the X axis
+			/** @brief Unit vector along the X axis */
 			static const Vector3 XAxis;
-			/// A unit vector on the Y axis
+			/** @brief Unit vector along the Y axis */
 			static const Vector3 YAxis;
-			/// A unit vector on the Z axis
+			/** @brief Unit vector along the Z axis */
 			static const Vector3 ZAxis;
 
 			/** @} */
 		};
 
-		/// Three-component vector of floats
+		/** @brief Three-component vector of floats */
 		using Vector3f = Vector3<float>;
-		/// Three-component vector of 32-bit integers
+		/** @brief Three-component vector of 32-bit integers */
 		using Vector3i = Vector3<int>;
 
 		template<class T>

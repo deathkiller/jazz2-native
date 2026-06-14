@@ -44,6 +44,12 @@ namespace Jazz2::UI::Menu
 	};
 #endif
 
+	/**
+		@brief User profile options menu section
+		
+		Lets the player edit the player profile, such as the displayed name, character fur colors, and color mode,
+		with a live recolored character preview.
+	*/
 	class UserProfileOptionsSection : public ScrollableMenuSection<UserProfileOptionsItem>
 	{
 	public:

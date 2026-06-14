@@ -13,7 +13,12 @@ using namespace Death::Containers;
 
 namespace Jazz2::Compatibility
 {
-	/** @brief Parses original `.j2t` tile set files */
+	/**
+		@brief Parses original `.j2t` tile set files
+		
+		Reads an original tile set, decoding its palette and per-tile image, alpha and collision mask
+		data, and writes the converted tile set to the target path for use by the engine's tile maps.
+	*/
 	class JJ2Tileset
 	{
 	public:

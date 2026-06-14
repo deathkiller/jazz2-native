@@ -15,7 +15,13 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	/// Manages the cache of binary OpenGL shader programs
+	/**
+		@brief Caches compiled OpenGL shader programs in binary form on disk
+		
+		Stores and retrieves linked shader program binaries (via `glGetProgramBinary`/`glProgramBinary`) so
+		that shaders compiled in a previous run can be reloaded without recompiling. Cached binaries are keyed
+		by shader name, a version stamp and a platform hash; binaries from other platforms can be pruned.
+	*/
 	class BinaryShaderCache
 	{
 	public:
@@ -24,42 +30,47 @@ namespace nCine
 		BinaryShaderCache(const BinaryShaderCache&) = delete;
 		BinaryShaderCache& operator=(const BinaryShaderCache&) = delete;
 
+		/** @brief Returns whether binary shaders are supported and the cache can be used */
 		inline bool IsAvailable() const {
 			return isAvailable_;
 		}
 
+		/** @brief Returns the hash value that identifies the current OpenGL platform */
 		inline std::uint64_t GetPlatformHash() const {
 			return platformHash_;
 		}
 
+		/** @brief Returns the on-disk path of the cached binary for the specified shader */
 		String GetCachedShaderPath(const char* shaderName);
 
+		/** @brief Loads a binary into the program from the cache, returning `true` on success */
 		bool LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program, GLShaderProgram::Introspection introspection);
+		/** @brief Saves the program binary to the cache, returning `true` on success */
 		bool SaveToCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program);
 
-		/// Deletes all binary shaders that not belong to this platform from the cache directory
+		/** @brief Deletes all binary shaders that don't belong to this platform from the cache directory */
 		std::uint32_t Prune();
-		/// Deletes all binary shaders from the cache directory
+		/** @brief Deletes all binary shaders from the cache directory */
 		bool Clear();
 
-		/// Returns the current cache directory for binary shaders
+		/** @brief Returns the current cache directory for binary shaders */
 		inline const StringView Path() {
 			return path_;
 		}
-		/// Sets a new directory as the cache for binary shaders
+		/** @brief Sets a new directory as the cache for binary shaders */
 		bool SetPath(StringView path);
 
 	private:
 		using glGetProgramBinary_t = void(__GLAPIENTRY*)(GLuint program, GLsizei bufSize, GLsizei* length, GLenum* binaryFormat, void* binary);
 		using glProgramBinary_t = void(__GLAPIENTRY*)(GLuint program, GLenum binaryFormat, const void* binary, GLsizei length);
 
-		/// A flag that indicates if the OpenGL context supports binary shaders and the cache is available
+		/** @brief Whether the OpenGL context supports binary shaders and the cache is available */
 		bool isAvailable_;
 
-		/// The hash value that identifies a specific OpenGL platform
+		/** @brief The hash value that identifies a specific OpenGL platform */
 		std::uint64_t platformHash_;
 
-		/// The cache directory containing the binary shaders
+		/** @brief The cache directory containing the binary shaders */
 		String path_;
 
 		glGetProgramBinary_t _glGetProgramBinary;

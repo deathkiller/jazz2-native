@@ -4,7 +4,12 @@
 
 namespace nCine
 {
-	/// Texture loader used to specify a raw format when loading texels
+	/**
+		@brief Texture loader that describes an empty raw-format texture
+		
+		Does not read any file; it just records the width, height, MIP count and internal format so
+		raw texels can later be uploaded into the resulting texture.
+	*/
 	class TextureLoaderRaw : public ITextureLoader
 	{
 	public:

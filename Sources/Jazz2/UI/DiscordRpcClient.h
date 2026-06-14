@@ -17,7 +17,13 @@ using namespace nCine;
 
 namespace Jazz2::UI
 {
-	/** @brief Allows interactions with running Discord client */
+	/**
+		@brief Allows interactions with running Discord client
+		
+		Discord Rich Presence integration. It connects to the locally running Discord client over its IPC pipe on a
+		background thread and publishes the current rich presence (state, details, and images) shown on the user's
+		profile. Exposed as a process-wide singleton via @ref Get().
+	*/
 	class DiscordRpcClient
 	{
 	public:

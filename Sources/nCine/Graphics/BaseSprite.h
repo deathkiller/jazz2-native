@@ -8,8 +8,13 @@ namespace nCine
 	class Texture;
 	class GLUniformBlockCache;
 
-	/// Base class for sprites
-	/*! \note Users cannot create instances of this class */
+	/**
+		@brief Base class for textured sprites
+		
+		Common base for drawable sprites such as @ref Sprite and @ref MeshSprite. Holds the texture, the
+		source rectangle to blit from it, horizontal/vertical flipping and the palette offset used by the
+		palette shaders. This class is abstract; instances are created through its derived classes.
+	*/
 	class BaseSprite : public DrawableNode
 	{
 	public:
@@ -18,78 +23,78 @@ namespace nCine
 
 		BaseSprite& operator=(const BaseSprite&) = delete;
 
-		/// Sets sprite size
+		/** @brief Sets the sprite size */
 		void setSize(float width, float height);
-		/// Sets sprite size with a `Vector2f`
+		/** @brief Sets the sprite size from a `Vector2f` */
 		inline void setSize(Vector2f size) {
 			setSize(size.X, size.Y);
 		}
 
-		/// Gets the texture object
+		/** @brief Returns the texture object */
 		inline const Texture* texture() const {
 			return texture_;
 		}
-		/// Sets the texture object
+		/** @brief Sets the texture object */
 		void setTexture(Texture* texture);
-		/// Triggers a texture update without setting a new texture
+		/** @brief Triggers a texture update without setting a new texture */
 		void resetTexture();
 
-		/// Gets the texture source rectangle for blitting
+		/** @brief Returns the texture source rectangle used for blitting */
 		inline Recti texRect() const {
 			return texRect_;
 		}
-		/// Sets the texture source rectangle for blitting
+		/** @brief Sets the texture source rectangle used for blitting */
 		void setTexRect(const Recti& rect);
 
-		/// Returns `true` if the sprite texture is horizontally flipped
+		/** @brief Returns whether the sprite texture is horizontally flipped */
 		inline bool isFlippedX() const {
 			return flippedX_;
 		}
-		/// Flips the texture rect horizontally
+		/** @brief Flips the texture rectangle horizontally */
 		void setFlippedX(bool flippedX);
-		/// Returns `true` if the sprite texture is vertically flipped
+		/** @brief Returns whether the sprite texture is vertically flipped */
 		inline bool isFlippedY() const {
 			return flippedY_;
 		}
-		/// Flips the texture rect vertically
+		/** @brief Flips the texture rectangle vertically */
 		void setFlippedY(bool flippedY);
 
-		/// Returns the flat palette offset (added to the per-pixel index by palette shaders)
+		/** @brief Returns the flat palette offset added to the per-pixel index by palette shaders */
 		inline float paletteOffset() const {
 			return paletteOffset_;
 		}
-		/// Sets the flat palette offset used by palette shaders (no effect on non-palette shaders)
+		/** @brief Sets the flat palette offset used by palette shaders (no effect on non-palette shaders) */
 		void setPaletteOffset(float paletteOffset);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		/// The sprite texture
+		/** @brief The sprite texture */
 		Texture* texture_;
-		/// The texture source rectangle
+		/** @brief The texture source rectangle */
 		Recti texRect_;
 
-		/// A flag indicating if the sprite texture is horizontally flipped
+		/** @brief Whether the sprite texture is horizontally flipped */
 		bool flippedX_;
-		/// A flag indicating if the sprite texture is vertically flipped
+		/** @brief Whether the sprite texture is vertically flipped */
 		bool flippedY_;
-		/// Flat index into the palette texture, uploaded per-instance for palette shaders (0 = first palette row)
+		/** @brief Flat index into the palette texture, uploaded per-instance for palette shaders (0 = first palette row) */
 		float paletteOffset_;
 
 		GLUniformBlockCache* instanceBlock_;
 #endif
 
-		/// Protected constructor accessible only by derived sprite classes
+		/** @brief Protected constructor accessible only by derived sprite classes */
 		BaseSprite(SceneNode* parent, Texture* texture, float xx, float yy);
-		/// Protected constructor accessible only by derived sprite classes
+		/** @brief Protected constructor accessible only by derived sprite classes */
 		BaseSprite(SceneNode* parent, Texture* texture, Vector2f position);
 
-		/// Protected copy constructor used to clone objects
+		/** @brief Protected copy constructor used to clone objects */
 		BaseSprite(const BaseSprite& other);
 
-		/// Performs the required tasks upon a change to the shader
+		/** @brief Performs the required tasks upon a change to the shader */
 		void shaderHasChanged() override;
 
-		/// Performs the required tasks upon a change to the texture
+		/** @brief Performs the required tasks upon a change to the texture */
 		virtual void textureHasChanged(Texture* newTexture) = 0;
 
 		void updateRenderCommand() override;

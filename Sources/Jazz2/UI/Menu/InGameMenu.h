@@ -13,7 +13,13 @@ using namespace Jazz2::Tiles;
 
 namespace Jazz2::UI::Menu
 {
-	/** @brief In-game menu */
+	/**
+		@brief In-game menu
+		
+		@ref IMenuContainer attached to a running @ref LevelHandler that hosts the menu sections shown while a game is
+		paused, starting from @ref PauseSection. It draws over the live level and provides actions such as resuming the
+		game, returning to the main menu, and (in multiplayer) spectating or reselecting a character.
+	*/
 	class InGameMenu : public IMenuContainer
 	{
 		DEATH_RUNTIME_OBJECT(IMenuContainer);

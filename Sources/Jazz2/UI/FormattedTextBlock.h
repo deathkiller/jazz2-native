@@ -33,7 +33,13 @@ namespace Jazz2::UI
 		float LineSpacing = 1.0f;
 	};
 
-	/** @brief Formatted text block */
+	/**
+		@brief Formatted text block
+		
+		Lays out and renders a block of rich text to a canvas, splitting it into parts according to inline formatting,
+		alignment, scale, and spacing. It supports multiline layout with optional word wrapping and ellipsizing to fit
+		given bounds, and caches the computed layout for repeated drawing and measurement.
+	*/
 	class FormattedTextBlock
 	{
 	public:

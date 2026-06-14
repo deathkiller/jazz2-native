@@ -12,7 +12,7 @@
 
 namespace nCine
 {
-	/*! Private constructor called only by `AudioStreamPlayer`. */
+	// Private constructor called only by AudioStreamPlayer
 	AudioStream::AudioStream()
 		: nextAvailableBufferIndex_(0), currentBufferId_(0), bytesPerSample_(0), numChannels_(0), isLooping_(false),
 			frequency_(0), numSamples_(0), duration_(0.0f), buffersIds_(NumBuffers)
@@ -28,7 +28,7 @@ namespace nCine
 #endif
 	}
 
-	/*! Private constructor called only by `AudioStreamPlayer`. */
+	// Private constructor called only by AudioStreamPlayer
 	AudioStream::AudioStream(StringView filename)
 		: AudioStream()
 	{
@@ -63,7 +63,7 @@ namespace nCine
 		return 0UL;
 	}
 
-	/*! \return A flag indicating whether the stream has been entirely decoded and played or not. */
+	// Returns false once the stream has been entirely decoded and played
 	bool AudioStream::enqueue(std::uint32_t source, bool looping)
 	{
 #if defined(WITH_AUDIO)

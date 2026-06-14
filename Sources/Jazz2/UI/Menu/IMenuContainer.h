@@ -28,7 +28,13 @@ namespace Jazz2::UI::Menu
 
 	DEATH_ENUM_FLAGS(ChangedPreferencesType);
 
-	/** @brief Base interface of a menu container */
+	/**
+		@brief Base interface of a menu container
+		
+		Interface for the host that owns the stack of @ref MenuSection screens. It manages switching between and
+		leaving sections, exposes the drawing, string measurement, input, and sound primitives that sections build on,
+		and bridges to higher-level actions such as changing levels or connecting to multiplayer servers.
+	*/
 	class IMenuContainer
 	{
 		DEATH_RUNTIME_OBJECT();

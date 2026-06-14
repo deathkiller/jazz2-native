@@ -5,6 +5,12 @@
 
 namespace Jazz2::UI::Menu
 {
+	/**
+		@brief Start game options menu section
+		
+		Lets the player choose the number of local players, the characters, and the difficulty before starting the
+		selected episode or level.
+	*/
 	class StartGameOptionsSection : public MenuSection
 	{
 	public:

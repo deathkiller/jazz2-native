@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Enemies
 {
 	/**
-	 * @brief Helmut
-	 *
-	 * Helmeted creature that plods slowly along the ground, alternating between walking and pausing to
-	 * idle, and reverses direction at walls and ledges. It has no special attack and harms the player
-	 * only on contact; defeated by a single hit.
-	 */
+		@brief Helmut
+		
+		Helmeted creature that plods slowly along the ground, alternating between walking and pausing to
+		idle, and reverses direction at walls and ledges. It has no special attack and harms the player
+		only on contact; defeated by a single hit.
+	*/
 	class Helmut : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

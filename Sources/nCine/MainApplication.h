@@ -15,11 +15,16 @@ namespace nCine
 	class Qt5Widget;
 #endif
 
-	/// Main entry point and handler for standard (desktop) applications
+	/**
+		@brief Main entry point and event loop driver for standard (desktop) applications
+		
+		Concrete @ref Application subclass that initializes the engine, runs the game loop and processes
+		platform events on desktop backends (GLFW/SDL/Qt5).
+	*/
 	class MainApplication : public Application
 	{
 	public:
-		/** @brief Entry point method to be called in the `main()`/`wWinMain()` function */ 
+		/** @brief Entry point to be called from the `main()`/`wWinMain()` function; returns the process exit code */
 		static int Run(CreateAppEventHandlerDelegate createAppEventHandler, int argc, NativeArgument* argv);
 
 		void Quit() override;
@@ -73,7 +78,7 @@ namespace nCine
 #endif
 	};
 
-	/// Returns application instance
+	/** @brief Returns the singleton application instance */
 	Application& theApplication();
 
 }

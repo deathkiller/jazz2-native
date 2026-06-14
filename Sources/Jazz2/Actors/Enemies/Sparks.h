@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Enemies
 {
 	/**
-	 * @brief Sparks
-	 *
-	 * Floating ghost-like enemy that hovers idly until a player approaches, then slowly drifts toward
-	 * them to attack, chasing faster on higher difficulties and ignoring invulnerable players. It
-	 * stays above the water and is defeated by a single hit.
-	 */
+		@brief Sparks
+		
+		Floating ghost-like enemy that hovers idly until a player approaches, then slowly drifts toward
+		them to attack, chasing faster on higher difficulties and ignoring invulnerable players. It
+		stays above the water and is defeated by a single hit.
+	*/
 	class Sparks : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

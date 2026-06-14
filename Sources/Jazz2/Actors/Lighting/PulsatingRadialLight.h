@@ -4,7 +4,13 @@
 
 namespace Jazz2::Actors::Lighting
 {
-	/** @brief Pulsating radial light */
+	/**
+		@brief Pulsating radial light
+		
+		Invisible light-emitter actor placed in a level that contributes a circular light whose radius oscillates
+		smoothly over time to the dynamic lighting layer. It has no sprite and disables all collisions; the
+		pulsation speed and starting phase are configurable.
+	*/
 	class PulsatingRadialLight : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

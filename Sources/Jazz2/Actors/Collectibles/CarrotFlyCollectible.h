@@ -5,11 +5,11 @@
 namespace Jazz2::Actors::Collectibles
 {
 	/**
-	 * @brief Fly carrot (collectible)
-	 *
-	 * The flying carrot (copter ears) power-up from JJ2. Collecting it lets the player hover and fly for a
-	 * limited time by applying the copter modifier, and awards points.
-	 */
+		@brief Fly carrot (collectible)
+		
+		The flying carrot (copter ears) power-up from JJ2. Collecting it lets the player hover and fly for a
+		limited time by applying the copter modifier, and awards points.
+	*/
 	class CarrotFlyCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);

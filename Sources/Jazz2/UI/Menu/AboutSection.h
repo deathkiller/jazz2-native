@@ -5,7 +5,11 @@
 
 namespace Jazz2::UI::Menu
 {
-	/** @brief About menu section */
+	/**
+		@brief About menu section
+		
+		Shows the credits, version, and build information as an auto-scrolling formatted text block.
+	*/
 	class AboutSection : public MenuSection
 	{
 	public:

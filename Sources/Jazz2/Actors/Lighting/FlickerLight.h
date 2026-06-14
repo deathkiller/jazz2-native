@@ -4,7 +4,13 @@
 
 namespace Jazz2::Actors::Lighting
 {
-	/** @brief Flickering light */
+	/**
+		@brief Flickering light
+		
+		Invisible light-emitter actor placed in a level that contributes a randomly flickering light to the dynamic
+		lighting layer, suitable for fire or torches. It has no sprite and disables all collisions; in addition to a
+		randomly varying main light it emits several smaller sub-lights that wander around its position.
+	*/
 	class FlickerLight : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

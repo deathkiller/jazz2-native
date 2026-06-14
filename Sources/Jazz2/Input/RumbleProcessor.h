@@ -4,7 +4,13 @@
 
 namespace Jazz2::Input
 {
-	/** @brief Gamepad rumble processor */
+	/**
+		@brief Gamepad rumble processor
+		
+		Tracks the rumble effects currently playing on connected gamepads and, each frame, advances them
+		along their @ref RumbleDescription timelines and applies the resulting motor and trigger
+		intensities through the input manager. Effects for disconnected gamepads are dropped automatically.
+	*/
 	class RumbleProcessor
 	{
 	public:

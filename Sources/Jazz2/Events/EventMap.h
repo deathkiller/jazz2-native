@@ -16,7 +16,13 @@ namespace Jazz2::Tiles
 
 namespace Jazz2::Events
 {
-	/** @brief Represents event map, spawns triggered objects */
+	/**
+		@brief Represents event map, spawns triggered objects
+		
+		Owns the per-tile event layout of a level, together with spawn points, warp targets and active
+		generators. Activates, deactivates and respawns actors as the level is played, supports rollback
+		checkpoints, and can be serialized to and restored from a stream.
+	*/
 	class EventMap // : public IResumable
 	{
 	public:

@@ -651,7 +651,7 @@ namespace nCine
 				if (imCmd->UserCallback != nullptr) {
 					// User callback, registered via ImDrawList::AddCallback()
 					// (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-					if (imCmd->UserCallback == ImDrawCallback_ResetRenderState) {
+					if (imCmd->UserCallback == ImGui::GetPlatformIO().DrawCallback_ResetRenderState) {
 						SetupRenderStateForPlatformWindow(drawData, fbWidth, fbHeight, vertexArrayObject);
 					} else {
 						imCmd->UserCallback(imCmdList, imCmd);

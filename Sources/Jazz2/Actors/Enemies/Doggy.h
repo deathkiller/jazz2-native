@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Enemies
 {
 	/**
-	 * @brief Doggy
-	 *
-	 * Dog that trots back and forth along the ground, turning at walls and ledges. When shot it
-	 * becomes enraged, barking and dashing at high speed for a time before calming down. Appears as a
-	 * cat in the Secret Files episode. Takes several hits to defeat.
-	 */
+		@brief Doggy
+		
+		Dog that trots back and forth along the ground, turning at walls and ledges. When shot it
+		becomes enraged, barking and dashing at high speed for a time before calming down. Appears as a
+		cat in the Secret Files episode. Takes several hits to defeat.
+	*/
 	class Doggy : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

@@ -74,7 +74,7 @@ namespace Jazz2::Multiplayer
 
 	/**
 		@brief Interface to observe publicly-listed running servers
-
+		
 		@experimental
 	*/
 	class IServerObserver
@@ -86,7 +86,7 @@ namespace Jazz2::Multiplayer
 
 	/**
 		@brief Interface to provide current status of the server
-
+		
 		@experimental
 	*/
 	class IServerStatusProvider
@@ -100,6 +100,11 @@ namespace Jazz2::Multiplayer
 
 	/**
 		@brief Allows to monitor publicly-listed running servers for server listing
+		
+		Runs on a background thread in one of two roles: when given a @ref NetworkManager it advertises the
+		local server, answering UDP multicast discovery requests on the LAN and publishing the server to the
+		public list; when given an @ref IServerObserver it sends discovery requests and downloads the public
+		list, reporting each discovered server back to the observer.
 
 		@experimental
 	*/

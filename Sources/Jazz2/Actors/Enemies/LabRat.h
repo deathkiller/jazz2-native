@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Enemies
 {
 	/**
-	 * @brief Lab rat
-	 *
-	 * Rat that scurries back and forth along the ground, squeaking and occasionally pausing to idle,
-	 * and turns around at walls and ledges. When a player comes near in front of it, it pounces with a
-	 * short hopping lunge. Defeated by a single hit.
-	 */
+		@brief Lab rat
+		
+		Rat that scurries back and forth along the ground, squeaking and occasionally pausing to idle,
+		and turns around at walls and ledges. When a player comes near in front of it, it pounces with a
+		short hopping lunge. Defeated by a single hit.
+	*/
 	class LabRat : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

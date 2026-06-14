@@ -12,7 +12,12 @@ using namespace Jazz2::Input;
 
 namespace Jazz2::UI::Menu
 {
-	/** @brief Base class of a menu section */
+	/**
+		@brief Base class of a menu section
+		
+		A single screen ("section") in the menu stack hosted by an @ref IMenuContainer. Subclasses implement the update,
+		layered draw, and input callbacks to define what an individual screen shows and does.
+	*/
 	class MenuSection
 	{
 	public:

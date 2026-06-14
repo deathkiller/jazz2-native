@@ -5,7 +5,11 @@
 
 namespace nCine
 {
-	/** @brief Gamepad buttons */
+	/**
+		@brief Gamepad buttons
+		
+		Unified button names a mapped joystick can report, regardless of the physical controller layout.
+	*/
 	enum class ButtonName : std::int16_t
 	{
 		Unknown = -1,
@@ -34,7 +38,11 @@ namespace nCine
 		Count
 	};
 
-	/** @brief Gamepad axes */
+	/**
+		@brief Gamepad axes
+		
+		Unified axis names a mapped joystick can report, regardless of the physical controller layout.
+	*/
 	enum class AxisName : std::int16_t
 	{
 		Unknown = -1,
@@ -46,7 +54,11 @@ namespace nCine
 		RightTrigger
 	};
 
-	/// Structure containing joystick hat values
+	/**
+		@brief Bit flags describing the direction of a joystick hat (D-pad)
+		
+		Diagonal directions combine the orthogonal flags.
+	*/
 	struct HatState
 	{
 		enum
@@ -63,43 +75,51 @@ namespace nCine
 		};
 	};
 
-	/** @brief Touch event types */
+	/** @brief Type of a touch event */
 	enum class TouchEventType
 	{
-		/// Called every time the first screen touch is made
-		Down,
-		/// Called every time the last screen touch is released
-		Up,
-		/// Called every time a screen touch is moved
-		Move,
-		/// Called every time a screen touch different than the first one is made
-		PointerDown,
-		/// Called every time a screen touch different than the last one is released
-		PointerUp
+		Down,			/**< The first pointer touched the screen */
+		Up,				/**< The last pointer was released */
+		Move,			/**< A pointer moved */
+		PointerDown,	/**< An additional pointer touched the screen */
+		PointerUp		/**< An additional pointer was released */
 	};
 
-	/// Information about a screen touch event
+	/**
+		@brief Screen touch event
+		
+		Holds the snapshot of all active pointers together with the action that triggered the event.
+	*/
 	class TouchEvent
 	{
 	public:
+		/** @brief Maximum number of simultaneous pointers tracked */
 		static constexpr std::uint32_t MaxPointers = 10;
 
-		/// Information about a single touch pointer
+		/** @brief State of a single touch pointer */
 		struct Pointer
 		{
+			/** @brief Pointer identifier */
 			std::int32_t id;
+			/** @brief Pointer position */
 			float x, y;
+			/** @brief Pointer pressure */
 			float pressure;
 		};
 
 		TouchEvent()
 			: count(0), actionIndex(-1) {}
 
+		/** @brief Type of the event */
 		TouchEventType type;
+		/** @brief Number of active pointers */
 		std::uint32_t count;
+		/** @brief Index into @ref pointers of the pointer that triggered the event, or -1 */
 		std::int32_t actionIndex;
+		/** @brief Active pointers */
 		Pointer pointers[MaxPointers];
 
+		/** @brief Returns the index of the pointer with the specified identifier, or -1 if not found */
 		inline std::int32_t findPointerIndex(std::int32_t pointerId) const
 		{
 			std::int32_t pointerIndex = -1;
@@ -113,16 +133,18 @@ namespace nCine
 		}
 	};
 
-	/// Information about an accelerometer event
+	/** @brief Accelerometer sensor reading */
 	class AccelerometerEvent
 	{
 	public:
 		AccelerometerEvent()
 			: x(0.0f), y(0.0f), z(0.0f) {}
 
+		/** @brief Acceleration on each axis */
 		float x, y, z;
 	};
 
+	/** @brief Mouse buttons */
 	enum class MouseButton : short int
 	{
 		Left,
@@ -132,73 +154,74 @@ namespace nCine
 		Fifth
 	};
 
-	/// Information about mouse state
+	/** @brief Current state of the mouse */
 	class MouseState
 	{
 	public:
-		/// Pointer position on the X axis
+		/** @brief Pointer position on the X axis */
 		std::int32_t x;
-		/// Pointer position on the Y axis
+		/** @brief Pointer position on the Y axis */
 		std::int32_t y;
 
-		/// Returns `true` if the specified button is down this frame
+		/** @brief Returns `true` if the specified button is currently down */
 		virtual bool isButtonDown(MouseButton button) const = 0;
 
 	protected:
 		static const unsigned int NumButtons = 5;
 	};
 
-	/// Information about a mouse event
+	/** @brief Mouse button event */
 	class MouseEvent
 	{
 	public:
-		/// Pointer position on the X axis
+		/** @brief Pointer position on the X axis */
 		std::int32_t x;
-		/// Pointer position on the Y axis
+		/** @brief Pointer position on the Y axis */
 		std::int32_t y;
-		/// The button that has been pressed or released
+		/** @brief Button that was pressed or released */
 		MouseButton button;
 	};
 
-	/// Information about a scroll event (mouse wheel, touchpad gesture, etc.)
+	/** @brief Scroll event (mouse wheel, touchpad gesture, etc.) */
 	class ScrollEvent
 	{
 	public:
-		/// Scroll offset on the X axis
+		/** @brief Scroll offset on the X axis */
 		float x;
-		/// Scroll offset on the Y axis
+		/** @brief Scroll offset on the Y axis */
 		float y;
 	};
 
-	/// Information about keyboard state
+	/** @brief Current state of the keyboard */
 	class KeyboardState
 	{
 	public:
-		/// Returns 'true' if the specified key is down
+		/** @brief Returns `true` if the specified key is currently down */
 		virtual bool isKeyDown(Keys key) const = 0;
 	};
 
-	/// Information about a keyboard event
+	/** @brief Keyboard key event */
 	class KeyboardEvent
 	{
 	public:
-		/// Key scan code
+		/** @brief Key scan code */
 		std::int32_t scancode;
-		/// Key symbol code
+		/** @brief Key symbol code */
 		Keys sym;
-		/// Key modifiers mask
+		/** @brief Key modifiers mask */
 		std::int32_t mod;
 
 		KeyboardEvent()
 			: scancode(0), sym(Keys::Unknown), mod(0) {}
 	};
 
-	/// Information about a text input event
+	/** @brief Text input event */
 	class TextInputEvent
 	{
 	public:
-		/// Unicode code point encoded in UTF-8
+		/** @brief Unicode code point encoded in UTF-8 */
 		char text[4];
+		/** @brief Length in bytes of the encoded code point */
 		std::int32_t length;
 
 		TextInputEvent()
@@ -208,71 +231,71 @@ namespace nCine
 		}
 	};
 
-	/// Information about the joystick state
+	/** @brief Current raw state of a joystick */
 	class JoystickState
 	{
 	public:
 		virtual ~JoystickState() { }
 
-		/// Returns 'true' if the specified button is pressed
+		/** @brief Returns `true` if the specified button is pressed */
 		virtual bool isButtonPressed(int buttonId) const = 0;
-		/// Returns the state of the specified hat
+		/** @brief Returns the state of the specified hat */
 		virtual unsigned char hatState(int hatId) const = 0;
-		/// Returns a normalized value between -1.0 and 1.0 for a joystick axis
+		/** @brief Returns the value of the specified axis, normalized between -1.0 and 1.0 */
 		virtual float axisValue(int axisId) const = 0;
 	};
 
-	/// Information about a joystick button event
+	/** @brief Joystick button event */
 	class JoyButtonEvent
 	{
 	public:
-		/// Joystick id
+		/** @brief Joystick identifier */
 		std::int32_t joyId;
-		/// Button id
+		/** @brief Button identifier */
 		std::int32_t buttonId;
 	};
 
-	/// Information about a joystick hat event
+	/** @brief Joystick hat event */
 	class JoyHatEvent
 	{
 	public:
-		/// Joystick id
+		/** @brief Joystick identifier */
 		std::int32_t joyId;
-		/// Hat id
+		/** @brief Hat identifier */
 		std::int32_t hatId;
-		/// Hat position state
+		/** @brief Hat direction state (a combination of @ref HatState flags) */
 		unsigned char hatState;
 	};
 
-	/// Information about a joystick axis event
+	/** @brief Joystick axis event */
 	class JoyAxisEvent
 	{
 	public:
-		/// Joystick id
+		/** @brief Joystick identifier */
 		std::int32_t joyId;
-		/// Axis id
+		/** @brief Axis identifier */
 		std::int32_t axisId;
-		/// Axis value normalized between -1.0f and 1.0f
+		/** @brief Axis value normalized between -1.0f and 1.0f */
 		float value;
 	};
 
-	/// Information about a joystick connection event
+	/** @brief Joystick connection or disconnection event */
 	class JoyConnectionEvent
 	{
 	public:
-		/// Joystick id
+		/** @brief Joystick identifier */
 		std::int32_t joyId;
 	};
 
-	/// Information about a mapped joystick state
+	/** @brief Current state of a joystick translated through its mapping into unified buttons and axes */
 	class JoyMappedState
 	{
 		friend class JoyMapping;
 
 	public:
-		/// The number of joystick buttons with a mapping name
+		/** @brief Number of mapped buttons */
 		static constexpr std::uint32_t NumButtons = (std::uint32_t)ButtonName::Count;
-		/// The number of joystick axes with a mapping name
+		/** @brief Number of mapped axes */
 		static constexpr std::uint32_t NumAxes = 6;
 
 		JoyMappedState()
@@ -284,6 +307,7 @@ namespace nCine
 			lastHatState_ = HatState::Centered;
 		}
 
+		/** @brief Returns `true` if the specified mapped button is pressed */
 		bool isButtonPressed(ButtonName name) const
 		{
 			bool pressed = false;
@@ -292,6 +316,7 @@ namespace nCine
 			return pressed;
 		}
 
+		/** @brief Returns the value of the specified mapped axis */
 		float axisValue(AxisName name) const
 		{
 			float value = 0.0f;
@@ -306,25 +331,25 @@ namespace nCine
 		unsigned char lastHatState_;
 	};
 
-	/// Information about a joystick mapped button event
+	/** @brief Mapped joystick button event */
 	class JoyMappedButtonEvent
 	{
 	public:
-		/// Joystick id
+		/** @brief Joystick identifier */
 		std::int32_t joyId;
-		/// Button name
+		/** @brief Unified button name */
 		ButtonName buttonName;
 	};
 
-	/// Information about a joystick mapped axis event
+	/** @brief Mapped joystick axis event */
 	class JoyMappedAxisEvent
 	{
 	public:
-		/// Joystick id
+		/** @brief Joystick identifier */
 		std::int32_t joyId;
-		/// Axis name
+		/** @brief Unified axis name */
 		AxisName axisName;
-		/// Axis value between its minimum and maximum
+		/** @brief Axis value normalized between -1.0f and 1.0f */
 		float value;
 	};
 

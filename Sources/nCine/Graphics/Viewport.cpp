@@ -94,7 +94,7 @@ namespace nCine
 
 	Viewport::~Viewport() = default;
 
-	/*! \note Adding more textures enables the use of multiple render targets (MRTs) */
+	/** @note Adding more textures enables the use of multiple render targets (MRTs) */
 	bool Viewport::SetTexture(std::uint32_t index, Texture* texture)
 	{
 		if (type_ == Type::Screen) {
@@ -156,7 +156,7 @@ namespace nCine
 		return result;
 	}
 
-	/*! \note It can remove the depth and stencil render buffer of the viewport's FBO by specifying `DepthStencilFormat::NONE` */
+	/** @note Specifying `DepthStencilFormat::None` removes the depth and stencil renderbuffer of the viewport's FBO */
 	bool Viewport::SetDepthStencilFormat(DepthStencilFormat depthStencilFormat)
 	{
 		if (depthStencilFormat_ == depthStencilFormat || type_ == Type::NoTexture)

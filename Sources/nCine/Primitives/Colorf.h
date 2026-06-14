@@ -14,7 +14,13 @@ namespace nCine
 
 		using Death::Containers::NoInitT;
 
-		/// Four-channel normalized color with 32-bit floats per component
+		/**
+			@brief Four-channel normalized color with 32-bit floats per component
+			
+			Stores the red, green, blue and alpha channels as @cpp float @ce values, with the alpha
+			clamped to the 0-1 range. Provides array and channel-wise construction, channel-wise and
+			scalar arithmetic, and conversion to and from the 8-bit integer @ref Color.
+		*/
 		class Colorf
 		{
 		public:
@@ -47,30 +53,30 @@ namespace nCine
 			/** @brief Alpha */
 			float A;
 
-			/// Default constructor (transparent color)
+			/** @brief Default constructor, creates an opaque white color */
 			constexpr Colorf() noexcept
 				: Colorf(1.0f, 1.0f, 1.0f, 1.0f) {}
 			explicit Colorf(NoInitT) noexcept {}
-			/// Three channels constructor
+			/** @brief Constructs an opaque color from three channels */
 			constexpr Colorf(float red, float green, float blue) noexcept
 				: Colorf(red, green, blue, 1.0f) {}
-			/// Four channels constructor
+			/** @brief Constructs a color from four channels, clamping the alpha to the 0-1 range */
 			constexpr Colorf(float red, float green, float blue, float alpha) noexcept
 				: R(red), G(green), B(blue), A(std::clamp(alpha, 0.0f, 1.0f)) {}
-			/// Four channels constructor from an array
+			/** @brief Constructs a color from a four-channel array */
 			explicit Colorf(const float channels[NumChannels]) noexcept;
 			explicit Colorf(const Color& color) noexcept;
 
-			/// Returns color array
+			/** @brief Returns a pointer to the channel array */
 			inline const float* Data() const {
 				return &R;
 			}
-			/// @overload
+			/** @overload */
 			inline float* Data() {
 				return &R;
 			}
 
-			/// Sets four color channels
+			/** @brief Sets all four channels, clamping the alpha to the 0-1 range */
 			constexpr void Set(float red, float green, float blue, float alpha)
 			{
 				R = red;
@@ -78,14 +84,14 @@ namespace nCine
 				B = blue;
 				A = std::clamp(alpha, 0.0f, 1.0f);
 			}
-			/// Sets three color channels
+			/** @brief Sets the three color channels, keeping the alpha unchanged */
 			void Set(float red, float green, float blue);
-			/// Sets four color channels from an array
+			/** @brief Sets all four channels from an array */
 			void SetVec(const float channels[NumChannels]);
-			/// Sets the alpha channel
+			/** @brief Sets the alpha channel */
 			void SetAlpha(float alpha);
 
-			/// Assigns operator from an unsigned char color
+			/** @brief Assigns from an 8-bit integer color */
 			Colorf& operator=(const Color& color);
 
 			bool operator==(const Colorf& color) const;
@@ -95,14 +101,14 @@ namespace nCine
 			Colorf& operator-=(const Colorf& v);
 
 			Colorf& operator*=(const Colorf& color);
-			/// Multiplies by a constant scalar
+			/** @brief Multiplies all channels by a scalar */
 			Colorf& operator*=(float scalar);
 
 			Colorf operator+(const Colorf& color) const;
 			Colorf operator-(const Colorf& color) const;
 
 			Colorf operator*(const Colorf& color) const;
-			/// Multiplies by a constant scalar
+			/** @brief Multiplies all channels by a scalar */
 			Colorf operator*(float scalar) const;
 		};
 
@@ -120,7 +126,7 @@ namespace nCine
 
 			/** @relatesalso nCine::Primitives::Colorf
 				@brief Float RGB color literal
-
+				
 				@code{.cpp}
 				using namespace nCine::Primitives::Literals;
 				Colorf a = 0x5eb233bb_rgbf;	// R: 0x5e, G: 0xb2, B: 0x33, A: 0xff
@@ -134,7 +140,7 @@ namespace nCine
 
 			/** @relatesalso nCine::Primitives::Colorf
 				@brief Float RGBA color literal
-
+				
 				@code{.cpp}
 				using namespace nCine::Primitives::Literals;
 				Colorf a = 0x5eb233bb_rgbaf;	// R: 0x5e, G: 0xb2, B: 0x33, A: 0xbb

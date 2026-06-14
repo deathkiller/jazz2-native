@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Enemies
 {
 	/**
-	 * @brief Sucker
-	 *
-	 * Small plunger-like creature that shuffles along the ground in short bursts, popping and squeaking
-	 * as it moves and turning at walls and ledges. It harms the player only on contact and is defeated
-	 * by a single hit; it can also spawn deflating from a destroyed @ref SuckerFloat.
-	 */
+		@brief Sucker
+		
+		Small plunger-like creature that shuffles along the ground in short bursts, popping and squeaking
+		as it moves and turning at walls and ledges. It harms the player only on contact and is defeated
+		by a single hit; it can also spawn deflating from a destroyed @ref SuckerFloat.
+	*/
 	class Sucker : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);

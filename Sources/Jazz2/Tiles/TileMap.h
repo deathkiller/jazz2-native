@@ -156,7 +156,13 @@ namespace Jazz2::Tiles
 		bool Forwards;
 	};
 
-	/** @brief Represents a renderable tile map, consists of multiple layers */
+	/**
+		@brief Represents a renderable tile map, consists of multiple layers
+		
+		Owns the level's tile layers and tile sets and renders them as a scene node. Besides drawing, it advances
+		animated tiles, performs tile collision queries, handles destructible/collapsing/trigger tiles and spawns
+		debris, notifying its @ref ITileMapOwner of the resulting events.
+	*/
 	class TileMap : public SceneNode // , public IResumable
 	{
 #if defined(WITH_ANGELSCRIPT)

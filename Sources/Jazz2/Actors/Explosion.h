@@ -5,12 +5,12 @@
 namespace Jazz2::Actors
 {
 	/**
-	 * @brief Explosion effects
-	 *
-	 * A transient visual effect actor spawned when something is destroyed, such as a projectile impact,
-	 * an enemy death or a smoke/debris puff. It plays a single animation and then disappears. Covers
-	 * several explosion and smoke variants (see @ref Type).
-	 */
+		@brief Explosion effects
+		
+		A transient visual effect actor spawned when something is destroyed, such as a projectile impact,
+		an enemy death or a smoke/debris puff. It plays a single animation and then disappears. Covers
+		several explosion and smoke variants (see @ref Type).
+	*/
 	class Explosion : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

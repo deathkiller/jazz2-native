@@ -24,7 +24,13 @@ namespace Jazz2::UI::Menu
 	class CreateServerOptionsSection;
 #endif
 
-	/** @brief Main menu */
+	/**
+		@brief Main menu
+		
+		Top-level state handler and @ref IMenuContainer that drives the standalone main menu. It renders the animated
+		menu background and logo, plays the menu music, and hosts the stack of menu sections starting from
+		@ref BeginSection.
+	*/
 	class MainMenu : public IStateHandler, public IMenuContainer
 	{
 		DEATH_RUNTIME_OBJECT(IStateHandler, IMenuContainer);

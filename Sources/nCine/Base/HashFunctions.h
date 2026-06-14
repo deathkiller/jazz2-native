@@ -12,16 +12,22 @@ using namespace Death::Cryptography;
 
 namespace nCine
 {
+	/** @brief 32-bit hash value */
 	using hash_t = std::uint32_t;
+	/** @brief 64-bit hash value */
 	using hash64_t = std::uint64_t;
 
-	/** @brief Invalid hash value */
+	/** @brief Reserved hash value marking an empty or invalid entry */
 	const hash_t NullHash = static_cast<hash_t>(~0);
 
-	/// Fowler-Noll-Vo Hash (FNV-1a)
-	/*!
-	 * For more information: http://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
-	 */
+	/**
+		@brief Fowler-Noll-Vo (FNV-1a) hash function
+		
+		Computes a 32-bit hash by iterating over the raw bytes of the key. Specializations are provided
+		for C strings, @ref Death::Containers::String and @ref Death::Containers::Pair.
+
+		@see http://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+	*/
 	template<class K>
 	class FNV1aHashFunc
 	{
@@ -106,7 +112,13 @@ namespace nCine
 	};
 #endif
 
-	/// xxHash hash function (32-bit)
+	/**
+		@brief xxHash3 hash function producing a 32-bit value
+		
+		Hashes the raw bytes of the key with xxHash3 and truncates the result to 32 bits.
+		Specializations are provided for C strings, @ref Death::Containers::String and
+		@ref Death::Containers::Pair.
+	*/
 	template<class K>
 	class xxHash32Func
 	{
@@ -150,7 +162,12 @@ namespace nCine
 	};
 #endif
 
-	/// xxHash hash function (64-bit)
+	/**
+		@brief xxHash3 hash function producing a 64-bit value
+		
+		Hashes the raw bytes of the key with xxHash3. Specializations are provided for C strings,
+		@ref Death::Containers::String and @ref Death::Containers::Pair.
+	*/
 	template<class K>
 	class xxHash64Func
 	{

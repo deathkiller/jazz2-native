@@ -4,11 +4,18 @@
 
 namespace nCine
 {
-	/// Base class of nCine objects
+	/**
+		@brief Base class of all nCine objects
+		
+		Provides each derived object with a unique identifier and a run-time type tag (@ref ObjectType)
+		usable for lightweight type checks without RTTI.
+	*/
 	class Object
 	{
 	public:
-		/// Object types
+		/**
+		 * @brief Run-time type of an object
+		 */
 		enum class ObjectType {
 			Base = 0,
 			Texture,
@@ -24,33 +31,32 @@ namespace nCine
 			AudioStreamPlayer
 		};
 
-		/// Constructs an object with a specified type and adds it to the index
+		/** @brief Constructs an object of the specified type and assigns it a unique identifier */
 		explicit Object(ObjectType type);
-		/// Removes an object from the index and then destroys it
 		virtual ~Object() = 0;
 
 		Object(Object&& other) noexcept;
 		Object& operator=(Object&& other) noexcept;
 
-		/// Returns the object identification number
+		/** @brief Returns the unique object identifier */
 		inline unsigned int id() const {
 			return _id;
 		}
 
-		/// Returns the object type (RTTI)
+		/** @brief Returns the run-time object type */
 		inline ObjectType type() const {
 			return _type;
 		}
-		/// Static method to return class type
+		/** @brief Returns the static type of this class */
 		inline static ObjectType sType() {
 			return ObjectType::Base;
 		}
 
 	protected:
-		/// Object type
+		/** @brief Run-time object type */
 		ObjectType _type;
 
-		/// Protected copy constructor used to clone objects
+		/** @brief Protected copy constructor used to clone objects */
 		Object(const Object& other);
 
 	private:

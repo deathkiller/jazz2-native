@@ -45,7 +45,7 @@ namespace nCine
 #endif
 	}
 
-	/*! The change is applied to the OpenAL source only when playing. */
+	// The change is applied to the OpenAL source only when playing
 	void IAudioPlayer::setSourceRelative(bool value)
 	{
 		if (GetFlags(PlayerFlags::SourceRelative) != value) {
@@ -58,7 +58,7 @@ namespace nCine
 		}
 	}
 
-	/*! The change is applied to the OpenAL source only when playing. */
+	// The change is applied to the OpenAL source only when playing
 	void IAudioPlayer::setGain(float gain)
 	{
 		gain_ = gain;
@@ -69,7 +69,7 @@ namespace nCine
 #endif
 	}
 
-	/*! The change is applied to the OpenAL source only when playing. */
+	// The change is applied to the OpenAL source only when playing
 	void IAudioPlayer::setPitch(float pitch)
 	{
 		pitch_ = pitch;
@@ -90,7 +90,7 @@ namespace nCine
 		}
 	}
 
-	/*! The change is applied to the OpenAL source only when playing. */
+	// The change is applied to the OpenAL source only when playing
 	void IAudioPlayer::setPosition(const Vector3f& position)
 	{
 		position_ = position;

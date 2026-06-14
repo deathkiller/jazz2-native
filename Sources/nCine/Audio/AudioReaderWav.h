@@ -10,7 +10,9 @@ namespace nCine
 {
 	class IFile;
 
-	/// WAVE audio reader
+	/**
+		@brief Audio reader for the WAVE (`.wav`) format
+	*/
 	class AudioReaderWav : public IAudioReader
 	{
 	public:

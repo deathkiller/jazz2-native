@@ -17,7 +17,13 @@ namespace winrtWUV = winrt::Windows::UI::ViewManagement;
 
 namespace nCine
 {
-	/// Main entry point and handler for UWP (Universal Windows Platform) applications
+	/**
+		@brief Main entry point and handler for UWP (Universal Windows Platform) applications
+		
+		Subclasses @ref Application and implements the C++/WinRT @ref winrtWAC::IFrameworkViewSource
+		and @ref winrtWAC::IFrameworkView interfaces, driving the application life cycle through the
+		`CoreApplication` framework.
+	*/
 	class UwpApplication : public Application, public winrt::implements<UwpApplication, winrtWAC::IFrameworkViewSource, winrtWAC::IFrameworkView>
 	{
 	public:
@@ -62,7 +68,7 @@ namespace nCine
 		friend Application& theApplication();
 	};
 
-	/// Returns application instance
+	/** @brief Returns the application instance */
 	Application& theApplication();
 
 }

@@ -17,7 +17,12 @@ namespace nCine
 
 namespace nCine::Backends
 {
-	/// Class for setting up JNI and initialize requests classes
+	/**
+		@brief Sets up the JNI environment and initializes the wrapper classes
+		
+		Attaches the Java virtual machine, queries the SDK version and initializes the `AndroidJniClass_*`
+		and `AndroidJniWrap_*` wrapper classes for the lifetime of the application.
+	*/
 	class AndroidJniHelper
 	{
 		friend class nCine::AndroidApplication;
@@ -36,16 +41,20 @@ namespace nCine::Backends
 		static JavaVM* javaVM_;
 		static unsigned int sdkVersion_;
 
-		/// Attaches the Java virtual machine to make use of JNI
+		/** @brief Attaches the Java virtual machine to make use of JNI */
 		static void AttachJVM(struct android_app* state);
-		/// Detaches the Java virtual machine
+		/** @brief Detaches the Java virtual machine */
 		static void DetachJVM();
 		static void InitializeClasses();
 
 		static String ExceptionToString(JNIEnv* env, jthrowable exception);
 	};
 
-	/// Base class for handling of JNI requests to the Android API
+	/**
+		@brief Base class for the JNI wrappers that hold a reference to a Java object
+		
+		Owns an underlying `jobject` and exposes helpers for resolving classes, methods and fields through JNI.
+	*/
 	class AndroidJniClass
 	{
 	public:
@@ -54,14 +63,14 @@ namespace nCine::Backends
 		explicit AndroidJniClass(jobject javaObject);
 		virtual ~AndroidJniClass();
 
-		/// Move constructor
+		/** @brief Move constructor */
 		AndroidJniClass(AndroidJniClass&& other);
-		/// Move assignment operator
+		/** @brief Move assignment operator */
 		AndroidJniClass& operator=(AndroidJniClass&& other);
 
-		/// Deleted copy constructor
+		/** @brief Deleted copy constructor */
 		AndroidJniClass(const AndroidJniClass&) = delete;
-		/// Deleted assignment operator
+		/** @brief Deleted assignment operator */
 		AndroidJniClass& operator=(const AndroidJniClass&) = delete;
 
 		inline bool IsNull() const {
@@ -82,7 +91,7 @@ namespace nCine::Backends
 		friend class AndroidJniHelper;
 	};
 
-	/// Handles JNI requests to `android.os.Build.VERSION`
+	/** @brief Wraps JNI access to `android.os.Build.VERSION` */
 	class AndroidJniClass_Version
 	{
 	public:
@@ -92,7 +101,7 @@ namespace nCine::Backends
 		static String deviceModel();
 	};
 
-	/// Handles JNI requests to `android.view.InputDevice.MotionRange`
+	/** @brief Wraps JNI access to `android.view.InputDevice.MotionRange` */
 	class AndroidJniClass_MotionRange : public AndroidJniClass
 	{
 	public:
@@ -107,7 +116,7 @@ namespace nCine::Backends
 		static jmethodID midGetRange_;
 	};
 
-	/// A class to handle JNI requests to `android.os.VibrationEffect`
+	/** @brief Wraps JNI access to `android.os.VibrationEffect` */
 	class AndroidJniClass_VibrationEffect : public AndroidJniClass
 	{
 	public:
@@ -121,7 +130,7 @@ namespace nCine::Backends
 		static jmethodID midCreateOneShot_;
 	};
 
-	/// A class to handle JNI requests to `android.os.Vibrator`
+	/** @brief Wraps JNI access to `android.os.Vibrator` */
 	class AndroidJniClass_Vibrator : public AndroidJniClass
 	{
 	public:
@@ -140,7 +149,7 @@ namespace nCine::Backends
 		static jmethodID midVibrate_;
 	};
 
-	/// A class to handle JNI requests to `android.os.VibratorManager`
+	/** @brief Wraps JNI access to `android.os.VibratorManager` */
 	class AndroidJniClass_VibratorManager : public AndroidJniClass
 	{
 	public:
@@ -158,7 +167,7 @@ namespace nCine::Backends
 		static jmethodID midGetVibrator_;
 	};
 
-	/// Handles JNI requests to `android.view.InputDevice`
+	/** @brief Wraps JNI access to `android.view.InputDevice` */
 	class AndroidJniClass_InputDevice : public AndroidJniClass
 	{
 	public:
@@ -190,7 +199,7 @@ namespace nCine::Backends
 		static jmethodID midGetVibratorManager_;
 	};
 
-	/// Handles JNI requests to `android.view.KeyCharacterMap`
+	/** @brief Wraps JNI access to `android.view.KeyCharacterMap` */
 	class AndroidJniClass_KeyCharacterMap : public AndroidJniClass
 	{
 	public:
@@ -204,7 +213,7 @@ namespace nCine::Backends
 		static jmethodID midDeviceHasKey_;
 	};
 
-	/// Handles JNI requests to `android.view.KeyEvent`
+	/** @brief Wraps JNI access to `android.view.KeyEvent` */
 	class AndroidJniClass_KeyEvent : public AndroidJniClass
 	{
 	public:
@@ -228,7 +237,7 @@ namespace nCine::Backends
 		static jmethodID midIsPrintingKey_;
 	};
 	
-	/// Handles JNI requests to `android.view.Display.Mode`
+	/** @brief Wraps JNI access to `android.view.Display.Mode` */
 	class AndroidJniClass_DisplayMode : public AndroidJniClass
 	{
 	public:
@@ -250,7 +259,7 @@ namespace nCine::Backends
 		static jmethodID midGetRefreshRate_;
 	};
 
-	/// Handles JNI requests to `android.view.Display`
+	/** @brief Wraps JNI access to `android.view.Display` */
 	class AndroidJniClass_Display : public AndroidJniClass
 	{
 	public:
@@ -272,7 +281,7 @@ namespace nCine::Backends
 		static jmethodID midGetSupportedModes_;
 	};
 
-	/// Handles JNI requests to `android.app.Activity`
+	/** @brief Wraps JNI access to `android.app.Activity` */
 	class AndroidJniWrap_Activity
 	{
 	public:
@@ -319,7 +328,7 @@ namespace nCine::Backends
 		static jmethodID midGetWindowVisibleDisplayFrame_;
 	};
 
-	/// Handles JNI requests to `android.view.inputmethod.InputMethodManager`
+	/** @brief Wraps JNI access to `android.view.inputmethod.InputMethodManager` */
 	class AndroidJniWrap_InputMethodManager
 	{
 	public:
@@ -341,7 +350,7 @@ namespace nCine::Backends
 		static const int HIDE_IMPLICIT_ONLY = 1;
 	};
 
-	/// Handles JNI requests to `android.hardware.display.DisplayManager`
+	/** @brief Wraps JNI access to `android.hardware.display.DisplayManager` */
 	class AndroidJniWrap_DisplayManager
 	{
 	public:
@@ -357,7 +366,7 @@ namespace nCine::Backends
 		static jmethodID midGetDisplays_;
 	};
 
-	/// Handles JNI requests to `android.provider.Settings.Secure`
+	/** @brief Wraps JNI access to `android.provider.Settings.Secure` */
 	class AndroidJniWrap_Secure
 	{
 	public:

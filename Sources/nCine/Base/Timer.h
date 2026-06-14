@@ -4,35 +4,40 @@
 
 namespace nCine
 {
-	/// Accumulates the time between starting and stopping the time measurement
+	/**
+		@brief Stopwatch that accumulates elapsed time across start/stop intervals
+		
+		Each @ref start()/@ref stop() pair adds its duration to a running total that can be queried
+		with @ref total(). @ref interval() reports the time since the most recent @ref start().
+	*/
 	class Timer
 	{
 	public:
 		Timer();
 
-		/// Starts the timer
+		/** @brief Starts the timer */
 		void start();
-		/// Stops the timer
+		/** @brief Stops the timer and adds the elapsed interval to the accumulated time */
 		void stop();
-		/// Resets the accumulated time
+		/** @brief Resets the accumulated time to zero */
 		inline void reset() {
 			_accumulatedTime = 0ULL;
 		}
-		/// Returns `true` if the timer is running
+		/** @brief Returns `true` if the timer is currently running */
 		inline bool isRunning() const {
 			return _isRunning;
 		}
 
-		/// Returns elapsed time in seconds since last starting the timer
+		/** @brief Returns the time in seconds elapsed since the last call to @ref start() */
 		float interval() const;
-		/// Returns total accumulated time in seconds
+		/** @brief Returns the total accumulated time in seconds across all intervals */
 		float total() const;
 
 	private:
 		bool _isRunning;
-		/// Start time mark
+		// Start time mark
 		std::uint64_t _startTime;
-		/// Accumulated time ticks over multiple start and stop
+		// Accumulated time ticks over multiple start and stop
 		std::uint64_t _accumulatedTime;
 	};
 }

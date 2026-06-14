@@ -13,13 +13,19 @@ namespace nCine
 	class Particle;
 	struct ParticleInitializer;
 
-	/// Represents a particle system
+	/**
+		@brief Scene node that emits and simulates a pool of textured particles
+		
+		Owns a fixed pool of @ref Particle child nodes that are recycled between alive and dead states.
+		@ref emitParticles() spawns particles from a @ref ParticleInitializer, and each frame the attached
+		@ref ParticleAffector list animates every alive particle before it is drawn as part of the scene graph.
+	*/
 	class ParticleSystem : public SceneNode
 	{
 	public:
-		/// Constructs a particle system with the specified maximum amount of particles
+		/** @brief Constructs a particle system with the specified maximum amount of particles */
 		ParticleSystem(SceneNode* parent, std::uint32_t count, Texture* texture);
-		/// Constructs a particle system with the specified maximum amount of particles and the specified texture rectangle
+		/** @brief Constructs a particle system with the specified maximum amount of particles and the specified texture rectangle */
 		ParticleSystem(SceneNode* parent, std::uint32_t count, Texture* texture, Recti texRect);
 		~ParticleSystem() override;
 
@@ -27,87 +33,88 @@ namespace nCine
 		ParticleSystem(ParticleSystem&&);
 		ParticleSystem& operator=(ParticleSystem&&);
 
-		/// Returns a copy of this object
+		/** @brief Returns a copy of this object */
 		inline ParticleSystem clone() const {
 			return ParticleSystem(*this);
 		}
 
-		/// Adds a particle affector
+		/** @brief Adds a particle affector, taking ownership of it */
 		inline void addAffector(std::unique_ptr<ParticleAffector> affector) {
 			affectors_.push_back(affector.release());
 		}
-		/// Deletes all particle affectors
+		/** @brief Deletes all particle affectors */
 		void clearAffectors();
-		/// Emits particles with the specified initialization parameters
+		/** @brief Emits particles with the specified initialization parameters */
 		void emitParticles(const ParticleInitializer& init);
-		/// Kills all alive particles
+		/** @brief Kills all alive particles, returning them to the pool */
 		void killParticles();
 
-		/// Returns the local space flag of the system
+		/** @brief Returns whether the system is simulated in local space */
 		inline bool inLocalSpace() const {
 			return inLocalSpace_;
 		}
-		/// Sets the local space flag of the system
+		/** @brief Sets whether the system is simulated in local space */
 		inline void setInLocalSpace(bool inLocalSpace) {
 			inLocalSpace_ = inLocalSpace;
 		}
 
-		/// Returns the total number of particles in the system
+		/** @brief Returns the total number of particles in the pool */
 		inline std::uint32_t numParticles() const {
 			return std::uint32_t(particleArray_.size());
 		}
-		/// Returns the number of particles currently alive
+		/** @brief Returns the number of particles currently alive */
 		inline std::uint32_t numAliveParticles() const {
 			return std::uint32_t(particleArray_.size()) - poolTop_ - 1;
 		}
 
-		/// Sets the texture object for every particle
+		/** @brief Sets the texture object for every particle */
 		void setTexture(Texture* texture);
-		/// Sets the texture source rectangle for every particle
+		/** @brief Sets the texture source rectangle for every particle */
 		void setTexRect(const Recti& rect);
 
-		/// Sets the transformation anchor point for every particle
+		/** @brief Sets the transformation anchor point for every particle */
 		void setAnchorPoint(float xx, float yy);
-		/// Sets the transformation anchor point for every particle with a `Vector2f`
+		/** @brief Sets the transformation anchor point for every particle with a `Vector2f` */
 		void setAnchorPoint(Vector2f point);
 
-		/// Flips the texture rect horizontally for every particle
+		/** @brief Flips the texture rect horizontally for every particle */
 		void setFlippedX(bool flippedX);
-		/// Flips the texture rect vertically for every particle
+		/** @brief Flips the texture rect vertically for every particle */
 		void setFlippedY(bool flippedY);
 
-		/// Sets the blending factors preset for every particle
+		/** @brief Sets the blending factors preset for every particle */
 		void setBlendingPreset(DrawableNode::BlendingPreset blendingPreset);
-		/// Sets the source and destination blending factors for every particle
+		/** @brief Sets the source and destination blending factors for every particle */
 		void setBlendingFactors(DrawableNode::BlendingFactor srcBlendingFactor, DrawableNode::BlendingFactor destBlendingFactor);
 
-		/// Sets the rendering layer for every particle
+		/** @brief Sets the rendering layer for every particle */
 		void setLayer(uint16_t layer);
 
 		void OnUpdate(float timeMult) override;
 
+		/** @brief Returns the static object type of the class */
 		inline static ObjectType sType() {
 			return ObjectType::ParticleSystem;
 		}
 
 	protected:
-		/// Protected copy constructor used to clone objects
+		/** @brief Protected copy constructor used to clone objects */
 		ParticleSystem(const ParticleSystem& other);
 
 	private:
-		/// Particle pool size
+		/** @brief Particle pool size */
 		std::uint32_t poolSize_;
-		/// Index of the next free particle in the pool
+		/** @brief Index of the next free particle in the pool */
 		std::int32_t poolTop_;
-		/// Pool containing available particles (only dead ones)
+		/** @brief Pool containing available particles (only dead ones) */
 		SmallVector<Particle*, 0> particlePool_;
-		/// Array containing every particle (dead or alive)
+		/** @brief Array containing every particle (dead or alive) */
 		SmallVector<Particle*, 0> particleArray_;
 
-		/// Array of particle affectors
+		/** @brief Array of particle affectors */
 		SmallVector<ParticleAffector*, 0> affectors_;
 
-		/// Flag indicating whether the system should be simulated in local space
+		/** @brief Whether the system is simulated in local space */
 		bool inLocalSpace_;
 	};
 

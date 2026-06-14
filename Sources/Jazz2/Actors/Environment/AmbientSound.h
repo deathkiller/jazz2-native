@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Environment
 {
 	/**
-	 * @brief Ambient sound
-	 *
-	 * Invisible level object that plays a looping background sound effect (such as wind,
-	 * fire, or machinery noise) to add atmosphere to a region. It has no collision and
-	 * does not interact with the player.
-	 */
+		@brief Ambient sound
+		
+		Invisible level object that plays a looping background sound effect (such as wind,
+		fire, or machinery noise) to add atmosphere to a region. It has no collision and
+		does not interact with the player.
+	*/
 	class AmbientSound : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

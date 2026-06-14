@@ -2,15 +2,26 @@
 
 namespace nCine
 {
-	/// Display properties
+	/**
+		@brief Describes the pixel format and buffering properties of a display surface
+		
+		Immutable set of attributes requested for or reported by an OpenGL context: the per-channel color bit
+		depths, the depth and stencil buffer sizes, and whether double buffering and vertical sync are enabled.
+	*/
 	class DisplayMode
 	{
 	public:
+		/**
+		 * @brief Double buffering state
+		 */
 		enum class DoubleBuffering {
 			Disabled,
 			Enabled
 		};
 
+		/**
+		 * @brief Vertical sync state
+		 */
 		enum class VSync {
 			Disabled,
 			Enabled
@@ -30,55 +41,55 @@ namespace nCine
 			depthBits_(depthBits), stencilBits_(stencilBits), isDoubleBuffered_(dbMode == DoubleBuffering::Enabled),
 			hasVSync_(vsMode == VSync::Enabled) {}
 
-		/// Returns the number of bits for the red channel
+		/** @brief Returns the number of bits for the red channel */
 		inline std::uint8_t redBits() const {
 			return redBits_;
 		}
-		/// Returns the number of bits for the green channel
+		/** @brief Returns the number of bits for the green channel */
 		inline std::uint8_t greenBits() const {
 			return greenBits_;
 		}
-		/// Returns the number of bits for the blue channel
+		/** @brief Returns the number of bits for the blue channel */
 		inline std::uint8_t blueBits() const {
 			return blueBits_;
 		}
-		/// Returns the number of bits for the alpha channel
+		/** @brief Returns the number of bits for the alpha channel */
 		inline std::uint8_t alphaBits() const {
 			return alphaBits_;
 		}
-		/// Returns the number of bits for the depth buffer
+		/** @brief Returns the number of bits for the depth buffer */
 		inline std::uint8_t depthBits() const {
 			return depthBits_;
 		}
-		/// Returns the number of bits for the stencil buffer
+		/** @brief Returns the number of bits for the stencil buffer */
 		inline std::uint8_t stencilBits() const {
 			return stencilBits_;
 		}
-		/// Returns true if the display is double buffered
+		/** @brief Returns whether the display is double buffered */
 		inline bool isDoubleBuffered() const {
 			return isDoubleBuffered_;
 		}
-		/// Returns true if the dislpay has V-sync enabled
+		/** @brief Returns whether the display has vertical sync enabled */
 		inline bool hasVSync() const {
 			return hasVSync_;
 		}
 
 	private:
-		/// Red component bits
+		/** @brief Red channel bits */
 		std::uint8_t redBits_;
-		/// Green component bits
+		/** @brief Green channel bits */
 		std::uint8_t greenBits_;
-		/// Blue component bits
+		/** @brief Blue channel bits */
 		std::uint8_t blueBits_;
-		/// Alpha component bits
+		/** @brief Alpha channel bits */
 		std::uint8_t alphaBits_;
-		/// Depth buffer size in bit
+		/** @brief Depth buffer size in bits */
 		std::uint8_t depthBits_;
-		/// Stencil buffer size in bit
+		/** @brief Stencil buffer size in bits */
 		std::uint8_t stencilBits_;
-		/// Double buffering flag
+		/** @brief Whether double buffering is enabled */
 		bool isDoubleBuffered_;
-		/// VSync flag
+		/** @brief Whether vertical sync is enabled */
 		bool hasVSync_;
 	};
 

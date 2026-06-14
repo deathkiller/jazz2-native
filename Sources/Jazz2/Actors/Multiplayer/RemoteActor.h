@@ -6,7 +6,13 @@
 
 namespace Jazz2::Actors::Multiplayer
 {
-	/** @brief Remote object in online session */
+	/**
+		@brief Remote object in online session
+		
+		A generic actor whose transform, animation and miscellaneous state are synchronized from a remote authority
+		(the server). It has no gameplay logic of its own; the received position is buffered and interpolated on the
+		receiving side to smooth out network delay.
+	*/
 	class RemoteActor : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

@@ -9,7 +9,13 @@ namespace Jazz2::Actors
 
 namespace Jazz2::Actors::Collectibles
 {
-	/** @brief Base class of a collectible object */
+	/**
+		@brief Base class of a collectible object
+		
+		Base for pickups that grant the player a bonus when collected on contact. It provides the behavior shared by
+		all collectibles: the floating/bobbing animation, optional light emission when illuminated, and dispatching
+		the collection logic to the deriving type.
+	*/
 	class CollectibleBase : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);

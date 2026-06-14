@@ -15,7 +15,13 @@ namespace ix { class WebSocket; }
 
 namespace Jazz2::Multiplayer
 {
-	/** @brief Remote peer as opaque handle */
+	/**
+	 * @brief Remote peer as opaque handle
+	 *
+	 * Lightweight value type identifying a single network connection. It wraps the underlying ENet peer or
+	 * WebSocket handle (depending on platform and transport) behind comparison, validity and stable-ID
+	 * accessors, so the rest of the engine can refer to connections without touching transport details.
+	 */
 	struct Peer
 	{
 		/** @brief Creates a new instance */

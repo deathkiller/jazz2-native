@@ -5,12 +5,12 @@
 namespace Jazz2::Actors::Weapons
 {
 	/**
-	 * @brief RF (shot)
-	 *
-	 * Rocket-fuel (RF) missile that flies straight while trailing smoke and explodes on impact with a wall or after
-	 * its short lifetime, pushing nearby players away with its blast. RF missiles are fired in a spread, and the
-	 * powered-up variant produces a larger explosion.
-	 */
+		@brief RF (shot)
+		
+		Rocket-fuel (RF) missile that flies straight while trailing smoke and explodes on impact with a wall or after
+		its short lifetime, pushing nearby players away with its blast. RF missiles are fired in a spread, and the
+		powered-up variant produces a larger explosion.
+	*/
 	class RFShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);

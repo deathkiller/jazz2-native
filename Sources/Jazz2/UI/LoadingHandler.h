@@ -8,7 +8,12 @@
 
 namespace Jazz2::UI
 {
-	/** @brief Handler that only shows the loading indicator */
+	/**
+		@brief Handler that only shows the loading indicator
+		
+		State handler for the loading screen shown while content is being prepared, drawing an animated loading
+		indicator over a light or dark background. An optional callback is invoked once loading completes.
+	*/
 	class LoadingHandler : public IStateHandler
 	{
 	public:

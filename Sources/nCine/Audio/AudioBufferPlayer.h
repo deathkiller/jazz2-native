@@ -6,15 +6,19 @@ namespace nCine
 {
 	class AudioBuffer;
 
-	/// Audio buffer player
+	/**
+		@brief Plays back a fully decoded @ref AudioBuffer
+		
+		Suitable for short sound effects that are decoded into memory ahead of time. The same
+		buffer can be shared between several players.
+	*/
 	class AudioBufferPlayer : public IAudioPlayer
 	{
 		DEATH_RUNTIME_OBJECT(IAudioPlayer);
 
 	public:
-		/// Default constructor
 		AudioBufferPlayer();
-		/// A constructor creating a player from a shared buffer
+		/** @brief Creates a player bound to the specified shared buffer */
 		explicit AudioBufferPlayer(AudioBuffer* audioBuffer);
 		~AudioBufferPlayer() override;
 
@@ -34,20 +38,20 @@ namespace nCine
 
 		std::int32_t bufferSize() const override;
 
-		/// Gets the audio buffer used for playing
+		/** @brief Returns the audio buffer used for playback */
 		inline const AudioBuffer* audioBuffer() const {
 			return audioBuffer_;
 		}
-		/// Sets the audio buffer used for playing
+		/** @brief Sets the audio buffer used for playback */
 		void setAudioBuffer(AudioBuffer* audioBuffer);
 
 		void play() override;
 		void pause() override;
 		void stop() override;
 
-		/// Updates the player state
 		void updateState() override;
 
+		/** @brief Returns the static object type of this class */
 		inline static ObjectType sType() {
 			return ObjectType::AudioBufferPlayer;
 		}
