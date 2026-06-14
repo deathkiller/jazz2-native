@@ -44,6 +44,12 @@ namespace Jazz2::UI
 
 		/** @} */
 
+		/**
+		 * @brief Creates a new instance by loading a bitmap font from the specified path
+		 *
+		 * @param path     Path to the bitmap font file
+		 * @param palette  Palette used to colorize the font
+		 */
 		Font(StringView path, const std::uint32_t* palette);
 
 		/** @brief Returns font size in pixels */

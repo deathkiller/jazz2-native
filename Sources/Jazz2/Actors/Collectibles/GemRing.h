@@ -4,14 +4,21 @@
 
 namespace Jazz2::Actors::Collectibles
 {
-	/** @brief Gem ring */
+	/**
+	 * @brief Gem ring
+	 *
+	 * A rotating ring of gems from JJ2. Touching the ring collects every gem in it at once, adding them to
+	 * the player's gem count and awarding a points bonus.
+	 */
 	class GemRing : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);
 
 	public:
+		/** @brief Creates a new instance */
 		GemRing();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

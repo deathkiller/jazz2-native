@@ -11,7 +11,14 @@ namespace Jazz2::UI::Menu
 	class SimpleMessageSection : public MenuSection
 	{
 	public:
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param message         Message to be shown
+		 * @param withTransition  Whether a fade-in transition should be played
+		 */
 		SimpleMessageSection(StringView message, bool withTransition = false);
+		/** @overload */
 		SimpleMessageSection(String&& message, bool withTransition = false);
 
 		void OnUpdate(float timeMult) override;

@@ -20,16 +20,27 @@ namespace Jazz2::Scripting
 {
 	class LevelScriptLoader;
 
+	/** @brief Wraps a scripted actor, forwarding engine callbacks to the **AngelScript** object */
 	class ScriptActorWrapper : public Actors::ActorBase
 	{
 	public:
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param levelScripts  Owning level script loader
+		 * @param obj           Backing **AngelScript** object
+		 */
 		ScriptActorWrapper(LevelScriptLoader* levelScripts, asIScriptObject* obj);
 		~ScriptActorWrapper();
 
+		/** @brief Registers the actor factory to the specified **AngelScript** engine and module */
 		static void RegisterFactory(asIScriptEngine* engine, asIScriptModule* module);
+		/** @brief Creates a new wrapper instance for the specified actor type */
 		static ScriptActorWrapper* Factory(std::int32_t actorType);
 
+		/** @brief Increases the reference count */
 		void AddRef();
+		/** @brief Decreases the reference count, destroying the instance when it reaches zero */
 		void Release();
 
 		// Assignment operator
@@ -68,17 +79,28 @@ namespace Jazz2::Scripting
 		void OnAnimationStarted() override;
 		void OnAnimationFinished() override;
 
+		/** @brief Returns the alpha (opacity) of the actor */
 		float asGetAlpha() const;
+		/** @brief Sets the alpha (opacity) of the actor */
 		void asSetAlpha(float value);
+		/** @brief Returns the rendering layer of the actor */
 		uint16_t asGetLayer() const;
+		/** @brief Sets the rendering layer of the actor */
 		void asSetLayer(std::uint16_t value);
 
+		/** @brief Decreases the health of the actor by the specified amount */
 		void asDecreaseHealth(std::int32_t amount);
+		/** @brief Moves the actor to the specified position, returns `true` on success */
 		bool asMoveTo(float x, float y, bool force);
+		/** @brief Moves the actor by the specified offset, returns `true` on success */
 		bool asMoveBy(float x, float y, bool force);
+		/** @brief Applies standard movement integration for the current frame */
 		void asTryStandardMovement(float timeMult);
+		/** @brief Requests metadata to be loaded from the specified path */
 		void asRequestMetadata(const String& path);
+		/** @brief Plays a sound effect by its identifier */
 		void asPlaySfx(const String& identifier, float gain, float pitch);
+		/** @brief Sets the current animation state */
 		void asSetAnimationState(std::int32_t state);
 
 	private:
@@ -96,9 +118,16 @@ namespace Jazz2::Scripting
 		asIScriptFunction* _onAnimationFinished;
 	};
 
+	/** @brief Wraps a scripted collectible actor, forwarding engine callbacks to the **AngelScript** object */
 	class ScriptCollectibleWrapper : public ScriptActorWrapper
 	{
 	public:
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param levelScripts  Owning level script loader
+		 * @param obj           Backing **AngelScript** object
+		 */
 		ScriptCollectibleWrapper(LevelScriptLoader* levelScripts, asIScriptObject* obj);
 
 		bool OnHandleCollision(ActorBase* other) override;
@@ -106,6 +135,7 @@ namespace Jazz2::Scripting
 	protected:
 		Task<bool> OnActivatedAsync(const Actors::ActorActivationDetails& details) override;
 
+		/** @brief Called when the collectible is collected by the specified player */
 		bool OnCollect(Actors::Player* player);
 
 	private:

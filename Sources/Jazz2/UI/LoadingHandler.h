@@ -21,7 +21,20 @@ namespace Jazz2::UI
 
 		/** @} */
 
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param root      Root controller
+		 * @param darkMode  Whether the loading indicator should use the dark theme
+		 */
 		LoadingHandler(IRootController* root, bool darkMode);
+		/**
+		 * @brief Creates a new instance with a completion callback
+		 *
+		 * @param root      Root controller
+		 * @param darkMode  Whether the loading indicator should use the dark theme
+		 * @param callback  Called when the loading finishes
+		 */
 		LoadingHandler(IRootController* root, bool darkMode, Function<bool(IRootController*)>&& callback);
 		~LoadingHandler() override;
 

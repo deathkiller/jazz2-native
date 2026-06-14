@@ -23,6 +23,17 @@ namespace Jazz2::Tiles
 		/** @brief Size of a tile */
 		static constexpr std::int32_t DefaultTileSize = 32;
 
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param path               Relative path to the source file
+		 * @param tileCount          Total number of tiles
+		 * @param textureDiffuse     Main (diffuse) texture
+		 * @param mask               Collision mask of all tiles
+		 * @param maskSize           Size of the collision mask in bytes
+		 * @param captionTile        Pixels of the caption tile
+		 * @param tileDiffuseOpaque  Optional table marking fully opaque tiles
+		 */
 		TileSet(StringView path, std::uint16_t tileCount, std::unique_ptr<Texture> textureDiffuse, std::unique_ptr<std::uint8_t[]> mask, std::uint32_t maskSize, std::unique_ptr<Color[]> captionTile, const std::uint8_t* tileDiffuseOpaque = nullptr);
 
 		/** @brief Relative path to source file */

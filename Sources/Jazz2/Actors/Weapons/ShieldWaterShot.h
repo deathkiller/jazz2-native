@@ -4,12 +4,18 @@
 
 namespace Jazz2::Actors::Weapons
 {
-	/** @brief Water shield (shot) */
+	/**
+	 * @brief Water shield (shot)
+	 *
+	 * Projectile emitted by the water shield power-up. It flies straight with a slight random spread in its firing
+	 * angle and dissipates on hitting a wall.
+	 */
 	class ShieldWaterShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);
 
 	public:
+		/** @brief Creates a new instance */
 		ShieldWaterShot();
 
 		/** @brief Called when the shot is fired */

@@ -28,6 +28,7 @@ namespace Jazz2::UI::Menu
 
 		/** @} */
 
+		/** @brief Creates a new instance attached to the specified level handler */
 		InGameMenu(LevelHandler* root);
 		~InGameMenu();
 

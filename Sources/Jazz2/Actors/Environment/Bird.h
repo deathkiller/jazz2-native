@@ -9,16 +9,24 @@ namespace Jazz2::Actors
 
 namespace Jazz2::Actors::Environment
 {
-	/** @brief Bird */
+	/**
+	 * @brief Bird
+	 *
+	 * Companion bird (the red Chuck or the yellow Birdy) freed from a bird cage that follows
+	 * its owning player around. It automatically attacks nearby enemies---Chuck fires shots
+	 * while Birdy dives at them---and flies away if abandoned.
+	 */
 	class Bird : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Bird();
 
 		bool OnHandleCollision(ActorBase* other) override;
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 		/** @brief Leaves the owner */

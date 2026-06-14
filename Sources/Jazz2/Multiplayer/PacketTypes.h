@@ -9,146 +9,146 @@ namespace Jazz2::Multiplayer
 	/** @brief Packet type broadcasted on the local network */
 	enum class BroadcastPacketType
 	{
-		Null,
-		DiscoveryRequest,
-		DiscoveryResponse
+		Null,				/**< Empty packet */
+		DiscoveryRequest,	/**< Request to discover servers on the local network */
+		DiscoveryResponse	/**< Response of a server to a discovery request */
 	};
 
 	/** @brief Packet type going from client to server */
 	enum class ClientPacketType
 	{
-		Null,
-		Ping,
-		Reserved,
-		Rpc,
+		Null,						/**< Empty packet */
+		Ping,						/**< Ping request to measure round trip time */
+		Reserved,					/**< Reserved */
+		Rpc,						/**< Remote procedure call forwarded to a scripted actor */
 
-		Auth = 10,
-		LevelReady,
-		ChatMessage,
-		ValidateAssetsResponse,
+		Auth = 10,					/**< Authentication request */
+		LevelReady,					/**< Notifies the server that the level finished loading */
+		ChatMessage,				/**< Chat message sent to the server */
+		ValidateAssetsResponse,		/**< Response to a server request to validate required assets */
 
-		ForceResyncActors = 20,
+		ForceResyncActors = 20,		/**< Requests the server to resynchronize all actors */
 
-		PlayerReady = 30,
-		PlayerUpdate,
-		PlayerKeyPress,
-		PlayerChangeWeaponRequest,
-		PlayerSpectateRequest,
-		PlayerAckWarped,
-		PlayerChangeCharacter
+		PlayerReady = 30,			/**< Notifies the server that the player is ready to spawn */
+		PlayerUpdate,				/**< Periodic update of the local player state */
+		PlayerKeyPress,				/**< Player input state */
+		PlayerChangeWeaponRequest,	/**< Requests a weapon change */
+		PlayerSpectateRequest,		/**< Requests to enable or disable spectate mode */
+		PlayerAckWarped,			/**< Acknowledges that the player has been warped */
+		PlayerChangeCharacter		/**< Requests to change the player character */
 	};
 
 	/** @brief Packet type going from server to client */
 	enum class ServerPacketType
 	{
-		Null,
-		Pong,
-		Reserved,
-		Rpc,
+		Null,							/**< Empty packet */
+		Pong,							/**< Response to a ping request */
+		Reserved,						/**< Reserved */
+		Rpc,							/**< Remote procedure call forwarded to a scripted actor */
 
-		AuthResponse = 70,
-		PeerSetProperty,
-		ValidateAssets,
-		StreamAsset,
+		AuthResponse = 70,				/**< Response to an authentication request */
+		PeerSetProperty,				/**< Sets a property of a peer */
+		ValidateAssets,					/**< Requests the client to validate its required assets */
+		StreamAsset,					/**< Streams a missing asset to the client */
 
-		LoadLevel = 80,
-		LevelSetProperty,
+		LoadLevel = 80,					/**< Requests the client to load a level */
+		LevelSetProperty,				/**< Sets a property of the current level */
 		LevelResetProperties,		// TODO
-		ShowInGameLobby,
-		FadeOut,
-		PlaySfx,
-		PlayCommonSfx,
+		ShowInGameLobby,				/**< Requests the client to show the in-game lobby */
+		FadeOut,						/**< Requests the client to fade out the screen */
+		PlaySfx,						/**< Plays a sound effect attached to an actor */
+		PlayCommonSfx,					/**< Plays a common sound effect at a position */
 		ShowAlert,					// TODO
-		ChatMessage,
-		SyncTileMap,
-		SetTrigger,
-		AdvanceTileAnimation,
+		ChatMessage,					/**< Chat message broadcasted to the client */
+		SyncTileMap,					/**< Synchronizes the state of the tile map */
+		SetTrigger,						/**< Sets the state of a trigger */
+		AdvanceTileAnimation,			/**< Advances a destructible tile animation */
 		RevertTileAnimation,		// TODO
-		CreateDebris,
+		CreateDebris,					/**< Creates particle or sprite debris */
 
-		CreateControllablePlayer = 110,
-		CreateRemoteActor,
-		CreateMirroredActor,
-		DestroyRemoteActor,
-		UpdateAllActors,
-		ChangeRemoteActorMetadata,
-		MarkRemoteActorAsPlayer,
-		UpdatePositionsInRound,
+		CreateControllablePlayer = 110,	/**< Creates a player controllable by the client */
+		CreateRemoteActor,				/**< Creates a remote actor on the client */
+		CreateMirroredActor,			/**< Creates a mirrored actor on the client */
+		DestroyRemoteActor,				/**< Destroys a remote actor on the client */
+		UpdateAllActors,				/**< Periodic update of all remote actors */
+		ChangeRemoteActorMetadata,		/**< Changes metadata of a remote actor */
+		MarkRemoteActorAsPlayer,		/**< Marks a remote actor as another player */
+		UpdatePositionsInRound,			/**< Updates player positions in the current round */
 
-		PlayerSetProperty = 130,
-		PlayerResetProperties,
-		PlayerRespawn,
-		PlayerMoveInstantly,
+		PlayerSetProperty = 130,		/**< Sets a property of a player */
+		PlayerResetProperties,			/**< Resets all properties of a player */
+		PlayerRespawn,					/**< Respawns a player */
+		PlayerMoveInstantly,			/**< Moves a player instantly to a position */
 		PlayerAckWarped,			// TODO
 		PlayerActivateForce,		// TODO
-		PlayerEmitWeaponFlare,
-		PlayerChangeWeapon,
-		PlayerTakeDamage,
-		PlayerPush,
-		PlayerActivateSpring,
-		PlayerWarpIn
+		PlayerEmitWeaponFlare,			/**< Emits a weapon flare from a player */
+		PlayerChangeWeapon,				/**< Changes the current weapon of a player */
+		PlayerTakeDamage,				/**< Applies damage to a player */
+		PlayerPush,						/**< Pushes a player */
+		PlayerActivateSpring,			/**< Activates a spring under a player */
+		PlayerWarpIn					/**< Warps a player into the level */
 	};
 
 	/** @brief Peer property type from @ref ServerPacketType::PeerSetProperty */
 	enum class PeerPropertyType
 	{
-		Unknown,
+		Unknown,		/**< Unknown */
 
-		Connected,
-		Disconnected,
-		Roasted,
+		Connected,		/**< Peer connected */
+		Disconnected,	/**< Peer disconnected */
+		Roasted,		/**< Peer was roasted (killed) */
 
-		Count
+		Count			/**< Count of supported property types */
 	};
 
 	/** @brief Level property type from @ref ServerPacketType::LevelSetProperty */
 	enum class LevelPropertyType
 	{
-		Unknown,
+		Unknown,			/**< Unknown */
 
-		State = 1,
-		GameMode,
-		
+		State = 1,			/**< Level state */
+		GameMode,			/**< Game mode */
+
 		LevelText = 10,		// TODO
-		Music,
+		Music,				/**< Currently playing music */
 
-		Count
+		Count				/**< Count of supported property types */
 	};
 
 	/** @brief Player property type from @ref ServerPacketType::PlayerSetProperty */
 	enum class PlayerPropertyType
 	{
-		Unknown,
+		Unknown,			/**< Unknown */
 
-		PlayerType = 1,
-		Lives,
-		Health,
-		Controllable,
-		Invulnerable,
-		Modifier,
-		Dizzy,
-		Freeze,
-		Shield,
-		LimitCameraView,
-		OverrideCameraView,
-		ShakeCameraView,
-		Spectate,
+		PlayerType = 1,		/**< Player type (character) */
+		Lives,				/**< Remaining lives */
+		Health,				/**< Current health */
+		Controllable,		/**< Whether the player is controllable */
+		Invulnerable,		/**< Invulnerability state */
+		Modifier,			/**< Active modifier (e.g. copter, frog) */
+		Dizzy,				/**< Dizziness state */
+		Freeze,				/**< Freeze state */
+		Shield,				/**< Active shield */
+		LimitCameraView,	/**< Camera view limit */
+		OverrideCameraView,	/**< Camera view override */
+		ShakeCameraView,	/**< Camera shake */
+		Spectate,			/**< Spectate mode state */
 
-		WeaponAmmo = 30,
-		WeaponUpgrades,
+		WeaponAmmo = 30,	/**< Ammo of a weapon */
+		WeaponUpgrades,		/**< Upgrades of a weapon */
 
-		Coins = 60,
-		Gems,
-		Score,
+		Coins = 60,			/**< Collected coins */
+		Gems,				/**< Collected gems */
+		Score,				/**< Current score */
 
-		Points = 90,
+		Points = 90,		/**< Earned points in the session */
 		PositionInRound,	// TODO: Unused
-		Deaths,
-		Kills,
-		Laps,
-		TreasureCollected,
+		Deaths,				/**< Deaths in the current round */
+		Kills,				/**< Kills in the current round */
+		Laps,				/**< Completed laps in the current round */
+		TreasureCollected,	/**< Treasure collected in the current round */
 
-		Count
+		Count				/**< Count of supported property types */
 	};
 }
 

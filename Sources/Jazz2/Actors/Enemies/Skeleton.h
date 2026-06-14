@@ -4,14 +4,22 @@
 
 namespace Jazz2::Actors::Enemies
 {
-	/** @brief Skeleton */
+	/**
+	 * @brief Skeleton
+	 *
+	 * Walking skeleton that shambles back and forth along the ground, turning at walls and ledges and
+	 * harming the player on contact. It shakes loose bones when hit and clatters apart into a pile of
+	 * bones and a skull when defeated, which takes several hits.
+	 */
 	class Skeleton : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Skeleton();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

@@ -4,15 +4,23 @@
 
 namespace Jazz2::Actors::Environment
 {
-	/** @brief Copter */
+	/**
+	 * @brief Copter
+	 *
+	 * Flight item (the Lizard's spinning helicopter pack) that the player can grab to gain
+	 * temporary hovering flight. Touching it attaches the copter to the rabbit; once its time
+	 * runs out it detaches, sputters, and fades away.
+	 */
 	class Copter : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Copter();
 		~Copter();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 		bool OnHandleCollision(ActorBase* other) override;

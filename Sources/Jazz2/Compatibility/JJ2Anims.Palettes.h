@@ -4,6 +4,7 @@
 
 using namespace nCine;
 
+/** @brief Palette index remapping that fixes the Toaster power-up colors */
 static constexpr uint8_t ToasterPowerUpFix[] = {
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
 	21, 22, 23, /*<*/88, 89, 90, 91, 92, 93, 94/*>*/, 31, /*<*/40, 41, 42, 43, 44, 45/*>*/, 38, 39, 40,
@@ -20,6 +21,7 @@ static constexpr uint8_t ToasterPowerUpFix[] = {
 	241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255
 };
 
+/** @brief Default palette used by the original menu animations */
 static constexpr Color MenuPalette[] = {
 	Color(0, 0, 0, 0), // 0
 	Color(0, 0, 1, 255), // 1
@@ -279,6 +281,7 @@ static constexpr Color MenuPalette[] = {
 	Color(254, 255, 255, 255) // 255
 };
 
+/** @brief Default palette used by the original sprite animations */
 static constexpr Color SpritePalette[] = {
 	Color(0, 0, 0, 0), // 0
 	Color(0, 0, 1, 255), // 1

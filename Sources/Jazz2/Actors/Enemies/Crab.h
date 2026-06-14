@@ -4,14 +4,22 @@
 
 namespace Jazz2::Actors::Enemies
 {
-	/** @brief Crab */
+	/**
+	 * @brief Crab
+	 *
+	 * Walks steadily along the ground, turning around when it hits a wall or ledge it cannot pass,
+	 * while chittering and making footstep sounds. Takes several hits to defeat and bursts in a large
+	 * explosion when destroyed.
+	 */
 	class Crab : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Crab();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

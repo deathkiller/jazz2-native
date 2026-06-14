@@ -20,19 +20,28 @@ namespace Jazz2::Compatibility
 	public:
 		/** @brief Item from a `.j2d` data file */
 		struct Item {
+			/** @brief File name of the item */
 			String Filename;
+			/** @brief Raw item data */
 			std::unique_ptr<uint8_t[]> Blob;
+			/** @brief Item type */
 			std::uint32_t Type;
+			/** @brief Size of the item data in bytes */
 			std::int32_t Size;
 		};
 
+		/** @brief List of parsed items */
 		SmallVector<Item, 0> Items;
 
+		/** @brief Creates a new instance */
 		JJ2Data() {}
 
+		/** @brief Opens and parses the specified `.j2d` data file */
 		bool Open(StringView path, bool strictParser);
 
+		/** @brief Extracts all items to the specified target path */
 		void Extract(StringView targetPath);
+		/** @brief Converts the data file and writes the result to a `.pak` file */
 		void Convert(PakWriter& pakWriter, JJ2Version version);
 
 	private:

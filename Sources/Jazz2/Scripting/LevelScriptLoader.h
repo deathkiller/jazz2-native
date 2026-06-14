@@ -57,6 +57,12 @@ namespace Jazz2::Scripting
 		friend class Legacy::jjPAL;
 
 	public:
+		/**
+		 * @brief Creates a new instance and binds the specified script to the level handler
+		 *
+		 * @param levelHandler  Level handler the script is bound to
+		 * @param scriptPath    Path to the script file to load
+		 */
 		LevelScriptLoader(LevelHandler* levelHandler, StringView scriptPath);
 		~LevelScriptLoader();
 

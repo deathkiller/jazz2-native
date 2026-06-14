@@ -4,14 +4,22 @@
 
 namespace Jazz2::Actors::Bosses
 {
-	/** @brief Bilsy (boss) */
+	/**
+	 * @brief Bilsy (boss)
+	 *
+	 * The fire-throwing demon summoned by Devan. He repeatedly teleports to random spots around the arena,
+	 * then turns to face the nearest player and spews a homing fireball before vanishing again. He is only
+	 * vulnerable while materialized between teleports and is defeated once his health is depleted.
+	 */
 	class Bilsy : public BossBase
 	{
 		DEATH_RUNTIME_OBJECT(BossBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Bilsy();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

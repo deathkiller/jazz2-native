@@ -8,6 +8,7 @@ namespace Jazz2::Input
 	class RumbleProcessor
 	{
 	public:
+		/** @brief Creates a new instance */
 		RumbleProcessor();
 		~RumbleProcessor();
 

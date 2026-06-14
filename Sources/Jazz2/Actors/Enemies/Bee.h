@@ -4,15 +4,23 @@
 
 namespace Jazz2::Actors::Enemies
 {
-	/** @brief Bee */
+	/**
+	 * @brief Bee
+	 *
+	 * Floating insect that bobs in a small circular pattern near its origin and periodically darts out
+	 * to lunge at the nearest player within range, buzzing as it attacks, before drifting back to its
+	 * starting point. Defeated by a single hit.
+	 */
 	class Bee : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Bee();
 		~Bee();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

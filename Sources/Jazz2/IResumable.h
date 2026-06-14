@@ -12,6 +12,7 @@ namespace Jazz2
 	class IResumable
 	{
 	public:
+		/** @brief Creates a new instance */
 		IResumable() {}
 
 		/** @brief Serializes object state to a stream */

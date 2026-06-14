@@ -186,6 +186,7 @@ namespace Jazz2::Actors
 #endif
 
 	public:
+		/** @brief Creates a new instance */
 		ActorBase();
 		virtual ~ActorBase();
 
@@ -261,6 +262,11 @@ namespace Jazz2::Actors
 			friend class ActorBase;
 
 		public:
+			/**
+			 * @brief Creates a new instance
+			 *
+			 * @param owner  Actor that owns this renderer
+			 */
 			ActorRenderer(ActorBase* owner);
 
 			/** @brief Whether the animation is paused */

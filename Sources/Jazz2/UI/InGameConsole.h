@@ -28,13 +28,17 @@ namespace Jazz2::UI
 	class InGameConsole : public Canvas
 	{
 	public:
+		/** @brief Creates a new instance */
 		InGameConsole(LevelHandler* levelHandler);
 		~InGameConsole();
 
+		/** @brief Called when the console is fully initialized */
 		void OnInitialized();
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
+		/** @brief Called when a key is pressed */
 		void OnKeyPressed(const KeyboardEvent& event);
+		/** @brief Called when text is entered */
 		void OnTextInput(const TextInputEvent& event);
 
 		/** @brief Clears the console and its history */

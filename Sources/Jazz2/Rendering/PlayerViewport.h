@@ -42,18 +42,41 @@ namespace Jazz2::Rendering
 		Vector4f _ambientLight;
 #endif
 
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param levelHandler  Level handler that owns the viewport
+		 * @param targetActor   Actor the camera follows
+		 */
 		PlayerViewport(LevelHandler* levelHandler, Actors::ActorBase* targetActor);
 
+		/**
+		 * @brief Initializes the viewport
+		 *
+		 * @param sceneNode   Root node of the rendered scene
+		 * @param outputNode  Node the resulting image is attached to
+		 * @param bounds      Bounds of the viewport
+		 * @param useHalfRes  Whether to render at half resolution
+		 */
 		bool Initialize(SceneNode* sceneNode, SceneNode* outputNode, Recti bounds, bool useHalfRes);
+		/** @brief Registers the viewport and its render passes into the viewport chain */
 		void Register();
 
+		/** @brief Returns bounds of the viewport */
 		Rectf GetBounds() const;
+		/** @brief Returns size of the viewport */
 		Vector2i GetViewportSize() const;
+		/** @brief Returns the actor the camera follows */
 		Actors::ActorBase* GetTargetActor() const;
+		/** @brief Called at the end of each frame */
 		void OnEndFrame();
+		/** @brief Updates the camera position */
 		void UpdateCamera(float timeMult);
+		/** @brief Shakes the camera view for a given duration */
 		void ShakeCameraView(float duration);
+		/** @brief Overrides the camera position */
 		void OverrideCamera(float x, float y, bool topLeft = false);
+		/** @brief Instantly moves the camera to the target actor */
 		void WarpCameraToTarget(bool fast);
 
 	private:

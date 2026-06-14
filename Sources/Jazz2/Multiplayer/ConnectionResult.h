@@ -12,7 +12,9 @@ namespace Jazz2::Multiplayer
 		/** @brief Failure reason if the connection was not successful */
 		Reason FailureReason;
 
+		/** @brief Creates an instance from a failure reason */
 		ConnectionResult(Reason reason);
+		/** @brief Creates an instance from a success state */
 		ConnectionResult(bool success);
 
 		explicit operator bool() const {

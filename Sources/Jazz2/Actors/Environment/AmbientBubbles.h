@@ -4,14 +4,22 @@
 
 namespace Jazz2::Actors::Environment
 {
-	/** @brief Ambient bubbles */
+	/**
+	 * @brief Ambient bubbles
+	 *
+	 * Decorative emitter that releases streams of rising bubbles, used in underwater
+	 * sections to give submerged areas life. Purely cosmetic---the bubbles drift upward
+	 * and fade away without affecting gameplay.
+	 */
 	class AmbientBubbles : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
+		/** @brief Creates a new instance */
 		AmbientBubbles();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

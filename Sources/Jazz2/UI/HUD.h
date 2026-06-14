@@ -42,11 +42,13 @@ namespace Jazz2::UI
 		static constexpr float SmallButtonSize = 0.098f;
 #endif
 
+		/** @brief Creates a new instance */
 		HUD(LevelHandler* levelHandler);
 		~HUD();
 
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
+		/** @brief Called when a touch event occurs, allowing the HUD to override actions and movement */
 		void OnTouchEvent(const TouchEvent& event, std::uint32_t& overrideActions, Vector2f& overrideMovement);
 
 		/** @brief Shows a text notification */

@@ -21,6 +21,11 @@ namespace Jazz2::Actors::Multiplayer
 		/** @brief The position at which the player should respawn */
 		Vector2f RespawnPos;
 
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param peerDesc  Descriptor of the peer this player belongs to
+		 */
 		RemotablePlayer(std::shared_ptr<PeerDescriptor> peerDesc);
 
 		/** @brief Warps the player in */

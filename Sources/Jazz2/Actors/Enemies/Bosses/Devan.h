@@ -4,14 +4,23 @@
 
 namespace Jazz2::Actors::Bosses
 {
-	/** @brief Devan (boss) */
+	/**
+	 * @brief Devan (boss)
+	 *
+	 * Devan Shell, the main antagonist, fought in his humanoid form. He warps in, then runs around the arena
+	 * shooting bullets and crouching to dodge incoming fire. Once reduced to half health he drops his gun and
+	 * transforms into a flying demon that hovers and spits fireballs; depleting his health in this form makes
+	 * him fall and warp out, ending the fight.
+	 */
 	class Devan : public BossBase
 	{
 		DEATH_RUNTIME_OBJECT(BossBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Devan();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

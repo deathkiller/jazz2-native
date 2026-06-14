@@ -4,12 +4,19 @@
 
 namespace Jazz2::Actors::Weapons
 {
-	/** @brief Pepper (shot) */
+	/**
+	 * @brief Pepper (shot)
+	 *
+	 * Projectile of the pepper spray (Spaz's special weapon), fired as a short-range spread of fast, briefly-lived
+	 * particles with randomized speed and lifetime that fan out and quickly fade. The powered-up variant flies
+	 * faster, lives longer and emits light.
+	 */
 	class PepperShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);
 
 	public:
+		/** @brief Creates a new instance */
 		PepperShot();
 
 		/** @brief Called when the shot is fired */

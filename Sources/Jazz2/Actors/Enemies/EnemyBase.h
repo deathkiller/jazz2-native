@@ -11,6 +11,7 @@ namespace Jazz2::Actors::Enemies
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
+		/** @brief Creates a new instance */
 		EnemyBase();
 
 		/** @brief Whether the enemy should collide with player shots */
@@ -40,12 +41,19 @@ namespace Jazz2::Actors::Enemies
 		void OnHealthChanged(ActorBase* collider) override;
 		bool OnPerish(ActorBase* collider) override;
 
+		/** @brief Awards the enemy's score value to the collider (or its owner) */
 		void AddScoreToCollider(ActorBase* collider);
+		/** @brief Sets the enemy's health scaled by the current game difficulty */
 		virtual void SetHealthByDifficulty(std::int32_t health);
+		/** @brief Snaps the enemy onto the ground below it */
 		void PlaceOnGround();
+		/** @brief Returns whether the enemy can move to the specified relative offset */
 		bool CanMoveToPosition(float x, float y);
+		/** @brief Randomly spawns a drop (collectible) at the enemy's position */
 		void TryGenerateRandomDrop();
+		/** @brief Starts the white-mask blinking effect */
 		void StartBlinking();
+		/** @brief Advances the blinking effect */
 		void HandleBlinking(float timeMult);
 
 	private:

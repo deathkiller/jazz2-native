@@ -23,9 +23,10 @@ namespace Jazz2::Resources
 	/** @brief Flags for @ref GenericGraphicResource, supports a bitwise combination of its member values */
 	enum class GenericGraphicResourceFlags
 	{
-		None = 0x00,
+		None = 0x00,						/**< None */
 
-		Referenced = 0x01,
+		Referenced = 0x01,					/**< The resource is referenced and should not be released */
+		
 		/**
 		 * @brief Diffuse texture stores raw palette indices instead of baked colors
 		 *
@@ -62,6 +63,7 @@ namespace Jazz2::Resources
 		/** @brief Optional gunspot */
 		Vector2i Gunspot;
 
+		/** @brief Creates a new instance */
 		GenericGraphicResource() noexcept;
 	};
 
@@ -88,17 +90,19 @@ namespace Jazz2::Resources
 		 */
 		std::uint16_t PaletteOffset;
 
+		/** @brief Creates a new instance */
 		GraphicResource() noexcept;
 
+		/** @brief Compares two resources by animation state */
 		bool operator<(const GraphicResource& p) const noexcept;
 	};
 
 	/** @brief Flags for @ref GenericSoundResource, supports a bitwise combination of its member values */
 	enum class GenericSoundResourceFlags
 	{
-		None = 0x00,
+		None = 0x00,						/**< None */
 
-		Referenced = 0x01
+		Referenced = 0x01					/**< The resource is referenced and should not be released */
 	};
 
 	DEATH_ENUM_FLAGS(GenericSoundResourceFlags);
@@ -111,6 +115,12 @@ namespace Jazz2::Resources
 		/** @brief Resource flags */
 		GenericSoundResourceFlags Flags;
 
+		/**
+		 * @brief Creates a new instance from a stream
+		 *
+		 * @param stream	Stream containing the sound data
+		 * @param filename	File name used to detect the audio format
+		 */
 		GenericSoundResource(std::unique_ptr<Stream> stream, StringView filename) noexcept;
 	};
 
@@ -120,15 +130,16 @@ namespace Jazz2::Resources
 		/** @brief List of underlying generic resources */
 		SmallVector<GenericSoundResource*, 1> Buffers;
 
+		/** @brief Creates a new instance */
 		SoundResource() noexcept;
 	};
 
 	/** @brief Flags for @ref Metadata, supports a bitwise combination of its member values */
 	enum class MetadataFlags {
-		None = 0x00,
+		None = 0x00,						/**< None */
 
-		Referenced = 0x01,
-		AsyncFinalizingRequired = 0x02
+		Referenced = 0x01,					/**< The metadata is referenced and should not be released */
+		AsyncFinalizingRequired = 0x02		/**< The metadata still requires asynchronous finalization */
 	};
 
 	DEATH_ENUM_FLAGS(MetadataFlags);
@@ -149,6 +160,7 @@ namespace Jazz2::Resources
 		/** @brief Bounding box */
 		Vector2i BoundingBox;
 
+		/** @brief Creates a new instance */
 		Metadata() noexcept;
 
 		/** @brief Finds specified animation state */
@@ -175,6 +187,7 @@ namespace Jazz2::Resources
 		/** @brief Texture for background image */
 		std::unique_ptr<Texture> BackgroundImage;
 
+		/** @brief Creates a new instance */
 		Episode() noexcept;
 	};
 
@@ -190,70 +203,70 @@ namespace Jazz2::Resources
 	/** @brief Precompiled shader */
 	enum class PrecompiledShader
 	{
-		Lighting,
-		BatchedLighting,
+		Lighting,							/**< Lighting */
+		BatchedLighting,					/**< Batched variant of @ref Lighting */
 
-		Blur,
-		Downsample,
-		Combine,
-		CombineWithWater,
-		CombineWithWaterLow,
+		Blur,								/**< Blur */
+		Downsample,							/**< Downsample */
+		Combine,							/**< Combine render passes */
+		CombineWithWater,					/**< Combine render passes with water effect */
+		CombineWithWaterLow,				/**< Combine render passes with low quality water effect */
 
-		TexturedBackground,
-		TexturedBackgroundDither,
-		TexturedBackgroundCircle,
-		TexturedBackgroundCircleDither,
+		TexturedBackground,					/**< Textured background */
+		TexturedBackgroundDither,			/**< Textured background with dithering */
+		TexturedBackgroundCircle,			/**< Circular textured background */
+		TexturedBackgroundCircleDither,		/**< Circular textured background with dithering */
 
-		Colorized,
-		BatchedColorized,
-		Tinted,
-		BatchedTinted,
-		Outline,
-		BatchedOutline,
-		WhiteMask,
-		BatchedWhiteMask,
-		PartialWhiteMask,
-		BatchedPartialWhiteMask,
-		FrozenMask,
-		BatchedFrozenMask,
-		PaletteRemap,
-		BatchedPaletteRemap,
-		OutlinePalette,
-		BatchedOutlinePalette,
-		WhiteMaskPalette,
-		BatchedWhiteMaskPalette,
-		PartialWhiteMaskPalette,
-		BatchedPartialWhiteMaskPalette,
-		FrozenMaskPalette,
-		BatchedFrozenMaskPalette,
-		TintedPalette,
-		BatchedTintedPalette,
-		ShieldFire,
-		BatchedShieldFire,
-		ShieldLightning,
-		BatchedShieldLightning,
+		Colorized,							/**< Colorized */
+		BatchedColorized,					/**< Batched variant of @ref Colorized */
+		Tinted,								/**< Tinted */
+		BatchedTinted,						/**< Batched variant of @ref Tinted */
+		Outline,							/**< Outline */
+		BatchedOutline,						/**< Batched variant of @ref Outline */
+		WhiteMask,							/**< White mask */
+		BatchedWhiteMask,					/**< Batched variant of @ref WhiteMask */
+		PartialWhiteMask,					/**< Partial white mask */
+		BatchedPartialWhiteMask,			/**< Batched variant of @ref PartialWhiteMask */
+		FrozenMask,							/**< Frozen mask */
+		BatchedFrozenMask,					/**< Batched variant of @ref FrozenMask */
+		PaletteRemap,						/**< Remaps indexed sprites through a palette texture */
+		BatchedPaletteRemap,				/**< Batched variant of @ref PaletteRemap */
+		OutlinePalette,						/**< Palette variant of @ref Outline */
+		BatchedOutlinePalette,				/**< Batched variant of @ref OutlinePalette */
+		WhiteMaskPalette,					/**< Palette variant of @ref WhiteMask */
+		BatchedWhiteMaskPalette,			/**< Batched variant of @ref WhiteMaskPalette */
+		PartialWhiteMaskPalette,			/**< Palette variant of @ref PartialWhiteMask */
+		BatchedPartialWhiteMaskPalette,		/**< Batched variant of @ref PartialWhiteMaskPalette */
+		FrozenMaskPalette,					/**< Palette variant of @ref FrozenMask */
+		BatchedFrozenMaskPalette,			/**< Batched variant of @ref FrozenMaskPalette */
+		TintedPalette,						/**< Palette variant of @ref Tinted */
+		BatchedTintedPalette,				/**< Batched variant of @ref TintedPalette */
+		ShieldFire,							/**< Fire shield effect */
+		BatchedShieldFire,					/**< Batched variant of @ref ShieldFire */
+		ShieldLightning,					/**< Lightning shield effect */
+		BatchedShieldLightning,				/**< Batched variant of @ref ShieldLightning */
 
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 		// Whole-layer tile mesh: one draw call per tile layer instead of one per visible tile. Reads per-vertex
 		// position/texcoords/alpha; `TileMapMeshPalette` additionally recolors indexed tilesets via the palette texture.
-		TileMapMesh,
-		TileMapMeshPalette,
+		TileMapMesh,						/**< Tile-map aggregation shader */
+		TileMapMeshPalette,					/**< Batched variant of @ref TileMapMesh */
 #endif
 
 #if !defined(DISABLE_RESCALE_SHADERS)
-		ResizeHQ2x,
-		Resize3xBrz,
-		ResizeCrtScanlines,
-		ResizeCrtShadowMask,
-		ResizeCrtApertureGrille,
-		ResizeMonochrome,
-		ResizeSabr,
-		ResizeCleanEdge,
+		ResizeHQ2x,							/**< HQ2× upscaling */
+		Resize3xBrz,						/**< 3×BRZ upscaling */
+		ResizeCrtScanlines,					/**< CRT scanlines upscaling */
+		ResizeCrtShadowMask,				/**< CRT shadow mask upscaling */
+		ResizeCrtApertureGrille,			/**< CRT aperture grille upscaling */
+		ResizeMonochrome,					/**< Monochrome upscaling */
+		ResizeSabr,							/**< SABR upscaling */
+		ResizeCleanEdge,					/**< CleanEdge upscaling */
 #endif
-		Antialiasing,
-		Transition,
-		TouchCircle,
+		Antialiasing,						/**< Antialiasing */
+		Transition,							/**< Screen transition effect */
+		TouchCircle,						/**< Touch control circle */
 
-		Count
+		Count								/**< Number of precompiled shaders */
 	};
 }

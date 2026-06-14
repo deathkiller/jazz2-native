@@ -4,7 +4,13 @@
 
 namespace Jazz2::Actors
 {
-	/** @brief Explosion effects */
+	/**
+	 * @brief Explosion effects
+	 *
+	 * A transient visual effect actor spawned when something is destroyed, such as a projectile impact,
+	 * an enemy death or a smoke/debris puff. It plays a single animation and then disappears. Covers
+	 * several explosion and smoke variants (see @ref Type).
+	 */
 	class Explosion : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
@@ -12,31 +18,33 @@ namespace Jazz2::Actors
 	public:
 		/** @brief Explosion effect type */
 		enum class Type {
-			Tiny,
-			TinyBlue,
-			TinyDark,
-			Small,
-			SmallDark,
-			Large,
+			Tiny,				/**< Tiny explosion */
+			TinyBlue,			/**< Tiny blue explosion */
+			TinyDark,			/**< Tiny dark explosion */
+			Small,				/**< Small explosion */
+			SmallDark,			/**< Small dark explosion */
+			Large,				/**< Large explosion */
 
-			SmokeBrown,
-			SmokeGray,
-			SmokeWhite,
-			SmokePoof,
+			SmokeBrown,			/**< Brown smoke */
+			SmokeGray,			/**< Gray smoke */
+			SmokeWhite,			/**< White smoke */
+			SmokePoof,			/**< Smoke poof */
 
-			WaterSplash,
+			WaterSplash,		/**< Water splash */
 
-			Pepper,
-			RF,
-			RFUpgraded,
+			Pepper,				/**< Pepper spray impact */
+			RF,					/**< RF missile explosion */
+			RFUpgraded,			/**< Upgraded RF missile explosion */
 
-			Generator,
+			Generator,			/**< Generator (de)activation effect */
 
-			IceShrapnel,
+			IceShrapnel,		/**< Ice shrapnel */
 		};
 
+		/** @brief Creates a new instance */
 		Explosion();
 
+		/** @brief Spawns an explosion effect of a given type at a given position */
 		static void Create(ILevelHandler* levelHandler, const Vector3i& pos, Type type, float scale = 1.0f);
 
 	protected:

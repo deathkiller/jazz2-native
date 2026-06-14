@@ -38,6 +38,7 @@ namespace Jazz2::UI
 			String SmallImageTooltip;
 		};
 
+		/** @brief Creates a new instance */
 		DiscordRpcClient();
 		~DiscordRpcClient();
 

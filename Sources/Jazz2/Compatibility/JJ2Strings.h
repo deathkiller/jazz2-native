@@ -18,30 +18,41 @@ namespace Jazz2::Compatibility
 		/** @brief Texts for specific level */
 		struct LevelEntry
 		{
+			/** @brief Level name */
 			String Name;
+			/** @brief Texts of the level's text events */
 			SmallVector<String, 0> TextEvents;
 
+			/** @brief Creates a new instance for the specified level name */
 			LevelEntry(String name)
 				: Name(name)
 			{
 			}
 		};
 
+		/** @brief Name of the localization */
 		String Name;
+		/** @brief Texts shared across all levels */
 		SmallVector<String, 0> CommonTexts;
+		/** @brief Per-level texts */
 		SmallVector<LevelEntry, 0> LevelTexts;
 
+		/** @brief Creates a new instance */
 		JJ2Strings() { }
 
+		/** @brief Creates a new instance with the specified name */
 		JJ2Strings(StringView name)
 			: Name(name)
 		{
 		}
 
+		/** @brief Opens and parses the specified localization file */
 		bool Open(StringView path);
 
+		/** @brief Converts the localization and writes the result to the specified target path */
 		void Convert(StringView targetPath, Function<JJ2Level::LevelToken(StringView)>&& levelTokenConversion);
 
+		/** @brief Recodes a string from the original encoding, optionally stripping formatting or escaping it */
 		static String RecodeString(StringView text, bool stripFormatting = false, bool escaped = false);
 	};
 }

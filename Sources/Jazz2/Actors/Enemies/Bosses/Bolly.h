@@ -4,15 +4,23 @@
 
 namespace Jazz2::Actors::Bosses
 {
-	/** @brief Bolly (boss) */
+	/**
+	 * @brief Bolly (boss)
+	 *
+	 * A large flying mechanical boss with a trailing chain tail that hovers around the arena tracking the
+	 * nearest player. It periodically stops to launch a volley of homing rockets before resuming flight,
+	 * and is defeated by depleting its health while dodging the rockets.
+	 */
 	class Bolly : public BossBase
 	{
 		DEATH_RUNTIME_OBJECT(BossBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Bolly();
 		~Bolly();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

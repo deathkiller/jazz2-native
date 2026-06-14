@@ -4,14 +4,22 @@
 
 namespace Jazz2::Actors::Enemies
 {
-	/** @brief Bat */
+	/**
+	 * @brief Bat
+	 *
+	 * Hangs idle from a fixed spot until a player comes near, then wakes up and swoops in to attack,
+	 * homing toward the target while avoiding the water surface and returning to its origin when the
+	 * player escapes. Easily dispatched with a single hit.
+	 */
 	class Bat : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Bat();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

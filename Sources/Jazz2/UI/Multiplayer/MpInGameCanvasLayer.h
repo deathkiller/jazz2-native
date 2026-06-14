@@ -12,6 +12,7 @@ namespace Jazz2::UI::Multiplayer
 	class MpInGameCanvasLayer : public Canvas
 	{
 	public:
+		/** @brief Creates a new instance */
 		MpInGameCanvasLayer(Jazz2::Multiplayer::MpLevelHandler* levelHandler);
 
 		bool OnDraw(RenderQueue& renderQueue) override;

@@ -4,15 +4,23 @@
 
 namespace Jazz2::Actors::Solid
 {
-	/** @brief Bridge */
+	/**
+	 * @brief Bridge
+	 *
+	 * A span the player can walk across that sags downward under their weight and springs back once they
+	 * step off, made up of individually drawn pieces. Several visual styles exist (rope, vine, stone, log,
+	 * etc.) depending on the level theme.
+	 */
 	class Bridge : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Bridge();
 		~Bridge();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

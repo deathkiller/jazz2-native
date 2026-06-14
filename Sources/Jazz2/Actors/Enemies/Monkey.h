@@ -4,14 +4,22 @@
 
 namespace Jazz2::Actors::Enemies
 {
-	/** @brief Monkey */
+	/**
+	 * @brief Monkey
+	 *
+	 * Monkey that either patrols the ground on foot or hangs in place, hurling bananas at nearby
+	 * players that arc through the air and splatter on impact. The throw distance scales with how far
+	 * the player is. Takes several hits to defeat.
+	 */
 	class Monkey : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Monkey();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

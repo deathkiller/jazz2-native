@@ -4,17 +4,25 @@
 
 namespace Jazz2::Actors::Solid
 {
-	/** @brief Moving platform */
+	/**
+	 * @brief Moving platform
+	 *
+	 * A solid platform suspended from a chain that swings or circles along a fixed path; the player can stand
+	 * on it and is carried along as it moves. Comes in several themed variants (Carrotus fruit, ball, lab,
+	 * etc.), including spiked variants that damage the player instead of carrying them.
+	 */
 	class MovingPlatform : public SolidObjectBase
 	{
 		DEATH_RUNTIME_OBJECT(SolidObjectBase);
 
 	public:
+		/** @brief Creates a new instance */
 		MovingPlatform();
 		~MovingPlatform();
 
 		bool OnHandleCollision(ActorBase* other) override;
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

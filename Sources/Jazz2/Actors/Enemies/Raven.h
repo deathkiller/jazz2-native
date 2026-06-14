@@ -4,14 +4,22 @@
 
 namespace Jazz2::Actors::Enemies
 {
-	/** @brief Raven */
+	/**
+	 * @brief Raven
+	 *
+	 * Black bird that hovers in place with a gentle bobbing motion and, when a player comes within
+	 * range, swoops down to attack from above before gliding back to its origin, staying clear of the
+	 * water. Takes a couple of hits to defeat.
+	 */
 	class Raven : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Raven();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

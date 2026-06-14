@@ -12,6 +12,7 @@ namespace Jazz2::UI::Multiplayer
 	class MpInGameLobby : public Canvas
 	{
 	public:
+		/** @brief Creates a new instance */
 		MpInGameLobby(Jazz2::Multiplayer::MpLevelHandler* levelHandler);
 		~MpInGameLobby();
 

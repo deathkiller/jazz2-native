@@ -17,6 +17,7 @@ namespace Jazz2::UI::Menu
 	class MultiplayerGameModeSelectSection : public ScrollableMenuSection<MultiplayerGameModeItem>
 	{
 	public:
+		/** @brief Creates a new instance */
 		MultiplayerGameModeSelectSection();
 
 		void OnShow(IMenuContainer* root) override;

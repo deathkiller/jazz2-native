@@ -4,12 +4,18 @@
 
 namespace Jazz2::Actors::Weapons
 {
-	/** @brief Fire shield (shot) */
+	/**
+	 * @brief Fire shield (shot)
+	 *
+	 * Projectile emitted by the fire shield power-up. It flies straight and fast, casts a bright light, and
+	 * dissipates on hitting a wall.
+	 */
 	class ShieldFireShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);
 
 	public:
+		/** @brief Creates a new instance */
 		ShieldFireShot();
 
 		/** @brief Called when the shot is fired */

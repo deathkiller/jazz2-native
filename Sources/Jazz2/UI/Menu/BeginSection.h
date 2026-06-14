@@ -8,6 +8,7 @@ namespace Jazz2::UI::Menu
 	class BeginSection : public MenuSection
 	{
 	public:
+		/** @brief Creates a new instance */
 		BeginSection();
 
 		void OnShow(IMenuContainer* root) override;

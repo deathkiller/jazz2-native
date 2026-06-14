@@ -34,16 +34,24 @@ namespace Jazz2::Compatibility
 
 		/** @brief Mapped entry */
 		struct Entry {
+			/** @brief Category name */
 			String Category;
+			/** @brief Entry name */
 			String Name;
+			/** @brief Sequential ordinal of the entry */
 			std::uint32_t Ordinal;
 
+			/** @brief Default palette used by the entry */
 			JJ2DefaultPalette Palette;
+			/** @brief Whether normal map generation should be skipped */
 			bool SkipNormalMap;
+			/** @brief Whether the entry allows realtime palette changes */
 			bool AllowRealtimePalette;
 		};
 
+		/** @brief Returns the entry for the specified set and item, or `nullptr` if not found */
 		Entry* Get(std::uint32_t set, std::uint32_t item);
+		/** @brief Returns the entry with the specified ordinal index, or `nullptr` if not found */
 		Entry* GetByOrdinal(std::uint32_t index);
 
 		/** @brief Returns mapping of animations for the specified version */

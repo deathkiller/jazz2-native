@@ -34,6 +34,13 @@ namespace Jazz2::UI
 
 		/** @} */
 
+		/**
+		 * @brief Creates a new instance and starts playing the specified cinematic
+		 *
+		 * @param root      Root controller
+		 * @param path      Path to the cinematic to play
+		 * @param callback  Called when the playback finishes or is skipped
+		 */
 		Cinematics(IRootController* root, StringView path, Function<bool(IRootController*, bool)>&& callback);
 		~Cinematics() override;
 

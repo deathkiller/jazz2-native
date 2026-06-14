@@ -14,6 +14,7 @@ namespace Jazz2::UI::Menu
 	class LanguageSelectSection : public ScrollableMenuSection<LanguageData>
 	{
 	public:
+		/** @brief Creates a new instance */
 		LanguageSelectSection();
 
 		void OnDraw(Canvas* canvas) override;

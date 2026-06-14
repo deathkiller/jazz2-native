@@ -17,6 +17,7 @@ namespace Jazz2::UI::Menu
 	class ImportSection : public MenuSection
 	{
 	public:
+		/** @brief Creates a new instance */
 		ImportSection();
 
 		void OnShow(IMenuContainer* root) override;

@@ -22,6 +22,7 @@ namespace Jazz2::UI::Menu
 	class GameplayEnhancementsSection : public ScrollableMenuSection<GameplayEnhancementsItem>
 	{
 	public:
+		/** @brief Creates a new instance */
 		GameplayEnhancementsSection();
 		~GameplayEnhancementsSection();
 

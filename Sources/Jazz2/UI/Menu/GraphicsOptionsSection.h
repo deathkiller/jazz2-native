@@ -34,6 +34,7 @@ namespace Jazz2::UI::Menu
 	class GraphicsOptionsSection : public ScrollableMenuSection<GraphicsOptionsItem>
 	{
 	public:
+		/** @brief Creates a new instance */
 		GraphicsOptionsSection();
 		~GraphicsOptionsSection();
 

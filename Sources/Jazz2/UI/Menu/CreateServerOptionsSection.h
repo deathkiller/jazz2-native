@@ -13,6 +13,13 @@ namespace Jazz2::UI::Menu
 		/** @brief Special value for LevelName to create a server from configured playlist */
 		static constexpr StringView FromPlaylist = "\0:playlist"_s;
 
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param levelName            Level to host, or @ref FromPlaylist to use the configured playlist
+		 * @param previousEpisodeName  Name of the episode the level belongs to
+		 * @param privateServer        Whether the server should be private (not publicly listed)
+		 */
 		CreateServerOptionsSection(StringView levelName, StringView previousEpisodeName, bool privateServer);
 
 		void OnShow(IMenuContainer* root) override;
@@ -21,7 +28,9 @@ namespace Jazz2::UI::Menu
 		void OnDrawOverlay(Canvas* canvas) override;
 		void OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize) override;
 
+		/** @brief Returns the selected multiplayer game mode */
 		Jazz2::Multiplayer::MpGameMode GetGameMode() const;
+		/** @brief Sets the selected multiplayer game mode */
 		void SetGameMode(Jazz2::Multiplayer::MpGameMode value);
 
 	private:

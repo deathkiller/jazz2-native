@@ -29,6 +29,12 @@ namespace Jazz2::UI::Menu
 	class EpisodeSelectSection : public ScrollableMenuSection<EpisodeData>
 	{
 	public:
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param multiplayer    Whether the selected level should be hosted as a multiplayer server
+		 * @param privateServer  Whether the hosted server should be private (not publicly listed)
+		 */
 		EpisodeSelectSection(bool multiplayer = false, bool privateServer = false);
 
 		void OnUpdate(float timeMult) override;

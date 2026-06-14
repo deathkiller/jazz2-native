@@ -4,12 +4,19 @@
 
 namespace Jazz2::Actors::Weapons
 {
-	/** @brief Blaster (shot) */
+	/**
+	 * @brief Blaster (shot)
+	 *
+	 * Projectile of the default rapid-fire energy blaster, the player's starting weapon with unlimited ammo.
+	 * It travels in a straight line, vanishes when it hits a wall, and can ricochet off ricochet modifier tiles.
+	 * The powered-up variant is stronger and lives slightly longer.
+	 */
 	class BlasterShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);
 
 	public:
+		/** @brief Creates a new instance */
 		BlasterShot();
 
 		/** @brief Called when the shot is fired */

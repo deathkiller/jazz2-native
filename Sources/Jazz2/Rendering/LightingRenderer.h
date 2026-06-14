@@ -19,6 +19,7 @@ namespace Jazz2::Rendering
 	class LightingRenderer : public SceneNode
 	{
 	public:
+		/** @brief Creates a new instance attached to a given viewport */
 		LightingRenderer(PlayerViewport* owner);
 
 		bool OnDraw(RenderQueue& renderQueue) override;

@@ -76,7 +76,7 @@ namespace Jazz2::Input
 		LeftCtrl, LeftWindows, LeftAlt, Space, RightAlt, Fn, Menu, RightCtrl,
 		ArrowLeft, ArrowDown, ArrowRight, NumZero, NumPeriod,
 
-		Unknown = -1
+		Unknown = -1					/**< Unknown light */
 	};
 
 	/** @brief Provides access to RGB lights from various peripherals */
@@ -92,6 +92,7 @@ namespace Jazz2::Input
 
 		/** @} */
 
+		/** @brief Creates a new instance */
 		RgbLights();
 		~RgbLights();
 

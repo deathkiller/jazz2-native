@@ -25,8 +25,10 @@ namespace Jazz2::Compatibility
 		static constexpr std::uint16_t CacheVersion = 36;
 #endif
 
+		/** @brief Converts the specified animation file and writes the result to a `.pak` file */
 		static JJ2Version Convert(StringView path, PakWriter& pakWriter, bool isPlus = false);
 
+		/** @brief Writes raw image content to the specified stream */
 		static void WriteImageContent(Stream& so, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount);
 
 	private:

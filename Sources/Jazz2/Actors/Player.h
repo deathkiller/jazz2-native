@@ -55,7 +55,13 @@ namespace Jazz2::Actors
 		class Thunderbolt;
 	}
 
-	/** @brief Represents a controllable player */
+	/**
+	 * @brief Represents a controllable player
+	 *
+	 * The player-controlled rabbit character (Jazz, Spaz or Lori in JJ2) that runs, jumps, fires weapons,
+	 * collects items and takes damage. Each character has its own special move (e.g. buttstomp, uppercut or
+	 * sidekick), can enter a temporary Sugar Rush and may be morphed into other forms such as the Frog.
+	 */
 	class Player : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
@@ -76,27 +82,28 @@ namespace Jazz2::Actors
 	public:
 		/** @brief Modifier */
 		enum class Modifier : std::uint8_t {
-			None,
-			Airboard,
-			Copter,
-			LizardCopter
+			None,				/**< No modifier */
+			Airboard,			/**< Riding an airboard */
+			Copter,				/**< Using a copter */
+			LizardCopter		/**< Using a lizard copter */
 		};
 
 		/** @brief Special move type */
 		enum class SpecialMoveType : std::uint8_t {
-			None,
-			Buttstomp,
-			Uppercut,
-			Sidekick
+			None,				/**< No special move */
+			Buttstomp,			/**< Buttstomp */
+			Uppercut,			/**< Uppercut */
+			Sidekick			/**< Sidekick */
 		};
 
 		/** @brief Type of invulnerability */
 		enum class InvulnerableType {
-			Transient,
-			Blinking,
-			Shielded
+			Transient,			/**< Invulnerable without any visual effect */
+			Blinking,			/**< Invulnerable with blinking effect */
+			Shielded			/**< Invulnerable due to an active shield */
 		};
 
+		/** @brief Creates a new instance */
 		Player();
 		~Player();
 
@@ -255,19 +262,19 @@ namespace Jazz2::Actors
 	protected:
 		/** @brief State of level exiting */
 		enum class LevelExitingState {
-			None,
-			Waiting,
-			WaitingForWarp,
-			Transition,
-			Ready
+			None,				/**< Not exiting */
+			Waiting,			/**< Waiting before exiting */
+			WaitingForWarp,		/**< Waiting for a warp to complete */
+			Transition,			/**< Playing the exit transition */
+			Ready				/**< Ready to exit */
 		};
 
 		/** @brief State of HUD weapon wheel */
 		enum class WeaponWheelState {
-			Hidden,
-			Opening,
-			Visible,
-			Closing
+			Hidden,				/**< Hidden */
+			Opening,			/**< Opening */
+			Visible,			/**< Visible */
+			Closing				/**< Closing */
 		};
 		
 		/** @brief Reason the current weapon was changed */
@@ -282,14 +289,22 @@ namespace Jazz2::Actors
 
 		/** @{ @name Constants */
 
+		/** @brief Maximum horizontal speed while dashing */
 		static constexpr float MaxDashingSpeed = 9.0f;
+		/** @brief Maximum horizontal speed while running */
 		static constexpr float MaxRunningSpeed = 4.0f;
+		/** @brief Maximum speed while climbing a vine */
 		static constexpr float MaxVineSpeed = 2.0f;
+		/** @brief Maximum horizontal speed while dizzy */
 		static constexpr float MaxDizzySpeed = 2.4f;
+		/** @brief Maximum horizontal speed in shallow water */
 		static constexpr float MaxShallowWaterSpeed = 3.6f;
+		/** @brief Horizontal acceleration */
 		static constexpr float Acceleration = 0.2f;
+		/** @brief Horizontal deceleration */
 		static constexpr float Deceleration = 0.22f;
 
+		/** @brief Display names of all weapons */
 		static constexpr const char* WeaponNames[(std::int32_t)WeaponType::Count] = {
 			"Blaster",
 			"Bouncer",

@@ -11,6 +11,12 @@ namespace Jazz2::UI::Menu
 	class CustomLevelSelectSection : public MenuSection
 	{
 	public:
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param multiplayer    Whether the selected level should be hosted as a multiplayer server
+		 * @param privateServer  Whether the hosted server should be private (not publicly listed)
+		 */
 		CustomLevelSelectSection(bool multiplayer = false, bool privateServer = false);
 		~CustomLevelSelectSection();
 

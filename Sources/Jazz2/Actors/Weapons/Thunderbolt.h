@@ -4,12 +4,19 @@
 
 namespace Jazz2::Actors::Weapons
 {
-	/** @brief Thunderbolt (shot) */
+	/**
+	 * @brief Thunderbolt (shot)
+	 *
+	 * Lightning weapon that strikes instantly as a beam spanning from the gun muzzle to a far point, damaging
+	 * everything along its length and passing through solid tiles. The bolt follows the player's aim until they
+	 * stop firing or change facing, then fades out.
+	 */
 	class Thunderbolt : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Thunderbolt();
 
 		/** @brief Called when the shot is fired */

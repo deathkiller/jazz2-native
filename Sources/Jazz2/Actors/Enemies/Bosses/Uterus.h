@@ -5,15 +5,23 @@
 
 namespace Jazz2::Actors::Bosses
 {
-	/** @brief Uterus (boss) */
+	/**
+	 * @brief Uterus (boss)
+	 *
+	 * A floating brain-like boss that drifts around the arena while periodically spawning Crab minions.
+	 * It is initially encircled by a ring of orbiting shield parts that make it invulnerable; once all
+	 * shields are shot away it becomes vulnerable while open, and is defeated by depleting its health.
+	 */
 	class Uterus : public BossBase
 	{
 		DEATH_RUNTIME_OBJECT(BossBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Uterus();
 		~Uterus();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

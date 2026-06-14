@@ -4,14 +4,22 @@
 
 namespace Jazz2::Actors::Enemies
 {
-	/** @brief Rapier */
+	/**
+	 * @brief Rapier
+	 *
+	 * Ghostly sword-bearing enemy that floats with a gentle weaving motion, moaning occasionally, and
+	 * lunges at the nearest player within range before drifting back to its origin. Takes a couple of
+	 * hits and dissolves when defeated.
+	 */
 	class Rapier : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Rapier();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

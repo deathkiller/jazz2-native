@@ -23,6 +23,7 @@ namespace Jazz2::Multiplayer
 	class NetworkManager : public NetworkManagerBase
 	{
 	public:
+		/** @brief Creates a new instance */
 		NetworkManager();
 		~NetworkManager();
 

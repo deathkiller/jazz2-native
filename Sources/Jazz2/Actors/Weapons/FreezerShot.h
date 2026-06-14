@@ -4,12 +4,18 @@
 
 namespace Jazz2::Actors::Weapons
 {
-	/** @brief Freezer (shot) */
+	/**
+	 * @brief Freezer (shot)
+	 *
+	 * Projectile of the freezer gun; it deals no direct damage but freezes any enemy it strikes into a block of ice
+	 * for a fixed duration, and disappears on hitting a wall. The powered-up variant is faster and freezes for longer.
+	 */
 	class FreezerShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);
 
 	public:
+		/** @brief Creates a new instance */
 		FreezerShot();
 
 		/** @brief Called when the shot is fired */

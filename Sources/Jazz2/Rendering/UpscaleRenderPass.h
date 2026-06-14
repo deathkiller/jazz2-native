@@ -15,25 +15,38 @@ namespace Jazz2::Rendering
 	class UpscaleRenderPass : public SceneNode
 	{
 	public:
+		/** @brief Creates a new instance */
 		UpscaleRenderPass()
 			: _resizeShader(nullptr)
 		{
 			setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 		}
 
+		/**
+		 * @brief Initializes the render pass
+		 *
+		 * @param width         Width of the input image
+		 * @param height        Height of the input image
+		 * @param targetWidth   Width of the upscaled target image
+		 * @param targetHeight  Height of the upscaled target image
+		 */
 		virtual void Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight);
+		/** @brief Registers the render pass into the viewport chain */
 		virtual void Register();
 
 		bool OnDraw(RenderQueue& renderQueue) override;
 
+		/** @brief Returns the input scene node */
 		SceneNode* GetNode() const {
 			return _node.get();
 		}
 
+		/** @brief Returns size of the input image */
 		Vector2i GetViewSize() const {
 			return _view->GetSize();
 		}
 
+		/** @brief Returns size of the upscaled target image */
 		Vector2f GetTargetSize() const {
 			return (_antialiasing._target != nullptr ? _antialiasing._targetSize : _targetSize);
 		}
@@ -45,8 +58,10 @@ namespace Jazz2::Rendering
 			friend class UpscaleRenderPass;
 
 		public:
+			/** @brief Creates a new instance */
 			AntialiasingSubpass();
 
+			/** @brief Registers the subpass into the viewport chain */
 			void Register();
 
 			bool OnDraw(RenderQueue& renderQueue) override;
@@ -80,19 +95,23 @@ namespace Jazz2::Rendering
 	class UpscaleRenderPassWithClipping : public UpscaleRenderPass
 	{
 	public:
+		/** @brief Creates a new instance */
 		UpscaleRenderPassWithClipping();
 
 		void Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight) override;
 		void Register() override;
 
+		/** @brief Returns the clipped main layer node */
 		SceneNode* GetClippedNode() const {
 			return _clippedNode.get();
 		}
 
+		/** @brief Returns the overlay layer node */
 		SceneNode* GetOverlayNode() const {
 			return _overlayNode.get();
 		}
 
+		/** @brief Sets the clipping rectangle of the main layer */
 		void SetClipRectangle(const Recti& scissorRect) {
 			_clippedView->SetScissorRect(scissorRect);
 		}

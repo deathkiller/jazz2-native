@@ -14,20 +14,20 @@ namespace Jazz2::Actors::Multiplayer
 	public:
 		/** @brief State flags of the remote player */
 		enum class PlayerFlags {
-			None = 0,
+			None = 0,					/**< None */
 
-			SpecialMoveMask = 0x07,
+			SpecialMoveMask = 0x07,		/**< Mask of the current special move */
 
-			IsFacingLeft = 0x10,
-			IsVisible = 0x20,
-			IsActivelyPushing = 0x40,
+			IsFacingLeft = 0x10,		/**< Player is facing left */
+			IsVisible = 0x20,			/**< Player is visible */
+			IsActivelyPushing = 0x40,	/**< Player is actively pushing against something */
 
-			JustWarped = 0x100,
+			JustWarped = 0x100,			/**< Player has just warped */
 
-			EnableContinuousJump = 0x200,
+			EnableContinuousJump = 0x200,	/**< Continuous jump is enabled */
 
-			InMenu = 0x1000,
-			InConsole = 0x2000
+			InMenu = 0x1000,			/**< Player has a menu open */
+			InConsole = 0x2000			/**< Player has the console open */
 		};
 
 		/** @brief State flags */
@@ -41,6 +41,11 @@ namespace Jazz2::Actors::Multiplayer
 
 		DEATH_PRIVATE_ENUM_FLAGS(PlayerFlags);
 
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param peerDesc  Descriptor of the peer this player belongs to
+		 */
 		RemotePlayerOnServer(std::shared_ptr<PeerDescriptor> peerDesc);
 
 		bool IsContinuousJumpAllowed() const override;

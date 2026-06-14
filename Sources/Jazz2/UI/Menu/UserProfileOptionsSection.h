@@ -47,6 +47,7 @@ namespace Jazz2::UI::Menu
 	class UserProfileOptionsSection : public ScrollableMenuSection<UserProfileOptionsItem>
 	{
 	public:
+		/** @brief Creates a new instance */
 		UserProfileOptionsSection();
 		~UserProfileOptionsSection();
 

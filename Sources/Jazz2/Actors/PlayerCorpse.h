@@ -4,12 +4,17 @@
 
 namespace Jazz2::Actors
 {
-	/** @brief Represents a dead coprse of a player */
+	/**
+	 * @brief Represents a dead corpse of a player
+	 *
+	 * The leftover body of a defeated player that remains in the level as decoration after the player dies.
+	 */
 	class PlayerCorpse : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
+		/** @brief Creates a new instance */
 		PlayerCorpse();
 		~PlayerCorpse();
 

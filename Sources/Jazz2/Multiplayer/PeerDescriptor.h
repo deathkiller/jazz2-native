@@ -113,6 +113,7 @@ namespace Jazz2::Multiplayer
 		/** @brief Time when the peer disconnected, used for the reconnect window (invalid while connected) */
 		TimeStamp DisconnectedSince;
 
+		/** @brief Creates a new instance */
 		PeerDescriptor();
 	};
 }

@@ -4,12 +4,19 @@
 
 namespace Jazz2::Actors::Weapons
 {
-	/** @brief Bouncer (shot) */
+	/**
+	 * @brief Bouncer (shot)
+	 *
+	 * Elastic projectile that ricochets off walls, floors and ceilings while affected by gravity, bouncing
+	 * around until its lifetime expires or it has bounced too many times. The powered-up variant lives longer
+	 * and gradually steers its horizontal speed toward a target velocity.
+	 */
 	class BouncerShot : public ShotBase
 	{
 		DEATH_RUNTIME_OBJECT(ShotBase);
 
 	public:
+		/** @brief Creates a new instance */
 		BouncerShot();
 
 		/** @brief Called when the shot is fired */

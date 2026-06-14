@@ -12,16 +12,21 @@ namespace Jazz2::Actors::Multiplayer
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
+		/** @brief Creates a new instance */
 		RemoteActor();
 		~RemoteActor();
 
+		/** @brief Initializes the actor from metadata received from the server */
 		void AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType);
 		/** @brief Sets the per-player recolor (0 = none); reloads the sprites indexed and (re)applies the palette */
 		void SetPlayerColor(std::uint32_t furColor);
 		/** @brief Changes the metadata (e.g. on character change), keeping the current recolor applied */
 		void ChangeMetadata(StringView path);
+		/** @brief Synchronizes the position with the server */
 		void SyncPositionWithServer(Vector2f pos);
+		/** @brief Synchronizes the animation and transform with the server */
 		void SyncAnimationWithServer(AnimState anim, float rotation, float scaleX, float scaleY, Actors::ActorRendererType rendererType);
+		/** @brief Synchronizes miscellaneous state flags with the server */
 		void SyncMiscWithServer(std::uint8_t flags);
 
 	protected:

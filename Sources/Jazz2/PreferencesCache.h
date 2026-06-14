@@ -29,8 +29,8 @@ namespace Jazz2
 
 		Count,						/**< Count of rescale modes */
 
-		TypeMask = 0x0f,
-		UseAntialiasing = 0x80
+		TypeMask = 0x0f,			/**< Mask for the rescale mode */
+		UseAntialiasing = 0x80		/**< Antialiasing should be applied */
 	};
 
 	DEATH_ENUM_FLAGS(RescaleMode);
@@ -66,14 +66,14 @@ namespace Jazz2
 
 	/** @brief Unlockable episodes, mainly used if compiled with `SHAREWARE_DEMO_ONLY` */
 	enum class UnlockableEpisodes : std::uint32_t {
-		None = 0x00,
+		None = 0x00,						/**< None */
 
-		FormerlyAPrince = 0x01,
-		JazzInTime = 0x02,
-		Flashback = 0x04,
-		FunkyMonkeys = 0x08,
-		ChristmasChronicles = 0x10,
-		TheSecretFiles = 0x20,
+		FormerlyAPrince = 0x01,				/**< Formerly a Prince */
+		JazzInTime = 0x02,					/**< Jazz in Time */
+		Flashback = 0x04,					/**< Flashback */
+		FunkyMonkeys = 0x08,				/**< Funky Monkeys */
+		ChristmasChronicles = 0x10,			/**< Christmas Chronicles */
+		TheSecretFiles = 0x20,				/**< The Secret Files */
 	};
 
 	DEATH_ENUM_FLAGS(UnlockableEpisodes);
@@ -130,9 +130,11 @@ namespace Jazz2
 		std::uint8_t DifficultyAndPlayerType;
 		/** @brief Lives */
 		std::uint8_t Lives;
+		/** @brief Reserved for alignment */
 		std::uint8_t Unused1;
 		/** @brief Score */
 		std::int32_t Score;
+		/** @brief Reserved for alignment */
 		std::uint16_t Unused2;
 		/** @brief Elapsed game time in milliseconds */
 		std::uint64_t ElapsedMilliseconds;

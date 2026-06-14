@@ -24,10 +24,13 @@ namespace Jazz2::Compatibility
 
 		/** @} */
 
+		/** @brief Creates a new instance */
 		JJ2Tileset() : _version(JJ2Version::Unknown), _tileCount(0) { }
 
+		/** @brief Opens and parses the specified tile set file */
 		bool Open(StringView path, bool strictParser);
 
+		/** @brief Converts the tile set and writes the result to the specified target path */
 		void Convert(StringView targetPath) const;
 
 		/** @brief Returns maximum number of supported tiles */

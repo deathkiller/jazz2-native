@@ -104,6 +104,7 @@ namespace Jazz2::Multiplayer
 
 		/** @} */
 
+		/** @brief Creates a new instance */
 		NetworkManagerBase();
 		~NetworkManagerBase();
 

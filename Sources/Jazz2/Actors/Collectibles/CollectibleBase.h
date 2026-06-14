@@ -15,6 +15,7 @@ namespace Jazz2::Actors::Collectibles
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
+		/** @brief Creates a new instance */
 		CollectibleBase();
 
 		bool OnHandleCollision(ActorBase* other) override;
@@ -22,6 +23,7 @@ namespace Jazz2::Actors::Collectibles
 	protected:
 		/** @{ @name Constants */
 
+		/** @brief Number of lights emitted when the collectible is illuminated */
 		static constexpr std::int32_t IlluminateLightCount = 20;
 
 		/** @} */

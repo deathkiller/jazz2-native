@@ -7,174 +7,174 @@ namespace Jazz2
 	/** @brief Event type */
 	enum class EventType : std::uint16_t
 	{
-		Empty = 0,
+		Empty = 0,							/**< No event */
 
 		// Basic
-		LevelStart,
-		LevelStartMultiplayer,
-		Checkpoint,
+		LevelStart,							/**< Player spawn point */
+		LevelStartMultiplayer,				/**< Multiplayer player spawn point */
+		Checkpoint,							/**< Checkpoint */
 
 		// Scenery
-		SceneryDestruct,
-		SceneryDestructButtstomp,
-		SceneryDestructSpeed,
-		SceneryCollapse,
+		SceneryDestruct,					/**< Tile destructible by weapon fire */
+		SceneryDestructButtstomp,			/**< Tile destructible by buttstomp */
+		SceneryDestructSpeed,				/**< Tile destructible by running at high speed */
+		SceneryCollapse,					/**< Tile that collapses after being stepped on */
 
 		// Modifiers
-		ModifierVine,
-		ModifierOneWay,
-		ModifierHook,
-		ModifierHPole,
-		ModifierVPole,
-		ModifierHurt,
-		ModifierTube,
-		ModifierRicochet,
-		ModifierSlide,
-		ModifierDeath,
-		ModifierSetWater,
-		ModifierLimitCameraView,
-		ModifierNoClimb,
+		ModifierVine,						/**< Vine the player can climb */
+		ModifierOneWay,						/**< One-way platform tile */
+		ModifierHook,						/**< Hook the player can hang on */
+		ModifierHPole,						/**< Horizontal pole */
+		ModifierVPole,						/**< Vertical pole */
+		ModifierHurt,						/**< Tile that hurts the player */
+		ModifierTube,						/**< Tube that transports the player */
+		ModifierRicochet,					/**< Tile that ricochets projectiles */
+		ModifierSlide,						/**< Tile the player slides on */
+		ModifierDeath,						/**< Tile that instantly kills the player */
+		ModifierSetWater,					/**< Sets the water level */
+		ModifierLimitCameraView,			/**< Limits the camera view */
+		ModifierNoClimb,					/**< Tile the player cannot climb */
 
 		// Area
-		AreaStopEnemy,
-		AreaFloatUp,
-		AreaHForce,
-		AreaText,
-		AreaEndOfLevel,
-		AreaCallback,
-		AreaActivateBoss,
-		AreaFlyOff,
-		AreaRevertMorph,
-		AreaMorphToFrog,
-		AreaNoFire,
-		AreaWaterBlock,
-		AreaWeather,
-		AreaAmbientSound,
-		AreaAmbientBubbles,
+		AreaStopEnemy,						/**< Area that stops enemies */
+		AreaFloatUp,						/**< Area that makes the player float up */
+		AreaHForce,							/**< Area that applies a horizontal force */
+		AreaText,							/**< Area that shows a text */
+		AreaEndOfLevel,						/**< Area that ends the level */
+		AreaCallback,						/**< Area that invokes a script callback */
+		AreaActivateBoss,					/**< Area that activates a boss */
+		AreaFlyOff,							/**< Area that disables the airboard */
+		AreaRevertMorph,					/**< Area that reverts player morph */
+		AreaMorphToFrog,					/**< Area that morphs the player into a frog */
+		AreaNoFire,							/**< Area that disables firing */
+		AreaWaterBlock,						/**< Area that blocks water */
+		AreaWeather,						/**< Area that sets the weather */
+		AreaAmbientSound,					/**< Area that plays an ambient sound */
+		AreaAmbientBubbles,					/**< Area that emits ambient bubbles */
 
 		// Triggers
-		TriggerCrate,
-		TriggerArea,
-		TriggerZone,
+		TriggerCrate,						/**< Crate that toggles a trigger */
+		TriggerArea,						/**< Area that sets a trigger */
+		TriggerZone,						/**< Zone that toggles a trigger */
 
 		// Warp
-		WarpCoinBonus,
-		WarpOrigin,
-		WarpTarget,
+		WarpCoinBonus,						/**< Warp to a coin bonus */
+		WarpOrigin,							/**< Warp origin */
+		WarpTarget,							/**< Warp target */
 
 		// Lights
-		LightAmbient,
-		LightSteady,
-		LightPulse,
-		LightFlicker,
-		LightIlluminate,
+		LightAmbient,						/**< Ambient light */
+		LightSteady,						/**< Steady light */
+		LightPulse,							/**< Pulsing light */
+		LightFlicker,						/**< Flickering light */
+		LightIlluminate,					/**< Illuminating light */
 
 		// Environment
-		Spring,
-		Bridge,
-		MovingPlatform,
-		PushableBox,
-		Eva,
-		Pole,
-		SignEOL,
-		Moth,
-		SteamNote,
-		Bomb,
-		PinballBumper,
-		PinballPaddle,
-		CtfBase,
-		BirdCage,
-		Stopwatch,
-		SpikeBall,
-		AirboardGenerator,
-		Copter,
-		RollingRock,
-		RollingRockTrigger,
-		SwingingVine,
+		Spring,								/**< Spring */
+		Bridge,								/**< Bridge */
+		MovingPlatform,						/**< Moving platform */
+		PushableBox,						/**< Pushable box */
+		Eva,								/**< Eva (kissable character) */
+		Pole,								/**< Pole */
+		SignEOL,							/**< End-of-level sign */
+		Moth,								/**< Moth */
+		SteamNote,							/**< Steam note */
+		Bomb,								/**< Bomb */
+		PinballBumper,						/**< Pinball bumper */
+		PinballPaddle,						/**< Pinball paddle */
+		CtfBase,							/**< Capture the flag base */
+		BirdCage,							/**< Bird cage */
+		Stopwatch,							/**< Stopwatch */
+		SpikeBall,							/**< Spike ball */
+		AirboardGenerator,					/**< Airboard generator */
+		Copter,								/**< Copter */
+		RollingRock,						/**< Rolling rock */
+		RollingRockTrigger,					/**< Rolling rock trigger */
+		SwingingVine,						/**< Swinging vine */
 
 		// Enemies
-		EnemyTurtle,
-		EnemyLizard,
-		EnemySucker,
-		EnemySuckerFloat,
-		EnemyLabRat,
-		EnemyHelmut,
-		EnemyDragon,
-		EnemyBat,
-		EnemyFatChick,
-		EnemyFencer,
-		EnemyRapier,
-		EnemySparks,
-		EnemyMonkey,
-		EnemyDemon,
-		EnemyBee,
-		EnemyBeeSwarm,
-		EnemyCaterpillar,
-		EnemyCrab,
-		EnemyDoggy,
-		EnemyDragonfly,
-		EnemyFish,
-		EnemyMadderHatter,
-		EnemyRaven,
-		EnemySkeleton,
-		EnemyTurtleTough,
-		EnemyTurtleTube,
-		EnemyWitch,
-		EnemyLizardFloat,
+		EnemyTurtle,						/**< Turtle enemy */
+		EnemyLizard,						/**< Lizard enemy */
+		EnemySucker,						/**< Sucker enemy */
+		EnemySuckerFloat,					/**< Floating sucker enemy */
+		EnemyLabRat,						/**< Lab rat enemy */
+		EnemyHelmut,						/**< Helmut enemy */
+		EnemyDragon,						/**< Dragon enemy */
+		EnemyBat,							/**< Bat enemy */
+		EnemyFatChick,						/**< Fat chick enemy */
+		EnemyFencer,						/**< Fencer enemy */
+		EnemyRapier,						/**< Rapier enemy */
+		EnemySparks,						/**< Sparks enemy */
+		EnemyMonkey,						/**< Monkey enemy */
+		EnemyDemon,							/**< Demon enemy */
+		EnemyBee,							/**< Bee enemy */
+		EnemyBeeSwarm,						/**< Bee swarm enemy */
+		EnemyCaterpillar,					/**< Caterpillar enemy */
+		EnemyCrab,							/**< Crab enemy */
+		EnemyDoggy,							/**< Doggy enemy */
+		EnemyDragonfly,						/**< Dragonfly enemy */
+		EnemyFish,							/**< Fish enemy */
+		EnemyMadderHatter,					/**< Madder Hatter enemy */
+		EnemyRaven,							/**< Raven enemy */
+		EnemySkeleton,						/**< Skeleton enemy */
+		EnemyTurtleTough,					/**< Tough turtle enemy */
+		EnemyTurtleTube,					/**< Tube turtle enemy */
+		EnemyWitch,							/**< Witch enemy */
+		EnemyLizardFloat,					/**< Floating lizard enemy */
 
-		BossTweedle,
-		BossBilsy,
-		BossDevan,
-		BossQueen,
-		BossRobot,
-		BossUterus,
-		BossTurtleTough,
-		BossBubba,
-		BossDevanRemote,
-		BossBolly,
+		BossTweedle,						/**< Tweedle boss */
+		BossBilsy,							/**< Bilsy boss */
+		BossDevan,							/**< Devan boss */
+		BossQueen,							/**< Queen boss */
+		BossRobot,							/**< Robot boss */
+		BossUterus,							/**< Uterus boss */
+		BossTurtleTough,					/**< Tough turtle boss */
+		BossBubba,							/**< Bubba boss */
+		BossDevanRemote,					/**< Devan remote boss */
+		BossBolly,							/**< Bolly boss */
 
-		TurtleShell,
+		TurtleShell,						/**< Turtle shell */
 
 		// Collectibles
-		Coin,
-		Gem,
-		GemGiant,
-		GemRing,
-		GemStomp,
-		Carrot,
-		CarrotFly,
-		CarrotInvincible,
-		OneUp,
-		FastFire,
-		Food,
-		Ammo,
-		PowerUpWeapon,
+		Coin,								/**< Coin */
+		Gem,								/**< Gem */
+		GemGiant,							/**< Giant gem */
+		GemRing,							/**< Gem ring */
+		GemStomp,							/**< Gem released by buttstomp */
+		Carrot,								/**< Carrot (restores health) */
+		CarrotFly,							/**< Flying carrot (grants copter) */
+		CarrotInvincible,					/**< Invincibility carrot */
+		OneUp,								/**< Extra life */
+		FastFire,							/**< Fast fire power-up */
+		Food,								/**< Food (contributes to sugar rush) */
+		Ammo,								/**< Weapon ammo */
+		PowerUpWeapon,						/**< Weapon power-up */
 
 		// Containers
-		Crate,
-		Barrel,
-		CrateAmmo,
-		BarrelAmmo,
-		CrateGem,
-		BarrelGem,
-		PowerUpMorph,
-		PowerUpShield,
+		Crate,								/**< Crate */
+		Barrel,								/**< Barrel */
+		CrateAmmo,							/**< Crate containing ammo */
+		BarrelAmmo,							/**< Barrel containing ammo */
+		CrateGem,							/**< Crate containing gems */
+		BarrelGem,							/**< Barrel containing gems */
+		PowerUpMorph,						/**< Morph power-up monitor */
+		PowerUpShield,						/**< Shield power-up monitor */
 
 		// End of enumeration
-		Count,
+		Count,								/**< Number of well-known events */
 
-		Generator = 0x1000,
+		Generator = 0x1000,					/**< Generator (spawns another event repeatedly) */
 
 		// Multiplayer-only remotable actors
-		WeaponBlaster = 0x2001,
-		WeaponBouncer = 0x2002,
-		WeaponElectro = 0x2003,
-		WeaponFreezer = 0x2004,
-		WeaponPepper = 0x2005,
-		WeaponRF = 0x2006,
-		WeaponSeeker = 0x2007,
-		WeaponThunderbolt = 0x2008,
-		WeaponTNT = 0x2009,
-		WeaponToaster = 0x200A,
+		WeaponBlaster = 0x2001,				/**< Remotable Blaster projectile */
+		WeaponBouncer = 0x2002,				/**< Remotable Bouncer projectile */
+		WeaponElectro = 0x2003,				/**< Remotable Electro projectile */
+		WeaponFreezer = 0x2004,				/**< Remotable Freezer projectile */
+		WeaponPepper = 0x2005,				/**< Remotable Pepper projectile */
+		WeaponRF = 0x2006,					/**< Remotable RF projectile */
+		WeaponSeeker = 0x2007,				/**< Remotable Seeker projectile */
+		WeaponThunderbolt = 0x2008,			/**< Remotable Thunderbolt projectile */
+		WeaponTNT = 0x2009,					/**< Remotable TNT */
+		WeaponToaster = 0x200A,				/**< Remotable Toaster projectile */
 	};
 }

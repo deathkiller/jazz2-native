@@ -13,6 +13,7 @@ namespace Jazz2::UI::Menu
 	class RefreshCacheSection : public MenuSection
 	{
 	public:
+		/** @brief Creates a new instance */
 		RefreshCacheSection();
 
 		void OnShow(IMenuContainer* root) override;

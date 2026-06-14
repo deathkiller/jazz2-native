@@ -4,12 +4,19 @@
 
 namespace Jazz2::Actors::Environment
 {
-	/** @brief Spring */
+	/**
+	 * @brief Spring
+	 *
+	 * Bouncy spring that launches the player when stepped on or run into. Vertical springs come in
+	 * three strengths---red, green, and blue---that fling the rabbit progressively higher, while
+	 * horizontal springs shove the player sideways; a frozen spring must be thawed before it works.
+	 */
 	class Spring : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Spring();
 
 		/** @brief Whether player horizontal speed should be kept */
@@ -19,6 +26,7 @@ namespace Jazz2::Actors::Environment
 
 		bool OnHandleCollision(ActorBase* other) override;
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 		/** @brief Activates the spring */

@@ -11,6 +11,7 @@ namespace Jazz2::UI::Multiplayer
 	class MpHUD : public HUD
 	{
 	public:
+		/** @brief Creates a new instance */
 		MpHUD(Jazz2::Multiplayer::MpLevelHandler* levelHandler);
 
 		void OnUpdate(float timeMult) override;
@@ -23,6 +24,7 @@ namespace Jazz2::UI::Multiplayer
 		void OnDrawOverview(const Rectf& view, const Rectf& adjustedView, Actors::Player* player) override;
 		void OnDrawScore(const Rectf& view, Actors::Player* player) override;
 
+		/** @brief Draws the position of the player in the current round */
 		void DrawPositionInRound(const Rectf& view, Actors::Player* player);
 
 	private:

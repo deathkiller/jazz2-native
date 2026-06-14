@@ -9,6 +9,7 @@ namespace Jazz2::UI::Menu
 	class InputDiagnosticsSection : public MenuSection
 	{
 	public:
+		/** @brief Creates a new instance */
 		InputDiagnosticsSection();
 
 		void OnShow(IMenuContainer* root) override;

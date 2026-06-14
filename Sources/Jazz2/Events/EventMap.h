@@ -32,6 +32,7 @@ namespace Jazz2::Events
 			bool IsEventActive;
 		};
 
+		/** @brief Creates a new instance with the specified layout size */
 		EventMap(Vector2i layoutSize);
 
 		/** @brief Sets owner of the event map */

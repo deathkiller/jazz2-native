@@ -9,14 +9,23 @@ namespace Jazz2::Actors::Environment
 
 namespace Jazz2::Actors::Enemies
 {
-	/** @brief Floating lizard */
+	/**
+	 * @brief Floating lizard
+	 *
+	 * Lizard suspended from a copter that hovers in the air, drifting toward nearby players and
+	 * lobbing bombs at them. When defeated by an ordinary hit it drops its copter and falls to the
+	 * ground as a normal walking @ref Lizard; only special moves, freezing, or heavy weapons destroy
+	 * it outright.
+	 */
 	class LizardFloat : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);
 
 	public:
+		/** @brief Creates a new instance */
 		LizardFloat();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

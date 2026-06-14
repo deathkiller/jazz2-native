@@ -25,6 +25,7 @@ namespace Jazz2::UI::Menu
 
 		/** @} */
 
+		/** @brief Creates a new instance for the specified player */
 		RemapControlsSection(std::int32_t playerIndex);
 		~RemapControlsSection() override;
 
@@ -41,16 +42,26 @@ namespace Jazz2::UI::Menu
 		void OnBackPressed() override;
 
 	protected:
+		/** @brief Index of the currently selected mapping target column */
 		std::int32_t _selectedColumn;
+		/** @brief Index of the player whose controls are being remapped */
 		std::int32_t _playerIndex;
+		/** @brief Remaining time to wait for input before the assignment is cancelled */
 		float _timeout;
+		/** @brief Animation progress of the input hint */
 		float _hintAnimation;
+		/** @brief Last sampled gamepad states, used to detect newly pressed buttons */
 		JoyMappedState _joyStatesLast[ControlScheme::MaxConnectedGamepads];
+		/** @brief Whether the mapping has unsaved changes */
 		bool _isDirty;
+		/** @brief Whether the section is currently waiting for input to assign */
 		bool _waitForInput;
+		/** @brief Value of @ref _waitForInput from the previous frame */
 		bool _waitForInputPrev;
 
+		/** @brief Refreshes the cached gamepad states */
 		void RefreshPreviousState();
+		/** @brief Returns `true` if the specified mapping target is already assigned to another action */
 		bool HasCollision(PlayerAction action, MappingTarget target, PlayerAction& collidingAction, std::int32_t& collidingAssignment);
 	};
 }

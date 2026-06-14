@@ -4,17 +4,25 @@
 
 namespace Jazz2::Actors::Bosses
 {
-	/** @brief Queen (boss) */
+	/**
+	 * @brief Queen (boss)
+	 *
+	 * The Queen of Board, who stands on a ledge and screams to shove the player backwards while dropping
+	 * bricks from above. She is invulnerable except briefly while screaming. She cannot be killed by normal
+	 * damage; instead the player must use a spring to launch her off the ledge to defeat her.
+	 */
 	class Queen : public BossBase
 	{
 		DEATH_RUNTIME_OBJECT(BossBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Queen();
 		~Queen();
 
 		bool OnHandleCollision(ActorBase* other) override;
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

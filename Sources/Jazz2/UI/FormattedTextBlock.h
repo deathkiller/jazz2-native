@@ -17,12 +17,19 @@ namespace Jazz2::UI
 	/** @brief Initialization parameters for formatted text block */
 	struct FormattedTextBlockParams
 	{
+		/** @brief Text to display */
 		StringView Text;
+		/** @brief Font used to render the text */
 		Font* TextFont = nullptr;
+		/** @brief Text alignment */
 		Alignment Align = Alignment::Left;
+		/** @brief Default text color */
 		Colorf Color = Font::DefaultColor;
+		/** @brief Text scale */
 		float Scale = 1.0f;
+		/** @brief Character spacing */
 		float CharSpacing = 1.0f;
+		/** @brief Line spacing */
 		float LineSpacing = 1.0f;
 	};
 
@@ -30,80 +37,110 @@ namespace Jazz2::UI
 	class FormattedTextBlock
 	{
 	public:
+		/** @brief Creates a new empty instance */
 		FormattedTextBlock();
+		/** @brief Creates a new instance from the specified parameters */
 		FormattedTextBlock(const FormattedTextBlockParams& params);
 
 		FormattedTextBlock(const FormattedTextBlock&) = delete;
+		/** @brief Creates a new instance by moving the contents of another instance */
 		FormattedTextBlock(FormattedTextBlock&& other) noexcept;
 		FormattedTextBlock& operator=(const FormattedTextBlock&) = delete;
 		FormattedTextBlock& operator=(FormattedTextBlock&& other) noexcept;
 
+		/** @brief Returns a copy of the specified instance */
 		static FormattedTextBlock From(const FormattedTextBlock& source);
 
+		/** @brief Draws the text block to the specified canvas within the given bounds */
 		void Draw(Canvas* canvas, Rectf bounds, std::uint16_t depth, std::int32_t& charOffset, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f, float speed = 0.4f);
+		/** @brief Measures the size of the text block for the specified proposed size */
 		Vector2f MeasureSize(Vector2f proposedSize);
+		/** @brief Returns the cached width of the text block */
 		float GetCachedWidth() const;
+		/** @brief Returns the cached height of the text block */
 		float GetCachedHeight() const;
 
+		/** @brief Returns the text alignment */
 		Alignment GetAlignment() const {
 			return _alignment;
 		}
 
+		/** @brief Sets the text alignment */
 		void SetAlignment(Alignment value);
 
+		/** @brief Returns the default text color */
 		Colorf GetDefaultColor() const {
 			return _defaultColor;
 		}
 
+		/** @brief Sets the default text color */
 		void SetDefaultColor(Colorf color);
 
+		/** @brief Returns the font used to render the text */
 		Font* GetFont() {
 			return _font;
 		}
 
+		/** @brief Sets the font used to render the text */
 		void SetFont(Font* value);
 
+		/** @brief Returns the text scale */
 		float GetScale() const {
 			return _defaultScale;
 		}
 
+		/** @brief Sets the text scale */
 		void SetScale(float value);
 
+		/** @brief Returns the character spacing */
 		float GetCharSpacing() const {
 			return _defaultCharSpacing;
 		}
 
+		/** @brief Sets the character spacing */
 		void SetCharSpacing(float value);
 
+		/** @brief Returns the line spacing */
 		float GetLineSpacing() const {
 			return _defaultLineSpacing;
 		}
 
+		/** @brief Sets the line spacing */
 		void SetLineSpacing(float value);
 
+		/** @brief Returns the proposed width used for layout */
 		constexpr float GetProposedWidth() const {
 			return _proposedWidth;
 		}
 
+		/** @brief Sets the proposed width used for layout */
 		void SetProposedWidth(float value);
 
+		/** @brief Returns the displayed text */
 		StringView GetText() const {
 			return _text;
 		}
 
+		/** @brief Sets the displayed text */
 		void SetText(StringView value);
+		/** @overload */
 		void SetText(String&& value);
 
+		/** @brief Returns `true` if multiline text is enabled */
 		constexpr bool IsMultiline() const {
 			return (_flags & FormattedTextBlockFlags::Multiline) == FormattedTextBlockFlags::Multiline;
 		}
+		/** @brief Sets whether multiline text is enabled */
 		void SetMultiline(bool value);
 
+		/** @brief Returns `true` if word wrapping is enabled */
 		constexpr bool GetWrapping() const {
 			return (_flags & FormattedTextBlockFlags::Wrapping) == FormattedTextBlockFlags::Wrapping;
 		}
+		/** @brief Sets whether word wrapping is enabled */
 		void SetWrapping(bool value);
 
+		/** @brief Returns `true` if the text is ellipsized to fit the bounds */
 		constexpr bool IsEllipsized() const {
 			return (_flags & FormattedTextBlockFlags::Ellipsized) == FormattedTextBlockFlags::Ellipsized;
 		}

@@ -90,6 +90,11 @@ namespace Jazz2
 
 		/** @} */
 
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param root	Root controller that owns the handler
+		 */
 		LevelHandler(IRootController* root);
 		~LevelHandler() override;
 
@@ -203,12 +208,18 @@ namespace Jazz2
 	protected:
 		/** @brief Describes current input state of a player */
 		struct PlayerInput {
+			/** @brief Bitmask of actions pressed in the current frame */
 			std::uint64_t PressedActions;
+			/** @brief Bitmask of actions pressed in the previous frame */
 			std::uint64_t PressedActionsLast;
+			/** @brief Desired movement vector */
 			Vector2f RequiredMovement;
+			/** @brief Movement vector applied while the input is frozen */
 			Vector2f FrozenMovement;
+			/** @brief Whether the input is frozen */
 			bool Frozen;
 
+			/** @brief Creates a new instance */
 			PlayerInput();
 		};
 

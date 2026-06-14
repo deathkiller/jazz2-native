@@ -8,6 +8,7 @@ namespace Jazz2::UI::Menu
 	class TouchControlsOptionsSection : public MenuSection
 	{
 	public:
+		/** @brief Creates a new instance */
 		TouchControlsOptionsSection();
 		~TouchControlsOptionsSection();
 

@@ -65,13 +65,21 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Asset type */
 		enum class AssetType {
-			Unknown,
-			Level,
-			TileSet,
-			Music,
-			Script
+			Unknown,	/**< Unknown */
+			Level,		/**< Level */
+			TileSet,	/**< Tile set */
+			Music,		/**< Music */
+			Script		/**< Script */
 		};
 
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param root             Root controller
+		 * @param networkManager   Network manager that handles the connection
+		 * @param levelState       Initial level state
+		 * @param enableLedgeClimb Whether ledge climbing is enabled
+		 */
 		MpLevelHandler(IRootController* root, NetworkManager* networkManager, LevelState levelState, bool enableLedgeClimb);
 		~MpLevelHandler() override;
 

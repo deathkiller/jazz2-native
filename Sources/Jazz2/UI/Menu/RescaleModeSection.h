@@ -15,6 +15,7 @@ namespace Jazz2::UI::Menu
 	class RescaleModeSection : public ScrollableMenuSection<RescaleModeItem>
 	{
 	public:
+		/** @brief Creates a new instance */
 		RescaleModeSection();
 
 		void OnDraw(Canvas* canvas) override;

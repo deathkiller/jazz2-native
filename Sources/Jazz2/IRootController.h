@@ -19,20 +19,21 @@ namespace Jazz2
 	public:
 		/** @brief State flags of root controller, supports a bitwise combination of its member values */
 		enum class Flags {
-			None = 0x00,
+			None = 0x00,									/**< None */
 
-			IsInitialized = 0x01,
-			IsVerified = 0x02,
-			IsPlayable = 0x04,
+			IsInitialized = 0x01,							/**< The controller has been initialized */
+			IsVerified = 0x02,								/**< The assets have been verified */
+			IsPlayable = 0x04,								/**< The game is playable */
 
 #if defined(DEATH_TARGET_ANDROID)
-			HasExternalStoragePermission = 0x10,
-			HasExternalStoragePermissionOnResume = 0x20,
+			HasExternalStoragePermission = 0x10,			/**< External storage permission has been granted */
+			HasExternalStoragePermissionOnResume = 0x20,	/**< External storage permission should be checked on resume */
 #endif
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(Flags);
 
+		/** @brief Creates a new instance */
 		IRootController() { }
 		virtual ~IRootController() { }
 

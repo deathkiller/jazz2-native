@@ -8,6 +8,7 @@ namespace Jazz2::UI::Menu
 	class PauseSection : public MenuSection
 	{
 	public:
+		/** @brief Creates a new instance */
 		PauseSection();
 
 		void OnShow(IMenuContainer* root) override;

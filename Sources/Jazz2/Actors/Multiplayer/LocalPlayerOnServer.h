@@ -12,6 +12,11 @@ namespace Jazz2::Actors::Multiplayer
 		DEATH_RUNTIME_OBJECT(PlayerOnServer);
 
 	public:
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param peerDesc  Descriptor of the peer this player belongs to
+		 */
 		LocalPlayerOnServer(std::shared_ptr<PeerDescriptor> peerDesc);
 
 	protected:

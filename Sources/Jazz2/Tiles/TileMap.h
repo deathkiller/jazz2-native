@@ -184,10 +184,10 @@ namespace Jazz2::Tiles
 
 		/** @brief Flags that modify behaviour of @ref DestructibleDebris, supports a bitwise combination of its member values */
 		enum class DebrisFlags {
-			None = 0x00,
-			Disappear = 0x01,
-			Bounce = 0x02,
-			AdditiveBlending = 0x04
+			None = 0x00,				/**< None */
+			Disappear = 0x01,			/**< Debris disappears over time */
+			Bounce = 0x02,				/**< Debris bounces off solid tiles */
+			AdditiveBlending = 0x04		/**< Debris is rendered with additive blending */
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(DebrisFlags);
@@ -247,9 +247,17 @@ namespace Jazz2::Tiles
 			DebrisFlags Flags;
 		};
 
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param tileSetPath   Relative path to the main tile set
+		 * @param captionTileId  Tile used to render the level-preview caption thumbnail
+		 * @param applyPalette   Whether to apply the tile set's palette to the live sprite palette
+		 */
 		TileMap(StringView tileSetPath, std::uint16_t captionTileId, bool applyPalette);
 		~TileMap();
 
+		/** @brief Returns `true` if all used tile sets are loaded */
 		bool IsValid() const;
 
 		/** @brief Sets an owner of tile map */

@@ -11,6 +11,7 @@ namespace Jazz2::UI::Menu
 	class ServerSelectSection : public MenuSection, public Jazz2::Multiplayer::IServerObserver
 	{
 	public:
+		/** @brief Creates a new instance */
 		ServerSelectSection();
 		~ServerSelectSection();
 

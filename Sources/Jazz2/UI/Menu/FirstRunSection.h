@@ -21,6 +21,7 @@ namespace Jazz2::UI::Menu
 	class FirstRunSection : public ScrollableMenuSection<FirstRunItem>
 	{
 	public:
+		/** @brief Creates a new instance */
 		FirstRunSection();
 
 		Recti GetClipRectangle(const Recti& contentBounds) override;

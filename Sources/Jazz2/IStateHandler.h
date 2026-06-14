@@ -16,6 +16,7 @@ namespace Jazz2
 		DEATH_RUNTIME_OBJECT();
 
 	public:
+		/** @brief Creates a new instance */
 		IStateHandler() {}
 		virtual ~IStateHandler() {}
 

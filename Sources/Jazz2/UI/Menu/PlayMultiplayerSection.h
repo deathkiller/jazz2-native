@@ -22,6 +22,7 @@ namespace Jazz2::UI::Menu
 	class PlayMultiplayerSection : public ScrollableMenuSection<PlayMultiplayerItem>
 	{
 	public:
+		/** @brief Creates a new instance */
 		PlayMultiplayerSection();
 
 		void OnDraw(Canvas* canvas) override;

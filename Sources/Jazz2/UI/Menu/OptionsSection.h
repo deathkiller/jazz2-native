@@ -23,6 +23,7 @@ namespace Jazz2::UI::Menu
 	class OptionsSection : public ScrollableMenuSection<OptionsItem>
 	{
 	public:
+		/** @brief Creates a new instance */
 		OptionsSection();
 
 		void OnDraw(Canvas* canvas) override;

@@ -9,6 +9,7 @@ namespace Jazz2::UI::Menu
 	class AboutSection : public MenuSection
 	{
 	public:
+		/** @brief Creates a new instance */
 		AboutSection();
 
 		Recti GetClipRectangle(const Recti& contentBounds) override;

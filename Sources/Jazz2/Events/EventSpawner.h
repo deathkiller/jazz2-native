@@ -23,6 +23,7 @@ namespace Jazz2::Events
 
 		/** @} */
 
+		/** @brief Creates a new instance owned by the specified level handler */
 		EventSpawner(ILevelHandler* levelHandler);
 
 		/** @brief Preloads assets for a given event */

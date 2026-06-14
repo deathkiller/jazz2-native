@@ -46,6 +46,7 @@ namespace Jazz2::Collisions
 		friend class DynamicTree;
 
 	public:
+		/** @brief Creates a new instance */
 		DynamicTreeBroadPhase();
 		~DynamicTreeBroadPhase();
 

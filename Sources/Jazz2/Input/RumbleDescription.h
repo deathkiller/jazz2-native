@@ -14,6 +14,7 @@ namespace Jazz2::Input
 		friend class RumbleProcessor;
 
 	public:
+		/** @brief Creates a new instance */
 		RumbleDescription() {}
 
 		/** @brief Adds a new frame to the effect timeline */

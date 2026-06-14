@@ -37,7 +37,18 @@ namespace Jazz2::UI::Menu
 	class HighscoresSection : public ScrollableMenuSection<HighscoreItem*>
 	{
 	public:
+		/** @brief Creates a new instance */
 		HighscoresSection();
+		/**
+		 * @brief Creates a new instance and adds a new highscore from a completed run
+		 *
+		 * @param seriesIndex          Index of the highscore series the new item belongs to
+		 * @param difficulty           Difficulty the run was played on
+		 * @param isReforged           Whether the run used the Reforged ruleset
+		 * @param cheatsUsed           Whether any cheats were used during the run
+		 * @param elapsedMilliseconds  Total time spent playing the run
+		 * @param itemToAdd            Player state carried over from the completed run
+		 */
 		HighscoresSection(std::int32_t seriesIndex, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, std::uint64_t elapsedMilliseconds, const PlayerCarryOver& itemToAdd);
 
 		void OnUpdate(float timeMult) override;
@@ -47,6 +58,7 @@ namespace Jazz2::UI::Menu
 		void OnTextInput(const nCine::TextInputEvent& event) override;
 		NavigationFlags GetNavigationFlags() const override;
 
+		/** @brief Returns the highscore series index for the specified episode, or `-1` if it has none */
 		static std::int32_t TryGetSeriesIndex(StringView episodeName, bool playerDied);
 
 	protected:

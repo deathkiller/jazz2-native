@@ -16,6 +16,7 @@ namespace Jazz2::Actors::Multiplayer
 		friend class Jazz2::Multiplayer::MpLevelHandler;
 
 	public:
+		/** @brief Creates a new instance */
 		PlayerOnServer();
 
 		bool OnHandleCollision(ActorBase* other) override;
@@ -25,9 +26,13 @@ namespace Jazz2::Actors::Multiplayer
 		bool MorphTo(PlayerType type) override;
 
 	protected:
+		/** @brief Actor that last attacked this player (cleared once @ref _lastAttackerTimeout elapses) */
 		std::shared_ptr<ActorBase> _lastAttacker;
+		/** @brief Remaining time before the last attacker reference is cleared */
 		float _lastAttackerTimeout;
+		/** @brief Whether the player can currently take damage */
 		bool _canTakeDamage;
+		/** @brief Whether the player has just warped */
 		bool _justWarped;
 		/** @brief Remaining cooldown before this player can be bumped by another player again */
 		float _bumpCooldown;
@@ -36,6 +41,7 @@ namespace Jazz2::Actors::Multiplayer
 
 		void OnUpdate(float timeMult) override;
 
+		/** @brief Returns `true` if the player is currently performing a damaging move */
 		bool IsAttacking() const;
 
 	private:

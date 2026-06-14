@@ -18,6 +18,7 @@ namespace Jazz2::Multiplayer
 	/** @brief Remote peer as opaque handle */
 	struct Peer
 	{
+		/** @brief Creates a new instance */
 		Peer(std::nullptr_t = nullptr)
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 			: _enet(nullptr)

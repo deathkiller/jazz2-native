@@ -4,14 +4,22 @@
 
 namespace Jazz2::Actors::Bosses
 {
-	/** @brief Bubba (boss) */
+	/**
+	 * @brief Bubba (boss)
+	 *
+	 * A large frog boss that bounds around the arena in big jumps toward the nearest player. On landing it
+	 * randomly either spews a fireball, whirls into a tornado dash, or jumps again. It is defeated by
+	 * depleting its health between attacks, after which it collapses in a death animation.
+	 */
 	class Bubba : public BossBase
 	{
 		DEATH_RUNTIME_OBJECT(BossBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Bubba();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

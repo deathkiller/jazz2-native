@@ -8,6 +8,12 @@ namespace Jazz2::UI::Menu
 	class StartGameOptionsSection : public MenuSection
 	{
 	public:
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param levelName            Level to start
+		 * @param previousEpisodeName  Name of the episode the level belongs to
+		 */
 		StartGameOptionsSection(StringView levelName, StringView previousEpisodeName);
 
 		void OnShow(IMenuContainer* root) override;

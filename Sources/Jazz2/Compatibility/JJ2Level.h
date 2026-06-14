@@ -74,23 +74,37 @@ namespace Jazz2::Compatibility
 		/** @brief Number of level text entries in the original game */
 		static constexpr std::int32_t TextEventStringsCount = 16;
 
+		/** @brief Internal name of the level */
 		String LevelName;
+		/** @brief Display name of the level */
 		String DisplayName;
+		/** @brief Name of the tile set used by the level */
 		String Tileset;
+		/** @brief List of alternate palettes */
 		SmallVector<AlternatePalette, 0> AlternatePalettes;
+		/** @brief List of extra tile sets used by the level */
 		SmallVector<ExtraTilesetEntry, 0> ExtraTilesets;
+		/** @brief Name of the music track */
 		String Music;
+		/** @brief Name of the next level */
 		String NextLevel;
+		/** @brief Name of the bonus level */
 		String BonusLevel;
+		/** @brief Name of the secret level */
 		String SecretLevel;
 
+		/** @brief Minimum and starting lighting level */
 		std::uint8_t LightingMin, LightingStart;
 
+		/** @brief Creates a new instance */
 		JJ2Level() : _version(JJ2Version::Unknown), _animCount(0), _verticalMPSplitscreen(false), _isMpLevel(false), _hasPit(false), _hasPitInstantDeath(false), _hasCTF(false), _hasLaps(false), _useLevelPalette(false) { }
 
+		/** @brief Opens and parses the specified level file */
 		bool Open(StringView path, bool strictParser);
 
+		/** @brief Converts the level and writes the result to the specified target path */
 		void Convert(StringView targetPath, EventConverter& eventConverter, Function<LevelToken(StringView)>&& levelTokenConversion = {});
+		/** @brief Marks the level text with the specified ID as a level token */
 		void AddLevelTokenTextID(std::uint8_t textId);
 
 		/** @brief Returns target version of the level */

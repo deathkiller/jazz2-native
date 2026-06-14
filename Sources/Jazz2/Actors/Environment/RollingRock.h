@@ -4,14 +4,22 @@
 
 namespace Jazz2::Actors::Environment
 {
-	/** @brief Rolling rock */
+	/**
+	 * @brief Rolling rock
+	 *
+	 * Large boulder hazard that stays put until triggered, then rolls and bounces through the
+	 * level under gravity. While rolling it crushes the player on contact and shoves them aside,
+	 * and can collide with other rolling rocks.
+	 */
 	class RollingRock : public Enemies::EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(Enemies::EnemyBase);
 
 	public:
+		/** @brief Creates a new instance */
 		RollingRock();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

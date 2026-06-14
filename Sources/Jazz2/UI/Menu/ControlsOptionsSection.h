@@ -34,6 +34,7 @@ namespace Jazz2::UI::Menu
 	class ControlsOptionsSection : public ScrollableMenuSection<ControlsOptionsItem>
 	{
 	public:
+		/** @brief Creates a new instance */
 		ControlsOptionsSection();
 		~ControlsOptionsSection();
 

@@ -46,6 +46,12 @@ namespace Jazz2::UI::Menu
 
 		/** @} */
 
+		/**
+		 * @brief Creates a new instance
+		 *
+		 * @param root        Root controller the menu is attached to
+		 * @param afterIntro  Whether the menu is shown right after the intro, playing a fade-in transition
+		 */
 		MainMenu(IRootController* root, bool afterIntro);
 		~MainMenu() override;
 

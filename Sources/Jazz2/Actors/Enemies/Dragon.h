@@ -4,14 +4,21 @@
 
 namespace Jazz2::Actors::Enemies
 {
-	/** @brief Dragon */
+	/**
+	 * @brief Dragon
+	 *
+	 * Small dragon that stays in place and faces the nearest player within range, then spits a stream
+	 * of short-lived fireballs at them before pausing between bursts. Defeated by a single hit.
+	 */
 	class Dragon : public EnemyBase
 	{
 		DEATH_RUNTIME_OBJECT(EnemyBase);
 
 	public:
+		/** @brief Creates a new instance */
 		Dragon();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

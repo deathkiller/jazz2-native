@@ -4,12 +4,19 @@
 
 namespace Jazz2::Actors::Weapons
 {
-	/** @brief TNT */
+	/**
+	 * @brief TNT
+	 *
+	 * Placeable explosive that is dropped in place rather than fired. It detonates after a short fuse (sooner if an
+	 * enemy or another exploding TNT comes near), pulsing and growing as the timer runs down, then damages all
+	 * actors and destructible tiles within its blast radius.
+	 */
 	class TNT : public ActorBase
 	{
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
+		/** @brief Creates a new instance */
 		TNT();
 
 		bool OnHandleCollision(ActorBase* other) override;

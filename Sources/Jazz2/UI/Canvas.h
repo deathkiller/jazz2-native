@@ -14,6 +14,7 @@ namespace Jazz2::UI
 		friend class Font;
 
 	public:
+		/** @brief Creates a new instance */
 		Canvas();
 
 		/** @brief View size of the canvas */

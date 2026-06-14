@@ -10,8 +10,10 @@ namespace Jazz2::Actors::Lighting
 		DEATH_RUNTIME_OBJECT(ActorBase);
 
 	public:
+		/** @brief Creates a new instance */
 		PulsatingRadialLight();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details) {}
 
 	protected:

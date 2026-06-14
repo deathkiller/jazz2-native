@@ -7,6 +7,7 @@ namespace Jazz2::UI::Menu
 	class SoundsOptionsSection : public MenuSection
 	{
 	public:
+		/** @brief Creates a new instance */
 		SoundsOptionsSection();
 		~SoundsOptionsSection() override;
 

@@ -74,13 +74,41 @@ namespace Jazz2
 		/** @brief Player carry over descriptions */
 		StaticArray<MaxPlayerCount, PlayerCarryOver> PlayerCarryOvers;
 
+		/** @brief Creates a new instance */
 		LevelInitialization();
 
+		/**
+		 * @brief Creates a new instance for a given level
+		 *
+		 * @param level			Level name in `<episode>/<level>` format
+		 * @param difficulty	Difficulty
+		 * @param isReforged	Whether reforged gameplay is enabled
+		 */
 		LevelInitialization(StringView level, GameDifficulty difficulty, bool isReforged);
+		/**
+		 * @brief Creates a new instance for a given level and a single player
+		 *
+		 * @param level			Level name in `<episode>/<level>` format
+		 * @param difficulty	Difficulty
+		 * @param isReforged	Whether reforged gameplay is enabled
+		 * @param cheatsUsed	Whether cheats were used
+		 * @param playerType	Type of the player
+		 */
 		LevelInitialization(StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, PlayerType playerType);
+		/**
+		 * @brief Creates a new instance for a given level and multiple players
+		 *
+		 * @param level			Level name in `<episode>/<level>` format
+		 * @param difficulty	Difficulty
+		 * @param isReforged	Whether reforged gameplay is enabled
+		 * @param cheatsUsed	Whether cheats were used
+		 * @param playerTypes	Types of the players
+		 */
 		LevelInitialization(StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, ArrayView<const PlayerType> playerTypes);
 
+		/** @brief Copy constructor */
 		LevelInitialization(const LevelInitialization& copy) noexcept;
+		/** @brief Move constructor */
 		LevelInitialization(LevelInitialization&& move) noexcept;
 
 		/** @brief Returns number of assigned players */

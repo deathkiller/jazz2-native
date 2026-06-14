@@ -4,14 +4,22 @@
 
 namespace Jazz2::Actors::Collectibles
 {
-	/** @brief Gem (collectible) */
+	/**
+	 * @brief Gem (collectible)
+	 *
+	 * The colored gems collected for points throughout JJ2. Red, green, and blue gems are worth
+	 * increasing amounts (1, 5, and 10 respectively); purple gems also exist. Each gem adds to the
+	 * player's gem count and score.
+	 */
 	class GemCollectible : public CollectibleBase
 	{
 		DEATH_RUNTIME_OBJECT(CollectibleBase);
 
 	public:
+		/** @brief Creates a new instance */
 		GemCollectible();
 
+		/** @brief Preloads all assets required by this actor */
 		static void Preload(const ActorActivationDetails& details);
 
 	protected:

@@ -19,18 +19,30 @@ namespace Jazz2::Rendering
 	class BlurRenderPass : public SceneNode
 	{
 	public:
+		/** @brief Creates a new instance attached to a given viewport */
 		BlurRenderPass(PlayerViewport* owner)
 			: _owner(owner)
 		{
 			setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 		}
 
+		/**
+		 * @brief Initializes the render pass
+		 *
+		 * @param source     Source texture to blur
+		 * @param width      Width of the target texture
+		 * @param height     Height of the target texture
+		 * @param direction  Blur direction (zero vector performs only downsampling)
+		 */
 		void Initialize(Texture* source, std::int32_t width, std::int32_t height, Vector2f direction);
+		/** @brief Registers the render pass into the viewport chain */
 		void Register();
+		/** @brief Releases all allocated resources */
 		void Dispose();
 
 		bool OnDraw(RenderQueue& renderQueue) override;
 
+		/** @brief Returns the resulting target texture */
 		Texture* GetTarget() const {
 			return _target.get();
 		}
