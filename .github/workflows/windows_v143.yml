@@ -56,7 +56,8 @@ jobs:
           Platform: ARM64
           Backend: SDL2
 
-    runs-on: 'windows-latest'
+    #runs-on: 'windows-latest'
+    runs-on: 'windows-2022'
 
     steps:
     - name: 'Checkout Repository'

@@ -74,7 +74,7 @@ namespace Death { namespace Trace {
 			: _nanosecondsPerTick(RdtscTicks::instance().nanosecondsPerTick())
 
 		{
-			const double calcValue = static_cast<double>(resyncInterval.count()) * _nanosecondsPerTick;
+			const double calcValue = static_cast<double>(resyncInterval.count()) / _nanosecondsPerTick;
 
 			// Check for overflow and negative values
 			if (calcValue >= static_cast<double>(std::numeric_limits<std::int64_t>::max()) || calcValue < 0) {
@@ -99,7 +99,7 @@ namespace Death { namespace Trace {
 		{
 			// Should only get called by the backend thread
 
-			// Get the current index, this is only sef called my the thread that is doing the resync
+			// Get the current index, this is only self-called by the thread that is doing the resync
 			auto index = _version.load(std::memory_order_relaxed) & (_base.size() - 1);
 
 			// Get rdtsc current value and compare the diff then add it to base wall time
@@ -108,10 +108,14 @@ namespace Death { namespace Trace {
 			// We need to sync after we calculated otherwise BaseTsc value will be ahead of passed tsc value
 			if (diff > _resyncIntervalTicks) {
 				resync(ResyncLagCycles);
-				diff = static_cast<std::int64_t>(rdtscValue - _base[index].BaseTsc);
+				auto const resyncedIndex = _version.load(std::memory_order_relaxed) & (_base.size() - 1);
+				diff = static_cast<int64_t>(rdtscValue - _base[resyncedIndex].BaseTsc);
+				return static_cast<uint64_t>(_base[resyncedIndex].BaseTime +
+											 static_cast<int64_t>(static_cast<double>(diff) * _nanosecondsPerTick));
 			}
 
-			return static_cast<std::uint64_t>(_base[index].BaseTime + static_cast<std::int64_t>(static_cast<double>(diff) * _nanosecondsPerTick));
+			return static_cast<std::uint64_t>(_base[index].BaseTime +
+				static_cast<std::int64_t>(static_cast<double>(diff) * _nanosecondsPerTick));
 		}
 
 		std::uint64_t RdtscClock::timeSinceEpochSafe(std::uint64_t rdtscValue) const noexcept

@@ -38,7 +38,8 @@ jobs:
           Platform: x64
           ArchExts: AVX2
 
-    runs-on: 'windows-latest'
+    #runs-on: 'windows-latest'
+    runs-on: 'windows-2022'
 
     steps:
     - name: 'Checkout Repository'
@@ -121,7 +122,8 @@ jobs:
           Platform: x64
           ArchExts: AVX
 
-    runs-on: 'windows-latest'
+    #runs-on: 'windows-latest'
+    runs-on: 'windows-2022'
 
     steps:
     - name: 'Checkout Repository'
