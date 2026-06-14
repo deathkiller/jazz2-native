@@ -1315,7 +1315,7 @@ namespace Jazz2::Actors
 				if (flareIndexed) {
 					// Use the DEFAULT palette (row 0, palette offset 0) so the flare keeps its original colors even
 					// when the player's fur recolor would otherwise overlap the flare's palette indices
-					Texture* defaultPalette = ContentResolver::Get().GetDefaultPaletteTexture();
+					Texture* defaultPalette = ContentResolver::Get().GetPaletteTexture();
 					if (defaultPalette != nullptr) {
 						command->GetMaterial().SetTexture(1, *defaultPalette);
 					}

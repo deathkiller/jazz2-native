@@ -676,6 +676,10 @@ endif()
 if(SHAREWARE_DEMO_ONLY)
 	message(STATUS "Building the game only with Shareware Demo episode")
 	target_compile_definitions(${NCINE_APP} PUBLIC "SHAREWARE_DEMO_ONLY")
+
+	if(WITH_MULTIPLAYER AND SHAREWARE_DEMO_ALLOW_MULTIPLAYER)
+		target_compile_definitions(${NCINE_APP} PUBLIC "SHAREWARE_DEMO_ALLOW_MULTIPLAYER")
+	endif()
 endif()
 
 if(DISABLE_RESCALE_SHADERS)

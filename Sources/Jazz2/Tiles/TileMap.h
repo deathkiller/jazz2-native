@@ -13,13 +13,6 @@
 
 using namespace Death::IO;
 
-// Tilemap rendering path toggle (A/B switch). When defined, each eligible tile layer (default renderer, single
-// tileset) is drawn as one mesh = one draw call per layer (or a few <=64 KB chunks), trading a slightly higher
-// draw-call count for much less per-frame CPU (no per-tile render command + no RenderBatcher pass). When commented
-// out, the original path is used: one render command per visible tile, which RenderBatcher merges into ~2 commands.
-// Layers that aren't eligible (tinted/solid/sky/circle renderers, multi-tileset levels) always use the original path.
-//#define TILEMAP_USE_SINGLE_DRAW
-
 namespace Jazz2
 {
 	class LevelHandler;
@@ -411,8 +404,8 @@ namespace Jazz2::Tiles
 		// and reset in OnEndFrame(); host vertex pointers reference the buffers until the render queue is flushed, so
 		// a buffer is never reused within a frame (across viewports the counts simply keep growing).
 		SmallVector<SmallVector<float, 0>, 0> _layerMeshVertices;
-		std::int32_t _layerMeshVerticesCount = 0;
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _layerMeshCommands;
+		std::int32_t _layerMeshVerticesCount = 0;
 		std::int32_t _layerMeshCommandCount = 0;
 #endif
 

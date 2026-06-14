@@ -225,8 +225,18 @@ namespace Jazz2::Compatibility
 		so->WriteValue<std::uint8_t>(2); // Version 2 is reserved for sprites (or bigger images)
 		so->WriteValue<std::uint8_t>(flags); // Flags
 
-		// TODO: Use single channel instead
-		so->WriteValue<std::uint8_t>(4);
+		// 8-bit palette tilesets (no 32-bit/true-color tiles) are emitted as a single index channel: the palette is
+		// stored in the file and entry 0 is fixed transparent, so the loader reproduces every color and on/off
+		// transparency from the index alone - the alpha channel is redundant. Tilesets with any 32-bit tile stay RGBA.
+		bool hasAny32bitTile = false;
+		for (std::int32_t i = 0; i < tileCount; i++) {
+			if (_tiles[i].ImageDataOffset & Is32bitTile) {
+				hasAny32bitTile = true;
+				break;
+			}
+		}
+		std::uint8_t channelCount = (hasAny32bitTile ? 4 : 1);
+		so->WriteValue<std::uint8_t>(channelCount);
 		so->WriteValueAsLE<std::uint32_t>(width);
 		so->WriteValueAsLE<std::uint32_t>(height);
 		so->WriteValueAsLE<std::uint16_t>(tileCount);
@@ -284,7 +294,7 @@ namespace Jazz2::Compatibility
 		so->Write(ms.GetBuffer(), ms.GetSize());
 
 		// Diffuse
-		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * 4);
+		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * channelCount);
 
 		for (std::int32_t i = 0; i < tileCount; i++) {
 			const auto& tile = _tiles[i];
@@ -303,6 +313,13 @@ namespace Jazz2::Compatibility
 						pixels[pixelIdx + 3] = src[3];
 					}
 				}
+			} else if (channelCount == 1) {
+				// Single index channel; the palette (incl. fixed-transparent entry 0) is applied at load time
+				for (std::int32_t y = 0; y < BlockSize; y++) {
+					for (std::int32_t x = 0; x < BlockSize; x++) {
+						pixels[width * (oy + y) + ox + x] = tile.Image[y * BlockSize + x];
+					}
+				}
 			} else {
 				for (std::int32_t y = 0; y < BlockSize; y++) {
 					for (std::int32_t x = 0; x < BlockSize; x++) {
@@ -318,7 +335,6 @@ namespace Jazz2::Compatibility
 			}
 		}
 
-		// TODO: Use single channel for 8-bit palette tiles instead
-		JJ2Anims::WriteImageContent(*so, pixels.get(), width, height, 4);
+		JJ2Anims::WriteImageContent(*so, pixels.get(), width, height, channelCount);
 	}
 }

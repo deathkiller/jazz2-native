@@ -61,14 +61,29 @@ namespace Jazz2::UI::Menu
 			// TRANSLATORS: Menu item in main menu
 			_items.emplace_back(Item::PlaySingleplayer, _("Play Story"));
 
-#	if defined(WITH_MULTIPLAYER)
+#	if defined(WITH_MULTIPLAYER) && !defined(SHAREWARE_DEMO_ALLOW_MULTIPLAYER)
+#		if defined(DEATH_TARGET_EMSCRIPTEN)
+		if (!_isEmbedded)
+#		endif
+		{
 			// TRANSLATORS: Menu item in main menu
 			_items.emplace_back(Item::PlayMultiplayer, _("Play Online"));
+		}
 #	endif
 		} else {
 			// TRANSLATORS: Menu item in main menu (Emscripten only)
 			_items.emplace_back(Item::PlaySingleplayer, _("Play Shareware Demo"));
 		}
+
+#	if defined(WITH_MULTIPLAYER) && defined(SHAREWARE_DEMO_ALLOW_MULTIPLAYER)
+#		if defined(DEATH_TARGET_EMSCRIPTEN)
+		if (!_isEmbedded)
+#		endif
+		{
+			// TRANSLATORS: Menu item in main menu
+			_items.emplace_back(Item::PlayMultiplayer, _("Play Online"));
+		}
+#	endif
 
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 		// TRANSLATORS: Menu item in main menu (Emscripten only)
@@ -396,7 +411,12 @@ namespace Jazz2::UI::Menu
 				break;
 #if defined(WITH_MULTIPLAYER)
 			case Item::PlayMultiplayer:
-				if (_isPlayable) {
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+				if (_isPlayable && !_isEmbedded)
+#	else
+				if (_isPlayable)
+#	endif
+				{
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
 #	if defined(DEATH_TARGET_EMSCRIPTEN)
 					// Creating a server is not supported on Emscripten

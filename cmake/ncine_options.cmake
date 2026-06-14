@@ -182,3 +182,5 @@ if(WITH_WEBSOCKET AND NOT EMSCRIPTEN)
 	set(WITH_WEBSOCKET_TLS_BACKEND "OpenSSL" CACHE STRING "TLS backend for WebSocket transport (None, OpenSSL, mbedTLS)")
 	set_property(CACHE WITH_WEBSOCKET_TLS_BACKEND PROPERTY STRINGS "None" "OpenSSL" "mbedTLS")
 endif()
+
+cmake_dependent_option(SHAREWARE_DEMO_ALLOW_MULTIPLAYER "Enable multiplayer support also in shareware demo" ON "SHAREWARE_DEMO_ONLY;NCINE_WITH_THREADS OR EMSCRIPTEN" OFF)

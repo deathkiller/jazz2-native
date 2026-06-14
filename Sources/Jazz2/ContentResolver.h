@@ -50,29 +50,39 @@ namespace Jazz2
 		static constexpr std::int32_t PaletteCount = 256;
 		/** @brief Number of colors per palette */
 		static constexpr std::int32_t ColorsPerPalette = 256;
-		/** @brief First palette row in the shared palette texture available for dynamic per-player allocation; lower
-			rows are reserved for the sprite palette (row 0) and the generated gem palettes (rows 1-2) */
+		/**
+		 * @brief First shared-palette row available for dynamic per-player allocation
+		 *
+		 * Lower rows are reserved for the sprite palette (row 0) and the generated gem palettes (rows 1-2).
+		 */
 		static constexpr std::int32_t FirstDynamicPaletteRow = 8;
 		/** @brief Invalid value */
 		static constexpr std::int32_t InvalidValue = INT_MAX;
 
-		/** @{ @name Player recolor palette sections
+		/** @{ @name Player recolor palette sections */
 
-			The player's fur color is 4 bytes (one per section, as in the original game). The low 7 bits of each byte
-			are the starting palette index of an 8-color gradient in the sprite palette; those 8 colors are copied into
-			the section's fixed range in the per-player palette (a byte of 0 keeps the original colors for that section).
-			If @ref FurHueShiftFlag is also set, the gradient's hue is rotated by @ref HueShiftDegreesForGradient first
-			(see @ref ShiftHue), which roughly doubles the selectable color variants without extra gradients in the palette.
-			@b TODO: @ref FurSectionStarts are best-guess placeholders - adjust them to the real player sprite palette. */
+		/**
+		 * @brief How a player's 4-byte fur color maps to recolored palette sections
+		 *
+		 * The fur color is 4 bytes, one per section (as in the original game). The low 7 bits of each byte are the
+		 * starting palette index of an 8-color gradient in the sprite palette; those 8 colors are copied into the
+		 * section's fixed range in the per-player palette (a byte of 0 keeps the original colors for that section).
+		 * If @ref FurHueShiftFlag is also set, the gradient's hue is rotated by @ref HueShiftDegreesForGradient first
+		 * (see @ref ShiftHue), which roughly doubles the selectable color variants without extra gradients in the palette.
+		 */
 		/** @brief Number of recolorable fur sections */
 		static constexpr std::int32_t FurSectionCount = 4;
 		/** @brief Number of consecutive palette indices per fur section */
 		static constexpr std::int32_t FurSectionSize = 8;
 		/** @brief Starting palette index of each fur section in the per-player palette */
 		static constexpr std::int32_t FurSectionStarts[FurSectionCount] = { 0x10, 0x18, 0x20, 0x28 };
-		/** @brief High bit of a fur section byte requesting its gradient be hue-shifted by @ref HueShiftDegreesForGradient;
-			the low 7 bits stay the gradient start index (gradient starts never exceed 0x58, so this bit is always free) */
+		/**
+		 * @brief High bit of a fur section byte requesting its gradient be hue-shifted by @ref HueShiftDegreesForGradient
+		 *
+		 * The low 7 bits stay the gradient start index (gradient starts never exceed 0x58, so this bit is always free)
+		 */
 		static constexpr std::uint8_t FurHueShiftFlag = 0x80;
+
 		/** @} */
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -113,8 +123,11 @@ namespace Jazz2
 #endif
 		/** @brief Tries to find and open a file specified by the path */
 		std::unique_ptr<Stream> OpenContentFile(StringView path, std::int32_t bufferSize = 8192);
-		/** @brief Tries to open a file from the `"Source"` directory (original/custom game files, case-insensitive);
-			the returned stream is invalid if the file wasn't found */
+		/**
+		 * @brief Tries to open a file from the `"Source"` directory (case-insensitive)
+		 *
+		 * Used for original/custom game files. The returned stream is invalid if the file wasn't found.
+		 */
 		std::unique_ptr<Stream> OpenSourceFile(StringView path, std::int32_t bufferSize = 8192);
 		
 		/** @brief Marks beginning of the loading assets */
@@ -127,58 +140,91 @@ namespace Jazz2
 
 		/** @brief Preloads specified metadata and its linked assets to cache */
 		void PreloadMetadataAsync(StringView path);
-		/** @brief Loads specified metadata and its linked assets if not in cache already and returns it
-			@param forceIndexed Load all linked graphics as indexed (palette not baked) so they can be recolored at
-				draw time - used for the player so each player can have a custom color scheme */
+		/**
+		 * @brief Loads specified metadata and its linked assets (cached)
+		 *
+		 * @param forceIndexed Load all linked graphics as indexed (palette not baked) so they can be recolored at draw
+		 *                     time - used for the player so each player can have a custom color scheme
+		 */
 		Metadata* RequestMetadata(StringView path, bool forceIndexed = false);
-		/** @brief Loads specified graphics asset if not in cache already and returns it
-			@param keepIndexed Keep raw palette indices in the texture (don't bake the palette) for shader recoloring */
+		/**
+		 * @brief Loads specified graphics asset (cached)
+		 *
+		 * @param keepIndexed Keep raw palette indices in the texture (don't bake the palette) for shader recoloring
+		 */
 		GenericGraphicResource* RequestGraphics(StringView path, std::uint16_t paletteOffset, bool keepIndexed = false);
 
-		/** @brief Builds a 256-color palette for a player from a packed 4-byte fur color (one section per byte, each
-			byte a gradient start in the sprite palette; 0 = original); see @ref FurSectionStarts */
+		/**
+		 * @brief Builds a 256-color palette for a player from a packed 4-byte fur color
+		 *
+		 * Each byte is one section: a gradient start index in the sprite palette (0 = keep the original colors).
+		 * See @ref FurSectionStarts.
+		 */
 		void BuildPlayerColorPalette(std::uint32_t furColor, std::uint32_t* outPalette) const;
-		/** @brief Rotates the hue of a packed `0xAABBGGRR` color by `degrees` in YIQ space, preserving its perceived
-			brightness (luma) and chroma - so the result keeps the original's lightness and saturation and only the
-			hue changes (alpha is kept untouched). Used to derive the per-gradient hue-shifted fur variants */
+		/**
+		 * @brief Rotates the hue of a packed `0xAABBGGRR` color by `degrees`
+		 *
+		 * Rotates in YIQ space, so the result keeps the original's perceived brightness (luma) and chroma - only the
+		 * hue changes, and alpha is untouched. Used to derive the per-gradient hue-shifted fur variants.
+		 */
 		static std::uint32_t ShiftHue(std::uint32_t color, float degrees);
-		/** @brief Returns the hue rotation (in degrees) applied to the gradient that starts at `gradientStart` in the
-			sprite palette when @ref FurHueShiftFlag is set. Each selectable gradient gets its own angle, chosen so its
-			hue-shifted twin lands in a part of the hue wheel the base gradients leave sparse (the sprite palette clusters
-			into a warm wedge ~0-73° and a cool wedge ~207-335°, leaving green/cyan/indigo underrepresented). A single
-			global angle would push ~2 of the cool gradients back onto hues that already exist; per-gradient angles spread
-			all twins evenly instead. Returns `0` for the near-neutral gradients (and any unrecognized start), which barely
-			change under any rotation and so get no twin. */
+		/**
+		 * @brief Returns the hue rotation (degrees) for the gradient starting at `gradientStart` when @ref FurHueShiftFlag is set
+		 *
+		 * Each selectable gradient gets its own angle, chosen so its hue-shifted twin lands where the base gradients are
+		 * sparse (the sprite palette clusters into a warm wedge ~0-73° and a cool wedge ~207-335°, leaving green/cyan/indigo
+		 * underrepresented). A single global angle would push ~2 of the cool gradients back onto hues that already exist;
+		 * per-gradient angles spread all twins evenly. Returns `0` for the near-neutral gradients (and any unrecognized
+		 * start), which barely change under rotation and so get no twin.
+		 */
 		static float HueShiftDegreesForGradient(std::int32_t gradientStart);
-		/** @brief Builds/updates a standalone 256x1 palette texture for a player fur color into `texture` (created on
-			first use) and returns it; used for off-screen previews (e.g. the profile menu). Returns `nullptr` in
-			headless mode. In-game recoloring uses @ref AcquirePaletteOffset instead. */
+		/**
+		 * @brief Builds/updates a standalone 256x1 palette texture for a player fur color and returns it
+		 *
+		 * `texture` is created on first use. Used for off-screen previews (e.g. the profile menu); in-game recoloring
+		 * uses @ref AcquirePaletteOffset instead. Returns `nullptr` in headless mode.
+		 */
 		Texture* ApplyPlayerColorPalette(std::unique_ptr<Texture>& texture, std::uint32_t furColor);
-		/** @brief Returns the shared 256x256 palette texture (row 0 = sprite palette, rows 1-2 = gems, rows
-			@ref FirstDynamicPaletteRow+ = dynamically allocated per-player palettes), uploading any rows changed
-			since the last call; bound to texture unit 1 for palette shaders. Returns `nullptr` in headless mode. */
+		/**
+		 * @brief Returns the shared 256x256 palette texture, uploading any rows changed since the last call
+		 *
+		 * Row 0 is the sprite palette, rows 1-2 the gems, rows @ref FirstDynamicPaletteRow+ the dynamically allocated
+		 * per-player palettes. Bound to texture unit 1 for palette shaders. Returns `nullptr` in headless mode. Indexed
+		 * sprites that must keep their original colors sample row 0 (the default palette) via a palette offset of 0.
+		 */
 		Texture* GetPaletteTexture();
-		/** @brief Returns the shared palette texture; indexed sprites that must not be recolored sample row 0 (the
-			default sprite palette) by using a palette offset of 0. Returns `nullptr` in headless mode. */
-		Texture* GetDefaultPaletteTexture();
-		/** @brief Acquires a palette offset (the flat offset into the shared palette texture passed to
-			@ref ActorBase::ActorRenderer::SetPalette and the palette-aware shaders) for the given packed fur color,
-			reference-counted: callers with the same fur color share one palette (so e.g. many corpses of the same
-			character cost a single row). Builds the recolored palette on first use. Returns the offset, or -1 if none
-			are free. Release it with @ref ReleasePaletteOffset when the holder disconnects/despawns. */
+		/**
+		 * @brief Acquires a reference-counted palette offset for the given packed fur color
+		 *
+		 * The offset is the flat offset into the shared palette texture, passed to @ref ActorBase::ActorRenderer::SetPalette
+		 * and the palette-aware shaders. Callers with the same fur color share one palette (so e.g. many corpses of the
+		 * same character cost a single row); the recolored palette is built on first use. Returns the offset, or -1 if
+		 * none are free. Release it with @ref ReleasePaletteOffset when the holder disconnects/despawns.
+		 */
 		std::int32_t AcquirePaletteOffset(std::uint32_t furColor);
-		/** @brief Releases one reference to a palette offset previously returned by @ref AcquirePaletteOffset; the
-			underlying palette is returned to the pool only when the last holder releases it */
+		/**
+		 * @brief Releases one reference to a palette offset from @ref AcquirePaletteOffset
+		 *
+		 * The underlying palette is returned to the pool only when the last holder releases it.
+		 */
 		void ReleasePaletteOffset(std::int32_t paletteOffset);
 
-		/** @brief Configures a manually-built sprite render command for a (possibly indexed) sprite: selects the
-			@ref PrecompiledShader::PaletteRemap shader when `indexed` (recolored at draw time via the shared palette),
-			else the plain Sprite program; when the shader changes it also reserves uniform memory, sets triangle-strip
-			draw params, and points the diffuse/palette samplers at units 0/1. Returns whether the shader changed (use
-			it to gate one-time per-command setup). For drawing game-world graphics outside the standard ActorRenderer. */
+		/**
+		 * @brief Configures a manually-built render command for a (possibly indexed) sprite
+		 *
+		 * Selects the @ref PrecompiledShader::PaletteRemap shader when `indexed` (recolored at draw time via the shared
+		 * palette), else the plain Sprite program. When the shader changes it also reserves uniform memory, sets
+		 * triangle-strip draw params, and points the diffuse/palette samplers at units 0/1. Returns whether the shader
+		 * changed (use it to gate one-time per-command setup). For game-world graphics drawn outside the standard
+		 * ActorRenderer.
+		 */
 		bool ConfigureSpriteShader(RenderCommand& command, bool indexed);
-		/** @brief Binds `diffuse` to texture unit 0 and, when `indexed`, the shared palette texture to unit 1 plus the
-			per-instance palette offset on `instanceBlock`. Call at draw time after the other instance uniforms. */
+		/**
+		 * @brief Binds the diffuse (and, when `indexed`, the palette) textures for a sprite render command
+		 *
+		 * Binds `diffuse` to texture unit 0 and, when `indexed`, the shared palette texture to unit 1 plus the
+		 * per-instance palette offset on `instanceBlock`. Call at draw time, after the other instance uniforms.
+		 */
 		void BindSpritePalette(RenderCommand& command, GLUniformBlockCache& instanceBlock, const Texture& diffuse, bool indexed, std::uint16_t paletteOffset);
 
 		/** @brief Loads specified tile set and its palette */
@@ -189,9 +235,13 @@ namespace Jazz2
 		bool TryLoadLevel(StringView path, GameDifficulty difficulty, LevelDescriptor& descriptor);
 		/** @brief Loads default (sprite) palette */
 		void ApplyDefaultPalette();
-		/** @brief Overrides the active sprite palette (row 0 of the shared palette) with up to @ref ColorsPerPalette
-			packed colors (`0xAABBGGRR`) and refreshes everything derived from it (gem gradients and per-player recolor
-			rows) so the change takes effect on the next frame. Has no visible effect in headless mode. */
+		/**
+		 * @brief Overrides the active sprite palette (row 0 of the shared palette)
+		 *
+		 * Takes up to @ref ColorsPerPalette packed colors (`0xAABBGGRR`) and refreshes everything derived from it (gem
+		 * gradients and per-player recolor rows), so the change takes effect on the next frame. No visible effect in
+		 * headless mode.
+		 */
 		void SetSpritePalette(ArrayView<const std::uint32_t> palette);
 
 		/** @brief Returns specified episode by name */
@@ -238,12 +288,28 @@ namespace Jazz2
 
 		GenericGraphicResource* RequestGraphicsAura(StringView path, std::uint16_t paletteOffset, bool keepIndexed = false);
 		static void ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount);
-		static void ExpandTileDiffuse(std::uint8_t* pixelsOffset, std::uint32_t widthWithPadding);
+		// Copies a tile's edge pixels into its 1px atlas padding (so sampling never bleeds across tiles); `bytesPerPixel`
+		// is 1 for an indexed (R8) atlas or 4 for a baked RGBA atlas
+		static void ExpandTileDiffuse(std::uint8_t* pixelsOffset, std::uint32_t widthWithPadding, std::uint32_t bytesPerPixel);
+
+		// Reads the tileset's 256-color palette from the decompressed stream and applies it to the live sprite palette
+		// (drops baked fonts, regenerates gem palettes); just skips the bytes when headless or `applyPalette` is false
+		void ReadTilesetPalette(Stream& uc, bool applyPalette);
+		// Reads the tileset's per-pixel collision mask from the decompressed stream (1 byte per pixel); `maskSizeBits`
+		// receives the total number of mask pixels
+		static std::unique_ptr<std::uint8_t[]> ReadTilesetMask(Stream& uc, std::uint32_t& maskSizeBits);
+		// Builds the padded tileset diffuse atlas (R8 indexed for all-8-bit tilesets, RGBA8 baked when any tile is
+		// 32-bit), the per-tile fully-opaque flags and the optional caption thumbnail. Reads pixels from the raw stream
+		// `s` (the image content follows the compressed block). Sets `indexTiles` to the chosen mode.
+		std::unique_ptr<Texture> BuildTilesetDiffuse(std::unique_ptr<Stream>& s, const char* name, std::uint8_t channelCount,
+			std::uint32_t width, std::uint32_t height, std::uint16_t tileCount, const std::uint8_t* is32bitTile,
+			const std::uint8_t* paletteRemapping, std::uint16_t captionTileId, bool& indexTiles,
+			std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<Color[]>& captionTile);
 		// Packs an indexed sprite/tile (palette index in the red/first channel) into the smallest texture format: R8
 		// when alpha is on/off only (4x less VRAM than RGBA8), or RG8 keeping the per-pixel alpha in green (sampled
 		// into .a via swizzle) when alpha is partial. `srcChannels` is the bytes-per-pixel of `pixels`: 1 (index
-		// only) or 2 (index + alpha) are pre-packed and upload directly with no scan; 4 (RGBA, e.g. a user-supplied
-		// PNG using the indexed pipeline) is packed straight to RG8 in a single pass (correct but unoptimized).
+		// only) or 2 (index + alpha) are pre-packed and upload directly with no scan; 4 (RGBA, e.g. a user-supplied PNG)
+		// packs to RG8. Indexed tilesets are handed over as a single index channel by RequestTileSet, taking the R8 path.
 		// `paletteBaseTransparent` must be true if the sprite's palette entry 0 (its row base) is transparent - only
 		// then can on/off transparency be dropped and reproduced by the palette (false e.g. for gems, which keep RG8)
 		static std::unique_ptr<Texture> CreateIndexedTexture(const char* name, const std::uint8_t* pixels, std::int32_t width, std::int32_t height, std::int32_t srcChannels, bool paletteBaseTransparent);

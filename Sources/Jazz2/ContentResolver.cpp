@@ -1028,56 +1028,56 @@ namespace Jazz2
 		}
 	}
 
-	void ContentResolver::ExpandTileDiffuse(std::uint8_t* pixelsOffset, std::uint32_t widthWithPadding)
+	void ContentResolver::ExpandTileDiffuse(std::uint8_t* pixelsOffset, std::uint32_t widthWithPadding, std::uint32_t bytesPerPixel)
 	{
 		// Top
 		for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-			std::uint32_t from = (1 * widthWithPadding + (x + 1)) * PixelSize;
-			std::uint32_t to = (0 * widthWithPadding + (x + 1)) * PixelSize;
-			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
+			std::uint32_t from = (1 * widthWithPadding + (x + 1)) * bytesPerPixel;
+			std::uint32_t to = (0 * widthWithPadding + (x + 1)) * bytesPerPixel;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], bytesPerPixel);
 		}
 
 		// Bottom
 		for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-			std::uint32_t from = (TileSet::DefaultTileSize * widthWithPadding + (x + 1)) * PixelSize;
-			std::uint32_t to = ((TileSet::DefaultTileSize + 1) * widthWithPadding + (x + 1)) * PixelSize;
-			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
+			std::uint32_t from = (TileSet::DefaultTileSize * widthWithPadding + (x + 1)) * bytesPerPixel;
+			std::uint32_t to = ((TileSet::DefaultTileSize + 1) * widthWithPadding + (x + 1)) * bytesPerPixel;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], bytesPerPixel);
 		}
 
 		// Left
 		for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
-			std::uint32_t from = ((y + 1) * widthWithPadding + 1) * PixelSize;
-			std::uint32_t to = ((y + 1) * widthWithPadding + 0) * PixelSize;
-			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
+			std::uint32_t from = ((y + 1) * widthWithPadding + 1) * bytesPerPixel;
+			std::uint32_t to = ((y + 1) * widthWithPadding + 0) * bytesPerPixel;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], bytesPerPixel);
 		}
 
 		// Right
 		for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
-			std::uint32_t from = ((y + 1) * widthWithPadding + TileSet::DefaultTileSize) * PixelSize;
-			std::uint32_t to = ((y + 1) * widthWithPadding + (TileSet::DefaultTileSize + 1)) * PixelSize;
-			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
+			std::uint32_t from = ((y + 1) * widthWithPadding + TileSet::DefaultTileSize) * bytesPerPixel;
+			std::uint32_t to = ((y + 1) * widthWithPadding + (TileSet::DefaultTileSize + 1)) * bytesPerPixel;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], bytesPerPixel);
 		}
 
 		// Corners (TL, TR, BL, BR)
 		{
-			std::uint32_t from = (0 * widthWithPadding + 1) * PixelSize;
-			std::uint32_t to = (0 * widthWithPadding + 0) * PixelSize;
-			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
+			std::uint32_t from = (0 * widthWithPadding + 1) * bytesPerPixel;
+			std::uint32_t to = (0 * widthWithPadding + 0) * bytesPerPixel;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], bytesPerPixel);
 		}
 		{
-			std::uint32_t from = (0 * widthWithPadding + TileSet::DefaultTileSize) * PixelSize;
-			std::uint32_t to = (0 * widthWithPadding + (TileSet::DefaultTileSize + 1)) * PixelSize;
-			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
+			std::uint32_t from = (0 * widthWithPadding + TileSet::DefaultTileSize) * bytesPerPixel;
+			std::uint32_t to = (0 * widthWithPadding + (TileSet::DefaultTileSize + 1)) * bytesPerPixel;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], bytesPerPixel);
 		}
 		{
-			std::uint32_t from = ((TileSet::DefaultTileSize + 1) * widthWithPadding + 1) * PixelSize;
-			std::uint32_t to = ((TileSet::DefaultTileSize + 1) * widthWithPadding + 0) * PixelSize;
-			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
+			std::uint32_t from = ((TileSet::DefaultTileSize + 1) * widthWithPadding + 1) * bytesPerPixel;
+			std::uint32_t to = ((TileSet::DefaultTileSize + 1) * widthWithPadding + 0) * bytesPerPixel;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], bytesPerPixel);
 		}
 		{
-			std::uint32_t from = ((TileSet::DefaultTileSize + 1) * widthWithPadding + TileSet::DefaultTileSize) * PixelSize;
-			std::uint32_t to = ((TileSet::DefaultTileSize + 1) * widthWithPadding + (TileSet::DefaultTileSize + 1)) * PixelSize;
-			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], PixelSize);
+			std::uint32_t from = ((TileSet::DefaultTileSize + 1) * widthWithPadding + TileSet::DefaultTileSize) * bytesPerPixel;
+			std::uint32_t to = ((TileSet::DefaultTileSize + 1) * widthWithPadding + (TileSet::DefaultTileSize + 1)) * bytesPerPixel;
+			std::memcpy(&pixelsOffset[to], &pixelsOffset[from], bytesPerPixel);
 		}
 	}
 
@@ -1112,10 +1112,10 @@ namespace Jazz2
 				texture->SetSwizzle(SwizzleChannel::Red, SwizzleChannel::Green, SwizzleChannel::Blue, SwizzleChannel::Green);
 			}
 		} else {
-			// RGBA source that isn't pre-packed (e.g. a user-supplied PNG using the indexed pipeline). We can't pick
-			// the optimal R8/RG8 format without an extra scan, so this fallback just packs (index, alpha) into RG8 in a
-			// single pass: it's always correct (fully-opaque sprites merely waste the alpha byte) and never crashes on
-			// user content. The optimized R8/RG8 selection is reserved for pre-packed Aura assets above.
+			// RGBA source that isn't pre-packed (a user-supplied PNG using the indexed pipeline). Pack (index, alpha)
+			// into RG8 in a single pass: always correct (fully-opaque sprites just waste the alpha byte) and never
+			// crashes on user content. Indexed tilesets don't reach this branch - RequestTileSet hands them over as a
+			// single index channel, so they take the R8 path above.
 			std::unique_ptr<std::uint8_t[]> packed = std::make_unique<std::uint8_t[]>(count * 2);
 			for (std::int32_t i = 0; i < count; i++) {
 				packed[(i * 2) + 0] = pixels[(i * srcChannels) + 0];
@@ -1154,7 +1154,6 @@ namespace Jazz2
 		DEATH_ASSERT(signature1 == 0xB8EF8498E2BFBBEF && signature2 == 0x208F && version == 2,
 			("Tile set \"{}\" has invalid signature", fullPath), nullptr);
 
-		// TODO: Use single channel instead
 		std::uint8_t channelCount = s->ReadValue<std::uint8_t>();
 		std::uint32_t width = s->ReadValueAsLE<std::uint32_t>();
 		std::uint32_t height = s->ReadValueAsLE<std::uint32_t>();
@@ -1165,28 +1164,7 @@ namespace Jazz2
 
 		DeflateStream uc(*s, compressedSize);
 
-		// Palette
-		if (applyPalette && !_isHeadless) {
-			std::uint32_t newPalette[ColorsPerPalette];
-			for (std::size_t i = 0; i < arraySize(newPalette); i++) {
-				newPalette[i] = uc.ReadValueAsLE<std::uint32_t>();
-			}
-
-			if (std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(std::uint32_t)) != 0) {
-				// The sprite palette changed. Indexed sprites/tiles recolor from the live palette texture, so they
-				// don't need reloading; only the baked fonts are dropped so they rebake with the new palette.
-				if (_isLoading) {
-					for (std::int32_t i = 0; i < (std::int32_t)FontType::Count; i++) {
-						_fonts[i] = nullptr;
-					}
-				}
-
-				std::memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(std::uint32_t));
-				RecreateGemPalettes();
-			}
-		} else {
-			uc.Seek(ColorsPerPalette * sizeof(std::uint32_t), SeekOrigin::Current);
-		}
+		ReadTilesetPalette(uc, applyPalette);
 
 		// Mark individual tiles as 32-bit or 8-bit
 		std::unique_ptr<uint8_t[]> is32bitTile;
@@ -1198,172 +1176,210 @@ namespace Jazz2
 		}
 
 		// Mask
-		std::uint32_t maskSize = uc.ReadValueAsLE<std::uint32_t>();
-		std::unique_ptr<uint8_t[]> mask = std::make_unique<std::uint8_t[]>(maskSize * 8);
-		for (std::uint32_t j = 0; j < maskSize; j++) {
-			std::uint8_t idx = uc.ReadValue<std::uint8_t>();
-			for (std::uint32_t k = 0; k < 8; k++) {
-				std::uint32_t pixelIdx = 8 * j + k;
-				mask[pixelIdx] = (((idx >> k) & 0x01) != 0);
-			}
-		}
+		std::uint32_t maskSizeBits;
+		std::unique_ptr<std::uint8_t[]> mask = ReadTilesetMask(uc, maskSizeBits);
 
 		std::unique_ptr<Texture> textureDiffuse;
 		std::unique_ptr<Color[]> captionTile;
-		// Per-tile flag (1 = fully opaque diffuse); only computed when rendering, used to cull hidden debris
+		// Per-tile flag (1 = fully opaque diffuse); used to cull hidden debris. Set by BuildTilesetDiffuse().
 		std::unique_ptr<std::uint8_t[]> tileDiffuseOpaque;
-		// Keep raw palette indices in the atlas (recolor tiles at draw time) unless any tile is 32-bit true-color
+		// Whether tiles keep raw palette indices (recolored at draw time) vs baked colors; set by BuildTilesetDiffuse()
 		bool indexTiles = false;
 
+		// The image content follows the compressed block, so it's read from the raw stream (headless builds masks only)
 		if (!_isHeadless) {
-			// Don't load textures in headless mode, only collision masks
-			// 32-bit (true-color) tiles have no palette index, so a tileset containing any must stay baked
-			indexTiles = true;
-			for (std::int32_t t = 0; t < (std::int32_t)tileCount; t++) {
-				if ((is32bitTile[t / 8] & (1 << (t & 7))) != 0) {
-					indexTiles = false;
-					break;
-				}
-			}
-			// Load raw pixels from file
-			std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * 4);
-			ReadImageFromFile(s, pixels.get(), width, height, channelCount);
-
-			// Then add 1px padding to each tile
-			std::uint32_t tilesPerRow = width / TileSet::DefaultTileSize;
-			std::uint32_t tilesPerColumn = height / TileSet::DefaultTileSize;
-
-			std::uint32_t widthWithPadding = width + (2 * tilesPerRow);
-			std::uint32_t heightWithPadding = height + (2 * tilesPerColumn);
-			std::unique_ptr<std::uint8_t[]> pixelsWithPadding = std::make_unique<std::uint8_t[]>(widthWithPadding * heightWithPadding * 4);
-			tileDiffuseOpaque = std::make_unique<std::uint8_t[]>(tileCount);
-
-			for (uint32_t i = 0; i < tilesPerColumn; i++) {
-				std::uint32_t yf = i * TileSet::DefaultTileSize;
-				std::uint32_t yt = i * (TileSet::DefaultTileSize + 2);
-
-				for (uint32_t j = 0; j < tilesPerRow; j++) {
-					std::uint32_t xf = j * TileSet::DefaultTileSize;
-					std::uint32_t xt = j * (TileSet::DefaultTileSize + 2);
-
-					std::uint8_t* dstTile = &pixelsWithPadding[(yt * widthWithPadding + xt) * 4];
-					std::int32_t tileIdx = i * tilesPerRow + j;
-
-					if ((is32bitTile[tileIdx / 8] & (1 << (tileIdx & 7))) != 0) {
-						// 32-bit tile
-						for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
-							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-								std::uint32_t srcIdx = ((yf + y) * width + (xf + x)) * 4;
-								std::uint32_t dstIdx = ((y + 1) * widthWithPadding + (x + 1)) * 4;
-
-								dstTile[dstIdx + 0] = pixels[srcIdx + 0]; // R
-								dstTile[dstIdx + 1] = pixels[srcIdx + 1]; // G
-								dstTile[dstIdx + 2] = pixels[srcIdx + 2]; // B
-								dstTile[dstIdx + 3] = pixels[srcIdx + 3]; // A
-							}
-						}
-					} else if (paletteRemapping != nullptr) {
-						// Remapped 8-bit tile
-						for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
-							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-								std::uint32_t srcIdx = ((yf + y) * width + (xf + x)) * 4;
-								std::uint32_t dstIdx = ((y + 1) * widthWithPadding + (x + 1)) * 4;
-
-								// When indexing, store the (remapped) palette index in the red channel with full alpha so the
-								// existing writes below produce [index, 0, 0, srcAlpha]; the palette is applied at draw time
-								std::uint32_t color = (indexTiles ? ((std::uint32_t)paletteRemapping[pixels[srcIdx]] | 0xFF000000u) : _palettes[paletteRemapping[pixels[srcIdx]]]);
-								std::uint32_t alpha = pixels[srcIdx + 3];
-
-								dstTile[dstIdx + 0] = (color >> 0) & 0xFF;
-								dstTile[dstIdx + 1] = (color >> 8) & 0xFF;
-								dstTile[dstIdx + 2] = (color >> 16) & 0xFF;
-								dstTile[dstIdx + 3] = ((color >> 24) & 0xFF) * alpha / 255;
-							}
-						}
-					} else {
-						// Plain 8-bit tile
-						for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
-							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-								std::uint32_t srcIdx = ((yf + y) * width + (xf + x)) * 4;
-								std::uint32_t dstIdx = ((y + 1) * widthWithPadding + (x + 1)) * 4;
-
-								// When indexing, store the palette index in the red channel with full alpha (see remapped branch)
-								std::uint32_t color = (indexTiles ? ((std::uint32_t)pixels[srcIdx] | 0xFF000000u) : _palettes[pixels[srcIdx]]);
-								std::uint32_t alpha = pixels[srcIdx + 3];
-
-								dstTile[dstIdx + 0] = (color >> 0) & 0xFF;
-								dstTile[dstIdx + 1] = (color >> 8) & 0xFF;
-								dstTile[dstIdx + 2] = (color >> 16) & 0xFF;
-								dstTile[dstIdx + 3] = ((color >> 24) & 0xFF) * alpha / 255;
-							}
-						}
-					}
-
-					// Record whether the tile's diffuse is fully opaque (every interior pixel alpha == 255)
-					if (tileIdx < (std::int32_t)tileCount) {
-						bool opaque = true;
-						for (std::uint32_t y = 0; y < TileSet::DefaultTileSize && opaque; y++) {
-							for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-								if (dstTile[(((y + 1) * widthWithPadding) + (x + 1)) * 4 + 3] != 255) {
-									opaque = false;
-									break;
-								}
-							}
-						}
-						tileDiffuseOpaque[tileIdx] = (opaque ? 1 : 0);
-					}
-
-					ExpandTileDiffuse(dstTile, widthWithPadding);
-				}
-			}
-
-			if (indexTiles) {
-				// The atlas holds palette indices (red channel) - pack it to R8/RG8 like indexed sprites; the
-				// per-tile alpha was expanded into the padding above, so it carries over correctly. Tiles draw at
-				// palette offset 0 (row 0), whose entry 0 is transparent, so on/off transparency can drop to R8
-				bool paletteBaseTransparent = (((_palettes[0] >> 24) & 0xFF) == 0);
-				textureDiffuse = CreateIndexedTexture(fullPath.data(), pixelsWithPadding.get(), widthWithPadding, heightWithPadding, PixelSize, paletteBaseTransparent);
-			} else {
-				textureDiffuse = std::make_unique<Texture>(fullPath.data(), Texture::Format::RGBA8, widthWithPadding, heightWithPadding);
-				textureDiffuse->LoadFromTexels((std::uint8_t*)pixelsWithPadding.get(), 0, 0, widthWithPadding, heightWithPadding);
-			}
-			textureDiffuse->SetMinFiltering(SamplerFilter::Nearest);
-			textureDiffuse->SetMagFiltering(SamplerFilter::Nearest);
-
-			// Caption Tile
-			if (captionTileId > 0) {
-				std::uint32_t tilesPerRow = width / TileSet::DefaultTileSize;
-				std::uint32_t tx = (captionTileId % tilesPerRow) * TileSet::DefaultTileSize;
-				std::uint32_t ty = (captionTileId / tilesPerRow) * TileSet::DefaultTileSize;
-
-				if (tx + TileSet::DefaultTileSize <= width && ty + TileSet::DefaultTileSize <= height) {
-					captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
-
-					for (std::uint32_t y = 0; y < TileSet::DefaultTileSize / 3; y++) {
-						for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
-							// Read 3 rows of pixels and average
-							std::uint32_t idx1 = ((ty + y * 3) * width + (tx + x)) * 4;
-							std::uint32_t idx2 = ((ty + y * 3 + 1) * width + (tx + x)) * 4;
-							std::uint32_t idx3 = ((ty + y * 3 + 2) * width + (tx + x)) * 4;
-
-							std::uint8_t r = (pixels[idx1 + 0] + pixels[idx2 + 0] + pixels[idx3 + 0]) / 3;
-							std::uint8_t g = (pixels[idx1 + 1] + pixels[idx2 + 1] + pixels[idx3 + 1]) / 3;
-							std::uint8_t b = (pixels[idx1 + 2] + pixels[idx2 + 2] + pixels[idx3 + 2]) / 3;
-
-							captionTile[y * TileSet::DefaultTileSize + x] = Color(r, g, b);
-						}
-					}
-				}
-			}
+			textureDiffuse = BuildTilesetDiffuse(s, fullPath.data(), channelCount, width, height, tileCount,
+				is32bitTile.get(), paletteRemapping, captionTileId, indexTiles, tileDiffuseOpaque, captionTile);
 		}
 
 		if (!uc.IsValid()) {
 			return nullptr;
 		}
 
-		auto tileSet = std::make_unique<Tiles::TileSet>(path, tileCount, std::move(textureDiffuse), std::move(mask), maskSize * 8, std::move(captionTile), tileDiffuseOpaque.get());
+		auto tileSet = std::make_unique<Tiles::TileSet>(path,
+			tileCount, Death::move(textureDiffuse), Death::move(mask),
+			maskSizeBits, Death::move(captionTile), tileDiffuseOpaque.get());
 		tileSet->IsIndexed = indexTiles;
 		return tileSet;
+	}
+
+	void ContentResolver::ReadTilesetPalette(Stream& uc, bool applyPalette)
+	{
+		if (!applyPalette || _isHeadless) {
+			uc.Seek(ColorsPerPalette * sizeof(std::uint32_t), SeekOrigin::Current);
+			return;
+		}
+
+		std::uint32_t newPalette[ColorsPerPalette];
+		for (std::size_t i = 0; i < arraySize(newPalette); i++) {
+			newPalette[i] = uc.ReadValueAsLE<std::uint32_t>();
+		}
+
+		if (std::memcmp(_palettes, newPalette, ColorsPerPalette * sizeof(std::uint32_t)) != 0) {
+			// The sprite palette changed. Indexed sprites/tiles recolor from the live palette texture, so they don't
+			// need reloading; only the baked fonts are dropped so they rebake with the new palette.
+			if (_isLoading) {
+				for (std::int32_t i = 0; i < (std::int32_t)FontType::Count; i++) {
+					_fonts[i] = nullptr;
+				}
+			}
+
+			std::memcpy(_palettes, newPalette, ColorsPerPalette * sizeof(std::uint32_t));
+			RecreateGemPalettes();
+		}
+	}
+
+	std::unique_ptr<std::uint8_t[]> ContentResolver::ReadTilesetMask(Stream& uc, std::uint32_t& maskSizeBits)
+	{
+		std::uint32_t maskSize = uc.ReadValueAsLE<std::uint32_t>();
+		maskSizeBits = maskSize * 8;
+
+		// Unpack the bitmask to one byte per pixel
+		std::unique_ptr<std::uint8_t[]> mask = std::make_unique<std::uint8_t[]>(maskSizeBits);
+		for (std::uint32_t j = 0; j < maskSize; j++) {
+			std::uint8_t idx = uc.ReadValue<std::uint8_t>();
+			for (std::uint32_t k = 0; k < 8; k++) {
+				mask[8 * j + k] = (((idx >> k) & 0x01) != 0);
+			}
+		}
+		return mask;
+	}
+
+	std::unique_ptr<Texture> ContentResolver::BuildTilesetDiffuse(std::unique_ptr<Stream>& s, const char* name, std::uint8_t channelCount,
+		std::uint32_t width, std::uint32_t height, std::uint16_t tileCount, const std::uint8_t* is32bitTile,
+		const std::uint8_t* paletteRemapping, std::uint16_t captionTileId, bool& indexTiles,
+		std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<Color[]>& captionTile)
+	{
+		// 32-bit (true-color) tiles have no palette index, so a tileset containing any must stay baked as RGBA;
+		// an all-8-bit tileset keeps raw palette indices and recolors at draw time (uploaded as R8).
+		indexTiles = true;
+		for (std::int32_t t = 0; t < (std::int32_t)tileCount; t++) {
+			if ((is32bitTile[t / 8] & (1 << (t & 7))) != 0) {
+				indexTiles = false;
+				break;
+			}
+		}
+
+		// Load raw pixels. The data is laid out `channelCount` bytes per pixel (1 = index only, 4 = RGBA / index-in-red;
+		// an 8-bit tile keeps its palette index in the first byte either way), but ReadImageFromFile always writes a full
+		// 4-byte RGBA per pixel (overlapping for narrower strides), so the buffer must be sized for 4 bytes/pixel even
+		// when channelCount is 1 - otherwise the final pixel's write overruns the heap.
+		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * 4);
+		ReadImageFromFile(s, pixels.get(), width, height, channelCount);
+
+		// Build the atlas with 1px padding around each tile (so sampling never bleeds across tiles). Indexed output
+		// is a single index channel (-> R8), baked output is RGBA.
+		const std::uint32_t tilesPerRow = width / TileSet::DefaultTileSize;
+		const std::uint32_t tilesPerColumn = height / TileSet::DefaultTileSize;
+		const std::uint32_t paddedWidth = width + (2 * tilesPerRow);
+		const std::uint32_t paddedHeight = height + (2 * tilesPerColumn);
+		const std::uint32_t dstChannels = (indexTiles ? 1u : 4u);
+
+		std::unique_ptr<std::uint8_t[]> atlas = std::make_unique<std::uint8_t[]>(paddedWidth * paddedHeight * dstChannels);
+		tileDiffuseOpaque = std::make_unique<std::uint8_t[]>(tileCount);
+
+		for (std::uint32_t ty = 0; ty < tilesPerColumn; ty++) {
+			for (std::uint32_t tx = 0; tx < tilesPerRow; tx++) {
+				const std::uint32_t srcX = tx * TileSet::DefaultTileSize;
+				const std::uint32_t srcY = ty * TileSet::DefaultTileSize;
+				const std::uint32_t dstX = tx * (TileSet::DefaultTileSize + 2);
+				const std::uint32_t dstY = ty * (TileSet::DefaultTileSize + 2);
+				const std::int32_t tileIdx = ty * tilesPerRow + tx;
+				const bool is32bit = ((is32bitTile[tileIdx / 8] & (1 << (tileIdx & 7))) != 0);
+
+				std::uint8_t* dstTile = &atlas[(dstY * paddedWidth + dstX) * dstChannels];
+				bool opaque = true;
+
+				for (std::uint32_t y = 0; y < TileSet::DefaultTileSize; y++) {
+					for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+						const std::uint32_t src = ((srcY + y) * width + (srcX + x)) * channelCount;
+						const std::uint32_t dst = ((y + 1) * paddedWidth + (x + 1)) * dstChannels;
+
+						if (is32bit) {
+							// True-color: copy RGBA straight through (only happens in baked tilesets, so dstChannels == 4)
+							dstTile[dst + 0] = pixels[src + 0];
+							dstTile[dst + 1] = pixels[src + 1];
+							dstTile[dst + 2] = pixels[src + 2];
+							dstTile[dst + 3] = pixels[src + 3];
+							if (pixels[src + 3] != 255) {
+								opaque = false;
+							}
+						} else {
+							// 8-bit: index is the first byte; transparency is index 0 (carried as on/off alpha when the
+							// source is 4-channel). Remapping preserves transparency - a transparent source stays index 0
+							// even if the remap table moves index 0 elsewhere.
+							const std::uint8_t origIndex = pixels[src];
+							const bool transparent = (channelCount >= 4 ? (pixels[src + 3] == 0) : (origIndex == 0));
+							const std::uint8_t index = (transparent ? 0 : (paletteRemapping != nullptr ? paletteRemapping[origIndex] : origIndex));
+
+							if (indexTiles) {
+								dstTile[dst] = index;
+								if (transparent) {
+									opaque = false;
+								}
+							} else {
+								const std::uint32_t color = _palettes[index];
+								const std::uint8_t alpha = (transparent ? 0 : (std::uint8_t)((color >> 24) & 0xFF));
+								dstTile[dst + 0] = (color >> 0) & 0xFF;
+								dstTile[dst + 1] = (color >> 8) & 0xFF;
+								dstTile[dst + 2] = (color >> 16) & 0xFF;
+								dstTile[dst + 3] = alpha;
+								if (alpha != 255) {
+									opaque = false;
+								}
+							}
+						}
+					}
+				}
+
+				if (tileIdx < (std::int32_t)tileCount) {
+					tileDiffuseOpaque[tileIdx] = (opaque ? 1 : 0);
+				}
+
+				ExpandTileDiffuse(dstTile, paddedWidth, dstChannels);
+			}
+		}
+
+		std::unique_ptr<Texture> textureDiffuse;
+		if (indexTiles) {
+			// Index 0 is the transparent palette entry (row 0), so this uploads directly as R8 (no per-pixel alpha)
+			const bool paletteBaseTransparent = (((_palettes[0] >> 24) & 0xFF) == 0);
+			textureDiffuse = CreateIndexedTexture(name, atlas.get(), paddedWidth, paddedHeight, 1, paletteBaseTransparent);
+		} else {
+			textureDiffuse = std::make_unique<Texture>(name, Texture::Format::RGBA8, paddedWidth, paddedHeight);
+			textureDiffuse->LoadFromTexels(atlas.get(), 0, 0, paddedWidth, paddedHeight);
+		}
+		textureDiffuse->SetMinFiltering(SamplerFilter::Nearest);
+		textureDiffuse->SetMagFiltering(SamplerFilter::Nearest);
+
+		// Caption tile (level-select thumbnail): downscale one tile 1:3 vertically, averaging 3 source rows. Resolve
+		// 8-bit indices through the palette here (32-bit tiles already hold RGB).
+		if (captionTileId > 0) {
+			const std::uint32_t tileX = (captionTileId % tilesPerRow) * TileSet::DefaultTileSize;
+			const std::uint32_t tileY = (captionTileId / tilesPerRow) * TileSet::DefaultTileSize;
+			if (tileX + TileSet::DefaultTileSize <= width && tileY + TileSet::DefaultTileSize <= height) {
+				const bool captionIs32bit = ((is32bitTile[captionTileId / 8] & (1 << (captionTileId & 7))) != 0);
+				captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);
+
+				for (std::uint32_t y = 0; y < TileSet::DefaultTileSize / 3; y++) {
+					for (std::uint32_t x = 0; x < TileSet::DefaultTileSize; x++) {
+						std::uint32_t r = 0, g = 0, b = 0;
+						for (std::uint32_t row = 0; row < 3; row++) {
+							const std::uint32_t src = ((tileY + y * 3 + row) * width + (tileX + x)) * channelCount;
+							if (captionIs32bit) {
+								r += pixels[src + 0]; g += pixels[src + 1]; b += pixels[src + 2];
+							} else {
+								const std::uint32_t color = _palettes[pixels[src]];
+								r += (color >> 0) & 0xFF; g += (color >> 8) & 0xFF; b += (color >> 16) & 0xFF;
+							}
+						}
+						captionTile[y * TileSet::DefaultTileSize + x] = Color((std::uint8_t)(r / 3), (std::uint8_t)(g / 3), (std::uint8_t)(b / 3));
+					}
+				}
+			}
+		}
+
+		return textureDiffuse;
 	}
 
 	bool ContentResolver::LevelExists(StringView levelName)
@@ -1538,7 +1554,7 @@ namespace Jazz2
 					}
 				}
 
-				ExpandTileDiffuse((std::uint8_t*)tileDiffuse, TileSet::DefaultTileSize + 2);
+				ExpandTileDiffuse((std::uint8_t*)tileDiffuse, TileSet::DefaultTileSize + 2, PixelSize);
 				descriptor.TileMap->OverrideTileDiffuse(tileId, tileDiffuse);
 			}
 		} else {
@@ -2151,15 +2167,15 @@ namespace Jazz2
 	float ContentResolver::HueShiftDegreesForGradient(std::int32_t gradientStart)
 	{
 		// Per-gradient rotations. The combined base+twin hues land roughly evenly around the wheel:
-		// base {0, 35, 73, 158, 207, 287, 335} + twins below fill the green/cyan/indigo gaps.
+		// base {0, 35, 73, 158, 207, 287, 335} + twins below fill the green/cyan/blue gaps.
 		switch (gradientStart) {
-			case 0x10: return 42.0f;	// chartreuse ~73°  -> green ~115°
-			case 0x18: return 200.0f;	// red ~0°          -> blue ~200°
-			case 0x20: return 104.0f;	// azure ~207°      -> magenta ~311°
-			case 0x28: return 145.0f;	// orange ~35°      -> cyan ~180°
-			case 0x30: return 65.0f;	// rose ~335°       -> gold ~40°
+			case 0x10: return 42.0f;	// chartreuse ~73°	-> green ~115°
+			case 0x18: return 195.0f;	// red ~0°			-> blue ~195°
+			case 0x20: return 104.0f;	// azure ~207°		-> magenta ~311°
+			case 0x28: return 145.0f;	// orange ~35°		-> cyan ~180°
+			case 0x30: return 65.0f;	// rose ~335°		-> gold ~40°
 			case 0x50: return 218.0f;	// spring-green ~158° -> crimson ~16°
-			case 0x58: return 168.0f;	// purple ~287°     -> lime ~95°
+			case 0x58: return 168.0f;	// purple ~287°		-> lime ~95°
 			default: return 190.0f;		// neutrals (0x40, 0x48) and anything unrecognized -> ~190°
 		}
 	}
@@ -2241,12 +2257,6 @@ namespace Jazz2
 		}
 
 		return _paletteTexture.get();
-	}
-
-	Texture* ContentResolver::GetDefaultPaletteTexture()
-	{
-		// The default sprite palette lives in row 0 of the shared texture; callers sample it with a palette offset of 0
-		return GetPaletteTexture();
 	}
 
 	void ContentResolver::MarkPaletteDirty(std::int32_t firstRow, std::int32_t lastRow)
