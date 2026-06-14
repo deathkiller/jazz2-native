@@ -4,7 +4,14 @@
 
 namespace Jazz2
 {
-	/** @brief Level flags, supports a bitwise combination of its member values */
+	/**
+		@brief Level flags
+		
+		Per-level boolean properties stored as single-bit flags --- whether the level has a pit (and whether that pit
+		kills instantly), uses a custom palette, is hidden, is a multiplayer level, has laps or capture-the-flag,
+		should use a vertical splitscreen, or defines multiplayer spawn points. Read from the level file and used by
+		the level handler to configure the session. Supports a bitwise combination of its member values.
+	*/
 	enum class LevelFlags : std::uint16_t
 	{
 		None = 0,								/**< None */

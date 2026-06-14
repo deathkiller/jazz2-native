@@ -4,7 +4,14 @@
 
 namespace Jazz2::Compatibility
 {
-	/** @brief Version of the original game, supports a bitwise combination of its member values */
+	/**
+		@brief Version of the original game, supports a bitwise combination of its member values
+		
+		Identifies which release of the original game a file being imported originates from (base game,
+		The Secret Files, Holiday Hare or Christmas Chronicles), together with flags marking the JJ2+
+		extension and the shareware demo. Detected during conversion and used to drive
+		version-specific import behavior.
+	*/
 	enum class JJ2Version : std::uint16_t
 	{
 		Unknown = 0x0000,					/**< Unknown version */

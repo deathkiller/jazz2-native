@@ -6,7 +6,13 @@
 
 namespace Jazz2::Multiplayer
 {
-	/** @brief Client disconnect reason */
+	/**
+		@brief Client disconnect reason
+		
+		Describes why a connection was refused or terminated, ranging from user-initiated disconnects and
+		protocol or version mismatches to authentication failures, moderation actions and various server
+		shutdown states. It is reported on disconnect and when kicking a peer.
+	*/
 	enum class Reason : std::uint32_t
 	{
 		Unknown,								/**< Unspecified */

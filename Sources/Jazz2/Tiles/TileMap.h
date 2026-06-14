@@ -27,7 +27,13 @@ namespace Jazz2
 
 namespace Jazz2::Tiles
 {
-	/** @brief Layer speed model */
+	/**
+		@brief Describes how a layer's parallax scrolling speed is interpreted
+		
+		Selected per axis in @ref LayerDescription to control how a layer follows the camera --- the default parallax
+		model, locking to the top/left of the screen, fitting the whole layer into view, or treating the speed values
+		as multipliers of the camera size rather than its position.
+	*/
 	enum class LayerSpeedModel {
 		/** @brief Default model */
 		Default,			
@@ -39,7 +45,13 @@ namespace Jazz2::Tiles
 		SpeedMultipliers
 	};
 
-	/** @brief Layer renderer type */
+	/**
+		@brief Specifies how a layer is rendered
+		
+		Stored in @ref LayerDescription to choose the rendering path for a layer --- ordinary textured tiles, a solid
+		or color-tinted fill, or one of the special textured background effects (sky or circle) used for distant
+		parallax backdrops.
+	*/
 	enum class LayerRendererType {
 		Default,				/**< Default rendering */
 		Solid,					/**< Solid color rendering */
@@ -49,7 +61,13 @@ namespace Jazz2::Tiles
 		Circle					/**< Textured background --- Circle */
 	};
 
-	/** @brief Description of a tile map layer */
+	/**
+		@brief Describes the configuration of a tile map layer
+		
+		Holds the parallax and rendering properties of a single layer --- its depth, per-axis scroll and auto-scroll
+		speeds, scroll offsets, repeat flags, speed models and the renderer type with its color parameter. One is
+		stored in each @ref TileMapLayer and drives how that layer is positioned and drawn relative to the camera.
+	*/
 	struct LayerDescription {
 		/** @brief Layer depth (Z position) */
 		std::uint16_t Depth;
@@ -82,7 +100,13 @@ namespace Jazz2::Tiles
 		Vector4f Color;
 	};
 
-	/** @brief Layer tile flags, supports a bitwise combination of its member values */
+	/**
+		@brief Per-tile state flags of a tile placed in a layer
+		
+		Stored on each @ref LayerTile to mark horizontal/vertical flipping, one-way collision and the runtime-only
+		state of a tile already queued in the active collapsing list. Supports a bitwise combination of its member
+		values.
+	*/
 	enum class LayerTileFlags : std::uint8_t {
 		None = 0x00,			/**< None */
 
@@ -96,7 +120,13 @@ namespace Jazz2::Tiles
 
 	DEATH_ENUM_FLAGS(LayerTileFlags);
 
-	/** @brief Represents a single tile in a tile map layer */
+	/**
+		@brief Represents a single tile placed in a tile map layer
+		
+		One entry of a layer's layout grid. It references a tile in the tile set (or an animated tile) together with
+		its packed parameters, flags, transparency and the suspend and destruct behavior; for destructible tiles it
+		also tracks the associated animation and the currently active frame (reused as collapse delay or trigger ID).
+	*/
 	struct LayerTile {
 		/** @brief Tile ID */
 		std::int32_t TileID;
@@ -116,7 +146,13 @@ namespace Jazz2::Tiles
 		std::int32_t DestructFrameIndex;
 	};
 
-	/** @brief Represents a single tile map layer */
+	/**
+		@brief Represents a single tile map layer
+		
+		Bundles a layer's grid of @ref LayerTile entries with its dimensions, its @ref LayerDescription and a
+		visibility flag. A @ref TileMap owns an ordered list of these layers, of which one is the main sprite layer
+		used for collision while the rest provide foreground and parallax background detail.
+	*/
 	struct TileMapLayer {
 		/** @brief Layer layout */
 		std::unique_ptr<LayerTile[]> Layout;
@@ -128,13 +164,24 @@ namespace Jazz2::Tiles
 		bool Visible;
 	};
 
-	/** @brief Represents a single frame of an animated tile */
+	/**
+		@brief Represents a single frame of an animated tile
+		
+		One entry in the frame sequence of an @ref AnimatedTile, referencing the static tile in the tile set that is
+		displayed while this frame is active.
+	*/
 	struct AnimatedTileFrame {
 		/** @brief Tile ID */
 		std::int32_t TileID;
 	};
 
-	/** @brief Represents an animated tile */
+	/**
+		@brief Represents an animated tile
+		
+		Defines a tile whose appearance cycles through a sequence of @ref AnimatedTileFrame frames. Besides the frame
+		list it stores the playback timing (frame duration, optional fixed and random extra delays) and the current
+		playback state, and supports forward-only as well as ping-pong (forward then backward) animation.
+	*/
 	struct AnimatedTile {
 		/** @brief Individual tiles (frames) */
 		SmallVector<AnimatedTileFrame, 0> Tiles;

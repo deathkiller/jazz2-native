@@ -4,7 +4,15 @@
 
 namespace Jazz2
 {
-	/** @brief Exit type, supports a bitwise combination of its member values */
+	/**
+		@brief Exit type
+		
+		Describes how the player left a level when a level change begins. The low bits (extracted with
+		@ref ExitType::TypeMask) select the kind of exit --- normal, warp, bonus, special or boss --- and the high
+		bits are independent modifiers: @ref ExitType::Frozen spawns the player frozen in the next level and
+		@ref ExitType::FastTransition skips the fade transitions. Carried in @ref LevelInitialization to the next
+		level. Supports a bitwise combination of its member values.
+	*/
 	enum class ExitType : std::uint8_t
 	{
 		None,						/**< Unspecified */

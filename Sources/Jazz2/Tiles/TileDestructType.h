@@ -4,7 +4,13 @@
 
 namespace Jazz2::Tiles
 {
-	/** @brief Flags that specify type of collision with tile map, supports a bitwise combination of its member values */
+	/**
+		@brief Specifies how a tile reacts when collided with
+		
+		Assigned per tile to describe what can destroy or trigger it (a weapon hit, movement speed, a special move,
+		collapsing or acting as a trigger) along with collision modifiers such as ignoring solid tiles or restricting
+		movement to the vertical axis. Supports a bitwise combination of its member values.
+	*/
 	enum class TileDestructType
 	{
 		None = 0x00,			/**< No collision */

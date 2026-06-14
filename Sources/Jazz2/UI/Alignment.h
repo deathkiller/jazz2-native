@@ -4,7 +4,13 @@
 
 namespace Jazz2::UI
 {
-	/** @brief Alignment, supports a bitwise combination of its member values */
+	/**
+		@brief Alignment
+		
+		Describes how content is positioned within its bounds by combining independent horizontal and
+		vertical edges, with convenience corner values and masks for isolating each axis. Supports a
+		bitwise combination of its member values.
+	*/
 	enum class Alignment
 	{
 		Center = 0x00,								/**< Center */

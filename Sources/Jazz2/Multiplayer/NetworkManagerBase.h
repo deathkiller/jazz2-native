@@ -38,7 +38,12 @@ namespace Jazz2::Multiplayer
 {
 	class INetworkHandler;
 
-	/** @brief Network packet channel */
+	/**
+		@brief Network packet channel
+		
+		Selects which transport channel a packet is sent on, separating reliable, ordered traffic on the
+		main channel from frequent unreliable state updates.
+	*/
 	enum class NetworkChannel : std::uint8_t
 	{
 		Main,				/**< Main */
@@ -46,7 +51,12 @@ namespace Jazz2::Multiplayer
 		Count				/**< Count of supported channels */
 	};
 
-	/** @brief State of network connection */
+	/**
+		@brief State of network connection
+		
+		Describes the current role and connection status of a @ref NetworkManagerBase: idle, listening as a
+		server, or connecting to and connected with a remote server as a client.
+	*/
 	enum class NetworkState
 	{
 		None,				/**< Disconnected */

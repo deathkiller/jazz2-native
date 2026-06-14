@@ -18,7 +18,13 @@ namespace Jazz2::UI::Menu
 
 namespace Jazz2::Input
 {
-	/** @brief Navigation flags for @ref ControlScheme::FetchNavigation(), supports a bitwise combination of its member values */
+	/**
+		@brief Navigation flags for @ref ControlScheme::FetchNavigation()
+		
+		Restricts which input sources are considered when resolving menu navigation, allowing keyboard
+		presses, gamepad presses or both to be taken into account. Supports a bitwise combination of its
+		member values.
+	*/
 	enum class NavigationFlags
 	{
 		/** @brief None */
@@ -33,21 +39,37 @@ namespace Jazz2::Input
 
 	DEATH_ENUM_FLAGS(NavigationFlags);
 
-	/** @brief Control mapping target */
+	/**
+		@brief Control mapping target
+		
+		Describes a single bindable input source as opaque packed data, encoding either a keyboard key
+		or a gamepad button or axis (including the gamepad index and axis direction). Targets are created
+		through @ref ControlScheme::CreateTarget() and compared by their raw value.
+	*/
 	struct MappingTarget
 	{
 		/** @brief Opaque data of the target */
 		std::uint32_t Data;
 	};
 
-	/** @brief Control mapping for a particular action */
+	/**
+		@brief Control mapping for a particular action
+		
+		Collects all input targets currently bound to a single player action, so that any one of them can
+		trigger it. The control scheme holds one such mapping per player and action.
+	*/
 	struct ControlSchemeMapping
 	{
 		/** @brief List of mapping targets */
 		SmallVector<MappingTarget, 3> Targets;
 	};
 
-	/** @brief Result returned by @ref ControlScheme::FetchProcessedInput() */
+	/**
+		@brief Result returned by @ref ControlScheme::FetchProcessedInput()
+		
+		Holds the resolved input state of a single local player for the current frame, combining the set
+		of pressed actions as a bit mask with a normalized analog movement vector.
+	*/
 	struct ProcessedInput
 	{
 		/** @brief Pressed actions */

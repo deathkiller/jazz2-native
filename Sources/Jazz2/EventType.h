@@ -4,7 +4,16 @@
 
 namespace Jazz2
 {
-	/** @brief Event type */
+	/**
+		@brief Event type
+		
+		Identifies every kind of event or object that can be placed in a level or spawned at runtime --- player and
+		checkpoint markers, destructible/modifier scenery tiles, trigger and warp markers, lights, environment objects,
+		enemies and bosses, collectibles and containers. Values below @ref EventType::Count are the well-known events
+		stored in the event map; @ref EventType::Generator marks a generator that repeatedly spawns another event, and
+		the `0x2000`-range values are projectiles/objects remotable in multiplayer. The event spawner maps each value
+		to the actor it instantiates.
+	*/
 	enum class EventType : std::uint16_t
 	{
 		Empty = 0,							/**< No event */

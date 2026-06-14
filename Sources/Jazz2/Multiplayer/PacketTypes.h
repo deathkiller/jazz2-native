@@ -6,7 +6,12 @@
 
 namespace Jazz2::Multiplayer
 {
-	/** @brief Packet type broadcasted on the local network */
+	/**
+		@brief Packet type broadcasted on the local network
+		
+		Identifies a connectionless packet exchanged over the LAN discovery channel, used by clients to
+		locate running servers and by servers to announce themselves in response.
+	*/
 	enum class BroadcastPacketType
 	{
 		Null,				/**< Empty packet */
@@ -14,7 +19,12 @@ namespace Jazz2::Multiplayer
 		DiscoveryResponse	/**< Response of a server to a discovery request */
 	};
 
-	/** @brief Packet type going from client to server */
+	/**
+		@brief Packet type going from client to server
+		
+		Identifies the kind of message sent in the client-to-server direction, covering connection setup
+		(ping, authentication), level and chat handshakes, and periodic player state and input updates.
+	*/
 	enum class ClientPacketType
 	{
 		Null,						/**< Empty packet */
@@ -38,7 +48,13 @@ namespace Jazz2::Multiplayer
 		PlayerChangeCharacter		/**< Requests to change the player character */
 	};
 
-	/** @brief Packet type going from server to client */
+	/**
+		@brief Packet type going from server to client
+		
+		Identifies the kind of message sent in the server-to-client direction, covering authentication and
+		asset handshakes, level loading and synchronization, actor creation and updates, and player state
+		changes pushed by the server.
+	*/
 	enum class ServerPacketType
 	{
 		Null,							/**< Empty packet */
@@ -89,7 +105,12 @@ namespace Jazz2::Multiplayer
 		PlayerWarpIn					/**< Warps a player into the level */
 	};
 
-	/** @brief Peer property type from @ref ServerPacketType::PeerSetProperty */
+	/**
+		@brief Peer property type from @ref ServerPacketType::PeerSetProperty
+		
+		Identifies which per-peer session property the server is announcing to clients, such as a peer
+		connecting, disconnecting or being roasted.
+	*/
 	enum class PeerPropertyType
 	{
 		Unknown,		/**< Unknown */
@@ -101,7 +122,12 @@ namespace Jazz2::Multiplayer
 		Count			/**< Count of supported property types */
 	};
 
-	/** @brief Level property type from @ref ServerPacketType::LevelSetProperty */
+	/**
+		@brief Level property type from @ref ServerPacketType::LevelSetProperty
+		
+		Identifies which property of the current level the server is updating on clients, such as the level
+		state, the active game mode or the currently playing music.
+	*/
 	enum class LevelPropertyType
 	{
 		Unknown,			/**< Unknown */
@@ -115,7 +141,12 @@ namespace Jazz2::Multiplayer
 		Count				/**< Count of supported property types */
 	};
 
-	/** @brief Player property type from @ref ServerPacketType::PlayerSetProperty */
+	/**
+		@brief Player property type from @ref ServerPacketType::PlayerSetProperty
+		
+		Identifies which property of a player the server is updating on clients, covering character and
+		health state, weapon ammo and upgrades, collected currency, and per-round statistics.
+	*/
 	enum class PlayerPropertyType
 	{
 		Unknown,			/**< Unknown */

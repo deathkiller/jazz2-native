@@ -19,7 +19,14 @@ namespace Jazz2::Scripting
 {
 	class CScriptArray;
 
-	/** @brief Script context type */
+	/**
+		@brief Script context type
+		
+		Identifies the dialect of a loaded script part as it is processed, distinguishing legacy
+		JJ2+ compatible scripts from standard Jazz² Resurrection scripts, as well as parts that are
+		unsupported or were already included. It is reported per file and may be refined by `#pragma`
+		directives.
+	*/
 	enum class ScriptContextType {
 		/** @brief Unknown/unsupported script part */
 		Unknown,
@@ -31,7 +38,13 @@ namespace Jazz2::Scripting
 		Standard
 	};
 
-	/** @brief Result of @ref ScriptLoader::Build() */
+	/**
+		@brief Result of @ref ScriptLoader::Build()
+		
+		Reports the outcome of compiling the main script module, mirroring the underlying **AngelScript**
+		return codes for success and the various failure conditions such as an invalid engine
+		configuration, a failed build, a build already in progress or missing compiler support.
+	*/
 	enum class ScriptBuildResult {
 		/** @brief The engine succeeded */
 		Success = asSUCCESS,

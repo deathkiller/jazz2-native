@@ -14,7 +14,14 @@ namespace Jazz2::UI::Menu
 {
 	class MenuSection;
 
-	/** @brief Changed preferences, supports a bitwise combination of its member values */
+	/**
+		@brief Changed preferences
+		
+		Identifies which categories of settings were modified in a menu section, so that the owning
+		container can apply or persist only the affected groups such as audio, graphics, gameplay,
+		language, control scheme or touch button layout. Supports a bitwise combination of its member
+		values.
+	*/
 	enum class ChangedPreferencesType {
 		None = 0x00,					/**< None */
 		Audio = 0x01,					/**< Audio */

@@ -12,10 +12,21 @@ using namespace nCine;
 
 namespace Jazz2
 {
-	/** @brief Universally unique identifier (16 bytes) */
+	/**
+		@brief Universally unique identifier (16 bytes)
+		
+		Fixed 16-byte array used as a stable identity, such as the unique player and server IDs persisted in
+		@ref PreferencesCache.
+	*/
 	using Uuid = StaticArray<16, std::uint8_t>;
 
-	/** @brief Rescale mode */
+	/**
+		@brief Rescale mode
+		
+		Selects the post-processing filter applied when the internal viewport is scaled to the output
+		resolution, ranging from pixel-perfect to upscalers (HQ2×, 3×BRZ, SABR, CleanEdge) and CRT
+		emulation. @ref TypeMask isolates the filter while @ref UseAntialiasing is an independent flag.
+	*/
 	enum class RescaleMode {
 		None,						/**< None/Pixel-perfect */
 		HQ2x,						/**< HQ2× */
@@ -35,21 +46,37 @@ namespace Jazz2
 
 	DEATH_ENUM_FLAGS(RescaleMode);
 
-	/** @brief Weapon wheel style */
+	/**
+		@brief Weapon wheel style
+		
+		Controls whether the radial weapon selection wheel is available and, when enabled, whether it
+		also displays the remaining ammo count for each weapon.
+	*/
 	enum class WeaponWheelStyle : std::uint8_t {
 		Disabled,					/**< Disabled */
 		Enabled,					/**< Enabled */
 		EnabledWithAmmoCount		/**< Enabled with Ammo count */
 	};
 
-	/** @brief When the custom player character color is applied */
+	/**
+		@brief When the custom player character color is applied
+		
+		Determines the scope in which the user's custom fur recolor takes effect: only for remote
+		players in online multiplayer, additionally for the first local player, or for every local
+		player.
+	*/
 	enum class PlayerColorMode : std::uint8_t {
 		OnlineOnly,					/**< Only in online multiplayer */
 		FirstLocalPlayer,			/**< Online, and the first player in local games */
 		AllLocalPlayers				/**< Online, and all players in local games */
 	};
 
-	/** @brief Gamepad button labels */
+	/**
+		@brief Gamepad button labels
+		
+		Selects which controller family's glyphs and button names are shown in the user interface, so
+		that on-screen prompts match the physical gamepad being used.
+	*/
 	enum class GamepadType : std::uint8_t {
 		Xbox,						/**< Xbox */
 		PlayStation,				/**< PlayStation */
@@ -57,14 +84,26 @@ namespace Jazz2
 		Switch						/**< Switch */
 	};
 
-	/** @brief Episode completion overwrite mode */
+	/**
+		@brief Episode completion overwrite mode
+		
+		Decides under which conditions a newly recorded episode-completion result replaces the
+		previously stored one: always, only when no cheats were used, or only when the new score is
+		higher.
+	*/
 	enum class EpisodeEndOverwriteMode : std::uint8_t {
 		Always,						/**< Always */
 		NoCheatsOnly,				/**< No cheats only */
 		HigherScoreOnly				/**< Higher score only */
 	};
 
-	/** @brief Unlockable episodes, mainly used if compiled with `SHAREWARE_DEMO_ONLY` */
+	/**
+		@brief Unlockable episodes, supports a bitwise combination of its member values
+		
+		Bit flags identifying which episodes have been unlocked, mainly used when the application is
+		compiled with `SHAREWARE_DEMO_ONLY` to gate access to the full episode list. Stored in
+		@ref PreferencesCache::UnlockedEpisodes.
+	*/
 	enum class UnlockableEpisodes : std::uint32_t {
 		None = 0x00,						/**< None */
 
@@ -78,7 +117,12 @@ namespace Jazz2
 
 	DEATH_ENUM_FLAGS(UnlockableEpisodes);
 
-	/** @brief Episode continuation flags, supports a bitwise combination of its member values */
+	/**
+		@brief Episode continuation flags, supports a bitwise combination of its member values
+		
+		Bit flags recorded alongside a stored @ref EpisodeContinuationState, marking whether the
+		episode has been completed and whether cheats were used during the saved playthrough.
+	*/
 	enum class EpisodeContinuationFlags : std::uint8_t {
 		None = 0x00,				/**< None */
 
@@ -86,7 +130,13 @@ namespace Jazz2
 		CheatsUsed = 0x02			/**< Cheats have been used */
 	};
 
-	/** @brief Anchor edge for a configurable touch button */
+	/**
+		@brief Anchor edge for a configurable touch button
+		
+		Identifies which screen corner (or top-center, used for round screens) a touch button's
+		position is measured from, so that its @ref TouchButtonLayout::EdgeOffset stays consistent
+		across different screen sizes and aspect ratios.
+	*/
 	enum class TouchButtonAnchor : std::uint8_t {
 		BottomLeft = 0,				/**< Bottom-left corner */
 		BottomRight = 1,			/**< Bottom-right corner */
@@ -95,7 +145,13 @@ namespace Jazz2
 		TopCenter = 4				/**< Top-center (used for round screens) */
 	};
 
-	/** @brief Slot index for each independently configurable touch button */
+	/**
+		@brief Slot index for each independently configurable touch button
+		
+		Enumerates the on-screen touch controls (D-pad, fire, jump, run, change weapon, menu and
+		console) that can each be repositioned and resized independently. Used to index the
+		@ref PreferencesCache::TouchButtons array, with @ref Count giving the number of slots.
+	*/
 	enum class TouchButtonSlot : std::uint8_t {
 		Dpad = 0,					/**< D-pad / Joystick (moves and resizes as a unit with its sub-zones) */
 		Fire = 1,					/**< Fire button */
@@ -107,7 +163,13 @@ namespace Jazz2
 		Count = 7					/**< Number of configurable slots */
 	};
 
-	/** @brief Per-button layout stored in user preferences */
+	/**
+		@brief Per-button layout stored in user preferences
+		
+		Holds the persisted on-screen placement of a single touch button: its anchor edge, the offset
+		from that edge in reference pixels and a size scale factor. One entry is stored per
+		@ref TouchButtonSlot in @ref PreferencesCache::TouchButtons.
+	*/
 	struct TouchButtonLayout {
 		/** @brief Offset from the anchor edge in reference pixels (DefaultWidth * 0.5 = 360) */
 		Vector2f EdgeOffset;
@@ -151,7 +213,13 @@ namespace Jazz2
 		StaticArray<(std::int32_t)WeaponType::Count, std::uint8_t> WeaponUpgrades;
 	};
 
-	/** @brief Continuation state between two levels in episode */
+	/**
+		@brief Continuation state between two levels in episode
+		
+		Wraps an @ref EpisodeContinuationState with the name of the last level played, so that an
+		in-progress episode can be resumed at the correct level. Stored per-episode in
+		@ref PreferencesCache.
+	*/
 	struct EpisodeContinuationStateWithLevel {
 		/** @brief Base continuation state */
 		EpisodeContinuationState State;

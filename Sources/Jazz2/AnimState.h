@@ -4,7 +4,15 @@
 
 namespace Jazz2
 {
-	/** @brief Well-known animation state */
+	/**
+		@brief Well-known animation state
+		
+		Identifies the animation an actor should currently play. Lower bits pack the continuous movement state
+		(horizontal/vertical speed, shooting) so several conditions can be combined, while higher values starting at
+		`0x40000000` are discrete one-shot transition animations (e.g. turning, warping, uppercut stages) and a few
+		aliases reused for object states. A @ref Resources::GraphicResource is matched against this state to pick the
+		frames to render. Supports a bitwise combination of its member values.
+	*/
 	enum class AnimState
 	{
 		// Bits 0, 1: Horizontal speed (none, low, med, high)

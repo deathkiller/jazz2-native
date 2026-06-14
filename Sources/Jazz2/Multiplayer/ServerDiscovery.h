@@ -36,7 +36,13 @@ namespace Jazz2::Multiplayer
 {
 	class NetworkManager;
 
-	/** @brief Server description */
+	/**
+		@brief Server description
+		
+		Summary of a discovered server as advertised over LAN discovery or the public list, holding its
+		endpoint, identity and version, current game mode and level, player counts and transport details.
+		It is reported to an @ref IServerObserver and shown in the server browser.
+	*/
 	struct ServerDescription
 	{
 		/** @brief Server endpoint in text format */

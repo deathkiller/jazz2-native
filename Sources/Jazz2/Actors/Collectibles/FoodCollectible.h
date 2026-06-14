@@ -4,7 +4,13 @@
 
 namespace Jazz2::Actors::Collectibles
 {
-	/** @brief Food type */
+	/**
+		@brief Food type
+		
+		Identifies a specific food or drink item carried by a @ref FoodCollectible. The values match the JJ2 event
+		identifiers and span fruit, vegetables, sweets, fast food and sodas; drinkable items are distinguished from
+		the rest when collected.
+	*/
 	enum class FoodType
 	{
 		Apple = 1,			/**< Apple */

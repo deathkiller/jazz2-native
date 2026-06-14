@@ -54,7 +54,14 @@ namespace ChromaSDK::Keyboard
 
 namespace Jazz2::Input
 {
-	/** @brief Individual lights of @ref RgbLights service */
+	/**
+		@brief Individual lights of @ref RgbLights service
+		
+		Enumerates every separately addressable light exposed by the lighting service, used to index into
+		the color array passed to @ref RgbLights::Update(). It begins with the primary accent lights
+		(logo, secondary, tertiary and keyboard logo) and continues with one entry per physical keyboard
+		key arranged in row order.
+	*/
 	enum struct AuraLight
 	{
 		// Primary / Logo / Center

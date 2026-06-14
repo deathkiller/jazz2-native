@@ -9,7 +9,13 @@ namespace Jazz2::Scripting
 	struct SArrayBuffer;
 	struct SArrayCache;
 
-	/** @brief **AngelScript** array */
+	/**
+		@brief **AngelScript** array
+		
+		Reference-counted, garbage-collected implementation of the generic `array<T>` template type exposed
+		to scripts. It stores a dynamically sized, type-erased buffer of elements and provides the factory,
+		element access, resizing, searching and sorting operations the scripting engine binds to.
+	*/
 	class CScriptArray
 	{
 	public:

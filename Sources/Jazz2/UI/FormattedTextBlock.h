@@ -14,7 +14,13 @@ using namespace nCine;
 
 namespace Jazz2::UI
 {
-	/** @brief Initialization parameters for formatted text block */
+	/**
+		@brief Initialization parameters for formatted text block
+		
+		Bundles the text contents together with the font, alignment, color, scale and spacing used to lay
+		out and render a @ref FormattedTextBlock. Passed to its constructor to configure the appearance of
+		the block in a single call.
+	*/
 	struct FormattedTextBlockParams
 	{
 		/** @brief Text to display */

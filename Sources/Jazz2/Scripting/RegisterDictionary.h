@@ -20,7 +20,14 @@ namespace Jazz2::Scripting
 	typedef String dictKey_t;
 	typedef HashMap<dictKey_t, CScriptDictValue> dictMap_t;
 
-	/** @brief **AngelScript** dictionary value */
+	/**
+		@brief **AngelScript** dictionary value
+		
+		Type-erased container for a single value stored in a @ref CScriptDictionary, holding either an
+		integer, a floating-point number or a script object reference together with its type id. It must
+		always be used in the context of a script engine, which is why the engine pointer is passed to
+		every operation rather than stored as a member.
+	*/
 	class CScriptDictValue
 	{
 		friend class CScriptDictionary;
@@ -70,7 +77,13 @@ namespace Jazz2::Scripting
 #endif
 	};
 
-	/** @brief **AngelScript** dictionary */
+	/**
+		@brief **AngelScript** dictionary
+		
+		Reference-counted, garbage-collected associative container mapping string keys to @ref CScriptDictValue
+		entries, exposed to scripts as the `dictionary` type. It supports setting, retrieving and removing
+		keyed values of arbitrary script types as well as enumerating its keys.
+	*/
 	class CScriptDictionary
 	{
 	public:

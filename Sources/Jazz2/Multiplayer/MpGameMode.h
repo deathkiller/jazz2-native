@@ -4,7 +4,12 @@
 
 namespace Jazz2::Multiplayer
 {
-	/** @brief Multiplayer game mode */
+	/**
+		@brief Multiplayer game mode
+		
+		Selects the win condition and team rules of a multiplayer round, from free-for-all and team variants
+		of Battle, Race and Treasure Hunt to Capture The Flag and Cooperation.
+	*/
 	enum class MpGameMode
 	{
 		Unknown = 0,		/**< Unspecified */

@@ -4,7 +4,15 @@
 
 namespace Jazz2
 {
-	/** Warp flags, supports a bitwise combination of its member values */
+	/**
+		@brief Warp flags
+		
+		Options controlling how a player warp is performed, as single-bit flags over the @ref WarpFlags::Default
+		behaviour: @ref WarpFlags::Fast skips the warp transitions, @ref WarpFlags::Freeze freezes the player when the
+		transition ends, @ref WarpFlags::SkipWarpIn makes the player disappear instantly without the warp-in
+		animation, and @ref WarpFlags::IncrementLaps counts a lap in race levels. Passed when a player is warped.
+		Supports a bitwise combination of its member values.
+	*/
 	enum class WarpFlags
 	{
 		Default = 0,				/**< Standard warp */

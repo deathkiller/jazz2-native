@@ -56,7 +56,14 @@ namespace Jazz2::Actors
 {
 	class Player;
 
-	/** @brief Flags that modify behaviour of @ref ActorBase, supports a bitwise combination of its member values */
+	/**
+		@brief Flags that modify behaviour of @ref ActorBase
+		
+		Bit set describing how an actor behaves and collides. It mixes instantiation hints (e.g. created from the
+		event map or asynchronously), per-instance state (invulnerable, on the ground, frozen, facing left) and
+		collision options (which entities to collide with, gravitation, solidity, per-pixel checks). Supports a
+		bitwise combination of its member values.
+	*/
 	enum class ActorState {
 		None = 0x00,
 
@@ -124,7 +131,13 @@ namespace Jazz2::Actors
 
 	DEATH_ENUM_FLAGS(ActorState);
 
-	/** @brief Description how to initialize an actor */
+	/**
+		@brief Description how to initialize an actor
+		
+		Bundle of parameters passed to @ref ActorBase::OnActivated() and @ref ActorBase::OnActivatedAsync() when an
+		actor is spawned. It carries the owning level handler, the spawn position, the initial @ref ActorState, the
+		@ref EventType and a pointer to the raw event activation parameters.
+	*/
 	struct ActorActivationDetails {
 		/** @brief Current level handler */
 		ILevelHandler* LevelHandler;
@@ -143,7 +156,13 @@ namespace Jazz2::Actors
 		}
 	};
 
-	/** @brief Move type, supports a bitwise combination of its member values */
+	/**
+		@brief Move type
+		
+		Describes how a target position passed to @ref ActorBase::MoveInstantly() is interpreted: as an absolute
+		world position, as an offset relative to the current position, or as a forced move that ignores all
+		collision checks. Supports a bitwise combination of its member values.
+	*/
 	enum class MoveType {
 		Absolute = 0x00,		/**< Move to absolute position */
 		Relative = 0x01,		/**< Move to relative position */
@@ -152,7 +171,13 @@ namespace Jazz2::Actors
 
 	DEATH_ENUM_FLAGS(MoveType);
 
-	/** @brief Actor renderer type */
+	/**
+		@brief Actor renderer type
+		
+		Selects the visual mode used by @ref ActorBase::ActorRenderer when drawing the actor's sprite. Besides the
+		default rendering it can draw an outline, render non-transparent pixels as a white or partial white mask
+		(used for hit flashes), or apply the frozen-ice effect.
+	*/
 	enum class ActorRendererType {
 		Default,				/**< Default rendering */
 		Outline,				/**< Draw outline around the sprite */
@@ -161,7 +186,13 @@ namespace Jazz2::Actors
 		FrozenMask				/**< Apply frozen effect to the sprite */
 	};
 
-	/** @brief Effect type of @ref ActorBase::CreateParticleDebrisOnPerish() */
+	/**
+		@brief Effect type of @ref ActorBase::CreateParticleDebrisOnPerish()
+		
+		Chooses which particle debris effect is emitted when an actor perishes. Variants cover the standard burst
+		(and its in-water variant), a dissolve for ghosts, an icy shatter for frozen actors, and fire and lightning
+		effects for actors destroyed by toasting or electrocution.
+	*/
 	enum class ParticleDebrisEffect {
 		Unknown,				/**< Unspecified */
 		Standard,				/**< Standard */

@@ -6,7 +6,12 @@
 
 namespace Jazz2::Multiplayer
 {
-	/** @brief Describes a connection result of @ref INetworkHandler::OnPeerConnected() */
+	/**
+		@brief Describes a connection result of @ref INetworkHandler::OnPeerConnected()
+		
+		Returned by a connection handler to accept or reject an incoming peer. It wraps either a success
+		state or a @ref Reason explaining the rejection, and converts implicitly to `bool` for convenience.
+	*/
 	struct ConnectionResult
 	{
 		/** @brief Failure reason if the connection was not successful */

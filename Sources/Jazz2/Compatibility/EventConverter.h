@@ -18,7 +18,13 @@ namespace Jazz2::Compatibility
 {
 	class JJ2Level;
 
-	/** @brief Converted extended event description */
+	/**
+		@brief Converted extended event description
+		
+		Result of translating a single original @ref JJ2Event into the engine's native representation,
+		pairing the resolved @ref Jazz2::EventType with the unpacked event parameter bytes. Produced by
+		@ref EventConverter::TryConvert.
+	*/
 	struct ConversionResult {
 		/** @brief Resulting event type */
 		EventType Type;

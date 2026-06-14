@@ -6,7 +6,13 @@
 
 namespace Jazz2::Scripting
 {
-	/** @brief **AngelScript** reference handle */
+	/**
+		@brief **AngelScript** reference handle
+		
+		Generic handle that can refer to an object of any reference type, exposed to scripts as the `ref`
+		type. It manages the reference count of the held object, supports assignment and comparison, and
+		can be dynamically cast to a concrete handle type.
+	*/
 	class CScriptHandle
 	{
 	public:

@@ -20,7 +20,15 @@ using namespace nCine;
 
 namespace Jazz2::Resources
 {
-	/** @brief Flags for @ref GenericGraphicResource, supports a bitwise combination of its member values */
+	/**
+		@brief Flags for @ref GenericGraphicResource
+		
+		Per-resource state of a shared graphic. @ref GenericGraphicResourceFlags::Referenced keeps the resource alive
+		(it must not be released while in use), and @ref GenericGraphicResourceFlags::Indexed marks a diffuse texture
+		that stores raw palette indices in the red channel, so it must be drawn through the @ref
+		PrecompiledShader::PaletteRemap shader and a palette texture. Supports a bitwise combination of its member
+		values.
+	*/
 	enum class GenericGraphicResourceFlags
 	{
 		None = 0x00,						/**< None */
@@ -38,7 +46,14 @@ namespace Jazz2::Resources
 
 	DEATH_ENUM_FLAGS(GenericGraphicResourceFlags);
 
-	/** @brief Shared graphic resource */
+	/**
+		@brief Shared graphic resource
+		
+		Loaded, cached representation of a sprite sheet: the diffuse texture (optionally indexed), an optional
+		collision mask, the frame grid (dimensions and configuration), frame count and animation duration, plus the
+		hotspot, coldspot and gunspot offsets. Owned by @ref ContentResolver and referenced by the per-animation
+		@ref GraphicResource entries that map an @ref AnimState onto a slice of these frames.
+	*/
 	struct GenericGraphicResource
 	{
 		/** @brief Resource flags */
@@ -67,7 +82,14 @@ namespace Jazz2::Resources
 		GenericGraphicResource() noexcept;
 	};
 
-	/** @brief Specific graphic resource (from metadata) */
+	/**
+		@brief Specific graphic resource (from metadata)
+		
+		One animation entry parsed from an object's metadata. It points at a shared @ref GenericGraphicResource and
+		describes the sub-range of its frames to play --- frame offset, frame count, animation duration and loop mode
+		--- the @ref AnimState it represents, and the palette offset used when the sprite is indexed. Stored in a
+		@ref Metadata and looked up by animation state at runtime.
+	*/
 	struct GraphicResource
 	{
 		/** @brief Underlying generic resource */
@@ -97,7 +119,12 @@ namespace Jazz2::Resources
 		bool operator<(const GraphicResource& p) const noexcept;
 	};
 
-	/** @brief Flags for @ref GenericSoundResource, supports a bitwise combination of its member values */
+	/**
+		@brief Flags for @ref GenericSoundResource
+		
+		Per-resource state of a shared sound. @ref GenericSoundResourceFlags::Referenced keeps the resource alive so
+		it is not released while still in use. Supports a bitwise combination of its member values.
+	*/
 	enum class GenericSoundResourceFlags
 	{
 		None = 0x00,						/**< None */
@@ -107,7 +134,13 @@ namespace Jazz2::Resources
 
 	DEATH_ENUM_FLAGS(GenericSoundResourceFlags);
 
-	/** @brief Shared sound resource */
+	/**
+		@brief Shared sound resource
+		
+		Loaded, cached audio buffer for a single sound file, decoded on construction from a stream (the file name is
+		used to detect the format), together with its resource flags. Owned by @ref ContentResolver and referenced by
+		the @ref SoundResource entries that group the buffers belonging to one named metadata sound.
+	*/
 	struct GenericSoundResource
 	{
 		/** @brief Audio buffer */
@@ -124,7 +157,13 @@ namespace Jazz2::Resources
 		GenericSoundResource(std::unique_ptr<Stream> stream, StringView filename) noexcept;
 	};
 
-	/** @brief Specific sound resource (from metadata) */
+	/**
+		@brief Specific sound resource (from metadata)
+		
+		A named sound declared in an object's metadata, holding the list of shared @ref GenericSoundResource buffers
+		it can use. When the sound has several variants, one of the buffers is chosen at playback time. Stored in a
+		@ref Metadata keyed by the sound's name.
+	*/
 	struct SoundResource
 	{
 		/** @brief List of underlying generic resources */
@@ -134,7 +173,13 @@ namespace Jazz2::Resources
 		SoundResource() noexcept;
 	};
 
-	/** @brief Flags for @ref Metadata, supports a bitwise combination of its member values */
+	/**
+		@brief Flags for @ref Metadata
+		
+		Per-resource state of a loaded metadata. @ref MetadataFlags::Referenced keeps it alive so it is not released
+		while still in use, and @ref MetadataFlags::AsyncFinalizingRequired marks metadata whose linked assets still
+		need asynchronous finalization before it is fully ready. Supports a bitwise combination of its member values.
+	*/
 	enum class MetadataFlags {
 		None = 0x00,						/**< None */
 
@@ -173,7 +218,14 @@ namespace Jazz2::Resources
 		GraphicResource* FindAnimation(AnimState state) noexcept;
 	};
 	
-	/** @brief Describes an episode */
+	/**
+		@brief Describes an episode
+		
+		Metadata for a group of levels presented as one episode: its internal and display names, the first level to
+		play, the previous and next episode names that chain episodes together, the position in the episode-selection
+		list, and optional title and background image textures. Loaded by @ref ContentResolver and used to build the
+		episode selection UI and drive episode-to-episode progression.
+	*/
 	struct Episode
 	{
 		/** @brief Internal name */
@@ -197,7 +249,13 @@ namespace Jazz2::Resources
 		Episode() noexcept;
 	};
 
-	/** @brief Font type */
+	/**
+		@brief Font type
+		
+		Selects one of the engine's built-in bitmap fonts --- a small and a medium size --- used when requesting a
+		font from @ref ContentResolver. @ref FontType::Count is the number of supported font types and sizes the
+		font cache.
+	*/
 	enum class FontType
 	{
 		Small,			/**< Small */
@@ -206,7 +264,16 @@ namespace Jazz2::Resources
 		Count			/**< Count of supported font types */
 	};
 
-	/** @brief Precompiled shader */
+	/**
+		@brief Precompiled shader
+		
+		Identifies one of the engine's built-in shader programs, compiled up front by @ref ContentResolver and
+		requested by this value. It covers the lighting and blur/downsample/combine post-processing passes, the
+		textured background variants, the per-sprite effect shaders (colorized, tinted, outline, white/frozen masks)
+		and their batched, palette and tile-map mesh variants, the optional upscaling/CRT rescalers, plus
+		antialiasing, screen transition and touch-control shaders. @ref PrecompiledShader::Count is the number of
+		precompiled shaders. Some entries are compiled only when the matching build option is enabled.
+	*/
 	enum class PrecompiledShader
 	{
 		Lighting,							/**< Lighting */

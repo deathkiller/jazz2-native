@@ -4,7 +4,12 @@
 
 namespace Jazz2::Actors::Solid
 {
-	/** @brief State of @ref TriggerCrate */
+	/**
+		@brief State of @ref TriggerCrate
+		
+		Selects the action a @ref TriggerCrate performs on its level trigger when the crate is destroyed: turn the
+		trigger off, turn it on, or toggle its current value.
+	*/
 	enum class TriggerCrateState {
 		Off,	/**< Sets the trigger off */
 		On,		/**< Sets the trigger on */

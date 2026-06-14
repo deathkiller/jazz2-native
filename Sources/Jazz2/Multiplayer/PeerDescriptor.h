@@ -20,7 +20,13 @@ namespace Jazz2::Actors::Multiplayer
 
 namespace Jazz2::Multiplayer
 {
-	/** @brief Peer state in a level  */
+	/**
+		@brief Peer state in a level
+		
+		Tracks how far a peer has progressed through joining the current level, from validating and
+		streaming required assets through loading and synchronization to spectating or having a spawned
+		player. The server advances this state as the join handshake completes.
+	*/
 	enum class PeerLevelState
 	{
 		Unknown,				/**< Unknown */
@@ -33,7 +39,13 @@ namespace Jazz2::Multiplayer
 		PlayerSpawned			/**< Player is spawned */
 	};
 
-	/** @brief Spectate mode flags */
+	/**
+		@brief Spectate mode flags
+		
+		Describes whether and how a player is spectating instead of playing. The low bits hold the base mode
+		(not spectating, forced by the server, or requested by the client), while the @ref SpectateMode::FreeCamera
+		flag selects a free-roaming camera over a player-following one.
+	*/
 	enum class SpectateMode : std::uint8_t {
 		None,					/**< Not spectating */
 		Forced,					/**< Spectate mode is forced by the server, the client cannot disable it */

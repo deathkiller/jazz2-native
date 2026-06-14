@@ -35,7 +35,13 @@ namespace Jazz2::Scripting
 		class jjPLAYER;
 	}
 
-	/** @brief Specifies a part to be drawn in @ref LevelScriptLoader::OnDraw() */
+	/**
+		@brief Specifies a part to be drawn in @ref LevelScriptLoader::OnDraw()
+		
+		Identifies an individual HUD element a script may override or augment while drawing, such as the
+		weapon ammo, health, lives, player timer, score or the game mode specific overlay. It is passed
+		to the draw callback so the script can render or customize that particular part.
+	*/
 	enum class DrawType
 	{
 		WeaponAmmo,

@@ -4,7 +4,14 @@
 
 namespace Jazz2::Compatibility
 {
-	/** @brief Original event type */
+	/**
+		@brief Original event type
+		
+		Verbatim list of the event IDs used by the original game's level format, where each tile may
+		carry one such event (pickups, enemies, bosses, springs, modifiers, area triggers and so on).
+		Values match the original byte identifiers and are translated to the engine's native
+		@ref Jazz2::EventType by @ref EventConverter during level import.
+	*/
 	enum class JJ2Event : uint8_t {
 		EMPTY = 0x00,
 

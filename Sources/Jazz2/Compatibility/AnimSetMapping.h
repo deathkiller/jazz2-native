@@ -15,7 +15,13 @@ using namespace nCine;
 
 namespace Jazz2::Compatibility
 {
-	/** @brief Default palette for original animation */
+	/**
+		@brief Default palette for original animation
+		
+		Selects which of the original game's built-in palettes an imported animation entry should be
+		decoded against: the in-game sprite palette or the dedicated menu palette. Stored per entry in
+		@ref AnimSetMapping::Entry.
+	*/
 	enum class JJ2DefaultPalette {
 		Sprite,
 		Menu

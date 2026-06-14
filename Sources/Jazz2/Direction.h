@@ -4,7 +4,13 @@
 
 namespace Jazz2
 {
-	/** @brief Direction, supports a bitwise combination of its member values */
+	/**
+		@brief Direction
+		
+		Identifies one or more of the four cardinal directions as single-bit flags, with @ref Direction::Any covering
+		all of them and @ref Direction::None covering none. Used throughout the engine to describe directional state
+		such as which sides of an object are relevant. Supports a bitwise combination of its member values.
+	*/
 	enum class Direction
 	{
 		None = 0,							/**< None */

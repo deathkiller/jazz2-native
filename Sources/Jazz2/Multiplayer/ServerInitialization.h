@@ -17,6 +17,10 @@ namespace Jazz2::Multiplayer
 {
 	/**
 		@brief Playlist entry in @ref ServerConfiguration
+		
+		Describes a single round in a server's rotation: the level to play and its game mode along with the
+		per-round rules (health, time limits, win conditions and similar). Unspecified fields inherit their
+		values from the root @ref ServerConfiguration.
 	*/
 	struct PlaylistEntry
 	{
@@ -264,6 +268,9 @@ namespace Jazz2::Multiplayer
 
 	/**
 		@brief Server initialization parameters
+		
+		Bundles everything needed to start a server: the @ref ServerConfiguration describing its settings and
+		rules, together with the @ref LevelInitialization parameters for the level it should first load.
 	*/
 	struct ServerInitialization
 	{

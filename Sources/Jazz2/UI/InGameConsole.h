@@ -8,7 +8,13 @@
 
 namespace Jazz2::UI
 {
-	/** @brief Message importance level */
+	/**
+		@brief Message importance level
+		
+		Classifies a line written to the @ref InGameConsole by severity and purpose, ranging from echoed
+		input and debug output through informational, chat and confirmation messages up to warnings,
+		errors and fatal conditions. It influences how each message is presented in the log.
+	*/
 	enum class MessageLevel
 	{
 		Unknown,		/**< Unspecified */

@@ -2,7 +2,15 @@
 
 namespace Jazz2
 {
-	/** @brief Player action */
+	/**
+		@brief Player action
+		
+		Logical input action a player can perform, decoupled from the physical key, button or touch control bound to
+		it. Covers movement, jumping, running, firing, weapon switching and UI actions (menu, console), plus the
+		direct switch-to-weapon shortcuts. @ref PlayerAction::Count is the total number of actions, @ref
+		PlayerAction::CountInMenu the subset usable in menus, and @ref PlayerAction::None means no action. Used by the
+		control scheme and input handling to query whether an action is pressed or hit.
+	*/
 	enum class PlayerAction
 	{
 		Left,							/**< Left */

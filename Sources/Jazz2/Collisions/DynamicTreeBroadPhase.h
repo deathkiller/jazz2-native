@@ -26,7 +26,13 @@
 
 namespace Jazz2::Collisions
 {
-	/** @brief Collided pair of objects found by collision detection */
+	/**
+		@brief A potentially overlapping pair of proxies reported by the broad-phase
+		
+		Holds the two proxy IDs of objects whose fat AABBs were found to overlap during @ref
+		DynamicTreeBroadPhase::UpdatePairs(). It identifies candidates that the client should examine with an exact
+		narrow-phase test, rather than a confirmed collision.
+	*/
 	struct CollisionPair {
 		/** @brief Proxy ID of the first node */
 		std::int32_t ProxyIdA;

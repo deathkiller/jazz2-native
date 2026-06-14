@@ -38,7 +38,15 @@ namespace Jazz2
 		class TileSet;
 	}
 
-	/** @brief Manages loading of assets */
+	/**
+		@brief Manages loading of assets
+		
+		Process-wide singleton (see @ref ContentResolver::Get) that locates and loads every kind of game asset ---
+		metadata, graphics, tile sets, levels, episodes, fonts, music and shaders --- caching the results so repeated
+		requests are cheap. It also owns the shared 256x256 palette texture and the palette pipeline: applying tileset
+		and sprite palettes, building and reference-counting per-player recolor palettes from a packed fur color, and
+		configuring the palette-aware sprite shaders. In headless mode it skips all GPU work.
+	*/
 	class ContentResolver
 	{
 	public:
