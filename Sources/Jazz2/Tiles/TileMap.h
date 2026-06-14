@@ -235,8 +235,12 @@ namespace Jazz2::Tiles
 
 			/** @brief Diffuse texture */
 			Texture* DiffuseTexture;
-			/** @brief Flat palette offset when @ref DiffuseTexture is an indexed sprite (recolored at draw time), or
-				-1 when it holds baked colors (e.g. a tileset texture) and must use the plain Sprite shader */
+			/**
+			 * @brief Flat palette offset when @ref DiffuseTexture is an indexed sprite
+			 *
+			 * The sprite is recolored at draw time. `-1` when the texture holds baked colors (e.g. a tileset texture)
+			 * and must use the plain Sprite shader.
+			 */
 			std::int32_t PaletteOffset = -1;
 
 			/** @brief Behavior flags */
@@ -285,8 +289,11 @@ namespace Jazz2::Tiles
 		void SetTileEventFlags(std::int32_t x, std::int32_t y, EventType tileEvent, std::uint8_t* tileParams);
 		/** @brief Overrides the diffuse texture of the specified tile */
 		bool OverrideTileDiffuse(std::int32_t tileId, StaticArrayView<(TileSet::DefaultTileSize + 2) * (TileSet::DefaultTileSize + 2), std::uint32_t> tileDiffuse);
-		/** @brief Returns `true` if the tileset containing the given tile stores indexed (palette) diffuse, so an
-			overridden tile must be supplied as palette indices (red channel) rather than baked colors */
+		/**
+		 * @brief Returns `true` if the tileset containing the given tile stores indexed (palette) diffuse
+		 *
+		 * When indexed, an overridden tile must be supplied as palette indices (red channel) rather than baked colors.
+		 */
 		bool IsTileSetIndexed(std::int32_t tileId);
 		/** @brief Overrides the collision mask of the specified tile */
 		bool OverrideTileMask(std::int32_t tileId, StaticArrayView<TileSet::DefaultTileSize * TileSet::DefaultTileSize, std::uint8_t> tileMask);
@@ -319,12 +326,19 @@ namespace Jazz2::Tiles
 		}
 		/** @brief Returns size of a given layer in tiles, or an empty vector if the layer doesn't exist */
 		Vector2i GetLayerSize(std::int32_t layerIndex) const;
-		/** @brief Returns the tile at the given coordinates on a given layer as a packed value (low 12 bits are the tile
-			index, see @ref TileIndexMask; combined with @ref TileFlagFlipX / @ref TileFlagFlipY / @ref TileFlagAnimated),
-			or `0` if the layer or coordinates are out of range */
+		/**
+		 * @brief Returns the tile at the given coordinates on a given layer as a packed value
+		 *
+		 * The low 12 bits are the tile index (see @ref TileIndexMask), combined with @ref TileFlagFlipX / @ref
+		 * TileFlagFlipY / @ref TileFlagAnimated. Returns `0` if the layer or coordinates are out of range.
+		 */
 		std::uint16_t GetTile(std::int32_t layerIndex, std::int32_t x, std::int32_t y) const;
-		/** @brief Sets the tile at the given coordinates on a given layer from a packed value (see @ref GetTile()),
-			preserving unrelated tile state (transparency, collision flags); returns `false` if out of range */
+		/**
+		 * @brief Sets the tile at the given coordinates on a given layer from a packed value
+		 *
+		 * The value is packed as in @ref GetTile(). Unrelated tile state (transparency, collision flags) is preserved.
+		 * Returns `false` if out of range.
+		 */
 		bool SetTile(std::int32_t layerIndex, std::int32_t x, std::int32_t y, std::uint16_t tileValue);
 
 		/** @brief Creates a checkpoint for eventual rollback */

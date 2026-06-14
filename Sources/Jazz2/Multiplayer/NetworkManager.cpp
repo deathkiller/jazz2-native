@@ -157,14 +157,14 @@ namespace Jazz2::Multiplayer
 			if (pair.second->RemotePeer) {
 				auto address = NetworkManagerBase::AddressToString(pair.second->RemotePeer);
 				if (_serverConfig->BannedIPAddresses.contains(address)) {
-					LOGI("[MP] Peer kicked \"{}\" ({}): Banned by IP address", pair.second->PlayerName, address);
+					LOGW("Peer kicked \"{}\" ({}): Banned by IP address", pair.second->PlayerName, address);
 					Kick(pair.second->RemotePeer, Reason::Banned);
 					continue;
 				}
 
 				auto uniquePlayerId = UuidToString(pair.second->UniquePlayerID);
 				if (_serverConfig->BannedUniquePlayerIDs.contains(uniquePlayerId)) {
-					LOGI("[MP] Peer kicked \"{}\" ({}): Banned by unique player ID", pair.second->PlayerName, address);
+					LOGW("Peer kicked \"{}\" ({}): Banned by unique player ID", pair.second->PlayerName, address);
 					Kick(pair.second->RemotePeer, Reason::Banned);
 					continue;
 				}
@@ -239,7 +239,7 @@ namespace Jazz2::Multiplayer
 			return {};
 		}
 
-		LOGW("[MP] Overriding path \"{}\" to \"{}\"", path, fullPath);
+		LOGI("Overriding path \"{}\" to \"{}\"", path, fullPath);
 		return fullPath;
 	}
 
@@ -697,7 +697,7 @@ namespace Jazz2::Multiplayer
 		if (isListening) {
 			auto address = AddressToString(peer);
 			if (_serverConfig->BannedIPAddresses.contains(address)) {
-				LOGI("[MP] Peer kicked \"<unknown>\" ({}): Banned by IP address", address);
+				LOGI("Peer kicked \"<unknown>\" ({}): Banned by IP address", address);
 				return Reason::Banned;
 			}
 		}

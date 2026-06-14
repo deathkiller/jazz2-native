@@ -278,7 +278,7 @@ namespace Jazz2::Multiplayer
 
 			switch (_levelState) {
 				case LevelState::InitialUpdatePending: {
-					LOGD("[MP] Level \"{}\" is ready", _levelName);
+					LOGI("Level \"{}\" is ready", _levelName);
 
 					if (_isServer) {
 						MemoryStream packet;
@@ -322,7 +322,7 @@ namespace Jazz2::Multiplayer
 							SynchronizeGameMode();
 							ResetAllPlayerStats();
 							static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
-							LOGI("[MP] Starting round...");
+							LOGI("Starting round...");
 						} else {
 							_levelState = LevelState::WaitingForMinPlayers;
 							_waitingForPlayerCount = (std::int32_t)serverConfig.MinPlayerCount - playerCount;
@@ -343,7 +343,7 @@ namespace Jazz2::Multiplayer
 							ResetAllPlayerStats();
 							static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
 							SendLevelStateToAllPlayers();
-							LOGI("[MP] Starting round...");
+							LOGI("Starting round...");
 						}
 					}
 					break;
@@ -994,7 +994,7 @@ namespace Jazz2::Multiplayer
 			nextLevel = _defaultNextLevel;
 		}
 
-		LOGD("[MP] Changing level to \"{}\" (0x{:.2x})", nextLevel, exitType);
+		LOGD("Changing level to \"{}\" (0x{:.2x})", nextLevel, exitType);
 
 		if ((nextLevel == ":end"_s || nextLevel == ":credits"_s) && !serverConfig.Playlist.empty()) {
 			serverConfig.PlaylistIndex++;
@@ -1817,11 +1817,11 @@ namespace Jazz2::Multiplayer
 					peerDesc->LapsElapsedFrames = _elapsedFrames;
 					peerDesc->LapStarted = now;
 
-					LOGI("[MP] Player {} finished lap ({})", mpPlayer->_playerIndex, peerDesc->Laps);
+					LOGI("Player {} finished lap ({})", mpPlayer->_playerIndex, peerDesc->Laps);
 
 					CheckGameEnds();
 				} else {
-					LOGW("[MP] Player {} attempted to increment laps twice in a row", mpPlayer->_playerIndex);
+					LOGW("Player {} attempted to increment laps twice in a row", mpPlayer->_playerIndex);
 				}
 			}
 
@@ -2397,7 +2397,7 @@ namespace Jazz2::Multiplayer
 			return false;
 		}
 
-		LOGI("[MP] Game mode set to {}", NetworkManager::GameModeToString(value));
+		LOGI("Game mode set to {}", NetworkManager::GameModeToString(value));
 
 		auto& serverConfig = _networkManager->GetServerConfiguration();
 		serverConfig.GameMode = value;
@@ -2636,7 +2636,7 @@ namespace Jazz2::Multiplayer
 						levelInit.LevelName = "unknown/"_s + value;
 					}
 					if (ContentResolver::Get().LevelExists(levelInit.LevelName)) {
-						LOGD("[MP] Changing level to \"{}\"", levelInit.LevelName);
+						LOGD("Changing level to \"{}\"", levelInit.LevelName);
 
 						auto& serverConfig = _networkManager->GetServerConfiguration();
 						serverConfig.PlaylistIndex = -1;
@@ -3170,7 +3170,7 @@ namespace Jazz2::Multiplayer
 						}
 					}
 
-					LOGW("[MP] ClientPacketType::Rpc [{}] - id: {}, {} bytes - ACTOR NOT FOUND", peer, actorId, data.size() - packet.GetPosition());
+					LOGW("[MP] ClientPacketType::Rpc [{}] - id: {}, {} bytes - Actor not found", peer, actorId, data.size() - packet.GetPosition());
 					return true;
 				}
 				case ClientPacketType::Auth: {
@@ -3234,7 +3234,7 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::ChatMessage [{}] - invalid playerIndex ({})", peer, playerIndex);
+						LOGD("[MP] ClientPacketType::ChatMessage [{}] - Invalid playerIndex ({})", peer, playerIndex);
 						return true;
 					}
 
@@ -3242,7 +3242,7 @@ namespace Jazz2::Multiplayer
 
 					std::uint32_t lineLength = packet.ReadVariableUint32();
 					if (lineLength == 0 || lineLength > 1024) {
-						LOGD("[MP] ClientPacketType::ChatMessage [{}] - length out of bounds ({})", peer, lineLength);
+						LOGD("[MP] ClientPacketType::ChatMessage [{}] - Length out of bounds ({})", peer, lineLength);
 						return true;
 					}
 
@@ -3282,7 +3282,7 @@ namespace Jazz2::Multiplayer
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->LevelState != PeerLevelState::ValidatingAssets) {
 						// Packet received when the peer is in different state
-						LOGW("[MP] ClientPacketType::ValidateAssetsResponse [{}] - invalid state ({})", peer, peerDesc->LevelState);
+						LOGW("[MP] ClientPacketType::ValidateAssetsResponse [{}] - Invalid state ({})", peer, peerDesc->LevelState);
 						return true;
 					}
 
@@ -3330,7 +3330,7 @@ namespace Jazz2::Multiplayer
 
 					if (!success) {
 						// Peer response is corrupted
-						LOGW("[MP] ClientPacketType::ValidateAssetsResponse [{}] - malformed packet", peer);
+						LOGW("[MP] ClientPacketType::ValidateAssetsResponse [{}] - Malformed packet", peer);
 						_networkManager->Kick(peer, Reason::InvalidParameter);
 						return true;
 					}
@@ -3357,7 +3357,7 @@ namespace Jazz2::Multiplayer
 #else
 					auto* _this = this;
 #endif
-						LOGI("[MP] Started streaming {} assets to peer [{}]", missingAssets.size(), peer);
+						LOGI("Started streaming {} assets to peer [{}]", missingAssets.size(), peer);
 						TimeStamp begin = TimeStamp::now();
 
 						for (std::uint32_t i = 0; i < (std::uint32_t)missingAssets.size(); i++) {
@@ -3403,7 +3403,7 @@ namespace Jazz2::Multiplayer
 							_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::StreamAsset, packetEnd);
 						}
 
-						LOGI("[MP] Finished streaming {} assets to peer [{}] - took {:.1f} ms",
+						LOGI("Finished streaming {} assets to peer [{}] - took {:.1f} ms",
 						missingAssets.size(), peer, begin.millisecondsSince());
 						if (peerDesc->IsAuthenticated && !_this->_ignorePackets) {
 							MemoryStream packet;
@@ -3423,12 +3423,12 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->LevelState != PeerLevelState::LevelLoaded && peerDesc->LevelState != PeerLevelState::LevelSynchronized) {
-						LOGW("[MP] ClientPacketType::PlayerReady [{}] - invalid state", peer);
+						LOGW("[MP] ClientPacketType::PlayerReady [{}] - Invalid state", peer);
 						return true;
 					}
 
 					if (preferredPlayerType != PlayerType::Jazz && preferredPlayerType != PlayerType::Spaz && preferredPlayerType != PlayerType::Lori) {
-						LOGW("[MP] ClientPacketType::PlayerReady [{}] - invalid preferred player type", peer);
+						LOGW("[MP] ClientPacketType::PlayerReady [{}] - Invalid preferred player type", peer);
 						return true;
 					}
 
@@ -3439,7 +3439,7 @@ namespace Jazz2::Multiplayer
 					InvokeAsync([this, peer]() {
 						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 						if (!peerDesc || peerDesc->LevelState < PeerLevelState::LevelLoaded || peerDesc->LevelState > PeerLevelState::LevelSynchronized) {
-							LOGW("[MP] ClientPacketType::PlayerReady [{}] - invalid state", peer);
+							LOGW("[MP] ClientPacketType::PlayerReady [{}] - Invalid state", peer);
 							return;
 						}
 						if (peerDesc->LevelState == PeerLevelState::LevelSynchronized) {
@@ -3459,7 +3459,7 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::PlayerUpdate [{}] - invalid playerIndex ({})", peer, playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerUpdate [{}] - Invalid playerIndex ({})", peer, playerIndex);
 						return true;
 					}
 
@@ -3487,7 +3487,7 @@ namespace Jazz2::Multiplayer
 
 						bool corrected = false;
 						if (std::abs(speedX) > MaxPlausibleSpeed || std::abs(speedY) > MaxPlausibleSpeed) {
-							LOGW("[MP] Clamped implausible speed from player {} ({:.1f}, {:.1f})", playerIndex, speedX, speedY);
+							LOGW("Clamped implausible speed from player {} ({:.1f}, {:.1f})", playerIndex, speedX, speedY);
 							speedX = std::clamp(speedX, -MaxPlausibleSpeed, MaxPlausibleSpeed);
 							speedY = std::clamp(speedY, -MaxPlausibleSpeed, MaxPlausibleSpeed);
 							corrected = true;
@@ -3497,7 +3497,7 @@ namespace Jazz2::Multiplayer
 						if (!remotePlayerOnServer->_justWarped) {
 							float stepDistSqr = (Vector2f(posX, posY) - remotePlayerOnServer->_pos).SqrLength();
 							if (stepDistSqr > MaxPlausibleStep * MaxPlausibleStep) {
-								LOGW("[MP] Rejected implausible teleport from player {} ({} px in one update)",
+								LOGW("Rejected implausible teleport from player {} ({} px in one update)",
 									playerIndex, (std::int32_t)std::sqrt(stepDistSqr));
 								posX = remotePlayerOnServer->_pos.X;
 								posY = remotePlayerOnServer->_pos.Y;
@@ -3568,7 +3568,7 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{}] - invalid playerIndex ({})", peer, playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{}] - Invalid playerIndex ({})", peer, playerIndex);
 						return true;
 					}
 
@@ -3578,7 +3578,7 @@ namespace Jazz2::Multiplayer
 
 					const auto& playerAmmo = peerDesc->Player->GetWeaponAmmo();
 					if (weaponType >= playerAmmo.size() || playerAmmo[weaponType] == 0) {
-						LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{}] - playerIndex: {}, no ammo in selected weapon", peer, playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{}] - playerIndex: {} - No ammo in selected weapon", peer, playerIndex);
 
 						// Request is denied, send the current weapon back to the client
 						HandlePlayerWeaponChanged(peerDesc->Player, Actors::Player::SetCurrentWeaponReason::Rollback);
@@ -3595,7 +3595,7 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::PlayerSpectateRequest [{}] - invalid playerIndex ({})", peer, playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerSpectateRequest [{}] - Invalid playerIndex ({})", peer, playerIndex);
 						return true;
 					}
 
@@ -3607,7 +3607,7 @@ namespace Jazz2::Multiplayer
 						return true;
 					}
 
-					LOGI("[MP] Player {} [{}] {} spectating", playerIndex, peer, enable ? "started"_s : "stopped"_s);
+					LOGI("Player {} [{}] {} spectating", playerIndex, peer, enable ? "started"_s : "stopped"_s);
 					SetPlayerSpectateMode(peerDesc->Player, enable ? SpectateMode::Requested : SpectateMode::None);
 					return true;
 				}
@@ -3618,29 +3618,29 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::PlayerChangeCharacter [{}] - invalid playerIndex ({})", peer, playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerChangeCharacter [{}] - Invalid playerIndex ({})", peer, playerIndex);
 						return true;
 					}
 
 					if (playerType != PlayerType::Jazz && playerType != PlayerType::Spaz && playerType != PlayerType::Lori) {
-						LOGW("[MP] ClientPacketType::PlayerChangeCharacter [{}] - invalid player type", peer);
+						LOGW("[MP] ClientPacketType::PlayerChangeCharacter [{}] - Invalid player type", peer);
 						return true;
 					}
 
 					auto& serverConfig = _networkManager->GetServerConfiguration();
 					if ((peerDesc->IsSpectating & SpectateMode::Mask) == SpectateMode::Forced) {
 						// Forced spectators (e.g. winner, eliminated) can't rejoin by changing character
-						LOGD("[MP] ClientPacketType::PlayerChangeCharacter [{}] - forced to spectate", peer);
+						LOGD("[MP] ClientPacketType::PlayerChangeCharacter [{}] - Forced to spectate", peer);
 						return true;
 					}
 
 					std::uint8_t typeBit = (std::uint8_t)(1 << ((std::int32_t)playerType - (std::int32_t)PlayerType::Jazz));
 					if ((serverConfig.AllowedPlayerTypes & typeBit) == 0) {
-						LOGW("[MP] ClientPacketType::PlayerChangeCharacter [{}] - player type {} not allowed", peer, playerType);
+						LOGW("[MP] ClientPacketType::PlayerChangeCharacter [{}] - Player type {} not allowed", peer, playerType);
 						return true;
 					}
 
-					LOGI("[MP] Player {} [{}] changing character to {}", playerIndex, peer, playerType);
+					LOGI("Player {} [{}] changing character to {}", playerIndex, peer, playerType);
 
 					// Respawn the player with the chosen character (also leaves spectate mode if currently spectating)
 					peerDesc->PreferredPlayerType = playerType;
@@ -3658,7 +3658,7 @@ namespace Jazz2::Multiplayer
 
 					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
 					if (peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::PlayerAckWarped [{}] - invalid playerIndex ({})", peer, playerIndex);
+						LOGD("[MP] ClientPacketType::PlayerAckWarped [{}] - Invalid playerIndex ({})", peer, playerIndex);
 						return true;
 					}
 
@@ -3692,7 +3692,7 @@ namespace Jazz2::Multiplayer
 						LOGD("[MP] ServerPacketType::Rpc - id: {}, {} bytes", actorId, data.size() - packet.GetPosition());
 						actor->OnPacketReceived(packet);
 					} else {
-						LOGW("[MP] ServerPacketType::Rpc - id: {}, {} bytes - ACTOR NOT FOUND", actorId,data.size() - packet.GetPosition());
+						LOGW("[MP] ServerPacketType::Rpc - id: {}, {} bytes - Actor not found", actorId,data.size() - packet.GetPosition());
 					}
 					return true;
 				}
@@ -3777,7 +3777,7 @@ namespace Jazz2::Multiplayer
 									}
 									case LevelState::Countdown3: {
 										static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
-										LOGI("[MP] Starting round...");
+										LOGI("Starting round...");
 										break;
 									}
 									case LevelState::Countdown2: {
@@ -3848,7 +3848,7 @@ namespace Jazz2::Multiplayer
 							break;
 						}
 						default: {
-							LOGD("[MP] ServerPacketType::LevelSetProperty - received unknown property {}", (std::uint32_t)propertyType);
+							LOGD("[MP] ServerPacketType::LevelSetProperty - Received unknown property {}", (std::uint32_t)propertyType);
 							break;
 						}
 					}
@@ -3978,7 +3978,7 @@ namespace Jazz2::Multiplayer
 
 					std::uint32_t messageLength = packet.ReadVariableUint32();
 					if (messageLength == 0 || messageLength > 1024) {
-						LOGD("[MP] ServerPacketType::ChatMessage - length out of bounds ({})", messageLength);
+						LOGD("[MP] ServerPacketType::ChatMessage - Length out of bounds ({})", messageLength);
 						return true;
 					}
 
@@ -4045,7 +4045,7 @@ namespace Jazz2::Multiplayer
 							if (it != _remoteActors.end()) {
 								it->second->CreateSpriteDebris(state, count);
 							} else {
-								LOGW("[MP] ServerPacketType::CreateDebris - NOT FOUND - actorId: {}", actorId);
+								LOGD("[MP] ServerPacketType::CreateDebris - actorId: {} - Actor not found", actorId);
 							}
 						});
 					} else {
@@ -4058,7 +4058,7 @@ namespace Jazz2::Multiplayer
 							if (it != _remoteActors.end()) {
 								it->second->CreateParticleDebrisOnPerish((Actors::ParticleDebrisEffect)effect, Vector2f(x, y));
 							} else {
-								LOGW("[MP] ServerPacketType::CreateDebris - NOT FOUND - actorId: {}", actorId);
+								LOGD("[MP] ServerPacketType::CreateDebris - actorId: {} - Actor not found", actorId);
 							}
 						});
 					}
@@ -4147,7 +4147,7 @@ namespace Jazz2::Multiplayer
 						{
 							std::unique_lock lock(_lock);
 							if (_remoteActors.contains(actorId)) {
-								LOGW("[MP] ServerPacketType::CreateRemoteActor - actor ({}) already exists", actorId);
+								LOGW("[MP] ServerPacketType::CreateRemoteActor - Actor ({}) already exists", actorId);
 								return;
 							}
 						}
@@ -4189,7 +4189,7 @@ namespace Jazz2::Multiplayer
 						{
 							std::unique_lock lock(_lock);
 							if (_remoteActors.contains(actorId)) {
-								LOGW("[MP] ServerPacketType::CreateMirroredActor - actor ({}) already exists", actorId);
+								LOGW("[MP] ServerPacketType::CreateMirroredActor - Actor ({}) already exists", actorId);
 								return;
 							}
 						}
@@ -4203,7 +4203,7 @@ namespace Jazz2::Multiplayer
 							}
 							AddActor(actor);
 						} else {
-							LOGD("[MP] ServerPacketType::CreateMirroredActor - CANNOT CREATE - actorId: {}", actorId);
+							LOGD("[MP] ServerPacketType::CreateMirroredActor - actorId: {} - Failed to create", actorId);
 						}
 					});
 					return true;
@@ -4239,7 +4239,7 @@ namespace Jazz2::Multiplayer
 							_remoteActors.erase(it);
 							_playerNames.erase(actorId);
 						} else {
-							LOGW("[MP] ServerPacketType::DestroyRemoteActor - NOT FOUND - actorId: {}", actorId);
+							LOGW("[MP] ServerPacketType::DestroyRemoteActor - actorId: {} - Actor not found", actorId);
 						}
 					});
 					return true;
@@ -4258,9 +4258,9 @@ namespace Jazz2::Multiplayer
 
 					bool forceResyncRequired = (!forceResyncInvoked && _lastUpdated + 1 < now);
 					if (forceResyncRequired) {
-						LOGD("[MP] ServerPacketType::UpdateAllActors - FORCE RESYNC REQUIRED ({} -> {})", _lastUpdated, now);
+						LOGD("[MP] ServerPacketType::UpdateAllActors - Force re-sync required ({} -> {})", _lastUpdated, now);
 					} else if (forceResyncInvoked) {
-						LOGD("[MP] ServerPacketType::UpdateAllActors - FORCE RESYNC INVOKED ({} -> {})", _lastUpdated, now);
+						LOGD("[MP] ServerPacketType::UpdateAllActors - Force re-sync invoked ({} -> {})", _lastUpdated, now);
 					}
 
 					std::unique_lock lock(_lock);
@@ -4411,7 +4411,7 @@ namespace Jazz2::Multiplayer
 					PlayerPropertyType propertyType = (PlayerPropertyType)packet.ReadValue<std::uint8_t>();
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerSetProperty - received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+						LOGD("[MP] ServerPacketType::PlayerSetProperty - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
@@ -4662,7 +4662,7 @@ namespace Jazz2::Multiplayer
 							break;
 						}
 						default: {
-							LOGD("[MP] ServerPacketType::PlayerSetProperty - received unknown property {}", propertyType);
+							LOGD("[MP] ServerPacketType::PlayerSetProperty - Received unknown property {}", propertyType);
 							break;
 						}
 					}
@@ -4672,7 +4672,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerSetProperty - received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+						LOGD("[MP] ServerPacketType::PlayerSetProperty - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
@@ -4707,7 +4707,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerRespawn - received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+						LOGD("[MP] ServerPacketType::PlayerRespawn - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
@@ -4778,7 +4778,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerEmitWeaponFlare - received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+						LOGD("[MP] ServerPacketType::PlayerEmitWeaponFlare - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
@@ -4795,7 +4795,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerChangeWeapon - received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+						LOGD("[MP] ServerPacketType::PlayerChangeWeapon - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
@@ -4822,7 +4822,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerTakeDamage - received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+						LOGD("[MP] ServerPacketType::PlayerTakeDamage - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
@@ -4842,7 +4842,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerPush - received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+						LOGD("[MP] ServerPacketType::PlayerPush - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
@@ -4860,7 +4860,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerActivateSpring - received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+						LOGD("[MP] ServerPacketType::PlayerActivateSpring - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
@@ -4885,7 +4885,7 @@ namespace Jazz2::Multiplayer
 					MemoryStream packet(data);
 					std::uint32_t playerIndex = packet.ReadVariableUint32();
 					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerWarpIn - received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+						LOGD("[MP] ServerPacketType::PlayerWarpIn - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
 						return true;
 					}
 
@@ -5134,7 +5134,7 @@ namespace Jazz2::Multiplayer
 					peerDesc->LevelState = PeerLevelState::LevelSynchronized;
 				}
 
-				LOGI("[MP] Syncing peer [{}]", peer);
+				LOGI("Syncing peer [{}]", peer);
 
 				// TODO: Send positions only to the newly connected player
 				CalculatePositionInRound(true);
@@ -5234,7 +5234,7 @@ namespace Jazz2::Multiplayer
 					// TODO: Send ambient light (_lastCheckpointLight)
 
 					std::uint8_t playerIndex = FindFreePlayerId();
-					LOGI("[MP] Spawning player {} [{}]", playerIndex, peer);
+					LOGI("Spawning player {} [{}]", playerIndex, peer);
 
 					std::shared_ptr<Actors::Multiplayer::RemotePlayerOnServer> player = std::make_shared<Actors::Multiplayer::RemotePlayerOnServer>(peerDesc);
 					std::uint8_t playerParams[2] = { (std::uint8_t)peerDesc->PreferredPlayerType, (std::uint8_t)playerIndex };
@@ -5362,7 +5362,7 @@ namespace Jazz2::Multiplayer
 					Vector2f spawnPosition = GetSpawnPoint(peerDesc->PreferredPlayerType);
 
 					std::uint8_t playerIndex = FindFreePlayerId();
-					LOGI("[MP] Spawning player {} [{}] as spectator", playerIndex, peer);
+					LOGI("Spawning player {} [{}] as spectator", playerIndex, peer);
 
 					std::shared_ptr<Actors::Multiplayer::RemotePlayerOnServer> player = std::make_shared<Actors::Multiplayer::RemotePlayerOnServer>(peerDesc);
 					std::uint8_t playerParams[2] = { (std::uint8_t)PlayerType::Spectate, (std::uint8_t)playerIndex };
@@ -6079,7 +6079,7 @@ namespace Jazz2::Multiplayer
 			_overtimeStarted = true;
 			_overtimeFinishers = 0;
 
-			LOGI("[MP] Overtime started - {} seconds", serverConfig.OvertimeSecs);
+			LOGI("Overtime started - {} seconds", serverConfig.OvertimeSecs);
 			// TODO: Localize on client
 			ShowAlertToAllPlayers(_f("\n\nOvertime! {} seconds remaining", serverConfig.OvertimeSecs));
 		}
@@ -6320,7 +6320,7 @@ namespace Jazz2::Multiplayer
 		if (winner != nullptr) {
 			auto peerDesc = winner->GetPeerDescriptor();
 			ShowAlertToAllPlayers(_f("\n\nWinner is {}", peerDesc->PlayerName));
-			LOGI("[MP] Winner is {}", peerDesc->PlayerName);
+			LOGW("Winner is {}", peerDesc->PlayerName);
 		}
 
 		for (auto* player : _players) {

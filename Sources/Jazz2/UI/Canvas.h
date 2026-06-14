@@ -24,11 +24,18 @@ namespace Jazz2::UI
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
 
-		/** @brief Draws a textured rectangle. `paletteOffset` >= 0 marks the texture as indexed (palette index in the
-			red channel), recolored at draw time through the shared palette texture at that offset; -1 = plain RGBA */
+		/**
+		 * @brief Draws a textured rectangle
+		 *
+		 * `paletteOffset` >= 0 marks the texture as indexed (palette index in the red channel), recolored at draw time
+		 * through the shared palette texture at that offset; -1 = plain RGBA.
+		 */
 		void DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending = false, float angle = 0.0f, std::int32_t paletteOffset = -1);
-		/** @brief Draws an indexed textured rectangle recolored through a palette texture (PaletteRemap shader). The
-			palette offset is the flat index of the first color in the palette texture (0 = the first row/palette) */
+		/**
+		 * @brief Draws an indexed textured rectangle recolored through a palette texture (PaletteRemap shader)
+		 *
+		 * The palette offset is the flat index of the first color in the palette texture (0 = the first row/palette).
+		 */
 		void DrawTextureWithPalette(const Texture& texture, const Texture& palette, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, float paletteOffset = 0.0f);
 		/** @brief Draws a solid rectangle */
 		void DrawSolid(Vector2f pos, std::uint16_t z, Vector2f size, const Colorf& color, bool additiveBlending = false);

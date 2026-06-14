@@ -285,8 +285,12 @@ namespace Jazz2
 		static Uuid UniqueServerID;
 		/** @brief Player display name */
 		static String PlayerName;
-		/** @brief Player character recolor: 4 packed bytes (one per fur section), each a sprite-palette gradient
-			start; 0x00000000 means "use the original colors" (see @ref ContentResolver::BuildPlayerColorPalette) */
+		/**
+		 * @brief Player character recolor as 4 packed bytes (one per fur section)
+		 *
+		 * Each byte is a sprite-palette gradient start; `0x00000000` means "use the original colors" (see @ref
+		 * ContentResolver::BuildPlayerColorPalette).
+		 */
 		static std::uint32_t PlayerFurColor;
 		/** @brief When the custom player character color is applied (see @ref PlayerColorMode) */
 		static PlayerColorMode PlayerColors;

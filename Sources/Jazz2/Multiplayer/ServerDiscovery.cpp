@@ -65,7 +65,7 @@ namespace Jazz2::Multiplayer
 					(ifa->ifa_flags & IFF_UP) && !(ifa->ifa_flags & IFF_LOOPBACK) && (ifa->ifa_flags & IFF_MULTICAST)) {
 					ifidx = if_nametoindex(ifa->ifa_name);
 					if (ifidx > 0) {
-						LOGI("[MP] Using {} interface \"{}\" ({}) for local discovery", ifa->ifa_addr->sa_family == AF_INET6
+						LOGI("Using {} interface \"{}\" ({}) for local discovery", ifa->ifa_addr->sa_family == AF_INET6
 							? "IPv6" : "IPv4", ifa->ifa_name, ifidx);
 						break;
 					}
@@ -74,7 +74,7 @@ namespace Jazz2::Multiplayer
 			freeifaddrs(ifaddr);
 		}
 		if (ifidx == 0) {
-			LOGI("[MP] No suitable interface found for local discovery");
+			LOGI("No suitable network interface found for local discovery");
 			ifidx = if_nametoindex("wlan0");
 		}
 		return ifidx;
@@ -89,13 +89,13 @@ namespace Jazz2::Multiplayer
 				// Prefer first adapter that is up, not loopback, supports multicast
 				if (adapter->OperStatus == IfOperStatusUp && adapter->IfType != IF_TYPE_SOFTWARE_LOOPBACK &&
 					!(adapter->Flags & IP_ADAPTER_NO_MULTICAST)) {
-					LOGI("[MP] Using IPv6 interface \"{}\" ({}:{}) for local discovery", Utf8::FromUtf16(adapter->FriendlyName),
+					LOGI("Using IPv6 interface \"{}\" ({}:{}) for local discovery", Utf8::FromUtf16(adapter->FriendlyName),
 						adapter->AdapterName, (std::int32_t)adapter->Ipv6IfIndex);
 					return (std::int32_t)adapter->Ipv6IfIndex;
 				}
 			}
 		}
-		LOGI("[MP] No suitable interface found for local discovery");
+		LOGI("No suitable network interface found for local discovery");
 		return 0;
 #	else
 		return 0;
@@ -162,7 +162,7 @@ namespace Jazz2::Multiplayer
 			return;
 		}
 
-		LOGD("[MP] Downloading public server list…");
+		LOGD("Downloading public server list…");
 
 		String url = "https://deat.tk/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
 		String urlNt = String::nullTerminatedView(url);
@@ -197,7 +197,7 @@ namespace Jazz2::Multiplayer
 			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
 			Json::Value doc; std::string errors;
 			if (reader->parse(fetch->data, fetch->data + fetch->numBytes, &doc, &errors)) {
-				LOGI("[MP] Downloaded public server list with {} entries ({} bytes)",
+				LOGI("Downloaded public server list with {} entries ({} bytes)",
 					(std::uint32_t)doc["s"].size(), (std::uint32_t)fetch->numBytes);
 
 				for (auto serverItem : doc["s"]) {
@@ -227,15 +227,15 @@ namespace Jazz2::Multiplayer
 						serverItem["wss"].get(wsSecure);
 						discoveredServer.WsSecure = wsSecure;
 
-						LOGD("[MP] -\tFound server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
+						LOGD("-\tFound server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
 						observer->OnServerFound(std::move(discoveredServer));
 					}
 				}
 			} else {
-				LOGE("[MP] Failed to parse public server list: {}", StringView(errors));
+				LOGE("Failed to parse public server list: {}", StringView(errors));
 			}
 		} else if (fetch->numBytes == 0) {
-			LOGE("[MP] Failed to download public server list (empty response)");
+			LOGE("Failed to download public server list (empty response)");
 		}
 
 		// TODO: It seems that the callback is triggered only with readyState==4
@@ -259,7 +259,7 @@ namespace Jazz2::Multiplayer
 
 		_this->_pendingFetch = nullptr;
 
-		LOGE("[MP] Failed to download public server list (HTTP {})", (std::int32_t)fetch->status);
+		LOGE("Failed to download public server list (HTTP {})", (std::int32_t)fetch->status);
 
 		emscripten_fetch_close(fetch);
 
@@ -292,7 +292,7 @@ namespace Jazz2::Multiplayer
 #		else
 			std::int32_t error = errno;
 #		endif
-			LOGE("[MP] Failed to create socket for local server discovery (error: {})", error);
+			LOGE("Failed to create socket for local server discovery (error: {})", error);
 			return ENET_SOCKET_NULL;
 		}
 
@@ -306,7 +306,7 @@ namespace Jazz2::Multiplayer
 #		else
 			std::int32_t error = errno;
 #		endif
-			LOGE("[MP] Failed to enable multicast on socket for local server discovery (error: {})", error);
+			LOGE("Failed to enable multicast on socket for local server discovery (error: {})", error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
@@ -323,7 +323,7 @@ namespace Jazz2::Multiplayer
 #		else
 			std::int32_t error = errno;
 #		endif
-			LOGE("[MP] Failed to bind socket for local server discovery (error: {})", error);
+			LOGE("Failed to bind socket for local server discovery (error: {})", error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
@@ -335,7 +335,7 @@ namespace Jazz2::Multiplayer
 #		else
 			std::int32_t error = errno;
 #		endif
-			LOGE("[MP] Failed to parse multicast address for local server discovery (result: {}, error: {})", result, error);
+			LOGE("Failed to parse multicast address for local server discovery (result: {}, error: {})", result, error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
@@ -353,13 +353,13 @@ namespace Jazz2::Multiplayer
 #		else
 			std::int32_t error = errno;
 #		endif
-			LOGE("[MP] Failed to join multicast group on socket for local server discovery (error: {})", error);
+			LOGE("Failed to join multicast group on socket for local server discovery (error: {})", error);
 			enet_socket_destroy(socket);
 			return ENET_SOCKET_NULL;
 		}
 #	else
 		// TODO: Use broadcast on IPv4
-		LOGW("[MP] Local server discovery is not supported on IPv4");
+		LOGW("Local server discovery is not supported on IPv4");
 		ENetSocket socket = ENET_SOCKET_NULL;
 #	endif
 
@@ -386,13 +386,13 @@ namespace Jazz2::Multiplayer
 #	else
 			std::int32_t error = errno;
 #	endif
-			LOGE("[MP] Failed to send local discovery request (result: {}, error: {})", result, error);
+			LOGE("Failed to send local discovery request (result: {}, error: {})", result, error);
 		}
 	}
 
 	void ServerDiscovery::DownloadPublicServerList(IServerObserver* observer)
 	{
-		LOGD("[MP] Downloading public server list…");
+		LOGD("Downloading public server list…");
 
 		String url = "https://deat.tk/jazz2/servers?fetch&v=2&d="_s + PreferencesCache::GetDeviceID();
 		auto request = WebSession::GetDefault().CreateRequest(url);
@@ -407,7 +407,7 @@ namespace Jazz2::Multiplayer
 			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
 			Json::Value doc; std::string errors;
 			if (reader->parse(buffer.get(), buffer.get() + size, &doc, &errors)) {
-				LOGI("[MP] Downloaded public server list with {} entries ({} bytes)", (std::uint32_t)doc["s"].size(), (std::uint32_t)size);
+				LOGI("Downloaded public server list with {} entries ({} bytes)", (std::uint32_t)doc["s"].size(), (std::uint32_t)size);
 
 				for (auto serverItem : doc["s"]) {
 					std::string_view serverName, serverUuid, serverEndpoints;
@@ -437,15 +437,15 @@ namespace Jazz2::Multiplayer
 						serverItem["wss"].get(wsSecure);
 						discoveredServer.WsSecure = wsSecure;
 #	endif
-						LOGD("[MP] -\tFound server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
+						LOGD("-\tFound server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
 						observer->OnServerFound(std::move(discoveredServer));
 					}
 				}
 			} else {
-				LOGE("[MP] Failed to parse public server list: {}", StringView(errors));
+				LOGE("Failed to parse public server list: {}", StringView(errors));
 			}
 		} else {
-			LOGE("[MP] Failed to download public server list: {}", result.error);
+			LOGE("Failed to download public server list: {}", result.error);
 		}
 	}
 
@@ -516,7 +516,7 @@ namespace Jazz2::Multiplayer
 		}
 #	endif
 
-		LOGD("[MP] Found local server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
+		LOGD("Found local server \"{}\" at {}", discoveredServer.Name, discoveredServer.EndpointString);
 		return true;
 	}
 
@@ -620,7 +620,7 @@ namespace Jazz2::Multiplayer
 #	else
 				std::int32_t error = errno;
 #	endif
-				LOGE("[MP] Failed to send local discovery response (result: {}, error: {})", result, error);
+				LOGE("Failed to send local discovery response (result: {}, error: {})", result, error);
 			}
 		}
 	}
@@ -715,15 +715,15 @@ namespace Jazz2::Multiplayer
 				if (doc["r"].get(success) == Json::SUCCESS && success &&
 					doc["e"].get(endpoints) == Json::SUCCESS && !endpoints.empty()) {
 					_onlineSuccess = true;
-					LOGD("[MP] Server published with following endpoints: {}", StringView(endpoints));
+					LOGD("Server published with following endpoints: {}", StringView(endpoints));
 				} else {
-					LOGE("[MP] Failed to publish the server: Request rejected");
+					LOGE("Failed to publish the server: Request rejected");
 				}
 			} else {
-				LOGE("[MP] Failed to publish the server: Response cannot be parsed: {}", StringView(errors));
+				LOGE("Failed to publish the server: Response cannot be parsed: {}", StringView(errors));
 			}
 		} else {
-			LOGE("[MP] Failed to publish the server: {}", result.error);
+			LOGE("Failed to publish the server: {}", result.error);
 		}
 	}
 
@@ -769,15 +769,15 @@ namespace Jazz2::Multiplayer
 			if (reader->parse(buffer.get(), buffer.get() + size, &doc, &errors)) {
 				bool success; std::string_view endpoints;
 				if (doc["r"].get(success) == Json::SUCCESS && success) {
-					LOGD("[MP] Server delisted successfully");
+					LOGD("Server delisted successfully");
 				} else {
-					LOGE("[MP] Failed to delist the server: Request rejected");
+					LOGE("Failed to delist the server: Request rejected");
 				}
 			} else {
-				LOGE("[MP] Failed to delist the server: Response cannot be parsed: {}", StringView(errors));
+				LOGE("Failed to delist the server: Response cannot be parsed: {}", StringView(errors));
 			}
 		} else {
-			LOGE("[MP] Failed to delist the server: {}", result.error);
+			LOGE("Failed to delist the server: {}", result.error);
 		}
 	}
 
@@ -816,7 +816,7 @@ namespace Jazz2::Multiplayer
 			_this->_socket = ENET_SOCKET_NULL;
 		}
 
-		LOGD("[MP] Server discovery thread exited");
+		LOGD("Server discovery thread exited");
 	}
 
 	void ServerDiscovery::OnServerThread(void* param)
@@ -858,7 +858,7 @@ namespace Jazz2::Multiplayer
 			_this->_socket = ENET_SOCKET_NULL;
 		}
 
-		LOGD("[MP] Server discovery thread exited");
+		LOGD("Server discovery thread exited");
 	}
 
 #endif

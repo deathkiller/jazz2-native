@@ -177,7 +177,7 @@ namespace Jazz2::Multiplayer
 	void NetworkManagerBase::CreateClient(INetworkHandler* handler, StringView endpoints, std::uint16_t defaultPort, std::uint32_t clientData)
 	{
 		if (_handler != nullptr) {
-			LOGE("[MP] Client already created");
+			LOGE("Multiplayer client already created");
 			return;
 		}
 
@@ -202,19 +202,19 @@ namespace Jazz2::Multiplayer
 			Reason reason;
 			switch (_emWsSocket) {
 				case EM_WS_ERR_SECURITY:
-					LOGE("[MP] WebSocket connection to \"{}\" failed due to security error (e.g., \"ws://\" from \"https://\")", firstEndpoint);
+					LOGE("WebSocket connection to \"{}\" failed due to security error (e.g., \"ws://\" from \"https://\")", firstEndpoint);
 					reason = Reason::SecurityPolicyViolation;
 					break;
 				case EM_WS_ERR_DOM:
-					LOGE("[MP] WebSocket connection to \"{}\" failed due to DOM error (e.g., browser blocked the connection)", firstEndpoint);
+					LOGE("WebSocket connection to \"{}\" failed due to DOM error (e.g., browser blocked the connection)", firstEndpoint);
 					reason = Reason::SecurityPolicyViolation;
 					break;
 				case EM_WS_ERR_MALFORMED_URL:
-					LOGE("[MP] WebSocket connection to \"{}\" failed due to malformed URL", firstEndpoint);
+					LOGE("WebSocket connection to \"{}\" failed due to malformed URL", firstEndpoint);
 					reason = Reason::InvalidParameter;
 					break;
 				default:
-					LOGE("[MP] WebSocket connection to \"{}\" failed due to unknown error", firstEndpoint);
+					LOGE("WebSocket connection to \"{}\" failed due to unknown error", firstEndpoint);
 					reason = Reason::Unknown;
 					break;
 			}
@@ -226,7 +226,7 @@ namespace Jazz2::Multiplayer
 		}
 
 		_emWsUrl = firstEndpoint;
-		LOGI("[MP] Connecting to \"{}\"", _emWsUrl);
+		LOGI("Connecting to \"{}\"", _emWsUrl);
 
 		emscripten_websocket_set_onopen_callback(_emWsSocket, this, OnEmWsOpen);
 		emscripten_websocket_set_onmessage_callback(_emWsSocket, this, OnEmWsMessage);
@@ -237,7 +237,7 @@ namespace Jazz2::Multiplayer
 		// If the first endpoint looks like a WebSocket URL, use IXWebSocket client
 		StringView firstEndpoint = endpoints.prefix(endpoints.findOr('|', endpoints.end()).begin());
 		if (firstEndpoint.hasPrefix("ws://"_s) || firstEndpoint.hasPrefix("wss://"_s)) {
-			LOGI("[MP] Connecting to \"{}\" via WebSocket transport", firstEndpoint);
+			LOGI("Connecting to \"{}\" via WebSocket transport", firstEndpoint);
 
 			_wsClient = std::make_unique<ix::WebSocket>();
 			_wsClient->setUrl(firstEndpoint);
@@ -262,7 +262,7 @@ namespace Jazz2::Multiplayer
 						_wsPendingEvents.push_back({WsQueuedEvent::Type::Message, ws, msg->str, 0, 0});
 					}
 				} else if (msg->type == ix::WebSocketMessageType::Error) {
-					LOGE("[MP] WebSocket transport error: {}", StringView{msg->errorInfo.reason});
+					LOGE("WebSocket transport error: {}", StringView{msg->errorInfo.reason});
 					_wsPendingEvents.push_back({WsQueuedEvent::Type::Close, ws, {}, 0, 0});
 				}
 			});
@@ -284,7 +284,7 @@ namespace Jazz2::Multiplayer
 					(ifa->ifa_flags & IFF_UP)) {
 					ifidx = if_nametoindex(ifa->ifa_name);
 					if (ifidx > 0) {
-						LOGI("[MP] Using {} interface \"{}\" ({})", ifa->ifa_addr->sa_family == AF_INET6
+						LOGI("Using {} interface \"{}\" ({})", ifa->ifa_addr->sa_family == AF_INET6
 							? "IPv6" : "IPv4", ifa->ifa_name, ifidx);
 						break;
 					}
@@ -293,7 +293,7 @@ namespace Jazz2::Multiplayer
 			freeifaddrs(ifaddr);
 		}
 		if (ifidx == 0) {
-			LOGI("[MP] No suitable interface found");
+			LOGI("No suitable network interface found");
 			ifidx = if_nametoindex("wlan0");
 		}
 #	else
@@ -323,10 +323,10 @@ namespace Jazz2::Multiplayer
 #	else
 						std::int32_t error = errno;
 #	endif
-						LOGW("[MP] Failed to parse specified address \"{}\" with error {}", nullTerminatedAddress, error);
+						LOGW("Failed to parse specified address \"{}\" with error {}", nullTerminatedAddress, error);
 					}
 				} else {
-					LOGW("[MP] Failed to parse specified endpoint \"{}\"", p[0]);
+					LOGW("Failed to parse specified endpoint \"{}\"", p[0]);
 				}
 			}
 
@@ -458,12 +458,12 @@ namespace Jazz2::Multiplayer
 
 			if (ioctl(_host->socket, SIOCGIFCONF, &ifc) >= 0) {
 				std::int32_t count = ifc.ifc_len / sizeof(struct ifreq);
-				LOGI("[MP] Found {} interfaces:", count);
+				LOGI("Found {} interfaces:", count);
 				for (std::int32_t i = 0; i < count; i++) {
 					if (ifr[i].ifr_addr.sa_family == AF_INET) { // IPv4
 						auto* addrPtr = &((struct sockaddr_in*)&ifr[i].ifr_addr)->sin_addr;
 						String addressString = AddressToString(*addrPtr, _host->address.port);
-						LOGI("[MP] -\t{}: {}", ifr[i].ifr_name, addressString);
+						LOGI(" -\t{}: {}", ifr[i].ifr_name, addressString);
 						if (!addressString.empty() && !addressString.hasPrefix("127.0.0.1:"_s)) {
 							arrayAppend(result, std::move(addressString));
 						}
@@ -473,7 +473,7 @@ namespace Jazz2::Multiplayer
 						auto* addrPtr = &((struct sockaddr_in6*)&ifr[i].ifr_addr)->sin6_addr;
 						//auto scopeId = ((struct sockaddr_in6*)&ifr[i].ifr_addr)->sin6_scope_id;
 						String addressString = AddressToString(*addrPtr, /*scopeId*/0, _host->address.port);
-						LOGI("[MP] -\t{}: {}", ifr[i].ifr_name, addressString);
+						LOGI(" -\t{}: {}", ifr[i].ifr_name, addressString);
 						if (!addressString.empty() && !addressString.hasPrefix("[::1]:"_s)) {
 							arrayAppend(result, std::move(addressString));
 						}
@@ -481,7 +481,7 @@ namespace Jazz2::Multiplayer
 #		endif
 				}
 			} else {
-				LOGW("[MP] Failed to get server endpoints");
+				LOGW("Failed to get server endpoints");
 			}
 #	elif defined(DEATH_TARGET_WINDOWS)
 			ULONG bufferSize = 0;
@@ -516,7 +516,7 @@ namespace Jazz2::Multiplayer
 					}
 				}
 			} else {
-				LOGW("[MP] Failed to get server endpoints");
+				LOGW("Failed to get server endpoints");
 			}
 #	else
 			struct ifaddrs* ifAddrStruct = nullptr;
@@ -546,7 +546,7 @@ namespace Jazz2::Multiplayer
 				}
 				freeifaddrs(ifAddrStruct);
 			} else {
-				LOGW("[MP] Failed to get server endpoints");
+				LOGW("Failed to get server endpoints");
 			}
 #	endif
 		} else {
@@ -1068,7 +1068,7 @@ namespace Jazz2::Multiplayer
 
 	EM_BOOL NetworkManagerBase::OnEmWsOpen(int eventType, const EmscriptenWebSocketOpenEvent* e, void* userData)
 	{
-		LOGI("[MP] WebSocket connection opened");
+		LOGI("WebSocket connection opened");
 
 		NetworkManagerBase* _this = static_cast<NetworkManagerBase*>(userData);
 		if (_this->_emWsSocket <= 0 || _this->_handler == nullptr) {
@@ -1115,7 +1115,7 @@ namespace Jazz2::Multiplayer
 
 	EM_BOOL NetworkManagerBase::OnEmWsError(int eventType, const EmscriptenWebSocketErrorEvent* e, void* userData)
 	{
-		LOGE("[MP] WebSocket connection error");
+		LOGE("WebSocket connection error");
 		return EM_TRUE;
 	}
 
@@ -1198,11 +1198,11 @@ namespace Jazz2::Multiplayer
 			tlsOptions.tls = true;
 			tlsOptions.autoDetect = true;
 			_wsServer->setTLSOptions(tlsOptions);
-			LOGI("[MP] WebSocket transport starting with TLS on port {}", wsPort);
+			LOGI("WebSocket transport starting with TLS on port {}", wsPort);
 		} else
 #		endif
 		{
-			LOGI("[MP] WebSocket transport starting on port {}", wsPort);
+			LOGI("WebSocket transport starting on port {}", wsPort);
 		}
 
 		// Select the application-level sub-protocol carrying client data if present
@@ -1230,7 +1230,7 @@ namespace Jazz2::Multiplayer
 					_wsPeers.emplace(&ws, WsPeerInfo{String(remoteIp.data(), remoteIp.size()), 0});
 					_wsPendingEvents.push_back({WsQueuedEvent::Type::Open, &ws, {}, peerClientData, 0});
 				}
-				LOGD("[MP] WebSocket client connected [{}] from {}", Peer::FromWebSocket(&ws), StringView{remoteIp});
+				LOGD("WebSocket client connected [{}] from {}", Peer::FromWebSocket(&ws), StringView{remoteIp});
 
 			} else if (msg->type == ix::WebSocketMessageType::Close) {
 				{
@@ -1238,7 +1238,7 @@ namespace Jazz2::Multiplayer
 					_wsPeers.erase(&ws);
 					_wsPendingEvents.push_back({WsQueuedEvent::Type::Close, &ws, {}, 0, std::uint16_t(msg->closeInfo.code)});
 				}
-				LOGD("[MP] WebSocket client disconnected [{}]", Peer::FromWebSocket(&ws));
+				LOGD("WebSocket client disconnected [{}]", Peer::FromWebSocket(&ws));
 			} else if (msg->type == ix::WebSocketMessageType::Message && msg->binary) {
 				if (!msg->str.empty()) {
 					std::unique_lock<Spinlock> lock(_wsLock);
@@ -1246,13 +1246,13 @@ namespace Jazz2::Multiplayer
 				}
 
 			} else if (msg->type == ix::WebSocketMessageType::Error) {
-				LOGE("[MP] WebSocket transport error: {}", StringView{msg->errorInfo.reason});
+				LOGE("WebSocket transport error: {}", StringView{msg->errorInfo.reason});
 			}
 		});
 
 		auto res = _wsServer->listen();
 		if (!res.first) {
-			LOGE("[MP] WebSocket transport failed to listen on port {}: {}", wsPort, StringView{res.second});
+			LOGE("WebSocket transport failed to listen on port {}: {}", wsPort, StringView{res.second});
 			_wsServer = nullptr;
 			return false;
 		}
@@ -1431,7 +1431,7 @@ namespace Jazz2::Multiplayer
 		_this->_handler = nullptr;
 		_this->_thread.Detach();
 
-		LOGD("[MP] WebSocket client thread exited");
+		LOGD("WebSocket client thread exited");
 	}
 #	endif
 
@@ -1449,7 +1449,7 @@ namespace Jazz2::Multiplayer
 		ENetEvent ev{};
 		for (std::int32_t i = 0; i < std::int32_t(_this->_desiredEndpoints.size()) && _this->_state != NetworkState::None; i++) {
 			ENetAddress& addr = _this->_desiredEndpoints[i];
-			LOGI("[MP] Connecting to {} ({}/{})", _this->AddressToString(addr, true), i + 1, _this->_desiredEndpoints.size());
+			LOGI("Connecting to {} ({}/{})", _this->AddressToString(addr, true), i + 1, _this->_desiredEndpoints.size());
 			
 			if (host != nullptr) {
 				enet_host_destroy(host);
@@ -1458,7 +1458,7 @@ namespace Jazz2::Multiplayer
 			host = enet_host_create(nullptr, 1, std::size_t(NetworkChannel::Count), 0, 0);
 			_this->_host = host;
 			if (host == nullptr) {
-				LOGE("[MP] Failed to create client");
+				LOGE("Failed to create multiplayer client");
 				_this->OnPeerDisconnected({}, Reason::InvalidParameter);
 				return;
 			}
@@ -1491,7 +1491,7 @@ namespace Jazz2::Multiplayer
 
 		Reason reason;
 		if (_this->_connectedPeers.empty()) {
-			LOGE("[MP] Failed to connect to the server");
+			LOGE("Failed to connect to the server");
 			_this->_state = NetworkState::None;
 			reason = Reason::ConnectionTimedOut;
 		} else {
@@ -1600,7 +1600,7 @@ namespace Jazz2::Multiplayer
 					}
 
 					if (host == nullptr) {
-						LOGE("[MP] Failed to recreate the server");
+						LOGE("Failed to recreate multiplayer server");
 						break;
 					}
 				}

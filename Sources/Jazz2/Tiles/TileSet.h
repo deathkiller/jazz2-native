@@ -33,8 +33,12 @@ namespace Jazz2::Tiles
 		std::int32_t TileCount;
 		/** @brief Number of tiles per row */
 		std::int32_t TilesPerRow;
-		/** @brief Whether @ref TextureDiffuse stores raw palette indices (red channel) recolored at draw time through
-			the palette shaders, instead of baked colors (false for tilesets containing 32-bit true-color tiles) */
+		/**
+		 * @brief Whether @ref TextureDiffuse stores raw palette indices instead of baked colors
+		 *
+		 * Indexed tiles (red channel holds the index) are recolored at draw time through the palette shaders. `false`
+		 * for tilesets containing 32-bit true-color tiles.
+		 */
 		bool IsIndexed = false;
 
 		/** @brief Returns mask for specified tile */
@@ -68,8 +72,9 @@ namespace Jazz2::Tiles
 		}
 
 		/**
-		 * @brief Returns `true` if every column of the tile's mask is vertically contiguous (no gaps),
-		 * which allows replacing the per-pixel collision scan with an exact per-column span test
+		 * @brief Returns `true` if every column of the tile's mask is vertically contiguous (no gaps)
+		 *
+		 * Contiguity allows replacing the per-pixel collision scan with an exact per-column span test.
 		 */
 		bool IsColumnContiguous(std::int32_t tileId) const
 		{
@@ -81,9 +86,10 @@ namespace Jazz2::Tiles
 		}
 
 		/**
-		 * @brief Returns per-column solid spans for a tile (2 bytes per column: first solid row, last
-		 * solid row; a first row of `0xFF` marks an empty column). Only meaningful when
-		 * @ref IsColumnContiguous() returns `true`
+		 * @brief Returns per-column solid spans for a tile
+		 *
+		 * 2 bytes per column (first solid row, last solid row); a first row of `0xFF` marks an empty column. Only
+		 * meaningful when @ref IsColumnContiguous() returns `true`.
 		 */
 		const std::uint8_t* GetColumnSpans(std::int32_t tileId) const
 		{

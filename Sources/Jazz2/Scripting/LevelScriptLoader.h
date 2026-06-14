@@ -65,34 +65,53 @@ namespace Jazz2::Scripting
 			return _levelHandler;
 		}
 
-		/** @brief Plays a sound sample by its original sample index (see `SOUND::Sample`), loading and caching it on
-			first use; returns the player, or `nullptr` if the sample couldn't be played */
+		/**
+		 * @brief Plays a sound sample by its original sample index (see `SOUND::Sample`)
+		 *
+		 * Loads and caches the sample on first use. Returns the player, or `nullptr` if the sample couldn't be played.
+		 */
 		std::shared_ptr<AudioBufferPlayer> PlaySample(const Vector2f& pos, std::int32_t sampleId, std::int32_t volume, std::int32_t frequency, bool sourceRelative, std::int32_t loopChannel);
 		/** @brief Returns `true` if the given built-in sample is available (loading it on first query) */
 		bool IsSampleLoaded(std::int32_t sampleId);
 		/** @brief Loads a custom sample from the given content path, overriding the sample at the given index */
 		bool LoadSample(std::int32_t sampleId, StringView path);
 
-		/** @brief Resolves the graphic resource for an original JJ2 animation set + animation index (via the anim
-			mapping and the converted assets), loading and caching it on first use; returns `nullptr` if unavailable.
-			Used by the canvas sprite-drawing functions. */
+		/**
+		 * @brief Resolves the graphic resource for an original JJ2 animation set and animation index
+		 *
+		 * Goes through the anim mapping and the converted assets, loading and caching on first use. Returns `nullptr`
+		 * if unavailable. Used by the canvas sprite-drawing functions.
+		 */
 		Resources::GenericGraphicResource* ResolveSpriteGraphic(std::int32_t setID, std::int32_t animation);
 
-		/** @brief Spawns an object from an original JJ2 event ID at the given pixel position (converting the event to a
-			native type), registers it, and returns a script object ID (or 0 on failure). Used by `jjAddObject`. */
+		/**
+		 * @brief Spawns an object from an original JJ2 event ID at the given pixel position
+		 *
+		 * Converts the event to a native type, registers it, and returns a script object ID (or 0 on failure). Used by
+		 * `jjAddObject`.
+		 */
 		std::int32_t AddObjectFromEvent(std::uint8_t eventId, float xPixel, float yPixel);
-		/** @brief Returns the live actor for a script object ID previously returned by @ref AddObjectFromEvent, or
-			`nullptr` if it no longer exists. Used by `jjObjects`. */
+		/**
+		 * @brief Returns the live actor for a script object ID previously returned by @ref AddObjectFromEvent
+		 *
+		 * Returns `nullptr` if it no longer exists. Used by `jjObjects`.
+		 */
 		Actors::ActorBase* GetScriptObject(std::int32_t objectId);
 
-		/** @brief Spawns a script-controlled object whose behavior function drives it each frame (a host actor applies
-			its velocity, calls the behavior over the jjOBJ, and syncs the position back). Returns a script object ID.
-			Used by `jjAddObject` when a custom behavior function is supplied. */
+		/**
+		 * @brief Spawns a script-controlled object whose behavior function drives it each frame
+		 *
+		 * A host actor applies its velocity, calls the behavior over the jjOBJ, and syncs the position back. Returns a
+		 * script object ID. Used by `jjAddObject` when a custom behavior function is supplied.
+		 */
 		std::int32_t AddScriptControlledObject(std::uint8_t eventId, float xPixel, float yPixel, asIScriptFunction* behaviorFunc);
 
-		/** @brief Returns the persistent `jjLAYER` proxy bound to the given level layer index, creating and populating it
-			from the engine layer on first access (or `nullptr` if the index is out of range). The returned handle is
-			AddRef'd for the caller. Used by `jjLayers`. */
+		/**
+		 * @brief Returns the persistent `jjLAYER` proxy bound to the given level layer index
+		 *
+		 * Creates and populates it from the engine layer on first access (or returns `nullptr` if the index is out of
+		 * range). The returned handle is AddRef'd for the caller. Used by `jjLayers`.
+		 */
 		Legacy::jjLAYER* GetLayerProxy(std::int32_t index);
 
 		/** @brief Returns list of players */

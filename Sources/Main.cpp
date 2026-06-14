@@ -938,7 +938,7 @@ void GameEventHandler::StartProcessingStdin()
 #if defined(WITH_MULTIPLAYER)
 void GameEventHandler::ConnectToServer(StringView endpoint, std::uint16_t defaultPort, StringView password)
 {
-	LOGI("[MP] Preparing connection to \"{}\"...", endpoint);
+	LOGI("Preparing connection to \"{}\"...", endpoint);
 
 	_networkManager = std::make_unique<NetworkManager>();
 	_networkManager->CreateClient(this, endpoint, defaultPort, 0xDEA00000 | (MultiplayerProtocolVersion & 0x000FFFFF));
@@ -996,13 +996,13 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 	}
 
 	auto& serverConfig = _networkManager->GetServerConfiguration();
-	LOGI("[MP] Creating {} server \"{}\" on port {}...", serverConfig.IsPrivate ? "private"_s : "public"_s, serverConfig.ServerName, serverConfig.ServerPort);
+	LOGI("Creating {} server \"{}\" on port {}...", serverConfig.IsPrivate ? "private"_s : "public"_s, serverConfig.ServerName, serverConfig.ServerPort);
 
 	InvokeAsync([this, serverInit = std::move(serverInit)]() mutable {
 		auto levelHandler = std::make_shared<MpLevelHandler>(this,
 			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending, true);
 		if (!levelHandler->Initialize(serverInit.InitialLevel)) {
-			LOGE("[MP] Failed to load initial level \"{}\", shutting down server", serverInit.InitialLevel.LevelName);
+			LOGE("Failed to load initial level \"{}\", shutting down server", serverInit.InitialLevel.LevelName);
 			theApplication().Quit();
 			return;
 		}
@@ -1015,12 +1015,12 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 
 ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32_t clientData)
 {
-	LOGI("[MP] Peer connected ({}) [{}]", _networkManager->AddressToString(peer), peer);
+	LOGI("Peer connected ({}) [{}]", _networkManager->AddressToString(peer), peer);
 
 	if (_networkManager->GetState() == NetworkState::Listening) {
 		if ((clientData & 0xFFF00000) != 0xDEA00000 || (clientData & 0x000FFFFF) > MultiplayerProtocolVersion) {
 			// Connected client is newer than server, reject it
-			LOGI("[MP] Peer kicked ({}) [{}]: Incompatible protocol version", _networkManager->AddressToString(peer), peer);
+			LOGI("Peer kicked ({}) [{}]: Incompatible protocol version", _networkManager->AddressToString(peer), peer);
 			return Reason::IncompatibleVersion;
 		}
 
@@ -1081,13 +1081,13 @@ ConnectionResult GameEventHandler::OnPeerConnected(const Peer& peer, std::uint32
 void GameEventHandler::OnPeerDisconnected(const Peer& peer, Reason reason)
 {
 	if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
-		LOGI("[MP] Peer disconnected \"{}\" ({}) [{}]: {} ({})", peerDesc->PlayerName.data(),
+		LOGI("Peer disconnected \"{}\" ({}) [{}]: {} ({})", peerDesc->PlayerName.data(),
 			_networkManager->AddressToString(peer), peer, NetworkManagerBase::ReasonToString(reason), reason);
 	} else if (peer) {
-		LOGI("[MP] Peer disconnected ({}) [{}]: {} ({})", _networkManager->AddressToString(peer), peer,
+		LOGI("Peer disconnected ({}) [{}]: {} ({})", _networkManager->AddressToString(peer), peer,
 			NetworkManagerBase::ReasonToString(reason), reason);
 	} else {
-		LOGI("[MP] Peer disconnected [{}]: {} ({})", peer, NetworkManagerBase::ReasonToString(reason), reason);
+		LOGI("Peer disconnected [{}]: {} ({})", peer, NetworkManagerBase::ReasonToString(reason), reason);
 	}
 
 	if (auto multiLevelHandler = runtime_cast<MpLevelHandler>(_currentHandler)) {
@@ -1162,7 +1162,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
 
 				if (strncmp("J2R ", gameID, sizeof("J2R ") - 1) != 0 || (gameVersion & VersionMask) != (currentVersion & VersionMask)) {
-					LOGI("[MP] Peer kicked ({}) [{}]: Incompatible game version", _networkManager->AddressToString(peer), peer);
+					LOGI("Peer kicked ({}) [{}]: Incompatible game version", _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::IncompatibleVersion);
 					return;
 				}
@@ -1182,7 +1182,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				// TODO: Sanitize (\n,\r,\t) and strip formatting (\f) from player name
 				if (playerNameLength == 0 || playerNameLength > MaxPlayerNameLength) {
-					LOGI("[MP] Peer kicked ({}) [{}]: Invalid player name", _networkManager->AddressToString(peer), peer);
+					LOGI("Peer kicked ({}) [{}]: Invalid player name", _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::InvalidPlayerName);
 					return;
 				}
@@ -1192,18 +1192,18 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				const auto& serverConfig = _networkManager->GetServerConfiguration();
 				if (serverConfig.BannedUniquePlayerIDs.contains(uniquePlayerId)) {
-					LOGI("[MP] Peer kicked \"{}\" ({}) [{}]: Banned by unique player ID", playerName, _networkManager->AddressToString(peer), peer);
+					LOGI("Peer kicked \"{}\" ({}) [{}]: Banned by unique player ID", playerName, _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::Banned);
 					return;
 				}
 				if (!serverConfig.WhitelistedUniquePlayerIDs.empty() && !serverConfig.WhitelistedUniquePlayerIDs.contains(uniquePlayerId)) {
-					LOGI("[MP] Peer kicked \"{}\" ({}) [{}]: Not in whitelist", playerName, _networkManager->AddressToString(peer), peer);
+					LOGI("Peer kicked \"{}\" ({}) [{}]: Not in whitelist", playerName, _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::NotInWhitelist);
 					return;
 				}
 
 				if (!serverConfig.ServerPassword.empty() && password != serverConfig.ServerPassword) {
-					LOGI("[MP] Peer kicked \"{}\" ({}) [{}]: Invalid password", playerName, _networkManager->AddressToString(peer), peer);
+					LOGI("Peer kicked \"{}\" ({}) [{}]: Invalid password", playerName, _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::InvalidPassword);
 					return;
 				}
@@ -1214,7 +1214,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 
 				std::uint64_t playerUserId = packet.ReadVariableUint64();
 				if (serverConfig.RequiresDiscordAuth && playerUserId == 0) {
-					LOGI("[MP] Peer kicked \"{}\" ({}) [{}]: Discord authentication is required", playerName, _networkManager->AddressToString(peer), peer);
+					LOGI("Peer kicked \"{}\" ({}) [{}]: Discord authentication is required", playerName, _networkManager->AddressToString(peer), peer);
 					_networkManager->Kick(peer, Reason::Requires3rdPartyAuthProvider);
 					return;
 				}
@@ -1241,11 +1241,11 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 							peerDesc->Points = previous->Points;
 							peerDesc->Team = previous->Team;
 							peerDesc->PreferredPlayerType = previous->CarryOver.Type;
-							LOGI("[MP] Peer \"{}\" [{}] reconnected, restoring progression", peerDesc->PlayerName, peer);
+							LOGI("Peer \"{}\" [{}] reconnected, restoring progression", peerDesc->PlayerName, peer);
 						}
 					}
 
-					LOGI("[MP] Peer authenticated as \"{}\" ({}){} [{}]", peerDesc->PlayerName, _networkManager->AddressToString(peer),
+					LOGI("Peer authenticated as \"{}\" ({}){} [{}]", peerDesc->PlayerName, _networkManager->AddressToString(peer),
 						peerDesc->IsAdmin ? " [Admin]" : "", peer);
 
 					MemoryStream packet(17);
@@ -1272,7 +1272,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				MemoryStream packet(data);
 				std::uint32_t assetCount = packet.ReadVariableUint32();
 
-				LOGD("[MP] ServerPacketType::ValidateAssets ({} assets)", assetCount);
+				LOGD("[MP] ServerPacketType::ValidateAssets - {} assets", assetCount);
 
 				MemoryStream packetOut(8 + assetCount * 64);
 				packetOut.WriteVariableUint32(assetCount);
@@ -1313,7 +1313,16 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						packet.Read(path.data(), pathLength);
 						std::int64_t size = packet.ReadVariableInt64();
 
-						LOGI("[MP] Downloading asset \"{}\" ({}) with {} bytes", path, type, size);
+						StringView typeName;
+						switch (type) {
+							case MpLevelHandler::AssetType::Level: typeName = "Level"_s; break;
+							case MpLevelHandler::AssetType::TileSet: typeName = "TileSet"_s; break;
+							case MpLevelHandler::AssetType::Music: typeName = "Music"_s; break;
+							case MpLevelHandler::AssetType::Script: typeName = "Script"_s; break;
+							default: typeName = "Unknown"_s; break;
+						}
+
+						LOGI("Downloading asset \"{}\" ({}) with {} bytes", path, typeName, size);
 
 						auto fullPath = MpLevelHandler::GetAssetFullPath(type, path, _networkManager->GetServerConfiguration().UniqueServerID, true);
 						if (!fullPath.empty()) {
@@ -1325,7 +1334,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 							}
 						}
 
-						LOGE("[MP] Failed to create asset \"{}\"", path);
+						LOGE("Failed to create asset \"{}\"", path);
 						break;
 					}
 					case 2: { // Chunk
@@ -1342,7 +1351,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 						break;
 					}
 					default: {
-						LOGD("[MP] ServerPacketType::StreamAsset - unsupported flags (0x{:.2x})", flags);
+						LOGD("[MP] ServerPacketType::StreamAsset - Unsupported flags (0x{:.2x})", flags);
 						break;
 					}
 				}
@@ -1364,7 +1373,7 @@ void GameEventHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId
 				std::uint32_t totalTreasureCollected = packet.ReadVariableUint32();
 				std::uint8_t allowedPlayerTypes = packet.ReadValue<std::uint8_t>();
 
-				LOGI("[MP] ServerPacketType::LoadLevel - flags: 0x{:.2x}, gameMode: {}, level: \"{}\"", flags, gameMode, levelName);
+				LOGI("Server requested to load level \"{}\" - flags: 0x{:.2x}, gameMode: {}", levelName, flags, gameMode);
 
 				InvokeAsync([this, flags, levelState, gameMode, lastExitType, levelName = std::move(levelName), initialPlayerHealth, maxGameTimeSecs, totalKills, totalLaps, totalTreasureCollected, allowedPlayerTypes]() {
 					bool isReforged = (flags & 0x01) != 0;

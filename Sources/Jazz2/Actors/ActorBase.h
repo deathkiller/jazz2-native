@@ -287,15 +287,22 @@ namespace Jazz2::Actors
 			/** @brief Initializes the renderer to the specified renderer type */
 			void Initialize(ActorRendererType type);
 
-			/** @brief Selects a recolor palette override: a flat offset into the shared palette texture (e.g.
-				paletteRow * @ref ContentResolver::ColorsPerPalette), or -1 for no override. Takes precedence over the
-				base palette used for plain (non-recolored) indexed sprites; see @ref SetIndexed. */
+			/**
+			 * @brief Selects a recolor palette override
+			 *
+			 * The override is a flat offset into the shared palette texture (e.g. `paletteRow * @ref
+			 * ContentResolver::ColorsPerPalette`), or -1 for no override. It takes precedence over the base palette used
+			 * for plain (non-recolored) indexed sprites; see @ref SetIndexed.
+			 */
 			void SetPalette(std::int32_t paletteOffset);
 
-			/** @brief Marks whether the current graphic is indexed (palette index in the red channel) and which palette
-				region it samples (basePaletteOffset = the animation's palette offset; 0 = default sprite palette, the
-				gem-gradient rows for gems). Indexed sprites render through the palette shader unless a recolor override
-				is set via @ref SetPalette. Set automatically from the current animation by @ref ActorBase::RefreshAnimation. */
+			/**
+			 * @brief Marks whether the current graphic is indexed and which palette region it samples
+			 *
+			 * `basePaletteOffset` is the animation's palette offset (0 = default sprite palette, the gem-gradient rows
+			 * for gems). Indexed sprites render through the palette shader unless a recolor override is set via @ref
+			 * SetPalette. Set automatically from the current animation by @ref ActorBase::RefreshAnimation.
+			 */
 			void SetIndexed(bool indexed, std::int32_t basePaletteOffset);
 
 			void OnUpdate(float timeMult) override;
@@ -442,8 +449,12 @@ namespace Jazz2::Actors
 
 		/** @brief Preloads specified metadata and its linked assets to cache */
 		static void PreloadMetadataAsync(StringView path);
-		/** @brief Loads specified metadata and its linked assets
-			@param forceIndexed Load linked graphics as indexed (for shader-based recoloring, e.g. the player) */
+		/**
+		 * @brief Loads specified metadata and its linked assets
+		 *
+		 * @param path          Relative path to the metadata asset
+		 * @param forceIndexed  Load linked graphics as indexed (for shader-based recoloring, e.g. the player)
+		 */
 		void RequestMetadata(StringView path, bool forceIndexed = false);
 
 		/** @brief Loads specified metadata and its linked assets asynchronously if supported */

@@ -62,7 +62,9 @@ namespace Jazz2
 		/** @{ @name Player recolor palette sections */
 
 		/**
-		 * @brief How a player's 4-byte fur color maps to recolored palette sections
+		 * @brief Number of recolorable fur sections
+		 * 
+		 * @section player-recolor How a player's 4-byte fur color maps to recolored palette sections
 		 *
 		 * The fur color is 4 bytes, one per section (as in the original game). The low 7 bits of each byte are the
 		 * starting palette index of an 8-color gradient in the sprite palette; those 8 colors are copied into the
@@ -70,7 +72,6 @@ namespace Jazz2
 		 * If @ref FurHueShiftFlag is also set, the gradient's hue is rotated by @ref HueShiftDegreesForGradient first
 		 * (see @ref ShiftHue), which roughly doubles the selectable color variants without extra gradients in the palette.
 		 */
-		/** @brief Number of recolorable fur sections */
 		static constexpr std::int32_t FurSectionCount = 4;
 		/** @brief Number of consecutive palette indices per fur section */
 		static constexpr std::int32_t FurSectionSize = 8;
@@ -143,14 +144,17 @@ namespace Jazz2
 		/**
 		 * @brief Loads specified metadata and its linked assets (cached)
 		 *
-		 * @param forceIndexed Load all linked graphics as indexed (palette not baked) so they can be recolored at draw
-		 *                     time - used for the player so each player can have a custom color scheme
+		 * @param path          Relative path to the metadata asset
+		 * @param forceIndexed  Load all linked graphics as indexed (palette not baked) so they can be recolored at draw
+		 *                      time - used for the player so each player can have a custom color scheme
 		 */
 		Metadata* RequestMetadata(StringView path, bool forceIndexed = false);
 		/**
 		 * @brief Loads specified graphics asset (cached)
 		 *
-		 * @param keepIndexed Keep raw palette indices in the texture (don't bake the palette) for shader recoloring
+		 * @param path           Relative path to the graphics asset
+		 * @param paletteOffset  Index of the first palette color used to bake the sprite (ignored when `keepIndexed`)
+		 * @param keepIndexed    Keep raw palette indices in the texture (don't bake the palette) for shader recoloring
 		 */
 		GenericGraphicResource* RequestGraphics(StringView path, std::uint16_t paletteOffset, bool keepIndexed = false);
 
@@ -227,7 +231,14 @@ namespace Jazz2
 		 */
 		void BindSpritePalette(RenderCommand& command, GLUniformBlockCache& instanceBlock, const Texture& diffuse, bool indexed, std::uint16_t paletteOffset);
 
-		/** @brief Loads specified tile set and its palette */
+		/**
+		 * @brief Loads specified tile set and its palette
+		 *
+		 * @param path              Relative path to the tile set
+		 * @param captionTileId     Tile used to render the level-preview caption thumbnail
+		 * @param applyPalette      Apply the tile set's palette to the live sprite palette
+		 * @param paletteRemapping  Optional 256-entry table remapping each tile's palette indices
+		 */
 		std::unique_ptr<Tiles::TileSet> RequestTileSet(StringView path, std::uint16_t captionTileId, bool applyPalette, const std::uint8_t* paletteRemapping = nullptr);
 		/** @brief Returns `true` if specified level exists */
 		bool LevelExists(StringView levelName);

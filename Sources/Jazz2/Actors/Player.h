@@ -110,11 +110,18 @@ namespace Jazz2::Actors
 			return _playerType;
 		}
 
-		/** @brief Returns the fur color to actually use for this player (the configured color, or 0 = none when the
-			"Apply Colors" preference disables recoloring in the current session/for this player index) */
+		/**
+		 * @brief Returns the fur color to actually use for this player
+		 *
+		 * The configured color, or 0 = none when the "Apply Colors" preference disables recoloring in the current
+		 * session (or for this player index).
+		 */
 		std::uint32_t GetEffectiveFurColor() const;
-		/** @brief Returns this player's flat offset into the shared palette texture (for the palette-aware shader),
-			or -1 if the player is not being recolored */
+		/**
+		 * @brief Returns this player's flat offset into the shared palette texture (for the palette-aware shader)
+		 *
+		 * Returns -1 if the player is not being recolored.
+		 */
 		std::int32_t GetPaletteOffset() const;
 
 		/** @brief Returns current special move */

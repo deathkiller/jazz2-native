@@ -26,8 +26,12 @@ namespace Jazz2::Resources
 		None = 0x00,
 
 		Referenced = 0x01,
-		/** @brief The diffuse texture stores raw palette indices (in the red channel) instead of baked colors, so it
-			must be rendered with the @ref PrecompiledShader::PaletteRemap shader and a palette texture */
+		/**
+		 * @brief Diffuse texture stores raw palette indices instead of baked colors
+		 *
+		 * The index is in the red channel, so the texture must be rendered with the @ref
+		 * PrecompiledShader::PaletteRemap shader and a palette texture.
+		 */
 		Indexed = 0x02
 	};
 
@@ -76,8 +80,12 @@ namespace Jazz2::Resources
 		std::int32_t FrameOffset;
 		/** @brief Animation loop mode */
 		AnimationLoopMode LoopMode;
-		/** @brief Flat palette offset for an indexed sprite (from the metadata `PaletteOffset`); selects which palette
-			region the @ref PrecompiledShader::PaletteRemap shader samples at draw time (e.g. the gem gradient rows) */
+		/**
+		 * @brief Flat palette offset for an indexed sprite (from the metadata `PaletteOffset`)
+		 *
+		 * Selects which palette region the @ref PrecompiledShader::PaletteRemap shader samples at draw time (e.g. the
+		 * gem gradient rows).
+		 */
 		std::uint16_t PaletteOffset;
 
 		GraphicResource() noexcept;
