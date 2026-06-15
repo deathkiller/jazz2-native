@@ -275,6 +275,12 @@ namespace Jazz2::Multiplayer
 			std::uint32_t PointsInRound;
 		};
 
+		struct RaceCheckpoint {
+			Vector2i Tile;			// Tile coordinates (multiply by TileSet::DefaultTileSize for world pixels)
+			std::uint16_t Order;	// Ordering index along the track (raw JJ2+ TextID, or 0,1,2,... when auto-generated)
+			std::uint8_t Group;		// Split/group id (JJ2+ Offset); 0 for auto-generated and single-track levels
+		};
+
 		struct MultiplayerSpawnPoint {
 			Vector2f Pos;
 			std::uint8_t Team;
@@ -331,7 +337,12 @@ namespace Jazz2::Multiplayer
 		HashMap<std::uint32_t, PlayerName> _playerNames; // Client: Actor ID -> Player name (and flags)
 		SmallVector<PlayerPositionInRound, 0> _positionsInRound; // Client: Actor ID -> Position In Round
 		SmallVector<MultiplayerSpawnPoint, 0> _multiplayerSpawnPoints;
-		SmallVector<Vector2i, 0> _raceCheckpoints;
+		SmallVector<Vector2i, 0> _raceCheckpoints;					// Unordered, used for race position ranking
+		SmallVector<RaceCheckpoint, 0> _orderedRaceCheckpoints;		// Ordered polyline for the minimap (server-built, synced to clients)
+		SmallVector<Vector2i, 0> _raceStartMarkers;					// Warp "Set Lap" tiles shown as start/finish on the minimap (synced to clients)
+		Vector2i _raceBoundsMin;									// Minimap extent in tiles (covers the whole area players can reach; synced to clients)
+		Vector2i _raceBoundsMax;
+		bool _raceCheckpointsOrdered;								// Whether _orderedRaceCheckpoints come from authored waypoints (trusted for progress-based ranking)
 		SmallVector<PendingSfx, 0> _pendingSfx;
 		std::uint32_t _lastSpawnedActorId;	// Server: last assigned actor/player ID, Client: ID assigned by server
 		std::int32_t _waitingForPlayerCount;	// Client: number of players needed to start the game
@@ -378,7 +389,10 @@ namespace Jazz2::Multiplayer
 		void SendLevelStateToAllPlayers();
 		void ResetAllPlayerStats();
 		Vector2f GetSpawnPoint(PlayerType playerType);
+		void BuildRaceCheckpoints();
 		void ConsolidateRaceCheckpoints();
+		void ConsolidateOrderedRaceCheckpoints();
+		void GenerateRaceCheckpointsFromGeometry();
 		void WarpAllPlayersToStart();
 		void RollbackLevelState();
 		void CalculatePositionInRound(bool forceSend = false);

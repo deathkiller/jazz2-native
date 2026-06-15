@@ -51,6 +51,8 @@ namespace Jazz2::Multiplayer
 		std::uint32_t OvertimeSecs;
 		/** @brief Whether players can stand on top of each other; if disabled, they bump apart on every axis */
 		bool PlayerStacking;
+		/** @brief Whether the race minimap is available to clients (Race/TeamRace only, ignored in other modes) */
+		bool AllowMinimap;
 	};
 
 	/**
@@ -213,6 +215,8 @@ namespace Jazz2::Multiplayer
 		bool ReforgedGameplay;
 		/** @brief Whether to play the playlist in random order */
 		bool RandomizePlaylist;
+		/** @brief Whether the race minimap is available to clients (Race/TeamRace only, ignored in other modes) */
+		bool AllowMinimap;
 		/** @brief Whether every player has limited number of lives, the game ends when only one player remains */
 		bool Elimination;
 		/** @brief Total player points to win the championship */

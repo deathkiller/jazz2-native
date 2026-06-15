@@ -190,6 +190,7 @@ namespace Jazz2::Multiplayer
 
 		ServerConfiguration serverConfig{};
 		serverConfig.AllowAssetStreaming = true;
+		serverConfig.AllowMinimap = true;
 		serverConfig.GameMode = MpGameMode::Cooperation;
 		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
 		serverConfig.IdleKickTimeSecs = -1;
@@ -424,6 +425,11 @@ namespace Jazz2::Multiplayer
 					serverConfig.RandomizePlaylist = randomizePlaylist;
 				}
 
+				bool allowMinimap;
+				if (doc["AllowMinimap"].get(allowMinimap) == Json::SUCCESS) {
+					serverConfig.AllowMinimap = allowMinimap;
+				}
+
 				bool elimination;
 				if (doc["Elimination"].get(elimination) == Json::SUCCESS) {
 					serverConfig.Elimination = elimination;
@@ -520,6 +526,7 @@ namespace Jazz2::Multiplayer
 						playlistEntry.TotalTreasureCollected = serverConfig.TotalTreasureCollected;
 						playlistEntry.OvertimeSecs = serverConfig.OvertimeSecs;
 						playlistEntry.PlayerStacking = serverConfig.PlayerStacking;
+						playlistEntry.AllowMinimap = serverConfig.AllowMinimap;
 
 						std::string_view levelName;
 						if (entry["LevelName"].get(levelName) == Json::SUCCESS) {
@@ -544,6 +551,11 @@ namespace Jazz2::Multiplayer
 						bool entryPlayerStacking;
 						if (entry["PlayerStacking"].get(entryPlayerStacking) == Json::SUCCESS) {
 							playlistEntry.PlayerStacking = entryPlayerStacking;
+						}
+
+						bool entryAllowMinimap;
+						if (entry["AllowMinimap"].get(entryAllowMinimap) == Json::SUCCESS) {
+							playlistEntry.AllowMinimap = entryAllowMinimap;
 						}
 
 						std::int64_t initialPlayerHealth;

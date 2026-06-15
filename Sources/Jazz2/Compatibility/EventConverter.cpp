@@ -397,6 +397,13 @@ namespace Jazz2::Compatibility
 				{ JJ2ParamUInt, 8 }		// Offset (JJ2+)
 			}, eventParams);
 
+			// JJ2+ minimap waypoint: a Text event with TextID >= 100 and AngelScript == 0 is an ordered
+			// race-track checkpoint (used for the minimap and race positioning), not a displayable text.
+			if (eventParams[0] >= 100 && eventParams[2] == 0) {
+				// Params[0] = order index (raw TextID 100..255), Params[1] = group/split id (Offset)
+				return { EventType::RaceCheckpoint, { eventParams[0], eventParams[3] } };
+			}
+
 			if (eventParams[2] != 0) {
 				return { EventType::AreaCallback, { eventParams[0], eventParams[3], eventParams[1] } };
 			} else {

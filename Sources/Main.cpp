@@ -978,6 +978,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 		serverInit.Configuration.TotalKills = playlistEntry.TotalKills;
 		serverInit.Configuration.TotalLaps = playlistEntry.TotalLaps;
 		serverInit.Configuration.TotalTreasureCollected = playlistEntry.TotalTreasureCollected;
+		serverInit.Configuration.AllowMinimap = playlistEntry.AllowMinimap;
 		serverInit.Configuration.GameMode = playlistEntry.GameMode;
 	}
 

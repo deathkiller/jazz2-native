@@ -90,6 +90,7 @@ namespace Jazz2::Multiplayer
 		ChangeRemoteActorMetadata,		/**< Changes metadata of a remote actor */
 		MarkRemoteActorAsPlayer,		/**< Marks a remote actor as another player */
 		UpdatePositionsInRound,			/**< Updates player positions in the current round */
+		SyncRaceCheckpoints,			/**< Sends the ordered race checkpoint polyline and start markers for the minimap */
 
 		PlayerSetProperty = 130,		/**< Sets a property of a player */
 		PlayerResetProperties,			/**< Resets all properties of a player */

@@ -257,6 +257,126 @@ namespace Jazz2::Tiles
 		return (tileSet == nullptr || tileSet->IsTileMaskEmpty(tileId));
 	}
 
+	bool TileMap::IsTileDestructible(std::int32_t tx, std::int32_t ty)
+	{
+		if (_sprLayerIndex == -1) {
+			return false;
+		}
+
+		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		if (tx < 0 || ty < 0 || tx >= layoutSize.X || ty >= layoutSize.Y) {
+			return false;
+		}
+
+		// The player can eventually pass through these by destroying them. Collapsing tiles are intentionally
+		// excluded - the player stands on (and jumps over) them, they're not a passage.
+		const LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
+		return (tile.DestructType == TileDestructType::Weapon || tile.DestructType == TileDestructType::Speed ||
+				tile.DestructType == TileDestructType::Special);
+	}
+
+	bool TileMap::IsTileOneWay(std::int32_t tx, std::int32_t ty)
+	{
+		if (_sprLayerIndex == -1) {
+			return false;
+		}
+
+		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		if (tx < 0 || ty < 0 || tx >= layoutSize.X || ty >= layoutSize.Y) {
+			return false;
+		}
+
+		const LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
+		return ((tile.Flags & LayerTileFlags::OneWay) == LayerTileFlags::OneWay);
+	}
+
+	bool TileMap::IsTileCornerEmpty(std::int32_t tx, std::int32_t ty, std::int32_t cornerX, std::int32_t cornerY)
+	{
+		if (_sprLayerIndex == -1) {
+			return true;
+		}
+
+		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		if (tx < 0 || ty < 0 || tx >= layoutSize.X || ty >= layoutSize.Y) {
+			return false;
+		}
+
+		const LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
+		std::int32_t tileId = ResolveTileID(tile);
+		TileSet* tileSet = ResolveTileSet(tileId);
+		if (tileSet == nullptr || tileSet->IsTileMaskEmpty(tileId)) {
+			return true;
+		}
+		if (tileSet->IsTileMaskFilled(tileId)) {
+			return false;
+		}
+
+		// Check whether the ~1/3 corner of the tile mask (e.g. the empty triangle of a 45-degree slope) is clear,
+		// so the path tracer can squeeze a diagonal move through partially-solid slope tiles
+		constexpr std::int32_t Size = TileSet::DefaultTileSize;
+		constexpr std::int32_t Corner = Size / 3;
+		std::int32_t left = (cornerX < 0 ? 0 : Size - Corner);
+		std::int32_t right = (cornerX < 0 ? Corner - 1 : Size - 1);
+		std::int32_t top = (cornerY < 0 ? 0 : Size - Corner);
+		std::int32_t bottom = (cornerY < 0 ? Corner - 1 : Size - 1);
+
+		if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
+			std::int32_t left2 = left;
+			left = (Size - 1 - right);
+			right = (Size - 1 - left2);
+		}
+		if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
+			std::int32_t top2 = top;
+			top = (Size - 1 - bottom);
+			bottom = (Size - 1 - top2);
+		}
+
+		std::uint8_t* mask = tileSet->GetTileMask(tileId);
+		for (std::int32_t ry = top; ry <= bottom; ry++) {
+			for (std::int32_t rx = left; rx <= right; rx++) {
+				if (mask[ry * Size + rx]) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	bool TileMap::IsTilePartiallySolid(std::int32_t tx, std::int32_t ty)
+	{
+		if (_sprLayerIndex == -1) {
+			return false;
+		}
+
+		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		if (tx < 0 || ty < 0 || tx >= layoutSize.X || ty >= layoutSize.Y) {
+			return false;
+		}
+
+		// True if the tile's collision mask is neither fully empty nor fully filled (e.g. a slope or a thin
+		// solid band) - the player rests on its solid part rather than falling through it
+		const LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
+		std::int32_t tileId = ResolveTileID(tile);
+		TileSet* tileSet = ResolveTileSet(tileId);
+		return (tileSet != nullptr && !tileSet->IsTileMaskEmpty(tileId) && !tileSet->IsTileMaskFilled(tileId));
+	}
+
+	bool TileMap::IsTileTrigger(std::int32_t tx, std::int32_t ty)
+	{
+		if (_sprLayerIndex == -1) {
+			return false;
+		}
+
+		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
+		if (tx < 0 || ty < 0 || tx >= layoutSize.X || ty >= layoutSize.Y) {
+			return false;
+		}
+
+		// A trigger-controlled tile, toggled solid/empty by a trigger crate (see SetTrigger)
+		const LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
+		return ((tile.DestructType & TileDestructType::Trigger) == TileDestructType::Trigger);
+	}
+
 	bool TileMap::IsTileEmpty(const AABBf& aabb, TileCollisionParams& params)
 	{
 		if (_sprLayerIndex == -1) {
@@ -1816,7 +1936,7 @@ namespace Jazz2::Tiles
 		return nullptr;
 	}
 
-	std::int32_t TileMap::ResolveTileID(LayerTile& tile)
+	std::int32_t TileMap::ResolveTileID(const LayerTile& tile) const
 	{
 		std::int32_t tileId = tile.TileID;
 		if (tileId >= _animatedTilesOffset) {

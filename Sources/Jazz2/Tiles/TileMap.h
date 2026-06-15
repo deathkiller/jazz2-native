@@ -331,6 +331,16 @@ namespace Jazz2::Tiles
 
 		/** @brief Returns `true` if the mask of a tile on the main (sprite) layer is completely empty */
 		bool IsTileEmpty(std::int32_t tx, std::int32_t ty);
+		/** @brief Returns `true` if the tile on the main (sprite) layer can be destroyed by the player (read-only, no side effects) */
+		bool IsTileDestructible(std::int32_t tx, std::int32_t ty);
+		/** @brief Returns `true` if the tile on the main (sprite) layer is a one-way platform (passable from below) */
+		bool IsTileOneWay(std::int32_t tx, std::int32_t ty);
+		/** @brief Returns `true` if the given ~1/3 corner of the tile's collision mask is empty (cornerX/cornerY: -1 = left/top, +1 = right/bottom) */
+		bool IsTileCornerEmpty(std::int32_t tx, std::int32_t ty, std::int32_t cornerX, std::int32_t cornerY);
+		/** @brief Returns `true` if the tile's collision mask is neither fully empty nor fully filled (e.g. a slope or a thin solid band) */
+		bool IsTilePartiallySolid(std::int32_t tx, std::int32_t ty);
+		/** @brief Returns `true` if the tile on the main (sprite) layer is controlled by a trigger (toggled solid/empty by a trigger crate) */
+		bool IsTileTrigger(std::int32_t tx, std::int32_t ty);
 		/** @brief Returns `true` if the mask of tiles on the main (sprite) layer intersecting a given AABB is empty */
 		bool IsTileEmpty(const AABBf& aabb, TileCollisionParams& params);
 		/** @brief Returns `true` if tiles on the main (sprite) layer intersecting a given AABB can be destroyed */
@@ -510,6 +520,6 @@ namespace Jazz2::Tiles
 		void RenderTexturedBackground(RenderQueue& renderQueue, const Rectf& cullingRect, Vector2f viewCenter, TileMapLayer& layer, float x, float y);
 
 		TileSet* ResolveTileSet(std::int32_t& tileId);
-		std::int32_t ResolveTileID(LayerTile& tile);
+		std::int32_t ResolveTileID(const LayerTile& tile) const;
 	};
 }

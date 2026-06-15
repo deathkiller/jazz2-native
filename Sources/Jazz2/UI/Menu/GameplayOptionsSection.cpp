@@ -49,6 +49,8 @@ namespace Jazz2::UI::Menu
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::SwitchToNewWeapon, _("Switch To New Weapon"), true });
 		// TRANSLATORS: Menu item in Options > Gameplay section
+		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::ShowMinimap, _("Show Minimap"), true });
+		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowCheats, _("Allow Cheats"), true, isInGame });
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::OverwriteEpisodeEnd, _("Overwrite Episode Completion"), true, isInGame });
@@ -130,6 +132,7 @@ namespace Jazz2::UI::Menu
 #endif
 				case GameplayOptionsItemType::ContinuousJump: enabled = PreferencesCache::EnableContinuousJump; break;
 				case GameplayOptionsItemType::SwitchToNewWeapon: enabled = PreferencesCache::SwitchToNewWeapon; break;
+				case GameplayOptionsItemType::ShowMinimap: enabled = PreferencesCache::ShowMinimap; break;
 				// TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
 				case GameplayOptionsItemType::AllowCheats: enabled = PreferencesCache::AllowCheats; customText = (enabled ? _("Yes") : _("No")); break;
 				case GameplayOptionsItemType::OverwriteEpisodeEnd:
@@ -191,6 +194,12 @@ namespace Jazz2::UI::Menu
 			}
 			case GameplayOptionsItemType::SwitchToNewWeapon: {
 				PreferencesCache::SwitchToNewWeapon = !PreferencesCache::SwitchToNewWeapon;
+				_isDirty = true;
+				_animation = 0.0f;
+				break;
+			}
+			case GameplayOptionsItemType::ShowMinimap: {
+				PreferencesCache::ShowMinimap = !PreferencesCache::ShowMinimap;
 				_isDirty = true;
 				_animation = 0.0f;
 				break;

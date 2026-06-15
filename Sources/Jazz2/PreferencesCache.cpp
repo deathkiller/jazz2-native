@@ -41,6 +41,7 @@ namespace Jazz2
 	bool PreferencesCache::ShowPerformanceMetrics = false;
 	bool PreferencesCache::KeepAspectRatioInCinematics = false;
 	bool PreferencesCache::ShowPlayerTrails = true;
+	bool PreferencesCache::ShowMinimap = true;
 	bool PreferencesCache::LowWaterQuality = false;
 	bool PreferencesCache::UnalignedViewport = false;
 	bool PreferencesCache::PreferVerticalSplitscreen = false;
@@ -493,8 +494,8 @@ namespace Jazz2
 						}
 					}
 
-					// Player character recolor
 					if (version >= 15) {
+						ShowMinimap = ((boolOptions & BoolOptions::ShowMinimap) == BoolOptions::ShowMinimap);
 						PlayerFurColor = uc.ReadValueAsLE<std::uint32_t>();
 						PlayerColors = (PlayerColorMode)uc.ReadValue<std::uint8_t>();
 					}
@@ -645,6 +646,7 @@ namespace Jazz2
 		if (BlurEffects) boolOptions |= BoolOptions::BlurEffects;
 		if (EnableTouchJoystick) boolOptions |= BoolOptions::EnableTouchJoystick;
 		if (EnableTouchVibration) boolOptions |= BoolOptions::EnableTouchVibration;
+		if (ShowMinimap) boolOptions |= BoolOptions::ShowMinimap;
 		co.WriteValueAsLE<std::uint64_t>(std::uint64_t(boolOptions));
 
 		if (Language[0] != '\0') {

@@ -274,6 +274,8 @@ namespace Jazz2
 		static bool KeepAspectRatioInCinematics;
 		/** @brief Whether player trails are visible */
 		static bool ShowPlayerTrails;
+		/** @brief Whether the race minimap is shown in multiplayer (if provided by the server) */
+		static bool ShowMinimap;
 		/** @brief Whether low quality water effects are enabled */
 		static bool LowWaterQuality;
 		/** @brief Whether viewport should be unaligned */
@@ -438,7 +440,9 @@ namespace Jazz2
 
 			BlurEffects = 0x20000000,
 			EnableTouchJoystick = 0x40000000,
-			EnableTouchVibration = 0x80000000
+			EnableTouchVibration = 0x80000000,
+
+			ShowMinimap = 0x100000000
 		};
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
