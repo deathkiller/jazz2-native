@@ -82,6 +82,12 @@ namespace Jazz2::Multiplayer
 		bool VotedYes;
 		/** @brief Team ID */
 		std::uint8_t Team;
+		/** @brief Preferred team requested by the peer (@ref NoPreferredTeam = no preference, let the server decide) */
+		std::uint8_t PreferredTeam;
+		/** @brief Whether the team was forced by the server (admin or rebalance); client team requests are rejected while set */
+		bool TeamLocked;
+		/** @brief Remaining frames before the player may switch teams again (anti-spam, prevents repeated auto-rebalancing) */
+		float TeamSwitchCooldown;
 		/** @brief Preferred player type selected by the peer */
 		PlayerType PreferredPlayerType;
 		/** @brief Player display name */

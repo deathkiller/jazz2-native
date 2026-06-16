@@ -45,7 +45,8 @@ namespace Jazz2::Multiplayer
 		PlayerChangeWeaponRequest,	/**< Requests a weapon change */
 		PlayerSpectateRequest,		/**< Requests to enable or disable spectate mode */
 		PlayerAckWarped,			/**< Acknowledges that the player has been warped */
-		PlayerChangeCharacter		/**< Requests to change the player character */
+		PlayerChangeCharacter,		/**< Requests to change the player character */
+		PlayerChangeTeamRequest		/**< Requests to change the player team */
 	};
 
 	/**
@@ -91,6 +92,8 @@ namespace Jazz2::Multiplayer
 		MarkRemoteActorAsPlayer,		/**< Marks a remote actor as another player */
 		UpdatePositionsInRound,			/**< Updates player positions in the current round */
 		SyncRaceCheckpoints,			/**< Sends the ordered race checkpoint polyline and start markers for the minimap */
+		SyncTeamScores,					/**< Sends the per-team aggregate scores for the HUD */
+		SyncScoreboard,					/**< Sends per-player scoreboard rows (name, kills, deaths, points, ping) */
 
 		PlayerSetProperty = 130,		/**< Sets a property of a player */
 		PlayerResetProperties,			/**< Resets all properties of a player */
@@ -165,6 +168,7 @@ namespace Jazz2::Multiplayer
 		OverrideCameraView,	/**< Camera view override */
 		ShakeCameraView,	/**< Camera shake */
 		Spectate,			/**< Spectate mode state */
+		Team,				/**< Team the player belongs to */
 
 		WeaponAmmo = 30,	/**< Ammo of a weapon */
 		WeaponUpgrades,		/**< Upgrades of a weapon */

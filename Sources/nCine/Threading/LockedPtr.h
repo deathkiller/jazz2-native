@@ -24,6 +24,12 @@ namespace nCine
 		/** @brief Returns the pointer */
 		DEATH_CONSTEXPR14 T* get() const noexcept { return _pointer; }
 
+		/** @brief Unlocks the locked pointer */
+		void unlock() noexcept {
+			_lock.unlock();
+			_pointer = nullptr;
+		}
+
 		/** @brief Dereferences the pointer */
 		DEATH_CONSTEXPR14 T& operator*() const noexcept { return *_pointer; }
 		/** @brief Allows direct calls against the pointer */

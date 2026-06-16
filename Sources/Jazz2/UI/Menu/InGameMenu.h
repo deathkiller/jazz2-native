@@ -11,6 +11,13 @@
 
 using namespace Jazz2::Tiles;
 
+#if defined(WITH_MULTIPLAYER)
+namespace Jazz2::Multiplayer
+{
+	class MpLevelHandler;
+}
+#endif
+
 namespace Jazz2::UI::Menu
 {
 	/**
@@ -101,6 +108,8 @@ namespace Jazz2::UI::Menu
 		void EnterSpectate();
 		/** @brief Opens the in-game lobby to (re)select a character, (re)joining the game on confirmation */
 		void ShowCharacterSelect();
+		/** @brief Returns the multiplayer level handler if this is an online session, otherwise `nullptr` (used by the scoreboard) */
+		Jazz2::Multiplayer::MpLevelHandler* GetMultiplayerHandler();
 #endif
 
 	private:

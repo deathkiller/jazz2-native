@@ -35,10 +35,12 @@ namespace Jazz2::UI::Multiplayer
 		void Hide();
 		/** @brief Sets allowed player types as bitmask of @ref PlayerType */
 		void SetAllowedPlayerTypes(std::uint8_t playerTypes);
+		/** @brief Initializes the team picker selection to the player's current team when the lobby opens */
+		void SetTeamInfo(std::uint8_t currentTeam);
 
 	private:
 		static constexpr std::uint16_t MainLayer = 60;
-		
+
 		Jazz2::Multiplayer::MpLevelHandler* _levelHandler;
 		Metadata* _metadata;
 		Font* _smallFont;
@@ -46,11 +48,18 @@ namespace Jazz2::UI::Multiplayer
 		float _animation;
 		std::int32_t _selectedPlayerType;
 		std::uint8_t _allowedPlayerTypes;
+		bool _teamMode;
+		bool _allowTeamSelection;
+		std::uint8_t _teamCount;
+		std::int32_t _selectedTeam;	// 0.._teamCount-1 selects a team, _teamCount means "Auto"
+		std::int32_t _focusRow;		// 0 = character, 1 = team
 		bool _isVisible;
 
 		bool ActionPressed(PlayerAction action);
 		bool ActionHit(PlayerAction action);
 		void UpdatePressedActions();
+		/** @brief Refreshes the cached team config (mode, count, selection allowed) from the current server configuration */
+		void RefreshTeamInfo();
 
 		void DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
 			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, bool unaligned = false);

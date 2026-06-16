@@ -238,6 +238,25 @@ namespace Jazz2::Actors
 		virtual bool SetShield(ShieldType shieldType, float timeLeft);
 		/** @brief Increases active shield time */
 		virtual bool IncreaseShieldTime(float timeLeft);
+
+		/**
+		 * @brief Draws the active shield decoration around a position
+		 *
+		 * Shared by the locally-controlled @ref Player and by remote players (rendered as
+		 * @ref Actors::Multiplayer::RemoteActor on clients), so the fire/water/lightning shield bubble looks
+		 * identical regardless of which side owns the player. Nothing is drawn for @ref ShieldType::None.
+		 *
+		 * @param renderQueue           Render queue the shield draw commands are added to
+		 * @param shieldType            Active shield type
+		 * @param shieldTime            Remaining shield time, in frames (drives the fade-in/out alpha and scale)
+		 * @param metadata              Metadata holding the shield animations (the player's metadata)
+		 * @param elapsedFrames         Elapsed level frames, used to animate the shield
+		 * @param pos                   World position the shield is centered on
+		 * @param baseLayer             Base render layer; the shield is drawn just behind and in front of it
+		 * @param shieldRenderCommands  Render commands owned by the caller, reused across frames
+		 */
+		static void DrawShield(RenderQueue& renderQueue, ShieldType shieldType, float shieldTime, Metadata* metadata,
+			float elapsedFrames, Vector2f pos, std::uint16_t baseLayer, std::unique_ptr<RenderCommand> (&shieldRenderCommands)[2]);
 		/** @brief Spawns bird companion */
 		bool SpawnBird(std::uint8_t type, Vector2f pos);
 		/** @brief Disables controls for specified time */
@@ -418,6 +437,9 @@ namespace Jazz2::Actors
 		void OnHitFloor(float timeMult) override;
 		void OnHitCeiling(float timeMult) override;
 		void OnHitWall(float timeMult) override;
+
+		/** @brief Reduces remaining shield time when a hit is absorbed (only if more than @p time remains) */
+		virtual void DecreaseShieldTime(float time);
 
 		/** @brief Called when a solid object is pushed */
 		virtual void OnPushSolidObject(float timeMult, float pushSpeedX);

@@ -31,6 +31,14 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Whether reforged gameplay is enabled */
 		bool ReforgedGameplay;
+		/** @brief Number of teams in team game modes (2-4, ignored in non-team modes) */
+		std::uint8_t TeamCount;
+		/** @brief Whether teams are automatically rebalanced when they become uneven */
+		bool AutoBalanceTeams;
+		/** @brief Whether players are allowed to pick/change their own team */
+		bool AllowTeamSelection;
+		/** @brief Whether players on the same team can damage each other */
+		bool FriendlyFire;
 		/** @brief Whether every player has limited number of lives, the game ends when only one player remains */
 		bool Elimination;
 		/** @brief Initial player health, default is unlimited for Race and Treasure Hunt, otherwise 5 */
@@ -113,6 +121,11 @@ namespace Jazz2::Multiplayer
 			-   @cpp "tth" @ce / @cpp "teamtreasurehunt" @ce - Team Treasure Hunt
 			-   @cpp "ctf" @ce / @cpp "capturetheflag" @ce - Capture The Flag
 			-   @cpp "c" @ce / @cpp "coop" @ce / @cpp "cooperation" @ce - Cooperation
+		-   @cpp "TeamCount" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Number of teams in team game modes, clamped to 2-4 (default is **2**)
+		-   @cpp "AutoBalanceTeams" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether teams are automatically rebalanced when they become uneven (default is **true**)
+		-   @cpp "MaxTeamSizeDiff" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Allowed player-count difference between the largest and smallest team before rebalancing (default is **1**)
+		-   @cpp "AllowTeamSelection" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players may pick/change their own team (default is **true**)
+		-   @cpp "FriendlyFire" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players on the same team can damage each other (default is **false**)
 		-   @cpp "Elimination" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether elimination mode is enabled
 			-   If enabled, a player has a limited number of lives given by @cpp "TotalKills" @ce property
 			-   Game ends when only one player remains, or when the conditions of the specified game mode are met
@@ -213,6 +226,16 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Whether reforged gameplay is enabled, see @ref PreferencesCache::EnableReforgedGameplay */
 		bool ReforgedGameplay;
+		/** @brief Number of teams in team game modes (2-4, ignored in non-team modes) */
+		std::uint8_t TeamCount;
+		/** @brief Whether teams are automatically rebalanced when they become uneven */
+		bool AutoBalanceTeams;
+		/** @brief Maximum allowed difference in player count between the largest and smallest team before rebalancing */
+		std::uint8_t MaxTeamSizeDiff;
+		/** @brief Whether players are allowed to pick/change their own team */
+		bool AllowTeamSelection;
+		/** @brief Whether players on the same team can damage each other */
+		bool FriendlyFire;
 		/** @brief Whether to play the playlist in random order */
 		bool RandomizePlaylist;
 		/** @brief Whether the race minimap is available to clients (Race/TeamRace only, ignored in other modes) */

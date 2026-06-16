@@ -1,6 +1,9 @@
 ﻿#include "PauseSection.h"
 #include "OptionsSection.h"
 #include "InGameMenu.h"
+#if defined(WITH_MULTIPLAYER)
+#	include "ScoreboardSection.h"
+#endif
 
 #include "../../../nCine/I18n.h"
 
@@ -75,6 +78,18 @@ namespace Jazz2::UI::Menu
 				inGameMenu->ResumeGame();
 			}
 		} else if (_root->ActionHit(PlayerAction::Up)) {
+#if defined(WITH_MULTIPLAYER)
+			// In multiplayer, pressing Up while on the first (Resume) item opens the scoreboard
+			if (_selectedIndex == 0) {
+				if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
+					if (!inGameMenu->IsLocalSession()) {
+						_root->PlaySfx("MenuSelect"_s, 0.5f);
+						_root->SwitchToSection<ScoreboardSection>();
+						return;
+					}
+				}
+			}
+#endif
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			if (_selectedIndex > 0) {

@@ -19,7 +19,8 @@ namespace Jazz2::UI::Multiplayer
 {
 	MpInGameLobby::MpInGameLobby(MpLevelHandler* levelHandler)
 		: _levelHandler(levelHandler), _pressedActions(0), _animation(0.0f), _selectedPlayerType(0),
-			_allowedPlayerTypes(0), _isVisible(false)
+			_allowedPlayerTypes(0), _teamMode(false), _allowTeamSelection(false), _teamCount(2),
+			_selectedTeam(0), _focusRow(0), _isVisible(false)
 	{
 		auto& resolver = ContentResolver::Get();
 
@@ -44,21 +45,50 @@ namespace Jazz2::UI::Multiplayer
 
 			UpdatePressedActions();
 
+			// Read team config live so the team row works regardless of when the game-mode packet arrived
+			RefreshTeamInfo();
+			bool teamRowActive = (_teamMode && _allowTeamSelection);
+			if (!teamRowActive) {
+				_focusRow = 0;
+			}
+
 			if (ActionHit(PlayerAction::Fire)) {
 				if ((_allowedPlayerTypes & (1 << _selectedPlayerType)) != 0) {
-					_levelHandler->SetPlayerReady((PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType));
+					std::uint8_t team = NoPreferredTeam;
+					if (teamRowActive) {
+						team = (_selectedTeam >= _teamCount ? NoPreferredTeam : (std::uint8_t)_selectedTeam);
+					}
+					_levelHandler->SetPlayerReady((PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType), team);
 				}
 			} else if (ActionHit(PlayerAction::Left)) {
-				_selectedPlayerType--;
-				if (_selectedPlayerType < 0) {
-					_selectedPlayerType = 2;
+				if (teamRowActive && _focusRow == 1) {
+					_selectedTeam--;
+					if (_selectedTeam < 0) {
+						_selectedTeam = _teamCount;
+					}
+				} else {
+					_selectedPlayerType--;
+					if (_selectedPlayerType < 0) {
+						_selectedPlayerType = 2;
+					}
 				}
 				_animation = 0.0f;
 			} else if (ActionHit(PlayerAction::Right)) {
-				_selectedPlayerType++;
-				if (_selectedPlayerType > 2) {
-					_selectedPlayerType = 0;
+				if (teamRowActive && _focusRow == 1) {
+					_selectedTeam++;
+					if (_selectedTeam > _teamCount) {
+						_selectedTeam = 0;
+					}
+				} else {
+					_selectedPlayerType++;
+					if (_selectedPlayerType > 2) {
+						_selectedPlayerType = 0;
+					}
 				}
+				_animation = 0.0f;
+			} else if (teamRowActive && (ActionHit(PlayerAction::Up) || ActionHit(PlayerAction::Down))) {
+				// Only two rows, so Up/Down just toggle the focus between Character and Team
+				_focusRow = (_focusRow == 0 ? 1 : 0);
 				_animation = 0.0f;
 			}
 		}
@@ -95,53 +125,102 @@ namespace Jazz2::UI::Multiplayer
 			DrawStringShadow(serverConfig.WelcomeMessage, charOffset, center.X, center.Y / 2, MainLayer,
 				Alignment::Center, Font::DefaultColor, 1.0f, 0.7f, 0.6f, 0.6f, 0.4f, 1.0f);
 
-			DrawStringShadow(_("Character"), charOffset, center.X, center.Y + 10.0f, MainLayer,
+			RefreshTeamInfo();
+			bool teamRowActive = (_teamMode && _allowTeamSelection);
+
+			// Vertical layout (moved up so the team row fits comfortably)
+			float charLabelY = center.Y - 34.0f;
+			float charRowY = center.Y + 2.0f;
+			float teamLabelY = center.Y + 44.0f;
+			float teamRowY = center.Y + 78.0f;
+			float pressY = (_teamMode ? center.Y + 122.0f : center.Y + 56.0f);
+
+			DrawStringShadow(_("Character"), charOffset, center.X, charLabelY, MainLayer,
 				Alignment::Center, Font::DefaultColor, 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 			float offset = 100.0f;
 			float spacing = 100.0f;
 
-			/*if (contentBounds.W < 480) {
-				offset *= 0.7f;
-				spacing *= 0.7f;
-			}*/
-
 			for (std::int32_t j = 0; j < _availableCharacters; j++) {
 				float x = center.X - offset + j * spacing;
+				bool isFocused = (_focusRow == 0);
 				if ((_allowedPlayerTypes & (1 << j)) == 0) {
 					if (_selectedPlayerType == j) {
-						DrawElement(MenuGlow, 0, x, center.Y + 50.0f, MainLayer - 20, Alignment::Center,
+						DrawElement(MenuGlow, 0, x, charRowY, MainLayer - 20, Alignment::Center,
 							Colorf(1.0f, 1.0f, 1.0f, 0.2f), 3.6f, 5.0f, true, true);
 					}
 
-					DrawStringShadow(playerTypes[j], charOffset, x, center.Y + 50.0f, MainLayer, Alignment::Center,
+					DrawStringShadow(playerTypes[j], charOffset, x, charRowY, MainLayer, Alignment::Center,
 						Colorf(0.5f, 0.5f, 0.5f, 0.34f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.9f);
 				} else if ((std::int32_t)_selectedPlayerType == j) {
-					float size = 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+					float size = (isFocused ? 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.6f : 0.9f);
 
-					DrawElement(MenuGlow, 0, x, center.Y + 50.0f, MainLayer - 20, Alignment::Center,
+					DrawElement(MenuGlow, 0, x, charRowY, MainLayer - 20, Alignment::Center,
 						Colorf(1.0f, 1.0f, 1.0f, 0.26f * size), 3.6f * size, 5.0f * size, true, true);
 
-					DrawStringShadow(playerTypes[j], charOffset, x, center.Y + 50.0f, MainLayer,
+					DrawStringShadow(playerTypes[j], charOffset, x, charRowY, MainLayer,
 						Alignment::Center, playerColors[j], size, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
 				} else {
-					_smallFont->DrawString(this, playerTypes[j], charOffset, x, center.Y + 50.0f, MainLayer,
+					_smallFont->DrawString(this, playerTypes[j], charOffset, x, charRowY, MainLayer,
 						Alignment::Center, Font::TransparentDefaultColor, 0.9f, 0.0f, 4.0f, 4.0f, 0.4f, 0.9f);
 				}
 			}
 
-			//if (_selectedIndex == i) {
+			float arrowRowY = charRowY;
+			float arrowHalfWidth = 110.0f;
+
+			// Team picker row (shown in team modes; interactive only when team selection is allowed)
+			if (_teamMode) {
+				DrawStringShadow(_("Team"), charOffset, center.X, teamLabelY, MainLayer,
+					Alignment::Center, Font::DefaultColor, 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+
+				std::int32_t optionCount = _teamCount + (_allowTeamSelection ? 1 : 0); // teams + optional "Auto"
+				float teamSpacing = 70.0f;
+				float teamOffset = teamSpacing * (optionCount - 1) * 0.5f;
+				for (std::int32_t t = 0; t < optionCount; t++) {
+					float x = center.X - teamOffset + t * teamSpacing;
+					bool isAuto = (t >= _teamCount);
+					StringView label = (isAuto ? _("Auto") : GetTeamName((std::uint8_t)t));
+					Colorf color = (isAuto ? Colorf(0.7f, 0.7f, 0.7f, 0.5f) : GetTeamColor((std::uint8_t)t));
+
+					if (_selectedTeam == t) {
+						float tsize = (_focusRow == 1 ? 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.5f : 0.9f);
+						Colorf glowColor = color;
+						glowColor.SetAlpha(0.3f);
+						DrawElement(MenuGlow, 0, x, teamRowY, MainLayer - 20, Alignment::Center,
+							glowColor, 2.6f, 4.0f, true, true);
+						DrawStringShadow(label, charOffset, x, teamRowY, MainLayer,
+							Alignment::Center, color, tsize, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
+					} else {
+						DrawStringShadow(label, charOffset, x, teamRowY, MainLayer,
+							Alignment::Center, Font::TransparentDefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.9f);
+					}
+				}
+
+				if (teamRowActive && _focusRow == 1) {
+					arrowRowY = teamRowY;
+					arrowHalfWidth = teamOffset + 30.0f;
+				}
+			}
+
+			// Navigation arrows at the currently focused row
+			{
 				float size = 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.6f;
 
 				Colorf fontColor = Font::DefaultColor;
 				fontColor.SetAlpha(std::min(1.0f, 0.6f + _animation));
-				DrawStringShadow("<"_s, charOffset, center.X - 110.0f - 30.0f * size, center.Y + 50.0f, MainLayer,
+				DrawStringShadow("<"_s, charOffset, center.X - arrowHalfWidth - 30.0f * size, arrowRowY, MainLayer,
 					Alignment::Center, fontColor, 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
-				DrawStringShadow(">"_s, charOffset, center.X + 110.0f + 30.0f * size, center.Y + 50.0f, MainLayer,
+				DrawStringShadow(">"_s, charOffset, center.X + arrowHalfWidth + 30.0f * size, arrowRowY, MainLayer,
 					Alignment::Center, fontColor, 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
-			//}
+			}
 
-			DrawStringShadow(_("Press \f[c:#d0705d]Fire\f[/c] to continue"), charOffset, center.X, (ViewSize.Y + (center.Y + 80.0f)) / 2, MainLayer,
+			if (teamRowActive) {
+				DrawStringShadow(_("Use \f[c:#d0705d]Up/Down\f[/c] to switch between character and team"), charOffset, center.X, pressY - 22.0f, MainLayer,
+					Alignment::Center, Font::DefaultColor, 0.7f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
+			}
+
+			DrawStringShadow(_("Press \f[c:#d0705d]Fire\f[/c] to continue"), charOffset, center.X, pressY, MainLayer,
 				Alignment::Center, Font::DefaultColor, 0.9f, 0.4f, 0.6f, 0.6f, 0.6f, 0.9f, 1.2f);
 		}
 
@@ -170,7 +249,11 @@ namespace Jazz2::UI::Multiplayer
 				} else if (y >= ((ViewSize.Y + (center.Y + 80.0f)) / 2) - 24.f && y <= ((ViewSize.Y + (center.Y + 80.0f)) / 2) + 24.f &&
 						   x > 0.3f && x < 0.7f) {
 					if ((_allowedPlayerTypes & (1 << _selectedPlayerType)) != 0) {
-						_levelHandler->SetPlayerReady((PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType));
+						std::uint8_t team = NoPreferredTeam;
+						if (_teamMode && _allowTeamSelection) {
+							team = (_selectedTeam >= _teamCount ? NoPreferredTeam : (std::uint8_t)_selectedTeam);
+						}
+						_levelHandler->SetPlayerReady((PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType), team);
 					}
 				}
 			}
@@ -195,6 +278,22 @@ namespace Jazz2::UI::Multiplayer
 	void MpInGameLobby::SetAllowedPlayerTypes(std::uint8_t playerTypes)
 	{
 		_allowedPlayerTypes = playerTypes;
+	}
+
+	void MpInGameLobby::SetTeamInfo(std::uint8_t currentTeam)
+	{
+		RefreshTeamInfo();
+		// Default the picker to the player's current team, or "Auto" if not on a valid team yet
+		_selectedTeam = (currentTeam < _teamCount ? currentTeam : _teamCount);
+		_focusRow = 0;
+	}
+
+	void MpInGameLobby::RefreshTeamInfo()
+	{
+		const auto& serverConfig = _levelHandler->_networkManager->GetServerConfiguration();
+		_teamMode = IsTeamGameMode(serverConfig.GameMode);
+		_teamCount = (serverConfig.TeamCount < 2 ? 2 : (serverConfig.TeamCount > MaxTeamCount ? MaxTeamCount : serverConfig.TeamCount));
+		_allowTeamSelection = serverConfig.AllowTeamSelection;
 	}
 
 	bool MpInGameLobby::ActionPressed(PlayerAction action)

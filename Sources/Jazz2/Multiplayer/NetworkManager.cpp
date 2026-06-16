@@ -2,6 +2,7 @@
 
 #if defined(WITH_MULTIPLAYER)
 
+#include "Teams.h"
 #include "ServerDiscovery.h"
 #include "../ContentResolver.h"
 #include "../PreferencesCache.h"
@@ -24,7 +25,8 @@ using namespace std::string_view_literals;
 namespace Jazz2::Multiplayer
 {
 	PeerDescriptor::PeerDescriptor()
-		: IsAuthenticated(false), IsAdmin(false), EnableLedgeClimb(false), Team(0), PreferredPlayerType(PlayerType::None),
+		: IsAuthenticated(false), IsAdmin(false), EnableLedgeClimb(false), Team(0), PreferredTeam(NoPreferredTeam), TeamLocked(false),
+			TeamSwitchCooldown(0.0f), PreferredPlayerType(PlayerType::None),
 			FurColor(0), Points(0), PointsInRound(0), PositionInRound(0), LevelState(PeerLevelState::Unknown), Player(nullptr),
 			LastUpdated(0), Deaths(0), Kills(0), Laps(0), LapStarted{}, TreasureCollected(0), IdleElapsedFrames(0.0f),
 			DeathElapsedFrames(FLT_MAX), LapsElapsedFrames(0.0f), JoinCooldownFrames(0.0f), IsSpectating(SpectateMode::None),
@@ -213,6 +215,12 @@ namespace Jazz2::Multiplayer
 		serverConfig.EnableFreeCamera = true;
 		serverConfig.AllowJoinDuringRound = true;
 		serverConfig.JoinCooldownSecs = 0;
+
+		serverConfig.TeamCount = 2;
+		serverConfig.AutoBalanceTeams = true;
+		serverConfig.MaxTeamSizeDiff = 1;
+		serverConfig.AllowTeamSelection = true;
+		serverConfig.FriendlyFire = false;
 
 		FillServerConfigurationFromFile(path, serverConfig, includedFiles, 0);
 
@@ -440,6 +448,31 @@ namespace Jazz2::Multiplayer
 					serverConfig.PlayerStacking = playerStacking;
 				}
 
+				std::int64_t teamCount;
+				if (doc["TeamCount"].get(teamCount) == Json::SUCCESS && teamCount >= 2 && teamCount <= MaxTeamCount) {
+					serverConfig.TeamCount = std::uint8_t(teamCount);
+				}
+
+				bool autoBalanceTeams;
+				if (doc["AutoBalanceTeams"].get(autoBalanceTeams) == Json::SUCCESS) {
+					serverConfig.AutoBalanceTeams = autoBalanceTeams;
+				}
+
+				std::int64_t maxTeamSizeDiff;
+				if (doc["MaxTeamSizeDiff"].get(maxTeamSizeDiff) == Json::SUCCESS && maxTeamSizeDiff >= 1 && maxTeamSizeDiff <= INT8_MAX) {
+					serverConfig.MaxTeamSizeDiff = std::uint8_t(maxTeamSizeDiff);
+				}
+
+				bool allowTeamSelection;
+				if (doc["AllowTeamSelection"].get(allowTeamSelection) == Json::SUCCESS) {
+					serverConfig.AllowTeamSelection = allowTeamSelection;
+				}
+
+				bool friendlyFire;
+				if (doc["FriendlyFire"].get(friendlyFire) == Json::SUCCESS) {
+					serverConfig.FriendlyFire = friendlyFire;
+				}
+
 				std::int64_t totalPlayerPoints;
 				if (doc["TotalPlayerPoints"].get(totalPlayerPoints) == Json::SUCCESS && totalPlayerPoints >= 0 && totalPlayerPoints <= INT32_MAX) {
 					serverConfig.TotalPlayerPoints = std::uint32_t(totalPlayerPoints);
@@ -517,6 +550,10 @@ namespace Jazz2::Multiplayer
 						PlaylistEntry playlistEntry{};
 						playlistEntry.GameMode = serverConfig.GameMode;
 						playlistEntry.ReforgedGameplay = serverConfig.ReforgedGameplay;
+						playlistEntry.TeamCount = serverConfig.TeamCount;
+						playlistEntry.AutoBalanceTeams = serverConfig.AutoBalanceTeams;
+						playlistEntry.AllowTeamSelection = serverConfig.AllowTeamSelection;
+						playlistEntry.FriendlyFire = serverConfig.FriendlyFire;
 						playlistEntry.Elimination = serverConfig.Elimination;
 						playlistEntry.InitialPlayerHealth = serverConfig.InitialPlayerHealth;
 						playlistEntry.MaxGameTimeSecs = serverConfig.MaxGameTimeSecs;
@@ -551,6 +588,26 @@ namespace Jazz2::Multiplayer
 						bool entryPlayerStacking;
 						if (entry["PlayerStacking"].get(entryPlayerStacking) == Json::SUCCESS) {
 							playlistEntry.PlayerStacking = entryPlayerStacking;
+						}
+
+						std::int64_t entryTeamCount;
+						if (entry["TeamCount"].get(entryTeamCount) == Json::SUCCESS && entryTeamCount >= 2 && entryTeamCount <= MaxTeamCount) {
+							playlistEntry.TeamCount = std::uint8_t(entryTeamCount);
+						}
+
+						bool entryAutoBalanceTeams;
+						if (entry["AutoBalanceTeams"].get(entryAutoBalanceTeams) == Json::SUCCESS) {
+							playlistEntry.AutoBalanceTeams = entryAutoBalanceTeams;
+						}
+
+						bool entryAllowTeamSelection;
+						if (entry["AllowTeamSelection"].get(entryAllowTeamSelection) == Json::SUCCESS) {
+							playlistEntry.AllowTeamSelection = entryAllowTeamSelection;
+						}
+
+						bool entryFriendlyFire;
+						if (entry["FriendlyFire"].get(entryFriendlyFire) == Json::SUCCESS) {
+							playlistEntry.FriendlyFire = entryFriendlyFire;
 						}
 
 						bool entryAllowMinimap;
@@ -633,6 +690,14 @@ namespace Jazz2::Multiplayer
 		}
 		if (serverConfig.MaxPlayerCount == 0) {
 			serverConfig.MaxPlayerCount = MaxPeerCount;
+		}
+		if (serverConfig.TeamCount < 2) {
+			serverConfig.TeamCount = 2;
+		} else if (serverConfig.TeamCount > MaxTeamCount) {
+			serverConfig.TeamCount = MaxTeamCount;
+		}
+		if (serverConfig.MaxTeamSizeDiff < 1) {
+			serverConfig.MaxTeamSizeDiff = 1;
 		}
 
 		// Replace variables in parameters

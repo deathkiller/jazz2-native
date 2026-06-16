@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../ActorBase.h"
+#include "../../ShieldType.h"
 
 namespace Jazz2::Actors::Multiplayer
 {
@@ -34,6 +35,8 @@ namespace Jazz2::Actors::Multiplayer
 		void SyncAnimationWithServer(AnimState anim, float rotation, float scaleX, float scaleY, Actors::ActorRendererType rendererType);
 		/** @brief Synchronizes miscellaneous state flags with the server */
 		void SyncMiscWithServer(std::uint8_t flags);
+		/** @brief Sets the active shield shown around this remote player (synced from the server) */
+		void SetShield(ShieldType shieldType, float timeLeft);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -51,10 +54,16 @@ namespace Jazz2::Actors::Multiplayer
 		std::uint32_t _furColor;
 		// Allocated palette offset into the shared palette texture for this player's recolor (-1 = none)
 		std::int32_t _paletteOffset;
+		// Active shield shown around this player (synced from the server). The decoration is drawn in OnDraw; the
+		// time decays locally, mirroring the owning player (the server only sends shield state changes).
+		ShieldType _activeShield;
+		float _activeShieldTime;
+		std::unique_ptr<RenderCommand> _shieldRenderCommands[2];
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;
 		void OnUpdate(float timeMult) override;
+		bool OnDraw(RenderQueue& renderQueue) override;
 		void OnAttach(ActorBase* parent) override;
 		void OnDetach(ActorBase* parent) override;
 

@@ -718,6 +718,8 @@ if(WITH_MULTIPLAYER)
 	endif()
 
 	list(APPEND HEADERS
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/CtfBase.h
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/Flag.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/LocalPlayerOnServer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/MpPlayer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/PlayerOnServer.h
@@ -736,9 +738,11 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Reason.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerInitialization.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Teams.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayMultiplayerSection.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ScoreboardSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ServerSelectSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpHUD.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameCanvasLayer.h
@@ -746,6 +750,8 @@ if(WITH_MULTIPLAYER)
 	)
 
 	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/CtfBase.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/Flag.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/LocalPlayerOnServer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/MpPlayer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/PlayerOnServer.cpp
@@ -761,6 +767,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayMultiplayerSection.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ScoreboardSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ServerSelectSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpHUD.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameCanvasLayer.cpp

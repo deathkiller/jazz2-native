@@ -568,6 +568,11 @@ namespace Jazz2::UI::Menu
 
 		_root->ResumeGame();
 	}
+
+	Jazz2::Multiplayer::MpLevelHandler* InGameMenu::GetMultiplayerHandler()
+	{
+		return runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_root);
+	}
 #endif
 
 	bool InGameMenu::ActionPressed(PlayerAction action)

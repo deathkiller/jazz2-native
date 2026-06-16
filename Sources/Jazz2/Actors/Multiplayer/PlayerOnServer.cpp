@@ -54,7 +54,10 @@ namespace Jazz2::Actors::Multiplayer
 		// TODO: Check player special move here
 		if (auto* weaponOwner = MpLevelHandler::GetWeaponOwner(other)) {
 			auto* otherPlayerOnServer = static_cast<PlayerOnServer*>(weaponOwner);
-			if (_health > 0 && GetPeerDescriptor()->Team != otherPlayerOnServer->GetPeerDescriptor()->Team) {
+			auto* mpHandler = static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler);
+			bool friendlyFire = mpHandler->_networkManager->GetServerConfiguration().FriendlyFire;
+			bool canHit = (otherPlayerOnServer != this) && (friendlyFire || GetPeerDescriptor()->Team != otherPlayerOnServer->GetPeerDescriptor()->Team);
+			if (_health > 0 && canHit) {
 				bool otherIsPlayer = false;
 				if (auto* anotherPlayer = runtime_cast<PlayerOnServer>(other)) {
 					bool isAttacking = IsAttacking();
@@ -72,7 +75,7 @@ namespace Jazz2::Actors::Multiplayer
 
 				// Decrease remaining shield time by 5 secs
 				if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
-					_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
+					DecreaseShieldTime(5.0f * FrameTimer::FramesPerSecond);
 				} else if (auto* freezerShot = runtime_cast<Weapons::FreezerShot>(other)) {
 					Freeze(3.0f * FrameTimer::FramesPerSecond);
 				} else {
@@ -152,7 +155,10 @@ namespace Jazz2::Actors::Multiplayer
 	{
 		if (_canTakeDamage && _health > 0) {
 			if (auto* weaponOwner = MpLevelHandler::GetWeaponOwner(collider)) {
-				return (static_cast<PlayerOnServer*>(weaponOwner)->GetPeerDescriptor()->Team != GetPeerDescriptor()->Team);
+				auto* otherPlayerOnServer = static_cast<PlayerOnServer*>(weaponOwner);
+				auto* mpHandler = static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler);
+				bool friendlyFire = mpHandler->_networkManager->GetServerConfiguration().FriendlyFire;
+				return (otherPlayerOnServer != this) && (friendlyFire || otherPlayerOnServer->GetPeerDescriptor()->Team != GetPeerDescriptor()->Team);
 			}
 		}
 
@@ -183,8 +189,45 @@ namespace Jazz2::Actors::Multiplayer
 		}
 
 		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerMorphTo(this, type);
-	
+
 		return true;
+	}
+
+	bool PlayerOnServer::SetShield(ShieldType shieldType, float timeLeft)
+	{
+		if (!MpPlayer::SetShield(shieldType, timeLeft)) {
+			return false;
+		}
+
+		// Notify clients so every peer renders the shield decoration, not just the owning player (the server is
+		// authoritative for shields). Handled here rather than in RemotePlayerOnServer so the host's own player
+		// (LocalPlayerOnServer) is synchronized too.
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetShield(this, shieldType, timeLeft);
+
+		return true;
+	}
+
+	bool PlayerOnServer::IncreaseShieldTime(float timeLeft)
+	{
+		if (!MpPlayer::IncreaseShieldTime(timeLeft)) {
+			return false;
+		}
+
+		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetShield(this, _activeShield, _activeShieldTime);
+
+		return true;
+	}
+
+	void PlayerOnServer::DecreaseShieldTime(float time)
+	{
+		float prevTime = _activeShieldTime;
+		MpPlayer::DecreaseShieldTime(time);
+
+		// Resync only when a hit actually chipped the shield, so clients/other peers stay in step with the
+		// authoritative remaining time (natural per-frame decay is not sent - both sides decay locally)
+		if (_activeShieldTime != prevTime) {
+			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetShield(this, _activeShield, _activeShieldTime);
+		}
 	}
 
 	bool PlayerOnServer::IsAttacking() const

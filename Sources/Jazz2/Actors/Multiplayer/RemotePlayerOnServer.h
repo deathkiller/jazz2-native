@@ -73,9 +73,6 @@ namespace Jazz2::Actors::Multiplayer
 		void AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade) override;
 		bool SetDizzy(float timeLeft) override;
 
-		bool SetShield(ShieldType shieldType, float timeLeft) override;
-		bool IncreaseShieldTime(float timeLeft) override;
-
 		bool FireCurrentWeapon(WeaponType weaponType) override;
 		void EmitWeaponFlare() override;
 		void SetCurrentWeapon(WeaponType weaponType, SetCurrentWeaponReason reason) override;

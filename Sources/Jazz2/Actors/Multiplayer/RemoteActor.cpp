@@ -3,12 +3,16 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "../../ContentResolver.h"
+#include "../../ILevelHandler.h"
+#include "../Player.h"
 #include "../../../nCine/Base/Clock.h"
+#include "../../../nCine/Graphics/RenderQueue.h"
 
 namespace Jazz2::Actors::Multiplayer
 {
 	RemoteActor::RemoteActor()
-		: _stateBufferPos(0), _lastAnim(AnimState::Idle), _isAttachedLocally(false), _furColor(0), _paletteOffset(-1)
+		: _stateBufferPos(0), _lastAnim(AnimState::Idle), _isAttachedLocally(false), _furColor(0), _paletteOffset(-1),
+			_activeShield(ShieldType::None), _activeShieldTime(0.0f)
 	{
 	}
 
@@ -93,7 +97,29 @@ namespace Jazz2::Actors::Multiplayer
 			}
 		}
 
+		// Shield time decays locally (the server sends only state changes, not per-frame expiry), so the decoration
+		// fades out on remote players just like on the owning player
+		if (_activeShieldTime > 0.0f) {
+			_activeShieldTime -= timeMult;
+			if (_activeShieldTime <= 0.0f) {
+				_activeShield = ShieldType::None;
+				_activeShieldTime = 0.0f;
+			}
+		}
+
 		ActorBase::OnUpdate(timeMult);
+	}
+
+	bool RemoteActor::OnDraw(RenderQueue& renderQueue)
+	{
+		// Remote players carry the same shield decoration as the local player; reuse the shared renderer so it looks
+		// identical. Skipped for non-player remote actors, which never receive a shield (and lack the shield anims).
+		if (_activeShield != ShieldType::None && _metadata != nullptr) {
+			Player::DrawShield(renderQueue, _activeShield, _activeShieldTime, _metadata,
+				_levelHandler->GetElapsedFrames(), _pos, _renderer.layer(), _shieldRenderCommands);
+		}
+
+		return ActorBase::OnDraw(renderQueue);
 	}
 
 	void RemoteActor::OnAttach(ActorBase* parent)
@@ -221,6 +247,12 @@ namespace Jazz2::Actors::Multiplayer
 				_stateBuffer[i].Pos = pos;
 			}
 		}
+	}
+
+	void RemoteActor::SetShield(ShieldType shieldType, float timeLeft)
+	{
+		_activeShield = shieldType;
+		_activeShieldTime = (shieldType != ShieldType::None ? timeLeft : 0.0f);
 	}
 }
 

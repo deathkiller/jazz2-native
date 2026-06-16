@@ -280,28 +280,6 @@ namespace Jazz2::Actors::Multiplayer
 		return success;
 	}
 
-	bool RemotePlayerOnServer::SetShield(ShieldType shieldType, float timeLeft)
-	{
-		if (!PlayerOnServer::SetShield(shieldType, timeLeft)) {
-			return false;
-		}
-
-		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetShield(this, shieldType, timeLeft);
-
-		return true;
-	}
-
-	bool RemotePlayerOnServer::IncreaseShieldTime(float timeLeft)
-	{
-		if (!PlayerOnServer::IncreaseShieldTime(timeLeft)) {
-			return false;
-		}
-
-		static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetShield(this, _activeShield, _activeShieldTime);
-
-		return true;
-	}
-
 	bool RemotePlayerOnServer::FireCurrentWeapon(WeaponType weaponType)
 	{
 		std::uint16_t prevAmmo = _weaponAmmo[(std::int32_t)weaponType];

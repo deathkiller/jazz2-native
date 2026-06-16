@@ -4,6 +4,7 @@
 
 #include "../LevelHandler.h"
 #include "MpGameMode.h"
+#include "Teams.h"
 #include "NetworkManager.h"
 #include "../Actors/Player.h"
 #include "../UI/InGameConsole.h"
@@ -161,6 +162,26 @@ namespace Jazz2::Multiplayer
 		/** @brief Synchronizes current game mode with all peers without restarting round */
 		bool SynchronizeGameMode();
 
+		/** @brief Requests to change the local player's team (client) or applies it directly (host) */
+		void RequestChangeTeam(std::uint8_t team);
+
+		/** @brief Single row of the multiplayer scoreboard */
+		struct PlayerScore {
+			String Name;
+			std::uint8_t Team;
+			std::uint32_t Kills;
+			std::uint32_t Deaths;
+			std::uint32_t Points;
+			std::uint32_t Extra;	// Laps (Race), treasure (Treasure Hunt) or captures (CTF), 0 otherwise
+			std::int32_t PingMs;	// Round-trip time in ms, -1 if unknown (e.g. the local/host player)
+			bool IsLocal;
+		};
+
+		/** @brief Returns the current scoreboard rows (built on the server and synced to clients) */
+		const SmallVector<PlayerScore, 0>& GetScoreboard() const {
+			return _scoreboard;
+		}
+
 		/** @brief Returns owner of the specified object or the player itself */
 		static Actors::Multiplayer::MpPlayer* GetWeaponOwner(Actors::ActorBase* actor);
 
@@ -267,6 +288,7 @@ namespace Jazz2::Multiplayer
 			String Name;
 			std::uint8_t Flags;
 			std::uint32_t FurColor;
+			std::uint8_t Team;
 		};
 
 		struct PlayerPositionInRound {
@@ -287,6 +309,33 @@ namespace Jazz2::Multiplayer
 
 			MultiplayerSpawnPoint(Vector2f pos, std::uint8_t team)
 				: Pos(pos), Team(team) {}
+		};
+
+		enum class CtfFlagState : std::uint8_t {
+			AtBase,		// Resting on its home base
+			Carried,	// Being carried by an enemy player (CarrierPlayerIndex)
+			Dropped		// Lying at DropPos after the carrier was killed/left
+		};
+
+		struct CtfFlag {
+			std::uint8_t Team;
+			Vector2f BasePos;
+			Vector2f DropPos;
+			CtfFlagState State;
+			std::uint32_t CarrierPlayerIndex;
+			std::shared_ptr<Actors::ActorBase> Actor;		// Server: local visual flag actor (host view; not remoted)
+			std::shared_ptr<Actors::ActorBase> BaseActor;	// Server: local visual base structure (host view; not remoted)
+		};
+
+		// Client: per-team flag info mirrored from the server. The flag/base are rendered as client-local actors
+		// (not remoted) driven by this state, so they don't depend on actor remoting/id reuse.
+		struct CtfClientFlag {
+			std::uint8_t State;
+			Vector2f BasePos;
+			Vector2f DropPos;
+			std::uint32_t CarrierActorId;	// Valid when State == Carried (player index = remote actor id)
+			std::shared_ptr<Actors::ActorBase> FlagActor;	// Client-local visual flag
+			std::shared_ptr<Actors::ActorBase> BaseActor;	// Client-local visual base
 		};
 
 		struct PendingSfx {
@@ -323,6 +372,8 @@ namespace Jazz2::Multiplayer
 		static constexpr float UpdatesPerSecond = 30.0f; // ~33 ms interval
 		static constexpr std::int64_t ServerDelay = 64;
 		static constexpr float EndingDuration = 10 * FrameTimer::FramesPerSecond;
+		static constexpr float TeamSwitchCooldownFrames = 5.0f * FrameTimer::FramesPerSecond;
+		static constexpr float CtfTouchRadius = 40.0f;	// Pixel radius for picking up / returning / capturing flags
 
 		NetworkManager* _networkManager;
 		float _updateTimeLeft;
@@ -336,6 +387,12 @@ namespace Jazz2::Multiplayer
 		HashMap<Actors::ActorBase*, RemotingActorInfo> _remotingActors; // Server: Local Actor created by server -> Info
 		HashMap<std::uint32_t, PlayerName> _playerNames; // Client: Actor ID -> Player name (and flags)
 		SmallVector<PlayerPositionInRound, 0> _positionsInRound; // Client: Actor ID -> Position In Round
+		SmallVector<std::uint32_t, 0> _teamScores;	// Server: computed each check; Client: mirrored for the HUD (index = team id)
+		SmallVector<CtfFlag, 0> _ctfFlags;			// Server: one flag per team in Capture The Flag
+		std::uint32_t _ctfCaptures[MaxTeamCount];	// Server: per-team capture count (used as the team score in CTF)
+		SmallVector<CtfClientFlag, 0> _ctfFlagStates; // Server + Client: per-team flag info for the HUD and carried-flag attachment
+		SmallVector<PlayerScore, 0> _scoreboard;	// Server: built periodically; Client: mirrored for the scoreboard
+		float _scoreboardSyncTime;					// Server: countdown until the next scoreboard broadcast
 		SmallVector<MultiplayerSpawnPoint, 0> _multiplayerSpawnPoints;
 		SmallVector<Vector2i, 0> _raceCheckpoints;					// Unordered, used for race position ranking
 		SmallVector<RaceCheckpoint, 0> _orderedRaceCheckpoints;		// Ordered polyline for the minimap (server-built, synced to clients)
@@ -384,11 +441,25 @@ namespace Jazz2::Multiplayer
 		bool IsLocalPlayer(Actors::ActorBase* actor);
 		void ApplyGameModeToAllPlayers(MpGameMode gameMode);
 		void ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player);
+		std::uint8_t GetTeamCount() const;
+		std::uint8_t FindSmallestTeam(Actors::Multiplayer::MpPlayer* exclude);
+		std::uint8_t ResolveTeam(Actors::Multiplayer::MpPlayer* player, std::uint8_t requested);
+		bool ChangePlayerTeam(Actors::Multiplayer::MpPlayer* player, std::uint8_t requestedTeam, bool fromAdmin);
+		void RebalanceTeams(bool force);
+		void BroadcastPlayerTeam(Actors::Multiplayer::MpPlayer* player);
+		std::uint32_t GetTeamScore(std::uint8_t team);
+		void SyncTeamScores();
+
+		void BuildCtfBases();
+		void UpdateCtf(float timeMult);
+		void UpdateCtfClient();
+		void DropCtfFlag(Actors::Player* player);
+		void BuildScoreboard();
 		void ShowAlertToAllPlayers(StringView text);
 		void SetControllableToAllPlayers(bool enable);
 		void SendLevelStateToAllPlayers();
 		void ResetAllPlayerStats();
-		Vector2f GetSpawnPoint(PlayerType playerType);
+		Vector2f GetSpawnPoint(PlayerType playerType, std::uint8_t team = 0);
 		void BuildRaceCheckpoints();
 		void ConsolidateRaceCheckpoints();
 		void ConsolidateOrderedRaceCheckpoints();
@@ -399,6 +470,7 @@ namespace Jazz2::Multiplayer
 		void CheckGameEnds();
 		void BeginOvertime(Actors::Multiplayer::MpPlayer* winner);
 		void EndGame(Actors::Multiplayer::MpPlayer* winner);
+		void EndGameWithTeam(std::uint8_t team);
 		void EndGameOnTimeOut();
 
 		bool ApplyFromPlaylist();
@@ -406,7 +478,7 @@ namespace Jazz2::Multiplayer
 		void SkipInPlaylist();
 		void ResetPeerPoints();
 		void SetWelcomeMessage(StringView message);
-		void SetPlayerReady(PlayerType playerType);
+		void SetPlayerReady(PlayerType playerType, std::uint8_t team);
 		void BroadcastLocalPlayerIdle(bool isIdle);
 
 		void EndActivePoll();

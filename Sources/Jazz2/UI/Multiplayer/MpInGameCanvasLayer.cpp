@@ -26,11 +26,15 @@ namespace Jazz2::UI::Multiplayer
 	{
 		Canvas::OnDraw(renderQueue);
 
+		bool teamMode = IsTeamGameMode(_levelHandler->_networkManager->GetServerConfiguration().GameMode);
+
 		if (_levelHandler->_isServer) {
 			for (auto& [peer, peerDesc] : *_levelHandler->_networkManager->GetPeers()) {
 				if (peerDesc->RemotePeer && peerDesc->Player && peerDesc->Player->_renderer.isEnabled()) {
 					auto pos = peerDesc->Player->GetPos();
-					Colorf color = Font::DefaultColor;
+					// In team modes the name is tinted with the player's team color; the in-menu/idle status
+					// colors take precedence so they remain a clear at-a-glance cue
+					Colorf color = (teamMode ? GetTeamColor(peerDesc->Team) : Font::DefaultColor);
 					if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player)) {
 						// If player is in menu or console, show their name in red
 						// If player is idle for more than 60 seconds, show their name in blue
@@ -49,7 +53,7 @@ namespace Jazz2::UI::Multiplayer
 				auto it = _levelHandler->_remoteActors.find(actorId);
 				if (it != _levelHandler->_remoteActors.end() && it->second->_renderer.isEnabled()) {
 					auto pos = it->second->GetPos();
-					Colorf color = Font::DefaultColor;
+					Colorf color = (teamMode ? GetTeamColor(playerName.Team) : Font::DefaultColor);
 					// If player is in menu or console, show their name in red
 					if (playerName.Flags & 0x01) {
 						color = Colorf(0.6f, 0.42f, 0.42f);

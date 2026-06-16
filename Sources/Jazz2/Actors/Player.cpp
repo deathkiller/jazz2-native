@@ -1329,12 +1329,27 @@ namespace Jazz2::Actors
 			}
 		}
 
-		switch (_activeShield) {
+		DrawShield(renderQueue, _activeShield, _activeShieldTime, _metadata, _levelHandler->GetElapsedFrames(), _pos, _renderer.layer(), _shieldRenderCommands);
+
+		return ActorBase::OnDraw(renderQueue);
+	}
+
+	void Player::DrawShield(RenderQueue& renderQueue, ShieldType shieldType, float shieldTime, Metadata* metadata,
+		float elapsedFrames, Vector2f pos, std::uint16_t baseLayer, std::unique_ptr<RenderCommand> (&shieldRenderCommands)[2])
+	{
+		// Local aliases so the drawing code below is shared verbatim by Player::OnDraw (which owns the live state)
+		// and by the remote-player path (RemoteActor), which passes its own server-synced copies of the same values
+		auto& _shieldRenderCommands = shieldRenderCommands;
+		Metadata* const _metadata = metadata;
+		const Vector2f _pos = pos;
+		const float _activeShieldTime = shieldTime;
+
+		switch (shieldType) {
 			case ShieldType::Fire: {
 				auto* res = _metadata->FindAnimation(ShieldFire);
 				if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 					constexpr float PosMultiplier = 0.003f;
-					float frames = _levelHandler->GetElapsedFrames();
+					float frames = elapsedFrames;
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 					float shieldSize = 70.0f * shieldScale;
@@ -1373,7 +1388,7 @@ namespace Jazz2::Actors
 						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
 						command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
-						command->SetLayer(_renderer.layer() - 4);
+						command->SetLayer(baseLayer - 4);
 						command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
 
 						renderQueue.AddCommand(command.get());
@@ -1404,7 +1419,7 @@ namespace Jazz2::Actors
 						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 1.0f, 1.0f * shieldAlpha);
 
 						command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
-						command->SetLayer(_renderer.layer() + 4);
+						command->SetLayer(baseLayer + 4);
 						command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
 
 						renderQueue.AddCommand(command.get());
@@ -1415,7 +1430,7 @@ namespace Jazz2::Actors
 			case ShieldType::Water: {
 				auto* res = _metadata->FindAnimation(ShieldWater);
 				if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
-					float frames = _levelHandler->GetElapsedFrames();
+					float frames = elapsedFrames;
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 
@@ -1454,7 +1469,7 @@ namespace Jazz2::Actors
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(1.0f, 1.0f, 1.0f, shieldAlpha);
 
 					command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
-					command->SetLayer(_renderer.layer() + 4);
+					command->SetLayer(baseLayer + 4);
 					// Use the default palette (offset 0) so the shield keeps its own colors, not the player's fur recolor
 					ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *res->Base->TextureDiffuse.get(), shieldIndexed, res->PaletteOffset);
 
@@ -1466,7 +1481,7 @@ namespace Jazz2::Actors
 				auto* res = _metadata->FindAnimation(ShieldLightning);
 				if (res != nullptr && res->Base->TextureDiffuse != nullptr) {
 					constexpr float PosMultiplier = 0.001f;
-					float frames = _levelHandler->GetElapsedFrames();
+					float frames = elapsedFrames;
 					float shieldAlpha = std::min(_activeShieldTime * 0.01f, 1.0f);
 					float shieldScale = std::min(_activeShieldTime * 0.016f + 0.6f, 1.0f);
 					float shieldSize = 70.0f * shieldScale + sinf(frames * 0.06f) * 4.0f;
@@ -1505,7 +1520,7 @@ namespace Jazz2::Actors
 						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 0.8f, 0.9f * shieldAlpha);
 
 						command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
-						command->SetLayer(_renderer.layer() - 4);
+						command->SetLayer(baseLayer - 4);
 						command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
 
 						renderQueue.AddCommand(command.get());
@@ -1536,7 +1551,7 @@ namespace Jazz2::Actors
 						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(2.0f, 2.0f, 1.0f, shieldAlpha);
 
 						command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
-						command->SetLayer(_renderer.layer() + 4);
+						command->SetLayer(baseLayer + 4);
 						command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
 
 						renderQueue.AddCommand(command.get());
@@ -1545,8 +1560,6 @@ namespace Jazz2::Actors
 				break;
 			}
 		}
-
-		return ActorBase::OnDraw(renderQueue);
 	}
 
 	void Player::OnEmitLights(SmallVectorImpl<LightEmitter>& lights)
@@ -1691,10 +1704,7 @@ namespace Jazz2::Actors
 			} else if (enemy->CanHurtPlayer()) {
 				if (!IsInvulnerable()) {
 					if (_activeShieldTime > 0.0f) {
-						// Decrease remaining shield time by 5 secs
-						if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
-							_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
-						}
+						DecreaseShieldTime(5.0f * FrameTimer::FramesPerSecond);
 						float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
 						SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 						PlayPlayerSfx("HurtSoft"_s);
@@ -1767,10 +1777,7 @@ namespace Jazz2::Actors
 		if (_levelHandler->EventMap()->IsHurting(_pos.X, _pos.Y + 24.0f, Direction::Up)) {
 			if (!IsInvulnerable() && _sugarRushLeft <= 0.0f) {
 				if (_activeShieldTime > 0.0f) {
-					// Decrease remaining shield time by 5 secs
-					if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
-						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
-					}
+					DecreaseShieldTime(5.0f * FrameTimer::FramesPerSecond);
 					float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
 					SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 					PlayPlayerSfx("HurtSoft"_s);
@@ -1810,10 +1817,7 @@ namespace Jazz2::Actors
 		if (_levelHandler->EventMap()->IsHurting(_pos.X, _pos.Y - 4.0f, Direction::Down)) {
 			if (!IsInvulnerable() && _sugarRushLeft <= 0.0f) {
 				if (_activeShieldTime > 0.0f) {
-					// Decrease remaining shield time by 5 secs
-					if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
-						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
-					}
+					DecreaseShieldTime(5.0f * FrameTimer::FramesPerSecond);
 					float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
 					SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 					PlayPlayerSfx("HurtSoft"_s);
@@ -1834,10 +1838,7 @@ namespace Jazz2::Actors
 		if (_levelHandler->EventMap()->IsHurting(_pos.X + (_speed.X > 0.0f ? 16.0f : -16.0f), _pos.Y, (_speed.X > 0.0f ? Direction::Left : Direction::Right))) {
 			if (!IsInvulnerable() && _sugarRushLeft <= 0.0f) {
 				if (_activeShieldTime > 0.0f) {
-					// Decrease remaining shield time by 5 secs
-					if (_activeShieldTime > (5.0f * FrameTimer::FramesPerSecond)) {
-						_activeShieldTime -= (5.0f * FrameTimer::FramesPerSecond);
-					}
+					DecreaseShieldTime(5.0f * FrameTimer::FramesPerSecond);
 					float invulnerableTime = _levelHandler->GetHurtInvulnerableTime();
 					SetInvulnerability(invulnerableTime, InvulnerableType::Blinking);
 					PlayPlayerSfx("HurtSoft"_s);
@@ -4373,6 +4374,15 @@ namespace Jazz2::Actors
 		_activeShieldTime += time;
 		PlayPlayerSfx("PickupGem"_s);
 		return true;
+	}
+
+	void Player::DecreaseShieldTime(float time)
+	{
+		// Only chips away while there's a comfortable margin left, so an absorbed hit never drops the shield right
+		// before it would have expired anyway
+		if (_activeShieldTime > time) {
+			_activeShieldTime -= time;
+		}
 	}
 
 	bool Player::SpawnBird(std::uint8_t type, Vector2f pos)

@@ -424,6 +424,8 @@
     <ClInclude Include="Jazz2\Actors\Lighting\FlickerLight.h" />
     <ClInclude Include="Jazz2\Actors\Lighting\PulsatingRadialLight.h" />
     <ClInclude Include="Jazz2\Actors\Lighting\StaticRadialLight.h" />
+    <ClInclude Include="Jazz2\Actors\Multiplayer\CtfBase.h" />
+    <ClInclude Include="Jazz2\Actors\Multiplayer\Flag.h" />
     <ClInclude Include="Jazz2\Actors\Multiplayer\LocalPlayerOnServer.h" />
     <ClInclude Include="Jazz2\Actors\Multiplayer\PlayerOnServer.h" />
     <ClInclude Include="Jazz2\Actors\Multiplayer\RemotablePlayer.h" />
@@ -486,6 +488,7 @@
     <ClInclude Include="Jazz2\Multiplayer\INetworkHandler.h" />
     <ClInclude Include="Jazz2\Multiplayer\MpLevelHandler.h" />
     <ClInclude Include="Jazz2\Multiplayer\MpGameMode.h" />
+    <ClInclude Include="Jazz2\Multiplayer\Teams.h" />
     <ClInclude Include="Jazz2\Multiplayer\NetworkManager.h" />
     <ClInclude Include="Jazz2\Multiplayer\PacketTypes.h" />
     <ClInclude Include="Jazz2\Multiplayer\Peer.h" />
@@ -545,6 +548,7 @@
     <ClInclude Include="Jazz2\UI\Menu\PauseSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\PlayMultiplayerSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RefreshCacheSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\ScoreboardSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RemapControlsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RescaleModeSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\ScrollableMenuSection.h" />
@@ -834,6 +838,8 @@
     <ClCompile Include="Jazz2\Actors\Lighting\FlickerLight.cpp" />
     <ClCompile Include="Jazz2\Actors\Lighting\PulsatingRadialLight.cpp" />
     <ClCompile Include="Jazz2\Actors\Lighting\StaticRadialLight.cpp" />
+    <ClCompile Include="Jazz2\Actors\Multiplayer\CtfBase.cpp" />
+    <ClCompile Include="Jazz2\Actors\Multiplayer\Flag.cpp" />
     <ClCompile Include="Jazz2\Actors\Multiplayer\LocalPlayerOnServer.cpp" />
     <ClCompile Include="Jazz2\Actors\Multiplayer\MpPlayer.cpp" />
     <ClCompile Include="Jazz2\Actors\Multiplayer\PlayerOnServer.cpp" />
@@ -937,6 +943,7 @@
     <ClCompile Include="Jazz2\UI\Menu\PauseSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\PlayMultiplayerSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RefreshCacheSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\ScoreboardSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RemapControlsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\RescaleModeSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\ServerSelectSection.cpp" />

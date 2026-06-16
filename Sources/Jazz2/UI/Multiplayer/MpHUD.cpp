@@ -223,6 +223,24 @@ namespace Jazz2::UI::Multiplayer
 			return;
 		}
 
+		// Team score header (centered at the top) in team game modes
+		if (IsTeamGameMode(serverConfig.GameMode)) {
+			std::uint8_t teamCount = (std::uint8_t)mpLevelHandler->_teamScores.size();
+			if (teamCount >= 2) {
+				char teamBuffer[16];
+				float spacing = 54.0f;
+				float startX = view.X + view.W * 0.5f - spacing * (teamCount - 1) * 0.5f;
+				for (std::uint8_t team = 0; team < teamCount; team++) {
+					float x = startX + team * spacing;
+					std::size_t length = formatInto(teamBuffer, "{}", mpLevelHandler->_teamScores[team]);
+					_mediumFont->DrawString(this, { teamBuffer, length }, charOffsetShadow, x, view.Y + 5.0f + 2.0f, FontShadowLayer,
+						Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
+					_mediumFont->DrawString(this, { teamBuffer, length }, charOffset, x, view.Y + 5.0f, FontLayer,
+						Alignment::Top, GetTeamColor(team), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
+				}
+			}
+		}
+
 		switch (serverConfig.GameMode) {
 			case MpGameMode::Battle:
 			case MpGameMode::TeamBattle: {
@@ -287,14 +305,23 @@ namespace Jazz2::UI::Multiplayer
 				break;
 			}
 			case MpGameMode::CaptureTheFlag: {
-
-				// TODO
-				/*std::size_t length = formatInto(stringBuffer, "{} / {}", peerDesc->FlagsCaptured, serverConfig.TotalFlagsCaptured);
-				_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-				_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);*/
-
+				// The per-team capture counts are drawn by the team score header above; here we show each team's
+				// flag status (home / taken / dropped) centered just below it, aligned under each team's count
+				const StringView flagStateText[] = { _("home"), _("taken"), _("dropped") };
+				std::uint8_t teamCount = (std::uint8_t)mpLevelHandler->_ctfFlagStates.size();
+				if (teamCount >= 2) {
+					float spacing = 54.0f;
+					float startX = view.X + view.W * 0.5f - spacing * (teamCount - 1) * 0.5f;
+					for (std::uint8_t team = 0; team < teamCount; team++) {
+						float x = startX + team * spacing;
+						std::uint8_t state = mpLevelHandler->_ctfFlagStates[team].State;
+						StringView label = flagStateText[state < 3 ? state : 0];
+						_smallFont->DrawString(this, label, charOffsetShadow, x, view.Y + 26.0f + 1.0f, FontShadowLayer,
+							Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+						_smallFont->DrawString(this, label, charOffset, x, view.Y + 26.0f, FontLayer,
+							Alignment::Top, GetTeamColor(team), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
+					}
+				}
 				break;
 			}
 			default: {
@@ -325,9 +352,10 @@ namespace Jazz2::UI::Multiplayer
 		std::uint32_t PositionInRound;
 		std::uint32_t PointsInRound;
 		bool IsLocal;
+		std::uint8_t Team;
 
-		PositionInRoundItem(StringView playerName, std::uint32_t position, std::uint32_t points, bool isLocal)
-			: PlayerName(playerName), PositionInRound(position), PointsInRound(points), IsLocal(isLocal) {}
+		PositionInRoundItem(StringView playerName, std::uint32_t position, std::uint32_t points, bool isLocal, std::uint8_t team)
+			: PlayerName(playerName), PositionInRound(position), PointsInRound(points), IsLocal(isLocal), Team(team) {}
 	};
 
 	void MpHUD::DrawPositionInRound(const Rectf& view, Actors::Player* player)
@@ -353,24 +381,28 @@ namespace Jazz2::UI::Multiplayer
 						localPoints = peerDesc->PointsInRound;
 					}
 
-					positions.emplace_back(peerDesc->PlayerName, peerDesc->PositionInRound, peerDesc->PointsInRound, !peerDesc->RemotePeer);
+					positions.emplace_back(peerDesc->PlayerName, peerDesc->PositionInRound, peerDesc->PointsInRound, !peerDesc->RemotePeer, peerDesc->Team);
 				}
 			}
 		} else {
 			for (const auto& pos : mpLevelHandler->_positionsInRound) {
 				if ((pos.PositionInRound >= 1 && pos.PositionInRound <= 3) || pos.ActorID == mpLevelHandler->_lastSpawnedActorId) {
 					StringView playerName;
+					std::uint8_t team = 0;
 					if (pos.ActorID == mpLevelHandler->_lastSpawnedActorId) {
 						localPoints = pos.PointsInRound;
-						playerName = mpLevelHandler->_networkManager->GetPeerDescriptor(LocalPeer)->PlayerName;
+						auto localPeerDesc = mpLevelHandler->_networkManager->GetPeerDescriptor(LocalPeer);
+						playerName = localPeerDesc->PlayerName;
+						team = localPeerDesc->Team;
 					} else {
 						auto it = mpLevelHandler->_playerNames.find(pos.ActorID);
 						if (it != mpLevelHandler->_playerNames.end()) {
 							playerName = it->second.Name;
+							team = it->second.Team;
 						}
 					}
 
-					positions.emplace_back(playerName, pos.PositionInRound, pos.PointsInRound, pos.ActorID == mpLevelHandler->_lastSpawnedActorId);
+					positions.emplace_back(playerName, pos.PositionInRound, pos.PointsInRound, pos.ActorID == mpLevelHandler->_lastSpawnedActorId, team);
 				}
 			}
 		}
@@ -396,10 +428,19 @@ namespace Jazz2::UI::Multiplayer
 				_smallFont->DrawString(this, "-."_s, charOffset, view.X + 30.0f, view.Y + offset, FontLayer,
 					Alignment::TopRight, Colorf(0.4f, 0.4f, 0.4f, 1.0f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			}
+			// In team modes the name is tinted with the player's team color (friend/foe cue); otherwise the local
+			// player's name uses the usual highlight and everyone else the default color
+			Colorf nameColor;
+			if (IsTeamGameMode(serverConfig.GameMode)) {
+				nameColor = GetTeamColor(item.Team);
+				nameColor.SetAlpha(item.IsLocal ? 0.9f : 0.7f);
+			} else {
+				nameColor = (item.IsLocal ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor);
+			}
 			_smallFont->DrawString(this, item.PlayerName, charOffsetShadow, view.X + 38.0f, view.Y + offset + 1.0f, FontShadowLayer,
 				Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			_smallFont->DrawString(this, item.PlayerName, charOffset, view.X + 38.0f, view.Y + offset, FontLayer,
-				Alignment::TopLeft, item.IsLocal ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				Alignment::TopLeft, nameColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 			if (!item.IsLocal) {
 				std::int64_t pointsDiff = (std::int64_t)item.PointsInRound - (std::int64_t)localPoints;
@@ -515,10 +556,21 @@ namespace Jazz2::UI::Multiplayer
 		};
 		constexpr std::int32_t DotPaletteCount = (std::int32_t)(sizeof(DotPalette) / sizeof(DotPalette[0]));
 
-		auto drawPlayerDot = [&](Vector2f worldPos, std::uint32_t id, bool isLocal) {
+		bool teamMode = IsTeamGameMode(mpLevelHandler->_networkManager->GetServerConfiguration().GameMode);
+
+		auto drawPlayerDot = [&](Vector2f worldPos, std::uint32_t id, bool isLocal, std::uint8_t team) {
 			Vector2f p = clampToBox(toMinimap(worldPos));
 			float s = (isLocal ? 3.0f : 2.0f);
-			Colorf color = (isLocal ? Colorf(0.9f, 1.0f, 1.0f, 1.0f) : DotPalette[id % DotPaletteCount]);
+			Colorf color;
+			if (teamMode) {
+				// Color by team; the local player stays slightly brighter to stand out
+				color = GetTeamColor(team);
+				if (isLocal) {
+					color = Colorf(std::min(1.0f, color.R + 0.25f), std::min(1.0f, color.G + 0.25f), std::min(1.0f, color.B + 0.25f), 1.0f);
+				}
+			} else {
+				color = (isLocal ? Colorf(0.9f, 1.0f, 1.0f, 1.0f) : DotPalette[id % DotPaletteCount]);
+			}
 			DrawSolid(Vector2f(p.X - s * 0.5f - 1.0f, p.Y - s * 0.5f - 1.0f), MainLayer + 10, Vector2f(s + 2.0f, s + 2.0f), Colorf(0.0f, 0.0f, 0.0f, 0.7f));
 			DrawSolid(Vector2f(p.X - s * 0.5f, p.Y - s * 0.5f), MainLayer + 12, Vector2f(s, s), color);
 		};
@@ -527,12 +579,16 @@ namespace Jazz2::UI::Multiplayer
 			auto peers = mpLevelHandler->_networkManager->GetPeers();
 			for (auto& [peer, peerDesc] : *peers) {
 				if (peerDesc->Player != nullptr) {
-					drawPlayerDot(peerDesc->Player->GetPos(), peerDesc->Player->GetPlayerIndex(), !peerDesc->RemotePeer);
+					drawPlayerDot(peerDesc->Player->GetPos(), peerDesc->Player->GetPlayerIndex(), !peerDesc->RemotePeer, peerDesc->Team);
 				}
 			}
 		} else {
 			// Local player is the currently viewed one
-			drawPlayerDot(player->GetPos(), mpLevelHandler->_lastSpawnedActorId, true);
+			std::uint8_t localTeam = 0;
+			if (auto localPeerDesc = mpLevelHandler->_networkManager->GetPeerDescriptor(LocalPeer)) {
+				localTeam = localPeerDesc->Team;
+			}
+			drawPlayerDot(player->GetPos(), mpLevelHandler->_lastSpawnedActorId, true, localTeam);
 
 			for (auto& [actorId, playerName] : mpLevelHandler->_playerNames) {
 				if (actorId == mpLevelHandler->_lastSpawnedActorId) {
@@ -540,7 +596,7 @@ namespace Jazz2::UI::Multiplayer
 				}
 				auto it = mpLevelHandler->_remoteActors.find(actorId);
 				if (it != mpLevelHandler->_remoteActors.end()) {
-					drawPlayerDot(it->second->GetPos(), actorId, false);
+					drawPlayerDot(it->second->GetPos(), actorId, false, playerName.Team);
 				}
 			}
 		}
