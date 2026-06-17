@@ -49,6 +49,8 @@ namespace Jazz2::UI::Menu
 		SmallVector<ItemData, (std::int32_t)Item::Count> _items;
 		std::int32_t _selectedIndex;
 		float _animation;
+		Vector2f _touchStart;
+		Vector2f _touchLast;
 
 		void ExecuteSelected();
 	};

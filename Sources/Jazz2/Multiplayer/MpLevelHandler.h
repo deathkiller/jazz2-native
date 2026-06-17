@@ -158,6 +158,12 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Returns current game mode */
 		MpGameMode GetGameMode() const;
+		/** @brief Returns the number of laps required to finish a race (Race/TeamRace) */
+		std::uint32_t GetTotalLaps() const;
+		/** @brief Returns the current round state (synced to clients) */
+		LevelState GetLevelState() const {
+			return _levelState;
+		}
 		/** @brief Sets current game mode */
 		bool SetGameMode(MpGameMode value);
 		/** @brief Synchronizes current game mode with all peers without restarting round */

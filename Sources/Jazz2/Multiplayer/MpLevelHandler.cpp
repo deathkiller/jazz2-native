@@ -2465,6 +2465,12 @@ namespace Jazz2::Multiplayer
 		return serverConfig.GameMode;
 	}
 
+	std::uint32_t MpLevelHandler::GetTotalLaps() const
+	{
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		return serverConfig.TotalLaps;
+	}
+
 	bool MpLevelHandler::SetGameMode(MpGameMode value)
 	{
 		if (!_isServer) {

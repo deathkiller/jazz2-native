@@ -16,6 +16,12 @@ namespace Jazz2::UI::Menu
 	{
 	}
 
+	namespace
+	{
+		// Minimum vertical travel (in view pixels) for a touch drag to count as a swipe rather than a tap
+		constexpr float SwipeThreshold = 50.0f;
+	}
+
 	void PauseSection::OnShow(IMenuContainer* root)
 	{
 		MenuSection::OnShow(root);
@@ -63,6 +69,8 @@ namespace Jazz2::UI::Menu
 #endif
 
 		_animation = 0.0f;
+		_touchStart = Vector2f::Zero;
+		_touchLast = Vector2f::Zero;
 	}
 
 	void PauseSection::OnUpdate(float timeMult)
@@ -133,24 +141,67 @@ namespace Jazz2::UI::Menu
 
 	void PauseSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
-		if (event.type == TouchEventType::Down) {
-			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
-			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x;
-				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
-
-				for (std::int32_t i = 0; i < (std::int32_t)_items.size(); i++) {
-					if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 22.0f) {
-						if (_selectedIndex == i) {
-							ExecuteSelected();
-						} else {
-							_root->PlaySfx("MenuSelect"_s, 0.5f);
-							_animation = 0.0f;
-							_selectedIndex = i;
-						}
-						break;
+		switch (event.type) {
+			case TouchEventType::Down: {
+				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+				if (pointerIndex != -1) {
+					// X is kept normalized (for the centered-column hit test), Y in view pixels (for swipe distance)
+					_touchStart = Vector2f(event.pointers[pointerIndex].x, event.pointers[pointerIndex].y * (float)viewSize.Y);
+					_touchLast = _touchStart;
+				}
+				break;
+			}
+			case TouchEventType::Move: {
+				if (_touchStart != Vector2f::Zero) {
+					std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+					if (pointerIndex != -1) {
+						_touchLast = Vector2f(event.pointers[pointerIndex].x, event.pointers[pointerIndex].y * (float)viewSize.Y);
 					}
 				}
+				break;
+			}
+			case TouchEventType::Up: {
+				if (_touchStart == Vector2f::Zero) {
+					break;
+				}
+				Vector2f start = _touchStart;
+				Vector2f last = _touchLast;
+				_touchStart = Vector2f::Zero;
+
+				float deltaY = last.Y - start.Y;	// View pixels; positive = downward
+
+#if defined(WITH_MULTIPLAYER)
+				// A downward swipe opens the scoreboard (multiplayer, non-local) - the mirror of the swipe-up that
+				// closes it, and of the Up-on-Resume keyboard shortcut
+				if (deltaY > SwipeThreshold && std::abs(last.X - start.X) < 0.3f) {
+					if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
+						if (!inGameMenu->IsLocalSession()) {
+							_root->PlaySfx("MenuSelect"_s, 0.5f);
+							_root->SwitchToSection<ScoreboardSection>();
+							return;
+						}
+					}
+				}
+#endif
+
+				// A near-stationary touch is a tap: select the item under it, or execute it if already selected
+				if (std::abs(deltaY) < 16.0f) {
+					float x = start.X;
+					float y = start.Y;
+					for (std::int32_t i = 0; i < (std::int32_t)_items.size(); i++) {
+						if (std::abs(x - 0.5f) < 0.22f && std::abs(y - _items[i].TouchY) < 22.0f) {
+							if (_selectedIndex == i) {
+								ExecuteSelected();
+							} else {
+								_root->PlaySfx("MenuSelect"_s, 0.5f);
+								_animation = 0.0f;
+								_selectedIndex = i;
+							}
+							break;
+						}
+					}
+				}
+				break;
 			}
 		}
 	}
