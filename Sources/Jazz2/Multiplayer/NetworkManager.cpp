@@ -197,10 +197,10 @@ namespace Jazz2::Multiplayer
 		serverConfig.GameMode = MpGameMode::Cooperation;
 		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
 		serverConfig.IdleKickTimeSecs = -1;
-		serverConfig.ReconnectWindowSecs = 600;
+		serverConfig.ReconnectWindowSecs = 300;
 		serverConfig.MinPlayerCount = 1;
 		serverConfig.ReforgedGameplay = PreferencesCache::EnableReforgedGameplay;
-		serverConfig.PreGameSecs = 60;
+		serverConfig.PreGameSecs = 30;
 		serverConfig.SpawnInvulnerableSecs = 4;
 		serverConfig.PlaylistIndex = -1;
 
@@ -217,7 +217,7 @@ namespace Jazz2::Multiplayer
 		serverConfig.AllowJoinDuringRound = true;
 		serverConfig.JoinCooldownSecs = 0;
 
-		serverConfig.TeamCount = 4;
+		serverConfig.TeamCount = 2;
 		serverConfig.AutoBalanceTeams = true;
 		serverConfig.MaxTeamSizeDiff = 1;
 		serverConfig.AllowTeamSelection = true;

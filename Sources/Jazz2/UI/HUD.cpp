@@ -989,6 +989,44 @@ namespace Jazz2::UI
 		}
 	}
 
+	bool HUD::GetTouchPauseButtonRect(Rectf& bounds) const
+	{
+		if (_touchButtonsTimer <= 0.0f) {
+			return false;
+		}
+
+		// The pause/menu button is touch button 9 (see RefreshTouchButtons())
+		const auto& button = _touchButtons[9];
+		if (button.Action != PlayerAction::Menu || button.Graphics == nullptr) {
+			return false;
+		}
+#if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
+		if (PreferencesCache::UseNativeBackButton) {
+			// Handled by the platform's native back button, so nothing is drawn here
+			return false;
+		}
+#endif
+
+		// Resolve the on-screen center from the alignment, exactly as OnDrawTouchButtons() does
+		float x;
+		if ((button.Align & Alignment::Right) == Alignment::Right) {
+			x = ViewSize.X - button.Width * 0.5f - button.Left;
+		} else if ((button.Align & Alignment::Left) == Alignment::Left) {
+			x = button.Left + button.Width * 0.5f;
+		} else {
+			x = ViewSize.X / 2;
+		}
+		float y;
+		if ((button.Align & Alignment::Bottom) == Alignment::Bottom) {
+			y = ViewSize.Y - button.Height * 0.5f - button.Top;
+		} else {
+			y = button.Top + button.Height * 0.5f;
+		}
+
+		bounds = Rectf(x - button.Width * 0.5f, y - button.Height * 0.5f, button.Width, button.Height);
+		return true;
+	}
+
 	void HUD::DrawHealthCarrots(float x, float y, std::int32_t health)
 	{
 		constexpr Colorf CarrotShadowColor = Colorf(0.0f, 0.0f, 0.0f, 0.5f);

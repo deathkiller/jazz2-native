@@ -138,10 +138,10 @@ namespace Jazz2::UI::Menu
 		float top = contentBounds.Y + 10.0f;
 		std::int32_t charOffset = 0;
 
-		// Slide the title/header up from the middle of the content area and fade them in. The slide eases out
-		// (decelerates into place) while the fade finishes a little earlier so they are legible as they settle;
-		// the data rows in OnDrawClipped share the same offset and wipe up into their band.
-		float slideY = (1.0f - IMenuContainer::EaseOutCubic(_transition)) * ((contentBounds.Y + contentBounds.H * 0.5f) - top);
+		// Slide the title/header down from above (a third of the content height up) and fade them in. The slide
+		// eases out (decelerates into place) while the fade finishes a little earlier so they are legible as they
+		// settle; the data rows in OnDrawClipped share the same offset and wipe down into their band.
+		float slideY = (1.0f - IMenuContainer::EaseOutCubic(_transition)) * -(contentBounds.H / 3.0f);
 		float alpha = IMenuContainer::EaseOutCubic(std::min(_transition * 1.4f, 1.0f));
 		// Elastic "pop" scale for the title, matching the selected-item animation elsewhere in the menu (0.9 is the
 		// title's resting scale)
@@ -225,10 +225,9 @@ namespace Jazz2::UI::Menu
 		Recti clip = GetClipRectangle(contentBounds);
 		float left = contentBounds.X + contentBounds.W * 0.06f;
 		float width = contentBounds.W * 0.88f;
-		float top = contentBounds.Y + 10.0f;
 		std::int32_t charOffset = 0;
 
-		float slideY = (1.0f - IMenuContainer::EaseOutCubic(_transition)) * ((contentBounds.Y + contentBounds.H * 0.5f) - top);
+		float slideY = (1.0f - IMenuContainer::EaseOutCubic(_transition)) * -(contentBounds.H / 3.0f);
 		float alpha = IMenuContainer::EaseOutCubic(std::min(_transition * 1.4f, 1.0f));
 		auto faded = [](Colorf color, float a) -> Colorf {
 			color.A *= a;

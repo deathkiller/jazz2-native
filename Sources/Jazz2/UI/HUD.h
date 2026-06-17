@@ -166,6 +166,8 @@ namespace Jazz2::UI
 		virtual void OnDrawGems(const Rectf& view, std::int32_t& charOffset);
 		/** @brief Called when touch buttons need to be drawn */
 		void OnDrawTouchButtons(Actors::Player* player);
+		/** @brief Returns `true` and the on-screen bounds of the touch pause button if it's currently visible */
+		bool GetTouchPauseButtonRect(Rectf& bounds) const;
 
 		/** @brief Draws carrotized health bar (Reforged) */
 		void DrawHealthCarrots(float x, float y, std::int32_t health);

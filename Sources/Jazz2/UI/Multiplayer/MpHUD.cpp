@@ -168,14 +168,6 @@ namespace Jazz2::UI::Multiplayer
 		auto* mpPlayer = static_cast<MpPlayer*>(player);
 		auto peerDesc = mpPlayer->GetPeerDescriptor();
 
-		if (serverConfig.GameMode != MpGameMode::Cooperation && serverConfig.TotalPlayerPoints > 0 && peerDesc->Points > 0) {
-			auto pointsText = _f("Points: {}", peerDesc->Points);
-			_smallFont->DrawString(this, pointsText, charOffsetShadow, view.X + view.W - 14.0f, view.Y + 30.0f + 1.0f, FontShadowLayer,
-				Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-			_smallFont->DrawString(this, pointsText, charOffset, view.X + view.W - 14.0f, view.Y + 30.0f, FontLayer,
-				Alignment::TopRight, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-		}
-
 		if (mpLevelHandler->_levelState == MpLevelHandler::LevelState::PreGame) {
 			float timeLeftSecs = mpLevelHandler->_gameTimeLeft / FrameTimer::FramesPerSecond;
 			std::int32_t minutes = std::max(0, (std::int32_t)(timeLeftSecs / 60));
@@ -501,8 +493,19 @@ namespace Jazz2::UI::Multiplayer
 		boxW = std::max(boxW, minBoxW);
 		boxH = std::max(boxH, minBoxH);
 
-		const float boxX = view.X + view.W - boxW - Margin;
+		float boxX = view.X + view.W - boxW - Margin;
 		const float boxY = view.Y + Margin;
+
+		// When the on-screen touch pause button is visible and would overlap the minimap's default top-right
+		// position, tuck the minimap to the left of it; otherwise leave it where it is
+		Rectf pauseRect;
+		if (GetTouchPauseButtonRect(pauseRect)) {
+			bool overlaps = (pauseRect.X < boxX + boxW && pauseRect.X + pauseRect.W > boxX &&
+							 pauseRect.Y < boxY + boxH && pauseRect.Y + pauseRect.H > boxY);
+			if (overlaps) {
+				boxX = std::max(view.X + Margin, pauseRect.X - boxW - Margin);
+			}
+		}
 
 		const float innerW = boxW - 2.0f * Pad, innerH = boxH - 2.0f * Pad;
 		const float scale = std::min(innerW / spanX, innerH / spanY);
