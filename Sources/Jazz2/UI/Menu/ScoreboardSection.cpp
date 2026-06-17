@@ -18,7 +18,7 @@ namespace Jazz2::UI::Menu
 	}
 
 	ScoreboardSection::ScoreboardSection()
-		: _scrollOffset(0), _animation(0.0f)
+		: _scrollOffset(0), _transition(0.0f)
 	{
 	}
 
@@ -27,7 +27,7 @@ namespace Jazz2::UI::Menu
 		MenuSection::OnShow(root);
 
 		_scrollOffset = 0;
-		_animation = 0.0f;
+		_transition = 0.0f;
 	}
 
 	std::int32_t ScoreboardSection::GetVisibleRows() const
@@ -39,8 +39,8 @@ namespace Jazz2::UI::Menu
 
 	void ScoreboardSection::OnUpdate(float timeMult)
 	{
-		if (_animation < 1.0f) {
-			_animation = std::min(_animation + timeMult * 0.02f, 1.0f);
+		if (_transition < 1.0f) {
+			_transition = std::min(_transition + timeMult * 0.04f, 1.0f);
 		}
 
 		auto inGameMenu = runtime_cast<InGameMenu>(_root);
@@ -59,7 +59,6 @@ namespace Jazz2::UI::Menu
 		} else if (_root->ActionHit(PlayerAction::Up)) {
 			if (_scrollOffset > 0) {
 				_scrollOffset--;
-				_animation = 0.0f;
 				_root->PlaySfx("MenuSelect"_s, 0.4f);
 			} else {
 				// Scrolled past the top - return to the previous section (the pause menu)
@@ -69,7 +68,6 @@ namespace Jazz2::UI::Menu
 		} else if (_root->ActionHit(PlayerAction::Down)) {
 			if (_scrollOffset < maxScroll) {
 				_scrollOffset++;
-				_animation = 0.0f;
 				_root->PlaySfx("MenuSelect"_s, 0.4f);
 			} else {
 				// Scrolled past the bottom - return to the previous section (the pause menu)
@@ -106,6 +104,19 @@ namespace Jazz2::UI::Menu
 		float top = contentBounds.Y + 10.0f;
 		std::int32_t charOffset = 0;
 
+		// Slide the whole table (title, header and rows) up from the middle of the content area and fade it in as
+		// one cohesive unit: every element shares the same vertical offset and alpha. The slide eases out
+		// (decelerates into place) while the fade finishes a little earlier so the table is legible as it settles.
+		float slideY = (1.0f - IMenuContainer::EaseOutCubic(_transition)) * ((contentBounds.Y + contentBounds.H * 0.5f) - top);
+		float alpha = IMenuContainer::EaseOutCubic(std::min(_transition * 1.4f, 1.0f));
+		// Elastic "pop" scale for the title, matching the selected-item animation elsewhere in the menu (0.9 is the
+		// title's resting scale)
+		float titleScale = 0.9f * (0.5f + IMenuContainer::EaseOutElastic(_transition * 0.3f) * 0.5f);
+		auto faded = [](Colorf color, float a) -> Colorf {
+			color.A *= a;
+			return color;
+		};
+
 		// Column x positions (as a fraction of the table width)
 		float colName = left + width * 0.04f;
 		float colExtra = left + width * 0.60f;
@@ -115,24 +126,24 @@ namespace Jazz2::UI::Menu
 		float colPing = left + width * 0.98f;
 
 		// Title
-		_root->DrawStringShadow(_("Scoreboard"), charOffset, contentBounds.X + contentBounds.W * 0.5f, top, IMenuContainer::FontLayer + 10,
-			Alignment::Top, Font::DefaultColor, 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+		_root->DrawStringShadow(_("Scoreboard"), charOffset, contentBounds.X + contentBounds.W * 0.5f, top + slideY, IMenuContainer::FontLayer + 10,
+			Alignment::Top, faded(Font::DefaultColor, alpha), titleScale, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 		float headerY = top + 20.0f;
-		Colorf headerColor = Colorf(0.5f, 0.5f, 0.5f, 0.5f);
-		_root->DrawStringShadow(_("Player"), charOffset, colName, headerY, IMenuContainer::FontLayer,
+		Colorf headerColor = faded(Colorf(0.5f, 0.5f, 0.5f, 0.5f), alpha);
+		_root->DrawStringShadow(_("Player"), charOffset, colName, headerY + slideY, IMenuContainer::FontLayer,
 			Alignment::TopLeft, headerColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 		if (hasExtra) {
-			_root->DrawStringShadow(extraLabel, charOffset, colExtra, headerY, IMenuContainer::FontLayer,
+			_root->DrawStringShadow(extraLabel, charOffset, colExtra, headerY + slideY, IMenuContainer::FontLayer,
 				Alignment::Top, headerColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 		}
-		_root->DrawStringShadow("K"_s, charOffset, colK, headerY, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("K"_s, charOffset, colK, headerY + slideY, IMenuContainer::FontLayer,
 			Alignment::Top, headerColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-		_root->DrawStringShadow("D"_s, charOffset, colD, headerY, IMenuContainer::FontLayer,
+		_root->DrawStringShadow("D"_s, charOffset, colD, headerY + slideY, IMenuContainer::FontLayer,
 			Alignment::Top, headerColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-		_root->DrawStringShadow(_("Pts"), charOffset, colPts, headerY, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Pts"), charOffset, colPts, headerY + slideY, IMenuContainer::FontLayer,
 			Alignment::Top, headerColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
-		_root->DrawStringShadow(_("Ping"), charOffset, colPing, headerY, IMenuContainer::FontLayer,
+		_root->DrawStringShadow(_("Ping"), charOffset, colPing, headerY + slideY, IMenuContainer::FontLayer,
 			Alignment::Top, headerColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 		std::int32_t visibleRows = GetVisibleRows();
@@ -144,58 +155,60 @@ namespace Jazz2::UI::Menu
 		for (std::int32_t i = scroll; i < count && i < scroll + visibleRows; i++) {
 			const auto& row = rows[i];
 
+			float drawY = rowY + slideY;
+
 			Colorf nameColor = (teamMode ? GetTeamColor(row.Team) : Font::DefaultColor);
 			if (row.IsLocal) {
 				// Highlight the local player's row
-				_root->DrawSolid(left, rowY + RowHeight * 0.5f, IMenuContainer::MainLayer - 10, Alignment::Left,
-					Vector2f(width, RowHeight), Colorf(1.0f, 1.0f, 1.0f, 0.1f));
+				_root->DrawSolid(left, drawY + RowHeight * 0.5f, IMenuContainer::MainLayer - 10, Alignment::Left,
+					Vector2f(width, RowHeight), Colorf(1.0f, 1.0f, 1.0f, 0.1f * alpha));
 			}
 
 			std::size_t rankLength = formatInto(buffer, "{}.", i + 1);
-			_root->DrawStringShadow({ buffer, rankLength }, charOffset, left, rowY, IMenuContainer::FontLayer,
-				Alignment::TopLeft, Colorf(0.5f, 0.5f, 0.5f, 0.5f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_root->DrawStringShadow({ buffer, rankLength }, charOffset, left, drawY, IMenuContainer::FontLayer,
+				Alignment::TopLeft, faded(Colorf(0.5f, 0.5f, 0.5f, 0.5f), alpha), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
-			_root->DrawStringShadow(row.Name, charOffset, colName, rowY, IMenuContainer::FontLayer,
-				Alignment::TopLeft, nameColor, 0.76f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_root->DrawStringShadow(row.Name, charOffset, colName, drawY, IMenuContainer::FontLayer,
+				Alignment::TopLeft, faded(nameColor, alpha), 0.76f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 			if (hasExtra) {
 				std::size_t length = formatInto(buffer, "{}", row.Extra);
-				_root->DrawStringShadow({ buffer, length }, charOffset, colExtra, rowY, IMenuContainer::FontLayer,
-					Alignment::Top, Font::DefaultColor, 0.76f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				_root->DrawStringShadow({ buffer, length }, charOffset, colExtra, drawY, IMenuContainer::FontLayer,
+					Alignment::Top, faded(Font::DefaultColor, alpha), 0.76f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			}
 
 			std::size_t length = formatInto(buffer, "{}", row.Kills);
-			_root->DrawStringShadow({ buffer, length }, charOffset, colK, rowY, IMenuContainer::FontLayer,
-				Alignment::Top, Font::DefaultColor, 0.76f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_root->DrawStringShadow({ buffer, length }, charOffset, colK, drawY, IMenuContainer::FontLayer,
+				Alignment::Top, faded(Font::DefaultColor, alpha), 0.76f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 			length = formatInto(buffer, "{}", row.Deaths);
-			_root->DrawStringShadow({ buffer, length }, charOffset, colD, rowY, IMenuContainer::FontLayer,
-				Alignment::Top, Font::DefaultColor, 0.76f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_root->DrawStringShadow({ buffer, length }, charOffset, colD, drawY, IMenuContainer::FontLayer,
+				Alignment::Top, faded(Font::DefaultColor, alpha), 0.76f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 			length = formatInto(buffer, "{}", row.Points);
-			_root->DrawStringShadow({ buffer, length }, charOffset, colPts, rowY, IMenuContainer::FontLayer,
-				Alignment::Top, Font::DefaultColor, 0.76f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_root->DrawStringShadow({ buffer, length }, charOffset, colPts, drawY, IMenuContainer::FontLayer,
+				Alignment::Top, faded(Font::DefaultColor, alpha), 0.76f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 
 			if (row.PingMs < 0) {
-				_root->DrawStringShadow("-"_s, charOffset, colPing, rowY, IMenuContainer::FontLayer,
-					Alignment::Top, Colorf(0.5f, 0.5f, 0.5f, 0.5f), 0.76f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				_root->DrawStringShadow("-"_s, charOffset, colPing, drawY, IMenuContainer::FontLayer,
+					Alignment::Top, faded(Colorf(0.5f, 0.5f, 0.5f, 0.5f), alpha), 0.76f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			} else {
 				length = formatInto(buffer, "{}", row.PingMs);
-				_root->DrawStringShadow({ buffer, length }, charOffset, colPing, rowY, IMenuContainer::FontLayer,
-					Alignment::Top, Font::DefaultColor, 0.76f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+				_root->DrawStringShadow({ buffer, length }, charOffset, colPing, drawY, IMenuContainer::FontLayer,
+					Alignment::Top, faded(Font::DefaultColor, alpha), 0.76f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 			}
 
 			rowY += RowHeight;
 		}
 
-		// Scroll hints
+		// Scroll hints (slide with the table)
 		if (scroll > 0) {
-			_root->DrawStringShadow("^"_s, charOffset, contentBounds.X + contentBounds.W * 0.5f, headerY + 13.0f, IMenuContainer::FontLayer,
-				Alignment::Top, Colorf(0.7f, 0.7f, 0.7f, 0.5f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_root->DrawStringShadow("^"_s, charOffset, contentBounds.X + contentBounds.W * 0.5f, headerY + 13.0f + slideY, IMenuContainer::FontLayer,
+				Alignment::Top, faded(Colorf(0.7f, 0.7f, 0.7f, 0.5f), alpha), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 		}
 		if (scroll + visibleRows < count) {
-			_root->DrawStringShadow("v"_s, charOffset, contentBounds.X + contentBounds.W * 0.5f, rowY, IMenuContainer::FontLayer,
-				Alignment::Top, Colorf(0.7f, 0.7f, 0.7f, 0.5f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+			_root->DrawStringShadow("v"_s, charOffset, contentBounds.X + contentBounds.W * 0.5f, rowY + slideY, IMenuContainer::FontLayer,
+				Alignment::Top, faded(Colorf(0.7f, 0.7f, 0.7f, 0.5f), alpha), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 		}
 	}
 

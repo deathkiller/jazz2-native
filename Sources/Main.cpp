@@ -259,7 +259,7 @@ void GameEventHandler::OnInitialize()
 	OnBeginInitialize();
 
 #if !defined(SHAREWARE_DEMO_ONLY) && !(defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER))
-	if (PreferencesCache::ResumeOnStart) {
+	if (PreferencesCache::ResumeOnStart && !ContentResolver::Get().IsHeadless()) {
 		LOGI("Resuming last state due to suspended termination");
 		PreferencesCache::ResumeOnStart = false;
 		PreferencesCache::Save();
@@ -979,6 +979,7 @@ bool GameEventHandler::CreateServer(ServerInitialization&& serverInit)
 		serverInit.Configuration.TotalLaps = playlistEntry.TotalLaps;
 		serverInit.Configuration.TotalTreasureCollected = playlistEntry.TotalTreasureCollected;
 		serverInit.Configuration.AllowMinimap = playlistEntry.AllowMinimap;
+		serverInit.Configuration.ColorizePlayersByTeam = playlistEntry.ColorizePlayersByTeam;
 		serverInit.Configuration.GameMode = playlistEntry.GameMode;
 	}
 

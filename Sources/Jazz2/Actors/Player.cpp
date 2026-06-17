@@ -125,17 +125,21 @@ namespace Jazz2::Actors
 
 	std::uint32_t Player::GetEffectiveFurColor() const
 	{
+		// The level handler may force a color (multiplayer team modes recolor players to their team color); this
+		// applies even when the player picked no custom color of their own.
+		std::uint32_t furColor = _levelHandler->GetPlayerFurColor(this, _furColor);
+
 		// Online multiplayer always recolors the local player; local games depend on the "Apply Colors" preference
 		// (and the player index for the "first player only" mode).
-		if (_furColor == 0) {
+		if (furColor == 0) {
 			return 0;
 		}
 		if (!_levelHandler->IsLocalSession()) {
-			return _furColor;
+			return furColor;
 		}
 		switch (PreferencesCache::PlayerColors) {
-			case PlayerColorMode::FirstLocalPlayer: return (_playerIndex == 0 ? _furColor : 0);
-			case PlayerColorMode::AllLocalPlayers: return _furColor;
+			case PlayerColorMode::FirstLocalPlayer: return (_playerIndex == 0 ? furColor : 0);
+			case PlayerColorMode::AllLocalPlayers: return furColor;
 			default: return 0; // OnlineOnly
 		}
 	}

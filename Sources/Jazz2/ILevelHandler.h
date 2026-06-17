@@ -102,6 +102,15 @@ namespace Jazz2
 		virtual ArrayView<const std::shared_ptr<Actors::ActorBase>> GetActors() const = 0;
 		/** @brief Returns list of players */
 		virtual ArrayView<Actors::Player* const> GetPlayers() const = 0;
+		/**
+		 * @brief Returns the fur color a player should actually be recolored with
+		 *
+		 * Lets the level handler override a player's configured color; multiplayer team modes use this to force
+		 * the team color. The default returns @p furColor unchanged.
+		 */
+		virtual std::uint32_t GetPlayerFurColor(const Actors::Player* player, std::uint32_t furColor) const {
+			return furColor;
+		}
 
 		/** @brief Returns default ambient light intensity */
 		virtual float GetDefaultAmbientLight() const = 0;

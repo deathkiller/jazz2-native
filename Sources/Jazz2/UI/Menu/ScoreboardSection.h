@@ -27,7 +27,7 @@ namespace Jazz2::UI::Menu
 
 	private:
 		std::int32_t _scrollOffset;
-		float _animation;
+		float _transition;
 
 		std::int32_t GetVisibleRows() const;
 	};

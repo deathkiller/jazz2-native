@@ -93,6 +93,7 @@ namespace Jazz2::Multiplayer
 
 		bool IsLocalSession() const override;
 		bool IsServer() const override;
+		std::uint32_t GetPlayerFurColor(const Actors::Player* player, std::uint32_t furColor) const override;
 		bool IsPausable() const override;
 		bool CanActivateSugarRush() const override;
 		bool CanEventDisappear(EventType eventType) const override;
@@ -447,6 +448,8 @@ namespace Jazz2::Multiplayer
 		bool ChangePlayerTeam(Actors::Multiplayer::MpPlayer* player, std::uint8_t requestedTeam, bool fromAdmin);
 		void RebalanceTeams(bool force);
 		void BroadcastPlayerTeam(Actors::Multiplayer::MpPlayer* player);
+		std::uint32_t ColorizeFurForTeam(std::uint32_t furColor, std::uint8_t team) const;
+		void RecolorRemoteActor(std::uint32_t actorId, std::uint32_t furColor, std::uint8_t team);
 		std::uint32_t GetTeamScore(std::uint8_t team);
 		void SyncTeamScores();
 

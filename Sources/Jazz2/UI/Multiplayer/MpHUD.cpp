@@ -101,13 +101,6 @@ namespace Jazz2::UI::Multiplayer
 
 		std::int32_t charOffset = 0;
 
-		// Debug information
-		std::int32_t debugCharOffset = 0, debugShadowCharOffset = 0;
-		_smallFont->DrawString(this, "This is online multiplayer preview, not final release!"_s, debugShadowCharOffset, ViewSize.X / 2, 1.0f + 1.0f,
-			180, Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.76f, 0.7f, 0.7f, 0.7f, 0.2f, 0.9f);
-		_smallFont->DrawString(this, "This is online multiplayer preview, not final release!"_s, debugCharOffset, ViewSize.X / 2, 1.0f,
-			190, Alignment::Top, Colorf(0.62f, 0.44f, 0.34f, 0.46f), 0.76f, 0.7f, 0.7f, 0.7f, 0.2f, 0.9f);
-
 		if (_countdownTimeLeft > 0.0f) {
 			float textScale = 2.0f - std::min(_countdownTimeLeft / FrameTimer::FramesPerSecond, 1.0f);
 			Colorf textColor = Font::DefaultColor;
@@ -117,6 +110,7 @@ namespace Jazz2::UI::Multiplayer
 		}
 
 		if (PreferencesCache::ShowPerformanceMetrics) {
+			std::int32_t debugCharOffset = 0;
 			auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
 			if (mpLevelHandler->_isServer) {
 #if defined(DEATH_DEBUG)

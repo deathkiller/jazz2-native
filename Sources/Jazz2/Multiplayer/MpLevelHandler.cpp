@@ -138,6 +138,46 @@ namespace Jazz2::Multiplayer
 		return _isServer;
 	}
 
+	std::uint32_t MpLevelHandler::ColorizeFurForTeam(std::uint32_t furColor, std::uint8_t team) const
+	{
+		// In team modes with team coloring enabled, force the first two color sections to the team color. Kept
+		// consistent on server and clients - both have the synced ColorizePlayersByTeam flag and team ids.
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		if (serverConfig.ColorizePlayersByTeam && IsTeamGameMode(serverConfig.GameMode)) {
+			return ApplyTeamFurColor(furColor, team);
+		}
+		return furColor;
+	}
+
+	std::uint32_t MpLevelHandler::GetPlayerFurColor(const Actors::Player* player, std::uint32_t furColor) const
+	{
+		if (auto* mpPlayer = runtime_cast<MpPlayer>(player)) {
+			if (auto peerDesc = mpPlayer->GetPeerDescriptor()) {
+				return ColorizeFurForTeam(furColor, peerDesc->Team);
+			}
+		}
+		return furColor;
+	}
+
+	void MpLevelHandler::RecolorRemoteActor(std::uint32_t actorId, std::uint32_t furColor, std::uint8_t team)
+	{
+		// (Re)applies the effective (team-aware) fur color to a remote player actor if it currently exists. Looks the
+		// actor up under the lock, then recolors after releasing it - SetPlayerColor reloads metadata (file I/O),
+		// which must not run while holding the spinlock.
+		std::uint32_t effectiveColor = ColorizeFurForTeam(furColor, team);
+		std::shared_ptr<Actors::ActorBase> actor;
+		{
+			std::unique_lock lock(_lock);
+			auto it = _remoteActors.find(actorId);
+			if (it != _remoteActors.end()) {
+				actor = it->second;
+			}
+		}
+		if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(actor.get())) {
+			remoteActor->SetPlayerColor(effectiveColor);
+		}
+	}
+
 	bool MpLevelHandler::IsPausable() const
 	{
 		return false;
@@ -2547,7 +2587,7 @@ namespace Jazz2::Multiplayer
 				continue;
 			}
 
-			MemoryStream packet(26);
+			MemoryStream packet(27);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::GameMode);
 			packet.WriteValue<std::uint8_t>(flags);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
@@ -2559,6 +2599,7 @@ namespace Jazz2::Multiplayer
 			packet.WriteVariableUint32(serverConfig.TotalKills);
 			packet.WriteVariableUint32(serverConfig.TotalLaps);
 			packet.WriteVariableUint32(serverConfig.TotalTreasureCollected);
+			packet.WriteValue<std::uint8_t>(serverConfig.ColorizePlayersByTeam ? 1 : 0);
 
 			_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
 		}
@@ -4104,11 +4145,13 @@ namespace Jazz2::Multiplayer
 							std::uint32_t totalKills = packet.ReadVariableUint32();
 							std::uint32_t totalLaps = packet.ReadVariableUint32();
 							std::uint32_t totalTreasureCollected = packet.ReadVariableUint32();
+							bool colorizePlayersByTeam = (packet.ReadValue<std::uint8_t>() != 0);
 
 							LOGD("[MP] ServerPacketType::LevelSetProperty::GameMode - mode: {}", gameMode);
 
 							auto& serverConfig = _networkManager->GetServerConfiguration();
 							serverConfig.GameMode = gameMode;
+							serverConfig.ColorizePlayersByTeam = colorizePlayersByTeam;
 							serverConfig.ReforgedGameplay = (flags & 0x01) != 0;
 							serverConfig.Elimination = (flags & 0x04) != 0;
 							serverConfig.EnableSpectate = (flags & 0x08) != 0;
@@ -4129,6 +4172,18 @@ namespace Jazz2::Multiplayer
 							if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
 								peerDesc->Team = teamId;
 							}
+
+							// Re-apply team colors to all visible players now that the mode / team-coloring flag is
+							// (re)synced (touches the renderer, so defer to the main thread; a no-op when disabled).
+							// _playerNames is the set of remote players (the local players live in _players).
+							InvokeAsync([this]() {
+								for (auto* player : _players) {
+									player->RefreshColorPalette();
+								}
+								for (auto& [actorId, playerName] : _playerNames) {
+									RecolorRemoteActor(actorId, playerName.FurColor, playerName.Team);
+								}
+							});
 							break;
 						}
 						case LevelPropertyType::Music: {
@@ -4398,6 +4453,10 @@ namespace Jazz2::Multiplayer
 							peerDesc->CarryOver = carryOver;
 							peerDesc->HasCarryOver = true;
 						}
+						// Assign the team before activating the player so the spawn-time recolor (GetEffectiveFurColor)
+						// resolves the correct team color when team coloring is enabled
+						peerDesc->Team = teamId;
+
 						std::shared_ptr<Actors::Multiplayer::RemotablePlayer> player = std::make_shared<Actors::Multiplayer::RemotablePlayer>(peerDesc);
 						std::uint8_t playerParams[2] = { (std::uint8_t)playerType, 0 };
 						player->OnActivated(Actors::ActorActivationDetails(
@@ -4410,7 +4469,6 @@ namespace Jazz2::Multiplayer
 						player->_controllable = (flags & 0x01) != 0;
 						player->_controllableExternal = (flags & 0x02) != 0;
 
-						peerDesc->Team = teamId;
 						peerDesc->LapStarted = TimeStamp::now();
 						// Spawning as a real player clears any stale spectate state on the client; a spectate spawn
 						// sends a separate PlayerSetProperty::Spectate right after to set it back
@@ -4465,10 +4523,14 @@ namespace Jazz2::Multiplayer
 						remoteActor->OnActivated(Actors::ActorActivationDetails(this, Vector3i(posX, posY, posZ)));
 
 						// If this actor was already marked as a player with a custom color, apply it before assigning
-						// metadata so the sprites load indexed and the palette is set
+						// metadata so the sprites load indexed and the palette is set. Team coloring may force a color
+						// even when the player has none of their own.
 						auto pnIt = _playerNames.find(actorId);
-						if (pnIt != _playerNames.end() && pnIt->second.FurColor != 0) {
-							remoteActor->SetPlayerColor(pnIt->second.FurColor);
+						if (pnIt != _playerNames.end()) {
+							std::uint32_t furColor = ColorizeFurForTeam(pnIt->second.FurColor, pnIt->second.Team);
+							if (furColor != 0) {
+								remoteActor->SetPlayerColor(furColor);
+							}
 						}
 
 						remoteActor->AssignMetadata(flags, state, metadataPath, anim, rotation, scaleX, scaleY, rendererType);
@@ -4691,23 +4753,15 @@ namespace Jazz2::Multiplayer
 							if (hasTeam) {
 								it.first->second.Team = team;
 							}
-
 							if (hasFurColor) {
 								it.first->second.FurColor = furColor;
+							}
 
-								// Apply the color now if the actor already exists (otherwise CreateRemoteActor will
-								// pick it up from _playerNames)
-								std::shared_ptr<Actors::ActorBase> actor;
-								{
-									std::unique_lock lock(_lock);
-									auto actorIt = _remoteActors.find(actorId);
-									if (actorIt != _remoteActors.end()) {
-										actor = actorIt->second;
-									}
-								}
-								if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(actor.get())) {
-									remoteActor->SetPlayerColor(furColor);
-								}
+							if (hasFurColor || hasTeam) {
+								// (Re)apply the effective color if the actor already exists (otherwise CreateRemoteActor
+								// picks it up from _playerNames). Team coloring can force a color even when the player
+								// has none of their own, so this runs whenever the color or team is known.
+								RecolorRemoteActor(actorId, it.first->second.FurColor, it.first->second.Team);
 							}
 						}
 					});
@@ -4823,9 +4877,16 @@ namespace Jazz2::Multiplayer
 								if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
 									peerDesc->Team = team;
 								}
+								// Recolor the local player: with team coloring on, GetEffectiveFurColor now resolves
+								// the new team (no-op otherwise)
+								if (!_players.empty()) {
+									_players[0]->RefreshColorPalette();
+								}
 							} else {
 								auto it = _playerNames.try_emplace(playerIndex, PlayerName{});
 								it.first->second.Team = team;
+								// Recolor the matching remote actor for its new team
+								RecolorRemoteActor(playerIndex, it.first->second.FurColor, team);
 							}
 						});
 						return true;
@@ -5574,6 +5635,13 @@ namespace Jazz2::Multiplayer
 
 				LOGI("Syncing peer [{}]", peer);
 
+				// Sync the game mode (incl. the team-coloring flag) to this peer BEFORE the remote actors below and
+				// before its own player spawns next tick (PlayerReady branch). The client decides at spawn time whether
+				// to load player sprites indexed (recolorable) based on the effective fur color, which depends on this
+				// flag - if it arrived only at round start (after spawn), default-color players would load non-indexed
+				// and could never be team-recolored. Reliable-ordered channel guarantees it lands first.
+				SynchronizeGameMode();
+
 				// TODO: Send positions only to the newly connected player
 				CalculatePositionInRound(true);
 
@@ -5712,6 +5780,13 @@ namespace Jazz2::Multiplayer
 					LOGI("Spawning player {} [{}]", playerIndex, peer);
 
 					std::shared_ptr<Actors::Multiplayer::RemotePlayerOnServer> player = std::make_shared<Actors::Multiplayer::RemotePlayerOnServer>(peerDesc);
+					// In team-coloring modes, resolve the team BEFORE activating so the spawn-time recolor decision
+					// (GetEffectiveFurColor in OnActivatedAsync) loads the sprites indexed and applies the team color
+					// even for players with no custom color of their own. ApplyGameModeToPlayer below re-resolves to the
+					// same team and refreshes once the sprites are loaded.
+					if (serverConfig.ColorizePlayersByTeam && IsTeamGameMode(serverConfig.GameMode)) {
+						peerDesc->Team = ResolveTeam(player.get(), peerDesc->PreferredTeam);
+					}
 					std::uint8_t playerParams[2] = { (std::uint8_t)peerDesc->PreferredPlayerType, (std::uint8_t)playerIndex };
 					player->OnActivated(Actors::ActorActivationDetails(
 						this,
@@ -6112,6 +6187,13 @@ namespace Jazz2::Multiplayer
 			auto peerDesc = mpPlayer->GetPeerDescriptor();
 			peerDesc->Team = ResolveTeam(mpPlayer, peerDesc->PreferredTeam);
 		}
+
+		// Broadcast every player's (re)assigned team so all clients update their team colors, nametags and
+		// scoreboard - SynchronizeGameMode only tells each peer its own team, not the others'. This also recolors
+		// the host's own view (a no-op when team coloring is off or on a headless server).
+		for (auto* player : _players) {
+			BroadcastPlayerTeam(static_cast<MpPlayer*>(player));
+		}
 	}
 
 	void MpLevelHandler::ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player)
@@ -6119,6 +6201,8 @@ namespace Jazz2::Multiplayer
 		auto* mpPlayer = static_cast<MpPlayer*>(player);
 		auto peerDesc = mpPlayer->GetPeerDescriptor();
 		peerDesc->Team = ResolveTeam(mpPlayer, peerDesc->PreferredTeam);
+		// Recolor for the assigned team (no-op when team coloring is off or on a headless server)
+		player->RefreshColorPalette();
 	}
 
 	bool MpLevelHandler::ChangePlayerTeam(MpPlayer* player, std::uint8_t requestedTeam, bool fromAdmin)
@@ -6299,6 +6383,10 @@ namespace Jazz2::Multiplayer
 		}
 
 		auto peerDesc = player->GetPeerDescriptor();
+
+		// Recolor the player for the host's own view (team coloring resolves the new team via GetEffectiveFurColor;
+		// no-op when disabled or on a headless server)
+		player->RefreshColorPalette();
 
 		MemoryStream packet(8);
 		packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Team);
@@ -8441,6 +8529,12 @@ namespace Jazz2::Multiplayer
 		} else {
 			// Initialize the actor as real player
 			Vector2f spawnPosition = GetSpawnPoint(peerDesc->PreferredPlayerType, peerDesc->Team);
+			// In team-coloring modes, resolve the team before activating so the spawn-time recolor decision loads the
+			// sprites indexed even for default-color players (see the join spawn above); ApplyGameModeToPlayer below
+			// re-resolves to the same team and refreshes afterwards.
+			if (serverConfig.ColorizePlayersByTeam && IsTeamGameMode(serverConfig.GameMode)) {
+				peerDesc->Team = ResolveTeam(ptr, peerDesc->PreferredTeam);
+			}
 			std::uint8_t playerParams[2] = { (std::uint8_t)peerDesc->PreferredPlayerType, (std::uint8_t)playerIndex };
 			ptr->OnActivated(Actors::ActorActivationDetails(this,
 				Vector3i((std::int32_t)spawnPosition.X, (std::int32_t)spawnPosition.Y, PlayerZ - playerIndex),
@@ -8802,6 +8896,7 @@ namespace Jazz2::Multiplayer
 		serverConfig.TotalTreasureCollected = playlistEntry.TotalTreasureCollected;
 		serverConfig.PlayerStacking = playlistEntry.PlayerStacking;
 		serverConfig.AllowMinimap = playlistEntry.AllowMinimap;
+		serverConfig.ColorizePlayersByTeam = playlistEntry.ColorizePlayersByTeam;
 
 		_autoWeightTreasure = (serverConfig.TotalTreasureCollected == 0);
 

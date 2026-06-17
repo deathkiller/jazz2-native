@@ -59,8 +59,10 @@ namespace Jazz2::Multiplayer
 		std::uint32_t OvertimeSecs;
 		/** @brief Whether players can stand on top of each other; if disabled, they bump apart on every axis */
 		bool PlayerStacking;
-		/** @brief Whether the race minimap is available to clients (Race/TeamRace only, ignored in other modes) */
+		/** @brief Whether the race minimap is available to clients (Race only) */
 		bool AllowMinimap;
+		/** @brief Whether players are recolored to their team color in team modes (forces the first 2 fur sections, ignored in non-team modes) */
+		bool ColorizePlayersByTeam;
 	};
 
 	/**
@@ -126,6 +128,8 @@ namespace Jazz2::Multiplayer
 		-   @cpp "MaxTeamSizeDiff" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Allowed player-count difference between the largest and smallest team before rebalancing (default is **1**)
 		-   @cpp "AllowTeamSelection" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players may pick/change their own team (default is **true**)
 		-   @cpp "FriendlyFire" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players on the same team can damage each other (default is **false**)
+		-   @cpp "AllowMinimap" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether the race minimap is available to clients (Race only) (default is **true**)
+		-   @cpp "ColorizePlayersByTeam" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether players are recolored to their team color in team modes, forcing the first 2 character color sections (default is **true**)
 		-   @cpp "Elimination" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether elimination mode is enabled
 			-   If enabled, a player has a limited number of lives given by @cpp "TotalKills" @ce property
 			-   Game ends when only one player remains, or when the conditions of the specified game mode are met
@@ -238,8 +242,10 @@ namespace Jazz2::Multiplayer
 		bool FriendlyFire;
 		/** @brief Whether to play the playlist in random order */
 		bool RandomizePlaylist;
-		/** @brief Whether the race minimap is available to clients (Race/TeamRace only, ignored in other modes) */
+		/** @brief Whether the race minimap is available to clients (Race only) */
 		bool AllowMinimap;
+		/** @brief Whether players are recolored to their team color in team modes (forces the first 2 fur sections, ignored in non-team modes) */
+		bool ColorizePlayersByTeam;
 		/** @brief Whether every player has limited number of lives, the game ends when only one player remains */
 		bool Elimination;
 		/** @brief Total player points to win the championship */

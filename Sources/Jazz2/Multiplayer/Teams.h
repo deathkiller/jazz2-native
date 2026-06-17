@@ -35,8 +35,8 @@ namespace Jazz2::Multiplayer
 		switch (team) {
 			case 0: return nCine::Colorf(0.3f, 0.48f, 0.74f, 1.0f);		// Blue
 			case 1: return nCine::Colorf(0.68f, 0.36f, 0.36f, 1.0f);	// Red
-			case 2: return nCine::Colorf(0.36f, 0.80f, 0.40f, 1.0f);	// Green
-			case 3: return nCine::Colorf(0.8f, 0.76f, 0.32f, 1.0f);		// Yellow
+			case 2: return nCine::Colorf(0.34f, 0.48f, 0.32f, 1.0f);	// Green
+			case 3: return nCine::Colorf(0.62f, 0.44f, 0.34f, 1.0f);	// Yellow
 			default: return nCine::Colorf(0.7f, 0.7f, 0.7f, 1.0f);		// Neutral
 		}
 	}
@@ -51,6 +51,28 @@ namespace Jazz2::Multiplayer
 			case 3: return "Yellow";
 			default: return "Neutral";
 		}
+	}
+
+	/**
+		@brief Recolors a packed fur color so the first two character color sections match the team color
+
+		Forces the low two bytes (the first two of the four packed fur sections) of @p furColor to the team's
+		signature sprite-palette gradient start, keeping the player's own choice for the remaining sections. The
+		gradient bytes match the in-game character color options (@ref Jazz2::ContentResolver::FurHueShiftFlag =
+		`0x80` marks a hue-shifted variant): Red = `0x18`, Blue = `0x20`, Yellow = `0x28`, Green = `0x58 | 0x80`
+		(the last hue-shifted variant). Unknown/neutral teams are left unchanged.
+	*/
+	inline std::uint32_t ApplyTeamFurColor(std::uint32_t furColor, std::uint8_t team)
+	{
+		std::uint8_t gradient;
+		switch (team) {
+			case 0: gradient = 0x20; break;			// Blue
+			case 1: gradient = 0x18; break;			// Red
+			case 2: gradient = 0x58 | 0x80; break;	// Green (hue-shifted variant)
+			case 3: gradient = 0x28; break;			// Yellow
+			default: return furColor;				// Neutral / no team - leave the player's own color
+		}
+		return (furColor & 0xFFFF0000u) | (std::uint32_t)gradient | ((std::uint32_t)gradient << 8);
 	}
 }
 

@@ -193,6 +193,7 @@ namespace Jazz2::Multiplayer
 		ServerConfiguration serverConfig{};
 		serverConfig.AllowAssetStreaming = true;
 		serverConfig.AllowMinimap = true;
+		serverConfig.ColorizePlayersByTeam = true;
 		serverConfig.GameMode = MpGameMode::Cooperation;
 		serverConfig.AllowedPlayerTypes = 0x01 | 0x02 | 0x04;
 		serverConfig.IdleKickTimeSecs = -1;
@@ -216,7 +217,7 @@ namespace Jazz2::Multiplayer
 		serverConfig.AllowJoinDuringRound = true;
 		serverConfig.JoinCooldownSecs = 0;
 
-		serverConfig.TeamCount = 2;
+		serverConfig.TeamCount = 4;
 		serverConfig.AutoBalanceTeams = true;
 		serverConfig.MaxTeamSizeDiff = 1;
 		serverConfig.AllowTeamSelection = true;
@@ -438,6 +439,11 @@ namespace Jazz2::Multiplayer
 					serverConfig.AllowMinimap = allowMinimap;
 				}
 
+				bool colorizePlayersByTeam;
+				if (doc["ColorizePlayersByTeam"].get(colorizePlayersByTeam) == Json::SUCCESS) {
+					serverConfig.ColorizePlayersByTeam = colorizePlayersByTeam;
+				}
+
 				bool elimination;
 				if (doc["Elimination"].get(elimination) == Json::SUCCESS) {
 					serverConfig.Elimination = elimination;
@@ -564,6 +570,7 @@ namespace Jazz2::Multiplayer
 						playlistEntry.OvertimeSecs = serverConfig.OvertimeSecs;
 						playlistEntry.PlayerStacking = serverConfig.PlayerStacking;
 						playlistEntry.AllowMinimap = serverConfig.AllowMinimap;
+						playlistEntry.ColorizePlayersByTeam = serverConfig.ColorizePlayersByTeam;
 
 						std::string_view levelName;
 						if (entry["LevelName"].get(levelName) == Json::SUCCESS) {
@@ -613,6 +620,11 @@ namespace Jazz2::Multiplayer
 						bool entryAllowMinimap;
 						if (entry["AllowMinimap"].get(entryAllowMinimap) == Json::SUCCESS) {
 							playlistEntry.AllowMinimap = entryAllowMinimap;
+						}
+
+						bool entryColorizePlayersByTeam;
+						if (entry["ColorizePlayersByTeam"].get(entryColorizePlayersByTeam) == Json::SUCCESS) {
+							playlistEntry.ColorizePlayersByTeam = entryColorizePlayersByTeam;
 						}
 
 						std::int64_t initialPlayerHealth;

@@ -181,14 +181,14 @@ namespace Jazz2::UI::Multiplayer
 					float x = center.X - teamOffset + t * teamSpacing;
 					bool isAuto = (t >= _teamCount);
 					StringView label = (isAuto ? _("Auto") : GetTeamName((std::uint8_t)t));
-					Colorf color = (isAuto ? Colorf(0.7f, 0.7f, 0.7f, 0.5f) : GetTeamColor((std::uint8_t)t));
+					Colorf color = (isAuto ? Colorf(0.52f, 0.52f, 0.52f, 0.5f) : GetTeamColor((std::uint8_t)t));
 
 					if (_selectedTeam == t) {
 						float tsize = (_focusRow == 1 ? 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.5f : 0.9f);
 						Colorf glowColor = color;
 						glowColor.SetAlpha(0.3f);
 						DrawElement(MenuGlow, 0, x, teamRowY, MainLayer - 20, Alignment::Center,
-							glowColor, 2.6f, 4.0f, true, true);
+							glowColor, 4.0f, 5.0f, true, true);
 						DrawStringShadow(label, charOffset, x, teamRowY, MainLayer,
 							Alignment::Center, color, tsize, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
 					} else {
@@ -206,6 +206,9 @@ namespace Jazz2::UI::Multiplayer
 			// Navigation arrows at the currently focused row
 			{
 				float size = 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+
+				DrawElement(MenuGlow, 0, center.X, arrowRowY - 32.0f, MainLayer, Alignment::Center,
+					Colorf(1.0f, 1.0f, 1.0f, 0.2f), 5.0f, 5.0f, true, true);
 
 				Colorf fontColor = Font::DefaultColor;
 				fontColor.SetAlpha(std::min(1.0f, 0.6f + _animation));
