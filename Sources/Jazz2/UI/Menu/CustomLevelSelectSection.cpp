@@ -147,14 +147,10 @@ namespace Jazz2::UI::Menu
 		float topLine = contentBounds.Y + TopLine;
 		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
 
-		_root->DrawElement(MenuDim, centerX, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
-			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawMenuFrame(centerX, topLine, bottomLine);
 
 		std::int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Play Custom Levels"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer, Alignment::Center,
-			Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+		_root->DrawMenuTitle(charOffset, _("Play Custom Levels"), centerX, topLine);
 	}
 
 	void CustomLevelSelectSection::OnDrawClipped(Canvas* canvas)

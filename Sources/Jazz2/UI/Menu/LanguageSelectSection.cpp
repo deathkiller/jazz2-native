@@ -1,71 +1,18 @@
-﻿#include "LanguageSelectSection.h"
-#include "MenuResources.h"
+#include "LanguageSelectSection.h"
 #include "../../PreferencesCache.h"
 #include "../../../nCine/I18n.h"
 
 #include <Containers/StringConcatenable.h>
 
-using namespace Jazz2::UI::Menu::Resources;
-
 namespace Jazz2::UI::Menu
 {
-	LanguageSelectSection::LanguageSelectSection()
-	{
-		auto& resolver = ContentResolver::Get();
-
-		auto& defaultLanguage = _items.emplace_back();
-		defaultLanguage.Item.DisplayName = "English \f[c:#707070]· en"_s;
-
-		// Search first "Cache/Translations/" and then "Content/Translations/"
-		HashMap<String, bool> foundLanguages;
-		for (auto item : fs::Directory(fs::CombinePath(resolver.GetCachePath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
-			AddLanguage(item, foundLanguages, true);
-		}
-
-		for (auto item : fs::Directory(fs::CombinePath(resolver.GetContentPath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
-			AddLanguage(item, foundLanguages, false);
-		}
-	}
-
-	void LanguageSelectSection::OnDraw(Canvas* canvas)
-	{
-		Recti contentBounds = _root->GetContentBounds();
-		float centerX = contentBounds.X + contentBounds.W * 0.5f;
-		float topLine = contentBounds.Y + TopLine;
-		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
-
-		_root->DrawElement(MenuDim, centerX, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
-			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-
-		std::int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Language"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
-			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
-	}
-
-	void LanguageSelectSection::OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected)
-	{
-		float centerX = canvas->ViewSize.X * 0.5f;
-
-		if (isSelected) {
-			float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
-
-			_root->DrawStringGlow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
-				Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
-		} else {
-			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer,
-				Alignment::Center, Font::DefaultColor, 0.9f);
-		}
-	}
-
-	void LanguageSelectSection::OnExecuteSelected()
+	// Applies the chosen language and recreates the menu (or leaves the section on failure)
+	static void ApplyLanguage(IMenuContainer* root, const String& fileName)
 	{
 		bool success = false;
-		auto& selectedItem = _items[_selectedIndex];
-		if (!selectedItem.Item.FileName.empty()) {
-			if (I18n::Get().LoadFromFile(selectedItem.Item.FileName)) {
-				auto language = fs::GetFileNameWithoutExtension(selectedItem.Item.FileName);
+		if (!fileName.empty()) {
+			if (I18n::Get().LoadFromFile(fileName)) {
+				auto language = fs::GetFileNameWithoutExtension(fileName);
 				std::memcpy(PreferencesCache::Language, language.data(), language.size());
 				std::memset(PreferencesCache::Language + language.size(), 0, sizeof(PreferencesCache::Language) - language.size());
 				success = true;
@@ -76,41 +23,69 @@ namespace Jazz2::UI::Menu
 			success = true;
 		}
 
-		_root->PlaySfx("MenuSelect"_s, 0.6f);
-
 		if (success) {
 			PreferencesCache::Save();
-			// It will automatically recreate the menu
-			_root->ApplyPreferencesChanges(ChangedPreferencesType::Language);
+			// This recreates the whole menu (destroying this section), so it must be the last thing done
+			root->ApplyPreferencesChanges(ChangedPreferencesType::Language);
 		} else {
-			_root->LeaveSection();
+			root->LeaveSection();
 		}
 	}
 
-	void LanguageSelectSection::AddLanguage(const StringView languageFile, HashMap<String, bool>& foundLanguages, bool fromCache)
+	void LanguageSelectSection::OnShow(IMenuContainer* root)
 	{
-		if (fs::GetExtension(languageFile) != "mo"_s) {
+		MenuSection::OnShow(root);
+
+		if (_content != nullptr) {
 			return;
 		}
 
-		auto language = fs::GetFileNameWithoutExtension(languageFile);
-		if (language.empty() || language.size() >= sizeof(PreferencesCache::Language)) {
-			return;
+		SetTitle(_("Language"));
+
+		auto& resolver = ContentResolver::Get();
+		auto list = std::make_unique<ScrollView>();
+
+		// Default (built-in English)
+		list->Add<ListItem>("English \f[c:#707070]· en"_s, [root]() { ApplyLanguage(root, {}); });
+
+		std::int32_t selectedIndex = 0;
+		std::int32_t nextIndex = 1;
+		HashMap<String, bool> foundLanguages;
+
+		auto addLanguage = [&](StringView languageFile, bool fromCache) {
+			if (fs::GetExtension(languageFile) != "mo"_s) {
+				return;
+			}
+			auto language = fs::GetFileNameWithoutExtension(languageFile);
+			if (language.empty() || language.size() >= sizeof(PreferencesCache::Language)) {
+				return;
+			}
+			// Add each language only once (cache directory takes precedence over content)
+			if (!foundLanguages.try_emplace(language, true).second) {
+				return;
+			}
+
+			String displayName = fromCache
+				? String{I18n::GetLanguageName(language) + " \f[c:#707070]· "_s + language + "⁺"_s}
+				: String{I18n::GetLanguageName(language) + " \f[c:#707070]· "_s + language};
+			if (language == StringView(PreferencesCache::Language)) {
+				selectedIndex = nextIndex;
+			}
+
+			String fileName = languageFile;
+			list->Add<ListItem>(displayName, [root, fileName]() { ApplyLanguage(root, fileName); });
+			nextIndex++;
+		};
+
+		// Search first "Cache/Translations/" and then "Content/Translations/"
+		for (auto item : fs::Directory(fs::CombinePath(resolver.GetCachePath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
+			addLanguage(item, true);
+		}
+		for (auto item : fs::Directory(fs::CombinePath(resolver.GetContentPath(), "Translations"_s), fs::EnumerationOptions::SkipDirectories)) {
+			addLanguage(item, false);
 		}
 
-		// Add each language only once
-		if (!foundLanguages.try_emplace(language, true).second) {
-			return;
-		}
-
-		if (language == StringView(PreferencesCache::Language)) {
-			_selectedIndex = _items.size();
-		}
-
-		auto& episode = _items.emplace_back();
-		episode.Item.FileName = languageFile;
-		episode.Item.DisplayName = fromCache
-			? String{I18n::GetLanguageName(language) + " \f[c:#707070]· "_s + language + "⁺"_s}
-			: String{I18n::GetLanguageName(language) + " \f[c:#707070]· "_s + language};
+		list->SetSelectedIndex(selectedIndex);
+		SetContent(std::move(list));
 	}
 }

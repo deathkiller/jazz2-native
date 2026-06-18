@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "IMenuContainer.h"
+#include "MenuStyle.h"
 #include "../Canvas.h"
 #include "../../Input/ControlScheme.h"
 #include "../../../Main.h"
@@ -52,7 +53,19 @@ namespace Jazz2::UI::Menu
 		/** @brief Allows to override navigation behavior */
 		virtual NavigationFlags GetNavigationFlags() const;
 
+		/** @brief Allows to override the animated transition played when this section is shown or hidden */
+		virtual TransitionInfo GetTransition() const;
+
 	protected:
+		/**
+			@brief Advances the hold-to-repeat navigation timer and reports whether Up/Down should fire this frame
+
+			Fires once on the initial press, then repeatedly at a steady rate after a short delay while the key/button
+			is held (`outPlaySound` follows each fire). Lets any section give its Up/Down list navigation a continuous
+			hold-to-scroll. Must be called once per frame while the section is active.
+		*/
+		void UpdateNavigation(float timeMult, bool& outUp, bool& outDown, bool& outPlaySound);
+
 		/** @brief Kinetic divider for smooth touch controls */
 		static constexpr float TouchKineticDivider = 0.004f;
 		/** @brief Kinetic friction for smooth touch controls */
@@ -62,6 +75,7 @@ namespace Jazz2::UI::Menu
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		IMenuContainer* _root;
+		float _navRepeat = 0.0f;	// Frames until the next auto-repeat fire while Up/Down is held
 #endif
 	};
 }

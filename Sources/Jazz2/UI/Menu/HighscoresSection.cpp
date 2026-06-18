@@ -1,6 +1,8 @@
-﻿#include "HighscoresSection.h"
+#include "HighscoresSection.h"
 #include "MenuResources.h"
+#include "../Font.h"
 #include "../DiscordRpcClient.h"
+#include "../../PreferencesCache.h"
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/I18n.h"
@@ -10,6 +12,8 @@
 #	include "../../../nCine/Backends/Android/AndroidJniHelper.h"
 #endif
 
+#include <algorithm>
+#include <cmath>
 #include <Containers/DateTime.h>
 #include <Containers/StringConcatenable.h>
 #include <IO/Compression/DeflateStream.h>
@@ -20,15 +24,18 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
+	// Row height matching the original section (ItemHeight * 5 / 8)
+	static constexpr float RowHeight = 40 * 5 / 8;	// 25
+
 	HighscoresSection::HighscoresSection()
-		: _selectedSeries(0), _notValidPos(-1), _notValidSeries(-1), _textCursor(0), _carretAnim(0.0f), _waitForInput(false)
+		: _selectedSeries(0), _notValidPos(-1), _notValidSeries(-1), _pendingFocus(0), _textCursor(0), _carretAnim(0.0f),
+			_animation(0.0f), _waitForInput(false), _list(nullptr)
 #if defined(DEATH_TARGET_ANDROID)
 			, _recalcVisibleBoundsTimeLeft(30.0f)
 #endif
 	{
 		DeserializeFromFile();
 		FillDefaultsIfEmpty();
-		RefreshList();
 
 #if defined(DEATH_TARGET_ANDROID)
 		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
@@ -69,14 +76,30 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
+	void HighscoresSection::OnShow(IMenuContainer* root)
+	{
+		MenuSection::OnShow(root);
+
+		if (_content != nullptr) {
+			return;
+		}
+
+		RebuildList();
+		if (_pendingFocus > 0) {
+			_list->SetSelectedIndex(_pendingFocus, true);
+		}
+	}
+
 	void HighscoresSection::OnUpdate(float timeMult)
 	{
-		// Move the variable to stack to fix leaving the section
-		bool waitingForInput = _waitForInput;
+		if (_animation < 1.0f) {
+			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
+		}
+		if (_content != nullptr) {
+			_content->OnUpdate(timeMult);
+		}
 
-		ScrollableMenuSection::OnUpdate(timeMult);
-
-		if (waitingForInput) {
+		if (_waitForInput) {
 #if defined(DEATH_TARGET_ANDROID)
 			_recalcVisibleBoundsTimeLeft -= timeMult;
 			if (_recalcVisibleBoundsTimeLeft <= 0.0f) {
@@ -84,29 +107,55 @@ namespace Jazz2::UI::Menu
 				_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
 			}
 #endif
+			std::int32_t row = GetSelectedRow();
 			if (_root->ActionHit(PlayerAction::ChangeWeapon) && theApplication().CanShowScreenKeyboard()) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				theApplication().ToggleScreenKeyboard();
 				RecalcLayoutForScreenKeyboard();
 			} else if (_root->ActionHit(PlayerAction::Menu) || _root->ActionHit(PlayerAction::Run)) {
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
-				_waitForInput = false;
-				auto& selectedItem = _items[_selectedIndex];
-				if (!selectedItem.Item->PlayerName.empty()) {
-					SerializeToFile();
-				}
+				FinishNameEntry();
 			} else if (_root->ActionHit(PlayerAction::Fire)) {
-				auto& selectedItem = _items[_selectedIndex];
-				if (!selectedItem.Item->PlayerName.empty()) {
+				if (row >= 0 && !_series[_selectedSeries].Items[row].PlayerName.empty()) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					_waitForInput = false;
-					SerializeToFile();
+					FinishNameEntry();
 				}
 			}
 
-			EnsureVisibleSelected();
-
 			_carretAnim += timeMult;
+			return;
+		}
+
+		if (_root->ActionHit(PlayerAction::Menu)) {
+			_root->PlaySfx("MenuSelect"_s, 0.5f);
+			_root->LeaveSection();
+			return;
+		}
+
+		bool navUp, navDown, navSound;
+		UpdateNavigation(timeMult, navUp, navDown, navSound);
+
+		std::int32_t row = GetSelectedRow();
+		if (navUp) {
+			if (!_series[_selectedSeries].Items.empty()) {
+				if (navSound) _root->PlaySfx("MenuSelect"_s, 0.5f);
+				_animation = 0.0f;
+				std::int32_t count = (std::int32_t)_series[_selectedSeries].Items.size();
+				std::int32_t newRow = (row > 0 ? row - 1 : count - 1);
+				_list->SetSelectedIndex(newRow, false);
+			}
+		} else if (navDown) {
+			if (!_series[_selectedSeries].Items.empty()) {
+				if (navSound) _root->PlaySfx("MenuSelect"_s, 0.5f);
+				_animation = 0.0f;
+				std::int32_t count = (std::int32_t)_series[_selectedSeries].Items.size();
+				std::int32_t newRow = (row < count - 1 ? row + 1 : 0);
+				_list->SetSelectedIndex(newRow, false);
+			}
+		} else if (_root->ActionHit(PlayerAction::Left)) {
+			SwitchSeries(-1);
+		} else if (_root->ActionHit(PlayerAction::Right)) {
+			SwitchSeries(1);
 		}
 	}
 
@@ -114,13 +163,10 @@ namespace Jazz2::UI::Menu
 	{
 		Recti contentBounds = _root->GetContentBounds();
 		float centerX = contentBounds.X + contentBounds.W * 0.5f;
-		float topLine = contentBounds.Y + TopLine;
-		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
+		float topLine = contentBounds.Y + 31.0f;
+		float bottomLine = contentBounds.Y + contentBounds.H - 42.0f;
 
-		_root->DrawElement(MenuDim, centerX, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
-			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawMenuFrame(centerX, topLine, bottomLine);
 
 		std::int32_t charOffset = 0;
 
@@ -164,99 +210,102 @@ namespace Jazz2::UI::Menu
 				if (_currentVisibleBounds.Y * viewSize.Y / _initialVisibleSize.Y < 32.0f) {
 					_root->DrawSolid(0.0f, 0.0f, IMenuContainer::MainLayer - 10, Alignment::TopLeft, Vector2f(viewSize.X, viewSize.Y), Colorf(0.0f, 0.0f, 0.0f, 0.6f));
 
-					auto& selectedItem = _items[_selectedIndex];
+					std::int32_t row = GetSelectedRow();
+					if (row >= 0) {
+						auto& entry = _series[_selectedSeries].Items[row];
 
-					std::int32_t charOffset = 0;
-					_root->DrawStringShadow(selectedItem.Item->PlayerName, charOffset, 120.0f, titleY, IMenuContainer::MainLayer,
-						Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 1.0f);
+						std::int32_t charOffset = 0;
+						_root->DrawStringShadow(entry.PlayerName, charOffset, 120.0f, titleY, IMenuContainer::MainLayer,
+							Alignment::Left, Colorf(0.62f, 0.44f, 0.34f, 0.5f), 1.0f);
 
-					Vector2f textToCursorSize = _root->MeasureString(selectedItem.Item->PlayerName.prefix(_textCursor), 1.0f);
-					_root->DrawSolid(120.0f + textToCursorSize.X + 1.0f, titleY - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Left, Vector2f(1.0f, 14.0f),
-						Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+						Vector2f textToCursorSize = _root->MeasureString(entry.PlayerName.prefix(_textCursor), 1.0f);
+						_root->DrawSolid(120.0f + textToCursorSize.X + 1.0f, titleY - 1.0f, IMenuContainer::MainLayer + 10, Alignment::Left, Vector2f(1.0f, 14.0f),
+							Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+					}
 				}
 			}
 #endif
 		}
 	}
 
-	void HighscoresSection::OnKeyPressed(const KeyboardEvent& event)
+	void HighscoresSection::OnKeyPressed(const nCine::KeyboardEvent& event)
 	{
-		if (_waitForInput) {
-			switch (event.sym) {
-				case Keys::Escape: {
+		if (!_waitForInput) {
+			return;
+		}
+
+		std::int32_t row = GetSelectedRow();
+		if (row < 0) {
+			return;
+		}
+		auto& playerName = _series[_selectedSeries].Items[row].PlayerName;
+
+		switch (event.sym) {
+			case Keys::Escape: {
+				_root->PlaySfx("MenuSelect"_s, 0.5f);
+				FinishNameEntry();
+				break;
+			}
+			case Keys::Return: {
+				if (!playerName.empty()) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					_waitForInput = false;
-					auto& selectedItem = _items[_selectedIndex];
-					if (!selectedItem.Item->PlayerName.empty()) {
-						SerializeToFile();
-					}
-					theApplication().HideScreenKeyboard();
-					RecalcLayoutForScreenKeyboard();
-					break;
+					FinishNameEntry();
 				}
-				case Keys::Return: {
-					auto& selectedItem = _items[_selectedIndex];
-					if (!selectedItem.Item->PlayerName.empty()) {
-						_root->PlaySfx("MenuSelect"_s, 0.5f);
-						_waitForInput = false;
-						SerializeToFile();
-						theApplication().HideScreenKeyboard();
-						RecalcLayoutForScreenKeyboard();
-					}
-					break;
+				break;
+			}
+			case Keys::Backspace: {
+				if (_textCursor > 0) {
+					auto [_, prevPos] = Utf8::PrevChar(playerName, _textCursor);
+					playerName = playerName.prefix(prevPos) + playerName.exceptPrefix(_textCursor);
+					_textCursor = prevPos;
+					_carretAnim = 0.0f;
 				}
-				case Keys::Backspace: {
-					auto& selectedItem = _items[_selectedIndex];
-					if (_textCursor > 0) {
-						auto [_, prevPos] = Utf8::PrevChar(selectedItem.Item->PlayerName, _textCursor);
-						selectedItem.Item->PlayerName = selectedItem.Item->PlayerName.prefix(prevPos) + selectedItem.Item->PlayerName.exceptPrefix(_textCursor);
-						_textCursor = prevPos;
-						_carretAnim = 0.0f;
-					}
-					break;
+				break;
+			}
+			case Keys::Delete: {
+				if (_textCursor < playerName.size()) {
+					auto [_, nextPos] = Utf8::NextChar(playerName, _textCursor);
+					playerName = playerName.prefix(_textCursor) + playerName.exceptPrefix(nextPos);
+					_carretAnim = 0.0f;
 				}
-				case Keys::Delete: {
-					auto& selectedItem = _items[_selectedIndex];
-					if (_textCursor < selectedItem.Item->PlayerName.size()) {
-						auto [_, nextPos] = Utf8::NextChar(selectedItem.Item->PlayerName, _textCursor);
-						selectedItem.Item->PlayerName = selectedItem.Item->PlayerName.prefix(_textCursor) + selectedItem.Item->PlayerName.exceptPrefix(nextPos);
-						_carretAnim = 0.0f;
-					}
-					break;
+				break;
+			}
+			case Keys::Left: {
+				if (_textCursor > 0) {
+					auto [c, prevPos] = Utf8::PrevChar(playerName, _textCursor);
+					_textCursor = prevPos;
+					_carretAnim = 0.0f;
 				}
-				case Keys::Left: {
-					auto& selectedItem = _items[_selectedIndex];
-					if (_textCursor > 0) {
-						auto [c, prevPos] = Utf8::PrevChar(selectedItem.Item->PlayerName, _textCursor);
-						_textCursor = prevPos;
-						_carretAnim = 0.0f;
-					}
-					break;
+				break;
+			}
+			case Keys::Right: {
+				if (_textCursor < playerName.size()) {
+					auto [c, nextPos] = Utf8::NextChar(playerName, _textCursor);
+					_textCursor = nextPos;
+					_carretAnim = 0.0f;
 				}
-				case Keys::Right: {
-					auto& selectedItem = _items[_selectedIndex];
-					if (_textCursor < selectedItem.Item->PlayerName.size()) {
-						auto [c, nextPos] = Utf8::NextChar(selectedItem.Item->PlayerName, _textCursor);
-						_textCursor = nextPos;
-						_carretAnim = 0.0f;
-					}
-					break;
-				}
+				break;
 			}
 		}
 	}
 
 	void HighscoresSection::OnTextInput(const nCine::TextInputEvent& event)
 	{
-		if (_waitForInput) {
-			auto& selectedItem = _items[_selectedIndex];
-			if (selectedItem.Item->PlayerName.size() + event.length <= MaxPlayerNameLength) {
-				selectedItem.Item->PlayerName = selectedItem.Item->PlayerName.prefix(_textCursor)
-					+ StringView(event.text, event.length)
-					+ selectedItem.Item->PlayerName.exceptPrefix(_textCursor);
-				_textCursor += event.length;
-				_carretAnim = 0.0f;
-			}
+		if (!_waitForInput) {
+			return;
+		}
+
+		std::int32_t row = GetSelectedRow();
+		if (row < 0) {
+			return;
+		}
+		auto& playerName = _series[_selectedSeries].Items[row].PlayerName;
+		if (playerName.size() + event.length <= MaxPlayerNameLength) {
+			playerName = playerName.prefix(_textCursor)
+				+ StringView(event.text, event.length)
+				+ playerName.exceptPrefix(_textCursor);
+			_textCursor += event.length;
+			_carretAnim = 0.0f;
 		}
 	}
 
@@ -278,33 +327,30 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void HighscoresSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
+	void HighscoresSection::DrawScoreRow(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset, bool isSelected, std::int32_t row)
 	{
-		item.Height = ItemHeight * 5 / 8;
-	}
-
-	void HighscoresSection::OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected)
-	{
+		auto& entry = _series[_selectedSeries].Items[row];
 		float centerX = canvas->ViewSize.X * 0.5f;
 		float nameX = centerX * 0.36f;
+		float itemY = bounds.Y + bounds.H * 0.5f;
 		char stringBuffer[64];
 
 		if (isSelected) {
-			_root->DrawElement(MenuGlow, 0, centerX, item.Y, IMenuContainer::MainLayer - 200, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.1f), 26.0f, 5.0f, true, true);
+			root->DrawElement(MenuGlow, 0, centerX, itemY, IMenuContainer::MainLayer - 200, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.1f), 26.0f, 5.0f, true, true);
 		}
 
-		std::int32_t pos = (std::int32_t)(&item - &_items[0] + 1);
+		std::int32_t pos = row + 1;
 		bool isNotValid = (_notValidPos == pos && _notValidSeries == _selectedSeries);
 		if (_notValidPos > 0 && _notValidPos < pos && _notValidSeries == _selectedSeries) {
 			pos--;
 		}
 		if (!isNotValid && pos <= MaxItems) {
 			std::size_t length = formatInto(stringBuffer, "{}.", pos);
-			_root->DrawStringShadow({ stringBuffer, length }, charOffset, nameX - 16.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right,
+			root->DrawStringShadow({ stringBuffer, length }, charOffset, nameX - 16.0f, itemY, IMenuContainer::MainLayer - 100, Alignment::Right,
 				(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
 		}
 
-		bool cheatsUsed = (item.Item->Flags & HighscoreFlags::CheatsUsed) == HighscoreFlags::CheatsUsed;
+		bool cheatsUsed = (entry.Flags & HighscoreFlags::CheatsUsed) == HighscoreFlags::CheatsUsed;
 
 		Colorf nameColor;
 		if (isSelected && _waitForInput) {
@@ -315,187 +361,140 @@ namespace Jazz2::UI::Menu
 			nameColor = (cheatsUsed ? Colorf(0.48f, 0.38f, 0.34f, 0.5f) : Font::DefaultColor);
 		}
 
-		_root->DrawStringShadow(item.Item->PlayerName, charOffset, nameX, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left, nameColor, 0.8f);
+		root->DrawStringShadow(entry.PlayerName, charOffset, nameX, itemY, IMenuContainer::MainLayer - 100, Alignment::Left, nameColor, 0.8f);
 
-		if (item.Item->Lives <= 0) {
-			Vector2f nameSize = _root->MeasureString(item.Item->PlayerName, 0.8f);
-			_root->DrawElement(RestInPeace, -1, nameX + nameSize.X + 12.0f, item.Y - 2.0f, IMenuContainer::MainLayer - 100, Alignment::Left, Colorf::White, 1.0f, 1.0f);
+		if (entry.Lives <= 0) {
+			Vector2f nameSize = root->MeasureString(entry.PlayerName, 0.8f);
+			root->DrawElement(RestInPeace, -1, nameX + nameSize.X + 12.0f, itemY - 2.0f, IMenuContainer::MainLayer - 100, Alignment::Left, Colorf::White, 1.0f, 1.0f);
 		}
 
-		u32tos(item.Item->Score, stringBuffer);
-		_root->DrawStringShadow(stringBuffer, charOffset, centerX * 1.06f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right,
+		u32tos(entry.Score, stringBuffer);
+		root->DrawStringShadow(stringBuffer, charOffset, centerX * 1.06f, itemY, IMenuContainer::MainLayer - 100, Alignment::Right,
 			(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.92f);
 
-		_root->DrawElement(PickupGemRed, -1, centerX * 1.18f - 6.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right, Colorf(1.0f, 1.0f, 1.0f, 0.8f), 0.46f, 0.46f);
+		root->DrawElement(PickupGemRed, -1, centerX * 1.18f - 6.0f, itemY, IMenuContainer::MainLayer - 100, Alignment::Right, Colorf(1.0f, 1.0f, 1.0f, 0.8f), 0.46f, 0.46f);
 
-		std::size_t length = formatInto(stringBuffer, "{} · {} · {} · {}", item.Item->Gems[0], item.Item->Gems[1], item.Item->Gems[2], item.Item->Gems[3]);
-		_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX * 1.18f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Left,
-			(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f,0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
+		std::size_t length = formatInto(stringBuffer, "{} · {} · {} · {}", entry.Gems[0], entry.Gems[1], entry.Gems[2], entry.Gems[3]);
+		root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX * 1.18f, itemY, IMenuContainer::MainLayer - 100, Alignment::Left,
+			(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.8f);
 
-		std::int64_t elapsedSeconds = (item.Item->ElapsedMilliseconds / 1000);
+		std::int64_t elapsedSeconds = (entry.ElapsedMilliseconds / 1000);
 		if (elapsedSeconds > 0) {
-			_root->DrawElement(PickupStopwatch, -1, centerX * 1.58f - 6.0f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right, Colorf::White, 0.55f, 0.55f);
+			root->DrawElement(PickupStopwatch, -1, centerX * 1.58f - 6.0f, itemY, IMenuContainer::MainLayer - 100, Alignment::Right, Colorf::White, 0.55f, 0.55f);
 
-			std::int32_t elapsedHours = (elapsedSeconds / 3600);
-			std::int32_t elapsedMinutes = (elapsedSeconds / 60);
+			std::int32_t elapsedHours = (std::int32_t)(elapsedSeconds / 3600);
+			std::int32_t elapsedMinutes = (std::int32_t)(elapsedSeconds / 60);
 			elapsedSeconds -= (elapsedMinutes * 60);
 			elapsedMinutes -= (elapsedHours * 60);
-			std::size_t length = formatInto(stringBuffer, "{}:{:.2}:{:.2}", elapsedHours, elapsedMinutes, elapsedSeconds);
-			_root->DrawStringShadow({ stringBuffer, length }, charOffset, centerX * 1.72f, item.Y, IMenuContainer::MainLayer - 100, Alignment::Right,
+			std::size_t length2 = formatInto(stringBuffer, "{}:{:.2}:{:.2}", elapsedHours, elapsedMinutes, elapsedSeconds);
+			root->DrawStringShadow({ stringBuffer, length2 }, charOffset, centerX * 1.72f, itemY, IMenuContainer::MainLayer - 100, Alignment::Right,
 				(isSelected ? Colorf(0.48f, 0.48f, 0.48f, 0.5f) : Font::DefaultColor), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
 		}
 
 		if (isSelected && _waitForInput) {
-			Vector2f textToCursorSize = _root->MeasureString(item.Item->PlayerName.prefix(_textCursor), 0.8f);
-			_root->DrawSolid(nameX + textToCursorSize.X + 1.0f, item.Y - 1.0f, IMenuContainer::MainLayer - 80, Alignment::Center, Vector2f(1.0f, 12.0f),
+			Vector2f textToCursorSize = root->MeasureString(entry.PlayerName.prefix(_textCursor), 0.8f);
+			root->DrawSolid(nameX + textToCursorSize.X + 1.0f, itemY - 1.0f, IMenuContainer::MainLayer - 80, Alignment::Center, Vector2f(1.0f, 12.0f),
 				Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
-		}
-	}
-
-	void HighscoresSection::OnHandleInput()
-	{
-		if (_waitForInput) {
-			return;
-		}
-
-		if (_root->ActionHit(PlayerAction::Menu)) {
-			OnBackPressed();
-		} else if (_root->ActionHit(PlayerAction::Fire)) {
-			OnExecuteSelected();
-		} else if (_root->ActionHit(PlayerAction::Up)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			std::int32_t offset;
-			if (_selectedIndex > 0) {
-				_selectedIndex--;
-				offset = -ItemHeight / 4;
-			} else {
-				_selectedIndex = (std::int32_t)(_items.size() - 1);
-				offset = 0;
-			}
-			EnsureVisibleSelected(offset);
-			OnSelectionChanged(_items[_selectedIndex]);
-		} else if (_root->ActionHit(PlayerAction::Down)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			std::int32_t offset;
-			if (_selectedIndex < (std::int32_t)(_items.size() - 1)) {
-				_selectedIndex++;
-				offset = ItemHeight / 3;
-			} else {
-				_selectedIndex = 0;
-				offset = 0;
-			}
-			EnsureVisibleSelected(offset);
-			OnSelectionChanged(_items[_selectedIndex]);
-		} else if (_root->ActionHit(PlayerAction::Left)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			_selectedSeries--;
-			if (_selectedSeries < 0) {
-				_selectedSeries = (std::int32_t)SeriesName::Count - 1;
-			}
-			RefreshList();
-			if (!_items.empty()) {
-				if (_selectedIndex >= _items.size()) {
-					_selectedIndex = _items.size() - 1;
-				}
-				EnsureVisibleSelected();
-				OnSelectionChanged(_items[_selectedIndex]);
-			}
-		} else if (_root->ActionHit(PlayerAction::Right)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_animation = 0.0f;
-			_selectedSeries++;
-			if (_selectedSeries >= (std::int32_t)SeriesName::Count) {
-				_selectedSeries = 0;
-			}
-			RefreshList();
-			if (!_items.empty()) {
-				if (_selectedIndex >= _items.size()) {
-					_selectedIndex = _items.size() - 1;
-				}
-				EnsureVisibleSelected();
-				OnSelectionChanged(_items[_selectedIndex]);
-			}
 		}
 	}
 
 	void HighscoresSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
+		if (_waitForInput) {
+			// While entering a name, only the on-screen keyboard button and the top bar (which commits) respond
+			if (event.type == TouchEventType::Down) {
+				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+				if (pointerIndex != -1) {
+					float x = event.pointers[pointerIndex].x;
+					float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+					if (x < 0.2f && y < 80.0f && theApplication().CanShowScreenKeyboard()) {
+						_root->PlaySfx("MenuSelect"_s, 0.5f);
+						theApplication().ShowScreenKeyboard();
+						RecalcLayoutForScreenKeyboard();
+						return;
+					}
+					if (y < 80.0f) {
+						OnBackPressed();
+						return;
+					}
+				}
+			}
+			return;
+		}
+
 		if (event.type == TouchEventType::Down) {
 			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
 			if (pointerIndex != -1) {
 				float x = event.pointers[pointerIndex].x;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
-				if (x < 0.2f && y < 80.0f && _waitForInput && theApplication().CanShowScreenKeyboard()) {
-					_root->PlaySfx("MenuSelect"_s, 0.5f);
-					theApplication().ShowScreenKeyboard();
-					RecalcLayoutForScreenKeyboard();
-					return;
-				} else if (y >= 80.0f) {
+				if (y >= 80.0f) {
 					Recti contentBounds = _root->GetContentBounds();
-					float topLine = contentBounds.Y + TopLine;
+					float topLine = contentBounds.Y + 31.0f;
 					if (std::abs(x - 0.5f) > (y > topLine ? 0.35f : 0.1f)) {
-						_root->PlaySfx("MenuSelect"_s, 0.5f);
-						_animation = 0.0f;
-
-						if (x < 0.5f) {
-							_selectedSeries--;
-							if (_selectedSeries < 0) {
-								_selectedSeries = (std::int32_t)SeriesName::Count - 1;
-							}
-						} else {
-							_selectedSeries++;
-							if (_selectedSeries >= (std::int32_t)SeriesName::Count) {
-								_selectedSeries = 0;
-							}
-						}
-
-						RefreshList();
-						if (!_items.empty()) {
-							if (_selectedIndex >= _items.size()) {
-								_selectedIndex = _items.size() - 1;
-							}
-							EnsureVisibleSelected();
-							OnSelectionChanged(_items[_selectedIndex]);
-						}
+						SwitchSeries(x < 0.5f ? -1 : 1);
 						return;
 					}
 				}
 			}
 		}
 
-		ScrollableMenuSection::OnTouchEvent(event, viewSize);
-	}
-
-	void HighscoresSection::OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos)
-	{
-		if (!_waitForInput) {
-			ScrollableMenuSection::OnTouchUp(newIndex, viewSize, touchPos);
-		}
-	}
-
-	void HighscoresSection::OnExecuteSelected()
-	{
+		WidgetSection::OnTouchEvent(event, viewSize);
 	}
 
 	void HighscoresSection::OnBackPressed()
 	{
 		if (_waitForInput) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
-			_waitForInput = false;
-			auto& selectedItem = _items[_selectedIndex];
-			if (!selectedItem.Item->PlayerName.empty()) {
-				SerializeToFile();
-			}
-
-			theApplication().HideScreenKeyboard();
-			RecalcLayoutForScreenKeyboard();
+			FinishNameEntry();
 			return;
 		}
 
-		ScrollableMenuSection::OnBackPressed();
+		WidgetSection::OnBackPressed();
+	}
+
+	void HighscoresSection::SwitchSeries(std::int32_t direction)
+	{
+		_root->PlaySfx("MenuSelect"_s, 0.5f);
+		_animation = 0.0f;
+		_selectedSeries += direction;
+		if (_selectedSeries < 0) {
+			_selectedSeries = (std::int32_t)SeriesName::Count - 1;
+		} else if (_selectedSeries >= (std::int32_t)SeriesName::Count) {
+			_selectedSeries = 0;
+		}
+		RebuildList();
+	}
+
+	void HighscoresSection::FinishNameEntry()
+	{
+		_waitForInput = false;
+		std::int32_t row = GetSelectedRow();
+		if (row >= 0 && !_series[_selectedSeries].Items[row].PlayerName.empty()) {
+			SerializeToFile();
+		}
+		theApplication().HideScreenKeyboard();
+		RecalcLayoutForScreenKeyboard();
+	}
+
+	std::int32_t HighscoresSection::GetSelectedRow() const
+	{
+		return (_list != nullptr ? _list->GetSelectedIndex() : -1);
+	}
+
+	void HighscoresSection::RebuildList()
+	{
+		auto list = std::make_unique<ScrollView>();
+		auto& entries = _series[_selectedSeries].Items;
+		for (std::int32_t i = 0; i < (std::int32_t)entries.size(); i++) {
+			std::int32_t row = i;
+			auto* item = list->Add<CanvasWidget>(RowHeight);
+			item->OnDrawContent = [this, row](IMenuContainer* r, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset, bool selected, float animation) {
+				DrawScoreRow(r, canvas, bounds, charOffset, selected, row);
+			};
+		}
+		_list = list.get();
+
+		SetContent(std::move(list));
 	}
 
 	void HighscoresSection::FillDefaultsIfEmpty()
@@ -541,7 +540,6 @@ namespace Jazz2::UI::Menu
 			theSecretFiles.Items.push_back(HighscoreItem { "Thomas"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Spaz, GameDifficulty::Normal, 1, 25000, { 16, 6, 0, 0 } });
 			theSecretFiles.Items.push_back(HighscoreItem { "Alexander"_s, UINT64_MAX, HighscoreFlags::IsDefault, PlayerType::Jazz, GameDifficulty::Normal, 1, 10000, { 8, 2, 0, 0 } });
 		}
-
 	}
 
 	void HighscoresSection::DeserializeFromFile()
@@ -648,7 +646,7 @@ namespace Jazz2::UI::Menu
 		auto* newItem = items.insert(nearestItem, std::move(item));
 		std::int32_t index = (std::int32_t)(newItem - &items[0]);
 
-		if ((item.Flags & HighscoreFlags::CheatsUsed) == HighscoreFlags::CheatsUsed && PreferencesCache::OverwriteEpisodeEnd != EpisodeEndOverwriteMode::Always) {
+		if ((newItem->Flags & HighscoreFlags::CheatsUsed) == HighscoreFlags::CheatsUsed && PreferencesCache::OverwriteEpisodeEnd != EpisodeEndOverwriteMode::Always) {
 			_notValidPos = index + 1;
 			_notValidSeries = _selectedSeries;
 		} else {
@@ -661,19 +659,7 @@ namespace Jazz2::UI::Menu
 			_waitForInput = true;
 		}
 
-		RefreshList();
-		_selectedIndex = index;
-	}
-
-	void HighscoresSection::RefreshList()
-	{
-		_selectedIndex = 0;
-		_items.clear();
-
-		auto& entries = _series[_selectedSeries].Items;
-		for (auto& entry : entries) {
-			_items.emplace_back(&entry);
-		}
+		_pendingFocus = index;
 	}
 
 	void HighscoresSection::RecalcLayoutForScreenKeyboard()

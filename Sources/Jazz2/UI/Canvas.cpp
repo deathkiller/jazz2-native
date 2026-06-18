@@ -36,6 +36,11 @@ namespace Jazz2::UI
 
 	void Canvas::DrawTexture(const Texture& texture, Vector2f pos, std::uint16_t z, Vector2f size, const Vector4f& texCoords, const Colorf& color, bool additiveBlending, float angle, std::int32_t paletteOffset)
 	{
+		// Apply the optional per-layer draw transform (menu section transitions; identity by default)
+		pos = pos * LayerScale + LayerOffset;
+		size = size * LayerScale;
+		const Colorf finalColor = color * LayerColor;
+
 		// An indexed texture (palette index in the red channel) is recolored at draw time through the shared palette
 		// texture; paletteOffset selects the palette region (0 = default sprite palette). -1 = a plain RGBA texture.
 		bool indexed = (paletteOffset >= 0);
@@ -66,7 +71,7 @@ namespace Jazz2::UI
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(finalColor.Data());
 		if (indexed) {
 			auto* palOffsetUniform = instanceBlock->GetUniform(Material::PaletteOffsetUniformName);
 			if (palOffsetUniform != nullptr) {
@@ -97,10 +102,15 @@ namespace Jazz2::UI
 	{
 		auto* shader = ContentResolver::Get().GetShader(PrecompiledShader::PaletteRemap);
 		if (shader == nullptr) {
-			// No palette shader - fall back to a plain textured draw
+			// No palette shader - fall back to a plain textured draw (which applies the layer transform itself)
 			DrawTexture(texture, pos, z, size, texCoords, color);
 			return;
 		}
+
+		// Apply the optional per-layer draw transform (menu section transitions; identity by default)
+		pos = pos * LayerScale + LayerOffset;
+		size = size * LayerScale;
+		const Colorf finalColor = color * LayerColor;
 
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShader(shader)) {
@@ -122,7 +132,7 @@ namespace Jazz2::UI
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(finalColor.Data());
 		auto* palOffsetUniform = instanceBlock->GetUniform(Material::PaletteOffsetUniformName);
 		if (palOffsetUniform != nullptr) {
 			palOffsetUniform->SetFloatValue(paletteOffset);
@@ -138,6 +148,11 @@ namespace Jazz2::UI
 
 	void Canvas::DrawSolid(Vector2f pos, std::uint16_t z, Vector2f size, const Colorf& color, bool additiveBlending)
 	{
+		// Apply the optional per-layer draw transform (menu section transitions; identity by default)
+		pos = pos * LayerScale + LayerOffset;
+		size = size * LayerScale;
+		const Colorf finalColor = color * LayerColor;
+
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::SpriteNoTexture)) {
 			command->GetMaterial().ReserveUniformsDataMemory();
@@ -154,7 +169,7 @@ namespace Jazz2::UI
 
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(finalColor.Data());
 
 		command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
 		command->SetLayer(z);

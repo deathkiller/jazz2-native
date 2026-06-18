@@ -286,12 +286,16 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GameplayOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/GraphicsOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/HighscoresSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/IMenuContainer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ImportSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InGameMenu.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InputDiagnosticsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/LanguageSelectSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MainMenu.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MenuContainerBase.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MenuSection.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MenuTransition.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MenuWidgets.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/OptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PauseSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RefreshCacheSection.cpp
@@ -303,4 +307,5 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/UserProfileOptionsSection.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/TextInputBuffer.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/WidgetSection.cpp
 )

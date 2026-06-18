@@ -72,7 +72,7 @@ namespace Jazz2::Actors
 		_externalForceCooldown(0.0f),
 		_springCooldown(0.0f),
 		_inIdleTransition(false), _inLedgeTransition(false), _canDoubleJump(true),
-		_carryingObject(nullptr),
+		_carryingObject(nullptr), _stackCarrying(false), _beingStoodOn(false),
 		// Per-player recolor; 0 = use the original colors. The local player defaults to the user's profile color;
 		// remote players get their color from the network (see MpLevelHandler).
 		_furColor(PreferencesCache::PlayerFurColor), _paletteOffset(-1),
@@ -339,6 +339,13 @@ namespace Jazz2::Actors
 			_levelHandler->PlayerExecuteRumble(this, "Warp"_s);
 
 			_lastExitType = ExitType::None;
+		}
+
+		// In local splitscreen co-op, resolve standing on another player before the physics update, so jump input
+		// sees CanJump() == true (online sessions call UpdatePlayerStacking from the MpPlayer subclasses instead,
+		// where CanPlayersCollide() is false)
+		if (_levelHandler->CanPlayersCollide()) {
+			UpdatePlayerStacking(timeMult, /*snap:*/ true);
 		}
 
 		bool canJumpPrev = CanJump();
@@ -999,6 +1006,15 @@ namespace Jazz2::Actors
 
 							_speed.Y = -3.0f;
 							_internalForceY = -0.88f;
+
+							// If we're jumping out from under another player (not a solid object), bump out sideways too,
+							// so we arc away and don't just fall straight back onto them into the lift state again
+							for (auto* other : _levelHandler->GetPlayers()) {
+								if (other != this && other->_stackCarrying && other->_carryingObject == this) {
+									_speed.X = (_pos.X <= other->GetPos().X ? -1.0f : 1.0f) * PlayerBumpMinSeparationSpeed;
+									break;
+								}
+							}
 
 							SetTransition(AnimState::TransitionLiftEnd, false, [this]() {
 								_controllable = true;
@@ -1746,17 +1762,17 @@ namespace Jazz2::Actors
 
 			handled = true;
 		} else if (auto* otherPlayer = runtime_cast<Player>(other)) {
-			if (_levelHandler->CanPlayersCollide() &&
+			// Local splitscreen co-op: players physically bump each other apart and can stand on one another. Both
+			// must be alive (skip a dead/respawning player) and not warping. Vertical contact is left to the stacking
+			// resolver (one player landing on the other), so ApplyPlayerBump only separates side-to-side contact here.
+			if (_levelHandler->CanPlayersCollide() && _health > 0 && otherPlayer->_health > 0 &&
 				(_currentTransition == nullptr ||
 				 (_currentTransition->State != AnimState::TransitionWarpIn && _currentTransition->State != AnimState::TransitionWarpInFreefall &&
 				  _currentTransition->State != AnimState::TransitionWarpOut && _currentTransition->State != AnimState::TransitionWarpOutFreefall))) {
-				Vector2f diff = (_pos - otherPlayer->GetPos());
-				if (diff.SqrLength() < 24.0f * 24.0f) {
-					_speed = diff.Normalize() * 4.0f - (_isActivelyPushing ? (_speed * 0.2f) : Vector2f::Zero);
-					if (diff.Y < 0.0f && std::abs(_speed.X) < 2.0f) {
-						_speed.X = (_speed.X < 0.0f ? -2.0f : 2.0f);
-					}
-				}
+				ApplyPlayerBump(*otherPlayer, /*stackingEnabled:*/ true);
+				// Resolve the pair only once per frame: returning `true` stops LevelHandler from also dispatching the
+				// reverse collision (which would bump both players a second time, since ApplyPlayerBump moves both)
+				handled = true;
 			}
 		}
 
@@ -2061,7 +2077,10 @@ namespace Jazz2::Actors
 			newState = AnimState::Hook;
 		} else if (_suspendType == SuspendType::SwingingVine) {
 			newState = AnimState::Swing;
-		} else if (_isLifting) {
+		} else if (_isLifting || (_beingStoodOn && CanJump() && std::abs(_speed.X) < 1.0f && std::abs(_speed.Y) < 1.0f)) {
+			// `_isLifting` is the movement-restricting lift (solid object, or a player in local co-op); `_beingStoodOn`
+			// is the cosmetic online case - only show its pose while grounded and still, so a moving (unrestricted)
+			// player doesn't freeze in the lift pose
 			newState = AnimState::Lift;
 		} else if (CanJump() && _isActivelyPushing && _pushFramesLeft > 0.0f && _keepRunningTime <= 0.0f && _fireFramesLeft <= 0.0f) {
 			newState = AnimState::Push;
@@ -2240,27 +2259,46 @@ namespace Jazz2::Actors
 					SetState(ActorState::IsSolidObject, true);
 				}
 			}
-		} else if (GetState(ActorState::IsSolidObject)) {
-			AABBf aabb = AABBf(AABBInner.L, AABBInner.T - 20.0f, AABBInner.R, AABBInner.T + 6.0f);
-			TileCollisionParams params = { TileDestructType::None, false };
-			ActorBase* collider;
-			ActorState prevState = GetState();
-			SetState(ActorState::CollideWithTileset, false);
-			if (!_levelHandler->IsPositionEmpty(this, aabb, params, &collider)) {
-				if (auto* solidObject = runtime_cast<SolidObjectBase>(collider)) {
-					if (AABBInner.T >= solidObject->AABBInner.T && !_isLifting && std::abs(_speed.Y) < 1.0f) {
-						_isLifting = true;
-						SetTransition(AnimState::TransitionLiftStart, true);
+		} else {
+			// Lift state: a solid object resting on our head, or another player standing on top of us. The lift
+			// animation is shown in both cases (online it propagates to other clients via the normal animation sync),
+			// but only the local co-op case immobilizes us, exactly like a solid object - so the player has to jump
+			// to get out of it. Online, being stood on is purely cosmetic and never restricts movement.
+			bool liftedBySolid = false;
+			if (GetState(ActorState::IsSolidObject)) {
+				AABBf aabb = AABBf(AABBInner.L, AABBInner.T - 20.0f, AABBInner.R, AABBInner.T + 6.0f);
+				TileCollisionParams params = { TileDestructType::None, false };
+				ActorBase* collider;
+				ActorState prevState = GetState();
+				SetState(ActorState::CollideWithTileset, false);
+				if (!_levelHandler->IsPositionEmpty(this, aabb, params, &collider)) {
+					if (auto* solidObject = runtime_cast<SolidObjectBase>(collider)) {
+						liftedBySolid = (AABBInner.T >= solidObject->AABBInner.T);
 					}
-				} else {
-					_isLifting = false;
+				}
+				SetState(prevState);
+			}
+
+			// Detecting who stands on us by scanning the player list only works where we simulate them: locally
+			// (splitscreen) and on the server (all players). On an online client, our own player is predicted and
+			// can't see a remote player standing on it, so the server tells us via PlayerPropertyType::BeingStoodOn -
+			// in that case leave `_beingStoodOn` alone (it's driven by the packet, not recomputed here).
+			bool authoritative = (_levelHandler->IsServer() || _levelHandler->CanPlayersCollide());
+			bool stoodOnByPlayer = (authoritative && IsBeingStoodOnByPlayer());
+			// Only local splitscreen co-op turns being stood on into a real (movement-restricting) lift
+			bool stoodOnRestricts = (stoodOnByPlayer && _levelHandler->CanPlayersCollide());
+			if (liftedBySolid || stoodOnRestricts) {
+				if (!_isLifting && std::abs(_speed.Y) < 1.0f) {
+					_isLifting = true;
+					SetTransition(AnimState::TransitionLiftStart, true);
 				}
 			} else {
 				_isLifting = false;
 			}
-			SetState(prevState);
-		} else {
-			_isLifting = false;
+			// Cosmetic-only "being stood on" (online): drives the lift pose without restricting movement
+			if (authoritative) {
+				_beingStoodOn = (stoodOnByPlayer && !stoodOnRestricts);
+			}
 		}
 	}
 
@@ -4480,5 +4518,94 @@ namespace Jazz2::Actors
 			SetState(ActorState::ApplyGravitation, true);
 			_renderer.setRotation(0.0f);
 		}
+	}
+
+	bool Player::ApplyPlayerBump(Player& other, bool stackingEnabled)
+	{
+		// Compute the overlap of the two collision boxes and resolve along the axis of least penetration (minimum
+		// translation vector), the standard way to keep two AABBs from interpenetrating
+		const AABBf& a = AABBInner;
+		const AABBf& b = other.AABBInner;
+		float overlapX = std::min(a.R, b.R) - std::max(a.L, b.L);
+		float overlapY = std::min(a.B, b.B) - std::max(a.T, b.T);
+		if (overlapX <= 0.0f || overlapY <= 0.0f) {
+			// Boxes don't actually overlap (e.g. per-pixel collision reported the hit) - nothing to separate
+			return false;
+		}
+
+		if (overlapY <= overlapX && stackingEnabled) {
+			// Vertical overlap is the smaller axis and stacking is enabled - one player is standing/landing on the
+			// other. That is resolved by UpdatePlayerStacking (the player below acts as a one-way platform), so don't
+			// bump them apart vertically.
+			return false;
+		}
+
+		// Equal-mass elastic bump along the least-penetration axis, applied only while the two are approaching so it
+		// can't compound across frames. This is the "bump apart" behavior (always for side-to-side contact, and for
+		// vertical contact too when player stacking is disabled). MoveInstantly checks the tilemap, so a player is
+		// never pushed into a wall (it just stays put if blocked).
+		Vector2f normal;
+		float penetration;
+		if (overlapX < overlapY) {
+			normal = Vector2f(_pos.X < other._pos.X ? -1.0f : 1.0f, 0.0f);
+			penetration = overlapX;
+		} else {
+			normal = Vector2f(0.0f, _pos.Y < other._pos.Y ? -1.0f : 1.0f);
+			penetration = overlapY;
+		}
+
+		float push = std::min(penetration * 0.5f, PlayerBumpMaxSeparationPerFrame);
+		MoveInstantly(Vector2f(normal.X * push, normal.Y * push), MoveType::Relative);
+		other.MoveInstantly(Vector2f(-normal.X * push, -normal.Y * push), MoveType::Relative);
+
+		Vector2f relativeSpeed = _speed - other._speed;
+		float approachSpeed = relativeSpeed.X * normal.X + relativeSpeed.Y * normal.Y;
+		if (approachSpeed < 0.0f) {
+			float impulse = std::max(-(1.0f + PlayerBumpRestitution) * approachSpeed * 0.5f, PlayerBumpMinSeparationSpeed);
+			_speed += normal * impulse;
+			other._speed += normal * (-impulse);
+		}
+		return true;
+	}
+
+	void Player::UpdatePlayerStacking(float timeMult, bool snap)
+	{
+		ActorBase* ground = _levelHandler->FindPlayerToStandOn(this, timeMult);
+		if (ground != nullptr) {
+			if (snap) {
+				// Reposition so our feet rest on the other player's head, re-snapping each frame so we ride its
+				// vertical movement. The head is derived from the other player's position plus OUR collision
+				// head-offset (players are the same size) rather than its AABB top - a client's RemoteActor uses the
+				// sprite box, which is taller and would leave us floating. We sink PlayerStackSinkDepth px into the
+				// player below so the two read as one connected stack instead of the upper one floating on its head.
+				float groundHead = ground->GetPos().Y + (AABBInner.T - _pos.Y);
+				float delta = groundHead - AABBInner.B + PlayerStackSinkDepth;
+				if (delta != 0.0f) {
+					MoveInstantly(Vector2f(0.0f, delta), MoveType::Relative);
+				}
+			}
+			// Carrying makes CanJump() return true (so we can jump off) and Player::OnUpdatePhysics zeroes our
+			// vertical speed so we rest on top instead of falling through.
+			UpdateCarryingObject(ground);
+			_stackCarrying = true;
+		} else if (_stackCarrying) {
+			// We were standing on a player and aren't anymore (walked off / jumped) - stop carrying so we fall again.
+			// Guarded by _stackCarrying so we never cancel a real solid object we might be standing on.
+			CancelCarryingObject();
+			_stackCarrying = false;
+		}
+	}
+
+	bool Player::IsBeingStoodOnByPlayer() const
+	{
+		// A player B is standing on us when its stacking resolver picked us as the ground (B->_carryingObject == this).
+		// This sees only locally-simulated players: all of them in local co-op and on the server, just our own on a
+		// client - which is why the cosmetic online animation is driven from the server (see PushSolidObjects).
+		for (auto* other : _levelHandler->GetPlayers()) {
+			if (other != this && other->_stackCarrying && other->_carryingObject == this) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

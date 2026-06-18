@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "ScrollableMenuSection.h"
+#include "WidgetSection.h"
 
 namespace Jazz2::UI::Menu
 {
@@ -27,10 +27,12 @@ namespace Jazz2::UI::Menu
 
 	/**
 		@brief Episode selection menu section
-		
-		Lists the installed episodes and lets the player pick one to start or continue.
+
+		Lists the installed episodes and lets the player pick one to start or continue. Built on top of @ref WidgetSection
+		with each episode drawn through a @ref CanvasWidget; the background cross-fade, expand state and start transition
+		are driven by the section.
 	*/
-	class EpisodeSelectSection : public ScrollableMenuSection<EpisodeData>
+	class EpisodeSelectSection : public WidgetSection
 	{
 	public:
 		/**
@@ -41,29 +43,30 @@ namespace Jazz2::UI::Menu
 		 */
 		EpisodeSelectSection(bool multiplayer = false, bool privateServer = false);
 
+		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
 		void OnDrawClipped(Canvas* canvas) override;
 		void OnDrawOverlay(Canvas* canvas) override;
-		void OnTouchEvent(const TouchEvent& event, Vector2i viewSize) override;
-
-	protected:
-		void OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos) override;
-		void OnExecuteSelected() override;
-		void OnDrawEmptyText(Canvas* canvas, std::int32_t& charOffset) override;
-		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
-		void OnHandleInput() override;
+		void OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize) override;
 
 	private:
 		float _expandedAnimation;
 		float _transitionTime;
 		std::int32_t _transitionFromEpisode;
 		float _transitionFromEpisodeTime;
+		float _animation;
 		bool _multiplayer;
 		bool _privateServer;
 		bool _expanded;
 		bool _shouldStart;
+		ScrollView* _list;
+		SmallVector<EpisodeData> _episodes;
 
+		std::int32_t GetSelectedRow() const;
+		void DrawEpisodeRow(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset, bool isSelected, std::int32_t row);
+		void ExecuteSelected();
+		void HandleTap(std::int32_t row, Vector2i touchPos);
 		void OnAfterTransition();
 		void AddEpisode(StringView episodeFile);
 	};

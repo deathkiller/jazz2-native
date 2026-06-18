@@ -65,16 +65,12 @@ namespace Jazz2::UI::Menu
 		float topLine = contentBounds.Y + 31.0f;
 		float bottomLine = contentBounds.Y + contentBounds.H - 42.0f;
 
-		_root->DrawElement(MenuDim, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
-			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement(MenuLine, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement(MenuLine, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawMenuFrame(center.X, topLine, bottomLine);
 
 		center.Y = topLine + (bottomLine - topLine) * 0.4f;
 		std::int32_t charOffset = 0;
 
-		_root->DrawStringShadow(_("Refresh Cache"), charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
-			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+		_root->DrawMenuTitle(charOffset, _("Refresh Cache"), center.X, topLine);
 
 		_root->DrawStringShadow(_("Processing of files in \f[c:#9e7056]\"Source\"\f[/c] directory..."), charOffset, center.X, center.Y, IMenuContainer::FontLayer,
 			Alignment::Center, Font::DefaultColor, 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);

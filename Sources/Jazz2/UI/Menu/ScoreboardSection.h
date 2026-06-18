@@ -28,10 +28,11 @@ namespace Jazz2::UI::Menu
 		void OnDraw(Canvas* canvas) override;
 		void OnDrawClipped(Canvas* canvas) override;
 		void OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize) override;
+		// The scoreboard drops in from the top instead of the default horizontal slide
+		TransitionInfo GetTransition() const override;
 
 	private:
-		float _transition;
-		std::int32_t _scrollY;			// Vertical scroll offset in pixels (<= 0; 0 = top), same convention as ScrollableMenuSection
+		std::int32_t _scrollY;			// Vertical scroll offset in pixels (<= 0; 0 = top), same convention as ScrollView
 		std::int32_t _contentHeight;	// Total height of all rows
 		std::int32_t _availableHeight;	// Height of the visible (clipped) row band
 		bool _scrollable;

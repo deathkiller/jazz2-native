@@ -248,18 +248,101 @@ struct __ti
 namespace Death { namespace TypeInfo { namespace Implementation {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
-	using TypeHandle = const void*;
+	// 64-bit FNV-1a of the extracted type name, evaluated at compile-time and used as the type identity.
+	// It's stable across translation units and shared-library (DLL/.so) boundaries (unlike a raw pointer
+	// to the name), so it's emitted as an immediate and the name string itself never reaches the binary.
+	static constexpr std::uint64_t HashTypeName(const char* data, std::size_t size) noexcept {
+		std::uint64_t hash = 0xcbf29ce484222325ull;
+		for (std::size_t i = 0; i < size; i++) {
+			hash = (hash ^ static_cast<std::uint8_t>(data[i])) * 0x00000100000001b3ull;
+		}
+		return hash;
+	}
+
+	// The name is built into a local (never a static member), so it stays a compile-time-only value
+	template<class T>
+	static constexpr std::uint64_t ComputeNameHash() noexcept {
+		constexpr auto name = __ti<T>::n();
+		return HashTypeName(name.data(), name.size());
+	}
 
 	template<class T>
 	struct TypeName {
+		static constexpr std::uint64_t hash = ComputeNameHash<T>();
+	};
+
+	// Debug-only registry that verifies no two distinct types share a 64-bit hash (which would make
+	// runtime_cast<T>() occasionally return a wrong, non-null pointer). Each type registers (hash + name)
+	// through ForceTypeRegistration(), which its __FindInstance() ODR-uses, so the registrar's static
+	// initializer runs at startup and checks the new type against all already-registered ones. None of
+	// this - including the type-name strings - is compiled into release builds.
+#if defined(DEATH_DEBUG)
+	template<class T>
+	struct TypeNameString {
 		static constexpr auto value = __ti<T>::n();
 	};
+
+	struct TypeRegistryNode {
+		std::uint64_t Hash;
+		const char* Name;
+		TypeRegistryNode* Next;
+	};
+
+	// Meyers singleton, so the list head is alive before any registrar runs, regardless of init order
+	inline TypeRegistryNode*& GetTypeRegistryHead() noexcept {
+		static TypeRegistryNode* head = nullptr;
+		return head;
+	}
+
+	struct TypeRegistrar {
+		TypeRegistryNode Node;
+		TypeRegistrar(std::uint64_t hash, const char* name) noexcept {
+			Node.Hash = hash;
+			Node.Name = name;
+			// A shared hash with a different name is a real collision; the same name reached from two
+			// translation units is the same type and benign. The strcmp() runs only on a hash match.
+			for (const TypeRegistryNode* n = GetTypeRegistryHead(); n != nullptr; n = n->Next) {
+				DEATH_DEBUG_ASSERT(n->Hash != hash || constexpr_strcmp(n->Name, name) == 0,
+					("runtime_cast<T>() hash collision: \"{}\" and \"{}\" both hash to {}", n->Name, name, hash));
+			}
+			Node.Next = GetTypeRegistryHead();
+			GetTypeRegistryHead() = &Node;
+		}
+	};
+
+	template<class T>
+	struct TypeRegistryEntry {
+		static TypeRegistrar Instance;
+	};
+
+	template<class T>
+	TypeRegistrar TypeRegistryEntry<T>::Instance{TypeName<T>::hash, TypeNameString<T>::value.data()};
+
+	template<class T>
+	DEATH_ALWAYS_INLINE void ForceTypeRegistration() noexcept {
+		// Just ODR-uses the per-type registrar so its static initializer registers the type at startup
+		(void)&TypeRegistryEntry<T>::Instance;
+	}
+#else
+	template<class T>
+	DEATH_ALWAYS_INLINE void ForceTypeRegistration() noexcept {}
+#endif
+
+	// A single 64-bit value, so it's passed in a register and compared in one instruction. A wider
+	// (16-byte) handle would be passed via memory on the Windows x64 ABI, which slows the cast walk
+	// considerably. A false match needs two distinct type names to share a 64-bit hash (~2^-64).
+	using TypeHandle = std::uint64_t;
 
 	struct Helpers
 	{
 		template<class T>
+		static constexpr TypeHandle GetTypeHandle() noexcept {
+			return TypeName<T>::hash;
+		}
+
+		template<class T>
 		static constexpr TypeHandle GetTypeHandle(const T*) noexcept {
-			return TypeName<T>::value.data();
+			return GetTypeHandle<T>();
 		}
 
 		template<class T, class U>
@@ -277,7 +360,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 			if (u == nullptr)
 				return nullptr;
 			return const_cast<T*>(static_cast<const T*>(
-				u->__FindInstance(TypeName<T>::value.data())
+				u->__FindInstance(GetTypeHandle<T>())
 			));
 		}
 
@@ -285,7 +368,7 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 		static const T* RuntimeCast(const U* u, std::integral_constant<bool, false>) noexcept {
 			if (u == nullptr)
 				return nullptr;
-			return static_cast<const T*>(u->__FindInstance(TypeName<T>::value.data()));
+			return static_cast<const T*>(u->__FindInstance(GetTypeHandle<T>()));
 		}
 
 		template<class Self>
@@ -310,6 +393,8 @@ namespace Death { namespace TypeInfo { namespace Implementation {
 	__DEATH_NO_OVERRIDE_WARNING																			\
 	friend struct Death::TypeInfo::Implementation::Helpers;												\
 	virtual const void* __FindInstance(Death::TypeInfo::Implementation::TypeHandle t) const noexcept {	\
+		Death::TypeInfo::Implementation::ForceTypeRegistration<											\
+			typename std::remove_cv<typename std::remove_pointer<decltype(this)>::type>::type>();		\
 		if (t == Death::TypeInfo::Implementation::Helpers::GetTypeHandle(this))							\
 			return this;																				\
 		return Death::TypeInfo::Implementation::Helpers::FindInstance<__VA_ARGS__>(t, this);			\

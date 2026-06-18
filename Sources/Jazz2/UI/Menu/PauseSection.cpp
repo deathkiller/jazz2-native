@@ -79,13 +79,16 @@ namespace Jazz2::UI::Menu
 			_animation = std::min(_animation + timeMult * 0.02f, 1.0f);
 		}
 
+		bool navUp, navDown, navSound;
+		UpdateNavigation(timeMult, navUp, navDown, navSound);
+
 		if (_root->ActionHit(PlayerAction::Fire)) {
 			ExecuteSelected();
 		} else if (_root->ActionHit(PlayerAction::Menu)) {
 			if (auto inGameMenu = runtime_cast<InGameMenu>(_root)) {
 				inGameMenu->ResumeGame();
 			}
-		} else if (_root->ActionHit(PlayerAction::Up)) {
+		} else if (navUp) {
 #if defined(WITH_MULTIPLAYER)
 			// In multiplayer, pressing Up while on the first (Resume) item opens the scoreboard
 			if (_selectedIndex == 0) {
@@ -98,15 +101,15 @@ namespace Jazz2::UI::Menu
 				}
 			}
 #endif
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
+			if (navSound) _root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			if (_selectedIndex > 0) {
 				_selectedIndex--;
 			} else {
 				_selectedIndex = (std::int32_t)_items.size() - 1;
 			}
-		} else if (_root->ActionHit(PlayerAction::Down)) {
-			_root->PlaySfx("MenuSelect"_s, 0.5f);
+		} else if (navDown) {
+			if (navSound) _root->PlaySfx("MenuSelect"_s, 0.5f);
 			_animation = 0.0f;
 			if (_selectedIndex < (std::int32_t)_items.size() - 1) {
 				_selectedIndex++;

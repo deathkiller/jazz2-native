@@ -541,8 +541,14 @@
     <ClInclude Include="Jazz2\UI\Menu\InputDiagnosticsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\LanguageSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\MainMenu.h" />
+    <ClInclude Include="Jazz2\UI\Menu\MenuContainerBase.h" />
     <ClInclude Include="Jazz2\UI\Menu\MenuResources.h" />
     <ClInclude Include="Jazz2\UI\Menu\MenuSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\MenuStyle.h" />
+    <ClInclude Include="Jazz2\UI\Menu\MenuTransition.h" />
+    <ClInclude Include="Jazz2\UI\Menu\MenuWidgets.h" />
+    <ClInclude Include="Jazz2\UI\Menu\WidgetSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\Tweening.h" />
     <ClInclude Include="Jazz2\UI\Menu\MultiplayerGameModeSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\OptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\PauseSection.h" />
@@ -551,7 +557,6 @@
     <ClInclude Include="Jazz2\UI\Menu\ScoreboardSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RemapControlsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\RescaleModeSection.h" />
-    <ClInclude Include="Jazz2\UI\Menu\ScrollableMenuSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\ServerSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\SimpleMessageSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\SoundsOptionsSection.h" />
@@ -937,7 +942,12 @@
     <ClCompile Include="Jazz2\UI\Menu\InputDiagnosticsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\LanguageSelectSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\MainMenu.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\IMenuContainer.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\MenuContainerBase.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\MenuSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\MenuTransition.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\MenuWidgets.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\WidgetSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\MultiplayerGameModeSelectSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\OptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\PauseSection.cpp" />

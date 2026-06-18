@@ -25,9 +25,17 @@ namespace Jazz2::UI::Menu
 	}
 
 	ScoreboardSection::ScoreboardSection()
-		: _transition(0.0f), _scrollY(0), _contentHeight(0), _availableHeight(0), _scrollable(false),
+		: _scrollY(0), _contentHeight(0), _availableHeight(0), _scrollable(false),
 			_touchTime(0.0f), _touchSpeed(0.0f), _touchDirection(0), _touchStartedAtBottom(false)
 	{
+	}
+
+	TransitionInfo ScoreboardSection::GetTransition() const
+	{
+		// Drop in from the top (and slide back up on close) instead of the default horizontal slide
+		TransitionInfo info;
+		info.Style = TransitionStyle::SlideVertical;
+		return info;
 	}
 
 	Recti ScoreboardSection::GetClipRectangle(const Recti& contentBounds)
@@ -39,8 +47,8 @@ namespace Jazz2::UI::Menu
 	{
 		MenuSection::OnShow(root);
 
-		_transition = 0.0f;
 		_scrollY = 0;
+		_navRepeat = 0.0f;
 		_touchStart = Vector2f::Zero;
 		_touchLast = Vector2f::Zero;
 		_touchTime = 0.0f;
@@ -51,10 +59,6 @@ namespace Jazz2::UI::Menu
 
 	void ScoreboardSection::OnUpdate(float timeMult)
 	{
-		if (_transition < 1.0f) {
-			_transition = std::min(_transition + timeMult * 0.04f, 1.0f);
-		}
-
 		auto inGameMenu = runtime_cast<InGameMenu>(_root);
 		auto* mpLevelHandler = (inGameMenu != nullptr ? inGameMenu->GetMultiplayerHandler() : nullptr);
 		if (mpLevelHandler == nullptr) {
@@ -70,7 +74,7 @@ namespace Jazz2::UI::Menu
 		_scrollable = (_contentHeight > _availableHeight);
 		std::int32_t minScroll = std::min(0, _availableHeight - _contentHeight);
 
-		// Kinetic touch momentum (mirrors ScrollableMenuSection): coast after release, bounce slightly at the edges
+		// Kinetic touch momentum (mirrors ScrollView): coast after release, bounce slightly at the edges
 		if (_touchSpeed > 0.0f) {
 			if (_touchStart == Vector2f::Zero && _scrollable) {
 				float y = _scrollY + (_touchSpeed * (std::int32_t)_touchDirection * TouchKineticDivider * timeMult);
@@ -92,20 +96,25 @@ namespace Jazz2::UI::Menu
 		_scrollY = std::clamp(_scrollY, minScroll, 0);
 		_touchTime += timeMult;
 
+		// Hold Up/Down to scroll continuously (one row per repeat, matching the menu lists)
+		bool navUp, navDown, navSound;
+		UpdateNavigation(timeMult, navUp, navDown, navSound);
+
 		if (_root->ActionHit(PlayerAction::Menu) || _root->ActionHit(PlayerAction::Fire)) {
 			_root->PlaySfx("MenuSelect"_s, 0.5f);
 			_root->LeaveSection();
-		} else if (_root->ActionHit(PlayerAction::Up)) {
+		} else if (navUp) {
 			if (_scrollable && _scrollY < 0) {
 				_scrollY = std::min(0, _scrollY + (std::int32_t)RowHeight);
-				_root->PlaySfx("MenuSelect"_s, 0.4f);
+				if (navSound) _root->PlaySfx("MenuSelect"_s, 0.4f);
 			}
-		} else if (_root->ActionHit(PlayerAction::Down)) {
+		} else if (navDown) {
 			if (_scrollable && _scrollY > minScroll) {
 				_scrollY = std::max(minScroll, _scrollY - (std::int32_t)RowHeight);
-				_root->PlaySfx("MenuSelect"_s, 0.4f);
-			} else {
-				// Nothing more to scroll - a Down press dismisses the scoreboard (returns to the pause menu)
+				if (navSound) _root->PlaySfx("MenuSelect"_s, 0.4f);
+			} else if (_root->ActionHit(PlayerAction::Down)) {
+				// Nothing more to scroll - a deliberate (fresh) Down press dismisses the scoreboard and returns to the
+				// pause menu. Gated on the fresh press so a hold-scroll that reaches the bottom doesn't kick you out.
 				_root->PlaySfx("MenuSelect"_s, 0.5f);
 				_root->LeaveSection();
 			}
@@ -138,14 +147,11 @@ namespace Jazz2::UI::Menu
 		float top = contentBounds.Y + 10.0f;
 		std::int32_t charOffset = 0;
 
-		// Slide the title/header down from above (a third of the content height up) and fade them in. The slide
-		// eases out (decelerates into place) while the fade finishes a little earlier so they are legible as they
-		// settle; the data rows in OnDrawClipped share the same offset and wipe down into their band.
-		float slideY = (1.0f - IMenuContainer::EaseOutCubic(_transition)) * -(contentBounds.H / 3.0f);
-		float alpha = IMenuContainer::EaseOutCubic(std::min(_transition * 1.4f, 1.0f));
-		// Elastic "pop" scale for the title, matching the selected-item animation elsewhere in the menu (0.9 is the
-		// title's resting scale)
-		float titleScale = 0.9f * (0.5f + IMenuContainer::EaseOutElastic(_transition * 0.3f) * 0.5f);
+		// The drop-in animation is now handled by the common section transition (SlideVertical), so the content is
+		// drawn at its resting position, full opacity and resting title scale
+		constexpr float slideY = 0.0f;
+		constexpr float alpha = 1.0f;
+		constexpr float titleScale = 0.9f;
 		auto faded = [](Colorf color, float a) -> Colorf {
 			color.A *= a;
 			return color;
@@ -227,8 +233,8 @@ namespace Jazz2::UI::Menu
 		float width = contentBounds.W * 0.88f;
 		std::int32_t charOffset = 0;
 
-		float slideY = (1.0f - IMenuContainer::EaseOutCubic(_transition)) * -(contentBounds.H / 3.0f);
-		float alpha = IMenuContainer::EaseOutCubic(std::min(_transition * 1.4f, 1.0f));
+		constexpr float slideY = 0.0f;
+		constexpr float alpha = 1.0f;
 		auto faded = [](Colorf color, float a) -> Colorf {
 			color.A *= a;
 			return color;

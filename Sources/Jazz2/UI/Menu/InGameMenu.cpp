@@ -1,4 +1,4 @@
-﻿#include "InGameMenu.h"
+#include "InGameMenu.h"
 #include "MenuResources.h"
 #include "PauseSection.h"
 #include "../../Input/ControlScheme.h"
@@ -9,9 +9,6 @@
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/Graphics/RenderQueue.h"
-#include "../../../nCine/Audio/AudioReaderMpt.h"
-#include "../../../nCine/Base/Random.h"
-#include "../../../nCine/Input/JoyMapping.h"
 
 #if defined(WITH_MULTIPLAYER)
 #	include "../../Multiplayer/MpLevelHandler.h"
@@ -26,7 +23,7 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	InGameMenu::InGameMenu(LevelHandler* root)
-		: _root(root), _pressedActions(0), _lastNavigationFlags(NavigationFlags::AllowAll), _touchButtonsTimer(0.0f)
+		: _root(root)
 	{
 		_canvasBackground = std::make_unique<MenuBackgroundCanvas>(this);
 		_canvasClipped = std::make_unique<MenuClippedCanvas>(this);
@@ -83,10 +80,7 @@ namespace Jazz2::UI::Menu
 			_owner->_touchButtonsTimer -= timeMult;
 		}
 
-		if (!_owner->_sections.empty()) {
-			auto& lastSection = _owner->_sections.back();
-			lastSection->OnUpdate(timeMult);
-		}
+		_owner->UpdateActiveSection(timeMult);
 	}
 
 	void InGameMenu::OnKeyPressed(const nCine::KeyboardEvent& event)
@@ -208,10 +202,7 @@ namespace Jazz2::UI::Menu
 				Alignment::BottomLeft, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 0.7f, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
 		}
 
-		if (!_owner->_sections.empty()) {
-			auto& lastSection = _owner->_sections.back();
-			lastSection->OnDraw(this);
-		}
+		_owner->DrawSections(this, ActiveCanvas::Background);
 
 		return true;
 	}
@@ -261,8 +252,7 @@ namespace Jazz2::UI::Menu
 
 		_owner->_activeCanvas = ActiveCanvas::Clipped;
 
-		auto& lastSection = _owner->_sections.back();
-		lastSection->OnDrawClipped(this);
+		_owner->DrawSections(this, ActiveCanvas::Clipped);
 
 		return true;
 	}
@@ -275,61 +265,9 @@ namespace Jazz2::UI::Menu
 
 		_owner->_activeCanvas = ActiveCanvas::Overlay;
 
-		if (!_owner->_sections.empty()) {
-			auto& lastSection = _owner->_sections.back();
-			lastSection->OnDrawOverlay(this);
-		}
+		_owner->DrawSections(this, ActiveCanvas::Overlay);
 
 		return true;
-	}
-
-	MenuSection* InGameMenu::SwitchToSectionDirect(std::unique_ptr<MenuSection> section)
-	{
-		if (!_sections.empty()) {
-			auto& lastSection = _sections.back();
-			lastSection->OnHide();
-		}
-
-		auto& currentSection = _sections.emplace_back(std::move(section));
-		currentSection->OnShow(this);
-
-		if (_contentBounds != Recti::Empty) {
-			Recti clipRectangle = currentSection->GetClipRectangle(_contentBounds);
-			_root->_upscalePass.SetClipRectangle(clipRectangle);
-		}
-
-		return currentSection.get();
-	}
-
-	void InGameMenu::LeaveSection()
-	{
-		if (_sections.empty()) {
-			return;
-		}
-
-		_sections.pop_back();
-
-		if (!_sections.empty()) {
-			auto& lastSection = _sections.back();
-			lastSection->OnShow(this);
-
-			if (_contentBounds != Recti::Empty) {
-				Recti clipRectangle = lastSection->GetClipRectangle(_contentBounds);
-				_root->_upscalePass.SetClipRectangle(clipRectangle);
-			}
-		}
-	}
-
-	MenuSection* InGameMenu::GetCurrentSection() const
-	{
-		std::size_t count = _sections.size();
-		return (count >= 1 ? _sections[count - 1].get() : nullptr);
-	}
-
-	MenuSection* InGameMenu::GetUnderlyingSection() const
-	{
-		std::size_t count = _sections.size();
-		return (count >= 2 ? _sections[count - 2].get() : nullptr);
 	}
 
 	void InGameMenu::ChangeLevel(LevelInitialization&& levelInit)
@@ -380,6 +318,7 @@ namespace Jazz2::UI::Menu
 
 		if ((type & ChangedPreferencesType::Language) == ChangedPreferencesType::Language) {
 			// All sections have to be recreated to load new language
+			_transition.Skip();
 			_sections.clear();
 			SwitchToSection<PauseSection>();
 		}
@@ -394,124 +333,6 @@ namespace Jazz2::UI::Menu
 				_root->_hud->RefreshTouchButtons();
 			}
 		}
-	}
-
-	void InGameMenu::DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, bool unaligned)
-	{
-		auto* res = _metadata->FindAnimation(state);
-		if (res == nullptr) {
-			return;
-		}
-
-		if (frame < 0) {
-			frame = res->FrameOffset + ((std::int32_t)(_canvasBackground->AnimTime * res->FrameCount / res->AnimDuration) % res->FrameCount);
-		}
-
-		Canvas* currentCanvas = GetActiveCanvas();
-		GenericGraphicResource* base = res->Base;
-		Vector2f size = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
-		if (!unaligned) {
-			adjustedPos.X = std::round(adjustedPos.X);
-			adjustedPos.Y = std::round(adjustedPos.Y);
-		}
-
-		Vector2i texSize = base->TextureDiffuse->GetSize();
-		std::int32_t col = frame % base->FrameConfiguration.X;
-		std::int32_t row = frame / base->FrameConfiguration.X;
-		Vector4f texCoords = Vector4f(
-			float(base->FrameDimensions.X) / float(texSize.X),
-			float(base->FrameDimensions.X * col) / float(texSize.X),
-			float(base->FrameDimensions.Y) / float(texSize.Y),
-			float(base->FrameDimensions.Y * row) / float(texSize.Y)
-		);
-
-		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
-		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending, 0.0f, paletteOffset);
-	}
-
-	void InGameMenu::DrawElement(AnimState state, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, Vector2f size, const Vector4f& texCoords, bool unaligned)
-	{
-		auto* res = _metadata->FindAnimation(state);
-		if (res == nullptr) {
-			return;
-		}
-
-		Canvas* currentCanvas = GetActiveCanvas();
-		GenericGraphicResource* base = res->Base;
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
-		if (!unaligned) {
-			adjustedPos.X = std::round(adjustedPos.X);
-			adjustedPos.Y = std::round(adjustedPos.Y);
-		}
-
-		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
-		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false, 0.0f, paletteOffset);
-	}
-
-	void InGameMenu::DrawSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool additiveBlending)
-	{
-		Canvas* currentCanvas = GetActiveCanvas();
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
-		adjustedPos.X = std::round(adjustedPos.X);
-		adjustedPos.Y = std::round(adjustedPos.Y);
-
-		currentCanvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
-	}
-
-	void InGameMenu::DrawTexture(const Texture& texture, float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool unaligned)
-	{
-		Canvas* currentCanvas = GetActiveCanvas();
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
-		if (!unaligned) {
-			adjustedPos.X = std::round(adjustedPos.X);
-			adjustedPos.Y = std::round(adjustedPos.Y);
-		}
-
-		currentCanvas->DrawTexture(texture, adjustedPos, z, size, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), color);
-	}
-
-	Vector2f InGameMenu::MeasureString(StringView text, float scale, float charSpacing, float lineSpacing)
-	{
-		return _smallFont->MeasureString(text, scale, charSpacing, lineSpacing);
-	}
-
-	void InGameMenu::DrawStringShadow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scale,
-		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
-	{
-		Canvas* currentCanvas = GetActiveCanvas();
-		std::int32_t charOffsetShadow = charOffset;
-		_smallFont->DrawString(currentCanvas, text, charOffsetShadow, x, y + 2.8f * scale, FontShadowLayer,
-			align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
-		_smallFont->DrawString(currentCanvas, text, charOffset, x, y, z,
-			align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
-	}
-
-	void InGameMenu::DrawStringGlow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scale,
-		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
-	{
-		DrawElement(MenuGlow, 0, x, y, z - 40, align, Colorf(1.0f, 1.0f, 1.0f, 0.4f * scale),
-			(MeasureString(text, scale, charSpacing).X + 30.0f) * 0.06f, 4.0f * scale, true, true);
-
-		DrawStringShadow(text, charOffset, x, y, z, align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
-	}
-
-	void InGameMenu::PlaySfx(StringView identifier, float gain)
-	{
-#if defined(WITH_AUDIO)
-		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
-		if (it != _metadata->Sounds.end()) {
-			std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
-			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
-			player->setPosition(Vector3f(0.0f, 0.0f, 100.0f));
-			player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
-			player->setSourceRelative(true);
-
-			player->play();
-		} else {
-			LOGE("Sound effect \"{}\" was not found", identifier);
-		}
-#endif
 	}
 
 	bool InGameMenu::IsLocalSession() const
@@ -574,48 +395,4 @@ namespace Jazz2::UI::Menu
 		return runtime_cast<Jazz2::Multiplayer::MpLevelHandler>(_root);
 	}
 #endif
-
-	bool InGameMenu::ActionPressed(PlayerAction action)
-	{
-		return ((_pressedActions & (1 << (std::int32_t)action)) == (1 << (std::int32_t)action));
-	}
-
-	bool InGameMenu::ActionHit(PlayerAction action)
-	{
-		return ((_pressedActions & ((1 << (std::int32_t)action) | (1 << (16 + (std::int32_t)action)))) == (1 << (std::int32_t)action));
-	}
-
-	void InGameMenu::UpdateContentBounds(Vector2i viewSize)
-	{
-		float headerY = (viewSize.Y >= 300 ? std::clamp((200.0f * viewSize.Y / viewSize.X) - 40.0f, 30.0f, 70.0f) : 8.0f);
-		float footerY = (viewSize.Y >= 300 ? 30.0f : 14.0f);
-		_contentBounds = Recti(0, headerY + 30, viewSize.X, viewSize.Y - (headerY + footerY));
-	}
-
-	void InGameMenu::UpdatePressedActions()
-	{
-		auto& input = theApplication().GetInputManager();
-		_pressedActions = ((_pressedActions & 0xFFFF) << 16);
-
-		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
-		std::int32_t joyStatesCount = 0;
-		for (std::int32_t i = 0; i < JoyMapping::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)); i++) {
-			if (input.isJoyMapped(i)) {
-				joyStates[joyStatesCount++] = &input.joyMappedState(i);
-			}
-		}
-
-		NavigationFlags flags = NavigationFlags::AllowAll;
-		if (!_sections.empty()) {
-			auto& lastSection = _sections.back();
-			flags = lastSection->GetNavigationFlags();
-		}
-
-		_pressedActions |= ControlScheme::FetchNavigation(_root->_pressedKeys, ArrayView(joyStates, joyStatesCount), flags);
-		if (_lastNavigationFlags != flags) {
-			_lastNavigationFlags = flags;
-			_pressedActions &= 0xffff;
-			_pressedActions |= (_pressedActions << 16);
-		}
-	}
 }

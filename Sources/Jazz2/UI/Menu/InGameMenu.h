@@ -1,13 +1,9 @@
-﻿#pragma once
+#pragma once
 
-#include "IMenuContainer.h"
-#include "MenuSection.h"
+#include "MenuContainerBase.h"
 #include "../../LevelHandler.h"
-#include "../Canvas.h"
-#include "../../ContentResolver.h"
 
 #include "../../../nCine/Input/InputEvents.h"
-#include "../../../nCine/Audio/AudioBufferPlayer.h"
 
 using namespace Jazz2::Tiles;
 
@@ -22,14 +18,14 @@ namespace Jazz2::UI::Menu
 {
 	/**
 		@brief In-game menu
-		
-		@ref IMenuContainer attached to a running @ref LevelHandler that hosts the menu sections shown while a game is
+
+		@ref MenuContainerBase attached to a running @ref LevelHandler that hosts the menu sections shown while a game is
 		paused, starting from @ref PauseSection. It draws over the live level and provides actions such as resuming the
 		game, returning to the main menu, and (in multiplayer) spectating or reselecting a character.
 	*/
-	class InGameMenu : public IMenuContainer
+	class InGameMenu : public MenuContainerBase
 	{
-		DEATH_RUNTIME_OBJECT(IMenuContainer);
+		DEATH_RUNTIME_OBJECT(MenuContainerBase);
 
 	public:
 		/** @{ @name Constants */
@@ -54,10 +50,6 @@ namespace Jazz2::UI::Menu
 		/** @brief Called when the viewport needs to be initialized (e.g., when the resolution is changed) */
 		void OnInitializeViewport(std::int32_t width, std::int32_t height);
 
-		MenuSection* SwitchToSectionDirect(std::unique_ptr<MenuSection> section) override;
-		void LeaveSection() override;
-		MenuSection* GetCurrentSection() const override;
-		MenuSection* GetUnderlyingSection() const override;
 		void ChangeLevel(LevelInitialization&& levelInit) override;
 		bool HasResumableState() const override;
 		void ResumeSavedState() override;
@@ -66,31 +58,10 @@ namespace Jazz2::UI::Menu
 		bool CreateServer(Jazz2::Multiplayer::ServerInitialization&& serverInit) override;
 #endif
 		void ApplyPreferencesChanges(ChangedPreferencesType type) override;
-		bool ActionPressed(PlayerAction action) override;
-		bool ActionHit(PlayerAction action) override;
 
 		Vector2i GetViewSize() const override {
 			return _canvasBackground->ViewSize;
 		}
-
-		Recti GetContentBounds() const override {
-			return _contentBounds;
-		}
-
-		void DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
-			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, bool unaligned = false) override;
-		void DrawElement(AnimState state, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
-			Vector2f size, const Vector4f& texCoords, bool unaligned = false) override;
-		void DrawSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool additiveBlending = false) override;
-		void DrawTexture(const Texture& texture, float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool unaligned = false) override;
-		Vector2f MeasureString(StringView text, float scale = 1.0f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;
-		void DrawStringShadow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
-			float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
-			float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;
-		void DrawStringGlow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
-			float scale = 1.0f, float angleOffset = 0.0f, float varianceX = 4.0f, float varianceY = 4.0f,
-			float speed = 0.4f, float charSpacing = 1.0f, float lineSpacing = 1.0f) override;
-		void PlaySfx(StringView identifier, float gain = 1.0f) override;
 
 		/** @brief Returns `true` if the level handler is on a local session */
 		bool IsLocalSession() const;
@@ -114,12 +85,6 @@ namespace Jazz2::UI::Menu
 
 	private:
 		LevelHandler* _root;
-
-		enum class ActiveCanvas {
-			Background,
-			Clipped,
-			Overlay
-		};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
@@ -160,34 +125,12 @@ namespace Jazz2::UI::Menu
 		};
 #endif
 
-		Recti _contentBounds;
-		std::unique_ptr<MenuBackgroundCanvas> _canvasBackground;
-		std::unique_ptr<MenuClippedCanvas> _canvasClipped;
-		std::unique_ptr<MenuOverlayCanvas> _canvasOverlay;
-		ActiveCanvas _activeCanvas;
-		Metadata* _metadata;
-		Font* _smallFont;
-		Font* _mediumFont;
-#if defined(WITH_AUDIO)
-		SmallVector<std::shared_ptr<AudioBufferPlayer>> _playingSounds;
-#endif
-
-		SmallVector<std::unique_ptr<MenuSection>, 8> _sections;
-		std::uint32_t _pressedActions;
-		NavigationFlags _lastNavigationFlags;
-		float _touchButtonsTimer;
-
-		void UpdateContentBounds(Vector2i viewSize);
-		void UpdatePressedActions();
-
-		inline Canvas* GetActiveCanvas()
-		{
-			switch (_activeCanvas) {
-				default:
-				case ActiveCanvas::Background: return _canvasBackground.get();
-				case ActiveCanvas::Clipped: return _canvasClipped.get();
-				case ActiveCanvas::Overlay: return _canvasOverlay.get();
-			}
+	protected:
+		Rendering::UpscaleRenderPassWithClipping& GetUpscalePass() override {
+			return _root->_upscalePass;
+		}
+		const BitArray& GetPressedKeys() const override {
+			return _root->_pressedKeys;
 		}
 	};
 }

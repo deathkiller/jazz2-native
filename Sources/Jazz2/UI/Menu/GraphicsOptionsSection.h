@@ -1,57 +1,27 @@
-﻿#pragma once
+#pragma once
 
-#include "ScrollableMenuSection.h"
+#include "WidgetSection.h"
 
 namespace Jazz2::UI::Menu
 {
-#ifndef DOXYGEN_GENERATING_OUTPUT
-	enum class GraphicsOptionsItemType {
-		RescaleMode,
-		Resolution,
-#if defined(NCINE_HAS_WINDOWS)
-		Fullscreen,
-#endif
-		Antialiasing,
-		BackgroundDithering,
-		BlurEffects,
-		LightingResolution,
-		LowWaterQuality,
-		ShowPlayerTrails,
-		PreferVerticalSplitscreen,
-		PreferZoomOut,
-		KeepAspectRatioInCinematics,
-		UnalignedViewport,
-		ShowPerformanceMetrics
-	};
-
-	struct GraphicsOptionsItem {
-		GraphicsOptionsItemType Type;
-		StringView DisplayName;
-		bool HasBooleanValue;
-	};
-#endif
-
 	/**
 		@brief Graphics options menu section
-		
+
 		Lists the graphics and video settings, such as rescale mode, resolution, antialiasing, and lighting quality.
+		Built declaratively on top of @ref WidgetSection.
 	*/
-	class GraphicsOptionsSection : public ScrollableMenuSection<GraphicsOptionsItem>
+	class GraphicsOptionsSection : public WidgetSection
 	{
 	public:
-		/** @brief Creates a new instance */
-		GraphicsOptionsSection();
-		~GraphicsOptionsSection();
+		~GraphicsOptionsSection() override;
 
+		void OnShow(IMenuContainer* root) override;
 		void OnDraw(Canvas* canvas) override;
 
-	protected:
-		void OnHandleInput() override;
-		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
-		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
-		void OnExecuteSelected() override;
-
 	private:
-		bool _isDirty;
+		bool _isDirty = false;
+		// Backing storage for the formatted (non-catalog) values, so those choice rows can hand out a stable view
+		String _resolutionValue;
+		String _lightingResolutionValue;
 	};
 }

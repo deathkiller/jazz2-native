@@ -95,6 +95,7 @@ namespace Jazz2::Multiplayer
 		bool IsServer() const override;
 		std::uint32_t GetPlayerFurColor(const Actors::Player* player, std::uint32_t furColor) const override;
 		bool IsPausable() const override;
+		bool CanPlayersCollide() const override;
 		bool CanActivateSugarRush() const override;
 		bool CanEventDisappear(EventType eventType) const override;
 		float GetHurtInvulnerableTime() const override;
@@ -261,7 +262,7 @@ namespace Jazz2::Multiplayer
 		/** @brief Returns `true` if players can stand on top of each other (per-level @ref ServerConfiguration::PlayerStacking) */
 		bool IsPlayerStackingEnabled() const;
 		/** @brief Returns the player actor the given player is standing/landing on (one-way platform check), or `nullptr` */
-		Actors::ActorBase* FindPlayerToStandOn(Actors::Player* player, float timeMult);
+		Actors::ActorBase* FindPlayerToStandOn(Actors::Player* player, float timeMult) override;
 		/** @brief Called when a player requests to synchronize weapon ammo */
 		void HandlePlayerRefreshAmmo(Actors::Player* player, WeaponType weaponType);
 		/** @brief Called when a player requests to synchronize weapon upgrades */
@@ -270,6 +271,8 @@ namespace Jazz2::Multiplayer
 		void HandlePlayerMorphTo(Actors::Player* player, PlayerType type);
 		/** @brief Called when a player changed duration of dizziness */
 		void HandlePlayerSetDizzy(Actors::Player* player, float timeLeft);
+		/** @brief Called when another player starts/stops standing on a player, to sync its cosmetic lift animation */
+		void HandlePlayerSetBeingStoodOn(Actors::Player* player, bool beingStoodOn);
 		/** @brief Called when a player sets a shield */
 		void HandlePlayerSetShield(Actors::Player* player, ShieldType shieldType, float timeLeft);
 		/** @brief Called when a player emits a weapon flare */

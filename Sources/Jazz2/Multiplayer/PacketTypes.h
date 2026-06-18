@@ -169,6 +169,7 @@ namespace Jazz2::Multiplayer
 		ShakeCameraView,	/**< Camera shake */
 		Spectate,			/**< Spectate mode state */
 		Team,				/**< Team the player belongs to */
+		BeingStoodOn,		/**< Whether another player is standing on this one (cosmetic lift animation) */
 
 		WeaponAmmo = 30,	/**< Ammo of a weapon */
 		WeaponUpgrades,		/**< Upgrades of a weapon */

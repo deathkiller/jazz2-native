@@ -151,6 +151,9 @@ namespace Jazz2::UI::Menu
 			_animation = std::min(_animation + timeMult * 0.016f, 1.0f);
 		}
 
+		bool navUp, navDown, navSound;
+		UpdateNavigation(timeMult, navUp, navDown, navSound);
+
 		if (!_shouldStart) {
 			if (_root->ActionHit(PlayerAction::Fire)) {
 				ExecuteSelected();
@@ -160,8 +163,8 @@ namespace Jazz2::UI::Menu
 					_animation = 0.0f;
 					_selectedIndex = (std::int32_t)_items.size() - 1;
 				}
-			} else if (_root->ActionHit(PlayerAction::Up)) {
-				_root->PlaySfx("MenuSelect"_s, 0.5f);
+			} else if (navUp) {
+				if (navSound) _root->PlaySfx("MenuSelect"_s, 0.5f);
 				_animation = 0.0f;
 				if (_selectedIndex > 0) {
 					_selectedIndex--;
@@ -171,8 +174,8 @@ namespace Jazz2::UI::Menu
 				} else {
 					_selectedIndex = (std::int32_t)_items.size() - 1;
 				}
-			} else if (_root->ActionHit(PlayerAction::Down)) {
-				_root->PlaySfx("MenuSelect"_s, 0.5f);
+			} else if (navDown) {
+				if (navSound) _root->PlaySfx("MenuSelect"_s, 0.5f);
 				_animation = 0.0f;
 				if (_selectedIndex < (std::int32_t)_items.size() - 1) {
 					_selectedIndex++;

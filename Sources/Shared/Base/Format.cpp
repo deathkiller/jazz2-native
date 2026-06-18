@@ -173,16 +173,20 @@ namespace Death { namespace Implementation {
 
 	template<int Bits, typename TUint>
 	std::int32_t countDigits(TUint n) {
-#if defined(__DEATH_HAS_BUILTIN_CLZLL)
-		if (std::numeric_limits<TUint>::digits == 32) {
+#if defined(__DEATH_HAS_BUILTIN_CLZ)
+		if (std::numeric_limits<TUint>::digits <= 32) {
 			return (__DEATH_HAS_BUILTIN_CLZ(static_cast<std::uint32_t>(n) | 1) ^ 31) / Bits + 1;
 		}
 #endif
+#if defined(__DEATH_HAS_BUILTIN_CLZLL)
+		return (__DEATH_HAS_BUILTIN_CLZLL(static_cast<std::uint64_t>(n) | 1) ^ 63) / Bits + 1;
+#else
 		std::int32_t digitCount = 0;
 		do {
 			++digitCount;
 		} while ((n >>= Bits) != 0);
 		return digitCount;
+#endif
 	}
 
 	inline const char* getTwoDigits(std::size_t value) {
@@ -266,7 +270,10 @@ namespace Death { namespace Implementation {
 				auto absValue = static_cast<uint32_or_64_t<T>>(value);
 
 				std::int32_t digitCount = countDigits<3>(absValue);
-				std::int32_t size = (digitCount < precision ? precision : digitCount + 1);
+				// Octal numbers are prefixed with '0', but a zero value is already "0" and, when
+				// precision padding applies, its leading zero already serves as the prefix
+				bool needsPrefix = (digitCount >= precision && absValue != 0);
+				std::int32_t size = (digitCount < precision ? precision : digitCount) + (needsPrefix ? 1 : 0);
 
 				if (size <= buffer.size()) {
 					char* begin = buffer.data();
@@ -274,7 +281,7 @@ namespace Death { namespace Implementation {
 						for (std::int32_t i = 0; i < precision - digitCount; i++) {
 							*begin++ = '0';
 						}
-					} else {
+					} else if (needsPrefix) {
 						*begin++ = '0'; // '0' prefix for octal numbers
 					}
 					formatBase2e<3>(begin, absValue, digitCount, false);
@@ -358,18 +365,24 @@ namespace Death { namespace Implementation {
 		return formatNumber(buffer, value, context);
 	}
 
+	// std::snprintf() returns a negative value on an output error; clamp it to zero so the result
+	// is never reinterpreted as a huge std::size_t, which would corrupt the computed output size
+	inline std::size_t clampSnprintfResult(int result) {
+		return (result < 0 ? std::size_t{0} : static_cast<std::size_t>(result));
+	}
+
 	std::size_t Formatter<float>::format(const Containers::MutableStringView& buffer, float value, FormatContext& context) {
 		std::int32_t precision = context.Precision;
 		if (precision == -1) precision = std::numeric_limits<float>::digits10;
 		const char format[] { '%', '.', '*', formatTypeChar<float>(context.Type), '\0' };
-		return std::snprintf(buffer.data(), buffer.size(), format, precision, double(value));
+		return clampSnprintfResult(std::snprintf(buffer.data(), buffer.size(), format, precision, double(value)));
 	}
 
 	std::size_t Formatter<double>::format(const Containers::MutableStringView& buffer, double value, FormatContext& context) {
 		std::int32_t precision = context.Precision;
 		if (precision == -1) precision = std::numeric_limits<double>::digits10;
 		const char format[] { '%', '.', '*', formatTypeChar<float>(context.Type), '\0' };
-		return std::snprintf(buffer.data(), buffer.size(), format, precision, value);
+		return clampSnprintfResult(std::snprintf(buffer.data(), buffer.size(), format, precision, value));
 	}
 
 	std::size_t Formatter<long double>::format(const Containers::MutableStringView& buffer, long double value, FormatContext& context) {
@@ -380,7 +393,7 @@ namespace Death { namespace Implementation {
 		if (precision == -1) precision = std::numeric_limits<double>::digits10;
 #endif
 		const char format[] { '%', '.', '*', 'L', formatTypeChar<float>(context.Type), '\0' };
-		return std::snprintf(buffer.data(), buffer.size(), format, precision, value);
+		return clampSnprintfResult(std::snprintf(buffer.data(), buffer.size(), format, precision, value));
 	}
 
 	std::size_t Formatter<bool>::format(const Containers::MutableStringView& buffer, bool value, FormatContext& context) {
@@ -409,9 +422,10 @@ namespace Death { namespace Implementation {
 		std::int32_t parseNumber(Containers::StringView format, std::size_t& formatOffset) {
 			std::int32_t number = -1;
 			while (formatOffset < format.size() && format[formatOffset] >= '0' && format[formatOffset] <= '9') {
-				if (number == -1) number = 0;
-				else number *= 10;
-				number += (format[formatOffset] - '0');
+				// Clamp to avoid signed integer overflow (which is UB) on absurdly long numeric
+				// fields; such values are meaningless as a placeholder index or precision anyway
+				if (number == -1) number = (format[formatOffset] - '0');
+				else if (number < 100000000) number = number * 10 + (format[formatOffset] - '0');
 				++formatOffset;
 			}
 			return number;

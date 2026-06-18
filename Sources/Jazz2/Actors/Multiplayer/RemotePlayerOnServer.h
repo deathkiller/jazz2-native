@@ -95,6 +95,8 @@ namespace Jazz2::Actors::Multiplayer
 		StateFrame _stateBuffer[8];
 		std::int32_t _stateBufferPos;
 		Vector2f _displayPos;
+		/** @brief Last "being stood on" state sent to the owning client, to only resync on change */
+		bool _beingStoodOnLastSent = false;
 #endif
 
 		Task<bool> OnActivatedAsync(const ActorActivationDetails& details) override;

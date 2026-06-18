@@ -24,10 +24,9 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	MainMenu::MainMenu(IRootController* root, bool afterIntro)
-		: _root(root), _activeCanvas(ActiveCanvas::Background), _transitionWhite(afterIntro ? 1.0f : 0.0f),
+		: _root(root), _transitionWhite(afterIntro ? 1.0f : 0.0f),
 			_logoTransition(0.0f), _texturedBackgroundPass(this), _texturedBackgroundPhase(0.0f),
-			_pressedKeys(ValueInit, (std::size_t)Keys::Count), _pressedActions(0), _lastNavigationFlags(NavigationFlags::AllowAll),
-			_touchButtonsTimer(0.0f)
+			_pressedKeys(ValueInit, (std::size_t)Keys::Count)
 	{
 		theApplication().GetGfxDevice().setWindowTitle("Jazz² Resurrection"_s);
 
@@ -78,6 +77,9 @@ namespace Jazz2::UI::Menu
 
 	void MainMenu::Reset()
 	{
+		// Finish any in-flight transition first so it doesn't reference sections about to be removed
+		_transition.Skip();
+
 		bool shouldSwitch = false;
 		while (!_sections.empty()) {
 			if (_sections.size() == 1 && dynamic_cast<BeginSection*>(_sections.back().get())) {
@@ -144,10 +146,7 @@ namespace Jazz2::UI::Menu
 			_touchButtonsTimer -= timeMult;
 		}
 
-		if (!_sections.empty()) {
-			auto& lastSection = _sections.back();
-			lastSection->OnUpdate(timeMult);
-		}
+		UpdateActiveSection(timeMult);
 	}
 
 	void MainMenu::OnInitializeViewport(std::int32_t width, std::int32_t height)
@@ -309,10 +308,7 @@ namespace Jazz2::UI::Menu
 #endif
 		}
 
-		if (!_owner->_sections.empty()) {
-			auto& lastSection = _owner->_sections.back();
-			lastSection->OnDraw(this);
-		}
+		_owner->DrawSections(this, ActiveCanvas::Background);
 
 		return true;
 	}
@@ -329,8 +325,7 @@ namespace Jazz2::UI::Menu
 
 		_owner->_activeCanvas = ActiveCanvas::Clipped;
 
-		auto& lastSection = _owner->_sections.back();
-		lastSection->OnDrawClipped(this);
+		_owner->DrawSections(this, ActiveCanvas::Clipped);
 
 		return true;
 	}
@@ -343,10 +338,7 @@ namespace Jazz2::UI::Menu
 
 		_owner->_activeCanvas = ActiveCanvas::Overlay;
 
-		if (!_owner->_sections.empty()) {
-			auto& lastSection = _owner->_sections.back();
-			lastSection->OnDrawOverlay(this);
-		}
+		_owner->DrawSections(this, ActiveCanvas::Overlay);
 
 		_owner->DrawDebris(renderQueue);
 
@@ -355,55 +347,6 @@ namespace Jazz2::UI::Menu
 		}
 
 		return true;
-	}
-
-	MenuSection* MainMenu::SwitchToSectionDirect(std::unique_ptr<MenuSection> section)
-	{
-		if (!_sections.empty()) {
-			auto& lastSection = _sections.back();
-			lastSection->OnHide();
-		}
-
-		auto& currentSection = _sections.emplace_back(std::move(section));
-		currentSection->OnShow(this);
-
-		if (_contentBounds != Recti::Empty) {
-			Recti clipRectangle = currentSection->GetClipRectangle(_contentBounds);
-			_upscalePass.SetClipRectangle(clipRectangle);
-		}
-
-		return currentSection.get();
-	}
-
-	void MainMenu::LeaveSection()
-	{
-		if (_sections.empty()) {
-			return;
-		}
-
-		_sections.pop_back();
-
-		if (!_sections.empty()) {
-			auto& lastSection = _sections.back();
-			lastSection->OnShow(this);
-
-			if (_contentBounds != Recti::Empty) {
-				Recti clipRectangle = lastSection->GetClipRectangle(_contentBounds);
-				_upscalePass.SetClipRectangle(clipRectangle);
-			}
-		}
-	}
-
-	MenuSection* MainMenu::GetCurrentSection() const
-	{
-		std::size_t count = _sections.size();
-		return (count >= 1 ? _sections[count - 1].get() : nullptr);
-	}
-
-	MenuSection* MainMenu::GetUnderlyingSection() const
-	{
-		std::size_t count = _sections.size();
-		return (count >= 2 ? _sections[count - 2].get() : nullptr);
 	}
 
 	void MainMenu::ChangeLevel(LevelInitialization&& levelInit)
@@ -451,6 +394,7 @@ namespace Jazz2::UI::Menu
 
 		if ((type & ChangedPreferencesType::Language) == ChangedPreferencesType::Language) {
 			// All sections have to be recreated to load new language
+			_transition.Skip();
 			_sections.clear();
 			SwitchToSection<BeginSection>();
 		}
@@ -463,86 +407,6 @@ namespace Jazz2::UI::Menu
 		if ((type & ChangedPreferencesType::MainMenu) == ChangedPreferencesType::MainMenu) {
 			PlayMenuMusic();
 		}
-	}
-
-	void MainMenu::DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, bool unaligned)
-	{
-		auto* res = _metadata->FindAnimation(state);
-		if (res == nullptr) {
-			return;
-		}
-
-		if (frame < 0) {
-			frame = res->FrameOffset + ((std::int32_t)(_canvasBackground->AnimTime * res->FrameCount / res->AnimDuration) % res->FrameCount);
-		}
-
-		Canvas* currentCanvas = GetActiveCanvas();
-		GenericGraphicResource* base = res->Base;
-		Vector2f size = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
-		if (!unaligned) {
-			adjustedPos.X = std::round(adjustedPos.X);
-			adjustedPos.Y = std::round(adjustedPos.Y);
-		}
-
-		Vector2i texSize = base->TextureDiffuse->GetSize();
-		std::int32_t col = frame % base->FrameConfiguration.X;
-		std::int32_t row = frame / base->FrameConfiguration.X;
-		Vector4f texCoords = Vector4f(
-			float(base->FrameDimensions.X) / float(texSize.X),
-			float(base->FrameDimensions.X * col) / float(texSize.X),
-			float(base->FrameDimensions.Y) / float(texSize.Y),
-			float(base->FrameDimensions.Y * row) / float(texSize.Y)
-		);
-		
-		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
-		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, additiveBlending, 0.0f, paletteOffset);
-	}
-
-	void MainMenu::DrawElement(AnimState state, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, Vector2f size, const Vector4f& texCoords, bool unaligned)
-	{
-		auto* res = _metadata->FindAnimation(state);
-		if (res == nullptr) {
-			return;
-		}
-
-		Canvas* currentCanvas = GetActiveCanvas();
-		GenericGraphicResource* base = res->Base;
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
-		if (!unaligned) {
-			adjustedPos.X = std::round(adjustedPos.X);
-			adjustedPos.Y = std::round(adjustedPos.Y);
-		}
-
-		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
-		currentCanvas->DrawTexture(*base->TextureDiffuse.get(), adjustedPos, z, size, texCoords, color, false, 0.0f, paletteOffset);
-	}
-
-	void MainMenu::DrawSolid(float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool additiveBlending)
-	{
-		Canvas* currentCanvas = GetActiveCanvas();
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
-		adjustedPos.X = std::round(adjustedPos.X);
-		adjustedPos.Y = std::round(adjustedPos.Y);
-
-		currentCanvas->DrawSolid(adjustedPos, z, size, color, additiveBlending);
-	}
-
-	void MainMenu::DrawTexture(const Texture& texture, float x, float y, std::uint16_t z, Alignment align, Vector2f size, const Colorf& color, bool unaligned)
-	{
-		Canvas* currentCanvas = GetActiveCanvas();
-		Vector2f adjustedPos = Canvas::ApplyAlignment(align, Vector2f(x, y), size);
-		if (!unaligned) {
-			adjustedPos.X = std::round(adjustedPos.X);
-			adjustedPos.Y = std::round(adjustedPos.Y);
-		}
-
-		currentCanvas->DrawTexture(texture, adjustedPos, z, size, Vector4f(1.0f, 0.0f, 1.0f, 0.0f), color);
-	}
-
-	Vector2f MainMenu::MeasureString(StringView text, float scale, float charSpacing, float lineSpacing)
-	{
-		return _smallFont->MeasureString(text, scale, charSpacing, lineSpacing);
 	}
 
 	void MainMenu::DrawStringShadow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scale,
@@ -562,43 +426,6 @@ namespace Jazz2::UI::Menu
 			align, Colorf(0.0f, 0.0f, 0.0f, 0.29f), scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
 		_smallFont->DrawString(currentCanvas, text, charOffset, x, y, z,
 			align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
-	}
-
-	void MainMenu::DrawStringGlow(StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scale,
-		float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
-	{
-		DrawElement(MenuGlow, 0, x, y, z - 40, align, Colorf(1.0f, 1.0f, 1.0f, 0.4f * scale),
-			(MeasureString(text, scale, charSpacing).X + 30.0f) * 0.06f, 4.0f * scale, true, true);
-
-		DrawStringShadow(text, charOffset, x, y, z, align, color, scale, angleOffset, varianceX, varianceY, speed, charSpacing, lineSpacing);
-	}
-
-	void MainMenu::PlaySfx(StringView identifier, float gain)
-	{
-#if defined(WITH_AUDIO)
-		auto it = _metadata->Sounds.find(String::nullTerminatedView(identifier));
-		if (it != _metadata->Sounds.end()) {
-			std::int32_t idx = (it->second.Buffers.size() > 1 ? Random().Next(0, (std::int32_t)it->second.Buffers.size()) : 0);
-			auto& player = _playingSounds.emplace_back(std::make_shared<AudioBufferPlayer>(&it->second.Buffers[idx]->Buffer));
-			player->setPosition(Vector3f(0.0f, 0.0f, 100.0f));
-			player->setGain(gain * PreferencesCache::MasterVolume * PreferencesCache::SfxVolume);
-			player->setSourceRelative(true);
-
-			player->play();
-		} else {
-			LOGE("Sound effect \"{}\" was not found", identifier);
-		}
-#endif
-	}
-
-	bool MainMenu::ActionPressed(PlayerAction action)
-	{
-		return ((_pressedActions & (1 << (std::int32_t)action)) == (1 << (std::int32_t)action));
-	}
-
-	bool MainMenu::ActionHit(PlayerAction action)
-	{
-		return ((_pressedActions & ((1 << (std::int32_t)action) | (1 << (16 + (std::int32_t)action)))) == (1 << (std::int32_t)action));
 	}
 
 	void MainMenu::PlayMenuMusic()
@@ -623,40 +450,6 @@ namespace Jazz2::UI::Menu
 			_music->play();
 		}
 #endif
-	}
-
-	void MainMenu::UpdateContentBounds(Vector2i viewSize)
-	{
-		float headerY = (viewSize.Y >= 300 ? std::clamp((200.0f * viewSize.Y / viewSize.X) - 40.0f, 30.0f, 70.0f) : 8.0f);
-		float footerY = (viewSize.Y >= 300 ? 30.0f : 14.0f);
-		_contentBounds = Recti(0, headerY + 30, viewSize.X, viewSize.Y - (headerY + footerY));
-	}
-
-	void MainMenu::UpdatePressedActions()
-	{
-		auto& input = theApplication().GetInputManager();
-		_pressedActions = ((_pressedActions & 0xFFFF) << 16);
-
-		const JoyMappedState* joyStates[ControlScheme::MaxConnectedGamepads];
-		std::int32_t joyStatesCount = 0;
-		for (std::int32_t i = 0; i < JoyMapping::MaxNumJoysticks && joyStatesCount < std::int32_t(arraySize(joyStates)); i++) {
-			if (input.isJoyMapped(i)) {
-				joyStates[joyStatesCount++] = &input.joyMappedState(i);
-			}
-		}
-
-		NavigationFlags flags = NavigationFlags::AllowAll;
-		if (!_sections.empty()) {
-			auto& lastSection = _sections.back();
-			flags = lastSection->GetNavigationFlags();
-		}
-
-		_pressedActions |= ControlScheme::FetchNavigation(_pressedKeys, ArrayView(joyStates, joyStatesCount), flags);
-		if (_lastNavigationFlags != flags) {
-			_lastNavigationFlags = flags;
-			_pressedActions &= 0xffff;
-			_pressedActions |= (_pressedActions << 16);
-		}
 	}
 
 	void MainMenu::UpdateRichPresence()

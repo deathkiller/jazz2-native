@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "ScrollableMenuSection.h"
+#include "WidgetSection.h"
 #include "../../Input/ControlScheme.h"
 
 #include "../../../nCine/Input/InputEvents.h"
@@ -8,63 +8,55 @@
 
 namespace Jazz2::UI::Menu
 {
-#ifndef DOXYGEN_GENERATING_OUTPUT
-	struct RemapControlsItem {
-		PlayerAction Type;
-		String DisplayName;
-	};
-#endif
-
 	/**
 		@brief Remap controls menu section
-		
+
 		Lists the player actions and lets the player rebind the individual control mappings for a given player by
-		assigning new keyboard, gamepad, or touch inputs.
+		assigning new keyboard, gamepad, or touch inputs. Built on top of @ref WidgetSection with each action row drawn
+		through a @ref CanvasWidget; the bespoke 2D (row/column) navigation and input capture are driven by the section.
 	*/
-	class RemapControlsSection : public ScrollableMenuSection<RemapControlsItem>
+	class RemapControlsSection : public WidgetSection
 	{
 	public:
-		/** @{ @name Constants */
-
 		/** @brief Maximum number of mapping targets */
 		static constexpr std::int32_t MaxTargetCount = 6;
-
-		/** @} */
 
 		/** @brief Creates a new instance for the specified player */
 		RemapControlsSection(std::int32_t playerIndex);
 		~RemapControlsSection() override;
 
+		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
+		void OnKeyPressed(const nCine::KeyboardEvent& event) override;
+		NavigationFlags GetNavigationFlags() const override;
 
 	protected:
-		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
-		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
-		void OnKeyPressed(const KeyboardEvent& event) override;
-		void OnHandleInput() override;
-		void OnExecuteSelected() override;
-		void OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos) override;
 		void OnBackPressed() override;
 
-	protected:
-		/** @brief Index of the currently selected mapping target column */
+	private:
 		std::int32_t _selectedColumn;
-		/** @brief Index of the player whose controls are being remapped */
 		std::int32_t _playerIndex;
-		/** @brief Remaining time to wait for input before the assignment is cancelled */
 		float _timeout;
-		/** @brief Animation progress of the input hint */
 		float _hintAnimation;
-		/** @brief Last sampled gamepad states, used to detect newly pressed buttons */
+		float _animation;
 		JoyMappedState _joyStatesLast[ControlScheme::MaxConnectedGamepads];
-		/** @brief Whether the mapping has unsaved changes */
 		bool _isDirty;
-		/** @brief Whether the section is currently waiting for input to assign */
 		bool _waitForInput;
-		/** @brief Value of @ref _waitForInput from the previous frame */
 		bool _waitForInputPrev;
+		ScrollView* _list;
+		SmallVector<PlayerAction> _actions;
 
+		/** @brief Returns the index of the currently selected action row */
+		std::int32_t GetSelectedRow() const;
+		/** @brief Begins waiting for an input to assign to the selected row/column */
+		void StartCapture();
+		/** @brief Clamps the selected column to the targets available for the given row */
+		void ClampColumn(std::int32_t row);
+		/** @brief Draws a single action row */
+		void DrawRow(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset, bool selected, PlayerAction type, StringView name);
+		/** @brief Handles a tap on the given row at the given pixel position */
+		void HandleTap(std::int32_t row, Vector2i touchPos);
 		/** @brief Refreshes the cached gamepad states */
 		void RefreshPreviousState();
 		/** @brief Returns `true` if the specified mapping target is already assigned to another action */

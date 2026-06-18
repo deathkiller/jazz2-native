@@ -319,8 +319,10 @@ namespace Jazz2
 
 	bool LevelHandler::CanPlayersCollide() const
 	{
-		// TODO
-		return false;
+		// Enable player-vs-player physical collision (bump apart + stand on each other) in local splitscreen co-op,
+		// i.e. whenever more than one player shares the level. Online sessions override this to `false` and resolve
+		// collisions server-side (see MpLevelHandler / PlayerOnServer).
+		return (_players.size() > 1);
 	}
 
 	Recti LevelHandler::GetLevelBounds() const
@@ -359,6 +361,41 @@ namespace Jazz2
 	ArrayView<Actors::Player* const> LevelHandler::GetPlayers() const
 	{
 		return _players;
+	}
+
+	Actors::ActorBase* LevelHandler::FindPlayerToStandOn(Actors::Player* player, float timeMult)
+	{
+		// Minimum horizontal overlap required to count as "on top of" the other player (not brushing its side)
+		constexpr float MinHorizontalOverlap = 4.0f;
+		// How close the feet must be to the other player's head to count as standing/landing on it
+		constexpr float StandThreshold = 6.0f;
+
+		// Only grab onto another player while falling or already resting, never while moving up (jumping off)
+		Vector2f speed = player->GetSpeed();
+		if (speed.Y < -0.1f) {
+			return nullptr;
+		}
+
+		const AABBf& self = player->AABBInner;
+		float feet = self.B;
+		float nextFeet = feet + speed.Y * timeMult;
+
+		// Treat the other player as a one-way platform: stand on it if our feet are at (or about to cross) its head
+		// this frame, with enough horizontal overlap that we're really on top of it (not just brushing its side).
+		for (auto* other : _players) {
+			if (other == player || other->GetPlayerType() == PlayerType::Spectate) {
+				continue;
+			}
+			const AABBf& o = other->AABBInner;
+			if (self.R - o.L < MinHorizontalOverlap || o.R - self.L < MinHorizontalOverlap) {
+				continue;
+			}
+			float top = o.T;
+			if (feet <= top + StandThreshold && nextFeet >= top - StandThreshold) {
+				return other;
+			}
+		}
+		return nullptr;
 	}
 
 	float LevelHandler::GetDefaultAmbientLight() const

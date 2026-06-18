@@ -72,6 +72,13 @@ namespace Jazz2::Actors::Multiplayer
 		PlayerOnServer::OnUpdate(timeMult);
 
 		_renderer.setPosition(_displayPos);
+
+		// The owning client predicts this player locally and can't tell when another player stands on it, so push the
+		// server-authoritative "being stood on" state to it (only on change) to drive its cosmetic lift animation.
+		if (_beingStoodOn != _beingStoodOnLastSent) {
+			_beingStoodOnLastSent = _beingStoodOn;
+			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerSetBeingStoodOn(this, _beingStoodOn);
+		}
 	}
 
 	bool RemotePlayerOnServer::IsContinuousJumpAllowed() const

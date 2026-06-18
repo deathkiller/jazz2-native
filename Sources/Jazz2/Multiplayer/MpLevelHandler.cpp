@@ -182,7 +182,14 @@ namespace Jazz2::Multiplayer
 	{
 		return false;
 	}
-	
+
+	bool MpLevelHandler::CanPlayersCollide() const
+	{
+		// Online sessions don't use the base Player-vs-Player bump path (which the local splitscreen handler enables);
+		// player collisions are resolved server-side via PlayerOnServer and stacking via MpPlayer instead.
+		return false;
+	}
+
 	bool MpLevelHandler::CanActivateSugarRush() const
 	{
 		const auto& serverConfig = _networkManager->GetServerConfiguration();
@@ -1774,6 +1781,25 @@ namespace Jazz2::Multiplayer
 				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Dizzy);
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
 				packet.WriteVariableInt32((std::int32_t)timeLeft);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetBeingStoodOn(Actors::Player* player, bool beingStoodOn)
+	{
+		// The owning client predicts its own player and can't see a remote player standing on it, so the server (which
+		// simulates everyone) tells it when to show/hide the cosmetic lift animation. Other peers already see it via
+		// the normal remoting-actor animation sync.
+		if (_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(6);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::BeingStoodOn);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::uint8_t>(beingStoodOn ? 1 : 0);
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 			}
 		}
@@ -4993,6 +5019,17 @@ namespace Jazz2::Multiplayer
 							InvokeAsync([this, timeLeft]() {
 								if (!_players.empty()) {
 									_players[0]->SetDizzy(float(timeLeft));
+								}
+							});
+							break;
+						}
+						case PlayerPropertyType::BeingStoodOn: {
+							bool beingStoodOn = (packet.ReadValue<std::uint8_t>() != 0);
+							InvokeAsync([this, beingStoodOn]() {
+								if (!_players.empty()) {
+									// Our own player is predicted locally, so it can't detect a remote player standing on
+									// it - the server tells us, and PushSolidObjects leaves this flag alone on a client
+									_players[0]->_beingStoodOn = beingStoodOn;
 								}
 							});
 							break;

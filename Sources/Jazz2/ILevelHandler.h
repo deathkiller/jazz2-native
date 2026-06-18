@@ -103,6 +103,13 @@ namespace Jazz2
 		/** @brief Returns list of players */
 		virtual ArrayView<Actors::Player* const> GetPlayers() const = 0;
 		/**
+		 * @brief Returns the player actor @p player is standing/landing on (one-way platform check), or `nullptr`
+		 *
+		 * Shared by local splitscreen co-op and online sessions to let players stand on top of each other. Local
+		 * sessions search the player list; online sessions also search remote players on clients.
+		 */
+		virtual Actors::ActorBase* FindPlayerToStandOn(Actors::Player* player, float timeMult) = 0;
+		/**
 		 * @brief Returns the fur color a player should actually be recolored with
 		 *
 		 * Lets the level handler override a player's configured color; multiplayer team modes use this to force

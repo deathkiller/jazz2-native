@@ -93,8 +93,8 @@ namespace Death { namespace Cpu {
 		return Implementation::runtimeFeatures(hwcap);
 #	else
 		// No other (deinlined) implementation at the moment. The function should not be even defined here
-		// in that case -- it's inlined in the headervinstead, including the x86 implementation.
-#		error
+		// in that case -- it's inlined in the header instead, including the x86 implementation.
+#		error Unsupported platform
 #	endif
 	}
 #endif

@@ -400,17 +400,22 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/InputDiagnosticsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/LanguageSelectSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MainMenu.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MenuContainerBase.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MenuResources.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MenuStyle.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MenuTransition.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MenuWidgets.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/OptionsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PauseSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RefreshCacheSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RemapControlsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/RescaleModeSection.h
-	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/ScrollableMenuSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/SimpleMessageSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/SoundsOptionsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/StartGameOptionsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/TouchControlsOptionsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/UserProfileOptionsSection.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/TextInputBuffer.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/Tweening.h
+	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/WidgetSection.h
 )

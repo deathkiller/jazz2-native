@@ -1,41 +1,18 @@
-﻿#pragma once
+#pragma once
 
-#include "ScrollableMenuSection.h"
+#include "WidgetSection.h"
 
 namespace Jazz2::UI::Menu
 {
-#ifndef DOXYGEN_GENERATING_OUTPUT
-	enum class OptionsItemType {
-		Gameplay,
-		Graphics,
-		Sounds,
-		Controls,
-		UserProfile
-	};
-
-	struct OptionsItem {
-		OptionsItemType Type;
-		StringView DisplayName;
-	};
-#endif
-
 	/**
 		@brief Options menu section
-		
+
 		Top-level options screen listing the settings categories (gameplay, graphics, sounds, controls, and user
-		profile).
+		profile). Built declaratively on top of @ref WidgetSection.
 	*/
-	class OptionsSection : public ScrollableMenuSection<OptionsItem>
+	class OptionsSection : public WidgetSection
 	{
 	public:
-		/** @brief Creates a new instance */
-		OptionsSection();
-
-		void OnDraw(Canvas* canvas) override;
-
-	protected:
-		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
-		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
-		void OnExecuteSelected() override;
+		void OnShow(IMenuContainer* root) override;
 	};
 }

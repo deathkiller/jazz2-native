@@ -361,6 +361,12 @@ namespace Jazz2::Actors
 		bool _inIdleTransition, _inLedgeTransition;
 		bool _canDoubleJump;
 		ActorBase* _carryingObject;
+		// Whether this player is currently standing on top of another player (local splitscreen co-op stacking, and
+		// online stacking when this is an `MpPlayer`); guards cancelling the carry so a real solid object is untouched
+		bool _stackCarrying;
+		// Whether another player is standing on top of this one without immobilizing it - drives the lift animation
+		// cosmetically (online; local co-op uses `_isLifting` instead so movement is restricted, like a solid object)
+		bool _beingStoodOn;
 		float _externalForceCooldown;
 		float _springCooldown;
 		// Per-player recoloring: packed 4-byte fur color (one section per byte) and the allocated palette offset into
@@ -438,6 +444,31 @@ namespace Jazz2::Actors
 		void OnHitCeiling(float timeMult) override;
 		void OnHitWall(float timeMult) override;
 
+		/**
+		 * @brief Keeps this player and @p other from overlapping (so they can't pass through) and bumps them apart
+		 *
+		 * Equal-mass elastic separation along the axis of least penetration. Shared by local splitscreen co-op and
+		 * online sessions (where @ref Multiplayer::PlayerOnServer adds the authoritative knockback resync on top).
+		 *
+		 * @param other            The other player in contact
+		 * @param stackingEnabled  When `true`, vertical overlap is left to @ref UpdatePlayerStacking instead of bumped
+		 * @return `true` if the players were separated (a bump was applied)
+		 */
+		bool ApplyPlayerBump(Player& other, bool stackingEnabled);
+		/**
+		 * @brief Resolves this player standing on top of another player as a one-way platform
+		 *
+		 * Carrying makes @ref CanJump() return `true` (so the player can jump off) and zeroes vertical speed so it
+		 * rests instead of falling through. Call before the physics update so jump input sees it. Shared by local
+		 * splitscreen co-op and online sessions.
+		 *
+		 * @param timeMult  Frame time multiplier
+		 * @param snap      Whether to reposition our feet onto the player below (the side that simulates this player);
+		 *                  `false` only grounds it (the server's shadow of a remote player, whose position comes from
+		 *                  its client)
+		 */
+		void UpdatePlayerStacking(float timeMult, bool snap);
+
 		/** @brief Reduces remaining shield time when a hit is absorbed (only if more than @p time remains) */
 		virtual void DecreaseShieldTime(float time);
 
@@ -467,6 +498,14 @@ namespace Jazz2::Actors
 	private:
 		static constexpr float ShieldDisabled = -1000000000000.0f;
 
+		// Player-vs-player bump tuning for local splitscreen co-op; mirrors the server-side values in PlayerOnServer
+		static constexpr float PlayerBumpMaxSeparationPerFrame = 4.0f;
+		static constexpr float PlayerBumpRestitution = 0.5f;
+		static constexpr float PlayerBumpMinSeparationSpeed = 5.0f;
+		// How far the upper player sinks into the one it stands on, so a stack reads as connected instead of floating
+		// on the exact hitbox edge
+		static constexpr float PlayerStackSinkDepth = 4.0f;
+
 		void UpdateAnimation(float timeMult);
 		void PushSolidObjects(float timeMult);
 		void CheckEndOfSpecialMoves(float timeMult);
@@ -490,5 +529,9 @@ namespace Jazz2::Actors
 		void FireWeaponRF();
 		void FireWeaponTNT();
 		bool FireWeaponThunderbolt();
+
+		// Returns `true` if another player is currently standing on top of this one (so we should show the lift
+		// animation). Searches the player list, which on a client only contains locally-simulated players.
+		bool IsBeingStoodOnByPlayer() const;
 	};
 }

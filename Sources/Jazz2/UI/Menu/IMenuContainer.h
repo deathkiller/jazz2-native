@@ -119,6 +119,23 @@ namespace Jazz2::UI::Menu
 		/** @brief Plays a common sound effect */
 		virtual void PlaySfx(StringView identifier, float gain = 1.0f) = 0;
 
+		/** @{ @name Standard menu chrome painters */
+
+		/** @brief Draws the standard dimmed background frame between the given top and bottom divider lines */
+		void DrawMenuFrame(float centerX, float topLine, float bottomLine);
+		/** @brief Draws a section title above the top divider line */
+		void DrawMenuTitle(std::int32_t& charOffset, StringView text, float centerX, float topLine);
+		/** @brief Draws a menu list item, animating the selected one with the elastic glow */
+		void DrawMenuListItem(std::int32_t& charOffset, StringView text, float centerX, float y, bool selected, float animation, bool transparent = false);
+		/** @brief Draws the `<` `>` selection arrows around a value row; `arrowSpacing` pushes them further out for wider values */
+		void DrawMenuArrows(std::int32_t& charOffset, float centerX, float y, float animation, float arrowSpacing = 0.0f);
+		/** @brief Draws a setting's current value (with `<` `>` arrows when `showArrows`) below its label; `arrowSpacing` pushes the arrows further out for wider values */
+		void DrawMenuValue(std::int32_t& charOffset, StringView value, float centerX, float y, bool selected, bool readOnly, bool showArrows, float animation, float arrowSpacing = 0.0f);
+		/** @brief Draws the scroll-edge fade glow at the given line */
+		void DrawMenuEdgeGlow(float centerX, float y);
+
+		/** @} */
+
 		/** @brief Returns elastic ease-out interpolation of the specified value */
 		static float EaseOutElastic(float t)
 		{

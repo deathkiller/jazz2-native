@@ -816,7 +816,7 @@ namespace Death { namespace Cpu {
 		Ssse3T
 #	elif defined(DEATH_TARGET_SSE3)
 		Sse3T
-#		elif defined(DEATH_TARGET_SSE2)
+#	elif defined(DEATH_TARGET_SSE2)
 		Sse2T
 #else
 		ScalarT
@@ -2623,7 +2623,7 @@ namespace Death { namespace Cpu {
 			// Declared at the top of the file
 			__cpuidex(data, leaf, count);
 #else
-#	error
+#	error Unsupported platform
 #endif
 		}
 	}
@@ -2670,7 +2670,7 @@ namespace Death { namespace Cpu {
 #elif defined(DEATH_TARGET_MSVC)
 			const unsigned long long xgetbv = _xgetbv(0);
 #else
-#	error
+#	error Unsupported platform
 #endif
 
 			// If AVX is not supported, we don't check any following flags either

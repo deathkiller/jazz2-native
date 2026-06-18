@@ -1,25 +1,22 @@
-﻿#include "GameplayOptionsSection.h"
+#include "GameplayOptionsSection.h"
 #include "InGameMenu.h"
-#include "MenuResources.h"
 #include "GameplayEnhancementsSection.h"
 #include "LanguageSelectSection.h"
 #include "RefreshCacheSection.h"
+#include "MenuResources.h"
+#include "../Font.h"
 #include "../../Input/RgbLights.h"
 #include "../../PreferencesCache.h"
+#include "../../ContentResolver.h"
 
 #include "../../../nCine/I18n.h"
 
-#include <Utf8.h>
+#include <cmath>
 
 using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	GameplayOptionsSection::GameplayOptionsSection()
-		: _isDirty(false)
-	{
-	}
-
 	GameplayOptionsSection::~GameplayOptionsSection()
 	{
 		if (_isDirty) {
@@ -32,221 +29,103 @@ namespace Jazz2::UI::Menu
 	{
 		MenuSection::OnShow(root);
 
-		bool isInGame = runtime_cast<InGameMenu>(_root);
-
-		_items.clear();
-
-		// TRANSLATORS: Menu item in Options > Gameplay section
-		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::Enhancements, _("Enhancements") });
-		// TRANSLATORS: Menu item in Options > Gameplay section
-		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::Language, _("Language") });
-#if defined(WITH_ANGELSCRIPT)
-		// TRANSLATORS: Menu item in Options > Gameplay section
-		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowUnsignedScripts, _("Scripting"), true, isInGame });
-#endif
-		// TRANSLATORS: Menu item in Options > Gameplay section
-		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::ContinuousJump, _("Continuous Jump"), true });
-		// TRANSLATORS: Menu item in Options > Gameplay section
-		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::SwitchToNewWeapon, _("Switch To New Weapon"), true });
-		// TRANSLATORS: Menu item in Options > Gameplay section
-		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::ShowMinimap, _("Show Minimap"), true });
-		// TRANSLATORS: Menu item in Options > Gameplay section
-		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::AllowCheats, _("Allow Cheats"), true, isInGame });
-		// TRANSLATORS: Menu item in Options > Gameplay section
-		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::OverwriteEpisodeEnd, _("Overwrite Episode Completion"), true, isInGame });
-
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
-		// TRANSLATORS: Menu item in Options > Gameplay section
-		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::EnableRgbLights, _("Razer Chroma™"), true });
-#endif
-#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_UNIX)
-		// TRANSLATORS: Menu item in Options > Gameplay section
-		_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::BrowseSourceDirectory, _("Browse \"Source\" Directory") });
-#endif
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
-		if (!isInGame) {
-			// TRANSLATORS: Menu item in Options > Gameplay section
-			_items.emplace_back(GameplayOptionsItem { GameplayOptionsItemType::RefreshCache, _("Refresh Cache") });
-		}
-#endif
-	}
-
-	void GameplayOptionsSection::OnHandleInput()
-	{
-		if (!_items.empty() && _items[_selectedIndex].Item.HasBooleanValue && (_root->ActionHit(PlayerAction::Left) || _root->ActionHit(PlayerAction::Right))) {
-			OnExecuteSelected();
-		} else {
-			ScrollableMenuSection::OnHandleInput();
-		}
-	}
-
-	void GameplayOptionsSection::OnDraw(Canvas* canvas)
-	{
-		Recti contentBounds = _root->GetContentBounds();
-		float centerX = contentBounds.X + contentBounds.W * 0.5f;
-		float topLine = contentBounds.Y + TopLine;
-		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
-		
-		_root->DrawElement(MenuDim, centerX, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
-			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-
-		std::int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Gameplay"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
-			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
-	}
-
-	void GameplayOptionsSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
-	{
-		item.Height = (item.Item.HasBooleanValue ? 52 : ItemHeight);
-	}
-
-	void GameplayOptionsSection::OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected)
-	{
-		float centerX = canvas->ViewSize.X * 0.5f;
-
-		if (isSelected) {
-			float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
-
-			_root->DrawStringGlow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
-				Alignment::Center, item.Item.IsReadOnly ? Font::TransparentRandomColor : Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
-
-			if (item.Item.HasBooleanValue && !item.Item.IsReadOnly) {
-				_root->DrawStringShadow("<"_s, charOffset, centerX - 70.0f - 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
-					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
-				_root->DrawStringShadow(">"_s, charOffset, centerX + 80.0f + 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
-					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
-			}
-		} else {
-			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer,
-				Alignment::Center, item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor, 0.9f);
-		}
-
-		if (item.Item.HasBooleanValue) {
-			StringView customText;
-			bool enabled = false;
-			switch (item.Item.Type) {
-#if defined(WITH_ANGELSCRIPT)
-				case GameplayOptionsItemType::AllowUnsignedScripts: enabled = PreferencesCache::AllowUnsignedScripts; break;
-#endif
-				case GameplayOptionsItemType::ContinuousJump: enabled = PreferencesCache::EnableContinuousJump; break;
-				case GameplayOptionsItemType::SwitchToNewWeapon: enabled = PreferencesCache::SwitchToNewWeapon; break;
-				case GameplayOptionsItemType::ShowMinimap: enabled = PreferencesCache::ShowMinimap; break;
-				// TRANSLATORS: Option for Allow Cheats in Options > Gameplay section
-				case GameplayOptionsItemType::AllowCheats: enabled = PreferencesCache::AllowCheats; customText = (enabled ? _("Yes") : _("No")); break;
-				case GameplayOptionsItemType::OverwriteEpisodeEnd:
-					customText = (PreferencesCache::OverwriteEpisodeEnd == EpisodeEndOverwriteMode::NoCheatsOnly
-						// TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
-						? _("No Cheats Only")
-						: (PreferencesCache::OverwriteEpisodeEnd == EpisodeEndOverwriteMode::HigherScoreOnly
-							// TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
-							? _("Higher Score Only")
-							// TRANSLATORS: Option for Overwrite Episode Completion in Options > Gameplay section
-							: _("Always")));
-					break;
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
-				case GameplayOptionsItemType::EnableRgbLights: enabled = PreferencesCache::EnableRgbLights; break;
-#endif
-			}
-
-#if defined(WITH_ANGELSCRIPT)
-			if (item.Item.Type == GameplayOptionsItemType::AllowUnsignedScripts && enabled) {
-				_root->DrawStringShadow(_("Enabled"), charOffset, centerX + 12.0f, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
-					Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f) : (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor)), 0.8f);
-
-				Vector2f textSize = _root->MeasureString(_("Enabled"), 0.8f);
-				_root->DrawElement(Uac, 0, ceil(centerX - textSize.X * 0.5f - 6.0f), item.Y + 22.0f - 1.0f, IMenuContainer::MainLayer + 10,
-					Alignment::Center, (item.Item.IsReadOnly ? Colorf(1.0f, 1.0f, 1.0f, 0.5f) : Colorf::White));
-			} else
-#endif
-			{
-				_root->DrawStringShadow(!customText.empty() ? customText : (enabled ? _("Enabled") : _("Disabled")), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
-					Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, item.Item.IsReadOnly ? 0.36f : 0.5f) : (item.Item.IsReadOnly ? Font::TransparentDefaultColor : Font::DefaultColor)), 0.8f);
-			}
-		}
-	}
-
-	void GameplayOptionsSection::OnExecuteSelected()
-	{
-		if (_items[_selectedIndex].Item.IsReadOnly) {
+		if (_content != nullptr) {
 			return;
 		}
 
-		_root->PlaySfx("MenuSelect"_s, 0.6f);
+		bool isInGame = (runtime_cast<InGameMenu>(root) != nullptr);
 
-		switch (_items[_selectedIndex].Item.Type) {
-			case GameplayOptionsItemType::Enhancements: _root->SwitchToSection<GameplayEnhancementsSection>(); break;
-			case GameplayOptionsItemType::Language: _root->SwitchToSection<LanguageSelectSection>(); break;
+		SetTitle(_("Gameplay"));
+
+		auto list = std::make_unique<ScrollView>();
+
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		list->Add<ListItem>(_("Enhancements"), [root]() { root->SwitchToSection<GameplayEnhancementsSection>(); });
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		list->Add<ListItem>(_("Language"), [root]() { root->SwitchToSection<LanguageSelectSection>(); });
+
 #if defined(WITH_ANGELSCRIPT)
-			case GameplayOptionsItemType::AllowUnsignedScripts: {
-				PreferencesCache::AllowUnsignedScripts = !PreferencesCache::AllowUnsignedScripts;
-				_isDirty = true;
-				_animation = 0.0f;
-				break;
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		// Uses a custom value drawer to show the UAC icon next to "Enabled" (it allows running unsigned scripts)
+		auto* scripting = list->Add<CustomValueItem>(_("Scripting"));
+		scripting->ReadOnly = isInGame;
+		scripting->OnChange = [this](std::int32_t) { PreferencesCache::AllowUnsignedScripts = !PreferencesCache::AllowUnsignedScripts; _isDirty = true; };
+		scripting->DrawValue = [](IMenuContainer* r, float centerX, float y, std::int32_t& charOffset, bool selected, bool readOnly) {
+			Colorf valueColor = (selected ? Colorf(0.46f, 0.46f, 0.46f, readOnly ? 0.36f : 0.5f) : (readOnly ? Font::TransparentDefaultColor : Font::DefaultColor));
+			if (PreferencesCache::AllowUnsignedScripts) {
+				r->DrawStringShadow(_("Enabled"), charOffset, centerX + 12.0f, y, IMenuContainer::FontLayer - 10, Alignment::Center, valueColor, 0.8f);
+				Vector2f textSize = r->MeasureString(_("Enabled"), 0.8f);
+				r->DrawElement(Uac, 0, std::ceil(centerX - textSize.X * 0.5f - 6.0f), y - 1.0f, IMenuContainer::MainLayer + 10,
+					Alignment::Center, (readOnly ? Colorf(1.0f, 1.0f, 1.0f, 0.5f) : Colorf::White));
+			} else {
+				r->DrawStringShadow(_("Disabled"), charOffset, centerX, y, IMenuContainer::FontLayer - 10, Alignment::Center, valueColor, 0.8f);
 			}
+		};
 #endif
-			case GameplayOptionsItemType::ContinuousJump: {
-				PreferencesCache::EnableContinuousJump = !PreferencesCache::EnableContinuousJump;
-				_isDirty = true;
-				_animation = 0.0f;
-				break;
-			}
-			case GameplayOptionsItemType::SwitchToNewWeapon: {
-				PreferencesCache::SwitchToNewWeapon = !PreferencesCache::SwitchToNewWeapon;
-				_isDirty = true;
-				_animation = 0.0f;
-				break;
-			}
-			case GameplayOptionsItemType::ShowMinimap: {
-				PreferencesCache::ShowMinimap = !PreferencesCache::ShowMinimap;
-				_isDirty = true;
-				_animation = 0.0f;
-				break;
-			}
-			case GameplayOptionsItemType::AllowCheats: {
-				PreferencesCache::AllowCheats = !PreferencesCache::AllowCheats;
-				_isDirty = true;
-				_animation = 0.0f;
-				break;
-			}
-			case GameplayOptionsItemType::OverwriteEpisodeEnd: {
-				PreferencesCache::OverwriteEpisodeEnd = (PreferencesCache::OverwriteEpisodeEnd == EpisodeEndOverwriteMode::NoCheatsOnly
-					? EpisodeEndOverwriteMode::HigherScoreOnly
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		list->Add<ChoiceItem>(_("Continuous Jump"),
+			[]() -> StringView { return (PreferencesCache::EnableContinuousJump ? _("Enabled") : _("Disabled")); },
+			[this](std::int32_t) { PreferencesCache::EnableContinuousJump = !PreferencesCache::EnableContinuousJump; _isDirty = true; });
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		list->Add<ChoiceItem>(_("Switch To New Weapon"),
+			[]() -> StringView { return (PreferencesCache::SwitchToNewWeapon ? _("Enabled") : _("Disabled")); },
+			[this](std::int32_t) { PreferencesCache::SwitchToNewWeapon = !PreferencesCache::SwitchToNewWeapon; _isDirty = true; });
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		list->Add<ChoiceItem>(_("Show Minimap"),
+			[]() -> StringView { return (PreferencesCache::ShowMinimap ? _("Enabled") : _("Disabled")); },
+			[this](std::int32_t) { PreferencesCache::ShowMinimap = !PreferencesCache::ShowMinimap; _isDirty = true; });
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		list->Add<ChoiceItem>(_("Allow Cheats"),
+			[]() -> StringView { return (PreferencesCache::AllowCheats ? _("Yes") : _("No")); },
+			[this](std::int32_t) { PreferencesCache::AllowCheats = !PreferencesCache::AllowCheats; _isDirty = true; },
+			isInGame);
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		list->Add<ChoiceItem>(_("Overwrite Episode Completion"),
+			[]() -> StringView {
+				return (PreferencesCache::OverwriteEpisodeEnd == EpisodeEndOverwriteMode::NoCheatsOnly
+					? _("No Cheats Only")
 					: (PreferencesCache::OverwriteEpisodeEnd == EpisodeEndOverwriteMode::HigherScoreOnly
-						? EpisodeEndOverwriteMode::Always
-						: EpisodeEndOverwriteMode::NoCheatsOnly));
+						? _("Higher Score Only")
+						: _("Always")));
+			},
+			[this](std::int32_t direction) {
+				// 3 contiguous values; Left/Right step backward/forward with wraparound
+				PreferencesCache::OverwriteEpisodeEnd = (EpisodeEndOverwriteMode)(((std::int32_t)PreferencesCache::OverwriteEpisodeEnd + direction + 3) % 3);
 				_isDirty = true;
-				_animation = 0.0f;
-				break;
-			}
+			},
+			isInGame);
+
 #if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
-			case GameplayOptionsItemType::EnableRgbLights: {
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		list->Add<ChoiceItem>(_("Razer Chroma™"),
+			[]() -> StringView { return (PreferencesCache::EnableRgbLights ? _("Enabled") : _("Disabled")); },
+			[this](std::int32_t) {
 				PreferencesCache::EnableRgbLights = !PreferencesCache::EnableRgbLights;
 				if (!PreferencesCache::EnableRgbLights) {
 					RgbLights::Get().Clear();
 				}
 				_isDirty = true;
-				_animation = 0.0f;
-				break;
-			}
+			});
 #endif
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_UNIX)
-			case GameplayOptionsItemType::BrowseSourceDirectory: {
-				auto& resolver = ContentResolver::Get();
-				String sourcePath = fs::GetAbsolutePath(resolver.GetSourcePath());
-				if (sourcePath.empty()) {
-					// If `Source` directory doesn't exist, GetAbsolutePath() will fail
-					sourcePath = resolver.GetSourcePath();
-				}
-				fs::CreateDirectories(sourcePath);
-				fs::LaunchDirectoryAsync(sourcePath);
-				break;
+		// TRANSLATORS: Menu item in Options > Gameplay section
+		list->Add<ListItem>(_("Browse \"Source\" Directory"), [root]() {
+			auto& resolver = ContentResolver::Get();
+			String sourcePath = fs::GetAbsolutePath(resolver.GetSourcePath());
+			if (sourcePath.empty()) {
+				sourcePath = resolver.GetSourcePath();
 			}
+			fs::CreateDirectories(sourcePath);
+			fs::LaunchDirectoryAsync(sourcePath);
+		});
 #endif
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
-			case GameplayOptionsItemType::RefreshCache: _root->SwitchToSection<RefreshCacheSection>(); break;
-#endif
+		if (!isInGame) {
+			// TRANSLATORS: Menu item in Options > Gameplay section
+			list->Add<ListItem>(_("Refresh Cache"), [root]() { root->SwitchToSection<RefreshCacheSection>(); });
 		}
+#endif
+
+		SetContent(std::move(list));
 	}
 }

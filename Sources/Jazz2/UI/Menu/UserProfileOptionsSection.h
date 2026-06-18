@@ -1,7 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "ScrollableMenuSection.h"
-#include "TextInputBuffer.h"
+#include "WidgetSection.h"
 
 namespace nCine
 {
@@ -20,69 +19,37 @@ namespace Jazz2
 
 namespace Jazz2::UI::Menu
 {
-#ifndef DOXYGEN_GENERATING_OUTPUT
-	enum class UserProfileOptionsItemType {
-#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_UNIX)
-		EnableDiscordIntegration,
-#endif
-		PlayerName,
-		FurColor1,
-		FurColor2,
-		FurColor3,
-		FurColor4,
-		ColorMode,
-#if defined(WITH_MULTIPLAYER)
-		UniquePlayerID
-#endif
-	};
-
-	struct UserProfileOptionsItem {
-		UserProfileOptionsItemType Type;
-		StringView DisplayName;
-		bool HasBooleanValue;
-		bool IsReadOnly;
-	};
-#endif
-
 	/**
 		@brief User profile options menu section
-		
+
 		Lets the player edit the player profile, such as the displayed name, character fur colors, and color mode,
-		with a live recolored character preview.
+		with a live recolored character preview. Built declaratively on top of @ref WidgetSection using a @ref TextInput
+		for the name and @ref CustomValueItem rows for the color pickers and identifier.
 	*/
-	class UserProfileOptionsSection : public ScrollableMenuSection<UserProfileOptionsItem>
+	class UserProfileOptionsSection : public WidgetSection
 	{
 	public:
 		/** @brief Creates a new instance */
 		UserProfileOptionsSection();
-		~UserProfileOptionsSection();
+		~UserProfileOptionsSection() override;
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
 		void OnDrawOverlay(Canvas* canvas) override;
-		void OnKeyPressed(const nCine::KeyboardEvent& event) override;
-		void OnTextInput(const nCine::TextInputEvent& event) override;
-		NavigationFlags GetNavigationFlags() const override;
+		void OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize) override;
 
 	protected:
-		void OnHandleInput() override;
-		void OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize) override;
-		void OnTouchUp(std::int32_t newIndex, Vector2i viewSize, Vector2i touchPos) override;
-		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
-		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
-		void OnExecuteSelected() override;
 		void OnBackPressed() override;
 
 	private:
 		constexpr static std::uint32_t MaxPlayerNameLength = 24;
 
 		bool _isDirty;
-		bool _waitForInput;
-		TextInputBuffer _textInput;
 		String _localPlayerName;
 		std::uint32_t _furColor;
 		PlayerColorMode _colorMode;
+		TextInput* _nameInput;
 		// Live character preview (recolored idle frames of Jazz/Spaz/Lori): indexed metadata + the shared palette
 		Jazz2::Resources::Metadata* _previewMetadata[3];
 		bool _previewLoaded;
@@ -96,8 +63,6 @@ namespace Jazz2::UI::Menu
 #endif
 
 		void RecalcLayoutForScreenKeyboard();
-		// Returns the fur section index (0..3) for a FurColor* item type, or -1 if it's not a color item
-		static std::int32_t GetFurSectionIndex(UserProfileOptionsItemType type);
 		void CycleFurSection(std::int32_t section, std::int32_t direction);
 		void CycleColorMode(std::int32_t direction);
 	};

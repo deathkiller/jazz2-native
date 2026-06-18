@@ -1,58 +1,24 @@
-﻿#pragma once
+#pragma once
 
-#include "ScrollableMenuSection.h"
+#include "WidgetSection.h"
 
 namespace Jazz2::UI::Menu
 {
-#ifndef DOXYGEN_GENERATING_OUTPUT
-	enum class ControlsOptionsItemType {
-		RemapControls,
-		TouchControls,
-		ToggleRunAction,
-		GamepadButtonLabels,
-#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
-		EnableGamepadRumble,
-#endif
-#if defined(WITH_SDL)
-		EnablePlayStationExtendedSupport,
-#endif
-#if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
-		UseNativeBackButton,
-#endif
-		InputDiagnostics,
-		ResetToDefault
-	};
-
-	struct ControlsOptionsItem {
-		ControlsOptionsItemType Type;
-		String DisplayName;
-		bool HasBooleanValue;
-		std::int32_t PlayerIndex;
-	};
-#endif
-
 	/**
 		@brief Controls options menu section
-		
+
 		Lists the input and control-related settings, such as control remapping, touch controls, and gamepad
-		options, with entries that lead into the more specific control screens.
+		options, with entries that lead into the more specific control screens. Built declaratively on top of
+		@ref WidgetSection.
 	*/
-	class ControlsOptionsSection : public ScrollableMenuSection<ControlsOptionsItem>
+	class ControlsOptionsSection : public WidgetSection
 	{
 	public:
-		/** @brief Creates a new instance */
-		ControlsOptionsSection();
-		~ControlsOptionsSection();
+		~ControlsOptionsSection() override;
 
-		void OnDraw(Canvas* canvas) override;
-
-	protected:
-		void OnHandleInput() override;
-		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
-		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
-		void OnExecuteSelected() override;
+		void OnShow(IMenuContainer* root) override;
 
 	private:
-		bool _isDirty;
+		bool _isDirty = false;
 	};
 }

@@ -520,6 +520,11 @@ namespace Jazz2::UI
 						pos.Y += sinf(currentPhase) * varianceY * scale;
 					}
 
+					// Apply the canvas-wide draw transform (menu section transitions; identity by default)
+					pos = pos * canvas->LayerScale + canvas->LayerOffset;
+					float glyphScale = scale * canvas->LayerScale;
+					Colorf glyphColor = color * canvas->LayerColor;
+
 					pos.X = std::round(pos.X);
 					pos.Y = std::round(pos.Y);
 
@@ -556,8 +561,8 @@ namespace Jazz2::UI
 
 					auto* instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
-					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(charWidth * scale, uvRect.H * scale);
-					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(charWidth * glyphScale, uvRect.H * glyphScale);
+					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(glyphColor.Data());
 
 					command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
 					command->SetLayer(z - (charOffset & 1));

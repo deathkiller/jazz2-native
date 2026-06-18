@@ -57,16 +57,12 @@ namespace Jazz2::UI::Menu
 		float topLine = contentBounds.Y + TopLine + 28.0f;
 		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
 
-		_root->DrawElement(MenuDim, center.X, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
-			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement(MenuLine, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement(MenuLine, 1, center.X, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		_root->DrawMenuFrame(center.X, topLine, bottomLine);
 
 		center.Y = topLine + (bottomLine - topLine) * 0.4f;
 		std::int32_t charOffset = 0;
 
-		_root->DrawStringShadow(_("Import Episodes"), charOffset, center.X, contentBounds.Y + TopLine - 21.0f, IMenuContainer::FontLayer,
-			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+		_root->DrawMenuTitle(charOffset, _("Import Episodes"), center.X, contentBounds.Y + TopLine);
 
 		// TRANSLATORS: Header in Import Episodes section
 		_root->DrawStringShadow(_("Select files of your original game to unlock additional episodes"), charOffset, center.X, topLine - 15.0f - 4.0f, IMenuContainer::FontLayer,

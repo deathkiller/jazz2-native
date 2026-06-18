@@ -1,54 +1,28 @@
-﻿#pragma once
+#pragma once
 
-#include "ScrollableMenuSection.h"
+#include "WidgetSection.h"
 
 namespace Jazz2::UI::Menu
 {
-#ifndef DOXYGEN_GENERATING_OUTPUT
-	enum class GameplayEnhancementsItemType {
-		ReforgedGameplay,
-		ReforgedHUD,
-		ReforgedMainMenu,
-		LedgeClimb,
-		WeaponWheel
-	};
-
-	struct GameplayEnhancementsItem {
-		GameplayEnhancementsItemType Type;
-		String DisplayName;
-	};
-#endif
-
 	/**
 		@brief Gameplay enhancements menu section
-		
+
 		Lets the player toggle the individual "Reforged" gameplay enhancements, such as the Reforged gameplay, HUD,
-		main menu, ledge climbing, and weapon wheel.
+		main menu, ledge climbing, and weapon wheel. Built declaratively on top of @ref WidgetSection, with an
+		animated intro panel describing the section.
 	*/
-	class GameplayEnhancementsSection : public ScrollableMenuSection<GameplayEnhancementsItem>
+	class GameplayEnhancementsSection : public WidgetSection
 	{
 	public:
-		/** @brief Creates a new instance */
-		GameplayEnhancementsSection();
-		~GameplayEnhancementsSection();
+		~GameplayEnhancementsSection() override;
 
 		Recti GetClipRectangle(const Recti& contentBounds) override;
-
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
 		void OnDraw(Canvas* canvas) override;
 
-	protected:
-		void OnHandleInput() override;
-		void OnLayoutItem(Canvas* canvas, ListViewItem& item) override;
-		void OnDrawItem(Canvas* canvas, ListViewItem& item, std::int32_t& charOffset, bool isSelected) override;
-		void OnExecuteSelected() override;
-
 	private:
-		float _transition;
-		bool _isDirty;
-		bool _isInGame;
-
-		bool IsItemReadOnly(GameplayEnhancementsItemType type);
+		float _transition = 0.0f;
+		bool _isDirty = false;
 	};
 }

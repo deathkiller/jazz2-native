@@ -71,8 +71,7 @@ namespace Jazz2::UI::Menu
 		_root->DrawElement(MenuLine, 0, center.X, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
 
 		int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Input Diagnostics"), charOffset, center.X, topLine - 21.0f, IMenuContainer::FontLayer,
-			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
+		_root->DrawMenuTitle(charOffset, _("Input Diagnostics"), center.X, topLine);
 
 		// Show gamepad info
 		auto& input = theApplication().GetInputManager();

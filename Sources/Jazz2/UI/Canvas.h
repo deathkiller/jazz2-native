@@ -27,6 +27,20 @@ namespace Jazz2::UI
 		/** @brief Animation time of the canvas */
 		float AnimTime;
 
+		/**
+		 * @brief Translation added to every drawn primitive in screen-space
+		 *
+		 * Together with @ref LayerScale and @ref LayerColor forms an optional draw transform applied to all
+		 * primitives, including text drawn through @ref Font. Used by the menu section transition system to slide,
+		 * scale and fade an entire section without per-section cooperation. Identity by default, so non-menu
+		 * canvases (HUD, cinematics, …) are unaffected. A final screen position is `worldPos * LayerScale + LayerOffset`.
+		 */
+		Vector2f LayerOffset = Vector2f::Zero;
+		/** @brief Uniform scale applied to every drawn primitive */
+		float LayerScale = 1.0f;
+		/** @brief Tint multiplied into the color of every drawn primitive */
+		Colorf LayerColor = Colorf::White;
+
 		void OnUpdate(float timeMult) override;
 		bool OnDraw(RenderQueue& renderQueue) override;
 

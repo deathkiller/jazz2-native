@@ -945,7 +945,25 @@
     <ClInclude Include="Jazz2\UI\Menu\MainMenu.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\MenuContainerBase.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\MenuSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\MenuStyle.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\MenuTransition.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\MenuWidgets.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\WidgetSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\Tweening.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\BeginSection.h">
@@ -1219,9 +1237,6 @@
       <Filter>Header Files\nCine</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\LanguageSelectSection.h">
-      <Filter>Header Files\Jazz2\UI\Menu</Filter>
-    </ClInclude>
-    <ClInclude Include="Jazz2\UI\Menu\ScrollableMenuSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\ShieldType.h">
@@ -1663,6 +1678,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Dependencies\pdqsort\pdqsort.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Multiplayer\CtfBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Multiplayer\Flag.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\Teams.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\ScoreboardSection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -2696,7 +2723,22 @@
     <ClCompile Include="$(ExtensionLibraryPath)\Cryptography\xxHash.cpp">
       <Filter>Source Files\Shared\Cryptography</Filter>
     </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\IMenuContainer.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\MenuContainerBase.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\MenuSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\MenuTransition.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\MenuWidgets.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\WidgetSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Multiplayer\Peer.cpp">
@@ -2710,6 +2752,15 @@
     </ClCompile>
     <ClCompile Include="Dependencies\jsoncpp\writer.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Multiplayer\Flag.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Actors\Multiplayer\CtfBase.cpp">
+      <Filter>Source Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\ScoreboardSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Multiplayer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

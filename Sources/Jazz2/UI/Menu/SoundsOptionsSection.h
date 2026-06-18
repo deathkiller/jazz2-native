@@ -1,48 +1,23 @@
-﻿#pragma once
+#pragma once
 
-#include "MenuSection.h"
+#include "WidgetSection.h"
 
 namespace Jazz2::UI::Menu
 {
 	/**
 		@brief Sounds options menu section
-		
-		Lets the player adjust the audio settings, namely the master, sound effects, and music volumes.
+
+		Lets the player adjust the audio settings, namely the master, sound effects, and music volumes. Built
+		declaratively on top of @ref WidgetSection using spread-out @ref Slider rows.
 	*/
-	class SoundsOptionsSection : public MenuSection
+	class SoundsOptionsSection : public WidgetSection
 	{
 	public:
-		/** @brief Creates a new instance */
-		SoundsOptionsSection();
 		~SoundsOptionsSection() override;
 
 		void OnShow(IMenuContainer* root) override;
-		void OnUpdate(float timeMult) override;
-		void OnDraw(Canvas* canvas) override;
-		void OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize) override;
 
 	private:
-		enum class Item {
-			MasterVolume,
-			SfxVolume,
-			MusicVolume,
-
-			Count
-		};
-
-#ifndef DOXYGEN_GENERATING_OUTPUT
-		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
-		struct ItemData {
-			String Name;
-			float TouchY;
-		};
-#endif
-
-		ItemData _items[(std::int32_t)Item::Count];
-		std::int32_t _selectedIndex;
-		float _animation;
-		float _pressedCooldown;
-		std::int32_t _pressedCount;
-		bool _isDirty;
+		bool _isDirty = false;
 	};
 }

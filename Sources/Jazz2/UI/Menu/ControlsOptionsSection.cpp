@@ -1,5 +1,4 @@
-﻿#include "ControlsOptionsSection.h"
-#include "MenuResources.h"
+#include "ControlsOptionsSection.h"
 #include "RemapControlsSection.h"
 #include "TouchControlsOptionsSection.h"
 #include "InputDiagnosticsSection.h"
@@ -10,41 +9,8 @@
 
 #include <Utf8.h>
 
-using namespace Jazz2::UI::Menu::Resources;
-
 namespace Jazz2::UI::Menu
 {
-	ControlsOptionsSection::ControlsOptionsSection()
-		: _isDirty(false)
-	{
-		if (ControlScheme::MaxSupportedPlayers > 1) {
-			for (std::int32_t i = 0; i < ControlScheme::MaxSupportedPlayers; i++) {
-				// TRANSLATORS: Menu item in Options > Controls section
-				_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::RemapControls, _f("Remap Controls for Player {}", i + 1), false, i });
-			}
-		} else {
-			// TRANSLATORS: Menu item in Options > Controls section
-			_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::RemapControls, _("Remap Controls") });
-		}
-		// TRANSLATORS: Menu item in Options > Controls section
-		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::TouchControls, _("Touch Controls") });
-		// TRANSLATORS: Menu item in Options > Controls section
-		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::ToggleRunAction, _("Toggle Run"), true });
-		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::GamepadButtonLabels, _("Gamepad Button Labels"), true });
-#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
-		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::EnableGamepadRumble, _("Gamepad Rumble"), true });
-#endif
-#if defined(WITH_SDL)
-		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::EnablePlayStationExtendedSupport, _("Extended PlayStation™ Support"), true });
-#endif
-#if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
-		// TRANSLATORS: Menu item in Options > Controls section (Android only)
-		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::UseNativeBackButton, _("Native Back Button"), true });
-#endif
-		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::InputDiagnostics, _("Input Diagnostics") });
-		_items.emplace_back(ControlsOptionsItem { ControlsOptionsItemType::ResetToDefault, _("Reset To Default") });
-	}
-
 	ControlsOptionsSection::~ControlsOptionsSection()
 	{
 		if (_isDirty) {
@@ -53,151 +19,97 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	void ControlsOptionsSection::OnHandleInput()
+	void ControlsOptionsSection::OnShow(IMenuContainer* root)
 	{
-		if (!_items.empty() && _items[_selectedIndex].Item.HasBooleanValue && (_root->ActionHit(PlayerAction::Left) || _root->ActionHit(PlayerAction::Right))) {
-			OnExecuteSelected();
-		} else {
-			ScrollableMenuSection::OnHandleInput();
+		MenuSection::OnShow(root);
+
+		if (_content != nullptr) {
+			return;
 		}
-	}
 
-	void ControlsOptionsSection::OnDraw(Canvas* canvas)
-	{
-		Recti contentBounds = _root->GetContentBounds();
-		float centerX = contentBounds.X + contentBounds.W * 0.5f;
-		float topLine = contentBounds.Y + TopLine;
-		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
+		SetTitle(_("Controls"));
 
-		_root->DrawElement(MenuDim, centerX, (topLine + bottomLine) * 0.5f, IMenuContainer::BackgroundLayer,
-			Alignment::Center, Colorf::Black, Vector2f(680.0f, bottomLine - topLine + 2.0f), Vector4f(1.0f, 0.0f, 0.4f, 0.3f));
-		_root->DrawElement(MenuLine, 0, centerX, topLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
-		_root->DrawElement(MenuLine, 1, centerX, bottomLine, IMenuContainer::MainLayer, Alignment::Center, Colorf::White, 1.6f);
+		// Row heights matching the original section (ItemHeight = 40, integer math)
+		constexpr float RemapHeight = 40 * 4 / 5;	// 32
+		constexpr float ActionHeight = 40 * 8 / 7;	// 45
 
-		std::int32_t charOffset = 0;
-		_root->DrawStringShadow(_("Controls"), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
-			Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
-	}
+		auto list = std::make_unique<ScrollView>();
 
-	void ControlsOptionsSection::OnLayoutItem(Canvas* canvas, ListViewItem& item)
-	{
-		item.Height = (item.Item.HasBooleanValue ? 52 : (item.Item.Type == ControlsOptionsItemType::RemapControls ? (ItemHeight * 4 / 5) : (ItemHeight * 8 / 7)));
-	}
-
-	void ControlsOptionsSection::OnDrawItem(Canvas* canvas, ListViewItem& item, int32_t& charOffset, bool isSelected)
-	{
-		float centerX = canvas->ViewSize.X * 0.5f;
-
-		if (isSelected) {
-			float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
-
-			_root->DrawStringGlow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer + 10,
-				Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
-
-			if (item.Item.HasBooleanValue) {
-				_root->DrawStringShadow("<"_s, charOffset, centerX - 70.0f - 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
-					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);
-				_root->DrawStringShadow(">"_s, charOffset, centerX + 80.0f + 30.0f * size, item.Y + 22.0f, IMenuContainer::FontLayer + 20,
-					Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
+		if (ControlScheme::MaxSupportedPlayers > 1) {
+			for (std::int32_t i = 0; i < ControlScheme::MaxSupportedPlayers; i++) {
+				// TRANSLATORS: Menu item in Options > Controls section
+				list->Add<ListItem>(_f("Remap Controls for Player {}", i + 1),
+					[root, i]() { root->SwitchToSection<RemapControlsSection>(i); }, RemapHeight);
 			}
 		} else {
-			_root->DrawStringShadow(item.Item.DisplayName, charOffset, centerX, item.Y, IMenuContainer::FontLayer,
-				Alignment::Center, Font::DefaultColor, 0.9f);
+			// TRANSLATORS: Menu item in Options > Controls section
+			list->Add<ListItem>(_("Remap Controls"),
+				[root]() { root->SwitchToSection<RemapControlsSection>(0); }, RemapHeight);
 		}
 
-		if (item.Item.HasBooleanValue) {
-			StringView customText;
-			bool enabled = false;
-			switch (item.Item.Type) {
-				case ControlsOptionsItemType::ToggleRunAction: enabled = PreferencesCache::ToggleRunAction; break;
-				case ControlsOptionsItemType::GamepadButtonLabels:
-					switch (PreferencesCache::GamepadButtonLabels) {
-						default:
-						case GamepadType::Xbox: customText = "Xbox"_s; break;
-						case GamepadType::PlayStation: customText = "PlayStation™"_s; break;
-						case GamepadType::Steam: customText = "Steam Deck"_s; break;
-						case GamepadType::Switch: customText = "Switch"_s; break;
-					}
-					break;
-#if defined(NCINE_HAS_GAMEPAD_RUMBLE)
-				case ControlsOptionsItemType::EnableGamepadRumble:
-					customText = (PreferencesCache::GamepadRumble == 2
-						// TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-						? _("Strong")
-						: (PreferencesCache::GamepadRumble == 1
-							// TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
-							? _("Weak")
-							: _("Disabled")));
-					break;
-#endif
-#if defined(WITH_SDL)
-				case ControlsOptionsItemType::EnablePlayStationExtendedSupport: enabled = PreferencesCache::PlayStationExtendedSupport; break;
-#endif
-#if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
-				case ControlsOptionsItemType::UseNativeBackButton: enabled = PreferencesCache::UseNativeBackButton; break;
-#endif
-			}
+		// TRANSLATORS: Menu item in Options > Controls section
+		list->Add<ListItem>(_("Touch Controls"),
+			[root]() { root->SwitchToSection<TouchControlsOptionsSection>(); }, ActionHeight);
 
-			_root->DrawStringShadow(!customText.empty() ? customText : (enabled ? _("Enabled") : _("Disabled")), charOffset, centerX, item.Y + 22.0f, IMenuContainer::FontLayer - 10,
-				Alignment::Center, (isSelected ? Colorf(0.46f, 0.46f, 0.46f, 0.5f) : Font::DefaultColor), 0.8f);
-		}
-	}
+		// TRANSLATORS: Menu item in Options > Controls section
+		list->Add<ChoiceItem>(_("Toggle Run"),
+			[]() -> StringView { return (PreferencesCache::ToggleRunAction ? _("Enabled") : _("Disabled")); },
+			[this](std::int32_t) { PreferencesCache::ToggleRunAction = !PreferencesCache::ToggleRunAction; _isDirty = true; });
 
-	void ControlsOptionsSection::OnExecuteSelected()
-	{
-		_root->PlaySfx("MenuSelect"_s, 0.6f);
-
-		switch (_items[_selectedIndex].Item.Type) {
-			case ControlsOptionsItemType::RemapControls: _root->SwitchToSection<RemapControlsSection>(_items[_selectedIndex].Item.PlayerIndex); break;
-			case ControlsOptionsItemType::TouchControls: _root->SwitchToSection<TouchControlsOptionsSection>(); break;
-			case ControlsOptionsItemType::ToggleRunAction:
-				PreferencesCache::ToggleRunAction = !PreferencesCache::ToggleRunAction;
-				_isDirty = true;
-				_animation = 0.0f;
-				break;
-			case ControlsOptionsItemType::GamepadButtonLabels:
+		list->Add<ChoiceItem>(_("Gamepad Button Labels"),
+			[]() -> StringView {
 				switch (PreferencesCache::GamepadButtonLabels) {
 					default:
-					case GamepadType::Xbox: PreferencesCache::GamepadButtonLabels = GamepadType::PlayStation; break;
-					case GamepadType::PlayStation: PreferencesCache::GamepadButtonLabels = GamepadType::Steam; break;
-					case GamepadType::Steam: PreferencesCache::GamepadButtonLabels = GamepadType::Switch; break;
-					case GamepadType::Switch: PreferencesCache::GamepadButtonLabels = GamepadType::Xbox; break;
+					case GamepadType::Xbox: return "Xbox"_s;
+					case GamepadType::PlayStation: return "PlayStation™"_s;
+					case GamepadType::Steam: return "Steam Deck"_s;
+					case GamepadType::Switch: return "Switch"_s;
 				}
+			},
+			[this](std::int32_t direction) {
+				// 4 contiguous values; Left/Right step backward/forward with wraparound
+				PreferencesCache::GamepadButtonLabels = (GamepadType)(((std::int32_t)PreferencesCache::GamepadButtonLabels + direction + 4) % 4);
 				_isDirty = true;
-				_animation = 0.0f;
-				break;
+			});
+
 #if defined(NCINE_HAS_GAMEPAD_RUMBLE)
-			case ControlsOptionsItemType::EnableGamepadRumble:
-				PreferencesCache::GamepadRumble = (PreferencesCache::GamepadRumble == 1
-					? 2
-					: (PreferencesCache::GamepadRumble == 2 ? 0 : 1));
+		list->Add<ChoiceItem>(_("Gamepad Rumble"),
+			[]() -> StringView {
+				return (PreferencesCache::GamepadRumble == 2
+					// TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
+					? _("Strong")
+					: (PreferencesCache::GamepadRumble == 1
+						// TRANSLATORS: Option for Gamepad Rumble in Options > Controls section
+						? _("Weak")
+						: _("Disabled")));
+			},
+			[this](std::int32_t direction) {
+				// 3 contiguous values (Disabled/Weak/Strong); Left/Right step backward/forward with wraparound
+				PreferencesCache::GamepadRumble = (PreferencesCache::GamepadRumble + direction + 3) % 3;
 				_isDirty = true;
-				_animation = 0.0f;
-				break;
+			});
 #endif
 #if defined(WITH_SDL)
-			case ControlsOptionsItemType::EnablePlayStationExtendedSupport:
+		list->Add<ChoiceItem>(_("Extended PlayStation™ Support"),
+			[]() -> StringView { return (PreferencesCache::PlayStationExtendedSupport ? _("Enabled") : _("Disabled")); },
+			[this](std::int32_t) {
 				PreferencesCache::PlayStationExtendedSupport = !PreferencesCache::PlayStationExtendedSupport;
 				theApplication().EnablePlayStationExtendedSupport(PreferencesCache::PlayStationExtendedSupport);
 				_isDirty = true;
-				_animation = 0.0f;
-				break;
+			});
 #endif
 #if defined(NCINE_HAS_NATIVE_BACK_BUTTON)
-			case ControlsOptionsItemType::UseNativeBackButton:
-				PreferencesCache::UseNativeBackButton = !PreferencesCache::UseNativeBackButton;
-				_isDirty = true;
-				_animation = 0.0f;
-				break;
+		// TRANSLATORS: Menu item in Options > Controls section (Android only)
+		list->Add<ChoiceItem>(_("Native Back Button"),
+			[]() -> StringView { return (PreferencesCache::UseNativeBackButton ? _("Enabled") : _("Disabled")); },
+			[this](std::int32_t) { PreferencesCache::UseNativeBackButton = !PreferencesCache::UseNativeBackButton; _isDirty = true; });
 #endif
-			case ControlsOptionsItemType::InputDiagnostics:
-				_root->SwitchToSection<InputDiagnosticsSection>();
-				break;
-			case ControlsOptionsItemType::ResetToDefault:
-				ControlScheme::Reset();
-				_isDirty = true;
-				_animation = 0.0f;
-				break;
-		}
+
+		list->Add<ListItem>(_("Input Diagnostics"),
+			[root]() { root->SwitchToSection<InputDiagnosticsSection>(); }, ActionHeight);
+		list->Add<ListItem>(_("Reset To Default"),
+			[this]() { ControlScheme::Reset(); _isDirty = true; }, ActionHeight);
+
+		SetContent(std::move(list));
 	}
 }
