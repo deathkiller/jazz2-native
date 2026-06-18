@@ -6,6 +6,190 @@
 
 namespace Jazz2::UI::Menu
 {
+	void ListItem::OnUpdate(float timeMult)
+	{
+		if (Selected) {
+			Animation.Update(timeMult);
+		}
+	}
+
+	void ListItem::Draw(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset)
+	{
+		Bounds = bounds;
+		float centerX = bounds.X + bounds.W * 0.5f;
+		float y = bounds.Y + bounds.H * 0.5f;
+		root->DrawMenuListItem(charOffset, Text, centerX, y, Selected, Animation.Raw());
+	}
+
+	void ListItem::Activate(IMenuContainer* root)
+	{
+		if (OnActivate) {
+			OnActivate();
+		}
+	}
+
+	void ChoiceItem::OnUpdate(float timeMult)
+	{
+		if (Selected) {
+			Animation.Update(timeMult);
+		}
+	}
+
+	void ChoiceItem::Draw(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset)
+	{
+		Bounds = bounds;
+		float centerX = bounds.X + bounds.W * 0.5f;
+		float y = bounds.Y + bounds.H * 0.5f;
+		root->DrawMenuListItem(charOffset, Label, centerX, y, Selected, Animation.Raw(), ReadOnly);
+		if (Value) {
+			StringView value = Value();
+			// Arrows are shown only for editable rows (selected, not read-only, has an OnChange handler);
+			// a value with no handler (e.g. a read-only resolution display) still draws but without arrows
+			bool showArrows = (Selected && !ReadOnly && (bool)OnChange);
+			root->DrawMenuValue(charOffset, value, centerX, y + 22.0f, Selected, ReadOnly, showArrows, Animation.Raw(), ArrowSpacing);
+		}
+	}
+
+	bool ChoiceItem::OnNavigate(const WidgetInput& input, IMenuContainer* root)
+	{
+		if (input.Left || input.Right || input.Fire) {
+			if (!ReadOnly && OnChange) {
+				root->PlaySfx("MenuSelect"_s, 0.6f);
+				OnChange(input.Left ? -1 : 1);
+				Animation.Restart(0.0f);
+			}
+			return true;
+		}
+		return false;
+	}
+
+	bool ChoiceItem::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize, IMenuContainer* root)
+	{
+		// A tap cycles the value (left half decrements, right half increments, mirroring the `< >` arrows), but
+		// only once the row is selected, so the first tap just selects it (matching the keyboard flow). Returning
+		// false lets the container select an unselected row.
+		if (!Selected || ReadOnly || !OnChange || event.type != TouchEventType::Up) {
+			return false;
+		}
+		std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		if (pointerIndex == -1) {
+			return false;
+		}
+		float x = event.pointers[pointerIndex].x * viewSize.X;
+		root->PlaySfx("MenuSelect"_s, 0.6f);
+		OnChange(x < Bounds.X + Bounds.W * 0.5f ? -1 : 1);
+		Animation.Restart(0.0f);
+		return true;
+	}
+
+	void CustomValueItem::OnUpdate(float timeMult)
+	{
+		if (Selected) {
+			Animation.Update(timeMult);
+		}
+	}
+
+	void CustomValueItem::Draw(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset)
+	{
+		Bounds = bounds;
+		float centerX = bounds.X + bounds.W * 0.5f;
+		float y = bounds.Y + bounds.H * 0.5f;
+		root->DrawMenuListItem(charOffset, Label, centerX, y, Selected, Animation.Raw(), ReadOnly);
+		if (Selected && !ReadOnly && (bool)OnChange) {
+			root->DrawMenuArrows(charOffset, centerX, y + 22.0f, Animation.Raw(), ArrowSpacing);
+		}
+		if (DrawValue) {
+			DrawValue(root, centerX, y + 22.0f, charOffset, Selected, ReadOnly);
+		}
+	}
+
+	bool CustomValueItem::OnNavigate(const WidgetInput& input, IMenuContainer* root)
+	{
+		if (input.Left || input.Right || input.Fire) {
+			if (!ReadOnly) {
+				if (OnChange) {
+					root->PlaySfx("MenuSelect"_s, 0.6f);
+					OnChange(input.Left ? -1 : 1);
+					Animation.Restart(0.0f);
+					return true;
+				}
+				if (input.Fire && OnActivate) {
+					OnActivate();
+					return true;
+				}
+			}
+			return true;
+		}
+		return false;
+	}
+
+	bool CustomValueItem::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize, IMenuContainer* root)
+	{
+		// A tap cycles the value (left half decrements, right half increments) once selected, or activates the row
+		// when it has no cycler - the touch equivalent of the keyboard Left/Right/Fire handling above
+		if (!Selected || ReadOnly || event.type != TouchEventType::Up) {
+			return false;
+		}
+		std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		if (pointerIndex == -1) {
+			return false;
+		}
+		if (OnChange) {
+			float x = event.pointers[pointerIndex].x * viewSize.X;
+			root->PlaySfx("MenuSelect"_s, 0.6f);
+			OnChange(x < Bounds.X + Bounds.W * 0.5f ? -1 : 1);
+			Animation.Restart(0.0f);
+			return true;
+		}
+		if (OnActivate) {
+			OnActivate();
+			return true;
+		}
+		return false;
+	}
+
+	void CanvasWidget::OnUpdate(float timeMult)
+	{
+		if (Selected) {
+			Animation.Update(timeMult);
+		}
+	}
+
+	void CanvasWidget::Draw(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset)
+	{
+		Bounds = bounds;
+		if (OnDrawContent) {
+			OnDrawContent(root, canvas, bounds, charOffset, Selected, Animation.Raw());
+		}
+	}
+
+	void CanvasWidget::Activate(IMenuContainer* root)
+	{
+		if (OnActivate) {
+			OnActivate();
+		}
+	}
+
+	bool CanvasWidget::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize, IMenuContainer* root)
+	{
+		if (OnTouch && event.type == TouchEventType::Up) {
+			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+			if (pointerIndex != -1) {
+				OnTouch(Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y)));
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void CanvasWidget::OnSelected()
+	{
+		Animation.Restart(0.0f);
+		if (OnSelectedChanged) {
+			OnSelectedChanged();
+		}
+	}
+
 	float ListContainer::GetHeight() const
 	{
 		float total = 0.0f;

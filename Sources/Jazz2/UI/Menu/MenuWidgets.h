@@ -116,22 +116,9 @@ namespace Jazz2::UI::Menu
 		float GetHeight() const override {
 			return Height;
 		}
-		void OnUpdate(float timeMult) override {
-			if (Selected) {
-				Animation.Update(timeMult);
-			}
-		}
-		void Draw(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset) override {
-			Bounds = bounds;
-			float centerX = bounds.X + bounds.W * 0.5f;
-			float y = bounds.Y + bounds.H * 0.5f;
-			root->DrawMenuListItem(charOffset, Text, centerX, y, Selected, Animation.Raw());
-		}
-		void Activate(IMenuContainer* root) override {
-			if (OnActivate) {
-				OnActivate();
-			}
-		}
+		void OnUpdate(float timeMult) override;
+		void Draw(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset) override;
+		void Activate(IMenuContainer* root) override;
 		void OnSelected() override {
 			Animation.Restart(0.0f);
 		}
@@ -170,35 +157,10 @@ namespace Jazz2::UI::Menu
 		float GetHeight() const override {
 			return Height;
 		}
-		void OnUpdate(float timeMult) override {
-			if (Selected) {
-				Animation.Update(timeMult);
-			}
-		}
-		void Draw(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset) override {
-			Bounds = bounds;
-			float centerX = bounds.X + bounds.W * 0.5f;
-			float y = bounds.Y + bounds.H * 0.5f;
-			root->DrawMenuListItem(charOffset, Label, centerX, y, Selected, Animation.Raw(), ReadOnly);
-			if (Value) {
-				StringView value = Value();
-				// Arrows are shown only for editable rows (selected, not read-only, has an OnChange handler);
-				// a value with no handler (e.g. a read-only resolution display) still draws but without arrows
-				bool showArrows = (Selected && !ReadOnly && (bool)OnChange);
-				root->DrawMenuValue(charOffset, value, centerX, y + 22.0f, Selected, ReadOnly, showArrows, Animation.Raw(), ArrowSpacing);
-			}
-		}
-		bool OnNavigate(const WidgetInput& input, IMenuContainer* root) override {
-			if (input.Left || input.Right || input.Fire) {
-				if (!ReadOnly && OnChange) {
-					root->PlaySfx("MenuSelect"_s, 0.6f);
-					OnChange(input.Left ? -1 : 1);
-					Animation.Restart(0.0f);
-				}
-				return true;
-			}
-			return false;
-		}
+		void OnUpdate(float timeMult) override;
+		void Draw(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset) override;
+		bool OnNavigate(const WidgetInput& input, IMenuContainer* root) override;
+		bool OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize, IMenuContainer* root) override;
 		void OnSelected() override {
 			Animation.Restart(0.0f);
 		}
@@ -321,41 +283,10 @@ namespace Jazz2::UI::Menu
 		float GetHeight() const override {
 			return Height;
 		}
-		void OnUpdate(float timeMult) override {
-			if (Selected) {
-				Animation.Update(timeMult);
-			}
-		}
-		void Draw(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset) override {
-			Bounds = bounds;
-			float centerX = bounds.X + bounds.W * 0.5f;
-			float y = bounds.Y + bounds.H * 0.5f;
-			root->DrawMenuListItem(charOffset, Label, centerX, y, Selected, Animation.Raw(), ReadOnly);
-			if (Selected && !ReadOnly && (bool)OnChange) {
-				root->DrawMenuArrows(charOffset, centerX, y + 22.0f, Animation.Raw(), ArrowSpacing);
-			}
-			if (DrawValue) {
-				DrawValue(root, centerX, y + 22.0f, charOffset, Selected, ReadOnly);
-			}
-		}
-		bool OnNavigate(const WidgetInput& input, IMenuContainer* root) override {
-			if (input.Left || input.Right || input.Fire) {
-				if (!ReadOnly) {
-					if (OnChange) {
-						root->PlaySfx("MenuSelect"_s, 0.6f);
-						OnChange(input.Left ? -1 : 1);
-						Animation.Restart(0.0f);
-						return true;
-					}
-					if (input.Fire && OnActivate) {
-						OnActivate();
-						return true;
-					}
-				}
-				return true;
-			}
-			return false;
-		}
+		void OnUpdate(float timeMult) override;
+		void Draw(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset) override;
+		bool OnNavigate(const WidgetInput& input, IMenuContainer* root) override;
+		bool OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize, IMenuContainer* root) override;
 		void OnSelected() override {
 			Animation.Restart(0.0f);
 		}
@@ -393,38 +324,11 @@ namespace Jazz2::UI::Menu
 		float GetHeight() const override {
 			return Height;
 		}
-		void OnUpdate(float timeMult) override {
-			if (Selected) {
-				Animation.Update(timeMult);
-			}
-		}
-		void Draw(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset) override {
-			Bounds = bounds;
-			if (OnDrawContent) {
-				OnDrawContent(root, canvas, bounds, charOffset, Selected, Animation.Raw());
-			}
-		}
-		void Activate(IMenuContainer* root) override {
-			if (OnActivate) {
-				OnActivate();
-			}
-		}
-		bool OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize, IMenuContainer* root) override {
-			if (OnTouch && event.type == TouchEventType::Up) {
-				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
-				if (pointerIndex != -1) {
-					OnTouch(Vector2i((std::int32_t)(event.pointers[pointerIndex].x * viewSize.X), (std::int32_t)(event.pointers[pointerIndex].y * viewSize.Y)));
-					return true;
-				}
-			}
-			return false;
-		}
-		void OnSelected() override {
-			Animation.Restart(0.0f);
-			if (OnSelectedChanged) {
-				OnSelectedChanged();
-			}
-		}
+		void OnUpdate(float timeMult) override;
+		void Draw(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset) override;
+		void Activate(IMenuContainer* root) override;
+		bool OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize, IMenuContainer* root) override;
+		void OnSelected() override;
 	};
 
 	/**
@@ -554,8 +458,8 @@ namespace Jazz2::UI::Menu
 	public:
 		ScrollView();
 
-		/** @brief Extra empty space reserved before the first and after the last item (e.g. for rows with oversized content) */
-		float ContentPadding = 0.0f;
+		/** @brief Empty space reserved before the first and after the last item so they aren't flush against the frame; sections with oversized rows can raise it */
+		float ContentPadding = 8.0f;
 
 		void OnUpdate(float timeMult) override;
 		void Draw(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset) override;

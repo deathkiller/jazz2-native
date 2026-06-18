@@ -89,8 +89,19 @@ namespace nCine
 				AxisName name;
 				ButtonName buttonNamePositive;
 				ButtonName buttonNameNegative;
+				// Output range the logical axis is driven across (supports half-axis outputs like "+rightx")
 				float min;
 				float max;
+				// Input range of the physical axis that is considered (supports half-axis inputs like "+a2" and "a2~")
+				float inMin;
+				float inMax;
+			};
+
+			// Physical button or hat direction driving a (half of a) logical axis
+			struct AxisSource
+			{
+				AxisName name;
+				float value; // Output value applied while the source is active (+1 or -1)
 			};
 
 			static const std::int32_t MaxNumAxes = 10;
@@ -98,10 +109,13 @@ namespace nCine
 			static const std::int32_t MaxHatButtons = 4; // The four directions
 
 			Axis axes[MaxNumAxes];
-			// Button axes (buttons mapped as axes, like when analog triggers are missing)
-			AxisName buttonAxes[MaxNumAxes];
+			// Physical buttons mapped to logical axes (e.g. digital triggers when analog ones are missing).
+			// Indexed by physical button id, so it must be sized like buttons[], not like axes[].
+			AxisSource buttonAxes[MaxNumButtons];
 			ButtonName buttons[MaxNumButtons];
 			ButtonName hats[MaxHatButtons];
+			// Hat directions mapped to logical axes (e.g. a D-pad used as a stick, like sideways Joy-Con)
+			AxisSource hatAxes[MaxHatButtons];
 
 			MappingDescription();
 		};
@@ -142,7 +156,7 @@ namespace nCine
 		bool ParsePlatformName(StringView value) const;
 		std::int32_t ParseAxisName(StringView value) const;
 		std::int32_t ParseButtonName(StringView value) const;
-		std::int32_t ParseAxisMapping(StringView value, MappingDescription::Axis& axis) const;
+		std::int32_t ParseAxisInput(StringView value, MappingDescription::Axis& axis) const;
 		std::int32_t ParseButtonMapping(StringView value) const;
 		std::int32_t ParseHatMapping(StringView value) const;
 		std::int32_t HatStateToIndex(std::int32_t hatState) const;

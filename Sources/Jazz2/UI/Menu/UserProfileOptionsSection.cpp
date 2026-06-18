@@ -370,16 +370,27 @@ namespace Jazz2::UI::Menu
 	void UserProfileOptionsSection::OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize)
 	{
 		if (_nameInput != nullptr && _nameInput->IsActive()) {
-			if (event.type == TouchEventType::Down) {
-				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
-				if (pointerIndex != -1) {
-					float x = event.pointers[pointerIndex].x;
-					float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+			if (pointerIndex != -1) {
+				float x = event.pointers[pointerIndex].x;
+				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+				// The top-left corner toggles the on-screen keyboard (matching the icon drawn in OnDrawOverlay)
+				bool keyboardCorner = (x < 0.2f && y < 80.0f);
 
-					if (x < 0.2f && y < 80.0f && theApplication().CanShowScreenKeyboard()) {
+				if (event.type == TouchEventType::Down) {
+					if (keyboardCorner && theApplication().CanShowScreenKeyboard()) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						theApplication().ShowScreenKeyboard();
 						RecalcLayoutForScreenKeyboard();
+					}
+				} else if (event.type == TouchEventType::Up && !keyboardCorner) {
+					// A tap finishes editing - the touch equivalent of Enter/Escape, since taps are otherwise swallowed
+					// below. The top bar cancels (discards, like the back action); a tap on the field/list area commits
+					// the typed name. An empty field can't be committed, so it cancels too.
+					if (y < 80.0f || _nameInput->GetText().empty()) {
+						_nameInput->Cancel(_root);
+					} else {
+						_nameInput->Commit(_root);
 					}
 				}
 			}

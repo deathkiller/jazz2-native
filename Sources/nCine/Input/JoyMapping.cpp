@@ -108,15 +108,22 @@ namespace nCine
 			axes[i].name = AxisName::Unknown;
 			axes[i].buttonNamePositive = ButtonName::Unknown;
 			axes[i].buttonNameNegative = ButtonName::Unknown;
+			axes[i].min = -1.0f;
+			axes[i].max = 1.0f;
+			axes[i].inMin = -1.0f;
+			axes[i].inMax = 1.0f;
 		}
-		for (std::int32_t i = 0; i < MaxNumAxes; i++) {
-			buttonAxes[i] = AxisName::Unknown;
+		for (std::int32_t i = 0; i < MaxNumButtons; i++) {
+			buttonAxes[i].name = AxisName::Unknown;
+			buttonAxes[i].value = 0.0f;
 		}
 		for (std::int32_t i = 0; i < MaxNumButtons; i++) {
 			buttons[i] = ButtonName::Unknown;
 		}
 		for (std::int32_t i = 0; i < MaxHatButtons; i++) {
 			hats[i] = ButtonName::Unknown;
+			hatAxes[i].name = AxisName::Unknown;
+			hatAxes[i].value = 0.0f;
 		}
 	}
 
@@ -274,20 +281,20 @@ namespace nCine
 				mappedJoyStates_[event.joyId].buttons_[buttonId] = true;
 				inputEventHandler_->OnJoyMappedButtonPressed(mappedButtonEvent_);
 			} else {
-				// Check if the button is mapped as an axis
-				const AxisName axisName = mapping.desc.buttonAxes[event.buttonId];
-				if (axisName != AxisName::Unknown) {
+				// Check if the button is mapped as an axis (drives the half indicated by its sign)
+				const auto& buttonAxis = mapping.desc.buttonAxes[event.buttonId];
+				if (buttonAxis.name != AxisName::Unknown) {
 					mappedAxisEvent_.joyId = event.joyId;
-					mappedAxisEvent_.axisName = axisName;
-					mappedAxisEvent_.value = 1.0f;
+					mappedAxisEvent_.axisName = buttonAxis.name;
+					mappedAxisEvent_.value = buttonAxis.value;
 #if defined(NCINE_INPUT_DEBUGGING)
-					LOGI("Button press mapped as axis {}", axisName);
+					LOGI("Button press mapped as axis {}", buttonAxis.name);
 #endif
-					mappedJoyStates_[event.joyId].axesValues_[static_cast<std::int32_t>(axisName)] = mappedAxisEvent_.value;
+					mappedJoyStates_[event.joyId].axesValues_[static_cast<std::int32_t>(buttonAxis.name)] = mappedAxisEvent_.value;
 					inputEventHandler_->OnJoyMappedAxisMoved(mappedAxisEvent_);
 				} else {
 #if defined(NCINE_INPUT_DEBUGGING)
-					LOGW("Button release has incorrect mapping");
+					LOGW("Button press has incorrect mapping");
 #endif
 				}
 			}
@@ -323,15 +330,15 @@ namespace nCine
 				inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
 			} else {
 				// Button mapped as axis
-				const AxisName axisName = mapping.desc.buttonAxes[event.buttonId];
-				if (axisName != AxisName::Unknown) {
+				const auto& buttonAxis = mapping.desc.buttonAxes[event.buttonId];
+				if (buttonAxis.name != AxisName::Unknown) {
 					mappedAxisEvent_.joyId = event.joyId;
-					mappedAxisEvent_.axisName = axisName;
+					mappedAxisEvent_.axisName = buttonAxis.name;
 					mappedAxisEvent_.value = 0.0f;
 #if defined(NCINE_INPUT_DEBUGGING)
-					LOGI("Button release mapped as axis {}", axisName);
+					LOGI("Button release mapped as axis {}", buttonAxis.name);
 #endif
-					mappedJoyStates_[event.joyId].axesValues_[static_cast<std::int32_t>(axisName)] = mappedAxisEvent_.value;
+					mappedJoyStates_[event.joyId].axesValues_[static_cast<std::int32_t>(buttonAxis.name)] = mappedAxisEvent_.value;
 					inputEventHandler_->OnJoyMappedAxisMoved(mappedAxisEvent_);
 				} else {
 #if defined(NCINE_INPUT_DEBUGGING)
@@ -386,6 +393,19 @@ namespace nCine
 							mappedJoyStates_[event.joyId].buttons_[buttonId] = false;
 							inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
 						}
+					} else {
+						// Hat direction mapped as a (half) axis (e.g. a D-pad used as a stick)
+						const auto& hatAxis = mapping.desc.hatAxes[hatIndex];
+						if (hatAxis.name != AxisName::Unknown) {
+							mappedAxisEvent_.joyId = event.joyId;
+							mappedAxisEvent_.axisName = hatAxis.name;
+							mappedAxisEvent_.value = (newHatState & hatValue) ? hatAxis.value : 0.0f;
+#if defined(NCINE_INPUT_DEBUGGING)
+							LOGI("Hat move mapped as axis {} (value: {})", hatAxis.name, mappedAxisEvent_.value);
+#endif
+							mappedJoyStates_[event.joyId].axesValues_[static_cast<std::int32_t>(hatAxis.name)] = mappedAxisEvent_.value;
+							inputEventHandler_->OnJoyMappedAxisMoved(mappedAxisEvent_);
+						}
 					}
 				}
 			}
@@ -418,7 +438,13 @@ namespace nCine
 			if (axis.name != AxisName::Unknown) {
 				mappedAxisEvent_.joyId = event.joyId;
 				mappedAxisEvent_.axisName = axis.name;
-				const float value = (event.value + 1.0f) * 0.5f;
+				// Clamp the raw value to the active input range (handles "+a2"/"-a2" half inputs), then
+				// linearly remap that range onto the output range (handles "+rightx"/"-rightx" half outputs)
+				const float inLow = (axis.inMin < axis.inMax ? axis.inMin : axis.inMax);
+				const float inHigh = (axis.inMin < axis.inMax ? axis.inMax : axis.inMin);
+				const float clamped = std::clamp(event.value, inLow, inHigh);
+				const float inRange = axis.inMax - axis.inMin;
+				const float value = (inRange != 0.0f ? (clamped - axis.inMin) / inRange : 0.0f);
 				mappedAxisEvent_.value = axis.min + value * (axis.max - axis.min);
 #if defined(NCINE_INPUT_DEBUGGING)
 				LOGI("Axis move mapped as axis {} (value: {}, normalized: {}, min: {}, max: {})", axis.name, mappedAxisEvent_.value, value, axis.min, axis.max);
@@ -533,6 +559,9 @@ namespace nCine
 					mapping.desc.axes[i].min = -1.0f;
 				}
 				mapping.desc.axes[i].max = 1.0f;
+				// Full physical input range (the assigned mapping is reused across reconnects, so set explicitly)
+				mapping.desc.axes[i].inMin = -1.0f;
+				mapping.desc.axes[i].inMax = 1.0f;
 			}
 
 			constexpr std::int32_t AndroidButtonCount = (std::int32_t)ButtonName::Misc1;
@@ -776,30 +805,66 @@ namespace nCine
 					return false;
 				}
 			} else if (keyValue[0] != "crc"_s && keyValue[0] != "hint"_s) {
-				// Axis
-				const std::int32_t axisIndex = ParseAxisName(keyValue[0]);
+				// Axis output; the name may be prefixed with '+'/'-' to drive only one half of the axis
+				// (e.g. "+leftx"), which lets a hat or split inputs synthesize a stick
+				StringView outputName = keyValue[0];
+				std::int32_t outputHalf = 0;
+				if (outputName[0] == '+' || outputName[0] == '-') {
+					outputHalf = (outputName[0] == '+' ? 1 : -1);
+					outputName = outputName.exceptPrefix(1);
+				}
+
+				const std::int32_t axisIndex = ParseAxisName(outputName);
 				if (axisIndex != -1) {
-					MappingDescription::Axis axis;
-					axis.name = static_cast<AxisName>(axisIndex);
-					const std::int32_t axisMapping = ParseAxisMapping(keyValue[2], axis);
-					if (axisMapping != -1 && axisMapping < MappingDescription::MaxNumAxes) {
-						map.desc.axes[axisMapping].name = axis.name;
-						map.desc.axes[axisMapping].min = axis.min;
-						map.desc.axes[axisMapping].max = axis.max;
+					const AxisName axisName = static_cast<AxisName>(axisIndex);
+
+					// Determine the output range this binding drives the logical axis across
+					float outMin, outMax;
+					if (axisName == AxisName::LeftTrigger || axisName == AxisName::RightTrigger) {
+						outMin = 0.0f; outMax = 1.0f;
+					} else if (outputHalf > 0) {
+						outMin = 0.0f; outMax = 1.0f;
+					} else if (outputHalf < 0) {
+						outMin = 0.0f; outMax = -1.0f;
 					} else {
-						// The same parsing method for buttons will be used for button axes
-						const std::int32_t buttonAxisMapping = ParseButtonMapping(keyValue[2]);
-						if (buttonAxisMapping != -1 && buttonAxisMapping < MappingDescription::MaxNumAxes) {
-							map.desc.buttonAxes[buttonAxisMapping] = static_cast<AxisName>(axisIndex);
-						} else if (!keyValue[2].empty()) {
-							// It's empty sometimes
+						outMin = -1.0f; outMax = 1.0f;
+					}
+
+					MappingDescription::Axis axis;
+					axis.name = axisName;
+					const std::int32_t axisMapping = ParseAxisInput(keyValue[2], axis);
+					if (axisMapping != -1 && axisMapping < MappingDescription::MaxNumAxes) {
+						// Physical axis drives (a half of) the logical axis
+						auto& dst = map.desc.axes[axisMapping];
+						if (dst.name == axisName && outputHalf != 0) {
+							// The opposite half was already bound to this physical axis, so widen to full travel
+							dst.inMin = -1.0f; dst.inMax = 1.0f;
+							dst.min = -1.0f; dst.max = 1.0f;
+						} else {
+							dst.name = axisName;
+							dst.inMin = axis.inMin;
+							dst.inMax = axis.inMax;
+							dst.min = outMin;
+							dst.max = outMax;
+						}
+					} else if (std::int32_t hatAxisMapping = ParseHatMapping(keyValue[2]);
+							   hatAxisMapping != -1 && hatAxisMapping < MappingDescription::MaxHatButtons) {
+						// Hat direction drives (a half of) the logical axis (e.g. a sideways Joy-Con's D-pad)
+						map.desc.hatAxes[hatAxisMapping].name = axisName;
+						map.desc.hatAxes[hatAxisMapping].value = (outputHalf < 0 ? -1.0f : 1.0f);
+					} else if (std::int32_t buttonAxisMapping = ParseButtonMapping(keyValue[2]);
+							   buttonAxisMapping != -1 && buttonAxisMapping < MappingDescription::MaxNumButtons) {
+						// Physical button drives (a half of) the logical axis
+						map.desc.buttonAxes[buttonAxisMapping].name = axisName;
+						map.desc.buttonAxes[buttonAxisMapping].value = (outputHalf < 0 ? -1.0f : 1.0f);
+					} else if (!keyValue[2].empty()) {
+						// It's empty sometimes
 #if !defined(DEATH_DEBUG)
-							if (!suppressErrors)
+						if (!suppressErrors)
 #endif
-							{
-								const uint8_t* g = map.guid.data;
-								LOGW("Unsupported assignment in mapping source \"{}\" in \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}]", keyValue[0], map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
-							}
+						{
+							const uint8_t* g = map.guid.data;
+							LOGW("Unsupported assignment in mapping source \"{}\" in \"{}\" [{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}]", keyValue[0], map.name, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11], g[12], g[13], g[14], g[15]);
 						}
 					}
 				} else {
@@ -815,11 +880,12 @@ namespace nCine
 								map.desc.hats[hatMapping] = static_cast<ButtonName>(buttonIndex);
 							} else {
 								MappingDescription::Axis axis;
-								const std::int32_t axisMapping = ParseAxisMapping(keyValue[2], axis);
+								const std::int32_t axisMapping = ParseAxisInput(keyValue[2], axis);
 								if (axisMapping != -1 && axisMapping < MappingDescription::MaxNumAxes) {
-									if (axis.max > 0.0f) {
+									// The sign of the active input half decides which button edge fires
+									if (axis.inMax > 0.0f) {
 										map.desc.axes[axisMapping].buttonNamePositive = static_cast<ButtonName>(buttonIndex);
-									} else if (axis.max < 0.0f) {
+									} else if (axis.inMax < 0.0f) {
 										map.desc.axes[axisMapping].buttonNameNegative = static_cast<ButtonName>(buttonIndex);
 									} else {
 #if !defined(DEATH_DEBUG)
@@ -906,37 +972,37 @@ namespace nCine
 		return buttonIndex;
 	}
 
-	std::int32_t JoyMapping::ParseAxisMapping(StringView value, MappingDescription::Axis& axis) const
+	std::int32_t JoyMapping::ParseAxisInput(StringView value, MappingDescription::Axis& axis) const
 	{
 		std::int32_t axisMapping = -1;
 
-		axis.max = 1.0f;
-		axis.min = -1.0f;
+		// Active input range of the physical axis. Defaults to the full travel; a '+'/'-' prefix selects
+		// a single half ("+a2"/"-a2") and a trailing '~' inverts the direction ("a2~").
+		axis.inMin = -1.0f;
+		axis.inMax = 1.0f;
 
-		if (!value.empty() && value.size() <= 5 && (value[0] == 'a' || value[1] == 'a')) {
+		// Accepted forms: "aN", "+aN", "-aN" and any of those with a trailing "~" (inverted)
+		const bool isAxis = (value.size() >= 2 && value.size() <= 5 &&
+			(value[0] == 'a' || ((value[0] == '+' || value[0] == '-') && value[1] == 'a')));
+		if (isAxis) {
 			const char* digits = &value[1];
 
-			if (axis.name == AxisName::LeftTrigger || axis.name == AxisName::RightTrigger) {
-				axis.min = 0.0f;
-				axis.max = 1.0f;
-			}
-
 			if (value[0] == '+') {
-				axis.min = 0.0f;
-				axis.max = 1.0f;
+				axis.inMin = 0.0f;
+				axis.inMax = 1.0f;
 				digits++;
 			} else if (value[0] == '-') {
-				axis.min = 0.0f;
-				axis.max = -1.0f;
+				axis.inMin = 0.0f;
+				axis.inMax = -1.0f;
 				digits++;
 			}
 
 			axisMapping = stou32(digits, value.size() - (digits - value.begin()));
 
 			if (value[value.size() - 1] == '~') {
-				const float temp = axis.min;
-				axis.min = axis.max;
-				axis.max = temp;
+				const float temp = axis.inMin;
+				axis.inMin = axis.inMax;
+				axis.inMax = temp;
 			}
 		}
 

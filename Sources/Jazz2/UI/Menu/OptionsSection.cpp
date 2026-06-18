@@ -21,7 +21,9 @@ namespace Jazz2::UI::Menu
 
 		SetTitle(_("Options"));
 
-		auto list = std::make_unique<StackLayout>();
+		// A ScrollView (rather than a plain centered StackLayout) so the list keeps edge padding and scrolls instead of
+		// cropping the first/last item when the window is short enough that the items only just fit
+		auto list = std::make_unique<ScrollView>();
 		// TRANSLATORS: Menu item in Options section
 		list->Add<ListItem>(_("Gameplay"), [root]() { root->SwitchToSection<GameplayOptionsSection>(); });
 		// TRANSLATORS: Menu item in Options section
