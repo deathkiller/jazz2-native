@@ -261,7 +261,7 @@ namespace Jazz2::UI::Menu
 					auto grantPermissionText = _("Allow access to external storage");
 					float grantPermissionY = (contentBounds.H >= 260 ? 40.0f : 30.0f);
 					if (_selectedIndex == 0) {
-						float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+						float size = 0.5f + Easing::OutElastic(_animation) * 0.6f;
 						_root->DrawElement(MenuGlow, 0, center.X, center.Y * 0.96f + grantPermissionY, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.4f * size),
 							(_root->MeasureString(grantPermissionText, size).X + 30.0f) * 0.06f, 4.0f * size, true, true);
 						_root->DrawStringShadow(grantPermissionText, charOffset, center.X + 12.0f, center.Y * 0.96f + grantPermissionY, IMenuContainer::FontLayer,
@@ -300,7 +300,7 @@ namespace Jazz2::UI::Menu
 			else
 #endif
 			if (_selectedIndex == i) {
-				float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+				float size = 0.5f + Easing::OutElastic(_animation) * 0.6f;
 
 				_root->DrawStringGlow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 					Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);

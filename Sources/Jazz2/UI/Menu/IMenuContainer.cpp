@@ -1,5 +1,6 @@
 #include "IMenuContainer.h"
 #include "MenuResources.h"
+#include "Tweening.h"
 #include "../Font.h"
 
 #include <algorithm>
@@ -25,7 +26,7 @@ namespace Jazz2::UI::Menu
 	void IMenuContainer::DrawMenuListItem(std::int32_t& charOffset, StringView text, float centerX, float y, bool selected, float animation, bool transparent)
 	{
 		if (selected) {
-			float size = 0.5f + EaseOutElastic(animation) * 0.6f;
+			float size = 0.5f + Easing::OutElastic(animation) * 0.6f;
 			DrawStringGlow(text, charOffset, centerX, y, FontLayer + 10, Alignment::Center,
 				transparent ? Font::TransparentRandomColor : Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 		} else {
@@ -36,7 +37,7 @@ namespace Jazz2::UI::Menu
 
 	void IMenuContainer::DrawMenuArrows(std::int32_t& charOffset, float centerX, float y, float animation, float arrowSpacing)
 	{
-		float size = 0.5f + EaseOutElastic(animation) * 0.6f;
+		float size = 0.5f + Easing::OutElastic(animation) * 0.6f;
 		Colorf arrowColor = Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + animation));
 		DrawStringShadow("<"_s, charOffset, centerX - 70.0f - arrowSpacing - 30.0f * size, y, FontLayer + 20,
 			Alignment::Right, arrowColor, 0.8f, 1.1f, -1.1f, 0.4f, 0.4f);

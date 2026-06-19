@@ -283,7 +283,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Colorf(0.51f, 0.51f, 0.51f, 0.35f), 0.9f);
 			}
 		} else if (isSelected) {
-			float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+			float size = 0.5f + Easing::OutElastic(_animation) * 0.6f;
 
 			if ((item.Flags & EpisodeDataFlags::IsAvailable) == EpisodeDataFlags::IsAvailable || PreferencesCache::AllowCheatsUnlock) {
 				float expandedAnimation2 = std::min(_expandedAnimation * 6.0f, 1.0f);
@@ -308,7 +308,7 @@ namespace Jazz2::UI::Menu
 						Alignment::Right, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.8f, 1.1f, 1.1f, 0.4f, 0.4f);
 
 					if (_expanded) {
-						float expandedAnimation4 = IMenuContainer::EaseOutElastic(_expandedAnimation) * 0.8f;
+						float expandedAnimation4 = Easing::OutElastic(_expandedAnimation) * 0.8f;
 
 						// TRANSLATORS: Menu subitem in Play Story section
 						Vector2f textSize = root->MeasureString(_("Restart episode"), 0.8f, 0.8f);
@@ -346,7 +346,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if ((item.Flags & (EpisodeDataFlags::IsCompleted | EpisodeDataFlags::IsAvailable)) == (EpisodeDataFlags::IsCompleted | EpisodeDataFlags::IsAvailable)) {
-			float size = (isSelected ? 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f : 0.7f);
+			float size = (isSelected ? 0.5f + Easing::OutElastic(_animation) * 0.6f : 0.7f);
 			float textWidth = item.Description.DisplayName.size() + 3;
 			if (isSelected) {
 				if (item.Description.Name == "prince"_s || item.Description.Name == "share"_s) {

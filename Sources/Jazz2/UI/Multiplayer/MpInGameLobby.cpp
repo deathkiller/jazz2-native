@@ -6,6 +6,7 @@
 #include "../../PreferencesCache.h"
 #include "../Menu/IMenuContainer.h"
 #include "../Menu/MenuResources.h"
+#include "../Menu/Tweening.h"
 
 #include "../../../nCine/Application.h"
 #include "../../../nCine/I18n.h"
@@ -153,7 +154,7 @@ namespace Jazz2::UI::Multiplayer
 					DrawStringShadow(playerTypes[j], charOffset, x, charRowY, MainLayer, Alignment::Center,
 						Colorf(0.5f, 0.5f, 0.5f, 0.34f), 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.9f);
 				} else if ((std::int32_t)_selectedPlayerType == j) {
-					float size = (isFocused ? 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.6f : 0.9f);
+					float size = (isFocused ? 0.5f + Menu::Easing::OutElastic(_animation) * 0.6f : 0.9f);
 
 					DrawElement(MenuGlow, 0, x, charRowY, MainLayer - 20, Alignment::Center,
 						Colorf(1.0f, 1.0f, 1.0f, 0.26f * size), 3.6f * size, 5.0f * size, true, true);
@@ -184,7 +185,7 @@ namespace Jazz2::UI::Multiplayer
 					Colorf color = (isAuto ? Colorf(0.52f, 0.52f, 0.52f, 0.5f) : GetTeamColor((std::uint8_t)t));
 
 					if (_selectedTeam == t) {
-						float tsize = (_focusRow == 1 ? 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.5f : 0.9f);
+						float tsize = (_focusRow == 1 ? 0.5f + Menu::Easing::OutElastic(_animation) * 0.5f : 0.9f);
 						Colorf glowColor = color;
 						glowColor.SetAlpha(0.3f);
 						DrawElement(MenuGlow, 0, x, teamRowY, MainLayer - 20, Alignment::Center,
@@ -205,7 +206,7 @@ namespace Jazz2::UI::Multiplayer
 
 			// Navigation arrows at the currently focused row
 			{
-				float size = 0.5f + Menu::IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+				float size = 0.5f + Menu::Easing::OutElastic(_animation) * 0.6f;
 
 				DrawElement(MenuGlow, 0, center.X, arrowRowY - 32.0f, MainLayer, Alignment::Center,
 					Colorf(1.0f, 1.0f, 1.0f, 0.2f), 5.0f, 5.0f, true, true);

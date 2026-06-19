@@ -156,7 +156,7 @@ namespace Jazz2::Actors
 	{
 		// Called from inside the position update code when the object hits floor
 		// and was falling earlier. Objects should override this if they need to
-		// (e.g. the Player class playing a sound).
+		// (e.g., the Player class playing a sound).
 	}
 
 	void ActorBase::OnHitCeiling(float timeMult)
@@ -307,7 +307,7 @@ namespace Jazz2::Actors
 					// First, attempt to move horizontally as much as possible
 					float maxDiff = std::abs(effectiveSpeedX);
 					float xDiff = maxDiff;
-					// For mostly-horizontal airborne movement (e.g. Spaz/Lori sidekick), climb gentle upslopes
+					// For mostly-horizontal airborne movement (e.g., Spaz/Lori sidekick), climb gentle upslopes
 					// instead of stopping at their foot: if the straight horizontal step is blocked, retry the
 					// full step with an increasing upward offset. Flat ground / open air succeed on the straight
 					// step, so there is no upward drift, and steep walls still block (xDiff stays full on success).

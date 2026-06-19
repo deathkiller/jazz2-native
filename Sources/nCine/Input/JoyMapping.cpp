@@ -394,7 +394,7 @@ namespace nCine
 							inputEventHandler_->OnJoyMappedButtonReleased(mappedButtonEvent_);
 						}
 					} else {
-						// Hat direction mapped as a (half) axis (e.g. a D-pad used as a stick)
+						// Hat direction mapped as a (half) axis (e.g., a D-pad used as a stick)
 						const auto& hatAxis = mapping.desc.hatAxes[hatIndex];
 						if (hatAxis.name != AxisName::Unknown) {
 							mappedAxisEvent_.joyId = event.joyId;
@@ -806,7 +806,7 @@ namespace nCine
 				}
 			} else if (keyValue[0] != "crc"_s && keyValue[0] != "hint"_s) {
 				// Axis output; the name may be prefixed with '+'/'-' to drive only one half of the axis
-				// (e.g. "+leftx"), which lets a hat or split inputs synthesize a stick
+				// (e.g., "+leftx"), which lets a hat or split inputs synthesize a stick
 				StringView outputName = keyValue[0];
 				std::int32_t outputHalf = 0;
 				if (outputName[0] == '+' || outputName[0] == '-') {
@@ -849,7 +849,7 @@ namespace nCine
 						}
 					} else if (std::int32_t hatAxisMapping = ParseHatMapping(keyValue[2]);
 							   hatAxisMapping != -1 && hatAxisMapping < MappingDescription::MaxHatButtons) {
-						// Hat direction drives (a half of) the logical axis (e.g. a sideways Joy-Con's D-pad)
+						// Hat direction drives (a half of) the logical axis (e.g., a sideways Joy-Con's D-pad)
 						map.desc.hatAxes[hatAxisMapping].name = axisName;
 						map.desc.hatAxes[hatAxisMapping].value = (outputHalf < 0 ? -1.0f : 1.0f);
 					} else if (std::int32_t buttonAxisMapping = ParseButtonMapping(keyValue[2]);

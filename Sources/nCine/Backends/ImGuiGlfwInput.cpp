@@ -339,7 +339,7 @@ namespace nCine::Backends
 				case WM_NCHITTEST: {
 					// Let mouse pass-through the window. This will allow the backend to call io.AddMouseViewportEvent() properly (which is OPTIONAL).
 					// The ImGuiViewportFlags_NoInputs flag is set while dragging a viewport, as want to detect the window behind the one we are dragging.
-					// If you cannot easily access those viewport flags from your windowing/event code: you may manually synchronize its state e.g. in
+					// If you cannot easily access those viewport flags from your windowing/event code: you may manually synchronize its state, e.g., in
 					// your main loop after calling UpdatePlatformWindows(). Iterate all viewports/platform windows and pass the flag to your windowing system.
 					if (viewport != nullptr && (viewport->Flags & ImGuiViewportFlags_NoInputs)) {
 						return HTTRANSPARENT;
@@ -477,7 +477,7 @@ namespace nCine::Backends
 #	endif
 
 		// Register main window handle (which is owned by the main application, not by us)
-		// This is mostly for simplicity and consistency, so that our code (e.g. mouse handling etc.) can use same logic for main and secondary viewports.
+		// This is mostly for simplicity and consistency, so that our code (e.g., mouse handling etc.) can use same logic for main and secondary viewports.
 		ViewportData* vd = new ViewportData();
 		vd->Window = window_;
 		vd->WindowOwned = false;
@@ -854,7 +854,7 @@ namespace nCine::Backends
 			// - [X] GLFW >= 3.3 backend ON WINDOWS ONLY does correctly ignore viewports with the _NoInputs flag (since we implement hit via our WndProc hook)
 			//       On other platforms we rely on the library fallbacking to its own search when reporting a viewport with _NoInputs flag.
 			// - [!] GLFW <= 3.2 backend CANNOT correctly ignore viewports with the _NoInputs flag, and CANNOT reported Hovered Viewport because of mouse capture.
-			//       Some backend are not able to handle that correctly. If a backend report an hovered viewport that has the _NoInputs flag (e.g. when dragging a window
+			//       Some backend are not able to handle that correctly. If a backend report an hovered viewport that has the _NoInputs flag (e.g., when dragging a window
 			//       for docking, the viewport has the _NoInputs flag in order to allow us to find the viewport under), then Dear ImGui is forced to ignore the value reported
 			//       by the backend, and use its flawed heuristic to guess the viewport behind.
 			// - [X] GLFW backend correctly reports this regardless of another viewport behind focused and dragged from (we need this to find a useful drag and drop target).
@@ -1063,7 +1063,7 @@ namespace nCine::Backends
 			glfwGetMonitorPos(glfwMonitors[n], &x, &y);
 			const GLFWvidmode* vidMode = glfwGetVideoMode(glfwMonitors[n]);
 			if (vidMode == nullptr) {
-				continue; // Failed to get Video mode (e.g. Emscripten does not support this function)
+				continue; // Failed to get Video mode (e.g., Emscripten does not support this function)
 			}
 			monitor.MainPos = monitor.WorkPos = ImVec2(static_cast<float>(x), static_cast<float>(y));
 			monitor.MainSize = monitor.WorkSize = ImVec2(static_cast<float>(vidMode->width), static_cast<float>(vidMode->height));

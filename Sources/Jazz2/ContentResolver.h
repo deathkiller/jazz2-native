@@ -193,7 +193,7 @@ namespace Jazz2
 		/**
 		 * @brief Builds/updates a standalone 256x1 palette texture for a player fur color and returns it
 		 *
-		 * `texture` is created on first use. Used for off-screen previews (e.g. the profile menu); in-game recoloring
+		 * `texture` is created on first use. Used for off-screen previews (e.g., the profile menu); in-game recoloring
 		 * uses @ref AcquirePaletteOffset instead. Returns `nullptr` in headless mode.
 		 */
 		Texture* ApplyPlayerColorPalette(std::unique_ptr<Texture>& texture, std::uint32_t furColor);
@@ -209,7 +209,7 @@ namespace Jazz2
 		 * @brief Acquires a reference-counted palette offset for the given packed fur color
 		 *
 		 * The offset is the flat offset into the shared palette texture, passed to @ref ActorBase::ActorRenderer::SetPalette
-		 * and the palette-aware shaders. Callers with the same fur color share one palette (so e.g. many corpses of the
+		 * and the palette-aware shaders. Callers with the same fur color share one palette (so e.g., many corpses of the
 		 * same character cost a single row); the recolored palette is built on first use. Returns the offset, or -1 if
 		 * none are free. Release it with @ref ReleasePaletteOffset when the holder disconnects/despawns.
 		 */
@@ -327,10 +327,10 @@ namespace Jazz2
 		// Packs an indexed sprite/tile (palette index in the red/first channel) into the smallest texture format: R8
 		// when alpha is on/off only (4x less VRAM than RGBA8), or RG8 keeping the per-pixel alpha in green (sampled
 		// into .a via swizzle) when alpha is partial. `srcChannels` is the bytes-per-pixel of `pixels`: 1 (index
-		// only) or 2 (index + alpha) are pre-packed and upload directly with no scan; 4 (RGBA, e.g. a user-supplied PNG)
+		// only) or 2 (index + alpha) are pre-packed and upload directly with no scan; 4 (RGBA, e.g., a user-supplied PNG)
 		// packs to RG8. Indexed tilesets are handed over as a single index channel by RequestTileSet, taking the R8 path.
 		// `paletteBaseTransparent` must be true if the sprite's palette entry 0 (its row base) is transparent - only
-		// then can on/off transparency be dropped and reproduced by the palette (false e.g. for gems, which keep RG8)
+		// then can on/off transparency be dropped and reproduced by the palette (false, e.g., for gems, which keep RG8)
 		static std::unique_ptr<Texture> CreateIndexedTexture(const char* name, const std::uint8_t* pixels, std::int32_t width, std::int32_t height, std::int32_t srcChannels, bool paletteBaseTransparent);
 
 		std::unique_ptr<Shader> CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled, std::initializer_list<StringView> defines = {});

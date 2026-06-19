@@ -11,7 +11,7 @@ namespace nCine
 	/**
 		@brief Wraps an OpenGL buffer object
 		
-		Manages the lifetime of a single OpenGL buffer object bound to a given target (e.g. a VBO, IBO
+		Manages the lifetime of a single OpenGL buffer object bound to a given target (e.g., a VBO, IBO
 		or UBO). Binding is cached per target so that redundant `glBindBuffer()` calls are skipped, and
 		indexed binding state (base/range) is tracked for uniform buffers. Provides data upload, immutable
 		storage allocation and persistent mapping.
@@ -28,7 +28,7 @@ namespace nCine
 		inline GLuint GetGLHandle() const {
 			return glHandle_;
 		}
-		/** @brief Returns the target this buffer is bound to (e.g. `GL_ARRAY_BUFFER`) */
+		/** @brief Returns the target this buffer is bound to (e.g., `GL_ARRAY_BUFFER`) */
 		inline GLenum GetTarget() const {
 			return target_;
 		}

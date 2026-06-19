@@ -109,12 +109,12 @@ namespace nCine
 			static const std::int32_t MaxHatButtons = 4; // The four directions
 
 			Axis axes[MaxNumAxes];
-			// Physical buttons mapped to logical axes (e.g. digital triggers when analog ones are missing).
+			// Physical buttons mapped to logical axes (e.g., digital triggers when analog ones are missing).
 			// Indexed by physical button id, so it must be sized like buttons[], not like axes[].
 			AxisSource buttonAxes[MaxNumButtons];
 			ButtonName buttons[MaxNumButtons];
 			ButtonName hats[MaxHatButtons];
-			// Hat directions mapped to logical axes (e.g. a D-pad used as a stick, like sideways Joy-Con)
+			// Hat directions mapped to logical axes (e.g., a D-pad used as a stick, like sideways Joy-Con)
 			AxisSource hatAxes[MaxHatButtons];
 
 			MappingDescription();

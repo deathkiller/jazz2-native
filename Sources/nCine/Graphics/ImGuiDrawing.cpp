@@ -286,7 +286,7 @@ namespace nCine
 		GLTexture* texturePtr = (GLTexture*)(intptr_t)tex->TexID;
 		textures_.erase(texturePtr);
 
-		// Clear identifiers and mark as destroyed (in order to allow e.g. calling InvalidateDeviceObjects while running)
+		// Clear identifiers and mark as destroyed (in order to allow, e.g., calling InvalidateDeviceObjects while running)
 		tex->SetTexID(ImTextureID_Invalid);
 		tex->SetStatus(ImTextureStatus_Destroyed);
 	}

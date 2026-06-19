@@ -30,7 +30,7 @@ namespace nCine
 		inline GLint GetSize() const {
 			return size_;
 		}
-		/** @brief Returns the GL type of the attribute (e.g. `GL_FLOAT_VEC4`) */
+		/** @brief Returns the GL type of the attribute (e.g., `GL_FLOAT_VEC4`) */
 		inline GLenum GetType() const {
 			return type_;
 		}
@@ -41,7 +41,7 @@ namespace nCine
 		/**
 		 * @brief Returns the basic GL type underlying the attribute type
 		 *
-		 * Maps a composite type to its scalar component type, e.g. `GL_FLOAT_VEC4` to `GL_FLOAT`.
+		 * Maps a composite type to its scalar component type, e.g., `GL_FLOAT_VEC4` to `GL_FLOAT`.
 		 */
 		GLenum GetBasicType() const;
 		/**

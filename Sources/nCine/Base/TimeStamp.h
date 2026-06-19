@@ -8,7 +8,7 @@ namespace nCine
 		@brief Wraps a clock counter value representing a point in time or a duration
 		
 		Stores a raw counter value obtained from the system @ref Clock. The same type is used both for
-		absolute time points (e.g. @ref now()) and for durations (e.g. the result of subtracting two
+		absolute time points (e.g., @ref now()) and for durations (e.g. the result of subtracting two
 		time stamps). Conversion methods are provided to read the stored value, or the time elapsed
 		since it, in seconds, milliseconds, microseconds or nanoseconds.
 	*/

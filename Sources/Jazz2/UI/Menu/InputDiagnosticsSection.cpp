@@ -111,7 +111,7 @@ namespace Jazz2::UI::Menu
 
 		std::size_t joyNameStringLength = _root->MeasureString({buffer, length}).X * 0.05f;
 		float xMultiplier = joyNameStringLength * 0.5f;
-		float easing = IMenuContainer::EaseOutElastic(_animation);
+		float easing = Easing::OutElastic(_animation);
 		float x = center.X * 0.4f + (1.0f - easing) * xMultiplier;
 		float size = 0.85f + easing * 0.12f;
 

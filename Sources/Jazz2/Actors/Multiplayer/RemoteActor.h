@@ -27,7 +27,7 @@ namespace Jazz2::Actors::Multiplayer
 		void AssignMetadata(std::uint8_t flags, ActorState state, StringView path, AnimState anim, float rotation, float scaleX, float scaleY, ActorRendererType rendererType);
 		/** @brief Sets the per-player recolor (0 = none); reloads the sprites indexed and (re)applies the palette */
 		void SetPlayerColor(std::uint32_t furColor);
-		/** @brief Changes the metadata (e.g. on character change), keeping the current recolor applied */
+		/** @brief Changes the metadata (e.g., on character change), keeping the current recolor applied */
 		void ChangeMetadata(StringView path);
 		/** @brief Synchronizes the position with the server */
 		void SyncPositionWithServer(Vector2f pos);

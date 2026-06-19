@@ -109,7 +109,7 @@ namespace Jazz2::UI::Menu
 				break;
 			}
 			case TransitionStyle::SlideVertical: {
-				// Slides down when going forward (e.g. the scoreboard dropping in from the top), up when going back
+				// Slides down when going forward (e.g., the scoreboard dropping in from the top), up when going back
 				float dir = (forward ? -1.0f : 1.0f);
 				offset.Y = (incoming ? dir * (1.0f - p) : -dir * p) * h * 0.18f;
 				alpha = (incoming ? p : 1.0f - p);

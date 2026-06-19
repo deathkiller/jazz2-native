@@ -135,19 +135,5 @@ namespace Jazz2::UI::Menu
 		void DrawMenuEdgeGlow(float centerX, float y);
 
 		/** @} */
-
-		/** @brief Returns elastic ease-out interpolation of the specified value */
-		static float EaseOutElastic(float t)
-		{
-			constexpr float p = 0.3f;
-			return powf(2.0f, -10.0f * t) * sinf((t - p / 4.0f) * (2.0f * fPi) / p) + 1.0f;
-		}
-
-		/** @brief Returns cubic ease-out interpolation of the specified value */
-		static float EaseOutCubic(float t)
-		{
-			float x = 1.0f - t;
-			return 1.0f - x * x * x;
-		}
 	};
 }

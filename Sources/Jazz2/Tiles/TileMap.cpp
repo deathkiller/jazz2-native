@@ -311,7 +311,7 @@ namespace Jazz2::Tiles
 			return false;
 		}
 
-		// Check whether the ~1/3 corner of the tile mask (e.g. the empty triangle of a 45-degree slope) is clear,
+		// Check whether the ~1/3 corner of the tile mask (e.g., the empty triangle of a 45-degree slope) is clear,
 		// so the path tracer can squeeze a diagonal move through partially-solid slope tiles
 		constexpr std::int32_t Size = TileSet::DefaultTileSize;
 		constexpr std::int32_t Corner = Size / 3;
@@ -353,7 +353,7 @@ namespace Jazz2::Tiles
 			return false;
 		}
 
-		// True if the tile's collision mask is neither fully empty nor fully filled (e.g. a slope or a thin
+		// True if the tile's collision mask is neither fully empty nor fully filled (e.g., a slope or a thin
 		// solid band) - the player rests on its solid part rather than falling through it
 		const LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
 		std::int32_t tileId = ResolveTileID(tile);
@@ -1521,7 +1521,7 @@ namespace Jazz2::Tiles
 				debris.TexBiasY = (((float)(currentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
 
 				debris.DiffuseTexture = res->Base->TextureDiffuse.get();
-				// Indexed sprite debris is recolored at draw time; -1 keeps a baked (e.g. tileset) texture on plain Sprite
+				// Indexed sprite debris is recolored at draw time; -1 keeps a baked (e.g., tileset) texture on plain Sprite
 				debris.PaletteOffset = (((res->Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) ? (std::int32_t)res->PaletteOffset : -1);
 				debris.Flags = DebrisFlags::Bounce;
 			}
@@ -1591,7 +1591,7 @@ namespace Jazz2::Tiles
 
 			debris.Time -= timeMult;
 			if (debris.Time <= 0.0f) {
-				// Time's up - fade out smoothly instead of popping while still partly visible (e.g. the Fire/Lightning
+				// Time's up - fade out smoothly instead of popping while still partly visible (e.g., the Fire/Lightning
 				// death effects, whose own AlphaSpeed is too slow to reach zero within their lifetime)
 				debris.AlphaSpeed = std::min(debris.AlphaSpeed, -0.08f);
 			}
@@ -1788,7 +1788,7 @@ namespace Jazz2::Tiles
 			tile.TileID = tileIndex;
 		}
 
-		// Replace just the flip flags, preserving collision/other flags (e.g. OneWay)
+		// Replace just the flip flags, preserving collision/other flags (e.g., OneWay)
 		std::uint8_t flags = (std::uint8_t)tile.Flags & ~(std::uint8_t)(LayerTileFlags::FlipX | LayerTileFlags::FlipY);
 		if ((tileValue & TileFlagFlipX) == TileFlagFlipX) {
 			flags |= (std::uint8_t)LayerTileFlags::FlipX;

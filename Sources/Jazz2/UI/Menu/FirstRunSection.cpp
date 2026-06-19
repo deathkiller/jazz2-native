@@ -55,7 +55,7 @@ namespace Jazz2::UI::Menu
 				float y = bounds.Y + bounds.H * 0.5f;
 
 				if (selected) {
-					float size = 0.7f + IMenuContainer::EaseOutElastic(animation) * 0.6f;
+					float size = 0.7f + Easing::OutElastic(animation) * 0.6f;
 					r->DrawElement(MenuGlow, 0, centerX, y + 10.0f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 0.2f), 22.0f, 12.0f, true, true);
 					r->DrawStringShadow(name, charOffset, centerX, y, IMenuContainer::FontLayer + 10,
 						Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);

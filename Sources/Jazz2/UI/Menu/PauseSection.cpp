@@ -1,6 +1,7 @@
 ﻿#include "PauseSection.h"
 #include "OptionsSection.h"
 #include "InGameMenu.h"
+#include "Tweening.h"
 #if defined(WITH_MULTIPLAYER)
 #	include "ScoreboardSection.h"
 #endif
@@ -129,7 +130,7 @@ namespace Jazz2::UI::Menu
 			_items[i].TouchY = center.Y;
 
 			if (_selectedIndex == i) {
-				float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+				float size = 0.5f + Easing::OutElastic(_animation) * 0.6f;
 
 				_root->DrawStringGlow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 					Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);

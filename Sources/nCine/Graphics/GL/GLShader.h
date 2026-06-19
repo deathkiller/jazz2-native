@@ -16,7 +16,7 @@ namespace nCine
 	/**
 		@brief Wraps an OpenGL shader object
 		
-		Manages the lifetime of a single shader object of a given stage (e.g. vertex or fragment),
+		Manages the lifetime of a single shader object of a given stage (e.g., vertex or fragment),
 		loads its source from strings and/or a file, compiles it, and tracks the compilation status.
 		Compilation errors can be checked immediately or deferred.
 	*/

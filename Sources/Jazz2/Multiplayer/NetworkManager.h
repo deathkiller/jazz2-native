@@ -63,7 +63,7 @@ namespace Jazz2::Multiplayer
 		 * if there is none within the reconnect window.
 		 */
 		std::shared_ptr<PeerDescriptor> ReclaimDisconnectedPeer(StaticArrayView<Uuid::Size, Uuid::Type> uuid);
-		/** @brief Clears the restorable state of all retained disconnected peers (e.g. when a new round starts) */
+		/** @brief Clears the restorable state of all retained disconnected peers (e.g., when a new round starts) */
 		void ClearDisconnectedPeerStates();
 
 		/** @brief Returns `true` if there are any inbound connections */

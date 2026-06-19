@@ -291,7 +291,7 @@ namespace Jazz2::Tiles
 			/**
 			 * @brief Flat palette offset when @ref DiffuseTexture is an indexed sprite
 			 *
-			 * The sprite is recolored at draw time. `-1` when the texture holds baked colors (e.g. a tileset texture)
+			 * The sprite is recolored at draw time. `-1` when the texture holds baked colors (e.g., a tileset texture)
 			 * and must use the plain Sprite shader.
 			 */
 			std::int32_t PaletteOffset = -1;
@@ -337,7 +337,7 @@ namespace Jazz2::Tiles
 		bool IsTileOneWay(std::int32_t tx, std::int32_t ty);
 		/** @brief Returns `true` if the given ~1/3 corner of the tile's collision mask is empty (cornerX/cornerY: -1 = left/top, +1 = right/bottom) */
 		bool IsTileCornerEmpty(std::int32_t tx, std::int32_t ty, std::int32_t cornerX, std::int32_t cornerY);
-		/** @brief Returns `true` if the tile's collision mask is neither fully empty nor fully filled (e.g. a slope or a thin solid band) */
+		/** @brief Returns `true` if the tile's collision mask is neither fully empty nor fully filled (e.g., a slope or a thin solid band) */
 		bool IsTilePartiallySolid(std::int32_t tx, std::int32_t ty);
 		/** @brief Returns `true` if the tile on the main (sprite) layer is controlled by a trigger (toggled solid/empty by a trigger crate) */
 		bool IsTileTrigger(std::int32_t tx, std::int32_t ty);

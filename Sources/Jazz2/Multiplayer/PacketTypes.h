@@ -160,7 +160,7 @@ namespace Jazz2::Multiplayer
 		Health,				/**< Current health */
 		Controllable,		/**< Whether the player is controllable */
 		Invulnerable,		/**< Invulnerability state */
-		Modifier,			/**< Active modifier (e.g. copter, frog) */
+		Modifier,			/**< Active modifier (e.g., copter, frog) */
 		Dizzy,				/**< Dizziness state */
 		Freeze,				/**< Freeze state */
 		Shield,				/**< Active shield */

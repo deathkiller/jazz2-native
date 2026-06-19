@@ -59,7 +59,7 @@ namespace Jazz2::Actors
 		@brief Represents a controllable player
 		
 		The player-controlled rabbit character (Jazz, Spaz or Lori in JJ2) that runs, jumps, fires weapons,
-		collects items and takes damage. Each character has its own special move (e.g. buttstomp, uppercut or
+		collects items and takes damage. Each character has its own special move (e.g., buttstomp, uppercut or
 		sidekick), can enter a temporary Sugar Rush and may be morphed into other forms such as the Frog.
 	*/
 	class Player : public ActorBase

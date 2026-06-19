@@ -300,7 +300,7 @@ namespace Jazz2::Scripting
 						}
 					}
 				} else {
-					// Check for lines starting with #!, e.g. shebang interpreter directive. These will be treated as comments and removed by the preprocessor
+					// Check for lines starting with #!, e.g., shebang interpreter directive. These will be treated as comments and removed by the preprocessor
 					if (scriptContent[pos] == '!') {
 						pos += len;
 						for (; pos < scriptSize && scriptContent[pos] != '\n'; pos++);
@@ -973,9 +973,9 @@ namespace Jazz2::Scripting
 
 	void ScriptLoader::ReturnContextCallback(asIScriptEngine* engine, asIScriptContext* ctx, void* param)
 	{
-		// Unprepare the context to free any objects it may still hold (e.g. return value)
+		// Unprepare the context to free any objects it may still hold (e.g., return value)
 		// This must be done before making the context available for re-use, as the clean
-		// up may trigger other script executions, e.g. if a destructor needs to call a function.
+		// up may trigger other script executions, e.g., if a destructor needs to call a function.
 		ctx->Unprepare();
 
 		// Place the context into the pool for when it will be needed again

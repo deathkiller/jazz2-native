@@ -119,7 +119,7 @@ namespace Jazz2::Actors
 			_weaponSound = nullptr;
 		}
 #endif
-		// Release the shared palette offset back to the pool (e.g. on disconnect/level end)
+		// Release the shared palette offset back to the pool (e.g., on disconnect/level end)
 		ReleasePaletteOffset();
 	}
 
@@ -4529,7 +4529,7 @@ namespace Jazz2::Actors
 		float overlapX = std::min(a.R, b.R) - std::max(a.L, b.L);
 		float overlapY = std::min(a.B, b.B) - std::max(a.T, b.T);
 		if (overlapX <= 0.0f || overlapY <= 0.0f) {
-			// Boxes don't actually overlap (e.g. per-pixel collision reported the hit) - nothing to separate
+			// Boxes don't actually overlap (e.g., per-pixel collision reported the hit) - nothing to separate
 			return false;
 		}
 

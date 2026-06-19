@@ -193,7 +193,7 @@ namespace Jazz2::Scripting
 
 		// Persistent jjLAYER proxies keyed by engine layer index, created lazily when a script first accesses jjLayers[i].
 		// Each holds one AddRef'd reference (released in the destructor); SyncLayerProperties pushes their writable fields
-		// into the engine layer descriptions every frame so direct property writes (e.g. layer.xSpeed = N) take effect.
+		// into the engine layer descriptions every frame so direct property writes (e.g., layer.xSpeed = N) take effect.
 		HashMap<std::int32_t, Legacy::jjLAYER*> _layerProxies;
 
 		// Pushes every cached jjLAYER proxy's writable properties (speeds, offsets, repeat, speed models) into the engine

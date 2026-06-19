@@ -248,7 +248,7 @@ namespace Jazz2::UI::Menu
 
 			if (center.Y > topLine - ItemHeight && center.Y < bottomLine + ItemHeight) {
 				if (_selectedIndex == i) {
-					float easing = IMenuContainer::EaseOutElastic(_animation);
+					float easing = Easing::OutElastic(_animation);
 					float size = 0.7f + easing * 0.12f;
 					float xMultiplier = _root->MeasureString(_items[i].Desc.Name, size, 0.9f).X * 0.125f;
 					float x = column1 + xMultiplier - easing * xMultiplier;

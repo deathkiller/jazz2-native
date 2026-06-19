@@ -14,7 +14,7 @@ namespace Jazz2::UI::Menu
 	static constexpr std::int32_t BottomLine = 42;
 	// Intro panel slides the frame down by this much and reveals the header text
 	static constexpr float IntroOffset = 28.0f;
-	// Extra arrow spacing so the `<` `>` arrows clear the wider values (e.g. "Enabled With Ammo Count")
+	// Extra arrow spacing so the `<` `>` arrows clear the wider values (e.g., "Enabled With Ammo Count")
 	static constexpr float WideArrowSpacing = 40.0f;
 
 	GameplayEnhancementsSection::~GameplayEnhancementsSection()
@@ -102,7 +102,7 @@ namespace Jazz2::UI::Menu
 	{
 		Recti contentBounds = _root->GetContentBounds();
 		float centerX = contentBounds.X + contentBounds.W * 0.5f;
-		float topLine = contentBounds.Y + TopLine + IntroOffset * IMenuContainer::EaseOutCubic(_transition);
+		float topLine = contentBounds.Y + TopLine + IntroOffset * Easing::OutCubic(_transition);
 		float bottomLine = contentBounds.Y + contentBounds.H - BottomLine;
 
 		_root->DrawMenuFrame(centerX, topLine, bottomLine);

@@ -3971,7 +3971,7 @@ namespace Jazz2::Multiplayer
 
 					auto& serverConfig = _networkManager->GetServerConfiguration();
 					if ((peerDesc->IsSpectating & SpectateMode::Mask) == SpectateMode::Forced) {
-						// Forced spectators (e.g. winner, eliminated) can't rejoin by changing character
+						// Forced spectators (e.g., winner, eliminated) can't rejoin by changing character
 						LOGD("[MP] ClientPacketType::PlayerChangeCharacter [{}] - Forced to spectate", peer);
 						return true;
 					}
@@ -5840,7 +5840,7 @@ namespace Jazz2::Multiplayer
 						? serverConfig.InitialPlayerHealth
 						: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
 
-					// Spawning as a real player clears any stale spectate state (e.g. carried over from a previous
+					// Spawning as a real player clears any stale spectate state (e.g., carried over from a previous
 					// round or a reconnect), otherwise the player would be treated as spectating despite being active
 					peerDesc->IsSpectating = SpectateMode::None;
 
@@ -6385,7 +6385,7 @@ namespace Jazz2::Multiplayer
 			}
 
 			if (victim == nullptr) {
-				// No eligible player to move (e.g. all locked); give up to avoid an infinite loop
+				// No eligible player to move (e.g., all locked); give up to avoid an infinite loop
 				break;
 			}
 
@@ -7521,7 +7521,7 @@ namespace Jazz2::Multiplayer
 		// Gravity-aware breadth-first search recording predecessors, so a route can be reconstructed.
 		// 'blocked' optionally forbids tiles (used to force the second pass around the other arm of the loop).
 		// 'useWarps' toggles warp teleport edges: enabled for reachability, disabled when tracing a route so it
-		// follows the geometry (e.g. climbs poles) rather than teleporting past it.
+		// follows the geometry (e.g., climbs poles) rather than teleporting past it.
 		auto runBfs = [&](Vector2i start, const std::uint8_t* blocked, std::int32_t* parent, std::int32_t* dist, Vector2i& farTile, std::int32_t& visitedCount, bool useWarps) {
 			std::queue<Vector2i> q;
 			std::int32_t startIdx = start.X + start.Y * W;
@@ -7544,7 +7544,7 @@ namespace Jazz2::Multiplayer
 				q.push(Vector2i(tx, ty));
 			};
 
-			// Adds a tile without the occupiable check (the caller verified it can be entered, e.g. a slope tile
+			// Adds a tile without the occupiable check (the caller verified it can be entered, e.g., a slope tile
 			// reached diagonally through its empty corner)
 			auto tryAddRaw = [&](std::int32_t tx, std::int32_t ty, std::int32_t fromDist, std::int32_t fromIdx) {
 				if (tx < 0 || ty < 0 || tx >= W || ty >= H) {
@@ -7568,7 +7568,7 @@ namespace Jazz2::Multiplayer
 				// A node sitting inside a partially-solid tile (a slope or a thin solid band, reached via the diagonal
 				// step) rests on that tile's solid part - treat it as grounded so the tracer doesn't fall straight
 				// through it (fixes the player dropping through a middle-solid tile after a tube ends). Destructible
-				// tiles are excluded: the player breaks through them (e.g. buttstomps down), so they must not read as
+				// tiles are excluded: the player breaks through them (e.g., buttstomps down), so they must not read as
 				// standable ground - !isFree(c) is true only for genuine solid terrain (slopes/bands), not breakables.
 				bool grounded = hasGround(c.X, c.Y) || (_tileMap->IsTilePartiallySolid(c.X, c.Y) && !isFree(c.X, c.Y));
 				bool lift = isLift(c.X, c.Y);
@@ -7874,9 +7874,9 @@ namespace Jazz2::Multiplayer
 				wj.second.X, wj.second.Y, (dist[wj.second.X + wj.second.Y * W] >= 0) ? 1 : 0);
 		}
 
-		// First arm: spawn -> far. Prefer a warp-free route so the line follows the geometry (e.g. climbs the poles
+		// First arm: spawn -> far. Prefer a warp-free route so the line follows the geometry (e.g., climbs the poles
 		// or vines) instead of teleporting past it via a warp shortcut; fall back to the warp-enabled route only
-		// when the far tile can't be reached without warps (e.g. a section only accessible by a warp).
+		// when the far tile can't be reached without warps (e.g., a section only accessible by a warp).
 		std::unique_ptr<std::int32_t[]> parentNW = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
 		std::unique_ptr<std::int32_t[]> distNW = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
 		for (std::int32_t i = 0; i < totalTiles; i++) { parentNW[i] = -1; distNW[i] = -1; }
@@ -7889,7 +7889,7 @@ namespace Jazz2::Multiplayer
 		reconstruct(routeNoWarp ? parentNW.get() : parent.get(), spawnIdx, farIdx, pathOut);
 
 		// Second arm: far -> finish, taking the opposite side by blocking the first arm. If blocking disconnects
-		// the finish (e.g. wide corridors), retry without blocking so the route still reaches the end.
+		// the finish (e.g., wide corridors), retry without blocking so the route still reaches the end.
 		std::unique_ptr<std::uint8_t[]> blocked = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
 		for (std::int32_t i = 1; i + 1 < (std::int32_t)pathOut.size(); i++) {
 			blocked[pathOut[i].X + pathOut[i].Y * W] = 1;
@@ -7919,7 +7919,7 @@ namespace Jazz2::Multiplayer
 			reconstruct(parent2.get(), farIdx, targetIdx, pathBack);
 		}
 
-		// Assemble the route spawn -> far -> finish. But if the far tile overshoots just past the finish (e.g. a
+		// Assemble the route spawn -> far -> finish. But if the far tile overshoots just past the finish (e.g., a
 		// catch-spring sits a couple of tiles beyond the finish warp), end the route at the finish instead of
 		// looping out to far and back.
 		SmallVector<Vector2i, 0> route;

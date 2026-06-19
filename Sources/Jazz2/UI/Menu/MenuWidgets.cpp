@@ -44,7 +44,7 @@ namespace Jazz2::UI::Menu
 		if (Value) {
 			StringView value = Value();
 			// Arrows are shown only for editable rows (selected, not read-only, has an OnChange handler);
-			// a value with no handler (e.g. a read-only resolution display) still draws but without arrows
+			// a value with no handler (e.g., a read-only resolution display) still draws but without arrows
 			bool showArrows = (Selected && !ReadOnly && (bool)OnChange);
 			root->DrawMenuValue(charOffset, value, centerX, y + 22.0f, Selected, ReadOnly, showArrows, Animation.Raw(), ArrowSpacing);
 		}
@@ -228,7 +228,7 @@ namespace Jazz2::UI::Menu
 		}
 		if (_selectedIndex >= 0 && _selectedIndex < (std::int32_t)_children.size()) {
 			Widget* selected = _children[_selectedIndex].get();
-			// Let the selected widget handle Left/Right/Fire first (e.g. a ChoiceItem changing its value)
+			// Let the selected widget handle Left/Right/Fire first (e.g., a ChoiceItem changing its value)
 			if (selected->OnNavigate(input, root)) {
 				return true;
 			}
@@ -376,7 +376,7 @@ namespace Jazz2::UI::Menu
 				for (std::int32_t i = 0; i < (std::int32_t)_children.size(); i++) {
 					auto& child = _children[i];
 					if (child->Focusable && child->Visible && child->Bounds.Contains(x, y)) {
-						// Re-tapping the already-selected child lets it self-handle the touch (e.g. a Slider adjusting
+						// Re-tapping the already-selected child lets it self-handle the touch (e.g., a Slider adjusting
 						// its value); if it doesn't consume the event, fall back to the standard select/activate
 						if (i == _selectedIndex && child->OnTouchEvent(event, viewSize, root)) {
 							return true;
@@ -539,7 +539,7 @@ namespace Jazz2::UI::Menu
 				for (std::int32_t i = 0; i < (std::int32_t)_children.size(); i++) {
 					auto& child = _children[i];
 					if (child->Focusable && child->Visible && child->Bounds.Contains(_touchLast.X, _touchLast.Y)) {
-						// Let the row self-handle the tap (e.g. a bespoke row picking a column); otherwise select/activate it
+						// Let the row self-handle the tap (e.g., a bespoke row picking a column); otherwise select/activate it
 						if (!child->OnTouchEvent(event, viewSize, root)) {
 							SelectAt(i, root);
 						}
@@ -569,7 +569,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		// Scroll by the item's full extent (top/bottom), not just its center, so taller multi-line items
-		// (e.g. a ChoiceItem with its value on a second line) are brought entirely into view. A little extra
+		// (e.g., a ChoiceItem with its value on a second line) are brought entirely into view. A little extra
 		// padding past the item is kept so the viewport scrolls slightly more than strictly needed, leaving the
 		// selection a bit inside the edge (revealing part of the adjacent item) instead of flush against it. The
 		// scroll offset is clamped in Draw, so this never over-scrolls past the first/last item.

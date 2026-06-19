@@ -38,7 +38,7 @@ namespace nCine
 		inline GLint GetBlockIndex() const {
 			return blockIndex_;
 		}
-		/** @brief Returns the uniform location, or -1 if it has no location (e.g. block members) */
+		/** @brief Returns the uniform location, or -1 if it has no location (e.g., block members) */
 		inline GLint GetLocation() const {
 			return location_;
 		}
@@ -46,7 +46,7 @@ namespace nCine
 		inline GLint GetSize() const {
 			return size_;
 		}
-		/** @brief Returns the GL type enum of the uniform (e.g. `GL_FLOAT_VEC4`) */
+		/** @brief Returns the GL type enum of the uniform (e.g., `GL_FLOAT_VEC4`) */
 		inline GLenum GetType() const {
 			return type_;
 		}
@@ -60,7 +60,7 @@ namespace nCine
 		}
 		/** @brief Returns the basic component type (`GL_FLOAT`, `GL_INT` or `GL_BOOL`) derived from the GL type */
 		GLenum GetBasicType() const;
-		/** @brief Returns the number of components of the uniform type (e.g. 4 for a `vec4`, 16 for a `mat4`) */
+		/** @brief Returns the number of components of the uniform type (e.g., 4 for a `vec4`, 16 for a `mat4`) */
 		std::uint32_t GetComponentCount() const;
 		/** @brief Returns the size in bytes occupied by the uniform value */
 		inline std::uint32_t GetMemorySize() const {

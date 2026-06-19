@@ -1,6 +1,6 @@
 ﻿#include "HUD.h"
 #include "InGameConsole.h"
-#include "Menu/IMenuContainer.h"
+#include "Menu/Tweening.h"
 #include "../ContentResolver.h"
 #include "../PreferencesCache.h"
 #include "../Actors/Enemies/Bosses/BossBase.h"
@@ -1389,7 +1389,7 @@ namespace Jazz2::UI
 
 		float scale = std::min(std::min(view.W, view.H) * 0.0034f, 1.0f);
 		float alpha = state.Anim / WeaponWheelAnimDuration;
-		float easing = Menu::IMenuContainer::EaseOutCubic(alpha);
+		float easing = Menu::Easing::OutCubic(alpha);
 		float distance = scale * (20.0f  + (70.0f * easing));
 		float distance2 = scale * (10.0f  + (50.0f * easing));
 		float distance3 = distance2 * 2.0f;
@@ -1774,7 +1774,7 @@ namespace Jazz2::UI
 			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-			// texRect: x=inner radius fraction (0=filled, e.g. 0.75=ring), y=softness, zw=unused
+			// texRect: x=inner radius fraction (0=filled, e.g., 0.75=ring), y=softness, zw=unused
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(Vector4f(ringInnerFraction, 0.018f, 0.0f, 0.0f).Data());
 			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(Vector2f(radius * 2.0f, radius * 2.0f).Data());
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());

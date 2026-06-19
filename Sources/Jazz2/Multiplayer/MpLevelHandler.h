@@ -181,7 +181,7 @@ namespace Jazz2::Multiplayer
 			std::uint32_t Deaths;
 			std::uint32_t Points;
 			std::uint32_t Extra;	// Laps (Race), treasure (Treasure Hunt) or captures (CTF), 0 otherwise
-			std::int32_t PingMs;	// Round-trip time in ms, -1 if unknown (e.g. the local/host player)
+			std::int32_t PingMs;	// Round-trip time in ms, -1 if unknown (e.g., the local/host player)
 			bool IsLocal;
 		};
 

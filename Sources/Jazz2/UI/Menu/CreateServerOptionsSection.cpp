@@ -164,7 +164,7 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 		for (std::int32_t i = 0; i < (std::int32_t)Item::Count; i++) {
 		    if (_selectedIndex == i) {
-		        float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+		        float size = 0.5f + Easing::OutElastic(_animation) * 0.6f;
 
 		        _root->DrawStringGlow(_items[i].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 		            Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);

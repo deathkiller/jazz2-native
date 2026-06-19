@@ -186,7 +186,7 @@ namespace nCine
 		 * @brief Remaps the channels returned when the texture is sampled
 		 *
 		 * The default mapping is `Red, Green, Blue, Alpha`. Swizzling lets a reduced-channel
-		 * texture (e.g. an RG8 sprite holding a palette index plus alpha) be sampled as if it
+		 * texture (e.g., an RG8 sprite holding a palette index plus alpha) be sampled as if it
 		 * were RGBA8 in the shader.
 		 */
 		void SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a);

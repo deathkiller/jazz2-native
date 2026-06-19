@@ -362,7 +362,7 @@ namespace nCine::Backends
 #	endif
 
 			// Register main window handle (which is owned by the main application, not by us)
-			// This is mostly for simplicity and consistency, so that our code (e.g. mouse handling etc.) can use same logic for main and secondary viewports.
+			// This is mostly for simplicity and consistency, so that our code (e.g., mouse handling etc.) can use same logic for main and secondary viewports.
 			ImGuiViewport* mainViewport = ImGui::GetMainViewport();
 			ViewportData* vd = IM_NEW(ViewportData)();
 			vd->Window = window;
@@ -611,7 +611,7 @@ namespace nCine::Backends
 
 		// We forward mouse input when hovered or captured (via SDL_MOUSEMOTION) or when focused (below)
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
-		// - SDL_CaptureMouse() let the OS know e.g. that our drags can extend outside of parent boundaries (we want updated position) and shouldn't trigger other operations outside.
+		// - SDL_CaptureMouse() let the OS know, e.g., that our drags can extend outside of parent boundaries (we want updated position) and shouldn't trigger other operations outside.
 		// - Debuggers under Linux tends to leave captured mouse on break, which may be very inconvenient, so to mitigate the issue we wait until mouse has moved to begin capture.
 		if (mouseCanUseGlobalState_) {
 			bool wantCapture = false;

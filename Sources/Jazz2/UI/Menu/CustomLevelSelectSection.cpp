@@ -193,7 +193,7 @@ namespace Jazz2::UI::Menu
 				}
 
 				if (_selectedIndex == i) {
-					float easing = IMenuContainer::EaseOutElastic(_animation);
+					float easing = Easing::OutElastic(_animation);
 					float size = 0.7f + easing * 0.12f;
 					float xMultiplier = _items[i].DisplayName.size() * 0.25f;
 					float x = column1 + xMultiplier - easing * xMultiplier;

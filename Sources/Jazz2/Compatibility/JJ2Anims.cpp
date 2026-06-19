@@ -451,7 +451,7 @@ namespace Jazz2::Compatibility
 			// Indexed sprites (default Sprite palette) keep the palette index in the red channel and are recolored
 			// in-game through the palette texture. Save them with the fewest channels so no per-pixel work is
 			// needed at load: 1 (index only), or 2 (index + alpha) when any pixel is partially transparent
-			// (DrawTransparent). True-color palettes (e.g. Menu) stay RGBA.
+			// (DrawTransparent). True-color palettes (e.g., Menu) stay RGBA.
 			if (entry->Palette == JJ2DefaultPalette::Sprite) {
 				bool hasPartialAlpha = false;
 				for (std::int32_t i = 0; i < totalPixels; i++) {

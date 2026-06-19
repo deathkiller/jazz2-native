@@ -9,7 +9,7 @@ namespace Jazz2
 		
 		Identifies the animation an actor should currently play. Lower bits pack the continuous movement state
 		(horizontal/vertical speed, shooting) so several conditions can be combined, while higher values starting at
-		`0x40000000` are discrete one-shot transition animations (e.g. turning, warping, uppercut stages) and a few
+		`0x40000000` are discrete one-shot transition animations (e.g., turning, warping, uppercut stages) and a few
 		aliases reused for object states. A @ref Resources::GraphicResource is matched against this state to pick the
 		frames to render. Supports a bitwise combination of its member values.
 	*/
@@ -25,7 +25,7 @@ namespace Jazz2
 		VIdle = 0x00000000,					/**< No vertical movement */
 		Jump = 0x00000004,					/**< Jumping (moving upwards) */
 		Fall = 0x00000008,					/**< Falling (moving downwards) */
-		Hook = 0x0000000c,					/**< Suspended (e.g. on a hook) */
+		Hook = 0x0000000c,					/**< Suspended (e.g., on a hook) */
 
 		// Bit 4: Shoot
 		Shoot = 0x00000010,					/**< Shooting */

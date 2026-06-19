@@ -744,7 +744,7 @@ void main() {
 )";
 
 	// Same as Outline, but the sprite interior is an indexed sprite recolored through a palette (texture unit 1).
-	// Used to highlight a recolored player (e.g. weapon wheel) while keeping its custom colors.
+	// Used to highlight a recolored player (e.g., weapon wheel) while keeping its custom colors.
 	constexpr char OutlinePaletteFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
@@ -891,7 +891,7 @@ void main() {
 	// Renders an indexed sprite (palette index stored in the red channel) by looking the color up in the shared
 	// 256x256 palette texture bound to texture unit 1. The per-instance vPaletteOffset selects the palette: it is
 	// a flat index (added to the per-pixel index) mapped row-major into the texture, so sprites using different
-	// palettes (e.g. differently recolored players) still batch together, differing only by this offset.
+	// palettes (e.g., differently recolored players) still batch together, differing only by this offset.
 	constexpr char PaletteRemapFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES
 precision mediump float;
@@ -2852,7 +2852,7 @@ void main() {
 
 	// Fragment shader for drawing SDF circles and rings without textures.
 	//	texRect.x = inner radius as fraction of outer (0=filled circle, 0.8=thin ring)
-	//	texRect.y = edge softness (anti-alias width, e.g. 0.02)
+	//	texRect.y = edge softness (anti-alias width, e.g., 0.02)
 	//	texRect.z, texRect.w = unused
 	constexpr char TouchCircleFs[] = "#line " DEATH_LINE_STRING "\n" R"(
 #ifdef GL_ES

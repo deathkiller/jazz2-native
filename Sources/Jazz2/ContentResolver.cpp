@@ -1101,7 +1101,7 @@ namespace Jazz2
 				texture = std::make_unique<Texture>(name, Texture::Format::R8, width, height);
 				texture->LoadFromTexels(pixels, 0, 0, width, height);
 			} else {
-				// Opaque palette base (e.g. gems): synthesize on/off alpha from the index so transparency survives
+				// Opaque palette base (e.g., gems): synthesize on/off alpha from the index so transparency survives
 				std::unique_ptr<std::uint8_t[]> packed = std::make_unique<std::uint8_t[]>(count * 2);
 				for (std::int32_t i = 0; i < count; i++) {
 					packed[(i * 2) + 0] = pixels[i];
@@ -1823,7 +1823,7 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMask]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedFrozenMask]);
 
 		// Palette-based rendering: indexed sprites/tiles are recolored at draw time through a palette texture bound
-		// at unit 1. Batched variants let many indexed sprites that share the same palette texture (e.g. all actors
+		// at unit 1. Batched variants let many indexed sprites that share the same palette texture (e.g., all actors
 		// using the default sprite palette) collapse into a single draw call, exactly like the non-palette shaders.
 		_precompiledShaders[(std::int32_t)PrecompiledShader::PaletteRemap] = CompileShader("PaletteRemap", Shader::DefaultVertex::SPRITE, Shaders::PaletteRemapFs);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedPaletteRemap] = CompileShader("BatchedPaletteRemap", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::PaletteRemapFs, Shader::Introspection::NoUniformsInBlocks);
@@ -2142,7 +2142,7 @@ namespace Jazz2
 		float q = 0.211f * r - 0.523f * g + 0.312f * b;
 
 		// YIQ's chroma angle runs opposite to the conventional HSV hue direction, so negate `degrees` here: this makes
-		// a positive argument increase the HSV hue (e.g. red 0deg + 60 -> yellow), matching what the per-gradient
+		// a positive argument increase the HSV hue (e.g., red 0deg + 60 -> yellow), matching what the per-gradient
 		// angles in HueShiftDegreesForGradient assume.
 		float rad = -degrees * 0.01745329252f; // degrees -> radians
 		float cs = std::cos(rad), sn = std::sin(rad);

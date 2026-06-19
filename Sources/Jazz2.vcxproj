@@ -321,6 +321,8 @@
     <ClInclude Include="$(ExtensionLibraryPath)\Containers\Containers.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Base\Format.h" />
     <ClInclude Include="$(ExtensionLibraryPath)\Cryptography\xxHash.h" />
+    <ClInclude Include="Dependencies\enet\enet.h" />
+    <ClInclude Include="Dependencies\enet\ifaddrs-android.h" />
     <ClInclude Include="Dependencies\jsoncpp\allocator.h" />
     <ClInclude Include="Dependencies\jsoncpp\assertions.h" />
     <ClInclude Include="Dependencies\jsoncpp\config.h" />
@@ -483,7 +485,6 @@
     <ClInclude Include="Jazz2\LevelDescriptor.h" />
     <ClInclude Include="Jazz2\LevelFlags.h" />
     <ClInclude Include="Jazz2\LightEmitter.h" />
-    <ClInclude Include="Jazz2\Multiplayer\Backends\enet.h" />
     <ClInclude Include="Jazz2\Multiplayer\ConnectionResult.h" />
     <ClInclude Include="Jazz2\Multiplayer\INetworkHandler.h" />
     <ClInclude Include="Jazz2\Multiplayer\MpLevelHandler.h" />

@@ -266,7 +266,8 @@ namespace Jazz2::UI::Menu
 			Colorf textColor = Font::DefaultColor;
 			textColor.SetAlpha(_hintAnimation);
 			// TRANSLATORS: Bottom hint in Options > Controls > Remap Controls section
-			_root->DrawStringShadow(_("Press any key or button to assign"), charOffset, centerX, hintY - 18.0f * IMenuContainer::EaseOutCubic(_hintAnimation), IMenuContainer::FontLayer,
+			_root->DrawStringShadow(_("Press any key or button to assign"), charOffset,
+				centerX, hintY - 18.0f * Easing::OutCubic(_hintAnimation), IMenuContainer::FontLayer,
 				Alignment::Center, textColor, 0.7f, 0.4f, 0.0f, 0.0f, 0.0f, 0.9f);
 		} else {
 			std::int32_t row = GetSelectedRow();
@@ -461,7 +462,7 @@ namespace Jazz2::UI::Menu
 
 			if (!value.empty()) {
 				if (isSelected && _selectedColumn == j) {
-					float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.5f;
+					float size = 0.5f + Easing::OutElastic(_animation) * 0.5f;
 
 					Colorf color;
 					if (_waitForInput) {
@@ -480,7 +481,7 @@ namespace Jazz2::UI::Menu
 		}
 
 		if (isSelected && _selectedColumn == targetCount) {
-			float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.5f;
+			float size = 0.5f + Easing::OutElastic(_animation) * 0.5f;
 			root->DrawStringShadow("+"_s, charOffset, centerX * (0.81f + targetCount * 0.2f) + 2.0f, itemY, IMenuContainer::MainLayer - 10,
 				Alignment::Center, _waitForInput ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Colorf(0.44f, 0.62f, 0.34f, 0.5f), size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 		} else {

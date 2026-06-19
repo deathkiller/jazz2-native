@@ -59,7 +59,7 @@ namespace Jazz2::Actors
 	/**
 		@brief Flags that modify behaviour of @ref ActorBase
 		
-		Bit set describing how an actor behaves and collides. It mixes instantiation hints (e.g. created from the
+		Bit set describing how an actor behaves and collides. It mixes instantiation hints (e.g., created from the
 		event map or asynchronously), per-instance state (invulnerable, on the ground, frozen, facing left) and
 		collision options (which entities to collide with, gravitation, solidity, per-pixel checks). Supports a
 		bitwise combination of its member values.
@@ -334,7 +334,7 @@ namespace Jazz2::Actors
 			/**
 			 * @brief Selects a recolor palette override
 			 *
-			 * The override is a flat offset into the shared palette texture (e.g. `paletteRow * @ref
+			 * The override is a flat offset into the shared palette texture (e.g., `paletteRow * @ref
 			 * ContentResolver::ColorsPerPalette`), or -1 for no override. It takes precedence over the base palette used
 			 * for plain (non-recolored) indexed sprites; see @ref SetIndexed.
 			 */
@@ -497,7 +497,7 @@ namespace Jazz2::Actors
 		 * @brief Loads specified metadata and its linked assets
 		 *
 		 * @param path          Relative path to the metadata asset
-		 * @param forceIndexed  Load linked graphics as indexed (for shader-based recoloring, e.g. the player)
+		 * @param forceIndexed  Load linked graphics as indexed (for shader-based recoloring, e.g., the player)
 		 */
 		void RequestMetadata(StringView path, bool forceIndexed = false);
 

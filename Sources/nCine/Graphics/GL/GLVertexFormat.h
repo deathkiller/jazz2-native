@@ -61,7 +61,7 @@ namespace nCine
 			inline GLint GetSize() const {
 				return size_;
 			}
-			/** @brief Returns the data type of each component (e.g. `GL_FLOAT`) */
+			/** @brief Returns the data type of each component (e.g., `GL_FLOAT`) */
 			inline GLenum GetType() const {
 				return type_;
 			}

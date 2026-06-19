@@ -125,7 +125,7 @@ namespace nCine
 		/**
 		 * @brief Attaches a shader stage compiled from the specified file
 		 *
-		 * @param type		The shader stage (e.g. `GL_VERTEX_SHADER`)
+		 * @param type		The shader stage (e.g., `GL_VERTEX_SHADER`)
 		 * @param filename	Path of the file containing the shader source
 		 * @return `true` if the shader compiled successfully (or when checks are deferred)
 		 */
@@ -133,7 +133,7 @@ namespace nCine
 		/**
 		 * @brief Attaches a shader stage compiled from the specified source string
 		 *
-		 * @param type		The shader stage (e.g. `GL_VERTEX_SHADER`)
+		 * @param type		The shader stage (e.g., `GL_VERTEX_SHADER`)
 		 * @param string	The shader source
 		 * @return `true` if the shader compiled successfully (or when checks are deferred)
 		 */
@@ -141,7 +141,7 @@ namespace nCine
 		/**
 		 * @brief Attaches a shader stage compiled from the specified source strings
 		 *
-		 * @param type		The shader stage (e.g. `GL_VERTEX_SHADER`)
+		 * @param type		The shader stage (e.g., `GL_VERTEX_SHADER`)
 		 * @param strings	The shader source fragments, concatenated in order
 		 * @return `true` if the shader compiled successfully (or when checks are deferred)
 		 */
@@ -149,7 +149,7 @@ namespace nCine
 		/**
 		 * @brief Attaches a shader stage compiled from the specified source strings and file
 		 *
-		 * @param type		The shader stage (e.g. `GL_VERTEX_SHADER`)
+		 * @param type		The shader stage (e.g., `GL_VERTEX_SHADER`)
 		 * @param strings	The shader source fragments, concatenated in order
 		 * @param filename	Path of a file whose source is appended after the strings
 		 * @return `true` if the shader compiled successfully (or when checks are deferred)

@@ -8,7 +8,6 @@
 #include "../../../nCine/Primitives/Rect.h"
 #include "../../../nCine/Input/InputEvents.h"
 
-#include <functional>
 #include <memory>
 #include <utility>
 
@@ -101,14 +100,14 @@ namespace Jazz2::UI::Menu
 		/** @brief Displayed text */
 		String Text;
 		/** @brief Invoked when the item is activated */
-		std::function<void()> OnActivate;
+		Function<void()> OnActivate;
 		/** @brief Selection animation progress */
 		AnimatedValue Animation;
 		/** @brief Height of the item row */
 		float Height;
 
-		ListItem(StringView text, std::function<void()> onActivate, float height = 40.0f)
-			: Text(text), OnActivate(std::move(onActivate)), Height(height)
+		ListItem(StringView text, Function<void()> onActivate, float height = 40.0f)
+			: Text(text), OnActivate(Death::move(onActivate)), Height(height)
 		{
 			Focusable = true;
 		}
@@ -138,9 +137,9 @@ namespace Jazz2::UI::Menu
 		/** @brief Whether the value can be changed */
 		bool ReadOnly;
 		/** @brief Returns the current value text */
-		std::function<StringView()> Value;
+		Function<StringView()> Value;
 		/** @brief Changes the value (direction is -1 for left, +1 for right/fire) */
-		std::function<void(std::int32_t)> OnChange;
+		Function<void(std::int32_t)> OnChange;
 		/** @brief Selection animation progress */
 		AnimatedValue Animation;
 		/** @brief Extra horizontal spacing of the `<` `>` arrows, for rows with wider values */
@@ -148,8 +147,8 @@ namespace Jazz2::UI::Menu
 		/** @brief Height of the item row */
 		float Height = 52.0f;
 
-		ChoiceItem(StringView label, std::function<StringView()> value, std::function<void(std::int32_t)> onChange, bool readOnly = false)
-			: Label(label), ReadOnly(readOnly), Value(std::move(value)), OnChange(std::move(onChange))
+		ChoiceItem(StringView label, Function<StringView()> value, Function<void(std::int32_t)> onChange, bool readOnly = false)
+			: Label(label), ReadOnly(readOnly), Value(Death::move(value)), OnChange(Death::move(onChange))
 		{
 			Focusable = true;
 		}
@@ -179,15 +178,15 @@ namespace Jazz2::UI::Menu
 		/** @brief Setting label */
 		String Label;
 		/** @brief Returns the value to display when not editing */
-		std::function<String()> Value;
-		/** @brief Returns `true` if the value can be edited (e.g. `false` when overridden by an external account) */
-		std::function<bool()> CanEdit;
+		Function<String()> Value;
+		/** @brief Returns `true` if the value can be edited (e.g., `false` when overridden by an external account) */
+		Function<bool()> CanEdit;
 		/** @brief Returns `true` if the external-account icon should be drawn next to the value */
-		std::function<bool()> ShowIcon;
+		Function<bool()> ShowIcon;
 		/** @brief Invoked with the new text when editing is committed */
-		std::function<void(StringView)> OnCommit;
-		/** @brief Invoked when editing starts (`true`) or ends (`false`), e.g. to manage the on-screen keyboard */
-		std::function<void(bool)> OnEditStateChanged;
+		Function<void(StringView)> OnCommit;
+		/** @brief Invoked when editing starts (`true`) or ends (`false`), e.g., to manage the on-screen keyboard */
+		Function<void(bool)> OnEditStateChanged;
 		/** @brief Glyph drawn to the left of the value when @ref ShowIcon returns `true` */
 		String Icon;
 		/** @brief Whether the value is read-only (greyed, not editable) */
@@ -252,7 +251,7 @@ namespace Jazz2::UI::Menu
 
 		Like @ref ChoiceItem but draws its value through a caller-provided callback instead of plain text, for rows such
 		as colour swatch pickers or a formatted identifier. Optionally cycles via @ref OnChange (showing arrows) or
-		activates via @ref OnActivate (e.g. copying to the clipboard).
+		activates via @ref OnActivate (e.g., copying to the clipboard).
 	*/
 	class CustomValueItem : public Widget
 	{
@@ -264,11 +263,11 @@ namespace Jazz2::UI::Menu
 		/** @brief Extra horizontal spacing of the `<` `>` arrows */
 		float ArrowSpacing = 0.0f;
 		/** @brief Draws the value area (already offset below the label) */
-		std::function<void(IMenuContainer* root, float centerX, float y, std::int32_t& charOffset, bool selected, bool readOnly)> DrawValue;
+		Function<void(IMenuContainer* root, float centerX, float y, std::int32_t& charOffset, bool selected, bool readOnly)> DrawValue;
 		/** @brief If set, Left/Right/Fire cycle the value (direction -1/+1) and arrows are shown */
-		std::function<void(std::int32_t)> OnChange;
+		Function<void(std::int32_t)> OnChange;
 		/** @brief If set (and no @ref OnChange), Fire activates the row */
-		std::function<void()> OnActivate;
+		Function<void()> OnActivate;
 		/** @brief Selection animation progress */
 		AnimatedValue Animation;
 		/** @brief Height of the item row */
@@ -303,13 +302,13 @@ namespace Jazz2::UI::Menu
 	{
 	public:
 		/** @brief Draws the row content within the given bounds */
-		std::function<void(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset, bool selected, float animation)> OnDrawContent;
+		Function<void(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset, bool selected, float animation)> OnDrawContent;
 		/** @brief Invoked when the row is activated (Fire or tap) */
-		std::function<void()> OnActivate;
-		/** @brief Invoked when the row becomes selected (e.g. for a live preview) */
-		std::function<void()> OnSelectedChanged;
+		Function<void()> OnActivate;
+		/** @brief Invoked when the row becomes selected (e.g., for a live preview) */
+		Function<void()> OnSelectedChanged;
 		/** @brief Invoked when the row is tapped, with the touch position in pixels (for bespoke hit-testing such as columns) */
-		std::function<void(Vector2i touchPos)> OnTouch;
+		Function<void(Vector2i touchPos)> OnTouch;
 		/** @brief Selection animation progress */
 		AnimatedValue Animation;
 		/** @brief Height of the row */
@@ -344,14 +343,14 @@ namespace Jazz2::UI::Menu
 		/** @brief Setting label */
 		String Label;
 		/** @brief Returns the current value in the `[0, 1]` range */
-		std::function<float()> Value;
+		Function<float()> Value;
 		/** @brief Applies a clamped delta to the value (the callback persists/applies the change) */
-		std::function<void(float)> OnAdjust;
+		Function<void(float)> OnAdjust;
 		/** @brief Selection animation progress */
 		AnimatedValue Animation;
 
-		Slider(StringView label, std::function<float()> value, std::function<void(float)> onAdjust)
-			: Label(label), Value(std::move(value)), OnAdjust(std::move(onAdjust)), _pressedCooldown(0.0f), _pressedCount(0)
+		Slider(StringView label, Function<float()> value, Function<void(float)> onAdjust)
+			: Label(label), Value(Death::move(value)), OnAdjust(Death::move(onAdjust)), _pressedCooldown(0.0f), _pressedCount(0)
 		{
 			Focusable = true;
 		}
@@ -399,7 +398,7 @@ namespace Jazz2::UI::Menu
 			if (_selectedIndex < 0 && ptr->Focusable) {
 				_selectedIndex = (std::int32_t)_children.size();
 			}
-			_children.push_back(std::move(child));
+			_children.push_back(Death::move(child));
 			return ptr;
 		}
 
@@ -413,7 +412,7 @@ namespace Jazz2::UI::Menu
 		float GetHeight() const override;
 		void OnUpdate(float timeMult) override;
 		bool OnNavigate(const WidgetInput& input, IMenuContainer* root) override;
-		// Route text-entry input to the selected child (e.g. an editing TextInput)
+		// Route text-entry input to the selected child (e.g., an editing TextInput)
 		bool OnKeyPressed(const nCine::KeyboardEvent& event, IMenuContainer* root) override;
 		void OnTextInput(const nCine::TextInputEvent& event) override;
 		bool IsCapturingInput() const override;

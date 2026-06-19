@@ -176,7 +176,7 @@ namespace Jazz2::UI::Menu
 				std::int32_t sectionIndex = (i > _playerCount ? i - _playerCount : 0);
 
 				if (_selectedIndex == i) {
-					float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+					float size = 0.5f + Easing::OutElastic(_animation) * 0.6f;
 
 					_root->DrawStringGlow(_items[sectionIndex].Name, charOffset, center.X, center.Y, IMenuContainer::FontLayer + 10,
 						Alignment::Center, Font::RandomColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
@@ -226,7 +226,7 @@ namespace Jazz2::UI::Menu
 				}
 
 				if (_selectedIndex == i) {
-					float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+					float size = 0.5f + Easing::OutElastic(_animation) * 0.6f;
 
 					_root->DrawStringShadow("<"_s, charOffset, center.X - 110.0f - 30.0f * size, center.Y + 28.0f, IMenuContainer::FontLayer,
 						Alignment::Center, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.7f);
@@ -264,7 +264,7 @@ namespace Jazz2::UI::Menu
 		            float x = center.X - offset + j * spacing;
 		            if (_selectedPlayerType[i - 1] == j) {
 						if (_selectedIndex == i) {
-							float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+							float size = 0.5f + Easing::OutElastic(_animation) * 0.6f;
 
 							_root->DrawStringGlow(playerTypes[j], charOffset, x, center.Y - 12.0f, IMenuContainer::FontLayer,
 								Alignment::Center, Colorf(0.62f, 0.44f, 0.34f, 0.5f), size, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
@@ -279,7 +279,7 @@ namespace Jazz2::UI::Menu
 		        }
 
 				if (_selectedIndex == i) {
-					float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+					float size = 0.5f + Easing::OutElastic(_animation) * 0.6f;
 
 					_root->DrawStringShadow("<"_s, charOffset, center.X - 110.0f - 30.0f * size, center.Y - 12.0f, IMenuContainer::FontLayer,
 						Alignment::Center, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.7f);
@@ -304,7 +304,7 @@ namespace Jazz2::UI::Menu
 		        }
 
 				if (_selectedIndex == i) {
-					float size = 0.5f + IMenuContainer::EaseOutElastic(_animation) * 0.6f;
+					float size = 0.5f + Easing::OutElastic(_animation) * 0.6f;
 
 					_root->DrawStringShadow("<"_s, charOffset, center.X - 110.0f - 30.0f * size, center.Y + 28.0f, IMenuContainer::FontLayer,
 						Alignment::Center, Colorf(0.5f, 0.5f, 0.5f, 0.5f * std::min(1.0f, 0.6f + _animation)), 0.7f);

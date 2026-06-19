@@ -1628,7 +1628,7 @@ namespace Jazz2::Scripting
 		/**
 		 * @brief A set of related sprite animations
 		 *
-		 * Reference-counted handle to one animation set (e.g. an original JJ2 sprite set) within the global table,
+		 * Reference-counted handle to one animation set (e.g., an original JJ2 sprite set) within the global table,
 		 * grouping a contiguous run of @ref jjANIMATION starting at `firstAnim`. Scripts can allocate empty animations
 		 * or load them from a file into the set. Obtained via `jjAnimSets[index]`.
 		 */

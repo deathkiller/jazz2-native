@@ -107,8 +107,8 @@ namespace Jazz2::Resources
 		/**
 		 * @brief Flat palette offset for an indexed sprite (from the metadata `PaletteOffset`)
 		 *
-		 * Selects which palette region the @ref PrecompiledShader::PaletteRemap shader samples at draw time (e.g. the
-		 * gem gradient rows).
+		 * Selects which palette region the @ref PrecompiledShader::PaletteRemap shader samples at draw time
+		 * (e.g., the gem gradient rows).
 		 */
 		std::uint16_t PaletteOffset;
 

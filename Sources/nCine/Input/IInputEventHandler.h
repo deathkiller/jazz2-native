@@ -61,7 +61,7 @@ namespace nCine
 		/** @brief Called when a joystick is disconnected */
 		inline virtual void OnJoyDisconnected(const JoyConnectionEvent& event) { }
 
-		/** @brief Called when the system requests to quit (e.g. the window close button); returns `true` to allow it */
+		/** @brief Called when the system requests to quit (e.g., the window close button); returns `true` to allow it */
 		inline virtual bool OnQuitRequest() { return true; }
 	};
 }
