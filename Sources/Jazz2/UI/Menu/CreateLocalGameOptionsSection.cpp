@@ -167,7 +167,7 @@ namespace Jazz2::UI::Menu
 			_playerTypes[i] = i % _availableCharacters;
 		}
 
-		SetTitle(_("Create Local Game"));
+		SetTitle(_("Create Local Splitscreen Game"));
 
 		auto list = std::make_unique<ScrollView>();
 

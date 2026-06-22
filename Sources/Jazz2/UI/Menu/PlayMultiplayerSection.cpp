@@ -17,7 +17,7 @@ namespace Jazz2::UI::Menu
 			return;
 		}
 
-		SetTitle(_("Multiplayer"));
+		SetTitle(_("Play Multiplayer"));
 
 		auto list = std::make_unique<ScrollView>();
 #if defined(WITH_ONLINE_MULTIPLAYER)
