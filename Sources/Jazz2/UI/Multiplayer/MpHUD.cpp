@@ -164,7 +164,6 @@ namespace Jazz2::UI::Multiplayer
 		std::int32_t charOffset = 0, charOffsetShadow = 0;
 
 		auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
-		const auto& serverConfig = mpLevelHandler->_networkManager->GetServerConfiguration();
 		auto* mpPlayer = static_cast<MpPlayer*>(player);
 		auto peerDesc = mpPlayer->GetPeerDescriptor();
 

@@ -753,6 +753,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/TreasureHuntMode.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/TeamTreasureHuntMode.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/CaptureTheFlagMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateLocalGameOptionsSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayMultiplayerSection.h
@@ -785,6 +786,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManagerBase.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Peer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayMultiplayerSection.cpp
