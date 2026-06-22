@@ -163,8 +163,14 @@
     <Filter Include="Header Files\Jazz2\Multiplayer">
       <UniqueIdentifier>{e6c68c6e-edbd-4024-90a5-9cfb436da67f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Jazz2\Multiplayer\GameModes">
+      <UniqueIdentifier>{a1b2c3d4-1111-4a2b-8c3d-100000000001}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\Jazz2\Multiplayer">
       <UniqueIdentifier>{66756cef-10ce-4ae3-ade6-87422c5ddb2e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Jazz2\Multiplayer\GameModes">
+      <UniqueIdentifier>{a1b2c3d4-2222-4a2b-8c3d-100000000002}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\Shared\Threading">
       <UniqueIdentifier>{5e949f82-18ce-4137-97f1-bbcc7d2285c9}</UniqueIdentifier>
@@ -1440,6 +1446,9 @@
     <ClInclude Include="Jazz2\UI\Menu\ServerSelectSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\UI\Menu\CreateLocalGameOptionsSection.h">
+      <Filter>Header Files\Jazz2\UI\Menu</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\CreateServerOptionsSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
     </ClInclude>
@@ -1469,6 +1478,39 @@
     </ClInclude>
     <ClInclude Include="Jazz2\Multiplayer\MpGameMode.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\MpPlayerState.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\IGameMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\GameModeFactory.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\CooperationMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\BattleMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\TeamBattleMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\RaceMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\TeamRaceMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\TreasureHuntMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\TeamTreasureHuntMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\CaptureTheFlagMode.h">
+      <Filter>Header Files\Jazz2\Multiplayer\GameModes</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\FirstRunSection.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
@@ -2570,6 +2612,27 @@
     <ClCompile Include="Jazz2\Multiplayer\MpLevelHandler.cpp">
       <Filter>Source Files\Jazz2\Multiplayer</Filter>
     </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\GameModeFactory.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\CooperationMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\BattleMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\TeamBattleMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\RaceMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\TreasureHuntMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\CaptureTheFlagMode.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer\GameModes</Filter>
+    </ClCompile>
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp">
       <Filter>Source Files\Jazz2\Multiplayer</Filter>
     </ClCompile>
@@ -2613,6 +2676,9 @@
       <Filter>Source Files\Jazz2\Multiplayer</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\ServerSelectSection.cpp">
+      <Filter>Source Files\Jazz2\UI\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\UI\Menu\CreateLocalGameOptionsSection.cpp">
       <Filter>Source Files\Jazz2\UI\Menu</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\UI\Menu\CreateServerOptionsSection.cpp">

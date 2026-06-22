@@ -37,6 +37,7 @@ namespace Jazz2::UI::Menu
 		friend class StartGameOptionsSection;
 #if defined(WITH_MULTIPLAYER)
 		friend class CreateServerOptionsSection;
+		friend class CreateLocalGameOptionsSection;
 #endif
 
 	public:

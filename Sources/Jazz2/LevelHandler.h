@@ -311,6 +311,8 @@ namespace Jazz2
 		virtual std::unique_ptr<UI::HUD> CreateHUD();
 		/** @brief Spawns all players */
 		virtual void SpawnPlayers(const LevelInitialization& levelInit);
+		/** @brief Creates a player instance while restoring a resumable state from a stream (one per serialized player) */
+		virtual std::shared_ptr<Actors::Player> CreateResumablePlayer(std::int32_t index);
 		/** @brief Returns `true` if cheats are enabled */
 		virtual bool IsCheatingAllowed();
 

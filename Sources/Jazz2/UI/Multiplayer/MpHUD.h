@@ -14,7 +14,7 @@ namespace Jazz2::UI::Multiplayer
 		multiplayer information such as the player's position in the current round, and adds a centered countdown
 		display.
 	*/
-	class MpHUD : public HUD
+	class MpHUD : public HUD, public Jazz2::Multiplayer::IGameModeHUD
 	{
 	public:
 		/** @brief Creates a new instance */
@@ -30,11 +30,18 @@ namespace Jazz2::UI::Multiplayer
 		void OnDrawOverview(const Rectf& view, const Rectf& adjustedView, Actors::Player* player) override;
 		void OnDrawScore(const Rectf& view, Actors::Player* player) override;
 
-		/** @brief Draws the position of the player in the current round */
-		void DrawPositionInRound(const Rectf& view, Actors::Player* player);
+		/** @brief Draws the position of the player in the current round (also serves as @ref IGameModeHUD::DrawPositionInRound) */
+		void DrawPositionInRound(const Rectf& view, Actors::Player* player) override;
 
-		/** @brief Draws the race-track minimap in the top-right corner */
-		void DrawMinimap(const Rectf& view, Actors::Player* player);
+		/** @brief Draws the race-track minimap in the top-right corner (also serves as @ref IGameModeHUD::DrawMinimap) */
+		void DrawMinimap(const Rectf& view, Actors::Player* player) override;
+
+		// IGameModeHUD - drawing surface used by the hosted game mode to render its part of the HUD
+		void DrawHudText(Jazz2::Multiplayer::GameModeFontType font, StringView text, float x, float y, float shadowOffsetY,
+			Alignment alignment, const Colorf& color, float scale, float charSpacing,
+			float angleOffset, float variance, float speed) override;
+		void DrawHudIcon(Jazz2::Multiplayer::GameModeHudIcon icon, float x, float y, float shadowOffsetY,
+			Alignment alignment, const Colorf& color, float scaleX, float scaleY) override;
 
 	private:
 		static constexpr std::int32_t MinimapMaxVertexFloats = 65536;

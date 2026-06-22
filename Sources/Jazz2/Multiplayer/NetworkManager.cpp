@@ -25,13 +25,12 @@ using namespace std::string_view_literals;
 namespace Jazz2::Multiplayer
 {
 	PeerDescriptor::PeerDescriptor()
-		: IsAuthenticated(false), IsAdmin(false), EnableLedgeClimb(false), Team(0), PreferredTeam(NoPreferredTeam), TeamLocked(false),
-			TeamSwitchCooldown(0.0f), PreferredPlayerType(PlayerType::None),
-			FurColor(0), Points(0), PointsInRound(0), PositionInRound(0), LevelState(PeerLevelState::Unknown), Player(nullptr),
-			LastUpdated(0), Deaths(0), Kills(0), Laps(0), LapStarted{}, TreasureCollected(0), IdleElapsedFrames(0.0f),
-			DeathElapsedFrames(FLT_MAX), LapsElapsedFrames(0.0f), JoinCooldownFrames(0.0f), IsSpectating(SpectateMode::None),
+		: IsAuthenticated(false), IsAdmin(false), EnableLedgeClimb(false), PreferredPlayerType(PlayerType::None),
+			FurColor(0), Points(0), LevelState(PeerLevelState::Unknown), Player(nullptr),
+			LastUpdated(0), IdleElapsedFrames(0.0f), JoinCooldownFrames(0.0f), IsSpectating(SpectateMode::None),
 			CarryOver{}, HasCarryOver(false)
 	{
+		// The per-round game-mode statistics and team assignment are initialized by the MpPlayerState base constructor
 	}
 
 	NetworkManager::NetworkManager()
@@ -88,6 +87,17 @@ namespace Jazz2::Multiplayer
 #endif
 	}
 
+	bool NetworkManager::CreateLocalServer(INetworkHandler* handler, ServerConfiguration&& serverConfig)
+	{
+		_peerDesc.emplace(Peer{}, std::make_shared<PeerDescriptor>());
+		_serverConfig = std::make_unique<ServerConfiguration>(std::move(serverConfig));
+		_serverConfig->StartUnixTimestamp = DateTime::UtcNow().ToUnixMilliseconds() / 1000;
+
+		// No socket, no server discovery and no content path override (all content is local)
+		NetworkManagerBase::CreateLocalSession(handler);
+		return true;
+	}
+
 	void NetworkManager::Dispose()
 	{
 		_discovery = nullptr;
@@ -123,6 +133,28 @@ namespace Jazz2::Multiplayer
 		std::unique_lock<Spinlock> l(_lock);
 		auto it = _peerDesc.find(Peer{});
 		return (it != _peerDesc.end() ? it->second : nullptr);
+	}
+
+	std::shared_ptr<PeerDescriptor> NetworkManager::GetPeerDescriptor(LocalPeerT, std::int32_t index)
+	{
+		Peer key = (index <= 0 ? Peer{} : Peer::Local(index));
+		std::unique_lock<Spinlock> l(_lock);
+		auto it = _peerDesc.find(key);
+		return (it != _peerDesc.end() ? it->second : nullptr);
+	}
+
+	std::shared_ptr<PeerDescriptor> NetworkManager::AddLocalPlayer(std::int32_t index)
+	{
+		Peer key = (index <= 0 ? Peer{} : Peer::Local(index));
+		std::unique_lock<Spinlock> l(_lock);
+		auto it = _peerDesc.find(key);
+		if (it != _peerDesc.end()) {
+			return it->second;
+		}
+		// RemotePeer stays empty so the player is treated as local everywhere
+		auto desc = std::make_shared<PeerDescriptor>();
+		_peerDesc.emplace(key, desc);
+		return desc;
 	}
 
 	std::shared_ptr<PeerDescriptor> NetworkManager::GetPeerDescriptor(const Peer& peer)

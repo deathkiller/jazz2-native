@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "CreateServerOptionsSection.h"
+#include "CreateLocalGameOptionsSection.h"
 #include "../../Multiplayer/MpGameMode.h"
 
 #include "../../../nCine/I18n.h"
@@ -22,8 +23,11 @@ namespace Jazz2::UI::Menu
 		SetTitle(_("Select Game Mode"));
 
 		MpGameMode currentMode = MpGameMode::Battle;
-		if (auto* underlyingSection = dynamic_cast<CreateServerOptionsSection*>(root->GetUnderlyingSection())) {
-			currentMode = underlyingSection->GetGameMode();
+		MenuSection* underlying = root->GetUnderlyingSection();
+		if (auto* serverSection = dynamic_cast<CreateServerOptionsSection*>(underlying)) {
+			currentMode = serverSection->GetGameMode();
+		} else if (auto* localSection = dynamic_cast<CreateLocalGameOptionsSection*>(underlying)) {
+			currentMode = localSection->GetGameMode();
 		}
 
 		auto list = std::make_unique<ScrollView>();
@@ -35,8 +39,11 @@ namespace Jazz2::UI::Menu
 				selectedIndex = index;
 			}
 			list->Add<ListItem>(name, [root, mode]() {
-				if (auto* underlyingSection = dynamic_cast<CreateServerOptionsSection*>(root->GetUnderlyingSection())) {
-					underlyingSection->SetGameMode(mode);
+				MenuSection* underlying = root->GetUnderlyingSection();
+				if (auto* serverSection = dynamic_cast<CreateServerOptionsSection*>(underlying)) {
+					serverSection->SetGameMode(mode);
+				} else if (auto* localSection = dynamic_cast<CreateLocalGameOptionsSection*>(underlying)) {
+					localSection->SetGameMode(mode);
 				}
 				root->LeaveSection();
 			});

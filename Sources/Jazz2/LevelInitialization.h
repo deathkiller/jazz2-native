@@ -71,6 +71,8 @@ namespace Jazz2
 
 		/** @brief Whether the session is local (not online) */
 		bool IsLocalSession;
+		/** @brief Game mode of a local splitscreen multiplayer session (value of @ref Multiplayer::MpGameMode); @ref Multiplayer::MpGameMode::Unknown (the default) marks a plain single-player local session that uses the base level handler, anything else selects the local @ref Multiplayer::MpLevelHandler running that mode */
+		std::uint8_t LocalMultiplayerGameMode;
 		/** @brief Difficulty */
 		GameDifficulty Difficulty;
 		/** @brief Whether reforged gameplay is enabled */

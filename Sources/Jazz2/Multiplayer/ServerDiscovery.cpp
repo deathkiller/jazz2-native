@@ -108,7 +108,7 @@ namespace Jazz2::Multiplayer
 	{
 		DEATH_DEBUG_ASSERT(server != nullptr, "server is null", );
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_ONLINE_MULTIPLAYER)
 		_thread = Thread(ServerDiscovery::OnServerThread, this);
 #endif
 	}
@@ -123,7 +123,7 @@ namespace Jazz2::Multiplayer
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		DownloadPublicServerListAsync();
-#else
+#elif defined(WITH_ONLINE_MULTIPLAYER)
 		_thread = Thread(ServerDiscovery::OnClientThread, this);
 #endif
 	}
@@ -142,7 +142,7 @@ namespace Jazz2::Multiplayer
 			emscripten_fetch_close(_pendingFetch);
 			_pendingFetch = nullptr;
 		}
-#else
+#elif defined(WITH_ONLINE_MULTIPLAYER)
 		_thread.Join();
 
 		NetworkManagerBase::ReleaseBackend();
@@ -278,7 +278,7 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-#else
+#elif defined(WITH_ONLINE_MULTIPLAYER)
 
 	ENetSocket ServerDiscovery::TryCreateLocalSocket(const char* multicastAddress, ENetAddress& parsedAddress)
 	{

@@ -187,7 +187,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;__WITH_GLFW;WITH_SDL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TILEMAP_USE_SINGLE_DRAW=1;_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;__WITH_GLFW;WITH_SDL;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -209,7 +209,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_DEBUG;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -232,7 +232,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -258,7 +258,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;DEATH_TRACE;DEATH_TRACE_ASYNC;DEATH_TRACE_VERBOSE_IO;WITH_GLEW;WITH_GLFW;WITH_AUDIO;WITH_THREADS;WITH_VORBIS;WITH_VORBIS_DYNAMIC;WITH_OPENMPT;WITH_ZLIB;WITH_BACKWARD;__WITH_ANGELSCRIPT;WITH_MULTIPLAYER;WITH_ONLINE_MULTIPLAYER;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -490,6 +490,17 @@
     <ClInclude Include="Jazz2\Multiplayer\MpLevelHandler.h" />
     <ClInclude Include="Jazz2\Multiplayer\MpGameMode.h" />
     <ClInclude Include="Jazz2\Multiplayer\Teams.h" />
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\MpPlayerState.h" />
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\IGameMode.h" />
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\GameModeFactory.h" />
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\CooperationMode.h" />
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\BattleMode.h" />
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\TeamBattleMode.h" />
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\RaceMode.h" />
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\TeamRaceMode.h" />
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\TreasureHuntMode.h" />
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\TeamTreasureHuntMode.h" />
+    <ClInclude Include="Jazz2\Multiplayer\GameModes\CaptureTheFlagMode.h" />
     <ClInclude Include="Jazz2\Multiplayer\NetworkManager.h" />
     <ClInclude Include="Jazz2\Multiplayer\PacketTypes.h" />
     <ClInclude Include="Jazz2\Multiplayer\Peer.h" />
@@ -528,6 +539,7 @@
     <ClInclude Include="Jazz2\UI\Menu\AboutSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\BeginSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\ControlsOptionsSection.h" />
+    <ClInclude Include="Jazz2\UI\Menu\CreateLocalGameOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\CreateServerOptionsSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\CustomLevelSelectSection.h" />
     <ClInclude Include="Jazz2\UI\Menu\EpisodeSelectSection.h" />
@@ -897,6 +909,13 @@
     <ClCompile Include="Jazz2\LevelInitialization.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\ConnectionResult.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\MpLevelHandler.cpp" />
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\GameModeFactory.cpp" />
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\CooperationMode.cpp" />
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\BattleMode.cpp" />
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\TeamBattleMode.cpp" />
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\RaceMode.cpp" />
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\TreasureHuntMode.cpp" />
+    <ClCompile Include="Jazz2\Multiplayer\GameModes\CaptureTheFlagMode.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\NetworkManagerBase.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\Peer.cpp" />
@@ -930,6 +949,7 @@
     <ClCompile Include="Jazz2\UI\Menu\AboutSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\BeginSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\ControlsOptionsSection.cpp" />
+    <ClCompile Include="Jazz2\UI\Menu\CreateLocalGameOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\CreateServerOptionsSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\CustomLevelSelectSection.cpp" />
     <ClCompile Include="Jazz2\UI\Menu\EpisodeSelectSection.cpp" />

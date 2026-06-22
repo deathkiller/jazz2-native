@@ -1,15 +1,15 @@
-﻿#pragma once
+#pragma once
 
 #include "MenuSection.h"
-#include "../../Input/ControlScheme.h"
 
 namespace Jazz2::UI::Menu
 {
 	/**
 		@brief Start game options menu section
-		
-		Lets the player choose the number of local players, the characters, and the difficulty before starting the
-		selected episode or level.
+
+		Lets the player choose the character and difficulty before starting the selected single player episode or
+		level. Local splitscreen multiplayer (multiple players and game modes) is configured separately in
+		@ref CreateLocalGameOptionsSection.
 	*/
 	class StartGameOptionsSection : public MenuSection
 	{
@@ -30,7 +30,7 @@ namespace Jazz2::UI::Menu
 
 	private:
 		enum class Item {
-			PlayerCount,
+			Character,
 			Difficulty,
 			Start,
 
@@ -52,13 +52,11 @@ namespace Jazz2::UI::Menu
 		std::int32_t _selectedIndex;
 
 		std::int32_t _availableCharacters;
-		std::int32_t _playerCount;
+		std::int32_t _selectedPlayerType;
+		std::int32_t _selectedDifficulty;
 		std::int32_t _lastPlayerType;
 		std::int32_t _lastDifficulty;
-		std::int32_t _selectedPlayerType[ControlScheme::MaxSupportedPlayers];
-		std::int32_t _selectedDifficulty;
 		float _imageTransition;
-
 		float _animation;
 		float _transitionTime;
 		bool _shouldStart;

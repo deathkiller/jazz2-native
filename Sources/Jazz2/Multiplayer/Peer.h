@@ -47,6 +47,31 @@ namespace Jazz2::Multiplayer
 		}
 #endif
 
+		/**
+		 * @brief Creates a synthetic peer identifying a local splitscreen player
+		 *
+		 * Local multiplayer (splitscreen) has no network connection, but each local player still needs a distinct
+		 * key in the peer map so the shared game-mode logic can track it. These synthetic peers are used only as map
+		 * keys, their descriptor keeps @ref PeerDescriptor::RemotePeer empty so all "is this remote?" checks treat
+		 * them as local, and no packets are ever addressed to them (sending is a no-op in @ref NetworkState::Local).
+		 *
+		 * @param index  Local player index (must be greater than zero, index zero is the default @ref LocalPeer)
+		 */
+		static Peer Local(std::int32_t index) {
+			Peer p;
+#if defined(DEATH_TARGET_EMSCRIPTEN)
+			p._wsId = (std::uint64_t)0xFFFF0000u + (std::uint64_t)index;
+#else
+			// Both handles are set to a non-null sentinel: operator== falls back to comparing _ws when _enet is null,
+			// so a null _ws here would make the empty (host) Peer{} compare equal to Local(index) in one direction
+			p._enet = reinterpret_cast<_ENetPeer*>(static_cast<std::uintptr_t>(index));
+#	if defined(WITH_WEBSOCKET)
+			p._ws = reinterpret_cast<ix::WebSocket*>(static_cast<std::uintptr_t>(index));
+#	endif
+#endif
+			return p;
+		}
+
 #if defined(WITH_WEBSOCKET)
 		/** @brief Creates a WebSocket peer from a native WebSocket pointer */
 		static Peer FromWebSocket(

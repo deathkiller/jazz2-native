@@ -62,7 +62,8 @@ namespace Jazz2::Multiplayer
 		None,				/**< Disconnected */
 		Listening,			/**< Listening as server */
 		Connecting,			/**< Connecting to server as client */
-		Connected			/**< Connected to server as client */
+		Connected,			/**< Connected to server as client */
+		Local				/**< Local session with no socket (local splitscreen multiplayer) */
 	};
 
 	/**
@@ -176,6 +177,15 @@ namespace Jazz2::Multiplayer
 		static const char* ReasonToString(Reason reason);
 
 	protected:
+		/**
+		 * @brief Puts the manager into a socket-less local session state
+		 *
+		 * Used for local splitscreen multiplayer: no socket is bound and no background thread is started, but the
+		 * manager reports @ref NetworkState::Local so the game session layer treats it as an authoritative server.
+		 * Sending packets is a no-op in this state.
+		 */
+		void CreateLocalSession(INetworkHandler* handler);
+
 		/** @brief Called when a peer connects to the local server or the local client connects to a server */
 		virtual ConnectionResult OnPeerConnected(const Peer& peer, std::uint32_t clientData);
 		/** @brief Called when a peer disconnects from the local server or the local client disconnects from a server */

@@ -1,4 +1,6 @@
-﻿#define ENET_IMPLEMENTATION
+﻿#if defined(WITH_ONLINE_MULTIPLAYER)
+#	define ENET_IMPLEMENTATION
+#endif
 #include "NetworkManagerBase.h"
 
 #if defined(WITH_MULTIPLAYER)
@@ -185,7 +187,8 @@ namespace Jazz2::Multiplayer
 		_clientData = clientData;
 		_handler = handler;
 
-#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
+#if defined(WITH_ONLINE_MULTIPLAYER)
+#	if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
 	StringView firstEndpoint = endpoints.prefix(endpoints.findOr('|', endpoints.end()).begin());
 	String proto = MakeClientSubProtocol(clientData);
 
@@ -232,8 +235,8 @@ namespace Jazz2::Multiplayer
 		emscripten_websocket_set_onmessage_callback(_emWsSocket, this, OnEmWsMessage);
 		emscripten_websocket_set_onerror_callback(_emWsSocket, this, OnEmWsError);
 		emscripten_websocket_set_onclose_callback(_emWsSocket, this, OnEmWsClose);
-#else
-#	if defined(WITH_WEBSOCKET)
+#	else
+#		if defined(WITH_WEBSOCKET)
 		// If the first endpoint looks like a WebSocket URL, use IXWebSocket client
 		StringView firstEndpoint = endpoints.prefix(endpoints.findOr('|', endpoints.end()).begin());
 		if (firstEndpoint.hasPrefix("ws://"_s) || firstEndpoint.hasPrefix("wss://"_s)) {
@@ -270,11 +273,11 @@ namespace Jazz2::Multiplayer
 			_thread = Thread(NetworkManagerBase::OnClientWsThread, this);
 			return;
 		}
-#	endif
+#		endif
 
 		_desiredEndpoints.clear();
 
-#	if defined(DEATH_TARGET_ANDROID)
+#		if defined(DEATH_TARGET_ANDROID)
 		std::int32_t ifidx = 0;
 		struct ifaddrs* ifaddr;
 		struct ifaddrs* ifa;
@@ -296,9 +299,9 @@ namespace Jazz2::Multiplayer
 			LOGI("No suitable network interface found");
 			ifidx = if_nametoindex("wlan0");
 		}
-#	else
+#		else
 		std::int32_t ifidx = 0;
-#	endif
+#		endif
 
 		while (endpoints) {
 			auto p = endpoints.partition('|');
@@ -310,19 +313,19 @@ namespace Jazz2::Multiplayer
 					std::int32_t r = enet_address_set_host(&addr, nullTerminatedAddress.data());
 					//std::int32_t r = enet_address_set_host_ip(&addr, nullTerminatedAddress.data());
 					if (r == 0) {
-#	if ENET_IPV6
+#		if ENET_IPV6
 						if (addr.sin6_scope_id == 0) {
 							addr.sin6_scope_id = (std::uint16_t)ifidx;
 						}
-#	endif
+#		endif
 						addr.port = (port != 0 ? port : defaultPort);
 						_desiredEndpoints.push_back(std::move(addr));
 					} else {
-#	if defined(DEATH_TARGET_WINDOWS)
+#		if defined(DEATH_TARGET_WINDOWS)
 						std::int32_t error = ::WSAGetLastError();
-#	else
+#		else
 						std::int32_t error = errno;
-#	endif
+#		endif
 						LOGW("Failed to parse specified address \"{}\" with error {}", nullTerminatedAddress, error);
 					}
 				} else {
@@ -334,15 +337,18 @@ namespace Jazz2::Multiplayer
 		}
 
 		_thread = Thread(NetworkManagerBase::OnClientThread, this);
+#	endif
+#else
+		// Online multiplayer (transport) is not compiled into this build
+		LOGE("Online multiplayer is not available in this build");
+		_state = NetworkState::None;
+		_handler = nullptr;
 #endif
 	}
 
 	bool NetworkManagerBase::CreateServer(INetworkHandler* handler, std::uint16_t port)
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-		// Creating a server is not supported on Emscripten
-		return false;
-#else
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_ONLINE_MULTIPLAYER)
 		if (_handler != nullptr) {
 			return false;
 		}
@@ -358,12 +364,23 @@ namespace Jazz2::Multiplayer
 		_state = NetworkState::Listening;
 		_thread = Thread(NetworkManagerBase::OnServerThread, this);
 		return true;
+#else
+		// Creating a server requires the online transport (not available on Emscripten or in local-only builds)
+		return false;
 #endif
+	}
+
+	void NetworkManagerBase::CreateLocalSession(INetworkHandler* handler)
+	{
+		// No socket is bound and no background thread is started; the manager just reports a local session state
+		_state = NetworkState::Local;
+		_handler = handler;
 	}
 
 	void NetworkManagerBase::Dispose()
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
+#if defined(WITH_ONLINE_MULTIPLAYER)
+#	if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
 		if (_emWsSocket <= 0) {
 			return;
 		}
@@ -382,11 +399,11 @@ namespace Jazz2::Multiplayer
 		if (wasConnected) {
 			OnPeerDisconnected(Peer::FromWebSocket(1), Reason::Disconnected);
 		}
-#else
+#	else
 		if (_host == nullptr
-#	if defined(WITH_WEBSOCKET)
+#		if defined(WITH_WEBSOCKET)
 			&& _wsClient == nullptr
-#	endif
+#		endif
 		) {
 			return;
 		}
@@ -395,6 +412,7 @@ namespace Jazz2::Multiplayer
 		_thread.Join();
 
 		_host = nullptr;
+#	endif
 #endif
 
 		_handler = nullptr;
@@ -588,7 +606,12 @@ namespace Jazz2::Multiplayer
 
 	void NetworkManagerBase::SendTo(const Peer& peer, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
+		if DEATH_UNLIKELY(_state == NetworkState::Local) {
+			// Local session has no peers to send to
+			return;
+		}
+#if defined(WITH_ONLINE_MULTIPLAYER)
+#	if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
 		if DEATH_LIKELY(_emWsSocket > 0) {
 			SmallVector<std::uint8_t, 128> buf(1 + data.size());
 			buf[0] = packetType;
@@ -597,20 +620,20 @@ namespace Jazz2::Multiplayer
 			}
 			emscripten_websocket_send_binary(_emWsSocket, buf.data(), buf.size());
 		}
-#else
-#	if defined(WITH_WEBSOCKET)
+#	else
+#		if defined(WITH_WEBSOCKET)
 		if DEATH_UNLIKELY(peer.IsWebSocket()) {
 			SendToWsPeer(peer._ws, packetType, data);
 			return;
 		}
-#	endif
+#		endif
 
 		ENetPeer* target;
 		if (peer == nullptr) {
 			if (_state != NetworkState::Connected || _connectedPeers.empty()
-#	if defined(WITH_WEBSOCKET)
+#		if defined(WITH_WEBSOCKET)
 				|| _connectedPeers[0].IsWebSocket()
-#	endif
+#		endif
 			) {
 				return;
 			}
@@ -637,12 +660,18 @@ namespace Jazz2::Multiplayer
 		if DEATH_UNLIKELY(!success) {
 			enet_packet_destroy(packet);
 		}
+#	endif
 #endif
 	}
 
 	void NetworkManagerBase::SendTo(Function<bool(const Peer&)>&& predicate, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
+		if DEATH_UNLIKELY(_state == NetworkState::Local) {
+			// Local session has no peers to send to
+			return;
+		}
+#if defined(WITH_ONLINE_MULTIPLAYER)
+#	if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
 		if DEATH_LIKELY(_emWsSocket > 0) {
 			Peer serverPeer = Peer::FromWebSocket(1);
 			if (predicate(serverPeer)) {
@@ -654,7 +683,7 @@ namespace Jazz2::Multiplayer
 				emscripten_websocket_send_binary(_emWsSocket, buffer.data(), buffer.size());
 			}
 		}
-#else
+#	else
 		enet_uint32 flags;
 		if (channel == NetworkChannel::Main) {
 			flags = ENET_PACKET_FLAG_RELIABLE;
@@ -664,19 +693,19 @@ namespace Jazz2::Multiplayer
 
 		ENetPacket* enetPacket = nullptr;
 		bool enetPacketSent = false;
-#	if defined(WITH_WEBSOCKET)
+#		if defined(WITH_WEBSOCKET)
 		SmallVector<ix::WebSocket*, 16> wsTargets;
-#	endif
+#		endif
 
 		{
 			std::unique_lock lock(_lock);
 			for (const Peer& p : _connectedPeers) {
 				if (predicate(p)) {
-#	if defined(WITH_WEBSOCKET)
+#		if defined(WITH_WEBSOCKET)
 					if DEATH_UNLIKELY(p.IsWebSocket()) {
 						wsTargets.push_back(p._ws);
 					} else
-#	endif
+#		endif
 					{
 						if DEATH_UNLIKELY(enetPacket == nullptr) {
 							enetPacket = enet_packet_create(packetType, data.data(), data.size(), flags);
@@ -693,7 +722,7 @@ namespace Jazz2::Multiplayer
 			enet_packet_destroy(enetPacket);
 		}
 
-#	if defined(WITH_WEBSOCKET)
+#		if defined(WITH_WEBSOCKET)
 		if (!wsTargets.empty()) {
 			std::string wsPacket(1 + data.size(), '\0');
 			wsPacket[0] = (char)packetType;
@@ -710,13 +739,19 @@ namespace Jazz2::Multiplayer
 				ws->sendBinary(wsPacket);
 			}
 		}
+#		endif
 #	endif
 #endif
 	}
 
 	void NetworkManagerBase::SendTo(AllPeersT, NetworkChannel channel, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
+		if DEATH_UNLIKELY(_state == NetworkState::Local) {
+			// Local session has no peers to send to
+			return;
+		}
+#if defined(WITH_ONLINE_MULTIPLAYER)
+#	if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
 		if DEATH_LIKELY(_emWsSocket > 0) {
 			SmallVector<std::uint8_t, 128> buffer(1 + data.size());
 			buffer[0] = packetType;
@@ -725,7 +760,7 @@ namespace Jazz2::Multiplayer
 			}
 			emscripten_websocket_send_binary(_emWsSocket, buffer.data(), buffer.size());
 		}
-#else
+#	else
 		enet_uint32 flags;
 		if (channel == NetworkChannel::Main) {
 			flags = ENET_PACKET_FLAG_RELIABLE;
@@ -735,18 +770,18 @@ namespace Jazz2::Multiplayer
 
 		ENetPacket* enetPacket = nullptr;
 		bool enetPacketSent = false;
-#	if defined(WITH_WEBSOCKET)
+#		if defined(WITH_WEBSOCKET)
 		SmallVector<ix::WebSocket*, 16> wsTargets;
-#	endif
+#		endif
 
 		{
 			std::unique_lock lock(_lock);
 			for (const Peer& p : _connectedPeers) {
-#	if defined(WITH_WEBSOCKET)
+#		if defined(WITH_WEBSOCKET)
 				if DEATH_UNLIKELY(p.IsWebSocket()) {
 					wsTargets.push_back(p._ws);
 				} else
-#	endif
+#		endif
 				{
 					if DEATH_UNLIKELY(enetPacket == nullptr) {
 						enetPacket = enet_packet_create(packetType, data.data(), data.size(), flags);
@@ -762,7 +797,7 @@ namespace Jazz2::Multiplayer
 			enet_packet_destroy(enetPacket);
 		}
 
-#	if defined(WITH_WEBSOCKET)
+#		if defined(WITH_WEBSOCKET)
 		if (!wsTargets.empty()) {
 			std::string wsPacket(1 + data.size(), '\0');
 			wsPacket[0] = (char)packetType;
@@ -779,13 +814,19 @@ namespace Jazz2::Multiplayer
 				ws->sendBinary(wsPacket);
 			}
 		}
+#		endif
 #	endif
 #endif
 	}
 
 	void NetworkManagerBase::Kick(const Peer& peer, Reason reason)
 	{
-#if defined(WITH_WEBSOCKET) && !defined(DEATH_TARGET_EMSCRIPTEN)
+		if DEATH_UNLIKELY(_state == NetworkState::Local) {
+			// Local session has no peers to kick
+			return;
+		}
+#if defined(WITH_ONLINE_MULTIPLAYER)
+#	if defined(WITH_WEBSOCKET) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		if DEATH_UNLIKELY(peer.IsWebSocket()) {
 			{
 				std::unique_lock<Spinlock> lock(_wsLock);
@@ -796,12 +837,13 @@ namespace Jazz2::Multiplayer
 			peer._ws->close(ReasonToWsCloseCode(reason), ReasonToString(reason));
 			return;
 		}
-#endif
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	endif
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
 		if DEATH_LIKELY(peer != nullptr) {
 			std::unique_lock lock(_lock);
 			enet_peer_disconnect(peer._enet, std::uint32_t(reason));
 		}
+#	endif
 #endif
 	}
 
@@ -838,7 +880,12 @@ namespace Jazz2::Multiplayer
 
 		if (IN6_IS_ADDR_V4MAPPED(&address)) {
 			struct in_addr buf;
+#		if defined(WITH_ONLINE_MULTIPLAYER)
 			enet_inaddr_map6to4(&address, &buf);
+#		else
+			// enet_inaddr_map6to4 just extracts the embedded IPv4 (the last 4 bytes of the v4-mapped IPv6 address)
+			std::memcpy(&buf, reinterpret_cast<const std::uint8_t*>(&address) + 12, sizeof(buf));
+#		endif
 
 			if (inet_ntop(AF_INET, &buf, addressString, sizeof(addressString) - 1) == NULL) {
 				return {};
@@ -1047,7 +1094,7 @@ namespace Jazz2::Multiplayer
 
 	void NetworkManagerBase::InitializeBackend()
 	{
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_ONLINE_MULTIPLAYER)
 		if (++_initializeCount == 1) {
 			std::int32_t error = enet_initialize();
 			DEATH_ASSERT(error == 0, ("enet_initialize() failed with error {}", error), );
@@ -1057,7 +1104,7 @@ namespace Jazz2::Multiplayer
 
 	void NetworkManagerBase::ReleaseBackend()
 	{
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_ONLINE_MULTIPLAYER)
 		if (--_initializeCount == 0) {
 			enet_deinitialize();
 		}
@@ -1435,6 +1482,7 @@ namespace Jazz2::Multiplayer
 	}
 #	endif
 
+#	if defined(WITH_ONLINE_MULTIPLAYER)
 	void NetworkManagerBase::OnClientThread(void* param)
 	{
 		Thread::SetCurrentName("Multiplayer client");
@@ -1584,9 +1632,9 @@ namespace Jazz2::Multiplayer
 						std::swap(peersSnapshot, _this->_connectedPeers);
 					}
 					for (const Peer& p : peersSnapshot) {
-#if defined(WITH_WEBSOCKET)
+#		if defined(WITH_WEBSOCKET)
 						if DEATH_LIKELY(!p.IsWebSocket())
-#endif
+#		endif
 						{
 							_this->OnPeerDisconnected(p, Reason::ConnectionLost);
 						}
@@ -1604,9 +1652,9 @@ namespace Jazz2::Multiplayer
 						break;
 					}
 				}
-#	if defined(WITH_WEBSOCKET)
+#		if defined(WITH_WEBSOCKET)
 				_this->ProcessWsQueue(handler);
-#	endif
+#		endif
 				Thread::Sleep(ProcessingIntervalMs);
 				continue;
 			}
@@ -1648,15 +1696,15 @@ namespace Jazz2::Multiplayer
 					break;
 			}
 
-#	if defined(WITH_WEBSOCKET)
+#		if defined(WITH_WEBSOCKET)
 			_this->ProcessWsQueue(handler);
-#	endif
+#		endif
 		}
 
 		for (const Peer& p : _this->_connectedPeers) {
-#	if defined(WITH_WEBSOCKET)
+#		if defined(WITH_WEBSOCKET)
 			if DEATH_LIKELY(!p.IsWebSocket())
-#	endif
+#		endif
 			{
 				enet_peer_disconnect_now(p._enet, std::uint32_t(Reason::ServerStopped));
 			}
@@ -1667,7 +1715,7 @@ namespace Jazz2::Multiplayer
 		_this->_host = nullptr;
 		_this->_handler = nullptr;
 
-#	if defined(WITH_WEBSOCKET)
+#		if defined(WITH_WEBSOCKET)
 		if (_this->_wsServer != nullptr) {
 			_this->_wsServer->stop();
 			_this->_wsServer = nullptr;
@@ -1681,12 +1729,13 @@ namespace Jazz2::Multiplayer
 			_this->_wsPeers.clear();
 			_this->_wsPendingEvents.clear();
 		}
-#	endif
+#		endif
 
 		_this->_thread.Detach();
 
 		LOGD("[MP] Server thread exited");
 	}
+#	endif
 
 #endif
 

@@ -694,6 +694,9 @@ endif()
 
 if(WITH_MULTIPLAYER)
 	target_compile_definitions(${NCINE_APP} PUBLIC "WITH_MULTIPLAYER")
+	if(WITH_ONLINE_MULTIPLAYER)
+		target_compile_definitions(${NCINE_APP} PUBLIC "WITH_ONLINE_MULTIPLAYER")
+	endif()
 	if(DEDICATED_SERVER)
 		message(STATUS "Building the game with multiplayer support as dedicated server")
 		target_compile_definitions(${NCINE_APP} PUBLIC "DEDICATED_SERVER")
@@ -705,8 +708,8 @@ if(WITH_MULTIPLAYER)
 		# Switch doesn't support IPv6 protocol, fallback to IPv4
 		target_compile_definitions(${NCINE_APP} PUBLIC "ENET_IPV6=0")
 		target_compile_definitions(${NCINE_APP} PUBLIC "DEATH_DEBUG")
-	elseif(WIN32)
-		# Link to IP Helper API library and Windows Sockets 2 library
+	elseif(WIN32 AND WITH_ONLINE_MULTIPLAYER)
+		# Link to IP Helper API library and Windows Sockets 2 library (only the enet transport needs them)
 		target_link_libraries(${NCINE_APP} PRIVATE iphlpapi ws2_32)
 	endif()
 	
@@ -739,6 +742,17 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerInitialization.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Teams.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/MpPlayerState.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/IGameMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/GameModeFactory.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/CooperationMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/BattleMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/TeamBattleMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/RaceMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/TeamRaceMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/TreasureHuntMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/TeamTreasureHuntMode.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/CaptureTheFlagMode.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/MultiplayerGameModeSelectSection.h
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/PlayMultiplayerSection.h
@@ -760,6 +774,13 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotePlayerOnServer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ConnectionResult.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MpLevelHandler.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/GameModeFactory.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/CooperationMode.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/BattleMode.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/TeamBattleMode.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/RaceMode.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/TreasureHuntMode.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/GameModes/CaptureTheFlagMode.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManager.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManagerBase.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Peer.cpp

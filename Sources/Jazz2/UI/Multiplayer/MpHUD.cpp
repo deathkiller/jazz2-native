@@ -197,13 +197,10 @@ namespace Jazz2::UI::Multiplayer
 		}*/
 #endif
 
-		char stringBuffer[32];
 		std::int32_t charOffset = 0, charOffsetShadow = 0;
 
 		auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
 		const auto& serverConfig = mpLevelHandler->_networkManager->GetServerConfiguration();
-		auto* mpPlayer = static_cast<MpPlayer*>(player);
-		auto peerDesc = mpPlayer->GetPeerDescriptor();
 
 		if DEATH_UNLIKELY(mpLevelHandler->_levelState != MpLevelHandler::LevelState::Running) {
 			return;
@@ -227,109 +224,35 @@ namespace Jazz2::UI::Multiplayer
 			}
 		}
 
-		switch (serverConfig.GameMode) {
-			case MpGameMode::Battle:
-			case MpGameMode::TeamBattle: {
-				std::size_t length = formatInto(stringBuffer, "K: {}  D: {}  /{}", peerDesc->Kills, peerDesc->Deaths, serverConfig.TotalKills);
-				_mediumFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 2.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
+		// Each game mode draws its own score HUD via IGameMode::OnDrawHUD (dispatched here); when no game mode is
+		// active (MpGameMode::Unknown) there is nothing to draw.
+		mpLevelHandler->DrawActiveGameModeHUD(*this, player, view);
+	}
 
-				DrawPositionInRound(view, player);
-				break;
-			}
-			case MpGameMode::Race:
-			case MpGameMode::TeamRace: {
-				std::size_t length = formatInto(stringBuffer, "{}/{}", peerDesc->Laps + 1, serverConfig.TotalLaps);
-				_mediumFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 65.0f, view.Y + 7.0f + 2.0f, FontShadowLayer,
-					Alignment::TopRight, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.88f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 65.0f, view.Y + 7.0f, FontLayer,
-					Alignment::TopRight, Font::DefaultColor, 0.88f, 0.8f, 0.0f, 0.0f, 0.0f);
+	void MpHUD::DrawHudText(GameModeFontType font, StringView text, float x, float y, float shadowOffsetY,
+		Alignment alignment, const Colorf& color, float scale, float charSpacing,
+		float angleOffset, float variance, float speed)
+	{
+		Font* selectedFont = (font == GameModeFontType::Medium ? _mediumFont : _smallFont);
+		std::int32_t charOffsetShadow = 0, charOffset = 0;
+		selectedFont->DrawString(this, text, charOffsetShadow, x, y + shadowOffsetY, FontShadowLayer, alignment,
+			Colorf(0.0f, 0.0f, 0.0f, 0.32f), scale, angleOffset, variance, variance, speed, charSpacing, 1.0f);
+		selectedFont->DrawString(this, text, charOffset, x, y, FontLayer, alignment, color,
+			scale, angleOffset, variance, variance, speed, charSpacing, 1.0f);
+	}
 
-				float sinceLapStarted = peerDesc->LapStarted.secondsSince();
-				std::int32_t minutes = std::max(0, (std::int32_t)(sinceLapStarted / 60));
-				std::int32_t seconds = std::max(0, (std::int32_t)fmod(sinceLapStarted, 60));
-				std::int32_t milliseconds = std::max(0, (std::int32_t)(fmod(sinceLapStarted, 1) * 100));
-
-				length = formatInto(stringBuffer, "{}:{:.2}:{:.2}", minutes, seconds, milliseconds);
-				_mediumFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 14.0f + 80.0f, view.Y + 10.0f + 1.4f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 14.0f + 80.0f, view.Y + 10.0f, FontLayer,
-					Alignment::TopLeft, Font::DefaultColor, 0.7f, 0.0f, 0.0f, 0.0f, 0.0f);
-
-				DrawMinimap(view, player);
-				DrawPositionInRound(view, player);
-				break;
-			}
-			case MpGameMode::TreasureHunt:
-			case MpGameMode::TeamTreasureHunt: {
-				bool hasEnoughTreasure = (peerDesc->TreasureCollected >= serverConfig.TotalTreasureCollected);
-				Colorf textColor = (hasEnoughTreasure ? Colorf(0.34f, 0.5f, 0.38f, 0.5f) : Font::DefaultColor);
-
-				AnimState animState = (hasEnoughTreasure ? PickupGemGreen : PickupGemRed);
-				DrawElement(animState, -1, view.X + 8.0f, view.Y + 8.0f + 2.5f, ShadowLayer, Alignment::TopLeft,
-					Colorf(0.0f, 0.0f, 0.0f, 0.4f), 0.8f, 0.8f);
-				DrawElement(animState, -1, view.X + 8.0f, view.Y + 8.0f, MainLayer, Alignment::TopLeft,
-					Colorf(1.0f, 1.0f, 1.0f, 0.8f), 0.8f, 0.8f);
-
-				std::size_t length = formatInto(stringBuffer, "{}/{}", peerDesc->TreasureCollected, serverConfig.TotalTreasureCollected);
-				_mediumFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 38.0f, view.Y + 10.0f + 2.0f, FontShadowLayer,
-					Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-				_mediumFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 38.0f, view.Y + 10.0f, FontLayer,
-					Alignment::TopLeft, textColor, 0.8f, 0.0f, 0.0f, 0.0f, 0.0f);
-
-				if (hasEnoughTreasure) {
-					auto fintExitTest = _("Find exit!");
-					_smallFont->DrawString(this, fintExitTest, charOffsetShadow, view.X + view.W * 0.5f, view.Y + 36.0f + 2.5f, FontShadowLayer,
-						Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 1.0f, 0.72f, 0.8f, 0.8f);
-					_smallFont->DrawString(this, fintExitTest, charOffset, view.X + view.W * 0.5f, view.Y + 36.0f, FontLayer,
-						Alignment::Center, Font::DefaultColor, 1.0f, 0.72f, 0.8f, 0.8f);
-				}
-
-				DrawPositionInRound(view, player);
-				break;
-			}
-			case MpGameMode::CaptureTheFlag: {
-				// The per-team capture counts are drawn by the team score header above; here we show each team's
-				// flag status (home / taken / dropped) centered just below it, aligned under each team's count
-				const StringView flagStateText[] = { _("home"), _("taken"), _("dropped") };
-				std::uint8_t teamCount = (std::uint8_t)mpLevelHandler->_ctfFlagStates.size();
-				if (teamCount >= 2) {
-					float spacing = 54.0f;
-					float startX = view.X + view.W * 0.5f - spacing * (teamCount - 1) * 0.5f;
-					for (std::uint8_t team = 0; team < teamCount; team++) {
-						float x = startX + team * spacing;
-						std::uint8_t state = mpLevelHandler->_ctfFlagStates[team].State;
-						StringView label = flagStateText[state < 3 ? state : 0];
-						_smallFont->DrawString(this, label, charOffsetShadow, x, view.Y + 26.0f + 1.0f, FontShadowLayer,
-							Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-						_smallFont->DrawString(this, label, charOffset, x, view.Y + 26.0f, FontLayer,
-							Alignment::Top, GetTeamColor(team), 0.7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-					}
-				}
-				break;
-			}
-			default: {
-				if (PreferencesCache::EnableReforgedHUD) {
-					DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f + 1.6f, ShadowLayer, Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.4f));
-					DrawElement(PickupFood, -1, view.X + 3.0f, view.Y + 3.0f, MainLayer, Alignment::TopLeft, Colorf::White);
-
-					std::size_t length = formatInto(stringBuffer, "{:.8}", player->GetScore());
-					_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 14.0f, view.Y + 5.0f + 1.0f, FontShadowLayer,
-						Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-					_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 14.0f, view.Y + 5.0f, FontLayer,
-						Alignment::TopLeft, Font::DefaultColor, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-				} else {
-					std::size_t length = formatInto(stringBuffer, "{:.8}", player->GetScore());
-					_smallFont->DrawString(this, { stringBuffer, length }, charOffsetShadow, view.X + 4.0f, view.Y + 1.0f + 1.0f, FontShadowLayer,
-						Alignment::TopLeft, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-					_smallFont->DrawString(this, { stringBuffer, length }, charOffset, view.X + 4.0f, view.Y + 1.0f, FontLayer,
-						Alignment::TopLeft, Font::DefaultColor, 1.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.88f);
-				}
-				break;
-			}
+	void MpHUD::DrawHudIcon(GameModeHudIcon icon, float x, float y, float shadowOffsetY,
+		Alignment alignment, const Colorf& color, float scaleX, float scaleY)
+	{
+		AnimState state;
+		switch (icon) {
+			default:
+			case GameModeHudIcon::Food: state = Resources::PickupFood; break;
+			case GameModeHudIcon::GemRed: state = Resources::PickupGemRed; break;
+			case GameModeHudIcon::GemGreen: state = Resources::PickupGemGreen; break;
 		}
+		DrawElement(state, -1, x, y + shadowOffsetY, ShadowLayer, alignment, Colorf(0.0f, 0.0f, 0.0f, 0.4f), scaleX, scaleY);
+		DrawElement(state, -1, x, y, MainLayer, alignment, color, scaleX, scaleY);
 	}
 
 	struct PositionInRoundItem

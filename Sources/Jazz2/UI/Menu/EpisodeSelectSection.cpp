@@ -9,6 +9,7 @@
 
 #if defined(WITH_MULTIPLAYER)
 #	include "CreateServerOptionsSection.h"
+#	include "CreateLocalGameOptionsSection.h"
 #endif
 
 #include <cstring>
@@ -22,9 +23,9 @@ namespace Jazz2::UI::Menu
 	// Row height matching the original section (ItemHeight * 4 / 5)
 	static constexpr float RowHeight = 40 * 4 / 5;	// 32
 
-	EpisodeSelectSection::EpisodeSelectSection(bool multiplayer, bool privateServer)
+	EpisodeSelectSection::EpisodeSelectSection(bool multiplayer, bool privateServer, bool localGame)
 		: _expandedAnimation(0.0f), _transitionTime(0.0f), _transitionFromEpisode(-1), _transitionFromEpisodeTime(0.0f),
-			_animation(0.0f), _multiplayer(multiplayer), _privateServer(privateServer), _expanded(false), _shouldStart(false), _list(nullptr)
+			_animation(0.0f), _multiplayer(multiplayer), _privateServer(privateServer), _localGame(localGame), _expanded(false), _shouldStart(false), _list(nullptr)
 	{
 		auto& resolver = ContentResolver::Get();
 
@@ -167,7 +168,13 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(
 #if defined(WITH_MULTIPLAYER)
-			_multiplayer ? (_privateServer ? _("Create Private Server") : _("Create Public Server")) : _("Play Story"),
+			_localGame
+				? _("Create Local Splitscreen Game")
+				: (_multiplayer
+					? (_privateServer
+						? _("Create Private Server")
+						: _("Create Public Server"))
+					: _("Play Story")),
 #else
 			_("Play Story"),
 #endif
@@ -381,12 +388,17 @@ namespace Jazz2::UI::Menu
 #if defined(WITH_MULTIPLAYER)
 			if (_multiplayer) {
 				if ((selectedItem.Flags & EpisodeDataFlags::RedirectToCustomLevels) == EpisodeDataFlags::RedirectToCustomLevels) {
-					_root->SwitchToSection<CustomLevelSelectSection>(true, _privateServer);
+					_root->SwitchToSection<CustomLevelSelectSection>(true, _privateServer, _localGame);
 					return;
 				}
 
-				_root->SwitchToSection<CreateServerOptionsSection>(String(selectedItem.Description.Name + '/' + selectedItem.Description.FirstLevel),
-					selectedItem.Description.PreviousEpisode, _privateServer);
+				if (_localGame) {
+					_root->SwitchToSection<CreateLocalGameOptionsSection>(String(selectedItem.Description.Name + '/' + selectedItem.Description.FirstLevel),
+						selectedItem.Description.PreviousEpisode);
+				} else {
+					_root->SwitchToSection<CreateServerOptionsSection>(String(selectedItem.Description.Name + '/' + selectedItem.Description.FirstLevel),
+						selectedItem.Description.PreviousEpisode, _privateServer);
+				}
 				return;
 			}
 #endif

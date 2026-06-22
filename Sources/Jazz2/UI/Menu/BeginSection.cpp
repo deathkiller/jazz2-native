@@ -67,7 +67,7 @@ namespace Jazz2::UI::Menu
 #		endif
 		{
 			// TRANSLATORS: Menu item in main menu
-			_items.emplace_back(Item::PlayMultiplayer, _("Play Online"));
+			_items.emplace_back(Item::PlayMultiplayer, _("Play Multiplayer"));
 		}
 #	endif
 		} else {
@@ -81,7 +81,7 @@ namespace Jazz2::UI::Menu
 #		endif
 		{
 			// TRANSLATORS: Menu item in main menu
-			_items.emplace_back(Item::PlayMultiplayer, _("Play Online"));
+			_items.emplace_back(Item::PlayMultiplayer, _("Play Multiplayer"));
 		}
 #	endif
 
@@ -101,7 +101,7 @@ namespace Jazz2::UI::Menu
 #	if defined(WITH_MULTIPLAYER)
 		if (_isPlayable) {
 			// TRANSLATORS: Menu item in main menu
-			_items.emplace_back(Item::PlayMultiplayer, _("Play Online"));
+			_items.emplace_back(Item::PlayMultiplayer, _("Play Multiplayer"));
 		}
 #	endif
 #endif
@@ -421,12 +421,12 @@ namespace Jazz2::UI::Menu
 #	endif
 				{
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
-#	if defined(DEATH_TARGET_EMSCRIPTEN)
-					// Creating a server is not supported on Emscripten
-					_root->SwitchToSection<ServerSelectSection>();
-#	else
+#if defined(WITH_ONLINE_MULTIPLAYER)
 					_root->SwitchToSection<PlayMultiplayerSection>();
-#	endif
+#else
+					// No online transport in this build - go straight to the local splitscreen setup
+					_root->SwitchToSection<EpisodeSelectSection>(true, false, true);
+#endif
 				}
 				break;
 #endif

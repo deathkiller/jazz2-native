@@ -6,6 +6,7 @@
 #include "MpGameMode.h"
 #include "Teams.h"
 #include "NetworkManager.h"
+#include "GameModes/GameModeFactory.h"
 #include "../Actors/Player.h"
 #include "../UI/InGameConsole.h"
 
@@ -30,16 +31,18 @@ namespace Jazz2::UI::Multiplayer
 namespace Jazz2::Multiplayer
 {
 	/**
-		@brief Level handler of an online multiplayer game session
+		@brief Level handler of a multiplayer game session (online or local splitscreen)
 		
-		Subclass of @ref LevelHandler that drives a networked match on top of a @ref NetworkManager. On the
-		server it owns the authoritative game state, spawns and remotes actors to clients, and processes
-		incoming packets and commands; on the client it applies state updates and forwards local input. It
-		also manages the game mode, round flow, asset validation/streaming and the in-game lobby.
+		Subclass of @ref LevelHandler that runs a multiplayer match on top of a @ref NetworkManager. It is the
+		authoritative server in two configurations: an online session (@ref NetworkState::Listening), where it
+		spawns and remotes actors to connected clients and processes their packets and commands, and a
+		socket-less local splitscreen session (@ref NetworkState::Local) with only local players and no
+		networking. As a client it applies state updates and forwards local input. It also manages the game
+		mode, round flow, asset validation/streaming and the in-game lobby.
 
 		@experimental
 	*/
-	class MpLevelHandler : public LevelHandler, public IServerStatusProvider
+	class MpLevelHandler : public LevelHandler, public IServerStatusProvider, public IGameModeContext
 	{
 		DEATH_RUNTIME_OBJECT(LevelHandler, IServerStatusProvider);
 
@@ -90,6 +93,7 @@ namespace Jazz2::Multiplayer
 		~MpLevelHandler() override;
 
 		bool Initialize(const LevelInitialization& levelInit) override;
+		bool Initialize(Stream& src, std::uint16_t version) override;
 
 		bool IsLocalSession() const override;
 		bool IsServer() const override;
@@ -159,6 +163,21 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Returns current game mode */
 		MpGameMode GetGameMode() const;
+		/** @brief Returns the active game-mode rules object, or `nullptr` if the mode has not been migrated to @ref IGameMode yet */
+		IGameMode* GetActiveGameMode() const;
+		/** @brief Lets the active game mode draw its part of the HUD into @p hud; returns `false` if no migrated mode is active (caller should fall back to its own drawing) */
+		bool DrawActiveGameModeHUD(IGameModeHUD& hud, Actors::Player* player, const Rectf& view);
+
+		const ServerConfiguration& GetServerConfiguration() const override;
+		ArrayView<Actors::Player* const> GetPlayers() const override;
+		MpPlayerState& GetPlayerState(Actors::Player* player) override;
+		bool IsSpectating(Actors::Player* player) const override;
+		std::uint8_t GetCtfFlagStateCount() const override;
+		std::uint8_t GetCtfFlagState(std::uint8_t team) const override;
+		Vector2f GetSpawnPoint(Actors::Player* player) override;
+		float GetElapsedFrames() const override;
+		void EndGame(Actors::Player* winner) override;
+
 		/** @brief Returns the number of laps required to finish a race (Race/TeamRace) */
 		std::uint32_t GetTotalLaps() const;
 		/** @brief Returns the current round state (synced to clients) */
@@ -224,6 +243,7 @@ namespace Jazz2::Multiplayer
 		void AttachComponents(LevelDescriptor&& descriptor) override;
 		std::unique_ptr<UI::HUD> CreateHUD() override;
 		void SpawnPlayers(const LevelInitialization& levelInit) override;
+		std::shared_ptr<Actors::Player> CreateResumablePlayer(std::int32_t index) override;
 		void PrepareNextLevelInitialization(LevelInitialization& levelInit) override;
 		bool IsCheatingAllowed() override;
 
@@ -386,6 +406,7 @@ namespace Jazz2::Multiplayer
 		static constexpr float CtfTouchRadius = 40.0f;	// Pixel radius for picking up / returning / capturing flags
 
 		NetworkManager* _networkManager;
+		std::unique_ptr<IGameMode> _gameMode;
 		float _updateTimeLeft;
 		float _gameTimeLeft;
 		LevelState _levelState;
@@ -451,7 +472,7 @@ namespace Jazz2::Multiplayer
 		bool IsLocalPlayer(Actors::ActorBase* actor);
 		void ApplyGameModeToAllPlayers(MpGameMode gameMode);
 		void ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player);
-		std::uint8_t GetTeamCount() const;
+		std::uint8_t GetTeamCount() const override;
 		std::uint8_t FindSmallestTeam(Actors::Multiplayer::MpPlayer* exclude);
 		std::uint8_t ResolveTeam(Actors::Multiplayer::MpPlayer* player, std::uint8_t requested);
 		bool ChangePlayerTeam(Actors::Multiplayer::MpPlayer* player, std::uint8_t requestedTeam, bool fromAdmin);
@@ -459,7 +480,7 @@ namespace Jazz2::Multiplayer
 		void BroadcastPlayerTeam(Actors::Multiplayer::MpPlayer* player);
 		std::uint32_t ColorizeFurForTeam(std::uint32_t furColor, std::uint8_t team) const;
 		void RecolorRemoteActor(std::uint32_t actorId, std::uint32_t furColor, std::uint8_t team);
-		std::uint32_t GetTeamScore(std::uint8_t team);
+		std::uint32_t GetTeamScore(std::uint8_t team) override;
 		void SyncTeamScores();
 
 		void BuildCtfBases();
@@ -482,7 +503,7 @@ namespace Jazz2::Multiplayer
 		void CheckGameEnds();
 		void BeginOvertime(Actors::Multiplayer::MpPlayer* winner);
 		void EndGame(Actors::Multiplayer::MpPlayer* winner);
-		void EndGameWithTeam(std::uint8_t team);
+		void EndGameWithTeam(std::uint8_t team) override;
 		void EndGameOnTimeOut();
 
 		bool ApplyFromPlaylist();

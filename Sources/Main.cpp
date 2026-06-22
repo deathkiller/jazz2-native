@@ -85,7 +85,7 @@ class GameEventHandler : public IAppEventHandler, public IInputEventHandler, pub
 #endif
 {
 public:
-	static constexpr std::uint16_t StateVersion = 3;
+	static constexpr std::uint16_t StateVersion = 4;
 	static constexpr StringView StateFileName = "Jazz2.resume"_s;
 
 #if defined(WITH_MULTIPLAYER)
@@ -706,6 +706,16 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 		} else if (levelName == ":gameover"_s) {
 			// Player died
 			HandleEndOfGame(levelInit, true);
+#if defined(WITH_MULTIPLAYER)
+			// A local cooperation game-over ends the match, so dispose the socket-less local server like the other
+			// terminal paths (":end"/":credits"). Online sessions never produce ":gameover", and this is guarded on
+			// the Local state so it never touches a real client/server connection.
+			if (_networkManager != nullptr && _networkManager->GetState() == NetworkState::Local) {
+				_networkManager->Dispose();
+				_networkManager = nullptr;
+				_streamedAsset = nullptr;
+			}
+#endif
 		} else {
 			SaveEpisodeContinue(levelInit);
 
@@ -779,7 +789,33 @@ void GameEventHandler::ResumeSavedState()
 			}
 
 			DeflateStream uc(*s);
-			auto levelHandler = std::make_shared<LevelHandler>(this);
+
+			// Session kind byte was added in state version 4; older saves are always single player / classic local
+			std::uint8_t sessionKind = 0;
+			if (version >= 4) {
+				sessionKind = uc.ReadValue<std::uint8_t>();
+			}
+
+			std::shared_ptr<LevelHandler> levelHandler;
+#if defined(WITH_MULTIPLAYER)
+			if (sessionKind == 1) {
+				// Local splitscreen cooperation resumes back into a local MpLevelHandler
+				auto serverConfig = NetworkManager::CreateDefaultServerConfiguration();
+				serverConfig.GameMode = MpGameMode::Cooperation;
+				serverConfig.MinPlayerCount = 1;
+				serverConfig.PreGameSecs = 0;
+
+				_networkManager = std::make_unique<NetworkManager>();
+				_networkManager->CreateLocalServer(this, std::move(serverConfig));
+
+				levelHandler = std::make_shared<MpLevelHandler>(this,
+					_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending, PreferencesCache::EnableLedgeClimb);
+			} else
+#endif
+			{
+				levelHandler = std::make_shared<LevelHandler>(this);
+			}
+
 			if (levelHandler->Initialize(uc, version)) {
 				SetStateHandler(std::move(levelHandler));
 				return;
@@ -800,15 +836,33 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 	if (auto* levelHandler = runtime_cast<LevelHandler>(_currentHandler.get())) {
 		if (levelHandler->IsLocalSession()) {
 			auto configDir = PreferencesCache::GetDirectory();
-			auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Write);
+			auto statePath = fs::CombinePath(configDir, StateFileName);
+			auto s = fs::Open(statePath, FileAccess::Write);
 			if (*s) {
 				s->WriteValueAsLE<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
 				s->WriteValue<std::uint8_t>(ContentResolver::StateFile);
 				s->WriteValueAsLE<std::uint16_t>(StateVersion);
 
-				DeflateWriter co(*s);
-				if (!levelHandler->SerializeResumableToStream(co)) {
-					LOGE("Failed to save current state");
+				bool serialized;
+				{
+					DeflateWriter co(*s);
+					// Session kind: 0 = single player / classic local session, 1 = local splitscreen multiplayer
+					// (cooperative). Read back in ResumeSavedState() to recreate the matching level handler.
+					std::uint8_t sessionKind = 0;
+#if defined(WITH_MULTIPLAYER)
+					if (runtime_cast<MpLevelHandler>(levelHandler) != nullptr) {
+						sessionKind = 1;
+					}
+#endif
+					co.WriteValue<std::uint8_t>(sessionKind);
+					serialized = levelHandler->SerializeResumableToStream(co);
+				}
+				if (!serialized) {
+					// The current session can't be resumed (e.g. a competitive local multiplayer mode); don't leave
+					// a partial state file behind that would offer a broken "Continue" on the next launch
+					s = nullptr;
+					fs::RemoveFile(statePath);
+					return false;
 				}
 				return true;
 			}
@@ -2026,6 +2080,37 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 		}
 		SetStateHandler(std::move(levelHandler));
 		return true;
+	} else if ((MpGameMode)levelInit.LocalMultiplayerGameMode != MpGameMode::Unknown) {
+		// Local splitscreen multiplayer: create a socket-less local server running the chosen game mode, so all the
+		// shared (server-authoritative) game-mode logic drives the match for the local splitscreen players
+		auto serverConfig = NetworkManager::CreateDefaultServerConfiguration();
+		serverConfig.GameMode = (MpGameMode)levelInit.LocalMultiplayerGameMode;
+		serverConfig.ReforgedGameplay = levelInit.IsReforged;
+		serverConfig.MinPlayerCount = 1;
+		serverConfig.PreGameSecs = 0;	// Start the round immediately, no waiting for remote players
+
+		_networkManager = std::make_unique<NetworkManager>();
+		_networkManager->CreateLocalServer(this, std::move(serverConfig));
+
+		auto levelHandler = std::make_shared<MpLevelHandler>(this,
+			_networkManager.get(), MpLevelHandler::LevelState::InitialUpdatePending, PreferencesCache::EnableLedgeClimb);
+		if (!levelHandler->Initialize(levelInit)) {
+			return false;
+		}
+		SetStateHandler(std::move(levelHandler));
+
+#if !defined(SHAREWARE_DEMO_ONLY)
+		// Starting a fresh local game invalidates any previous resumable state; a cooperative session saves its own
+		// on exit, while competitive modes intentionally leave none
+		RemoveResumableStateIfAny();
+#endif
+		return true;
+	}
+
+	// A leftover local multiplayer network manager (from a previous local splitscreen match) is no longer needed
+	if (_networkManager != nullptr && _networkManager->GetState() == NetworkState::Local) {
+		_networkManager->Dispose();
+		_networkManager = nullptr;
 	}
 #endif
 

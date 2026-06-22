@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "Peer.h"
+#include "GameModes/MpPlayerState.h"
 #include "../LevelInitialization.h"
 #include "../PlayerType.h"
 #include "../PreferencesCache.h"
@@ -62,10 +63,12 @@ namespace Jazz2::Multiplayer
 	 * @brief Peer descriptor
 	 *
 	 * Holds all per-peer session state tracked by @ref NetworkManager and @ref MpLevelHandler: identity and
-	 * authentication, chosen player type/team/name, the spawned player actor and its per-round statistics,
-	 * and the carry-over state retained so a reconnecting player can resume.
+	 * authentication, chosen player type/name, the spawned player actor and the carry-over state retained so a
+	 * reconnecting player can resume. The per-round game-mode statistics and team assignment are inherited from
+	 * @ref MpPlayerState, so the game modes can read and write them through @ref IGameModeContext without knowing
+	 * about peers or networking.
 	 */
-	struct PeerDescriptor
+	struct PeerDescriptor : public MpPlayerState
 	{
 		/** @brief Remote peer if the peer is connected remotely */
 		Peer RemotePeer;
@@ -80,14 +83,6 @@ namespace Jazz2::Multiplayer
 		bool EnableLedgeClimb;
 		/** @brief Whether the peer voted "yes" in the active poll */
 		bool VotedYes;
-		/** @brief Team ID */
-		std::uint8_t Team;
-		/** @brief Preferred team requested by the peer (@ref NoPreferredTeam = no preference, let the server decide) */
-		std::uint8_t PreferredTeam;
-		/** @brief Whether the team was forced by the server (admin or rebalance); client team requests are rejected while set */
-		bool TeamLocked;
-		/** @brief Remaining frames before the player may switch teams again (anti-spam, prevents repeated auto-rebalancing) */
-		float TeamSwitchCooldown;
 		/** @brief Preferred player type selected by the peer */
 		PlayerType PreferredPlayerType;
 		/** @brief Player display name */
@@ -96,10 +91,6 @@ namespace Jazz2::Multiplayer
 		std::uint32_t FurColor;
 		/** @brief Earned points in the current session (championship) */
 		std::uint32_t Points;
-		/** @brief Game mode specific points held by the player in a round */
-		std::uint32_t PointsInRound;
-		/** @brief Position in a round */
-		std::uint32_t PositionInRound;
 		/** @brief State of the player in the current level */
 		PeerLevelState LevelState;
 		/** @brief Spawned player in the current level */
@@ -107,23 +98,8 @@ namespace Jazz2::Multiplayer
 		/** @brief Last update of the player from client */
 		std::uint64_t LastUpdated;
 
-		/** @brief Deaths of the player in the current round */
-		std::uint32_t Deaths;
-		/** @brief Kills of the player in the current round */
-		std::uint32_t Kills;
-		/** @brief Laps of the player in the current round */
-		std::uint32_t Laps;
-		/** @brief Timestamp when the last lap started */
-		TimeStamp LapStarted;
-		/** @brief Treasure collected of the player in the current round */
-		std::uint32_t TreasureCollected;
-
 		/** @brief Elapsed frames when the player is idle */
 		float IdleElapsedFrames;
-		/** @brief Elapsed frames when the player lost all lives */
-		float DeathElapsedFrames;
-		/** @brief Elapsed frames of all completed laps */
-		float LapsElapsedFrames;
 		/** @brief Time remaining for join cooldown */
 		float JoinCooldownFrames;
 

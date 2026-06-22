@@ -226,7 +226,7 @@ namespace Jazz2
 		_players.reserve(playerCount);
 
 		for (std::uint32_t i = 0; i < playerCount; i++) {
-			std::shared_ptr<Actors::Player> player = std::make_shared<Actors::Player>();
+			std::shared_ptr<Actors::Player> player = CreateResumablePlayer((std::int32_t)i);
 			player->InitializeFromStream(this, src, version);
 
 			Actors::Player* ptr = player.get();
@@ -541,6 +541,11 @@ namespace Jazz2
 
 		_hud = CreateHUD();
 		_hud->BeginFadeIn((levelInit.LastExitType & ExitType::FastTransition) == ExitType::FastTransition);
+	}
+
+	std::shared_ptr<Actors::Player> LevelHandler::CreateResumablePlayer(std::int32_t index)
+	{
+		return std::make_shared<Actors::Player>();
 	}
 
 	bool LevelHandler::IsCheatingAllowed()

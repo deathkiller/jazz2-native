@@ -6,13 +6,13 @@
 namespace Jazz2
 {
 	LevelInitialization::LevelInitialization()
-		: IsLocalSession(true), Difficulty(GameDifficulty::Normal), IsReforged(true), CheatsUsed(false),
+		: IsLocalSession(true), LocalMultiplayerGameMode(0), Difficulty(GameDifficulty::Normal), IsReforged(true), CheatsUsed(false),
 			LastExitType(ExitType::None), ElapsedMilliseconds(0), PlayerCarryOvers{}
 	{
 	}
 
 	LevelInitialization::LevelInitialization(StringView level, GameDifficulty difficulty, bool isReforged)
-		: LevelName(level), IsLocalSession(true), Difficulty(difficulty), IsReforged(isReforged),
+		: LevelName(level), IsLocalSession(true), LocalMultiplayerGameMode(0), Difficulty(difficulty), IsReforged(isReforged),
 			CheatsUsed(false), LastExitType(ExitType::None), ElapsedMilliseconds(0), PlayerCarryOvers{}
 	{
 		for (std::int32_t i = 0; i < MaxPlayerCount; i++) {
@@ -21,7 +21,7 @@ namespace Jazz2
 	}
 
 	LevelInitialization::LevelInitialization(StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, PlayerType playerType)
-		: LevelName(level), IsLocalSession(true), Difficulty(difficulty), IsReforged(isReforged),
+		: LevelName(level), IsLocalSession(true), LocalMultiplayerGameMode(0), Difficulty(difficulty), IsReforged(isReforged),
 			CheatsUsed(cheatsUsed), LastExitType(ExitType::None), ElapsedMilliseconds(0), PlayerCarryOvers{}
 	{
 		PlayerCarryOvers[0].Type = playerType;
@@ -33,7 +33,7 @@ namespace Jazz2
 	}
 
 	LevelInitialization::LevelInitialization(StringView level, GameDifficulty difficulty, bool isReforged, bool cheatsUsed, ArrayView<const PlayerType> playerTypes)
-		: LevelName(level), IsLocalSession(true), Difficulty(difficulty), IsReforged(isReforged),
+		: LevelName(level), IsLocalSession(true), LocalMultiplayerGameMode(0), Difficulty(difficulty), IsReforged(isReforged),
 			CheatsUsed(cheatsUsed), LastExitType(ExitType::None), ElapsedMilliseconds(0), PlayerCarryOvers{}
 	{
 		std::int32_t playerCount = std::min((std::int32_t)playerTypes.size(), MaxPlayerCount);
@@ -51,6 +51,7 @@ namespace Jazz2
 	{
 		LevelName = copy.LevelName;
 		IsLocalSession = copy.IsLocalSession;
+		LocalMultiplayerGameMode = copy.LocalMultiplayerGameMode;
 		Difficulty = copy.Difficulty;
 		IsReforged = copy.IsReforged;
 		CheatsUsed = copy.CheatsUsed;
@@ -65,6 +66,7 @@ namespace Jazz2
 	{
 		LevelName = std::move(move.LevelName);
 		IsLocalSession = move.IsLocalSession;
+		LocalMultiplayerGameMode = move.LocalMultiplayerGameMode;
 		Difficulty = move.Difficulty;
 		IsReforged = move.IsReforged;
 		CheatsUsed = move.CheatsUsed;

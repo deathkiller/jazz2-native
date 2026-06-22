@@ -63,6 +63,56 @@ namespace Jazz2::Multiplayer
 		20, 17, 15, 13, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
 	};
 
+	static void WriteCarryOver(MemoryStream& packet, const PlayerCarryOver& c)
+	{
+		packet.WriteValue<std::uint8_t>((std::uint8_t)c.CurrentWeapon);
+		packet.WriteValue<std::uint8_t>(c.Lives);
+		packet.WriteValue<std::uint8_t>(c.FoodEaten);
+		packet.WriteVariableInt32(c.Score);
+		for (std::int32_t i = 0; i < 4; i++) {
+			packet.WriteVariableInt32(c.Gems[i]);
+		}
+		for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
+			packet.WriteValue<std::uint16_t>(c.Ammo[i]);
+		}
+		for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
+			packet.WriteValue<std::uint8_t>(c.WeaponUpgrades[i]);
+		}
+	}
+
+	static PlayerCarryOver ReadCarryOver(MemoryStream& packet, PlayerType type)
+	{
+		PlayerCarryOver c;
+		c.Type = type;
+		c.CurrentWeapon = (WeaponType)packet.ReadValue<std::uint8_t>();
+		c.Lives = packet.ReadValue<std::uint8_t>();
+		c.FoodEaten = packet.ReadValue<std::uint8_t>();
+		c.Score = packet.ReadVariableInt32();
+		for (std::int32_t i = 0; i < 4; i++) {
+			c.Gems[i] = packet.ReadVariableInt32();
+		}
+		for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
+			c.Ammo[i] = packet.ReadValue<std::uint16_t>();
+		}
+		for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
+			c.WeaponUpgrades[i] = packet.ReadValue<std::uint8_t>();
+		}
+		return c;
+	}
+
+	struct TileCoordHash {
+#if defined(DEATH_TARGET_32BIT)
+		using IntHash = xxHash32Func<std::int32_t>;
+#else
+		using IntHash = xxHash64Func<std::int32_t>;
+#endif
+
+		std::size_t operator()(const Vector2i& coord) const {
+			return IntHash()(coord.X) ^ (IntHash()(coord.Y) << 1);
+		}
+	};
+
+
 	// TODO: levelState is unused, it needs to be set after LevelState::InitialUpdatePending is processed
 	MpLevelHandler::MpLevelHandler(IRootController* root, NetworkManager* networkManager, MpLevelHandler::LevelState levelState, bool enableLedgeClimb)
 		: LevelHandler(root), _networkManager(networkManager), _updateTimeLeft(1.0f), _gameTimeLeft(0.0f),
@@ -79,7 +129,8 @@ namespace Jazz2::Multiplayer
 			_mirroredActorsCount{}, _updatePacketMaxSize(0.0f), _updatePacketSize{}, _compressedUpdatePacketSize{}
 #endif
 	{
-		_isServer = (networkManager->GetState() == NetworkState::Listening);
+		NetworkState state = networkManager->GetState();
+		_isServer = (state == NetworkState::Listening || state == NetworkState::Local);
 	}
 
 	MpLevelHandler::~MpLevelHandler()
@@ -88,7 +139,8 @@ namespace Jazz2::Multiplayer
 
 	bool MpLevelHandler::Initialize(const LevelInitialization& levelInit)
 	{
-		DEATH_DEBUG_ASSERT(!levelInit.IsLocalSession);
+		// Online sessions are never flagged as local; local splitscreen multiplayer is the only local session here
+		DEATH_DEBUG_ASSERT(!levelInit.IsLocalSession || IsLocalSession());
 
 		_suppressRemoting = true;
 		bool initialized = LevelHandler::Initialize(levelInit);
@@ -105,11 +157,15 @@ namespace Jazz2::Multiplayer
 			_lastSpawnedActorId = UINT8_MAX;
 			_autoWeightTreasure = (serverConfig.TotalTreasureCollected == 0);
 
-			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
-				peerDesc->LevelState = PeerLevelState::ValidatingAssets;
-				peerDesc->LastUpdated = 0;
-				if (peerDesc->RemotePeer) {
-					peerDesc->Player = nullptr;
+			if (!IsLocalSession()) {
+				// Local splitscreen players are spawned directly in SpawnPlayers() and have no asset-validation
+				// handshake, so this remote-peer reset must not run (it would clear their just-set level state)
+				for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+					peerDesc->LevelState = PeerLevelState::ValidatingAssets;
+					peerDesc->LastUpdated = 0;
+					if (peerDesc->RemotePeer) {
+						peerDesc->Player = nullptr;
+					}
 				}
 			}
 		}
@@ -128,25 +184,40 @@ namespace Jazz2::Multiplayer
 		return true;
 	}
 
+	bool MpLevelHandler::Initialize(Stream& src, std::uint16_t version)
+	{
+		// Restoring a resumable state - only local cooperative sessions are ever saved (see SerializeResumableToStream).
+		// The base deserializes the level and players (the players are created as LocalPlayerOnServer via the overridden
+		// CreateResumablePlayer); the multiplayer-specific setup is applied afterwards so the match runs like a fresh one.
+		_suppressRemoting = true;
+		bool initialized = LevelHandler::Initialize(src, version);
+		_suppressRemoting = false;
+		if (!initialized) {
+			return false;
+		}
+
+		_lastSpawnedActorId = UINT8_MAX;
+
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+		ApplyGameModeToAllPlayers(serverConfig.GameMode);
+
+		if (!ContentResolver::Get().IsHeadless()) {
+			_inGameCanvasLayer = std::make_unique<UI::Multiplayer::MpInGameCanvasLayer>(this);
+			_inGameCanvasLayer->setParent(_rootNode.get());
+			_inGameLobby = std::make_unique<UI::Multiplayer::MpInGameLobby>(this);
+		}
+
+		return true;
+	}
+
 	bool MpLevelHandler::IsLocalSession() const
 	{
-		return false;
+		return (_networkManager->GetState() == NetworkState::Local);
 	}
 
 	bool MpLevelHandler::IsServer() const
 	{
 		return _isServer;
-	}
-
-	std::uint32_t MpLevelHandler::ColorizeFurForTeam(std::uint32_t furColor, std::uint8_t team) const
-	{
-		// In team modes with team coloring enabled, force the first two color sections to the team color. Kept
-		// consistent on server and clients - both have the synced ColorizePlayersByTeam flag and team ids.
-		const auto& serverConfig = _networkManager->GetServerConfiguration();
-		if (serverConfig.ColorizePlayersByTeam && IsTeamGameMode(serverConfig.GameMode)) {
-			return ApplyTeamFurColor(furColor, team);
-		}
-		return furColor;
 	}
 
 	std::uint32_t MpLevelHandler::GetPlayerFurColor(const Actors::Player* player, std::uint32_t furColor) const
@@ -159,35 +230,18 @@ namespace Jazz2::Multiplayer
 		return furColor;
 	}
 
-	void MpLevelHandler::RecolorRemoteActor(std::uint32_t actorId, std::uint32_t furColor, std::uint8_t team)
-	{
-		// (Re)applies the effective (team-aware) fur color to a remote player actor if it currently exists. Looks the
-		// actor up under the lock, then recolors after releasing it - SetPlayerColor reloads metadata (file I/O),
-		// which must not run while holding the spinlock.
-		std::uint32_t effectiveColor = ColorizeFurForTeam(furColor, team);
-		std::shared_ptr<Actors::ActorBase> actor;
-		{
-			std::unique_lock lock(_lock);
-			auto it = _remoteActors.find(actorId);
-			if (it != _remoteActors.end()) {
-				actor = it->second;
-			}
-		}
-		if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(actor.get())) {
-			remoteActor->SetPlayerColor(effectiveColor);
-		}
-	}
-
 	bool MpLevelHandler::IsPausable() const
 	{
-		return false;
+		// Online sessions can't pause, but local splitscreen multiplayer can (like single player / local co-op)
+		return IsLocalSession();
 	}
 
 	bool MpLevelHandler::CanPlayersCollide() const
 	{
 		// Online sessions don't use the base Player-vs-Player bump path (which the local splitscreen handler enables);
-		// player collisions are resolved server-side via PlayerOnServer and stacking via MpPlayer instead.
-		return false;
+		// player collisions are resolved server-side via PlayerOnServer and stacking via MpPlayer instead. Local
+		// splitscreen has all players in the same simulation, so it uses the base bump path directly.
+		return IsLocalSession();
 	}
 
 	bool MpLevelHandler::CanActivateSugarRush() const
@@ -1033,28 +1087,35 @@ namespace Jazz2::Multiplayer
 		}
 
 		auto& serverConfig = _networkManager->GetServerConfiguration();
-		if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace) {
-			auto* mpPlayer = static_cast<MpPlayer*>(initiator);
-			if (mpPlayer->_currentTransition == nullptr ||
-				(mpPlayer->_currentTransition->State != AnimState::TransitionWarpIn && mpPlayer->_currentTransition->State != AnimState::TransitionWarpOut &&
-					mpPlayer->_currentTransition->State != AnimState::TransitionWarpInFreefall && mpPlayer->_currentTransition->State != AnimState::TransitionWarpOutFreefall)) {
-				Vector2f spawnPosition = GetSpawnPoint(mpPlayer->_playerTypeOriginal, mpPlayer->GetPeerDescriptor()->Team);
-				mpPlayer->WarpToPosition(spawnPosition, WarpFlags::IncrementLaps);
-			}
+
+		if DEATH_UNLIKELY(_gameMode == nullptr) {
+			// No active game mode (MpGameMode::Unknown) - nothing to change
 			return;
-		} else if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
-			// Player has to stand on EndOfLevel event with required treasure amount
-			auto* mpPlayer = static_cast<MpPlayer*>(initiator);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-			if (peerDesc->TreasureCollected >= serverConfig.TotalTreasureCollected) {
-				peerDesc->TreasureCollected++;	// The escaped player should have the most points
+		}
+
+		// The active game mode decides what reaching the level exit means; the host carries out that decision.
+		switch (_gameMode->OnLevelExitReached(*this, static_cast<MpPlayer*>(initiator))) {
+			case LevelExitAction::Ignore:
+				// Competitive modes with no level-exit win condition (Battle / TeamBattle / Capture The Flag)
+				return;
+			case LevelExitAction::WarpToStartIncrementLap: {
+				// Race / TeamRace: warp the finisher back to the start line and count a lap (unless already warping)
+				auto* mpPlayer = static_cast<MpPlayer*>(initiator);
+				if (mpPlayer->_currentTransition == nullptr ||
+					(mpPlayer->_currentTransition->State != AnimState::TransitionWarpIn && mpPlayer->_currentTransition->State != AnimState::TransitionWarpOut &&
+						mpPlayer->_currentTransition->State != AnimState::TransitionWarpInFreefall && mpPlayer->_currentTransition->State != AnimState::TransitionWarpOutFreefall)) {
+					Vector2f spawnPosition = GetSpawnPoint(mpPlayer->_playerTypeOriginal, mpPlayer->GetPeerDescriptor()->Team);
+					mpPlayer->WarpToPosition(spawnPosition, WarpFlags::IncrementLaps);
+				}
+				return;
+			}
+			case LevelExitAction::EndGameForInitiator:
+				// Treasure Hunt / Team Treasure Hunt: the escaping player (with enough treasure) wins the round
 				CalculatePositionInRound();
-				EndGame(mpPlayer);
-			}
-			return;
-		} else if (serverConfig.GameMode != MpGameMode::Cooperation) {
-			// Ignore end of the level in all game modes except cooperation
-			return;
+				EndGame(static_cast<MpPlayer*>(initiator));
+				return;
+			case LevelExitAction::ChangeToNextLevel:
+				break;	// Cooperation: proceed to the shared level-change code below
 		}
 
 		if (nextLevel.empty()) {
@@ -1174,8 +1235,13 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::HandleGameOver(Actors::Player* player)
 	{
-		// TODO
-		//LevelHandler::HandleGameOver(player);
+		// In a local cooperation session the lives system is active (exactly like classic splitscreen co-op): when a
+		// player runs out of lives the whole session ends and returns to the game-over screen. Competitive modes use
+		// infinite respawns, and online sessions never reach this path at all - Player::OnPerishInner only calls
+		// HandleGameOver in local sessions once lives are exhausted - so this is gated to local cooperation.
+		if (IsLocalSession() && _networkManager->GetServerConfiguration().GameMode == MpGameMode::Cooperation) {
+			LevelHandler::HandleGameOver(player);
+		}
 	}
 
 	bool MpLevelHandler::HandlePlayerDied(Actors::Player* player)
@@ -1251,11 +1317,16 @@ namespace Jazz2::Multiplayer
 					BeginPlayMusic(_musicDefaultPath);
 				}
 
-				if (serverConfig.GameMode != MpGameMode::Cooperation) {
-					mpPlayer->_checkpointPos = GetSpawnPoint(peerDesc->PreferredPlayerType, peerDesc->Team);
-
-					// The player is invulnerable for a short time after respawning
-					mpPlayer->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
+				if (_gameMode != nullptr) {
+					// The game mode decides where the player respawns (its own checkpoint vs. a fresh spawn point) and
+					// the spawn invulnerability. Cooperation keeps the checkpoint; competitive modes move to a spawn point.
+					RespawnDecision respawn = _gameMode->DecideRespawn(*this, mpPlayer);
+					if (!respawn.UseCheckpoint) {
+						mpPlayer->_checkpointPos = respawn.SpawnPos;
+					}
+					if (respawn.InvulnerableSecs > 0.0f) {
+						mpPlayer->SetInvulnerability(respawn.InvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
+					}
 				}
 			}
 
@@ -1313,572 +1384,6 @@ namespace Jazz2::Multiplayer
 			}
 
 			return false;
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerLevelChanging(Actors::Player* player, ExitType exitType)
-	{
-		// TODO: Only called by RemotePlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(5);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)exitType);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerWarpIn, packet);
-			}
-		}
-	}
-
-	bool MpLevelHandler::HandlePlayerPush(Actors::Player* player, float pushSpeedX)
-	{
-		// TODO: Only called by RemotePlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(8);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteValue<std::int32_t>((std::int32_t)(pushSpeedX * 512.0f));
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerPush, packet);
-			}
-		}
-
-		return true;
-	}
-
-	bool MpLevelHandler::HandlePlayerSpring(Actors::Player* player, Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY)
-	{
-		// TODO: Only called by RemotePlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				std::uint8_t flags = 0;
-				if (keepSpeedX) {
-					flags |= 0x01;
-				}
-				if (keepSpeedY) {
-					flags |= 0x02;
-				}
-
-				MemoryStream packet(17);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteValue<std::int32_t>((std::int32_t)(pos.X * 512.0f));
-				packet.WriteValue<std::int32_t>((std::int32_t)(pos.Y * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(force.X * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(force.Y * 512.0f));
-				packet.WriteValue<std::uint8_t>(flags);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerActivateSpring, packet);
-			}
-		}
-
-		return true;
-	}
-
-	void MpLevelHandler::HandlePlayerBeforeWarp(Actors::Player* player, Vector2f pos, WarpFlags flags)
-	{
-		if (_isServer) {
-			if ((flags & (WarpFlags::Fast | WarpFlags::SkipWarpIn)) != WarpFlags::Default) {
-				// Nothing to do, sending PlayerMoveInstantly packet is enough
-				return;
-			}
-
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(5);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteValue<std::uint8_t>(0xFF);	// Only temporary, no level changing
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerWarpIn, packet);
-			}
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerSetModifier(Actors::Player* player, Actors::Player::Modifier modifier, const std::shared_ptr<Actors::ActorBase>& decor)
-	{
-		// TODO: Only called by RemotePlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				std::uint32_t actorId;
-				{
-					std::unique_lock lock(_lock);
-					auto it = _remotingActors.find(decor.get());
-					if (it != _remotingActors.end()) {
-						actorId = it->second.ActorID;
-					} else {
-						actorId = UINT32_MAX;
-					}
-				}
-
-				MemoryStream packet(10);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Modifier);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)modifier);
-				packet.WriteVariableUint32(actorId);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-			}
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerFreeze(Actors::Player* player, float timeLeft)
-	{
-		// TODO: Only called by RemotePlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(9);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Freeze);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteVariableInt32((std::int32_t)timeLeft);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-			}
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerSetInvulnerability(Actors::Player* player, float timeLeft, Actors::Player::InvulnerableType type)
-	{
-		// TODO: Only called by RemotePlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(10);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Invulnerable);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteVariableInt32((std::int32_t)timeLeft);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)type);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-			}
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerSetScore(Actors::Player* player, std::int32_t value)
-	{
-		// TODO: Only called by RemotePlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(9);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Score);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteVariableInt32((std::int32_t)value);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-			}
-		}
-	}
-
-	bool MpLevelHandler::IsPlayerStackingEnabled() const
-	{
-		return _networkManager->GetServerConfiguration().PlayerStacking;
-	}
-
-	Actors::ActorBase* MpLevelHandler::FindPlayerToStandOn(Actors::Player* player, float timeMult)
-	{
-		// Minimum horizontal overlap required to count as "on top of" the other player (not brushing its side)
-		constexpr float MinHorizontalOverlap = 4.0f;
-		// How close the feet must be to the other player's head to count as standing/landing on it
-		constexpr float StandThreshold = 6.0f;
-
-		auto& serverConfig = _networkManager->GetServerConfiguration();
-		if (!serverConfig.PlayerStacking) {
-			return nullptr;
-		}
-
-		// Only grab onto another player while falling or already resting, never while moving up (jumping off)
-		if (player->_speed.Y < -0.1f) {
-			return nullptr;
-		}
-
-		const AABBf& self = player->AABBInner;
-		float feet = self.B;
-		float nextFeet = feet + player->_speed.Y * timeMult;
-		// Locate the other player's head from its position plus OUR collision head-offset (players are the same
-		// size), not its AABB top: a client's RemoteActor uses the sprite box (taller than the collision box),
-		// which would report the head ~16px too high and leave us floating.
-		float headOffset = self.T - player->_pos.Y;
-
-		// Treat the other player as a one-way platform: stand on it if our feet are at (or about to cross) its head
-		// this frame, with enough horizontal overlap that we're really on top of it (not just brushing its side).
-		auto isStandingOn = [&](Actors::ActorBase* actor) -> bool {
-			const AABBf& o = actor->AABBInner;
-			if (self.R - o.L < MinHorizontalOverlap || o.R - self.L < MinHorizontalOverlap) {
-				return false;
-			}
-			float top = actor->_pos.Y + headOffset;
-			return (feet <= top + StandThreshold && nextFeet >= top - StandThreshold);
-		};
-
-		if (_isServer) {
-			for (auto* other : _players) {
-				if (other == player) {
-					continue;
-				}
-				auto* mpOther = static_cast<MpPlayer*>(other);
-				if (mpOther->GetPeerDescriptor()->IsSpectating != SpectateMode::None) {
-					continue;
-				}
-				if (isStandingOn(other)) {
-					return other;
-				}
-			}
-		} else {
-			std::unique_lock lock(_lock);
-			for (auto& [actorId, remoteActor] : _remoteActors) {
-				if (_playerNames.find(actorId) == _playerNames.end()) {
-					continue;
-				}
-				if (isStandingOn(remoteActor.get())) {
-					return remoteActor.get();
-				}
-			}
-		}
-		return nullptr;
-	}
-
-	void MpLevelHandler::HandlePlayerSetHealth(Actors::Player* player, std::int32_t count)
-	{
-		// TODO: Only called by RemotePlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(9);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Health);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteVariableInt32((std::int32_t)count);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-			}
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerSetLives(Actors::Player* player, std::int32_t count)
-	{
-		// TODO: Only called by RemotePlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(9);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Lives);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteVariableInt32((std::int32_t)count);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-			}
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerPushed(Actors::Player* player)
-	{
-		// A server-side force was applied to the player (boss attack, explosion, bumper, ...). Resync the
-		// resulting position/velocity to the owning client so it isn't overwritten by the client's own state.
-		HandlePlayerBumped(player);
-	}
-
-	void MpLevelHandler::HandlePlayerBumped(Actors::Player* player)
-	{
-		// TODO: Only called by PlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<PlayerOnServer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			// The owning client simulates its own physics, so resync the post-bump position and velocity;
-			// reuses the existing PlayerMoveInstantly packet.
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(20);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.X * 512.0f));
-				packet.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.Y * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.X * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.Y * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.X * 512.0f));
-				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.Y * 512.0f));
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet);
-			}
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce)
-	{
-		// TODO: Only called by PlayerOnServer
-		if (_isServer) {
-			auto& serverConfig = _networkManager->GetServerConfiguration();
-			auto* mpPlayer = static_cast<PlayerOnServer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(10);
-				packet.WriteVariableUint32(player->_playerIndex);
-				packet.WriteVariableInt32(player->_health);
-				packet.WriteValue<std::int16_t>((std::int16_t)(pushForce * 512.0f));
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerTakeDamage, packet);
-			}
-
-			if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
-				// TODO: Drop number of gems accorting to the gun strength (usually 3 times)
-				std::uint32_t treasureLost = std::min(peerDesc->TreasureCollected, 3u);
-				if (treasureLost > 0) {
-					// If the player is dead, drop half of the collected treasure instead
-					if (mpPlayer->_health <= 0 && treasureLost < peerDesc->TreasureCollected / 2) {
-						treasureLost = peerDesc->TreasureCollected / 2;
-					}
-
-					peerDesc->TreasureCollected -= treasureLost;
-
-					if (peerDesc->RemotePeer) {
-						MemoryStream packet2(9);
-						packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::TreasureCollected);
-						packet2.WriteVariableUint32(mpPlayer->_playerIndex);
-						packet2.WriteVariableUint32(peerDesc->TreasureCollected);
-						_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
-					}
-
-					Vector2f pos = mpPlayer->_pos;
-					for (std::uint32_t i = 0; i < treasureLost; i++) {
-						float dir = (Random().NextBool() ? -1.0f : 1.0f);
-						float force = Random().NextFloat(10.0f, 20.0f);
-						Vector3f spawnPos = Vector3f(pos.X, pos.Y, MainPlaneZ);
-						std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x04 };
-						auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos.As<std::int32_t>());
-						if (actor != nullptr) {
-							actor->AddExternalForce(dir * force, force);
-							AddActor(actor);
-						}
-					}
-				}
-			}
-
-			if (_levelState == LevelState::Running && player->_health <= 0) {
-				peerDesc->Deaths++;
-
-				if (peerDesc->RemotePeer) {
-					MemoryStream packet3(9);
-					packet3.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Deaths);
-					packet3.WriteVariableUint32(mpPlayer->_playerIndex);
-					packet3.WriteVariableUint32(peerDesc->Deaths);
-					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet3);
-				}
-
-				if (auto* attacker = GetWeaponOwner(mpPlayer->_lastAttacker.get())) {
-					auto attackerPeerDesc = attacker->GetPeerDescriptor();
-					attackerPeerDesc->Kills++;
-
-					if (attackerPeerDesc->RemotePeer) {
-						MemoryStream packet4(9);
-						packet4.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Kills);
-						packet4.WriteVariableUint32(attacker->_playerIndex);
-						packet4.WriteVariableUint32(attackerPeerDesc->Kills);
-						_networkManager->SendTo(attackerPeerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet4);
-					}
-
-					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]",
-						peerDesc->PlayerName, attackerPeerDesc->PlayerName));
-
-					MemoryStream packet5(19 + peerDesc->PlayerName.size() + attackerPeerDesc->PlayerName.size());
-					packet5.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Roasted);
-					packet5.WriteVariableUint64(peerDesc->RemotePeer.GetId());
-					packet5.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
-					packet5.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
-					packet5.WriteVariableUint64(attackerPeerDesc->RemotePeer.GetId());
-					packet5.WriteValue<std::uint8_t>((std::uint8_t)attackerPeerDesc->PlayerName.size());
-					packet5.Write(attackerPeerDesc->PlayerName.data(), (std::uint32_t)attackerPeerDesc->PlayerName.size());
-
-					_networkManager->SendTo([this](const Peer& peer) {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						return (peerDesc && peerDesc->IsAuthenticated);
-					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet5);
-				} else {
-					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by environment",
-						peerDesc->PlayerName));
-
-					MemoryStream packet6(19 + peerDesc->PlayerName.size());
-					packet6.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Roasted);
-					packet6.WriteVariableUint64(peerDesc->RemotePeer.GetId());
-					packet6.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
-					packet6.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
-					packet6.WriteVariableUint64(0);
-					packet6.WriteValue<std::uint8_t>(0);
-
-					_networkManager->SendTo([this](const Peer& peer) {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						return (peerDesc && peerDesc->IsAuthenticated);
-					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet6);
-				}
-			}
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerRefreshAmmo(Actors::Player* player, WeaponType weaponType)
-	{
-		// TODO: Only called by RemotePlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(8);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::WeaponAmmo);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)weaponType);
-				packet.WriteValue<std::uint16_t>((std::uint16_t)mpPlayer->_weaponAmmo[(std::uint8_t)weaponType]);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-			}
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerMorphTo(Actors::Player* player, PlayerType type)
-	{
-		// TODO: Only called by PlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			String metadataPath = fs::FromNativeSeparators(mpPlayer->_metadata->Path);
-
-			MemoryStream packet(9 + metadataPath.size());
-			packet.WriteVariableUint32(mpPlayer->_playerIndex);
-			packet.WriteValue<std::uint8_t>(0); // Flags (Reserved)
-			packet.WriteVariableUint32((std::uint32_t)metadataPath.size());
-			packet.Write(metadataPath.data(), (std::uint32_t)metadataPath.size());
-			_networkManager->SendTo([otherPeer = peerDesc->RemotePeer](const Peer& peer) {
-				return (peer != otherPeer);
-			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ChangeRemoteActorMetadata, packet);
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet2(6);
-				packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::PlayerType);
-				packet2.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet2.WriteValue<std::uint8_t>((std::uint8_t)type);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
-			}
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerSetDizzy(Actors::Player* player, float timeLeft)
-	{
-		// TODO: Only called by RemotePlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(9);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Dizzy);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteVariableInt32((std::int32_t)timeLeft);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-			}
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerSetBeingStoodOn(Actors::Player* player, bool beingStoodOn)
-	{
-		// The owning client predicts its own player and can't see a remote player standing on it, so the server (which
-		// simulates everyone) tells it when to show/hide the cosmetic lift animation. Other peers already see it via
-		// the normal remoting-actor animation sync.
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(6);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::BeingStoodOn);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteValue<std::uint8_t>(beingStoodOn ? 1 : 0);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-			}
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerSetShield(Actors::Player* player, ShieldType shieldType, float timeLeft)
-	{
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-
-			// Broadcast to every synchronized peer, not just the owning one: the owner applies it to its local
-			// player while the other peers apply it to this player's RemoteActor, so they render the shield
-			// decoration around the remote player too.
-			MemoryStream packet(10);
-			packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Shield);
-			packet.WriteVariableUint32(mpPlayer->_playerIndex);
-			packet.WriteValue<std::uint8_t>((std::uint8_t)shieldType);
-			packet.WriteVariableInt32((std::int32_t)timeLeft);
-			_networkManager->SendTo([this](const Peer& peer) {
-				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerRefreshWeaponUpgrades(Actors::Player* player, WeaponType weaponType)
-	{
-		// TODO: Only called by RemotePlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(7);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::WeaponUpgrades);
-				packet.WriteVariableUint32(player->_playerIndex);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)weaponType);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)player->_weaponUpgrades[(std::uint8_t)weaponType]);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-			}
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerEmitWeaponFlare(Actors::Player* player)
-	{
-		// TODO: Only called by RemotePlayerOnServer
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(4);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerEmitWeaponFlare, packet);
-			}
-		}
-	}
-
-	void MpLevelHandler::HandlePlayerWeaponChanged(Actors::Player* player, Actors::Player::SetCurrentWeaponReason reason)
-	{
-		if (_isServer) {
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-
-			if (peerDesc->RemotePeer) {
-				MemoryStream packet(6);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)mpPlayer->_currentWeapon);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)reason);
-				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerChangeWeapon, packet);
-			}
-		} else {
-			auto* remotablePlayer = static_cast<Actors::Multiplayer::RemotablePlayer*>(player);
-			if (!remotablePlayer->ChangingWeaponFromServer) {
-				MemoryStream packet(5);
-				packet.WriteVariableUint32(_lastSpawnedActorId);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)player->_currentWeapon);
-				_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerChangeWeaponRequest, packet);
-			}
 		}
 	}
 
@@ -1955,6 +1460,13 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::HandlePlayerPushed(Actors::Player* player)
+	{
+		// A server-side force was applied to the player (boss attack, explosion, bumper, ...). Resync the
+		// resulting position/velocity to the owning client so it isn't overwritten by the client's own state.
+		HandlePlayerBumped(player);
+	}
+
 	void MpLevelHandler::HandlePlayerCoins(Actors::Player* player, std::int32_t prevCount, std::int32_t newCount)
 	{
 		//LevelHandler::HandlePlayerCoins(player, prevCount, newCount);
@@ -1963,13 +1475,9 @@ namespace Jazz2::Multiplayer
 			// Coins are shared in cooperation, add it also to all other local players
 			auto& serverConfig = _networkManager->GetServerConfiguration();
 			if (serverConfig.GameMode == MpGameMode::Cooperation) {
-				if (prevCount < newCount) {
-					std::int32_t increment = (newCount - prevCount);
-					for (auto current : _players) {
-						if (current != player) {
-							current->AddCoinsInternal(increment);
-						}
-					}
+				// Coins are shared in cooperation - the mode adds the increment onto every other local player
+				if (_gameMode != nullptr) {
+					_gameMode->OnCoinsCollected(*this, player, prevCount, newCount);
 				}
 
 				for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
@@ -2178,6 +1686,132 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
+	void MpLevelHandler::LimitCameraView(Actors::Player* player, Vector2f playerPos, std::int32_t left, std::int32_t width)
+	{
+		std::int32_t prevLeft = _limitCameraLeft;
+		std::int32_t prevWidth = _limitCameraWidth;
+
+		_limitCameraLeft = left;
+		_limitCameraWidth = width;
+
+		LevelHandler::LimitCameraView(player, playerPos, left, width);
+
+		if (_isServer && (prevLeft != _limitCameraLeft || prevWidth != _limitCameraWidth)) {
+			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+				if (peerDesc->RemotePeer && peerDesc->Player) {
+					MemoryStream packet(21);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::LimitCameraView);
+					packet.WriteVariableUint32(peerDesc->Player->_playerIndex);
+					packet.WriteVariableInt32(left);
+					packet.WriteVariableInt32(width);
+					packet.WriteVariableInt32((std::int32_t)playerPos.X);
+					packet.WriteVariableInt32((std::int32_t)playerPos.Y);
+					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+				}
+			}
+		}
+	}
+
+	void MpLevelHandler::OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft)
+	{
+		// TODO: Include this state in initial sync
+		LevelHandler::OverrideCameraView(player, x, y, topLeft);
+
+		if (_isServer) {
+			if (auto* mpPlayer = runtime_cast<RemotePlayerOnServer>(player)) {
+				MemoryStream packet(14);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::OverrideCameraView);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)(x * 100.0f));
+				packet.WriteVariableInt32((std::int32_t)(y * 100.0f));
+				packet.WriteValue<std::uint8_t>(topLeft ? 1 : 0);
+				_networkManager->SendTo(mpPlayer->GetPeerDescriptor()->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::ShakeCameraView(Actors::Player* player, float duration)
+	{
+		LevelHandler::ShakeCameraView(player, duration);
+
+		if (_isServer) {
+			if (auto* mpPlayer = runtime_cast<RemotePlayerOnServer>(player)) {
+				MemoryStream packet(9);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::ShakeCameraView);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)(duration * 100.0f));
+				_networkManager->SendTo(mpPlayer->GetPeerDescriptor()->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+	
+	void MpLevelHandler::ShakeCameraViewNear(Vector2f pos, float duration)
+	{
+		// TODO: This should probably be client local
+		LevelHandler::ShakeCameraViewNear(pos, duration);
+
+		constexpr float MaxDistance = 800.0f;
+
+		if (_isServer) {
+			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
+				if (peerDesc->RemotePeer && peerDesc->Player && (peerDesc->Player->_pos - pos).Length() <= MaxDistance) {
+					MemoryStream packet(9);
+					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::ShakeCameraView);
+					packet.WriteVariableUint32(peerDesc->Player->_playerIndex);
+					packet.WriteVariableInt32((std::int32_t)(duration * 100.0f));
+					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+				}
+			}
+		}
+	}
+
+	void MpLevelHandler::SetTrigger(std::uint8_t triggerId, bool newState)
+	{
+		LevelHandler::SetTrigger(triggerId, newState);
+
+		if (_isServer) {
+			MemoryStream packet(2);
+			packet.WriteValue<std::uint8_t>(triggerId);
+			packet.WriteValue<std::uint8_t>(newState);
+
+			_networkManager->SendTo([this](const Peer& peer) {
+				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SetTrigger, packet);
+		}
+	}
+
+	void MpLevelHandler::SetWeather(WeatherType type, std::uint8_t intensity)
+	{
+		// TODO: This should probably be client local
+		LevelHandler::SetWeather(type, intensity);
+	}
+
+	bool MpLevelHandler::BeginPlayMusic(StringView path, bool setDefault, bool forceReload)
+	{
+		// TODO: Include this state in initial sync
+		bool success = LevelHandler::BeginPlayMusic(path, setDefault, forceReload);
+
+		if (_isServer) {
+			std::uint8_t flags = 0;
+			if (setDefault) flags |= 0x01;
+			if (forceReload) flags |= 0x02;
+
+			MemoryStream packet(6 + path.size());
+			packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::Music);
+			packet.WriteValue<std::uint8_t>(flags);
+			packet.WriteVariableUint32((std::uint32_t)path.size());
+			packet.Write(path.data(), (std::uint32_t)path.size());
+
+			_networkManager->SendTo([this](const Peer& peer) {
+				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
+		}
+
+		return success;
+	}
+
 	bool MpLevelHandler::PlayerActionPressed(Actors::Player* player, PlayerAction action, bool includeGamepads, bool& isGamepad)
 	{
 		if (_isServer) {
@@ -2270,8 +1904,14 @@ namespace Jazz2::Multiplayer
 
 	bool MpLevelHandler::SerializeResumableToStream(Stream& dest)
 	{
-		// Online multiplayer sessions cannot be resumed
-		return false;
+		// Online multiplayer sessions cannot be resumed. Local splitscreen cooperation can be resumed just like
+		// classic local co-op - it serializes in the base format and restores as a regular LevelHandler session.
+		// Competitive local modes are not resumable.
+		if (!IsLocalSession() || GetGameMode() != MpGameMode::Cooperation) {
+			return false;
+		}
+
+		return LevelHandler::SerializeResumableToStream(dest);
 	}
 
 	void MpLevelHandler::OnAdvanceDestructibleTileAnimation(std::int32_t tx, std::int32_t ty, std::int32_t amount)
@@ -2294,201 +1934,70 @@ namespace Jazz2::Multiplayer
 		return _levelDisplayName;
 	}
 
-	void MpLevelHandler::AttachComponents(LevelDescriptor&& descriptor)
-	{
-		LevelHandler::AttachComponents(std::move(descriptor));
-
-		// Reset race minimap geometry for both server and client (the client repopulates it from a server packet,
-		// or leaves it empty so no minimap is shown when the new level has no track)
-		_orderedRaceCheckpoints.clear();
-		_raceStartMarkers.clear();
-		_raceCheckpoints.clear();
-		_raceCheckpointsOrdered = false;
-		_raceBoundsMin = Vector2i(0, 0);
-		_raceBoundsMax = Vector2i(0, 0);
-
-		if (_isServer) {
-			// Cache all possible multiplayer spawn points (if it's not coop level)
-			_multiplayerSpawnPoints.clear();
-			_totalTreasureCount = 0;
-
-			_eventMap->ForEachEvent([this](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
-				if (e.Event == EventType::LevelStartMultiplayer) {
-					_multiplayerSpawnPoints.emplace_back(Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize - 8), e.EventParams[0]);
-				} else if (e.Event == EventType::Gem) {
-					// GemStomp event is not counted, because it's difficult to find
-					std::uint8_t gemType = (std::uint8_t)(e.EventParams[0] & 0x03);
-					std::int32_t count = GetTreasureWeight(gemType);
-					_totalTreasureCount += count;
-				} else if (e.Event == EventType::GemGiant) {
-					// Giant gem randowly spawns between 5 and 12 red gems, so use 8 as average
-					_totalTreasureCount += 8 * GetTreasureWeight(0);
-				} else if (e.Event == EventType::GemRing) {
-					// Gems in the ring are always red
-					std::int32_t count = (e.EventParams[0] > 0 ? e.EventParams[0] : 8) * GetTreasureWeight(0);
-					_totalTreasureCount += count;
-				} else if (e.Event == EventType::CrateGem || e.Event == EventType::BarrelGem) {
-					std::int32_t count = e.EventParams[0] * GetTreasureWeight(0) +
-										 e.EventParams[1] * GetTreasureWeight(1) +
-										 e.EventParams[2] * GetTreasureWeight(2) +
-										 e.EventParams[3] * GetTreasureWeight(3);
-					_totalTreasureCount += count;
-				}
-				return true;
-			});
-
-			const auto& serverConfig = _networkManager->GetServerConfiguration();
-
-			if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace) {
-				BuildRaceCheckpoints();
-			}
-			// Capture The Flag bases/flags are (re)built at round start in ResetAllPlayerStats(), not here: at level
-			// load no client is connected yet, so spawning now would only reach late joiners via the per-peer sync
-
-			if (serverConfig.GameMode == MpGameMode::Cooperation) {
-				_eventMap->ForEachEvent([this](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
-					if (e.Event == EventType::OneUp) {
-						// Replace all 1ups with max carrots
-						// TODO: Reset it back to 1ups when starting a different mode with limited lives
-						e.Event = EventType::Carrot;
-						e.EventParams[0] = 1;
-					} else if (e.Event == EventType::AirboardGenerator) {
-						// Shorten delay time of all airboard generators
-						// TODO: Reset it back when starting a different mode
-						if (e.EventParams[0] > 4) {
-							e.EventParams[0] = 4;
-						}
-					}
-					return true;
-				});
-			}
-		} else {
-			// Change InstantDeathPit to FallForever, because player health is managed by the server
-			if (_eventMap->GetPitType() == PitType::InstantDeathPit) {
-				_eventMap->SetPitType(PitType::FallForever);
-			}
-
-			_eventMap->ForEachEvent([this](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
-				switch (e.Event) {
-					case EventType::WarpOrigin:
-					case EventType::ModifierHurt:
-					case EventType::ModifierDeath:
-					case EventType::ModifierLimitCameraView:
-					case EventType::AreaEndOfLevel:
-					case EventType::AreaCallback:
-					case EventType::AreaActivateBoss:
-					case EventType::AreaFlyOff:
-					case EventType::AreaRevertMorph:
-					case EventType::AreaMorphToFrog:
-					case EventType::AreaNoFire:
-					case EventType::TriggerZone:
-					case EventType::RollingRockTrigger:
-						// These events are handled on server-side only
-						e.Event = EventType::Empty;
-						break;
-				}
-				return true;
-			});
-		}
-	}
-
-	std::unique_ptr<UI::HUD> MpLevelHandler::CreateHUD()
-	{
-		return std::make_unique<UI::Multiplayer::MpHUD>(this);
-	}
-
-	void MpLevelHandler::PrepareNextLevelInitialization(LevelInitialization& levelInit)
-	{
-		LevelHandler::PrepareNextLevelInitialization(levelInit);
-
-		// Online co-op: capture each remote player's state into its (persistent) peer descriptor so weapons,
-		// lives, score and gems carry over to the next level - the host already carries over via levelInit.
-		// The snapshot is applied on (re)spawn in PlayerOnServer::OnActivatedAsync.
-		if (_isServer) {
-			for (auto* player : _players) {
-				if (auto* mpPlayer = runtime_cast<Actors::Multiplayer::MpPlayer>(player)) {
-					auto peerDesc = mpPlayer->GetPeerDescriptor();
-					if (peerDesc != nullptr && peerDesc->RemotePeer) {
-						// Call the base implementation explicitly: RemotePlayerOnServer::PrepareLevelCarryOver() is
-						// overridden to return an empty struct (so remotes stay out of levelInit's local-spawn list),
-						// but the server does track the real score/lives/weapons/gems for it, so capture those here.
-						peerDesc->CarryOver = mpPlayer->Player::PrepareLevelCarryOver();
-						peerDesc->HasCarryOver = true;
-					}
-				}
-			}
-		}
-	}
-
-	void MpLevelHandler::SpawnPlayers(const LevelInitialization& levelInit)
-	{
-		if (!_isServer) {
-			// Player spawning is delayed/controlled by server
-			_hud = CreateHUD();
-			return;
-		}
-
-		const auto& serverConfig = _networkManager->GetServerConfiguration();
-
-		for (std::int32_t i = 0; i < std::int32_t(arraySize(levelInit.PlayerCarryOvers)); i++) {
-			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
-				continue;
-			}
-
-			Vector2f spawnPosition = GetSpawnPoint(levelInit.PlayerCarryOvers[i].Type);
-
-			auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer);
-			std::shared_ptr<Actors::Multiplayer::LocalPlayerOnServer> player = std::make_shared<Actors::Multiplayer::LocalPlayerOnServer>(peerDesc);
-			std::uint8_t playerParams[2] = { (std::uint8_t)levelInit.PlayerCarryOvers[i].Type, (std::uint8_t)i };
-			player->OnActivated(Actors::ActorActivationDetails(
-				this,
-				Vector3i((std::int32_t)spawnPosition.X + (i * 30), (std::int32_t)spawnPosition.Y - (i * 30), PlayerZ - i),
-				playerParams
-			));
-			player->_controllableExternal = _controllableExternal;
-			player->_health = (serverConfig.InitialPlayerHealth > 0
-				? serverConfig.InitialPlayerHealth
-				: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
-
-			peerDesc->PreferredPlayerType = levelInit.PlayerCarryOvers[i].Type;
-			peerDesc->LevelState = PeerLevelState::PlayerSpawned;
-			peerDesc->LapsElapsedFrames = _elapsedFrames;
-			peerDesc->LapStarted = TimeStamp::now();
-			peerDesc->PlayerName = PreferencesCache::GetEffectivePlayerName();
-			// Local players use the host's configured color so remote clients see it (sent via MarkRemoteActorAsPlayer)
-			peerDesc->FurColor = PreferencesCache::PlayerFurColor;
-
-			Actors::Multiplayer::LocalPlayerOnServer* ptr = player.get();
-			_players.push_back(ptr);
-			AddActor(player);
-			AssignViewport(ptr);
-
-			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
-
-			// The player is invulnerable for a short time after spawning
-			ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
-		}
-
-		ApplyGameModeToAllPlayers(serverConfig.GameMode);
-
-		_hud = CreateHUD();
-		_hud->BeginFadeIn((levelInit.LastExitType & ExitType::FastTransition) == ExitType::FastTransition);
-	}
-
-	bool MpLevelHandler::IsCheatingAllowed()
-	{
-		if (!_isServer) {
-			return false;
-		}
-
-		auto& serverConfig = _networkManager->GetServerConfiguration();
-		return (PreferencesCache::AllowCheats && serverConfig.GameMode == MpGameMode::Cooperation);
-	}
-
 	MpGameMode MpLevelHandler::GetGameMode() const
 	{
 		const auto& serverConfig = _networkManager->GetServerConfiguration();
 		return serverConfig.GameMode;
+	}
+	IGameMode* MpLevelHandler::GetActiveGameMode() const
+	{
+		return _gameMode.get();
+	}
+
+	bool MpLevelHandler::DrawActiveGameModeHUD(IGameModeHUD& hud, Actors::Player* player, const Rectf& view)
+	{
+		if (_gameMode == nullptr) {
+			return false;
+		}
+
+		_gameMode->OnDrawHUD(*this, hud, player, view);
+		return true;
+	}
+
+	const ServerConfiguration& MpLevelHandler::GetServerConfiguration() const
+	{
+		return _networkManager->GetServerConfiguration();
+	}
+
+	ArrayView<Actors::Player* const> MpLevelHandler::GetPlayers() const
+	{
+		return LevelHandler::GetPlayers();
+	}
+
+	MpPlayerState& MpLevelHandler::GetPlayerState(Actors::Player* player)
+	{
+		return *static_cast<MpPlayer*>(player)->GetPeerDescriptor();
+	}
+
+	bool MpLevelHandler::IsSpectating(Actors::Player* player) const
+	{
+		return (static_cast<MpPlayer*>(player)->GetPeerDescriptor()->IsSpectating != SpectateMode::None);
+	}
+
+	std::uint8_t MpLevelHandler::GetCtfFlagStateCount() const
+	{
+		return (std::uint8_t)_ctfFlagStates.size();
+	}
+
+	std::uint8_t MpLevelHandler::GetCtfFlagState(std::uint8_t team) const
+	{
+		return _ctfFlagStates[team].State;
+	}
+
+	Vector2f MpLevelHandler::GetSpawnPoint(Actors::Player* player)
+	{
+		auto peerDesc = static_cast<MpPlayer*>(player)->GetPeerDescriptor();
+		return GetSpawnPoint(peerDesc->PreferredPlayerType, peerDesc->Team);
+	}
+
+	float MpLevelHandler::GetElapsedFrames() const
+	{
+		return LevelHandler::GetElapsedFrames();
+	}
+
+	void MpLevelHandler::EndGame(Actors::Player* winner)
+	{
+		EndGame(static_cast<MpPlayer*>(winner));
 	}
 
 	std::uint32_t MpLevelHandler::GetTotalLaps() const
@@ -2640,6 +2149,24 @@ namespace Jazz2::Multiplayer
 		SyncTeamScores();
 
 		return true;
+	}
+
+	void MpLevelHandler::RequestChangeTeam(std::uint8_t team)
+	{
+		if (_isServer) {
+			// Host applies the change directly
+			for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
+				if (!peerDesc->RemotePeer && peerDesc->Player) {
+					ChangePlayerTeam(peerDesc->Player, team, false);
+					break;
+				}
+			}
+			return;
+		}
+
+		MemoryStream packet(1);
+		packet.WriteValue<std::uint8_t>(team);
+		_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerChangeTeamRequest, packet);
 	}
 
 	MpPlayer* MpLevelHandler::GetWeaponOwner(Actors::ActorBase* actor)
@@ -3295,6 +2822,225 @@ namespace Jazz2::Multiplayer
 		});
 	}
 
+	void MpLevelHandler::SetPlayerSpectateMode(Actors::Player* player, SpectateMode mode)
+	{
+		if DEATH_UNLIKELY(!_isServer) {
+			return;
+		}
+
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+		auto* mpPlayer = static_cast<MpPlayer*>(player);
+		auto peerDesc = mpPlayer->GetPeerDescriptor();
+		std::uint32_t playerIndex = mpPlayer->_playerIndex;
+
+		// Remove player from active players list
+		for (std::size_t i = 0; i < _players.size(); i++) {
+			if (_players[i] == player) {
+				_players.eraseUnordered(i);
+				break;
+			}
+		}
+
+		// Destroy the previous player actor
+		Vector2f playerPos = player->_pos;
+		player->SetState(Actors::ActorState::IsDestroyed, true);
+
+		// Notify all clients to destroy the actor
+		MemoryStream packetDestroy(4);
+		packetDestroy.WriteVariableUint32(playerIndex);
+		_networkManager->SendTo([this](const Peer& peer) {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packetDestroy);
+
+		// Spawn new player actor according to spectate mode
+		std::shared_ptr<MpPlayer> newPlayer;
+		MpPlayer* ptr;
+
+		if (peerDesc->RemotePeer) {
+			newPlayer = std::make_shared<RemotePlayerOnServer>(peerDesc);
+		} else {
+			newPlayer = std::make_shared<LocalPlayerOnServer>(peerDesc);
+		}
+		ptr = newPlayer.get();
+
+		// Apply new spectating mode
+		peerDesc->IsSpectating = mode;
+
+		if ((mode & SpectateMode::Mask) != SpectateMode::None) {
+			if (serverConfig.EnableFreeCamera) {
+				peerDesc->IsSpectating |= SpectateMode::FreeCamera;
+			}
+
+			// Initialize the actor as spectator
+			std::uint8_t playerParams[2] = { (std::uint8_t)PlayerType::Spectate, (std::uint8_t)playerIndex };
+			ptr->OnActivated(Actors::ActorActivationDetails(this,
+				Vector3i((std::int32_t)playerPos.X, (std::int32_t)playerPos.Y, PlayerZ - playerIndex),
+				playerParams));
+			ptr->_controllableExternal = true;
+		} else {
+			// Initialize the actor as real player
+			Vector2f spawnPosition = GetSpawnPoint(peerDesc->PreferredPlayerType, peerDesc->Team);
+			// In team-coloring modes, resolve the team before activating so the spawn-time recolor decision loads the
+			// sprites indexed even for default-color players (see the join spawn above); ApplyGameModeToPlayer below
+			// re-resolves to the same team and refreshes afterwards.
+			if (serverConfig.ColorizePlayersByTeam && IsTeamGameMode(serverConfig.GameMode)) {
+				peerDesc->Team = ResolveTeam(ptr, peerDesc->PreferredTeam);
+			}
+			std::uint8_t playerParams[2] = { (std::uint8_t)peerDesc->PreferredPlayerType, (std::uint8_t)playerIndex };
+			ptr->OnActivated(Actors::ActorActivationDetails(this,
+				Vector3i((std::int32_t)spawnPosition.X, (std::int32_t)spawnPosition.Y, PlayerZ - playerIndex),
+				playerParams));
+			ptr->_health = (serverConfig.InitialPlayerHealth > 0
+				? serverConfig.InitialPlayerHealth
+				: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
+
+			if (_levelState == LevelState::Running && serverConfig.JoinCooldownSecs > 0) {
+				peerDesc->JoinCooldownFrames = serverConfig.JoinCooldownSecs * FrameTimer::FramesPerSecond;
+				player->_controllableExternal = false;
+			} else {
+				peerDesc->JoinCooldownFrames = 0.0f;
+				player->_controllableExternal = _controllableExternal;
+			}
+		}
+
+		peerDesc->Player = ptr;
+		_players.push_back(ptr);
+
+		_suppressRemoting = true;
+		AddActor(newPlayer);
+		_suppressRemoting = false;
+
+		// First, create new controllable player if needed, then create remote actor for other clients
+		if (peerDesc->RemotePeer) {
+			// Remote client
+			std::uint8_t flags = 0x10; // Skip fade-in transition
+			if (ptr->_controllable) {
+				flags |= 0x01;
+			}
+			if (ptr->_controllableExternal) {
+				flags |= 0x02;
+			}
+
+			MemoryStream packet2(16);
+			packet2.WriteVariableUint32(playerIndex);
+			packet2.WriteValue<std::uint8_t>((std::uint8_t)ptr->_playerType);
+			packet2.WriteVariableInt32(ptr->_health);
+			packet2.WriteValue<std::uint8_t>(flags);
+			packet2.WriteValue<std::uint8_t>(peerDesc->Team);
+			packet2.WriteVariableInt32((std::int32_t)ptr->_pos.X);
+			packet2.WriteVariableInt32((std::int32_t)ptr->_pos.Y);
+			// Forward carried-over progression to the client (flag = 0 if none). The server-side player applies
+			// it in MpPlayer::OnActivatedAsync (after the base reset); clear the flag once serialized.
+			packet2.WriteValue<std::uint8_t>(peerDesc->HasCarryOver ? 1 : 0);
+			if (peerDesc->HasCarryOver) {
+				WriteCarryOver(packet2, peerDesc->CarryOver);
+			}
+			peerDesc->HasCarryOver = false;
+
+			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateControllablePlayer, packet2);
+		} else {
+			// Local player
+			UnassignViewport(player);
+			AssignViewport(ptr);
+			CommitViewports();
+		}
+
+		MemoryStream packet3;
+		InitializeCreateRemoteActorPacket(packet3, playerIndex, ptr);
+
+		_networkManager->SendTo([this, self = peerDesc->RemotePeer](const Peer& peer) {
+			if (peer == self) {
+				return false;
+			}
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet3);
+
+		MemoryStream packet4(11 + peerDesc->PlayerName.size());
+		packet4.WriteVariableUint32(playerIndex);
+		packet4.WriteValue<std::uint8_t>(0x02 | 0x04); // HasFurColor | HasTeam
+		packet4.WriteVariableUint32(peerDesc->PlayerName.size());
+		packet4.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
+		packet4.WriteValueAsLE<std::uint32_t>(peerDesc->FurColor);
+		packet4.WriteValue<std::uint8_t>(peerDesc->Team);
+
+		_networkManager->SendTo([this](const Peer& peer) {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::MarkRemoteActorAsPlayer, packet4);
+
+		if (peerDesc->RemotePeer) {
+			MemoryStream packet5(6);
+			packet5.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Spectate);
+			packet5.WriteVariableUint32(playerIndex);
+			packet5.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->IsSpectating);
+			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet5);
+		}
+
+		if ((mode & SpectateMode::Mask) == SpectateMode::None) {
+			// Player is now active again - apply game mode effects
+			ApplyGameModeToPlayer(serverConfig.GameMode, ptr);
+
+			// The player is invulnerable for a short time after spawning
+			ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
+		}
+	}
+
+	void MpLevelHandler::RequestSpectateMode(bool enable)
+	{
+		if DEATH_UNLIKELY(_players.empty()) {
+			return;
+		}
+
+		if (_isServer) {
+			for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
+				if (!peerDesc->RemotePeer && peerDesc->Player) {
+					SetPlayerSpectateMode(peerDesc->Player, enable ? SpectateMode::Requested : SpectateMode::None);
+				}
+			}
+		} else {
+			MemoryStream packet(5);
+			packet.WriteVariableUint32(_lastSpawnedActorId);
+			packet.WriteValue<std::uint8_t>(enable ? 1 : 0);
+			_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerSpectateRequest, packet);
+		}
+	}
+
+	bool MpLevelHandler::IsSpectating()
+	{
+		for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
+			if (!peerDesc->RemotePeer && peerDesc->Player) {
+				return (peerDesc->IsSpectating != SpectateMode::None);
+			}
+		}
+		return false;
+	}
+
+	bool MpLevelHandler::IsSpectateAvailable() const
+	{
+		return _networkManager->GetServerConfiguration().EnableSpectate;
+	}
+
+	void MpLevelHandler::ShowCharacterSelectLobby()
+	{
+		if DEATH_UNLIKELY(_inGameLobby == nullptr) {
+			return;
+		}
+
+		// Open the lobby so the player can pick a (possibly different) character; SetPlayerReady() then (re)joins
+		// the game with the selected type instead of treating it as the initial join.
+		_changingCharacterInLobby = true;
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+		_inGameLobby->SetAllowedPlayerTypes(serverConfig.AllowedPlayerTypes);
+		std::uint8_t currentTeam = NoPreferredTeam;
+		if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
+			currentTeam = peerDesc->Team;
+		}
+		_inGameLobby->SetTeamInfo(currentTeam);
+		_inGameLobby->Show();
+	}
+
 	bool MpLevelHandler::OnPeerDisconnected(const Peer& peer)
 	{
 		constexpr Vector2f OutOfBounds = Vector2f(-1000000.0f, -1000000.0f);
@@ -3442,47 +3188,6 @@ namespace Jazz2::Multiplayer
 		return false;
 	}
 
-	namespace
-	{
-		// Serializes the player progression appended to ServerPacketType::CreateControllablePlayer so a
-		// reconnecting / level-changing client restores the same state the server holds (otherwise it starts fresh)
-		static void WriteCarryOver(MemoryStream& packet, const PlayerCarryOver& c)
-		{
-			packet.WriteValue<std::uint8_t>((std::uint8_t)c.CurrentWeapon);
-			packet.WriteValue<std::uint8_t>(c.Lives);
-			packet.WriteValue<std::uint8_t>(c.FoodEaten);
-			packet.WriteVariableInt32(c.Score);
-			for (std::int32_t i = 0; i < 4; i++) {
-				packet.WriteVariableInt32(c.Gems[i]);
-			}
-			for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
-				packet.WriteValue<std::uint16_t>(c.Ammo[i]);
-			}
-			for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
-				packet.WriteValue<std::uint8_t>(c.WeaponUpgrades[i]);
-			}
-		}
-
-		static PlayerCarryOver ReadCarryOver(MemoryStream& packet, PlayerType type)
-		{
-			PlayerCarryOver c;
-			c.Type = type;
-			c.CurrentWeapon = (WeaponType)packet.ReadValue<std::uint8_t>();
-			c.Lives = packet.ReadValue<std::uint8_t>();
-			c.FoodEaten = packet.ReadValue<std::uint8_t>();
-			c.Score = packet.ReadVariableInt32();
-			for (std::int32_t i = 0; i < 4; i++) {
-				c.Gems[i] = packet.ReadVariableInt32();
-			}
-			for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
-				c.Ammo[i] = packet.ReadValue<std::uint16_t>();
-			}
-			for (std::int32_t i = 0; i < PlayerCarryOver::WeaponCount; i++) {
-				c.WeaponUpgrades[i] = packet.ReadValue<std::uint8_t>();
-			}
-			return c;
-		}
-	}
 
 	bool MpLevelHandler::OnPacketReceived(const Peer& peer, std::uint8_t channelId, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
 	{
@@ -4208,7 +3913,11 @@ namespace Jazz2::Multiplayer
 							// Re-apply team colors to all visible players now that the mode / team-coloring flag is
 							// (re)synced (touches the renderer, so defer to the main thread; a no-op when disabled).
 							// _playerNames is the set of remote players (the local players live in _players).
-							InvokeAsync([this]() {
+							InvokeAsync([this, gameMode]() {
+								// Build the game-mode rules object so this client can draw the mode-specific HUD; the
+								// game-mode logic itself stays server-authoritative.
+								_gameMode = CreateGameMode(gameMode);
+
 								for (auto* player : _players) {
 									player->RefreshColorPalette();
 								}
@@ -5444,130 +5153,282 @@ namespace Jazz2::Multiplayer
 		return false;
 	}
 
-	void MpLevelHandler::LimitCameraView(Actors::Player* player, Vector2f playerPos, std::int32_t left, std::int32_t width)
+	String MpLevelHandler::GetAssetFullPath(AssetType type, StringView path, StaticArrayView<Uuid::Size, Uuid::Type> remoteServerId, bool forWrite)
 	{
-		std::int32_t prevLeft = _limitCameraLeft;
-		std::int32_t prevWidth = _limitCameraWidth;
+		const auto& resolver = ContentResolver::Get();
+		auto pathNormalized = fs::ToNativeSeparators(path);
 
-		_limitCameraLeft = left;
-		_limitCameraWidth = width;
+		char uuidStr[33]; std::size_t uuidStrLength;
+		if (remoteServerId) {
+			uuidStrLength = formatInto(uuidStr, "{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}",
+				remoteServerId[0], remoteServerId[1], remoteServerId[2], remoteServerId[3], remoteServerId[4], remoteServerId[5], remoteServerId[6], remoteServerId[7], remoteServerId[8], remoteServerId[9], remoteServerId[10], remoteServerId[11], remoteServerId[12], remoteServerId[13], remoteServerId[14], remoteServerId[15]);
+		}
 
-		LevelHandler::LimitCameraView(player, playerPos, left, width);
+		switch (type) {
+			case AssetType::Level: {
+				String fullPath;
+				if (remoteServerId) {
+					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
+						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(String(path + ".j2l"_s)) });
+				}
+				if (!forWrite && !fs::IsReadableFile(fullPath)) {
+					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
+					if (!fs::IsReadableFile(fullPath)) {
+						fullPath = fs::CombinePath({ resolver.GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
+						if (!fs::IsReadableFile(fullPath)) {
+							fullPath = {};
+						}
+					}
+				}
+				return fullPath;
+			}
+			case AssetType::TileSet: {
+				String fullPath;
+				if (remoteServerId) {
+					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
+						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(String(path + ".j2t"_s)) });
+				}
+				if (!forWrite && !fs::IsReadableFile(fullPath)) {
+					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Tilesets"_s, String(path + ".j2t"_s) });
+					if (!fs::IsReadableFile(fullPath)) {
+						fullPath = fs::CombinePath({ resolver.GetCachePath(), "Tilesets"_s, String(path + ".j2t"_s) });
+						if (!fs::IsReadableFile(fullPath)) {
+							fullPath = {};
+						}
+					}
+				}
+				return fullPath;
+			}
+			case AssetType::Music: {
+				String fullPath;
+				if (remoteServerId) {
+					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
+						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(path) });
+				}
+				if (!forWrite && !fs::IsReadableFile(fullPath)) {
+					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Music"_s, path });
+					if (!fs::IsReadableFile(fullPath)) {
+						// "Source" directory must be case in-sensitive
+						fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), path));
+						if (!fs::IsReadableFile(fullPath)) {
+							fullPath = {};
+						}
+					}
+				}
+				return fullPath;
+			}
+			default: {
+				return {};
+			}
+		}
+	}
 
-		if (_isServer && (prevLeft != _limitCameraLeft || prevWidth != _limitCameraWidth)) {
-			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
-				if (peerDesc->RemotePeer && peerDesc->Player) {
-					MemoryStream packet(21);
-					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::LimitCameraView);
-					packet.WriteVariableUint32(peerDesc->Player->_playerIndex);
-					packet.WriteVariableInt32(left);
-					packet.WriteVariableInt32(width);
-					packet.WriteVariableInt32((std::int32_t)playerPos.X);
-					packet.WriteVariableInt32((std::int32_t)playerPos.Y);
-					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+	void MpLevelHandler::AttachComponents(LevelDescriptor&& descriptor)
+	{
+		LevelHandler::AttachComponents(std::move(descriptor));
+
+		// Reset race minimap geometry for both server and client (the client repopulates it from a server packet,
+		// or leaves it empty so no minimap is shown when the new level has no track)
+		_orderedRaceCheckpoints.clear();
+		_raceStartMarkers.clear();
+		_raceCheckpoints.clear();
+		_raceCheckpointsOrdered = false;
+		_raceBoundsMin = Vector2i(0, 0);
+		_raceBoundsMax = Vector2i(0, 0);
+
+		if (_isServer) {
+			// Cache all possible multiplayer spawn points (if it's not coop level)
+			_multiplayerSpawnPoints.clear();
+			_totalTreasureCount = 0;
+
+			_eventMap->ForEachEvent([this](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
+				if (e.Event == EventType::LevelStartMultiplayer) {
+					_multiplayerSpawnPoints.emplace_back(Vector2f(x * Tiles::TileSet::DefaultTileSize, y * Tiles::TileSet::DefaultTileSize - 8), e.EventParams[0]);
+				} else if (e.Event == EventType::Gem) {
+					// GemStomp event is not counted, because it's difficult to find
+					std::uint8_t gemType = (std::uint8_t)(e.EventParams[0] & 0x03);
+					std::int32_t count = GetTreasureWeight(gemType);
+					_totalTreasureCount += count;
+				} else if (e.Event == EventType::GemGiant) {
+					// Giant gem randowly spawns between 5 and 12 red gems, so use 8 as average
+					_totalTreasureCount += 8 * GetTreasureWeight(0);
+				} else if (e.Event == EventType::GemRing) {
+					// Gems in the ring are always red
+					std::int32_t count = (e.EventParams[0] > 0 ? e.EventParams[0] : 8) * GetTreasureWeight(0);
+					_totalTreasureCount += count;
+				} else if (e.Event == EventType::CrateGem || e.Event == EventType::BarrelGem) {
+					std::int32_t count = e.EventParams[0] * GetTreasureWeight(0) +
+										 e.EventParams[1] * GetTreasureWeight(1) +
+										 e.EventParams[2] * GetTreasureWeight(2) +
+										 e.EventParams[3] * GetTreasureWeight(3);
+					_totalTreasureCount += count;
+				}
+				return true;
+			});
+
+			const auto& serverConfig = _networkManager->GetServerConfiguration();
+
+			if (serverConfig.GameMode == MpGameMode::Race || serverConfig.GameMode == MpGameMode::TeamRace) {
+				BuildRaceCheckpoints();
+			}
+			// Capture The Flag bases/flags are (re)built at round start in ResetAllPlayerStats(), not here: at level
+			// load no client is connected yet, so spawning now would only reach late joiners via the per-peer sync
+
+			if (serverConfig.GameMode == MpGameMode::Cooperation) {
+				_eventMap->ForEachEvent([this](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
+					if (e.Event == EventType::OneUp) {
+						// Replace all 1ups with max carrots
+						// TODO: Reset it back to 1ups when starting a different mode with limited lives
+						e.Event = EventType::Carrot;
+						e.EventParams[0] = 1;
+					} else if (e.Event == EventType::AirboardGenerator) {
+						// Shorten delay time of all airboard generators
+						// TODO: Reset it back when starting a different mode
+						if (e.EventParams[0] > 4) {
+							e.EventParams[0] = 4;
+						}
+					}
+					return true;
+				});
+			}
+		} else {
+			// Change InstantDeathPit to FallForever, because player health is managed by the server
+			if (_eventMap->GetPitType() == PitType::InstantDeathPit) {
+				_eventMap->SetPitType(PitType::FallForever);
+			}
+
+			_eventMap->ForEachEvent([this](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
+				switch (e.Event) {
+					case EventType::WarpOrigin:
+					case EventType::ModifierHurt:
+					case EventType::ModifierDeath:
+					case EventType::ModifierLimitCameraView:
+					case EventType::AreaEndOfLevel:
+					case EventType::AreaCallback:
+					case EventType::AreaActivateBoss:
+					case EventType::AreaFlyOff:
+					case EventType::AreaRevertMorph:
+					case EventType::AreaMorphToFrog:
+					case EventType::AreaNoFire:
+					case EventType::TriggerZone:
+					case EventType::RollingRockTrigger:
+						// These events are handled on server-side only
+						e.Event = EventType::Empty;
+						break;
+				}
+				return true;
+			});
+		}
+	}
+
+	std::unique_ptr<UI::HUD> MpLevelHandler::CreateHUD()
+	{
+		return std::make_unique<UI::Multiplayer::MpHUD>(this);
+	}
+
+	void MpLevelHandler::SpawnPlayers(const LevelInitialization& levelInit)
+	{
+		if (!_isServer) {
+			// Player spawning is delayed/controlled by server
+			_hud = CreateHUD();
+			return;
+		}
+
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+
+		for (std::int32_t i = 0; i < std::int32_t(arraySize(levelInit.PlayerCarryOvers)); i++) {
+			if (levelInit.PlayerCarryOvers[i].Type == PlayerType::None) {
+				continue;
+			}
+
+			Vector2f spawnPosition = GetSpawnPoint(levelInit.PlayerCarryOvers[i].Type);
+
+			// Each local player gets its own peer descriptor so teams, scores, kills and laps are tracked separately.
+			// In online sessions there is only the single host player (index 0 == LocalPeer); local splitscreen
+			// registers one local descriptor per player index.
+			auto peerDesc = _networkManager->AddLocalPlayer(i);
+			std::shared_ptr<Actors::Multiplayer::LocalPlayerOnServer> player = std::make_shared<Actors::Multiplayer::LocalPlayerOnServer>(peerDesc);
+			std::uint8_t playerParams[2] = { (std::uint8_t)levelInit.PlayerCarryOvers[i].Type, (std::uint8_t)i };
+			player->OnActivated(Actors::ActorActivationDetails(
+				this,
+				Vector3i((std::int32_t)spawnPosition.X + (i * 30), (std::int32_t)spawnPosition.Y - (i * 30), PlayerZ - i),
+				playerParams
+			));
+			player->_controllableExternal = _controllableExternal;
+			player->_health = (serverConfig.InitialPlayerHealth > 0
+				? serverConfig.InitialPlayerHealth
+				: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
+
+			peerDesc->PreferredPlayerType = levelInit.PlayerCarryOvers[i].Type;
+			peerDesc->LevelState = PeerLevelState::PlayerSpawned;
+			peerDesc->LapsElapsedFrames = _elapsedFrames;
+			peerDesc->LapStarted = TimeStamp::now();
+			peerDesc->PlayerName = PreferencesCache::GetEffectivePlayerName();
+			// Local players use the host's configured color so remote clients see it (sent via MarkRemoteActorAsPlayer)
+			peerDesc->FurColor = PreferencesCache::PlayerFurColor;
+
+			Actors::Multiplayer::LocalPlayerOnServer* ptr = player.get();
+			_players.push_back(ptr);
+			AddActor(player);
+			AssignViewport(ptr);
+
+			ptr->ReceiveLevelCarryOver(levelInit.LastExitType, levelInit.PlayerCarryOvers[i]);
+
+			// The player is invulnerable for a short time after spawning
+			ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
+		}
+
+		ApplyGameModeToAllPlayers(serverConfig.GameMode);
+
+		_hud = CreateHUD();
+		_hud->BeginFadeIn((levelInit.LastExitType & ExitType::FastTransition) == ExitType::FastTransition);
+	}
+
+	std::shared_ptr<Actors::Player> MpLevelHandler::CreateResumablePlayer(std::int32_t index)
+	{
+		// Restoring a resumable (local cooperative) session: give each player its own local peer descriptor and create
+		// it as a LocalPlayerOnServer, mirroring SpawnPlayers(). The player's state is restored afterwards by the base
+		// from the stream (Player::InitializeFromStream activates the actor at its checkpoint).
+		auto peerDesc = _networkManager->AddLocalPlayer(index);
+		peerDesc->LevelState = PeerLevelState::PlayerSpawned;
+		peerDesc->LapsElapsedFrames = _elapsedFrames;
+		peerDesc->LapStarted = TimeStamp::now();
+		peerDesc->PlayerName = PreferencesCache::GetEffectivePlayerName();
+		peerDesc->FurColor = PreferencesCache::PlayerFurColor;
+		return std::make_shared<Actors::Multiplayer::LocalPlayerOnServer>(peerDesc);
+	}
+
+	void MpLevelHandler::PrepareNextLevelInitialization(LevelInitialization& levelInit)
+	{
+		LevelHandler::PrepareNextLevelInitialization(levelInit);
+
+		// Online co-op: capture each remote player's state into its (persistent) peer descriptor so weapons,
+		// lives, score and gems carry over to the next level - the host already carries over via levelInit.
+		// The snapshot is applied on (re)spawn in PlayerOnServer::OnActivatedAsync.
+		if (_isServer) {
+			for (auto* player : _players) {
+				if (auto* mpPlayer = runtime_cast<Actors::Multiplayer::MpPlayer>(player)) {
+					auto peerDesc = mpPlayer->GetPeerDescriptor();
+					if (peerDesc != nullptr && peerDesc->RemotePeer) {
+						// Call the base implementation explicitly: RemotePlayerOnServer::PrepareLevelCarryOver() is
+						// overridden to return an empty struct (so remotes stay out of levelInit's local-spawn list),
+						// but the server does track the real score/lives/weapons/gems for it, so capture those here.
+						peerDesc->CarryOver = mpPlayer->Player::PrepareLevelCarryOver();
+						peerDesc->HasCarryOver = true;
+					}
 				}
 			}
 		}
 	}
 
-	void MpLevelHandler::OverrideCameraView(Actors::Player* player, float x, float y, bool topLeft)
+	bool MpLevelHandler::IsCheatingAllowed()
 	{
-		// TODO: Include this state in initial sync
-		LevelHandler::OverrideCameraView(player, x, y, topLeft);
-
-		if (_isServer) {
-			if (auto* mpPlayer = runtime_cast<RemotePlayerOnServer>(player)) {
-				MemoryStream packet(14);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::OverrideCameraView);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteVariableInt32((std::int32_t)(x * 100.0f));
-				packet.WriteVariableInt32((std::int32_t)(y * 100.0f));
-				packet.WriteValue<std::uint8_t>(topLeft ? 1 : 0);
-				_networkManager->SendTo(mpPlayer->GetPeerDescriptor()->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-			}
-		}
-	}
-
-	void MpLevelHandler::ShakeCameraView(Actors::Player* player, float duration)
-	{
-		LevelHandler::ShakeCameraView(player, duration);
-
-		if (_isServer) {
-			if (auto* mpPlayer = runtime_cast<RemotePlayerOnServer>(player)) {
-				MemoryStream packet(9);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::ShakeCameraView);
-				packet.WriteVariableUint32(mpPlayer->_playerIndex);
-				packet.WriteVariableInt32((std::int32_t)(duration * 100.0f));
-				_networkManager->SendTo(mpPlayer->GetPeerDescriptor()->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-			}
-		}
-	}
-	
-	void MpLevelHandler::ShakeCameraViewNear(Vector2f pos, float duration)
-	{
-		// TODO: This should probably be client local
-		LevelHandler::ShakeCameraViewNear(pos, duration);
-
-		constexpr float MaxDistance = 800.0f;
-
-		if (_isServer) {
-			for (auto& [peer, peerDesc] : *_networkManager->GetPeers()) {
-				if (peerDesc->RemotePeer && peerDesc->Player && (peerDesc->Player->_pos - pos).Length() <= MaxDistance) {
-					MemoryStream packet(9);
-					packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::ShakeCameraView);
-					packet.WriteVariableUint32(peerDesc->Player->_playerIndex);
-					packet.WriteVariableInt32((std::int32_t)(duration * 100.0f));
-					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
-				}
-			}
-		}
-	}
-
-	void MpLevelHandler::SetTrigger(std::uint8_t triggerId, bool newState)
-	{
-		LevelHandler::SetTrigger(triggerId, newState);
-
-		if (_isServer) {
-			MemoryStream packet(2);
-			packet.WriteValue<std::uint8_t>(triggerId);
-			packet.WriteValue<std::uint8_t>(newState);
-
-			_networkManager->SendTo([this](const Peer& peer) {
-				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::SetTrigger, packet);
-		}
-	}
-
-	void MpLevelHandler::SetWeather(WeatherType type, std::uint8_t intensity)
-	{
-		// TODO: This should probably be client local
-		LevelHandler::SetWeather(type, intensity);
-	}
-
-	bool MpLevelHandler::BeginPlayMusic(StringView path, bool setDefault, bool forceReload)
-	{
-		// TODO: Include this state in initial sync
-		bool success = LevelHandler::BeginPlayMusic(path, setDefault, forceReload);
-
-		if (_isServer) {
-			std::uint8_t flags = 0;
-			if (setDefault) flags |= 0x01;
-			if (forceReload) flags |= 0x02;
-
-			MemoryStream packet(6 + path.size());
-			packet.WriteValue<std::uint8_t>((std::uint8_t)LevelPropertyType::Music);
-			packet.WriteValue<std::uint8_t>(flags);
-			packet.WriteVariableUint32((std::uint32_t)path.size());
-			packet.Write(path.data(), (std::uint32_t)path.size());
-
-			_networkManager->SendTo([this](const Peer& peer) {
-				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LevelSetProperty, packet);
+		if (!_isServer) {
+			return false;
 		}
 
-		return success;
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+		return (PreferencesCache::AllowCheats && serverConfig.GameMode == MpGameMode::Cooperation);
 	}
 
 	void MpLevelHandler::BeforeActorDestroyed(Actors::ActorBase* actor)
@@ -5601,7 +5462,7 @@ namespace Jazz2::Multiplayer
 	void MpLevelHandler::ProcessEvents(float timeMult)
 	{
 		// Process events only by server
-		if (_isServer) {
+		if DEATH_LIKELY(_isServer) {
 			LevelHandler::ProcessEvents(timeMult);
 		}
 	}
@@ -5632,6 +5493,565 @@ namespace Jazz2::Multiplayer
 		LevelHandler::HideConsole();
 
 		BroadcastLocalPlayerIdle(false);
+	}
+
+	void MpLevelHandler::HandlePlayerLevelChanging(Actors::Player* player, ExitType exitType)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(5);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)exitType);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerWarpIn, packet);
+			}
+		}
+	}
+
+	bool MpLevelHandler::HandlePlayerPush(Actors::Player* player, float pushSpeedX)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(8);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::int32_t>((std::int32_t)(pushSpeedX * 512.0f));
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerPush, packet);
+			}
+		}
+
+		return true;
+	}
+
+	bool MpLevelHandler::HandlePlayerSpring(Actors::Player* player, Vector2f pos, Vector2f force, bool keepSpeedX, bool keepSpeedY)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				std::uint8_t flags = 0;
+				if (keepSpeedX) {
+					flags |= 0x01;
+				}
+				if (keepSpeedY) {
+					flags |= 0x02;
+				}
+
+				MemoryStream packet(17);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::int32_t>((std::int32_t)(pos.X * 512.0f));
+				packet.WriteValue<std::int32_t>((std::int32_t)(pos.Y * 512.0f));
+				packet.WriteValue<std::int16_t>((std::int16_t)(force.X * 512.0f));
+				packet.WriteValue<std::int16_t>((std::int16_t)(force.Y * 512.0f));
+				packet.WriteValue<std::uint8_t>(flags);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerActivateSpring, packet);
+			}
+		}
+
+		return true;
+	}
+
+	void MpLevelHandler::HandlePlayerBeforeWarp(Actors::Player* player, Vector2f pos, WarpFlags flags)
+	{
+		if DEATH_LIKELY(_isServer) {
+			if ((flags & (WarpFlags::Fast | WarpFlags::SkipWarpIn)) != WarpFlags::Default) {
+				// Nothing to do, sending PlayerMoveInstantly packet is enough
+				return;
+			}
+
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(5);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::uint8_t>(0xFF);	// Only temporary, no level changing
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerWarpIn, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetModifier(Actors::Player* player, Actors::Player::Modifier modifier, const std::shared_ptr<Actors::ActorBase>& decor)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				std::uint32_t actorId;
+				{
+					std::unique_lock lock(_lock);
+					auto it = _remotingActors.find(decor.get());
+					if (it != _remotingActors.end()) {
+						actorId = it->second.ActorID;
+					} else {
+						actorId = UINT32_MAX;
+					}
+				}
+
+				MemoryStream packet(10);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Modifier);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)modifier);
+				packet.WriteVariableUint32(actorId);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerFreeze(Actors::Player* player, float timeLeft)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(9);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Freeze);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)timeLeft);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetInvulnerability(Actors::Player* player, float timeLeft, Actors::Player::InvulnerableType type)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(10);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Invulnerable);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)timeLeft);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)type);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetScore(Actors::Player* player, std::int32_t value)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(9);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Score);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)value);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetHealth(Actors::Player* player, std::int32_t count)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(9);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Health);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)count);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetLives(Actors::Player* player, std::int32_t count)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(9);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Lives);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)count);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerTakeDamage(Actors::Player* player, std::int32_t amount, float pushForce)
+	{
+		// TODO: Only called by PlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto& serverConfig = _networkManager->GetServerConfiguration();
+			auto* mpPlayer = static_cast<PlayerOnServer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(10);
+				packet.WriteVariableUint32(player->_playerIndex);
+				packet.WriteVariableInt32(player->_health);
+				packet.WriteValue<std::int16_t>((std::int16_t)(pushForce * 512.0f));
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerTakeDamage, packet);
+			}
+
+			if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
+				// TODO: Drop number of gems accorting to the gun strength (usually 3 times)
+				std::uint32_t treasureLost = std::min(peerDesc->TreasureCollected, 3u);
+				if (treasureLost > 0) {
+					// If the player is dead, drop half of the collected treasure instead
+					if (mpPlayer->_health <= 0 && treasureLost < peerDesc->TreasureCollected / 2) {
+						treasureLost = peerDesc->TreasureCollected / 2;
+					}
+
+					peerDesc->TreasureCollected -= treasureLost;
+
+					if (peerDesc->RemotePeer) {
+						MemoryStream packet2(9);
+						packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::TreasureCollected);
+						packet2.WriteVariableUint32(mpPlayer->_playerIndex);
+						packet2.WriteVariableUint32(peerDesc->TreasureCollected);
+						_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
+					}
+
+					Vector2f pos = mpPlayer->_pos;
+					for (std::uint32_t i = 0; i < treasureLost; i++) {
+						float dir = (Random().NextBool() ? -1.0f : 1.0f);
+						float force = Random().NextFloat(10.0f, 20.0f);
+						Vector3f spawnPos = Vector3f(pos.X, pos.Y, MainPlaneZ);
+						std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x04 };
+						auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos.As<std::int32_t>());
+						if (actor != nullptr) {
+							actor->AddExternalForce(dir * force, force);
+							AddActor(actor);
+						}
+					}
+				}
+			}
+
+			if (_levelState == LevelState::Running && player->_health <= 0) {
+				peerDesc->Deaths++;
+
+				if (peerDesc->RemotePeer) {
+					MemoryStream packet3(9);
+					packet3.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Deaths);
+					packet3.WriteVariableUint32(mpPlayer->_playerIndex);
+					packet3.WriteVariableUint32(peerDesc->Deaths);
+					_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet3);
+				}
+
+				if (auto* attacker = GetWeaponOwner(mpPlayer->_lastAttacker.get())) {
+					auto attackerPeerDesc = attacker->GetPeerDescriptor();
+					attackerPeerDesc->Kills++;
+
+					if (attackerPeerDesc->RemotePeer) {
+						MemoryStream packet4(9);
+						packet4.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Kills);
+						packet4.WriteVariableUint32(attacker->_playerIndex);
+						packet4.WriteVariableUint32(attackerPeerDesc->Kills);
+						_networkManager->SendTo(attackerPeerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet4);
+					}
+
+					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]",
+						peerDesc->PlayerName, attackerPeerDesc->PlayerName));
+
+					MemoryStream packet5(19 + peerDesc->PlayerName.size() + attackerPeerDesc->PlayerName.size());
+					packet5.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Roasted);
+					packet5.WriteVariableUint64(peerDesc->RemotePeer.GetId());
+					packet5.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
+					packet5.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
+					packet5.WriteVariableUint64(attackerPeerDesc->RemotePeer.GetId());
+					packet5.WriteValue<std::uint8_t>((std::uint8_t)attackerPeerDesc->PlayerName.size());
+					packet5.Write(attackerPeerDesc->PlayerName.data(), (std::uint32_t)attackerPeerDesc->PlayerName.size());
+
+					_networkManager->SendTo([this](const Peer& peer) {
+						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+						return (peerDesc && peerDesc->IsAuthenticated);
+					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet5);
+				} else {
+					_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by environment",
+						peerDesc->PlayerName));
+
+					MemoryStream packet6(19 + peerDesc->PlayerName.size());
+					packet6.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Roasted);
+					packet6.WriteVariableUint64(peerDesc->RemotePeer.GetId());
+					packet6.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
+					packet6.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
+					packet6.WriteVariableUint64(0);
+					packet6.WriteValue<std::uint8_t>(0);
+
+					_networkManager->SendTo([this](const Peer& peer) {
+						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+						return (peerDesc && peerDesc->IsAuthenticated);
+					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet6);
+				}
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerBumped(Actors::Player* player)
+	{
+		// TODO: Only called by PlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<PlayerOnServer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			// The owning client simulates its own physics, so resync the post-bump position and velocity;
+			// reuses the existing PlayerMoveInstantly packet.
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(20);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.X * 512.0f));
+				packet.WriteValue<std::int32_t>((std::int32_t)(mpPlayer->_pos.Y * 512.0f));
+				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.X * 512.0f));
+				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_speed.Y * 512.0f));
+				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.X * 512.0f));
+				packet.WriteValue<std::int16_t>((std::int16_t)(mpPlayer->_externalForce.Y * 512.0f));
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet);
+			}
+		}
+	}
+
+	bool MpLevelHandler::IsPlayerStackingEnabled() const
+	{
+		return _networkManager->GetServerConfiguration().PlayerStacking;
+	}
+
+	Actors::ActorBase* MpLevelHandler::FindPlayerToStandOn(Actors::Player* player, float timeMult)
+	{
+		// Minimum horizontal overlap required to count as "on top of" the other player (not brushing its side)
+		constexpr float MinHorizontalOverlap = 4.0f;
+		// How close the feet must be to the other player's head to count as standing/landing on it
+		constexpr float StandThreshold = 6.0f;
+
+		auto& serverConfig = _networkManager->GetServerConfiguration();
+		if (!serverConfig.PlayerStacking) {
+			return nullptr;
+		}
+
+		// Only grab onto another player while falling or already resting, never while moving up (jumping off)
+		if (player->_speed.Y < -0.1f) {
+			return nullptr;
+		}
+
+		const AABBf& self = player->AABBInner;
+		float feet = self.B;
+		float nextFeet = feet + player->_speed.Y * timeMult;
+		// Locate the other player's head from its position plus OUR collision head-offset (players are the same
+		// size), not its AABB top: a client's RemoteActor uses the sprite box (taller than the collision box),
+		// which would report the head ~16px too high and leave us floating.
+		float headOffset = self.T - player->_pos.Y;
+
+		// Treat the other player as a one-way platform: stand on it if our feet are at (or about to cross) its head
+		// this frame, with enough horizontal overlap that we're really on top of it (not just brushing its side).
+		auto isStandingOn = [&](Actors::ActorBase* actor) -> bool {
+			const AABBf& o = actor->AABBInner;
+			if (self.R - o.L < MinHorizontalOverlap || o.R - self.L < MinHorizontalOverlap) {
+				return false;
+			}
+			float top = actor->_pos.Y + headOffset;
+			return (feet <= top + StandThreshold && nextFeet >= top - StandThreshold);
+		};
+
+		if (_isServer) {
+			for (auto* other : _players) {
+				if (other == player) {
+					continue;
+				}
+				auto* mpOther = static_cast<MpPlayer*>(other);
+				if (mpOther->GetPeerDescriptor()->IsSpectating != SpectateMode::None) {
+					continue;
+				}
+				if (isStandingOn(other)) {
+					return other;
+				}
+			}
+		} else {
+			std::unique_lock lock(_lock);
+			for (auto& [actorId, remoteActor] : _remoteActors) {
+				if (_playerNames.find(actorId) == _playerNames.end()) {
+					continue;
+				}
+				if (isStandingOn(remoteActor.get())) {
+					return remoteActor.get();
+				}
+			}
+		}
+		return nullptr;
+	}
+
+	void MpLevelHandler::HandlePlayerRefreshAmmo(Actors::Player* player, WeaponType weaponType)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(8);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::WeaponAmmo);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)weaponType);
+				packet.WriteValue<std::uint16_t>((std::uint16_t)mpPlayer->_weaponAmmo[(std::uint8_t)weaponType]);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerRefreshWeaponUpgrades(Actors::Player* player, WeaponType weaponType)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(7);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::WeaponUpgrades);
+				packet.WriteVariableUint32(player->_playerIndex);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)weaponType);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)player->_weaponUpgrades[(std::uint8_t)weaponType]);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerMorphTo(Actors::Player* player, PlayerType type)
+	{
+		// TODO: Only called by PlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			String metadataPath = fs::FromNativeSeparators(mpPlayer->_metadata->Path);
+
+			MemoryStream packet(9 + metadataPath.size());
+			packet.WriteVariableUint32(mpPlayer->_playerIndex);
+			packet.WriteValue<std::uint8_t>(0); // Flags (Reserved)
+			packet.WriteVariableUint32((std::uint32_t)metadataPath.size());
+			packet.Write(metadataPath.data(), (std::uint32_t)metadataPath.size());
+			_networkManager->SendTo([otherPeer = peerDesc->RemotePeer](const Peer& peer) {
+				return (peer != otherPeer);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ChangeRemoteActorMetadata, packet);
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet2(6);
+				packet2.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::PlayerType);
+				packet2.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet2.WriteValue<std::uint8_t>((std::uint8_t)type);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet2);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetDizzy(Actors::Player* player, float timeLeft)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(9);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Dizzy);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteVariableInt32((std::int32_t)timeLeft);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetBeingStoodOn(Actors::Player* player, bool beingStoodOn)
+	{
+		// The owning client predicts its own player and can't see a remote player standing on it, so the server (which
+		// simulates everyone) tells it when to show/hide the cosmetic lift animation. Other peers already see it via
+		// the normal remoting-actor animation sync.
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(6);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::BeingStoodOn);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::uint8_t>(beingStoodOn ? 1 : 0);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerSetShield(Actors::Player* player, ShieldType shieldType, float timeLeft)
+	{
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+
+			// Broadcast to every synchronized peer, not just the owning one: the owner applies it to its local
+			// player while the other peers apply it to this player's RemoteActor, so they render the shield
+			// decoration around the remote player too.
+			MemoryStream packet(10);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Shield);
+			packet.WriteVariableUint32(mpPlayer->_playerIndex);
+			packet.WriteValue<std::uint8_t>((std::uint8_t)shieldType);
+			packet.WriteVariableInt32((std::int32_t)timeLeft);
+			_networkManager->SendTo([this](const Peer& peer) {
+				auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+				return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerEmitWeaponFlare(Actors::Player* player)
+	{
+		// TODO: Only called by RemotePlayerOnServer
+		if DEATH_LIKELY(_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(4);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerEmitWeaponFlare, packet);
+			}
+		}
+	}
+
+	void MpLevelHandler::HandlePlayerWeaponChanged(Actors::Player* player, Actors::Player::SetCurrentWeaponReason reason)
+	{
+		if (_isServer) {
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+
+			if (peerDesc->RemotePeer) {
+				MemoryStream packet(6);
+				packet.WriteVariableUint32(mpPlayer->_playerIndex);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)mpPlayer->_currentWeapon);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)reason);
+				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerChangeWeapon, packet);
+			}
+		} else {
+			auto* remotablePlayer = static_cast<Actors::Multiplayer::RemotablePlayer*>(player);
+			if (!remotablePlayer->ChangingWeaponFromServer) {
+				MemoryStream packet(5);
+				packet.WriteVariableUint32(_lastSpawnedActorId);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)player->_currentWeapon);
+				_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerChangeWeaponRequest, packet);
+			}
+		}
 	}
 
 	void MpLevelHandler::InitializeRequiredAssets()
@@ -6098,6 +6518,72 @@ namespace Jazz2::Multiplayer
 				runtime_cast<Actors::Multiplayer::RemotablePlayer>(actor));
 	}
 
+	void MpLevelHandler::ApplyGameModeToAllPlayers(MpGameMode gameMode)
+	{
+		// Keep the active game-mode rules object in sync with the selected mode. This is the single point through
+		// which the game mode is (re)applied, so it is also where the IGameMode is (re)built. It stays null for modes
+		// not yet migrated to IGameMode, in which case callers fall back to the legacy switch-based logic.
+		_gameMode = CreateGameMode(gameMode);
+
+		if (gameMode == MpGameMode::Cooperation) {
+			// Everyone in a single team
+			for (auto* player : _players) {
+				static_cast<MpPlayer*>(player)->GetPeerDescriptor()->Team = 0;
+			}
+			return;
+		}
+		if (!IsTeamGameMode(gameMode)) {
+			// Each player is in their own team (free-for-all)
+			for (auto* player : _players) {
+				std::int32_t playerIdx = player->_playerIndex;
+				DEATH_DEBUG_ASSERT(0 <= playerIdx && playerIdx < UINT8_MAX);
+				static_cast<MpPlayer*>(player)->GetPeerDescriptor()->Team = (std::uint8_t)playerIdx;
+			}
+			return;
+		}
+
+		// Team mode: (re)distribute players into balanced teams, honoring per-player preferences where they
+		// keep the teams balanced. Players whose team was forced (TeamLocked) keep it. Unassigned players are
+		// marked out of range so the incremental balancing in ResolveTeam() doesn't count them prematurely.
+		std::uint8_t teamCount = GetTeamCount();
+		SmallVector<MpPlayer*, 0> toAssign;
+		for (auto* player : _players) {
+			if (player->_playerType == PlayerType::Spectate) {
+				continue;
+			}
+			auto* mpPlayer = static_cast<MpPlayer*>(player);
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+			if (peerDesc->TeamLocked && peerDesc->Team < teamCount) {
+				continue;
+			}
+			peerDesc->Team = NoPreferredTeam;
+			toAssign.push_back(mpPlayer);
+		}
+
+		Random().Shuffle(arrayView(toAssign));
+
+		for (auto* mpPlayer : toAssign) {
+			auto peerDesc = mpPlayer->GetPeerDescriptor();
+			peerDesc->Team = ResolveTeam(mpPlayer, peerDesc->PreferredTeam);
+		}
+
+		// Broadcast every player's (re)assigned team so all clients update their team colors, nametags and
+		// scoreboard - SynchronizeGameMode only tells each peer its own team, not the others'. This also recolors
+		// the host's own view (a no-op when team coloring is off or on a headless server).
+		for (auto* player : _players) {
+			BroadcastPlayerTeam(static_cast<MpPlayer*>(player));
+		}
+	}
+
+	void MpLevelHandler::ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player)
+	{
+		auto* mpPlayer = static_cast<MpPlayer*>(player);
+		auto peerDesc = mpPlayer->GetPeerDescriptor();
+		peerDesc->Team = ResolveTeam(mpPlayer, peerDesc->PreferredTeam);
+		// Recolor for the assigned team (no-op when team coloring is off or on a headless server)
+		player->RefreshColorPalette();
+	}
+
 	std::uint8_t MpLevelHandler::GetTeamCount() const
 	{
 		auto& serverConfig = _networkManager->GetServerConfiguration();
@@ -6185,67 +6671,6 @@ namespace Jazz2::Multiplayer
 			return requested;
 		}
 		return smallest;
-	}
-
-	void MpLevelHandler::ApplyGameModeToAllPlayers(MpGameMode gameMode)
-	{
-		if (gameMode == MpGameMode::Cooperation) {
-			// Everyone in a single team
-			for (auto* player : _players) {
-				static_cast<MpPlayer*>(player)->GetPeerDescriptor()->Team = 0;
-			}
-			return;
-		}
-		if (!IsTeamGameMode(gameMode)) {
-			// Each player is in their own team (free-for-all)
-			for (auto* player : _players) {
-				std::int32_t playerIdx = player->_playerIndex;
-				DEATH_DEBUG_ASSERT(0 <= playerIdx && playerIdx < UINT8_MAX);
-				static_cast<MpPlayer*>(player)->GetPeerDescriptor()->Team = (std::uint8_t)playerIdx;
-			}
-			return;
-		}
-
-		// Team mode: (re)distribute players into balanced teams, honoring per-player preferences where they
-		// keep the teams balanced. Players whose team was forced (TeamLocked) keep it. Unassigned players are
-		// marked out of range so the incremental balancing in ResolveTeam() doesn't count them prematurely.
-		std::uint8_t teamCount = GetTeamCount();
-		SmallVector<MpPlayer*, 0> toAssign;
-		for (auto* player : _players) {
-			if (player->_playerType == PlayerType::Spectate) {
-				continue;
-			}
-			auto* mpPlayer = static_cast<MpPlayer*>(player);
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-			if (peerDesc->TeamLocked && peerDesc->Team < teamCount) {
-				continue;
-			}
-			peerDesc->Team = NoPreferredTeam;
-			toAssign.push_back(mpPlayer);
-		}
-
-		Random().Shuffle(arrayView(toAssign));
-
-		for (auto* mpPlayer : toAssign) {
-			auto peerDesc = mpPlayer->GetPeerDescriptor();
-			peerDesc->Team = ResolveTeam(mpPlayer, peerDesc->PreferredTeam);
-		}
-
-		// Broadcast every player's (re)assigned team so all clients update their team colors, nametags and
-		// scoreboard - SynchronizeGameMode only tells each peer its own team, not the others'. This also recolors
-		// the host's own view (a no-op when team coloring is off or on a headless server).
-		for (auto* player : _players) {
-			BroadcastPlayerTeam(static_cast<MpPlayer*>(player));
-		}
-	}
-
-	void MpLevelHandler::ApplyGameModeToPlayer(MpGameMode gameMode, Actors::Player* player)
-	{
-		auto* mpPlayer = static_cast<MpPlayer*>(player);
-		auto peerDesc = mpPlayer->GetPeerDescriptor();
-		peerDesc->Team = ResolveTeam(mpPlayer, peerDesc->PreferredTeam);
-		// Recolor for the assigned team (no-op when team coloring is off or on a headless server)
-		player->RefreshColorPalette();
 	}
 
 	bool MpLevelHandler::ChangePlayerTeam(MpPlayer* player, std::uint8_t requestedTeam, bool fromAdmin)
@@ -6442,6 +6867,36 @@ namespace Jazz2::Multiplayer
 		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 	}
 
+	std::uint32_t MpLevelHandler::ColorizeFurForTeam(std::uint32_t furColor, std::uint8_t team) const
+	{
+		// In team modes with team coloring enabled, force the first two color sections to the team color. Kept
+		// consistent on server and clients - both have the synced ColorizePlayersByTeam flag and team ids.
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		if (serverConfig.ColorizePlayersByTeam && IsTeamGameMode(serverConfig.GameMode)) {
+			return ApplyTeamFurColor(furColor, team);
+		}
+		return furColor;
+	}
+
+	void MpLevelHandler::RecolorRemoteActor(std::uint32_t actorId, std::uint32_t furColor, std::uint8_t team)
+	{
+		// (Re)applies the effective (team-aware) fur color to a remote player actor if it currently exists. Looks the
+		// actor up under the lock, then recolors after releasing it - SetPlayerColor reloads metadata (file I/O),
+		// which must not run while holding the spinlock.
+		std::uint32_t effectiveColor = ColorizeFurForTeam(furColor, team);
+		std::shared_ptr<Actors::ActorBase> actor;
+		{
+			std::unique_lock lock(_lock);
+			auto it = _remoteActors.find(actorId);
+			if (it != _remoteActors.end()) {
+				actor = it->second;
+			}
+		}
+		if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(actor.get())) {
+			remoteActor->SetPlayerColor(effectiveColor);
+		}
+	}
+
 	std::uint32_t MpLevelHandler::GetTeamScore(std::uint8_t team)
 	{
 		auto& serverConfig = _networkManager->GetServerConfiguration();
@@ -6467,7 +6922,7 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::SyncTeamScores()
 	{
-		if (!_isServer) {
+		if DEATH_UNLIKELY(!_isServer) {
 			return;
 		}
 
@@ -6613,7 +7068,7 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::UpdateCtf(float timeMult)
 	{
-		if (!_isServer || _ctfFlags.empty() || _levelState != LevelState::Running) {
+		if DEATH_UNLIKELY(!_isServer || _ctfFlags.empty() || _levelState != LevelState::Running) {
 			return;
 		}
 
@@ -6741,33 +7196,12 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	void MpLevelHandler::DropCtfFlag(Actors::Player* player)
-	{
-		if (!_isServer || _ctfFlags.empty()) {
-			return;
-		}
-
-		std::uint32_t playerIndex = static_cast<MpPlayer*>(player)->_playerIndex;
-		for (auto& flag : _ctfFlags) {
-			if (flag.State == CtfFlagState::Carried && flag.CarrierPlayerIndex == playerIndex) {
-				flag.State = CtfFlagState::Dropped;
-				flag.CarrierPlayerIndex = UINT32_MAX;
-				flag.DropPos = player->_pos;
-				if (flag.Actor != nullptr) {
-					flag.Actor->MoveInstantly(player->_pos, Actors::MoveType::Absolute | Actors::MoveType::Force);
-				}
-				ShowAlertToAllPlayers(_f("\n\nThe {} flag was dropped", GetTeamName(flag.Team)));
-				SyncTeamScores();
-			}
-		}
-	}
-
 	void MpLevelHandler::UpdateCtfClient()
 	{
 		// Client-only: the flag/base are rendered as client-local actors (not remoted), created on demand and
 		// positioned each frame from the synced state. The carried flag follows its carrier's already-smoothed/
 		// predicted position, so it never lags or jitters relative to the player.
-		if (_isServer || _ctfFlagStates.empty()) {
+		if DEATH_UNLIKELY(_isServer || _ctfFlagStates.empty()) {
 			return;
 		}
 
@@ -6836,6 +7270,27 @@ namespace Jazz2::Multiplayer
 			}
 
 			info.FlagActor->MoveInstantly(flagPos, Actors::MoveType::Absolute | Actors::MoveType::Force);
+		}
+	}
+
+	void MpLevelHandler::DropCtfFlag(Actors::Player* player)
+	{
+		if DEATH_UNLIKELY(!_isServer || _ctfFlags.empty()) {
+			return;
+		}
+
+		std::uint32_t playerIndex = static_cast<MpPlayer*>(player)->_playerIndex;
+		for (auto& flag : _ctfFlags) {
+			if (flag.State == CtfFlagState::Carried && flag.CarrierPlayerIndex == playerIndex) {
+				flag.State = CtfFlagState::Dropped;
+				flag.CarrierPlayerIndex = UINT32_MAX;
+				flag.DropPos = player->_pos;
+				if (flag.Actor != nullptr) {
+					flag.Actor->MoveInstantly(player->_pos, Actors::MoveType::Absolute | Actors::MoveType::Force);
+				}
+				ShowAlertToAllPlayers(_f("\n\nThe {} flag was dropped", GetTeamName(flag.Team)));
+				SyncTeamScores();
+			}
 		}
 	}
 
@@ -7064,17 +7519,6 @@ namespace Jazz2::Multiplayer
 		}
 	}
 
-	struct TileCoordHash {
-#if defined(DEATH_TARGET_32BIT)
-		using IntHash = xxHash32Func<std::int32_t>;
-#else
-		using IntHash = xxHash64Func<std::int32_t>;
-#endif
-
-		std::size_t operator()(const Vector2i& coord) const {
-			return IntHash()(coord.X) ^ (IntHash()(coord.Y) << 1);
-		}
-	};
 
 	void MpLevelHandler::BuildRaceCheckpoints()
 	{
@@ -8304,6 +8748,12 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::CheckGameEnds()
 	{
+		// Win-condition evaluation is server-authoritative (it ends the round and broadcasts the result); clients only
+		// receive the outcome, so this must never run on a client even though they now host a game-mode object for the HUD.
+		if DEATH_UNLIKELY(!_isServer) {
+			return;
+		}
+
 		if DEATH_UNLIKELY(_levelState != LevelState::Running) {
 			return;
 		}
@@ -8314,6 +8764,19 @@ namespace Jazz2::Multiplayer
 
 		// Keep clients' team scores up to date for the HUD
 		SyncTeamScores();
+
+		// Modes that own their round logic decide their win condition; the rest fall back to the legacy checks below
+		if (_gameMode != nullptr && _gameMode->OwnsRoundLogic()) {
+			GameEndResult result = _gameMode->CheckGameEnds(*this);
+			if (result.ShouldEnd) {
+				if (result.WithTeam) {
+					EndGameWithTeam(result.WinnerTeam);
+				} else {
+					EndGame(static_cast<MpPlayer*>(result.Winner));
+				}
+			}
+			return;
+		}
 
 		if (serverConfig.GameMode != MpGameMode::Cooperation && serverConfig.Elimination) {
 			if (IsTeamGameMode(serverConfig.GameMode)) {
@@ -8513,225 +8976,6 @@ namespace Jazz2::Multiplayer
 		SetPlayerSpectateMode(winner, SpectateMode::Forced);
 	}
 
-	void MpLevelHandler::SetPlayerSpectateMode(Actors::Player* player, SpectateMode mode)
-	{
-		if (!_isServer) {
-			return;
-		}
-
-		auto& serverConfig = _networkManager->GetServerConfiguration();
-		auto* mpPlayer = static_cast<MpPlayer*>(player);
-		auto peerDesc = mpPlayer->GetPeerDescriptor();
-		std::uint32_t playerIndex = mpPlayer->_playerIndex;
-
-		// Remove player from active players list
-		for (std::size_t i = 0; i < _players.size(); i++) {
-			if (_players[i] == player) {
-				_players.eraseUnordered(i);
-				break;
-			}
-		}
-
-		// Destroy the previous player actor
-		Vector2f playerPos = player->_pos;
-		player->SetState(Actors::ActorState::IsDestroyed, true);
-
-		// Notify all clients to destroy the actor
-		MemoryStream packetDestroy(4);
-		packetDestroy.WriteVariableUint32(playerIndex);
-		_networkManager->SendTo([this](const Peer& peer) {
-			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::DestroyRemoteActor, packetDestroy);
-
-		// Spawn new player actor according to spectate mode
-		std::shared_ptr<MpPlayer> newPlayer;
-		MpPlayer* ptr;
-
-		if (peerDesc->RemotePeer) {
-			newPlayer = std::make_shared<RemotePlayerOnServer>(peerDesc);
-		} else {
-			newPlayer = std::make_shared<LocalPlayerOnServer>(peerDesc);
-		}
-		ptr = newPlayer.get();
-
-		// Apply new spectating mode
-		peerDesc->IsSpectating = mode;
-
-		if ((mode & SpectateMode::Mask) != SpectateMode::None) {
-			if (serverConfig.EnableFreeCamera) {
-				peerDesc->IsSpectating |= SpectateMode::FreeCamera;
-			}
-
-			// Initialize the actor as spectator
-			std::uint8_t playerParams[2] = { (std::uint8_t)PlayerType::Spectate, (std::uint8_t)playerIndex };
-			ptr->OnActivated(Actors::ActorActivationDetails(this,
-				Vector3i((std::int32_t)playerPos.X, (std::int32_t)playerPos.Y, PlayerZ - playerIndex),
-				playerParams));
-			ptr->_controllableExternal = true;
-		} else {
-			// Initialize the actor as real player
-			Vector2f spawnPosition = GetSpawnPoint(peerDesc->PreferredPlayerType, peerDesc->Team);
-			// In team-coloring modes, resolve the team before activating so the spawn-time recolor decision loads the
-			// sprites indexed even for default-color players (see the join spawn above); ApplyGameModeToPlayer below
-			// re-resolves to the same team and refreshes afterwards.
-			if (serverConfig.ColorizePlayersByTeam && IsTeamGameMode(serverConfig.GameMode)) {
-				peerDesc->Team = ResolveTeam(ptr, peerDesc->PreferredTeam);
-			}
-			std::uint8_t playerParams[2] = { (std::uint8_t)peerDesc->PreferredPlayerType, (std::uint8_t)playerIndex };
-			ptr->OnActivated(Actors::ActorActivationDetails(this,
-				Vector3i((std::int32_t)spawnPosition.X, (std::int32_t)spawnPosition.Y, PlayerZ - playerIndex),
-				playerParams));
-			ptr->_health = (serverConfig.InitialPlayerHealth > 0
-				? serverConfig.InitialPlayerHealth
-				: (PlayerShouldHaveUnlimitedHealth(serverConfig.GameMode) ? INT32_MAX : 5));
-
-			if (_levelState == LevelState::Running && serverConfig.JoinCooldownSecs > 0) {
-				peerDesc->JoinCooldownFrames = serverConfig.JoinCooldownSecs * FrameTimer::FramesPerSecond;
-				player->_controllableExternal = false;
-			} else {
-				peerDesc->JoinCooldownFrames = 0.0f;
-				player->_controllableExternal = _controllableExternal;
-			}
-		}
-
-		peerDesc->Player = ptr;
-		_players.push_back(ptr);
-
-		_suppressRemoting = true;
-		AddActor(newPlayer);
-		_suppressRemoting = false;
-
-		// First, create new controllable player if needed, then create remote actor for other clients
-		if (peerDesc->RemotePeer) {
-			// Remote client
-			std::uint8_t flags = 0x10; // Skip fade-in transition
-			if (ptr->_controllable) {
-				flags |= 0x01;
-			}
-			if (ptr->_controllableExternal) {
-				flags |= 0x02;
-			}
-
-			MemoryStream packet2(16);
-			packet2.WriteVariableUint32(playerIndex);
-			packet2.WriteValue<std::uint8_t>((std::uint8_t)ptr->_playerType);
-			packet2.WriteVariableInt32(ptr->_health);
-			packet2.WriteValue<std::uint8_t>(flags);
-			packet2.WriteValue<std::uint8_t>(peerDesc->Team);
-			packet2.WriteVariableInt32((std::int32_t)ptr->_pos.X);
-			packet2.WriteVariableInt32((std::int32_t)ptr->_pos.Y);
-			// Forward carried-over progression to the client (flag = 0 if none). The server-side player applies
-			// it in MpPlayer::OnActivatedAsync (after the base reset); clear the flag once serialized.
-			packet2.WriteValue<std::uint8_t>(peerDesc->HasCarryOver ? 1 : 0);
-			if (peerDesc->HasCarryOver) {
-				WriteCarryOver(packet2, peerDesc->CarryOver);
-			}
-			peerDesc->HasCarryOver = false;
-
-			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateControllablePlayer, packet2);
-		} else {
-			// Local player
-			UnassignViewport(player);
-			AssignViewport(ptr);
-			CommitViewports();
-		}
-
-		MemoryStream packet3;
-		InitializeCreateRemoteActorPacket(packet3, playerIndex, ptr);
-
-		_networkManager->SendTo([this, self = peerDesc->RemotePeer](const Peer& peer) {
-			if (peer == self) {
-				return false;
-			}
-			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::CreateRemoteActor, packet3);
-
-		MemoryStream packet4(11 + peerDesc->PlayerName.size());
-		packet4.WriteVariableUint32(playerIndex);
-		packet4.WriteValue<std::uint8_t>(0x02 | 0x04); // HasFurColor | HasTeam
-		packet4.WriteVariableUint32(peerDesc->PlayerName.size());
-		packet4.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
-		packet4.WriteValueAsLE<std::uint32_t>(peerDesc->FurColor);
-		packet4.WriteValue<std::uint8_t>(peerDesc->Team);
-
-		_networkManager->SendTo([this](const Peer& peer) {
-			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-			return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::MarkRemoteActorAsPlayer, packet4);
-
-		if (peerDesc->RemotePeer) {
-			MemoryStream packet5(6);
-			packet5.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Spectate);
-			packet5.WriteVariableUint32(playerIndex);
-			packet5.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->IsSpectating);
-			_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet5);
-		}
-
-		if ((mode & SpectateMode::Mask) == SpectateMode::None) {
-			// Player is now active again - apply game mode effects
-			ApplyGameModeToPlayer(serverConfig.GameMode, ptr);
-
-			// The player is invulnerable for a short time after spawning
-			ptr->SetInvulnerability(serverConfig.SpawnInvulnerableSecs * FrameTimer::FramesPerSecond, Actors::Player::InvulnerableType::Blinking);
-		}
-	}
-
-	void MpLevelHandler::RequestSpectateMode(bool enable)
-	{
-		if (_players.empty()) {
-			return;
-		}
-
-		if (_isServer) {
-			for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
-				if (!peerDesc->RemotePeer && peerDesc->Player) {
-					SetPlayerSpectateMode(peerDesc->Player, enable ? SpectateMode::Requested : SpectateMode::None);
-				}
-			}
-		} else {
-			MemoryStream packet(5);
-			packet.WriteVariableUint32(_lastSpawnedActorId);
-			packet.WriteValue<std::uint8_t>(enable ? 1 : 0);
-			_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerSpectateRequest, packet);
-		}
-	}
-
-	bool MpLevelHandler::IsSpectating()
-	{
-		for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
-			if (!peerDesc->RemotePeer && peerDesc->Player) {
-				return (peerDesc->IsSpectating != SpectateMode::None);
-			}
-		}
-		return false;
-	}
-
-	bool MpLevelHandler::IsSpectateAvailable() const
-	{
-		return _networkManager->GetServerConfiguration().EnableSpectate;
-	}
-
-	void MpLevelHandler::ShowCharacterSelectLobby()
-	{
-		if (_inGameLobby == nullptr) {
-			return;
-		}
-
-		// Open the lobby so the player can pick a (possibly different) character; SetPlayerReady() then (re)joins
-		// the game with the selected type instead of treating it as the initial join.
-		_changingCharacterInLobby = true;
-		auto& serverConfig = _networkManager->GetServerConfiguration();
-		_inGameLobby->SetAllowedPlayerTypes(serverConfig.AllowedPlayerTypes);
-		std::uint8_t currentTeam = NoPreferredTeam;
-		if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
-			currentTeam = peerDesc->Team;
-		}
-		_inGameLobby->SetTeamInfo(currentTeam);
-		_inGameLobby->Show();
-	}
-
 	void MpLevelHandler::EndGame(MpPlayer* winner)
 	{
 		_levelState = LevelState::Ending;
@@ -8854,7 +9098,7 @@ namespace Jazz2::Multiplayer
 
 			if (tied || bestScore == 0) {
 				ShowAlertToAllPlayers(_("\n\nThe round ended in a draw"));
-				EndGame(nullptr);
+				EndGame(static_cast<MpPlayer*>(nullptr));
 			} else {
 				EndGameWithTeam(bestTeam);
 			}
@@ -9087,24 +9331,6 @@ namespace Jazz2::Multiplayer
 		_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerReady, packet);
 	}
 
-	void MpLevelHandler::RequestChangeTeam(std::uint8_t team)
-	{
-		if (_isServer) {
-			// Host applies the change directly
-			for (auto& [playerPeer, peerDesc] : *_networkManager->GetPeers()) {
-				if (!peerDesc->RemotePeer && peerDesc->Player) {
-					ChangePlayerTeam(peerDesc->Player, team, false);
-					break;
-				}
-			}
-			return;
-		}
-
-		MemoryStream packet(1);
-		packet.WriteValue<std::uint8_t>(team);
-		_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerChangeTeamRequest, packet);
-	}
-
 	void MpLevelHandler::BroadcastLocalPlayerIdle(bool isIdle)
 	{
 		if (!_isServer) {
@@ -9292,76 +9518,6 @@ namespace Jazz2::Multiplayer
 		packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.X});
 		packet.WriteValue<std::uint16_t>((std::uint16_t)Half{scale.Y});
 		packet.WriteValue<std::uint8_t>((std::uint8_t)actor->_renderer.GetRendererType());
-	}
-
-	String MpLevelHandler::GetAssetFullPath(AssetType type, StringView path, StaticArrayView<Uuid::Size, Uuid::Type> remoteServerId, bool forWrite)
-	{
-		const auto& resolver = ContentResolver::Get();
-		auto pathNormalized = fs::ToNativeSeparators(path);
-
-		char uuidStr[33]; std::size_t uuidStrLength;
-		if (remoteServerId) {
-			uuidStrLength = formatInto(uuidStr, "{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}{:.2x}",
-				remoteServerId[0], remoteServerId[1], remoteServerId[2], remoteServerId[3], remoteServerId[4], remoteServerId[5], remoteServerId[6], remoteServerId[7], remoteServerId[8], remoteServerId[9], remoteServerId[10], remoteServerId[11], remoteServerId[12], remoteServerId[13], remoteServerId[14], remoteServerId[15]);
-		}
-
-		switch (type) {
-			case AssetType::Level: {
-				String fullPath;
-				if (remoteServerId) {
-					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
-						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(String(path + ".j2l"_s)) });
-				}
-				if (!forWrite && !fs::IsReadableFile(fullPath)) {
-					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
-					if (!fs::IsReadableFile(fullPath)) {
-						fullPath = fs::CombinePath({ resolver.GetCachePath(), "Episodes"_s, String(pathNormalized + ".j2l"_s) });
-						if (!fs::IsReadableFile(fullPath)) {
-							fullPath = {};
-						}
-					}
-				}
-				return fullPath;
-			}
-			case AssetType::TileSet: {
-				String fullPath;
-				if (remoteServerId) {
-					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
-						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(String(path + ".j2t"_s)) });
-				}
-				if (!forWrite && !fs::IsReadableFile(fullPath)) {
-					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Tilesets"_s, String(path + ".j2t"_s) });
-					if (!fs::IsReadableFile(fullPath)) {
-						fullPath = fs::CombinePath({ resolver.GetCachePath(), "Tilesets"_s, String(path + ".j2t"_s) });
-						if (!fs::IsReadableFile(fullPath)) {
-							fullPath = {};
-						}
-					}
-				}
-				return fullPath;
-			}
-			case AssetType::Music: {
-				String fullPath;
-				if (remoteServerId) {
-					fullPath = fs::CombinePath({ resolver.GetCachePath(), "Downloads"_s,
-						{ uuidStr, uuidStrLength }, fs::ToNativeSeparators(path) });
-				}
-				if (!forWrite && !fs::IsReadableFile(fullPath)) {
-					fullPath = fs::CombinePath({ resolver.GetContentPath(), "Music"_s, path });
-					if (!fs::IsReadableFile(fullPath)) {
-						// "Source" directory must be case in-sensitive
-						fullPath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), path));
-						if (!fs::IsReadableFile(fullPath)) {
-							fullPath = {};
-						}
-					}
-				}
-				return fullPath;
-			}
-			default: {
-				return {};
-			}
-		}
 	}
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)

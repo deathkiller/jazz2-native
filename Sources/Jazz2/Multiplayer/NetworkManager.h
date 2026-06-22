@@ -39,6 +39,14 @@ namespace Jazz2::Multiplayer
 		/** @brief Creates a server that accepts incoming connections */
 		virtual bool CreateServer(INetworkHandler* handler, ServerConfiguration&& serverConfig);
 
+		/**
+		 * @brief Creates a socket-less local server for local splitscreen multiplayer
+		 *
+		 * Behaves like a server (authoritative game state, @ref NetworkState::Local) but binds no socket and accepts
+		 * no remote connections. Local players are registered with @ref AddLocalPlayer().
+		 */
+		bool CreateLocalServer(INetworkHandler* handler, ServerConfiguration&& serverConfig);
+
 		void Dispose() override;
 
 		/** @brief Returns server configuration */
@@ -52,6 +60,23 @@ namespace Jazz2::Multiplayer
 
 		/** @brief Returns session peer descriptor for the local peer */
 		std::shared_ptr<PeerDescriptor> GetPeerDescriptor(LocalPeerT);
+
+		/**
+		 * @brief Returns the session peer descriptor for the local splitscreen player at the given index
+		 *
+		 * Index zero is the default local peer (same as @ref GetPeerDescriptor(LocalPeerT)). Returns `nullptr` if no
+		 * such local player has been registered with @ref AddLocalPlayer().
+		 */
+		std::shared_ptr<PeerDescriptor> GetPeerDescriptor(LocalPeerT, std::int32_t index);
+
+		/**
+		 * @brief Registers (or returns the existing) descriptor for a local splitscreen player
+		 *
+		 * The descriptor is inserted into the peer map under a synthetic local key (see @ref Peer::Local) so the
+		 * shared game-mode logic iterates it like any other player, while its @ref PeerDescriptor::RemotePeer stays
+		 * empty so it is treated as a local player. Index zero maps to the default local peer.
+		 */
+		std::shared_ptr<PeerDescriptor> AddLocalPlayer(std::int32_t index);
 
 		/** @brief Returns session peer descriptor for the specified connected remote peer */
 		std::shared_ptr<PeerDescriptor> GetPeerDescriptor(const Peer& peer);

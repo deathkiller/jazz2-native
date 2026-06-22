@@ -9,6 +9,7 @@
 
 #if defined(WITH_MULTIPLAYER)
 #	include "CreateServerOptionsSection.h"
+#	include "CreateLocalGameOptionsSection.h"
 #endif
 
 #include <Containers/StringConcatenable.h>
@@ -21,8 +22,8 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
-	CustomLevelSelectSection::CustomLevelSelectSection(bool multiplayer, bool privateServer)
-		: _multiplayer(multiplayer), _privateServer(privateServer), _selectedIndex(0), _animation(0.0f), _y(0.0f),
+	CustomLevelSelectSection::CustomLevelSelectSection(bool multiplayer, bool privateServer, bool localGame)
+		: _multiplayer(multiplayer), _privateServer(privateServer), _localGame(localGame), _selectedIndex(0), _animation(0.0f), _y(0.0f),
 			_height(0.0f), _availableHeight(0.0f), _touchTime(0.0f), _touchSpeed(0.0f), _pressedCount(0),
 			_noiseCooldown(0.0f), _touchDirection(0)
 	{
@@ -315,6 +316,10 @@ namespace Jazz2::UI::Menu
 		}
 
 #if defined(WITH_MULTIPLAYER)
+		if (_localGame) {
+			_root->SwitchToSection<CreateLocalGameOptionsSection>(levelName, nullptr);
+			return;
+		}
 		if (_multiplayer) {
 			_root->SwitchToSection<CreateServerOptionsSection>(levelName, nullptr, _privateServer);
 			return;
@@ -342,7 +347,7 @@ namespace Jazz2::UI::Menu
 		auto& resolver = ContentResolver::Get();
 
 #if defined(WITH_MULTIPLAYER)
-		if (_multiplayer) {
+		if (_multiplayer && !_localGame) {
 			auto& level = _items.emplace_back();
 			level.LevelName = CreateServerOptionsSection::FromPlaylist;
 		}

@@ -20,10 +20,12 @@ namespace Jazz2::UI::Menu
 		/**
 		 * @brief Creates a new instance
 		 *
-		 * @param multiplayer    Whether the selected level should be hosted as a multiplayer server
-		 * @param privateServer  Whether the hosted server should be private (not publicly listed)
+		 * @param multiplayer    Whether the selected level should be played as a multiplayer game (online or local)
+		 * @param privateServer  Whether the hosted online server should be private (not publicly listed)
+		 * @param localGame      Whether the selected level should start as a local splitscreen multiplayer match
+		 *                       instead of hosting an online server
 		 */
-		CustomLevelSelectSection(bool multiplayer = false, bool privateServer = false);
+		CustomLevelSelectSection(bool multiplayer = false, bool privateServer = false, bool localGame = false);
 		~CustomLevelSelectSection();
 
 		Recti GetClipRectangle(const Recti& contentBounds) override;
@@ -51,6 +53,7 @@ namespace Jazz2::UI::Menu
 		SmallVector<ItemData> _items;
 		bool _multiplayer;
 		bool _privateServer;
+		bool _localGame;
 		std::int32_t _selectedIndex;
 		float _animation;
 		float _y;

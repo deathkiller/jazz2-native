@@ -38,10 +38,13 @@ namespace Jazz2::UI::Menu
 		/**
 		 * @brief Creates a new instance
 		 *
-		 * @param multiplayer    Whether the selected level should be hosted as a multiplayer server
-		 * @param privateServer  Whether the hosted server should be private (not publicly listed)
+		 * @param multiplayer    Whether the selected level should be played as a multiplayer game (online server or
+		 *                       local splitscreen), enabling multiplayer-style level browsing (custom levels)
+		 * @param privateServer  Whether the hosted online server should be private (not publicly listed)
+		 * @param localGame      Whether the selected level should start as a local splitscreen multiplayer match
+		 *                       instead of hosting an online server
 		 */
-		EpisodeSelectSection(bool multiplayer = false, bool privateServer = false);
+		EpisodeSelectSection(bool multiplayer = false, bool privateServer = false, bool localGame = false);
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
@@ -58,6 +61,7 @@ namespace Jazz2::UI::Menu
 		float _animation;
 		bool _multiplayer;
 		bool _privateServer;
+		bool _localGame;
 		bool _expanded;
 		bool _shouldStart;
 		ScrollView* _list;

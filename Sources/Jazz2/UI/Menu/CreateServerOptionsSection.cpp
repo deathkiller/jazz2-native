@@ -227,6 +227,7 @@ namespace Jazz2::UI::Menu
 					Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);
 
 				_items[i].TouchY = center.Y + 28.0f;
+				center.Y += 6.0f;
 			} else {
 				_items[i].TouchY = center.Y;
 			}
