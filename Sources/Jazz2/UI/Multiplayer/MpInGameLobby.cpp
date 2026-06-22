@@ -233,33 +233,75 @@ namespace Jazz2::UI::Multiplayer
 
 	void MpInGameLobby::OnTouchEvent(const nCine::TouchEvent& event)
 	{
-		// TODO
-		if (event.type == TouchEventType::Down) {
-			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
-			if (pointerIndex != -1) {
-				float x = event.pointers[pointerIndex].x;
-				float y = event.pointers[pointerIndex].y * (float)ViewSize.Y;
-				Vector2i center = ViewSize / 2;
+		if (event.type != TouchEventType::Down) {
+			return;
+		}
 
-				if (y >= center.Y + 50.0f - 24.f && y <= center.Y + 50.0f + 24.0f) {
-					if (x > 0.3f && x < 0.44f) {
-						_selectedPlayerType = 0;
-					} else if (x <= 0.56f) {
-						_selectedPlayerType = 1;
-					} else if (x < 0.7f) {
-						_selectedPlayerType = 2;
+		std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+		if (pointerIndex == -1) {
+			return;
+		}
+
+		// Touch pointers are normalized to [0..1] over the window; map both axes into the lobby's view-pixel space,
+		// which is the same space OnDraw() lays the rows out in (the previous code left x normalized, so the hit
+		// regions didn't line up with the drawn characters / confirm prompt).
+		Vector2i viewSize = _levelHandler->GetViewSize();
+		float x = event.pointers[pointerIndex].x * (float)viewSize.X;
+		float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+		Vector2i center = viewSize / 2;
+
+		RefreshTeamInfo();
+		bool teamRowActive = (_teamMode && _allowTeamSelection);
+
+		// Layout mirrors OnDraw()
+		constexpr float RowHalfHeight = 22.0f;
+		constexpr std::int32_t AvailableCharacters = 3;
+		float charRowY = center.Y + 2.0f;
+		float teamRowY = center.Y + 78.0f;
+		float pressY = (_teamMode ? center.Y + 122.0f : center.Y + 56.0f);
+		float charOffset = 100.0f, charSpacing = 100.0f;
+
+		// Tap a character to select it
+		if (y >= charRowY - RowHalfHeight && y <= charRowY + RowHalfHeight) {
+			for (std::int32_t j = 0; j < AvailableCharacters; j++) {
+				float cx = center.X - charOffset + j * charSpacing;
+				if (x >= cx - charSpacing * 0.5f && x <= cx + charSpacing * 0.5f) {
+					if ((_allowedPlayerTypes & (1 << j)) != 0) {
+						_selectedPlayerType = j;
+						_focusRow = 0;
+						_animation = 0.0f;
 					}
-					_animation = 0.0f;
-				} else if (y >= ((ViewSize.Y + (center.Y + 80.0f)) / 2) - 24.f && y <= ((ViewSize.Y + (center.Y + 80.0f)) / 2) + 24.f &&
-						   x > 0.3f && x < 0.7f) {
-					if ((_allowedPlayerTypes & (1 << _selectedPlayerType)) != 0) {
-						std::uint8_t team = NoPreferredTeam;
-						if (_teamMode && _allowTeamSelection) {
-							team = (_selectedTeam >= _teamCount ? NoPreferredTeam : (std::uint8_t)_selectedTeam);
-						}
-						_levelHandler->SetPlayerReady((PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType), team);
-					}
+					break;
 				}
+			}
+			return;
+		}
+
+		// Tap a team to select it (only interactive when team selection is allowed)
+		if (teamRowActive && y >= teamRowY - RowHalfHeight && y <= teamRowY + RowHalfHeight) {
+			std::int32_t optionCount = _teamCount + 1; // teams + "Auto"
+			float teamSpacing = 70.0f;
+			float teamOffset = teamSpacing * (optionCount - 1) * 0.5f;
+			for (std::int32_t t = 0; t < optionCount; t++) {
+				float tx = center.X - teamOffset + t * teamSpacing;
+				if (x >= tx - teamSpacing * 0.5f && x <= tx + teamSpacing * 0.5f) {
+					_selectedTeam = t;
+					_focusRow = 1;
+					_animation = 0.0f;
+					break;
+				}
+			}
+			return;
+		}
+
+		// Tap the "Press Fire to continue" prompt to confirm the selection
+		if (y >= pressY - RowHalfHeight && y <= pressY + RowHalfHeight && x >= center.X - 160.0f && x <= center.X + 160.0f) {
+			if ((_allowedPlayerTypes & (1 << _selectedPlayerType)) != 0) {
+				std::uint8_t team = NoPreferredTeam;
+				if (teamRowActive) {
+					team = (_selectedTeam >= _teamCount ? NoPreferredTeam : (std::uint8_t)_selectedTeam);
+				}
+				_levelHandler->SetPlayerReady((PlayerType)((std::int32_t)PlayerType::Jazz + _selectedPlayerType), team);
 			}
 		}
 	}
