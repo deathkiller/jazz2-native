@@ -169,7 +169,7 @@ namespace Jazz2::Actors
 
 		// Acquire the new (shared, reference-counted) palette before releasing the old one, so an unchanged fur color
 		// keeps its slot instead of being freed and immediately rebuilt
-		std::int32_t newOffset = (isIndexed ? resolver.AcquirePaletteOffset(furColor) : -1);
+		std::int32_t newOffset = (isIndexed ? resolver.AcquirePaletteOffset(furColor, _playerType) : -1);
 		if (_paletteOffset >= 0) {
 			resolver.ReleasePaletteOffset(_paletteOffset);
 		}
@@ -394,10 +394,36 @@ namespace Jazz2::Actors
 		}
 	}
 
+	float Player::GetGravityModifier(float baseGravity, bool isRising) const
+	{
+		// In Reforged mode keep the engine's symmetric gravity, that jump uses the internal-force model.
+		if (_levelHandler->IsReforged()) {
+			return baseGravity;
+		}
+
+		// Original JJ2: in air the rise decelerates ~3x faster than the fall accelerates, which gives
+		// the recognizable "snappy up, floaty down" arc. The original per-tick constants are scaled by (70/60)^2
+		// to match this engine's 60 Hz timeMult baseline (the caller then multiplies by timeMult), so the descent
+		// runs at the original's real-time acceleration, not ~26% slow.
+		if (_pos.Y >= _levelHandler->GetWaterLevel()) {
+			return 0.015625f * LegacyVerticalGravityScale;	// 1024/65536 - very weak underwater gravity (slow sink)
+		}
+		// Rising and falling use different scales: the original's descent accelerates slightly faster than the
+		// (height-preserving) ascent slow-down, which matches the snappier initial fall after the jump apex.
+		return isRising ? (0.375f * LegacyVerticalGravityScale)	// 3*8192/65536 rising
+						: (0.125f * LegacyFallGravityScale);	// 8192/65536 falling
+	}
+
 	void Player::OnUpdatePhysics(float timeMult)
 	{
 		// Force collisions every frame even if player doesn't move
 		SetState(ActorState::IsDirty, true);
+
+		// The applied rise cap reproduces the original constant-speed rise for jumps/springs, but special moves
+		// (uppercut/sidekick) launch via forces and need their full height, so disable it while one is active.
+		if (!_levelHandler->IsReforged()) {
+			_maxRiseSpeed = (_currentSpecialMove == SpecialMoveType::None ? LegacyRiseSpeedCap : 0.0f);
+		}
 
 		// Process level bounds (if not warping)
 		if (_currentTransition == nullptr ||
@@ -444,6 +470,12 @@ namespace Jazz2::Actors
 
 		if ((GetState() & ActorState::ApplyGravitation) != ActorState::ApplyGravitation) {
 			_externalForce.Y = std::min(_externalForce.Y + 0.002f * timeMult, 0.0f);
+		}
+
+		// Original JJ2 terminal velocity. Only the downward cap is applied,
+		// so the upward jump impulse keeps its momentum.
+		if (!_levelHandler->IsReforged() && _speed.Y > 12.0f * LegacyVerticalSpeedScale) {
+			_speed.Y = 12.0f * LegacyVerticalSpeedScale;
 		}
 
 		if (params.TilesDestroyed > 0) {
@@ -796,6 +828,20 @@ namespace Jazz2::Actors
 			return;
 		}
 
+		// Original-style ledge hop: running off a ledge at (at least) walking speed gives a small upward boost so
+		// the player clears small gaps instead of dropping straight in. Fires once on the ground->air transition,
+		// only when not already rising (so deliberate jumps/springs/uppercuts are untouched), and only over a real
+		// gap (a probe below finds no ground within ~1.5 tiles - a step/slope down has ground there, so no hop).
+		if (!_levelHandler->IsReforged() && canJumpPrev && !CanJump() && _speed.Y >= 0.0f &&
+			_controllable && _controllableExternal && !_isLifting && std::abs(_speed.X) >= MaxRunningSpeed &&
+			_suspendType == SuspendType::None && _currentSpecialMove == SpecialMoveType::None && _activeModifier == Modifier::None) {
+			AABBf gapProbe = AABBf(AABBInner.L + 6.0f, AABBInner.B + 4.0f, AABBInner.R - 6.0f, AABBInner.B + 44.0f);
+			TileCollisionParams params = { TileDestructType::None, true };
+			if (_levelHandler->IsPositionEmpty(this, gapProbe, params)) {
+				_speed.Y = -1.5f * LegacyVerticalSpeedScale;
+			}
+		}
+
 		if (_keepRunningTime <= 0.0f) {
 			bool canWalk = (_controllable && _controllableExternal && !_isLifting && _suspendType != SuspendType::SwingingVine &&
 				(_playerType != PlayerType::Frog || !_levelHandler->PlayerActionPressed(this, PlayerAction::Fire)));
@@ -826,7 +872,19 @@ namespace Jazz2::Actors
 
 				_isActivelyPushing = _wasActivelyPushing = true;
 
-				float acceleration = (_levelHandler->IsReforged() ? Acceleration : Acceleration * 2.0f);
+				float acceleration = (_levelHandler->IsReforged() ? Acceleration : Acceleration * 2.0f * LegacyGroundAccelScale);
+				// Skid (original turn-around): when the player is moving fast and the input flips to the opposite
+				// direction, bleed the existing momentum off gently instead of snapping around, so they keep
+				// drifting the original way for a few frames before accelerating back.
+				if (!_levelHandler->IsReforged()) {
+					bool reversing = (isFacingLeft ? (_speed.X > 0.4f) : (_speed.X < -0.4f));
+					if (reversing) {
+						// Coast in the original direction before turning - even at walking speed, just less than running
+						acceleration *= (std::abs(_speed.X) > MaxRunningSpeed * LegacyGroundSpeedScale
+							? LegacyRunBrakeScale : LegacyWalkBrakeScale);
+					}
+				}
+
 				if (_dizzyTime > 0.0f || _playerType == PlayerType::Frog) {
 					_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxDizzySpeed * playerMovementVelocity, MaxDizzySpeed * playerMovementVelocity);
 				} else if (_inShallowWater != -1 && _levelHandler->IsReforged() && _playerType != PlayerType::Lori) {
@@ -835,7 +893,9 @@ namespace Jazz2::Actors
 					_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxShallowWaterSpeed * playerMovementVelocity, MaxShallowWaterSpeed * playerMovementVelocity);
 				} else {
 					if (_suspendType == SuspendType::None && !_inWater && _isRunPressed) {
-						_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxDashingSpeed * playerMovementVelocity, MaxDashingSpeed * playerMovementVelocity);
+						// Original JJ2 caps the applied dash speed at 8 px/tick
+						float maxDashSpeed = (_levelHandler->IsReforged() ? MaxDashingSpeed : 8.0f * LegacyGroundSpeedScale);
+						_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -maxDashSpeed * playerMovementVelocity, maxDashSpeed * playerMovementVelocity);
 					} else if (_suspendType == SuspendType::Vine) {
 						if (_wasFirePressed) {
 							_speed.X = 0.0f;
@@ -847,7 +907,9 @@ namespace Jazz2::Actors
 							_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxVineSpeed * playerMovementVelocity, MaxVineSpeed * playerMovementVelocity);
 						}
 					} else if (_suspendType != SuspendType::Hook) {
-						_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -MaxRunningSpeed * playerMovementVelocity, MaxRunningSpeed * playerMovementVelocity);
+						// Original JJ2 walk cap is 4 px/tick
+						float maxRunSpeed = (_levelHandler->IsReforged() ? MaxRunningSpeed : MaxRunningSpeed * LegacyGroundSpeedScale);
+						_speed.X = std::clamp(_speed.X + acceleration * timeMult * (isFacingLeft ? -1 : 1), -maxRunSpeed * playerMovementVelocity, maxRunSpeed * playerMovementVelocity);
 					}
 				}
 
@@ -855,10 +917,20 @@ namespace Jazz2::Actors
 					_wasUpPressed = _wasDownPressed = false;
 				}
 			} else if (_inTubeTime <= 0.0f) {
-				_speed.X = std::max((std::abs(_speed.X) - Deceleration * timeMult), 0.0f) * (_speed.X < 0.0f ? -1.0f : 1.0f);
+				float absSpeedX = std::abs(_speed.X);
+				float deceleration = Deceleration;
+				if (!_levelHandler->IsReforged()) {
+					deceleration *= LegacyReleaseBrakeScale;
+					// Releasing the key stops the player fairly quickly, only walking coasts a little longer. (Pressing
+					// the opposite direction is the slow, momentum-keeping case - handled as the reversal skid above.)
+					if (absSpeedX <= MaxRunningSpeed * LegacyGroundSpeedScale) {
+						deceleration *= LegacyWalkBrakeScale;
+					}
+				}
+				_speed.X = std::max((absSpeedX - deceleration * timeMult), 0.0f) * (_speed.X < 0.0f ? -1.0f : 1.0f);
 				_isActivelyPushing = false;
 
-				float absSpeedX = std::abs(_speed.X);
+				absSpeedX = std::abs(_speed.X);
 				if (absSpeedX > 4.0f) {
 					SetFacingLeft(_speed.X < 0.0f);
 				} else if (absSpeedX < 0.001f) {
@@ -972,7 +1044,8 @@ namespace Jazz2::Actors
 						SetState(ActorState::ApplyGravitation, false);
 						SetAnimation(AnimState::Buttstomp);
 						SetPlayerTransition(AnimState::TransitionButtstompStart, true, false, SpecialMoveType::Buttstomp, [this]() {
-							_speed.Y = 9.0f;
+							// Original JJ2 buttstomp falls at 10 px/tick
+							_speed.Y = (_levelHandler->IsReforged() ? 9.0f : 10.0f * LegacyVerticalSpeedScale);
 							SetState(ActorState::ApplyGravitation, true);
 							SetAnimation(AnimState::Buttstomp);
 							PlaySfx("Buttstomp"_s, 1.0f, 0.8f);
@@ -1027,8 +1100,9 @@ namespace Jazz2::Actors
 										_controllable = false;
 										SetAnimation(AnimState::Uppercut);
 										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Uppercut, [this]() {
-											_externalForce.Y = (_levelHandler->IsReforged() ? -1.4f : -1.2f);
-											_speed.Y = -2.0f;
+											// Non-Reforged launch is boosted to keep the original height against the steeper rise gravity
+											_externalForce.Y = (_levelHandler->IsReforged() ? -1.4f : -1.2f * LegacySpecialMoveScale);
+											_speed.Y = (_levelHandler->IsReforged() ? -2.0f : -2.0f * LegacySpecialMoveScale);
 											SetState(ActorState::CanJump, false);
 											SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
 										});
@@ -1158,7 +1232,10 @@ namespace Jazz2::Actors
 								_speed.Y *= 1.3f;
 							}
 						} else {
-							_speed.Y = -8.0f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
+							// Original-style instant jump impulse (-10 reference). The applied rise cap then holds the
+							// ascent at a constant speed for the first frames (original feel); vertical scale carries
+							// the 70/60 framerate plus the playtest slow-down (height preserved: velocity x s, gravity x s^2).
+							_speed.Y = -10.0f * LegacyVerticalSpeedScale - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
 						}
 					}
 				}
@@ -1170,8 +1247,9 @@ namespace Jazz2::Actors
 							_internalForceY = 0.0f;
 						}
 					} else {
-						if (_speed.Y < -4.0f) {
-							_speed.Y = -4.0f;
+						// Releasing jump early cuts the ascent (original tap-hop). -4 reference, vertical scale.
+						if (_speed.Y < -4.0f * LegacyVerticalSpeedScale) {
+							_speed.Y = -4.0f * LegacyVerticalSpeedScale;
 						}
 					}
 				}
@@ -1975,13 +2053,15 @@ namespace Jazz2::Actors
 
 			_copterFramesLeft = 0.0f;
 			//speedX = force.X;
-			_speed.X = (1.0f + std::abs(force.X)) * sign;
-			_externalForce.X = force.X * 0.6f;
+			// Match the original real-time launch speed (70/60 baseline) when not Reforged
+			float springScaleX = (_levelHandler->IsReforged() ? 1.0f : LegacyFrameRateScale * 0.95f);
+			_speed.X = (1.0f + std::abs(force.X)) * sign * springScaleX;
+			_externalForce.X = force.X * 0.6f * springScaleX;
 			_springCooldown = 10.0f;
 			SetState(ActorState::CanJump, false);
 
 			_wasActivelyPushing = false;
-			_keepRunningTime = 100.0f;
+			_keepRunningTime = (_levelHandler->IsReforged() ? 100.0f : 80.0f);
 
 			if (!keepSpeedY) {
 				_speed.Y = 0.0f;
@@ -2012,13 +2092,16 @@ namespace Jazz2::Actors
 				SetState(ActorState::ApplyGravitation, true);
 			}
 
-			_speed.Y = (4.0f + std::abs(force.Y)) * sign;
+			// The applied rise cap (_maxRiseSpeed) holds the launch at a constant speed for the first frames like
+			// the original, so the big gravity-compensation boost is gone.
+			float springScaleY = (_levelHandler->IsReforged() ? 1.0f : LegacyFrameRateScale * 1.18f);
+			_speed.Y = (4.0f + std::abs(force.Y)) * sign * springScaleY;
 			if (!GetState(ActorState::ApplyGravitation)) {
 				_externalForce.Y = force.Y * 0.14f;
 			} else if (_levelHandler->IsReforged()) {
 				_externalForce.Y = force.Y;
 			} else {
-				_externalForce.Y = force.Y * 0.8f;
+				_externalForce.Y = force.Y * 0.8f * springScaleY;
 			}
 			_springCooldown = 10.0f;
 			SetState(ActorState::CanJump, false);
@@ -2093,9 +2176,12 @@ namespace Jazz2::Actors
 			// Only certain ones don't need to be preserved from earlier state, others should be set as expected
 			AnimState composite = (_currentAnimation->State & CompositeAnimMask);
 
-			if (_isActivelyPushing == _wasActivelyPushing) {
+			if (_isActivelyPushing == _wasActivelyPushing || !_levelHandler->IsReforged()) {
 				float absSpeedX = std::abs(_speed.X);
-				if (absSpeedX > MaxRunningSpeed) {
+				// Threshold must track the actual walk cap, otherwise the higher non-Reforged walk speed would
+				// keep triggering the Dash animation while merely walking.
+				float dashAnimThreshold = (_levelHandler->IsReforged() ? MaxRunningSpeed : MaxRunningSpeed * LegacyGroundSpeedScale);
+				if (absSpeedX > dashAnimThreshold) {
 					composite |= AnimState::Dash;
 				} else if (_keepRunningTime > 0.0f) {
 					composite |= AnimState::Run;
@@ -2177,17 +2263,18 @@ namespace Jazz2::Actors
 		if (!_isAttachedToPole) {
 			switch (oldState) {
 				case AnimState::Walk:
-					if (newState == AnimState::Idle) {
+					// The skid/brake transition isn't part of the original game, so skip it when not Reforged
+					if (newState == AnimState::Dash) {
+						SetTransition(AnimState::TransitionRunToDash, true);
+					} else if (newState == AnimState::Idle && _levelHandler->IsReforged()) {
 						_inIdleTransition = true;
 						SetTransition(AnimState::TransitionRunToIdle, true, [this]() {
 							_inIdleTransition = false;
 						});
-					} else if (newState == AnimState::Dash) {
-						SetTransition(AnimState::TransitionRunToDash, true);
 					}
 					break;
 				case AnimState::Dash:
-					if (newState == AnimState::Idle) {
+					if (newState == AnimState::Idle && _levelHandler->IsReforged()) {
 						_inIdleTransition = true;
 						SetTransition(AnimState::TransitionDashToIdle, true, [this]() {
 							if (_inIdleTransition) {
@@ -3869,8 +3956,9 @@ namespace Jazz2::Actors
 			} else {
 				MoveInstantly(Vector2f(0.0f, sign * 16.0f), MoveType::Relative | MoveType::Force);
 
-				_speed.Y = 4.0f * sign + lastSpeed * 1.4f;
-				_externalForce.Y = 1.3f * sign;
+				// Non-Reforged: stronger vertical launch so spring->pole chains gain ~50% more height
+				_speed.Y = (4.0f * sign + lastSpeed * 1.4f) * (_levelHandler->IsReforged() ? 1.0f : 2.5f);
+				_externalForce.Y = 1.3f * sign * (_levelHandler->IsReforged() ? 1.0f : 2.5f);
 			}
 
 			SetState(ActorState::ApplyGravitation, true);

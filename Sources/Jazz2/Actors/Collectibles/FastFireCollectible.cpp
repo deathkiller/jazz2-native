@@ -58,7 +58,7 @@ namespace Jazz2::Actors::Collectibles
 				(_metadata->Animations[0].Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
 			if (isIndexed) {
 				// Share a reference-counted palette with the player and any other objects of the same color
-				_paletteOffset = resolver.AcquirePaletteOffset(furColor);
+				_paletteOffset = resolver.AcquirePaletteOffset(furColor, playerType);
 				if (_paletteOffset >= 0) {
 					_renderer.SetPalette(_paletteOffset);
 				}

@@ -224,6 +224,12 @@ namespace Jazz2::Actors
 			effectiveSpeedX = _speed.X + _externalForce.X * timeMult;
 			effectiveSpeedY = _speed.Y + 0.5f * accelY;
 		}
+		// Cap applied upward speed if requested. Internal `_speed.Y` keeps its (larger) momentum, so the actor
+		// rises at a constant capped speed for the first frames while gravity bleeds the momentum off - this is
+		// how the original JJ2 springs/jumps behave (applied vertical movement clamped to 8 px/tick).
+		if (_maxRiseSpeed > 0.0f && effectiveSpeedY < -_maxRiseSpeed) {
+			effectiveSpeedY = -_maxRiseSpeed;
+		}
 		effectiveSpeedX *= timeMult;
 		effectiveSpeedY *= timeMult;
 
@@ -393,7 +399,7 @@ namespace Jazz2::Actors
 				if (_levelHandler->IsPositionEmpty(this, aabb, params)) {
 					// There is still some space below - only apply gravity
 					SetState(ActorState::CanJump, false);
-					_speed.Y += currentGravity * timeMult;
+					_speed.Y += GetGravityModifier(currentGravity, /*isRising:*/false) * timeMult;
 				} else {
 					// Actor is on the floor
 					OnHitFloor(timeMult);
@@ -408,7 +414,7 @@ namespace Jazz2::Actors
 			} else {
 				// Actor is going up - only apply gravity
 				SetState(ActorState::CanJump, false);
-				_speed.Y += currentGravity * timeMult;
+				_speed.Y += GetGravityModifier(currentGravity, /*isRising:*/true) * timeMult;
 			}
 
 			_externalForce.Y = std::min(_externalForce.Y + currentGravity * 0.33f * timeMult, 0.0f);

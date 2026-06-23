@@ -289,6 +289,10 @@ namespace Jazz2::UI::Menu
 					firstEndpoint = firstEndpointShort;
 				}
 #endif
+				if (_items[i].Desc.Flags & 0x04u /*Reforged*/) {
+					firstEndpointShort = firstEndpoint + " R"_s;
+					firstEndpoint = firstEndpointShort;
+				}
 				if (_items[i].Desc.Flags & 0x80000000u /*Local*/) {
 					firstEndpointShort = firstEndpoint + " ^"_s;
 					firstEndpoint = firstEndpointShort;

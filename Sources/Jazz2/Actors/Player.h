@@ -323,6 +323,32 @@ namespace Jazz2::Actors
 		/** @brief Horizontal deceleration */
 		static constexpr float Deceleration = 0.22f;
 
+		/** @brief Velocity scale that maps original JJ2 (70 Hz) per-tick values onto this engine's 60 Hz timeMult baseline */
+		static constexpr float LegacyFrameRateScale = 70.0f / 60.0f;
+		/** @brief Acceleration scale for the 70->60 Hz mapping, squared because position is the double integral of acceleration */
+		static constexpr float LegacyFrameRateScaleSqr = LegacyFrameRateScale * LegacyFrameRateScale;
+		/** @brief Non-Reforged ground max-speed scale */
+		static constexpr float LegacyGroundSpeedScale = LegacyFrameRateScale * 1.05f;
+		/** @brief Non-Reforged ground acceleration/braking scale */
+		static constexpr float LegacyGroundAccelScale = 0.95f;
+		/** @brief Non-Reforged coast factor when reversing at running speed - low so pressing the opposite way keeps momentum
+			noticeably longer than just releasing the key (which stops quickly) */
+		static constexpr float LegacyRunBrakeScale = 0.4f;
+		/** @brief Non-Reforged braking factor at walking speed - gentler than before so the player coasts longer before stopping/turning */
+		static constexpr float LegacyWalkBrakeScale = 0.7f;
+		/** @brief Non-Reforged deceleration multiplier when the direction key is released - a decisive stop (the slow, momentum case is reversing) */
+		static constexpr float LegacyReleaseBrakeScale = 2.5f;
+		/** @brief Non-Reforged vertical velocity scale */
+		static constexpr float LegacyVerticalSpeedScale = LegacyFrameRateScale * 0.94f;
+		/** @brief Non-Reforged rising-gravity scale; the vertical tune is squared so jump height is preserved */
+		static constexpr float LegacyVerticalGravityScale = LegacyFrameRateScaleSqr * 0.94f * 0.94f;
+		/** @brief Non-Reforged falling-gravity scale; the original drops a touch faster than the rise, so less slow-down here */
+		static constexpr float LegacyFallGravityScale = LegacyFrameRateScaleSqr * 0.977f;
+		/** @brief Non-Reforged applied upward-speed cap (original JJ2 clamps applied vertical movement to 8 px/tick) */
+		static constexpr float LegacyRiseSpeedCap = 8.0f * LegacyFrameRateScale;
+		/** @brief Non-Reforged launch scale for vertical special moves (uppercut). */
+		static constexpr float LegacySpecialMoveScale = LegacyVerticalSpeedScale * 1.10f;
+
 		/** @brief Display names of all weapons */
 		static constexpr const char* WeaponNames[(std::int32_t)WeaponType::Count] = {
 			"Blaster",
@@ -443,6 +469,7 @@ namespace Jazz2::Actors
 		void OnHitFloor(float timeMult) override;
 		void OnHitCeiling(float timeMult) override;
 		void OnHitWall(float timeMult) override;
+		float GetGravityModifier(float baseGravity, bool isRising) const override;
 
 		/**
 		 * @brief Keeps this player and @p other from overlapping (so they can't pass through) and bumps them apart

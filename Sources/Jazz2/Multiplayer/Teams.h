@@ -54,11 +54,11 @@ namespace Jazz2::Multiplayer
 	}
 
 	/**
-		@brief Recolors a packed fur color so the first two character color sections match the team color
+		@brief Recolors a packed fur color so the primary character color section matches the team color
 
-		Forces the low two bytes (the first two of the four packed fur sections) of @p furColor to the team's
-		signature sprite-palette gradient start, keeping the player's own choice for the remaining sections. The
-		gradient bytes match the in-game character color options (@ref Jazz2::ContentResolver::FurHueShiftFlag =
+		Forces the low byte (the first of the four packed fur sections, i.e. the primary fur color) of @p furColor to
+		the team's signature sprite-palette gradient start, keeping the player's own choice for the remaining sections.
+		The gradient bytes match the in-game character color options (@ref Jazz2::ContentResolver::FurHueShiftFlag =
 		`0x80` marks a hue-shifted variant): Red = `0x18`, Blue = `0x20`, Yellow = `0x28`, Green = `0x58 | 0x80`
 		(the last hue-shifted variant). Unknown/neutral teams are left unchanged.
 	*/
@@ -72,7 +72,7 @@ namespace Jazz2::Multiplayer
 			case 3: gradient = 0x28; break;			// Yellow
 			default: return furColor;				// Neutral / no team - leave the player's own color
 		}
-		return (furColor & 0xFFFF0000u) | (std::uint32_t)gradient | ((std::uint32_t)gradient << 8);
+		return (furColor & 0xFFFFFF00u) | (std::uint32_t)gradient;
 	}
 }
 

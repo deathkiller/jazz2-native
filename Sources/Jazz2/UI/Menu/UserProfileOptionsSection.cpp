@@ -149,14 +149,14 @@ namespace Jazz2::UI::Menu
 		_nameInput = nameInput;
 
 		StringView furLabels[] = {
-			// TRANSLATORS: Menu item in Options > User Profile section
-			_("Character Color 1"),
-			// TRANSLATORS: Menu item in Options > User Profile section
-			_("Character Color 2"),
-			// TRANSLATORS: Menu item in Options > User Profile section
-			_("Character Color 3"),
-			// TRANSLATORS: Menu item in Options > User Profile section
-			_("Character Color 4")
+			// TRANSLATORS: Menu item in Options > User Profile section (primary fur/body color)
+			_("Primary Fur"),
+			// TRANSLATORS: Menu item in Options > User Profile section (secondary fur/body color)
+			_("Secondary Fur"),
+			// TRANSLATORS: Menu item in Options > User Profile section (weapon color)
+			_("Weapon"),
+			// TRANSLATORS: Menu item in Options > User Profile section (miscellaneous accent color)
+			_("Miscellaneous")
 		};
 		for (std::int32_t section = 0; section < 4; section++) {
 			auto* furItem = list->Add<CustomValueItem>(furLabels[section], 52.0f);
@@ -286,12 +286,16 @@ namespace Jazz2::UI::Menu
 			_previewMetadata[2] = ContentResolver::Get().RequestMetadata("Interactive/PlayerLori"_s, true);
 		}
 
-		if (_previewPalette == nullptr || _previewPaletteColor != _furColor) {
-			ContentResolver::Get().ApplyPlayerColorPalette(_previewPalette, _furColor);
+		// Each character uses a different recolor scheme, so build one preview palette per character from the fur color
+		if (_previewPalette[0] == nullptr || _previewPaletteColor != _furColor) {
+			const PlayerType previewTypes[] = { PlayerType::Jazz, PlayerType::Spaz, PlayerType::Lori };
+			for (std::int32_t i = 0; i < 3; i++) {
+				ContentResolver::Get().ApplyPlayerColorPalette(_previewPalette[i], _furColor, previewTypes[i]);
+			}
 			_previewPaletteColor = _furColor;
 		}
 
-		if (_previewPalette != nullptr) {
+		if (_previewPalette[0] != nullptr) {
 			std::int32_t available = 0;
 			for (std::int32_t i = 0; i < 3; i++) {
 				if (_previewMetadata[i] != nullptr) {
@@ -306,7 +310,7 @@ namespace Jazz2::UI::Menu
 				float slotX = centerX + 200.0f - step * (available - 1) * 0.5f;
 
 				for (std::int32_t i = 0; i < 3; i++) {
-					if (_previewMetadata[i] == nullptr) {
+					if (_previewMetadata[i] == nullptr || _previewPalette[i] == nullptr) {
 						continue;
 					}
 
@@ -327,7 +331,7 @@ namespace Jazz2::UI::Menu
 
 						Vector2f size = Vector2f(base->FrameDimensions.X * scale, base->FrameDimensions.Y * scale);
 						Vector2f pos = Canvas::ApplyAlignment(Alignment::Center, Vector2f(slotX, rowY), size);
-						canvas->DrawTextureWithPalette(*base->TextureDiffuse, *_previewPalette, pos, IMenuContainer::MainLayer, size, texCoords, Colorf::White);
+						canvas->DrawTextureWithPalette(*base->TextureDiffuse, *_previewPalette[i], pos, IMenuContainer::MainLayer, size, texCoords, Colorf::White);
 					}
 
 					slotX += step;

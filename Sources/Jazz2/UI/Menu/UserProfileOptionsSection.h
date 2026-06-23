@@ -50,10 +50,11 @@ namespace Jazz2::UI::Menu
 		std::uint32_t _furColor;
 		PlayerColorMode _colorMode;
 		TextInput* _nameInput;
-		// Live character preview (recolored idle frames of Jazz/Spaz/Lori): indexed metadata + the shared palette
+		// Live character preview (recolored idle frames of Jazz/Spaz/Lori): indexed metadata + one palette per
+		// character (they use different recolor schemes, so the same fur color yields a different palette each)
 		Jazz2::Resources::Metadata* _previewMetadata[3];
 		bool _previewLoaded;
-		std::unique_ptr<nCine::Texture> _previewPalette;
+		std::unique_ptr<nCine::Texture> _previewPalette[3];
 		std::uint32_t _previewPaletteColor;
 #if defined(DEATH_TARGET_ANDROID)
 		String _deviceId;

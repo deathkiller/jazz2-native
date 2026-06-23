@@ -10,6 +10,24 @@
 
 namespace Jazz2::Actors::Multiplayer
 {
+	namespace
+	{
+		// Recoloring uses a per-character palette scheme; a remote player's character is identified by the metadata
+		// path the server sent (the only signal a RemoteActor has). Only the character matters here, not the morph.
+		PlayerType GetPlayerTypeFromMetadataPath(StringView path)
+		{
+			if (path == "Interactive/PlayerLori"_s) {
+				return PlayerType::Lori;
+			} else if (path == "Interactive/PlayerSpaz"_s) {
+				return PlayerType::Spaz;
+			} else if (path == "Interactive/PlayerFrog"_s) {
+				return PlayerType::Frog;
+			} else {
+				return PlayerType::Jazz;
+			}
+		}
+	}
+
 	RemoteActor::RemoteActor()
 		: _stateBufferPos(0), _lastAnim(AnimState::Idle), _isAttachedLocally(false), _furColor(0), _paletteOffset(-1),
 			_activeShield(ShieldType::None), _activeShieldTime(0.0f)
@@ -33,8 +51,9 @@ namespace Jazz2::Actors::Multiplayer
 		}
 
 		// Acquire the new (shared, reference-counted) palette before releasing the old one, so an unchanged fur color
-		// keeps its slot; players with the same color share a single palette
-		std::int32_t newOffset = (_furColor != 0 ? resolver.AcquirePaletteOffset(_furColor) : -1);
+		// keeps its slot; players with the same color and character share a single palette
+		PlayerType playerType = (_metadata != nullptr ? GetPlayerTypeFromMetadataPath(_metadata->Path) : PlayerType::Jazz);
+		std::int32_t newOffset = (_furColor != 0 ? resolver.AcquirePaletteOffset(_furColor, playerType) : -1);
 		if (_paletteOffset >= 0) {
 			resolver.ReleasePaletteOffset(_paletteOffset);
 		}

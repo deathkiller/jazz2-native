@@ -60,7 +60,8 @@ namespace Jazz2
 #if defined(WITH_AUDIO)
 			_cachedSounds(192),
 #endif
-			_palettes{}, _paletteDirtyFirstRow(0), _paletteDirtyLastRow(PaletteCount - 1), _paletteRowRefCount{}, _paletteRowColor{}
+			_palettes{}, _paletteDirtyFirstRow(0), _paletteDirtyLastRow(PaletteCount - 1), _paletteRowRefCount{},
+			_paletteRowColor{}, _paletteRowScheme{}
 	{
 		InitializePaths();
 	}
@@ -2180,14 +2181,72 @@ namespace Jazz2
 		}
 	}
 
-	void ContentResolver::BuildPlayerColorPalette(std::uint32_t furColor, std::uint32_t* outPalette) const
+	namespace
+	{
+		// A destination block recolored by a fur section: copies `Size` colors from the section's chosen 8-color source
+		// gradient (starting `SrcOffset` colors into it) into the palette starting at `Start`. A section can recolor
+		// more than one block, e.g., when a character draws one logical color across two separate palette ranges.
+		// `Size == 0` marks an unused block slot.
+		struct FurBlock {
+			std::int32_t Start;      // First destination palette index (0 = transparent, never a real destination)
+			std::int32_t Size;       // Number of consecutive indices to recolor (SrcOffset + Size must be <= FurSectionSize)
+			std::int32_t SrcOffset;  // Offset into the source gradient for Start (so Start+i takes gradient color SrcOffset+i)
+		};
+		constexpr FurBlock NoBlock = { 0, 0, 0 };
+
+		// A character's recolor scheme: the destination blocks for each of the 4 sections, in the canonical order
+		// Primary Fur, Secondary Fur, Weapon, Misc - so the same picked color recolors the analogous region on every
+		// character. The destination ranges differ per character because each one's sprites are drawn with a different
+		// set of palette ranges; derived from a palette-usage analysis of the dumped sprites (see player-color-customization).
+		struct FurScheme {
+			FurBlock Sections[ContentResolver::FurSectionCount][ContentResolver::FurSectionMaxBlocks];
+		};
+
+		// [0] Default - Jazz (also the Frog morph and anything unspecified): the standard rabbit fur ranges.
+		// [1] Spaz: green rabbit gun (0x10), but his fur uses different ranges than Jazz - primary red 0x18,
+		//     secondary orange 0x28, misc green 0x20.
+		// [2] Lori: entirely different ranges. Her blonde hair is a bright highlight (0x28) plus the 0x3B-0x3F gold ramp,
+		//     recolored as one section; the ramp is mapped one gradient step below the highlight (SrcOffset 1) so the
+		//     highlight->body transition stays smooth instead of jumping. Skin 0x40; her dark-blue weapon spans the 0x20
+		//     blue body and the 0x48 steel barrel; misc (lips) 0x30. Her eyes (0x58) are left at their original color.
+		constexpr FurScheme FurSchemes[] = {
+			//   Primary Fur                        Secondary Fur                Weapon                                      Misc
+			{ { { { 0x10, 8, 0 }, NoBlock },        { { 0x18, 8, 0 }, NoBlock }, { { 0x20, 8, 0 }, NoBlock },                { { 0x28, 8, 0 }, NoBlock } } },
+			{ { { { 0x18, 8, 0 }, NoBlock },        { { 0x28, 8, 0 }, NoBlock }, { { 0x10, 8, 0 }, NoBlock },                { { 0x20, 8, 0 }, NoBlock } } },
+			{ { { { 0x28, 7, 1 }, { 0x3B, 5, 2 } }, { { 0x40, 8, 0 }, NoBlock }, { { 0x20, 8, 0 }, { 0x48, 8, 0 } },         { { 0x30, 8, 0 }, NoBlock } } }
+		};
+		constexpr std::int32_t FurSchemeCount = (std::int32_t)(sizeof(FurSchemes) / sizeof(FurSchemes[0]));
+	}
+
+	std::int32_t ContentResolver::GetFurSchemeIndex(PlayerType playerType)
+	{
+		// Each playable character's sprites use different palette ranges, so each needs its own recolor scheme; the Frog
+		// morph and anything unspecified fall back to the Jazz (default) scheme.
+		switch (playerType) {
+			case PlayerType::Spaz: return 1;
+			case PlayerType::Lori: return 2;
+			default: return 0;
+		}
+	}
+
+	void ContentResolver::BuildPlayerColorPalette(std::uint32_t furColor, PlayerType playerType, std::uint32_t* outPalette) const
+	{
+		BuildPlayerColorPaletteForScheme(furColor, GetFurSchemeIndex(playerType), outPalette);
+	}
+
+	void ContentResolver::BuildPlayerColorPaletteForScheme(std::uint32_t furColor, std::int32_t schemeIndex, std::uint32_t* outPalette) const
 	{
 		// Start from the default sprite palette (first row of _palettes), then recolor the fur sections.
 		std::memcpy(outPalette, _palettes, ColorsPerPalette * sizeof(std::uint32_t));
 
-		// The fur color packs one byte per section (as in the original game). The low 7 bits of each non-zero byte
-		// are the starting palette index of an 8-color gradient in the sprite palette; copy those 8 colors into the
-		// section's range. If FurHueShiftFlag is set, rotate their hue by the gradient's angle first (a color variant).
+		if (schemeIndex < 0 || schemeIndex >= FurSchemeCount) {
+			schemeIndex = 0;
+		}
+		const FurScheme& scheme = FurSchemes[schemeIndex];
+
+		// The fur color packs one byte per section (as in the original game). The low 7 bits of each non-zero byte are
+		// the starting palette index of an 8-color gradient in the sprite palette; copy those colors into each of the
+		// section's destination blocks. If FurHueShiftFlag is set, rotate their hue by the gradient's angle first.
 		for (std::int32_t section = 0; section < FurSectionCount; section++) {
 			std::uint32_t packed = (furColor >> (section * 8)) & 0xFF;
 			std::int32_t base = (std::int32_t)(packed & ~(std::uint32_t)FurHueShiftFlag);
@@ -2198,29 +2257,35 @@ namespace Jazz2
 
 			bool hueShift = (packed & FurHueShiftFlag) != 0;
 			float hueDegrees = HueShiftDegreesForGradient(base);
-			std::int32_t dst = FurSectionStarts[section];
-			for (std::int32_t i = 0; i < FurSectionSize; i++) {
-				std::int32_t srcIdx = base + i;
-				std::int32_t dstIdx = dst + i;
-				if (srcIdx < ColorsPerPalette && dstIdx > 0 && dstIdx < ColorsPerPalette) {
-					std::uint32_t color = _palettes[srcIdx];
-					if (hueShift && hueDegrees != 0.0f) {
-						color = ShiftHue(color, hueDegrees);
+			for (std::int32_t block = 0; block < FurSectionMaxBlocks; block++) {
+				const FurBlock& blk = scheme.Sections[section][block];
+				if (blk.Size <= 0 || blk.Start <= 0) {
+					// Unused block slot (index 0 is transparent, never a valid destination)
+					continue;
+				}
+				for (std::int32_t i = 0; i < blk.Size; i++) {
+					std::int32_t srcIdx = base + blk.SrcOffset + i;
+					std::int32_t dstIdx = blk.Start + i;
+					if (srcIdx > 0 && srcIdx < ColorsPerPalette && dstIdx > 0 && dstIdx < ColorsPerPalette) {
+						std::uint32_t color = _palettes[srcIdx];
+						if (hueShift && hueDegrees != 0.0f) {
+							color = ShiftHue(color, hueDegrees);
+						}
+						outPalette[dstIdx] = color;
 					}
-					outPalette[dstIdx] = color;
 				}
 			}
 		}
 	}
 
-	Texture* ContentResolver::ApplyPlayerColorPalette(std::unique_ptr<Texture>& texture, std::uint32_t furColor)
+	Texture* ContentResolver::ApplyPlayerColorPalette(std::unique_ptr<Texture>& texture, std::uint32_t furColor, PlayerType playerType)
 	{
 		if (_isHeadless) {
 			return nullptr;
 		}
 
 		std::uint32_t palette[ColorsPerPalette];
-		BuildPlayerColorPalette(furColor, palette);
+		BuildPlayerColorPalette(furColor, playerType, palette);
 
 		if (texture == nullptr) {
 			texture = std::make_unique<Texture>("PlayerColorPalette", Texture::Format::RGBA8, ColorsPerPalette, 1);
@@ -2278,29 +2343,34 @@ namespace Jazz2
 		}
 	}
 
-	std::int32_t ContentResolver::AcquirePaletteOffset(std::uint32_t furColor)
+	std::int32_t ContentResolver::AcquirePaletteOffset(std::uint32_t furColor, PlayerType playerType)
 	{
-		// Reuse the row already holding this fur color (shared, reference-counted) while noting the first free row
+		// Rows are keyed by both the fur color and the recolor scheme: the same packed color produces different
+		// palettes for characters with different schemes (e.g., Jazz vs. Lori), so they can't share a row.
+		std::uint8_t scheme = (std::uint8_t)GetFurSchemeIndex(playerType);
+
+		// Reuse the row already holding this color+scheme (shared, reference-counted) while noting the first free row
 		std::int32_t freeRow = -1;
 		for (std::int32_t row = FirstDynamicPaletteRow; row < PaletteCount; row++) {
 			if (_paletteRowRefCount[row] == 0) {
 				if (freeRow < 0) {
 					freeRow = row;
 				}
-			} else if (_paletteRowColor[row] == furColor) {
+			} else if (_paletteRowColor[row] == furColor && _paletteRowScheme[row] == scheme) {
 				_paletteRowRefCount[row]++;
 				return row * ColorsPerPalette;
 			}
 		}
 
 		if (freeRow < 0) {
-			// All dynamic rows are in use (would need more than (PaletteCount - FirstDynamicPaletteRow) distinct colors)
+			// All dynamic rows are in use (would need more than (PaletteCount - FirstDynamicPaletteRow) distinct recolors)
 			return -1;
 		}
 
 		_paletteRowRefCount[freeRow] = 1;
 		_paletteRowColor[freeRow] = furColor;
-		BuildPlayerColorPalette(furColor, _palettes + freeRow * ColorsPerPalette);
+		_paletteRowScheme[freeRow] = scheme;
+		BuildPlayerColorPaletteForScheme(furColor, scheme, _palettes + freeRow * ColorsPerPalette);
 		MarkPaletteDirty(freeRow, freeRow);
 		return freeRow * ColorsPerPalette;
 	}
@@ -2320,7 +2390,7 @@ namespace Jazz2
 	{
 		for (std::int32_t row = FirstDynamicPaletteRow; row < PaletteCount; row++) {
 			if (_paletteRowRefCount[row] > 0) {
-				BuildPlayerColorPalette(_paletteRowColor[row], _palettes + row * ColorsPerPalette);
+				BuildPlayerColorPaletteForScheme(_paletteRowColor[row], _paletteRowScheme[row], _palettes + row * ColorsPerPalette);
 				MarkPaletteDirty(row, row);
 			}
 		}

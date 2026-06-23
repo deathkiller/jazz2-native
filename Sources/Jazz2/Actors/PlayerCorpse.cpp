@@ -47,7 +47,7 @@ namespace Jazz2::Actors
 
 		if (recolor) {
 			// Share a reference-counted palette with the player and any other corpses of the same color
-			_paletteOffset = ContentResolver::Get().AcquirePaletteOffset(furColor);
+			_paletteOffset = ContentResolver::Get().AcquirePaletteOffset(furColor, playerType);
 			if (_paletteOffset >= 0) {
 				_renderer.SetPalette(_paletteOffset);
 			}

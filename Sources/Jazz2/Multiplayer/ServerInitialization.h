@@ -61,7 +61,7 @@ namespace Jazz2::Multiplayer
 		bool PlayerStacking;
 		/** @brief Whether the race minimap is available to clients (Race only) */
 		bool AllowMinimap;
-		/** @brief Whether players are recolored to their team color in team modes (forces the first 2 fur sections, ignored in non-team modes) */
+		/** @brief Whether players are recolored to their team color in team modes (forces the primary fur section, ignored in non-team modes) */
 		bool ColorizePlayersByTeam;
 	};
 
@@ -244,7 +244,7 @@ namespace Jazz2::Multiplayer
 		bool RandomizePlaylist;
 		/** @brief Whether the race minimap is available to clients (Race only) */
 		bool AllowMinimap;
-		/** @brief Whether players are recolored to their team color in team modes (forces the first 2 fur sections, ignored in non-team modes) */
+		/** @brief Whether players are recolored to their team color in team modes (forces the primary fur section, ignored in non-team modes) */
 		bool ColorizePlayersByTeam;
 		/** @brief Whether every player has limited number of lives, the game ends when only one player remains */
 		bool Elimination;

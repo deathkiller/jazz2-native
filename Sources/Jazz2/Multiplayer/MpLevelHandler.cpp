@@ -6869,7 +6869,7 @@ namespace Jazz2::Multiplayer
 
 	std::uint32_t MpLevelHandler::ColorizeFurForTeam(std::uint32_t furColor, std::uint8_t team) const
 	{
-		// In team modes with team coloring enabled, force the first two color sections to the team color. Kept
+		// In team modes with team coloring enabled, force the primary fur color section to the team color. Kept
 		// consistent on server and clients - both have the synced ColorizePlayersByTeam flag and team ids.
 		const auto& serverConfig = _networkManager->GetServerConfiguration();
 		if (serverConfig.ColorizePlayersByTeam && IsTeamGameMode(serverConfig.GameMode)) {

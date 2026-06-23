@@ -97,7 +97,7 @@ namespace Jazz2::Actors::Environment
 		if (_orientation == Orientation::Right || _orientation == Orientation::Left) {
 			// Horizontal springs all seem to have the same strength.
 			// This constant strength gives about the correct amount of horizontal push.
-			_strength = 9.5f;
+			_strength = (_levelHandler->IsReforged() ? 9.5f : 9.5f * 0.95f);
 		} else {
 			// Vertical springs should work as follows:
 			// Red spring lifts the player 9 tiles, green 14, and blue 19.
@@ -105,13 +105,13 @@ namespace Jazz2::Actors::Environment
 			// the otherwise inexplicable difference of scale between the two types.
 			switch (_type) {
 				case 0: // Red
-					_strength = 1.25f;
+					_strength = (_levelHandler->IsReforged() ? 1.25f : 1.15f);
 					break;
 				case 1: // Green
-					_strength = (_levelHandler->IsReforged() ? 1.50f : 1.52f);
+					_strength = (_levelHandler->IsReforged() ? 1.50f : 1.6f);
 					break;
 				case 2: // Blue
-					_strength = (_levelHandler->IsReforged() ? 1.68f : 1.72f);
+					_strength = (_levelHandler->IsReforged() ? 1.68f : 2.4f);
 					break;
 			}
 		}

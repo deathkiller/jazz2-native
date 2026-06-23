@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2026-06-22 23:39+0200\n"
+"POT-Creation-Date: 2026-06-23 21:21+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Consul\n"
@@ -1437,7 +1437,6 @@ msgid "Teams are only used in team game modes"
 msgstr ""
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2516
-#| msgid "Team Race"
 msgid "Teams rebalanced"
 msgstr ""
 
@@ -1882,13 +1881,11 @@ msgstr "Eşli Oyun"
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:170
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:172
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:34
-#| msgid "Preferred Splitscreen"
 msgid "Create Local Splitscreen Game"
 msgstr ""
 
 #. TRANSLATORS: Menu item to select the number of local splitscreen players
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:175
-#| msgid "Number of Local Players"
 msgid "Number of Players"
 msgstr ""
 
@@ -2338,7 +2335,6 @@ msgstr "Bağlantıyı Kes ve Çık"
 
 #. TRANSLATORS: Menu item in Multiplayer section (join an existing online server)
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:25
-#| msgid "Connect To Server"
 msgid "Join Server"
 msgstr ""
 
@@ -2397,8 +2393,8 @@ msgstr "Koş"
 #. }
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:62
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:278
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:372
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:383
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:376
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:387
 msgid "Change Weapon"
 msgstr "Silah Değiştir"
 
@@ -2462,7 +2458,6 @@ msgid "Laps"
 msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:141
-#| msgid "Treasure Hunt"
 msgid "Treasure"
 msgstr ""
 
@@ -2471,7 +2466,6 @@ msgid "Scoreboard"
 msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:177
-#| msgid "Player Name"
 msgid "Player"
 msgstr ""
 
@@ -2492,22 +2486,22 @@ msgid "No servers found, but still searchin'!"
 msgstr "Sunucu bulunamadı, ama hala aranıyor!"
 
 #. TRANSLATORS: Label in Connect To Server > IP Address input field
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:342
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:346
 msgid "IP Address:"
 msgstr ""
 
 #. TRANSLATORS: Placeholder in Connect To Server > IP Address input field
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:349
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:353
 msgid "<ip> or <ip>:<port>"
 msgstr ""
 
 #. TRANSLATORS: Bottom hint in Connect To Server > IP Address input field, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:380
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:384
 msgid "to show keyboard"
 msgstr ""
 
 #. TRANSLATORS: Bottom hint in Connect To Server section, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:394
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:398
 msgid "to connect to IP address"
 msgstr ""
 
@@ -2561,24 +2555,25 @@ msgstr "Discord Entegrasyonu"
 msgid "Player Name"
 msgstr "Oyuncu Adı"
 
-#. TRANSLATORS: Menu item in Options > User Profile section
+#. TRANSLATORS: Menu item in Options > User Profile section (primary fur/body color)
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:153
-msgid "Character Color 1"
+msgid "Primary Fur"
 msgstr ""
 
-#. TRANSLATORS: Menu item in Options > User Profile section
+#. TRANSLATORS: Menu item in Options > User Profile section (secondary fur/body color)
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:155
-msgid "Character Color 2"
+msgid "Secondary Fur"
 msgstr ""
 
-#. TRANSLATORS: Menu item in Options > User Profile section
+#. TRANSLATORS: Menu item in Options > User Profile section (weapon color)
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:157
-msgid "Character Color 3"
+#| msgid "Weapon {}"
+msgid "Weapon"
 msgstr ""
 
-#. TRANSLATORS: Menu item in Options > User Profile section
+#. TRANSLATORS: Menu item in Options > User Profile section (miscellaneous accent color)
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:159
-msgid "Character Color 4"
+msgid "Miscellaneous"
 msgstr ""
 
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:174
@@ -2623,7 +2618,6 @@ msgstr[0] "{} oyuncu daha bekleniyor"
 msgstr[1] "{} oyuncu daha bekleniyor"
 
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:175
-#| msgid "Team Race"
 msgid "Team"
 msgstr ""
 

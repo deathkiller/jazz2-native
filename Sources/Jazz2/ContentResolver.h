@@ -3,6 +3,7 @@
 #include "../Main.h"
 #include "GameDifficulty.h"
 #include "LevelDescriptor.h"
+#include "PlayerType.h"
 #include "Resources.h"
 #include "UI/Font.h"
 
@@ -71,20 +72,32 @@ namespace Jazz2
 
 		/**
 		 * @brief Number of recolorable fur sections
-		 * 
+		 *
 		 * @section player-recolor How a player's 4-byte fur color maps to recolored palette sections
 		 *
 		 * The fur color is 4 bytes, one per section (as in the original game). The low 7 bits of each byte are the
 		 * starting palette index of an 8-color gradient in the sprite palette; those 8 colors are copied into the
-		 * section's fixed range in the per-player palette (a byte of 0 keeps the original colors for that section).
-		 * If @ref FurHueShiftFlag is also set, the gradient's hue is rotated by @ref HueShiftDegreesForGradient first
-		 * (see @ref ShiftHue), which roughly doubles the selectable color variants without extra gradients in the palette.
+		 * section's destination block(s) in the per-player palette (a byte of 0 keeps the original colors for that
+		 * section). If @ref FurHueShiftFlag is also set, the gradient's hue is rotated by @ref HueShiftDegreesForGradient
+		 * first (see @ref ShiftHue), which roughly doubles the selectable color variants without extra gradients.
+		 *
+		 * Every character's scheme uses the same section order --- Primary Fur, Secondary Fur, Weapon, Misc --- so a
+		 * picked color recolors the analogous region on each one. The *destination* blocks differ per character
+		 * (@ref GetFurSchemeIndex) because their sprites are drawn with different palette ranges: Jazz uses the standard
+		 * rabbit ranges (0x10/0x18/0x20/0x28); Spaz reorders them to his own fur layout; Lori uses entirely different
+		 * ranges (hair, skin, dark-blue weapon, lips), with her eyes left at their original color. The per-character
+		 * schemes are defined in the source file.
 		 */
 		static constexpr std::int32_t FurSectionCount = 4;
-		/** @brief Number of consecutive palette indices per fur section */
+		/** @brief Number of consecutive palette indices per fur section block */
 		static constexpr std::int32_t FurSectionSize = 8;
-		/** @brief Starting palette index of each fur section in the per-player palette */
-		static constexpr std::int32_t FurSectionStarts[FurSectionCount] = { 0x10, 0x18, 0x20, 0x28 };
+		/**
+		 * @brief Maximum number of destination blocks a single fur section can recolor
+		 *
+		 * Most sections map to one block, but a section may span several (e.g., Lori's hair occupies both the 0x28
+		 * highlight block and the 0x38 gold-ramp block, recolored together as one logical section).
+		 */
+		static constexpr std::int32_t FurSectionMaxBlocks = 2;
 		/**
 		 * @brief High bit of a fur section byte requesting its gradient be hue-shifted by @ref HueShiftDegreesForGradient
 		 *
@@ -169,10 +182,10 @@ namespace Jazz2
 		/**
 		 * @brief Builds a 256-color palette for a player from a packed 4-byte fur color
 		 *
-		 * Each byte is one section: a gradient start index in the sprite palette (0 = keep the original colors).
-		 * See @ref FurSectionStarts.
+		 * Each byte is one section: a gradient start index in the sprite palette (0 = keep the original colors). The
+		 * destination blocks recolored by each section depend on `playerType` (see @ref player-recolor).
 		 */
-		void BuildPlayerColorPalette(std::uint32_t furColor, std::uint32_t* outPalette) const;
+		void BuildPlayerColorPalette(std::uint32_t furColor, PlayerType playerType, std::uint32_t* outPalette) const;
 		/**
 		 * @brief Rotates the hue of a packed `0xAABBGGRR` color by `degrees`
 		 *
@@ -194,9 +207,10 @@ namespace Jazz2
 		 * @brief Builds/updates a standalone 256x1 palette texture for a player fur color and returns it
 		 *
 		 * `texture` is created on first use. Used for off-screen previews (e.g., the profile menu); in-game recoloring
-		 * uses @ref AcquirePaletteOffset instead. Returns `nullptr` in headless mode.
+		 * uses @ref AcquirePaletteOffset instead. The recolored blocks depend on `playerType` (see @ref player-recolor).
+		 * Returns `nullptr` in headless mode.
 		 */
-		Texture* ApplyPlayerColorPalette(std::unique_ptr<Texture>& texture, std::uint32_t furColor);
+		Texture* ApplyPlayerColorPalette(std::unique_ptr<Texture>& texture, std::uint32_t furColor, PlayerType playerType);
 		/**
 		 * @brief Returns the shared 256x256 palette texture, uploading any rows changed since the last call
 		 *
@@ -209,11 +223,12 @@ namespace Jazz2
 		 * @brief Acquires a reference-counted palette offset for the given packed fur color
 		 *
 		 * The offset is the flat offset into the shared palette texture, passed to @ref ActorBase::ActorRenderer::SetPalette
-		 * and the palette-aware shaders. Callers with the same fur color share one palette (so e.g., many corpses of the
-		 * same character cost a single row); the recolored palette is built on first use. Returns the offset, or -1 if
-		 * none are free. Release it with @ref ReleasePaletteOffset when the holder disconnects/despawns.
+		 * and the palette-aware shaders. Callers with the same fur color *and* recolor scheme (@ref GetFurSchemeIndex,
+		 * derived from `playerType`) share one palette (so e.g., many corpses of the same character cost a single row);
+		 * the recolored palette is built on first use. Returns the offset, or -1 if none are free. Release it with
+		 * @ref ReleasePaletteOffset when the holder disconnects/despawns.
 		 */
-		std::int32_t AcquirePaletteOffset(std::uint32_t furColor);
+		std::int32_t AcquirePaletteOffset(std::uint32_t furColor, PlayerType playerType);
 		/**
 		 * @brief Releases one reference to a palette offset from @ref AcquirePaletteOffset
 		 *
@@ -342,6 +357,10 @@ namespace Jazz2
 		void MarkPaletteDirty(std::int32_t firstRow, std::int32_t lastRow);
 		// Rebuilds every in-use dynamic palette row from the current base palette (after the sprite palette changes)
 		void RefreshDynamicPaletteRows();
+		// Maps a player type to its fur recolor scheme index (which destination blocks each section recolors)
+		static std::int32_t GetFurSchemeIndex(PlayerType playerType);
+		// Core recolor builder, keyed by the scheme index stored on each dynamic palette row
+		void BuildPlayerColorPaletteForScheme(std::uint32_t furColor, std::int32_t schemeIndex, std::uint32_t* outPalette) const;
 #if defined(DEATH_DEBUG)
 		void MigrateGraphics(StringView path);
 #endif
@@ -351,12 +370,14 @@ namespace Jazz2
 		std::uint32_t _palettes[PaletteCount * ColorsPerPalette];
 		// Shared palette texture (256x256: one palette per row). Rows changed since the last upload are tracked by
 		// the dirty range below and re-uploaded lazily. Dynamically allocated per-player rows are reference-counted
-		// (_paletteRowRefCount > 0 = in use) and keyed by fur color (_paletteRowColor) so identical colors share a row.
+		// (_paletteRowRefCount > 0 = in use) and keyed by both fur color (_paletteRowColor) and recolor scheme
+		// (_paletteRowScheme) so identical recolors share a row (a character's scheme decides which blocks it recolors).
 		std::unique_ptr<Texture> _paletteTexture;
 		std::int32_t _paletteDirtyFirstRow;
 		std::int32_t _paletteDirtyLastRow;
 		std::int32_t _paletteRowRefCount[PaletteCount];
 		std::uint32_t _paletteRowColor[PaletteCount];
+		std::uint8_t _paletteRowScheme[PaletteCount];
 		HashMap<Reference<const String>, std::unique_ptr<Metadata>, 
 #if defined(DEATH_TARGET_32BIT)
 			xxHash32Func<String>,

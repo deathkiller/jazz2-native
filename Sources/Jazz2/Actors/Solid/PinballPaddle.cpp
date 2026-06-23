@@ -52,11 +52,11 @@ namespace Jazz2::Actors::Solid
 
 						float forceY = 1.9f * mult;
 						if (!_levelHandler->IsReforged()) {
-							forceY *= 0.85f;
+							forceY *= 1.6f;
 						}
 
 						player->_speed.X = 0.0f;
-						player->_speed.Y = (_levelHandler->IsReforged() ? -1.0f : -0.7f);
+						player->_speed.Y = (_levelHandler->IsReforged() ? -1.0f : -1.6f);
 
 						if (player->_activeModifier == Player::Modifier::None) {
 							if (player->_copterFramesLeft > 1.0f) {

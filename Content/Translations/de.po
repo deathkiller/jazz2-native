@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: jazz2-resurrection\n"
-"POT-Creation-Date: 2026-06-22 23:37+0200\n"
-"PO-Revision-Date: 2026-06-22 23:37+0200\n"
+"POT-Creation-Date: 2026-06-23 21:16+0200\n"
+"PO-Revision-Date: 2026-06-23 21:19+0200\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: de\n"
@@ -1444,7 +1444,6 @@ msgid "Teams are only used in team game modes"
 msgstr ""
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2516
-#| msgid "Team Race"
 msgid "Teams rebalanced"
 msgstr ""
 
@@ -1894,13 +1893,11 @@ msgstr "Kooperation"
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:170
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:172
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:34
-#| msgid "Preferred Splitscreen"
 msgid "Create Local Splitscreen Game"
 msgstr ""
 
 #. TRANSLATORS: Menu item to select the number of local splitscreen players
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:175
-#| msgid "Number of Local Players"
 msgid "Number of Players"
 msgstr ""
 
@@ -2354,7 +2351,6 @@ msgstr "Trennen & Beenden"
 
 #. TRANSLATORS: Menu item in Multiplayer section (join an existing online server)
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:25
-#| msgid "Connect To Server"
 msgid "Join Server"
 msgstr ""
 
@@ -2413,8 +2409,8 @@ msgstr "Laufen"
 #. }
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:62
 #: Sources/Jazz2/UI/Menu/RemapControlsSection.cpp:278
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:372
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:383
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:376
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:387
 msgid "Change Weapon"
 msgstr "Waffe wechseln"
 
@@ -2478,7 +2474,6 @@ msgid "Laps"
 msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:141
-#| msgid "Treasure Hunt"
 msgid "Treasure"
 msgstr ""
 
@@ -2487,7 +2482,6 @@ msgid "Scoreboard"
 msgstr ""
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:177
-#| msgid "Player Name"
 msgid "Player"
 msgstr ""
 
@@ -2508,22 +2502,22 @@ msgid "No servers found, but still searchin'!"
 msgstr "Keine Server gefunden, aber die Suche läuft noch!"
 
 #. TRANSLATORS: Label in Connect To Server > IP Address input field
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:342
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:346
 msgid "IP Address:"
 msgstr "IP Adresse:"
 
 #. TRANSLATORS: Placeholder in Connect To Server > IP Address input field
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:349
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:353
 msgid "<ip> or <ip>:<port>"
 msgstr "<ip> oder <ip>:<port>"
 
 #. TRANSLATORS: Bottom hint in Connect To Server > IP Address input field, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:380
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:384
 msgid "to show keyboard"
 msgstr "Tastatur anzeigen"
 
 #. TRANSLATORS: Bottom hint in Connect To Server section, prefixed with key/button to press
-#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:394
+#: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:398
 msgid "to connect to IP address"
 msgstr "eine Verbindung zur IP-Adresse herzustellen"
 
@@ -2577,24 +2571,24 @@ msgstr "Discord-Integration"
 msgid "Player Name"
 msgstr "Spielername"
 
-#. TRANSLATORS: Menu item in Options > User Profile section
+#. TRANSLATORS: Menu item in Options > User Profile section (primary fur/body color)
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:153
-msgid "Character Color 1"
+msgid "Primary Fur"
 msgstr ""
 
-#. TRANSLATORS: Menu item in Options > User Profile section
+#. TRANSLATORS: Menu item in Options > User Profile section (secondary fur/body color)
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:155
-msgid "Character Color 2"
+msgid "Secondary Fur"
 msgstr ""
 
-#. TRANSLATORS: Menu item in Options > User Profile section
+#. TRANSLATORS: Menu item in Options > User Profile section (weapon color)
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:157
-msgid "Character Color 3"
-msgstr ""
+msgid "Weapon"
+msgstr "Waffe"
 
-#. TRANSLATORS: Menu item in Options > User Profile section
+#. TRANSLATORS: Menu item in Options > User Profile section (miscellaneous accent color)
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:159
-msgid "Character Color 4"
+msgid "Miscellaneous"
 msgstr ""
 
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:174
@@ -2614,12 +2608,12 @@ msgstr ""
 #. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:201
 msgid "Online and first local player"
-msgstr ""
+msgstr "Online und erster lokaler Anbieter"
 
 #. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:203
 msgid "Online and all local players"
-msgstr ""
+msgstr "Online-Spieler und alle lokalen Spieler"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:211
@@ -2639,17 +2633,18 @@ msgstr[0] "Warte auf {} weiteren Spieler"
 msgstr[1] "Warte auf {} weitere Spieler"
 
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:175
-#| msgid "Team Race"
 msgid "Team"
-msgstr ""
+msgstr "Team"
 
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:184
 msgid "Auto"
-msgstr ""
+msgstr "Auto"
 
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:223
 msgid "Use \f[c:#d0705d]Up/Down\f[/c] to switch between character and team"
 msgstr ""
+"Verwende \f[c:#d0705d]Hoch/Runter\f[/c], um zwischen Charakter und Team zu "
+"wechseln"
 
 #: Sources/Main.cpp:669 Sources/Main.cpp:740
 msgid ""
@@ -2714,6 +2709,11 @@ msgid ""
 "\n"
 "The client was rejected due to malformed communication protocol."
 msgstr ""
+"\f[c:#704a4a]Die Verbindung wurde geschlossen!\f[/c]\n"
+"\n"
+"\n"
+"Der Client wurde aufgrund eines fehlerhaften Kommunikationsprotokolls "
+"abgelehnt."
 
 #: Sources/Main.cpp:1178
 msgid ""
@@ -2723,6 +2723,12 @@ msgid ""
 "The connection was denied by the web browser.\n"
 "One of the reasons may be connecting to an unsecured WebSocket."
 msgstr ""
+"\f[c:#704a4a]Verbindung zum Server nicht möglich!\f[/c]\n"
+"\n"
+"\n"
+"Die Verbindung wurde vom Webbrowser abgelehnt.\n"
+"Ein möglicher Grund dafür könnte die Verbindung zu einem ungesicherten "
+"WebSocket sein."
 
 #: Sources/Main.cpp:1179
 msgid ""

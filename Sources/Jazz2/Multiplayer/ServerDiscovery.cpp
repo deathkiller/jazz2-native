@@ -213,10 +213,14 @@ namespace Jazz2::Multiplayer
 						std::string_view version;
 						serverItem["v"].get(version);
 
+						std::int64_t serverFlags = 0;
+						serverItem["h"].get(serverFlags);
+
 						ServerDescription discoveredServer {};
 						discoveredServer.Version = version;
 						discoveredServer.Name = serverName;
 						discoveredServer.EndpointString = serverEndpoints;
+						discoveredServer.Flags = (std::uint32_t)serverFlags;
 						discoveredServer.CurrentPlayerCount = (std::uint32_t)currentPlayers;
 						discoveredServer.MaxPlayerCount = (std::uint32_t)maxPlayers;
 
@@ -422,11 +426,15 @@ namespace Jazz2::Multiplayer
 						std::string_view version;
 						serverItem["v"].get(version);
 
+						std::int64_t serverFlags = 0;
+						serverItem["h"].get(serverFlags);
+
 						ServerDescription discoveredServer{};
 						discoveredServer.Version = version;
 						discoveredServer.Name = serverName;
 						discoveredServer.EndpointString = serverEndpoints;
 						discoveredServer.Name = serverName;
+						discoveredServer.Flags = (std::uint32_t)serverFlags;
 						discoveredServer.CurrentPlayerCount = (std::uint32_t)currentPlayers;
 						discoveredServer.MaxPlayerCount = (std::uint32_t)maxPlayers;
 #	if defined(WITH_WEBSOCKET)
@@ -580,10 +588,13 @@ namespace Jazz2::Multiplayer
 
 			std::uint32_t flags = 0;
 			if (!serverConfig.ServerPassword.empty()) {
-				flags |= 0x01;
+				flags |= 0x01;	// Password-protected
 			}
 			if (!serverConfig.WhitelistedUniquePlayerIDs.empty()) {
-				flags |= 0x02;
+				flags |= 0x02;	// Whitelisted
+			}
+			if (serverConfig.ReforgedGameplay) {
+				flags |= 0x04;	// Reforged gameplay
 			}
 			packet.WriteVariableUint32(flags);
 			packet.WriteValue<std::uint8_t>((std::uint8_t)serverConfig.GameMode);
@@ -683,10 +694,21 @@ namespace Jazz2::Multiplayer
 				"\\"_s, "\\\\"_s), "\""_s, "\\\""_s), "\f"_s, "\\f"_s);
 		}
 
+		std::uint32_t flags = 0;
+		if (!serverConfig.ServerPassword.empty()) {
+			flags |= 0x01;	// Password-protected
+		}
+		if (!serverConfig.WhitelistedUniquePlayerIDs.empty()) {
+			flags |= 0x02;	// Whitelisted
+		}
+		if (serverConfig.ReforgedGameplay) {
+			flags |= 0x04;	// Reforged gameplay
+		}
+
 		length += formatInto({ input + length, sizeof(input) - length },
-			"\",\"v\":\"{}\",\"d\":\"{}\",\"p\":{},\"m\":{},\"s\":{},\"l\":{},\"g\":{},\"f\":\"{}\"",
+			"\",\"v\":\"{}\",\"d\":\"{}\",\"p\":{},\"m\":{},\"s\":{},\"l\":{},\"g\":{},\"h\":{},\"f\":\"{}\"",
 			NCINE_VERSION, PreferencesCache::GetDeviceID(), server->GetPeerCount(), serverConfig.MaxPlayerCount,
-			serverConfig.StartUnixTimestamp, serverLoad, serverConfig.GameMode, levelDisplayName);
+			serverConfig.StartUnixTimestamp, serverLoad, serverConfig.GameMode, flags, levelDisplayName);
 
 #	if defined(WITH_WEBSOCKET)
 		if (serverConfig.WsPort != 0) {
@@ -711,13 +733,13 @@ namespace Jazz2::Multiplayer
 			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
 			Json::Value doc; std::string errors;
 			if (reader->parse(buffer.get(), buffer.get() + size, &doc, &errors)) {
-				bool success; std::string_view endpoints;
-				if (doc["r"].get(success) == Json::SUCCESS && success &&
+				std::int64_t result; std::string_view endpoints;
+				if (doc["r"].get(result) == Json::SUCCESS && result == 0 &&
 					doc["e"].get(endpoints) == Json::SUCCESS && !endpoints.empty()) {
 					_onlineSuccess = true;
 					LOGD("Server published with following endpoints: {}", StringView(endpoints));
 				} else {
-					LOGE("Failed to publish the server: Request rejected");
+					LOGE("Failed to publish the server: Request rejected ({})", result);
 				}
 			} else {
 				LOGE("Failed to publish the server: Response cannot be parsed: {}", StringView(errors));

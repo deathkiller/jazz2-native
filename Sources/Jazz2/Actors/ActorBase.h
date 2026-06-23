@@ -400,6 +400,8 @@ namespace Jazz2::Actors
 		float _internalForceY;
 		float _elasticity;
 		float _friction;
+		/** @brief Optional cap on applied upward speed per frame (0 = no cap); used to reproduce the original's constant-speed rise */
+		float _maxRiseSpeed = 0.0f;
 		float _unstuckCooldown;
 		float _frozenTimeLeft;
 		std::int32_t _maxHealth;
@@ -449,6 +451,10 @@ namespace Jazz2::Actors
 		virtual void OnHitCeiling(float timeMult);
 		/** @brief Called when the object hits a wall */
 		virtual void OnHitWall(float timeMult);
+		/** @brief Returns the gravity applied this frame, allowing it to be direction-dependent (e.g., the player's asymmetric jump arc) */
+		virtual float GetGravityModifier(float baseGravity, bool isRising) const {
+			return baseGravity;
+		}
 
 		/** @brief Called when an event is triggered */
 		virtual void OnTriggeredEvent(EventType eventType, std::uint8_t* eventParams);
