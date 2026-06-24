@@ -42,7 +42,6 @@ namespace Jazz2::Rendering
 		Vector2f _cameraPos;
 		Vector2f _cameraLastPos;
 		Vector2f _cameraDistanceFactor;
-		Vector2f _cameraResponsiveness;
 		float _shakeDuration;
 		Vector2f _shakeOffset;
 		float _ambientLightTarget;
@@ -87,12 +86,17 @@ namespace Jazz2::Rendering
 		void WarpCameraToTarget(bool fast);
 
 	private:
-		static constexpr float ResponsivenessChange = 0.04f;
-		static constexpr float ResponsivenessMin = 0.3f;
-		static constexpr float ResponsivenessMax = 1.2f;
-		static constexpr float SlowRatioX = 0.3f;
-		static constexpr float SlowRatioY = 0.3f;
-		static constexpr float FastRatioX = 0.2f;
-		static constexpr float FastRatioY = 0.04f;
+		// Below this focus speed there is no look-ahead - the camera stays exactly on the player, so slow nudging or
+		// pushing keeps the player perfectly centered and pixel-crisp. Above it the lead eases in, scaled by the excess.
+		static constexpr float CameraStickSpeed = 1.0f;
+		// Look-ahead distance per unit of (excess) player speed - how far ahead, in pixels, the camera leads at speed.
+		// ~2x the old camera's lead (a full-speed walk now leads ~65px); raise for an even bigger lead.
+		static constexpr float LookAheadFactorX = 22.0f;
+		static constexpr float LookAheadFactorY = 14.0f;
+		// The look-ahead is capped at this fraction of the half-view, so very high speeds (dashing/falling) can't shove
+		// the player too far toward the screen edge.
+		static constexpr float MaxLookAheadFraction = 0.4f;
+		// Per-frame rate at which the look-ahead eases toward its target (cumulative + smooth - it never snaps in/out).
+		static constexpr float LookAheadSmoothing = 0.06f;
 	};
 }

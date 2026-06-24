@@ -402,6 +402,8 @@ namespace Jazz2::Actors
 		float _friction;
 		/** @brief Optional cap on applied upward speed per frame (0 = no cap); used to reproduce the original's constant-speed rise */
 		float _maxRiseSpeed = 0.0f;
+		/** @brief Per-frame clamp on @ref _speed Y; raised for forced transport (e.g. sucker tubes) so high launch speeds aren't truncated */
+		float _verticalSpeedLimit = 16.0f;
 		float _unstuckCooldown;
 		float _frozenTimeLeft;
 		std::int32_t _maxHealth;

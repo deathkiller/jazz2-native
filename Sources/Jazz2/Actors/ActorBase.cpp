@@ -212,7 +212,7 @@ namespace Jazz2::Actors
 		float accelY = (_internalForceY + _externalForce.Y) * timeMult;
 
 		_speed.X = std::clamp(_speed.X, -16.0f, 16.0f);
-		_speed.Y = std::clamp(_speed.Y + accelY, -16.0f, 16.0f);
+		_speed.Y = std::clamp(_speed.Y + accelY, -_verticalSpeedLimit, _verticalSpeedLimit);
 
 		float effectiveSpeedX, effectiveSpeedY;
 		if (_frozenTimeLeft > 0.0f) {

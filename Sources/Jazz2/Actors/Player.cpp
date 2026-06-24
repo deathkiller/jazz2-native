@@ -420,10 +420,14 @@ namespace Jazz2::Actors
 		// Force collisions every frame even if player doesn't move
 		SetState(ActorState::IsDirty, true);
 
-		// The applied rise cap reproduces the original constant-speed rise for jumps/springs, but special moves
-		// (uppercut/sidekick) launch via forces and need their full height, so disable it while one is active.
+		// The applied rise cap reproduces the original constant-speed rise for jumps/springs; special moves
+		// (uppercut/sidekick) launch via forces and skip it. The cap stays on even in a tube, so a sucker tube
+		// ascends slowly like the original - but the raised vertical-speed limit is kept while in the tube and
+		// while the launch momentum is still bleeding off, so a strong suck (e.g. -30) keeps rising at the cap
+		// for a long time (high) instead of being clamped to 16 the instant the tube ends.
 		if (!_levelHandler->IsReforged()) {
 			_maxRiseSpeed = (_currentSpecialMove == SpecialMoveType::None ? LegacyRiseSpeedCap : 0.0f);
+			_verticalSpeedLimit = ((_inTubeTime > 0.0f || _speed.Y < -16.0f) ? 32.0f : 16.0f);
 		}
 
 		// Process level bounds (if not warping)
@@ -1913,6 +1917,13 @@ namespace Jazz2::Actors
 
 	void Player::OnHitCeiling(float timeMult)
 	{
+		// Hitting a ceiling must stop the upward push immediately - otherwise a strong launch (e.g. a vertical
+		// spring) keeps re-applying its force and the player sticks to the ceiling. (_speed.Y and _internalForceY
+		// are already zeroed by the caller; clear the external force too.)
+		if (!_levelHandler->IsReforged() && _externalForce.Y < 0.0f) {
+			_externalForce.Y = 0.0f;
+		}
+
 		if (_levelHandler->EventMap()->IsHurting(_pos.X, _pos.Y - 4.0f, Direction::Down)) {
 			if (!IsInvulnerable() && _sugarRushLeft <= 0.0f) {
 				if (_activeShieldTime > 0.0f) {

@@ -11,7 +11,7 @@ namespace Jazz2::Rendering
 	PlayerViewport::PlayerViewport(LevelHandler* levelHandler, Actors::ActorBase* targetActor)
 		: _levelHandler(levelHandler), _targetActor(targetActor),
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
-			_cameraResponsiveness(ResponsivenessMax, ResponsivenessMax), _shakeDuration(0.0f)
+			_shakeDuration(0.0f)
 	{
 		_ambientLight = levelHandler->_defaultAmbientLight;
 		_ambientLightTarget = _ambientLight.W;
@@ -171,42 +171,39 @@ namespace Jazz2::Rendering
 			}
 		}*/
 
-		// If player doesn't move but has some speed, it's probably stuck, so reset the speed
+		// Smooth, cumulative look-ahead. The camera base is locked to the player (see the clamp below), so the camera
+		// never lags behind - this is purely a lead in the direction of travel. The lead eases toward a target that is
+		// proportional to how much the player's speed exceeds CameraStickSpeed (so it builds up and decays gradually),
+		// and is applied rounded to whole pixels (clamp below) so the player never shimmers - only clean 1px steps.
+		// A player that has speed but didn't actually move (pushing into a wall) gets no lead.
 		Vector2f focusSpeed = _targetActor->GetSpeed();
-		if (overridePosX || std::abs(_cameraLastPos.X - focusPos.X) < 1.0f) {
+		Vector2f actualMovement = focusPos - _cameraLastPos;
+		_cameraLastPos = focusPos;
+		if (overridePosX || std::abs(actualMovement.X) < 0.01f) {
 			focusSpeed.X = 0.0f;
 		}
-		if (overridePosY || std::abs(_cameraLastPos.Y - focusPos.Y) < 1.0f) {
+		if (overridePosY || std::abs(actualMovement.Y) < 0.01f) {
 			focusSpeed.Y = 0.0f;
 		}
 
 		Vector2f focusVelocity = Vector2f(std::abs(focusSpeed.X), std::abs(focusSpeed.Y));
-
-		// Camera responsiveness (smoothing unexpected movements)
-		if (focusVelocity.X <= 3.0f) {
-			if (_cameraResponsiveness.X > ResponsivenessMin) {
-				_cameraResponsiveness.X = std::max(_cameraResponsiveness.X - ResponsivenessChange * timeMult, ResponsivenessMin);
-			}
-		} else {
-			if (_cameraResponsiveness.X < ResponsivenessMax) {
-				_cameraResponsiveness.X = std::min(_cameraResponsiveness.X + ResponsivenessChange * timeMult, ResponsivenessMax);
-			}
+		float maxLookAheadX = halfView.X * MaxLookAheadFraction;
+		float maxLookAheadY = halfView.Y * MaxLookAheadFraction;
+		float targetLookAheadX = (focusVelocity.X > CameraStickSpeed
+			? (focusSpeed.X < 0.0f ? -1.0f : 1.0f) * std::min((focusVelocity.X - CameraStickSpeed) * LookAheadFactorX, maxLookAheadX) : 0.0f);
+		float targetLookAheadY = (focusVelocity.Y > CameraStickSpeed
+			? (focusSpeed.Y < 0.0f ? -1.0f : 1.0f) * std::min((focusVelocity.Y - CameraStickSpeed) * LookAheadFactorY, maxLookAheadY) : 0.0f);
+		// Ease the look-ahead toward its target, but once the player has stopped (target zero) and the remaining lead
+		// is small, freeze it instead of crawling all the way to zero: the camera is pixel-snapped, so easing through
+		// the last few pixels shows up as visible 1px jumps. Holding a small constant lead avoids that; easing resumes
+		// the moment the player moves again (target != 0).
+		static constexpr float LookAheadFreezeThreshold = 4.0f;
+		if (targetLookAheadX != 0.0f || std::abs(_cameraDistanceFactor.X) >= LookAheadFreezeThreshold) {
+			_cameraDistanceFactor.X = lerpByTime(_cameraDistanceFactor.X, targetLookAheadX, LookAheadSmoothing, timeMult);
 		}
-		if (focusVelocity.Y <= 3.0f) {
-			if (_cameraResponsiveness.Y > ResponsivenessMin) {
-				_cameraResponsiveness.Y = std::max(_cameraResponsiveness.Y - ResponsivenessChange * timeMult, ResponsivenessMin);
-			}
-		} else {
-			if (_cameraResponsiveness.Y < ResponsivenessMax) {
-				_cameraResponsiveness.Y = std::min(_cameraResponsiveness.Y + ResponsivenessChange * timeMult, ResponsivenessMax);
-			}
+		if (targetLookAheadY != 0.0f || std::abs(_cameraDistanceFactor.Y) >= LookAheadFreezeThreshold) {
+			_cameraDistanceFactor.Y = lerpByTime(_cameraDistanceFactor.Y, targetLookAheadY, LookAheadSmoothing, timeMult);
 		}
-
-		_cameraLastPos.X = lerpByTime(_cameraLastPos.X, focusPos.X, std::min(_cameraResponsiveness.X, 1.0f), timeMult);
-		_cameraLastPos.Y = lerpByTime(_cameraLastPos.Y, focusPos.Y, std::min(_cameraResponsiveness.Y, 1.0f), timeMult);
-
-		_cameraDistanceFactor.X = lerpByTime(_cameraDistanceFactor.X, focusSpeed.X * 8.0f, (focusVelocity.X < 2.0f ? SlowRatioX : FastRatioX), timeMult);
-		_cameraDistanceFactor.Y = lerpByTime(_cameraDistanceFactor.Y, focusSpeed.Y * 5.0f, (focusVelocity.Y < 2.0f ? SlowRatioY : FastRatioY), timeMult);
 
 		if (_shakeDuration > 0.0f) {
 			_shakeDuration -= timeMult;
@@ -220,22 +217,24 @@ namespace Jazz2::Rendering
 			}
 		}
 
-		// Clamp camera position to level bounds
+		// The camera base is the player's position plus the look-ahead rounded to a whole pixel: a constant integer
+		// offset between the floored player sprite and the floored camera is what keeps the player pixel-crisp (it does
+		// clean 1px steps as the lead grows/shrinks, never sub-pixel shimmer). Then clamp to the level bounds.
 		if (overridePosX) {
-			_cameraPos.X = _cameraLastPos.X + _shakeOffset.X;
+			_cameraPos.X = focusPos.X + _shakeOffset.X;
 		} else if (_viewBounds.W > halfView.X * 2) {
-			_cameraPos.X = std::clamp(_cameraLastPos.X + _cameraDistanceFactor.X, _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X) + _shakeOffset.X;
-			if (!PreferencesCache::UnalignedViewport || std::abs(_cameraDistanceFactor.X) < 1.0f) {
+			_cameraPos.X = std::clamp(focusPos.X + std::round(_cameraDistanceFactor.X), _viewBounds.X + halfView.X, _viewBounds.X + _viewBounds.W - halfView.X) + _shakeOffset.X;
+			if (!PreferencesCache::UnalignedViewport) {
 				_cameraPos.X = std::floor(_cameraPos.X);
 			}
 		} else {
 			_cameraPos.X = std::floor(_viewBounds.X + _viewBounds.W * 0.5f + _shakeOffset.X);
 		}
 		if (overridePosY) {
-			_cameraPos.Y = _cameraLastPos.Y + _shakeOffset.Y;
+			_cameraPos.Y = focusPos.Y + _shakeOffset.Y;
 		} else if (_viewBounds.H > halfView.Y * 2) {
-			_cameraPos.Y = std::clamp(_cameraLastPos.Y + _cameraDistanceFactor.Y, _viewBounds.Y + halfView.Y - 1.0f, _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f) + _shakeOffset.Y;
-			if (!PreferencesCache::UnalignedViewport || std::abs(_cameraDistanceFactor.Y) < 1.0f) {
+			_cameraPos.Y = std::clamp(focusPos.Y + std::round(_cameraDistanceFactor.Y), _viewBounds.Y + halfView.Y - 1.0f, _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f) + _shakeOffset.Y;
+			if (!PreferencesCache::UnalignedViewport) {
 				_cameraPos.Y = std::floor(_cameraPos.Y);
 			}
 		} else {
@@ -267,16 +266,13 @@ namespace Jazz2::Rendering
 
 	void PlayerViewport::WarpCameraToTarget(bool fast)
 	{
+		// The camera base is locked to the player, so warping just means placing it on the player and resetting the
+		// movement-tracking reference. A non-fast (hard) warp also clears the look-ahead so it starts centered.
 		Vector2f focusPos = _targetActor->GetPos();
+		_cameraPos = focusPos;
+		_cameraLastPos = focusPos;
 		if (!fast) {
-			_cameraPos = focusPos;
-			_cameraLastPos = _cameraPos;
 			_cameraDistanceFactor = Vector2f(0.0f, 0.0f);
-			_cameraResponsiveness = Vector2f(ResponsivenessMax, ResponsivenessMax);
-		} else {
-			Vector2f diff = _cameraLastPos - _cameraPos;
-			_cameraPos = focusPos;
-			_cameraLastPos = _cameraPos + diff;
 		}
 	}
 }
