@@ -1420,7 +1420,23 @@ namespace Jazz2::UI
 				}
 
 				DrawElement(WeaponWheelDim, -1, pos.X, pos.Y, ShadowLayer - 10, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, alpha * 0.6f), 5.0f, 5.0f);
-				DrawElement(weapon, -1, pos.X, pos.Y, MainLayer + 10, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, isSelected ? alpha : alpha * 0.7f), scale, scale);
+
+				// The Blaster icon is tinted with the player's colors (like the character icon), so recolor it to match
+				// when the player is being recolored; every other weapon has fixed colors and uses the plain (baked) icon.
+				Colorf weaponColor = Colorf(1.0f, 1.0f, 1.0f, isSelected ? alpha : alpha * 0.7f);
+				bool drawn = false;
+				if ((WeaponType)i == WeaponType::Blaster) {
+					std::int32_t paletteOffset = player->GetPaletteOffset();
+					if (paletteOffset >= 0) {
+						if (_metadataIndexed == nullptr) {
+							_metadataIndexed = ContentResolver::Get().RequestMetadata("UI/HUD"_s, true);
+						}
+						drawn = DrawElementWithPalette(weapon, -1, roundf(pos.X), roundf(pos.Y), MainLayer + 10, Alignment::Center, weaponColor, (float)paletteOffset, scale, scale);
+					}
+				}
+				if (!drawn) {
+					DrawElement(weapon, -1, roundf(pos.X), roundf(pos.Y), MainLayer + 10, Alignment::Center, weaponColor, scale, scale);
+				}
 
 				if (PreferencesCache::WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount) {
 					char stringBuffer[32];

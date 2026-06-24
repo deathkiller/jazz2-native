@@ -322,6 +322,15 @@ namespace Jazz2::Actors
 		static constexpr float Acceleration = 0.2f;
 		/** @brief Horizontal deceleration */
 		static constexpr float Deceleration = 0.22f;
+		/**
+		 * @brief Speed above which the player is no longer considered to be pushing
+		 *
+		 * While genuinely pushing, the player is held to a slow speed (a wall pins it to 0, a movable object to roughly
+		 * @ref SolidObjectBase "PushSpeed" times 1.2). Once they break free and accelerate past this, the push animation
+		 * ends even if the push grace timer (@ref _pushFramesLeft) hasn't expired, so it doesn't linger while walking
+		 * in open space.
+		 */
+		static constexpr float MaxPushingSpeed = 1.0f;
 
 		/** @brief Velocity scale that maps original JJ2 (70 Hz) per-tick values onto this engine's 60 Hz timeMult baseline */
 		static constexpr float LegacyFrameRateScale = 70.0f / 60.0f;
@@ -369,6 +378,10 @@ namespace Jazz2::Actors
 		// Hide these members from documentation before refactoring
 		std::int32_t _playerIndex;
 		bool _isActivelyPushing, _wasActivelyPushing;
+		// `true` only for the physics step in which the player is actually in contact with a wall or pushable object
+		// (set in OnHitWall / OnPushSolidObject, cleared at the start of each PushSolidObjects). Lets the push animation
+		// tell genuine pushing from the lingering grace timer (_pushFramesLeft).
+		bool _pushContactThisFrame;
 		bool _controllable;
 		bool _controllableExternal;
 		float _controllableTimeout;

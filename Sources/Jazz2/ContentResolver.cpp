@@ -2206,14 +2206,15 @@ namespace Jazz2
 		// [1] Spaz: green rabbit gun (0x10), but his fur uses different ranges than Jazz - primary red 0x18,
 		//     secondary orange 0x28, misc green 0x20.
 		// [2] Lori: entirely different ranges. Her blonde hair is a bright highlight (0x28) plus the 0x3B-0x3F gold ramp,
-		//     recolored as one section; the ramp is mapped one gradient step below the highlight (SrcOffset 1) so the
-		//     highlight->body transition stays smooth instead of jumping. Skin 0x40; her dark-blue weapon spans the 0x20
-		//     blue body and the 0x48 steel barrel; misc (lips) 0x30. Her eyes (0x58) are left at their original color.
+		//     recolored as one section; the ramp is mapped one gradient step below the highlight so the highlight->body
+		//     transition stays smooth instead of jumping. Her purple suit is 0x58 (secondary); her dark-blue weapon
+		//     spans the 0x20 blue body and the 0x48 steel barrel; misc (lips) 0x30. Her eyes (the cream 0x40 sclera) are
+		//     left at their original color.
 		constexpr FurScheme FurSchemes[] = {
 			//   Primary Fur                        Secondary Fur                Weapon                                      Misc
 			{ { { { 0x10, 8, 0 }, NoBlock },        { { 0x18, 8, 0 }, NoBlock }, { { 0x20, 8, 0 }, NoBlock },                { { 0x28, 8, 0 }, NoBlock } } },
 			{ { { { 0x18, 8, 0 }, NoBlock },        { { 0x28, 8, 0 }, NoBlock }, { { 0x10, 8, 0 }, NoBlock },                { { 0x20, 8, 0 }, NoBlock } } },
-			{ { { { 0x28, 7, 1 }, { 0x3B, 5, 2 } }, { { 0x40, 8, 0 }, NoBlock }, { { 0x20, 8, 0 }, { 0x48, 8, 0 } },         { { 0x30, 8, 0 }, NoBlock } } }
+			{ { { { 0x28, 7, 1 }, { 0x3B, 5, 2 } }, { { 0x58, 8, 0 }, NoBlock }, { { 0x20, 8, 0 }, { 0x48, 8, 0 } },         { { 0x30, 8, 0 }, NoBlock } } }
 		};
 		constexpr std::int32_t FurSchemeCount = (std::int32_t)(sizeof(FurSchemes) / sizeof(FurSchemes[0]));
 	}

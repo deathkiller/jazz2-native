@@ -85,8 +85,8 @@ namespace Jazz2
 		 * picked color recolors the analogous region on each one. The *destination* blocks differ per character
 		 * (@ref GetFurSchemeIndex) because their sprites are drawn with different palette ranges: Jazz uses the standard
 		 * rabbit ranges (0x10/0x18/0x20/0x28); Spaz reorders them to his own fur layout; Lori uses entirely different
-		 * ranges (hair, skin, dark-blue weapon, lips), with her eyes left at their original color. The per-character
-		 * schemes are defined in the source file.
+		 * ranges (hair, purple suit, dark-blue weapon, lips), with her eyes left at their original color. The
+		 * per-character schemes are defined in the source file.
 		 */
 		static constexpr std::int32_t FurSectionCount = 4;
 		/** @brief Number of consecutive palette indices per fur section block */

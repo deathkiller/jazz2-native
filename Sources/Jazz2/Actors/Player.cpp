@@ -57,6 +57,7 @@ namespace Jazz2::Actors
 		_playerType(PlayerType::Jazz), _playerTypeOriginal(PlayerType::Jazz),
 		_isActivelyPushing(false),
 		_wasActivelyPushing(false),
+		_pushContactThisFrame(false),
 		_controllable(true),
 		_controllableExternal(true),
 		_controllableTimeout(0.0f),
@@ -1931,6 +1932,7 @@ namespace Jazz2::Actors
 		// Reset speed and show Push animation
 		_speed.X = 0.0f;
 		_pushFramesLeft = 12.0f;
+		_pushContactThisFrame = true;
 		_keepRunningTime = 0.0f;
 
 		if (_levelHandler->EventMap()->IsHurting(_pos.X + (_speed.X > 0.0f ? 16.0f : -16.0f), _pos.Y, (_speed.X > 0.0f ? Direction::Left : Direction::Right))) {
@@ -2038,6 +2040,7 @@ namespace Jazz2::Actors
 		if (std::abs(pushSpeedX) > 0.0f) {
 			_speed.X = pushSpeedX * 1.2f * timeMult;
 			_pushFramesLeft = 12.0f;
+			_pushContactThisFrame = true;
 			_fireFramesLeft = 0.0f;
 			_canPushFurther = true;
 		} else {
@@ -2165,7 +2168,12 @@ namespace Jazz2::Actors
 			// is the cosmetic online case - only show its pose while grounded and still, so a moving (unrestricted)
 			// player doesn't freeze in the lift pose
 			newState = AnimState::Lift;
-		} else if (CanJump() && _isActivelyPushing && _pushFramesLeft > 0.0f && _keepRunningTime <= 0.0f && _fireFramesLeft <= 0.0f) {
+		} else if (CanJump() && _isActivelyPushing && _pushFramesLeft > 0.0f && _keepRunningTime <= 0.0f && _fireFramesLeft <= 0.0f &&
+			(_pushContactThisFrame || std::abs(_speed.X) <= MaxPushingSpeed)) {
+			// The grace timer (_pushFramesLeft) bridges brief frames where the contact probe misses an object that's
+			// still being pushed, so the pose doesn't flicker. But only keep it while still genuinely pushing: in
+			// contact this step, or still held to the slow push speed. Once the player breaks free and accelerates
+			// away, end it at once instead of letting the timer linger the push pose over open ground.
 			newState = AnimState::Push;
 
 			if (_inIdleTransition) {
@@ -2327,6 +2335,9 @@ namespace Jazz2::Actors
 
 	void Player::PushSolidObjects(float timeMult)
 	{
+		// Ground truth for "pushing this step" - re-established below (and in OnHitWall during the move that follows)
+		_pushContactThisFrame = false;
+
 		if (_pushFramesLeft > 0.0f) {
 			_pushFramesLeft -= timeMult;
 		} else {
@@ -2524,6 +2535,11 @@ namespace Jazz2::Actors
 		}
 
 		if (newSuspendState != SuspendType::None && _playerType != PlayerType::Frog && _frozenTimeLeft <= 0.0f) {
+			// In original (non-Reforged) gameplay, grabbing a vine cancels an ongoing buttstomp
+			if (!_levelHandler->IsReforged() && _currentSpecialMove == SpecialMoveType::Buttstomp && newSuspendState == SuspendType::Vine) {
+				EndDamagingMove();
+			}
+
 			if (_currentSpecialMove == SpecialMoveType::None) {
 				_suspendType = newSuspendState;
 				SetState(ActorState::ApplyGravitation, false);
