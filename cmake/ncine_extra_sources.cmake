@@ -694,32 +694,7 @@ endif()
 
 if(WITH_MULTIPLAYER)
 	target_compile_definitions(${NCINE_APP} PUBLIC "WITH_MULTIPLAYER")
-	if(WITH_ONLINE_MULTIPLAYER)
-		target_compile_definitions(${NCINE_APP} PUBLIC "WITH_ONLINE_MULTIPLAYER")
-	endif()
-	if(DEDICATED_SERVER)
-		message(STATUS "Building the game with multiplayer support as dedicated server")
-		target_compile_definitions(${NCINE_APP} PUBLIC "DEDICATED_SERVER")
-	else()
-		message(STATUS "Building the game with multiplayer support")
-	endif()
 	
-	if(NINTENDO_SWITCH)
-		# Switch doesn't support IPv6 protocol, fallback to IPv4
-		target_compile_definitions(${NCINE_APP} PUBLIC "ENET_IPV6=0")
-		target_compile_definitions(${NCINE_APP} PUBLIC "DEATH_DEBUG")
-	elseif(WIN32 AND WITH_ONLINE_MULTIPLAYER)
-		# Link to IP Helper API library and Windows Sockets 2 library (only the enet transport needs them)
-		target_link_libraries(${NCINE_APP} PRIVATE iphlpapi ws2_32)
-	endif()
-	
-	if(NOT EMSCRIPTEN)
-		list(APPEND HEADERS
-			${NCINE_SOURCE_DIR}/Dependencies/enet/enet.h
-			${NCINE_SOURCE_DIR}/Dependencies/enet/ifaddrs-android.h
-		)
-	endif()
-
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/CtfBase.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/Flag.h
@@ -796,48 +771,77 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameCanvasLayer.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Multiplayer/MpInGameLobby.cpp
 	)
-
-	if(WITH_WEBSOCKET)
-		message(STATUS "Building the game with WebSocket transport support")
-		target_compile_definitions(${NCINE_APP} PUBLIC "WITH_WEBSOCKET")
-
-		if(EMSCRIPTEN)
-			# Emscripten uses the browser's native WebSocket via <emscripten/websocket.h>
-			message(STATUS "Using Emscripten native WebSocket API")
-			target_link_options(${NCINE_APP} PUBLIC -sFETCH=1)
+	
+	if(WITH_ONLINE_MULTIPLAYER)
+		target_compile_definitions(${NCINE_APP} PUBLIC "WITH_ONLINE_MULTIPLAYER")
+		if(DEDICATED_SERVER)
+			message(STATUS "Building the game with online multiplayer support as dedicated server")
+			target_compile_definitions(${NCINE_APP} PUBLIC "DEDICATED_SERVER")
 		else()
-			# IXWebSocket library for all other platforms
-			if(WITH_WEBSOCKET_TLS_BACKEND STREQUAL "OpenSSL")
-				find_package(OpenSSL QUIET)
-				if(OPENSSL_FOUND)
-					message(STATUS "WebSocket TLS: Using OpenSSL")
-					set(USE_TLS ON CACHE BOOL "" FORCE)
-					set(USE_OPEN_SSL ON CACHE BOOL "" FORCE)
-					set(USE_MBED_TLS OFF CACHE BOOL "" FORCE)
-					target_compile_definitions(${NCINE_APP} PUBLIC "WITH_WEBSOCKET_TLS")
-				else()
-					message(WARNING "OpenSSL not found, building WebSocket without TLS support")
-					set(USE_TLS OFF CACHE BOOL "" FORCE)
-				endif()
-			elseif(WITH_WEBSOCKET_TLS_BACKEND STREQUAL "mbedTLS")
-				find_package(MbedTLS QUIET)
-				if(MbedTLS_FOUND OR MBEDTLS_FOUND)
-					message(STATUS "WebSocket TLS: Using mbedTLS")
-					set(USE_TLS ON CACHE BOOL "" FORCE)
-					set(USE_OPEN_SSL OFF CACHE BOOL "" FORCE)
-					set(USE_MBED_TLS ON CACHE BOOL "" FORCE)
-					target_compile_definitions(${NCINE_APP} PUBLIC "WITH_WEBSOCKET_TLS")
-				else()
-					message(WARNING "mbedTLS not found, building WebSocket without TLS support")
-					set(USE_TLS OFF CACHE BOOL "" FORCE)
-				endif()
-			else()
-				message(STATUS "WebSocket TLS: Disabled")
-				set(USE_TLS OFF CACHE BOOL "" FORCE)
-			endif()
-
-			find_package(IXWebSocket REQUIRED)
-			target_link_libraries(${NCINE_APP} PRIVATE IXWebSocket)
+			message(STATUS "Building the game with online multiplayer support")
 		endif()
+		
+		if(NINTENDO_SWITCH)
+			# Switch doesn't support IPv6 protocol, fallback to IPv4
+			target_compile_definitions(${NCINE_APP} PUBLIC "ENET_IPV6=0")
+		elseif(WIN32)
+			# Link to IP Helper API library and Windows Sockets 2 library (only the enet transport needs them)
+			target_link_libraries(${NCINE_APP} PRIVATE iphlpapi ws2_32)
+		endif()
+		
+		if(NOT EMSCRIPTEN)
+			list(APPEND HEADERS
+				${NCINE_SOURCE_DIR}/Dependencies/enet/enet.h
+				${NCINE_SOURCE_DIR}/Dependencies/enet/ifaddrs-android.h
+			)
+		endif()
+		
+		if(WITH_WEBSOCKET)
+			message(STATUS "Building the game with WebSocket transport support")
+			target_compile_definitions(${NCINE_APP} PUBLIC "WITH_WEBSOCKET")
+
+			if(EMSCRIPTEN)
+				# Emscripten uses the browser's native WebSocket via <emscripten/websocket.h>
+				message(STATUS "Using Emscripten native WebSocket API")
+				target_link_options(${NCINE_APP} PUBLIC -sFETCH=1)
+			else()
+				# IXWebSocket library for all other platforms
+				if(WITH_WEBSOCKET_TLS_BACKEND STREQUAL "OpenSSL")
+					find_package(OpenSSL QUIET)
+					if(OPENSSL_FOUND)
+						message(STATUS "WebSocket TLS: Using OpenSSL")
+						set(USE_TLS ON CACHE BOOL "" FORCE)
+						set(USE_OPEN_SSL ON CACHE BOOL "" FORCE)
+						set(USE_MBED_TLS OFF CACHE BOOL "" FORCE)
+						target_compile_definitions(${NCINE_APP} PUBLIC "WITH_WEBSOCKET_TLS")
+					else()
+						message(WARNING "OpenSSL not found, building WebSocket without TLS support")
+						set(USE_TLS OFF CACHE BOOL "" FORCE)
+					endif()
+				elseif(WITH_WEBSOCKET_TLS_BACKEND STREQUAL "mbedTLS")
+					find_package(MbedTLS QUIET)
+					if(MbedTLS_FOUND OR MBEDTLS_FOUND)
+						message(STATUS "WebSocket TLS: Using mbedTLS")
+						set(USE_TLS ON CACHE BOOL "" FORCE)
+						set(USE_OPEN_SSL OFF CACHE BOOL "" FORCE)
+						set(USE_MBED_TLS ON CACHE BOOL "" FORCE)
+						target_compile_definitions(${NCINE_APP} PUBLIC "WITH_WEBSOCKET_TLS")
+					else()
+						message(WARNING "mbedTLS not found, building WebSocket without TLS support")
+						set(USE_TLS OFF CACHE BOOL "" FORCE)
+					endif()
+				else()
+					message(STATUS "WebSocket TLS: Disabled")
+					set(USE_TLS OFF CACHE BOOL "" FORCE)
+				endif()
+
+				find_package(IXWebSocket REQUIRED)
+				target_link_libraries(${NCINE_APP} PRIVATE IXWebSocket)
+			endif()
+		endif()
+	else()
+		message(STATUS "Building the game with local multiplayer support")
 	endif()
+else()
+	message(STATUS "Building the game without multiplayer support")
 endif()

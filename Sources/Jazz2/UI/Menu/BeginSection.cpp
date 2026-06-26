@@ -421,12 +421,12 @@ namespace Jazz2::UI::Menu
 #	endif
 				{
 					_root->PlaySfx("MenuSelect"_s, 0.6f);
-#if defined(WITH_ONLINE_MULTIPLAYER)
+#	if defined(WITH_ONLINE_MULTIPLAYER)
 					_root->SwitchToSection<PlayMultiplayerSection>();
-#else
+#	else
 					// No online transport in this build - go straight to the local splitscreen setup
 					_root->SwitchToSection<EpisodeSelectSection>(true, false, true);
-#endif
+#	endif
 				}
 				break;
 #endif

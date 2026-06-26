@@ -172,6 +172,17 @@ namespace Death { namespace IO {
 		/** @brief Returns the path to the executable file for the running application */
 		static Containers::String GetExecutablePath();
 		/**
+		 * @brief Returns the path to the application-specific writable directory for configuration files
+		 *
+		 * Unlike @ref GetSavePath(), which targets game-state storage (e.g., @cpp "Saved Games" @ce on Windows), this
+		 * targets the conventional location for application settings. On Windows, the directory is usually equivalent to
+		 * @cb{.bat} %APPDATA% @ce, which points to @cpp "C:\\Users\\<user>\\AppData\\Roaming\\<name>\\" @ce. On macOS,
+		 * it's usually equivalent to @cpp "~/Library/Application Support/<name>/" @ce. On other Unix systems, it usually
+		 * points to @cb{.sh} "${XDG_CONFIG_HOME}/<name>/" @ce or @cpp "~/.config/<name>/" @ce. On Android, the internal
+		 * data directory of the application is returned. On Windows RT, the local data folder of the package is returned.
+		 */
+		static Containers::String GetConfigPath(Containers::StringView applicationName);
+		/**
 		 * @brief Returns the path to the application-specific writable directory for saving game state
 		 * 
 		 * On macOS, the directory is usually equivalent to @cpp "~/Library/Application Support/<name>/" @ce. On Android,

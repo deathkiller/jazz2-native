@@ -249,7 +249,12 @@ namespace Jazz2::UI::Menu
 		_root->DrawMenuFrame(centerX, topLine, bottomLine);
 
 		std::int32_t charOffset = 0;
-		if (ControlScheme::MaxSupportedPlayers > 1) {
+#if defined(WITH_MULTIPLAYER)
+		constexpr std::int32_t MaxSupportedPlayers = ControlScheme::MaxSupportedPlayers;
+#else
+		constexpr std::int32_t MaxSupportedPlayers = 1;
+#endif
+		if (MaxSupportedPlayers > 1) {
 			_root->DrawStringShadow(_f("Remap Controls for Player {}", _playerIndex + 1), charOffset, centerX, topLine - 21.0f, IMenuContainer::FontLayer,
 				Alignment::Center, Colorf(0.46f, 0.46f, 0.46f, 0.5f), 0.9f, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 		} else {

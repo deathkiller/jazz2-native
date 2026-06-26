@@ -256,7 +256,8 @@ The following parameters can be used to customize the build:
 -   `DISABLE_RESCALE_SHADERS` (default @cpp OFF @ce) --- Disable rescale shaders and use only nearest neighbor
 -   `TILEMAP_USE_SINGLE_DRAW` (default @cpp ON @ce) --- Aggregate draw calls for each tilemap layer
 -   `SHAREWARE_DEMO_ONLY` (default @cpp OFF @ce) --- Shareware Demo only, usually used on **Emscripten** platform
--   `WITH_MULTIPLAYER` (default @cpp OFF @ce) --- Enable experimental online multiplayer support
+-   `WITH_MULTIPLAYER` (default @cpp ON @ce) --- Enable multiplayer support
+-   `WITH_ONLINE_MULTIPLAYER` (default @cpp ON @ce if `WITH_MULTIPLAYER`) --- Enable also online multiplayer support, otherwise only local splitscreen is enabled
 -   `WITH_WEBSOCKET` (default @cpp OFF @ce except on Emscripten) --- Enable WebSocket transport for online multiplayer
 -   `WITH_WEBSOCKET_TLS_BACKEND` (default @cpp OpenSSL @ce) --- TLS backend for WebSocket transport
     -   Possible values: `OpenSSL`, `mbedTLS`, `None`

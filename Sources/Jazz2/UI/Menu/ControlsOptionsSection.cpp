@@ -35,8 +35,13 @@ namespace Jazz2::UI::Menu
 
 		auto list = std::make_unique<ScrollView>();
 
-		if (ControlScheme::MaxSupportedPlayers > 1) {
-			for (std::int32_t i = 0; i < ControlScheme::MaxSupportedPlayers; i++) {
+#if defined(WITH_MULTIPLAYER)
+		constexpr std::int32_t MaxSupportedPlayers = ControlScheme::MaxSupportedPlayers;
+#else
+		constexpr std::int32_t MaxSupportedPlayers = 1;
+#endif
+		if (MaxSupportedPlayers > 1) {
+			for (std::int32_t i = 0; i < MaxSupportedPlayers; i++) {
 				// TRANSLATORS: Menu item in Options > Controls section
 				list->Add<ListItem>(_f("Remap Controls for Player {}", i + 1),
 					[root, i]() { root->SwitchToSection<RemapControlsSection>(i); }, RemapHeight);

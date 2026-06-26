@@ -6532,6 +6532,7 @@ namespace Jazz2::Multiplayer
 			}
 			return;
 		}
+
 		if (!IsTeamGameMode(gameMode)) {
 			// Each player is in their own team (free-for-all)
 			for (auto* player : _players) {

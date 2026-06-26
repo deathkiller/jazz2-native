@@ -1360,17 +1360,10 @@ namespace Death { namespace IO {
 #endif
 	}
 
-	String FileSystem::GetSavePath(StringView applicationName)
+	String FileSystem::GetConfigPath(StringView applicationName)
 	{
 #if defined(DEATH_TARGET_ANDROID)
-		StringView savePath = AndroidAssetStream::GetInternalDataPath();
-		if (!DirectoryExists(savePath)) {
-			// Trying to create the data directory
-			if (!CreateDirectories(savePath)) {
-				return {};
-			}
-		}
-		return savePath;
+		return AndroidAssetStream::GetInternalDataPath();
 #elif defined(DEATH_TARGET_APPLE)
 		StringView home = ::getenv("HOME");
 		if (home.empty()) {
@@ -1398,6 +1391,25 @@ namespace Death { namespace IO {
 #elif defined(DEATH_TARGET_WINDOWS)
 		String result;
 		wchar_t* pathW = nullptr;
+		if (SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DEFAULT, nullptr, &pathW)) && pathW != nullptr && pathW[0] != L'\0') {
+			std::int32_t pathLengthW = std::int32_t(wcslen(pathW));
+			SmallVector<char, MAX_PATH + 1> path(DefaultInit, pathLengthW * 4 + 1);
+			std::size_t pathLength = Utf8::FromUtf16(path.data(), std::int32_t(path.size()), pathW, pathLengthW);
+			result = CombinePath({ path.data(), pathLength }, applicationName);
+		} else {
+			LOGE("SHGetKnownFolderPath(FOLDERID_RoamingAppData) failed with error 0x{:.8x}", ::GetLastError());
+		}
+		::CoTaskMemFree(pathW);
+		return result;
+#endif
+	}
+
+	String FileSystem::GetSavePath(StringView applicationName)
+	{
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		// Prefer "Saved Games" directory for games on Windows if available
+		String result;
+		wchar_t* pathW = nullptr;
 		bool success = SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_SavedGames, KF_FLAG_DEFAULT, nullptr, &pathW));
 		if (!success || pathW == nullptr || pathW[0] == L'\0') {
 			::CoTaskMemFree(pathW);
@@ -1415,6 +1427,8 @@ namespace Death { namespace IO {
 		}
 		::CoTaskMemFree(pathW);
 		return result;
+#else
+		return GetConfigPath(applicationName);
 #endif
 	}
 
