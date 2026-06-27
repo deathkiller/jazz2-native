@@ -11,7 +11,7 @@ namespace Jazz2::Rendering
 	PlayerViewport::PlayerViewport(LevelHandler* levelHandler, Actors::ActorBase* targetActor)
 		: _levelHandler(levelHandler), _targetActor(targetActor),
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
-			_shakeDuration(0.0f)
+			_cameraViewCenterY(0.0f), _shakeDuration(0.0f)
 	{
 		_ambientLight = levelHandler->_defaultAmbientLight;
 		_ambientLightTarget = _ambientLight.W;
@@ -205,6 +205,20 @@ namespace Jazz2::Rendering
 			_cameraDistanceFactor.Y = lerpByTime(_cameraDistanceFactor.Y, targetLookAheadY, LookAheadSmoothing, timeMult);
 		}
 
+		// Vertical deadzone: hold the camera's vertical anchor while the player stays within +-VerticalDeadzone of it,
+		// so small bumps on uneven ground (steps, slopes, landing jitter) don't make the view bob. Snap to follow once
+		// the player leaves the band, and recenter slowly within it (freezing when nearly centered, to avoid a 4px
+		// crawl) so the camera doesn't stay offset after a jump. The anchor stays whole-pixel and is floored downstream,
+		// so the player itself stays crisp - this only desensitizes the vertical follow, it doesn't smear it.
+		float verticalOffset = focusPos.Y - _cameraViewCenterY;
+		if (verticalOffset > VerticalDeadzone) {
+			_cameraViewCenterY = focusPos.Y - VerticalDeadzone;
+		} else if (verticalOffset < -VerticalDeadzone) {
+			_cameraViewCenterY = focusPos.Y + VerticalDeadzone;
+		} else if (std::abs(verticalOffset) >= VerticalRecenterThreshold) {
+			_cameraViewCenterY = lerpByTime(_cameraViewCenterY, focusPos.Y, VerticalRecenter, timeMult);
+		}
+
 		if (_shakeDuration > 0.0f) {
 			_shakeDuration -= timeMult;
 
@@ -233,7 +247,7 @@ namespace Jazz2::Rendering
 		if (overridePosY) {
 			_cameraPos.Y = focusPos.Y + _shakeOffset.Y;
 		} else if (_viewBounds.H > halfView.Y * 2) {
-			_cameraPos.Y = std::clamp(focusPos.Y + std::round(_cameraDistanceFactor.Y), _viewBounds.Y + halfView.Y - 1.0f, _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f) + _shakeOffset.Y;
+			_cameraPos.Y = std::clamp(_cameraViewCenterY + std::round(_cameraDistanceFactor.Y), _viewBounds.Y + halfView.Y - 1.0f, _viewBounds.Y + _viewBounds.H - halfView.Y - 2.0f) + _shakeOffset.Y;
 			if (!PreferencesCache::UnalignedViewport) {
 				_cameraPos.Y = std::floor(_cameraPos.Y);
 			}
@@ -271,6 +285,7 @@ namespace Jazz2::Rendering
 		Vector2f focusPos = _targetActor->GetPos();
 		_cameraPos = focusPos;
 		_cameraLastPos = focusPos;
+		_cameraViewCenterY = focusPos.Y;
 		if (!fast) {
 			_cameraDistanceFactor = Vector2f(0.0f, 0.0f);
 		}

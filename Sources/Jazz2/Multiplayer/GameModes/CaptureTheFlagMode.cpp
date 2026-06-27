@@ -7,7 +7,7 @@
 
 #include "../../../nCine/I18n.h"
 
-namespace Jazz2::Multiplayer
+namespace Jazz2::Multiplayer::GameModes
 {
 	void CaptureTheFlagMode::OnDrawHUD(IGameModeContext& ctx, IGameModeHUD& hud, Actors::Player* player, const Rectf& view)
 	{

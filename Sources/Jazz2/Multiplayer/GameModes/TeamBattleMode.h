@@ -4,7 +4,7 @@
 
 #include "BattleMode.h"
 
-namespace Jazz2::Multiplayer
+namespace Jazz2::Multiplayer::GameModes
 {
 	/**
 		@brief Team Battle game mode

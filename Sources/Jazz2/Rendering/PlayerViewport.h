@@ -42,6 +42,9 @@ namespace Jazz2::Rendering
 		Vector2f _cameraPos;
 		Vector2f _cameraLastPos;
 		Vector2f _cameraDistanceFactor;
+		// Vertical follow anchor for the deadzone (see UpdateCamera): the camera holds this Y while the player makes
+		// only small vertical movements, so bumps on uneven ground don't jolt the view.
+		float _cameraViewCenterY;
 		float _shakeDuration;
 		Vector2f _shakeOffset;
 		float _ambientLightTarget;
@@ -97,6 +100,14 @@ namespace Jazz2::Rendering
 		// the player too far toward the screen edge.
 		static constexpr float MaxLookAheadFraction = 0.4f;
 		// Per-frame rate at which the look-ahead eases toward its target (cumulative + smooth - it never snaps in/out).
-		static constexpr float LookAheadSmoothing = 0.06f;
+		static constexpr float LookAheadSmoothing = 0.04f;
+		// Vertical deadzone: the camera holds its Y while the player stays within +-this many pixels of it, so small
+		// bumps (steps, slopes, landing jitter) don't move the view; it snaps to follow once the player leaves the band.
+		static constexpr float VerticalDeadzone = 24.0f;
+		// Within the deadzone the camera recenters toward the player at this per-frame rate - slow, so brief bumps are
+		// ignored, but it doesn't stay offset after a jump. Freezes once within VerticalRecenterThreshold px to avoid a
+		// pixel-by-pixel crawl.
+		static constexpr float VerticalRecenter = 0.05f;
+		static constexpr float VerticalRecenterThreshold = 4.0f;
 	};
 }

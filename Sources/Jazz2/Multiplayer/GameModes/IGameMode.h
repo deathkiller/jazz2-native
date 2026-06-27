@@ -24,7 +24,10 @@ namespace Jazz2::Actors
 namespace Jazz2::Multiplayer
 {
 	struct ServerConfiguration;
+}
 
+namespace Jazz2::Multiplayer::GameModes
+{
 	/** @brief What should happen when a player reaches the level exit, as decided by the game mode */
 	enum class LevelExitAction
 	{

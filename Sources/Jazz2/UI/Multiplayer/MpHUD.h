@@ -14,7 +14,7 @@ namespace Jazz2::UI::Multiplayer
 		multiplayer information such as the player's position in the current round, and adds a centered countdown
 		display.
 	*/
-	class MpHUD : public HUD, public Jazz2::Multiplayer::IGameModeHUD
+	class MpHUD : public HUD, public Jazz2::Multiplayer::GameModes::IGameModeHUD
 	{
 	public:
 		/** @brief Creates a new instance */
@@ -37,10 +37,10 @@ namespace Jazz2::UI::Multiplayer
 		void DrawMinimap(const Rectf& view, Actors::Player* player) override;
 
 		// IGameModeHUD - drawing surface used by the hosted game mode to render its part of the HUD
-		void DrawHudText(Jazz2::Multiplayer::GameModeFontType font, StringView text, float x, float y, float shadowOffsetY,
+		void DrawHudText(Jazz2::Multiplayer::GameModes::GameModeFontType font, StringView text, float x, float y, float shadowOffsetY,
 			Alignment alignment, const Colorf& color, float scale, float charSpacing,
 			float angleOffset, float variance, float speed) override;
-		void DrawHudIcon(Jazz2::Multiplayer::GameModeHudIcon icon, float x, float y, float shadowOffsetY,
+		void DrawHudIcon(Jazz2::Multiplayer::GameModes::GameModeHudIcon icon, float x, float y, float shadowOffsetY,
 			Alignment alignment, const Colorf& color, float scaleX, float scaleY) override;
 
 	private:
@@ -49,6 +49,7 @@ namespace Jazz2::UI::Multiplayer
 		Font* _mediumFont;
 		String _countdownText;
 		float _countdownTimeLeft;
+		float _hudScale;	// 1.0 normally, < 1.0 in splitscreen so the multiplayer HUD elements take less space
 
 		// Cached smoothed minimap track centerline (in tile coordinates), rebuilt only when the checkpoints change.
 		// The actual thick-line mesh is rebuilt each frame from this (cheap) because it depends on the view.

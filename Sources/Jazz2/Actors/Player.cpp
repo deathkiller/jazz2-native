@@ -138,6 +138,11 @@ namespace Jazz2::Actors
 		if (!_levelHandler->IsLocalSession()) {
 			return furColor;
 		}
+		// A game-mode-forced color (e.g., team coloring) applies to every local player regardless of the cosmetic
+		// "Apply Colors" preference, which only governs the player's own chosen color.
+		if (_levelHandler->IsPlayerColorForced(this)) {
+			return furColor;
+		}
 		switch (PreferencesCache::PlayerColors) {
 			case PlayerColorMode::FirstLocalPlayer: return (_playerIndex == 0 ? furColor : 0);
 			case PlayerColorMode::AllLocalPlayers: return furColor;
@@ -1135,7 +1140,7 @@ namespace Jazz2::Actors
 								case PlayerType::Spaz: {
 									if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
 										_controllable = false;
-										_controllableTimeout = 60.0f;
+										_controllableTimeout = (_levelHandler->IsReforged() ? 60.0f : 120.0f);	// Non-Reforged Spaz sidekick travels ~2x as far (dash runs until controllable)
 										SetAnimation(AnimState::Uppercut);
 										SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
 											_externalForce.X = 8.0f * (IsFacingLeft() ? -1.0f : 1.0f);

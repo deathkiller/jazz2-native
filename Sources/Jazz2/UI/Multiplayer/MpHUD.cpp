@@ -14,6 +14,7 @@
 
 using namespace Jazz2::Multiplayer;
 using namespace Jazz2::Actors::Multiplayer;
+using namespace Jazz2::Multiplayer::GameModes;
 
 namespace Jazz2::UI::Multiplayer
 {
@@ -71,8 +72,12 @@ namespace Jazz2::UI::Multiplayer
 
 	using namespace Jazz2::UI::Multiplayer::Resources;
 
+	// Multiplayer HUD elements are scaled by this factor in splitscreen so they take less of the smaller viewport
+	static constexpr float SplitscreenHudScale = 0.7f;
+
 	MpHUD::MpHUD(Jazz2::Multiplayer::MpLevelHandler* levelHandler)
-		: HUD(levelHandler), _countdownTimeLeft(0.0f), _minimapCacheKey(0), _minimapVertexCount(0), _minimapCommandsCount(0)
+		: HUD(levelHandler), _countdownTimeLeft(0.0f), _hudScale(1.0f), _minimapCacheKey(0), _minimapVertexCount(0),
+			_minimapCommandsCount(0)
 	{
 		auto& resolver = ContentResolver::Get();
 		_mediumFont = resolver.GetFont(FontType::Medium);
@@ -205,20 +210,23 @@ namespace Jazz2::UI::Multiplayer
 			return;
 		}
 
+		// Shrink the multiplayer HUD in splitscreen (any viewport smaller than the full screen) so it takes less room
+		_hudScale = (view.W < ViewSize.X - 1.0f || view.H < ViewSize.Y - 1.0f ? SplitscreenHudScale : 1.0f);
+
 		// Team score header (centered at the top) in team game modes
 		if (IsTeamGameMode(serverConfig.GameMode)) {
 			std::uint8_t teamCount = (std::uint8_t)mpLevelHandler->_teamScores.size();
 			if (teamCount >= 2) {
 				char teamBuffer[16];
-				float spacing = 54.0f;
+				float spacing = 54.0f * _hudScale;
 				float startX = view.X + view.W * 0.5f - spacing * (teamCount - 1) * 0.5f;
 				for (std::uint8_t team = 0; team < teamCount; team++) {
 					float x = startX + team * spacing;
 					std::size_t length = formatInto(teamBuffer, "{}", mpLevelHandler->_teamScores[team]);
 					_mediumFont->DrawString(this, { teamBuffer, length }, charOffsetShadow, x, view.Y + 5.0f + 2.0f, FontShadowLayer,
-						Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
+						Alignment::Top, Colorf(0.0f, 0.0f, 0.0f, 0.32f), 0.9f * _hudScale, 0.0f, 0.0f, 0.0f, 0.0f);
 					_mediumFont->DrawString(this, { teamBuffer, length }, charOffset, x, view.Y + 5.0f, FontLayer,
-						Alignment::Top, GetTeamColor(team), 0.9f, 0.0f, 0.0f, 0.0f, 0.0f);
+						Alignment::Top, GetTeamColor(team), 0.9f * _hudScale, 0.0f, 0.0f, 0.0f, 0.0f);
 				}
 			}
 		}
@@ -233,6 +241,7 @@ namespace Jazz2::UI::Multiplayer
 		float angleOffset, float variance, float speed)
 	{
 		Font* selectedFont = (font == GameModeFontType::Medium ? _mediumFont : _smallFont);
+		scale *= _hudScale;
 		std::int32_t charOffsetShadow = 0, charOffset = 0;
 		selectedFont->DrawString(this, text, charOffsetShadow, x, y + shadowOffsetY, FontShadowLayer, alignment,
 			Colorf(0.0f, 0.0f, 0.0f, 0.32f), scale, angleOffset, variance, variance, speed, charSpacing, 1.0f);
@@ -243,6 +252,8 @@ namespace Jazz2::UI::Multiplayer
 	void MpHUD::DrawHudIcon(GameModeHudIcon icon, float x, float y, float shadowOffsetY,
 		Alignment alignment, const Colorf& color, float scaleX, float scaleY)
 	{
+		scaleX *= _hudScale;
+		scaleY *= _hudScale;
 		AnimState state;
 		switch (icon) {
 			default:
@@ -268,6 +279,11 @@ namespace Jazz2::UI::Multiplayer
 
 	void MpHUD::DrawPositionInRound(const Rectf& view, Actors::Player* player)
 	{
+		// The leaderboard (top 3 + local player) takes too much room in splitscreen, so it's hidden there
+		if (_hudScale < 1.0f) {
+			return;
+		}
+
 		auto* mpLevelHandler = static_cast<MpLevelHandler*>(_levelHandler);
 		const auto& serverConfig = mpLevelHandler->_networkManager->GetServerConfiguration();
 

@@ -55,6 +55,7 @@
 using namespace Death::IO::Compression;
 using namespace nCine;
 using namespace Jazz2::Actors::Multiplayer;
+using namespace Jazz2::Multiplayer::GameModes;
 
 namespace Jazz2::Multiplayer
 {
@@ -228,6 +229,14 @@ namespace Jazz2::Multiplayer
 			}
 		}
 		return furColor;
+	}
+
+	bool MpLevelHandler::IsPlayerColorForced(const Actors::Player* player) const
+	{
+		// Team coloring is a game-mode mechanic (keeps teams distinguishable), so it overrides the cosmetic color
+		// preference and must apply to every local player, not just the first one.
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		return serverConfig.ColorizePlayersByTeam && IsTeamGameMode(serverConfig.GameMode);
 	}
 
 	bool MpLevelHandler::IsPausable() const

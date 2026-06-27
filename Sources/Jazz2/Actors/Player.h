@@ -345,8 +345,8 @@ namespace Jazz2::Actors
 		static constexpr float LegacyRunBrakeScale = 0.4f;
 		/** @brief Non-Reforged braking factor at walking speed - gentler than before so the player coasts longer before stopping/turning */
 		static constexpr float LegacyWalkBrakeScale = 0.7f;
-		/** @brief Non-Reforged deceleration multiplier when the direction key is released - a decisive stop (the slow, momentum case is reversing) */
-		static constexpr float LegacyReleaseBrakeScale = 2.5f;
+		/** @brief Non-Reforged deceleration multiplier when the direction key is released - gentle so the player coasts to a stop */
+		static constexpr float LegacyReleaseBrakeScale = 1.0f;
 		/** @brief Non-Reforged vertical velocity scale */
 		static constexpr float LegacyVerticalSpeedScale = LegacyFrameRateScale * 0.94f;
 		/** @brief Non-Reforged rising-gravity scale; the vertical tune is squared so jump height is preserved */

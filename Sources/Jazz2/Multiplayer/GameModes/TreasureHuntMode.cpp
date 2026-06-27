@@ -9,7 +9,7 @@
 
 #include <Base/Format.h>
 
-namespace Jazz2::Multiplayer
+namespace Jazz2::Multiplayer::GameModes
 {
 	void TreasureHuntMode::OnDrawHUD(IGameModeContext& ctx, IGameModeHUD& hud, Actors::Player* player, const Rectf& view)
 	{

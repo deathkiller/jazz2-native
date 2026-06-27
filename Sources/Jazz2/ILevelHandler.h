@@ -119,6 +119,16 @@ namespace Jazz2
 			return furColor;
 		}
 
+		/**
+		 * @brief Returns whether the level handler forces a fur color on the player, overriding local color preferences
+		 *
+		 * Multiplayer team modes force the team color on every player so teams stay distinguishable; such a forced
+		 * color applies regardless of the cosmetic "Apply Colors" preference. The default returns `false`.
+		 */
+		virtual bool IsPlayerColorForced(const Actors::Player* player) const {
+			return false;
+		}
+
 		/** @brief Returns default ambient light intensity */
 		virtual float GetDefaultAmbientLight() const = 0;
 		/** @brief Returns current ambient light intensity */

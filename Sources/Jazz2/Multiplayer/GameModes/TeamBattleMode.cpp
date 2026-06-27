@@ -6,7 +6,7 @@
 #include "../Teams.h"
 #include "../../Actors/Player.h"
 
-namespace Jazz2::Multiplayer
+namespace Jazz2::Multiplayer::GameModes
 {
 	GameEndResult TeamBattleMode::CheckGameEnds(IGameModeContext& ctx)
 	{

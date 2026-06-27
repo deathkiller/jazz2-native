@@ -166,11 +166,8 @@ namespace Jazz2::UI::Menu
 		float colPing = left + width * 0.98f;
 
 		// Title
-		_root->DrawElement(MenuGlow, 0, contentBounds.X + contentBounds.W * 0.5f, top + slideY + 8.0f, IMenuContainer::MainLayer, Alignment::Center,
-			Colorf(1.0f, 1.0f, 1.0f, 0.3f * alpha), 6.0f, 4.0f, true, true);
-
-		_root->DrawStringShadow(_("Scoreboard"), charOffset, contentBounds.X + contentBounds.W * 0.5f, top + slideY + 8.0f, IMenuContainer::FontLayer + 10,
-			Alignment::Center, faded(Font::DefaultColor, alpha), titleScale, 0.0f, 0.0f, 0.0f, 0.0f, 0.9f);
+		_root->DrawStringGlow(_("Scoreboard"), charOffset, contentBounds.X + contentBounds.W * 0.5f, top + slideY + 8.0f, IMenuContainer::FontLayer + 10,
+			Alignment::Center, faded(Font::DefaultColor, alpha), titleScale, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 
 		float headerY = top + 20.0f;
 		Colorf headerColor = faded(Colorf(0.5f, 0.5f, 0.5f, 0.5f), alpha);

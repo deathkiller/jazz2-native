@@ -11,7 +11,7 @@
 #include "TeamTreasureHuntMode.h"
 #include "CaptureTheFlagMode.h"
 
-namespace Jazz2::Multiplayer
+namespace Jazz2::Multiplayer::GameModes
 {
 	std::unique_ptr<IGameMode> CreateGameMode(MpGameMode mode)
 	{

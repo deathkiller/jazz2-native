@@ -4,7 +4,7 @@
 
 #include "RaceMode.h"
 
-namespace Jazz2::Multiplayer
+namespace Jazz2::Multiplayer::GameModes
 {
 	/**
 		@brief Team Race game mode

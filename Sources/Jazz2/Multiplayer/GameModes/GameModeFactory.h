@@ -7,7 +7,7 @@
 
 #include <memory>
 
-namespace Jazz2::Multiplayer
+namespace Jazz2::Multiplayer::GameModes
 {
 	/**
 		@brief Creates the @ref IGameMode implementation for the specified game mode

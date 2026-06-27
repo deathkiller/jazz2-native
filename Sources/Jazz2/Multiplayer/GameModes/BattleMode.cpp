@@ -8,7 +8,7 @@
 
 #include <Base/Format.h>
 
-namespace Jazz2::Multiplayer
+namespace Jazz2::Multiplayer::GameModes
 {
 	void BattleMode::OnRoundStarted(IGameModeContext& ctx)
 	{

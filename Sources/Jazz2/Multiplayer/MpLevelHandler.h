@@ -42,7 +42,7 @@ namespace Jazz2::Multiplayer
 
 		@experimental
 	*/
-	class MpLevelHandler : public LevelHandler, public IServerStatusProvider, public IGameModeContext
+	class MpLevelHandler : public LevelHandler, public IServerStatusProvider, public GameModes::IGameModeContext
 	{
 		DEATH_RUNTIME_OBJECT(LevelHandler, IServerStatusProvider);
 
@@ -98,6 +98,7 @@ namespace Jazz2::Multiplayer
 		bool IsLocalSession() const override;
 		bool IsServer() const override;
 		std::uint32_t GetPlayerFurColor(const Actors::Player* player, std::uint32_t furColor) const override;
+		bool IsPlayerColorForced(const Actors::Player* player) const override;
 		bool IsPausable() const override;
 		bool CanPlayersCollide() const override;
 		bool CanActivateSugarRush() const override;
@@ -164,9 +165,9 @@ namespace Jazz2::Multiplayer
 		/** @brief Returns current game mode */
 		MpGameMode GetGameMode() const;
 		/** @brief Returns the active game-mode rules object, or `nullptr` if the mode has not been migrated to @ref IGameMode yet */
-		IGameMode* GetActiveGameMode() const;
+		GameModes::IGameMode* GetActiveGameMode() const;
 		/** @brief Lets the active game mode draw its part of the HUD into @p hud; returns `false` if no migrated mode is active (caller should fall back to its own drawing) */
-		bool DrawActiveGameModeHUD(IGameModeHUD& hud, Actors::Player* player, const Rectf& view);
+		bool DrawActiveGameModeHUD(GameModes::IGameModeHUD& hud, Actors::Player* player, const Rectf& view);
 
 		const ServerConfiguration& GetServerConfiguration() const override;
 		ArrayView<Actors::Player* const> GetPlayers() const override;
@@ -406,7 +407,7 @@ namespace Jazz2::Multiplayer
 		static constexpr float CtfTouchRadius = 40.0f;	// Pixel radius for picking up / returning / capturing flags
 
 		NetworkManager* _networkManager;
-		std::unique_ptr<IGameMode> _gameMode;
+		std::unique_ptr<GameModes::IGameMode> _gameMode;
 		float _updateTimeLeft;
 		float _gameTimeLeft;
 		LevelState _levelState;

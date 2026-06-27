@@ -4,7 +4,7 @@
 
 #include "IGameMode.h"
 
-namespace Jazz2::Multiplayer
+namespace Jazz2::Multiplayer::GameModes
 {
 	/**
 		@brief Treasure Hunt game mode
