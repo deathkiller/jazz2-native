@@ -1393,15 +1393,15 @@ msgstr "Juks er ikke tillat i nåværende kontekst"
 
 #: Sources/Jazz2/Multiplayer/GameModes/CaptureTheFlagMode.cpp:16
 msgid "home"
-msgstr ""
+msgstr "hjem"
 
 #: Sources/Jazz2/Multiplayer/GameModes/CaptureTheFlagMode.cpp:16
 msgid "taken"
-msgstr ""
+msgstr "tatt"
 
 #: Sources/Jazz2/Multiplayer/GameModes/CaptureTheFlagMode.cpp:16
 msgid "dropped"
-msgstr ""
+msgstr "mistet"
 
 #: Sources/Jazz2/Multiplayer/GameModes/TreasureHuntMode.cpp:32
 msgid "Find exit!"
@@ -1420,44 +1420,44 @@ msgstr ""
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2417
 #, c++-format
 msgid "Value out of range (2-{})"
-msgstr ""
+msgstr "Verdi utenfor rekkevidde (2-{})"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2493
 msgid "Usage: /team <blue|red|green|yellow|auto>"
-msgstr ""
+msgstr "Bruk: /team <blue|red|green|yellow|auto>"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2500
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3715
 #, c++-format
 msgid "You joined the {} team"
-msgstr ""
+msgstr "Du ble med i {} teamet"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2502
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3717
 msgid "Cannot change team right now"
-msgstr ""
+msgstr "Kan ikke bytte lag akkurat nå"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2513
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2525
 msgid "Teams are only used in team game modes"
-msgstr ""
+msgstr "Lag brukes kun i lagspillmoduser"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2516
 msgid "Teams rebalanced"
-msgstr ""
+msgstr "Lagene er ombalansert"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2540
 msgid "Usage: /setteam <player#> <blue|red|green|yellow>"
-msgstr ""
+msgstr "Bruk: /setteam <spiller#> <blue|red|green|yellow>"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2555
 #, c++-format
 msgid "Player {} moved to the {} team"
-msgstr ""
+msgstr "Spiller {} flyttet til {}-laget"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:2557
 msgid "Player not found"
-msgstr ""
+msgstr "Spilleren ble ikke funnet"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3054
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:3790
@@ -1489,6 +1489,9 @@ msgid ""
 "\n"
 "Teams have been rebalanced"
 msgstr ""
+"\n"
+"\n"
+"Lagene har blitt ombalansert"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7132
 #, c++-format
@@ -1497,6 +1500,9 @@ msgid ""
 "\n"
 "{} took the {} flag!"
 msgstr ""
+"\n"
+"\n"
+"{} tok {}-flagget!"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7140
 #, c++-format
@@ -1505,6 +1511,9 @@ msgid ""
 "\n"
 "The {} flag was returned"
 msgstr ""
+"\n"
+"\n"
+"Flagget {} ble returnert"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7188
 #, c++-format
@@ -1513,6 +1522,9 @@ msgid ""
 "\n"
 "{} team captured the {} flag!"
 msgstr ""
+"\n"
+"\n"
+"{}-laget erobret {}-flagget!"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:7291
 #, c++-format
@@ -1521,6 +1533,9 @@ msgid ""
 "\n"
 "The {} flag was dropped"
 msgstr ""
+"\n"
+"\n"
+"Flagget {} ble mistet"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:8972
 #, c++-format
@@ -1529,6 +1544,9 @@ msgid ""
 "\n"
 "Overtime! {} seconds remaining"
 msgstr ""
+"\n"
+"\n"
+"Overtid! {} sekunder igjen"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9004
 #, c++-format
@@ -1548,6 +1566,9 @@ msgid ""
 "\n"
 "{} team wins!"
 msgstr ""
+"\n"
+"\n"
+"{} lag vinner!"
 
 #: Sources/Jazz2/Multiplayer/MpLevelHandler.cpp:9100
 msgid ""
@@ -1555,10 +1576,13 @@ msgid ""
 "\n"
 "The round ended in a draw"
 msgstr ""
+"\n"
+"\n"
+"Runden endte uavgjort"
 
 #: Sources/Jazz2/UI/HUD.cpp:543
 msgid "Spectating"
-msgstr ""
+msgstr "Ser på"
 
 #: Sources/Jazz2/UI/InGameConsole.cpp:359
 msgid "Unknown command"
@@ -1615,7 +1639,7 @@ msgstr "Spill historie"
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:104
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:20
 msgid "Play Multiplayer"
-msgstr ""
+msgstr "Spill flerspiller"
 
 #. TRANSLATORS: Menu item in main menu (Emscripten only)
 #: Sources/Jazz2/UI/Menu/BeginSection.cpp:75
@@ -1795,7 +1819,7 @@ msgstr "Svak"
 
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:93
 msgid "Extended PlayStation™ Support"
-msgstr "Extedned PlayStation™-støtte"
+msgstr "Extended PlayStation™-støtte"
 
 #. TRANSLATORS: Menu item in Options > Controls section (Android only)
 #: Sources/Jazz2/UI/Menu/ControlsOptionsSection.cpp:103
@@ -1888,12 +1912,12 @@ msgstr "Samarbeid"
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:172
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:34
 msgid "Create Local Splitscreen Game"
-msgstr ""
+msgstr "Lag et lokalt spill med delt skjerm"
 
 #. TRANSLATORS: Menu item to select the number of local splitscreen players
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:175
 msgid "Number of Players"
-msgstr ""
+msgstr "Antall spillere"
 
 #. TRANSLATORS: Menu item to select player character (Jazz, Spaz, Lori)
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:187
@@ -2102,7 +2126,7 @@ msgstr "Skripting"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:66
 msgid "Continuous Jump"
-msgstr ""
+msgstr "Kontinuerlig Hopp"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:70
@@ -2112,7 +2136,7 @@ msgstr "Bytt til nytt våpen"
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:74
 msgid "Show Minimap"
-msgstr ""
+msgstr "Vis minimap"
 
 #. TRANSLATORS: Menu item in Options > Gameplay section
 #: Sources/Jazz2/UI/Menu/GameplayOptionsSection.cpp:78
@@ -2194,12 +2218,12 @@ msgstr "Bakgrunnsdithering"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:96
 msgid "Blur Effects"
-msgstr ""
+msgstr "Uskarphetseffekter"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:104
 msgid "Lighting Resolution"
-msgstr ""
+msgstr "Oppløsning for belysning"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:133
@@ -2317,7 +2341,7 @@ msgstr "Fortsett"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:49
 msgid "Join Game"
-msgstr ""
+msgstr "Bli med i spillet"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:52
@@ -2327,7 +2351,7 @@ msgstr "Se på"
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:56
 msgid "Change Character"
-msgstr ""
+msgstr "Bytt karakter"
 
 #. TRANSLATORS: Menu item in main menu
 #: Sources/Jazz2/UI/Menu/PauseSection.cpp:66
@@ -2342,7 +2366,7 @@ msgstr "Koble fra og avslutt"
 #. TRANSLATORS: Menu item in Multiplayer section (join an existing online server)
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:25
 msgid "Join Server"
-msgstr ""
+msgstr "Bli med i serveren"
 
 #: Sources/Jazz2/UI/Menu/RefreshCacheSection.cpp:75
 msgid "Processing of files in \f[c:#9e7056]\"Source\"\f[/c] directory..."
@@ -2461,27 +2485,27 @@ msgstr "Monokrom"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:139
 msgid "Laps"
-msgstr ""
+msgstr "Runder"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:141
 msgid "Treasure"
-msgstr ""
+msgstr "Skatt"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:172
 msgid "Scoreboard"
-msgstr ""
+msgstr "Resultattavle"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:177
 msgid "Player"
-msgstr ""
+msgstr "Spiller"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:187
 msgid "Pts"
-msgstr ""
+msgstr "Png"
 
 #: Sources/Jazz2/UI/Menu/ScoreboardSection.cpp:189
 msgid "Ping"
-msgstr ""
+msgstr "Ping"
 
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:216
 msgid "Connect To Server"
@@ -2494,22 +2518,22 @@ msgstr "Ingen servere funnet, men søker fortsatt!"
 #. TRANSLATORS: Label in Connect To Server > IP Address input field
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:346
 msgid "IP Address:"
-msgstr ""
+msgstr "IP Adresse:"
 
 #. TRANSLATORS: Placeholder in Connect To Server > IP Address input field
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:353
 msgid "<ip> or <ip>:<port>"
-msgstr ""
+msgstr "<ip> eller <ip>:<port>"
 
 #. TRANSLATORS: Bottom hint in Connect To Server > IP Address input field, prefixed with key/button to press
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:384
 msgid "to show keyboard"
-msgstr ""
+msgstr "for å vise tastaturet"
 
 #. TRANSLATORS: Bottom hint in Connect To Server section, prefixed with key/button to press
 #: Sources/Jazz2/UI/Menu/ServerSelectSection.cpp:398
 msgid "to connect to IP address"
-msgstr ""
+msgstr "å koble til IP-adresse"
 
 #: Sources/Jazz2/UI/Menu/SimpleMessageSection.cpp:48
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:227
@@ -2533,23 +2557,23 @@ msgstr "Musikkvolum"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:111
 msgid "Save"
-msgstr ""
+msgstr "Lagre"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:120
 msgid "Reset"
-msgstr ""
+msgstr "Tilbakestill"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:127
 msgid "Joystick"
-msgstr ""
+msgstr "Joystick"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:137
 msgid "Vibration"
-msgstr ""
+msgstr "Vibrasjon"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:145
 msgid "Drag to move · Pinch or corner to resize"
-msgstr ""
+msgstr "Dra for å flytte · Klyp eller hjørne for å endre størrelse"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:95
@@ -2564,47 +2588,47 @@ msgstr "Spiller Navn"
 #. TRANSLATORS: Menu item in Options > User Profile section (primary fur/body color)
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:153
 msgid "Primary Fur"
-msgstr ""
+msgstr "Primær pels"
 
 #. TRANSLATORS: Menu item in Options > User Profile section (secondary fur/body color)
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:155
 msgid "Secondary Fur"
-msgstr ""
+msgstr "Sekundær pels"
 
 #. TRANSLATORS: Menu item in Options > User Profile section (weapon color)
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:157
 #| msgid "Weapon {}"
 msgid "Weapon"
-msgstr ""
+msgstr "Våpen"
 
 #. TRANSLATORS: Menu item in Options > User Profile section (miscellaneous accent color)
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:159
 msgid "Miscellaneous"
-msgstr ""
+msgstr "Diverse"
 
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:174
 msgid "Default"
-msgstr ""
+msgstr "Standard"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:194
 msgid "Apply Custom Colors"
-msgstr ""
+msgstr "Bruk egendefinerte farger"
 
 #. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:199
 msgid "Online only"
-msgstr ""
+msgstr "Kun på nett"
 
 #. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:201
 msgid "Online and first local player"
-msgstr ""
+msgstr "Online og første lokale spiller"
 
 #. TRANSLATORS: Value of "Apply Colors" in Options > User Profile
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:203
 msgid "Online and all local players"
-msgstr ""
+msgstr "Online og alle lokale spillere"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:211
@@ -2625,15 +2649,15 @@ msgstr[1] "Venter for {} mer spillere"
 
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:175
 msgid "Team"
-msgstr ""
+msgstr "Lag"
 
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:184
 msgid "Auto"
-msgstr ""
+msgstr "Auto"
 
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:223
 msgid "Use \f[c:#d0705d]Up/Down\f[/c] to switch between character and team"
-msgstr ""
+msgstr "Bruk \f[c:#d0705d]Opp/Ned\f[/c] for å bytte mellom karakter og lag"
 
 #: Sources/Main.cpp:669 Sources/Main.cpp:740
 msgid ""
@@ -2698,6 +2722,10 @@ msgid ""
 "\n"
 "The client was rejected due to malformed communication protocol."
 msgstr ""
+"\f[c:#704a4a]Tilkoblingen er lukket!\f[/c]\n"
+"\n"
+"\n"
+"Klienten ble avvist på grunn av feil kommunikasjonsprotokoll."
 
 #: Sources/Main.cpp:1178
 msgid ""
@@ -2707,6 +2735,11 @@ msgid ""
 "The connection was denied by the web browser.\n"
 "One of the reasons may be connecting to an unsecured WebSocket."
 msgstr ""
+"\f[c:#704a4a]Kan ikke koble til serveren!\f[/c]\n"
+"\n"
+"\n"
+"Tilkoblingen ble avvist av nettleseren.\n"
+"En av årsakene kan være tilkobling til en usikret WebSocket."
 
 #: Sources/Main.cpp:1179
 msgid ""
