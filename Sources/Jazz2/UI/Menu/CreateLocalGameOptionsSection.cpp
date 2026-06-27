@@ -143,8 +143,8 @@ namespace Jazz2::UI::Menu
 		}
 	}
 
-	CreateLocalGameOptionsSection::CreateLocalGameOptionsSection(StringView levelName, StringView previousEpisodeName)
-		: _levelName(levelName), _previousEpisodeName(previousEpisodeName), _availableCharacters(3),
+	CreateLocalGameOptionsSection::CreateLocalGameOptionsSection(StringView levelName, StringView previousEpisodeName, StringView resumeEpisodeName)
+		: _levelName(levelName), _previousEpisodeName(previousEpisodeName), _resumeEpisodeName(resumeEpisodeName), _availableCharacters(3),
 			_playerCount(2), _playerTypes{}, _currentPlayer(0), _difficulty(1), _gameMode(MpGameMode::Cooperation),
 			_characterRows{}, _shouldStart(false), _transitionTime(0.0f)
 	{
@@ -165,6 +165,18 @@ namespace Jazz2::UI::Menu
 
 		for (std::int32_t i = 0; i < ControlScheme::MaxSupportedPlayers; i++) {
 			_playerTypes[i] = i % _availableCharacters;
+		}
+
+		// When resuming a saved episode, restore the difficulty and the first player's character from the saved
+		// progress (continue); the remaining players keep their defaults and can still be configured below
+		if (!_resumeEpisodeName.empty()) {
+			if (auto* episodeContinue = PreferencesCache::GetEpisodeContinue(_resumeEpisodeName)) {
+				_difficulty = std::clamp((std::int32_t)(episodeContinue->State.DifficultyAndPlayerType & 0x0f) - (std::int32_t)GameDifficulty::Easy, 0, 2);
+				std::int32_t savedType = (std::int32_t)((episodeContinue->State.DifficultyAndPlayerType >> 4) & 0x0f) - (std::int32_t)PlayerType::Jazz;
+				if (savedType >= 0 && savedType < _availableCharacters) {
+					_playerTypes[0] = savedType;
+				}
+			}
 		}
 
 		SetTitle(_("Create Local Splitscreen Game"));
@@ -211,6 +223,12 @@ namespace Jazz2::UI::Menu
 			root->DrawMenuValue(charOffset, GetGameModeName(_gameMode), centerX, y, selected, readOnly, false, 0.0f);
 		};
 		gameModeItem->OnActivate = [root]() { root->SwitchToSection<MultiplayerGameModeSelectSection>(); };
+
+		// Episode continue only applies to cooperation, so lock the game mode when resuming a saved episode
+		if (!_resumeEpisodeName.empty()) {
+			_gameMode = MpGameMode::Cooperation;
+			gameModeItem->ReadOnly = true;
+		}
 
 		// TRANSLATORS: Menu item to start the local game with the selected settings
 		list->Add<ListItem>(_("Start"), [this]() {
@@ -323,8 +341,25 @@ namespace Jazz2::UI::Menu
 		// mode shares the same authoritative code path; a non-Unknown game mode is what selects that handler
 		levelInit.LocalMultiplayerGameMode = (std::uint8_t)_gameMode;
 
+		if (!_resumeEpisodeName.empty()) {
+			// Resuming a saved episode: restore the first player's progress (lives, score, ammo, ...) from the
+			// continue state, matching the single-player continue path in EpisodeSelectSection
+			if (auto* episodeContinue = PreferencesCache::GetEpisodeContinue(_resumeEpisodeName)) {
+				if ((episodeContinue->State.Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed) {
+					levelInit.CheatsUsed = true;
+				}
+				levelInit.ElapsedMilliseconds = episodeContinue->State.ElapsedMilliseconds;
+
+				auto& firstPlayer = levelInit.PlayerCarryOvers[0];
+				firstPlayer.Lives = episodeContinue->State.Lives;
+				firstPlayer.Score = episodeContinue->State.Score;
+				std::memcpy(firstPlayer.Gems, episodeContinue->State.Gems, sizeof(firstPlayer.Gems));
+				std::memcpy(firstPlayer.Ammo, episodeContinue->State.Ammo, sizeof(firstPlayer.Ammo));
+				std::memcpy(firstPlayer.WeaponUpgrades, episodeContinue->State.WeaponUpgrades, sizeof(firstPlayer.WeaponUpgrades));
+			}
+		}
 		// Cooperation carries over player stats from the previous episode (and is resumable), like classic co-op
-		if (_gameMode == MpGameMode::Cooperation && !_previousEpisodeName.empty()) {
+		else if (_gameMode == MpGameMode::Cooperation && !_previousEpisodeName.empty()) {
 			auto previousEpisodeEnd = PreferencesCache::GetEpisodeEnd(_previousEpisodeName);
 			if (previousEpisodeEnd != nullptr) {
 				if ((previousEpisodeEnd->Flags & EpisodeContinuationFlags::CheatsUsed) == EpisodeContinuationFlags::CheatsUsed ||

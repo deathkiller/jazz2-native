@@ -241,6 +241,11 @@ namespace Jazz2
 		Shader* _combineWithWaterShader;
 
 		Rendering::UpscaleRenderPassWithClipping _upscalePass;
+		// When the scene is supersampled (splitscreen zoom-out), the HUD and the in-game menu are rendered through this
+		// separate pass at the native resolution and composited on top, so they stay crisp instead of being
+		// supersampled with the scene
+		Rendering::UpscaleRenderPassWithClipping _hudUpscalePass;
+		bool _hudOverlayActive = false;
 
 		std::unique_ptr<SceneNode> _rootNode;
 		std::unique_ptr<Texture> _noiseTexture;
@@ -339,6 +344,10 @@ namespace Jazz2
 		void UnassignViewport(Actors::Player* player);
 		/** @brief Commits changes in assigned viewports */
 		void CommitViewports();
+		/** @brief Returns the upscale pass that hosts the HUD and in-game menu (the native-resolution overlay pass when the scene is supersampled, otherwise the scene pass) */
+		Rendering::UpscaleRenderPassWithClipping& GetActiveOverlayPass();
+		/** @brief Returns the scene node that the HUD and other overlay UI should attach to */
+		SceneNode* GetHudParentNode();
 		/** @brief Initializes camera for specified viewport */
 		void InitializeCamera(Rendering::PlayerViewport& viewport);
 		/** @brief Updates pressed actions */

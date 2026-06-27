@@ -66,11 +66,14 @@ namespace Jazz2::Rendering
 		_lightingBuffer->SetWrap(SamplerWrapping::ClampToEdge);
 
 		if (PreferencesCache::BlurEffects) {
+			// The blur targets are sized to the displayed (logical) viewport size rather than the (possibly
+			// supersampled) texture size, so the blur strength - and the in-game bloom - stay consistent in splitscreen
+			// zoom-out. Otherwise the larger per-player texture makes the blur cover a smaller fraction of the view
 			_downsamplePass.Initialize(_viewTexture.get(), w / 2, h / 2, Vector2f(0.0f, 0.0f));
-			_blurPass1.Initialize(_downsamplePass.GetTarget(), w / 2, h / 2, Vector2f(1.0f, 0.0f));
-			_blurPass2.Initialize(_blurPass1.GetTarget(), w / 2, h / 2, Vector2f(0.0f, 1.0f));
-			_blurPass3.Initialize(_blurPass2.GetTarget(), w / 4, h / 4, Vector2f(1.0f, 0.0f));
-			_blurPass4.Initialize(_blurPass3.GetTarget(), w / 4, h / 4, Vector2f(0.0f, 1.0f));
+			_blurPass1.Initialize(_downsamplePass.GetTarget(), bounds.W / 2, bounds.H / 2, Vector2f(1.0f, 0.0f));
+			_blurPass2.Initialize(_blurPass1.GetTarget(), bounds.W / 2, bounds.H / 2, Vector2f(0.0f, 1.0f));
+			_blurPass3.Initialize(_blurPass2.GetTarget(), bounds.W / 4, bounds.H / 4, Vector2f(1.0f, 0.0f));
+			_blurPass4.Initialize(_blurPass3.GetTarget(), bounds.W / 4, bounds.H / 4, Vector2f(0.0f, 1.0f));
 		} else {
 			_downsamplePass.Dispose();
 			_blurPass1.Dispose();

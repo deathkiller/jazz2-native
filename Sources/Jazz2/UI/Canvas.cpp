@@ -62,10 +62,13 @@ namespace Jazz2::UI
 			}
 		}
 
+		// Use a separate alpha blend so the alpha channel of an RGBA render target accumulates correct "over" coverage,
+		// otherwise drawing semi-transparent content over an opaque background would erode its alpha and let the
+		// scene behind show through. Harmless for opaque/RGB targets (alpha ignored).
 		if (additiveBlending) {
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
 		} else {
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		}
 
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
@@ -127,7 +130,7 @@ namespace Jazz2::UI
 			}
 		}
 
-		command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
@@ -162,9 +165,9 @@ namespace Jazz2::UI
 		}
 
 		if (additiveBlending) {
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
 		} else {
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		}
 
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);

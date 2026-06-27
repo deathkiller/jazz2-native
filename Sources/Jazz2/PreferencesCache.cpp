@@ -45,7 +45,7 @@ namespace Jazz2
 	bool PreferencesCache::LowWaterQuality = false;
 	bool PreferencesCache::UnalignedViewport = false;
 	bool PreferencesCache::PreferVerticalSplitscreen = false;
-	bool PreferencesCache::PreferZoomOut = false;
+	bool PreferencesCache::PreferZoomOut = true;
 	bool PreferencesCache::BackgroundDithering = true;
 	bool PreferencesCache::BlurEffects = true;
 	std::uint8_t PreferencesCache::LightingResolutionPercent = 100;

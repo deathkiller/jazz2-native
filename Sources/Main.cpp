@@ -2221,8 +2221,15 @@ void GameEventHandler::SaveEpisodeContinue(const LevelInitialization& levelInit)
 	const PlayerCarryOver* firstPlayer;
 	std::size_t playerCount = levelInit.GetPlayerCount(&firstPlayer);
 
-	// Don't save continue in multiplayer
-	if (playerCount == 1) {
+	// Save continue for single-player and local cooperation (splitscreen co-op is episodic and resumable); the other
+	// local multiplayer modes aren't episodic and online sessions already returned above
+	bool saveContinue = (playerCount == 1);
+#if defined(WITH_MULTIPLAYER)
+	if (!saveContinue && (MpGameMode)levelInit.LocalMultiplayerGameMode == MpGameMode::Cooperation) {
+		saveContinue = true;
+	}
+#endif
+	if (saveContinue) {
 		auto* episodeContinue = PreferencesCache::GetEpisodeContinue(p[0], true);
 		episodeContinue->LevelName = p[2];
 		episodeContinue->State.Flags = EpisodeContinuationFlags::None;

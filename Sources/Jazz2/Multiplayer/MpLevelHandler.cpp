@@ -907,7 +907,7 @@ namespace Jazz2::Multiplayer
 		LevelHandler::OnInitializeViewport(width, height);
 
 		if (_inGameLobby != nullptr) {
-			_inGameLobby->setParent(_upscalePass.GetNode());
+			_inGameLobby->setParent(GetHudParentNode());
 		}
 	}
 

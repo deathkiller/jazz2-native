@@ -557,7 +557,9 @@ namespace Jazz2::UI
 						}
 					}
 
-					command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					// Separate alpha blend so text (e.g. semi-transparent shadows) accumulates correct alpha coverage
+					// when drawn into an RGBA render target, harmless for opaque/RGB targets
+					command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
 					auto* instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());

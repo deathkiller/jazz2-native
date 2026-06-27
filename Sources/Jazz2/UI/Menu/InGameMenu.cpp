@@ -29,11 +29,12 @@ namespace Jazz2::UI::Menu
 		_canvasClipped = std::make_unique<MenuClippedCanvas>(this);
 		_canvasOverlay = std::make_unique<MenuOverlayCanvas>(this);
 
-		_canvasBackground->setParent(root->_upscalePass.GetNode());
-		_canvasClipped->setParent(root->_upscalePass.GetClippedNode());
-		_canvasOverlay->setParent(root->_upscalePass.GetOverlayNode());
+		auto& overlayPass = root->GetActiveOverlayPass();
+		_canvasBackground->setParent(overlayPass.GetNode());
+		_canvasClipped->setParent(overlayPass.GetClippedNode());
+		_canvasOverlay->setParent(overlayPass.GetOverlayNode());
 
-		UpdateContentBounds(_root->_upscalePass.GetViewSize());
+		UpdateContentBounds(overlayPass.GetViewSize());
 
 		auto& resolver = ContentResolver::Get();
 
@@ -111,12 +112,18 @@ namespace Jazz2::UI::Menu
 
 	void InGameMenu::OnInitializeViewport(std::int32_t width, std::int32_t height)
 	{
+		// The active overlay pass can change (e.g. when the splitscreen player count changes), so re-attach the canvases
+		auto& overlayPass = _root->GetActiveOverlayPass();
+		_canvasBackground->setParent(overlayPass.GetNode());
+		_canvasClipped->setParent(overlayPass.GetClippedNode());
+		_canvasOverlay->setParent(overlayPass.GetOverlayNode());
+
 		UpdateContentBounds(Vector2i(width, height));
 
 		if (!_sections.empty()) {
 			auto& lastSection = _sections.back();
 			Recti clipRectangle = lastSection->GetClipRectangle(_contentBounds);
-			_root->_upscalePass.SetClipRectangle(clipRectangle);
+			overlayPass.SetClipRectangle(clipRectangle);
 		}
 	}
 

@@ -23,9 +23,9 @@ namespace Jazz2::UI::Menu
 	// Row height matching the original section (ItemHeight * 4 / 5)
 	static constexpr float RowHeight = 40 * 4 / 5;	// 32
 
-	EpisodeSelectSection::EpisodeSelectSection(bool multiplayer, bool privateServer, bool localGame)
+	EpisodeSelectSection::EpisodeSelectSection(EpisodeSelectMode mode, bool privateServer)
 		: _expandedAnimation(0.0f), _transitionTime(0.0f), _transitionFromEpisode(-1), _transitionFromEpisodeTime(0.0f),
-			_animation(0.0f), _multiplayer(multiplayer), _privateServer(privateServer), _localGame(localGame), _expanded(false), _shouldStart(false), _list(nullptr)
+			_animation(0.0f), _mode(mode), _privateServer(privateServer), _expanded(false), _shouldStart(false), _list(nullptr)
 	{
 		auto& resolver = ContentResolver::Get();
 
@@ -116,13 +116,13 @@ namespace Jazz2::UI::Menu
 				if (_root->ActionHit(PlayerAction::Fire)) {
 					ExecuteSelected();
 				} else if (_root->ActionHit(PlayerAction::Left)) {
-					if (!_multiplayer && _expanded) {
+					if (_mode != EpisodeSelectMode::OnlineMultiplayer && _expanded) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_expanded = false;
 						_expandedAnimation = 0.0f;
 					}
 				} else if (_root->ActionHit(PlayerAction::Right)) {
-					if (!_multiplayer && !_expanded && row >= 0 && (_episodes[row].Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue) {
+					if (_mode != EpisodeSelectMode::OnlineMultiplayer && !_expanded && row >= 0 && (_episodes[row].Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue) {
 						_root->PlaySfx("MenuSelect"_s, 0.5f);
 						_expanded = true;
 					}
@@ -168,9 +168,9 @@ namespace Jazz2::UI::Menu
 		std::int32_t charOffset = 0;
 		_root->DrawStringShadow(
 #if defined(WITH_MULTIPLAYER)
-			_localGame
+			_mode == EpisodeSelectMode::LocalMultiplayer
 				? _("Create Local Splitscreen Game")
-				: (_multiplayer
+				: (_mode == EpisodeSelectMode::OnlineMultiplayer
 					? (_privateServer
 						? _("Create Private Server")
 						: _("Create Public Server"))
@@ -308,7 +308,7 @@ namespace Jazz2::UI::Menu
 						Alignment::Center, nameColor, size, 0.7f, 1.1f, 1.1f, 0.4f, 0.9f);
 				}
 
-				if (!_multiplayer && (item.Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue) {
+				if (_mode != EpisodeSelectMode::OnlineMultiplayer && (item.Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue) {
 					float expandX = centerX + (item.Description.DisplayName.size() + 3) * 2.8f * size + (canvas->ViewSize.X >= 400 ? 40.0f : 0.0f);
 					float moveX = expandedAnimation3 * -12.0f;
 					root->DrawStringShadow(">"_s, charOffset, expandX + moveX, itemY, IMenuContainer::FontLayer + 20,
@@ -385,16 +385,13 @@ namespace Jazz2::UI::Menu
 		if ((selectedItem.Flags & EpisodeDataFlags::IsAvailable) == EpisodeDataFlags::IsAvailable || PreferencesCache::AllowCheatsUnlock) {
 			_root->PlaySfx("MenuSelect"_s, 0.6f);
 
-#if defined(WITH_MULTIPLAYER)
-			if (_multiplayer) {
-				if ((selectedItem.Flags & EpisodeDataFlags::RedirectToCustomLevels) == EpisodeDataFlags::RedirectToCustomLevels) {
-					_root->SwitchToSection<CustomLevelSelectSection>(true, _privateServer, _localGame);
-					return;
-				}
+			bool redirectToCustomLevels = ((selectedItem.Flags & EpisodeDataFlags::RedirectToCustomLevels) == EpisodeDataFlags::RedirectToCustomLevels);
 
-				if (_localGame) {
-					_root->SwitchToSection<CreateLocalGameOptionsSection>(String(selectedItem.Description.Name + '/' + selectedItem.Description.FirstLevel),
-						selectedItem.Description.PreviousEpisode);
+#if defined(WITH_MULTIPLAYER)
+			if (_mode == EpisodeSelectMode::OnlineMultiplayer) {
+				// Online server hosting doesn't use the episode-continue feature; always start a fresh episode
+				if (redirectToCustomLevels) {
+					_root->SwitchToSection<CustomLevelSelectSection>(true, _privateServer, false);
 				} else {
 					_root->SwitchToSection<CreateServerOptionsSection>(String(selectedItem.Description.Name + '/' + selectedItem.Description.FirstLevel),
 						selectedItem.Description.PreviousEpisode, _privateServer);
@@ -403,27 +400,54 @@ namespace Jazz2::UI::Menu
 			}
 #endif
 
-			if ((selectedItem.Flags & EpisodeDataFlags::RedirectToCustomLevels) == EpisodeDataFlags::RedirectToCustomLevels) {
+			if (redirectToCustomLevels) {
+#if defined(WITH_MULTIPLAYER)
+				if (_mode == EpisodeSelectMode::LocalMultiplayer) {
+					_root->SwitchToSection<CustomLevelSelectSection>(true, false, true);
+					return;
+				}
+#endif
 				_root->SwitchToSection<CustomLevelSelectSection>();
 				return;
 			}
 
+			// Both single-player and local splitscreen support continuing a saved episode
 			if ((selectedItem.Flags & EpisodeDataFlags::CanContinue) == EpisodeDataFlags::CanContinue) {
 				if (_expanded) {
-					// Remove saved progress and restart the episode
+					// Remove saved progress and restart the episode (falls through to the fresh-start routing below)
 					PreferencesCache::RemoveEpisodeContinue(selectedItem.Description.Name);
 
 					selectedItem.Flags &= ~EpisodeDataFlags::CanContinue;
 					_expandedAnimation = 0.0f;
 					_expanded = false;
 				} else {
-					// Continue from the last level
+#if defined(WITH_MULTIPLAYER)
+					if (_mode == EpisodeSelectMode::LocalMultiplayer) {
+						// Resume the saved level as a local splitscreen game; the player setup (count/characters)
+						// happens in the options section, which loads the saved progress for the first player
+						auto* episodeContinue = PreferencesCache::GetEpisodeContinue(selectedItem.Description.Name);
+						if (episodeContinue != nullptr) {
+							_root->SwitchToSection<CreateLocalGameOptionsSection>(String(selectedItem.Description.Name + '/' + episodeContinue->LevelName),
+								selectedItem.Description.PreviousEpisode, selectedItem.Description.Name);
+							return;
+						}
+					}
+#endif
+					// Continue from the last level (single-player; resumes directly through OnAfterTransition)
 					_shouldStart = true;
 					_transitionTime = 1.0f;
 					return;
 				}
 			}
 
+			// Start the episode from its first level
+#if defined(WITH_MULTIPLAYER)
+			if (_mode == EpisodeSelectMode::LocalMultiplayer) {
+				_root->SwitchToSection<CreateLocalGameOptionsSection>(String(selectedItem.Description.Name + '/' + selectedItem.Description.FirstLevel),
+					selectedItem.Description.PreviousEpisode);
+				return;
+			}
+#endif
 			_root->SwitchToSection<StartGameOptionsSection>(String(selectedItem.Description.Name + '/' + selectedItem.Description.FirstLevel),
 				selectedItem.Description.PreviousEpisode);
 		}

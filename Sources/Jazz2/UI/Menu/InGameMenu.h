@@ -127,7 +127,7 @@ namespace Jazz2::UI::Menu
 
 	protected:
 		Rendering::UpscaleRenderPassWithClipping& GetUpscalePass() override {
-			return _root->_upscalePass;
+			return _root->GetActiveOverlayPass();
 		}
 		const BitArray& GetPressedKeys() const override {
 			return _root->_pressedKeys;

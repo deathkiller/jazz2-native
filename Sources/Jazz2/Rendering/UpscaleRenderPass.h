@@ -23,7 +23,7 @@ namespace Jazz2::Rendering
 	public:
 		/** @brief Creates a new instance */
 		UpscaleRenderPass()
-			: _resizeShader(nullptr)
+			: _supersample(1), _resizeAtLogicalScale(false), _resizeShader(nullptr)
 		{
 			setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 		}
@@ -35,8 +35,13 @@ namespace Jazz2::Rendering
 		 * @param height        Height of the input image
 		 * @param targetWidth   Width of the upscaled target image
 		 * @param targetHeight  Height of the upscaled target image
+		 * @param supersample   Render-resolution multiplier for the input image (1 = native); the scene is still drawn
+		 *                      in `width`×`height` coordinates, but rasterized into a `supersample`× larger texture
+		 * @param overlay       If `true`, renders an RGBA layer at native resolution (transparent where nothing is
+		 *                      drawn) and composites it alpha-blended on top of everything else; used for the HUD so
+		 *                      it stays crisp regardless of the scene's supersampling
 		 */
-		virtual void Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight);
+		virtual void Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample = 1, bool overlay = false);
 		/** @brief Registers the render pass into the viewport chain */
 		virtual void Register();
 
@@ -47,9 +52,9 @@ namespace Jazz2::Rendering
 			return _node.get();
 		}
 
-		/** @brief Returns size of the input image */
+		/** @brief Returns size of the input image (the logical coordinate space, not the supersampled texture) */
 		Vector2i GetViewSize() const {
-			return _view->GetSize();
+			return _logicalSize;
 		}
 
 		/** @brief Returns size of the upscaled target image */
@@ -80,22 +85,25 @@ namespace Jazz2::Rendering
 		private:
 			std::unique_ptr<Texture> _target;
 			std::unique_ptr<Viewport> _view;
-			std::unique_ptr<Camera> _camera;
+			Camera _camera;
 			RenderCommand _renderCommand;
 			Vector2f _targetSize;
 		};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		// Hide these members from documentation before refactoring
-		std::unique_ptr<Viewport> _view;
-		std::unique_ptr<Camera> _camera;
-		std::unique_ptr<Texture> _target;
-		Vector2f _targetSize;
-		AntialiasingSubpass _antialiasing;
+		// Members shared with UpscaleRenderPassWithClipping (its clipped/overlay views reuse the target and camera)
+		std::unique_ptr<Texture> _target;	// The (possibly supersampled) render target the input scene is drawn into
+		std::unique_ptr<Viewport> _view;	// Renders the input scene node into the target
+		Camera _camera;						// View/projection shared by the target view (and the clipping variant's views)
+		AntialiasingSubpass _antialiasing;	// Optional resolve pass that smooths the final upscale (see Initialize)
+		std::int32_t _supersample;			// Render-resolution multiplier of the target texture over the logical size
 #endif
 
 	private:
-		std::unique_ptr<SceneNode> _node;
+		bool _resizeAtLogicalScale;			// Edge-detection rescale shaders (HQ2x/3xBRZ/SABR) sample at the logical, not supersampled, scale
+		std::unique_ptr<SceneNode> _node;	// Input scene root that the rest of the rendering attaches to (GetNode())
+		Vector2i _logicalSize;				// Logical coordinate space the scene is drawn in (GetViewSize())
+		Vector2f _targetSize;				// Size this pass renders to: the window, or the antialiasing intermediate when active
 #if !defined(DISABLE_RESCALE_SHADERS)
 		Shader* _resizeShader;
 #endif
@@ -115,7 +123,7 @@ namespace Jazz2::Rendering
 		/** @brief Creates a new instance */
 		UpscaleRenderPassWithClipping();
 
-		void Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight) override;
+		void Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample = 1, bool overlay = false) override;
 		void Register() override;
 
 		/** @brief Returns the clipped main layer node */
@@ -128,9 +136,16 @@ namespace Jazz2::Rendering
 			return _overlayNode.get();
 		}
 
-		/** @brief Sets the clipping rectangle of the main layer */
+		/** @brief Sets the clipping rectangle of the main layer (given in logical coordinates) */
 		void SetClipRectangle(const Recti& scissorRect) {
-			_clippedView->SetScissorRect(scissorRect);
+			if (_supersample > 1) {
+				// The scissor rectangle is supplied in logical coordinates, but it is applied to the supersampled
+				// target texture, so it must be scaled up to match
+				_clippedView->SetScissorRect(Recti(scissorRect.X * _supersample, scissorRect.Y * _supersample,
+					scissorRect.W * _supersample, scissorRect.H * _supersample));
+			} else {
+				_clippedView->SetScissorRect(scissorRect);
+			}
 		}
 
 	private:

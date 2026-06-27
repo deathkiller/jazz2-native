@@ -16,6 +16,7 @@ namespace nCine
 
 	Material::Material(GLShaderProgram* program, GLTexture* texture)
 		: isBlendingEnabled_(false), srcBlendingFactor_(GL_SRC_ALPHA), destBlendingFactor_(GL_ONE_MINUS_SRC_ALPHA),
+			srcAlphaBlendingFactor_(GL_ONE), destAlphaBlendingFactor_(GL_ONE_MINUS_SRC_ALPHA),
 			shaderProgramType_(ShaderProgramType::Custom), shaderProgram_(program), uniformsHostBufferSize_(0)
 	{
 		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
@@ -32,6 +33,31 @@ namespace nCine
 	{
 		srcBlendingFactor_ = srcBlendingFactor;
 		destBlendingFactor_ = destBlendingFactor;
+
+		// Derive correct "over" factors for the alpha channel from the common color-blend presets, so RGBA render
+		// targets accumulate proper coverage even though callers only specify color factors. Drawing semi-transparent
+		// content with SRC_ALPHA on the alpha channel would erode the destination alpha (a = src.a*src.a + dst.a*(1-src.a));
+		// the alpha source factor must be ONE instead. This is harmless for opaque/RGB render targets, where the
+		// alpha channel is unused.
+		if (srcBlendingFactor == GL_SRC_ALPHA && destBlendingFactor == GL_ONE_MINUS_SRC_ALPHA) {
+			srcAlphaBlendingFactor_ = GL_ONE;
+			destAlphaBlendingFactor_ = GL_ONE_MINUS_SRC_ALPHA;
+		} else if (srcBlendingFactor == GL_SRC_ALPHA && destBlendingFactor == GL_ONE) {
+			// Additive: keep the destination coverage unchanged (the source adds light, it does not cover)
+			srcAlphaBlendingFactor_ = GL_ZERO;
+			destAlphaBlendingFactor_ = GL_ONE;
+		} else {
+			srcAlphaBlendingFactor_ = srcBlendingFactor;
+			destAlphaBlendingFactor_ = destBlendingFactor;
+		}
+	}
+
+	void Material::SetBlendingFactors(GLenum srcRgbBlendingFactor, GLenum destRgbBlendingFactor, GLenum srcAlphaBlendingFactor, GLenum destAlphaBlendingFactor)
+	{
+		srcBlendingFactor_ = srcRgbBlendingFactor;
+		destBlendingFactor_ = destRgbBlendingFactor;
+		srcAlphaBlendingFactor_ = srcAlphaBlendingFactor;
+		destAlphaBlendingFactor_ = destAlphaBlendingFactor;
 	}
 
 	bool Material::SetShaderProgramType(ShaderProgramType shaderProgramType)
@@ -188,6 +214,8 @@ namespace nCine
 			GLuint shaderProgram;
 			std::uint8_t srcBlendingFactor;
 			std::uint8_t destBlendingFactor;
+			std::uint8_t srcAlphaBlendingFactor;
+			std::uint8_t destAlphaBlendingFactor;
 		};
 	}
 
@@ -203,6 +231,8 @@ namespace nCine
 		hashData.shaderProgram = shaderProgram_->GetGLHandle();
 		hashData.srcBlendingFactor = glBlendingFactorToInt(srcBlendingFactor_);
 		hashData.destBlendingFactor = glBlendingFactorToInt(destBlendingFactor_);
+		hashData.srcAlphaBlendingFactor = glBlendingFactorToInt(srcAlphaBlendingFactor_);
+		hashData.destAlphaBlendingFactor = glBlendingFactorToInt(destAlphaBlendingFactor_);
 
 		return (std::uint32_t)xxHash3(reinterpret_cast<const void*>(&hashData), sizeof(SortHashData), Seed);
 	}

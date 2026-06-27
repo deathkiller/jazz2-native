@@ -737,7 +737,30 @@ namespace Jazz2
 		}
 
 		_viewSize = Vector2i(w, h);
-		_upscalePass.Initialize(w, h, width, height);
+
+		// When zooming out in splitscreen, each player's camera shows a full-size view but their on-screen region is
+		// only a fraction of the framebuffer, so the per-player image would be minified to roughly half resolution.
+		// Supersampling the shared framebuffer restores the per-player resolution; the logical coordinate space (and
+		// thus the HUD layout) stays unchanged.
+		bool useHalfRes = (PreferencesCache::PreferZoomOut && _assignedViewports.size() >= 3);
+		std::int32_t supersample = (useHalfRes ? 2 : 1);
+		_upscalePass.Initialize(w, h, width, height, supersample);
+
+		// When the scene is supersampled, the HUD and in-game menu are rendered through a separate overlay pass at the
+		// native resolution and then composited (nearest, so clean integer scaling) into the supersampled scene buffer,
+		// on top of the player viewports. The combined buffer is then upscaled to the window by the scene pass, so the
+		// rescale/upscale effect (HQ2x etc.) applies to everything at the end. When not supersampling, the HUD stays in
+		// the scene pass directly as before.
+		_hudOverlayActive = (supersample > 1);
+		if (_hudOverlayActive) {
+			// The overlay renders at the logical size; its composite quad is also logical, so it fills the logical view
+			// and is rasterized into the (supersampled) scene buffer at an integer scale
+			_hudUpscalePass.Initialize(w, h, w, h, 1, true);
+			// Composite the overlay into the scene buffer (on top of the player viewports) instead of to the screen
+			_hudUpscalePass.setParent(_upscalePass.GetNode());
+		} else {
+			_hudUpscalePass.setParent(nullptr);
+		}
 
 		bool notInitialized = (_combineShader == nullptr);
 		if (notInitialized) {
@@ -751,13 +774,16 @@ namespace Jazz2
 			if (_downsampleShader == nullptr) { LOGW("PrecompiledShader::Downsample failed"); }
 			_combineShader = resolver.GetShader(PrecompiledShader::Combine);
 			if (_combineShader == nullptr) { LOGW("PrecompiledShader::Combine failed"); }
+		}
 
-			if (_hud != nullptr) {
-				_hud->setParent(_upscalePass.GetNode());
-			}
-			if (_console != nullptr) {
-				_console->setParent(_upscalePass.GetNode());
-			}
+		// Attach the HUD and console to the active overlay/scene node (re-evaluated every time, as the overlay can be
+		// toggled on or off when the player count changes)
+		SceneNode* hudParent = GetHudParentNode();
+		if (_hud != nullptr) {
+			_hud->setParent(hudParent);
+		}
+		if (_console != nullptr) {
+			_console->setParent(hudParent);
 		}
 
 		_combineWithWaterShader = resolver.GetShader(PreferencesCache::LowWaterQuality
@@ -771,8 +797,6 @@ namespace Jazz2
 			}
 		}
 
-		bool useHalfRes = (PreferencesCache::PreferZoomOut && _assignedViewports.size() >= 3);
-
 		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
 			Rendering::PlayerViewport& viewport = *_assignedViewports[i];
 			Recti bounds = GetPlayerViewportBounds(w, h, (std::int32_t)i);
@@ -781,12 +805,17 @@ namespace Jazz2
 			}
 		}
 
-		// Viewports must be registered in reverse order
+		// Viewports must be registered in reverse order (registered later = drawn earlier). The scene pass composites
+		// everything to the screen, so it is registered first; the overlay pass must render its UI texture before the
+		// scene pass reads it (to composite it into the scene buffer), so it is registered after.
 		_upscalePass.Register();
+		if (_hudOverlayActive) {
+			_hudUpscalePass.Register();
+		}
 
 		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
 			Rendering::PlayerViewport& viewport = *_assignedViewports[i];
-			viewport.Register();			
+			viewport.Register();
 
 			if (_pauseMenu != nullptr) {
 				viewport.UpdateCamera(0.0f);	// Force update camera if game is paused
@@ -1918,6 +1947,18 @@ namespace Jazz2
 		Viewport::GetChain().clear();
 		Vector2i res = theApplication().GetResolution();
 		OnInitializeViewport(res.X, res.Y);
+	}
+
+	Rendering::UpscaleRenderPassWithClipping& LevelHandler::GetActiveOverlayPass()
+	{
+		// When the scene is supersampled, the HUD and in-game menu live in a separate native-resolution overlay pass;
+		// otherwise they are drawn into the scene pass as usual
+		return (_hudOverlayActive ? _hudUpscalePass : _upscalePass);
+	}
+
+	SceneNode* LevelHandler::GetHudParentNode()
+	{
+		return GetActiveOverlayPass().GetNode();
 	}
 
 	void LevelHandler::InitializeCamera(Rendering::PlayerViewport& viewport)

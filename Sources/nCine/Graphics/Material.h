@@ -101,7 +101,16 @@ namespace nCine
 		inline GLenum GetDestBlendingFactor() const {
 			return destBlendingFactor_;
 		}
+		inline GLenum GetSrcAlphaBlendingFactor() const {
+			return srcAlphaBlendingFactor_;
+		}
+		inline GLenum GetDestAlphaBlendingFactor() const {
+			return destAlphaBlendingFactor_;
+		}
+		/** @brief Sets the blending factors for both color and alpha */
 		void SetBlendingFactors(GLenum srcBlendingFactor, GLenum destBlendingFactor);
+		/** @brief Sets separate blending factors for color and alpha (alpha typically `ONE`/`ONE_MINUS_SRC_ALPHA` so RGBA render targets accumulate correct coverage) */
+		void SetBlendingFactors(GLenum srcRgbBlendingFactor, GLenum destRgbBlendingFactor, GLenum srcAlphaBlendingFactor, GLenum destAlphaBlendingFactor);
 
 		inline ShaderProgramType GetShaderProgramType() const {
 			return shaderProgramType_;
@@ -163,6 +172,8 @@ namespace nCine
 		bool isBlendingEnabled_;
 		GLenum srcBlendingFactor_;
 		GLenum destBlendingFactor_;
+		GLenum srcAlphaBlendingFactor_;
+		GLenum destAlphaBlendingFactor_;
 
 		ShaderProgramType shaderProgramType_;
 		GLShaderProgram* shaderProgram_;

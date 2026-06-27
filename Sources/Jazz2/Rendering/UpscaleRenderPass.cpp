@@ -8,17 +8,41 @@
 
 namespace Jazz2::Rendering
 {
-	void UpscaleRenderPass::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight)
+	// Layer assigned to an overlay layer's composite command so it is drawn on top of the scene composite (layer 0)
+	static constexpr std::uint16_t OverlayCompositeLayer = 60000;
+
+	void UpscaleRenderPass::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample, bool overlay)
 	{
+		_logicalSize = Vector2i(width, height);
+		// An overlay layer (the HUD) is always at native resolution, only the scene is supersampled
+		_supersample = (overlay ? 1 : (supersample > 1 ? supersample : 1));
+
+		// The scene is always drawn in [0, width]x[0, height] coordinates (the ortho projection below), but the target
+		// texture may be rendered at a higher resolution. This is used for splitscreen zoom-out, where each player's
+		// composite would otherwise be minified into a small region of a native-resolution framebuffer (effectively
+		// halving its resolution); supersampling the framebuffer keeps the per-player image at full resolution, while
+		// the HUD and combine geometry keep using the unchanged logical coordinate space.
+		std::int32_t textureWidth = width * _supersample;
+		std::int32_t textureHeight = height * _supersample;
+
+		// An overlay layer needs an alpha channel so the scene shows through where nothing is drawn
+		Texture::Format targetFormat = (overlay ? Texture::Format::RGBA8 : Texture::Format::RGB8);
+
 		_targetSize = Vector2f((float)targetWidth, (float)targetHeight);
 
-		if ((PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing) {
+		// The antialiasing subpass renders the (possibly rescaled) image to an integer multiple of the source resolution
+		// and then bicubically resolves it down to the window. It runs when explicitly enabled, and always when the
+		// scene is supersampled: there the source resolution doesn't evenly divide the window, so a plain upscale
+		// shimmers as the camera moves; the subpass turns it into a clean integer upscale followed by a smooth
+		// downsample. The integer multiple is computed from the actual (supersampled) texture size. Never for the overlay.
+		bool useAntialiasing = ((PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing);
+		if (!overlay && (_supersample > 1 || useAntialiasing)) {
 			float widthRatio, heightRatio;
-			float widthFrac = modff((float)targetWidth / width, &widthRatio);
-			float heightFrac = modff((float)targetHeight / height, &heightRatio);
+			float widthFrac = modff((float)targetWidth / textureWidth, &widthRatio);
+			float heightFrac = modff((float)targetHeight / textureHeight, &heightRatio);
 
-			std::int32_t requiredWidth = (std::int32_t)(widthFrac > 0.004f ? (width * (widthRatio + 1)) : targetWidth);
-			std::int32_t requiredHeight = (std::int32_t)(heightFrac > 0.004f ? (height * (heightRatio + 1)) : targetHeight);
+			std::int32_t requiredWidth = (std::int32_t)(widthFrac > 0.004f ? (textureWidth * (widthRatio + 1)) : targetWidth);
+			std::int32_t requiredHeight = (std::int32_t)(heightFrac > 0.004f ? (textureHeight * (heightRatio + 1)) : targetHeight);
 
 			if (std::abs(requiredWidth - targetWidth) > 2 || std::abs(requiredHeight - targetHeight) > 2) {
 				if (_antialiasing._target == nullptr) {
@@ -39,40 +63,41 @@ namespace Jazz2::Rendering
 			_antialiasing._target = nullptr;
 		}
 
-		if (_camera == nullptr) {
-			_camera = std::make_unique<Camera>();
-		}
-		_camera->SetOrthoProjection(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f);
-		_camera->SetView(0, 0, 0, 1);
+		_camera.SetOrthoProjection(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f);
+		_camera.SetView(0, 0, 0, 1);
 
 		if (_view == nullptr) {
 			_node = std::make_unique<SceneNode>();
 			_node->setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 
-			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+			_target = std::make_unique<Texture>(nullptr, targetFormat, textureWidth, textureHeight);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->SetRootNode(_node.get());
-			_view->SetCamera(_camera.get());
+			_view->SetCamera(&_camera);
 			_view->SetClearMode(Viewport::ClearMode::Never);
 		} else {
 			_view->RemoveAllTextures();
-			_target->Init(nullptr, Texture::Format::RGB8, width, height);
+			_target->Init(nullptr, targetFormat, textureWidth, textureHeight);
 			_view->SetTexture(_target.get());
 		}
 		_target->SetMinFiltering(SamplerFilter::Nearest);
 		_target->SetMagFiltering(SamplerFilter::Nearest);
 		_target->SetWrap(SamplerWrapping::ClampToEdge);
 
+		// The overlay layer is only partially covered by the HUD, so unlike the scene (which is fully repainted every
+		// frame and uses ClearMode::Never) it must be cleared to fully transparent each frame
+		if (overlay) {
+			_view->SetClearMode(Viewport::ClearMode::EveryFrame);
+			_view->SetClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		}
+
 		if (_antialiasing._target != nullptr) {
-			if (_antialiasing._camera == nullptr) {
-				_antialiasing._camera = std::make_unique<Camera>();
-			}
-			_antialiasing._camera->SetOrthoProjection(0.0f, _targetSize.X, _targetSize.Y, 0.0f);
-			_antialiasing._camera->SetView(0, 0, 0, 1);
+			_antialiasing._camera.SetOrthoProjection(0.0f, _targetSize.X, _targetSize.Y, 0.0f);
+			_antialiasing._camera.SetView(0, 0, 0, 1);
 
 			_antialiasing._view = std::make_unique<Viewport>(_antialiasing._target.get(), Viewport::DepthStencilFormat::None);
 			_antialiasing._view->SetRootNode(this);
-			_antialiasing._view->SetCamera(_antialiasing._camera.get());
+			_antialiasing._view->SetCamera(&_antialiasing._camera);
 			//_antialiasing._view->setClearMode(Viewport::ClearMode::Never);
 
 			SceneNode& rootNode = theApplication().GetRootNode();
@@ -91,7 +116,6 @@ namespace Jazz2::Rendering
 				}
 			}
 		} else {
-			_antialiasing._camera = nullptr;
 			_antialiasing._view = nullptr;
 
 			SceneNode& rootNode = theApplication().GetRootNode();
@@ -101,16 +125,26 @@ namespace Jazz2::Rendering
 
 		// Prepare render command
 #if !defined(DISABLE_RESCALE_SHADERS)
-		switch (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask) {
-			case RescaleMode::HQ2x: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeHQ2x); break;
-			case RescaleMode::_3xBrz: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::Resize3xBrz); break;
-			case RescaleMode::CrtScanlines: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeCrtScanlines); break;
-			case RescaleMode::CrtShadowMask: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeCrtShadowMask); break;
-			case RescaleMode::CrtApertureGrille: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeCrtApertureGrille); break;
-			case RescaleMode::Monochrome: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeMonochrome); break;
-			case RescaleMode::Sabr: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeSabr); break;
-			case RescaleMode::CleanEdge: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeCleanEdge); break;
-			default: _resizeShader = nullptr; break;
+		_resizeAtLogicalScale = false;
+		if (overlay) {
+			// The overlay layer is composited at the native logical resolution straight onto the screen, so it must
+			// never go through a rescale (pixel-art upscaling) shader
+			_resizeShader = nullptr;
+		} else {
+			switch (PreferencesCache::ActiveRescaleMode & RescaleMode::TypeMask) {
+				// Edge-detection scalers derive their sample offsets from the input size; when the scene is supersampled
+				// they must use the logical size, otherwise they operate at the supersampled texel scale (offsets too
+				// small) and the effect comes out far too weak
+				case RescaleMode::HQ2x: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeHQ2x); _resizeAtLogicalScale = true; break;
+				case RescaleMode::_3xBrz: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::Resize3xBrz); _resizeAtLogicalScale = true; break;
+				case RescaleMode::CrtScanlines: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeCrtScanlines); break;
+				case RescaleMode::CrtShadowMask: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeCrtShadowMask); break;
+				case RescaleMode::CrtApertureGrille: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeCrtApertureGrille); break;
+				case RescaleMode::Monochrome: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeMonochrome); break;
+				case RescaleMode::Sabr: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeSabr); _resizeAtLogicalScale = true; break;
+				case RescaleMode::CleanEdge: _resizeShader = ContentResolver::Get().GetShader(PrecompiledShader::ResizeCleanEdge); _resizeAtLogicalScale = true; break;
+				default: _resizeShader = nullptr; break;
+			}
 		}
 
 		bool shaderChanged = (_resizeShader != nullptr
@@ -130,6 +164,18 @@ namespace Jazz2::Rendering
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
 		}
+
+		if (overlay) {
+			// Composite the overlay over whatever it is drawn onto (the player viewports in the scene buffer). Canvas
+			// draws into the overlay texture with the standard SRC_ALPHA/ONE_MINUS_SRC_ALPHA blend over a transparent
+			// clear, which leaves the texture's color premultiplied by alpha, so it must be composited with a
+			// premultiplied blend (ONE, ONE_MINUS_SRC_ALPHA); this keeps opaque HUD pixels exact (a straight-alpha
+			// blend would darken them by the alpha twice). Force it to the top so it is drawn after the viewport
+			// composites (which stay at the default layer 0).
+			_renderCommand.GetMaterial().SetBlendingEnabled(true);
+			_renderCommand.GetMaterial().SetBlendingFactors(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+			_renderCommand.SetLayer(OverlayCompositeLayer);
+		}
 	}
 
 	void UpscaleRenderPass::Register()
@@ -144,8 +190,10 @@ namespace Jazz2::Rendering
 		auto instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);
 #if !defined(DISABLE_RESCALE_SHADERS)
 		if (_resizeShader != nullptr) {
-			// TexRectUniformName is reused for input texture size
-			Vector2i size = _target->GetSize();
+			// TexRectUniformName is reused for the input size that the shader derives its sample offsets from. Edge
+			// detection scalers use the logical size so they operate at the native pixel scale even when the scene
+			// texture is supersampled; others use the actual texture size.
+			Vector2i size = (_resizeAtLogicalScale ? _logicalSize : _target->GetSize());
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue((float)size.X, (float)size.Y, 0.0f, 0.0f);
 		} else
 #endif
@@ -154,7 +202,7 @@ namespace Jazz2::Rendering
 		}
 
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(_targetSize.Data());
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 		_renderCommand.GetMaterial().SetTexture(0, *_target);
 
@@ -181,7 +229,7 @@ namespace Jazz2::Rendering
 		auto instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue((float)size.X, (float)size.Y, 0.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(_targetSize.Data());
-		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
+		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 		_renderCommand.GetMaterial().SetTexture(0, *_target);
 
@@ -195,7 +243,7 @@ namespace Jazz2::Rendering
 	{
 	}
 
-	void UpscaleRenderPassWithClipping::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight)
+	void UpscaleRenderPassWithClipping::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample, bool overlay)
 	{
 		if (_clippedView != nullptr) {
 			_clippedView->RemoveAllTextures();
@@ -204,7 +252,7 @@ namespace Jazz2::Rendering
 			_overlayView->RemoveAllTextures();
 		}
 
-		UpscaleRenderPass::Initialize(width, height, targetWidth, targetHeight);
+		UpscaleRenderPass::Initialize(width, height, targetWidth, targetHeight, supersample, overlay);
 
 		if (_clippedView == nullptr) {
 			_clippedNode = std::make_unique<SceneNode>();
@@ -212,7 +260,7 @@ namespace Jazz2::Rendering
 
 			_clippedView = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_clippedView->SetRootNode(_clippedNode.get());
-			_clippedView->SetCamera(_camera.get());
+			_clippedView->SetCamera(&_camera);
 			_clippedView->SetClearMode(Viewport::ClearMode::Never);
 		} else {
 			_clippedView->SetTexture(_target.get());
@@ -224,7 +272,7 @@ namespace Jazz2::Rendering
 
 			_overlayView = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_overlayView->SetRootNode(_overlayNode.get());
-			_overlayView->SetCamera(_camera.get());
+			_overlayView->SetCamera(&_camera);
 			_overlayView->SetClearMode(Viewport::ClearMode::Never);
 		} else {
 			_overlayView->SetTexture(_target.get());

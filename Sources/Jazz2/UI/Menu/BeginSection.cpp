@@ -425,7 +425,7 @@ namespace Jazz2::UI::Menu
 					_root->SwitchToSection<PlayMultiplayerSection>();
 #	else
 					// No online transport in this build - go straight to the local splitscreen setup
-					_root->SwitchToSection<EpisodeSelectSection>(true, false, true);
+					_root->SwitchToSection<EpisodeSelectSection>(EpisodeSelectMode::LocalMultiplayer);
 #	endif
 				}
 				break;

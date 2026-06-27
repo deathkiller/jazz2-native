@@ -25,13 +25,13 @@ namespace Jazz2::UI::Menu
 		list->Add<ListItem>(_("Join Server"), [root]() { root->SwitchToSection<ServerSelectSection>(); });
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
 		// TRANSLATORS: Menu item in Multiplayer section (host a publicly listed online server)
-		list->Add<ListItem>(_("Create Public Server"), [root]() { root->SwitchToSection<EpisodeSelectSection>(true, false, false); });
+		list->Add<ListItem>(_("Create Public Server"), [root]() { root->SwitchToSection<EpisodeSelectSection>(EpisodeSelectMode::OnlineMultiplayer, false); });
 		// TRANSLATORS: Menu item in Multiplayer section (host a private online server)
-		list->Add<ListItem>(_("Create Private Server"), [root]() { root->SwitchToSection<EpisodeSelectSection>(true, true, false); });
+		list->Add<ListItem>(_("Create Private Server"), [root]() { root->SwitchToSection<EpisodeSelectSection>(EpisodeSelectMode::OnlineMultiplayer, true); });
 #	endif
 #endif
 		// TRANSLATORS: Menu item in Multiplayer section (local splitscreen multiplayer)
-		list->Add<ListItem>(_("Create Local Splitscreen Game"), [root]() { root->SwitchToSection<EpisodeSelectSection>(true, false, true); });
+		list->Add<ListItem>(_("Create Local Splitscreen Game"), [root]() { root->SwitchToSection<EpisodeSelectSection>(EpisodeSelectMode::LocalMultiplayer); });
 		SetContent(std::move(list));
 	}
 }

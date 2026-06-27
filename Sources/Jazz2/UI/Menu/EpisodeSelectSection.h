@@ -4,6 +4,13 @@
 
 namespace Jazz2::UI::Menu
 {
+	/** @brief How the episode selected in @ref EpisodeSelectSection should be started */
+	enum class EpisodeSelectMode {
+		Singleplayer,		/**< Plain single-player story game */
+		LocalMultiplayer,	/**< Local splitscreen multiplayer match */
+		OnlineMultiplayer	/**< Hosted online multiplayer server */
+	};
+
 #ifndef DOXYGEN_GENERATING_OUTPUT
 	enum class EpisodeDataFlags {
 		None = 0x00,
@@ -38,13 +45,13 @@ namespace Jazz2::UI::Menu
 		/**
 		 * @brief Creates a new instance
 		 *
-		 * @param multiplayer    Whether the selected level should be played as a multiplayer game (online server or
-		 *                       local splitscreen), enabling multiplayer-style level browsing (custom levels)
-		 * @param privateServer  Whether the hosted online server should be private (not publicly listed)
-		 * @param localGame      Whether the selected level should start as a local splitscreen multiplayer match
-		 *                       instead of hosting an online server
+		 * @param mode           How the selected episode should be started (single-player, local splitscreen or
+		 *                       online server); anything other than single-player enables multiplayer-style level
+		 *                       browsing (custom levels)
+		 * @param privateServer  Whether the hosted online server should be private (not publicly listed); only used
+		 *                       when @p mode is @ref EpisodeSelectMode::OnlineMultiplayer
 		 */
-		EpisodeSelectSection(bool multiplayer = false, bool privateServer = false, bool localGame = false);
+		EpisodeSelectSection(EpisodeSelectMode mode = EpisodeSelectMode::Singleplayer, bool privateServer = false);
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
@@ -59,9 +66,8 @@ namespace Jazz2::UI::Menu
 		std::int32_t _transitionFromEpisode;
 		float _transitionFromEpisodeTime;
 		float _animation;
-		bool _multiplayer;
+		EpisodeSelectMode _mode;
 		bool _privateServer;
-		bool _localGame;
 		bool _expanded;
 		bool _shouldStart;
 		ScrollView* _list;

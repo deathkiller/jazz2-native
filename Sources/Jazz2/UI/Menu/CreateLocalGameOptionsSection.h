@@ -23,9 +23,11 @@ namespace Jazz2::UI::Menu
 		 * @brief Creates a new instance
 		 *
 		 * @param levelName            Level to start
-		 * @param previousEpisodeName  Name of the episode the level belongs to
+		 * @param previousEpisodeName  Name of the previous episode (used for the cooperation stat carry-over)
+		 * @param resumeEpisodeName    If non-empty, resume this episode from its saved progress (continue) instead of
+		 *                             starting @p levelName fresh; forces the cooperation game mode
 		 */
-		CreateLocalGameOptionsSection(StringView levelName, StringView previousEpisodeName);
+		CreateLocalGameOptionsSection(StringView levelName, StringView previousEpisodeName, StringView resumeEpisodeName = {});
 
 		void OnShow(IMenuContainer* root) override;
 		void OnUpdate(float timeMult) override;
@@ -45,6 +47,7 @@ namespace Jazz2::UI::Menu
 	private:
 		String _levelName;
 		String _previousEpisodeName;
+		String _resumeEpisodeName;	// Non-empty when resuming a saved episode (continue); selects the resume code path
 		std::int32_t _availableCharacters;
 		std::int32_t _playerCount;
 		std::int32_t _playerTypes[ControlScheme::MaxSupportedPlayers];
