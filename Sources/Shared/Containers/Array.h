@@ -132,14 +132,11 @@ namespace Death { namespace Containers {
 
 		@subsection Containers-Array-usage-initialization Array initialization
 
-		The array is by default *value-initialized*, which means that trivial types
-		are zero-initialized and the default constructor is called on other types. It
-		is possible to initialize the array in a different way using so-called *tags*:
+		It is possible to initialize the array in different ways using so-called *tags*:
 
-		-   @ref Array(ValueInitT, std::size_t) is equivalent to the default case,
-			zero-initializing trivial types and calling the default constructor
-			elsewhere. Useful when you want to make the choice appear explicit. In
-			other words, @cpp new T[size]{} @ce.
+		-   @ref Array(ValueInitT, std::size_t), used in the snippet above, is the
+			go-to default, zero-initializing trivial types and calling the default
+			constructor elsewhere. In other words, @cpp new T[size]{} @ce.
 		-   @ref Array(DirectInitT, std::size_t, Args&&... args) constructs all
 			elements of the array using provided arguments. In other words,
 			@cpp new T[size]{T{args...}, T{args...}, …} @ce.
@@ -147,7 +144,7 @@ namespace Death { namespace Containers {
 			or the @ref array(ArrayView<const T>) / @ref array(std::initializer_list<T>)
 			shorthand allocates unitialized memory and then copy-constructs all
 			elements from the list. In other words, @cpp new T[size]{args...} @ce. The
-			class deliberately *doesn't* provide an implicit @ref std::initializer_list
+			class currently *doesn't* provide an implicit @ref std::initializer_list
 			constructor due to @ref Containers-Array-initializer-list "reasons described below".
 		-   @ref Array(NoInitT, std::size_t) does not initialize anything. Useful for
 			trivial types when you'll be overwriting the contents anyway, for
@@ -263,12 +260,11 @@ namespace Death { namespace Containers {
 		@m_class{m-block m-warning}
 
 		@par Conversion from std::initializer_list
-			The class deliberately *doesn't* provide a @ref std::initializer_list
+			The class currently *doesn't* provide a @ref std::initializer_list
 			constructor to prevent the same usability issues as with @ref std::vector.
 			Instead you're expected to use either the
 			@ref Array(InPlaceInitT, std::initializer_list<T>) constructor or the
-			@ref array(std::initializer_list<T>) shorthand, which are both more
-			explicit and thus should prevent accidental use.
+			@ref array(std::initializer_list<T>) shorthand.
 	*/
 #ifdef DOXYGEN_GENERATING_OUTPUT
 	template<class T, class D = void(*)(T*, std::size_t)>
@@ -357,13 +353,6 @@ namespace Death { namespace Containers {
 
 		/** @overload */
 		/*implicit*/ Array(InPlaceInitT, std::initializer_list<T> list);
-
-		/**
-		 * @brief Construct a value-initialized array
-		 *
-		 * Alias to @ref Array(ValueInitT, std::size_t).
-		 */
-		explicit Array(std::size_t size) : Array{ValueInit, size} {}
 
 		/**
 		 * @brief Wrap an existing array with an explicit deleter

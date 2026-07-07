@@ -68,7 +68,7 @@ namespace Death { namespace Containers {
 		@subsection Containers-ArrayView-usage-access Data access
 
 		The class provides the usual C++ container interface --- @ref data(),
-		@ref size() and @ref empty(); subscript access via @ref operator T*(), range
+		@ref size() and @ref empty(); subscript access via @ref operator[](), range
 		access via @ref begin() / @ref end(), and their overloads and acess to the
 		@ref front() and @ref back() element, if the view is non-empty. The view itself
 		is immutable and thus all member functions are @cpp const @ce, but if the
@@ -78,9 +78,9 @@ namespace Death { namespace Containers {
 		@subsection Containers-ArrayView-usage-slicing View slicing
 
 		Except for the usual element access via @ref begin(), @ref end() and
-		@ref operator T*() that provides also access via @cpp [] @ce, there's a
-		collection of slicing functions --- @ref slice(), @ref sliceSize(),
-		@ref prefix(), @ref suffix(), @ref exceptPrefix() and @ref exceptSuffix().
+		@ref operator[](), there's a collection of slicing functions --- @ref slice(),
+		@ref sliceSize(), @ref prefix(), @ref suffix(), @ref exceptPrefix() and
+		@ref exceptSuffix().
 		The @ref slice(), @ref sliceSize(), @ref prefix(), @ref suffix() APIs accept
 		also a pointer as the begin/end arguments. As a special case, if @ref prefix()
 		and @ref suffix() are called with @cpp nullptr @ce, they return a zero-sized
@@ -464,7 +464,7 @@ namespace Death { namespace Containers {
 #ifndef DOXYGEN_GENERATING_OUTPUT
 			, typename std::enable_if<!std::is_const<T>::value, int>::type = 0
 #endif
-		> constexpr /*implicit*/ ArrayView(const StaticArrayView<size, T>& array) noexcept : _data{array}, _size{size * sizeof(T)} {}
+		> constexpr /*implicit*/ ArrayView(StaticArrayView<size, T> array) noexcept : _data{array}, _size{size * sizeof(T)} {}
 
 		/** @brief Construct a view on an external type / from an external representation */
 		template<class T, class U = decltype(Implementation::ErasedArrayViewConverter<typename std::decay<T&&>::type>::from(std::declval<T&&>()))
@@ -557,7 +557,7 @@ namespace Death { namespace Containers {
 		template<class T> constexpr /*implicit*/ ArrayView(ArrayView<T> array) noexcept : _data(array), _size(array.size() * sizeof(T)) {}
 
 		/** @brief Construct a const void view on any @ref StaticArrayView */
-		template<std::size_t size, class T> constexpr /*implicit*/ ArrayView(const StaticArrayView<size, T>& array) noexcept : _data{array}, _size{size * sizeof(T)} {}
+		template<std::size_t size, class T> constexpr /*implicit*/ ArrayView(StaticArrayView<size, T> array) noexcept : _data{array}, _size{size * sizeof(T)} {}
 
 		/** @brief Construct a view on an external type / from an external representation */
 		template<class T, class = decltype(Implementation::ErasedArrayViewConverter<const T>::from(std::declval<const T&>()))> constexpr /*implicit*/ ArrayView(const T& other) noexcept : ArrayView{Implementation::ErasedArrayViewConverter<const T>::from(other)} {}

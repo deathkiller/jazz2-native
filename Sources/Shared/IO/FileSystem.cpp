@@ -533,8 +533,10 @@ namespace Death { namespace IO {
 				SmallVector<wchar_t, MAX_PATH + 2> pathW(DefaultInit, pathLength + 2);
 				std::int32_t pathLengthW = Utf8::ToUtf16(pathW.data(), std::int32_t(pathW.size()), _path, std::int32_t(pathLength));
 				if (pathLengthW > 0 && pathLengthW < MaxPathLength) {
-					// Remove trailing backslash for directory handle
-					if (pathW[pathLengthW - 1] == L'\\') {
+					// Remove trailing backslash for directory handle, but keep it for a drive root:
+					// "C:\" is the root, whereas "C:" refers to the per-drive current directory.
+					bool isDriveRoot = (pathLengthW == 3 && pathW[1] == L':' && pathW[2] == L'\\');
+					if (pathW[pathLengthW - 1] == L'\\' && !isDriveRoot) {
 						pathW[pathLengthW - 1] = L'\0';
 						pathLengthW--;
 					}

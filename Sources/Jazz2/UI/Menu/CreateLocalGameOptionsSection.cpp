@@ -12,6 +12,7 @@
 #include "../../../nCine/I18n.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 using namespace Jazz2::Multiplayer;
@@ -56,9 +57,26 @@ namespace Jazz2::UI::Menu
 				}
 			}
 
+			// On-screen x of character option `j` within the current row bounds; shared by Draw and touch hit-testing
+			// so the tappable areas always match what's drawn
+			float GetCharacterX(std::int32_t j) const {
+				float centerX = Bounds.X + Bounds.W * 0.5f;
+				float offset, spacing;
+				if (AvailableCharacters <= 1) {
+					offset = 0.0f;
+					spacing = 0.0f;
+				} else if (AvailableCharacters == 2) {
+					offset = 50.0f;
+					spacing = 100.0f;
+				} else {
+					offset = 100.0f;
+					spacing = 300.0f / AvailableCharacters;
+				}
+				return centerX - offset + j * spacing;
+			}
+
 			void Draw(IMenuContainer* root, Canvas* canvas, const Rectf& bounds, std::int32_t& charOffset) override {
 				Bounds = bounds;
-				float centerX = bounds.X + bounds.W * 0.5f;
 				float optionsY = bounds.Y + bounds.H * 0.5f;
 
 				if (Selected && FocusedPlayer != nullptr) {
@@ -72,21 +90,9 @@ namespace Jazz2::UI::Menu
 					Colorf(0.5f, 0.45f, 0.22f, 0.5f)
 				};
 
-				float offset, spacing;
-				if (AvailableCharacters <= 1) {
-					offset = 0.0f;
-					spacing = 0.0f;
-				} else if (AvailableCharacters == 2) {
-					offset = 50.0f;
-					spacing = 100.0f;
-				} else {
-					offset = 100.0f;
-					spacing = 300.0f / AvailableCharacters;
-				}
-
 				std::int32_t selectedType = (PlayerType != nullptr ? *PlayerType : 0);
 				for (std::int32_t j = 0; j < AvailableCharacters; j++) {
-					float x = centerX - offset + j * spacing;
+					float x = GetCharacterX(j);
 					if (selectedType == j) {
 						// Selected character: pops with the elastic selection animation when the row is focused
 						float size = (Selected ? 0.5f + Easing::OutElastic(Animation.Raw()) * 0.6f : 1.0f);
@@ -99,7 +105,7 @@ namespace Jazz2::UI::Menu
 				}
 
 				if (Selected) {
-					root->DrawMenuArrows(charOffset, centerX, optionsY, Animation.Raw(), 50.0f);
+					root->DrawMenuArrows(charOffset, Bounds.X + Bounds.W * 0.5f, optionsY, Animation.Raw(), 50.0f);
 				}
 			}
 
@@ -114,6 +120,35 @@ namespace Jazz2::UI::Menu
 					return true;
 				}
 				return false;
+			}
+
+			bool OnTouchEvent(const nCine::TouchEvent& event, Vector2i viewSize, IMenuContainer* root) override {
+				// A tap selects the character nearest the touched position (so tapping a name picks that character
+				// directly), but only once the row is selected; the first tap just selects the row (return false so
+				// the container handles selection), matching ChoiceItem/CustomValueItem and the keyboard flow.
+				if (!Selected || PlayerType == nullptr || AvailableCharacters <= 0 || event.type != TouchEventType::Up) {
+					return false;
+				}
+				std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+				if (pointerIndex == -1) {
+					return false;
+				}
+				float x = event.pointers[pointerIndex].x * viewSize.X;
+				std::int32_t nearest = 0;
+				float nearestDist = std::abs(x - GetCharacterX(0));
+				for (std::int32_t j = 1; j < AvailableCharacters; j++) {
+					float dist = std::abs(x - GetCharacterX(j));
+					if (dist < nearestDist) {
+						nearestDist = dist;
+						nearest = j;
+					}
+				}
+				if (nearest != *PlayerType) {
+					*PlayerType = nearest;
+					root->PlaySfx("MenuSelect"_s, 0.5f);
+					Animation.Restart(0.0f);
+				}
+				return true;
 			}
 		};
 

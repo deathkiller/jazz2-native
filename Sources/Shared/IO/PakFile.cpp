@@ -598,10 +598,10 @@ namespace Death { namespace IO {
 
 		Array<Item>* items;
 		if (parentItem != nullptr) {
-			parentItem->ChildItems = Array<Item>(itemCount);
+			parentItem->ChildItems = Array<Item>(ValueInit, itemCount);
 			items = &parentItem->ChildItems;
 		} else {
-			_rootItems = Array<Item>(itemCount);
+			_rootItems = Array<Item>(ValueInit, itemCount);
 			items = &_rootItems;
 		}
 

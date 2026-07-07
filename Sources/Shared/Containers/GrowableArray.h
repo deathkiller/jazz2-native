@@ -98,7 +98,8 @@ namespace Death { namespace Containers {
 		inline void arrayConstruct(ValueInitT, T* begin, T* const end) {
 			/* Needs to be < because sometimes begin > end. The () instead of {} works
 			   around a featurebug in C++ where new T{} doesn't work for an explicit defaulted constructor. */
-			for (; begin < end; ++begin) new(begin) T{};
+			for (; begin < end; ++begin)
+				new(begin) T{};
 		}
 
 		template<class T> struct AllocatorTraits {
@@ -204,7 +205,8 @@ namespace Death { namespace Containers {
 		 * @ref deallocate().
 		 */
 		static void deleter(T* data, std::size_t size) {
-			for (T* it = data, *end = data + size; it != end; ++it) it->~T();
+			for (T* it = data, *end = data + size; it != end; ++it)
+				it->~T();
 			deallocate(data);
 		}
 	};
@@ -1396,7 +1398,8 @@ namespace Death { namespace Containers {
 
 		template<class T, typename std::enable_if<!std::is_trivially_destructible<T>::value, int>::type = 0> inline void arrayDestruct(T* begin, T* const end) {
 			// Needs to be < because sometimes begin > end
-			for (; begin < end; ++begin) begin->~T();
+			for (; begin < end; ++begin)
+				begin->~T();
 		}
 
 		template<class T> inline std::size_t arrayGrowth(const std::size_t currentCapacity, const std::size_t desiredCapacity) {
@@ -1429,7 +1432,8 @@ namespace Death { namespace Containers {
 #else
 			new(dst) T{Death::move(*src)};
 #endif
-		for (T* it = array, *end = array + prevSize; it < end; ++it) it->~T();
+		for (T* it = array, *end = array + prevSize; it < end; ++it)
+			it->~T();
 		deallocate(array);
 		array = newArray;
 	}
