@@ -369,7 +369,7 @@ namespace nCine
 			}
 
 			if (count > 0) {
-				appCfg_.argv_ = Array<StringView>(count);
+				appCfg_.argv_ = Array<StringView>(ValueInit, count);
 				count = 0;
 				i = 1;
 				while (i < argc) {
@@ -383,7 +383,7 @@ namespace nCine
 				}
 			}
 #else
-			appCfg_.argv_ = Array<StringView>(argc - 1);
+			appCfg_.argv_ = Array<StringView>(ValueInit, argc - 1);
 			for (std::int32_t i = 1; i < argc; i++) {
 				appCfg_.argv_[i - 1] = argv[i];
 			}
