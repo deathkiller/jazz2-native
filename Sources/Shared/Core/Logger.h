@@ -395,7 +395,8 @@ namespace Death { namespace Trace {
 			}
 
 			void commitRead() noexcept {
-				if (static_cast<T>(_readerPos - _atomicReaderPos.load(std::memory_order_relaxed)) >= _bytesPerBatch) {
+				if ((static_cast<T>(_readerPos - _atomicReaderPos.load(std::memory_order_relaxed)) >= _bytesPerBatch) ||
+					(_writerPosCache == _readerPos)) {
 					_atomicReaderPos.store(_readerPos, std::memory_order_release);
 
 #	if defined(DEATH_TARGET_X86) && defined(DEATH_TARGET_CLFLUSHOPT) && !defined(DEATH_TARGET_CLANG_CL)

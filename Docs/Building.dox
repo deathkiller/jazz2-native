@@ -11,7 +11,7 @@ namespace Death {
 The project requires following tools and libraries to build it successfully:
 
 -   **CMake** 3.15 or newer
--   C++ compiler with C++17 support --- any newer version of **GCC**, **Clang** and **MSVC**
+-   C++ compiler with C++17 support --- any recent version of **GCC**, **Clang** and **MSVC**
     should work, **MinGW** and **Clang-CL** toolchains should be also supported
 -   **OpenGL** 3.3, **OpenGL|ES** 3.0 or **WebGL** 2.0 library @m_span{m-text m-dim} (alternatively **ANGLE**
     or **Mesa** translation library) @m_endspan
@@ -24,7 +24,7 @@ The project requires following tools and libraries to build it successfully:
 
 @m_class{m-noindent}
 
-In addition, these libraries are required for an optimal experience:
+In addition, these libraries are recommended for an optimal experience:
 
 -   **OpenAL** library --- audio support
 -   **libopenmpt** library --- module music playback
@@ -222,7 +222,7 @@ The following parameters can be used to customize the build:
 -   `DEATH_DEBUG` --- Enable verbose logging and additional assertions for debugging
     -   Enabled by default for `Debug` build configuration
 -   `DEATH_DEBUG_SYMBOLS` --- Create debug symbols for executable
-    -   Separate `.pdb` file will be created on Windows and Linux, on other platforms the symbols will probably be embedded in the executable
+    -   A separate `.pdb` file will be created on Windows and Linux, on other platforms the symbols will probably be embedded in the executable
     -   Enabled by default on Windows platforms
 -   `DEATH_TRACE` (default @cpp ON @ce) --- Enable runtime event tracing, see @ref Asserts.h file
 -   `DEATH_TRACE_ASYNC` (default @cpp ON @ce if `NCINE_WITH_THREADS`) --- Enable asynchronous processing of event tracing for better performance

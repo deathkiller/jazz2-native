@@ -29,7 +29,7 @@ jobs:
       with:
         repository: 'deathkiller/m.css'
         ref: 'death-main'
-        ssh-key: ${{ secrets.DOCS_DEPLOY_PRIVATE_KEY }}
+        ssh-key: ${{ secrets.DOCS_DEPLOY_KEY }}
         path: 'm.css'
 
     - name: 'Create Build Environment'
