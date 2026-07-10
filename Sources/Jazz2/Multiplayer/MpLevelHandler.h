@@ -422,6 +422,7 @@ namespace Jazz2::Multiplayer
 		SmallVector<std::uint32_t, 0> _teamScores;	// Server: computed each check; Client: mirrored for the HUD (index = team id)
 		SmallVector<CtfFlag, 0> _ctfFlags;			// Server: one flag per team in Capture The Flag
 		std::uint32_t _ctfCaptures[MaxTeamCount];	// Server: per-team capture count (used as the team score in CTF)
+		std::uint32_t _teamKills[MaxTeamCount];		// Server: per-team kill count credited at kill time (team score in TeamBattle; independent of current membership so switching teams can't transfer a score)
 		SmallVector<CtfClientFlag, 0> _ctfFlagStates; // Server + Client: per-team flag info for the HUD and carried-flag attachment
 		SmallVector<PlayerScore, 0> _scoreboard;	// Server: built periodically; Client: mirrored for the scoreboard
 		float _scoreboardSyncTime;					// Server: countdown until the next scoreboard broadcast

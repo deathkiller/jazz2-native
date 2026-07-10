@@ -1,4 +1,5 @@
 #include "AudioStreamPlayer.h"
+#include "ALDebug.h"
 #include "../ServiceLocator.h"
 
 #define NCINE_INCLUDE_OPENAL
@@ -74,6 +75,7 @@ namespace nCine
 				break;
 			}
 		}
+		AL_LOG_ERRORS();
 	}
 
 	void AudioStreamPlayer::pause()
@@ -85,6 +87,7 @@ namespace nCine
 				break;
 			}
 		}
+		AL_LOG_ERRORS();
 	}
 
 	void AudioStreamPlayer::stop()
@@ -105,6 +108,7 @@ namespace nCine
 				break;
 			}
 		}
+		AL_LOG_ERRORS();
 
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 		device.unregisterPlayer(this);
@@ -134,6 +138,7 @@ namespace nCine
 				IAudioDevice& device = theServiceLocator().GetAudioDevice();
 				device.unregisterPlayer(this);
 			}
+			AL_LOG_ERRORS();
 		}
 	}
 }

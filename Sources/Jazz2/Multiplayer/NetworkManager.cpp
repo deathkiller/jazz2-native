@@ -112,9 +112,11 @@ namespace Jazz2::Multiplayer
 
 	std::uint32_t NetworkManager::GetPeerCount()
 	{
-		std::uint32_t count = std::uint32_t(_peerDesc.size() - 1);
-
+		// The size is read under the lock too - this is called from the discovery thread while
+		// the network thread inserts/erases peers
 		std::unique_lock<Spinlock> l(_lock);
+
+		std::uint32_t count = std::uint32_t(_peerDesc.size() - 1);
 		auto it = _peerDesc.find(Peer{});
 		if (it != _peerDesc.end() && it->second->Player) {
 			count++;
@@ -170,6 +172,7 @@ namespace Jazz2::Multiplayer
 
 	bool NetworkManager::HasInboundConnections() const
 	{
+		std::unique_lock<Spinlock> l(_lock);
 		// Local peer is always present
 		return (_peerDesc.size() > 1);
 	}
@@ -185,24 +188,32 @@ namespace Jazz2::Multiplayer
 		FillServerConfigurationFromFile(_serverConfig->FilePath, *_serverConfig, includedFiles, 0);
 		VerifyServerConfiguration(*_serverConfig);
 
-		// Check if any newly banned player should be kicked
-		std::unique_lock<Spinlock> l(_lock);
-		for (auto& pair : _peerDesc) {
-			if (pair.second->RemotePeer) {
-				auto address = NetworkManagerBase::AddressToString(pair.second->RemotePeer);
-				if (_serverConfig->BannedIPAddresses.contains(address)) {
-					LOGW("Peer kicked \"{}\" ({}): Banned by IP address", pair.second->PlayerName, address);
-					Kick(pair.second->RemotePeer, Reason::Banned);
-					continue;
-				}
+		// Check if any newly banned player should be kicked. The peers are collected under the lock, but kicked
+		// after releasing it - Kick() takes the base class lock, and holding this lock across it would invert
+		// the lock order against the send paths
+		SmallVector<Peer, 8> peersToKick;
+		{
+			std::unique_lock<Spinlock> l(_lock);
+			for (auto& pair : _peerDesc) {
+				if (pair.second->RemotePeer) {
+					auto address = NetworkManagerBase::AddressToString(pair.second->RemotePeer);
+					if (_serverConfig->BannedIPAddresses.contains(address)) {
+						LOGW("Peer kicked \"{}\" ({}): Banned by IP address", pair.second->PlayerName, address);
+						peersToKick.push_back(pair.second->RemotePeer);
+						continue;
+					}
 
-				auto uniquePlayerId = UuidToString(pair.second->UniquePlayerID);
-				if (_serverConfig->BannedUniquePlayerIDs.contains(uniquePlayerId)) {
-					LOGW("Peer kicked \"{}\" ({}): Banned by unique player ID", pair.second->PlayerName, address);
-					Kick(pair.second->RemotePeer, Reason::Banned);
-					continue;
+					auto uniquePlayerId = UuidToString(pair.second->UniquePlayerID);
+					if (_serverConfig->BannedUniquePlayerIDs.contains(uniquePlayerId)) {
+						LOGW("Peer kicked \"{}\" ({}): Banned by unique player ID", pair.second->PlayerName, address);
+						peersToKick.push_back(pair.second->RemotePeer);
+						continue;
+					}
 				}
 			}
+		}
+		for (const Peer& peer : peersToKick) {
+			Kick(peer, Reason::Banned);
 		}
 	}
 
@@ -537,12 +548,12 @@ namespace Jazz2::Multiplayer
 				}
 
 				std::int64_t totalKills;
-				if (doc["TotalKills"].get(totalKills) == Json::SUCCESS && totalKills >= 0 && totalKills <= INT32_MAX) {
+				if (doc["TotalKills"].get(totalKills) == Json::SUCCESS && totalKills > 0 && totalKills <= INT32_MAX) {
 					serverConfig.TotalKills = std::uint32_t(totalKills);
 				}
 
 				std::int64_t totalLaps;
-				if (doc["TotalLaps"].get(totalLaps) == Json::SUCCESS && totalLaps >= 0 && totalLaps <= INT32_MAX) {
+				if (doc["TotalLaps"].get(totalLaps) == Json::SUCCESS && totalLaps > 0 && totalLaps <= INT32_MAX) {
 					serverConfig.TotalLaps = std::uint32_t(totalLaps);
 					if (serverConfig.TotalLaps > MaxLapCount) {
 						serverConfig.TotalLaps = MaxLapCount;
@@ -680,12 +691,12 @@ namespace Jazz2::Multiplayer
 						}
 
 						std::int64_t totalKills;
-						if (entry["TotalKills"].get(totalKills) == Json::SUCCESS && totalKills >= 0 && totalKills <= INT32_MAX) {
+						if (entry["TotalKills"].get(totalKills) == Json::SUCCESS && totalKills > 0 && totalKills <= INT32_MAX) {
 							playlistEntry.TotalKills = std::uint32_t(totalKills);
 						}
 
 						std::int64_t totalLaps;
-						if (entry["TotalLaps"].get(totalLaps) == Json::SUCCESS && totalLaps >= 0 && totalLaps <= INT32_MAX) {
+						if (entry["TotalLaps"].get(totalLaps) == Json::SUCCESS && totalLaps > 0 && totalLaps <= INT32_MAX) {
 							playlistEntry.TotalLaps = std::uint32_t(totalLaps);
 							if (playlistEntry.TotalLaps > MaxLapCount) {
 								playlistEntry.TotalLaps = MaxLapCount;

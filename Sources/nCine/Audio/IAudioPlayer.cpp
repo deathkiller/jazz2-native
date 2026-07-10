@@ -1,6 +1,7 @@
 #if defined(WITH_AUDIO)
 #	define NCINE_INCLUDE_OPENAL
 #	include "../CommonHeaders.h"
+#	include "ALDebug.h"
 #endif
 
 #include "IAudioPlayer.h"
@@ -31,7 +32,10 @@ namespace nCine
 	{
 #if defined(WITH_AUDIO)
 		ALint byteOffset = 0;
-		alGetSourcei(sourceId_, AL_SAMPLE_OFFSET, &byteOffset);
+		if (sourceId_ != IAudioDevice::UnavailableSource) {
+			alGetSourcei(sourceId_, AL_SAMPLE_OFFSET, &byteOffset);
+			AL_LOG_ERRORS();
+		}
 		return byteOffset;
 #else
 		return 0;
@@ -41,41 +45,47 @@ namespace nCine
 	void IAudioPlayer::setSampleOffset(std::int32_t byteOffset)
 	{
 #if defined(WITH_AUDIO)
-		alSourcei(sourceId_, AL_SAMPLE_OFFSET, byteOffset);
+		if (sourceId_ != IAudioDevice::UnavailableSource) {
+			alSourcei(sourceId_, AL_SAMPLE_OFFSET, byteOffset);
+			AL_LOG_ERRORS();
+		}
 #endif
 	}
 
-	// The change is applied to the OpenAL source only when playing
+	// The change is applied to the OpenAL source only when a source is assigned (playing or paused)
 	void IAudioPlayer::setSourceRelative(bool value)
 	{
 		if (GetFlags(PlayerFlags::SourceRelative) != value) {
 			SetFlags(PlayerFlags::SourceRelative, value);
 #if defined(WITH_AUDIO)
-			if (state_ == PlayerState::Playing) {
+			if (sourceId_ != IAudioDevice::UnavailableSource) {
 				alSourcei(sourceId_, AL_SOURCE_RELATIVE, value ? AL_TRUE : AL_FALSE);
+				AL_LOG_ERRORS();
 			}
 #endif
 		}
 	}
 
-	// The change is applied to the OpenAL source only when playing
+	// The change is applied to the OpenAL source only when a source is assigned (playing or paused)
 	void IAudioPlayer::setGain(float gain)
 	{
 		gain_ = gain;
 #if defined(WITH_AUDIO)
-		if (state_ == PlayerState::Playing) {
+		if (sourceId_ != IAudioDevice::UnavailableSource) {
 			alSourcef(sourceId_, AL_GAIN, gain_);
+			AL_LOG_ERRORS();
 		}
 #endif
 	}
 
-	// The change is applied to the OpenAL source only when playing
+	// The change is applied to the OpenAL source only when a source is assigned (playing or paused)
 	void IAudioPlayer::setPitch(float pitch)
 	{
 		pitch_ = pitch;
 #if defined(WITH_AUDIO)
-		if (state_ == PlayerState::Playing) {
+		if (sourceId_ != IAudioDevice::UnavailableSource) {
 			alSourcef(sourceId_, AL_PITCH, pitch_);
+			AL_LOG_ERRORS();
 		}
 #endif
 	}
@@ -84,17 +94,17 @@ namespace nCine
 	{
 		if (lowPass_ != value) {
 			lowPass_ = value;
-			if (state_ == PlayerState::Playing) {
+			if (sourceId_ != IAudioDevice::UnavailableSource) {
 				updateFilters();
 			}
 		}
 	}
 
-	// The change is applied to the OpenAL source only when playing
+	// The change is applied to the OpenAL source only when a source is assigned (playing or paused)
 	void IAudioPlayer::setPosition(const Vector3f& position)
 	{
 		position_ = position;
-		if (state_ == PlayerState::Playing) {
+		if (sourceId_ != IAudioDevice::UnavailableSource) {
 			IAudioDevice& device = theServiceLocator().GetAudioDevice();
 			setPositionInternal(getAdjustedPosition(device, position_, GetFlags(PlayerFlags::SourceRelative), GetFlags(PlayerFlags::As2D)));
 		}
@@ -119,6 +129,7 @@ namespace nCine
 			}
 			alSourcei(sourceId_, AL_DIRECT_FILTER, 0);
 		}
+		AL_LOG_ERRORS();
 #endif
 	}
 
@@ -126,6 +137,7 @@ namespace nCine
 	{
 #if defined(WITH_AUDIO)
 		alSource3f(sourceId_, AL_POSITION, position.X, position.Y, position.Z);
+		AL_LOG_ERRORS();
 #endif
 	}
 

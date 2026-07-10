@@ -7,6 +7,9 @@
 
 namespace nCine
 {
+	class GLUniformCache;
+	class GLUniformBlockCache;
+
 	/**
 		@brief Holds all the state needed to issue a single draw call
 		
@@ -142,6 +145,9 @@ namespace nCine
 			return geometry_;
 		}
 
+		/** @brief Returns the material's "InstanceBlock" uniform block cache, resolved once per shader change */
+		GLUniformBlockCache* GetInstanceBlock();
+
 		/** @brief Commits the model matrix uniform block */
 		void CommitNodeTransformation();
 
@@ -160,8 +166,14 @@ namespace nCine
 
 		/** @brief Material sort key that minimizes state changes when rendering commands */
 		std::uint64_t materialSortKey_;
+		// Cached model matrix uniform and "InstanceBlock" uniform block cache, avoiding name-based
+		// lookups on every use. Valid as long as the cached shader change counter matches the material's one.
+		GLUniformCache* modelMatrixUniform_;
+		GLUniformBlockCache* instanceBlock_;
 		/** @brief Id based secondary sort key that stabilizes render command sorting */
 		std::uint32_t idSortKey_;
+		// Value of the material's shader change counter when the cached uniforms were resolved
+		std::uint32_t cachedShaderChangeCounter_;
 		/** @brief Drawing layer for this command */
 		std::uint16_t layer_;
 		/** @brief Visit order index for this command */
@@ -170,6 +182,8 @@ namespace nCine
 		std::int32_t batchSize_;
 
 		bool transformationCommitted_;
+		// Whether the cached model matrix uniform belongs to a uniform block (as opposed to a loose uniform)
+		bool modelMatrixUniformInBlock_;
 
 #if defined(NCINE_PROFILING)
 		Type type_;
@@ -184,5 +198,8 @@ namespace nCine
 		inline std::uint32_t GetLayerSortKey() const {
 			return std::uint32_t(layer_ << 16) + visitOrder_;
 		}
+
+		// Re-resolves the cached uniform pointers if the material's shader program has changed
+		void RefreshCachedUniforms();
 	};
 }

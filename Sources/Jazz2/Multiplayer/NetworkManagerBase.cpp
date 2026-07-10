@@ -428,6 +428,8 @@ namespace Jazz2::Multiplayer
 #if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
 		return _emWsRtt;
 #else
+		// Guard against the network thread erasing _connectedPeers (disconnect) while the UI polls the RTT
+		std::unique_lock<Spinlock> lock(_lock);
 		if (_state == NetworkState::Connected && !_connectedPeers.empty()) {
 #	if defined(WITH_WEBSOCKET)
 			if DEATH_UNLIKELY(_connectedPeers[0].IsWebSocket()) {
@@ -467,7 +469,10 @@ namespace Jazz2::Multiplayer
 #else
 		Array<String> result;
 
-		if (_state == NetworkState::Listening) {
+		// _host and _connectedPeers are torn down by the network thread under _lock
+		std::unique_lock lock(_lock);
+
+		if (_state == NetworkState::Listening && _host != nullptr) {
 #	if defined(DEATH_TARGET_SWITCH)
 			struct ifconf ifc;
 			struct ifreq ifr[8];
@@ -590,7 +595,9 @@ namespace Jazz2::Multiplayer
 		// Creating a server is not supported on Emscripten
 		return 0;
 #else
-		if (_state == NetworkState::Listening) {
+		// _host and _connectedPeers are torn down by the network thread under _lock
+		std::unique_lock lock(_lock);
+		if (_state == NetworkState::Listening && _host != nullptr) {
 			return _host->address.port;
 		} else if (!_connectedPeers.empty()
 #	if defined(WITH_WEBSOCKET)
@@ -628,20 +635,6 @@ namespace Jazz2::Multiplayer
 		}
 #		endif
 
-		ENetPeer* target;
-		if (peer == nullptr) {
-			if (_state != NetworkState::Connected || _connectedPeers.empty()
-#		if defined(WITH_WEBSOCKET)
-				|| _connectedPeers[0].IsWebSocket()
-#		endif
-			) {
-				return;
-			}
-			target = _connectedPeers[0]._enet;
-		} else {
-			target = peer._enet;
-		}
-
 		enet_uint32 flags;
 		if (channel == NetworkChannel::Main) {
 			flags = ENET_PACKET_FLAG_RELIABLE;
@@ -651,10 +644,24 @@ namespace Jazz2::Multiplayer
 
 		ENetPacket* packet = enet_packet_create(packetType, data.data(), data.size(), flags);
 
-		bool success;
+		bool success = false;
 		{
+			// The target is resolved under the lock too, so the network thread can't tear down
+			// _connectedPeers/_host between the check and the send
 			std::unique_lock lock(_lock);
-			success = enet_peer_send(target, std::uint8_t(channel), packet) >= 0;
+			ENetPeer* target;
+			if (peer == nullptr) {
+				target = (_state == NetworkState::Connected && !_connectedPeers.empty()
+#		if defined(WITH_WEBSOCKET)
+					&& !_connectedPeers[0].IsWebSocket()
+#		endif
+					? _connectedPeers[0]._enet : nullptr);
+			} else {
+				target = peer._enet;
+			}
+			if DEATH_LIKELY(target != nullptr) {
+				success = enet_peer_send(target, std::uint8_t(channel), packet) >= 0;
+			}
 		}
 
 		if DEATH_UNLIKELY(!success) {
@@ -691,29 +698,53 @@ namespace Jazz2::Multiplayer
 			flags = ENET_PACKET_FLAG_UNSEQUENCED;
 		}
 
-		ENetPacket* enetPacket = nullptr;
-		bool enetPacketSent = false;
+		// The predicate is evaluated without holding _lock - predicates commonly call GetPeerDescriptor(),
+		// which takes the derived class lock, and holding _lock across that would invert the lock order
+		// against callers that hold the derived lock while sending/kicking (deadlock with spinlocks)
+		SmallVector<Peer, 16> targets;
+		{
+			std::unique_lock lock(_lock);
+			targets.assign(_connectedPeers.begin(), _connectedPeers.end());
+		}
+
+		SmallVector<Peer, 16> enetTargets;
 #		if defined(WITH_WEBSOCKET)
 		SmallVector<ix::WebSocket*, 16> wsTargets;
 #		endif
-
-		{
-			std::unique_lock lock(_lock);
-			for (const Peer& p : _connectedPeers) {
-				if (predicate(p)) {
+		for (const Peer& p : targets) {
+			if (predicate(p)) {
 #		if defined(WITH_WEBSOCKET)
-					if DEATH_UNLIKELY(p.IsWebSocket()) {
-						wsTargets.push_back(p._ws);
-					} else
+				if DEATH_UNLIKELY(p.IsWebSocket()) {
+					wsTargets.push_back(p._ws);
+				} else
 #		endif
-					{
-						if DEATH_UNLIKELY(enetPacket == nullptr) {
-							enetPacket = enet_packet_create(packetType, data.data(), data.size(), flags);
-						}
-						if DEATH_LIKELY(enet_peer_send(p._enet, std::uint8_t(channel), enetPacket) >= 0) {
-							enetPacketSent = true;
-						}
+				{
+					enetTargets.push_back(p);
+				}
+			}
+		}
+
+		ENetPacket* enetPacket = nullptr;
+		bool enetPacketSent = false;
+		if (!enetTargets.empty()) {
+			std::unique_lock lock(_lock);
+			for (const Peer& p : enetTargets) {
+				// Re-check the peer is still connected - it may have been torn down while the predicate ran unlocked
+				bool stillConnected = false;
+				for (const Peer& c : _connectedPeers) {
+					if (c == p) {
+						stillConnected = true;
+						break;
 					}
+				}
+				if DEATH_UNLIKELY(!stillConnected) {
+					continue;
+				}
+				if DEATH_UNLIKELY(enetPacket == nullptr) {
+					enetPacket = enet_packet_create(packetType, data.data(), data.size(), flags);
+				}
+				if DEATH_LIKELY(enet_peer_send(p._enet, std::uint8_t(channel), enetPacket) >= 0) {
+					enetPacketSent = true;
 				}
 			}
 		}
@@ -730,13 +761,12 @@ namespace Jazz2::Multiplayer
 				std::memcpy(&wsPacket[1], data.data(), data.size());
 			}
 			for (ix::WebSocket* ws : wsTargets) {
-				{
-					std::unique_lock<Spinlock> wslock(_wsLock);
-					if DEATH_UNLIKELY(_wsPeers.find(ws) == _wsPeers.end()) {
-						continue;
-					}
+				// Send under the lock while the peer is confirmed present, so the socket can't be
+				// destroyed between the lookup and the send
+				std::unique_lock<Spinlock> wslock(_wsLock);
+				if DEATH_LIKELY(_wsPeers.find(ws) != _wsPeers.end()) {
+					ws->sendBinary(wsPacket);
 				}
-				ws->sendBinary(wsPacket);
 			}
 		}
 #		endif
@@ -805,13 +835,12 @@ namespace Jazz2::Multiplayer
 				std::memcpy(&wsPacket[1], data.data(), data.size());
 			}
 			for (ix::WebSocket* ws : wsTargets) {
-				{
-					std::unique_lock<Spinlock> wslock(_wsLock);
-					if DEATH_UNLIKELY(_wsPeers.find(ws) == _wsPeers.end()) {
-						continue;
-					}
+				// Send under the lock while the peer is confirmed present, so the socket can't be
+				// destroyed between the lookup and the send
+				std::unique_lock<Spinlock> wslock(_wsLock);
+				if DEATH_LIKELY(_wsPeers.find(ws) != _wsPeers.end()) {
+					ws->sendBinary(wsPacket);
 				}
-				ws->sendBinary(wsPacket);
 			}
 		}
 #		endif
@@ -828,13 +857,12 @@ namespace Jazz2::Multiplayer
 #if defined(WITH_ONLINE_MULTIPLAYER)
 #	if defined(WITH_WEBSOCKET) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		if DEATH_UNLIKELY(peer.IsWebSocket()) {
-			{
-				std::unique_lock<Spinlock> lock(_wsLock);
-				if DEATH_UNLIKELY(_wsPeers.find(peer._ws) == _wsPeers.end()) {
-					return;
-				}
+			// Close under the lock while the peer is confirmed present, so the socket can't be
+			// destroyed between the lookup and the close
+			std::unique_lock<Spinlock> lock(_wsLock);
+			if DEATH_LIKELY(_wsPeers.find(peer._ws) != _wsPeers.end()) {
+				peer._ws->close(ReasonToWsCloseCode(reason), ReasonToString(reason));
 			}
-			peer._ws->close(ReasonToWsCloseCode(reason), ReasonToString(reason));
 			return;
 		}
 #	endif
@@ -1348,13 +1376,15 @@ namespace Jazz2::Multiplayer
 								auto it = _wsPeers.find(ev.peer);
 								if DEATH_LIKELY(it != _wsPeers.end()) {
 									it->second.rtt = reportedRtt;
+
+									// Echo timestamp back as Pong. Done under the lock while the peer is confirmed
+									// present, so the socket can't be destroyed between the lookup and the send.
+									std::uint8_t pong[1 + 8];
+									pong[0] = (std::uint8_t)ServerPacketType::Pong;
+									std::memcpy(pong + 1, &timestamp, 8);
+									ev.peer->sendBinary(std::string(reinterpret_cast<const char*>(pong), sizeof(pong)));
 								}
 							}
-							// Echo timestamp back as Pong
-							std::uint8_t pong[1 + 8];
-							pong[0] = (std::uint8_t)ServerPacketType::Pong;
-							std::memcpy(pong + 1, &timestamp, 8);
-							ev.peer->sendBinary(std::string(reinterpret_cast<const char*>(pong), sizeof(pong)));
 						} else {
 							handler->OnPacketReceived(Peer::FromWebSocket(ev.peer), 0,
 								pktType, arrayView((const std::uint8_t*)ev.data.data() + 1, ev.data.size() - 1));
@@ -1368,17 +1398,17 @@ namespace Jazz2::Multiplayer
 
 	bool NetworkManagerBase::SendToWsPeer(ix::WebSocket* ws, std::uint8_t packetType, ArrayView<const std::uint8_t> data)
 	{
-		{
-			std::unique_lock<Spinlock> lock(_wsLock);
-			if DEATH_UNLIKELY(_wsPeers.find(ws) == _wsPeers.end()) {
-				return false;
-			}
-		}
-
 		std::string packet(1 + data.size(), '\0');
 		packet[0] = (char)packetType;
 		if (!data.empty()) {
 			std::memcpy(&packet[1], data.data(), data.size());
+		}
+
+		// Send under the lock while the peer is confirmed present, so the socket can't be
+		// destroyed between the lookup and the send
+		std::unique_lock<Spinlock> lock(_wsLock);
+		if DEATH_UNLIKELY(_wsPeers.find(ws) == _wsPeers.end()) {
+			return false;
 		}
 		ws->sendBinary(packet);
 		return true;
@@ -1532,7 +1562,11 @@ namespace Jazz2::Multiplayer
 			}
 
 			if (n != 0) {
-				_this->_connectedPeers.push_back(Peer(ev.peer));
+				{
+					// The main thread may already be iterating _connectedPeers in SendTo() under _lock
+					std::unique_lock lock(_this->_lock);
+					_this->_connectedPeers.push_back(Peer(ev.peer));
+				}
 				break;
 			}
 		}
@@ -1566,8 +1600,14 @@ namespace Jazz2::Multiplayer
 
 				switch (ev.type) {
 					case ENET_EVENT_TYPE_RECEIVE: {
-						auto data = arrayView(ev.packet->data, ev.packet->dataLength);
-						handler->OnPacketReceived(ev.peer, ev.channelID, data[0], data.exceptPrefix(1));
+						// A valid packet carries at least the 1-byte packet-type prefix. Drop empty packets so the
+						// data[0] read and exceptPrefix(1) slice below can't run out of bounds - a malicious or buggy
+						// peer can legally send a zero-length packet, and exceptPrefix(1) on it would otherwise yield a
+						// SIZE_MAX-length view in release builds (the bounds check is compiled out).
+						if (ev.packet->dataLength >= 1) {
+							auto data = arrayView(ev.packet->data, ev.packet->dataLength);
+							handler->OnPacketReceived(ev.peer, ev.channelID, data[0], data.exceptPrefix(1));
+						}
 						enet_packet_destroy(ev.packet);
 						break;
 					}
@@ -1584,18 +1624,23 @@ namespace Jazz2::Multiplayer
 		}
 
 		if DEATH_UNLIKELY(!_this->_connectedPeers.empty()) {
+			// Called before taking _lock, because the handler acquires its own lock internally
 			_this->OnPeerDisconnected(_this->_connectedPeers[0], reason);
-
-			for (const Peer& p : _this->_connectedPeers) {
-				enet_peer_disconnect_now(p._enet, (std::uint32_t)Reason::Disconnected);
-			}
-			_this->_connectedPeers.clear();
 		} else {
 			_this->OnPeerDisconnected({}, reason);
 		}
 
-		enet_host_destroy(_this->_host);
-		_this->_host = nullptr;
+		{
+			// Serialize the teardown with the main-thread send paths, which use _connectedPeers/_host under _lock
+			std::unique_lock lock(_this->_lock);
+			for (const Peer& p : _this->_connectedPeers) {
+				enet_peer_disconnect_now(p._enet, (std::uint32_t)Reason::Disconnected);
+			}
+			_this->_connectedPeers.clear();
+
+			enet_host_destroy(_this->_host);
+			_this->_host = nullptr;
+		}
 		_this->_handler = nullptr;
 
 		_this->_thread.Detach();
@@ -1683,8 +1728,14 @@ namespace Jazz2::Multiplayer
 					break;
 				}
 				case ENET_EVENT_TYPE_RECEIVE: {
-					auto data = arrayView(ev.packet->data, ev.packet->dataLength);
-					handler->OnPacketReceived(ev.peer, ev.channelID, data[0], data.exceptPrefix(1));
+					// A valid packet carries at least the 1-byte packet-type prefix. Drop empty packets so the
+					// data[0] read and exceptPrefix(1) slice below can't run out of bounds - a malicious or buggy
+					// peer can legally send a zero-length packet, and exceptPrefix(1) on it would otherwise yield a
+					// SIZE_MAX-length view in release builds (the bounds check is compiled out).
+					if (ev.packet->dataLength >= 1) {
+						auto data = arrayView(ev.packet->data, ev.packet->dataLength);
+						handler->OnPacketReceived(ev.peer, ev.channelID, data[0], data.exceptPrefix(1));
+					}
 					enet_packet_destroy(ev.packet);
 					break;
 				}
@@ -1701,18 +1752,22 @@ namespace Jazz2::Multiplayer
 #		endif
 		}
 
-		for (const Peer& p : _this->_connectedPeers) {
+		{
+			// Serialize the teardown with the main-thread send paths, which use _connectedPeers/_host under _lock
+			std::unique_lock lock(_this->_lock);
+			for (const Peer& p : _this->_connectedPeers) {
 #		if defined(WITH_WEBSOCKET)
-			if DEATH_LIKELY(!p.IsWebSocket())
+				if DEATH_LIKELY(!p.IsWebSocket())
 #		endif
-			{
-				enet_peer_disconnect_now(p._enet, std::uint32_t(Reason::ServerStopped));
+				{
+					enet_peer_disconnect_now(p._enet, std::uint32_t(Reason::ServerStopped));
+				}
 			}
-		}
-		_this->_connectedPeers.clear();
+			_this->_connectedPeers.clear();
 
-		enet_host_destroy(_this->_host);
-		_this->_host = nullptr;
+			enet_host_destroy(_this->_host);
+			_this->_host = nullptr;
+		}
 		_this->_handler = nullptr;
 
 #		if defined(WITH_WEBSOCKET)

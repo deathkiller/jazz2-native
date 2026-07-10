@@ -15,8 +15,10 @@ namespace nCine
 	}
 
 	Material::Material(GLShaderProgram* program, GLTexture* texture)
-		: isBlendingEnabled_(false), srcBlendingFactor_(GL_SRC_ALPHA), destBlendingFactor_(GL_ONE_MINUS_SRC_ALPHA),
+		: isBlendingEnabled_(false), sortKeyDirty_(true), usedTextureUnits_(texture != nullptr ? 1 : 0),
+			srcBlendingFactor_(GL_SRC_ALPHA), destBlendingFactor_(GL_ONE_MINUS_SRC_ALPHA),
 			srcAlphaBlendingFactor_(GL_ONE), destAlphaBlendingFactor_(GL_ONE_MINUS_SRC_ALPHA),
+			sortKey_(0), shaderChangeCounter_(0),
 			shaderProgramType_(ShaderProgramType::Custom), shaderProgram_(program), uniformsHostBufferSize_(0)
 	{
 		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
@@ -33,6 +35,7 @@ namespace nCine
 	{
 		srcBlendingFactor_ = srcBlendingFactor;
 		destBlendingFactor_ = destBlendingFactor;
+		sortKeyDirty_ = true;
 
 		// Derive correct "over" factors for the alpha channel from the common color-blend presets, so RGBA render
 		// targets accumulate proper coverage even though callers only specify color factors. Drawing semi-transparent
@@ -58,6 +61,7 @@ namespace nCine
 		destBlendingFactor_ = destRgbBlendingFactor;
 		srcAlphaBlendingFactor_ = srcAlphaBlendingFactor;
 		destAlphaBlendingFactor_ = destAlphaBlendingFactor;
+		sortKeyDirty_ = true;
 	}
 
 	bool Material::SetShaderProgramType(ShaderProgramType shaderProgramType)
@@ -80,6 +84,8 @@ namespace nCine
 
 		shaderProgramType_ = ShaderProgramType::Custom;
 		shaderProgram_ = program;
+		sortKeyDirty_ = true;
+		shaderChangeCounter_++;
 		// The camera uniforms are handled separately as they have a different update frequency
 		shaderUniforms_.SetProgram(shaderProgram_, nullptr, ProjectionViewMatrixExcludeString);
 		shaderUniformBlocks_.SetProgram(shaderProgram_);
@@ -143,6 +149,8 @@ namespace nCine
 		bool result = false;
 		if (unit < GLTexture::MaxTextureUnits) {
 			textures_[unit] = texture;
+			sortKeyDirty_ = true;
+			UpdateUsedTextureUnits(unit, texture != nullptr);
 			result = true;
 		}
 		return result;
@@ -158,14 +166,34 @@ namespace nCine
 		bool result = false;
 		if (unit < GLTexture::MaxTextureUnits) {
 			textures_[unit] = nullptr;
+			sortKeyDirty_ = true;
+			UpdateUsedTextureUnits(unit, false);
 			result = true;
 		}
 		return result;
 	}
 
+	void Material::UpdateUsedTextureUnits(std::uint32_t unit, bool textureSet)
+	{
+		if (textureSet) {
+			if (unit >= usedTextureUnits_) {
+				usedTextureUnits_ = std::uint8_t(unit + 1);
+			}
+		} else if (unit + 1 == usedTextureUnits_) {
+			// The highest used unit was cleared, find the new highest one
+			std::uint32_t n = unit;
+			while (n > 0 && textures_[n - 1] == nullptr) {
+				n--;
+			}
+			usedTextureUnits_ = std::uint8_t(n);
+		}
+	}
+
 	void Material::Bind()
 	{
-		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
+		// Units above `usedTextureUnits_` are intentionally left untouched, samplers of this
+		// material's shader only reference units that the material binds itself
+		for (std::uint32_t i = 0; i < usedTextureUnits_; i++) {
 			if (textures_[i] != nullptr) {
 				textures_[i]->Bind(i);
 			} else {
@@ -221,9 +249,13 @@ namespace nCine
 
 	std::uint32_t Material::GetSortKey()
 	{
+		if (!sortKeyDirty_) {
+			return sortKey_;
+		}
+
 		constexpr std::uint32_t Seed = 1697381921;
 		// Align to 64 bits for `fasthash64()` to properly work on Emscripten without alignment faults
-		static SortHashData hashData alignas(8);
+		SortHashData hashData alignas(8);
 
 		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
 			hashData.textures[i] = (textures_[i] != nullptr) ? textures_[i]->GetGLHandle() : 0;
@@ -234,6 +266,8 @@ namespace nCine
 		hashData.srcAlphaBlendingFactor = glBlendingFactorToInt(srcAlphaBlendingFactor_);
 		hashData.destAlphaBlendingFactor = glBlendingFactorToInt(destAlphaBlendingFactor_);
 
-		return (std::uint32_t)xxHash3(reinterpret_cast<const void*>(&hashData), sizeof(SortHashData), Seed);
+		sortKey_ = (std::uint32_t)xxHash3(reinterpret_cast<const void*>(&hashData), sizeof(SortHashData), Seed);
+		sortKeyDirty_ = false;
+		return sortKey_;
 	}
 }

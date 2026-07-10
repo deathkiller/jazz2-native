@@ -47,6 +47,8 @@ namespace nCine
 
 		/** @brief Whether mapping is used to update OpenGL buffers */
 		bool useBufferMapping;
+		/** @brief Whether persistently mapped buffer storage is used for streaming buffers, if the device supports it */
+		bool useBufferStorage;
 		/** @brief Fixed size of render commands to be collected for batching on Emscripten and ANGLE */
 		std::uint32_t fixedBatchSize;
 		/** @brief Path for the binary shaders cache (or empty to disable binary shader cache) */

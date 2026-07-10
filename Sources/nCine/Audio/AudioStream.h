@@ -1,5 +1,7 @@
 #pragma once
 
+#include "IAudioDevice.h"
+
 #include <memory>
 
 #include <Containers/SmallVector.h>
@@ -90,8 +92,8 @@ namespace nCine
 
 		/** @brief Size in bytes of each streaming buffer */
 		static const std::int32_t BufferSize = 16 * 1024;
-		/** @brief Intermediate memory buffer feeding the OpenAL buffers */
-		std::unique_ptr<char[]> memBuffer_;
+		/** @brief Reusable decode request holding the intermediate buffer, executed ahead of time on the decoding thread when available */
+		std::shared_ptr<StreamDecodeRequest> decodeRequest_;
 
 		/** @brief OpenAL id of the currently playing buffer, or 0 if none */
 		std::uint32_t currentBufferId_;
@@ -113,8 +115,8 @@ namespace nCine
 
 		/** @brief OpenAL channel format enumeration */
 		std::int32_t format_;
-		/** @brief Reader that continuously streams decoded data */
-		std::unique_ptr<IAudioReader> audioReader_;
+		/** @brief Reader that continuously streams decoded data, shared with @ref decodeRequest_ */
+		std::shared_ptr<IAudioReader> audioReader_;
 
 		// Private constructors called only by AudioStreamPlayer
 		AudioStream();

@@ -51,6 +51,8 @@ namespace Jazz2::UI
 		void OnKeyPressed(const KeyboardEvent& event);
 		/** @brief Called when text is entered */
 		void OnTextInput(const TextInputEvent& event);
+		/** @brief Called when a touch event occurs, used to toggle the on-screen keyboard on touch devices */
+		void OnTouchEvent(const TouchEvent& event, Vector2i viewSize);
 
 		/** @brief Clears the console and its history */
 		static void Clear();
@@ -68,9 +70,10 @@ namespace Jazz2::UI
 		static constexpr std::uint16_t ShadowLayer = 80;
 		static constexpr std::uint16_t FontLayer = 200;
 		static constexpr std::uint16_t FontShadowLayer = 120;
+		static constexpr std::uint16_t KeyboardLayer = 400;
 
 		static constexpr std::int32_t MaxLineLength = 128;
-		
+
 		LevelHandler* _levelHandler;
 		Font* _smallFont;
 		char _currentLine[MaxLineLength];
@@ -79,6 +82,12 @@ namespace Jazz2::UI
 		std::int32_t _historyIndex;
 		std::int32_t _scrollPos;
 		bool _isVisible;
+		bool _keyboardVisible;
+#if defined(DEATH_TARGET_ANDROID)
+		Recti _currentVisibleBounds;
+		Vector2i _initialVisibleSize;
+		float _recalcVisibleBoundsTimeLeft;
+#endif
 
 		void ProcessCurrentLine();
 		void PruneLogHistory();
@@ -86,5 +95,7 @@ namespace Jazz2::UI
 		void GetNextCommandFromHistory();
 		void ScrollUp(std::int32_t amount);
 		void ScrollDown(std::int32_t amount);
+		void ToggleScreenKeyboard();
+		void RecalcLayoutForScreenKeyboard();
 	};
 }

@@ -53,7 +53,7 @@ namespace Jazz2::Multiplayer
 		std::uint32_t TotalKills;
 		/** @brief Total number of laps, default is 3 (Race) */
 		std::uint32_t TotalLaps;
-		/** @brief Total number of treasure collected, default is 80 (Treasure Hunt) */
+		/** @brief Total number of treasure to collect to win (Treasure Hunt); default is 0, which auto-weights the target from the level's treasure */
 		std::uint32_t TotalTreasureCollected;
 		/** @brief Duration of overtime in seconds after first player finishes (Race only) */
 		std::uint32_t OvertimeSecs;
@@ -98,7 +98,7 @@ namespace Jazz2::Multiplayer
 			-   Supported platforms are Linux, macOS and Windows, players from other platforms won't be able to join
 		-   @cpp "AllowedPlayerTypes" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Bitmask for allowed player types (@cpp 1 @ce - Jazz, @cpp 2 @ce - Spaz, @cpp 4 @ce - Lori)
 		-   @cpp "IdleKickTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time in seconds after idle players are kicked (default is **never**)
-		-   @cpp "ReconnectWindowSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time window in seconds during which a disconnected player can reconnect and resume their progression (weapons, lives, score, gems), @cpp 0 @ce or less to disable (default is **600**, i.e. 10 minutes)
+		-   @cpp "ReconnectWindowSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Time window in seconds during which a disconnected player can reconnect and resume their progression (weapons, lives, score, gems), @cpp 0 @ce or less to disable (default is **300**, i.e. 5 minutes)
 		-   @cpp "AdminUniquePlayerIDs" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of admin player IDs
 			-   Key specifies player ID, value contains privileges
 		-   @cpp "WhitelistedUniquePlayerIDs" @ce : @m_span{m-label m-primary m-flat} object @m_endspan Map of whitelisted player IDs
@@ -112,7 +112,7 @@ namespace Jazz2::Multiplayer
 			-   Has a higher priority than settings of the player
 		-   @cpp "RandomizePlaylist" @ce : @m_span{m-label m-default m-flat} bool @m_endspan Whether to play the playlist in random order
 			-   If enabled, the list is shuffled when the server is started and when the end of the list is reached
-		-   @cpp "TotalPlayerPoints" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Total points to win the championship (default is **0**)
+		-   @cpp "TotalPlayerPoints" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Total points to win the championship, @cpp 0 @ce to disable (default is **50**)
 			-   Player can score a maximum of 20 points per round
 		-   @cpp "GameMode" @ce : @m_span{m-label m-danger m-flat} string @m_endspan Game mode
 			-   @cpp "b" @ce / @cpp "battle" @ce - Battle
@@ -138,7 +138,7 @@ namespace Jazz2::Multiplayer
 			-   If the property is not specified or is less than 1, the player's health is automatically assigned depending on the game mode
 			-   Default value for Race and Treasure Hunt is **unlimited**, in all other game modes it's **5**
 		-   @cpp "MaxGameTimeSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Maximum allowed game time in seconds per level (default is **unlimited**)
-		-   @cpp "PreGameSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Pre-game duration in seconds (default is **60** seconds)
+		-   @cpp "PreGameSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Pre-game duration in seconds (default is **30** seconds)
 			-   Pre-game is skipped in Cooperation
 		-   @cpp "SpawnInvulnerableSecs" @ce : @m_span{m-label m-warning m-flat} integer @m_endspan Duration of invulnerability after (re)spawning (default is **4** seconds)
 			-   Invulnerability is skipped in Cooperation

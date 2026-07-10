@@ -7,7 +7,7 @@
 namespace nCine
 {
 	GLVertexFormat::Attribute::Attribute()
-		: enabled_(false), vbo_(nullptr), index_(0), size_(-1), type_(GL_FLOAT), stride_(0), pointer_(nullptr), baseOffset_(0)
+		: vbo_(nullptr), pointer_(nullptr), index_(0), size_(-1), type_(GL_FLOAT), stride_(0), baseOffset_(0), enabled_(false), normalized_(GL_FALSE)
 	{
 	}
 
@@ -110,6 +110,35 @@ namespace nCine
 			attributes_[i].enabled_ = false;
 		}
 		ibo_ = nullptr;
+	}
+
+	namespace
+	{
+		inline std::uint64_t hashCombine(std::uint64_t h, std::uint64_t v)
+		{
+			// One splitmix64 step over the previous hash and the new value
+			h += 0x9E3779B97F4A7C15ull + v;
+			h = (h ^ (h >> 30)) * 0xBF58476D1CE4E5B9ull;
+			h = (h ^ (h >> 27)) * 0x94D049BB133111EBull;
+			return h ^ (h >> 31);
+		}
+	}
+
+	std::uint64_t GLVertexFormat::CalculateFingerprint() const
+	{
+		// Mirrors operator==(): only enabled attributes and the IBO identity contribute
+		std::uint64_t hash = std::uint64_t(std::uintptr_t(ibo_));
+		for (std::uint32_t i = 0; i < MaxAttributes; i++) {
+			const Attribute& attribute = attributes_[i];
+			if (!attribute.enabled_) {
+				continue;
+			}
+			hash = hashCombine(hash, (std::uint64_t(attribute.index_) << 32) | (attribute.vbo_ != nullptr ? attribute.vbo_->GetGLHandle() : 0));
+			hash = hashCombine(hash, (std::uint64_t(std::uint32_t(attribute.size_)) << 32) | attribute.type_);
+			hash = hashCombine(hash, (std::uint64_t(std::uint32_t(attribute.stride_)) << 33) | (std::uint64_t(attribute.baseOffset_) << 1) | (attribute.normalized_ ? 1u : 0u));
+			hash = hashCombine(hash, std::uint64_t(std::uintptr_t(attribute.pointer_)));
+		}
+		return hash;
 	}
 
 	bool GLVertexFormat::operator==(const GLVertexFormat& other) const

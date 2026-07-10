@@ -111,7 +111,7 @@ namespace nCine
 		}
 
 		const char* ExtensionNames[] = {
-			"GL_KHR_debug", "GL_ARB_texture_storage", "GL_ARB_get_program_binary",
+			"GL_KHR_debug", "GL_ARB_texture_storage", "GL_ARB_buffer_storage", "GL_ARB_get_program_binary",
 #if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
 			"GL_OES_get_program_binary",
 #endif
@@ -173,6 +173,7 @@ namespace nCine
 		LOGI("---");
 		LOGI("GL_KHR_debug: {}", glExtensions_[(std::int32_t)GLExtensions::KHR_DEBUG]);
 		LOGI("GL_ARB_texture_storage: {}", glExtensions_[(std::int32_t)GLExtensions::ARB_TEXTURE_STORAGE]);
+		LOGI("GL_ARB_buffer_storage: {}", glExtensions_[(std::int32_t)GLExtensions::ARB_BUFFER_STORAGE]);
 		LOGI("GL_ARB_get_program_binary: {}", glExtensions_[(std::int32_t)GLExtensions::ARB_GET_PROGRAM_BINARY]);
 #if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
 		LOGI("GL_OES_get_program_binary: {}", glExtensions_[(std::int32_t)GLExtensions::OES_GET_PROGRAM_BINARY]);

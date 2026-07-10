@@ -16,6 +16,7 @@ namespace Death { namespace Threading {
 		Spinlock(Spinlock const&) = delete;
 		Spinlock& operator=(Spinlock const&) = delete;
 
+		/** @brief Acquires the lock, busy-waiting until it becomes available */
 		void lock() noexcept
 		{
 			do {
@@ -25,6 +26,7 @@ namespace Death { namespace Threading {
 			} while (_state.exchange(State::Locked, std::memory_order_acquire) == State::Locked);
 		}
 
+		/** @brief Releases the lock */
 		void unlock() noexcept
 		{
 			_state.store(State::Free, std::memory_order_release);

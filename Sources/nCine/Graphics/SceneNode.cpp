@@ -367,17 +367,35 @@ namespace nCine
 		}
 
 		if (dirtyBits_.test(DirtyBitPositions::TransformationBit)) {
-			// Calculating world and local matrices
-			localMatrix_ = Matrix4x4f::Translation(position_.X, position_.Y, 0.0f);
-			localMatrix_.RotateZ(rotation_);
-			localMatrix_.Scale(scaleFactor_.X, scaleFactor_.Y, 1.0f);
-			localMatrix_.Translate(-anchorPoint_.X, -anchorPoint_.Y, 0.0f);
+			// Calculating world and local matrices, the local matrix is equivalent to
+			// Translation(position) * RotateZ(rotation) * Scale(scale) * Translation(-anchor)
+			float c = 1.0f, s = 0.0f;
+			if (rotation_ != 0.0f) {
+				c = cosf(rotation_);
+				s = sinf(rotation_);
+			}
+			const float m00 = c * scaleFactor_.X;
+			const float m01 = s * scaleFactor_.X;
+			const float m10 = -s * scaleFactor_.Y;
+			const float m11 = c * scaleFactor_.Y;
+			const float tx = position_.X - anchorPoint_.X * m00 - anchorPoint_.Y * m10;
+			const float ty = position_.Y - anchorPoint_.X * m01 - anchorPoint_.Y * m11;
+
+			localMatrix_[0].Set(m00, m01, 0.0f, 0.0f);
+			localMatrix_[1].Set(m10, m11, 0.0f, 0.0f);
+			localMatrix_[2].Set(0.0f, 0.0f, 1.0f, 0.0f);
+			localMatrix_[3].Set(tx, ty, 0.0f, 1.0f);
 
 			absScaleFactor_ = scaleFactor_;
 			absRotation_ = rotation_;
 
 			if (parent_ != nullptr) {
-				worldMatrix_ = parent_->worldMatrix_ * localMatrix_;
+				// Equivalent to parent_->worldMatrix_ * localMatrix_, but the two zero columns of the local matrix are skipped
+				const Matrix4x4f& pm = parent_->worldMatrix_;
+				worldMatrix_[0] = pm[0] * m00 + pm[1] * m01;
+				worldMatrix_[1] = pm[0] * m10 + pm[1] * m11;
+				worldMatrix_[2] = pm[2];
+				worldMatrix_[3] = pm[0] * tx + pm[1] * ty + pm[3];
 
 				absScaleFactor_ *= parent_->absScaleFactor_;
 				absRotation_ += parent_->absRotation_;

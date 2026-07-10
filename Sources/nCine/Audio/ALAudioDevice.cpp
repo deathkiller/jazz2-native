@@ -17,6 +17,9 @@ namespace nCine
 {
 	ALAudioDevice::ALAudioDevice()
 		: device_(nullptr), context_(nullptr), gain_(1.0f), sources_ {}, deviceName_(nullptr), nativeFreq_(44100)
+#if defined(WITH_THREADS)
+		, decodeThreadCreated_(false), decodeThreadShouldQuit_(false)
+#endif
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		, alcReopenDeviceSOFT_(nullptr), pEnumerator_(nullptr), lastDeviceChangeTime_(0), shouldRecreate_(false)
 #endif
@@ -78,8 +81,11 @@ namespace nCine
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		// Try to use ALC_SOFT_reopen_device extension to reopen the device
-		alcReopenDeviceSOFT_ = (LPALCREOPENDEVICESOFT)alGetProcAddress("alcReopenDeviceSOFT");
+		// Try to use ALC_SOFT_reopen_device extension to reopen the device, it's a context
+		// extension, so it has to be queried with alcGetProcAddress() and the device
+		if (alcIsExtensionPresent(device_, "ALC_SOFT_reopen_device")) {
+			alcReopenDeviceSOFT_ = (LPALCREOPENDEVICESOFT)alcGetProcAddress(device_, "alcReopenDeviceSOFT");
+		}
 		registerAudioEvents();
 #endif
 
@@ -189,6 +195,22 @@ namespace nCine
 	{
 		LOGD("Disposing OpenAL audio device...");
 
+#if defined(WITH_THREADS)
+		// Shut down the decoding thread first, so it doesn't touch any readers afterwards
+		decodeMutex_.Lock();
+		decodeThreadShouldQuit_ = true;
+		// Requests still in the queue will never be executed, reset them so their owners don't wait forever
+		for (auto& request : decodeQueue_) {
+			request->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
+		}
+		decodeQueue_.clear();
+		decodeMutex_.Unlock();
+		decodeQueueCond_.Broadcast();
+		if (decodeThreadCreated_) {
+			decodeThread_.Join();
+		}
+#endif
+
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		unregisterAudioEvents();
 #endif
@@ -229,10 +251,19 @@ namespace nCine
 		return nullptr;
 	}
 
+	IAudioPlayer* ALAudioDevice::player(std::uint32_t index)
+	{
+		if (index < players_.size()) {
+			return players_[index];
+		}
+		return nullptr;
+	}
+
 	void ALAudioDevice::stopPlayers()
 	{
-		for (auto& player : players_) {
-			player->stop();
+		// Iterating backwards because stop() unregisters the player, erasing it from the array
+		for (std::size_t i = players_.size(); i > 0; i--) {
+			players_[i - 1]->stop();
 		}
 		players_.clear();
 	}
@@ -251,14 +282,12 @@ namespace nCine
 			? AudioBufferPlayer::sType()
 			: AudioStreamPlayer::sType();
 
-		auto it = players_.begin();
-		while (it != players_.end()) {
-			if ((*it)->type() == objectType) {
-				(*it)->stop();
-				it = players_.eraseUnordered(it);
-				continue;
+		// Iterating backwards because stop() unregisters the player, erasing it from the array
+		for (std::size_t i = players_.size(); i > 0; i--) {
+			IAudioPlayer* player = players_[i - 1];
+			if (player->type() == objectType) {
+				player->stop();
 			}
-			++it;
 		}
 	}
 
@@ -268,14 +297,13 @@ namespace nCine
 			? AudioBufferPlayer::sType()
 			: AudioStreamPlayer::sType();
 
-		auto it = players_.begin();
-		while (it != players_.end()) {
-			if ((*it)->type() == objectType) {
-				(*it)->pause();
-				it = players_.eraseUnordered(it);
-				continue;
+		// Iterating backwards, so removing the current element doesn't affect the remaining ones
+		for (std::size_t i = players_.size(); i > 0; i--) {
+			IAudioPlayer* player = players_[i - 1];
+			if (player->type() == objectType) {
+				player->pause();
+				players_.eraseUnordered(&players_[i - 1]);
 			}
-			++it;
 		}
 	}
 
@@ -338,10 +366,85 @@ namespace nCine
 		}
 #endif
 
-		for (auto& player : players_) {
-			player->updateState();
+		// Iterating backwards because a finished player unregisters itself, erasing it from the array
+		for (std::size_t i = players_.size(); i > 0; i--) {
+			players_[i - 1]->updateState();
 		}
 	}
+
+	bool ALAudioDevice::submitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
+	{
+#if defined(WITH_THREADS)
+		decodeMutex_.Lock();
+		if (!decodeThreadCreated_) {
+			// The decoding thread is created lazily on the first streamed sound
+			decodeThreadCreated_ = true;
+			decodeThread_ = Thread(ALAudioDevice::decodeThreadFunc, this);
+		}
+		decodeQueue_.push_back(request);
+		decodeMutex_.Unlock();
+		decodeQueueCond_.Signal();
+		return true;
+#else
+		return false;
+#endif
+	}
+
+	void ALAudioDevice::drainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
+	{
+#if defined(WITH_THREADS)
+		// A null request would compare equal to the idle active request and wait forever
+		if (request == nullptr) {
+			return;
+		}
+
+		decodeMutex_.Lock();
+		// Remove the request from the queue if it hasn't been picked up yet
+		for (std::size_t i = 0; i < decodeQueue_.size(); i++) {
+			if (decodeQueue_[i] == request) {
+				decodeQueue_.erase(&decodeQueue_[i]);
+				request->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
+				decodeMutex_.Unlock();
+				return;
+			}
+		}
+		// Wait for the decoding thread if the request is currently being executed
+		while (activeDecodeRequest_ == request) {
+			decodeDoneCond_.Wait(decodeMutex_);
+		}
+		decodeMutex_.Unlock();
+#endif
+	}
+
+#if defined(WITH_THREADS)
+	void ALAudioDevice::decodeThreadFunc(void* arg)
+	{
+		Thread::SetCurrentName("Audio decoding");
+
+		ALAudioDevice* device = static_cast<ALAudioDevice*>(arg);
+		device->decodeMutex_.Lock();
+		while (true) {
+			while (device->decodeQueue_.empty() && !device->decodeThreadShouldQuit_) {
+				device->decodeQueueCond_.Wait(device->decodeMutex_);
+			}
+			if (device->decodeThreadShouldQuit_) {
+				break;
+			}
+
+			device->activeDecodeRequest_ = std::move(device->decodeQueue_.front());
+			device->decodeQueue_.erase(device->decodeQueue_.begin());
+			device->decodeMutex_.Unlock();
+
+			// Decoding is executed without holding the lock, so new requests can still be submitted
+			device->activeDecodeRequest_->Execute();
+
+			device->decodeMutex_.Lock();
+			device->activeDecodeRequest_ = nullptr;
+			device->decodeDoneCond_.Broadcast();
+		}
+		device->decodeMutex_.Unlock();
+	}
+#endif
 
 	const Vector3f& ALAudioDevice::getListenerPosition() const
 	{

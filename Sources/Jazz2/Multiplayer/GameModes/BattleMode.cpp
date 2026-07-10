@@ -68,23 +68,22 @@ namespace Jazz2::Multiplayer::GameModes
 		auto players = ctx.GetPlayers();
 
 		if (config.Elimination) {
-			// Faithful replication of the original non-team elimination check in MpLevelHandler::CheckGameEnds.
-			// eliminationCount counts players still within the death limit; eliminationWinner is the last eliminated
-			// player. The original ends the round once at most one player remains un-eliminated.
-			std::int32_t eliminationCount = 0;
-			Actors::Player* eliminationWinner = nullptr;
+			// Last player standing wins: a player is eliminated once their death count reaches the limit (TotalKills).
+			// Count the players still in the round (spectators excluded) and remember one of them; the round ends
+			// once at most one remains un-eliminated, and that survivor is the winner.
+			std::int32_t aliveCount = 0;
+			Actors::Player* lastAlive = nullptr;
 			for (auto* player : players) {
 				if (ctx.IsSpectating(player)) {
 					continue;
 				}
 				if (ctx.GetPlayerState(player).Deaths < config.TotalKills) {
-					eliminationCount++;
-				} else {
-					eliminationWinner = player;
+					aliveCount++;
+					lastAlive = player;
 				}
 			}
-			if (eliminationCount >= (std::int32_t)players.size() - 1) {
-				return { true, false, eliminationWinner, (std::uint8_t)0 };
+			if (aliveCount <= 1) {
+				return { true, false, lastAlive, (std::uint8_t)0 };
 			}
 			return GameEndResult::None();
 		}

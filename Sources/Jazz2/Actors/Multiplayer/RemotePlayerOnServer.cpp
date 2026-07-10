@@ -26,6 +26,9 @@ namespace Jazz2::Actors::Multiplayer
 			_stateBuffer[i].Time = now - arraySize(_stateBuffer) + i;
 			_stateBuffer[i].Pos = Vector2f(details.Pos.X, details.Pos.Y);
 		}
+		// Seed the interpolated display position too, so a hitch before the first OnUpdate interpolation doesn't
+		// render the player at the level origin (0, 0)
+		_displayPos = Vector2f(details.Pos.X, details.Pos.Y);
 
 		async_return async_await PlayerOnServer::OnActivatedAsync(details);
 	}

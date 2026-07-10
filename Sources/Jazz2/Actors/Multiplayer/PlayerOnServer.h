@@ -41,7 +41,7 @@ namespace Jazz2::Actors::Multiplayer
 		float _lastAttackerTimeout;
 		/** @brief Whether the player can currently take damage */
 		bool _canTakeDamage;
-		/** @brief Whether the player has just warped */
+		/** @brief Whether the player has just warped (consumed once by the outgoing broadcast to flag interpolation reset) */
 		bool _justWarped;
 		/** @brief Remaining cooldown before this player can be bumped by another player again */
 		float _bumpCooldown;

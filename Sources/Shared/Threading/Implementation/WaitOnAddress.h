@@ -53,18 +53,29 @@ extern "C"
 #	include <unistd.h>
 #endif
 
+/**
+	@brief Cross-platform "wait on address" (futex-style) primitives used to build higher-level synchronization
+
+	Provides a uniform wrapper around each platform's address-based blocking mechanism --- `WaitOnAddress` on
+	Windows, `__ulock` on Apple, `_umtx_op` on FreeBSD/DragonFly and `futex` on Linux, with a no-op fallback
+	elsewhere. Used internally by @ref Death::Threading::Event and @ref Death::Threading::ReadWriteLock and not
+	intended to be used directly.
+*/
 namespace Death { namespace Threading { namespace Implementation {
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
+	/** @brief Trait that yields the underlying value type of a possibly-@cpp std::atomic @ce type */
 	template <typename T>
 	struct RemoveAtomic {
 		using type = T;
 	};
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	template <typename T>
 	struct RemoveAtomic<std::atomic<T>> {
 		using type = T;
 	};
+#endif
 
 #if defined(DEATH_TARGET_WINDOWS)
 	using WaitOnAddressDelegate = decltype(::WaitOnAddress);
@@ -75,10 +86,13 @@ namespace Death { namespace Threading { namespace Implementation {
 	extern WakeByAddressAllDelegate* _wakeByAddressAll;
 	extern WakeByAddressAllDelegate* _wakeByAddressSingle;
 
+	/** @brief Timeout value representing an infinite wait */
 	constexpr std::uint32_t Infinite = INFINITE;
 
+	/** @brief Resolves the platform's wait-on-address entry points; must be called before first use */
 	void InitializeWaitOnAddress();
 
+	/** @brief Blocks until @p futex changes away from @p expectedValue or the timeout elapses, returns `true` if woken */
 	template<typename T>
 	inline bool WaitOnAddress(T& futex, typename RemoveAtomic<T>::type expectedValue, std::uint32_t timeoutMilliseconds)
 	{
@@ -87,29 +101,35 @@ namespace Death { namespace Threading { namespace Implementation {
 		return !!waitResult;
 	}
 
+	/** @brief Wakes all threads waiting on the specified address */
 	template<typename T>
 	inline void WakeByAddressAll(T& futex)
 	{
 		_wakeByAddressAll(&futex);
 	}
 
+	/** @brief Wakes a single thread waiting on the specified address */
 	template<typename T>
 	inline void WakeByAddressSingle(T& futex)
 	{
 		_wakeByAddressSingle(&futex);
 	}
 
+	/** @brief Returns `true` if the platform supports wait-on-address blocking */
 	inline bool IsWaitOnAddressSupported()
 	{
 		return Environment::IsWindows8();
 	}
 #elif defined(DEATH_TARGET_APPLE)
+	/** @brief Timeout value representing an infinite wait */
 	constexpr std::uint32_t Infinite = ~0;
 
+	/** @brief Resolves the platform's wait-on-address entry points; must be called before first use */
 	inline void InitializeWaitOnAddress()
 	{
 	}
 
+	/** @brief Returns the `__ulock` operation code matching the size of the futex variable */
 	template<typename T>
 	inline std::uint32_t GetBaseOperation(T&)
 	{
@@ -124,6 +144,7 @@ namespace Death { namespace Threading { namespace Implementation {
 		return operation;
 	}
 
+	/** @brief Blocks until @p futex changes away from @p expectedValue or the timeout elapses, returns `true` if woken */
 	template<typename T>
 	inline bool WaitOnAddress(T& futex, typename RemoveAtomic<T>::type expectedValue, std::uint32_t timeoutMilliseconds)
 	{
@@ -133,18 +154,21 @@ namespace Death { namespace Threading { namespace Implementation {
 		return (r == 0 || r != -ETIMEDOUT);
 	}
 
+	/** @brief Wakes all threads waiting on the specified address */
 	template<typename T>
 	inline void WakeByAddressAll(T& futex)
 	{
 		__ulock_wake(GetBaseOperation(futex) | ULF_WAKE_ALL, &futex, 0);
 	}
 
+	/** @brief Wakes a single thread waiting on the specified address */
 	template<typename T>
 	inline void WakeByAddressSingle(T& futex)
 	{
 		__ulock_wake(GetBaseOperation(futex), &futex, 0);
 	}
 
+	/** @brief Returns `true` if the platform supports wait-on-address blocking */
 	inline bool IsWaitOnAddressSupported()
 	{
 		return (__ulock_wake != nullptr && __ulock_wait2 != nullptr);
@@ -152,12 +176,15 @@ namespace Death { namespace Threading { namespace Implementation {
 #elif defined(__FreeBSD__) || defined(__DragonFly__)
 #	define __DEATH_ALWAYS_USE_WAKEONADDRESS
 
+	/** @brief Timeout value representing an infinite wait */
 	constexpr std::uint32_t Infinite = ~0;
 
+	/** @brief Resolves the platform's wait-on-address entry points; must be called before first use */
 	inline void InitializeWaitOnAddress()
 	{
 	}
 
+	/** @brief Issues the underlying `_umtx_op` wait, optionally with an absolute timeout */
 	template <typename T>
 	inline int WaitOnAddressInner(T& futex, typename RemoveAtomic<T>::type expectedValue, _umtx_time* tmp = nullptr)
 	{
@@ -172,6 +199,7 @@ namespace Death { namespace Threading { namespace Implementation {
 		return _umtx_op(&futex, op, (u_long)expectedValue, uaddr, uaddr2);
 	}
 
+	/** @brief Blocks until @p futex changes away from @p expectedValue or the timeout elapses, returns `true` if woken */
 	template<typename T>
 	inline bool WaitOnAddress(T& futex, typename RemoveAtomic<T>::type expectedValue, std::uint32_t timeoutMilliseconds)
 	{
@@ -197,18 +225,21 @@ namespace Death { namespace Threading { namespace Implementation {
 		}
 	}
 
+	/** @brief Wakes all threads waiting on the specified address */
 	template<typename T>
 	inline void WakeByAddressAll(T& futex)
 	{
 		_umtx_op(&futex, UMTX_OP_WAKE_PRIVATE, INT32_MAX, nullptr, nullptr);
 	}
 
+	/** @brief Wakes a single thread waiting on the specified address */
 	template<typename T>
 	inline void WakeByAddressSingle(T& futex)
 	{
 		_umtx_op(&futex, UMTX_OP_WAKE_PRIVATE, 1, nullptr, nullptr);
 	}
 
+	/** @brief Returns `true` if the platform supports wait-on-address blocking */
 	inline constexpr bool IsWaitOnAddressSupported()
 	{
 		return true;
@@ -216,18 +247,22 @@ namespace Death { namespace Threading { namespace Implementation {
 #elif (defined(__linux__) || defined(__linux)) && !defined(__LSB_VERSION__) && !defined(DEATH_TARGET_EMSCRIPTEN)
 #	define __DEATH_ALWAYS_USE_WAKEONADDRESS
 
+	/** @brief Timeout value representing an infinite wait */
 	constexpr std::uint32_t Infinite = ~0;
 
+	/** @brief Resolves the platform's wait-on-address entry points; must be called before first use */
 	inline void InitializeWaitOnAddress()
 	{
 	}
 
+	/** @brief Thin wrapper around the private `futex` syscall */
 	inline long FutexOp(int* addr, int op, int val, std::uintptr_t val2 = 0, int* addr2 = nullptr, int val3 = 0) noexcept
 	{
 		// We use __NR_futex because some libcs (like Android's bionic) don't provide SYS_futex
 		return syscall(__NR_futex, addr, op | FUTEX_PRIVATE_FLAG, val, val2, addr2, val3);
 	}
 
+	/** @brief Returns the 32-bit-aligned futex address for @p ptr, accounting for endianness */
 	template<typename T>
 	int* GetFutexAddress(T* ptr)
 	{
@@ -240,6 +275,7 @@ namespace Death { namespace Threading { namespace Implementation {
 		return intPtr;
 	}
 
+	/** @brief Blocks until @p futex changes away from @p expectedValue or the timeout elapses, returns `true` if woken */
 	template<typename T>
 	inline bool WaitOnAddress(T& futex, typename RemoveAtomic<T>::type expectedValue, std::uint32_t timeoutMilliseconds)
 	{
@@ -262,45 +298,54 @@ namespace Death { namespace Threading { namespace Implementation {
 		}
 	}
 
+	/** @brief Wakes all threads waiting on the specified address */
 	template<typename T>
 	inline void WakeByAddressAll(T& futex)
 	{
 		FutexOp(GetFutexAddress(&futex), FUTEX_WAKE, INT32_MAX);
 	}
 
+	/** @brief Wakes a single thread waiting on the specified address */
 	template<typename T>
 	inline void WakeByAddressSingle(T& futex)
 	{
 		FutexOp(GetFutexAddress(&futex), FUTEX_WAKE, 1);
 	}
 
+	/** @brief Returns `true` if the platform supports wait-on-address blocking */
 	inline constexpr bool IsWaitOnAddressSupported()
 	{
 		return true;
 	}
 #else
+	/** @brief Timeout value representing an infinite wait */
 	constexpr std::uint32_t Infinite = ~0;
 
+	/** @brief Resolves the platform's wait-on-address entry points; must be called before first use */
 	inline void InitializeWaitOnAddress()
 	{
 	}
 
+	/** @brief Blocks until @p futex changes away from @p expectedValue or the timeout elapses, returns `true` if woken (unsupported on this platform, always returns `false`) */
 	template<typename T>
 	inline bool WaitOnAddress(T& futex, typename RemoveAtomic<T>::type expectedValue, std::uint32_t timeoutMilliseconds)
 	{
 		return false;
 	}
 
+	/** @brief Wakes all threads waiting on the specified address (no-op on this platform) */
 	template<typename T>
 	inline void WakeByAddressAll(T& futex)
 	{
 	}
 
+	/** @brief Wakes a single thread waiting on the specified address (no-op on this platform) */
 	template<typename T>
 	inline void WakeByAddressSingle(T& futex)
 	{
 	}
 
+	/** @brief Returns `true` if the platform supports wait-on-address blocking */
 	inline constexpr bool IsWaitOnAddressSupported()
 	{
 		return false;

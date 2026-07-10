@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../Base/TimeStamp.h"
 #include "GL/GLVertexArrayObject.h"
 #include "GL/GLVertexFormat.h"
 
@@ -35,12 +34,18 @@ namespace nCine
 		struct VaoBinding
 		{
 			std::unique_ptr<GLVertexArrayObject> object;
+			// Value of the pool bind counter when this VAO was last bound, used for LRU eviction
+			// (kept before the large vertex format so the LRU scan stays within the first cache line)
+			std::uint64_t lastBindIndex = 0;
+			// Fingerprint of the format, so a scan rejects mismatches without a deep comparison
+			std::uint64_t fingerprint = 0;
 			GLVertexFormat format;
-			TimeStamp lastBindTime;
 		};
 #endif
 
 		SmallVector<VaoBinding, 0> vaoPool_;
+		// Monotonically increasing counter, incremented on every BindVao() call
+		std::uint64_t bindIndex_ = 0;
 
 		void InsertGLDebugMessage(const VaoBinding& binding);
 	};

@@ -1,4 +1,4 @@
-﻿#include "RemoteActor.h"
+#include "RemoteActor.h"
 
 #if defined(WITH_MULTIPLAYER)
 
@@ -16,11 +16,15 @@ namespace Jazz2::Actors::Multiplayer
 		// path the server sent (the only signal a RemoteActor has). Only the character matters here, not the morph.
 		PlayerType GetPlayerTypeFromMetadataPath(StringView path)
 		{
-			if (path == "Interactive/PlayerLori"_s) {
+			// _metadata->Path uses native separators (backslashes on Windows), so pull out the file name with the
+			// separator-aware helper instead of matching a hard-coded "Interactive/PlayerX" literal - that never
+			// matched on Windows and made every remote player fall back to Jazz's recolor scheme (wrong/default fur).
+			StringView fileName = fs::GetFileName(path);
+			if (fileName == "PlayerLori"_s) {
 				return PlayerType::Lori;
-			} else if (path == "Interactive/PlayerSpaz"_s) {
+			} else if (fileName == "PlayerSpaz"_s) {
 				return PlayerType::Spaz;
-			} else if (path == "Interactive/PlayerFrog"_s) {
+			} else if (fileName == "PlayerFrog"_s) {
 				return PlayerType::Frog;
 			} else {
 				return PlayerType::Jazz;
@@ -160,6 +164,9 @@ namespace Jazz2::Actors::Multiplayer
 		// Load indexed sprites when this remote player has a custom color, so they can be recolored at draw time
 		RequestMetadata(path, _furColor != 0);
 		SetAnimation(anim);
+		// Track the assigned animation so the first SyncAnimationWithServer() for the same state isn't skipped as
+		// "unchanged", which would otherwise leave the actor stuck in its spawn animation
+		_lastAnim = anim;
 		SetState((GetState() & ~RemotedFlags) | (state & RemotedFlags));
 
 		_renderer.Initialize(rendererType);

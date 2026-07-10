@@ -23,9 +23,13 @@ namespace nCine
 		char debugString[128];
 #endif
 
+		// The fingerprint rejects mismatches with a single comparison, the deep format
+		// comparison only runs on a fingerprint match to rule out hash collisions
+		const std::uint64_t fingerprint = vertexFormat.CalculateFingerprint();
+
 		bool vaoFound = false;
 		for (VaoBinding& binding : vaoPool_) {
-			if (binding.format == vertexFormat) {
+			if (binding.fingerprint == fingerprint && binding.format == vertexFormat) {
 				vaoFound = true;
 				const bool bindChanged = binding.object->Bind();
 				const GLuint iboHandle = vertexFormat.GetIbo() ? vertexFormat.GetIbo()->GetGLHandle() : 0;
@@ -39,7 +43,7 @@ namespace nCine
 					// The VAO was already bound but it is not known if the bound element array buffer changed in the meantime
 					GLBufferObject::BindHandle(GL_ELEMENT_ARRAY_BUFFER, iboHandle);
 				}
-				binding.lastBindTime = TimeStamp::now();
+				binding.lastBindIndex = ++bindIndex_;
 #if defined(NCINE_PROFILING)
 				RenderStatistics::AddVaoPoolBinding();
 #endif
@@ -64,11 +68,11 @@ namespace nCine
 #endif
 			} else {
 				// Find the least recently used VAO
-				TimeStamp time = vaoPool_[0].lastBindTime;
+				std::uint64_t lruBindIndex = vaoPool_[0].lastBindIndex;
 				for (std::uint32_t i = 1; i < vaoPool_.size(); i++) {
-					if (vaoPool_[i].lastBindTime < time) {
+					if (vaoPool_[i].lastBindIndex < lruBindIndex) {
 						index = i;
-						time = vaoPool_[i].lastBindTime;
+						lruBindIndex = vaoPool_[i].lastBindIndex;
 					}
 				}
 
@@ -87,8 +91,9 @@ namespace nCine
 			const GLuint oldIboHandle = vaoPool_[index].format.GetIbo() ? vaoPool_[index].format.GetIbo()->GetGLHandle() : 0;
 			GLBufferObject::SetBoundHandle(GL_ELEMENT_ARRAY_BUFFER, oldIboHandle);
 			vaoPool_[index].format = vertexFormat;
+			vaoPool_[index].fingerprint = fingerprint;
 			vaoPool_[index].format.Define();
-			vaoPool_[index].lastBindTime = TimeStamp::now();
+			vaoPool_[index].lastBindIndex = ++bindIndex_;
 #if defined(NCINE_PROFILING)
 			RenderStatistics::AddVaoPoolBinding();
 #endif

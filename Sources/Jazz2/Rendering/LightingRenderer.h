@@ -30,11 +30,20 @@ namespace Jazz2::Rendering
 		bool OnDraw(RenderQueue& renderQueue) override;
 
 	private:
+		// Render command with its per-light uniform caches resolved once at creation
+		struct LightCommand
+		{
+			std::unique_ptr<RenderCommand> Command;
+			GLUniformCache* TexRectUniform;
+			GLUniformCache* SpriteSizeUniform;
+			GLUniformCache* ColorUniform;
+		};
+
 		PlayerViewport* _owner;
-		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
+		SmallVector<LightCommand, 0> _renderCommands;
 		std::int32_t _renderCommandsCount;
 		SmallVector<LightEmitter, 0> _emittedLightsCache;
 
-		RenderCommand* RentRenderCommand();
+		LightCommand& RentRenderCommand();
 	};
 }

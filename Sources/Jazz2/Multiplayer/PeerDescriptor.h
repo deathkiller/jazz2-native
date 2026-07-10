@@ -98,6 +98,11 @@ namespace Jazz2::Multiplayer
 		/** @brief Last update of the player from client */
 		std::uint64_t LastUpdated;
 
+		/** @brief Start of the current inbound packet-rate window in milliseconds (server-side flood mitigation) */
+		std::uint64_t PacketRateWindowStart = 0;
+		/** @brief Number of packets received from this peer within the current rate window */
+		std::uint32_t PacketRateCount = 0;
+
 		/** @brief Elapsed frames when the player is idle */
 		float IdleElapsedFrames;
 		/** @brief Time remaining for join cooldown */

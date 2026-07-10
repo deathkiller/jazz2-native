@@ -74,21 +74,27 @@ namespace nCine
 			return 0;
 		}
 
+		// A single call can render less than requested without reaching the end, so keep
+		// reading until the buffer is full or the module has ended (returns 0 frames)
+		std::int16_t* dst = static_cast<std::int16_t*>(buffer);
+		std::int32_t totalFrames = 0;
+		std::int32_t framesRemaining = std::int32_t(bufferSize / (2 * sizeof(std::int16_t)));
+		while (framesRemaining > 0) {
 #if defined(WITH_OPENMPT_DYNAMIC)
-		std::size_t count = _openmpt_module_read_interleaved_stereo(
-			_module, _frequency,
-			bufferSize / (2 * sizeof(int16_t)), // Buffer size per channel
-			(int16_t*)buffer
-		);
+			std::size_t count = _openmpt_module_read_interleaved_stereo(
+				_module, _frequency, framesRemaining, dst + (totalFrames * 2));
 #else
-		std::size_t count = openmpt_module_read_interleaved_stereo(
-			_module, _frequency,
-			bufferSize / (2 * sizeof(std::int16_t)), // Buffer size per channel
-			(std::int16_t*)buffer
-		);
+			std::size_t count = openmpt_module_read_interleaved_stereo(
+				_module, _frequency, framesRemaining, dst + (totalFrames * 2));
 #endif
+			if (count == 0) {
+				break;
+			}
+			totalFrames += std::int32_t(count);
+			framesRemaining -= std::int32_t(count);
+		}
 		// Number of frames * channel count * size of sample
-		return std::int32_t(count) * 2 * sizeof(std::int16_t);
+		return totalFrames * 2 * sizeof(std::int16_t);
 	}
 
 	void AudioReaderMpt::rewind() const

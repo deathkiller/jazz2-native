@@ -130,6 +130,10 @@ namespace nCine
 #if defined(DEATH_DEBUG) && defined(NCINE_PROFILING)
 		std::uint32_t commandIndex = 0;
 #endif
+		// The camera is constant within a single queue draw, so its uniforms only need to be
+		// committed when the shader program changes from one command to the next
+		const GLShaderProgram* lastCommittedShader = nullptr;
+
 		// Rendering opaque nodes front to back
 		for (RenderCommand* opaqueRenderCommand : *opaques) {
 			TracyGpuZone("Opaque");
@@ -157,7 +161,11 @@ namespace nCine
 #if defined(NCINE_PROFILING)
 			RenderStatistics::GatherStatistics(*opaqueRenderCommand);
 #endif
-			opaqueRenderCommand->CommitCameraTransformation();
+			const GLShaderProgram* shaderProgram = opaqueRenderCommand->GetMaterial().GetShaderProgram();
+			if (shaderProgram != lastCommittedShader) {
+				opaqueRenderCommand->CommitCameraTransformation();
+				lastCommittedShader = shaderProgram;
+			}
 			opaqueRenderCommand->Issue();
 		}
 
@@ -192,7 +200,11 @@ namespace nCine
 #endif
 			GLBlending::SetBlendFunc(transparentRenderCommand->GetMaterial().GetSrcBlendingFactor(), transparentRenderCommand->GetMaterial().GetDestBlendingFactor(),
 				transparentRenderCommand->GetMaterial().GetSrcAlphaBlendingFactor(), transparentRenderCommand->GetMaterial().GetDestAlphaBlendingFactor());
-			transparentRenderCommand->CommitCameraTransformation();
+			const GLShaderProgram* shaderProgram = transparentRenderCommand->GetMaterial().GetShaderProgram();
+			if (shaderProgram != lastCommittedShader) {
+				transparentRenderCommand->CommitCameraTransformation();
+				lastCommittedShader = shaderProgram;
+			}
 			transparentRenderCommand->Issue();
 		}
 		// Depth mask has to be enabled again before exiting this method or glClear(GL_DEPTH_BUFFER_BIT) won't have any effect

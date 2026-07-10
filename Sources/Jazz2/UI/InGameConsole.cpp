@@ -9,6 +9,11 @@
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Input/IInputManager.h"
 
+#if defined(DEATH_TARGET_ANDROID)
+#	include "../../nCine/Backends/Android/AndroidApplication.h"
+#	include "../../nCine/Backends/Android/AndroidJniHelper.h"
+#endif
+
 #include <Containers/StringConcatenable.h>
 #include <Utf8.h>
 
@@ -26,14 +31,29 @@ namespace Jazz2::UI
 	static SmallVector<String, 0> _commandHistory;
 
 	InGameConsole::InGameConsole(LevelHandler* levelHandler)
-		: _levelHandler(levelHandler), _currentLine{}, _textCursor(0), _carretAnim(0.0f), _scrollPos(0), _isVisible(false)
+		: _levelHandler(levelHandler), _currentLine{}, _textCursor(0), _carretAnim(0.0f), _scrollPos(0), _isVisible(false),
+			_keyboardVisible(false)
+#if defined(DEATH_TARGET_ANDROID)
+			, _recalcVisibleBoundsTimeLeft(30.0f)
+#endif
 	{
 		PruneLogHistory();
 		_historyIndex = _commandHistory.size();
+
+#if defined(DEATH_TARGET_ANDROID)
+		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+		_initialVisibleSize.X = _currentVisibleBounds.W;
+		_initialVisibleSize.Y = _currentVisibleBounds.H;
+#endif
 	}
 
 	InGameConsole::~InGameConsole()
 	{
+		// Make sure the on-screen keyboard is not left open if the console is destroyed while visible
+		if (_keyboardVisible) {
+			theApplication().HideScreenKeyboard();
+			_keyboardVisible = false;
+		}
 	}
 
 	void InGameConsole::OnInitialized()
@@ -51,6 +71,16 @@ namespace Jazz2::UI
 		Canvas::OnUpdate(timeMult);
 
 		_carretAnim += timeMult;
+
+#if defined(DEATH_TARGET_ANDROID)
+		if (_isVisible && _keyboardVisible) {
+			_recalcVisibleBoundsTimeLeft -= timeMult;
+			if (_recalcVisibleBoundsTimeLeft <= 0.0f) {
+				_recalcVisibleBoundsTimeLeft = 60.0f;
+				_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+			}
+		}
+#endif
 
 		for (std::int32_t i = _logHistory.size() - 1; i >= 0; i--) {
 			auto& line = _logHistory[i];
@@ -138,6 +168,52 @@ namespace Jazz2::UI
 			}
 
 			line.Message.Draw(this, Rectf(historyLinePos.X, historyLinePos.Y, width, 400.0f), FontLayer + 100, charOffset);
+		}
+
+		// On-screen keyboard support for touch devices: a tappable hint in the top-left corner toggles the software
+		// keyboard, and while it is shown the current input is mirrored near the top of the screen so it is not hidden
+		// behind the keyboard (mirrors how text input is handled in the main menu)
+		if (_isVisible && theApplication().CanShowScreenKeyboard()) {
+			bool keyboardCoversInput = _keyboardVisible;
+#if defined(DEATH_TARGET_ANDROID)
+			// On Android the keyboard state can't be queried directly, so detect it from the shrunk visible bounds
+			keyboardCoversInput = (_keyboardVisible &&
+				(_currentVisibleBounds.W < _initialVisibleSize.X || _currentVisibleBounds.H < _initialVisibleSize.Y) &&
+				(_currentVisibleBounds.Y * ViewSize.Y / _initialVisibleSize.Y < 32.0f));
+#endif
+
+			if (keyboardCoversInput) {
+				// Dark overlay over the console with the input line redrawn near the top, above the keyboard
+				DrawSolid(Vector2f(0.0f, 0.0f), KeyboardLayer, ViewSize.As<float>(), Colorf(0.0f, 0.0f, 0.0f, 0.6f));
+
+				Colorf color = (_currentLine[0] == '/' ? Colorf(0.38f, 0.48f, 0.69f, 0.5f) : Colorf(0.62f, 0.44f, 0.34f, 0.5f));
+				float topLineY = (ViewSize.Y >= 300 ? 34.0f : 22.0f);
+
+				std::int32_t charOffset = 0, charOffsetShadow = 0;
+				_smallFont->DrawString(this, ">"_s, charOffsetShadow, 120.0f - 16.0f + 1.0f, topLineY + 2.0f, KeyboardLayer + 10,
+					Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 1.0f, 0.0f, 0.0f, 0.0f);
+				_smallFont->DrawString(this, ">"_s, charOffset, 120.0f - 16.0f, topLineY, KeyboardLayer + 12,
+					Alignment::Left, color, 1.0f, 0.0f, 0.0f, 0.0f);
+
+				StringView currentLine = _currentLine;
+				_smallFont->DrawString(this, currentLine, charOffsetShadow, 120.0f + 1.0f, topLineY + 2.0f, KeyboardLayer + 10,
+					Alignment::Left, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 1.0f, 0.0f, 0.0f, 0.0f);
+				_smallFont->DrawString(this, currentLine, charOffset, 120.0f, topLineY, KeyboardLayer + 12,
+					Alignment::Left, color, 1.0f, 0.0f, 0.0f, 0.0f);
+
+				Vector2f textToCursorSize = _smallFont->MeasureString(StringView{_currentLine, _textCursor}, 1.0f);
+				DrawSolid(Vector2f(120.0f + textToCursorSize.X + 1.0f, topLineY - 1.0f), KeyboardLayer + 14, Vector2f(1.0f, 14.0f),
+					Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
+			}
+
+			// TRANSLATORS: Tappable hint in the top-left corner of the in-game console to toggle the on-screen keyboard
+			StringView keyboardLabel = _("Keyboard");
+			Vector2f labelSize = _smallFont->MeasureString(keyboardLabel, 0.8f);
+			DrawSolid(Vector2f(10.0f, 11.0f), KeyboardLayer + 20, Vector2f(labelSize.X + 12.0f, 18.0f),
+				Colorf(0.0f, 0.0f, 0.0f, _keyboardVisible ? 0.5f : 0.3f));
+			std::int32_t hintCharOffset = 0;
+			_smallFont->DrawString(this, keyboardLabel, hintCharOffset, 16.0f, 20.0f, KeyboardLayer + 22,
+				Alignment::Left, _keyboardVisible ? Colorf(0.62f, 0.44f, 0.34f, 0.5f) : Colorf(0.45f, 0.45f, 0.45f, 0.5f), 0.8f, 0.0f, 0.0f, 0.0f);
 		}
 
 		return true;
@@ -287,6 +363,25 @@ namespace Jazz2::UI
 		}
 	}
 
+	void InGameConsole::OnTouchEvent(const TouchEvent& event, Vector2i viewSize)
+	{
+		if (!_isVisible || !theApplication().CanShowScreenKeyboard()) {
+			return;
+		}
+
+		if (event.type == TouchEventType::Down) {
+			std::int32_t pointerIndex = event.findPointerIndex(event.actionIndex);
+			if (pointerIndex != -1) {
+				float x = event.pointers[pointerIndex].x;
+				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
+				// The top-left corner toggles the on-screen keyboard (matching the hint drawn in OnDraw)
+				if (x < 0.2f && y < 80.0f) {
+					ToggleScreenKeyboard();
+				}
+			}
+		}
+	}
+
 	void InGameConsole::Clear()
 	{
 		_logHistory.clear();
@@ -311,13 +406,56 @@ namespace Jazz2::UI
 		_carretAnim = 0.0f;
 
 		AnimTime = 0.0f;
+
+#if defined(DEATH_TARGET_ANDROID)
+		// On touch-only devices the on-screen keyboard is the only way to type, so show it right away. On desktop
+		// the keyboard stays hidden until the user taps the hint, so it never pops up over a physical keyboard.
+		if (!_keyboardVisible && theApplication().CanShowScreenKeyboard()) {
+			theApplication().ShowScreenKeyboard();
+			_keyboardVisible = true;
+			RecalcLayoutForScreenKeyboard();
+		}
+#endif
 	}
 
 	void InGameConsole::Hide()
 	{
 		_isVisible = false;
 
+		if (_keyboardVisible) {
+			theApplication().HideScreenKeyboard();
+			_keyboardVisible = false;
+		}
+
 		AnimTime = 0.0f;
+	}
+
+	void InGameConsole::ToggleScreenKeyboard()
+	{
+		if (!theApplication().CanShowScreenKeyboard()) {
+			return;
+		}
+
+		if (_keyboardVisible) {
+			theApplication().HideScreenKeyboard();
+			_keyboardVisible = false;
+		} else {
+			theApplication().ShowScreenKeyboard();
+			_keyboardVisible = true;
+		}
+
+		RecalcLayoutForScreenKeyboard();
+	}
+
+	void InGameConsole::RecalcLayoutForScreenKeyboard()
+	{
+#if defined(DEATH_TARGET_ANDROID)
+		_currentVisibleBounds = Backends::AndroidJniWrap_Activity::getVisibleBounds();
+
+		if (_recalcVisibleBoundsTimeLeft > 30.0f) {
+			_recalcVisibleBoundsTimeLeft = 30.0f;
+		}
+#endif
 	}
 
 	void InGameConsole::WriteLine(MessageLevel level, String line)

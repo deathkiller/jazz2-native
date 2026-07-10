@@ -347,6 +347,7 @@ namespace Death { namespace Trace {
 			BoundedSPSCQueueImpl(BoundedSPSCQueueImpl const&) = delete;
 			BoundedSPSCQueueImpl& operator=(BoundedSPSCQueueImpl const&) = delete;
 
+			/** @brief Reserves space for @p n bytes and returns a pointer to write to, or `nullptr` if the queue is full */
 			std::uint8_t* prepareWrite(T n) noexcept {
 				if ((_capacity - static_cast<T>(_writerPos - _cachedReaderPos)) < n) {
 					// Not enough space, we need to load reader and re-check
@@ -360,10 +361,12 @@ namespace Death { namespace Trace {
 				return &_storage[_writerPos & _capacityMask];
 			}
 
+			/** @brief Advances the writer position by @p nbytes after a successful @ref prepareWrite() */
 			void finishWrite(T nbytes) noexcept {
 				_writerPos += nbytes;
 			}
 
+			/** @brief Publishes all finished writes so the reader can observe them */
 			void commitWrite() noexcept {
 				// Set the atomic flag, so the reader can see write
 				_atomicWriterPos.store(_writerPos, std::memory_order_release);
@@ -377,11 +380,13 @@ namespace Death { namespace Trace {
 #	endif
 			}
 
+			/** @brief Convenience helper that calls @ref finishWrite() followed by @ref commitWrite() */
 			void finishAndCommitWrite(T nbytes) noexcept {
 				finishWrite(nbytes);
 				commitWrite();
 			}
 
+			/** @brief Returns a pointer to the next bytes to read, or `nullptr` if the queue is empty */
 			const std::uint8_t* prepareRead() noexcept {
 				if (empty()) {
 					return nullptr;
@@ -390,10 +395,12 @@ namespace Death { namespace Trace {
 				return &_storage[_readerPos & _capacityMask];
 			}
 
+			/** @brief Advances the reader position by @p nbytes after a successful @ref prepareRead() */
 			void finishRead(T nbytes) noexcept {
 				_readerPos += nbytes;
 			}
 
+			/** @brief Publishes finished reads so the writer can reuse the freed space */
 			void commitRead() noexcept {
 				if ((static_cast<T>(_readerPos - _atomicReaderPos.load(std::memory_order_relaxed)) >= _bytesPerBatch) ||
 					(_writerPosCache == _readerPos)) {
@@ -419,10 +426,12 @@ namespace Death { namespace Trace {
 				return false;
 			}
 
+			/** @brief Returns the capacity of the queue in bytes */
 			T capacity() const noexcept {
 				return static_cast<T>(_capacity);
 			}
 
+			/** @brief Returns `true` if the underlying storage uses huge pages */
 			bool hugePagesEnabled() const noexcept {
 				return _hugePagesEnabled;
 			}
@@ -570,13 +579,18 @@ namespace Death { namespace Trace {
 			};
 
 		public:
+			/** @brief Result of a read attempt, describing the read position and any buffer switch that occurred */
 			struct ReadResult
 			{
 				explicit ReadResult(const std::uint8_t* readPosition) : readPos(readPosition) {}
 
+				/** @brief Pointer to the next bytes to read, or `nullptr` if nothing is available */
 				const std::uint8_t* readPos;
+				/** @brief Capacity of the previous buffer in bytes if a new buffer was switched to */
 				std::size_t previousCapacity{0};
+				/** @brief Capacity of the current buffer in bytes if a new buffer was switched to */
 				std::size_t newCapacity{0};
+				/** @brief `true` if the consumer switched to a newly allocated buffer during this read */
 				bool allocation{false};
 			};
 
@@ -598,6 +612,7 @@ namespace Death { namespace Trace {
 			UnboundedSPSCQueue(UnboundedSPSCQueue const&) = delete;
 			UnboundedSPSCQueue& operator=(UnboundedSPSCQueue const&) = delete;
 
+			/** @brief Reserves space for @p nbytes, allocating a larger buffer if the current one is full, and returns a pointer to write to */
 			std::uint8_t* prepareWrite(std::size_t nbytes) noexcept {
 				// Try to reserve the bounded queue
 				std::uint8_t* writePos = _producer->boundedQueue.prepareWrite(nbytes);
@@ -609,23 +624,28 @@ namespace Death { namespace Trace {
 				return handleFullQueue(nbytes);
 			}
 
+			/** @brief Advances the writer position by @p nbytes after a successful @ref prepareWrite() */
 			void finishWrite(std::size_t nbytes) noexcept {
 				_producer->boundedQueue.finishWrite(nbytes);
 			}
 
+			/** @brief Publishes all finished writes so the reader can observe them */
 			void commitWrite() noexcept {
 				_producer->boundedQueue.commitWrite();
 			}
 
+			/** @brief Convenience helper that calls @ref finishWrite() followed by @ref commitWrite() */
 			void finishAndCommitWrite(std::size_t nbytes) noexcept {
 				finishWrite(nbytes);
 				commitWrite();
 			}
 
+			/** @brief Returns the capacity of the current producer buffer in bytes */
 			std::size_t producerCapacity() const noexcept {
 				return _producer->boundedQueue.capacity();
 			}
 
+			/** @brief Requests the producer buffer to shrink towards the specified target capacity */
 			void shrink(std::size_t capacity) noexcept {
 				if (capacity > (_producer->boundedQueue.capacity() >> 1)) {
 					// We should only shrink if the new capacity is less or at least equal to the previous_power_of_2
@@ -643,6 +663,7 @@ namespace Death { namespace Trace {
 				_producer = nextNode;
 			}
 
+			/** @brief Returns a @ref ReadResult describing the next bytes to read, transparently switching to the next buffer when needed */
 			ReadResult prepareRead() noexcept {
 				ReadResult readResult{_consumer->boundedQueue.prepareRead()};
 
@@ -661,18 +682,22 @@ namespace Death { namespace Trace {
 				return readResult;
 			}
 
+			/** @brief Advances the reader position by @p nbytes after a successful @ref prepareRead() */
 			void finishRead(std::size_t nbytes) noexcept {
 				_consumer->boundedQueue.finishRead(nbytes);
 			}
 
+			/** @brief Publishes finished reads so the writer can reuse the freed space */
 			void commitRead() noexcept {
 				_consumer->boundedQueue.commitRead();
 			}
 
+			/** @brief Returns the capacity of the current consumer buffer in bytes */
 			std::size_t capacity() const noexcept {
 				return _consumer->boundedQueue.capacity();
 			}
 
+			/** @brief Returns `true` if the queue is empty and no further buffers are pending */
 			bool empty() const noexcept {
 				return _consumer->boundedQueue.empty() && (_consumer->next.load(std::memory_order_relaxed) == nullptr);
 			}

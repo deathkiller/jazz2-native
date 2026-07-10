@@ -910,6 +910,9 @@ namespace Jazz2
 		if (_pauseMenu != nullptr) {
 			_pauseMenu->OnTouchEvent(event);
 		} else {
+			if (_console->IsVisible()) {
+				_console->OnTouchEvent(event, _viewSize);
+			}
 			_hud->OnTouchEvent(event, _overrideActions, _overrideMovement);
 		}
 	}

@@ -107,16 +107,16 @@ namespace nCine
 			}
 
 		private:
-			bool enabled_;
 			const GLBufferObject* vbo_;
+			const GLvoid* pointer_;
 			std::uint32_t index_;
 			GLint size_;
 			GLenum type_;
-			GLboolean normalized_;
 			GLsizei stride_;
-			const GLvoid* pointer_;
 			/** @brief Used to simulate the missing `glDrawElementsBaseVertex()` on OpenGL ES 3.0 */
 			std::uint32_t baseOffset_;
+			bool enabled_;
+			GLboolean normalized_;
 		};
 
 		GLVertexFormat();
@@ -140,6 +140,14 @@ namespace nCine
 		void Define();
 		/** @brief Disables all attributes and clears the index buffer */
 		void Reset();
+
+		/**
+		 * @brief Calculates a hash of the format for fast inequality checks
+		 *
+		 * Formats that compare equal have equal fingerprints, so a fingerprint mismatch proves
+		 * inequality, while a match still has to be confirmed with `operator==()`.
+		 */
+		std::uint64_t CalculateFingerprint() const;
 
 		/** @brief Returns the attribute at the given index */
 		inline Attribute& operator[](std::uint32_t index) {

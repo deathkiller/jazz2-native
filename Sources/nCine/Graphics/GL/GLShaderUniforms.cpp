@@ -8,7 +8,7 @@
 namespace nCine
 {
 	GLShaderUniforms::GLShaderUniforms()
-		: shaderProgram_(nullptr)
+		: shaderProgram_(nullptr), maybeDirty_(true)
 	{
 	}
 
@@ -31,6 +31,7 @@ namespace nCine
 		shaderProgram_ = shaderProgram;
 		shaderProgram_->ProcessDeferredQueries();
 		uniformCaches_.clear();
+		maybeDirty_ = true;
 
 		if (shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
 			ImportUniforms(includeOnly, exclude);
@@ -45,6 +46,7 @@ namespace nCine
 			return;
 		}
 
+		maybeDirty_ = true;
 		std::uint32_t offset = 0;
 		for (GLUniformCache& uniformCache : uniformCaches_) {
 			uniformCache.SetDataPointer(dataPointer + offset);
@@ -58,6 +60,7 @@ namespace nCine
 			return;
 		}
 
+		maybeDirty_ = isDirty;
 		for (auto& uniform : uniformCaches_) {
 			uniform.SetDirty(isDirty);
 		}
@@ -70,6 +73,10 @@ namespace nCine
 
 		if (shaderProgram_ != nullptr) {
 			uniformCache = uniformCaches_.find(String::nullTerminatedView(name));
+			// The caller may write to the returned cache, so the commit early-out has to be pessimistic
+			if (uniformCache != nullptr) {
+				maybeDirty_ = true;
+			}
 		} else {
 			LOGE("Cannot find uniform \"{}\", no shader program associated", name);
 		}
@@ -79,11 +86,12 @@ namespace nCine
 	void GLShaderUniforms::CommitUniforms()
 	{
 		if (shaderProgram_ != nullptr) {
-			if (shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
+			if (maybeDirty_ && shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
 				shaderProgram_->Use();
 				for (auto& uniform : uniformCaches_) {
 					uniform.CommitValue();
 				}
+				maybeDirty_ = false;
 			}
 		} else {
 			LOGE("No shader program associated");

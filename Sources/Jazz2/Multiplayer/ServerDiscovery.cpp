@@ -824,7 +824,7 @@ namespace Jazz2::Multiplayer
 				_this->DownloadPublicServerList(observer);
 			}
 
-			ServerDescription discoveredServer;
+			ServerDescription discoveredServer{};
 			if (_this->ProcessLocalDiscoveryResponses(socket, discoveredServer, 0)) {
 				observer->OnServerFound(std::move(discoveredServer));
 			} else {

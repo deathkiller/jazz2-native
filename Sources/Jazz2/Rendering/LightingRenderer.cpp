@@ -25,28 +25,29 @@ namespace Jazz2::Rendering
 		}
 
 		for (auto& light : _emittedLightsCache) {
-			auto command = RentRenderCommand();
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(light.Pos.X, light.Pos.Y, light.RadiusNear / light.RadiusFar, 0.0f);
-			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(light.RadiusFar * 2.0f, light.RadiusFar * 2.0f);
-			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(light.Intensity, light.Brightness, 0.0f, 0.0f);
-			command->SetTransformation(Matrix4x4f::Translation(light.Pos.X, light.Pos.Y, 0));
+			LightCommand& lightCommand = RentRenderCommand();
+			lightCommand.TexRectUniform->SetFloatValue(light.Pos.X, light.Pos.Y, light.RadiusNear / light.RadiusFar, 0.0f);
+			lightCommand.SpriteSizeUniform->SetFloatValue(light.RadiusFar * 2.0f, light.RadiusFar * 2.0f);
+			lightCommand.ColorUniform->SetFloatValue(light.Intensity, light.Brightness, 0.0f, 0.0f);
+			lightCommand.Command->SetTransformation(Matrix4x4f::Translation(light.Pos.X, light.Pos.Y, 0));
 
-			renderQueue.AddCommand(command);
+			renderQueue.AddCommand(lightCommand.Command.get());
 		}
 
 		return true;
 	}
 
-	RenderCommand* LightingRenderer::RentRenderCommand()
+	LightingRenderer::LightCommand& LightingRenderer::RentRenderCommand()
 	{
 		if (_renderCommandsCount < _renderCommands.size()) {
-			RenderCommand* command = _renderCommands[_renderCommandsCount].get();
+			LightCommand& lightCommand = _renderCommands[_renderCommandsCount];
 			_renderCommandsCount++;
-			return command;
+			return lightCommand;
 		} else {
-			std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::Lighting));
+			LightCommand& lightCommand = _renderCommands.emplace_back();
+			lightCommand.Command = std::make_unique<RenderCommand>(RenderCommand::Type::Lighting);
 			_renderCommandsCount++;
+			RenderCommand* command = lightCommand.Command.get();
 			command->GetMaterial().SetShader(_owner->_levelHandler->_lightingShader);
 			command->GetMaterial().SetBlendingEnabled(true);
 			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
@@ -57,7 +58,13 @@ namespace Jazz2::Rendering
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
-			return command.get();
+
+			// The uniform caches stay valid for the command's lifetime, as its shader never changes again
+			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+			lightCommand.TexRectUniform = instanceBlock->GetUniform(Material::TexRectUniformName);
+			lightCommand.SpriteSizeUniform = instanceBlock->GetUniform(Material::SpriteSizeUniformName);
+			lightCommand.ColorUniform = instanceBlock->GetUniform(Material::ColorUniformName);
+			return lightCommand;
 		}
 	}
 }

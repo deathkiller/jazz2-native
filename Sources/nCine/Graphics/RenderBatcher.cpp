@@ -134,7 +134,7 @@ namespace nCine
 		batchCommand = RenderResources::GetRenderCommandPool().RetrieveOrAdd(batchedShader, commandAdded);
 
 		// Retrieving the original block instance size without the uniform buffer offset alignment
-		const GLUniformBlockCache* singleInstanceBlock = (*start)->GetMaterial().UniformBlock(Material::InstanceBlockName);
+		const GLUniformBlockCache* singleInstanceBlock = (*start)->GetInstanceBlock();
 		const std::uint32_t singleInstanceBlockSizePacked = singleInstanceBlock->GetSize() - singleInstanceBlock->GetAlignAmount(); // remove the uniform buffer offset alignment
 		const std::uint32_t singleInstanceBlockSize = singleInstanceBlockSizePacked + (16 - singleInstanceBlockSizePacked % 16) % 16; // but add the std140 vec4 layout alignment
 
@@ -147,14 +147,14 @@ namespace nCine
 		const std::uint32_t nonBlockUniformsSize = batchCommand->GetMaterial().GetShaderProgram()->GetUniformsSize();
 		// Determine how much memory is needed by uniform blocks that are not for instances
 		std::uint32_t nonInstancesBlocksSize = 0;
-		const GLShaderUniformBlocks::UniformHashMapType allUniformBlocks = refCommand->GetMaterial().GetAllUniformBlocks();
+		const GLShaderUniformBlocks::UniformHashMapType& allUniformBlocks = refCommand->GetMaterial().GetAllUniformBlocks();
 		for (const GLUniformBlockCache& uniformBlockCache : allUniformBlocks) {
-			const char* uniformBlockName = uniformBlockCache.uniformBlock()->GetName();
-			if (strcmp(uniformBlockName, Material::InstanceBlockName) == 0) {
+			// The instance block was already resolved, comparing addresses avoids a string comparison
+			if (&uniformBlockCache == singleInstanceBlock) {
 				continue;
 			}
 
-			GLUniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockName);
+			GLUniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockCache.uniformBlock()->GetName());
 			DEATH_ASSERT(batchBlock);
 			if (batchBlock) {
 				nonInstancesBlocksSize += uniformBlockCache.GetSize() - uniformBlockCache.GetAlignAmount();
@@ -184,19 +184,18 @@ namespace nCine
 		batchCommand->GetMaterial().SetUniformsDataPointer(AcquireMemory(nonBlockUniformsSize + nonInstancesBlocksSize + instancesBlockSize));
 		// Copying data for non-instances uniform blocks from the first command in the batch
 		for (const GLUniformBlockCache& uniformBlockCache : allUniformBlocks) {
-			const char* uniformBlockName = uniformBlockCache.uniformBlock()->GetName();
-			if (strcmp(uniformBlockName, Material::InstanceBlockName) == 0) {
+			if (&uniformBlockCache == singleInstanceBlock) {
 				continue;
 			}
 
-			GLUniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockName);
+			GLUniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockCache.uniformBlock()->GetName());
 			const bool dataCopied = batchBlock->CopyData(uniformBlockCache.GetDataPointer());
 			DEATH_ASSERT(dataCopied);
 			batchBlock->SetUsedSize(uniformBlockCache.usedSize());
 		}
 
 		// Setting sampler uniforms for GL_TEXTURE* units
-		const GLShaderUniforms::UniformHashMapType allUniforms = refCommand->GetMaterial().GetAllUniforms();
+		const GLShaderUniforms::UniformHashMapType& allUniforms = refCommand->GetMaterial().GetAllUniforms();
 		for (const GLUniformCache& uniformCache : allUniforms) {
 			if (uniformCache.GetUniform()->GetType() == GL_SAMPLER_2D) {
 				GLUniformCache* batchUniformCache = batchCommand->GetMaterial().Uniform(uniformCache.GetUniform()->GetName());
@@ -278,7 +277,7 @@ namespace nCine
 			RenderCommand* command = *it;
 			command->CommitNodeTransformation();
 
-			const GLUniformBlockCache* singleInstanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+			const GLUniformBlockCache* singleInstanceBlock = command->GetInstanceBlock();
 			const bool dataCopied = instancesBlock->CopyData(instancesBlockOffset, singleInstanceBlock->GetDataPointer(), singleInstanceBlockSize);
 			DEATH_ASSERT(dataCopied);
 			instancesBlockOffset += singleInstanceBlockSize;

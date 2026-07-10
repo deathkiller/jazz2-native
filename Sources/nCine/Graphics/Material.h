@@ -145,11 +145,11 @@ namespace nCine
 		}
 
 		/** @brief Wrapper around `GLShaderUniforms::GetAllUniforms()` */
-		inline const GLShaderUniforms::UniformHashMapType GetAllUniforms() const {
+		inline const GLShaderUniforms::UniformHashMapType& GetAllUniforms() const {
 			return shaderUniforms_.GetAllUniforms();
 		}
 		/** @brief Wrapper around `GLShaderUniformBlocks::GetAllUniformBlocks()` */
-		inline const GLShaderUniformBlocks::UniformHashMapType GetAllUniformBlocks() const {
+		inline const GLShaderUniformBlocks::UniformHashMapType& GetAllUniformBlocks() const {
 			return shaderUniformBlocks_.GetAllUniformBlocks();
 		}
 
@@ -170,11 +170,19 @@ namespace nCine
 
 	private:
 		bool isBlendingEnabled_;
+		// Whether the cached sort key has to be recomputed
+		bool sortKeyDirty_;
+		// Number of texture units in use, i.e. the highest unit with a texture plus one
+		std::uint8_t usedTextureUnits_;
 		GLenum srcBlendingFactor_;
 		GLenum destBlendingFactor_;
 		GLenum srcAlphaBlendingFactor_;
 		GLenum destAlphaBlendingFactor_;
-
+		// Cached result of GetSortKey(), recomputed only when the hashed state changes
+		std::uint32_t sortKey_;
+		// Incremented every time SetShaderProgram() rebuilds the uniform caches, so
+		// that pointers into them can be cached and safely invalidated by observers
+		std::uint32_t shaderChangeCounter_;
 		ShaderProgramType shaderProgramType_;
 		GLShaderProgram* shaderProgram_;
 		GLShaderUniforms shaderUniforms_;
@@ -187,6 +195,8 @@ namespace nCine
 		std::unique_ptr<GLubyte[]> uniformsHostBuffer_;
 
 		void Bind();
+		// Maintains the used texture unit count after a texture change on the specified unit
+		void UpdateUsedTextureUnits(std::uint32_t unit, bool textureSet);
 		/** @brief Wrapper around `GLShaderUniforms::CommitUniforms()` */
 		inline void CommitUniforms() {
 			shaderUniforms_.CommitUniforms();

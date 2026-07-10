@@ -208,7 +208,7 @@ namespace Jazz2::Multiplayer
 		NetworkState _state;
 		std::uint32_t _clientData;
 		INetworkHandler* _handler;
-		Spinlock _lock;
+		mutable Spinlock _lock;
 
 #if defined(WITH_WEBSOCKET) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		/** @brief Queued event from WebSocket callbacks to the main processing thread */

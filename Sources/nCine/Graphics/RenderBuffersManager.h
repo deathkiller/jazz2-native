@@ -46,10 +46,12 @@ namespace nCine
 			GLenum mapFlags;
 			/** @brief Buffer usage hint */
 			GLenum usageFlags;
-			/** @brief Maximum size of a single buffer object in bytes */
+			/** @brief Maximum size of a single buffer object in bytes (one ring section with persistent storage) */
 			std::uint32_t maxSize;
 			/** @brief Required alignment in bytes for sub-allocations */
 			GLuint alignment;
+			/** @brief Whether the buffer uses persistently mapped immutable storage with a section ring */
+			bool persistent;
 		};
 
 		/** @brief Result of a memory request, locating a sub-range within a buffer object */
@@ -68,7 +70,8 @@ namespace nCine
 			GLubyte* mapBase;
 		};
 
-		RenderBuffersManager(bool useBufferMapping, std::uint32_t vboMaxSize, std::uint32_t iboMaxSize);
+		RenderBuffersManager(bool useBufferMapping, bool useBufferStorage, std::uint32_t vboMaxSize, std::uint32_t iboMaxSize);
+		~RenderBuffersManager();
 
 		/** @brief Returns the specifications for a buffer of the specified type */
 		inline const BufferSpecifications& Specs(BufferTypes type) const {
@@ -89,18 +92,29 @@ namespace nCine
 		struct ManagedBuffer
 		{
 			ManagedBuffer()
-				: type(BufferTypes::Array), size(0), freeSpace(0), object(nullptr), mapBase(nullptr), hostBuffer(nullptr) {}
+				: type(BufferTypes::Array), size(0), freeSpace(0), sectionOffset(0), object(nullptr), mapBase(nullptr), hostBuffer(nullptr) {}
 
 			BufferTypes type;
 			std::unique_ptr<GLBufferObject> object;
 			std::uint32_t size;
 			std::uint32_t freeSpace;
+			// Byte offset of the current ring section, always zero without persistent storage
+			std::uint32_t sectionOffset;
 			GLubyte* mapBase;
 			std::unique_ptr<GLubyte[]> hostBuffer;
 		};
 #endif
 
+		// Number of ring sections that persistently mapped buffers are divided into
+		static constexpr std::uint32_t NumPersistentSections = 3;
+
 		SmallVector<ManagedBuffer, 0> buffers_;
+		// Whether the common buffers use persistently mapped immutable storage with a section ring
+		bool usePersistentMapping_;
+		// Current section of the persistent buffer ring
+		std::uint32_t currentSection_;
+		// Fences protecting each ring section from being overwritten while the GPU still reads it
+		GLsync sectionFences_[NumPersistentSections];
 
 		void FlushUnmap();
 		void Remap();

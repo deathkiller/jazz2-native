@@ -5,6 +5,11 @@
 
 #include "AudioBuffer.h"
 #include "IAudioLoader.h"
+#if defined(WITH_AUDIO)
+#	include "ALDebug.h"
+#	include "AudioBufferPlayer.h"
+#	include "../ServiceLocator.h"
+#endif
 #include "../../Main.h"
 
 #include <Containers/String.h>
@@ -80,7 +85,25 @@ namespace nCine
 	{
 #if defined(WITH_AUDIO)
 		// Moved out objects have their buffer id set to zero
+		if (bufferId_ != 0) {
+			// Stop any player that still uses this buffer, otherwise the buffer stays attached to its
+			// source, `alDeleteBuffers()` fails with AL_INVALID_OPERATION and the buffer leaks. This
+			// also clears the players' pointer to this buffer, which is dangling from now on.
+			IAudioDevice& device = theServiceLocator().GetAudioDevice();
+			// Iterating backwards because a stopped player unregisters itself, erasing it from the device
+			for (std::uint32_t i = device.numPlayers(); i > 0; i--) {
+				IAudioPlayer* player = device.player(i - 1);
+				if (player != nullptr && player->type() == AudioBufferPlayer::sType()) {
+					AudioBufferPlayer* bufferPlayer = static_cast<AudioBufferPlayer*>(player);
+					if (bufferPlayer->audioBuffer() == this) {
+						bufferPlayer->setAudioBuffer(nullptr);
+					}
+				}
+			}
+		}
+
 		alDeleteBuffers(1, &bufferId_);
+		AL_LOG_ERRORS();
 #endif
 	}
 
@@ -203,13 +226,14 @@ namespace nCine
 		frequency_ = audioLoader.frequency();
 
 		// Buffer size calculated as samples * channels * bytes per samples
-		const unsigned long int bufferSize = audioLoader.bufferSize();
+		const std::int32_t bufferSize = std::int32_t(audioLoader.bufferSize());
 		std::unique_ptr<unsigned char[]> buffer = std::make_unique<unsigned char[]>(bufferSize);
 
 		std::unique_ptr<IAudioReader> audioReader = audioLoader.createReader();
-		audioReader->read(buffer.get(), bufferSize);
+		// The decoder can produce less data than the loader promised, upload only what was actually read
+		const std::int32_t bytesRead = audioReader->read(buffer.get(), bufferSize);
 
-		return loadFromSamples(buffer.get(), bufferSize);
+		return loadFromSamples(buffer.get(), bytesRead);
 #else
 		return false;
 #endif

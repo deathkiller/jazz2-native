@@ -26,6 +26,7 @@ namespace Death { namespace Threading {
 	class Event
 	{
 	public:
+		/** @brief Creates the event, optionally starting in the signaled state */
 		explicit Event(bool isSignaled = false) noexcept
 			: _isSignaled(isSignaled ? 1 : 0)
 		{

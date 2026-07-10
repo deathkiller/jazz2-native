@@ -52,7 +52,7 @@ namespace nCine
 		/** @brief Returns the uniform block cache with the specified name, or `nullptr` if not found */
 		GLUniformBlockCache* GetUniformBlock(const char* name);
 		/** @brief Returns the hashmap of all managed uniform block caches */
-		inline const UniformHashMapType GetAllUniformBlocks() const {
+		inline const UniformHashMapType& GetAllUniformBlocks() const {
 			return uniformBlockCaches_;
 		}
 		/** @brief Copies the managed blocks into a uniform buffer acquired from the buffers manager */

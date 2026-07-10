@@ -9,7 +9,9 @@
 namespace nCine
 {
 	RenderCommand::RenderCommand(Type type)
-		: materialSortKey_(0), layer_(0), numInstances_(0), batchSize_(0), transformationCommitted_(false), modelMatrix_(Matrix4x4f::Identity)
+		: materialSortKey_(0), modelMatrixUniform_(nullptr), instanceBlock_(nullptr), cachedShaderChangeCounter_(std::uint32_t(-1)),
+			layer_(0), numInstances_(0), batchSize_(0), transformationCommitted_(false), modelMatrixUniformInBlock_(false),
+			modelMatrix_(Matrix4x4f::Identity)
 #if defined(NCINE_PROFILING)
 			, type_(type)
 #endif
@@ -69,6 +71,31 @@ namespace nCine
 		transformationCommitted_ = false;
 	}
 
+	void RenderCommand::RefreshCachedUniforms()
+	{
+		// The name-based lookups only have to run again after `Material::SetShaderProgram()`,
+		// the resulting pointers stay valid because the caches are only rebuilt there
+		if (cachedShaderChangeCounter_ == material_.shaderChangeCounter_) {
+			return;
+		}
+
+		instanceBlock_ = material_.UniformBlock(Material::InstanceBlockName);
+		modelMatrixUniform_ = (instanceBlock_ != nullptr
+			? instanceBlock_->GetUniform(Material::ModelMatrixUniformName)
+			: material_.Uniform(Material::ModelMatrixUniformName));
+		modelMatrixUniformInBlock_ = (instanceBlock_ != nullptr);
+		cachedShaderChangeCounter_ = material_.shaderChangeCounter_;
+	}
+
+	GLUniformBlockCache* RenderCommand::GetInstanceBlock()
+	{
+		if (material_.shaderProgram_ == nullptr) {
+			return nullptr;
+		}
+		RefreshCachedUniforms();
+		return instanceBlock_;
+	}
+
 	void RenderCommand::CommitNodeTransformation()
 	{
 		if (transformationCommitted_) {
@@ -81,13 +108,15 @@ namespace nCine
 		modelMatrix_[3][2] = CalculateDepth(layer_, cameraValues.nearClip, cameraValues.farClip);
 
 		if (material_.shaderProgram_ && material_.shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
-			GLUniformBlockCache* instanceBlock = material_.UniformBlock(Material::InstanceBlockName);
-			GLUniformCache* matrixUniform = instanceBlock
-				? instanceBlock->GetUniform(Material::ModelMatrixUniformName)
-				: material_.Uniform(Material::ModelMatrixUniformName);
-			if (matrixUniform) {
+			RefreshCachedUniforms();
+			if (modelMatrixUniform_) {
 				//ZoneScopedNC("Set model matrix", 0x81A861);
-				matrixUniform->SetFloatVector(modelMatrix_.Data());
+				modelMatrixUniform_->SetFloatVector(modelMatrix_.Data());
+				if (!modelMatrixUniformInBlock_) {
+					// The loose uniform was written through a cached pointer, so the material's
+					// uniform manager has to be notified for its commit early-out check
+					material_.shaderUniforms_.MarkDirty();
+				}
 			}
 		}
 

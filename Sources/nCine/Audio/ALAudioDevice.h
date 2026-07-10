@@ -7,6 +7,11 @@
 
 #include "IAudioDevice.h"
 
+#if defined(WITH_THREADS)
+#	include "../Threading/Thread.h"
+#	include "../Threading/ThreadSync.h"
+#endif
+
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 #	include <CommonWindows.h>
 #	include <mmdeviceapi.h>
@@ -55,6 +60,7 @@ namespace nCine
 			return std::uint32_t(players_.size());
 		}
 		const IAudioPlayer* player(unsigned int index) const override;
+		IAudioPlayer* player(std::uint32_t index) override;
 
 		void stopPlayers() override;
 		void pausePlayers() override;
@@ -67,7 +73,10 @@ namespace nCine
 		std::uint32_t registerPlayer(IAudioPlayer* player) override;
 		void unregisterPlayer(IAudioPlayer* player) override;
 		void updatePlayers() override;
-		
+
+		bool submitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
+		void drainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
+
 		const Vector3f& getListenerPosition() const override;
 		void updateListener(const Vector3f& position, const Vector3f& velocity) override;
 
@@ -103,6 +112,27 @@ namespace nCine
 
 		/** @brief OpenAL device name */
 		const char* deviceName_;
+
+#if defined(WITH_THREADS)
+		// Decoding thread that executes stream decode requests ahead of time
+		Thread decodeThread_;
+		// Protects the request queue, the active request and the quit flag
+		Mutex decodeMutex_;
+		// Signaled when a request is added to the queue or the thread should quit
+		CondVariable decodeQueueCond_;
+		// Signaled when the decoding thread finishes executing a request
+		CondVariable decodeDoneCond_;
+		// Queue of decode requests waiting to be executed
+		SmallVector<std::shared_ptr<StreamDecodeRequest>, 4> decodeQueue_;
+		// Request currently being executed by the decoding thread, if any
+		std::shared_ptr<StreamDecodeRequest> activeDecodeRequest_;
+		// Whether the decoding thread has been created
+		bool decodeThreadCreated_;
+		// Whether the decoding thread should quit
+		bool decodeThreadShouldQuit_;
+
+		static void decodeThreadFunc(void* arg);
+#endif
 
 		void Init();
 

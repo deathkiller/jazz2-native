@@ -1,5 +1,6 @@
 #include "AudioBufferPlayer.h"
 #include "AudioBuffer.h"
+#include "ALDebug.h"
 #include "../ServiceLocator.h"
 
 #define NCINE_INCLUDE_OPENAL
@@ -113,6 +114,7 @@ namespace nCine
 				break;
 			}
 		}
+		AL_LOG_ERRORS();
 	}
 
 	void AudioBufferPlayer::pause()
@@ -124,6 +126,7 @@ namespace nCine
 				break;
 			}
 		}
+		AL_LOG_ERRORS();
 	}
 
 	void AudioBufferPlayer::stop()
@@ -143,9 +146,22 @@ namespace nCine
 				break;
 			}
 		}
+		AL_LOG_ERRORS();
 
 		IAudioDevice& device = theServiceLocator().GetAudioDevice();
 		device.unregisterPlayer(this);
+	}
+
+	void AudioBufferPlayer::setLooping(bool value)
+	{
+		if (isLooping() != value) {
+			IAudioPlayer::setLooping(value);
+			// Applying the change immediately, so the per-frame update doesn't have to re-set it
+			if (sourceId_ != IAudioDevice::UnavailableSource) {
+				alSourcei(sourceId_, AL_LOOPING, value ? AL_TRUE : AL_FALSE);
+				AL_LOG_ERRORS();
+			}
+		}
 	}
 
 	void AudioBufferPlayer::updateState()
@@ -166,9 +182,8 @@ namespace nCine
 
 				IAudioDevice& device = theServiceLocator().GetAudioDevice();
 				device.unregisterPlayer(this);
-			} else {
-				alSourcei(sourceId_, AL_LOOPING, GetFlags(PlayerFlags::Looping));
 			}
+			AL_LOG_ERRORS();
 		}
 	}
 }

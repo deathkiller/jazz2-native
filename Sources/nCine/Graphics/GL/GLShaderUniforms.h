@@ -54,14 +54,25 @@ namespace nCine
 		/** @brief Returns the uniform cache with the specified name, or `nullptr` if not found */
 		GLUniformCache* GetUniform(const char* name);
 		/** @brief Returns the hashmap of all managed uniform caches */
-		inline const UniformHashMapType GetAllUniforms() const {
+		inline const UniformHashMapType& GetAllUniforms() const {
 			return uniformCaches_;
+		}
+		/**
+		 * @brief Notes that a managed uniform cache may have been modified externally
+		 *
+		 * Called automatically by the non-const @ref GetUniform(), it only has to be called
+		 * explicitly when a uniform is written through a long-lived cached pointer.
+		 */
+		inline void MarkDirty() {
+			maybeDirty_ = true;
 		}
 		/** @brief Uses the program and uploads all dirty uniforms to the GL */
 		void CommitUniforms();
 
 	private:
 		GLShaderProgram* shaderProgram_;
+		// Conservative flag for the commit early-out, set whenever a uniform cache may have been dirtied
+		bool maybeDirty_;
 		UniformHashMapType uniformCaches_;
 
 		// Imports the uniforms with the option of including only some or excluding others

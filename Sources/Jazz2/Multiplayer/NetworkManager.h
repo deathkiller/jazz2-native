@@ -136,7 +136,7 @@ namespace Jazz2::Multiplayer
 		std::unique_ptr<ServerDiscovery> _discovery;
 		HashMap<Peer, std::shared_ptr<PeerDescriptor>> _peerDesc;
 		HashMap<String, std::shared_ptr<PeerDescriptor>> _disconnectedPeers; // Retained for reconnect, keyed by unique player ID
-		Spinlock _lock;
+		mutable Spinlock _lock;
 
 		String OnOverrideContentPath(StringView path);
 

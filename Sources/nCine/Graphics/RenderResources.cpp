@@ -189,10 +189,10 @@ namespace nCine
 	
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
-		buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.vboSize, appCfg.iboSize);
+		buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.useBufferStorage, appCfg.vboSize, appCfg.iboSize);
 		vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
 	}
-	
+
 	void RenderResources::Create()
 	{
 		// `Create()` can be called after `CreateMinimal()`
@@ -202,7 +202,7 @@ namespace nCine
 			binaryShaderCache_ = std::make_unique<BinaryShaderCache>(appCfg.shaderCachePath);
 		}
 		if (buffersManager_ == nullptr) {
-			buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.vboSize, appCfg.iboSize);
+			buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.useBufferStorage, appCfg.vboSize, appCfg.iboSize);
 		}
 		if (vaoPool_ == nullptr) {
 			vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);

@@ -54,25 +54,25 @@ namespace Jazz2::Multiplayer
 		/** @brief Server name */
 		String Name;
 		/** @brief Multiplayer game mode */
-		MpGameMode GameMode;
+		MpGameMode GameMode = MpGameMode::Unknown;
 		/** @brief Server flags */
-		std::uint32_t Flags;
+		std::uint32_t Flags = 0;
 		/** @brief Current number of players */
-		std::uint32_t CurrentPlayerCount;
+		std::uint32_t CurrentPlayerCount = 0;
 		/** @brief Maximum number of players */
-		std::uint32_t MaxPlayerCount;
+		std::uint32_t MaxPlayerCount = 0;
 		/** @brief Current level name */
 		String LevelName;
 
 #if defined(WITH_WEBSOCKET) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief WebSocket port (`0` = no WebSocket transport support) */
-		std::uint16_t WsPort;
+		std::uint16_t WsPort = 0;
 		/** @brief Whether the WebSocket transport uses TLS (WSS) */
-		bool WsSecure;
+		bool WsSecure = false;
 #endif
 
 		/** @brief Whether the server is compatible with the local client */
-		bool IsCompatible;
+		bool IsCompatible = false;
 
 		// TODO: LastPingTime
 		//bool IsLost;

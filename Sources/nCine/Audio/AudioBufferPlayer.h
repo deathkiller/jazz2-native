@@ -49,6 +49,8 @@ namespace nCine
 		void pause() override;
 		void stop() override;
 
+		void setLooping(bool value) override;
+
 		void updateState() override;
 
 		/** @brief Returns the static object type of this class */
