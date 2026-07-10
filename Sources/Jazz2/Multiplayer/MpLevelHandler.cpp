@@ -3919,7 +3919,7 @@ namespace Jazz2::Multiplayer
 							actor = it->second;
 						}
 					}
-					if DEATH_LIKELY(actor) {
+					if DEATH_LIKELY(actor != nullptr) {
 						LOGD("[MP] ServerPacketType::Rpc - id: {}, {} bytes", actorId, data.size() - packet.GetPosition());
 						actor->OnPacketReceived(packet);
 					} else {
