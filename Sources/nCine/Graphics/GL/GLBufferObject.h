@@ -54,7 +54,7 @@ namespace nCine
 		void BufferData(GLsizeiptr size, const GLvoid* data, GLenum usage);
 		/** @brief Updates a subset of the data store starting at the given byte offset */
 		void BufferSubData(GLintptr offset, GLsizeiptr size, const GLvoid* data);
-#if !defined(WITH_OPENGLES) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
+#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
 		/** @brief Allocates an immutable data store with the given size, optional data and storage flags */
 		void BufferStorage(GLsizeiptr size, const GLvoid* data, GLbitfield flags);
 #endif

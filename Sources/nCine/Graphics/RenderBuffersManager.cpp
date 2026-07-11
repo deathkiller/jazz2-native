@@ -10,8 +10,9 @@ using namespace Death;
 using namespace Death::Containers::Literals;
 
 // Persistently mapped immutable buffer storage requires desktop OpenGL 4.4 or `GL_ARB_buffer_storage`,
-// availability is checked at runtime so the required context version doesn't change
-#if !defined(WITH_OPENGLES) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && defined(GL_MAP_PERSISTENT_BIT)
+// availability is checked at runtime so the required context version doesn't change. Emscripten has to be
+// excluded explicitly, its GL headers declare `glBufferStorage()` even though WebGL cannot provide it.
+#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && defined(GL_MAP_PERSISTENT_BIT)
 #	define NCINE_HAS_PERSISTENT_MAPPING
 #endif
 
