@@ -274,10 +274,10 @@ namespace Jazz2::UI
 			auto command = RentRenderCommand();
 			if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Transition))) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 			}
 
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
 			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
@@ -1208,9 +1208,9 @@ namespace Jazz2::UI
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShader(shader)) {
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 		}
-		command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
 		auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 		if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
@@ -1634,11 +1634,11 @@ namespace Jazz2::UI
 			}
 		}
 
-		command->GetGeometry().SetDrawParameters(GL_LINE_STRIP, 0, vertexCount);
+		command->GetGeometry().SetDrawParameters(PrimitiveType::LineStrip, 0, vertexCount);
 		command->GetGeometry().SetElementsPerVertex(VertexFloats);
 		command->GetGeometry().SetHostVertexPointer((const float*)vertices);
 
-		command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
@@ -1785,9 +1785,9 @@ namespace Jazz2::UI
 			auto command = RentRenderCommand();
 			if (command->GetMaterial().SetShader(shader)) {
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 			}
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
 			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 			// texRect: x=inner radius fraction (0=filled, e.g., 0.75=ring), y=softness, zw=unused

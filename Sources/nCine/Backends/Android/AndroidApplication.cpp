@@ -352,7 +352,7 @@ namespace nCine
 		// Graphics device should always be created before the input manager!
 		const DisplayMode displayMode32(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, DisplayMode::VSync::Disabled);
 		const DisplayMode displayMode16(5, 6, 5, 0, 16, 0, DisplayMode::DoubleBuffering::Enabled, DisplayMode::VSync::Disabled);
-		IGfxDevice::GLContextInfo contextInfo(appCfg_);
+		IGfxDevice::ContextInfo contextInfo(appCfg_);
 
 		if (EglGfxDevice::isModeSupported(state_, contextInfo, displayMode32)) {
 			gfxDevice_ = std::make_unique<EglGfxDevice>(state_, contextInfo, displayMode32);

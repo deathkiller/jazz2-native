@@ -36,8 +36,8 @@ namespace nCine::Backends
 {
 	char EglGfxDevice::monitorNames_[MaxMonitors][MaxMonitorNameLength];
 
-	EglGfxDevice::EglGfxDevice(struct android_app* state, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
-		: IGfxDevice(WindowMode(0, 0, 0, 0, true, false, false), glContextInfo, displayMode), state_(state)
+	EglGfxDevice::EglGfxDevice(struct android_app* state, const ContextInfo& contextInfo, const DisplayMode& displayMode)
+		: IGfxDevice(WindowMode(0, 0, 0, 0, true, false, false), contextInfo, displayMode), state_(state)
 	{
 		updateMonitors();
 		initDevice();
@@ -135,9 +135,9 @@ namespace nCine::Backends
 		return Vector2i(width_, height_);
 	}
 
-	bool EglGfxDevice::isModeSupported(struct android_app* state, const GLContextInfo& glContextInfo, const DisplayMode& mode)
+	bool EglGfxDevice::isModeSupported(struct android_app* state, const ContextInfo& contextInfo, const DisplayMode& mode)
 	{
-		const EGLint renderableTypeBit = (glContextInfo.majorVersion == 3) ? EGL_OPENGL_ES3_BIT_KHR : EGL_OPENGL_ES2_BIT;
+		const EGLint renderableTypeBit = (contextInfo.majorVersion == 3) ? EGL_OPENGL_ES3_BIT_KHR : EGL_OPENGL_ES2_BIT;
 
 		const EGLint attribs[] = {
 			EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
@@ -187,7 +187,7 @@ namespace nCine::Backends
 
 	void EglGfxDevice::initDevice()
 	{
-		const EGLint renderableTypeBit = (glContextInfo_.majorVersion == 3) ? EGL_OPENGL_ES3_BIT_KHR : EGL_OPENGL_ES2_BIT;
+		const EGLint renderableTypeBit = (contextInfo_.majorVersion == 3) ? EGL_OPENGL_ES3_BIT_KHR : EGL_OPENGL_ES2_BIT;
 
 		const EGLint attribs[] = {
 			EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
@@ -201,23 +201,23 @@ namespace nCine::Backends
 			EGL_NONE
 		};
 
-		//const EGLint glProfileMaskBit = glContextInfo_.coreProfile ? EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR :
+		//const EGLint glProfileMaskBit = contextInfo_.coreProfile ? EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR :
 		//	EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR; // disabled
 
 		EGLint attribList[] = {
-			EGL_CONTEXT_MAJOR_VERSION_KHR, static_cast<EGLint>(glContextInfo_.majorVersion),
-			EGL_CONTEXT_MINOR_VERSION_KHR, static_cast<EGLint>(glContextInfo_.minorVersion),
+			EGL_CONTEXT_MAJOR_VERSION_KHR, static_cast<EGLint>(contextInfo_.majorVersion),
+			EGL_CONTEXT_MINOR_VERSION_KHR, static_cast<EGLint>(contextInfo_.minorVersion),
 			//EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR, glProfileMaskBit, // disabled
 			EGL_NONE, EGL_NONE,
 			EGL_NONE
 		};
 
 #if !defined(DEATH_TARGET_ANDROID) || (GL_ES_VERSION_3_0 && __ANDROID_API__ >= 21)
-		if (glContextInfo_.forwardCompatible || glContextInfo_.debugContext) {
+		if (contextInfo_.forwardCompatible || contextInfo_.debugContext) {
 			attribList[4] = EGL_CONTEXT_FLAGS_KHR;
 			EGLint contextFlagsMask = 0;
-			contextFlagsMask |= (glContextInfo_.forwardCompatible) ? EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR : 0;
-			contextFlagsMask |= (glContextInfo_.debugContext) ? EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR : 0;
+			contextFlagsMask |= (contextInfo_.forwardCompatible) ? EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR : 0;
+			contextFlagsMask |= (contextInfo_.debugContext) ? EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR : 0;
 			attribList[5] = contextFlagsMask;
 		}
 #endif

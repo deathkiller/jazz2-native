@@ -49,7 +49,7 @@ extern "C"
 #include "Graphics/RenderResources.h"
 #include "Graphics/RenderQueue.h"
 #include "Graphics/ScreenViewport.h"
-#include "Graphics/GL/GLDebug.h"
+#include "Graphics/RHI/Rhi.h"
 #include "Base/FrameTimer.h"
 #include "Graphics/SceneNode.h"
 #include "Input/IInputManager.h"
@@ -751,13 +751,13 @@ namespace nCine
 		if (appCfg_.withGraphics) {
 			theServiceLocator().RegisterGfxCapabilities(std::make_unique<GfxCapabilities>());
 			const auto& gfxCapabilities = theServiceLocator().GetGfxCapabilities();
-			GLDebug::Init(gfxCapabilities);
+			Rhi::Debug::Init(gfxCapabilities);
 
 #if !defined(WITH_ANGLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
 			if (appCfg_.fixedBatchSize > 0) {
 				LOGI("Using fixed batch size: {}", appCfg_.fixedBatchSize);
 			} else {
-				const auto& info = gfxCapabilities.GetGLInfoStrings();
+				const auto& info = gfxCapabilities.GetInfoStrings();
 				const StringView vendor = info.vendor;
 				const StringView renderer = info.renderer;
 				// Some GPUs don't work with dynamic batch size, so it refuses to render VBOs (shows a black screen), disable it for them
@@ -784,7 +784,7 @@ namespace nCine
 			RenderResources::CreateMinimal(); // they are required for rendering even without a scenegraph
 
 			if (appCfg_.withScenegraph) {
-				gfxDevice_->setupGL();
+				gfxDevice_->setupDevice();
 				RenderResources::Create();
 				rootNode_ = std::make_unique<SceneNode>();
 				screenViewport_ = std::make_unique<ScreenViewport>();

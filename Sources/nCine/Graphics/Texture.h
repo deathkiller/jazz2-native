@@ -1,5 +1,7 @@
 #pragma once
 
+#include "RHI/RhiTypes.h"
+#include "RHI/RhiFwd.h"
 #include "../Base/Object.h"
 #include "../Primitives/Rect.h"
 #include "../Primitives/Color.h"
@@ -14,7 +16,6 @@ using namespace Death::Containers;
 namespace nCine
 {
 	class ITextureLoader;
-	class GLTexture;
 
 	/**
 		@brief Texture minification and magnification filtering modes
@@ -70,15 +71,7 @@ namespace nCine
 
 	public:
 		/** @brief Pixel formats for an empty texture */
-		enum class Format
-		{
-			Unknown,
-
-			R8,
-			RG8,
-			RGB8,
-			RGBA8
-		};
+		using Format = PixelFormat;
 
 		/** @brief Creates an OpenGL texture name */
 		Texture();
@@ -202,7 +195,7 @@ namespace nCine
 		}
 
 	private:
-		std::unique_ptr<GLTexture> glTexture_;
+		std::unique_ptr<Rhi::Texture> glTexture_;
 		std::int32_t width_;
 		std::int32_t height_;
 		std::int32_t mipMapLevels_;

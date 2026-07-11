@@ -355,7 +355,7 @@ namespace Jazz2::UI
 		_renderCommand.SetType(RenderCommand::Type::Sprite);
 		_renderCommand.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
 		_renderCommand.GetMaterial().ReserveUniformsDataMemory();
-		_renderCommand.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		_renderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 		auto* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 		if (textureUniform && textureUniform->GetIntValue(0) != 0) {

@@ -4,10 +4,7 @@
 #include "../../Main.h"
 #include "IGfxDevice.h"
 #include "../Primitives/Colorf.h"
-#include "GL/GLDepthTest.h"
-#include "GL/GLBlending.h"
-#include "GL/GLClearColor.h"
-#include "GL/GLViewport.h"
+#include "RHI/Rhi.h"
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <emscripten/html5.h>
@@ -78,9 +75,9 @@ namespace nCine
 #	endif
 #endif
 
-	IGfxDevice::IGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
+	IGfxDevice::IGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode)
 		: drawableWidth_(windowMode.width), drawableHeight_(windowMode.height), width_(windowMode.width), height_(windowMode.height),
-			glContextInfo_(glContextInfo), isFullscreen_(windowMode.isFullscreen), displayMode_(displayMode), numMonitors_(0)
+			contextInfo_(contextInfo), isFullscreen_(windowMode.isFullscreen), displayMode_(displayMode), numMonitors_(0)
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		double cssWidth = 0.0;
@@ -156,15 +153,13 @@ namespace nCine
 		return factor;
 	}
 
-	void IGfxDevice::initGLViewport()
+	void IGfxDevice::initDeviceViewport()
 	{
-		GLViewport::InitRect(0, 0, drawableWidth_, drawableHeight_);
+		Rhi::Device::InitViewport(0, 0, drawableWidth_, drawableHeight_);
 	}
 
-	void IGfxDevice::setupGL()
+	void IGfxDevice::setupDevice()
 	{
-		glDisable(GL_DITHER);
-		GLBlending::SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		GLDepthTest::Enable();
+		Rhi::Device::SetupInitialState();
 	}
 }

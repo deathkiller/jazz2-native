@@ -687,8 +687,8 @@ namespace Jazz2::UI::Multiplayer
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
 		}
-		command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, vertexCount);
+		command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+		command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, vertexCount);
 		command->GetGeometry().SetElementsPerVertex(4);
 		command->GetGeometry().SetHostVertexPointer(&_minimapVertices[startFloat]);
 

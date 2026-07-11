@@ -17,8 +17,8 @@ namespace nCine::Backends
 	SDL_Window* SdlGfxDevice::windowHandle_ = nullptr;
 	SDL_GLContext SdlGfxDevice::glContextHandle_;
 
-	SdlGfxDevice::SdlGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
-		: IGfxDevice(windowMode, glContextInfo, displayMode)
+	SdlGfxDevice::SdlGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode)
+		: IGfxDevice(windowMode, contextInfo, displayMode)
 	{
 		initGraphics(windowMode.hasWindowScaling);
 		updateMonitors();
@@ -207,22 +207,22 @@ namespace nCine::Backends
 		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, displayMode_.isDoubleBuffered());
 		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, displayMode_.depthBits());
 		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, displayMode_.stencilBits());
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, glContextInfo_.majorVersion);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, glContextInfo_.minorVersion);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, contextInfo_.majorVersion);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, contextInfo_.minorVersion);
 #if defined(WITH_OPENGLES)
 		SDL_SetHint(SDL_HINT_OPENGL_ES_DRIVER, "1");
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 #else
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, glContextInfo_.coreProfile
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, contextInfo_.coreProfile
 															 ? SDL_GL_CONTEXT_PROFILE_CORE
 															 : SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 #endif
-		if (!glContextInfo_.forwardCompatible) {
+		if (!contextInfo_.forwardCompatible) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
 		}
-		if (glContextInfo_.debugContext) {
+		if (contextInfo_.debugContext) {
 			SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 		}
 
@@ -250,7 +250,7 @@ namespace nCine::Backends
 		windowHandle_ = SDL_CreateWindow("", windowPosX, windowPosY, width_, height_, flags);
 		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: {}", SDL_GetError());
 		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
-		initGLViewport();
+		initDeviceViewport();
 
 		SDL_SetWindowResizable(windowHandle_, isResizable ? SDL_TRUE : SDL_FALSE);
 
@@ -264,26 +264,26 @@ namespace nCine::Backends
 	Retry:
 		glContextHandle_ = SDL_GL_CreateContext(windowHandle_);
 
-		if (!glContextHandle_ && glContextInfo_.minorVersion > 0) {
+		if (!glContextHandle_ && contextInfo_.minorVersion > 0) {
 			// Retry with lower minor version
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 			LOGW("SDL_GL_CreateContext() with OpenGL|ES {}.{} failed, retrying with lower version: {}",
-				glContextInfo_.majorVersion, glContextInfo_.minorVersion, SDL_GetError());
+				contextInfo_.majorVersion, contextInfo_.minorVersion, SDL_GetError());
 #else
-			LOGW(glContextInfo_.coreProfile ? "SDL_GL_CreateContext() with OpenGL Core {}.{} failed, retrying with lower version: {}" : "SDL_GL_CreateContext() with OpenGL {}.{} failed, retrying with lower version: {}",
-				glContextInfo_.majorVersion, glContextInfo_.minorVersion, SDL_GetError());
+			LOGW(contextInfo_.coreProfile ? "SDL_GL_CreateContext() with OpenGL Core {}.{} failed, retrying with lower version: {}" : "SDL_GL_CreateContext() with OpenGL {}.{} failed, retrying with lower version: {}",
+				contextInfo_.majorVersion, contextInfo_.minorVersion, SDL_GetError());
 #endif
-			glContextInfo_.minorVersion--;
-			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, glContextInfo_.minorVersion);
+			contextInfo_.minorVersion--;
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, contextInfo_.minorVersion);
 			goto Retry;
 		}
 
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		FATAL_ASSERT_MSG(glContextHandle_, "SDL_GL_CreateContext() with OpenGL|ES {}.{} failed: {}",
-			glContextInfo_.majorVersion, glContextInfo_.minorVersion, SDL_GetError());
+			contextInfo_.majorVersion, contextInfo_.minorVersion, SDL_GetError());
 #else
-		FATAL_ASSERT_MSG(glContextHandle_, glContextInfo_.coreProfile ? "SDL_GL_CreateContext() with OpenGL Core {}.{} failed: {}" : "SDL_GL_CreateContext() with OpenGL {}.{} failed: {}",
-			glContextInfo_.majorVersion, glContextInfo_.minorVersion, SDL_GetError());
+		FATAL_ASSERT_MSG(glContextHandle_, contextInfo_.coreProfile ? "SDL_GL_CreateContext() with OpenGL Core {}.{} failed: {}" : "SDL_GL_CreateContext() with OpenGL {}.{} failed: {}",
+			contextInfo_.majorVersion, contextInfo_.minorVersion, SDL_GetError());
 #endif
 
 		const int interval = (displayMode_.hasVSync() ? 1 : 0);
@@ -293,7 +293,7 @@ namespace nCine::Backends
 		const GLenum err = glewInit();
 		FATAL_ASSERT_MSG(err == GLEW_OK, "GLEW error: {}", (const char*)glewGetErrorString(err));
 
-		glContextInfo_.debugContext = (glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output"));
+		contextInfo_.debugContext = (contextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output"));
 #endif
 	}
 

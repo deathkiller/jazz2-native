@@ -7,8 +7,6 @@
 
 namespace nCine
 {
-	class GLUniformCache;
-	class GLUniformBlockCache;
 
 	/**
 		@brief Holds all the state needed to issue a single draw call
@@ -119,7 +117,7 @@ namespace nCine
 			scissorRect_ = scissorRect;
 		}
 		/** @brief Sets the scissor rectangle for this command */
-		void SetScissor(GLint x, GLint y, GLsizei width, GLsizei height);
+		void SetScissor(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height);
 
 		/** @brief Returns the model transformation matrix */
 		inline const Matrix4x4f& GetTransformation() const {
@@ -146,7 +144,7 @@ namespace nCine
 		}
 
 		/** @brief Returns the material's "InstanceBlock" uniform block cache, resolved once per shader change */
-		GLUniformBlockCache* GetInstanceBlock();
+		Rhi::UniformBlockCache* GetInstanceBlock();
 
 		/** @brief Commits the model matrix uniform block */
 		void CommitNodeTransformation();
@@ -168,8 +166,8 @@ namespace nCine
 		std::uint64_t materialSortKey_;
 		// Cached model matrix uniform and "InstanceBlock" uniform block cache, avoiding name-based
 		// lookups on every use. Valid as long as the cached shader change counter matches the material's one.
-		GLUniformCache* modelMatrixUniform_;
-		GLUniformBlockCache* instanceBlock_;
+		Rhi::UniformCache* modelMatrixUniform_;
+		Rhi::UniformBlockCache* instanceBlock_;
 		/** @brief Id based secondary sort key that stabilizes render command sorting */
 		std::uint32_t idSortKey_;
 		// Value of the material's shader change counter when the cached uniforms were resolved

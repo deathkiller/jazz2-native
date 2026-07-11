@@ -42,7 +42,7 @@ namespace nCine::Backends
 		friend class ImGuiDrawing;
 
 	public:
-		GlfwGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode);
+		GlfwGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode);
 		~GlfwGfxDevice() override;
 
 		void setSwapInterval(int interval) override;

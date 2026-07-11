@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RHI/RhiFwd.h"
 #include "RenderQueue.h"
 #include "../Primitives/Colorf.h"
 #include "../Primitives/Vector2.h"
@@ -16,7 +17,6 @@ namespace nCine
 {
 	class SceneNode;
 	class Camera;
-	class GLFramebuffer;
 	class Texture;
 
 	/**
@@ -59,14 +59,8 @@ namespace nCine
 			Never
 		};
 
-		/** @brief Depth and stencil format for a viewport with a texture or for the screen */
-		enum class DepthStencilFormat
-		{
-			None,
-			Depth16,
-			Depth24,
-			Depth24_Stencil8
-		};
+		/** @brief Depth and stencil format for a viewport with a texture or for the screen (alias of the backend-neutral @ref nCine::DepthStencilFormat) */
+		using DepthStencilFormat = nCine::DepthStencilFormat;
 
 		/** @brief Creates a viewport with the specified name and texture, plus a depth and stencil renderbuffer */
 		Viewport(const char* name, Texture* texture, DepthStencilFormat depthStencilFormat);
@@ -211,8 +205,8 @@ namespace nCine
 			camera_ = camera;
 		}
 
-		/** @brief Sets the OpenGL object label for the viewport's framebuffer object */
-		void SetGLFramebufferLabel(const char* label);
+		/** @brief Sets the debug object label for the viewport's render target */
+		void SetRenderTargetLabel(const char* label);
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -245,7 +239,7 @@ namespace nCine
 		/** @brief Render queue of commands for this viewport or render target */
 		RenderQueue renderQueue_;
 
-		std::unique_ptr<GLFramebuffer> fbo_;
+		std::unique_ptr<Rhi::RenderTarget> fbo_;
 
 		static const std::uint32_t MaxNumTextures = 4;
 		Texture* textures_[MaxNumTextures];

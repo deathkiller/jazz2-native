@@ -19,7 +19,7 @@ namespace nCine::Backends
 	class Qt5GfxDevice : public IGfxDevice
 	{
 	public:
-		Qt5GfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, Qt5Widget& widget);
+		Qt5GfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode, Qt5Widget& widget);
 
 		void setSwapInterval(int interval) override;
 

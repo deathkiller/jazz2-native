@@ -22,7 +22,7 @@ namespace nCine::Backends
 	{
 	public:
 		/** @brief Constructor taking a `DisplayMode` object */
-		EglGfxDevice(struct android_app* state, const GLContextInfo& glContextInfo, const DisplayMode& displayMode);
+		EglGfxDevice(struct android_app* state, const ContextInfo& contextInfo, const DisplayMode& displayMode);
 		~EglGfxDevice() override;
 
 		void setSwapInterval(int interval) override { }
@@ -48,7 +48,7 @@ namespace nCine::Backends
 		Vector2i querySurfaceSize();
 
 		/** @brief Checks if the desired pixel format is supported */
-		static bool isModeSupported(struct android_app* state, const GLContextInfo& glContextInfo, const DisplayMode& mode);
+		static bool isModeSupported(struct android_app* state, const ContextInfo& contextInfo, const DisplayMode& mode);
 
 #if defined(DEATH_TARGET_ANDROID)
 		/** @brief Refreshes the monitor list from JNI, called only by the JNI native function */

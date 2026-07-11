@@ -27,7 +27,7 @@ namespace nCine::Backends
 	class SdlGfxDevice : public IGfxDevice
 	{
 	public:
-		SdlGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode);
+		SdlGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode);
 		~SdlGfxDevice() override;
 
 		void setSwapInterval(int interval) override;

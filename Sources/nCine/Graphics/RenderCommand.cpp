@@ -1,6 +1,5 @@
 #include "RenderCommand.h"
-#include "GL/GLShaderProgram.h"
-#include "GL/GLScissorTest.h"
+#include "RHI/Rhi.h"
 #include "RenderResources.h"
 #include "Camera.h"
 #include "DrawableNode.h"
@@ -41,9 +40,9 @@ namespace nCine
 		material_.Bind();
 		material_.CommitUniforms();
 
-		GLScissorTest::State scissorTestState = GLScissorTest::GetState();
+		Rhi::Device::ScissorState scissorState = Rhi::Device::GetScissorState();
 		if (scissorRect_.W > 0 && scissorRect_.H > 0) {
-			GLScissorTest::Enable(scissorRect_);
+			Rhi::Device::SetScissor(scissorRect_);
 		}
 
 		std::uint32_t offset = 0;
@@ -57,10 +56,10 @@ namespace nCine
 		geometry_.Bind();
 		geometry_.Draw(numInstances_);
 
-		GLScissorTest::SetState(scissorTestState);
+		Rhi::Device::SetScissorState(scissorState);
 	}
 
-	void RenderCommand::SetScissor(GLint x, GLint y, GLsizei width, GLsizei height)
+	void RenderCommand::SetScissor(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
 	{
 		scissorRect_.Set(x, y, width, height);
 	}
@@ -87,7 +86,7 @@ namespace nCine
 		cachedShaderChangeCounter_ = material_.shaderChangeCounter_;
 	}
 
-	GLUniformBlockCache* RenderCommand::GetInstanceBlock()
+	Rhi::UniformBlockCache* RenderCommand::GetInstanceBlock()
 	{
 		if (material_.shaderProgram_ == nullptr) {
 			return nullptr;
@@ -107,7 +106,7 @@ namespace nCine
 		const Camera::ProjectionValues cameraValues = RenderResources::GetCurrentCamera()->GetProjectionValues();
 		modelMatrix_[3][2] = CalculateDepth(layer_, cameraValues.nearClip, cameraValues.farClip);
 
-		if (material_.shaderProgram_ && material_.shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
+		if (material_.shaderProgram_ && material_.shaderProgram_->GetStatus() == Rhi::ShaderProgram::Status::LinkedWithIntrospection) {
 			RefreshCachedUniforms();
 			if (modelMatrixUniform_) {
 				//ZoneScopedNC("Set model matrix", 0x81A861);

@@ -106,7 +106,7 @@ namespace Jazz2::Rendering
 
 			if (_antialiasing._renderCommand.GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::Antialiasing))) {
 				_antialiasing._renderCommand.GetMaterial().ReserveUniformsDataMemory();
-				_antialiasing._renderCommand.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				_antialiasing._renderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 				// Required to reset render command properly
 				_antialiasing._renderCommand.SetTransformation(_antialiasing._renderCommand.GetTransformation());
 
@@ -155,7 +155,7 @@ namespace Jazz2::Rendering
 #endif
 		if (shaderChanged) {
 			_renderCommand.GetMaterial().ReserveUniformsDataMemory();
-			_renderCommand.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			_renderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 			// Required to reset render command properly
 			_renderCommand.SetTransformation(_renderCommand.GetTransformation());
 
@@ -173,7 +173,7 @@ namespace Jazz2::Rendering
 			// blend would darken them by the alpha twice). Force it to the top so it is drawn after the viewport
 			// composites (which stay at the default layer 0).
 			_renderCommand.GetMaterial().SetBlendingEnabled(true);
-			_renderCommand.GetMaterial().SetBlendingFactors(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+			_renderCommand.GetMaterial().SetBlendingFactors(BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 			_renderCommand.SetLayer(OverlayCompositeLayer);
 		}
 	}

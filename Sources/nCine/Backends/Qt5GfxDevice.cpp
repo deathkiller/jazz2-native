@@ -6,8 +6,7 @@
 #endif
 
 #include "../../Main.h"
-#include "../Graphics/GL/GLTexture.h"
-#include "../Graphics/GL/GLFramebuffer.h"
+#include "../Graphics/RHI/Rhi.h"
 #include "Qt5GfxDevice.h"
 #include "../MainApplication.h"
 #include "Qt5Widget.h"
@@ -18,8 +17,8 @@
 
 namespace nCine::Backends
 {
-	Qt5GfxDevice::Qt5GfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, Qt5Widget& widget)
-		: IGfxDevice(windowMode, glContextInfo, displayMode), widget_(widget), isResizable_(windowMode.isResizable)
+	Qt5GfxDevice::Qt5GfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode, Qt5Widget& widget)
+		: IGfxDevice(windowMode, contextInfo, displayMode), widget_(widget), isResizable_(windowMode.isResizable)
 	{
 		initDevice(windowMode.isFullscreen);
 	}
@@ -136,19 +135,19 @@ namespace nCine::Backends
 		const GLenum err = glewInit();
 		FATAL_ASSERT_MSG(err == GLEW_OK, "GLEW error: {}", glewGetErrorString(err));
 
-		glContextInfo_.debugContext = glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output");
+		contextInfo_.debugContext = contextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output");
 	}
 #endif
 
 	void Qt5GfxDevice::resetTextureBinding()
 	{
-		GLTexture::bindHandle(GL_TEXTURE_2D, 0);
+		Rhi::Texture::bindHandle(GL_TEXTURE_2D, 0);
 	}
 
 	void Qt5GfxDevice::bindDefaultDrawFramebufferObject()
 	{
 		const GLuint glHandle = widget_.defaultFramebufferObject();
-		GLFramebuffer::bindHandle(GL_DRAW_FRAMEBUFFER, glHandle);
+		Rhi::Framebuffer::bindHandle(GL_DRAW_FRAMEBUFFER, glHandle);
 	}
 
 	void Qt5GfxDevice::initDevice(bool isFullscreen)
@@ -161,12 +160,12 @@ namespace nCine::Backends
 		format.setSwapBehavior(displayMode_.isDoubleBuffered() ? QSurfaceFormat::DoubleBuffer : QSurfaceFormat::SingleBuffer);
 		format.setDepthBufferSize(displayMode_.depthBits());
 		format.setStencilBufferSize(displayMode_.stencilBits());
-		format.setVersion(glContextInfo_.majorVersion, glContextInfo_.minorVersion);
+		format.setVersion(contextInfo_.majorVersion, contextInfo_.minorVersion);
 #if defined(WITH_OPENGLES)
 		format.setRenderableType(QSurfaceFormat::OpenGLES);
 #endif
-		format.setProfile(glContextInfo_.coreProfile ? QSurfaceFormat::CoreProfile : QSurfaceFormat::CompatibilityProfile);
-		if (glContextInfo_.debugContext)
+		format.setProfile(contextInfo_.coreProfile ? QSurfaceFormat::CoreProfile : QSurfaceFormat::CompatibilityProfile);
+		if (contextInfo_.debugContext)
 			format.setOptions(QSurfaceFormat::DebugContext);
 
 		if (isFullscreen) {

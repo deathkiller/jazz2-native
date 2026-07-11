@@ -17,8 +17,8 @@ namespace nCine::Backends
 	int GlfwGfxDevice::fsMonitorIndex_ = -1;
 	int GlfwGfxDevice::fsModeIndex_ = -1;
 
-	GlfwGfxDevice::GlfwGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode)
-			: IGfxDevice(windowMode, glContextInfo, displayMode)
+	GlfwGfxDevice::GlfwGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode)
+			: IGfxDevice(windowMode, contextInfo, displayMode)
 	{
 		initGraphics();
 		updateMonitors();
@@ -297,9 +297,9 @@ namespace nCine::Backends
 
 		// Setting window hints and creating a window with GLFW
 		glfwWindowHint(GLFW_RESIZABLE, isResizable ? GLFW_TRUE : GLFW_FALSE);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, static_cast<int>(glContextInfo_.majorVersion));
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, static_cast<int>(glContextInfo_.minorVersion));
-		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, glContextInfo_.debugContext ? GLFW_TRUE : GLFW_FALSE);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, static_cast<int>(contextInfo_.majorVersion));
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, static_cast<int>(contextInfo_.minorVersion));
+		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, contextInfo_.debugContext ? GLFW_TRUE : GLFW_FALSE);
 		glfwWindowHint(GLFW_RED_BITS, static_cast<int>(displayMode_.redBits()));
 		glfwWindowHint(GLFW_GREEN_BITS, static_cast<int>(displayMode_.greenBits()));
 		glfwWindowHint(GLFW_BLUE_BITS, static_cast<int>(displayMode_.blueBits()));
@@ -313,8 +313,8 @@ namespace nCine::Backends
 		glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 #else
-		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, glContextInfo_.forwardCompatible ? GLFW_TRUE : GLFW_FALSE);
-		glfwWindowHint(GLFW_OPENGL_PROFILE, glContextInfo_.coreProfile ? GLFW_OPENGL_CORE_PROFILE : GLFW_OPENGL_COMPAT_PROFILE);
+		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, contextInfo_.forwardCompatible ? GLFW_TRUE : GLFW_FALSE);
+		glfwWindowHint(GLFW_OPENGL_PROFILE, contextInfo_.coreProfile ? GLFW_OPENGL_CORE_PROFILE : GLFW_OPENGL_COMPAT_PROFILE);
 #endif
 #if GLFW_VERSION_COMBINED >= 3400
 		if (windowPosX != AppConfiguration::WindowPositionIgnore) {
@@ -336,26 +336,26 @@ namespace nCine::Backends
 	Retry:
 		windowHandle_ = glfwCreateWindow(width_, height_, "", monitor, nullptr);
 
-		if (!windowHandle_ && glContextInfo_.minorVersion > 0) {
+		if (!windowHandle_ && contextInfo_.minorVersion > 0) {
 			// Retry with lower minor version
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 			LOGW("glfwCreateWindow() with OpenGL|ES {}.{} failed, retrying with lower version",
-				glContextInfo_.majorVersion, glContextInfo_.minorVersion);
+				contextInfo_.majorVersion, contextInfo_.minorVersion);
 #else
-			LOGW(glContextInfo_.coreProfile ? "glfwCreateWindow() with OpenGL Core {}.{} failed, retrying with lower version" : "glfwCreateWindow() with OpenGL {}.{} failed, retrying with lower version",
-				glContextInfo_.majorVersion, glContextInfo_.minorVersion);
+			LOGW(contextInfo_.coreProfile ? "glfwCreateWindow() with OpenGL Core {}.{} failed, retrying with lower version" : "glfwCreateWindow() with OpenGL {}.{} failed, retrying with lower version",
+				contextInfo_.majorVersion, contextInfo_.minorVersion);
 #endif
-			glContextInfo_.minorVersion--;
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, static_cast<int>(glContextInfo_.minorVersion));
+			contextInfo_.minorVersion--;
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, static_cast<int>(contextInfo_.minorVersion));
 			goto Retry;
 		}
 
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		FATAL_ASSERT_MSG(windowHandle_, "glfwCreateWindow() with OpenGL|ES {}.{} failed",
-			glContextInfo_.majorVersion, glContextInfo_.minorVersion);
+			contextInfo_.majorVersion, contextInfo_.minorVersion);
 #else
-		FATAL_ASSERT_MSG(windowHandle_, glContextInfo_.coreProfile ? "glfwCreateWindow() with OpenGL Core {}.{} failed" : "glfwCreateWindow() with OpenGL {}.{} failed",
-			glContextInfo_.majorVersion, glContextInfo_.minorVersion);
+		FATAL_ASSERT_MSG(windowHandle_, contextInfo_.coreProfile ? "glfwCreateWindow() with OpenGL Core {}.{} failed" : "glfwCreateWindow() with OpenGL {}.{} failed",
+			contextInfo_.majorVersion, contextInfo_.minorVersion);
 #endif
 
 #if GLFW_VERSION_COMBINED < 3400
@@ -373,7 +373,7 @@ namespace nCine::Backends
 #endif
 
 		glfwGetFramebufferSize(windowHandle_, &drawableWidth_, &drawableHeight_);
-		initGLViewport();
+		initDeviceViewport();
 
 		glfwSetWindowSizeLimits(windowHandle_, 200, 160, GLFW_DONT_CARE, GLFW_DONT_CARE);
 
@@ -388,7 +388,7 @@ namespace nCine::Backends
 		const GLenum err = glewInit();
 		FATAL_ASSERT_MSG(err == GLEW_OK, "GLEW error: {}", (const char*)glewGetErrorString(err));
 
-		glContextInfo_.debugContext = (glContextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output"));
+		contextInfo_.debugContext = (contextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output"));
 #endif
 	}
 

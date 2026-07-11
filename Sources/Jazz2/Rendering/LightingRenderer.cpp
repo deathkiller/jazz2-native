@@ -50,9 +50,9 @@ namespace Jazz2::Rendering
 			RenderCommand* command = lightCommand.Command.get();
 			command->GetMaterial().SetShader(_owner->_levelHandler->_lightingShader);
 			command->GetMaterial().SetBlendingEnabled(true);
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One);
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 			auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {

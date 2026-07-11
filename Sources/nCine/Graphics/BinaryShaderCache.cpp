@@ -34,10 +34,10 @@ namespace nCine
 
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 #if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
-		const bool isSupported = gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::ARB_GET_PROGRAM_BINARY) ||
-								 gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::OES_GET_PROGRAM_BINARY);
+		const bool isSupported = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_GET_PROGRAM_BINARY) ||
+								 gfxCaps.HasExtension(IGfxCapabilities::Extensions::OES_GET_PROGRAM_BINARY);
 #else
-		const bool isSupported = gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::ARB_GET_PROGRAM_BINARY);
+		const bool isSupported = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_GET_PROGRAM_BINARY);
 #endif
 		if (!isSupported) {
 			LOGW("GL_ARB_get_program_binary extensions not supported, binary shader cache is disabled");
@@ -45,7 +45,7 @@ namespace nCine
 		}
 
 #if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX) && (!defined(DEATH_TARGET_WINDOWS_RT) || defined(WITH_ANGLE))
-		if (gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::OES_GET_PROGRAM_BINARY)) {
+		if (gfxCaps.HasExtension(IGfxCapabilities::Extensions::OES_GET_PROGRAM_BINARY)) {
 			_glGetProgramBinary = glGetProgramBinaryOES;
 			_glProgramBinary = glProgramBinaryOES;
 			_glProgramBinaryLength = GL_PROGRAM_BINARY_LENGTH_OES;
@@ -57,11 +57,11 @@ namespace nCine
 			_glProgramBinaryLength = GL_PROGRAM_BINARY_LENGTH;
 		}
 
-		const auto& infoStrings = gfxCaps.GetGLInfoStrings();
+		const auto& infoStrings = gfxCaps.GetInfoStrings();
 
 		platformHash_ =
 			xxHash3(infoStrings.renderer, std::strlen(infoStrings.renderer),
-				xxHash3(infoStrings.glVersion, std::strlen(infoStrings.glVersion)));
+				xxHash3(infoStrings.apiVersion, std::strlen(infoStrings.apiVersion)));
 
 		char platformHashString[24];
 		std::size_t platformHashLength = formatInto(platformHashString, "{:.16x}", platformHash_);
@@ -88,7 +88,7 @@ namespace nCine
 		return fs::CombinePath(path_, { filename, filenameLength });
 	}
 
-	bool BinaryShaderCache::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program, GLShaderProgram::Introspection introspection)
+	bool BinaryShaderCache::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program, Rhi::ShaderProgram::Introspection introspection)
 	{
 		String cachePath = GetCachedShaderPath(shaderName);
 		if (cachePath.empty()) {
@@ -142,7 +142,7 @@ namespace nCine
 		return program->FinalizeAfterLinking(introspection);
 	}
 
-	bool BinaryShaderCache::SaveToCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program)
+	bool BinaryShaderCache::SaveToCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program)
 	{
 		String cachePath = GetCachedShaderPath(shaderName);
 		if (cachePath.empty()) {

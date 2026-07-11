@@ -7,8 +7,7 @@
 
 #include "Material.h"
 #include "../Primitives/Matrix4x4.h"
-#include "GL/GLShaderUniforms.h"
-#include "GL/GLShaderProgram.h"
+#include "RHI/Rhi.h"
 #include "../Base/HashMap.h"
 
 #include <memory>
@@ -77,7 +76,7 @@ namespace nCine
 			CameraUniformData()
 				: camera(nullptr), updateFrameProjectionMatrix(0), updateFrameViewMatrix(0) {}
 
-			GLShaderUniforms shaderUniforms;
+			Rhi::ShaderUniforms shaderUniforms;
 			Camera* camera;
 			std::uint32_t updateFrameProjectionMatrix;
 			std::uint32_t updateFrameViewMatrix;
@@ -99,18 +98,18 @@ namespace nCine
 			return *renderBatcher_;
 		}
 
-		static GLShaderProgram* GetShaderProgram(Material::ShaderProgramType shaderProgramType);
+		static Rhi::ShaderProgram* GetShaderProgram(Material::ShaderProgramType shaderProgramType);
 
-		static GLShaderProgram* GetBatchedShader(const GLShaderProgram* shader);
-		static bool RegisterBatchedShader(const GLShaderProgram* shader, GLShaderProgram* batchedShader);
-		static bool UnregisterBatchedShader(const GLShaderProgram* shader);
+		static Rhi::ShaderProgram* GetBatchedShader(const Rhi::ShaderProgram* shader);
+		static bool RegisterBatchedShader(const Rhi::ShaderProgram* shader, Rhi::ShaderProgram* batchedShader);
+		static bool UnregisterBatchedShader(const Rhi::ShaderProgram* shader);
 
 		static inline std::uint8_t* GetCameraUniformsBuffer() {
 			return cameraUniformsBuffer_;
 		}
-		static CameraUniformData* FindCameraUniformData(GLShaderProgram* shaderProgram);
-		static void InsertCameraUniformData(GLShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData);
-		static bool RemoveCameraUniformData(GLShaderProgram* shaderProgram);
+		static CameraUniformData* FindCameraUniformData(Rhi::ShaderProgram* shaderProgram);
+		static void InsertCameraUniformData(Rhi::ShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData);
+		static bool RemoveCameraUniformData(Rhi::ShaderProgram* shaderProgram);
 
 		static inline const Camera* GetCurrentCamera() {
 			return currentCamera_;
@@ -119,7 +118,7 @@ namespace nCine
 			return currentViewport_;
 		}
 
-		static void SetDefaultAttributesParameters(GLShaderProgram& shaderProgram);
+		static void SetDefaultAttributesParameters(Rhi::ShaderProgram& shaderProgram);
 
 	private:
 #if defined(WITH_EMBEDDED_SHADERS)
@@ -133,12 +132,12 @@ namespace nCine
 		static std::unique_ptr<RenderBatcher> renderBatcher_;
 
 		static constexpr std::uint32_t DefaultShaderProgramsCount = std::uint32_t(Material::ShaderProgramType::Custom);
-		static std::unique_ptr<GLShaderProgram> defaultShaderPrograms_[DefaultShaderProgramsCount];
-		static HashMap<const GLShaderProgram*, GLShaderProgram*> batchedShaders_;
+		static std::unique_ptr<Rhi::ShaderProgram> defaultShaderPrograms_[DefaultShaderProgramsCount];
+		static HashMap<const Rhi::ShaderProgram*, Rhi::ShaderProgram*> batchedShaders_;
 
 		static constexpr std::uint32_t UniformsBufferSize = 128; // two 4x4 float matrices
 		static std::uint8_t cameraUniformsBuffer_[UniformsBufferSize];
-		static HashMap<GLShaderProgram*, CameraUniformData> cameraUniformDataMap_;
+		static HashMap<Rhi::ShaderProgram*, CameraUniformData> cameraUniformDataMap_;
 
 		static Camera* currentCamera_;
 		static std::unique_ptr<Camera> defaultCamera_;

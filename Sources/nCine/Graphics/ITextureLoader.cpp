@@ -44,9 +44,9 @@ namespace nCine
 		return dataSize;
 	}
 
-	const GLubyte* ITextureLoader::pixels(std::uint32_t mipMapLevel) const
+	const std::uint8_t* ITextureLoader::pixels(std::uint32_t mipMapLevel) const
 	{
-		const GLubyte* pixels = nullptr;
+		const std::uint8_t* pixels = nullptr;
 
 		if (pixels_ != nullptr) {
 			if (mipMapCount_ > 1 && std::int32_t(mipMapLevel) < mipMapCount_) {

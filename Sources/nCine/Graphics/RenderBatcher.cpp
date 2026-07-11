@@ -2,7 +2,7 @@
 #include "RenderCommand.h"
 #include "RenderCommandPool.h"
 #include "RenderResources.h"
-#include "GL/GLShaderProgram.h"
+#include "RHI/Rhi.h"
 #include "../Application.h"
 #include "../ServiceLocator.h"
 #include "../Base/StaticHashMapIterator.h"
@@ -16,7 +16,7 @@ namespace nCine
 	RenderBatcher::RenderBatcher()
 	{
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		UboMaxSize = std::uint32_t(gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED));
+		UboMaxSize = std::uint32_t(gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED));
 
 		// Create the first buffer right away
 		CreateBuffer(UboMaxSize);
@@ -42,21 +42,21 @@ namespace nCine
 
 		for (std::uint32_t i = 1; i < srcQueue.size(); i++) {
 			const RenderCommand* command = srcQueue[i];
-			const GLenum primitive = command->GetGeometry().GetPrimitiveType();
+			const PrimitiveType primitive = command->GetGeometry().GetPrimitiveType();
 
 			const RenderCommand* prevCommand = srcQueue[i - 1];
-			const GLenum prevPrimitive = prevCommand->GetGeometry().GetPrimitiveType();
+			const PrimitiveType prevPrimitive = prevCommand->GetGeometry().GetPrimitiveType();
 
 			// Should split if material sort key (that takes into account shader program, textures and blending) or primitive type differs
 			// GL_LINE_STRIP is split always, because it cannot be batched
-			const bool shouldSplit = (command->GetLowerMaterialSortKey() != prevCommand->GetLowerMaterialSortKey() || prevPrimitive != primitive || primitive == GL_LINE_STRIP);
+			const bool shouldSplit = (command->GetLowerMaterialSortKey() != prevCommand->GetLowerMaterialSortKey() || prevPrimitive != primitive || primitive == PrimitiveType::LineStrip);
 
 			// Also collect the very last command if it can be batched with the previous one
 			std::uint32_t endSplit = (i == srcQueue.size() - 1 && !shouldSplit ? i + 1 : i);
 
 			// Split point if last command or split condition
 			if (i == srcQueue.size() - 1 || shouldSplit) {
-				const GLShaderProgram* batchedShader = RenderResources::GetBatchedShader(prevCommand->GetMaterial().GetShaderProgram());
+				const Rhi::ShaderProgram* batchedShader = RenderResources::GetBatchedShader(prevCommand->GetMaterial().GetShaderProgram());
 				if (batchedShader && (endSplit - lastSplit) >= minBatchSize) {
 					// Split point for the maximum batch size
 					while (lastSplit < endSplit) {
@@ -119,22 +119,22 @@ namespace nCine
 
 		const RenderCommand* refCommand = *start;
 		RenderCommand* batchCommand = nullptr;
-		GLUniformBlockCache* instancesBlock = nullptr;
+		Rhi::UniformBlockCache* instancesBlock = nullptr;
 
 		// Tracking the amount of memory required by uniform blocks, vertices and indices of all instances
 		std::uint32_t instancesBlockSize = 0;
 		std::uint32_t instancesVertexDataSize = 0;
 		std::uint32_t instancesIndicesAmount = 0;
 
-		const GLShaderProgram* refShader = refCommand->GetMaterial().GetShaderProgram();
-		GLShaderProgram* batchedShader = RenderResources::GetBatchedShader(refShader);
+		const Rhi::ShaderProgram* refShader = refCommand->GetMaterial().GetShaderProgram();
+		Rhi::ShaderProgram* batchedShader = RenderResources::GetBatchedShader(refShader);
 		// The following check should never fail as it is already checked by the calling function
 		FATAL_ASSERT_MSG(batchedShader != nullptr, "Unsupported shader for batch element");
 		bool commandAdded = false;
 		batchCommand = RenderResources::GetRenderCommandPool().RetrieveOrAdd(batchedShader, commandAdded);
 
 		// Retrieving the original block instance size without the uniform buffer offset alignment
-		const GLUniformBlockCache* singleInstanceBlock = (*start)->GetInstanceBlock();
+		const Rhi::UniformBlockCache* singleInstanceBlock = (*start)->GetInstanceBlock();
 		const std::uint32_t singleInstanceBlockSizePacked = singleInstanceBlock->GetSize() - singleInstanceBlock->GetAlignAmount(); // remove the uniform buffer offset alignment
 		const std::uint32_t singleInstanceBlockSize = singleInstanceBlockSizePacked + (16 - singleInstanceBlockSizePacked % 16) % 16; // but add the std140 vec4 layout alignment
 
@@ -147,14 +147,14 @@ namespace nCine
 		const std::uint32_t nonBlockUniformsSize = batchCommand->GetMaterial().GetShaderProgram()->GetUniformsSize();
 		// Determine how much memory is needed by uniform blocks that are not for instances
 		std::uint32_t nonInstancesBlocksSize = 0;
-		const GLShaderUniformBlocks::UniformHashMapType& allUniformBlocks = refCommand->GetMaterial().GetAllUniformBlocks();
-		for (const GLUniformBlockCache& uniformBlockCache : allUniformBlocks) {
+		const Rhi::ShaderUniformBlocks::UniformHashMapType& allUniformBlocks = refCommand->GetMaterial().GetAllUniformBlocks();
+		for (const Rhi::UniformBlockCache& uniformBlockCache : allUniformBlocks) {
 			// The instance block was already resolved, comparing addresses avoids a string comparison
 			if (&uniformBlockCache == singleInstanceBlock) {
 				continue;
 			}
 
-			GLUniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockCache.uniformBlock()->GetName());
+			Rhi::UniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockCache.uniformBlock()->GetName());
 			DEATH_ASSERT(batchBlock);
 			if (batchBlock) {
 				nonInstancesBlocksSize += uniformBlockCache.GetSize() - uniformBlockCache.GetAlignAmount();
@@ -183,22 +183,22 @@ namespace nCine
 
 		batchCommand->GetMaterial().SetUniformsDataPointer(AcquireMemory(nonBlockUniformsSize + nonInstancesBlocksSize + instancesBlockSize));
 		// Copying data for non-instances uniform blocks from the first command in the batch
-		for (const GLUniformBlockCache& uniformBlockCache : allUniformBlocks) {
+		for (const Rhi::UniformBlockCache& uniformBlockCache : allUniformBlocks) {
 			if (&uniformBlockCache == singleInstanceBlock) {
 				continue;
 			}
 
-			GLUniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockCache.uniformBlock()->GetName());
+			Rhi::UniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockCache.uniformBlock()->GetName());
 			const bool dataCopied = batchBlock->CopyData(uniformBlockCache.GetDataPointer());
 			DEATH_ASSERT(dataCopied);
 			batchBlock->SetUsedSize(uniformBlockCache.usedSize());
 		}
 
 		// Setting sampler uniforms for GL_TEXTURE* units
-		const GLShaderUniforms::UniformHashMapType& allUniforms = refCommand->GetMaterial().GetAllUniforms();
-		for (const GLUniformCache& uniformCache : allUniforms) {
+		const Rhi::ShaderUniforms::UniformHashMapType& allUniforms = refCommand->GetMaterial().GetAllUniforms();
+		for (const Rhi::UniformCache& uniformCache : allUniforms) {
 			if (uniformCache.GetUniform()->GetType() == GL_SAMPLER_2D) {
-				GLUniformCache* batchUniformCache = batchCommand->GetMaterial().Uniform(uniformCache.GetUniform()->GetName());
+				Rhi::UniformCache* batchUniformCache = batchCommand->GetMaterial().Uniform(uniformCache.GetUniform()->GetName());
 				const std::int32_t refValue = uniformCache.GetIntValue(0);
 				const std::int32_t batchValue = batchUniformCache->GetIntValue(0);
 				// Also checking if the command has just been added, as the memory at the
@@ -277,7 +277,7 @@ namespace nCine
 			RenderCommand* command = *it;
 			command->CommitNodeTransformation();
 
-			const GLUniformBlockCache* singleInstanceBlock = command->GetInstanceBlock();
+			const Rhi::UniformBlockCache* singleInstanceBlock = command->GetInstanceBlock();
 			const bool dataCopied = instancesBlock->CopyData(instancesBlockOffset, singleInstanceBlock->GetDataPointer(), singleInstanceBlockSize);
 			DEATH_ASSERT(dataCopied);
 			instancesBlockOffset += singleInstanceBlockSize;
@@ -350,7 +350,7 @@ namespace nCine
 			}
 		}
 
-		for (std::uint32_t i = 0; i < GLTexture::MaxTextureUnits; i++) {
+		for (std::uint32_t i = 0; i < Rhi::Texture::MaxTextureUnits; i++) {
 			batchCommand->GetMaterial().SetTexture(i, refCommand->GetMaterial().GetTexture(i));
 		}
 		batchCommand->GetMaterial().SetBlendingEnabled(refCommand->GetMaterial().IsBlendingEnabled());
@@ -361,11 +361,11 @@ namespace nCine
 
 		if (batchedShaderHasAttributes) {
 			const std::uint32_t totalVertices = instancesVertexDataSize / SizeVertexFormatAndIndex;
-			batchCommand->GetGeometry().SetDrawParameters(refCommand->GetGeometry().GetPrimitiveType(), 0, totalVertices);
+			batchCommand->GetGeometry().SetDrawParameters(refCommand->GetGeometry().GetPrimitiveType(), 0, std::int32_t(totalVertices));
 			batchCommand->GetGeometry().SetElementsPerVertex(NumFloatsVertexFormatAndIndex);
 			batchCommand->GetGeometry().SetIndexCount(instancesIndicesAmount);
 		} else {
-			batchCommand->GetGeometry().SetDrawParameters(GL_TRIANGLES, 0, 6 * GLsizei(nextStart - start));
+			batchCommand->GetGeometry().SetDrawParameters(PrimitiveType::Triangles, 0, 6 * std::int32_t(nextStart - start));
 		}
 
 		return batchCommand;

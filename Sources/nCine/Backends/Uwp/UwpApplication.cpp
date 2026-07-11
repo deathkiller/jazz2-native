@@ -197,13 +197,13 @@ namespace nCine
 
 		_dispatcher = window.Dispatcher();
 
-		IGfxDevice::GLContextInfo glContextInfo(appCfg_);
+		IGfxDevice::ContextInfo contextInfo(appCfg_);
 		const DisplayMode::VSync vSyncMode = (appCfg_.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
 		DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
 		const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.windowPosition.X, appCfg_.windowPosition.Y, appCfg_.fullscreen, appCfg_.resizable, appCfg_.windowScaling);
 
 		// Graphics device should always be created before the input manager
-		gfxDevice_ = std::make_unique<UwpGfxDevice>(windowMode, glContextInfo, displayMode, window);
+		gfxDevice_ = std::make_unique<UwpGfxDevice>(windowMode, contextInfo, displayMode, window);
 		inputManager_ = std::make_unique<UwpInputManager>(window);
 
 		displayInfo.DpiChanged([](const auto&, const auto& args) {

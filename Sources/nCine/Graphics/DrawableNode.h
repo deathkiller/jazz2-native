@@ -34,38 +34,19 @@ namespace nCine
 
 		/** @} */
 
+		/** @brief Blending factor of the source or destination color (alias of the backend-neutral @ref nCine::BlendingFactor) */
+		using BlendingFactor = nCine::BlendingFactor;
+
 		/**
 		 * @brief Presets for source and destination blending factors
 		 */
 		enum class BlendingPreset
 		{
-			DISABLED,					/**< Uses `GL_ONE` and `GL_ZERO` */
-			ALPHA,						/**< Uses `GL_SRC_ALPHA` and `GL_ONE_MINUS_SRC_ALPHA` */
-			PREMULTIPLIED_ALPHA,		/**< Uses `GL_ONE` and `GL_ONE_MINUS_SRC_ALPHA` */
-			ADDITIVE,					/**< Uses `GL_SRC_ALPHA` and `GL_ONE` */
-			MULTIPLY					/**< Uses `GL_DST_COLOR` and `GL_ZERO` */
-		};
-
-		/**
-		 * @brief OpenGL blending factors
-		 */
-		enum class BlendingFactor
-		{
-			ZERO,
-			ONE,
-			SRC_COLOR,
-			ONE_MINUS_SRC_COLOR,
-			DST_COLOR,
-			ONE_MINUS_DST_COLOR,
-			SRC_ALPHA,
-			ONE_MINUS_SRC_ALPHA,
-			DST_ALPHA,
-			ONE_MINUS_DST_ALPHA,
-			CONSTANT_COLOR,
-			ONE_MINUS_CONSTANT_COLOR,
-			CONSTANT_ALPHA,
-			ONE_MINUS_CONSTANT_ALPHA,
-			SRC_ALPHA_SATURATE,
+			DISABLED,					/**< Uses `BlendingFactor::One` and `BlendingFactor::Zero` */
+			ALPHA,						/**< Uses `BlendingFactor::SrcAlpha` and `BlendingFactor::OneMinusSrcAlpha` */
+			PREMULTIPLIED_ALPHA,		/**< Uses `BlendingFactor::One` and `BlendingFactor::OneMinusSrcAlpha` */
+			ADDITIVE,					/**< Uses `BlendingFactor::SrcAlpha` and `BlendingFactor::One` */
+			MULTIPLY					/**< Uses `BlendingFactor::DstColor` and `BlendingFactor::Zero` */
 		};
 
 		/** @brief Creates a node as a child of @p parent at the relative position (@p xx, @p yy) */

@@ -19,8 +19,8 @@ namespace winrtWGDC = winrt::Windows::Graphics::Display::Core;
 
 namespace nCine::Backends
 {
-	UwpGfxDevice::UwpGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUC::CoreWindow& window)
-		: IGfxDevice(windowMode, glContextInfo, displayMode), _window(window), _renderSurface{EGL_NO_SURFACE}, _sizeChanged(2)
+	UwpGfxDevice::UwpGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode, const winrtWUC::CoreWindow& window)
+		: IGfxDevice(windowMode, contextInfo, displayMode), _window(window), _renderSurface{EGL_NO_SURFACE}, _sizeChanged(2)
 	{
 		updateMonitors();
 		Initialize();
