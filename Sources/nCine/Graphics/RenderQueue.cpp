@@ -2,11 +2,8 @@
 #include "RenderBatcher.h"
 #include "RenderResources.h"
 #include "RenderStatistics.h"
-#include "GL/GLDebug.h"
+#include "RHI/Rhi.h"
 #include "../Application.h"
-#include "GL/GLScissorTest.h"
-#include "GL/GLDepthTest.h"
-#include "GL/GLBlending.h"
 #include "../Base/Algorithms.h"
 #include "../tracy_opengl.h"
 
@@ -99,7 +96,7 @@ namespace nCine
 			ZoneScopedNC("Commit opaques", 0x81A861);
 #if defined(DEATH_DEBUG)
 			std::size_t length = formatInto(debugString, "Commit {} opaque command(s) for viewport 0x{:x}", opaques->size(), std::uintptr_t(RenderResources::GetCurrentViewport()));
-			GLDebug::ScopedGroup scoped({ debugString, length });
+			Rhi::Debug::ScopedGroup scoped({ debugString, length });
 #endif
 			for (RenderCommand* opaqueRenderCommand : *opaques) {
 				opaqueRenderCommand->CommitAll();
@@ -110,7 +107,7 @@ namespace nCine
 			ZoneScopedNC("Commit transparents", 0x81A861);
 #if defined(DEATH_DEBUG)
 			std::size_t length = formatInto(debugString, "Commit {} transparent command(s) for viewport 0x{:x}", transparents->size(), std::uintptr_t(RenderResources::GetCurrentViewport()));
-			GLDebug::ScopedGroup scoped({ debugString, length });
+			Rhi::Debug::ScopedGroup scoped({ debugString, length });
 #endif
 			for (RenderCommand* transparentRenderCommand : *transparents) {
 				transparentRenderCommand->CommitAll();
@@ -132,7 +129,7 @@ namespace nCine
 #endif
 		// The camera is constant within a single queue draw, so its uniforms only need to be
 		// committed when the shader program changes from one command to the next
-		const GLShaderProgram* lastCommittedShader = nullptr;
+		const Rhi::ShaderProgram* lastCommittedShader = nullptr;
 
 		// Rendering opaque nodes front to back
 		for (RenderCommand* opaqueRenderCommand : *opaques) {
@@ -154,14 +151,14 @@ namespace nCine
 				length = formatInto(debugString, "Opaque {} ({} {} layer {}, visit order {}, sort key 0x{:x})",
 								    commandIndex, commandTypeString(*opaqueRenderCommand), layer, visitOrder, opaqueRenderCommand->GetMaterialSortKey());
 			}
-			GLDebug::ScopedGroup scoped({ debugString, length });
+			Rhi::Debug::ScopedGroup scoped({ debugString, length });
 			commandIndex++;
 #endif
 
 #if defined(NCINE_PROFILING)
 			RenderStatistics::GatherStatistics(*opaqueRenderCommand);
 #endif
-			const GLShaderProgram* shaderProgram = opaqueRenderCommand->GetMaterial().GetShaderProgram();
+			const Rhi::ShaderProgram* shaderProgram = opaqueRenderCommand->GetMaterial().GetShaderProgram();
 			if (shaderProgram != lastCommittedShader) {
 				opaqueRenderCommand->CommitCameraTransformation();
 				lastCommittedShader = shaderProgram;
@@ -169,8 +166,8 @@ namespace nCine
 			opaqueRenderCommand->Issue();
 		}
 
-		GLBlending::Enable();
-		GLDepthTest::DisableDepthMask();
+		Rhi::Device::SetBlendingEnabled(true);
+		Rhi::Device::SetDepthMaskEnabled(false);
 		// Rendering transparent nodes back to front
 		for (RenderCommand* transparentRenderCommand : *transparents) {
 			TracyGpuZone("Transparent");
@@ -191,27 +188,27 @@ namespace nCine
 				length = formatInto(debugString, "Transparent {} ({} on layer {}, visit order {}, sort key 0x{:x})",
 								    commandIndex, commandTypeString(*transparentRenderCommand), layer, visitOrder, transparentRenderCommand->GetMaterialSortKey());
 			}
-			GLDebug::ScopedGroup scoped({ debugString, length });
+			Rhi::Debug::ScopedGroup scoped({ debugString, length });
 			commandIndex++;
 #endif
 
 #if defined(NCINE_PROFILING)
 			RenderStatistics::GatherStatistics(*transparentRenderCommand);
 #endif
-			GLBlending::SetBlendFunc(transparentRenderCommand->GetMaterial().GetSrcBlendingFactor(), transparentRenderCommand->GetMaterial().GetDestBlendingFactor(),
+			Rhi::Device::SetBlendingFactors(transparentRenderCommand->GetMaterial().GetSrcBlendingFactor(), transparentRenderCommand->GetMaterial().GetDestBlendingFactor(),
 				transparentRenderCommand->GetMaterial().GetSrcAlphaBlendingFactor(), transparentRenderCommand->GetMaterial().GetDestAlphaBlendingFactor());
-			const GLShaderProgram* shaderProgram = transparentRenderCommand->GetMaterial().GetShaderProgram();
+			const Rhi::ShaderProgram* shaderProgram = transparentRenderCommand->GetMaterial().GetShaderProgram();
 			if (shaderProgram != lastCommittedShader) {
 				transparentRenderCommand->CommitCameraTransformation();
 				lastCommittedShader = shaderProgram;
 			}
 			transparentRenderCommand->Issue();
 		}
-		// Depth mask has to be enabled again before exiting this method or glClear(GL_DEPTH_BUFFER_BIT) won't have any effect
-		GLDepthTest::EnableDepthMask();
-		GLBlending::Disable();
+		// Depth mask has to be enabled again before exiting this method or clearing the depth buffer won't have any effect
+		Rhi::Device::SetDepthMaskEnabled(true);
+		Rhi::Device::SetBlendingEnabled(false);
 
-		GLScissorTest::Disable();
+		Rhi::Device::SetScissorTestEnabled(false);
 	}
 
 	void RenderQueue::Clear()

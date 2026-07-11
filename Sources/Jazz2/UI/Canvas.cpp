@@ -50,7 +50,7 @@ namespace Jazz2::UI
 			: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
 		if (shaderChanged) {
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 			auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -66,9 +66,9 @@ namespace Jazz2::UI
 		// otherwise drawing semi-transparent content over an opaque background would erode its alpha and let the
 		// scene behind show through. Harmless for opaque/RGB targets (alpha ignored).
 		if (additiveBlending) {
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One, BlendingFactor::Zero, BlendingFactor::One);
 		} else {
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 		}
 
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
@@ -118,7 +118,7 @@ namespace Jazz2::UI
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShader(shader)) {
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 			auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -130,7 +130,7 @@ namespace Jazz2::UI
 			}
 		}
 
-		command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+		command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
@@ -159,15 +159,15 @@ namespace Jazz2::UI
 		auto command = RentRenderCommand();
 		if (command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::SpriteNoTexture)) {
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 			// Required to reset render command properly
 			//command->SetTransformation(command->transformation());
 		}
 
 		if (additiveBlending) {
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One, BlendingFactor::Zero, BlendingFactor::One);
 		} else {
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 		}
 
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);

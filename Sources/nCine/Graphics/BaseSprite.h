@@ -6,7 +6,6 @@
 namespace nCine
 {
 	class Texture;
-	class GLUniformBlockCache;
 
 	/**
 		@brief Base class for textured sprites
@@ -80,7 +79,7 @@ namespace nCine
 		/** @brief Flat index into the palette texture, uploaded per-instance for palette shaders (0 = first palette row) */
 		float paletteOffset_;
 
-		GLUniformBlockCache* instanceBlock_;
+		Rhi::UniformBlockCache* instanceBlock_;
 #endif
 
 		/** @brief Protected constructor accessible only by derived sprite classes */

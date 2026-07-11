@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GL/GLBufferObject.h"
+#include "RHI/Rhi.h"
 
 #include <memory>
 
@@ -40,35 +40,22 @@ namespace nCine
 		{
 			/** @brief Buffer type the specification applies to */
 			BufferTypes type;
-			/** @brief OpenGL binding target */
-			GLenum target;
-			/** @brief Buffer mapping flags, or zero when a host buffer is used instead of mapping */
-			GLenum mapFlags;
+			/** @brief Buffer binding target */
+			BufferTarget target;
+			/** @brief Buffer mapping flags, or `None` when a host buffer is used instead of mapping */
+			MapFlags mapFlags;
 			/** @brief Buffer usage hint */
-			GLenum usageFlags;
+			BufferUsage usageFlags;
 			/** @brief Maximum size of a single buffer object in bytes (one ring section with persistent storage) */
 			std::uint32_t maxSize;
 			/** @brief Required alignment in bytes for sub-allocations */
-			GLuint alignment;
+			std::uint32_t alignment;
 			/** @brief Whether the buffer uses persistently mapped immutable storage with a section ring */
 			bool persistent;
 		};
 
 		/** @brief Result of a memory request, locating a sub-range within a buffer object */
-		struct Parameters
-		{
-			Parameters()
-				: object(nullptr), size(0), offset(0), mapBase(nullptr) {}
-
-			/** @brief Buffer object the memory belongs to */
-			GLBufferObject* object;
-			/** @brief Size of the reserved region in bytes */
-			std::uint32_t size;
-			/** @brief Offset of the reserved region within the buffer object */
-			std::uint32_t offset;
-			/** @brief Base pointer of the mapped (or host) buffer memory */
-			GLubyte* mapBase;
-		};
+		using Parameters = Rhi::BufferRange;
 
 		RenderBuffersManager(bool useBufferMapping, bool useBufferStorage, std::uint32_t vboMaxSize, std::uint32_t iboMaxSize);
 		~RenderBuffersManager();
@@ -95,13 +82,13 @@ namespace nCine
 				: type(BufferTypes::Array), size(0), freeSpace(0), sectionOffset(0), object(nullptr), mapBase(nullptr), hostBuffer(nullptr) {}
 
 			BufferTypes type;
-			std::unique_ptr<GLBufferObject> object;
+			std::unique_ptr<Rhi::Buffer> object;
 			std::uint32_t size;
 			std::uint32_t freeSpace;
 			// Byte offset of the current ring section, always zero without persistent storage
 			std::uint32_t sectionOffset;
-			GLubyte* mapBase;
-			std::unique_ptr<GLubyte[]> hostBuffer;
+			std::uint8_t* mapBase;
+			std::unique_ptr<std::uint8_t[]> hostBuffer;
 		};
 #endif
 
@@ -114,7 +101,7 @@ namespace nCine
 		// Current section of the persistent buffer ring
 		std::uint32_t currentSection_;
 		// Fences protecting each ring section from being overwritten while the GPU still reads it
-		GLsync sectionFences_[NumPersistentSections];
+		FenceHandle sectionFences_[NumPersistentSections];
 
 		void FlushUnmap();
 		void Remap();

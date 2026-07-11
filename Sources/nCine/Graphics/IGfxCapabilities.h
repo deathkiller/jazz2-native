@@ -15,7 +15,7 @@ namespace nCine
 	{
 	public:
 		/** @brief OpenGL version component */
-		enum class GLVersion
+		enum class ApiVersion
 		{
 			Major,
 			Minor,
@@ -23,16 +23,16 @@ namespace nCine
 		};
 
 		/** @brief OpenGL information strings */
-		struct GLInfoStrings
+		struct InfoStrings
 		{
 			const char* vendor = nullptr;
 			const char* renderer = nullptr;
-			const char* glVersion = nullptr;
-			const char* glslVersion = nullptr;
+			const char* apiVersion = nullptr;
+			const char* shadingLanguageVersion = nullptr;
 		};
 
 		/** @brief OpenGL queryable runtime integer value */
-		enum class GLIntValues
+		enum class IntValues
 		{
 			MAX_TEXTURE_SIZE = 0,
 			MAX_TEXTURE_IMAGE_UNITS,
@@ -50,7 +50,7 @@ namespace nCine
 		};
 
 		/** @brief OpenGL queryable runtime integer array value */
-		enum class GLArrayIntValues
+		enum class ArrayIntValues
 		{
 			PROGRAM_BINARY_FORMATS = 0,
 
@@ -58,7 +58,7 @@ namespace nCine
 		};
 
 		/** @brief OpenGL queryable extension */
-		enum class GLExtensions
+		enum class Extensions
 		{
 			KHR_DEBUG = 0,
 			ARB_TEXTURE_STORAGE,
@@ -80,15 +80,15 @@ namespace nCine
 		virtual ~IGfxCapabilities() = 0;
 
 		/** @brief Returns the specified OpenGL version component */
-		virtual std::int32_t GetGLVersion(GLVersion version) const = 0;
+		virtual std::int32_t GetApiVersion(ApiVersion version) const = 0;
 		/** @brief Returns the OpenGL information strings */
-		virtual const GLInfoStrings& GetGLInfoStrings() const = 0;
+		virtual const InfoStrings& GetInfoStrings() const = 0;
 		/** @brief Returns a runtime OpenGL integer value */
-		virtual std::int32_t GetValue(GLIntValues valueName) const = 0;
+		virtual std::int32_t GetValue(IntValues valueName) const = 0;
 		/** @brief Returns an element of a runtime OpenGL integer array value */
-		virtual std::int32_t GetArrayValue(GLArrayIntValues arrayValueName, std::uint32_t index) const = 0;
+		virtual std::int32_t GetArrayValue(ArrayIntValues arrayValueName, std::uint32_t index) const = 0;
 		/** @brief Returns `true` if the specified OpenGL extension is available */
-		virtual bool HasExtension(GLExtensions extensionName) const = 0;
+		virtual bool HasExtension(Extensions extensionName) const = 0;
 	};
 
 	inline IGfxCapabilities::~IGfxCapabilities() {}
@@ -103,24 +103,24 @@ namespace nCine
 	class NullGfxCapabilities : public IGfxCapabilities
 	{
 	public:
-		inline std::int32_t GetGLVersion(GLVersion version) const override {
+		inline std::int32_t GetApiVersion(ApiVersion version) const override {
 			return 0;
 		}
-		inline const GLInfoStrings& GetGLInfoStrings() const override {
+		inline const InfoStrings& GetInfoStrings() const override {
 			return glInfoStrings_;
 		}
-		inline std::int32_t GetValue(GLIntValues valueName) const override {
+		inline std::int32_t GetValue(IntValues valueName) const override {
 			return 0;
 		}
-		inline std::int32_t GetArrayValue(GLArrayIntValues arrayValueName, std::uint32_t index) const override {
+		inline std::int32_t GetArrayValue(ArrayIntValues arrayValueName, std::uint32_t index) const override {
 			return 0;
 		}
-		inline bool HasExtension(GLExtensions extensionName) const override {
+		inline bool HasExtension(Extensions extensionName) const override {
 			return false;
 		}
 
 	private:
-		GLInfoStrings glInfoStrings_;
+		InfoStrings glInfoStrings_;
 	};
 #endif
 }

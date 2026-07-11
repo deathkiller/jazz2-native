@@ -1,7 +1,6 @@
 #pragma once
 
-#include "GL/GLVertexArrayObject.h"
-#include "GL/GLVertexFormat.h"
+#include "RHI/Rhi.h"
 
 #include <memory>
 
@@ -11,8 +10,6 @@ using namespace Death::Containers;
 
 namespace nCine
 {
-	class GLVertexArrayObject;
-
 	/**
 		@brief Pool of reusable Vertex Array Objects
 		
@@ -26,20 +23,20 @@ namespace nCine
 		explicit RenderVaoPool(std::uint32_t vaoPoolSize);
 
 		/** @brief Binds a VAO matching the specified vertex format, reusing a pooled one or creating it */
-		void BindVao(const GLVertexFormat& vertexFormat);
+		void BindVao(const Rhi::VertexFormat& vertexFormat);
 
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct VaoBinding
 		{
-			std::unique_ptr<GLVertexArrayObject> object;
+			std::unique_ptr<Rhi::VertexArray> object;
 			// Value of the pool bind counter when this VAO was last bound, used for LRU eviction
 			// (kept before the large vertex format so the LRU scan stays within the first cache line)
 			std::uint64_t lastBindIndex = 0;
 			// Fingerprint of the format, so a scan rejects mismatches without a deep comparison
 			std::uint64_t fingerprint = 0;
-			GLVertexFormat format;
+			Rhi::VertexFormat format;
 		};
 #endif
 

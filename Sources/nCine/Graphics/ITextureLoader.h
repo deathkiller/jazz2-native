@@ -75,7 +75,7 @@ namespace nCine
 		/**
 		 * @brief Returns the pointer to pixel data
 		 */
-		inline const GLubyte* pixels() const {
+		inline const std::uint8_t* pixels() const {
 			return pixels_.get();
 		}
 		/**
@@ -83,7 +83,7 @@ namespace nCine
 		 *
 		 * @param mipMapLevel  Zero-based MIP map level
 		 */
-		const GLubyte* pixels(std::uint32_t mipMapLevel) const;
+		const std::uint8_t* pixels(std::uint32_t mipMapLevel) const;
 
 		//static std::unique_ptr<ITextureLoader> createFromMemory(const unsigned char* bufferPtr, unsigned long int bufferSize);
 		/**
@@ -108,7 +108,7 @@ namespace nCine
 		std::unique_ptr<std::uint32_t[]> mipDataOffsets_;
 		std::unique_ptr<std::uint32_t[]> mipDataSizes_;
 		TextureFormat texFormat_;
-		std::unique_ptr<GLubyte[]> pixels_;
+		std::unique_ptr<std::uint8_t[]> pixels_;
 #endif
 
 		/** @brief An empty constructor only used by `TextureLoaderRaw` */

@@ -415,7 +415,7 @@ namespace nCine
 			LOGB("Initializing graphics device and input manager...");
 
 			// Graphics device should always be created before the input manager
-			IGfxDevice::GLContextInfo glContextInfo(appCfg_);
+			IGfxDevice::ContextInfo contextInfo(appCfg_);
 			const DisplayMode::VSync vSyncMode = (appCfg_.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
 			DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
 
@@ -423,14 +423,14 @@ namespace nCine
 				appCfg_.windowPosition.Y, appCfg_.fullscreen, appCfg_.resizable, appCfg_.windowScaling);
 
 #if defined(WITH_SDL)
-			gfxDevice_ = std::make_unique<SdlGfxDevice>(windowMode, glContextInfo, displayMode);
+			gfxDevice_ = std::make_unique<SdlGfxDevice>(windowMode, contextInfo, displayMode);
 			inputManager_ = std::make_unique<SdlInputManager>();
 #elif defined(WITH_GLFW)
-			gfxDevice_ = std::make_unique<GlfwGfxDevice>(windowMode, glContextInfo, displayMode);
+			gfxDevice_ = std::make_unique<GlfwGfxDevice>(windowMode, contextInfo, displayMode);
 			inputManager_ = std::make_unique<GlfwInputManager>();
 #elif defined(WITH_QT5)
 			FATAL_ASSERT_MSG(qt5Widget_, "The Qt5 widget has not been assigned");
-			gfxDevice_ = std::make_unique<Qt5GfxDevice>(windowMode, glContextInfo, displayMode, *qt5Widget_);
+			gfxDevice_ = std::make_unique<Qt5GfxDevice>(windowMode, contextInfo, displayMode, *qt5Widget_);
 			inputManager_ = std::make_unique<Qt5InputManager>(*qt5Widget_);
 #endif
 			gfxDevice_->setWindowTitle(appCfg_.windowTitle.data());

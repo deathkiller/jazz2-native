@@ -7,6 +7,8 @@
 
 #include "../../Main.h"
 
+#include "RHI/RhiTypes.h"
+
 namespace nCine
 {
 	/**
@@ -38,6 +40,8 @@ namespace nCine
 		inline bool isCompressed() const {
 			return isCompressed_;
 		}
+		/** @brief Returns the backend-neutral pixel format, or `PixelFormat::Unknown` if the data is compressed or not 8-bit-per-channel */
+		PixelFormat pixelFormat() const;
 		/** @brief Returns the number of color channels */
 		std::uint32_t numChannels() const;
 

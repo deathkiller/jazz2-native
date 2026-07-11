@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GL/GLShaderProgram.h"
+#include "RHI/Rhi.h"
 
 #include <Containers/String.h>
 #include <Containers/StringView.h>
@@ -44,9 +44,9 @@ namespace nCine
 		String GetCachedShaderPath(const char* shaderName);
 
 		/** @brief Loads a binary into the program from the cache, returning `true` on success */
-		bool LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program, GLShaderProgram::Introspection introspection);
+		bool LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program, Rhi::ShaderProgram::Introspection introspection);
 		/** @brief Saves the program binary to the cache, returning `true` on success */
-		bool SaveToCache(const char* shaderName, std::uint64_t shaderVersion, GLShaderProgram* program);
+		bool SaveToCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program);
 
 		/** @brief Deletes all binary shaders that don't belong to this platform from the cache directory */
 		std::uint32_t Prune();

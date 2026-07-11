@@ -25,8 +25,8 @@ namespace Jazz2::UI
 
 		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(path);
 		if (texLoader->hasLoaded()) {
-			auto texFormat = texLoader->texFormat().internalFormat();
-			if (texFormat != GL_RGBA8 && texFormat != GL_RGB8) {
+			auto texFormat = texLoader->texFormat().pixelFormat();
+			if (texFormat != PixelFormat::RGBA8 && texFormat != PixelFormat::RGB8) {
 				return;
 			}
 
@@ -547,7 +547,7 @@ namespace Jazz2::UI
 						: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
 					if (shaderChanged) {
 						command->GetMaterial().ReserveUniformsDataMemory();
-						command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+						command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 						// Required to reset render command properly
 						//command->SetTransformation(command->transformation());
 
@@ -559,7 +559,7 @@ namespace Jazz2::UI
 
 					// Separate alpha blend so text (e.g. semi-transparent shadows) accumulates correct alpha coverage
 					// when drawn into an RGBA render target, harmless for opaque/RGB targets
-					command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+					command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 
 					auto* instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());

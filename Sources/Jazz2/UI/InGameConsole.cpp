@@ -202,7 +202,7 @@ namespace Jazz2::UI
 					Alignment::Left, color, 1.0f, 0.0f, 0.0f, 0.0f);
 
 				Vector2f textToCursorSize = _smallFont->MeasureString(StringView{_currentLine, _textCursor}, 1.0f);
-				DrawSolid(Vector2f(120.0f + textToCursorSize.X + 1.0f, topLineY - 1.0f), KeyboardLayer + 14, Vector2f(1.0f, 14.0f),
+				DrawSolid(Vector2f(120.0f + textToCursorSize.X + 1.0f, topLineY - 8.0f), KeyboardLayer + 14, Vector2f(1.0f, 14.0f),
 					Colorf(1.0f, 1.0f, 1.0f, std::clamp(sinf(_carretAnim * 0.1f) * 1.4f, 0.0f, 0.8f)), true);
 			}
 

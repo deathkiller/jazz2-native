@@ -23,7 +23,7 @@
 #include "../../nCine/Primitives/Matrix4x4.h"
 #include "../../nCine/Base/Random.h"
 #include "../../nCine/Base/FrameTimer.h"
-#include "../../nCine/Graphics/GL/GLUniformCache.h"
+#include "../../nCine/Graphics/RHI/Rhi.h"
 
 using namespace Jazz2::Tiles;
 using namespace nCine;
@@ -1478,7 +1478,7 @@ namespace Jazz2::Actors
 		}
 		if (shaderChanged) {
 			shaderHasChanged();
-			renderCommand_.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			renderCommand_.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 			if (type == ActorRendererType::Outline || type == ActorRendererType::FrozenMask) {
 				_rendererTransition = 0.0f;
@@ -1496,7 +1496,7 @@ namespace Jazz2::Actors
 		// after shaderHasChanged() (which (re)allocates the uniform data and resets uTexture to unit 0) so the
 		// sampler/texture binding sticks. Every render type has a palette variant now.
 		if (hasPalette) {
-			GLUniformCache* paletteUniform = renderCommand_.GetMaterial().Uniform("uTexturePalette");
+			Rhi::UniformCache* paletteUniform = renderCommand_.GetMaterial().Uniform("uTexturePalette");
 			if (paletteUniform != nullptr) {
 				paletteUniform->SetIntValue(1); // GL_TEXTURE1
 			}

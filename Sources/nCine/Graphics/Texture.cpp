@@ -3,7 +3,7 @@
 
 #include "Texture.h"
 #include "TextureLoaderRaw.h"
-#include "GL/GLTexture.h"
+#include "RHI/Rhi.h"
 #include "RenderStatistics.h"
 #include "../ServiceLocator.h"
 #include "../tracy.h"
@@ -72,7 +72,7 @@ namespace nCine
 	}
 
 	Texture::Texture()
-		: Object(ObjectType::Texture), glTexture_(std::make_unique<GLTexture>(GL_TEXTURE_2D)), width_(0), height_(0),
+		: Object(ObjectType::Texture), glTexture_(std::make_unique<Rhi::Texture>(GL_TEXTURE_2D)), width_(0), height_(0),
 			mipMapLevels_(0), isCompressed_(false), format_(Format::Unknown), dataSize_(0), minFiltering_(SamplerFilter::Nearest),
 			magFiltering_(SamplerFilter::Nearest), wrapMode_(SamplerWrapping::ClampToEdge)
 	{
@@ -385,7 +385,7 @@ namespace nCine
 	void Texture::Initialize(const ITextureLoader& texLoader)
 	{
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		const std::int32_t maxTextureSize = gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_TEXTURE_SIZE);
+		const std::int32_t maxTextureSize = gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_TEXTURE_SIZE);
 		FATAL_ASSERT_MSG(texLoader.width() <= maxTextureSize, "Texture width {} is bigger than device maximum {}", texLoader.width(), maxTextureSize);
 		FATAL_ASSERT_MSG(texLoader.height() <= maxTextureSize, "Texture height {} is bigger than device maximum {}", texLoader.height(), maxTextureSize);
 
@@ -397,7 +397,7 @@ namespace nCine
 #if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 		const bool withTexStorage = true;
 #else
-		const bool withTexStorage = gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::ARB_TEXTURE_STORAGE);
+		const bool withTexStorage = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_TEXTURE_STORAGE);
 #endif
 
 		// Specify texture storage because it's either the very first time or there have been a change in size or format
@@ -405,7 +405,7 @@ namespace nCine
 			if (withTexStorage) {
 				if (dataSize_ > 0) {
 					// The OpenGL texture needs to be recreated as its storage is immutable
-					glTexture_ = std::make_unique<GLTexture>(GL_TEXTURE_2D);
+					glTexture_ = std::make_unique<Rhi::Texture>(GL_TEXTURE_2D);
 					dataSize_ = 0;
 				}
 
@@ -456,7 +456,7 @@ namespace nCine
 		const bool withTexStorage = true;
 #else
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		const bool withTexStorage = gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::ARB_TEXTURE_STORAGE);
+		const bool withTexStorage = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_TEXTURE_STORAGE);
 #endif
 
 		const TextureFormat& texFormat = texLoader.texFormat();

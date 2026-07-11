@@ -1394,9 +1394,9 @@ namespace Jazz2::Actors
 					: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
 				if (shaderChanged) {
 					command->GetMaterial().ReserveUniformsDataMemory();
-					command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
-					//command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-					command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+					command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One);
+					//command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+					command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 					auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 					if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1464,7 +1464,7 @@ namespace Jazz2::Actors
 					if (defaultPalette != nullptr) {
 						command->GetMaterial().SetTexture(1, *defaultPalette);
 					}
-					GLUniformCache* palOffsetUniform = instanceBlock->GetUniform(Material::PaletteOffsetUniformName);
+					Rhi::UniformCache* palOffsetUniform = instanceBlock->GetUniform(Material::PaletteOffsetUniformName);
 					if (palOffsetUniform != nullptr) {
 						palOffsetUniform->SetFloatValue(0.0f);
 					}
@@ -1516,8 +1516,8 @@ namespace Jazz2::Actors
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldFire))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-							command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+							command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1547,8 +1547,8 @@ namespace Jazz2::Actors
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldFire))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-							command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+							command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1588,7 +1588,7 @@ namespace Jazz2::Actors
 					bool shieldIndexed = ((res->Base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed);
 					if (ContentResolver::Get().ConfigureSpriteShader(*command, shieldIndexed)) {
 						// Water shield blends additively
-						command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+						command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One);
 					}
 
 					Vector2i texSize = res->Base->TextureDiffuse->GetSize();
@@ -1648,8 +1648,8 @@ namespace Jazz2::Actors
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldLightning))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-							command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+							command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1679,8 +1679,8 @@ namespace Jazz2::Actors
 
 						if (command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::ShieldLightning))) {
 							command->GetMaterial().ReserveUniformsDataMemory();
-							command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-							command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+							command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+							command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 							if (textureUniform && textureUniform->GetIntValue(0) != 0) {

@@ -34,9 +34,9 @@ namespace Jazz2::Rendering
 		struct LightCommand
 		{
 			std::unique_ptr<RenderCommand> Command;
-			GLUniformCache* TexRectUniform;
-			GLUniformCache* SpriteSizeUniform;
-			GLUniformCache* ColorUniform;
+			Rhi::UniformCache* TexRectUniform;
+			Rhi::UniformCache* SpriteSizeUniform;
+			Rhi::UniformCache* ColorUniform;
 		};
 
 		PlayerViewport* _owner;

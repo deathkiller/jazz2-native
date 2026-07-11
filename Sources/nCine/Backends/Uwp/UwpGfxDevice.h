@@ -44,7 +44,7 @@ namespace nCine::Backends
 		friend class UwpApplication;
 
 	public:
-		UwpGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode, const winrtWUC::CoreWindow& window);
+		UwpGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode, const winrtWUC::CoreWindow& window);
 		~UwpGfxDevice();
 
 		void update() override;

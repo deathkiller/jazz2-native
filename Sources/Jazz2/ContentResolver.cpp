@@ -719,8 +719,8 @@ namespace Jazz2
 			String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, pathNormalized });
 			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
 			if (texLoader->hasLoaded()) {
-				auto texFormat = texLoader->texFormat().internalFormat();
-				if (texFormat != GL_RGBA8 && texFormat != GL_RGB8) {
+				auto texFormat = texLoader->texFormat().pixelFormat();
+				if (texFormat != PixelFormat::RGBA8 && texFormat != PixelFormat::RGB8) {
 					return nullptr;
 				}
 
@@ -1909,14 +1909,14 @@ namespace Jazz2
 			// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
 			batchSize = 1;
 		} else {
-			batchSize = GLShaderProgram::DefaultBatchSize;
+			batchSize = Rhi::ShaderProgram::DefaultBatchSize;
 		}
 
 		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
 
 		if (compileTwice) {
-			GLShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
-			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
+			Rhi::ShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
+			Rhi::UniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
 			DEATH_DEBUG_ASSERT(block != nullptr);
 			if (block != nullptr) {
 				batchSize = maxUniformBlockSize / block->GetSize();
@@ -1967,14 +1967,14 @@ namespace Jazz2
 			// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
 			batchSize = 1;
 		} else {
-			batchSize = GLShaderProgram::DefaultBatchSize;
+			batchSize = Rhi::ShaderProgram::DefaultBatchSize;
 		}
 
 		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
 
 		if (compileTwice) {
-			GLShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
-			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
+			Rhi::ShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
+			Rhi::UniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
 			DEATH_DEBUG_ASSERT(block != nullptr);
 			if (block != nullptr) {
 				batchSize = maxUniformBlockSize / block->GetSize();
@@ -2025,14 +2025,14 @@ namespace Jazz2
 			// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
 			batchSize = 1;
 		} else {
-			batchSize = GLShaderProgram::DefaultBatchSize;
+			batchSize = Rhi::ShaderProgram::DefaultBatchSize;
 		}
 
 		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
 
 		if (compileTwice) {
-			GLShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
-			GLUniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
+			Rhi::ShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
+			Rhi::UniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
 			DEATH_DEBUG_ASSERT(block != nullptr);
 			if (block != nullptr) {
 				batchSize = maxUniformBlockSize / block->GetSize();
@@ -2404,13 +2404,13 @@ namespace Jazz2
 			: command.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
 		if (shaderChanged) {
 			command.GetMaterial().ReserveUniformsDataMemory();
-			command.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			command.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
-			GLUniformCache* textureUniform = command.GetMaterial().Uniform(Material::TextureUniformName);
+			Rhi::UniformCache* textureUniform = command.GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
-			GLUniformCache* paletteUniform = command.GetMaterial().Uniform("uTexturePalette");
+			Rhi::UniformCache* paletteUniform = command.GetMaterial().Uniform("uTexturePalette");
 			if (paletteUniform != nullptr) {
 				paletteUniform->SetIntValue(1); // GL_TEXTURE1
 			}
@@ -2418,7 +2418,7 @@ namespace Jazz2
 		return shaderChanged;
 	}
 
-	void ContentResolver::BindSpritePalette(RenderCommand& command, GLUniformBlockCache& instanceBlock, const Texture& diffuse, bool indexed, std::uint16_t paletteOffset)
+	void ContentResolver::BindSpritePalette(RenderCommand& command, Rhi::UniformBlockCache& instanceBlock, const Texture& diffuse, bool indexed, std::uint16_t paletteOffset)
 	{
 		command.GetMaterial().SetTexture(0, diffuse);
 		if (indexed) {
@@ -2426,7 +2426,7 @@ namespace Jazz2
 			if (palette != nullptr) {
 				command.GetMaterial().SetTexture(1, *palette);
 			}
-			GLUniformCache* palOffsetUniform = instanceBlock.GetUniform(Material::PaletteOffsetUniformName);
+			Rhi::UniformCache* palOffsetUniform = instanceBlock.GetUniform(Material::PaletteOffsetUniformName);
 			if (palOffsetUniform != nullptr) {
 				palOffsetUniform->SetFloatValue((float)paletteOffset);
 			}
@@ -2459,8 +2459,8 @@ namespace Jazz2
 			String fullPath = fs::CombinePath({ GetContentPath(), "Animations"_s, path });
 			std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(fullPath);
 			if (texLoader->hasLoaded()) {
-				auto texFormat = texLoader->texFormat().internalFormat();
-				if (texFormat != GL_RGBA8 && texFormat != GL_RGB8) {
+				auto texFormat = texLoader->texFormat().pixelFormat();
+				if (texFormat != PixelFormat::RGBA8 && texFormat != PixelFormat::RGB8) {
 					return;
 				}
 

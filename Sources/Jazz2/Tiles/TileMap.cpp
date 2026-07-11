@@ -994,7 +994,7 @@ namespace Jazz2::Tiles
 
 					auto command = RentRenderCommand(layer.Description.RendererType, tileSet->IsIndexed);
 					command->SetType(RenderCommand::Type::TileMap);
-					command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
 					auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
@@ -1052,7 +1052,7 @@ namespace Jazz2::Tiles
 		}
 		if (shaderChanged) {
 			command->GetMaterial().ReserveUniformsDataMemory();
-			command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+			command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 			auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform && textureUniform->GetIntValue(0) != 0) {
@@ -1118,7 +1118,7 @@ namespace Jazz2::Tiles
 			RenderCommand* command = _layerMeshCommands[_layerMeshCommandCount++].get();
 
 			command->SetType(RenderCommand::Type::TileMap);
-			command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
 			bool shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(
 				indexed ? PrecompiledShader::TileMapMeshPalette : PrecompiledShader::TileMapMesh));
@@ -1144,7 +1144,7 @@ namespace Jazz2::Tiles
 			geometry.SetElementsPerVertex(FloatsPerVertex);
 			geometry.SetVertexCount(count);
 			geometry.SetHostVertexPointer(vertices.data() + firstVertex * FloatsPerVertex);
-			geometry.SetDrawParameters(GL_TRIANGLES, 0, count);
+			geometry.SetDrawParameters(PrimitiveType::Triangles, 0, count);
 
 			// Vertex positions are already in world space, so the model matrix is identity
 			command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
@@ -1678,9 +1678,9 @@ namespace Jazz2::Tiles
 			ContentResolver::Get().ConfigureSpriteShader(*command, debrisIndexed);
 
 			if ((debris.Flags & DebrisFlags::AdditiveBlending) == DebrisFlags::AdditiveBlending) {
-				command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE);
+				command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One);
 			} else {
-				command->GetMaterial().SetBlendingFactors(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 			}
 
 			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
@@ -1978,7 +1978,7 @@ namespace Jazz2::Tiles
 				std::unique_ptr<RenderCommand>& command = _renderCommands.emplace_back(std::make_unique<RenderCommand>());
 				command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
 				command->GetMaterial().ReserveUniformsDataMemory();
-				command->GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+				command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 				auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
 				if (textureUniform && textureUniform->GetIntValue(0) != 0) {

@@ -24,6 +24,22 @@ namespace nCine
 		type_ = type;
 	}
 
+	PixelFormat TextureFormat::pixelFormat() const
+	{
+		switch (internalFormat_) {
+			case GL_R8:
+				return PixelFormat::R8;
+			case GL_RG8:
+				return PixelFormat::RG8;
+			case GL_RGB8:
+				return PixelFormat::RGB8;
+			case GL_RGBA8:
+				return PixelFormat::RGBA8;
+			default:
+				return PixelFormat::Unknown;
+		}
+	}
+
 	std::uint32_t TextureFormat::numChannels() const
 	{
 		switch (format_) {
@@ -468,14 +484,14 @@ namespace nCine
 			case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
 			case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
 			{
-				const bool hasS3tc = gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::EXT_TEXTURE_COMPRESSION_S3TC);
+				const bool hasS3tc = gfxCaps.HasExtension(IGfxCapabilities::Extensions::EXT_TEXTURE_COMPRESSION_S3TC);
 				FATAL_ASSERT_MSG(hasS3tc, "GL_EXT_texture_compression_s3tc not available");
 				break;
 			}
 #if defined(WITH_OPENGLES)
 			case GL_ETC1_RGB8_OES:
 			{
-				const bool hasEct1 = gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE);
+				const bool hasEct1 = gfxCaps.HasExtension(IGfxCapabilities::Extensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE);
 				FATAL_ASSERT_MSG(hasEct1, "GL_OES_compressed_etc1_rgb8_texture not available");
 				break;
 			}
@@ -483,7 +499,7 @@ namespace nCine
 			case GL_ATC_RGBA_EXPLICIT_ALPHA_AMD:
 			case GL_ATC_RGBA_INTERPOLATED_ALPHA_AMD:
 			{
-				const bool hasAtc = gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::AMD_COMPRESSED_ATC_TEXTURE);
+				const bool hasAtc = gfxCaps.HasExtension(IGfxCapabilities::Extensions::AMD_COMPRESSED_ATC_TEXTURE);
 				FATAL_ASSERT_MSG(hasAtc, "GL_AMD_compressed_ATC_texture not available");
 				break;
 			}
@@ -492,7 +508,7 @@ namespace nCine
 			case GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG:
 			case GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG:
 			{
-				const bool hasPvr = gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::IMG_TEXTURE_COMPRESSION_PVRTC);
+				const bool hasPvr = gfxCaps.HasExtension(IGfxCapabilities::Extensions::IMG_TEXTURE_COMPRESSION_PVRTC);
 				FATAL_ASSERT_MSG(hasPvr, "GL_IMG_texture_compression_pvrtc not available");
 				break;
 			}
@@ -512,7 +528,7 @@ namespace nCine
 			case GL_COMPRESSED_RGBA_ASTC_12x10_KHR:
 			case GL_COMPRESSED_RGBA_ASTC_12x12_KHR:
 			{
-				const bool hasAstc = gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR);
+				const bool hasAstc = gfxCaps.HasExtension(IGfxCapabilities::Extensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR);
 				FATAL_ASSERT_MSG(hasAstc, "GL_KHR_texture_compression_astc_ldr not available");
 				break;
 			}

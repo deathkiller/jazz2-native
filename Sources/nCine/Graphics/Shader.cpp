@@ -2,7 +2,7 @@
 #include "../CommonHeaders.h"
 
 #include "Shader.h"
-#include "GL/GLShaderProgram.h"
+#include "RHI/Rhi.h"
 #include "RenderResources.h"
 #include "BinaryShaderCache.h"
 #include "../Application.h"
@@ -27,16 +27,16 @@ namespace nCine
 		static const char ResetLineString[] = "#line 0\n";
 		static const std::int32_t MaxShaderStrings = 8;
 
-		GLShaderProgram::Introspection shaderToShaderProgramIntrospection(Shader::Introspection introspection)
+		Rhi::ShaderProgram::Introspection shaderToShaderProgramIntrospection(Shader::Introspection introspection)
 		{
 			switch (introspection) {
 				default:
 				case Shader::Introspection::Enabled:
-					return GLShaderProgram::Introspection::Enabled;
+					return Rhi::ShaderProgram::Introspection::Enabled;
 				case Shader::Introspection::NoUniformsInBlocks:
-					return GLShaderProgram::Introspection::NoUniformsInBlocks;
+					return Rhi::ShaderProgram::Introspection::NoUniformsInBlocks;
 				case Shader::Introspection::Disabled:
-					return GLShaderProgram::Introspection::Disabled;
+					return Rhi::ShaderProgram::Introspection::Disabled;
 			}
 		}
 
@@ -82,7 +82,7 @@ namespace nCine
 	}
 
 	Shader::Shader()
-		: Object(ObjectType::Shader), glShaderProgram_(std::make_unique<GLShaderProgram>(GLShaderProgram::QueryPhase::Immediate))
+		: Object(ObjectType::Shader), glShaderProgram_(std::make_unique<Rhi::ShaderProgram>(Rhi::ShaderProgram::QueryPhase::Immediate))
 	{
 	}
 
@@ -402,7 +402,7 @@ namespace nCine
 
 	bool Shader::SetAttribute(const char* name, std::int32_t stride, void* pointer)
 	{
-		GLVertexFormat::Attribute* attribute = glShaderProgram_->GetAttribute(name);
+		Rhi::VertexFormat::Attribute* attribute = glShaderProgram_->GetAttribute(name);
 		if (attribute != nullptr) {
 			attribute->SetVboParameters(stride, pointer);
 		}

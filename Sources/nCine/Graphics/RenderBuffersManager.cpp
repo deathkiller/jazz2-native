@@ -1,6 +1,6 @@
 #include "RenderBuffersManager.h"
 #include "RenderStatistics.h"
-#include "GL/GLDebug.h"
+#include "RHI/Rhi.h"
 #include "../ServiceLocator.h"
 #include "IGfxCapabilities.h"
 #include "../../Main.h"
@@ -26,9 +26,9 @@ namespace nCine
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 
 #if defined(NCINE_HAS_PERSISTENT_MAPPING)
-		const std::int32_t glMajor = gfxCaps.GetGLVersion(IGfxCapabilities::GLVersion::Major);
-		const std::int32_t glMinor = gfxCaps.GetGLVersion(IGfxCapabilities::GLVersion::Minor);
-		const bool hasBufferStorage = gfxCaps.HasExtension(IGfxCapabilities::GLExtensions::ARB_BUFFER_STORAGE) ||
+		const std::int32_t glMajor = gfxCaps.GetApiVersion(IGfxCapabilities::ApiVersion::Major);
+		const std::int32_t glMinor = gfxCaps.GetApiVersion(IGfxCapabilities::ApiVersion::Minor);
+		const bool hasBufferStorage = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_BUFFER_STORAGE) ||
 			(glMajor > 4 || (glMajor == 4 && glMinor >= 4));
 		usePersistentMapping_ = (useBufferStorage && hasBufferStorage);
 		if (usePersistentMapping_) {
@@ -36,32 +36,34 @@ namespace nCine
 		}
 #endif
 
+		const MapFlags commonMapFlags = (useBufferMapping ? MapFlags::Write | MapFlags::InvalidateBuffer | MapFlags::FlushExplicit : MapFlags::None);
+
 		BufferSpecifications& vboSpecs = specs_[std::int32_t(BufferTypes::Array)];
 		vboSpecs.type = BufferTypes::Array;
-		vboSpecs.target = GL_ARRAY_BUFFER;
-		vboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
-		vboSpecs.usageFlags = GL_STREAM_DRAW;
+		vboSpecs.target = BufferTarget::Vertex;
+		vboSpecs.mapFlags = commonMapFlags;
+		vboSpecs.usageFlags = BufferUsage::StreamDraw;
 		vboSpecs.maxSize = vboMaxSize;
-		vboSpecs.alignment = sizeof(GLfloat);
+		vboSpecs.alignment = sizeof(float);
 		vboSpecs.persistent = usePersistentMapping_;
 
 		BufferSpecifications& iboSpecs = specs_[std::int32_t(BufferTypes::ElementArray)];
 		iboSpecs.type = BufferTypes::ElementArray;
-		iboSpecs.target = GL_ELEMENT_ARRAY_BUFFER;
-		iboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
-		iboSpecs.usageFlags = GL_STREAM_DRAW;
+		iboSpecs.target = BufferTarget::Index;
+		iboSpecs.mapFlags = commonMapFlags;
+		iboSpecs.usageFlags = BufferUsage::StreamDraw;
 		iboSpecs.maxSize = iboMaxSize;
-		iboSpecs.alignment = sizeof(GLushort);
+		iboSpecs.alignment = sizeof(std::uint16_t);
 		iboSpecs.persistent = usePersistentMapping_;
 
-		const std::int32_t offsetAlignment = gfxCaps.GetValue(IGfxCapabilities::GLIntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
-		const std::int32_t uboMaxSize = gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
+		const std::int32_t offsetAlignment = gfxCaps.GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		const std::int32_t uboMaxSize = gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
 
 		BufferSpecifications& uboSpecs = specs_[std::int32_t(BufferTypes::Uniform)];
 		uboSpecs.type = BufferTypes::Uniform;
-		uboSpecs.target = GL_UNIFORM_BUFFER;
-		uboSpecs.mapFlags = useBufferMapping ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT : 0;
-		uboSpecs.usageFlags = GL_STREAM_DRAW;
+		uboSpecs.target = BufferTarget::Uniform;
+		uboSpecs.mapFlags = commonMapFlags;
+		uboSpecs.usageFlags = BufferUsage::StreamDraw;
 		uboSpecs.maxSize = std::uint32_t(uboMaxSize);
 		uboSpecs.alignment = std::uint32_t(offsetAlignment);
 		uboSpecs.persistent = usePersistentMapping_;
@@ -76,10 +78,7 @@ namespace nCine
 	{
 #if defined(NCINE_HAS_PERSISTENT_MAPPING)
 		for (std::uint32_t i = 0; i < NumPersistentSections; i++) {
-			if (sectionFences_[i] != nullptr) {
-				glDeleteSync(sectionFences_[i]);
-				sectionFences_[i] = nullptr;
-			}
+			Rhi::Device::DeleteFence(sectionFences_[i]);
 		}
 #endif
 	}
@@ -144,7 +143,7 @@ namespace nCine
 	void RenderBuffersManager::FlushUnmap()
 	{
 		ZoneScopedC(0x81A861);
-		GLDebug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()"_s);
+		Rhi::Debug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()"_s);
 
 		for (ManagedBuffer& buffer : buffers_) {
 #if defined(NCINE_PROFILING)
@@ -161,7 +160,7 @@ namespace nCine
 
 			buffer.freeSpace = buffer.size;
 
-			if (specs_[std::int32_t(buffer.type)].mapFlags == 0) {
+			if (specs_[std::int32_t(buffer.type)].mapFlags == MapFlags::None) {
 				if (usedSize > 0) {
 					buffer.object->BufferSubData(0, usedSize, buffer.hostBuffer.get());
 				}
@@ -179,26 +178,22 @@ namespace nCine
 	void RenderBuffersManager::Remap()
 	{
 		ZoneScopedC(0x81A861);
-		GLDebug::ScopedGroup scoped("RenderBuffersManager::remap()"_s);
+		Rhi::Debug::ScopedGroup scoped("RenderBuffersManager::remap()"_s);
 
 #if defined(NCINE_HAS_PERSISTENT_MAPPING)
 		if (usePersistentMapping_) {
 			// This runs right after the frame's draw calls were submitted, so a fence here protects
 			// everything the GPU may still read from the current section. Advancing then waits on the
 			// fence inserted `NumPersistentSections - 1` frames ago before its section is reused.
-			if (sectionFences_[currentSection_] != nullptr) {
-				glDeleteSync(sectionFences_[currentSection_]);
-			}
-			sectionFences_[currentSection_] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+			Rhi::Device::DeleteFence(sectionFences_[currentSection_]);
+			sectionFences_[currentSection_] = Rhi::Device::InsertFence();
 
 			currentSection_ = (currentSection_ + 1) % NumPersistentSections;
 			if (sectionFences_[currentSection_] != nullptr) {
-				const GLenum result = glClientWaitSync(sectionFences_[currentSection_], GL_SYNC_FLUSH_COMMANDS_BIT, 1000000000);
-				if (result == GL_TIMEOUT_EXPIRED || result == GL_WAIT_FAILED) {
-					LOGW("Wait for persistent buffer section {} failed (0x{:x})", currentSection_, result);
+				if (!Rhi::Device::ClientWaitFence(sectionFences_[currentSection_], 1000000000)) {
+					LOGW("Wait for persistent buffer section {} failed", currentSection_);
 				}
-				glDeleteSync(sectionFences_[currentSection_]);
-				sectionFences_[currentSection_] = nullptr;
+				Rhi::Device::DeleteFence(sectionFences_[currentSection_]);
 			}
 		}
 #endif
@@ -214,11 +209,11 @@ namespace nCine
 			DEATH_ASSERT(buffer.freeSpace == buffer.size);
 			DEATH_ASSERT(buffer.mapBase == nullptr);
 
-			if (specs_[std::int32_t(buffer.type)].mapFlags == 0) {
+			if (specs_[std::int32_t(buffer.type)].mapFlags == MapFlags::None) {
 				buffer.object->BufferData(buffer.size, nullptr, specs_[std::int32_t(buffer.type)].usageFlags);
 				buffer.mapBase = buffer.hostBuffer.get();
 			} else {
-				buffer.mapBase = static_cast<GLubyte*>(buffer.object->MapBufferRange(0, buffer.size, specs_[std::int32_t(buffer.type)].mapFlags));
+				buffer.mapBase = static_cast<std::uint8_t*>(buffer.object->MapBufferRange(0, buffer.size, specs_[std::int32_t(buffer.type)].mapFlags));
 			}
 			FATAL_ASSERT(buffer.mapBase != nullptr);
 		}
@@ -230,14 +225,14 @@ namespace nCine
 		ManagedBuffer& managedBuffer = buffers_.emplace_back();
 		managedBuffer.type = specs.type;
 		managedBuffer.size = specs.maxSize;
-		managedBuffer.object = std::make_unique<GLBufferObject>(specs.target);
+		managedBuffer.object = std::make_unique<Rhi::Buffer>(specs.target);
 #if defined(NCINE_HAS_PERSISTENT_MAPPING)
 		if (specs.persistent) {
 			// The immutable storage holds all ring sections and stays mapped for the buffer's whole lifetime
-			const GLbitfield storageFlags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
-			const GLsizeiptr totalSize = GLsizeiptr(specs.maxSize) * NumPersistentSections;
+			const MapFlags storageFlags = MapFlags::Write | MapFlags::Persistent | MapFlags::Coherent;
+			const std::int64_t totalSize = std::int64_t(specs.maxSize) * NumPersistentSections;
 			managedBuffer.object->BufferStorage(totalSize, nullptr, storageFlags);
-			managedBuffer.mapBase = static_cast<GLubyte*>(managedBuffer.object->MapBufferRange(0, totalSize, storageFlags));
+			managedBuffer.mapBase = static_cast<std::uint8_t*>(managedBuffer.object->MapBufferRange(0, totalSize, storageFlags));
 			managedBuffer.sectionOffset = currentSection_ * specs.maxSize;
 		} else
 #endif
@@ -260,21 +255,21 @@ namespace nCine
 		}
 
 		if (!specs.persistent) {
-			if (specs.mapFlags == 0) {
-				managedBuffer.hostBuffer = std::make_unique<GLubyte[]>(specs.maxSize);
+			if (specs.mapFlags == MapFlags::None) {
+				managedBuffer.hostBuffer = std::make_unique<std::uint8_t[]>(specs.maxSize);
 				managedBuffer.mapBase = managedBuffer.hostBuffer.get();
 			} else {
-				managedBuffer.mapBase = static_cast<GLubyte*>(managedBuffer.object->MapBufferRange(0, managedBuffer.size, specs.mapFlags));
+				managedBuffer.mapBase = static_cast<std::uint8_t*>(managedBuffer.object->MapBufferRange(0, managedBuffer.size, specs.mapFlags));
 			}
 		}
 
 		FATAL_ASSERT(managedBuffer.mapBase != nullptr);
 
 #if defined(DEATH_DEBUG)
-		if (GLDebug::IsAvailable()) {
+		if (Rhi::Debug::IsAvailable()) {
 			char debugString[128];
 			std::size_t length = formatInto(debugString, "Create {} buffer 0x{:x}", bufferTypeToString(specs.type), std::uintptr_t(buffers_.back().object.get()));
-			GLDebug::MessageInsert({ debugString, length });
+			Rhi::Debug::MessageInsert({ debugString, length });
 		}
 #endif
 	}

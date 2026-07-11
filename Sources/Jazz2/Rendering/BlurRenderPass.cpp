@@ -39,7 +39,7 @@ namespace Jazz2::Rendering
 		_renderCommand.GetMaterial().SetShader(shader);
 		//_renderCommand.GetMaterial().SetBlendingEnabled(true);
 		_renderCommand.GetMaterial().ReserveUniformsDataMemory();
-		_renderCommand.GetGeometry().SetDrawParameters(GL_TRIANGLE_STRIP, 0, 4);
+		_renderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
 		auto* textureUniform = _renderCommand.GetMaterial().Uniform(Material::TextureUniformName);
 		if (textureUniform && textureUniform->GetIntValue(0) != 0) {

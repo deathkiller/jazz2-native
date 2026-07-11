@@ -101,12 +101,12 @@ namespace nCine
 		};
 
 		/** @brief Attributes used to create an OpenGL context */
-		struct GLContextInfo
+		struct ContextInfo
 		{
-			GLContextInfo()
+			ContextInfo()
 				: majorVersion(0), minorVersion(0), coreProfile(false), forwardCompatible(false), debugContext(false) { }
 
-			explicit GLContextInfo(const AppConfiguration& appCfg)
+			explicit ContextInfo(const AppConfiguration& appCfg)
 				: majorVersion(appCfg.glMajorVersion()), minorVersion(appCfg.glMinorVersion()),
 				  coreProfile(appCfg.glCoreProfile()), forwardCompatible(appCfg.glForwardCompatible()),
 				  debugContext(appCfg.withGlDebugContext) { }
@@ -118,7 +118,7 @@ namespace nCine
 			bool debugContext;
 		};
 
-		IGfxDevice(const WindowMode& windowMode, const GLContextInfo& glContextInfo, const DisplayMode& displayMode);
+		IGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode);
 		virtual ~IGfxDevice() { }
 
 		/**
@@ -187,7 +187,7 @@ namespace nCine
 		inline virtual void flashWindow() const { }
 
 		/** @brief Returns the OpenGL context creation attributes */
-		inline const GLContextInfo& glContextInfo() const { return glContextInfo_; }
+		inline const ContextInfo& contextInfo() const { return contextInfo_; }
 		/** @brief Returns the display mode */
 		inline const DisplayMode& displayMode() const { return displayMode_; }
 
@@ -231,7 +231,7 @@ namespace nCine
 		/** @brief Whether rendering occurs in full screen */
 		bool isFullscreen_;
 		/** @brief OpenGL context creation attributes */
-		GLContextInfo glContextInfo_;
+		ContextInfo contextInfo_;
 		/** @brief Display properties */
 		DisplayMode displayMode_;
 
@@ -242,7 +242,7 @@ namespace nCine
 #endif
 
 		/** @brief Initializes the OpenGL viewport based on the drawable resolution */
-		void initGLViewport();
+		void initDeviceViewport();
 
 		/** @brief Updates the array of connected monitors */
 		inline virtual void updateMonitors() { }
@@ -251,7 +251,7 @@ namespace nCine
 
 	private:
 		/** @brief Sets up the initial OpenGL state for the scene graph */
-		virtual void setupGL();
+		virtual void setupDevice();
 
 		/** @brief Updates the screen by swapping the back and front buffers */
 		virtual void update() = 0;
@@ -277,7 +277,7 @@ namespace nCine
 	{
 	public:
 		NullGfxDevice()
-			: IGfxDevice(WindowMode{}, GLContextInfo{}, DisplayMode{}) {}
+			: IGfxDevice(WindowMode{}, ContextInfo{}, DisplayMode{}) {}
 
 		void setSwapInterval(int interval) override {}
 
@@ -297,7 +297,7 @@ namespace nCine
 		void setResolutionInternal(int width, int height) override {}
 
 	private:
-		void setupGL() override {}
+		void setupDevice() override {}
 		void update() override {}
 	};
 #endif
