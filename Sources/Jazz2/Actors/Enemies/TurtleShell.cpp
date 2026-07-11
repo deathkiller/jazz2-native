@@ -48,9 +48,10 @@ namespace Jazz2::Actors::Enemies
 			SetState(ActorState::CollideWithSolidObjects | ActorState::CollideWithSolidObjectsBelow, true);
 		}
 
-		_speed.X = *(float*)&details.Params[0];
-		_externalForce.Y = *(float*)&details.Params[4];
-		uint8_t theme = details.Params[8];
+		EventParamsReader params(details);
+		_speed.X = params.GetFloat(0);
+		_externalForce.Y = params.GetFloat(4);
+		uint8_t theme = params.GetUint8(8);
 		switch (theme) {
 			case 0:
 			default:

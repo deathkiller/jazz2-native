@@ -20,8 +20,9 @@ namespace Jazz2::Actors::Solid
 	{
 		Movable = true;
 
-		EventType eventType = (EventType)*(uint16_t*)&details.Params[0];
-		std::int32_t count = details.Params[2];
+		EventParamsReader params(details);
+		EventType eventType = (EventType)params.GetUint16(0);
+		std::int32_t count = params.GetUint8(2);
 		if (eventType != EventType::Empty && count > 0) {
 			AddContent(eventType, count, &details.Params[3], 16 - 3);
 		}

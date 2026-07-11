@@ -373,17 +373,19 @@ namespace Jazz2
 #endif
 
 	private:
-		bool CheatKill();
-		bool CheatGod();
-		bool CheatNext();
-		bool CheatGuns();
-		bool CheatRush();
-		bool CheatGems();
-		bool CheatBird();
-		bool CheatLife();
-		bool CheatPower();
-		bool CheatCoins();
-		bool CheatMorph();
-		bool CheatShield();
+		bool TryInvokeCheat(StringView line);
+
+		void CheatKill();
+		void CheatGod();
+		void CheatNext();
+		void CheatGuns();
+		void CheatRush();
+		void CheatGems();
+		void CheatBird();
+		void CheatLife();
+		void CheatPower();
+		void CheatCoins();
+		void CheatMorph();
+		void CheatShield();
 	};
 }

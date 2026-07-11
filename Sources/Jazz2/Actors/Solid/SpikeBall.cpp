@@ -18,12 +18,13 @@ namespace Jazz2::Actors::Solid
 
 	Task<bool> SpikeBall::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		std::uint8_t length = details.Params[2];
-		_speed = *(std::int8_t*)&details.Params[1] * 0.0072f;
-		std::uint8_t sync = details.Params[0];
-		_isSwing = details.Params[3] != 0;
+		EventParamsReader params(details);
+		std::uint8_t length = params.GetUint8(2);
+		_speed = params.GetInt8(1) * 0.0072f;
+		std::uint8_t sync = params.GetUint8(0);
+		_isSwing = params.GetBool(3);
 		_phase = sync * fPiOver2 - _speed * _levelHandler->GetElapsedFrames();
-		_shade = details.Params[4] != 0;
+		_shade = params.GetBool(4);
 
 		_originPos = _pos;
 		_originLayer = _renderer.layer() - 12;

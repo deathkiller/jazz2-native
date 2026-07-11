@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../ActorBase.h"
+#include "StateInterpolationBuffer.h"
 #include "../../ShieldType.h"
 
 namespace Jazz2::Actors::Multiplayer
@@ -40,15 +41,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		struct StateFrame {
-			std::int64_t Time;
-			Vector2f Pos;
-		};
-
-		static constexpr std::int64_t ServerDelay = 64;
-
-		StateFrame _stateBuffer[8];
-		std::int32_t _stateBufferPos;
+		StateInterpolationBuffer _stateBuffer;
 		AnimState _lastAnim;
 		bool _isAttachedLocally;
 		std::uint32_t _furColor;

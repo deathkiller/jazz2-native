@@ -77,11 +77,12 @@ namespace Jazz2::Actors
 		// Per-player recolor; 0 = use the original colors. The local player defaults to the user's profile color;
 		// remote players get their color from the network (see MpLevelHandler).
 		_furColor(PreferencesCache::PlayerFurColor), _paletteOffset(-1),
-		_lives(0), _coins(0), _coinsCheckpoint(0), _foodEaten(0), _foodEatenCheckpoint(0), _score(0),
+		_lives(0), _score(0),
+		_inventory{}, _inventoryCheckpoint{},
 		_checkpointLight(1.0f),
 		_sugarRushLeft(0.0f), _sugarRushStarsTime(0.0f),
 		_shieldSpawnTime(ShieldDisabled),
-		_gems{}, _gemsCheckpoint{}, _gemsTotal{}, _gemsPitch(0),
+		_gemsTotal{}, _gemsPitch(0),
 		_gemsTimer(0.0f),
 		_bonusWarpTimer(0.0f),
 		_suspendType(SuspendType::None),
@@ -122,6 +123,26 @@ namespace Jazz2::Actors
 #endif
 		// Release the shared palette offset back to the pool (e.g., on disconnect/level end)
 		ReleasePaletteOffset();
+	}
+
+	const Player::CharacterTraits& Player::GetCharacterTraits(PlayerType type)
+	{
+		static const CharacterTraits Traits[] = {
+			{ "Interactive/PlayerJazz"_s, 1.1f, 5 },
+			{ "Interactive/PlayerSpaz"_s, 1.6f, 4 },
+			{ "Interactive/PlayerLori"_s, 1.3f, 3 },
+			{ "Interactive/PlayerFrog"_s, 1.0f, 0 },
+			// Spectate mode and unknown types fall back to Jazz metadata, the player is invisible anyway
+			{ "Interactive/PlayerJazz"_s, 1.0f, 0 }
+		};
+
+		switch (type) {
+			case PlayerType::Jazz: return Traits[0];
+			case PlayerType::Spaz: return Traits[1];
+			case PlayerType::Lori: return Traits[2];
+			case PlayerType::Frog: return Traits[3];
+			default: return Traits[4];
+		}
 	}
 
 	std::uint32_t Player::GetEffectiveFurColor() const
@@ -200,29 +221,21 @@ namespace Jazz2::Actors
 		// Load the anim set as indexed ONLY when this player is actually being recolored, so it can be recolored at
 		// draw time. Loading indexed without applying a palette would render raw palette indices (glitched sprites).
 		bool useIndexed = (GetEffectiveFurColor() != 0);
-		switch (_playerType) {
-			case PlayerType::Jazz: async_await RequestMetadataAsync("Interactive/PlayerJazz"_s, useIndexed); break;
-			case PlayerType::Spaz: async_await RequestMetadataAsync("Interactive/PlayerSpaz"_s, useIndexed); break;
-			case PlayerType::Lori: async_await RequestMetadataAsync("Interactive/PlayerLori"_s, useIndexed); break;
-			case PlayerType::Frog: async_await RequestMetadataAsync("Interactive/PlayerFrog"_s, useIndexed); break;
-			case PlayerType::Spectate:
-				// TODO: Spectate mode - load minimal metadata for fallback, but player will be invisible
-				async_await RequestMetadataAsync("Interactive/PlayerJazz"_s, useIndexed);
-				break;
-		}
+		// TODO: Spectate mode - loads Jazz metadata for fallback, but player will be invisible
+		async_await RequestMetadataAsync(GetCharacterTraits(_playerType).Metadata, useIndexed);
 
 		SetAnimation(AnimState::Fall);
 
 		// Build and bind the per-player recolor palette now that the renderer has a texture
 		RefreshColorPalette();
 
-		std::memset(_weaponAmmo, 0, sizeof(_weaponAmmo));
-		std::memset(_weaponAmmoCheckpoint, 0, sizeof(_weaponAmmoCheckpoint));
-		std::memset(_weaponUpgrades, 0, sizeof(_weaponUpgrades));
-		std::memset(_weaponUpgradesCheckpoint, 0, sizeof(_weaponUpgradesCheckpoint));
+		std::memset(_inventory.WeaponAmmo, 0, sizeof(_inventory.WeaponAmmo));
+		std::memset(_inventoryCheckpoint.WeaponAmmo, 0, sizeof(_inventoryCheckpoint.WeaponAmmo));
+		std::memset(_inventory.WeaponUpgrades, 0, sizeof(_inventory.WeaponUpgrades));
+		std::memset(_inventoryCheckpoint.WeaponUpgrades, 0, sizeof(_inventoryCheckpoint.WeaponUpgrades));
 
-		_weaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-		_weaponAmmoCheckpoint[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+		_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+		_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
 
 		if (_playerType == PlayerType::Spectate) {
 			// Spectate mode - no collision, no gravity, invisible
@@ -852,6 +865,37 @@ namespace Jazz2::Actors
 			}
 		}
 
+		HandleHorizontalMovement(timeMult);
+
+		if (_hitFloorTime > 0.0f) {
+			_hitFloorTime -= timeMult;
+		}
+
+		if (!_controllable || !_controllableExternal || _currentSpecialMove == SpecialMoveType::Buttstomp) {
+#if defined(WITH_AUDIO)
+			// Weapons are automatically disabled if player is not controllable
+			if (_currentWeapon != WeaponType::Thunderbolt || _fireFramesLeft <= 0.0f) {
+				if (_weaponSound != nullptr) {
+					_weaponSound->stop();
+					_weaponSound = nullptr;
+				}
+			}
+#endif
+			return;
+		}
+
+		if (_inWater || _activeModifier != Modifier::None) {
+			HandleWaterAndModifierMovement(timeMult);
+		} else {
+			HandleLookupAndCrouch(timeMult, canJumpPrev);
+			HandleJump(timeMult);
+		}
+
+		HandleWeaponFire(areaWeaponAllowed);
+	}
+
+	void Player::HandleHorizontalMovement(float timeMult)
+	{
 		if (_keepRunningTime <= 0.0f) {
 			bool canWalk = (_controllable && _controllableExternal && !_isLifting && _suspendType != SuspendType::SwingingVine &&
 				(_playerType != PlayerType::Frog || !_levelHandler->PlayerActionPressed(this, PlayerAction::Fire)));
@@ -959,313 +1003,311 @@ namespace Jazz2::Actors
 				_keepRunningTime = 0.0f;
 			}
 		}
+	}
 
-		if (_hitFloorTime > 0.0f) {
-			_hitFloorTime -= timeMult;
-		}
-
-		if (!_controllable || !_controllableExternal || _currentSpecialMove == SpecialMoveType::Buttstomp) {
-#if defined(WITH_AUDIO)
-			// Weapons are automatically disabled if player is not controllable
-			if (_currentWeapon != WeaponType::Thunderbolt || _fireFramesLeft <= 0.0f) {
-				if (_weaponSound != nullptr) {
-					_weaponSound->stop();
-					_weaponSound = nullptr;
-				}
-			}
-#endif
-			return;
-		}
-
-		if (_inWater || _activeModifier != Modifier::None) {
-			float playerMovement = _levelHandler->PlayerVerticalMovement(this);
-			float playerMovementVelocity = std::abs(playerMovement);
-			if (playerMovementVelocity > 0.3f) {
-				float mult, max;
-				switch (_activeModifier) {
-					case Modifier::Airboard: mult = (playerMovement > 0 ? 1.0f : -0.2f); max = MaxRunningSpeed; break;
-					case Modifier::LizardCopter: mult = (playerMovement > 0 ? 2.0f : -4.0f); max = (playerMovement > 0 ? MaxRunningSpeed : 2.0f * MaxRunningSpeed); break;
-					default: mult = (playerMovement > 0 ? 1.0f : -1.0f); max = MaxRunningSpeed; break;
-				}
-
-				_speed.Y = std::clamp(_speed.Y + Acceleration * timeMult * mult, -max * playerMovementVelocity, max * playerMovementVelocity);
-			} else {
-				_speed.Y = std::max((std::abs(_speed.Y) - Deceleration * timeMult), 0.0f) * (_speed.Y < 0.0f ? -1.0f : 1.0f);
+	void Player::HandleWaterAndModifierMovement(float timeMult)
+	{
+		float playerMovement = _levelHandler->PlayerVerticalMovement(this);
+		float playerMovementVelocity = std::abs(playerMovement);
+		if (playerMovementVelocity > 0.3f) {
+			float mult, max;
+			switch (_activeModifier) {
+				case Modifier::Airboard: mult = (playerMovement > 0 ? 1.0f : -0.2f); max = MaxRunningSpeed; break;
+				case Modifier::LizardCopter: mult = (playerMovement > 0 ? 2.0f : -4.0f); max = (playerMovement > 0 ? MaxRunningSpeed : 2.0f * MaxRunningSpeed); break;
+				default: mult = (playerMovement > 0 ? 1.0f : -1.0f); max = MaxRunningSpeed; break;
 			}
 
-			if (_activeModifier == Modifier::LizardCopter && _levelHandler->PlayerActionHit(this, PlayerAction::Jump)) {
-				// Allow to jump off the copter
-				// TODO: Copter shouldn't diappear immediately
-				SetModifier(Modifier::None);
-				// Don't trigger buttstomp or copter ears when pressing down
-				_wasDownPressed = true;
-				_wasJumpPressed = true;
-			}
+			_speed.Y = std::clamp(_speed.Y + Acceleration * timeMult * mult, -max * playerMovementVelocity, max * playerMovementVelocity);
 		} else {
-			// Look-up
-			if (_levelHandler->PlayerActionPressed(this, PlayerAction::Up)) {
-				if (!_wasUpPressed && _dizzyTime <= 0.0f) {
-					// Check also previous CanJump to avoid animation glitches on Springs
-					if (((canJumpPrev && CanJump()) || (_suspendType != SuspendType::None && _suspendType != SuspendType::SwingingVine)) && !_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
-						_wasUpPressed = true;
+			_speed.Y = std::max((std::abs(_speed.Y) - Deceleration * timeMult), 0.0f) * (_speed.Y < 0.0f ? -1.0f : 1.0f);
+		}
 
-						SetAnimation(AnimState::Lookup | (_currentAnimation->State & AnimState::Hook));
-					}
+		if (_activeModifier == Modifier::LizardCopter && _levelHandler->PlayerActionHit(this, PlayerAction::Jump)) {
+			// Allow to jump off the copter
+			// TODO: Copter shouldn't diappear immediately
+			SetModifier(Modifier::None);
+			// Don't trigger buttstomp or copter ears when pressing down
+			_wasDownPressed = true;
+			_wasJumpPressed = true;
+		}
+	}
+
+	void Player::HandleLookupAndCrouch(float timeMult, bool canJumpPrev)
+	{
+		// Look-up
+		if (_levelHandler->PlayerActionPressed(this, PlayerAction::Up)) {
+			if (!_wasUpPressed && _dizzyTime <= 0.0f) {
+				// Check also previous CanJump to avoid animation glitches on Springs
+				if (((canJumpPrev && CanJump()) || (_suspendType != SuspendType::None && _suspendType != SuspendType::SwingingVine)) && !_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
+					_wasUpPressed = true;
+
+					SetAnimation(AnimState::Lookup | (_currentAnimation->State & AnimState::Hook));
 				}
-			} else if (_wasUpPressed) {
-				_wasUpPressed = false;
-
-				SetAnimation(_currentAnimation->State & ~AnimState::Lookup);
 			}
+		} else if (_wasUpPressed) {
+			_wasUpPressed = false;
 
-			// Crouch / Buttstomp - Uses different bindings whether it's in the air or not
-			if (_levelHandler->PlayerActionPressed(this, CanJump() ? PlayerAction::Down : PlayerAction::Buttstomp)) {
-				if (_suspendType == SuspendType::SwingingVine) {
-					// TODO: Swinging vine
-				} else if (_suspendType != SuspendType::None) {
-					// Jump off vine/hook
-					if (IsContinuousJumpAllowed() || _levelHandler->PlayerActionHit(this, CanJump() ? PlayerAction::Down : PlayerAction::Buttstomp)) {
+			SetAnimation(_currentAnimation->State & ~AnimState::Lookup);
+		}
+
+		// Crouch / Buttstomp - Uses different bindings whether it's in the air or not
+		if (_levelHandler->PlayerActionPressed(this, CanJump() ? PlayerAction::Down : PlayerAction::Buttstomp)) {
+			if (_suspendType == SuspendType::SwingingVine) {
+				// TODO: Swinging vine
+			} else if (_suspendType != SuspendType::None) {
+				// Jump off vine/hook
+				if (IsContinuousJumpAllowed() || _levelHandler->PlayerActionHit(this, CanJump() ? PlayerAction::Down : PlayerAction::Buttstomp)) {
+					_wasDownPressed = true;
+
+					MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative | MoveType::Force);
+					_suspendType = SuspendType::None;
+					_suspendTime = 4.0f;
+
+					SetState(ActorState::ApplyGravitation, true);
+				}
+			} else if (_dizzyTime <= 0.0f) {
+				// Check also previous CanJump to avoid animation glitches on Springs
+				if (canJumpPrev && CanJump()) {
+					if (!_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
 						_wasDownPressed = true;
+						if (_fireFramesLeft > 0.0f) {
+							SetAnimation(AnimState::Crouch | AnimState::Shoot);
+						} else {
+							SetAnimation(AnimState::Crouch);
+						}
+					}
+				} else if (!CanJump() && !_wasDownPressed && _playerType != PlayerType::Frog) {
+					_wasDownPressed = true;
 
-						MoveInstantly(Vector2f(0.0f, 4.0f), MoveType::Relative | MoveType::Force);
-						_suspendType = SuspendType::None;
-						_suspendTime = 4.0f;
-
+					_speed.X = 0.0f;
+					_speed.Y = 0.0f;
+					_internalForceY = 0.0f;
+					_externalForce.Y = 0.0f;
+					SetState(ActorState::ApplyGravitation, false);
+					SetAnimation(AnimState::Buttstomp);
+					SetPlayerTransition(AnimState::TransitionButtstompStart, true, false, SpecialMoveType::Buttstomp, [this]() {
+						// Original JJ2 buttstomp falls at 10 px/tick
+						_speed.Y = (_levelHandler->IsReforged() ? 9.0f : 10.0f * LegacyVerticalSpeedScale);
 						SetState(ActorState::ApplyGravitation, true);
-					}
-				} else if (_dizzyTime <= 0.0f) {
-					// Check also previous CanJump to avoid animation glitches on Springs
-					if (canJumpPrev && CanJump()) {
-						if (!_isLifting && std::abs(_speed.X) < std::numeric_limits<float>::epsilon()) {
-							_wasDownPressed = true;
-							if (_fireFramesLeft > 0.0f) {
-								SetAnimation(AnimState::Crouch | AnimState::Shoot);
-							} else {
-								SetAnimation(AnimState::Crouch);
-							}
-						}
-					} else if (!CanJump() && !_wasDownPressed && _playerType != PlayerType::Frog) {
-						_wasDownPressed = true;
-
-						_speed.X = 0.0f;
-						_speed.Y = 0.0f;
-						_internalForceY = 0.0f;
-						_externalForce.Y = 0.0f;
-						SetState(ActorState::ApplyGravitation, false);
 						SetAnimation(AnimState::Buttstomp);
-						SetPlayerTransition(AnimState::TransitionButtstompStart, true, false, SpecialMoveType::Buttstomp, [this]() {
-							// Original JJ2 buttstomp falls at 10 px/tick
-							_speed.Y = (_levelHandler->IsReforged() ? 9.0f : 10.0f * LegacyVerticalSpeedScale);
-							SetState(ActorState::ApplyGravitation, true);
-							SetAnimation(AnimState::Buttstomp);
-							PlaySfx("Buttstomp"_s, 1.0f, 0.8f);
-							PlaySfx("Buttstomp2"_s);
-						});
-					}
+						PlaySfx("Buttstomp"_s, 1.0f, 0.8f);
+						PlaySfx("Buttstomp2"_s);
+					});
 				}
-			} else if (_wasDownPressed) {
-				_wasDownPressed = false;
-
-				SetAnimation(_currentAnimation->State & ~AnimState::Crouch);
 			}
+		} else if (_wasDownPressed) {
+			_wasDownPressed = false;
 
-			// Jump
-			if (_levelHandler->PlayerActionPressed(this, PlayerAction::Jump)) {
-				if (!_wasJumpPressed) {
-					_wasJumpPressed = true;
+			SetAnimation(_currentAnimation->State & ~AnimState::Crouch);
+		}
+	}
 
-					if (_suspendType == SuspendType::None && _jumpTime <= 0.0f) {
-						if (_isLifting && CanJump() && _currentSpecialMove == SpecialMoveType::None) {
-							SetState(ActorState::CanJump, false);
-							SetAnimation(_currentAnimation->State & ~(AnimState::Lookup | AnimState::Crouch));
-							PlayPlayerSfx("Jump"_s);
-							_carryingObject = nullptr;
+	void Player::HandleJump(float timeMult)
+	{
+		// Jump
+		if (_levelHandler->PlayerActionPressed(this, PlayerAction::Jump)) {
+			if (!_wasJumpPressed) {
+				_wasJumpPressed = true;
 
-							SetState(ActorState::IsSolidObject | ActorState::CollideWithSolidObjects, false);
-
-							_isLifting = false;
-							_controllable = false;
-							_jumpTime = 12.0f;
-
-							_speed.Y = -3.0f;
-							_internalForceY = -0.88f;
-
-							// If we're jumping out from under another player (not a solid object), bump out sideways too,
-							// so we arc away and don't just fall straight back onto them into the lift state again
-							for (auto* other : _levelHandler->GetPlayers()) {
-								if (other != this && other->_stackCarrying && other->_carryingObject == this) {
-									_speed.X = (_pos.X <= other->GetPos().X ? -1.0f : 1.0f) * PlayerBumpMinSeparationSpeed;
-									break;
-								}
-							}
-
-							SetTransition(AnimState::TransitionLiftEnd, false, [this]() {
-								_controllable = true;
-								SetState(ActorState::CollideWithSolidObjects, true);
-							});
-						} else {
-							switch (_playerType) {
-								case PlayerType::Jazz: {
-									if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
-										_controllable = false;
-										SetAnimation(AnimState::Uppercut);
-										SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Uppercut, [this]() {
-											// Non-Reforged launch is boosted to keep the original height against the steeper rise gravity
-											_externalForce.Y = (_levelHandler->IsReforged() ? -1.4f : -1.2f * LegacySpecialMoveScale);
-											_speed.Y = (_levelHandler->IsReforged() ? -2.0f : -2.0f * LegacySpecialMoveScale);
-											SetState(ActorState::CanJump, false);
-											SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
-										});
-									} else {
-										if (_speed.Y > 0.01f && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
-											SetState(ActorState::ApplyGravitation, false);
-											_speed.Y = 1.5f;
-											_externalForce.Y = 0.0f;
-											if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
-												SetAnimation(AnimState::Copter);
-											}
-											_copterFramesLeft = 70.0f;
-#if defined(WITH_AUDIO)
-											if (_copterSound == nullptr) {
-												_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
-												if (_copterSound != nullptr) {
-													_copterSound->setLooping(true);
-												}
-											}
-#endif
-										}
-									}
-									break;
-								}
-								case PlayerType::Spaz: {
-									if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
-										_controllable = false;
-										_controllableTimeout = (_levelHandler->IsReforged() ? 60.0f : 120.0f);	// Non-Reforged Spaz sidekick travels ~2x as far (dash runs until controllable)
-										SetAnimation(AnimState::Uppercut);
-										SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
-											_externalForce.X = 8.0f * (IsFacingLeft() ? -1.0f : 1.0f);
-											_speed.X = 14.4f * (IsFacingLeft() ? -1.0f : 1.0f);
-											SetState(ActorState::ApplyGravitation, false);
-											SetPlayerTransition(AnimState::TransitionUppercutB, true, false, SpecialMoveType::Sidekick);
-										});
-
-										PlayPlayerSfx("Sidekick"_s);
-									} else {
-										if (!CanJump() && _canDoubleJump) {
-											_canDoubleJump = false;
-											_isFreefall = false;
-
-											_internalForceY = -1.15f - 0.1f * (1.0f - timeMult);
-											_speed.Y = -0.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
-											_speed.X = std::clamp(_speed.X * 0.4f, -1.0f, 1.0f);
-
-											PlayPlayerSfx("DoubleJump"_s);
-
-											SetTransition(AnimState::Spring, false);
-										}
-									}
-									break;
-								}
-								case PlayerType::Lori: {
-									if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
-										_controllable = false;
-										_controllableTimeout = 40.0f;
-										SetAnimation(AnimState::Uppercut);
-										SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
-											_externalForce.X = 4.0f * (IsFacingLeft() ? -1.0f : 1.0f);
-											_speed.X = 9.3f * (IsFacingLeft() ? -1.0f : 1.0f);
-											SetState(ActorState::ApplyGravitation, false);
-										});
-									} else {
-										if (_speed.Y > 0.01f && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
-											SetState(ActorState::ApplyGravitation, false);
-											_speed.Y = 1.5f;
-											_externalForce.Y = 0.0f;
-											if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
-												SetAnimation(AnimState::Copter);
-											}
-											_copterFramesLeft = 70.0f;
-#if defined(WITH_AUDIO)
-											if (_copterSound == nullptr) {
-												_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
-												if (_copterSound != nullptr) {
-													_copterSound->setLooping(true);
-												}
-											}
-#endif
-										}
-									}
-									break;
-								}
-							}
-						}
-					}
-				}
-
-				if (_suspendType != SuspendType::None) {
-					// Drop off hook/vine
-					if (IsContinuousJumpAllowed() || _levelHandler->PlayerActionHit(this, PlayerAction::Jump)) {
-						if (_suspendType == SuspendType::SwingingVine) {
-							CancelCarryingObject();
-							_springCooldown = 30.0f;
-						} else {
-							MoveInstantly(Vector2(0.0f, -4.0f), MoveType::Relative | MoveType::Force);
-						}
-						SetState(ActorState::CanJump, true);
-						_canDoubleJump = true;
-					}
-				}
-
-				if (!CanJump()) {
-					// Extend copter time
-					if (_copterFramesLeft > 0.0f) {
-						_copterFramesLeft = 70.0f;
-					}
-				} else if (_currentSpecialMove == SpecialMoveType::None && _jumpTime <= 0.0f && !_levelHandler->PlayerActionPressed(this, PlayerAction::Down)) {
-					// Standard jump
-					if (IsContinuousJumpAllowed() || _levelHandler->PlayerActionHit(this, PlayerAction::Jump)) {
+				if (_suspendType == SuspendType::None && _jumpTime <= 0.0f) {
+					if (_isLifting && CanJump() && _currentSpecialMove == SpecialMoveType::None) {
 						SetState(ActorState::CanJump, false);
-						_isFreefall = false;
-						SetAnimation(_currentAnimation->State & (~AnimState::Lookup & ~AnimState::Crouch));
+						SetAnimation(_currentAnimation->State & ~(AnimState::Lookup | AnimState::Crouch));
 						PlayPlayerSfx("Jump"_s);
-						_jumpTime = 10.0f;
 						_carryingObject = nullptr;
 
-						// Gravitation is sometimes off because of active copter, turn it on again
-						SetState(ActorState::ApplyGravitation, true);
-						SetState(ActorState::IsSolidObject, false);
+						SetState(ActorState::IsSolidObject | ActorState::CollideWithSolidObjects, false);
 
-						if (_levelHandler->IsReforged()) {
-							_speed.Y = -3.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
-							_internalForceY = -1.02f - 0.07f * (1.0f - timeMult);
-							if (_playerType == PlayerType::Lori) {
-								_speed.Y *= 1.3f;
+						_isLifting = false;
+						_controllable = false;
+						_jumpTime = 12.0f;
+
+						_speed.Y = -3.0f;
+						_internalForceY = -0.88f;
+
+						// If we're jumping out from under another player (not a solid object), bump out sideways too,
+						// so we arc away and don't just fall straight back onto them into the lift state again
+						for (auto* other : _levelHandler->GetPlayers()) {
+							if (other != this && other->_stackCarrying && other->_carryingObject == this) {
+								_speed.X = (_pos.X <= other->GetPos().X ? -1.0f : 1.0f) * PlayerBumpMinSeparationSpeed;
+								break;
 							}
-						} else {
-							// Original-style instant jump impulse (-10 reference). The applied rise cap then holds the
-							// ascent at a constant speed for the first frames (original feel); vertical scale carries
-							// the 70/60 framerate plus the playtest slow-down (height preserved: velocity x s, gravity x s^2).
-							_speed.Y = -10.0f * LegacyVerticalSpeedScale - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
 						}
+
+						SetTransition(AnimState::TransitionLiftEnd, false, [this]() {
+							_controllable = true;
+							SetState(ActorState::CollideWithSolidObjects, true);
+						});
+					} else {
+						HandleSpecialJump(timeMult);
 					}
 				}
-			} else {
-				if (_wasJumpPressed) {
-					_wasJumpPressed = false;
+			}
+
+			if (_suspendType != SuspendType::None) {
+				// Drop off hook/vine
+				if (IsContinuousJumpAllowed() || _levelHandler->PlayerActionHit(this, PlayerAction::Jump)) {
+					if (_suspendType == SuspendType::SwingingVine) {
+						CancelCarryingObject();
+						_springCooldown = 30.0f;
+					} else {
+						MoveInstantly(Vector2(0.0f, -4.0f), MoveType::Relative | MoveType::Force);
+					}
+					SetState(ActorState::CanJump, true);
+					_canDoubleJump = true;
+				}
+			}
+
+			if (!CanJump()) {
+				// Extend copter time
+				if (_copterFramesLeft > 0.0f) {
+					_copterFramesLeft = 70.0f;
+				}
+			} else if (_currentSpecialMove == SpecialMoveType::None && _jumpTime <= 0.0f && !_levelHandler->PlayerActionPressed(this, PlayerAction::Down)) {
+				// Standard jump
+				if (IsContinuousJumpAllowed() || _levelHandler->PlayerActionHit(this, PlayerAction::Jump)) {
+					SetState(ActorState::CanJump, false);
+					_isFreefall = false;
+					SetAnimation(_currentAnimation->State & (~AnimState::Lookup & ~AnimState::Crouch));
+					PlayPlayerSfx("Jump"_s);
+					_jumpTime = 10.0f;
+					_carryingObject = nullptr;
+
+					// Gravitation is sometimes off because of active copter, turn it on again
+					SetState(ActorState::ApplyGravitation, true);
+					SetState(ActorState::IsSolidObject, false);
+
 					if (_levelHandler->IsReforged()) {
-						if (_internalForceY < 0.0f) {
-							_internalForceY = 0.0f;
+						_speed.Y = -3.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
+						_internalForceY = -1.02f - 0.07f * (1.0f - timeMult);
+						if (_playerType == PlayerType::Lori) {
+							_speed.Y *= 1.3f;
 						}
 					} else {
-						// Releasing jump early cuts the ascent (original tap-hop). -4 reference, vertical scale.
-						if (_speed.Y < -4.0f * LegacyVerticalSpeedScale) {
-							_speed.Y = -4.0f * LegacyVerticalSpeedScale;
-						}
+						// Original-style instant jump impulse (-10 reference). The applied rise cap then holds the
+						// ascent at a constant speed for the first frames (original feel); vertical scale carries
+						// the 70/60 framerate plus the playtest slow-down (height preserved: velocity x s, gravity x s^2).
+						_speed.Y = -10.0f * LegacyVerticalSpeedScale - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
+					}
+				}
+			}
+		} else {
+			if (_wasJumpPressed) {
+				_wasJumpPressed = false;
+				if (_levelHandler->IsReforged()) {
+					if (_internalForceY < 0.0f) {
+						_internalForceY = 0.0f;
+					}
+				} else {
+					// Releasing jump early cuts the ascent (original tap-hop). -4 reference, vertical scale.
+					if (_speed.Y < -4.0f * LegacyVerticalSpeedScale) {
+						_speed.Y = -4.0f * LegacyVerticalSpeedScale;
 					}
 				}
 			}
 		}
+	}
 
+	void Player::HandleSpecialJump(float timeMult)
+	{
+		switch (_playerType) {
+			case PlayerType::Jazz: {
+				if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
+					_controllable = false;
+					SetAnimation(AnimState::Uppercut);
+					SetPlayerTransition(AnimState::TransitionUppercutA, true, true, SpecialMoveType::Uppercut, [this]() {
+						// Non-Reforged launch is boosted to keep the original height against the steeper rise gravity
+						_externalForce.Y = (_levelHandler->IsReforged() ? -1.4f : -1.2f * LegacySpecialMoveScale);
+						_speed.Y = (_levelHandler->IsReforged() ? -2.0f : -2.0f * LegacySpecialMoveScale);
+						SetState(ActorState::CanJump, false);
+						SetPlayerTransition(AnimState::TransitionUppercutB, true, true, SpecialMoveType::Uppercut);
+					});
+				} else {
+					if (_speed.Y > 0.01f && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
+						SetState(ActorState::ApplyGravitation, false);
+						_speed.Y = 1.5f;
+						_externalForce.Y = 0.0f;
+						if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
+							SetAnimation(AnimState::Copter);
+						}
+						_copterFramesLeft = 70.0f;
+#if defined(WITH_AUDIO)
+						if (_copterSound == nullptr) {
+							_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
+							if (_copterSound != nullptr) {
+								_copterSound->setLooping(true);
+							}
+						}
+#endif
+					}
+				}
+				break;
+			}
+			case PlayerType::Spaz: {
+				if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
+					_controllable = false;
+					_controllableTimeout = (_levelHandler->IsReforged() ? 60.0f : 120.0f);	// Non-Reforged Spaz sidekick travels ~2x as far (dash runs until controllable)
+					SetAnimation(AnimState::Uppercut);
+					SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
+						_externalForce.X = 8.0f * (IsFacingLeft() ? -1.0f : 1.0f);
+						_speed.X = 14.4f * (IsFacingLeft() ? -1.0f : 1.0f);
+						SetState(ActorState::ApplyGravitation, false);
+						SetPlayerTransition(AnimState::TransitionUppercutB, true, false, SpecialMoveType::Sidekick);
+					});
+
+					PlayPlayerSfx("Sidekick"_s);
+				} else {
+					if (!CanJump() && _canDoubleJump) {
+						_canDoubleJump = false;
+						_isFreefall = false;
+
+						_internalForceY = -1.15f - 0.1f * (1.0f - timeMult);
+						_speed.Y = -0.6f - std::max(0.0f, (std::abs(_speed.X) - 4.0f) * 0.3f);
+						_speed.X = std::clamp(_speed.X * 0.4f, -1.0f, 1.0f);
+
+						PlayPlayerSfx("DoubleJump"_s);
+
+						SetTransition(AnimState::Spring, false);
+					}
+				}
+				break;
+			}
+			case PlayerType::Lori: {
+				if ((_currentAnimation->State & AnimState::Crouch) == AnimState::Crouch) {
+					_controllable = false;
+					_controllableTimeout = 40.0f;
+					SetAnimation(AnimState::Uppercut);
+					SetPlayerTransition(AnimState::TransitionUppercutA, true, false, SpecialMoveType::Sidekick, [this]() {
+						_externalForce.X = 4.0f * (IsFacingLeft() ? -1.0f : 1.0f);
+						_speed.X = 9.3f * (IsFacingLeft() ? -1.0f : 1.0f);
+						SetState(ActorState::ApplyGravitation, false);
+					});
+				} else {
+					if (_speed.Y > 0.01f && !CanJump() && (_currentAnimation->State & (AnimState::Fall | AnimState::Copter)) != AnimState::Idle) {
+						SetState(ActorState::ApplyGravitation, false);
+						_speed.Y = 1.5f;
+						_externalForce.Y = 0.0f;
+						if ((_currentAnimation->State & AnimState::Copter) != AnimState::Copter) {
+							SetAnimation(AnimState::Copter);
+						}
+						_copterFramesLeft = 70.0f;
+#if defined(WITH_AUDIO)
+						if (_copterSound == nullptr) {
+							_copterSound = PlaySfx("Copter"_s, 0.6f, 1.5f);
+							if (_copterSound != nullptr) {
+								_copterSound->setLooping(true);
+							}
+						}
+#endif
+					}
+				}
+				break;
+			}
+		}
+	}
+
+	void Player::HandleWeaponFire(bool areaWeaponAllowed)
+	{
 		// Fire
 		bool weaponInUse = false;
 		if (_weaponAllowed && areaWeaponAllowed && _levelHandler->PlayerActionPressed(this, PlayerAction::Fire)) {
@@ -1282,7 +1324,7 @@ namespace Jazz2::Actors
 							_controllableTimeout = 0.0f;
 						});
 					}
-				} else if (_weaponAmmo[(std::int32_t)_currentWeapon] != 0) {
+				} else if (_inventory.WeaponAmmo[(std::int32_t)_currentWeapon] != 0) {
 					_wasFirePressed = true;
 
 					// Shooting has higher priority than pushing if object can't be moved further anymore
@@ -1377,12 +1419,7 @@ namespace Jazz2::Actors
 				float texScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
 				float texBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
-				float scaleY = std::max(_weaponFlareTime / 8.0f, 0.4f);
-				switch (_playerType) {
-					case PlayerType::Jazz: scaleY *= 1.1f; break;
-					case PlayerType::Spaz: scaleY *= 1.6f; break;
-					case PlayerType::Lori: scaleY *= 1.3f; break;
-				}
+				float scaleY = std::max(_weaponFlareTime / 8.0f, 0.4f) * GetCharacterTraits(_playerType).WeaponFlareScaleY;
 
 				bool facingLeft = IsFacingLeft();
 				bool lookUp = (_currentAnimation->State & AnimState::Lookup) == AnimState::Lookup;
@@ -1704,12 +1741,7 @@ namespace Jazz2::Actors
 
 			// Load original metadata, indexed only when recolored (must match the renderer's current palette state)
 			bool useIndexed = (GetEffectiveFurColor() != 0);
-			switch (_playerType) {
-				case PlayerType::Jazz: RequestMetadata("Interactive/PlayerJazz"_s, useIndexed); break;
-				case PlayerType::Spaz: RequestMetadata("Interactive/PlayerSpaz"_s, useIndexed); break;
-				case PlayerType::Lori: RequestMetadata("Interactive/PlayerLori"_s, useIndexed); break;
-				case PlayerType::Frog: RequestMetadata("Interactive/PlayerFrog"_s, useIndexed); break;
-			}
+			RequestMetadata(GetCharacterTraits(_playerType).Metadata, useIndexed);
 
 			// Refresh animation state
 			AnimState prevState = _currentAnimation->State;
@@ -1832,16 +1864,16 @@ namespace Jazz2::Actors
 		} else if (auto* bonusWarp = runtime_cast<Environment::BonusWarp>(other)) {
 			if (_currentTransition == nullptr || _currentTransitionCancellable) {
 				auto cost = bonusWarp->GetCost();
-				if (cost <= _coins) {
-					_coins -= cost;
+				if (cost <= _inventory.Coins) {
+					_inventory.Coins -= cost;
 					bonusWarp->Activate(this);
 
 					// Convert remaing coins to gems and equivalent score
-					_gems[0] += _coins;
-					AddScore(_coins * 100);
-					_coins = 0;
+					_inventory.Gems[0] += _inventory.Coins;
+					AddScore(_inventory.Coins * 100);
+					_inventory.Coins = 0;
 				} else if (_bonusWarpTimer <= 0.0f) {
-					_levelHandler->HandlePlayerCoins(this, _coins, _coins);
+					_levelHandler->HandlePlayerCoins(this, _inventory.Coins, _inventory.Coins);
 					PlaySfx("BonusWarpNotEnoughCoins"_s);
 
 					_bonusWarpTimer = 400.0f;
@@ -2261,13 +2293,7 @@ namespace Jazz2::Actors
 					constexpr StringView IdleBored[] = {
 						"IdleBored1"_s, "IdleBored2"_s, "IdleBored3"_s, "IdleBored4"_s, "IdleBored5"_s
 					};
-					std::int32_t maxIdx;
-					switch (_playerType) {
-						case PlayerType::Jazz: maxIdx = 5; break;
-						case PlayerType::Spaz: maxIdx = 4; break;
-						case PlayerType::Lori: maxIdx = 3; break;
-						default: maxIdx = 0; break;
-					}
+					std::int32_t maxIdx = GetCharacterTraits(_playerType).IdleBoredAnimCount;
 					if (maxIdx > 0) {
 						std::int32_t selectedIdx = Random().Fast(0, maxIdx);
 						if (SetTransition((AnimState)(536870944 + selectedIdx), true)) {
@@ -2765,8 +2791,8 @@ namespace Jazz2::Actors
 				if (_levelExiting == LevelExitingState::None) {
 					// TODO: Implement Fast parameter
 					uint16_t coinsRequired = *(std::uint16_t*)&p[4];
-					if (coinsRequired <= _coins) {
-						_coins -= coinsRequired;
+					if (coinsRequired <= _inventory.Coins) {
+						_inventory.Coins -= coinsRequired;
 
 						ExitType exitType = (ExitType)p[0];
 						if (p[1] != 0) {
@@ -2778,7 +2804,7 @@ namespace Jazz2::Actors
 						}
 						_levelHandler->BeginLevelChange(this, exitType, nextLevel);
 					} else if (_bonusWarpTimer <= 0.0f) {
-						_levelHandler->HandlePlayerCoins(this, _coins, _coins);
+						_levelHandler->HandlePlayerCoins(this, _inventory.Coins, _inventory.Coins);
 						PlaySfx("BonusWarpNotEnoughCoins"_s);
 
 						_bonusWarpTimer = 400.0f;
@@ -3038,22 +3064,18 @@ namespace Jazz2::Actors
 					_lives--;
 				}
 
-				// Revert food eaten only if Reforged
-				if (_levelHandler->IsReforged()) {
-					_foodEaten = _foodEatenCheckpoint;
+				// Revert coins, gems, ammo and weapon upgrades; food eaten is reverted only if Reforged
+				std::int32_t foodEaten = _inventory.FoodEaten;
+				_inventory = _inventoryCheckpoint;
+				if (!_levelHandler->IsReforged()) {
+					_inventory.FoodEaten = foodEaten;
 				}
 
-				// Revert coins, gems, ammo and weapon upgrades
-				_coins = _coinsCheckpoint;
-				std::memcpy(_gems, _gemsCheckpoint, sizeof(_gems));
-				std::memcpy(_weaponAmmo, _weaponAmmoCheckpoint, sizeof(_weaponAmmo));
-				std::memcpy(_weaponUpgrades, _weaponUpgradesCheckpoint, sizeof(_weaponUpgrades));
-
 				// Remove all fast fires and Blaster upgrades
-				_weaponUpgrades[(std::int32_t)WeaponType::Blaster] = 0;
+				_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] = 0;
 
 				// Reset current weapon to Blaster if player has no ammo on checkpoint
-				if (_weaponAmmo[(std::int32_t)_currentWeapon] == 0) {
+				if (_inventory.WeaponAmmo[(std::int32_t)_currentWeapon] == 0) {
 					SetCurrentWeapon(WeaponType::Blaster, SetCurrentWeaponReason::Rollback);
 				}
 
@@ -3123,7 +3145,7 @@ namespace Jazz2::Actors
 
 		// Find next available weapon
 		WeaponType weaponType = (WeaponType)(((std::int32_t)_currentWeapon + 1) % (std::int32_t)WeaponType::Count);
-		for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count && _weaponAmmo[(std::int32_t)weaponType] == 0; i++) {
+		for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count && _inventory.WeaponAmmo[(std::int32_t)weaponType] == 0; i++) {
 			weaponType = (WeaponType)(((std::int32_t)weaponType + 1) % (std::int32_t)WeaponType::Count);
 		}
 		SetCurrentWeapon(weaponType, SetCurrentWeaponReason::User);
@@ -3133,7 +3155,7 @@ namespace Jazz2::Actors
 
 	void Player::SwitchToWeaponByIndex(std::uint32_t weaponIndex)
 	{
-		if (weaponIndex >= (std::uint32_t)WeaponType::Count || _weaponAmmo[weaponIndex] == 0) {
+		if (weaponIndex >= (std::uint32_t)WeaponType::Count || _inventory.WeaponAmmo[weaponIndex] == 0) {
 			PlayPlayerSfx("ChangeWeapon"_s);
 			return;
 		}
@@ -3157,7 +3179,7 @@ namespace Jazz2::Actors
 		GetFirePointAndAngle(initialPos, gunspotPos, angle);
 
 		std::shared_ptr<T> shot = std::make_shared<T>();
-		std::uint8_t shotParams[1] = { _weaponUpgrades[(std::int32_t)weaponType] };
+		std::uint8_t shotParams[1] = { _inventory.WeaponUpgrades[(std::int32_t)weaponType] };
 		shot->OnActivated(ActorActivationDetails(
 			_levelHandler,
 			initialPos,
@@ -3166,7 +3188,7 @@ namespace Jazz2::Actors
 		shot->OnFire(shared_from_this(), gunspotPos, _speed, angle, IsFacingLeft());
 		_levelHandler->AddActor(shot);
 
-		std::int32_t fastFire = (_weaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
+		std::int32_t fastFire = (_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
 		_weaponCooldown = cooldownBase - (fastFire * cooldownUpgrade);
 
 		if (emitFlare) {
@@ -3181,9 +3203,9 @@ namespace Jazz2::Actors
 		float angle;
 		GetFirePointAndAngle(initialPos, gunspotPos, angle);
 
-		uint8_t shotParams[1] = { _weaponUpgrades[(std::int32_t)WeaponType::RF] };
+		uint8_t shotParams[1] = { _inventory.WeaponUpgrades[(std::int32_t)WeaponType::RF] };
 
-		if ((_weaponUpgrades[(std::int32_t)WeaponType::RF] & 0x1) != 0) {
+		if ((_inventory.WeaponUpgrades[(std::int32_t)WeaponType::RF] & 0x1) != 0) {
 			std::shared_ptr<Weapons::RFShot> shot1 = std::make_shared<Weapons::RFShot>();
 			shot1->OnActivated(ActorActivationDetails(
 				_levelHandler,
@@ -3241,7 +3263,7 @@ namespace Jazz2::Actors
 		float angle;
 		GetFirePointAndAngle(initialPos, gunspotPos, angle);
 
-		uint8_t shotParams[1] = { _weaponUpgrades[(std::int32_t)WeaponType::Pepper] };
+		uint8_t shotParams[1] = { _inventory.WeaponUpgrades[(std::int32_t)WeaponType::Pepper] };
 
 		std::shared_ptr<Weapons::PepperShot> shot1 = std::make_shared<Weapons::PepperShot>();
 		shot1->OnActivated(ActorActivationDetails(
@@ -3261,7 +3283,7 @@ namespace Jazz2::Actors
 		shot2->OnFire(shared_from_this(), gunspotPos, _speed, angle + Random().NextFloat(-0.2f, 0.2f), IsFacingLeft());
 		_levelHandler->AddActor(shot2);
 
-		std::int32_t fastFire = (_weaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
+		std::int32_t fastFire = (_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
 		_weaponCooldown = 30.0f - (fastFire * 2.76f);
 		EmitWeaponFlare();
 	}
@@ -3293,7 +3315,7 @@ namespace Jazz2::Actors
 		GetFirePointAndAngle(initialPos, gunspotPos, angle);
 
 		std::shared_ptr<Weapons::Thunderbolt> shot = std::make_shared<Weapons::Thunderbolt>();
-		uint8_t shotParams[1] = { _weaponUpgrades[(std::int32_t)WeaponType::Thunderbolt] };
+		uint8_t shotParams[1] = { _inventory.WeaponUpgrades[(std::int32_t)WeaponType::Thunderbolt] };
 		shot->OnActivated(ActorActivationDetails(
 			_levelHandler,
 			initialPos,
@@ -3302,7 +3324,7 @@ namespace Jazz2::Actors
 		shot->OnFire(shared_from_this(), gunspotPos, _speed, angle, IsFacingLeft());
 		_levelHandler->AddActor(shot);
 
-		_weaponCooldown = 12.0f - (_weaponUpgrades[(std::int32_t)WeaponType::Blaster] * 0.1f);
+		_weaponCooldown = 12.0f - (_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] * 0.1f);
 
 		if (!_inWater && (_currentAnimation->State & AnimState::Lookup) != AnimState::Lookup) {
 			AddExternalForce(IsFacingLeft() ? 2.0f : -2.0f, 0.0f);
@@ -3391,7 +3413,7 @@ namespace Jazz2::Actors
 					if (!FireWeaponThunderbolt()) {
 						return false;
 					}
-					ammoDecrease = ((_weaponUpgrades[(std::int32_t)WeaponType::Thunderbolt] & 0x1) != 0 ? 40 : 80); // Lower ammo consumption with upgrade
+					ammoDecrease = ((_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Thunderbolt] & 0x1) != 0 ? 40 : 80); // Lower ammo consumption with upgrade
 					break;
 				}
 
@@ -3399,7 +3421,7 @@ namespace Jazz2::Actors
 				return false;
 		}
 
-		auto& currentAmmo = _weaponAmmo[(std::int32_t)weaponType];
+		auto& currentAmmo = _inventory.WeaponAmmo[(std::int32_t)weaponType];
 		if (ammoDecrease > currentAmmo) {
 			ammoDecrease = currentAmmo;
 		}
@@ -3408,7 +3430,7 @@ namespace Jazz2::Actors
 		// No ammo, switch weapons
 		if (currentAmmo == 0) {
 			// Remove upgrade if no ammo left
-			_weaponUpgrades[(std::int32_t)weaponType] &= ~0x01;
+			_inventory.WeaponUpgrades[(std::int32_t)weaponType] &= ~0x01;
 
 			SwitchToNextWeapon();
 			PlayPlayerSfx("ChangeWeapon"_s);
@@ -3647,18 +3669,18 @@ namespace Jazz2::Actors
 	{
 		_lives = (std::int32_t)carryOver.Lives;
 		_score = carryOver.Score;
-		_foodEaten = (std::int32_t)carryOver.FoodEaten;
-		_foodEatenCheckpoint = _foodEaten;
+		_inventory.FoodEaten = (std::int32_t)carryOver.FoodEaten;
+		_inventoryCheckpoint.FoodEaten = _inventory.FoodEaten;
 		_currentWeapon = carryOver.CurrentWeapon;
 
 		std::memcpy(_gemsTotal, carryOver.Gems, sizeof(_gemsTotal));
-		std::memcpy(_weaponAmmo, carryOver.Ammo, sizeof(_weaponAmmo));
-		std::memcpy(_weaponAmmoCheckpoint, carryOver.Ammo, sizeof(_weaponAmmoCheckpoint));
-		std::memcpy(_weaponUpgrades, carryOver.WeaponUpgrades, sizeof(_weaponUpgrades));
-		std::memcpy(_weaponUpgradesCheckpoint, carryOver.WeaponUpgrades, sizeof(_weaponUpgradesCheckpoint));
+		std::memcpy(_inventory.WeaponAmmo, carryOver.Ammo, sizeof(_inventory.WeaponAmmo));
+		std::memcpy(_inventoryCheckpoint.WeaponAmmo, carryOver.Ammo, sizeof(_inventoryCheckpoint.WeaponAmmo));
+		std::memcpy(_inventory.WeaponUpgrades, carryOver.WeaponUpgrades, sizeof(_inventory.WeaponUpgrades));
+		std::memcpy(_inventoryCheckpoint.WeaponUpgrades, carryOver.WeaponUpgrades, sizeof(_inventoryCheckpoint.WeaponUpgrades));
 
-		_weaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-		_weaponAmmoCheckpoint[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+		_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+		_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
 
 		ExitType exitTypeMasked = (exitType & ExitType::TypeMask);
 		if (exitTypeMasked == ExitType::Warp || exitTypeMasked == ExitType::Bonus || exitTypeMasked == ExitType::Boss) {
@@ -3674,8 +3696,8 @@ namespace Jazz2::Actors
 		}
 
 		// Preload all weapons
-		for (std::int32_t i = 0; i < std::int32_t(arraySize(_weaponAmmo)); i++) {
-			if (_weaponAmmo[i] != 0) {
+		for (std::int32_t i = 0; i < std::int32_t(arraySize(_inventory.WeaponAmmo)); i++) {
+			if (_inventory.WeaponAmmo[i] != 0) {
 				PreloadMetadataAsync(String("Weapon/"_s + WeaponNames[i]));
 			}
 		}
@@ -3687,15 +3709,15 @@ namespace Jazz2::Actors
 		carryOver.Type = _playerType;
 		carryOver.Lives = (_lives > UINT8_MAX ? UINT8_MAX : (std::uint8_t)_lives);
 		carryOver.Score = _score;
-		carryOver.FoodEaten = (_foodEaten > UINT8_MAX ? UINT8_MAX : (std::uint8_t)_foodEaten);
+		carryOver.FoodEaten = (_inventory.FoodEaten > UINT8_MAX ? UINT8_MAX : (std::uint8_t)_inventory.FoodEaten);
 		carryOver.CurrentWeapon = _currentWeapon;
 
 		for (std::size_t i = 0; i < arraySize(carryOver.Gems); i++) {
-			carryOver.Gems[i] = _gemsTotal[i] + _gems[i];
+			carryOver.Gems[i] = _gemsTotal[i] + _inventory.Gems[i];
 		}
 
-		std::memcpy(carryOver.Ammo, _weaponAmmo, sizeof(_weaponAmmo));
-		std::memcpy(carryOver.WeaponUpgrades, _weaponUpgrades, sizeof(_weaponUpgrades));
+		std::memcpy(carryOver.Ammo, _inventory.WeaponAmmo, sizeof(_inventory.WeaponAmmo));
+		std::memcpy(carryOver.WeaponUpgrades, _inventory.WeaponUpgrades, sizeof(_inventory.WeaponUpgrades));
 
 		return carryOver;
 	}
@@ -3719,39 +3741,39 @@ namespace Jazz2::Actors
 
 		_checkpointLight = src.ReadValueAsLE<float>();
 		_lives = src.ReadVariableInt32();
-		_coins = src.ReadVariableInt32();
-		_coinsCheckpoint = _coins;
-		_foodEaten = src.ReadVariableInt32();
-		_foodEatenCheckpoint = _foodEaten;
+		_inventory.Coins = src.ReadVariableInt32();
+		_inventoryCheckpoint.Coins = _inventory.Coins;
+		_inventory.FoodEaten = src.ReadVariableInt32();
+		_inventoryCheckpoint.FoodEaten = _inventory.FoodEaten;
 		_score = src.ReadVariableInt32();
 
-		_gems[0] = src.ReadVariableInt32();
+		_inventory.Gems[0] = src.ReadVariableInt32();
 		if (version >= 3) {
 			// Gem types are split since v3.0.0
-			_gems[1] = src.ReadVariableInt32();
-			_gems[2] = src.ReadVariableInt32();
-			_gems[3] = src.ReadVariableInt32();
+			_inventory.Gems[1] = src.ReadVariableInt32();
+			_inventory.Gems[2] = src.ReadVariableInt32();
+			_inventory.Gems[3] = src.ReadVariableInt32();
 
 			_gemsTotal[0] = src.ReadVariableInt32();
 			_gemsTotal[1] = src.ReadVariableInt32();
 			_gemsTotal[2] = src.ReadVariableInt32();
 			_gemsTotal[3] = src.ReadVariableInt32();
 		}
-		std::memcpy(_gemsCheckpoint, _gems, sizeof(_gems));
+		std::memcpy(_inventoryCheckpoint.Gems, _inventory.Gems, sizeof(_inventory.Gems));
 
 		levelHandler->SetAmbientLight(this, _checkpointLight);
 
 		std::int32_t weaponCount = src.ReadVariableInt32();
-		DEATH_ASSERT(weaponCount == std::int32_t(arraySize(_weaponAmmoCheckpoint)), "Weapon count mismatch", );
+		DEATH_ASSERT(weaponCount == std::int32_t(arraySize(_inventoryCheckpoint.WeaponAmmo)), "Weapon count mismatch", );
 		_currentWeapon = (WeaponType)src.ReadVariableInt32();
-		src.Read(_weaponAmmoCheckpoint, sizeof(_weaponAmmoCheckpoint));
-		src.Read(_weaponUpgradesCheckpoint, sizeof(_weaponUpgradesCheckpoint));
+		src.Read(_inventoryCheckpoint.WeaponAmmo, sizeof(_inventoryCheckpoint.WeaponAmmo));
+		src.Read(_inventoryCheckpoint.WeaponUpgrades, sizeof(_inventoryCheckpoint.WeaponUpgrades));
 
-		std::memcpy(_weaponAmmo, _weaponAmmoCheckpoint, sizeof(_weaponAmmoCheckpoint));
-		std::memcpy(_weaponUpgrades, _weaponUpgradesCheckpoint, sizeof(_weaponUpgradesCheckpoint));
+		std::memcpy(_inventory.WeaponAmmo, _inventoryCheckpoint.WeaponAmmo, sizeof(_inventoryCheckpoint.WeaponAmmo));
+		std::memcpy(_inventory.WeaponUpgrades, _inventoryCheckpoint.WeaponUpgrades, sizeof(_inventoryCheckpoint.WeaponUpgrades));
 
 		// Reset current weapon to Blaster if player has no ammo on checkpoint
-		if (_weaponAmmo[(std::int32_t)_currentWeapon] == 0) {
+		if (_inventory.WeaponAmmo[(std::int32_t)_currentWeapon] == 0) {
 			SetCurrentWeapon(WeaponType::Blaster, SetCurrentWeaponReason::Rollback);
 		}
 	}
@@ -3765,21 +3787,21 @@ namespace Jazz2::Actors
 		dest.WriteValueAsLE<float>(_checkpointPos.Y);
 		dest.WriteValueAsLE<float>(_checkpointLight);
 		dest.WriteVariableInt32(_lives);
-		dest.WriteVariableInt32(_coinsCheckpoint);
-		dest.WriteVariableInt32(_foodEatenCheckpoint);
+		dest.WriteVariableInt32(_inventoryCheckpoint.Coins);
+		dest.WriteVariableInt32(_inventoryCheckpoint.FoodEaten);
 		dest.WriteVariableInt32(_score);
-		dest.WriteVariableInt32(_gemsCheckpoint[0]);
-		dest.WriteVariableInt32(_gemsCheckpoint[1]);
-		dest.WriteVariableInt32(_gemsCheckpoint[2]);
-		dest.WriteVariableInt32(_gemsCheckpoint[3]);
+		dest.WriteVariableInt32(_inventoryCheckpoint.Gems[0]);
+		dest.WriteVariableInt32(_inventoryCheckpoint.Gems[1]);
+		dest.WriteVariableInt32(_inventoryCheckpoint.Gems[2]);
+		dest.WriteVariableInt32(_inventoryCheckpoint.Gems[3]);
 		dest.WriteVariableInt32(_gemsTotal[0]);
 		dest.WriteVariableInt32(_gemsTotal[1]);
 		dest.WriteVariableInt32(_gemsTotal[2]);
 		dest.WriteVariableInt32(_gemsTotal[3]);
-		dest.WriteVariableInt32(std::int32_t(arraySize(_weaponAmmoCheckpoint)));
+		dest.WriteVariableInt32(std::int32_t(arraySize(_inventoryCheckpoint.WeaponAmmo)));
 		dest.WriteVariableInt32((std::int32_t)_currentWeapon);
-		dest.Write(_weaponAmmoCheckpoint, sizeof(_weaponAmmoCheckpoint));
-		dest.Write(_weaponUpgradesCheckpoint, sizeof(_weaponUpgradesCheckpoint));
+		dest.Write(_inventoryCheckpoint.WeaponAmmo, sizeof(_inventoryCheckpoint.WeaponAmmo));
+		dest.Write(_inventoryCheckpoint.WeaponUpgrades, sizeof(_inventoryCheckpoint.WeaponUpgrades));
 	}
 
 	bool Player::Respawn(Vector2f pos)
@@ -4276,40 +4298,40 @@ namespace Jazz2::Actors
 
 	std::int32_t Player::GetCoins() const
 	{
-		return _coins;
+		return _inventory.Coins;
 	}
 
 	void Player::AddCoins(std::int32_t count)
 	{
-		std::int32_t prevCoins = _coins;
-		_coins += count;
-		_levelHandler->HandlePlayerCoins(this, prevCoins, _coins);
+		std::int32_t prevCoins = _inventory.Coins;
+		_inventory.Coins += count;
+		_levelHandler->HandlePlayerCoins(this, prevCoins, _inventory.Coins);
 		PlayPlayerSfx("PickupCoin"_s);
 	}
 
 	void Player::AddCoinsInternal(std::int32_t count)
 	{
-		_coins += count;
+		_inventory.Coins += count;
 	}
 
 	std::int32_t Player::GetGems(std::uint8_t gemType) const
 	{
-		if (gemType >= arraySize(_gems)) {
+		if (gemType >= arraySize(_inventory.Gems)) {
 			return 0;
 		}
 
-		return _gems[gemType];
+		return _inventory.Gems[gemType];
 	}
 
 	void Player::AddGems(std::uint8_t gemType, std::int32_t count)
 	{
-		if (gemType >= arraySize(_gems)) {
+		if (gemType >= arraySize(_inventory.Gems)) {
 			return;
 		}
 
-		std::int32_t prevGems = _gems[gemType];
-		_gems[gemType] += count;
-		_levelHandler->HandlePlayerGems(this, gemType, prevGems, _gems[gemType]);
+		std::int32_t prevGems = _inventory.Gems[gemType];
+		_inventory.Gems[gemType] += count;
+		_levelHandler->HandlePlayerGems(this, gemType, prevGems, _inventory.Gems[gemType]);
 		float pitch = 1.0f - fabs(2.0f * fmod(_gemsPitch * 0.05f, 1.0f) - 1.0f);
 		PlayPlayerSfx("PickupGem"_s, 1.0f, std::min(0.7f + pitch * 0.6f, 1.3f));
 		_gemsTimer = 120.0f;
@@ -4318,16 +4340,16 @@ namespace Jazz2::Actors
 
 	std::int32_t Player::GetConsumedFood() const
 	{
-		return _foodEaten;
+		return _inventory.FoodEaten;
 	}
 
 	void Player::ConsumeFood(bool isDrinkable)
 	{
 		PlayPlayerSfx(isDrinkable ? "PickupDrink"_s : "PickupFood"_s);
 
-		_foodEaten++;
-		if (_foodEaten >= 100 && _levelHandler->CanActivateSugarRush()) {
-			_foodEaten = _foodEaten % 100;
+		_inventory.FoodEaten++;
+		if (_inventory.FoodEaten >= 100 && _levelHandler->CanActivateSugarRush()) {
+			_inventory.FoodEaten = _inventory.FoodEaten % 100;
 			ActivateSugarRush(1300.0f);
 		}
 	}
@@ -4352,13 +4374,13 @@ namespace Jazz2::Actors
 		constexpr std::int16_t Multiplier = 256;
 		constexpr std::int16_t AmmoLimit = 99 * Multiplier;
 
-		if (weaponType >= WeaponType::Count || _weaponAmmo[(std::int32_t)weaponType] < 0 || _weaponAmmo[(std::int32_t)weaponType] >= AmmoLimit) {
+		if (weaponType >= WeaponType::Count || _inventory.WeaponAmmo[(std::int32_t)weaponType] < 0 || _inventory.WeaponAmmo[(std::int32_t)weaponType] >= AmmoLimit) {
 			return false;
 		}
 
-		bool switchTo = (_weaponAmmo[(std::int32_t)weaponType] == 0);
+		bool switchTo = (_inventory.WeaponAmmo[(std::int32_t)weaponType] == 0);
 
-		_weaponAmmo[(std::int32_t)weaponType] = (std::int16_t)std::min((std::int32_t)_weaponAmmo[(std::int32_t)weaponType] + count * Multiplier, (int32_t)AmmoLimit);
+		_inventory.WeaponAmmo[(std::int32_t)weaponType] = (std::int16_t)std::min((std::int32_t)_inventory.WeaponAmmo[(std::int32_t)weaponType] + count * Multiplier, (int32_t)AmmoLimit);
 
 		if (switchTo) {
 			SetCurrentWeapon(weaponType, SetCurrentWeaponReason::AddAmmo);
@@ -4383,9 +4405,9 @@ namespace Jazz2::Actors
 
 	void Player::AddWeaponUpgrade(WeaponType weaponType, std::uint8_t upgrade)
 	{
-		bool shouldSwitchToWeapon = (_weaponUpgrades[(std::int32_t)weaponType] == 0);
+		bool shouldSwitchToWeapon = (_inventory.WeaponUpgrades[(std::int32_t)weaponType] == 0);
 
-		_weaponUpgrades[(std::int32_t)weaponType] |= upgrade;
+		_inventory.WeaponUpgrades[(std::int32_t)weaponType] |= upgrade;
 
 		if (shouldSwitchToWeapon) {
 			SetCurrentWeapon(weaponType, SetCurrentWeaponReason::AddUpgrade);
@@ -4396,14 +4418,14 @@ namespace Jazz2::Actors
 	{
 		const std::int32_t FastFireLimit = 9;
 
-		std::int32_t current = (_weaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
+		std::int32_t current = (_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
 		if (current >= FastFireLimit) {
 			return false;
 		}
 
 		current = std::min(current + count, FastFireLimit);
 
-		_weaponUpgrades[(std::int32_t)WeaponType::Blaster] = (std::uint8_t)((_weaponUpgrades[(std::int32_t)WeaponType::Blaster] & 0x1) | (current << 1));
+		_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] = (std::uint8_t)((_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] & 0x1) | (current << 1));
 
 		PlayPlayerSfx("PickupAmmo"_s);
 
@@ -4422,12 +4444,7 @@ namespace Jazz2::Actors
 
 		// Load new metadata, indexed only when recolored (must match the renderer's current palette state)
 		bool useIndexed = (GetEffectiveFurColor() != 0);
-		switch (type) {
-			case PlayerType::Jazz: RequestMetadata("Interactive/PlayerJazz", useIndexed); break;
-			case PlayerType::Spaz: RequestMetadata("Interactive/PlayerSpaz", useIndexed); break;
-			case PlayerType::Lori: RequestMetadata("Interactive/PlayerLori", useIndexed); break;
-			case PlayerType::Frog: RequestMetadata("Interactive/PlayerFrog", useIndexed); break;
-		}
+		RequestMetadata(GetCharacterTraits(type).Metadata, useIndexed);
 
 		// Refresh animation state
 		if ((_currentSpecialMove == SpecialMoveType::None) ||
@@ -4596,11 +4613,7 @@ namespace Jazz2::Actors
 		_checkpointPos = Vector2f(pos.X, pos.Y - 20.0f);
 		_checkpointLight = ambientLight;
 		
-		_foodEatenCheckpoint = _foodEaten;
-		_coinsCheckpoint = _coins;
-		std::memcpy(_gemsCheckpoint, _gems, sizeof(_gems));
-		std::memcpy(_weaponAmmoCheckpoint, _weaponAmmo, sizeof(_weaponAmmo));
-		std::memcpy(_weaponUpgradesCheckpoint, _weaponUpgrades, sizeof(_weaponUpgrades));
+		_inventoryCheckpoint = _inventory;
 	}
 
 	void Player::CancelCarryingObject(ActorBase* expectedActor)

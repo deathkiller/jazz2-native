@@ -27,8 +27,9 @@ namespace Jazz2::Actors
 
 	Task<bool> Explosion::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_type = (Type)*(std::uint16_t*)&details.Params[0];
-		_scale = *(float*)&details.Params[4];
+		EventParamsReader params(details);
+		_type = (Type)params.GetUint16(0);
+		_scale = params.GetFloat(4);
 
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);

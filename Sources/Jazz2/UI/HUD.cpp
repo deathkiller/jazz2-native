@@ -722,11 +722,11 @@ namespace Jazz2::UI
 
 		char stringBuffer[32];
 		StringView ammoCount;
-		if (player->_weaponAmmo[(int32_t)weapon] == UINT16_MAX) {
+		if (player->_inventory.WeaponAmmo[(int32_t)weapon] == UINT16_MAX) {
 			ammoCount = "x\u221E"_s;
 		} else {
 			stringBuffer[0] = 'x';
-			i32tos(player->_weaponAmmo[(int32_t)weapon] / 256, stringBuffer + 1);
+			i32tos(player->_inventory.WeaponAmmo[(int32_t)weapon] / 256, stringBuffer + 1);
 			ammoCount = stringBuffer;
 		}
 
@@ -1281,7 +1281,7 @@ namespace Jazz2::UI
 			offset.X += 6;
 		}
 
-		if ((player->_weaponUpgrades[(std::int32_t)weapon] & 0x01) != 0) {
+		if ((player->_inventory.WeaponUpgrades[(std::int32_t)weapon] & 0x01) != 0) {
 			switch (weapon) {
 				default:
 				case WeaponType::Blaster:
@@ -1400,8 +1400,8 @@ namespace Jazz2::UI
 		}
 
 		float angle = -fPiOver2;
-		for (std::int32_t i = 0, j = 0; i < std::int32_t(arraySize(player->_weaponAmmo)); i++) {
-			if (player->_weaponAmmo[i] != 0) {
+		for (std::int32_t i = 0, j = 0; i < std::int32_t(arraySize(player->_inventory.WeaponAmmo)); i++) {
+			if (player->_inventory.WeaponAmmo[i] != 0) {
 				float x = cosf(angle) * distance;
 				float y = sinf(angle) * distance;
 
@@ -1441,11 +1441,11 @@ namespace Jazz2::UI
 				if (PreferencesCache::WeaponWheel == WeaponWheelStyle::EnabledWithAmmoCount) {
 					char stringBuffer[32];
 					StringView ammoCount;
-					if (player->_weaponAmmo[i] == UINT16_MAX) {
+					if (player->_inventory.WeaponAmmo[i] == UINT16_MAX) {
 						ammoCount = "x\u221E"_s;
 					} else {
 						stringBuffer[0] = 'x';
-						i32tos(player->_weaponAmmo[i] / 256, stringBuffer + 1);
+						i32tos(player->_inventory.WeaponAmmo[i] / 256, stringBuffer + 1);
 						ammoCount = stringBuffer;
 					}
 
@@ -1552,8 +1552,8 @@ namespace Jazz2::UI
 	{
 		std::int32_t weaponCount = 0;
 
-		for (std::int32_t i = 0; i < std::int32_t(arraySize(player->_weaponAmmo)); i++) {
-			if (player->_weaponAmmo[i] != 0) {
+		for (std::int32_t i = 0; i < std::int32_t(arraySize(player->_inventory.WeaponAmmo)); i++) {
+			if (player->_inventory.WeaponAmmo[i] != 0) {
 				weaponCount++;
 			}
 		}

@@ -4,12 +4,11 @@
 
 #include "../Weapons/ShotBase.h"
 #include "../../Multiplayer/MpLevelHandler.h"
-#include "../../../nCine/Base/Clock.h"
 
 namespace Jazz2::Actors::Multiplayer
 {
 	RemotePlayerOnServer::RemotePlayerOnServer(std::shared_ptr<PeerDescriptor> peerDesc)
-		: _stateBufferPos(0), Flags(PlayerFlags::None), PressedKeys(0),
+		: Flags(PlayerFlags::None), PressedKeys(0),
 			PressedKeysLast(0), UpdatedFrame(0)
 	{
 		_peerDesc = std::move(peerDesc);
@@ -20,12 +19,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	Task<bool> RemotePlayerOnServer::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		Clock& c = nCine::clock();
-		std::uint64_t now = c.now() * 1000 / c.frequency();
-		for (std::int32_t i = 0; i < std::int32_t(arraySize(_stateBuffer)); i++) {
-			_stateBuffer[i].Time = now - arraySize(_stateBuffer) + i;
-			_stateBuffer[i].Pos = Vector2f(details.Pos.X, details.Pos.Y);
-		}
+		_stateBuffer.Reset(Vector2f(details.Pos.X, details.Pos.Y), StateInterpolationBuffer::Now());
 		// Seed the interpolated display position too, so a hitch before the first OnUpdate interpolation doesn't
 		// render the player at the level origin (0, 0)
 		_displayPos = Vector2f(details.Pos.X, details.Pos.Y);
@@ -35,38 +29,8 @@ namespace Jazz2::Actors::Multiplayer
 
 	void RemotePlayerOnServer::OnUpdate(float timeMult)
 	{
-		Clock& c = nCine::clock();
-		std::int64_t now = c.now() * 1000 / c.frequency();
-		std::int64_t renderTime = now - ServerDelay;
-
-		std::int32_t nextIdx = _stateBufferPos - 1;
-		if (nextIdx < 0) {
-			nextIdx += std::int32_t(arraySize(_stateBuffer));
-		}
-
-		if (renderTime <= _stateBuffer[nextIdx].Time) {
-			std::int32_t prevIdx;
-			while (true) {
-				prevIdx = nextIdx - 1;
-				if (prevIdx < 0) {
-					prevIdx += std::int32_t(arraySize(_stateBuffer));
-				}
-
-				if (prevIdx == _stateBufferPos || _stateBuffer[prevIdx].Time <= renderTime) {
-					break;
-				}
-
-				nextIdx = prevIdx;
-			}
-
-			std::int64_t timeRange = (_stateBuffer[nextIdx].Time - _stateBuffer[prevIdx].Time);
-			if (timeRange > 0) {
-				float lerp = (float)(renderTime - _stateBuffer[prevIdx].Time) / timeRange;
-				_displayPos = _stateBuffer[prevIdx].Pos + (_stateBuffer[nextIdx].Pos - _stateBuffer[prevIdx].Pos) * lerp;
-			} else {
-				_displayPos = _stateBuffer[nextIdx].Pos;
-			}
-		}
+		std::int64_t renderTime = StateInterpolationBuffer::Now() - StateInterpolationBuffer::ServerDelay;
+		_stateBuffer.Sample(renderTime, _displayPos);
 
 		// Ground this server-side shadow on the player it stands on (if any) so it doesn't apply gravity and play a
 		// falling animation - its position comes from the owning client, so don't reposition it (snap = false).
@@ -126,9 +90,6 @@ namespace Jazz2::Actors::Multiplayer
 			return;
 		}
 
-		Clock& c = nCine::clock();
-		std::int64_t now = c.now() * 1000 / c.frequency();
-
 		Flags = flags;
 
 		bool wasVisible = _renderer.isDrawEnabled();
@@ -137,29 +98,7 @@ namespace Jazz2::Actors::Multiplayer
 		SetFacingLeft((flags & PlayerFlags::IsFacingLeft) == PlayerFlags::IsFacingLeft);
 		_isActivelyPushing = (flags & PlayerFlags::IsActivelyPushing) == PlayerFlags::IsActivelyPushing;
 
-		if (wasVisible) {
-			// Actor is still visible, enable interpolation
-			_stateBuffer[_stateBufferPos].Time = now;
-			_stateBuffer[_stateBufferPos].Pos = pos;
-		} else {
-			// Actor was hidden before, reset state buffer to disable interpolation
-			std::int32_t stateBufferPrevPos = _stateBufferPos - 1;
-			if (stateBufferPrevPos < 0) {
-				stateBufferPrevPos += std::int32_t(arraySize(_stateBuffer));
-			}
-
-			std::int64_t renderTime = now - ServerDelay;
-
-			_stateBuffer[stateBufferPrevPos].Time = renderTime;
-			_stateBuffer[stateBufferPrevPos].Pos = pos;
-			_stateBuffer[_stateBufferPos].Time = renderTime;
-			_stateBuffer[_stateBufferPos].Pos = pos;
-		}
-
-		_stateBufferPos++;
-		if (_stateBufferPos >= std::int32_t(arraySize(_stateBuffer))) {
-			_stateBufferPos = 0;
-		}
+		_stateBuffer.Push(pos, StateInterpolationBuffer::Now(), wasVisible);
 
 		// TODO: Set actual pos and speed to the newest value
 		_pos = pos;
@@ -168,16 +107,10 @@ namespace Jazz2::Actors::Multiplayer
 
 	void RemotePlayerOnServer::ForceResyncWithServer(Vector2f pos, Vector2f speed)
 	{
-		Clock& c = nCine::clock();
-		std::int64_t now = c.now() * 1000 / c.frequency();
-
 		_pos = pos;
 		_speed = speed;
 
-		for (std::size_t i = 0; i < arraySize(_stateBuffer); i++) {
-			_stateBuffer[i].Time = now;
-			_stateBuffer[i].Pos = pos;
-		}
+		_stateBuffer.Reset(pos, StateInterpolationBuffer::Now());
 	}
 
 	void RemotePlayerOnServer::OnPushSolidObject(float timeMult, float pushSpeedX)
@@ -292,10 +225,10 @@ namespace Jazz2::Actors::Multiplayer
 
 	bool RemotePlayerOnServer::FireCurrentWeapon(WeaponType weaponType)
 	{
-		std::uint16_t prevAmmo = _weaponAmmo[(std::int32_t)weaponType];
+		std::uint16_t prevAmmo = _inventory.WeaponAmmo[(std::int32_t)weaponType];
 		bool success = PlayerOnServer::FireCurrentWeapon(weaponType);
 
-		if (prevAmmo != _weaponAmmo[(std::int32_t)weaponType]) {
+		if (prevAmmo != _inventory.WeaponAmmo[(std::int32_t)weaponType]) {
 			static_cast<Jazz2::Multiplayer::MpLevelHandler*>(_levelHandler)->HandlePlayerRefreshAmmo(this, weaponType);
 		}
 

@@ -9,10 +9,11 @@ namespace Jazz2::Actors::Lighting
 
 	Task<bool> StaticRadialLight::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_intensity = details.Params[0] / 255.0f;
-		_brightness = details.Params[1] / 255.0f;
-		_radiusNear = (float)*(uint16_t*)&details.Params[2];
-		_radiusFar = (float)*(uint16_t*)&details.Params[4];
+		EventParamsReader params(details);
+		_intensity = params.GetUint8(0) / 255.0f;
+		_brightness = params.GetUint8(1) / 255.0f;
+		_radiusNear = (float)params.GetUint16(2);
+		_radiusFar = (float)params.GetUint16(4);
 
 		SetState(ActorState::ForceDisableCollisions, true);
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::CollideWithOtherActors | ActorState::ApplyGravitation, false);

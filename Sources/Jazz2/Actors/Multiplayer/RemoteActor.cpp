@@ -5,7 +5,6 @@
 #include "../../ContentResolver.h"
 #include "../../ILevelHandler.h"
 #include "../Player.h"
-#include "../../../nCine/Base/Clock.h"
 #include "../../../nCine/Graphics/RenderQueue.h"
 
 namespace Jazz2::Actors::Multiplayer
@@ -33,7 +32,7 @@ namespace Jazz2::Actors::Multiplayer
 	}
 
 	RemoteActor::RemoteActor()
-		: _stateBufferPos(0), _lastAnim(AnimState::Idle), _isAttachedLocally(false), _furColor(0), _paletteOffset(-1),
+		: _lastAnim(AnimState::Idle), _isAttachedLocally(false), _furColor(0), _paletteOffset(-1),
 			_activeShield(ShieldType::None), _activeShieldTime(0.0f)
 	{
 	}
@@ -70,12 +69,7 @@ namespace Jazz2::Actors::Multiplayer
 		SetState(ActorState::PreserveOnRollback, true);
 		SetState(ActorState::CanBeFrozen | ActorState::CollideWithTileset | ActorState::ApplyGravitation, false);
 
-		Clock& c = nCine::clock();
-		std::uint64_t now = c.now() * 1000 / c.frequency();
-		for (std::int32_t i = 0; i < std::int32_t(arraySize(_stateBuffer)); i++) {
-			_stateBuffer[i].Time = now - arraySize(_stateBuffer) + i;
-			_stateBuffer[i].Pos = Vector2f(details.Pos.X, details.Pos.Y);
-		}
+		_stateBuffer.Reset(Vector2f(details.Pos.X, details.Pos.Y), StateInterpolationBuffer::Now());
 
 		async_return true;
 	}
@@ -83,39 +77,10 @@ namespace Jazz2::Actors::Multiplayer
 	void RemoteActor::OnUpdate(float timeMult)
 	{
 		if (!_isAttachedLocally) {
-			Clock& c = nCine::clock();
-			std::int64_t now = c.now() * 1000 / c.frequency();
-			std::int64_t renderTime = now - ServerDelay;
+			std::int64_t renderTime = StateInterpolationBuffer::Now() - StateInterpolationBuffer::ServerDelay;
 
-			std::int32_t nextIdx = _stateBufferPos - 1;
-			if (nextIdx < 0) {
-				nextIdx += std::int32_t(arraySize(_stateBuffer));
-			}
-
-			if (renderTime <= _stateBuffer[nextIdx].Time) {
-				std::int32_t prevIdx;
-				while (true) {
-					prevIdx = nextIdx - 1;
-					if (prevIdx < 0) {
-						prevIdx += std::int32_t(arraySize(_stateBuffer));
-					}
-
-					if (prevIdx == _stateBufferPos || _stateBuffer[prevIdx].Time <= renderTime) {
-						break;
-					}
-
-					nextIdx = prevIdx;
-				}
-
-				Vector2f pos;
-				std::int64_t timeRange = (_stateBuffer[nextIdx].Time - _stateBuffer[prevIdx].Time);
-				if (timeRange > 0) {
-					float lerp = (float)(renderTime - _stateBuffer[prevIdx].Time) / timeRange;
-					pos = _stateBuffer[prevIdx].Pos + (_stateBuffer[nextIdx].Pos - _stateBuffer[prevIdx].Pos) * lerp;
-				} else {
-					pos = _stateBuffer[nextIdx].Pos;
-				}
-
+			Vector2f pos;
+			if (_stateBuffer.Sample(renderTime, pos)) {
 				MoveInstantly(pos, MoveType::Absolute | MoveType::Force);
 			}
 		}
@@ -209,32 +174,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	void RemoteActor::SyncPositionWithServer(Vector2f pos)
 	{
-		Clock& c = nCine::clock();
-		std::int64_t now = c.now() * 1000 / c.frequency();
-
-		if (_renderer.isDrawEnabled()) {
-			// Actor is still visible, enable interpolation
-			_stateBuffer[_stateBufferPos].Time = now;
-			_stateBuffer[_stateBufferPos].Pos = pos;
-		} else {
-			// Actor was hidden before, reset state buffer to disable interpolation
-			std::int32_t stateBufferPrevPos = _stateBufferPos - 1;
-			if (stateBufferPrevPos < 0) {
-				stateBufferPrevPos += std::int32_t(arraySize(_stateBuffer));
-			}
-
-			std::int64_t renderTime = now - ServerDelay;
-
-			_stateBuffer[stateBufferPrevPos].Time = renderTime;
-			_stateBuffer[stateBufferPrevPos].Pos = pos;
-			_stateBuffer[_stateBufferPos].Time = renderTime;
-			_stateBuffer[_stateBufferPos].Pos = pos;
-		}
-
-		_stateBufferPos++;
-		if (_stateBufferPos >= std::int32_t(arraySize(_stateBuffer))) {
-			_stateBufferPos = 0;
-		}
+		_stateBuffer.Push(pos, StateInterpolationBuffer::Now(), _renderer.isDrawEnabled());
 	}
 
 	void RemoteActor::SyncAnimationWithServer(AnimState anim, float rotation, float scaleX, float scaleY, Actors::ActorRendererType rendererType)
@@ -258,20 +198,8 @@ namespace Jazz2::Actors::Multiplayer
 
 		bool justWarped = (flags & 0x40) != 0;
 		if (justWarped) {
-			Clock& c = nCine::clock();
-			std::int64_t now = c.now() * 1000 / c.frequency();
-
-			std::int32_t stateBufferPrevPos = _stateBufferPos - 1;
-			if (stateBufferPrevPos < 0) {
-				stateBufferPrevPos += std::int32_t(arraySize(_stateBuffer));
-			}
-
-			Vector2f pos = _stateBuffer[stateBufferPrevPos].Pos;
-
-			for (std::size_t i = 0; i < arraySize(_stateBuffer); i++) {
-				_stateBuffer[i].Time = now;
-				_stateBuffer[i].Pos = pos;
-			}
+			// Collapse the buffer to the most recent position, so the actor teleports instead of interpolating
+			_stateBuffer.Reset(_stateBuffer.GetLatest(), StateInterpolationBuffer::Now());
 		}
 	}
 

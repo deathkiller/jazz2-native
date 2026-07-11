@@ -11,6 +11,8 @@
 #include "../../nCine/Graphics/BaseSprite.h"
 #include "../../nCine/Graphics/SceneNode.h"
 
+#include <cstring>
+
 #include <Base/TypeInfo.h>
 #include <Containers/Function.h>
 #include <Containers/StringView.h>
@@ -154,6 +156,60 @@ namespace Jazz2::Actors
 			: LevelHandler(levelHandler), Pos(pos), State(ActorState::None), Type(EventType::Empty), Params(params)
 		{
 		}
+	};
+
+	/**
+		@brief Typed accessor over the raw event activation parameter buffer
+
+		Wraps the raw byte buffer of @ref ActorActivationDetails::Params and provides typed reads at explicit byte
+		offsets. Multi-byte values are read unaligned, matching the packed layout produced by the event converter.
+		Prefer this over indexing and type-punning the raw buffer directly.
+	*/
+	struct EventParamsReader {
+		explicit EventParamsReader(const ActorActivationDetails& details) noexcept
+			: _params(details.Params) {}
+		explicit EventParamsReader(const std::uint8_t* params) noexcept
+			: _params(params) {}
+
+		/** @brief Reads a boolean at the given byte offset */
+		bool GetBool(std::int32_t offset) const noexcept {
+			return (_params[offset] != 0);
+		}
+		/** @brief Reads an unsigned 8-bit value at the given byte offset */
+		std::uint8_t GetUint8(std::int32_t offset) const noexcept {
+			return _params[offset];
+		}
+		/** @brief Reads a signed 8-bit value at the given byte offset */
+		std::int8_t GetInt8(std::int32_t offset) const noexcept {
+			return (std::int8_t)_params[offset];
+		}
+		/** @brief Reads an unsigned 16-bit value at the given byte offset */
+		std::uint16_t GetUint16(std::int32_t offset) const noexcept {
+			std::uint16_t value;
+			std::memcpy(&value, &_params[offset], sizeof(value));
+			return value;
+		}
+		/** @brief Reads a signed 16-bit value at the given byte offset */
+		std::int16_t GetInt16(std::int32_t offset) const noexcept {
+			std::int16_t value;
+			std::memcpy(&value, &_params[offset], sizeof(value));
+			return value;
+		}
+		/** @brief Reads an unsigned 32-bit value at the given byte offset */
+		std::uint32_t GetUint32(std::int32_t offset) const noexcept {
+			std::uint32_t value;
+			std::memcpy(&value, &_params[offset], sizeof(value));
+			return value;
+		}
+		/** @brief Reads a 32-bit floating-point value at the given byte offset */
+		float GetFloat(std::int32_t offset) const noexcept {
+			float value;
+			std::memcpy(&value, &_params[offset], sizeof(value));
+			return value;
+		}
+
+	private:
+		const std::uint8_t* _params;
 	};
 
 	/**

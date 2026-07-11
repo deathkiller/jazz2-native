@@ -31,6 +31,35 @@ namespace Jazz2::UI::Multiplayer
 namespace Jazz2::Multiplayer
 {
 	/**
+		@brief Checkpoint on a race track
+
+		Waypoint of the ordered polyline that describes the race route, used by the minimap and by
+		progress-based position ranking. Either authored in the level (JJ2+ Text waypoints) or auto-generated
+		from level geometry.
+	*/
+	struct RaceCheckpoint {
+		/** @brief Tile coordinates (multiply by @ref Tiles::TileSet::DefaultTileSize for world pixels) */
+		Vector2i Tile;
+		/** @brief Ordering index along the track (raw JJ2+ TextID, or 0, 1, 2, ... when auto-generated) */
+		std::uint16_t Order;
+		/** @brief Split/group ID (JJ2+ Offset); 0 for auto-generated and single-track levels */
+		std::uint8_t Group;
+	};
+
+	/**
+		@brief Spawn point in a multiplayer level
+	*/
+	struct MultiplayerSpawnPoint {
+		/** @brief Position */
+		Vector2f Pos;
+		/** @brief Team ID the spawn point belongs to */
+		std::uint8_t Team;
+
+		MultiplayerSpawnPoint(Vector2f pos, std::uint8_t team)
+			: Pos(pos), Team(team) {}
+	};
+
+	/**
 		@brief Level handler of a multiplayer game session (online or local splitscreen)
 		
 		Subclass of @ref LevelHandler that runs a multiplayer match on top of a @ref NetworkManager. It is the
@@ -328,20 +357,6 @@ namespace Jazz2::Multiplayer
 			std::uint32_t PointsInRound;
 		};
 
-		struct RaceCheckpoint {
-			Vector2i Tile;			// Tile coordinates (multiply by TileSet::DefaultTileSize for world pixels)
-			std::uint16_t Order;	// Ordering index along the track (raw JJ2+ TextID, or 0,1,2,... when auto-generated)
-			std::uint8_t Group;		// Split/group id (JJ2+ Offset); 0 for auto-generated and single-track levels
-		};
-
-		struct MultiplayerSpawnPoint {
-			Vector2f Pos;
-			std::uint8_t Team;
-
-			MultiplayerSpawnPoint(Vector2f pos, std::uint8_t team)
-				: Pos(pos), Team(team) {}
-		};
-
 		enum class CtfFlagState : std::uint8_t {
 			AtBase,		// Resting on its home base
 			Carried,	// Being carried by an enemy player (CarrierPlayerIndex)
@@ -524,6 +539,59 @@ namespace Jazz2::Multiplayer
 		void InitializeValidateAssetsPacket(MemoryStream& packet);
 		void InitializeLoadLevelPacket(MemoryStream& packet);
 		static void InitializeCreateRemoteActorPacket(MemoryStream& packet, std::uint32_t actorId, const Actors::ActorBase* actor);
+
+		// Per-packet handlers dispatched from OnPacketReceived(); they run on the network thread,
+		// so all gameplay mutations inside go through InvokeAsync()
+		bool HandleClientPacketRpc(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketAuth(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketLevelReady(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketChatMessage(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketValidateAssetsResponse(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketPlayerReady(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketForceResyncActors(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketPlayerUpdate(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketPlayerKeyPress(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketPlayerChangeWeaponRequest(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketPlayerSpectateRequest(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketPlayerChangeCharacter(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketPlayerChangeTeamRequest(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleClientPacketPlayerAckWarped(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketRpc(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPeerSetProperty(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketLoadLevel(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketLevelSetProperty(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketShowInGameLobby(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketFadeOut(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlaySfx(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlayCommonSfx(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketShowAlert(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketChatMessage(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketSyncTileMap(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketSetTrigger(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketAdvanceTileAnimation(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketCreateDebris(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketCreateControllablePlayer(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketCreateRemoteActor(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketCreateMirroredActor(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketDestroyRemoteActor(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketUpdateAllActors(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketChangeRemoteActorMetadata(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketMarkRemoteActorAsPlayer(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketUpdatePositionsInRound(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketSyncRaceCheckpoints(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketSyncTeamScores(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketSyncScoreboard(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlayerSetProperty(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlayerResetProperties(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlayerRespawn(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlayerMoveInstantly(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlayerAckWarped(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlayerEmitWeaponFlare(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlayerChangeWeapon(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlayerTakeDamage(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlayerPush(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlayerActivateSpring(const Peer& peer, ArrayView<const std::uint8_t> data);
+		bool HandleServerPacketPlayerWarpIn(const Peer& peer, ArrayView<const std::uint8_t> data);
 
 #if defined(DEATH_DEBUG) && defined(WITH_IMGUI)
 		static constexpr std::int32_t PlotValueCount = 512;

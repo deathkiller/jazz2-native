@@ -24,9 +24,10 @@ namespace Jazz2::Actors::Environment
 	{
 		_renderer.setLayer(_renderer.layer() + 10);
 
-		_id = details.Params[0];
-		_triggerSpeedX = (float)*(int8_t*)&details.Params[1];
-		_triggerSpeedY = (float)*(int8_t*)&details.Params[2];
+		EventParamsReader params(details);
+		_id = params.GetUint8(0);
+		_triggerSpeedX = (float)params.GetInt8(1);
+		_triggerSpeedY = (float)params.GetInt8(2);
 
 		SetState(ActorState::CollideWithSolidObjects | ActorState::CollideWithSolidObjectsBelow | ActorState::IsSolidObject | ActorState::IsInvulnerable, true);
 		SetState(ActorState::ApplyGravitation, false);

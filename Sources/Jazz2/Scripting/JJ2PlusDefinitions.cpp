@@ -1706,10 +1706,10 @@ namespace Jazz2::Scripting
 		}
 
 		std::int32_t jjPLAYER::get_fastfire() const {
-			return (_player->_weaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
+			return (_player->_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] >> 1);
 		}
 		std::int32_t jjPLAYER::set_fastfire(std::int32_t value) {
-			_player->_weaponUpgrades[(std::int32_t)WeaponType::Blaster] = (std::uint8_t)((_player->_weaponUpgrades[(std::int32_t)WeaponType::Blaster] & 0x1) | (value << 1));
+			_player->_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] = (std::uint8_t)((_player->_inventory.WeaponUpgrades[(std::int32_t)WeaponType::Blaster] & 0x1) | (value << 1));
 			return value;
 		}
 
@@ -1760,42 +1760,42 @@ namespace Jazz2::Scripting
 		}
 
 		std::int32_t jjPLAYER::get_food() const {
-			noop(); return _player->_foodEaten;
+			noop(); return _player->_inventory.FoodEaten;
 		}
 		std::int32_t jjPLAYER::set_food(std::int32_t value) {
-			_player->_foodEaten = value;
-			return _player->_foodEaten;
+			_player->_inventory.FoodEaten = value;
+			return _player->_inventory.FoodEaten;
 		}
 		std::int32_t jjPLAYER::get_coins() const {
-			return _player->_coins;
+			return _player->_inventory.Coins;
 		}
 		std::int32_t jjPLAYER::set_coins(std::int32_t value) {
-			_player->_coins = value;
-			return _player->_coins;
+			_player->_inventory.Coins = value;
+			return _player->_inventory.Coins;
 		}
 
 		bool jjPLAYER::testForCoins(std::int32_t numberOfCoins) {
-			if (numberOfCoins > _player->_coins) {
+			if (numberOfCoins > _player->_inventory.Coins) {
 				return false;
 			}
 			_player->AddCoins(-numberOfCoins);
 			return true;
 		}
 		std::int32_t jjPLAYER::get_gems(std::uint32_t type) const {
-			return (type < arraySize(_player->_gems) ? _player->_gems[type] : 0);
+			return (type < arraySize(_player->_inventory.Gems) ? _player->_inventory.Gems[type] : 0);
 		}
 		std::int32_t jjPLAYER::set_gems(std::uint32_t type, std::int32_t value) {
-			if (type < arraySize(_player->_gems)) {
-				_player->_gems[type] = value;
+			if (type < arraySize(_player->_inventory.Gems)) {
+				_player->_inventory.Gems[type] = value;
 			}
-			return (type < arraySize(_player->_gems) ? _player->_gems[type] : 0);
+			return (type < arraySize(_player->_inventory.Gems) ? _player->_inventory.Gems[type] : 0);
 		}
 		bool jjPLAYER::testForGems(std::int32_t numberOfGems, std::uint32_t type) {
 			noop();
-			std::uint8_t currentCount = (type < arraySize(_player->_gems) ? _player->_gems[type] : 0);
+			std::uint8_t currentCount = (type < arraySize(_player->_inventory.Gems) ? _player->_inventory.Gems[type] : 0);
 			if (numberOfGems <= currentCount) {
 				if (numberOfGems > 0) {
-					_player->_gems[type] -= numberOfGems;
+					_player->_inventory.Gems[type] -= numberOfGems;
 				}
 				return true;
 			}
@@ -2040,26 +2040,26 @@ namespace Jazz2::Scripting
 			if (index < 0 || index >= (std::int8_t)WeaponType::Count) {
 				return 0;
 			}
-			return (_player->_weaponUpgrades[index] & 0x01) == 0x01;
+			return (_player->_inventory.WeaponUpgrades[index] & 0x01) == 0x01;
 		}
 		bool jjPLAYER::set_powerup(std::uint8_t index, bool value) {
 			if (index < 0 || index >= (std::int8_t)WeaponType::Count) {
 				return 0;
 			}
-			_player->_weaponUpgrades[index] = (value ? 0x01 : 0x00);
+			_player->_inventory.WeaponUpgrades[index] = (value ? 0x01 : 0x00);
 			return value;
 		}
 		std::int32_t jjPLAYER::get_ammo(std::uint8_t index) const {
 			if (index < 0 || index >= (std::int8_t)WeaponType::Count) {
 				return 0;
 			}
-			return _player->_weaponAmmo[index];
+			return _player->_inventory.WeaponAmmo[index];
 		}
 		std::int32_t jjPLAYER::set_ammo(std::uint8_t index, std::int32_t value) {
 			if (index < 0 || index >= (std::int8_t)WeaponType::Count) {
 				return 0;
 			}
-			_player->_weaponAmmo[index] = value * 256;
+			_player->_inventory.WeaponAmmo[index] = value * 256;
 			return value;
 		}
 

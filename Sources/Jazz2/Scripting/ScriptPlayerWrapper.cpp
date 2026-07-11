@@ -134,7 +134,7 @@ namespace Jazz2::Scripting
 
 	std::int32_t ScriptPlayerWrapper::asGetFoodEaten() const
 	{
-		return (_player != nullptr ? _player->_foodEaten : -1);
+		return (_player != nullptr ? _player->_inventory.FoodEaten : -1);
 	}
 
 	std::int32_t ScriptPlayerWrapper::asGetScore() const
@@ -175,13 +175,13 @@ namespace Jazz2::Scripting
 
 	std::int32_t ScriptPlayerWrapper::asGetWeaponAmmo(std::int32_t weaponType) const
 	{
-		return (_player != nullptr && weaponType >= 0 && weaponType < (std::int32_t)WeaponType::Count ? _player->_weaponAmmo[weaponType] : -1);
+		return (_player != nullptr && weaponType >= 0 && weaponType < (std::int32_t)WeaponType::Count ? _player->_inventory.WeaponAmmo[weaponType] : -1);
 	}
 
 	void ScriptPlayerWrapper::asSetWeaponAmmo(std::int32_t weaponType, std::int32_t value)
 	{
 		if (_player != nullptr && weaponType >= 0 && weaponType < (std::int32_t)WeaponType::Count) {
-			_player->_weaponAmmo[weaponType] = value;
+			_player->_inventory.WeaponAmmo[weaponType] = value;
 		}
 	}
 

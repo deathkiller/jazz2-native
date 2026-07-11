@@ -431,6 +431,7 @@
     <ClInclude Include="Jazz2\Actors\Multiplayer\RemotablePlayer.h" />
     <ClInclude Include="Jazz2\Actors\Multiplayer\RemoteActor.h" />
     <ClInclude Include="Jazz2\Actors\Multiplayer\RemotePlayerOnServer.h" />
+    <ClInclude Include="Jazz2\Actors\Multiplayer\StateInterpolationBuffer.h" />
     <ClInclude Include="Jazz2\Actors\Solid\AmmoBarrel.h" />
     <ClInclude Include="Jazz2\Actors\Solid\AmmoCrate.h" />
     <ClInclude Include="Jazz2\Actors\Solid\BarrelContainer.h" />
@@ -501,6 +502,7 @@
     <ClInclude Include="Jazz2\Multiplayer\GameModes\CaptureTheFlagMode.h" />
     <ClInclude Include="Jazz2\Multiplayer\NetworkManager.h" />
     <ClInclude Include="Jazz2\Multiplayer\PacketTypes.h" />
+    <ClInclude Include="Jazz2\Multiplayer\RaceRouteGenerator.h" />
     <ClInclude Include="Jazz2\Multiplayer\Peer.h" />
     <ClInclude Include="Jazz2\Multiplayer\Reason.h" />
     <ClInclude Include="Jazz2\Multiplayer\ServerDiscovery.h" />
@@ -917,6 +919,7 @@
     <ClCompile Include="Jazz2\Multiplayer\NetworkManager.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\NetworkManagerBase.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\Peer.cpp" />
+    <ClCompile Include="Jazz2\Multiplayer\RaceRouteGenerator.cpp" />
     <ClCompile Include="Jazz2\Multiplayer\ServerDiscovery.cpp" />
     <ClCompile Include="Jazz2\PreferencesCache.cpp" />
     <ClCompile Include="Jazz2\Rendering\BlurRenderPass.cpp" />

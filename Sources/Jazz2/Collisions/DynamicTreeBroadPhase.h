@@ -24,6 +24,8 @@
 
 #include "DynamicTree.h"
 
+#include <algorithm>
+
 namespace Jazz2::Collisions
 {
 	/**
@@ -213,13 +215,25 @@ namespace Jazz2::Collisions
 			_tree.Query(this, fatAABB);
 		}
 
+		// Sort the pair buffer to expose duplicates
+		std::sort(_pairBuffer, _pairBuffer + _pairCount, [](const CollisionPair& a, const CollisionPair& b) {
+			return (a.ProxyIdA < b.ProxyIdA || (a.ProxyIdA == b.ProxyIdA && a.ProxyIdB < b.ProxyIdB));
+		});
+
 		// Send pairs to caller
-		for (std::int32_t i = 0; i < _pairCount; ++i) {
+		std::int32_t i = 0;
+		while (i < _pairCount) {
 			CollisionPair* primaryPair = &_pairBuffer[i];
 			void* userDataA = _tree.GetUserData(primaryPair->ProxyIdA);
 			void* userDataB = _tree.GetUserData(primaryPair->ProxyIdB);
 
 			callback->OnPairAdded(userDataA, userDataB);
+			++i;
+
+			// Skip any duplicate pairs
+			while (i < _pairCount && _pairBuffer[i].ProxyIdA == primaryPair->ProxyIdA && _pairBuffer[i].ProxyIdB == primaryPair->ProxyIdB) {
+				++i;
+			}
 		}
 
 		// Clear move flags

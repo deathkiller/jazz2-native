@@ -44,11 +44,7 @@ namespace Jazz2::Actors::Solid
 		for (auto* player : players) {
 			std::optional<PlayerType> playerType = GetTargetType(player->GetPlayerType());
 			if (playerType) {
-				switch (*playerType) {
-					case PlayerType::Jazz: PreloadMetadataAsync("Interactive/PlayerJazz"_s); break;
-					case PlayerType::Spaz: PreloadMetadataAsync("Interactive/PlayerSpaz"_s); break;
-					case PlayerType::Lori: PreloadMetadataAsync("Interactive/PlayerLori"_s); break;
-				}
+				PreloadMetadataAsync(Player::GetCharacterTraits(*playerType).Metadata);
 			}
 		}
 

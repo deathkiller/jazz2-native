@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER)
 
 #include "PacketTypes.h"
+#include "RaceRouteGenerator.h"
 #include "../ContentResolver.h"
 #include "../PreferencesCache.h"
 #include "../UI/InGameConsole.h"
@@ -1531,7 +1532,7 @@ namespace Jazz2::Multiplayer
 						MemoryStream packet(9);
 						packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::Coins);
 						packet.WriteVariableUint32(peerDesc->Player->_playerIndex);
-						packet.WriteVariableInt32(peerDesc->Player->_coins);
+						packet.WriteVariableInt32(peerDesc->Player->_inventory.Coins);
 						_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 					}
 				}
@@ -3272,2180 +3273,2330 @@ namespace Jazz2::Multiplayer
 			}
 
 			switch ((ClientPacketType)packetType) {
-				case ClientPacketType::Rpc: {
-					// The actor RPC handler can mutate arbitrary game state, so run it on the main thread rather than the
-					// network thread. The packet buffer is freed as soon as this returns, so copy it into an owned buffer.
-					Array<std::uint8_t> buffer{NoInit, data.size()};
-					if (data.size() > 0) {
-						std::memcpy(buffer.data(), data.data(), data.size());
-					}
-
-					InvokeAsync([this, peer, buffer = std::move(buffer)]() {
-						MemoryStream packet(buffer);
-						std::uint32_t actorId = packet.ReadVariableUint32();
-
-						// Looked up on the main thread - actors are also removed on the main thread, so a found
-						// pointer is valid for the duration of this callback
-						Actors::ActorBase* remotingActor = nullptr;
-						{
-							std::unique_lock lock(_lock);
-							for (const auto& [actor, remotingActorInfo] : _remotingActors) {
-								if (remotingActorInfo.ActorID == actorId) {
-									remotingActor = actor;
-									break;
-								}
-							}
-						}
-
-						if DEATH_LIKELY(remotingActor != nullptr) {
-							LOGD("[MP] ClientPacketType::Rpc [{}] - id: {}, {} bytes", peer, actorId, buffer.size() - packet.GetPosition());
-							remotingActor->OnPacketReceived(packet);
-						} else {
-							LOGW("[MP] ClientPacketType::Rpc [{}] - id: {}, {} bytes - Actor not found", peer, actorId, buffer.size() - packet.GetPosition());
-						}
-					});
-					return true;
-				}
-				case ClientPacketType::Auth: {
-					if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
-						peerDesc->LevelState = PeerLevelState::ValidatingAssets;
-
-						InvokeAsync([this, peerDesc]() mutable {
-							_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] connected", peerDesc->PlayerName));
-						});
-
-						MemoryStream packet(10 + peerDesc->PlayerName.size());
-						packet.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Connected);
-						packet.WriteVariableUint64(peer.GetId());
-						packet.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
-						packet.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
-
-						_networkManager->SendTo([otherPeer = peer](const Peer& peer) {
-							return (peer != otherPeer);
-						}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet);
-					}
-
-					MemoryStream packet;
-					InitializeValidateAssetsPacket(packet);
-					_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ValidateAssets, packet);
-					return true;
-				}
-				case ClientPacketType::LevelReady: {
-					MemoryStream packet(data);
-					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
-
-					LOGD("[MP] ClientPacketType::LevelReady [{}] - flags: 0x{:.2x}", peer, flags);
-
-					if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
-						bool enableLedgeClimb = (flags & 0x02) != 0;
-						peerDesc->EnableLedgeClimb = enableLedgeClimb;
-						if (peerDesc->LevelState < PeerLevelState::LevelLoaded) {
-							peerDesc->LevelState = PeerLevelState::LevelLoaded;
-						}
-
-						if (peerDesc->PreferredPlayerType == PlayerType::None) {
-							auto& serverConfig = _networkManager->GetServerConfiguration();
-
-							// Show in-game lobby only to newly connected players
-							std::uint8_t flags = 0x01 | 0x02 | 0x04; // Set Visibility | Show | SetWelcomeMessage
-							std::uint8_t allowedCharacters = serverConfig.AllowedPlayerTypes;
-
-							MemoryStream packet(6 + serverConfig.WelcomeMessage.size());
-							packet.WriteValue<std::uint8_t>(flags);
-							packet.WriteValue<std::uint8_t>(allowedCharacters);
-							packet.WriteVariableUint32(serverConfig.WelcomeMessage.size());
-							packet.Write(serverConfig.WelcomeMessage.data(), serverConfig.WelcomeMessage.size());
-
-							_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ShowInGameLobby, packet);
-						}
-					}
-					return true;
-				}
-				case ClientPacketType::ChatMessage: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-
-					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-					if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-						LOGD("[MP] ClientPacketType::ChatMessage [{}] - Invalid playerIndex ({})", peer, playerIndex);
-						return true;
-					}
-
-					/*std::uint8_t reserved =*/ packet.ReadValue<std::uint8_t>();
-
-					std::uint32_t lineLength = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(lineLength == 0 || lineLength > 1024) {
-						LOGD("[MP] ClientPacketType::ChatMessage [{}] - Length out of bounds ({})", peer, lineLength);
-						return true;
-					}
-
-					String line{NoInit, lineLength};
-					packet.Read(line.data(), lineLength);
-
-					if (line.hasPrefix('/')) {
-						SendMessage(peer, UI::MessageLevel::Echo, line);
-						ProcessCommand(peer, line, peerDesc->IsAdmin);
-						return true;
-					}
-
-					String prefixedMessage;
-					if (peerDesc->IsAdmin) {
-						prefixedMessage = "\f[c:#907060]"_s + peerDesc->PlayerName + ":\f[/c] "_s + line;
-					} else {
-						prefixedMessage = "\f[c:#709060]"_s + peerDesc->PlayerName + ":\f[/c] "_s + line;
-					}
-
-					MemoryStream packetOut(9 + prefixedMessage.size());
-					packetOut.WriteVariableUint32(playerIndex);
-					packetOut.WriteValue<std::uint8_t>((std::uint8_t)UI::MessageLevel::Chat);
-					packetOut.WriteVariableUint32((std::uint32_t)prefixedMessage.size());
-					packetOut.Write(prefixedMessage.data(), (std::uint32_t)prefixedMessage.size());
-
-					_networkManager->SendTo([this](const Peer& peer) {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						return (peerDesc && peerDesc->LevelState != PeerLevelState::Unknown);
-					}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ChatMessage, packetOut);
-
-					InvokeAsync([this, line = std::move(prefixedMessage)]() mutable {
-						_console->WriteLine(UI::MessageLevel::Chat, std::move(line));
-					});
-					return true;
-				}
-				case ClientPacketType::ValidateAssetsResponse: {
-					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-					if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->LevelState != PeerLevelState::ValidatingAssets) {
-						// Packet received when the peer is in different state
-						LOGW("[MP] ClientPacketType::ValidateAssetsResponse [{}] - Invalid state ({})", peer,
-							peerDesc != nullptr ? peerDesc->LevelState : PeerLevelState::Unknown);
-						return true;
-					}
-
-					peerDesc->LevelState = PeerLevelState::StreamingMissingAssets;
-
-					bool success = true;
-					SmallVector<RequiredAsset*> missingAssets;
-
-					MemoryStream packet(data);
-					std::uint32_t assetCount = packet.ReadVariableUint32();
-
-					LOGD("[MP] ClientPacketType::ValidateAssetsResponse [{}] - {}/{} assets", peer, assetCount, _requiredAssets.size());
-
-					if DEATH_LIKELY(assetCount == _requiredAssets.size()) {
-						for (std::uint32_t i = 0; i < assetCount; i++) {
-							AssetType type = (AssetType)packet.ReadValue<std::uint8_t>();
-							std::uint32_t pathLength = packet.ReadVariableUint32();
-							if DEATH_UNLIKELY(pathLength > 512) {
-								// Refuse an implausibly long (attacker-controlled) path before allocating a buffer for it
-								success = false;
-								break;
-							}
-							String path{NoInit, pathLength};
-							packet.Read(path.data(), pathLength);
-							std::int64_t size = packet.ReadVariableInt64();
-							std::uint32_t crc32 = packet.ReadValue<std::uint32_t>();
-
-							bool found = false;
-							for (std::size_t j = 0; j < _requiredAssets.size(); j++) {
-								if (type == _requiredAssets[j].Type && path == _requiredAssets[j].Path) {
-									found = true;
-									if (size != _requiredAssets[j].Size || crc32 != _requiredAssets[j].Crc32) {
-										LOGD("[MP] ClientPacketType::ValidateAssetsResponse [{}] - \"{}\":{:.8x} is missing",
-											peer, _requiredAssets[j].Path, _requiredAssets[j].Crc32);
-										missingAssets.push_back(&_requiredAssets[j]);
-									}
-									break;
-								}
-							}
-
-							if DEATH_UNLIKELY(!found) {
-								// This asset wasn't requested, something went wrong
-								success = false;
-							}
-						}
-					} else {
-						// Asset count mismatch, something went wrong
-						success = false;
-					}
-
-					if DEATH_UNLIKELY(!success) {
-						// Peer response is corrupted
-						LOGW("[MP] ClientPacketType::ValidateAssetsResponse [{}] - Malformed packet", peer);
-						_networkManager->Kick(peer, Reason::InvalidParameter);
-						return true;
-					}
-
-					LOGI("[MP] ClientPacketType::ValidateAssetsResponse [{}] - {} missing assets", peer, missingAssets.size());
-
-					if (missingAssets.empty()) {
-						// All assets are already ready
-						MemoryStream packet;
-						InitializeLoadLevelPacket(packet);
-						_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LoadLevel, packet);
-						return true;
-					}
-
-					const auto& serverConfig = _networkManager->GetServerConfiguration();
-					if (!serverConfig.AllowAssetStreaming) {
-						// Server doesn't allow downloads, kick the client instead
-						_networkManager->Kick(peer, Reason::AssetStreamingNotAllowed);
-						return true;
-					}
-					
-#if defined(WITH_THREADS)
-					Thread streamingThread([_this = runtime_cast<MpLevelHandler>(shared_from_this()), peer, peerDesc = std::move(peerDesc), missingAssets = std::move(missingAssets)]() {
-#else
-					auto* _this = this;
-#endif
-						LOGI("Started streaming {} assets to peer [{}]", missingAssets.size(), peer);
-						TimeStamp begin = TimeStamp::now();
-
-						for (std::uint32_t i = 0; i < (std::uint32_t)missingAssets.size(); i++) {
-							if (!peerDesc->IsAuthenticated || _this->_ignorePackets) {
-								// Stop streaming if peer disconnects or handler has changed
-								break;
-							}
-
-							const RequiredAsset& asset = *missingAssets[i];
-
-							MemoryStream packetBegin(14 + asset.Path.size());
-							packetBegin.WriteValue<std::uint8_t>(1);	// Begin
-							packetBegin.WriteValue<std::uint8_t>((std::uint8_t)asset.Type);
-							packetBegin.WriteVariableUint32((std::uint32_t)asset.Path.size());
-							packetBegin.Write(asset.Path.data(), (std::int64_t)asset.Path.size());
-							packetBegin.WriteVariableInt64(asset.Size);
-							_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::StreamAsset, packetBegin);
-
-							auto s = fs::Open(asset.FullPath, FileAccess::Read);
-							if (s->IsValid()) {
-								char buffer[8192];
-								while (true) {
-									if DEATH_UNLIKELY(!peerDesc->IsAuthenticated || _this->_ignorePackets) {
-										// Stop streaming if peer disconnects or handler has changed
-										break;
-									}
-
-									std::int64_t bytesRead = s->Read(buffer, sizeof(buffer));
-									if (bytesRead <= 0) {
-										break;
-									}
-
-									MemoryStream packetChunk(9 + bytesRead);
-									packetChunk.WriteValue<std::uint8_t>(2);	// Chunk
-									packetChunk.WriteVariableInt64(bytesRead);
-									packetChunk.Write(buffer, bytesRead);
-									_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::StreamAsset, packetChunk);
-								}
-							}
-
-							MemoryStream packetEnd(1);
-							packetEnd.WriteValue<std::uint8_t>(3);	// End
-							_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::StreamAsset, packetEnd);
-						}
-
-						LOGI("Finished streaming {} assets to peer [{}] - took {:.1f} ms",
-						missingAssets.size(), peer, begin.millisecondsSince());
-						if (peerDesc->IsAuthenticated && !_this->_ignorePackets) {
-							MemoryStream packet;
-							_this->InitializeLoadLevelPacket(packet);
-							_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LoadLevel, packet);
-						}
-#if defined(WITH_THREADS)
-					});
-#endif
-
-					return true;
-				}
-				case ClientPacketType::PlayerReady: {
-					MemoryStream packet(data);
-					PlayerType preferredPlayerType = (PlayerType)packet.ReadValue<std::uint8_t>();
-					std::uint8_t preferredTeam = packet.ReadValue<std::uint8_t>();
-
-					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-					if DEATH_UNLIKELY(peerDesc == nullptr || (peerDesc->LevelState != PeerLevelState::LevelLoaded && peerDesc->LevelState != PeerLevelState::LevelSynchronized)) {
-						LOGW("[MP] ClientPacketType::PlayerReady [{}] - Invalid state", peer);
-						return true;
-					}
-
-					if DEATH_UNLIKELY(preferredPlayerType != PlayerType::Jazz && preferredPlayerType != PlayerType::Spaz && preferredPlayerType != PlayerType::Lori) {
-						LOGW("[MP] ClientPacketType::PlayerReady [{}] - Invalid preferred player type", peer);
-						return true;
-					}
-
-					peerDesc->PreferredPlayerType = preferredPlayerType;
-					// Honor the requested team unless it was forced by the server (admin/rebalance); ResolveTeam()
-					// applies it (balanced) when the player is spawned in ApplyGameModeToPlayer()
-					if (!peerDesc->TeamLocked) {
-						peerDesc->PreferredTeam = preferredTeam;
-					}
-
-					LOGI("[MP] ClientPacketType::PlayerReady [{}] - type: {}, team: {}", peer, preferredPlayerType, preferredTeam);
-
-					InvokeAsync([this, peer]() {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						if (!peerDesc || peerDesc->LevelState < PeerLevelState::LevelLoaded || peerDesc->LevelState > PeerLevelState::LevelSynchronized) {
-							LOGW("[MP] ClientPacketType::PlayerReady [{}] - Invalid state", peer);
-							return;
-						}
-						if (peerDesc->LevelState == PeerLevelState::LevelSynchronized) {
-							peerDesc->LevelState = PeerLevelState::PlayerReady;
-						}
-					});
-					return true;
-				}
-				case ClientPacketType::ForceResyncActors: {
-					LOGD("[MP] ClientPacketType::ForceResyncActors [{}] - update: {}", peer, _lastUpdated);
-					_forceResyncPending = true;
-					return true;
-				}
-				case ClientPacketType::PlayerUpdate: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					std::uint64_t now = packet.ReadVariableUint64();
-					float posX = packet.ReadValue<std::int32_t>() / 512.0f;
-					float posY = packet.ReadValue<std::int32_t>() / 512.0f;
-					float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
-					float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
-					RemotePlayerOnServer::PlayerFlags flags = (RemotePlayerOnServer::PlayerFlags)packet.ReadVariableUint32();
-
-					// TODO: Special move
-
-					// The packet is parsed here (its backing buffer is freed as soon as this returns), but the state
-					// is applied on the main thread so it doesn't race the simulation - only plain values are captured.
-					InvokeAsync([this, peer, playerIndex, now, posX, posY, speedX, speedY, flags]() mutable {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-							return;
-						}
-
-						// Drop stale/out-of-order updates (unreliable channel), and everything sent before a
-						// server-initiated warp/respawn is acknowledged (LastUpdated is parked at UINT64_MAX until then,
-						// so the client's pre-warp positions never reach the teleport check below)
-						if DEATH_UNLIKELY(peerDesc->LastUpdated >= now) {
-							return;
-						}
-
-						auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player);
-						if DEATH_UNLIKELY(remotePlayerOnServer == nullptr) {
-							return;
-						}
-
-						// Anti-cheat: reject client-reported movement that is physically impossible (speedhack /
-						// teleport). Bounds are intentionally generous so latency, springs, sugar rush and similar
-						// legitimate bursts never trip them; only gross violations are corrected.
-						constexpr float MaxPlausibleSpeed = 32.0f;	// Per axis; normal clamp is 16, boosted states stay well under
-						constexpr float MaxPlausibleStep = 600.0f;	// Base accepted position change for a single update (px)
-
-						// Scale the accepted step by the time actually elapsed since the last accepted update, so a
-						// network stall or packet-loss burst (which arrives as one large jump) isn't mistaken for a
-						// teleport. Capped so an unusually large gap can't grant an unbounded budget.
-						std::uint64_t deltaMs = (now > peerDesc->LastUpdated ? now - peerDesc->LastUpdated : 0);
-						if (deltaMs > 2000) {
-							deltaMs = 2000;
-						}
-						float maxStep = MaxPlausibleStep + MaxPlausibleSpeed * FrameTimer::FramesPerSecond * (deltaMs / 1000.0f);
-
-						peerDesc->LastUpdated = now;
-
-						float acceptedX = posX, acceptedY = posY;
-						float acceptedSpeedX = speedX, acceptedSpeedY = speedY;
-						bool corrected = false;
-						if (std::abs(acceptedSpeedX) > MaxPlausibleSpeed || std::abs(acceptedSpeedY) > MaxPlausibleSpeed) {
-							LOGW("Clamped implausible speed from player {} ({:.1f}, {:.1f})", playerIndex, acceptedSpeedX, acceptedSpeedY);
-							acceptedSpeedX = std::clamp(acceptedSpeedX, -MaxPlausibleSpeed, MaxPlausibleSpeed);
-							acceptedSpeedY = std::clamp(acceptedSpeedY, -MaxPlausibleSpeed, MaxPlausibleSpeed);
-							corrected = true;
-						}
-
-						// Belt-and-suspenders: stale pre-warp updates are already dropped via the LastUpdated grace, so
-						// this only guards against desyncs after a warp was acknowledged
-						if (!remotePlayerOnServer->_justWarped) {
-							float stepDistSqr = (Vector2f(acceptedX, acceptedY) - remotePlayerOnServer->_pos).SqrLength();
-							if (stepDistSqr > maxStep * maxStep) {
-								LOGW("Rejected implausible teleport from player {} ({} px in one update, budget {} px)",
-									playerIndex, (std::int32_t)std::sqrt(stepDistSqr), (std::int32_t)maxStep);
-								acceptedX = remotePlayerOnServer->_pos.X;
-								acceptedY = remotePlayerOnServer->_pos.Y;
-								corrected = true;
-							}
-						}
-
-						if (corrected) {
-							// Snap the offending client back to the accepted authoritative state
-							MemoryStream packet2(20);
-							packet2.WriteVariableUint32(remotePlayerOnServer->_playerIndex);
-							packet2.WriteValue<std::int32_t>((std::int32_t)(acceptedX * 512.0f));
-							packet2.WriteValue<std::int32_t>((std::int32_t)(acceptedY * 512.0f));
-							packet2.WriteValue<std::int16_t>((std::int16_t)(acceptedSpeedX * 512.0f));
-							packet2.WriteValue<std::int16_t>((std::int16_t)(acceptedSpeedY * 512.0f));
-							packet2.WriteValue<std::int16_t>((std::int16_t)(remotePlayerOnServer->_externalForce.X * 512.0f));
-							packet2.WriteValue<std::int16_t>((std::int16_t)(remotePlayerOnServer->_externalForce.Y * 512.0f));
-							_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet2);
-						}
-
-						constexpr RemotePlayerOnServer::PlayerFlags IdleFlags = RemotePlayerOnServer::PlayerFlags::InMenu | RemotePlayerOnServer::PlayerFlags::InConsole;
-						bool wasIdle = (remotePlayerOnServer->Flags & IdleFlags) != RemotePlayerOnServer::PlayerFlags::None;
-						bool isIdle = (flags & IdleFlags) != RemotePlayerOnServer::PlayerFlags::None;
-
-						remotePlayerOnServer->SyncWithServer(Vector2f(acceptedX, acceptedY), Vector2f(acceptedSpeedX, acceptedSpeedY), flags);
-
-						if (wasIdle != isIdle) {
-							// Broadcast idle state to all other players
-							MemoryStream packet2(6);
-							packet2.WriteVariableUint32(playerIndex);
-							packet2.WriteValue<std::uint8_t>(isIdle ? 0x01 : 0x00);
-							packet2.WriteVariableUint32(0);
-
-							_networkManager->SendTo([this, self = peer](const Peer& peer) {
-								if (peer == self) {
-									return false;
-								}
-								auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-								return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
-							}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::MarkRemoteActorAsPlayer, packet2);
-						}
-					});
-					return true;
-				}
-				case ClientPacketType::PlayerKeyPress: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					std::uint64_t pressedKeys = packet.ReadVariableUint64();
-
-					// Applied on the main thread; the remote player's input is read by the simulation there
-					InvokeAsync([this, peer, playerIndex, pressedKeys]() mutable {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-							return;
-						}
-
-						if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player)) {
-							std::uint32_t frameCount = theApplication().GetFrameCount();
-							if (remotePlayerOnServer->UpdatedFrame != frameCount) {
-								remotePlayerOnServer->UpdatedFrame = frameCount;
-								remotePlayerOnServer->PressedKeysLast = remotePlayerOnServer->PressedKeys;
-							}
-							remotePlayerOnServer->PressedKeys = pressedKeys;
-						}
-					});
-
-					//LOGD("Player {} pressed 0x{:.8x}, last state was 0x{:.8x}", playerIndex, it->second.PressedKeys & 0xffffffffu, prevState);
-					return true;
-				}
-				case ClientPacketType::PlayerChangeWeaponRequest: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
-
-					LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{}] - playerIndex: {}, weaponType: {}", peer, playerIndex, weaponType);
-
-					// Applied on the main thread; touches the player weapon/ammo state read by the simulation
-					InvokeAsync([this, peer, playerIndex, weaponType]() mutable {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-							LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{}] - Invalid playerIndex ({})", peer, playerIndex);
-							return;
-						}
-
-						const auto& playerAmmo = peerDesc->Player->GetWeaponAmmo();
-						if (weaponType >= playerAmmo.size() || playerAmmo[weaponType] == 0) {
-							LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{}] - playerIndex: {} - No ammo in selected weapon", peer, playerIndex);
-
-							// Request is denied, send the current weapon back to the client
-							HandlePlayerWeaponChanged(peerDesc->Player, Actors::Player::SetCurrentWeaponReason::Rollback);
-							return;
-						}
-
-						peerDesc->Player->SetCurrentWeapon((WeaponType)weaponType, Actors::Player::SetCurrentWeaponReason::User);
-					});
-					return true;
-				}
-				case ClientPacketType::PlayerSpectateRequest: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					std::uint8_t enable = packet.ReadValue<std::uint8_t>();
-
-					LOGD("[MP] ClientPacketType::PlayerSpectateRequest [{}] - playerIndex: {}, enable: {}", peer, playerIndex, enable);
-
-					// Applied on the main thread; SetPlayerSpectateMode mutates the active player list
-					InvokeAsync([this, peer, playerIndex, enable]() mutable {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-							LOGD("[MP] ClientPacketType::PlayerSpectateRequest [{}] - Invalid playerIndex ({})", peer, playerIndex);
-							return;
-						}
-
-						auto& serverConfig = _networkManager->GetServerConfiguration();
-						if (!serverConfig.EnableSpectate || ((peerDesc->IsSpectating & SpectateMode::Mask) == SpectateMode::Forced && enable == 0)) {
-							// Spectate mode is disabled or forced, deny the request
-							return;
-						}
-
-						LOGI("Player {} [{}] {} spectating", playerIndex, peer, enable ? "started"_s : "stopped"_s);
-						SetPlayerSpectateMode(peerDesc->Player, enable ? SpectateMode::Requested : SpectateMode::None);
-
-						if (enable) {
-							// A player entering spectate reduces the active count and can satisfy a win condition (e.g. elimination)
-							CheckGameEnds();
-						}
-					});
-					return true;
-				}
-				case ClientPacketType::PlayerChangeCharacter: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					PlayerType playerType = (PlayerType)packet.ReadValue<std::uint8_t>();
-
-					// Applied on the main thread; SetPlayerSpectateMode respawns/mutates the active player list
-					InvokeAsync([this, peer, playerIndex, playerType]() mutable {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-							LOGD("[MP] ClientPacketType::PlayerChangeCharacter [{}] - Invalid playerIndex ({})", peer, playerIndex);
-							return;
-						}
-
-						if DEATH_UNLIKELY(playerType != PlayerType::Jazz && playerType != PlayerType::Spaz && playerType != PlayerType::Lori) {
-							LOGW("[MP] ClientPacketType::PlayerChangeCharacter [{}] - Invalid player type", peer);
-							return;
-						}
-
-						auto& serverConfig = _networkManager->GetServerConfiguration();
-						if DEATH_UNLIKELY((peerDesc->IsSpectating & SpectateMode::Mask) == SpectateMode::Forced) {
-							// Forced spectators (e.g., winner, eliminated) can't rejoin by changing character
-							LOGD("[MP] ClientPacketType::PlayerChangeCharacter [{}] - Forced to spectate", peer);
-							return;
-						}
-
-						std::uint8_t typeBit = (std::uint8_t)(1 << ((std::int32_t)playerType - (std::int32_t)PlayerType::Jazz));
-						if DEATH_UNLIKELY((serverConfig.AllowedPlayerTypes & typeBit) == 0) {
-							LOGW("[MP] ClientPacketType::PlayerChangeCharacter [{}] - Player type {} not allowed", peer, playerType);
-							return;
-						}
-
-						LOGI("Player {} [{}] changing character to {}", playerIndex, peer, playerType);
-
-						// Respawn the player with the chosen character (also leaves spectate mode if currently spectating)
-						peerDesc->PreferredPlayerType = playerType;
-						SetPlayerSpectateMode(peerDesc->Player, SpectateMode::None);
-					});
-					return true;
-				}
-				case ClientPacketType::PlayerChangeTeamRequest: {
-					MemoryStream packet(data);
-					std::uint8_t requestedTeam = packet.ReadValue<std::uint8_t>();
-
-					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-					if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr) {
-						LOGD("[MP] ClientPacketType::PlayerChangeTeamRequest [{}] - No player", peer);
-						return true;
-					}
-
-					LOGI("Player {} [{}] requesting team change to {}", peerDesc->Player->_playerIndex, peer, requestedTeam);
-
-					InvokeAsync([this, peer, requestedTeam]() {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr) {
-							return;
-						}
-						if (ChangePlayerTeam(peerDesc->Player, requestedTeam, false)) {
-							SendMessage(peer, UI::MessageLevel::Info, _f("You joined the {} team", GetTeamName(peerDesc->Team)));
-						} else {
-							SendMessage(peer, UI::MessageLevel::Warning, _("Cannot change team right now"));
-						}
-					});
-					return true;
-				}
-				case ClientPacketType::PlayerAckWarped: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					std::uint64_t seqNum = packet.ReadVariableUint64();
-					float posX = packet.ReadValue<std::int32_t>() / 512.0f;
-					float posY = packet.ReadValue<std::int32_t>() / 512.0f;
-					float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
-					float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
-
-					InvokeAsync([this, peer, playerIndex, seqNum, posX, posY, speedX, speedY]() mutable {
-						auto peerDesc = _networkManager->GetPeerDescriptor(peer);
-						if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
-							LOGD("[MP] ClientPacketType::PlayerAckWarped [{}] - Invalid playerIndex ({})", peer, playerIndex);
-							return;
-						}
-
-						auto* mpPlayer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player);
-						if DEATH_UNLIKELY(mpPlayer == nullptr) {
-							return;
-						}
-
-						// Only honor an acknowledgement when the server actually initiated a warp/respawn for this
-						// player - every such path parks LastUpdated at UINT64_MAX until the ack arrives. Otherwise a
-						// client could send this at will to force an arbitrary resync (teleport past the anti-cheat).
-						if (peerDesc->LastUpdated != UINT64_MAX) {
-							LOGD("[MP] ClientPacketType::PlayerAckWarped [{}] - No warp pending, ignoring", peer);
-							return;
-						}
-
-						// The client should acknowledge at (approximately) the position the server warped/respawned it
-						// to, which is the shadow's current authoritative position; if it reports somewhere else, keep
-						// the server position instead of trusting the client value.
-						constexpr float MaxAckDeviation = 200.0f;
-						Vector2f ackPos(posX, posY);
-						Vector2f acceptedPos = ackPos;
-						if ((ackPos - mpPlayer->_pos).SqrLength() > MaxAckDeviation * MaxAckDeviation) {
-							LOGW("Player {} acknowledged a warp at an unexpected position, keeping the authoritative one", playerIndex);
-							acceptedPos = mpPlayer->_pos;
-						}
-
-						LOGD("[MP] ClientPacketType::PlayerAckWarped [{}] - playerIndex: {}, seqNum: {}, x: {}, y: {}",
-							peer, playerIndex, seqNum, acceptedPos.X, acceptedPos.Y);
-
-						peerDesc->LastUpdated = seqNum;
-						mpPlayer->ForceResyncWithServer(acceptedPos, Vector2f(speedX, speedY));
-						mpPlayer->_canTakeDamage = true;
-						mpPlayer->_justWarped = true;
-					});
-					return true;
-				}
+				case ClientPacketType::Rpc: return HandleClientPacketRpc(peer, data);
+				case ClientPacketType::Auth: return HandleClientPacketAuth(peer, data);
+				case ClientPacketType::LevelReady: return HandleClientPacketLevelReady(peer, data);
+				case ClientPacketType::ChatMessage: return HandleClientPacketChatMessage(peer, data);
+				case ClientPacketType::ValidateAssetsResponse: return HandleClientPacketValidateAssetsResponse(peer, data);
+				case ClientPacketType::PlayerReady: return HandleClientPacketPlayerReady(peer, data);
+				case ClientPacketType::ForceResyncActors: return HandleClientPacketForceResyncActors(peer, data);
+				case ClientPacketType::PlayerUpdate: return HandleClientPacketPlayerUpdate(peer, data);
+				case ClientPacketType::PlayerKeyPress: return HandleClientPacketPlayerKeyPress(peer, data);
+				case ClientPacketType::PlayerChangeWeaponRequest: return HandleClientPacketPlayerChangeWeaponRequest(peer, data);
+				case ClientPacketType::PlayerSpectateRequest: return HandleClientPacketPlayerSpectateRequest(peer, data);
+				case ClientPacketType::PlayerChangeCharacter: return HandleClientPacketPlayerChangeCharacter(peer, data);
+				case ClientPacketType::PlayerChangeTeamRequest: return HandleClientPacketPlayerChangeTeamRequest(peer, data);
+				case ClientPacketType::PlayerAckWarped: return HandleClientPacketPlayerAckWarped(peer, data);
 			}
 		} else {
 			switch ((ServerPacketType)packetType) {
-				case ServerPacketType::Rpc: {
-					MemoryStream packet(data);
-					std::uint32_t actorId = packet.ReadVariableUint32();
-
-					std::shared_ptr<Actors::ActorBase> actor;
-					{
-						std::unique_lock lock(_lock);
-						auto it = _remoteActors.find(actorId);
-						if (it != _remoteActors.end()) {
-							actor = it->second;
-						}
-					}
-					if DEATH_LIKELY(actor != nullptr) {
-						LOGD("[MP] ServerPacketType::Rpc - id: {}, {} bytes", actorId, data.size() - packet.GetPosition());
-						actor->OnPacketReceived(packet);
-					} else {
-						LOGW("[MP] ServerPacketType::Rpc - id: {}, {} bytes - Actor not found", actorId,data.size() - packet.GetPosition());
-					}
-					return true;
-				}
-				case ServerPacketType::PeerSetProperty: {
-					MemoryStream packet(data);
-					PeerPropertyType type = (PeerPropertyType)packet.ReadValue<std::uint8_t>();
-					DEATH_UNUSED std::uint64_t peerId = packet.ReadVariableUint64();
-
-					switch (type) {
-						case PeerPropertyType::Connected:
-						case PeerPropertyType::Disconnected: {
-							std::uint8_t playerNameLength = packet.ReadValue<std::uint8_t>();
-							String playerName{NoInit, playerNameLength};
-							packet.Read(playerName.data(), playerNameLength);
-
-							LOGD("[MP] ServerPacketType::PeerSetProperty - type: {}, peer: 0x{:.8x}, name: \"{}\"",
-								type, peerId, playerName);
-
-							InvokeAsync([this, type, playerName = std::move(playerName)]() mutable {
-								if (type == PeerPropertyType::Connected) {
-									_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] connected", playerName));
-								} else {
-									_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] disconnected", playerName));
-								}
-							});
-							break;
-						}
-						case PeerPropertyType::Roasted: {
-							std::uint8_t victimNameLength = packet.ReadValue<std::uint8_t>();
-							String victimName{NoInit, victimNameLength};
-							packet.Read(victimName.data(), victimNameLength);
-
-							DEATH_UNUSED std::uint64_t attackerPeerId = packet.ReadVariableUint64();
-
-							std::uint8_t attackerNameLength = packet.ReadValue<std::uint8_t>();
-							String attackerName{NoInit, attackerNameLength};
-							packet.Read(attackerName.data(), attackerNameLength);
-
-							LOGD("[MP] ServerPacketType::PeerSetProperty - type: {}, victim: 0x{:.8x}, victim-name: \"{}\", attacker: 0x{:.8x}, attacker-name: \"{}\"",
-								type, peerId, victimName, attackerPeerId, attackerName);
-
-							InvokeAsync([this, victimName = std::move(victimName), attackerName = std::move(attackerName)]() mutable {
-								if (!attackerName.empty()) {
-									_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]",
-										victimName, attackerName));
-								} else {
-									_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by environment",
-										victimName));
-								}
-							});
-							break;
-						}
-					}
-					break;
-				}
-				case ServerPacketType::LoadLevel: {
-					// Start to ignore all incoming packets, because they no longer belong to this handler
-					_ignorePackets = true;
-
-					LOGD("[MP] ServerPacketType::LoadLevel");
-					break;
-				}
-				case ServerPacketType::LevelSetProperty: {
-					MemoryStream packet(data);
-					LevelPropertyType propertyType = (LevelPropertyType)packet.ReadValue<std::uint8_t>();
-					switch (propertyType) {
-						case LevelPropertyType::State: {
-							LevelState state = (LevelState)packet.ReadValue<std::uint8_t>();
-							std::int32_t gameTimeLeft = packet.ReadVariableInt32();
-
-							LOGD("[MP] ServerPacketType::LevelSetProperty::State - state: {}, timeLeft: {:.1f}", state, (float)gameTimeLeft * 0.01f);
-
-							InvokeAsync([this, state, gameTimeLeft]() {
-								_levelState = state;
-								_gameTimeLeft = (float)gameTimeLeft * 0.01f;
-
-								switch (_levelState) {
-									case LevelState::WaitingForMinPlayers: {
-										// gameTimeLeft is reused for waitingForPlayerCount in this state
-										_waitingForPlayerCount = gameTimeLeft;
-										break;
-									}
-									case LevelState::Countdown3: {
-										static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
-										LOGI("Starting round...");
-										break;
-									}
-									case LevelState::Countdown2: {
-										static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(2);
-										break;
-									}
-									case LevelState::Countdown1: {
-										static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(1);
-										break;
-									}
-									case LevelState::Running: {
-										const auto& serverConfig = _networkManager->GetServerConfiguration();
-										if (serverConfig.GameMode != MpGameMode::Cooperation) {
-											static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(0);
-										}
-										break;
-									}
-								}
-							});
-							break;
-						}
-						case LevelPropertyType::GameMode: {
-							std::uint8_t flags = packet.ReadValue<std::uint8_t>();
-							MpGameMode gameMode = (MpGameMode)packet.ReadValue<std::uint8_t>();
-							std::uint8_t teamCount = packet.ReadValue<std::uint8_t>();
-							std::uint8_t teamId = packet.ReadValue<std::uint8_t>();
-							std::uint8_t allowedPlayerTypes = packet.ReadValue<std::uint8_t>();
-							std::int32_t initialPlayerHealth = packet.ReadVariableInt32();
-							std::uint32_t maxGameTimeSecs = packet.ReadVariableUint32();
-							std::uint32_t totalKills = packet.ReadVariableUint32();
-							std::uint32_t totalLaps = packet.ReadVariableUint32();
-							std::uint32_t totalTreasureCollected = packet.ReadVariableUint32();
-							bool colorizePlayersByTeam = (packet.ReadValue<std::uint8_t>() != 0);
-
-							LOGD("[MP] ServerPacketType::LevelSetProperty::GameMode - mode: {}", gameMode);
-
-							auto& serverConfig = _networkManager->GetServerConfiguration();
-							serverConfig.GameMode = gameMode;
-							serverConfig.ColorizePlayersByTeam = colorizePlayersByTeam;
-							serverConfig.ReforgedGameplay = (flags & 0x01) != 0;
-							serverConfig.Elimination = (flags & 0x04) != 0;
-							serverConfig.EnableSpectate = (flags & 0x08) != 0;
-							serverConfig.PlayerStacking = (flags & 0x10) != 0;
-							serverConfig.AllowTeamSelection = (flags & 0x20) != 0;
-							serverConfig.FriendlyFire = (flags & 0x40) != 0;
-							serverConfig.AutoBalanceTeams = (flags & 0x80) != 0;
-							serverConfig.TeamCount = teamCount;
-							serverConfig.AllowedPlayerTypes = allowedPlayerTypes;
-							serverConfig.InitialPlayerHealth = initialPlayerHealth;
-							serverConfig.MaxGameTimeSecs = maxGameTimeSecs;
-							serverConfig.TotalKills = totalKills;
-							serverConfig.TotalLaps = totalLaps;
-							serverConfig.TotalTreasureCollected = totalTreasureCollected;
-
-							_isReforged = serverConfig.ReforgedGameplay;
-
-							if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
-								peerDesc->Team = teamId;
-							}
-
-							// Re-apply team colors to all visible players now that the mode / team-coloring flag is
-							// (re)synced (touches the renderer, so defer to the main thread; a no-op when disabled).
-							// _playerNames is the set of remote players (the local players live in _players).
-							InvokeAsync([this, gameMode]() {
-								// Build the game-mode rules object so this client can draw the mode-specific HUD; the
-								// game-mode logic itself stays server-authoritative.
-								_gameMode = CreateGameMode(gameMode);
-
-								for (auto* player : _players) {
-									player->RefreshColorPalette();
-								}
-								for (auto& [actorId, playerName] : _playerNames) {
-									RecolorRemoteActor(actorId, playerName.FurColor, playerName.Team);
-								}
-							});
-							break;
-						}
-						case LevelPropertyType::Music: {
-							std::uint8_t flags = packet.ReadValue<std::uint8_t>();
-							std::uint32_t pathLength = packet.ReadVariableUint32();
-							if DEATH_UNLIKELY(pathLength > 512) {
-								// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
-								LOGW("[MP] ServerPacketType::LevelSetProperty::Music - Malformed packet");
-								return true;
-							}
-							String path{NoInit, pathLength};
-							packet.Read(path.data(), pathLength);
-
-							LOGD("[MP] ServerPacketType::LevelSetProperty::Music - path: \"{}\", flags: {}", path, flags);
-
-							InvokeAsync([this, flags, path = std::move(path)]() {
-								bool setDefault = (flags & 0x01) != 0;
-								bool forceReload = (flags & 0x02) != 0;
-								BeginPlayMusic(path, setDefault, forceReload);
-							});
-							break;
-						}
-						default: {
-							LOGD("[MP] ServerPacketType::LevelSetProperty - Received unknown property {}", (std::uint32_t)propertyType);
-							break;
-						}
-					}
-					return true;
-				}
-				case ServerPacketType::ShowInGameLobby: {
-					MemoryStream packet(data);
-					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
-					std::uint8_t allowedPlayerTypes = packet.ReadValue<std::uint8_t>();
-
-					bool hasWelcomeMessage = (flags & 0x04) != 0;
-					String welcomeMessage;
-					if (hasWelcomeMessage) {
-						std::uint32_t welcomeMessageLength = packet.ReadVariableUint32();
-						if DEATH_UNLIKELY(welcomeMessageLength > 4096) {
-							// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
-							LOGW("[MP] ServerPacketType::ShowInGameLobby - Malformed packet");
-							return true;
-						}
-						welcomeMessage = String(NoInit, welcomeMessageLength);
-						packet.Read(welcomeMessage.data(), welcomeMessageLength);
-					}
-					if (flags & 0x08) {
-						// TODO: Welcome server logo
-						std::uint32_t serverLogoLength = packet.ReadVariableUint32();
-						if DEATH_UNLIKELY(serverLogoLength > 262144) {
-							LOGW("[MP] ServerPacketType::ShowInGameLobby - Malformed packet");
-							return true;
-						}
-						Array<std::uint8_t> serverLogo{NoInit, serverLogoLength};
-						packet.Read(serverLogo.data(), serverLogoLength);
-					}
-
-					LOGD("[MP] ServerPacketType::ShowInGameLobby - flags: 0x{:.2x}, allowedPlayerTypes: 0x{:.2x}, message: \"{}\"",
-						flags, allowedPlayerTypes, welcomeMessage);
-
-					// The welcome message is applied on the main thread too, because the lobby UI reads it there
-					InvokeAsync([this, flags, allowedPlayerTypes, hasWelcomeMessage, welcomeMessage = std::move(welcomeMessage)]() mutable {
-						if (hasWelcomeMessage) {
-							auto& serverConfig = _networkManager->GetServerConfiguration();
-							serverConfig.WelcomeMessage = std::move(welcomeMessage);
-						}
-						if ((flags & 0x01) != 0 && _inGameLobby != nullptr) {
-							_changingCharacterInLobby = false; // Server-driven lobby is the initial join, not a player-initiated change
-							_inGameLobby->SetAllowedPlayerTypes(allowedPlayerTypes);
-							std::uint8_t currentTeam = NoPreferredTeam;
-							if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
-								currentTeam = peerDesc->Team;
-							}
-							_inGameLobby->SetTeamInfo(currentTeam);
-							if (flags & 0x02) {
-								_inGameLobby->Show();
-							} else {
-								_inGameLobby->Hide();
-							}
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::FadeOut: {
-					MemoryStream packet(data);
-					std::int32_t fadeOutDelay = packet.ReadVariableInt32();
-
-					LOGD("[MP] ServerPacketType::FadeOut - delay: {}", fadeOutDelay);
-
-					InvokeAsync([this, fadeOutDelay]() {
-						if (_hud != nullptr) {
-							_hud->BeginFadeOut((float)fadeOutDelay);
-						}
-
-#if defined(WITH_AUDIO)
-						if (_sugarRushMusic != nullptr) {
-							_sugarRushMusic->stop();
-							_sugarRushMusic = nullptr;
-						}
-						if (_music != nullptr) {
-							_music->stop();
-							_music = nullptr;
-						}
-#endif
-					});
-					return true;
-				}
-				case ServerPacketType::PlaySfx: {
-					MemoryStream packet(data);
-					std::uint32_t actorId = packet.ReadVariableUint32();
-					float gain = halfToFloat(packet.ReadValue<std::uint16_t>());
-					float pitch = halfToFloat(packet.ReadValue<std::uint16_t>());
-					std::uint32_t identifierLength = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(identifierLength > 128) {
-						// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
-						LOGW("[MP] ServerPacketType::PlaySfx - Malformed packet");
-						return true;
-					}
-					String identifier = String(NoInit, identifierLength);
-					packet.Read(identifier.data(), identifierLength);
-
-					// TODO: Use only lock here
-					InvokeAsync([this, actorId, gain, pitch, identifier = std::move(identifier)]() {
-						if (_lastSpawnedActorId == actorId) {
-							if (!_players.empty()) {
-								_players[0]->PlaySfx(identifier, gain, pitch);
-							}
-						} else {
-							std::unique_lock lock(_lock);
-							auto it = _remoteActors.find(actorId);
-							if (it != _remoteActors.end()) {
-								// TODO: gain, pitch, ...
-								it->second->PlaySfx(identifier, gain, pitch);
-							}
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::PlayCommonSfx: {
-					MemoryStream packet(data);
-					std::int32_t posX = packet.ReadVariableInt32();
-					std::int32_t posY = packet.ReadVariableInt32();
-					float gain = halfToFloat(packet.ReadValue<std::uint16_t>());
-					float pitch = halfToFloat(packet.ReadValue<std::uint16_t>());
-					std::uint32_t identifierLength = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(identifierLength > 128) {
-						// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
-						LOGW("[MP] ServerPacketType::PlayCommonSfx - Malformed packet");
-						return true;
-					}
-					String identifier(NoInit, identifierLength);
-					packet.Read(identifier.data(), identifierLength);
-
-					// TODO: Use only lock here
-					InvokeAsync([this, posX, posY, gain, pitch, identifier = std::move(identifier)]() {
-						std::unique_lock lock(_lock);
-						PlayCommonSfx(identifier, Vector3f((float)posX, (float)posY, 0.0f), gain, pitch);
-					});
-					return true;
-				}
-				case ServerPacketType::ShowAlert: {
-					MemoryStream packet(data);
-					/*std::uint8_t flags =*/ packet.ReadValue<std::uint8_t>();
-					std::uint32_t textLength = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(textLength > 1024) {
-						// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
-						LOGW("[MP] ServerPacketType::ShowAlert - Malformed packet");
-						return true;
-					}
-					String text = String(NoInit, textLength);
-					packet.Read(text.data(), textLength);
-
-					LOGD("[MP] ServerPacketType::ShowAlert - text: \"{}\"", text);
-
-					InvokeAsync([this, text = std::move(text)]() mutable {
-						if (_hud != nullptr) {
-							_hud->ShowLevelText(text);
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::ChatMessage: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					UI::MessageLevel level = (UI::MessageLevel)packet.ReadValue<std::uint8_t>();
-
-					std::uint32_t messageLength = packet.ReadVariableUint32();
-					if (messageLength == 0 || messageLength > 1024) {
-						LOGD("[MP] ServerPacketType::ChatMessage - Length out of bounds ({})", messageLength);
-						return true;
-					}
-
-					String message{NoInit, messageLength};
-					packet.Read(message.data(), messageLength);
-
-					if (level == UI::MessageLevel::Chat && playerIndex == _lastSpawnedActorId) {
-						level = UI::MessageLevel::Echo;
-					}
-
-					InvokeAsync([this, level, message = std::move(message)]() mutable {
-						_console->WriteLine(level, std::move(message));
-					});
-					return true;
-				}
-				case ServerPacketType::SyncTileMap: {
-					LOGD("[MP] ServerPacketType::SyncTileMap");
-
-					// The packet buffer is freed once this returns and the tilemap is read by the renderer/simulation on
-					// the main thread, so copy the payload and re-initialize there rather than on the network thread.
-					Array<std::uint8_t> buffer{NoInit, data.size()};
-					if (data.size() > 0) {
-						std::memcpy(buffer.data(), data.data(), data.size());
-					}
-
-					InvokeAsync([this, buffer = std::move(buffer)]() {
-						if (auto* tileMap = TileMap()) {
-							MemoryStream packet(buffer);
-							tileMap->InitializeFromStream(packet);
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::SetTrigger: {
-					MemoryStream packet(data);
-					std::uint8_t triggerId = packet.ReadValue<std::uint8_t>();
-					bool newState = (bool)packet.ReadValue<std::uint8_t>();
-
-					LOGD("[MP] ServerPacketType::SetTrigger - id: {}, state: {}", triggerId, newState);
-
-					InvokeAsync([this, triggerId, newState]() {
-						TileMap()->SetTrigger(triggerId, newState);
-					});
-					return true;
-				}
-				case ServerPacketType::AdvanceTileAnimation: {
-					MemoryStream packet(data);
-					std::int32_t tx = packet.ReadVariableInt32();
-					std::int32_t ty = packet.ReadVariableInt32();
-					std::int32_t amount = packet.ReadVariableInt32();
-
-					LOGD("[MP] ServerPacketType::AdvanceTileAnimation - tx: {}, ty: {}, amount: {}", tx, ty, amount);
-
-					InvokeAsync([this, tx, ty, amount]() {
-						TileMap()->AdvanceDestructibleTileAnimation(tx, ty, amount);
-					});
-					return true;
-				}
-				case ServerPacketType::CreateDebris: {
-					MemoryStream packet(data);
-					std::uint8_t effect = packet.ReadValue<std::uint8_t>();
-					std::uint32_t actorId = packet.ReadVariableUint32();
-
-					LOGD("[MP] ServerPacketType::CreateDebris - effect: {}, actorId: {}", effect, actorId);
-
-					if (effect == UINT8_MAX) {
-						AnimState state = (AnimState)packet.ReadVariableUint32();
-						std::int32_t count = packet.ReadVariableInt32();
-
-						InvokeAsync([this, actorId, state, count]() {
-							std::unique_lock lock(_lock);
-							auto it = _remoteActors.find(actorId);
-							if DEATH_LIKELY(it != _remoteActors.end()) {
-								it->second->CreateSpriteDebris(state, count);
-							} else {
-								LOGD("[MP] ServerPacketType::CreateDebris - actorId: {} - Actor not found", actorId);
-							}
-						});
-					} else {
-						float x = packet.ReadVariableInt32() * 0.01f;
-						float y = packet.ReadVariableInt32() * 0.01f;
-
-						InvokeAsync([this, actorId, effect, x, y]() {
-							std::unique_lock lock(_lock);
-							auto it = _remoteActors.find(actorId);
-							if DEATH_LIKELY(it != _remoteActors.end()) {
-								it->second->CreateParticleDebrisOnPerish((Actors::ParticleDebrisEffect)effect, Vector2f(x, y));
-							} else {
-								LOGD("[MP] ServerPacketType::CreateDebris - actorId: {} - Actor not found", actorId);
-							}
-						});
-					}
-					return true;
-				}
-				case ServerPacketType::CreateControllablePlayer: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					PlayerType playerType = (PlayerType)packet.ReadValue<std::uint8_t>();
-					std::int32_t health = packet.ReadVariableInt32();
-					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
-					std::uint8_t teamId = packet.ReadValue<std::uint8_t>();
-					std::int32_t posX = packet.ReadVariableInt32();
-					std::int32_t posY = packet.ReadVariableInt32();
-					bool hasCarryOver = (packet.ReadValue<std::uint8_t>() != 0);
-					PlayerCarryOver carryOver{};
-					if (hasCarryOver) {
-						carryOver = ReadCarryOver(packet, playerType);
-					}
-
-					LOGI("[MP] ServerPacketType::CreateControllablePlayer - playerIndex: {}, playerType: {}, health: {}, flags: 0x{:.2x}, team: {}, x: {}, y: {}",
-						playerIndex, playerType, health, flags, teamId, posX, posY);
-
-					_lastSpawnedActorId = playerIndex;
-
-					InvokeAsync([this, playerType, health, flags, teamId, posX, posY, hasCarryOver, carryOver]() {
-						auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer);
-						// Stash the carried-over progression (online co-op level change / reconnect) on the descriptor
-						// before activating the player, so MpPlayer::OnActivatedAsync applies it after the base reset
-						// (with coroutines the base activation finishes asynchronously and would otherwise overwrite a
-						// value applied here at the call site). RemotablePlayer clears the flag once it's applied.
-						if (hasCarryOver) {
-							peerDesc->CarryOver = carryOver;
-							peerDesc->HasCarryOver = true;
-						}
-						// Assign the team before activating the player so the spawn-time recolor (GetEffectiveFurColor)
-						// resolves the correct team color when team coloring is enabled
-						peerDesc->Team = teamId;
-
-						std::shared_ptr<Actors::Multiplayer::RemotablePlayer> player = std::make_shared<Actors::Multiplayer::RemotablePlayer>(peerDesc);
-						std::uint8_t playerParams[2] = { (std::uint8_t)playerType, 0 };
-						player->OnActivated(Actors::ActorActivationDetails(
-							this,
-							Vector3i(posX, posY, PlayerZ),
-							playerParams
-						));
-
-						player->SetHealth(health);
-						player->_controllable = (flags & 0x01) != 0;
-						player->_controllableExternal = (flags & 0x02) != 0;
-
-						peerDesc->LapStarted = TimeStamp::now();
-						// Spawning as a real player clears any stale spectate state on the client; a spectate spawn
-						// sends a separate PlayerSetProperty::Spectate right after to set it back
-						if (playerType != PlayerType::Spectate) {
-							peerDesc->IsSpectating = SpectateMode::None;
-						}
-
-						Actors::Multiplayer::RemotablePlayer* ptr = player.get();
-						_players.push_back(ptr);
-						AddActor(player);
-						AssignViewport(ptr);
-						// TODO: Needed to drop and reinitialize newly assigned viewport, because it's called asynchronously, not from handler initialization
-						CommitViewports();
-
-						// TODO: Fade in should be skipped sometimes
-						if ((flags & 0x10) == 0) {
-							_hud->BeginFadeIn(false);
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::CreateRemoteActor: {
-					MemoryStream packet(data);
-					std::uint32_t actorId = packet.ReadVariableUint32();
-					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
-					std::int32_t posX = packet.ReadVariableInt32();
-					std::int32_t posY = packet.ReadVariableInt32();
-					std::int32_t posZ = packet.ReadVariableInt32();
-					Actors::ActorState state = (Actors::ActorState)packet.ReadVariableUint32();
-					std::uint32_t metadataLength = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(metadataLength > 512) {
-						// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
-						LOGW("[MP] ServerPacketType::CreateRemoteActor - Malformed packet");
-						return true;
-					}
-					String metadataPath = String(NoInit, metadataLength);
-					packet.Read(metadataPath.data(), metadataLength);
-					AnimState anim = (AnimState)packet.ReadVariableUint32();
-					float rotation = packet.ReadValue<std::uint16_t>() * fRadAngle360 / UINT16_MAX;
-					float scaleX = (float)Half{packet.ReadValue<std::uint16_t>()};
-					float scaleY = (float)Half{packet.ReadValue<std::uint16_t>()};
-					Actors::ActorRendererType rendererType = (Actors::ActorRendererType)packet.ReadValue<std::uint8_t>();
-
-					//LOGD("Remote actor {} created on [{};{}] with metadata \"{}\"", actorId, posX, posY, metadataPath);
-					LOGD("[MP] ServerPacketType::CreateRemoteActor - actorId: {}, metadata: \"{}\", x: {}, y: {}", actorId, metadataPath, posX, posY);
-
-					InvokeAsync([this, actorId, flags, posX, posY, posZ, state, metadataPath = std::move(metadataPath), anim, rotation, scaleX, scaleY, rendererType]() {
-						{
-							std::unique_lock lock(_lock);
-							if (_remoteActors.contains(actorId)) {
-								LOGW("[MP] ServerPacketType::CreateRemoteActor - Actor ({}) already exists", actorId);
-								return;
-							}
-						}
-
-						std::shared_ptr<Actors::Multiplayer::RemoteActor> remoteActor = std::make_shared<Actors::Multiplayer::RemoteActor>();
-						remoteActor->OnActivated(Actors::ActorActivationDetails(this, Vector3i(posX, posY, posZ)));
-
-						// If this actor was already marked as a player with a custom color, apply it before assigning
-						// metadata so the sprites load indexed and the palette is set. Team coloring may force a color
-						// even when the player has none of their own.
-						auto pnIt = _playerNames.find(actorId);
-						if (pnIt != _playerNames.end()) {
-							std::uint32_t furColor = ColorizeFurForTeam(pnIt->second.FurColor, pnIt->second.Team);
-							if (furColor != 0) {
-								remoteActor->SetPlayerColor(furColor);
-							}
-						}
-
-						remoteActor->AssignMetadata(flags, state, metadataPath, anim, rotation, scaleX, scaleY, rendererType);
-
-						{
-							std::unique_lock lock(_lock);
-							_remoteActors[actorId] = remoteActor;
-						}
-						AddActor(remoteActor);
-					});
-					return true;
-				}
-				case ServerPacketType::CreateMirroredActor: {
-					MemoryStream packet(data);
-					std::uint32_t actorId = packet.ReadVariableUint32();
-					EventType eventType = (EventType)packet.ReadVariableUint32();
-					StaticArray<Events::EventSpawner::SpawnParamsSize, std::uint8_t> eventParams(NoInit);
-					packet.Read(eventParams, Events::EventSpawner::SpawnParamsSize);
-					Actors::ActorState actorFlags = (Actors::ActorState)packet.ReadVariableUint32();
-					std::int32_t tileX = packet.ReadVariableInt32();
-					std::int32_t tileY = packet.ReadVariableInt32();
-					std::int32_t posZ = packet.ReadVariableInt32();
-
-					LOGD("[MP] ServerPacketType::CreateMirroredActor - actorId: {}, event: {}, x: {}, y: {}", actorId, eventType, tileX * 32 + 16, tileY * 32 + 16);
-
-					InvokeAsync([this, actorId, eventType, eventParams = std::move(eventParams), actorFlags, tileX, tileY, posZ]() {
-						{
-							std::unique_lock lock(_lock);
-							if (_remoteActors.contains(actorId)) {
-								LOGW("[MP] ServerPacketType::CreateMirroredActor - Actor ({}) already exists", actorId);
-								return;
-							}
-						}
-						
-						// TODO: Remove const_cast
-						std::shared_ptr<Actors::ActorBase> actor =_eventSpawner.SpawnEvent(eventType, const_cast<std::uint8_t*>(eventParams.data()), actorFlags, tileX, tileY, posZ);
-						if DEATH_LIKELY(actor != nullptr) {
-							{
-								std::unique_lock lock(_lock);
-								_remoteActors[actorId] = actor;
-							}
-							AddActor(actor);
-						} else {
-							LOGD("[MP] ServerPacketType::CreateMirroredActor - actorId: {} - Failed to create", actorId);
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::DestroyRemoteActor: {
-					MemoryStream packet(data);
-					std::uint32_t actorId = packet.ReadVariableUint32();
-
-					LOGD("[MP] ServerPacketType::DestroyRemoteActor - actorId: {}", actorId);
-
-					InvokeAsync([this, actorId]() {
-						std::unique_lock lock(_lock);
-						if DEATH_UNLIKELY(actorId == _lastSpawnedActorId) {
-							// Server requested to despawn controllable player
-							if (!_players.empty()) {
-								auto* player = _players[0];
-								player->SetState(Actors::ActorState::IsDestroyed, true);
-								_players.eraseUnordered(0);
-
-								UnassignViewport(player);
-								CommitViewports();
-							}
-							return;
-						}
-
-						auto it = _remoteActors.find(actorId);
-						if DEATH_LIKELY(it != _remoteActors.end()) {
-							// If the local player was standing on this actor, stop carrying it before it's gone
-							if (!_players.empty()) {
-								_players[0]->CancelCarryingObject(it->second.get());
-							}
-							it->second->SetState(Actors::ActorState::IsDestroyed, true);
-							_remoteActors.erase(it);
-							_playerNames.erase(actorId);
-						} else {
-							LOGW("[MP] ServerPacketType::DestroyRemoteActor - actorId: {} - Actor not found", actorId);
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::UpdateAllActors: {
-					MemoryStream packetCompressed(data);
-					DeflateStream packet(packetCompressed);
-					std::uint32_t now = packet.ReadVariableUint32();
-					float elapsedFrames = (float)packet.ReadVariableUint64();
-					std::uint32_t actorCount = packet.ReadVariableUint32();
-
-					bool forceResyncInvoked = (actorCount & 1) == 1;
-					if DEATH_UNLIKELY(!forceResyncInvoked && _lastUpdated >= now) {
-						return true;
-					}
-
-					bool forceResyncRequired = (!forceResyncInvoked && _lastUpdated + 1 < now);
-					if (forceResyncRequired) {
-						LOGD("[MP] ServerPacketType::UpdateAllActors - Force re-sync required ({} -> {})", _lastUpdated, now);
-					} else if (forceResyncInvoked) {
-						LOGD("[MP] ServerPacketType::UpdateAllActors - Force re-sync invoked ({} -> {})", _lastUpdated, now);
-					}
-
-					std::unique_lock lock(_lock);
-
-					_lastUpdated = now;
-					_elapsedFrames = lerp(_elapsedFrames, elapsedFrames + _networkManager->GetRoundTripTimeMs() * FrameTimer::FramesPerSecond * 0.002f, 0.05f);
-
-					actorCount >>= 1;
-
-					for (std::uint32_t i = 0; i < actorCount; i++) {
-						std::uint32_t actorId = packet.ReadVariableUint32();
-						std::uint8_t flags = packet.ReadValue<std::uint8_t>();
-
-						bool positionChanged = (flags & 0x01) != 0;
-						bool animationChanged = (flags & 0x02) != 0;
-
-						float posX, posY, rotation, scaleX, scaleY;
-						AnimState anim; Actors::ActorRendererType rendererType;
-
-						if (positionChanged) {
-							posX = packet.ReadValue<std::int32_t>() / 512.0f;
-							posY = packet.ReadValue<std::int32_t>() / 512.0f;
-						} else {
-							posX = 0.0f;
-							posY = 0.0f;
-						}
-
-						if (animationChanged) {
-							anim = (AnimState)packet.ReadVariableUint32();
-							rotation = packet.ReadValue<std::uint16_t>() * fRadAngle360 / UINT16_MAX;
-							scaleX = (float)Half{packet.ReadValue<std::uint16_t>()};
-							scaleY = (float)Half{packet.ReadValue<std::uint16_t>()};
-							rendererType = (Actors::ActorRendererType)packet.ReadValue<std::uint8_t>();
-						} else {
-							anim = AnimState::Idle;
-							rotation = 0.0f;
-							scaleX = 0.0f;
-							scaleY = 0.0f;
-							rendererType = Actors::ActorRendererType::Default;
-						}
-
-						auto it = _remoteActors.find(actorId);
-						if (it != _remoteActors.end()) {
-							if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(it->second.get())) {
-								if (positionChanged) {
-									remoteActor->SyncPositionWithServer(Vector2f(posX, posY));
-								}
-								if (animationChanged) {
-									remoteActor->SyncAnimationWithServer(anim, rotation, scaleX, scaleY, rendererType);
-								}
-								remoteActor->SyncMiscWithServer(flags);
-							}
-						}
-					}
-
-					if (forceResyncRequired) {
-						_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::ForceResyncActors, {});
-					}
-					return true;
-				}
-				case ServerPacketType::ChangeRemoteActorMetadata: {
-					MemoryStream packet(data);
-					std::uint32_t actorId = packet.ReadVariableUint32();
-					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
-					std::uint32_t metadataLength = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(metadataLength > 512) {
-						// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
-						LOGW("[MP] ServerPacketType::ChangeRemoteActorMetadata - Malformed packet");
-						return true;
-					}
-					String metadataPath = String(NoInit, metadataLength);
-					packet.Read(metadataPath.data(), metadataLength);
-
-					LOGD("[MP] ServerPacketType::ChangeRemoteActorMetadata - id: {}, metadata: \"{}\"", actorId, metadataPath);
-
-					InvokeAsync([this, actorId, metadataPath = std::move(metadataPath)]() mutable {
-						std::unique_lock lock(_lock);
-						auto it = _remoteActors.find(actorId);
-						if DEATH_LIKELY(it != _remoteActors.end()) {
-							if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(it->second.get())) {
-								remoteActor->ChangeMetadata(metadataPath);
-							}
-						}
-					});
-					return true;
-					break;
-				}
-				case ServerPacketType::MarkRemoteActorAsPlayer: {
-					MemoryStream packet(data);
-					std::uint32_t actorId = packet.ReadVariableUint32();
-					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
-					std::uint32_t playerNameLength = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(playerNameLength > 256) {
-						// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
-						LOGW("[MP] ServerPacketType::MarkRemoteActorAsPlayer - Malformed packet");
-						return true;
-					}
-					String playerName = String(NoInit, playerNameLength);
-					packet.Read(playerName.data(), playerNameLength);
-
-					// Per-player recolor is only present when the HasFurColor flag is set (the idle-state broadcast
-					// reuses this packet type with no color); the team is present when the HasTeam flag is set
-					bool hasFurColor = (flags & 0x02) != 0;
-					std::uint32_t furColor = (hasFurColor ? packet.ReadValueAsLE<std::uint32_t>() : 0);
-					bool hasTeam = (flags & 0x04) != 0;
-					std::uint8_t team = (hasTeam ? packet.ReadValue<std::uint8_t>() : 0);
-
-					LOGD("[MP] ServerPacketType::MarkRemoteActorAsPlayer - actorId: {}, flags: 0x{:.2x}, name: \"{}\"", actorId, flags, playerName);
-
-					InvokeAsync([this, actorId, flags, hasFurColor, furColor, hasTeam, team, playerName = std::move(playerName)]() mutable {
-						if (actorId == _lastSpawnedActorId) {
-							if (!playerName.empty()) {
-								// Player name is optional, so only set it if it's not empty
-								if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
-									peerDesc->PlayerName = std::move(playerName);
-								}
-							}
-							if (hasTeam) {
-								if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
-									peerDesc->Team = team;
-								}
-							}
-						} else {
-							auto it = _playerNames.try_emplace(actorId, PlayerName{});
-							if (!playerName.empty()) {
-								// Player name is optional, so only set it if it's not empty
-								it.first->second.Name = std::move(playerName);
-							}
-							it.first->second.Flags = flags;
-							if (hasTeam) {
-								it.first->second.Team = team;
-							}
-							if (hasFurColor) {
-								it.first->second.FurColor = furColor;
-							}
-
-							if (hasFurColor || hasTeam) {
-								// (Re)apply the effective color if the actor already exists (otherwise CreateRemoteActor
-								// picks it up from _playerNames). Team coloring can force a color even when the player
-								// has none of their own, so this runs whenever the color or team is known.
-								RecolorRemoteActor(actorId, it.first->second.FurColor, it.first->second.Team);
-							}
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::UpdatePositionsInRound: {
-					MemoryStream packet(data);
-					std::uint32_t count = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(count > 1024) {
-						// Refuse an implausible (attacker-controlled) count before allocating a buffer for it
-						LOGW("[MP] ServerPacketType::UpdatePositionsInRound - Malformed packet");
-						return true;
-					}
-					SmallVector<PlayerPositionInRound, 0> positions;
-					positions.resize_for_overwrite(count);
-					for (std::uint32_t i = 0; i < count; i++) {
-						std::uint32_t playerIdx = packet.ReadVariableUint32();
-						std::uint32_t positionInRound = packet.ReadVariableUint32();
-						std::uint32_t pointsInRound = packet.ReadVariableUint32();
-						positions[i] = { playerIdx, positionInRound, pointsInRound };
-					}
-					// Applied on the main thread, because the HUD iterates the list there
-					InvokeAsync([this, positions = std::move(positions)]() mutable {
-						_positionsInRound = std::move(positions);
-					});
-					return true;
-				}
-				case ServerPacketType::SyncRaceCheckpoints: {
-					MemoryStream packet(data);
-					Vector2i boundsMin, boundsMax;
-					boundsMin.X = packet.ReadVariableInt32();
-					boundsMin.Y = packet.ReadVariableInt32();
-					boundsMax.X = packet.ReadVariableInt32();
-					boundsMax.Y = packet.ReadVariableInt32();
-					std::uint32_t count = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(count > 8192) {
-						// Refuse an implausible (attacker-controlled) count before allocating a buffer for it
-						LOGW("[MP] ServerPacketType::SyncRaceCheckpoints - Malformed packet");
-						return true;
-					}
-					SmallVector<RaceCheckpoint, 0> checkpoints;
-					checkpoints.resize_for_overwrite(count);
-					for (std::uint32_t i = 0; i < count; i++) {
-						std::int32_t x = packet.ReadVariableInt32();
-						std::int32_t y = packet.ReadVariableInt32();
-						std::uint16_t order = (std::uint16_t)packet.ReadVariableUint32();
-						std::uint8_t group = packet.ReadValue<std::uint8_t>();
-						checkpoints[i] = { Vector2i(x, y), order, group };
-					}
-					std::uint32_t markerCount = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(markerCount > 1024) {
-						LOGW("[MP] ServerPacketType::SyncRaceCheckpoints - Malformed packet");
-						return true;
-					}
-					SmallVector<Vector2i, 0> markers;
-					markers.resize_for_overwrite(markerCount);
-					for (std::uint32_t i = 0; i < markerCount; i++) {
-						std::int32_t x = packet.ReadVariableInt32();
-						std::int32_t y = packet.ReadVariableInt32();
-						markers[i] = Vector2i(x, y);
-					}
-					// Applied on the main thread, because the minimap iterates these lists there
-					InvokeAsync([this, boundsMin, boundsMax, checkpoints = std::move(checkpoints), markers = std::move(markers)]() mutable {
-						_raceBoundsMin = boundsMin;
-						_raceBoundsMax = boundsMax;
-						_orderedRaceCheckpoints = std::move(checkpoints);
-						_raceStartMarkers = std::move(markers);
-					});
-					return true;
-				}
-				case ServerPacketType::SyncTeamScores: {
-					MemoryStream packet(data);
-					std::uint8_t teamCount = packet.ReadValue<std::uint8_t>();
-					SmallVector<std::uint32_t, 0> teamScores;
-					teamScores.resize_for_overwrite(teamCount);
-					for (std::uint8_t i = 0; i < teamCount; i++) {
-						teamScores[i] = packet.ReadVariableUint32();
-					}
-					bool isCtf = (packet.ReadValue<std::uint8_t>() != 0);
-					SmallVector<CtfClientFlag, 0> flags;
-					if (isCtf) {
-						flags.resize(teamCount);
-						for (std::uint8_t i = 0; i < teamCount; i++) {
-							flags[i].State = packet.ReadValue<std::uint8_t>();
-							flags[i].BasePos.X = (float)packet.ReadVariableInt32();
-							flags[i].BasePos.Y = (float)packet.ReadVariableInt32();
-							flags[i].DropPos.X = (float)packet.ReadVariableInt32();
-							flags[i].DropPos.Y = (float)packet.ReadVariableInt32();
-							flags[i].CarrierActorId = packet.ReadVariableUint32();
-						}
-					}
-					// Applied on the main thread - UpdateCtfClient() iterates _ctfFlagStates and owns the visual actors there
-					InvokeAsync([this, isCtf, teamScores = std::move(teamScores), flags = std::move(flags)]() mutable {
-						_teamScores = std::move(teamScores);
-						if (isCtf) {
-							// Update state/positions in place, preserving the client-local visual actor pointers
-							if (_ctfFlagStates.size() != flags.size()) {
-								// Team count changed - drop any stale local actors and resize
-								for (auto& info : _ctfFlagStates) {
-									if (info.FlagActor != nullptr) info.FlagActor->SetState(Actors::ActorState::IsDestroyed, true);
-									if (info.BaseActor != nullptr) info.BaseActor->SetState(Actors::ActorState::IsDestroyed, true);
-								}
-								_ctfFlagStates.clear();
-								_ctfFlagStates.resize(flags.size());
-							}
-							for (std::size_t i = 0; i < flags.size(); i++) {
-								_ctfFlagStates[i].State = flags[i].State;
-								_ctfFlagStates[i].BasePos = flags[i].BasePos;
-								_ctfFlagStates[i].DropPos = flags[i].DropPos;
-								_ctfFlagStates[i].CarrierActorId = flags[i].CarrierActorId;
-							}
-						} else {
-							for (auto& info : _ctfFlagStates) {
-								if (info.FlagActor != nullptr) info.FlagActor->SetState(Actors::ActorState::IsDestroyed, true);
-								if (info.BaseActor != nullptr) info.BaseActor->SetState(Actors::ActorState::IsDestroyed, true);
-							}
-							_ctfFlagStates.clear();
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::SyncScoreboard: {
-					MemoryStream packet(data);
-					std::uint32_t count = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(count > 1024) {
-						// Refuse an implausible (attacker-controlled) count before allocating a buffer for it
-						LOGW("[MP] ServerPacketType::SyncScoreboard - Malformed packet");
-						return true;
-					}
-					SmallVector<PlayerScore, 0> scoreboard;
-					SmallVector<std::uint32_t, 0> actorIds;
-					scoreboard.reserve(count);
-					actorIds.reserve(count);
-					for (std::uint32_t i = 0; i < count; i++) {
-						std::uint32_t actorId = packet.ReadVariableUint32();
-						PlayerScore score;
-						score.Team = packet.ReadValue<std::uint8_t>();
-						score.Kills = packet.ReadVariableUint32();
-						score.Deaths = packet.ReadVariableUint32();
-						score.Points = packet.ReadVariableUint32();
-						score.Extra = packet.ReadVariableUint32();
-						score.PingMs = packet.ReadVariableInt32();
-						std::uint32_t nameLength = packet.ReadVariableUint32();
-						if DEATH_UNLIKELY(nameLength > 1024) {
-							LOGW("[MP] ServerPacketType::SyncScoreboard - Malformed packet");
-							return true;
-						}
-						score.Name = String(NoInit, nameLength);
-						packet.Read(score.Name.data(), nameLength);
-						score.IsLocal = false;
-						actorIds.push_back(actorId);
-						scoreboard.push_back(std::move(score));
-					}
-
-					// IsLocal, sorting and the swap happen on the main thread (_lastSpawnedActorId and _scoreboard are owned there)
-					InvokeAsync([this, scoreboard = std::move(scoreboard), actorIds = std::move(actorIds)]() mutable {
-						for (std::size_t i = 0; i < scoreboard.size(); i++) {
-							scoreboard[i].IsLocal = (actorIds[i] == _lastSpawnedActorId);
-						}
-						nCine::sort(scoreboard.begin(), scoreboard.end(), [](const PlayerScore& a, const PlayerScore& b) {
-							return (a.Points != b.Points ? a.Points > b.Points : a.Kills > b.Kills);
-						});
-						_scoreboard = std::move(scoreboard);
-					});
-					return true;
-				}
-				case ServerPacketType::PlayerSetProperty: {
-					MemoryStream packet(data);
-					PlayerPropertyType propertyType = (PlayerPropertyType)packet.ReadValue<std::uint8_t>();
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-
-					// Team is tracked for every player (not just the local one) so the HUD/nametags can color them
-					if (propertyType == PlayerPropertyType::Team) {
-						std::uint8_t team = packet.ReadValue<std::uint8_t>();
-						InvokeAsync([this, playerIndex, team]() {
-							if (playerIndex == _lastSpawnedActorId) {
-								if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
-									peerDesc->Team = team;
-								}
-								// Recolor the local player: with team coloring on, GetEffectiveFurColor now resolves
-								// the new team (no-op otherwise)
-								if (!_players.empty()) {
-									_players[0]->RefreshColorPalette();
-								}
-							} else {
-								auto it = _playerNames.try_emplace(playerIndex, PlayerName{});
-								it.first->second.Team = team;
-								// Recolor the matching remote actor for its new team
-								RecolorRemoteActor(playerIndex, it.first->second.FurColor, team);
-							}
-						});
-						return true;
-					}
-
-					// Shield drives a visible decoration for every player, so it is applied to the local player or
-					// to the matching RemoteActor; the server broadcasts it to all peers, not just the owner.
-					if (propertyType == PlayerPropertyType::Shield) {
-						ShieldType shieldType = (ShieldType)packet.ReadValue<std::uint8_t>();
-						std::int32_t timeLeft = packet.ReadVariableInt32();
-
-						LOGD("[MP] ServerPacketType::PlayerSetProperty::Shield - playerIndex: {}, shieldType: {}, timeLeft: {}", playerIndex, shieldType, timeLeft);
-
-						InvokeAsync([this, playerIndex, shieldType, timeLeft]() {
-							if (playerIndex == _lastSpawnedActorId) {
-								if (!_players.empty()) {
-									_players[0]->SetShield(shieldType, float(timeLeft));
-								}
-							} else {
-								std::unique_lock lock(_lock);
-								auto it = _remoteActors.find(playerIndex);
-								if (it != _remoteActors.end()) {
-									if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(it->second.get())) {
-										remoteActor->SetShield(shieldType, float(timeLeft));
-									}
-								}
-							}
-						});
-						return true;
-					}
-
-					if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerSetProperty - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
-						return true;
-					}
-
-					switch (propertyType) {
-						case PlayerPropertyType::PlayerType: {
-							PlayerType type = (PlayerType)packet.ReadValue<std::uint8_t>();
-							InvokeAsync([this, type]() {
-								if (!_players.empty()) {
-									_players[0]->MorphTo(type);
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::Lives: {
-							std::int32_t lives = packet.ReadVariableInt32();
-							InvokeAsync([this, lives]() {
-								if (!_players.empty()) {
-									_players[0]->_lives = lives;
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::Health: {
-							std::int32_t health = packet.ReadVariableInt32();
-							InvokeAsync([this, health]() {
-								if (!_players.empty()) {
-									_players[0]->SetHealth(health);
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::Controllable: {
-							std::uint8_t enable = packet.ReadValue<std::uint8_t>();
-							InvokeAsync([this, enable]() {
-								if (!_players.empty()) {
-									_players[0]->_controllableExternal = (enable != 0);
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::Invulnerable: {
-							std::int32_t timeLeft = packet.ReadVariableInt32();
-							Actors::Player::InvulnerableType type = (Actors::Player::InvulnerableType)packet.ReadValue<std::uint8_t>();
-							InvokeAsync([this, timeLeft, type]() {
-								if (!_players.empty()) {
-									_players[0]->SetInvulnerability(float(timeLeft), type);
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::Modifier: {
-							Actors::Player::Modifier modifier = (Actors::Player::Modifier)packet.ReadValue<std::uint8_t>();
-							std::uint32_t decorActorId = packet.ReadVariableUint32();
-							InvokeAsync([this, modifier, decorActorId]() {
-								std::unique_lock lock(_lock);
-								if (!_players.empty()) {
-									auto it = _remoteActors.find(decorActorId);
-									_players[0]->SetModifier(modifier, it != _remoteActors.end() ? it->second : nullptr);
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::Dizzy: {
-							std::int32_t timeLeft = packet.ReadVariableInt32();
-							InvokeAsync([this, timeLeft]() {
-								if (!_players.empty()) {
-									_players[0]->SetDizzy(float(timeLeft));
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::BeingStoodOn: {
-							bool beingStoodOn = (packet.ReadValue<std::uint8_t>() != 0);
-							InvokeAsync([this, beingStoodOn]() {
-								if (!_players.empty()) {
-									// Our own player is predicted locally, so it can't detect a remote player standing on
-									// it - the server tells us, and PushSolidObjects leaves this flag alone on a client
-									_players[0]->_beingStoodOn = beingStoodOn;
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::Freeze: {
-							std::int32_t timeLeft = packet.ReadVariableInt32();
-							InvokeAsync([this, timeLeft]() {
-								if (!_players.empty()) {
-									_players[0]->Freeze(float(timeLeft));
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::LimitCameraView: {
-							std::int32_t left = packet.ReadVariableInt32();
-							std::int32_t width = packet.ReadVariableInt32();
-							std::int32_t playerPosX = packet.ReadVariableInt32();
-							std::int32_t playerPosY = packet.ReadVariableInt32();
-
-							LOGD("[MP] ServerPacketType::PlayerSetProperty::LimitCameraView - left: {}, width: {}, playerPos: [{}, {}]", left, width, playerPosX, playerPosY);
-
-							InvokeAsync([this, left, width, playerPosX, playerPosY]() {
-								LimitCameraView(nullptr, Vector2f(playerPosX, playerPosY), left, width);
-							});
-							break;
-						}
-						case PlayerPropertyType::OverrideCameraView: {
-							float x = packet.ReadVariableInt32() * 0.01f;
-							float y = packet.ReadVariableInt32() * 0.01f;
-							bool topLeft = packet.ReadValue<std::uint8_t>() != 0;
-
-							LOGD("[MP] ServerPacketType::PlayerSetProperty::OverrideCameraView - x: {}, y: {}, topLeft: {}", x, y, topLeft);
-
-							InvokeAsync([this, x, y, topLeft]() {
-								if (!_players.empty()) {
-									OverrideCameraView(_players[0], x, y, topLeft);
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::ShakeCameraView: {
-							float duration = packet.ReadVariableInt32() * 0.01f;
-
-							LOGD("[MP] ServerPacketType::PlayerSetProperty::ShakeCameraView - duration: {}", duration);
-
-							InvokeAsync([this, duration]() {
-								if (!_players.empty()) {
-									ShakeCameraView(_players[0], duration);
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::Spectate: {
-							SpectateMode spectateMode = (SpectateMode)packet.ReadValue<std::uint8_t>();
-
-							LOGD("[MP] ServerPacketType::PlayerSetProperty::Spectate - mode: 0x{:.2x}", spectateMode);
-
-							InvokeAsync([this, spectateMode]() {
-								if (!_players.empty()) {
-									auto* player = static_cast<RemotablePlayer*>(_players[0]);
-									player->GetPeerDescriptor()->IsSpectating = spectateMode;
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::WeaponAmmo: {
-							std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
-							std::uint16_t weaponAmmo = packet.ReadValue<std::uint16_t>();
-							InvokeAsync([this, weaponType, weaponAmmo]() {
-								if (!_players.empty() && weaponType < arraySize(_players[0]->_weaponAmmo)) {
-									_players[0]->_weaponAmmo[weaponType] = weaponAmmo;
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::WeaponUpgrades: {
-							std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
-							std::uint8_t weaponUpgrades = packet.ReadValue<std::uint8_t>();
-							InvokeAsync([this, weaponType, weaponUpgrades]() {
-								if (!_players.empty() && weaponType < arraySize(_players[0]->_weaponUpgrades)) {
-									_players[0]->_weaponUpgrades[weaponType] = weaponUpgrades;
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::Coins: {
-							std::int32_t newCount = packet.ReadVariableInt32();
-							InvokeAsync([this, newCount]() {
-								if (!_players.empty()) {
-									_players[0]->_coins = newCount;
-									_hud->ShowCoins(newCount);
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::Gems: {
-							std::uint8_t gemType = packet.ReadValue<std::uint8_t>();
-							std::int32_t newCount = packet.ReadVariableInt32();
-							InvokeAsync([this, gemType, newCount]() {
-								if (!_players.empty() && gemType < arraySize(_players[0]->_gems)) {
-									_players[0]->_gems[gemType] = newCount;
-									_hud->ShowGems(gemType, newCount);
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::Score: {
-							std::int32_t score = packet.ReadVariableInt32();
-							InvokeAsync([this, score]() {
-								if (!_players.empty()) {
-									_players[0]->_score = score;
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::Points: {
-							std::uint32_t points = packet.ReadVariableUint32();
-							std::uint32_t totalPoints = packet.ReadVariableUint32();
-
-							InvokeAsync([this, points, totalPoints]() {
-								if (!_players.empty()) {
-									auto* player = static_cast<RemotablePlayer*>(_players[0]);
-									player->GetPeerDescriptor()->Points = points;
-								}
-
-								auto& serverConfig = _networkManager->GetServerConfiguration();
-								serverConfig.TotalPlayerPoints = totalPoints;
-							});
-							break;
-						}
-						/*case PlayerPropertyType::PositionInRound: {
-							std::uint32_t positionInRound = packet.ReadVariableUint32();
-							if (!_players.empty()) {
-								auto* player = static_cast<RemotablePlayer*>(_players[0]);
-								player->GetPeerDescriptor()->PositionInRound = positionInRound;
-							}
-							break;
-						}*/
-						case PlayerPropertyType::Deaths: {
-							std::uint32_t deaths = packet.ReadVariableUint32();
-							InvokeAsync([this, deaths]() {
-								if (!_players.empty()) {
-									auto* player = static_cast<RemotablePlayer*>(_players[0]);
-									player->GetPeerDescriptor()->Deaths = deaths;
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::Kills: {
-							std::uint32_t kills = packet.ReadVariableUint32();
-							InvokeAsync([this, kills]() {
-								if (!_players.empty()) {
-									auto* player = static_cast<RemotablePlayer*>(_players[0]);
-									player->GetPeerDescriptor()->Kills = kills;
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::Laps: {
-							std::uint32_t currentLaps = packet.ReadVariableUint32();
-							//std::uint32_t totalLaps = packet.ReadVariableUint32();
-							InvokeAsync([this, currentLaps]() {
-								if (!_players.empty()) {
-									auto* player = static_cast<RemotablePlayer*>(_players[0]);
-									auto peerDesc = player->GetPeerDescriptor();
-									peerDesc->Laps = currentLaps;
-									peerDesc->LapStarted = TimeStamp::now();
-								}
-							});
-							break;
-						}
-						case PlayerPropertyType::TreasureCollected: {
-							std::uint32_t treasureCollected = packet.ReadVariableUint32();
-							InvokeAsync([this, treasureCollected]() {
-								if (!_players.empty()) {
-									auto* player = static_cast<RemotablePlayer*>(_players[0]);
-									player->GetPeerDescriptor()->TreasureCollected = treasureCollected;
-								}
-							});
-							break;
-						}
-						default: {
-							LOGD("[MP] ServerPacketType::PlayerSetProperty - Received unknown property {}", propertyType);
-							break;
-						}
-					}
-					return true;
-				}
-				case ServerPacketType::PlayerResetProperties: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					if (_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerSetProperty - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
-						return true;
-					}
-
-					if (!_players.empty()) {
-						auto* player = static_cast<RemotablePlayer*>(_players[0]);
-						auto peerDesc = player->GetPeerDescriptor();
-						peerDesc->PositionInRound = 0;
-						peerDesc->Deaths = 0;
-						peerDesc->Kills = 0;
-						peerDesc->Laps = 0;
-						peerDesc->LapStarted = TimeStamp::now();
-						peerDesc->TreasureCollected = 0;
-						peerDesc->DeathElapsedFrames = FLT_MAX;
-
-						player->_coins = 0;
-						std::memset(player->_gems, 0, sizeof(player->_gems));
-						std::memset(player->_weaponAmmo, 0, sizeof(player->_weaponAmmo));
-						std::memset(player->_weaponAmmoCheckpoint, 0, sizeof(player->_weaponAmmoCheckpoint));
-
-						player->_coinsCheckpoint = 0;
-						std::memset(player->_gemsCheckpoint, 0, sizeof(player->_gemsCheckpoint));
-						std::memset(player->_weaponUpgrades, 0, sizeof(player->_weaponUpgrades));
-						std::memset(player->_weaponUpgradesCheckpoint, 0, sizeof(player->_weaponUpgradesCheckpoint));
-
-						player->_weaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-						player->_weaponAmmoCheckpoint[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-						player->_currentWeapon = WeaponType::Blaster;
-					}
-					return true;
-				}
-				case ServerPacketType::PlayerRespawn: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerRespawn - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
-						return true;
-					}
-
-					float posX = packet.ReadValue<std::int32_t>() / 512.0f;
-					float posY = packet.ReadValue<std::int32_t>() / 512.0f;
-					LOGD("[MP] ServerPacketType::PlayerRespawn - playerIndex: {}, x: {}, y: {}", playerIndex, posX, posY);
-
-					InvokeAsync([this, posX, posY]() {
-						if (!_players.empty()) {
-							auto* player = _players[0];
-							if (!player->Respawn(Vector2f(posX, posY))) {
-								return;
-							}
-
-							Clock& c = nCine::clock();
-							std::uint64_t now = c.now() * 1000 / c.frequency();
-
-							MemoryStream packetAck(24);
-							packetAck.WriteVariableUint32(_lastSpawnedActorId);
-							packetAck.WriteVariableUint64(now);
-							packetAck.WriteValue<std::int32_t>((std::int32_t)(player->_pos.X * 512.0f));
-							packetAck.WriteValue<std::int32_t>((std::int32_t)(player->_pos.Y * 512.0f));
-							packetAck.WriteValue<std::int16_t>((std::int16_t)(player->_speed.X * 512.0f));
-							packetAck.WriteValue<std::int16_t>((std::int16_t)(player->_speed.Y * 512.0f));
-							_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerAckWarped, packetAck);
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::PlayerMoveInstantly: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					if (_lastSpawnedActorId != playerIndex) {
-						return true;
-					}
-
-					float posX = packet.ReadValue<std::int32_t>() / 512.0f;
-					float posY = packet.ReadValue<std::int32_t>() / 512.0f;
-					float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
-					float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
-					float externalForceX = packet.ReadValue<std::int16_t>() / 512.0f;
-					float externalForceY = packet.ReadValue<std::int16_t>() / 512.0f;
-
-					LOGD("[MP] ServerPacketType::PlayerMoveInstantly - playerIndex: {}, x: {}, y: {}, sx: {}, sy: {}",
-						playerIndex, posX, posY, speedX, speedY);
-
-					InvokeAsync([this, posX, posY, speedX, speedY, externalForceX, externalForceY]() {
-						if (!_players.empty()) {
-							auto* player = static_cast<RemotablePlayer*>(_players[0]);
-							player->MoveRemotely(Vector2f(posX, posY), Vector2f(speedX, speedY), Vector2f(externalForceX, externalForceY));
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::PlayerAckWarped: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					std::uint64_t seqNum = packet.ReadVariableUint64();
-
-					LOGD("[MP] ServerPacketType::PlayerAckWarped - playerIndex: {}, seqNum: {}", playerIndex, seqNum);
-
-					if (_lastSpawnedActorId == playerIndex && _seqNumWarped == seqNum) {
-						_seqNumWarped = 0;
-					}
-					return true;
-				}
-				case ServerPacketType::PlayerEmitWeaponFlare: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerEmitWeaponFlare - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
-						return true;
-					}
-
-					LOGD("[MP] ServerPacketType::PlayerEmitWeaponFlare - playerIndex: {}", playerIndex);
-
-					InvokeAsync([this]() {
-						if (!_players.empty()) {
-							_players[0]->EmitWeaponFlare();
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::PlayerChangeWeapon: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerChangeWeapon - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
-						return true;
-					}
-
-					WeaponType weaponType = (WeaponType)packet.ReadValue<std::uint8_t>();
-					Actors::Player::SetCurrentWeaponReason reason = (Actors::Player::SetCurrentWeaponReason)packet.ReadValue<std::uint8_t>();
-
-					LOGD("[MP] ServerPacketType::PlayerChangeWeapon - playerIndex: {}, weaponType: {}, reason: {}", playerIndex, weaponType, reason);
-
-					if (!_players.empty()) {
-						auto* remotablePlayer = static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0]);
-
-						if (reason == Actors::Player::SetCurrentWeaponReason::AddAmmo && !PreferencesCache::SwitchToNewWeapon) {
-							HandlePlayerWeaponChanged(remotablePlayer, Actors::Player::SetCurrentWeaponReason::Rollback);
-							return true;
-						}
-						
-						remotablePlayer->ChangingWeaponFromServer = true;
-						static_cast<Actors::Player*>(remotablePlayer)->SetCurrentWeapon(weaponType, reason);
-						remotablePlayer->ChangingWeaponFromServer = false;
-					}
-					return true;
-				}
-				case ServerPacketType::PlayerTakeDamage: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerTakeDamage - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
-						return true;
-					}
-
-					std::int32_t health = packet.ReadVariableInt32();
-					float pushForce = packet.ReadValue<std::int16_t>() / 512.0f;
-
-					LOGD("[MP] ServerPacketType::PlayerTakeDamage - playerIndex: {}, health: {}, pushForce: {}", playerIndex, health, pushForce);
-
-					InvokeAsync([this, health, pushForce]() {
-						if (!_players.empty()) {
-							_players[0]->TakeDamage(health == 0 ? INT32_MAX : (_players[0]->_health - health), pushForce, true);
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::PlayerPush: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerPush - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
-						return true;
-					}
-
-					float pushSpeedX = packet.ReadValue<std::int32_t>() / 512.0f;
-					InvokeAsync([this, pushSpeedX]() {
-						if (!_players.empty()) {
-							// TODO: Remove timeMult and make push speed consistent regardless of time multiplier
-							float timeMult = theApplication().GetTimeMult();
-							_players[0]->OnPushSolidObject(timeMult, pushSpeedX);
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::PlayerActivateSpring: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerActivateSpring - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
-						return true;
-					}
-
-					float posX = packet.ReadValue<std::int32_t>() / 512.0f;
-					float posY = packet.ReadValue<std::int32_t>() / 512.0f;
-					float forceX = packet.ReadValue<std::int16_t>() / 512.0f;
-					float forceY = packet.ReadValue<std::int16_t>() / 512.0f;
-					std::uint8_t flags = packet.ReadValue<std::uint8_t>();
-					InvokeAsync([this, posX, posY, forceX, forceY, flags]() {
-						if (!_players.empty()) {
-							bool removeSpecialMove = false;
-							_players[0]->OnHitSpring(Vector2f(posX, posY), Vector2f(forceX, forceY), (flags & 0x01) == 0x01, (flags & 0x02) == 0x02, removeSpecialMove);
-							if (removeSpecialMove) {
-								_players[0]->_controllable = true;
-								_players[0]->EndDamagingMove();
-							}
-						}
-					});
-					return true;
-				}
-				case ServerPacketType::PlayerWarpIn: {
-					MemoryStream packet(data);
-					std::uint32_t playerIndex = packet.ReadVariableUint32();
-					if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
-						LOGD("[MP] ServerPacketType::PlayerWarpIn - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
-						return true;
-					}
-
-					ExitType exitType = (ExitType)packet.ReadValue<std::uint8_t>();
-					LOGD("[MP] ServerPacketType::PlayerWarpIn - playerIndex: {}, exitType: 0x{:.2x}", playerIndex, exitType);
-
-					InvokeAsync([this, exitType]() {
-						if (!_players.empty()) {
-							auto* player = static_cast<RemotablePlayer*>(_players[0]);
-							player->WarpIn(exitType);
-						}
-					});
-					return true;
-				}
+				case ServerPacketType::Rpc: return HandleServerPacketRpc(peer, data);
+				case ServerPacketType::PeerSetProperty: return HandleServerPacketPeerSetProperty(peer, data);
+				case ServerPacketType::LoadLevel: return HandleServerPacketLoadLevel(peer, data);
+				case ServerPacketType::LevelSetProperty: return HandleServerPacketLevelSetProperty(peer, data);
+				case ServerPacketType::ShowInGameLobby: return HandleServerPacketShowInGameLobby(peer, data);
+				case ServerPacketType::FadeOut: return HandleServerPacketFadeOut(peer, data);
+				case ServerPacketType::PlaySfx: return HandleServerPacketPlaySfx(peer, data);
+				case ServerPacketType::PlayCommonSfx: return HandleServerPacketPlayCommonSfx(peer, data);
+				case ServerPacketType::ShowAlert: return HandleServerPacketShowAlert(peer, data);
+				case ServerPacketType::ChatMessage: return HandleServerPacketChatMessage(peer, data);
+				case ServerPacketType::SyncTileMap: return HandleServerPacketSyncTileMap(peer, data);
+				case ServerPacketType::SetTrigger: return HandleServerPacketSetTrigger(peer, data);
+				case ServerPacketType::AdvanceTileAnimation: return HandleServerPacketAdvanceTileAnimation(peer, data);
+				case ServerPacketType::CreateDebris: return HandleServerPacketCreateDebris(peer, data);
+				case ServerPacketType::CreateControllablePlayer: return HandleServerPacketCreateControllablePlayer(peer, data);
+				case ServerPacketType::CreateRemoteActor: return HandleServerPacketCreateRemoteActor(peer, data);
+				case ServerPacketType::CreateMirroredActor: return HandleServerPacketCreateMirroredActor(peer, data);
+				case ServerPacketType::DestroyRemoteActor: return HandleServerPacketDestroyRemoteActor(peer, data);
+				case ServerPacketType::UpdateAllActors: return HandleServerPacketUpdateAllActors(peer, data);
+				case ServerPacketType::ChangeRemoteActorMetadata: return HandleServerPacketChangeRemoteActorMetadata(peer, data);
+				case ServerPacketType::MarkRemoteActorAsPlayer: return HandleServerPacketMarkRemoteActorAsPlayer(peer, data);
+				case ServerPacketType::UpdatePositionsInRound: return HandleServerPacketUpdatePositionsInRound(peer, data);
+				case ServerPacketType::SyncRaceCheckpoints: return HandleServerPacketSyncRaceCheckpoints(peer, data);
+				case ServerPacketType::SyncTeamScores: return HandleServerPacketSyncTeamScores(peer, data);
+				case ServerPacketType::SyncScoreboard: return HandleServerPacketSyncScoreboard(peer, data);
+				case ServerPacketType::PlayerSetProperty: return HandleServerPacketPlayerSetProperty(peer, data);
+				case ServerPacketType::PlayerResetProperties: return HandleServerPacketPlayerResetProperties(peer, data);
+				case ServerPacketType::PlayerRespawn: return HandleServerPacketPlayerRespawn(peer, data);
+				case ServerPacketType::PlayerMoveInstantly: return HandleServerPacketPlayerMoveInstantly(peer, data);
+				case ServerPacketType::PlayerAckWarped: return HandleServerPacketPlayerAckWarped(peer, data);
+				case ServerPacketType::PlayerEmitWeaponFlare: return HandleServerPacketPlayerEmitWeaponFlare(peer, data);
+				case ServerPacketType::PlayerChangeWeapon: return HandleServerPacketPlayerChangeWeapon(peer, data);
+				case ServerPacketType::PlayerTakeDamage: return HandleServerPacketPlayerTakeDamage(peer, data);
+				case ServerPacketType::PlayerPush: return HandleServerPacketPlayerPush(peer, data);
+				case ServerPacketType::PlayerActivateSpring: return HandleServerPacketPlayerActivateSpring(peer, data);
+				case ServerPacketType::PlayerWarpIn: return HandleServerPacketPlayerWarpIn(peer, data);
 			}
 		}
 
 		return false;
+	}
+
+	bool MpLevelHandler::HandleClientPacketRpc(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		// The actor RPC handler can mutate arbitrary game state, so run it on the main thread rather than the
+		// network thread. The packet buffer is freed as soon as this returns, so copy it into an owned buffer.
+		Array<std::uint8_t> buffer{NoInit, data.size()};
+		if (data.size() > 0) {
+			std::memcpy(buffer.data(), data.data(), data.size());
+		}
+
+		InvokeAsync([this, peer, buffer = std::move(buffer)]() {
+			MemoryStream packet(buffer);
+			std::uint32_t actorId = packet.ReadVariableUint32();
+
+			// Looked up on the main thread - actors are also removed on the main thread, so a found
+			// pointer is valid for the duration of this callback
+			Actors::ActorBase* remotingActor = nullptr;
+			{
+				std::unique_lock lock(_lock);
+				for (const auto& [actor, remotingActorInfo] : _remotingActors) {
+					if (remotingActorInfo.ActorID == actorId) {
+						remotingActor = actor;
+						break;
+					}
+				}
+			}
+
+			if DEATH_LIKELY(remotingActor != nullptr) {
+				LOGD("[MP] ClientPacketType::Rpc [{}] - id: {}, {} bytes", peer, actorId, buffer.size() - packet.GetPosition());
+				remotingActor->OnPacketReceived(packet);
+			} else {
+				LOGW("[MP] ClientPacketType::Rpc [{}] - id: {}, {} bytes - Actor not found", peer, actorId, buffer.size() - packet.GetPosition());
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleClientPacketAuth(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
+			peerDesc->LevelState = PeerLevelState::ValidatingAssets;
+
+			InvokeAsync([this, peerDesc]() mutable {
+				_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] connected", peerDesc->PlayerName));
+			});
+
+			MemoryStream packet(10 + peerDesc->PlayerName.size());
+			packet.WriteValue<std::uint8_t>((std::uint8_t)PeerPropertyType::Connected);
+			packet.WriteVariableUint64(peer.GetId());
+			packet.WriteValue<std::uint8_t>((std::uint8_t)peerDesc->PlayerName.size());
+			packet.Write(peerDesc->PlayerName.data(), (std::uint32_t)peerDesc->PlayerName.size());
+
+			_networkManager->SendTo([otherPeer = peer](const Peer& peer) {
+				return (peer != otherPeer);
+			}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PeerSetProperty, packet);
+		}
+
+		MemoryStream packet;
+		InitializeValidateAssetsPacket(packet);
+		_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ValidateAssets, packet);
+		return true;
+	}
+
+	bool MpLevelHandler::HandleClientPacketLevelReady(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+
+		LOGD("[MP] ClientPacketType::LevelReady [{}] - flags: 0x{:.2x}", peer, flags);
+
+		if (auto peerDesc = _networkManager->GetPeerDescriptor(peer)) {
+			bool enableLedgeClimb = (flags & 0x02) != 0;
+			peerDesc->EnableLedgeClimb = enableLedgeClimb;
+			if (peerDesc->LevelState < PeerLevelState::LevelLoaded) {
+				peerDesc->LevelState = PeerLevelState::LevelLoaded;
+			}
+
+			if (peerDesc->PreferredPlayerType == PlayerType::None) {
+				auto& serverConfig = _networkManager->GetServerConfiguration();
+
+				// Show in-game lobby only to newly connected players
+				std::uint8_t flags = 0x01 | 0x02 | 0x04; // Set Visibility | Show | SetWelcomeMessage
+				std::uint8_t allowedCharacters = serverConfig.AllowedPlayerTypes;
+
+				MemoryStream packet(6 + serverConfig.WelcomeMessage.size());
+				packet.WriteValue<std::uint8_t>(flags);
+				packet.WriteValue<std::uint8_t>(allowedCharacters);
+				packet.WriteVariableUint32(serverConfig.WelcomeMessage.size());
+				packet.Write(serverConfig.WelcomeMessage.data(), serverConfig.WelcomeMessage.size());
+
+				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ShowInGameLobby, packet);
+			}
+		}
+		return true;
+	}
+
+	bool MpLevelHandler::HandleClientPacketChatMessage(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+
+		auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+		if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
+			LOGD("[MP] ClientPacketType::ChatMessage [{}] - Invalid playerIndex ({})", peer, playerIndex);
+			return true;
+		}
+
+		/*std::uint8_t reserved =*/ packet.ReadValue<std::uint8_t>();
+
+		std::uint32_t lineLength = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(lineLength == 0 || lineLength > 1024) {
+			LOGD("[MP] ClientPacketType::ChatMessage [{}] - Length out of bounds ({})", peer, lineLength);
+			return true;
+		}
+
+		String line{NoInit, lineLength};
+		packet.Read(line.data(), lineLength);
+
+		if (line.hasPrefix('/')) {
+			SendMessage(peer, UI::MessageLevel::Echo, line);
+			ProcessCommand(peer, line, peerDesc->IsAdmin);
+			return true;
+		}
+
+		String prefixedMessage;
+		if (peerDesc->IsAdmin) {
+			prefixedMessage = "\f[c:#907060]"_s + peerDesc->PlayerName + ":\f[/c] "_s + line;
+		} else {
+			prefixedMessage = "\f[c:#709060]"_s + peerDesc->PlayerName + ":\f[/c] "_s + line;
+		}
+
+		MemoryStream packetOut(9 + prefixedMessage.size());
+		packetOut.WriteVariableUint32(playerIndex);
+		packetOut.WriteValue<std::uint8_t>((std::uint8_t)UI::MessageLevel::Chat);
+		packetOut.WriteVariableUint32((std::uint32_t)prefixedMessage.size());
+		packetOut.Write(prefixedMessage.data(), (std::uint32_t)prefixedMessage.size());
+
+		_networkManager->SendTo([this](const Peer& peer) {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			return (peerDesc && peerDesc->LevelState != PeerLevelState::Unknown);
+		}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::ChatMessage, packetOut);
+
+		InvokeAsync([this, line = std::move(prefixedMessage)]() mutable {
+			_console->WriteLine(UI::MessageLevel::Chat, std::move(line));
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleClientPacketValidateAssetsResponse(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+		if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->LevelState != PeerLevelState::ValidatingAssets) {
+			// Packet received when the peer is in different state
+			LOGW("[MP] ClientPacketType::ValidateAssetsResponse [{}] - Invalid state ({})", peer,
+				peerDesc != nullptr ? peerDesc->LevelState : PeerLevelState::Unknown);
+			return true;
+		}
+
+		peerDesc->LevelState = PeerLevelState::StreamingMissingAssets;
+
+		bool success = true;
+		SmallVector<RequiredAsset*> missingAssets;
+
+		MemoryStream packet(data);
+		std::uint32_t assetCount = packet.ReadVariableUint32();
+
+		LOGD("[MP] ClientPacketType::ValidateAssetsResponse [{}] - {}/{} assets", peer, assetCount, _requiredAssets.size());
+
+		if DEATH_LIKELY(assetCount == _requiredAssets.size()) {
+			for (std::uint32_t i = 0; i < assetCount; i++) {
+				AssetType type = (AssetType)packet.ReadValue<std::uint8_t>();
+				std::uint32_t pathLength = packet.ReadVariableUint32();
+				if DEATH_UNLIKELY(pathLength > 512) {
+					// Refuse an implausibly long (attacker-controlled) path before allocating a buffer for it
+					success = false;
+					break;
+				}
+				String path{NoInit, pathLength};
+				packet.Read(path.data(), pathLength);
+				std::int64_t size = packet.ReadVariableInt64();
+				std::uint32_t crc32 = packet.ReadValue<std::uint32_t>();
+
+				bool found = false;
+				for (std::size_t j = 0; j < _requiredAssets.size(); j++) {
+					if (type == _requiredAssets[j].Type && path == _requiredAssets[j].Path) {
+						found = true;
+						if (size != _requiredAssets[j].Size || crc32 != _requiredAssets[j].Crc32) {
+							LOGD("[MP] ClientPacketType::ValidateAssetsResponse [{}] - \"{}\":{:.8x} is missing",
+								peer, _requiredAssets[j].Path, _requiredAssets[j].Crc32);
+							missingAssets.push_back(&_requiredAssets[j]);
+						}
+						break;
+					}
+				}
+
+				if DEATH_UNLIKELY(!found) {
+					// This asset wasn't requested, something went wrong
+					success = false;
+				}
+			}
+		} else {
+			// Asset count mismatch, something went wrong
+			success = false;
+		}
+
+		if DEATH_UNLIKELY(!success) {
+			// Peer response is corrupted
+			LOGW("[MP] ClientPacketType::ValidateAssetsResponse [{}] - Malformed packet", peer);
+			_networkManager->Kick(peer, Reason::InvalidParameter);
+			return true;
+		}
+
+		LOGI("[MP] ClientPacketType::ValidateAssetsResponse [{}] - {} missing assets", peer, missingAssets.size());
+
+		if (missingAssets.empty()) {
+			// All assets are already ready
+			MemoryStream packet;
+			InitializeLoadLevelPacket(packet);
+			_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LoadLevel, packet);
+			return true;
+		}
+
+		const auto& serverConfig = _networkManager->GetServerConfiguration();
+		if (!serverConfig.AllowAssetStreaming) {
+			// Server doesn't allow downloads, kick the client instead
+			_networkManager->Kick(peer, Reason::AssetStreamingNotAllowed);
+			return true;
+		}
+		
+#if defined(WITH_THREADS)
+		Thread streamingThread([_this = runtime_cast<MpLevelHandler>(shared_from_this()), peer, peerDesc = std::move(peerDesc), missingAssets = std::move(missingAssets)]() {
+#else
+		auto* _this = this;
+#endif
+			LOGI("Started streaming {} assets to peer [{}]", missingAssets.size(), peer);
+			TimeStamp begin = TimeStamp::now();
+
+			for (std::uint32_t i = 0; i < (std::uint32_t)missingAssets.size(); i++) {
+				if (!peerDesc->IsAuthenticated || _this->_ignorePackets) {
+					// Stop streaming if peer disconnects or handler has changed
+					break;
+				}
+
+				const RequiredAsset& asset = *missingAssets[i];
+
+				MemoryStream packetBegin(14 + asset.Path.size());
+				packetBegin.WriteValue<std::uint8_t>(1);	// Begin
+				packetBegin.WriteValue<std::uint8_t>((std::uint8_t)asset.Type);
+				packetBegin.WriteVariableUint32((std::uint32_t)asset.Path.size());
+				packetBegin.Write(asset.Path.data(), (std::int64_t)asset.Path.size());
+				packetBegin.WriteVariableInt64(asset.Size);
+				_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::StreamAsset, packetBegin);
+
+				auto s = fs::Open(asset.FullPath, FileAccess::Read);
+				if (s->IsValid()) {
+					char buffer[8192];
+					while (true) {
+						if DEATH_UNLIKELY(!peerDesc->IsAuthenticated || _this->_ignorePackets) {
+							// Stop streaming if peer disconnects or handler has changed
+							break;
+						}
+
+						std::int64_t bytesRead = s->Read(buffer, sizeof(buffer));
+						if (bytesRead <= 0) {
+							break;
+						}
+
+						MemoryStream packetChunk(9 + bytesRead);
+						packetChunk.WriteValue<std::uint8_t>(2);	// Chunk
+						packetChunk.WriteVariableInt64(bytesRead);
+						packetChunk.Write(buffer, bytesRead);
+						_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::StreamAsset, packetChunk);
+					}
+				}
+
+				MemoryStream packetEnd(1);
+				packetEnd.WriteValue<std::uint8_t>(3);	// End
+				_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::StreamAsset, packetEnd);
+			}
+
+			LOGI("Finished streaming {} assets to peer [{}] - took {:.1f} ms",
+			missingAssets.size(), peer, begin.millisecondsSince());
+			if (peerDesc->IsAuthenticated && !_this->_ignorePackets) {
+				MemoryStream packet;
+				_this->InitializeLoadLevelPacket(packet);
+				_this->_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::LoadLevel, packet);
+			}
+#if defined(WITH_THREADS)
+		});
+#endif
+
+		return true;
+	}
+
+	bool MpLevelHandler::HandleClientPacketPlayerReady(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		PlayerType preferredPlayerType = (PlayerType)packet.ReadValue<std::uint8_t>();
+		std::uint8_t preferredTeam = packet.ReadValue<std::uint8_t>();
+
+		auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+		if DEATH_UNLIKELY(peerDesc == nullptr || (peerDesc->LevelState != PeerLevelState::LevelLoaded && peerDesc->LevelState != PeerLevelState::LevelSynchronized)) {
+			LOGW("[MP] ClientPacketType::PlayerReady [{}] - Invalid state", peer);
+			return true;
+		}
+
+		if DEATH_UNLIKELY(preferredPlayerType != PlayerType::Jazz && preferredPlayerType != PlayerType::Spaz && preferredPlayerType != PlayerType::Lori) {
+			LOGW("[MP] ClientPacketType::PlayerReady [{}] - Invalid preferred player type", peer);
+			return true;
+		}
+
+		peerDesc->PreferredPlayerType = preferredPlayerType;
+		// Honor the requested team unless it was forced by the server (admin/rebalance); ResolveTeam()
+		// applies it (balanced) when the player is spawned in ApplyGameModeToPlayer()
+		if (!peerDesc->TeamLocked) {
+			peerDesc->PreferredTeam = preferredTeam;
+		}
+
+		LOGI("[MP] ClientPacketType::PlayerReady [{}] - type: {}, team: {}", peer, preferredPlayerType, preferredTeam);
+
+		InvokeAsync([this, peer]() {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			if (!peerDesc || peerDesc->LevelState < PeerLevelState::LevelLoaded || peerDesc->LevelState > PeerLevelState::LevelSynchronized) {
+				LOGW("[MP] ClientPacketType::PlayerReady [{}] - Invalid state", peer);
+				return;
+			}
+			if (peerDesc->LevelState == PeerLevelState::LevelSynchronized) {
+				peerDesc->LevelState = PeerLevelState::PlayerReady;
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleClientPacketForceResyncActors(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		LOGD("[MP] ClientPacketType::ForceResyncActors [{}] - update: {}", peer, _lastUpdated);
+		_forceResyncPending = true;
+		return true;
+	}
+
+	bool MpLevelHandler::HandleClientPacketPlayerUpdate(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		std::uint64_t now = packet.ReadVariableUint64();
+		float posX = packet.ReadValue<std::int32_t>() / 512.0f;
+		float posY = packet.ReadValue<std::int32_t>() / 512.0f;
+		float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
+		float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
+		RemotePlayerOnServer::PlayerFlags flags = (RemotePlayerOnServer::PlayerFlags)packet.ReadVariableUint32();
+
+		// TODO: Special move
+
+		// The packet is parsed here (its backing buffer is freed as soon as this returns), but the state
+		// is applied on the main thread so it doesn't race the simulation - only plain values are captured.
+		InvokeAsync([this, peer, playerIndex, now, posX, posY, speedX, speedY, flags]() mutable {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
+				return;
+			}
+
+			// Drop stale/out-of-order updates (unreliable channel), and everything sent before a
+			// server-initiated warp/respawn is acknowledged (LastUpdated is parked at UINT64_MAX until then,
+			// so the client's pre-warp positions never reach the teleport check below)
+			if DEATH_UNLIKELY(peerDesc->LastUpdated >= now) {
+				return;
+			}
+
+			auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player);
+			if DEATH_UNLIKELY(remotePlayerOnServer == nullptr) {
+				return;
+			}
+
+			// Anti-cheat: reject client-reported movement that is physically impossible (speedhack /
+			// teleport). Bounds are intentionally generous so latency, springs, sugar rush and similar
+			// legitimate bursts never trip them; only gross violations are corrected.
+			constexpr float MaxPlausibleSpeed = 32.0f;	// Per axis; normal clamp is 16, boosted states stay well under
+			constexpr float MaxPlausibleStep = 600.0f;	// Base accepted position change for a single update (px)
+
+			// Scale the accepted step by the time actually elapsed since the last accepted update, so a
+			// network stall or packet-loss burst (which arrives as one large jump) isn't mistaken for a
+			// teleport. Capped so an unusually large gap can't grant an unbounded budget.
+			std::uint64_t deltaMs = (now > peerDesc->LastUpdated ? now - peerDesc->LastUpdated : 0);
+			if (deltaMs > 2000) {
+				deltaMs = 2000;
+			}
+			float maxStep = MaxPlausibleStep + MaxPlausibleSpeed * FrameTimer::FramesPerSecond * (deltaMs / 1000.0f);
+
+			peerDesc->LastUpdated = now;
+
+			float acceptedX = posX, acceptedY = posY;
+			float acceptedSpeedX = speedX, acceptedSpeedY = speedY;
+			bool corrected = false;
+			if (std::abs(acceptedSpeedX) > MaxPlausibleSpeed || std::abs(acceptedSpeedY) > MaxPlausibleSpeed) {
+				LOGW("Clamped implausible speed from player {} ({:.1f}, {:.1f})", playerIndex, acceptedSpeedX, acceptedSpeedY);
+				acceptedSpeedX = std::clamp(acceptedSpeedX, -MaxPlausibleSpeed, MaxPlausibleSpeed);
+				acceptedSpeedY = std::clamp(acceptedSpeedY, -MaxPlausibleSpeed, MaxPlausibleSpeed);
+				corrected = true;
+			}
+
+			// Belt-and-suspenders: stale pre-warp updates are already dropped via the LastUpdated grace, so
+			// this only guards against desyncs after a warp was acknowledged
+			if (!remotePlayerOnServer->_justWarped) {
+				float stepDistSqr = (Vector2f(acceptedX, acceptedY) - remotePlayerOnServer->_pos).SqrLength();
+				if (stepDistSqr > maxStep * maxStep) {
+					LOGW("Rejected implausible teleport from player {} ({} px in one update, budget {} px)",
+						playerIndex, (std::int32_t)std::sqrt(stepDistSqr), (std::int32_t)maxStep);
+					acceptedX = remotePlayerOnServer->_pos.X;
+					acceptedY = remotePlayerOnServer->_pos.Y;
+					corrected = true;
+				}
+			}
+
+			if (corrected) {
+				// Snap the offending client back to the accepted authoritative state
+				MemoryStream packet2(20);
+				packet2.WriteVariableUint32(remotePlayerOnServer->_playerIndex);
+				packet2.WriteValue<std::int32_t>((std::int32_t)(acceptedX * 512.0f));
+				packet2.WriteValue<std::int32_t>((std::int32_t)(acceptedY * 512.0f));
+				packet2.WriteValue<std::int16_t>((std::int16_t)(acceptedSpeedX * 512.0f));
+				packet2.WriteValue<std::int16_t>((std::int16_t)(acceptedSpeedY * 512.0f));
+				packet2.WriteValue<std::int16_t>((std::int16_t)(remotePlayerOnServer->_externalForce.X * 512.0f));
+				packet2.WriteValue<std::int16_t>((std::int16_t)(remotePlayerOnServer->_externalForce.Y * 512.0f));
+				_networkManager->SendTo(peer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerMoveInstantly, packet2);
+			}
+
+			constexpr RemotePlayerOnServer::PlayerFlags IdleFlags = RemotePlayerOnServer::PlayerFlags::InMenu | RemotePlayerOnServer::PlayerFlags::InConsole;
+			bool wasIdle = (remotePlayerOnServer->Flags & IdleFlags) != RemotePlayerOnServer::PlayerFlags::None;
+			bool isIdle = (flags & IdleFlags) != RemotePlayerOnServer::PlayerFlags::None;
+
+			remotePlayerOnServer->SyncWithServer(Vector2f(acceptedX, acceptedY), Vector2f(acceptedSpeedX, acceptedSpeedY), flags);
+
+			if (wasIdle != isIdle) {
+				// Broadcast idle state to all other players
+				MemoryStream packet2(6);
+				packet2.WriteVariableUint32(playerIndex);
+				packet2.WriteValue<std::uint8_t>(isIdle ? 0x01 : 0x00);
+				packet2.WriteVariableUint32(0);
+
+				_networkManager->SendTo([this, self = peer](const Peer& peer) {
+					if (peer == self) {
+						return false;
+					}
+					auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+					return (peerDesc && peerDesc->LevelState >= PeerLevelState::LevelSynchronized);
+				}, NetworkChannel::Main, (std::uint8_t)ServerPacketType::MarkRemoteActorAsPlayer, packet2);
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleClientPacketPlayerKeyPress(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		std::uint64_t pressedKeys = packet.ReadVariableUint64();
+
+		// Applied on the main thread; the remote player's input is read by the simulation there
+		InvokeAsync([this, peer, playerIndex, pressedKeys]() mutable {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
+				return;
+			}
+
+			if (auto* remotePlayerOnServer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player)) {
+				std::uint32_t frameCount = theApplication().GetFrameCount();
+				if (remotePlayerOnServer->UpdatedFrame != frameCount) {
+					remotePlayerOnServer->UpdatedFrame = frameCount;
+					remotePlayerOnServer->PressedKeysLast = remotePlayerOnServer->PressedKeys;
+				}
+				remotePlayerOnServer->PressedKeys = pressedKeys;
+			}
+		});
+
+		//LOGD("Player {} pressed 0x{:.8x}, last state was 0x{:.8x}", playerIndex, it->second.PressedKeys & 0xffffffffu, prevState);
+		return true;
+	}
+
+	bool MpLevelHandler::HandleClientPacketPlayerChangeWeaponRequest(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
+
+		LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{}] - playerIndex: {}, weaponType: {}", peer, playerIndex, weaponType);
+
+		// Applied on the main thread; touches the player weapon/ammo state read by the simulation
+		InvokeAsync([this, peer, playerIndex, weaponType]() mutable {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
+				LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{}] - Invalid playerIndex ({})", peer, playerIndex);
+				return;
+			}
+
+			const auto& playerAmmo = peerDesc->Player->GetWeaponAmmo();
+			if (weaponType >= playerAmmo.size() || playerAmmo[weaponType] == 0) {
+				LOGD("[MP] ClientPacketType::PlayerChangeWeaponRequest [{}] - playerIndex: {} - No ammo in selected weapon", peer, playerIndex);
+
+				// Request is denied, send the current weapon back to the client
+				HandlePlayerWeaponChanged(peerDesc->Player, Actors::Player::SetCurrentWeaponReason::Rollback);
+				return;
+			}
+
+			peerDesc->Player->SetCurrentWeapon((WeaponType)weaponType, Actors::Player::SetCurrentWeaponReason::User);
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleClientPacketPlayerSpectateRequest(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		std::uint8_t enable = packet.ReadValue<std::uint8_t>();
+
+		LOGD("[MP] ClientPacketType::PlayerSpectateRequest [{}] - playerIndex: {}, enable: {}", peer, playerIndex, enable);
+
+		// Applied on the main thread; SetPlayerSpectateMode mutates the active player list
+		InvokeAsync([this, peer, playerIndex, enable]() mutable {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
+				LOGD("[MP] ClientPacketType::PlayerSpectateRequest [{}] - Invalid playerIndex ({})", peer, playerIndex);
+				return;
+			}
+
+			auto& serverConfig = _networkManager->GetServerConfiguration();
+			if (!serverConfig.EnableSpectate || ((peerDesc->IsSpectating & SpectateMode::Mask) == SpectateMode::Forced && enable == 0)) {
+				// Spectate mode is disabled or forced, deny the request
+				return;
+			}
+
+			LOGI("Player {} [{}] {} spectating", playerIndex, peer, enable ? "started"_s : "stopped"_s);
+			SetPlayerSpectateMode(peerDesc->Player, enable ? SpectateMode::Requested : SpectateMode::None);
+
+			if (enable) {
+				// A player entering spectate reduces the active count and can satisfy a win condition (e.g. elimination)
+				CheckGameEnds();
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleClientPacketPlayerChangeCharacter(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		PlayerType playerType = (PlayerType)packet.ReadValue<std::uint8_t>();
+
+		// Applied on the main thread; SetPlayerSpectateMode respawns/mutates the active player list
+		InvokeAsync([this, peer, playerIndex, playerType]() mutable {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
+				LOGD("[MP] ClientPacketType::PlayerChangeCharacter [{}] - Invalid playerIndex ({})", peer, playerIndex);
+				return;
+			}
+
+			if DEATH_UNLIKELY(playerType != PlayerType::Jazz && playerType != PlayerType::Spaz && playerType != PlayerType::Lori) {
+				LOGW("[MP] ClientPacketType::PlayerChangeCharacter [{}] - Invalid player type", peer);
+				return;
+			}
+
+			auto& serverConfig = _networkManager->GetServerConfiguration();
+			if DEATH_UNLIKELY((peerDesc->IsSpectating & SpectateMode::Mask) == SpectateMode::Forced) {
+				// Forced spectators (e.g., winner, eliminated) can't rejoin by changing character
+				LOGD("[MP] ClientPacketType::PlayerChangeCharacter [{}] - Forced to spectate", peer);
+				return;
+			}
+
+			std::uint8_t typeBit = (std::uint8_t)(1 << ((std::int32_t)playerType - (std::int32_t)PlayerType::Jazz));
+			if DEATH_UNLIKELY((serverConfig.AllowedPlayerTypes & typeBit) == 0) {
+				LOGW("[MP] ClientPacketType::PlayerChangeCharacter [{}] - Player type {} not allowed", peer, playerType);
+				return;
+			}
+
+			LOGI("Player {} [{}] changing character to {}", playerIndex, peer, playerType);
+
+			// Respawn the player with the chosen character (also leaves spectate mode if currently spectating)
+			peerDesc->PreferredPlayerType = playerType;
+			SetPlayerSpectateMode(peerDesc->Player, SpectateMode::None);
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleClientPacketPlayerChangeTeamRequest(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint8_t requestedTeam = packet.ReadValue<std::uint8_t>();
+
+		auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+		if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr) {
+			LOGD("[MP] ClientPacketType::PlayerChangeTeamRequest [{}] - No player", peer);
+			return true;
+		}
+
+		LOGI("Player {} [{}] requesting team change to {}", peerDesc->Player->_playerIndex, peer, requestedTeam);
+
+		InvokeAsync([this, peer, requestedTeam]() {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr) {
+				return;
+			}
+			if (ChangePlayerTeam(peerDesc->Player, requestedTeam, false)) {
+				SendMessage(peer, UI::MessageLevel::Info, _f("You joined the {} team", GetTeamName(peerDesc->Team)));
+			} else {
+				SendMessage(peer, UI::MessageLevel::Warning, _("Cannot change team right now"));
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleClientPacketPlayerAckWarped(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		std::uint64_t seqNum = packet.ReadVariableUint64();
+		float posX = packet.ReadValue<std::int32_t>() / 512.0f;
+		float posY = packet.ReadValue<std::int32_t>() / 512.0f;
+		float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
+		float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
+
+		InvokeAsync([this, peer, playerIndex, seqNum, posX, posY, speedX, speedY]() mutable {
+			auto peerDesc = _networkManager->GetPeerDescriptor(peer);
+			if DEATH_UNLIKELY(peerDesc == nullptr || peerDesc->Player == nullptr || peerDesc->Player->_playerIndex != playerIndex) {
+				LOGD("[MP] ClientPacketType::PlayerAckWarped [{}] - Invalid playerIndex ({})", peer, playerIndex);
+				return;
+			}
+
+			auto* mpPlayer = runtime_cast<RemotePlayerOnServer>(peerDesc->Player);
+			if DEATH_UNLIKELY(mpPlayer == nullptr) {
+				return;
+			}
+
+			// Only honor an acknowledgement when the server actually initiated a warp/respawn for this
+			// player - every such path parks LastUpdated at UINT64_MAX until the ack arrives. Otherwise a
+			// client could send this at will to force an arbitrary resync (teleport past the anti-cheat).
+			if (peerDesc->LastUpdated != UINT64_MAX) {
+				LOGD("[MP] ClientPacketType::PlayerAckWarped [{}] - No warp pending, ignoring", peer);
+				return;
+			}
+
+			// The client should acknowledge at (approximately) the position the server warped/respawned it
+			// to, which is the shadow's current authoritative position; if it reports somewhere else, keep
+			// the server position instead of trusting the client value.
+			constexpr float MaxAckDeviation = 200.0f;
+			Vector2f ackPos(posX, posY);
+			Vector2f acceptedPos = ackPos;
+			if ((ackPos - mpPlayer->_pos).SqrLength() > MaxAckDeviation * MaxAckDeviation) {
+				LOGW("Player {} acknowledged a warp at an unexpected position, keeping the authoritative one", playerIndex);
+				acceptedPos = mpPlayer->_pos;
+			}
+
+			LOGD("[MP] ClientPacketType::PlayerAckWarped [{}] - playerIndex: {}, seqNum: {}, x: {}, y: {}",
+				peer, playerIndex, seqNum, acceptedPos.X, acceptedPos.Y);
+
+			peerDesc->LastUpdated = seqNum;
+			mpPlayer->ForceResyncWithServer(acceptedPos, Vector2f(speedX, speedY));
+			mpPlayer->_canTakeDamage = true;
+			mpPlayer->_justWarped = true;
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketRpc(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t actorId = packet.ReadVariableUint32();
+
+		std::shared_ptr<Actors::ActorBase> actor;
+		{
+			std::unique_lock lock(_lock);
+			auto it = _remoteActors.find(actorId);
+			if (it != _remoteActors.end()) {
+				actor = it->second;
+			}
+		}
+		if DEATH_LIKELY(actor != nullptr) {
+			LOGD("[MP] ServerPacketType::Rpc - id: {}, {} bytes", actorId, data.size() - packet.GetPosition());
+			actor->OnPacketReceived(packet);
+		} else {
+			LOGW("[MP] ServerPacketType::Rpc - id: {}, {} bytes - Actor not found", actorId,data.size() - packet.GetPosition());
+		}
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPeerSetProperty(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		PeerPropertyType type = (PeerPropertyType)packet.ReadValue<std::uint8_t>();
+		DEATH_UNUSED std::uint64_t peerId = packet.ReadVariableUint64();
+
+		switch (type) {
+			case PeerPropertyType::Connected:
+			case PeerPropertyType::Disconnected: {
+				std::uint8_t playerNameLength = packet.ReadValue<std::uint8_t>();
+				String playerName{NoInit, playerNameLength};
+				packet.Read(playerName.data(), playerNameLength);
+
+				LOGD("[MP] ServerPacketType::PeerSetProperty - type: {}, peer: 0x{:.8x}, name: \"{}\"",
+					type, peerId, playerName);
+
+				InvokeAsync([this, type, playerName = std::move(playerName)]() mutable {
+					if (type == PeerPropertyType::Connected) {
+						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] connected", playerName));
+					} else {
+						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] disconnected", playerName));
+					}
+				});
+				break;
+			}
+			case PeerPropertyType::Roasted: {
+				std::uint8_t victimNameLength = packet.ReadValue<std::uint8_t>();
+				String victimName{NoInit, victimNameLength};
+				packet.Read(victimName.data(), victimNameLength);
+
+				DEATH_UNUSED std::uint64_t attackerPeerId = packet.ReadVariableUint64();
+
+				std::uint8_t attackerNameLength = packet.ReadValue<std::uint8_t>();
+				String attackerName{NoInit, attackerNameLength};
+				packet.Read(attackerName.data(), attackerNameLength);
+
+				LOGD("[MP] ServerPacketType::PeerSetProperty - type: {}, victim: 0x{:.8x}, victim-name: \"{}\", attacker: 0x{:.8x}, attacker-name: \"{}\"",
+					type, peerId, victimName, attackerPeerId, attackerName);
+
+				InvokeAsync([this, victimName = std::move(victimName), attackerName = std::move(attackerName)]() mutable {
+					if (!attackerName.empty()) {
+						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by \f[c:#d0705d]{}\f[/c]",
+							victimName, attackerName));
+					} else {
+						_console->WriteLine(UI::MessageLevel::Info, _f("\f[c:#d0705d]{}\f[/c] was roasted by environment",
+							victimName));
+					}
+				});
+				break;
+			}
+		}
+		return false;
+	}
+
+	bool MpLevelHandler::HandleServerPacketLoadLevel(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		// Start to ignore all incoming packets, because they no longer belong to this handler
+		_ignorePackets = true;
+
+		LOGD("[MP] ServerPacketType::LoadLevel");
+		return false;
+	}
+
+	bool MpLevelHandler::HandleServerPacketLevelSetProperty(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		LevelPropertyType propertyType = (LevelPropertyType)packet.ReadValue<std::uint8_t>();
+		switch (propertyType) {
+			case LevelPropertyType::State: {
+				LevelState state = (LevelState)packet.ReadValue<std::uint8_t>();
+				std::int32_t gameTimeLeft = packet.ReadVariableInt32();
+
+				LOGD("[MP] ServerPacketType::LevelSetProperty::State - state: {}, timeLeft: {:.1f}", state, (float)gameTimeLeft * 0.01f);
+
+				InvokeAsync([this, state, gameTimeLeft]() {
+					_levelState = state;
+					_gameTimeLeft = (float)gameTimeLeft * 0.01f;
+
+					switch (_levelState) {
+						case LevelState::WaitingForMinPlayers: {
+							// gameTimeLeft is reused for waitingForPlayerCount in this state
+							_waitingForPlayerCount = gameTimeLeft;
+							break;
+						}
+						case LevelState::Countdown3: {
+							static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(3);
+							LOGI("Starting round...");
+							break;
+						}
+						case LevelState::Countdown2: {
+							static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(2);
+							break;
+						}
+						case LevelState::Countdown1: {
+							static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(1);
+							break;
+						}
+						case LevelState::Running: {
+							const auto& serverConfig = _networkManager->GetServerConfiguration();
+							if (serverConfig.GameMode != MpGameMode::Cooperation) {
+								static_cast<UI::Multiplayer::MpHUD*>(_hud.get())->ShowCountdown(0);
+							}
+							break;
+						}
+					}
+				});
+				break;
+			}
+			case LevelPropertyType::GameMode: {
+				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+				MpGameMode gameMode = (MpGameMode)packet.ReadValue<std::uint8_t>();
+				std::uint8_t teamCount = packet.ReadValue<std::uint8_t>();
+				std::uint8_t teamId = packet.ReadValue<std::uint8_t>();
+				std::uint8_t allowedPlayerTypes = packet.ReadValue<std::uint8_t>();
+				std::int32_t initialPlayerHealth = packet.ReadVariableInt32();
+				std::uint32_t maxGameTimeSecs = packet.ReadVariableUint32();
+				std::uint32_t totalKills = packet.ReadVariableUint32();
+				std::uint32_t totalLaps = packet.ReadVariableUint32();
+				std::uint32_t totalTreasureCollected = packet.ReadVariableUint32();
+				bool colorizePlayersByTeam = (packet.ReadValue<std::uint8_t>() != 0);
+
+				LOGD("[MP] ServerPacketType::LevelSetProperty::GameMode - mode: {}", gameMode);
+
+				auto& serverConfig = _networkManager->GetServerConfiguration();
+				serverConfig.GameMode = gameMode;
+				serverConfig.ColorizePlayersByTeam = colorizePlayersByTeam;
+				serverConfig.ReforgedGameplay = (flags & 0x01) != 0;
+				serverConfig.Elimination = (flags & 0x04) != 0;
+				serverConfig.EnableSpectate = (flags & 0x08) != 0;
+				serverConfig.PlayerStacking = (flags & 0x10) != 0;
+				serverConfig.AllowTeamSelection = (flags & 0x20) != 0;
+				serverConfig.FriendlyFire = (flags & 0x40) != 0;
+				serverConfig.AutoBalanceTeams = (flags & 0x80) != 0;
+				serverConfig.TeamCount = teamCount;
+				serverConfig.AllowedPlayerTypes = allowedPlayerTypes;
+				serverConfig.InitialPlayerHealth = initialPlayerHealth;
+				serverConfig.MaxGameTimeSecs = maxGameTimeSecs;
+				serverConfig.TotalKills = totalKills;
+				serverConfig.TotalLaps = totalLaps;
+				serverConfig.TotalTreasureCollected = totalTreasureCollected;
+
+				_isReforged = serverConfig.ReforgedGameplay;
+
+				if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
+					peerDesc->Team = teamId;
+				}
+
+				// Re-apply team colors to all visible players now that the mode / team-coloring flag is
+				// (re)synced (touches the renderer, so defer to the main thread; a no-op when disabled).
+				// _playerNames is the set of remote players (the local players live in _players).
+				InvokeAsync([this, gameMode]() {
+					// Build the game-mode rules object so this client can draw the mode-specific HUD; the
+					// game-mode logic itself stays server-authoritative.
+					_gameMode = CreateGameMode(gameMode);
+
+					for (auto* player : _players) {
+						player->RefreshColorPalette();
+					}
+					for (auto& [actorId, playerName] : _playerNames) {
+						RecolorRemoteActor(actorId, playerName.FurColor, playerName.Team);
+					}
+				});
+				break;
+			}
+			case LevelPropertyType::Music: {
+				std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+				std::uint32_t pathLength = packet.ReadVariableUint32();
+				if DEATH_UNLIKELY(pathLength > 512) {
+					// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
+					LOGW("[MP] ServerPacketType::LevelSetProperty::Music - Malformed packet");
+					return true;
+				}
+				String path{NoInit, pathLength};
+				packet.Read(path.data(), pathLength);
+
+				LOGD("[MP] ServerPacketType::LevelSetProperty::Music - path: \"{}\", flags: {}", path, flags);
+
+				InvokeAsync([this, flags, path = std::move(path)]() {
+					bool setDefault = (flags & 0x01) != 0;
+					bool forceReload = (flags & 0x02) != 0;
+					BeginPlayMusic(path, setDefault, forceReload);
+				});
+				break;
+			}
+			default: {
+				LOGD("[MP] ServerPacketType::LevelSetProperty - Received unknown property {}", (std::uint32_t)propertyType);
+				break;
+			}
+		}
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketShowInGameLobby(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+		std::uint8_t allowedPlayerTypes = packet.ReadValue<std::uint8_t>();
+
+		bool hasWelcomeMessage = (flags & 0x04) != 0;
+		String welcomeMessage;
+		if (hasWelcomeMessage) {
+			std::uint32_t welcomeMessageLength = packet.ReadVariableUint32();
+			if DEATH_UNLIKELY(welcomeMessageLength > 4096) {
+				// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
+				LOGW("[MP] ServerPacketType::ShowInGameLobby - Malformed packet");
+				return true;
+			}
+			welcomeMessage = String(NoInit, welcomeMessageLength);
+			packet.Read(welcomeMessage.data(), welcomeMessageLength);
+		}
+		if (flags & 0x08) {
+			// TODO: Welcome server logo
+			std::uint32_t serverLogoLength = packet.ReadVariableUint32();
+			if DEATH_UNLIKELY(serverLogoLength > 262144) {
+				LOGW("[MP] ServerPacketType::ShowInGameLobby - Malformed packet");
+				return true;
+			}
+			Array<std::uint8_t> serverLogo{NoInit, serverLogoLength};
+			packet.Read(serverLogo.data(), serverLogoLength);
+		}
+
+		LOGD("[MP] ServerPacketType::ShowInGameLobby - flags: 0x{:.2x}, allowedPlayerTypes: 0x{:.2x}, message: \"{}\"",
+			flags, allowedPlayerTypes, welcomeMessage);
+
+		// The welcome message is applied on the main thread too, because the lobby UI reads it there
+		InvokeAsync([this, flags, allowedPlayerTypes, hasWelcomeMessage, welcomeMessage = std::move(welcomeMessage)]() mutable {
+			if (hasWelcomeMessage) {
+				auto& serverConfig = _networkManager->GetServerConfiguration();
+				serverConfig.WelcomeMessage = std::move(welcomeMessage);
+			}
+			if ((flags & 0x01) != 0 && _inGameLobby != nullptr) {
+				_changingCharacterInLobby = false; // Server-driven lobby is the initial join, not a player-initiated change
+				_inGameLobby->SetAllowedPlayerTypes(allowedPlayerTypes);
+				std::uint8_t currentTeam = NoPreferredTeam;
+				if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
+					currentTeam = peerDesc->Team;
+				}
+				_inGameLobby->SetTeamInfo(currentTeam);
+				if (flags & 0x02) {
+					_inGameLobby->Show();
+				} else {
+					_inGameLobby->Hide();
+				}
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketFadeOut(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::int32_t fadeOutDelay = packet.ReadVariableInt32();
+
+		LOGD("[MP] ServerPacketType::FadeOut - delay: {}", fadeOutDelay);
+
+		InvokeAsync([this, fadeOutDelay]() {
+			if (_hud != nullptr) {
+				_hud->BeginFadeOut((float)fadeOutDelay);
+			}
+
+#if defined(WITH_AUDIO)
+			if (_sugarRushMusic != nullptr) {
+				_sugarRushMusic->stop();
+				_sugarRushMusic = nullptr;
+			}
+			if (_music != nullptr) {
+				_music->stop();
+				_music = nullptr;
+			}
+#endif
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlaySfx(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t actorId = packet.ReadVariableUint32();
+		float gain = halfToFloat(packet.ReadValue<std::uint16_t>());
+		float pitch = halfToFloat(packet.ReadValue<std::uint16_t>());
+		std::uint32_t identifierLength = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(identifierLength > 128) {
+			// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
+			LOGW("[MP] ServerPacketType::PlaySfx - Malformed packet");
+			return true;
+		}
+		String identifier = String(NoInit, identifierLength);
+		packet.Read(identifier.data(), identifierLength);
+
+		// TODO: Use only lock here
+		InvokeAsync([this, actorId, gain, pitch, identifier = std::move(identifier)]() {
+			if (_lastSpawnedActorId == actorId) {
+				if (!_players.empty()) {
+					_players[0]->PlaySfx(identifier, gain, pitch);
+				}
+			} else {
+				std::unique_lock lock(_lock);
+				auto it = _remoteActors.find(actorId);
+				if (it != _remoteActors.end()) {
+					// TODO: gain, pitch, ...
+					it->second->PlaySfx(identifier, gain, pitch);
+				}
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlayCommonSfx(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::int32_t posX = packet.ReadVariableInt32();
+		std::int32_t posY = packet.ReadVariableInt32();
+		float gain = halfToFloat(packet.ReadValue<std::uint16_t>());
+		float pitch = halfToFloat(packet.ReadValue<std::uint16_t>());
+		std::uint32_t identifierLength = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(identifierLength > 128) {
+			// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
+			LOGW("[MP] ServerPacketType::PlayCommonSfx - Malformed packet");
+			return true;
+		}
+		String identifier(NoInit, identifierLength);
+		packet.Read(identifier.data(), identifierLength);
+
+		// TODO: Use only lock here
+		InvokeAsync([this, posX, posY, gain, pitch, identifier = std::move(identifier)]() {
+			std::unique_lock lock(_lock);
+			PlayCommonSfx(identifier, Vector3f((float)posX, (float)posY, 0.0f), gain, pitch);
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketShowAlert(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		/*std::uint8_t flags =*/ packet.ReadValue<std::uint8_t>();
+		std::uint32_t textLength = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(textLength > 1024) {
+			// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
+			LOGW("[MP] ServerPacketType::ShowAlert - Malformed packet");
+			return true;
+		}
+		String text = String(NoInit, textLength);
+		packet.Read(text.data(), textLength);
+
+		LOGD("[MP] ServerPacketType::ShowAlert - text: \"{}\"", text);
+
+		InvokeAsync([this, text = std::move(text)]() mutable {
+			if (_hud != nullptr) {
+				_hud->ShowLevelText(text);
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketChatMessage(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		UI::MessageLevel level = (UI::MessageLevel)packet.ReadValue<std::uint8_t>();
+
+		std::uint32_t messageLength = packet.ReadVariableUint32();
+		if (messageLength == 0 || messageLength > 1024) {
+			LOGD("[MP] ServerPacketType::ChatMessage - Length out of bounds ({})", messageLength);
+			return true;
+		}
+
+		String message{NoInit, messageLength};
+		packet.Read(message.data(), messageLength);
+
+		if (level == UI::MessageLevel::Chat && playerIndex == _lastSpawnedActorId) {
+			level = UI::MessageLevel::Echo;
+		}
+
+		InvokeAsync([this, level, message = std::move(message)]() mutable {
+			_console->WriteLine(level, std::move(message));
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketSyncTileMap(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		LOGD("[MP] ServerPacketType::SyncTileMap");
+
+		// The packet buffer is freed once this returns and the tilemap is read by the renderer/simulation on
+		// the main thread, so copy the payload and re-initialize there rather than on the network thread.
+		Array<std::uint8_t> buffer{NoInit, data.size()};
+		if (data.size() > 0) {
+			std::memcpy(buffer.data(), data.data(), data.size());
+		}
+
+		InvokeAsync([this, buffer = std::move(buffer)]() {
+			if (auto* tileMap = TileMap()) {
+				MemoryStream packet(buffer);
+				tileMap->InitializeFromStream(packet);
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketSetTrigger(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint8_t triggerId = packet.ReadValue<std::uint8_t>();
+		bool newState = (bool)packet.ReadValue<std::uint8_t>();
+
+		LOGD("[MP] ServerPacketType::SetTrigger - id: {}, state: {}", triggerId, newState);
+
+		InvokeAsync([this, triggerId, newState]() {
+			TileMap()->SetTrigger(triggerId, newState);
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketAdvanceTileAnimation(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::int32_t tx = packet.ReadVariableInt32();
+		std::int32_t ty = packet.ReadVariableInt32();
+		std::int32_t amount = packet.ReadVariableInt32();
+
+		LOGD("[MP] ServerPacketType::AdvanceTileAnimation - tx: {}, ty: {}, amount: {}", tx, ty, amount);
+
+		InvokeAsync([this, tx, ty, amount]() {
+			TileMap()->AdvanceDestructibleTileAnimation(tx, ty, amount);
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketCreateDebris(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint8_t effect = packet.ReadValue<std::uint8_t>();
+		std::uint32_t actorId = packet.ReadVariableUint32();
+
+		LOGD("[MP] ServerPacketType::CreateDebris - effect: {}, actorId: {}", effect, actorId);
+
+		if (effect == UINT8_MAX) {
+			AnimState state = (AnimState)packet.ReadVariableUint32();
+			std::int32_t count = packet.ReadVariableInt32();
+
+			InvokeAsync([this, actorId, state, count]() {
+				std::unique_lock lock(_lock);
+				auto it = _remoteActors.find(actorId);
+				if DEATH_LIKELY(it != _remoteActors.end()) {
+					it->second->CreateSpriteDebris(state, count);
+				} else {
+					LOGD("[MP] ServerPacketType::CreateDebris - actorId: {} - Actor not found", actorId);
+				}
+			});
+		} else {
+			float x = packet.ReadVariableInt32() * 0.01f;
+			float y = packet.ReadVariableInt32() * 0.01f;
+
+			InvokeAsync([this, actorId, effect, x, y]() {
+				std::unique_lock lock(_lock);
+				auto it = _remoteActors.find(actorId);
+				if DEATH_LIKELY(it != _remoteActors.end()) {
+					it->second->CreateParticleDebrisOnPerish((Actors::ParticleDebrisEffect)effect, Vector2f(x, y));
+				} else {
+					LOGD("[MP] ServerPacketType::CreateDebris - actorId: {} - Actor not found", actorId);
+				}
+			});
+		}
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketCreateControllablePlayer(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		PlayerType playerType = (PlayerType)packet.ReadValue<std::uint8_t>();
+		std::int32_t health = packet.ReadVariableInt32();
+		std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+		std::uint8_t teamId = packet.ReadValue<std::uint8_t>();
+		std::int32_t posX = packet.ReadVariableInt32();
+		std::int32_t posY = packet.ReadVariableInt32();
+		bool hasCarryOver = (packet.ReadValue<std::uint8_t>() != 0);
+		PlayerCarryOver carryOver{};
+		if (hasCarryOver) {
+			carryOver = ReadCarryOver(packet, playerType);
+		}
+
+		LOGI("[MP] ServerPacketType::CreateControllablePlayer - playerIndex: {}, playerType: {}, health: {}, flags: 0x{:.2x}, team: {}, x: {}, y: {}",
+			playerIndex, playerType, health, flags, teamId, posX, posY);
+
+		_lastSpawnedActorId = playerIndex;
+
+		InvokeAsync([this, playerType, health, flags, teamId, posX, posY, hasCarryOver, carryOver]() {
+			auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer);
+			// Stash the carried-over progression (online co-op level change / reconnect) on the descriptor
+			// before activating the player, so MpPlayer::OnActivatedAsync applies it after the base reset
+			// (with coroutines the base activation finishes asynchronously and would otherwise overwrite a
+			// value applied here at the call site). RemotablePlayer clears the flag once it's applied.
+			if (hasCarryOver) {
+				peerDesc->CarryOver = carryOver;
+				peerDesc->HasCarryOver = true;
+			}
+			// Assign the team before activating the player so the spawn-time recolor (GetEffectiveFurColor)
+			// resolves the correct team color when team coloring is enabled
+			peerDesc->Team = teamId;
+
+			std::shared_ptr<Actors::Multiplayer::RemotablePlayer> player = std::make_shared<Actors::Multiplayer::RemotablePlayer>(peerDesc);
+			std::uint8_t playerParams[2] = { (std::uint8_t)playerType, 0 };
+			player->OnActivated(Actors::ActorActivationDetails(
+				this,
+				Vector3i(posX, posY, PlayerZ),
+				playerParams
+			));
+
+			player->SetHealth(health);
+			player->_controllable = (flags & 0x01) != 0;
+			player->_controllableExternal = (flags & 0x02) != 0;
+
+			peerDesc->LapStarted = TimeStamp::now();
+			// Spawning as a real player clears any stale spectate state on the client; a spectate spawn
+			// sends a separate PlayerSetProperty::Spectate right after to set it back
+			if (playerType != PlayerType::Spectate) {
+				peerDesc->IsSpectating = SpectateMode::None;
+			}
+
+			Actors::Multiplayer::RemotablePlayer* ptr = player.get();
+			_players.push_back(ptr);
+			AddActor(player);
+			AssignViewport(ptr);
+			// TODO: Needed to drop and reinitialize newly assigned viewport, because it's called asynchronously, not from handler initialization
+			CommitViewports();
+
+			// TODO: Fade in should be skipped sometimes
+			if ((flags & 0x10) == 0) {
+				_hud->BeginFadeIn(false);
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketCreateRemoteActor(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t actorId = packet.ReadVariableUint32();
+		std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+		std::int32_t posX = packet.ReadVariableInt32();
+		std::int32_t posY = packet.ReadVariableInt32();
+		std::int32_t posZ = packet.ReadVariableInt32();
+		Actors::ActorState state = (Actors::ActorState)packet.ReadVariableUint32();
+		std::uint32_t metadataLength = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(metadataLength > 512) {
+			// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
+			LOGW("[MP] ServerPacketType::CreateRemoteActor - Malformed packet");
+			return true;
+		}
+		String metadataPath = String(NoInit, metadataLength);
+		packet.Read(metadataPath.data(), metadataLength);
+		AnimState anim = (AnimState)packet.ReadVariableUint32();
+		float rotation = packet.ReadValue<std::uint16_t>() * fRadAngle360 / UINT16_MAX;
+		float scaleX = (float)Half{packet.ReadValue<std::uint16_t>()};
+		float scaleY = (float)Half{packet.ReadValue<std::uint16_t>()};
+		Actors::ActorRendererType rendererType = (Actors::ActorRendererType)packet.ReadValue<std::uint8_t>();
+
+		//LOGD("Remote actor {} created on [{};{}] with metadata \"{}\"", actorId, posX, posY, metadataPath);
+		LOGD("[MP] ServerPacketType::CreateRemoteActor - actorId: {}, metadata: \"{}\", x: {}, y: {}", actorId, metadataPath, posX, posY);
+
+		InvokeAsync([this, actorId, flags, posX, posY, posZ, state, metadataPath = std::move(metadataPath), anim, rotation, scaleX, scaleY, rendererType]() {
+			{
+				std::unique_lock lock(_lock);
+				if (_remoteActors.contains(actorId)) {
+					LOGW("[MP] ServerPacketType::CreateRemoteActor - Actor ({}) already exists", actorId);
+					return;
+				}
+			}
+
+			std::shared_ptr<Actors::Multiplayer::RemoteActor> remoteActor = std::make_shared<Actors::Multiplayer::RemoteActor>();
+			remoteActor->OnActivated(Actors::ActorActivationDetails(this, Vector3i(posX, posY, posZ)));
+
+			// If this actor was already marked as a player with a custom color, apply it before assigning
+			// metadata so the sprites load indexed and the palette is set. Team coloring may force a color
+			// even when the player has none of their own.
+			auto pnIt = _playerNames.find(actorId);
+			if (pnIt != _playerNames.end()) {
+				std::uint32_t furColor = ColorizeFurForTeam(pnIt->second.FurColor, pnIt->second.Team);
+				if (furColor != 0) {
+					remoteActor->SetPlayerColor(furColor);
+				}
+			}
+
+			remoteActor->AssignMetadata(flags, state, metadataPath, anim, rotation, scaleX, scaleY, rendererType);
+
+			{
+				std::unique_lock lock(_lock);
+				_remoteActors[actorId] = remoteActor;
+			}
+			AddActor(remoteActor);
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketCreateMirroredActor(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t actorId = packet.ReadVariableUint32();
+		EventType eventType = (EventType)packet.ReadVariableUint32();
+		StaticArray<Events::EventSpawner::SpawnParamsSize, std::uint8_t> eventParams(NoInit);
+		packet.Read(eventParams, Events::EventSpawner::SpawnParamsSize);
+		Actors::ActorState actorFlags = (Actors::ActorState)packet.ReadVariableUint32();
+		std::int32_t tileX = packet.ReadVariableInt32();
+		std::int32_t tileY = packet.ReadVariableInt32();
+		std::int32_t posZ = packet.ReadVariableInt32();
+
+		LOGD("[MP] ServerPacketType::CreateMirroredActor - actorId: {}, event: {}, x: {}, y: {}", actorId, eventType, tileX * 32 + 16, tileY * 32 + 16);
+
+		InvokeAsync([this, actorId, eventType, eventParams = std::move(eventParams), actorFlags, tileX, tileY, posZ]() {
+			{
+				std::unique_lock lock(_lock);
+				if (_remoteActors.contains(actorId)) {
+					LOGW("[MP] ServerPacketType::CreateMirroredActor - Actor ({}) already exists", actorId);
+					return;
+				}
+			}
+			
+			// TODO: Remove const_cast
+			std::shared_ptr<Actors::ActorBase> actor =_eventSpawner.SpawnEvent(eventType, const_cast<std::uint8_t*>(eventParams.data()), actorFlags, tileX, tileY, posZ);
+			if DEATH_LIKELY(actor != nullptr) {
+				{
+					std::unique_lock lock(_lock);
+					_remoteActors[actorId] = actor;
+				}
+				AddActor(actor);
+			} else {
+				LOGD("[MP] ServerPacketType::CreateMirroredActor - actorId: {} - Failed to create", actorId);
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketDestroyRemoteActor(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t actorId = packet.ReadVariableUint32();
+
+		LOGD("[MP] ServerPacketType::DestroyRemoteActor - actorId: {}", actorId);
+
+		InvokeAsync([this, actorId]() {
+			std::unique_lock lock(_lock);
+			if DEATH_UNLIKELY(actorId == _lastSpawnedActorId) {
+				// Server requested to despawn controllable player
+				if (!_players.empty()) {
+					auto* player = _players[0];
+					player->SetState(Actors::ActorState::IsDestroyed, true);
+					_players.eraseUnordered(0);
+
+					UnassignViewport(player);
+					CommitViewports();
+				}
+				return;
+			}
+
+			auto it = _remoteActors.find(actorId);
+			if DEATH_LIKELY(it != _remoteActors.end()) {
+				// If the local player was standing on this actor, stop carrying it before it's gone
+				if (!_players.empty()) {
+					_players[0]->CancelCarryingObject(it->second.get());
+				}
+				it->second->SetState(Actors::ActorState::IsDestroyed, true);
+				_remoteActors.erase(it);
+				_playerNames.erase(actorId);
+			} else {
+				LOGW("[MP] ServerPacketType::DestroyRemoteActor - actorId: {} - Actor not found", actorId);
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketUpdateAllActors(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packetCompressed(data);
+		DeflateStream packet(packetCompressed);
+		std::uint32_t now = packet.ReadVariableUint32();
+		float elapsedFrames = (float)packet.ReadVariableUint64();
+		std::uint32_t actorCount = packet.ReadVariableUint32();
+
+		bool forceResyncInvoked = (actorCount & 1) == 1;
+		if DEATH_UNLIKELY(!forceResyncInvoked && _lastUpdated >= now) {
+			return true;
+		}
+
+		bool forceResyncRequired = (!forceResyncInvoked && _lastUpdated + 1 < now);
+		if (forceResyncRequired) {
+			LOGD("[MP] ServerPacketType::UpdateAllActors - Force re-sync required ({} -> {})", _lastUpdated, now);
+		} else if (forceResyncInvoked) {
+			LOGD("[MP] ServerPacketType::UpdateAllActors - Force re-sync invoked ({} -> {})", _lastUpdated, now);
+		}
+
+		std::unique_lock lock(_lock);
+
+		_lastUpdated = now;
+		_elapsedFrames = lerp(_elapsedFrames, elapsedFrames + _networkManager->GetRoundTripTimeMs() * FrameTimer::FramesPerSecond * 0.002f, 0.05f);
+
+		actorCount >>= 1;
+
+		for (std::uint32_t i = 0; i < actorCount; i++) {
+			std::uint32_t actorId = packet.ReadVariableUint32();
+			std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+
+			bool positionChanged = (flags & 0x01) != 0;
+			bool animationChanged = (flags & 0x02) != 0;
+
+			float posX, posY, rotation, scaleX, scaleY;
+			AnimState anim; Actors::ActorRendererType rendererType;
+
+			if (positionChanged) {
+				posX = packet.ReadValue<std::int32_t>() / 512.0f;
+				posY = packet.ReadValue<std::int32_t>() / 512.0f;
+			} else {
+				posX = 0.0f;
+				posY = 0.0f;
+			}
+
+			if (animationChanged) {
+				anim = (AnimState)packet.ReadVariableUint32();
+				rotation = packet.ReadValue<std::uint16_t>() * fRadAngle360 / UINT16_MAX;
+				scaleX = (float)Half{packet.ReadValue<std::uint16_t>()};
+				scaleY = (float)Half{packet.ReadValue<std::uint16_t>()};
+				rendererType = (Actors::ActorRendererType)packet.ReadValue<std::uint8_t>();
+			} else {
+				anim = AnimState::Idle;
+				rotation = 0.0f;
+				scaleX = 0.0f;
+				scaleY = 0.0f;
+				rendererType = Actors::ActorRendererType::Default;
+			}
+
+			auto it = _remoteActors.find(actorId);
+			if (it != _remoteActors.end()) {
+				if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(it->second.get())) {
+					if (positionChanged) {
+						remoteActor->SyncPositionWithServer(Vector2f(posX, posY));
+					}
+					if (animationChanged) {
+						remoteActor->SyncAnimationWithServer(anim, rotation, scaleX, scaleY, rendererType);
+					}
+					remoteActor->SyncMiscWithServer(flags);
+				}
+			}
+		}
+
+		if (forceResyncRequired) {
+			_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::ForceResyncActors, {});
+		}
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketChangeRemoteActorMetadata(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t actorId = packet.ReadVariableUint32();
+		std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+		std::uint32_t metadataLength = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(metadataLength > 512) {
+			// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
+			LOGW("[MP] ServerPacketType::ChangeRemoteActorMetadata - Malformed packet");
+			return true;
+		}
+		String metadataPath = String(NoInit, metadataLength);
+		packet.Read(metadataPath.data(), metadataLength);
+
+		LOGD("[MP] ServerPacketType::ChangeRemoteActorMetadata - id: {}, metadata: \"{}\"", actorId, metadataPath);
+
+		InvokeAsync([this, actorId, metadataPath = std::move(metadataPath)]() mutable {
+			std::unique_lock lock(_lock);
+			auto it = _remoteActors.find(actorId);
+			if DEATH_LIKELY(it != _remoteActors.end()) {
+				if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(it->second.get())) {
+					remoteActor->ChangeMetadata(metadataPath);
+				}
+			}
+		});
+		return true;
+		return false;
+	}
+
+	bool MpLevelHandler::HandleServerPacketMarkRemoteActorAsPlayer(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t actorId = packet.ReadVariableUint32();
+		std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+		std::uint32_t playerNameLength = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(playerNameLength > 256) {
+			// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
+			LOGW("[MP] ServerPacketType::MarkRemoteActorAsPlayer - Malformed packet");
+			return true;
+		}
+		String playerName = String(NoInit, playerNameLength);
+		packet.Read(playerName.data(), playerNameLength);
+
+		// Per-player recolor is only present when the HasFurColor flag is set (the idle-state broadcast
+		// reuses this packet type with no color); the team is present when the HasTeam flag is set
+		bool hasFurColor = (flags & 0x02) != 0;
+		std::uint32_t furColor = (hasFurColor ? packet.ReadValueAsLE<std::uint32_t>() : 0);
+		bool hasTeam = (flags & 0x04) != 0;
+		std::uint8_t team = (hasTeam ? packet.ReadValue<std::uint8_t>() : 0);
+
+		LOGD("[MP] ServerPacketType::MarkRemoteActorAsPlayer - actorId: {}, flags: 0x{:.2x}, name: \"{}\"", actorId, flags, playerName);
+
+		InvokeAsync([this, actorId, flags, hasFurColor, furColor, hasTeam, team, playerName = std::move(playerName)]() mutable {
+			if (actorId == _lastSpawnedActorId) {
+				if (!playerName.empty()) {
+					// Player name is optional, so only set it if it's not empty
+					if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
+						peerDesc->PlayerName = std::move(playerName);
+					}
+				}
+				if (hasTeam) {
+					if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
+						peerDesc->Team = team;
+					}
+				}
+			} else {
+				auto it = _playerNames.try_emplace(actorId, PlayerName{});
+				if (!playerName.empty()) {
+					// Player name is optional, so only set it if it's not empty
+					it.first->second.Name = std::move(playerName);
+				}
+				it.first->second.Flags = flags;
+				if (hasTeam) {
+					it.first->second.Team = team;
+				}
+				if (hasFurColor) {
+					it.first->second.FurColor = furColor;
+				}
+
+				if (hasFurColor || hasTeam) {
+					// (Re)apply the effective color if the actor already exists (otherwise CreateRemoteActor
+					// picks it up from _playerNames). Team coloring can force a color even when the player
+					// has none of their own, so this runs whenever the color or team is known.
+					RecolorRemoteActor(actorId, it.first->second.FurColor, it.first->second.Team);
+				}
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketUpdatePositionsInRound(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t count = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(count > 1024) {
+			// Refuse an implausible (attacker-controlled) count before allocating a buffer for it
+			LOGW("[MP] ServerPacketType::UpdatePositionsInRound - Malformed packet");
+			return true;
+		}
+		SmallVector<PlayerPositionInRound, 0> positions;
+		positions.resize_for_overwrite(count);
+		for (std::uint32_t i = 0; i < count; i++) {
+			std::uint32_t playerIdx = packet.ReadVariableUint32();
+			std::uint32_t positionInRound = packet.ReadVariableUint32();
+			std::uint32_t pointsInRound = packet.ReadVariableUint32();
+			positions[i] = { playerIdx, positionInRound, pointsInRound };
+		}
+		// Applied on the main thread, because the HUD iterates the list there
+		InvokeAsync([this, positions = std::move(positions)]() mutable {
+			_positionsInRound = std::move(positions);
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketSyncRaceCheckpoints(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		Vector2i boundsMin, boundsMax;
+		boundsMin.X = packet.ReadVariableInt32();
+		boundsMin.Y = packet.ReadVariableInt32();
+		boundsMax.X = packet.ReadVariableInt32();
+		boundsMax.Y = packet.ReadVariableInt32();
+		std::uint32_t count = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(count > 8192) {
+			// Refuse an implausible (attacker-controlled) count before allocating a buffer for it
+			LOGW("[MP] ServerPacketType::SyncRaceCheckpoints - Malformed packet");
+			return true;
+		}
+		SmallVector<RaceCheckpoint, 0> checkpoints;
+		checkpoints.resize_for_overwrite(count);
+		for (std::uint32_t i = 0; i < count; i++) {
+			std::int32_t x = packet.ReadVariableInt32();
+			std::int32_t y = packet.ReadVariableInt32();
+			std::uint16_t order = (std::uint16_t)packet.ReadVariableUint32();
+			std::uint8_t group = packet.ReadValue<std::uint8_t>();
+			checkpoints[i] = { Vector2i(x, y), order, group };
+		}
+		std::uint32_t markerCount = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(markerCount > 1024) {
+			LOGW("[MP] ServerPacketType::SyncRaceCheckpoints - Malformed packet");
+			return true;
+		}
+		SmallVector<Vector2i, 0> markers;
+		markers.resize_for_overwrite(markerCount);
+		for (std::uint32_t i = 0; i < markerCount; i++) {
+			std::int32_t x = packet.ReadVariableInt32();
+			std::int32_t y = packet.ReadVariableInt32();
+			markers[i] = Vector2i(x, y);
+		}
+		// Applied on the main thread, because the minimap iterates these lists there
+		InvokeAsync([this, boundsMin, boundsMax, checkpoints = std::move(checkpoints), markers = std::move(markers)]() mutable {
+			_raceBoundsMin = boundsMin;
+			_raceBoundsMax = boundsMax;
+			_orderedRaceCheckpoints = std::move(checkpoints);
+			_raceStartMarkers = std::move(markers);
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketSyncTeamScores(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint8_t teamCount = packet.ReadValue<std::uint8_t>();
+		SmallVector<std::uint32_t, 0> teamScores;
+		teamScores.resize_for_overwrite(teamCount);
+		for (std::uint8_t i = 0; i < teamCount; i++) {
+			teamScores[i] = packet.ReadVariableUint32();
+		}
+		bool isCtf = (packet.ReadValue<std::uint8_t>() != 0);
+		SmallVector<CtfClientFlag, 0> flags;
+		if (isCtf) {
+			flags.resize(teamCount);
+			for (std::uint8_t i = 0; i < teamCount; i++) {
+				flags[i].State = packet.ReadValue<std::uint8_t>();
+				flags[i].BasePos.X = (float)packet.ReadVariableInt32();
+				flags[i].BasePos.Y = (float)packet.ReadVariableInt32();
+				flags[i].DropPos.X = (float)packet.ReadVariableInt32();
+				flags[i].DropPos.Y = (float)packet.ReadVariableInt32();
+				flags[i].CarrierActorId = packet.ReadVariableUint32();
+			}
+		}
+		// Applied on the main thread - UpdateCtfClient() iterates _ctfFlagStates and owns the visual actors there
+		InvokeAsync([this, isCtf, teamScores = std::move(teamScores), flags = std::move(flags)]() mutable {
+			_teamScores = std::move(teamScores);
+			if (isCtf) {
+				// Update state/positions in place, preserving the client-local visual actor pointers
+				if (_ctfFlagStates.size() != flags.size()) {
+					// Team count changed - drop any stale local actors and resize
+					for (auto& info : _ctfFlagStates) {
+						if (info.FlagActor != nullptr) info.FlagActor->SetState(Actors::ActorState::IsDestroyed, true);
+						if (info.BaseActor != nullptr) info.BaseActor->SetState(Actors::ActorState::IsDestroyed, true);
+					}
+					_ctfFlagStates.clear();
+					_ctfFlagStates.resize(flags.size());
+				}
+				for (std::size_t i = 0; i < flags.size(); i++) {
+					_ctfFlagStates[i].State = flags[i].State;
+					_ctfFlagStates[i].BasePos = flags[i].BasePos;
+					_ctfFlagStates[i].DropPos = flags[i].DropPos;
+					_ctfFlagStates[i].CarrierActorId = flags[i].CarrierActorId;
+				}
+			} else {
+				for (auto& info : _ctfFlagStates) {
+					if (info.FlagActor != nullptr) info.FlagActor->SetState(Actors::ActorState::IsDestroyed, true);
+					if (info.BaseActor != nullptr) info.BaseActor->SetState(Actors::ActorState::IsDestroyed, true);
+				}
+				_ctfFlagStates.clear();
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketSyncScoreboard(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t count = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(count > 1024) {
+			// Refuse an implausible (attacker-controlled) count before allocating a buffer for it
+			LOGW("[MP] ServerPacketType::SyncScoreboard - Malformed packet");
+			return true;
+		}
+		SmallVector<PlayerScore, 0> scoreboard;
+		SmallVector<std::uint32_t, 0> actorIds;
+		scoreboard.reserve(count);
+		actorIds.reserve(count);
+		for (std::uint32_t i = 0; i < count; i++) {
+			std::uint32_t actorId = packet.ReadVariableUint32();
+			PlayerScore score;
+			score.Team = packet.ReadValue<std::uint8_t>();
+			score.Kills = packet.ReadVariableUint32();
+			score.Deaths = packet.ReadVariableUint32();
+			score.Points = packet.ReadVariableUint32();
+			score.Extra = packet.ReadVariableUint32();
+			score.PingMs = packet.ReadVariableInt32();
+			std::uint32_t nameLength = packet.ReadVariableUint32();
+			if DEATH_UNLIKELY(nameLength > 1024) {
+				LOGW("[MP] ServerPacketType::SyncScoreboard - Malformed packet");
+				return true;
+			}
+			score.Name = String(NoInit, nameLength);
+			packet.Read(score.Name.data(), nameLength);
+			score.IsLocal = false;
+			actorIds.push_back(actorId);
+			scoreboard.push_back(std::move(score));
+		}
+
+		// IsLocal, sorting and the swap happen on the main thread (_lastSpawnedActorId and _scoreboard are owned there)
+		InvokeAsync([this, scoreboard = std::move(scoreboard), actorIds = std::move(actorIds)]() mutable {
+			for (std::size_t i = 0; i < scoreboard.size(); i++) {
+				scoreboard[i].IsLocal = (actorIds[i] == _lastSpawnedActorId);
+			}
+			nCine::sort(scoreboard.begin(), scoreboard.end(), [](const PlayerScore& a, const PlayerScore& b) {
+				return (a.Points != b.Points ? a.Points > b.Points : a.Kills > b.Kills);
+			});
+			_scoreboard = std::move(scoreboard);
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlayerSetProperty(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		PlayerPropertyType propertyType = (PlayerPropertyType)packet.ReadValue<std::uint8_t>();
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+
+		// Team is tracked for every player (not just the local one) so the HUD/nametags can color them
+		if (propertyType == PlayerPropertyType::Team) {
+			std::uint8_t team = packet.ReadValue<std::uint8_t>();
+			InvokeAsync([this, playerIndex, team]() {
+				if (playerIndex == _lastSpawnedActorId) {
+					if (auto peerDesc = _networkManager->GetPeerDescriptor(LocalPeer)) {
+						peerDesc->Team = team;
+					}
+					// Recolor the local player: with team coloring on, GetEffectiveFurColor now resolves
+					// the new team (no-op otherwise)
+					if (!_players.empty()) {
+						_players[0]->RefreshColorPalette();
+					}
+				} else {
+					auto it = _playerNames.try_emplace(playerIndex, PlayerName{});
+					it.first->second.Team = team;
+					// Recolor the matching remote actor for its new team
+					RecolorRemoteActor(playerIndex, it.first->second.FurColor, team);
+				}
+			});
+			return true;
+		}
+
+		// Shield drives a visible decoration for every player, so it is applied to the local player or
+		// to the matching RemoteActor; the server broadcasts it to all peers, not just the owner.
+		if (propertyType == PlayerPropertyType::Shield) {
+			ShieldType shieldType = (ShieldType)packet.ReadValue<std::uint8_t>();
+			std::int32_t timeLeft = packet.ReadVariableInt32();
+
+			LOGD("[MP] ServerPacketType::PlayerSetProperty::Shield - playerIndex: {}, shieldType: {}, timeLeft: {}", playerIndex, shieldType, timeLeft);
+
+			InvokeAsync([this, playerIndex, shieldType, timeLeft]() {
+				if (playerIndex == _lastSpawnedActorId) {
+					if (!_players.empty()) {
+						_players[0]->SetShield(shieldType, float(timeLeft));
+					}
+				} else {
+					std::unique_lock lock(_lock);
+					auto it = _remoteActors.find(playerIndex);
+					if (it != _remoteActors.end()) {
+						if (auto* remoteActor = runtime_cast<Actors::Multiplayer::RemoteActor>(it->second.get())) {
+							remoteActor->SetShield(shieldType, float(timeLeft));
+						}
+					}
+				}
+			});
+			return true;
+		}
+
+		if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
+			LOGD("[MP] ServerPacketType::PlayerSetProperty - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+			return true;
+		}
+
+		switch (propertyType) {
+			case PlayerPropertyType::PlayerType: {
+				PlayerType type = (PlayerType)packet.ReadValue<std::uint8_t>();
+				InvokeAsync([this, type]() {
+					if (!_players.empty()) {
+						_players[0]->MorphTo(type);
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::Lives: {
+				std::int32_t lives = packet.ReadVariableInt32();
+				InvokeAsync([this, lives]() {
+					if (!_players.empty()) {
+						_players[0]->_lives = lives;
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::Health: {
+				std::int32_t health = packet.ReadVariableInt32();
+				InvokeAsync([this, health]() {
+					if (!_players.empty()) {
+						_players[0]->SetHealth(health);
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::Controllable: {
+				std::uint8_t enable = packet.ReadValue<std::uint8_t>();
+				InvokeAsync([this, enable]() {
+					if (!_players.empty()) {
+						_players[0]->_controllableExternal = (enable != 0);
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::Invulnerable: {
+				std::int32_t timeLeft = packet.ReadVariableInt32();
+				Actors::Player::InvulnerableType type = (Actors::Player::InvulnerableType)packet.ReadValue<std::uint8_t>();
+				InvokeAsync([this, timeLeft, type]() {
+					if (!_players.empty()) {
+						_players[0]->SetInvulnerability(float(timeLeft), type);
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::Modifier: {
+				Actors::Player::Modifier modifier = (Actors::Player::Modifier)packet.ReadValue<std::uint8_t>();
+				std::uint32_t decorActorId = packet.ReadVariableUint32();
+				InvokeAsync([this, modifier, decorActorId]() {
+					std::unique_lock lock(_lock);
+					if (!_players.empty()) {
+						auto it = _remoteActors.find(decorActorId);
+						_players[0]->SetModifier(modifier, it != _remoteActors.end() ? it->second : nullptr);
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::Dizzy: {
+				std::int32_t timeLeft = packet.ReadVariableInt32();
+				InvokeAsync([this, timeLeft]() {
+					if (!_players.empty()) {
+						_players[0]->SetDizzy(float(timeLeft));
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::BeingStoodOn: {
+				bool beingStoodOn = (packet.ReadValue<std::uint8_t>() != 0);
+				InvokeAsync([this, beingStoodOn]() {
+					if (!_players.empty()) {
+						// Our own player is predicted locally, so it can't detect a remote player standing on
+						// it - the server tells us, and PushSolidObjects leaves this flag alone on a client
+						_players[0]->_beingStoodOn = beingStoodOn;
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::Freeze: {
+				std::int32_t timeLeft = packet.ReadVariableInt32();
+				InvokeAsync([this, timeLeft]() {
+					if (!_players.empty()) {
+						_players[0]->Freeze(float(timeLeft));
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::LimitCameraView: {
+				std::int32_t left = packet.ReadVariableInt32();
+				std::int32_t width = packet.ReadVariableInt32();
+				std::int32_t playerPosX = packet.ReadVariableInt32();
+				std::int32_t playerPosY = packet.ReadVariableInt32();
+
+				LOGD("[MP] ServerPacketType::PlayerSetProperty::LimitCameraView - left: {}, width: {}, playerPos: [{}, {}]", left, width, playerPosX, playerPosY);
+
+				InvokeAsync([this, left, width, playerPosX, playerPosY]() {
+					LimitCameraView(nullptr, Vector2f(playerPosX, playerPosY), left, width);
+				});
+				break;
+			}
+			case PlayerPropertyType::OverrideCameraView: {
+				float x = packet.ReadVariableInt32() * 0.01f;
+				float y = packet.ReadVariableInt32() * 0.01f;
+				bool topLeft = packet.ReadValue<std::uint8_t>() != 0;
+
+				LOGD("[MP] ServerPacketType::PlayerSetProperty::OverrideCameraView - x: {}, y: {}, topLeft: {}", x, y, topLeft);
+
+				InvokeAsync([this, x, y, topLeft]() {
+					if (!_players.empty()) {
+						OverrideCameraView(_players[0], x, y, topLeft);
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::ShakeCameraView: {
+				float duration = packet.ReadVariableInt32() * 0.01f;
+
+				LOGD("[MP] ServerPacketType::PlayerSetProperty::ShakeCameraView - duration: {}", duration);
+
+				InvokeAsync([this, duration]() {
+					if (!_players.empty()) {
+						ShakeCameraView(_players[0], duration);
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::Spectate: {
+				SpectateMode spectateMode = (SpectateMode)packet.ReadValue<std::uint8_t>();
+
+				LOGD("[MP] ServerPacketType::PlayerSetProperty::Spectate - mode: 0x{:.2x}", spectateMode);
+
+				InvokeAsync([this, spectateMode]() {
+					if (!_players.empty()) {
+						auto* player = static_cast<RemotablePlayer*>(_players[0]);
+						player->GetPeerDescriptor()->IsSpectating = spectateMode;
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::WeaponAmmo: {
+				std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
+				std::uint16_t weaponAmmo = packet.ReadValue<std::uint16_t>();
+				InvokeAsync([this, weaponType, weaponAmmo]() {
+					if (!_players.empty() && weaponType < arraySize(_players[0]->_inventory.WeaponAmmo)) {
+						_players[0]->_inventory.WeaponAmmo[weaponType] = weaponAmmo;
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::WeaponUpgrades: {
+				std::uint8_t weaponType = packet.ReadValue<std::uint8_t>();
+				std::uint8_t weaponUpgrades = packet.ReadValue<std::uint8_t>();
+				InvokeAsync([this, weaponType, weaponUpgrades]() {
+					if (!_players.empty() && weaponType < arraySize(_players[0]->_inventory.WeaponUpgrades)) {
+						_players[0]->_inventory.WeaponUpgrades[weaponType] = weaponUpgrades;
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::Coins: {
+				std::int32_t newCount = packet.ReadVariableInt32();
+				InvokeAsync([this, newCount]() {
+					if (!_players.empty()) {
+						_players[0]->_inventory.Coins = newCount;
+						_hud->ShowCoins(newCount);
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::Gems: {
+				std::uint8_t gemType = packet.ReadValue<std::uint8_t>();
+				std::int32_t newCount = packet.ReadVariableInt32();
+				InvokeAsync([this, gemType, newCount]() {
+					if (!_players.empty() && gemType < arraySize(_players[0]->_inventory.Gems)) {
+						_players[0]->_inventory.Gems[gemType] = newCount;
+						_hud->ShowGems(gemType, newCount);
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::Score: {
+				std::int32_t score = packet.ReadVariableInt32();
+				InvokeAsync([this, score]() {
+					if (!_players.empty()) {
+						_players[0]->_score = score;
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::Points: {
+				std::uint32_t points = packet.ReadVariableUint32();
+				std::uint32_t totalPoints = packet.ReadVariableUint32();
+
+				InvokeAsync([this, points, totalPoints]() {
+					if (!_players.empty()) {
+						auto* player = static_cast<RemotablePlayer*>(_players[0]);
+						player->GetPeerDescriptor()->Points = points;
+					}
+
+					auto& serverConfig = _networkManager->GetServerConfiguration();
+					serverConfig.TotalPlayerPoints = totalPoints;
+				});
+				break;
+			}
+			/*case PlayerPropertyType::PositionInRound: {
+				std::uint32_t positionInRound = packet.ReadVariableUint32();
+				if (!_players.empty()) {
+					auto* player = static_cast<RemotablePlayer*>(_players[0]);
+					player->GetPeerDescriptor()->PositionInRound = positionInRound;
+				}
+				break;
+			}*/
+			case PlayerPropertyType::Deaths: {
+				std::uint32_t deaths = packet.ReadVariableUint32();
+				InvokeAsync([this, deaths]() {
+					if (!_players.empty()) {
+						auto* player = static_cast<RemotablePlayer*>(_players[0]);
+						player->GetPeerDescriptor()->Deaths = deaths;
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::Kills: {
+				std::uint32_t kills = packet.ReadVariableUint32();
+				InvokeAsync([this, kills]() {
+					if (!_players.empty()) {
+						auto* player = static_cast<RemotablePlayer*>(_players[0]);
+						player->GetPeerDescriptor()->Kills = kills;
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::Laps: {
+				std::uint32_t currentLaps = packet.ReadVariableUint32();
+				//std::uint32_t totalLaps = packet.ReadVariableUint32();
+				InvokeAsync([this, currentLaps]() {
+					if (!_players.empty()) {
+						auto* player = static_cast<RemotablePlayer*>(_players[0]);
+						auto peerDesc = player->GetPeerDescriptor();
+						peerDesc->Laps = currentLaps;
+						peerDesc->LapStarted = TimeStamp::now();
+					}
+				});
+				break;
+			}
+			case PlayerPropertyType::TreasureCollected: {
+				std::uint32_t treasureCollected = packet.ReadVariableUint32();
+				InvokeAsync([this, treasureCollected]() {
+					if (!_players.empty()) {
+						auto* player = static_cast<RemotablePlayer*>(_players[0]);
+						player->GetPeerDescriptor()->TreasureCollected = treasureCollected;
+					}
+				});
+				break;
+			}
+			default: {
+				LOGD("[MP] ServerPacketType::PlayerSetProperty - Received unknown property {}", propertyType);
+				break;
+			}
+		}
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlayerResetProperties(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		if (_lastSpawnedActorId != playerIndex) {
+			LOGD("[MP] ServerPacketType::PlayerSetProperty - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+			return true;
+		}
+
+		if (!_players.empty()) {
+			auto* player = static_cast<RemotablePlayer*>(_players[0]);
+			auto peerDesc = player->GetPeerDescriptor();
+			peerDesc->PositionInRound = 0;
+			peerDesc->Deaths = 0;
+			peerDesc->Kills = 0;
+			peerDesc->Laps = 0;
+			peerDesc->LapStarted = TimeStamp::now();
+			peerDesc->TreasureCollected = 0;
+			peerDesc->DeathElapsedFrames = FLT_MAX;
+
+			player->_inventory.Coins = 0;
+			std::memset(player->_inventory.Gems, 0, sizeof(player->_inventory.Gems));
+			std::memset(player->_inventory.WeaponAmmo, 0, sizeof(player->_inventory.WeaponAmmo));
+			std::memset(player->_inventoryCheckpoint.WeaponAmmo, 0, sizeof(player->_inventoryCheckpoint.WeaponAmmo));
+
+			player->_inventoryCheckpoint.Coins = 0;
+			std::memset(player->_inventoryCheckpoint.Gems, 0, sizeof(player->_inventoryCheckpoint.Gems));
+			std::memset(player->_inventory.WeaponUpgrades, 0, sizeof(player->_inventory.WeaponUpgrades));
+			std::memset(player->_inventoryCheckpoint.WeaponUpgrades, 0, sizeof(player->_inventoryCheckpoint.WeaponUpgrades));
+
+			player->_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+			player->_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+			player->_currentWeapon = WeaponType::Blaster;
+		}
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlayerRespawn(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
+			LOGD("[MP] ServerPacketType::PlayerRespawn - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+			return true;
+		}
+
+		float posX = packet.ReadValue<std::int32_t>() / 512.0f;
+		float posY = packet.ReadValue<std::int32_t>() / 512.0f;
+		LOGD("[MP] ServerPacketType::PlayerRespawn - playerIndex: {}, x: {}, y: {}", playerIndex, posX, posY);
+
+		InvokeAsync([this, posX, posY]() {
+			if (!_players.empty()) {
+				auto* player = _players[0];
+				if (!player->Respawn(Vector2f(posX, posY))) {
+					return;
+				}
+
+				Clock& c = nCine::clock();
+				std::uint64_t now = c.now() * 1000 / c.frequency();
+
+				MemoryStream packetAck(24);
+				packetAck.WriteVariableUint32(_lastSpawnedActorId);
+				packetAck.WriteVariableUint64(now);
+				packetAck.WriteValue<std::int32_t>((std::int32_t)(player->_pos.X * 512.0f));
+				packetAck.WriteValue<std::int32_t>((std::int32_t)(player->_pos.Y * 512.0f));
+				packetAck.WriteValue<std::int16_t>((std::int16_t)(player->_speed.X * 512.0f));
+				packetAck.WriteValue<std::int16_t>((std::int16_t)(player->_speed.Y * 512.0f));
+				_networkManager->SendTo(AllPeers, NetworkChannel::Main, (std::uint8_t)ClientPacketType::PlayerAckWarped, packetAck);
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlayerMoveInstantly(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		if (_lastSpawnedActorId != playerIndex) {
+			return true;
+		}
+
+		float posX = packet.ReadValue<std::int32_t>() / 512.0f;
+		float posY = packet.ReadValue<std::int32_t>() / 512.0f;
+		float speedX = packet.ReadValue<std::int16_t>() / 512.0f;
+		float speedY = packet.ReadValue<std::int16_t>() / 512.0f;
+		float externalForceX = packet.ReadValue<std::int16_t>() / 512.0f;
+		float externalForceY = packet.ReadValue<std::int16_t>() / 512.0f;
+
+		LOGD("[MP] ServerPacketType::PlayerMoveInstantly - playerIndex: {}, x: {}, y: {}, sx: {}, sy: {}",
+			playerIndex, posX, posY, speedX, speedY);
+
+		InvokeAsync([this, posX, posY, speedX, speedY, externalForceX, externalForceY]() {
+			if (!_players.empty()) {
+				auto* player = static_cast<RemotablePlayer*>(_players[0]);
+				player->MoveRemotely(Vector2f(posX, posY), Vector2f(speedX, speedY), Vector2f(externalForceX, externalForceY));
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlayerAckWarped(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		std::uint64_t seqNum = packet.ReadVariableUint64();
+
+		LOGD("[MP] ServerPacketType::PlayerAckWarped - playerIndex: {}, seqNum: {}", playerIndex, seqNum);
+
+		if (_lastSpawnedActorId == playerIndex && _seqNumWarped == seqNum) {
+			_seqNumWarped = 0;
+		}
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlayerEmitWeaponFlare(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
+			LOGD("[MP] ServerPacketType::PlayerEmitWeaponFlare - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+			return true;
+		}
+
+		LOGD("[MP] ServerPacketType::PlayerEmitWeaponFlare - playerIndex: {}", playerIndex);
+
+		InvokeAsync([this]() {
+			if (!_players.empty()) {
+				_players[0]->EmitWeaponFlare();
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlayerChangeWeapon(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
+			LOGD("[MP] ServerPacketType::PlayerChangeWeapon - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+			return true;
+		}
+
+		WeaponType weaponType = (WeaponType)packet.ReadValue<std::uint8_t>();
+		Actors::Player::SetCurrentWeaponReason reason = (Actors::Player::SetCurrentWeaponReason)packet.ReadValue<std::uint8_t>();
+
+		LOGD("[MP] ServerPacketType::PlayerChangeWeapon - playerIndex: {}, weaponType: {}, reason: {}", playerIndex, weaponType, reason);
+
+		if (!_players.empty()) {
+			auto* remotablePlayer = static_cast<Actors::Multiplayer::RemotablePlayer*>(_players[0]);
+
+			if (reason == Actors::Player::SetCurrentWeaponReason::AddAmmo && !PreferencesCache::SwitchToNewWeapon) {
+				HandlePlayerWeaponChanged(remotablePlayer, Actors::Player::SetCurrentWeaponReason::Rollback);
+				return true;
+			}
+			
+			remotablePlayer->ChangingWeaponFromServer = true;
+			static_cast<Actors::Player*>(remotablePlayer)->SetCurrentWeapon(weaponType, reason);
+			remotablePlayer->ChangingWeaponFromServer = false;
+		}
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlayerTakeDamage(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
+			LOGD("[MP] ServerPacketType::PlayerTakeDamage - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+			return true;
+		}
+
+		std::int32_t health = packet.ReadVariableInt32();
+		float pushForce = packet.ReadValue<std::int16_t>() / 512.0f;
+
+		LOGD("[MP] ServerPacketType::PlayerTakeDamage - playerIndex: {}, health: {}, pushForce: {}", playerIndex, health, pushForce);
+
+		InvokeAsync([this, health, pushForce]() {
+			if (!_players.empty()) {
+				_players[0]->TakeDamage(health == 0 ? INT32_MAX : (_players[0]->_health - health), pushForce, true);
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlayerPush(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
+			LOGD("[MP] ServerPacketType::PlayerPush - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+			return true;
+		}
+
+		float pushSpeedX = packet.ReadValue<std::int32_t>() / 512.0f;
+		InvokeAsync([this, pushSpeedX]() {
+			if (!_players.empty()) {
+				// TODO: Remove timeMult and make push speed consistent regardless of time multiplier
+				float timeMult = theApplication().GetTimeMult();
+				_players[0]->OnPushSolidObject(timeMult, pushSpeedX);
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlayerActivateSpring(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
+			LOGD("[MP] ServerPacketType::PlayerActivateSpring - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+			return true;
+		}
+
+		float posX = packet.ReadValue<std::int32_t>() / 512.0f;
+		float posY = packet.ReadValue<std::int32_t>() / 512.0f;
+		float forceX = packet.ReadValue<std::int16_t>() / 512.0f;
+		float forceY = packet.ReadValue<std::int16_t>() / 512.0f;
+		std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+		InvokeAsync([this, posX, posY, forceX, forceY, flags]() {
+			if (!_players.empty()) {
+				bool removeSpecialMove = false;
+				_players[0]->OnHitSpring(Vector2f(posX, posY), Vector2f(forceX, forceY), (flags & 0x01) == 0x01, (flags & 0x02) == 0x02, removeSpecialMove);
+				if (removeSpecialMove) {
+					_players[0]->_controllable = true;
+					_players[0]->EndDamagingMove();
+				}
+			}
+		});
+		return true;
+	}
+
+	bool MpLevelHandler::HandleServerPacketPlayerWarpIn(const Peer& peer, ArrayView<const std::uint8_t> data)
+	{
+		MemoryStream packet(data);
+		std::uint32_t playerIndex = packet.ReadVariableUint32();
+		if DEATH_UNLIKELY(_lastSpawnedActorId != playerIndex) {
+			LOGD("[MP] ServerPacketType::PlayerWarpIn - Received playerIndex {} instead of {}", playerIndex, _lastSpawnedActorId);
+			return true;
+		}
+
+		ExitType exitType = (ExitType)packet.ReadValue<std::uint8_t>();
+		LOGD("[MP] ServerPacketType::PlayerWarpIn - playerIndex: {}, exitType: 0x{:.2x}", playerIndex, exitType);
+
+		InvokeAsync([this, exitType]() {
+			if (!_players.empty()) {
+				auto* player = static_cast<RemotablePlayer*>(_players[0]);
+				player->WarpIn(exitType);
+			}
+		});
+		return true;
 	}
 
 	String MpLevelHandler::GetAssetFullPath(AssetType type, StringView path, StaticArrayView<Uuid::Size, Uuid::Type> remoteServerId, bool forWrite)
@@ -6211,7 +6362,7 @@ namespace Jazz2::Multiplayer
 				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::WeaponAmmo);
 				packet.WriteVariableUint32(mpPlayer->_playerIndex);
 				packet.WriteValue<std::uint8_t>((std::uint8_t)weaponType);
-				packet.WriteValue<std::uint16_t>((std::uint16_t)mpPlayer->_weaponAmmo[(std::uint8_t)weaponType]);
+				packet.WriteValue<std::uint16_t>((std::uint16_t)mpPlayer->_inventory.WeaponAmmo[(std::uint8_t)weaponType]);
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 			}
 		}
@@ -6229,7 +6380,7 @@ namespace Jazz2::Multiplayer
 				packet.WriteValue<std::uint8_t>((std::uint8_t)PlayerPropertyType::WeaponUpgrades);
 				packet.WriteVariableUint32(player->_playerIndex);
 				packet.WriteValue<std::uint8_t>((std::uint8_t)weaponType);
-				packet.WriteValue<std::uint8_t>((std::uint8_t)player->_weaponUpgrades[(std::uint8_t)weaponType]);
+				packet.WriteValue<std::uint8_t>((std::uint8_t)player->_inventory.WeaponUpgrades[(std::uint8_t)weaponType]);
 				_networkManager->SendTo(peerDesc->RemotePeer, NetworkChannel::Main, (std::uint8_t)ServerPacketType::PlayerSetProperty, packet);
 			}
 		}
@@ -7777,18 +7928,18 @@ namespace Jazz2::Multiplayer
 			peerDesc->DeathElapsedFrames = FLT_MAX;
 
 			if (peerDesc->Player) {
-				peerDesc->Player->_coins = 0;
-				std::memset(peerDesc->Player->_gems, 0, sizeof(peerDesc->Player->_gems));
-				std::memset(peerDesc->Player->_weaponAmmo, 0, sizeof(peerDesc->Player->_weaponAmmo));
-				std::memset(peerDesc->Player->_weaponAmmoCheckpoint, 0, sizeof(peerDesc->Player->_weaponAmmoCheckpoint));
+				peerDesc->Player->_inventory.Coins = 0;
+				std::memset(peerDesc->Player->_inventory.Gems, 0, sizeof(peerDesc->Player->_inventory.Gems));
+				std::memset(peerDesc->Player->_inventory.WeaponAmmo, 0, sizeof(peerDesc->Player->_inventory.WeaponAmmo));
+				std::memset(peerDesc->Player->_inventoryCheckpoint.WeaponAmmo, 0, sizeof(peerDesc->Player->_inventoryCheckpoint.WeaponAmmo));
 
-				peerDesc->Player->_coinsCheckpoint = 0;
-				std::memset(peerDesc->Player->_gemsCheckpoint, 0, sizeof(peerDesc->Player->_gemsCheckpoint));
-				std::memset(peerDesc->Player->_weaponUpgrades, 0, sizeof(peerDesc->Player->_weaponUpgrades));
-				std::memset(peerDesc->Player->_weaponUpgradesCheckpoint, 0, sizeof(peerDesc->Player->_weaponUpgradesCheckpoint));
+				peerDesc->Player->_inventoryCheckpoint.Coins = 0;
+				std::memset(peerDesc->Player->_inventoryCheckpoint.Gems, 0, sizeof(peerDesc->Player->_inventoryCheckpoint.Gems));
+				std::memset(peerDesc->Player->_inventory.WeaponUpgrades, 0, sizeof(peerDesc->Player->_inventory.WeaponUpgrades));
+				std::memset(peerDesc->Player->_inventoryCheckpoint.WeaponUpgrades, 0, sizeof(peerDesc->Player->_inventoryCheckpoint.WeaponUpgrades));
 
-				peerDesc->Player->_weaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
-				peerDesc->Player->_weaponAmmoCheckpoint[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+				peerDesc->Player->_inventory.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
+				peerDesc->Player->_inventoryCheckpoint.WeaponAmmo[(std::int32_t)WeaponType::Blaster] = UINT16_MAX;
 				peerDesc->Player->_currentWeapon = WeaponType::Blaster;
 				peerDesc->Player->_health = (serverConfig.InitialPlayerHealth > 0
 					? serverConfig.InitialPlayerHealth
@@ -8006,840 +8157,8 @@ namespace Jazz2::Multiplayer
 
 	void MpLevelHandler::GenerateRaceCheckpointsFromGeometry()
 	{
-		// Heuristic auto-placement for original race levels that don't carry JJ2+ waypoint Text events.
-		// We trace the actual walkable route the player would take: from a spawn point, out to the farthest
-		// reachable point (the far side of the loop), and back to the "Set Lap" warp via the opposite arm of
-		// the track. Checkpoints are then sampled evenly along that route, so the minimap reflects the real
-		// level geometry and starts at the spawn / ends at the Set Lap warp.
-		Vector2i gridSize = _tileMap->GetSize();
-		const std::int32_t W = gridSize.X, H = gridSize.Y;
-		if (W <= 0 || H <= 0) {
-			return;
-		}
-
-		Vector2f spawnPos;
-		if (!_multiplayerSpawnPoints.empty()) {
-			// Multiple spawn points are usually clustered around the start line; aggregate the ones near each
-			// other (within ~20 tiles of the first) into a single start point
-			const float clusterRange = 20.0f * Tiles::TileSet::DefaultTileSize;
-			Vector2f base = _multiplayerSpawnPoints[0].Pos;
-			Vector2f sum(0.0f, 0.0f);
-			std::int32_t clustered = 0;
-			for (const auto& sp : _multiplayerSpawnPoints) {
-				if ((sp.Pos - base).Length() <= clusterRange) {
-					sum += sp.Pos;
-					clustered++;
-				}
-			}
-			spawnPos = (clustered > 0 ? sum / (float)clustered : base);
-			LOGI("Auto-placing race checkpoints: aggregated {} of {} spawn point(s)", clustered, (std::int32_t)_multiplayerSpawnPoints.size());
-		} else {
-			spawnPos = _eventMap->GetSpawnPosition(PlayerType::Jazz);
-		}
-		if (spawnPos.X < 0.0f || spawnPos.Y < 0.0f) {
-			LOGW("Cannot auto-place race checkpoints: no valid spawn position");
-			return;
-		}
-
-		// Movement model: the player can stand on solid ground or special surfaces (bridges/platforms), walk, fall,
-		// jump a limited height/gap (without passing through solid tiles), ascend through float-up/vine/pole areas
-		// and launch high off springs - but cannot fly. This keeps the traced route on the real player path.
-		const std::int32_t totalTiles = W * H;
-
-		// A tile is passable if it's empty, destructible (player breaks it) or a one-way platform (passable from
-		// below). Trigger-controlled tiles are treated as PASSABLE (their open state): a trigger crate toggles such
-		// tiles - typically solid-by-default tiles that become invisible once triggered to open the way forward - so
-		// assuming they're open lets the route pass through the path the crate reveals.
-		auto isFree = [this](std::int32_t tx, std::int32_t ty) -> bool {
-			if (_tileMap->IsTileTrigger(tx, ty)) {
-				return true;
-			}
-			return _tileMap->IsTileEmpty(tx, ty) || _tileMap->IsTileDestructible(tx, ty) || _tileMap->IsTileOneWay(tx, ty);
-		};
-		auto isOneWay = [this, W, H](std::int32_t tx, std::int32_t ty) -> bool {
-			return (tx >= 0 && ty >= 0 && tx < W && ty < H && _tileMap->IsTileOneWay(tx, ty));
-		};
-
-		// Scan events for movement aids: springs (launch), lifts (ascend through float-up/vine/pole/hook) and
-		// surfaces (bridges/moving platforms the player stands on over a gap)
-		std::unique_ptr<std::uint8_t[]> springMap = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
-		std::unique_ptr<std::uint8_t[]> springBoost = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
-		std::unique_ptr<std::uint8_t[]> liftMap = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
-		std::unique_ptr<std::uint8_t[]> surfaceMap = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
-		std::unique_ptr<std::uint8_t[]> tubeMap = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
-		// Warps that teleport the player to another section (so the route can continue from the destination). The
-		// "Set Lap" warp (EventParams[2] != 0) is the lap finish and is handled separately, so it's excluded here.
-		// Warp targets live in a separate EventMap list (not the event layout), so they're resolved via GetWarpTarget().
-		SmallVector<Pair<Vector2i, std::uint32_t>, 0> warpOrigins;
-		// Level-exit events (end-of-level area / sign): the finish when there's no "Set Lap" warp, mirroring how
-		// Race mode itself falls back to level exits for lap completion
-		SmallVector<Vector2i, 0> exitMarkers;
-		_eventMap->ForEachEvent([this, &springMap, &springBoost, &liftMap, &surfaceMap, &tubeMap, &warpOrigins, &exitMarkers, &isFree, W, H](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
-			if (x < 0 || y < 0 || x >= W || y >= H) {
-				return true;
-			}
-			switch (e.Event) {
-				case EventType::Spring: {
-					// Orientation: 0 = vertical up, 2 = vertical down (ceiling), 4/5 = horizontal. Mark 1 for
-					// "launch up", 2 for "launch sideways"; down springs don't help the player ascend, so ignore them.
-					std::uint8_t orientation = e.EventParams[1];
-					if (orientation == 4 || orientation == 5) {
-						springMap[x + y * W] = 2;
-					} else if (orientation == 0) {
-						springMap[x + y * W] = 1;
-						// Per-type lift height: red 9, green 15, blue 19 tiles (+1 for the landing)
-						std::uint8_t type = e.EventParams[0];
-						springBoost[x + y * W] = (std::uint8_t)((type == 0 ? 9 : type == 2 ? 19 : 15) + 1);
-					}
-					break;
-				}
-				case EventType::AreaFloatUp:
-				case EventType::ModifierVine:
-				case EventType::SwingingVine:
-				case EventType::ModifierHook:
-					// Gentle lift: float-up area / vine / hook - the player climbs and does a normal jump off
-					liftMap[x + y * W] = 1;
-					break;
-				case EventType::PinballBumper:
-				case EventType::PinballPaddle:
-					// Pinball bumpers/paddles fling the player upward; model them as a moderate vertical spring
-					springMap[x + y * W] = 1;
-					springBoost[x + y * W] = 12;
-					break;
-				case EventType::Crate:
-				case EventType::Barrel: {
-					// A crate/barrel may contain a spring (CRATE_SPRING etc.) - the player breaks it and rides the
-					// spring, so treat the tile as that spring. Params[0..1] = contained event type; the contained
-					// event's own params follow at [3..], so [3] = spring type, [4] = orientation (as in Spring).
-					std::uint16_t contained = (std::uint16_t)(e.EventParams[0] | (e.EventParams[1] << 8));
-					if (contained == (std::uint16_t)EventType::Spring) {
-						std::uint8_t orientation = e.EventParams[4];
-						if (orientation == 4 || orientation == 5) {
-							springMap[x + y * W] = 2;
-						} else if (orientation == 0) {
-							springMap[x + y * W] = 1;
-							std::uint8_t type = e.EventParams[3];
-							springBoost[x + y * W] = (std::uint8_t)((type == 0 ? 9 : type == 2 ? 19 : 15) + 1);
-						}
-					}
-					break;
-				}
-				case EventType::ModifierVPole:
-				case EventType::Pole:
-					// Spinning pole: flings the player upward with amplified momentum (chains higher and higher),
-					// often arranged in an offset zigzag - mark as a strong launcher with a long jump-off reach
-					liftMap[x + y * W] = 2;
-					break;
-				case EventType::ModifierTube:
-					// Tubes transport the player through (often narrow/diagonal) passages regardless of geometry
-					tubeMap[x + y * W] = 1;
-					break;
-				case EventType::WarpOrigin:
-					if (e.EventParams[2] == 0) {
-						warpOrigins.push_back(pair(Vector2i(x, y), (std::uint32_t)e.EventParams[0]));
-					}
-					break;
-				case EventType::AreaEndOfLevel:
-				case EventType::SignEOL:
-					// Skip secret exits (encoded as ExitType::Special) - they lead to a secret level, not the finish
-					if (e.EventParams[0] != (std::uint8_t)ExitType::Special) {
-						exitMarkers.push_back(Vector2i(x, y));
-					}
-					break;
-				case EventType::Bridge: {
-					// A bridge is a walkable surface extending to the right of the event tile (one extra tile past
-					// each end for the actor's ~half-tile overhang). Mark only its EMPTY tiles: the span may overlap
-					// solid anchor tiles, which ground the player on their own - flagging those as "bridge surface"
-					// would wrongly suppress the downward jump on solid ground (see the jump loop below).
-					std::int32_t widthTiles = ((e.EventParams[0] | (e.EventParams[1] << 8)) * 16) / Tiles::TileSet::DefaultTileSize;
-					for (std::int32_t i = -1; i <= widthTiles + 1; i++) {
-						if (x + i >= 0 && x + i < W && _tileMap->IsTileEmpty(x + i, y)) {
-							surfaceMap[(x + i) + y * W] = 1;
-						}
-					}
-					break;
-				}
-				case EventType::MovingPlatform: {
-					// A moving platform's anchor (the event tile) usually sits inside a wall; the platform sweeps a
-					// circle of radius (length * 12px) around it. Mark the free tiles within that radius as a lift
-					// zone (+ surface) so the tracer can board the platform anywhere along its path and ride up.
-					std::int32_t radius = (e.EventParams[3] * 12 + Tiles::TileSet::DefaultTileSize - 1) / Tiles::TileSet::DefaultTileSize;
-					if (radius < 1) {
-						radius = 1;
-					}
-					for (std::int32_t dy = -radius; dy <= radius; dy++) {
-						for (std::int32_t dx = -radius; dx <= radius; dx++) {
-							if (dx * dx + dy * dy > radius * radius) {
-								continue;
-							}
-							std::int32_t nx = x + dx, ny = y + dy;
-							if (nx >= 0 && ny >= 0 && nx < W && ny < H && isFree(nx, ny)) {
-								liftMap[nx + ny * W] = 1;
-								surfaceMap[nx + ny * W] = 1;
-							}
-						}
-					}
-					break;
-				}
-				default:
-					break;
-			}
-			return true;
-		});
-		auto springAt = [&springMap, W, H](std::int32_t tx, std::int32_t ty) -> std::uint8_t {
-			return (tx >= 0 && ty >= 0 && tx < W && ty < H ? springMap[tx + ty * W] : 0);
-		};
-		auto springBoostAt = [&springBoost, W, H](std::int32_t tx, std::int32_t ty) -> std::int32_t {
-			return (tx >= 0 && ty >= 0 && tx < W && ty < H ? springBoost[tx + ty * W] : 0);
-		};
-		auto isLift = [&liftMap, W, H](std::int32_t tx, std::int32_t ty) -> bool {
-			return (tx >= 0 && ty >= 0 && tx < W && ty < H && liftMap[tx + ty * W] != 0);
-		};
-		auto isPole = [&liftMap, W, H](std::int32_t tx, std::int32_t ty) -> bool {
-			return (tx >= 0 && ty >= 0 && tx < W && ty < H && liftMap[tx + ty * W] == 2);
-		};
-		auto onSurface = [&surfaceMap, W, H](std::int32_t tx, std::int32_t ty) -> bool {
-			return (tx >= 0 && ty >= 0 && tx < W && ty < H && surfaceMap[tx + ty * W] != 0);
-		};
-		auto isTube = [&tubeMap, W, H](std::int32_t tx, std::int32_t ty) -> bool {
-			return (tx >= 0 && ty >= 0 && tx < W && ty < H && tubeMap[tx + ty * W] != 0);
-		};
-
-		// A tile the player can occupy - a single free tile is enough (the player can crawl through 1-tile gaps);
-		// tube tiles count too, even if their terrain is solid, since the tube transports the player through them.
-		// Lift tiles (vine/pole/hook/float-up) are occupiable even when their tile graphic has a solid mask - the
-		// player grabs and climbs them, so they must not read as a ceiling that blocks the upward boost.
-		auto occupiable = [&isFree, &isTube, &isLift, W, H](std::int32_t tx, std::int32_t ty) -> bool {
-			return (tx >= 0 && ty >= 0 && tx < W && ty < H && (isFree(tx, ty) || isTube(tx, ty) || isLift(tx, ty)));
-		};
-		// The player stands here if there's a solid tile/level floor, a one-way platform or a bridge/platform below,
-		// or a spring at its feet/below (springs are actors on otherwise-empty tiles, but the player rests on them)
-		auto hasGround = [&isFree, &isOneWay, &onSurface, &springAt, H](std::int32_t tx, std::int32_t ty) -> bool {
-			return (ty + 1 >= H) || !isFree(tx, ty + 1) || isOneWay(tx, ty + 1) || onSurface(tx, ty) || onSurface(tx, ty + 1)
-				|| springAt(tx, ty) != 0 || springAt(tx, ty + 1) != 0;
-		};
-		// Snaps a tile to the nearest occupiable tile within a small radius (or {-1,-1} if none found)
-		auto findSeed = [&occupiable](Vector2i t) -> Vector2i {
-			if (occupiable(t.X, t.Y)) {
-				return t;
-			}
-			for (std::int32_t r = 1; r <= 6; r++) {
-				for (std::int32_t dy = -r; dy <= r; dy++) {
-					for (std::int32_t dx = -r; dx <= r; dx++) {
-						if (occupiable(t.X + dx, t.Y + dy)) {
-							return Vector2i(t.X + dx, t.Y + dy);
-						}
-					}
-				}
-			}
-			return Vector2i(-1, -1);
-		};
-
-		Vector2i spawnTile = findSeed(Vector2i((std::int32_t)(spawnPos.X / Tiles::TileSet::DefaultTileSize), (std::int32_t)(spawnPos.Y / Tiles::TileSet::DefaultTileSize)));
-		if (spawnTile.X < 0) {
-			LOGW("Cannot auto-place race checkpoints: spawn area is not walkable");
-			return;
-		}
-
-		// Resolve each warp origin to a standable destination tile (matched by warp ID), so the BFS can teleport.
-		// GetWarpTarget() returns the destination in world (pixel) coordinates, or (-1,-1) if the ID is unknown.
-		constexpr std::int32_t WarpTS = (std::int32_t)Tiles::TileSet::DefaultTileSize;
-		HashMap<Vector2i, Vector2i, TileCoordHash> warpJump;
-		for (const auto& origin : warpOrigins) {
-			Vector2f targetWorld = _eventMap->GetWarpTarget(origin.second());
-			if (targetWorld.X >= 0.0f && targetWorld.Y >= 0.0f) {
-				Vector2i dest = findSeed(Vector2i((std::int32_t)(targetWorld.X / WarpTS), (std::int32_t)(targetWorld.Y / WarpTS)));
-				if (dest.X >= 0) {
-					warpJump[origin.first()] = dest;
-				}
-			}
-		}
-
-		// Jump / boost envelope (in tiles)
-		constexpr std::int32_t JumpHeight = 7;		// How high the player can jump straight up
-		constexpr std::int32_t JumpReachX = 10;		// Horizontal reach of a (running) jump - clears fairly wide gaps
-		constexpr std::int32_t JumpDropY = 6;		// How far below the player can land when jumping across a gap
-		constexpr std::int32_t BoostHeight = 64;	// Max tiles a spring/float-up can carry the player up a clear column
-		constexpr std::int32_t BoostReachX = 3;		// Sideways reach when stepping off a vertical boost
-		constexpr std::int32_t HSpringReachX = 16;	// Horizontal reach of a running jump off a spring (clears wide pits)
-		constexpr std::int32_t PoleReachY = 8;		// How far a spinning pole carries the player to the next pole (kept modest so it doesn't vault whole sections)
-
-		// Finds a clear arc for a jump from (sx,sy) to (sx+dx,sy+dy) - rise in the start column, travel across at
-		// the apex, then descend to the landing - without passing through solid tiles, trying higher apexes up to
-		// maxUp to clear taller obstacles. Returns the apex row, or INT32_MAX if no clear arc exists.
-		auto jumpApex = [&isFree, &isOneWay](std::int32_t sx, std::int32_t sy, std::int32_t dx, std::int32_t dy, std::int32_t maxUp) -> std::int32_t {
-			std::int32_t ex = sx + dx, ey = sy + dy;
-			std::int32_t x0 = (sx < ex ? sx : ex), x1 = (sx < ex ? ex : sx);
-			std::int32_t apexStart = (sy < ey ? sy : ey);
-			for (std::int32_t apexY = apexStart; apexY >= sy - maxUp; apexY--) {
-				bool ok = true;
-				for (std::int32_t yy = sy - 1; yy >= apexY; yy--) {
-					if (!isFree(sx, yy)) { ok = false; break; }
-				}
-				if (!ok) {
-					break; // ceiling above the start: a higher apex is impossible too
-				}
-				for (std::int32_t xx = x0; xx <= x1; xx++) {
-					if (!isFree(xx, apexY)) { ok = false; break; }
-				}
-				if (!ok) {
-					continue; // wall at this height; try a higher apex
-				}
-				// Descending toward the landing: a one-way platform is solid from above, so the arc can't drop
-				// down through it (the rise phase above may still pass up through one-way platforms)
-				for (std::int32_t yy = apexY + 1; yy <= ey; yy++) {
-					if (!isFree(ex, yy) || isOneWay(ex, yy)) { ok = false; break; }
-				}
-				if (ok) {
-					return apexY;
-				}
-			}
-			return INT32_MAX;
-		};
-		auto jumpClear = [&jumpApex](std::int32_t sx, std::int32_t sy, std::int32_t dx, std::int32_t dy, std::int32_t maxUp) -> bool {
-			return jumpApex(sx, sy, dx, dy, maxUp) != INT32_MAX;
-		};
-
-		// Gravity-aware breadth-first search recording predecessors, so a route can be reconstructed.
-		// 'blocked' optionally forbids tiles (used to force the second pass around the other arm of the loop).
-		// 'useWarps' toggles warp teleport edges: enabled for reachability, disabled when tracing a route so it
-		// follows the geometry (e.g., climbs poles) rather than teleporting past it.
-		auto runBfs = [&](Vector2i start, const std::uint8_t* blocked, std::int32_t* parent, std::int32_t* dist, Vector2i& farTile, std::int32_t& visitedCount, bool useWarps) {
-			std::queue<Vector2i> q;
-			std::int32_t startIdx = start.X + start.Y * W;
-			dist[startIdx] = 0;
-			farTile = start;
-			std::int32_t farDist = 0;
-			visitedCount = 0;
-			q.push(start);
-
-			auto tryAdd = [&](std::int32_t tx, std::int32_t ty, std::int32_t fromDist, std::int32_t fromIdx) {
-				if (!occupiable(tx, ty)) {
-					return;
-				}
-				std::int32_t ni = tx + ty * W;
-				if (dist[ni] >= 0 || (blocked != nullptr && blocked[ni] != 0)) {
-					return;
-				}
-				dist[ni] = fromDist + 1;
-				parent[ni] = fromIdx;
-				q.push(Vector2i(tx, ty));
-			};
-
-			// Adds a tile without the occupiable check (the caller verified it can be entered, e.g., a slope tile
-			// reached diagonally through its empty corner)
-			auto tryAddRaw = [&](std::int32_t tx, std::int32_t ty, std::int32_t fromDist, std::int32_t fromIdx) {
-				if (tx < 0 || ty < 0 || tx >= W || ty >= H) {
-					return;
-				}
-				std::int32_t ni = tx + ty * W;
-				if (dist[ni] >= 0 || (blocked != nullptr && blocked[ni] != 0)) {
-					return;
-				}
-				dist[ni] = fromDist + 1;
-				parent[ni] = fromIdx;
-				q.push(Vector2i(tx, ty));
-			};
-
-			while (!q.empty()) {
-				Vector2i c = q.front(); q.pop();
-				visitedCount++;
-				std::int32_t ci = c.X + c.Y * W;
-				std::int32_t cd = dist[ci];
-
-				// A node sitting inside a partially-solid tile (a slope or a thin solid band, reached via the diagonal
-				// step) rests on that tile's solid part - treat it as grounded so the tracer doesn't fall straight
-				// through it (fixes the player dropping through a middle-solid tile after a tube ends). Destructible
-				// tiles are excluded: the player breaks through them (e.g., buttstomps down), so they must not read as
-				// standable ground - !isFree(c) is true only for genuine solid terrain (slopes/bands), not breakables.
-				bool grounded = hasGround(c.X, c.Y) || (_tileMap->IsTilePartiallySolid(c.X, c.Y) && !isFree(c.X, c.Y));
-				bool lift = isLift(c.X, c.Y);
-				bool tube = isTube(c.X, c.Y);
-				// A spinning pole flings the player in the direction of entry momentum (see Player::NextPoleStage):
-				// up if they rose into it, down if they descended into it (or entered from the side, where gravity
-				// dominates). Approximate the entry direction from how the BFS arrived, so a pole on a downward
-				// section doesn't launch the route up and over it.
-				bool poleHere = isPole(c.X, c.Y);
-				bool poleUp = poleHere && (parent[ci] >= 0 && (parent[ci] / W) > c.Y);
-				bool poleDown = poleHere && !poleUp;
-
-				// Only consider real footing (not transient air tiles above a spring/jump) as the farthest point
-				if (cd > farDist && (grounded || lift || tube)) {
-					farDist = cd;
-					farTile = c;
-				}
-
-				if (tube) {
-					// Inside a tube the player is transported freely through the connected passage (any direction,
-					// ignoring gravity and tight geometry)
-					tryAdd(c.X - 1, c.Y, cd, ci);
-					tryAdd(c.X + 1, c.Y, cd, ci);
-					tryAdd(c.X, c.Y - 1, cd, ci);
-					tryAdd(c.X, c.Y + 1, cd, ci);
-				}
-
-				// A warp teleports the player to its destination; continue tracing the route from there
-				if (useWarps) {
-					auto warp = warpJump.find(c);
-					if (warp != warpJump.end()) {
-						tryAddRaw(warp->second.X, warp->second.Y, cd, ci);
-					}
-				}
-
-				std::uint8_t springHere = (springAt(c.X, c.Y) != 0 ? springAt(c.X, c.Y) : springAt(c.X, c.Y + 1));
-				// Springs and vines/hooks/float-up always carry upward; a pole only when the player rose into it
-				bool boostUp = springHere == 1 || (lift && !poleHere) || poleUp;
-
-				if (boostUp) {
-					// Vertical springs launch the player a fixed height (per spring type); float-up/vine/pole areas
-					// carry the player up the whole clear column. Ride upward (bounded by that cap or a ceiling) and
-					// step off onto any ledge within reach along the way.
-					// Poles only carry a modest distance (they don't lift the player the whole shaft like a float-up
-					// area or vine), so cap them low; springs use their per-type height, vines/float-up the full column
-					std::int32_t cap = poleHere ? PoleReachY : (lift ? BoostHeight : springBoostAt(c.X, c.Y));
-					if (cap == 0) {
-						cap = springBoostAt(c.X, c.Y + 1);
-					}
-					if (cap <= 0 || cap > BoostHeight) {
-						cap = BoostHeight;
-					}
-					for (std::int32_t k = 1; k <= cap; k++) {
-						std::int32_t ty = c.Y - k;
-						if (!occupiable(c.X, ty)) {
-							break; // ceiling
-						}
-						tryAdd(c.X, ty, cd, ci);
-						for (std::int32_t dir = -1; dir <= 1; dir += 2) {
-							for (std::int32_t s = 1; s <= BoostReachX; s++) {
-								std::int32_t sx = c.X + dir * s;
-								if (!occupiable(sx, ty)) {
-									break; // wall blocks stepping further sideways at this height
-								}
-								if (hasGround(sx, ty) || isLift(sx, ty)) {
-									tryAdd(sx, ty, cd, ci);
-								}
-							}
-						}
-					}
-				}
-
-				if (poleDown && !isOneWay(c.X, c.Y + 1)) {
-					// Flung downward: descend the pole's column (then keeps falling below it via the airborne logic);
-					// never drop down through a one-way platform (solid from above)
-					tryAdd(c.X, c.Y + 1, cd, ci);
-				}
-
-				if (lift) {
-					// On a vine/pole the player can also move sideways
-					tryAdd(c.X - 1, c.Y, cd, ci);
-					tryAdd(c.X + 1, c.Y, cd, ci);
-				}
-
-				// A jump-off arc: from a spring (long arc, height by type), or off a vine/pole (a normal jump - the
-				// player can climb then leap to a forward ledge). jumpClear picks a feasible apex under any ceiling,
-				// so the player arcs forward instead of going straight up into it.
-				if ((grounded && (springHere == 1 || springHere == 2)) || (lift && !poleDown)) {
-					std::int32_t sMaxUp;
-					std::int32_t maxDx;
-					if (springHere == 1) {
-						std::int32_t sc = springBoostAt(c.X, c.Y);
-						if (sc == 0) {
-							sc = springBoostAt(c.X, c.Y + 1);
-						}
-						sMaxUp = (sc > 0 ? sc : JumpHeight);
-						maxDx = HSpringReachX;
-					} else if (springHere == 2) {
-						sMaxUp = JumpHeight;
-						maxDx = HSpringReachX;
-					} else if (poleHere) {
-						// Spinning pole (entered ascending): carries the player a modest distance up to the next
-						// pole/ledge - kept conservative so it doesn't vault over whole sections
-						sMaxUp = PoleReachY;
-						maxDx = JumpReachX;
-					} else {
-						// Vine/hook/float-up: a normal jump off it
-						sMaxUp = JumpHeight;
-						maxDx = JumpReachX;
-					}
-					for (std::int32_t dx = -maxDx; dx <= maxDx; dx++) {
-						if (dx == 0) {
-							continue; // straight up is already covered by the column boost
-						}
-						// The spring/climb provides the height and running provides the horizontal distance
-						// independently, so a wide gap can still end on a higher ledge; jumpClear validates the arc.
-						for (std::int32_t dy = -sMaxUp; dy <= JumpDropY; dy++) {
-							std::int32_t tx = c.X + dx, ty = c.Y + dy;
-							if ((hasGround(tx, ty) || isLift(tx, ty)) && occupiable(tx, ty) && jumpClear(c.X, c.Y, dx, dy, sMaxUp)) {
-								tryAdd(tx, ty, cd, ci);
-							}
-						}
-					}
-				}
-
-				if (!grounded && !lift && !tube) {
-					// Airborne: fall, drifting horizontally as it descends - but never INTO a one-way platform (those
-					// are solid from above; the player may only pass UP through them), and never upward
-					if (!isOneWay(c.X, c.Y + 1)) {
-						tryAdd(c.X, c.Y + 1, cd, ci);
-					}
-					if (!isOneWay(c.X - 1, c.Y + 1)) {
-						tryAdd(c.X - 1, c.Y + 1, cd, ci);
-					}
-					if (!isOneWay(c.X + 1, c.Y + 1)) {
-						tryAdd(c.X + 1, c.Y + 1, cd, ci);
-					}
-					if (isFree(c.X - 1, c.Y + 1) && !isOneWay(c.X - 2, c.Y + 1)) {
-						tryAdd(c.X - 2, c.Y + 1, cd, ci);
-					}
-					if (isFree(c.X + 1, c.Y + 1) && !isOneWay(c.X + 2, c.Y + 1)) {
-						tryAdd(c.X + 2, c.Y + 1, cd, ci);
-					}
-				} else if (grounded) {
-					// On a bridge/platform surface the player is held up over empty space and must WALK across it -
-					// they can't descend off it (down a slope at its end, or by jumping/falling through it). Once on
-					// solid ground past the bridge, descending is allowed again.
-					bool onBridgeSurface = onSurface(c.X, c.Y) || onSurface(c.X, c.Y + 1);
-
-					// Walk to either side (stepping off a ledge then falls via gravity)
-					tryAdd(c.X - 1, c.Y, cd, ci);
-					tryAdd(c.X + 1, c.Y, cd, ci);
-
-					// Step one tile diagonally to follow a slope or squeeze through a tight 1-tile diagonal corridor.
-					// Only when the straight-sideways tile is blocked (otherwise walk/jump/fall already handle it -
-					// and this stops the tracer from dropping diagonally off an open ledge or bridge). 45-degree
-					// slope tiles read as "solid" on the grid, so a partially-solid tile is enterable - but ONLY when
-					// it's a genuine triangular slope: the corner facing the player is clear AND the diagonally
-					// opposite corner is solid. A thin diagonal line or a middle-solid band has both corners clear,
-					// so this check refuses to step into (and through) it.
-					for (std::int32_t dir = -1; dir <= 1; dir += 2) {
-						if (occupiable(c.X + dir, c.Y)) {
-							continue;
-						}
-						std::int32_t cornerX = (dir < 0 ? 1 : -1); // destination corner facing the player
-						std::int32_t ux = c.X + dir, uy = c.Y - 1;
-						bool upSlope = !occupiable(ux, uy) && _tileMap->IsTileCornerEmpty(ux, uy, cornerX, 1)
-							&& !_tileMap->IsTileCornerEmpty(ux, uy, -cornerX, -1);
-						if ((occupiable(ux, uy) && (hasGround(ux, uy) || isLift(ux, uy))) || upSlope) {
-							tryAddRaw(ux, uy, cd, ci);
-						}
-						// Descend diagonally ONLY into a genuine slope tile. Dropping into an open tile past a solid
-						// side would clip the solid corner - that's what made the tracer fall off the end of a bridge
-						// past its solid anchor instead of stepping up onto it (the diagonal-up branch above handles
-						// that). A normal walk + gravity covers stepping down onto a lower ledge with an open side.
-						std::int32_t dxt = c.X + dir, dyt = c.Y + 1;
-						bool downSlope = !occupiable(dxt, dyt) && _tileMap->IsTileCornerEmpty(dxt, dyt, cornerX, -1)
-							&& !_tileMap->IsTileCornerEmpty(dxt, dyt, -cornerX, 1);
-						if (downSlope && !isOneWay(dxt, dyt) && !onBridgeSurface) {
-							tryAddRaw(dxt, dyt, cd, ci);
-						}
-					}
-
-					// Jump onto reachable ledges, surfaces or movement aids within the envelope, only when the arc
-					// is clear of solids. When standing on a bridge/platform surface (which holds the player up over
-					// empty space), DON'T allow a downward jump: jumpClear sees the empty space below the surface as
-					// "clear" and would otherwise let the tracer drop straight down THROUGH the bridge it's crossing.
-					// The player must walk across; once on solid ground past it they can descend normally.
-					std::int32_t maxDrop = (onBridgeSurface ? 0 : JumpDropY);
-					for (std::int32_t dx = -JumpReachX; dx <= JumpReachX; dx++) {
-						std::int32_t adx = (dx < 0 ? -dx : dx);
-						std::int32_t up = JumpHeight - adx;
-						if (up < 0) {
-							up = 0;
-						}
-						for (std::int32_t dy = -up; dy <= maxDrop; dy++) {
-							if (dx == 0 && dy == 0) {
-								continue;
-							}
-							std::int32_t tx = c.X + dx, ty = c.Y + dy;
-							if ((hasGround(tx, ty) || isLift(tx, ty)) && occupiable(tx, ty) && jumpClear(c.X, c.Y, dx, dy, JumpHeight)) {
-								tryAdd(tx, ty, cd, ci);
-							}
-						}
-					}
-				}
-			}
-		};
-
-		auto reconstruct = [&](const std::int32_t* parent, std::int32_t fromIdx, std::int32_t toIdx, SmallVector<Vector2i, 0>& out) {
-			SmallVector<Vector2i, 0> rev;
-			std::int32_t cur = toIdx;
-			while (cur >= 0) {
-				rev.push_back(Vector2i(cur % W, cur / W));
-				if (cur == fromIdx) {
-					break;
-				}
-				cur = parent[cur];
-			}
-			for (std::int32_t i = (std::int32_t)rev.size() - 1; i >= 0; i--) {
-				out.push_back(rev[i]);
-			}
-		};
-
-		// First pass: spawn -> everything; find the farthest reachable tile (far side of the loop)
-		std::unique_ptr<std::int32_t[]> parent = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
-		std::unique_ptr<std::int32_t[]> dist = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
-		for (std::int32_t i = 0; i < totalTiles; i++) { parent[i] = -1; dist[i] = -1; }
-
-		Vector2i farTile;
-		std::int32_t regionSize = 0;
-		runBfs(spawnTile, nullptr, parent.get(), dist.get(), farTile, regionSize, true);
-
-		if (regionSize < 32) {
-			LOGW("Cannot auto-place race checkpoints: walkable region is too small ({} tiles)", regionSize);
-			return;
-		}
-		if (regionSize > (totalTiles * 3) / 5) {
-			LOGW("Cannot auto-place race checkpoints: level looks like an open arena, not a track");
-			return;
-		}
-
-		const std::int32_t spawnIdx = spawnTile.X + spawnTile.Y * W;
-		std::int32_t farIdx = farTile.X + farTile.Y * W;
-
-		// The finish is the "Set Lap" warp, or - if the level has none - a level-exit event (end-of-level area or
-		// EOL sign), mirroring how Race mode itself falls back to level exits for lap completion. A full lap goes
-		// spawn -> (out to the far side) -> finish; routing via the far tile forces the trace around the whole loop
-		// even when the start line sits right next to the finish (so there's no short path to block). Among the
-		// candidates, take the one reachable from spawn and farthest along the track, so the route spans the level.
-		auto pickFarthestReachable = [&](const SmallVector<Vector2i, 0>& markers) -> Vector2i {
-			Vector2i best(-1, -1);
-			std::int32_t bestDist = -1;
-			for (const auto& m : markers) {
-				Vector2i t = findSeed(m);
-				if (t.X >= 0) {
-					std::int32_t d = dist[t.X + t.Y * W];
-					if (d > bestDist) { bestDist = d; best = t; }
-				}
-			}
-			return best;
-		};
-		Vector2i finishTile = pickFarthestReachable(_raceStartMarkers);
-		const char* finishSource = "warp";
-		if (finishTile.X < 0) {
-			finishTile = pickFarthestReachable(exitMarkers);
-			finishSource = (finishTile.X >= 0 ? "exit" : "far");
-		}
-		Vector2i target = farTile;
-		if (finishTile.X >= 0 && dist[finishTile.X + finishTile.Y * W] >= 0) {
-			target = finishTile;
-			// If the finish itself lies far from the spawn (a point-to-point race, not a loop back to the start),
-			// make it the turnaround too, so the route runs straight to it instead of overshooting to the farthest
-			// tile and doubling back past the finish.
-			std::int32_t finDist = dist[finishTile.X + finishTile.Y * W];
-			if (dist[farIdx] > 0 && finDist * 2 >= dist[farIdx]) {
-				farTile = finishTile;
-				farIdx = finishTile.X + finishTile.Y * W;
-			}
-		}
-		const std::int32_t targetIdx = target.X + target.Y * W;
-
-		std::int32_t springUp = 0, springSide = 0, liftCount = 0, surfaceCount = 0, poleCount = 0;
-		std::int32_t springUpReached = 0, liftReached = 0, poleReached = 0;
-		for (std::int32_t i = 0; i < totalTiles; i++) {
-			if (springMap[i] == 1) { springUp++; if (dist[i] >= 0) { springUpReached++; } }
-			else if (springMap[i] == 2) { springSide++; }
-			if (liftMap[i] != 0) { liftCount++; if (dist[i] >= 0) { liftReached++; } }
-			if (liftMap[i] == 2) { poleCount++; if (dist[i] >= 0) { poleReached++; } }
-			if (surfaceMap[i] != 0) { surfaceCount++; }
-		}
-		LOGI("Race geometry: {} vertical springs ({} reached) + {} horizontal, {} lift ({} reached, of which {} poles {} reached), {} surface, {} warp(s), {} exit(s); finish [{}, {}] via {} reachable={} (dist {})",
-			springUp, springUpReached, springSide, liftCount, liftReached, poleCount, poleReached, surfaceCount, (std::int32_t)warpJump.size(), (std::int32_t)exitMarkers.size(),
-			finishTile.X, finishTile.Y, finishSource,
-			(finishTile.X >= 0 && dist[finishTile.X + finishTile.Y * W] >= 0) ? 1 : 0,
-			(finishTile.X >= 0 ? dist[finishTile.X + finishTile.Y * W] : -1));
-		// Each resolved warp and whether the BFS actually reached its origin (so it could teleport) - helps diagnose
-		// warps the tracer stops at instead of following
-		for (const auto& wj : warpJump) {
-			std::int32_t oi = wj.first.X + wj.first.Y * W;
-			LOGI("Race warp: origin [{}, {}] (reached={}) -> dest [{}, {}] (reached={})",
-				wj.first.X, wj.first.Y, (dist[oi] >= 0) ? 1 : 0,
-				wj.second.X, wj.second.Y, (dist[wj.second.X + wj.second.Y * W] >= 0) ? 1 : 0);
-		}
-
-		// First arm: spawn -> far. Prefer a warp-free route so the line follows the geometry (e.g., climbs the poles
-		// or vines) instead of teleporting past it via a warp shortcut; fall back to the warp-enabled route only
-		// when the far tile can't be reached without warps (e.g., a section only accessible by a warp).
-		std::unique_ptr<std::int32_t[]> parentNW = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
-		std::unique_ptr<std::int32_t[]> distNW = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
-		for (std::int32_t i = 0; i < totalTiles; i++) { parentNW[i] = -1; distNW[i] = -1; }
-		Vector2i farNW;
-		std::int32_t regionNW = 0;
-		runBfs(spawnTile, nullptr, parentNW.get(), distNW.get(), farNW, regionNW, false);
-		bool routeNoWarp = (distNW[farIdx] >= 0);
-
-		SmallVector<Vector2i, 0> pathOut;
-		reconstruct(routeNoWarp ? parentNW.get() : parent.get(), spawnIdx, farIdx, pathOut);
-
-		// Second arm: far -> finish, taking the opposite side by blocking the first arm. If blocking disconnects
-		// the finish (e.g., wide corridors), retry without blocking so the route still reaches the end.
-		std::unique_ptr<std::uint8_t[]> blocked = std::make_unique<std::uint8_t[]>((std::size_t)totalTiles);
-		for (std::int32_t i = 1; i + 1 < (std::int32_t)pathOut.size(); i++) {
-			blocked[pathOut[i].X + pathOut[i].Y * W] = 1;
-		}
-
-		std::unique_ptr<std::int32_t[]> parent2 = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
-		std::unique_ptr<std::int32_t[]> dist2 = std::make_unique<std::int32_t[]>((std::size_t)totalTiles);
-		for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
-
-		Vector2i far2;
-		std::int32_t visited2 = 0;
-		runBfs(farTile, blocked.get(), parent2.get(), dist2.get(), far2, visited2, !routeNoWarp);
-
-		if (dist2[targetIdx] < 0) {
-			// Blocking the first arm cut off the finish; retry unblocked so we still reach it
-			for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
-			runBfs(farTile, nullptr, parent2.get(), dist2.get(), far2, visited2, !routeNoWarp);
-		}
-		if (dist2[targetIdx] < 0 && routeNoWarp) {
-			// Still unreachable without warps - allow warps for the return arm so the route completes
-			for (std::int32_t i = 0; i < totalTiles; i++) { parent2[i] = -1; dist2[i] = -1; }
-			runBfs(farTile, nullptr, parent2.get(), dist2.get(), far2, visited2, true);
-		}
-
-		SmallVector<Vector2i, 0> pathBack;
-		if (dist2[targetIdx] >= 0) {
-			reconstruct(parent2.get(), farIdx, targetIdx, pathBack);
-		}
-
-		// Assemble the route spawn -> far -> finish. But if the far tile overshoots just past the finish (e.g., a
-		// catch-spring sits a couple of tiles beyond the finish warp), end the route at the finish instead of
-		// looping out to far and back.
-		SmallVector<Vector2i, 0> route;
-		std::int32_t trimAt = -1;
-		if (target.X == finishTile.X && target.Y == finishTile.Y) {
-			for (std::int32_t i = (std::int32_t)pathOut.size() / 2; i < (std::int32_t)pathOut.size(); i++) {
-				std::int32_t ddx = pathOut[i].X - finishTile.X, ddy = pathOut[i].Y - finishTile.Y;
-				if (std::max(ddx < 0 ? -ddx : ddx, ddy < 0 ? -ddy : ddy) <= 2) {
-					trimAt = i;
-					break;
-				}
-			}
-		}
-		if (trimAt >= 0) {
-			for (std::int32_t i = 0; i <= trimAt; i++) {
-				route.push_back(pathOut[i]);
-			}
-			Vector2i last = route[route.size() - 1];
-			if (last.X != finishTile.X || last.Y != finishTile.Y) {
-				route.push_back(finishTile);
-			}
-		} else {
-			for (std::int32_t i = 0; i < (std::int32_t)pathOut.size(); i++) {
-				route.push_back(pathOut[i]);
-			}
-			for (std::int32_t i = 1; i < (std::int32_t)pathBack.size(); i++) {
-				route.push_back(pathBack[i]);
-			}
-		}
-
-		if (route.size() < 2) {
-			LOGW("Cannot auto-place race checkpoints: could not trace a route through the level");
-			return;
-		}
-
-		// Expand jumps (non-adjacent steps) into up-over-down arcs so the minimap draws the player going up and
-		// over an obstacle instead of a straight line cutting through it. A parallel group id is bumped at each
-		// warp edge (origin -> teleport target) so the minimap doesn't draw a line straight across the level.
-		SmallVector<Vector2i, 0> routeArc;
-		SmallVector<std::uint8_t, 0> routeArcGroup;
-		std::uint8_t curGroup = 0;
-		routeArc.push_back(route[0]);
-		routeArcGroup.push_back(curGroup);
-		for (std::int32_t i = 1; i < (std::int32_t)route.size(); i++) {
-			Vector2i a = route[i - 1], b = route[i];
-			auto w = warpJump.find(a);
-			if (w != warpJump.end() && w->second.X == b.X && w->second.Y == b.Y) {
-				if (curGroup < 255) {
-					curGroup++; // teleport: break the line here
-				}
-			} else {
-				std::int32_t ddx = b.X - a.X, ddy = b.Y - a.Y;
-				std::int32_t adx = (ddx < 0 ? -ddx : ddx), ady = (ddy < 0 ? -ddy : ddy);
-				if (adx > 1 || ady > 1) {
-					std::int32_t apexY = jumpApex(a.X, a.Y, ddx, ddy, BoostHeight);
-					std::int32_t topY = (a.Y < b.Y ? a.Y : b.Y);
-					if (apexY != INT32_MAX && apexY < topY) {
-						routeArc.push_back(Vector2i(a.X, apexY));
-						routeArcGroup.push_back(curGroup);
-						routeArc.push_back(Vector2i(b.X, apexY));
-						routeArcGroup.push_back(curGroup);
-					}
-				}
-			}
-			routeArc.push_back(b);
-			routeArcGroup.push_back(curGroup);
-		}
-
-		// Minimap extent = the route's bounding box (padded for track width), plus start markers
-		Vector2i boundsMin(W, H), boundsMax(-1, -1);
-		auto includeBounds = [&boundsMin, &boundsMax](Vector2i t) {
-			if (t.X < boundsMin.X) { boundsMin.X = t.X; }
-			if (t.Y < boundsMin.Y) { boundsMin.Y = t.Y; }
-			if (t.X > boundsMax.X) { boundsMax.X = t.X; }
-			if (t.Y > boundsMax.Y) { boundsMax.Y = t.Y; }
-		};
-		for (std::int32_t i = 0; i < (std::int32_t)routeArc.size(); i++) {
-			includeBounds(routeArc[i]);
-		}
-		for (const auto& m : _raceStartMarkers) {
-			includeBounds(m);
-		}
-		boundsMin.X = std::max(0, boundsMin.X - 2);
-		boundsMin.Y = std::max(0, boundsMin.Y - 2);
-		boundsMax.X = std::min(W - 1, boundsMax.X + 2);
-		boundsMax.Y = std::min(H - 1, boundsMax.Y + 2);
-		_raceBoundsMin = boundsMin;
-		_raceBoundsMax = boundsMax;
-
-		// Checkpoints = the route's corners (direction changes), so straight runs stay sparse while bends and jump
-		// arcs get the detail they need; decimated uniformly if there are too many. The group id is carried so the
-		// minimap breaks the polyline at teleports, and a group change at a corner is always kept as a corner.
-		SmallVector<Vector2i, 0> corners;
-		SmallVector<std::uint8_t, 0> cornerGroup;
-		for (std::int32_t i = 0; i < (std::int32_t)routeArc.size(); i++) {
-			if (i == 0 || i == (std::int32_t)routeArc.size() - 1) {
-				corners.push_back(routeArc[i]);
-				cornerGroup.push_back(routeArcGroup[i]);
-				continue;
-			}
-			Vector2i p = routeArc[i - 1], c2 = routeArc[i], n = routeArc[i + 1];
-			std::int32_t d1x = (c2.X > p.X) - (c2.X < p.X), d1y = (c2.Y > p.Y) - (c2.Y < p.Y);
-			std::int32_t d2x = (n.X > c2.X) - (n.X < c2.X), d2y = (n.Y > c2.Y) - (n.Y < c2.Y);
-			if (d1x != d2x || d1y != d2y || routeArcGroup[i] != routeArcGroup[i - 1] || routeArcGroup[i] != routeArcGroup[i + 1]) {
-				corners.push_back(routeArc[i]);
-				cornerGroup.push_back(routeArcGroup[i]);
-			}
-		}
-
-		LOGI("Auto-placing race checkpoints: spawn [{}, {}], far [{}, {}], target [{}, {}], region {} tiles, warpFreeRoute={}, route {}, arc {}, corners {}, bounds [{}, {}]-[{}, {}]",
-			spawnTile.X, spawnTile.Y, farTile.X, farTile.Y, target.X, target.Y, regionSize, routeNoWarp ? 1 : 0,
-			(std::int32_t)route.size(), (std::int32_t)routeArc.size(), (std::int32_t)corners.size(),
-			boundsMin.X, boundsMin.Y, boundsMax.X, boundsMax.Y);
-
-		const std::int32_t cornerCount = (std::int32_t)corners.size();
-		constexpr std::int32_t MaxCheckpoints = 100;
-		_orderedRaceCheckpoints.clear();
-		if (cornerCount <= MaxCheckpoints) {
-			for (std::int32_t i = 0; i < cornerCount; i++) {
-				_orderedRaceCheckpoints.push_back({ corners[i], (std::uint16_t)i, cornerGroup[i] });
-			}
-		} else {
-			for (std::int32_t k = 0; k < MaxCheckpoints; k++) {
-				std::int32_t idx = (std::int32_t)((std::int64_t)k * (cornerCount - 1) / (MaxCheckpoints - 1));
-				_orderedRaceCheckpoints.push_back({ corners[idx], (std::uint16_t)k, cornerGroup[idx] });
-			}
-		}
-
-		if (_orderedRaceCheckpoints.size() < 2) {
-			_orderedRaceCheckpoints.clear();
-			LOGW("Cannot auto-place race checkpoints: could not derive a track from level geometry");
-			return;
-		}
-
-		// The route is directional (spawn -> finish), so it can be trusted for progress-based ranking
-		_raceCheckpointsOrdered = true;
-		LOGI("Auto-placed {} race checkpoints (finish tile [{}, {}])",
-			(std::int32_t)_orderedRaceCheckpoints.size(), finishTile.X, finishTile.Y);
+		GenerateRaceRouteFromGeometry(_tileMap.get(), _eventMap.get(), _multiplayerSpawnPoints, _raceStartMarkers,
+			_orderedRaceCheckpoints, _raceBoundsMin, _raceBoundsMax, _raceCheckpointsOrdered);
 	}
 
 	void MpLevelHandler::WarpAllPlayersToStart()

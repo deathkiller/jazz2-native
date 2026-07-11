@@ -3,6 +3,7 @@
 #if defined(WITH_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "PlayerOnServer.h"
+#include "StateInterpolationBuffer.h"
 
 namespace Jazz2::Actors::Multiplayer
 {
@@ -85,15 +86,7 @@ namespace Jazz2::Actors::Multiplayer
 
 	protected:
 #ifndef DOXYGEN_GENERATING_OUTPUT
-		struct StateFrame {
-			std::int64_t Time;
-			Vector2f Pos;
-		};
-
-		static constexpr std::int64_t ServerDelay = 64;
-
-		StateFrame _stateBuffer[8];
-		std::int32_t _stateBufferPos;
+		StateInterpolationBuffer _stateBuffer;
 		Vector2f _displayPos;
 		/** @brief Last "being stood on" state sent to the owning client, to only resync on change */
 		bool _beingStoodOnLastSent = false;

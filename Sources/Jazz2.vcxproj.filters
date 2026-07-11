@@ -1356,6 +1356,9 @@
     <ClInclude Include="Jazz2\Multiplayer\PacketTypes.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
+    <ClInclude Include="Jazz2\Multiplayer\RaceRouteGenerator.h">
+      <Filter>Header Files\Jazz2\Multiplayer</Filter>
+    </ClInclude>
     <ClInclude Include="Jazz2\Multiplayer\INetworkHandler.h">
       <Filter>Header Files\Jazz2\Multiplayer</Filter>
     </ClInclude>
@@ -1462,6 +1465,9 @@
       <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\Actors\Multiplayer\LocalPlayerOnServer.h">
+      <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
+    </ClInclude>
+    <ClInclude Include="Jazz2\Actors\Multiplayer\StateInterpolationBuffer.h">
       <Filter>Header Files\Jazz2\Actors\Multiplayer</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\PlayMultiplayerSection.h">
@@ -2604,6 +2610,9 @@
       <Filter>Source Files\Shared\Containers</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Multiplayer\MpLevelHandler.cpp">
+      <Filter>Source Files\Jazz2\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="Jazz2\Multiplayer\RaceRouteGenerator.cpp">
       <Filter>Source Files\Jazz2\Multiplayer</Filter>
     </ClCompile>
     <ClCompile Include="Jazz2\Multiplayer\GameModes\GameModeFactory.cpp">

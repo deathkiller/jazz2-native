@@ -704,6 +704,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotablePlayer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemoteActor.h
 		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/RemotePlayerOnServer.h
+		${NCINE_SOURCE_DIR}/Jazz2/Actors/Multiplayer/StateInterpolationBuffer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ConnectionResult.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/INetworkHandler.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/MpGameMode.h
@@ -713,6 +714,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/PacketTypes.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Peer.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/PeerDescriptor.h
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/RaceRouteGenerator.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Reason.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.h
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerInitialization.h
@@ -760,6 +762,7 @@ if(WITH_MULTIPLAYER)
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManager.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/NetworkManagerBase.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/Peer.cpp
+		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/RaceRouteGenerator.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/Multiplayer/ServerDiscovery.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp
 		${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/CreateServerOptionsSection.cpp

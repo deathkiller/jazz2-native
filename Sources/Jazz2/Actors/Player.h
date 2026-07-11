@@ -103,6 +103,44 @@ namespace Jazz2::Actors
 			Shielded			/**< Invulnerable due to an active shield */
 		};
 
+		/**
+			@brief Constant per-character properties
+
+			Character-specific constants shared by all players of the same @ref PlayerType, so simple character
+			differences live in one table instead of being scattered across switches. Behavioral differences
+			(special moves, double jump, copter) remain in code.
+		*/
+		struct CharacterTraits {
+			/** @brief Path to the metadata with the character's animations and sounds */
+			StringView Metadata;
+			/** @brief Vertical scale of the weapon flare effect */
+			float WeaponFlareScaleY;
+			/** @brief Number of bored idle animations the character can play */
+			std::int32_t IdleBoredAnimCount;
+		};
+
+		/** @brief Returns constant per-character properties for a given player type */
+		static const CharacterTraits& GetCharacterTraits(PlayerType type);
+
+		/**
+			@brief Collected items and weapon loadout of a player
+
+			Grouped into one value struct so the checkpoint snapshot and its rollback are single assignments
+			instead of a hand-maintained set of parallel fields.
+		*/
+		struct InventoryState {
+			/** @brief Number of collected coins */
+			std::int32_t Coins;
+			/** @brief Amount of eaten food (drives sugar rush) */
+			std::int32_t FoodEaten;
+			/** @brief Number of collected gems, by gem type */
+			std::int32_t Gems[4];
+			/** @brief Remaining weapon ammo (in 1/256 units), by weapon type; `UINT16_MAX` means unlimited */
+			std::uint16_t WeaponAmmo[(std::int32_t)WeaponType::Count];
+			/** @brief Weapon upgrade flags, by weapon type */
+			std::uint8_t WeaponUpgrades[(std::int32_t)WeaponType::Count];
+		};
+
 		/** @brief Creates a new instance */
 		Player();
 		~Player();
@@ -138,12 +176,12 @@ namespace Jazz2::Actors
 
 		/** @brief Return weapon ammo */
 		ArrayView<const std::uint16_t> GetWeaponAmmo() const {
-			return _weaponAmmo;
+			return _inventory.WeaponAmmo;
 		}
 
 		/** @brief Returns weapon upgrades */
 		ArrayView<const std::uint8_t> GetWeaponUpgrades() const {
-			return _weaponUpgrades;
+			return _inventory.WeaponUpgrades;
 		}
 
 		/** @brief Returns `true` if sugar rush is active */
@@ -421,14 +459,14 @@ namespace Jazz2::Actors
 		std::shared_ptr<AudioBufferPlayer> _copterSound;
 #endif
 
-		std::int32_t _lives, _coins, _coinsCheckpoint, _foodEaten, _foodEatenCheckpoint, _score;
+		std::int32_t _lives, _score;
+		InventoryState _inventory;
+		InventoryState _inventoryCheckpoint;
 		Vector2f _checkpointPos;
 		float _checkpointLight;
 
 		float _sugarRushLeft, _sugarRushStarsTime;
 		float _shieldSpawnTime;
-		std::int32_t _gems[4];
-		std::int32_t _gemsCheckpoint[4];
 		std::int32_t _gemsTotal[4];
 		std::int32_t _gemsPitch;
 		float _gemsTimer;
@@ -460,10 +498,6 @@ namespace Jazz2::Actors
 		float _weaponCooldown;
 		WeaponType _currentWeapon;
 		bool _weaponAllowed;
-		std::uint16_t _weaponAmmo[(std::int32_t)WeaponType::Count];
-		std::uint16_t _weaponAmmoCheckpoint[(std::int32_t)WeaponType::Count];
-		std::uint8_t _weaponUpgrades[(std::int32_t)WeaponType::Count];
-		std::uint8_t _weaponUpgradesCheckpoint[(std::int32_t)WeaponType::Count];
 		WeaponWheelState _weaponWheelState;
 #if defined(WITH_AUDIO)
 		std::shared_ptr<AudioBufferPlayer> _weaponSound;
@@ -553,6 +587,12 @@ namespace Jazz2::Actors
 		void OnUpdatePhysics(float timeMult);
 		void OnUpdateTimers(float timeMult);
 		void OnHandleMovement(float timeMult, bool areaWeaponAllowed, bool canJumpPrev);
+		void HandleHorizontalMovement(float timeMult);
+		void HandleWaterAndModifierMovement(float timeMult);
+		void HandleLookupAndCrouch(float timeMult, bool canJumpPrev);
+		void HandleJump(float timeMult);
+		void HandleSpecialJump(float timeMult);
+		void HandleWeaponFire(bool areaWeaponAllowed);
 		void OnHandleWater();
 		void OnHandleAreaEvents(float timeMult, bool& areaWeaponAllowed, std::int32_t& areaWaterBlock);
 		void OnHandleSpectate(float timeMult);

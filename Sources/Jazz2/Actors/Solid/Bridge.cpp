@@ -43,10 +43,11 @@ namespace Jazz2::Actors::Solid
 
 	Task<bool> Bridge::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_bridgeWidth = *(uint16_t*)&details.Params[0] * 16;
-		_bridgeType = (BridgeType)details.Params[2];
+		EventParamsReader params(details);
+		_bridgeWidth = params.GetUint16(0) * 16;
+		_bridgeType = (BridgeType)params.GetUint8(2);
 		// Limit _heightFactor here, because with higher _heightFactor (for example in "04_haunted1") it starts to be inaccurate
-		_heightFactor = std::round(std::min((float)_bridgeWidth / details.Params[3], 38.0f));
+		_heightFactor = std::round(std::min((float)_bridgeWidth / params.GetUint8(3), 38.0f));
 
 		_pos.Y -= 6.0f;
 

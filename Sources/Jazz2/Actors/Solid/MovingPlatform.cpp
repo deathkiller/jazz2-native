@@ -38,12 +38,13 @@ namespace Jazz2::Actors::Solid
 
 	Task<bool> MovingPlatform::OnActivatedAsync(const ActorActivationDetails& details)
 	{
-		_type = (PlatformType)details.Params[0];
+		EventParamsReader params(details);
+		_type = (PlatformType)params.GetUint8(0);
 
-		std::uint8_t length = details.Params[3];
-		_speed = *(std::int8_t*)&details.Params[2] * 0.0072f;
-		std::uint8_t sync = details.Params[1];
-		_isSwing = details.Params[4] != 0;
+		std::uint8_t length = params.GetUint8(3);
+		_speed = params.GetInt8(2) * 0.0072f;
+		std::uint8_t sync = params.GetUint8(1);
+		_isSwing = params.GetBool(4);
 		_phase = sync * fPiOver2 - _speed * _levelHandler->GetElapsedFrames();
 
 		_originPos = _pos;

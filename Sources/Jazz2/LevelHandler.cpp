@@ -837,45 +837,9 @@ namespace Jazz2
 			_console->WriteLine(UI::MessageLevel::Echo, line);
 			_console->WriteLine(UI::MessageLevel::Confirm, _("For more information, visit the official website:") + " \f[w:80]\f[c:#707070]https://deat.tk/jazz2/help\f[/c]\f[/w]"_s);
 			return true;
-		} else if (line == "jjk"_s || line == "jjkill"_s) {
-			_console->WriteLine(UI::MessageLevel::Echo, line);
-			return CheatKill();
-		} else if (line == "jjgod"_s) {
-			_console->WriteLine(UI::MessageLevel::Echo, line);
-			return CheatGod();
-		} else if (line == "jjnext"_s) {
-			_console->WriteLine(UI::MessageLevel::Echo, line);
-			return CheatNext();
-		} else if (line == "jjguns"_s || line == "jjammo"_s) {
-			_console->WriteLine(UI::MessageLevel::Echo, line);
-			return CheatGuns();
-		} else if (line == "jjrush"_s) {
-			_console->WriteLine(UI::MessageLevel::Echo, line);
-			return CheatRush();
-		} else if (line == "jjgems"_s) {
-			_console->WriteLine(UI::MessageLevel::Echo, line);
-			return CheatGems();
-		} else if (line == "jjbird"_s) {
-			_console->WriteLine(UI::MessageLevel::Echo, line);
-			return CheatBird();
-		} else if (line == "jjlife"_s) {
-			_console->WriteLine(UI::MessageLevel::Echo, line);
-			return CheatLife();
-		} else if (line == "jjpower"_s) {
-			_console->WriteLine(UI::MessageLevel::Echo, line);
-			return CheatPower();
-		} else if (line == "jjcoins"_s) {
-			_console->WriteLine(UI::MessageLevel::Echo, line);
-			return CheatCoins();
-		} else if (line == "jjmorph"_s) {
-			_console->WriteLine(UI::MessageLevel::Echo, line);
-			return CheatMorph();
-		} else if (line == "jjshield"_s) {
-			_console->WriteLine(UI::MessageLevel::Echo, line);
-			return CheatShield();
-		} else {
-			return false;
 		}
+
+		return TryInvokeCheat(line);
 	}
 
 	void LevelHandler::OnKeyPressed(const KeyboardEvent& event)
@@ -1759,6 +1723,17 @@ namespace Jazz2
 
 		std::int32_t weatherIntensity = std::max((std::int32_t)(_weatherIntensity * timeMult), 1);
 
+		bool isRain = ((_weatherType & ~WeatherType::OutdoorsOnly) == WeatherType::Rain);
+		auto* res = _commonResources->FindAnimation(isRain ? Rain : Snow);
+		if (res == nullptr) {
+			return;
+		}
+
+		auto& resBase = res->Base;
+		Vector2i texSize = resBase->TextureDiffuse->GetSize();
+		// The weather sprite is loaded indexed now, so the debris must recolor through its palette offset (-1 = baked)
+		std::int32_t paletteOffset = (((resBase->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) ? (std::int32_t)res->PaletteOffset : -1);
+
 		for (auto& zone : playerZones) {
 			for (std::int32_t i = 0; i < weatherIntensity; i++) {
 				TileMap::DebrisFlags debrisFlags;
@@ -1773,91 +1748,50 @@ namespace Jazz2
 				Vector2f debrisPos = Vector2f(zone.X + Random().FastFloat(zone.W * -1.0f, zone.W * 2.0f),
 					zone.Y + Random().NextFloat(zone.H * -1.0f, zone.H * 2.0f));
 
-				WeatherType realWeatherType = (_weatherType & ~WeatherType::OutdoorsOnly);
-				if (realWeatherType == WeatherType::Rain) {
-					auto* res = _commonResources->FindAnimation(Rain);
-					if (res != nullptr) {
-						auto& resBase = res->Base;
-						Vector2i texSize = resBase->TextureDiffuse->GetSize();
-						// The rain sprite is loaded indexed now, so the debris must recolor through its palette offset (-1 = baked)
-						std::int32_t paletteOffset = (((resBase->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) ? (std::int32_t)res->PaletteOffset : -1);
-						float scale = Random().FastFloat(0.4f, 1.1f);
-						float speedX = Random().FastFloat(2.2f, 2.7f) * scale;
-						float speedY = Random().FastFloat(7.6f, 8.6f) * scale;
+				float scale = Random().FastFloat(0.4f, 1.1f);
 
-						TileMap::DestructibleDebris debris = { };
-						debris.Pos = debrisPos;
-						debris.Depth = MainPlaneZ - 100 + (std::uint16_t)(200 * scale);
-						debris.Size = resBase->FrameDimensions.As<float>();
-						debris.Speed = Vector2f(speedX, speedY);
-						debris.Acceleration = Vector2f(0.0f, 0.0f);
+				TileMap::DestructibleDebris debris = { };
+				debris.Pos = debrisPos;
+				debris.Depth = MainPlaneZ - 100 + (std::uint16_t)(200 * scale);
+				debris.Size = resBase->FrameDimensions.As<float>();
 
-						debris.Scale = scale;
-						debris.ScaleSpeed = 0.0f;
-						debris.Angle = atan2f(speedY, speedX);
-						debris.AngleSpeed = 0.0f;
-						debris.Alpha = 1.0f;
-						debris.AlphaSpeed = 0.0f;
-
-						debris.Time = 180.0f;
-
-						std::uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
-						std::uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
-						std::uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
-						debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
-						debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
-						debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
-						debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
-
-						debris.DiffuseTexture = resBase->TextureDiffuse.get();
-						debris.PaletteOffset = paletteOffset;
-						debris.Flags = debrisFlags;
-
-						_tileMap->CreateDebris(debris);
-					}
+				if (isRain) {
+					float speedX = Random().FastFloat(2.2f, 2.7f) * scale;
+					float speedY = Random().FastFloat(7.6f, 8.6f) * scale;
+					debris.Speed = Vector2f(speedX, speedY);
+					debris.Acceleration = Vector2f(0.0f, 0.0f);
+					debris.Angle = atan2f(speedY, speedX);
+					debris.AngleSpeed = 0.0f;
 				} else {
-					auto* res = _commonResources->FindAnimation(Snow);
-					if (res != nullptr) {
-						auto& resBase = res->Base;
-						Vector2i texSize = resBase->TextureDiffuse->GetSize();
-						// The snow sprite is loaded indexed now, so the debris must recolor through its palette offset (-1 = baked)
-						std::int32_t paletteOffset = (((resBase->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed) ? (std::int32_t)res->PaletteOffset : -1);
-						float scale = Random().FastFloat(0.4f, 1.1f);
-						float speedX = Random().FastFloat(-1.6f, -1.2f) * scale;
-						float speedY = Random().FastFloat(3.0f, 4.0f) * scale;
-						float accel = Random().FastFloat(-0.008f, 0.008f) * scale;
-
-						TileMap::DestructibleDebris debris = { };
-						debris.Pos = debrisPos;
-						debris.Depth = MainPlaneZ - 100 + (std::uint16_t)(200 * scale);
-						debris.Size = resBase->FrameDimensions.As<float>();
-						debris.Speed = Vector2f(speedX, speedY);
-						debris.Acceleration = Vector2f(accel, -std::abs(accel));
-
-						debris.Scale = scale;
-						debris.ScaleSpeed = 0.0f;
-						debris.Angle = Random().FastFloat(0.0f, fTwoPi);
-						debris.AngleSpeed = speedX * 0.02f;
-						debris.Alpha = 1.0f;
-						debris.AlphaSpeed = 0.0f;
-
-						debris.Time = 180.0f;
-
-						std::uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
-						std::uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
-						std::uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
-						debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
-						debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
-						debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
-						debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
-
-						debris.DiffuseTexture = resBase->TextureDiffuse.get();
-						debris.PaletteOffset = paletteOffset;
-						debris.Flags = debrisFlags;
-
-						_tileMap->CreateDebris(debris);
-					}
+					float speedX = Random().FastFloat(-1.6f, -1.2f) * scale;
+					float speedY = Random().FastFloat(3.0f, 4.0f) * scale;
+					float accel = Random().FastFloat(-0.008f, 0.008f) * scale;
+					debris.Speed = Vector2f(speedX, speedY);
+					debris.Acceleration = Vector2f(accel, -std::abs(accel));
+					debris.Angle = Random().FastFloat(0.0f, fTwoPi);
+					debris.AngleSpeed = speedX * 0.02f;
 				}
+
+				debris.Scale = scale;
+				debris.ScaleSpeed = 0.0f;
+				debris.Alpha = 1.0f;
+				debris.AlphaSpeed = 0.0f;
+
+				debris.Time = 180.0f;
+
+				std::uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
+				std::uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
+				std::uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
+				debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
+				debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
+				debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
+				debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
+
+				debris.DiffuseTexture = resBase->TextureDiffuse.get();
+				debris.PaletteOffset = paletteOffset;
+				debris.Flags = debrisFlags;
+
+				_tileMap->CreateDebris(debris);
 			}
 		}
 	}
@@ -2436,170 +2370,136 @@ namespace Jazz2
 		_console->Hide();
 	}
 
-	bool LevelHandler::CheatKill()
+	bool LevelHandler::TryInvokeCheat(StringView line)
 	{
-		if (IsCheatingAllowed() && !_players.empty()) {
-			_cheatsUsed = true;
-			for (auto* player : _players) {
-				player->TakeDamage(INT32_MAX, 0.0f, true);
-			}
-		} else {
-			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
-		}
-		return true;
-	}
+		struct CheatCommand {
+			StringView Command;
+			StringView Alias;
+			void (LevelHandler::*Handler)();
+		};
 
-	bool LevelHandler::CheatGod()
-	{
-		if (IsCheatingAllowed() && !_players.empty()) {
-			_cheatsUsed = true;
-			for (auto* player : _players) {
-				player->SetInvulnerability(36000.0f, Actors::Player::InvulnerableType::Shielded);
-			}
-		} else {
-			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
-		}
-		return true;
-	}
+		static const CheatCommand CheatCommands[] = {
+			{ "jjkill"_s, "jjk"_s, &LevelHandler::CheatKill },
+			{ "jjgod"_s, {}, &LevelHandler::CheatGod },
+			{ "jjnext"_s, {}, &LevelHandler::CheatNext },
+			{ "jjguns"_s, "jjammo"_s, &LevelHandler::CheatGuns },
+			{ "jjrush"_s, {}, &LevelHandler::CheatRush },
+			{ "jjgems"_s, {}, &LevelHandler::CheatGems },
+			{ "jjbird"_s, {}, &LevelHandler::CheatBird },
+			{ "jjlife"_s, {}, &LevelHandler::CheatLife },
+			{ "jjpower"_s, {}, &LevelHandler::CheatPower },
+			{ "jjcoins"_s, {}, &LevelHandler::CheatCoins },
+			{ "jjmorph"_s, {}, &LevelHandler::CheatMorph },
+			{ "jjshield"_s, {}, &LevelHandler::CheatShield },
+		};
 
-	bool LevelHandler::CheatNext()
-	{
-		if (IsCheatingAllowed() && !_players.empty()) {
-			_cheatsUsed = true;
-			BeginLevelChange(nullptr, ExitType::Warp | ExitType::FastTransition);
-		} else {
-			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
-		}
-		return true;
-	}
-
-	bool LevelHandler::CheatGuns()
-	{
-		if (IsCheatingAllowed() && !_players.empty()) {
-			_cheatsUsed = true;
-			for (auto* player : _players) {
-				for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
-					player->AddAmmo((WeaponType)i, 99);
+		for (const auto& cheat : CheatCommands) {
+			if (line == cheat.Command || (!cheat.Alias.empty() && line == cheat.Alias)) {
+				_console->WriteLine(UI::MessageLevel::Echo, line);
+				if (IsCheatingAllowed() && !_players.empty()) {
+					_cheatsUsed = true;
+					(this->*cheat.Handler)();
+				} else {
+					_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 				}
+				return true;
 			}
-		} else {
-			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
-		return true;
+
+		return false;
 	}
 
-	bool LevelHandler::CheatRush()
+	void LevelHandler::CheatKill()
 	{
-		if (IsCheatingAllowed() && !_players.empty()) {
-			_cheatsUsed = true;
-			for (auto* player : _players) {
-				player->ActivateSugarRush(1300.0f);
-			}
-		} else {
-			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
+		for (auto* player : _players) {
+			player->TakeDamage(INT32_MAX, 0.0f, true);
 		}
-		return true;
 	}
 
-	bool LevelHandler::CheatGems()
+	void LevelHandler::CheatGod()
 	{
-		if (IsCheatingAllowed() && !_players.empty()) {
-			_cheatsUsed = true;
-			for (auto* player : _players) {
-				player->AddGems(0, 5);
-			}
-		} else {
-			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
+		for (auto* player : _players) {
+			player->SetInvulnerability(36000.0f, Actors::Player::InvulnerableType::Shielded);
 		}
-		return true;
 	}
 
-	bool LevelHandler::CheatBird()
+	void LevelHandler::CheatNext()
 	{
-		if (IsCheatingAllowed() && !_players.empty()) {
-			_cheatsUsed = true;
-			for (auto* player : _players) {
-				player->SpawnBird(0, player->GetPos());
-			}
-		} else {
-			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
-		}
-		return true;
+		BeginLevelChange(nullptr, ExitType::Warp | ExitType::FastTransition);
 	}
 
-	bool LevelHandler::CheatLife()
+	void LevelHandler::CheatGuns()
 	{
-		if (IsCheatingAllowed() && !_players.empty()) {
-			_cheatsUsed = true;
-			for (auto* player : _players) {
-				player->AddLives(5);
+		for (auto* player : _players) {
+			for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
+				player->AddAmmo((WeaponType)i, 99);
 			}
-		} else {
-			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
 		}
-		return true;
 	}
 
-	bool LevelHandler::CheatPower()
+	void LevelHandler::CheatRush()
 	{
-		if (IsCheatingAllowed() && !_players.empty()) {
-			_cheatsUsed = true;
-			for (auto* player : _players) {
-				for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
-					player->AddWeaponUpgrade((WeaponType)i, 0x01);
-				}
-			}
-		} else {
-			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
+		for (auto* player : _players) {
+			player->ActivateSugarRush(1300.0f);
 		}
-		return true;
 	}
 
-	bool LevelHandler::CheatCoins()
+	void LevelHandler::CheatGems()
 	{
-		if (IsCheatingAllowed() && !_players.empty()) {
-			_cheatsUsed = true;
-			// Coins are synchronized automatically
-			_players[0]->AddCoins(5);
-		} else {
-			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
+		for (auto* player : _players) {
+			player->AddGems(0, 5);
 		}
-		return true;
 	}
 
-	bool LevelHandler::CheatMorph()
+	void LevelHandler::CheatBird()
 	{
-		if (IsCheatingAllowed() && !_players.empty()) {
-			_cheatsUsed = true;
-
-			PlayerType newType;
-			switch (_players[0]->GetPlayerType()) {
-				case PlayerType::Jazz: newType = PlayerType::Spaz; break;
-				case PlayerType::Spaz: newType = PlayerType::Lori; break;
-				default: newType = PlayerType::Jazz; break;
-			}
-
-			if (!_players[0]->MorphTo(newType)) {
-				_players[0]->MorphTo(PlayerType::Jazz);
-			}
-		} else {
-			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
+		for (auto* player : _players) {
+			player->SpawnBird(0, player->GetPos());
 		}
-		return true;
 	}
 
-	bool LevelHandler::CheatShield()
+	void LevelHandler::CheatLife()
 	{
-		if (IsCheatingAllowed() && !_players.empty()) {
-			_cheatsUsed = true;
-			for (auto* player : _players) {
-				ShieldType shieldType = (ShieldType)(((std::int32_t)player->GetActiveShield() + 1) % (std::int32_t)ShieldType::Count);
-				player->SetShield(shieldType, 40.0f * FrameTimer::FramesPerSecond);
-			}
-		} else {
-			_console->WriteLine(UI::MessageLevel::Error, _("Cheats are not allowed in current context"));
+		for (auto* player : _players) {
+			player->AddLives(5);
 		}
-		return true;
+	}
+
+	void LevelHandler::CheatPower()
+	{
+		for (auto* player : _players) {
+			for (std::int32_t i = 0; i < (std::int32_t)WeaponType::Count; i++) {
+				player->AddWeaponUpgrade((WeaponType)i, 0x01);
+			}
+		}
+	}
+
+	void LevelHandler::CheatCoins()
+	{
+		// Coins are synchronized automatically
+		_players[0]->AddCoins(5);
+	}
+
+	void LevelHandler::CheatMorph()
+	{
+		PlayerType newType;
+		switch (_players[0]->GetPlayerType()) {
+			case PlayerType::Jazz: newType = PlayerType::Spaz; break;
+			case PlayerType::Spaz: newType = PlayerType::Lori; break;
+			default: newType = PlayerType::Jazz; break;
+		}
+
+		if (!_players[0]->MorphTo(newType)) {
+			_players[0]->MorphTo(PlayerType::Jazz);
+		}
+	}
+
+	void LevelHandler::CheatShield()
+	{
+		for (auto* player : _players) {
+			ShieldType shieldType = (ShieldType)(((std::int32_t)player->GetActiveShield() + 1) % (std::int32_t)ShieldType::Count);
+			player->SetShield(shieldType, 40.0f * FrameTimer::FramesPerSecond);
+		}
 	}
 
 #if defined(WITH_IMGUI)
