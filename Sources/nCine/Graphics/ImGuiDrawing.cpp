@@ -20,9 +20,7 @@
 #	include "../Backends/Android/ImGuiAndroidInput.h"
 #endif
 
-#if defined(WITH_EMBEDDED_SHADERS)
-#	include "shader_strings.h"
-#endif
+#include "../../Shaders/Generated/DefaultImGui.h"
 
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
@@ -75,13 +73,8 @@ namespace nCine
 		io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;	// We can honor ImGuiPlatformIO::Textures[] requests during render.
 
 		imguiShaderProgram_ = std::make_unique<Rhi::ShaderProgram>(Rhi::ShaderProgram::QueryPhase::Immediate);
-#if !defined(WITH_EMBEDDED_SHADERS)
-		imguiShaderProgram_->AttachShaderFromFile(GL_VERTEX_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, "imgui_vs.glsl"_s }));
-		imguiShaderProgram_->AttachShaderFromFile(GL_FRAGMENT_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, "imgui_fs.glsl"_s }));
-#else
-		imguiShaderProgram_->AttachShaderFromString(GL_VERTEX_SHADER, ShaderStrings::imgui_vs);
-		imguiShaderProgram_->AttachShaderFromString(GL_FRAGMENT_SHADER, ShaderStrings::imgui_fs);
-#endif
+		imguiShaderProgram_->AttachShaderFromString(GL_VERTEX_SHADER, ShadersGen::DefaultImGui.Variants[0].VsSource);
+		imguiShaderProgram_->AttachShaderFromString(GL_FRAGMENT_SHADER, ShadersGen::DefaultImGui.Variants[0].FsSource);
 		imguiShaderProgram_->Link(Rhi::ShaderProgram::Introspection::Enabled);
 		FATAL_ASSERT(imguiShaderProgram_->GetStatus() != Rhi::ShaderProgram::Status::LinkingFailed);
 

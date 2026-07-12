@@ -49,6 +49,12 @@
     <Filter Include="Source Files\Jazz2">
       <UniqueIdentifier>{89144cf1-d95c-46b1-9196-16537338f431}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\ShaderCompiler">
+      <UniqueIdentifier>{7c4f0a92-63d1-45b8-9e2a-0d8a3bf51c67}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ShaderCompiler">
+      <UniqueIdentifier>{2ea8b7d5-914f-4c06-b3d8-6f1e5a20c943}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Header Files\Jazz2\Actors">
       <UniqueIdentifier>{15fe9e4f-88e7-4418-bd1e-185e04df0ff6}</UniqueIdentifier>
     </Filter>
@@ -795,6 +801,18 @@
     <ClInclude Include="nCine\Graphics\Shader.h">
       <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="ShaderCompiler\ConstFold.h">
+      <Filter>Header Files\ShaderCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderCompiler\GlslReflect.h">
+      <Filter>Header Files\ShaderCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderCompiler\RuntimeShader.h">
+      <Filter>Header Files\ShaderCompiler</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderCompiler\ShaderParser.h">
+      <Filter>Header Files\ShaderCompiler</Filter>
+    </ClInclude>
     <ClInclude Include="nCine\Graphics\ShaderState.h">
       <Filter>Header Files\nCine\Graphics</Filter>
     </ClInclude>
@@ -968,9 +986,6 @@
     </ClInclude>
     <ClInclude Include="Jazz2\Actors\Solid\PushableBox.h">
       <Filter>Header Files\Jazz2\Actors\Solid</Filter>
-    </ClInclude>
-    <ClInclude Include="Jazz2\ContentResolver.Shaders.h">
-      <Filter>Header Files\Jazz2</Filter>
     </ClInclude>
     <ClInclude Include="Jazz2\UI\Menu\MainMenu.h">
       <Filter>Header Files\Jazz2\UI\Menu</Filter>
@@ -2161,6 +2176,18 @@
     </ClCompile>
     <ClCompile Include="nCine\Graphics\Shader.cpp">
       <Filter>Source Files\nCine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="ShaderCompiler\ConstFold.cpp">
+      <Filter>Source Files\ShaderCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="ShaderCompiler\GlslReflect.cpp">
+      <Filter>Source Files\ShaderCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="ShaderCompiler\RuntimeShader.cpp">
+      <Filter>Source Files\ShaderCompiler</Filter>
+    </ClCompile>
+    <ClCompile Include="ShaderCompiler\ShaderParser.cpp">
+      <Filter>Source Files\ShaderCompiler</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Base\HashFunctions.cpp">
       <Filter>Source Files\nCine\Base</Filter>

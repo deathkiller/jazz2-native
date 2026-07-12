@@ -21,6 +21,8 @@ namespace nCine::RhiGL
 	public:
 		GLAttribute();
 		GLAttribute(GLuint program, GLuint index);
+		/** @brief Creates an attribute from offline reflection data, querying only the location */
+		GLAttribute(GLuint program, const char* name, GLenum type);
 
 		/** @brief Returns the attribute location, or -1 if it has no location */
 		inline GLint GetLocation() const {

@@ -1,0 +1,13 @@
+program BatchedSprites
+variant (base)
+  struct Instance size=112 align=16
+    field mat4 modelMatrix offset=0
+    field vec4 color offset=64
+    field vec4 texRect offset=80
+    field vec2 spriteSize offset=96
+    field float palOffset offset=104
+  uniform mat4 uProjectionMatrix
+  uniform mat4 uViewMatrix
+  block InstancesBlock baseSize=0 instanceStride=112
+    member Instance instances[*] offset=0
+  texture uTexture unit=0

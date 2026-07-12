@@ -199,6 +199,11 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Threading/LockedPtr.h
 	${NCINE_SOURCE_DIR}/nCine/Threading/Thread.h
 	${NCINE_SOURCE_DIR}/nCine/Threading/ThreadSync.h
+	# Runtime part of ShaderCompiler, shared with the offline tool
+	${NCINE_SOURCE_DIR}/ShaderCompiler/ConstFold.h
+	${NCINE_SOURCE_DIR}/ShaderCompiler/GlslReflect.h
+	${NCINE_SOURCE_DIR}/ShaderCompiler/RuntimeShader.h
+	${NCINE_SOURCE_DIR}/ShaderCompiler/ShaderParser.h
 )
 
 list(APPEND HEADERS
@@ -207,7 +212,6 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/AnimationLoopMode.h
 	${NCINE_SOURCE_DIR}/Jazz2/AnimState.h
 	${NCINE_SOURCE_DIR}/Jazz2/ContentResolver.h
-	${NCINE_SOURCE_DIR}/Jazz2/ContentResolver.Shaders.h
 	${NCINE_SOURCE_DIR}/Jazz2/Direction.h
 	${NCINE_SOURCE_DIR}/Jazz2/EventType.h
 	${NCINE_SOURCE_DIR}/Jazz2/ExitType.h

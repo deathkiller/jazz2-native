@@ -1,7 +1,7 @@
 #include "GLShaderUniformBlocks.h"
 #include "GLShaderProgram.h"
-#include "../../RenderResources.h"
-#include "../../RenderBuffersManager.h"
+#include "GLBufferObject.h"
+#include "../../IGfxCapabilities.h"
 #include "../../../ServiceLocator.h"
 #include "../../../../Main.h"
 
@@ -9,6 +9,13 @@
 
 namespace nCine::RhiGL
 {
+	GLShaderUniformBlocks::UniformRangeAllocator GLShaderUniformBlocks::uniformRangeAllocator_ = nullptr;
+
+	void GLShaderUniformBlocks::SetUniformRangeAllocator(UniformRangeAllocator allocator)
+	{
+		uniformRangeAllocator_ = allocator;
+	}
+
 	GLShaderUniformBlocks::GLShaderUniformBlocks()
 		: shaderProgram_(nullptr), dataPointer_(nullptr)
 	{
@@ -103,8 +110,8 @@ namespace nCine::RhiGL
 				}
 
 				if (totalUsedSize > 0) {
-					const RenderBuffersManager::BufferTypes bufferType = RenderBuffersManager::BufferTypes::Uniform;
-					uboParams_ = RenderResources::GetBuffersManager().AcquireMemory(bufferType, totalUsedSize);
+					DEATH_ASSERT(uniformRangeAllocator_ != nullptr);
+					uboParams_ = uniformRangeAllocator_(std::uint32_t(totalUsedSize));
 					if (uboParams_.mapBase != nullptr) {
 						if (hasMemoryGaps) {
 							std::int32_t offset = 0;

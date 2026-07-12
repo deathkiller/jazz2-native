@@ -1,0 +1,17 @@
+program CustomWave
+render_mode blend_premul_alpha
+variant (base)
+  uniform mat4 uProjectionMatrix
+  uniform mat4 uViewMatrix
+  uniform vec2 uPhase
+  texture uTexture unit=0
+  attribute vec2 aPosition location=0
+  attribute vec2 aTexCoords location=-1
+variant DESATURATE
+  define DESATURATE
+  uniform mat4 uProjectionMatrix
+  uniform mat4 uViewMatrix
+  uniform vec2 uPhase
+  texture uTexture unit=0
+  attribute vec2 aPosition location=0
+  attribute vec2 aTexCoords location=-1

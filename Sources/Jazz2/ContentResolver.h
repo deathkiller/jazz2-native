@@ -22,6 +22,11 @@
 
 #include "../nCine/Graphics/RHI/RhiFwd.h"
 
+namespace ShaderCompiler
+{
+	struct Program;
+}
+
 namespace nCine
 {
 	class RenderCommand;
@@ -349,9 +354,14 @@ namespace Jazz2
 		// then can on/off transparency be dropped and reproduced by the palette (false, e.g., for gems, which keep RG8)
 		static std::unique_ptr<Texture> CreateIndexedTexture(const char* name, const std::uint8_t* pixels, std::int32_t width, std::int32_t height, std::int32_t srcChannels, bool paletteBaseTransparent);
 
-		std::unique_ptr<Shader> CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled, std::initializer_list<StringView> defines = {});
-		std::unique_ptr<Shader> CompileShader(const char* shaderName, const char* vertex, Shader::DefaultFragment fragment, Shader::Introspection introspection = Shader::Introspection::Enabled, std::initializer_list<StringView> defines = {});
-		std::unique_ptr<Shader> CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection = Shader::Introspection::Enabled, std::initializer_list<StringView> defines = {});
+		// Compiles one variant of a ShaderCompiler-generated program. Batched shaders get their batch size from
+		// the offline-reflected std140 instance stride, so no probe compilation is needed anymore.
+		// Pass nullptr (the default) as variantName for the unnamed base variant (program.Variants[0]).
+		std::unique_ptr<Shader> CompileShader(const char* shaderName, const ShaderCompiler::Program& program, const char* variantName = nullptr, Shader::Introspection introspection = Shader::Introspection::Enabled);
+		// Convenience overload - compiles the base variant with explicit introspection
+		std::unique_ptr<Shader> CompileShader(const char* shaderName, const ShaderCompiler::Program& program, Shader::Introspection introspection) {
+			return CompileShader(shaderName, program, nullptr, introspection);
+		}
 		
 		void RecreateGemPalettes();
 		// Expands the dirty palette-row range so the next GetPaletteTexture re-uploads at least rows [firstRow, lastRow]

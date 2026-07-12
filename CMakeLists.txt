@@ -92,6 +92,12 @@ if(NCINE_BUILD_ANDROID)
 	return()
 endif()
 
+# The offline shader preprocessing tool runs on the build machine, so it's skipped when cross-compiling
+if(NOT EMSCRIPTEN AND NOT NINTENDO_SWITCH AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
+	add_subdirectory("${NCINE_SOURCE_DIR}/ShaderCompiler")
+	set_target_properties(ShaderCompiler PROPERTIES FOLDER "Utilities")
+endif()
+
 add_executable(${NCINE_APP})
 
 if(WINDOWS_PHONE OR WINDOWS_STORE)
@@ -123,14 +129,11 @@ include(ncine_generated_sources)
 
 # Organize main project files into folders
 ncine_assign_source_group(PATH_PREFIX ${NCINE_SOURCE_DIR} FILES ${HEADERS} ${SOURCES})
-foreach(SOURCE_FILE IN LISTS SHADER_FILES)
-	source_group("Shaders" FILES ${SOURCE_FILE})
-endforeach()
 foreach(SOURCE_FILE ${GENERATED_SOURCES})
 	source_group("Generated Files" FILES ${SOURCE_FILE})
 endforeach()
 
-target_sources(${NCINE_APP} PRIVATE ${SOURCES} ${HEADERS} ${SHADER_FILES} ${GENERATED_SOURCES})
+target_sources(${NCINE_APP} PRIVATE ${SOURCES} ${HEADERS} ${GENERATED_SOURCES})
 
 # Windows RT uses custom packaging, enable it only for other platforms
 if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH)

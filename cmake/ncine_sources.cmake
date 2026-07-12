@@ -118,6 +118,11 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Colorf.cpp
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Half.cpp
 	${NCINE_SOURCE_DIR}/nCine/Threading/Thread.cpp
+	# Runtime part of ShaderCompiler, shared with the offline tool — enables loading ".shader" files at runtime
+	${NCINE_SOURCE_DIR}/ShaderCompiler/ConstFold.cpp
+	${NCINE_SOURCE_DIR}/ShaderCompiler/GlslReflect.cpp
+	${NCINE_SOURCE_DIR}/ShaderCompiler/RuntimeShader.cpp
+	${NCINE_SOURCE_DIR}/ShaderCompiler/ShaderParser.cpp
 )
 
 list(APPEND SOURCES

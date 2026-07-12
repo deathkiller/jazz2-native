@@ -2,6 +2,8 @@
 #include "RenderResources.h"
 #include "RHI/Rhi.h"
 #include "Texture.h"
+#include "../../Main.h"
+#include "../../Shaders/Generated/ShaderCompilerTypes.h"
 
 #include <cstddef> // for offsetof()
 
@@ -99,6 +101,26 @@ namespace nCine
 		}
 
 		SetShaderProgram(shaderProgram);
+
+		// The shader's "render_mode" provides the default blending - an explicit
+		// SetBlendingFactors() call after assigning the shader still overrides it
+		std::uint32_t renderModes = shader->GetRenderModes();
+		if (renderModes != 0) {
+			if (renderModes & std::uint32_t(ShaderCompiler::RenderMode::BlendAdd)) {
+				SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One);
+			} else if (renderModes & std::uint32_t(ShaderCompiler::RenderMode::BlendMul)) {
+				SetBlendingFactors(BlendingFactor::DstColor, BlendingFactor::Zero);
+			} else if (renderModes & std::uint32_t(ShaderCompiler::RenderMode::BlendPremulAlpha)) {
+				SetBlendingFactors(BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+			} else if (renderModes & std::uint32_t(ShaderCompiler::RenderMode::BlendSub)) {
+				// Subtractive blending needs blend-equation support, which materials don't have yet
+				LOGW("Shader render_mode \"blend_sub\" is not supported yet, falling back to \"blend_mix\"");
+				SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+			} else if (renderModes & std::uint32_t(ShaderCompiler::RenderMode::BlendMix)) {
+				SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
+			}
+			SetBlendingEnabled(true);
+		}
 		return true;
 	}
 

@@ -1,0 +1,3 @@
+program TexturePassthrough
+variant (base)
+  texture TEXTURE unit=2

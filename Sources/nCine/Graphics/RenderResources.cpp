@@ -10,16 +10,10 @@
 #include "../ServiceLocator.h"
 #include "../../Main.h"
 
+#include "../../Shaders/Generated/ShadersGen.h"
+
 #include <cstddef>	// for offsetof()
 #include <cstring>
-
-#if defined(WITH_EMBEDDED_SHADERS)
-#	include "shader_strings.h"
-#else
-#	include <Containers/DateTime.h>
-#	include <IO/FileSystem.h>
-using namespace Death::IO;
-#endif
 
 using namespace Death::Containers::Literals;
 
@@ -29,11 +23,15 @@ namespace nCine
 	{
 		static const char BatchSizeFormatString[] = "#ifndef BATCH_SIZE\n\t#define BATCH_SIZE ({})\n#endif\n#line 0\n";
 
+		// Cache-busting version of the default shader set — bump whenever any "Default*.shader" source in
+		// "Sources/Shaders/" or the ShaderCompiler artifact format changes, so stale binary program caches
+		// are invalidated (12 = the switch from embedded/file sources to ShaderCompiler-generated artifacts)
+		static constexpr std::uint64_t DefaultShadersVersion = 22;
+
 		struct ShaderLoad
 		{
 			std::unique_ptr<Rhi::ShaderProgram>& shaderProgram;
-			const char* vertexShader;
-			const char* fragmentShader;
+			const ShaderCompiler::Program& program;
 			Rhi::ShaderProgram::Introspection introspection;
 			const char* shaderName;
 		};
@@ -204,6 +202,11 @@ namespace nCine
 		if (buffersManager_ == nullptr) {
 			buffersManager_ = std::make_unique<RenderBuffersManager>(appCfg.useBufferMapping, appCfg.useBufferStorage, appCfg.vboSize, appCfg.iboSize);
 		}
+		// The backend places committed uniform blocks into the streaming uniform buffer through this hook,
+		// so it doesn't have to know the pipeline's buffer suballocator
+		Rhi::ShaderUniformBlocks::SetUniformRangeAllocator([](std::uint32_t bytes) {
+			return buffersManager_->AcquireMemory(RenderBuffersManager::BufferTypes::Uniform, bytes);
+		});
 		if (vaoPool_ == nullptr) {
 			vaoPool_ = std::make_unique<RenderVaoPool>(appCfg.vaoPoolSize);
 		}
@@ -213,153 +216,107 @@ namespace nCine
 		currentCamera_ = defaultCamera_.get();
 
 		ShaderLoad shadersToLoad[] = {
-#if defined(WITH_EMBEDDED_SHADERS)
-			// Skipping the initial new line character of the raw string literal
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::Sprite)], ShaderStrings::sprite_vs + 1, ShaderStrings::sprite_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "Sprite" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteGray)], ShaderStrings::sprite_vs + 1, ShaderStrings::sprite_gray_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "Sprite_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteNoTexture)], ShaderStrings::sprite_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSprite)], ShaderStrings::meshsprite_vs + 1, ShaderStrings::sprite_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteGray)], ShaderStrings::meshsprite_vs + 1, ShaderStrings::sprite_gray_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteNoTexture)], ShaderStrings::meshsprite_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite_NoTexture" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::TextNodeAlpha)], ShaderStrings::textnode_vs + 1, ShaderStrings::textnode_alpha_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "TextNode_Alpha" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::TextNodeRed)], ShaderStrings::textnode_vs + 1, ShaderStrings::textnode_red_fs + 1, Rhi::ShaderProgram::Introspection::Enabled, "TextNode_Red" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSprites)], ShaderStrings::batched_sprites_vs + 1, ShaderStrings::sprite_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesGray)], ShaderStrings::batched_sprites_vs + 1, ShaderStrings::sprite_gray_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesNoTexture)], ShaderStrings::batched_sprites_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSprites)], ShaderStrings::batched_meshsprites_vs + 1, ShaderStrings::sprite_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesGray)], ShaderStrings::batched_meshsprites_vs + 1, ShaderStrings::sprite_gray_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesNoTexture)], ShaderStrings::batched_meshsprites_notexture_vs + 1, ShaderStrings::sprite_notexture_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedTextNodesAlpha)], ShaderStrings::batched_textnodes_vs + 1, ShaderStrings::textnode_alpha_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Alpha" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedTextNodesRed)], ShaderStrings::batched_textnodes_vs + 1, ShaderStrings::textnode_red_fs + 1, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Red" }
-#else
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::Sprite)], "sprite_vs.glsl", "sprite_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "Sprite" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteGray)], "sprite_vs.glsl", "sprite_gray_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "Sprite_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteNoTexture)], "sprite_notexture_vs.glsl", "sprite_notexture_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSprite)], "meshsprite_vs.glsl", "sprite_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteGray)], "meshsprite_vs.glsl", "sprite_gray_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteNoTexture)], "meshsprite_notexture_vs.glsl", "sprite_notexture_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite_NoTexture" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::TextNodeAlpha)], "textnode_vs.glsl", "textnode_alpha_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "TextNode_Alpha" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::TextNodeRed)], "textnode_vs.glsl", "textnode_red_fs.glsl", Rhi::ShaderProgram::Introspection::Enabled, "TextNode_Red" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSprites)], "batched_sprites_vs.glsl", "sprite_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesGray)], "batched_sprites_vs.glsl", "sprite_gray_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesNoTexture)], "batched_sprites_notexture_vs.glsl", "sprite_notexture_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSprites)], "batched_meshsprites_vs.glsl", "sprite_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesGray)], "batched_meshsprites_vs.glsl", "sprite_gray_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_Gray" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesNoTexture)], "batched_meshsprites_notexture_vs.glsl", "sprite_notexture_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedTextNodesAlpha)], "batched_textnodes_vs.glsl", "textnode_alpha_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Alpha" },
-			//{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedTextNodesRed)], "batched_textnodes_vs.glsl", "textnode_red_fs.glsl", Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_TextNodes_Red" }
-#endif
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::Sprite)], ShadersGen::DefaultSprite, Rhi::ShaderProgram::Introspection::Enabled, "Sprite" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteNoTexture)], ShadersGen::DefaultSpriteNoTexture, Rhi::ShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSprite)], ShadersGen::DefaultMeshSprite, Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteNoTexture)], ShadersGen::DefaultMeshSpriteNoTexture, Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite_NoTexture" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSprites)], ShadersGen::DefaultBatchedSprites, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesNoTexture)], ShadersGen::DefaultBatchedSpritesNoTexture, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_NoTexture" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSprites)], ShadersGen::DefaultBatchedMeshSprites, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesNoTexture)], ShadersGen::DefaultBatchedMeshSpritesNoTexture, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
 		};
 
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		std::int32_t maxUniformBlockSize = gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
 
 		char sourceString[64];
-		StringView vertexStrings[3];
+		StringView vertexStrings[2];
 
 		for (std::uint32_t i = 0; i < std::uint32_t(arraySize(shadersToLoad)); i++) {
 			const ShaderLoad& shaderToLoad = shadersToLoad[i];
-
-#if defined(WITH_EMBEDDED_SHADERS)
-			constexpr std::uint64_t shaderVersion = EmbeddedShadersVersion;
-#else
-			String vertexPath = fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, StringView(shaderToLoad.vertexShader) });
-			String fragmentPath = fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, StringView(shaderToLoad.fragmentShader) });
-			std::uint64_t shaderVersion = (std::uint64_t)std::max(fs::GetLastModificationTime(vertexPath).ToUnixMilliseconds(), fs::GetLastModificationTime(fragmentPath).ToUnixMilliseconds());
-#endif
+			// All default programs use the base variant of their generated ShaderCompiler artifact
+			const ShaderCompiler::ProgramVariant& variant = shaderToLoad.program.Variants[0];
 
 			shaderToLoad.shaderProgram = std::make_unique<Rhi::ShaderProgram>(Rhi::ShaderProgram::QueryPhase::Immediate);
-			if (binaryShaderCache_->LoadFromCache(shaderToLoad.shaderName, shaderVersion, shaderToLoad.shaderProgram.get(), shaderToLoad.introspection)) {
+			// Uniforms, blocks and attributes come from the offline reflection instead of GL introspection
+			shaderToLoad.shaderProgram->SetReflection(&variant);
+			if (binaryShaderCache_->LoadFromCache(shaderToLoad.shaderName, DefaultShadersVersion, shaderToLoad.shaderProgram.get(), shaderToLoad.introspection)) {
 				// Shader is already compiled and up-to-date
 				continue;
 			}
 
-			// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
-			bool compileTwice = false;
-			std::int32_t stringsCount = 0;
-
-			if (appCfg.fixedBatchSize > 0 && shaderToLoad.introspection == Rhi::ShaderProgram::Introspection::NoUniformsInBlocks) {
-				// If fixed batch size is used, it's compiled only once with specified batch size
-				shaderToLoad.shaderProgram->SetBatchSize(appCfg.fixedBatchSize);
-
-				std::size_t length = formatInto(sourceString, BatchSizeFormatString, appCfg.fixedBatchSize);
-				vertexStrings[stringsCount++] = { sourceString, length };
-#if defined(WITH_EMBEDDED_SHADERS)
-				vertexStrings[stringsCount++] = shaderToLoad.vertexShader;
-#endif
-			} else if (shaderToLoad.introspection == Rhi::ShaderProgram::Introspection::NoUniformsInBlocks && maxUniformBlockSize < 64 * 1024) {
-				compileTwice = true;
-
-				// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
-				std::size_t length = formatInto(sourceString, BatchSizeFormatString, 1);
-				vertexStrings[stringsCount++] = { sourceString, length };
-#if defined(WITH_EMBEDDED_SHADERS)
-				vertexStrings[stringsCount++] = shaderToLoad.vertexShader;
-#endif
-			} else {
-#if defined(WITH_EMBEDDED_SHADERS)
-				vertexStrings[stringsCount++] = shaderToLoad.vertexShader;
-#endif
-			}
-			
-#if defined(WITH_EMBEDDED_SHADERS)
-			bool vertexCompiled = shaderToLoad.shaderProgram->AttachShaderFromStrings(GL_VERTEX_SHADER, arrayView(vertexStrings, stringsCount));
-			bool fragmentCompiled = shaderToLoad.shaderProgram->AttachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
-#else
-			bool vertexCompiled = shaderToLoad.shaderProgram->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(vertexStrings, stringsCount), vertexPath);
-			bool fragmentCompiled = shaderToLoad.shaderProgram->AttachShaderFromFile(GL_FRAGMENT_SHADER, fragmentPath);
-#endif
-			DEATH_ASSERT(vertexCompiled);
-			DEATH_ASSERT(fragmentCompiled);
-			
-			shaderToLoad.shaderProgram->SetObjectLabel(shaderToLoad.shaderName);
-
-			if (compileTwice) {
-				bool hasLinked = shaderToLoad.shaderProgram->Link(Rhi::ShaderProgram::Introspection::Enabled);
-				FATAL_ASSERT(hasLinked);
-
-				Rhi::ShaderUniformBlocks blocks(shaderToLoad.shaderProgram.get(), Material::InstancesBlockName, nullptr);
-				Rhi::UniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
-				if (block != nullptr) {
-					std::int32_t batchSize = maxUniformBlockSize / block->GetSize();
-					LOGI("Shader \"{}\" - block size: {} + {} align bytes, max batch size: {}", shaderToLoad.shaderName,
-						block->GetSize() - block->GetAlignAmount(), block->GetAlignAmount(), batchSize);
-
-					bool hasLinkedFinal = false;
-					while (batchSize > 0) {
-						shaderToLoad.shaderProgram->Reset();
-						shaderToLoad.shaderProgram->SetBatchSize(batchSize);
-						std::size_t length = formatInto(sourceString, BatchSizeFormatString, batchSize);
-						vertexStrings[0] = { sourceString, length };
-
-#if defined(WITH_EMBEDDED_SHADERS)
-						bool vertexFinalCompiled = shaderToLoad.shaderProgram->AttachShaderFromStrings(GL_VERTEX_SHADER, arrayView(vertexStrings, stringsCount));
-						bool fragmentFinalCompiled = shaderToLoad.shaderProgram->AttachShaderFromString(GL_FRAGMENT_SHADER, shaderToLoad.fragmentShader);
-#else
-						bool vertexFinalCompiled = shaderToLoad.shaderProgram->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(vertexStrings, stringsCount), vertexPath);
-						bool fragmentFinalCompiled = shaderToLoad.shaderProgram->AttachShaderFromFile(GL_FRAGMENT_SHADER, fragmentPath);
-#endif
-						if (vertexFinalCompiled && fragmentFinalCompiled) {
-							hasLinkedFinal = shaderToLoad.shaderProgram->Link(shaderToLoad.introspection);
-							if (hasLinkedFinal) {
-								break;
-							}
+			// Batched shaders whose UBO is smaller than the 64 KB the in-shader BATCH_SIZE fallbacks assume get
+			// their batch size from the std140 instance stride reflected offline by ShaderCompiler - this replaces
+			// the probe compilation that used to run each batched shader twice
+			std::int32_t batchSize = 0;
+			bool hasBatchSizeDefine = false;
+			if (shaderToLoad.introspection == Rhi::ShaderProgram::Introspection::NoUniformsInBlocks) {
+				if (appCfg.fixedBatchSize > 0) {
+					batchSize = appCfg.fixedBatchSize;
+					hasBatchSizeDefine = true;
+				} else if (maxUniformBlockSize < 64 * 1024) {
+					std::int32_t instanceStride = 0;
+					for (std::size_t j = 0; j < variant.BlockCount; j++) {
+						if (variant.Blocks[j].InstanceStride > 0) {
+							instanceStride = std::int32_t(variant.Blocks[j].InstanceStride);
+							break;
 						}
-
-						batchSize--;
-						LOGW("Failed to compile the shader, recompiling with batch size: {}", batchSize);
 					}
-
-					FATAL_ASSERT_MSG(hasLinkedFinal, "Failed to compile shader \"{}\"", shaderToLoad.shaderName);
+					DEATH_ASSERT(instanceStride > 0);
+					if (instanceStride > 0) {
+						// The whole per-batch block is suballocated from a uniform buffer, so its size has to
+						// respect the uniform buffer offset alignment, exactly like the introspected size did
+						const std::int32_t offsetAlignment = gfxCaps.GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+						std::int32_t alignedStride = instanceStride;
+						if (offsetAlignment > 0) {
+							alignedStride += (offsetAlignment - instanceStride % offsetAlignment) % offsetAlignment;
+						}
+						batchSize = maxUniformBlockSize / alignedStride;
+						LOGI("Shader \"{}\" - instance stride: {} + {} align bytes, max batch size: {}", shaderToLoad.shaderName,
+							instanceStride, alignedStride - instanceStride, batchSize);
+						hasBatchSizeDefine = true;
+					}
 				}
-			} else {
-				bool hasLinked = shaderToLoad.shaderProgram->Link(shaderToLoad.introspection);
-				FATAL_ASSERT_MSG(hasLinked, "Failed to compile shader \"{}\"", shaderToLoad.shaderName);
 			}
 
-			binaryShaderCache_->SaveToCache(shaderToLoad.shaderName, shaderVersion, shaderToLoad.shaderProgram.get());
-		}
+			bool hasLinked = false;
+			bool isRetry = false;
+			while (true) {
+				if (isRetry) {
+					shaderToLoad.shaderProgram->Reset();
+				}
 
+				std::int32_t stringsCount = 0;
+				if (hasBatchSizeDefine) {
+					shaderToLoad.shaderProgram->SetBatchSize(batchSize);
+					std::size_t length = formatInto(sourceString, BatchSizeFormatString, batchSize);
+					vertexStrings[stringsCount++] = { sourceString, length };
+				}
+				vertexStrings[stringsCount++] = variant.VsSource;
+
+				bool vertexCompiled = shaderToLoad.shaderProgram->AttachShaderFromStrings(GL_VERTEX_SHADER, arrayView(vertexStrings, stringsCount));
+				// The BATCH_SIZE define is baked into both stages - a batched InstancesBlock is declared
+				// in the fragment stage too (shared globals), and mismatched block sizes would fail to link
+				vertexStrings[stringsCount - 1] = variant.FsSource;
+				bool fragmentCompiled = shaderToLoad.shaderProgram->AttachShaderFromStrings(GL_FRAGMENT_SHADER, arrayView(vertexStrings, stringsCount));
+				if (vertexCompiled && fragmentCompiled) {
+					shaderToLoad.shaderProgram->SetObjectLabel(shaderToLoad.shaderName);
+					// Reset() on a retry clears the reflection, so it is set (again) right before linking
+					shaderToLoad.shaderProgram->SetReflection(&variant);
+					hasLinked = shaderToLoad.shaderProgram->Link(shaderToLoad.introspection);
+				}
+				if (hasLinked || !hasBatchSizeDefine || batchSize <= 1) {
+					break;
+				}
+
+				batchSize--;
+				isRetry = true;
+				LOGW("Failed to compile the shader, recompiling with batch size: {}", batchSize);
+			}
+
+			FATAL_ASSERT_MSG(hasLinked, "Failed to compile shader \"{}\"", shaderToLoad.shaderName);
+			binaryShaderCache_->SaveToCache(shaderToLoad.shaderName, DefaultShadersVersion, shaderToLoad.shaderProgram.get());
+		}
 		RegisterDefaultBatchedShaders();
 
 		// Calculating a default projection matrix for all shader programs
@@ -369,6 +326,8 @@ namespace nCine
 
 	void RenderResources::Dispose()
 	{
+		Rhi::ShaderUniformBlocks::SetUniformRangeAllocator(nullptr);
+
 		for (auto& shaderProgram : defaultShaderPrograms_) {
 			shaderProgram.reset(nullptr);
 		}

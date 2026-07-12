@@ -8,11 +8,47 @@
 #include "../../../ServiceLocator.h"
 #include "../../../Base/StaticHashMapIterator.h"
 #include "../../../tracy.h"
+#include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
 
+#include <cstring>
 #include <string>
 
 namespace nCine::RhiGL
 {
+	namespace
+	{
+		GLenum UniformTypeToGL(ShaderCompiler::UniformType type)
+		{
+			switch (type) {
+				case ShaderCompiler::UniformType::Float: return GL_FLOAT;
+				case ShaderCompiler::UniformType::Int: return GL_INT;
+				case ShaderCompiler::UniformType::UInt: return GL_UNSIGNED_INT;
+				case ShaderCompiler::UniformType::Bool: return GL_BOOL;
+				case ShaderCompiler::UniformType::Vec2: return GL_FLOAT_VEC2;
+				case ShaderCompiler::UniformType::Vec3: return GL_FLOAT_VEC3;
+				case ShaderCompiler::UniformType::Vec4: return GL_FLOAT_VEC4;
+				case ShaderCompiler::UniformType::IVec2: return GL_INT_VEC2;
+				case ShaderCompiler::UniformType::IVec3: return GL_INT_VEC3;
+				case ShaderCompiler::UniformType::IVec4: return GL_INT_VEC4;
+				case ShaderCompiler::UniformType::UVec2: return GL_UNSIGNED_INT_VEC2;
+				case ShaderCompiler::UniformType::UVec3: return GL_UNSIGNED_INT_VEC3;
+				case ShaderCompiler::UniformType::UVec4: return GL_UNSIGNED_INT_VEC4;
+				case ShaderCompiler::UniformType::BVec2: return GL_BOOL_VEC2;
+				case ShaderCompiler::UniformType::BVec3: return GL_BOOL_VEC3;
+				case ShaderCompiler::UniformType::BVec4: return GL_BOOL_VEC4;
+				case ShaderCompiler::UniformType::Mat2: return GL_FLOAT_MAT2;
+				case ShaderCompiler::UniformType::Mat3: return GL_FLOAT_MAT3;
+				case ShaderCompiler::UniformType::Mat4: return GL_FLOAT_MAT4;
+				case ShaderCompiler::UniformType::Sampler2D: return GL_SAMPLER_2D;
+				case ShaderCompiler::UniformType::Sampler3D: return GL_SAMPLER_3D;
+				case ShaderCompiler::UniformType::SamplerCube: return GL_SAMPLER_CUBE;
+				default:
+					LOGW("No available case to handle reflected type: {}", std::uint32_t(type));
+					return GL_FLOAT;
+			}
+		}
+	}
+
 	GLuint GLShaderProgram::boundProgram_ = 0;
 
 	GLShaderProgram::GLShaderProgram()
@@ -21,7 +57,7 @@ namespace nCine::RhiGL
 	}
 
 	GLShaderProgram::GLShaderProgram(QueryPhase queryPhase)
-		: glHandle_(0), status_(Status::NotLinked), introspection_(Introspection::Disabled), queryPhase_(queryPhase), batchSize_(DefaultBatchSize), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0)
+		: glHandle_(0), status_(Status::NotLinked), introspection_(Introspection::Disabled), queryPhase_(queryPhase), batchSize_(DefaultBatchSize), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0), reflection_(nullptr)
 	{
 		glHandle_ = glCreateProgram();
 
@@ -232,6 +268,7 @@ namespace nCine::RhiGL
 
 		status_ = Status::NotLinked;
 		batchSize_ = DefaultBatchSize;
+		reflection_ = nullptr;
 	}
 
 	void GLShaderProgram::SetObjectLabel(StringView label)
@@ -297,16 +334,103 @@ namespace nCine::RhiGL
 	void GLShaderProgram::PerformIntrospection()
 	{
 		if (introspection_ != Introspection::Disabled && status_ != Status::LinkedWithIntrospection) {
-			const GLUniformBlock::DiscoverUniforms discover = (introspection_ == Introspection::NoUniformsInBlocks)
-				? GLUniformBlock::DiscoverUniforms::DISABLED
-				: GLUniformBlock::DiscoverUniforms::ENABLED;
+			uniformsSize_ = 0;
+			uniformBlocksSize_ = 0;
 
-			DiscoverUniforms();
-			DiscoverUniformBlocks(discover);
-			DiscoverAttributes();
+			if (reflection_ != nullptr) {
+				ImportReflection();
+			} else {
+				const GLUniformBlock::DiscoverUniforms discover = (introspection_ == Introspection::NoUniformsInBlocks)
+					? GLUniformBlock::DiscoverUniforms::DISABLED
+					: GLUniformBlock::DiscoverUniforms::ENABLED;
+
+				DiscoverUniforms();
+				DiscoverUniformBlocks(discover);
+				DiscoverAttributes();
+			}
 			InitVertexFormat();
 			status_ = Status::LinkedWithIntrospection;
 		}
+		// The reflection data is consumed by introspection and may not outlive the caller, so it is never kept
+		reflection_ = nullptr;
+	}
+
+	void GLShaderProgram::ImportReflection()
+	{
+		ZoneScopedC(0x81A861);
+		const ShaderCompiler::ProgramVariant& reflection = *reflection_;
+
+		// Loose uniforms - the reflection keeps samplers in a separate list, but GL treats them as uniforms
+		// (all samplers are 2D across the shader set; the reflected texture bindings carry no dimension)
+		for (std::size_t i = 0; i < reflection.UniformCount; i++) {
+			const ShaderCompiler::Uniform& u = reflection.Uniforms[i];
+			GLUniform& uniform = uniforms_.emplace_back(glHandle_, u.Name, UniformTypeToGL(u.Type), GLint(u.ArraySize));
+			uniformsSize_ += uniform.GetMemorySize();
+
+			LOGD("Shader program {} - uniform {} : \"{}\" (reflected)", glHandle_, uniform.GetLocation(), uniform.GetName());
+		}
+		for (std::size_t i = 0; i < reflection.TextureCount; i++) {
+			const ShaderCompiler::TextureBinding& t = reflection.Textures[i];
+			GLUniform& uniform = uniforms_.emplace_back(glHandle_, t.Name, GL_SAMPLER_2D, 1);
+			uniformsSize_ += uniform.GetMemorySize();
+
+			LOGD("Shader program {} - sampler uniform {} : \"{}\" (reflected)", glHandle_, uniform.GetLocation(), uniform.GetName());
+		}
+
+		for (std::size_t i = 0; i < reflection.BlockCount; i++) {
+			const ShaderCompiler::UniformBlock& b = reflection.Blocks[i];
+			const GLuint blockIndex = glGetUniformBlockIndex(glHandle_, b.Name);
+			if (blockIndex == GL_INVALID_INDEX) {
+				// The whole block was optimized out by the driver - GL introspection would not have listed it either
+				LOGD("Shader program {} - uniform block \"{}\" is inactive and was skipped", glHandle_, b.Name);
+				continue;
+			}
+
+			// A BATCH_SIZE-sized instance array uses the explicitly set batch size, or the same 64 KB-based
+			// fallback the in-shader "#ifndef BATCH_SIZE" defaults assume when no size is injected
+			std::uint32_t effectiveBatchSize = 0;
+			std::uint32_t dataSize = b.BaseSize;
+			if (b.InstanceStride > 0) {
+				effectiveBatchSize = (batchSize_ != std::uint32_t(DefaultBatchSize) && batchSize_ > 0)
+					? batchSize_ : (64 * 1024) / b.InstanceStride;
+				dataSize += b.InstanceStride * effectiveBatchSize;
+			}
+
+			GLUniformBlock& uniformBlock = uniformBlocks_.emplace_back(glHandle_, b.Name, blockIndex, GLint(dataSize));
+			uniformBlocksSize_ += uniformBlock.GetSize();
+
+			if (introspection_ != Introspection::NoUniformsInBlocks) {
+				for (std::size_t j = 0; j < b.MemberCount; j++) {
+					const ShaderCompiler::BlockMember& m = b.Members[j];
+					if (m.Type == ShaderCompiler::UniformType::Struct) {
+						// GL introspection reports flattened leaves of struct members instead - no engine code
+						// accesses struct aggregates by name, so they are skipped here
+						continue;
+					}
+
+					GLUniform blockUniform;
+					std::size_t nameLength = strnlen(m.Name, GLUniform::MaxNameLength);
+					DEATH_ASSERT(nameLength < GLUniform::MaxNameLength);
+					std::memcpy(blockUniform.name_, m.Name, nameLength);
+					blockUniform.name_[nameLength] = '\0';
+					blockUniform.blockIndex_ = GLint(blockIndex);
+					blockUniform.type_ = UniformTypeToGL(m.Type);
+					blockUniform.size_ = (m.ArraySize == ShaderCompiler::SymbolicArraySize) ? GLint(effectiveBatchSize)
+						: (m.ArraySize > 0 ? GLint(m.ArraySize) : 1);
+					blockUniform.offset_ = GLint(m.Offset);
+					uniformBlock.blockUniforms_[blockUniform.name_] = blockUniform;
+				}
+			}
+
+			LOGD("Shader program {} - uniform block {} : \"{}\" ({} bytes with {} align, reflected)", glHandle_, uniformBlock.GetIndex(), uniformBlock.GetName(), uniformBlock.GetSize(), uniformBlock.GetAlignAmount());
+		}
+
+		for (std::size_t i = 0; i < reflection.AttributeCount; i++) {
+			const ShaderCompiler::Attribute& a = reflection.Attributes[i];
+			DEATH_UNUSED GLAttribute& attribute = attributes_.emplace_back(glHandle_, a.Name, UniformTypeToGL(a.Type));
+			LOGD("Shader program {} - attribute {} : \"{}\" (reflected)", glHandle_, attribute.GetLocation(), attribute.GetName());
+		}
+		GL_LOG_ERRORS();
 	}
 
 	void GLShaderProgram::DiscoverUniforms()

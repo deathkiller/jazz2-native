@@ -1,5 +1,5 @@
 ﻿#include "ContentResolver.h"
-#include "ContentResolver.Shaders.h"
+#include "../Shaders/Generated/ShadersGen.h"
 #include "Compatibility/JJ2Anims.Palettes.h"
 #include "LevelFlags.h"
 #include "LevelHandler.h"
@@ -49,6 +49,11 @@ static Vector2i GetVector2iFromJson(const Json::Value& value, Vector2i defaultVa
 
 namespace Jazz2
 {
+	// Cache-busting version of the precompiled shader set — bump whenever any ".shader" source in
+	// "Sources/Shaders/" or the ShaderCompiler artifact format changes, so stale binary program caches
+	// are invalidated (12 = the switch from embedded sources to ShaderCompiler-generated artifacts)
+	static constexpr std::uint64_t ShadersVersion = 22;
+
 	ContentResolver& ContentResolver::Get()
 	{
 		static ContentResolver current;
@@ -1779,89 +1784,89 @@ namespace Jazz2
 
 		ZoneScoped;
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Lighting] = CompileShader("Lighting", Shaders::LightingVs, Shaders::LightingFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedLighting] = CompileShader("BatchedLighting", Shaders::BatchedLightingVs, Shaders::LightingFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Lighting] = CompileShader("Lighting", ShadersGen::Lighting);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedLighting] = CompileShader("BatchedLighting", ShadersGen::BatchedLighting, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Lighting]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedLighting]);
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Blur] = CompileShader("Blur", Shader::DefaultVertex::SPRITE, Shaders::BlurFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Downsample] = CompileShader("Downsample", Shader::DefaultVertex::SPRITE, Shaders::DownsampleFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Combine] = CompileShader("Combine", Shaders::CombineVs, Shaders::CombineFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::CombineWithWater] = CompileShader("CombineWithWater", Shaders::CombineVs, Shaders::CombineWithWaterFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::CombineWithWaterLow] = CompileShader("CombineWithWaterLow", Shaders::CombineVs, Shaders::CombineWithWaterLowFs);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Blur] = CompileShader("Blur", ShadersGen::Blur);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Downsample] = CompileShader("Downsample", ShadersGen::Downsample);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Combine] = CompileShader("Combine", ShadersGen::Combine);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::CombineWithWater] = CompileShader("CombineWithWater", ShadersGen::CombineWithWater);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::CombineWithWaterLow] = CompileShader("CombineWithWaterLow", ShadersGen::CombineWithWaterLow);
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackground] = CompileShader("TexturedBackground", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundDither] = CompileShader("TexturedBackgroundDither", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundFs, Shader::Introspection::Enabled, { "DITHER"_s });
-		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCircle] = CompileShader("TexturedBackgroundCircle", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundCircleFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCircleDither] = CompileShader("TexturedBackgroundCircleDither", Shader::DefaultVertex::SPRITE, Shaders::TexturedBackgroundCircleFs, Shader::Introspection::Enabled, { "DITHER"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackground] = CompileShader("TexturedBackground", ShadersGen::TexturedBackground);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundDither] = CompileShader("TexturedBackgroundDither", ShadersGen::TexturedBackground, "DITHER");
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCircle] = CompileShader("TexturedBackgroundCircle", ShadersGen::TexturedBackgroundCircle);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCircleDither] = CompileShader("TexturedBackgroundCircleDither", ShadersGen::TexturedBackgroundCircle, "DITHER");
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Colorized] = CompileShader("Colorized", Shader::DefaultVertex::SPRITE, Shaders::ColorizedFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedColorized] = CompileShader("BatchedColorized", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::ColorizedFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Colorized] = CompileShader("Colorized", ShadersGen::Colorized);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedColorized] = CompileShader("BatchedColorized", ShadersGen::BatchedColorized, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Colorized]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedColorized]);
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Tinted] = CompileShader("Tinted", Shader::DefaultVertex::SPRITE, Shaders::TintedFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedTinted] = CompileShader("BatchedTinted", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::TintedFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Tinted] = CompileShader("Tinted", ShadersGen::Tinted);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedTinted] = CompileShader("BatchedTinted", ShadersGen::BatchedTinted, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Tinted]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedTinted]);
 
 		// Palette-aware Tinted, for tinted tile layers drawn from an indexed tileset
-		_precompiledShaders[(std::int32_t)PrecompiledShader::TintedPalette] = CompileShader("TintedPalette", Shader::DefaultVertex::SPRITE, Shaders::TintedFs, Shader::Introspection::Enabled, { "USE_PALETTE"_s });
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedTintedPalette] = CompileShader("BatchedTintedPalette", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::TintedFs, Shader::Introspection::NoUniformsInBlocks, { "USE_PALETTE"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TintedPalette] = CompileShader("TintedPalette", ShadersGen::Tinted, "USE_PALETTE");
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedTintedPalette] = CompileShader("BatchedTintedPalette", ShadersGen::BatchedTinted, "USE_PALETTE", Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TintedPalette]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedTintedPalette]);
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Outline] = CompileShader("Outline", Shader::DefaultVertex::SPRITE, Shaders::OutlineFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedOutline] = CompileShader("BatchedOutline", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::OutlineFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Outline] = CompileShader("Outline", ShadersGen::Outline);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedOutline] = CompileShader("BatchedOutline", ShadersGen::BatchedOutline, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Outline]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedOutline]);
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::WhiteMask] = CompileShader("WhiteMask", Shader::DefaultVertex::SPRITE, Shaders::WhiteMaskFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedWhiteMask] = CompileShader("BatchedWhiteMask", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::WhiteMaskFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::WhiteMask] = CompileShader("WhiteMask", ShadersGen::WhiteMask);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedWhiteMask] = CompileShader("BatchedWhiteMask", ShadersGen::BatchedWhiteMask, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::WhiteMask]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedWhiteMask]);
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::PartialWhiteMask] = CompileShader("PartialWhiteMask", Shader::DefaultVertex::SPRITE, Shaders::PartialWhiteMaskFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedPartialWhiteMask] = CompileShader("BatchedPartialWhiteMask", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::PartialWhiteMaskFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::PartialWhiteMask] = CompileShader("PartialWhiteMask", ShadersGen::PartialWhiteMask);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedPartialWhiteMask] = CompileShader("BatchedPartialWhiteMask", ShadersGen::BatchedPartialWhiteMask, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::PartialWhiteMask]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedPartialWhiteMask]);
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMask] = CompileShader("FrozenMask", Shader::DefaultVertex::SPRITE, Shaders::FrozenMaskFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedFrozenMask] = CompileShader("BatchedFrozenMask", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::FrozenMaskFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMask] = CompileShader("FrozenMask", ShadersGen::FrozenMask);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedFrozenMask] = CompileShader("BatchedFrozenMask", ShadersGen::BatchedFrozenMask, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMask]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedFrozenMask]);
 
 		// Palette-based rendering: indexed sprites/tiles are recolored at draw time through a palette texture bound
 		// at unit 1. Batched variants let many indexed sprites that share the same palette texture (e.g., all actors
 		// using the default sprite palette) collapse into a single draw call, exactly like the non-palette shaders.
-		_precompiledShaders[(std::int32_t)PrecompiledShader::PaletteRemap] = CompileShader("PaletteRemap", Shader::DefaultVertex::SPRITE, Shaders::PaletteRemapFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedPaletteRemap] = CompileShader("BatchedPaletteRemap", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::PaletteRemapFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::PaletteRemap] = CompileShader("PaletteRemap", ShadersGen::PaletteRemap);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedPaletteRemap] = CompileShader("BatchedPaletteRemap", ShadersGen::BatchedPaletteRemap, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::PaletteRemap]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedPaletteRemap]);
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::OutlinePalette] = CompileShader("OutlinePalette", Shader::DefaultVertex::SPRITE, Shaders::OutlinePaletteFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedOutlinePalette] = CompileShader("BatchedOutlinePalette", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::OutlinePaletteFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::OutlinePalette] = CompileShader("OutlinePalette", ShadersGen::OutlinePalette);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedOutlinePalette] = CompileShader("BatchedOutlinePalette", ShadersGen::BatchedOutlinePalette, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::OutlinePalette]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedOutlinePalette]);
 
 		// Palette-aware variants of the mask shaders, so a recolored (indexed) actor keeps correct colors while
 		// hit-flashing, frozen, or in sugar rush.
-		_precompiledShaders[(std::int32_t)PrecompiledShader::WhiteMaskPalette] = CompileShader("WhiteMaskPalette", Shader::DefaultVertex::SPRITE, Shaders::WhiteMaskFs, Shader::Introspection::Enabled, { "USE_PALETTE"_s });
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedWhiteMaskPalette] = CompileShader("BatchedWhiteMaskPalette", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::WhiteMaskFs, Shader::Introspection::NoUniformsInBlocks, { "USE_PALETTE"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::WhiteMaskPalette] = CompileShader("WhiteMaskPalette", ShadersGen::WhiteMask, "USE_PALETTE");
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedWhiteMaskPalette] = CompileShader("BatchedWhiteMaskPalette", ShadersGen::BatchedWhiteMask, "USE_PALETTE", Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::WhiteMaskPalette]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedWhiteMaskPalette]);
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::PartialWhiteMaskPalette] = CompileShader("PartialWhiteMaskPalette", Shader::DefaultVertex::SPRITE, Shaders::PartialWhiteMaskFs, Shader::Introspection::Enabled, { "USE_PALETTE"_s });
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedPartialWhiteMaskPalette] = CompileShader("BatchedPartialWhiteMaskPalette", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::PartialWhiteMaskFs, Shader::Introspection::NoUniformsInBlocks, { "USE_PALETTE"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::PartialWhiteMaskPalette] = CompileShader("PartialWhiteMaskPalette", ShadersGen::PartialWhiteMask, "USE_PALETTE");
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedPartialWhiteMaskPalette] = CompileShader("BatchedPartialWhiteMaskPalette", ShadersGen::BatchedPartialWhiteMask, "USE_PALETTE", Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::PartialWhiteMaskPalette]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedPartialWhiteMaskPalette]);
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMaskPalette] = CompileShader("FrozenMaskPalette", Shader::DefaultVertex::SPRITE, Shaders::FrozenMaskFs, Shader::Introspection::Enabled, { "USE_PALETTE"_s });
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedFrozenMaskPalette] = CompileShader("BatchedFrozenMaskPalette", Shader::DefaultVertex::BATCHED_SPRITES, Shaders::FrozenMaskFs, Shader::Introspection::NoUniformsInBlocks, { "USE_PALETTE"_s });
+		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMaskPalette] = CompileShader("FrozenMaskPalette", ShadersGen::FrozenMask, "USE_PALETTE");
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedFrozenMaskPalette] = CompileShader("BatchedFrozenMaskPalette", ShadersGen::BatchedFrozenMask, "USE_PALETTE", Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::FrozenMaskPalette]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedFrozenMaskPalette]);
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldFire] = CompileShader("ShieldFire", Shaders::ShieldVs, Shaders::ShieldFireFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedShieldFire] = CompileShader("BatchedShieldFire", Shaders::BatchedShieldVs, Shaders::ShieldFireFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldFire] = CompileShader("ShieldFire", ShadersGen::ShieldFire);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedShieldFire] = CompileShader("BatchedShieldFire", ShadersGen::BatchedShieldFire, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldFire]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedShieldFire]);
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldLightning] = CompileShader("ShieldLightning", Shaders::ShieldVs, Shaders::ShieldLightningFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedShieldLightning] = CompileShader("BatchedShieldLightning", Shaders::BatchedShieldVs, Shaders::ShieldLightningFs, Shader::Introspection::NoUniformsInBlocks);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldLightning] = CompileShader("ShieldLightning", ShadersGen::ShieldLightning);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedShieldLightning] = CompileShader("BatchedShieldLightning", ShadersGen::BatchedShieldLightning, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ShieldLightning]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedShieldLightning]);
 
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 		// Tile-layer mesh shaders (used by TileMap when TILEMAP_USE_SINGLE_DRAW is enabled; cheap to keep compiled
 		// either way). Define the interleaved per-vertex format (position.xy, texcoords.xy, color.rgba = 8 floats /
 		// 32 bytes) shared by both, filled in TileMap::DrawLayer.
-		_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMesh] = CompileShader("TileMapMesh", Shaders::TileMapVs, Shader::DefaultFragment::SPRITE);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMeshPalette] = CompileShader("TileMapMeshPalette", Shaders::TileMapVs, Shaders::PaletteRemapFs);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMesh] = CompileShader("TileMapMesh", ShadersGen::TileMapMesh);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TileMapMeshPalette] = CompileShader("TileMapMeshPalette", ShadersGen::TileMapMeshPalette);
 		for (PrecompiledShader meshShader : { PrecompiledShader::TileMapMesh, PrecompiledShader::TileMapMeshPalette }) {
 			Shader* shader = _precompiledShaders[(std::int32_t)meshShader].get();
 			constexpr std::int32_t Stride = 8 * sizeof(float);
@@ -1872,195 +1877,101 @@ namespace Jazz2
 #endif
 
 #if !defined(DISABLE_RESCALE_SHADERS)
-		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeHQ2x] = CompileShader("ResizeHQ2x", Shaders::ResizeHQ2xVs, Shaders::ResizeHQ2xFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Resize3xBrz] = CompileShader("Resize3xBrz", Shaders::Resize3xBrzVs, Shaders::Resize3xBrzFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCrtScanlines] = CompileShader("ResizeCrtScanlines", Shaders::ResizeCrtScanlinesVs, Shaders::ResizeCrtScanlinesFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCrtShadowMask] = CompileShader("ResizeCrtShadowMask", Shaders::ResizeCrtVs, Shaders::ResizeCrtShadowMaskFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCrtApertureGrille] = CompileShader("ResizeCrtApertureGrille", Shaders::ResizeCrtVs, Shaders::ResizeCrtApertureGrilleFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeMonochrome] = CompileShader("ResizeMonochrome", Shaders::ResizeMonochromeVs, Shaders::ResizeMonochromeFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeSabr] = CompileShader("ResizeSabr", Shaders::ResizeSabrVs, Shaders::ResizeSabrFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCleanEdge] = CompileShader("ResizeCleanEdge", Shaders::ResizeCleanEdgeVs, Shaders::ResizeCleanEdgeFs);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeHQ2x] = CompileShader("ResizeHQ2x", ShadersGen::ResizeHQ2x);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Resize3xBrz] = CompileShader("Resize3xBrz", ShadersGen::Resize3xBrz);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCrtScanlines] = CompileShader("ResizeCrtScanlines", ShadersGen::ResizeCrtScanlines);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCrtShadowMask] = CompileShader("ResizeCrtShadowMask", ShadersGen::ResizeCrtShadowMask);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCrtApertureGrille] = CompileShader("ResizeCrtApertureGrille", ShadersGen::ResizeCrtApertureGrille);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeMonochrome] = CompileShader("ResizeMonochrome", ShadersGen::ResizeMonochrome);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeSabr] = CompileShader("ResizeSabr", ShadersGen::ResizeSabr);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCleanEdge] = CompileShader("ResizeCleanEdge", ShadersGen::ResizeCleanEdge);
 #endif
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Antialiasing] = CompileShader("Antialiasing", Shaders::AntialiasingVs, Shaders::AntialiasingFs);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Antialiasing] = CompileShader("Antialiasing", ShadersGen::Antialiasing);
 
-		_precompiledShaders[(std::int32_t)PrecompiledShader::Transition] = CompileShader("Transition", Shaders::TransitionVs, Shaders::TransitionFs);
-		_precompiledShaders[(std::int32_t)PrecompiledShader::TouchCircle] = CompileShader("TouchCircle", Shaders::TouchCircleVs, Shaders::TouchCircleFs);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::Transition] = CompileShader("Transition", ShadersGen::Transition);
+		_precompiledShaders[(std::int32_t)PrecompiledShader::TouchCircle] = CompileShader("TouchCircle", ShadersGen::TouchCircle);
 	}
 
-	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, Shader::DefaultVertex vertex, const char* fragment, Shader::Introspection introspection, std::initializer_list<StringView> defines)
+	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, const ShaderCompiler::Program& program, const char* variantName, Shader::Introspection introspection)
 	{
+		const ShaderCompiler::ProgramVariant* variant = nullptr;
+		if (variantName == nullptr || variantName[0] == '\0') {
+			// The base variant is unnamed (Name "") and is always Variants[0]
+			if (program.VariantCount > 0) {
+				variant = &program.Variants[0];
+			}
+		} else {
+			for (std::size_t i = 0; i < program.VariantCount; i++) {
+				if (strcmp(program.Variants[i].Name, variantName) == 0) {
+					variant = &program.Variants[i];
+					break;
+				}
+			}
+		}
+		FATAL_ASSERT_MSG(variant != nullptr, "Shader \"{}\" has no variant \"{}\"", program.Name, variantName != nullptr ? variantName : "(base)");
+
 		std::unique_ptr shader = std::make_unique<Shader>();
-		if (shader->LoadFromCache(shaderName, Shaders::Version, introspection)) {
+		// "render_mode" flags are program-level metadata applied by Material::SetShader()
+		shader->SetRenderModes(program.RenderModes);
+		if (shader->LoadFromCache(shaderName, ShadersVersion, introspection, *variant)) {
 			return shader;
 		}
 
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
+		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
-		// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
-		bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && introspection == Shader::Introspection::NoUniformsInBlocks);
-
-		std::int32_t batchSize;
-		if (appCfg.fixedBatchSize > 0 && introspection == Shader::Introspection::NoUniformsInBlocks) {
-			batchSize = appCfg.fixedBatchSize;
-		} else if (compileTwice) {
-			// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
-			batchSize = 1;
-		} else {
-			batchSize = Rhi::ShaderProgram::DefaultBatchSize;
-		}
-
-		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
-
-		if (compileTwice) {
-			Rhi::ShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
-			Rhi::UniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
-			DEATH_DEBUG_ASSERT(block != nullptr);
-			if (block != nullptr) {
-				batchSize = maxUniformBlockSize / block->GetSize();
-				LOGI("Shader \"{}\" - block size: {} + {} align bytes, max batch size: {}", shaderName,
-					block->GetSize() - block->GetAlignAmount(), block->GetAlignAmount(), batchSize);
-				
-				bool hasLinked = false;
-				while (batchSize > 0) {
-					hasLinked = shader->LoadFromMemory(shaderName, introspection, vertex, fragment, batchSize, arrayView(defines));
-					if (hasLinked) {
+		std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize;
+		bool batchSizeComputed = false;
+		if (introspection == Shader::Introspection::NoUniformsInBlocks) {
+			if (appCfg.fixedBatchSize > 0) {
+				batchSize = appCfg.fixedBatchSize;
+			} else if (maxUniformBlockSize < 64 * 1024) {
+				// The UBO is smaller than the 64 KB the in-shader BATCH_SIZE fallbacks assume, so the batch size is
+				// computed from the std140 instance stride reflected offline by ShaderCompiler - this replaces the probe
+				// compilation that used to run the shader twice
+				std::int32_t instanceStride = 0;
+				for (std::size_t i = 0; i < variant->BlockCount; i++) {
+					if (variant->Blocks[i].InstanceStride > 0) {
+						instanceStride = std::int32_t(variant->Blocks[i].InstanceStride);
 						break;
 					}
-
-					batchSize--;
-					LOGW("Failed to compile the shader, recompiling with batch size: {}", batchSize);
 				}
-
-				if (!hasLinked) {
-					// Don't save to cache if it cannot be linked
-					return shader;
+				DEATH_ASSERT(instanceStride > 0);
+				if (instanceStride > 0) {
+					// The whole per-batch block is suballocated from a uniform buffer, so its size has to respect
+					// the uniform buffer offset alignment, exactly like the introspected block size did before
+					const std::int32_t offsetAlignment = gfxCaps.GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+					std::int32_t alignedStride = instanceStride;
+					if (offsetAlignment > 0) {
+						alignedStride += (offsetAlignment - instanceStride % offsetAlignment) % offsetAlignment;
+					}
+					batchSize = maxUniformBlockSize / alignedStride;
+					LOGI("Shader \"{}\" - instance stride: {} + {} align bytes, max batch size: {}", shaderName,
+						instanceStride, alignedStride - instanceStride, batchSize);
+					batchSizeComputed = true;
 				}
 			}
 		}
 
-		shader->SaveToCache(shaderName, Shaders::Version);
-		return shader;
-	}
-	
-	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, const char* vertex, Shader::DefaultFragment fragment, Shader::Introspection introspection, std::initializer_list<StringView> defines)
-	{
-		std::unique_ptr shader = std::make_unique<Shader>();
-		if (shader->LoadFromCache(shaderName, Shaders::Version, introspection)) {
+		bool hasLinked;
+		while (true) {
+			hasLinked = shader->LoadFromMemory(shaderName, introspection, *variant, batchSize);
+			if (hasLinked || !batchSizeComputed || batchSize <= 1) {
+				break;
+			}
+			batchSize--;
+			LOGW("Failed to compile the shader, recompiling with batch size: {}", batchSize);
+		}
+		if (!hasLinked) {
+			// Don't save to cache if it cannot be linked
 			return shader;
 		}
 
-		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
-		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
-
-		// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
-		bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && introspection == Shader::Introspection::NoUniformsInBlocks);
-
-		std::int32_t batchSize;
-		if (appCfg.fixedBatchSize > 0 && introspection == Shader::Introspection::NoUniformsInBlocks) {
-			batchSize = appCfg.fixedBatchSize;
-		} else if (compileTwice) {
-			// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
-			batchSize = 1;
-		} else {
-			batchSize = Rhi::ShaderProgram::DefaultBatchSize;
-		}
-
-		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
-
-		if (compileTwice) {
-			Rhi::ShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
-			Rhi::UniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
-			DEATH_DEBUG_ASSERT(block != nullptr);
-			if (block != nullptr) {
-				batchSize = maxUniformBlockSize / block->GetSize();
-				LOGI("Shader \"{}\" - block size: {} + {} align bytes, max batch size: {}", shaderName,
-					block->GetSize() - block->GetAlignAmount(), block->GetAlignAmount(), batchSize);
-
-				bool hasLinked = false;
-				while (batchSize > 0) {
-					hasLinked = shader->LoadFromMemory(shaderName, introspection, vertex, fragment, batchSize, arrayView(defines));
-					if (hasLinked) {
-						break;
-					}
-
-					batchSize--;
-					LOGW("Failed to compile the shader, recompiling with batch size: {}", batchSize);
-				}
-
-				if (!hasLinked) {
-					// Don't save to cache if it cannot be linked
-					return shader;
-				}
-			}
-		}
-
-		shader->SaveToCache(shaderName, Shaders::Version);
+		shader->SaveToCache(shaderName, ShadersVersion);
 		return shader;
 	}
-
-	std::unique_ptr<Shader> ContentResolver::CompileShader(const char* shaderName, const char* vertex, const char* fragment, Shader::Introspection introspection, std::initializer_list<StringView> defines)
-	{
-		std::unique_ptr shader = std::make_unique<Shader>();
-		if (shader->LoadFromCache(shaderName, Shaders::Version, introspection)) {
-			return shader;
-		}
-
-		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
-		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.GetValue(IGfxCapabilities::GLIntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
-
-		// If the UBO is smaller than 64kb and fixed batch size is disabled, batched shaders need to be compiled twice to determine safe `BATCH_SIZE` define value
-		bool compileTwice = (maxUniformBlockSize < 64 * 1024 && appCfg.fixedBatchSize <= 0 && introspection == Shader::Introspection::NoUniformsInBlocks);
-
-		std::int32_t batchSize;
-		if (appCfg.fixedBatchSize > 0 && introspection == Shader::Introspection::NoUniformsInBlocks) {
-			batchSize = appCfg.fixedBatchSize;
-		} else if (compileTwice) {
-			// The first compilation of a batched shader needs a `BATCH_SIZE` defined as 1
-			batchSize = 1;
-		} else {
-			batchSize = Rhi::ShaderProgram::DefaultBatchSize;
-		}
-
-		shader->LoadFromMemory(shaderName, compileTwice ? Shader::Introspection::Enabled : introspection, vertex, fragment, batchSize, arrayView(defines));
-
-		if (compileTwice) {
-			Rhi::ShaderUniformBlocks blocks(shader->GetHandle(), Material::InstancesBlockName, nullptr);
-			Rhi::UniformBlockCache* block = blocks.GetUniformBlock(Material::InstancesBlockName);
-			DEATH_DEBUG_ASSERT(block != nullptr);
-			if (block != nullptr) {
-				batchSize = maxUniformBlockSize / block->GetSize();
-				LOGI("Shader \"{}\" - block size: {} + {} align bytes, max batch size: {}", shaderName,
-					block->GetSize() - block->GetAlignAmount(), block->GetAlignAmount(), batchSize);
-
-				bool hasLinked = false;
-				while (batchSize > 0) {
-					hasLinked = shader->LoadFromMemory(shaderName, introspection, vertex, fragment, batchSize, arrayView(defines));
-					if (hasLinked) {
-						break;
-					}
-
-					batchSize--;
-					LOGW("Failed to compile the shader, recompiling with batch size: {}", batchSize);
-				}
-
-				if (!hasLinked) {
-					// Don't save to cache if it cannot be linked
-					return shader;
-				}
-			}
-		}
-
-		shader->SaveToCache(shaderName, Shaders::Version);
-		return shader;
-	}
-
 	std::unique_ptr<Texture> ContentResolver::GetNoiseTexture()
 	{
 		// Don't load textures in headless mode

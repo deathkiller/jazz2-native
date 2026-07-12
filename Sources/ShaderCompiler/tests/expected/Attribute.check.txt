@@ -1,0 +1,5 @@
+program Attribute
+variant (base)
+  uniform mat4 uProjectionMatrix
+  attribute vec2 aPosition location=-1
+  attribute vec4 aColor location=3
