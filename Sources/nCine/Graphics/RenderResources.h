@@ -121,10 +121,6 @@ namespace nCine
 		static void SetDefaultAttributesParameters(Rhi::ShaderProgram& shaderProgram);
 
 	private:
-#if defined(WITH_EMBEDDED_SHADERS)
-		static constexpr std::uint64_t EmbeddedShadersVersion = 2ull | (1ull << 63);
-#endif
-
 		static std::unique_ptr<BinaryShaderCache> binaryShaderCache_;
 		static std::unique_ptr<RenderBuffersManager> buffersManager_;
 		static std::unique_ptr<RenderVaoPool> vaoPool_;

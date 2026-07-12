@@ -2,6 +2,8 @@
 #include "GLDebug.h"
 #include "../../../../Main.h"
 
+#include <cstring>
+
 namespace nCine::RhiGL
 {
 	GLUniform::GLUniform()
@@ -18,6 +20,24 @@ namespace nCine::RhiGL
 		DEATH_ASSERT(length <= MaxNameLength);
 
 		if (!HasReservedPrefix()) {
+			location_ = glGetUniformLocation(program, name_);
+		}
+		GL_LOG_ERRORS();
+	}
+
+	GLUniform::GLUniform(GLuint program, const char* name, GLenum type, GLint arraySize)
+		: GLUniform()
+	{
+		std::size_t length = strnlen(name, MaxNameLength);
+		DEATH_ASSERT(length < MaxNameLength);
+		std::memcpy(name_, name, length);
+		name_[length] = '\0';
+
+		type_ = type;
+		size_ = (arraySize > 0 ? arraySize : 1);
+
+		if (!HasReservedPrefix()) {
+			// A location of -1 means the uniform was optimized out by the driver - committing it is a silent no-op
 			location_ = glGetUniformLocation(program, name_);
 		}
 		GL_LOG_ERRORS();
@@ -41,6 +61,11 @@ namespace nCine::RhiGL
 			case GL_BOOL_VEC3:
 			case GL_BOOL_VEC4:
 				return GL_BOOL;
+			case GL_UNSIGNED_INT:
+			case GL_UNSIGNED_INT_VEC2:
+			case GL_UNSIGNED_INT_VEC3:
+			case GL_UNSIGNED_INT_VEC4:
+				return GL_UNSIGNED_INT;
 			case GL_FLOAT_MAT2:
 			case GL_FLOAT_MAT3:
 			case GL_FLOAT_MAT4:
@@ -67,18 +92,22 @@ namespace nCine::RhiGL
 			case GL_FLOAT:
 			case GL_INT:
 			case GL_BOOL:
+			case GL_UNSIGNED_INT:
 				return 1;
 			case GL_FLOAT_VEC2:
 			case GL_INT_VEC2:
 			case GL_BOOL_VEC2:
+			case GL_UNSIGNED_INT_VEC2:
 				return 2;
 			case GL_FLOAT_VEC3:
 			case GL_INT_VEC3:
 			case GL_BOOL_VEC3:
+			case GL_UNSIGNED_INT_VEC3:
 				return 3;
 			case GL_FLOAT_VEC4:
 			case GL_INT_VEC4:
 			case GL_BOOL_VEC4:
+			case GL_UNSIGNED_INT_VEC4:
 				return 4;
 			case GL_FLOAT_MAT2:
 				return 4;

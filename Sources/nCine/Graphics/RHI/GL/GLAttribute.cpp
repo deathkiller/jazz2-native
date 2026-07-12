@@ -2,6 +2,8 @@
 #include "GLDebug.h"
 #include "../../../../Main.h"
 
+#include <cstring>
+
 namespace nCine::RhiGL
 {
 	GLAttribute::GLAttribute()
@@ -22,6 +24,22 @@ namespace nCine::RhiGL
 			if (location_ == -1) {
 				LOGW("Attribute location not found for attribute \"{}\" ({}) in shader program {}", name_, index, program);
 			}
+		}
+		GL_LOG_ERRORS();
+	}
+
+	GLAttribute::GLAttribute(GLuint program, const char* name, GLenum type)
+		: location_(-1), size_(1), type_(type)
+	{
+		std::size_t length = strnlen(name, MaxNameLength);
+		DEATH_ASSERT(length < MaxNameLength);
+		std::memcpy(name_, name, length);
+		name_[length] = '\0';
+
+		if (!HasReservedPrefix()) {
+			// Unlike GL introspection, reflection also lists attributes the driver optimized out,
+			// so a location of -1 is expected here and the attribute is simply never enabled
+			location_ = glGetAttribLocation(program, name_);
 		}
 		GL_LOG_ERRORS();
 	}

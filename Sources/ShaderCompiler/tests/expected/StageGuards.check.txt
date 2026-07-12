@@ -1,0 +1,17 @@
+program StageGuards
+variant (base)
+  uniform mat4 uProjectionMatrix
+  uniform vec2 uVertexOnly
+  texture uTexture unit=0
+  attribute vec2 aPosition location=-1
+  attribute vec2 aTexCoords location=-1
+variant TINT
+  define TINT
+  uniform mat4 uProjectionMatrix
+  uniform vec2 uVertexOnly
+  uniform float uTintStrength
+  uniform vec2 uTintShift
+  uniform vec4 uTintColor
+  texture uTexture unit=0
+  attribute vec2 aPosition location=-1
+  attribute vec2 aTexCoords location=-1

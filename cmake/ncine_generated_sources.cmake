@@ -3,51 +3,9 @@
 set(GENERATED_SOURCE_DIR "${CMAKE_BINARY_DIR}/Generated")
 set(GENERATED_INCLUDE_DIR "${GENERATED_SOURCE_DIR}")
 
-# Shader strings
-file(GLOB SHADER_FILES "${NCINE_SOURCE_DIR}/nCine/Shaders/*.glsl")
-if(NCINE_EMBED_SHADERS)
-	message(STATUS "Exporting shader files to C strings")
-
-	set(SHADERS_H_FILE "${GENERATED_INCLUDE_DIR}/shader_strings.h")
-	set(SHADERS_CPP_FILE "${GENERATED_SOURCE_DIR}/shader_strings.cpp")
-	if(EXISTS ${SHADERS_H_FILE})
-		file(REMOVE ${SHADERS_H_FILE})
-	endif()
-	if(EXISTS ${SHADERS_CPP_FILE})
-		file(REMOVE ${SHADERS_CPP_FILE})
-	endif()
-
-	set(SHADER_STRUCT_NAME "ShaderStrings")
-	get_filename_component(SHADERS_H_FILENAME ${SHADERS_H_FILE} NAME)
-	file(APPEND ${SHADERS_H_FILE} "namespace nCine {\n\n")
-	file(APPEND ${SHADERS_H_FILE} "struct ${SHADER_STRUCT_NAME}\n{\n")
-	file(APPEND ${SHADERS_CPP_FILE} "#include \"${SHADERS_H_FILENAME}\"\n\n")
-	file(APPEND ${SHADERS_CPP_FILE} "namespace nCine {\n\n")
-	foreach(SHADER_FILE ${SHADER_FILES})
-		get_filename_component(SHADER_CSTRING_NAME ${SHADER_FILE} NAME_WE)
-		file(STRINGS ${SHADER_FILE} SHADER_LINES NEWLINE_CONSUME)
-		file(APPEND ${SHADERS_H_FILE} "\tstatic char const * const ${SHADER_CSTRING_NAME};\n")
-		file(APPEND ${SHADERS_CPP_FILE} "char const * const ${SHADER_STRUCT_NAME}::${SHADER_CSTRING_NAME} = ")
-		file(APPEND ${SHADERS_CPP_FILE} "R\"(\n")
-		foreach(SHADER_LINE ${SHADER_LINES})
-			file(APPEND ${SHADERS_CPP_FILE} "${SHADER_LINE}")
-		endforeach()
-		file(APPEND ${SHADERS_CPP_FILE} ")\"")
-		file(APPEND ${SHADERS_CPP_FILE} ";\n\n")
-	endforeach()
-	file(APPEND ${SHADERS_H_FILE} "};\n\n}\n")
-	file(APPEND ${SHADERS_CPP_FILE} "}\n")
-
-	list(APPEND GENERATED_SOURCES ${SHADERS_H_FILE})
-	list(APPEND GENERATED_SOURCES ${SHADERS_CPP_FILE})
-	if(TARGET ${NCINE_APP}) # Disabled if NCINE_BUILD_ANDROID
-		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_EMBEDDED_SHADERS")
-	endif()
-	list(APPEND ANDROID_GENERATED_FLAGS WITH_EMBEDDED_SHADERS)
-
-	# Don't need to add shader files to the library target if they are embedded
-	set(SHADER_FILES "")
-endif()
+# Shader sources are preprocessed offline by ShaderCompiler into committed headers under
+# "Sources/Shaders/Generated/" (see Sources/ShaderCompiler/GenerateAll.ps1), so no shader
+# embedding or file installation happens at build time anymore
 
 if(WIN32)
 	if(DEDICATED_SERVER)

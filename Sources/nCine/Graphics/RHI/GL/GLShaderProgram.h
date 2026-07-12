@@ -18,6 +18,11 @@
 
 using namespace Death::Containers;
 
+namespace ShaderCompiler
+{
+	struct ProgramVariant;
+}
+
 namespace nCine::RhiGL
 {
 	class GLShader;
@@ -156,6 +161,18 @@ namespace nCine::RhiGL
 		 */
 		bool AttachShaderFromStringsAndFile(GLenum type, ArrayView<const StringView> strings, StringView filename);
 		/**
+		 * @brief Sets offline reflection data to be used instead of GL introspection after linking
+		 *
+		 * When set before @ref Link() (or @ref FinalizeAfterLinking()), uniforms, uniform blocks and
+		 * attributes are imported from the ShaderCompiler reflection with targeted location queries only,
+		 * instead of being enumerated with `glGetActiveUniform*()`. The pointer must stay valid until
+		 * introspection runs (it is consumed and cleared afterwards, and cleared by @ref Reset()).
+		 */
+		inline void SetReflection(const ShaderCompiler::ProgramVariant* reflection) {
+			reflection_ = reflection;
+		}
+
+		/**
 		 * @brief Links the attached shaders into the program
 		 *
 		 * @param introspection	The introspection level to use after linking
@@ -265,6 +282,9 @@ namespace nCine::RhiGL
 		SmallVector<GLUniformBlock, 0> uniformBlocks_;
 		SmallVector<GLAttribute, 0> attributes_;
 
+		/** @brief Offline reflection used instead of GL introspection, consumed by PerformIntrospection() */
+		const ShaderCompiler::ProgramVariant* reflection_;
+
 		StaticHashMap<String, std::int32_t, GLVertexFormat::MaxAttributes> attributeLocations_;
 		GLVertexFormat vertexFormat_;
 
@@ -272,6 +292,7 @@ namespace nCine::RhiGL
 		bool CheckLinking();
 		void PerformIntrospection();
 
+		void ImportReflection();
 		void DiscoverUniforms();
 		void DiscoverUniformBlocks(GLUniformBlock::DiscoverUniforms discover);
 		void DiscoverAttributes();

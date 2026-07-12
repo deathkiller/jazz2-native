@@ -23,6 +23,7 @@ namespace nCine::RhiGL
 	class GLUniformBlock
 	{
 		friend class GLUniformBlockCache;
+		friend class GLShaderProgram;
 
 	public:
 		/** @brief Maximum length of a uniform block name, including the terminating null character */
@@ -41,6 +42,8 @@ namespace nCine::RhiGL
 		GLUniformBlock(GLuint program, GLuint blockIndex, DiscoverUniforms discover);
 		/** @brief Queries the active uniform block at the specified index, discovering its member uniforms */
 		GLUniformBlock(GLuint program, GLuint blockIndex);
+		/** @brief Creates a uniform block from offline reflection data (name, queried index and unaligned data size), without member discovery */
+		GLUniformBlock(GLuint program, const char* name, GLuint blockIndex, GLint dataSize);
 
 		/** @brief Returns the active uniform block index within the program */
 		inline GLuint GetIndex() const {

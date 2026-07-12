@@ -25,6 +25,12 @@ namespace nCine::RhiGL
 		static constexpr std::int32_t UniformBlockCachesHashSize = 4;
 		using UniformHashMapType = StaticHashMap<String, GLUniformBlockCache, UniformBlockCachesHashSize>;
 
+		/** @brief Function that suballocates a range of the given size from the streaming uniform buffer */
+		using UniformRangeAllocator = Rhi::BufferRange (*)(std::uint32_t bytes);
+
+		/** @brief Sets the allocator used by @ref CommitUniformBlocks() to place block data into a uniform buffer (registered by the render pipeline at startup) */
+		static void SetUniformRangeAllocator(UniformRangeAllocator allocator);
+
 		/** @brief Creates an instance not associated with any shader program */
 		GLShaderUniformBlocks();
 		/** @brief Creates an instance importing all uniform blocks of the specified shader program */
@@ -62,6 +68,8 @@ namespace nCine::RhiGL
 		void Bind();
 
 	private:
+		static UniformRangeAllocator uniformRangeAllocator_;
+
 		GLShaderProgram* shaderProgram_;
 		// Pointer to the data of the first uniform block
 		GLubyte* dataPointer_;

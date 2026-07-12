@@ -1,0 +1,26 @@
+program ImplicitTexture
+variant (base)
+  uniform mat4 uProjectionMatrix
+  uniform mat4 uViewMatrix
+  uniform vec2 uPixelOffset
+  block InstanceBlock baseSize=112 instanceStride=0
+    member mat4 modelMatrix offset=0
+    member vec4 color offset=64
+    member vec4 texRect offset=80
+    member vec2 spriteSize offset=96
+    member float palOffset offset=104
+  texture uTexture unit=0
+program BatchedImplicitTexture
+variant (base)
+  struct Instance size=112 align=16
+    field mat4 modelMatrix offset=0
+    field vec4 color offset=64
+    field vec4 texRect offset=80
+    field vec2 spriteSize offset=96
+    field float palOffset offset=104
+  uniform mat4 uProjectionMatrix
+  uniform mat4 uViewMatrix
+  uniform vec2 uPixelOffset
+  block InstancesBlock baseSize=0 instanceStride=112
+    member Instance instances[*] offset=0
+  texture uTexture unit=0

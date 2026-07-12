@@ -1,0 +1,6 @@
+program DeadFunctions
+variant (base)
+  uniform mat4 uProjectionMatrix
+  uniform vec2 uOffset
+  texture uTexture unit=0
+  attribute vec2 aPosition location=-1

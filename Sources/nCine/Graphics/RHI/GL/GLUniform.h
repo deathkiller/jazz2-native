@@ -20,6 +20,7 @@ namespace nCine::RhiGL
 	class GLUniform
 	{
 		friend class GLUniformBlock;
+		friend class GLShaderProgram;
 
 	public:
 		/** @brief Maximum length of a uniform name, including the terminating null character */
@@ -29,6 +30,8 @@ namespace nCine::RhiGL
 		GLUniform();
 		/** @brief Queries the active uniform at the specified index of a linked program */
 		GLUniform(GLuint program, GLuint index);
+		/** @brief Creates a uniform from offline reflection data, querying only the location */
+		GLUniform(GLuint program, const char* name, GLenum type, GLint arraySize);
 
 		/** @brief Returns the active uniform index within the program */
 		inline GLuint GetIndex() const {

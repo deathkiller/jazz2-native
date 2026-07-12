@@ -4,6 +4,8 @@
 #include "../../IGfxCapabilities.h"
 #include "../../../ServiceLocator.h"
 
+#include <cstring>
+
 namespace nCine::RhiGL
 {
 	GLUniformBlock::GLUniformBlock()
@@ -82,6 +84,24 @@ namespace nCine::RhiGL
 	GLUniformBlock::GLUniformBlock(GLuint program, GLuint index)
 		: GLUniformBlock(program, index, DiscoverUniforms::ENABLED)
 	{
+	}
+
+	GLUniformBlock::GLUniformBlock(GLuint program, const char* name, GLuint index, GLint dataSize)
+		: GLUniformBlock()
+	{
+		program_ = program;
+		index_ = index;
+		size_ = dataSize;
+
+		std::size_t length = strnlen(name, MaxNameLength);
+		DEATH_ASSERT(length < MaxNameLength);
+		std::memcpy(name_, name, length);
+		name_[length] = '\0';
+
+		// Align to the uniform buffer offset alignment or `glBindBufferRange()` will generate an `INVALID_VALUE` error
+		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		alignAmount_ = (offsetAlignment - size_ % offsetAlignment) % offsetAlignment;
+		size_ += alignAmount_;
 	}
 
 	void GLUniformBlock::SetBlockBinding(GLuint blockBinding)

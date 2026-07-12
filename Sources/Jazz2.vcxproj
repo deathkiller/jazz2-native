@@ -475,7 +475,6 @@
     <ClInclude Include="Jazz2\Compatibility\JJ2Strings.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Tileset.h" />
     <ClInclude Include="Jazz2\Compatibility\JJ2Version.h" />
-    <ClInclude Include="Jazz2\ContentResolver.Shaders.h" />
     <ClInclude Include="Jazz2\Direction.h" />
     <ClInclude Include="Jazz2\ExitType.h" />
     <ClInclude Include="Jazz2\GameDifficulty.h" />
@@ -680,6 +679,10 @@
     <ClInclude Include="nCine\Graphics\SceneNode.h" />
     <ClInclude Include="nCine\Graphics\ScreenViewport.h" />
     <ClInclude Include="nCine\Graphics\Shader.h" />
+    <ClInclude Include="ShaderCompiler\ConstFold.h" />
+    <ClInclude Include="ShaderCompiler\GlslReflect.h" />
+    <ClInclude Include="ShaderCompiler\RuntimeShader.h" />
+    <ClInclude Include="ShaderCompiler\ShaderParser.h" />
     <ClInclude Include="nCine\Graphics\ShaderState.h" />
     <ClInclude Include="nCine\Graphics\Sprite.h" />
     <ClInclude Include="nCine\Graphics\Texture.h" />
@@ -1078,6 +1081,10 @@
     <ClCompile Include="nCine\Graphics\ScreenViewport.cpp" />
     <ClCompile Include="nCine\Graphics\Shader.cpp" />
     <ClCompile Include="nCine\Graphics\ShaderState.cpp" />
+    <ClCompile Include="ShaderCompiler\ConstFold.cpp" />
+    <ClCompile Include="ShaderCompiler\GlslReflect.cpp" />
+    <ClCompile Include="ShaderCompiler\RuntimeShader.cpp" />
+    <ClCompile Include="ShaderCompiler\ShaderParser.cpp" />
     <ClCompile Include="nCine\Graphics\Sprite.cpp" />
     <ClCompile Include="nCine\Graphics\Texture.cpp" />
     <ClCompile Include="nCine\Graphics\TextureFormat.cpp" />

@@ -8,15 +8,12 @@
 #include "../Application.h"
 #include "../tracy.h"
 #include "../../Main.h"
+#include "../../ShaderCompiler/RuntimeShader.h"
 
-#if defined(WITH_EMBEDDED_SHADERS)
-#	include "shader_strings.h"
-#else
-#	include <IO/FileSystem.h>
-using namespace Death::IO;
-#endif
+#include <IO/FileSystem.h>
 
 using namespace Death::Containers::Literals;
+using namespace Death::IO;
 
 namespace nCine
 {
@@ -37,20 +34,6 @@ namespace nCine
 					return Rhi::ShaderProgram::Introspection::NoUniformsInBlocks;
 				case Shader::Introspection::Disabled:
 					return Rhi::ShaderProgram::Introspection::Disabled;
-			}
-		}
-
-		bool isBatchedVertex(Shader::DefaultVertex vertex)
-		{
-			switch (vertex) {
-				case Shader::DefaultVertex::BATCHED_SPRITES:
-				case Shader::DefaultVertex::BATCHED_SPRITES_NOTEXTURE:
-				case Shader::DefaultVertex::BATCHED_MESHSPRITES:
-				case Shader::DefaultVertex::BATCHED_MESHSPRITES_NOTEXTURE:
-				//case Shader::DefaultVertex::BATCHED_TEXTNODES:
-					return true;
-				default:
-					return false;
 			}
 		}
 
@@ -82,7 +65,7 @@ namespace nCine
 	}
 
 	Shader::Shader()
-		: Object(ObjectType::Shader), glShaderProgram_(std::make_unique<Rhi::ShaderProgram>(Rhi::ShaderProgram::QueryPhase::Immediate))
+		: Object(ObjectType::Shader), glShaderProgram_(std::make_unique<Rhi::ShaderProgram>(Rhi::ShaderProgram::QueryPhase::Immediate)), renderModes_(0)
 	{
 	}
 
@@ -115,64 +98,6 @@ namespace nCine
 	{
 	}
 
-	Shader::Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, DefaultVertex vertex, const char* fragment, std::int32_t batchSize)
-		: Shader()
-	{
-		const bool hasLoaded = loadMode == LoadMode::String
-			? LoadFromMemory(shaderName, introspection, vertex, fragment, batchSize)
-			: LoadFromFile(shaderName, introspection, vertex, fragment, batchSize);
-
-		if (!hasLoaded) {
-			LOGE("Shader \"{}\" cannot be loaded", shaderName);
-		}
-	}
-
-	Shader::Shader(const char* shaderName, LoadMode loadMode, DefaultVertex vertex, const char* fragment, std::int32_t batchSize)
-		: Shader()
-	{
-		const bool hasLoaded = loadMode == LoadMode::String
-			? LoadFromMemory(shaderName, vertex, fragment, batchSize)
-			: LoadFromFile(shaderName, vertex, fragment, batchSize);
-
-		if (!hasLoaded) {
-			LOGE("Shader \"{}\" cannot be loaded", shaderName);
-		}
-	}
-
-	Shader::Shader(LoadMode loadMode, DefaultVertex vertex, const char* fragment, int batchSize)
-		: Shader(nullptr, loadMode, vertex, fragment, batchSize)
-	{
-	}
-
-	Shader::Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, const char* vertex, DefaultFragment fragment, std::int32_t batchSize)
-		: Shader()
-	{
-		const bool hasLoaded = loadMode == LoadMode::String
-			? LoadFromMemory(shaderName, introspection, vertex, fragment, batchSize)
-			: LoadFromFile(shaderName, introspection, vertex, fragment, batchSize);
-
-		if (!hasLoaded) {
-			LOGE("Shader \"{}\" cannot be loaded", shaderName);
-		}
-	}
-
-	Shader::Shader(const char* shaderName, LoadMode loadMode, const char* vertex, DefaultFragment fragment, std::int32_t batchSize)
-		: Shader()
-	{
-		const bool hasLoaded = loadMode == LoadMode::String
-			? LoadFromMemory(shaderName, vertex, fragment, batchSize)
-			: LoadFromFile(shaderName, vertex, fragment, batchSize);
-
-		if (!hasLoaded) {
-			LOGE("Shader \"{}\" cannot be loaded", shaderName);
-		}
-	}
-
-	Shader::Shader(LoadMode loadMode, const char* vertex, DefaultFragment fragment, std::int32_t batchSize)
-		: Shader(nullptr, loadMode, vertex, fragment, batchSize)
-	{
-	}
-
 	Shader::~Shader()
 	{
 		RenderResources::UnregisterBatchedShader(glShaderProgram_.get());
@@ -195,7 +120,9 @@ namespace nCine
 		stringsCount = populateShaderStrings(strings, backingStore, vertex, batchSize, defines);
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), {});
 
-		stringsCount = populateShaderStrings(strings, backingStore, fragment, -1, defines);
+		// The BATCH_SIZE define is baked into both stages - a batched InstancesBlock is declared
+		// in the fragment stage too (shared globals), and mismatched block sizes would fail to link
+		stringsCount = populateShaderStrings(strings, backingStore, fragment, batchSize, defines);
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), {});
 
 		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
@@ -213,41 +140,7 @@ namespace nCine
 		return LoadFromMemory(nullptr, vertex, fragment, batchSize);
 	}
 
-	bool Shader::LoadFromMemory(const char* shaderName, Introspection introspection, DefaultVertex vertex, const char* fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
-	{
-		ZoneScopedC(0x81A861);
-		if (shaderName != nullptr) {
-			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, std::strlen(shaderName));
-		}
-
-		glShaderProgram_->Reset(); // reset before attaching new shaders
-		glShaderProgram_->SetBatchSize(batchSize);
-		glShaderProgram_->SetObjectLabel(shaderName);
-		LoadDefaultShader(vertex, batchSize);
-
-		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
-
-		stringsCount = populateShaderStrings(strings, backingStore, fragment, -1, defines);
-		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), {});
-
-		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
-
-		return IsLinked();
-	}
-
-	bool Shader::LoadFromMemory(const char* shaderName, DefaultVertex vertex, const char* fragment, std::int32_t batchSize)
-	{
-		const Introspection introspection = (isBatchedVertex(vertex) ? Introspection::NoUniformsInBlocks : Introspection::Enabled);
-		return LoadFromMemory(shaderName, introspection, vertex, fragment, batchSize);
-	}
-
-	bool Shader::LoadFromMemory(DefaultVertex vertex, const char* fragment, std::int32_t batchSize)
-	{
-		return LoadFromMemory(nullptr, vertex, fragment, batchSize);
-	}
-
-	bool Shader::LoadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, DefaultFragment fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
+	bool Shader::LoadFromMemory(const char* shaderName, Introspection introspection, const ShaderCompiler::ProgramVariant& variant, std::int32_t batchSize)
 	{
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
@@ -261,23 +154,19 @@ namespace nCine
 
 		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
-		stringsCount = populateShaderStrings(strings, backingStore, vertex, batchSize, defines);
+		stringsCount = populateShaderStrings(strings, backingStore, variant.VsSource, batchSize, {});
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), {});
 
-		LoadDefaultShader(fragment);
+		// The BATCH_SIZE define is baked into both stages - a batched InstancesBlock is declared
+		// in the fragment stage too (shared globals), and mismatched block sizes would fail to link
+		stringsCount = populateShaderStrings(strings, backingStore, variant.FsSource, batchSize, {});
+		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), {});
+
+		// Set after Reset(), which clears any previous reflection
+		glShaderProgram_->SetReflection(&variant);
 		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
 		return IsLinked();
-	}
-
-	bool Shader::LoadFromMemory(const char* shaderName, const char* vertex, DefaultFragment fragment, std::int32_t batchSize)
-	{
-		return LoadFromMemory(shaderName, Introspection::Enabled, vertex, fragment, batchSize);
-	}
-
-	bool Shader::LoadFromMemory(const char* vertex, DefaultFragment fragment, std::int32_t batchSize)
-	{
-		return LoadFromMemory(nullptr, vertex, fragment, batchSize);
 	}
 
 	bool Shader::LoadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize, ArrayView<const StringView> defines)
@@ -297,7 +186,9 @@ namespace nCine
 		stringsCount = populateShaderStrings(strings, backingStore, {}, batchSize, defines);
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), vertexPath);
 
-		stringsCount = populateShaderStrings(strings, backingStore, {}, -1, defines);
+		// The BATCH_SIZE define is baked into both stages - a batched InstancesBlock is declared
+		// in the fragment stage too (shared globals), and mismatched block sizes would fail to link
+		stringsCount = populateShaderStrings(strings, backingStore, {}, batchSize, defines);
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), fragmentPath);
 
 		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
@@ -315,71 +206,57 @@ namespace nCine
 		return LoadFromFile(nullptr, vertexPath, fragmentPath, batchSize);
 	}
 
-	bool Shader::LoadFromFile(const char* shaderName, Introspection introspection, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize, ArrayView<const StringView> defines)
+	bool Shader::LoadFromShaderFile(const char* shaderName, Introspection introspection, StringView path, const char* variantName, std::int32_t batchSize)
 	{
-		ZoneScopedC(0x81A861);
-		if (shaderName != nullptr) {
-			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, std::strlen(shaderName));
+		ShaderCompiler::RuntimeProgram program;
+		if (!CompileShaderFile(path, program)) {
+			return false;
 		}
 
-		glShaderProgram_->Reset(); // reset before attaching new shaders
-		glShaderProgram_->SetBatchSize(batchSize);
-		glShaderProgram_->SetObjectLabel(shaderName);
-		LoadDefaultShader(vertex, batchSize);
-
-		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
-
-		stringsCount = populateShaderStrings(strings, backingStore, {}, -1, defines);
-		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), fragmentPath);
-
-		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
-
-		return IsLinked();
-	}
-
-	bool Shader::LoadFromFile(const char* shaderName, DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize)
-	{
-		const Introspection introspection = (isBatchedVertex(vertex) ? Introspection::NoUniformsInBlocks : Introspection::Enabled);
-		return LoadFromFile(shaderName, introspection, vertex, fragmentPath, batchSize);
-	}
-
-	bool Shader::LoadFromFile(DefaultVertex vertex, StringView fragmentPath, std::int32_t batchSize)
-	{
-		return LoadFromFile(nullptr, vertex, fragmentPath, batchSize);
-	}
-
-	bool Shader::LoadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize, ArrayView<const StringView> defines)
-	{
-		ZoneScopedC(0x81A861);
-		if (shaderName != nullptr) {
-			// When Tracy is disabled the statement body is empty and braces are needed
-			ZoneText(shaderName, std::strlen(shaderName));
+		// nullptr (or an empty name) resolves to the unnamed base variant (Variants[0])
+		const char* resolvedVariantName = (variantName != nullptr ? variantName : "");
+		const ShaderCompiler::RuntimeVariant* variant = program.FindVariant(resolvedVariantName);
+		if (variant == nullptr) {
+			LOGE("Shader file \"{}\" has no variant \"{}\"", path, resolvedVariantName[0] != '\0' ? resolvedVariantName : "(base)");
+			return false;
 		}
 
-		glShaderProgram_->Reset(); // reset before attaching new shaders
-		glShaderProgram_->SetBatchSize(batchSize);
-		glShaderProgram_->SetObjectLabel(shaderName);
-
-		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
-
-		stringsCount = populateShaderStrings(strings, backingStore, {}, batchSize, defines);
-		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), vertexPath);
-
-		LoadDefaultShader(fragment);
-		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
-
-		return IsLinked();
+		// The artifact view exposes the same reflection the offline tool emits, so runtime-compiled
+		// shaders also skip GL introspection (the view only has to live for the duration of this call)
+		const ShaderCompiler::Program& view = program.GetView();
+		const ShaderCompiler::ProgramVariant& variantView = view.Variants[variant - program.Variants.data()];
+		renderModes_ = view.RenderModes;
+		return LoadFromMemory(shaderName, introspection, variantView, batchSize);
 	}
 
-	bool Shader::LoadFromFile(const char* shaderName, StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize)
+	bool Shader::CompileShaderFile(StringView path, ShaderCompiler::RuntimeProgram& program)
 	{
-		return LoadFromFile(shaderName, Introspection::Enabled, vertexPath, fragment, batchSize);
-	}
+		ShaderCompiler::FileReader reader = [](const std::string& filePath, std::string& content) {
+			std::unique_ptr<Stream> fileHandle = fs::Open(StringView(filePath.data(), filePath.size()), FileAccess::Read);
+			if (!fileHandle->IsValid()) {
+				return false;
+			}
+			std::int64_t fileSize = fileHandle->GetSize();
+			content.resize(static_cast<std::size_t>(fileSize));
+			if (fileSize > 0) {
+				fileHandle->Read(&content[0], fileSize);
+			}
+			return true;
+		};
 
-	bool Shader::LoadFromFile(StringView vertexPath, DefaultFragment fragment, std::int32_t batchSize)
-	{
-		return LoadFromFile(nullptr, vertexPath, fragment, batchSize);
+		std::string content;
+		std::string pathString(path.data(), path.size());
+		if (!reader(pathString, content)) {
+			LOGE("Cannot read shader file \"{}\"", path);
+			return false;
+		}
+
+		ShaderCompiler::Diagnostic diag;
+		if (!ShaderCompiler::CompileRuntimeProgram(content, ShaderCompiler::ShaderParser::DirectoryOf(pathString), reader, program, diag)) {
+			LOGE("Cannot compile shader file \"{}\" (line {}): {}", path, diag.Line, diag.Message.c_str());
+			return false;
+		}
+		return true;
 	}
 
 	bool Shader::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Introspection introspection)
@@ -392,6 +269,20 @@ namespace nCine
 
 		glShaderProgram_->Reset();
 		glShaderProgram_->SetObjectLabel(shaderName);
+		return RenderResources::GetBinaryShaderCache().LoadFromCache(shaderName, shaderVersion, glShaderProgram_.get(), shaderToShaderProgramIntrospection(introspection));
+	}
+
+	bool Shader::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Introspection introspection, const ShaderCompiler::ProgramVariant& variant)
+	{
+		ZoneScopedC(0x81A861);
+		if (shaderName != nullptr) {
+			// When Tracy is disabled the statement body is empty and braces are needed
+			ZoneText(shaderName, std::strlen(shaderName));
+		}
+
+		glShaderProgram_->Reset();
+		glShaderProgram_->SetObjectLabel(shaderName);
+		glShaderProgram_->SetReflection(&variant);
 		return RenderResources::GetBinaryShaderCache().LoadFromCache(shaderName, shaderVersion, glShaderProgram_.get(), shaderToShaderProgramIntrospection(introspection));
 	}
 
@@ -442,143 +333,5 @@ namespace nCine
 	void Shader::RegisterBatchedShader(Shader& batchedShader)
 	{
 		RenderResources::RegisterBatchedShader(glShaderProgram_.get(), batchedShader.glShaderProgram_.get());
-	}
-
-	bool Shader::LoadDefaultShader(DefaultVertex vertex, int batchSize)
-	{
-#if !defined(WITH_EMBEDDED_SHADERS)
-		StringView vertexShader;
-		switch (vertex) {
-			case DefaultVertex::SPRITE:
-				vertexShader = "sprite_vs.glsl"_s;
-				break;
-			case DefaultVertex::SPRITE_NOTEXTURE:
-				vertexShader = "sprite_notexture_vs.glsl"_s;
-				break;
-			case DefaultVertex::MESHSPRITE:
-				vertexShader = "meshsprite_vs.glsl"_s;
-				break;
-			case DefaultVertex::MESHSPRITE_NOTEXTURE:
-				vertexShader = "meshsprite_notexture_vs.glsl"_s;
-				break;
-			//case DefaultVertex::TEXTNODE:
-			//	vertexShader = "textnode_vs.glsl"_s;
-			//	break;
-			case DefaultVertex::BATCHED_SPRITES:
-				vertexShader = "batched_sprites_vs.glsl"_s;
-				break;
-			case DefaultVertex::BATCHED_SPRITES_NOTEXTURE:
-				vertexShader = "batched_sprites_notexture_vs.glsl"_s;
-				break;
-			case DefaultVertex::BATCHED_MESHSPRITES:
-				vertexShader = "batched_meshsprites_vs.glsl"_s;
-				break;
-			case DefaultVertex::BATCHED_MESHSPRITES_NOTEXTURE:
-				vertexShader = "batched_meshsprites_notexture_vs.glsl"_s;
-				break;
-			//case DefaultVertex::BATCHED_TEXTNODES:
-			//	vertexShader = "batched_textnodes_vs.glsl";
-			//	break;
-		}
-
-		if (batchSize > 0) {
-			char sourceString[48];
-			std::size_t length = formatInto(sourceString, DefineFormatString, BatchSizeDefine, batchSize);
-			StringView vertexStrings[2] = { { sourceString, length }, ResetLineString };
-			return glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, vertexShader }));
-		} else {
-			return glShaderProgram_->AttachShaderFromFile(GL_VERTEX_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, vertexShader }));
-		}
-#else
-		const char* vertexShader = nullptr;
-		// Skipping the initial new line character of the raw string literal
-		switch (vertex) {
-			case DefaultVertex::SPRITE:
-				vertexShader = ShaderStrings::sprite_vs + 1;
-				break;
-			case DefaultVertex::SPRITE_NOTEXTURE:
-				vertexShader = ShaderStrings::sprite_notexture_vs + 1;
-				break;
-			case DefaultVertex::MESHSPRITE:
-				vertexShader = ShaderStrings::meshsprite_vs + 1;
-				break;
-			case DefaultVertex::MESHSPRITE_NOTEXTURE:
-				vertexShader = ShaderStrings::meshsprite_notexture_vs + 1;
-				break;
-			//case DefaultVertex::TEXTNODE:
-			//	vertexShader = ShaderStrings::textnode_vs + 1;
-			//	break;
-			case DefaultVertex::BATCHED_SPRITES:
-				vertexShader = ShaderStrings::batched_sprites_vs + 1;
-				break;
-			case DefaultVertex::BATCHED_SPRITES_NOTEXTURE:
-				vertexShader = ShaderStrings::batched_sprites_notexture_vs + 1;
-				break;
-			case DefaultVertex::BATCHED_MESHSPRITES:
-				vertexShader = ShaderStrings::batched_meshsprites_vs + 1;
-				break;
-			case DefaultVertex::BATCHED_MESHSPRITES_NOTEXTURE:
-				vertexShader = ShaderStrings::batched_meshsprites_notexture_vs + 1;
-				break;
-			//case DefaultVertex::BATCHED_TEXTNODES:
-			//	vertexShader = ShaderStrings::batched_textnodes_vs + 1;
-			//	break;
-		}
-
-		if (batchSize > 0) {
-			char sourceString[48];
-			std::size_t length = formatInto(sourceString, DefineFormatString, BatchSizeDefine, batchSize);
-			StringView vertexStrings[3] = { { sourceString, length }, ResetLineString, vertexShader };
-			return glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, vertexStrings, {});
-		} else {
-			return glShaderProgram_->AttachShaderFromString(GL_VERTEX_SHADER, vertexShader);
-		}
-#endif
-	}
-
-	bool Shader::LoadDefaultShader(DefaultFragment fragment)
-	{
-#if !defined(WITH_EMBEDDED_SHADERS)
-		StringView fragmentShader;
-		switch (fragment) {
-			case DefaultFragment::SPRITE:
-				fragmentShader = "sprite_fs.glsl"_s;
-				break;
-			//case DefaultFragment::SPRITE_GRAY:
-			//	fragmentShader = "sprite_gray_fs.glsl"_s;
-			//	break;
-			case DefaultFragment::SPRITE_NOTEXTURE:
-				fragmentShader = "sprite_notexture_fs.glsl"_s;
-				break;
-			//case DefaultFragment::TEXTNODE_ALPHA:
-			//	fragmentShader = "textnode_alpha_fs.glsl"_s;
-			//	break;
-			//case DefaultFragment::TEXTNODE_RED:
-			//	fragmentShader = "textnode_red_fs.glsl"_s;
-			//	break;
-		}
-		return glShaderProgram_->AttachShaderFromFile(GL_FRAGMENT_SHADER, fs::CombinePath({ theApplication().GetDataPath(), "Shaders"_s, fragmentShader }));
-#else
-		const char* fragmentShader = nullptr;
-		// Skipping the initial new line character of the raw string literal
-		switch (fragment) {
-			case DefaultFragment::SPRITE:
-				fragmentShader = ShaderStrings::sprite_fs + 1;
-				break;
-			//case DefaultFragment::SPRITE_GRAY:
-			//	fragmentShader = ShaderStrings::sprite_gray_fs + 1;
-			//	break;
-			case DefaultFragment::SPRITE_NOTEXTURE:
-				fragmentShader = ShaderStrings::sprite_notexture_fs + 1;
-				break;
-			//case DefaultFragment::TEXTNODE_ALPHA:
-			//	fragmentShader = ShaderStrings::textnode_alpha_fs + 1;
-			//	break;
-			//case DefaultFragment::TEXTNODE_RED:
-			//	fragmentShader = ShaderStrings::textnode_red_fs + 1;
-			//	break;
-		}
-		return glShaderProgram_->AttachShaderFromString(GL_FRAGMENT_SHADER, fragmentShader);
-#endif
 	}
 }

@@ -1,0 +1,30 @@
+program TexturedBackground
+variant (base)
+  uniform mat4 uProjectionMatrix
+  uniform mat4 uViewMatrix
+  uniform vec2 uViewSize
+  uniform vec2 uCameraPos
+  uniform vec4 uHorizonColor
+  uniform vec2 uShift
+  block InstanceBlock baseSize=112 instanceStride=0
+    member mat4 modelMatrix offset=0
+    member vec4 color offset=64
+    member vec4 texRect offset=80
+    member vec2 spriteSize offset=96
+    member float palOffset offset=104
+  texture uTexture unit=0
+variant DITHER
+  define DITHER
+  uniform mat4 uProjectionMatrix
+  uniform mat4 uViewMatrix
+  uniform vec2 uViewSize
+  uniform vec2 uCameraPos
+  uniform vec4 uHorizonColor
+  uniform vec2 uShift
+  block InstanceBlock baseSize=112 instanceStride=0
+    member mat4 modelMatrix offset=0
+    member vec4 color offset=64
+    member vec4 texRect offset=80
+    member vec2 spriteSize offset=96
+    member float palOffset offset=104
+  texture uTexture unit=0

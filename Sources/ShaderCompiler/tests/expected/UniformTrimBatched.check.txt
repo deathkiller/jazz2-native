@@ -1,0 +1,11 @@
+program UniformTrimBatched
+variant (base)
+  struct Instance size=96 align=16
+    field mat4 modelMatrix offset=0
+    field vec4 color offset=64
+    field vec2 spriteSize offset=80
+  uniform mat4 uProjectionMatrix
+  uniform mat4 uViewMatrix
+  block InstancesBlock baseSize=0 instanceStride=96
+    member Instance instances[*] offset=0
+  texture uTexture unit=0
