@@ -641,6 +641,7 @@
     <ClInclude Include="nCine\Graphics\RHI\GL\GLShaderUniformBlocks.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\GLShaderUniforms.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\GLTexture.h" />
+    <ClInclude Include="nCine\Graphics\RHI\GL\GLTextureFormat.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\GLUniform.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\GLUniformBlock.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\GLUniformBlockCache.h" />
@@ -1047,6 +1048,7 @@
     <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderUniformBlocks.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderUniforms.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLTexture.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLTextureFormat.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLUniform.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLUniformBlock.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLUniformBlockCache.cpp" />

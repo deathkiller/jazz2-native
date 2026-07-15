@@ -231,29 +231,28 @@ namespace nCine
 
 	bool Shader::CompileShaderFile(StringView path, ShaderCompiler::RuntimeProgram& program)
 	{
-		ShaderCompiler::FileReader reader = [](const std::string& filePath, std::string& content) {
-			std::unique_ptr<Stream> fileHandle = fs::Open(StringView(filePath.data(), filePath.size()), FileAccess::Read);
+		ShaderCompiler::FileReader reader = [](StringView filePath, String& content) {
+			std::unique_ptr<Stream> fileHandle = fs::Open(filePath, FileAccess::Read);
 			if (!fileHandle->IsValid()) {
 				return false;
 			}
 			std::int64_t fileSize = fileHandle->GetSize();
-			content.resize(static_cast<std::size_t>(fileSize));
+			content = String{NoInit, static_cast<std::size_t>(fileSize)};
 			if (fileSize > 0) {
-				fileHandle->Read(&content[0], fileSize);
+				fileHandle->Read(content.data(), fileSize);
 			}
 			return true;
 		};
 
-		std::string content;
-		std::string pathString(path.data(), path.size());
-		if (!reader(pathString, content)) {
+		String content;
+		if (!reader(path, content)) {
 			LOGE("Cannot read shader file \"{}\"", path);
 			return false;
 		}
 
 		ShaderCompiler::Diagnostic diag;
-		if (!ShaderCompiler::CompileRuntimeProgram(content, ShaderCompiler::ShaderParser::DirectoryOf(pathString), reader, program, diag)) {
-			LOGE("Cannot compile shader file \"{}\" (line {}): {}", path, diag.Line, diag.Message.c_str());
+		if (!ShaderCompiler::CompileRuntimeProgram(content, ShaderCompiler::ShaderParser::DirectoryOf(path), reader, program, diag)) {
+			LOGE("Cannot compile shader file \"{}\" (line {}): {}", path, diag.Line, diag.Message.data());
 			return false;
 		}
 		return true;

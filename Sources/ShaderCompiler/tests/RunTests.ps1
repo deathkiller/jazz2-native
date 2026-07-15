@@ -352,6 +352,70 @@ Assert ($fs.Contains('uniform sampler2D TEXTURE;')) 'TexturePassthrough: user TE
 Assert ($fs.Contains('texture(TEXTURE, vTexCoords)')) 'TexturePassthrough: TEXTURE was substituted in custom mode'
 Assert (-not $h.Contains('uTexture')) 'TexturePassthrough: uTexture auto-declaration leaked into custom mode'
 
+# --- 4. ESSL 100 (OpenGL ES 2.0) target -----------------------------------------------------------
+# The --essl100-check transform dump: attribute/varying split per stage, texture->texture2D,
+# the "out vec4 COLOR;" -> gl_FragColor retarget (incl. early "return;"), the unconditional
+# precision prologue, layout()/flat stripping, and the slice-2 deferral of gl_VertexID / std140-UBO
+# programs (fixtures live in tests/essl100/, outside the section-1 golden-dump scan).
+
+function Essl100($path) {
+    (& $tool $path --essl100-check | Out-String -Width 4096) -replace "`r`n", "`n"
+}
+function Get-Essl100Stage($dump, $stage) {
+    # Extracts one stage section of a single-variant program dump ('vertex' or 'fragment')
+    if ($stage -eq 'vertex') {
+        return [regex]::Match($dump, "(?s)--- vertex \(essl100\) ---\n(.*?)\n--- fragment").Groups[1].Value
+    }
+    return [regex]::Match($dump, "(?s)--- fragment \(essl100\) ---\n(.*)").Groups[1].Value
+}
+
+# Textured: non-batched textured shader - the attribute/varying split per stage, the layout()
+# qualifier stripped to a plain attribute, texture()->texture2D(), the gl_FragColor epilogue and
+# the unconditional mediump precision prologue
+$d = Essl100 (Join-Path $testsDir 'essl100\Textured.shader')
+$vs = Get-Essl100Stage $d 'vertex'
+$fs = Get-Essl100Stage $d 'fragment'
+Assert ($vs.Contains('attribute vec2 aPosition;')) 'Essl100 Textured: VS "in" not turned into "attribute"'
+Assert ($vs.Contains('attribute vec2 aTexCoords;') -and -not $vs.Contains('layout')) 'Essl100 Textured: layout-qualified attribute not stripped to a plain attribute'
+Assert ($vs.Contains('varying vec2 vTexCoords;')) 'Essl100 Textured: VS "out" not turned into "varying"'
+Assert ($vs.Contains('uniform mat4 uProjectionMatrix;')) 'Essl100 Textured: VS uniform changed'
+Assert ($fs.Contains('precision mediump float;') -and -not $fs.Contains('#ifdef GL_ES')) 'Essl100 Textured: FS precision prologue not made unconditional'
+Assert ($fs.Contains('varying vec2 vTexCoords;')) 'Essl100 Textured: FS "in" not turned into "varying"'
+Assert (-not $fs.Contains('out vec4 COLOR;')) 'Essl100 Textured: FS "out vec4 COLOR;" not removed'
+Assert ($fs.Contains('vec4 COLOR;')) 'Essl100 Textured: FS local COLOR not declared in main()'
+Assert ($fs.Contains('texture2D(uTexture, vTexCoords)')) 'Essl100 Textured: texture() not rewritten to texture2D()'
+Assert ($fs.Contains('gl_FragColor = COLOR;')) 'Essl100 Textured: gl_FragColor epilogue missing'
+
+# VaryingEarlyReturn: the highp precision directive, a highp varying preserved through both stages,
+# the early "return;" retargeted, and textureLod()->texture2DLod()
+$d = Essl100 (Join-Path $testsDir 'essl100\VaryingEarlyReturn.shader')
+$vs = Get-Essl100Stage $d 'vertex'
+$fs = Get-Essl100Stage $d 'fragment'
+Assert ($vs.Contains('attribute vec2 aPosition;')) 'Essl100 Varying: VS attribute missing'
+Assert ($vs.Contains('varying highp vec2 vTexCoords;')) 'Essl100 Varying: VS highp varying not preserved'
+Assert ($fs.Contains('precision highp float;')) 'Essl100 Varying: highp precision directive not honored'
+Assert ($fs.Contains('varying highp vec2 vTexCoords;')) 'Essl100 Varying: FS highp varying not preserved'
+Assert ($fs.Contains('gl_FragColor = COLOR; return;')) 'Essl100 Varying: early "return;" not retargeted to gl_FragColor'
+Assert ($fs.Contains('texture2DLod(uTexture, vTexCoords, 0.0)')) 'Essl100 Varying: textureLod() not rewritten to texture2DLod()'
+Assert ((([regex]::Matches($fs, [regex]::Escape('gl_FragColor = COLOR;'))).Count) -ge 2) 'Essl100 Varying: expected both the early-return and the final gl_FragColor writes'
+
+# BatchedSprites: a std140-UBO + gl_VertexID batched program defers its VS to slice 2 (std140 cited
+# first, being the earliest offending line) while its FRAGMENT stage still transforms cleanly
+$d = Essl100 (Join-Path $testsDir 'BatchedSprites.shader')
+$vs = Get-Essl100Stage $d 'vertex'
+$fs = Get-Essl100Stage $d 'fragment'
+Assert ($vs.Contains('unsupported in ES2') -and $vs.Contains('std140')) 'Essl100 BatchedSprites: VS not deferred with a std140 diagnostic'
+Assert ($fs.Contains('texture2D(uTexture, vTexCoords)')) 'Essl100 BatchedSprites: FS texture() not rewritten'
+Assert ($fs.Contains('gl_FragColor = COLOR;') -and -not $fs.Contains('out vec4 COLOR;')) 'Essl100 BatchedSprites: FS COLOR not retargeted to gl_FragColor'
+
+# TexturePassthrough: a gl_VertexID-only (no UBO) program defers its VS citing gl_VertexID; the
+# fragment stage transforms regardless of the deferred vertex stage
+$d = Essl100 (Join-Path $testsDir 'TexturePassthrough.shader')
+$vs = Get-Essl100Stage $d 'vertex'
+$fs = Get-Essl100Stage $d 'fragment'
+Assert ($vs.Contains('unsupported in ES2') -and $vs.Contains('gl_VertexID')) 'Essl100 TexturePassthrough: VS not deferred citing gl_VertexID'
+Assert ($fs.Contains('texture2D(TEXTURE, vTexCoords)') -and $fs.Contains('gl_FragColor = COLOR;')) 'Essl100 TexturePassthrough: FS not transformed'
+
 Write-Host ''
 if ($failures -eq 0) {
     Write-Host "All tests passed ($passed assertions)."

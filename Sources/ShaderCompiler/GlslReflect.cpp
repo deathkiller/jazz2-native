@@ -1,9 +1,25 @@
 #include "GlslReflect.h"
 
+#include <Containers/StringConcatenable.h>
+
+using namespace Death::Containers::Literals;
+
 namespace ShaderCompiler
 {
 	namespace
 	{
+		constexpr std::size_t Npos = ~std::size_t{0};
+
+		// substr helper with standard-library semantics — clamps count to available (pos never exceeds size here)
+		StringView Substr(StringView s, std::size_t pos, std::size_t count = Npos)
+		{
+			std::size_t size = s.size();
+			if (pos > size) pos = size;
+			std::size_t avail = size - pos;
+			if (count > avail) count = avail;
+			return s.slice(pos, pos + count);
+		}
+
 		bool IsDigit(char c)
 		{
 			return (c >= '0' && c <= '9');
@@ -24,7 +40,7 @@ namespace ShaderCompiler
 			return ((value + alignment - 1) / alignment) * alignment;
 		}
 
-		bool Fail(Diagnostic& diag, const std::string& message, std::int32_t line)
+		bool Fail(Diagnostic& diag, const String& message, std::int32_t line)
 		{
 			diag.Message = message;
 			diag.Line = line;
@@ -42,7 +58,7 @@ namespace ShaderCompiler
 		struct Tok
 		{
 			TokType Type = TokType::End;
-			std::string Text;
+			String Text;
 			std::int32_t Line = 0;
 		};
 
@@ -51,7 +67,7 @@ namespace ShaderCompiler
 			std::int32_t lastLine = 1;
 			for (const SourceLine& line : lines) {
 				lastLine = line.Line;
-				const std::string& s = line.Text;
+				const String& s = line.Text;
 				std::size_t i = 0;
 				while (i < s.size()) {
 					char c = s[i];
@@ -67,7 +83,7 @@ namespace ShaderCompiler
 							i++;
 						}
 						t.Type = TokType::Identifier;
-						t.Text = s.substr(begin, i - begin);
+						t.Text = Substr(s, begin, i - begin);
 					} else if (IsDigit(c) || (c == '.' && i + 1 < s.size() && IsDigit(s[i + 1]))) {
 						// Numeric literal — consume digits, dots and alphanumeric suffixes (1.0f, 0x1F, 1e5)
 						std::size_t begin = i;
@@ -75,10 +91,10 @@ namespace ShaderCompiler
 							i++;
 						}
 						t.Type = TokType::Number;
-						t.Text = s.substr(begin, i - begin);
+						t.Text = Substr(s, begin, i - begin);
 					} else {
 						t.Type = TokType::Punct;
-						t.Text = std::string(1, c);
+						t.Text = String{&c, 1};
 						i++;
 					}
 					out.push_back(std::move(t));
@@ -86,12 +102,12 @@ namespace ShaderCompiler
 			}
 			Tok end;
 			end.Type = TokType::End;
-			end.Text.clear();
+			end.Text = {};
 			end.Line = lastLine;
 			out.push_back(std::move(end));
 		}
 
-		bool ParseDecimalU32(const std::string& s, std::uint32_t& value)
+		bool ParseDecimalU32(StringView s, std::uint32_t& value)
 		{
 			if (s.empty()) {
 				return false;
@@ -145,7 +161,7 @@ namespace ShaderCompiler
 			{ "samplerCube", GlslType::SamplerCube, 0, 0, true }
 		};
 
-		const BuiltinType* FindBuiltin(const std::string& name)
+		const BuiltinType* FindBuiltin(StringView name)
 		{
 			for (const BuiltinType& b : BuiltinTypes) {
 				if (name == b.Name) {
@@ -155,7 +171,7 @@ namespace ShaderCompiler
 			return nullptr;
 		}
 
-		bool IsPrecisionQualifier(const std::string& s)
+		bool IsPrecisionQualifier(StringView s)
 		{
 			return (s == "highp" || s == "mediump" || s == "lowp");
 		}
@@ -252,12 +268,12 @@ namespace ShaderCompiler
 			bool Expect(const char* text)
 			{
 				if (!Accept(text)) {
-					return Fail(_diag, std::string("expected '") + text + "' but found '" + Peek().Text + "'", Peek().Line);
+					return Fail(_diag, "expected '"_s + text + "' but found '" + Peek().Text + "'", Peek().Line);
 				}
 				return true;
 			}
 
-			const StructInfo* FindStruct(const std::string& name) const
+			const StructInfo* FindStruct(StringView name) const
 			{
 				for (const StructInfo& s : _result.Structs) {
 					if (s.Name == name) {

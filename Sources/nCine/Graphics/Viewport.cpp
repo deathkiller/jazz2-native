@@ -88,7 +88,7 @@ namespace nCine
 				fbo_ = std::make_unique<Rhi::RenderTarget>();
 			}
 
-			fbo_->AttachColorTexture(*texture->glTexture_, index);
+			fbo_->AttachColorTexture(*texture->rhiTexture_, index);
 			const bool isStatusComplete = fbo_->IsStatusComplete();
 			if (isStatusComplete) {
 				type_ = Type::WithTexture;

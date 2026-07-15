@@ -301,12 +301,12 @@ namespace nCine
 			// Upload texture to graphics system
 			// (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
 			GLint lastTexture = Rhi::Texture::GetBoundHandle(GL_TEXTURE_2D);
-			std::unique_ptr<Rhi::Texture> texture = std::make_unique<Rhi::Texture>(GL_TEXTURE_2D);
+			std::unique_ptr<Rhi::Texture> texture = std::make_unique<Rhi::Texture>(TextureTarget::Texture2D);
 			texture->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			texture->TexParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			texture->TexParameteri(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			texture->TexParameteri(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			texture->TexImage2D(0, GL_RGBA, tex->Width, tex->Height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+			texture->TexImage2D(0, PixelFormat::RGBA8, false, tex->Width, tex->Height, pixels);
 
 			Rhi::Texture* texturePtr = texture.get();
 			textures_.emplace(texturePtr, std::move(texture));
@@ -327,7 +327,7 @@ namespace nCine
 #ifdef GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
 			glPixelStorei(GL_UNPACK_ROW_LENGTH, tex->Width);
 			for (ImTextureRect& r : tex->Updates) {
-				texturePtr->TexSubImage2D(0, r.x, r.y, r.w, r.h, GL_RGBA, GL_UNSIGNED_BYTE, tex->GetPixelsAt(r.x, r.y));
+				texturePtr->TexSubImage2D(0, r.x, r.y, r.w, r.h, PixelFormat::RGBA8, false, tex->GetPixelsAt(r.x, r.y));
 			}
 			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 #else
@@ -339,7 +339,7 @@ namespace nCine
 				char* outP = tempTexBuffer_.data();
 				for (int y = 0; y < r.h; y++, outP += srcPitch)
 					memcpy(outP, tex->GetPixelsAt(r.x, r.y + y), srcPitch);
-				texturePtr->TexSubImage2D(0, r.x, r.y, r.w, r.h, GL_RGBA, GL_UNSIGNED_BYTE, tempTexBuffer_.data());
+				texturePtr->TexSubImage2D(0, r.x, r.y, r.w, r.h, PixelFormat::RGBA8, false, tempTexBuffer_.data());
 			}
 #endif
 			tex->SetStatus(ImTextureStatus_OK);

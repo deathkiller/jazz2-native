@@ -67,6 +67,29 @@ namespace nCine
 
 	void GfxCapabilities::Init()
 	{
+#if defined(WITH_RHI_SOFTWARE)
+		// The software backend has no OpenGL context to query; publish conservative capability values that
+		// satisfy the render pipeline (color-attachment count, texture size, uniform-block limits/alignment)
+		glMajorVersion_ = 3;
+		glMinorVersion_ = 3;
+		glReleaseVersion_ = 0;
+		glInfoStrings_.vendor = "nCine";
+		glInfoStrings_.renderer = "Software Rasterizer";
+		glInfoStrings_.apiVersion = "3.3";
+		glInfoStrings_.shadingLanguageVersion = "";
+		glIntValues_[(std::int32_t)IntValues::MAX_TEXTURE_SIZE] = 16384;
+		glIntValues_[(std::int32_t)IntValues::MAX_TEXTURE_IMAGE_UNITS] = 8;
+		glIntValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE] = 64 * 1024;
+		glIntValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = 64 * 1024;
+		glIntValues_[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS] = 8;
+		glIntValues_[(std::int32_t)IntValues::MAX_VERTEX_UNIFORM_BLOCKS] = 8;
+		glIntValues_[(std::int32_t)IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS] = 8;
+		glIntValues_[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT] = 16;
+		glIntValues_[(std::int32_t)IntValues::MAX_VERTEX_ATTRIB_STRIDE] = 2048;
+		glIntValues_[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS] = 8;
+		glIntValues_[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS] = 0;
+		return;
+#endif
 		const char* version = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 
 		if (version != nullptr) {

@@ -66,9 +66,9 @@ namespace ShaderCompiler
 	/** @brief Member of a struct or std140 uniform block */
 	struct MemberInfo
 	{
-		std::string Name;
+		String Name;
 		GlslType Type = GlslType::Float;
-		std::string TypeName;
+		String TypeName;
 		std::uint32_t ArraySize = 0;	// 0 = not an array
 		bool SymbolicArray = false;		// sized by the symbolic BATCH_SIZE constant
 		std::uint32_t Offset = 0;		// std140 offset from the start of the aggregate
@@ -78,7 +78,7 @@ namespace ShaderCompiler
 	/** @brief User struct declaration with its computed std140 layout */
 	struct StructInfo
 	{
-		std::string Name;
+		String Name;
 		std::vector<MemberInfo> Fields;
 		std::uint32_t Size = 0;
 		std::uint32_t Align = 0;
@@ -87,16 +87,16 @@ namespace ShaderCompiler
 	/** @brief Loose (non-block, non-sampler) uniform */
 	struct UniformInfo
 	{
-		std::string Name;
+		String Name;
 		GlslType Type = GlslType::Float;
-		std::string TypeName;
+		String TypeName;
 		std::uint32_t ArraySize = 0;	// 0 = not an array
 	};
 
 	/** @brief std140 uniform block */
 	struct BlockInfo
 	{
-		std::string Name;
+		String Name;
 		std::uint32_t BaseSize = 0;			// std140 size covering everything except symbolic arrays
 		std::uint32_t InstanceStride = 0;	// element stride of the symbolic BATCH_SIZE array (0 if none)
 		std::vector<MemberInfo> Members;
@@ -105,7 +105,7 @@ namespace ShaderCompiler
 	/** @brief Sampler uniform with its optional "texture_unit(N)" hint unit assignment */
 	struct TextureInfo
 	{
-		std::string Name;
+		String Name;
 		GlslType Type = GlslType::Sampler2D;
 		std::int32_t Unit = -1;		// -1 = not assigned
 	};
@@ -113,9 +113,9 @@ namespace ShaderCompiler
 	/** @brief Vertex attribute ("in" declaration in the vertex stage) */
 	struct AttributeInfo
 	{
-		std::string Name;
+		String Name;
 		GlslType Type = GlslType::Float;
-		std::string TypeName;
+		String TypeName;
 		std::int32_t Location = -1;	// -1 = unspecified
 	};
 

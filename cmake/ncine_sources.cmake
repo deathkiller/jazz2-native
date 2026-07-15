@@ -73,6 +73,7 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderUniformBlocks.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderUniforms.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLTexture.cpp
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLTextureFormat.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniform.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformBlock.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformBlockCache.cpp
@@ -316,3 +317,17 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/TextInputBuffer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/WidgetSection.cpp
 )
+
+# CPU software rendering backend (compiled only when the software backend is selected)
+if(NCINE_WITH_RHI_SOFTWARE)
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwBuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwRaster.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwUniformCache.cpp
+	)
+endif()

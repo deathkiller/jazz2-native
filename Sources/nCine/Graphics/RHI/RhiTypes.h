@@ -167,18 +167,129 @@ namespace nCine
 	}
 
 	/**
-		@brief Pixel format of uncompressed 8-bit-per-channel texture data
+		@brief Pixel format of texture data
 
-		Backend-neutral description of the texel layouts supported for empty and decoded textures,
-		shared by @ref Texture (as `Texture::Format`) and the texture loaders.
+		Backend-neutral description of every texel layout supported for empty and decoded textures,
+		shared by @ref Texture (as `Texture::Format`), @ref TextureFormat and the texture loaders. Each
+		backend maps these logical formats to its own internal/external formats and data types. The
+		external channel order (RGB vs. BGR) is carried separately by @ref TextureFormat.
 	*/
 	enum class PixelFormat
 	{
-		Unknown,		/**< Unknown or unsupported format (e.g., compressed or non-8-bit data) */
+		Unknown,		/**< Unknown or unsupported format */
 
+		// Uncompressed, 8 bits per channel (the runtime-exercised formats)
 		R8,				/**< One channel, 8 bits per pixel */
 		RG8,			/**< Two channels, 16 bits per pixel */
 		RGB8,			/**< Three channels, 24 bits per pixel */
-		RGBA8			/**< Four channels, 32 bits per pixel */
+		RGBA8,			/**< Four channels, 32 bits per pixel */
+
+		// Packed integer formats (16 bits per pixel)
+		RGB565,			/**< Packed RGB, 5/6/5 bits per channel */
+		RGB5A1,			/**< Packed RGBA, 5/5/5/1 bits per channel */
+		RGBA4,			/**< Packed RGBA, 4 bits per channel */
+
+		// Floating-point formats
+		RGB16F,			/**< Three half-float channels */
+		RGBA16F,		/**< Four half-float channels */
+		RGB32F,			/**< Three single-float channels */
+		RGBA32F,		/**< Four single-float channels */
+
+		// Depth formats
+		Depth16,		/**< 16-bit depth */
+		Depth24,		/**< 24-bit depth */
+		Depth32F,		/**< 32-bit floating-point depth */
+
+		// Compressed S3TC / DXT
+		DXT1RGB,		/**< S3TC DXT1, RGB (no alpha) */
+		DXT1RGBA,		/**< S3TC DXT1, RGBA (1-bit alpha) */
+		DXT3,			/**< S3TC DXT3, RGBA (explicit alpha) */
+		DXT5,			/**< S3TC DXT5, RGBA (interpolated alpha) */
+
+		// Compressed ETC / EAC
+		ETC1,			/**< ETC1, RGB */
+		ETC2RGB8,		/**< ETC2, RGB */
+		ETC2RGB8A1,		/**< ETC2, RGB with 1-bit punch-through alpha */
+		ETC2RGBA8,		/**< ETC2 + EAC, RGBA */
+		EAC_R11,		/**< EAC, one channel */
+		EAC_RG11,		/**< EAC, two channels */
+
+		// Compressed ATC
+		ATC_RGB,				/**< ATC, RGB */
+		ATC_RGBA_Explicit,		/**< ATC, RGBA with explicit alpha */
+		ATC_RGBA_Interpolated,	/**< ATC, RGBA with interpolated alpha */
+
+		// Compressed PVRTC
+		PVRTC_2BPP_RGB,		/**< PVRTC v1, 2 bpp, RGB */
+		PVRTC_2BPP_RGBA,	/**< PVRTC v1, 2 bpp, RGBA */
+		PVRTC_4BPP_RGB,		/**< PVRTC v1, 4 bpp, RGB */
+		PVRTC_4BPP_RGBA,	/**< PVRTC v1, 4 bpp, RGBA */
+
+		// Compressed ASTC (all block sizes are RGBA, LDR)
+		ASTC_4x4,		/**< ASTC, 4x4 block */
+		ASTC_5x4,		/**< ASTC, 5x4 block */
+		ASTC_5x5,		/**< ASTC, 5x5 block */
+		ASTC_6x5,		/**< ASTC, 6x5 block */
+		ASTC_6x6,		/**< ASTC, 6x6 block */
+		ASTC_8x5,		/**< ASTC, 8x5 block */
+		ASTC_8x6,		/**< ASTC, 8x6 block */
+		ASTC_8x8,		/**< ASTC, 8x8 block */
+		ASTC_10x5,		/**< ASTC, 10x5 block */
+		ASTC_10x6,		/**< ASTC, 10x6 block */
+		ASTC_10x8,		/**< ASTC, 10x8 block */
+		ASTC_10x10,		/**< ASTC, 10x10 block */
+		ASTC_12x10,		/**< ASTC, 12x10 block */
+		ASTC_12x12		/**< ASTC, 12x12 block */
+	};
+
+	/**
+		@brief Type of texture the backend allocates and binds
+
+		The renderer only uses two-dimensional textures; the enum exists so pipeline code does not name
+		a backend-specific texture target constant.
+	*/
+	enum class TextureTarget
+	{
+		Texture2D		/**< A two-dimensional texture */
+	};
+
+	/**
+		@brief Texture minification and magnification filtering modes
+	*/
+	enum class SamplerFilter
+	{
+		Unknown,
+
+		Nearest,
+		Linear,
+		NearestMipmapNearest,
+		LinearMipmapNearest,
+		NearestMipmapLinear,
+		LinearMipmapLinear
+	};
+
+	/**
+		@brief Texture coordinate wrapping modes
+	*/
+	enum class SamplerWrapping
+	{
+		Unknown,
+
+		ClampToEdge,
+		MirroredRepeat,
+		Repeat
+	};
+
+	/**
+		@brief Source for a sampled texture channel (see @ref Texture::SetSwizzle())
+	*/
+	enum class SwizzleChannel
+	{
+		Red,
+		Green,
+		Blue,
+		Alpha,
+		Zero,
+		One
 	};
 }

@@ -32,6 +32,13 @@ namespace nCine
 			return;
 		}
 
+#if defined(WITH_RHI_SOFTWARE)
+		// The software backend compiles no shaders, so there is no program binary to cache. Stay silently
+		// disabled (isAvailable_ is already false, so every cache operation is a no-op) instead of querying
+		// GL capabilities and logging a missing-extension warning that does not apply to this backend.
+		return;
+#endif
+
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 #if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
 		const bool isSupported = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_GET_PROGRAM_BINARY) ||

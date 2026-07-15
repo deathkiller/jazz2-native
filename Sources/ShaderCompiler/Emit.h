@@ -30,8 +30,8 @@ namespace ShaderCompiler
 	/** @brief Reflection of one program variant (the unnamed base or a named variant), merged across stages */
 	struct VariantReflection
 	{
-		std::string Name;			// empty for the base variant, otherwise the variant name
-		std::string Define;			// empty for the base variant, otherwise the baked define
+		String Name;				// empty for the base variant, otherwise the variant name
+		String Define;				// empty for the base variant, otherwise the baked define
 		StageReflection Reflection;
 	};
 
@@ -47,7 +47,7 @@ namespace ShaderCompiler
 	{
 	public:
 		/** Builds the standalone "ShaderCompilerTypes.h" header with the shared reflection types */
-		static std::string BuildTypesHeader();
+		static String BuildTypesHeader();
 
 		/**
 			Emits the complete generated header, returns false and fills @p diag on error.
@@ -55,9 +55,9 @@ namespace ShaderCompiler
 			document plus its "batched" twin) — all of them are emitted into the same namespace.
 		*/
 		static bool EmitHeader(const std::vector<ProgramReflection>& programs,
-			const std::string& ns, const std::string& inputFileName, std::string& output, Diagnostic& diag);
+			StringView ns, StringView inputFileName, String& output, Diagnostic& diag);
 
 		/** Builds the human-readable reflection dump printed by "--check" (called once per program) */
-		static std::string BuildCheckDump(const ShaderDocument& document, const std::vector<VariantReflection>& variants);
+		static String BuildCheckDump(const ShaderDocument& document, const std::vector<VariantReflection>& variants);
 	};
 }

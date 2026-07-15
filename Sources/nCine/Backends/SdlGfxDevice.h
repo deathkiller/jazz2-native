@@ -95,6 +95,24 @@ namespace nCine::Backends
 		/** @brief Initializes the OpenGL graphics context */
 		void initDevice(int windowPosX, int windowPosY, bool isResizable);
 
+#if defined(WITH_RHI_SOFTWARE)
+		/** @brief SDL2 renderer used to present the CPU framebuffer (software backend, no GL context) */
+		SDL_Renderer* softwareRenderer_ = nullptr;
+		/** @brief Streaming texture the software backend's screen framebuffer is uploaded into each frame */
+		SDL_Texture* softwareTexture_ = nullptr;
+		/** @brief Current width of @ref softwareTexture_ and the backend screen framebuffer */
+		std::int32_t softwareTextureWidth_ = 0;
+		/** @brief Current height of @ref softwareTexture_ and the backend screen framebuffer */
+		std::int32_t softwareTextureHeight_ = 0;
+
+		/** @brief Creates the SDL2 renderer and the initial streaming target for the software present path */
+		void initSoftwarePresent(bool hasVSync);
+		/** @brief (Re)creates the streaming texture and resizes the backend screen framebuffer to match */
+		void resizeSoftwareTarget(int width, int height);
+		/** @brief Uploads and blits the backend screen framebuffer to the window (replaces the GL buffer swap) */
+		void presentSoftware();
+#endif
+
 		void convertVideoModeInfo(const SDL_DisplayMode& sdlVideoMode, IGfxDevice::VideoMode& videoMode) const;
 
 		friend class SdlInputManager;

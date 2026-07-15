@@ -1,60 +1,68 @@
 #include "TextureFormat.h"
-#include "../ServiceLocator.h"
 #include "../../Main.h"
-
-#if defined(DEATH_TARGET_ANDROID)
-#	include <android/api-level.h>
-#endif
 
 namespace nCine
 {
-	TextureFormat::TextureFormat(GLenum internalFormat)
-		: internalFormat_(internalFormat), format_(-1), type_(-1), isCompressed_(false)
+	bool TextureFormat::isCompressed() const
 	{
-		findExternalFormat();
-		checkFormatSupport();
-	}
-
-	TextureFormat::TextureFormat(GLenum internalFormat, GLenum type)
-		: internalFormat_(internalFormat), format_(-1), type_(-1), isCompressed_(false)
-	{
-		findExternalFormat();
-		checkFormatSupport();
-		// Overriding the type found by `findExternalFormat()`
-		type_ = type;
-	}
-
-	PixelFormat TextureFormat::pixelFormat() const
-	{
-		switch (internalFormat_) {
-			case GL_R8:
-				return PixelFormat::R8;
-			case GL_RG8:
-				return PixelFormat::RG8;
-			case GL_RGB8:
-				return PixelFormat::RGB8;
-			case GL_RGBA8:
-				return PixelFormat::RGBA8;
+		switch (pixelFormat_) {
+			case PixelFormat::DXT1RGB:
+			case PixelFormat::DXT1RGBA:
+			case PixelFormat::DXT3:
+			case PixelFormat::DXT5:
+			case PixelFormat::ETC1:
+			case PixelFormat::ETC2RGB8:
+			case PixelFormat::ETC2RGB8A1:
+			case PixelFormat::ETC2RGBA8:
+			case PixelFormat::EAC_R11:
+			case PixelFormat::EAC_RG11:
+			case PixelFormat::ATC_RGB:
+			case PixelFormat::ATC_RGBA_Explicit:
+			case PixelFormat::ATC_RGBA_Interpolated:
+			case PixelFormat::PVRTC_2BPP_RGB:
+			case PixelFormat::PVRTC_2BPP_RGBA:
+			case PixelFormat::PVRTC_4BPP_RGB:
+			case PixelFormat::PVRTC_4BPP_RGBA:
+			case PixelFormat::ASTC_4x4:
+			case PixelFormat::ASTC_5x4:
+			case PixelFormat::ASTC_5x5:
+			case PixelFormat::ASTC_6x5:
+			case PixelFormat::ASTC_6x6:
+			case PixelFormat::ASTC_8x5:
+			case PixelFormat::ASTC_8x6:
+			case PixelFormat::ASTC_8x8:
+			case PixelFormat::ASTC_10x5:
+			case PixelFormat::ASTC_10x6:
+			case PixelFormat::ASTC_10x8:
+			case PixelFormat::ASTC_10x10:
+			case PixelFormat::ASTC_12x10:
+			case PixelFormat::ASTC_12x12:
+				return true;
 			default:
-				return PixelFormat::Unknown;
+				return false;
 		}
 	}
 
 	std::uint32_t TextureFormat::numChannels() const
 	{
-		switch (format_) {
-			case GL_RED:
+		switch (pixelFormat_) {
+			case PixelFormat::R8:
+			case PixelFormat::EAC_R11:
 				return 1;
-			case GL_RG:
+			case PixelFormat::RG8:
+			case PixelFormat::EAC_RG11:
 				return 2;
-			case GL_RGB:
+			case PixelFormat::RGB8:
+			case PixelFormat::RGB565:
+			case PixelFormat::RGB16F:
+			case PixelFormat::RGB32F:
+			case PixelFormat::DXT1RGB:
+			case PixelFormat::ETC1:
+			case PixelFormat::ETC2RGB8:
+			case PixelFormat::ATC_RGB:
+			case PixelFormat::PVRTC_2BPP_RGB:
+			case PixelFormat::PVRTC_4BPP_RGB:
 				return 3;
-			case GL_RGBA:
-#if !defined(WITH_OPENGLES)
-			case GL_BGRA:
-#else
-			case GL_BGRA_EXT:
-#endif
 			default:
 				return 4;
 		}
@@ -62,21 +70,10 @@ namespace nCine
 
 	void TextureFormat::bgrFormat()
 	{
-		if (format_ == GL_RGBA) {
-#if !defined(WITH_OPENGLES)
-			format_ = GL_BGRA;
-#else
-			format_ = GL_BGRA_EXT;
-#endif
-		}
-#if !defined(WITH_OPENGLES)
-		else if (format_ == GL_RGB) {
-			format_ = GL_BGR;
-		}
-#endif
+		bgr_ = true;
 	}
 
-	std::uint32_t TextureFormat::calculateMipSizes(GLenum internalFormat, std::int32_t width, std::int32_t height, std::int32_t mipMapCount, std::uint32_t* mipDataOffsets, std::uint32_t* mipDataSizes)
+	std::uint32_t TextureFormat::calculateMipSizes(PixelFormat format, std::int32_t width, std::int32_t height, std::int32_t mipMapCount, std::uint32_t* mipDataOffsets, std::uint32_t* mipDataSizes)
 	{
 		std::uint32_t blockWidth = 1; // Compression block width in pixels
 		std::uint32_t blockHeight = 1; // Compression block height in pixels
@@ -84,173 +81,169 @@ namespace nCine
 		std::uint32_t blockSize = 0; // Compression block size in byts
 		std::uint32_t minDataSize = 1; // Minimum data size in bytes
 
-		switch (internalFormat) {
-			case GL_RGBA8:
+		switch (format) {
+			case PixelFormat::RGBA8:
 				bpp = 32;
 				break;
-			case GL_RGB8:
+			case PixelFormat::RGB8:
 				bpp = 24;
 				break;
-			case GL_RG8:
-			case GL_RGB565:
-			case GL_RGB5_A1:
-			case GL_RGBA4:
+			case PixelFormat::RG8:
+			case PixelFormat::RGB565:
+			case PixelFormat::RGB5A1:
+			case PixelFormat::RGBA4:
 				bpp = 16;
 				break;
-			case GL_R8:
+			case PixelFormat::R8:
 				bpp = 8;
 				break;
-			case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
-			case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+			case PixelFormat::DXT1RGBA:
+			case PixelFormat::DXT1RGB:
 				// max(1, width / 4) x max(1, height / 4) x 8(DXT1)
 				blockWidth = 4;
 				blockHeight = 4;
 				bpp = 4;
 				minDataSize = 8;
 				break;
-			case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
-			case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+			case PixelFormat::DXT3:
+			case PixelFormat::DXT5:
 				// max(1, width / 4) x max(1, height / 4) x 16(DXT2-5)
 				blockWidth = 4;
 				blockHeight = 4;
 				bpp = 8;
 				minDataSize = 16;
 				break;
-#if defined(WITH_OPENGLES)
-			case GL_ETC1_RGB8_OES:
-			case GL_COMPRESSED_RGB8_ETC2:
-			case GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2:
-			case GL_COMPRESSED_R11_EAC:
+			case PixelFormat::ETC1:
+			case PixelFormat::ETC2RGB8:
+			case PixelFormat::ETC2RGB8A1:
+			case PixelFormat::EAC_R11:
 				blockWidth = 4;
 				blockHeight = 4;
 				bpp = 4;
 				minDataSize = 8;
 				break;
-			case GL_COMPRESSED_RGBA8_ETC2_EAC:
-			case GL_COMPRESSED_RG11_EAC:
+			case PixelFormat::ETC2RGBA8:
+			case PixelFormat::EAC_RG11:
 				blockWidth = 4;
 				blockHeight = 4;
 				bpp = 8;
 				minDataSize = 16;
 				break;
-			case GL_ATC_RGBA_EXPLICIT_ALPHA_AMD:
-			case GL_ATC_RGBA_INTERPOLATED_ALPHA_AMD:
+			case PixelFormat::ATC_RGBA_Explicit:
+			case PixelFormat::ATC_RGBA_Interpolated:
 				// ((width_in_texels+3)/4) * ((height_in_texels+3)/4) * 16
 				blockWidth = 4;
 				blockHeight = 4;
 				bpp = 8;
 				minDataSize = 16;
 				break;
-			case GL_ATC_RGB_AMD:
+			case PixelFormat::ATC_RGB:
 				// ((width_in_texels+3)/4) * ((height_in_texels+3)/4) * 8
 				blockWidth = 4;
 				blockHeight = 4;
 				bpp = 4;
 				minDataSize = 8;
 				break;
-			case GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG:
-			case GL_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG:
+			case PixelFormat::PVRTC_2BPP_RGB:
+			case PixelFormat::PVRTC_2BPP_RGBA:
 				blockWidth = 8;
 				blockHeight = 4;
 				bpp = 2;
 				minDataSize = 2 * 2 * ((blockWidth * blockHeight * bpp) / 8);
 				break;
-			case GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG:
-			case GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG:
+			case PixelFormat::PVRTC_4BPP_RGB:
+			case PixelFormat::PVRTC_4BPP_RGBA:
 				blockWidth = 4;
 				blockHeight = 4;
 				bpp = 4;
 				minDataSize = 2 * 2 * ((blockWidth * blockHeight * bpp) / 8);
 				break;
-#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
-			case GL_COMPRESSED_RGBA_ASTC_4x4_KHR:
+			case PixelFormat::ASTC_4x4:
 				blockWidth = 4;
 				blockHeight = 4;
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-			case GL_COMPRESSED_RGBA_ASTC_5x4_KHR:
+			case PixelFormat::ASTC_5x4:
 				blockWidth = 5;
 				blockHeight = 4;
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-			case GL_COMPRESSED_RGBA_ASTC_5x5_KHR:
+			case PixelFormat::ASTC_5x5:
 				blockWidth = 5;
 				blockHeight = 5;
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-			case GL_COMPRESSED_RGBA_ASTC_6x5_KHR:
+			case PixelFormat::ASTC_6x5:
 				blockWidth = 6;
 				blockHeight = 5;
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-			case GL_COMPRESSED_RGBA_ASTC_6x6_KHR:
+			case PixelFormat::ASTC_6x6:
 				blockWidth = 6;
 				blockHeight = 6;
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-			case GL_COMPRESSED_RGBA_ASTC_8x5_KHR:
+			case PixelFormat::ASTC_8x5:
 				blockWidth = 8;
 				blockHeight = 5;
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-			case GL_COMPRESSED_RGBA_ASTC_8x6_KHR:
+			case PixelFormat::ASTC_8x6:
 				blockWidth = 8;
 				blockHeight = 6;
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-			case GL_COMPRESSED_RGBA_ASTC_8x8_KHR:
+			case PixelFormat::ASTC_8x8:
 				blockWidth = 8;
 				blockHeight = 8;
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-			case GL_COMPRESSED_RGBA_ASTC_10x5_KHR:
+			case PixelFormat::ASTC_10x5:
 				blockWidth = 10;
 				blockHeight = 5;
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-			case GL_COMPRESSED_RGBA_ASTC_10x6_KHR:
+			case PixelFormat::ASTC_10x6:
 				blockWidth = 10;
 				blockHeight = 6;
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-			case GL_COMPRESSED_RGBA_ASTC_10x8_KHR:
+			case PixelFormat::ASTC_10x8:
 				blockWidth = 10;
 				blockHeight = 8;
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-			case GL_COMPRESSED_RGBA_ASTC_10x10_KHR:
+			case PixelFormat::ASTC_10x10:
 				blockWidth = 10;
 				blockHeight = 10;
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-			case GL_COMPRESSED_RGBA_ASTC_12x10_KHR:
+			case PixelFormat::ASTC_12x10:
 				blockWidth = 12;
 				blockHeight = 10;
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-			case GL_COMPRESSED_RGBA_ASTC_12x12_KHR:
+			case PixelFormat::ASTC_12x12:
 				blockWidth = 12;
 				blockHeight = 12;
 				blockSize = 16;
 				minDataSize = 16;
 				break;
-#	endif
-#endif
 			default:
-				LOGF("MIP maps not supported for internal format: 0x{:x}", internalFormat);
+				LOGF("MIP maps not supported for pixel format: {}", std::uint32_t(format));
 				break;
 		}
 
@@ -278,263 +271,6 @@ namespace nCine
 		}
 
 		return dataSizesSum;
-	}
-
-	void TextureFormat::findExternalFormat()
-	{
-		bool found = false;
-
-		if (!found)
-			found = integerFormat();
-		if (!found)
-			found = nonIntegerFormat();
-		if (!found)
-			found = floatFormat();
-		if (!found)
-			found = compressedFormat();
-#if defined(WITH_OPENGLES)
-		if (!found)
-			found = oesCompressedFormat();
-#endif
-
-		FATAL_ASSERT_MSG(found, "Unknown internal format: 0x{:x}", internalFormat_);
-
-		//LOGD("Internal format: 0x{:x} - type: 0x{:x}", internalFormat_, type_);
-	}
-
-	bool TextureFormat::integerFormat()
-	{
-		bool found = true;
-
-		switch (internalFormat_) {
-			case GL_RGBA8:
-			case 4:
-				format_ = GL_RGBA;
-				break;
-			case GL_RGB8:
-			case 3:
-				format_ = GL_RGB;
-				break;
-			case GL_RG8:
-			case 2:
-				format_ = GL_RG;
-				break;
-			case GL_R8:
-			case 1:
-				format_ = GL_RED;
-				break;
-			case GL_DEPTH_COMPONENT16:
-			case GL_DEPTH_COMPONENT24:
-				format_ = GL_DEPTH_COMPONENT;
-				break;
-			default:
-				found = false;
-				break;
-		}
-
-		if (found) {
-			type_ = GL_UNSIGNED_BYTE;
-		}
-
-		return found;
-	}
-
-	bool TextureFormat::nonIntegerFormat()
-	{
-		bool found = true;
-
-		switch (internalFormat_) {
-			case GL_RGB5_A1:
-				format_ = GL_RGBA;
-				type_ = GL_UNSIGNED_SHORT_5_5_5_1;
-				break;
-			case GL_RGBA4:
-				format_ = GL_RGBA;
-				type_ = GL_UNSIGNED_SHORT_4_4_4_4;
-				break;
-			case GL_RGB565:
-				format_ = GL_RGB;
-				type_ = GL_UNSIGNED_SHORT_5_6_5;
-				break;
-			default:
-				found = false;
-				break;
-		}
-
-		return found;
-	}
-
-	bool TextureFormat::floatFormat()
-	{
-		bool found = true;
-
-		switch (internalFormat_) {
-			case GL_RGBA16F:
-			case GL_RGBA32F:
-				format_ = GL_RGBA;
-				break;
-			case GL_RGB16F:
-			case GL_RGB32F:
-				format_ = GL_RGB;
-				break;
-			case GL_DEPTH_COMPONENT32F:
-				format_ = GL_DEPTH_COMPONENT;
-				break;
-			default:
-				found = false;
-				break;
-		}
-
-		if (found) {
-			type_ = GL_FLOAT;
-		}
-
-		return found;
-	}
-
-	bool TextureFormat::compressedFormat()
-	{
-		bool found = true;
-
-		switch (internalFormat_) {
-			case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
-			case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
-			case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-				format_ = GL_RGBA;
-				break;
-			case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
-				format_ = GL_RGB;
-				break;
-			default:
-				found = false;
-				break;
-		}
-
-		if (found) {
-			type_ = GL_UNSIGNED_BYTE;
-			isCompressed_ = true;
-		}
-
-		return found;
-	}
-
-#if defined(WITH_OPENGLES)
-	bool TextureFormat::oesCompressedFormat()
-	{
-		bool found = true;
-
-		switch (internalFormat_) {
-			case GL_ATC_RGBA_EXPLICIT_ALPHA_AMD:
-			case GL_ATC_RGBA_INTERPOLATED_ALPHA_AMD:
-			case GL_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG:
-			case GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG:
-			case GL_COMPRESSED_RGBA8_ETC2_EAC:
-			case GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2:
-#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
-			case GL_COMPRESSED_RGBA_ASTC_4x4_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_5x4_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_5x5_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_6x5_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_6x6_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_8x5_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_8x6_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_8x8_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_10x5_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_10x6_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_10x8_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_10x10_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_12x10_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_12x12_KHR:
-#	endif
-				format_ = GL_RGBA;
-				break;
-			case GL_ETC1_RGB8_OES:
-			case GL_COMPRESSED_RGB8_ETC2:
-			case GL_ATC_RGB_AMD:
-			case GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG:
-			case GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG:
-				format_ = GL_RGB;
-				break;
-			case GL_COMPRESSED_RG11_EAC:
-				format_ = GL_RG;
-				break;
-			case GL_COMPRESSED_R11_EAC:
-				format_ = GL_RED;
-				break;
-			default:
-				found = false;
-				break;
-		}
-
-		if (found) {
-			type_ = GL_UNSIGNED_BYTE;
-			isCompressed_ = true;
-		}
-
-		return found;
-	}
-#endif
-
-	void TextureFormat::checkFormatSupport() const
-	{
-		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-
-		switch (internalFormat_) {
-			case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
-			case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
-			case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-			{
-				const bool hasS3tc = gfxCaps.HasExtension(IGfxCapabilities::Extensions::EXT_TEXTURE_COMPRESSION_S3TC);
-				FATAL_ASSERT_MSG(hasS3tc, "GL_EXT_texture_compression_s3tc not available");
-				break;
-			}
-#if defined(WITH_OPENGLES)
-			case GL_ETC1_RGB8_OES:
-			{
-				const bool hasEct1 = gfxCaps.HasExtension(IGfxCapabilities::Extensions::OES_COMPRESSED_ETC1_RGB8_TEXTURE);
-				FATAL_ASSERT_MSG(hasEct1, "GL_OES_compressed_etc1_rgb8_texture not available");
-				break;
-			}
-			case GL_ATC_RGB_AMD:
-			case GL_ATC_RGBA_EXPLICIT_ALPHA_AMD:
-			case GL_ATC_RGBA_INTERPOLATED_ALPHA_AMD:
-			{
-				const bool hasAtc = gfxCaps.HasExtension(IGfxCapabilities::Extensions::AMD_COMPRESSED_ATC_TEXTURE);
-				FATAL_ASSERT_MSG(hasAtc, "GL_AMD_compressed_ATC_texture not available");
-				break;
-			}
-			case GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG:
-			case GL_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG:
-			case GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG:
-			case GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG:
-			{
-				const bool hasPvr = gfxCaps.HasExtension(IGfxCapabilities::Extensions::IMG_TEXTURE_COMPRESSION_PVRTC);
-				FATAL_ASSERT_MSG(hasPvr, "GL_IMG_texture_compression_pvrtc not available");
-				break;
-			}
-#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
-			case GL_COMPRESSED_RGBA_ASTC_4x4_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_5x4_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_5x5_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_6x5_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_6x6_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_8x5_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_8x6_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_8x8_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_10x5_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_10x6_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_10x8_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_10x10_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_12x10_KHR:
-			case GL_COMPRESSED_RGBA_ASTC_12x12_KHR:
-			{
-				const bool hasAstc = gfxCaps.HasExtension(IGfxCapabilities::Extensions::KHR_TEXTURE_COMPRESSION_ASTC_LDR);
-				FATAL_ASSERT_MSG(hasAstc, "GL_KHR_texture_compression_astc_ldr not available");
-				break;
-			}
-#	endif
-#endif
-		}
 	}
 
 }

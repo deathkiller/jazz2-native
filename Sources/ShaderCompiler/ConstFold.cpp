@@ -4,11 +4,44 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
+
+#include <Base/Format.h>
+#include <Containers/StringConcatenable.h>
+
+using namespace Death::Containers::Literals;
 
 namespace ShaderCompiler
 {
 	namespace
 	{
+		constexpr std::size_t Npos = ~std::size_t{0};
+
+		/** Substring [pos, pos + count), clamping count to the available length (never throws for pos <= size) */
+		StringView Substr(StringView s, std::size_t pos, std::size_t count = Npos)
+		{
+			std::size_t size = s.size();
+			if (pos > size) {
+				pos = size;
+			}
+			std::size_t avail = size - pos;
+			if (count > avail) {
+				count = avail;
+			}
+			return s.slice(pos, pos + count);
+		}
+
+		/** Index of the first character at or after @p pos that is not any of @p set, or Npos */
+		std::size_t FindFirstNotOf(StringView s, StringView set, std::size_t pos = 0)
+		{
+			for (std::size_t size = s.size(); pos < size; pos++) {
+				if (!set.contains(s[pos])) {
+					return pos;
+				}
+			}
+			return Npos;
+		}
+
 		constexpr std::int64_t Int32Min = -2147483647LL - 1;
 		constexpr std::int64_t Int32Max = 2147483647LL;
 
@@ -74,7 +107,7 @@ namespace ShaderCompiler
 		}
 
 		/** Returns the precedence of a binary operator (higher binds tighter), or -1 when @p text is not one */
-		std::int32_t BinaryPrecedence(const std::string& text)
+		std::int32_t BinaryPrecedence(StringView text)
 		{
 			if (text == "=" || text == "+=" || text == "-=" || text == "*=" || text == "/=" ||
 				text == "%=" || text == "&=" || text == "|=" || text == "^=" || text == "<<=" || text == ">>=") {
@@ -95,7 +128,7 @@ namespace ShaderCompiler
 			return -1;
 		}
 
-		bool IsAssignmentOperator(const std::string& text)
+		bool IsAssignmentOperator(StringView text)
 		{
 			return (BinaryPrecedence(text) == 1);
 		}
@@ -146,7 +179,7 @@ namespace ShaderCompiler
 				return (Peek().Type == GlslTokenType::Operator && Peek().Text == text);
 			}
 
-			const std::string* LineTextOf(std::size_t index) const
+			const String* LineTextOf(std::size_t index) const
 			{
 				for (const FoldInputLine& line : _lines) {
 					if (line.Index == index) {
@@ -170,15 +203,15 @@ namespace ShaderCompiler
 				if (!_allowed[v.First]) {
 					return;		// Suppressed after a mid-statement preprocessor barrier
 				}
-				std::string replacement = Render(v);
+				String replacement = Render(v);
 				if (replacement.empty()) {
 					return;
 				}
-				const std::string* lineText = LineTextOf(first.Index);
+				const String* lineText = LineTextOf(first.Index);
 				if (lineText == nullptr || last.End > lineText->size()) {
 					return;
 				}
-				std::string original = lineText->substr(first.Begin, last.End - first.Begin);
+				String original = Substr(*lineText, first.Begin, last.End - first.Begin);
 				if (replacement.size() > original.size() || replacement == original) {
 					return;		// No gain, or nothing changes
 				}
@@ -191,31 +224,31 @@ namespace ShaderCompiler
 			}
 
 			/** Renders a folded value as GLSL literal text, or "" when it cannot be represented exactly */
-			std::string Render(const Value& v) const
+			String Render(const Value& v) const
 			{
 				switch (v.K) {
 					case Value::Kind::Int:
-						return std::to_string(v.I);
+						return Death::format("{}", v.I);
 					case Value::Kind::Bool:
 						return (v.B ? "true" : "false");
 					case Value::Kind::Float: {
 						if (!std::isfinite(v.F)) {
-							return std::string();
+							return {};
 						}
 						char buffer[64];
 						std::snprintf(buffer, sizeof(buffer), "%.9g", v.F);
 						// Emit only when the printed text round-trips to the exact computed value
 						if (std::strtod(buffer, nullptr) != v.F) {
-							return std::string();
+							return {};
 						}
-						std::string s = buffer;
-						if (s.find_first_of(".eE") == std::string::npos) {
-							s += ".0";
+						String s = buffer;
+						if (!s.findAny(".eE"_s)) {
+							s = s + ".0"_s;
 						}
 						return s;
 					}
 					default:
-						return std::string();
+						return {};
 				}
 			}
 
@@ -226,7 +259,7 @@ namespace ShaderCompiler
 					return lhs;
 				}
 				while (Peek().Type == GlslTokenType::Operator) {
-					const std::string opText = Peek().Text;
+					StringView opText = Peek().Text;
 					if (opText == "?") {
 						if (minPrec > 2) {
 							break;
@@ -264,7 +297,7 @@ namespace ShaderCompiler
 				const GlslToken& t = Peek();
 				if (t.Type == GlslTokenType::Operator &&
 					(t.Text == "+" || t.Text == "-" || t.Text == "!" || t.Text == "~" || t.Text == "++" || t.Text == "--")) {
-					std::string opText = t.Text;
+					StringView opText = t.Text;
 					std::size_t opTok = _pos++;
 					Value v = ParseUnary();
 					if (v.K == Value::Kind::Invalid) {
@@ -277,7 +310,7 @@ namespace ShaderCompiler
 				return ParsePostfix();
 			}
 
-			Value ApplyUnary(const std::string& op, Value v)
+			Value ApplyUnary(StringView op, Value v)
 			{
 				if (op == "-") {
 					if (v.K == Value::Kind::Int && -v.I >= Int32Min && -v.I <= Int32Max) {
@@ -310,7 +343,7 @@ namespace ShaderCompiler
 					return v;
 				}
 				while (Peek().Type == GlslTokenType::Operator) {
-					const std::string& opText = Peek().Text;
+					const String& opText = Peek().Text;
 					if (opText == "(") {
 						// Call/constructor — the callee never folds, arguments fold individually
 						_pos++;
@@ -376,7 +409,7 @@ namespace ShaderCompiler
 					case GlslTokenType::IntLiteral: {
 						Value v = MakeOpaque(_pos, _pos);
 						if (!t.Suffixed) {
-							const char* text = t.Text.c_str();
+							const char* text = t.Text.data();
 							char* end = nullptr;
 							long long parsed = std::strtoll(text, &end, 0);	// Base 0 handles decimal, hex and octal
 							if (end != nullptr && *end == '\0' && parsed >= 0 && parsed <= Int32Max) {
@@ -390,7 +423,7 @@ namespace ShaderCompiler
 					case GlslTokenType::FloatLiteral: {
 						Value v = MakeOpaque(_pos, _pos);
 						if (!t.Suffixed) {
-							const char* text = t.Text.c_str();
+							const char* text = t.Text.data();
 							char* end = nullptr;
 							double parsed = std::strtod(text, &end);
 							if (end != nullptr && *end == '\0' && std::isfinite(parsed)) {
@@ -440,7 +473,7 @@ namespace ShaderCompiler
 				}
 			}
 
-			Value Combine(const std::string& op, Value a, Value b)
+			Value Combine(StringView op, Value a, Value b)
 			{
 				const std::size_t first = a.First;
 				const std::size_t last = b.Last;
@@ -515,7 +548,7 @@ namespace ShaderCompiler
 
 	// --- GlslExprTokenizer ----------------------------------------------------------------------
 
-	void GlslExprTokenizer::Tokenize(const std::string& text, std::size_t begin, std::size_t end, std::size_t index, std::vector<GlslToken>& out)
+	void GlslExprTokenizer::Tokenize(StringView text, std::size_t begin, std::size_t end, std::size_t index, std::vector<GlslToken>& out)
 	{
 		if (end > text.size()) {
 			end = text.size();
@@ -534,7 +567,7 @@ namespace ShaderCompiler
 				while (i < end && IsIdentChar(text[i])) {
 					i++;
 				}
-				t.Text = text.substr(t.Begin, i - t.Begin);
+				t.Text = Substr(text, t.Begin, i - t.Begin);
 				t.Type = ((t.Text == "true" || t.Text == "false") ? GlslTokenType::BoolLiteral : GlslTokenType::Identifier);
 			} else if (IsDigit(c) || (c == '.' && i + 1 < end && IsDigit(text[i + 1]))) {
 				bool isFloat = false;
@@ -577,19 +610,19 @@ namespace ShaderCompiler
 					}
 					i++;
 				}
-				t.Text = text.substr(t.Begin, i - t.Begin);
+				t.Text = Substr(text, t.Begin, i - t.Begin);
 				t.Type = (isFloat ? GlslTokenType::FloatLiteral : (isUnsigned ? GlslTokenType::UIntLiteral : GlslTokenType::IntLiteral));
 			} else {
 				t.Type = GlslTokenType::Operator;
 				std::size_t length = 1;
 				for (const char* op : MultiCharOperators) {
-					std::size_t opLength = std::char_traits<char>::length(op);
-					if (i + opLength <= end && text.compare(i, opLength, op) == 0) {
+					std::size_t opLength = std::strlen(op);
+					if (i + opLength <= end && Substr(text, i, opLength) == op) {
 						length = opLength;
 						break;
 					}
 				}
-				t.Text = text.substr(i, length);
+				t.Text = Substr(text, i, length);
 				i += length;
 			}
 			t.End = i;
@@ -612,9 +645,9 @@ namespace ShaderCompiler
 		std::vector<bool> conditionalStack;
 
 		for (const FoldInputLine& line : lines) {
-			const std::string& text = *line.Text;
-			std::size_t first = text.find_first_not_of(" \t", line.Begin);
-			if (first != std::string::npos && first < line.End && text[first] == '#') {
+			const String& text = *line.Text;
+			std::size_t first = FindFirstNotOf(text, " \t"_s, line.Begin);
+			if (first != Npos && first < line.End && text[first] == '#') {
 				std::size_t p = first + 1;
 				while (p < line.End && IsSpace(text[p])) {
 					p++;
@@ -623,7 +656,7 @@ namespace ShaderCompiler
 				while (p < line.End && IsIdentChar(text[p])) {
 					p++;
 				}
-				std::string name = text.substr(nameBegin, p - nameBegin);
+				String name = Substr(text, nameBegin, p - nameBegin);
 				if (name == "if" || name == "ifdef" || name == "ifndef") {
 					conditionalStack.push_back(atBoundary);
 				} else if (name == "elif" || name == "else") {

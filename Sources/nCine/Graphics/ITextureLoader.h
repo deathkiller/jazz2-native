@@ -119,16 +119,9 @@ namespace nCine
 		/**
 		 * @brief Loads pixel data from a texture file holding either compressed or uncompressed data
 		 *
-		 * @param internalFormat  OpenGL internal format describing the decoded pixels
+		 * @param format  Backend-neutral pixel format describing the decoded pixels
 		 */
-		void loadPixels(GLenum internalFormat);
-		/**
-		 * @brief Loads pixel data from a texture file holding either compressed or uncompressed data, overriding pixel type
-		 *
-		 * @param internalFormat  OpenGL internal format describing the decoded pixels
-		 * @param type            OpenGL pixel type that overrides the format default
-		 */
-		void loadPixels(GLenum internalFormat, GLenum type);
+		void loadPixels(PixelFormat format);
 	};
 
 #ifndef DOXYGEN_GENERATING_OUTPUT

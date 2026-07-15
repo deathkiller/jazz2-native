@@ -35,7 +35,7 @@ namespace nCine
 
 		LOGI("Header found: w:{} h:{}, xw:{} xh:{}", width_, height_, extWidth, extHeight);
 
-		loadPixels(GL_ETC1_RGB8_OES);
+		loadPixels(PixelFormat::ETC1);
 		hasLoaded_ = true;
 	}
 }

@@ -19,16 +19,16 @@ namespace nCine
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
-		/** @brief Header of a KTX file */
+		/** @brief Header of a KTX file (field codes are the graphics-API enum values stored by KTX v1.1) */
 		struct KtxHeader
 		{
 			std::uint8_t identifier[KtxIdentifierLength];
 			std::uint32_t endianess;
-			std::uint32_t glType;
-			std::uint32_t glTypeSize;
-			std::uint32_t glFormat;
-			std::uint32_t glInternalFormat;
-			std::uint32_t glBaseInternalFormat;
+			std::uint32_t dataType;
+			std::uint32_t dataTypeSize;
+			std::uint32_t format;
+			std::uint32_t internalFormat;
+			std::uint32_t baseInternalFormat;
 			std::uint32_t pixelWidth;
 			std::uint32_t pixelHeight;
 			std::uint32_t pixelDepth;

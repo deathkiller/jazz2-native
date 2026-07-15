@@ -39,6 +39,11 @@ if(GLEW_FOUND)
 	target_link_libraries(${NCINE_APP} PRIVATE GLEW::GLEW)
 endif()
 
+if(NCINE_WITH_RHI_SOFTWARE)
+	# Selects the CPU software backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_SOFTWARE")
+endif()
+
 if(NOT DEDICATED_SERVER)
 	if(GLFW_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "GLFW")
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_GLFW")

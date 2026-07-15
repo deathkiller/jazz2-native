@@ -3,6 +3,10 @@
 #include "SdlGfxDevice.h"
 #include "../Graphics/ITextureLoader.h"
 
+#if defined(WITH_RHI_SOFTWARE)
+#	include "../Graphics/RHI/Rhi.h"
+#endif
+
 #if defined(WITH_GLEW)
 #	define GLEW_NO_GLU
 #	include <GL/glew.h>
@@ -27,20 +31,38 @@ namespace nCine::Backends
 
 	SdlGfxDevice::~SdlGfxDevice()
 	{
+#if defined(WITH_RHI_SOFTWARE)
+		LOGD("Disposing software renderer...");
+
+		if (softwareTexture_ != nullptr) {
+			SDL_DestroyTexture(softwareTexture_);
+			softwareTexture_ = nullptr;
+		}
+		if (softwareRenderer_ != nullptr) {
+			SDL_DestroyRenderer(softwareRenderer_);
+			softwareRenderer_ = nullptr;
+		}
+#else
 		LOGD("Disposing OpenGL context...");
 
 		SDL_GL_DeleteContext(glContextHandle_);
 		glContextHandle_ = nullptr;
+#endif
 		SDL_DestroyWindow(windowHandle_);
 		windowHandle_ = nullptr;
-		
+
 		SDL_QuitSubSystem(SDL_INIT_VIDEO);
 		SDL_Quit();
 	}
 
 	void SdlGfxDevice::setSwapInterval(int interval)
 	{
+#if defined(WITH_RHI_SOFTWARE)
+		// No GL context; vsync is selected when the SDL renderer is created (present path)
+		static_cast<void>(interval);
+#else
 		SDL_GL_SetSwapInterval(interval);
+#endif
 	}
 
 	void SdlGfxDevice::setResolution(bool fullscreen, int width, int height)
@@ -74,12 +96,21 @@ namespace nCine::Backends
 #endif
 
 		SDL_GetWindowSize(windowHandle_, &width_, &height_);
+#if defined(WITH_RHI_SOFTWARE)
+		SDL_GetRendererOutputSize(softwareRenderer_, &drawableWidth_, &drawableHeight_);
+		resizeSoftwareTarget(drawableWidth_, drawableHeight_);
+#else
 		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+#endif
 	}
 
 	void SdlGfxDevice::update()
 	{
+#if defined(WITH_RHI_SOFTWARE)
+		presentSoftware();
+#else
 		SDL_GL_SwapWindow(windowHandle_);
+#endif
 	}
 
 	void SdlGfxDevice::setResolutionInternal(int width, int height)
@@ -113,7 +144,12 @@ namespace nCine::Backends
 		if (!isFullscreen_) {
 			SDL_SetWindowSize(windowHandle_, width, height);
 			SDL_GetWindowSize(windowHandle_, &width_, &height_);
+#if defined(WITH_RHI_SOFTWARE)
+			SDL_GetRendererOutputSize(softwareRenderer_, &drawableWidth_, &drawableHeight_);
+			resizeSoftwareTarget(drawableWidth_, drawableHeight_);
+#else
 			SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+#endif
 		}
 	}
 
@@ -199,6 +235,39 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::initDevice(int windowPosX, int windowPosY, bool isResizable)
 	{
+#if defined(WITH_RHI_SOFTWARE)
+		// Software backend: create a plain window (no OpenGL context) and present a CPU framebuffer
+		LOGD("Initializing window (software renderer)...");
+
+		Uint32 swFlags = 0;
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+		swFlags |= SDL_WINDOW_ALLOW_HIGHDPI;
+#	endif
+		if (width_ <= 0 || height_ <= 0) {
+			swFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+			isFullscreen_ = true;
+		} else if (isFullscreen_) {
+			swFlags |= SDL_WINDOW_FULLSCREEN;
+		}
+		if (windowPosX == AppConfiguration::WindowPositionIgnore) {
+			windowPosX = SDL_WINDOWPOS_UNDEFINED;
+		}
+		if (windowPosY == AppConfiguration::WindowPositionIgnore) {
+			windowPosY = SDL_WINDOWPOS_UNDEFINED;
+		}
+
+		windowHandle_ = SDL_CreateWindow("", windowPosX, windowPosY, width_, height_, swFlags);
+		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: {}", SDL_GetError());
+		SDL_SetWindowResizable(windowHandle_, isResizable ? SDL_TRUE : SDL_FALSE);
+		// Resolution should be set to current screen size when it was left unspecified
+		if (width_ <= 0 || height_ <= 0) {
+			SDL_GetWindowSize(windowHandle_, &width_, &height_);
+		}
+
+		initSoftwarePresent(displayMode_.hasVSync());
+		initDeviceViewport();
+		return;
+#endif
 		// Setting OpenGL attributes
 		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, displayMode_.redBits());
 		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, displayMode_.greenBits());
@@ -296,6 +365,74 @@ namespace nCine::Backends
 		contextInfo_.debugContext = (contextInfo_.debugContext && glewIsSupported("GL_ARB_debug_output"));
 #endif
 	}
+
+#if defined(WITH_RHI_SOFTWARE)
+	void SdlGfxDevice::initSoftwarePresent(bool hasVSync)
+	{
+		Uint32 rendererFlags = SDL_RENDERER_ACCELERATED;
+		if (hasVSync) {
+			rendererFlags |= SDL_RENDERER_PRESENTVSYNC;
+		}
+		softwareRenderer_ = SDL_CreateRenderer(windowHandle_, -1, rendererFlags);
+		if (softwareRenderer_ == nullptr) {
+			// Fall back to a non-accelerated renderer if no accelerated one is available
+			softwareRenderer_ = SDL_CreateRenderer(windowHandle_, -1, SDL_RENDERER_SOFTWARE);
+		}
+		FATAL_ASSERT_MSG(softwareRenderer_, "SDL_CreateRenderer failed: {}", SDL_GetError());
+
+		SDL_GetRendererOutputSize(softwareRenderer_, &drawableWidth_, &drawableHeight_);
+		resizeSoftwareTarget(drawableWidth_, drawableHeight_);
+	}
+
+	void SdlGfxDevice::resizeSoftwareTarget(int width, int height)
+	{
+		if (width <= 0 || height <= 0 || softwareRenderer_ == nullptr) {
+			return;
+		}
+		if (softwareTexture_ != nullptr && width == softwareTextureWidth_ && height == softwareTextureHeight_) {
+			return;
+		}
+		if (softwareTexture_ != nullptr) {
+			SDL_DestroyTexture(softwareTexture_);
+			softwareTexture_ = nullptr;
+		}
+		// The backend framebuffer is laid out as R,G,B,A bytes per texel; on a little-endian host that byte
+		// order is SDL's ABGR8888 packed format
+		softwareTexture_ = SDL_CreateTexture(softwareRenderer_, SDL_PIXELFORMAT_ABGR8888,
+			SDL_TEXTUREACCESS_STREAMING, width, height);
+		FATAL_ASSERT_MSG(softwareTexture_, "SDL_CreateTexture failed: {}", SDL_GetError());
+		softwareTextureWidth_ = width;
+		softwareTextureHeight_ = height;
+		// Give the root screen viewport a CPU framebuffer of the same size to render into
+		Rhi::Device::ResizeScreenFramebuffer(width, height);
+	}
+
+	void SdlGfxDevice::presentSoftware()
+	{
+		if (softwareRenderer_ == nullptr) {
+			return;
+		}
+		// Self-heal against a resize the event loop may not have delivered yet
+		int outputWidth = 0, outputHeight = 0;
+		SDL_GetRendererOutputSize(softwareRenderer_, &outputWidth, &outputHeight);
+		if (outputWidth > 0 && outputHeight > 0 &&
+			(outputWidth != softwareTextureWidth_ || outputHeight != softwareTextureHeight_)) {
+			resizeSoftwareTarget(outputWidth, outputHeight);
+		}
+		if (softwareTexture_ == nullptr) {
+			return;
+		}
+		const auto fb = Rhi::Device::GetScreenFramebuffer();
+		if (fb.pixels != nullptr && fb.width == softwareTextureWidth_ && fb.height == softwareTextureHeight_) {
+			SDL_UpdateTexture(softwareTexture_, nullptr, fb.pixels, fb.strideBytes);
+		}
+		SDL_RenderClear(softwareRenderer_);
+		// The SwRaster engine renders the screen color buffer bottom-up (OpenGL framebuffer convention), so
+		// present it flipped vertically into the top-left-origin window
+		SDL_RenderCopyEx(softwareRenderer_, softwareTexture_, nullptr, nullptr, 0.0, nullptr, SDL_FLIP_VERTICAL);
+		SDL_RenderPresent(softwareRenderer_);
+	}
+#endif
 
 	void SdlGfxDevice::updateMonitors()
 	{

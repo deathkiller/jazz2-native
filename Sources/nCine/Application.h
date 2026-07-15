@@ -200,6 +200,9 @@ namespace nCine
 		/** @brief Adds the specified target as a sink for tracing */
 		void AttachTraceTarget(Containers::StringView targetPath);
 
+		/** @brief Overrides the base directory where crash memory dumps are written; no-op if crash handling is not enabled */
+		void SetCrashDumpDirectory(Containers::StringView path);
+
 		/** @brief Vibrates the device for the specified duration in milliseconds; no-op if not supported */
 		virtual void Vibrate(std::int32_t milliseconds);
 

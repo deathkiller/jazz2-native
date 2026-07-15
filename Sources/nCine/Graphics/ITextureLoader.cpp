@@ -108,18 +108,9 @@ namespace nCine
 		return std::make_unique<InvalidTextureLoader>(std::move(fileHandle));
 	}
 
-	void ITextureLoader::loadPixels(GLenum internalFormat)
+	void ITextureLoader::loadPixels(PixelFormat format)
 	{
-		loadPixels(internalFormat, 0);
-	}
-
-	void ITextureLoader::loadPixels(GLenum internalFormat, GLenum type)
-	{
-		if (type) { // overriding pixel type
-			texFormat_ = TextureFormat(internalFormat, type);
-		} else {
-			texFormat_ = TextureFormat(internalFormat);
-		}
+		texFormat_ = TextureFormat(format);
 
 		dataSize_ = fileHandle_->GetSize() - headerSize_;
 		fileHandle_->Seek(headerSize_, SeekOrigin::Current);

@@ -171,6 +171,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderUniformBlocks.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderUniforms.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLTexture.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLTextureFormat.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniform.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformBlock.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformBlockCache.h
@@ -428,3 +429,22 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/Tweening.h
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/WidgetSection.h
 )
+
+# CPU software rendering backend headers (used only when the software backend is selected)
+if(NCINE_WITH_RHI_SOFTWARE)
+	list(APPEND HEADERS
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwBackend.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwBuffer.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwDebug.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwRaster.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwRenderTarget.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwShader.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwShaderProgram.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwShaderTypes.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwShaderUniforms.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwTexture.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwUniformCache.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwVertexFormat.h
+	)
+endif()

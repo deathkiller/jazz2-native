@@ -32,4 +32,19 @@
 #include "GL/GLViewport.h"
 #include "GL/GLDebug.h"
 
+#elif defined(WITH_RHI_SOFTWARE)
+
+#include "Software/SwDebug.h"
+#include "Software/SwShader.h"
+#include "Software/SwBuffer.h"
+#include "Software/SwTexture.h"
+#include "Software/SwVertexFormat.h"
+#include "Software/SwShaderTypes.h"
+#include "Software/SwUniformCache.h"
+#include "Software/SwShaderUniforms.h"
+#include "Software/SwShaderProgram.h"
+#include "Software/SwRenderTarget.h"
+#include "Software/SwRaster.h"
+#include "Software/SwDevice.h"
+
 #endif

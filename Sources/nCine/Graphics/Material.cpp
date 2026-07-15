@@ -178,7 +178,7 @@ namespace nCine
 
 	bool Material::SetTexture(std::uint32_t unit, const Texture& texture)
 	{
-		return SetTexture(unit, texture.glTexture_.get());
+		return SetTexture(unit, texture.rhiTexture_.get());
 	}
 
 	bool Material::SetTexture(std::uint32_t unit, std::nullptr_t)

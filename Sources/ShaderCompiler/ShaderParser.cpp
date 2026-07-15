@@ -2,6 +2,12 @@
 #include "ConstFold.h"
 
 #include <algorithm>
+#include <cstring>
+
+#include <Containers/GrowableArray.h>
+#include <Containers/StringConcatenable.h>
+
+using namespace Death::Containers::Literals;
 
 namespace ShaderCompiler
 {
@@ -9,6 +15,61 @@ namespace ShaderCompiler
 	{
 		constexpr std::int32_t MaxExpressionDepth = 32;
 		constexpr std::int32_t MaxExpansionPasses = 16;
+
+		// std::string-semantics position/substring helpers over StringView (Death's find returns a view,
+		// so these keep the index-based scanning logic byte-for-byte identical)
+		constexpr std::size_t Npos = ~std::size_t{0};
+
+		StringView Substr(StringView s, std::size_t pos, std::size_t count = Npos)
+		{
+			std::size_t size = s.size();
+			if (pos > size) pos = size;
+			std::size_t avail = size - pos;
+			if (count > avail) count = avail;
+			return s.slice(pos, pos + count);
+		}
+
+		std::size_t Find(StringView s, char c, std::size_t pos = 0)
+		{
+			for (std::size_t size = s.size(); pos < size; pos++) if (s[pos] == c) return pos;
+			return Npos;
+		}
+
+		std::size_t Find(StringView s, StringView needle, std::size_t pos = 0)
+		{
+			std::size_t size = s.size(), n = needle.size();
+			if (n == 0) return (pos <= size ? pos : Npos);
+			if (n > size) return Npos;
+			for (std::size_t last = size - n; pos <= last; pos++) {
+				if (std::memcmp(s.data() + pos, needle.data(), n) == 0) return pos;
+				if (pos == last) break;
+			}
+			return Npos;
+		}
+
+		std::size_t Rfind(StringView s, char c)
+		{
+			for (std::size_t i = s.size(); i > 0; i--) if (s[i - 1] == c) return i - 1;
+			return Npos;
+		}
+
+		std::size_t FindFirstNotOf(StringView s, StringView set, std::size_t pos = 0)
+		{
+			for (std::size_t size = s.size(); pos < size; pos++) if (!set.contains(s[pos])) return pos;
+			return Npos;
+		}
+
+		std::size_t FindLastNotOf(StringView s, StringView set)
+		{
+			for (std::size_t i = s.size(); i > 0; i--) if (!set.contains(s[i - 1])) return i - 1;
+			return Npos;
+		}
+
+		std::size_t FindLastOf(StringView s, StringView set)
+		{
+			for (std::size_t i = s.size(); i > 0; i--) if (set.contains(s[i - 1])) return i - 1;
+			return Npos;
+		}
 
 		bool IsSpace(char c)
 		{
@@ -30,7 +91,7 @@ namespace ShaderCompiler
 			return (IsIdentStart(c) || IsDigit(c));
 		}
 
-		std::string Trim(const std::string& s)
+		String Trim(StringView s)
 		{
 			std::size_t begin = 0;
 			std::size_t end = s.size();
@@ -40,10 +101,10 @@ namespace ShaderCompiler
 			while (end > begin && IsSpace(s[end - 1])) {
 				end--;
 			}
-			return s.substr(begin, end - begin);
+			return Substr(s, begin, end - begin);
 		}
 
-		bool IsIdentifier(const std::string& s)
+		bool IsIdentifier(StringView s)
 		{
 			if (s.empty() || !IsIdentStart(s[0])) {
 				return false;
@@ -56,7 +117,7 @@ namespace ShaderCompiler
 			return true;
 		}
 
-		bool ParseDecimal(const std::string& s, std::int64_t& value)
+		bool ParseDecimal(StringView s, std::int64_t& value)
 		{
 			if (s.empty()) {
 				return false;
@@ -84,7 +145,7 @@ namespace ShaderCompiler
 			return true;
 		}
 
-		void SplitWords(const std::string& s, std::vector<std::string>& words)
+		void SplitWords(StringView s, std::vector<String>& words)
 		{
 			std::size_t i = 0;
 			while (i < s.size()) {
@@ -96,12 +157,12 @@ namespace ShaderCompiler
 					i++;
 				}
 				if (i > begin) {
-					words.push_back(s.substr(begin, i - begin));
+					words.push_back(Substr(s, begin, i - begin));
 				}
 			}
 		}
 
-		std::string FirstIdentifier(const std::string& s)
+		String FirstIdentifier(StringView s)
 		{
 			std::size_t i = 0;
 			while (i < s.size() && !IsIdentStart(s[i])) {
@@ -111,10 +172,10 @@ namespace ShaderCompiler
 			while (i < s.size() && IsIdentChar(s[i])) {
 				i++;
 			}
-			return s.substr(begin, i - begin);
+			return Substr(s, begin, i - begin);
 		}
 
-		bool Fail(Diagnostic& diag, const std::string& message, std::int32_t line)
+		bool Fail(Diagnostic& diag, const String& message, std::int32_t line)
 		{
 			diag.Message = message;
 			diag.Line = line;
@@ -134,7 +195,7 @@ namespace ShaderCompiler
 		struct ExprToken
 		{
 			ExprTokenType Type = ExprTokenType::End;
-			std::string Text;
+			String Text;
 			std::int64_t Value = 0;
 		};
 
@@ -147,7 +208,7 @@ namespace ShaderCompiler
 			{
 			}
 
-			bool Evaluate(const std::string& expression, std::int64_t& value)
+			bool Evaluate(StringView expression, std::int64_t& value)
 			{
 				if (_depth > MaxExpressionDepth) {
 					return Fail(_diag, "macro expansion too deep in #if expression", _line);
@@ -159,7 +220,7 @@ namespace ShaderCompiler
 					return false;
 				}
 				if (Peek().Type != ExprTokenType::End) {
-					return Fail(_diag, "unexpected token '" + Peek().Text + "' in #if expression", _line);
+					return Fail(_diag, "unexpected token '"_s + Peek().Text + "' in #if expression"_s, _line);
 				}
 				return true;
 			}
@@ -195,7 +256,7 @@ namespace ShaderCompiler
 				return false;
 			}
 
-			bool Tokenize(const std::string& s)
+			bool Tokenize(StringView s)
 			{
 				std::size_t i = 0;
 				while (i < s.size()) {
@@ -215,13 +276,13 @@ namespace ShaderCompiler
 							i++;
 						}
 						t.Type = ExprTokenType::Number;
-						t.Text = s.substr(begin, i - begin);
-						std::string digits = t.Text;
+						t.Text = Substr(s, begin, i - begin);
+						String digits = t.Text;
 						while (!digits.empty() && !IsDigit(digits[digits.size() - 1])) {
-							digits.erase(digits.size() - 1);
+							digits = String{digits.prefix(digits.size() - 1)};
 						}
 						if (!ParseDecimal(digits, t.Value)) {
-							return Fail(_diag, "invalid integer literal '" + t.Text + "' in #if expression", _line);
+							return Fail(_diag, "invalid integer literal '"_s + t.Text + "' in #if expression"_s, _line);
 						}
 					} else if (IsIdentStart(c)) {
 						std::size_t begin = i;
@@ -229,11 +290,11 @@ namespace ShaderCompiler
 							i++;
 						}
 						t.Type = ExprTokenType::Identifier;
-						t.Text = s.substr(begin, i - begin);
+						t.Text = Substr(s, begin, i - begin);
 					} else {
 						t.Type = ExprTokenType::Operator;
 						if (i + 1 < s.size()) {
-							std::string two = s.substr(i, 2);
+							String two = Substr(s, i, 2);
 							if (two == "&&" || two == "||" || two == "==" || two == "!=" || two == "<=" || two == ">=") {
 								t.Text = two;
 								i += 2;
@@ -244,10 +305,10 @@ namespace ShaderCompiler
 						char single = s[i];
 						if (single == '!' || single == '<' || single == '>' || single == '(' || single == ')' ||
 							single == '+' || single == '-' || single == '*' || single == '/' || single == '%') {
-							t.Text = std::string(1, single);
+							t.Text = String{&single, 1};
 							i++;
 						} else {
-							return Fail(_diag, std::string("unexpected character '") + single + "' in #if expression", _line);
+							return Fail(_diag, "unexpected character '"_s + String{&single, 1} + "' in #if expression"_s, _line);
 						}
 					}
 					_tokens.push_back(t);
@@ -316,7 +377,7 @@ namespace ShaderCompiler
 					return false;
 				}
 				while (true) {
-					std::string op;
+					String op;
 					if (AcceptOp("<=")) {
 						op = "<=";
 					} else if (AcceptOp(">=")) {
@@ -458,7 +519,7 @@ namespace ShaderCompiler
 						v = 0;
 						return true;
 					}
-					std::string body;
+					String body;
 					if (_pp.TryGetMacroBody(t.Text, body)) {
 						if (Trim(body).empty()) {
 							v = 1;
@@ -476,17 +537,17 @@ namespace ShaderCompiler
 					v = 0;
 					return true;
 				}
-				return Fail(_diag, "unexpected token '" + t.Text + "' in #if expression", _line);
+				return Fail(_diag, "unexpected token '"_s + t.Text + "' in #if expression"_s, _line);
 			}
 		};
 	}
 
 	// --- ShaderParser -------------------------------------------------------------------------------
 
-	void ShaderParser::SplitLines(const std::string& content, std::vector<SourceLine>& lines)
+	void ShaderParser::SplitLines(StringView content, std::vector<SourceLine>& lines)
 	{
 		std::vector<SourceLine> raw;
-		std::string current;
+		Array<char> current;
 		std::int32_t lineNumber = 1;
 		std::size_t i = 0;
 		while (i < content.size()) {
@@ -499,18 +560,18 @@ namespace ShaderCompiler
 			}
 			if (c == '\n') {
 				SourceLine l;
-				l.Text = current;
+				l.Text = String{current.data(), current.size()};
 				l.Line = lineNumber;
 				raw.push_back(std::move(l));
-				current.clear();
+				arrayResize(current, 0);
 				lineNumber++;
 			} else {
-				current += c;
+				arrayAppend(current, c);
 			}
 			i++;
 		}
 		SourceLine last;
-		last.Text = current;
+		last.Text = String{current.data(), current.size()};
 		last.Line = lineNumber;
 		raw.push_back(std::move(last));
 
@@ -519,9 +580,9 @@ namespace ShaderCompiler
 		while (j < raw.size()) {
 			SourceLine merged = raw[j];
 			while (!merged.Text.empty() && merged.Text[merged.Text.size() - 1] == '\\' && j + 1 < raw.size()) {
-				merged.Text.erase(merged.Text.size() - 1);
+				merged.Text = String{merged.Text.prefix(merged.Text.size() - 1)};
 				j++;
-				merged.Text += raw[j].Text;
+				merged.Text = merged.Text + raw[j].Text;
 			}
 			lines.push_back(std::move(merged));
 			j++;
@@ -532,7 +593,7 @@ namespace ShaderCompiler
 	{
 		bool inBlockComment = false;
 		for (SourceLine& line : lines) {
-			std::string& text = line.Text;
+			String& text = line.Text;
 			std::size_t i = 0;
 			while (i < text.size()) {
 				if (inBlockComment) {
@@ -546,7 +607,7 @@ namespace ShaderCompiler
 						i++;
 					}
 				} else if (i + 1 < text.size() && text[i] == '/' && text[i + 1] == '/') {
-					text.erase(i);
+					text = String{text.prefix(i)};
 					break;
 				} else if (i + 1 < text.size() && text[i] == '/' && text[i + 1] == '*') {
 					text[i] = ' ';
@@ -564,18 +625,18 @@ namespace ShaderCompiler
 
 	namespace
 	{
-		std::string TrimRight(const std::string& s)
+		String TrimRight(StringView s)
 		{
 			std::size_t end = s.size();
 			while (end > 0 && IsSpace(s[end - 1])) {
 				end--;
 			}
-			return s.substr(0, end);
+			return Substr(s, 0, end);
 		}
 
-		std::string LastIdentifier(const std::string& s)
+		String LastIdentifier(StringView s)
 		{
-			std::string last;
+			String last;
 			std::size_t i = 0;
 			while (i < s.size()) {
 				if (IsIdentStart(s[i])) {
@@ -583,7 +644,7 @@ namespace ShaderCompiler
 					while (i < s.size() && IsIdentChar(s[i])) {
 						i++;
 					}
-					last = s.substr(begin, i - begin);
+					last = Substr(s, begin, i - begin);
 				} else {
 					i++;
 				}
@@ -592,7 +653,7 @@ namespace ShaderCompiler
 		}
 
 		/** Returns the identifier starting at the first non-space character from @p pos (empty if none) and advances @p pos */
-		std::string WordAt(const std::string& s, std::size_t& pos)
+		String WordAt(StringView s, std::size_t& pos)
 		{
 			while (pos < s.size() && IsSpace(s[pos])) {
 				pos++;
@@ -601,19 +662,19 @@ namespace ShaderCompiler
 			while (pos < s.size() && IsIdentChar(s[pos])) {
 				pos++;
 			}
-			return s.substr(begin, pos - begin);
+			return Substr(s, begin, pos - begin);
 		}
 
-		bool StartsWithWord(const std::string& s, const char* word)
+		bool StartsWithWord(StringView s, const char* word)
 		{
 			std::size_t length = std::char_traits<char>::length(word);
-			return (s.compare(0, length, word) == 0 && (s.size() == length || !IsIdentChar(s[length])));
+			return (Substr(s, 0, length) == word && (s.size() == length || !IsIdentChar(s[length])));
 		}
 
 		/** @brief Parsed "varying" declaration */
 		struct VaryingDecl
 		{
-			std::string Declaration;	// Declaration without the "varying"/"flat" keywords, e.g. "highp float vExtra"
+			String Declaration;	// Declaration without the "varying"/"flat" keywords, e.g. "highp float vExtra"
 			bool Flat = false;
 			std::int32_t Line = 0;
 		};
@@ -621,17 +682,17 @@ namespace ShaderCompiler
 		/** @brief Parsed "attribute" declaration (lowered to a vertex-stage-only "in" global) */
 		struct AttributeDecl
 		{
-			std::string Declaration;	// Declaration without the "attribute" keyword, e.g. "layout(location = 0) vec2 aPosition"
+			String Declaration;	// Declaration without the "attribute" keyword, e.g. "layout(location = 0) vec2 aPosition"
 			std::int32_t Line = 0;
 		};
 
 		/** @brief Intermediate parse state of a ".shader" file before lowering */
 		struct ParsedShader
 		{
-			std::string ProgramName;
-			std::string BatchedName;
-			std::string FragmentPrecision = "mediump";	// "precision mediump|highp;" directive (GL ES float precision of the fragment stage)
-			std::vector<std::string> Variants;
+			String ProgramName;
+			String BatchedName;
+			String FragmentPrecision = "mediump";	// "precision mediump|highp;" directive (GL ES float precision of the fragment stage)
+			std::vector<String> Variants;
 			std::vector<TextureDirective> Textures;
 			std::uint32_t RenderModes = 0;
 			std::vector<VaryingDecl> Varyings;
@@ -733,7 +794,7 @@ R"GLSL(void main()
 		void AppendTemplate(std::vector<SourceLine>& target, const char* text)
 		{
 			std::vector<SourceLine> lines;
-			ShaderParser::SplitLines(std::string(text), lines);
+			ShaderParser::SplitLines(text, lines);
 			// Raw-string templates end with a newline, so the final split line is empty — drop it
 			if (!lines.empty() && lines.back().Text.empty()) {
 				lines.pop_back();
@@ -750,7 +811,7 @@ R"GLSL(void main()
 			Appends body text from the original @p text (comments preserved) while counting braces on
 			the comment-stripped @p bare; sets @p done when the entry's closing brace is reached.
 		*/
-		bool CaptureBodyLine(const std::string& text, const std::string& bare, std::size_t bodyBegin, std::int32_t lineNumber,
+		bool CaptureBodyLine(StringView text, StringView bare, std::size_t bodyBegin, std::int32_t lineNumber,
 			std::vector<SourceLine>& body, std::int32_t& depth, bool& done, Diagnostic& diag)
 		{
 			std::size_t pos = bodyBegin;
@@ -770,11 +831,11 @@ R"GLSL(void main()
 			}
 			// Comment stripping only blanks or truncates, so brace positions in "bare" are valid in "text"
 			if (closed) {
-				std::string prefix = TrimRight(text.substr(bodyBegin, pos - bodyBegin));
+				String prefix = TrimRight(Substr(text, bodyBegin, pos - bodyBegin));
 				if (!Trim(prefix).empty()) {
 					body.push_back({ std::move(prefix), lineNumber });
 				}
-				if (bare.find_first_not_of(" \t", pos + 1) != std::string::npos) {
+				if (FindFirstNotOf(bare, " \t", pos + 1) != Npos) {
 					return Fail(diag, "unexpected text after the closing '}'", lineNumber);
 				}
 				done = true;
@@ -783,7 +844,7 @@ R"GLSL(void main()
 			if (bodyBegin == 0) {
 				body.push_back({ text, lineNumber });
 			} else {
-				std::string rest = TrimRight(text.substr(bodyBegin));
+				String rest = TrimRight(Substr(text, bodyBegin));
 				if (!Trim(rest).empty()) {
 					body.push_back({ std::move(rest), lineNumber });
 				}
@@ -793,19 +854,19 @@ R"GLSL(void main()
 		}
 
 		/** Skips spaces and consumes the terminating ';' of a directive statement */
-		bool ExpectSemicolon(const std::string& bare, std::size_t cursor, const char* statement, std::int32_t lineNumber, Diagnostic& diag)
+		bool ExpectSemicolon(StringView bare, std::size_t cursor, const char* statement, std::int32_t lineNumber, Diagnostic& diag)
 		{
 			while (cursor < bare.size() && IsSpace(bare[cursor])) {
 				cursor++;
 			}
 			if (cursor >= bare.size() || bare[cursor] != ';') {
-				return Fail(diag, std::string("expected ';' after \"") + statement + "\"", lineNumber);
+				return Fail(diag, "expected ';' after \""_s + statement + "\""_s, lineNumber);
 			}
 			return true;
 		}
 
 		/** Parses one directive-keyword statement ("program"/"batched"/"variant"), with @p cursor just past the keyword */
-		bool ParseDirective(const std::string& kind, const std::string& bare, std::size_t cursor, std::int32_t lineNumber,
+		bool ParseDirective(StringView kind, StringView bare, std::size_t cursor, std::int32_t lineNumber,
 			ParsedShader& src, bool& seenProgram, Diagnostic& diag)
 		{
 			if (!seenProgram && kind != "program") {
@@ -816,7 +877,7 @@ R"GLSL(void main()
 				if (seenProgram) {
 					return Fail(diag, "duplicate \"program\" directive", lineNumber);
 				}
-				std::string name = WordAt(bare, cursor);
+				String name = WordAt(bare, cursor);
 				if (!IsIdentifier(name)) {
 					return Fail(diag, "usage: program <Name>; (identifier)", lineNumber);
 				}
@@ -829,7 +890,7 @@ R"GLSL(void main()
 				if (!src.BatchedName.empty()) {
 					return Fail(diag, "duplicate \"batched\" directive", lineNumber);
 				}
-				std::string name = WordAt(bare, cursor);
+				String name = WordAt(bare, cursor);
 				if (!IsIdentifier(name)) {
 					return Fail(diag, "usage: batched <Name>; (identifier)", lineNumber);
 				}
@@ -842,16 +903,16 @@ R"GLSL(void main()
 				src.BatchedName = std::move(name);
 				src.BatchedLine = lineNumber;
 			} else {	// "variant"
-				std::string name = WordAt(bare, cursor);
+				String name = WordAt(bare, cursor);
 				if (!IsIdentifier(name)) {
 					return Fail(diag, "usage: variant <NAME>; (identifier)", lineNumber);
 				}
 				if (!ExpectSemicolon(bare, cursor, "variant <NAME>", lineNumber, diag)) {
 					return false;
 				}
-				for (const std::string& v : src.Variants) {
+				for (const String& v : src.Variants) {
 					if (v == name) {
-						return Fail(diag, "duplicate variant \"" + name + "\"", lineNumber);
+						return Fail(diag, "duplicate variant \""_s + name + "\""_s, lineNumber);
 					}
 				}
 				src.Variants.push_back(std::move(name));
@@ -860,7 +921,7 @@ R"GLSL(void main()
 		}
 
 		/** Parses the uniform hint list between ':' and ';' — "texture_unit(N)" becomes a TextureDirective, known hints drop */
-		bool ParseUniformHints(const std::string& hints, const std::string& uniformName, std::int32_t lineNumber,
+		bool ParseUniformHints(StringView hints, StringView uniformName, std::int32_t lineNumber,
 			ParsedShader& src, Diagnostic& diag)
 		{
 			std::size_t start = 0;
@@ -876,22 +937,22 @@ R"GLSL(void main()
 					}
 					pos++;
 				}
-				std::string hint = Trim(hints.substr(start, pos - start));
+				String hint = Trim(Substr(hints, start, pos - start));
 				if (hint.empty()) {
 					return Fail(diag, "empty uniform hint", lineNumber);
 				}
 
 				if (StartsWithWord(hint, "texture_unit")) {
-					std::size_t open = hint.find('(');
-					std::size_t close = hint.rfind(')');
+					std::size_t open = Find(hint, '(');
+					std::size_t close = Rfind(hint, ')');
 					std::int64_t unit = -1;
-					if (open == std::string::npos || close == std::string::npos || close < open ||
-						!ParseDecimal(Trim(hint.substr(open + 1, close - open - 1)), unit) || unit < 0 || unit > 31) {
-						return Fail(diag, "invalid hint \"" + hint + "\" (expected texture_unit(0-31))", lineNumber);
+					if (open == Npos || close == Npos || close < open ||
+						!ParseDecimal(Trim(Substr(hint, open + 1, close - open - 1)), unit) || unit < 0 || unit > 31) {
+						return Fail(diag, "invalid hint \""_s + hint + "\" (expected texture_unit(0-31))"_s, lineNumber);
 					}
 					for (const TextureDirective& t : src.Textures) {
 						if (t.Name == uniformName) {
-							return Fail(diag, "duplicate texture unit assignment for \"" + uniformName + "\"", lineNumber);
+							return Fail(diag, "duplicate texture unit assignment for \""_s + uniformName + "\""_s, lineNumber);
 						}
 					}
 					TextureDirective directive;
@@ -903,7 +964,7 @@ R"GLSL(void main()
 					hint == "repeat_enable" || hint == "repeat_disable" || StartsWithWord(hint, "hint_range")) {
 					// Accepted hints without an equivalent here - parsed and silently dropped
 				} else {
-					return Fail(diag, "unknown uniform hint \"" + hint + "\"", lineNumber);
+					return Fail(diag, "unknown uniform hint \""_s + hint + "\""_s, lineNumber);
 				}
 
 				if (pos >= hints.size()) {
@@ -914,17 +975,17 @@ R"GLSL(void main()
 		}
 
 		/** Parses a "render_mode <mode>[, <mode>];" statement into the RenderModes bitmask */
-		bool ParseRenderMode(const std::string& bare, std::size_t cursor, std::int32_t lineNumber, ParsedShader& src, Diagnostic& diag)
+		bool ParseRenderMode(StringView bare, std::size_t cursor, std::int32_t lineNumber, ParsedShader& src, Diagnostic& diag)
 		{
-			std::size_t semi = bare.find(';', cursor);
-			if (semi == std::string::npos) {
+			std::size_t semi = Find(bare, ';', cursor);
+			if (semi == Npos) {
 				return Fail(diag, "render_mode statement must end with ';'", lineNumber);
 			}
-			std::string list = bare.substr(cursor, semi - cursor);
+			String list = Substr(bare, cursor, semi - cursor);
 			std::size_t start = 0;
 			while (true) {
-				std::size_t comma = list.find(',', start);
-				std::string mode = Trim(list.substr(start, comma == std::string::npos ? std::string::npos : comma - start));
+				std::size_t comma = Find(list, ',', start);
+				String mode = Trim(Substr(list, start, comma == Npos ? Npos : comma - start));
 				if (mode == "blend_mix") {
 					src.RenderModes |= RenderModeBlendMix;
 				} else if (mode == "blend_add") {
@@ -940,9 +1001,9 @@ R"GLSL(void main()
 				} else if (mode.empty()) {
 					return Fail(diag, "empty render_mode entry", lineNumber);
 				} else {
-					return Fail(diag, "unknown render_mode \"" + mode + "\"", lineNumber);
+					return Fail(diag, "unknown render_mode \""_s + mode + "\""_s, lineNumber);
 				}
-				if (comma == std::string::npos) {
+				if (comma == Npos) {
 					return true;
 				}
 				start = comma + 1;
@@ -963,20 +1024,20 @@ R"GLSL(void main()
 
 			for (std::size_t index = 0; index < lines.size(); index++) {
 				const SourceLine& line = lines[index];
-				const std::string& text = line.Text;
-				const std::string& bare = stripped[index].Text;
+				const String& text = line.Text;
+				const String& bare = stripped[index].Text;
 
 				// Inside a vertex()/fragment() body — capture verbatim until the matching brace
 				if (capturing != 0) {
 					std::vector<SourceLine>& body = (capturing == 1 ? src.VertexBody : src.FragmentBody);
 					std::size_t bodyBegin = 0;
 					if (awaitingBrace) {
-						std::size_t open = bare.find_first_not_of(" \t");
-						if (open == std::string::npos) {
+						std::size_t open = FindFirstNotOf(bare, " \t");
+						if (open == Npos) {
 							continue;
 						}
 						if (bare[open] != '{') {
-							return Fail(diag, std::string("expected '{' after \"") + (capturing == 1 ? "vertex()" : "fragment()") + "\"", line.Line);
+							return Fail(diag, "expected '{' after \""_s + (capturing == 1 ? "vertex()" : "fragment()") + "\""_s, line.Line);
 						}
 						awaitingBrace = false;
 						captureDepth = 1;
@@ -1009,7 +1070,7 @@ R"GLSL(void main()
 				}
 
 				std::size_t cursor = 0;
-				std::string word = WordAt(bare, cursor);
+				String word = WordAt(bare, cursor);
 
 				if (word == "program" || word == "batched" || word == "variant") {
 					if (!ParseDirective(word, bare, cursor, line.Line, src, seenProgram, diag)) {
@@ -1025,11 +1086,12 @@ R"GLSL(void main()
 					if (seenShaderType) {
 						return Fail(diag, "duplicate shader_type statement", line.Line);
 					}
-					std::string type = WordAt(bare, cursor);
+					String type = WordAt(bare, cursor);
 					if (type != "canvas_item" && type != "custom") {
-						return Fail(diag, "unsupported shader_type \"" + type + "\" (expected canvas_item or custom)", line.Line);
+						return Fail(diag, "unsupported shader_type \""_s + type + "\" (expected canvas_item or custom)"_s, line.Line);
 					}
-					if (!ExpectSemicolon(bare, cursor, ("shader_type " + type).c_str(), line.Line, diag)) {
+					String shaderType = "shader_type "_s + type;
+					if (!ExpectSemicolon(bare, cursor, shaderType.data(), line.Line, diag)) {
 						return false;
 					}
 					src.CanvasItem = (type == "canvas_item");
@@ -1048,7 +1110,7 @@ R"GLSL(void main()
 					// Only the two-token form "precision <p>;" is a directive — a real GLSL global
 					// precision statement ("precision highp float;", with a type) passes through below
 					std::size_t qualifierCursor = cursor;
-					std::string qualifier = WordAt(bare, qualifierCursor);
+					String qualifier = WordAt(bare, qualifierCursor);
 					std::size_t after = qualifierCursor;
 					while (after < bare.size() && IsSpace(bare[after])) {
 						after++;
@@ -1061,7 +1123,7 @@ R"GLSL(void main()
 							return Fail(diag, "duplicate precision directive", line.Line);
 						}
 						if (qualifier != "mediump" && qualifier != "highp") {
-							return Fail(diag, "unsupported precision \"" + qualifier + "\" (expected mediump or highp)", line.Line);
+							return Fail(diag, "unsupported precision \""_s + qualifier + "\" (expected mediump or highp)"_s, line.Line);
 						}
 						src.FragmentPrecision = std::move(qualifier);
 						seenPrecision = true;
@@ -1071,15 +1133,15 @@ R"GLSL(void main()
 				}
 
 				if (word == "varying") {
-					std::size_t semi = bare.find(';', cursor);
-					if (semi == std::string::npos) {
+					std::size_t semi = Find(bare, ';', cursor);
+					if (semi == Npos) {
 						return Fail(diag, "varying declaration must end with ';'", line.Line);
 					}
-					std::string decl = Trim(bare.substr(cursor, semi - cursor));
+					String decl = Trim(Substr(bare, cursor, semi - cursor));
 					VaryingDecl varying;
 					if (StartsWithWord(decl, "flat")) {
 						varying.Flat = true;
-						decl = Trim(decl.substr(4));
+						decl = Trim(Substr(decl, 4));
 					}
 					if (decl.empty()) {
 						return Fail(diag, "usage: varying [flat] [precision] <type> <name>;", line.Line);
@@ -1091,11 +1153,11 @@ R"GLSL(void main()
 				}
 
 				if (word == "attribute") {
-					std::size_t semi = bare.find(';', cursor);
-					if (semi == std::string::npos) {
+					std::size_t semi = Find(bare, ';', cursor);
+					if (semi == Npos) {
 						return Fail(diag, "attribute declaration must end with ';'", line.Line);
 					}
-					std::string decl = Trim(bare.substr(cursor, semi - cursor));
+					String decl = Trim(Substr(bare, cursor, semi - cursor));
 					if (decl.empty()) {
 						return Fail(diag, "usage: attribute [layout(location = N)] <type> <name>;", line.Line);
 					}
@@ -1108,28 +1170,28 @@ R"GLSL(void main()
 
 				if (word == "void") {
 					std::size_t nameCursor = cursor;
-					std::string name = WordAt(bare, nameCursor);
+					String name = WordAt(bare, nameCursor);
 					if (name == "vertex" || name == "fragment") {
 						if (!seenProgram) {
 							return Fail(diag, "the first directive must be \"program <Name>;\"", line.Line);
 						}
 						bool isVertex = (name == "vertex");
 						if (isVertex ? src.HasVertexBody : src.HasFragmentBody) {
-							return Fail(diag, "duplicate \"void " + name + "()\" entry", line.Line);
+							return Fail(diag, "duplicate \"void "_s + name + "()\" entry"_s, line.Line);
 						}
 						cursor = nameCursor;
 						while (cursor < bare.size() && IsSpace(bare[cursor])) {
 							cursor++;
 						}
 						if (cursor >= bare.size() || bare[cursor] != '(') {
-							return Fail(diag, "expected \"void " + name + "()\"", line.Line);
+							return Fail(diag, "expected \"void "_s + name + "()\""_s, line.Line);
 						}
 						cursor++;
 						while (cursor < bare.size() && IsSpace(bare[cursor])) {
 							cursor++;
 						}
 						if (cursor >= bare.size() || bare[cursor] != ')') {
-							return Fail(diag, "\"" + name + "()\" must not declare parameters", line.Line);
+							return Fail(diag, "\""_s + name + "()\" must not declare parameters"_s, line.Line);
 						}
 						cursor++;
 						while (cursor < bare.size() && IsSpace(bare[cursor])) {
@@ -1152,7 +1214,7 @@ R"GLSL(void main()
 								capturing = 0;
 							}
 						} else {
-							return Fail(diag, std::string("expected '{' after \"") + name + "()\"", line.Line);
+							return Fail(diag, "expected '{' after \""_s + name + "()\""_s, line.Line);
 						}
 						continue;
 					}
@@ -1160,21 +1222,21 @@ R"GLSL(void main()
 				}
 
 				if (word == "uniform") {
-					std::size_t colon = bare.find(':', cursor);
-					std::size_t semi = bare.find(';', cursor);
-					if (colon != std::string::npos && (semi == std::string::npos || colon < semi)) {
-						if (semi == std::string::npos) {
+					std::size_t colon = Find(bare, ':', cursor);
+					std::size_t semi = Find(bare, ';', cursor);
+					if (colon != Npos && (semi == Npos || colon < semi)) {
+						if (semi == Npos) {
 							return Fail(diag, "a uniform declaration with hints must end with ';' on the same line", line.Line);
 						}
-						std::string uniformName = LastIdentifier(bare.substr(0, colon));
+						String uniformName = LastIdentifier(Substr(bare, 0, colon));
 						if (uniformName.empty() || uniformName == "uniform") {
 							return Fail(diag, "cannot parse the uniform declaration before ':'", line.Line);
 						}
-						if (!ParseUniformHints(bare.substr(colon + 1, semi - colon - 1), uniformName, line.Line, src, diag)) {
+						if (!ParseUniformHints(Substr(bare, colon + 1, semi - colon - 1), uniformName, line.Line, src, diag)) {
 							return false;
 						}
 						// The lowered declaration keeps the original text with the hint list stripped
-						src.Globals.push_back({ TrimRight(text.substr(0, colon)) + ";", line.Line });
+						src.Globals.push_back({ TrimRight(Substr(text, 0, colon)) + ";"_s, line.Line });
 						continue;
 					}
 					// A plain uniform declaration — falls through to the global pass-through below
@@ -1196,7 +1258,7 @@ R"GLSL(void main()
 			}
 
 			if (capturing != 0) {
-				return Fail(diag, std::string("unterminated \"") + (capturing == 1 ? "vertex()" : "fragment()") + "\" body", captureStartLine);
+				return Fail(diag, "unterminated \""_s + (capturing == 1 ? "vertex()" : "fragment()") + "\" body"_s, captureStartLine);
 			}
 			if (globalDepth != 0) {
 				return Fail(diag, "unbalanced braces at global scope", lines.empty() ? 1 : lines.back().Line);
@@ -1232,10 +1294,10 @@ R"GLSL(void main()
 		*/
 		bool FindIdentifier(const std::vector<SourceLine>& lines, const char* name, std::int32_t& foundLine)
 		{
-			const std::size_t nameLength = std::char_traits<char>::length(name);
+			const std::size_t nameLength = std::strlen(name);
 			bool inBlockComment = false;
 			for (const SourceLine& line : lines) {
-				const std::string& text = line.Text;
+				const String& text = line.Text;
 				std::size_t i = 0;
 				char previous = '\0';
 				while (i < text.size()) {
@@ -1265,7 +1327,7 @@ R"GLSL(void main()
 						while (i < text.size() && IsIdentChar(text[i])) {
 							i++;
 						}
-						if (i - begin == nameLength && text.compare(begin, nameLength, name) == 0) {
+						if (i - begin == nameLength && Substr(text, begin, nameLength) == name) {
 							foundLine = line.Line;
 							return true;
 						}
@@ -1293,8 +1355,8 @@ R"GLSL(void main()
 				if (WordAt(line.Text, cursor) != "uniform") {
 					continue;
 				}
-				std::size_t semi = line.Text.find(';', cursor);
-				if (LastIdentifier(line.Text.substr(cursor, semi == std::string::npos ? std::string::npos : semi - cursor)) == name) {
+				std::size_t semi = Find(line.Text, ';', cursor);
+				if (LastIdentifier(Substr(line.Text, cursor, semi == Npos ? Npos : semi - cursor)) == name) {
 					return true;
 				}
 			}
@@ -1311,32 +1373,32 @@ R"GLSL(void main()
 		{
 			bool inBlockComment = false;
 			for (SourceLine& line : body) {
-				const std::string& text = line.Text;
-				std::string out;
-				out.reserve(text.size());
+				const String& text = line.Text;
+				Array<char> out;
+				arrayReserve(out, text.size());
 				std::size_t i = 0;
 				char previous = '\0';
 				while (i < text.size()) {
 					char c = text[i];
 					if (inBlockComment) {
 						if (c == '*' && i + 1 < text.size() && text[i + 1] == '/') {
-							out += "*/";
+							arrayAppend(out, "*/"_s);
 							i += 2;
 							inBlockComment = false;
 							previous = '/';
 						} else {
-							out += c;
+							arrayAppend(out, c);
 							previous = c;
 							i++;
 						}
 						continue;
 					}
 					if (c == '/' && i + 1 < text.size() && text[i + 1] == '/') {
-						out += text.substr(i);
+						arrayAppend(out, Substr(text, i));
 						break;
 					}
 					if (c == '/' && i + 1 < text.size() && text[i + 1] == '*') {
-						out += "/*";
+						arrayAppend(out, "/*"_s);
 						i += 2;
 						inBlockComment = true;
 						previous = '*';
@@ -1347,27 +1409,27 @@ R"GLSL(void main()
 						while (i < text.size() && IsIdentChar(text[i])) {
 							i++;
 						}
-						std::string id = text.substr(idBegin, i - idBegin);
+						String id = Substr(text, idBegin, i - idBegin);
 						if (id == "UV") {
-							out += "vTexCoords";
+							arrayAppend(out, "vTexCoords"_s);
 						} else if (id == "TEXTURE") {
-							out += "uTexture";
+							arrayAppend(out, "uTexture"_s);
 						} else if (id == "PALETTE_OFFSET") {
-							out += "vPaletteOffset";
+							arrayAppend(out, "vPaletteOffset"_s);
 						} else if (id == "VERTEX" || id == "NORMAL" || id == "SCREEN_UV" || id == "SCREEN_PIXEL_SIZE" ||
 							id == "TIME" || id == "POINT_COORD") {
-							return Fail(diag, "Built-in \"" + id + "\" is not supported in fragment() (only UV, TEXTURE, COLOR and PALETTE_OFFSET are available)", line.Line);
+							return Fail(diag, "Built-in \""_s + id + "\" is not supported in fragment() (only UV, TEXTURE, COLOR and PALETTE_OFFSET are available)"_s, line.Line);
 						} else {
-							out += id;
+							arrayAppend(out, id);
 						}
 						previous = out[out.size() - 1];
 						continue;
 					}
-					out += c;
+					arrayAppend(out, c);
 					previous = c;
 					i++;
 				}
-				line.Text = std::move(out);
+				line.Text = String{out.data(), out.size()};
 			}
 			return true;
 		}
@@ -1377,7 +1439,7 @@ R"GLSL(void main()
 		/** @brief Extent of one global-scope function definition inside a stage line stream (inclusive line/column positions) */
 		struct FunctionDef
 		{
-			std::string Name;
+			String Name;
 			std::size_t StartLine = 0;		// Index of the line where the definition (return type) starts
 			std::size_t StartCol = 0;
 			std::size_t EndLine = 0;		// Index of the line holding the closing '}' of the body
@@ -1400,20 +1462,20 @@ R"GLSL(void main()
 			std::int32_t depth = 0;
 			std::int32_t parenDepth = 0;
 			std::size_t stmtLine = NoLine, stmtCol = 0;
-			std::string lastIdent;
+			String lastIdent;
 			FunctionDef current;
 
 			for (std::size_t i = 0; i < stripped.size(); i++) {
-				const std::string& text = stripped[i].Text;
-				std::size_t first = text.find_first_not_of(" \t");
-				if (first != std::string::npos && text[first] == '#') {
+				const String& text = stripped[i].Text;
+				std::size_t first = FindFirstNotOf(text, " \t");
+				if (first != Npos && text[first] == '#') {
 					// Preprocessor line — no brace counting; abort a half-parsed signature
 					if (mode == Mode::Parens || mode == Mode::AwaitBrace) {
 						mode = Mode::TopLevel;
 					}
 					if (mode == Mode::TopLevel) {
 						stmtLine = NoLine;
-						lastIdent.clear();
+						lastIdent = {};
 					}
 					continue;
 				}
@@ -1445,7 +1507,7 @@ R"GLSL(void main()
 						}
 						// Not a definition (prototype, declaration or initializer) — reprocess the character
 						mode = Mode::TopLevel;
-						lastIdent.clear();
+						lastIdent = {};
 						continue;
 					}
 					if (mode == Mode::Body) {
@@ -1462,7 +1524,7 @@ R"GLSL(void main()
 								defs.push_back(current);
 								mode = Mode::TopLevel;
 								stmtLine = NoLine;
-								lastIdent.clear();
+								lastIdent = {};
 							}
 						}
 						pos++;
@@ -1480,7 +1542,7 @@ R"GLSL(void main()
 							}
 							if (depth == 0) {
 								stmtLine = NoLine;
-								lastIdent.clear();
+								lastIdent = {};
 							}
 						}
 						pos++;
@@ -1499,7 +1561,7 @@ R"GLSL(void main()
 						while (pos < text.size() && IsIdentChar(text[pos])) {
 							pos++;
 						}
-						lastIdent = text.substr(begin, pos - begin);
+						lastIdent = Substr(text, begin, pos - begin);
 						continue;
 					}
 					if (c == '(') {
@@ -1516,7 +1578,7 @@ R"GLSL(void main()
 					}
 					if (c == '{') {
 						depth++;
-						lastIdent.clear();
+						lastIdent = {};
 						pos++;
 						continue;
 					}
@@ -1525,7 +1587,7 @@ R"GLSL(void main()
 					}
 					if (c == ';') {
 						stmtLine = NoLine;
-						lastIdent.clear();
+						lastIdent = {};
 						pos++;
 						continue;
 					}
@@ -1549,12 +1611,12 @@ R"GLSL(void main()
 		}
 
 		/** Counts whole-identifier occurrences of @p name in @p stripped outside the definition ranges in @p ownDefs */
-		std::size_t CountExternalReferences(const std::vector<SourceLine>& stripped, const std::string& name,
+		std::size_t CountExternalReferences(const std::vector<SourceLine>& stripped, StringView name,
 			const std::vector<const FunctionDef*>& ownDefs)
 		{
 			std::size_t count = 0;
 			for (std::size_t i = 0; i < stripped.size(); i++) {
-				const std::string& text = stripped[i].Text;
+				const String& text = stripped[i].Text;
 				std::size_t pos = 0;
 				char previous = '\0';
 				while (pos < text.size()) {
@@ -1564,7 +1626,7 @@ R"GLSL(void main()
 						while (pos < text.size() && IsIdentChar(text[pos])) {
 							pos++;
 						}
-						if (pos - begin == name.size() && text.compare(begin, name.size(), name) == 0 &&
+						if (pos - begin == name.size() && Substr(text, begin, name.size()) == name &&
 							!InsideDefinition(ownDefs, i, begin)) {
 							count++;
 						}
@@ -1599,7 +1661,7 @@ R"GLSL(void main()
 				}
 
 				// Group definitions by name (overloads share fate)
-				std::map<std::string, std::vector<const FunctionDef*>> byName;
+				std::map<String, std::vector<const FunctionDef*>> byName;
 				for (const FunctionDef& def : defs) {
 					byName[def.Name].push_back(&def);
 				}
@@ -1622,10 +1684,10 @@ R"GLSL(void main()
 					return (a->StartLine > b->StartLine || (a->StartLine == b->StartLine && a->StartCol > b->StartCol));
 				});
 				for (const FunctionDef* def : removable) {
-					const std::string& startStripped = stripped[def->StartLine].Text;
-					const std::string& endStripped = stripped[def->EndLine].Text;
-					bool firstWhole = (startStripped.find_first_not_of(" \t") >= def->StartCol);
-					bool lastWhole = (endStripped.find_first_not_of(" \t", def->EndCol + 1) == std::string::npos);
+					const String& startStripped = stripped[def->StartLine].Text;
+					const String& endStripped = stripped[def->EndLine].Text;
+					bool firstWhole = (FindFirstNotOf(startStripped, " \t") >= def->StartCol);
+					bool lastWhole = (FindFirstNotOf(endStripped, " \t", def->EndCol + 1) == Npos);
 					if (firstWhole && lastWhole) {
 						// Comment-only lines directly above the definition belong to it — remove them too
 						std::size_t begin = def->StartLine;
@@ -1639,15 +1701,16 @@ R"GLSL(void main()
 							lines.erase(lines.begin() + begin);
 						}
 					} else if (def->StartLine == def->EndLine) {
-						lines[def->StartLine].Text.erase(def->StartCol, def->EndCol - def->StartCol + 1);
+						String& t = lines[def->StartLine].Text;
+						t = t.prefix(def->StartCol) + t.exceptPrefix(def->EndCol + 1);
 					} else {
 						if (!lastWhole) {
-							lines[def->EndLine].Text.erase(0, def->EndCol + 1);
+							lines[def->EndLine].Text = String{lines[def->EndLine].Text.exceptPrefix(def->EndCol + 1)};
 							lines.erase(lines.begin() + def->StartLine + 1, lines.begin() + def->EndLine);
 						} else {
 							lines.erase(lines.begin() + def->StartLine + 1, lines.begin() + def->EndLine + 1);
 						}
-						lines[def->StartLine].Text.erase(def->StartCol);
+						lines[def->StartLine].Text = String{lines[def->StartLine].Text.prefix(def->StartCol)};
 					}
 				}
 			}
@@ -1659,7 +1722,7 @@ R"GLSL(void main()
 		struct InterfaceDecl
 		{
 			std::size_t LineIndex = 0;
-			std::vector<std::string> Names;										// All names declared on the line ("out vec2 a, b;")
+			std::vector<String> Names;										// All names declared on the line ("out vec2 a, b;")
 			std::vector<std::pair<std::size_t, std::size_t>> QualifierSpans;	// Column ranges of the qualifiers stripped on demotion
 		};
 
@@ -1670,11 +1733,11 @@ R"GLSL(void main()
 			anything else — arrays, initializers, layout qualifiers and "invariant" declarations
 			are conservatively left untouched by the trimming pass.
 		*/
-		bool ParseInterfaceDeclLine(const std::string& bare, const char* direction, InterfaceDecl& decl)
+		bool ParseInterfaceDeclLine(StringView bare, const char* direction, InterfaceDecl& decl)
 		{
 			std::size_t pos = 0;
 			bool seenDirection = false;
-			std::string word;
+			String word;
 			while (true) {
 				while (pos < bare.size() && IsSpace(bare[pos])) {
 					pos++;
@@ -1683,7 +1746,7 @@ R"GLSL(void main()
 				while (pos < bare.size() && IsIdentChar(bare[pos])) {
 					pos++;
 				}
-				word = bare.substr(begin, pos - begin);
+				word = Substr(bare, begin, pos - begin);
 				if (word.empty()) {
 					return false;
 				}
@@ -1719,7 +1782,7 @@ R"GLSL(void main()
 				while (pos < bare.size() && IsIdentChar(bare[pos])) {
 					pos++;
 				}
-				word = bare.substr(begin, pos - begin);
+				word = Substr(bare, begin, pos - begin);
 			}
 			if (!IsIdentifier(word)) {
 				return false;		// The type
@@ -1732,7 +1795,7 @@ R"GLSL(void main()
 				while (pos < bare.size() && IsIdentChar(bare[pos])) {
 					pos++;
 				}
-				std::string name = bare.substr(begin, pos - begin);
+				String name = Substr(bare, begin, pos - begin);
 				if (!IsIdentifier(name)) {
 					return false;
 				}
@@ -1745,7 +1808,7 @@ R"GLSL(void main()
 					continue;
 				}
 				if (pos < bare.size() && bare[pos] == ';') {
-					return (bare.find_first_not_of(" \t", pos + 1) == std::string::npos);
+					return (FindFirstNotOf(bare, " \t", pos + 1) == Npos);
 				}
 				return false;		// Arrays, initializers and other tails are not touched
 			}
@@ -1761,9 +1824,9 @@ R"GLSL(void main()
 		{
 			std::int32_t depth = 0;
 			for (std::size_t i = 0; i < stripped.size(); i++) {
-				const std::string& text = stripped[i].Text;
-				std::size_t first = text.find_first_not_of(" \t");
-				if (first == std::string::npos) {
+				const String& text = stripped[i].Text;
+				std::size_t first = FindFirstNotOf(text, " \t");
+				if (first == Npos) {
 					continue;
 				}
 				if (text[first] == '#') {
@@ -1792,13 +1855,13 @@ R"GLSL(void main()
 		}
 
 		/** Returns true when @p name occurs as a whole identifier on any line NOT listed in @p excludedLines */
-		bool IdentifierReadOutsideLines(const std::vector<SourceLine>& stripped, const std::string& name, const std::vector<std::size_t>& excludedLines)
+		bool IdentifierReadOutsideLines(const std::vector<SourceLine>& stripped, StringView name, const std::vector<std::size_t>& excludedLines)
 		{
 			for (std::size_t i = 0; i < stripped.size(); i++) {
 				if (std::find(excludedLines.begin(), excludedLines.end(), i) != excludedLines.end()) {
 					continue;
 				}
-				const std::string& text = stripped[i].Text;
+				const String& text = stripped[i].Text;
 				std::size_t pos = 0;
 				char previous = '\0';
 				while (pos < text.size()) {
@@ -1808,7 +1871,7 @@ R"GLSL(void main()
 						while (pos < text.size() && IsIdentChar(text[pos])) {
 							pos++;
 						}
-						if (pos - begin == name.size() && text.compare(begin, name.size(), name) == 0) {
+						if (pos - begin == name.size() && Substr(text, begin, name.size()) == name) {
 							return true;
 						}
 						previous = text[pos - 1];
@@ -1824,10 +1887,10 @@ R"GLSL(void main()
 		// --- Dead-store removal for trimmed varyings ------------------------------------------------
 
 		/** Returns true when a comment-stripped line is a preprocessor directive */
-		bool IsPreprocessorLine(const std::string& text)
+		bool IsPreprocessorLine(StringView text)
 		{
-			std::size_t first = text.find_first_not_of(" \t");
-			return (first != std::string::npos && text[first] == '#');
+			std::size_t first = FindFirstNotOf(text, " \t");
+			return (first != Npos && text[first] == '#');
 		}
 
 		/**
@@ -1835,7 +1898,7 @@ R"GLSL(void main()
 			the GLSL type constructors and a fixed list of known pure builtins. Any other
 			identifier followed by '(' (user functions, macros) disqualifies the store.
 		*/
-		bool IsPureCallee(const std::string& name)
+		bool IsPureCallee(StringView name)
 		{
 			static const char* PureCallees[] = {
 				"vec2", "vec3", "vec4", "ivec2", "ivec3", "ivec4", "uvec2", "uvec3", "uvec4",
@@ -1862,7 +1925,7 @@ R"GLSL(void main()
 		{
 			bool sameLine = true;
 			while (li < stripped.size()) {
-				const std::string& text = stripped[li].Text;
+				const String& text = stripped[li].Text;
 				while (pos < text.size() && IsSpace(text[pos])) {
 					pos++;
 				}
@@ -1894,7 +1957,7 @@ R"GLSL(void main()
 				if (!SkipStatementWhitespace(stripped, li, pos)) {
 					return false;
 				}
-				const std::string& text = stripped[li].Text;
+				const String& text = stripped[li].Text;
 				char c = text[pos];
 				if (callArgs.empty() && c == terminator) {
 					return true;
@@ -1907,7 +1970,7 @@ R"GLSL(void main()
 					while (pos < text.size() && IsIdentChar(text[pos])) {
 						pos++;
 					}
-					std::string name = text.substr(begin, pos - begin);
+					String name = Substr(text, begin, pos - begin);
 					// An identifier followed by '(' is a call — whitelisted callees only
 					std::size_t peekLine = li, peekPos = pos;
 					if (SkipStatementWhitespace(stripped, peekLine, peekPos) && stripped[peekLine].Text[peekPos] == '(') {
@@ -2014,7 +2077,7 @@ R"GLSL(void main()
 			std::size_t line = li;
 			std::size_t pos = col;
 			while (true) {
-				const std::string& text = stripped[line].Text;
+				const String& text = stripped[line].Text;
 				while (pos > 0 && IsSpace(text[pos - 1])) {
 					pos--;
 				}
@@ -2053,7 +2116,7 @@ R"GLSL(void main()
 					if (!SkipStatementWhitespace(stripped, li, pos)) {
 						return false;
 					}
-					const std::string& text = stripped[li].Text;
+					const String& text = stripped[li].Text;
 					if (!IsIdentStart(text[pos])) {
 						return false;
 					}
@@ -2105,12 +2168,12 @@ R"GLSL(void main()
 			the declaration AND all stores; ANY failing occurrence keeps the demotion fallback
 			for the whole name (all-or-nothing — no partial removal).
 		*/
-		bool CollectRemovableStores(const std::vector<SourceLine>& stripped, const std::string& name,
+		bool CollectRemovableStores(const std::vector<SourceLine>& stripped, StringView name,
 			std::size_t declLine, std::vector<StoreExtent>& stores)
 		{
 			std::int32_t parenDepth = 0;
 			for (std::size_t i = 0; i < stripped.size(); i++) {
-				const std::string& text = stripped[i].Text;
+				const String& text = stripped[i].Text;
 				bool preprocessor = IsPreprocessorLine(text);
 				std::size_t pos = 0;
 				char previous = '\0';
@@ -2122,7 +2185,7 @@ R"GLSL(void main()
 							pos++;
 						}
 						previous = text[pos - 1];
-						if (pos - begin != name.size() || text.compare(begin, name.size(), name) != 0) {
+						if (pos - begin != name.size() || Substr(text, begin, name.size()) != name) {
 							continue;
 						}
 						if (i == declLine) {
@@ -2187,16 +2250,16 @@ R"GLSL(void main()
 				if (!CollectInterfaceDecls(stripped, "in", decls)) {
 					return;
 				}
-				std::map<std::string, std::vector<std::size_t>> declLinesByName;
+				std::map<String, std::vector<std::size_t>> declLinesByName;
 				for (const InterfaceDecl& decl : decls) {
-					for (const std::string& name : decl.Names) {
+					for (const String& name : decl.Names) {
 						declLinesByName[name].push_back(decl.LineIndex);
 					}
 				}
 				std::vector<std::size_t> removable;
 				for (const InterfaceDecl& decl : decls) {
 					bool anyRead = false;
-					for (const std::string& name : decl.Names) {
+					for (const String& name : decl.Names) {
 						if (IdentifierReadOutsideLines(stripped, name, declLinesByName[name])) {
 							anyRead = true;
 							break;
@@ -2227,7 +2290,7 @@ R"GLSL(void main()
 				std::vector<StoreExtent> removals;
 				for (const InterfaceDecl& decl : decls) {
 					bool anyRead = false;
-					for (const std::string& name : decl.Names) {
+					for (const String& name : decl.Names) {
 						if (IdentifierReadOutsideLines(fragment, name, noExcludedLines)) {
 							anyRead = true;
 							break;
@@ -2241,7 +2304,7 @@ R"GLSL(void main()
 					{
 						std::vector<StoreExtent> stores;
 						bool removable = true;
-						for (const std::string& name : decl.Names) {
+						for (const String& name : decl.Names) {
 							if (!CollectRemovableStores(stripped, name, decl.LineIndex, stores)) {
 								removable = false;
 								break;
@@ -2252,9 +2315,9 @@ R"GLSL(void main()
 							// by construction (nothing follows the ';')
 							StoreExtent declExtent;
 							declExtent.StartLine = decl.LineIndex;
-							declExtent.StartCol = stripped[decl.LineIndex].Text.find_first_not_of(" \t");
+							declExtent.StartCol = FindFirstNotOf(stripped[decl.LineIndex].Text, " \t");
 							declExtent.EndLine = decl.LineIndex;
-							declExtent.EndCol = stripped[decl.LineIndex].Text.find_last_not_of(" \t");
+							declExtent.EndCol = FindLastNotOf(stripped[decl.LineIndex].Text, " \t");
 							removals.push_back(declExtent);
 							removals.insert(removals.end(), stores.begin(), stores.end());
 							continue;
@@ -2262,13 +2325,13 @@ R"GLSL(void main()
 					}
 					// Demotion fallback — strip the qualifier spans back to front (positions computed
 					// on the stripped copy are valid in the original — comments only blank or truncate)
-					std::string& line = document.VertexLines[decl.LineIndex].Text;
+					String& line = document.VertexLines[decl.LineIndex].Text;
 					std::vector<std::pair<std::size_t, std::size_t>> spans = decl.QualifierSpans;
 					std::sort(spans.begin(), spans.end());
 					bool valid = true;
 					for (const auto& span : spans) {
 						if (span.second > line.size() ||
-							line.compare(span.first, span.second - span.first, stripped[decl.LineIndex].Text, span.first, span.second - span.first) != 0) {
+							Substr(line, span.first, span.second - span.first) != Substr(stripped[decl.LineIndex].Text, span.first, span.second - span.first)) {
 							valid = false;
 							break;
 						}
@@ -2277,7 +2340,7 @@ R"GLSL(void main()
 						continue;
 					}
 					for (auto it = spans.rbegin(); it != spans.rend(); ++it) {
-						line.erase(it->first, it->second - it->first);
+						line = line.prefix(it->first) + line.exceptPrefix(it->second);
 					}
 				}
 				// Apply the removals in descending position order so earlier extents stay valid
@@ -2288,10 +2351,10 @@ R"GLSL(void main()
 				});
 				std::vector<SourceLine>& lines = document.VertexLines;
 				for (const StoreExtent& extent : removals) {
-					const std::string& startStripped = stripped[extent.StartLine].Text;
-					const std::string& endStripped = stripped[extent.EndLine].Text;
-					bool firstWhole = (startStripped.find_first_not_of(" \t") >= extent.StartCol);
-					bool lastWhole = (endStripped.find_first_not_of(" \t", extent.EndCol + 1) == std::string::npos);
+					const String& startStripped = stripped[extent.StartLine].Text;
+					const String& endStripped = stripped[extent.EndLine].Text;
+					bool firstWhole = (FindFirstNotOf(startStripped, " \t") >= extent.StartCol);
+					bool lastWhole = (FindFirstNotOf(endStripped, " \t", extent.EndCol + 1) == Npos);
 					if (firstWhole && lastWhole) {
 						lines.erase(lines.begin() + extent.StartLine, lines.begin() + extent.EndLine + 1);
 						while (extent.StartLine < lines.size() && Trim(lines[extent.StartLine].Text).empty() &&
@@ -2299,15 +2362,16 @@ R"GLSL(void main()
 							lines.erase(lines.begin() + extent.StartLine);
 						}
 					} else if (extent.StartLine == extent.EndLine) {
-						lines[extent.StartLine].Text.erase(extent.StartCol, extent.EndCol - extent.StartCol + 1);
+						String& t = lines[extent.StartLine].Text;
+						t = t.prefix(extent.StartCol) + t.exceptPrefix(extent.EndCol + 1);
 					} else {
 						if (!lastWhole) {
-							lines[extent.EndLine].Text.erase(0, extent.EndCol + 1);
+							lines[extent.EndLine].Text = String{lines[extent.EndLine].Text.exceptPrefix(extent.EndCol + 1)};
 							lines.erase(lines.begin() + extent.StartLine + 1, lines.begin() + extent.EndLine);
 						} else {
 							lines.erase(lines.begin() + extent.StartLine + 1, lines.begin() + extent.EndLine + 1);
 						}
-						lines[extent.StartLine].Text.erase(extent.StartCol);
+						lines[extent.StartLine].Text = String{lines[extent.StartLine].Text.prefix(extent.StartCol)};
 					}
 				}
 			}
@@ -2329,8 +2393,8 @@ R"GLSL(void main()
 		struct GlobalDecl
 		{
 			GlobalDeclKind Kind = GlobalDeclKind::Define;
-			std::vector<std::string> DeclaredNames;		// Reflection-rule keys (uniform names / the block name); empty = exempt (defines, structs)
-			std::vector<std::string> ReferenceNames;	// Names whose external references pin the declaration
+			std::vector<String> DeclaredNames;		// Reflection-rule keys (uniform names / the block name); empty = exempt (defines, structs)
+			std::vector<String> ReferenceNames;	// Names whose external references pin the declaration
 			std::size_t StartLine = 0;
 			std::size_t EndLine = 0;
 		};
@@ -2344,7 +2408,7 @@ R"GLSL(void main()
 		{
 			bool sameLine = true;
 			while (li < lines.size()) {
-				const std::string& text = lines[li].Text;
+				const String& text = lines[li].Text;
 				while (pos < text.size() && IsSpace(text[pos])) {
 					pos++;
 				}
@@ -2362,17 +2426,17 @@ R"GLSL(void main()
 		}
 
 		/** Reads the identifier at the cursor (empty when the next token is not an identifier) */
-		std::string ReadDeclWord(const std::vector<SourceLine>& lines, std::size_t& li, std::size_t& pos)
+		String ReadDeclWord(const std::vector<SourceLine>& lines, std::size_t& li, std::size_t& pos)
 		{
 			if (!SkipDeclWhitespace(lines, li, pos)) {
-				return std::string();
+				return String{};
 			}
-			const std::string& text = lines[li].Text;
+			const String& text = lines[li].Text;
 			std::size_t begin = pos;
 			while (pos < text.size() && IsIdentChar(text[pos])) {
 				pos++;
 			}
-			return text.substr(begin, pos - begin);
+			return Substr(text, begin, pos - begin);
 		}
 
 		/** Consumes the expected character at the cursor, returns false when something else follows */
@@ -2393,9 +2457,9 @@ R"GLSL(void main()
 		{
 			std::int32_t depth = 0;
 			for (std::size_t j = li; j < lines.size(); j++) {
-				const std::string& text = lines[j].Text;
-				std::size_t first = text.find_first_not_of(" \t");
-				if (j != li && first != std::string::npos && text[first] == '#') {
+				const String& text = lines[j].Text;
+				std::size_t first = FindFirstNotOf(text, " \t");
+				if (j != li && first != Npos && text[first] == '#') {
 					continue;
 				}
 				for (std::size_t k = (j == li ? pos : 0); k < text.size(); k++) {
@@ -2423,7 +2487,7 @@ R"GLSL(void main()
 			symbolic size is never mistaken for the name. Returns false when parsing fails — the
 			caller then leaves the declaration untouched (conservative).
 		*/
-		bool ExtractDeclaratorNames(const std::string& list, std::vector<std::string>& names)
+		bool ExtractDeclaratorNames(StringView list, std::vector<String>& names)
 		{
 			std::size_t start = 0;
 			bool firstChunk = true;
@@ -2438,7 +2502,7 @@ R"GLSL(void main()
 					}
 					pos++;
 				}
-				std::string cleaned;
+				Array<char> cleaned;
 				std::int32_t brackets = 0;
 				for (std::size_t c = start; c < pos; c++) {
 					if (list[c] == '[') {
@@ -2446,16 +2510,17 @@ R"GLSL(void main()
 					} else if (list[c] == ']') {
 						brackets--;
 					} else if (brackets == 0) {
-						cleaned += list[c];
+						arrayAppend(cleaned, list[c]);
 					}
 				}
-				std::string name = LastIdentifier(cleaned);
+				StringView cleanedView{cleaned.data(), cleaned.size()};
+				String name = LastIdentifier(cleanedView);
 				if (!IsIdentifier(name)) {
 					return false;
 				}
 				if (firstChunk) {
 					// The first chunk holds the type too — require a separate type identifier
-					if (FirstIdentifier(cleaned) == name) {
+					if (FirstIdentifier(cleanedView) == name) {
 						return false;
 					}
 					firstChunk = false;
@@ -2470,27 +2535,27 @@ R"GLSL(void main()
 		}
 
 		/** Returns true when @p text is a "#define <name> ..." line for exactly @p name */
-		bool IsDefineOfName(const std::string& text, const std::string& name)
+		bool IsDefineOfName(StringView text, StringView name)
 		{
-			std::size_t first = text.find_first_not_of(" \t");
-			if (first == std::string::npos || text[first] != '#') {
+			std::size_t first = FindFirstNotOf(text, " \t"_s);
+			if (first == Npos || text[first] != '#') {
 				return false;
 			}
 			std::size_t p = first + 1;
 			while (p < text.size() && IsSpace(text[p])) {
 				p++;
 			}
-			if (text.compare(p, 6, "define") != 0 || (p + 6 < text.size() && IsIdentChar(text[p + 6]))) {
+			if (Substr(text, p, 6) != "define"_s || (p + 6 < text.size() && IsIdentChar(text[p + 6]))) {
 				return false;
 			}
-			return (FirstIdentifier(text.substr(p + 6)) == name);
+			return (FirstIdentifier(Substr(text, p + 6)) == name);
 		}
 
 		/** Returns true when @p text is an "#endif" line */
-		bool IsEndifLine(const std::string& text)
+		bool IsEndifLine(StringView text)
 		{
-			std::size_t first = text.find_first_not_of(" \t");
-			if (first == std::string::npos || text[first] != '#') {
+			std::size_t first = FindFirstNotOf(text, " \t"_s);
+			if (first == Npos || text[first] != '#') {
 				return false;
 			}
 			std::size_t p = first + 1;
@@ -2501,7 +2566,7 @@ R"GLSL(void main()
 			while (p < text.size() && IsIdentChar(text[p])) {
 				p++;
 			}
-			return (text.compare(begin, p - begin, "endif") == 0 && p - begin == 5);
+			return (p - begin == 5 && Substr(text, begin, p - begin) == "endif"_s);
 		}
 
 		/**
@@ -2520,9 +2585,9 @@ R"GLSL(void main()
 			std::int32_t condDepth = 0;
 			std::size_t i = 0;
 			while (i < stripped.size()) {
-				const std::string& text = stripped[i].Text;
-				std::size_t first = text.find_first_not_of(" \t");
-				if (first == std::string::npos) {
+				StringView text = stripped[i].Text;
+				std::size_t first = FindFirstNotOf(text, " \t"_s);
+				if (first == Npos) {
 					i++;
 					continue;
 				}
@@ -2535,12 +2600,12 @@ R"GLSL(void main()
 					while (p < text.size() && IsIdentChar(text[p])) {
 						p++;
 					}
-					std::string name = text.substr(nameBegin, p - nameBegin);
-					std::string rest = text.substr(p);
+					String name = Substr(text, nameBegin, p - nameBegin);
+					String rest = Substr(text, p);
 					if (name == "if" || name == "ifdef" || name == "ifndef") {
 						// "#ifndef X" + "#define X ..." + "#endif" fallback trio — recorded as a unit
 						if (name == "ifndef" && braceDepth == 0 && condDepth == 0 && i + 2 < stripped.size()) {
-							std::string guard = FirstIdentifier(rest);
+							String guard = FirstIdentifier(rest);
 							if (IsIdentifier(guard) && IsDefineOfName(stripped[i + 1].Text, guard) && IsEndifLine(stripped[i + 2].Text)) {
 								GlobalDecl decl;
 								decl.Kind = GlobalDeclKind::DefineTrio;
@@ -2560,7 +2625,7 @@ R"GLSL(void main()
 						condDepth--;
 					} else if (name == "define") {
 						if (braceDepth == 0 && condDepth == 0) {
-							std::string macro = FirstIdentifier(rest);
+							String macro = FirstIdentifier(rest);
 							if (IsIdentifier(macro)) {
 								GlobalDecl decl;
 								decl.Kind = GlobalDeclKind::Define;
@@ -2577,19 +2642,19 @@ R"GLSL(void main()
 
 				if (braceDepth == 0 && condDepth == 0) {
 					std::size_t cursor = first;
-					std::string word = WordAt(text, cursor);
+					String word = WordAt(text, cursor);
 
 					// "struct <Name> { ... };" (nothing else on the closing line)
 					if (word == "struct") {
 						std::size_t li = i, pos = cursor;
-						std::string structName = ReadDeclWord(stripped, li, pos);
+						String structName = ReadDeclWord(stripped, li, pos);
 						std::size_t endLine, endPos;
 						if (IsIdentifier(structName) && ConsumeDeclChar(stripped, li, pos, '{') &&
 							FindDeclClosingBrace(stripped, li, pos - 1, endLine, endPos)) {
-							const std::string& endText = stripped[endLine].Text;
-							std::size_t after = endText.find_first_not_of(" \t", endPos + 1);
-							if (after != std::string::npos && endText[after] == ';' &&
-								endText.find_first_not_of(" \t", after + 1) == std::string::npos) {
+							StringView endText = stripped[endLine].Text;
+							std::size_t after = FindFirstNotOf(endText, " \t"_s, endPos + 1);
+							if (after != Npos && endText[after] == ';' &&
+								FindFirstNotOf(endText, " \t"_s, after + 1) == Npos) {
 								GlobalDecl decl;
 								decl.Kind = GlobalDeclKind::Struct;
 								decl.ReferenceNames.push_back(std::move(structName));
@@ -2608,54 +2673,55 @@ R"GLSL(void main()
 						bool parsed = false;
 						if (ConsumeDeclChar(stripped, li, pos, '(')) {
 							std::size_t layoutBegin = pos;
-							std::size_t close = stripped[li].Text.find(')', pos);
-							if (close != std::string::npos) {
-								std::string layoutList = " " + stripped[li].Text.substr(layoutBegin, close - layoutBegin) + " ";
+							std::size_t close = Find(stripped[li].Text, ')', pos);
+							if (close != Npos) {
+								String layoutList = " "_s + Substr(stripped[li].Text, layoutBegin, close - layoutBegin) + " "_s;
 								bool std140 = false;
 								std::size_t q = 0;
-								std::string qualifier;
-								while (!(qualifier = FirstIdentifier(layoutList.substr(q))).empty()) {
+								String qualifier;
+								while (!(qualifier = FirstIdentifier(Substr(layoutList, q))).empty()) {
 									if (qualifier == "std140") {
 										std140 = true;
 										break;
 									}
-									q = layoutList.find(qualifier, q) + qualifier.size();
+									q = Find(layoutList, qualifier, q) + qualifier.size();
 								}
 								pos = close + 1;
 								if (std140 && ReadDeclWord(stripped, li, pos) == "uniform") {
-									std::string blockName = ReadDeclWord(stripped, li, pos);
+									String blockName = ReadDeclWord(stripped, li, pos);
 									std::size_t bodyLine = li, bodyPos = pos;
 									std::size_t endLine, endPos;
 									if (IsIdentifier(blockName) && ConsumeDeclChar(stripped, bodyLine, bodyPos, '{') &&
 										FindDeclClosingBrace(stripped, bodyLine, bodyPos - 1, endLine, endPos)) {
 										// Tail on the closing line: optional instance name + ';', nothing after
-										const std::string& endText = stripped[endLine].Text;
+										StringView endText = stripped[endLine].Text;
 										std::size_t tailPos = endPos + 1;
-										std::string instanceName;
-										std::size_t idBegin = endText.find_first_not_of(" \t", tailPos);
-										if (idBegin != std::string::npos && IsIdentStart(endText[idBegin])) {
+										String instanceName;
+										std::size_t idBegin = FindFirstNotOf(endText, " \t"_s, tailPos);
+										if (idBegin != Npos && IsIdentStart(endText[idBegin])) {
 											tailPos = idBegin;
 											while (tailPos < endText.size() && IsIdentChar(endText[tailPos])) {
 												tailPos++;
 											}
-											instanceName = endText.substr(idBegin, tailPos - idBegin);
+											instanceName = Substr(endText, idBegin, tailPos - idBegin);
 										}
-										std::size_t semi = endText.find_first_not_of(" \t", tailPos);
-										if (semi != std::string::npos && endText[semi] == ';' &&
-											endText.find_first_not_of(" \t", semi + 1) == std::string::npos) {
+										std::size_t semi = FindFirstNotOf(endText, " \t"_s, tailPos);
+										if (semi != Npos && endText[semi] == ';' &&
+											FindFirstNotOf(endText, " \t"_s, semi + 1) == Npos) {
 											// Member names: the ';'-separated declarations between the braces
-											std::string body;
+											Array<char> body;
 											for (std::size_t j = bodyLine; j <= endLine; j++) {
-												const std::string& memberText = stripped[j].Text;
-												std::size_t memberFirst = memberText.find_first_not_of(" \t");
-												if (memberFirst != std::string::npos && memberText[memberFirst] == '#') {
+												StringView memberText = stripped[j].Text;
+												std::size_t memberFirst = FindFirstNotOf(memberText, " \t"_s);
+												if (memberFirst != Npos && memberText[memberFirst] == '#') {
 													continue;
 												}
 												std::size_t from = (j == bodyLine ? bodyPos : 0);
 												std::size_t to = (j == endLine ? endPos : memberText.size());
-												body += memberText.substr(from, to - from);
-												body += ' ';
+												arrayAppend(body, Substr(memberText, from, to - from));
+												arrayAppend(body, ' ');
 											}
+											StringView bodyView{body.data(), body.size()};
 											GlobalDecl decl;
 											decl.Kind = GlobalDeclKind::Block;
 											decl.DeclaredNames.push_back(blockName);
@@ -2665,13 +2731,13 @@ R"GLSL(void main()
 											}
 											bool membersOk = true;
 											std::size_t stmtStart = 0;
-											while (stmtStart < body.size()) {
-												std::size_t stmtEnd = body.find(';', stmtStart);
-												if (stmtEnd == std::string::npos) {
-													membersOk = Trim(body.substr(stmtStart)).empty();
+											while (stmtStart < bodyView.size()) {
+												std::size_t stmtEnd = Find(bodyView, ';', stmtStart);
+												if (stmtEnd == Npos) {
+													membersOk = Trim(Substr(bodyView, stmtStart)).empty();
 													break;
 												}
-												std::string stmt = Trim(body.substr(stmtStart, stmtEnd - stmtStart));
+												String stmt = Trim(Substr(bodyView, stmtStart, stmtEnd - stmtStart));
 												if (!stmt.empty() && !ExtractDeclaratorNames(stmt, decl.ReferenceNames)) {
 													membersOk = false;
 													break;
@@ -2696,12 +2762,12 @@ R"GLSL(void main()
 					}
 
 					// "uniform <type> <name>[, <name>...];" — single line, whole statement
-					if (word == "uniform" && text.find('{') == std::string::npos && text.find('}') == std::string::npos) {
-						std::size_t semi = text.find(';', cursor);
-						if (semi != std::string::npos && text.find_first_not_of(" \t", semi + 1) == std::string::npos) {
+					if (word == "uniform" && Find(text, '{') == Npos && Find(text, '}') == Npos) {
+						std::size_t semi = Find(text, ';', cursor);
+						if (semi != Npos && FindFirstNotOf(text, " \t"_s, semi + 1) == Npos) {
 							GlobalDecl decl;
 							decl.Kind = GlobalDeclKind::LooseUniform;
-							if (ExtractDeclaratorNames(Trim(text.substr(cursor, semi - cursor)), decl.DeclaredNames)) {
+							if (ExtractDeclaratorNames(Trim(Substr(text, cursor, semi - cursor)), decl.DeclaredNames)) {
 								decl.ReferenceNames = decl.DeclaredNames;
 								decl.StartLine = i;
 								decl.EndLine = i;
@@ -2769,7 +2835,7 @@ R"GLSL(void main()
 							excluded.push_back(l);
 						}
 						bool referenced = false;
-						for (const std::string& name : decls[s][d].ReferenceNames) {
+						for (const String& name : decls[s][d].ReferenceNames) {
 							if (IdentifierReadOutsideLines(stripped[s], name, excluded)) {
 								referenced = true;
 								break;
@@ -2782,7 +2848,7 @@ R"GLSL(void main()
 				// Names of uniform/block declarations that survive this pass, per stage and kind
 				// (the reflection-preservation rule checks against the OTHER stage's kept set)
 				auto keptNames = [&decls, &candidate](std::int32_t s, GlobalDeclKind kind) {
-					std::vector<std::string> kept;
+					std::vector<String> kept;
 					for (std::size_t d = 0; d < decls[s].size(); d++) {
 						if (decls[s][d].Kind == kind && !candidate[s][d]) {
 							kept.insert(kept.end(), decls[s][d].DeclaredNames.begin(), decls[s][d].DeclaredNames.end());
@@ -2802,9 +2868,9 @@ R"GLSL(void main()
 						const GlobalDecl& decl = decls[s][d];
 						if (decl.Kind == GlobalDeclKind::LooseUniform || decl.Kind == GlobalDeclKind::Block) {
 							// Reflection-preservation rule — every declared name must survive in the other stage
-							const std::vector<std::string> kept = keptNames(other, decl.Kind);
+							const std::vector<String> kept = keptNames(other, decl.Kind);
 							bool allKept = true;
-							for (const std::string& name : decl.DeclaredNames) {
+							for (const String& name : decl.DeclaredNames) {
 								if (std::find(kept.begin(), kept.end(), name) == kept.end()) {
 									allKept = false;
 									break;
@@ -2868,18 +2934,18 @@ R"GLSL(void main()
 				std::vector<FoldEdit> edits;
 				ConstFolder::ComputeFolds(region, edits);
 				for (auto it = edits.rbegin(); it != edits.rend(); ++it) {
-					std::string& original = lines[it->Index].Text;
+					String& original = lines[it->Index].Text;
 					std::size_t length = it->End - it->Begin;
 					if (it->End > original.size() ||
-						original.compare(it->Begin, length, stripped[it->Index].Text, it->Begin, length) != 0) {
+						Substr(original, it->Begin, length) != Substr(stripped[it->Index].Text, it->Begin, length)) {
 						continue;	// A comment overlaps the span
 					}
-					std::string replacement = it->Replacement;
+					String replacement = it->Replacement;
 					if (replacement[0] == '-' && it->Begin > 0 &&
 						(original[it->Begin - 1] == '-' || original[it->Begin - 1] == '+')) {
-						replacement.insert(replacement.begin(), ' ');	// "x--2" would tokenize as a decrement
+						replacement = " "_s + replacement;	// "x--2" would tokenize as a decrement
 					}
-					original.replace(it->Begin, length, replacement);
+					original = Substr(original, 0, it->Begin) + StringView{replacement} + Substr(original, it->Begin + length);
 				}
 			}
 		}
@@ -2904,11 +2970,11 @@ R"GLSL(void main()
 			vec2 aPosition;" emits "layout(location = 0) in vec2 aPosition;"), everything else passes
 			through verbatim after "in ".
 		*/
-		std::string FormatAttributeDecl(const std::string& declaration)
+		String FormatAttributeDecl(StringView declaration)
 		{
 			if (StartsWithWord(declaration, "layout")) {
-				std::size_t pos = declaration.find('(');
-				if (pos != std::string::npos) {
+				std::size_t pos = Find(declaration, '(');
+				if (pos != Npos) {
 					std::int32_t depth = 0;
 					while (pos < declaration.size()) {
 						if (declaration[pos] == '(') {
@@ -2922,15 +2988,15 @@ R"GLSL(void main()
 						pos++;
 					}
 					if (pos < declaration.size()) {
-						return declaration.substr(0, pos + 1) + " in " + Trim(declaration.substr(pos + 1)) + ";";
+						return Substr(declaration, 0, pos + 1) + " in "_s + Trim(Substr(declaration, pos + 1)) + ";"_s;
 					}
 				}
 			}
-			return "in " + declaration + ";";
+			return "in "_s + declaration + ";"_s;
 		}
 
 		/** Returns true when @p s contains a whole-identifier occurrence of VERTEX_STAGE or FRAGMENT_STAGE */
-		bool ContainsStageMacro(const std::string& s)
+		bool ContainsStageMacro(StringView s)
 		{
 			std::size_t i = 0;
 			char previous = '\0';
@@ -2941,7 +3007,7 @@ R"GLSL(void main()
 					while (i < s.size() && IsIdentChar(s[i])) {
 						i++;
 					}
-					std::string id = s.substr(begin, i - begin);
+					StringView id = Substr(s, begin, i - begin);
 					if (id == "VERTEX_STAGE" || id == "FRAGMENT_STAGE") {
 						return true;
 					}
@@ -2996,10 +3062,10 @@ R"GLSL(void main()
 			constexpr char OnlyIfdefForms[] = "VERTEX_STAGE/FRAGMENT_STAGE are resolved at compile time and support only the \"#ifdef\"/\"#ifndef\" forms";
 
 			for (std::size_t index = 0; index < lines.size(); index++) {
-				const std::string& bare = stripped[index].Text;
+				StringView bare = stripped[index].Text;
 				const std::int32_t lineNumber = lines[index].Line;
-				std::size_t begin = bare.find_first_not_of(" \t");
-				if (begin != std::string::npos && bare[begin] == '#') {
+				std::size_t begin = FindFirstNotOf(bare, " \t"_s);
+				if (begin != Npos && bare[begin] == '#') {
 					std::size_t p = begin + 1;
 					while (p < bare.size() && IsSpace(bare[p])) {
 						p++;
@@ -3008,11 +3074,11 @@ R"GLSL(void main()
 					while (p < bare.size() && IsIdentChar(bare[p])) {
 						p++;
 					}
-					std::string name = bare.substr(nameBegin, p - nameBegin);
-					std::string rest = bare.substr(p);
+					String name = Substr(bare, nameBegin, p - nameBegin);
+					String rest = Substr(bare, p);
 
 					if (name == "ifdef" || name == "ifndef") {
-						std::string id = FirstIdentifier(rest);
+						String id = FirstIdentifier(rest);
 						if (id == "VERTEX_STAGE" || id == "FRAGMENT_STAGE") {
 							bool value = ((id == "VERTEX_STAGE") == vertexStage);
 							if (name == "ifndef") {
@@ -3090,9 +3156,9 @@ R"GLSL(void main()
 		}
 
 		/** Returns true when @p s contains a whole-identifier occurrence of @p name (member accesses excluded) */
-		bool ContainsIdentifier(const std::string& s, const char* name)
+		bool ContainsIdentifier(StringView s, const char* name)
 		{
-			const std::size_t nameLength = std::char_traits<char>::length(name);
+			const std::size_t nameLength = std::strlen(name);
 			std::size_t i = 0;
 			char previous = '\0';
 			while (i < s.size()) {
@@ -3102,7 +3168,7 @@ R"GLSL(void main()
 					while (i < s.size() && IsIdentChar(s[i])) {
 						i++;
 					}
-					if (i - begin == nameLength && s.compare(begin, nameLength, name) == 0) {
+					if (i - begin == nameLength && Substr(s, begin, nameLength) == name) {
 						return true;
 					}
 					previous = s[i - 1];
@@ -3146,9 +3212,9 @@ R"GLSL(void main()
 			bool inAssignmentTail = false;		// Between the qualifying "COLOR =" and its terminating ';'
 
 			for (const SourceLine& line : stripped) {
-				const std::string& text = line.Text;
-				std::size_t first = text.find_first_not_of(" \t");
-				if (first != std::string::npos && text[first] == '#') {
+				StringView text = line.Text;
+				std::size_t first = FindFirstNotOf(text, " \t"_s);
+				if (first != Npos && text[first] == '#') {
 					if (inAssignmentTail) {
 						return false;	// A conditional splits the statement - conservative
 					}
@@ -3160,7 +3226,7 @@ R"GLSL(void main()
 					while (p < text.size() && IsIdentChar(text[p])) {
 						p++;
 					}
-					std::string name = text.substr(nameBegin, p - nameBegin);
+					String name = Substr(text, nameBegin, p - nameBegin);
 					if (name == "if" || name == "ifdef" || name == "ifndef") {
 						condDepth++;
 					} else if (name == "endif") {
@@ -3170,10 +3236,10 @@ R"GLSL(void main()
 						condDepth--;
 					}
 					// A directive could smuggle the identifiers into the body (e.g. through a #define) - conservative
-					if (ContainsIdentifier(text.substr(p), "COLOR")) {
+					if (ContainsIdentifier(Substr(text, p), "COLOR")) {
 						return false;
 					}
-					if (ContainsIdentifier(text.substr(p), "return")) {
+					if (ContainsIdentifier(Substr(text, p), "return")) {
 						returnSeen = true;
 					}
 					continue;
@@ -3189,7 +3255,7 @@ R"GLSL(void main()
 							i++;
 						}
 						std::size_t length = i - begin;
-						if (length == 5 && text.compare(begin, 5, "COLOR") == 0) {
+						if (length == 5 && Substr(text, begin, 5) == "COLOR"_s) {
 							if (inAssignmentTail) {
 								return false;	// The right-hand side reads the default back
 							}
@@ -3209,7 +3275,7 @@ R"GLSL(void main()
 							previous = '=';
 							continue;
 						}
-						if (length == 6 && text.compare(begin, 6, "return") == 0) {
+						if (length == 6 && Substr(text, begin, 6) == "return"_s) {
 							returnSeen = true;
 						}
 						previous = text[i - 1];
@@ -3239,7 +3305,7 @@ R"GLSL(void main()
 			std::vector<SourceLine>& lines = document.VertexLines;
 			AppendTemplate(lines, batched ? CanvasBatchedVsHead : CanvasSpriteVsHead);
 			for (const VaryingDecl& varying : src.Varyings) {
-				lines.push_back({ std::string(varying.Flat ? "flat out " : "out ") + varying.Declaration + ";", varying.Line });
+				lines.push_back({ (varying.Flat ? "flat out "_s : "out "_s) + varying.Declaration + ";"_s, varying.Line });
 			}
 			for (const AttributeDecl& attribute : src.Attributes) {
 				lines.push_back({ FormatAttributeDecl(attribute.Declaration), attribute.Line });
@@ -3273,15 +3339,15 @@ R"GLSL(void main()
 			const char* p = (batched ? "i." : "");
 			lines.push_back({ "void main()", 0 });
 			lines.push_back({ "{", 0 });
-			lines.push_back({ std::string("\tvec2 aPosition = ") + (batched ? CanvasBatchedCorner : CanvasSpriteCorner) + ";", 0 });
-			lines.push_back({ std::string("\tvec2 VERTEX = vec2(aPosition.x * ") + p + "spriteSize.x, aPosition.y * " + p + "spriteSize.y);", 0 });
-			lines.push_back({ std::string("\tvec2 UV = vec2(aPosition.x * ") + p + "texRect.x + " + p + "texRect.y, aPosition.y * " + p + "texRect.z + " + p + "texRect.w);", 0 });
-			lines.push_back({ std::string("\tvec4 COLOR = ") + p + "color;", 0 });
-			lines.push_back({ std::string("\thighp float PALETTE_OFFSET = ") + p + "palOffset;", 0 });
+			lines.push_back({ "\tvec2 aPosition = "_s + StringView(batched ? CanvasBatchedCorner : CanvasSpriteCorner) + ";"_s, 0 });
+			lines.push_back({ "\tvec2 VERTEX = vec2(aPosition.x * "_s + StringView(p) + "spriteSize.x, aPosition.y * "_s + StringView(p) + "spriteSize.y);"_s, 0 });
+			lines.push_back({ "\tvec2 UV = vec2(aPosition.x * "_s + StringView(p) + "texRect.x + "_s + StringView(p) + "texRect.y, aPosition.y * "_s + StringView(p) + "texRect.z + "_s + StringView(p) + "texRect.w);"_s, 0 });
+			lines.push_back({ "\tvec4 COLOR = "_s + StringView(p) + "color;"_s, 0 });
+			lines.push_back({ "\thighp float PALETTE_OFFSET = "_s + StringView(p) + "palOffset;"_s, 0 });
 			lines.push_back({ "", 0 });
 			AppendEntryBody(lines, src.VertexBody);
 			lines.push_back({ "", 0 });
-			lines.push_back({ std::string("\tgl_Position = uProjectionMatrix * uViewMatrix * ") + p + "modelMatrix * vec4(VERTEX, 0.0, 1.0);", 0 });
+			lines.push_back({ "\tgl_Position = uProjectionMatrix * uViewMatrix * "_s + StringView(p) + "modelMatrix * vec4(VERTEX, 0.0, 1.0);"_s, 0 });
 			lines.push_back({ "\tvTexCoords = UV;", 0 });
 			lines.push_back({ "\tvColor = COLOR;", 0 });
 			lines.push_back({ "\tvPaletteOffset = PALETTE_OFFSET;", 0 });
@@ -3293,7 +3359,7 @@ R"GLSL(void main()
 		{
 			std::vector<SourceLine>& lines = document.FragmentLines;
 			lines.push_back({ "#ifdef GL_ES", 0 });
-			lines.push_back({ "precision " + src.FragmentPrecision + " float;", 0 });
+			lines.push_back({ "precision "_s + src.FragmentPrecision + " float;"_s, 0 });
 			lines.push_back({ "#endif", 0 });
 			lines.push_back({ "", 0 });
 			// The varyings come before the globals, so helper functions there can reference them
@@ -3302,7 +3368,7 @@ R"GLSL(void main()
 			lines.push_back({ "in vec4 vColor;", 0 });
 			lines.push_back({ "in highp float vPaletteOffset;", 0 });
 			for (const VaryingDecl& varying : src.Varyings) {
-				lines.push_back({ std::string(varying.Flat ? "flat in " : "in ") + varying.Declaration + ";", varying.Line });
+				lines.push_back({ (varying.Flat ? "flat in "_s : "in "_s) + varying.Declaration + ";"_s, varying.Line });
 			}
 			lines.push_back({ "", 0 });
 			// An implicit TEXTURE declaration takes the head of the globals — exactly where the
@@ -3372,7 +3438,7 @@ R"GLSL(void main()
 				lines.push_back({ "", 0 });
 			}
 			for (const VaryingDecl& varying : src.Varyings) {
-				lines.push_back({ std::string(varying.Flat ? "flat out " : "out ") + varying.Declaration + ";", varying.Line });
+				lines.push_back({ (varying.Flat ? "flat out "_s : "out "_s) + varying.Declaration + ";"_s, varying.Line });
 			}
 			if (!src.Varyings.empty()) {
 				lines.push_back({ "", 0 });
@@ -3396,12 +3462,12 @@ R"GLSL(void main()
 		{
 			std::vector<SourceLine>& lines = document.FragmentLines;
 			lines.push_back({ "#ifdef GL_ES", 0 });
-			lines.push_back({ "precision " + src.FragmentPrecision + " float;", 0 });
+			lines.push_back({ "precision "_s + src.FragmentPrecision + " float;"_s, 0 });
 			lines.push_back({ "#endif", 0 });
 			lines.push_back({ "", 0 });
 			// The varyings come before the globals, so helper functions there can reference them
 			for (const VaryingDecl& varying : src.Varyings) {
-				lines.push_back({ std::string(varying.Flat ? "flat in " : "in ") + varying.Declaration + ";", varying.Line });
+				lines.push_back({ (varying.Flat ? "flat in "_s : "in "_s) + varying.Declaration + ";"_s, varying.Line });
 			}
 			if (!src.Varyings.empty()) {
 				lines.push_back({ "", 0 });
@@ -3455,7 +3521,7 @@ R"GLSL(void main()
 		}
 	}
 
-	bool ShaderParser::ParseDocuments(const std::string& content, std::vector<ShaderDocument>& documents, Diagnostic& diag)
+	bool ShaderParser::ParseDocuments(StringView content, std::vector<ShaderDocument>& documents, Diagnostic& diag)
 	{
 		std::vector<SourceLine> lines;
 		SplitLines(content, lines);
@@ -3537,7 +3603,7 @@ R"GLSL(void main()
 
 	// --- Preprocessor -------------------------------------------------------------------------------
 
-	void Preprocessor::Define(const std::string& name, const std::string& body)
+	void Preprocessor::Define(StringView name, StringView body)
 	{
 		Macro m;
 		m.Body = body;
@@ -3545,7 +3611,7 @@ R"GLSL(void main()
 		_macros[name] = std::move(m);
 	}
 
-	bool Preprocessor::IsDefined(const std::string& name) const
+	bool Preprocessor::IsDefined(StringView name) const
 	{
 		if (name == "BATCH_SIZE") {
 			// Symbolic constant — always treated as defined
@@ -3554,7 +3620,7 @@ R"GLSL(void main()
 		return (_macros.find(name) != _macros.end());
 	}
 
-	bool Preprocessor::TryGetMacroBody(const std::string& name, std::string& body) const
+	bool Preprocessor::TryGetMacroBody(StringView name, String& body) const
 	{
 		auto it = _macros.find(name);
 		if (it == _macros.end() || it->second.FunctionLike) {
@@ -3564,18 +3630,18 @@ R"GLSL(void main()
 		return true;
 	}
 
-	bool Preprocessor::EvaluateExpression(const std::string& expression, std::int32_t line, std::int32_t depth, std::int64_t& value, Diagnostic& diag) const
+	bool Preprocessor::EvaluateExpression(StringView expression, std::int32_t line, std::int32_t depth, std::int64_t& value, Diagnostic& diag) const
 	{
 		ExprEvaluator evaluator(*this, line, depth, diag);
 		return evaluator.Evaluate(expression, value);
 	}
 
-	std::string Preprocessor::ExpandMacros(const std::string& text) const
+	String Preprocessor::ExpandMacros(StringView text) const
 	{
-		std::string current = text;
+		String current = text;
 		for (std::int32_t pass = 0; pass < MaxExpansionPasses; pass++) {
-			std::string next;
-			next.reserve(current.size());
+			Array<char> next;
+			arrayReserve(next, current.size());
 			bool changed = false;
 			std::size_t i = 0;
 			char previous = '\0';
@@ -3587,23 +3653,23 @@ R"GLSL(void main()
 					while (i < current.size() && IsIdentChar(current[i])) {
 						i++;
 					}
-					std::string id = current.substr(begin, i - begin);
+					StringView id = Substr(current, begin, i - begin);
 					auto it = _macros.find(id);
 					if (it != _macros.end() && !it->second.FunctionLike) {
-						next += it->second.Body;
+						arrayAppend(next, StringView{it->second.Body});
 						changed = true;
 						previous = ' ';
 					} else {
-						next += id;
+						arrayAppend(next, id);
 						previous = id[id.size() - 1];
 					}
 				} else {
-					next += c;
+					arrayAppend(next, c);
 					previous = c;
 					i++;
 				}
 			}
-			current = std::move(next);
+			current = String{next.data(), next.size()};
 			if (!changed) {
 				break;
 			}
@@ -3632,8 +3698,8 @@ R"GLSL(void main()
 		};
 
 		for (const SourceLine& line : input) {
-			std::size_t begin = line.Text.find_first_not_of(" \t");
-			if (begin != std::string::npos && line.Text[begin] == '#') {
+			std::size_t begin = FindFirstNotOf(line.Text, " \t"_s);
+			if (begin != Npos && line.Text[begin] == '#') {
 				std::size_t p = begin + 1;
 				while (p < line.Text.size() && IsSpace(line.Text[p])) {
 					p++;
@@ -3642,8 +3708,8 @@ R"GLSL(void main()
 				while (p < line.Text.size() && IsIdentChar(line.Text[p])) {
 					p++;
 				}
-				std::string name = line.Text.substr(nameBegin, p - nameBegin);
-				std::string rest = Trim(line.Text.substr(p));
+				String name = Substr(line.Text, nameBegin, p - nameBegin);
+				String rest = Trim(Substr(line.Text, p));
 
 				if (name == "if" || name == "ifdef" || name == "ifndef") {
 					bool parentActive = allTaken(stack, stack.size());
@@ -3656,9 +3722,9 @@ R"GLSL(void main()
 							}
 							value = (v != 0);
 						} else {
-							std::string id = FirstIdentifier(rest);
+							String id = FirstIdentifier(rest);
 							if (id.empty()) {
-								return Fail(diag, "#" + name + " requires an identifier", line.Line);
+								return Fail(diag, "#"_s + name + " requires an identifier"_s, line.Line);
 							}
 							value = IsDefined(id);
 							if (name == "ifndef") {
@@ -3718,7 +3784,7 @@ R"GLSL(void main()
 						while (q < rest.size() && IsIdentChar(rest[q])) {
 							q++;
 						}
-						std::string macroName = rest.substr(idBegin, q - idBegin);
+						String macroName = Substr(rest, idBegin, q - idBegin);
 						if (!IsIdentifier(macroName)) {
 							return Fail(diag, "#define requires an identifier", line.Line);
 						}
@@ -3726,16 +3792,16 @@ R"GLSL(void main()
 						if (q < rest.size() && rest[q] == '(') {
 							// Function-like macros are recorded (for defined()) but never expanded
 							m.FunctionLike = true;
-							m.Body = rest.substr(q);
+							m.Body = Substr(rest, q);
 						} else {
 							m.FunctionLike = false;
-							m.Body = Trim(rest.substr(q));
+							m.Body = Trim(Substr(rest, q));
 						}
 						_macros[macroName] = std::move(m);
 					}
 				} else if (name == "undef") {
 					if (allTaken(stack, stack.size())) {
-						std::string id = FirstIdentifier(rest);
+						String id = FirstIdentifier(rest);
 						if (id.empty()) {
 							return Fail(diag, "#undef requires an identifier", line.Line);
 						}
@@ -3760,59 +3826,62 @@ R"GLSL(void main()
 		}
 		return true;
 	}
-	std::string ShaderParser::DirectoryOf(const std::string& path)
+	String ShaderParser::DirectoryOf(StringView path)
 	{
-		std::size_t pos = path.find_last_of("/\\");
-		return (pos == std::string::npos ? std::string(".") : path.substr(0, pos));
+		std::size_t pos = FindLastOf(path, "/\\"_s);
+		if (pos == Npos) {
+			return "."_s;
+		}
+		return Substr(path, 0, pos);
 	}
 
-	bool ShaderParser::ExpandIncludes(std::string& content, const std::string& baseDir, const FileReader& reader, std::int32_t depth, std::string& error)
+	bool ShaderParser::ExpandIncludes(String& content, StringView baseDir, const FileReader& reader, std::int32_t depth, String& error)
 	{
 		if (depth > 8) {
 			error = "include depth limit exceeded (a cycle between included files?)";
 			return false;
 		}
 
-		std::string result;
-		result.reserve(content.size());
+		Array<char> result;
+		arrayReserve(result, content.size());
 
 		std::size_t lineStart = 0;
 		while (lineStart <= content.size()) {
-			std::size_t lineEnd = content.find('\n', lineStart);
-			const bool lastLine = (lineEnd == std::string::npos);
-			std::string line = content.substr(lineStart, lastLine ? std::string::npos : lineEnd - lineStart + 1);
+			std::size_t lineEnd = Find(content, '\n', lineStart);
+			const bool lastLine = (lineEnd == Npos);
+			StringView line = Substr(content, lineStart, lastLine ? Npos : lineEnd - lineStart + 1);
 
-			std::size_t i = line.find_first_not_of(" \t");
+			std::size_t i = FindFirstNotOf(line, " \t"_s);
 			bool isInclude = false;
-			if (i != std::string::npos && line[i] == '#') {
-				std::size_t k = line.find_first_not_of(" \t", i + 1);
-				if (k != std::string::npos && line.compare(k, 7, "include") == 0 &&
+			if (i != Npos && line[i] == '#') {
+				std::size_t k = FindFirstNotOf(line, " \t"_s, i + 1);
+				if (k != Npos && Substr(line, k, 7) == "include"_s &&
 					(k + 7 >= line.size() || !IsIdentChar(line[k + 7]))) {
 					isInclude = true;
-					std::size_t openQuote = line.find('"', k + 7);
-					std::size_t closeQuote = (openQuote == std::string::npos ? std::string::npos : line.find('"', openQuote + 1));
-					if (closeQuote == std::string::npos) {
+					std::size_t openQuote = Find(line, '"', k + 7);
+					std::size_t closeQuote = (openQuote == Npos ? Npos : Find(line, '"', openQuote + 1));
+					if (closeQuote == Npos) {
 						error = "malformed include directive, expected: #include \"path\"";
 						return false;
 					}
-					const std::string relPath = line.substr(openQuote + 1, closeQuote - openQuote - 1);
-					const std::string fullPath = baseDir + "/" + relPath;
-					std::string included;
+					StringView relPath = Substr(line, openQuote + 1, closeQuote - openQuote - 1);
+					String fullPath = baseDir + "/"_s + relPath;
+					String included;
 					if (!reader(fullPath, included)) {
-						error = "cannot read included file \"" + fullPath + "\"";
+						error = "cannot read included file \""_s + fullPath + "\""_s;
 						return false;
 					}
 					if (!ExpandIncludes(included, DirectoryOf(fullPath), reader, depth + 1, error)) {
 						return false;
 					}
-					result += included;
-					if (!included.empty() && included.back() != '\n') {
-						result += '\n';
+					arrayAppend(result, included);
+					if (!included.empty() && included[included.size() - 1] != '\n') {
+						arrayAppend(result, '\n');
 					}
 				}
 			}
 			if (!isInclude) {
-				result += line;
+				arrayAppend(result, line);
 			}
 
 			if (lastLine) {
@@ -3821,26 +3890,28 @@ R"GLSL(void main()
 			lineStart = lineEnd + 1;
 		}
 
-		content = std::move(result);
+		content = String{result.data(), result.size()};
 		return true;
 	}
 
-	std::string ShaderParser::BuildStageSource(const ShaderDocument& document, bool vertexStage, const std::string& define)
+	String ShaderParser::BuildStageSource(const ShaderDocument& document, bool vertexStage, StringView define)
 	{
-		std::string out;
+		Array<char> out;
 		if (!define.empty()) {
-			out += "#define " + define + " (1)\n";
+			arrayAppend(out, "#define "_s);
+			arrayAppend(out, define);
+			arrayAppend(out, " (1)\n"_s);
 		}
-		out += "#line 1\n";
+		arrayAppend(out, "#line 1\n"_s);
 		for (const SourceLine& line : document.Prelude) {
-			out += line.Text;
-			out += '\n';
+			arrayAppend(out, line.Text);
+			arrayAppend(out, '\n');
 		}
 		const std::vector<SourceLine>& stage = (vertexStage ? document.VertexLines : document.FragmentLines);
 		for (const SourceLine& line : stage) {
-			out += line.Text;
-			out += '\n';
+			arrayAppend(out, line.Text);
+			arrayAppend(out, '\n');
 		}
-		return out;
+		return String{out.data(), out.size()};
 	}
 }

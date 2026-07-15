@@ -1,5 +1,7 @@
 #include "RuntimeShader.h"
 
+#include <Containers/StringConcatenable.h>
+
 namespace ShaderCompiler
 {
 	// GlslType (internal) and UniformType (artifact view) declare the same enumerators in the same order
@@ -16,7 +18,7 @@ namespace ShaderCompiler
 		}
 
 		/** Runs strip-comments + preprocess + reflect for one stage of one variant */
-		bool ReflectVariantStage(const ShaderDocument& document, bool vertexStage, const std::string& define,
+		bool ReflectVariantStage(const ShaderDocument& document, bool vertexStage, StringView define,
 			StageReflection& result, Diagnostic& diag)
 		{
 			std::vector<SourceLine> lines = document.Prelude;
@@ -37,7 +39,7 @@ namespace ShaderCompiler
 		}
 	}
 
-	const RuntimeVariant* RuntimeProgram::FindVariant(const std::string& name) const
+	const RuntimeVariant* RuntimeProgram::FindVariant(StringView name) const
 	{
 		// The base variant is unnamed — an empty name resolves to it (always Variants[0])
 		if (name.empty()) {
@@ -67,7 +69,7 @@ namespace ShaderCompiler
 
 			viewUniforms_[i].reserve(r.Uniforms.size());
 			for (const UniformInfo& u : r.Uniforms) {
-				viewUniforms_[i].push_back({ u.Name.c_str(), UniformType(u.Type), std::uint16_t(u.ArraySize) });
+				viewUniforms_[i].push_back({ u.Name.data(), UniformType(u.Type), std::uint16_t(u.ArraySize) });
 			}
 
 			viewBlockMembers_[i].resize(r.Blocks.size());
@@ -77,23 +79,23 @@ namespace ShaderCompiler
 				std::vector<BlockMember>& members = viewBlockMembers_[i][j];
 				members.reserve(b.Members.size());
 				for (const MemberInfo& m : b.Members) {
-					members.push_back({ m.Name.c_str(), UniformType(m.Type), ToViewArraySize(m.ArraySize, m.SymbolicArray), m.Offset });
+					members.push_back({ m.Name.data(), UniformType(m.Type), ToViewArraySize(m.ArraySize, m.SymbolicArray), m.Offset });
 				}
-				viewBlocks_[i].push_back({ b.Name.c_str(), b.BaseSize, b.InstanceStride, members.size(), members.data() });
+				viewBlocks_[i].push_back({ b.Name.data(), b.BaseSize, b.InstanceStride, members.size(), members.data() });
 			}
 
 			viewTextures_[i].reserve(r.Textures.size());
 			for (const TextureInfo& t : r.Textures) {
-				viewTextures_[i].push_back({ t.Name.c_str(), t.Unit });
+				viewTextures_[i].push_back({ t.Name.data(), t.Unit });
 			}
 
 			viewAttributes_[i].reserve(r.Attributes.size());
 			for (const AttributeInfo& a : r.Attributes) {
-				viewAttributes_[i].push_back({ a.Name.c_str(), UniformType(a.Type), a.Location });
+				viewAttributes_[i].push_back({ a.Name.data(), UniformType(a.Type), a.Location });
 			}
 
 			viewVariants_[i] = {
-				v.Name.c_str(), v.Define.c_str(), v.VsSource.c_str(), v.FsSource.c_str(),
+				v.Name.data(), v.Define.data(), v.VsSource.data(), v.FsSource.data(),
 				viewUniforms_[i].size(), viewUniforms_[i].data(),
 				viewBlocks_[i].size(), viewBlocks_[i].data(),
 				viewTextures_[i].size(), viewTextures_[i].data(),
@@ -101,14 +103,14 @@ namespace ShaderCompiler
 			};
 		}
 
-		view_ = { Name.c_str(), RenderModes, viewVariants_.size(), viewVariants_.data() };
+		view_ = { Name.data(), RenderModes, viewVariants_.size(), viewVariants_.data() };
 	}
 
-	bool CompileRuntimeProgram(const std::string& content, const std::string& baseDir, const FileReader& reader, RuntimeProgram& out, Diagnostic& diag)
+	bool CompileRuntimeProgram(StringView content, StringView baseDir, const FileReader& reader, RuntimeProgram& out, Diagnostic& diag)
 	{
-		std::string expanded = content;
+		String expanded = content;
 		{
-			std::string includeError;
+			String includeError;
 			if (!ShaderParser::ExpandIncludes(expanded, baseDir, reader, 0, includeError)) {
 				diag.Message = std::move(includeError);
 				diag.Line = 0;
@@ -131,7 +133,7 @@ namespace ShaderCompiler
 		// The unnamed base variant (Name "", always Variants[0]) plus one additional entry
 		// per declared variant (no cross-products)
 		out.Variants.emplace_back();
-		for (const std::string& name : document.Variants) {
+		for (const String& name : document.Variants) {
 			RuntimeVariant v;
 			v.Name = name;
 			v.Define = name;
