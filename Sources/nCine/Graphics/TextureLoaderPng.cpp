@@ -72,7 +72,7 @@ namespace nCine
 						dataLength *= 4;
 					}
 
-					pixels_ = std::make_unique<GLubyte[]>(dataLength);
+					pixels_ = std::make_unique<std::uint8_t[]>(dataLength);
 
 					std::uint8_t compression;
 					fileHandle_->Read(&compression, sizeof(compression));
@@ -106,7 +106,7 @@ namespace nCine
 
 				case 'IEND': {
 					std::size_t dataLength = 16 + (width_ * height_ * 5);
-					auto buffer = std::make_unique<GLubyte[]>(dataLength);
+					auto buffer = std::make_unique<std::uint8_t[]>(dataLength);
 
 					MemoryStream ms(data.data() + 2, data.size() - 2);
 					DeflateStream uc(ms, std::int32_t(dataLength));
@@ -118,14 +118,14 @@ namespace nCine
 					std::int32_t srcStride = width_ * pxStride;
 					std::int32_t dstStride = width_ * (isPaletted ? 1 : 4);
 
-					auto bufferPrev = std::make_unique<GLubyte[]>(srcStride);
+					auto bufferPrev = std::make_unique<std::uint8_t[]>(srcStride);
 
 					for (std::int32_t y = 0; y < height_; y++) {
 						// Read filter
 						std::uint8_t filter = buffer[o++];
 
 						// Read data
-						GLubyte* bufferRow = &buffer[o];
+						std::uint8_t* bufferRow = &buffer[o];
 						o += srcStride;
 
 						for (std::int32_t i = 0; i < srcStride; i++) {
@@ -149,7 +149,7 @@ namespace nCine
 					}
 
 					mipMapCount_ = 1;
-					texFormat_ = TextureFormat(GL_RGBA8);
+					texFormat_ = TextureFormat(PixelFormat::RGBA8);
 					hasLoaded_ = true;
 					return;
 				}

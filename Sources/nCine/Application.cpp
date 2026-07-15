@@ -1448,6 +1448,13 @@ namespace nCine
 #endif
 	}
 
+	void Application::SetCrashDumpDirectory(Containers::StringView path)
+	{
+#if defined(WITH_BACKWARD)
+		__eh.DumpDirectory = path;
+#endif
+	}
+
 #if defined(DEATH_TRACE)
 	void Application::InitializeTrace()
 	{

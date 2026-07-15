@@ -32,11 +32,15 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <string>
 #include <vector>
+
+#include <Containers/String.h>
+#include <Containers/StringView.h>
 
 namespace ShaderCompiler
 {
+	using namespace Death::Containers;
+
 	/** @brief Classification of one GLSL expression token */
 	enum class GlslTokenType : std::uint8_t
 	{
@@ -53,7 +57,7 @@ namespace ShaderCompiler
 	struct GlslToken
 	{
 		GlslTokenType Type = GlslTokenType::End;
-		std::string Text;
+		String Text;
 		std::size_t Index = 0;		// Caller-defined line identifier (FoldInputLine::Index)
 		std::size_t Begin = 0;		// First column of the token on its line
 		std::size_t End = 0;		// One past the last column of the token
@@ -63,7 +67,7 @@ namespace ShaderCompiler
 	/** @brief One input line range of a fold unit (positions must be valid in the rewritable original text) */
 	struct FoldInputLine
 	{
-		const std::string* Text = nullptr;	// Comment-stripped line text
+		const String* Text = nullptr;		// Comment-stripped line text
 		std::size_t Begin = 0;				// First column of the foldable range on this line
 		std::size_t End = 0;				// One past the last foldable column on this line
 		std::size_t Index = 0;				// Caller-defined line identifier reported back in FoldEdit
@@ -75,7 +79,7 @@ namespace ShaderCompiler
 		std::size_t Index = 0;
 		std::size_t Begin = 0;
 		std::size_t End = 0;
-		std::string Replacement;
+		String Replacement;
 	};
 
 	/** @brief GLSL expression tokenizer (reusable outside the folder) */
@@ -83,7 +87,7 @@ namespace ShaderCompiler
 	{
 	public:
 		/** Appends the tokens of columns [begin, end) of @p text to @p out, tagging them with @p index (no End token is added) */
-		static void Tokenize(const std::string& text, std::size_t begin, std::size_t end, std::size_t index, std::vector<GlslToken>& out);
+		static void Tokenize(StringView text, std::size_t begin, std::size_t end, std::size_t index, std::vector<GlslToken>& out);
 	};
 
 	/** @brief Computes literal constant-folding rewrites for one fold unit */

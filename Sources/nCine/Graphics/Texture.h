@@ -18,51 +18,13 @@ namespace nCine
 	class ITextureLoader;
 
 	/**
-		@brief Texture minification and magnification filtering modes
-	*/
-	enum class SamplerFilter
-	{
-		Unknown,
-
-		Nearest,
-		Linear,
-		NearestMipmapNearest,
-		LinearMipmapNearest,
-		NearestMipmapLinear,
-		LinearMipmapLinear
-	};
-
-	/**
-		@brief Texture coordinate wrapping modes
-	*/
-	enum class SamplerWrapping
-	{
-		Unknown,
-
-		ClampToEdge,
-		MirroredRepeat,
-		Repeat
-	};
-
-	/**
-		@brief Source for a sampled texture channel (see @ref Texture::SetSwizzle())
-	*/
-	enum class SwizzleChannel
-	{
-		Red,
-		Green,
-		Blue,
-		Alpha,
-		Zero,
-		One
-	};
-
-	/**
 		@brief Image data uploaded to the GPU and sampled by shaders
-		
-		Wraps an OpenGL texture object. It can be created empty with a given format and size, loaded
+
+		Wraps a backend texture object. It can be created empty with a given format and size, loaded
 		from an image file or filled from raw texels, and configured with filtering, wrapping and
 		channel swizzling before being bound by a material.
+
+		@ref SamplerFilter, @ref SamplerWrapping and @ref SwizzleChannel are declared in @ref RhiTypes.h.
 	*/
 	class Texture : public Object
 	{
@@ -184,8 +146,8 @@ namespace nCine
 		 */
 		void SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a);
 
-		/** @brief Sets the OpenGL object label for the texture */
-		void SetGLTextureLabel(const char* label);
+		/** @brief Sets the backend object label for the texture, for debugging */
+		void SetTextureLabel(const char* label);
 
 		/** @brief Returns the opaque user data pointer used as ImGui's `ImTextureID` */
 		void* GetGuiTexId() const;
@@ -195,7 +157,7 @@ namespace nCine
 		}
 
 	private:
-		std::unique_ptr<Rhi::Texture> glTexture_;
+		std::unique_ptr<Rhi::Texture> rhiTexture_;
 		std::int32_t width_;
 		std::int32_t height_;
 		std::int32_t mipMapLevels_;

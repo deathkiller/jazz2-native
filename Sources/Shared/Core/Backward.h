@@ -600,7 +600,6 @@ namespace Death { namespace Backward {
 				// Only search at the right nesting level
 				std::size_t searchPos = openBracket + 1;
 				std::int32_t argIndex = 0;
-				std::size_t argStart = searchPos;
 				std::size_t removeFrom = std::string::npos;
 				std::int32_t depth = 0;
 				for (std::size_t i = searchPos; i < closeBracket; i++) {
@@ -4306,6 +4305,9 @@ namespace Death { namespace Backward {
 		IO::Stream* Destination;
 		/** @brief Feature flags */
 		Flags FeatureFlags;
+		/** @brief Custom directory for memory dumps -- if empty, a `CrashDumps` subdirectory next to the executable is used
+			@partialsupport Memory dumps are currently written only on @ref DEATH_TARGET_WINDOWS "Windows" */
+		Containers::String DumpDirectory;
 
 		ExceptionHandling(Flags flags = Flags::None)
 			: Destination(nullptr), FeatureFlags(flags), _loaded(false) {
@@ -4484,6 +4486,8 @@ namespace Death { namespace Backward {
 	public:
 		IO::Stream* Destination;
 		Flags FeatureFlags;
+		/** @brief Custom directory for memory dumps -- if empty, a `CrashDumps` subdirectory next to the executable is used */
+		Containers::String DumpDirectory;
 
 		ExceptionHandling(Flags flags = Flags::None)
 			: Destination(nullptr), FeatureFlags(flags), _crashedThread(NULL),
@@ -4627,7 +4631,7 @@ namespace Death { namespace Backward {
 				// For some reason this must be called first, otherwise the dump is not linked to sources correctly
 				auto* current = GetSingleton();
 				if ((current->FeatureFlags & Flags::CreateMemoryDump) == Flags::CreateMemoryDump) {
-					WriteMinidumpWithException(::GetThreadId(_this->_crashedThread), &_this->_context);
+					WriteMinidumpWithException(::GetThreadId(_this->_crashedThread), &_this->_context, current->DumpDirectory);
 				}
 				current->HandleStacktrace();
 			}
@@ -4788,7 +4792,7 @@ namespace Death { namespace Backward {
 			}
 		}
 
-		static bool WriteMinidumpWithException(std::size_t requestingThreadId, ExceptionContext* ctx) {
+		static bool WriteMinidumpWithException(std::size_t requestingThreadId, ExceptionContext* ctx, Containers::StringView dumpDirectory) {
 			wchar_t processPath[MAX_PATH];
 			if (!::GetModuleFileNameW(NULL, processPath, DWORD(Containers::arraySize(processPath)))) {
 				return false;
@@ -4815,7 +4819,23 @@ namespace Death { namespace Backward {
 			::GetLocalTime(&lt);
 
 			wchar_t minidumpPath[MAX_PATH];
-			std::int32_t pathPrefixLength = swprintf_s(minidumpPath, L"%s\\CrashDumps\\", processPathLength > 0 ? processPath : L".");
+			std::int32_t pathPrefixLength;
+			if (!dumpDirectory.empty()) {
+				// Place the "CrashDumps" subdirectory inside the custom base directory, dropping any trailing separator
+				Containers::Array<wchar_t> dumpDirectoryW = Death::Utf8::ToUtf16(dumpDirectory);
+				const wchar_t* dumpDirectoryPtr = dumpDirectoryW.data();
+				std::size_t dumpDirectoryLength = wcslen(dumpDirectoryPtr);
+				while (dumpDirectoryLength > 0 && (dumpDirectoryPtr[dumpDirectoryLength - 1] == L'\\' || dumpDirectoryPtr[dumpDirectoryLength - 1] == L'/')) {
+					dumpDirectoryLength--;
+				}
+				// The custom base directory may not exist yet (e.g., a per-user config directory created lazily), so create it first
+				swprintf_s(minidumpPath, L"%.*s", std::int32_t(dumpDirectoryLength), dumpDirectoryPtr);
+				::CreateDirectory(minidumpPath, NULL);
+				pathPrefixLength = swprintf_s(minidumpPath, L"%.*s\\CrashDumps\\", std::int32_t(dumpDirectoryLength), dumpDirectoryPtr);
+			} else {
+				pathPrefixLength = swprintf_s(minidumpPath, L"%s\\CrashDumps\\", processPathLength > 0 ? processPath : L".");
+			}
+
 			::CreateDirectory(minidumpPath, NULL);
 			TryEnableFileCompression(minidumpPath);
 			swprintf_s(minidumpPath + pathPrefixLength, Containers::arraySize(minidumpPath) - pathPrefixLength,

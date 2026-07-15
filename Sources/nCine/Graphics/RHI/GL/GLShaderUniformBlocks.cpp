@@ -34,6 +34,9 @@ namespace nCine::RhiGL
 
 	void GLShaderUniformBlocks::Bind()
 	{
+		// Dead code when the software backend is selected: `Rhi::BufferRange::object` is then a `SwBuffer*`
+		// whose definition this GL translation unit does not include, and the pipeline never calls this here
+#if !defined(WITH_RHI_SOFTWARE)
 #if defined(DEATH_DEBUG)
 		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 #endif
@@ -51,6 +54,7 @@ namespace nCine::RhiGL
 				moreOffset += uniformBlockCache.usedSize();
 			}
 		}
+#endif
 	}
 
 	void GLShaderUniformBlocks::SetProgram(GLShaderProgram* shaderProgram, const char* includeOnly, const char* exclude)

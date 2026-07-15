@@ -46,7 +46,7 @@ namespace nCine
 
 	bool TextureLoaderPvr::parseFormat(const Pvr3Header& header)
 	{
-		GLenum internalFormat = GL_RGB8; // to suppress uninitialized variable warning
+		PixelFormat internalFormat = PixelFormat::RGB8; // to suppress uninitialized variable warning
 
 		uint64_t pixelFormat = AsLE(header.pixelFormat);
 
@@ -57,94 +57,90 @@ namespace nCine
 			// Parsing the pixel format
 			switch (pixelFormat) {
 				case FMT_DXT1:
-					internalFormat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
+					internalFormat = PixelFormat::DXT1RGB;
 					break;
 				case FMT_DXT3:
-					internalFormat = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+					internalFormat = PixelFormat::DXT3;
 					break;
 				case FMT_DXT5:
-					internalFormat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+					internalFormat = PixelFormat::DXT5;
 					break;
-#if defined(WITH_OPENGLES)
 				case FMT_ETC1:
-					internalFormat = GL_ETC1_RGB8_OES;
+					internalFormat = PixelFormat::ETC1;
 					break;
 				case FMT_PVRTC_2BPP_RGB:
-					internalFormat = GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG;
+					internalFormat = PixelFormat::PVRTC_2BPP_RGB;
 					break;
 				case FMT_PVRTC_2BPP_RGBA:
-					internalFormat = GL_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG;
+					internalFormat = PixelFormat::PVRTC_2BPP_RGBA;
 					break;
 				case FMT_PVRTC_4BPP_RGB:
-					internalFormat = GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG;
+					internalFormat = PixelFormat::PVRTC_4BPP_RGB;
 					break;
 				case FMT_PVRTC_4BPP_RGBA:
-					internalFormat = GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG;
+					internalFormat = PixelFormat::PVRTC_4BPP_RGBA;
 					break;
 				case FMT_PVRTCII_2BPP:
 				case FMT_PVRTCII_4BPP:
 					LOGF("No support for PVRTC-II compression");
 					break;
 				case FMT_ETC2_RGB:
-					internalFormat = GL_COMPRESSED_RGB8_ETC2;
+					internalFormat = PixelFormat::ETC2RGB8;
 					break;
 				case FMT_ETC2_RGBA:
-					internalFormat = GL_COMPRESSED_RGBA8_ETC2_EAC;
+					internalFormat = PixelFormat::ETC2RGBA8;
 					break;
 				case FMT_ETC2_RGB_A1:
-					internalFormat = GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2;
+					internalFormat = PixelFormat::ETC2RGB8A1;
 					break;
 				case FMT_EAC_R11:
-					internalFormat = GL_COMPRESSED_R11_EAC;
+					internalFormat = PixelFormat::EAC_R11;
 					break;
 				case FMT_EAC_RG11:
-					internalFormat = GL_COMPRESSED_RG11_EAC;
+					internalFormat = PixelFormat::EAC_RG11;
 					break;
-#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
 				case FMT_ASTC_4x4:
-					internalFormat = GL_COMPRESSED_RGBA_ASTC_4x4_KHR;
+					internalFormat = PixelFormat::ASTC_4x4;
 					break;
 				case FMT_ASTC_5x4:
-					internalFormat = GL_COMPRESSED_RGBA_ASTC_5x4_KHR;
+					internalFormat = PixelFormat::ASTC_5x4;
 					break;
 				case FMT_ASTC_5x5:
-					internalFormat = GL_COMPRESSED_RGBA_ASTC_5x5_KHR;
+					internalFormat = PixelFormat::ASTC_5x5;
 					break;
 				case FMT_ASTC_6x5:
-					internalFormat = GL_COMPRESSED_RGBA_ASTC_6x5_KHR;
+					internalFormat = PixelFormat::ASTC_6x5;
 					break;
 				case FMT_ASTC_6x6:
-					internalFormat = GL_COMPRESSED_RGBA_ASTC_6x6_KHR;
+					internalFormat = PixelFormat::ASTC_6x6;
 					break;
 				case FMT_ASTC_8x5:
-					internalFormat = GL_COMPRESSED_RGBA_ASTC_8x5_KHR;
+					internalFormat = PixelFormat::ASTC_8x5;
 					break;
 				case FMT_ASTC_8x6:
-					internalFormat = GL_COMPRESSED_RGBA_ASTC_8x6_KHR;
+					internalFormat = PixelFormat::ASTC_8x6;
 					break;
 				case FMT_ASTC_8x8:
-					internalFormat = GL_COMPRESSED_RGBA_ASTC_8x8_KHR;
+					internalFormat = PixelFormat::ASTC_8x8;
 					break;
 				case FMT_ASTC_10x5:
-					internalFormat = GL_COMPRESSED_RGBA_ASTC_10x5_KHR;
+					internalFormat = PixelFormat::ASTC_10x5;
 					break;
 				case FMT_ASTC_10x6:
-					internalFormat = GL_COMPRESSED_RGBA_ASTC_10x6_KHR;
+					internalFormat = PixelFormat::ASTC_10x6;
 					break;
 				case FMT_ASTC_10x8:
-					internalFormat = GL_COMPRESSED_RGBA_ASTC_10x8_KHR;
+					internalFormat = PixelFormat::ASTC_10x8;
 					break;
 				case FMT_ASTC_10x10:
-					internalFormat = GL_COMPRESSED_RGBA_ASTC_10x10_KHR;
+					internalFormat = PixelFormat::ASTC_10x10;
 					break;
 				case FMT_ASTC_12x10:
-					internalFormat = GL_COMPRESSED_RGBA_ASTC_12x10_KHR;
+					internalFormat = PixelFormat::ASTC_12x10;
 					break;
 				case FMT_ASTC_12x12:
-					internalFormat = GL_COMPRESSED_RGBA_ASTC_12x12_KHR;
+					internalFormat = PixelFormat::ASTC_12x12;
 					break;
-#	endif
-#endif
 				default:
 					LOGE("Unsupported PVR3 compressed format: 0x{:x}", pixelFormat);
 					return false;
@@ -153,7 +149,7 @@ namespace nCine
 			loadPixels(internalFormat);
 		} else {
 			// Texture contains uncompressed data
-			GLenum type = GL_UNSIGNED_BYTE;
+			bool bgra = false;
 
 			LOGI("Uncompressed format: {:c}{:c}{:c}{:c} ({}, {}, {}, {})",
 				   reinterpret_cast<char*>(&pixelFormat)[0], reinterpret_cast<char*>(&pixelFormat)[1],
@@ -163,45 +159,42 @@ namespace nCine
 
 			switch (pixelFormat) {
 				case FMT_BGRA_8888:
-#if !defined(WITH_OPENGLES)
-					internalFormat = GL_BGRA;
-#else
-					internalFormat = GL_BGRA_EXT;
-#endif
+					internalFormat = PixelFormat::RGBA8;
+					bgra = true;
 					break;
 				case FMT_RGBA_8888:
-					internalFormat = GL_RGBA8;
+					internalFormat = PixelFormat::RGBA8;
 					break;
 				case FMT_RGB_888:
-					internalFormat = GL_RGB8;
+					internalFormat = PixelFormat::RGB8;
 					break;
 				case FMT_RGB_565:
-					internalFormat = GL_RGB565;
-					type = GL_UNSIGNED_SHORT_5_6_5;
+					internalFormat = PixelFormat::RGB565;
 					break;
 				case FMT_RGBA_5551:
-					internalFormat = GL_RGB5_A1;
-					type = GL_UNSIGNED_SHORT_5_5_5_1;
+					internalFormat = PixelFormat::RGB5A1;
 					break;
 				case FMT_RGBA_4444:
-					internalFormat = GL_RGBA4;
-					type = GL_UNSIGNED_SHORT_4_4_4_4;
+					internalFormat = PixelFormat::RGBA4;
 					break;
 				case FMT_LA_88:
-					internalFormat = GL_RG8;
+					internalFormat = PixelFormat::RG8;
 					break;
 				case FMT_L_8:
-					internalFormat = GL_R8;
+					internalFormat = PixelFormat::R8;
 					break;
 				case FMT_A_8:
-					internalFormat = GL_R8;
+					internalFormat = PixelFormat::R8;
 					break;
 				default:
 					LOGE("Unsupported PVR3 uncompressed format: 0x{:x}", pixelFormat);
 					return false;
 			}
 
-			loadPixels(internalFormat, type);
+			loadPixels(internalFormat);
+			if (bgra) {
+				texFormat_.bgrFormat();
+			}
 		}
 
 		if (mipMapCount_ > 1) {

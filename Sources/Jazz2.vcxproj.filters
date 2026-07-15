@@ -471,6 +471,9 @@
     <ClInclude Include="nCine\Graphics\RHI\GL\GLTexture.h">
       <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
+    <ClInclude Include="nCine\Graphics\RHI\GL\GLTextureFormat.h">
+      <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
+    </ClInclude>
     <ClInclude Include="nCine\Graphics\RHI\GL\GLUniform.h">
       <Filter>Header Files\nCine\Graphics\RHI\GL</Filter>
     </ClInclude>
@@ -1977,6 +1980,9 @@
       <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Graphics\RHI\GL\GLTexture.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLTextureFormat.cpp">
       <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
     </ClCompile>
     <ClCompile Include="nCine\Graphics\RHI\GL\GLUniform.cpp">

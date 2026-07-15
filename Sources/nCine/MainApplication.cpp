@@ -522,7 +522,18 @@ namespace nCine
 								gfxDevice_->height_ = event.window.data2;
 								SDL_Window* windowHandle = SDL_GetWindowFromID(event.window.windowID);
 								gfxDevice_->isFullscreen_ = (SDL_GetWindowFlags(windowHandle) & SDL_WINDOW_FULLSCREEN) != 0;
+#if defined(WITH_RHI_SOFTWARE)
+								// No GL backbuffer; the drawable size is the SDL renderer output size (the software
+								// present resizes its CPU target to match on the next frame)
+								if (SDL_Renderer* softwareRenderer = SDL_GetRenderer(windowHandle)) {
+									SDL_GetRendererOutputSize(softwareRenderer, &gfxDevice_->drawableWidth_, &gfxDevice_->drawableHeight_);
+								} else {
+									gfxDevice_->drawableWidth_ = event.window.data1;
+									gfxDevice_->drawableHeight_ = event.window.data2;
+								}
+#else
 								SDL_GL_GetDrawableSize(windowHandle, &gfxDevice_->drawableWidth_, &gfxDevice_->drawableHeight_);
+#endif
 								ResizeScreenViewport(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
 								break;
 						}

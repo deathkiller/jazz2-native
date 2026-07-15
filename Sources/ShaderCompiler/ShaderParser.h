@@ -55,29 +55,33 @@
 #include <cstdint>
 #include <functional>
 #include <map>
-#include <string>
 #include <vector>
+
+#include <Containers/String.h>
+#include <Containers/StringView.h>
 
 namespace ShaderCompiler
 {
+	using namespace Death::Containers;
+
 	/** @brief One line of source text together with its 1-based line number in the original ".shader" file */
 	struct SourceLine
 	{
-		std::string Text;
+		String Text;
 		std::int32_t Line = 0;
 	};
 
 	/** @brief Error description pointing into the input file */
 	struct Diagnostic
 	{
-		std::string Message;
+		String Message;
 		std::int32_t Line = 0;
 	};
 
 	/** @brief Texture unit assignment for a sampler uniform — from a "texture_unit(N)" uniform hint or the implicit canvas TEXTURE registration */
 	struct TextureDirective
 	{
-		std::string Name;
+		String Name;
 		std::int32_t Unit = -1;
 		std::int32_t Line = 0;
 	};
@@ -96,8 +100,8 @@ namespace ShaderCompiler
 	/** @brief Lowered ".shader" document — directives plus raw (unpreprocessed) per-stage GLSL line streams */
 	struct ShaderDocument
 	{
-		std::string ProgramName;
-		std::vector<std::string> Variants;
+		String ProgramName;
+		std::vector<String> Variants;
 		std::vector<TextureDirective> Textures;
 		std::vector<SourceLine> Prelude;
 		std::vector<SourceLine> VertexLines;
@@ -108,7 +112,7 @@ namespace ShaderCompiler
 	};
 
 	/** @brief Reads the content of the file at @p path into @p content, returns false on failure */
-	using FileReader = std::function<bool(const std::string& path, std::string& content)>;
+	using FileReader = std::function<bool(StringView path, String& content)>;
 
 	/** @brief Parses and lowers the ".shader" input language */
 	class ShaderParser
@@ -120,10 +124,10 @@ namespace ShaderCompiler
 			exactly one document; "shader_type canvas_item;" files produce the primary document
 			plus, when "batched <Name>;" is present, its batched twin.
 		*/
-		static bool ParseDocuments(const std::string& content, std::vector<ShaderDocument>& documents, Diagnostic& diag);
+		static bool ParseDocuments(StringView content, std::vector<ShaderDocument>& documents, Diagnostic& diag);
 
 		/** Splits raw file content into lines (handles CRLF/CR and backslash-newline continuations) */
-		static void SplitLines(const std::string& content, std::vector<SourceLine>& lines);
+		static void SplitLines(StringView content, std::vector<SourceLine>& lines);
 
 		/** Removes line comments and block comments in place (newlines and line numbering are preserved) */
 		static void StripComments(std::vector<SourceLine>& lines);
@@ -135,13 +139,13 @@ namespace ShaderCompiler
 			and the emitted sources see the included text inlined. As a consequence, line numbers in
 			diagnostics refer to the include-expanded stream.
 		*/
-		static bool ExpandIncludes(std::string& content, const std::string& baseDir, const FileReader& reader, std::int32_t depth, std::string& error);
+		static bool ExpandIncludes(String& content, StringView baseDir, const FileReader& reader, std::int32_t depth, String& error);
 
 		/** Builds the compilable GLSL source of one stage (baked variant define + "#line 1" + shared prelude + stage body) */
-		static std::string BuildStageSource(const ShaderDocument& document, bool vertexStage, const std::string& define);
+		static String BuildStageSource(const ShaderDocument& document, bool vertexStage, StringView define);
 
 		/** Returns the directory part of @p path, or "." if it has none */
-		static std::string DirectoryOf(const std::string& path);
+		static String DirectoryOf(StringView path);
 	};
 
 	/** @brief Object-like macro preprocessor used to produce the per-variant declaration stream for reflection */
@@ -149,29 +153,29 @@ namespace ShaderCompiler
 	{
 	public:
 		/** Predefines an object-like macro (used to bake variant defines, e.g. DITHER=1) */
-		void Define(const std::string& name, const std::string& body);
+		void Define(StringView name, StringView body);
 
 		/** Runs the preprocessor, appending active (macro-expanded) lines to @p output */
 		bool Run(const std::vector<SourceLine>& input, std::vector<SourceLine>& output, Diagnostic& diag);
 
 		/** Returns true if the macro is defined (BATCH_SIZE always reports as defined) */
-		bool IsDefined(const std::string& name) const;
+		bool IsDefined(StringView name) const;
 
 		/** Retrieves the body of a defined object-like macro, returns false if not defined or function-like */
-		bool TryGetMacroBody(const std::string& name, std::string& body) const;
+		bool TryGetMacroBody(StringView name, String& body) const;
 
 		/** Evaluates a #if/#elif integer constant expression */
-		bool EvaluateExpression(const std::string& expression, std::int32_t line, std::int32_t depth, std::int64_t& value, Diagnostic& diag) const;
+		bool EvaluateExpression(StringView expression, std::int32_t line, std::int32_t depth, std::int64_t& value, Diagnostic& diag) const;
 
 	private:
 		struct Macro
 		{
-			std::string Body;
+			String Body;
 			bool FunctionLike = false;
 		};
 
-		std::map<std::string, Macro> _macros;
+		std::map<String, Macro> _macros;
 
-		std::string ExpandMacros(const std::string& text) const;
+		String ExpandMacros(StringView text) const;
 	};
 }

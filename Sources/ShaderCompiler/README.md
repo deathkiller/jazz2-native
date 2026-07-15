@@ -11,7 +11,7 @@ self-contained C++ header with the sources and reflection data, so the runtime n
 ## Usage
 
 ```
-ShaderCompiler <input.shader> -o <output.h> [-n <namespace>] [--check]
+ShaderCompiler <input.shader> -o <output.h> [-n <namespace>] [--check] [--essl100-check]
 ```
 
 | Option | Meaning |
@@ -19,6 +19,7 @@ ShaderCompiler <input.shader> -o <output.h> [-n <namespace>] [--check]
 | `-o <output.h>` | Path of the generated C++ header |
 | `-n <namespace>` | Namespace for the generated program data (default `ShaderArtifacts`) |
 | `--check` | Parse and print a human-readable reflection dump to stdout instead of writing output |
+| `--essl100-check` (or `--target essl100`) | Print the ESSL 100 (OpenGL ES 2.0) transform of every variant's stage sources to stdout, for inspection (see below) — tool-only, does not write or change any header |
 
 Errors are reported to stderr as `<file>:<line>: error: <message>` with a non-zero exit code.
 
@@ -329,6 +330,42 @@ variant (base)                                   (the unnamed base variant; name
 are omitted. See `tests/` for sample inputs and `tests/expected/` for their exact dumps;
 `tests/errors/` holds inputs that must fail to parse. `tests/RunTests.ps1` runs the whole suite
 (dump comparisons, expected errors and emitted-header shape assertions).
+
+## ESSL 100 / GLES2 target (in progress)
+
+The tool's emitted headers carry **modern-GLSL** stage sources (`in`/`out`, `texture()`,
+`out vec4 COLOR;`, `layout(std140)` UBO blocks, `gl_VertexID`) that serve both desktop GL 3.3
+(`#version 330`) and GLES3/WebGL2 (`#version 300 es`) via runtime `#version` injection. OpenGL
+ES 2.0 uses a **different dialect** — ESSL 100 (`#version 100`) — so it needs a genuinely
+different source. `--essl100-check` prints a source-to-source transform of each already-lowered
+stage into ESSL 100, for inspection (`Essl100.h`/`.cpp`). This is a **tool-only** surface: the
+committed `Generated/` artifacts are unchanged, no runtime is wired yet, and `#version 100` (like
+the other versions) is injected by the engine, not the tool.
+
+Transforms (vertex-vs-fragment aware, comment-aware, whole-identifier):
+
+| Modern GLSL | ESSL 100 |
+| --- | --- |
+| `in T name;` (vertex) | `attribute T name;` — a leading `layout(...)` qualifier is dropped (ES2 has none) |
+| `out T name;` (vertex) | `varying T name;` |
+| `in T name;` (fragment) | `varying T name;` |
+| `out vec4 COLOR;` (fragment) | **removed** — `COLOR` becomes a `vec4 COLOR;` local at the top of `main()`, each `return;` is preceded by `gl_FragColor = COLOR;`, and a final `gl_FragColor = COLOR;` is appended before `main()`'s closing brace (the inverse of the modern lowering) |
+| `texture(` / `textureLod(` | `texture2D(` / `texture2DLod(` |
+| `#ifdef GL_ES … #endif` | **unwrapped** — `GL_ES` is predefined under `#version 100`, so the fragment `precision <p> float;` prologue becomes unconditional |
+| `flat` interpolation qualifier | dropped (ES2 has none) |
+
+### Slice-2 batched-shader gap
+
+ES2 has **neither uniform buffer objects nor `gl_VertexID`**. A stage source that uses a
+`layout(std140)` block and/or `gl_VertexID` is **not** transformed — `--essl100-check` prints
+`unsupported in ES2 (slice 2: needs uniform-array batching + corner attribute)` with the offending
+line for that stage (the other stage, if clean, still transforms). This affects **every** sprite
+program, not only the `batched` twins: the shared sprite template lowers the corner position from
+`gl_VertexID` and reads instance data from a std140 `InstanceBlock`/`InstancesBlock` UBO, so both
+the batched twin **and** its non-batched primary trip the deferral. Of the shipped shaders only
+`DefaultImGui` (hand-written `attribute`/`varying`, no UBO, no `gl_VertexID`) translates today.
+The real transforms the rest need — UBO → uniform array, `gl_VertexID` → a supplied corner
+attribute — are the **P5 slice-2** work and are intentionally not attempted here.
 
 ## Known limitations
 

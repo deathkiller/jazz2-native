@@ -100,7 +100,11 @@ namespace nCine::RhiGL
 
 		glDeleteProgram(glHandle_);
 
+#if !defined(WITH_RHI_SOFTWARE)
+		// The render pipeline is built against a single backend's `Rhi::` aliases; when the software
+		// backend is selected these GL-typed pipeline calls do not apply (this file is dead code there)
 		RenderResources::RemoveCameraUniformData(this);
+#endif
 	}
 
 	bool GLShaderProgram::IsLinked() const
@@ -235,7 +239,9 @@ namespace nCine::RhiGL
 			}
 			vertexFormat_.SetIbo(ibo);
 
+#if !defined(WITH_RHI_SOFTWARE)
 			RenderResources::GetVaoPool().BindVao(vertexFormat_);
+#endif
 		}
 	}
 
@@ -260,8 +266,10 @@ namespace nCine::RhiGL
 			attachedShaders_.clear();
 			glDeleteProgram(glHandle_);
 
+#if !defined(WITH_RHI_SOFTWARE)
 			RenderResources::RemoveCameraUniformData(this);
 			RenderResources::UnregisterBatchedShader(this);
+#endif
 
 			glHandle_ = glCreateProgram();
 		}

@@ -1,6 +1,3 @@
-#define NCINE_INCLUDE_OPENGL
-#include "../CommonHeaders.h"
-
 #include "Texture.h"
 #include "TextureLoaderRaw.h"
 #include "RHI/Rhi.h"
@@ -10,69 +7,10 @@
 
 #include <Containers/String.h>
 
-#ifndef GL_TEXTURE_SWIZZLE_R
-#	define GL_TEXTURE_SWIZZLE_R 0x8E42
-#endif
-#ifndef GL_TEXTURE_SWIZZLE_G
-#	define GL_TEXTURE_SWIZZLE_G 0x8E43
-#endif
-#ifndef GL_TEXTURE_SWIZZLE_B
-#	define GL_TEXTURE_SWIZZLE_B 0x8E44
-#endif
-#ifndef GL_TEXTURE_SWIZZLE_A
-#	define GL_TEXTURE_SWIZZLE_A 0x8E45
-#endif
-
 namespace nCine
 {
-	GLenum ncFormatToInternal(Texture::Format format)
-	{
-		switch (format) {
-			case Texture::Format::R8:
-				return GL_R8;
-			case Texture::Format::RG8:
-				return GL_RG8;
-			case Texture::Format::RGB8:
-				return GL_RGB8;
-			case Texture::Format::RGBA8:
-			default:
-				return GL_RGBA8;
-		}
-	}
-
-	GLenum ncFormatToNonInternal(Texture::Format format)
-	{
-		switch (format) {
-			case Texture::Format::R8:
-				return GL_RED;
-			case Texture::Format::RG8:
-				return GL_RG;
-			case Texture::Format::RGB8:
-				return GL_RGB;
-			case Texture::Format::RGBA8:
-			default:
-				return GL_RGBA;
-		}
-	}
-
-	Texture::Format internalFormatToNc(GLenum format)
-	{
-		switch (format) {
-			case GL_R8:
-				return Texture::Format::R8;
-			case GL_RG8:
-				return Texture::Format::RG8;
-			case GL_RGB8:
-				return Texture::Format::RGB8;
-			case GL_RGBA8:
-				return Texture::Format::RGBA8;
-			default:
-				return Texture::Format::Unknown;
-		}
-	}
-
 	Texture::Texture()
-		: Object(ObjectType::Texture), glTexture_(std::make_unique<Rhi::Texture>(GL_TEXTURE_2D)), width_(0), height_(0),
+		: Object(ObjectType::Texture), rhiTexture_(std::make_unique<Rhi::Texture>(TextureTarget::Texture2D)), width_(0), height_(0),
 			mipMapLevels_(0), isCompressed_(false), format_(Format::Unknown), dataSize_(0), minFiltering_(SamplerFilter::Nearest),
 			magFiltering_(SamplerFilter::Nearest), wrapMode_(SamplerWrapping::ClampToEdge)
 	{
@@ -116,7 +54,7 @@ namespace nCine
 	{
 #if defined(NCINE_PROFILING)
 		// Don't remove data from statistics if this is a moved out object
-		if (dataSize_ > 0 && glTexture_ != nullptr) {
+		if (dataSize_ > 0 && rhiTexture_ != nullptr) {
 			RenderStatistics::RemoveTexture(dataSize_);
 		}
 #endif
@@ -134,15 +72,15 @@ namespace nCine
 			return;
 		}
 
-		TextureLoaderRaw texLoader(width, height, mipMapCount, ncFormatToInternal(format));
+		TextureLoaderRaw texLoader(width, height, mipMapCount, format);
 
 #if defined(NCINE_PROFILING)
 		if (dataSize_ > 0) {
 			RenderStatistics::RemoveTexture(dataSize_);
 		}
 #endif
-		glTexture_->Bind();
-		glTexture_->SetObjectLabel(name);
+		rhiTexture_->Bind();
+		rhiTexture_->SetObjectLabel(name);
 		Initialize(texLoader);
 
 #if defined(NCINE_PROFILING)
@@ -180,8 +118,8 @@ namespace nCine
 			RenderStatistics::RemoveTexture(dataSize_);
 		}
 #endif
-		glTexture_->Bind();
-		glTexture_->SetObjectLabel(filename);
+		rhiTexture_->Bind();
+		rhiTexture_->SetObjectLabel(filename);
 		Initialize(*texLoader);
 		Load(*texLoader);
 
@@ -214,26 +152,24 @@ namespace nCine
 	{
 		const std::uint8_t* data = bufferPtr;
 
-		const GLenum format = ncFormatToNonInternal(format_);
 		// Tightly-packed single-/dual-/triple-channel rows may not meet the default 4-byte unpack alignment
-		GLint alignment;
+		std::int32_t alignment;
 		switch (format_) {
 			case Format::R8:	alignment = 1; break;
 			case Format::RG8:	alignment = 2; break;
 			case Format::RGB8:	alignment = 1; break;
 			default:			alignment = 4; break;
 		}
-		glGetError();
+		Rhi::Texture::ClearErrors();
 		if (alignment != 4) {
-			glPixelStorei(GL_UNPACK_ALIGNMENT, alignment);
+			Rhi::Texture::SetUnpackAlignment(alignment);
 		}
-		glTexture_->TexSubImage2D(level, x, y, width, height, format, GL_UNSIGNED_BYTE, data);
+		rhiTexture_->TexSubImage2D(level, x, y, width, height, format_, false, data);
 		if (alignment != 4) {
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+			Rhi::Texture::SetUnpackAlignment(4);
 		}
-		const GLenum error = glGetError();
 
-		return (error == GL_NO_ERROR);
+		return !Rhi::Texture::CheckErrors();
 	}
 
 	/** @note Loads uncompressed pixel data from memory using the `Format` specified in the constructor */
@@ -249,16 +185,13 @@ namespace nCine
 
 	bool Texture::SaveToMemory(std::uint8_t* bufferPtr, std::int32_t level)
 	{
-#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
-		const GLenum format = ncFormatToNonInternal(format_);
-		glGetError();
-		glTexture_->GetTexImage(level, format, GL_UNSIGNED_BYTE, bufferPtr);
-		const GLenum error = glGetError();
+		if (!Rhi::Texture::SupportsTextureReadback()) {
+			return false;
+		}
 
-		return (error == GL_NO_ERROR);
-#else
-		return false;
-#endif
+		Rhi::Texture::ClearErrors();
+		rhiTexture_->GetTexImage(level, format_, false, bufferPtr);
+		return !Rhi::Texture::CheckErrors();
 	}
 
 	std::uint32_t Texture::GetChannelCount() const
@@ -284,21 +217,7 @@ namespace nCine
 			return;
 		}
 
-		GLenum glFilter = GL_NEAREST;
-		// clang-format off
-		switch (filter) {
-			case SamplerFilter::Nearest:				glFilter = GL_NEAREST; break;
-			case SamplerFilter::Linear:					glFilter = GL_LINEAR; break;
-			case SamplerFilter::NearestMipmapNearest:	glFilter = GL_NEAREST_MIPMAP_NEAREST; break;
-			case SamplerFilter::LinearMipmapNearest:	glFilter = GL_LINEAR_MIPMAP_NEAREST; break;
-			case SamplerFilter::NearestMipmapLinear:	glFilter = GL_NEAREST_MIPMAP_LINEAR; break;
-			case SamplerFilter::LinearMipmapLinear:		glFilter = GL_LINEAR_MIPMAP_LINEAR; break;
-			default:									glFilter = GL_NEAREST; break;
-		}
-		// clang-format on
-
-		glTexture_->Bind();
-		glTexture_->TexParameteri(GL_TEXTURE_MIN_FILTER, glFilter);
+		rhiTexture_->SetMinFiltering(filter);
 		minFiltering_ = filter;
 	}
 
@@ -308,17 +227,7 @@ namespace nCine
 			return;
 		}
 
-		GLenum glFilter = GL_NEAREST;
-		// clang-format off
-		switch (filter) {
-			case SamplerFilter::Nearest:			glFilter = GL_NEAREST; break;
-			case SamplerFilter::Linear:				glFilter = GL_LINEAR; break;
-			default:								glFilter = GL_NEAREST; break;
-		}
-		// clang-format on
-
-		glTexture_->Bind();
-		glTexture_->TexParameteri(GL_TEXTURE_MAG_FILTER, glFilter);
+		rhiTexture_->SetMagFiltering(filter);
 		magFiltering_ = filter;
 	}
 
@@ -328,49 +237,18 @@ namespace nCine
 			return;
 		}
 
-		GLenum glWrap;
-		// clang-format off
-		switch (wrapMode) {
-			default:
-			case SamplerWrapping::ClampToEdge:		glWrap = GL_CLAMP_TO_EDGE; break;
-			case SamplerWrapping::MirroredRepeat:	glWrap = GL_MIRRORED_REPEAT; break;
-			case SamplerWrapping::Repeat:			glWrap = GL_REPEAT; break;
-		}
-		// clang-format on
-
-		glTexture_->Bind();
-		glTexture_->TexParameteri(GL_TEXTURE_WRAP_S, glWrap);
-		glTexture_->TexParameteri(GL_TEXTURE_WRAP_T, glWrap);
+		rhiTexture_->SetWrap(wrapMode);
 		wrapMode_ = wrapMode;
-	}
-
-	static GLint SwizzleChannelToGL(SwizzleChannel channel)
-	{
-		switch (channel) {
-			default:
-			case SwizzleChannel::Red:	return GL_RED;
-			case SwizzleChannel::Green:	return GL_GREEN;
-			case SwizzleChannel::Blue:	return GL_BLUE;
-			case SwizzleChannel::Alpha:	return GL_ALPHA;
-			case SwizzleChannel::Zero:	return GL_ZERO;
-			case SwizzleChannel::One:	return GL_ONE;
-		}
 	}
 
 	void Texture::SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a)
 	{
-		// Channels are set individually because GL_TEXTURE_SWIZZLE_RGBA (a single glTexParameteriv) is desktop-only
-		// and absent on GLES/WebGL. Requires GL 3.3+ / GLES 3.0+.
-		glTexture_->Bind();
-		glTexture_->TexParameteri(GL_TEXTURE_SWIZZLE_R, SwizzleChannelToGL(r));
-		glTexture_->TexParameteri(GL_TEXTURE_SWIZZLE_G, SwizzleChannelToGL(g));
-		glTexture_->TexParameteri(GL_TEXTURE_SWIZZLE_B, SwizzleChannelToGL(b));
-		glTexture_->TexParameteri(GL_TEXTURE_SWIZZLE_A, SwizzleChannelToGL(a));
+		rhiTexture_->SetSwizzle(r, g, b, a);
 	}
 
-	void Texture::SetGLTextureLabel(const char* label)
+	void Texture::SetTextureLabel(const char* label)
 	{
-		glTexture_->SetObjectLabel(label);
+		rhiTexture_->SetObjectLabel(label);
 	}
 
 	/**
@@ -379,7 +257,7 @@ namespace nCine
 	 */
 	void* Texture::GetGuiTexId() const
 	{
-		return const_cast<void*>(reinterpret_cast<const void*>(glTexture_.get()));
+		return const_cast<void*>(reinterpret_cast<const void*>(rhiTexture_.get()));
 	}
 
 	void Texture::Initialize(const ITextureLoader& texLoader)
@@ -390,34 +268,30 @@ namespace nCine
 		FATAL_ASSERT_MSG(texLoader.height() <= maxTextureSize, "Texture height {} is bigger than device maximum {}", texLoader.height(), maxTextureSize);
 
 		const TextureFormat& texFormat = texLoader.texFormat();
-		GLenum internalFormat = texFormat.internalFormat();
-		GLenum format = texFormat.format();
+		const PixelFormat pixelFormat = texFormat.pixelFormat();
+		const bool bgr = texFormat.isBgr();
 		std::uint32_t dataSize = texLoader.dataSize();
 
-#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
-		const bool withTexStorage = true;
-#else
-		const bool withTexStorage = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_TEXTURE_STORAGE);
-#endif
+		const bool withTexStorage = Rhi::Texture::SupportsImmutableStorage();
 
 		// Specify texture storage because it's either the very first time or there have been a change in size or format
-		if (dataSize_ == 0 || (width_ != texLoader.width() || height_ != texLoader.height() || ncFormatToInternal(format_) != internalFormat)) {
+		if (dataSize_ == 0 || (width_ != texLoader.width() || height_ != texLoader.height() || format_ != pixelFormat)) {
 			if (withTexStorage) {
 				if (dataSize_ > 0) {
-					// The OpenGL texture needs to be recreated as its storage is immutable
-					glTexture_ = std::make_unique<Rhi::Texture>(GL_TEXTURE_2D);
+					// The texture needs to be recreated as its storage is immutable
+					rhiTexture_ = std::make_unique<Rhi::Texture>(TextureTarget::Texture2D);
 					dataSize_ = 0;
 				}
 
 				if (dataSize_ == 0) {
-					glTexture_->TexStorage2D(texLoader.mipMapCount(), internalFormat, texLoader.width(), texLoader.height());
+					rhiTexture_->TexStorage2D(texLoader.mipMapCount(), pixelFormat, texLoader.width(), texLoader.height());
 				}
 			} else if (!texFormat.isCompressed()) {
 				std::int32_t levelWidth = texLoader.width();
 				std::int32_t levelHeight = texLoader.height();
 
 				for (std::int32_t i = 0; i < texLoader.mipMapCount(); i++) {
-					glTexture_->TexImage2D(i, internalFormat, levelWidth, levelHeight, format, texFormat.type(), nullptr);
+					rhiTexture_->TexImage2D(i, pixelFormat, bgr, levelWidth, levelHeight, nullptr);
 					levelWidth /= 2;
 					levelHeight /= 2;
 				}
@@ -428,23 +302,22 @@ namespace nCine
 		height_ = texLoader.height();
 		mipMapLevels_ = texLoader.mipMapCount();
 		isCompressed_ = texFormat.isCompressed();
-		format_ = internalFormatToNc(internalFormat);
+		format_ = pixelFormat;
 		dataSize_ = dataSize;
 
-		glTexture_->TexParameteri(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexture_->TexParameteri(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		rhiTexture_->SetWrap(SamplerWrapping::ClampToEdge);
 		wrapMode_ = SamplerWrapping::ClampToEdge;
 
 		if (mipMapLevels_ > 1) {
-			glTexture_->TexParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexture_->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			rhiTexture_->SetMagFiltering(SamplerFilter::Linear);
+			rhiTexture_->SetMinFiltering(SamplerFilter::LinearMipmapLinear);
 			magFiltering_ = SamplerFilter::Linear;
 			minFiltering_ = SamplerFilter::LinearMipmapLinear;
 			// To prevent artifacts if the MIP map chain is not complete
-			glTexture_->TexParameteri(GL_TEXTURE_MAX_LEVEL, mipMapLevels_);
+			rhiTexture_->SetMaxLevel(mipMapLevels_);
 		} else {
-			glTexture_->TexParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexture_->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			rhiTexture_->SetMagFiltering(SamplerFilter::Linear);
+			rhiTexture_->SetMinFiltering(SamplerFilter::Linear);
 			magFiltering_ = SamplerFilter::Linear;
 			minFiltering_ = SamplerFilter::Linear;
 		}
@@ -452,31 +325,26 @@ namespace nCine
 
 	void Texture::Load(const ITextureLoader& texLoader)
 	{
-#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
-		const bool withTexStorage = true;
-#else
-		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		const bool withTexStorage = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_TEXTURE_STORAGE);
-#endif
+		const bool withTexStorage = Rhi::Texture::SupportsImmutableStorage();
 
 		const TextureFormat& texFormat = texLoader.texFormat();
+		const PixelFormat pixelFormat = texFormat.pixelFormat();
+		const bool bgr = texFormat.isBgr();
 		std::int32_t levelWidth = width_;
 		std::int32_t levelHeight = height_;
-
-		GLenum format = texFormat.format();
 
 		for (std::int32_t mipIdx = 0; mipIdx < texLoader.mipMapCount(); mipIdx++) {
 			const std::uint8_t* data = texLoader.pixels(mipIdx);
 
 			if (texFormat.isCompressed()) {
 				if (withTexStorage) {
-					glTexture_->CompressedTexSubImage2D(mipIdx, 0, 0, levelWidth, levelHeight, texFormat.internalFormat(), texLoader.dataSize(mipIdx), texLoader.pixels(mipIdx));
+					rhiTexture_->CompressedTexSubImage2D(mipIdx, 0, 0, levelWidth, levelHeight, pixelFormat, texLoader.dataSize(mipIdx), texLoader.pixels(mipIdx));
 				} else {
-					glTexture_->CompressedTexImage2D(mipIdx, texFormat.internalFormat(), levelWidth, levelHeight, texLoader.dataSize(mipIdx), texLoader.pixels(mipIdx));
+					rhiTexture_->CompressedTexImage2D(mipIdx, pixelFormat, levelWidth, levelHeight, texLoader.dataSize(mipIdx), texLoader.pixels(mipIdx));
 				}
 			} else {
 				// Storage has already been created at this point
-				glTexture_->TexSubImage2D(mipIdx, 0, 0, levelWidth, levelHeight, format, texFormat.type(), data);
+				rhiTexture_->TexSubImage2D(mipIdx, 0, 0, levelWidth, levelHeight, pixelFormat, bgr, data);
 			}
 
 			levelWidth /= 2;

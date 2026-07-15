@@ -34,7 +34,7 @@ namespace nCine
 		}
 
 		int imageSize = desc.width * desc.height * desc.channels;
-		pixels_ = std::make_unique<GLubyte[]>(imageSize);
+		pixels_ = std::make_unique<std::uint8_t[]>(imageSize);
 		// TODO: remove this additional copy
 		memcpy(pixels_.get(), data, imageSize);
 		QOI_FREE(data);
@@ -42,7 +42,7 @@ namespace nCine
 		width_ = desc.width;
 		height_ = desc.height;
 		mipMapCount_ = 1;
-		texFormat_ = TextureFormat(GL_RGBA8);
+		texFormat_ = TextureFormat(PixelFormat::RGBA8);
 
 		hasLoaded_ = true;
 	}

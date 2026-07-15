@@ -23,10 +23,10 @@ namespace ShaderCompiler
 	/** @brief One variant of a runtime-compiled program: lowered stage sources plus merged reflection */
 	struct RuntimeVariant
 	{
-		std::string Name;
-		std::string Define;
-		std::string VsSource;
-		std::string FsSource;
+		String Name;
+		String Define;
+		String VsSource;
+		String FsSource;
 		StageReflection Reflection;
 	};
 
@@ -37,7 +37,7 @@ namespace ShaderCompiler
 	*/
 	class RuntimeProgram
 	{
-		friend bool CompileRuntimeProgram(const std::string& content, const std::string& baseDir, const FileReader& reader, RuntimeProgram& out, Diagnostic& diag);
+		friend bool CompileRuntimeProgram(StringView content, StringView baseDir, const FileReader& reader, RuntimeProgram& out, Diagnostic& diag);
 
 	public:
 		RuntimeProgram() = default;
@@ -45,13 +45,13 @@ namespace ShaderCompiler
 		RuntimeProgram(const RuntimeProgram&) = delete;
 		RuntimeProgram& operator=(const RuntimeProgram&) = delete;
 
-		std::string Name;
+		String Name;
 		/** @brief "render_mode" flags (bitmask of ShaderCompiler::RenderMode; 0 when no render_mode is declared) */
 		std::uint32_t RenderModes = 0;
 		std::vector<RuntimeVariant> Variants;
 
 		/** @brief Returns the variant with the given name, or `nullptr` if not found; an empty name returns the unnamed base variant (`Variants[0]`) */
-		const RuntimeVariant* FindVariant(const std::string& name) const;
+		const RuntimeVariant* FindVariant(StringView name) const;
 
 		/** @brief Returns the artifact-struct view of the program (valid as long as this object lives) */
 		const Program& GetView() const {
@@ -80,5 +80,5 @@ namespace ShaderCompiler
 		@param out		Receives the compiled program
 		@param diag		Receives the error location and message on failure
 	*/
-	bool CompileRuntimeProgram(const std::string& content, const std::string& baseDir, const FileReader& reader, RuntimeProgram& out, Diagnostic& diag);
+	bool CompileRuntimeProgram(StringView content, StringView baseDir, const FileReader& reader, RuntimeProgram& out, Diagnostic& diag);
 }

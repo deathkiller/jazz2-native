@@ -19,6 +19,12 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
 	set(NCINE_PREFERRED_BACKEND ${_NCINE_DEFAULT_BACKEND} CACHE STRING "Specify preferred backend on desktop")
 	#set_property(CACHE NCINE_PREFERRED_BACKEND PROPERTY STRINGS "GLFW;SDL2;QT5")
 	set_property(CACHE NCINE_PREFERRED_BACKEND PROPERTY STRINGS "GLFW;SDL2")
+
+	# CPU software rendering backend (no OpenGL); it presents through SDL2, so it forces the SDL2 backend
+	option(NCINE_WITH_RHI_SOFTWARE "Use the CPU software rendering backend instead of OpenGL" OFF)
+	if(NCINE_WITH_RHI_SOFTWARE)
+		set(NCINE_PREFERRED_BACKEND "SDL2" CACHE STRING "Specify preferred backend on desktop" FORCE)
+	endif()
 endif()
 
 if(EMSCRIPTEN)
@@ -168,7 +174,7 @@ option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-depen
 # Jazz² Resurrection options
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)
 option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF)
-option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each tilemap layer" ON)
+cmake_dependent_option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each tilemap layer" ON "NOT NCINE_WITH_RHI_SOFTWARE" OFF)
 
 option(WITH_MULTIPLAYER "Enable multiplayer support" ON)
 cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN" OFF)

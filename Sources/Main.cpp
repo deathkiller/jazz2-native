@@ -217,6 +217,9 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 
 	PreferencesCache::Initialize(config);
 
+	// Write crash memory dumps next to the config file instead of next to the executable
+	theApplication().SetCrashDumpDirectory(PreferencesCache::GetDirectory());
+
 	config.windowTitle = NCINE_APP_NAME;
 	if (isServer) {
 		config.withGraphics = false;
