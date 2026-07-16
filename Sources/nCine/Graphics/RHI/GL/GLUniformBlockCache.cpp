@@ -95,4 +95,41 @@ namespace nCine::RhiGL
 			uniformBlock_->SetBlockBinding(blockBinding);
 		}
 	}
+
+#if defined(RHI_GL_PROFILE_ES2)
+	void GLUniformBlockCache::CommitAsLooseUniforms()
+	{
+		// Each member cache points into the host-side block buffer at the member's offset (SetDataPointer);
+		// on ES2 the member is a real loose uniform, so push it directly with the matching glUniform* call
+		// (the location was resolved in GLShaderProgram::ImportReflection). Mirrors GLUniformCache::CommitValue.
+		for (GLUniformCache& memberCache : uniformCaches_) {
+			const GLUniform* uniform = memberCache.GetUniform();
+			if (uniform == nullptr) {
+				continue;
+			}
+			const GLint location = uniform->GetLocation();
+			const GLubyte* data = memberCache.GetDataPointer();
+			if (location < 0 || data == nullptr) {
+				continue;
+			}
+			const GLsizei count = GLsizei(uniform->GetSize() > 0 ? uniform->GetSize() : 1);
+			const GLfloat* asFloat = reinterpret_cast<const GLfloat*>(data);
+			const GLint* asInt = reinterpret_cast<const GLint*>(data);
+			switch (uniform->GetType()) {
+				case GL_FLOAT:			glUniform1fv(location, count, asFloat); break;
+				case GL_FLOAT_VEC2:		glUniform2fv(location, count, asFloat); break;
+				case GL_FLOAT_VEC3:		glUniform3fv(location, count, asFloat); break;
+				case GL_FLOAT_VEC4:		glUniform4fv(location, count, asFloat); break;
+				case GL_INT:			glUniform1iv(location, count, asInt); break;
+				case GL_INT_VEC2:		glUniform2iv(location, count, asInt); break;
+				case GL_INT_VEC3:		glUniform3iv(location, count, asInt); break;
+				case GL_INT_VEC4:		glUniform4iv(location, count, asInt); break;
+				case GL_FLOAT_MAT2:		glUniformMatrix2fv(location, count, GL_FALSE, asFloat); break;
+				case GL_FLOAT_MAT3:		glUniformMatrix3fv(location, count, GL_FALSE, asFloat); break;
+				case GL_FLOAT_MAT4:		glUniformMatrix4fv(location, count, GL_FALSE, asFloat); break;
+				default: break;
+			}
+		}
+	}
+#endif
 }

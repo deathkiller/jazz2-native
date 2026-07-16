@@ -13,6 +13,14 @@
 
 #if defined(WITH_RHI_GL)
 
+// Rendering capability flags of the selected backend. Pipeline code guarded by these compiles only when the
+// active backend advertises the capability. `RHI_CAP_SHADERS` means the backend has hardware programmable
+// shaders cheap enough to drive full-screen post-processing (the bloom Blur/Downsample/Combine chain, the
+// shader lighting compositing and the rescale/antialiasing passes); `RHI_CAP_FRAMEBUFFERS` means off-screen
+// render targets are available. The OpenGL family backend provides both.
+#define RHI_CAP_SHADERS
+#define RHI_CAP_FRAMEBUFFERS
+
 namespace nCine::RhiGL
 {
 	class GLDevice;
@@ -81,6 +89,14 @@ namespace nCine::Rhi
 }
 
 #elif defined(WITH_RHI_SOFTWARE)
+
+// Rendering capability flags of the selected backend (see the OpenGL arm above for the meaning). The software
+// backend has off-screen render targets (@ref RhiSoftware::SwRenderTarget), so `RHI_CAP_FRAMEBUFFERS` is
+// defined; but its "shaders" are slow CPU-transpiled effects that must NOT drive full-screen post-processing,
+// so `RHI_CAP_SHADERS` is deliberately left undefined. The pipeline then skips the bloom chain, uses the cheap
+// no-shader lighting path and renders the scene directly to the screen buffer instead of through the shader
+// combine/rescale passes.
+#define RHI_CAP_FRAMEBUFFERS
 
 namespace nCine::RhiSoftware
 {

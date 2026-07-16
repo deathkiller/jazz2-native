@@ -30,7 +30,11 @@ namespace Jazz2::Rendering
 		bool OnDraw(RenderQueue& renderQueue) override;
 
 	private:
-		// Render command with its per-light uniform caches resolved once at creation
+		PlayerViewport* _owner;
+		SmallVector<LightEmitter, 0> _emittedLightsCache;
+#if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
+		// Render command with its per-light uniform caches resolved once at creation. Only the shader render
+		// path renders lights into a buffer; backends without cheap shaders skip lighting entirely (see RhiFwd.h)
 		struct LightCommand
 		{
 			std::unique_ptr<RenderCommand> Command;
@@ -39,11 +43,10 @@ namespace Jazz2::Rendering
 			Rhi::UniformCache* ColorUniform;
 		};
 
-		PlayerViewport* _owner;
 		SmallVector<LightCommand, 0> _renderCommands;
 		std::int32_t _renderCommandsCount;
-		SmallVector<LightEmitter, 0> _emittedLightsCache;
 
 		LightCommand& RentRenderCommand();
+#endif
 	};
 }

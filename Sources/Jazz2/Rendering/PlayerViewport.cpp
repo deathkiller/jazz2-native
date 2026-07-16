@@ -10,7 +10,9 @@ namespace Jazz2::Rendering
 {
 	PlayerViewport::PlayerViewport(LevelHandler* levelHandler, Actors::ActorBase* targetActor)
 		: _levelHandler(levelHandler), _targetActor(targetActor),
+#if defined(RHI_CAP_SHADERS)
 			_downsamplePass(this), _blurPass1(this), _blurPass2(this), _blurPass3(this), _blurPass4(this),
+#endif
 			_cameraViewCenterY(0.0f), _shakeDuration(0.0f)
 	{
 		_ambientLight = levelHandler->_defaultAmbientLight;
@@ -30,21 +32,34 @@ namespace Jazz2::Rendering
 		}
 
 		if (notInitialized) {
+#if !defined(RHI_CAP_SHADERS)
+			// Software renderer: the scene is rasterized straight into the screen buffer via a textureless
+			// viewport (no intermediate FBO); the combine and rescale shader passes are skipped downstream
+			_view = std::make_unique<Viewport>();
+			_view->SetViewportRect(Recti(0, 0, w, h));
+#else
 			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
 			_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::None);
+#endif
 
 			_camera = std::make_unique<Camera>();
 
 			_view->SetCamera(_camera.get());
 			_view->SetRootNode(sceneNode);
 		} else {
+#if !defined(RHI_CAP_SHADERS)
+			_view->SetViewportRect(Recti(0, 0, w, h));
+#else
 			_view->RemoveAllTextures();
 			_viewTexture->Init(nullptr, Texture::Format::RGB8, w, h);
 			_view->SetTexture(_viewTexture.get());
+#endif
 		}
 
+#if defined(RHI_CAP_SHADERS)
 		_viewTexture->SetMagFiltering(SamplerFilter::Nearest);
 		_viewTexture->SetWrap(SamplerWrapping::ClampToEdge);
+#endif
 
 		_camera->SetOrthoProjection(0.0f, (float)w, (float)h, 0.0f);
 
@@ -65,6 +80,7 @@ namespace Jazz2::Rendering
 		_lightingBuffer->SetMagFiltering(SamplerFilter::Nearest);
 		_lightingBuffer->SetWrap(SamplerWrapping::ClampToEdge);
 
+#if defined(RHI_CAP_SHADERS)
 		if (PreferencesCache::BlurEffects) {
 			// The blur targets are sized to the displayed (logical) viewport size rather than the (possibly
 			// supersampled) texture size, so the blur strength - and the in-game bloom - stay consistent in splitscreen
@@ -81,6 +97,11 @@ namespace Jazz2::Rendering
 			_blurPass3.Dispose();
 			_blurPass4.Dispose();
 		}
+#else
+		// Software renderer: nothing samples the lighting buffer (there is no combine shader), so the lighting
+		// view is an inert stub - LightingRenderer::OnDraw emits no commands and the buffer is never cleared
+		_lightingView->SetClearMode(Viewport::ClearMode::Never);
+#endif
 
 		if (notInitialized) {
 			_combineRenderer = std::make_unique<CombineRenderer>(this);
@@ -94,6 +115,7 @@ namespace Jazz2::Rendering
 
 	void PlayerViewport::Register()
 	{
+#if defined(RHI_CAP_SHADERS)
 		if (PreferencesCache::BlurEffects) {
 			_blurPass4.Register();
 			_blurPass3.Register();
@@ -101,10 +123,18 @@ namespace Jazz2::Rendering
 			_blurPass1.Register();
 			_downsamplePass.Register();
 		}
+#endif
 
 		auto& chain = Viewport::GetChain();
+#if !defined(RHI_CAP_SHADERS)
+		// Software: the scene view renders straight to the screen buffer, so it must be registered before the
+		// lighting view (a viewport registered later is drawn earlier)
+		chain.push_back(_view.get());
+		chain.push_back(_lightingView.get());
+#else
 		chain.push_back(_lightingView.get());
 		chain.push_back(_view.get());
+#endif
 	}
 
 	Rectf PlayerViewport::GetBounds() const
@@ -114,7 +144,12 @@ namespace Jazz2::Rendering
 
 	Vector2i PlayerViewport::GetViewportSize() const
 	{
+#if !defined(RHI_CAP_SHADERS)
+		Recti viewportRect = _view->GetViewportRect();
+		return Vector2i(viewportRect.W, viewportRect.H);
+#else
 		return _viewTexture->GetSize();
+#endif
 	}
 
 	Actors::ActorBase* PlayerViewport::GetTargetActor() const
@@ -154,7 +189,7 @@ namespace Jazz2::Rendering
 		}
 
 		// The position to focus on
-		Vector2i halfView = _view->GetSize() / 2;
+		Vector2i halfView = GetViewportSize() / 2;
 		Vector2f focusPos = _targetActor->GetPos();
 
 		bool overridePosX = false, overridePosY = false;

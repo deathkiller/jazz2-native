@@ -76,6 +76,8 @@ namespace nCine
 		static constexpr char TexCoordsAttributeName[] = "aTexCoords";
 		static constexpr char MeshIndexAttributeName[] = "aMeshIndex";
 		static constexpr char ColorAttributeName[] = "aColor";
+		/** @brief OpenGL|ES 2.0 profile: the static per-vertex quad corner replacing gl_VertexID synthesis */
+		static constexpr char QuadCornerAttributeName[] = "aQuadCorner";
 
 		/** @} */
 

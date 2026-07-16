@@ -41,6 +41,7 @@ namespace Jazz2
 namespace Jazz2::Rendering
 {
 	class LightingRenderer;
+	class CombineRenderer;
 }
 
 #if defined(WITH_MULTIPLAYER)
@@ -274,6 +275,8 @@ namespace Jazz2::Actors
 		friend class Player;
 		friend class Jazz2::LevelHandler;
 		friend class Jazz2::Rendering::LightingRenderer;
+		// Software renderer approximates the dynamic lighting in the combine step and needs the same light source
+		friend class Jazz2::Rendering::CombineRenderer;
 #if defined(WITH_MULTIPLAYER)
 		friend class Jazz2::Multiplayer::MpLevelHandler;
 		friend class Jazz2::UI::Multiplayer::MpInGameCanvasLayer;

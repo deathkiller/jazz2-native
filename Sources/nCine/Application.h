@@ -53,7 +53,16 @@ namespace nCine
 		struct RenderingSettings
 		{
 			RenderingSettings()
-				: batchingEnabled(true), batchingWithIndices(false), cullingEnabled(true), minBatchSize(4), maxBatchSize(585) {}
+#if defined(RHI_GL_PROFILE_ES2)
+				// The OpenGL|ES 2.0 profile has no uniform buffer objects: per-instance data is uploaded as
+				// plain uniforms per draw, so CPU sprite batching (which aggregates instances into a single
+				// InstancesBlock UBO indexed by gl_VertexID) is disabled and every sprite draws individually
+				// through its single-instance ESSL 100 program (corner attribute + loose uniforms).
+				: batchingEnabled(false),
+#else
+				: batchingEnabled(true),
+#endif
+				  batchingWithIndices(false), cullingEnabled(true), minBatchSize(4), maxBatchSize(585) {}
 
 			/** @brief Whether batching is enabled */
 			bool batchingEnabled;

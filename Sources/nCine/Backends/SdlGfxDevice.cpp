@@ -10,6 +10,10 @@
 #if defined(WITH_GLEW)
 #	define GLEW_NO_GLU
 #	include <GL/glew.h>
+#elif defined(WITH_OPENGLES)
+// No GLEW on the OpenGL|ES (ANGLE) path; pull in the GL/ES headers (GLubyte, glGetString, ...) directly
+#	define NCINE_INCLUDE_OPENGL
+#	include "../CommonHeaders.h"
 #endif
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
@@ -328,7 +332,12 @@ namespace nCine::Backends
 			SDL_GetWindowSize(windowHandle_, &width_, &height_);
 		}
 
-		LOGD("Initializing OpenGL context...");
+#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+		LOGD("Initializing OpenGL|ES {}.{} context...", contextInfo_.majorVersion, contextInfo_.minorVersion);
+#else
+		LOGD("Initializing OpenGL {}.{} {} context...", contextInfo_.majorVersion, contextInfo_.minorVersion,
+			contextInfo_.coreProfile ? "Core" : "Compatibility");
+#endif
 
 	Retry:
 		glContextHandle_ = SDL_GL_CreateContext(windowHandle_);
@@ -412,17 +421,21 @@ namespace nCine::Backends
 		if (softwareRenderer_ == nullptr) {
 			return;
 		}
-		// Self-heal against a resize the event loop may not have delivered yet
-		int outputWidth = 0, outputHeight = 0;
-		SDL_GetRendererOutputSize(softwareRenderer_, &outputWidth, &outputHeight);
-		if (outputWidth > 0 && outputHeight > 0 &&
-			(outputWidth != softwareTextureWidth_ || outputHeight != softwareTextureHeight_)) {
-			resizeSoftwareTarget(outputWidth, outputHeight);
+		// Render any draws the tile renderer deferred this frame into the screen buffer before we read it
+		Rhi::Device::FlushSoftwareRenderer();
+		const auto fb = Rhi::Device::GetScreenFramebuffer();
+		// The render pipeline sizes the screen framebuffer to the internal/logical resolution (see
+		// UpscaleRenderPass, which resizes it on the software backend); keep the streaming texture matched to
+		// that size so SDL_RenderCopyEx below stretches the low-resolution image up to the window. The window
+		// (drawable) size no longer drives the framebuffer size — this is what makes the software renderer draw
+		// the scene at the cheap internal resolution instead of the full window resolution.
+		if (fb.pixels != nullptr && fb.width > 0 && fb.height > 0 &&
+			(fb.width != softwareTextureWidth_ || fb.height != softwareTextureHeight_)) {
+			resizeSoftwareTarget(fb.width, fb.height);
 		}
 		if (softwareTexture_ == nullptr) {
 			return;
 		}
-		const auto fb = Rhi::Device::GetScreenFramebuffer();
 		if (fb.pixels != nullptr && fb.width == softwareTextureWidth_ && fb.height == softwareTextureHeight_) {
 			SDL_UpdateTexture(softwareTexture_, nullptr, fb.pixels, fb.strideBytes);
 		}

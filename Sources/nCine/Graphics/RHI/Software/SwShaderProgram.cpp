@@ -269,6 +269,7 @@ namespace nCine::RhiSoftware
 
 	void SwShaderProgram::SetObjectLabel(StringView label)
 	{
+		label_ = label;
 		effect_ = ClassifyEffect(label);
 		// The variant is baked into the shader name (e.g. "TexturedBackgroundDither"), so the dithering
 		// path is selected from the label rather than re-deriving it from the reflection's defines

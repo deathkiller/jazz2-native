@@ -37,6 +37,36 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char ResizeCrtScanlines_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+varying highp vec2 vPixelCoords;
+varying vec2 vTexCoords;
+varying highp vec2 vOutputSize;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vPixelCoords = aPosition * spriteSize.xy;
+	vTexCoords = aPosition;
+	vOutputSize = spriteSize.xy;
+}
+)__SHDR__";
+
 	inline constexpr char ResizeCrtScanlines_Fs[] =
 R"__SHDR__(#line 1
 
@@ -88,6 +118,56 @@ void main() {
 
 )__SHDR__";
 
+	inline constexpr char ResizeCrtScanlines_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying highp vec2 vPixelCoords;
+varying vec2 vTexCoords;
+varying highp vec2 vOutputSize;
+
+uniform sampler2D uTexture;
+
+vec3 toYiq(vec3 value) {
+	const mat3 yiqmat = mat3(
+		0.2989, 0.5870, 0.1140,
+		0.5959, -0.2744, -0.3216,
+		0.2115, -0.5229, 0.3114);
+	return value * yiqmat;
+}
+
+vec3 fromYiq(vec3 value) {
+	const mat3 rgbmat = mat3(
+		1.0, 0.956, 0.6210,
+		1.0, -0.272, -0.6474,
+		1.0, -1.106, 1.7046);
+	return value * rgbmat;
+}
+
+
+void main() {
+	vec4 COLOR;
+	float y = vPixelCoords.y;
+	vec2 uv0 = vec2(vTexCoords.x, y / vOutputSize.y);
+	vec3 t0 = texture2D(uTexture, uv0).rgb;
+	float ymod = mod(vPixelCoords.y, 3.0);
+	if (ymod > 2.0) {
+		vec2 uv1 = vec2(vTexCoords.x, (y + 1.0) / vOutputSize.y);
+		vec3 t1 = texture2D(uTexture, uv1).rgb;
+		COLOR.rgb = (t0 + t1) * 0.25;
+	} else {
+		t0 = toYiq(t0);
+		t0.r *= 1.1;
+		t0 = fromYiq(t0);
+		COLOR.rgb = t0;
+	}
+	COLOR.a = 1.0;
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+
 	inline constexpr ShaderCompiler::Uniform ResizeCrtScanlines_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -110,7 +190,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant ResizeCrtScanlines_Variants[] = {
 		{ "", "", ResizeCrtScanlines_Vs, ResizeCrtScanlines_Fs,
-			2, ResizeCrtScanlines_Uniforms, 1, ResizeCrtScanlines_Blocks, 1, ResizeCrtScanlines_Textures, 0, nullptr },
+			2, ResizeCrtScanlines_Uniforms, 1, ResizeCrtScanlines_Blocks, 1, ResizeCrtScanlines_Textures, 0, nullptr,
+			ResizeCrtScanlines_Vs100, ResizeCrtScanlines_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program ResizeCrtScanlines = { "ResizeCrtScanlines", 0, 1, ResizeCrtScanlines_Variants };

@@ -38,6 +38,37 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char WhiteMask_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	uniform float palOffset;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+varying highp float vPaletteOffset;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	vPaletteOffset = palOffset;
+}
+)__SHDR__";
+
 	inline constexpr char WhiteMask_Fs[] =
 R"__SHDR__(#line 1
 
@@ -73,8 +104,48 @@ out vec4 COLOR;
 void main() {
 	COLOR = vColor;
 	vec4 tex = maskSample(vTexCoords);
-	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0f, 1.0f);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0, 1.0);
 	COLOR = vec4(color, color, color, tex.a) * COLOR;
+}
+
+)__SHDR__";
+
+	inline constexpr char WhiteMask_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+varying highp float vPaletteOffset;
+
+uniform sampler2D uTexture;
+#ifdef USE_PALETTE
+uniform sampler2D uTexturePalette;
+#endif
+
+// Resolves the diffuse color, looking the palette index up in the palette texture when the sprite is indexed
+vec4 maskSample(vec2 uv) {
+	vec4 src = texture2D(uTexture, uv);
+#ifdef USE_PALETTE
+	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
+	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
+	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	vec4 c = texture2D(uTexturePalette, vec2(palX, palY));
+	return vec4(c.rgb, c.a * src.a);
+#else
+	return src;
+#endif
+}
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	vec4 tex = maskSample(vTexCoords);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0, 1.0);
+	COLOR = vec4(color, color, color, tex.a) * COLOR;
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -134,6 +205,38 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char WhiteMask_USE_PALETTE_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#define USE_PALETTE (1)
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	uniform float palOffset;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+varying highp float vPaletteOffset;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	vPaletteOffset = palOffset;
+}
+)__SHDR__";
+
 	inline constexpr char WhiteMask_USE_PALETTE_Fs[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -170,8 +273,49 @@ out vec4 COLOR;
 void main() {
 	COLOR = vColor;
 	vec4 tex = maskSample(vTexCoords);
-	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0f, 1.0f);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0, 1.0);
 	COLOR = vec4(color, color, color, tex.a) * COLOR;
+}
+
+)__SHDR__";
+
+	inline constexpr char WhiteMask_USE_PALETTE_Fs100[] =
+R"__SHDR__(#define USE_PALETTE (1)
+#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+varying highp float vPaletteOffset;
+
+uniform sampler2D uTexture;
+#ifdef USE_PALETTE
+uniform sampler2D uTexturePalette;
+#endif
+
+// Resolves the diffuse color, looking the palette index up in the palette texture when the sprite is indexed
+vec4 maskSample(vec2 uv) {
+	vec4 src = texture2D(uTexture, uv);
+#ifdef USE_PALETTE
+	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
+	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
+	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	vec4 c = texture2D(uTexturePalette, vec2(palX, palY));
+	return vec4(c.rgb, c.a * src.a);
+#else
+	return src;
+#endif
+}
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	vec4 tex = maskSample(vTexCoords);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0, 1.0);
+	COLOR = vec4(color, color, color, tex.a) * COLOR;
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -200,9 +344,11 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant WhiteMask_Variants[] = {
 		{ "", "", WhiteMask_Vs, WhiteMask_Fs,
-			2, WhiteMask_Uniforms, 1, WhiteMask_Blocks, 1, WhiteMask_Textures, 0, nullptr },
+			2, WhiteMask_Uniforms, 1, WhiteMask_Blocks, 1, WhiteMask_Textures, 0, nullptr,
+			WhiteMask_Vs100, WhiteMask_Fs100 },
 		{ "USE_PALETTE", "USE_PALETTE", WhiteMask_USE_PALETTE_Vs, WhiteMask_USE_PALETTE_Fs,
-			2, WhiteMask_USE_PALETTE_Uniforms, 1, WhiteMask_USE_PALETTE_Blocks, 2, WhiteMask_USE_PALETTE_Textures, 0, nullptr },
+			2, WhiteMask_USE_PALETTE_Uniforms, 1, WhiteMask_USE_PALETTE_Blocks, 2, WhiteMask_USE_PALETTE_Textures, 0, nullptr,
+			WhiteMask_USE_PALETTE_Vs100, WhiteMask_USE_PALETTE_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program WhiteMask = { "WhiteMask", 0, 2, WhiteMask_Variants };
@@ -249,6 +395,47 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char BatchedWhiteMask_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+attribute float aInstanceIndex;
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+struct Instance
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
+	float palOffset;
+};
+
+#ifndef BATCH_SIZE
+	#define BATCH_SIZE (585) // 64 Kb / 112 b
+#endif
+	uniform Instance instances[BATCH_SIZE];
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+varying highp float vPaletteOffset;
+
+#define i instances[int(aInstanceIndex)]
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), 1.0 - (1.0 - aQuadCorner.y));
+	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * i.texRect.x + i.texRect.y, aPosition.y * i.texRect.z + i.texRect.w);
+	vColor = i.color;
+	vPaletteOffset = i.palOffset;
+}
+)__SHDR__";
+
 	inline constexpr char BatchedWhiteMask_Fs[] =
 R"__SHDR__(#line 1
 
@@ -284,8 +471,48 @@ out vec4 COLOR;
 void main() {
 	COLOR = vColor;
 	vec4 tex = maskSample(vTexCoords);
-	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0f, 1.0f);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0, 1.0);
 	COLOR = vec4(color, color, color, tex.a) * COLOR;
+}
+
+)__SHDR__";
+
+	inline constexpr char BatchedWhiteMask_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+varying highp float vPaletteOffset;
+
+uniform sampler2D uTexture;
+#ifdef USE_PALETTE
+uniform sampler2D uTexturePalette;
+#endif
+
+// Resolves the diffuse color, looking the palette index up in the palette texture when the sprite is indexed
+vec4 maskSample(vec2 uv) {
+	vec4 src = texture2D(uTexture, uv);
+#ifdef USE_PALETTE
+	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
+	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
+	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	vec4 c = texture2D(uTexturePalette, vec2(palX, palY));
+	return vec4(c.rgb, c.a * src.a);
+#else
+	return src;
+#endif
+}
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	vec4 tex = maskSample(vTexCoords);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0, 1.0);
+	COLOR = vec4(color, color, color, tex.a) * COLOR;
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -350,6 +577,48 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char BatchedWhiteMask_USE_PALETTE_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+attribute float aInstanceIndex;
+#define USE_PALETTE (1)
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+struct Instance
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
+	float palOffset;
+};
+
+#ifndef BATCH_SIZE
+	#define BATCH_SIZE (585) // 64 Kb / 112 b
+#endif
+	uniform Instance instances[BATCH_SIZE];
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+varying highp float vPaletteOffset;
+
+#define i instances[int(aInstanceIndex)]
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), 1.0 - (1.0 - aQuadCorner.y));
+	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * i.texRect.x + i.texRect.y, aPosition.y * i.texRect.z + i.texRect.w);
+	vColor = i.color;
+	vPaletteOffset = i.palOffset;
+}
+)__SHDR__";
+
 	inline constexpr char BatchedWhiteMask_USE_PALETTE_Fs[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -386,8 +655,49 @@ out vec4 COLOR;
 void main() {
 	COLOR = vColor;
 	vec4 tex = maskSample(vTexCoords);
-	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0f, 1.0f);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0, 1.0);
 	COLOR = vec4(color, color, color, tex.a) * COLOR;
+}
+
+)__SHDR__";
+
+	inline constexpr char BatchedWhiteMask_USE_PALETTE_Fs100[] =
+R"__SHDR__(#define USE_PALETTE (1)
+#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+varying highp float vPaletteOffset;
+
+uniform sampler2D uTexture;
+#ifdef USE_PALETTE
+uniform sampler2D uTexturePalette;
+#endif
+
+// Resolves the diffuse color, looking the palette index up in the palette texture when the sprite is indexed
+vec4 maskSample(vec2 uv) {
+	vec4 src = texture2D(uTexture, uv);
+#ifdef USE_PALETTE
+	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
+	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
+	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	vec4 c = texture2D(uTexturePalette, vec2(palX, palY));
+	return vec4(c.rgb, c.a * src.a);
+#else
+	return src;
+#endif
+}
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	vec4 tex = maskSample(vTexCoords);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0, 1.0);
+	COLOR = vec4(color, color, color, tex.a) * COLOR;
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -412,9 +722,11 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant BatchedWhiteMask_Variants[] = {
 		{ "", "", BatchedWhiteMask_Vs, BatchedWhiteMask_Fs,
-			2, BatchedWhiteMask_Uniforms, 1, BatchedWhiteMask_Blocks, 1, BatchedWhiteMask_Textures, 0, nullptr },
+			2, BatchedWhiteMask_Uniforms, 1, BatchedWhiteMask_Blocks, 1, BatchedWhiteMask_Textures, 0, nullptr,
+			BatchedWhiteMask_Vs100, BatchedWhiteMask_Fs100 },
 		{ "USE_PALETTE", "USE_PALETTE", BatchedWhiteMask_USE_PALETTE_Vs, BatchedWhiteMask_USE_PALETTE_Fs,
-			2, BatchedWhiteMask_USE_PALETTE_Uniforms, 1, BatchedWhiteMask_USE_PALETTE_Blocks, 2, BatchedWhiteMask_USE_PALETTE_Textures, 0, nullptr },
+			2, BatchedWhiteMask_USE_PALETTE_Uniforms, 1, BatchedWhiteMask_USE_PALETTE_Blocks, 2, BatchedWhiteMask_USE_PALETTE_Textures, 0, nullptr,
+			BatchedWhiteMask_USE_PALETTE_Vs100, BatchedWhiteMask_USE_PALETTE_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program BatchedWhiteMask = { "BatchedWhiteMask", 0, 2, BatchedWhiteMask_Variants };

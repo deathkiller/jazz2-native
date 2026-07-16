@@ -40,6 +40,40 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char DefaultBatchedSpritesNoTexture_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+attribute float aInstanceIndex;
+#line 1
+
+varying vec4 vColor;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+struct Instance
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec2 spriteSize;
+};
+
+#ifndef BATCH_SIZE
+	#define BATCH_SIZE (682) // 64 Kb / 96 b
+#endif
+	uniform Instance instances[BATCH_SIZE];
+
+#define i instances[int(aInstanceIndex)]
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), 1.0 - (1.0 - aQuadCorner.y));
+	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
+	vColor = i.color;
+}
+)__SHDR__";
+
 	inline constexpr char DefaultBatchedSpritesNoTexture_Fs[] =
 R"__SHDR__(#line 1
 
@@ -53,6 +87,22 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = vColor;
+}
+
+)__SHDR__";
+
+	inline constexpr char DefaultBatchedSpritesNoTexture_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec4 vColor;
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -72,7 +122,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant DefaultBatchedSpritesNoTexture_Variants[] = {
 		{ "", "", DefaultBatchedSpritesNoTexture_Vs, DefaultBatchedSpritesNoTexture_Fs,
-			2, DefaultBatchedSpritesNoTexture_Uniforms, 1, DefaultBatchedSpritesNoTexture_Blocks, 0, nullptr, 0, nullptr },
+			2, DefaultBatchedSpritesNoTexture_Uniforms, 1, DefaultBatchedSpritesNoTexture_Blocks, 0, nullptr, 0, nullptr,
+			DefaultBatchedSpritesNoTexture_Vs100, DefaultBatchedSpritesNoTexture_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program DefaultBatchedSpritesNoTexture = { "DefaultBatchedSpritesNoTexture", 0, 1, DefaultBatchedSpritesNoTexture_Variants };

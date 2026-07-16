@@ -28,14 +28,18 @@ namespace Jazz2::Rendering
 		std::unique_ptr<Viewport> _lightingView;
 		std::unique_ptr<Texture> _lightingBuffer;
 
+#if defined(RHI_CAP_SHADERS)
+		// Bloom blur chain. Only backends with cheap shaders run the post-process bloom; the software backend
+		// renders the scene straight to the screen buffer with no blur passes (see RhiFwd.h)
 		BlurRenderPass _downsamplePass;
 		BlurRenderPass _blurPass2;
 		BlurRenderPass _blurPass1;
 		BlurRenderPass _blurPass3;
 		BlurRenderPass _blurPass4;
+#endif
 
 		std::unique_ptr<Viewport> _view;
-		std::unique_ptr<Texture> _viewTexture;
+		std::unique_ptr<Texture> _viewTexture;	// Scene render target for the shader path; unused (null) on the software backend
 		std::unique_ptr<Camera> _camera;
 
 		Rectf _viewBounds;

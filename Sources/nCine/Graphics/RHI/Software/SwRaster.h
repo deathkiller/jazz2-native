@@ -14,6 +14,17 @@ namespace nCine::RhiSoftware
 	static constexpr std::uint32_t MaxTextureUnits = SwTexture::MaxTextureUnits;
 
 	/**
+		@brief Upper bound on a fragment callback's parameter block
+
+		The tile renderer defers draws and rasterizes them later (possibly on a worker thread), so it copies
+		each draw's @ref DrawContext::fragmentShaderUserData block into per-command storage to make the
+		deferred draw self-contained. This is the size of that inline storage; an effect whose parameter
+		block is larger is declined for deferral and rasterized immediately instead. It must be at least as
+		large as the biggest effect parameter struct the device fills.
+	*/
+	static constexpr std::uint32_t MaxFragmentShaderUserDataSize = 256;
+
+	/**
 		@brief Source or destination factor of the blending equation (rasterizer-local mirror)
 
 		A compact mirror of the pipeline-neutral @ref nCine::BlendingFactor holding just the ten factors the
@@ -121,6 +132,13 @@ namespace nCine::RhiSoftware
 		FragmentShaderFn fragmentShader = nullptr;
 		/** @brief Opaque parameter block passed to @ref fragmentShader */
 		void* fragmentShaderUserData = nullptr;
+		/**
+		 * @brief Size in bytes of the @ref fragmentShaderUserData block (0 when there is none)
+		 *
+		 * Set by the device so the tile renderer can snapshot the block into per-command storage when a draw
+		 * is deferred. The block must be trivially copyable. Leave 0 for the immediate-only path.
+		 */
+		std::uint32_t fragmentShaderUserDataSize = 0;
 
 		/** @brief Whether blending is enabled for this draw */
 		bool blendingEnabled = false;
@@ -188,6 +206,15 @@ namespace nCine::RhiSoftware
 
 		/** @brief Rasterizes @p count vertices from @p firstVertex as @p primitive into the current color buffer */
 		static void Draw(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t count);
+
+		/**
+			@brief Renders every draw the tile renderer has deferred for the current color buffer
+
+			Forwards to the tile-based deferred layer's flush. The device calls this before the color buffer
+			is read for presentation, so all queued draws have landed in it. A no-op when nothing is queued;
+			it does not return until every worker thread has finished writing.
+		*/
+		static void Flush();
 	};
 }
 

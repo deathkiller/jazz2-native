@@ -7,6 +7,9 @@ namespace Jazz2::Rendering
 {
 	void BlurRenderPass::Initialize(Texture* source, std::int32_t width, std::int32_t height, Vector2f direction)
 	{
+#if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
+		return; // Blur post-processing requires shader support and framebuffers
+#else
 		_source = source;
 		_downsampleOnly = (direction.X <= std::numeric_limits<float>::epsilon() && direction.Y <= std::numeric_limits<float>::epsilon());
 		_direction = direction;
@@ -45,11 +48,14 @@ namespace Jazz2::Rendering
 		if (textureUniform && textureUniform->GetIntValue(0) != 0) {
 			textureUniform->SetIntValue(0); // GL_TEXTURE0
 		}
+#endif
 	}
 
 	void BlurRenderPass::Register()
 	{
+#if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
 		Viewport::GetChain().push_back(_view.get());
+#endif
 	}
 
 	void BlurRenderPass::Dispose()
@@ -62,6 +68,9 @@ namespace Jazz2::Rendering
 
 	bool BlurRenderPass::OnDraw(RenderQueue& renderQueue)
 	{
+#if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
+		return true; // Blur post-processing requires shader support and framebuffers
+#else
 		Vector2i size = _target->GetSize();
 
 		auto* instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);
@@ -78,5 +87,6 @@ namespace Jazz2::Rendering
 		renderQueue.AddCommand(&_renderCommand);
 
 		return true;
+#endif
 	}
 }

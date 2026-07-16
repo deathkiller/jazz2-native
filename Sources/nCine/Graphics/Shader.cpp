@@ -148,18 +148,35 @@ namespace nCine
 			ZoneText(shaderName, std::strlen(shaderName));
 		}
 
+		// OpenGL|ES 2.0 profile consumes the ESSL 100 (Essl100Emitter) stage sources baked alongside the
+		// modern ones; a batched InstancesBlock becomes a small "uniform Instance instances[N];" array that
+		// must fit in the ES2 vertex uniform space, so cap the batch. The GL 3.3 / ES 3.0 path is unchanged.
+		const char* vsSource = variant.VsSource;
+		const char* fsSource = variant.FsSource;
+#if defined(RHI_GL_PROFILE_ES2)
+		if (variant.VsSource100 != nullptr) {
+			vsSource = variant.VsSource100;
+		}
+		if (variant.FsSource100 != nullptr) {
+			fsSource = variant.FsSource100;
+		}
+		if (batchSize > 12) {
+			batchSize = 8;
+		}
+#endif
+
 		glShaderProgram_->Reset(); // reset before attaching new shaders
 		glShaderProgram_->SetBatchSize(batchSize);
 		glShaderProgram_->SetObjectLabel(shaderName);
 
 		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
-		stringsCount = populateShaderStrings(strings, backingStore, variant.VsSource, batchSize, {});
+		stringsCount = populateShaderStrings(strings, backingStore, vsSource, batchSize, {});
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), {});
 
 		// The BATCH_SIZE define is baked into both stages - a batched InstancesBlock is declared
 		// in the fragment stage too (shared globals), and mismatched block sizes would fail to link
-		stringsCount = populateShaderStrings(strings, backingStore, variant.FsSource, batchSize, {});
+		stringsCount = populateShaderStrings(strings, backingStore, fsSource, batchSize, {});
 		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), {});
 
 		// Set after Reset(), which clears any previous reflection

@@ -6,14 +6,23 @@
 namespace Jazz2::Rendering
 {
 	LightingRenderer::LightingRenderer(PlayerViewport* owner)
-		: _owner(owner), _renderCommandsCount(0)
+		: _owner(owner)
+#if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
+			, _renderCommandsCount(0)
+#endif
 	{
 		_emittedLightsCache.reserve(32);
 		setVisitOrderState(SceneNode::VisitOrderState::Disabled);
 	}
-		
+
 	bool LightingRenderer::OnDraw(RenderQueue& renderQueue)
 	{
+#if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
+		// Dynamic lighting is composited by a full-screen shader pass into an off-screen buffer, which the
+		// combine shader later applies; on backends without cheap programmable shaders (the software renderer)
+		// there is no combine pass, so the scene is drawn without dynamic lighting
+		return true;
+#else
 		_renderCommandsCount = 0;
 		_emittedLightsCache.clear();
 
@@ -35,8 +44,10 @@ namespace Jazz2::Rendering
 		}
 
 		return true;
+#endif
 	}
 
+#if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
 	LightingRenderer::LightCommand& LightingRenderer::RentRenderCommand()
 	{
 		if (_renderCommandsCount < _renderCommands.size()) {
@@ -67,4 +78,5 @@ namespace Jazz2::Rendering
 			return lightCommand;
 		}
 	}
+#endif
 }

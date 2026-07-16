@@ -1,6 +1,7 @@
 #if defined(WITH_RHI_SOFTWARE)
 
 #include "SwRaster.h"
+#include "SwTileRenderer.h"
 
 #include <Cpu.h>
 #if defined(DEATH_TARGET_X86)
@@ -788,6 +789,10 @@ namespace nCine::RhiSoftware
 			const std::int32_t dstW = g_state.bufferWidth;
 			const std::int32_t dstH = g_state.bufferHeight;
 			if (dstBuffer == nullptr) return false;
+
+			// Flush any pending deferred draws first, so this opaque full-screen blit (which bypasses the
+			// tile queue and writes the buffer directly) lands after everything submitted before it.
+			SwTileRenderer::Flush();
 
 			// Y-flip needed when source and destination have different row orders:
 			// - FBO textures/buffers are stored bottom-up (row 0 = bottom)
@@ -1711,6 +1716,12 @@ namespace nCine::RhiSoftware
 		g_state.bufferWidth = width;
 		g_state.bufferHeight = height;
 		g_state.isFboTarget = isFboTarget;
+
+		// Keep the tile renderer pointed at the same surface. Initialize() is idempotent (spins up the worker
+		// pool once); SetTargetBuffer() early-returns when the target is unchanged (the device calls this
+		// before every draw), and flushes the previous target's queue when it actually changes.
+		SwTileRenderer::Initialize();
+		SwTileRenderer::SetTargetBuffer(pixels, width, height, isFboTarget);
 	}
 
 	void SwRaster::SetViewport(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
@@ -1719,6 +1730,10 @@ namespace nCine::RhiSoftware
 		g_state.viewportY = y;
 		g_state.viewportW = width;
 		g_state.viewportH = height;
+
+		// Mirror the viewport so the tile renderer snapshots it into each deferred command and reproduces the
+		// exact NDC→screen transform the immediate path uses.
+		SwTileRenderer::SetViewport(x, y, width, height);
 	}
 
 	void SwRaster::SetScissor(bool enabled, std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
@@ -1741,6 +1756,12 @@ namespace nCine::RhiSoftware
 	{
 		if (g_state.colorBuffer == nullptr) {
 			return;
+		}
+
+		// A full-buffer clear wipes everything drawn before it, so drop any deferred draws still queued for
+		// this surface rather than letting them re-render on top of the cleared buffer at the next flush.
+		if (SwTileRenderer::GetPendingCommandCount() > 0) {
+			SwTileRenderer::DiscardPending();
 		}
 
 		const std::uint8_t rb = static_cast<std::uint8_t>(r * 255.0f);
@@ -1794,6 +1815,17 @@ namespace nCine::RhiSoftware
 			return;
 		}
 
+		// Defer to the tile-based renderer. An accepted command is rasterized later (tiled, multi-threaded);
+		// a declined one (an effect parameter block that can't be snapshotted, or the buffer being full)
+		// falls through to immediate rendering below — but flush the queue first so it lands after everything
+		// submitted before it, preserving draw order.
+		if (SwTileRenderer::IsActive()) {
+			if (SwTileRenderer::SubmitCommand(*g_state.drawCtx, type, firstVertex, count)) {
+				return;
+			}
+			SwTileRenderer::Flush();
+		}
+
 		// Fast path: procedural 4-vertex quad (TriangleStrip, no vertex buffer)
 		if DEATH_LIKELY(type == PrimitiveType::TriangleStrip && count == 4 && firstVertex == 0 &&
 		    g_state.drawCtx->vertexData == nullptr) {
@@ -1816,6 +1848,11 @@ namespace nCine::RhiSoftware
 			indices[i] = firstVertex + i;
 		}
 		DrawPrimitive(*g_state.drawCtx, type, indices);
+	}
+
+	void SwRaster::Flush()
+	{
+		SwTileRenderer::Flush();
 	}
 }
 

@@ -106,8 +106,11 @@ namespace Jazz2
 #endif
 
 	LevelHandler::LevelHandler(IRootController* root)
-		: _root(root), _lightingShader(nullptr), _blurShader(nullptr), _downsampleShader(nullptr), _combineShader(nullptr),
-			_combineWithWaterShader(nullptr), _eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false),
+		: _root(root),
+#if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
+			_lightingShader(nullptr), _blurShader(nullptr), _downsampleShader(nullptr), _combineShader(nullptr), _combineWithWaterShader(nullptr),
+#endif
+			_eventSpawner(this), _difficulty(GameDifficulty::Default), _isReforged(false),
 			_cheatsUsed(false), _checkpointCreated(false), _nextLevelType(ExitType::None),
 			_nextLevelTime(0.0f), _elapsedMillisecondsBegin(0), _elapsedFrames(0.0f), _checkpointFrames(0.0f),
 			_waterLevel(FLT_MAX), _weatherType(WeatherType::None), _pressedKeys(ValueInit, (std::size_t)Keys::Count),
@@ -762,6 +765,9 @@ namespace Jazz2
 			_hudUpscalePass.setParent(nullptr);
 		}
 
+#if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
+		// The bloom + lighting post-processing shaders are only used by the shader render path; the software
+		// backend skips the whole chain and renders the scene directly to the screen (see RhiFwd.h)
 		bool notInitialized = (_combineShader == nullptr);
 		if (notInitialized) {
 			LOGI("Acquiring required shaders");
@@ -775,6 +781,16 @@ namespace Jazz2
 			_combineShader = resolver.GetShader(PrecompiledShader::Combine);
 			if (_combineShader == nullptr) { LOGW("PrecompiledShader::Combine failed"); }
 		}
+#endif
+#if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
+		// Software renderer: the bloom + shader-lighting chain is capability-gated out, but the viewport compositor
+		// still needs the Combine program so the software device recognizes the draw (object label "Combine" ->
+		// SwEffect::Combine) and runs the CPU dynamic-lighting combine in its place instead of a fragment.
+		if (_combineShader == nullptr) {
+			_combineShader = resolver.GetShader(PrecompiledShader::Combine);
+			if (_combineShader == nullptr) { LOGW("PrecompiledShader::Combine failed"); }
+		}
+#endif
 
 		// Attach the HUD and console to the active overlay/scene node (re-evaluated every time, as the overlay can be
 		// toggled on or off when the player count changes)
@@ -786,6 +802,7 @@ namespace Jazz2
 			_console->setParent(hudParent);
 		}
 
+#if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
 		_combineWithWaterShader = resolver.GetShader(PreferencesCache::LowWaterQuality
 			? PrecompiledShader::CombineWithWaterLow
 			: PrecompiledShader::CombineWithWater);
@@ -796,6 +813,7 @@ namespace Jazz2
 				LOGW("PrecompiledShader::CombineWithWater failed");
 			}
 		}
+#endif
 
 		for (std::size_t i = 0; i < _assignedViewports.size(); i++) {
 			Rendering::PlayerViewport& viewport = *_assignedViewports[i];

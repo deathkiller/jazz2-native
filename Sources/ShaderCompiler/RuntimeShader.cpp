@@ -99,7 +99,10 @@ namespace ShaderCompiler
 				viewUniforms_[i].size(), viewUniforms_[i].data(),
 				viewBlocks_[i].size(), viewBlocks_[i].data(),
 				viewTextures_[i].size(), viewTextures_[i].data(),
-				viewAttributes_[i].size(), viewAttributes_[i].data()
+				viewAttributes_[i].size(), viewAttributes_[i].data(),
+				// No baked ES2 (ESSL 100) sources for runtime-compiled ".shader" files — the offline
+				// Essl100Emitter is not linked into the engine, so the ES2 profile falls back for these.
+				nullptr, nullptr
 			};
 		}
 

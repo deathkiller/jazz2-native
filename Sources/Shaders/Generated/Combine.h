@@ -35,6 +35,34 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char Combine_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+varying vec2 vTexCoords;
+varying vec2 vViewSizeInv;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vViewSizeInv = vec2(1.0) / spriteSize;
+}
+)__SHDR__";
+
 	inline constexpr char Combine_Fs[] =
 R"__SHDR__(#line 1
 
@@ -88,6 +116,58 @@ void main() {
 
 )__SHDR__";
 
+	inline constexpr char Combine_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec2 vViewSizeInv;
+
+uniform sampler2D uTexture;
+uniform sampler2D uTextureLighting;
+uniform sampler2D uTextureBlurHalf;
+uniform sampler2D uTextureBlurQuarter;
+
+uniform vec4 uAmbientColor;
+uniform float uTime;
+
+vec2 hash2D(in vec2 p) {
+	float h = dot(p, vec2(12.9898, 78.233));
+	float h2 = dot(p, vec2(37.271, 377.632));
+	return -1.0 + 2.0 * vec2(fract(sin(h) * 43758.5453), fract(sin(h2) * 43758.5453));
+}
+
+vec2 noiseTexCoords(vec2 position) {
+	vec2 seed = position + fract(uTime * 0.01);
+	return clamp(position + hash2D(seed) * vViewSizeInv * 1.4, vec2(0.0), vec2(1.0));
+}
+
+
+void main() {
+	vec4 COLOR;
+	vec4 blur1 = texture2D(uTextureBlurHalf, vTexCoords);
+	vec4 blur2 = texture2D(uTextureBlurQuarter, vTexCoords);
+
+	vec4 main = texture2D(uTexture, vTexCoords);
+	vec4 light = texture2D(uTextureLighting, noiseTexCoords(vTexCoords));
+
+	vec4 blur = (blur1 + blur2) * vec4(0.5);
+
+	float gray = dot(blur.rgb, vec3(0.299, 0.587, 0.114));
+	blur = vec4(gray, gray, gray, blur.a);
+
+	COLOR = mix(mix(
+		main * (1.0 + light.g) + max(light.g - 0.7, 0.0) * vec4(1.0),
+		blur,
+		vec4(clamp((1.0 - light.r) / sqrt(max(uAmbientColor.w, 0.35)), 0.0, 1.0))
+	), uAmbientColor, vec4(1.0 - light.r));
+	COLOR.a = 1.0;
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+
 	inline constexpr ShaderCompiler::Uniform Combine_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -115,7 +195,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant Combine_Variants[] = {
 		{ "", "", Combine_Vs, Combine_Fs,
-			4, Combine_Uniforms, 1, Combine_Blocks, 4, Combine_Textures, 0, nullptr },
+			4, Combine_Uniforms, 1, Combine_Blocks, 4, Combine_Textures, 0, nullptr,
+			Combine_Vs100, Combine_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program Combine = { "Combine", 0, 1, Combine_Variants };

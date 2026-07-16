@@ -176,6 +176,10 @@ namespace nCine::RhiSoftware
 		inline SwEffect GetEffect() const {
 			return effect_;
 		}
+		/** @brief Returns the object label the program was tagged with (the shader name), or an empty string */
+		inline const char* GetObjectLabel() const {
+			return label_.data();
+		}
 		/** @brief Returns `true` if the program is the dithering variant of its effect (derived from the label) */
 		inline bool IsDitherVariant() const {
 			return ditherVariant_;
@@ -212,6 +216,8 @@ namespace nCine::RhiSoftware
 		const ShaderCompiler::ProgramVariant* effectReflection_;
 		SwEffect effect_;
 		bool ditherVariant_;
+		// The shader name the program was tagged with (used to look up an offline-transpiled generated fragment)
+		String label_;
 
 		SwVertexFormat vertexFormat_;
 		const SwBuffer* boundVbo_;

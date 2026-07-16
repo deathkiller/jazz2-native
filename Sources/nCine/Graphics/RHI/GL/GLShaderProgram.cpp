@@ -232,6 +232,32 @@ namespace nCine::RhiGL
 
 	void GLShaderProgram::DefineVertexFormat(const GLBufferObject* vbo, const GLBufferObject* ibo, std::uint32_t vboOffset)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// ES2: the gl_VertexID-free sprite/full-screen shaders read their quad corner from the shared static
+		// corner VBO (bound to aQuadCorner); any real geometry attributes (mesh sprites) come from the geometry
+		// VBO. A VAO must be bound even when the sprite has no geometry VBO, so drive it off attribute presence.
+		std::int32_t cornerLocation = -1;
+		attributeLocations_.contains(Material::QuadCornerAttributeName, cornerLocation);
+		const GLBufferObject* cornerVbo = static_cast<const GLBufferObject*>(RenderResources::GetQuadCornerVbo());
+		bool hasBoundAttribute = false;
+		for (std::int32_t location : attributeLocations_) {
+			if (location == cornerLocation) {
+				if (cornerVbo != nullptr) {
+					vertexFormat_[location].setVbo(cornerVbo);
+					vertexFormat_[location].SetBaseOffset(0);
+					hasBoundAttribute = true;
+				}
+			} else if (vbo != nullptr) {
+				vertexFormat_[location].setVbo(vbo);
+				vertexFormat_[location].SetBaseOffset(vboOffset);
+				hasBoundAttribute = true;
+			}
+		}
+		vertexFormat_.SetIbo(ibo);
+		if (hasBoundAttribute) {
+			RenderResources::GetVaoPool().BindVao(vertexFormat_);
+		}
+#else
 		if (vbo != nullptr) {
 			for (std::int32_t location : attributeLocations_) {
 				vertexFormat_[location].setVbo(vbo);
@@ -243,6 +269,7 @@ namespace nCine::RhiGL
 			RenderResources::GetVaoPool().BindVao(vertexFormat_);
 #endif
 		}
+#endif
 	}
 
 	void GLShaderProgram::Reset()
@@ -388,11 +415,19 @@ namespace nCine::RhiGL
 		for (std::size_t i = 0; i < reflection.BlockCount; i++) {
 			const ShaderCompiler::UniformBlock& b = reflection.Blocks[i];
 			const GLuint blockIndex = glGetUniformBlockIndex(glHandle_, b.Name);
+#if defined(RHI_GL_PROFILE_ES2)
+			// ES2 (ESSL 100) has no uniform buffer objects: the block's members are plain loose uniforms in
+			// the linked program. Keep the block in the reflection so BaseSprite/Material still address the
+			// per-instance data through it, but resolve each member's real loose location below so that
+			// GLShaderUniformBlocks::Bind() can push them with glUniform* instead of a UBO bind. blockIndex is
+			// GL_INVALID_INDEX here and stays unused (the ES2 path never binds a buffer range).
+#else
 			if (blockIndex == GL_INVALID_INDEX) {
 				// The whole block was optimized out by the driver - GL introspection would not have listed it either
 				LOGD("Shader program {} - uniform block \"{}\" is inactive and was skipped", glHandle_, b.Name);
 				continue;
 			}
+#endif
 
 			// A BATCH_SIZE-sized instance array uses the explicitly set batch size, or the same 64 KB-based
 			// fallback the in-shader "#ifndef BATCH_SIZE" defaults assume when no size is injected
@@ -426,6 +461,10 @@ namespace nCine::RhiGL
 					blockUniform.size_ = (m.ArraySize == ShaderCompiler::SymbolicArraySize) ? GLint(effectiveBatchSize)
 						: (m.ArraySize > 0 ? GLint(m.ArraySize) : 1);
 					blockUniform.offset_ = GLint(m.Offset);
+#if defined(RHI_GL_PROFILE_ES2)
+					// The member is a real loose uniform on ES2 - resolve its location for the glUniform upload
+					blockUniform.location_ = glGetUniformLocation(glHandle_, m.Name);
+#endif
 					uniformBlock.blockUniforms_[blockUniform.name_] = blockUniform;
 				}
 			}
@@ -433,11 +472,18 @@ namespace nCine::RhiGL
 			LOGD("Shader program {} - uniform block {} : \"{}\" ({} bytes with {} align, reflected)", glHandle_, uniformBlock.GetIndex(), uniformBlock.GetName(), uniformBlock.GetSize(), uniformBlock.GetAlignAmount());
 		}
 
+#if defined(RHI_GL_PROFILE_ES2)
+		// The reflected attributes describe the modern (gl_VertexID) source; the linked ES2 program has
+		// different vertex inputs (aQuadCorner / aInstanceIndex replacing gl_VertexID), so query the real
+		// active attributes from GL instead of the offline reflection.
+		DiscoverAttributes();
+#else
 		for (std::size_t i = 0; i < reflection.AttributeCount; i++) {
 			const ShaderCompiler::Attribute& a = reflection.Attributes[i];
 			DEATH_UNUSED GLAttribute& attribute = attributes_.emplace_back(glHandle_, a.Name, UniformTypeToGL(a.Type));
 			LOGD("Shader program {} - attribute {} : \"{}\" (reflected)", glHandle_, attribute.GetLocation(), attribute.GetName());
 		}
+#endif
 		GL_LOG_ERRORS();
 	}
 
@@ -530,6 +576,13 @@ namespace nCine::RhiGL
 
 			attributeLocations_[attribute.GetName()] = location;
 			vertexFormat_[location].Init(attribute.GetLocation(), attribute.GetComponentCount(), attribute.GetBasicType());
+#if defined(RHI_GL_PROFILE_ES2)
+			// The ES2 quad-corner attribute is fed from a tightly-packed static VBO (a plain vec2 stream),
+			// not the geometry VBO; set its stride/offset once here (the VBO is bound in DefineVertexFormat).
+			if (std::strcmp(attribute.GetName(), Material::QuadCornerAttributeName) == 0) {
+				vertexFormat_[location].SetVboParameters(2 * sizeof(GLfloat), nullptr);
+			}
+#endif
 		}
 	}
 }

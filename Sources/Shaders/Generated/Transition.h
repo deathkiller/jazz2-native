@@ -37,6 +37,36 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char Transition_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+varying vec2 vTexCoords;
+varying vec2 vCorrection;
+varying float vProgressTime;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vCorrection = spriteSize / vec2(max(spriteSize.x, spriteSize.y));
+	vProgressTime = color.a;
+}
+)__SHDR__";
+
 	inline constexpr char Transition_Fs[] =
 R"__SHDR__(#line 1
 
@@ -78,6 +108,46 @@ void main() {
 
 )__SHDR__";
 
+	inline constexpr char Transition_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec2 vCorrection;
+varying float vProgressTime;
+
+float rand(vec2 xy) {
+	return fract(sin(dot(xy.xy, vec2(12.9898,78.233))) * 43758.5453);
+}
+
+float ease(float time) {
+	time *= 2.0;
+	if (time < 1.0)  {
+		return 0.5 * time * time;
+	}
+
+	time -= 1.0;
+	return -0.5 * (time * (time - 2.0) - 1.0);
+}
+
+
+void main() {
+	vec4 COLOR;
+	vec2 uv = (vTexCoords - vec2(0.5)) * vCorrection;
+	float distance = length(uv);
+
+	float progressInner = vProgressTime - 0.22;
+	distance = (clamp(distance, progressInner, vProgressTime) - progressInner) / (vProgressTime - progressInner);
+
+	float mixValue = ease(distance);
+	float noise = 1.0 + rand(uv) * 0.1;
+	COLOR = vec4(0.0, 0.0, 0.0, mixValue * noise);
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+
 	inline constexpr ShaderCompiler::Uniform Transition_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -96,7 +166,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant Transition_Variants[] = {
 		{ "", "", Transition_Vs, Transition_Fs,
-			2, Transition_Uniforms, 1, Transition_Blocks, 0, nullptr, 0, nullptr },
+			2, Transition_Uniforms, 1, Transition_Blocks, 0, nullptr, 0, nullptr,
+			Transition_Vs100, Transition_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program Transition = { "Transition", 0, 1, Transition_Variants };

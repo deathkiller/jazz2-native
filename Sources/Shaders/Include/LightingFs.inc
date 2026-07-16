@@ -24,7 +24,7 @@ void fragment() {
 		// Diffuse lighting
 		float diffuseFactor = 1.0 - max(dot(normal, normalize(lightDir)), 0.0);
 		diffuseFactor = diffuseFactor * 0.8 + 0.2;*/
-		float diffuseFactor = 1.0f;
+		float diffuseFactor = 1.0;
 
 		float strength = diffuseFactor * lightBlend(clamp(1.0 - ((dist - radiusNear) / (1.0 - radiusNear)), 0.0, 1.0));
 		COLOR = vec4(strength * intensity, strength * brightness, 0.0, 1.0);

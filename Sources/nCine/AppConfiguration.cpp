@@ -52,7 +52,11 @@ namespace nCine
 		// Compile-time variables
 		glCoreProfile_(true),
 		glForwardCompatible_(true),
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(RHI_GL_PROFILE_ES2)
+		// Real OpenGL|ES 2.0 profile (PS Vita target): ESSL 100, no UBOs, no gl_VertexID
+		glMajorVersion_(2),
+		glMinorVersion_(0),
+#elif defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		glMajorVersion_(3),
 		glMinorVersion_(0),
 #else

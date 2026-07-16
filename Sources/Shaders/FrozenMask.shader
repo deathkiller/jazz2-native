@@ -46,6 +46,6 @@ void fragment() {
 	outline = aastep(1.0, outline);
 
 	vec4 color = (tex + tex + tex1 + tex2 + tex3 + tex4) / 6.0;
-	float grey = min((0.299 * color.r + 0.587 * color.g + 0.114 * color.b) * 2.6f, 1.0f);
+	float grey = min((0.299 * color.r + 0.587 * color.g + 0.114 * color.b) * 2.6, 1.0);
 	COLOR = mix(tex, vec4(0.2 * grey, 0.2 + grey * 0.62, 0.6 + 0.2 * grey, outline * 0.95), COLOR.a);
 }

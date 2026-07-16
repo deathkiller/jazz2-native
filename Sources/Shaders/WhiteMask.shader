@@ -24,6 +24,6 @@ vec4 maskSample(vec2 uv) {
 
 void fragment() {
 	vec4 tex = maskSample(UV);
-	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0f, 1.0f);
+	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0, 1.0);
 	COLOR = vec4(color, color, color, tex.a) * COLOR;
 }

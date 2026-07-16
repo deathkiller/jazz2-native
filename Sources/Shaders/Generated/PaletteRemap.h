@@ -38,6 +38,37 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char PaletteRemap_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	uniform float palOffset;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+varying highp float vPaletteOffset;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+	vPaletteOffset = palOffset;
+}
+)__SHDR__";
+
 	inline constexpr char PaletteRemap_Fs[] =
 R"__SHDR__(#line 1
 
@@ -67,6 +98,34 @@ void main() {
 
 )__SHDR__";
 
+	inline constexpr char PaletteRemap_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+varying highp float vPaletteOffset;
+
+uniform sampler2D uTexture;
+uniform sampler2D uTexturePalette;
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	vec4 src = texture2D(uTexture, vTexCoords);
+	// Flat palette position = per-instance offset + the per-pixel index (red channel), mapped into the 256x256 texture
+	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
+	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
+	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	vec4 color = texture2D(uTexturePalette, vec2(palX, palY));
+	COLOR = vec4(color.rgb, color.a * src.a) * COLOR;
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+
 	inline constexpr ShaderCompiler::Uniform PaletteRemap_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -91,7 +150,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant PaletteRemap_Variants[] = {
 		{ "", "", PaletteRemap_Vs, PaletteRemap_Fs,
-			2, PaletteRemap_Uniforms, 1, PaletteRemap_Blocks, 2, PaletteRemap_Textures, 0, nullptr },
+			2, PaletteRemap_Uniforms, 1, PaletteRemap_Blocks, 2, PaletteRemap_Textures, 0, nullptr,
+			PaletteRemap_Vs100, PaletteRemap_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program PaletteRemap = { "PaletteRemap", 0, 1, PaletteRemap_Variants };
@@ -138,6 +198,47 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char BatchedPaletteRemap_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+attribute float aInstanceIndex;
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+struct Instance
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
+	float palOffset;
+};
+
+#ifndef BATCH_SIZE
+	#define BATCH_SIZE (585) // 64 Kb / 112 b
+#endif
+	uniform Instance instances[BATCH_SIZE];
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+varying highp float vPaletteOffset;
+
+#define i instances[int(aInstanceIndex)]
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), 1.0 - (1.0 - aQuadCorner.y));
+	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * i.texRect.x + i.texRect.y, aPosition.y * i.texRect.z + i.texRect.w);
+	vColor = i.color;
+	vPaletteOffset = i.palOffset;
+}
+)__SHDR__";
+
 	inline constexpr char BatchedPaletteRemap_Fs[] =
 R"__SHDR__(#line 1
 
@@ -167,6 +268,34 @@ void main() {
 
 )__SHDR__";
 
+	inline constexpr char BatchedPaletteRemap_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+varying highp float vPaletteOffset;
+
+uniform sampler2D uTexture;
+uniform sampler2D uTexturePalette;
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	vec4 src = texture2D(uTexture, vTexCoords);
+	// Flat palette position = per-instance offset + the per-pixel index (red channel), mapped into the 256x256 texture
+	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
+	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
+	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	vec4 color = texture2D(uTexturePalette, vec2(palX, palY));
+	COLOR = vec4(color.rgb, color.a * src.a) * COLOR;
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+
 	inline constexpr ShaderCompiler::Uniform BatchedPaletteRemap_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -187,7 +316,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant BatchedPaletteRemap_Variants[] = {
 		{ "", "", BatchedPaletteRemap_Vs, BatchedPaletteRemap_Fs,
-			2, BatchedPaletteRemap_Uniforms, 1, BatchedPaletteRemap_Blocks, 2, BatchedPaletteRemap_Textures, 0, nullptr },
+			2, BatchedPaletteRemap_Uniforms, 1, BatchedPaletteRemap_Blocks, 2, BatchedPaletteRemap_Textures, 0, nullptr,
+			BatchedPaletteRemap_Vs100, BatchedPaletteRemap_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program BatchedPaletteRemap = { "BatchedPaletteRemap", 0, 1, BatchedPaletteRemap_Variants };

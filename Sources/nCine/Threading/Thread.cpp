@@ -267,7 +267,7 @@ namespace nCine
 
 	Thread::operator bool() const
 	{
-		if (_sharedBlock != nullptr) {
+		if (_sharedBlock == nullptr) {
 			return false;
 		}
 

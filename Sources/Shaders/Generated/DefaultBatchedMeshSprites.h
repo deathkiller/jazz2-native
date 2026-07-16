@@ -49,6 +49,47 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char DefaultBatchedMeshSprites_Vs100[] =
+R"__SHDR__(#line 1
+
+attribute vec2 aPosition;
+attribute vec2 aTexCoords;
+attribute float aMeshIndex;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+struct Instance
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+#ifndef BATCH_SIZE
+	#define BATCH_SIZE (585) // 64 Kb / 112 b
+#endif
+	uniform Instance instances[BATCH_SIZE];
+
+
+#define i instances[int(aMeshIndex)]
+
+
+
+void main()
+{
+	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
+	vTexCoords = vec2(aTexCoords.x * i.texRect.x + i.texRect.y, aTexCoords.y * i.texRect.z + i.texRect.w);
+	vColor = i.color;
+}
+)__SHDR__";
+
 	inline constexpr char DefaultBatchedMeshSprites_Fs[] =
 R"__SHDR__(#line 1
 
@@ -65,6 +106,25 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = texture(uTexture, vTexCoords) * vColor;
+}
+
+)__SHDR__";
+
+	inline constexpr char DefaultBatchedMeshSprites_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = texture2D(uTexture, vTexCoords) * vColor;
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -94,7 +154,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant DefaultBatchedMeshSprites_Variants[] = {
 		{ "", "", DefaultBatchedMeshSprites_Vs, DefaultBatchedMeshSprites_Fs,
-			2, DefaultBatchedMeshSprites_Uniforms, 1, DefaultBatchedMeshSprites_Blocks, 1, DefaultBatchedMeshSprites_Textures, 3, DefaultBatchedMeshSprites_Attributes },
+			2, DefaultBatchedMeshSprites_Uniforms, 1, DefaultBatchedMeshSprites_Blocks, 1, DefaultBatchedMeshSprites_Textures, 3, DefaultBatchedMeshSprites_Attributes,
+			DefaultBatchedMeshSprites_Vs100, DefaultBatchedMeshSprites_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program DefaultBatchedMeshSprites = { "DefaultBatchedMeshSprites", 0, 1, DefaultBatchedMeshSprites_Variants };
