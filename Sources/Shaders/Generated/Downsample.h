@@ -34,6 +34,33 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char Downsample_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	uniform float palOffset;
+
+varying vec2 vTexCoords;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+}
+)__SHDR__";
+
 	inline constexpr char Downsample_Fs[] =
 R"__SHDR__(#line 1
 
@@ -54,6 +81,29 @@ void main() {
 	color += texture(uTexture, vTexCoords + vec2(uPixelOffset.x, 0.0));
 	color += texture(uTexture, vTexCoords + uPixelOffset);
 	COLOR = vec4(0.25) * color;
+}
+
+)__SHDR__";
+
+	inline constexpr char Downsample_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+
+uniform sampler2D uTexture;
+uniform vec2 uPixelOffset;
+
+
+void main() {
+	vec4 COLOR;
+	vec4 color = texture2D(uTexture, vTexCoords);
+	color += texture2D(uTexture, vTexCoords + vec2(0.0, uPixelOffset.y));
+	color += texture2D(uTexture, vTexCoords + vec2(uPixelOffset.x, 0.0));
+	color += texture2D(uTexture, vTexCoords + uPixelOffset);
+	COLOR = vec4(0.25) * color;
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -82,7 +132,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant Downsample_Variants[] = {
 		{ "", "", Downsample_Vs, Downsample_Fs,
-			3, Downsample_Uniforms, 1, Downsample_Blocks, 1, Downsample_Textures, 0, nullptr },
+			3, Downsample_Uniforms, 1, Downsample_Blocks, 1, Downsample_Textures, 0, nullptr,
+			Downsample_Vs100, Downsample_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program Downsample = { "Downsample", 0, 1, Downsample_Variants };

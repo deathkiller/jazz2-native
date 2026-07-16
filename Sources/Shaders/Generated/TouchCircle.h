@@ -31,6 +31,30 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char TouchCircle_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+varying vec2 vPos;
+
+// The InstanceBlock is deliberately shared by both stages - the fragment stage reads color/texRect directly
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+void main()
+{
+	vec2 aPosition = vec2((1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vPos = aPosition - vec2(0.5, 0.5);
+}
+)__SHDR__";
+
 	inline constexpr char TouchCircle_Fs[] =
 R"__SHDR__(#line 1
 
@@ -62,6 +86,33 @@ void main() {
 
 )__SHDR__";
 
+	inline constexpr char TouchCircle_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vPos;
+
+// The InstanceBlock is deliberately shared by both stages - the fragment stage reads color/texRect directly
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+
+void main() {
+	vec4 COLOR;
+	float dist = length(vPos);
+	float softness = texRect.y;
+	float outerAlpha = 1.0 - smoothstep(0.5 - softness, 0.5, dist);
+	float innerRadius = texRect.x * 0.5;
+	float innerAlpha = (innerRadius > 0.0) ? smoothstep(innerRadius - softness, innerRadius, dist) : 1.0;
+	COLOR = vec4(color.rgb, color.a * outerAlpha * innerAlpha);
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+
 	inline constexpr ShaderCompiler::Uniform TouchCircle_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -80,7 +131,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant TouchCircle_Variants[] = {
 		{ "", "", TouchCircle_Vs, TouchCircle_Fs,
-			2, TouchCircle_Uniforms, 1, TouchCircle_Blocks, 0, nullptr, 0, nullptr },
+			2, TouchCircle_Uniforms, 1, TouchCircle_Blocks, 0, nullptr, 0, nullptr,
+			TouchCircle_Vs100, TouchCircle_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program TouchCircle = { "TouchCircle", 0, 1, TouchCircle_Variants };

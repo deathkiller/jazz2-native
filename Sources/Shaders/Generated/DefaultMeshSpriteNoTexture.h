@@ -31,6 +31,29 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char DefaultMeshSpriteNoTexture_Vs100[] =
+R"__SHDR__(#line 1
+
+attribute vec2 aPosition;
+
+varying vec4 vColor;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec2 spriteSize;
+
+void main()
+{
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vColor = color;
+}
+)__SHDR__";
+
 	inline constexpr char DefaultMeshSpriteNoTexture_Fs[] =
 R"__SHDR__(#line 1
 
@@ -44,6 +67,22 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = vColor;
+}
+
+)__SHDR__";
+
+	inline constexpr char DefaultMeshSpriteNoTexture_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec4 vColor;
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -69,7 +108,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant DefaultMeshSpriteNoTexture_Variants[] = {
 		{ "", "", DefaultMeshSpriteNoTexture_Vs, DefaultMeshSpriteNoTexture_Fs,
-			2, DefaultMeshSpriteNoTexture_Uniforms, 1, DefaultMeshSpriteNoTexture_Blocks, 0, nullptr, 1, DefaultMeshSpriteNoTexture_Attributes },
+			2, DefaultMeshSpriteNoTexture_Uniforms, 1, DefaultMeshSpriteNoTexture_Blocks, 0, nullptr, 1, DefaultMeshSpriteNoTexture_Attributes,
+			DefaultMeshSpriteNoTexture_Vs100, DefaultMeshSpriteNoTexture_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program DefaultMeshSpriteNoTexture = { "DefaultMeshSpriteNoTexture", 0, 1, DefaultMeshSpriteNoTexture_Variants };

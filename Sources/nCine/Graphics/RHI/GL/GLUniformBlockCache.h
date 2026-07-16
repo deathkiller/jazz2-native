@@ -72,6 +72,16 @@ namespace nCine::RhiGL
 		/** @brief Wrapper around @ref GLUniformBlock::SetBlockBinding() */
 		void SetBlockBinding(GLuint blockBinding);
 
+#if defined(RHI_GL_PROFILE_ES2)
+		/**
+			@brief OpenGL|ES 2.0 only: uploads each member as a plain loose uniform via glUniform*
+
+			ES2 has no uniform buffer objects, so instead of a UBO bind the block's host-side data is pushed
+			to the program's loose uniforms (each member's location was resolved in GLShaderProgram::ImportReflection).
+		*/
+		void CommitAsLooseUniforms();
+#endif
+
 	private:
 		GLUniformBlock* uniformBlock_;
 		GLubyte* dataPointer_;

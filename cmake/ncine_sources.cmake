@@ -328,6 +328,8 @@ if(NCINE_WITH_RHI_SOFTWARE)
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwShaderProgram.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwShaderUniforms.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwTileRasterizer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwTileRenderer.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwUniformCache.cpp
 	)
 endif()

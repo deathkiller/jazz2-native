@@ -76,6 +76,10 @@ namespace nCine::RhiSoftware
 		inline SamplerWrapping GetWrapT() const {
 			return wrap_;
 		}
+		/** @brief Returns the four-channel sampling swizzle (identity by default; the palette path maps `.a` to green for RG8 index textures) */
+		inline const SwizzleChannel* GetSwizzle() const {
+			return swizzle_;
+		}
 		/** @brief Returns the magnification filter (alias of @ref GetMagFiltering() the rasterizer samples with) */
 		inline nCine::SamplerFilter GetMagFilter() const {
 			return magFilter_;

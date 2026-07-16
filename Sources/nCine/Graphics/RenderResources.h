@@ -98,6 +98,13 @@ namespace nCine
 			return *renderBatcher_;
 		}
 
+#if defined(RHI_GL_PROFILE_ES2)
+		/** @brief OpenGL|ES 2.0 only: shared static VBO of the 4 quad corners feeding the aQuadCorner attribute (replaces gl_VertexID) */
+		static inline Rhi::Buffer* GetQuadCornerVbo() {
+			return quadCornerVbo_.get();
+		}
+#endif
+
 		static Rhi::ShaderProgram* GetShaderProgram(Material::ShaderProgramType shaderProgramType);
 
 		static Rhi::ShaderProgram* GetBatchedShader(const Rhi::ShaderProgram* shader);
@@ -126,6 +133,11 @@ namespace nCine
 		static std::unique_ptr<RenderVaoPool> vaoPool_;
 		static std::unique_ptr<RenderCommandPool> renderCommandPool_;
 		static std::unique_ptr<RenderBatcher> renderBatcher_;
+
+#if defined(RHI_GL_PROFILE_ES2)
+		// Static 4-corner (TRIANGLE_STRIP order) VBO for the single-quad ES2 sprite/full-screen path
+		static std::unique_ptr<Rhi::Buffer> quadCornerVbo_;
+#endif
 
 		static constexpr std::uint32_t DefaultShaderProgramsCount = std::uint32_t(Material::ShaderProgramType::Custom);
 		static std::unique_ptr<Rhi::ShaderProgram> defaultShaderPrograms_[DefaultShaderProgramsCount];

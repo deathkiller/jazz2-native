@@ -1,4 +1,5 @@
 #include "Emit.h"
+#include "Essl100.h"
 
 #include <Base/Format.h>
 #include <Containers/StringConcatenable.h>
@@ -181,6 +182,13 @@ namespace ShaderCompiler
 		const TextureBinding* Textures;
 		std::size_t AttributeCount;
 		const Attribute* Attributes;
+		// OpenGL|ES 2.0 (ESSL 100) stage sources: the Essl100Emitter lowering of VsSource/FsSource — no
+		// UBOs (std140 blocks become loose uniforms / a uniform struct-array) and no gl_VertexID (the quad
+		// corner and the batched instance index become the aQuadCorner / aInstanceIndex vertex attributes).
+		// Consumed under RHI_GL_PROFILE_ES2 with "#version 100"; the GL 3.3 / ES 3.0 path ignores these and
+		// uses VsSource/FsSource. Null when the ES2 lowering was not available (e.g. runtime-compiled shaders).
+		const char* VsSource100;
+		const char* FsSource100;
 	};
 
 	// A shader program with all of its variants (Variants[0] is always the base variant, whose Name is "")
@@ -235,6 +243,25 @@ namespace ShaderCompiler
 					output += "\tinline constexpr char " + prefix + (vertexStage ? "_Vs" : "_Fs") + "[] =\n";
 					output += "R\"__SHDR__(";
 					output += source;
+					output += ")__SHDR__\";\n";
+					output += "\n";
+
+					// OpenGL|ES 2.0 (ESSL 100) lowering of the same stage. A decline here should not happen
+					// for committed shaders (enforced by --essl100-check); fall back to the modern source so
+					// the field is never null for a precompiled program.
+					String es2source;
+					Diagnostic es2diag;
+					if (!Essl100Emitter::Transform(source, vertexStage, es2source, es2diag)) {
+						es2source = source;
+					}
+					if (es2source.contains(")__SHDR__\""_s)) {
+						diag.Message = "ES2 shader source contains the raw string terminator sequence )__SHDR__\"";
+						diag.Line = 1;
+						return false;
+					}
+					output += "\tinline constexpr char " + prefix + (vertexStage ? "_Vs100" : "_Fs100") + "[] =\n";
+					output += "R\"__SHDR__(";
+					output += es2source;
 					output += ")__SHDR__\";\n";
 					output += "\n";
 				}
@@ -297,7 +324,8 @@ namespace ShaderCompiler
 				output += "\t\t\t" + Death::format("{}", r.Uniforms.size()) + ", " + (r.Uniforms.empty() ? String("nullptr") : String(prefix + "_Uniforms")) + ", ";
 				output += Death::format("{}", r.Blocks.size()) + ", " + (r.Blocks.empty() ? String("nullptr") : String(prefix + "_Blocks")) + ", ";
 				output += Death::format("{}", r.Textures.size()) + ", " + (r.Textures.empty() ? String("nullptr") : String(prefix + "_Textures")) + ", ";
-				output += Death::format("{}", r.Attributes.size()) + ", " + (r.Attributes.empty() ? String("nullptr") : String(prefix + "_Attributes")) + " },\n";
+				output += Death::format("{}", r.Attributes.size()) + ", " + (r.Attributes.empty() ? String("nullptr") : String(prefix + "_Attributes")) + ",\n";
+				output += "\t\t\t" + prefix + "_Vs100, " + prefix + "_Fs100 },\n";
 			}
 			output += "\t};\n";
 			output += "\n";

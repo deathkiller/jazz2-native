@@ -36,6 +36,35 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char Outline_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	uniform float palOffset;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+
 	inline constexpr char Outline_Fs[] =
 R"__SHDR__(#line 1
 
@@ -86,6 +115,56 @@ void main() {
 
 )__SHDR__";
 
+	inline constexpr char Outline_Fs100[] =
+R"__SHDR__(#extension GL_OES_standard_derivatives : enable
+#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+float aastep(float threshold, float value) {
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	vec2 size = COLOR.xy;
+
+	float outline = texture2D(uTexture, vTexCoords + vec2(-size.x, 0)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(0, size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(size.x, 0)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(0, -size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(-size.x, size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(size.x, size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(-size.x, -size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(size.x, -size.y)).a;
+	outline = aastep(1.0, outline);
+
+	float outline2 = texture2D(uTexture, vTexCoords + vec2(-2.0 * size.x, 0)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(0, 2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(2.0 * size.x, 0)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(0, -2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(-2.0 * size.x, 2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(2.0 * size.x, 2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(-2.0 * size.x, -2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(2.0 * size.x, -2.0 * size.y)).a;
+	outline2 = aastep(1.0, outline2);
+
+	vec4 color = texture2D(uTexture, vTexCoords);
+	COLOR = mix(color,
+		mix(vec4(0.0, 0.0, 0.0, COLOR.w * 0.5), vec4(COLOR.z, COLOR.z, COLOR.z, COLOR.w), outline),
+		max(outline, outline2) - color.a);
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+
 	inline constexpr ShaderCompiler::Uniform Outline_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -109,7 +188,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant Outline_Variants[] = {
 		{ "", "", Outline_Vs, Outline_Fs,
-			2, Outline_Uniforms, 1, Outline_Blocks, 1, Outline_Textures, 0, nullptr },
+			2, Outline_Uniforms, 1, Outline_Blocks, 1, Outline_Textures, 0, nullptr,
+			Outline_Vs100, Outline_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program Outline = { "Outline", 0, 1, Outline_Variants };
@@ -146,6 +226,45 @@ out vec4 vColor;
 void main()
 {
 	vec2 aPosition = vec2(1.0 - float(((gl_VertexID + 2) / 3) % 2), 1.0 - float(((gl_VertexID + 1) / 3) % 2));
+	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * i.texRect.x + i.texRect.y, aPosition.y * i.texRect.z + i.texRect.w);
+	vColor = i.color;
+}
+)__SHDR__";
+
+	inline constexpr char BatchedOutline_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+attribute float aInstanceIndex;
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+struct Instance
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
+	float palOffset;
+};
+
+#ifndef BATCH_SIZE
+	#define BATCH_SIZE (585) // 64 Kb / 112 b
+#endif
+	uniform Instance instances[BATCH_SIZE];
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+#define i instances[int(aInstanceIndex)]
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), 1.0 - (1.0 - aQuadCorner.y));
 	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
 
 	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
@@ -204,6 +323,56 @@ void main() {
 
 )__SHDR__";
 
+	inline constexpr char BatchedOutline_Fs100[] =
+R"__SHDR__(#extension GL_OES_standard_derivatives : enable
+#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+float aastep(float threshold, float value) {
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	vec2 size = COLOR.xy;
+
+	float outline = texture2D(uTexture, vTexCoords + vec2(-size.x, 0)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(0, size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(size.x, 0)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(0, -size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(-size.x, size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(size.x, size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(-size.x, -size.y)).a;
+	outline += texture2D(uTexture, vTexCoords + vec2(size.x, -size.y)).a;
+	outline = aastep(1.0, outline);
+
+	float outline2 = texture2D(uTexture, vTexCoords + vec2(-2.0 * size.x, 0)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(0, 2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(2.0 * size.x, 0)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(0, -2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(-2.0 * size.x, 2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(2.0 * size.x, 2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(-2.0 * size.x, -2.0 * size.y)).a;
+	outline2 += texture2D(uTexture, vTexCoords + vec2(2.0 * size.x, -2.0 * size.y)).a;
+	outline2 = aastep(1.0, outline2);
+
+	vec4 color = texture2D(uTexture, vTexCoords);
+	COLOR = mix(color,
+		mix(vec4(0.0, 0.0, 0.0, COLOR.w * 0.5), vec4(COLOR.z, COLOR.z, COLOR.z, COLOR.w), outline),
+		max(outline, outline2) - color.a);
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+
 	inline constexpr ShaderCompiler::Uniform BatchedOutline_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -223,7 +392,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant BatchedOutline_Variants[] = {
 		{ "", "", BatchedOutline_Vs, BatchedOutline_Fs,
-			2, BatchedOutline_Uniforms, 1, BatchedOutline_Blocks, 1, BatchedOutline_Textures, 0, nullptr },
+			2, BatchedOutline_Uniforms, 1, BatchedOutline_Blocks, 1, BatchedOutline_Textures, 0, nullptr,
+			BatchedOutline_Vs100, BatchedOutline_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program BatchedOutline = { "BatchedOutline", 0, 1, BatchedOutline_Variants };

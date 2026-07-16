@@ -22,9 +22,12 @@
 
 #include "Emit.h"
 #include "Essl100.h"
+#include "GlslToCpp.h"
 
 #include <cstdio>
 #include <fstream>
+#include <string>
+#include <utility>
 
 #include <Base/Format.h>
 #include <Containers/StringConcatenable.h>
@@ -152,6 +155,436 @@ namespace
 		}
 		return dump;
 	}
+
+	// --- SwGeneratedShaders.h emission (GLSL-to-C++ software fragment functions) -------------------
+
+	/** One non-sampler uniform of a transpiled shader's "<Program>_Uniforms" struct */
+	struct GeneratedUniformField
+	{
+		String Name;					// GLSL uniform name (== the emitted struct field name)
+		std::uint32_t ComponentCount;	// 1 for float/int/bool, N for vecN/ivecN/bvecN
+	};
+
+	/** One shader the transpiler accepted, ready to be written into the aggregate header */
+	struct GeneratedShaderEntry
+	{
+		String Prefix;								// program prefix, e.g. "Colorized" or "Tinted_USE_PALETTE"
+		String Code;								// the transpiled struct + fragment function
+		std::vector<GeneratedUniformField> Fields;	// non-sampler uniform layout of the struct
+		bool HasComputeVaryings = false;			// a "<Prefix>_ComputeVaryings" was emitted (per-instance-constant varyings)
+	};
+
+	/** Scalar-component count of a reflected GLSL type (0 for matrices/structs/samplers - not a varying member) */
+	std::uint32_t ComponentCountOfGlslType(GlslType t)
+	{
+		switch (t) {
+			case GlslType::Float: case GlslType::Int: case GlslType::UInt: case GlslType::Bool: return 1;
+			case GlslType::Vec2: case GlslType::IVec2: case GlslType::UVec2: case GlslType::BVec2: return 2;
+			case GlslType::Vec3: case GlslType::IVec3: case GlslType::UVec3: case GlslType::BVec3: return 3;
+			case GlslType::Vec4: case GlslType::IVec4: case GlslType::UVec4: case GlslType::BVec4: return 4;
+			default: return 0;
+		}
+	}
+
+	/**
+		Flattens the per-instance std140 block members into the (name, offset, componentCount) table the
+		constant-varying analysis reads. A batched program exposes its instance data as one struct-typed array
+		member ("instances"); its element struct's fields are expanded, their offsets already being relative to
+		one instance's start - exactly what the device's per-instance block pointer addresses. Matrix members
+		(only used by gl_Position) are dropped.
+	*/
+	void BuildInstanceMembers(const StageReflection& reflection, std::vector<GlslInstanceMember>& out)
+	{
+		for (const BlockInfo& block : reflection.Blocks) {
+			for (const MemberInfo& m : block.Members) {
+				if (m.Type == GlslType::Struct) {
+					for (const StructInfo& s : reflection.Structs) {
+						if (s.Name != m.TypeName) {
+							continue;
+						}
+						for (const MemberInfo& f : s.Fields) {
+							std::uint32_t cc = ComponentCountOfGlslType(f.Type);
+							if (cc == 0) {
+								continue;
+							}
+							GlslInstanceMember im;
+							im.Name = f.Name;
+							im.Offset = f.Offset;
+							im.ComponentCount = cc;
+							out.push_back(std::move(im));
+						}
+						break;
+					}
+				} else {
+					std::uint32_t cc = ComponentCountOfGlslType(m.Type);
+					if (cc == 0) {
+						continue;
+					}
+					GlslInstanceMember im;
+					im.Name = m.Name;
+					im.Offset = m.Offset;
+					im.ComponentCount = cc;
+					out.push_back(std::move(im));
+				}
+			}
+		}
+	}
+
+	/** Number of 4-byte components of an emitted C++ uniform field type (float/int/bool or vecN/ivecN/bvecN) */
+	std::uint32_t ComponentCountFromType(const std::string& type)
+	{
+		if (type.empty()) {
+			return 1;
+		}
+		switch (type.back()) {
+			case '2': return 2;
+			case '3': return 3;
+			case '4': return 4;
+			default: return 1;		// float / int / bool
+		}
+	}
+
+	/**
+		Parses the "struct <prefix>_Uniforms { ... };" the transpiler emitted at the head of @p code and
+		records each field's name and component count, so the device can populate the struct generically.
+		Reading the emitted struct (rather than the reflection) guarantees the field set and order match the
+		compiled layout exactly - the fragment source seen by the transpiler may drop uniforms the merged
+		reflection still lists (dead-code elimination keeps the reflection but strips unused per-stage decls).
+	*/
+	void ExtractUniformFields(StringView code, StringView prefix, std::vector<GeneratedUniformField>& out)
+	{
+		std::string s(code.data(), code.size());
+		std::string marker = "struct ";
+		marker.append(prefix.data(), prefix.size());
+		marker += "_Uniforms";
+		std::size_t pos = s.find(marker);
+		if (pos == std::string::npos) {
+			return;
+		}
+		std::size_t brace = s.find('{', pos);
+		if (brace == std::string::npos) {
+			return;
+		}
+		auto trim = [](std::string& t) {
+			std::size_t a = t.find_first_not_of(" \t\r");
+			if (a == std::string::npos) { t.clear(); return; }
+			std::size_t b = t.find_last_not_of(" \t\r");
+			t = t.substr(a, b - a + 1);
+		};
+		std::size_t i = brace + 1;
+		while (i < s.size()) {
+			std::size_t eol = s.find('\n', i);
+			if (eol == std::string::npos) {
+				eol = s.size();
+			}
+			std::string line = s.substr(i, eol - i);
+			i = eol + 1;
+			trim(line);
+			if (line.empty()) {
+				continue;
+			}
+			if (line[0] == '}') {
+				break;					// the closing "};"
+			}
+			if (line.back() != ';') {
+				continue;
+			}
+			line.pop_back();			// drop the trailing ';'
+			trim(line);
+			std::size_t sp = line.find_last_of(" \t");
+			if (sp == std::string::npos) {
+				continue;
+			}
+			std::string type = line.substr(0, sp);
+			std::string name = line.substr(sp + 1);
+			trim(type);
+			GeneratedUniformField f;
+			f.Name = String{name.c_str()};
+			f.ComponentCount = ComponentCountFromType(type);
+			out.push_back(std::move(f));
+		}
+	}
+
+	/**
+		Rejects transpiled code that would not compile against the software runtime, catching a known
+		limitation of the transpiler that it does not detect itself (and cannot be fixed here):
+
+		It always lowers the `vTexCoords` varying to the fragment's own 2-component texture coordinate
+		`vec2(in.u, in.v)`. A shader that declares vTexCoords wider than `vec2` (e.g. the Lighting family
+		packs data into a vec4 vTexCoords) and reads a 3rd/4th component would touch a component `sw::vec2`
+		does not have. Such a shader also cannot be reproduced by the sprite-quad path anyway.
+
+		(Helpers referencing the fragment input `in` used to be rejected here too, but helpers now take `in`
+		as their first parameter and re-derive `unis`, so that case compiles and the check was removed.)
+	*/
+	bool EmittedFragmentIsCompilable(const String& code, StringView prefix, String& reason)
+	{
+		static_cast<void>(prefix);
+		std::string s(code.data(), code.size());
+
+		// vTexCoords lowered to vec2(in.u, in.v) must only be read with components sw::vec2 provides
+		const std::string needle = "vec2(in.u, in.v)";
+		const std::string swizzleChars = "xyzwrgbastpq";
+		std::size_t p = 0;
+		while ((p = s.find(needle, p)) != std::string::npos) {
+			std::size_t after = p + needle.size();
+			p = after;
+			if (after >= s.size() || s[after] != '.') {
+				continue;
+			}
+			std::string sw;
+			for (std::size_t i = after + 1; i < s.size() && swizzleChars.find(s[i]) != std::string::npos; i++) {
+				sw.push_back(s[i]);
+			}
+			if (sw.empty()) {
+				continue;
+			}
+			bool ok;
+			if (sw.size() == 1) {
+				ok = (std::string("xyrgst").find(sw[0]) != std::string::npos);
+			} else {
+				ok = (sw == "xy" || sw == "rg");		// the only swizzle methods sw::vec2 provides
+			}
+			if (!ok) {
+				std::string r = "reads '." + sw + "' of vTexCoords, which the software path only exposes as a 2D texture coordinate";
+				reason = String{r.c_str()};
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** Loads one ".shader" file and reflects every variant of every program it declares (offline flow) */
+	bool LoadProgramsForFile(const char* inputPath, std::vector<ShaderDocument>& documents,
+		std::vector<ProgramReflection>& programs, String& errorMsg)
+	{
+		String content;
+		if (!ReadFileToString(inputPath, content)) {
+			errorMsg = "cannot read input file";
+			return false;
+		}
+		{
+			String includeError;
+			FileReader reader = [](StringView path, String& out) {
+				return ReadFileToString(String::nullTerminatedView(path).data(), out);
+			};
+			if (!ShaderParser::ExpandIncludes(content, ShaderParser::DirectoryOf(inputPath), reader, 0, includeError)) {
+				errorMsg = includeError;
+				return false;
+			}
+		}
+		Diagnostic diag;
+		if (!ShaderParser::ParseDocuments(content, documents, diag)) {
+			errorMsg = diag.Message;
+			return false;
+		}
+		programs.reserve(documents.size());
+		for (const ShaderDocument& document : documents) {
+			ProgramReflection program;
+			program.Document = &document;
+			program.Variants.emplace_back();
+			for (const String& name : document.Variants) {
+				VariantReflection v;
+				v.Name = name;
+				v.Define = name;
+				program.Variants.push_back(std::move(v));
+			}
+			for (VariantReflection& v : program.Variants) {
+				StageReflection vertex, fragment;
+				if (!ReflectVariantStage(document, true, v.Define, vertex, diag) ||
+					!ReflectVariantStage(document, false, v.Define, fragment, diag)) {
+					errorMsg = diag.Message;
+					return false;
+				}
+				if (!GlslReflector::MergeStages(vertex, fragment, v.Reflection, diag)) {
+					errorMsg = diag.Message;
+					return false;
+				}
+			}
+			// Apply "texture_unit(N)" hints (leniently - an unmatched hint just leaves the sampler unassigned,
+			// which makes the transpiler decline that shader rather than fail the whole aggregate run)
+			for (const TextureDirective& directive : document.Textures) {
+				for (VariantReflection& v : program.Variants) {
+					for (TextureInfo& t : v.Reflection.Textures) {
+						if (t.Name == directive.Name) {
+							t.Unit = directive.Unit;
+						}
+					}
+				}
+			}
+			programs.push_back(std::move(program));
+		}
+		return true;
+	}
+
+	/** Builds the aggregate "SwGeneratedShaders.h" contents from the accepted shaders */
+	String BuildSwGeneratedHeader(const std::vector<GeneratedShaderEntry>& supported)
+	{
+		String out;
+		out += "// Generated by ShaderCompiler (--emit-sw-generated). Do not edit manually.\n";
+		out += "#pragma once\n\n";
+		out += "#if defined(WITH_RHI_SOFTWARE)\n\n";
+		out += "#include \"../../nCine/Graphics/RHI/Software/SwShaderRuntime.h\"\n\n";
+		out += "#include <cstddef>\n";
+		out += "#include <cstdint>\n";
+		out += "#include <cstring>\n\n";
+		out += "namespace nCine::RhiSoftware\n{\n";
+		// The transpiled fragment functions are plain (non-inline) free functions. Wrapping the whole payload
+		// in an anonymous namespace gives them internal linkage so the header is ODR-safe even if it is ever
+		// included by more than one translation unit (today only SwDevice.cpp includes it).
+		out += "\tnamespace\n\t{\n";
+
+		for (const GeneratedShaderEntry& e : supported) {
+			out += "\t\t// --- " + e.Prefix + " ---\n";
+			out += e.Code;
+			if (e.Code.size() != 0 && e.Code[e.Code.size() - 1] != '\n') {
+				out += "\n";
+			}
+			out += "\n";
+		}
+
+		out += "\t\tstruct SwGeneratedUniformField { const char* name; std::uint32_t offset; std::uint32_t componentCount; };\n";
+		// computeVaryings is null unless the shader reads per-instance-constant varyings; the device calls it
+		// once per instance (with that instance's block pointer) to fill those varyings before the draw
+		out += "\t\tusing SwGeneratedComputeVaryingsFn = void (*)(void* inputs, const std::uint8_t* instanceBlock);\n";
+		out += "\t\tstruct SwGeneratedShaderInfo { const char* name; nCine::RhiSoftware::FragmentShaderFn fragment; std::uint32_t uniformsSize; const SwGeneratedUniformField* uniformFields; std::uint32_t uniformFieldCount; SwGeneratedComputeVaryingsFn computeVaryings; };\n\n";
+
+		for (const GeneratedShaderEntry& e : supported) {
+			if (e.Fields.empty()) {
+				continue;
+			}
+			out += "\t\tconst SwGeneratedUniformField " + e.Prefix + "_Fields[] = {\n";
+			for (const GeneratedUniformField& f : e.Fields) {
+				out += "\t\t\t{ \"" + f.Name + "\", (std::uint32_t)offsetof(" + e.Prefix + "_Uniforms, " + f.Name + "), " +
+					Death::format("{}", f.ComponentCount) + " },\n";
+			}
+			out += "\t\t};\n";
+		}
+		out += "\n";
+
+		if (supported.empty()) {
+			out += "\t\tconst SwGeneratedShaderInfo* FindGeneratedShader(const char*) { return nullptr; }\n";
+		} else {
+			out += "\t\tconst SwGeneratedShaderInfo SwGeneratedShaders[] = {\n";
+			for (const GeneratedShaderEntry& e : supported) {
+				String fieldsPtr = (e.Fields.empty() ? String("nullptr") : String(e.Prefix + "_Fields"));
+				String computeVaryingsPtr = (e.HasComputeVaryings ? String("&" + e.Prefix + "_ComputeVaryings") : String("nullptr"));
+				out += "\t\t\t{ \"" + e.Prefix + "\", &" + e.Prefix + "_Fragment, (std::uint32_t)sizeof(" + e.Prefix + "_Uniforms), " +
+					fieldsPtr + ", " + Death::format("{}", e.Fields.size()) + ", " + computeVaryingsPtr + " },\n";
+			}
+			out += "\t\t};\n\n";
+			out += "\t\tconst SwGeneratedShaderInfo* FindGeneratedShader(const char* name)\n\t\t{\n";
+			out += "\t\t\tif (name == nullptr) {\n\t\t\t\treturn nullptr;\n\t\t\t}\n";
+			out += "\t\t\t// Exact match first: for most programs the runtime object label (the shader name the\n";
+			out += "\t\t\t// content pipeline registers) equals the generated prefix verbatim.\n";
+			out += "\t\t\tfor (const SwGeneratedShaderInfo& info : SwGeneratedShaders) {\n";
+			out += "\t\t\t\tif (std::strcmp(info.name, name) == 0) {\n\t\t\t\t\treturn &info;\n\t\t\t\t}\n";
+			out += "\t\t\t}\n";
+			out += "\t\t\t// Otherwise match ignoring '_' and letter case, so a variant label that bakes the variant\n";
+			out += "\t\t\t// into the shader name (e.g. \"TexturedBackgroundDither\") still resolves to the generated\n";
+			out += "\t\t\t// prefix that separates it with an underscore and upper-cases the define (\"..._DITHER\").\n";
+			out += "\t\t\tfor (const SwGeneratedShaderInfo& info : SwGeneratedShaders) {\n";
+			out += "\t\t\t\tconst char* a = info.name;\n";
+			out += "\t\t\t\tconst char* b = name;\n";
+			out += "\t\t\t\tbool equal = true;\n";
+			out += "\t\t\t\tfor (;;) {\n";
+			out += "\t\t\t\t\twhile (*a == '_') { a++; }\n";
+			out += "\t\t\t\t\twhile (*b == '_') { b++; }\n";
+			out += "\t\t\t\t\tchar ca = (*a >= 'A' && *a <= 'Z') ? (char)(*a - 'A' + 'a') : *a;\n";
+			out += "\t\t\t\t\tchar cb = (*b >= 'A' && *b <= 'Z') ? (char)(*b - 'A' + 'a') : *b;\n";
+			out += "\t\t\t\t\tif (ca != cb) { equal = false; break; }\n";
+			out += "\t\t\t\t\tif (ca == '\\0') { break; }\n";
+			out += "\t\t\t\t\ta++; b++;\n";
+			out += "\t\t\t\t}\n";
+			out += "\t\t\t\tif (equal) {\n\t\t\t\t\treturn &info;\n\t\t\t\t}\n";
+			out += "\t\t\t}\n";
+			out += "\t\t\treturn nullptr;\n\t\t}\n";
+		}
+
+		out += "\t}\n";	// anonymous namespace
+		out += "}\n";		// namespace nCine::RhiSoftware
+		out += "\n#endif\n";
+		return out;
+	}
+
+	/**
+		Transpiles the fragment stage of every program variant across all @p inputPaths to C++ and writes the
+		single aggregate "SwGeneratedShaders.h". Prints a summary of accepted vs. declined shaders to stdout.
+	*/
+	int RunEmitSwGenerated(const char* outputPath, char** inputPaths, int inputCount)
+	{
+		std::vector<GeneratedShaderEntry> supported;
+		std::vector<std::pair<String, String>> declined;	// (prefix, reason)
+
+		for (int fi = 0; fi < inputCount; fi++) {
+			const char* inputPath = inputPaths[fi];
+			std::vector<ShaderDocument> documents;
+			std::vector<ProgramReflection> programs;
+			String errorMsg;
+			if (!LoadProgramsForFile(inputPath, documents, programs, errorMsg)) {
+				std::fprintf(stderr, "%s: error: %s\n", inputPath, errorMsg.data());
+				return 1;
+			}
+			for (const ProgramReflection& program : programs) {
+				const String& progName = program.Document->ProgramName;
+				for (const VariantReflection& v : program.Variants) {
+					String prefix = (v.Name.empty() ? progName : String(progName + "_" + v.Name));
+					String fs = ShaderParser::BuildStageSource(*program.Document, false, v.Define);
+					String vs = ShaderParser::BuildStageSource(*program.Document, true, v.Define);
+					std::vector<SamplerBinding> samplers;
+					for (const TextureInfo& t : v.Reflection.Textures) {
+						SamplerBinding sb;
+						sb.Name = t.Name;
+						sb.Unit = t.Unit;
+						samplers.push_back(std::move(sb));
+					}
+					std::vector<GlslInstanceMember> instanceMembers;
+					BuildInstanceMembers(v.Reflection, instanceMembers);
+					GlslToCppResult r = GlslToCpp::TranspileFragment(prefix, fs, vs, samplers, instanceMembers);
+					String rejectReason;
+					if (r.Supported && !EmittedFragmentIsCompilable(r.Code, prefix, rejectReason)) {
+						declined.emplace_back(prefix, rejectReason);
+					} else if (r.Supported) {
+						GeneratedShaderEntry e;
+						e.Prefix = prefix;
+						e.Code = std::move(r.Code);
+						e.HasComputeVaryings = r.HasComputeVaryings;
+						ExtractUniformFields(e.Code, e.Prefix, e.Fields);
+						// Constant-varying fields share the struct with the loose uniforms but are filled by
+						// "<Prefix>_ComputeVaryings" (not ResolveUniform), so drop them from the uniform list.
+						for (const String& vn : r.ConstVaryingNames) {
+							for (std::size_t i = 0; i < e.Fields.size();) {
+								if (e.Fields[i].Name == vn) {
+									e.Fields.erase(e.Fields.begin() + std::ptrdiff_t(i));
+								} else {
+									i++;
+								}
+							}
+						}
+						supported.push_back(std::move(e));
+					} else {
+						declined.emplace_back(prefix, r.UnsupportedReason);
+					}
+				}
+			}
+		}
+
+		String header = BuildSwGeneratedHeader(supported);
+		if (!WriteStringToFile(outputPath, header)) {
+			std::fprintf(stderr, "error: cannot write output file \"%s\"\n", outputPath);
+			return 1;
+		}
+
+		std::fprintf(stdout, "[SwGenerated] emitted %zu supported fragment function(s), declined %zu\n",
+			supported.size(), declined.size());
+		for (const GeneratedShaderEntry& e : supported) {
+			std::fprintf(stdout, "  emitted:  %s (%zu uniform field(s))\n", e.Prefix.data(), e.Fields.size());
+		}
+		for (const std::pair<String, String>& d : declined) {
+			std::fprintf(stdout, "  declined: %s - %s\n", d.first.data(), d.second.data());
+		}
+		return 0;
+	}
 }
 
 int main(int argc, char* argv[])
@@ -169,6 +602,17 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		return 0;
+	}
+
+	// Standalone mode: transpile every input shader's fragment stage to C++ and write the aggregate
+	// "SwGeneratedShaders.h" consumed by the software renderer. Usage:
+	//   ShaderCompiler --emit-sw-generated <output.h> <input1.shader> [input2.shader ...]
+	if (argc >= 2 && StringView(argv[1]) == "--emit-sw-generated") {
+		if (argc < 4) {
+			std::fprintf(stderr, "error: --emit-sw-generated requires <output.h> and at least one input .shader\n");
+			return 2;
+		}
+		return RunEmitSwGenerated(argv[2], &argv[3], argc - 3);
 	}
 
 	for (int i = 1; i < argc; i++) {

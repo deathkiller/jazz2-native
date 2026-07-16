@@ -15,7 +15,11 @@ namespace nCine::RhiGL
 {
 	namespace
 	{
-#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(RHI_GL_PROFILE_ES2)
+		// Real OpenGL|ES 2.0 profile: ESSL 100 (attribute/varying/gl_FragColor, no UBOs, no gl_VertexID).
+		// The engine feeds the ProgramVariant's *100 (Essl100Emitter) sources on this path.
+		static constexpr StringView CommonShaderVersion = "#version 100\n"_s;
+#elif (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 		static constexpr StringView CommonShaderVersion = "#version 300 es\n"_s;
 #else
 		static constexpr StringView CommonShaderVersion = "#version 330\n"_s;
@@ -142,7 +146,12 @@ namespace nCine::RhiGL
 					*(MutableStringView(buffer).trimmed().end()) = '\0';
 					LOGW("Shader: {}", buffer);
 				}
+#if !defined(RHI_GL_PROFILE_ES2)
+				// The desktop ES2 test profile keeps effect shaders that fail the strict ESSL 100 compiler
+				// non-fatal (logged, returns false) so the app still boots and the core sprite/menu path can be
+				// validated; the GL 3.3 / ES 3.0 path keeps the immediate debug break on a shader error.
 				DEATH_ASSERT_BREAK();
+#endif
 			}
 #endif
 			status_ = Status::CompilationFailed;

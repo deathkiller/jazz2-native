@@ -115,6 +115,7 @@
   <ItemGroup>
     <ClCompile Include="ConstFold.cpp" />
     <ClCompile Include="Emit.cpp" />
+    <ClCompile Include="GlslToCpp.cpp" />
     <ClCompile Include="Essl100.cpp" />
     <ClCompile Include="GlslReflect.cpp" />
     <ClCompile Include="RuntimeShader.cpp" />
@@ -129,6 +130,7 @@
   <ItemGroup>
     <ClInclude Include="ConstFold.h" />
     <ClInclude Include="Emit.h" />
+    <ClInclude Include="GlslToCpp.h" />
     <ClInclude Include="Essl100.h" />
     <ClInclude Include="GlslReflect.h" />
     <ClInclude Include="RuntimeShader.h" />

@@ -5,11 +5,11 @@
 #include "SwTexture.h"
 
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
+#include "../../../../Shaders/Generated/SwGeneratedShaders.h"
 
-#include <cmath>
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
-#include <algorithm>
 
 namespace nCine::RhiSoftware
 {
@@ -75,273 +75,6 @@ namespace nCine::RhiSoftware
 			}
 		}
 
-		// --- Scalar helpers reproducing the GLSL built-ins used by the procedural fragment shaders ---
-
-		inline float Fractf(float x) { return x - std::floor(x); }
-		inline float Mixf(float a, float b, float t) { return a + (b - a) * t; }
-		inline float Clampf(float x, float lo, float hi) { return (x < lo ? lo : (x > hi ? hi : x)); }
-		inline float Signf(float x) { return (x > 0.0f ? 1.0f : (x < 0.0f ? -1.0f : 0.0f)); }
-
-		void Hash2D(float px, float py, float out[2])
-		{
-			const float h = px * 12.9898f + py * 78.233f;
-			const float h2 = px * 37.271f + py * 377.632f;
-			out[0] = -1.0f + 2.0f * Fractf(std::sin(h) * 43758.5453f);
-			out[1] = -1.0f + 2.0f * Fractf(std::sin(h2) * 43758.5453f);
-		}
-
-		// Returns voronoi(p).x (the squared distance to the nearest feature point), the only component the
-		// star field reads
-		float VoronoiDistance(float px, float py)
-		{
-			const float nx = std::floor(px), ny = std::floor(py);
-			const float fx = px - nx, fy = py - ny;
-			float md = 8.0f;
-			for (int j = -1; j <= 1; ++j) {
-				for (int i = -1; i <= 1; ++i) {
-					const float gx = float(i), gy = float(j);
-					float o[2];
-					Hash2D(nx + gx, ny + gy, o);
-					const float rx = gx + o[0] - fx;
-					const float ry = gy + o[1] - fy;
-					const float d = rx * rx + ry * ry;
-					if (d < md) { md = d; }
-				}
-			}
-			return md;
-		}
-
-		float AddStarField(float px, float py, float threshold)
-		{
-			const float value = VoronoiDistance(px, py);
-			if (value < threshold) {
-				const float power = 1.0f - (value / threshold);
-				return std::min(power * power * power, 0.5f);
-			}
-			return 0.0f;
-		}
-
-		// A read-only view of a bound texture the procedural fragment callbacks sample directly
-		struct SourceView
-		{
-			const std::uint8_t* pixels = nullptr;
-			std::int32_t width = 0;
-			std::int32_t height = 0;
-			std::int32_t strideBytes = 0;
-			PixelFormat format = PixelFormat::RGBA8;
-		};
-
-		SourceView MakeSourceView(const SwTexture* texture)
-		{
-			SourceView v;
-			if (texture != nullptr) {
-				v.pixels = texture->GetPixels();
-				v.width = texture->GetWidth();
-				v.height = texture->GetHeight();
-				v.strideBytes = texture->GetStrideBytes();
-				v.format = texture->GetFormat();
-			}
-			return v;
-		}
-
-		// Nearest-neighbour texture fetch returning normalized RGBA (0..1); the wrap flag selects Repeat vs.
-		// ClampToEdge. Bilinear filtering is a later slice, so like the fast paths this samples nearest.
-		void SampleNearest(const SourceView& t, float u, float v, bool repeat, float out[4])
-		{
-			if (t.pixels == nullptr || t.width <= 0 || t.height <= 0) {
-				out[0] = out[1] = out[2] = out[3] = 0.0f;
-				return;
-			}
-			std::int32_t tx = std::int32_t(std::floor(u * float(t.width)));
-			std::int32_t ty = std::int32_t(std::floor(v * float(t.height)));
-			if (repeat) {
-				tx = ((tx % t.width) + t.width) % t.width;
-				ty = ((ty % t.height) + t.height) % t.height;
-			} else {
-				tx = (tx < 0 ? 0 : (tx >= t.width ? t.width - 1 : tx));
-				ty = (ty < 0 ? 0 : (ty >= t.height ? t.height - 1 : ty));
-			}
-			const std::int32_t bpp = (t.format == PixelFormat::RGBA8 ? 4 : (t.format == PixelFormat::RGB8 ? 3 : 4));
-			const std::uint8_t* p = t.pixels + std::size_t(ty) * t.strideBytes + std::size_t(tx) * bpp;
-			out[0] = float(p[0]) * (1.0f / 255.0f);
-			out[1] = float(p[1]) * (1.0f / 255.0f);
-			out[2] = float(p[2]) * (1.0f / 255.0f);
-			out[3] = (bpp == 4 ? float(p[3]) * (1.0f / 255.0f) : 1.0f);
-		}
-
-		// --- PaletteRemap / BatchedPaletteRemap ---
-
-		struct PaletteContext
-		{
-			SourceView palette;
-			std::int32_t paletteRowOffset;
-			std::int32_t paletteColumnOffset;
-			bool isRG8;
-		};
-
-		// Ports the palette-remap fragment. The promoted index texture keeps the palette index in byte 0 (and,
-		// for an RG8 source, its own alpha in byte 1) of the primary sample the engine already wrote into rgba,
-		// so this looks the index up in the shared 256x256 palette - advanced by the per-instance row/column
-		// offset - and modulates by the instance color. R8 sources take their alpha from the palette entry;
-		// RG8 sources from the index texture's G channel.
-		void PaletteFragment(const FragmentShaderInput& in)
-		{
-			const PaletteContext& c = *static_cast<const PaletteContext*>(in.userData);
-			const std::int32_t idx = in.rgba[0];
-			// The RG8 alpha source is the index texture's G channel; read it before rgba[] is overwritten below
-			const std::int32_t srcA = in.rgba[1];
-
-			const std::int32_t col = (idx + c.paletteColumnOffset) & 0xFF;
-			const std::int32_t row = c.paletteRowOffset;
-
-			float palR = 0.0f, palG = 0.0f, palB = 0.0f, palA = 0.0f;
-			if (c.palette.pixels != nullptr && row >= 0 && row < c.palette.height && col >= 0 && col < c.palette.width) {
-				const std::uint8_t* p = c.palette.pixels + std::size_t(row) * c.palette.strideBytes + std::size_t(col) * 4;
-				palR = float(p[0]);
-				palG = float(p[1]);
-				palB = float(p[2]);
-				palA = float(p[3]);
-			}
-
-			in.rgba[0] = std::uint8_t(Clampf(palR * in.color[0], 0.0f, 255.0f));
-			in.rgba[1] = std::uint8_t(Clampf(palG * in.color[1], 0.0f, 255.0f));
-			in.rgba[2] = std::uint8_t(Clampf(palB * in.color[2], 0.0f, 255.0f));
-			const float outA = (c.isRG8 ? (palA / 255.0f) * float(srcA) * in.color[3] : palA * in.color[3]);
-			in.rgba[3] = std::uint8_t(Clampf(outA, 0.0f, 255.0f));
-		}
-
-		// --- TexturedBackground / TexturedBackgroundCircle (+ DITHER) ---
-
-		struct BackgroundContext
-		{
-			SourceView texture;
-			float viewSize[2];
-			float cameraPos[2];
-			float horizonColor[4];
-			float shift[2];
-			bool dither;
-			bool circle;
-		};
-
-		// Ports the canvas fragment of TexturedBackground(.shader)/TexturedBackgroundCircle(.shader): warps
-		// UV into a scrolling texture lookup (Repeat wrap), optionally dithers a second tap, then blends the
-		// texture with a horizon colour (+ an optional voronoi star field) by a vertical-distance opacity.
-		void BackgroundFragment(const FragmentShaderInput& in)
-		{
-			const BackgroundContext& c = *static_cast<const BackgroundContext*>(in.userData);
-			const float uvx = in.u, uvy = in.v;
-
-			float distance, texturePosX, texturePosY, horizonOpacity;
-			if (!c.circle) {
-				distance = 1.3f - std::fabs(2.0f * uvy - 1.0f);
-				const float horizonDepth = std::pow(distance, 1.4f);
-				const float yShift = (uvy > 0.5f ? 1.0f : 0.0f);
-				const float correction = (c.viewSize[0] * 9.0f) / (c.viewSize[1] * 16.0f);
-				texturePosX = (c.shift[0] / 256.0f) + (uvx - 0.5f) * (0.5f + (1.5f * horizonDepth)) * correction;
-				texturePosY = (c.shift[1] / 256.0f) + (uvy - yShift) * 1.4f * distance;
-				horizonOpacity = Clampf(std::pow(distance, 1.5f) - 0.3f, 0.0f, 1.0f);
-			} else {
-				float tcx = 2.0f * uvx - 1.0f;
-				const float tcy = 2.0f * uvy - 1.0f;
-				tcx *= c.viewSize[0] / c.viewSize[1];
-				distance = std::sqrt(tcx * tcx + tcy * tcy);
-				const float INV_PI = 0.31830988618379067153776752675f;
-				const float xShift = (tcx == 0.0f ? Signf(tcy) * 0.5f : std::atan2(tcy, tcx) * INV_PI);
-				texturePosX = xShift * 1.0f + (c.shift[0] * 0.01f);
-				texturePosY = (1.0f / distance) * 1.4f + (c.shift[1] * 0.002f);
-				horizonOpacity = 1.0f - Clampf(std::pow(distance, 1.4f) - 0.3f, 0.0f, 1.0f);
-			}
-
-			float texColor[4];
-			SampleNearest(c.texture, texturePosX, texturePosY, true, texColor);
-			if (c.dither) {
-				float noise[2];
-				Hash2D(uvx * c.viewSize[0] + (c.cameraPos[0] + c.shift[0]) * 0.001f,
-					uvy * c.viewSize[1] + (c.cameraPos[1] + c.shift[1]) * 0.001f, noise);
-				const float dx = texturePosX + noise[0] * 8.0f / c.viewSize[0];
-				const float dy = texturePosY + noise[1] * 8.0f / c.viewSize[1];
-				float texColor2[4];
-				SampleNearest(c.texture, dx, dy, true, texColor2);
-				for (int i = 0; i < 4; i++) {
-					texColor[i] = Mixf(texColor[i], texColor2[i], 0.333f);
-				}
-			}
-
-			float horizon[4] = {c.horizonColor[0], c.horizonColor[1], c.horizonColor[2], 1.0f};
-			if (c.horizonColor[3] > 0.0f) {
-				const float aspect = c.viewSize[1] / c.viewSize[0];
-				float spx = uvx + c.cameraPos[0] * 0.00012f;
-				float spy = uvy * aspect + c.cameraPos[1] * 0.00012f;
-				const float star1 = AddStarField(spx * 7.0f, spy * 7.0f, 0.00008f);
-				spx = uvx + c.cameraPos[0] * 0.00018f + 0.5f;
-				spy = uvy * aspect + c.cameraPos[1] * 0.00018f + 0.5f;
-				const float star2 = AddStarField(spx * 7.0f, spy * 7.0f, 0.00008f);
-				const float stars = star1 + star2;
-				horizon[0] += stars;
-				horizon[1] += stars;
-				horizon[2] += stars;
-			}
-
-			in.rgba[0] = std::uint8_t(Clampf(Mixf(texColor[0], horizon[0], horizonOpacity) * 255.0f, 0.0f, 255.0f));
-			in.rgba[1] = std::uint8_t(Clampf(Mixf(texColor[1], horizon[1], horizonOpacity) * 255.0f, 0.0f, 255.0f));
-			in.rgba[2] = std::uint8_t(Clampf(Mixf(texColor[2], horizon[2], horizonOpacity) * 255.0f, 0.0f, 255.0f));
-			in.rgba[3] = 255;
-		}
-
-		// --- Combine (viewport compositor) ---
-
-		struct CombineContext
-		{
-			SourceView scene;
-			SourceView lighting;
-			SourceView blurHalf;
-			SourceView blurQuarter;
-			float ambientColor[4];
-			float time;
-			float viewSizeInv[2];
-		};
-
-		// Ports Combine(.shader): composites the scene render target with the lighting map (a noise-jittered
-		// lookup), the blurred/grayscaled bloom and the ambient colour. All source RTs sample ClampToEdge.
-		void CombineFragment(const FragmentShaderInput& in)
-		{
-			const CombineContext& c = *static_cast<const CombineContext*>(in.userData);
-			const float uvx = in.u, uvy = in.v;
-
-			float blur1[4], blur2[4], mainColor[4], light[4];
-			SampleNearest(c.blurHalf, uvx, uvy, false, blur1);
-			SampleNearest(c.blurQuarter, uvx, uvy, false, blur2);
-			SampleNearest(c.scene, uvx, uvy, false, mainColor);
-
-			// noiseTexCoords(): jitter the lighting lookup by a hashed offset, clamped to the [0,1] range
-			const float seedFract = Fractf(c.time * 0.01f);
-			float noise[2];
-			Hash2D(uvx + seedFract, uvy + seedFract, noise);
-			const float lx = Clampf(uvx + noise[0] * c.viewSizeInv[0] * 1.4f, 0.0f, 1.0f);
-			const float ly = Clampf(uvy + noise[1] * c.viewSizeInv[1] * 1.4f, 0.0f, 1.0f);
-			SampleNearest(c.lighting, lx, ly, false, light);
-
-			float blur[4];
-			for (int i = 0; i < 4; i++) {
-				blur[i] = (blur1[i] + blur2[i]) * 0.5f;
-			}
-			const float gray = blur[0] * 0.299f + blur[1] * 0.587f + blur[2] * 0.114f;
-			blur[0] = gray;
-			blur[1] = gray;
-			blur[2] = gray;
-
-			const float lightG = light[1];
-			const float lightR = light[0];
-			const float glow = std::max(lightG - 0.7f, 0.0f);
-			const float t1 = Clampf((1.0f - lightR) / std::sqrt(std::max(c.ambientColor[3], 0.35f)), 0.0f, 1.0f);
-			const float t2 = 1.0f - lightR;
-			for (int i = 0; i < 4; i++) {
-				const float lit = mainColor[i] * (1.0f + lightG) + glow;
-				const float mid = Mixf(lit, blur[i], t1);
-				in.rgba[i] = std::uint8_t(Clampf(Mixf(mid, c.ambientColor[i], t2) * 255.0f, 0.0f, 255.0f));
-			}
-			in.rgba[3] = 255;
-		}
 	}
 
 	SwDevice::BlendingState SwDevice::blending_;
@@ -360,6 +93,7 @@ namespace nCine::RhiSoftware
 	std::int32_t SwDevice::defaultFbHeight_ = 0;
 	std::int32_t SwDevice::defaultFbStride_ = 0;
 	std::vector<std::uint8_t> SwDevice::screenPixels_;
+	std::vector<SwDevice::PendingSoftwareLight> SwDevice::pendingSoftwareLights_;
 
 	void SwDevice::SetBlendingEnabled(bool enabled)
 	{
@@ -606,6 +340,105 @@ namespace nCine::RhiSoftware
 		return fb;
 	}
 
+	void SwDevice::FlushSoftwareRenderer()
+	{
+		SwRaster::Flush();
+	}
+
+	void SwDevice::SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
+		std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB)
+	{
+		PendingSoftwareLight entry;
+		entry.Lightmap = lightmap;
+		entry.LmW = lmW;
+		entry.LmH = lmH;
+		entry.Scale = (scale > 0 ? scale : 1);
+		entry.VpX = vpX;
+		entry.VpY = vpY;
+		entry.VpW = vpW;
+		entry.VpH = vpH;
+		entry.AmbR = ambR;
+		entry.AmbG = ambG;
+		entry.AmbB = ambB;
+		// Pushed in Visit/OnDraw order; the matching Combine draws are dispatched in that same order, so the queue
+		// is consumed front-to-back (see ApplyPendingSoftwareLighting)
+		pendingSoftwareLights_.push_back(entry);
+	}
+
+	void SwDevice::ApplyPendingSoftwareLighting()
+	{
+		if (pendingSoftwareLights_.empty()) {
+			// No lighting queued for this Combine draw: the scene stays as rasterized (fully lit)
+			return;
+		}
+		const PendingSoftwareLight light = pendingSoftwareLights_.front();
+		pendingSoftwareLights_.erase(pendingSoftwareLights_.begin());
+
+		if (light.Lightmap == nullptr || light.LmW <= 0 || light.LmH <= 0) {
+			return;
+		}
+
+		// The scene viewport rasterized straight into the screen back-buffer and deferred its tiles to the tile
+		// renderer; drain them so the buffer holds the finished scene before it is read back and modified here. The
+		// HUD is dispatched after this Combine draw, so it is not affected (it re-defers and is flushed at present).
+		FlushSoftwareRenderer();
+		const Framebuffer fb = GetScreenFramebuffer();
+		if (fb.pixels == nullptr) {
+			return;
+		}
+
+		// Clamp the viewport rectangle to the actual screen buffer (the compositor submits the unclamped rect)
+		const std::int32_t vpX = std::max(0, light.VpX);
+		const std::int32_t vpY = std::max(0, light.VpY);
+		const std::int32_t vpW = std::min(light.VpW, fb.width - vpX);
+		const std::int32_t vpH = std::min(light.VpH, fb.height - vpY);
+		if (vpW <= 0 || vpH <= 0) {
+			return;
+		}
+
+		const std::int32_t scale = light.Scale;
+		const std::int32_t lmW = light.LmW;
+		const std::int32_t lmH = light.LmH;
+		const float ambR = light.AmbR;
+		const float ambG = light.AmbG;
+		const float ambB = light.AmbB;
+
+		// In-place combine over the viewport region, matching the core of Combine.shader with the (heavy,
+		// blur-dependent) grayscale night-vision term dropped:
+		//   lit = main * (1 + g) + max(g - 0.7, 0)
+		//   out = mix(lit, ambientRGB, clamp(1 - r, 0, 1))
+		// The half-resolution lightmap is sampled point-wise. Rows share the screen buffer's top-down convention.
+		for (std::int32_t y = 0; y < vpH; y++) {
+			const std::int32_t lmY = std::min(y / scale, lmH - 1);
+			const float* texelBase = light.Lightmap + (std::size_t)lmY * lmW * 2;
+			std::uint8_t* px = fb.pixels + (std::size_t)(vpY + y) * fb.strideBytes + (std::size_t)vpX * 4;
+			for (std::int32_t x = 0; x < vpW; x++, px += 4) {
+				const std::int32_t lmX = std::min(x / scale, lmW - 1);
+				// Clamp to [0,1] to match the shader path's RG8 lighting buffer: a negative Brightness (some
+				// light emitters ramp it below zero, e.g. Player fire-shield parts) is clamped to 0 there and
+				// simply adds nothing. Without this clamp g<0 makes lit=(1+g)<1, which darkens the scene into a
+				// "black light" instead of a no-op.
+				const float r = std::clamp(texelBase[lmX * 2], 0.0f, 1.0f);
+				const float g = std::clamp(texelBase[lmX * 2 + 1], 0.0f, 1.0f);
+				const float darkT = std::clamp(1.0f - r, 0.0f, 1.0f);
+				if (darkT <= 0.0f && g <= 0.0f) {
+					continue; // Fully lit, no brightness core: leave the scene pixel as-is
+				}
+				const float lit = 1.0f + g;
+				const float core = (g > 0.7f ? g - 0.7f : 0.0f);
+				float cr = (px[0] / 255.0f) * lit + core;
+				float cg = (px[1] / 255.0f) * lit + core;
+				float cb = (px[2] / 255.0f) * lit + core;
+				cr += (ambR - cr) * darkT;
+				cg += (ambG - cg) * darkT;
+				cb += (ambB - cb) * darkT;
+				px[0] = (std::uint8_t)std::clamp(cr * 255.0f + 0.5f, 0.0f, 255.0f);
+				px[1] = (std::uint8_t)std::clamp(cg * 255.0f + 0.5f, 0.0f, 255.0f);
+				px[2] = (std::uint8_t)std::clamp(cb * 255.0f + 0.5f, 0.0f, 255.0f);
+			}
+		}
+	}
+
 	bool SwDevice::ResolveFramebuffer(Framebuffer& out)
 	{
 		if (currentRenderTarget_ != nullptr) {
@@ -636,9 +469,32 @@ namespace nCine::RhiSoftware
 		}
 
 		const SwEffect effect = currentProgram_->GetEffect();
-		if (effect == SwEffect::Unknown) {
-			std::fprintf(stderr, "[SwDevice] Skipped draw: no C++ effect for the bound program\n");
+
+		// The viewport compositor. The software backend renders the scene straight to the screen buffer and has no
+		// shader post-processing, so a Combine draw does not run a fragment: it triggers the CPU dynamic-lighting
+		// combine the compositor queued for this viewport (SetPendingSoftwareLighting), applied in place over the
+		// screen buffer. Combine is only ever the compositor, so every Combine draw is intercepted here.
+		if (effect == SwEffect::Combine) {
+			ApplyPendingSoftwareLighting();
 			return;
+		}
+
+		// Resolve the offline-transpiled generated fragment for this program (looked up by object label = the
+		// shader name; FindGeneratedShader also resolves the labels that bake a variant into the name, such as
+		// the "...Dither" ones). An Unknown-effect program requires one, else the draw is skipped as before.
+		// TexturedBackground(+Circle) and PaletteRemap(+Batched) are dispatched entirely through this generated
+		// fragment. DefaultSprite / DefaultBatchedSprites keep their dedicated no-fragment fast path and never
+		// look one up.
+		const bool prefersGenerated = (effect == SwEffect::Unknown ||
+			effect == SwEffect::TexturedBackground || effect == SwEffect::TexturedBackgroundCircle ||
+			effect == SwEffect::PaletteRemap || effect == SwEffect::BatchedPaletteRemap);
+		const SwGeneratedShaderInfo* generatedShader = nullptr;
+		if (prefersGenerated) {
+			generatedShader = FindGeneratedShader(currentProgram_->GetObjectLabel());
+			if (generatedShader == nullptr && effect == SwEffect::Unknown) {
+				std::fprintf(stderr, "[SwDevice] Skipped draw: no C++ effect for the bound program\n");
+				return;
+			}
 		}
 
 		Framebuffer fb;
@@ -727,8 +583,10 @@ namespace nCine::RhiSoftware
 		}
 
 		// Fills a draw context from one instance's fixed-function state and hands it to the engine as a
-		// procedural sprite quad (vertexData stays null, so FetchVertex synthesizes the four corners from ff)
-		auto drawQuad = [&](const FFState& ff, FragmentShaderFn fragmentShader, void* userData) {
+		// procedural sprite quad (vertexData stays null, so FetchVertex synthesizes the four corners from ff).
+		// userDataSize is the byte size of the block userData points at, so the tile renderer can snapshot it
+		// when the draw is deferred (its storage is caller-stack memory); pass 0 when there is no callback.
+		auto drawQuad = [&](const FFState& ff, FragmentShaderFn fragmentShader, void* userData, std::uint32_t userDataSize) {
 			DrawContext ctx;
 			for (std::uint32_t u = 0; u < MaxTextureUnits; u++) {
 				ctx.textures[u] = boundTextures_[u];
@@ -736,6 +594,7 @@ namespace nCine::RhiSoftware
 			ctx.ff = ff;
 			ctx.fragmentShader = fragmentShader;
 			ctx.fragmentShaderUserData = userData;
+			ctx.fragmentShaderUserDataSize = userDataSize;
 			ctx.blendingEnabled = blendOn;
 			ctx.blendSrc = bsrc;
 			ctx.blendDst = bdst;
@@ -745,13 +604,75 @@ namespace nCine::RhiSoftware
 			SwRaster::Draw(PrimitiveType::TriangleStrip, 0, 4);
 		};
 
-		const bool batched = (effect == SwEffect::DefaultBatchedSprites || effect == SwEffect::BatchedPaletteRemap);
+		// A generated shader is batched when its instance block carries a BATCH_SIZE-sized array (instanceStride > 0)
+		const bool batched = (effect == SwEffect::DefaultBatchedSprites || effect == SwEffect::BatchedPaletteRemap ||
+			(generatedShader != nullptr && instanceStride > 0));
 		std::int32_t numInstances = 1;
 		if (batched) {
 			numInstances = numVertices / 6;
 			if (numInstances < 1) {
 				numInstances = 1;
 			}
+		}
+
+		// Offline-transpiled generated fragment path. Reached for Unknown-effect programs and for the
+		// Combine / TexturedBackground(+Circle) / PaletteRemap(+Batched) effects, which are dispatched entirely
+		// here (the switch below only keeps the DefaultSprite / DefaultBatchedSprites fast path). Handles
+		// batched and non-batched draws and fills any per-instance-constant varyings via the generated
+		// computeVaryings hook.
+		if (generatedShader != nullptr) {
+			const std::uint32_t uniformsSize = generatedShader->uniformsSize;
+			if (uniformsSize > MaxFragmentShaderUserDataSize) {
+				std::fprintf(stderr, "[SwDevice] Skipped draw: generated shader uniform block exceeds the callback storage\n");
+				SwRaster::ClearDrawContext();
+				return;
+			}
+
+			// The generated fragment reads the sprite's instance state (and any constant varying) at the fixed
+			// sprite-family std140 offsets (through kPaletteOffsetOffset). Guard against a program whose instance
+			// block does not follow that layout, so the reads below never run past the bound block.
+			const std::uint32_t blockDataSize = boundUniformRanges_[binding].Size;
+			const std::size_t maxByte = std::size_t(numInstances > 0 ? numInstances - 1 : 0) * instanceStride +
+				(kPaletteOffsetOffset + sizeof(float));
+			if (blockDataSize != 0 && maxByte > blockDataSize) {
+				std::fprintf(stderr, "[SwDevice] Skipped draw: generated shader instance block is not sprite-compatible\n");
+				SwRaster::ClearDrawContext();
+				return;
+			}
+
+			const std::int32_t uTextureUnit = samplerUnit("uTexture", 0);
+			std::uint8_t uniformScratch[MaxFragmentShaderUserDataSize];
+			for (std::int32_t k = 0; k < numInstances; k++) {
+				const std::uint8_t* inst = blockData + std::size_t(k) * instanceStride;
+				FFState ff;
+				Mat4Mul(pv, reinterpret_cast<const float*>(inst + kModelMatrixOffset), ff.mvpMatrix);
+				std::memcpy(ff.color, inst + kColorOffset, sizeof(ff.color));
+				std::memcpy(ff.texRect, inst + kTexRectOffset, sizeof(ff.texRect));
+				std::memcpy(ff.spriteSize, inst + kSpriteSizeOffset, sizeof(ff.spriteSize));
+				ff.hasTexture = true;
+				ff.textureUnit = uTextureUnit;
+
+				// Populate the shader's "<Program>_Uniforms" struct generically: zero it, then copy each
+				// committed loose uniform to its offset (a uniform that was never set stays zero).
+				if (uniformsSize > 0) {
+					std::memset(uniformScratch, 0, uniformsSize);
+				}
+				for (std::uint32_t fi = 0; fi < generatedShader->uniformFieldCount; fi++) {
+					const SwGeneratedUniformField& field = generatedShader->uniformFields[fi];
+					const std::uint8_t* v = currentProgram_->ResolveUniform(field.name);
+					if (v != nullptr && field.offset + field.componentCount * sizeof(float) <= uniformsSize) {
+						std::memcpy(uniformScratch + field.offset, v, field.componentCount * sizeof(float));
+					}
+				}
+				// Fill any per-instance-constant varyings for THIS instance (after the loose uniforms, which a
+				// varying expression may reference). Reads the same instance block at baked std140 offsets.
+				if (generatedShader->computeVaryings != nullptr) {
+					generatedShader->computeVaryings(uniformScratch, inst);
+				}
+				drawQuad(ff, generatedShader->fragment, uniformScratch, uniformsSize);
+			}
+			SwRaster::ClearDrawContext();
+			return;
 		}
 
 		switch (effect) {
@@ -773,111 +694,14 @@ namespace nCine::RhiSoftware
 					std::memcpy(ff.spriteSize, inst + kSpriteSizeOffset, sizeof(ff.spriteSize));
 					ff.hasTexture = true;
 					ff.textureUnit = uTextureUnit;
-					drawQuad(ff, nullptr, nullptr);
+					drawQuad(ff, nullptr, nullptr, 0);
 				}
-				break;
-			}
-
-			case SwEffect::PaletteRemap:
-			case SwEffect::BatchedPaletteRemap: {
-				const std::int32_t indexUnit = samplerUnit("uTexture", 0);
-				const std::int32_t paletteUnit = samplerUnit("uTexturePalette", 1);
-				const SwTexture* indexTex = GetBoundTexture(std::uint32_t(indexUnit));
-				const SwTexture* paletteTex = GetBoundTexture(std::uint32_t(paletteUnit));
-				if (indexTex == nullptr || indexTex->GetPixels() == nullptr || paletteTex == nullptr || paletteTex->GetPixels() == nullptr) {
-					std::fprintf(stderr, "[SwDevice] Skipped draw: palette effect needs an index texture + a palette texture\n");
-					break;
-				}
-				const std::int32_t paletteRows = paletteTex->GetHeight();
-				const bool isRG8 = (indexTex->GetUploadFormat() == PixelFormat::RG8);
-				for (std::int32_t k = 0; k < numInstances; k++) {
-					const std::uint8_t* inst = blockData + std::size_t(k) * instanceStride;
-					FFState ff;
-					Mat4Mul(pv, reinterpret_cast<const float*>(inst + kModelMatrixOffset), ff.mvpMatrix);
-					std::memcpy(ff.color, inst + kColorOffset, sizeof(ff.color));
-					std::memcpy(ff.texRect, inst + kTexRectOffset, sizeof(ff.texRect));
-					std::memcpy(ff.spriteSize, inst + kSpriteSizeOffset, sizeof(ff.spriteSize));
-					ff.hasTexture = true;
-					ff.textureUnit = indexUnit;
-
-					// A whole-row palette offset selects the row via paletteRowOffset; the residual column
-					// offset feeds the lookup (0 in practice, since the offsets are multiples of 256)
-					std::int32_t palOffset = std::int32_t(std::lround(*reinterpret_cast<const float*>(inst + kPaletteOffsetOffset)));
-					if (palOffset < 0) { palOffset = 0; }
-					std::int32_t row = palOffset / 256;
-					if (row >= paletteRows) { row = (paletteRows > 0 ? paletteRows - 1 : 0); }
-					const std::int32_t columnOffset = palOffset - row * 256;
-
-					// Declared here so it stays alive across the Draw below (SetDrawContext keeps only a pointer)
-					PaletteContext pctx;
-					pctx.palette = MakeSourceView(paletteTex);
-					pctx.paletteRowOffset = row;
-					pctx.paletteColumnOffset = columnOffset;
-					pctx.isRG8 = isRG8;
-					drawQuad(ff, &PaletteFragment, &pctx);
-				}
-				break;
-			}
-
-			case SwEffect::TexturedBackground:
-			case SwEffect::TexturedBackgroundCircle: {
-				const std::int32_t uTextureUnit = samplerUnit("uTexture", 0);
-				const SwTexture* texture = GetBoundTexture(std::uint32_t(uTextureUnit));
-				if (texture == nullptr || texture->GetPixels() == nullptr) {
-					std::fprintf(stderr, "[SwDevice] Skipped draw: textured background has no source texture\n");
-					break;
-				}
-				BackgroundContext bctx;
-				bctx.texture = MakeSourceView(texture);
-				readUniform("uViewSize", bctx.viewSize, 2, 1.0f);
-				readUniform("uCameraPos", bctx.cameraPos, 2, 0.0f);
-				readUniform("uHorizonColor", bctx.horizonColor, 4, 0.0f);
-				readUniform("uShift", bctx.shift, 2, 0.0f);
-				bctx.dither = currentProgram_->IsDitherVariant();
-				bctx.circle = (effect == SwEffect::TexturedBackgroundCircle);
-
-				// Not batched: the single instance block drives one full-screen quad
-				FFState ff;
-				Mat4Mul(pv, reinterpret_cast<const float*>(blockData + kModelMatrixOffset), ff.mvpMatrix);
-				std::memcpy(ff.color, blockData + kColorOffset, sizeof(ff.color));
-				std::memcpy(ff.texRect, blockData + kTexRectOffset, sizeof(ff.texRect));
-				std::memcpy(ff.spriteSize, blockData + kSpriteSizeOffset, sizeof(ff.spriteSize));
-				ff.hasTexture = true;
-				ff.textureUnit = uTextureUnit;
-				drawQuad(ff, &BackgroundFragment, &bctx);
-				break;
-			}
-
-			case SwEffect::Combine: {
-				const std::int32_t sceneUnit = samplerUnit("uTexture", 0);
-				CombineContext cctx;
-				cctx.scene = MakeSourceView(GetBoundTexture(std::uint32_t(sceneUnit)));
-				cctx.lighting = MakeSourceView(GetBoundTexture(std::uint32_t(samplerUnit("uTextureLighting", 1))));
-				cctx.blurHalf = MakeSourceView(GetBoundTexture(std::uint32_t(samplerUnit("uTextureBlurHalf", 2))));
-				cctx.blurQuarter = MakeSourceView(GetBoundTexture(std::uint32_t(samplerUnit("uTextureBlurQuarter", 3))));
-				if (cctx.scene.pixels == nullptr) {
-					std::fprintf(stderr, "[SwDevice] Skipped draw: combine has no scene texture\n");
-					break;
-				}
-				readUniform("uAmbientColor", cctx.ambientColor, 4, 0.0f);
-				readUniform("uTime", &cctx.time, 1, 0.0f);
-				const float* spriteSize = reinterpret_cast<const float*>(blockData + kSpriteSizeOffset);
-				cctx.viewSizeInv[0] = (spriteSize[0] != 0.0f ? 1.0f / spriteSize[0] : 0.0f);
-				cctx.viewSizeInv[1] = (spriteSize[1] != 0.0f ? 1.0f / spriteSize[1] : 0.0f);
-
-				// Not batched: the single instance block drives one full-screen quad
-				FFState ff;
-				Mat4Mul(pv, reinterpret_cast<const float*>(blockData + kModelMatrixOffset), ff.mvpMatrix);
-				std::memcpy(ff.color, blockData + kColorOffset, sizeof(ff.color));
-				std::memcpy(ff.texRect, blockData + kTexRectOffset, sizeof(ff.texRect));
-				std::memcpy(ff.spriteSize, blockData + kSpriteSizeOffset, sizeof(ff.spriteSize));
-				ff.hasTexture = true;
-				ff.textureUnit = sceneUnit;
-				drawQuad(ff, &CombineFragment, &cctx);
 				break;
 			}
 
 			default:
+				// Every other effect is dispatched through the generated fragment path above (an Unknown
+				// program that matched none already returned there). Nothing to do here.
 				break;
 		}
 

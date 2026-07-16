@@ -448,33 +448,300 @@ namespace ShaderCompiler
 		}
 	}
 
+	namespace
+	{
+		/** First index of @p needle in @p s at or after @p pos (Npos when absent) */
+		std::size_t FindStr(StringView s, StringView needle, std::size_t pos = 0)
+		{
+			std::size_t n = needle.size();
+			if (n == 0 || n > s.size()) {
+				return Npos;
+			}
+			for (std::size_t i = pos; i + n <= s.size(); i++) {
+				std::size_t j = 0;
+				while (j < n && s[i + j] == needle[j]) {
+					j++;
+				}
+				if (j == n) {
+					return i;
+				}
+			}
+			return Npos;
+		}
+
+		/** Every occurrence of @p from in @p s replaced by @p to */
+		String ReplaceAll(StringView s, StringView from, StringView to)
+		{
+			if (from.empty()) {
+				return String{s.data(), s.size()};
+			}
+			Array<char> out;
+			std::size_t i = 0;
+			while (i < s.size()) {
+				std::size_t p = FindStr(s, from, i);
+				if (p == Npos) {
+					arrayAppend(out, s.exceptPrefix(i));
+					break;
+				}
+				arrayAppend(out, s.slice(i, p));
+				arrayAppend(out, to);
+				i = p + from.size();
+			}
+			return String{out.data(), out.size()};
+		}
+
+		/**
+			Rewrites the engine's gl_VertexID quad-synthesis expressions into reads of the ES2 vertex
+			attributes the runtime supplies (a static per-vertex [0,1]² corner, and a per-vertex instance
+			index for the batched six-vertices-per-sprite path). Sets @p usedCorner / @p usedInstance so
+			the caller declares only the attributes that end up referenced.
+
+			ES2 has no gl_VertexID and ESSL 100 has no integer bit/modulo operators, so the corner cannot be
+			recomputed in-shader. Every single-quad formula is a function of the two terms float(id>>1) and
+			float(id%2); substituting them with (1 - aQuadCorner.x) and aQuadCorner.y reproduces the exact
+			corner of any of them (plain sprite, Lighting's 0.5-offset, TouchCircle) after constant folding,
+			given the runtime supplies aQuadCorner = {(1,0),(1,1),(0,0),(0,1)} for the 4-vertex strip. The
+			batched corner + instance index are fixed expressions replaced wholesale.
+		*/
+		String RewriteVertexId(StringView src, bool& usedCorner, bool& usedInstance)
+		{
+			String text{src.data(), src.size()};
+			// Batched per-instance index (before the batched corner terms, which also contain gl_VertexID)
+			if (FindStr(text, "gl_VertexID / 6"_s) != Npos) {
+				text = ReplaceAll(text, "gl_VertexID / 6"_s, "int(aInstanceIndex)"_s);
+				usedInstance = true;
+			}
+			// Batched six-vertex corner terms (two triangles). Both forms in use — "1.0 - <term>" (sprites)
+			// and "-0.5 + <term>" (BatchedLighting) — are functions of these, so substituting the terms with
+			// (1 - aQuadCorner.{x,y}) reproduces either corner after folding, given the runtime's batched
+			// aQuadCorner = {(1,1),(0,1),(0,0),(0,0),(1,0),(1,1)}.
+			if (FindStr(text, "float(((gl_VertexID + 2) / 3) % 2)"_s) != Npos) {
+				text = ReplaceAll(text, "float(((gl_VertexID + 2) / 3) % 2)"_s, "(1.0 - aQuadCorner.x)"_s);
+				usedCorner = true;
+			}
+			if (FindStr(text, "float(((gl_VertexID + 1) / 3) % 2)"_s) != Npos) {
+				text = ReplaceAll(text, "float(((gl_VertexID + 1) / 3) % 2)"_s, "(1.0 - aQuadCorner.y)"_s);
+				usedCorner = true;
+			}
+			// Single-quad corner terms
+			if (FindStr(text, "float(gl_VertexID >> 1)"_s) != Npos) {
+				text = ReplaceAll(text, "float(gl_VertexID >> 1)"_s, "(1.0 - aQuadCorner.x)"_s);
+				usedCorner = true;
+			}
+			if (FindStr(text, "float(gl_VertexID % 2)"_s) != Npos) {
+				text = ReplaceAll(text, "float(gl_VertexID % 2)"_s, "aQuadCorner.y"_s);
+				usedCorner = true;
+			}
+			// Batched-mesh instance index: "uint aMeshIndex" is an integer vertex attribute, which ES2 forbids —
+			// the declaration is remapped to "float" by the interface rewrite (MapEs2AttributeType), so wrap its
+			// array-index uses in int() here so "instances[aMeshIndex]" stays a valid integer index under ES2.
+			if (FindStr(text, "[aMeshIndex]"_s) != Npos) {
+				text = ReplaceAll(text, "[aMeshIndex]"_s, "[int(aMeshIndex)]"_s);
+			}
+			return text;
+		}
+
+		/** Maps an ES2-illegal integer vertex-attribute type (int/uint/ivecN/uvecN) to its float equivalent */
+		String MapEs2AttributeType(StringView tail)
+		{
+			// @p tail is the declaration after the "attribute" keyword, e.g. "uint aMeshIndex;" -> "float aMeshIndex;"
+			static const struct { const char* From; const char* To; } Map[] = {
+				{ "uint ", "float " }, { "int ", "float " },
+				{ "uvec2 ", "vec2 " }, { "ivec2 ", "vec2 " },
+				{ "uvec3 ", "vec3 " }, { "ivec3 ", "vec3 " },
+				{ "uvec4 ", "vec4 " }, { "ivec4 ", "vec4 " },
+			};
+			for (const auto& m : Map) {
+				std::size_t n = std::char_traits<char>::length(m.From);
+				if (tail.size() >= n && Substr(tail, 0, n) == StringView{m.From}) {
+					return StringView{m.To} + tail.exceptPrefix(n);
+				}
+			}
+			return String{tail.data(), tail.size()};
+		}
+
+		/** 1-based index of the first comment-free line containing the operator char @p op, or -1 */
+		int FindCharLine(const std::vector<String>& lines, char op)
+		{
+			for (std::size_t i = 0; i < lines.size(); i++) {
+				if (Find(lines[i], op) != Npos) {
+					return static_cast<int>(i) + 1;
+				}
+			}
+			return -1;
+		}
+
+		/** 1-based index of the first comment-free line with an f/F-suffixed float literal (e.g. "1.0f"), or -1 */
+		int FindFloatSuffixLine(const std::vector<String>& lines)
+		{
+			for (std::size_t li = 0; li < lines.size(); li++) {
+				const String& s = lines[li];
+				for (std::size_t i = 1; i < s.size(); i++) {
+					char c = s[i];
+					if ((c == 'f' || c == 'F') && IsDigit(s[i - 1])) {
+						char next = (i + 1 < s.size() ? s[i + 1] : '\0');
+						if (!IsIdentChar(next)) {
+							return static_cast<int>(li) + 1;
+						}
+					}
+				}
+			}
+			return -1;
+		}
+
+		/** Emits one std140 block member as a plain ES2 uniform, moving any "[size]" from the type to the name */
+		String Std140MemberToUniform(StringView leading, StringView member)
+		{
+			// @p member is comment-free, trimmed and has no trailing ';'
+			std::size_t lastSpace = Npos;
+			for (std::size_t i = member.size(); i > 0; i--) {
+				char c = member[i - 1];
+				if (c == ' ' || c == '\t') {
+					lastSpace = i - 1;
+					break;
+				}
+			}
+			if (lastSpace == Npos) {
+				return leading + "uniform "_s + member + ";"_s;
+			}
+			String lhs = Trim(member.prefix(lastSpace));
+			String name = Trim(member.exceptPrefix(lastSpace + 1));
+			std::size_t bracket = FindStr(lhs, "["_s);
+			if (bracket != Npos) {
+				// "Instance[BATCH_SIZE] instances" -> "uniform Instance instances[BATCH_SIZE]"
+				String type = Trim(lhs.prefix(bracket));
+				StringView size = lhs.exceptPrefix(bracket);		// "[BATCH_SIZE]"
+				return leading + "uniform "_s + type + " "_s + name + size + ";"_s;
+			}
+			return leading + "uniform "_s + lhs + " "_s + name + ";"_s;
+		}
+
+		/**
+			Lowers every "layout(std140) uniform <Block> { ... } [instance];" to ES2 (which has no UBOs):
+			each scalar/vector/matrix member becomes a loose "uniform"; a struct-array member
+			("Instance[BATCH_SIZE] instances;") becomes a "uniform Instance instances[BATCH_SIZE];" array.
+			Preprocessor lines inside the block (the BATCH_SIZE guard) are preserved. The block's instance
+			name, if any, is stripped from every "<instance>.<member>" access so the members are read
+			directly / through the array.
+		*/
+		void RewriteStd140Blocks(std::vector<String>& lines)
+		{
+			std::vector<String> stripped = StripComments(lines);
+			std::vector<String> result;
+			result.reserve(lines.size());
+			std::vector<String> instanceNames;
+			std::size_t i = 0;
+			while (i < lines.size()) {
+				const String& s = stripped[i];
+				bool isBlockStart = (FindStr(s, "std140"_s) != Npos && FindStr(s, "uniform"_s) != Npos);
+				if (!isBlockStart) {
+					result.push_back(lines[i]);
+					i++;
+					continue;
+				}
+				// Opening brace: on this line or a following one
+				std::size_t openLine = i;
+				while (openLine < lines.size() && FindStr(stripped[openLine], "{"_s) == Npos) {
+					openLine++;
+				}
+				if (openLine >= lines.size()) {
+					result.push_back(lines[i]);
+					i++;
+					continue;
+				}
+				// Matching closing brace
+				int depth = 0;
+				std::size_t closeLine = openLine;
+				bool found = false;
+				for (std::size_t j = openLine; j < lines.size(); j++) {
+					depth += CountBraces(stripped[j]);
+					if (depth <= 0) {
+						closeLine = j;
+						found = true;
+						break;
+					}
+				}
+				if (!found) {
+					result.push_back(lines[i]);
+					i++;
+					continue;
+				}
+				// Optional instance name after '}' on the closing line
+				{
+					StringView cs = stripped[closeLine];
+					std::size_t bp = FindStr(cs, "}"_s);
+					if (bp != Npos) {
+						std::size_t k = bp + 1;
+						while (k < cs.size() && IsSpace(cs[k])) {
+							k++;
+						}
+						std::size_t nb = k;
+						while (k < cs.size() && IsIdentChar(cs[k])) {
+							k++;
+						}
+						if (k > nb) {
+							StringView nm = Substr(cs, nb, k - nb);
+							instanceNames.push_back(String{nm.data(), nm.size()});
+						}
+					}
+				}
+				// Body members -> plain uniforms (directives/blank lines kept verbatim)
+				for (std::size_t k = openLine + 1; k < closeLine; k++) {
+					String t = Trim(stripped[k]);
+					if (t.empty() || t[0] == '#') {
+						result.push_back(lines[k]);
+						continue;
+					}
+					if (t[t.size() - 1] != ';') {
+						result.push_back(lines[k]);
+						continue;
+					}
+					String member = Trim(t.prefix(t.size() - 1));		// drop trailing ';'
+					result.push_back(Std140MemberToUniform(LeadingWhitespace(lines[k]), member));
+				}
+				i = closeLine + 1;
+			}
+			// Drop the "<instance>." qualifier now that the block wrapper is gone
+			for (String& line : result) {
+				for (const String& n : instanceNames) {
+					String qualifier = n + "."_s;
+					line = ReplaceAll(line, qualifier, ""_s);
+				}
+			}
+			lines = result;
+		}
+	}
+
 	bool Essl100Emitter::Transform(StringView modernSource, bool vertexStage, String& out, Diagnostic& diag)
 	{
 		std::vector<String> lines = SplitLines(modernSource);
 
-		// --- 1. Detect ES2-unsupported features (deferred to P5 slice 2) ---------------------------
-		{
-			std::vector<String> stripped = StripComments(lines);
-			int vertexIdLine = FindIdentifierLine(stripped, "gl_VertexID");
-			int std140Line = FindIdentifierLine(stripped, "std140");
-			if (vertexIdLine >= 0 || std140Line >= 0) {
-				const char* detail;
-				int line;
-				if (vertexIdLine >= 0 && (std140Line < 0 || vertexIdLine <= std140Line)) {
-					detail = "gl_VertexID";
-					line = vertexIdLine;
-				} else {
-					detail = "std140 uniform block";
-					line = std140Line;
-				}
-				diag.Message = "unsupported in ES2 (slice 2: needs uniform-array batching + corner attribute): "_s + detail;
-				diag.Line = line;
-				return false;
-			}
-		}
-
-		// --- 2. Unwrap "#ifdef GL_ES ... #endif" (always active under "#version 100") ---------------
+		// --- 1. Unwrap "#ifdef GL_ES ... #endif" (always active under "#version 100") ---------------
 		lines = UnwrapGlEs(lines);
+
+		// --- 2. std140 uniform blocks -> plain uniforms / a uniform array (ES2 has no UBOs) ----------
+		RewriteStd140Blocks(lines);
+
+		// --- 3. gl_VertexID quad synthesis -> reads of the ES2 corner / instance-index attributes ----
+		bool usedCorner = false;
+		bool usedInstance = false;
+		{
+			String text = RewriteVertexId(JoinLines(lines), usedCorner, usedInstance);
+			lines = SplitLines(text);
+		}
+		// Declare the vertex attributes the rewrite introduced; the interface rewrite below turns the
+		// leading "in" into "attribute". Their per-vertex data is supplied by the runtime (a static
+		// corner VBO, and the batched instance-index stream).
+		if (vertexStage && (usedCorner || usedInstance)) {
+			std::vector<String> decls;
+			if (usedCorner) {
+				decls.push_back(String{"in vec2 aQuadCorner;"});
+			}
+			if (usedInstance) {
+				decls.push_back(String{"in float aInstanceIndex;"});
+			}
+			lines.insert(lines.begin(), decls.begin(), decls.end());
+		}
 
 		// --- 3. Interface rewrite + fragment COLOR/main lowering ------------------------------------
 		std::vector<String> stripped = StripComments(lines);
@@ -502,7 +769,9 @@ namespace ShaderCompiler
 						continue;
 					}
 					const char* newKeyword = (vertexStage ? (keyword == "in" ? "attribute" : "varying") : "varying");
-					result.push_back(LeadingWhitespace(orig) + newKeyword + " "_s + tail);
+					// ES2 vertex attributes must be float-typed - map any integer attribute type (e.g. "uint aMeshIndex")
+					String outTail = (vertexStage && keyword == "in") ? MapEs2AttributeType(tail) : String{tail.data(), tail.size()};
+					result.push_back(LeadingWhitespace(orig) + newKeyword + " "_s + outTail);
 					continue;
 				}
 			}
@@ -544,6 +813,44 @@ namespace ShaderCompiler
 		RewriteTextureCalls(result);
 
 		out = JoinLines(result);
+
+		// --- 5. Derivatives (dFdx/dFdy/fwidth) are core in GLSL ES 3.00 but need an explicitly enabled
+		//        extension under ESSL 100 — prepend the pragma when the stage uses any of them ----------
+		{
+			std::vector<String> check = StripComments(SplitLines(out));
+			if (FindIdentifierLine(check, "dFdx") >= 0 || FindIdentifierLine(check, "dFdy") >= 0 || FindIdentifierLine(check, "fwidth") >= 0) {
+				out = "#extension GL_OES_standard_derivatives : enable\n"_s + out;
+			}
+		}
+
+		// Safety net / --essl100-check gate: flag any construct that is core in GLSL ES 3.00 but unsupported
+		// under "#version 100", so the offline check catches ES2 breakage that the strict compiler would.
+		// (int / ivecN are intentionally NOT flagged — signed integers and int() casts are valid in ESSL 100.)
+		{
+			std::vector<String> check = StripComments(SplitLines(out));
+			const char* detail = nullptr;
+			int line = -1;
+			int l;
+			if ((l = FindIdentifierLine(check, "gl_VertexID")) >= 0) { detail = "gl_VertexID"; line = l; }
+			else if ((l = FindIdentifierLine(check, "std140")) >= 0) { detail = "std140 uniform block"; line = l; }
+			else if ((l = FindIdentifierLine(check, "uint")) >= 0) { detail = "uint (no unsigned integers in ESSL 100)"; line = l; }
+			else if ((l = FindIdentifierLine(check, "uvec2")) >= 0 || (l = FindIdentifierLine(check, "uvec3")) >= 0 || (l = FindIdentifierLine(check, "uvec4")) >= 0) { detail = "uvec (no unsigned integers in ESSL 100)"; line = l; }
+			else if ((l = FindIdentifierLine(check, "round")) >= 0) { detail = "round() (GLSL ES 3.00+ only)"; line = l; }
+			else if ((l = FindCharLine(check, '%')) >= 0) { detail = "integer % operator (GLSL ES 3.00+ only)"; line = l; }
+			else if ((l = FindFloatSuffixLine(check)) >= 0) { detail = "f-suffixed float literal (GLSL ES 3.00+ only)"; line = l; }
+			else {
+				bool hasDeriv = (FindIdentifierLine(check, "dFdx") >= 0 || FindIdentifierLine(check, "dFdy") >= 0 || FindIdentifierLine(check, "fwidth") >= 0);
+				if (hasDeriv && FindStr(JoinLines(check), "GL_OES_standard_derivatives"_s) == Npos) {
+					detail = "dFdx/dFdy/fwidth without the GL_OES_standard_derivatives extension";
+					line = FindIdentifierLine(check, "dFdx");
+				}
+			}
+			if (detail != nullptr) {
+				diag.Message = "ESSL100 transform incomplete (unsupported in ES2): "_s + detail;
+				diag.Line = line;
+				return false;
+			}
+		}
 		return true;
 	}
 }

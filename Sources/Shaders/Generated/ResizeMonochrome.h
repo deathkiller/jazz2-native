@@ -41,6 +41,40 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char ResizeMonochrome_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+varying vec2 vPixelCoords;
+varying vec2 vTexCoords;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+
+
+mat4 bayerIndex = mat4(
+	vec4(0.0625, 0.5625, 0.1875, 0.6875),
+	vec4(0.8125, 0.3125, 0.9375, 0.4375),
+	vec4(0.25, 0.75, 0.125, 0.625),
+	vec4(1.0, 0.5, 0.875, 0.375));
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vPixelCoords = aPosition * texRect.xy;
+	vTexCoords = aPosition;
+}
+)__SHDR__";
+
 	inline constexpr char ResizeMonochrome_Fs[] =
 R"__SHDR__(#line 1
 
@@ -70,7 +104,7 @@ mat4 bayerIndex = mat4(
 uniform sampler2D uTexture;
 
 float dither4x4(vec2 position, float brightness) {
-	float bayerValue = bayerIndex[int(position.x) % 4][int(position.y) % 4];
+	float bayerValue = bayerIndex[int(mod(position.x, 4.0))][int(mod(position.y, 4.0))];
 	return brightness + (brightness < bayerValue ? -0.05 : 0.1);
 }
 
@@ -92,6 +126,57 @@ void main() {
 		color = vec3(0.1, 0.134, 0.151);
 	}
 	COLOR = vec4(color, 1.0);
+}
+
+)__SHDR__";
+
+	inline constexpr char ResizeMonochrome_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vPixelCoords;
+varying vec2 vTexCoords;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+
+
+mat4 bayerIndex = mat4(
+	vec4(0.0625, 0.5625, 0.1875, 0.6875),
+	vec4(0.8125, 0.3125, 0.9375, 0.4375),
+	vec4(0.25, 0.75, 0.125, 0.625),
+	vec4(1.0, 0.5, 0.875, 0.375));
+
+uniform sampler2D uTexture;
+
+float dither4x4(vec2 position, float brightness) {
+	float bayerValue = bayerIndex[int(mod(position.x, 4.0))][int(mod(position.y, 4.0))];
+	return brightness + (brightness < bayerValue ? -0.05 : 0.1);
+}
+
+
+void main() {
+	vec4 COLOR;
+	vec3 color = texture2D(uTexture, vTexCoords).rgb;
+	float gray = dot(((color - vec3(0.5)) * vec3(1.4, 1.2, 1.0)) + vec3(0.5), vec3(0.3, 0.7, 0.1));
+	gray = dither4x4(vPixelCoords, gray);
+	float palette = (abs(1.0 - gray) * 0.75) + 0.125;
+
+	if (palette < 0.25) {
+		color = vec3(0.675, 0.710, 0.420);
+	} else if (palette < 0.5) {
+		color = vec3(0.463, 0.518, 0.283);
+	} else if (palette < 0.75) {
+		color = vec3(0.247, 0.314, 0.247);
+	} else {
+		color = vec3(0.1, 0.134, 0.151);
+	}
+	COLOR = vec4(color, 1.0);
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -118,7 +203,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant ResizeMonochrome_Variants[] = {
 		{ "", "", ResizeMonochrome_Vs, ResizeMonochrome_Fs,
-			2, ResizeMonochrome_Uniforms, 1, ResizeMonochrome_Blocks, 1, ResizeMonochrome_Textures, 0, nullptr },
+			2, ResizeMonochrome_Uniforms, 1, ResizeMonochrome_Blocks, 1, ResizeMonochrome_Textures, 0, nullptr,
+			ResizeMonochrome_Vs100, ResizeMonochrome_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program ResizeMonochrome = { "ResizeMonochrome", 0, 1, ResizeMonochrome_Variants };

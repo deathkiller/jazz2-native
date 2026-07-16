@@ -43,6 +43,10 @@ namespace nCine
 	std::unique_ptr<RenderCommandPool> RenderResources::renderCommandPool_;
 	std::unique_ptr<RenderBatcher> RenderResources::renderBatcher_;
 
+#if defined(RHI_GL_PROFILE_ES2)
+	std::unique_ptr<Rhi::Buffer> RenderResources::quadCornerVbo_;
+#endif
+
 	std::unique_ptr<Rhi::ShaderProgram> RenderResources::defaultShaderPrograms_[DefaultShaderProgramsCount];
 	HashMap<const Rhi::ShaderProgram*, Rhi::ShaderProgram*> RenderResources::batchedShaders_(32);
 
@@ -215,6 +219,18 @@ namespace nCine
 		defaultCamera_ = std::make_unique<Camera>();
 		currentCamera_ = defaultCamera_.get();
 
+#if defined(RHI_GL_PROFILE_ES2)
+		// The ES2 sprite/full-screen shaders read the quad corner from this static attribute instead of
+		// synthesizing it from gl_VertexID. The four corners are in the order of the single-quad 4-vertex
+		// TRIANGLE_STRIP draw (matching the old "vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2))").
+		if (quadCornerVbo_ == nullptr) {
+			static const GLfloat quadCorners[] = { 1.0f, 0.0f,  1.0f, 1.0f,  0.0f, 0.0f,  0.0f, 1.0f };
+			quadCornerVbo_ = std::make_unique<Rhi::Buffer>(BufferTarget::Vertex);
+			quadCornerVbo_->BufferData(sizeof(quadCorners), quadCorners, BufferUsage::StaticDraw);
+			quadCornerVbo_->SetObjectLabel("QuadCornerVBO");
+		}
+#endif
+
 		ShaderLoad shadersToLoad[] = {
 			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::Sprite)], ShadersGen::DefaultSprite, Rhi::ShaderProgram::Introspection::Enabled, "Sprite" },
 			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteNoTexture)], ShadersGen::DefaultSpriteNoTexture, Rhi::ShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
@@ -240,6 +256,15 @@ namespace nCine
 			shaderToLoad.shaderProgram = std::make_unique<Rhi::ShaderProgram>(Rhi::ShaderProgram::QueryPhase::Immediate);
 			// Uniforms, blocks and attributes come from the offline reflection instead of GL introspection
 			shaderToLoad.shaderProgram->SetReflection(&variant);
+#if defined(RHI_GL_PROFILE_ES2)
+			// ES2 disables CPU batching (no UBOs), so the batched programs are never used. Their ESSL 100
+			// form is also not valid ES2 (a "uint aMeshIndex" integer attribute), so skip compiling them -
+			// the program object stays created (RegisterDefaultBatchedShaders only stores its pointer) but
+			// unlinked, which is fine because nothing ever draws with it.
+			if (shaderToLoad.introspection == Rhi::ShaderProgram::Introspection::NoUniformsInBlocks) {
+				continue;
+			}
+#endif
 			if (binaryShaderCache_->LoadFromCache(shaderToLoad.shaderName, DefaultShadersVersion, shaderToLoad.shaderProgram.get(), shaderToLoad.introspection)) {
 				// Shader is already compiled and up-to-date
 				continue;
@@ -279,6 +304,27 @@ namespace nCine
 				}
 			}
 
+			// OpenGL|ES 2.0 profile consumes the ESSL 100 (Essl100Emitter) stage sources baked alongside the
+			// modern ones; the GL 3.3 / ES 3.0 path uses the modern VsSource/FsSource byte-for-byte unchanged.
+			const char* vsSource = variant.VsSource;
+			const char* fsSource = variant.FsSource;
+#if defined(RHI_GL_PROFILE_ES2)
+			if (variant.VsSource100 != nullptr) {
+				vsSource = variant.VsSource100;
+			}
+			if (variant.FsSource100 != nullptr) {
+				fsSource = variant.FsSource100;
+			}
+			// ES2 has no UBOs: the InstancesBlock becomes a "uniform Instance instances[BATCH_SIZE];" array
+			// that must fit in the (small) ES2 vertex uniform space, so force a small batch regardless of the
+			// reported max uniform block size (desktop ANGLE reports 64 KB, which would keep the 682 default).
+			if (shaderToLoad.introspection == Rhi::ShaderProgram::Introspection::NoUniformsInBlocks &&
+				(batchSize <= 0 || batchSize > 12)) {
+				batchSize = 8;
+				hasBatchSizeDefine = true;
+			}
+#endif
+
 			bool hasLinked = false;
 			bool isRetry = false;
 			while (true) {
@@ -292,12 +338,12 @@ namespace nCine
 					std::size_t length = formatInto(sourceString, BatchSizeFormatString, batchSize);
 					vertexStrings[stringsCount++] = { sourceString, length };
 				}
-				vertexStrings[stringsCount++] = variant.VsSource;
+				vertexStrings[stringsCount++] = vsSource;
 
 				bool vertexCompiled = shaderToLoad.shaderProgram->AttachShaderFromStrings(GL_VERTEX_SHADER, arrayView(vertexStrings, stringsCount));
 				// The BATCH_SIZE define is baked into both stages - a batched InstancesBlock is declared
 				// in the fragment stage too (shared globals), and mismatched block sizes would fail to link
-				vertexStrings[stringsCount - 1] = variant.FsSource;
+				vertexStrings[stringsCount - 1] = fsSource;
 				bool fragmentCompiled = shaderToLoad.shaderProgram->AttachShaderFromStrings(GL_FRAGMENT_SHADER, arrayView(vertexStrings, stringsCount));
 				if (vertexCompiled && fragmentCompiled) {
 					shaderToLoad.shaderProgram->SetObjectLabel(shaderToLoad.shaderName);

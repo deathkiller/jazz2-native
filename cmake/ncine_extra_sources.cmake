@@ -21,6 +21,13 @@ if(ANGLE_FOUND OR OPENGLES2_FOUND)
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ANGLE")
 	endif()
 
+	# OpenGL|ES 2.0 profile (real ES 2.0 context: ESSL 100, no UBOs, no gl_VertexID). Gated so the GL 3.3
+	# desktop and software builds - which never set NCINE_RHI_GL_PROFILE_ES2 - are completely unaffected.
+	if(NCINE_RHI_GL_PROFILE_ES2)
+		message(STATUS "Requesting a real OpenGL|ES 2.0 profile (ESSL 100, no UBOs/gl_VertexID)")
+		target_compile_definitions(${NCINE_APP} PRIVATE "RHI_GL_PROFILE_ES2")
+	endif()
+
 	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.h)
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.cpp)
 elseif(OPENGL_FOUND)

@@ -36,6 +36,35 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char ShieldFire_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+varying vec4 vTexCoords;
+varying vec4 vColor;
+varying vec2 vPos;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = texRect;
+	vColor = color;
+	vPos = aPosition * vec2(2.0) - vec2(1.0);
+}
+)__SHDR__";
+
 	inline constexpr char ShieldFire_Fs[] =
 R"__SHDR__(#line 1
 
@@ -96,6 +125,66 @@ void main() {
 
 )__SHDR__";
 
+	inline constexpr char ShieldFire_Fs100[] =
+R"__SHDR__(#extension GL_OES_standard_derivatives : enable
+#line 1
+
+precision mediump float;
+
+varying vec4 vTexCoords;
+varying vec4 vColor;
+varying vec2 vPos;
+
+uniform sampler2D uTexture;
+
+#define PI 3.1415926
+
+float aastep(float threshold, float value) {
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+float triangleWave(float x, float period) {
+  float p = x / period;
+  float f = fract(p);
+  return abs(f - 0.5) * 2.0;
+}
+
+
+void main() {
+	vec4 COLOR;
+	vec2 scale = vColor.xy;
+	vec2 shift1 = vTexCoords.xy;
+	vec2 shift2 = vTexCoords.zw;
+	float darkness = vColor.z;
+	float alpha = vColor.w;
+
+	float dist = length(vPos);
+	if (dist > 1.0) {
+		COLOR = vec4(0.0, 0.0, 0.0, 0.0);
+	} else {
+		vec3 v = vec3(vPos.x, vPos.y, sqrt(1.0 - vPos.x * vPos.x - vPos.y * vPos.y));
+		vec3 n = normalize(v);
+		float b = dot(n, vec3(0.0, 0.0, 1.0));
+		vec2 q = vec2(0.5 - 0.5 * atan(n.z, n.x) / PI, -acos(vPos.y) / PI);
+
+		float isNearBorder = 1.0 - aastep(0.96, dist);
+
+		float mask1 = texture2D(uTexture, mod(shift1 + (q * scale), 1.0)).r;
+		float maskNormalized1 = max(1.0 - (abs(triangleWave(shift2.y + 0.5, 2.0) - mask1) * 6.0), 0.0);
+
+		float mask2 = texture2D(uTexture, mod(shift2 + (q * scale), 1.0)).r;
+		float maskNormalized2 = max(1.0 - (abs(triangleWave(shift1.x, 1.333) - mask2) * 6.0), 0.0);
+
+		float maskSum = min(maskNormalized1 + maskNormalized2, 1.0);
+
+		COLOR = vec4(mix(vec3(1.0, 0.3, 0.0), vec3(1.0, 1.0, 1.0), max((maskSum * 2.0) - 1.0, 0.0)) * darkness, min(maskSum * b * isNearBorder * 1.3 + 0.1, 1.0) * alpha);
+	}
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+
 	inline constexpr ShaderCompiler::Uniform ShieldFire_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -118,7 +207,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant ShieldFire_Variants[] = {
 		{ "", "", ShieldFire_Vs, ShieldFire_Fs,
-			2, ShieldFire_Uniforms, 1, ShieldFire_Blocks, 1, ShieldFire_Textures, 0, nullptr },
+			2, ShieldFire_Uniforms, 1, ShieldFire_Blocks, 1, ShieldFire_Textures, 0, nullptr,
+			ShieldFire_Vs100, ShieldFire_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program ShieldFire = { "ShieldFire", 0, 1, ShieldFire_Variants };

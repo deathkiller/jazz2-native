@@ -47,6 +47,47 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char BatchedLighting_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+attribute float aInstanceIndex;
+#line 1
+
+varying vec4 vTexCoords;
+varying vec4 vColor;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+struct Instance
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+};
+
+#ifndef BATCH_SIZE
+	#define BATCH_SIZE (585) // 64 Kb / 112 b
+#endif
+	uniform Instance instances[BATCH_SIZE];
+
+#define i instances[int(aInstanceIndex)]
+
+
+
+uniform sampler2D uTexture;
+
+void main()
+{
+	vec2 aPosition = vec2(-0.5 + (1.0 - aQuadCorner.x), -0.5 + (1.0 - aQuadCorner.y));
+	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
+	vTexCoords = i.texRect;
+	vColor = vec4(i.color.x, i.color.y, aPosition.x * 2.0, aPosition.y * 2.0);
+}
+)__SHDR__";
+
 	inline constexpr char BatchedLighting_Fs[] =
 R"__SHDR__(#line 1
 
@@ -85,11 +126,57 @@ void main() {
 		// Diffuse lighting
 		float diffuseFactor = 1.0 - max(dot(normal, normalize(lightDir)), 0.0);
 		diffuseFactor = diffuseFactor * 0.8 + 0.2;*/
-		float diffuseFactor = 1.0f;
+		float diffuseFactor = 1.0;
 
 		float strength = diffuseFactor * lightBlend(clamp(1.0 - ((dist - radiusNear) / (1.0 - radiusNear)), 0.0, 1.0));
 		COLOR = vec4(strength * intensity, strength * brightness, 0.0, 1.0);
 	}
+}
+
+)__SHDR__";
+
+	inline constexpr char BatchedLighting_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec4 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+
+float lightBlend(float t) {
+	return t * t * t;
+}
+
+
+void main() {
+	vec4 COLOR;
+	vec2 center = vTexCoords.xy;
+	float radiusNear = vTexCoords.z;
+	float intensity = vColor.r;
+	float brightness = vColor.g;
+
+	float dist = length(vColor.zw);
+	if (dist > 1.0) {
+		COLOR = vec4(0.0, 0.0, 0.0, 1.0);
+	} else {
+		// TODO: Normal maps
+		/*vec4 clrNormal = texture(uTexture, vec2(gl_FragCoord) / ViewSize);
+		vec3 normal = normalize(clrNormal.xyz - vec3(0.5, 0.5, 0.5));
+		normal.z = -normal.z;
+
+		vec3 lightDir = vec3((center.x - gl_FragCoord.x), (center.y - gl_FragCoord.y), 0);
+
+		// Diffuse lighting
+		float diffuseFactor = 1.0 - max(dot(normal, normalize(lightDir)), 0.0);
+		diffuseFactor = diffuseFactor * 0.8 + 0.2;*/
+		float diffuseFactor = 1.0;
+
+		float strength = diffuseFactor * lightBlend(clamp(1.0 - ((dist - radiusNear) / (1.0 - radiusNear)), 0.0, 1.0));
+		COLOR = vec4(strength * intensity, strength * brightness, 0.0, 1.0);
+	}
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -113,7 +200,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant BatchedLighting_Variants[] = {
 		{ "", "", BatchedLighting_Vs, BatchedLighting_Fs,
-			2, BatchedLighting_Uniforms, 1, BatchedLighting_Blocks, 1, BatchedLighting_Textures, 0, nullptr },
+			2, BatchedLighting_Uniforms, 1, BatchedLighting_Blocks, 1, BatchedLighting_Textures, 0, nullptr,
+			BatchedLighting_Vs100, BatchedLighting_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program BatchedLighting = { "BatchedLighting", 0, 1, BatchedLighting_Variants };

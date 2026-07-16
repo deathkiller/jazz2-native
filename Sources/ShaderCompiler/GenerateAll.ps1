@@ -111,5 +111,17 @@ $umbrellaPath = Join-Path $outDir 'ShadersGen.h'
 [System.IO.File]::WriteAllText($umbrellaPath, $sb.ToString().Replace("`r`n", "`n").Replace("`n", "`r`n"), (New-Object System.Text.UTF8Encoding($false)))
 Write-Host "ok: umbrella -> Generated\ShadersGen.h ($($jazz2Names.Count) Jazz2 + $($ncineNames.Count) nCine programs)"
 
+# Emit the aggregate SwGeneratedShaders.h consumed by the CPU software renderer: the GLSL-to-C++
+# transpiler lowers each program variant's fragment stage into a C++ fragment function the software
+# device runs for shaders that have no hand-written effect. Shaders outside the supported subset are
+# declined and simply omitted (they keep the previous skipped behaviour), so this step never fails.
+$swGenPath = Join-Path $outDir 'SwGeneratedShaders.h'
+& $tool --emit-sw-generated $swGenPath @($shaders | ForEach-Object { $_.FullName })
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "error: failed to emit SwGeneratedShaders.h"
+    exit 1
+}
+Write-Host "ok: software fragments -> Generated\SwGeneratedShaders.h"
+
 Write-Host "All $($shaders.Count) shaders generated successfully."
 exit 0

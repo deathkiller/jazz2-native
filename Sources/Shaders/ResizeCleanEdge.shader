@@ -273,7 +273,7 @@ void fragment() {
 	vec2 local = fract(v_px);
 	vec2 px = ceil(v_px);
 
-	vec2 pointDir = round(local)*2.0-1.0;
+	vec2 pointDir = floor(local + 0.5)*2.0-1.0;
 
 	//neighbor pixels
 	//Up, Down, Forward, and Back

@@ -29,6 +29,30 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char DefaultImGui_Vs100[] =
+R"__SHDR__(#line 1
+
+attribute vec2 aPosition;
+attribute vec2 aTexCoords;
+attribute vec4 aColor;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform mat4 uGuiProjection;
+uniform float uDepth;
+
+
+
+
+void main()
+{
+	gl_Position = uGuiProjection * vec4(aPosition, uDepth, 1.0);
+	vTexCoords = aTexCoords;
+	vColor = aColor;
+}
+)__SHDR__";
+
 	inline constexpr char DefaultImGui_Fs[] =
 R"__SHDR__(#line 1
 
@@ -45,6 +69,25 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = vColor * texture(uTexture, vTexCoords);
+}
+
+)__SHDR__";
+
+	inline constexpr char DefaultImGui_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor * texture2D(uTexture, vTexCoords);
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -66,7 +109,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant DefaultImGui_Variants[] = {
 		{ "", "", DefaultImGui_Vs, DefaultImGui_Fs,
-			2, DefaultImGui_Uniforms, 0, nullptr, 1, DefaultImGui_Textures, 3, DefaultImGui_Attributes },
+			2, DefaultImGui_Uniforms, 0, nullptr, 1, DefaultImGui_Textures, 3, DefaultImGui_Attributes,
+			DefaultImGui_Vs100, DefaultImGui_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program DefaultImGui = { "DefaultImGui", 0, 1, DefaultImGui_Variants };

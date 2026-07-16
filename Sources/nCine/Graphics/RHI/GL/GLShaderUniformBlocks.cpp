@@ -34,9 +34,15 @@ namespace nCine::RhiGL
 
 	void GLShaderUniformBlocks::Bind()
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// ES2 has no uniform buffer objects: push each managed block's members to the program's loose
+		// uniforms. Material::Bind() has already called Use(), so the program is current for glUniform*.
+		for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
+			uniformBlockCache.CommitAsLooseUniforms();
+		}
 		// Dead code when the software backend is selected: `Rhi::BufferRange::object` is then a `SwBuffer*`
 		// whose definition this GL translation unit does not include, and the pipeline never calls this here
-#if !defined(WITH_RHI_SOFTWARE)
+#elif !defined(WITH_RHI_SOFTWARE)
 #if defined(DEATH_DEBUG)
 		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 #endif
@@ -101,6 +107,10 @@ namespace nCine::RhiGL
 
 	void GLShaderUniformBlocks::CommitUniformBlocks()
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// ES2 has no UBOs: block data is pushed to loose uniforms at Bind() time, nothing to commit here
+		return;
+#else
 		if (shaderProgram_ != nullptr) {
 			if (shaderProgram_->GetStatus() == GLShaderProgram::Status::LinkedWithIntrospection) {
 				std::int32_t totalUsedSize = 0;
@@ -132,6 +142,7 @@ namespace nCine::RhiGL
 		} else {
 			LOGE("No shader program associated");
 		}
+#endif
 	}
 
 	void GLShaderUniformBlocks::ImportUniformBlocks(const char* includeOnly, const char* exclude)

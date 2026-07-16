@@ -38,6 +38,36 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char DefaultMeshSprite_Vs100[] =
+R"__SHDR__(#line 1
+
+attribute vec2 aPosition;
+attribute vec2 aTexCoords;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+
+
+
+
+void main()
+{
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aTexCoords.x * texRect.x + texRect.y, aTexCoords.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+
 	inline constexpr char DefaultMeshSprite_Fs[] =
 R"__SHDR__(#line 1
 
@@ -54,6 +84,25 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = texture(uTexture, vTexCoords) * vColor;
+}
+
+)__SHDR__";
+
+	inline constexpr char DefaultMeshSprite_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = texture2D(uTexture, vTexCoords) * vColor;
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -85,7 +134,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant DefaultMeshSprite_Variants[] = {
 		{ "", "", DefaultMeshSprite_Vs, DefaultMeshSprite_Fs,
-			2, DefaultMeshSprite_Uniforms, 1, DefaultMeshSprite_Blocks, 1, DefaultMeshSprite_Textures, 2, DefaultMeshSprite_Attributes },
+			2, DefaultMeshSprite_Uniforms, 1, DefaultMeshSprite_Blocks, 1, DefaultMeshSprite_Textures, 2, DefaultMeshSprite_Attributes,
+			DefaultMeshSprite_Vs100, DefaultMeshSprite_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program DefaultMeshSprite = { "DefaultMeshSprite", 0, 1, DefaultMeshSprite_Variants };

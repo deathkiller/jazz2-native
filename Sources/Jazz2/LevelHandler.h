@@ -234,11 +234,20 @@ namespace Jazz2
 		// Hide these members from documentation before refactoring
 		IRootController* _root;
 
+#if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
+		// Post-processing shaders (bloom + lighting compositing). Only backends with cheap programmable shaders
+		// run the full-screen post-process chain, so these are absent on the software backend (see RhiFwd.h)
 		Shader* _lightingShader;
 		Shader* _blurShader;
 		Shader* _downsampleShader;
 		Shader* _combineShader;
 		Shader* _combineWithWaterShader;
+#else
+		// Software renderer: the bloom/lighting chain is gated out, but the viewport compositor still needs the
+		// Combine program so the device recognizes the draw (object label "Combine" -> SwEffect::Combine) and runs
+		// the CPU dynamic-lighting combine in its place. Default-initialized here so no constructor arm is needed.
+		Shader* _combineShader = nullptr;
+#endif
 
 		Rendering::UpscaleRenderPassWithClipping _upscalePass;
 		// When the scene is supersampled (splitscreen zoom-out), the HUD and the in-game menu are rendered through this

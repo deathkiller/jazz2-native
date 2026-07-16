@@ -32,7 +32,7 @@ mat4 bayerIndex = mat4(
 uniform sampler2D uTexture : texture_unit(0);
 
 float dither4x4(vec2 position, float brightness) {
-	float bayerValue = bayerIndex[int(position.x) % 4][int(position.y) % 4];
+	float bayerValue = bayerIndex[int(mod(position.x, 4.0))][int(mod(position.y, 4.0))];
 	return brightness + (brightness < bayerValue ? -0.05 : 0.1);
 }
 

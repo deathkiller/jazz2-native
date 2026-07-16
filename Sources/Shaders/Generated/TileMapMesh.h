@@ -37,6 +37,35 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char TileMapMesh_Vs100[] =
+R"__SHDR__(#line 1
+
+attribute vec2 aPosition;
+attribute vec2 aTexCoords;
+attribute vec4 aColor;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	uniform float palOffset;
+
+
+
+void main()
+{
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * vec4(aPosition.x, aPosition.y, 0.0, 1.0);
+	vTexCoords = aTexCoords;
+	vColor = aColor * color;
+}
+)__SHDR__";
+
 	inline constexpr char TileMapMesh_Fs[] =
 R"__SHDR__(#line 1
 
@@ -53,6 +82,25 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = texture(uTexture, vTexCoords) * vColor;
+}
+
+)__SHDR__";
+
+	inline constexpr char TileMapMesh_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = texture2D(uTexture, vTexCoords) * vColor;
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -86,7 +134,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant TileMapMesh_Variants[] = {
 		{ "", "", TileMapMesh_Vs, TileMapMesh_Fs,
-			2, TileMapMesh_Uniforms, 1, TileMapMesh_Blocks, 1, TileMapMesh_Textures, 3, TileMapMesh_Attributes },
+			2, TileMapMesh_Uniforms, 1, TileMapMesh_Blocks, 1, TileMapMesh_Textures, 3, TileMapMesh_Attributes,
+			TileMapMesh_Vs100, TileMapMesh_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program TileMapMesh = { "TileMapMesh", 0, 1, TileMapMesh_Variants };

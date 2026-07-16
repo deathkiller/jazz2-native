@@ -355,8 +355,9 @@ Assert (-not $h.Contains('uTexture')) 'TexturePassthrough: uTexture auto-declara
 # --- 4. ESSL 100 (OpenGL ES 2.0) target -----------------------------------------------------------
 # The --essl100-check transform dump: attribute/varying split per stage, texture->texture2D,
 # the "out vec4 COLOR;" -> gl_FragColor retarget (incl. early "return;"), the unconditional
-# precision prologue, layout()/flat stripping, and the slice-2 deferral of gl_VertexID / std140-UBO
-# programs (fixtures live in tests/essl100/, outside the section-1 golden-dump scan).
+# precision prologue, layout()/flat stripping, and the slice-2 lowering of gl_VertexID (-> the
+# aQuadCorner / aInstanceIndex attributes) and std140 UBOs (-> loose uniforms / a uniform array)
+# (fixtures live in tests/essl100/, outside the section-1 golden-dump scan).
 
 function Essl100($path) {
     (& $tool $path --essl100-check | Out-String -Width 4096) -replace "`r`n", "`n"
@@ -399,21 +400,24 @@ Assert ($fs.Contains('gl_FragColor = COLOR; return;')) 'Essl100 Varying: early "
 Assert ($fs.Contains('texture2DLod(uTexture, vTexCoords, 0.0)')) 'Essl100 Varying: textureLod() not rewritten to texture2DLod()'
 Assert ((([regex]::Matches($fs, [regex]::Escape('gl_FragColor = COLOR;'))).Count) -ge 2) 'Essl100 Varying: expected both the early-return and the final gl_FragColor writes'
 
-# BatchedSprites: a std140-UBO + gl_VertexID batched program defers its VS to slice 2 (std140 cited
-# first, being the earliest offending line) while its FRAGMENT stage still transforms cleanly
+# BatchedSprites: a std140-UBO + gl_VertexID batched program now fully lowers to ES2 (slice 2) — the
+# std140 block becomes a uniform struct-array indexed by the aInstanceIndex attribute, and the
+# gl_VertexID corner synthesis becomes the aQuadCorner attribute; the fragment stage transforms too
 $d = Essl100 (Join-Path $testsDir 'BatchedSprites.shader')
 $vs = Get-Essl100Stage $d 'vertex'
 $fs = Get-Essl100Stage $d 'fragment'
-Assert ($vs.Contains('unsupported in ES2') -and $vs.Contains('std140')) 'Essl100 BatchedSprites: VS not deferred with a std140 diagnostic'
+Assert ($vs.Contains('attribute vec2 aQuadCorner;') -and $vs.Contains('attribute float aInstanceIndex;')) 'Essl100 BatchedSprites: VS corner/instance attributes missing'
+Assert ($vs.Contains('uniform Instance instances[BATCH_SIZE];') -and $vs.Contains('#define i instances[int(aInstanceIndex)]')) 'Essl100 BatchedSprites: std140 block not lowered to a uniform array'
+Assert (-not $vs.Contains('layout (std140)') -and -not $vs.Contains('gl_VertexID')) 'Essl100 BatchedSprites: VS still carries an ES2-unsupported construct'
 Assert ($fs.Contains('texture2D(uTexture, vTexCoords)')) 'Essl100 BatchedSprites: FS texture() not rewritten'
 Assert ($fs.Contains('gl_FragColor = COLOR;') -and -not $fs.Contains('out vec4 COLOR;')) 'Essl100 BatchedSprites: FS COLOR not retargeted to gl_FragColor'
 
-# TexturePassthrough: a gl_VertexID-only (no UBO) program defers its VS citing gl_VertexID; the
-# fragment stage transforms regardless of the deferred vertex stage
+# TexturePassthrough: a gl_VertexID-only (no UBO) program now lowers its VS corner synthesis to the
+# aQuadCorner attribute; the fragment stage transforms regardless
 $d = Essl100 (Join-Path $testsDir 'TexturePassthrough.shader')
 $vs = Get-Essl100Stage $d 'vertex'
 $fs = Get-Essl100Stage $d 'fragment'
-Assert ($vs.Contains('unsupported in ES2') -and $vs.Contains('gl_VertexID')) 'Essl100 TexturePassthrough: VS not deferred citing gl_VertexID'
+Assert ($vs.Contains('attribute vec2 aQuadCorner;') -and -not $vs.Contains('gl_VertexID')) 'Essl100 TexturePassthrough: VS gl_VertexID not lowered to the corner attribute'
 Assert ($fs.Contains('texture2D(TEXTURE, vTexCoords)') -and $fs.Contains('gl_FragColor = COLOR;')) 'Essl100 TexturePassthrough: FS not transformed'
 
 Write-Host ''

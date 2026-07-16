@@ -151,6 +151,44 @@ namespace nCine::RhiSoftware
 		/** @brief Returns the owned screen back-buffer (pixels/size/stride) for the window backend to present */
 		static Framebuffer GetScreenFramebuffer();
 
+		/**
+			@brief Renders any draws the tile renderer has deferred into the current color buffer
+
+			The window backend calls this before reading @ref GetScreenFramebuffer() to present, so every
+			queued draw has landed in the screen buffer. Forwards to the rasterizer's deferred-layer flush,
+			which waits for all worker threads to finish; a no-op when nothing is queued.
+		*/
+		static void FlushSoftwareRenderer();
+
+		/**
+			@brief Queues a dynamic lightmap to be composited over a viewport during the next matching Combine draw
+
+			Software-lighting entry point used by the viewport compositor (@c Jazz2::Rendering::CombineRenderer). The
+			scene renders straight to the screen buffer with no shader post-processing, so the dynamic lighting is
+			applied on the CPU here instead: the compositor builds the half-resolution lightmap in the Visit
+			(queue-building) phase and calls this, then the Combine draw it queues is intercepted in @ref Dispatch()
+			during the later Draw phase - after the scene has been rasterized into the screen buffer and before the
+			HUD - where the map is blended in place over the viewport rectangle. Entries are consumed
+			first-in-first-out, one per Combine draw, so splitscreen viewports each receive their own map in
+			submission order.
+
+			@param lightmap  Half-resolution accumulation buffer, 2 floats per texel (R = intensity incl. the ambient
+			                 base, G = brightness core), row-major. Caller-owned; must stay valid until the matching
+			                 Combine draw is dispatched (the compositor keeps it in a per-viewport member).
+			@param lmW       Lightmap width in texels
+			@param lmH       Lightmap height in texels
+			@param scale     Lightmap-to-screen downscale factor (a screen pixel samples texel `pixel / scale`)
+			@param vpX       Viewport left in screen-buffer pixels
+			@param vpY       Viewport top in screen-buffer pixels
+			@param vpW       Viewport width in screen-buffer pixels (clamped against the buffer at apply time)
+			@param vpH       Viewport height in screen-buffer pixels (clamped against the buffer at apply time)
+			@param ambR      Ambient colour red the unlit scene is blended toward
+			@param ambG      Ambient colour green the unlit scene is blended toward
+			@param ambB      Ambient colour blue the unlit scene is blended toward
+		*/
+		static void SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
+			std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB);
+
 	private:
 		static constexpr std::uint32_t MaxTextureUnits = 8;
 		static constexpr std::uint32_t MaxUniformBindings = 8;
@@ -179,9 +217,22 @@ namespace nCine::RhiSoftware
 		/** @brief Backend-owned pixel store for the screen back-buffer (only used by the present path) */
 		static std::vector<std::uint8_t> screenPixels_;
 
+		/** @brief One queued software-lighting combine, submitted by the compositor and applied at the next Combine draw */
+		struct PendingSoftwareLight
+		{
+			const float* Lightmap = nullptr;
+			std::int32_t LmW = 0, LmH = 0, Scale = 1;
+			std::int32_t VpX = 0, VpY = 0, VpW = 0, VpH = 0;
+			float AmbR = 0.0f, AmbG = 0.0f, AmbB = 0.0f;
+		};
+		/** @brief FIFO of pending software-lighting combines (one per viewport, in submission order) */
+		static std::vector<PendingSoftwareLight> pendingSoftwareLights_;
+
 		/** @brief Resolves the color framebuffer that draws and clears write into (RT color 0, else default) */
 		static bool ResolveFramebuffer(Framebuffer& out);
 		/** @brief Runs the correct C++ effect for the bound program over the given draw range */
 		static void Dispatch(PrimitiveType primitive, std::int32_t numVertices);
+		/** @brief Consumes the front queued software lightmap and blends it in place over its viewport rectangle */
+		static void ApplyPendingSoftwareLighting();
 	};
 }

@@ -68,6 +68,18 @@ else()
 	endif()
 endif()
 
+# OpenGL|ES 2.0 profile of the GL backend. Requests a real ES 2.0 context (ESSL 100 shaders, no uniform
+# buffer objects, no gl_VertexID) instead of the ES 3.0 context the ANGLE/GLES path otherwise uses. This
+# targets the PS Vita (ES 2.0). It defaults ON when building against ANGLE for desktop testing and is only
+# available on OpenGL|ES builds - it is force-OFF (and thus must never affect) the desktop GL 3.3 and the
+# software (NCINE_WITH_RHI_SOFTWARE) builds.
+if(NCINE_WITH_ANGLE)
+	set(_NCINE_RHI_GL_PROFILE_ES2_DEFAULT ON)
+else()
+	set(_NCINE_RHI_GL_PROFILE_ES2_DEFAULT OFF)
+endif()
+cmake_dependent_option(NCINE_RHI_GL_PROFILE_ES2 "Request a real OpenGL|ES 2.0 profile (ESSL 100, no UBOs, no gl_VertexID)" ${_NCINE_RHI_GL_PROFILE_ES2_DEFAULT} "NCINE_WITH_ANGLE OR NCINE_WITH_OPENGLES" OFF)
+
 cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward library for exception handling" ON "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID" OFF)
 #option(NCINE_WITH_LZ4 "Enable LZ4 compression support" OFF)
 #option(NCINE_WITH_ZSTD "Enable Zstd compression support" OFF)

@@ -40,6 +40,38 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char TileMapMeshPalette_Vs100[] =
+R"__SHDR__(#line 1
+
+attribute vec2 aPosition;
+attribute vec2 aTexCoords;
+attribute vec4 aColor;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+varying highp float vPaletteOffset;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	uniform float palOffset;
+
+
+
+
+void main()
+{
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * vec4(aPosition.x, aPosition.y, 0.0, 1.0);
+	vTexCoords = aTexCoords;
+	vColor = aColor * color;
+	vPaletteOffset = palOffset;
+}
+)__SHDR__";
+
 	inline constexpr char TileMapMeshPalette_Fs[] =
 R"__SHDR__(#line 1
 
@@ -80,6 +112,42 @@ void main() {
 
 )__SHDR__";
 
+	inline constexpr char TileMapMeshPalette_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+varying highp float vPaletteOffset;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	uniform float palOffset;
+
+
+
+
+uniform sampler2D uTexture;
+uniform sampler2D uTexturePalette;
+
+
+void main() {
+	vec4 COLOR;
+	vec4 src = texture2D(uTexture, vTexCoords);
+	// Flat palette position = per-instance offset + the per-pixel index (red channel), mapped into the 256x256 texture
+	highp float palIndex = floor(vPaletteOffset + 0.5) + floor(src.r * 255.0 + 0.5);
+	highp float palX = (mod(palIndex, 256.0) + 0.5) / 256.0;
+	highp float palY = (floor(palIndex / 256.0) + 0.5) / 256.0;
+	vec4 color = texture2D(uTexturePalette, vec2(palX, palY));
+	COLOR = vec4(color.rgb, color.a * src.a) * vColor;
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+
 	inline constexpr ShaderCompiler::Uniform TileMapMeshPalette_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -110,7 +178,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant TileMapMeshPalette_Variants[] = {
 		{ "", "", TileMapMeshPalette_Vs, TileMapMeshPalette_Fs,
-			2, TileMapMeshPalette_Uniforms, 1, TileMapMeshPalette_Blocks, 2, TileMapMeshPalette_Textures, 3, TileMapMeshPalette_Attributes },
+			2, TileMapMeshPalette_Uniforms, 1, TileMapMeshPalette_Blocks, 2, TileMapMeshPalette_Textures, 3, TileMapMeshPalette_Attributes,
+			TileMapMeshPalette_Vs100, TileMapMeshPalette_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program TileMapMeshPalette = { "TileMapMeshPalette", 0, 1, TileMapMeshPalette_Variants };

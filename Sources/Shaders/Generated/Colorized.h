@@ -36,6 +36,35 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char Colorized_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec4 texRect;
+	uniform vec2 spriteSize;
+	// Flat index into the palette texture (added to the per-pixel index for the palette lookup). Lands in the
+	// std140 tail padding after spriteSize, so the block stays 112 bytes. Only read by palette shaders.
+	uniform float palOffset;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * texRect.x + texRect.y, aPosition.y * texRect.z + texRect.w);
+	vColor = color;
+}
+)__SHDR__";
+
 	inline constexpr char Colorized_Fs[] =
 R"__SHDR__(#line 1
 
@@ -57,6 +86,30 @@ void main() {
 	float average = (original.r + original.g + original.b) * 0.5;
 	vec4 gray = vec4(average, average, average, original.a);
 	COLOR = gray * dye;
+}
+
+)__SHDR__";
+
+	inline constexpr char Colorized_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	vec4 dye = vec4(1.0) + (COLOR - vec4(0.5)) * vec4(4.0);
+	vec4 original = texture2D(uTexture, vTexCoords);
+	float average = (original.r + original.g + original.b) * 0.5;
+	vec4 gray = vec4(average, average, average, original.a);
+	COLOR = gray * dye;
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -84,7 +137,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant Colorized_Variants[] = {
 		{ "", "", Colorized_Vs, Colorized_Fs,
-			2, Colorized_Uniforms, 1, Colorized_Blocks, 1, Colorized_Textures, 0, nullptr },
+			2, Colorized_Uniforms, 1, Colorized_Blocks, 1, Colorized_Textures, 0, nullptr,
+			Colorized_Vs100, Colorized_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program Colorized = { "Colorized", 0, 1, Colorized_Variants };
@@ -129,6 +183,45 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char BatchedColorized_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+attribute float aInstanceIndex;
+#line 1
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+struct Instance
+{
+	mat4 modelMatrix;
+	vec4 color;
+	vec4 texRect;
+	vec2 spriteSize;
+	// Flat index into the palette texture; lands in the std140 tail padding, so the stride stays 112 bytes
+	float palOffset;
+};
+
+#ifndef BATCH_SIZE
+	#define BATCH_SIZE (585) // 64 Kb / 112 b
+#endif
+	uniform Instance instances[BATCH_SIZE];
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+#define i instances[int(aInstanceIndex)]
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), 1.0 - (1.0 - aQuadCorner.y));
+	vec4 position = vec4(aPosition.x * i.spriteSize.x, aPosition.y * i.spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * i.modelMatrix * position;
+	vTexCoords = vec2(aPosition.x * i.texRect.x + i.texRect.y, aPosition.y * i.texRect.z + i.texRect.w);
+	vColor = i.color;
+}
+)__SHDR__";
+
 	inline constexpr char BatchedColorized_Fs[] =
 R"__SHDR__(#line 1
 
@@ -154,6 +247,30 @@ void main() {
 
 )__SHDR__";
 
+	inline constexpr char BatchedColorized_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec2 vTexCoords;
+varying vec4 vColor;
+
+uniform sampler2D uTexture;
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	vec4 dye = vec4(1.0) + (COLOR - vec4(0.5)) * vec4(4.0);
+	vec4 original = texture2D(uTexture, vTexCoords);
+	float average = (original.r + original.g + original.b) * 0.5;
+	vec4 gray = vec4(average, average, average, original.a);
+	COLOR = gray * dye;
+	gl_FragColor = COLOR;
+}
+
+)__SHDR__";
+
 	inline constexpr ShaderCompiler::Uniform BatchedColorized_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -173,7 +290,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant BatchedColorized_Variants[] = {
 		{ "", "", BatchedColorized_Vs, BatchedColorized_Fs,
-			2, BatchedColorized_Uniforms, 1, BatchedColorized_Blocks, 1, BatchedColorized_Textures, 0, nullptr },
+			2, BatchedColorized_Uniforms, 1, BatchedColorized_Blocks, 1, BatchedColorized_Textures, 0, nullptr,
+			BatchedColorized_Vs100, BatchedColorized_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program BatchedColorized = { "BatchedColorized", 0, 1, BatchedColorized_Variants };

@@ -95,6 +95,13 @@ namespace ShaderCompiler
 		const TextureBinding* Textures;
 		std::size_t AttributeCount;
 		const Attribute* Attributes;
+		// OpenGL|ES 2.0 (ESSL 100) stage sources: the Essl100Emitter lowering of VsSource/FsSource — no
+		// UBOs (std140 blocks become loose uniforms / a uniform struct-array) and no gl_VertexID (the quad
+		// corner and the batched instance index become the aQuadCorner / aInstanceIndex vertex attributes).
+		// Consumed under RHI_GL_PROFILE_ES2 with "#version 100"; the GL 3.3 / ES 3.0 path ignores these and
+		// uses VsSource/FsSource. Null when the ES2 lowering was not available (e.g. runtime-compiled shaders).
+		const char* VsSource100;
+		const char* FsSource100;
 	};
 
 	// A shader program with all of its variants (Variants[0] is always the base variant, whose Name is "")

@@ -30,6 +30,29 @@ void main()
 }
 )__SHDR__";
 
+	inline constexpr char DefaultSpriteNoTexture_Vs100[] =
+R"__SHDR__(attribute vec2 aQuadCorner;
+#line 1
+
+varying vec4 vColor;
+
+uniform mat4 uProjectionMatrix;
+uniform mat4 uViewMatrix;
+
+	uniform mat4 modelMatrix;
+	uniform vec4 color;
+	uniform vec2 spriteSize;
+
+void main()
+{
+	vec2 aPosition = vec2(1.0 - (1.0 - aQuadCorner.x), aQuadCorner.y);
+	vec4 position = vec4(aPosition.x * spriteSize.x, aPosition.y * spriteSize.y, 0.0, 1.0);
+
+	gl_Position = uProjectionMatrix * uViewMatrix * modelMatrix * position;
+	vColor = color;
+}
+)__SHDR__";
+
 	inline constexpr char DefaultSpriteNoTexture_Fs[] =
 R"__SHDR__(#line 1
 
@@ -43,6 +66,22 @@ out vec4 COLOR;
 
 void main() {
 	COLOR = vColor;
+}
+
+)__SHDR__";
+
+	inline constexpr char DefaultSpriteNoTexture_Fs100[] =
+R"__SHDR__(#line 1
+
+precision mediump float;
+
+varying vec4 vColor;
+
+
+void main() {
+	vec4 COLOR;
+	COLOR = vColor;
+	gl_FragColor = COLOR;
 }
 
 )__SHDR__";
@@ -64,7 +103,8 @@ void main() {
 
 	inline constexpr ShaderCompiler::ProgramVariant DefaultSpriteNoTexture_Variants[] = {
 		{ "", "", DefaultSpriteNoTexture_Vs, DefaultSpriteNoTexture_Fs,
-			2, DefaultSpriteNoTexture_Uniforms, 1, DefaultSpriteNoTexture_Blocks, 0, nullptr, 0, nullptr },
+			2, DefaultSpriteNoTexture_Uniforms, 1, DefaultSpriteNoTexture_Blocks, 0, nullptr, 0, nullptr,
+			DefaultSpriteNoTexture_Vs100, DefaultSpriteNoTexture_Fs100 },
 	};
 
 	inline constexpr ShaderCompiler::Program DefaultSpriteNoTexture = { "DefaultSpriteNoTexture", 0, 1, DefaultSpriteNoTexture_Variants };

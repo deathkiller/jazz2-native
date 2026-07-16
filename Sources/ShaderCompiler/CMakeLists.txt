@@ -12,6 +12,7 @@ add_executable(ShaderCompiler
 	GlslReflect.cpp
 	Emit.cpp
 	Essl100.cpp
+	GlslToCpp.cpp
 	# Runtime facade, also compiled into the game — built here to catch drift early
 	# (requires the committed Shaders/Generated/ShaderCompilerTypes.h)
 	RuntimeShader.cpp
