@@ -25,6 +25,24 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
 	if(NCINE_WITH_RHI_SOFTWARE)
 		set(NCINE_PREFERRED_BACKEND "SDL2" CACHE STRING "Specify preferred backend on desktop" FORCE)
 	endif()
+
+	# Direct3D 11 rendering backend (Windows/MSVC only, no OpenGL) - it presents through a DXGI swap chain
+	# created from the SDL2 window, so like the software backend it forces the SDL2 backend
+	if(WIN32 AND MSVC)
+		option(NCINE_WITH_RHI_D3D11 "Use the Direct3D 11 rendering backend instead of OpenGL (Windows only)" OFF)
+		if(NCINE_WITH_RHI_D3D11)
+			set(NCINE_PREFERRED_BACKEND "SDL2" CACHE STRING "Specify preferred backend on desktop" FORCE)
+endif()
+	endif()
+
+	# Vulkan rendering backend (desktop, no OpenGL) - it presents through a VkSwapchainKHR created from the
+	# SDL2 window's presentation surface, so like the software and Direct3D 11 backends it forces the SDL2
+	# backend. It is header-only (Khronos Vulkan-Headers via FetchContent) with a dynamic loader that binds
+	# the runtime vulkan-1.dll (which ships with GPU drivers), so it needs no Vulkan SDK and links no import lib.
+	option(NCINE_WITH_RHI_VULKAN "Use the Vulkan rendering backend instead of OpenGL" OFF)
+	if(NCINE_WITH_RHI_VULKAN)
+		set(NCINE_PREFERRED_BACKEND "SDL2" CACHE STRING "Specify preferred backend on desktop" FORCE)
+endif()
 endif()
 
 if(EMSCRIPTEN)
@@ -48,7 +66,18 @@ else()
 			set(NCINE_UWP_CERTIFICATE_THUMBPRINT "" CACHE STRING "Code-signing certificate thumbprint (Windows RT only)")
 			set(NCINE_UWP_CERTIFICATE_PATH "" CACHE STRING "Code-signing certificate path (Windows RT only)")
 			set(NCINE_UWP_CERTIFICATE_PASSWORD "" CACHE STRING "Code-signing certificate password (Windows RT only)")
+
+			# Direct3D 11 rendering backend — the DEFAULT renderer on UWP (Windows Store / Xbox). Unlike the
+			# desktop D3D11 build it must NOT force the SDL2 backend: UWP renders through UwpGfxDevice, which
+			# drives a DXGI flip-model swap chain from the CoreWindow (see UwpGfxDevice / D3D11Device). When it
+			# is enabled, ANGLE/OpenGL|ES is demoted to an opt-in fallback (its libs are then not required);
+			# turning D3D11 off restores ANGLE as the default so UWP always has a working renderer.
+			option(NCINE_WITH_RHI_D3D11 "Use the Direct3D 11 rendering backend instead of OpenGL|ES (default on UWP)" ON)
+			if(NCINE_WITH_RHI_D3D11)
+				set(_NCINE_WITH_ANGLE_DEFAULT OFF)
+			else()
 			set(_NCINE_WITH_ANGLE_DEFAULT ON)
+			endif()
 		else()
 			option(NCINE_INSTALL_SYSLIBS "Install required MSVC system libraries with CMake" OFF)
 			option(NCINE_COPY_DEPENDENCIES "Copy all build dependencies to target directory" ON)

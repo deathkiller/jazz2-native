@@ -6,6 +6,13 @@
 #   everything else (Jazz2 PrecompiledShader programs) -> Jazz2::ShadersGen
 #
 # Fails with a non-zero exit code if any shader fails to process.
+#
+# SPIR-V for the Vulkan backend is embedded when a glslangValidator can be found (VULKAN_SDK, PATH, a
+# repo-local build-tree copy, or a Visual Studio-bundled copy) or supplied with -Glslang <path>. glslang
+# is a BUILD-TIME-only dependency: when it is unavailable the SPIR-V fields are emitted as nullptr/0 and a
+# warning is printed (the headers still build; the Vulkan backend is then not buildable).
+
+param([string]$Glslang = '')
 
 $ErrorActionPreference = 'Stop'
 
@@ -21,6 +28,36 @@ if (-not (Test-Path $tool)) {
 if (-not (Test-Path $shadersDir)) {
     Write-Host "error: Shader directory not found at '$shadersDir'"
     exit 1
+}
+
+# Locate glslangValidator for offline SPIR-V compilation (build-time only; see the header comment)
+function Find-Glslang([string]$override) {
+    if ($override -and (Test-Path $override)) { return (Resolve-Path $override).Path }
+    if ($env:VULKAN_SDK) {
+        foreach ($sub in @('Bin\glslangValidator.exe', 'Bin32\glslangValidator.exe')) {
+            $p = Join-Path $env:VULKAN_SDK $sub
+            if (Test-Path $p) { return $p }
+        }
+    }
+    $cmd = Get-Command glslangValidator.exe -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    # Visual Studio-bundled copy (best-effort glob)
+    $vs = Get-ChildItem 'C:\Program Files*\Microsoft Visual Studio\*\*\Common7\IDE\Extensions\*\external\glslangValidator.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($vs) { return $vs.FullName }
+    # Repo-local build-tree copy (may be transient)
+    $repoRoot = Split-Path -Parent (Split-Path -Parent $scriptDir)
+    $repoCopy = Join-Path $repoRoot '.fake\_legacy\.fake\glsl\glslangValidator.exe'
+    if (Test-Path $repoCopy) { return $repoCopy }
+    return $null
+}
+
+$glslangPath = Find-Glslang $Glslang
+$glslangArgs = @()
+if ($glslangPath) {
+    Write-Host "using glslang: $glslangPath"
+    $glslangArgs = @('--glslang', $glslangPath)
+} else {
+    Write-Host "warning: glslangValidator not found - Vulkan SPIR-V will be omitted (install the Vulkan SDK for the Vulkan backend)"
 }
 
 New-Item -ItemType Directory -Force $outDir | Out-Null
@@ -48,7 +85,7 @@ foreach ($shader in $shaders) {
     }
     $outPath = Join-Path $outDir ($name + '.h')
 
-    & $tool $shader.FullName -o $outPath -n $ns
+    & $tool $shader.FullName -o $outPath -n $ns @glslangArgs
     if ($LASTEXITCODE -ne 0) {
         Write-Host "error: '$($shader.Name)' failed with exit code $LASTEXITCODE"
         $failed++

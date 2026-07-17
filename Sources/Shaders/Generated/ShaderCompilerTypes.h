@@ -102,6 +102,22 @@ namespace ShaderCompiler
 		// uses VsSource/FsSource. Null when the ES2 lowering was not available (e.g. runtime-compiled shaders).
 		const char* VsSource100;
 		const char* FsSource100;
+		// Direct3D 11 (HLSL, Shader Model 4/5) stage sources: the HlslEmitter lowering of VsSource/FsSource —
+		// VSMain/PSMain entry points, std140 blocks as cbuffers, separate Texture2D + SamplerState objects and
+		// mul()-based matrix algebra. Consumed by the D3D11 backend (P6 slice 2); GL/ES/software ignore these.
+		// Null when the HLSL lowering was not available (a construct outside the emitter's subset).
+		const char* HlslVsSource;
+		const char* HlslFsSource;
+		// Vulkan (SPIR-V) stage modules: the VulkanGlslEmitter lowering of VsSource/FsSource ("#version 450",
+		// explicit set/binding + location decorations, gathered "_Globals" UBO, gl_VertexIndex) compiled offline
+		// through glslang to SPIR-V words. Consumed by the Vulkan backend (P7 slice 2), which builds pipelines
+		// straight from these and the descriptor-set layout from the same reflection; other backends ignore them.
+		// Null/0 when glslang was unavailable at generation time or the shader is runtime-compiled (the Vulkan
+		// backend is then not buildable / falls back). Sizes are the number of 32-bit SPIR-V words.
+		const std::uint32_t* VkVsSpirv;
+		std::size_t VkVsSpirvSize;
+		const std::uint32_t* VkFsSpirv;
+		std::size_t VkFsSpirvSize;
 	};
 
 	// A shader program with all of its variants (Variants[0] is always the base variant, whose Name is "")

@@ -117,6 +117,8 @@
     <ClCompile Include="Emit.cpp" />
     <ClCompile Include="GlslToCpp.cpp" />
     <ClCompile Include="Essl100.cpp" />
+    <ClCompile Include="Hlsl.cpp" />
+    <ClCompile Include="Vulkan.cpp" />
     <ClCompile Include="GlslReflect.cpp" />
     <ClCompile Include="RuntimeShader.cpp" />
     <ClCompile Include="ShaderParser.cpp" />
@@ -132,6 +134,8 @@
     <ClInclude Include="Emit.h" />
     <ClInclude Include="GlslToCpp.h" />
     <ClInclude Include="Essl100.h" />
+    <ClInclude Include="Hlsl.h" />
+    <ClInclude Include="Vulkan.h" />
     <ClInclude Include="GlslReflect.h" />
     <ClInclude Include="RuntimeShader.h" />
     <ClInclude Include="ShaderParser.h" />

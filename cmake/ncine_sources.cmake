@@ -320,6 +320,10 @@ list(APPEND SOURCES
 
 # CPU software rendering backend (compiled only when the software backend is selected)
 if(NCINE_WITH_RHI_SOFTWARE)
+	# The OpenGL RHI translation units are dead code under the software backend (the pipeline's `Rhi::`
+	# aliases resolve to the `Sw*` types), so drop them from the build entirely instead of compiling them
+	list(FILTER SOURCES EXCLUDE REGEX "/RHI/GL/")
+
 	list(APPEND SOURCES
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwBuffer.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwDevice.cpp
@@ -331,5 +335,39 @@ if(NCINE_WITH_RHI_SOFTWARE)
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwTileRasterizer.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwTileRenderer.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwUniformCache.cpp
+	)
+endif()
+
+# Direct3D 11 rendering backend (compiled only when the Direct3D 11 backend is selected)
+if(NCINE_WITH_RHI_D3D11)
+	# The OpenGL RHI translation units are dead code under the Direct3D 11 backend (the pipeline's `Rhi::`
+	# aliases resolve to the `D3D11*` types), so drop them from the build entirely instead of compiling them
+	list(FILTER SOURCES EXCLUDE REGEX "/RHI/GL/")
+
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11BufferObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11Device.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11RenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11ShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11ShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11Texture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11UniformCache.cpp
+	)
+endif()
+
+# Vulkan rendering backend (compiled only when the Vulkan backend is selected)
+if(NCINE_WITH_RHI_VULKAN)
+	# The OpenGL RHI translation units are dead code under the Vulkan backend (the pipeline's `Rhi::`
+	# aliases resolve to the `Vulkan*` types), so drop them from the build entirely instead of compiling them
+	list(FILTER SOURCES EXCLUDE REGEX "/RHI/GL/")
+
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanBufferObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanUniformCache.cpp
 	)
 endif()

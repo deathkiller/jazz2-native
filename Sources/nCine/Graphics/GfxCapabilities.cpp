@@ -67,14 +67,21 @@ namespace nCine
 
 	void GfxCapabilities::Init()
 	{
-#if defined(WITH_RHI_SOFTWARE)
-		// The software backend has no OpenGL context to query; publish conservative capability values that
-		// satisfy the render pipeline (color-attachment count, texture size, uniform-block limits/alignment)
+#if defined(WITH_RHI_SOFTWARE) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN)
+		// The software, Direct3D 11 and Vulkan backends have no OpenGL context to query; publish conservative
+		// capability values that satisfy the render pipeline (color-attachment count, texture size,
+		// uniform-block limits/alignment)
 		glMajorVersion_ = 3;
 		glMinorVersion_ = 3;
 		glReleaseVersion_ = 0;
 		glInfoStrings_.vendor = "nCine";
+#	if defined(WITH_RHI_D3D11)
+		glInfoStrings_.renderer = "Direct3D 11";
+#	elif defined(WITH_RHI_VULKAN)
+		glInfoStrings_.renderer = "Vulkan";
+#	else
 		glInfoStrings_.renderer = "Software Rasterizer";
+#	endif
 		glInfoStrings_.apiVersion = "3.3";
 		glInfoStrings_.shadingLanguageVersion = "";
 		glIntValues_[(std::int32_t)IntValues::MAX_TEXTURE_SIZE] = 16384;

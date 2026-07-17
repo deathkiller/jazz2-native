@@ -32,10 +32,12 @@ namespace nCine
 			return;
 		}
 
-#if defined(WITH_RHI_SOFTWARE)
-		// The software backend compiles no shaders, so there is no program binary to cache. Stay silently
-		// disabled (isAvailable_ is already false, so every cache operation is a no-op) instead of querying
-		// GL capabilities and logging a missing-extension warning that does not apply to this backend.
+#if defined(WITH_RHI_SOFTWARE) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN)
+		// The software backend compiles no shaders, the Direct3D 11 backend does not use GL program binaries,
+		// and the Vulkan backend runs from pre-compiled SPIR-V shader modules (no GL program binary exists to
+		// cache), so there is nothing to cache on any of these. Stay silently disabled (isAvailable_ is already
+		// false, so every cache operation is a no-op) instead of querying GL capabilities and logging a
+		// missing-extension warning that does not apply here.
 		return;
 #endif
 

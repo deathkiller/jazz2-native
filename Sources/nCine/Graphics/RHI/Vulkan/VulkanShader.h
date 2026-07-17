@@ -1,0 +1,83 @@
+#pragma once
+
+#include <cstdint>
+
+#include <Containers/ArrayView.h>
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
+
+namespace nCine::RhiVulkan
+{
+	/**
+		@brief Shader-object stub of the Vulkan backend
+
+		Slice 2a does not build SPIR-V modules yet (the offline emitter already produces `VkVsSpirv`/`VkFsSpirv`
+		per program-variant; slice 2b creates `VkShaderModule` objects and pipelines from them). This class
+		carries no source and every operation succeeds trivially, only to satisfy the `Rhi::Shader` contract alias.
+	*/
+	class VulkanShader
+	{
+	public:
+		/** @brief Compilation status of the shader (always @ref Status::Compiled for slice 2a) */
+		enum class Status
+		{
+			NotCompiled,
+			CompilationFailed,
+			Compiled,
+			CompiledWithDeferredChecks
+		};
+
+		/** @brief When the compilation status is checked (irrelevant for the slice 2a stub) */
+		enum class ErrorChecking
+		{
+			Immediate,
+			Deferred
+		};
+
+		explicit VulkanShader(std::uint32_t type)
+			: type_(type), status_(Status::Compiled) {}
+		VulkanShader(std::uint32_t type, StringView filename)
+			: type_(type), status_(Status::Compiled) {
+			static_cast<void>(filename);
+		}
+
+		inline std::uint32_t GetGLHandle() const {
+			return 0;
+		}
+		inline Status GetStatus() const {
+			return status_;
+		}
+
+		bool LoadFromString(StringView string) {
+			static_cast<void>(string);
+			return true;
+		}
+		bool LoadFromStrings(ArrayView<const StringView> strings) {
+			static_cast<void>(strings);
+			return true;
+		}
+		bool LoadFromFile(StringView filename) {
+			static_cast<void>(filename);
+			return true;
+		}
+
+		bool Compile(ErrorChecking errorChecking, bool logOnErrors) {
+			static_cast<void>(errorChecking);
+			static_cast<void>(logOnErrors);
+			return true;
+		}
+		bool CheckCompilation(bool logOnErrors) {
+			static_cast<void>(logOnErrors);
+			return true;
+		}
+
+		void SetObjectLabel(StringView label) {
+			static_cast<void>(label);
+		}
+
+	private:
+		std::uint32_t type_;
+		Status status_;
+	};
+}

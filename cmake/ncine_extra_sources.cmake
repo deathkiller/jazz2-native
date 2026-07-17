@@ -37,7 +37,9 @@ elseif(OPENGL_FOUND)
 	else()
 		target_link_libraries(${NCINE_APP} PRIVATE OpenGL::GL)
 	endif()
-elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID)
+elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NCINE_WITH_RHI_D3D11 AND NOT NCINE_WITH_RHI_VULKAN)
+	# NCINE_WITH_RHI_D3D11 / NCINE_WITH_RHI_VULKAN are excluded: those backends deliberately import no
+	# OpenGL/EGL library (D3D11 links d3d11/dxgi/d3dcompiler; Vulkan loads vulkan-1.dll dynamically at runtime).
 	message(STATUS "No graphics library found! Make sure OpenGL or OpenGL|ES library is available on your system.")
 endif()
 
@@ -49,6 +51,21 @@ endif()
 if(NCINE_WITH_RHI_SOFTWARE)
 	# Selects the CPU software backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_SOFTWARE")
+endif()
+
+if(NCINE_WITH_RHI_D3D11)
+	# Selects the Direct3D 11 backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_D3D11")
+	# Direct3D 11 device/swap chain, DXGI and the (slice 2b) HLSL compiler
+	target_link_libraries(${NCINE_APP} PRIVATE d3d11 dxgi d3dcompiler)
+endif()
+
+if(NCINE_WITH_RHI_VULKAN)
+	# Selects the Vulkan backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_VULKAN")
+	# Header-only Khronos Vulkan-Headers (fetched in ncine_imported_targets.cmake). No vulkan-1.lib is linked:
+	# the loader binds the runtime vulkan-1.dll (shipped with GPU drivers) dynamically through SDL at startup.
+	target_include_directories(${NCINE_APP} PRIVATE "${VULKAN_HEADERS_INCLUDE_DIR}")
 endif()
 
 if(NOT DEDICATED_SERVER)
@@ -563,7 +580,11 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 		"${MSVC_WINRT_BINDIR}/vcruntime140_1.dll"
 	)
 	
-	if(NCINE_WITH_ANGLE)
+	if(NCINE_WITH_RHI_D3D11)
+		# Direct3D 11 renders through the DXGI CoreWindow swap chain; d3d11.dll / dxgi.dll / d3dcompiler_47.dll
+		# are inbox OS components on UWP (Windows Store / Xbox), so no EGL / OpenGL|ES runtime DLLs are packaged.
+		message(STATUS "Using Direct3D 11 as the rendering backend")
+	elseif(NCINE_WITH_ANGLE)
 		list(APPEND UWP_DEPENDENCIES
 			"${MSVC_WINRT_BINDIR}/libEGL.dll"
 			"${MSVC_WINRT_BINDIR}/libGLESv2.dll")
