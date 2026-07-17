@@ -32,6 +32,26 @@ endif()
 
 set(EXTERNAL_INCLUDES_DIR "${NCINE_LIBS}/Includes/" CACHE PATH "Set the path to external header files")
 
+# Vulkan backend: fetch the header-only Khronos Vulkan-Headers (no Vulkan SDK required — the loader is
+# resolved dynamically at runtime against vulkan-1.dll, which ships with GPU drivers, so no import library
+# is linked). Mirrors the ncine_libraries download above.
+if(NCINE_WITH_RHI_VULKAN)
+	if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.14.0")
+		include(FetchContent)
+		message(STATUS "Downloading Khronos Vulkan-Headers for the Vulkan backend...")
+		FetchContent_Declare(
+			vulkan_headers
+			DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+			URL "https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/vulkan-sdk-1.3.283.0.tar.gz"
+		)
+		FetchContent_MakeAvailable(vulkan_headers)
+		set(VULKAN_HEADERS_INCLUDE_DIR "${vulkan_headers_SOURCE_DIR}/include" CACHE PATH "Path to the Khronos Vulkan headers" FORCE)
+		message(STATUS "Using Khronos Vulkan-Headers at ${VULKAN_HEADERS_INCLUDE_DIR}")
+	else()
+		message(FATAL_ERROR "The Vulkan backend requires CMake 3.14.0 or newer to download Vulkan-Headers")
+	endif()
+endif()
+
 if(WIN32)
 	set(EXTERNAL_MSVC_DIR "${NCINE_LIBS}/Windows/" CACHE PATH "Set the path to the MSVC libraries directory")
 	if(NOT IS_DIRECTORY ${EXTERNAL_MSVC_DIR})
@@ -310,7 +330,11 @@ elseif(WIN32)
 		set(ZLIB_FOUND 1)
 	endif()
 
-	if(NCINE_WITH_ANGLE AND
+	if((WINDOWS_PHONE OR WINDOWS_STORE) AND NCINE_WITH_RHI_D3D11)
+		# Direct3D 11 backend on UWP renders through a DXGI CoreWindow swap chain (d3d11/dxgi/d3dcompiler are
+		# linked in ncine_extra_sources.cmake), so neither ANGLE nor OpenGL|ES / EGL is imported here. This
+		# leaves ANGLE_FOUND / OPENGLES2_FOUND (and OPENGL_FOUND) unset, so no EGL/GL libraries are required.
+	elseif(NCINE_WITH_ANGLE AND
 	   EXISTS "${MSVC_LIBDIR}/libEGL.lib" AND EXISTS "${MSVC_BINDIR}/libEGL.dll" AND
 	   EXISTS "${MSVC_LIBDIR}/libGLESv2.lib" AND EXISTS "${MSVC_BINDIR}/libGLESv2.dll")
 		add_library(EGL::EGL SHARED IMPORTED)

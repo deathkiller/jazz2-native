@@ -25,6 +25,10 @@
 
 #include "GlslReflect.h"
 
+#include <cstdint>
+#include <functional>
+#include <vector>
+
 namespace ShaderCompiler
 {
 	/** @brief Reflection of one program variant (the unnamed base or a named variant), merged across stages */
@@ -34,6 +38,17 @@ namespace ShaderCompiler
 		String Define;				// empty for the base variant, otherwise the baked define
 		StageReflection Reflection;
 	};
+
+	/**
+		@brief Offline SPIR-V compiler callback injected into EmitHeader
+
+		Compiles the Vulkan-flavored GLSL @p vulkanGlsl of one stage (@p vertexStage selects vertex vs.
+		fragment) to SPIR-V words in @p spirv, returning false (and optionally filling @p log) when glslang
+		is unavailable or the compile fails. Passing an empty function omits SPIR-V (the VkVsSpirv/VkFsSpirv
+		fields are emitted as nullptr/0). Injected by the caller so Emit stays free of the process-spawning
+		and glslang-locating code, which lives in the offline Main.cpp.
+	*/
+	using SpirvCompileFn = std::function<bool(StringView vulkanGlsl, bool vertexStage, std::vector<std::uint32_t>& spirv, String& log)>;
 
 	/** @brief One lowered program (document plus per-variant reflection) to be emitted into a generated header */
 	struct ProgramReflection
@@ -54,8 +69,8 @@ namespace ShaderCompiler
 			One input file yields one header, but it may carry multiple programs (a canvas_item
 			document plus its "batched" twin) — all of them are emitted into the same namespace.
 		*/
-		static bool EmitHeader(const std::vector<ProgramReflection>& programs,
-			StringView ns, StringView inputFileName, String& output, Diagnostic& diag);
+		static bool EmitHeader(const std::vector<ProgramReflection>& programs, StringView ns, StringView inputFileName,
+			const SpirvCompileFn& compileSpirv, String& output, Diagnostic& diag);
 
 		/** Builds the human-readable reflection dump printed by "--check" (called once per program) */
 		static String BuildCheckDump(const ShaderDocument& document, const std::vector<VariantReflection>& variants);

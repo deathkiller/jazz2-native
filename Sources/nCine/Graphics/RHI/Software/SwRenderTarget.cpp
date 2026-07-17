@@ -12,6 +12,12 @@ namespace nCine::RhiSoftware
 		}
 	}
 
+	SwRenderTarget::~SwRenderTarget()
+	{
+		// Clear from the device so a destroyed target can't dangle as currentRenderTarget_
+		SwDevice::UnbindRenderTarget(this);
+	}
+
 	void SwRenderTarget::AttachColorTexture(SwTexture& texture, std::uint32_t index)
 	{
 		if (index < MaxColorAttachments) {

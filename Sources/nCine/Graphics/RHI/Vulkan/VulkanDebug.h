@@ -1,0 +1,92 @@
+#pragma once
+
+#include <cstdint>
+
+#include <Containers/StringView.h>
+
+using namespace Death::Containers;
+
+namespace nCine
+{
+	class IGfxCapabilities;
+}
+
+namespace nCine::RhiVulkan
+{
+	/**
+		@brief Debug-output and object-labelling stub of the Vulkan backend
+
+		For slice 2a the backend has no device-side debug facility wired up, so every entry point is a
+		no-op. The class exists to satisfy the `Rhi::Debug` contract alias (debug groups, message insertion
+		and object labels used by the render pipeline). Slice 2b may route these to `VK_EXT_debug_utils`
+		labels / object names when the validation layer or a debugger is present.
+	*/
+	class VulkanDebug
+	{
+	public:
+		/** @brief Object types that can be labelled (values are irrelevant for the Vulkan backend) */
+		enum class LabelTypes
+		{
+			Buffer,
+			Shader,
+			Program,
+			VertexArray,
+			Query,
+			ProgramPipeline,
+			TransformFeedback,
+			Sampler,
+			Texture,
+			RenderBuffer,
+			FrameBuffer
+		};
+
+		/**
+			@brief RAII scope for a debug message group (a no-op for the Vulkan backend)
+		*/
+		class ScopedGroup
+		{
+		public:
+			explicit ScopedGroup(StringView message) {
+				static_cast<void>(message);
+			}
+		};
+
+		static void Init(const IGfxCapabilities& gfxCaps) {
+			static_cast<void>(gfxCaps);
+		}
+		static inline void Reset() {}
+
+		static inline bool IsAvailable() {
+			return false;
+		}
+
+		static void PushGroup(StringView message) {
+			static_cast<void>(message);
+		}
+		static void PopGroup() {}
+		static void MessageInsert(StringView message) {
+			static_cast<void>(message);
+		}
+
+		static void SetObjectLabel(LabelTypes identifier, std::uint32_t name, StringView label) {
+			static_cast<void>(identifier);
+			static_cast<void>(name);
+			static_cast<void>(label);
+		}
+		static void GetObjectLabel(LabelTypes identifier, std::uint32_t name, std::int32_t bufSize, std::int32_t* length, char* label) {
+			static_cast<void>(identifier);
+			static_cast<void>(name);
+			static_cast<void>(bufSize);
+			if (length != nullptr) {
+				*length = 0;
+			}
+			if (label != nullptr && bufSize > 0) {
+				label[0] = '\0';
+			}
+		}
+
+		static inline std::int32_t GetMaxLabelLength() {
+			return 0;
+		}
+	};
+}

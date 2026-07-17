@@ -47,4 +47,32 @@
 #include "Software/SwRaster.h"
 #include "Software/SwDevice.h"
 
+#elif defined(WITH_RHI_D3D11)
+
+#include "D3D11/D3D11Debug.h"
+#include "D3D11/D3D11Shader.h"
+#include "D3D11/D3D11BufferObject.h"
+#include "D3D11/D3D11Texture.h"
+#include "D3D11/D3D11VertexFormat.h"
+#include "D3D11/D3D11ShaderTypes.h"
+#include "D3D11/D3D11UniformCache.h"
+#include "D3D11/D3D11ShaderUniforms.h"
+#include "D3D11/D3D11ShaderProgram.h"
+#include "D3D11/D3D11RenderTarget.h"
+#include "D3D11/D3D11Device.h"
+
+#elif defined(WITH_RHI_VULKAN)
+
+#include "Vulkan/VulkanDebug.h"
+#include "Vulkan/VulkanShader.h"
+#include "Vulkan/VulkanBufferObject.h"
+#include "Vulkan/VulkanTexture.h"
+#include "Vulkan/VulkanVertexFormat.h"
+#include "Vulkan/VulkanShaderTypes.h"
+#include "Vulkan/VulkanUniformCache.h"
+#include "Vulkan/VulkanShaderUniforms.h"
+#include "Vulkan/VulkanShaderProgram.h"
+#include "Vulkan/VulkanRenderTarget.h"
+#include "Vulkan/VulkanDevice.h"
+
 #endif

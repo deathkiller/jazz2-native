@@ -71,6 +71,7 @@ namespace nCine::RhiSoftware
 		static constexpr std::uint32_t MaxColorAttachments = 8;
 
 		SwRenderTarget();
+		~SwRenderTarget();
 
 		SwRenderTarget(const SwRenderTarget&) = delete;
 		SwRenderTarget& operator=(const SwRenderTarget&) = delete;

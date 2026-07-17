@@ -3,8 +3,27 @@
 #include "SdlGfxDevice.h"
 #include "../Graphics/ITextureLoader.h"
 
-#if defined(WITH_RHI_SOFTWARE)
+#if defined(WITH_RHI_SOFTWARE) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN)
 #	include "../Graphics/RHI/Rhi.h"
+#endif
+
+#if defined(WITH_RHI_D3D11)
+// Needed to obtain the native HWND the DXGI swap chain is created for
+#	if defined(__HAS_LOCAL_SDL)
+#		include "SDL2/SDL_syswm.h"
+#	else
+#		include <SDL_syswm.h>
+#	endif
+#endif
+
+#if defined(WITH_RHI_VULKAN)
+// SDL_WINDOW_VULKAN + SDL_Vulkan_GetDrawableSize for the Vulkan swap-chain window (the surface itself is
+// created inside VulkanDevice from this window via SDL_Vulkan_CreateSurface)
+#	if defined(__HAS_LOCAL_SDL)
+#		include "SDL2/SDL_vulkan.h"
+#	else
+#		include <SDL_vulkan.h>
+#	endif
 #endif
 
 #if defined(WITH_GLEW)
@@ -46,6 +65,14 @@ namespace nCine::Backends
 			SDL_DestroyRenderer(softwareRenderer_);
 			softwareRenderer_ = nullptr;
 		}
+#elif defined(WITH_RHI_D3D11)
+		LOGD("Disposing Direct3D 11 device...");
+
+		Rhi::Device::DestroySwapchain();
+#elif defined(WITH_RHI_VULKAN)
+		LOGD("Disposing Vulkan device...");
+
+		Rhi::Device::DestroySwapchain();
 #else
 		LOGD("Disposing OpenGL context...");
 
@@ -61,8 +88,8 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::setSwapInterval(int interval)
 	{
-#if defined(WITH_RHI_SOFTWARE)
-		// No GL context; vsync is selected when the SDL renderer is created (present path)
+#if defined(WITH_RHI_SOFTWARE) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN)
+		// No GL context; vsync is fixed at device/swap-chain creation time (see the present path)
 		static_cast<void>(interval);
 #else
 		SDL_GL_SetSwapInterval(interval);
@@ -103,6 +130,20 @@ namespace nCine::Backends
 #if defined(WITH_RHI_SOFTWARE)
 		SDL_GetRendererOutputSize(softwareRenderer_, &drawableWidth_, &drawableHeight_);
 		resizeSoftwareTarget(drawableWidth_, drawableHeight_);
+#elif defined(WITH_RHI_D3D11)
+		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+		if (drawableWidth_ <= 0 || drawableHeight_ <= 0) {
+			drawableWidth_ = width_;
+			drawableHeight_ = height_;
+		}
+		Rhi::Device::ResizeSwapchain(drawableWidth_, drawableHeight_);
+#elif defined(WITH_RHI_VULKAN)
+		SDL_Vulkan_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+		if (drawableWidth_ <= 0 || drawableHeight_ <= 0) {
+			drawableWidth_ = width_;
+			drawableHeight_ = height_;
+		}
+		Rhi::Device::ResizeSwapchain(drawableWidth_, drawableHeight_);
 #else
 		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
 #endif
@@ -112,6 +153,16 @@ namespace nCine::Backends
 	{
 #if defined(WITH_RHI_SOFTWARE)
 		presentSoftware();
+#elif defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN)
+		// When the window is minimized there is no visible surface to present to: unlike a visible swap chain
+		// (whose present blocks on vsync), the D3D11/Vulkan present becomes a non-blocking no-op, so the main
+		// loop would otherwise spin at 100% CPU rendering frames nobody sees. PresentFrame() is still called so
+		// the backend can tidy up any partially-recorded frame, then the loop is throttled to a low rate while
+		// minimized. (The OpenGL and software arms are not compiled here, so they are unaffected.)
+		Rhi::Device::PresentFrame();
+		if ((SDL_GetWindowFlags(windowHandle_) & SDL_WINDOW_MINIMIZED) != 0) {
+			SDL_Delay(12);
+		}
 #else
 		SDL_GL_SwapWindow(windowHandle_);
 #endif
@@ -151,6 +202,20 @@ namespace nCine::Backends
 #if defined(WITH_RHI_SOFTWARE)
 			SDL_GetRendererOutputSize(softwareRenderer_, &drawableWidth_, &drawableHeight_);
 			resizeSoftwareTarget(drawableWidth_, drawableHeight_);
+#elif defined(WITH_RHI_D3D11)
+			SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+			if (drawableWidth_ <= 0 || drawableHeight_ <= 0) {
+				drawableWidth_ = width_;
+				drawableHeight_ = height_;
+			}
+			Rhi::Device::ResizeSwapchain(drawableWidth_, drawableHeight_);
+#elif defined(WITH_RHI_VULKAN)
+			SDL_Vulkan_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+			if (drawableWidth_ <= 0 || drawableHeight_ <= 0) {
+				drawableWidth_ = width_;
+				drawableHeight_ = height_;
+			}
+			Rhi::Device::ResizeSwapchain(drawableWidth_, drawableHeight_);
 #else
 			SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
 #endif
@@ -269,6 +334,97 @@ namespace nCine::Backends
 		}
 
 		initSoftwarePresent(displayMode_.hasVSync());
+		initDeviceViewport();
+		return;
+#elif defined(WITH_RHI_D3D11)
+		// Direct3D 11 backend: create a plain window (no OpenGL context) and drive a DXGI swap chain from its HWND
+		LOGD("Initializing window (Direct3D 11 renderer)...");
+
+		Uint32 d3dFlags = 0;
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+		d3dFlags |= SDL_WINDOW_ALLOW_HIGHDPI;
+#	endif
+		if (width_ <= 0 || height_ <= 0) {
+			d3dFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+			isFullscreen_ = true;
+		} else if (isFullscreen_) {
+			d3dFlags |= SDL_WINDOW_FULLSCREEN;
+		}
+		if (windowPosX == AppConfiguration::WindowPositionIgnore) {
+			windowPosX = SDL_WINDOWPOS_UNDEFINED;
+		}
+		if (windowPosY == AppConfiguration::WindowPositionIgnore) {
+			windowPosY = SDL_WINDOWPOS_UNDEFINED;
+		}
+
+		windowHandle_ = SDL_CreateWindow("", windowPosX, windowPosY, width_, height_, d3dFlags);
+		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: {}", SDL_GetError());
+		SDL_SetWindowResizable(windowHandle_, isResizable ? SDL_TRUE : SDL_FALSE);
+		// Resolution should be set to current screen size when it was left unspecified
+		if (width_ <= 0 || height_ <= 0) {
+			SDL_GetWindowSize(windowHandle_, &width_, &height_);
+		}
+		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+		if (drawableWidth_ <= 0 || drawableHeight_ <= 0) {
+			drawableWidth_ = width_;
+			drawableHeight_ = height_;
+		}
+
+		{
+			SDL_SysWMinfo wmInfo;
+			SDL_VERSION(&wmInfo.version);
+			const SDL_bool gotInfo = SDL_GetWindowWMInfo(windowHandle_, &wmInfo);
+			FATAL_ASSERT_MSG(gotInfo == SDL_TRUE, "SDL_GetWindowWMInfo failed: {}", SDL_GetError());
+			const bool created = Rhi::Device::CreateSwapchain(reinterpret_cast<void*>(wmInfo.info.win.window),
+				drawableWidth_, drawableHeight_, displayMode_.hasVSync());
+			FATAL_ASSERT_MSG(created, "Failed to create the Direct3D 11 device and swap chain");
+		}
+
+		initDeviceViewport();
+		return;
+#elif defined(WITH_RHI_VULKAN)
+		// Vulkan backend: create a plain window with the Vulkan flag (no OpenGL context) and drive a
+		// VkSwapchainKHR from the presentation surface created off this window (see VulkanDevice)
+		LOGD("Initializing window (Vulkan renderer)...");
+
+		Uint32 vkFlags = SDL_WINDOW_VULKAN;
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+		vkFlags |= SDL_WINDOW_ALLOW_HIGHDPI;
+#	endif
+		if (width_ <= 0 || height_ <= 0) {
+			vkFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+			isFullscreen_ = true;
+		} else if (isFullscreen_) {
+			vkFlags |= SDL_WINDOW_FULLSCREEN;
+		}
+		if (windowPosX == AppConfiguration::WindowPositionIgnore) {
+			windowPosX = SDL_WINDOWPOS_UNDEFINED;
+		}
+		if (windowPosY == AppConfiguration::WindowPositionIgnore) {
+			windowPosY = SDL_WINDOWPOS_UNDEFINED;
+		}
+
+		windowHandle_ = SDL_CreateWindow("", windowPosX, windowPosY, width_, height_, vkFlags);
+		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: {}", SDL_GetError());
+		SDL_SetWindowResizable(windowHandle_, isResizable ? SDL_TRUE : SDL_FALSE);
+		// Resolution should be set to current screen size when it was left unspecified
+		if (width_ <= 0 || height_ <= 0) {
+			SDL_GetWindowSize(windowHandle_, &width_, &height_);
+		}
+		SDL_Vulkan_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+		if (drawableWidth_ <= 0 || drawableHeight_ <= 0) {
+			drawableWidth_ = width_;
+			drawableHeight_ = height_;
+		}
+
+		{
+			// The Vulkan backend takes the SDL_Window* directly (it queries the required instance extensions
+			// and creates the presentation surface from it via the SDL Vulkan API)
+			const bool created = Rhi::Device::CreateSwapchain(reinterpret_cast<void*>(windowHandle_),
+				drawableWidth_, drawableHeight_, displayMode_.hasVSync());
+			FATAL_ASSERT_MSG(created, "Failed to create the Vulkan device and swap chain");
+		}
+
 		initDeviceViewport();
 		return;
 #endif

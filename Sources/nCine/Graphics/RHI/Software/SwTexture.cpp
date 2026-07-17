@@ -42,6 +42,13 @@ namespace nCine::RhiSoftware
 		swizzle_[3] = SwizzleChannel::Alpha;
 	}
 
+	SwTexture::~SwTexture()
+	{
+		// Clear from the device so a destroyed texture can't dangle in boundTextures_ (a later deferred draw would
+		// dereference freed memory in Dispatch)
+		SwDevice::UnbindTexture(this);
+	}
+
 	std::int32_t SwTexture::BytesPerPixel(PixelFormat format)
 	{
 		switch (format) {

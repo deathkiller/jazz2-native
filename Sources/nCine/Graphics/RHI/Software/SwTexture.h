@@ -29,7 +29,7 @@ namespace nCine::RhiSoftware
 		static constexpr std::uint32_t MaxTextureUnits = 8;
 
 		explicit SwTexture(TextureTarget target);
-		~SwTexture() = default;
+		~SwTexture();
 
 		SwTexture(const SwTexture&) = delete;
 		SwTexture& operator=(const SwTexture&) = delete;

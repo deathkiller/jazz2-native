@@ -287,6 +287,18 @@ namespace nCine::RhiSoftware
 		}
 	}
 
+	void SwDevice::UnbindTexture(const SwTexture* texture)
+	{
+		// Called from ~SwTexture so a destroyed texture never lingers as a dangling pointer in boundTextures_ (a
+		// later deferred draw reads it in Dispatch and would dereference freed memory - the same class of crash the
+		// D3D11 backend hit during splitscreen level changes). Clears every unit it may be bound to.
+		for (std::uint32_t unit = 0; unit < MaxTextureUnits; unit++) {
+			if (boundTextures_[unit] == texture) {
+				boundTextures_[unit] = nullptr;
+			}
+		}
+	}
+
 	const SwTexture* SwDevice::GetBoundTexture(std::uint32_t unit)
 	{
 		return (unit < MaxTextureUnits ? boundTextures_[unit] : nullptr);
@@ -303,6 +315,16 @@ namespace nCine::RhiSoftware
 	void SwDevice::SetRenderTarget(SwRenderTarget* renderTarget)
 	{
 		currentRenderTarget_ = renderTarget;
+	}
+
+	void SwDevice::UnbindRenderTarget(const SwRenderTarget* renderTarget)
+	{
+		// Called from ~SwRenderTarget so a destroyed target can't dangle as currentRenderTarget_ (ResolveFramebuffer
+		// and Dispatch dereference it). Reverts to the default framebuffer (nullptr); the pipeline binds a fresh
+		// target before the next off-screen draw.
+		if (currentRenderTarget_ == renderTarget) {
+			currentRenderTarget_ = nullptr;
+		}
 	}
 
 	void SwDevice::SetDefaultFramebuffer(const Framebuffer& framebuffer)

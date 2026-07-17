@@ -1,6 +1,12 @@
 #include "UwpGfxDevice.h"
 #include "UwpApplication.h"
 
+#if defined(WITH_RHI_D3D11)
+// Direct3D 11 device / CoreWindow swap chain. The header only forward-declares COM interfaces (no <d3d11.h>),
+// so it is safe to pull into this WinRT translation unit.
+#	include "../../Graphics/RHI/D3D11/D3D11Device.h"
+#endif
+
 #include <winrt/Windows.UI.Core.h>
 #include <winrt/Windows.Graphics.Display.h>
 #include <winrt/Windows.Graphics.Display.Core.h>
@@ -20,7 +26,11 @@ namespace winrtWGDC = winrt::Windows::Graphics::Display::Core;
 namespace nCine::Backends
 {
 	UwpGfxDevice::UwpGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode, const winrtWUC::CoreWindow& window)
-		: IGfxDevice(windowMode, contextInfo, displayMode), _window(window), _renderSurface{EGL_NO_SURFACE}, _sizeChanged(2)
+		: IGfxDevice(windowMode, contextInfo, displayMode), _window(window),
+#if defined(WITH_OPENGLES)
+		  _renderSurface{EGL_NO_SURFACE},
+#endif
+		  _sizeChanged(2)
 	{
 		updateMonitors();
 		Initialize();
@@ -33,7 +43,28 @@ namespace nCine::Backends
 
 	void UwpGfxDevice::Initialize()
 	{
-#if defined(WITH_OPENGLES)
+#if defined(WITH_RHI_D3D11)
+		// Direct3D 11 backend: create a DXGI flip-model swap chain bound to the CoreWindow (no EGL/OpenGL ES).
+		// The initial back-buffer size is the CoreWindow bounds (device-independent pixels) scaled to physical
+		// pixels by the display DPI, matching how update() tracks later resizes.
+		auto displayInfo = winrtWGD::DisplayInformation::GetForCurrentView();
+		const float dpi = displayInfo.LogicalDpi();
+		winrtWF::Rect bounds = _window.Bounds();
+		std::int32_t initialWidth = static_cast<std::int32_t>(bounds.Width * dpi / DefaultDPI);
+		std::int32_t initialHeight = static_cast<std::int32_t>(bounds.Height * dpi / DefaultDPI);
+		if (initialWidth < 1) { initialWidth = 1; }
+		if (initialHeight < 1) { initialHeight = 1; }
+
+		width_ = initialWidth;
+		height_ = initialHeight;
+		drawableWidth_ = initialWidth;
+		drawableHeight_ = initialHeight;
+
+		// The CoreWindow is passed as its raw ABI (IUnknown-compatible) pointer; CreateSwapChainForCoreWindow
+		// keeps its own reference, and `_window` owns the CoreWindow for the device's lifetime.
+		const bool created = RhiD3D11::D3D11Device::CreateSwapchain(winrt::get_abi(_window), initialWidth, initialHeight, displayMode_.hasVSync());
+		FATAL_ASSERT_MSG(created, "Failed to create the Direct3D 11 device and CoreWindow swap chain");
+#elif defined(WITH_OPENGLES)
 #	if defined(WITH_ANGLE)
 		static const EGLint configAttributes[] = {
 			EGL_RED_SIZE, 8,
@@ -183,13 +214,15 @@ namespace nCine::Backends
 		FATAL_ASSERT_MSG(_renderSurface != EGL_NO_SURFACE, "Failed to create EGL surface");
 #	endif
 #else
-#	error "For DEATH_TARGET_WINDOWS_RT, OpenGL|ES should be used instead of OpenGL"
+#	error "For DEATH_TARGET_WINDOWS_RT, either the Direct3D 11 (WITH_RHI_D3D11) or OpenGL|ES (WITH_OPENGLES) renderer must be selected"
 #endif
 	}
 
 	void UwpGfxDevice::Cleanup()
 	{
-#if defined(WITH_OPENGLES)
+#if defined(WITH_RHI_D3D11)
+		RhiD3D11::D3D11Device::DestroySwapchain();
+#elif defined(WITH_OPENGLES)
 		if (_renderSurface != EGL_NO_SURFACE) {
 			eglDestroySurface(_eglDisplay, _renderSurface);
 			_renderSurface = EGL_NO_SURFACE;
@@ -218,7 +251,31 @@ namespace nCine::Backends
 
 	void UwpGfxDevice::update()
 	{
-#if defined(WITH_OPENGLES)
+#if defined(WITH_RHI_D3D11)
+		// Present the frame just rendered, then reconcile any pending CoreWindow resize so the swap chain and
+		// screen viewport are updated before the next frame is drawn.
+		RhiD3D11::D3D11Device::PresentFrame();
+
+		if (_sizeChanged > 0) {
+			auto displayInfo = winrtWGD::DisplayInformation::GetForCurrentView();
+			const float dpi = displayInfo.LogicalDpi();
+			winrtWF::Rect bounds = _window.Bounds();
+			std::int32_t currentWidth = static_cast<std::int32_t>(bounds.Width * dpi / DefaultDPI);
+			std::int32_t currentHeight = static_cast<std::int32_t>(bounds.Height * dpi / DefaultDPI);
+
+			if (currentWidth > 0 && currentHeight > 0) {
+				_sizeChanged--;
+				if (currentWidth != width_ || currentHeight != height_) {
+					width_ = currentWidth;
+					height_ = currentHeight;
+					drawableWidth_ = width_;
+					drawableHeight_ = height_;
+					RhiD3D11::D3D11Device::ResizeSwapchain(drawableWidth_, drawableHeight_);
+					theApplication().ResizeScreenViewport(drawableWidth_, drawableHeight_);
+				}
+			}
+		}
+#elif defined(WITH_OPENGLES)
 		eglSwapBuffers(_eglDisplay, _renderSurface);
 
 		if (_sizeChanged > 0) {

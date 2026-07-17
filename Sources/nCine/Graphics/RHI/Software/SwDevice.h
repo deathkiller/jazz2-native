@@ -129,12 +129,16 @@ namespace nCine::RhiSoftware
 		static SwShaderProgram* CurrentProgram();
 		/** @brief Records the texture bound to a texture unit */
 		static void BindTexture(std::uint32_t unit, const SwTexture* texture);
+		/** @brief Clears a texture from every unit it is bound to (called from ~SwTexture to avoid a dangling pointer) */
+		static void UnbindTexture(const SwTexture* texture);
 		/** @brief Returns the texture bound to a texture unit */
 		static const SwTexture* GetBoundTexture(std::uint32_t unit);
 		/** @brief Records the host data range bound to a uniform binding point */
 		static void BindUniformRange(std::uint32_t index, const std::uint8_t* data, std::uint32_t size);
 		/** @brief Records the current draw render target (its color attachment 0 receives the pixels) */
 		static void SetRenderTarget(SwRenderTarget* renderTarget);
+		/** @brief Clears a render target from the device if it is the current one (called from ~SwRenderTarget) */
+		static void UnbindRenderTarget(const SwRenderTarget* renderTarget);
 		/** @brief Sets the framebuffer used when no render target is bound (present/back-buffer path) */
 		static void SetDefaultFramebuffer(const Framebuffer& framebuffer);
 
