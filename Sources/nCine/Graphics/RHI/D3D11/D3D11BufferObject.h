@@ -18,10 +18,10 @@ namespace nCine::RhiD3D11
 	/**
 		@brief Buffer object of the Direct3D 11 backend (aliased as `Rhi::Buffer`)
 
-		Slice 2a backs a vertex, index or uniform buffer with a plain resizable host byte store (no
-		`ID3D11Buffer` yet). @ref MapBufferRange() hands back a pointer into the store and @ref
-		BindBufferRange() forwards a sub-range to the device. Slice 2b creates real `ID3D11Buffer` objects
-		(with `Map`/`Unmap` for the streaming uniform ring) from this same surface.
+		A vertex, index or uniform buffer keeps a resizable host byte store the pipeline maps and writes into.
+		@ref MapBufferRange() hands back a pointer into the store and @ref BindBufferRange() forwards a
+		sub-range to the device. Real `ID3D11Buffer` objects (with `Map`/`Unmap` for the streaming uniform
+		ring) are created from this same surface.
 	*/
 	class D3D11BufferObject
 	{
@@ -65,7 +65,7 @@ namespace nCine::RhiD3D11
 		void BufferData(std::size_t size, const void* data, BufferUsage usage);
 		/** @brief Updates a subset of the data store starting at the given byte offset */
 		void BufferSubData(std::size_t offset, std::size_t size, const void* data);
-		/** @brief (Re)creates the data store like @ref BufferData(); slice 2a has no immutable storage, so the flags are ignored */
+		/** @brief (Re)creates the data store like @ref BufferData(); there is no immutable storage, so the flags are ignored */
 		void BufferStorage(std::size_t size, const void* data, MapFlags flags);
 
 		/** @brief Binds the whole buffer to a uniform binding point index */

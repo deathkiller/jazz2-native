@@ -5,6 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
+#if defined(WITH_RHI_GL)
 	inline constexpr char ResizeHQ2x_Vs[] =
 R"__SHDR__(#line 1
 
@@ -58,7 +59,9 @@ void main()
 	vTexCoords4.zw = aPosition - dx;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char ResizeHQ2x_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -110,7 +113,9 @@ void main()
 	vTexCoords4.zw = aPosition - dx;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char ResizeHQ2x_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 cbuffer _Globals : register(b0)
@@ -187,7 +192,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t ResizeHQ2x_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x000000a4u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -330,6 +337,8 @@ VsOutput VSMain(VsInput _input)
 		0x0000009eu, 0x0000009fu, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char ResizeHQ2x_Fs[] =
 R"__SHDR__(#line 1
 
@@ -392,7 +401,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char ResizeHQ2x_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -454,7 +465,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char ResizeHQ2x_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 Texture2D uTexture : register(t0);
@@ -521,7 +534,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t ResizeHQ2x_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000116u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -720,6 +735,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x0000004cu, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform ResizeHQ2x_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -741,11 +757,28 @@ float4 PSMain(PsInput _input) : SV_Target
 	};
 
 	inline constexpr ShaderCompiler::ProgramVariant ResizeHQ2x_Variants[] = {
-		{ "", "", ResizeHQ2x_Vs, ResizeHQ2x_Fs,
+		{ "", "",
+#if defined(WITH_RHI_GL)
+			ResizeHQ2x_Vs, ResizeHQ2x_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, ResizeHQ2x_Uniforms, 1, ResizeHQ2x_Blocks, 1, ResizeHQ2x_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL)
 			ResizeHQ2x_Vs100, ResizeHQ2x_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			ResizeHQ2x_VsHlsl, ResizeHQ2x_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			ResizeHQ2x_VkVs, 1108, ResizeHQ2x_VkFs, 1555 },
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
 	};
 
 	inline constexpr ShaderCompiler::Program ResizeHQ2x = { "ResizeHQ2x", 0, 1, ResizeHQ2x_Variants };

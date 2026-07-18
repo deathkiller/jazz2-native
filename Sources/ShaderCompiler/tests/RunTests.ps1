@@ -98,7 +98,7 @@ Assert (-not $fs.Contains('void fragment(')) 'EarlyReturn: fragment() wrapper st
 Assert (-not $h.Contains('fragColor')) 'EarlyReturn: fragColor appears in the emitted header'
 Assert (-not $h.Contains('VERTEX_STAGE') -and -not $h.Contains('FRAGMENT_STAGE')) 'EarlyReturn: stage macros leaked into the emitted header'
 Assert (-not $h.Contains('_Base')) 'EarlyReturn: "_Base" symbol infix still emitted for the unnamed base variant'
-Assert ($h.Contains('{ "", "", EarlyReturn_Vs, EarlyReturn_Fs,')) 'EarlyReturn: base ProgramVariant initializer does not carry the empty name'
+Assert ($h.Contains("{ `"`", `"`",`n#if defined(WITH_RHI_GL)`n			EarlyReturn_Vs, EarlyReturn_Fs,")) 'EarlyReturn: base ProgramVariant initializer does not carry the empty name (with the GL-gated stage sources)'
 
 # PrecisionHighp: directive selects the GL_ES prologue, three-token statement passes through
 $h = Emit 'PrecisionHighp'
@@ -142,7 +142,7 @@ Assert ($fs.Contains('out vec4 COLOR;')) 'CanvasVertex: FS does not declare COLO
 Assert ($fs.Contains("void main() {`n	COLOR = vColor;`n	vec4 c = texture(uTexture, vTexCoords);")) 'CanvasVertex: FS default is not the instance color (or the body is not verbatim after it)'
 Assert (-not $h.Contains('fragColor')) 'CanvasVertex: fragColor appears in the emitted header'
 Assert ($null -ne (Get-Source $h 'CanvasVertex_WAVE_Vs') -and $null -ne (Get-Source $h 'CanvasVertex_WAVE_Fs')) 'CanvasVertex: named WAVE variant lost its symbol infix'
-Assert ($h.Contains('{ "WAVE", "WAVE", CanvasVertex_WAVE_Vs, CanvasVertex_WAVE_Fs,')) 'CanvasVertex: named WAVE ProgramVariant initializer changed'
+Assert ($h.Contains("{ `"WAVE`", `"WAVE`",`n#if defined(WITH_RHI_GL)`n			CanvasVertex_WAVE_Vs, CanvasVertex_WAVE_Fs,")) 'CanvasVertex: named WAVE ProgramVariant initializer changed'
 Assert (-not $h.Contains('_Base')) 'CanvasVertex: "_Base" symbol infix still emitted for the unnamed base variant'
 # Unused-varying trimming: the template vPaletteOffset is never read here — its FS "in" is
 # removed and, because its only VS occurrence is the pure epilogue store, the VS declaration
@@ -355,7 +355,7 @@ Assert (-not $h.Contains('uTexture')) 'TexturePassthrough: uTexture auto-declara
 # --- 4. ESSL 100 (OpenGL ES 2.0) target -----------------------------------------------------------
 # The --essl100-check transform dump: attribute/varying split per stage, texture->texture2D,
 # the "out vec4 COLOR;" -> gl_FragColor retarget (incl. early "return;"), the unconditional
-# precision prologue, layout()/flat stripping, and the slice-2 lowering of gl_VertexID (-> the
+# precision prologue, layout()/flat stripping, and the lowering of gl_VertexID (-> the
 # aQuadCorner / aInstanceIndex attributes) and std140 UBOs (-> loose uniforms / a uniform array)
 # (fixtures live in tests/essl100/, outside the section-1 golden-dump scan).
 
@@ -400,7 +400,7 @@ Assert ($fs.Contains('gl_FragColor = COLOR; return;')) 'Essl100 Varying: early "
 Assert ($fs.Contains('texture2DLod(uTexture, vTexCoords, 0.0)')) 'Essl100 Varying: textureLod() not rewritten to texture2DLod()'
 Assert ((([regex]::Matches($fs, [regex]::Escape('gl_FragColor = COLOR;'))).Count) -ge 2) 'Essl100 Varying: expected both the early-return and the final gl_FragColor writes'
 
-# BatchedSprites: a std140-UBO + gl_VertexID batched program now fully lowers to ES2 (slice 2) — the
+# BatchedSprites: a std140-UBO + gl_VertexID batched program now fully lowers to ES2 — the
 # std140 block becomes a uniform struct-array indexed by the aInstanceIndex attribute, and the
 # gl_VertexID corner synthesis becomes the aQuadCorner attribute; the fragment stage transforms too
 $d = Essl100 (Join-Path $testsDir 'BatchedSprites.shader')

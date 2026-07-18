@@ -169,6 +169,39 @@ namespace nCine::RhiD3D11
 	std::vector<D3D11Device::RasterStateEntry> D3D11Device::rasterStates_;
 	ID3D11DepthStencilState* D3D11Device::depthDisabledState_ = nullptr;
 
+	ID3D11BlendState* D3D11Device::lastBlendState_ = nullptr;
+	ID3D11RasterizerState* D3D11Device::lastRasterState_ = nullptr;
+	bool D3D11Device::depthStateApplied_ = false;
+	ID3D11VertexShader* D3D11Device::lastVs_ = nullptr;
+	ID3D11PixelShader* D3D11Device::lastPs_ = nullptr;
+	std::uint32_t D3D11Device::lastTopology_ = 0;
+	ID3D11RenderTargetView* D3D11Device::lastRtv_ = nullptr;
+	bool D3D11Device::lastRtvValid_ = false;
+	Recti D3D11Device::lastViewport_(0, 0, 0, 0);
+	bool D3D11Device::lastViewportValid_ = false;
+	D3D11Device::CachedRect D3D11Device::lastScissorRect_;
+	bool D3D11Device::lastScissorValid_ = false;
+	ID3D11ShaderResourceView* D3D11Device::lastSrvs_[2][D3D11Device::MaxTextureUnits] = {};
+	ID3D11SamplerState* D3D11Device::lastSamplers_[2][D3D11Device::MaxTextureUnits] = {};
+	bool D3D11Device::srvShadowValid_ = false;
+
+	void D3D11Device::InvalidateCachedState()
+	{
+		lastBlendState_ = nullptr;
+		lastRasterState_ = nullptr;
+		depthStateApplied_ = false;
+		lastVs_ = nullptr;
+		lastPs_ = nullptr;
+		lastTopology_ = 0;
+		lastRtv_ = nullptr;
+		lastRtvValid_ = false;
+		lastViewportValid_ = false;
+		lastScissorValid_ = false;
+		std::memset(lastSrvs_, 0, sizeof(lastSrvs_));
+		std::memset(lastSamplers_, 0, sizeof(lastSamplers_));
+		srvShadowValid_ = false;
+	}
+
 	// -- Pipeline state (recorded) --
 
 	void D3D11Device::SetBlendingEnabled(bool enabled) { blending_.Enabled = enabled; }
@@ -206,6 +239,8 @@ namespace nCine::RhiD3D11
 		if (context_ != nullptr) {
 			D3D11_VIEWPORT vp = MakeViewport(rect);
 			context_->RSSetViewports(1, &vp);
+			lastViewport_ = rect;
+			lastViewportValid_ = true;
 		}
 	}
 
@@ -247,9 +282,9 @@ namespace nCine::RhiD3D11
 		DrawCommon(primitive, 0, numIndices, true, indexFormat, indexOffset, 1, baseVertex);
 	}
 
-	void D3D11Device::DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
+	void D3D11Device::DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
 	{
-		DrawCommon(primitive, 0, numIndices, true, IndexFormat::UInt16, indexOffset, numInstances, baseVertex);
+		DrawCommon(primitive, 0, numIndices, true, indexFormat, indexOffset, numInstances, baseVertex);
 	}
 
 	void D3D11Device::DrawCommon(PrimitiveType primitive, std::int32_t firstVertex, std::uint32_t count,
@@ -265,9 +300,11 @@ namespace nCine::RhiD3D11
 		// The viewport is always positive/top-down; the GL<->D3D vertical flip is applied uniformly in the vertex
 		// transform (projection matrix Y negated in BindConstantBuffers), which flips every draw to every target
 		// consistently - so back-buffer geometry and off-screen render targets stay in agreement with no present-flip.
-		{
+		if (!lastViewportValid_ || lastViewport_ != viewport_) {
 			D3D11_VIEWPORT vp = MakeViewport(viewport_);
 			context_->RSSetViewports(1, &vp);
+			lastViewport_ = viewport_;
+			lastViewportValid_ = true;
 		}
 
 		// SV_VertexID shaders (sprites, background, the fullscreen post-processing chain) need no vertex buffer;
@@ -297,16 +334,30 @@ namespace nCine::RhiD3D11
 			context_->IASetInputLayout(nullptr);
 		}
 
-		context_->IASetPrimitiveTopology(MapPrimitive(primitive));
-		context_->VSSetShader(prog->GetVertexShader(), nullptr, 0);
-		context_->PSSetShader(prog->GetPixelShader(), nullptr, 0);
+		const D3D11_PRIMITIVE_TOPOLOGY topology = MapPrimitive(primitive);
+		if (lastTopology_ != std::uint32_t(topology)) {
+			context_->IASetPrimitiveTopology(topology);
+			lastTopology_ = std::uint32_t(topology);
+		}
+		if (lastVs_ != prog->GetVertexShader()) {
+			lastVs_ = prog->GetVertexShader();
+			context_->VSSetShader(lastVs_, nullptr, 0);
+		}
+		if (lastPs_ != prog->GetPixelShader()) {
+			lastPs_ = prog->GetPixelShader();
+			context_->PSSetShader(lastPs_, nullptr, 0);
+		}
 		BindConstantBuffers();
 		BindTextures();
 		ApplyRenderState();
 
 		const UINT indexSize = (indexFormat == IndexFormat::UInt32 ? 4u : 2u);
 		if (indexed) {
-			context_->DrawIndexed(count, static_cast<UINT>(indexOffset / indexSize), baseVertex);
+			if (numInstances > 1) {
+				context_->DrawIndexedInstanced(count, std::uint32_t(numInstances), static_cast<UINT>(indexOffset / indexSize), baseVertex, 0);
+			} else {
+				context_->DrawIndexed(count, static_cast<UINT>(indexOffset / indexSize), baseVertex);
+			}
 		} else if (numInstances > 1) {
 			context_->DrawInstanced(count, std::uint32_t(numInstances), std::uint32_t(firstVertex), 0);
 		} else {
@@ -321,7 +372,34 @@ namespace nCine::RhiD3D11
 		// Falls back to the back-buffer if the present texture is absent.
 		ID3D11RenderTargetView* screenRtv = (presentRtv_ != nullptr ? presentRtv_ : backbufferRtv_);
 		ID3D11RenderTargetView* rtv = (currentRenderTarget_ != nullptr ? currentRenderTarget_->GetRTV() : screenRtv);
+		if (lastRtvValid_ && lastRtv_ == rtv) {
+			return;
+		}
+
+		// Read/write hazard guard: if the texture becoming the render target is still bound as an SRV from an
+		// earlier pass, unbind it explicitly. Without this the runtime silently nulls the SRV slot at draw time,
+		// which would desync the SRV shadow cache (it would still believe the SRV is bound and skip a later rebind).
+		if (currentRenderTarget_ != nullptr) {
+			const D3D11Texture* rtTex = currentRenderTarget_->GetColorTexture(0);
+			ID3D11ShaderResourceView* rtSrv = (rtTex != nullptr ? rtTex->GetSRV() : nullptr);
+			if (rtSrv != nullptr) {
+				ID3D11ShaderResourceView* nullSrv = nullptr;
+				for (std::uint32_t u = 0; u < MaxTextureUnits; u++) {
+					if (lastSrvs_[0][u] == rtSrv) {
+						context_->PSSetShaderResources(u, 1, &nullSrv);
+						lastSrvs_[0][u] = nullptr;
+					}
+					if (lastSrvs_[1][u] == rtSrv) {
+						context_->VSSetShaderResources(u, 1, &nullSrv);
+						lastSrvs_[1][u] = nullptr;
+					}
+				}
+			}
+		}
+
 		context_->OMSetRenderTargets(1, &rtv, nullptr);
+		lastRtv_ = rtv;
+		lastRtvValid_ = true;
 	}
 
 	std::uint32_t D3D11Device::AcquireConstantBuffer(std::uint32_t size)
@@ -449,15 +527,45 @@ namespace nCine::RhiD3D11
 
 	void D3D11Device::BindTextures()
 	{
+		// Only touch the slots the current program's stages actually read (from bytecode reflection), and skip
+		// the call when the slot already holds this SRV/sampler. The read/write hazard guard: a texture that is
+		// the current render target is never bound as an SRV (the runtime would silently null it, desyncing the
+		// shadow); it re-binds naturally on the first draw after the target changes.
+		const D3D11ShaderProgram* prog = currentProgram_;
+		const std::uint32_t psMask = prog->GetPsTextureMask();
+		const std::uint32_t vsMask = prog->GetVsTextureMask();
+		const D3D11Texture* rtTex = (currentRenderTarget_ != nullptr ? currentRenderTarget_->GetColorTexture(0) : nullptr);
+		const bool force = !srvShadowValid_;
+
+		std::uint32_t mask = psMask | vsMask;
 		for (std::uint32_t u = 0; u < MaxTextureUnits; u++) {
+			if ((mask & (1u << u)) == 0 && !force) {
+				continue;
+			}
 			const D3D11Texture* tex = boundTextures_[u];
+			if (tex == rtTex) {
+				tex = nullptr;
+			}
 			ID3D11ShaderResourceView* srv = (tex != nullptr ? tex->GetSRV() : nullptr);
 			ID3D11SamplerState* samp = (tex != nullptr ? tex->GetSampler() : nullptr);
-			context_->PSSetShaderResources(u, 1, &srv);
-			context_->PSSetSamplers(u, 1, &samp);
-			context_->VSSetShaderResources(u, 1, &srv);
-			context_->VSSetSamplers(u, 1, &samp);
+			if (force || lastSrvs_[0][u] != srv) {
+				context_->PSSetShaderResources(u, 1, &srv);
+				lastSrvs_[0][u] = srv;
+			}
+			if (force || lastSamplers_[0][u] != samp) {
+				context_->PSSetSamplers(u, 1, &samp);
+				lastSamplers_[0][u] = samp;
+			}
+			if (force || lastSrvs_[1][u] != srv) {
+				context_->VSSetShaderResources(u, 1, &srv);
+				lastSrvs_[1][u] = srv;
+			}
+			if (force || lastSamplers_[1][u] != samp) {
+				context_->VSSetSamplers(u, 1, &samp);
+				lastSamplers_[1][u] = samp;
+			}
 		}
+		srvShadowValid_ = true;
 	}
 
 	void D3D11Device::ApplyRenderState()
@@ -490,8 +598,11 @@ namespace nCine::RhiD3D11
 					blendStates_.push_back({ key, state });
 				}
 			}
-			const float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			context_->OMSetBlendState(state, blendFactor, 0xFFFFFFFF);
+			if (state != lastBlendState_ || state == nullptr) {
+				const float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+				context_->OMSetBlendState(state, blendFactor, 0xFFFFFFFF);
+				lastBlendState_ = state;
+			}
 		}
 
 		// Depth-stencil: the renderer is 2D and no depth buffer is attached, so depth is always disabled
@@ -502,8 +613,12 @@ namespace nCine::RhiD3D11
 			desc.DepthFunc = D3D11_COMPARISON_ALWAYS;
 			desc.StencilEnable = FALSE;
 			device_->CreateDepthStencilState(&desc, &depthDisabledState_);
+			depthStateApplied_ = false;
 		}
-		context_->OMSetDepthStencilState(depthDisabledState_, 0);
+		if (!depthStateApplied_) {
+			context_->OMSetDepthStencilState(depthDisabledState_, 0);
+			depthStateApplied_ = true;
+		}
 
 		// Rasterizer (keyed on cull enabled + mode + scissor enabled)
 		{
@@ -530,7 +645,10 @@ namespace nCine::RhiD3D11
 					rasterStates_.push_back({ key, state });
 				}
 			}
-			context_->RSSetState(state);
+			if (state != lastRasterState_ || state == nullptr) {
+				context_->RSSetState(state);
+				lastRasterState_ = state;
+			}
 		}
 
 		// Scissor rectangle. The engine specifies it in GL window space (bottom-left origin); convert it to match
@@ -553,15 +671,20 @@ namespace nCine::RhiD3D11
 			sr.left = r.X;
 			sr.right = r.X + r.W;
 			if (targetFlipped) {
-				// Off-screen render target (negative-height viewport): GL bottom-up Y maps straight to D3D rows
+				// Off-screen render target: rows are stored GL bottom-up, so GL Y maps straight to D3D rows
 				sr.top = r.Y;
 				sr.bottom = r.Y + r.H;
 			} else {
-				// Back-buffer / screen (normal viewport): flip against the target height
+				// Back-buffer / screen: flip against the target height (corrected again by the present flip-blit)
 				sr.top = targetHeight - (r.Y + r.H);
 				sr.bottom = targetHeight - r.Y;
 			}
-			context_->RSSetScissorRects(1, &sr);
+			if (!lastScissorValid_ || lastScissorRect_.L != sr.left || lastScissorRect_.T != sr.top ||
+				lastScissorRect_.R != sr.right || lastScissorRect_.B != sr.bottom) {
+				context_->RSSetScissorRects(1, &sr);
+				lastScissorRect_ = { sr.left, sr.top, sr.right, sr.bottom };
+				lastScissorValid_ = true;
+			}
 		}
 	}
 
@@ -605,6 +728,25 @@ namespace nCine::RhiD3D11
 				boundTextures_[unit] = nullptr;
 			}
 		}
+		// Scrub the last-bound SRV/sampler shadows too (the views are released right after this call, and a new
+		// texture recycling the same pointer would otherwise be mistaken for still-bound and its bind skipped).
+		// Peek* returns the existing objects without lazily creating them (this runs from the destructor).
+		if (texture != nullptr) {
+			ID3D11ShaderResourceView* srv = texture->PeekSRV();
+			ID3D11SamplerState* samp = texture->PeekSampler();
+			for (std::uint32_t stage = 0; stage < 2; stage++) {
+				for (std::uint32_t unit = 0; unit < MaxTextureUnits; unit++) {
+					if (srv != nullptr && lastSrvs_[stage][unit] == srv) {
+						lastSrvs_[stage][unit] = nullptr;
+						srvShadowValid_ = false;
+					}
+					if (samp != nullptr && lastSamplers_[stage][unit] == samp) {
+						lastSamplers_[stage][unit] = nullptr;
+						srvShadowValid_ = false;
+					}
+				}
+			}
+		}
 	}
 
 	const D3D11Texture* D3D11Device::GetBoundTexture(std::uint32_t unit)
@@ -635,6 +777,24 @@ namespace nCine::RhiD3D11
 		// before drawing to it. Only touches the static pointer (no D3D calls), so it is safe at any time.
 		if (currentRenderTarget_ == renderTarget) {
 			currentRenderTarget_ = nullptr;
+		}
+		// The RTV is released with the target; forget it so a recycled pointer can't match the shadow
+		lastRtv_ = nullptr;
+		lastRtvValid_ = false;
+	}
+
+	void D3D11Device::OnProgramDestroyed(const D3D11ShaderProgram* program)
+	{
+		if (currentProgram_ == program) {
+			currentProgram_ = nullptr;
+		}
+		if (program != nullptr) {
+			if (lastVs_ != nullptr && lastVs_ == program->GetVertexShader()) {
+				lastVs_ = nullptr;
+			}
+			if (lastPs_ != nullptr && lastPs_ == program->GetPixelShader()) {
+				lastPs_ = nullptr;
+			}
 		}
 	}
 
@@ -793,6 +953,7 @@ namespace nCine::RhiD3D11
 		}
 
 		context_->OMSetRenderTargets(1, &backbufferRtv_, nullptr);
+		InvalidateCachedState();
 		return true;
 	}
 
@@ -904,6 +1065,9 @@ namespace nCine::RhiD3D11
 			// Unbind so the present texture can be bound as a render target again next frame (no read/write hazard)
 			ID3D11ShaderResourceView* nullSrv = nullptr;
 			context_->PSSetShaderResources(0, 1, &nullSrv);
+			// The blit bound its own shaders/state/target directly; drop the shadow state so the next frame's
+			// first draw re-issues everything
+			InvalidateCachedState();
 		}
 		if (swapchain_ != nullptr) {
 			swapchain_->Present(vsync_ ? 1 : 0, 0);
@@ -934,6 +1098,7 @@ namespace nCine::RhiD3D11
 			context_->ClearState();
 			context_->Flush();
 		}
+		InvalidateCachedState();
 		ReleasePipelineObjects();
 		ReleasePresentResources();
 		SafeRelease(presentSampler_);

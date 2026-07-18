@@ -20,27 +20,23 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
 	#set_property(CACHE NCINE_PREFERRED_BACKEND PROPERTY STRINGS "GLFW;SDL2;QT5")
 	set_property(CACHE NCINE_PREFERRED_BACKEND PROPERTY STRINGS "GLFW;SDL2")
 
-	# CPU software rendering backend (no OpenGL); it presents through SDL2, so it forces the SDL2 backend
-	option(NCINE_WITH_RHI_SOFTWARE "Use the CPU software rendering backend instead of OpenGL" OFF)
-	if(NCINE_WITH_RHI_SOFTWARE)
-		set(NCINE_PREFERRED_BACKEND "SDL2" CACHE STRING "Specify preferred backend on desktop" FORCE)
-	endif()
+	# Rendering backend (RHI) selection. OpenGL is the default; the software (CPU), Direct3D 11, and Vulkan
+	# backends are mutually exclusive alternatives chosen through this single option. The non-OpenGL backends
+	# present through the SDL2 window (software via SDL_Renderer, D3D11 via a DXGI swap chain, Vulkan via a
+	# VkSwapchainKHR), so any of them forces the SDL2 window backend. Direct3D 11 requires Windows + MSVC;
+	# Vulkan is header-only (Khronos Vulkan-Headers via FetchContent) with a dynamic vulkan-1.dll loader (no
+	# Vulkan SDK). The rest of the build keys on this variable directly (NCINE_PREFERRED_RHI STREQUAL "...").
+	set(NCINE_PREFERRED_RHI "OpenGL" CACHE STRING "Rendering backend: OpenGL, Software, D3D11, or Vulkan")
+	set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "OpenGL;Software;D3D11;Vulkan")
 
-	# Direct3D 11 rendering backend (Windows/MSVC only, no OpenGL) - it presents through a DXGI swap chain
-	# created from the SDL2 window, so like the software backend it forces the SDL2 backend
-	if(WIN32 AND MSVC)
-		option(NCINE_WITH_RHI_D3D11 "Use the Direct3D 11 rendering backend instead of OpenGL (Windows only)" OFF)
-		if(NCINE_WITH_RHI_D3D11)
-			set(NCINE_PREFERRED_BACKEND "SDL2" CACHE STRING "Specify preferred backend on desktop" FORCE)
+	if(NCINE_PREFERRED_RHI STREQUAL "D3D11" AND NOT (WIN32 AND MSVC))
+		message(FATAL_ERROR "NCINE_PREFERRED_RHI=D3D11 requires Windows with the MSVC toolchain")
+	elseif(NOT NCINE_PREFERRED_RHI MATCHES "^(OpenGL|Software|D3D11|Vulkan)$")
+		message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" (expected OpenGL, Software, D3D11, or Vulkan)")
 endif()
-	endif()
 
-	# Vulkan rendering backend (desktop, no OpenGL) - it presents through a VkSwapchainKHR created from the
-	# SDL2 window's presentation surface, so like the software and Direct3D 11 backends it forces the SDL2
-	# backend. It is header-only (Khronos Vulkan-Headers via FetchContent) with a dynamic loader that binds
-	# the runtime vulkan-1.dll (which ships with GPU drivers), so it needs no Vulkan SDK and links no import lib.
-	option(NCINE_WITH_RHI_VULKAN "Use the Vulkan rendering backend instead of OpenGL" OFF)
-	if(NCINE_WITH_RHI_VULKAN)
+	# The non-OpenGL backends present through the SDL2 window, so force the SDL2 window backend
+	if(NOT NCINE_PREFERRED_RHI STREQUAL "OpenGL")
 		set(NCINE_PREFERRED_BACKEND "SDL2" CACHE STRING "Specify preferred backend on desktop" FORCE)
 endif()
 endif()
@@ -67,16 +63,20 @@ else()
 			set(NCINE_UWP_CERTIFICATE_PATH "" CACHE STRING "Code-signing certificate path (Windows RT only)")
 			set(NCINE_UWP_CERTIFICATE_PASSWORD "" CACHE STRING "Code-signing certificate password (Windows RT only)")
 
-			# Direct3D 11 rendering backend — the DEFAULT renderer on UWP (Windows Store / Xbox). Unlike the
+			# Rendering backend (RHI) on UWP (Windows Store / Xbox): Direct3D 11 is the DEFAULT. Unlike the
 			# desktop D3D11 build it must NOT force the SDL2 backend: UWP renders through UwpGfxDevice, which
-			# drives a DXGI flip-model swap chain from the CoreWindow (see UwpGfxDevice / D3D11Device). When it
-			# is enabled, ANGLE/OpenGL|ES is demoted to an opt-in fallback (its libs are then not required);
-			# turning D3D11 off restores ANGLE as the default so UWP always has a working renderer.
-			option(NCINE_WITH_RHI_D3D11 "Use the Direct3D 11 rendering backend instead of OpenGL|ES (default on UWP)" ON)
-			if(NCINE_WITH_RHI_D3D11)
+			# drives a DXGI flip-model swap chain from the CoreWindow (see UwpGfxDevice / D3D11Device).
+			# Selecting "OpenGL" chooses the ANGLE (OpenGL|ES) renderer instead. Picking D3D11 demotes ANGLE to
+			# an opt-in fallback (its libs are then not required); "OpenGL" restores ANGLE as the renderer so
+			# UWP always has a working backend. (Software and Vulkan are not supported on UWP.)
+			set(NCINE_PREFERRED_RHI "D3D11" CACHE STRING "Rendering backend on UWP: D3D11 or OpenGL (ANGLE)")
+			set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "D3D11;OpenGL")
+			if(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 				set(_NCINE_WITH_ANGLE_DEFAULT OFF)
-			else()
+			elseif(NCINE_PREFERRED_RHI STREQUAL "OpenGL")
 			set(_NCINE_WITH_ANGLE_DEFAULT ON)
+			else()
+				message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on UWP (expected D3D11 or OpenGL)")
 			endif()
 		else()
 			option(NCINE_INSTALL_SYSLIBS "Install required MSVC system libraries with CMake" OFF)
@@ -101,7 +101,7 @@ endif()
 # buffer objects, no gl_VertexID) instead of the ES 3.0 context the ANGLE/GLES path otherwise uses. This
 # targets the PS Vita (ES 2.0). It defaults ON when building against ANGLE for desktop testing and is only
 # available on OpenGL|ES builds - it is force-OFF (and thus must never affect) the desktop GL 3.3 and the
-# software (NCINE_WITH_RHI_SOFTWARE) builds.
+# software (NCINE_PREFERRED_RHI=Software) builds.
 if(NCINE_WITH_ANGLE)
 	set(_NCINE_RHI_GL_PROFILE_ES2_DEFAULT ON)
 else()

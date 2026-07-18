@@ -15,8 +15,8 @@ namespace nCine::RhiVulkan
 	/**
 		@brief Renderbuffer stub of the Vulkan backend (aliased as `Rhi::Renderbuffer`)
 
-		Slice 2a carries no depth/stencil storage (the renderer is 2D); the class just records the format and
-		size to satisfy the contract alias. Slice 2b creates a depth/stencil `VkImage` when needed.
+		Carries no depth/stencil storage (the renderer is 2D); the class just records the format and
+		size to satisfy the contract alias. A depth/stencil `VkImage` could be added here when needed.
 	*/
 	class VulkanRenderbuffer
 	{
@@ -63,7 +63,7 @@ namespace nCine::RhiVulkan
 
 		Records the color textures addressed by attachment index and an optional depth/stencil (ignored for
 		2D). @ref BindDraw() records the target on the device so the following clears and draws are associated
-		with its color attachment 0. Slice 2b builds a single-color-attachment `VkFramebuffer` over color
+		with its color attachment 0. The backend builds a single-color-attachment `VkFramebuffer` over color
 		attachment 0's image view (against a device-provided compatible render pass); the device begins a
 		render pass on it for the draws routed here.
 	*/
@@ -88,7 +88,7 @@ namespace nCine::RhiVulkan
 		/** @brief Detaches any texture from the color attachment with the given index */
 		void DetachColorTexture(std::uint32_t index);
 
-		/** @brief Records a depth/stencil buffer (no storage in slice 2a) */
+		/** @brief Records a depth/stencil buffer (no storage is created) */
 		void AttachDepthStencil(DepthStencilFormat format, std::int32_t width, std::int32_t height);
 		/** @brief Clears the recorded depth/stencil buffer */
 		void DetachDepthStencil(DepthStencilFormat format);

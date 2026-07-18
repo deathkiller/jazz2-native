@@ -113,13 +113,40 @@ namespace nCine::RhiSoftware
 		static inline void DrawElements(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t baseVertex) {
 			DrawElements(primitive, numIndices, IndexFormat::UInt16, indexOffset, baseVertex);
 		}
-		static void DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex);
+		static void DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex);
+		static inline void DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex) {
+			DrawElementsInstanced(primitive, numIndices, IndexFormat::UInt16, indexOffset, numInstances, baseVertex);
+		}
 
 		static FenceHandle InsertFence();
 		static void DeleteFence(FenceHandle& fence);
 		static bool ClientWaitFence(FenceHandle fence, std::uint64_t timeoutNs);
 
 		static void SetupInitialState();
+
+		// -- Swap-chain / presentation surface (uniform across every backend) --
+		// The software backend presents through the WINDOW backend's CPU blit (SDL_Renderer streaming
+		// texture): the window backend calls @ref FlushSoftwareRenderer() + @ref GetScreenFramebuffer() +
+		// @ref EndFrame() itself, so this quartet is inert here. It exists so window backends and shared
+		// code can drive any backend through the same calls instead of branching on WITH_RHI_*.
+
+		/** @brief No-op (the window backend owns the presentation path) */
+		static inline bool CreateSwapchain(void* windowHandle, std::int32_t width, std::int32_t height, bool vsync) {
+			static_cast<void>(windowHandle);
+			static_cast<void>(width);
+			static_cast<void>(height);
+			static_cast<void>(vsync);
+			return true;
+		}
+		/** @brief No-op */
+		static inline void DestroySwapchain() {}
+		/** @brief No-op (the CPU screen buffer is sized by @ref ResizeScreenFramebuffer() from the render pipeline, not by the window) */
+		static inline void ResizeSwapchain(std::int32_t width, std::int32_t height) {
+			static_cast<void>(width);
+			static_cast<void>(height);
+		}
+		/** @brief No-op (the window backend blits @ref GetScreenFramebuffer() itself) */
+		static inline void PresentFrame() {}
 
 		// -- Software backend extensions (called by the resource types and read by the effects) --
 
@@ -163,6 +190,16 @@ namespace nCine::RhiSoftware
 			which waits for all worker threads to finish; a no-op when nothing is queued.
 		*/
 		static void FlushSoftwareRenderer();
+
+		/**
+			@brief Ends the presented frame, dropping any per-frame device state
+
+			The window backend calls this after presenting. Discards software-lighting entries left in the queue
+			(their Combine draw was culled or never dispatched, e.g. an off-screen viewport): without this the
+			leftovers would survive into later frames, permanently shifting the viewport-to-lightmap pairing in
+			splitscreen — and their caller-owned lightmap pointers would dangle past the compositor's frame.
+		*/
+		static void EndFrame();
 
 		/**
 			@brief Queues a dynamic lightmap to be composited over a viewport during the next matching Combine draw

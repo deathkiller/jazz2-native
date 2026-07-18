@@ -141,8 +141,16 @@ namespace ShaderCompiler
 		*/
 		static bool ExpandIncludes(String& content, StringView baseDir, const FileReader& reader, std::int32_t depth, String& error);
 
-		/** Builds the compilable GLSL source of one stage (baked variant define + "#line 1" + shared prelude + stage body) */
-		static String BuildStageSource(const ShaderDocument& document, bool vertexStage, StringView define);
+		/**
+			Builds the compilable GLSL source of one stage (baked variant define + "#line 1" + shared
+			prelude + stage body). "#ifdef/#ifndef SOFTWARE_RENDERER" conditionals (with an optional
+			"#else" and the matching "#endif") are resolved here according to @p softwareRenderer, like
+			the stage macros are at assembly time - the built sources never contain the macro itself.
+			Every emission passes false (the default); only the offline GLSL-to-C++ software-fragment
+			transpiler builds its input with true, so a shader can carry a cheaper software-renderer
+			variant of a too-expensive fragment path without affecting any other backend's output.
+		*/
+		static String BuildStageSource(const ShaderDocument& document, bool vertexStage, StringView define, bool softwareRenderer = false);
 
 		/** Returns the directory part of @p path, or "." if it has none */
 		static String DirectoryOf(StringView path);

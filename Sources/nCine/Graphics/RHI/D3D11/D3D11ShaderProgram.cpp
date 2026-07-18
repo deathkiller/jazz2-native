@@ -144,6 +144,9 @@ namespace nCine::RhiD3D11
 
 	D3D11ShaderProgram::~D3D11ShaderProgram()
 	{
+		// Clear this program from the device's current-program and last-bound-shader tracking before the
+		// shader objects are released, so a recycled pointer can't be mistaken for a still-bound shader
+		D3D11Device::OnProgramDestroyed(this);
 		SafeRelease(inputLayout_);
 		SafeRelease(pixelShader_);
 		SafeRelease(vertexShader_);
@@ -157,30 +160,30 @@ namespace nCine::RhiD3D11
 		return (status_ == Status::Linked || status_ == Status::LinkedWithDeferredQueries || status_ == Status::LinkedWithIntrospection);
 	}
 
-	bool D3D11ShaderProgram::AttachShaderFromFile(std::uint32_t type, StringView filename)
+	bool D3D11ShaderProgram::AttachShaderFromFile(ShaderStage stage, StringView filename)
 	{
-		static_cast<void>(type);
+		static_cast<void>(stage);
 		static_cast<void>(filename);
 		return true;
 	}
 
-	bool D3D11ShaderProgram::AttachShaderFromString(std::uint32_t type, StringView string)
+	bool D3D11ShaderProgram::AttachShaderFromString(ShaderStage stage, StringView string)
 	{
-		static_cast<void>(type);
+		static_cast<void>(stage);
 		static_cast<void>(string);
 		return true;
 	}
 
-	bool D3D11ShaderProgram::AttachShaderFromStrings(std::uint32_t type, ArrayView<const StringView> strings)
+	bool D3D11ShaderProgram::AttachShaderFromStrings(ShaderStage stage, ArrayView<const StringView> strings)
 	{
-		static_cast<void>(type);
+		static_cast<void>(stage);
 		static_cast<void>(strings);
 		return true;
 	}
 
-	bool D3D11ShaderProgram::AttachShaderFromStringsAndFile(std::uint32_t type, ArrayView<const StringView> strings, StringView filename)
+	bool D3D11ShaderProgram::AttachShaderFromStringsAndFile(ShaderStage stage, ArrayView<const StringView> strings, StringView filename)
 	{
-		static_cast<void>(type);
+		static_cast<void>(stage);
 		static_cast<void>(strings);
 		static_cast<void>(filename);
 		return true;
@@ -368,11 +371,11 @@ namespace nCine::RhiD3D11
 		// Keep the VS bytecode so input layouts can be validated/created against it later
 		vsByteCode_ = vsBytes;
 
-		ReflectStageCBuffers(vsBytes.data(), vsBytes.size(), vsCBuffers_);
-		ReflectStageCBuffers(psBytes.data(), psBytes.size(), psCBuffers_);
+		ReflectStageCBuffers(vsBytes.data(), vsBytes.size(), vsCBuffers_, vsTextureMask_);
+		ReflectStageCBuffers(psBytes.data(), psBytes.size(), psCBuffers_, psTextureMask_);
 	}
 
-	void D3D11ShaderProgram::ReflectStageCBuffers(const void* byteCode, std::size_t byteCodeSize, std::vector<D3D11CBufferSlot>& slots)
+	void D3D11ShaderProgram::ReflectStageCBuffers(const void* byteCode, std::size_t byteCodeSize, std::vector<D3D11CBufferSlot>& slots, std::uint32_t& textureMask)
 	{
 		ID3D11ShaderReflection* refl = nullptr;
 		if (FAILED(D3DReflect(byteCode, byteCodeSize, __uuidof(ID3D11ShaderReflection), reinterpret_cast<void**>(&refl))) || refl == nullptr) {
@@ -381,6 +384,17 @@ namespace nCine::RhiD3D11
 
 		D3D11_SHADER_DESC shaderDesc;
 		refl->GetDesc(&shaderDesc);
+
+		// Record which texture/sampler registers the stage actually binds, so the device only touches those
+		// slots at draw time instead of re-binding all units to both stages every draw
+		textureMask = 0;
+		for (UINT r = 0; r < shaderDesc.BoundResources; r++) {
+			D3D11_SHADER_INPUT_BIND_DESC bindDesc;
+			if (SUCCEEDED(refl->GetResourceBindingDesc(r, &bindDesc)) &&
+				(bindDesc.Type == D3D_SIT_TEXTURE || bindDesc.Type == D3D_SIT_SAMPLER) && bindDesc.BindPoint < 32) {
+				textureMask |= (1u << bindDesc.BindPoint);
+			}
+		}
 
 		for (UINT i = 0; i < shaderDesc.ConstantBuffers; i++) {
 			ID3D11ShaderReflectionConstantBuffer* cb = refl->GetConstantBufferByIndex(i);
@@ -536,6 +550,7 @@ namespace nCine::RhiD3D11
 
 	void D3D11ShaderProgram::Reset()
 	{
+		D3D11Device::OnProgramDestroyed(this);
 		uniforms_.clear();
 		uniformBlocks_.clear();
 		attributes_.clear();
@@ -544,6 +559,8 @@ namespace nCine::RhiD3D11
 		vsCBuffers_.clear();
 		psCBuffers_.clear();
 		vsByteCode_.clear();
+		vsTextureMask_ = 0;
+		psTextureMask_ = 0;
 		SafeRelease(inputLayout_);
 		SafeRelease(pixelShader_);
 		SafeRelease(vertexShader_);
@@ -555,7 +572,7 @@ namespace nCine::RhiD3D11
 
 	void D3D11ShaderProgram::SetObjectLabel(StringView label)
 	{
-		// Slice 2b selects the HLSL variant from the reflection, not the label, so this is informational only
+		// The backend selects the HLSL variant from the reflection, not the label, so this is informational only
 		static_cast<void>(label);
 	}
 

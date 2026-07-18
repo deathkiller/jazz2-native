@@ -3155,6 +3155,124 @@ R"GLSL(void main()
 			return true;
 		}
 
+		/**
+			Partial preprocessing of an assembled stage stream (BuildStageSource): resolves ONLY
+			conditionals of the exact forms "#ifdef/#ifndef SOFTWARE_RENDERER" (with an optional
+			"#else" and the matching "#endif"), keeping or dropping the enclosed lines according
+			to @p softwareRenderer - the backend the source is being built for. Every other
+			preprocessor conditional passes through textually untouched (nesting works in both
+			directions, exactly like ResolveStageConditionals), so the built sources never contain
+			the SOFTWARE_RENDERER macro at all and shaders without such blocks come out byte-for-byte
+			unchanged. Unlike the stage-macro resolver this runs on already assembled/validated
+			streams and carries no diagnostics: on a malformed conditional structure the stream is
+			left untouched (a leaked block is then caught by the generated-header staleness checks).
+		*/
+		void ResolveSoftwareRendererConditionals(std::vector<SourceLine>& lines, bool softwareRenderer)
+		{
+			struct Cond
+			{
+				bool Software;		// true = resolved SOFTWARE_RENDERER conditional (its directive lines are removed)
+				bool Keep;			// Software conditionals only - the current branch is the active one
+				bool SeenElse;
+			};
+
+			// Directives are detected on a comment-stripped copy (a block comment could hide a '#')
+			std::vector<SourceLine> stripped = lines;
+			ShaderParser::StripComments(stripped);
+
+			std::vector<SourceLine> output;
+			output.reserve(lines.size());
+			std::vector<Cond> stack;
+			bool removed = false;		// The previous input line was removed (a directive or a dropped block line)
+
+			auto dropping = [&stack]() {
+				for (const Cond& c : stack) {
+					if (c.Software && !c.Keep) {
+						return true;
+					}
+				}
+				return false;
+			};
+
+			for (std::size_t index = 0; index < lines.size(); index++) {
+				StringView bare = stripped[index].Text;
+				std::size_t begin = FindFirstNotOf(bare, " \t"_s);
+				if (begin != Npos && bare[begin] == '#') {
+					std::size_t p = begin + 1;
+					while (p < bare.size() && IsSpace(bare[p])) {
+						p++;
+					}
+					std::size_t nameBegin = p;
+					while (p < bare.size() && IsIdentChar(bare[p])) {
+						p++;
+					}
+					String name = Substr(bare, nameBegin, p - nameBegin);
+					String rest = Substr(bare, p);
+
+					if (name == "ifdef" || name == "ifndef") {
+						String id = FirstIdentifier(rest);
+						if (id == "SOFTWARE_RENDERER") {
+							bool value = softwareRenderer;
+							if (name == "ifndef") {
+								value = !value;
+							}
+							stack.push_back({ true, value, false });
+							removed = true;
+							continue;
+						}
+						stack.push_back({ false, true, false });
+					} else if (name == "if") {
+						stack.push_back({ false, true, false });
+					} else if (name == "elif") {
+						if (stack.empty() || stack.back().Software) {
+							return;		// Malformed (or an unsupported #elif on a resolved conditional) - leave untouched
+						}
+					} else if (name == "else") {
+						if (stack.empty()) {
+							return;		// Malformed - leave untouched
+						}
+						Cond& top = stack.back();
+						if (top.Software) {
+							if (top.SeenElse) {
+								return;	// Malformed - leave untouched
+							}
+							top.Keep = !top.Keep;
+							top.SeenElse = true;
+							removed = true;
+							continue;
+						}
+					} else if (name == "endif") {
+						if (stack.empty()) {
+							return;		// Malformed - leave untouched
+						}
+						bool wasSoftware = stack.back().Software;
+						stack.pop_back();
+						if (wasSoftware) {
+							removed = true;
+							continue;
+						}
+					}
+					// Other directives (#version, #extension, #pragma, ...) pass through
+				}
+
+				if (dropping()) {
+					removed = true;
+					continue;
+				}
+				// Collapse the blank separator a removed directive/block leaves behind
+				if (removed && Trim(lines[index].Text).empty() && (output.empty() || Trim(output.back().Text).empty())) {
+					continue;
+				}
+				removed = false;
+				output.push_back(lines[index]);	// A copy - a malformed stream must leave "lines" fully intact
+			}
+
+			if (!stack.empty()) {
+				return;					// Unterminated conditional - leave untouched
+			}
+			lines = std::move(output);
+		}
+
 		/** Returns true when @p s contains a whole-identifier occurrence of @p name (member accesses excluded) */
 		bool ContainsIdentifier(StringView s, const char* name)
 		{
@@ -3894,8 +4012,30 @@ R"GLSL(void main()
 		return true;
 	}
 
-	String ShaderParser::BuildStageSource(const ShaderDocument& document, bool vertexStage, StringView define)
+	String ShaderParser::BuildStageSource(const ShaderDocument& document, bool vertexStage, StringView define, bool softwareRenderer)
 	{
+		const std::vector<SourceLine>& stage = (vertexStage ? document.VertexLines : document.FragmentLines);
+
+		// Resolve "#ifdef/#ifndef SOFTWARE_RENDERER" blocks according to the backend the source is
+		// built for (see the header comment). Gated on a quick reference scan so every document
+		// without such a block keeps the verbatim fast path (and provably identical output).
+		auto referencesMacro = [](const std::vector<SourceLine>& lines) {
+			for (const SourceLine& line : lines) {
+				if (line.Text.contains("SOFTWARE_RENDERER"_s)) {
+					return true;
+				}
+			}
+			return false;
+		};
+		std::vector<SourceLine> resolved;
+		bool useResolved = (referencesMacro(document.Prelude) || referencesMacro(stage));
+		if (useResolved) {
+			resolved.reserve(document.Prelude.size() + stage.size());
+			resolved.insert(resolved.end(), document.Prelude.begin(), document.Prelude.end());
+			resolved.insert(resolved.end(), stage.begin(), stage.end());
+			ResolveSoftwareRendererConditionals(resolved, softwareRenderer);
+		}
+
 		Array<char> out;
 		if (!define.empty()) {
 			arrayAppend(out, "#define "_s);
@@ -3903,14 +4043,20 @@ R"GLSL(void main()
 			arrayAppend(out, " (1)\n"_s);
 		}
 		arrayAppend(out, "#line 1\n"_s);
-		for (const SourceLine& line : document.Prelude) {
-			arrayAppend(out, line.Text);
-			arrayAppend(out, '\n');
-		}
-		const std::vector<SourceLine>& stage = (vertexStage ? document.VertexLines : document.FragmentLines);
-		for (const SourceLine& line : stage) {
-			arrayAppend(out, line.Text);
-			arrayAppend(out, '\n');
+		if (useResolved) {
+			for (const SourceLine& line : resolved) {
+				arrayAppend(out, line.Text);
+				arrayAppend(out, '\n');
+			}
+		} else {
+			for (const SourceLine& line : document.Prelude) {
+				arrayAppend(out, line.Text);
+				arrayAppend(out, '\n');
+			}
+			for (const SourceLine& line : stage) {
+				arrayAppend(out, line.Text);
+				arrayAppend(out, '\n');
+			}
 		}
 		return String{out.data(), out.size()};
 	}

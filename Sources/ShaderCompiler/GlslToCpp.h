@@ -3,7 +3,7 @@
 /**
 	@file GlslToCpp.h
 
-	GLSL-to-C++ fragment-shader transpiler for ShaderCompiler (Phase A vertical slice).
+	GLSL-to-C++ fragment-shader transpiler for ShaderCompiler.
 
 	Turns a shader's lowered fragment GLSL — the very text the tool bakes into a generated header's
 	`<Program>_Fs` string — into a plain C++ function the CPU software renderer can call once per pixel,

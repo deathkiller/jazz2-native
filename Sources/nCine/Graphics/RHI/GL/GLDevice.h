@@ -134,8 +134,12 @@ namespace nCine::RhiGL
 		static inline void DrawElements(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t baseVertex) {
 			DrawElements(primitive, numIndices, IndexFormat::UInt16, indexOffset, baseVertex);
 		}
+		/** @brief Draws indexed geometry with instancing */
+		static void DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex);
 		/** @brief Draws indexed geometry (16-bit indices) with instancing */
-		static void DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex);
+		static inline void DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex) {
+			DrawElementsInstanced(primitive, numIndices, IndexFormat::UInt16, indexOffset, numInstances, baseVertex);
+		}
 
 		/** @brief Inserts a fence that signals once all previously submitted commands complete */
 		static FenceHandle InsertFence();
@@ -146,5 +150,29 @@ namespace nCine::RhiGL
 
 		/** @brief Applies the initial pipeline state once after context creation */
 		static void SetupInitialState();
+
+		// -- Swap-chain / presentation surface (uniform across every backend) --
+		// The OpenGL backend renders through a GL context the WINDOW backend owns (SDL / GLFW / EGL), which
+		// also performs the buffer swap (e.g. SDL_GL_SwapWindow) - so this whole quartet is inert here. It
+		// exists so window backends and shared code can drive any backend through the same calls instead of
+		// branching on WITH_RHI_* (the D3D11 / Vulkan devices own a real swap chain behind the same surface).
+
+		/** @brief No-op (the window backend owns the GL context; there is no backend swap chain) */
+		static inline bool CreateSwapchain(void* windowHandle, std::int32_t width, std::int32_t height, bool vsync) {
+			static_cast<void>(windowHandle);
+			static_cast<void>(width);
+			static_cast<void>(height);
+			static_cast<void>(vsync);
+			return true;
+		}
+		/** @brief No-op */
+		static inline void DestroySwapchain() {}
+		/** @brief No-op (the GL default framebuffer resizes with the window) */
+		static inline void ResizeSwapchain(std::int32_t width, std::int32_t height) {
+			static_cast<void>(width);
+			static_cast<void>(height);
+		}
+		/** @brief No-op (the window backend performs the buffer swap) */
+		static inline void PresentFrame() {}
 	};
 }

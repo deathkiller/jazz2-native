@@ -12,9 +12,6 @@ namespace nCine::RhiGL
 	GLBufferObject::GLBufferObject(GLenum target)
 		: glHandle_(0), target_(target), size_(0), mapped_(false)
 	{
-		for (std::int32_t i = 0; i < MaxIndexBufferRange; i++)
-			boundIndexBase_[i] = 0;
-
 		glGenBuffers(1, &glHandle_);
 		GL_LOG_ERRORS();
 	}
@@ -23,6 +20,19 @@ namespace nCine::RhiGL
 	{
 		if (boundBuffers_[target_] == glHandle_)
 			Unbind();
+
+		// Scrub the indexed-binding caches, or a new buffer recycling this GL handle would be
+		// considered already bound and the actual glBindBufferBase()/glBindBufferRange() skipped
+		for (std::int32_t i = 0; i < MaxIndexBufferRange; i++) {
+			if (boundIndexBase_[i] == glHandle_) {
+				boundIndexBase_[i] = 0;
+			}
+			if (boundBufferRange_[i].glHandle == glHandle_) {
+				boundBufferRange_[i].glHandle = 0;
+				boundBufferRange_[i].offset = 0;
+				boundBufferRange_[i].ptrsize = 0;
+			}
+		}
 
 		glDeleteBuffers(1, &glHandle_);
 		GL_LOG_ERRORS();

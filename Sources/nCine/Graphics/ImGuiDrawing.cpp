@@ -50,7 +50,9 @@ namespace nCine
 #if defined(IMGUI_HAS_DOCK)
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;		// Enable Docking
 #endif
-#if defined(IMGUI_HAS_VIEWPORT)
+#if defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_GL)
+		// Multi-viewport platform windows render with raw OpenGL into per-window GL contexts, so the
+		// feature is only offered on the OpenGL backend
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;		// Enable Multi-Viewport / Platform Windows
 #endif
 
@@ -73,8 +75,8 @@ namespace nCine
 		io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;	// We can honor ImGuiPlatformIO::Textures[] requests during render.
 
 		imguiShaderProgram_ = std::make_unique<Rhi::ShaderProgram>(Rhi::ShaderProgram::QueryPhase::Immediate);
-		imguiShaderProgram_->AttachShaderFromString(GL_VERTEX_SHADER, ShadersGen::DefaultImGui.Variants[0].VsSource);
-		imguiShaderProgram_->AttachShaderFromString(GL_FRAGMENT_SHADER, ShadersGen::DefaultImGui.Variants[0].FsSource);
+		imguiShaderProgram_->AttachShaderFromString(ShaderStage::Vertex, ShadersGen::DefaultImGui.Variants[0].VsSource);
+		imguiShaderProgram_->AttachShaderFromString(ShaderStage::Fragment, ShadersGen::DefaultImGui.Variants[0].FsSource);
 		imguiShaderProgram_->Link(Rhi::ShaderProgram::Introspection::Enabled);
 		FATAL_ASSERT(imguiShaderProgram_->GetStatus() != Rhi::ShaderProgram::Status::LinkingFailed);
 
@@ -82,7 +84,7 @@ namespace nCine
 			SetupBuffersAndShader();
 		}
 
-#if defined(IMGUI_HAS_VIEWPORT)
+#if defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_GL)
 		PrepareForViewports();
 #endif
 
@@ -300,12 +302,14 @@ namespace nCine
 
 			// Upload texture to graphics system
 			// (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
+#if defined(WITH_RHI_GL)
+			// Preserve the GL bind-state cache across the upload's internal binds
 			GLint lastTexture = Rhi::Texture::GetBoundHandle(GL_TEXTURE_2D);
+#endif
 			std::unique_ptr<Rhi::Texture> texture = std::make_unique<Rhi::Texture>(TextureTarget::Texture2D);
-			texture->TexParameteri(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			texture->TexParameteri(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			texture->TexParameteri(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			texture->TexParameteri(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			texture->SetMinFiltering(SamplerFilter::Linear);
+			texture->SetMagFiltering(SamplerFilter::Linear);
+			texture->SetWrap(SamplerWrapping::ClampToEdge);
 			texture->TexImage2D(0, PixelFormat::RGBA8, false, tex->Width, tex->Height, pixels);
 
 			Rhi::Texture* texturePtr = texture.get();
@@ -314,12 +318,16 @@ namespace nCine
 			tex->SetTexID((ImTextureID)(intptr_t)texturePtr);
 			tex->SetStatus(ImTextureStatus_OK);
 
+#if defined(WITH_RHI_GL)
 			// Restore state
 			Rhi::Texture::BindHandle(GL_TEXTURE_2D, lastTexture);
+#endif
 		} else if (tex->Status == ImTextureStatus_WantUpdates) {
 			// Update selected blocks. We only ever write to textures regions which have never been used before!
 			// This backend choose to use tex->Updates[] but you can use tex->UpdateRect to upload a single region.
+#if defined(WITH_RHI_GL)
 			GLint lastTexture = Rhi::Texture::GetBoundHandle(GL_TEXTURE_2D);
+#endif
 
 			Rhi::Texture* texturePtr = (Rhi::Texture*)(intptr_t)tex->TexID;
 			texturePtr->Bind();
@@ -343,7 +351,9 @@ namespace nCine
 			}
 #endif
 			tex->SetStatus(ImTextureStatus_OK);
+#if defined(WITH_RHI_GL)
 			Rhi::Texture::BindHandle(GL_TEXTURE_2D, lastTexture); // Restore state
+#endif
 		} else if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames > 0) {
 			DestroyTexture(tex);
 		}
@@ -370,7 +380,7 @@ namespace nCine
 		imguiShaderProgram_->GetAttribute(Material::PositionAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, pos)));
 		imguiShaderProgram_->GetAttribute(Material::TexCoordsAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, uv)));
 		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, col)));
-		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetType(GL_UNSIGNED_BYTE);
+		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetType(std::uint32_t(VertexAttribType::UnsignedByte));
 		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetNormalized(true);
 		material.SetBlendingEnabled(true);
 		material.SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
@@ -417,13 +427,13 @@ namespace nCine
 			firstCmd.GetMaterial().Uniform(Material::GuiProjectionMatrixUniformName)->SetFloatVector(projectionMatrix_.Data());
 
 			firstCmd.GetGeometry().ShareVbo(nullptr);
-			GLfloat* vertices = firstCmd.GetGeometry().AcquireVertexPointer(imCmdList->VtxBuffer.Size * numElements, numElements);
-			memcpy(vertices, imCmdList->VtxBuffer.Data, imCmdList->VtxBuffer.Size * numElements * sizeof(GLfloat));
+			float* vertices = firstCmd.GetGeometry().AcquireVertexPointer(imCmdList->VtxBuffer.Size * numElements, numElements);
+			memcpy(vertices, imCmdList->VtxBuffer.Data, imCmdList->VtxBuffer.Size * numElements * sizeof(float));
 			firstCmd.GetGeometry().ReleaseVertexPointer();
 
 			firstCmd.GetGeometry().ShareIbo(nullptr);
-			GLushort* indices = firstCmd.GetGeometry().AcquireIndexPointer(imCmdList->IdxBuffer.Size);
-			memcpy(indices, imCmdList->IdxBuffer.Data, imCmdList->IdxBuffer.Size * sizeof(GLushort));
+			std::uint16_t* indices = firstCmd.GetGeometry().AcquireIndexPointer(imCmdList->IdxBuffer.Size);
+			memcpy(indices, imCmdList->IdxBuffer.Data, imCmdList->IdxBuffer.Size * sizeof(std::uint16_t));
 			firstCmd.GetGeometry().ReleaseIndexPointer();
 
 			if (lastLayerValue_ != theApplication().GetGuiSettings().imguiLayer) {
@@ -477,7 +487,7 @@ namespace nCine
 		imguiShaderProgram_->GetAttribute(Material::PositionAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, pos)));
 		imguiShaderProgram_->GetAttribute(Material::TexCoordsAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, uv)));
 		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetVboParameters(sizeof(ImDrawVert), reinterpret_cast<void*>(offsetof(ImDrawVert, col)));
-		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetType(GL_UNSIGNED_BYTE);
+		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetType(std::uint32_t(VertexAttribType::UnsignedByte));
 		imguiShaderProgram_->GetAttribute(Material::ColorAttributeName)->SetNormalized(true);
 	}
 
@@ -550,7 +560,7 @@ namespace nCine
 		Rhi::Device::SetBlendingState(blendingState);
 	}
 
-#if defined(IMGUI_HAS_VIEWPORT)
+#if defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_GL)
 	// The multi-viewport path below intentionally uses raw OpenGL instead of the RHI: it renders into
 	// the GL contexts of additional platform windows, where the RHI backend's single-context state and
 	// bind caches would hold stale values and must not be consulted

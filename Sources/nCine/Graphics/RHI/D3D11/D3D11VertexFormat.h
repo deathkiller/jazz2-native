@@ -16,9 +16,8 @@ namespace nCine::RhiD3D11
 		@brief Vertex layout description of the Direct3D 11 backend (aliased as `Rhi::VertexFormat`)
 
 		Records the set of vertex attributes (component count, type, stride, offset and source buffer) the
-		way the OpenGL backend does, so the pipeline's attribute setup code compiles unchanged. Slice 2a does
-		not issue real draws, so the recorded layout is informational; slice 2b builds `ID3D11InputLayout`
-		objects from it (fed by the offline shader reflection).
+		way the OpenGL backend does, so the pipeline's attribute setup code compiles unchanged. The backend
+		builds `ID3D11InputLayout` objects from the recorded layout (fed by the offline shader reflection).
 	*/
 	class D3D11VertexFormat
 	{
@@ -134,7 +133,7 @@ namespace nCine::RhiD3D11
 		inline void SetIbo(const D3D11BufferObject* ibo) {
 			ibo_ = ibo;
 		}
-		/** @brief Applies the vertex format (no-op for slice 2a) */
+		/** @brief Applies the vertex format (no-op; the recorded layout is consumed at input-layout creation) */
 		void Define() {}
 		/** @brief Disables all attributes and clears the index buffer */
 		void Reset() {

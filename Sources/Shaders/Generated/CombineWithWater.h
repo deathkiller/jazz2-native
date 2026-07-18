@@ -5,6 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
+#if defined(WITH_RHI_GL)
 	inline constexpr char CombineWithWater_Vs[] =
 R"__SHDR__(#line 1
 
@@ -34,7 +35,9 @@ void main()
 	vViewSizeInv = vec2(1.0) / spriteSize;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char CombineWithWater_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -62,7 +65,9 @@ void main()
 	vViewSizeInv = vec2(1.0) / spriteSize;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char CombineWithWater_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 cbuffer _Globals : register(b0)
@@ -111,7 +116,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t CombineWithWater_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000061u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -209,6 +216,8 @@ VsOutput VSMain(VsInput _input)
 		0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char CombineWithWater_Fs[] =
 R"__SHDR__(#line 1
 
@@ -352,7 +361,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char CombineWithWater_Fs100[] =
 R"__SHDR__(#extension GL_OES_standard_derivatives : enable
 #line 1
@@ -496,7 +507,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char CombineWithWater_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 cbuffer _Globals : register(b0)
@@ -628,7 +641,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t CombineWithWater_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x000002dcu, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -1153,6 +1168,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x00000153u, 0x00000156u, 0x000200feu, 0x00000157u, 0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform CombineWithWater_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -1182,11 +1198,28 @@ float4 PSMain(PsInput _input) : SV_Target
 	};
 
 	inline constexpr ShaderCompiler::ProgramVariant CombineWithWater_Variants[] = {
-		{ "", "", CombineWithWater_Vs, CombineWithWater_Fs,
+		{ "", "",
+#if defined(WITH_RHI_GL)
+			CombineWithWater_Vs, CombineWithWater_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			6, CombineWithWater_Uniforms, 1, CombineWithWater_Blocks, 5, CombineWithWater_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL)
 			CombineWithWater_Vs100, CombineWithWater_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			CombineWithWater_VsHlsl, CombineWithWater_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			CombineWithWater_VkVs, 746, CombineWithWater_VkFs, 4165 },
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
 	};
 
 	inline constexpr ShaderCompiler::Program CombineWithWater = { "CombineWithWater", 0, 1, CombineWithWater_Variants };

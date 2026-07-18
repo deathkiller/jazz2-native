@@ -389,7 +389,7 @@ namespace ShaderCompiler
 	bool VulkanGlslEmitter::Transform(StringView modernSource, bool vertexStage, const StageReflection& reflection,
 		String& out, Diagnostic& diag)
 	{
-		// --- Binding assignment (from the merged reflection; the two stages therefore agree, and slice 2 can
+		// --- Binding assignment (from the merged reflection; the two stages therefore agree, and the backend can
 		//     reconstruct the same numbering) — set 0 for all resources, UBOs first, then samplers -------------
 		const int uboBase = (reflection.Uniforms.empty() ? 0 : 1);
 		auto blockBinding = [&](StringView name) -> int {

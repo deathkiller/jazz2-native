@@ -20,11 +20,11 @@ namespace nCine::RhiD3D11
 	/**
 		@brief Texture object of the Direct3D 11 backend (aliased as `Rhi::Texture`)
 
-		Slice 2a wraps a single, tightly-packed level-0 pixel buffer in host memory (no `ID3D11Texture2D`
-		yet) and exposes the neutral upload surface `Texture.cpp` drives (`TexImage2D`, `TexSubImage2D`,
-		`TexStorage2D`, filter/wrap/swizzle setters); binding records the texture on the device. Slice 2b
-		creates the real `ID3D11Texture2D` + `ID3D11ShaderResourceView`/`ID3D11RenderTargetView` from this
-		same surface. Mip levels above 0 and compressed formats are accepted but not stored.
+		Wraps a single, tightly-packed level-0 pixel buffer in host memory and exposes the neutral upload
+		surface `Texture.cpp` drives (`TexImage2D`, `TexSubImage2D`, `TexStorage2D`, filter/wrap/swizzle
+		setters); binding records the texture on the device. The real `ID3D11Texture2D` +
+		`ID3D11ShaderResourceView`/`ID3D11RenderTargetView` are created from this same surface. Mip levels
+		above 0 and compressed formats are accepted but not stored.
 	*/
 	class D3D11Texture
 	{
@@ -131,9 +131,9 @@ namespace nCine::RhiD3D11
 		void TexSubImage2D(std::int32_t level, std::int32_t xoffset, std::int32_t yoffset, std::int32_t width, std::int32_t height, PixelFormat format, bool bgr, const void* data);
 		/** @brief Allocates immutable level-0 storage of the given format/size (no texels yet) */
 		void TexStorage2D(std::int32_t levels, PixelFormat format, std::int32_t width, std::int32_t height);
-		/** @brief Compressed upload (unsupported by slice 2a, accepted as a no-op) */
+		/** @brief Compressed upload (unsupported by this backend, accepted as a no-op) */
 		void CompressedTexImage2D(std::int32_t level, PixelFormat format, std::int32_t width, std::int32_t height, std::int32_t imageSize, const void* data);
-		/** @brief Compressed sub-upload (unsupported by slice 2a, accepted as a no-op) */
+		/** @brief Compressed sub-upload (unsupported by this backend, accepted as a no-op) */
 		void CompressedTexSubImage2D(std::int32_t level, std::int32_t xoffset, std::int32_t yoffset, std::int32_t width, std::int32_t height, PixelFormat format, std::int32_t imageSize, const void* data);
 		/** @brief Reads back level-0 texels into client memory */
 		void GetTexImage(std::int32_t level, PixelFormat format, bool bgr, void* pixels);
@@ -176,6 +176,15 @@ namespace nCine::RhiD3D11
 		/** @brief Returns the number of bytes occupied by one texel of the given format (0 if unsupported) */
 		static std::int32_t BytesPerPixel(PixelFormat format);
 
+		/** @brief Returns the existing SRV without creating one (device shadow-state scrubbing on destroy) */
+		inline ID3D11ShaderResourceView* PeekSRV() const {
+			return srv_;
+		}
+		/** @brief Returns the existing sampler without creating one */
+		inline ID3D11SamplerState* PeekSampler() const {
+			return sampler_;
+		}
+
 	private:
 		static std::uint32_t nextHandle_;
 
@@ -205,6 +214,7 @@ namespace nCine::RhiD3D11
 		mutable ID3D11SamplerState* sampler_;
 		mutable bool contentsDirty_;
 		mutable bool hasCpuData_;
+		mutable nCine::SamplerFilter samplerMinFilter_;
 		mutable nCine::SamplerFilter samplerFilter_;
 		mutable SamplerWrapping samplerWrap_;
 

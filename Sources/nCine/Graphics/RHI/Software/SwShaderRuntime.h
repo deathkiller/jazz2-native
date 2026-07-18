@@ -19,7 +19,7 @@
 	  the emitter maps `v.x` and an assignment `v.x = ...` straight through.
 	- A multi-component read swizzle (`v.rgb`, `v.xy`) is a const method the emitter calls: `v.rgb()`,
 	  `v.xy()`. The base is evaluated once and a fresh vector is returned. Only the common/contiguous
-	  swizzles are provided in this Phase-A slice (see the file tail) — the full permutation set is a
+	  swizzles are provided here (see the file tail) — the full permutation set is a
 	  mechanical later completion.
 	- A multi-component write swizzle (`v.xy = ...`) is NOT supported; the emitter would have to
 	  decompose it into per-component field writes. No corpus shader needs it yet.
@@ -307,6 +307,28 @@ namespace nCine::RhiSoftware::sw
 	inline vec2 reflect(const vec2& i, const vec2& n) { return i - n * (2.0f * dot(n, i)); }
 	inline vec3 reflect(const vec3& i, const vec3& n) { return i - n * (2.0f * dot(n, i)); }
 	inline vec4 reflect(const vec4& i, const vec4& n) { return i - n * (2.0f * dot(n, i)); }
+
+	// --- Screen-space derivatives (approximated) ----------------------------------------------------
+	//
+	// The per-pixel CPU path shades one pixel at a time with no 2x2 quad, so true screen-space
+	// derivatives are unavailable. Shaders use them only to widen an anti-aliasing edge (the aastep/fwidth
+	// idiom: smoothstep(t - fw, t + fw, v)), so a small constant is returned instead of 0 - that keeps the
+	// edge soft but finite (avoiding a divide-by-zero in smoothstep) while letting derivative-based effects
+	// (e.g. the frozen-enemy mask outline) run at approximate fidelity. The magnitude (~1/50 in value space)
+	// is a rough stand-in for the per-pixel rate of change of a quantity that spans a typical sprite; the
+	// exact value only affects edge softness.
+	inline float dFdx(float) { return 0.02f; }
+	inline float dFdy(float) { return 0.02f; }
+	inline vec2 dFdx(const vec2&) { return vec2(0.02f); }
+	inline vec2 dFdy(const vec2&) { return vec2(0.02f); }
+	inline vec3 dFdx(const vec3&) { return vec3(0.02f); }
+	inline vec3 dFdy(const vec3&) { return vec3(0.02f); }
+	inline vec4 dFdx(const vec4&) { return vec4(0.02f); }
+	inline vec4 dFdy(const vec4&) { return vec4(0.02f); }
+	inline float fwidth(float) { return 0.04f; }		// abs(dFdx) + abs(dFdy)
+	inline vec2 fwidth(const vec2&) { return vec2(0.04f); }
+	inline vec3 fwidth(const vec3&) { return vec3(0.04f); }
+	inline vec4 fwidth(const vec4&) { return vec4(0.04f); }
 
 	// --- Sampler shim -------------------------------------------------------------------------------
 

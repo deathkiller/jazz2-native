@@ -16,10 +16,10 @@ namespace nCine::RhiVulkan
 	/**
 		@brief Debug-output and object-labelling stub of the Vulkan backend
 
-		For slice 2a the backend has no device-side debug facility wired up, so every entry point is a
-		no-op. The class exists to satisfy the `Rhi::Debug` contract alias (debug groups, message insertion
-		and object labels used by the render pipeline). Slice 2b may route these to `VK_EXT_debug_utils`
-		labels / object names when the validation layer or a debugger is present.
+		The backend has no device-side debug facility wired up, so every entry point is a no-op. The class
+		exists to satisfy the `Rhi::Debug` contract alias (debug groups, message insertion and object labels
+		used by the render pipeline). These could later route to `VK_EXT_debug_utils` labels / object names
+		when the validation layer or a debugger is present.
 	*/
 	class VulkanDebug
 	{

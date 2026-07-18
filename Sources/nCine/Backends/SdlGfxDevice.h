@@ -74,6 +74,15 @@ namespace nCine::Backends
 			return glContextHandle_;
 		}
 
+		/**
+		 * @brief Queries a window's drawable (pixel) size the way the active RHI backend measures it
+		 *
+		 * Confines the per-backend drawable-size query (SDL renderer output size on the software backend,
+		 * `SDL_GL_GetDrawableSize` elsewhere) to one place; @p fallbackWidth / @p fallbackHeight are used
+		 * when the query returns a non-positive size.
+		 */
+		static void queryDrawableSize(SDL_Window* windowHandle, int fallbackWidth, int fallbackHeight, int& width, int& height);
+
 	protected:
 		void setResolutionInternal(int width, int height) override;
 

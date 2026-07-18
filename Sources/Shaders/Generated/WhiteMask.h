@@ -5,6 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
+#if defined(WITH_RHI_GL)
 	inline constexpr char WhiteMask_Vs[] =
 R"__SHDR__(#line 1
 
@@ -37,7 +38,9 @@ void main()
 	vPaletteOffset = palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char WhiteMask_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -68,7 +71,9 @@ void main()
 	vPaletteOffset = palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char WhiteMask_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 cbuffer _Globals : register(b0)
@@ -122,7 +127,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t WhiteMask_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000064u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -218,6 +225,8 @@ VsOutput VSMain(VsInput _input)
 		0x0003003eu, 0x00000060u, 0x00000063u, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char WhiteMask_Fs[] =
 R"__SHDR__(#line 1
 
@@ -258,7 +267,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char WhiteMask_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -298,7 +309,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char WhiteMask_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 Texture2D uTexture : register(t0);
@@ -335,7 +348,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t WhiteMask_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000048u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -392,6 +407,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform WhiteMask_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -413,6 +429,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		{ "uTexture", 0 },
 	};
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char WhiteMask_USE_PALETTE_Vs[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -446,7 +463,9 @@ void main()
 	vPaletteOffset = palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char WhiteMask_USE_PALETTE_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #define USE_PALETTE (1)
@@ -478,7 +497,9 @@ void main()
 	vPaletteOffset = palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char WhiteMask_USE_PALETTE_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 cbuffer _Globals : register(b0)
@@ -532,7 +553,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t WhiteMask_USE_PALETTE_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000064u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -628,6 +651,8 @@ VsOutput VSMain(VsInput _input)
 		0x0003003eu, 0x00000060u, 0x00000063u, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char WhiteMask_USE_PALETTE_Fs[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -669,7 +694,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char WhiteMask_USE_PALETTE_Fs100[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -710,7 +737,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char WhiteMask_USE_PALETTE_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 Texture2D uTexture : register(t0);
@@ -753,7 +782,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t WhiteMask_USE_PALETTE_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000072u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -840,6 +871,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x000200feu, 0x00000047u, 0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform WhiteMask_USE_PALETTE_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -863,20 +895,55 @@ float4 PSMain(PsInput _input) : SV_Target
 	};
 
 	inline constexpr ShaderCompiler::ProgramVariant WhiteMask_Variants[] = {
-		{ "", "", WhiteMask_Vs, WhiteMask_Fs,
+		{ "", "",
+#if defined(WITH_RHI_GL)
+			WhiteMask_Vs, WhiteMask_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, WhiteMask_Uniforms, 1, WhiteMask_Blocks, 1, WhiteMask_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL)
 			WhiteMask_Vs100, WhiteMask_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			WhiteMask_VsHlsl, WhiteMask_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			WhiteMask_VkVs, 733, WhiteMask_VkFs, 417 },
-		{ "USE_PALETTE", "USE_PALETTE", WhiteMask_USE_PALETTE_Vs, WhiteMask_USE_PALETTE_Fs,
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
+		{ "USE_PALETTE", "USE_PALETTE",
+#if defined(WITH_RHI_GL)
+			WhiteMask_USE_PALETTE_Vs, WhiteMask_USE_PALETTE_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, WhiteMask_USE_PALETTE_Uniforms, 1, WhiteMask_USE_PALETTE_Blocks, 2, WhiteMask_USE_PALETTE_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL)
 			WhiteMask_USE_PALETTE_Vs100, WhiteMask_USE_PALETTE_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			WhiteMask_USE_PALETTE_VsHlsl, WhiteMask_USE_PALETTE_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			WhiteMask_USE_PALETTE_VkVs, 733, WhiteMask_USE_PALETTE_VkFs, 659 },
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
 	};
 
 	inline constexpr ShaderCompiler::Program WhiteMask = { "WhiteMask", 0, 2, WhiteMask_Variants };
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedWhiteMask_Vs[] =
 R"__SHDR__(#line 1
 
@@ -918,7 +985,9 @@ void main()
 	vPaletteOffset = i.palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedWhiteMask_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -959,7 +1028,9 @@ void main()
 	vPaletteOffset = i.palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char BatchedWhiteMask_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 #define BATCH_SIZE 585
@@ -1020,7 +1091,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t BatchedWhiteMask_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x0000007fu, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -1136,6 +1209,8 @@ VsOutput VSMain(VsInput _input)
 		0x0003003eu, 0x00000079u, 0x0000007eu, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedWhiteMask_Fs[] =
 R"__SHDR__(#line 1
 
@@ -1176,7 +1251,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedWhiteMask_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -1216,7 +1293,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char BatchedWhiteMask_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 Texture2D uTexture : register(t0);
@@ -1253,7 +1332,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t BatchedWhiteMask_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000048u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -1310,6 +1391,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform BatchedWhiteMask_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -1327,6 +1409,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		{ "uTexture", 0 },
 	};
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedWhiteMask_USE_PALETTE_Vs[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -1369,7 +1452,9 @@ void main()
 	vPaletteOffset = i.palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedWhiteMask_USE_PALETTE_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -1411,7 +1496,9 @@ void main()
 	vPaletteOffset = i.palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char BatchedWhiteMask_USE_PALETTE_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 #define BATCH_SIZE 585
@@ -1472,7 +1559,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t BatchedWhiteMask_USE_PALETTE_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x0000007fu, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -1588,6 +1677,8 @@ VsOutput VSMain(VsInput _input)
 		0x0003003eu, 0x00000079u, 0x0000007eu, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedWhiteMask_USE_PALETTE_Fs[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -1629,7 +1720,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedWhiteMask_USE_PALETTE_Fs100[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -1670,7 +1763,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char BatchedWhiteMask_USE_PALETTE_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 Texture2D uTexture : register(t0);
@@ -1713,7 +1808,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t BatchedWhiteMask_USE_PALETTE_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000072u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -1800,6 +1897,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x000200feu, 0x00000047u, 0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform BatchedWhiteMask_USE_PALETTE_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -1819,16 +1917,50 @@ float4 PSMain(PsInput _input) : SV_Target
 	};
 
 	inline constexpr ShaderCompiler::ProgramVariant BatchedWhiteMask_Variants[] = {
-		{ "", "", BatchedWhiteMask_Vs, BatchedWhiteMask_Fs,
+		{ "", "",
+#if defined(WITH_RHI_GL)
+			BatchedWhiteMask_Vs, BatchedWhiteMask_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, BatchedWhiteMask_Uniforms, 1, BatchedWhiteMask_Blocks, 1, BatchedWhiteMask_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL)
 			BatchedWhiteMask_Vs100, BatchedWhiteMask_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			BatchedWhiteMask_VsHlsl, BatchedWhiteMask_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			BatchedWhiteMask_VkVs, 893, BatchedWhiteMask_VkFs, 417 },
-		{ "USE_PALETTE", "USE_PALETTE", BatchedWhiteMask_USE_PALETTE_Vs, BatchedWhiteMask_USE_PALETTE_Fs,
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
+		{ "USE_PALETTE", "USE_PALETTE",
+#if defined(WITH_RHI_GL)
+			BatchedWhiteMask_USE_PALETTE_Vs, BatchedWhiteMask_USE_PALETTE_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, BatchedWhiteMask_USE_PALETTE_Uniforms, 1, BatchedWhiteMask_USE_PALETTE_Blocks, 2, BatchedWhiteMask_USE_PALETTE_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL)
 			BatchedWhiteMask_USE_PALETTE_Vs100, BatchedWhiteMask_USE_PALETTE_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			BatchedWhiteMask_USE_PALETTE_VsHlsl, BatchedWhiteMask_USE_PALETTE_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			BatchedWhiteMask_USE_PALETTE_VkVs, 893, BatchedWhiteMask_USE_PALETTE_VkFs, 659 },
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
 	};
 
 	inline constexpr ShaderCompiler::Program BatchedWhiteMask = { "BatchedWhiteMask", 0, 2, BatchedWhiteMask_Variants };

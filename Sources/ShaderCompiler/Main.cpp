@@ -15,7 +15,7 @@
 	With --check the tool parses the input and prints a human-readable reflection
 	dump to stdout instead of writing the output header. With --essl100-check (or
 	--target essl100) it prints the ESSL 100 (OpenGL ES 2.0) transform of every
-	variant's stage sources to stdout, for inspection — a tool-only P5 slice-1
+	variant's stage sources to stdout, for inspection — a tool-only
 	surface that does NOT change the emitted headers. Errors are reported to
 	stderr as "<file>:<line>: error: <message>" and the exit code is non-zero.
 */
@@ -145,7 +145,7 @@ namespace
 
 	/**
 		Builds the ESSL 100 (OpenGL ES 2.0) transform dump printed by --essl100-check: one section
-		per program / variant / stage, with either the transformed source or a slice-2 "unsupported"
+		per program / variant / stage, with either the transformed source or an "unsupported"
 		diagnostic. Inspection-only — never touches the emitted header.
 	*/
 	String BuildEssl100Dump(const std::vector<ProgramReflection>& programs)
@@ -953,6 +953,8 @@ namespace
 			out += "\t\t\t// Otherwise match ignoring '_' and letter case, so a variant label that bakes the variant\n";
 			out += "\t\t\t// into the shader name (e.g. \"TexturedBackgroundDither\") still resolves to the generated\n";
 			out += "\t\t\t// prefix that separates it with an underscore and upper-cases the define (\"..._DITHER\").\n";
+			out += "\t\t\t// A \"use\" token is also skipped on both sides so a \"USE_PALETTE\" define matches a runtime\n";
+			out += "\t\t\t// label that spells the same variant as \"...Palette\" (the engine drops the \"USE_\" prefix).\n";
 			out += "\t\t\tfor (const SwGeneratedShaderInfo& info : SwGeneratedShaders) {\n";
 			out += "\t\t\t\tconst char* a = info.name;\n";
 			out += "\t\t\t\tconst char* b = name;\n";
@@ -960,6 +962,8 @@ namespace
 			out += "\t\t\t\tfor (;;) {\n";
 			out += "\t\t\t\t\twhile (*a == '_') { a++; }\n";
 			out += "\t\t\t\t\twhile (*b == '_') { b++; }\n";
+			out += "\t\t\t\t\tif ((a[0] == 'u' || a[0] == 'U') && (a[1] == 's' || a[1] == 'S') && (a[2] == 'e' || a[2] == 'E')) { a += 3; continue; }\n";
+			out += "\t\t\t\t\tif ((b[0] == 'u' || b[0] == 'U') && (b[1] == 's' || b[1] == 'S') && (b[2] == 'e' || b[2] == 'E')) { b += 3; continue; }\n";
 			out += "\t\t\t\t\tchar ca = (*a >= 'A' && *a <= 'Z') ? (char)(*a - 'A' + 'a') : *a;\n";
 			out += "\t\t\t\t\tchar cb = (*b >= 'A' && *b <= 'Z') ? (char)(*b - 'A' + 'a') : *b;\n";
 			out += "\t\t\t\t\tif (ca != cb) { equal = false; break; }\n";
@@ -999,8 +1003,11 @@ namespace
 				const String& progName = program.Document->ProgramName;
 				for (const VariantReflection& v : program.Variants) {
 					String prefix = (v.Name.empty() ? progName : String(progName + "_" + v.Name));
-					String fs = ShaderParser::BuildStageSource(*program.Document, false, v.Define);
-					String vs = ShaderParser::BuildStageSource(*program.Document, true, v.Define);
+					// Only this transpile path builds sources with SOFTWARE_RENDERER defined, so a shader can
+					// substitute a cheaper CPU variant of an expensive fragment path (e.g. TexturedBackground)
+					// without changing any other backend's emitted output.
+					String fs = ShaderParser::BuildStageSource(*program.Document, false, v.Define, /*softwareRenderer*/ true);
+					String vs = ShaderParser::BuildStageSource(*program.Document, true, v.Define, /*softwareRenderer*/ true);
 					std::vector<SamplerBinding> samplers;
 					for (const TextureInfo& t : v.Reflection.Textures) {
 						SamplerBinding sb;

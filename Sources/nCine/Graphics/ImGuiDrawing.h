@@ -53,7 +53,9 @@ namespace nCine
 	private:
 		bool withSceneGraph_;
 		HashMap<Rhi::Texture*, std::unique_ptr<Rhi::Texture>> textures_;
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN) || !defined(WITH_RHI_GL)
+		// Sub-rect updates are repacked into a contiguous buffer where GL_UNPACK_ROW_LENGTH is unavailable
+		// (OpenGL ES / WebGL) or the backend is not OpenGL at all
 		SmallVector<char, 0> tempTexBuffer_;
 #endif
 		std::unique_ptr<Rhi::ShaderProgram> imguiShaderProgram_;
@@ -70,7 +72,7 @@ namespace nCine
 		Matrix4x4f projectionMatrix_;
 		std::uint16_t lastLayerValue_;
 
-#if defined(IMGUI_HAS_VIEWPORT)
+#if defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_GL)
 		std::int32_t attribLocationTex_;
 		std::int32_t attribLocationProjMtx_;
 		std::uint32_t attribLocationVtxPos_;
@@ -89,7 +91,9 @@ namespace nCine
 		void SetupBuffersAndShader();
 		void Draw();
 
-#if defined(IMGUI_HAS_VIEWPORT)
+		// Multi-viewport platform windows are an OpenGL-backend-only feature: they render with raw GL into
+		// per-window GL contexts the RHI wrappers must not touch (their bind caches describe the main context)
+#if defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_GL)
 		void PrepareForViewports();
 		static void OnRenderPlatformWindow(ImGuiViewport* viewport, void*);
 		void DrawPlatformWindow(ImGuiViewport* viewport);

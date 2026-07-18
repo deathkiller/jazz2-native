@@ -1,10 +1,5 @@
 #pragma once
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
-#define NCINE_INCLUDE_OPENGL
-#include "../CommonHeaders.h"
-#endif
-
 #include "Material.h"
 #include "../Primitives/Matrix4x4.h"
 #include "RHI/Rhi.h"
@@ -45,28 +40,28 @@ namespace nCine
 		/** @brief Vertex format for vertices with positions only */
 		struct VertexFormatPos2
 		{
-			GLfloat position[2];
+			float position[2];
 		};
 
 		/** @brief Vertex format for vertices with positions and texture coordinates */
 		struct VertexFormatPos2Tex2
 		{
-			GLfloat position[2];
-			GLfloat texcoords[2];
+			float position[2];
+			float texcoords[2];
 		};
 
 		/** @brief Vertex format for vertices with positions and draw indices */
 		struct VertexFormatPos2Index
 		{
-			GLfloat position[2];
+			float position[2];
 			std::int32_t drawindex;
 		};
 
 		/** @brief Vertex format for vertices with positions, texture coordinates and draw indices */
 		struct VertexFormatPos2Tex2Index
 		{
-			GLfloat position[2];
-			GLfloat texcoords[2];
+			float position[2];
+			float texcoords[2];
 			std::int32_t drawindex;
 		};
 

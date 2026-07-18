@@ -2,6 +2,9 @@
 #include "GLUniformBlock.h"
 #include "../../../../Main.h"
 
+#include <cstring>
+#include <vector>
+
 namespace nCine::RhiGL
 {
 	GLUniformBlockCache::GLUniformBlockCache()
@@ -102,6 +105,12 @@ namespace nCine::RhiGL
 		// Each member cache points into the host-side block buffer at the member's offset (SetDataPointer);
 		// on ES2 the member is a real loose uniform, so push it directly with the matching glUniform* call
 		// (the location was resolved in GLShaderProgram::ImportReflection). Mirrors GLUniformCache::CommitValue.
+		//
+		// The host data uses the std140 layout the reflection computed, but glUniform*v expects tightly packed
+		// values. The layouts differ wherever std140 pads to 16-byte boundaries: array elements of scalar /
+		// vec2 / vec3 types (stride 16 vs their tight size) and the columns of mat2 / mat3 (column stride 16
+		// vs 8 / 12) - repack those into a scratch buffer before uploading. vec4-sized rows (vec4, ivec4,
+		// mat4 columns) are already dense.
 		for (GLUniformCache& memberCache : uniformCaches_) {
 			const GLUniform* uniform = memberCache.GetUniform();
 			if (uniform == nullptr) {
@@ -113,6 +122,34 @@ namespace nCine::RhiGL
 				continue;
 			}
 			const GLsizei count = GLsizei(uniform->GetSize() > 0 ? uniform->GetSize() : 1);
+
+			// Rows per element and tight bytes per row: mats are N column-vectors, everything else is 1 row
+			std::int32_t rowsPerElement = 1;
+			std::int32_t tightRowBytes = 0;
+			switch (uniform->GetType()) {
+				case GL_FLOAT: case GL_INT: tightRowBytes = 4; break;
+				case GL_FLOAT_VEC2: case GL_INT_VEC2: tightRowBytes = 8; break;
+				case GL_FLOAT_VEC3: case GL_INT_VEC3: tightRowBytes = 12; break;
+				case GL_FLOAT_VEC4: case GL_INT_VEC4: tightRowBytes = 16; break;
+				case GL_FLOAT_MAT2: rowsPerElement = 2; tightRowBytes = 8; break;
+				case GL_FLOAT_MAT3: rowsPerElement = 3; tightRowBytes = 12; break;
+				case GL_FLOAT_MAT4: rowsPerElement = 4; tightRowBytes = 16; break;
+				default: continue;
+			}
+			// std140: each row (array element or matrix column) is padded to a vec4 boundary, except that a
+			// non-array scalar/vec member is stored at its tight size with no trailing padding to skip
+			const bool strided = (tightRowBytes < 16) && (count > 1 || rowsPerElement > 1);
+
+			static std::vector<GLubyte> scratch;
+			if (strided) {
+				const std::int32_t totalRows = count * rowsPerElement;
+				scratch.resize(std::size_t(totalRows) * tightRowBytes);
+				for (std::int32_t row = 0; row < totalRows; row++) {
+					std::memcpy(scratch.data() + std::size_t(row) * tightRowBytes, data + std::size_t(row) * 16, tightRowBytes);
+				}
+				data = scratch.data();
+			}
+
 			const GLfloat* asFloat = reinterpret_cast<const GLfloat*>(data);
 			const GLint* asInt = reinterpret_cast<const GLint*>(data);
 			switch (uniform->GetType()) {

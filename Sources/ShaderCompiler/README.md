@@ -354,18 +354,18 @@ Transforms (vertex-vs-fragment aware, comment-aware, whole-identifier):
 | `#ifdef GL_ES … #endif` | **unwrapped** — `GL_ES` is predefined under `#version 100`, so the fragment `precision <p> float;` prologue becomes unconditional |
 | `flat` interpolation qualifier | dropped (ES2 has none) |
 
-### Slice-2 batched-shader gap
+### Batched-shader gap
 
 ES2 has **neither uniform buffer objects nor `gl_VertexID`**. A stage source that uses a
 `layout(std140)` block and/or `gl_VertexID` is **not** transformed — `--essl100-check` prints
-`unsupported in ES2 (slice 2: needs uniform-array batching + corner attribute)` with the offending
+`unsupported in ES2 (needs uniform-array batching + corner attribute)` with the offending
 line for that stage (the other stage, if clean, still transforms). This affects **every** sprite
 program, not only the `batched` twins: the shared sprite template lowers the corner position from
 `gl_VertexID` and reads instance data from a std140 `InstanceBlock`/`InstancesBlock` UBO, so both
 the batched twin **and** its non-batched primary trip the deferral. Of the shipped shaders only
 `DefaultImGui` (hand-written `attribute`/`varying`, no UBO, no `gl_VertexID`) translates today.
 The real transforms the rest need — UBO → uniform array, `gl_VertexID` → a supplied corner
-attribute — are the **P5 slice-2** work and are intentionally not attempted here.
+attribute — are intentionally not attempted here.
 
 ## Known limitations
 

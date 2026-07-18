@@ -40,7 +40,7 @@ namespace nCine::RhiD3D11
 			minFilter_(nCine::SamplerFilter::Nearest), magFilter_(nCine::SamplerFilter::Nearest), wrap_(SamplerWrapping::ClampToEdge),
 			textureUnit_(0), isRenderTarget_(false),
 			gpuTexture_(nullptr), srv_(nullptr), sampler_(nullptr), contentsDirty_(false), hasCpuData_(false),
-			samplerFilter_(nCine::SamplerFilter::Nearest), samplerWrap_(SamplerWrapping::ClampToEdge)
+			samplerMinFilter_(nCine::SamplerFilter::Nearest), samplerFilter_(nCine::SamplerFilter::Nearest), samplerWrap_(SamplerWrapping::ClampToEdge)
 	{
 		swizzle_[0] = SwizzleChannel::Red;
 		swizzle_[1] = SwizzleChannel::Green;
@@ -175,15 +175,27 @@ namespace nCine::RhiD3D11
 		if (device == nullptr) {
 			return nullptr;
 		}
-		if (sampler_ != nullptr && samplerFilter_ == magFilter_ && samplerWrap_ == wrap_) {
+		if (sampler_ != nullptr && samplerFilter_ == magFilter_ && samplerMinFilter_ == minFilter_ && samplerWrap_ == wrap_) {
 			return sampler_;
 		}
 		if (sampler_ != nullptr) { sampler_->Release(); sampler_ = nullptr; }
 
 		D3D11_SAMPLER_DESC desc = {};
-		const bool linear = (magFilter_ == nCine::SamplerFilter::Linear ||
+		// Compose the filter from both the minification and magnification modes (mip mode is irrelevant, the
+		// backend only ever stores level 0)
+		const bool magLinear = (magFilter_ == nCine::SamplerFilter::Linear ||
 			magFilter_ == nCine::SamplerFilter::LinearMipmapNearest || magFilter_ == nCine::SamplerFilter::LinearMipmapLinear);
-		desc.Filter = linear ? D3D11_FILTER_MIN_MAG_MIP_LINEAR : D3D11_FILTER_MIN_MAG_MIP_POINT;
+		const bool minLinear = (minFilter_ == nCine::SamplerFilter::Linear ||
+			minFilter_ == nCine::SamplerFilter::LinearMipmapNearest || minFilter_ == nCine::SamplerFilter::LinearMipmapLinear);
+		if (minLinear && magLinear) {
+			desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		} else if (minLinear) {
+			desc.Filter = D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT;
+		} else if (magLinear) {
+			desc.Filter = D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
+		} else {
+			desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+		}
 		D3D11_TEXTURE_ADDRESS_MODE address;
 		switch (wrap_) {
 			case SamplerWrapping::Repeat: address = D3D11_TEXTURE_ADDRESS_WRAP; break;
@@ -197,6 +209,7 @@ namespace nCine::RhiD3D11
 		desc.MinLOD = 0;
 		desc.MaxLOD = D3D11_FLOAT32_MAX;
 		device->CreateSamplerState(&desc, &sampler_);
+		samplerMinFilter_ = minFilter_;
 		samplerFilter_ = magFilter_;
 		samplerWrap_ = wrap_;
 		return sampler_;
@@ -217,7 +230,7 @@ namespace nCine::RhiD3D11
 	{
 		// Keep a self-consistent 4-byte-per-texel store for the runtime formats: promote the narrower ones
 		// (RGB8 render targets and the palette-index formats R8 / RG8) to an RGBA8 store, remembering the
-		// original in uploadFormat_. Mirrors the software backend's promotion so slice 2b can lift the same
+		// original in uploadFormat_. Mirrors the software backend's promotion so the backend can lift the same
 		// bytes into an `ID3D11Texture2D` without a separate widening step.
 		uploadFormat_ = format;
 		format_ = (format == PixelFormat::RGB8 || format == PixelFormat::R8 || format == PixelFormat::RG8) ? PixelFormat::RGBA8 : format;
@@ -342,7 +355,43 @@ namespace nCine::RhiD3D11
 		static_cast<void>(level);
 		static_cast<void>(format);
 		static_cast<void>(bgr);
-		if (pixels != nullptr && !pixels_.empty()) {
+		if (pixels == nullptr) {
+			return;
+		}
+
+		// A render target's contents only exist on the GPU (the host store is never written by draws), so read
+		// it back through a staging copy; plain textures return the host store directly
+		if (isRenderTarget_ && gpuTexture_ != nullptr) {
+			ID3D11Device* device = D3D11Device::GetD3DDevice();
+			ID3D11DeviceContext* context = D3D11Device::GetD3DContext();
+			if (device != nullptr && context != nullptr) {
+				D3D11_TEXTURE2D_DESC desc = {};
+				gpuTexture_->GetDesc(&desc);
+				desc.Usage = D3D11_USAGE_STAGING;
+				desc.BindFlags = 0;
+				desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+				desc.MiscFlags = 0;
+				ID3D11Texture2D* staging = nullptr;
+				if (SUCCEEDED(device->CreateTexture2D(&desc, nullptr, &staging))) {
+					context->CopyResource(staging, gpuTexture_);
+					D3D11_MAPPED_SUBRESOURCE mapped;
+					if (SUCCEEDED(context->Map(staging, 0, D3D11_MAP_READ, 0, &mapped))) {
+						const std::uint32_t rowBytes = std::uint32_t(width_) * 4;
+						std::uint8_t* dst = static_cast<std::uint8_t*>(pixels);
+						const std::uint8_t* src = static_cast<const std::uint8_t*>(mapped.pData);
+						for (std::int32_t y = 0; y < height_; y++) {
+							std::memcpy(dst + std::size_t(y) * rowBytes, src + std::size_t(y) * mapped.RowPitch, rowBytes);
+						}
+						context->Unmap(staging, 0);
+						staging->Release();
+						return;
+					}
+					staging->Release();
+				}
+			}
+		}
+
+		if (!pixels_.empty()) {
 			std::memcpy(pixels, pixels_.data(), pixels_.size());
 		}
 	}

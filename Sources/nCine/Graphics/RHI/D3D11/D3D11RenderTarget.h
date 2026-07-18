@@ -18,8 +18,8 @@ namespace nCine::RhiD3D11
 	/**
 		@brief Renderbuffer stub of the Direct3D 11 backend (aliased as `Rhi::Renderbuffer`)
 
-		Slice 2a carries no depth/stencil storage (the renderer is 2D); the class just records the format and
-		size to satisfy the contract alias. Slice 2b creates an `ID3D11Texture2D` depth/stencil when needed.
+		Carries no depth/stencil storage (the renderer is 2D); the class just records the format and
+		size to satisfy the contract alias. An `ID3D11Texture2D` depth/stencil could be added here when needed.
 	*/
 	class D3D11Renderbuffer
 	{
@@ -66,8 +66,8 @@ namespace nCine::RhiD3D11
 
 		Records the color textures addressed by attachment index and an optional depth/stencil (ignored for
 		2D). @ref BindDraw() records the target on the device so the following clears and draws are associated
-		with its color attachment 0. Slice 2a keeps this at the recording level (the textures have no real
-		`ID3D11RenderTargetView` yet); slice 2b creates the RTVs and routes `OMSetRenderTargets` through here.
+		with its color attachment 0. The RTVs are created lazily from the attached textures and
+		`OMSetRenderTargets` is routed through here.
 	*/
 	class D3D11RenderTarget
 	{
@@ -88,7 +88,7 @@ namespace nCine::RhiD3D11
 		/** @brief Detaches any texture from the color attachment with the given index */
 		void DetachColorTexture(std::uint32_t index);
 
-		/** @brief Records a depth/stencil buffer (no storage in slice 2a) */
+		/** @brief Records a depth/stencil buffer (no storage is created) */
 		void AttachDepthStencil(DepthStencilFormat format, std::int32_t width, std::int32_t height);
 		/** @brief Clears the recorded depth/stencil buffer */
 		void DetachDepthStencil(DepthStencilFormat format);

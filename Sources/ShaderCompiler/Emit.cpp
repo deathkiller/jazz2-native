@@ -224,13 +224,13 @@ namespace ShaderCompiler
 		const char* FsSource100;
 		// Direct3D 11 (HLSL, Shader Model 4/5) stage sources: the HlslEmitter lowering of VsSource/FsSource —
 		// VSMain/PSMain entry points, std140 blocks as cbuffers, separate Texture2D + SamplerState objects and
-		// mul()-based matrix algebra. Consumed by the D3D11 backend (P6 slice 2); GL/ES/software ignore these.
+		// mul()-based matrix algebra. Consumed by the D3D11 backend; GL/ES/software ignore these.
 		// Null when the HLSL lowering was not available (a construct outside the emitter's subset).
 		const char* HlslVsSource;
 		const char* HlslFsSource;
 		// Vulkan (SPIR-V) stage modules: the VulkanGlslEmitter lowering of VsSource/FsSource ("#version 450",
 		// explicit set/binding + location decorations, gathered "_Globals" UBO, gl_VertexIndex) compiled offline
-		// through glslang to SPIR-V words. Consumed by the Vulkan backend (P7 slice 2), which builds pipelines
+		// through glslang to SPIR-V words. Consumed by the Vulkan backend, which builds pipelines
 		// straight from these and the descriptor-set layout from the same reflection; other backends ignore them.
 		// Null/0 when glslang was unavailable at generation time or the shader is runtime-compiled (the Vulkan
 		// backend is then not buildable / falls back). Sizes are the number of 32-bit SPIR-V words.
@@ -307,10 +307,13 @@ namespace ShaderCompiler
 						diag.Line = 1;
 						return false;
 					}
+					// OpenGL-family (GL 3.3 / ES 3.0 / WebGL 2) stage source — compiled only into the OpenGL backend build
+					output += "#if defined(WITH_RHI_GL)\n";
 					output += "\tinline constexpr char " + prefix + (vertexStage ? "_Vs" : "_Fs") + "[] =\n";
 					output += "R\"__SHDR__(";
 					output += source;
 					output += ")__SHDR__\";\n";
+					output += "#endif\n";
 					output += "\n";
 
 					// OpenGL|ES 2.0 (ESSL 100) lowering of the same stage. A decline here should not happen
@@ -326,31 +329,37 @@ namespace ShaderCompiler
 						diag.Line = 1;
 						return false;
 					}
+					// OpenGL|ES 2.0 (ESSL 100) stage source — compiled only into the OpenGL backend build (used under RHI_GL_PROFILE_ES2)
+					output += "#if defined(WITH_RHI_GL)\n";
 					output += "\tinline constexpr char " + prefix + (vertexStage ? "_Vs100" : "_Fs100") + "[] =\n";
 					output += "R\"__SHDR__(";
 					output += es2source;
 					output += ")__SHDR__\";\n";
+					output += "#endif\n";
 					output += "\n";
 
-					// Direct3D 11 (HLSL) lowering of the same stage (P6 slice 1). Unlike the ES2 path there is no
-					// GLSL fallback — a decline leaves the field null (the D3D11 backend, P6 slice 2, will fall back
+					// Direct3D 11 (HLSL) lowering of the same stage. Unlike the ES2 path there is no
+					// GLSL fallback — a decline leaves the field null (the D3D11 backend will fall back
 					// to runtime compilation for such a shader). The terminator guard mirrors the modern/ES2 paths.
 					String hlslSource;
 					Diagnostic hlslDiag;
 					if (HlslEmitter::Transform(source, vertexStage, r, hlslSource, hlslDiag) &&
 						!hlslSource.contains(")__SHDR__\""_s)) {
 						String sym = prefix + (vertexStage ? "_VsHlsl" : "_FsHlsl");
+						// Direct3D 11 (HLSL) stage source — compiled only into the Direct3D 11 backend build
+						output += "#if defined(WITH_RHI_D3D11)\n";
 						output += "\tinline constexpr char " + sym + "[] =\n";
 						output += "R\"__SHDR__(";
 						output += hlslSource;
 						output += ")__SHDR__\";\n";
+						output += "#endif\n";
 						output += "\n";
 						(vertexStage ? hlslVsSym : hlslFsSym) = std::move(sym);
 					}
 
-					// Vulkan (SPIR-V) lowering of the same stage (P7 slice 1): emit the Vulkan GLSL and, when a
+					// Vulkan (SPIR-V) lowering of the same stage: emit the Vulkan GLSL and, when a
 					// glslang compiler was injected, compile it to SPIR-V and embed the words. A decline or a
-					// missing/failed compiler leaves the field null/0 (the Vulkan backend, P7 slice 2, is then
+					// missing/failed compiler leaves the field null/0 (the Vulkan backend is then
 					// not buildable for this shader and falls back to runtime compilation).
 					if (compileSpirv) {
 						String vkSource;
@@ -360,7 +369,10 @@ namespace ShaderCompiler
 							String log;
 							if (compileSpirv(vkSource, vertexStage, words, log) && !words.empty()) {
 								String sym = prefix + (vertexStage ? "_VkVs" : "_VkFs");
+								// Vulkan (SPIR-V) stage module — compiled only into the Vulkan backend build
+								output += "#if defined(WITH_RHI_VULKAN)\n";
 								EmitSpirvArray(output, sym, words);
+								output += "#endif\n";
 								if (vertexStage) { vk.VsSymbol = sym; vk.VsSize = words.size(); }
 								else { vk.FsSymbol = sym; vk.FsSize = words.size(); }
 							}
@@ -425,15 +437,35 @@ namespace ShaderCompiler
 			for (const VariantReflection& v : variants) {
 				const String prefix = (v.Name.empty() ? program : String(program + "_" + v.Name));
 				const StageReflection& r = v.Reflection;
-				output += "\t\t{ \"" + v.Name + "\", \"" + v.Define + "\", " + prefix + "_Vs, " + prefix + "_Fs,\n";
+				output += "\t\t{ \"" + v.Name + "\", \"" + v.Define + "\",\n";
+				// Per-backend stage sources: each group references symbols emitted only under that backend's
+				// WITH_RHI_* guard, so it is gated to match and is null on the other backends (which never read it) —
+				// a backend build therefore compiles in only its own shader sources.
+				output += "#if defined(WITH_RHI_GL)\n";
+				output += "\t\t\t" + prefix + "_Vs, " + prefix + "_Fs,\n";
+				output += "#else\n";
+				output += "\t\t\tnullptr, nullptr,\n";
+				output += "#endif\n";
 				output += "\t\t\t" + Death::format("{}", r.Uniforms.size()) + ", " + (r.Uniforms.empty() ? String("nullptr") : String(prefix + "_Uniforms")) + ", ";
 				output += Death::format("{}", r.Blocks.size()) + ", " + (r.Blocks.empty() ? String("nullptr") : String(prefix + "_Blocks")) + ", ";
 				output += Death::format("{}", r.Textures.size()) + ", " + (r.Textures.empty() ? String("nullptr") : String(prefix + "_Textures")) + ", ";
 				output += Death::format("{}", r.Attributes.size()) + ", " + (r.Attributes.empty() ? String("nullptr") : String(prefix + "_Attributes")) + ",\n";
+				output += "#if defined(WITH_RHI_GL)\n";
 				output += "\t\t\t" + prefix + "_Vs100, " + prefix + "_Fs100,\n";
+				output += "#else\n";
+				output += "\t\t\tnullptr, nullptr,\n";
+				output += "#endif\n";
+				output += "#if defined(WITH_RHI_D3D11)\n";
 				output += "\t\t\t" + hlslSymbols[variantIndex].first + ", " + hlslSymbols[variantIndex].second + ",\n";
-				output += "\t\t\t" + vkSymbols[variantIndex].VsSymbol + ", " + Death::format("{}", vkSymbols[variantIndex].VsSize) + ", " +
+				output += "#else\n";
+				output += "\t\t\tnullptr, nullptr,\n";
+				output += "#endif\n";
+				output += "#if defined(WITH_RHI_VULKAN)\n";
+					output += "\t\t\t" + vkSymbols[variantIndex].VsSymbol + ", " + Death::format("{}", vkSymbols[variantIndex].VsSize) + ", " +
 					vkSymbols[variantIndex].FsSymbol + ", " + Death::format("{}", vkSymbols[variantIndex].FsSize) + " },\n";
+					output += "#else\n";
+					output += "\t\t\tnullptr, 0, nullptr, 0 },\n";
+					output += "#endif\n";
 				variantIndex++;
 			}
 			output += "\t};\n";

@@ -215,15 +215,15 @@ namespace nCine::RhiGL
 #endif
 	}
 
-	void GLDevice::DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
+	void GLDevice::DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
 	{
 		void* indexOffsetPtr = reinterpret_cast<void*>(indexOffset);
 #if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 		// Base vertex is emulated by the caller offsetting the vertex format instead
 		static_cast<void>(baseVertex);
-		glDrawElementsInstanced(static_cast<GLenum>(primitive), GLsizei(numIndices), GL_UNSIGNED_SHORT, indexOffsetPtr, numInstances);
+		glDrawElementsInstanced(static_cast<GLenum>(primitive), GLsizei(numIndices), static_cast<GLenum>(indexFormat), indexOffsetPtr, numInstances);
 #else
-		glDrawElementsInstancedBaseVertex(static_cast<GLenum>(primitive), GLsizei(numIndices), GL_UNSIGNED_SHORT, indexOffsetPtr, numInstances, baseVertex);
+		glDrawElementsInstancedBaseVertex(static_cast<GLenum>(primitive), GLsizei(numIndices), static_cast<GLenum>(indexFormat), indexOffsetPtr, numInstances, baseVertex);
 #endif
 	}
 

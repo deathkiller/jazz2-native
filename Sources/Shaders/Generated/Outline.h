@@ -5,6 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
+#if defined(WITH_RHI_GL)
 	inline constexpr char Outline_Vs[] =
 R"__SHDR__(#line 1
 
@@ -35,7 +36,9 @@ void main()
 	vColor = color;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char Outline_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -64,7 +67,9 @@ void main()
 	vColor = color;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char Outline_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 cbuffer _Globals : register(b0)
@@ -114,7 +119,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t Outline_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x0000005fu, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -206,6 +213,8 @@ VsOutput VSMain(VsInput _input)
 		0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char Outline_Fs[] =
 R"__SHDR__(#line 1
 
@@ -255,7 +264,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char Outline_Fs100[] =
 R"__SHDR__(#extension GL_OES_standard_derivatives : enable
 #line 1
@@ -305,7 +316,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char Outline_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 Texture2D uTexture : register(t0);
@@ -357,7 +370,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t Outline_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000122u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -551,6 +566,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x0000001eu, 0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform Outline_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -573,15 +589,33 @@ float4 PSMain(PsInput _input) : SV_Target
 	};
 
 	inline constexpr ShaderCompiler::ProgramVariant Outline_Variants[] = {
-		{ "", "", Outline_Vs, Outline_Fs,
+		{ "", "",
+#if defined(WITH_RHI_GL)
+			Outline_Vs, Outline_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, Outline_Uniforms, 1, Outline_Blocks, 1, Outline_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL)
 			Outline_Vs100, Outline_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			Outline_VsHlsl, Outline_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			Outline_VkVs, 698, Outline_VkFs, 1514 },
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
 	};
 
 	inline constexpr ShaderCompiler::Program Outline = { "Outline", 0, 1, Outline_Variants };
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedOutline_Vs[] =
 R"__SHDR__(#line 1
 
@@ -621,7 +655,9 @@ void main()
 	vColor = i.color;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedOutline_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -660,7 +696,9 @@ void main()
 	vColor = i.color;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char BatchedOutline_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 #define BATCH_SIZE 585
@@ -717,7 +755,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t BatchedOutline_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000078u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -827,6 +867,8 @@ VsOutput VSMain(VsInput _input)
 		0x00000077u, 0x00000076u, 0x0003003eu, 0x00000072u, 0x00000077u, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedOutline_Fs[] =
 R"__SHDR__(#line 1
 
@@ -876,7 +918,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedOutline_Fs100[] =
 R"__SHDR__(#extension GL_OES_standard_derivatives : enable
 #line 1
@@ -926,7 +970,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char BatchedOutline_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 Texture2D uTexture : register(t0);
@@ -978,7 +1024,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t BatchedOutline_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000122u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -1172,6 +1220,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x0000001eu, 0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform BatchedOutline_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -1190,11 +1239,28 @@ float4 PSMain(PsInput _input) : SV_Target
 	};
 
 	inline constexpr ShaderCompiler::ProgramVariant BatchedOutline_Variants[] = {
-		{ "", "", BatchedOutline_Vs, BatchedOutline_Fs,
+		{ "", "",
+#if defined(WITH_RHI_GL)
+			BatchedOutline_Vs, BatchedOutline_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, BatchedOutline_Uniforms, 1, BatchedOutline_Blocks, 1, BatchedOutline_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL)
 			BatchedOutline_Vs100, BatchedOutline_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			BatchedOutline_VsHlsl, BatchedOutline_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			BatchedOutline_VkVs, 847, BatchedOutline_VkFs, 1514 },
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
 	};
 
 	inline constexpr ShaderCompiler::Program BatchedOutline = { "BatchedOutline", 0, 1, BatchedOutline_Variants };

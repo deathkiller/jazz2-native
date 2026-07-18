@@ -21,14 +21,12 @@ namespace nCine::RhiVulkan
 		@brief Pipeline-state and draw-call facade of the Vulkan backend (aliased as `Rhi::Device`)
 
 		Exposes the OpenGL device's surface (blending, depth, cull, scissor, viewport, clear and the draw
-		calls) so the backend-neutral render pipeline drives it unchanged. For slice 2a the pipeline-state
-		setters record their values and the draw calls are no-ops (no SPIR-V pipelines / descriptor sets are
-		built yet — that is slice 2b).
+		calls) so the backend-neutral render pipeline drives it unchanged.
 
 		The device also owns the real `VkInstance`, `VkDevice`, graphics/present `VkQueue` and the
 		`VkSwapchainKHR` created from the SDL window (via @ref CreateSwapchain(), called by the SDL window
-		backend). @ref PresentFrame() acquires a swap-chain image, clears it to the slice 2a marker color with
-		`vkCmdClearColorImage` and presents it — the slice 2a milestone.
+		backend). @ref PresentFrame() acquires a swap-chain image, blits the rendered scene into it and
+		presents it (the buffer-swap equivalent).
 	*/
 	class VulkanDevice
 	{
@@ -96,7 +94,10 @@ namespace nCine::RhiVulkan
 		static inline void DrawElements(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t baseVertex) {
 			DrawElements(primitive, numIndices, IndexFormat::UInt16, indexOffset, baseVertex);
 		}
-		static void DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex);
+		static void DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex);
+		static inline void DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex) {
+			DrawElementsInstanced(primitive, numIndices, IndexFormat::UInt16, indexOffset, numInstances, baseVertex);
+		}
 
 		static FenceHandle InsertFence();
 		static void DeleteFence(FenceHandle& fence);
@@ -152,7 +153,7 @@ namespace nCine::RhiVulkan
 		static void DestroySwapchain();
 		/** @brief Recreates the swap chain at the new drawable size (waits for the device to go idle first) */
 		static void ResizeSwapchain(std::int32_t width, std::int32_t height);
-		/** @brief Acquires a swap-chain image, clears it to the slice 2a marker color and presents it (the buffer-swap equivalent) */
+		/** @brief Acquires a swap-chain image, blits the rendered scene into it and presents it (the buffer-swap equivalent) */
 		static void PresentFrame();
 
 	private:

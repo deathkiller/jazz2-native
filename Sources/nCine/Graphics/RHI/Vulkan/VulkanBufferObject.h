@@ -17,7 +17,7 @@ namespace nCine::RhiVulkan
 
 		A vertex, index or uniform buffer keeps a resizable host byte store the pipeline maps and writes into.
 		@ref MapBufferRange() hands back a pointer into the store and @ref BindBufferRange() forwards a
-		sub-range to the device. Slice 2b additionally backs the Vertex/Index targets with a real host-visible
+		sub-range to the device. It additionally backs the Vertex/Index targets with a real host-visible
 		`VkBuffer` (@ref GetVkBuffer()), refreshed from the host store when dirty — the device binds it with
 		`vkCmdBindVertexBuffers`/`vkCmdBindIndexBuffer`. Uniform-target buffers stay host-only: their bound
 		ranges are copied into the device's per-frame device-aligned uniform ring at draw time instead.
@@ -64,7 +64,7 @@ namespace nCine::RhiVulkan
 		void BufferData(std::size_t size, const void* data, BufferUsage usage);
 		/** @brief Updates a subset of the data store starting at the given byte offset */
 		void BufferSubData(std::size_t offset, std::size_t size, const void* data);
-		/** @brief (Re)creates the data store like @ref BufferData(); slice 2a has no immutable storage, so the flags are ignored */
+		/** @brief (Re)creates the data store like @ref BufferData(); there is no immutable storage, so the flags are ignored */
 		void BufferStorage(std::size_t size, const void* data, MapFlags flags);
 
 		/** @brief Binds the whole buffer to a uniform binding point index */
