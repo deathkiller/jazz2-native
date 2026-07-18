@@ -73,13 +73,24 @@ void fragment() {
 	vec4 texColor = texture(TEXTURE, texturePos);
 
 #ifdef DITHER
+#ifndef SOFTWARE_RENDERER
 	texturePos += hash2D(UV * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
 	texColor = mix(texColor, texture(TEXTURE, texturePos), 0.333);
 #endif
+#endif
 
+#ifndef SOFTWARE_RENDERER
 	float horizonOpacity = 1.0 - clamp(pow(distance, 1.4) - 0.3, 0.0, 1.0);
+#else
+	// Software-renderer variant: the tunnel keeps its atan()-based warp geometry and the horizon
+	// tint, but the per-pixel pow() curve, the dithering second texture sample and the voronoi
+	// "star field" (dozens of sin() per pixel when uHorizonColor.w > 0) are far too slow on the
+	// CPU, so the pow() is approximated polynomially and dither/stars are dropped entirely.
+	float horizonOpacity = 1.0 - clamp(distance * distance - 0.3, 0.0, 1.0);	// Approximates pow(distance, 1.4)
+#endif
 
 	vec4 horizonColorWithStars = vec4(uHorizonColor.xyz, 1.0);
+#ifndef SOFTWARE_RENDERER
 	if (uHorizonColor.w > 0.0) {
 		vec2 samplePosition = (UV * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00012;
 		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
@@ -87,6 +98,7 @@ void fragment() {
 		samplePosition = (UV * uViewSize / uViewSize.xx) + uCameraPos.xy * 0.00018 + 0.5;
 		horizonColorWithStars += vec4(addStarField(samplePosition * 7.0, 0.00008));
 	}
+#endif
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.a = 1.0;

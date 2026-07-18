@@ -16,10 +16,9 @@
 #	include "Backends/Qt5InputManager.h"
 #endif
 
-#if defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN)
-// For resizing the swap chain when the window size changes (no GL backbuffer to follow the window)
-#	include "Graphics/RHI/Rhi.h"
-#endif
+// For resizing the swap chain when the window size changes (the call is uniform across the backends;
+// it is a no-op on the OpenGL and software backends, which have no backend-owned swap chain)
+#include "Graphics/RHI/Rhi.h"
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 #	include <emscripten/emscripten.h>
@@ -527,38 +526,15 @@ namespace nCine
 								gfxDevice_->height_ = event.window.data2;
 								SDL_Window* windowHandle = SDL_GetWindowFromID(event.window.windowID);
 								gfxDevice_->isFullscreen_ = (SDL_GetWindowFlags(windowHandle) & SDL_WINDOW_FULLSCREEN) != 0;
-#if defined(WITH_RHI_SOFTWARE)
-								// No GL backbuffer; the drawable size is the SDL renderer output size (the software
-								// present resizes its CPU target to match on the next frame)
-								if (SDL_Renderer* softwareRenderer = SDL_GetRenderer(windowHandle)) {
-									SDL_GetRendererOutputSize(softwareRenderer, &gfxDevice_->drawableWidth_, &gfxDevice_->drawableHeight_);
-								} else {
-									gfxDevice_->drawableWidth_ = event.window.data1;
-									gfxDevice_->drawableHeight_ = event.window.data2;
-								}
-#elif defined(WITH_RHI_D3D11)
-								// No GL backbuffer; get the pixel size and resize the DXGI swap chain to match
-								SDL_GL_GetDrawableSize(windowHandle, &gfxDevice_->drawableWidth_, &gfxDevice_->drawableHeight_);
-								if (gfxDevice_->drawableWidth_ <= 0 || gfxDevice_->drawableHeight_ <= 0) {
-									gfxDevice_->drawableWidth_ = event.window.data1;
-									gfxDevice_->drawableHeight_ = event.window.data2;
-								}
+								// Query the pixel size the way the active backend measures it, then resize the
+								// backend swap chain to match (no-op on OpenGL / software). The explicit resize
+								// is deterministic on Vulkan: some drivers never report OUT_OF_DATE for a
+								// window/swap-chain size mismatch, so relying on the present path alone would
+								// leave the swap chain stuck at the old size; ResizeSwapchain re-queries the
+								// surface caps for the authoritative extent (this value is the hint/fallback).
+								SdlGfxDevice::queryDrawableSize(windowHandle, event.window.data1, event.window.data2,
+									gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
 								Rhi::Device::ResizeSwapchain(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
-#elif defined(WITH_RHI_VULKAN)
-								// No GL backbuffer; get the pixel size and recreate the Vulkan swap chain to match.
-								// Deterministic resize: on some drivers present never reports OUT_OF_DATE for a
-								// window/swap-chain size mismatch, so relying on the present path alone would leave the
-								// swap chain stuck at the old size (content scaled into a corner). ResizeSwapchain
-								// re-queries the surface caps for the authoritative extent (this value is the hint/fallback).
-								SDL_GL_GetDrawableSize(windowHandle, &gfxDevice_->drawableWidth_, &gfxDevice_->drawableHeight_);
-								if (gfxDevice_->drawableWidth_ <= 0 || gfxDevice_->drawableHeight_ <= 0) {
-									gfxDevice_->drawableWidth_ = event.window.data1;
-									gfxDevice_->drawableHeight_ = event.window.data2;
-								}
-								Rhi::Device::ResizeSwapchain(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
-#else
-								SDL_GL_GetDrawableSize(windowHandle, &gfxDevice_->drawableWidth_, &gfxDevice_->drawableHeight_);
-#endif
 								ResizeScreenViewport(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
 								break;
 						}

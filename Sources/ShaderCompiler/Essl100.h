@@ -25,12 +25,12 @@
 	The "#version" line is NOT emitted here (the engine injects it) — same as the modern path;
 	ES2 wants "#version 100".
 
-	SLICE-2 DEFERRAL (out of scope for P5 slice 1): ES2 has neither uniform buffer objects nor
+	DEFERRED CONSTRUCTS (out of scope for this emitter): ES2 has neither uniform buffer objects nor
 	gl_VertexID. A source that uses a "layout(std140)" block and/or gl_VertexID (every batched twin
 	AND every sprite-template primary, since the template uses gl_VertexID for the corner formula
 	and an InstanceBlock UBO) is NOT transformed — Transform() returns false with a clear diagnostic.
 	The real transforms those need (UBO -> uniform array, gl_VertexID -> a supplied corner attribute)
-	are the P5 slice-2 hard problem and are intentionally not attempted here.
+	remain a hard problem and are intentionally not attempted here.
 */
 
 #include "ShaderParser.h"	// Diagnostic, SourceLine, ShaderParser::StripComments
@@ -45,8 +45,8 @@ namespace ShaderCompiler
 			Transforms @p modernSource (as produced by ShaderParser::BuildStageSource) into ESSL 100,
 			writing the result to @p out. @p vertexStage selects the vertex-vs-fragment lowering.
 			Returns false and fills @p diag (with the offending line) when the source uses a feature
-			ES2 cannot express — a "layout(std140)" uniform block or gl_VertexID — which is deferred
-			to P5 slice 2 (see the file comment).
+			ES2 cannot express — a "layout(std140)" uniform block or gl_VertexID — which this
+			emitter does not attempt (see the file comment).
 		*/
 		static bool Transform(StringView modernSource, bool vertexStage, String& out, Diagnostic& diag);
 	};

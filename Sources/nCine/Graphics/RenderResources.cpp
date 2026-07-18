@@ -224,7 +224,7 @@ namespace nCine
 		// synthesizing it from gl_VertexID. The four corners are in the order of the single-quad 4-vertex
 		// TRIANGLE_STRIP draw (matching the old "vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2))").
 		if (quadCornerVbo_ == nullptr) {
-			static const GLfloat quadCorners[] = { 1.0f, 0.0f,  1.0f, 1.0f,  0.0f, 0.0f,  0.0f, 1.0f };
+			static const float quadCorners[] = { 1.0f, 0.0f,  1.0f, 1.0f,  0.0f, 0.0f,  0.0f, 1.0f };
 			quadCornerVbo_ = std::make_unique<Rhi::Buffer>(BufferTarget::Vertex);
 			quadCornerVbo_->BufferData(sizeof(quadCorners), quadCorners, BufferUsage::StaticDraw);
 			quadCornerVbo_->SetObjectLabel("QuadCornerVBO");
@@ -340,11 +340,11 @@ namespace nCine
 				}
 				vertexStrings[stringsCount++] = vsSource;
 
-				bool vertexCompiled = shaderToLoad.shaderProgram->AttachShaderFromStrings(GL_VERTEX_SHADER, arrayView(vertexStrings, stringsCount));
+				bool vertexCompiled = shaderToLoad.shaderProgram->AttachShaderFromStrings(ShaderStage::Vertex, arrayView(vertexStrings, stringsCount));
 				// The BATCH_SIZE define is baked into both stages - a batched InstancesBlock is declared
 				// in the fragment stage too (shared globals), and mismatched block sizes would fail to link
 				vertexStrings[stringsCount - 1] = fsSource;
-				bool fragmentCompiled = shaderToLoad.shaderProgram->AttachShaderFromStrings(GL_FRAGMENT_SHADER, arrayView(vertexStrings, stringsCount));
+				bool fragmentCompiled = shaderToLoad.shaderProgram->AttachShaderFromStrings(ShaderStage::Fragment, arrayView(vertexStrings, stringsCount));
 				if (vertexCompiled && fragmentCompiled) {
 					shaderToLoad.shaderProgram->SetObjectLabel(shaderToLoad.shaderName);
 					// Reset() on a retry clears the reflection, so it is set (again) right before linking

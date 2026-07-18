@@ -2,6 +2,7 @@
 
 #include "SwShaderTypes.h"
 #include "SwVertexFormat.h"
+#include "../RhiTypes.h"
 
 #include <cstdint>
 #include <string>
@@ -35,6 +36,8 @@ namespace nCine::RhiSoftware
 		Unknown,				/**< No matching C++ effect — draws are skipped with a log message */
 		DefaultSprite,			/**< `texture(uTexture, vTexCoords) * vColor` over a single instance */
 		DefaultBatchedSprites,	/**< The same effect over an array of batched instances */
+		DefaultSpriteNoTexture,	/**< Solid-colour sprite (`vColor`, no texture) over a single instance */
+		DefaultBatchedSpritesNoTexture,	/**< The solid-colour sprite over an array of batched instances */
 		TexturedBackground,		/**< The animated, per-pixel-warped menu/level background (planar tunnel) */
 		TexturedBackgroundCircle,	/**< The circular ("tube") variant of the textured background */
 		PaletteRemap,			/**< An R8/RG8 index sprite recolored through the shared palette texture */
@@ -129,10 +132,10 @@ namespace nCine::RhiSoftware
 			return uniformBlocksSize_;
 		}
 
-		bool AttachShaderFromFile(std::uint32_t type, StringView filename);
-		bool AttachShaderFromString(std::uint32_t type, StringView string);
-		bool AttachShaderFromStrings(std::uint32_t type, ArrayView<const StringView> strings);
-		bool AttachShaderFromStringsAndFile(std::uint32_t type, ArrayView<const StringView> strings, StringView filename);
+		bool AttachShaderFromFile(ShaderStage stage, StringView filename);
+		bool AttachShaderFromString(ShaderStage stage, StringView string);
+		bool AttachShaderFromStrings(ShaderStage stage, ArrayView<const StringView> strings);
+		bool AttachShaderFromStringsAndFile(ShaderStage stage, ArrayView<const StringView> strings, StringView filename);
 
 		/** @brief Sets the offline reflection consumed by @ref Link() to import uniforms/blocks/attributes */
 		inline void SetReflection(const ShaderCompiler::ProgramVariant* reflection) {

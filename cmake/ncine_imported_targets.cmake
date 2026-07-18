@@ -35,7 +35,7 @@ set(EXTERNAL_INCLUDES_DIR "${NCINE_LIBS}/Includes/" CACHE PATH "Set the path to 
 # Vulkan backend: fetch the header-only Khronos Vulkan-Headers (no Vulkan SDK required — the loader is
 # resolved dynamically at runtime against vulkan-1.dll, which ships with GPU drivers, so no import library
 # is linked). Mirrors the ncine_libraries download above.
-if(NCINE_WITH_RHI_VULKAN)
+if(NCINE_PREFERRED_RHI STREQUAL "Vulkan")
 	if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.14.0")
 		include(FetchContent)
 		message(STATUS "Downloading Khronos Vulkan-Headers for the Vulkan backend...")
@@ -330,7 +330,7 @@ elseif(WIN32)
 		set(ZLIB_FOUND 1)
 	endif()
 
-	if((WINDOWS_PHONE OR WINDOWS_STORE) AND NCINE_WITH_RHI_D3D11)
+	if((WINDOWS_PHONE OR WINDOWS_STORE) AND NCINE_PREFERRED_RHI STREQUAL "D3D11")
 		# Direct3D 11 backend on UWP renders through a DXGI CoreWindow swap chain (d3d11/dxgi/d3dcompiler are
 		# linked in ncine_extra_sources.cmake), so neither ANGLE nor OpenGL|ES / EGL is imported here. This
 		# leaves ANGLE_FOUND / OPENGLES2_FOUND (and OPENGL_FOUND) unset, so no EGL/GL libraries are required.

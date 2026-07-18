@@ -5,6 +5,7 @@
 
 namespace nCine::ShadersGen
 {
+#if defined(WITH_RHI_GL)
 	inline constexpr char DefaultMeshSpriteNoTexture_Vs[] =
 R"__SHDR__(#line 1
 
@@ -30,7 +31,9 @@ void main()
 	vColor = color;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char DefaultMeshSpriteNoTexture_Vs100[] =
 R"__SHDR__(#line 1
 
@@ -53,7 +56,9 @@ void main()
 	vColor = color;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char DefaultMeshSpriteNoTexture_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 cbuffer _Globals : register(b0)
@@ -96,7 +101,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t DefaultMeshSpriteNoTexture_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x0000003fu, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -164,6 +171,8 @@ VsOutput VSMain(VsInput _input)
 		0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char DefaultMeshSpriteNoTexture_Fs[] =
 R"__SHDR__(#line 1
 
@@ -180,7 +189,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char DefaultMeshSpriteNoTexture_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -196,7 +207,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char DefaultMeshSpriteNoTexture_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 static float4 vColor;
@@ -215,7 +228,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t DefaultMeshSpriteNoTexture_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x0000000du, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -231,6 +246,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x0003003eu, 0x00000009u, 0x0000000cu, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform DefaultMeshSpriteNoTexture_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -251,11 +267,28 @@ float4 PSMain(PsInput _input) : SV_Target
 	};
 
 	inline constexpr ShaderCompiler::ProgramVariant DefaultMeshSpriteNoTexture_Variants[] = {
-		{ "", "", DefaultMeshSpriteNoTexture_Vs, DefaultMeshSpriteNoTexture_Fs,
+		{ "", "",
+#if defined(WITH_RHI_GL)
+			DefaultMeshSpriteNoTexture_Vs, DefaultMeshSpriteNoTexture_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, DefaultMeshSpriteNoTexture_Uniforms, 1, DefaultMeshSpriteNoTexture_Blocks, 0, nullptr, 1, DefaultMeshSpriteNoTexture_Attributes,
+#if defined(WITH_RHI_GL)
 			DefaultMeshSpriteNoTexture_Vs100, DefaultMeshSpriteNoTexture_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			DefaultMeshSpriteNoTexture_VsHlsl, DefaultMeshSpriteNoTexture_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			DefaultMeshSpriteNoTexture_VkVs, 506, DefaultMeshSpriteNoTexture_VkFs, 93 },
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
 	};
 
 	inline constexpr ShaderCompiler::Program DefaultMeshSpriteNoTexture = { "DefaultMeshSpriteNoTexture", 0, 1, DefaultMeshSpriteNoTexture_Variants };

@@ -123,7 +123,12 @@ namespace ShaderCompiler
 				"pow", "exp2", "log2", "sqrt", "inversesqrt", "abs", "sign",
 				"floor", "ceil", "round", "fract", "mod", "min", "max", "clamp",
 				"mix", "step", "smoothstep", "dot", "cross", "length", "distance",
-				"normalize", "reflect"
+				"normalize", "reflect",
+				// Screen-space derivatives: the CPU per-pixel path has no 2x2 quad, so the runtime approximates
+				// them with a small constant (SwShaderRuntime.h). They are used only to widen an anti-aliasing
+				// edge (aastep/fwidth), so the approximation is visually acceptable and lets derivative-based
+				// effects (e.g. the frozen-enemy mask) transpile instead of being declined.
+				"dFdx", "dFdy", "fwidth"
 			};
 			for (const char* n : kNames) {
 				if (name == n) {
@@ -135,9 +140,32 @@ namespace ShaderCompiler
 
 		bool IsBannedCall(StringView name)
 		{
-			return (name == "dFdx" || name == "dFdy" || name == "fwidth" ||
-				name == "texelFetch" || name == "textureSize" || name == "textureLod" ||
+			// dFdx/dFdy/fwidth are intentionally NOT banned: they are handled as approximated builtins so
+			// derivative-based anti-aliasing (e.g. the frozen-enemy mask) can run in software.
+			return (name == "texelFetch" || name == "textureSize" || name == "textureLod" ||
 				name == "textureProj" || name == "textureGrad" || name == "textureOffset");
+		}
+
+		// The software runtime (SwShaderRuntime.h) exposes multi-component read swizzles as a fixed set of
+		// const methods; a swizzle outside it (e.g. .yy, .xz, .www, .xxzz) would call a method that does not
+		// exist and fail to compile. Single components are always real fields. Returns false for a
+		// multi-component swizzle the runtime does not provide, so the caller declines the shader (matching the
+		// transpiler's "decline cleanly rather than mistranslate" contract) instead of emitting broken C++.
+		// This list must mirror the swizzle methods in SwShaderRuntime.h.
+		bool IsRuntimeSwizzle(StringView s)
+		{
+			if (s.size() <= 1) {
+				return true;
+			}
+			static const char* const kProvided[] = {
+				"xy", "rg", "xx", "zw", "ba", "xyz", "rgb", "yzw", "gba", "xyzw", "rgba"
+			};
+			for (const char* p : kProvided) {
+				if (s == p) {
+					return true;
+				}
+			}
+			return false;
 		}
 
 		// Precedence of a binary/assignment operator, mirroring ConstFold's model (assignment = 1,
@@ -1004,6 +1032,7 @@ namespace ShaderCompiler
 				for (std::size_t i = 0; i < field.size(); i++) {
 					if (!"xyzwrgbastpq"_s.contains(field[i])) { ok = false; reason = "unsupported swizzle in constant varying"_s; return base; }
 				}
+				if (!IsRuntimeSwizzle(field)) { ok = false; reason = "constant-varying swizzle '."_s + field + "' not provided by the software runtime"_s; return base; }
 				if (field.size() == 1) return base + "."_s + field;
 				if (field.size() >= 2 && field.size() <= 4) return base + "."_s + field + "()"_s;
 				ok = false; reason = "unsupported swizzle length in constant varying"_s;
@@ -1339,6 +1368,10 @@ namespace ShaderCompiler
 						Fail("member '."_s + field + "' is not a supported swizzle"_s);
 						return base;
 					}
+				}
+				if (!IsRuntimeSwizzle(field)) {
+					Fail("swizzle '."_s + field + "' is not provided by the software runtime"_s);
+					return base;
 				}
 				if (field.size() == 1) return base + "."_s + field;
 				if (field.size() >= 2 && field.size() <= 4) return base + "."_s + field + "()"_s;

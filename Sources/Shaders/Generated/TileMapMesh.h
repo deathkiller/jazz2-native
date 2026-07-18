@@ -5,6 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
+#if defined(WITH_RHI_GL)
 	inline constexpr char TileMapMesh_Vs[] =
 R"__SHDR__(#line 1
 
@@ -36,7 +37,9 @@ void main()
 	vColor = aColor * color;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char TileMapMesh_Vs100[] =
 R"__SHDR__(#line 1
 
@@ -65,7 +68,9 @@ void main()
 	vColor = aColor * color;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char TileMapMesh_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 cbuffer _Globals : register(b0)
@@ -119,7 +124,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t TileMapMesh_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x0000003cu, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -190,6 +197,8 @@ VsOutput VSMain(VsInput _input)
 		0x0000003bu, 0x00000037u, 0x0000003au, 0x0003003eu, 0x00000034u, 0x0000003bu, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char TileMapMesh_Fs[] =
 R"__SHDR__(#line 1
 
@@ -209,7 +218,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char TileMapMesh_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -228,7 +239,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char TileMapMesh_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 Texture2D uTexture : register(t0);
@@ -253,7 +266,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t TileMapMesh_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000018u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -278,6 +293,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x00000016u, 0x0003003eu, 0x00000009u, 0x00000017u, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform TileMapMesh_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -306,11 +322,28 @@ float4 PSMain(PsInput _input) : SV_Target
 	};
 
 	inline constexpr ShaderCompiler::ProgramVariant TileMapMesh_Variants[] = {
-		{ "", "", TileMapMesh_Vs, TileMapMesh_Fs,
+		{ "", "",
+#if defined(WITH_RHI_GL)
+			TileMapMesh_Vs, TileMapMesh_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, TileMapMesh_Uniforms, 1, TileMapMesh_Blocks, 1, TileMapMesh_Textures, 3, TileMapMesh_Attributes,
+#if defined(WITH_RHI_GL)
 			TileMapMesh_Vs100, TileMapMesh_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			TileMapMesh_VsHlsl, TileMapMesh_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			TileMapMesh_VkVs, 536, TileMapMesh_VkFs, 166 },
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
 	};
 
 	inline constexpr ShaderCompiler::Program TileMapMesh = { "TileMapMesh", 0, 1, TileMapMesh_Variants };

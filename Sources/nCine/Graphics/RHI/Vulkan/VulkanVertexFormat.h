@@ -16,10 +16,9 @@ namespace nCine::RhiVulkan
 		@brief Vertex layout description of the Vulkan backend (aliased as `Rhi::VertexFormat`)
 
 		Records the set of vertex attributes (component count, type, stride, offset and source buffer) the
-		way the OpenGL backend does, so the pipeline's attribute setup code compiles unchanged. Slice 2a does
-		not issue real draws, so the recorded layout is informational; slice 2b builds the graphics pipeline's
-		`VkVertexInputAttributeDescription`/`VkVertexInputBindingDescription` from it (fed by the offline
-		shader reflection).
+		way the OpenGL backend does, so the pipeline's attribute setup code compiles unchanged. The backend
+		builds the graphics pipeline's `VkVertexInputAttributeDescription`/`VkVertexInputBindingDescription`
+		from the recorded layout (fed by the offline shader reflection).
 	*/
 	class VulkanVertexFormat
 	{
@@ -135,7 +134,7 @@ namespace nCine::RhiVulkan
 		inline void SetIbo(const VulkanBufferObject* ibo) {
 			ibo_ = ibo;
 		}
-		/** @brief Applies the vertex format (no-op for slice 2a) */
+		/** @brief Applies the vertex format (no-op; the recorded layout is consumed at pipeline creation) */
 		void Define() {}
 		/** @brief Disables all attributes and clears the index buffer */
 		void Reset() {

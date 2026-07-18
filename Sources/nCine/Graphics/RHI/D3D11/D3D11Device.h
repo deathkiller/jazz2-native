@@ -33,13 +33,12 @@ namespace nCine::RhiD3D11
 		@brief Pipeline-state and draw-call facade of the Direct3D 11 backend (aliased as `Rhi::Device`)
 
 		Exposes the OpenGL device's surface (blending, depth, cull, scissor, viewport, clear and the draw
-		calls) so the backend-neutral render pipeline drives it unchanged. For slice 2a the pipeline state
-		setters record their values, @ref Clear() / @ref SetViewport() drive the real D3D11 immediate context,
-		and the draw calls are no-ops (no HLSL programs / input layouts are bound yet — that is slice 2b).
+		calls) so the backend-neutral render pipeline drives it unchanged.
 
 		The device also owns the real `ID3D11Device`, immediate `ID3D11DeviceContext` and the DXGI
 		`IDXGISwapChain` created from the SDL window (via @ref CreateSwapchain(), called by the SDL window
-		backend). @ref PresentFrame() clears the back-buffer and presents it — the slice 2a milestone.
+		backend). @ref PresentFrame() blits the rendered scene into the back-buffer and presents it (the
+		buffer-swap equivalent).
 	*/
 	class D3D11Device
 	{
@@ -107,7 +106,10 @@ namespace nCine::RhiD3D11
 		static inline void DrawElements(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t baseVertex) {
 			DrawElements(primitive, numIndices, IndexFormat::UInt16, indexOffset, baseVertex);
 		}
-		static void DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex);
+		static void DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex);
+		static inline void DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex) {
+			DrawElementsInstanced(primitive, numIndices, IndexFormat::UInt16, indexOffset, numInstances, baseVertex);
+		}
 
 		static FenceHandle InsertFence();
 		static void DeleteFence(FenceHandle& fence);
@@ -133,6 +135,8 @@ namespace nCine::RhiD3D11
 		static void UnbindRenderTarget(const D3D11RenderTarget* renderTarget);
 		/** @brief Records the current draw render target (its color attachment 0 receives the pixels) */
 		static void SetRenderTarget(D3D11RenderTarget* renderTarget);
+		/** @brief Clears a destroyed program from the device's current-program and shadow-state tracking (called from ~D3D11ShaderProgram) */
+		static void OnProgramDestroyed(const D3D11ShaderProgram* program);
 
 		// -- Direct3D 11 device / swap-chain lifecycle (called by the window backend) --
 
@@ -158,10 +162,10 @@ namespace nCine::RhiD3D11
 		static void DestroySwapchain();
 		/** @brief Resizes the swap-chain back-buffer (releases and recreates the back-buffer RTV around `ResizeBuffers`) */
 		static void ResizeSwapchain(std::int32_t width, std::int32_t height);
-		/** @brief Clears the back-buffer to the slice 2a marker color and presents it (the buffer-swap equivalent) */
+		/** @brief Blits the rendered scene into the back-buffer and presents it (the buffer-swap equivalent) */
 		static void PresentFrame();
 
-		/** @brief Returns the D3D11 device (for slice 2b resource creation), or `nullptr` before creation */
+		/** @brief Returns the D3D11 device (for resource creation), or `nullptr` before creation */
 		static ID3D11Device* GetD3DDevice();
 		/** @brief Returns the D3D11 immediate context, or `nullptr` before creation */
 		static ID3D11DeviceContext* GetD3DContext();
@@ -242,6 +246,34 @@ namespace nCine::RhiD3D11
 		};
 		static std::vector<RasterStateEntry> rasterStates_;
 		static ID3D11DepthStencilState* depthDisabledState_;
+
+		// Last-applied context state (redundant-bind elimination). DrawCommon re-applies everything each draw
+		// and D3D11 does not filter redundant calls itself, so these shadows skip the API call when the value
+		// is unchanged. They are invalidated whenever something else touches the context (the present blit,
+		// resize, device creation) and scrubbed when an object they point to dies (texture SRVs, render-target
+		// RTVs, program shaders), so a recycled pointer can never be mistaken for the one still bound.
+		struct CachedRect
+		{
+			std::int32_t L = 0, T = 0, R = 0, B = 0;
+		};
+		static ID3D11BlendState* lastBlendState_;
+		static ID3D11RasterizerState* lastRasterState_;
+		static bool depthStateApplied_;
+		static ID3D11VertexShader* lastVs_;
+		static ID3D11PixelShader* lastPs_;
+		static std::uint32_t lastTopology_;			// D3D11_PRIMITIVE_TOPOLOGY value; 0 (UNDEFINED) = unknown
+		static ID3D11RenderTargetView* lastRtv_;
+		static bool lastRtvValid_;
+		static Recti lastViewport_;
+		static bool lastViewportValid_;
+		static CachedRect lastScissorRect_;
+		static bool lastScissorValid_;
+		static ID3D11ShaderResourceView* lastSrvs_[2][MaxTextureUnits];		// [0] = PS stage, [1] = VS stage
+		static ID3D11SamplerState* lastSamplers_[2][MaxTextureUnits];
+		static bool srvShadowValid_;
+
+		/** @brief Forgets all last-applied context state so the next draw re-issues every binding */
+		static void InvalidateCachedState();
 
 		/** @brief (Re)creates @ref backbufferRtv_ from the current swap-chain back-buffer and binds it */
 		static bool CreateBackbufferRtv();

@@ -1,10 +1,7 @@
 #if defined(WITH_RHI_SOFTWARE)
 
 #include "SwTileRenderer.h"
-
-#if defined(DEATH_ENABLE_NEON)
-#	include <arm_neon.h>
-#endif
+#include "SwScanlineOps.h"
 
 #include <algorithm>
 #include <cmath>
@@ -176,100 +173,9 @@ namespace nCine::RhiSoftware
 			out[3] = static_cast<std::uint8_t>((c00[3] * w00 + c10[3] * w10 + c01[3] * w01 + c11[3] * w11) >> 16);
 		}
 
-		// =====================================================================
-		// NEON-optimized scanline blending (SrcAlpha/OneMinusSrcAlpha), scalar fallback otherwise
-		// =====================================================================
-		static void BlendScanlineNeon(std::uint8_t* DEATH_RESTRICT dst,
-		                              const std::uint8_t* DEATH_RESTRICT src,
-		                              std::int32_t count)
-		{
-#if defined(DEATH_ENABLE_NEON)
-			static const std::uint8_t alphaIdxData[8] = { 3, 3, 3, 3, 7, 7, 7, 7 };
-			const uint8x8_t alphaIdx = vld1_u8(alphaIdxData);
-			const uint8x8_t c255x8 = vdup_n_u8(255);
-
-			std::int32_t i = 0;
-			for (; i + 4 <= count; i += 4, dst += 16, src += 16) {
-				// Prefetch next texture data
-				__builtin_prefetch(src + 64, 0, 1);
-
-				uint8x16_t srcPx = vld1q_u8(src);
-				uint8x16_t dstPx = vld1q_u8(dst);
-
-				uint8x8_t srcLo = vget_low_u8(srcPx);
-				uint8x8_t dstLo = vget_low_u8(dstPx);
-				uint8x8_t aLo = vtbl1_u8(srcLo, alphaIdx);
-				uint8x8_t iaLo = vsub_u8(c255x8, aLo);
-				uint16x8_t rLo = vaddq_u16(vmull_u8(srcLo, aLo), vmull_u8(dstLo, iaLo));
-
-				uint8x8_t srcHi = vget_high_u8(srcPx);
-				uint8x8_t dstHi = vget_high_u8(dstPx);
-				uint8x8_t aHi = vtbl1_u8(srcHi, alphaIdx);
-				uint8x8_t iaHi = vsub_u8(c255x8, aHi);
-				uint16x8_t rHi = vaddq_u16(vmull_u8(srcHi, aHi), vmull_u8(dstHi, iaHi));
-
-				vst1q_u8(dst, vcombine_u8(vshrn_n_u16(rLo, 8), vshrn_n_u16(rHi, 8)));
-			}
-			for (; i < count; ++i, dst += 4, src += 4) {
-				const std::int32_t sA = src[3];
-				if (sA == 0) continue;
-				if (sA >= 255) { std::memcpy(dst, src, 4); continue; }
-				const std::int32_t inv = 255 - sA;
-				dst[0] = static_cast<std::uint8_t>((src[0] * sA + dst[0] * inv) >> 8);
-				dst[1] = static_cast<std::uint8_t>((src[1] * sA + dst[1] * inv) >> 8);
-				dst[2] = static_cast<std::uint8_t>((src[2] * sA + dst[2] * inv) >> 8);
-				dst[3] = static_cast<std::uint8_t>((sA * 255 + dst[3] * inv) >> 8);
-			}
-#else
-			for (std::int32_t i = 0; i < count; ++i, dst += 4, src += 4) {
-				const std::int32_t sA = src[3];
-				if (sA == 0) continue;
-				if (sA >= 255) { std::memcpy(dst, src, 4); continue; }
-				const std::int32_t inv = 255 - sA;
-				dst[0] = static_cast<std::uint8_t>((src[0] * sA + dst[0] * inv) >> 8);
-				dst[1] = static_cast<std::uint8_t>((src[1] * sA + dst[1] * inv) >> 8);
-				dst[2] = static_cast<std::uint8_t>((src[2] * sA + dst[2] * inv) >> 8);
-				dst[3] = static_cast<std::uint8_t>((sA * 255 + dst[3] * inv) >> 8);
-			}
-#endif
-		}
-
-		// =====================================================================
-		// NEON-optimized tint scanline, scalar fallback otherwise
-		// =====================================================================
-		static void TintScanlineNeon(std::uint8_t* DEATH_RESTRICT buf, std::int32_t count,
-		                             std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA)
-		{
-#if defined(DEATH_ENABLE_NEON)
-			const uint8x8_t vtR = vdup_n_u8(static_cast<std::uint8_t>(tR));
-			const uint8x8_t vtG = vdup_n_u8(static_cast<std::uint8_t>(tG));
-			const uint8x8_t vtB = vdup_n_u8(static_cast<std::uint8_t>(tB));
-			const uint8x8_t vtA = vdup_n_u8(static_cast<std::uint8_t>(tA));
-
-			std::int32_t i = 0;
-			for (; i + 8 <= count; i += 8, buf += 32) {
-				uint8x8x4_t px = vld4_u8(buf);
-				px.val[0] = vshrn_n_u16(vmull_u8(px.val[0], vtR), 8);
-				px.val[1] = vshrn_n_u16(vmull_u8(px.val[1], vtG), 8);
-				px.val[2] = vshrn_n_u16(vmull_u8(px.val[2], vtB), 8);
-				px.val[3] = vshrn_n_u16(vmull_u8(px.val[3], vtA), 8);
-				vst4_u8(buf, px);
-			}
-			for (; i < count; ++i, buf += 4) {
-				buf[0] = static_cast<std::uint8_t>((buf[0] * tR) >> 8);
-				buf[1] = static_cast<std::uint8_t>((buf[1] * tG) >> 8);
-				buf[2] = static_cast<std::uint8_t>((buf[2] * tB) >> 8);
-				buf[3] = static_cast<std::uint8_t>((buf[3] * tA) >> 8);
-			}
-#else
-			for (std::int32_t i = 0; i < count; ++i, buf += 4) {
-				buf[0] = static_cast<std::uint8_t>((buf[0] * tR) >> 8);
-				buf[1] = static_cast<std::uint8_t>((buf[1] * tG) >> 8);
-				buf[2] = static_cast<std::uint8_t>((buf[2] * tB) >> 8);
-				buf[3] = static_cast<std::uint8_t>((buf[3] * tA) >> 8);
-			}
-#endif
-		}
+		// Scanline blending and tinting use the CPU-dispatched implementations shared with the immediate
+		// rasterizer (SwScanlineOps.h): the previous per-TU copies here were NEON-or-scalar, which left the
+		// x86 desktop build running the hottest inner loops scalar while SwRaster.cpp's SSE2/AVX2 code idled.
 
 		// =====================================================================
 		// Vertex fetch — identical transform to SwRaster::FetchVertex (procedural sprite quad or interleaved
@@ -508,12 +414,12 @@ namespace nCine::RhiSoftware
 							txFixShader += dtxFix;
 						}
 					} else if DEATH_UNLIKELY(!whiteTint) {
-						TintScanlineNeon(scanBuf, scanWidth, tR, tG, tB, tA);
+						TintScanline(scanBuf, scanWidth, tR, tG, tB, tA);
 					}
 
 					// Phase 3: blend or copy
 					if (useFastBlend) {
-						BlendScanlineNeon(dstRow, scanBuf, scanWidth);
+						BlendScanlineSrcAlpha(dstRow, scanBuf, scanWidth);
 					} else {
 						std::memcpy(dstRow, scanBuf, static_cast<std::size_t>(scanWidth) * 4);
 					}

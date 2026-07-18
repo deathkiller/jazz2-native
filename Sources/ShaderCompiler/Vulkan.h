@@ -3,14 +3,14 @@
 /**
 	@file Vulkan.h
 
-	Vulkan-flavored GLSL ("#version 450") source-to-source emitter for ShaderCompiler (P7 slice 1).
+	Vulkan-flavored GLSL ("#version 450") source-to-source emitter for ShaderCompiler.
 
 	The tool lowers each ".shader" into a MODERN-GLSL stage source (in/out, texture(), "out vec4 COLOR;",
 	std140 UBO blocks, gl_VertexID) that serves the desktop GL 3.3 / GLES3 path. Vulkan consumes SPIR-V,
 	which is produced offline by compiling a Vulkan-flavored GLSL variant through glslang (see the
 	"--spirv-check" mode and the SPIR-V embedding in Emit.cpp). This emitter transforms an already-lowered
 	modern-GLSL stage source into that Vulkan GLSL — TOOL-ONLY: it adds no RHI backend and touches no engine
-	code (the Vulkan RHI backend is P7 slice 2). Vulkan GLSL is close to desktop GLSL 330, so the function
+	code. Vulkan GLSL is close to desktop GLSL 330, so the function
 	bodies pass through verbatim (unlike the HLSL emitter, which re-emits an AST); only declarations and the
 	vertex-id built-ins change:
 
@@ -28,7 +28,7 @@
 	- "gl_VertexID" -> "gl_VertexIndex" and "gl_InstanceID" -> "gl_InstanceIndex" (Vulkan keeps the vertex-id
 	  and integer math, unlike the ES2 profile that has to synthesize a corner attribute).
 
-	DESCRIPTOR SET / BINDING SCHEME (slice 2's Vulkan backend builds the VkDescriptorSetLayout from the SAME
+	DESCRIPTOR SET / BINDING SCHEME (the Vulkan backend builds the VkDescriptorSetLayout from the SAME
 	reflection, so the numbers here must be reconstructible from it):
 	  - Everything lives in descriptor SET 0.
 	  - UBOs come first, then combined-image-samplers, both in reflection order:

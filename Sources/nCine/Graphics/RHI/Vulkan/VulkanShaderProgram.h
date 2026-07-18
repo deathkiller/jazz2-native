@@ -2,6 +2,7 @@
 
 #include "VulkanShaderTypes.h"
 #include "VulkanVertexFormat.h"
+#include "../RhiTypes.h"
 
 #include <cstdint>
 #include <string>
@@ -29,8 +30,7 @@ namespace nCine::RhiVulkan
 
 		Carries the offline ShaderCompiler reflection (set with @ref SetReflection() like the OpenGL backend)
 		from which it imports uniforms, uniform blocks and attributes so the pipeline's uniform machinery runs.
-		Slice 2a stops there — no SPIR-V modules or pipelines are created yet (draws are no-ops on the device).
-		Slice 2b builds the `VkShaderModule` pair from the reflection's embedded `VkVsSpirv`/`VkFsSpirv`, a
+		It also builds the `VkShaderModule` pair from the reflection's embedded `VkVsSpirv`/`VkFsSpirv`, a
 		`VkDescriptorSetLayout` from the same reflection (set 0: optional `_Globals` UBO, then the std140 blocks,
 		then the combined-image-samplers, in reflection order) and a `VkPipeline` per vertex format. @ref Use()
 		records the program as current on the device.
@@ -113,10 +113,10 @@ namespace nCine::RhiVulkan
 			return uniformBlocksSize_;
 		}
 
-		bool AttachShaderFromFile(std::uint32_t type, StringView filename);
-		bool AttachShaderFromString(std::uint32_t type, StringView string);
-		bool AttachShaderFromStrings(std::uint32_t type, ArrayView<const StringView> strings);
-		bool AttachShaderFromStringsAndFile(std::uint32_t type, ArrayView<const StringView> strings, StringView filename);
+		bool AttachShaderFromFile(ShaderStage stage, StringView filename);
+		bool AttachShaderFromString(ShaderStage stage, StringView string);
+		bool AttachShaderFromStrings(ShaderStage stage, ArrayView<const StringView> strings);
+		bool AttachShaderFromStringsAndFile(ShaderStage stage, ArrayView<const StringView> strings, StringView filename);
 
 		/** @brief Sets the offline reflection consumed by @ref Link() to import uniforms/blocks/attributes */
 		inline void SetReflection(const ShaderCompiler::ProgramVariant* reflection) {
@@ -174,11 +174,11 @@ namespace nCine::RhiVulkan
 			return boundIbo_;
 		}
 
-		// -- Slice 2b: SPIR-V modules, descriptor-set layout and the reflection metadata the device uses to
+		// -- SPIR-V modules, descriptor-set layout and the reflection metadata the device uses to
 		// build pipelines + descriptor sets. Vulkan handles are opaque integers so this contract header stays
 		// free of <vulkan/vulkan.h>; the .cpp reinterprets them. --
 
-		/** @brief One entry of the descriptor set (set 0), matching the slice-1 binding scheme */
+		/** @brief One entry of the descriptor set (set 0), matching the offline emitter's binding scheme */
 		struct DescriptorBinding
 		{
 			enum class Kind { Globals, Block, Sampler };
@@ -223,8 +223,13 @@ namespace nCine::RhiVulkan
 			std::int32_t ComponentCount;
 			std::uint32_t Offset;		// byte offset within the vertex
 		};
-		/** @brief Fills the current vertex input layout (attributes + per-vertex stride) from the bound vertex format */
-		void GetVertexInput(std::vector<VertexAttrib>& outAttribs, std::uint32_t& outStride) const;
+		/**
+		 * @brief Fills the current vertex input layout (attributes + per-vertex stride) from the bound vertex format
+		 *
+		 * Writes at most @p maxAttribs entries into @p outAttribs (a caller-provided array, so the per-draw
+		 * pipeline-key computation never touches the heap) and returns the number written.
+		 */
+		std::uint32_t GetVertexInput(VertexAttrib* outAttribs, std::uint32_t maxAttribs, std::uint32_t& outStride) const;
 
 	private:
 		static std::uint32_t nextHandle_;
@@ -255,7 +260,7 @@ namespace nCine::RhiVulkan
 		};
 		std::vector<ResolvedUniform> resolvedUniforms_;
 
-		// Slice 2b GPU objects (opaque integers; see the getters above)
+		// GPU objects (opaque integers; see the getters above)
 		std::uint64_t vsModule_;
 		std::uint64_t fsModule_;
 		std::uint64_t descriptorSetLayout_;

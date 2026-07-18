@@ -381,6 +381,512 @@ void Downsample_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 	packColor(COLOR, in.rgba);
 }
 
+		// --- FrozenMask ---
+struct FrozenMask_Uniforms
+{
+};
+
+static float FrozenMask_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const FrozenMask_Uniforms* unis = static_cast<const FrozenMask_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757f;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+static nCine::RhiSoftware::sw::vec4 FrozenMask_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const FrozenMask_Uniforms* unis = static_cast<const FrozenMask_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 src = swTexture(in, 0, uv);
+	return src;
+}
+
+void FrozenMask_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const FrozenMask_Uniforms* unis = static_cast<const FrozenMask_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
+	vec2 size = COLOR.xy() * COLOR.a * 2.0f;
+	vec4 tex = FrozenMask_maskSample(in, vec2(in.u, in.v));
+	vec4 tex1 = FrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(-size.x, 0));
+	vec4 tex2 = FrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(0, size.y));
+	vec4 tex3 = FrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(size.x, 0));
+	vec4 tex4 = FrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(0, -size.y));
+	float outline = tex1.a;
+	outline += tex2.a;
+	outline += tex3.a;
+	outline += tex4.a;
+	outline += FrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(-size.x, size.y)).a;
+	outline += FrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(size.x, size.y)).a;
+	outline += FrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(-size.x, -size.y)).a;
+	outline += FrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(size.x, -size.y)).a;
+	outline = FrozenMask_aastep(in, 1.0f, outline);
+	vec4 color = (tex + tex + tex1 + tex2 + tex3 + tex4) / 6.0f;
+	float grey = min((0.299f * color.r + 0.587f * color.g + 0.114f * color.b) * 2.6f, 1.0f);
+	COLOR = mix(tex, vec4(0.2f * grey, 0.2f + grey * 0.62f, 0.6f + 0.2f * grey, outline * 0.95f), COLOR.a);
+	packColor(COLOR, in.rgba);
+}
+
+		// --- FrozenMask_USE_PALETTE ---
+struct FrozenMask_USE_PALETTE_Uniforms
+{
+	float vPaletteOffset;
+};
+
+void FrozenMask_USE_PALETTE_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
+{
+	using namespace nCine::RhiSoftware::sw;
+	FrozenMask_USE_PALETTE_Uniforms* io = static_cast<FrozenMask_USE_PALETTE_Uniforms*>(inputs);
+	(void)io;
+	(void)instanceBlock;
+	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
+}
+
+static float FrozenMask_USE_PALETTE_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const FrozenMask_USE_PALETTE_Uniforms* unis = static_cast<const FrozenMask_USE_PALETTE_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757f;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+static nCine::RhiSoftware::sw::vec4 FrozenMask_USE_PALETTE_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const FrozenMask_USE_PALETTE_Uniforms* unis = static_cast<const FrozenMask_USE_PALETTE_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 src = swTexture(in, 0, uv);
+	float palIndex = floor(unis->vPaletteOffset + 0.5f) + floor(src.r * 255.0f + 0.5f);
+	float palX = (mod(palIndex, 256.0f) + 0.5f) / 256.0f;
+	float palY = (floor(palIndex / 256.0f) + 0.5f) / 256.0f;
+	vec4 c = swTexture(in, 1, vec2(palX, palY));
+	return vec4(c.rgb(), c.a * src.a);
+}
+
+void FrozenMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const FrozenMask_USE_PALETTE_Uniforms* unis = static_cast<const FrozenMask_USE_PALETTE_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
+	vec2 size = COLOR.xy() * COLOR.a * 2.0f;
+	vec4 tex = FrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v));
+	vec4 tex1 = FrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(-size.x, 0));
+	vec4 tex2 = FrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(0, size.y));
+	vec4 tex3 = FrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(size.x, 0));
+	vec4 tex4 = FrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(0, -size.y));
+	float outline = tex1.a;
+	outline += tex2.a;
+	outline += tex3.a;
+	outline += tex4.a;
+	outline += FrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(-size.x, size.y)).a;
+	outline += FrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(size.x, size.y)).a;
+	outline += FrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(-size.x, -size.y)).a;
+	outline += FrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(size.x, -size.y)).a;
+	outline = FrozenMask_USE_PALETTE_aastep(in, 1.0f, outline);
+	vec4 color = (tex + tex + tex1 + tex2 + tex3 + tex4) / 6.0f;
+	float grey = min((0.299f * color.r + 0.587f * color.g + 0.114f * color.b) * 2.6f, 1.0f);
+	COLOR = mix(tex, vec4(0.2f * grey, 0.2f + grey * 0.62f, 0.6f + 0.2f * grey, outline * 0.95f), COLOR.a);
+	packColor(COLOR, in.rgba);
+}
+
+		// --- BatchedFrozenMask ---
+struct BatchedFrozenMask_Uniforms
+{
+};
+
+static float BatchedFrozenMask_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedFrozenMask_Uniforms* unis = static_cast<const BatchedFrozenMask_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757f;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+static nCine::RhiSoftware::sw::vec4 BatchedFrozenMask_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedFrozenMask_Uniforms* unis = static_cast<const BatchedFrozenMask_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 src = swTexture(in, 0, uv);
+	return src;
+}
+
+void BatchedFrozenMask_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedFrozenMask_Uniforms* unis = static_cast<const BatchedFrozenMask_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
+	vec2 size = COLOR.xy() * COLOR.a * 2.0f;
+	vec4 tex = BatchedFrozenMask_maskSample(in, vec2(in.u, in.v));
+	vec4 tex1 = BatchedFrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(-size.x, 0));
+	vec4 tex2 = BatchedFrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(0, size.y));
+	vec4 tex3 = BatchedFrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(size.x, 0));
+	vec4 tex4 = BatchedFrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(0, -size.y));
+	float outline = tex1.a;
+	outline += tex2.a;
+	outline += tex3.a;
+	outline += tex4.a;
+	outline += BatchedFrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(-size.x, size.y)).a;
+	outline += BatchedFrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(size.x, size.y)).a;
+	outline += BatchedFrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(-size.x, -size.y)).a;
+	outline += BatchedFrozenMask_maskSample(in, vec2(in.u, in.v) + vec2(size.x, -size.y)).a;
+	outline = BatchedFrozenMask_aastep(in, 1.0f, outline);
+	vec4 color = (tex + tex + tex1 + tex2 + tex3 + tex4) / 6.0f;
+	float grey = min((0.299f * color.r + 0.587f * color.g + 0.114f * color.b) * 2.6f, 1.0f);
+	COLOR = mix(tex, vec4(0.2f * grey, 0.2f + grey * 0.62f, 0.6f + 0.2f * grey, outline * 0.95f), COLOR.a);
+	packColor(COLOR, in.rgba);
+}
+
+		// --- BatchedFrozenMask_USE_PALETTE ---
+struct BatchedFrozenMask_USE_PALETTE_Uniforms
+{
+	float vPaletteOffset;
+};
+
+void BatchedFrozenMask_USE_PALETTE_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
+{
+	using namespace nCine::RhiSoftware::sw;
+	BatchedFrozenMask_USE_PALETTE_Uniforms* io = static_cast<BatchedFrozenMask_USE_PALETTE_Uniforms*>(inputs);
+	(void)io;
+	(void)instanceBlock;
+	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
+}
+
+static float BatchedFrozenMask_USE_PALETTE_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedFrozenMask_USE_PALETTE_Uniforms* unis = static_cast<const BatchedFrozenMask_USE_PALETTE_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757f;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+static nCine::RhiSoftware::sw::vec4 BatchedFrozenMask_USE_PALETTE_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedFrozenMask_USE_PALETTE_Uniforms* unis = static_cast<const BatchedFrozenMask_USE_PALETTE_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 src = swTexture(in, 0, uv);
+	float palIndex = floor(unis->vPaletteOffset + 0.5f) + floor(src.r * 255.0f + 0.5f);
+	float palX = (mod(palIndex, 256.0f) + 0.5f) / 256.0f;
+	float palY = (floor(palIndex / 256.0f) + 0.5f) / 256.0f;
+	vec4 c = swTexture(in, 1, vec2(palX, palY));
+	return vec4(c.rgb(), c.a * src.a);
+}
+
+void BatchedFrozenMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedFrozenMask_USE_PALETTE_Uniforms* unis = static_cast<const BatchedFrozenMask_USE_PALETTE_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
+	vec2 size = COLOR.xy() * COLOR.a * 2.0f;
+	vec4 tex = BatchedFrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v));
+	vec4 tex1 = BatchedFrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(-size.x, 0));
+	vec4 tex2 = BatchedFrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(0, size.y));
+	vec4 tex3 = BatchedFrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(size.x, 0));
+	vec4 tex4 = BatchedFrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(0, -size.y));
+	float outline = tex1.a;
+	outline += tex2.a;
+	outline += tex3.a;
+	outline += tex4.a;
+	outline += BatchedFrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(-size.x, size.y)).a;
+	outline += BatchedFrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(size.x, size.y)).a;
+	outline += BatchedFrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(-size.x, -size.y)).a;
+	outline += BatchedFrozenMask_USE_PALETTE_maskSample(in, vec2(in.u, in.v) + vec2(size.x, -size.y)).a;
+	outline = BatchedFrozenMask_USE_PALETTE_aastep(in, 1.0f, outline);
+	vec4 color = (tex + tex + tex1 + tex2 + tex3 + tex4) / 6.0f;
+	float grey = min((0.299f * color.r + 0.587f * color.g + 0.114f * color.b) * 2.6f, 1.0f);
+	COLOR = mix(tex, vec4(0.2f * grey, 0.2f + grey * 0.62f, 0.6f + 0.2f * grey, outline * 0.95f), COLOR.a);
+	packColor(COLOR, in.rgba);
+}
+
+		// --- Outline ---
+struct Outline_Uniforms
+{
+};
+
+static float Outline_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const Outline_Uniforms* unis = static_cast<const Outline_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757f;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+void Outline_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const Outline_Uniforms* unis = static_cast<const Outline_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
+	vec2 size = COLOR.xy();
+	float outline = swTexture(in, 0, vec2(in.u, in.v) + vec2(-size.x, 0)).a;
+	outline += swTexture(in, 0, vec2(in.u, in.v) + vec2(0, size.y)).a;
+	outline += swTexture(in, 0, vec2(in.u, in.v) + vec2(size.x, 0)).a;
+	outline += swTexture(in, 0, vec2(in.u, in.v) + vec2(0, -size.y)).a;
+	outline += swTexture(in, 0, vec2(in.u, in.v) + vec2(-size.x, size.y)).a;
+	outline += swTexture(in, 0, vec2(in.u, in.v) + vec2(size.x, size.y)).a;
+	outline += swTexture(in, 0, vec2(in.u, in.v) + vec2(-size.x, -size.y)).a;
+	outline += swTexture(in, 0, vec2(in.u, in.v) + vec2(size.x, -size.y)).a;
+	outline = Outline_aastep(in, 1.0f, outline);
+	float outline2 = swTexture(in, 0, vec2(in.u, in.v) + vec2(-2.0f * size.x, 0)).a;
+	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(0, 2.0f * size.y)).a;
+	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(2.0f * size.x, 0)).a;
+	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(0, -2.0f * size.y)).a;
+	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(-2.0f * size.x, 2.0f * size.y)).a;
+	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(2.0f * size.x, 2.0f * size.y)).a;
+	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(-2.0f * size.x, -2.0f * size.y)).a;
+	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(2.0f * size.x, -2.0f * size.y)).a;
+	outline2 = Outline_aastep(in, 1.0f, outline2);
+	vec4 color = swTexture(in, 0, vec2(in.u, in.v));
+	COLOR = mix(color, mix(vec4(0.0f, 0.0f, 0.0f, COLOR.w * 0.5f), vec4(COLOR.z, COLOR.z, COLOR.z, COLOR.w), outline), max(outline, outline2) - color.a);
+	packColor(COLOR, in.rgba);
+}
+
+		// --- BatchedOutline ---
+struct BatchedOutline_Uniforms
+{
+};
+
+static float BatchedOutline_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedOutline_Uniforms* unis = static_cast<const BatchedOutline_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757f;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+void BatchedOutline_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedOutline_Uniforms* unis = static_cast<const BatchedOutline_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
+	vec2 size = COLOR.xy();
+	float outline = swTexture(in, 0, vec2(in.u, in.v) + vec2(-size.x, 0)).a;
+	outline += swTexture(in, 0, vec2(in.u, in.v) + vec2(0, size.y)).a;
+	outline += swTexture(in, 0, vec2(in.u, in.v) + vec2(size.x, 0)).a;
+	outline += swTexture(in, 0, vec2(in.u, in.v) + vec2(0, -size.y)).a;
+	outline += swTexture(in, 0, vec2(in.u, in.v) + vec2(-size.x, size.y)).a;
+	outline += swTexture(in, 0, vec2(in.u, in.v) + vec2(size.x, size.y)).a;
+	outline += swTexture(in, 0, vec2(in.u, in.v) + vec2(-size.x, -size.y)).a;
+	outline += swTexture(in, 0, vec2(in.u, in.v) + vec2(size.x, -size.y)).a;
+	outline = BatchedOutline_aastep(in, 1.0f, outline);
+	float outline2 = swTexture(in, 0, vec2(in.u, in.v) + vec2(-2.0f * size.x, 0)).a;
+	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(0, 2.0f * size.y)).a;
+	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(2.0f * size.x, 0)).a;
+	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(0, -2.0f * size.y)).a;
+	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(-2.0f * size.x, 2.0f * size.y)).a;
+	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(2.0f * size.x, 2.0f * size.y)).a;
+	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(-2.0f * size.x, -2.0f * size.y)).a;
+	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(2.0f * size.x, -2.0f * size.y)).a;
+	outline2 = BatchedOutline_aastep(in, 1.0f, outline2);
+	vec4 color = swTexture(in, 0, vec2(in.u, in.v));
+	COLOR = mix(color, mix(vec4(0.0f, 0.0f, 0.0f, COLOR.w * 0.5f), vec4(COLOR.z, COLOR.z, COLOR.z, COLOR.w), outline), max(outline, outline2) - color.a);
+	packColor(COLOR, in.rgba);
+}
+
+		// --- OutlinePalette ---
+struct OutlinePalette_Uniforms
+{
+	float vPaletteOffset;
+};
+
+void OutlinePalette_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
+{
+	using namespace nCine::RhiSoftware::sw;
+	OutlinePalette_Uniforms* io = static_cast<OutlinePalette_Uniforms*>(inputs);
+	(void)io;
+	(void)instanceBlock;
+	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
+}
+
+static float OutlinePalette_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const OutlinePalette_Uniforms* unis = static_cast<const OutlinePalette_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757f;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+static nCine::RhiSoftware::sw::vec4 OutlinePalette_palette(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const OutlinePalette_Uniforms* unis = static_cast<const OutlinePalette_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 src = swTexture(in, 0, uv);
+	float palIndex = floor(unis->vPaletteOffset + 0.5f) + floor(src.r * 255.0f + 0.5f);
+	float palX = (mod(palIndex, 256.0f) + 0.5f) / 256.0f;
+	float palY = (floor(palIndex / 256.0f) + 0.5f) / 256.0f;
+	vec4 c = swTexture(in, 1, vec2(palX, palY));
+	return vec4(c.rgb(), c.a * src.a);
+}
+
+static float OutlinePalette_alphaAt(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const OutlinePalette_Uniforms* unis = static_cast<const OutlinePalette_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 src = swTexture(in, 0, uv);
+	float palIndex = floor(unis->vPaletteOffset + 0.5f) + floor(src.r * 255.0f + 0.5f);
+	float palX = (mod(palIndex, 256.0f) + 0.5f) / 256.0f;
+	float palY = (floor(palIndex / 256.0f) + 0.5f) / 256.0f;
+	return swTexture(in, 1, vec2(palX, palY)).a * src.a;
+}
+
+void OutlinePalette_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const OutlinePalette_Uniforms* unis = static_cast<const OutlinePalette_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
+	vec2 size = COLOR.xy();
+	float outline = OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(-size.x, 0));
+	outline += OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(0, size.y));
+	outline += OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(size.x, 0));
+	outline += OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(0, -size.y));
+	outline += OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(-size.x, size.y));
+	outline += OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(size.x, size.y));
+	outline += OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(-size.x, -size.y));
+	outline += OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(size.x, -size.y));
+	outline = OutlinePalette_aastep(in, 1.0f, outline);
+	float outline2 = OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(-2.0f * size.x, 0));
+	outline2 += OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(0, 2.0f * size.y));
+	outline2 += OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(2.0f * size.x, 0));
+	outline2 += OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(0, -2.0f * size.y));
+	outline2 += OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(-2.0f * size.x, 2.0f * size.y));
+	outline2 += OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(2.0f * size.x, 2.0f * size.y));
+	outline2 += OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(-2.0f * size.x, -2.0f * size.y));
+	outline2 += OutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(2.0f * size.x, -2.0f * size.y));
+	outline2 = OutlinePalette_aastep(in, 1.0f, outline2);
+	vec4 color = OutlinePalette_palette(in, vec2(in.u, in.v));
+	COLOR = mix(color, mix(vec4(0.0f, 0.0f, 0.0f, COLOR.w * 0.5f), vec4(COLOR.z, COLOR.z, COLOR.z, COLOR.w), outline), max(outline, outline2) - color.a);
+	packColor(COLOR, in.rgba);
+}
+
+		// --- BatchedOutlinePalette ---
+struct BatchedOutlinePalette_Uniforms
+{
+	float vPaletteOffset;
+};
+
+void BatchedOutlinePalette_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
+{
+	using namespace nCine::RhiSoftware::sw;
+	BatchedOutlinePalette_Uniforms* io = static_cast<BatchedOutlinePalette_Uniforms*>(inputs);
+	(void)io;
+	(void)instanceBlock;
+	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
+}
+
+static float BatchedOutlinePalette_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedOutlinePalette_Uniforms* unis = static_cast<const BatchedOutlinePalette_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757f;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+static nCine::RhiSoftware::sw::vec4 BatchedOutlinePalette_palette(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedOutlinePalette_Uniforms* unis = static_cast<const BatchedOutlinePalette_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 src = swTexture(in, 0, uv);
+	float palIndex = floor(unis->vPaletteOffset + 0.5f) + floor(src.r * 255.0f + 0.5f);
+	float palX = (mod(palIndex, 256.0f) + 0.5f) / 256.0f;
+	float palY = (floor(palIndex / 256.0f) + 0.5f) / 256.0f;
+	vec4 c = swTexture(in, 1, vec2(palX, palY));
+	return vec4(c.rgb(), c.a * src.a);
+}
+
+static float BatchedOutlinePalette_alphaAt(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedOutlinePalette_Uniforms* unis = static_cast<const BatchedOutlinePalette_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 src = swTexture(in, 0, uv);
+	float palIndex = floor(unis->vPaletteOffset + 0.5f) + floor(src.r * 255.0f + 0.5f);
+	float palX = (mod(palIndex, 256.0f) + 0.5f) / 256.0f;
+	float palY = (floor(palIndex / 256.0f) + 0.5f) / 256.0f;
+	return swTexture(in, 1, vec2(palX, palY)).a * src.a;
+}
+
+void BatchedOutlinePalette_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedOutlinePalette_Uniforms* unis = static_cast<const BatchedOutlinePalette_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
+	vec2 size = COLOR.xy();
+	float outline = BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(-size.x, 0));
+	outline += BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(0, size.y));
+	outline += BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(size.x, 0));
+	outline += BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(0, -size.y));
+	outline += BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(-size.x, size.y));
+	outline += BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(size.x, size.y));
+	outline += BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(-size.x, -size.y));
+	outline += BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(size.x, -size.y));
+	outline = BatchedOutlinePalette_aastep(in, 1.0f, outline);
+	float outline2 = BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(-2.0f * size.x, 0));
+	outline2 += BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(0, 2.0f * size.y));
+	outline2 += BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(2.0f * size.x, 0));
+	outline2 += BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(0, -2.0f * size.y));
+	outline2 += BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(-2.0f * size.x, 2.0f * size.y));
+	outline2 += BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(2.0f * size.x, 2.0f * size.y));
+	outline2 += BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(-2.0f * size.x, -2.0f * size.y));
+	outline2 += BatchedOutlinePalette_alphaAt(in, vec2(in.u, in.v) + vec2(2.0f * size.x, -2.0f * size.y));
+	outline2 = BatchedOutlinePalette_aastep(in, 1.0f, outline2);
+	vec4 color = BatchedOutlinePalette_palette(in, vec2(in.u, in.v));
+	COLOR = mix(color, mix(vec4(0.0f, 0.0f, 0.0f, COLOR.w * 0.5f), vec4(COLOR.z, COLOR.z, COLOR.z, COLOR.w), outline), max(outline, outline2) - color.a);
+	packColor(COLOR, in.rgba);
+}
+
 		// --- PaletteRemap ---
 struct PaletteRemap_Uniforms
 {
@@ -1192,19 +1698,13 @@ void TexturedBackground_Fragment(const nCine::RhiSoftware::FragmentShaderInput& 
 	(void)in;
 	vec4 COLOR;
 	float distance = 1.3f - abs(2.0f * vec2(in.u, in.v).y - 1.0f);
-	float horizonDepth = pow(distance, 1.4f);
+	float horizonDepth = distance;
 	float yShift = vec2(in.u, in.v).y > 0.5f ? 1.0f : 0.0f;
 	float correction = unis->uViewSize.x * 9.0f / (unis->uViewSize.y * 16.0f);
 	vec2 texturePos = vec2(unis->uShift.x / 256.0f + (vec2(in.u, in.v).x - 0.5f) * (0.5f + 1.5f * horizonDepth) * correction, unis->uShift.y / 256.0f + (vec2(in.u, in.v).y - yShift) * 1.4f * distance);
 	vec4 texColor = swTexture(in, 0, texturePos);
-	float horizonOpacity = clamp(pow(distance, 1.5f) - 0.3f, 0.0f, 1.0f);
+	float horizonOpacity = clamp(distance * distance - 0.3f, 0.0f, 1.0f);
 	vec4 horizonColorWithStars = vec4(unis->uHorizonColor.xyz(), 1.0f);
-	if (unis->uHorizonColor.w > 0.0f) {
-		vec2 samplePosition = vec2(in.u, in.v) * unis->uViewSize / unis->uViewSize.xx() + unis->uCameraPos.xy() * 0.00012f;
-		horizonColorWithStars += vec4(TexturedBackground_addStarField(in, samplePosition * 7.0f, 0.00008f));
-		samplePosition = vec2(in.u, in.v) * unis->uViewSize / unis->uViewSize.xx() + unis->uCameraPos.xy() * 0.00018f + 0.5f;
-		horizonColorWithStars += vec4(TexturedBackground_addStarField(in, samplePosition * 7.0f, 0.00008f));
-	}
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.a = 1.0f;
 	packColor(COLOR, in.rgba);
@@ -1279,21 +1779,13 @@ void TexturedBackground_DITHER_Fragment(const nCine::RhiSoftware::FragmentShader
 	(void)in;
 	vec4 COLOR;
 	float distance = 1.3f - abs(2.0f * vec2(in.u, in.v).y - 1.0f);
-	float horizonDepth = pow(distance, 1.4f);
+	float horizonDepth = distance;
 	float yShift = vec2(in.u, in.v).y > 0.5f ? 1.0f : 0.0f;
 	float correction = unis->uViewSize.x * 9.0f / (unis->uViewSize.y * 16.0f);
 	vec2 texturePos = vec2(unis->uShift.x / 256.0f + (vec2(in.u, in.v).x - 0.5f) * (0.5f + 1.5f * horizonDepth) * correction, unis->uShift.y / 256.0f + (vec2(in.u, in.v).y - yShift) * 1.4f * distance);
 	vec4 texColor = swTexture(in, 0, texturePos);
-	texturePos += TexturedBackground_DITHER_hash2D(in, vec2(in.u, in.v) * unis->uViewSize + (unis->uCameraPos + unis->uShift) * 0.001f).xy() * 8.0f / unis->uViewSize;
-	texColor = mix(texColor, swTexture(in, 0, texturePos), 0.333f);
-	float horizonOpacity = clamp(pow(distance, 1.5f) - 0.3f, 0.0f, 1.0f);
+	float horizonOpacity = clamp(distance * distance - 0.3f, 0.0f, 1.0f);
 	vec4 horizonColorWithStars = vec4(unis->uHorizonColor.xyz(), 1.0f);
-	if (unis->uHorizonColor.w > 0.0f) {
-		vec2 samplePosition = vec2(in.u, in.v) * unis->uViewSize / unis->uViewSize.xx() + unis->uCameraPos.xy() * 0.00012f;
-		horizonColorWithStars += vec4(TexturedBackground_DITHER_addStarField(in, samplePosition * 7.0f, 0.00008f));
-		samplePosition = vec2(in.u, in.v) * unis->uViewSize / unis->uViewSize.xx() + unis->uCameraPos.xy() * 0.00018f + 0.5f;
-		horizonColorWithStars += vec4(TexturedBackground_DITHER_addStarField(in, samplePosition * 7.0f, 0.00008f));
-	}
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.a = 1.0f;
 	packColor(COLOR, in.rgba);
@@ -1373,14 +1865,8 @@ void TexturedBackgroundCircle_Fragment(const nCine::RhiSoftware::FragmentShaderI
 	float xShift = targetCoord.x == 0.0f ? sign(targetCoord.y) * 0.5f : atan(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675f;
 	vec2 texturePos = vec2(xShift * 1.0f + unis->uShift.x * 0.01f, 1.0f / distance * 1.4f + unis->uShift.y * 0.002f);
 	vec4 texColor = swTexture(in, 0, texturePos);
-	float horizonOpacity = 1.0f - clamp(pow(distance, 1.4f) - 0.3f, 0.0f, 1.0f);
+	float horizonOpacity = 1.0f - clamp(distance * distance - 0.3f, 0.0f, 1.0f);
 	vec4 horizonColorWithStars = vec4(unis->uHorizonColor.xyz(), 1.0f);
-	if (unis->uHorizonColor.w > 0.0f) {
-		vec2 samplePosition = vec2(in.u, in.v) * unis->uViewSize / unis->uViewSize.xx() + unis->uCameraPos.xy() * 0.00012f;
-		horizonColorWithStars += vec4(TexturedBackgroundCircle_addStarField(in, samplePosition * 7.0f, 0.00008f));
-		samplePosition = vec2(in.u, in.v) * unis->uViewSize / unis->uViewSize.xx() + unis->uCameraPos.xy() * 0.00018f + 0.5f;
-		horizonColorWithStars += vec4(TexturedBackgroundCircle_addStarField(in, samplePosition * 7.0f, 0.00008f));
-	}
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.a = 1.0f;
 	packColor(COLOR, in.rgba);
@@ -1460,16 +1946,8 @@ void TexturedBackgroundCircle_DITHER_Fragment(const nCine::RhiSoftware::Fragment
 	float xShift = targetCoord.x == 0.0f ? sign(targetCoord.y) * 0.5f : atan(targetCoord.y, targetCoord.x) * 0.31830988618379067153776752675f;
 	vec2 texturePos = vec2(xShift * 1.0f + unis->uShift.x * 0.01f, 1.0f / distance * 1.4f + unis->uShift.y * 0.002f);
 	vec4 texColor = swTexture(in, 0, texturePos);
-	texturePos += TexturedBackgroundCircle_DITHER_hash2D(in, vec2(in.u, in.v) * unis->uViewSize + (unis->uCameraPos + unis->uShift) * 0.001f).xy() * 8.0f / unis->uViewSize;
-	texColor = mix(texColor, swTexture(in, 0, texturePos), 0.333f);
-	float horizonOpacity = 1.0f - clamp(pow(distance, 1.4f) - 0.3f, 0.0f, 1.0f);
+	float horizonOpacity = 1.0f - clamp(distance * distance - 0.3f, 0.0f, 1.0f);
 	vec4 horizonColorWithStars = vec4(unis->uHorizonColor.xyz(), 1.0f);
-	if (unis->uHorizonColor.w > 0.0f) {
-		vec2 samplePosition = vec2(in.u, in.v) * unis->uViewSize / unis->uViewSize.xx() + unis->uCameraPos.xy() * 0.00012f;
-		horizonColorWithStars += vec4(TexturedBackgroundCircle_DITHER_addStarField(in, samplePosition * 7.0f, 0.00008f));
-		samplePosition = vec2(in.u, in.v) * unis->uViewSize / unis->uViewSize.xx() + unis->uCameraPos.xy() * 0.00018f + 0.5f;
-		horizonColorWithStars += vec4(TexturedBackgroundCircle_DITHER_addStarField(in, samplePosition * 7.0f, 0.00008f));
-	}
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.a = 1.0f;
 	packColor(COLOR, in.rgba);
@@ -1860,6 +2338,14 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentSha
 			{ "DefaultBatchedSprites", &DefaultBatchedSprites_Fragment, (std::uint32_t)sizeof(DefaultBatchedSprites_Uniforms), nullptr, 0, nullptr },
 			{ "DefaultSpriteNoTexture", &DefaultSpriteNoTexture_Fragment, (std::uint32_t)sizeof(DefaultSpriteNoTexture_Uniforms), nullptr, 0, nullptr },
 			{ "Downsample", &Downsample_Fragment, (std::uint32_t)sizeof(Downsample_Uniforms), Downsample_Fields, 1, nullptr },
+			{ "FrozenMask", &FrozenMask_Fragment, (std::uint32_t)sizeof(FrozenMask_Uniforms), nullptr, 0, nullptr },
+			{ "FrozenMask_USE_PALETTE", &FrozenMask_USE_PALETTE_Fragment, (std::uint32_t)sizeof(FrozenMask_USE_PALETTE_Uniforms), nullptr, 0, &FrozenMask_USE_PALETTE_ComputeVaryings },
+			{ "BatchedFrozenMask", &BatchedFrozenMask_Fragment, (std::uint32_t)sizeof(BatchedFrozenMask_Uniforms), nullptr, 0, nullptr },
+			{ "BatchedFrozenMask_USE_PALETTE", &BatchedFrozenMask_USE_PALETTE_Fragment, (std::uint32_t)sizeof(BatchedFrozenMask_USE_PALETTE_Uniforms), nullptr, 0, &BatchedFrozenMask_USE_PALETTE_ComputeVaryings },
+			{ "Outline", &Outline_Fragment, (std::uint32_t)sizeof(Outline_Uniforms), nullptr, 0, nullptr },
+			{ "BatchedOutline", &BatchedOutline_Fragment, (std::uint32_t)sizeof(BatchedOutline_Uniforms), nullptr, 0, nullptr },
+			{ "OutlinePalette", &OutlinePalette_Fragment, (std::uint32_t)sizeof(OutlinePalette_Uniforms), nullptr, 0, &OutlinePalette_ComputeVaryings },
+			{ "BatchedOutlinePalette", &BatchedOutlinePalette_Fragment, (std::uint32_t)sizeof(BatchedOutlinePalette_Uniforms), nullptr, 0, &BatchedOutlinePalette_ComputeVaryings },
 			{ "PaletteRemap", &PaletteRemap_Fragment, (std::uint32_t)sizeof(PaletteRemap_Uniforms), nullptr, 0, &PaletteRemap_ComputeVaryings },
 			{ "BatchedPaletteRemap", &BatchedPaletteRemap_Fragment, (std::uint32_t)sizeof(BatchedPaletteRemap_Uniforms), nullptr, 0, &BatchedPaletteRemap_ComputeVaryings },
 			{ "PartialWhiteMask", &PartialWhiteMask_Fragment, (std::uint32_t)sizeof(PartialWhiteMask_Uniforms), nullptr, 0, nullptr },
@@ -1899,6 +2385,8 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentSha
 			// Otherwise match ignoring '_' and letter case, so a variant label that bakes the variant
 			// into the shader name (e.g. "TexturedBackgroundDither") still resolves to the generated
 			// prefix that separates it with an underscore and upper-cases the define ("..._DITHER").
+			// A "use" token is also skipped on both sides so a "USE_PALETTE" define matches a runtime
+			// label that spells the same variant as "...Palette" (the engine drops the "USE_" prefix).
 			for (const SwGeneratedShaderInfo& info : SwGeneratedShaders) {
 				const char* a = info.name;
 				const char* b = name;
@@ -1906,6 +2394,8 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentSha
 				for (;;) {
 					while (*a == '_') { a++; }
 					while (*b == '_') { b++; }
+					if ((a[0] == 'u' || a[0] == 'U') && (a[1] == 's' || a[1] == 'S') && (a[2] == 'e' || a[2] == 'E')) { a += 3; continue; }
+					if ((b[0] == 'u' || b[0] == 'U') && (b[1] == 's' || b[1] == 'S') && (b[2] == 'e' || b[2] == 'E')) { b += 3; continue; }
 					char ca = (*a >= 'A' && *a <= 'Z') ? (char)(*a - 'A' + 'a') : *a;
 					char cb = (*b >= 'A' && *b <= 'Z') ? (char)(*b - 'A' + 'a') : *b;
 					if (ca != cb) { equal = false; break; }

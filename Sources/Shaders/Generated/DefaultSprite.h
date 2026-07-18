@@ -5,6 +5,7 @@
 
 namespace nCine::ShadersGen
 {
+#if defined(WITH_RHI_GL)
 	inline constexpr char DefaultSprite_Vs[] =
 R"__SHDR__(#line 1
 
@@ -35,7 +36,9 @@ void main()
 	vColor = color;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char DefaultSprite_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -64,7 +67,9 @@ void main()
 	vColor = color;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char DefaultSprite_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 cbuffer _Globals : register(b0)
@@ -114,7 +119,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t DefaultSprite_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x0000005fu, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -206,6 +213,8 @@ VsOutput VSMain(VsInput _input)
 		0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char DefaultSprite_Fs[] =
 R"__SHDR__(#line 1
 
@@ -226,7 +235,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char DefaultSprite_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -246,7 +257,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char DefaultSprite_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 Texture2D uTexture : register(t0);
@@ -272,7 +285,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t DefaultSprite_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000019u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -298,6 +313,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x0003003eu, 0x00000009u, 0x00000018u, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform DefaultSprite_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -320,15 +336,33 @@ float4 PSMain(PsInput _input) : SV_Target
 	};
 
 	inline constexpr ShaderCompiler::ProgramVariant DefaultSprite_Variants[] = {
-		{ "", "", DefaultSprite_Vs, DefaultSprite_Fs,
+		{ "", "",
+#if defined(WITH_RHI_GL)
+			DefaultSprite_Vs, DefaultSprite_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, DefaultSprite_Uniforms, 1, DefaultSprite_Blocks, 1, DefaultSprite_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL)
 			DefaultSprite_Vs100, DefaultSprite_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			DefaultSprite_VsHlsl, DefaultSprite_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			DefaultSprite_VkVs, 698, DefaultSprite_VkFs, 173 },
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
 	};
 
 	inline constexpr ShaderCompiler::Program DefaultSprite = { "DefaultSprite", 0, 1, DefaultSprite_Variants };
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char DefaultBatchedSprites_Vs[] =
 R"__SHDR__(#line 1
 
@@ -368,7 +402,9 @@ void main()
 	vColor = i.color;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char DefaultBatchedSprites_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -407,7 +443,9 @@ void main()
 	vColor = i.color;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char DefaultBatchedSprites_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 #define BATCH_SIZE 585
@@ -464,7 +502,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t DefaultBatchedSprites_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000078u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -574,6 +614,8 @@ VsOutput VSMain(VsInput _input)
 		0x00000077u, 0x00000076u, 0x0003003eu, 0x00000072u, 0x00000077u, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char DefaultBatchedSprites_Fs[] =
 R"__SHDR__(#line 1
 
@@ -594,7 +636,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char DefaultBatchedSprites_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -614,7 +658,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char DefaultBatchedSprites_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 Texture2D uTexture : register(t0);
@@ -640,7 +686,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t DefaultBatchedSprites_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000019u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -666,6 +714,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x0003003eu, 0x00000009u, 0x00000018u, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform DefaultBatchedSprites_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -684,11 +733,28 @@ float4 PSMain(PsInput _input) : SV_Target
 	};
 
 	inline constexpr ShaderCompiler::ProgramVariant DefaultBatchedSprites_Variants[] = {
-		{ "", "", DefaultBatchedSprites_Vs, DefaultBatchedSprites_Fs,
+		{ "", "",
+#if defined(WITH_RHI_GL)
+			DefaultBatchedSprites_Vs, DefaultBatchedSprites_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, DefaultBatchedSprites_Uniforms, 1, DefaultBatchedSprites_Blocks, 1, DefaultBatchedSprites_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL)
 			DefaultBatchedSprites_Vs100, DefaultBatchedSprites_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			DefaultBatchedSprites_VsHlsl, DefaultBatchedSprites_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			DefaultBatchedSprites_VkVs, 847, DefaultBatchedSprites_VkFs, 173 },
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
 	};
 
 	inline constexpr ShaderCompiler::Program DefaultBatchedSprites = { "DefaultBatchedSprites", 0, 1, DefaultBatchedSprites_Variants };

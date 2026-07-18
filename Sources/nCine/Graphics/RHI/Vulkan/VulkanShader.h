@@ -12,14 +12,14 @@ namespace nCine::RhiVulkan
 	/**
 		@brief Shader-object stub of the Vulkan backend
 
-		Slice 2a does not build SPIR-V modules yet (the offline emitter already produces `VkVsSpirv`/`VkFsSpirv`
-		per program-variant; slice 2b creates `VkShaderModule` objects and pipelines from them). This class
-		carries no source and every operation succeeds trivially, only to satisfy the `Rhi::Shader` contract alias.
+		The offline emitter already produces `VkVsSpirv`/`VkFsSpirv` per program-variant, and the program object
+		creates the `VkShaderModule` objects and pipelines from them. This class therefore carries no source and
+		every operation succeeds trivially, only to satisfy the `Rhi::Shader` contract alias.
 	*/
 	class VulkanShader
 	{
 	public:
-		/** @brief Compilation status of the shader (always @ref Status::Compiled for slice 2a) */
+		/** @brief Compilation status of the shader (always @ref Status::Compiled for this stub) */
 		enum class Status
 		{
 			NotCompiled,
@@ -28,7 +28,7 @@ namespace nCine::RhiVulkan
 			CompiledWithDeferredChecks
 		};
 
-		/** @brief When the compilation status is checked (irrelevant for the slice 2a stub) */
+		/** @brief When the compilation status is checked (irrelevant for this stub) */
 		enum class ErrorChecking
 		{
 			Immediate,

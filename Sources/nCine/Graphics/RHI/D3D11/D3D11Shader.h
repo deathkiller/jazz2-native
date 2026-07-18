@@ -12,14 +12,14 @@ namespace nCine::RhiD3D11
 	/**
 		@brief Shader-object stub of the Direct3D 11 backend
 
-		Slice 2a does not compile HLSL yet (the offline emitter already produces `HlslVsSource`/`HlslFsSource`
-		per program-variant; slice 2b compiles them via d3dcompiler). This class carries no source and every
+		The offline emitter already produces `HlslVsSource`/`HlslFsSource` per program-variant, and the
+		program object compiles them via d3dcompiler. This class therefore carries no source and every
 		operation succeeds trivially, only to satisfy the `Rhi::Shader` contract alias.
 	*/
 	class D3D11Shader
 	{
 	public:
-		/** @brief Compilation status of the shader (always @ref Status::Compiled for slice 2a) */
+		/** @brief Compilation status of the shader (always @ref Status::Compiled for this stub) */
 		enum class Status
 		{
 			NotCompiled,
@@ -28,7 +28,7 @@ namespace nCine::RhiD3D11
 			CompiledWithDeferredChecks
 		};
 
-		/** @brief When the compilation status is checked (irrelevant for the slice 2a stub) */
+		/** @brief When the compilation status is checked (irrelevant for this stub) */
 		enum class ErrorChecking
 		{
 			Immediate,

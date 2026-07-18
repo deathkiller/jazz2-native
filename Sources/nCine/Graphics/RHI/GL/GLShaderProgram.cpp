@@ -74,8 +74,8 @@ namespace nCine::RhiGL
 	GLShaderProgram::GLShaderProgram(StringView vertexFile, StringView fragmentFile, Introspection introspection, QueryPhase queryPhase)
 		: GLShaderProgram(queryPhase)
 	{
-		const bool hasCompiledVS = AttachShaderFromFile(GL_VERTEX_SHADER, vertexFile);
-		const bool hasCompiledFS = AttachShaderFromFile(GL_FRAGMENT_SHADER, fragmentFile);
+		const bool hasCompiledVS = AttachShaderFromFile(ShaderStage::Vertex, vertexFile);
+		const bool hasCompiledFS = AttachShaderFromFile(ShaderStage::Fragment, fragmentFile);
 
 		if (hasCompiledVS && hasCompiledFS) {
 			Link(introspection);
@@ -133,24 +133,24 @@ namespace nCine::RhiGL
 		}
 	}
 
-	bool GLShaderProgram::AttachShaderFromFile(GLenum type, StringView filename)
+	bool GLShaderProgram::AttachShaderFromFile(ShaderStage stage, StringView filename)
 	{
-		return AttachShaderFromStringsAndFile(type, nullptr, filename);
+		return AttachShaderFromStringsAndFile(stage, nullptr, filename);
 	}
-	
-	bool GLShaderProgram::AttachShaderFromString(GLenum type, StringView string)
+
+	bool GLShaderProgram::AttachShaderFromString(ShaderStage stage, StringView string)
 	{
-		return AttachShaderFromStringsAndFile(type, arrayView({ string }), {});
+		return AttachShaderFromStringsAndFile(stage, arrayView({ string }), {});
 	}
-	
-	bool GLShaderProgram::AttachShaderFromStrings(GLenum type, ArrayView<const StringView> strings)
+
+	bool GLShaderProgram::AttachShaderFromStrings(ShaderStage stage, ArrayView<const StringView> strings)
 	{
-		return AttachShaderFromStringsAndFile(type, strings, {});
+		return AttachShaderFromStringsAndFile(stage, strings, {});
 	}
-	
-	bool GLShaderProgram::AttachShaderFromStringsAndFile(GLenum type, ArrayView<const StringView> strings, StringView filename)
+
+	bool GLShaderProgram::AttachShaderFromStringsAndFile(ShaderStage stage, ArrayView<const StringView> strings, StringView filename)
 	{
-		std::unique_ptr<GLShader> shader = std::make_unique<GLShader>(type);
+		std::unique_ptr<GLShader> shader = std::make_unique<GLShader>(stage == ShaderStage::Vertex ? GL_VERTEX_SHADER : GL_FRAGMENT_SHADER);
 		shader->LoadFromStringsAndFile(strings, filename);
 		glAttachShader(glHandle_, shader->GetGLHandle());
 

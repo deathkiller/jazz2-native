@@ -113,6 +113,9 @@ namespace nCine::RhiVulkan
 	PFN_vkDestroyPipelineLayout vkDestroyPipelineLayout = nullptr;
 	PFN_vkCreateGraphicsPipelines vkCreateGraphicsPipelines = nullptr;
 	PFN_vkDestroyPipeline vkDestroyPipeline = nullptr;
+	PFN_vkCreatePipelineCache vkCreatePipelineCache = nullptr;
+	PFN_vkDestroyPipelineCache vkDestroyPipelineCache = nullptr;
+	PFN_vkCmdCopyImageToBuffer vkCmdCopyImageToBuffer = nullptr;
 	PFN_vkCreateRenderPass vkCreateRenderPass = nullptr;
 	PFN_vkDestroyRenderPass vkDestroyRenderPass = nullptr;
 	PFN_vkCreateFramebuffer vkCreateFramebuffer = nullptr;
@@ -181,6 +184,7 @@ namespace nCine::RhiVulkan
 			VkCommandBuffer CommandBuffer = VK_NULL_HANDLE;
 			VkSemaphore ImageAvailable = VK_NULL_HANDLE;
 			VkFence InFlightFence = VK_NULL_HANDLE;
+			bool FenceInFlight = false;							// true only between a successful submit and the next BeginFrame wait
 			std::vector<VkDescriptorPool> DescPools;			// per-frame; reset when this slot is re-entered
 			std::size_t DescPoolCursor = 0;
 			VkDeviceSize UboCursor = 0;							// relative to this frame's uniform-ring region base
@@ -671,13 +675,45 @@ namespace nCine::RhiVulkan
 
 	namespace
 	{
+		// Driver-level pipeline cache passed to every vkCreateGraphicsPipelines, so pipelines recreated after a
+		// swapchain rebuild (s_pipelines is dropped on resize) reuse the driver's cached compilation instead of
+		// recompiling the SPIR-V from scratch. Created lazily, destroyed with the device.
+		VkPipelineCache s_pipelineCache = VK_NULL_HANDLE;
+
+		// Last-bound state of the current command buffer (redundant vkCmd* elimination). Command-buffer state is
+		// reset by vkResetCommandBuffer, so BeginFrame() clears these; deferred destruction only frees GPU objects
+		// at that same boundary, so a recycled handle can never alias a value still cached here mid-frame.
+		VkPipeline s_lastPipeline = VK_NULL_HANDLE;
+		VkDescriptorSet s_lastDescriptorSet = VK_NULL_HANDLE;
+		VkPipelineLayout s_lastDescriptorLayout = VK_NULL_HANDLE;
+		VkBuffer s_lastVertexBuffer = VK_NULL_HANDLE;
+		VkBuffer s_lastIndexBuffer = VK_NULL_HANDLE;
+		VkIndexType s_lastIndexType = VK_INDEX_TYPE_MAX_ENUM;
+		VkViewport s_lastViewport = {};
+		VkRect2D s_lastScissor = {};
+		bool s_lastViewportValid = false;
+		bool s_lastScissorValid = false;
+
+		void ResetCommandBufferShadowState()
+		{
+			s_lastPipeline = VK_NULL_HANDLE;
+			s_lastDescriptorSet = VK_NULL_HANDLE;
+			s_lastDescriptorLayout = VK_NULL_HANDLE;
+			s_lastVertexBuffer = VK_NULL_HANDLE;
+			s_lastIndexBuffer = VK_NULL_HANDLE;
+			s_lastIndexType = VK_INDEX_TYPE_MAX_ENUM;
+			s_lastViewportValid = false;
+			s_lastScissorValid = false;
+		}
+
 		VkPipeline GetOrCreatePipeline(VulkanShaderProgram* prog, PrimitiveType primitive, VkRenderPass renderPass)
 		{
-			std::vector<VulkanShaderProgram::VertexAttrib> attribs;
+			VulkanShaderProgram::VertexAttrib attribs[16];
+			std::uint32_t attribCount = 0;
 			std::uint32_t stride = 0;
 			const bool hasVI = prog->HasVertexAttributes();
 			if (hasVI) {
-				prog->GetVertexInput(attribs, stride);
+				attribCount = prog->GetVertexInput(attribs, 16, stride);
 			}
 
 			const VulkanDevice::BlendingState blend = VulkanDevice::GetBlendingState();
@@ -711,28 +747,27 @@ namespace nCine::RhiVulkan
 			stages[1].pName = "main";
 
 			VkVertexInputBindingDescription binding = {};
-			std::vector<VkVertexInputAttributeDescription> viAttribs;
+			VkVertexInputAttributeDescription viAttribs[16] = {};
+			std::uint32_t viAttribCount = 0;
 			if (hasVI && stride > 0) {
 				binding.binding = 0;
 				binding.stride = stride;
 				binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-				viAttribs.reserve(attribs.size());
-				for (const VulkanShaderProgram::VertexAttrib& a : attribs) {
-					VkVertexInputAttributeDescription d = {};
-					d.location = a.Location;
+				for (std::uint32_t i = 0; i < attribCount; i++) {
+					VkVertexInputAttributeDescription& d = viAttribs[viAttribCount++];
+					d.location = attribs[i].Location;
 					d.binding = 0;
-					d.format = AttributeFormat(a.ComponentCount);
-					d.offset = a.Offset;
-					viAttribs.push_back(d);
+					d.format = AttributeFormat(attribs[i].ComponentCount);
+					d.offset = attribs[i].Offset;
 				}
 			}
 			VkPipelineVertexInputStateCreateInfo vi = {};
 			vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-			if (hasVI && stride > 0 && !viAttribs.empty()) {
+			if (hasVI && stride > 0 && viAttribCount > 0) {
 				vi.vertexBindingDescriptionCount = 1;
 				vi.pVertexBindingDescriptions = &binding;
-				vi.vertexAttributeDescriptionCount = std::uint32_t(viAttribs.size());
-				vi.pVertexAttributeDescriptions = viAttribs.data();
+				vi.vertexAttributeDescriptionCount = viAttribCount;
+				vi.pVertexAttributeDescriptions = viAttribs;
 			}
 
 			VkPipelineInputAssemblyStateCreateInfo ia = {};
@@ -802,8 +837,14 @@ namespace nCine::RhiVulkan
 			gpci.renderPass = renderPass;
 			gpci.subpass = 0;
 
+			if (s_pipelineCache == VK_NULL_HANDLE && vkCreatePipelineCache != nullptr) {
+				VkPipelineCacheCreateInfo pcci = {};
+				pcci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+				vkCreatePipelineCache(s_device, &pcci, nullptr, &s_pipelineCache);
+			}
+
 			VkPipeline pipeline = VK_NULL_HANDLE;
-			if (vkCreateGraphicsPipelines(s_device, VK_NULL_HANDLE, 1, &gpci, nullptr, &pipeline) != VK_SUCCESS) {
+			if (vkCreateGraphicsPipelines(s_device, s_pipelineCache, 1, &gpci, nullptr, &pipeline) != VK_SUCCESS) {
 				LOGE("vkCreateGraphicsPipelines failed for program {}", prog->GetGLHandle());
 				return VK_NULL_HANDLE;
 			}
@@ -894,9 +935,13 @@ namespace nCine::RhiVulkan
 			FrameData& fr = s_frames[s_currentFrame];
 			// Wait for THIS frame slot's previous GPU work (NOT a global idle): its command buffer, descriptor
 			// pools and uniform-ring region then become safe to reuse. With MaxFramesInFlight slots the CPU can
-			// record this frame while the GPU still runs the other slot's frame. The fence is created signalled
-			// and only reset right before submit, so a frame that bails before submitting returns here at once.
-			vkWaitForFences(s_device, 1, &fr.InFlightFence, VK_TRUE, UINT64_MAX);
+			// record this frame while the GPU still runs the other slot's frame. The fence is only waited on when
+			// a submit actually put it in flight (FenceInFlight), so a frame that bailed before submitting - or
+			// whose vkQueueSubmit failed and left the fence unsignalled - cannot deadlock this wait.
+			if (fr.FenceInFlight) {
+				vkWaitForFences(s_device, 1, &fr.InFlightFence, VK_TRUE, UINT64_MAX);
+				fr.FenceInFlight = false;
+			}
 
 			// The fence signalled => the GPU finished the frame that queued this slot's staging buffers; free them
 			FreeFrameStaging(fr);
@@ -922,6 +967,7 @@ namespace nCine::RhiVulkan
 			s_frameActive = true;
 			s_renderPassOpen = false;
 			s_activeRenderPassTarget = nullptr;
+			ResetCommandBufferShadowState();	// the reset command buffer holds no bindings any more
 
 			// Clear the screen image to opaque black so unwritten regions are defined (the default framebuffer
 			// starts cleared, like GL); the engine overwrites/clears again through its own passes. The screen
@@ -1050,6 +1096,11 @@ namespace nCine::RhiVulkan
 
 			for (const VulkanShaderProgram::DescriptorBinding& b : bindings) {
 				if (writeCount >= 16) {
+					static bool warnedBindingOverflow = false;
+					if (!warnedBindingOverflow) {
+						warnedBindingOverflow = true;
+						LOGW("Program {} declares more than 16 descriptor bindings; the rest are dropped", prog->GetGLHandle());
+					}
 					break;
 				}
 				VkWriteDescriptorSet& w = writes[writeCount];
@@ -1126,6 +1177,11 @@ namespace nCine::RhiVulkan
 					offset = it->second;
 				} else {
 					if (!AllocUbo(size, offset)) {
+						static bool warnedRingExhausted = false;
+						if (!warnedRingExhausted) {
+							warnedRingExhausted = true;
+							LOGW("Per-frame uniform ring exhausted ({} bytes); draws are rendered with stale uniforms", s_uboPerFrameSize);
+						}
 						continue;
 					}
 					std::memcpy(s_uboRingMapped + offset, gather, std::size_t(size));
@@ -1163,7 +1219,11 @@ namespace nCine::RhiVulkan
 				}
 				s_frameSetByHash.emplace(keyHash, set);
 			}
-			vkCmdBindDescriptorSets(s_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &set, 0, nullptr);
+			if (s_lastDescriptorSet != set || s_lastDescriptorLayout != layout) {
+				vkCmdBindDescriptorSets(s_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &set, 0, nullptr);
+				s_lastDescriptorSet = set;
+				s_lastDescriptorLayout = layout;
+			}
 		}
 
 		void ApplyViewportScissor()
@@ -1177,7 +1237,11 @@ namespace nCine::RhiVulkan
 			vp.height = float(vpRect.H);
 			vp.minDepth = 0.0f;
 			vp.maxDepth = 1.0f;
-			vkCmdSetViewport(s_commandBuffer, 0, 1, &vp);
+			if (!s_lastViewportValid || std::memcmp(&s_lastViewport, &vp, sizeof(vp)) != 0) {
+				vkCmdSetViewport(s_commandBuffer, 0, 1, &vp);
+				s_lastViewport = vp;
+				s_lastViewportValid = true;
+			}
 
 			// The framebuffer stores rows exactly like GL (bottom-up), so the GL scissor (bottom-left origin)
 			// maps to the Vulkan framebuffer scissor with no flip; clamp it to the current render area.
@@ -1200,7 +1264,11 @@ namespace nCine::RhiVulkan
 				sc.offset = { 0, 0 };
 				sc.extent = extent;
 			}
-			vkCmdSetScissor(s_commandBuffer, 0, 1, &sc);
+			if (!s_lastScissorValid || std::memcmp(&s_lastScissor, &sc, sizeof(sc)) != 0) {
+				vkCmdSetScissor(s_commandBuffer, 0, 1, &sc);
+				s_lastScissor = sc;
+				s_lastScissorValid = true;
+			}
 		}
 
 		void DrawCommon(PrimitiveType primitive, std::int32_t firstVertex, std::uint32_t count,
@@ -1252,7 +1320,10 @@ namespace nCine::RhiVulkan
 			if (pipeline == VK_NULL_HANDLE) {
 				return;
 			}
-			vkCmdBindPipeline(s_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+			if (s_lastPipeline != pipeline) {
+				vkCmdBindPipeline(s_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+				s_lastPipeline = pipeline;
+			}
 			ApplyViewportScissor();
 			BuildAndBindDescriptorSet(prog);
 
@@ -1263,16 +1334,24 @@ namespace nCine::RhiVulkan
 					return;
 				}
 				VkBuffer vertexBuffer = reinterpret_cast<VkBuffer>(vk);
-				VkDeviceSize vboOffset = 0;
-				vkCmdBindVertexBuffers(s_commandBuffer, 0, 1, &vertexBuffer, &vboOffset);
+				if (s_lastVertexBuffer != vertexBuffer) {
+					VkDeviceSize vboOffset = 0;
+					vkCmdBindVertexBuffers(s_commandBuffer, 0, 1, &vertexBuffer, &vboOffset);
+					s_lastVertexBuffer = vertexBuffer;
+				}
 				if (indexed) {
 					const VulkanBufferObject* ibo = prog->GetBoundIbo();
 					const std::uint64_t ivk = (ibo != nullptr ? ibo->GetVkBuffer() : 0);
 					if (ivk == 0) {
 						return;
 					}
-					vkCmdBindIndexBuffer(s_commandBuffer, reinterpret_cast<VkBuffer>(ivk), 0,
-						indexFormat == IndexFormat::UInt32 ? VK_INDEX_TYPE_UINT32 : VK_INDEX_TYPE_UINT16);
+					VkBuffer indexBuffer = reinterpret_cast<VkBuffer>(ivk);
+					const VkIndexType indexType = (indexFormat == IndexFormat::UInt32 ? VK_INDEX_TYPE_UINT32 : VK_INDEX_TYPE_UINT16);
+					if (s_lastIndexBuffer != indexBuffer || s_lastIndexType != indexType) {
+						vkCmdBindIndexBuffer(s_commandBuffer, indexBuffer, 0, indexType);
+						s_lastIndexBuffer = indexBuffer;
+						s_lastIndexType = indexType;
+					}
 				}
 			}
 
@@ -1299,9 +1378,9 @@ namespace nCine::RhiVulkan
 	{
 		DrawCommon(primitive, 0, numIndices, true, indexFormat, indexOffset, 1, baseVertex);
 	}
-	void VulkanDevice::DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
+	void VulkanDevice::DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
 	{
-		DrawCommon(primitive, 0, numIndices, true, IndexFormat::UInt16, indexOffset, numInstances, baseVertex);
+		DrawCommon(primitive, 0, numIndices, true, indexFormat, indexOffset, numInstances, baseVertex);
 	}
 
 	FenceHandle VulkanDevice::InsertFence() { return nullptr; }
@@ -1648,6 +1727,7 @@ namespace nCine::RhiVulkan
 					!CheckVk(vkCreateFence(s_device, &fenceInfo, nullptr, &fr.InFlightFence), "vkCreateFence(inFlight)")) {
 					return false;
 				}
+				fr.FenceInFlight = false;	// fresh fence, nothing submitted against it yet
 			}
 			return true;
 		}
@@ -2038,7 +2118,7 @@ namespace nCine::RhiVulkan
 			SetViewport(Recti(0, 0, width, height));
 		}
 		s_ready = true;
-		LOGI("Vulkan device ready (slice 2b: real render pipeline; depthClamp {}, minUboAlign {})",
+		LOGI("Vulkan device ready (real render pipeline; depthClamp {}, minUboAlign {})",
 			s_depthClamp ? "on" : "off", static_cast<std::int32_t>(s_minUboAlign));
 		return true;
 #else
@@ -2208,10 +2288,16 @@ namespace nCine::RhiVulkan
 		vkResetFences(s_device, 1, &fr.InFlightFence);
 		s_frameActive = false;
 		if (vkQueueSubmit(s_graphicsQueue, 1, &submit, fr.InFlightFence) != VK_SUCCESS) {
-			// Submit failed: fr.ImageAvailable stays signalled, but the next successful submit for this slot will
-			// consume it (or the next resize recreates it). Leave the image-in-flight tracking; a resize resets it.
+			// Submit failed: the fence was reset but never enqueued, so it will never signal - FenceInFlight stays
+			// false so the next BeginFrame does not deadlock waiting on it, and the image-in-flight entry is
+			// cleared so a future acquire of this image does not wait on the same never-signalled fence.
+			// fr.ImageAvailable stays signalled, but the next successful submit for this slot consumes it
+			// (or the next resize recreates it).
+			s_imagesInFlight[imageIndex] = VK_NULL_HANDLE;
+			LOGE("vkQueueSubmit() failed, dropping the frame");
 			return;
 		}
+		fr.FenceInFlight = true;
 
 		VkPresentInfoKHR present = {};
 		present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -2286,6 +2372,13 @@ namespace nCine::RhiVulkan
 					fr.CommandBuffer = VK_NULL_HANDLE;
 				}
 				s_commandBuffer = VK_NULL_HANDLE;
+			}
+			if (s_pipelineCache != VK_NULL_HANDLE) {
+				// Kept across swapchain rebuilds (so resized pipelines reuse the driver cache); dies with the device
+				if (vkDestroyPipelineCache != nullptr) {
+					vkDestroyPipelineCache(s_device, s_pipelineCache, nullptr);
+				}
+				s_pipelineCache = VK_NULL_HANDLE;
 			}
 			vkDestroyDevice(s_device, nullptr);
 			s_device = VK_NULL_HANDLE;
@@ -2413,6 +2506,9 @@ namespace nCine::RhiVulkan
 		VK_LOAD_DEVICE(vkDestroyPipelineLayout);
 		VK_LOAD_DEVICE(vkCreateGraphicsPipelines);
 		VK_LOAD_DEVICE(vkDestroyPipeline);
+		VK_LOAD_DEVICE(vkCreatePipelineCache);
+		VK_LOAD_DEVICE(vkDestroyPipelineCache);
+		VK_LOAD_DEVICE(vkCmdCopyImageToBuffer);
 		VK_LOAD_DEVICE(vkCreateRenderPass);
 		VK_LOAD_DEVICE(vkDestroyRenderPass);
 		VK_LOAD_DEVICE(vkCreateFramebuffer);

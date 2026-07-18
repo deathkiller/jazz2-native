@@ -37,9 +37,9 @@ elseif(OPENGL_FOUND)
 	else()
 		target_link_libraries(${NCINE_APP} PRIVATE OpenGL::GL)
 	endif()
-elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NCINE_WITH_RHI_D3D11 AND NOT NCINE_WITH_RHI_VULKAN)
-	# NCINE_WITH_RHI_D3D11 / NCINE_WITH_RHI_VULKAN are excluded: those backends deliberately import no
-	# OpenGL/EGL library (D3D11 links d3d11/dxgi/d3dcompiler; Vulkan loads vulkan-1.dll dynamically at runtime).
+elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NCINE_PREFERRED_RHI STREQUAL "D3D11" AND NOT NCINE_PREFERRED_RHI STREQUAL "Vulkan")
+	# The D3D11 / Vulkan backends are excluded: those backends deliberately import no OpenGL/EGL
+	# library (D3D11 links d3d11/dxgi/d3dcompiler; Vulkan loads vulkan-1.dll dynamically at runtime).
 	message(STATUS "No graphics library found! Make sure OpenGL or OpenGL|ES library is available on your system.")
 endif()
 
@@ -48,19 +48,19 @@ if(GLEW_FOUND)
 	target_link_libraries(${NCINE_APP} PRIVATE GLEW::GLEW)
 endif()
 
-if(NCINE_WITH_RHI_SOFTWARE)
+if(NCINE_PREFERRED_RHI STREQUAL "Software")
 	# Selects the CPU software backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_SOFTWARE")
 endif()
 
-if(NCINE_WITH_RHI_D3D11)
+if(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 	# Selects the Direct3D 11 backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_D3D11")
-	# Direct3D 11 device/swap chain, DXGI and the (slice 2b) HLSL compiler
+	# Direct3D 11 device/swap chain, DXGI and the HLSL compiler
 	target_link_libraries(${NCINE_APP} PRIVATE d3d11 dxgi d3dcompiler)
 endif()
 
-if(NCINE_WITH_RHI_VULKAN)
+if(NCINE_PREFERRED_RHI STREQUAL "Vulkan")
 	# Selects the Vulkan backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_VULKAN")
 	# Header-only Khronos Vulkan-Headers (fetched in ncine_imported_targets.cmake). No vulkan-1.lib is linked:
@@ -580,7 +580,7 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 		"${MSVC_WINRT_BINDIR}/vcruntime140_1.dll"
 	)
 	
-	if(NCINE_WITH_RHI_D3D11)
+	if(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 		# Direct3D 11 renders through the DXGI CoreWindow swap chain; d3d11.dll / dxgi.dll / d3dcompiler_47.dll
 		# are inbox OS components on UWP (Windows Store / Xbox), so no EGL / OpenGL|ES runtime DLLs are packaged.
 		message(STATUS "Using Direct3D 11 as the rendering backend")

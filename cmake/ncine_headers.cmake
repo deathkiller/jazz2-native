@@ -431,7 +431,7 @@ list(APPEND HEADERS
 )
 
 # CPU software rendering backend headers (used only when the software backend is selected)
-if(NCINE_WITH_RHI_SOFTWARE)
+if(NCINE_PREFERRED_RHI STREQUAL "Software")
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwBackend.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwBuffer.h

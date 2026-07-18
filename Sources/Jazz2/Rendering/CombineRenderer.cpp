@@ -200,8 +200,14 @@ namespace Jazz2::Rendering
 			}
 			const float radiusNearNorm = light.RadiusNear / radiusFar;
 			const float denom = (1.0f - radiusNearNorm);
-			const float intensity = light.Intensity;
-			const float brightness = light.Brightness;
+			// Clamp each light's contribution to be non-negative, mirroring the GL/D3D11 lighting path: that
+			// buffer is an unsigned RG8 render target and blending clamps the shader's source colour to [0,1]
+			// before the additive blend, so a light whose Intensity/Brightness has ramped below zero (e.g. the
+			// fading player motion trail) simply adds nothing. Summing the raw negative value here instead would
+			// pull the local intensity below the ambient level, darkening the scene into a black trail rather
+			// than fading it out.
+			const float intensity = std::max(0.0f, light.Intensity);
+			const float brightness = std::max(0.0f, light.Brightness);
 
 			const float cx = (light.Pos.X - camX + halfW) / Scale;
 			const float cy = (camY - light.Pos.Y + halfH) / Scale;

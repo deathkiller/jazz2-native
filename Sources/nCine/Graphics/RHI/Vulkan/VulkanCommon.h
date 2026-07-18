@@ -1,12 +1,12 @@
 #pragma once
 
-// Backend-INTERNAL header of the Vulkan RHI (slice 2b). Unlike the contract headers (VulkanDevice.h,
+// Backend-INTERNAL header of the Vulkan RHI. Unlike the contract headers (VulkanDevice.h,
 // VulkanTexture.h, ...) — which stay free of <vulkan/vulkan.h> because they are pulled in across the whole
 // render pipeline through Rhi.h — this header pulls in the Vulkan headers and the dynamically-resolved loader
 // entry points, and is included ONLY by the Vulkan backend translation units (VulkanDevice.cpp,
-// VulkanShaderProgram.cpp, VulkanBufferObject.cpp, VulkanTexture.cpp, VulkanRenderTarget.cpp). Slice 2a kept
-// vulkan.h in VulkanDevice.cpp alone; slice 2b needs the symbols in several .cpp to build the real GPU
-// resources, so the loader is exposed here (the whole file only ever compiles in a WITH_RHI_VULKAN build).
+// VulkanShaderProgram.cpp, VulkanBufferObject.cpp, VulkanTexture.cpp, VulkanRenderTarget.cpp). The backend
+// needs the Vulkan symbols in several .cpp to build the real GPU resources, so the loader is exposed here
+// (the whole file only ever compiles in a WITH_RHI_VULKAN build).
 
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
@@ -72,7 +72,7 @@ namespace nCine::RhiVulkan
 	extern PFN_vkQueuePresentKHR vkQueuePresentKHR;
 	extern PFN_vkQueueWaitIdle vkQueueWaitIdle;
 
-	// -- Slice 2b: real GPU resources / pipelines / draws --
+	// -- Real GPU resources / pipelines / draws --
 	extern PFN_vkCreateBuffer vkCreateBuffer;
 	extern PFN_vkDestroyBuffer vkDestroyBuffer;
 	extern PFN_vkGetBufferMemoryRequirements vkGetBufferMemoryRequirements;
@@ -100,6 +100,9 @@ namespace nCine::RhiVulkan
 	extern PFN_vkDestroyPipelineLayout vkDestroyPipelineLayout;
 	extern PFN_vkCreateGraphicsPipelines vkCreateGraphicsPipelines;
 	extern PFN_vkDestroyPipeline vkDestroyPipeline;
+	extern PFN_vkCreatePipelineCache vkCreatePipelineCache;
+	extern PFN_vkDestroyPipelineCache vkDestroyPipelineCache;
+	extern PFN_vkCmdCopyImageToBuffer vkCmdCopyImageToBuffer;
 	extern PFN_vkCreateRenderPass vkCreateRenderPass;
 	extern PFN_vkDestroyRenderPass vkDestroyRenderPass;
 	extern PFN_vkCreateFramebuffer vkCreateFramebuffer;

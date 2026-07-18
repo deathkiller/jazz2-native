@@ -10,6 +10,10 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <string>
+#include <vector>
+
+#include <Containers/StringStl.h>
 
 namespace nCine::RhiSoftware
 {
@@ -25,6 +29,9 @@ namespace nCine::RhiSoftware
 		constexpr std::uint32_t kSpriteSizeOffset = 96;
 		// The palette shaders park a flat palette index in the std140 tail padding after spriteSize
 		constexpr std::uint32_t kPaletteOffsetOffset = 104;
+		// The no-texture sprite family (Sprite_NoTexture / Batched_Sprites_NoTexture) drops texRect from the
+		// instance block, so spriteSize sits directly after color (offset 80, not 96) and there is no palette tail
+		constexpr std::uint32_t kSpriteSizeNoTexOffset = 80;
 
 		const float IdentityMatrix[16] = {
 			1, 0, 0, 0,
@@ -237,8 +244,9 @@ namespace nCine::RhiSoftware
 		Dispatch(primitive, std::int32_t(numIndices));
 	}
 
-	void SwDevice::DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
+	void SwDevice::DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
 	{
+		static_cast<void>(indexFormat);
 		static_cast<void>(indexOffset);
 		static_cast<void>(numInstances);
 		static_cast<void>(baseVertex);
@@ -365,6 +373,20 @@ namespace nCine::RhiSoftware
 	void SwDevice::FlushSoftwareRenderer()
 	{
 		SwRaster::Flush();
+	}
+
+	void SwDevice::EndFrame()
+	{
+		if (!pendingSoftwareLights_.empty()) {
+			// A queued lightmap was not consumed by a Combine draw this frame (the draw was culled or skipped);
+			// drop the leftovers so they cannot desync the FIFO pairing or dangle into the next frame
+			static bool warnedLeftoverLights = false;
+			if (!warnedLeftoverLights) {
+				warnedLeftoverLights = true;
+				LOGW("{} software-lighting entr{} left unconsumed at frame end - dropping", pendingSoftwareLights_.size(), pendingSoftwareLights_.size() == 1 ? "y" : "ies");
+			}
+			pendingSoftwareLights_.clear();
+		}
 	}
 
 	void SwDevice::SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
@@ -514,14 +536,22 @@ namespace nCine::RhiSoftware
 		if (prefersGenerated) {
 			generatedShader = FindGeneratedShader(currentProgram_->GetObjectLabel());
 			if (generatedShader == nullptr && effect == SwEffect::Unknown) {
-				std::fprintf(stderr, "[SwDevice] Skipped draw: no C++ effect for the bound program\n");
+				// Expected for shaders the offline transpiler declined (e.g. the dFdx-based shield effects) -
+				// their visuals are simply absent on the software backend. Warn once per program, not per draw.
+				static std::vector<std::string> warnedLabels;
+				const char* label = currentProgram_->GetObjectLabel();
+				const std::string labelStr = (label != nullptr ? label : "<unlabeled>");
+				if (std::find(warnedLabels.begin(), warnedLabels.end(), labelStr) == warnedLabels.end()) {
+					warnedLabels.push_back(labelStr);
+					LOGW("Skipping draws of program \"{}\": No transpiled C++ fragment", StringView(labelStr));
+				}
 				return;
 			}
 		}
 
 		Framebuffer fb;
 		if (!ResolveFramebuffer(fb)) {
-			std::fprintf(stderr, "[SwDevice] Skipped draw: no render target bound\n");
+			LOGW("Skipped draw: No render target bound");
 			return;
 		}
 
@@ -542,7 +572,7 @@ namespace nCine::RhiSoftware
 			block = currentProgram_->FindBlock("InstancesBlock");
 		}
 		if (block == nullptr) {
-			std::fprintf(stderr, "[SwDevice] Skipped draw: program has no instance block\n");
+			LOGW("Skipped draw: Program has no instance block");
 			return;
 		}
 		std::int32_t binding = block->GetBindingIndex();
@@ -551,7 +581,7 @@ namespace nCine::RhiSoftware
 		}
 		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
 		if (blockData == nullptr) {
-			std::fprintf(stderr, "[SwDevice] Skipped draw: no uniform block data bound\n");
+			LOGW("Skipped draw: No uniform block data bound");
 			return;
 		}
 
@@ -627,7 +657,8 @@ namespace nCine::RhiSoftware
 		};
 
 		// A generated shader is batched when its instance block carries a BATCH_SIZE-sized array (instanceStride > 0)
-		const bool batched = (effect == SwEffect::DefaultBatchedSprites || effect == SwEffect::BatchedPaletteRemap ||
+		const bool batched = (effect == SwEffect::DefaultBatchedSprites || effect == SwEffect::DefaultBatchedSpritesNoTexture ||
+			effect == SwEffect::BatchedPaletteRemap ||
 			(generatedShader != nullptr && instanceStride > 0));
 		std::int32_t numInstances = 1;
 		if (batched) {
@@ -645,7 +676,7 @@ namespace nCine::RhiSoftware
 		if (generatedShader != nullptr) {
 			const std::uint32_t uniformsSize = generatedShader->uniformsSize;
 			if (uniformsSize > MaxFragmentShaderUserDataSize) {
-				std::fprintf(stderr, "[SwDevice] Skipped draw: generated shader uniform block exceeds the callback storage\n");
+				LOGW("Skipped draw: Generated shader uniform block exceeds the callback storage");
 				SwRaster::ClearDrawContext();
 				return;
 			}
@@ -657,12 +688,13 @@ namespace nCine::RhiSoftware
 			const std::size_t maxByte = std::size_t(numInstances > 0 ? numInstances - 1 : 0) * instanceStride +
 				(kPaletteOffsetOffset + sizeof(float));
 			if (blockDataSize != 0 && maxByte > blockDataSize) {
-				std::fprintf(stderr, "[SwDevice] Skipped draw: generated shader instance block is not sprite-compatible\n");
+				LOGW("Skipped draw: Generated shader instance block is not sprite-compatible");
 				SwRaster::ClearDrawContext();
 				return;
 			}
 
 			const std::int32_t uTextureUnit = samplerUnit("uTexture", 0);
+
 			std::uint8_t uniformScratch[MaxFragmentShaderUserDataSize];
 			for (std::int32_t k = 0; k < numInstances; k++) {
 				const std::uint8_t* inst = blockData + std::size_t(k) * instanceStride;
@@ -704,7 +736,7 @@ namespace nCine::RhiSoftware
 				const std::int32_t uTextureUnit = samplerUnit("uTexture", 0);
 				const SwTexture* texture = GetBoundTexture(std::uint32_t(uTextureUnit));
 				if (texture == nullptr || texture->GetPixels() == nullptr) {
-					std::fprintf(stderr, "[SwDevice] Skipped draw: no texture bound to the sampler unit\n");
+					LOGW("Skipped draw: No texture bound to the sampler unit");
 					break;
 				}
 				for (std::int32_t k = 0; k < numInstances; k++) {
@@ -717,6 +749,26 @@ namespace nCine::RhiSoftware
 					ff.hasTexture = true;
 					ff.textureUnit = uTextureUnit;
 					drawQuad(ff, nullptr, nullptr, 0);
+				}
+				break;
+			}
+
+			case SwEffect::DefaultSpriteNoTexture:
+			case SwEffect::DefaultBatchedSpritesNoTexture: {
+				// Solid-colour sprite: no texture is bound (so there is no fast-blit) and the instance block
+				// omits texRect, which places spriteSize at offset 80 (not 96). Run the transpiled no-texture
+				// fragment (COLOR = vColor); it overwrites the pixel unconditionally, so an unbound sampler unit
+				// is handled safely. hasTexture stays false so the rasterizer never dereferences a null texture.
+				const FragmentShaderFn noTexFragment = (effect == SwEffect::DefaultBatchedSpritesNoTexture)
+					? &DefaultBatchedSpritesNoTexture_Fragment : &DefaultSpriteNoTexture_Fragment;
+				for (std::int32_t k = 0; k < numInstances; k++) {
+					const std::uint8_t* inst = blockData + std::size_t(k) * instanceStride;
+					FFState ff;
+					Mat4Mul(pv, reinterpret_cast<const float*>(inst + kModelMatrixOffset), ff.mvpMatrix);
+					std::memcpy(ff.color, inst + kColorOffset, sizeof(ff.color));
+					std::memcpy(ff.spriteSize, inst + kSpriteSizeNoTexOffset, sizeof(ff.spriteSize));
+					ff.hasTexture = false;
+					drawQuad(ff, noTexFragment, nullptr, 0);
 				}
 				break;
 			}

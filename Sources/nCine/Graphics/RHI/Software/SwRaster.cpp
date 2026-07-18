@@ -2,6 +2,7 @@
 
 #include "SwRaster.h"
 #include "SwTileRenderer.h"
+#include "SwScanlineOps.h"
 
 #include <Cpu.h>
 #if defined(DEATH_TARGET_X86)
@@ -459,6 +460,18 @@ namespace nCine::RhiSoftware
 		DEATH_CPU_DISPATCHED(tintScanlineImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(tintScanline)(std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA))({
 			return tintScanlineImplementation(Cpu::DefaultBase)(buf, count, tR, tG, tB, tA);
 		})
+	}
+
+	// Externally-visible entry points (see SwScanlineOps.h) so the tile rasterizer TU runs the exact same
+	// CPU-dispatched implementations instead of keeping its own (previously scalar-on-x86) copies
+	void BlendScanlineSrcAlpha(std::uint8_t* dst, const std::uint8_t* src, std::int32_t count)
+	{
+		blendScanlineSrcAlpha(dst, src, count);
+	}
+
+	void TintScanline(std::uint8_t* buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA)
+	{
+		tintScanline(buf, count, tR, tG, tB, tA);
 	}
 
 	// =========================================================================

@@ -3,14 +3,14 @@
 /**
 	@file Hlsl.h
 
-	HLSL (Direct3D 11, Shader Model 4/5) source-to-source emitter for ShaderCompiler (P6 slice 1).
+	HLSL (Direct3D 11, Shader Model 4/5) source-to-source emitter for ShaderCompiler.
 
 	The tool lowers each ".shader" into a MODERN-GLSL stage source (in/out, texture(), "out vec4 COLOR;",
 	std140 UBO blocks, gl_VertexID). This emitter grows a real per-statement/expression AST from that
 	source (on the SAME reusable lexer + preprocessor the GLSL-to-C++ transpiler uses — @ref GlslExprTokenizer
 	and @ref Preprocessor) and emits an HLSL translation of one stage, then the offline `--hlsl-check` mode
 	compiles each stage via d3dcompiler_47's `D3DCompile` to validate it. This is TOOL-ONLY: it adds no RHI
-	backend and touches no engine code (that is P6 slice 2).
+	backend and touches no engine code.
 
 	The key GLSL -> HLSL rewrites:
 	- Types: vec2/3/4 -> float2/3/4, mat3/4 -> float3x3/float4x4, ivecN -> intN, bvecN -> boolN; precision

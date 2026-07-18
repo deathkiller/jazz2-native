@@ -11,14 +11,24 @@
 # repo-local build-tree copy, or a Visual Studio-bundled copy) or supplied with -Glslang <path>. glslang
 # is a BUILD-TIME-only dependency: when it is unavailable the SPIR-V fields are emitted as nullptr/0 and a
 # warning is printed (the headers still build; the Vulkan backend is then not buildable).
+#
+# -Check: staleness guard. Generates into a temporary directory instead and byte-compares the result
+# against the committed Sources/Shaders/Generated headers; exits non-zero (listing the stale files) if
+# they differ, without modifying the tree. Run it after editing a .shader (or in CI) to catch a
+# forgotten regeneration - the build itself never detects stale committed headers.
 
-param([string]$Glslang = '')
+param([string]$Glslang = '', [switch]$Check)
 
 $ErrorActionPreference = 'Stop'
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $shadersDir = Join-Path (Split-Path -Parent $scriptDir) 'Shaders'
-$outDir = Join-Path $shadersDir 'Generated'
+$committedDir = Join-Path $shadersDir 'Generated'
+if ($Check) {
+    $outDir = Join-Path ([System.IO.Path]::GetTempPath()) ("Jazz2-ShaderCheck-" + [System.IO.Path]::GetRandomFileName())
+} else {
+    $outDir = $committedDir
+}
 $tool = Join-Path $scriptDir 'x64\Release\ShaderCompiler.exe'
 
 if (-not (Test-Path $tool)) {
@@ -159,6 +169,42 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 Write-Host "ok: software fragments -> Generated\SwGeneratedShaders.h"
+
+if ($Check) {
+    # Compare the freshly generated headers against the committed ones; any difference means the committed
+    # artifacts are stale (or were edited by hand). Missing/extra files count as stale too.
+    if (-not $glslangPath) {
+        Write-Host "warning: -Check without glslang - committed headers with embedded SPIR-V will be reported stale"
+    }
+    $stale = @()
+    $freshFiles = @(Get-ChildItem (Join-Path $outDir '*.h') | Sort-Object Name)
+    foreach ($fresh in $freshFiles) {
+        $committed = Join-Path $committedDir $fresh.Name
+        if (-not (Test-Path $committed)) {
+            $stale += "$($fresh.Name) (missing from Generated)"
+        } else {
+            $a = [System.IO.File]::ReadAllBytes($fresh.FullName)
+            $b = [System.IO.File]::ReadAllBytes($committed)
+            if ($a.Length -ne $b.Length -or -not [System.Linq.Enumerable]::SequenceEqual($a, $b)) {
+                $stale += $fresh.Name
+            }
+        }
+    }
+    $freshNames = @($freshFiles | ForEach-Object { $_.Name })
+    foreach ($committed in @(Get-ChildItem (Join-Path $committedDir '*.h'))) {
+        if ($freshNames -notcontains $committed.Name) {
+            $stale += "$($committed.Name) (committed but no longer generated)"
+        }
+    }
+    Remove-Item -Recurse -Force $outDir
+    if ($stale.Count -gt 0) {
+        Write-Host "error: $($stale.Count) generated header(s) are STALE - re-run GenerateAll.ps1 and commit:"
+        foreach ($s in $stale) { Write-Host "  $s" }
+        exit 1
+    }
+    Write-Host "All $($shaders.Count) shaders verified up to date."
+    exit 0
+}
 
 Write-Host "All $($shaders.Count) shaders generated successfully."
 exit 0

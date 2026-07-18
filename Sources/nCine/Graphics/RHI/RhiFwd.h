@@ -247,8 +247,7 @@ namespace nCine::Rhi
 // full-pipeline hardware backend like the OpenGL family and Direct3D 11: it has programmable shaders (built
 // offline as SPIR-V, embedded per program-variant) and off-screen render targets, so both `RHI_CAP_SHADERS`
 // and `RHI_CAP_FRAMEBUFFERS` are defined and the pipeline runs the whole bloom / lighting / combine / rescale
-// chain exactly as it does on OpenGL. (Slice 2a stubs the resource GPU objects and no-ops the draws; the
-// capability flags describe the finished backend so the pipeline compiles its full path against it.)
+// chain exactly as it does on OpenGL.
 #define RHI_CAP_SHADERS
 #define RHI_CAP_FRAMEBUFFERS
 

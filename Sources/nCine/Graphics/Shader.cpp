@@ -1,6 +1,3 @@
-#define NCINE_INCLUDE_OPENGL
-#include "../CommonHeaders.h"
-
 #include "Shader.h"
 #include "RHI/Rhi.h"
 #include "RenderResources.h"
@@ -118,12 +115,12 @@ namespace nCine
 		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, vertex, batchSize, defines);
-		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), {});
+		glShaderProgram_->AttachShaderFromStringsAndFile(ShaderStage::Vertex, arrayView(strings, stringsCount), {});
 
 		// The BATCH_SIZE define is baked into both stages - a batched InstancesBlock is declared
 		// in the fragment stage too (shared globals), and mismatched block sizes would fail to link
 		stringsCount = populateShaderStrings(strings, backingStore, fragment, batchSize, defines);
-		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), {});
+		glShaderProgram_->AttachShaderFromStringsAndFile(ShaderStage::Fragment, arrayView(strings, stringsCount), {});
 
 		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
@@ -172,12 +169,12 @@ namespace nCine
 		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, vsSource, batchSize, {});
-		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), {});
+		glShaderProgram_->AttachShaderFromStringsAndFile(ShaderStage::Vertex, arrayView(strings, stringsCount), {});
 
 		// The BATCH_SIZE define is baked into both stages - a batched InstancesBlock is declared
 		// in the fragment stage too (shared globals), and mismatched block sizes would fail to link
 		stringsCount = populateShaderStrings(strings, backingStore, fsSource, batchSize, {});
-		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), {});
+		glShaderProgram_->AttachShaderFromStringsAndFile(ShaderStage::Fragment, arrayView(strings, stringsCount), {});
 
 		// Set after Reset(), which clears any previous reflection
 		glShaderProgram_->SetReflection(&variant);
@@ -201,12 +198,12 @@ namespace nCine
 		StringView strings[MaxShaderStrings]; std::size_t stringsCount; char backingStore[256];
 
 		stringsCount = populateShaderStrings(strings, backingStore, {}, batchSize, defines);
-		glShaderProgram_->AttachShaderFromStringsAndFile(GL_VERTEX_SHADER, arrayView(strings, stringsCount), vertexPath);
+		glShaderProgram_->AttachShaderFromStringsAndFile(ShaderStage::Vertex, arrayView(strings, stringsCount), vertexPath);
 
 		// The BATCH_SIZE define is baked into both stages - a batched InstancesBlock is declared
 		// in the fragment stage too (shared globals), and mismatched block sizes would fail to link
 		stringsCount = populateShaderStrings(strings, backingStore, {}, batchSize, defines);
-		glShaderProgram_->AttachShaderFromStringsAndFile(GL_FRAGMENT_SHADER, arrayView(strings, stringsCount), fragmentPath);
+		glShaderProgram_->AttachShaderFromStringsAndFile(ShaderStage::Fragment, arrayView(strings, stringsCount), fragmentPath);
 
 		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 

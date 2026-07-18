@@ -319,7 +319,7 @@ list(APPEND SOURCES
 )
 
 # CPU software rendering backend (compiled only when the software backend is selected)
-if(NCINE_WITH_RHI_SOFTWARE)
+if(NCINE_PREFERRED_RHI STREQUAL "Software")
 	# The OpenGL RHI translation units are dead code under the software backend (the pipeline's `Rhi::`
 	# aliases resolve to the `Sw*` types), so drop them from the build entirely instead of compiling them
 	list(FILTER SOURCES EXCLUDE REGEX "/RHI/GL/")
@@ -339,7 +339,7 @@ if(NCINE_WITH_RHI_SOFTWARE)
 endif()
 
 # Direct3D 11 rendering backend (compiled only when the Direct3D 11 backend is selected)
-if(NCINE_WITH_RHI_D3D11)
+if(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 	# The OpenGL RHI translation units are dead code under the Direct3D 11 backend (the pipeline's `Rhi::`
 	# aliases resolve to the `D3D11*` types), so drop them from the build entirely instead of compiling them
 	list(FILTER SOURCES EXCLUDE REGEX "/RHI/GL/")
@@ -356,7 +356,7 @@ if(NCINE_WITH_RHI_D3D11)
 endif()
 
 # Vulkan rendering backend (compiled only when the Vulkan backend is selected)
-if(NCINE_WITH_RHI_VULKAN)
+if(NCINE_PREFERRED_RHI STREQUAL "Vulkan")
 	# The OpenGL RHI translation units are dead code under the Vulkan backend (the pipeline's `Rhi::`
 	# aliases resolve to the `Vulkan*` types), so drop them from the build entirely instead of compiling them
 	list(FILTER SOURCES EXCLUDE REGEX "/RHI/GL/")

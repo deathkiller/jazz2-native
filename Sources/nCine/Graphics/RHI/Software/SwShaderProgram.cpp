@@ -33,6 +33,13 @@ namespace nCine::RhiSoftware
 				return SwEffect::Combine;
 			}
 
+			// No-texture solid-colour sprite family (labels "Sprite_NoTexture" / "Batched_Sprites_NoTexture").
+			// The block omits texRect, so it needs a dedicated fast path (different std140 offsets) rather than
+			// the generated fragment. The mesh no-texture variants keep the generated-fragment path.
+			if (Contains(label, "Sprite") && Contains(label, "NoTexture") && !Contains(label, "Mesh")) {
+				return Contains(label, "Batched") ? SwEffect::DefaultBatchedSpritesNoTexture : SwEffect::DefaultSpriteNoTexture;
+			}
+
 			// Default textured sprite family
 			const bool isSprite = Contains(label, "Sprite") && !Contains(label, "Mesh") && !Contains(label, "NoTexture");
 			if (isSprite && Contains(label, "Batched")) {
@@ -90,30 +97,30 @@ namespace nCine::RhiSoftware
 		return (status_ == Status::Linked || status_ == Status::LinkedWithDeferredQueries || status_ == Status::LinkedWithIntrospection);
 	}
 
-	bool SwShaderProgram::AttachShaderFromFile(std::uint32_t type, StringView filename)
+	bool SwShaderProgram::AttachShaderFromFile(ShaderStage stage, StringView filename)
 	{
-		static_cast<void>(type);
+		static_cast<void>(stage);
 		static_cast<void>(filename);
 		return true;
 	}
 
-	bool SwShaderProgram::AttachShaderFromString(std::uint32_t type, StringView string)
+	bool SwShaderProgram::AttachShaderFromString(ShaderStage stage, StringView string)
 	{
-		static_cast<void>(type);
+		static_cast<void>(stage);
 		static_cast<void>(string);
 		return true;
 	}
 
-	bool SwShaderProgram::AttachShaderFromStrings(std::uint32_t type, ArrayView<const StringView> strings)
+	bool SwShaderProgram::AttachShaderFromStrings(ShaderStage stage, ArrayView<const StringView> strings)
 	{
-		static_cast<void>(type);
+		static_cast<void>(stage);
 		static_cast<void>(strings);
 		return true;
 	}
 
-	bool SwShaderProgram::AttachShaderFromStringsAndFile(std::uint32_t type, ArrayView<const StringView> strings, StringView filename)
+	bool SwShaderProgram::AttachShaderFromStringsAndFile(ShaderStage stage, ArrayView<const StringView> strings, StringView filename)
 	{
-		static_cast<void>(type);
+		static_cast<void>(stage);
 		static_cast<void>(strings);
 		static_cast<void>(filename);
 		return true;

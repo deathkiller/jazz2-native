@@ -133,6 +133,32 @@ namespace nCine
 	using FenceHandle = void*;
 
 	/**
+		@brief Component data type of a vertex attribute
+
+		Backend-neutral replacement for the `GL_FLOAT`-style component type constants used with vertex
+		formats. The numeric values intentionally match the corresponding OpenGL constants, so the OpenGL
+		backend can translate with a plain cast.
+	*/
+	enum class VertexAttribType : std::uint32_t
+	{
+		UnsignedByte = 0x1401,	/**< 8-bit unsigned components */
+		Float = 0x1406			/**< 32-bit floating-point components */
+	};
+
+	/**
+		@brief Programmable pipeline stage a shader source is attached to
+
+		Backend-neutral replacement for the `GL_VERTEX_SHADER`-style shader type constants, so that shared
+		pipeline code (Shader / RenderResources) never names a GL constant. Each backend maps the stage to
+		its own compiler input.
+	*/
+	enum class ShaderStage
+	{
+		Vertex,			/**< The vertex stage */
+		Fragment		/**< The fragment (pixel) stage */
+	};
+
+	/**
 		@brief Depth and stencil format of a render target
 
 		The values are backend-neutral, each backend maps them to its own depth/stencil storage formats.

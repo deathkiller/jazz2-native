@@ -17,7 +17,7 @@ namespace nCine::RhiVulkan
 
 		Wraps a single, tightly-packed level-0 pixel buffer in host memory and exposes the neutral upload
 		surface `Texture.cpp` drives (`TexImage2D`, `TexSubImage2D`, `TexStorage2D`, filter/wrap/swizzle
-		setters). Slice 2b materializes the real `VkImage` + `VkImageView` + `VkSampler` from this surface: a
+		setters). It materializes the real `VkImage` + `VkImageView` + `VkSampler` from this surface: a
 		staging-buffer upload for CPU textures, or a colour-attachment image for render targets. The sampling
 		swizzle is applied through the image view's `VkComponentMapping` (no texel baking, unlike D3D11). Mip
 		levels above 0 and compressed formats are accepted but not stored.
@@ -34,7 +34,7 @@ namespace nCine::RhiVulkan
 		VulkanTexture(const VulkanTexture&) = delete;
 		VulkanTexture& operator=(const VulkanTexture&) = delete;
 
-		// -- Slice 2b GPU accessors (used by the device draw / render-pass path). Handles are opaque
+		// -- GPU accessors (used by the device draw / render-pass path). Handles are opaque
 		// integers so this contract header stays free of <vulkan/vulkan.h>; the .cpp reinterprets them. --
 
 		/** @brief Materializes the `VkImage`/view/sampler if missing (does NOT upload texels; see @ref RecordStreamingUpload()) */
@@ -147,9 +147,9 @@ namespace nCine::RhiVulkan
 		void TexSubImage2D(std::int32_t level, std::int32_t xoffset, std::int32_t yoffset, std::int32_t width, std::int32_t height, PixelFormat format, bool bgr, const void* data);
 		/** @brief Allocates immutable level-0 storage of the given format/size (no texels yet) */
 		void TexStorage2D(std::int32_t levels, PixelFormat format, std::int32_t width, std::int32_t height);
-		/** @brief Compressed upload (unsupported by slice 2a, accepted as a no-op) */
+		/** @brief Compressed upload (unsupported by this backend, accepted as a no-op) */
 		void CompressedTexImage2D(std::int32_t level, PixelFormat format, std::int32_t width, std::int32_t height, std::int32_t imageSize, const void* data);
-		/** @brief Compressed sub-upload (unsupported by slice 2a, accepted as a no-op) */
+		/** @brief Compressed sub-upload (unsupported by this backend, accepted as a no-op) */
 		void CompressedTexSubImage2D(std::int32_t level, std::int32_t xoffset, std::int32_t yoffset, std::int32_t width, std::int32_t height, PixelFormat format, std::int32_t imageSize, const void* data);
 		/** @brief Reads back level-0 texels into client memory */
 		void GetTexImage(std::int32_t level, PixelFormat format, bool bgr, void* pixels);

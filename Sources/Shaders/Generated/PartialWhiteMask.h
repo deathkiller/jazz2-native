@@ -5,6 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
+#if defined(WITH_RHI_GL)
 	inline constexpr char PartialWhiteMask_Vs[] =
 R"__SHDR__(#line 1
 
@@ -37,7 +38,9 @@ void main()
 	vPaletteOffset = palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char PartialWhiteMask_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -68,7 +71,9 @@ void main()
 	vPaletteOffset = palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char PartialWhiteMask_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 cbuffer _Globals : register(b0)
@@ -122,7 +127,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t PartialWhiteMask_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000064u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -218,6 +225,8 @@ VsOutput VSMain(VsInput _input)
 		0x0003003eu, 0x00000060u, 0x00000063u, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char PartialWhiteMask_Fs[] =
 R"__SHDR__(#line 1
 
@@ -257,7 +266,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char PartialWhiteMask_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -296,7 +307,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char PartialWhiteMask_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 Texture2D uTexture : register(t0);
@@ -333,7 +346,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t PartialWhiteMask_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000048u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -390,6 +405,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform PartialWhiteMask_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -411,6 +427,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		{ "uTexture", 0 },
 	};
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char PartialWhiteMask_USE_PALETTE_Vs[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -444,7 +461,9 @@ void main()
 	vPaletteOffset = palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char PartialWhiteMask_USE_PALETTE_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #define USE_PALETTE (1)
@@ -476,7 +495,9 @@ void main()
 	vPaletteOffset = palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char PartialWhiteMask_USE_PALETTE_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 cbuffer _Globals : register(b0)
@@ -530,7 +551,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t PartialWhiteMask_USE_PALETTE_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000064u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -626,6 +649,8 @@ VsOutput VSMain(VsInput _input)
 		0x0003003eu, 0x00000060u, 0x00000063u, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char PartialWhiteMask_USE_PALETTE_Fs[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -666,7 +691,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char PartialWhiteMask_USE_PALETTE_Fs100[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -706,7 +733,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char PartialWhiteMask_USE_PALETTE_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 Texture2D uTexture : register(t0);
@@ -749,7 +778,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t PartialWhiteMask_USE_PALETTE_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000072u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -836,6 +867,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x000200feu, 0x00000047u, 0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform PartialWhiteMask_USE_PALETTE_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -859,20 +891,55 @@ float4 PSMain(PsInput _input) : SV_Target
 	};
 
 	inline constexpr ShaderCompiler::ProgramVariant PartialWhiteMask_Variants[] = {
-		{ "", "", PartialWhiteMask_Vs, PartialWhiteMask_Fs,
+		{ "", "",
+#if defined(WITH_RHI_GL)
+			PartialWhiteMask_Vs, PartialWhiteMask_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, PartialWhiteMask_Uniforms, 1, PartialWhiteMask_Blocks, 1, PartialWhiteMask_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL)
 			PartialWhiteMask_Vs100, PartialWhiteMask_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			PartialWhiteMask_VsHlsl, PartialWhiteMask_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			PartialWhiteMask_VkVs, 733, PartialWhiteMask_VkFs, 417 },
-		{ "USE_PALETTE", "USE_PALETTE", PartialWhiteMask_USE_PALETTE_Vs, PartialWhiteMask_USE_PALETTE_Fs,
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
+		{ "USE_PALETTE", "USE_PALETTE",
+#if defined(WITH_RHI_GL)
+			PartialWhiteMask_USE_PALETTE_Vs, PartialWhiteMask_USE_PALETTE_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, PartialWhiteMask_USE_PALETTE_Uniforms, 1, PartialWhiteMask_USE_PALETTE_Blocks, 2, PartialWhiteMask_USE_PALETTE_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL)
 			PartialWhiteMask_USE_PALETTE_Vs100, PartialWhiteMask_USE_PALETTE_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			PartialWhiteMask_USE_PALETTE_VsHlsl, PartialWhiteMask_USE_PALETTE_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			PartialWhiteMask_USE_PALETTE_VkVs, 733, PartialWhiteMask_USE_PALETTE_VkFs, 659 },
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
 	};
 
 	inline constexpr ShaderCompiler::Program PartialWhiteMask = { "PartialWhiteMask", 0, 2, PartialWhiteMask_Variants };
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedPartialWhiteMask_Vs[] =
 R"__SHDR__(#line 1
 
@@ -914,7 +981,9 @@ void main()
 	vPaletteOffset = i.palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedPartialWhiteMask_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -955,7 +1024,9 @@ void main()
 	vPaletteOffset = i.palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char BatchedPartialWhiteMask_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 #define BATCH_SIZE 585
@@ -1016,7 +1087,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t BatchedPartialWhiteMask_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x0000007fu, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -1132,6 +1205,8 @@ VsOutput VSMain(VsInput _input)
 		0x0003003eu, 0x00000079u, 0x0000007eu, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedPartialWhiteMask_Fs[] =
 R"__SHDR__(#line 1
 
@@ -1171,7 +1246,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedPartialWhiteMask_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -1210,7 +1287,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char BatchedPartialWhiteMask_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 Texture2D uTexture : register(t0);
@@ -1247,7 +1326,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t BatchedPartialWhiteMask_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000048u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -1304,6 +1385,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform BatchedPartialWhiteMask_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -1321,6 +1403,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		{ "uTexture", 0 },
 	};
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedPartialWhiteMask_USE_PALETTE_Vs[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -1363,7 +1446,9 @@ void main()
 	vPaletteOffset = i.palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedPartialWhiteMask_USE_PALETTE_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -1405,7 +1490,9 @@ void main()
 	vPaletteOffset = i.palOffset;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char BatchedPartialWhiteMask_USE_PALETTE_VsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 #define BATCH_SIZE 585
@@ -1466,7 +1553,9 @@ VsOutput VSMain(VsInput _input)
 	return _output;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t BatchedPartialWhiteMask_USE_PALETTE_VkVs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x0000007fu, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -1582,6 +1671,8 @@ VsOutput VSMain(VsInput _input)
 		0x0003003eu, 0x00000079u, 0x0000007eu, 0x000100fdu, 0x00010038u,
 	};
 
+#endif
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedPartialWhiteMask_USE_PALETTE_Fs[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -1622,7 +1713,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_GL)
 	inline constexpr char BatchedPartialWhiteMask_USE_PALETTE_Fs100[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -1662,7 +1755,9 @@ void main() {
 }
 
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_D3D11)
 	inline constexpr char BatchedPartialWhiteMask_USE_PALETTE_FsHlsl[] =
 R"__SHDR__(// Generated HLSL (Shader Model 4/5) by ShaderCompiler. Do not edit manually.
 Texture2D uTexture : register(t0);
@@ -1705,7 +1800,9 @@ float4 PSMain(PsInput _input) : SV_Target
 	return COLOR;
 }
 )__SHDR__";
+#endif
 
+#if defined(WITH_RHI_VULKAN)
 	inline constexpr std::uint32_t BatchedPartialWhiteMask_USE_PALETTE_VkFs[] = {
 		0x07230203u, 0x00010000u, 0x0008000bu, 0x00000072u, 0x00000000u, 0x00020011u, 0x00000001u, 0x0006000bu,
 		0x00000001u, 0x4c534c47u, 0x6474732eu, 0x3035342eu, 0x00000000u, 0x0003000eu, 0x00000000u, 0x00000001u,
@@ -1792,6 +1889,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		0x000200feu, 0x00000047u, 0x00010038u,
 	};
 
+#endif
 	inline constexpr ShaderCompiler::Uniform BatchedPartialWhiteMask_USE_PALETTE_Uniforms[] = {
 		{ "uProjectionMatrix", ShaderCompiler::UniformType::Mat4, 0 },
 		{ "uViewMatrix", ShaderCompiler::UniformType::Mat4, 0 },
@@ -1811,16 +1909,50 @@ float4 PSMain(PsInput _input) : SV_Target
 	};
 
 	inline constexpr ShaderCompiler::ProgramVariant BatchedPartialWhiteMask_Variants[] = {
-		{ "", "", BatchedPartialWhiteMask_Vs, BatchedPartialWhiteMask_Fs,
+		{ "", "",
+#if defined(WITH_RHI_GL)
+			BatchedPartialWhiteMask_Vs, BatchedPartialWhiteMask_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, BatchedPartialWhiteMask_Uniforms, 1, BatchedPartialWhiteMask_Blocks, 1, BatchedPartialWhiteMask_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL)
 			BatchedPartialWhiteMask_Vs100, BatchedPartialWhiteMask_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			BatchedPartialWhiteMask_VsHlsl, BatchedPartialWhiteMask_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			BatchedPartialWhiteMask_VkVs, 893, BatchedPartialWhiteMask_VkFs, 417 },
-		{ "USE_PALETTE", "USE_PALETTE", BatchedPartialWhiteMask_USE_PALETTE_Vs, BatchedPartialWhiteMask_USE_PALETTE_Fs,
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
+		{ "USE_PALETTE", "USE_PALETTE",
+#if defined(WITH_RHI_GL)
+			BatchedPartialWhiteMask_USE_PALETTE_Vs, BatchedPartialWhiteMask_USE_PALETTE_Fs,
+#else
+			nullptr, nullptr,
+#endif
 			2, BatchedPartialWhiteMask_USE_PALETTE_Uniforms, 1, BatchedPartialWhiteMask_USE_PALETTE_Blocks, 2, BatchedPartialWhiteMask_USE_PALETTE_Textures, 0, nullptr,
+#if defined(WITH_RHI_GL)
 			BatchedPartialWhiteMask_USE_PALETTE_Vs100, BatchedPartialWhiteMask_USE_PALETTE_Fs100,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_D3D11)
 			BatchedPartialWhiteMask_USE_PALETTE_VsHlsl, BatchedPartialWhiteMask_USE_PALETTE_FsHlsl,
+#else
+			nullptr, nullptr,
+#endif
+#if defined(WITH_RHI_VULKAN)
 			BatchedPartialWhiteMask_USE_PALETTE_VkVs, 893, BatchedPartialWhiteMask_USE_PALETTE_VkFs, 659 },
+#else
+			nullptr, 0, nullptr, 0 },
+#endif
 	};
 
 	inline constexpr ShaderCompiler::Program BatchedPartialWhiteMask = { "BatchedPartialWhiteMask", 0, 2, BatchedPartialWhiteMask_Variants };

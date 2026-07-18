@@ -484,7 +484,87 @@ namespace nCine::RhiVulkan
 		static_cast<void>(level);
 		static_cast<void>(format);
 		static_cast<void>(bgr);
-		if (pixels != nullptr && !pixels_.empty()) {
+		if (pixels == nullptr) {
+			return;
+		}
+
+		// A render target's contents only exist on the GPU (draws never touch the host store), so read them
+		// back through a staging buffer with a one-time submit + queue-idle wait. Readback is a screenshot-rate
+		// operation, so the synchronous wait is acceptable.
+		if (isRenderTarget_ && gpuImage_ != 0 && width_ > 0 && height_ > 0 && vkCmdCopyImageToBuffer != nullptr) {
+			VkDevice device = VkDeviceHandle();
+			if (device != VK_NULL_HANDLE) {
+				const VkDeviceSize byteSize = VkDeviceSize(width_) * VkDeviceSize(height_) * 4;
+				VkBuffer staging = VK_NULL_HANDLE;
+				VkDeviceMemory stagingMem = VK_NULL_HANDLE;
+				VkBufferCreateInfo bci = {};
+				bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+				bci.size = byteSize;
+				bci.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+				bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+				if (vkCreateBuffer(device, &bci, nullptr, &staging) == VK_SUCCESS) {
+					VkMemoryRequirements req;
+					vkGetBufferMemoryRequirements(device, staging, &req);
+					const std::uint32_t memType = VkFindMemoryType(req.memoryTypeBits,
+						VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+					VkMemoryAllocateInfo mai = {};
+					mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+					mai.allocationSize = req.size;
+					mai.memoryTypeIndex = memType;
+					if (memType != UINT32_MAX && vkAllocateMemory(device, &mai, nullptr, &stagingMem) == VK_SUCCESS) {
+						vkBindBufferMemory(device, staging, stagingMem, 0);
+
+						VkCommandBuffer cmd = VkBeginOneTimeCommands();
+						if (cmd != VK_NULL_HANDLE) {
+							VkImage image = reinterpret_cast<VkImage>(gpuImage_);
+							const VkImageLayout oldLayout = VkImageLayout(currentLayout_);
+
+							// Conservative full-scope barriers: this is a synchronous, out-of-frame submit
+							VkImageMemoryBarrier toSrc = {};
+							toSrc.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+							toSrc.oldLayout = oldLayout;
+							toSrc.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+							toSrc.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+							toSrc.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+							toSrc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+							toSrc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+							toSrc.image = image;
+							toSrc.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+							vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+								0, 0, nullptr, 0, nullptr, 1, &toSrc);
+
+							VkBufferImageCopy region = {};
+							region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+							region.imageExtent = { std::uint32_t(width_), std::uint32_t(height_), 1 };
+							vkCmdCopyImageToBuffer(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, staging, 1, &region);
+
+							VkImageMemoryBarrier restore = toSrc;
+							restore.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+							restore.newLayout = oldLayout;
+							restore.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+							restore.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+							vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+								0, 0, nullptr, 0, nullptr, 1, &restore);
+
+							VkEndOneTimeCommands(cmd);	// submits + waits for the queue to go idle
+
+							void* mapped = nullptr;
+							if (vkMapMemory(device, stagingMem, 0, VK_WHOLE_SIZE, 0, &mapped) == VK_SUCCESS) {
+								std::memcpy(pixels, mapped, std::size_t(byteSize));
+								vkUnmapMemory(device, stagingMem);
+								vkDestroyBuffer(device, staging, nullptr);
+								vkFreeMemory(device, stagingMem, nullptr);
+								return;
+							}
+						}
+						vkFreeMemory(device, stagingMem, nullptr);
+					}
+					vkDestroyBuffer(device, staging, nullptr);
+				}
+			}
+		}
+
+		if (!pixels_.empty()) {
 			std::memcpy(pixels, pixels_.data(), pixels_.size());
 		}
 	}

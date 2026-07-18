@@ -62,7 +62,7 @@ namespace nCine::RhiD3D11
 
 	bool D3D11BufferObject::Bind() const
 	{
-		// Slice 2a does not consult a bound-buffer cache; the ranges are forwarded by BindBufferRange(),
+		// No bound-buffer cache is consulted; the ranges are forwarded by BindBufferRange(),
 		// so this only reports that a bind "was issued"
 		return true;
 	}

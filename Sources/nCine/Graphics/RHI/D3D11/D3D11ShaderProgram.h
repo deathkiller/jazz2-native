@@ -2,6 +2,7 @@
 
 #include "D3D11ShaderTypes.h"
 #include "D3D11VertexFormat.h"
+#include "../RhiTypes.h"
 
 #include <cstdint>
 #include <string>
@@ -56,7 +57,7 @@ namespace nCine::RhiD3D11
 		@brief Shader program of the Direct3D 11 backend (aliased as `Rhi::ShaderProgram`)
 
 		Carries the offline ShaderCompiler reflection (set with @ref SetReflection() like the OpenGL backend)
-		from which it imports uniforms, uniform blocks and attributes, and — the slice 2b addition — compiles
+		from which it imports uniforms, uniform blocks and attributes, and compiles
 		the reflection's `HlslVsSource`/`HlslFsSource` into real `ID3D11VertexShader`/`ID3D11PixelShader`
 		objects (matrix packing forced column-major so the emitter's `mul(M,v)` column-vector algebra matches
 		the engine's column-major uniform data verbatim), reflects their constant buffers into @ref
@@ -141,10 +142,10 @@ namespace nCine::RhiD3D11
 			return uniformBlocksSize_;
 		}
 
-		bool AttachShaderFromFile(std::uint32_t type, StringView filename);
-		bool AttachShaderFromString(std::uint32_t type, StringView string);
-		bool AttachShaderFromStrings(std::uint32_t type, ArrayView<const StringView> strings);
-		bool AttachShaderFromStringsAndFile(std::uint32_t type, ArrayView<const StringView> strings, StringView filename);
+		bool AttachShaderFromFile(ShaderStage stage, StringView filename);
+		bool AttachShaderFromString(ShaderStage stage, StringView string);
+		bool AttachShaderFromStrings(ShaderStage stage, ArrayView<const StringView> strings);
+		bool AttachShaderFromStringsAndFile(ShaderStage stage, ArrayView<const StringView> strings, StringView filename);
 
 		/** @brief Sets the offline reflection consumed by @ref Link() to import uniforms/blocks/attributes and compile HLSL */
 		inline void SetReflection(const ShaderCompiler::ProgramVariant* reflection) {
@@ -222,6 +223,14 @@ namespace nCine::RhiD3D11
 		inline const std::vector<D3D11CBufferSlot>& GetPsCBuffers() const {
 			return psCBuffers_;
 		}
+		/** @brief Bitmask of the texture/sampler registers the vertex stage actually reads (bit N = slot tN/sN) */
+		inline std::uint32_t GetVsTextureMask() const {
+			return vsTextureMask_;
+		}
+		/** @brief Bitmask of the texture/sampler registers the pixel stage actually reads */
+		inline std::uint32_t GetPsTextureMask() const {
+			return psTextureMask_;
+		}
 
 	private:
 		static std::uint32_t nextHandle_;
@@ -260,12 +269,14 @@ namespace nCine::RhiD3D11
 		std::vector<std::uint8_t> vsByteCode_;		// kept for building input layouts
 		std::vector<D3D11CBufferSlot> vsCBuffers_;
 		std::vector<D3D11CBufferSlot> psCBuffers_;
+		std::uint32_t vsTextureMask_ = 0;			// texture/sampler registers the stage binds (from bytecode reflection)
+		std::uint32_t psTextureMask_ = 0;
 
 		void PerformIntrospection();
 		void ImportReflection();
 		/** @brief Compiles `reflection_`'s HLSL stage sources and reflects their constant buffers (called during introspection) */
 		void CompileHlsl();
-		/** @brief Reflects the constant buffers of one compiled stage bytecode into @p slots */
-		void ReflectStageCBuffers(const void* byteCode, std::size_t byteCodeSize, std::vector<D3D11CBufferSlot>& slots);
+		/** @brief Reflects the constant buffers and used texture/sampler registers of one compiled stage bytecode */
+		void ReflectStageCBuffers(const void* byteCode, std::size_t byteCodeSize, std::vector<D3D11CBufferSlot>& slots, std::uint32_t& textureMask);
 	};
 }

@@ -9,6 +9,7 @@
 #include "GLUniformBlock.h"
 #include "GLAttribute.h"
 #include "GLVertexFormat.h"
+#include "../RhiTypes.h"
 #include "../../../Base/StaticHashMap.h"
 #include "../../../../Main.h"
 
@@ -130,36 +131,36 @@ namespace nCine::RhiGL
 		/**
 		 * @brief Attaches a shader stage compiled from the specified file
 		 *
-		 * @param type		The shader stage (e.g., `GL_VERTEX_SHADER`)
+		 * @param stage		The programmable stage the source targets
 		 * @param filename	Path of the file containing the shader source
 		 * @return `true` if the shader compiled successfully (or when checks are deferred)
 		 */
-		bool AttachShaderFromFile(GLenum type, StringView filename);
+		bool AttachShaderFromFile(ShaderStage stage, StringView filename);
 		/**
 		 * @brief Attaches a shader stage compiled from the specified source string
 		 *
-		 * @param type		The shader stage (e.g., `GL_VERTEX_SHADER`)
+		 * @param stage		The programmable stage the source targets
 		 * @param string	The shader source
 		 * @return `true` if the shader compiled successfully (or when checks are deferred)
 		 */
-		bool AttachShaderFromString(GLenum type, StringView string);
+		bool AttachShaderFromString(ShaderStage stage, StringView string);
 		/**
 		 * @brief Attaches a shader stage compiled from the specified source strings
 		 *
-		 * @param type		The shader stage (e.g., `GL_VERTEX_SHADER`)
+		 * @param stage		The programmable stage the source targets
 		 * @param strings	The shader source fragments, concatenated in order
 		 * @return `true` if the shader compiled successfully (or when checks are deferred)
 		 */
-		bool AttachShaderFromStrings(GLenum type, ArrayView<const StringView> strings);
+		bool AttachShaderFromStrings(ShaderStage stage, ArrayView<const StringView> strings);
 		/**
 		 * @brief Attaches a shader stage compiled from the specified source strings and file
 		 *
-		 * @param type		The shader stage (e.g., `GL_VERTEX_SHADER`)
+		 * @param stage		The programmable stage the source targets
 		 * @param strings	The shader source fragments, concatenated in order
 		 * @param filename	Path of a file whose source is appended after the strings
 		 * @return `true` if the shader compiled successfully (or when checks are deferred)
 		 */
-		bool AttachShaderFromStringsAndFile(GLenum type, ArrayView<const StringView> strings, StringView filename);
+		bool AttachShaderFromStringsAndFile(ShaderStage stage, ArrayView<const StringView> strings, StringView filename);
 		/**
 		 * @brief Sets offline reflection data to be used instead of GL introspection after linking
 		 *

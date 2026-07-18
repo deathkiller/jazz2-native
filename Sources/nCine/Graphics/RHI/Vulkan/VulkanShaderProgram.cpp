@@ -101,30 +101,30 @@ namespace nCine::RhiVulkan
 		return (status_ == Status::Linked || status_ == Status::LinkedWithDeferredQueries || status_ == Status::LinkedWithIntrospection);
 	}
 
-	bool VulkanShaderProgram::AttachShaderFromFile(std::uint32_t type, StringView filename)
+	bool VulkanShaderProgram::AttachShaderFromFile(ShaderStage stage, StringView filename)
 	{
-		static_cast<void>(type);
+		static_cast<void>(stage);
 		static_cast<void>(filename);
 		return true;
 	}
 
-	bool VulkanShaderProgram::AttachShaderFromString(std::uint32_t type, StringView string)
+	bool VulkanShaderProgram::AttachShaderFromString(ShaderStage stage, StringView string)
 	{
-		static_cast<void>(type);
+		static_cast<void>(stage);
 		static_cast<void>(string);
 		return true;
 	}
 
-	bool VulkanShaderProgram::AttachShaderFromStrings(std::uint32_t type, ArrayView<const StringView> strings)
+	bool VulkanShaderProgram::AttachShaderFromStrings(ShaderStage stage, ArrayView<const StringView> strings)
 	{
-		static_cast<void>(type);
+		static_cast<void>(stage);
 		static_cast<void>(strings);
 		return true;
 	}
 
-	bool VulkanShaderProgram::AttachShaderFromStringsAndFile(std::uint32_t type, ArrayView<const StringView> strings, StringView filename)
+	bool VulkanShaderProgram::AttachShaderFromStringsAndFile(ShaderStage stage, ArrayView<const StringView> strings, StringView filename)
 	{
-		static_cast<void>(type);
+		static_cast<void>(stage);
 		static_cast<void>(strings);
 		static_cast<void>(filename);
 		return true;
@@ -202,7 +202,7 @@ namespace nCine::RhiVulkan
 			return;
 		}
 
-		// -- Descriptor bindings, in the slice-1 scheme (set 0: optional _Globals UBO at binding 0, then the
+		// -- Descriptor bindings, in the offline emitter's scheme (set 0: optional _Globals UBO at binding 0, then the
 		// std140 blocks at uboBase+i, then the combined image samplers at uboBase+BlockCount+j). --
 		const bool hasGlobals = (reflection.UniformCount > 0);
 		const std::uint32_t uboBase = (hasGlobals ? 1u : 0u);
@@ -290,9 +290,9 @@ namespace nCine::RhiVulkan
 		pipelineLayout_ = reinterpret_cast<std::uint64_t>(layout);
 	}
 
-	void VulkanShaderProgram::GetVertexInput(std::vector<VertexAttrib>& outAttribs, std::uint32_t& outStride) const
+	std::uint32_t VulkanShaderProgram::GetVertexInput(VertexAttrib* outAttribs, std::uint32_t maxAttribs, std::uint32_t& outStride) const
 	{
-		outAttribs.clear();
+		std::uint32_t count = 0;
 		outStride = 0;
 		for (const VulkanAttribute& a : attributes_) {
 			const std::int32_t loc = a.GetLocation();
@@ -303,15 +303,17 @@ namespace nCine::RhiVulkan
 			if (!fa.IsEnabled()) {
 				continue;
 			}
-			VertexAttrib attr;
-			attr.Location = std::uint32_t(loc);
-			attr.ComponentCount = fa.GetSize();
-			attr.Offset = std::uint32_t(reinterpret_cast<std::uintptr_t>(fa.GetPointer()));
-			outAttribs.push_back(attr);
+			if (count < maxAttribs) {
+				VertexAttrib& attr = outAttribs[count++];
+				attr.Location = std::uint32_t(loc);
+				attr.ComponentCount = fa.GetSize();
+				attr.Offset = std::uint32_t(reinterpret_cast<std::uintptr_t>(fa.GetPointer()));
+			}
 			if (fa.GetStride() > 0) {
 				outStride = std::uint32_t(fa.GetStride());
 			}
 		}
+		return count;
 	}
 
 	void VulkanShaderProgram::ImportReflection()
@@ -444,7 +446,7 @@ namespace nCine::RhiVulkan
 
 	void VulkanShaderProgram::SetObjectLabel(StringView label)
 	{
-		// Slice 2b selects the SPIR-V variant from the reflection, not the label, so this is informational only
+		// The backend selects the SPIR-V variant from the reflection, not the label, so this is informational only
 		static_cast<void>(label);
 	}
 
