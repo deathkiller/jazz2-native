@@ -17,14 +17,12 @@ if(ANGLE_FOUND OR OPENGLES2_FOUND)
 	target_link_libraries(${NCINE_APP} PRIVATE EGL::EGL OpenGLES2::GLES2)
 
 	if(ANGLE_FOUND)
-		message(STATUS "Using ANGLE as OpenGL|ES backend")
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ANGLE")
 	endif()
 
 	# OpenGL|ES 2.0 profile (real ES 2.0 context: ESSL 100, no UBOs, no gl_VertexID). Gated so the GL 3.3
 	# desktop and software builds - which never set NCINE_RHI_GL_PROFILE_ES2 - are completely unaffected.
 	if(NCINE_RHI_GL_PROFILE_ES2)
-		message(STATUS "Requesting a real OpenGL|ES 2.0 profile (ESSL 100, no UBOs/gl_VertexID)")
 		target_compile_definitions(${NCINE_APP} PRIVATE "RHI_GL_PROFILE_ES2")
 	endif()
 
@@ -32,7 +30,6 @@ if(ANGLE_FOUND OR OPENGLES2_FOUND)
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.cpp)
 elseif(OPENGL_FOUND)
 	if(TARGET OpenGL::OpenGL)
-		message(STATUS "Using newer OpenGL::OpenGL target (GLVND)")
 		target_link_libraries(${NCINE_APP} PRIVATE OpenGL::OpenGL)
 	else()
 		target_link_libraries(${NCINE_APP} PRIVATE OpenGL::GL)
@@ -50,20 +47,40 @@ endif()
 
 if(NCINE_PREFERRED_RHI STREQUAL "Software")
 	# Selects the CPU software backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
+	message(STATUS "Rendering backend: Software (CPU rasterizer)")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_SOFTWARE")
 elseif(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 	# Selects the Direct3D 11 backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
+	message(STATUS "Rendering backend: Direct3D 11")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_D3D11")
 	# Direct3D 11 device/swap chain, DXGI and the HLSL compiler
 	target_link_libraries(${NCINE_APP} PRIVATE d3d11 dxgi d3dcompiler)
 elseif(NCINE_PREFERRED_RHI STREQUAL "Vulkan")
 	# Selects the Vulkan backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
+	message(STATUS "Rendering backend: Vulkan")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_VULKAN")
 	# Header-only Khronos Vulkan-Headers (fetched in ncine_imported_targets.cmake). No vulkan-1.lib is linked:
 	# the loader binds the runtime vulkan-1.dll (shipped with GPU drivers) dynamically through SDL at startup.
 	target_include_directories(${NCINE_APP} PRIVATE "${VULKAN_HEADERS_INCLUDE_DIR}")
 else()
 	# OpenGL/WebGL is the default rendering backend
+	if(ANGLE_FOUND)
+		set(_NCINE_RHI_SUMMARY "OpenGL|ES (ANGLE)")
+	elseif(OPENGLES2_FOUND)
+		set(_NCINE_RHI_SUMMARY "OpenGL|ES")
+	else()
+		set(_NCINE_RHI_SUMMARY "OpenGL (desktop)")
+	endif()
+	if(NCINE_RHI_GL_PROFILE_ES2)
+		string(APPEND _NCINE_RHI_SUMMARY ", ES 2.0 profile (ESSL 100, no UBOs)")
+	endif()
+	if(GLEW_FOUND)
+		string(APPEND _NCINE_RHI_SUMMARY ", GLEW loader")
+	elseif(TARGET OpenGL::OpenGL)
+		string(APPEND _NCINE_RHI_SUMMARY ", GLVND")
+	endif()
+	message(STATUS "Rendering backend: ${_NCINE_RHI_SUMMARY}")
+
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GL")
 endif()
 
@@ -582,7 +599,6 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 	if(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 		# Direct3D 11 renders through the DXGI CoreWindow swap chain; d3d11.dll / dxgi.dll / d3dcompiler_47.dll
 		# are inbox OS components on UWP (Windows Store / Xbox), so no EGL / OpenGL|ES runtime DLLs are packaged.
-		message(STATUS "Using Direct3D 11 as the rendering backend")
 	elseif(NCINE_WITH_ANGLE)
 		list(APPEND UWP_DEPENDENCIES
 			"${MSVC_WINRT_BINDIR}/libEGL.dll"

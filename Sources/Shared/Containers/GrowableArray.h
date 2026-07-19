@@ -1503,7 +1503,7 @@ namespace Death { namespace Containers {
 		// Reallocate if we don't have our growable deleter, as the default deleter  might then call destructors even in the non-initialized area ...
 		if (!hasGrowingDeleter) {
 			T* newArray = Allocator::allocate(size);
-			Implementation::arrayMoveConstruct<T>(array, newArray,
+			Implementation::arrayMoveConstruct<T>(array.data(), newArray,
 				// Move the min of the two sizes -- if we shrink, move only what will fit in the new array; if we extend,
 				// move only what's initialized in the original and left the rest not initialized
 				arrayGuts.size < size ? arrayGuts.size : size);
@@ -1518,7 +1518,7 @@ namespace Death { namespace Containers {
 #endif
 
 		// ... or the desired size is larger than the capacity. In that case make use of the reallocate() function that might be able to grow in-place.
-		} else if (Allocator::capacity(array) < size) {
+		} else if (Allocator::capacity(arrayGuts.data) < size) {
 			Allocator::reallocate(arrayGuts.data,
 				// Move the min of the two sizes -- if we shrink, move only what will fit in the new array; if we extend,
 				// move only what's initialized in the original and left the rest not initialized
@@ -1541,7 +1541,7 @@ namespace Death { namespace Containers {
 #if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
 			__sanitizer_annotate_contiguous_container(
 				Allocator::base(arrayGuts.data),
-				arrayGuts.data + Allocator::capacity(array),
+				arrayGuts.data + Allocator::capacity(arrayGuts.data),
 				arrayGuts.data + arrayGuts.size,
 				arrayGuts.data + size);
 #endif
@@ -1552,7 +1552,7 @@ namespace Death { namespace Containers {
 	template<class T, class Allocator> void arrayResize(Array<T>& array, ValueInitT, const std::size_t size) {
 		const std::size_t prevSize = array.size();
 		arrayResize<T, Allocator>(array, NoInit, size);
-		Implementation::arrayConstruct(ValueInit, array + prevSize, array.end());
+		Implementation::arrayConstruct(ValueInit, array.data() + prevSize, array.end());
 	}
 
 	template<class T, class Allocator, class ...Args> void arrayResize(Array<T>& array, DirectInitT, const std::size_t size, Args&&... args) {
@@ -1560,7 +1560,7 @@ namespace Death { namespace Containers {
 		arrayResize<T, Allocator>(array, NoInit, size);
 
 		// In-place construct the new elements. No helper function for this as there's no way we could memcpy such a thing.
-		for (T* it = array + prevSize; it < array.end(); ++it)
+		for (T* it = array.data() + prevSize; it < array.end(); ++it)
 			Implementation::construct(*it, Death::forward<Args>(args)...);
 	}
 
@@ -2055,7 +2055,7 @@ namespace Death { namespace Containers {
 
 		// Even if we don't need to shrink, reallocating to an usual array with common deleters to avoid surprises
 		Array<T> newArray{NoInit, arrayGuts.size};
-		Implementation::arrayMoveConstruct<T>(arrayGuts.data, newArray, arrayGuts.size);
+		Implementation::arrayMoveConstruct<T>(arrayGuts.data, newArray.data(), arrayGuts.size);
 		array = Death::move(newArray);
 
 #if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
@@ -2073,7 +2073,7 @@ namespace Death { namespace Containers {
 
 		// Even if we don't need to shrink, reallocating to an usual array with common deleters to avoid surprises
 		Array<T> newArray{ValueInit, arrayGuts.size};
-		Implementation::arrayMoveAssign<T>(arrayGuts.data, newArray, arrayGuts.size);
+		Implementation::arrayMoveAssign<T>(arrayGuts.data, newArray.data(), arrayGuts.size);
 		array = Death::move(newArray);
 
 #if defined(__DEATH_CONTAINERS_SANITIZER_ENABLED)
