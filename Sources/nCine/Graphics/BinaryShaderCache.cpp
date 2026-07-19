@@ -18,11 +18,13 @@ static constexpr std::uint16_t Version = 1 | 0x1000;
 
 namespace nCine
 {
+#if defined(WITH_RHI_GL)
 	namespace
 	{
 		std::uint32_t bufferSize = 0;
 		std::unique_ptr<std::uint8_t[]> bufferPtr;
 	}
+#endif
 
 	BinaryShaderCache::BinaryShaderCache(StringView path)
 		: isAvailable_(false), platformHash_(0)

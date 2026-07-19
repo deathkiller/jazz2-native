@@ -180,7 +180,7 @@ namespace nCine::Backends
 
 		SDL_Surface* surface = nullptr;
 		const int pitch = image->width() * bytesPerPixel;
-		void* pixels = reinterpret_cast<void*>(const_cast<GLubyte*>(image->pixels()));
+		void* pixels = reinterpret_cast<void*>(const_cast<std::uint8_t*>(image->pixels()));
 		surface = SDL_CreateRGBSurfaceWithFormatFrom(pixels, image->width(), image->height(), bytesPerPixel * 8, pitch, pixelFormat);
 		SDL_SetWindowIcon(windowHandle_, surface);
 		SDL_FreeSurface(surface);
