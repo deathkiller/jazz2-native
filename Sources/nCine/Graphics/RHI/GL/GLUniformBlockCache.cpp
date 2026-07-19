@@ -126,7 +126,7 @@ namespace nCine::RhiGL
 			// Rows per element and tight bytes per row: mats are N column-vectors, everything else is 1 row
 			std::int32_t rowsPerElement = 1;
 			std::int32_t tightRowBytes = 0;
-			switch (uniform->GetType()) {
+			switch (uniform->GetGLType()) {
 				case GL_FLOAT: case GL_INT: tightRowBytes = 4; break;
 				case GL_FLOAT_VEC2: case GL_INT_VEC2: tightRowBytes = 8; break;
 				case GL_FLOAT_VEC3: case GL_INT_VEC3: tightRowBytes = 12; break;
@@ -152,7 +152,7 @@ namespace nCine::RhiGL
 
 			const GLfloat* asFloat = reinterpret_cast<const GLfloat*>(data);
 			const GLint* asInt = reinterpret_cast<const GLint*>(data);
-			switch (uniform->GetType()) {
+			switch (uniform->GetGLType()) {
 				case GL_FLOAT:			glUniform1fv(location, count, asFloat); break;
 				case GL_FLOAT_VEC2:		glUniform2fv(location, count, asFloat); break;
 				case GL_FLOAT_VEC3:		glUniform3fv(location, count, asFloat); break;

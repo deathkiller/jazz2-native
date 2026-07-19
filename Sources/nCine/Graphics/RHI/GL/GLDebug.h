@@ -5,6 +5,15 @@
 #include "../../../CommonHeaders.h"
 #endif
 
+// On desktop Linux OpenGL ES the KHR_debug object-type enums (`GL_BUFFER_KHR`, ...) are not reliably
+// exposed by <GLES2/gl2ext.h>. Pull in the GLES 3.2 core header, which both defines `GL_ES_VERSION_3_2`
+// and provides the unsuffixed core object-type enums (`GL_BUFFER`, `GL_SHADER`, ...) that KHR_debug was
+// promoted to; the LabelTypes enum below then uses them. This mirrors what GLDebug.cpp already does for
+// the debug entry points on the same platform.
+#if !defined(DOXYGEN_GENERATING_OUTPUT) && !defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES) && defined(__linux__)
+#	include <GLES3/gl32.h>
+#endif
+
 #include "../../../../Main.h"
 
 #include <Containers/StringView.h>
@@ -70,7 +79,7 @@ namespace nCine::RhiGL
 			Texture = GL_TEXTURE,
 			RenderBuffer = GL_RENDERBUFFER,
 			FrameBuffer = GL_FRAMEBUFFER,
-#	if ((defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21) || (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES))) && GL_ES_VERSION_3_0
+#	if ((defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21) || (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES))) && GL_ES_VERSION_3_0 && !GL_ES_VERSION_3_2
 			Buffer = GL_BUFFER_KHR,
 			Shader = GL_SHADER_KHR,
 			Program = GL_PROGRAM_KHR,

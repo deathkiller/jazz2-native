@@ -131,6 +131,37 @@ namespace nCine::RhiGL
 		}
 	}
 
+	ShaderCompiler::UniformType GLUniform::GetType() const
+	{
+		switch (type_) {
+			case GL_FLOAT: return ShaderCompiler::UniformType::Float;
+			case GL_INT: return ShaderCompiler::UniformType::Int;
+			case GL_UNSIGNED_INT: return ShaderCompiler::UniformType::UInt;
+			case GL_BOOL: return ShaderCompiler::UniformType::Bool;
+			case GL_FLOAT_VEC2: return ShaderCompiler::UniformType::Vec2;
+			case GL_FLOAT_VEC3: return ShaderCompiler::UniformType::Vec3;
+			case GL_FLOAT_VEC4: return ShaderCompiler::UniformType::Vec4;
+			case GL_INT_VEC2: return ShaderCompiler::UniformType::IVec2;
+			case GL_INT_VEC3: return ShaderCompiler::UniformType::IVec3;
+			case GL_INT_VEC4: return ShaderCompiler::UniformType::IVec4;
+			case GL_UNSIGNED_INT_VEC2: return ShaderCompiler::UniformType::UVec2;
+			case GL_UNSIGNED_INT_VEC3: return ShaderCompiler::UniformType::UVec3;
+			case GL_UNSIGNED_INT_VEC4: return ShaderCompiler::UniformType::UVec4;
+			case GL_BOOL_VEC2: return ShaderCompiler::UniformType::BVec2;
+			case GL_BOOL_VEC3: return ShaderCompiler::UniformType::BVec3;
+			case GL_BOOL_VEC4: return ShaderCompiler::UniformType::BVec4;
+			case GL_FLOAT_MAT2: return ShaderCompiler::UniformType::Mat2;
+			case GL_FLOAT_MAT3: return ShaderCompiler::UniformType::Mat3;
+			case GL_FLOAT_MAT4: return ShaderCompiler::UniformType::Mat4;
+			case GL_SAMPLER_2D: return ShaderCompiler::UniformType::Sampler2D;
+			case GL_SAMPLER_3D: return ShaderCompiler::UniformType::Sampler3D;
+			case GL_SAMPLER_CUBE: return ShaderCompiler::UniformType::SamplerCube;
+			default:
+				LOGW("No available case to handle GL type: {}", type_);
+				return ShaderCompiler::UniformType::Float;
+		}
+	}
+
 	bool GLUniform::HasReservedPrefix() const
 	{
 		return (MaxNameLength >= 3 && name_[0] == 'g' && name_[1] == 'l' && name_[2] == '_');

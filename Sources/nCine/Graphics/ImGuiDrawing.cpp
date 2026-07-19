@@ -400,7 +400,7 @@ namespace nCine
 		material.SetBlendingEnabled(true);
 		material.SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
-		cmd.GetGeometry().SetElementsPerVertex(sizeof(ImDrawVert) / sizeof(GLfloat));
+		cmd.GetGeometry().SetElementsPerVertex(sizeof(ImDrawVert) / sizeof(float));
 		cmd.GetGeometry().SetDrawParameters(PrimitiveType::Triangles, 0, 0);
 	}
 
@@ -408,7 +408,7 @@ namespace nCine
 	{
 		ImDrawData* drawData = ImGui::GetDrawData();
 
-		const std::uint32_t numElements = sizeof(ImDrawVert) / sizeof(GLfloat);
+		const std::uint32_t numElements = sizeof(ImDrawVert) / sizeof(float);
 
 		ImGuiIO& io = ImGui::GetIO();
 		const std::int32_t fbWidth = std::int32_t(drawData->DisplaySize.x * drawData->FramebufferScale.x);

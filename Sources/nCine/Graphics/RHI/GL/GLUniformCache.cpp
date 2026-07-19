@@ -213,7 +213,7 @@ namespace nCine::RhiGL
 		DEATH_ASSERT(uniform_->GetBlockIndex() == -1);
 
 		const GLint location = uniform_->GetLocation();
-		switch (uniform_->GetType()) {
+		switch (uniform_->GetGLType()) {
 			case GL_FLOAT:
 				glUniform1fv(location, 1, reinterpret_cast<const GLfloat*>(dataPointer_));
 				break;
@@ -259,7 +259,7 @@ namespace nCine::RhiGL
 				glUniform1iv(location, 1, reinterpret_cast<const GLint*>(dataPointer_));
 				break;
 			default:
-				LOGW("No available case to handle type: {}", uniform_->GetType());
+				LOGW("No available case to handle type: {}", uniform_->GetGLType());
 				break;
 		}
 
