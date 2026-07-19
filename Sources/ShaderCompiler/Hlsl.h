@@ -25,13 +25,18 @@
 	  and `texture(uTex, uv)` -> `uTex.Sample(uTex_sampler, uv)` (`textureLod` -> `.SampleLevel`).
 	- I/O: vertex attributes + `gl_VertexID` (SV_VertexID) form the VS input struct; VS `out` varyings +
 	  `gl_Position` (SV_Position) form the VS output struct; FS `in` varyings + `gl_FragCoord` (SV_Position)
-	  form the PS input struct; the FS `out vec4 COLOR` is returned as SV_Target. Attributes/varyings/gl_*
-	  are copied to/from file-scope `static` globals so helper functions read them exactly as in GLSL.
+	  form the PS input struct; a single FS `out` (the usual `out vec4 COLOR`) is returned as SV_Target.
+	  MULTIPLE FS `out` declarations render to SV_Target0..N in DECLARATION ORDER (of the emitted stage
+	  source) through an emitted PsOutput struct — the same order the offline SPIR-V emission assigns as
+	  `layout(location = 0..N)`, so both backends write the same attachment for the same output (explicit
+	  `layout(location)` qualifiers on fragment outputs are declined to keep that scheme unambiguous).
+	  Attributes/varyings/gl_* are copied to/from file-scope `static` globals so helper functions read
+	  them exactly as in GLSL.
 	- Built-ins: mix->lerp, fract->frac, dFdx/dFdy->ddx/ddy, inversesqrt->rsqrt, atan(y,x)->atan2(y,x),
 	  mod(a,b)->(a - b*floor(a/b)); dot/length/normalize/clamp/... keep their names.
 
-	Constructs outside the handled subset (e.g. multiple fragment outputs, geometry/compute features) make
-	Transform() return false with a diagnostic rather than emit invalid HLSL.
+	Constructs outside the handled subset (e.g. geometry/compute features) make Transform() return false
+	with a diagnostic rather than emit invalid HLSL.
 */
 
 #include "GlslReflect.h"		// StageReflection (texture units, block strides), Diagnostic, StringView

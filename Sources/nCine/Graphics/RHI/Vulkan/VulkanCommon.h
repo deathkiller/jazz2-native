@@ -186,4 +186,14 @@ namespace nCine::RhiVulkan
 
 	/** @brief Returns (creating/caching on first use) a single-color-attachment render pass for @p format (loadOp LOAD, storeOp STORE, layout COLOR_ATTACHMENT_OPTIMAL) */
 	VkRenderPass VkGetColorRenderPass(VkFormat format);
+
+	/**
+		@brief Returns (creating/caching on first use) a color-only render pass over @p count attachments with the given formats
+
+		The multi-render-target generalization of @ref VkGetColorRenderPass(): the cache is keyed by the full
+		attachment-format signature (count + formats), every attachment uses loadOp LOAD / storeOp STORE and
+		stays in COLOR_ATTACHMENT_OPTIMAL, and the single subpass writes all @p count attachments. Returns
+		`VK_NULL_HANDLE` if @p count is 0 or exceeds the render-target contract's attachment limit.
+	*/
+	VkRenderPass VkGetColorRenderPassMrt(const VkFormat* formats, std::uint32_t count);
 }

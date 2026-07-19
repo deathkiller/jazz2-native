@@ -19,9 +19,10 @@
 	local declarations, `=`/`+=`/`-=`/`*=`/`/=` assignments, `if`/`else`, C-style `for`, `return`, the
 	ternary operator, arithmetic/comparison/logical operators, member and read-swizzle access,
 	constructors, built-in and user-helper calls. Anything outside the subset (matrices, arrays,
-	derivatives such as `dFdx`/`fwidth`, `texelFetch`/`textureSize`, or a read of any varying other than
-	`vTexCoords`/`vColor`) makes @ref GlslToCppResult::Supported `false` with a reason and NO emitted
-	code, so unsupported shaders are cleanly declined rather than mistranslated.
+	derivatives such as `dFdx`/`fwidth`, `texelFetch`/`textureSize`, a read of any varying other than
+	`vTexCoords`/`vColor`, or any fragment output besides `COLOR` — the software rasterizer renders to a
+	single color target, no MRT) makes @ref GlslToCppResult::Supported `false` with a reason and NO
+	emitted code, so unsupported shaders are cleanly declined rather than mistranslated.
 */
 
 #include <cstdint>

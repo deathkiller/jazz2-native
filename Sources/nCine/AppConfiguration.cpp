@@ -75,6 +75,12 @@ namespace nCine
 		dataPath() = "Content"_s + fs::PathSeparator;
 #endif
 
+#if defined(RHI_GL_PROFILE_ES2)
+		// glMapBufferRange()/glUnmapBuffer() are ES 3.0 (OES_mapbuffer is write-only and not assumed), so the
+		// streaming buffers must use the glBufferSubData() host-copy path on the ES2 profile
+		useBufferMapping = false;
+#endif
+
 #if defined(DEATH_TARGET_UNIX) && defined(WITH_SDL)
 		// DPI queries do not seem to work reliably on X11 with SDL2
 		windowScaling = false;

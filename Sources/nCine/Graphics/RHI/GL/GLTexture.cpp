@@ -68,6 +68,7 @@ namespace nCine::RhiGL
 			// clang-format on
 		}
 
+#if !defined(RHI_GL_PROFILE_ES2)
 		GLint SwizzleChannelToGL(SwizzleChannel channel)
 		{
 			switch (channel) {
@@ -80,6 +81,7 @@ namespace nCine::RhiGL
 				case SwizzleChannel::One:	return GL_ONE;
 			}
 		}
+#endif
 	}
 
 	GLHashMap<GLTextureMappingFunc::Size, GLTextureMappingFunc> GLTexture::boundTextures_[MaxTextureUnits];
@@ -222,17 +224,30 @@ namespace nCine::RhiGL
 
 	void GLTexture::SetSwizzle(SwizzleChannel r, SwizzleChannel g, SwizzleChannel b, SwizzleChannel a)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// ES2 has no GL_TEXTURE_SWIZZLE_* (ES 3.0 feature). The only non-identity swizzle the engine uses is the
+		// palette pipeline's (R,G,B,G) on RG8 index textures, and GLTextureFormat maps RG8 to LUMINANCE_ALPHA on
+		// this profile, which natively samples (L,L,L,A) - identical for the channels the shaders read (.r/.a)
+		static_cast<void>(r); static_cast<void>(g); static_cast<void>(b); static_cast<void>(a);
+#else
 		// Channels are set individually because GL_TEXTURE_SWIZZLE_RGBA (a single glTexParameteriv) is desktop-only
 		// and absent on GLES/WebGL. Requires GL 3.3+ / GLES 3.0+.
 		TexParameteri(GL_TEXTURE_SWIZZLE_R, SwizzleChannelToGL(r));
 		TexParameteri(GL_TEXTURE_SWIZZLE_G, SwizzleChannelToGL(g));
 		TexParameteri(GL_TEXTURE_SWIZZLE_B, SwizzleChannelToGL(b));
 		TexParameteri(GL_TEXTURE_SWIZZLE_A, SwizzleChannelToGL(a));
+#endif
 	}
 
 	void GLTexture::SetMaxLevel(std::int32_t maxLevel)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// ES2 has no GL_TEXTURE_MAX_LEVEL (ES 3.0 feature); an incomplete MIP chain sampled with a mipmap filter
+		// would still be incomplete, but the engine only sets this for multi-level textures it fully uploads
+		static_cast<void>(maxLevel);
+#else
 		TexParameteri(GL_TEXTURE_MAX_LEVEL, maxLevel);
+#endif
 	}
 
 	void GLTexture::SetUnpackAlignment(std::int32_t alignment)
@@ -261,7 +276,12 @@ namespace nCine::RhiGL
 
 	bool GLTexture::SupportsImmutableStorage()
 	{
-#if (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(RHI_GL_PROFILE_ES2)
+		// glTexStorage2D() is ES 3.0 (the GL_ES_VERSION_3_0 check below matches the GLES3 *headers* this build
+		// compiles against, not the runtime context); EXT_texture_storage is not assumed - use the mutable
+		// glTexImage2D() per-level fallback instead
+		return false;
+#elif (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 		return true;
 #else
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();

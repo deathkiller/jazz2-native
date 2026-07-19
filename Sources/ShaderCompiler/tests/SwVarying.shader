@@ -1,3 +1,5 @@
+program SwVarying;
+
 uniform mat4 uProjectionMatrix;
 uniform mat4 uViewMatrix;
 
@@ -14,12 +16,12 @@ varying vec4 vColor;
 #ifndef SOFTWARE_RENDERER
 varying vec2 vPos;
 #else
-// Software-renderer variant: the CPU fragment path cannot interpolate a per-vertex varying like vPos,
-// so the device feeds the fragment an identity-mapped texcoord instead (vTexCoords carries the
-// quad-local position in [0,1]^2, see SwDevice's Shield handling) and the real texRect - the animated
-// shift values the fragment needs - travels through this per-instance-constant varying.
-varying vec4 vShieldRect;
+// Software-only constant varying: the SW transpiler reads it from the instance block; every
+// other backend's emission must not contain it (nor the SOFTWARE_RENDERER macro itself)
+varying vec4 vRect;
 #endif
+
+uniform sampler2D uTexture : texture_unit(0);
 
 void vertex() {
 	vec2 aPosition = vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2));
@@ -31,6 +33,17 @@ void vertex() {
 #ifndef SOFTWARE_RENDERER
 	vPos = aPosition * vec2(2.0) - vec2(1.0);
 #else
-	vShieldRect = texRect;
+	vRect = texRect;
 #endif
+}
+
+void fragment() {
+#ifndef SOFTWARE_RENDERER
+	vec2 shift = vTexCoords.xy;
+	vec2 pos = vPos;
+#else
+	vec2 shift = vRect.xy;
+	vec2 pos = vTexCoords.xy * vec2(2.0) - vec2(1.0);
+#endif
+	COLOR = texture(uTexture, shift + pos * 0.5) * vColor;
 }

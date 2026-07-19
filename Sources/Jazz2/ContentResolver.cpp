@@ -52,7 +52,7 @@ namespace Jazz2
 	// Cache-busting version of the precompiled shader set — bump whenever any ".shader" source in
 	// "Sources/Shaders/" or the ShaderCompiler artifact format changes, so stale binary program caches
 	// are invalidated (12 = the switch from embedded sources to ShaderCompiler-generated artifacts)
-	static constexpr std::uint64_t ShadersVersion = 22;
+	static constexpr std::uint64_t ShadersVersion = 13;
 
 	ContentResolver& ContentResolver::Get()
 	{

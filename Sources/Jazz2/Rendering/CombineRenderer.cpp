@@ -91,14 +91,16 @@ namespace Jazz2::Rendering
 	bool CombineRenderer::OnDraw(RenderQueue& renderQueue)
 	{
 #if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
-		// Software renderer: the scene was rasterized straight to the screen buffer; bloom and the underwater
-		// pass stay dropped (too heavy for the CPU). Dynamic lighting cannot be composited here - OnDraw runs in
-		// nCine's Visit (queue-building) phase, before the scene is rasterized into the screen buffer, so an
+		// Software renderer: the scene was rasterized straight to the screen buffer; bloom stays dropped (too
+		// heavy for the CPU), and the underwater shader variant is replaced by a lightweight per-row CPU water
+		// effect applied by the device together with the lighting. Neither can be composited here - OnDraw runs
+		// in nCine's Visit (queue-building) phase, before the scene is rasterized into the screen buffer, so an
 		// in-place combine here would be overwritten when the queue is actually drawn. Instead we build the
-		// lightmap now (pure CPU work) and hand it to the device; the Combine command queued below is dispatched
-		// in the Draw phase - after the scene and before the HUD - where the device applies the combine in place.
+		// lightmap now (pure CPU work) and hand it plus the water parameters to the device; the Combine command
+		// queued below is dispatched in the Draw phase - after the scene and before the HUD - where the device
+		// applies the combine in place.
 		if (!PrepareSoftwareLighting()) {
-			return false;	// Fully lit with no lights: nothing to composite
+			return false;	// Fully lit with no lights and no water: nothing to composite
 		}
 		renderQueue.AddCommand(&_renderCommand);
 		return true;
@@ -142,6 +144,14 @@ namespace Jazz2::Rendering
 #if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
 	bool CombineRenderer::PrepareSoftwareLighting()
 	{
+		// Water covers (part of) this viewport when the waterline is above its bottom edge - the same test the
+		// shader path uses to select the CombineWithWater variant. The waterline is passed in viewport-local
+		// pixels from the top edge (it may be negative when the whole view is underwater), together with the
+		// shader's uTime and the camera Y that anchor the wave animation to the world.
+		const float viewWaterLevel = _owner->_levelHandler->_waterLevel - _owner->_cameraPos.Y + _bounds.H * 0.5f;
+		const bool viewHasWater = (viewWaterLevel < _bounds.H);
+		const float waterTime = _owner->_levelHandler->_elapsedFrames * 0.0018f;
+
 		// Collect every active light emitter, exactly like the shader-path LightingRenderer does
 		_swLightsCache.clear();
 		auto actors = _owner->_levelHandler->GetActors();
@@ -152,12 +162,14 @@ namespace Jazz2::Rendering
 
 		// The shader path clears the lighting buffer to (ambientLevel, 0) and blends the scene toward the
 		// ambient colour by (1 - light.r). A fully-lit level with no lights therefore leaves the scene
-		// untouched, so it can be skipped entirely - this keeps normal levels at full speed.
+		// untouched, so it can be skipped entirely - this keeps normal levels at full speed. With water in
+		// view the combine must still run (a fully-lit water level still tints), just without a lightmap.
 		const float ambientLevel = _owner->_ambientLight.W;
 		const float ambR = _owner->_ambientLight.X;
 		const float ambG = _owner->_ambientLight.Y;
 		const float ambB = _owner->_ambientLight.Z;
-		if (ambientLevel >= 0.999f && _swLightsCache.empty()) {
+		const bool fullyLit = (ambientLevel >= 0.999f && _swLightsCache.empty());
+		if (fullyLit && !viewHasWater) {
 			return false;
 		}
 
@@ -172,6 +184,13 @@ namespace Jazz2::Rendering
 		const std::int32_t vpH = (std::int32_t)_bounds.H;
 		if (vpW <= 0 || vpH <= 0) {
 			return false;
+		}
+
+		if (fullyLit) {
+			// Water-only combine: no lightmap is needed, the device applies just the per-row water effect
+			Rhi::Device::SetPendingSoftwareLighting(nullptr, 0, 0, 1, vpX, vpY, vpW, vpH, ambR, ambG, ambB,
+				true, viewWaterLevel, waterTime, _owner->_cameraPos.Y);
+			return true;
 		}
 
 		// A half-resolution lightmap keeps the per-light splat cheap; the combine samples it point-wise
@@ -240,12 +259,14 @@ namespace Jazz2::Rendering
 			}
 		}
 
-		// Hand the finished lightmap and this viewport's rectangle to the software device. The actual in-place
-		// combine (lit = main * (1 + g) + max(g - 0.7, 0); out = mix(lit, ambientRGB, clamp(1 - r, 0, 1))) runs
-		// there during the Draw phase, once the scene is in the screen buffer and before the HUD. The lightmap
-		// pointer must outlive this call: _swLightmap is a member reused across frames, and the device consumes
-		// the entry in the same frame's Draw phase (before the next PrepareSoftwareLighting reassigns it).
-		Rhi::Device::SetPendingSoftwareLighting(_swLightmap.data(), lmW, lmH, Scale, vpX, vpY, vpW, vpH, ambR, ambG, ambB);
+		// Hand the finished lightmap, this viewport's rectangle and the water parameters to the software device.
+		// The actual in-place combine (lit = main * (1 + g) + max(g - 0.7, 0); out = mix(lit, ambientRGB,
+		// clamp(1 - r, 0, 1)), with the water tint/waves applied to the underwater rows first) runs there during
+		// the Draw phase, once the scene is in the screen buffer and before the HUD. The lightmap pointer must
+		// outlive this call: _swLightmap is a member reused across frames, and the device consumes the entry in
+		// the same frame's Draw phase (before the next PrepareSoftwareLighting reassigns it).
+		Rhi::Device::SetPendingSoftwareLighting(_swLightmap.data(), lmW, lmH, Scale, vpX, vpY, vpW, vpH, ambR, ambG, ambB,
+			viewHasWater, viewWaterLevel, waterTime, _owner->_cameraPos.Y);
 		return true;
 	}
 #endif

@@ -156,6 +156,7 @@ namespace nCine::RhiD3D11
 	bool D3D11Device::vsync_ = true;
 	std::int32_t D3D11Device::backbufferWidth_ = 0;
 	std::int32_t D3D11Device::backbufferHeight_ = 0;
+	std::int32_t D3D11Device::maxTextureDimension_ = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
 	ID3D11Texture2D* D3D11Device::presentTexture_ = nullptr;
 	ID3D11RenderTargetView* D3D11Device::presentRtv_ = nullptr;
 	ID3D11ShaderResourceView* D3D11Device::presentSrv_ = nullptr;
@@ -175,7 +176,8 @@ namespace nCine::RhiD3D11
 	ID3D11VertexShader* D3D11Device::lastVs_ = nullptr;
 	ID3D11PixelShader* D3D11Device::lastPs_ = nullptr;
 	std::uint32_t D3D11Device::lastTopology_ = 0;
-	ID3D11RenderTargetView* D3D11Device::lastRtv_ = nullptr;
+	ID3D11RenderTargetView* D3D11Device::lastRtvs_[D3D11Device::MaxRenderTargets] = {};
+	std::uint32_t D3D11Device::lastRtvCount_ = 0;
 	bool D3D11Device::lastRtvValid_ = false;
 	Recti D3D11Device::lastViewport_(0, 0, 0, 0);
 	bool D3D11Device::lastViewportValid_ = false;
@@ -193,7 +195,8 @@ namespace nCine::RhiD3D11
 		lastVs_ = nullptr;
 		lastPs_ = nullptr;
 		lastTopology_ = 0;
-		lastRtv_ = nullptr;
+		std::memset(lastRtvs_, 0, sizeof(lastRtvs_));
+		lastRtvCount_ = 0;
 		lastRtvValid_ = false;
 		lastViewportValid_ = false;
 		lastScissorValid_ = false;
@@ -258,11 +261,20 @@ namespace nCine::RhiD3D11
 			return;
 		}
 		if ((flags & ClearFlags::Color) != ClearFlags::None) {
-			ID3D11RenderTargetView* screenRtv = (presentRtv_ != nullptr ? presentRtv_ : backbufferRtv_);
-			ID3D11RenderTargetView* rtv = (currentRenderTarget_ != nullptr ? currentRenderTarget_->GetRTV() : screenRtv);
-			if (rtv != nullptr) {
-				const float c[4] = { clearColor_.R, clearColor_.G, clearColor_.B, clearColor_.A };
-				context_->ClearRenderTargetView(rtv, c);
+			const float c[4] = { clearColor_.R, clearColor_.G, clearColor_.B, clearColor_.A };
+			if (currentRenderTarget_ != nullptr) {
+				// The clear covers every bound color attachment (the contiguous attached run, bounded by the
+				// draw-buffer count), matching glClear's semantics of clearing all enabled draw buffers
+				ID3D11RenderTargetView* rtvs[D3D11RenderTarget::MaxColorAttachments];
+				const std::uint32_t numRtvs = currentRenderTarget_->GetRTVs(rtvs);
+				for (std::uint32_t i = 0; i < numRtvs; i++) {
+					context_->ClearRenderTargetView(rtvs[i], c);
+				}
+			} else {
+				ID3D11RenderTargetView* screenRtv = (presentRtv_ != nullptr ? presentRtv_ : backbufferRtv_);
+				if (screenRtv != nullptr) {
+					context_->ClearRenderTargetView(screenRtv, c);
+				}
 			}
 		}
 	}
@@ -367,23 +379,43 @@ namespace nCine::RhiD3D11
 
 	void D3D11Device::BindCurrentRenderTarget()
 	{
+		static_assert(MaxRenderTargets == D3D11RenderTarget::MaxColorAttachments,
+			"The device's RTV shadow must span every color attachment a render target can hold");
+
 		// "Screen" (no render target bound) is directed into the intermediate present texture; PresentFrame()
 		// flip-blits it into the real back-buffer (the single GL bottom-up -> D3D top-down scan-out correction).
-		// Falls back to the back-buffer if the present texture is absent.
-		ID3D11RenderTargetView* screenRtv = (presentRtv_ != nullptr ? presentRtv_ : backbufferRtv_);
-		ID3D11RenderTargetView* rtv = (currentRenderTarget_ != nullptr ? currentRenderTarget_->GetRTV() : screenRtv);
-		if (lastRtvValid_ && lastRtv_ == rtv) {
+		// Falls back to the back-buffer if the present texture is absent. An off-screen render target binds
+		// every color attachment it has enabled for drawing (the contiguous attached run, bounded by
+		// SetDrawBuffers - the glDrawBuffers equivalent).
+		ID3D11RenderTargetView* rtvs[MaxRenderTargets] = {};
+		std::uint32_t numRtvs;
+		if (currentRenderTarget_ != nullptr) {
+			numRtvs = currentRenderTarget_->GetRTVs(rtvs);
+			if (numRtvs == 0) {
+				// Attachment 0 unusable: keep the historical behavior of explicitly binding a null target
+				numRtvs = 1;
+			}
+		} else {
+			rtvs[0] = (presentRtv_ != nullptr ? presentRtv_ : backbufferRtv_);
+			numRtvs = 1;
+		}
+		if (lastRtvValid_ && lastRtvCount_ == numRtvs &&
+			std::memcmp(lastRtvs_, rtvs, numRtvs * sizeof(ID3D11RenderTargetView*)) == 0) {
 			return;
 		}
 
-		// Read/write hazard guard: if the texture becoming the render target is still bound as an SRV from an
-		// earlier pass, unbind it explicitly. Without this the runtime silently nulls the SRV slot at draw time,
-		// which would desync the SRV shadow cache (it would still believe the SRV is bound and skip a later rebind).
+		// Read/write hazard guard: if a texture becoming a render target attachment is still bound as an SRV
+		// from an earlier pass, unbind it explicitly. Without this the runtime silently nulls the SRV slot at
+		// draw time, which would desync the SRV shadow cache (it would still believe the SRV is bound and skip
+		// a later rebind). Covers every bound color attachment, not just attachment 0.
 		if (currentRenderTarget_ != nullptr) {
-			const D3D11Texture* rtTex = currentRenderTarget_->GetColorTexture(0);
-			ID3D11ShaderResourceView* rtSrv = (rtTex != nullptr ? rtTex->GetSRV() : nullptr);
-			if (rtSrv != nullptr) {
-				ID3D11ShaderResourceView* nullSrv = nullptr;
+			ID3D11ShaderResourceView* nullSrv = nullptr;
+			for (std::uint32_t a = 0; a < numRtvs; a++) {
+				const D3D11Texture* rtTex = currentRenderTarget_->GetColorTexture(a);
+				ID3D11ShaderResourceView* rtSrv = (rtTex != nullptr ? rtTex->GetSRV() : nullptr);
+				if (rtSrv == nullptr) {
+					continue;
+				}
 				for (std::uint32_t u = 0; u < MaxTextureUnits; u++) {
 					if (lastSrvs_[0][u] == rtSrv) {
 						context_->PSSetShaderResources(u, 1, &nullSrv);
@@ -397,8 +429,9 @@ namespace nCine::RhiD3D11
 			}
 		}
 
-		context_->OMSetRenderTargets(1, &rtv, nullptr);
-		lastRtv_ = rtv;
+		context_->OMSetRenderTargets(numRtvs, rtvs, nullptr);
+		std::memcpy(lastRtvs_, rtvs, sizeof(lastRtvs_));
+		lastRtvCount_ = numRtvs;
 		lastRtvValid_ = true;
 	}
 
@@ -529,12 +562,26 @@ namespace nCine::RhiD3D11
 	{
 		// Only touch the slots the current program's stages actually read (from bytecode reflection), and skip
 		// the call when the slot already holds this SRV/sampler. The read/write hazard guard: a texture that is
-		// the current render target is never bound as an SRV (the runtime would silently null it, desyncing the
-		// shadow); it re-binds naturally on the first draw after the target changes.
+		// any color attachment of the current render target is never bound as an SRV (the runtime would silently
+		// null it, desyncing the shadow); it re-binds naturally on the first draw after the target changes.
 		const D3D11ShaderProgram* prog = currentProgram_;
 		const std::uint32_t psMask = prog->GetPsTextureMask();
 		const std::uint32_t vsMask = prog->GetVsTextureMask();
-		const D3D11Texture* rtTex = (currentRenderTarget_ != nullptr ? currentRenderTarget_->GetColorTexture(0) : nullptr);
+		const D3D11Texture* rtTexs[D3D11RenderTarget::MaxColorAttachments];
+		std::uint32_t numRtTexs = 0;
+		if (currentRenderTarget_ != nullptr) {
+			std::uint32_t boundCount = currentRenderTarget_->GetAttachedCount();
+			const std::uint32_t numDrawBuffers = currentRenderTarget_->GetNumDrawBuffers();
+			if (numDrawBuffers > 0 && numDrawBuffers < boundCount) {
+				boundCount = numDrawBuffers;
+			}
+			for (std::uint32_t a = 0; a < boundCount; a++) {
+				const D3D11Texture* rtTex = currentRenderTarget_->GetColorTexture(a);
+				if (rtTex != nullptr) {
+					rtTexs[numRtTexs++] = rtTex;
+				}
+			}
+		}
 		const bool force = !srvShadowValid_;
 
 		std::uint32_t mask = psMask | vsMask;
@@ -543,8 +590,11 @@ namespace nCine::RhiD3D11
 				continue;
 			}
 			const D3D11Texture* tex = boundTextures_[u];
-			if (tex == rtTex) {
-				tex = nullptr;
+			for (std::uint32_t a = 0; a < numRtTexs; a++) {
+				if (tex == rtTexs[a]) {
+					tex = nullptr;
+					break;
+				}
 			}
 			ID3D11ShaderResourceView* srv = (tex != nullptr ? tex->GetSRV() : nullptr);
 			ID3D11SamplerState* samp = (tex != nullptr ? tex->GetSampler() : nullptr);
@@ -585,6 +635,10 @@ namespace nCine::RhiD3D11
 				}
 			}
 			if (state == nullptr) {
+				// The engine has a single blend state for all attachments (glBlendFunc applies to every draw
+				// buffer), so IndependentBlendEnable stays FALSE (zero-init): D3D11 then applies the
+				// RenderTarget[0] description to every simultaneously bound render target, which is exactly
+				// the GL contract - no per-attachment replication needed.
 				D3D11_BLEND_DESC desc = {};
 				desc.RenderTarget[0].BlendEnable = blending_.Enabled ? TRUE : FALSE;
 				desc.RenderTarget[0].SrcBlend = MapBlend(blending_.SrcRgb, false);
@@ -778,9 +832,28 @@ namespace nCine::RhiD3D11
 		if (currentRenderTarget_ == renderTarget) {
 			currentRenderTarget_ = nullptr;
 		}
-		// The RTV is released with the target; forget it so a recycled pointer can't match the shadow
-		lastRtv_ = nullptr;
+		// The RTVs are released with the target; forget them so a recycled pointer can't match the shadow
+		std::memset(lastRtvs_, 0, sizeof(lastRtvs_));
+		lastRtvCount_ = 0;
 		lastRtvValid_ = false;
+	}
+
+	void D3D11Device::OnRtvReleased(const ID3D11RenderTargetView* rtv)
+	{
+		// Called by D3D11RenderTarget whenever it releases one of its views (attachment change, lazy rebuild,
+		// destruction). If the dying view is part of the last-bound shadow, forget the whole set so a new RTV
+		// recycling the same pointer can't be mistaken for still bound (the next draw re-issues the bind).
+		// Only touches the static shadow (no D3D calls), so it is safe at any time including shutdown.
+		if (lastRtvValid_ && rtv != nullptr) {
+			for (std::uint32_t i = 0; i < lastRtvCount_; i++) {
+				if (lastRtvs_[i] == rtv) {
+					std::memset(lastRtvs_, 0, sizeof(lastRtvs_));
+					lastRtvCount_ = 0;
+					lastRtvValid_ = false;
+					break;
+				}
+			}
+		}
 	}
 
 	void D3D11Device::OnProgramDestroyed(const D3D11ShaderProgram* program)
@@ -799,6 +872,81 @@ namespace nCine::RhiD3D11
 	}
 
 	// -- Direct3D 11 device / swap-chain lifecycle --
+
+#if defined(D3D11_MRT_PROBE)
+	namespace
+	{
+		// Synthetic multi-render-target self-test, compiled only when D3D11_MRT_PROBE is defined (no runtime
+		// cost otherwise; mirrors the Vulkan backend's VULKAN_MRT_PROBE). Run once at device creation: attaches
+		// TWO color textures to one render target, binds both through a single OMSetRenderTargets (the regular
+		// BindCurrentRenderTarget path), verifies the multi-attachment device Clear() covers both, then clears
+		// attachment 0 red and attachment 1 green through their per-attachment RTVs, reads both back through
+		// the regular staging readback and logs PASS/FAIL. Exercises per-attachment RTV creation, the
+		// contiguous multi-attachment bind, multi-attachment clears and the readback path.
+		void RunMrtProbe()
+		{
+			constexpr std::int32_t Size = 4;
+			D3D11Texture tex0(TextureTarget::Texture2D);
+			D3D11Texture tex1(TextureTarget::Texture2D);
+			tex0.TexStorage2D(1, PixelFormat::RGBA8, Size, Size);
+			tex1.TexStorage2D(1, PixelFormat::RGBA8, Size, Size);
+
+			D3D11RenderTarget rt;
+			rt.AttachColorTexture(tex0, 0);
+			rt.AttachColorTexture(tex1, 1);
+			rt.SetDrawBuffers(2);
+			rt.BindDraw();		// one bind covering both attachments (OMSetRenderTargets count 2)
+
+			// Multi-attachment Clear(): both attachments must come out blue from the single call
+			const Colorf previousClearColor = D3D11Device::GetClearColor();
+			D3D11Device::SetClearColor(Colorf(0.0f, 0.0f, 1.0f, 1.0f));
+			D3D11Device::Clear(ClearFlags::Color);
+			D3D11Device::SetClearColor(previousClearColor);
+
+			std::uint8_t px0[Size * Size * 4] = {};
+			std::uint8_t px1[Size * Size * 4] = {};
+			tex0.GetTexImage(0, PixelFormat::RGBA8, false, px0);
+			tex1.GetTexImage(0, PixelFormat::RGBA8, false, px1);
+			bool clearOk = true;
+			for (std::int32_t i = 0; i < Size * Size; i++) {
+				clearOk = clearOk && (px0[i * 4 + 0] == 0 && px0[i * 4 + 1] == 0 && px0[i * 4 + 2] == 255 && px0[i * 4 + 3] == 255);
+				clearOk = clearOk && (px1[i * 4 + 0] == 0 && px1[i * 4 + 1] == 0 && px1[i * 4 + 2] == 255 && px1[i * 4 + 3] == 255);
+			}
+
+			// Distinct per-attachment clears through the lazily created per-attachment RTVs
+			ID3D11DeviceContext* context = D3D11Device::GetD3DContext();
+			ID3D11RenderTargetView* rtv0 = rt.GetRTV(0);
+			ID3D11RenderTargetView* rtv1 = rt.GetRTV(1);
+			if (context == nullptr || rtv0 == nullptr || rtv1 == nullptr) {
+				LOGE("MRT probe FAILED: context={}, rtv0={}, rtv1={}", reinterpret_cast<std::uint64_t>(context),
+					reinterpret_cast<std::uint64_t>(rtv0), reinterpret_cast<std::uint64_t>(rtv1));
+				rt.UnbindDraw();
+				return;
+			}
+			const float red[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+			const float green[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
+			context->ClearRenderTargetView(rtv0, red);
+			context->ClearRenderTargetView(rtv1, green);
+
+			tex0.GetTexImage(0, PixelFormat::RGBA8, false, px0);
+			tex1.GetTexImage(0, PixelFormat::RGBA8, false, px1);
+			bool ok0 = true, ok1 = true;
+			for (std::int32_t i = 0; i < Size * Size; i++) {
+				ok0 = ok0 && (px0[i * 4 + 0] == 255 && px0[i * 4 + 1] == 0 && px0[i * 4 + 2] == 0 && px0[i * 4 + 3] == 255);
+				ok1 = ok1 && (px1[i * 4 + 0] == 0 && px1[i * 4 + 1] == 255 && px1[i * 4 + 2] == 0 && px1[i * 4 + 3] == 255);
+			}
+			rt.UnbindDraw();
+
+			if (clearOk && ok0 && ok1) {
+				LOGI("MRT probe PASSED: multi-attachment Clear() OK, attachment 0 = red, attachment 1 = green (2-attachment bind / per-attachment RTVs / clears / readback verified)");
+			} else {
+				LOGE("MRT probe FAILED: multi-clear {}, attachment 0 {} (got {},{},{},{}), attachment 1 {} (got {},{},{},{})",
+					clearOk ? "OK" : "WRONG", ok0 ? "OK" : "WRONG", px0[0], px0[1], px0[2], px0[3],
+					ok1 ? "OK" : "WRONG", px1[0], px1[1], px1[2], px1[3]);
+			}
+		}
+	}
+#endif
 
 	bool D3D11Device::CreateSwapchain(void* windowHandle, std::int32_t width, std::int32_t height, bool vsync)
 	{
@@ -916,6 +1064,10 @@ namespace nCine::RhiD3D11
 		}
 #endif
 
+		// The real texture-dimension limit of the obtained feature level: D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION
+		// (16384) on 11_x, 8192 (the D3D10_REQ_ equivalent) on the 10.x fallback levels
+		maxTextureDimension_ = (obtainedLevel >= D3D_FEATURE_LEVEL_11_0 ? D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION : 8192);
+
 		if (!CreateBackbufferRtv()) {
 			DestroySwapchain();
 			return false;
@@ -929,6 +1081,10 @@ namespace nCine::RhiD3D11
 
 		LOGI("Direct3D 11 device created (feature level {}.{}), {}x{} swap chain",
 			(static_cast<int>(obtainedLevel) >> 12) & 0xF, (static_cast<int>(obtainedLevel) >> 8) & 0xF, width, height);
+
+#if defined(D3D11_MRT_PROBE)
+		RunMrtProbe();
+#endif
 		return true;
 	}
 
@@ -1112,4 +1268,6 @@ namespace nCine::RhiD3D11
 
 	ID3D11Device* D3D11Device::GetD3DDevice() { return device_; }
 	ID3D11DeviceContext* D3D11Device::GetD3DContext() { return context_; }
+
+	std::int32_t D3D11Device::GetMaxTextureDimension() { return maxTextureDimension_; }
 }

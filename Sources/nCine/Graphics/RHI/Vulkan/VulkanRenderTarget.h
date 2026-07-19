@@ -63,9 +63,10 @@ namespace nCine::RhiVulkan
 
 		Records the color textures addressed by attachment index and an optional depth/stencil (ignored for
 		2D). @ref BindDraw() records the target on the device so the following clears and draws are associated
-		with its color attachment 0. The backend builds a single-color-attachment `VkFramebuffer` over color
-		attachment 0's image view (against a device-provided compatible render pass); the device begins a
-		render pass on it for the draws routed here.
+		with its color attachments. The backend builds a `VkFramebuffer` over the image views of every
+		contiguously attached color texture (against a device-provided render pass cached by the full
+		attachment-format signature, so multiple render targets work); the device begins a render pass on it
+		for the draws routed here.
 	*/
 	class VulkanRenderTarget
 	{
@@ -78,7 +79,7 @@ namespace nCine::RhiVulkan
 		VulkanRenderTarget(const VulkanRenderTarget&) = delete;
 		VulkanRenderTarget& operator=(const VulkanRenderTarget&) = delete;
 
-		/** @brief Returns (building/caching on demand) the `VkFramebuffer` over color attachment 0, or `0` if incomplete. Opaque `std::uint64_t` to keep this header free of `vulkan.h`. */
+		/** @brief Returns (building/caching on demand) the `VkFramebuffer` over all contiguously attached color textures, or `0` if incomplete. Opaque `std::uint64_t` to keep this header free of `vulkan.h`. */
 		std::uint64_t GetFramebuffer();
 		/** @brief Releases the cached framebuffer (on attachment change / destruction) */
 		void ReleaseFramebuffer();
@@ -114,12 +115,21 @@ namespace nCine::RhiVulkan
 			return (index < MaxColorAttachments ? colorTextures_[index] : nullptr);
 		}
 
+		/** @brief Returns the number of contiguously attached color textures starting from attachment 0 (the framebuffer / render-pass attachment count) */
+		std::uint32_t GetAttachedCount() const;
+
+		/** @brief Returns the number of color attachments enabled for drawing (see @ref SetDrawBuffers()) */
+		inline std::uint32_t GetNumDrawBuffers() const {
+			return numDrawBuffers_;
+		}
+
 	private:
 		VulkanTexture* colorTextures_[MaxColorAttachments];
 		std::uint32_t numDrawBuffers_;
 
-		// Cached VkFramebuffer over color attachment 0 (opaque; rebuilt when the attachment changes)
+		// Cached VkFramebuffer over all attached color textures (opaque; rebuilt when any attachment changes)
 		std::uint64_t framebuffer_;
-		std::uint64_t framebufferView_;	// the color-attachment image view the framebuffer was built for
+		std::uint64_t framebufferViews_[MaxColorAttachments];	// the image views the framebuffer was built for
+		std::uint32_t framebufferViewCount_;					// their count (the framebuffer's attachment count)
 	};
 }

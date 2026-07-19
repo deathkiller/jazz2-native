@@ -1,5 +1,7 @@
 #include "SwDevice.h"
+#include "SwBuffer.h"
 #include "SwRaster.h"
+#include "SwScanlineOps.h"
 #include "SwShaderProgram.h"
 #include "SwRenderTarget.h"
 #include "SwTexture.h"
@@ -8,6 +10,7 @@
 #include "../../../../Shaders/Generated/SwGeneratedShaders.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -224,24 +227,21 @@ namespace nCine::RhiSoftware
 
 	void SwDevice::DrawArrays(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
-		static_cast<void>(firstVertex);
-		Dispatch(primitive, numVertices);
+		Dispatch(primitive, firstVertex, numVertices);
 	}
 
 	void SwDevice::DrawArraysInstanced(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices, std::int32_t numInstances)
 	{
-		static_cast<void>(firstVertex);
 		static_cast<void>(numInstances);
 		// The sprite path batches into one non-instanced draw; hardware instancing is unused here
-		Dispatch(primitive, numVertices);
+		Dispatch(primitive, firstVertex, numVertices);
 	}
 
 	void SwDevice::DrawElements(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t baseVertex)
 	{
 		static_cast<void>(indexFormat);
 		static_cast<void>(indexOffset);
-		static_cast<void>(baseVertex);
-		Dispatch(primitive, std::int32_t(numIndices));
+		Dispatch(primitive, baseVertex, std::int32_t(numIndices));
 	}
 
 	void SwDevice::DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
@@ -249,8 +249,7 @@ namespace nCine::RhiSoftware
 		static_cast<void>(indexFormat);
 		static_cast<void>(indexOffset);
 		static_cast<void>(numInstances);
-		static_cast<void>(baseVertex);
-		Dispatch(primitive, std::int32_t(numIndices));
+		Dispatch(primitive, baseVertex, std::int32_t(numIndices));
 	}
 
 	FenceHandle SwDevice::InsertFence()
@@ -390,7 +389,8 @@ namespace nCine::RhiSoftware
 	}
 
 	void SwDevice::SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
-		std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB)
+		std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB,
+		bool waterActive, float waterLevelPx, float waterTime, float waterCamY)
 	{
 		PendingSoftwareLight entry;
 		entry.Lightmap = lightmap;
@@ -404,9 +404,46 @@ namespace nCine::RhiSoftware
 		entry.AmbR = ambR;
 		entry.AmbG = ambG;
 		entry.AmbB = ambB;
+		entry.WaterActive = waterActive;
+		entry.WaterLevelPx = waterLevelPx;
+		entry.WaterTime = waterTime;
+		entry.WaterCamY = waterCamY;
 		// Pushed in Visit/OnDraw order; the matching Combine draws are dispatched in that same order, so the queue
 		// is consumed front-to-back (see ApplyPendingSoftwareLighting)
 		pendingSoftwareLights_.push_back(entry);
+	}
+
+	// Shifts one row of RGBA8 pixels horizontally in place with edge clamping: out(x) = in(clamp(x + shift,
+	// 0, count - 1)) - the per-row equivalent of the water shader's clamped uv.x displacement. A memmove plus
+	// an edge-pixel fill, so it stays cheap even at full viewport width.
+	static void ShiftRowHorizontal(std::uint8_t* row, std::int32_t count, std::int32_t shift)
+	{
+		if (shift == 0 || count <= 0) {
+			return;
+		}
+		std::uint8_t edge[4];
+		if (shift >= count || shift <= -count) {
+			// Degenerate shift: the whole row clamps to one edge pixel
+			std::memcpy(edge, row + (shift > 0 ? (std::size_t)(count - 1) * 4 : 0), 4);
+			for (std::int32_t x = 0; x < count; x++) {
+				std::memcpy(row + (std::size_t)x * 4, edge, 4);
+			}
+			return;
+		}
+		if (shift > 0) {
+			std::memmove(row, row + (std::size_t)shift * 4, (std::size_t)(count - shift) * 4);
+			std::memcpy(edge, row + (std::size_t)(count - shift - 1) * 4, 4);
+			for (std::int32_t x = count - shift; x < count; x++) {
+				std::memcpy(row + (std::size_t)x * 4, edge, 4);
+			}
+		} else {
+			const std::int32_t s = -shift;
+			std::memmove(row + (std::size_t)s * 4, row, (std::size_t)(count - s) * 4);
+			std::memcpy(edge, row + (std::size_t)s * 4, 4);
+			for (std::int32_t x = 0; x < s; x++) {
+				std::memcpy(row + (std::size_t)x * 4, edge, 4);
+			}
+		}
 	}
 
 	void SwDevice::ApplyPendingSoftwareLighting()
@@ -418,7 +455,9 @@ namespace nCine::RhiSoftware
 		const PendingSoftwareLight light = pendingSoftwareLights_.front();
 		pendingSoftwareLights_.erase(pendingSoftwareLights_.begin());
 
-		if (light.Lightmap == nullptr || light.LmW <= 0 || light.LmH <= 0) {
+		const bool hasLighting = (light.Lightmap != nullptr && light.LmW > 0 && light.LmH > 0);
+		const bool hasWater = light.WaterActive;
+		if (!hasLighting && !hasWater) {
 			return;
 		}
 
@@ -447,38 +486,90 @@ namespace nCine::RhiSoftware
 		const float ambG = light.AmbG;
 		const float ambB = light.AmbB;
 
-		// In-place combine over the viewport region, matching the core of Combine.shader with the (heavy,
-		// blur-dependent) grayscale night-vision term dropped:
-		//   lit = main * (1 + g) + max(g - 0.7, 0)
-		//   out = mix(lit, ambientRGB, clamp(1 - r, 0, 1))
-		// The half-resolution lightmap is sampled point-wise. Rows share the screen buffer's top-down convention.
+		// Water precompute. This is the lightweight CPU replacement of the CombineWithWaterLow shader: a per-row
+		// horizontal sine displacement, the constant water tint mix(main, (0.4, 0.6, 0.8), 0.4), a surface glow
+		// band (0.2 * topGradient^2 plus 0.2 on the waterline row, approximated as a mix toward white instead of
+		// the shader's saturating add) and the shader's extra darkness above deep water (uWaterLevel < 0.4). The
+		// High-quality extras (noise displacement, chromatic aberration, light rays, wavy surface shape) are
+		// dropped - both quality settings share this effect on the software backend.
+		//
+		// Rows inside the viewport run bottom-up visually (row = camY - worldY + vpH/2, the same convention the
+		// lightmap uses; the present blit flips the buffer), so the underwater part (worldY > waterY) is the row
+		// range [0, waterRowLimit) and the waterline sits at row waterRowLimit, counted from the buffer's top.
+		const float invVpH = 1.0f / (float)vpH;
+		float waterRowLimit = 0.0f;
+		std::int32_t belowEndExcl = 0;
+		float waveAmplitudePx = 0.0f, wavePhaseBase = 0.0f, wavePhasePerRow = 0.0f;
+		std::uint8_t aboveWaterBlend[4] = {};
+		if (hasWater) {
+			waterRowLimit = (float)vpH - light.WaterLevelPx;
+			belowEndExcl = std::min(vpH, (std::int32_t)std::ceil(waterRowLimit));
+			// Shader: uv.x += 0.008 * sin(uTime * 16 + uvWorld.y * 20), uvWorld.y = (camY + vpH - row) / vpH
+			waveAmplitudePx = 0.008f * (float)vpW;
+			wavePhaseBase = light.WaterTime * 16.0f + (light.WaterCamY + (float)vpH) * invVpH * 20.0f;
+			wavePhasePerRow = -20.0f * invVpH;
+			// Shader: when the waterline is in the top 40% of the view, the above-water part is darkened toward
+			// the ambient colour by (0.4 - uWaterLevel) - deep water dims the world above it
+			const float waterLevelNorm = light.WaterLevelPx * invVpH;
+			if (waterLevelNorm < 0.4f) {
+				const std::int32_t a = (std::int32_t)((0.4f - waterLevelNorm) * 255.0f + 0.5f);
+				aboveWaterBlend[0] = (std::uint8_t)std::clamp((std::int32_t)(ambR * 255.0f + 0.5f), 0, 255);
+				aboveWaterBlend[1] = (std::uint8_t)std::clamp((std::int32_t)(ambG * 255.0f + 0.5f), 0, 255);
+				aboveWaterBlend[2] = (std::uint8_t)std::clamp((std::int32_t)(ambB * 255.0f + 0.5f), 0, 255);
+				aboveWaterBlend[3] = (std::uint8_t)std::clamp(a, 0, 254);
+			}
+		}
+		constexpr float WaterColorR = 0.4f, WaterColorG = 0.6f, WaterColorB = 0.8f;
+
+		// In-place combine over the viewport region, matching the core of Combine(WithWater).shader with the
+		// (heavy, blur-dependent) grayscale night-vision term dropped:
+		//   main = water tint/waves (underwater rows only)
+		//   lit  = main * (1 + g) + max(g - 0.7, 0)
+		//   out  = mix(lit, ambientRGB, clamp(1 - r, 0, 1))  (+ above-deep-water darkness)
+		// The water colour ops run before the lighting mix, in the same order as the shader. The half-resolution
+		// lightmap is sampled point-wise (both channels clamped to [0,1] to match the shader path's RG8 lighting
+		// buffer, so a negative Brightness stays a no-op instead of becoming a "black light"), and a fully lit
+		// texel leaves the scene pixel as-is. The row cores are the CPU-dispatched SIMD kernels (the lighting one
+		// bit-identical to the scalar loop it replaced, see SwScanlineOps.h).
 		for (std::int32_t y = 0; y < vpH; y++) {
-			const std::int32_t lmY = std::min(y / scale, lmH - 1);
-			const float* texelBase = light.Lightmap + (std::size_t)lmY * lmW * 2;
 			std::uint8_t* px = fb.pixels + (std::size_t)(vpY + y) * fb.strideBytes + (std::size_t)vpX * 4;
-			for (std::int32_t x = 0; x < vpW; x++, px += 4) {
-				const std::int32_t lmX = std::min(x / scale, lmW - 1);
-				// Clamp to [0,1] to match the shader path's RG8 lighting buffer: a negative Brightness (some
-				// light emitters ramp it below zero, e.g. Player fire-shield parts) is clamped to 0 there and
-				// simply adds nothing. Without this clamp g<0 makes lit=(1+g)<1, which darkens the scene into a
-				// "black light" instead of a no-op.
-				const float r = std::clamp(texelBase[lmX * 2], 0.0f, 1.0f);
-				const float g = std::clamp(texelBase[lmX * 2 + 1], 0.0f, 1.0f);
-				const float darkT = std::clamp(1.0f - r, 0.0f, 1.0f);
-				if (darkT <= 0.0f && g <= 0.0f) {
-					continue; // Fully lit, no brightness core: leave the scene pixel as-is
+
+			const bool isUnderwaterRow = (hasWater && y < belowEndExcl);
+			if (isUnderwaterRow) {
+				// Horizontal wave displacement, constant per row
+				const float phase = wavePhaseBase + wavePhasePerRow * (float)y;
+				const std::int32_t shift = (std::int32_t)std::lround(waveAmplitudePx * std::sin(phase));
+				ShiftRowHorizontal(px, vpW, shift);
+
+				// Water tint + surface glow folded into one constant blend: out = main * 0.6 * (1 - glow) +
+				// (waterColor * 0.4 * (1 - glow) + glow). Solving out = mix(main, src, a) for the blend kernel
+				// gives a = 0.4 + 0.6 * glow and src = (waterColor * 0.4 * (1 - glow) + glow) / a, with src
+				// always inside [0, 1] because it is a convex combination of waterColor and white.
+				const float topDist = (waterRowLimit - (float)y) * invVpH;
+				const float topGradient = std::max(1.0f - topDist, 0.0f);
+				float glow = 0.2f * topGradient * topGradient;
+				if (waterRowLimit - (float)y < 1.0f) {
+					glow += 0.2f;	// The waterline row itself gets an extra highlight
 				}
-				const float lit = 1.0f + g;
-				const float core = (g > 0.7f ? g - 0.7f : 0.0f);
-				float cr = (px[0] / 255.0f) * lit + core;
-				float cg = (px[1] / 255.0f) * lit + core;
-				float cb = (px[2] / 255.0f) * lit + core;
-				cr += (ambR - cr) * darkT;
-				cg += (ambG - cg) * darkT;
-				cb += (ambB - cb) * darkT;
-				px[0] = (std::uint8_t)std::clamp(cr * 255.0f + 0.5f, 0.0f, 255.0f);
-				px[1] = (std::uint8_t)std::clamp(cg * 255.0f + 0.5f, 0.0f, 255.0f);
-				px[2] = (std::uint8_t)std::clamp(cb * 255.0f + 0.5f, 0.0f, 255.0f);
+				const float a = 0.4f + 0.6f * glow;
+				const float tintScale = 0.4f * (1.0f - glow) / a;
+				const float glowTerm = glow / a;
+				std::uint8_t tintBlend[4];
+				tintBlend[0] = (std::uint8_t)std::clamp((std::int32_t)((WaterColorR * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
+				tintBlend[1] = (std::uint8_t)std::clamp((std::int32_t)((WaterColorG * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
+				tintBlend[2] = (std::uint8_t)std::clamp((std::int32_t)((WaterColorB * tintScale + glowTerm) * 255.0f + 0.5f), 0, 255);
+				tintBlend[3] = (std::uint8_t)std::clamp((std::int32_t)(a * 255.0f + 0.5f), 1, 254);
+				BlendScanlineConstSrcAlpha(px, vpW, tintBlend);
+			}
+
+			if (hasLighting) {
+				const std::int32_t lmY = std::min(y / scale, lmH - 1);
+				const float* texelBase = light.Lightmap + (std::size_t)lmY * lmW * 2;
+				CombineLightingScanline(px, vpW, texelBase, lmW, scale, ambR, ambG, ambB);
+			}
+
+			if (hasWater && !isUnderwaterRow && aboveWaterBlend[3] != 0) {
+				BlendScanlineConstSrcAlpha(px, vpW, aboveWaterBlend);
 			}
 		}
 	}
@@ -505,9 +596,169 @@ namespace nCine::RhiSoftware
 		return false;
 	}
 
-	void SwDevice::Dispatch(PrimitiveType primitive, std::int32_t numVertices)
+	namespace
 	{
-		static_cast<void>(primitive);
+		/**
+			General vertex-fed dispatch of the MeshSprite family (called from SwDevice::Dispatch when the
+			bound program declares real vertex attributes). Reads the interleaved vertices of
+			[firstVertex, firstVertex + numVertices) from the bound vertex buffer, transforms them on the
+			CPU exactly like the DefaultMeshSprite vertex shader (aPosition scaled by the instance's
+			spriteSize through modelMatrix and the projection; aTexCoords mapped through texRect) and
+			issues one general clip-space [x, y, u, v] draw per instance run (batched draws carry a
+			per-vertex aMeshIndex; a run is a maximal span of one index, so each run keeps its own
+			instance color / texRect / constant varyings).
+		*/
+		void DispatchMeshVerticesImpl(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices,
+			const SwGeneratedShaderInfo& generatedShader, SwShaderProgram* program, const float* pv,
+			const std::uint8_t* blockData, std::uint32_t blockDataSize, std::uint32_t instanceStride,
+			std::int32_t uTextureUnit, const SwTexture* const* boundTextures,
+			bool blendOn, SwBlendFactor bsrc, SwBlendFactor bdst, bool scissorEnabled, const Recti& scissorRect)
+		{
+			SwVertexFormat::Attribute* posAttr = program->GetAttribute("aPosition");
+			SwVertexFormat::Attribute* texAttr = program->GetAttribute("aTexCoords");
+			SwVertexFormat::Attribute* idxAttr = program->GetAttribute("aMeshIndex");
+			if (texAttr != nullptr && (!texAttr->IsEnabled() || texAttr->GetVbo() != posAttr->GetVbo())) {
+				texAttr = nullptr;
+			}
+			if (idxAttr != nullptr && (!idxAttr->IsEnabled() || idxAttr->GetVbo() != posAttr->GetVbo())) {
+				idxAttr = nullptr;
+			}
+
+			const SwBuffer* vbo = posAttr->GetVbo();
+			const std::uint8_t* vboData = vbo->HostData();
+			std::int32_t stride = posAttr->GetStride();
+			if (stride <= 0) {
+				stride = std::int32_t((2 + (texAttr != nullptr ? 2 : 0) + (idxAttr != nullptr ? 1 : 0)) * sizeof(float));
+			}
+			const std::size_t posOff = std::size_t(posAttr->GetBaseOffset()) + reinterpret_cast<std::uintptr_t>(posAttr->GetPointer());
+			const std::size_t texOff = (texAttr != nullptr ? std::size_t(texAttr->GetBaseOffset()) + reinterpret_cast<std::uintptr_t>(texAttr->GetPointer()) : 0);
+			const std::size_t idxOff = (idxAttr != nullptr ? std::size_t(idxAttr->GetBaseOffset()) + reinterpret_cast<std::uintptr_t>(idxAttr->GetPointer()) : 0);
+
+			// The whole vertex range must be inside the buffer store (the offsets address into each vertex)
+			std::size_t maxAttrEnd = posOff + 2 * sizeof(float);
+			if (texAttr != nullptr) {
+				maxAttrEnd = std::max(maxAttrEnd, texOff + 2 * sizeof(float));
+			}
+			if (idxAttr != nullptr) {
+				maxAttrEnd = std::max(maxAttrEnd, idxOff + sizeof(std::int32_t));
+			}
+			if (vboData == nullptr || firstVertex < 0 ||
+			    (std::size_t(firstVertex) + std::size_t(numVertices) - 1) * std::size_t(stride) + maxAttrEnd > vbo->GetSize()) {
+				LOGW("Skipped draw: Vertex range exceeds the bound vertex buffer");
+				return;
+			}
+
+			// The no-texture mesh variants drop texRect from the instance block, which moves spriteSize up
+			const bool hasTexRect = (texAttr != nullptr);
+			const std::uint32_t spriteSizeOffset = (hasTexRect ? kSpriteSizeOffset : kSpriteSizeNoTexOffset);
+
+			const std::uint32_t uniformsSize = generatedShader.uniformsSize;
+			std::uint8_t uniformScratch[MaxFragmentShaderUserDataSize];
+			// Reused per run; safe because both the immediate rasterizer and the tile renderer's submit
+			// (which snapshots the vertices into the deferred command) consume it before Draw() returns
+			static std::vector<float> vertexScratch;
+
+			auto vertexBytes = [&](std::int32_t index) {
+				return vboData + (std::size_t(firstVertex) + std::size_t(index)) * std::size_t(stride);
+			};
+			auto meshIndexAt = [&](std::int32_t index) -> std::int32_t {
+				std::int32_t value;
+				std::memcpy(&value, vertexBytes(index) + idxOff, sizeof(value));
+				return (value >= 0 ? value : 0);
+			};
+
+			std::int32_t runBegin = 0;
+			while (runBegin < numVertices) {
+				const std::int32_t meshIndex = (idxAttr != nullptr ? meshIndexAt(runBegin) : 0);
+				std::int32_t runEnd = (idxAttr != nullptr ? runBegin + 1 : numVertices);
+				while (idxAttr != nullptr && runEnd < numVertices && meshIndexAt(runEnd) == meshIndex) {
+					runEnd++;
+				}
+				const std::int32_t runCount = runEnd - runBegin;
+
+				const std::size_t instOffset = std::size_t(meshIndex) * instanceStride;
+				if (blockDataSize != 0 && instOffset + spriteSizeOffset + 2 * sizeof(float) > blockDataSize) {
+					runBegin = runEnd;
+					continue;	// Malformed mesh index - skip the run rather than read past the bound block
+				}
+				const std::uint8_t* inst = blockData + instOffset;
+
+				float mvp[16];
+				Mat4Mul(pv, reinterpret_cast<const float*>(inst + kModelMatrixOffset), mvp);
+				const float* spriteSize = reinterpret_cast<const float*>(inst + spriteSizeOffset);
+				const float* texRect = (hasTexRect ? reinterpret_cast<const float*>(inst + kTexRectOffset) : nullptr);
+
+				vertexScratch.resize(std::size_t(runCount) * 4);
+				float* out = vertexScratch.data();
+				for (std::int32_t i = runBegin; i < runEnd; i++, out += 4) {
+					float pos[2];
+					std::memcpy(pos, vertexBytes(i) + posOff, sizeof(pos));
+					const float wx = pos[0] * spriteSize[0];
+					const float wy = pos[1] * spriteSize[1];
+					float cx = mvp[0] * wx + mvp[4] * wy + mvp[12];
+					float cy = mvp[1] * wx + mvp[5] * wy + mvp[13];
+					const float cw = mvp[3] * wx + mvp[7] * wy + mvp[15];
+					if (cw != 0.0f && cw != 1.0f) {
+						// The 2D pipeline's projections keep w == 1; divide only when one does not
+						cx /= cw;
+						cy /= cw;
+					}
+					out[0] = cx;
+					out[1] = cy;
+					if (texRect != nullptr) {
+						float tex[2];
+						std::memcpy(tex, vertexBytes(i) + texOff, sizeof(tex));
+						out[2] = tex[0] * texRect[0] + texRect[1];
+						out[3] = tex[1] * texRect[2] + texRect[3];
+					} else {
+						out[2] = 0.0f;
+						out[3] = 0.0f;
+					}
+				}
+
+				DrawContext ctx;
+				for (std::uint32_t u = 0; u < MaxTextureUnits; u++) {
+					ctx.textures[u] = boundTextures[u];
+				}
+				std::memcpy(ctx.ff.color, inst + kColorOffset, sizeof(ctx.ff.color));
+				ctx.ff.hasTexture = hasTexRect;
+				ctx.ff.textureUnit = uTextureUnit;
+
+				// Populate the generated fragment's uniforms + this instance's constant varyings, exactly
+				// like the procedural-quad generated path
+				if (uniformsSize > 0) {
+					std::memset(uniformScratch, 0, uniformsSize);
+				}
+				for (std::uint32_t fi = 0; fi < generatedShader.uniformFieldCount; fi++) {
+					const SwGeneratedUniformField& field = generatedShader.uniformFields[fi];
+					const std::uint8_t* v = program->ResolveUniform(field.name);
+					if (v != nullptr && field.offset + field.componentCount * sizeof(float) <= uniformsSize) {
+						std::memcpy(uniformScratch + field.offset, v, field.componentCount * sizeof(float));
+					}
+				}
+				if (generatedShader.computeVaryings != nullptr) {
+					generatedShader.computeVaryings(uniformScratch, inst);
+				}
+				ctx.fragmentShader = generatedShader.fragment;
+				ctx.fragmentShaderUserData = uniformScratch;
+				ctx.fragmentShaderUserDataSize = uniformsSize;
+				ctx.blendingEnabled = blendOn;
+				ctx.blendSrc = bsrc;
+				ctx.blendDst = bdst;
+				ctx.scissorEnabled = scissorEnabled;
+				ctx.scissorRect = scissorRect;
+				ctx.vertexData = vertexScratch.data();
+				ctx.vertexStride = 4 * sizeof(float);
+				SwRaster::SetDrawContext(ctx);
+				SwRaster::Draw(primitive, 0, runCount);
+
+				runBegin = runEnd;
+			}
+		}
+	}
+
+	void SwDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
+	{
 		if (currentProgram_ == nullptr || numVertices <= 0) {
 			return;
 		}
@@ -535,9 +786,21 @@ namespace nCine::RhiSoftware
 		const SwGeneratedShaderInfo* generatedShader = nullptr;
 		if (prefersGenerated) {
 			generatedShader = FindGeneratedShader(currentProgram_->GetObjectLabel());
+			if (generatedShader == nullptr) {
+				// The engine registers the nCine default programs under labels without the shader file's
+				// "Default" prefix (e.g. "MeshSprite" for DefaultMeshSprite.shader, "BatchedMeshSprites"
+				// for DefaultBatchedMeshSprites.shader); retry prefixed so the mesh family resolves its
+				// transpiled fragment. Sprite-family labels never get here (they classify to a fast path).
+				const char* label = currentProgram_->GetObjectLabel();
+				if (label != nullptr && label[0] != '\0') {
+					std::string prefixed = "Default";
+					prefixed += label;
+					generatedShader = FindGeneratedShader(prefixed.c_str());
+				}
+			}
 			if (generatedShader == nullptr && effect == SwEffect::Unknown) {
-				// Expected for shaders the offline transpiler declined (e.g. the dFdx-based shield effects) -
-				// their visuals are simply absent on the software backend. Warn once per program, not per draw.
+				// Expected for shaders the offline transpiler declined - their visuals are simply absent on
+				// the software backend. Warn once per program, not per draw.
 				static std::vector<std::string> warnedLabels;
 				const char* label = currentProgram_->GetObjectLabel();
 				const std::string labelStr = (label != nullptr ? label : "<unlabeled>");
@@ -647,6 +910,15 @@ namespace nCine::RhiSoftware
 			ctx.fragmentShader = fragmentShader;
 			ctx.fragmentShaderUserData = userData;
 			ctx.fragmentShaderUserDataSize = userDataSize;
+			// PaletteRemap(+Batched) draws qualify for the tile renderer's palette-LUT fast path (the
+			// classified effect guarantees the fragment is the transpiled PaletteRemap one, whose parameter
+			// block is a single vPaletteOffset float); the remaining constraints are validated at build time
+			ctx.paletteRemapHint = ((effect == SwEffect::PaletteRemap || effect == SwEffect::BatchedPaletteRemap) &&
+				fragmentShader != nullptr && userData != nullptr);
+			// The no-texture sprite family's fragment is packColor(vColor) - a per-draw constant - so the
+			// tile renderer may evaluate it once and run its constant-color fill/blend scanline path
+			ctx.constantColorHint = ((effect == SwEffect::DefaultSpriteNoTexture || effect == SwEffect::DefaultBatchedSpritesNoTexture) &&
+				fragmentShader != nullptr);
 			ctx.blendingEnabled = blendOn;
 			ctx.blendSrc = bsrc;
 			ctx.blendDst = bdst;
@@ -681,6 +953,26 @@ namespace nCine::RhiSoftware
 				return;
 			}
 
+			// General vertex-fed path (the MeshSprite family). Programs with real vertex attributes read
+			// their geometry from the bound vertex buffer instead of synthesizing a procedural quad: each
+			// vertex is transformed on the CPU exactly like the DefaultMeshSprite vertex shader (aPosition
+			// scaled by the instance's spriteSize through modelMatrix and the projection, aTexCoords mapped
+			// through texRect) and handed to the rasterizer as interleaved clip-space [x, y, u, v]. A
+			// batched draw (aMeshIndex attribute) is split at instance boundaries so every run keeps its
+			// own instance color / texRect / constant varyings; the stitching vertices the batcher
+			// duplicates between meshes only ever form degenerate (zero-area) triangles inside a run.
+			// In-game consumers: the HUD weapon wheel (LineStrip) and the multiplayer minimap ribbons
+			// (TriangleStrip); plain quad sprites never have attributes, so they never take this path.
+			SwVertexFormat::Attribute* posAttr = currentProgram_->GetAttribute("aPosition");
+			if (posAttr != nullptr && posAttr->IsEnabled() && posAttr->GetVbo() != nullptr) {
+				DispatchMeshVerticesImpl(primitive, firstVertex, numVertices, *generatedShader,
+					currentProgram_, pv, blockData, boundUniformRanges_[binding].Size, instanceStride,
+					samplerUnit("uTexture", 0), boundTextures_, blendOn, bsrc, bdst,
+					scissor_.Enabled, scissor_.Rect);
+				SwRaster::ClearDrawContext();
+				return;
+			}
+
 			// The generated fragment reads the sprite's instance state (and any constant varying) at the fixed
 			// sprite-family std140 offsets (through kPaletteOffsetOffset). Guard against a program whose instance
 			// block does not follow that layout, so the reads below never run past the bound block.
@@ -695,6 +987,14 @@ namespace nCine::RhiSoftware
 
 			const std::int32_t uTextureUnit = samplerUnit("uTexture", 0);
 
+			// The shield fragments' SOFTWARE_RENDERER variant reconstructs the GL path's interpolated
+			// quad-local position from the interpolated texcoord, so those draws are fed an IDENTITY
+			// texRect (u = corner.x, v = corner.y in [0,1]) instead of the instance texRect - for the
+			// shield effects that field carries the animated shift values, not texture coordinates, and
+			// it reaches the fragment separately through the vShieldRect constant varying computed by
+			// computeVaryings from the untouched instance block (see Include/ShieldVs.inc).
+			const bool quadLocalUV = (std::strstr(generatedShader->name, "Shield") != nullptr);
+
 			std::uint8_t uniformScratch[MaxFragmentShaderUserDataSize];
 			for (std::int32_t k = 0; k < numInstances; k++) {
 				const std::uint8_t* inst = blockData + std::size_t(k) * instanceStride;
@@ -703,6 +1003,12 @@ namespace nCine::RhiSoftware
 				std::memcpy(ff.color, inst + kColorOffset, sizeof(ff.color));
 				std::memcpy(ff.texRect, inst + kTexRectOffset, sizeof(ff.texRect));
 				std::memcpy(ff.spriteSize, inst + kSpriteSizeOffset, sizeof(ff.spriteSize));
+				if (quadLocalUV) {
+					ff.texRect[0] = 1.0f;
+					ff.texRect[1] = 0.0f;
+					ff.texRect[2] = 1.0f;
+					ff.texRect[3] = 0.0f;
+				}
 				ff.hasTexture = true;
 				ff.textureUnit = uTextureUnit;
 

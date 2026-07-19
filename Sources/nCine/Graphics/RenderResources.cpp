@@ -23,10 +23,10 @@ namespace nCine
 	{
 		static const char BatchSizeFormatString[] = "#ifndef BATCH_SIZE\n\t#define BATCH_SIZE ({})\n#endif\n#line 0\n";
 
-		// Cache-busting version of the default shader set — bump whenever any "Default*.shader" source in
+		// Cache-busting version of the default shader set - bump whenever any "Default*.shader" source in
 		// "Sources/Shaders/" or the ShaderCompiler artifact format changes, so stale binary program caches
 		// are invalidated (12 = the switch from embedded/file sources to ShaderCompiler-generated artifacts)
-		static constexpr std::uint64_t DefaultShadersVersion = 22;
+		static constexpr std::uint64_t DefaultShadersVersion = 13;
 
 		struct ShaderLoad
 		{

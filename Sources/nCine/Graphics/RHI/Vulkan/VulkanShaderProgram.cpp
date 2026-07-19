@@ -308,6 +308,8 @@ namespace nCine::RhiVulkan
 				attr.Location = std::uint32_t(loc);
 				attr.ComponentCount = fa.GetSize();
 				attr.Offset = std::uint32_t(reinterpret_cast<std::uintptr_t>(fa.GetPointer()));
+				attr.Type = fa.GetType();
+				attr.Normalized = fa.IsNormalized();
 			}
 			if (fa.GetStride() > 0) {
 				outStride = std::uint32_t(fa.GetStride());

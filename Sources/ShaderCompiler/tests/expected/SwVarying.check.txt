@@ -1,0 +1,10 @@
+program SwVarying
+variant (base)
+  uniform mat4 uProjectionMatrix
+  uniform mat4 uViewMatrix
+  block InstanceBlock baseSize=112 instanceStride=0
+    member mat4 modelMatrix offset=0
+    member vec4 color offset=64
+    member vec4 texRect offset=80
+    member vec2 spriteSize offset=96
+  texture uTexture unit=0

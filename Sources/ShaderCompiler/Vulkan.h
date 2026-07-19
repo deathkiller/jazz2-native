@@ -23,8 +23,8 @@
 	- Each "layout(std140) uniform Block { ... }" gains an explicit "layout(set = S, binding = B, std140)".
 	- Each "uniform sampler2D uTex;" (combined image sampler) gains "layout(set = S, binding = B)".
 	- SPIR-V has no automatic interface locations, so every vertex attribute ("in" in the vertex stage), every
-	  varying ("out" in the vertex stage / "in" in the fragment stage) and the fragment output ("out vec4
-	  COLOR;") gains an explicit "layout(location = N)".
+	  varying ("out" in the vertex stage / "in" in the fragment stage) and every fragment output ("out vec4
+	  COLOR;" and any additional "out" declarations) gains an explicit "layout(location = N)".
 	- "gl_VertexID" -> "gl_VertexIndex" and "gl_InstanceID" -> "gl_InstanceIndex" (Vulkan keeps the vertex-id
 	  and integer math, unlike the ES2 profile that has to synthesize a corner attribute).
 
@@ -39,8 +39,18 @@
 	      binding (uboBase + BlockCount + j)     : the j-th sampler (reflection.Textures[j]).
 	  - Vertex attribute locations use reflection.Attributes[k].Location when >= 0, else the attribute's
 	    declaration index. Varying locations are assigned in declaration order within the stage (matching
-	    across stages because both stages declare the varyings in the same order). The fragment output is
-	    location 0.
+	    across stages because both stages declare the varyings in the same order).
+
+	FRAGMENT OUTPUT LOCATIONS (the render-target contract): fragment "out" declarations receive sequential
+	locations 0..N-1 in DECLARATION ORDER of the emitted stage source. A single output (the usual case) is
+	therefore location 0, exactly what the GL path yields for one unassigned output. With MULTIPLE outputs,
+	note that user-declared extras (shared globals) precede the tool-appended "out vec4 COLOR;" in the
+	emitted source, so COLOR takes the LAST location. The GL runtime uses no glBindFragDataLocation and the
+	emitted GL source carries no explicit output locations (driver assignment is only pinned for the
+	single-output case), so declaration order is the tool-defined contract every offline target follows:
+	the HLSL emitter maps the same order to SV_Target0..N. Explicit "layout(location)" qualifiers on
+	fragment outputs are NOT honored here (the emitter re-assigns by order); the HLSL emitter declines
+	them, keeping any divergence from the GL source impossible to express.
 */
 
 #include "GlslReflect.h"		// StageReflection (uniforms, blocks, textures, attributes), Diagnostic, StringView

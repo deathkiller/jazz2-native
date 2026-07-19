@@ -156,6 +156,15 @@ namespace nCine::RhiVulkan
 		/** @brief Acquires a swap-chain image, blits the rendered scene into it and presents it (the buffer-swap equivalent) */
 		static void PresentFrame();
 
+		// -- Physical-device limits (consumed by GfxCapabilities to publish the backend's real values) --
+
+		/** @brief Returns the device's largest supported 2D image dimension (`maxImageDimension2D`); a safe default before device creation */
+		static std::int32_t GetMaxTextureDimension();
+		/** @brief Returns the device's minimum uniform-buffer bind-offset alignment in bytes (`minUniformBufferOffsetAlignment`) */
+		static std::int32_t GetUniformBufferOffsetAlignment();
+		/** @brief Returns the device's largest allowed uniform-buffer descriptor range in bytes (`maxUniformBufferRange`) */
+		static std::int32_t GetMaxUniformBufferRange();
+
 	private:
 		static constexpr std::uint32_t MaxTextureUnits = 8;
 		static constexpr std::uint32_t MaxUniformBindings = 8;

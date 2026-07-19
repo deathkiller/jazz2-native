@@ -13,12 +13,14 @@
 // WITH_RHI_SOFTWARE is defined on the compiler command line so every translation unit sees it
 
 #include "nCine/Graphics/RHI/Software/SwBackend.h"
+#include "nCine/Graphics/RHI/Software/SwRaster.h"
 #include "Shaders/Generated/DefaultSprite.h"
 #include "Shaders/Generated/TexturedBackground.h"
 #include "Shaders/Generated/TexturedBackgroundCircle.h"
 #include "Shaders/Generated/Combine.h"
 #include "Shaders/Generated/PaletteRemap.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -378,29 +380,38 @@ bool RunSpriteTest(const char* baseDir)
 		false, BlendingFactor::One, BlendingFactor::Zero, &scissor, DrawKind::Elements);
 
 	// --- Read back and assert ---
+	// Drain the tile renderer's deferred draws before touching the texel store directly. The engine's
+	// present/readback paths flush implicitly; the harness bypasses them, and reading (or letting the
+	// test's textures die) with commands still queued reads a stale target - or worse, a later flush
+	// rasterizes commands whose textures are already destroyed.
+	RhiSoftware::SwRaster::Flush();
 	const std::uint8_t* pixels = colorTexture.GetPixels();
 	const std::int32_t stride = colorTexture.GetStrideBytes();
 
+	// The render-target store is bottom-up (OpenGL framebuffer convention - see SwRaster::SetColorBuffer's
+	// isFboTarget), so every assertion flips its logical top-down y into a store row
+	auto fy = [&](std::int32_t y) { return Height - 1 - y; };
+
 	std::printf("Software RHI backend harness (%dx%d)\n", Width, Height);
 	std::printf("Sprite 1 - checker quadrants (opaque, white modulation):\n");
-	CheckPixel(pixels, stride, 110, 90, 255, 0, 0, 255, 0, "checker top-left = red");
-	CheckPixel(pixels, stride, 145, 90, 0, 255, 0, 255, 0, "checker top-right = green");
-	CheckPixel(pixels, stride, 110, 116, 0, 0, 255, 255, 0, "checker bottom-left = blue");
-	CheckPixel(pixels, stride, 145, 116, 255, 255, 0, 255, 0, "checker bottom-right = yellow");
+	CheckPixel(pixels, stride, 110, fy(90), 255, 0, 0, 255, 0, "checker top-left = red");
+	CheckPixel(pixels, stride, 145, fy(90), 0, 255, 0, 255, 0, "checker top-right = green");
+	CheckPixel(pixels, stride, 110, fy(116), 0, 0, 255, 255, 0, "checker bottom-left = blue");
+	CheckPixel(pixels, stride, 145, fy(116), 255, 255, 0, 255, 0, "checker bottom-right = yellow");
 
 	std::printf("Clear color outside the sprites:\n");
-	CheckPixel(pixels, stride, 10, 130, 40, 40, 40, 255, 0, "clear (left edge)");
-	CheckPixel(pixels, stride, 250, 200, 40, 40, 40, 255, 0, "clear (bottom-right)");
+	CheckPixel(pixels, stride, 10, fy(130), 40, 40, 40, 255, 0, "clear (left edge)");
+	CheckPixel(pixels, stride, 250, fy(200), 40, 40, 40, 255, 0, "clear (bottom-right)");
 
 	std::printf("Sprite 2 - color modulation (white x (1, 0.5, 0.25)):\n");
-	CheckPixel(pixels, stride, 40, 32, 255, 128, 64, 255, 2, "modulated white");
+	CheckPixel(pixels, stride, 40, fy(32), 255, 128, 64, 255, 2, "modulated white");
 
 	std::printf("Sprite 3 - alpha blend (half-alpha white over gray 40):\n");
-	CheckPixel(pixels, stride, 216, 32, 148, 148, 148, 191, 2, "alpha-blended white");
+	CheckPixel(pixels, stride, 216, fy(32), 148, 148, 148, 191, 2, "alpha-blended white");
 
 	std::printf("Sprite 4 - scissor (right half clipped):\n");
-	CheckPixel(pixels, stride, 110, 186, 255, 0, 0, 255, 0, "scissor kept = red");
-	CheckPixel(pixels, stride, 145, 186, 40, 40, 40, 255, 0, "scissor clipped = clear");
+	CheckPixel(pixels, stride, 110, fy(186), 255, 0, 0, 255, 0, "scissor kept = red");
+	CheckPixel(pixels, stride, 145, fy(186), 40, 40, 40, 255, 0, "scissor clipped = clear");
 
 	const bool wrote = WritePng(outputPath, pixels, Width, Height, stride);
 	std::printf("PNG: %s (%s)\n", outputPath, wrote ? "ok" : "FAILED");
@@ -505,6 +516,11 @@ bool RunBackgroundTest(const char* baseDir, bool circle)
 	vbo.Bind();
 	Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
 
+	// Drain the tile renderer's deferred draws before touching the texel store directly. The engine's
+	// present/readback paths flush implicitly; the harness bypasses them, and reading (or letting the
+	// test's textures die) with commands still queued reads a stale target - or worse, a later flush
+	// rasterizes commands whose textures are already destroyed.
+	RhiSoftware::SwRaster::Flush();
 	const std::uint8_t* pixels = colorTexture.GetPixels();
 	const std::int32_t stride = colorTexture.GetStrideBytes();
 	const int hr = 230, hg = 51, hb = 26;		// round(horizon.rgb * 255)
@@ -602,6 +618,12 @@ bool RunBackgroundWarpTest(const char* baseDir)
 	const std::uint8_t* pixels = colorTexture.GetPixels();
 	const std::int32_t stride = colorTexture.GetStrideBytes();
 
+	// Every pass drains the tile renderer's deferred draws before the store is read. The engine's
+	// present/readback paths flush implicitly; the harness bypasses them, and reading (or letting the
+	// test's textures die) with commands still queued reads a stale target - or worse, a later flush
+	// (SetTargetBuffer flushes the OLD queue when the next test switches targets) rasterizes commands
+	// whose source texture and destination store are already destroyed - a use-after-free that
+	// corrupted the heap and crashed the run one test later.
 	auto issueDraw = [&](const char* lbl) {
 		program.SetObjectLabel(lbl);
 		blocks.CommitUniformBlocks();
@@ -614,6 +636,7 @@ bool RunBackgroundWarpTest(const char* baseDir)
 		program.DefineVertexFormat(&vbo, &ibo, 0);
 		vbo.Bind();
 		Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+		RhiSoftware::SwRaster::Flush();
 	};
 
 	// Non-dither pass, captured for comparison
@@ -626,7 +649,7 @@ bool RunBackgroundWarpTest(const char* baseDir)
 	issueDraw("TexturedBackgroundDither");
 
 	std::printf("Horizon band still resolves to the horizon colour:\n");
-	CheckPixel(pixels, stride, 128, 72, 230, 51, 26, 255, 1, "band centre");
+	CheckPixel(pixels, stride, 128, H - 1 - 72, 230, 51, 26, 255, 1, "band centre");
 
 	// The warp must sample different texels along a scanline (top row, opacity ~ 0 -> pure texture)
 	int minR = 255, maxR = 0;
@@ -643,23 +666,27 @@ bool RunBackgroundWarpTest(const char* baseDir)
 		std::printf("  FAIL warp scanline too flat (R range %d..%d)\n", minR, maxR);
 	}
 
-	// Dithering must change a meaningful number of pixels versus the non-dither pass
-	int changed = 0;
-	for (std::int32_t y = 0; y < H; y++) {
-		for (std::int32_t x = 0; x < W; x++) {
-			const std::uint8_t* a = nonDither.data() + std::size_t(y) * stride + std::size_t(x) * 4;
-			const std::uint8_t* b = pixels + std::size_t(y) * stride + std::size_t(x) * 4;
-			if (std::abs(int(a[0]) - int(b[0])) > 1 || std::abs(int(a[1]) - int(b[1])) > 1 || std::abs(int(a[2]) - int(b[2])) > 1) {
-				changed++;
+	// The software renderer intentionally DROPS the dither sample (TexturedBackground.shader guards it
+	// with `#ifdef DITHER #ifndef SOFTWARE_RENDERER` - the extra per-pixel texture sample is too costly
+	// on the CPU), so the DITHER variant must resolve to the same generated fragment math and produce a
+	// byte-identical image. This inverts the original "dither changes pixels" assertion, which described
+	// the GPU backends.
+	g_checks++;
+	if (std::memcmp(nonDither.data(), pixels, std::size_t(H) * stride) == 0) {
+		std::printf("  ok   dither variant == non-dither (SW drops the dither term by design)\n");
+	} else {
+		int changed = 0;
+		for (std::int32_t y = 0; y < H; y++) {
+			for (std::int32_t x = 0; x < W; x++) {
+				const std::uint8_t* a = nonDither.data() + std::size_t(y) * stride + std::size_t(x) * 4;
+				const std::uint8_t* b = pixels + std::size_t(y) * stride + std::size_t(x) * 4;
+				if (std::memcmp(a, b, 4) != 0) {
+					changed++;
+				}
 			}
 		}
-	}
-	g_checks++;
-	if (changed > 200) {
-		std::printf("  ok   dither changed %d pixels vs. non-dither\n", changed);
-	} else {
 		g_failures++;
-		std::printf("  FAIL dither changed only %d pixels\n", changed);
+		std::printf("  FAIL dither variant differs from non-dither in %d pixels (SW should drop dithering)\n", changed);
 	}
 
 	char outputPath[512];
@@ -670,12 +697,59 @@ bool RunBackgroundWarpTest(const char* baseDir)
 }
 
 // --- Combine (viewport compositor) ---
+//
+// The software backend does NOT run a Combine fragment: SwDevice::Dispatch intercepts every draw of a
+// Combine-labeled program and applies the CPU dynamic-lighting combine the compositor queued for the
+// viewport (SetPendingSoftwareLighting) in place over the SCREEN back-buffer - with nothing queued the
+// draw is a no-op. The original shader-compositing assertions (scene x lighting x blur textures) became
+// stale with that design; this now asserts the device-intercept semantics against a verbatim scalar
+// reference of the combine loop.
+
+// Scalar reference of SwDevice::ApplyPendingSoftwareLighting's per-pixel combine (kept verbatim so the
+// SIMD kernel is checked bit-exactly)
+static void RefCombineLighting(std::uint8_t* pixels, std::int32_t fbWidth, std::int32_t fbHeight, std::int32_t fbStride,
+	const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
+	std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH,
+	float ambR, float ambG, float ambB)
+{
+	vpX = std::max(0, vpX);
+	vpY = std::max(0, vpY);
+	vpW = std::min(vpW, fbWidth - vpX);
+	vpH = std::min(vpH, fbHeight - vpY);
+	if (vpW <= 0 || vpH <= 0) return;
+	auto clampf = [](float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); };
+	for (std::int32_t y = 0; y < vpH; y++) {
+		const std::int32_t lmY = std::min(y / scale, lmH - 1);
+		const float* texelBase = lightmap + (std::size_t)lmY * lmW * 2;
+		std::uint8_t* px = pixels + (std::size_t)(vpY + y) * fbStride + (std::size_t)vpX * 4;
+		for (std::int32_t x = 0; x < vpW; x++, px += 4) {
+			const std::int32_t lmX = std::min(x / scale, lmW - 1);
+			const float r = clampf(texelBase[lmX * 2], 0.0f, 1.0f);
+			const float g = clampf(texelBase[lmX * 2 + 1], 0.0f, 1.0f);
+			const float darkT = clampf(1.0f - r, 0.0f, 1.0f);
+			if (darkT <= 0.0f && g <= 0.0f) {
+				continue;
+			}
+			const float lit = 1.0f + g;
+			const float core = (g > 0.7f ? g - 0.7f : 0.0f);
+			float cr = (px[0] / 255.0f) * lit + core;
+			float cg = (px[1] / 255.0f) * lit + core;
+			float cb = (px[2] / 255.0f) * lit + core;
+			cr += (ambR - cr) * darkT;
+			cg += (ambG - cg) * darkT;
+			cb += (ambB - cb) * darkT;
+			px[0] = (std::uint8_t)clampf(cr * 255.0f + 0.5f, 0.0f, 255.0f);
+			px[1] = (std::uint8_t)clampf(cg * 255.0f + 0.5f, 0.0f, 255.0f);
+			px[2] = (std::uint8_t)clampf(cb * 255.0f + 0.5f, 0.0f, 255.0f);
+		}
+	}
+}
 
 bool RunCombineTest(const char* baseDir)
 {
 	constexpr std::int32_t W = 64, H = 64;
 	g_uniformBump = 0;
-	std::printf("\n=== Combine (scene + lighting + blur + ambient) ===\n");
+	std::printf("\n=== Combine (device-intercepted CPU lighting combine) ===\n");
 
 	Rhi::ShaderProgram program(Rhi::ShaderProgram::QueryPhase::Immediate);
 	program.SetReflection(&Jazz2::ShadersGen::Combine.Variants[0]);
@@ -687,119 +761,97 @@ bool RunCombineTest(const char* baseDir)
 	g_uniformBuffer = &uniformBuffer;
 	Rhi::ShaderUniformBlocks::SetUniformRangeAllocator(&AllocUniformRange);
 
-	std::vector<std::uint8_t> cameraBuffer(program.GetUniformsSize() + 16, 0);
-	Rhi::ShaderUniforms camera(&program);
-	camera.SetUniformsDataPointer(cameraBuffer.data());
-	float projection[16];
-	BuildOrtho(W, H, projection);
-	camera.GetUniform("uProjectionMatrix")->SetFloatVector(projection);
-	camera.GetUniform("uViewMatrix")->SetFloatVector(kIdentityView);
-	const float ambient[4] = {0.15f, 0.10f, 0.30f, 1.0f};	// -> (38, 26, 76) in the dark regions
-	camera.GetUniform("uAmbientColor")->SetFloatVector(ambient);
-	camera.GetUniform("uTime")->SetFloatValue(0.0f);
+	// The intercept composites over the SCREEN back-buffer, not a render target
+	RhiSoftware::SwDevice::SetRenderTarget(nullptr);
+	RhiSoftware::SwDevice::ResizeScreenFramebuffer(W, H);
+	RhiSoftware::Framebuffer fb = RhiSoftware::SwDevice::GetScreenFramebuffer();
+	g_checks++;
+	if (fb.pixels == nullptr) {
+		g_failures++;
+		std::printf("  FAIL no screen framebuffer\n");
+		return false;
+	}
+	std::printf("  ok   screen framebuffer %dx%d\n", fb.width, fb.height);
 
-	std::vector<std::uint8_t> blockBuffer(program.GetUniformBlocksSize() + 16, 0);
-	Rhi::ShaderUniformBlocks blocks(&program);
-	blocks.SetUniformsDataPointer(blockBuffer.data());
-
-	// Scene: four solid quadrants (so a +-1 texel sampling wobble stays in-colour)
-	Rhi::Texture sceneTexture(TextureTarget::Texture2D);
-	UploadRgba(sceneTexture, W, H, [](std::int32_t x, std::int32_t y, std::uint8_t* p) {
-		const bool right = (x >= 32), bottom = (y >= 32);
-		if (!right && !bottom) { p[0] = 200; p[1] = 40; p[2] = 40; }		// TL red
-		else if (right && !bottom) { p[0] = 40; p[1] = 200; p[2] = 40; }	// TR green
-		else if (!right && bottom) { p[0] = 40; p[1] = 40; p[2] = 200; }	// BL blue
-		else { p[0] = 200; p[1] = 200; p[2] = 40; }							// BR yellow
-		p[3] = 255;
-	});
-	// Lighting: three vertical bands (lit / half+glow / dark), uniform per column
-	Rhi::Texture lightingTexture(TextureTarget::Texture2D);
-	UploadRgba(lightingTexture, W, H, [](std::int32_t x, std::int32_t y, std::uint8_t* p) {
-		static_cast<void>(y);
-		if (x <= 20) { p[0] = 255; p[1] = 0; p[2] = 0; }		// fully lit
-		else if (x <= 42) { p[0] = 128; p[1] = 200; p[2] = 0; }	// half lit + glow (g > 0.7)
-		else { p[0] = 0; p[1] = 0; p[2] = 0; }					// dark -> ambient
-		p[3] = 255;
-	});
-	Rhi::Texture blurHalfTexture(TextureTarget::Texture2D);
-	UploadRgba(blurHalfTexture, W, H, [](std::int32_t, std::int32_t, std::uint8_t* p) { p[0] = 80; p[1] = 80; p[2] = 80; p[3] = 255; });
-	Rhi::Texture blurQuarterTexture(TextureTarget::Texture2D);
-	UploadRgba(blurQuarterTexture, W, H, [](std::int32_t, std::int32_t, std::uint8_t* p) { p[0] = 120; p[1] = 120; p[2] = 120; p[3] = 255; });
-
-	Rhi::Buffer vbo(BufferTarget::Vertex);
-	vbo.BufferData(4 * 4 * sizeof(float), nullptr, BufferUsage::StaticDraw);
-	Rhi::Buffer ibo(BufferTarget::Index);
-	const std::uint16_t indices[6] = {0, 1, 2, 2, 1, 3};
-	ibo.BufferData(sizeof(indices), indices, BufferUsage::StaticDraw);
-
-	Rhi::Texture colorTexture(TextureTarget::Texture2D);
-	colorTexture.TexImage2D(0, PixelFormat::RGBA8, false, W, H, nullptr);
-	Rhi::RenderTarget renderTarget;
-	renderTarget.AttachColorTexture(colorTexture, 0);
-	renderTarget.SetDrawBuffers(1);
-	renderTarget.BindDraw();
+	// Deterministic scene in the back-buffer
+	for (std::int32_t y = 0; y < H; y++) {
+		for (std::int32_t x = 0; x < W; x++) {
+			std::uint8_t* p = fb.pixels + std::size_t(y) * fb.strideBytes + std::size_t(x) * 4;
+			p[0] = std::uint8_t((x * 4) & 0xFF);
+			p[1] = std::uint8_t((y * 4) & 0xFF);
+			p[2] = std::uint8_t(((x + y) * 2) & 0xFF);
+			p[3] = 255;
+		}
+	}
+	std::vector<std::uint8_t> expected(fb.pixels, fb.pixels + std::size_t(H) * fb.strideBytes);
 
 	Rhi::Device::SetupInitialState();
 	Rhi::Device::SetViewport(Recti(0, 0, W, H));
-	Rhi::Device::SetClearColor(Colorf(0.0f, 0.0f, 0.0f, 1.0f));
-	Rhi::Device::Clear(ClearFlags::Color);
-
-	float model[16];
-	MakeTranslation(0.0f, 0.0f, model);
-	auto ib = blocks.GetUniformBlock("InstanceBlock");
-	ib->GetUniform("modelMatrix")->SetFloatVector(model);
-	ib->GetUniform("color")->SetFloatVector(kWhite);
-	ib->GetUniform("texRect")->SetFloatVector(kTexRectFull);
-	ib->GetUniform("spriteSize")->SetFloatValue(float(W), float(H));
-	blocks.CommitUniformBlocks();
-
-	sceneTexture.Bind(0);
-	lightingTexture.Bind(1);
-	blurHalfTexture.Bind(2);
-	blurQuarterTexture.Bind(3);
-	program.Use();
-	blocks.Bind();
-	camera.CommitUniforms();
 	Rhi::Device::SetBlendingEnabled(false);
 	Rhi::Device::SetScissorTestEnabled(false);
-	program.DefineVertexFormat(&vbo, &ibo, 0);
-	vbo.Bind();
+	program.Use();
+
+	// 1: a Combine draw with NO queued lighting must leave the buffer untouched (no-op intercept)
+	Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+	g_checks++;
+	if (std::memcmp(fb.pixels, expected.data(), expected.size()) == 0) {
+		std::printf("  ok   no queued lighting -> buffer untouched\n");
+	} else {
+		g_failures++;
+		std::printf("  FAIL no queued lighting modified the buffer\n");
+	}
+
+	// 2: queue a lightmap covering lit / clamped / half+glow / dark / negative regimes, draw, and
+	// compare the whole buffer against the scalar reference
+	constexpr std::int32_t lmW = 32, lmH = 32, scale = 2;
+	std::vector<float> lightmap(std::size_t(lmW) * lmH * 2);
+	for (std::int32_t ty = 0; ty < lmH; ty++) {
+		for (std::int32_t tx = 0; tx < lmW; tx++) {
+			float* t = lightmap.data() + (std::size_t(ty) * lmW + tx) * 2;
+			if (tx < 6) { t[0] = 1.0f; t[1] = 0.0f; }			// fully lit -> untouched
+			else if (tx < 12) { t[0] = 1.4f; t[1] = -0.3f; }	// out-of-range, clamps to lit
+			else if (tx < 18) { t[0] = 0.5f; t[1] = 0.9f; }		// half lit + glow core (g > 0.7)
+			else if (tx < 24) { t[0] = 0.5f; t[1] = 0.7f; }		// half lit, g == 0.7 (no core)
+			else { t[0] = 0.0f; t[1] = 0.0f; }					// dark -> ambient
+		}
+	}
+	const float ambR = 0.15f, ambG = 0.10f, ambB = 0.30f;
+	RefCombineLighting(expected.data(), fb.width, fb.height, fb.strideBytes, lightmap.data(), lmW, lmH, scale, 0, 0, W, H, ambR, ambG, ambB);
+	RhiSoftware::SwDevice::SetPendingSoftwareLighting(lightmap.data(), lmW, lmH, scale, 0, 0, W, H, ambR, ambG, ambB);
 	Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
 
-	const std::uint8_t* pixels = colorTexture.GetPixels();
-	const std::int32_t stride = colorTexture.GetStrideBytes();
-
-	std::printf("Fully lit (light.r = 1, g = 0) passes the scene through unchanged:\n");
-	CheckPixel(pixels, stride, 10, 16, 200, 40, 40, 255, 2, "lit -> scene TL");
-	CheckPixel(pixels, stride, 10, 48, 40, 40, 200, 255, 2, "lit -> scene BL");
-	std::printf("Dark (light.r = 0) resolves to the ambient colour:\n");
-	CheckPixel(pixels, stride, 54, 16, 38, 26, 76, 255, 2, "dark -> ambient");
-	CheckPixel(pixels, stride, 54, 48, 38, 26, 76, 255, 2, "dark -> ambient");
-
-	// Half-lit band: reproduce the composite independently and assert the pixel matches
-	{
-		const float sceneRgb[4] = {40.0f / 255.0f, 200.0f / 255.0f, 40.0f / 255.0f, 1.0f};	// scene TR (x=33, y=20)
-		const float lr = 128.0f / 255.0f, lg = 200.0f / 255.0f;
-		const float blurGray = ((80.0f + 120.0f) * 0.5f) / 255.0f;
-		const float glow = std::max(lg - 0.7f, 0.0f);
-		const float t1 = std::min(std::max((1.0f - lr) / std::sqrt(std::max(ambient[3], 0.35f)), 0.0f), 1.0f);
-		const float t2 = 1.0f - lr;
-		int expected[4];
-		for (int i = 0; i < 4; i++) {
-			const float blurI = (i < 3 ? blurGray : blurGray);
-			const float lit = sceneRgb[i] * (1.0f + lg) + glow;
-			const float mid = lit + (blurI - lit) * t1;
-			const float outF = (mid + (ambient[i] - mid) * t2) * 255.0f;
-			expected[i] = int(outF + 0.5f);
+	std::size_t diffs = 0;
+	std::int32_t firstX = -1, firstY = -1;
+	for (std::int32_t y = 0; y < H; y++) {
+		for (std::int32_t i = 0; i < W * 4; i++) {
+			if (fb.pixels[std::size_t(y) * fb.strideBytes + i] != expected[std::size_t(y) * fb.strideBytes + i]) {
+				if (diffs == 0) { firstX = i / 4; firstY = y; }
+				diffs++;
+			}
 		}
-		expected[3] = 255;
-		std::printf("Half-lit band matches an independent composite:\n");
-		CheckPixel(pixels, stride, 33, 20, expected[0], expected[1], expected[2], expected[3], 2, "half -> composite");
+	}
+	g_checks++;
+	if (diffs == 0) {
+		std::printf("  ok   queued lighting combine == scalar reference (%dx%d, scale %d)\n", W, H, scale);
+	} else {
+		g_failures++;
+		std::printf("  FAIL combine differs from reference: %zu bytes (first at %d,%d)\n", diffs, firstX, firstY);
+	}
+
+	// 3: the queue must be consumed - a further draw with nothing queued is a no-op again
+	std::vector<std::uint8_t> afterCombine(fb.pixels, fb.pixels + std::size_t(H) * fb.strideBytes);
+	Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+	g_checks++;
+	if (std::memcmp(fb.pixels, afterCombine.data(), afterCombine.size()) == 0) {
+		std::printf("  ok   queue consumed - next Combine draw is a no-op\n");
+	} else {
+		g_failures++;
+		std::printf("  FAIL lighting queue not consumed by the Combine draw\n");
 	}
 
 	char outputPath[512];
 	MakePath(baseDir, "sw_combine.png", outputPath, sizeof(outputPath));
-	const bool wrote = WritePng(outputPath, pixels, W, H, stride);
+	const bool wrote = WritePng(outputPath, fb.pixels, W, H, fb.strideBytes);
 	std::printf("PNG: %s (%s)\n", outputPath, wrote ? "ok" : "FAILED");
 	return wrote;
 }
@@ -817,9 +869,11 @@ bool RunPaletteTest(const char* baseDir)
 	g_uniformBuffer = &uniformBuffer;
 	Rhi::ShaderUniformBlocks::SetUniformRangeAllocator(&AllocUniformRange);
 
-	// 256-wide, 2-row palette texture (row 0 and row 1 hold two distinct 256-colour palettes)
+	// 256x256 palette texture, matching the engine's shared palette store (the fragment maps the flat
+	// palette index into a 256x256 texture: palY = floor(palIndex / 256) / 256, so a shorter texture
+	// would fold every row back onto row 0). Row 0 and row 1 hold two distinct 256-colour palettes.
 	Rhi::Texture paletteTexture(TextureTarget::Texture2D);
-	UploadRgba(paletteTexture, 256, 2, [](std::int32_t x, std::int32_t y, std::uint8_t* p) {
+	UploadRgba(paletteTexture, 256, 256, [](std::int32_t x, std::int32_t y, std::uint8_t* p) {
 		if (y == 0) {
 			if (x == 0) { p[0] = 0; p[1] = 0; p[2] = 0; p[3] = 0; }	// index 0 = transparent
 			else { p[0] = std::uint8_t(x); p[1] = std::uint8_t(255 - x); p[2] = 128; p[3] = 255; }
@@ -853,6 +907,11 @@ bool RunPaletteTest(const char* baseDir)
 	renderTarget.SetDrawBuffers(1);
 	renderTarget.BindDraw();
 
+	// Drain the tile renderer's deferred draws before touching the texel store directly. The engine's
+	// present/readback paths flush implicitly; the harness bypasses them, and reading (or letting the
+	// test's textures die) with commands still queued reads a stale target - or worse, a later flush
+	// rasterizes commands whose textures are already destroyed.
+	RhiSoftware::SwRaster::Flush();
 	const std::uint8_t* pixels = colorTexture.GetPixels();
 	const std::int32_t stride = colorTexture.GetStrideBytes();
 	bool wroteAll = true;
@@ -902,6 +961,7 @@ bool RunPaletteTest(const char* baseDir)
 		program.DefineVertexFormat(&vbo, &ibo, 0);
 		vbo.Bind();
 		Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+		RhiSoftware::SwRaster::Flush();	// Drain the deferred tiles before asserting texels
 
 		std::printf("Row 0 lookups (opaque, white):\n");
 		CheckPixel(pixels, stride, 2, 10, 0, 0, 0, 0, 0, "index 0 = transparent entry");
@@ -960,6 +1020,7 @@ bool RunPaletteTest(const char* baseDir)
 		program.DefineVertexFormat(&vbo, &ibo, 0);
 		vbo.Bind();
 		Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+		RhiSoftware::SwRaster::Flush();	// Drain the deferred tiles before asserting texels
 
 		std::printf("Row 1 lookups (offset 256) with colour modulation (1, 0.5, 1):\n");
 		CheckPixel(pixels, stride, 6, 10, 239, 8, 64, 255, 1, "row 1 index 16 x mod");
@@ -1012,6 +1073,7 @@ bool RunPaletteTest(const char* baseDir)
 		ibo12.BufferData(sizeof(indices12), indices12, BufferUsage::StaticDraw);
 		ibo12.Bind();
 		Rhi::Device::DrawElements(PrimitiveType::Triangles, 12, 0, 0);
+		RhiSoftware::SwRaster::Flush();	// Drain the deferred tiles before asserting texels
 
 		std::printf("Batched: left half = row 0, right half = row 1 (index 48 in each):\n");
 		CheckPixel(pixels, stride, 6, 10, 48, 207, 128, 255, 1, "instance 0 row 0 index 48");
@@ -1037,6 +1099,9 @@ bool RunPaletteTest(const char* baseDir)
 				}
 			}
 			rgTexture.TexImage2D(0, PixelFormat::RG8, false, 16, 16, data.data());
+			// The engine samples RG8 index textures with `.a` mapped to green (ContentResolver sets this
+			// swizzle on every RG8 index upload); without it the promoted store's opaque byte 3 is read
+			rgTexture.SetSwizzle(SwizzleChannel::Red, SwizzleChannel::Green, SwizzleChannel::Blue, SwizzleChannel::Green);
 		}
 
 		Rhi::ShaderProgram program(Rhi::ShaderProgram::QueryPhase::Immediate);
@@ -1081,6 +1146,7 @@ bool RunPaletteTest(const char* baseDir)
 		program.DefineVertexFormat(&vbo, &ibo, 0);
 		vbo.Bind();
 		Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+		RhiSoftware::SwRaster::Flush();	// Drain the deferred tiles before asserting texels
 
 		// index 16 with G = 128 alpha, palette[0][16] = (16,239,128), blended over the (40,40,40) clear
 		const float sa = 128.0f / 255.0f;
@@ -1098,6 +1164,8 @@ bool RunPaletteTest(const char* baseDir)
 
 int main(int argc, char** argv)
 {
+	// Unbuffered stdout so a crash in a later test cannot swallow the log of the earlier ones
+	std::setvbuf(stdout, nullptr, _IONBF, 0);
 	const char* baseDir = (argc > 1 ? argv[1] : ".");
 
 	std::printf("Software RHI backend harness\n");

@@ -75,8 +75,22 @@ namespace nCine
 		io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;	// We can honor ImGuiPlatformIO::Textures[] requests during render.
 
 		imguiShaderProgram_ = std::make_unique<Rhi::ShaderProgram>(Rhi::ShaderProgram::QueryPhase::Immediate);
+#if defined(WITH_RHI_GL)
+#	if defined(RHI_GL_PROFILE_ES2)
+		// The ES2 profile compiles with "#version 100", so it needs the ESSL 100 (Essl100Emitter) sources
+		imguiShaderProgram_->AttachShaderFromString(ShaderStage::Vertex, ShadersGen::DefaultImGui.Variants[0].VsSource100);
+		imguiShaderProgram_->AttachShaderFromString(ShaderStage::Fragment, ShadersGen::DefaultImGui.Variants[0].FsSource100);
+#	else
 		imguiShaderProgram_->AttachShaderFromString(ShaderStage::Vertex, ShadersGen::DefaultImGui.Variants[0].VsSource);
 		imguiShaderProgram_->AttachShaderFromString(ShaderStage::Fragment, ShadersGen::DefaultImGui.Variants[0].FsSource);
+#	endif
+#else
+		// Non-GL backends consume their own precompiled artifact from the offline reflection (D3D11: HLSL,
+		// Vulkan: SPIR-V, software: transpiled C++) - the same route RenderResources uses for the engine's
+		// precompiled programs. The GL source strings are compiled out (nullptr) on these builds and their
+		// AttachShaderFromString is an inert stub, so the reflection is the only shader input Link() needs.
+		imguiShaderProgram_->SetReflection(&ShadersGen::DefaultImGui.Variants[0]);
+#endif
 		imguiShaderProgram_->Link(Rhi::ShaderProgram::Introspection::Enabled);
 		FATAL_ASSERT(imguiShaderProgram_->GetStatus() != Rhi::ShaderProgram::Status::LinkingFailed);
 
@@ -185,7 +199,8 @@ namespace nCine
 			}
 		}
 
-#if defined(IMGUI_HAS_VIEWPORT)
+#if defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_GL)
+		// The raw-GL buffer handles only exist on the GL backend (matching the member declarations)
 		if (vboHandle_) {
 			glDeleteBuffers(1, &vboHandle_);
 			vboHandle_ = 0;

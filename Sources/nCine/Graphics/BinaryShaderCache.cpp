@@ -99,6 +99,10 @@ namespace nCine
 
 	bool BinaryShaderCache::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program, Rhi::ShaderProgram::Introspection introspection)
 	{
+#if defined(WITH_RHI_SOFTWARE) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN)
+		// No GL program binaries exist on these backends and the cache is permanently disabled (see the constructor)
+		return false;
+#else
 		String cachePath = GetCachedShaderPath(shaderName);
 		if (cachePath.empty()) {
 			return false;
@@ -149,10 +153,15 @@ namespace nCine
 		_glProgramBinary(program->GetGLHandle(), fileBinaryFormat, bufferPtr.get(), std::int64_t(fileShaderLength));
 		program->SetBatchSize(fileBatchSize);
 		return program->FinalizeAfterLinking(introspection);
+#endif
 	}
 
 	bool BinaryShaderCache::SaveToCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program)
 	{
+#if defined(WITH_RHI_SOFTWARE) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN)
+		// No GL program binaries exist on these backends and the cache is permanently disabled (see the constructor)
+		return false;
+#else
 		String cachePath = GetCachedShaderPath(shaderName);
 		if (cachePath.empty()) {
 			return false;
@@ -192,6 +201,7 @@ namespace nCine
 		dw.Write(bufferPtr.get(), shaderLength);
 
 		return true;
+#endif
 	}
 
 	std::uint32_t BinaryShaderCache::Prune()

@@ -715,6 +715,7 @@ namespace ShaderCompiler
 	bool Essl100Emitter::Transform(StringView modernSource, bool vertexStage, String& out, Diagnostic& diag)
 	{
 		std::vector<String> lines = SplitLines(modernSource);
+		bool fragmentOutSeen = false;
 
 		// --- 1. Unwrap "#ifdef GL_ES ... #endif" (always active under "#version 100") ---------------
 		lines = UnwrapGlEs(lines);
@@ -765,7 +766,16 @@ namespace ShaderCompiler
 				if (ParseInterfaceDecl(code, keyword, tail)) {
 					if (!vertexStage && keyword == "out") {
 						// The single fragment output "out vec4 COLOR;" — dropped; COLOR becomes a local
-						// in main() and the result is written to gl_FragColor (see below)
+						// in main() and the result is written to gl_FragColor (see below). ES2 has ONLY
+						// gl_FragColor (no MRT), so a second output cannot be expressed — decline cleanly
+						// instead of silently dropping the extra declaration (its writes would then
+						// reference an undeclared identifier).
+						if (fragmentOutSeen) {
+							diag.Message = "ESSL100 transform incomplete (unsupported in ES2): multiple fragment outputs (ES2 has only gl_FragColor, no MRT)"_s;
+							diag.Line = static_cast<std::int32_t>(idx + 1);
+							return false;
+						}
+						fragmentOutSeen = true;
 						continue;
 					}
 					const char* newKeyword = (vertexStage ? (keyword == "in" ? "attribute" : "varying") : "varying");

@@ -106,8 +106,8 @@ namespace nCine::RhiD3D11
 		D3D11ShaderProgram(const D3D11ShaderProgram&) = delete;
 		D3D11ShaderProgram& operator=(const D3D11ShaderProgram&) = delete;
 
-		/** @brief Returns a synthetic handle uniquely identifying the program (used by material sort keys) */
-		inline std::uint32_t GetGLHandle() const {
+		/** @brief Returns a backend-neutral identifier uniquely identifying the program (feeds material sort keys) */
+		inline std::uint32_t GetUniqueId() const {
 			return handle_;
 		}
 		inline Status GetStatus() const {

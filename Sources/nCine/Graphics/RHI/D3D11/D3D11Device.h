@@ -133,7 +133,9 @@ namespace nCine::RhiD3D11
 		static void BindUniformRange(std::uint32_t index, const std::uint8_t* data, std::uint32_t size);
 		/** @brief Clears a render target from the device if it is the current one (called from ~D3D11RenderTarget) */
 		static void UnbindRenderTarget(const D3D11RenderTarget* renderTarget);
-		/** @brief Records the current draw render target (its color attachment 0 receives the pixels) */
+		/** @brief Scrubs a released render target view from the last-bound shadow so a recycled pointer can't be mistaken for still bound (called by D3D11RenderTarget whenever it releases an RTV) */
+		static void OnRtvReleased(const ID3D11RenderTargetView* rtv);
+		/** @brief Records the current draw render target (its bound color attachments receive the pixels) */
 		static void SetRenderTarget(D3D11RenderTarget* renderTarget);
 		/** @brief Clears a destroyed program from the device's current-program and shadow-state tracking (called from ~D3D11ShaderProgram) */
 		static void OnProgramDestroyed(const D3D11ShaderProgram* program);
@@ -169,10 +171,15 @@ namespace nCine::RhiD3D11
 		static ID3D11Device* GetD3DDevice();
 		/** @brief Returns the D3D11 immediate context, or `nullptr` before creation */
 		static ID3D11DeviceContext* GetD3DContext();
+		/** @brief Returns the largest supported 2D texture dimension of the obtained feature level (16384 on 11_0, 8192 on 10.x; consumed by GfxCapabilities) */
+		static std::int32_t GetMaxTextureDimension();
 
 	private:
 		static constexpr std::uint32_t MaxTextureUnits = 8;
 		static constexpr std::uint32_t MaxUniformBindings = 8;
+		// Simultaneously bound color render targets (matches D3D11RenderTarget::MaxColorAttachments and
+		// D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT; asserted in BindCurrentRenderTarget)
+		static constexpr std::uint32_t MaxRenderTargets = 8;
 
 		struct UniformRange
 		{
@@ -200,6 +207,8 @@ namespace nCine::RhiD3D11
 		static bool vsync_;
 		static std::int32_t backbufferWidth_;
 		static std::int32_t backbufferHeight_;
+		// Largest 2D texture dimension of the obtained feature level (set by CreateSwapchain)
+		static std::int32_t maxTextureDimension_;
 
 		// The engine renders in the OpenGL convention. The D3D backend replays that faithfully: every draw's
 		// clip-space Y is flipped (projection matrix, see BindConstantBuffers) so all targets - the back-buffer and
@@ -262,7 +271,9 @@ namespace nCine::RhiD3D11
 		static ID3D11VertexShader* lastVs_;
 		static ID3D11PixelShader* lastPs_;
 		static std::uint32_t lastTopology_;			// D3D11_PRIMITIVE_TOPOLOGY value; 0 (UNDEFINED) = unknown
-		static ID3D11RenderTargetView* lastRtv_;
+		// The RTV set last passed to OMSetRenderTargets (all bound color attachments, in slot order)
+		static ID3D11RenderTargetView* lastRtvs_[MaxRenderTargets];
+		static std::uint32_t lastRtvCount_;
 		static bool lastRtvValid_;
 		static Recti lastViewport_;
 		static bool lastViewportValid_;

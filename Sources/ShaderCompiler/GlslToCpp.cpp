@@ -1070,6 +1070,16 @@ namespace ShaderCompiler
 				}
 				if (main == nullptr) { Fail("no main() function found in the fragment shader"_s); return {}; }
 
+				// The software rasterizer renders to a single color target (packColor writes in.rgba) —
+				// COLOR is the only expressible fragment output. Decline any additional "out" declaration
+				// cleanly instead of emitting a reference to a never-declared C++ identifier.
+				for (const std::pair<const String, Global>& g : _globals) {
+					if (g.second.Kind == SymKind::Output && g.first != "COLOR"_s) {
+						Fail("fragment output '"_s + g.first + "' is unsupported (the software fragment path has a single COLOR output, no MRT)"_s);
+						return {};
+					}
+				}
+
 				// Emit the helper functions and the fragment entry point first: reading a constant varying
 				// during emission records it in _usedVaryings, which the struct and _ComputeVaryings below need.
 				String helpersOut;
@@ -1410,6 +1420,19 @@ namespace ShaderCompiler
 						return {};
 					}
 					if (it->second.Unit < 0) { Fail("sampler '"_s + sampler->Text + "' has no texture-unit assignment"_s); return {}; }
+					// Primary-texel fast path: for the exact `texture(uTexture, vTexCoords)` pattern the
+					// software rasterizer's gather phase has already fetched this pixel's texel into
+					// `in.rgba`, so the runtime can read it back instead of re-sampling. Both conditions
+					// are load-bearing: the UV argument must be the plain interpolated texcoord identifier
+					// (any offset or computed UV addresses a different texel), and the sampler must be the
+					// primary one the software device keys the gather on (SwDevice sets FFState::textureUnit
+					// from the reflected unit of the sampler NAMED "uTexture" - the same unit emitted here).
+					// The runtime helper itself falls back to swTexture() for the cases the gather does not
+					// reproduce byte-exactly (unbound unit, bilinear filtering).
+					const Expr* uvArg = e->Args[1].get();
+					if (sampler->Text == "uTexture" && uvArg->Kind == ExprKind::Ident && uvArg->Text == "vTexCoords") {
+						return "swTexturePrimary(in, "_s + Death::format("{}", it->second.Unit) + ")"_s;
+					}
 					return "swTexture(in, "_s + Death::format("{}", it->second.Unit) + ", "_s + EmitExpr(e->Args[1].get(), 0) + ")"_s;
 				}
 

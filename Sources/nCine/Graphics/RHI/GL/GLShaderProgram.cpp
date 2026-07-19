@@ -66,9 +66,14 @@ namespace nCine::RhiGL
 		uniformBlocks_.reserve(UniformBlocksInitialSize);
 		attributes_.reserve(AttributesInitialSize);
 		
+#if defined(RHI_GL_PROFILE_ES2)
+		// GL_PROGRAM_BINARY_RETRIEVABLE_HINT (and glProgramParameteri) is ES 3.0; the ES2-era
+		// OES_get_program_binary path retrieves binaries without a hint
+#else
 		if (RenderResources::GetBinaryShaderCache().IsAvailable()) {
 			glProgramParameteri(glHandle_, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
 		}
+#endif
 	}
 
 	GLShaderProgram::GLShaderProgram(StringView vertexFile, StringView fragmentFile, Introspection introspection, QueryPhase queryPhase)
@@ -414,14 +419,16 @@ namespace nCine::RhiGL
 
 		for (std::size_t i = 0; i < reflection.BlockCount; i++) {
 			const ShaderCompiler::UniformBlock& b = reflection.Blocks[i];
-			const GLuint blockIndex = glGetUniformBlockIndex(glHandle_, b.Name);
 #if defined(RHI_GL_PROFILE_ES2)
 			// ES2 (ESSL 100) has no uniform buffer objects: the block's members are plain loose uniforms in
 			// the linked program. Keep the block in the reflection so BaseSprite/Material still address the
 			// per-instance data through it, but resolve each member's real loose location below so that
-			// GLShaderUniformBlocks::Bind() can push them with glUniform* instead of a UBO bind. blockIndex is
-			// GL_INVALID_INDEX here and stays unused (the ES2 path never binds a buffer range).
+			// GLShaderUniformBlocks::Bind() can push them with glUniform* instead of a UBO bind. There is no
+			// glGetUniformBlockIndex() (ES 3.0) to call; the stored index stays GL_INVALID_INDEX and unused
+			// (the ES2 path never binds a buffer range).
+			const GLuint blockIndex = GL_INVALID_INDEX;
 #else
+			const GLuint blockIndex = glGetUniformBlockIndex(glHandle_, b.Name);
 			if (blockIndex == GL_INVALID_INDEX) {
 				// The whole block was optimized out by the driver - GL introspection would not have listed it either
 				LOGD("Shader program {} - uniform block \"{}\" is inactive and was skipped", glHandle_, b.Name);
@@ -489,11 +496,24 @@ namespace nCine::RhiGL
 
 	void GLShaderProgram::DiscoverUniforms()
 	{
+		ZoneScopedC(0x81A861);
+#if defined(RHI_GL_PROFILE_ES2)
+		// ES2 has no uniform blocks, so every active uniform is a loose one - enumerate them directly
+		// (glGetActiveUniformsiv() used below to filter out block members is ES 3.0)
+		GLint uniformCount = 0;
+		glGetProgramiv(glHandle_, GL_ACTIVE_UNIFORMS, &uniformCount);
+
+		for (GLint i = 0; i < uniformCount; i++) {
+			GLUniform& uniform = uniforms_.emplace_back(glHandle_, static_cast<GLuint>(i));
+			uniformsSize_ += uniform.GetMemorySize();
+
+			LOGD("Shader program {} - uniform {} : \"{}\"", glHandle_, uniform.GetLocation(), uniform.GetName());
+		}
+#else
 		static const std::uint32_t NumIndices = 512;
 		static GLuint uniformIndices[NumIndices];
 		static GLint blockIndices[NumIndices];
 
-		ZoneScopedC(0x81A861);
 		GLint uniformCount = 0;
 		glGetProgramiv(glHandle_, GL_ACTIVE_UNIFORMS, &uniformCount);
 
@@ -530,11 +550,17 @@ namespace nCine::RhiGL
 				LOGD("Shader program {} - uniform {} : \"{}\"", glHandle_, uniform.GetLocation(), uniform.GetName());
 			}
 		}
+#endif
 		GL_LOG_ERRORS();
 	}
 
 	void GLShaderProgram::DiscoverUniformBlocks(GLUniformBlock::DiscoverUniforms discover)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// ES2 has no uniform blocks (GL_ACTIVE_UNIFORM_BLOCKS is ES 3.0); raw-string programs on this profile
+		// (e.g. ImGui) only carry loose uniforms, which DiscoverUniforms() has already enumerated
+		static_cast<void>(discover);
+#else
 		ZoneScopedC(0x81A861);
 		GLint count;
 		glGetProgramiv(glHandle_, GL_ACTIVE_UNIFORM_BLOCKS, &count);
@@ -546,6 +572,7 @@ namespace nCine::RhiGL
 			LOGD("Shader program {} - uniform block {} : \"{}\" ({} bytes with {} align)", glHandle_, uniformBlock.GetIndex(), uniformBlock.GetName(), uniformBlock.GetSize(), uniformBlock.GetAlignAmount());
 		}
 		GL_LOG_ERRORS();
+#endif
 	}
 
 	void GLShaderProgram::DiscoverAttributes()

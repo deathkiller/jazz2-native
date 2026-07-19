@@ -96,8 +96,8 @@ namespace nCine::RhiSoftware
 		SwShaderProgram(const SwShaderProgram&) = delete;
 		SwShaderProgram& operator=(const SwShaderProgram&) = delete;
 
-		/** @brief Returns a synthetic handle uniquely identifying the program (used by material sort keys) */
-		inline std::uint32_t GetGLHandle() const {
+		/** @brief Returns a backend-neutral identifier uniquely identifying the program (feeds material sort keys) */
+		inline std::uint32_t GetUniqueId() const {
 			return handle_;
 		}
 		inline Status GetStatus() const {

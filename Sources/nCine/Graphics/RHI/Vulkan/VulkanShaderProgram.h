@@ -77,8 +77,8 @@ namespace nCine::RhiVulkan
 		VulkanShaderProgram(const VulkanShaderProgram&) = delete;
 		VulkanShaderProgram& operator=(const VulkanShaderProgram&) = delete;
 
-		/** @brief Returns a synthetic handle uniquely identifying the program (used by material sort keys) */
-		inline std::uint32_t GetGLHandle() const {
+		/** @brief Returns a backend-neutral identifier uniquely identifying the program (feeds material sort keys; also keys the Vulkan pipeline/descriptor caches) */
+		inline std::uint32_t GetUniqueId() const {
 			return handle_;
 		}
 		inline Status GetStatus() const {
@@ -222,6 +222,8 @@ namespace nCine::RhiVulkan
 			std::uint32_t Location;
 			std::int32_t ComponentCount;
 			std::uint32_t Offset;		// byte offset within the vertex
+			std::uint32_t Type;			// component type (VertexAttribType numeric value; 0 = float)
+			bool Normalized;			// integer components normalized to [0,1] (e.g. u8 colors)
 		};
 		/**
 		 * @brief Fills the current vertex input layout (attributes + per-vertex stride) from the bound vertex format

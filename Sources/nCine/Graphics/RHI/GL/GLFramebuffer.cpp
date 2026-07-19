@@ -50,6 +50,13 @@ namespace nCine::RhiGL
 
 	bool GLFramebuffer::DrawBuffers(std::uint32_t numDrawBuffers)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// glDrawBuffers() is ES 3.0 and MRT does not exist on ES2 - a framebuffer always renders to its single
+		// GL_COLOR_ATTACHMENT0, which is exactly what a draw-buffer count of 0/1 selects, so those are no-ops
+		DEATH_ASSERT(numDrawBuffers <= 1, "Multiple render targets are not supported on OpenGL|ES 2.0", false);
+		numDrawBuffers_ = numDrawBuffers;
+		return false;
+#else
 		static const GLenum drawBuffers[MaxDrawbuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3,
 															GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6, GL_COLOR_ATTACHMENT7 };
 		if (numDrawBuffers < MaxDrawbuffers && numDrawBuffers_ != numDrawBuffers) {
@@ -59,6 +66,7 @@ namespace nCine::RhiGL
 			return true;
 		}
 		return false;
+#endif
 	}
 
 	bool GLFramebuffer::AttachRenderbuffer(const char* label, GLenum internalFormat, GLsizei width, GLsizei height, GLenum attachment)
@@ -118,9 +126,16 @@ namespace nCine::RhiGL
 #if !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
 	void GLFramebuffer::Invalidate(GLsizei numAttachments, const GLenum* attachments)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// glInvalidateFramebuffer() is ES 3.0 (ES2 would need EXT_discard_framebuffer, not assumed) and
+		// invalidation is purely a bandwidth optimization - skipping it is always correct
+		static_cast<void>(numAttachments);
+		static_cast<void>(attachments);
+#else
 		Bind(GL_FRAMEBUFFER);
 		glInvalidateFramebuffer(GL_FRAMEBUFFER, numAttachments, attachments);
 		GL_LOG_ERRORS();
+#endif
 	}
 #endif
 
@@ -142,6 +157,11 @@ namespace nCine::RhiGL
 	{
 		FATAL_ASSERT(target == GL_FRAMEBUFFER || target == GL_READ_FRAMEBUFFER || target == GL_DRAW_FRAMEBUFFER);
 
+#if defined(RHI_GL_PROFILE_ES2)
+		// ES2 only has the combined GL_FRAMEBUFFER target (separate READ/DRAW bind points are ES 3.0);
+		// remap every request so callers like GLRenderTarget::BindDraw() and the destructor stay portable
+		target = GL_FRAMEBUFFER;
+#endif
 		if (target == GL_FRAMEBUFFER && (readBoundBuffer_ != glHandle || drawBoundBuffer_ != glHandle)) {
 			glBindFramebuffer(target, glHandle);
 			GL_LOG_ERRORS();

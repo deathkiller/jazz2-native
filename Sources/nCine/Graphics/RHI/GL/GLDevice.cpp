@@ -200,7 +200,15 @@ namespace nCine::RhiGL
 
 	void GLDevice::DrawArraysInstanced(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices, std::int32_t numInstances)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// ES2 has no instanced drawing; the profile never issues instanced commands (CPU sprite batching is
+		// disabled and every RenderCommand draws single-instance), so keeping the ES 3.0 symbol out of the
+		// build is both a spec guard and a link-time aid for true ES2 loaders
+		static_cast<void>(primitive); static_cast<void>(firstVertex); static_cast<void>(numVertices); static_cast<void>(numInstances);
+		FATAL_ASSERT_MSG(false, "Instanced drawing is not supported on OpenGL|ES 2.0");
+#else
 		glDrawArraysInstanced(static_cast<GLenum>(primitive), firstVertex, numVertices, numInstances);
+#endif
 	}
 
 	void GLDevice::DrawElements(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t baseVertex)
@@ -217,6 +225,12 @@ namespace nCine::RhiGL
 
 	void GLDevice::DrawElementsInstanced(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t numInstances, std::int32_t baseVertex)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// See DrawArraysInstanced() - unreachable on the ES2 profile
+		static_cast<void>(primitive); static_cast<void>(numIndices); static_cast<void>(indexFormat);
+		static_cast<void>(indexOffset); static_cast<void>(numInstances); static_cast<void>(baseVertex);
+		FATAL_ASSERT_MSG(false, "Instanced drawing is not supported on OpenGL|ES 2.0");
+#else
 		void* indexOffsetPtr = reinterpret_cast<void*>(indexOffset);
 #if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 		// Base vertex is emulated by the caller offsetting the vertex format instead
@@ -225,25 +239,41 @@ namespace nCine::RhiGL
 #else
 		glDrawElementsInstancedBaseVertex(static_cast<GLenum>(primitive), GLsizei(numIndices), static_cast<GLenum>(indexFormat), indexOffsetPtr, numInstances, baseVertex);
 #endif
+#endif
 	}
 
 	FenceHandle GLDevice::InsertFence()
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// Fence sync objects are ES 3.0; the only user is the persistent-mapping ring, which is compiled out
+		// on every OpenGL|ES configuration (NCINE_HAS_PERSISTENT_MAPPING excludes WITH_OPENGLES)
+		return nullptr;
+#else
 		return glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+#endif
 	}
 
 	void GLDevice::DeleteFence(FenceHandle& fence)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		fence = nullptr;
+#else
 		if (fence != nullptr) {
 			glDeleteSync(static_cast<GLsync>(fence));
 			fence = nullptr;
 		}
+#endif
 	}
 
 	bool GLDevice::ClientWaitFence(FenceHandle fence, std::uint64_t timeoutNs)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		static_cast<void>(fence); static_cast<void>(timeoutNs);
+		return true;
+#else
 		const GLenum result = glClientWaitSync(static_cast<GLsync>(fence), GL_SYNC_FLUSH_COMMANDS_BIT, timeoutNs);
 		return (result == GL_ALREADY_SIGNALED || result == GL_CONDITION_SATISFIED);
+#endif
 	}
 
 	void GLDevice::SetupInitialState()

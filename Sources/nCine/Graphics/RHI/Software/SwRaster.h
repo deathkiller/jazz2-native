@@ -101,6 +101,49 @@ namespace nCine::RhiSoftware
 	using FragmentShaderFn = void (*)(const FragmentShaderInput& input);
 
 	/**
+		@brief Quantizes a normalized channel to a byte exactly like the shader runtime's `packColor()`
+
+		Kept bit-identical to `sw::packColor` (clamp to `[0, 1]`, scale, round) so the palette-LUT fast
+		path below reproduces the transpiled fragment's output byte for byte.
+	*/
+	inline std::uint8_t SwQuantizeColor(float v)
+	{
+		v = (v < 0.0f) ? 0.0f : (v > 1.0f ? 1.0f : v);
+		const std::int32_t i = static_cast<std::int32_t>(v * 255.0f + 0.5f);
+		return static_cast<std::uint8_t>((i < 0) ? 0 : (i > 255 ? 255 : i));
+	}
+
+	/**
+		@brief Per-command lookup table replacing the PaletteRemap fragment on the deferred tile path
+
+		The PaletteRemap / BatchedPaletteRemap fragment is fundamentally a 256-entry table lookup: the
+		palette row (`vPaletteOffset`) and the instance tint are constant for a whole draw command, so the
+		fully tinted, quantized output of every possible index byte can be precomputed once per command
+		instead of running the generic transpiled fragment (function-pointer call, redundant re-sample,
+		float palette math) per pixel. The alpha channel additionally depends on the texel's own source
+		alpha when the index texture is RG8 (its sampling swizzle maps `.a` to a texel byte); that case
+		keeps the RGB lookup and folds the per-pixel factor in with the same float math the fragment uses,
+		so the fast path stays bit-identical in every case.
+
+		Built by @ref SwTileRenderer::SubmitCommand() when @ref DrawContext::paletteRemapHint is set and
+		every constraint holds (nearest-sampled index texture, byte-addressable swizzle); consumed by the
+		tile rasterizer in place of the fragment callback.
+	*/
+	struct SwPaletteLut
+	{
+		/** @brief Final packed RGBA per index (palette texel x tint); alpha assumes a `1.0` (or constant) source alpha */
+		std::uint8_t packed[256][4];
+		/** @brief Palette texel alpha byte per index, for the per-pixel source-alpha case */
+		std::uint8_t palAlphaByte[256];
+		/** @brief Tint (instance color) alpha the fragment multiplies last */
+		float tintAlpha;
+		/** @brief Raw texel byte carrying the palette index (the unit-0 sampling swizzle's `.r` source) */
+		std::int32_t indexByteOffset;
+		/** @brief Raw texel byte carrying source alpha (swizzle `.a` source), or `-1` (constant 1) / `-2` (constant 0) */
+		std::int32_t alphaByteOffset;
+	};
+
+	/**
 		@brief One transformed screen-space vertex
 
 		The output of the vertex stage (@ref FFState transform + viewport map): pixel-space position, texture
@@ -139,6 +182,32 @@ namespace nCine::RhiSoftware
 		 * is deferred. The block must be trivially copyable. Leave 0 for the immediate-only path.
 		 */
 		std::uint32_t fragmentShaderUserDataSize = 0;
+
+		/**
+		 * @brief Marks a PaletteRemap / BatchedPaletteRemap draw (set by the device)
+		 *
+		 * A hint only: it promises @ref fragmentShader is the transpiled PaletteRemap fragment (whose
+		 * parameter block is a single `vPaletteOffset` float), so the tile renderer may build a
+		 * @ref SwPaletteLut for the deferred command. Every other constraint is validated at build time;
+		 * when any fails, the draw simply keeps the generic fragment callback.
+		 */
+		bool paletteRemapHint = false;
+		/**
+		 * @brief Palette LUT consumed in place of @ref fragmentShader (deferred tile path only)
+		 *
+		 * Never set by the device: the tile renderer builds the table per deferred command and points its
+		 * command snapshot here before the flush. Stays null on the immediate path.
+		 */
+		const SwPaletteLut* paletteLut = nullptr;
+
+		/**
+		 * @brief Marks a solid no-texture sprite draw (DefaultSpriteNoTexture family, set by the device)
+		 *
+		 * A hint only: it promises @ref fragmentShader writes a per-draw constant (`packColor(vColor)`,
+		 * independent of position and texel), so the tile renderer may evaluate the fragment once per
+		 * command and fill/blend the constant color instead of calling it per pixel.
+		 */
+		bool constantColorHint = false;
 
 		/** @brief Whether blending is enabled for this draw */
 		bool blendingEnabled = false;

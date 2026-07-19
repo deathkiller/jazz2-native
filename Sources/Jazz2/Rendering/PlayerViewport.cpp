@@ -63,16 +63,24 @@ namespace Jazz2::Rendering
 
 		_camera->SetOrthoProjection(0.0f, (float)w, (float)h, 0.0f);
 
+#if defined(RHI_GL_PROFILE_ES2)
+		// OpenGL|ES 2.0 cannot render into a two-channel texture (GL_RG8 is ES 3.0 and the profile's RG8
+		// substitute LUMINANCE_ALPHA is not color-renderable), so the lighting buffer is a full RGBA target
+		// there - the lighting shader writes all four channels and Combine only reads .r/.g either way
+		constexpr Texture::Format LightingBufferFormat = Texture::Format::RGBA8;
+#else
+		constexpr Texture::Format LightingBufferFormat = Texture::Format::RG8;
+#endif
 		if (notInitialized) {
 			_lightingRenderer = std::make_unique<LightingRenderer>(this);
-			_lightingBuffer = std::make_unique<Texture>(nullptr, Texture::Format::RG8,
+			_lightingBuffer = std::make_unique<Texture>(nullptr, LightingBufferFormat,
 				w * PreferencesCache::LightingResolutionPercent / 100, h * PreferencesCache::LightingResolutionPercent / 100);
 			_lightingView = std::make_unique<Viewport>(_lightingBuffer.get(), Viewport::DepthStencilFormat::None);
 			_lightingView->SetRootNode(_lightingRenderer.get());
 			_lightingView->SetCamera(_camera.get());
 		} else {
 			_lightingView->RemoveAllTextures();
-			_lightingBuffer->Init(nullptr, Texture::Format::RG8,
+			_lightingBuffer->Init(nullptr, LightingBufferFormat,
 				w * PreferencesCache::LightingResolutionPercent / 100, h * PreferencesCache::LightingResolutionPercent / 100);
 			_lightingView->SetTexture(_lightingBuffer.get());
 		}

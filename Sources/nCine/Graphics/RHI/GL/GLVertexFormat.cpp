@@ -79,6 +79,12 @@ namespace nCine::RhiGL
 				const GLvoid* pointer = attributes_[i].pointer_;
 #endif
 
+#if defined(RHI_GL_PROFILE_ES2)
+				// ES2 has no integer vertex attributes (glVertexAttribIPointer is ES 3.0) and no GL_(UNSIGNED_)INT
+				// attribute data type at all; the ESSL 100 emitter already declares every attribute float-typed and
+				// the only integer-typed streams belong to the batched-mesh programs this profile never compiles
+				glVertexAttribPointer(attributes_[i].index_, attributes_[i].size_, attributes_[i].type_, attributes_[i].normalized_, attributes_[i].stride_, pointer);
+#else
 				switch (attributes_[i].type_) {
 					case GL_BYTE:
 					case GL_UNSIGNED_BYTE:
@@ -96,6 +102,7 @@ namespace nCine::RhiGL
 						glVertexAttribPointer(attributes_[i].index_, attributes_[i].size_, attributes_[i].type_, attributes_[i].normalized_, attributes_[i].stride_, pointer);
 						break;
 				}
+#endif
 			}
 		}
 
