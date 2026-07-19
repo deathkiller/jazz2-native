@@ -1,5 +1,7 @@
-#define NCINE_INCLUDE_OPENGL
-#include "../CommonHeaders.h"
+#if defined(WITH_RHI_GL)
+#	define NCINE_INCLUDE_OPENGL
+#	include "../CommonHeaders.h"
+#endif
 
 #include "GfxCapabilities.h"
 #include "../../Main.h"

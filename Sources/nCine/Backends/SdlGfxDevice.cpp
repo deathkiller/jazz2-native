@@ -27,7 +27,7 @@
 #if defined(WITH_GLEW)
 #	define GLEW_NO_GLU
 #	include <GL/glew.h>
-#elif defined(WITH_OPENGLES)
+#elif defined(WITH_RHI_GL) && defined(WITH_OPENGLES)
 // No GLEW on the OpenGL|ES (ANGLE) path; pull in the GL/ES headers (GLubyte, glGetString, ...) directly
 #	define NCINE_INCLUDE_OPENGL
 #	include "../CommonHeaders.h"

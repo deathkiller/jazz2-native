@@ -51,21 +51,20 @@ endif()
 if(NCINE_PREFERRED_RHI STREQUAL "Software")
 	# Selects the CPU software backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_SOFTWARE")
-endif()
-
-if(NCINE_PREFERRED_RHI STREQUAL "D3D11")
+elseif(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 	# Selects the Direct3D 11 backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_D3D11")
 	# Direct3D 11 device/swap chain, DXGI and the HLSL compiler
 	target_link_libraries(${NCINE_APP} PRIVATE d3d11 dxgi d3dcompiler)
-endif()
-
-if(NCINE_PREFERRED_RHI STREQUAL "Vulkan")
+elseif(NCINE_PREFERRED_RHI STREQUAL "Vulkan")
 	# Selects the Vulkan backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_VULKAN")
 	# Header-only Khronos Vulkan-Headers (fetched in ncine_imported_targets.cmake). No vulkan-1.lib is linked:
 	# the loader binds the runtime vulkan-1.dll (shipped with GPU drivers) dynamically through SDL at startup.
 	target_include_directories(${NCINE_APP} PRIVATE "${VULKAN_HEADERS_INCLUDE_DIR}")
+else()
+	# OpenGL/WebGL is the default graphics backend
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GL")
 endif()
 
 if(NOT DEDICATED_SERVER)
