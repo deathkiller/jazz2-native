@@ -98,7 +98,7 @@ Assert (-not $fs.Contains('void fragment(')) 'EarlyReturn: fragment() wrapper st
 Assert (-not $h.Contains('fragColor')) 'EarlyReturn: fragColor appears in the emitted header'
 Assert (-not $h.Contains('VERTEX_STAGE') -and -not $h.Contains('FRAGMENT_STAGE')) 'EarlyReturn: stage macros leaked into the emitted header'
 Assert (-not $h.Contains('_Base')) 'EarlyReturn: "_Base" symbol infix still emitted for the unnamed base variant'
-Assert ($h.Contains("{ `"`", `"`",`n#if defined(WITH_RHI_GL)`n			EarlyReturn_Vs, EarlyReturn_Fs,")) 'EarlyReturn: base ProgramVariant initializer does not carry the empty name (with the GL-gated stage sources)'
+Assert ($h.Contains("{ `"`", `"`",`n#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)`n			EarlyReturn_Vs, EarlyReturn_Fs,")) 'EarlyReturn: base ProgramVariant initializer does not carry the empty name (with the GL-gated stage sources)'
 
 # PrecisionHighp: directive selects the GL_ES prologue, three-token statement passes through
 $h = Emit 'PrecisionHighp'
@@ -142,7 +142,7 @@ Assert ($fs.Contains('out vec4 COLOR;')) 'CanvasVertex: FS does not declare COLO
 Assert ($fs.Contains("void main() {`n	COLOR = vColor;`n	vec4 c = texture(uTexture, vTexCoords);")) 'CanvasVertex: FS default is not the instance color (or the body is not verbatim after it)'
 Assert (-not $h.Contains('fragColor')) 'CanvasVertex: fragColor appears in the emitted header'
 Assert ($null -ne (Get-Source $h 'CanvasVertex_WAVE_Vs') -and $null -ne (Get-Source $h 'CanvasVertex_WAVE_Fs')) 'CanvasVertex: named WAVE variant lost its symbol infix'
-Assert ($h.Contains("{ `"WAVE`", `"WAVE`",`n#if defined(WITH_RHI_GL)`n			CanvasVertex_WAVE_Vs, CanvasVertex_WAVE_Fs,")) 'CanvasVertex: named WAVE ProgramVariant initializer changed'
+Assert ($h.Contains("{ `"WAVE`", `"WAVE`",`n#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)`n			CanvasVertex_WAVE_Vs, CanvasVertex_WAVE_Fs,")) 'CanvasVertex: named WAVE ProgramVariant initializer changed'
 Assert (-not $h.Contains('_Base')) 'CanvasVertex: "_Base" symbol infix still emitted for the unnamed base variant'
 # Unused-varying trimming: the template vPaletteOffset is never read here — its FS "in" is
 # removed and, because its only VS occurrence is the pure epilogue store, the VS declaration

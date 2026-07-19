@@ -5,7 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char ResizeMonochrome_Vs[] =
 R"__SHDR__(#line 1
 
@@ -43,7 +43,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char ResizeMonochrome_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -228,7 +228,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char ResizeMonochrome_Fs[] =
 R"__SHDR__(#line 1
 
@@ -285,7 +285,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char ResizeMonochrome_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -535,13 +535,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant ResizeMonochrome_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			ResizeMonochrome_Vs, ResizeMonochrome_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, ResizeMonochrome_Uniforms, 1, ResizeMonochrome_Blocks, 1, ResizeMonochrome_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			ResizeMonochrome_Vs100, ResizeMonochrome_Fs100,
 #else
 			nullptr, nullptr,

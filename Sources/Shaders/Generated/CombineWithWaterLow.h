@@ -5,7 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char CombineWithWaterLow_Vs[] =
 R"__SHDR__(#line 1
 
@@ -37,7 +37,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char CombineWithWaterLow_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -217,7 +217,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char CombineWithWaterLow_Fs[] =
 R"__SHDR__(#line 1
 
@@ -300,7 +300,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char CombineWithWaterLow_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -714,13 +714,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant CombineWithWaterLow_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			CombineWithWaterLow_Vs, CombineWithWaterLow_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			6, CombineWithWaterLow_Uniforms, 1, CombineWithWaterLow_Blocks, 4, CombineWithWaterLow_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			CombineWithWaterLow_Vs100, CombineWithWaterLow_Fs100,
 #else
 			nullptr, nullptr,

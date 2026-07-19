@@ -5,7 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedShieldFire_Vs[] =
 R"__SHDR__(#line 1
 
@@ -48,7 +48,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedShieldFire_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -253,7 +253,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedShieldFire_Fs[] =
 R"__SHDR__(#line 1
 
@@ -315,7 +315,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedShieldFire_Fs100[] =
 R"__SHDR__(#extension GL_OES_standard_derivatives : enable
 #line 1
@@ -631,13 +631,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant BatchedShieldFire_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			BatchedShieldFire_Vs, BatchedShieldFire_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, BatchedShieldFire_Uniforms, 1, BatchedShieldFire_Blocks, 1, BatchedShieldFire_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			BatchedShieldFire_Vs100, BatchedShieldFire_Fs100,
 #else
 			nullptr, nullptr,

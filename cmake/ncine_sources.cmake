@@ -56,31 +56,6 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Graphics/DrawableNode.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Geometry.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/GfxCapabilities.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLAttribute.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLBlending.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLBufferObject.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLClearColor.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLCullFace.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLDebug.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLDevice.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLDepthTest.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLFramebuffer.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLRenderbuffer.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLRenderTarget.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLScissorTest.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShader.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderProgram.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderUniformBlocks.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderUniforms.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLTexture.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLTextureFormat.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniform.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformBlock.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformBlockCache.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformCache.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLVertexArrayObject.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLVertexFormat.cpp
-	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLViewport.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IGfxDevice.cpp
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureLoader.cpp
 	#${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureSaver.cpp
@@ -119,12 +94,79 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Colorf.cpp
 	${NCINE_SOURCE_DIR}/nCine/Primitives/Half.cpp
 	${NCINE_SOURCE_DIR}/nCine/Threading/Thread.cpp
-	# Runtime part of ShaderCompiler, shared with the offline tool — enables loading ".shader" files at runtime
+	# Runtime part of ShaderCompiler, shared with the offline tool - enables loading ".shader" files at runtime
 	${NCINE_SOURCE_DIR}/ShaderCompiler/ConstFold.cpp
 	${NCINE_SOURCE_DIR}/ShaderCompiler/GlslReflect.cpp
 	${NCINE_SOURCE_DIR}/ShaderCompiler/RuntimeShader.cpp
 	${NCINE_SOURCE_DIR}/ShaderCompiler/ShaderParser.cpp
 )
+
+if(NCINE_PREFERRED_RHI STREQUAL "Software")
+	# CPU software rendering backend
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwBuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwRaster.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwTileRasterizer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwTileRenderer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwUniformCache.cpp
+	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "D3D11")
+	# Direct3D 11 rendering backend
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11BufferObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11Device.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11RenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11ShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11ShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11Texture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11UniformCache.cpp
+	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "Vulkan")
+	# Vulkan rendering backend
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanBufferObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanUniformCache.cpp
+	)
+else()
+	# OpenGL/WebGL is the default rendering backend
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLAttribute.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLBlending.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLBufferObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLClearColor.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLCullFace.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLDebug.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLDepthTest.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLFramebuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLRenderbuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLScissorTest.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShader.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderUniformBlocks.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLTextureFormat.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniform.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformBlock.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformBlockCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLUniformCache.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLVertexArrayObject.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLVertexFormat.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLViewport.cpp
+	)
+endif()
 
 list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Main.cpp
@@ -317,57 +359,3 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/TextInputBuffer.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/UI/Menu/WidgetSection.cpp
 )
-
-# CPU software rendering backend (compiled only when the software backend is selected)
-if(NCINE_PREFERRED_RHI STREQUAL "Software")
-	# The OpenGL RHI translation units are dead code under the software backend (the pipeline's `Rhi::`
-	# aliases resolve to the `Sw*` types), so drop them from the build entirely instead of compiling them
-	list(FILTER SOURCES EXCLUDE REGEX "/RHI/GL/")
-
-	list(APPEND SOURCES
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwBuffer.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwDevice.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwRaster.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwRenderTarget.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwShaderProgram.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwShaderUniforms.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwTexture.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwTileRasterizer.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwTileRenderer.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwUniformCache.cpp
-	)
-endif()
-
-# Direct3D 11 rendering backend (compiled only when the Direct3D 11 backend is selected)
-if(NCINE_PREFERRED_RHI STREQUAL "D3D11")
-	# The OpenGL RHI translation units are dead code under the Direct3D 11 backend (the pipeline's `Rhi::`
-	# aliases resolve to the `D3D11*` types), so drop them from the build entirely instead of compiling them
-	list(FILTER SOURCES EXCLUDE REGEX "/RHI/GL/")
-
-	list(APPEND SOURCES
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11BufferObject.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11Device.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11RenderTarget.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11ShaderProgram.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11ShaderUniforms.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11Texture.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11UniformCache.cpp
-	)
-endif()
-
-# Vulkan rendering backend (compiled only when the Vulkan backend is selected)
-if(NCINE_PREFERRED_RHI STREQUAL "Vulkan")
-	# The OpenGL RHI translation units are dead code under the Vulkan backend (the pipeline's `Rhi::`
-	# aliases resolve to the `Vulkan*` types), so drop them from the build entirely instead of compiling them
-	list(FILTER SOURCES EXCLUDE REGEX "/RHI/GL/")
-
-	list(APPEND SOURCES
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanBufferObject.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanDevice.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanRenderTarget.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanShaderProgram.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanShaderUniforms.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanTexture.cpp
-		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanUniformCache.cpp
-	)
-endif()

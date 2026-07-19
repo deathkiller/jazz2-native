@@ -5,7 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TouchCircle_Vs[] =
 R"__SHDR__(#line 1
 
@@ -33,7 +33,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TouchCircle_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -184,7 +184,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TouchCircle_Fs[] =
 R"__SHDR__(#line 1
 
@@ -217,7 +217,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TouchCircle_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -365,13 +365,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant TouchCircle_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			TouchCircle_Vs, TouchCircle_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, TouchCircle_Uniforms, 1, TouchCircle_Blocks, 0, nullptr, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			TouchCircle_Vs100, TouchCircle_Fs100,
 #else
 			nullptr, nullptr,

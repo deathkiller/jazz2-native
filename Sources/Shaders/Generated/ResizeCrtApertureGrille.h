@@ -5,7 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char ResizeCrtApertureGrille_Vs[] =
 R"__SHDR__(#line 1
 
@@ -43,7 +43,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char ResizeCrtApertureGrille_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -219,7 +219,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char ResizeCrtApertureGrille_Fs[] =
 R"__SHDR__(#line 1
 
@@ -431,7 +431,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char ResizeCrtApertureGrille_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -1575,13 +1575,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant ResizeCrtApertureGrille_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			ResizeCrtApertureGrille_Vs, ResizeCrtApertureGrille_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, ResizeCrtApertureGrille_Uniforms, 1, ResizeCrtApertureGrille_Blocks, 1, ResizeCrtApertureGrille_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			ResizeCrtApertureGrille_Vs100, ResizeCrtApertureGrille_Fs100,
 #else
 			nullptr, nullptr,

@@ -5,7 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char PartialWhiteMask_Vs[] =
 R"__SHDR__(#line 1
 
@@ -40,7 +40,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char PartialWhiteMask_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -226,7 +226,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char PartialWhiteMask_Fs[] =
 R"__SHDR__(#line 1
 
@@ -268,7 +268,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char PartialWhiteMask_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -427,7 +427,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		{ "uTexture", 0 },
 	};
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char PartialWhiteMask_USE_PALETTE_Vs[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -463,7 +463,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char PartialWhiteMask_USE_PALETTE_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #define USE_PALETTE (1)
@@ -650,7 +650,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char PartialWhiteMask_USE_PALETTE_Fs[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -693,7 +693,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char PartialWhiteMask_USE_PALETTE_Fs100[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -892,13 +892,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant PartialWhiteMask_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			PartialWhiteMask_Vs, PartialWhiteMask_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, PartialWhiteMask_Uniforms, 1, PartialWhiteMask_Blocks, 1, PartialWhiteMask_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			PartialWhiteMask_Vs100, PartialWhiteMask_Fs100,
 #else
 			nullptr, nullptr,
@@ -914,13 +914,13 @@ float4 PSMain(PsInput _input) : SV_Target
 			nullptr, 0, nullptr, 0 },
 #endif
 		{ "USE_PALETTE", "USE_PALETTE",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			PartialWhiteMask_USE_PALETTE_Vs, PartialWhiteMask_USE_PALETTE_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, PartialWhiteMask_USE_PALETTE_Uniforms, 1, PartialWhiteMask_USE_PALETTE_Blocks, 2, PartialWhiteMask_USE_PALETTE_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			PartialWhiteMask_USE_PALETTE_Vs100, PartialWhiteMask_USE_PALETTE_Fs100,
 #else
 			nullptr, nullptr,
@@ -939,7 +939,7 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::Program PartialWhiteMask = { "PartialWhiteMask", 0, 2, PartialWhiteMask_Variants };
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedPartialWhiteMask_Vs[] =
 R"__SHDR__(#line 1
 
@@ -983,7 +983,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedPartialWhiteMask_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -1206,7 +1206,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedPartialWhiteMask_Fs[] =
 R"__SHDR__(#line 1
 
@@ -1248,7 +1248,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedPartialWhiteMask_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -1403,7 +1403,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		{ "uTexture", 0 },
 	};
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedPartialWhiteMask_USE_PALETTE_Vs[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -1448,7 +1448,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedPartialWhiteMask_USE_PALETTE_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -1672,7 +1672,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedPartialWhiteMask_USE_PALETTE_Fs[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -1715,7 +1715,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedPartialWhiteMask_USE_PALETTE_Fs100[] =
 R"__SHDR__(#define USE_PALETTE (1)
 #line 1
@@ -1910,13 +1910,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant BatchedPartialWhiteMask_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			BatchedPartialWhiteMask_Vs, BatchedPartialWhiteMask_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, BatchedPartialWhiteMask_Uniforms, 1, BatchedPartialWhiteMask_Blocks, 1, BatchedPartialWhiteMask_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			BatchedPartialWhiteMask_Vs100, BatchedPartialWhiteMask_Fs100,
 #else
 			nullptr, nullptr,
@@ -1932,13 +1932,13 @@ float4 PSMain(PsInput _input) : SV_Target
 			nullptr, 0, nullptr, 0 },
 #endif
 		{ "USE_PALETTE", "USE_PALETTE",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			BatchedPartialWhiteMask_USE_PALETTE_Vs, BatchedPartialWhiteMask_USE_PALETTE_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, BatchedPartialWhiteMask_USE_PALETTE_Uniforms, 1, BatchedPartialWhiteMask_USE_PALETTE_Blocks, 2, BatchedPartialWhiteMask_USE_PALETTE_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			BatchedPartialWhiteMask_USE_PALETTE_Vs100, BatchedPartialWhiteMask_USE_PALETTE_Fs100,
 #else
 			nullptr, nullptr,

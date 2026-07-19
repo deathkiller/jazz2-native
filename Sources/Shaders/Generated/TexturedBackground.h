@@ -5,7 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackground_Vs[] =
 R"__SHDR__(#line 1
 
@@ -36,7 +36,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackground_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -208,7 +208,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackground_Fs[] =
 R"__SHDR__(#line 1
 
@@ -305,7 +305,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackground_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -748,7 +748,7 @@ float4 PSMain(PsInput _input) : SV_Target
 		{ "uTexture", 0 },
 	};
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackground_DITHER_Vs[] =
 R"__SHDR__(#define DITHER (1)
 #line 1
@@ -780,7 +780,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackground_DITHER_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #define DITHER (1)
@@ -953,7 +953,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackground_DITHER_Fs[] =
 R"__SHDR__(#define DITHER (1)
 #line 1
@@ -1051,7 +1051,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TexturedBackground_DITHER_Fs100[] =
 R"__SHDR__(#define DITHER (1)
 #line 1
@@ -1517,13 +1517,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant TexturedBackground_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			TexturedBackground_Vs, TexturedBackground_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			6, TexturedBackground_Uniforms, 1, TexturedBackground_Blocks, 1, TexturedBackground_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			TexturedBackground_Vs100, TexturedBackground_Fs100,
 #else
 			nullptr, nullptr,
@@ -1539,13 +1539,13 @@ float4 PSMain(PsInput _input) : SV_Target
 			nullptr, 0, nullptr, 0 },
 #endif
 		{ "DITHER", "DITHER",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			TexturedBackground_DITHER_Vs, TexturedBackground_DITHER_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			6, TexturedBackground_DITHER_Uniforms, 1, TexturedBackground_DITHER_Blocks, 1, TexturedBackground_DITHER_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			TexturedBackground_DITHER_Vs100, TexturedBackground_DITHER_Fs100,
 #else
 			nullptr, nullptr,

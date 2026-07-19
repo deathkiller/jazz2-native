@@ -584,22 +584,121 @@ function(ncine_add_dependency target target_type)
 endfunction()
 
 function(ncine_assign_source_group)
-	cmake_parse_arguments(PARSE_ARGV 0 ARGS "SKIP_EXTERNAL" "PATH_PREFIX" "FILES")
+	cmake_parse_arguments(PARSE_ARGV 0 ARGS "SKIP_EXTERNAL" "" "PATH_PREFIX;FILES")
+	
+	# Normalize and ensure trailing slashes for all PATH_PREFIX values
+	if(NOT ARGS_PATH_PREFIX)
+		set(PATH_PREFIXES "")
+		set(PATH_REPLACEMENTS "")
+	else()
+		set(PATH_PREFIXES "")
+		set(PATH_REPLACEMENTS "")
+		foreach(CURRENT_PREFIX ${ARGS_PATH_PREFIX})
+			# Check if PREFIX contains colon (prefix:replace format)
+			string(FIND "${CURRENT_PREFIX}" ":" COLON_POS REVERSE)
+			if(COLON_POS GREATER 1)
+				# Split into prefix and replacement
+				string(SUBSTRING "${CURRENT_PREFIX}" 0 ${COLON_POS} PREFIX_PART)
+				math(EXPR REPLACE_START "${COLON_POS} + 1")
+				string(SUBSTRING "${CURRENT_PREFIX}" ${REPLACE_START} -1 REPLACE_PART)
 
-	foreach(FILE ${ARGS_FILES}) 
+				if(NOT IS_ABSOLUTE "${PREFIX_PART}")
+					get_filename_component(PREFIX_PART "${PREFIX_PART}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+				endif()
+				string(REPLACE "\\" "/" PREFIX_PART "${PREFIX_PART}")
+				if(NOT PREFIX_PART MATCHES "/$")
+					set(PREFIX_PART "${PREFIX_PART}/")
+				endif()
+
+				string(REPLACE "\\" "/" REPLACE_PART "${REPLACE_PART}")
+				if(NOT REPLACE_PART MATCHES "/$")
+					set(REPLACE_PART "${REPLACE_PART}/")
+				endif()
+				
+				list(APPEND PATH_PREFIXES "${PREFIX_PART}")
+				list(APPEND PATH_REPLACEMENTS "${REPLACE_PART}")
+			else()
+				# No replacement
+				if(NOT IS_ABSOLUTE "${CURRENT_PREFIX}")
+					get_filename_component(CURRENT_PREFIX "${CURRENT_PREFIX}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+				endif()
+				string(REPLACE "\\" "/" CURRENT_PREFIX "${CURRENT_PREFIX}")
+				if(NOT CURRENT_PREFIX MATCHES "/$")
+					set(CURRENT_PREFIX "${CURRENT_PREFIX}/")
+				endif()
+				list(APPEND PATH_PREFIXES "${CURRENT_PREFIX}")
+				list(APPEND PATH_REPLACEMENTS "/")
+			endif()
+		endforeach()
+	endif()
+
+	foreach(FILE ${ARGS_FILES})
+		# Make file path absolute if relative
+		if(NOT IS_ABSOLUTE "${FILE}")
+			get_filename_component(FILE "${FILE}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+		endif()
+		
 		get_filename_component(PARENT_DIR "${FILE}" DIRECTORY)
-		string(LENGTH "${ARGS_PATH_PREFIX}" ARGS_PATH_PREFIX_LENGTH)
-		string(SUBSTRING "${PARENT_DIR}" 0 ${ARGS_PATH_PREFIX_LENGTH} PATH_START)
-		if(PATH_START STREQUAL "${ARGS_PATH_PREFIX}")
-			string(SUBSTRING "${PARENT_DIR}" ${ARGS_PATH_PREFIX_LENGTH} -1 GROUP)
-			#string(REPLACE "/" "\\" GROUP "${GROUP}")
-			string(REPLACE "\\" "/" GROUP "${GROUP}")
+		# Convert backslashes to forward slashes
+		string(REPLACE "\\" "/" PARENT_DIR "${PARENT_DIR}")
+		# Ensure trailing slash for comparison
+		if(NOT PARENT_DIR MATCHES "/$")
+			set(PARENT_DIR "${PARENT_DIR}/")
+		endif()
+		
+		set(MATCHED_PREFIX "")
+		set(MATCHED_REPLACEMENT "")
+		set(GROUP "")
+		
+		# Try to match against each path prefix
+		list(LENGTH PATH_PREFIXES PREFIX_COUNT)
+		math(EXPR LAST_INDEX "${PREFIX_COUNT} - 1")
+		foreach(IDX RANGE ${LAST_INDEX})
+			list(GET PATH_PREFIXES ${IDX} PREFIX)
+			list(GET PATH_REPLACEMENTS ${IDX} REPLACEMENT)
+			
+			string(LENGTH "${PREFIX}" PREFIX_LENGTH)
+			string(SUBSTRING "${PARENT_DIR}" 0 ${PREFIX_LENGTH} PATH_START)
+			if(PATH_START STREQUAL "${PREFIX}")
+				set(MATCHED_PREFIX "${PREFIX}")
+				set(MATCHED_REPLACEMENT "${REPLACEMENT}")
+				break()
+			endif()
+		endforeach()
+		
+		if(NOT "${MATCHED_PREFIX}" STREQUAL "")
+			# Found a matching prefix
+			string(LENGTH "${MATCHED_PREFIX}" MATCHED_PREFIX_LENGTH)
+			string(SUBSTRING "${PARENT_DIR}" ${MATCHED_PREFIX_LENGTH} -1 GROUP)
+			# Remove trailing slash
+			if(GROUP MATCHES "/$")
+				string(REGEX REPLACE "/$" "" GROUP "${GROUP}")
+			endif()
+			
+			# Apply replacement if specified
+			if(NOT "${MATCHED_REPLACEMENT}" STREQUAL "/")
+				# Remove leading and trailing slash from replacement if present
+				string(REGEX REPLACE "^/" "" MATCHED_REPLACEMENT "${MATCHED_REPLACEMENT}")
+				string(REGEX REPLACE "/$" "" MATCHED_REPLACEMENT "${MATCHED_REPLACEMENT}")
+				
+				if(GROUP STREQUAL "")
+					set(GROUP "/${MATCHED_REPLACEMENT}")
+				else()
+					set(GROUP "/${MATCHED_REPLACEMENT}/${GROUP}")
+				endif()
+			else()
+				if(NOT GROUP STREQUAL "" AND NOT GROUP MATCHES "^/")
+					set(GROUP "/${GROUP}")
+				endif()
+			endif()
 
 			# Group into "Source Files" and "Header Files"
 			if("${FILE}" MATCHES ".*\\.(c|cpp|asm|s)$")
 				set(GROUP "/Source Files${GROUP}/")
 			elseif("${FILE}" MATCHES ".*\\.h$")
 				set(GROUP "/Header Files${GROUP}/")
+			elseif("${FILE}" MATCHES ".*\\.rc$")
+				set(GROUP "/Resource Files${GROUP}/")
 			else()
 				set(GROUP "/")
 			endif()

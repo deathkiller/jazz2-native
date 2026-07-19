@@ -5,7 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char Colorized_Vs[] =
 R"__SHDR__(#line 1
 
@@ -38,7 +38,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char Colorized_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -214,7 +214,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char Colorized_Fs[] =
 R"__SHDR__(#line 1
 
@@ -241,7 +241,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char Colorized_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -374,13 +374,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant Colorized_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			Colorized_Vs, Colorized_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, Colorized_Uniforms, 1, Colorized_Blocks, 1, Colorized_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			Colorized_Vs100, Colorized_Fs100,
 #else
 			nullptr, nullptr,
@@ -399,7 +399,7 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::Program Colorized = { "Colorized", 0, 1, Colorized_Variants };
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedColorized_Vs[] =
 R"__SHDR__(#line 1
 
@@ -441,7 +441,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedColorized_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -652,7 +652,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedColorized_Fs[] =
 R"__SHDR__(#line 1
 
@@ -679,7 +679,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedColorized_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -808,13 +808,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant BatchedColorized_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			BatchedColorized_Vs, BatchedColorized_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, BatchedColorized_Uniforms, 1, BatchedColorized_Blocks, 1, BatchedColorized_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			BatchedColorized_Vs100, BatchedColorized_Fs100,
 #else
 			nullptr, nullptr,

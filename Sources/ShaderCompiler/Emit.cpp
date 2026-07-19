@@ -307,8 +307,10 @@ namespace ShaderCompiler
 						diag.Line = 1;
 						return false;
 					}
-					// OpenGL-family (GL 3.3 / ES 3.0 / WebGL 2) stage source — compiled only into the OpenGL backend build
-					output += "#if defined(WITH_RHI_GL)\n";
+					// OpenGL-family (GL 3.3 / ES 3.0 / WebGL 2) stage source — compiled only into the OpenGL backend
+					// build's non-ES2 profile; the RHI_GL_PROFILE_ES2 profile uses the _Vs100/_Fs100 source below
+					// instead, so exactly one of the two GL variants is ever compiled in.
+					output += "#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)\n";
 					output += "\tinline constexpr char " + prefix + (vertexStage ? "_Vs" : "_Fs") + "[] =\n";
 					output += "R\"__SHDR__(";
 					output += source;
@@ -329,8 +331,9 @@ namespace ShaderCompiler
 						diag.Line = 1;
 						return false;
 					}
-					// OpenGL|ES 2.0 (ESSL 100) stage source — compiled only into the OpenGL backend build (used under RHI_GL_PROFILE_ES2)
-					output += "#if defined(WITH_RHI_GL)\n";
+					// OpenGL|ES 2.0 (ESSL 100) stage source — compiled only into the OpenGL backend build's ES2
+					// profile (RHI_GL_PROFILE_ES2); the non-ES2 profile uses the _Vs/_Fs source above instead.
+					output += "#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)\n";
 					output += "\tinline constexpr char " + prefix + (vertexStage ? "_Vs100" : "_Fs100") + "[] =\n";
 					output += "R\"__SHDR__(";
 					output += es2source;
@@ -440,8 +443,10 @@ namespace ShaderCompiler
 				output += "\t\t{ \"" + v.Name + "\", \"" + v.Define + "\",\n";
 				// Per-backend stage sources: each group references symbols emitted only under that backend's
 				// WITH_RHI_* guard, so it is gated to match and is null on the other backends (which never read it) —
-				// a backend build therefore compiles in only its own shader sources.
-				output += "#if defined(WITH_RHI_GL)\n";
+				// a backend build therefore compiles in only its own shader sources. The OpenGL backend is split
+				// further by profile: the modern VsSource/FsSource are compiled in only for the non-ES2 profile and
+				// the VsSource100/FsSource100 only for RHI_GL_PROFILE_ES2, matching the symbol guards above.
+				output += "#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)\n";
 				output += "\t\t\t" + prefix + "_Vs, " + prefix + "_Fs,\n";
 				output += "#else\n";
 				output += "\t\t\tnullptr, nullptr,\n";
@@ -450,7 +455,7 @@ namespace ShaderCompiler
 				output += Death::format("{}", r.Blocks.size()) + ", " + (r.Blocks.empty() ? String("nullptr") : String(prefix + "_Blocks")) + ", ";
 				output += Death::format("{}", r.Textures.size()) + ", " + (r.Textures.empty() ? String("nullptr") : String(prefix + "_Textures")) + ", ";
 				output += Death::format("{}", r.Attributes.size()) + ", " + (r.Attributes.empty() ? String("nullptr") : String(prefix + "_Attributes")) + ",\n";
-				output += "#if defined(WITH_RHI_GL)\n";
+				output += "#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)\n";
 				output += "\t\t\t" + prefix + "_Vs100, " + prefix + "_Fs100,\n";
 				output += "#else\n";
 				output += "\t\t\tnullptr, nullptr,\n";

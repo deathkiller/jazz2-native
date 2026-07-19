@@ -5,7 +5,7 @@
 
 namespace nCine::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultMeshSprite_Vs[] =
 R"__SHDR__(#line 1
 
@@ -40,7 +40,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultMeshSprite_Vs100[] =
 R"__SHDR__(#line 1
 
@@ -211,7 +211,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultMeshSprite_Fs[] =
 R"__SHDR__(#line 1
 
@@ -233,7 +233,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultMeshSprite_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -334,13 +334,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant DefaultMeshSprite_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			DefaultMeshSprite_Vs, DefaultMeshSprite_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, DefaultMeshSprite_Uniforms, 1, DefaultMeshSprite_Blocks, 1, DefaultMeshSprite_Textures, 2, DefaultMeshSprite_Attributes,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			DefaultMeshSprite_Vs100, DefaultMeshSprite_Fs100,
 #else
 			nullptr, nullptr,

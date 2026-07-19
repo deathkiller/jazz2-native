@@ -5,7 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char Outline_Vs[] =
 R"__SHDR__(#line 1
 
@@ -38,7 +38,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char Outline_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -214,7 +214,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char Outline_Fs[] =
 R"__SHDR__(#line 1
 
@@ -266,7 +266,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char Outline_Fs100[] =
 R"__SHDR__(#extension GL_OES_standard_derivatives : enable
 #line 1
@@ -590,13 +590,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant Outline_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			Outline_Vs, Outline_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, Outline_Uniforms, 1, Outline_Blocks, 1, Outline_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			Outline_Vs100, Outline_Fs100,
 #else
 			nullptr, nullptr,
@@ -615,7 +615,7 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::Program Outline = { "Outline", 0, 1, Outline_Variants };
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedOutline_Vs[] =
 R"__SHDR__(#line 1
 
@@ -657,7 +657,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedOutline_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -868,7 +868,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedOutline_Fs[] =
 R"__SHDR__(#line 1
 
@@ -920,7 +920,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedOutline_Fs100[] =
 R"__SHDR__(#extension GL_OES_standard_derivatives : enable
 #line 1
@@ -1240,13 +1240,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant BatchedOutline_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			BatchedOutline_Vs, BatchedOutline_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, BatchedOutline_Uniforms, 1, BatchedOutline_Blocks, 1, BatchedOutline_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			BatchedOutline_Vs100, BatchedOutline_Fs100,
 #else
 			nullptr, nullptr,

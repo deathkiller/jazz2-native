@@ -5,7 +5,7 @@
 
 namespace nCine::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultBatchedSpritesNoTexture_Vs[] =
 R"__SHDR__(#line 1
 
@@ -42,7 +42,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultBatchedSpritesNoTexture_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -220,7 +220,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultBatchedSpritesNoTexture_Fs[] =
 R"__SHDR__(#line 1
 
@@ -239,7 +239,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultBatchedSpritesNoTexture_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -310,13 +310,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant DefaultBatchedSpritesNoTexture_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			DefaultBatchedSpritesNoTexture_Vs, DefaultBatchedSpritesNoTexture_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, DefaultBatchedSpritesNoTexture_Uniforms, 1, DefaultBatchedSpritesNoTexture_Blocks, 0, nullptr, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			DefaultBatchedSpritesNoTexture_Vs100, DefaultBatchedSpritesNoTexture_Fs100,
 #else
 			nullptr, nullptr,

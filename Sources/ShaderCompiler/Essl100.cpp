@@ -1,5 +1,7 @@
 #include "Essl100.h"
 
+#include <string>
+
 #include <Containers/GrowableArray.h>
 #include <Containers/StringConcatenable.h>
 

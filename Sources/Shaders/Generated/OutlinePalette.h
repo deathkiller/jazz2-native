@@ -5,7 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char OutlinePalette_Vs[] =
 R"__SHDR__(#line 1
 
@@ -40,7 +40,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char OutlinePalette_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -226,7 +226,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char OutlinePalette_Fs[] =
 R"__SHDR__(#line 1
 
@@ -301,7 +301,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char OutlinePalette_Fs100[] =
 R"__SHDR__(#extension GL_OES_standard_derivatives : enable
 #line 1
@@ -743,13 +743,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant OutlinePalette_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			OutlinePalette_Vs, OutlinePalette_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, OutlinePalette_Uniforms, 1, OutlinePalette_Blocks, 2, OutlinePalette_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			OutlinePalette_Vs100, OutlinePalette_Fs100,
 #else
 			nullptr, nullptr,
@@ -768,7 +768,7 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::Program OutlinePalette = { "OutlinePalette", 0, 1, OutlinePalette_Variants };
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedOutlinePalette_Vs[] =
 R"__SHDR__(#line 1
 
@@ -812,7 +812,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedOutlinePalette_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -1035,7 +1035,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedOutlinePalette_Fs[] =
 R"__SHDR__(#line 1
 
@@ -1110,7 +1110,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedOutlinePalette_Fs100[] =
 R"__SHDR__(#extension GL_OES_standard_derivatives : enable
 #line 1
@@ -1548,13 +1548,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant BatchedOutlinePalette_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			BatchedOutlinePalette_Vs, BatchedOutlinePalette_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, BatchedOutlinePalette_Uniforms, 1, BatchedOutlinePalette_Blocks, 2, BatchedOutlinePalette_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			BatchedOutlinePalette_Vs100, BatchedOutlinePalette_Fs100,
 #else
 			nullptr, nullptr,

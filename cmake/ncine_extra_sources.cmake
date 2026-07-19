@@ -63,7 +63,7 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "Vulkan")
 	# the loader binds the runtime vulkan-1.dll (shipped with GPU drivers) dynamically through SDL at startup.
 	target_include_directories(${NCINE_APP} PRIVATE "${VULKAN_HEADERS_INCLUDE_DIR}")
 else()
-	# OpenGL/WebGL is the default graphics backend
+	# OpenGL/WebGL is the default rendering backend
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GL")
 endif()
 
