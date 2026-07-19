@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <string>
 
 #include <Containers/GrowableArray.h>
 #include <Containers/StringConcatenable.h>
