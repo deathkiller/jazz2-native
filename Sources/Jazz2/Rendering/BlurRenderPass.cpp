@@ -8,7 +8,7 @@ namespace Jazz2::Rendering
 	void BlurRenderPass::Initialize(Texture* source, std::int32_t width, std::int32_t height, Vector2f direction)
 	{
 #if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
-		return; // Blur post-processing requires shader support and framebuffers
+		// Blur post-processing requires shader support and framebuffers
 #else
 		_source = source;
 		_downsampleOnly = (direction.X <= std::numeric_limits<float>::epsilon() && direction.Y <= std::numeric_limits<float>::epsilon());
@@ -69,7 +69,8 @@ namespace Jazz2::Rendering
 	bool BlurRenderPass::OnDraw(RenderQueue& renderQueue)
 	{
 #if !defined(RHI_CAP_SHADERS) || !defined(RHI_CAP_FRAMEBUFFERS)
-		return true; // Blur post-processing requires shader support and framebuffers
+		// Blur post-processing requires shader support and framebuffers
+		return true;
 #else
 		Vector2i size = _target->GetSize();
 

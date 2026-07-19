@@ -258,8 +258,8 @@ namespace nCine
 
 		struct SortHashData
 		{
-			GLuint textures[Rhi::Texture::MaxTextureUnits];
-			GLuint shaderProgram;
+			std::uint32_t textures[Rhi::Texture::MaxTextureUnits];
+			std::uint32_t shaderProgram;
 			std::uint8_t srcBlendingFactor;
 			std::uint8_t destBlendingFactor;
 			std::uint8_t srcAlphaBlendingFactor;
@@ -278,9 +278,9 @@ namespace nCine
 		SortHashData hashData alignas(8);
 
 		for (std::uint32_t i = 0; i < Rhi::Texture::MaxTextureUnits; i++) {
-			hashData.textures[i] = (textures_[i] != nullptr) ? textures_[i]->GetGLHandle() : 0;
+			hashData.textures[i] = (textures_[i] != nullptr) ? textures_[i]->GetUniqueId() : 0;
 		}
-		hashData.shaderProgram = shaderProgram_->GetGLHandle();
+		hashData.shaderProgram = shaderProgram_->GetUniqueId();
 		hashData.srcBlendingFactor = blendingFactorToInt(srcBlendingFactor_);
 		hashData.destBlendingFactor = blendingFactorToInt(destBlendingFactor_);
 		hashData.srcAlphaBlendingFactor = blendingFactorToInt(srcAlphaBlendingFactor_);

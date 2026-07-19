@@ -3,13 +3,16 @@
 #include "VulkanTexture.h"
 #include "VulkanCommon.h"
 
+#include <cstring>
+
 namespace nCine::RhiVulkan
 {
 	VulkanRenderTarget::VulkanRenderTarget()
-		: numDrawBuffers_(1), framebuffer_(0), framebufferView_(0)
+		: numDrawBuffers_(1), framebuffer_(0), framebufferViewCount_(0)
 	{
 		for (std::uint32_t i = 0; i < MaxColorAttachments; i++) {
 			colorTextures_[i] = nullptr;
+			framebufferViews_[i] = 0;
 		}
 	}
 
@@ -28,7 +31,19 @@ namespace nCine::RhiVulkan
 		// VkEnqueueDestroy no-ops if the device is already gone (teardown).
 		VkEnqueueDestroy(VkDeferredResource::Framebuffer, framebuffer_);
 		framebuffer_ = 0;
-		framebufferView_ = 0;
+		for (std::uint32_t i = 0; i < MaxColorAttachments; i++) {
+			framebufferViews_[i] = 0;
+		}
+		framebufferViewCount_ = 0;
+	}
+
+	std::uint32_t VulkanRenderTarget::GetAttachedCount() const
+	{
+		std::uint32_t count = 0;
+		while (count < MaxColorAttachments && colorTextures_[count] != nullptr) {
+			count++;
+		}
+		return count;
 	}
 
 	std::uint64_t VulkanRenderTarget::GetFramebuffer()
@@ -39,22 +54,35 @@ namespace nCine::RhiVulkan
 			return 0;
 		}
 
-		// Ensure the attachment image / view exist, then (re)build the framebuffer if the view changed
-		const std::uint64_t view = color->GpuView();
-		if (view == 0) {
-			return 0;
+		// The framebuffer spans every contiguously attached color texture (attachment 0..count-1); ensure each
+		// attachment's image / view exist, then (re)build the framebuffer if any view (or the count) changed
+		const std::uint32_t count = GetAttachedCount();
+		std::uint64_t views[MaxColorAttachments];
+		VkImageView attachments[MaxColorAttachments];
+		VkFormat formats[MaxColorAttachments];
+		for (std::uint32_t i = 0; i < count; i++) {
+			views[i] = colorTextures_[i]->GpuView();
+			if (views[i] == 0) {
+				return 0;
+			}
+			attachments[i] = reinterpret_cast<VkImageView>(views[i]);
+			formats[i] = VkFormat(colorTextures_[i]->GpuFormat());
 		}
-		if (framebuffer_ != 0 && framebufferView_ == view) {
+		if (framebuffer_ != 0 && framebufferViewCount_ == count &&
+			std::memcmp(framebufferViews_, views, count * sizeof(std::uint64_t)) == 0) {
 			return framebuffer_;
 		}
 		ReleaseFramebuffer();
 
-		VkImageView attachment = reinterpret_cast<VkImageView>(view);
+		VkRenderPass renderPass = VkGetColorRenderPassMrt(formats, count);
+		if (renderPass == VK_NULL_HANDLE) {
+			return 0;
+		}
 		VkFramebufferCreateInfo fci = {};
 		fci.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		fci.renderPass = VkGetColorRenderPass(VkFormat(color->GpuFormat()));
-		fci.attachmentCount = 1;
-		fci.pAttachments = &attachment;
+		fci.renderPass = renderPass;
+		fci.attachmentCount = count;
+		fci.pAttachments = attachments;
 		fci.width = std::uint32_t(color->GetWidth());
 		fci.height = std::uint32_t(color->GetHeight());
 		fci.layers = 1;
@@ -63,7 +91,10 @@ namespace nCine::RhiVulkan
 			return 0;
 		}
 		framebuffer_ = reinterpret_cast<std::uint64_t>(framebuffer);
-		framebufferView_ = view;
+		for (std::uint32_t i = 0; i < count; i++) {
+			framebufferViews_[i] = views[i];
+		}
+		framebufferViewCount_ = count;
 		return framebuffer_;
 	}
 
@@ -72,9 +103,8 @@ namespace nCine::RhiVulkan
 		if (index < MaxColorAttachments) {
 			colorTextures_[index] = &texture;
 			texture.SetRenderTarget(true);
-			if (index == 0) {
-				ReleaseFramebuffer();
-			}
+			// Any attachment is (potentially) part of the framebuffer now, so a change to any slot rebuilds it
+			ReleaseFramebuffer();
 		}
 	}
 
@@ -82,9 +112,7 @@ namespace nCine::RhiVulkan
 	{
 		if (index < MaxColorAttachments) {
 			colorTextures_[index] = nullptr;
-			if (index == 0) {
-				ReleaseFramebuffer();
-			}
+			ReleaseFramebuffer();
 		}
 	}
 

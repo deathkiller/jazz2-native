@@ -15,8 +15,16 @@ float triangleWave(float x, float period) {
 
 void fragment() {
 	vec2 scale = vColor.xy;
+#ifndef SOFTWARE_RENDERER
 	vec2 shift1 = vTexCoords.xy;
 	vec2 shift2 = vTexCoords.zw;
+#else
+	// Software-renderer variant: see Include/ShieldFireFs.inc - vTexCoords is the quad-local position
+	// and the real texRect (the animated shifts) comes via the constant varying vShieldRect.
+	vec2 shift1 = vShieldRect.xy;
+	vec2 shift2 = vShieldRect.zw;
+	vec2 vPos = vTexCoords.xy * vec2(2.0) - vec2(1.0);
+#endif
 	float darkness = vColor.z;
 	float alpha = vColor.w;
 

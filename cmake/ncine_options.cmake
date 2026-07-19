@@ -11,34 +11,49 @@ option(NCINE_VERSION_FROM_GIT "Try to set current game version from GIT reposito
 #cmake_dependent_option(NCINE_DYNAMIC_LIBRARY "Compile the engine as a dynamic library" OFF "NOT EMSCRIPTEN" OFF)
 
 if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
-	if(NINTENDO_SWITCH)
+	if(NINTENDO_SWITCH OR VITA)
 		set(_NCINE_DEFAULT_BACKEND "SDL2")
 	else()
 		set(_NCINE_DEFAULT_BACKEND "GLFW")
 	endif()
-	set(NCINE_PREFERRED_BACKEND ${_NCINE_DEFAULT_BACKEND} CACHE STRING "Specify preferred backend on desktop")
-	#set_property(CACHE NCINE_PREFERRED_BACKEND PROPERTY STRINGS "GLFW;SDL2;QT5")
+	set(NCINE_PREFERRED_BACKEND ${_NCINE_DEFAULT_BACKEND} CACHE STRING "Specify preferred core backend")
 	set_property(CACHE NCINE_PREFERRED_BACKEND PROPERTY STRINGS "GLFW;SDL2")
 
-	# Rendering backend (RHI) selection. OpenGL is the default; the software (CPU), Direct3D 11, and Vulkan
-	# backends are mutually exclusive alternatives chosen through this single option. The non-OpenGL backends
-	# present through the SDL2 window (software via SDL_Renderer, D3D11 via a DXGI swap chain, Vulkan via a
-	# VkSwapchainKHR), so any of them forces the SDL2 window backend. Direct3D 11 requires Windows + MSVC;
-	# Vulkan is header-only (Khronos Vulkan-Headers via FetchContent) with a dynamic vulkan-1.dll loader (no
-	# Vulkan SDK). The rest of the build keys on this variable directly (NCINE_PREFERRED_RHI STREQUAL "...").
-	set(NCINE_PREFERRED_RHI "OpenGL" CACHE STRING "Rendering backend: OpenGL, Software, D3D11, or Vulkan")
-	set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "OpenGL;Software;D3D11;Vulkan")
+	if(VITA)
+		# PS Vita (the VitaSDK toolchain sets VITA): the OpenGL family runs through vitaGL, which is an
+		# OpenGL|ES 2.0 implementation - selecting "OpenGL" therefore force-enables the GLES path and the
+		# strict ES 2.0 profile below. The CPU software renderer is the only alternative. Direct3D 11 and
+		# Vulkan do not exist on the platform. The window backend is always SDL2 on Vita.
+		set(NCINE_PREFERRED_RHI "OpenGL" CACHE STRING "Rendering backend on PS Vita: OpenGL (ES 2.0 via vitaGL) or Software")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "OpenGL;Software")
 
-	if(NCINE_PREFERRED_RHI STREQUAL "D3D11" AND NOT (WIN32 AND MSVC))
-		message(FATAL_ERROR "NCINE_PREFERRED_RHI=D3D11 requires Windows with the MSVC toolchain")
-	elseif(NOT NCINE_PREFERRED_RHI MATCHES "^(OpenGL|Software|D3D11|Vulkan)$")
-		message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" (expected OpenGL, Software, D3D11, or Vulkan)")
-endif()
+		if(NCINE_PREFERRED_RHI STREQUAL "OpenGL")
+			set(NCINE_WITH_OPENGLES ON)
+			set(_NCINE_RHI_GL_PROFILE_ES2_FORCE ON)
+		elseif(NOT NCINE_PREFERRED_RHI STREQUAL "Software")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on PS Vita (expected OpenGL or Software)")
+		endif()
+	else()
+		# Rendering backend (RHI) selection. OpenGL is the default; the software (CPU), Direct3D 11, and Vulkan
+		# backends are mutually exclusive alternatives chosen through this single option. The non-OpenGL backends
+		# present through the SDL2 window (software via SDL_Renderer, D3D11 via a DXGI swap chain, Vulkan via a
+		# VkSwapchainKHR), so any of them forces the SDL2 window backend. Direct3D 11 requires Windows + MSVC;
+		# Vulkan is header-only (Khronos Vulkan-Headers via FetchContent) with a dynamic vulkan-1.dll loader (no
+		# Vulkan SDK). The rest of the build keys on this variable directly (NCINE_PREFERRED_RHI STREQUAL "...").
+		set(NCINE_PREFERRED_RHI "OpenGL" CACHE STRING "Rendering backend: OpenGL, Software, D3D11, or Vulkan")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "OpenGL;Software;D3D11;Vulkan")
 
-	# The non-OpenGL backends present through the SDL2 window, so force the SDL2 window backend
-	if(NOT NCINE_PREFERRED_RHI STREQUAL "OpenGL")
-		set(NCINE_PREFERRED_BACKEND "SDL2" CACHE STRING "Specify preferred backend on desktop" FORCE)
-endif()
+		if(NCINE_PREFERRED_RHI STREQUAL "D3D11" AND NOT (WIN32 AND MSVC))
+			message(FATAL_ERROR "NCINE_PREFERRED_RHI=D3D11 requires Windows with the MSVC toolchain")
+		elseif(NOT NCINE_PREFERRED_RHI MATCHES "^(OpenGL|Software|D3D11|Vulkan)$")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" (expected OpenGL, Software, D3D11, or Vulkan)")
+		endif()
+
+		# The non-OpenGL backends present through the SDL2 window, so force the SDL2 window backend
+		if(NOT NCINE_PREFERRED_RHI STREQUAL "OpenGL")
+			set(NCINE_PREFERRED_BACKEND "SDL2" CACHE STRING "Specify preferred core backend" FORCE)
+		endif()
+	endif()
 endif()
 
 if(EMSCRIPTEN)
@@ -74,7 +89,7 @@ else()
 			if(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 				set(_NCINE_WITH_ANGLE_DEFAULT OFF)
 			elseif(NCINE_PREFERRED_RHI STREQUAL "OpenGL")
-			set(_NCINE_WITH_ANGLE_DEFAULT ON)
+				set(_NCINE_WITH_ANGLE_DEFAULT ON)
 			else()
 				message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on UWP (expected D3D11 or OpenGL)")
 			endif()
@@ -102,12 +117,17 @@ endif()
 # targets the PS Vita (ES 2.0). It defaults ON when building against ANGLE for desktop testing and is only
 # available on OpenGL|ES builds - it is force-OFF (and thus must never affect) the desktop GL 3.3 and the
 # software (NCINE_PREFERRED_RHI=Software) builds.
-if(NCINE_WITH_ANGLE)
-	set(_NCINE_RHI_GL_PROFILE_ES2_DEFAULT ON)
+if(_NCINE_RHI_GL_PROFILE_ES2_FORCE)
+	# PS Vita: vitaGL IS an OpenGL|ES 2.0 implementation, so the strict profile is not optional there
+	set(NCINE_RHI_GL_PROFILE_ES2 ON)
 else()
-	set(_NCINE_RHI_GL_PROFILE_ES2_DEFAULT OFF)
+	if(NCINE_WITH_ANGLE)
+		set(_NCINE_RHI_GL_PROFILE_ES2_DEFAULT ON)
+	else()
+		set(_NCINE_RHI_GL_PROFILE_ES2_DEFAULT OFF)
+	endif()
+	cmake_dependent_option(NCINE_RHI_GL_PROFILE_ES2 "Request a real OpenGL|ES 2.0 profile (ESSL 100, no UBOs, no gl_VertexID)" ${_NCINE_RHI_GL_PROFILE_ES2_DEFAULT} "NCINE_WITH_ANGLE OR NCINE_WITH_OPENGLES" OFF)
 endif()
-cmake_dependent_option(NCINE_RHI_GL_PROFILE_ES2 "Request a real OpenGL|ES 2.0 profile (ESSL 100, no UBOs, no gl_VertexID)" ${_NCINE_RHI_GL_PROFILE_ES2_DEFAULT} "NCINE_WITH_ANGLE OR NCINE_WITH_OPENGLES" OFF)
 
 cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward library for exception handling" ON "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID" OFF)
 #option(NCINE_WITH_LZ4 "Enable LZ4 compression support" OFF)
@@ -215,7 +235,7 @@ option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-depen
 # Jazz² Resurrection options
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)
 option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF)
-cmake_dependent_option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each tilemap layer" ON "NOT NCINE_WITH_RHI_SOFTWARE" OFF)
+cmake_dependent_option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each tilemap layer" ON "NOT NCINE_PREFERRED_RHI STREQUAL Software" OFF)
 
 option(WITH_MULTIPLAYER "Enable multiplayer support" ON)
 cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN" OFF)

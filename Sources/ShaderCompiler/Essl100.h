@@ -17,6 +17,8 @@
 	                  fragment output is retargeted to gl_FragColor: "COLOR" becomes a local declared
 	                  at the top of main(), each "return;" is preceded by "gl_FragColor = COLOR;" and
 	                  a final "gl_FragColor = COLOR;" is appended before main()'s closing brace.
+	                  ES2 has ONLY gl_FragColor (no MRT), so a fragment stage with MORE than one "out"
+	                  declaration is declined with a clear diagnostic (never silently mangled).
 	- Both stages:    "texture(" -> "texture2D(", "textureLod(" -> "texture2DLod(" (comment-aware,
 	                  whole-identifier); "#ifdef GL_ES ... #endif" is unwrapped (GL_ES is always
 	                  defined under "#version 100", so the fragment precision prologue becomes

@@ -59,16 +59,20 @@ namespace Jazz2::Rendering
 		// alive after the Visit phase (the software device reads it during the later Draw phase), so it is a
 		// per-viewport member rather than a stack buffer.
 		SmallVector<LightEmitter, 0> _swLightsCache;
-		std::vector<float> _swLightmap;	// Half-resolution accumulation buffer, 2 floats/texel: R=intensity, G=brightness
+		// Half-resolution accumulation buffer, 2 floats/texel: R=intensity, G=brightness
+		SmallVector<float, 0> _swLightmap;
 
 		/**
-		 * @brief Builds the half-resolution dynamic lightmap on the CPU and hands it to the software device (software backend)
+		 * @brief Builds the half-resolution dynamic lightmap on the CPU and hands it plus the water parameters to the software device (software backend)
 		 *
 		 * Runs in the Visit (queue-building) phase: collects the light emitters, splats them into @ref _swLightmap and
-		 * submits the map plus this viewport's rectangle and ambient colour to the device (SetPendingSoftwareLighting).
-		 * The device applies the actual in-place combine during the Draw phase - after the scene has been rasterized
-		 * into the screen buffer and before the HUD - triggered by the Combine command @ref OnDraw queues. Returns
-		 * `true` when a combine command should be queued, `false` when the scene is fully lit with no lights.
+		 * submits the map plus this viewport's rectangle, ambient colour and water parameters (waterline, wave time,
+		 * camera Y) to the device (SetPendingSoftwareLighting). The device applies the actual in-place combine -
+		 * dynamic lighting and the lightweight per-row water effect that replaces the CombineWithWater shader
+		 * variants - during the Draw phase, after the scene has been rasterized into the screen buffer and before
+		 * the HUD, triggered by the Combine command @ref OnDraw queues. Returns `true` when a combine command should
+		 * be queued, `false` when the scene is fully lit with no lights and no water is in view (when water is in
+		 * view the combine is queued even fully lit, with no lightmap).
 		 */
 		bool PrepareSoftwareLighting();
 #endif

@@ -337,6 +337,11 @@ namespace nCine::RhiSoftware::sw
 		/** Wraps a signed integer texel coordinate into `[0, dim)`, mirroring SwRaster's WrapTexelCoord */
 		inline std::int32_t wrapTexel(std::int32_t idx, std::int32_t dim, nCine::SamplerWrapping mode)
 		{
+			// Fast path: an in-range coordinate maps to itself under every wrap mode, so the vast
+			// majority of samples skip the mode switch (and Repeat's integer division) entirely
+			if (static_cast<std::uint32_t>(idx) < static_cast<std::uint32_t>(dim)) {
+				return idx;
+			}
 			switch (mode) {
 				case nCine::SamplerWrapping::Repeat:
 					idx %= dim;
@@ -352,6 +357,21 @@ namespace nCine::RhiSoftware::sw
 				default:	// ClampToEdge (and Unknown)
 					return (idx < 0) ? 0 : (idx >= dim ? dim - 1 : idx);
 			}
+		}
+
+		/**
+			@brief Floor-to-integer without the `std::floor` library call
+
+			Bit-identical to `static_cast<std::int32_t>(std::floor(f))` for every value on which that
+			conversion is defined (any `f` whose floor fits in `int32`): truncate toward zero, then step
+			down one when truncation rounded up (negative non-integers). The `INT32_MIN` guard keeps the
+			already-out-of-range garbage inputs (a domain the old expression handled as UB) from
+			overflowing the adjustment.
+		*/
+		inline std::int32_t floorToInt(float f)
+		{
+			const std::int32_t i = static_cast<std::int32_t>(f);
+			return (static_cast<float>(i) > f && i != INT32_MIN) ? i - 1 : i;
 		}
 	}
 
@@ -379,15 +399,26 @@ namespace nCine::RhiSoftware::sw
 			return vec4(0.0f);
 		}
 		std::int32_t stride = tex->GetStrideBytes();
-		std::int32_t tx = detail::wrapTexel(static_cast<std::int32_t>(std::floor(uv.x * static_cast<float>(width))), width, tex->GetWrapS());
-		std::int32_t ty = detail::wrapTexel(static_cast<std::int32_t>(std::floor(uv.y * static_cast<float>(height))), height, tex->GetWrapT());
+		std::int32_t tx = detail::wrapTexel(detail::floorToInt(uv.x * static_cast<float>(width)), width, tex->GetWrapS());
+		std::int32_t ty = detail::wrapTexel(detail::floorToInt(uv.y * static_cast<float>(height)), height, tex->GetWrapT());
 		const std::uint8_t* texel = pixels + static_cast<std::size_t>(ty) * static_cast<std::size_t>(stride) + static_cast<std::size_t>(tx) * 4;
 
 		// Honor the texture's sampling swizzle, exactly as GLSL texture() does. It is identity for normal
-		// textures (a no-op), so this only ever remaps the palette-index RG8 textures, whose swizzle maps the
-		// sampled `.a` to the green channel (the packed per-pixel alpha) - the same source the hand-ported
-		// palette effect reads. Without this the promoted RGBA8 store's opaque byte-3 would drop that alpha.
+		// textures, so a four-way compare short-circuits the per-channel switch on the hot path; only the
+		// palette-index RG8 textures take the generic remap below (their swizzle maps the sampled `.a` to
+		// the green channel - the packed per-pixel alpha - the same source the hand-ported palette effect
+		// reads. Without this the promoted RGBA8 store's opaque byte-3 would drop that alpha).
+		//
+		// NOTE: the `/ 255.0f` byte normalization is kept verbatim (no reciprocal multiply, no lookup
+		// table): the Debug (/fp:precise) build compiles it as a true division while the Release
+		// (/fp:fast) build already rewrites it into `* (1/255)` on its own, and the two differ in the
+		// last bit for 126 of the 256 byte values - so any manual substitution would break bit-parity
+		// with the current output in one of the two float models.
 		const nCine::SwizzleChannel* swizzle = tex->GetSwizzle();
+		if (swizzle[0] == nCine::SwizzleChannel::Red && swizzle[1] == nCine::SwizzleChannel::Green &&
+		    swizzle[2] == nCine::SwizzleChannel::Blue && swizzle[3] == nCine::SwizzleChannel::Alpha) {
+			return vec4(texel[0] / 255.0f, texel[1] / 255.0f, texel[2] / 255.0f, texel[3] / 255.0f);
+		}
 		auto pickChannel = [texel](nCine::SwizzleChannel channel) -> float {
 			switch (channel) {
 				case nCine::SwizzleChannel::Red:	return texel[0] / 255.0f;
@@ -400,6 +431,55 @@ namespace nCine::RhiSoftware::sw
 			return 0.0f;
 		};
 		return vec4(pickChannel(swizzle[0]), pickChannel(swizzle[1]), pickChannel(swizzle[2]), pickChannel(swizzle[3]));
+	}
+
+	/**
+	 * @brief Reads the primary texel the rasterizer already sampled, the fast equivalent of
+	 *        `swTexture(in, unit, vec2(in.u, in.v))`
+	 *
+	 * The transpiler emits this for the exact `texture(uTexture, vTexCoords)` pattern - the sampler the
+	 * device keys the gather on (`FFState::textureUnit` is set from the same reflected `uTexture` unit
+	 * baked into @p unit here), sampled at the unmodified interpolated texcoord. For that pattern the
+	 * rasterizer's gather phase has already fetched the texel of this pixel into `in.rgba` (raw store
+	 * bytes, before the sampling swizzle), so the fragment reads it back - applying the unit's swizzle -
+	 * instead of re-deriving the texel address and re-fetching through the full sampler. For a
+	 * bilinear-filtered texture the gather holds the FILTERED sample - exactly what GL's `texture()`
+	 * returns there - so reading it back is what keeps `texture(uTexture, vTexCoords)` bilinear on the
+	 * software backend (the generic @ref swTexture samples nearest).
+	 *
+	 * Falls back to the generic @ref swTexture only when `in.rgba` is not guaranteed to hold that
+	 * sample: an unbound unit or empty store (the gather substitutes opaque white where `swTexture`
+	 * yields transparent black).
+	 */
+	inline vec4 swTexturePrimary(const FragmentShaderInput& in, int unit)
+	{
+		const SwTexture* tex = (unit >= 0 && unit < static_cast<int>(MaxTextureUnits) ? in.textures[unit] : nullptr);
+		if (tex != nullptr && tex->GetPixels(0) != nullptr) {
+			const std::int32_t width = tex->GetWidth();
+			const std::int32_t height = tex->GetHeight();
+			if (width > 0 && height > 0) {
+				const std::uint8_t* texel = in.rgba;
+				// Same swizzle handling (and the same verbatim `/ 255.0f`) as swTexture above
+				const nCine::SwizzleChannel* swizzle = tex->GetSwizzle();
+				if (swizzle[0] == nCine::SwizzleChannel::Red && swizzle[1] == nCine::SwizzleChannel::Green &&
+				    swizzle[2] == nCine::SwizzleChannel::Blue && swizzle[3] == nCine::SwizzleChannel::Alpha) {
+					return vec4(texel[0] / 255.0f, texel[1] / 255.0f, texel[2] / 255.0f, texel[3] / 255.0f);
+				}
+				auto pickChannel = [texel](nCine::SwizzleChannel channel) -> float {
+					switch (channel) {
+						case nCine::SwizzleChannel::Red:	return texel[0] / 255.0f;
+						case nCine::SwizzleChannel::Green:	return texel[1] / 255.0f;
+						case nCine::SwizzleChannel::Blue:	return texel[2] / 255.0f;
+						case nCine::SwizzleChannel::Alpha:	return texel[3] / 255.0f;
+						case nCine::SwizzleChannel::Zero:	return 0.0f;
+						case nCine::SwizzleChannel::One:	return 1.0f;
+					}
+					return 0.0f;
+				};
+				return vec4(pickChannel(swizzle[0]), pickChannel(swizzle[1]), pickChannel(swizzle[2]), pickChannel(swizzle[3]));
+			}
+		}
+		return swTexture(in, unit, vec2(in.u, in.v));
 	}
 
 	/**

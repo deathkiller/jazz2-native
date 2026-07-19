@@ -1,6 +1,15 @@
 #include "GLVertexArrayObject.h"
 #include "GLDebug.h"
 
+#if defined(RHI_GL_PROFILE_ES2)
+// Vertex array objects are not ES 2.0 core - this profile relies on GL_OES_vertex_array_object, whose
+// entry points carry the OES suffix on a true ES2 context (ANGLE and Vita-class drivers export them;
+// the extension is required by this engine's render loop, which binds all vertex state through VAOs)
+#	define glGenVertexArrays glGenVertexArraysOES
+#	define glDeleteVertexArrays glDeleteVertexArraysOES
+#	define glBindVertexArray glBindVertexArrayOES
+#endif
+
 namespace nCine::RhiGL
 {
 	unsigned int GLVertexArrayObject::boundVAO_ = 0;

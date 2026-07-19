@@ -10,6 +10,31 @@ namespace nCine::RhiGL
 	void GLTextureFormat::Resolve(PixelFormat format, bool bgr, GLint& internalFormat, GLenum& externalFormat, GLenum& dataType)
 	{
 		switch (format) {
+#if defined(RHI_GL_PROFILE_ES2)
+			// OpenGL|ES 2.0 core has no sized internal formats and no GL_RED/GL_RG - `internalformat` must equal
+			// `format` and be one of ALPHA/LUMINANCE/LUMINANCE_ALPHA/RGB/RGBA (ES 2.0 spec table 3.4). The engine's
+			// single/dual-channel data maps to LUMINANCE / LUMINANCE_ALPHA, which sample as (L,L,L,1) / (L,L,L,A) -
+			// exactly what the palette pipeline's GL3.3 swizzle produces for the channels its shaders read (.r/.a),
+			// so GLTexture::SetSwizzle() can be a no-op on this profile
+			case PixelFormat::RGBA8:
+				internalFormat = GL_RGBA; externalFormat = GL_RGBA; dataType = GL_UNSIGNED_BYTE; break;
+			case PixelFormat::RGB8:
+				internalFormat = GL_RGB; externalFormat = GL_RGB; dataType = GL_UNSIGNED_BYTE; break;
+			case PixelFormat::RG8:
+				internalFormat = GL_LUMINANCE_ALPHA; externalFormat = GL_LUMINANCE_ALPHA; dataType = GL_UNSIGNED_BYTE; break;
+			case PixelFormat::R8:
+				internalFormat = GL_LUMINANCE; externalFormat = GL_LUMINANCE; dataType = GL_UNSIGNED_BYTE; break;
+			// Depth *textures* need OES_depth_texture on ES2 and the engine only ever creates depth renderbuffers
+			// (GLRenderTarget), so the depth cases intentionally fall through to the unsupported-format assert
+
+			// Packed integer formats (already unsized in ES2 style; internal must equal external)
+			case PixelFormat::RGB5A1:
+				internalFormat = GL_RGBA; externalFormat = GL_RGBA; dataType = GL_UNSIGNED_SHORT_5_5_5_1; break;
+			case PixelFormat::RGBA4:
+				internalFormat = GL_RGBA; externalFormat = GL_RGBA; dataType = GL_UNSIGNED_SHORT_4_4_4_4; break;
+			case PixelFormat::RGB565:
+				internalFormat = GL_RGB; externalFormat = GL_RGB; dataType = GL_UNSIGNED_SHORT_5_6_5; break;
+#else
 			// Uncompressed integer formats (external pixel type is always GL_UNSIGNED_BYTE)
 			case PixelFormat::RGBA8:
 				internalFormat = GL_RGBA8; externalFormat = GL_RGBA; dataType = GL_UNSIGNED_BYTE; break;
@@ -31,6 +56,7 @@ namespace nCine::RhiGL
 				internalFormat = GL_RGBA4; externalFormat = GL_RGBA; dataType = GL_UNSIGNED_SHORT_4_4_4_4; break;
 			case PixelFormat::RGB565:
 				internalFormat = GL_RGB565; externalFormat = GL_RGB; dataType = GL_UNSIGNED_SHORT_5_6_5; break;
+#endif
 
 			// Floating-point formats (external pixel type is always GL_FLOAT)
 			case PixelFormat::RGBA16F:
@@ -122,7 +148,12 @@ namespace nCine::RhiGL
 		// Convert the external format to the corresponding BGR/BGRA one, matching the former `TextureFormat::bgrFormat()`
 		if (bgr) {
 			if (externalFormat == GL_RGBA) {
-#if !defined(WITH_OPENGLES)
+#if defined(RHI_GL_PROFILE_ES2)
+				// ES2's GL_EXT_texture_format_BGRA8888 requires `internalformat` to be GL_BGRA_EXT as well
+				// (ES2 core mandates internal == external), unlike ES3 where only the external format changes
+				externalFormat = GL_BGRA_EXT;
+				internalFormat = GL_BGRA_EXT;
+#elif !defined(WITH_OPENGLES)
 				externalFormat = GL_BGRA;
 #else
 				externalFormat = GL_BGRA_EXT;

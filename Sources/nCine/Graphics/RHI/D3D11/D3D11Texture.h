@@ -47,8 +47,8 @@ namespace nCine::RhiD3D11
 		/** @brief Releases the GPU texture / view / sampler (on re-allocation and destruction) */
 		void ReleaseGpu() const;
 
-		/** @brief Returns a synthetic handle uniquely identifying the texture (used by material sort keys) */
-		inline std::uint32_t GetGLHandle() const {
+		/** @brief Returns a backend-neutral identifier uniquely identifying the texture (feeds material sort keys) */
+		inline std::uint32_t GetUniqueId() const {
 			return handle_;
 		}
 		/** @brief Returns the texture target */

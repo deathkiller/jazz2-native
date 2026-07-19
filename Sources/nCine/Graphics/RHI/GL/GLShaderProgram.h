@@ -86,6 +86,10 @@ namespace nCine::RhiGL
 		inline GLuint GetGLHandle() const {
 			return glHandle_;
 		}
+		/** @brief Returns a backend-neutral identifier uniquely identifying the program (feeds material sort keys) */
+		inline std::uint32_t GetUniqueId() const {
+			return glHandle_;
+		}
 		/** @brief Returns the current lifecycle status */
 		inline Status GetStatus() const {
 			return status_;

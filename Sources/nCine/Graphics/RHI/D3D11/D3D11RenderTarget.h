@@ -66,7 +66,8 @@ namespace nCine::RhiD3D11
 
 		Records the color textures addressed by attachment index and an optional depth/stencil (ignored for
 		2D). @ref BindDraw() records the target on the device so the following clears and draws are associated
-		with its color attachment 0. The RTVs are created lazily from the attached textures and
+		with its contiguously attached color attachments (0..count-1, bounded by @ref SetDrawBuffers(), the
+		`glDrawBuffers` equivalent). One RTV per attachment is created lazily from the attached textures and
 		`OMSetRenderTargets` is routed through here.
 	*/
 	class D3D11RenderTarget
@@ -80,8 +81,18 @@ namespace nCine::RhiD3D11
 		D3D11RenderTarget(const D3D11RenderTarget&) = delete;
 		D3D11RenderTarget& operator=(const D3D11RenderTarget&) = delete;
 
-		/** @brief Returns the render target view of color attachment 0 (created lazily from its texture), or `nullptr` */
-		ID3D11RenderTargetView* GetRTV();
+		/** @brief Returns the render target view of the given color attachment (created lazily from its texture), or `nullptr` */
+		ID3D11RenderTargetView* GetRTV(std::uint32_t index = 0);
+		/**
+			@brief Fills @p outRtvs with the views of the contiguously attached color attachments enabled for drawing
+
+			The count is the contiguous attached run from attachment 0, bounded by @ref SetDrawBuffers()
+			(mirroring `glDrawBuffers`), and truncated at the first attachment whose view cannot be created.
+			@returns The number of views written (0 if attachment 0 is missing or unusable)
+		*/
+		std::uint32_t GetRTVs(ID3D11RenderTargetView* outRtvs[MaxColorAttachments]);
+		/** @brief Returns the number of contiguously attached color textures starting at attachment 0 */
+		std::uint32_t GetAttachedCount() const;
 
 		/** @brief Attaches a texture as the color attachment with the given index */
 		void AttachColorTexture(D3D11Texture& texture, std::uint32_t index);
@@ -113,12 +124,19 @@ namespace nCine::RhiD3D11
 		inline D3D11Texture* GetColorTexture(std::uint32_t index) const {
 			return (index < MaxColorAttachments ? colorTextures_[index] : nullptr);
 		}
+		/** @brief Returns the number of color attachments enabled for drawing (see @ref SetDrawBuffers()) */
+		inline std::uint32_t GetNumDrawBuffers() const {
+			return numDrawBuffers_;
+		}
 
 	private:
 		D3D11Texture* colorTextures_[MaxColorAttachments];
 		std::uint32_t numDrawBuffers_;
-		// Render target view of color attachment 0, created lazily and invalidated when the attachment changes
-		ID3D11RenderTargetView* rtv_;
-		D3D11Texture* rtvTexture_;		// the texture rtv_ was built for (to detect attachment changes)
+		// Render target view per color attachment, created lazily and invalidated when its attachment changes
+		ID3D11RenderTargetView* rtvs_[MaxColorAttachments];
+		D3D11Texture* rtvTextures_[MaxColorAttachments];	// the texture rtvs_[i] was built for (to detect attachment changes)
+
+		/** @brief Releases the view of one color attachment (on attachment change and destruction) */
+		void ReleaseRTV(std::uint32_t index);
 	};
 }

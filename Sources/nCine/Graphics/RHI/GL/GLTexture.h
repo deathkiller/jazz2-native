@@ -46,6 +46,10 @@ namespace nCine::RhiGL
 		inline GLuint GetGLHandle() const {
 			return glHandle_;
 		}
+		/** @brief Returns a backend-neutral identifier uniquely identifying the texture (feeds material sort keys) */
+		inline std::uint32_t GetUniqueId() const {
+			return glHandle_;
+		}
 		/** @brief Returns the target of the texture (e.g., `GL_TEXTURE_2D`) */
 		inline GLenum GetTarget() const {
 			return target_;

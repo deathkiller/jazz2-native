@@ -325,8 +325,10 @@ namespace ShaderCompiler
 			std::vector<AttributeDecl> Attributes;		// VS in
 			std::vector<GlobalVarDecl> GlobalVars;
 			std::vector<Function> Functions;
-			String FragOutputName;						// FS "out vec4 COLOR;"
-			TyRef FragOutputType;
+			// FS "out" declarations in DECLARATION ORDER; index i renders to SV_Target<i>. A single output
+			// keeps the historical "PSMain(...) : SV_Target" shape; multiple emit a PsOutput struct.
+			struct FragOutputDecl { String Name; TyRef Type; };
+			std::vector<FragOutputDecl> FragOutputs;
 
 		private:
 			const std::vector<GlslToken>& _toks;
@@ -513,8 +515,10 @@ namespace ShaderCompiler
 						VaryingDecl v; v.Name = std::move(name); v.Type = t; v.Flat = isFlat;
 						Varyings.push_back(std::move(v));
 					} else {
-						if (!FragOutputName.empty()) { Fail("multiple fragment outputs are unsupported"_s); return; }
-						FragOutputName = std::move(name); FragOutputType = t;
+						// Render-target index = declaration order (SV_Target0..N); an explicit location would
+						// diverge from that scheme (and from the offline SPIR-V emission), so it is declined
+						if (location >= 0) { Fail("explicit locations on fragment outputs are unsupported (render targets follow declaration order)"_s); return; }
+						FragOutputs.push_back({ std::move(name), t });
 					}
 				} else {
 					GlobalVarDecl g; g.Name = std::move(name); g.Type = t; g.IsConst = isConst; g.Init = std::move(init);
@@ -900,7 +904,7 @@ namespace ShaderCompiler
 				const Function* main = nullptr;
 				for (const Function& fn : _p.Functions) if (fn.Name == "main") { main = &fn; break; }
 				if (main == nullptr) { Fail("no main() function found"_s); return {}; }
-				if (!_vertexStage && _p.FragOutputName.empty()) { Fail("fragment shader has no color output"_s); return {}; }
+				if (!_vertexStage && _p.FragOutputs.empty()) { Fail("fragment shader has no color output"_s); return {}; }
 
 				// Emit helper + entry bodies FIRST: this records gl_VertexID / gl_FragCoord usage that the I/O
 				// structs and copy-in prologue depend on.
@@ -1048,7 +1052,9 @@ namespace ShaderCompiler
 				} else {
 					if (_usedFragCoord) out += "static float4 gl_FragCoord;\n"_s;
 					for (const VaryingDecl& v : _p.Varyings) out += "static "_s + HlslType(v.Type) + " "_s + v.Name + ";\n"_s;
-					out += "static "_s + HlslType(_p.FragOutputType) + " "_s + _p.FragOutputName + ";\n"_s;
+					for (const Parser::FragOutputDecl& o : _p.FragOutputs) {
+						out += "static "_s + HlslType(o.Type) + " "_s + o.Name + ";\n"_s;
+					}
 				}
 				out += "\n"_s;
 				return out;
@@ -1091,6 +1097,16 @@ namespace ShaderCompiler
 							_p.Varyings[i].Name + " : TEXCOORD"_s + Death::format("{}", i) + ";\n"_s;
 					}
 					out += "};\n\n"_s;
+					// Multiple render targets: one SV_Target<i> per fragment output, in declaration order
+					// (a single output keeps the historical "PSMain(...) : SV_Target" return instead)
+					if (_p.FragOutputs.size() > 1) {
+						out += "struct PsOutput\n{\n"_s;
+						for (std::size_t i = 0; i < _p.FragOutputs.size(); i++) {
+							out += "\t"_s + HlslType(_p.FragOutputs[i].Type) + " "_s + _p.FragOutputs[i].Name +
+								" : SV_Target"_s + Death::format("{}", i) + ";\n"_s;
+						}
+						out += "};\n\n"_s;
+					}
 				}
 				return out;
 			}
@@ -1098,7 +1114,16 @@ namespace ShaderCompiler
 			String ReturnEpilogue(const String& indent)
 			{
 				if (!_vertexStage) {
-					return indent + "return "_s + _p.FragOutputName + ";\n"_s;
+					if (_p.FragOutputs.size() <= 1) {
+						return indent + "return "_s + _p.FragOutputs[0].Name + ";\n"_s;
+					}
+					String mrt;
+					mrt += indent + "PsOutput _output = (PsOutput)0;\n"_s;
+					for (const Parser::FragOutputDecl& o : _p.FragOutputs) {
+						mrt += indent + "_output."_s + o.Name + " = "_s + o.Name + ";\n"_s;
+					}
+					mrt += indent + "return _output;\n"_s;
+					return mrt;
 				}
 				String out;
 				out += indent + "VsOutput _output = (VsOutput)0;\n"_s;
@@ -1127,7 +1152,11 @@ namespace ShaderCompiler
 					if (_usedInstanceID) out += "\tgl_InstanceID = _input._instanceID;\n"_s;
 					for (const AttributeDecl& a : _p.Attributes) out += "\t"_s + a.Name + " = _input."_s + a.Name + ";\n"_s;
 				} else {
-					out += "float4 PSMain(PsInput _input) : SV_Target\n{\n"_s;
+					if (_p.FragOutputs.size() > 1) {
+						out += "PsOutput PSMain(PsInput _input)\n{\n"_s;
+					} else {
+						out += "float4 PSMain(PsInput _input) : SV_Target\n{\n"_s;
+					}
 					if (_usedFragCoord) out += "\tgl_FragCoord = _input._fragCoord;\n"_s;
 					for (const VaryingDecl& v : _p.Varyings) out += "\t"_s + v.Name + " = _input."_s + v.Name + ";\n"_s;
 				}
@@ -1264,7 +1293,11 @@ namespace ShaderCompiler
 				if (name == "gl_Position") return { Ty::Vec4, {} };
 				if (name == "gl_FragCoord") return { Ty::Vec4, {} };
 				if (name == "gl_VertexID" || name == "gl_InstanceID") return { Ty::UInt, {} };
-				if (!_vertexStage && name == _p.FragOutputName) return _p.FragOutputType;
+				if (!_vertexStage) {
+					for (const Parser::FragOutputDecl& o : _p.FragOutputs) {
+						if (name == o.Name) return o.Type;
+					}
+				}
 				if (_samplerNames.find(String{name}) != _samplerNames.end()) return { Ty::Sampler2D, {} };
 				return { Ty::Unknown, {} };
 			}

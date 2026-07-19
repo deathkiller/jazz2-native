@@ -1,5 +1,6 @@
 #include "SwTexture.h"
 #include "SwDevice.h"
+#include "SwRaster.h"
 
 #include <cstring>
 
@@ -29,9 +30,10 @@ namespace nCine::RhiSoftware
 	}
 
 	std::uint32_t SwTexture::nextHandle_ = 1;
+	std::uint32_t SwTexture::nextContentVersion_ = 0;
 
 	SwTexture::SwTexture(TextureTarget target)
-		: handle_(nextHandle_++), target_(target), format_(PixelFormat::Unknown), uploadFormat_(PixelFormat::Unknown),
+		: handle_(nextHandle_++), contentVersion_(0), target_(target), format_(PixelFormat::Unknown), uploadFormat_(PixelFormat::Unknown),
 			width_(0), height_(0), strideBytes_(0),
 			minFilter_(nCine::SamplerFilter::Nearest), magFilter_(nCine::SamplerFilter::Nearest), wrap_(SamplerWrapping::ClampToEdge),
 			textureUnit_(0), isRenderTarget_(false)
@@ -77,7 +79,16 @@ namespace nCine::RhiSoftware
 		height_ = height;
 		const std::int32_t bpp = BytesPerPixel(format_);
 		strideBytes_ = width * bpp;
+		// A deferred tile-renderer command may still reference this texture's current store (the prepared
+		// command snapshots the level-0 pixel pointer at submit); drain the queue before the buffer can be
+		// reallocated so no worker rasterizes from freed memory. A no-op when nothing is queued.
+		if (!pixels_.empty()) {
+			SwRaster::Flush();
+		}
 		pixels_.assign(std::size_t(strideBytes_) * std::size_t(height > 0 ? height : 0), std::uint8_t(0));
+		// The store content changed; the counter is process-global so a stamp is never repeated, even by
+		// a different texture object reusing this one's address
+		contentVersion_ = ++nextContentVersion_;
 	}
 
 	bool SwTexture::Bind(std::uint32_t textureUnit) const
@@ -121,6 +132,7 @@ namespace nCine::RhiSoftware
 						dstBpp, src + std::size_t(y) * std::size_t(width_) * srcBpp, srcBpp, width_);
 				}
 			}
+			contentVersion_ = ++nextContentVersion_;
 		}
 	}
 
@@ -157,6 +169,7 @@ namespace nCine::RhiSoftware
 			std::uint8_t* dstRow = pixels_.data() + std::size_t(dstY) * strideBytes_ + std::size_t(dstX) * dstBpp;
 			CopyExpandRow(dstRow, dstBpp, srcRow, srcBpp, copyW);
 		}
+		contentVersion_ = ++nextContentVersion_;
 	}
 
 	void SwTexture::TexStorage2D(std::int32_t levels, PixelFormat format, std::int32_t width, std::int32_t height)

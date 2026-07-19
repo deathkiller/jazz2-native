@@ -149,6 +149,9 @@ namespace nCine::RhiVulkan
 		std::uint32_t s_graphicsFamily = 0;
 		std::uint32_t s_presentFamily = 0;
 		VkDeviceSize s_minUboAlign = 256;
+		// Physical-device limits published through GfxCapabilities (safe pre-creation defaults)
+		std::uint32_t s_maxImageDim2D = 16384;
+		std::uint32_t s_maxUniformRange = 64 * 1024;
 		bool s_depthClamp = false;
 
 		VkSwapchainKHR s_swapchain = VK_NULL_HANDLE;
@@ -238,8 +241,38 @@ namespace nCine::RhiVulkan
 		std::unordered_map<std::uint64_t, VkDescriptorSet> s_frameSetByHash;
 		std::vector<std::uint8_t> s_uboScratch;	// reused uniform-gather buffer
 
-		// Single-color-attachment render passes keyed by format (loadOp LOAD, layout COLOR_ATTACHMENT_OPTIMAL)
-		std::unordered_map<std::uint32_t, VkRenderPass> s_renderPasses;
+		// Color-only render passes keyed by the full attachment-format signature - count + per-attachment format -
+		// (loadOp LOAD, layout COLOR_ATTACHMENT_OPTIMAL). Single-attachment targets and the screen use count 1;
+		// multi-render-target framebuffers get a compatible pass over all their attachments.
+		struct RenderPassKey
+		{
+			std::uint32_t count;
+			std::uint32_t formats[VulkanRenderTarget::MaxColorAttachments];
+			bool operator==(const RenderPassKey& o) const {
+				if (count != o.count) {
+					return false;
+				}
+				for (std::uint32_t i = 0; i < count; i++) {
+					if (formats[i] != o.formats[i]) {
+						return false;
+					}
+				}
+				return true;
+			}
+		};
+		struct RenderPassKeyHash
+		{
+			std::size_t operator()(const RenderPassKey& k) const {
+				std::uint64_t h = 1469598103934665603ull;
+				auto mix = [&h](std::uint64_t v) { h ^= v; h *= 1099511628211ull; };
+				mix(k.count);
+				for (std::uint32_t i = 0; i < k.count; i++) {
+					mix(k.formats[i]);
+				}
+				return std::size_t(h);
+			}
+		};
+		std::unordered_map<RenderPassKey, VkRenderPass, RenderPassKeyHash> s_renderPasses;
 
 		// 1x1 white fallback texture bound when a sampler has no texture (keeps the descriptor valid)
 		VkImage s_dummyImage = VK_NULL_HANDLE;
@@ -257,9 +290,11 @@ namespace nCine::RhiVulkan
 			std::uint32_t rasterKey;
 			std::uint32_t topology;
 			std::uint32_t hasVertexInput;
+			std::uint32_t colorAttachmentCount;	// the subpass attachment count (the blend-state array is sized to it)
 			bool operator==(const PipelineKey& o) const {
 				return programHandle == o.programHandle && renderPass == o.renderPass && stride == o.stride &&
-					blendKey == o.blendKey && rasterKey == o.rasterKey && topology == o.topology && hasVertexInput == o.hasVertexInput;
+					blendKey == o.blendKey && rasterKey == o.rasterKey && topology == o.topology &&
+					hasVertexInput == o.hasVertexInput && colorAttachmentCount == o.colorAttachmentCount;
 			}
 		};
 		struct PipelineKeyHash
@@ -269,6 +304,7 @@ namespace nCine::RhiVulkan
 				auto mix = [&h](std::uint64_t v) { h ^= v; h *= 1099511628211ull; };
 				mix(k.programHandle); mix(k.renderPass); mix(k.stride);
 				mix(k.blendKey); mix(k.rasterKey); mix(std::uint64_t(k.topology) | (std::uint64_t(k.hasVertexInput) << 32));
+				mix(k.colorAttachmentCount);
 				return std::size_t(h);
 			}
 		};
@@ -352,8 +388,26 @@ namespace nCine::RhiVulkan
 			}
 		}
 
-		VkFormat AttributeFormat(std::int32_t componentCount)
+		VkFormat AttributeFormat(std::int32_t componentCount, std::uint32_t type, bool normalized)
 		{
+			// The recorded type uses the GL numeric constants (see VertexAttribType); 0 (unset) means float.
+			// Unsigned-byte attributes (e.g. the ImGui vertex color, 4 x u8 normalized) map to the R8 formats.
+			if (type == std::uint32_t(VertexAttribType::UnsignedByte)) {
+				if (normalized) {
+					switch (componentCount) {
+						case 1: return VK_FORMAT_R8_UNORM;
+						case 2: return VK_FORMAT_R8G8_UNORM;
+						case 3: return VK_FORMAT_R8G8B8_UNORM;
+						default: return VK_FORMAT_R8G8B8A8_UNORM;
+					}
+				}
+				switch (componentCount) {
+					case 1: return VK_FORMAT_R8_UINT;
+					case 2: return VK_FORMAT_R8G8_UINT;
+					case 3: return VK_FORMAT_R8G8B8_UINT;
+					default: return VK_FORMAT_R8G8B8A8_UINT;
+				}
+			}
 			switch (componentCount) {
 				case 1: return VK_FORMAT_R32_SFLOAT;
 				case 2: return VK_FORMAT_R32G32_SFLOAT;
@@ -524,6 +578,21 @@ namespace nCine::RhiVulkan
 	VkPhysicalDevice VkPhysicalDeviceHandle() { return s_physicalDevice; }
 	VkDeviceSize VkMinUniformBufferOffsetAlignment() { return s_minUboAlign; }
 
+	std::int32_t VulkanDevice::GetMaxTextureDimension()
+	{
+		return (s_maxImageDim2D > 0x7FFFFFFFu ? 0x7FFFFFFF : std::int32_t(s_maxImageDim2D));
+	}
+
+	std::int32_t VulkanDevice::GetUniformBufferOffsetAlignment()
+	{
+		return std::int32_t(s_minUboAlign);
+	}
+
+	std::int32_t VulkanDevice::GetMaxUniformBufferRange()
+	{
+		return (s_maxUniformRange > 0x7FFFFFFFu ? 0x7FFFFFFF : std::int32_t(s_maxUniformRange));
+	}
+
 	std::uint32_t VkFindMemoryType(std::uint32_t typeBits, VkMemoryPropertyFlags properties)
 	{
 		for (std::uint32_t i = 0; i < s_memProps.memoryTypeCount; i++) {
@@ -616,30 +685,44 @@ namespace nCine::RhiVulkan
 		}
 	}
 
-	VkRenderPass VkGetColorRenderPass(VkFormat format)
+	VkRenderPass VkGetColorRenderPassMrt(const VkFormat* formats, std::uint32_t count)
 	{
-		auto it = s_renderPasses.find(std::uint32_t(format));
+		if (count == 0 || count > VulkanRenderTarget::MaxColorAttachments) {
+			return VK_NULL_HANDLE;
+		}
+		RenderPassKey key = {};
+		key.count = count;
+		for (std::uint32_t i = 0; i < count; i++) {
+			key.formats[i] = std::uint32_t(formats[i]);
+		}
+		auto it = s_renderPasses.find(key);
 		if (it != s_renderPasses.end()) {
 			return it->second;
 		}
-		VkAttachmentDescription color = {};
-		color.format = format;
-		color.samples = VK_SAMPLE_COUNT_1_BIT;
-		color.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;			// contents preserved; the engine clears explicitly
-		color.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		color.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		color.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		color.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		color.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		VkAttachmentReference ref = {};
-		ref.attachment = 0;
-		ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		// Every color attachment is preserved (loadOp LOAD; the engine clears explicitly) and written by the
+		// single subpass; the external dependencies cover the sampled-image and blit consumers of ALL attachments
+		// (they are stage/access-scoped, not per-attachment, so the single-attachment scopes generalize as-is).
+		VkAttachmentDescription colors[VulkanRenderTarget::MaxColorAttachments] = {};
+		VkAttachmentReference refs[VulkanRenderTarget::MaxColorAttachments] = {};
+		for (std::uint32_t i = 0; i < count; i++) {
+			VkAttachmentDescription& color = colors[i];
+			color.format = formats[i];
+			color.samples = VK_SAMPLE_COUNT_1_BIT;
+			color.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			color.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			color.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			color.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			color.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			color.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			refs[i].attachment = i;
+			refs[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		}
 
 		VkSubpassDescription subpass = {};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &ref;
+		subpass.colorAttachmentCount = count;
+		subpass.pColorAttachments = refs;
 
 		VkSubpassDependency deps[2] = {};
 		deps[0].srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -657,8 +740,8 @@ namespace nCine::RhiVulkan
 
 		VkRenderPassCreateInfo rpci = {};
 		rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		rpci.attachmentCount = 1;
-		rpci.pAttachments = &color;
+		rpci.attachmentCount = count;
+		rpci.pAttachments = colors;
 		rpci.subpassCount = 1;
 		rpci.pSubpasses = &subpass;
 		rpci.dependencyCount = 2;
@@ -667,8 +750,13 @@ namespace nCine::RhiVulkan
 		if (vkCreateRenderPass(s_device, &rpci, nullptr, &rp) != VK_SUCCESS) {
 			return VK_NULL_HANDLE;
 		}
-		s_renderPasses[std::uint32_t(format)] = rp;
+		s_renderPasses[key] = rp;
 		return rp;
+	}
+
+	VkRenderPass VkGetColorRenderPass(VkFormat format)
+	{
+		return VkGetColorRenderPassMrt(&format, 1);
 	}
 
 	// -- Pipeline cache --
@@ -706,7 +794,7 @@ namespace nCine::RhiVulkan
 			s_lastScissorValid = false;
 		}
 
-		VkPipeline GetOrCreatePipeline(VulkanShaderProgram* prog, PrimitiveType primitive, VkRenderPass renderPass)
+		VkPipeline GetOrCreatePipeline(VulkanShaderProgram* prog, PrimitiveType primitive, VkRenderPass renderPass, std::uint32_t numColorAttachments)
 		{
 			VulkanShaderProgram::VertexAttrib attribs[16];
 			std::uint32_t attribCount = 0;
@@ -714,6 +802,9 @@ namespace nCine::RhiVulkan
 			const bool hasVI = prog->HasVertexAttributes();
 			if (hasVI) {
 				attribCount = prog->GetVertexInput(attribs, 16, stride);
+			}
+			if (numColorAttachments == 0 || numColorAttachments > VulkanRenderTarget::MaxColorAttachments) {
+				numColorAttachments = 1;
 			}
 
 			const VulkanDevice::BlendingState blend = VulkanDevice::GetBlendingState();
@@ -723,13 +814,14 @@ namespace nCine::RhiVulkan
 			const std::uint32_t rasterKey = (cull.Enabled ? 1u : 0u) | (std::uint32_t(cull.Mode) << 1);
 
 			PipelineKey key;
-			key.programHandle = prog->GetGLHandle();
+			key.programHandle = prog->GetUniqueId();
 			key.renderPass = reinterpret_cast<std::uint64_t>(renderPass);
 			key.stride = stride;
 			key.blendKey = blendKey;
 			key.rasterKey = rasterKey;
 			key.topology = std::uint32_t(MapPrimitive(primitive));
 			key.hasVertexInput = hasVI ? 1u : 0u;
+			key.colorAttachmentCount = numColorAttachments;
 
 			auto it = s_pipelines.find(key);
 			if (it != s_pipelines.end()) {
@@ -757,7 +849,7 @@ namespace nCine::RhiVulkan
 					VkVertexInputAttributeDescription& d = viAttribs[viAttribCount++];
 					d.location = attribs[i].Location;
 					d.binding = 0;
-					d.format = AttributeFormat(attribs[i].ComponentCount);
+					d.format = AttributeFormat(attribs[i].ComponentCount, attribs[i].Type, attribs[i].Normalized);
 					d.offset = attribs[i].Offset;
 				}
 			}
@@ -801,6 +893,8 @@ namespace nCine::RhiVulkan
 			ds.depthWriteEnable = VK_FALSE;
 			ds.depthCompareOp = VK_COMPARE_OP_ALWAYS;
 
+			// One blend state per subpass color attachment (Vulkan requires attachmentCount to match the subpass).
+			// All entries share the same state, so the independentBlend device feature is not required.
 			VkPipelineColorBlendAttachmentState cba = {};
 			cba.blendEnable = blend.Enabled ? VK_TRUE : VK_FALSE;
 			cba.srcColorBlendFactor = MapBlend(blend.SrcRgb);
@@ -810,10 +904,14 @@ namespace nCine::RhiVulkan
 			cba.dstAlphaBlendFactor = MapBlend(blend.DstAlpha);
 			cba.alphaBlendOp = VK_BLEND_OP_ADD;
 			cba.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+			VkPipelineColorBlendAttachmentState cbas[VulkanRenderTarget::MaxColorAttachments];
+			for (std::uint32_t i = 0; i < numColorAttachments; i++) {
+				cbas[i] = cba;
+			}
 			VkPipelineColorBlendStateCreateInfo cb = {};
 			cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-			cb.attachmentCount = 1;
-			cb.pAttachments = &cba;
+			cb.attachmentCount = numColorAttachments;
+			cb.pAttachments = cbas;
 
 			const VkDynamicState dynStates[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 			VkPipelineDynamicStateCreateInfo dyn = {};
@@ -845,7 +943,7 @@ namespace nCine::RhiVulkan
 
 			VkPipeline pipeline = VK_NULL_HANDLE;
 			if (vkCreateGraphicsPipelines(s_device, s_pipelineCache, 1, &gpci, nullptr, &pipeline) != VK_SUCCESS) {
-				LOGE("vkCreateGraphicsPipelines failed for program {}", prog->GetGLHandle());
+				LOGE("vkCreateGraphicsPipelines failed for program {}", prog->GetUniqueId());
 				return VK_NULL_HANDLE;
 			}
 			s_pipelines[key] = pipeline;
@@ -873,6 +971,27 @@ namespace nCine::RhiVulkan
 			layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		}
 
+		// Returns the (cached) render pass matching the current attachment signature of @p target - the screen's
+		// single-attachment pass when @p target is nullptr - and its subpass color-attachment count
+		VkRenderPass ResolveRenderPass(VulkanRenderTarget* target, std::uint32_t& outColorCount)
+		{
+			if (target == nullptr) {
+				outColorCount = 1;
+				return VkGetColorRenderPass(s_swapchainFormat);
+			}
+			const std::uint32_t count = target->GetAttachedCount();
+			if (count == 0) {
+				outColorCount = 0;
+				return VK_NULL_HANDLE;
+			}
+			VkFormat formats[VulkanRenderTarget::MaxColorAttachments];
+			for (std::uint32_t i = 0; i < count; i++) {
+				formats[i] = VkFormat(target->GetColorTexture(i)->GpuFormat());
+			}
+			outColorCount = count;
+			return VkGetColorRenderPassMrt(formats, count);
+		}
+
 		// Ensures a render pass is open for the current RHI render target (nullptr == the screen image)
 		bool EnsureRenderPass(VulkanRenderTarget* target)
 		{
@@ -898,12 +1017,19 @@ namespace nCine::RhiVulkan
 				if (color == nullptr || fb == 0) {
 					return false;
 				}
-				VkImage image = reinterpret_cast<VkImage>(color->GpuImage());
-				VkImageLayout layout = VkImageLayout(color->GetCurrentLayout());
-				ToColorAttachment(image, layout);
-				color->SetCurrentLayout(std::uint32_t(layout));
+				// Every attachment of the framebuffer must be in COLOR_ATTACHMENT_OPTIMAL when the LOAD-op render
+				// pass begins (each may have last been sampled, i.e. left in SHADER_READ_ONLY)
+				const std::uint32_t count = target->GetAttachedCount();
+				for (std::uint32_t i = 0; i < count; i++) {
+					VulkanTexture* attachment = target->GetColorTexture(i);
+					VkImage image = reinterpret_cast<VkImage>(attachment->GpuImage());
+					VkImageLayout layout = VkImageLayout(attachment->GetCurrentLayout());
+					ToColorAttachment(image, layout);
+					attachment->SetCurrentLayout(std::uint32_t(layout));
+				}
+				std::uint32_t colorCount = 0;
 				framebuffer = reinterpret_cast<VkFramebuffer>(fb);
-				renderPass = VkGetColorRenderPass(VkFormat(color->GpuFormat()));
+				renderPass = ResolveRenderPass(target, colorCount);
 				extent = { std::uint32_t(color->GetWidth()), std::uint32_t(color->GetHeight()) };
 			}
 			if (framebuffer == VK_NULL_HANDLE || renderPass == VK_NULL_HANDLE || extent.width == 0) {
@@ -1038,13 +1164,29 @@ namespace nCine::RhiVulkan
 		if (!EnsureRenderPass(currentRenderTarget_)) {
 			return;
 		}
-		VkClearAttachment ca = {};
-		ca.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		ca.colorAttachment = 0;
-		ca.clearValue.color.float32[0] = clearColor_.R;
-		ca.clearValue.color.float32[1] = clearColor_.G;
-		ca.clearValue.color.float32[2] = clearColor_.B;
-		ca.clearValue.color.float32[3] = clearColor_.A;
+		// GL semantics: glClear covers every color attachment enabled for drawing, so clear all of the render
+		// pass's attachments (bounded by the target's draw-buffer count, mirroring glDrawBuffers)
+		std::uint32_t clearCount = 1;
+		if (currentRenderTarget_ != nullptr) {
+			clearCount = currentRenderTarget_->GetAttachedCount();
+			const std::uint32_t numDrawBuffers = currentRenderTarget_->GetNumDrawBuffers();
+			if (numDrawBuffers > 0 && numDrawBuffers < clearCount) {
+				clearCount = numDrawBuffers;
+			}
+			if (clearCount == 0) {
+				return;
+			}
+		}
+		VkClearAttachment cas[VulkanRenderTarget::MaxColorAttachments] = {};
+		for (std::uint32_t i = 0; i < clearCount; i++) {
+			VkClearAttachment& ca = cas[i];
+			ca.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			ca.colorAttachment = i;
+			ca.clearValue.color.float32[0] = clearColor_.R;
+			ca.clearValue.color.float32[1] = clearColor_.G;
+			ca.clearValue.color.float32[2] = clearColor_.B;
+			ca.clearValue.color.float32[3] = clearColor_.A;
+		}
 		VkExtent2D extent = (currentRenderTarget_ == nullptr) ? s_screenExtent
 			: VkExtent2D{ std::uint32_t(currentRenderTarget_->GetColorTexture(0) ? currentRenderTarget_->GetColorTexture(0)->GetWidth() : 0),
 						  std::uint32_t(currentRenderTarget_->GetColorTexture(0) ? currentRenderTarget_->GetColorTexture(0)->GetHeight() : 0) };
@@ -1053,7 +1195,7 @@ namespace nCine::RhiVulkan
 		rect.rect.extent = extent;
 		rect.baseArrayLayer = 0;
 		rect.layerCount = 1;
-		vkCmdClearAttachments(s_commandBuffer, 1, &ca, 1, &rect);
+		vkCmdClearAttachments(s_commandBuffer, clearCount, cas, 1, &rect);
 	}
 
 	// -- Draws --
@@ -1092,14 +1234,14 @@ namespace nCine::RhiVulkan
 			// UBO bytes are deduped by content so identical draws land on the same ring region (and thus the same
 			// key), letting the whole descriptor set be reused below.
 			std::uint64_t keyHash = 1469598103934665603ull;
-			HashU64(keyHash, prog->GetGLHandle());
+			HashU64(keyHash, prog->GetUniqueId());
 
 			for (const VulkanShaderProgram::DescriptorBinding& b : bindings) {
 				if (writeCount >= 16) {
 					static bool warnedBindingOverflow = false;
 					if (!warnedBindingOverflow) {
 						warnedBindingOverflow = true;
-						LOGW("Program {} declares more than 16 descriptor bindings; the rest are dropped", prog->GetGLHandle());
+						LOGW("Program {} declares more than 16 descriptor bindings, the rest are dropped", prog->GetUniqueId());
 					}
 					break;
 				}
@@ -1180,7 +1322,7 @@ namespace nCine::RhiVulkan
 						static bool warnedRingExhausted = false;
 						if (!warnedRingExhausted) {
 							warnedRingExhausted = true;
-							LOGW("Per-frame uniform ring exhausted ({} bytes); draws are rendered with stale uniforms", s_uboPerFrameSize);
+							LOGW("Per-frame uniform ring exhausted ({} bytes), draws are rendered with stale uniforms", s_uboPerFrameSize);
 						}
 						continue;
 					}
@@ -1313,10 +1455,9 @@ namespace nCine::RhiVulkan
 				return;
 			}
 
-			VkRenderPass renderPass = (s_activeRenderPassTarget == nullptr)
-				? VkGetColorRenderPass(s_swapchainFormat)
-				: VkGetColorRenderPass(VkFormat(s_activeRenderPassTarget->GetColorTexture(0)->GpuFormat()));
-			VkPipeline pipeline = GetOrCreatePipeline(prog, primitive, renderPass);
+			std::uint32_t colorCount = 0;
+			VkRenderPass renderPass = ResolveRenderPass(s_activeRenderPassTarget, colorCount);
+			VkPipeline pipeline = GetOrCreatePipeline(prog, primitive, renderPass, colorCount);
 			if (pipeline == VK_NULL_HANDLE) {
 				return;
 			}
@@ -1451,7 +1592,7 @@ namespace nCine::RhiVulkan
 		if (s_device != VK_NULL_HANDLE) {
 			vkDeviceWaitIdle(s_device);
 		}
-		const std::uint32_t handle = program->GetGLHandle();
+		const std::uint32_t handle = program->GetUniqueId();
 		for (auto it = s_pipelines.begin(); it != s_pipelines.end(); ) {
 			if (it->first.programHandle == handle) {
 				vkDestroyPipeline(s_device, it->second, nullptr);
@@ -1837,7 +1978,7 @@ namespace nCine::RhiVulkan
 			if (caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
 				usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			} else {
-				LOGW("Swap-chain images lack TRANSFER_DST usage; the present blit may fail");
+				LOGW("Swap-chain images lack TRANSFER_DST usage, the present blit may fail");
 			}
 
 			VkSwapchainCreateInfoKHR sci = {};
@@ -1894,6 +2035,83 @@ namespace nCine::RhiVulkan
 			return true;
 		}
 	}
+
+#if defined(VULKAN_MRT_PROBE)
+	namespace
+	{
+		// Synthetic multi-render-target self-test, compiled only when VULKAN_MRT_PROBE is defined (no runtime
+		// cost otherwise). Run once at device creation: attaches TWO color textures to one render target, clears
+		// attachment 0 red and attachment 1 green through the 2-attachment render pass / framebuffer, reads both
+		// back through the regular readback path and logs PASS/FAIL. Exercises the MRT render-pass cache, the
+		// multi-view framebuffer, per-attachment layout handling and multi-attachment clears.
+		void RunMrtProbe()
+		{
+			constexpr std::int32_t Size = 4;
+			VulkanTexture tex0(TextureTarget::Texture2D);
+			VulkanTexture tex1(TextureTarget::Texture2D);
+			tex0.TexStorage2D(1, PixelFormat::RGBA8, Size, Size);
+			tex1.TexStorage2D(1, PixelFormat::RGBA8, Size, Size);
+
+			VulkanRenderTarget rt;
+			rt.AttachColorTexture(tex0, 0);
+			rt.AttachColorTexture(tex1, 1);
+			rt.SetDrawBuffers(2);
+
+			// GetFramebuffer materializes both attachment images (left in COLOR_ATTACHMENT_OPTIMAL by EnsureGpu,
+			// matching the LOAD-op render pass's initialLayout) and builds the 2-attachment framebuffer
+			const std::uint64_t fb = rt.GetFramebuffer();
+			VkFormat formats[2] = { VkFormat(tex0.GpuFormat()), VkFormat(tex1.GpuFormat()) };
+			VkRenderPass renderPass = VkGetColorRenderPassMrt(formats, 2);
+			if (fb == 0 || renderPass == VK_NULL_HANDLE) {
+				LOGE("MRT probe FAILED: framebuffer={}, renderPass={}", fb, reinterpret_cast<std::uint64_t>(renderPass));
+				return;
+			}
+
+			VkCommandBuffer cmd = VkBeginOneTimeCommands();
+			if (cmd == VK_NULL_HANDLE) {
+				LOGE("MRT probe FAILED: could not begin a one-time command buffer");
+				return;
+			}
+			VkRenderPassBeginInfo rpbi = {};
+			rpbi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			rpbi.renderPass = renderPass;
+			rpbi.framebuffer = reinterpret_cast<VkFramebuffer>(fb);
+			rpbi.renderArea.offset = { 0, 0 };
+			rpbi.renderArea.extent = { Size, Size };
+			vkCmdBeginRenderPass(cmd, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+			VkClearAttachment cas[2] = {};
+			cas[0].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			cas[0].colorAttachment = 0;
+			cas[0].clearValue.color = { { 1.0f, 0.0f, 0.0f, 1.0f } };	// attachment 0: red
+			cas[1].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			cas[1].colorAttachment = 1;
+			cas[1].clearValue.color = { { 0.0f, 1.0f, 0.0f, 1.0f } };	// attachment 1: green
+			VkClearRect rect = {};
+			rect.rect.extent = { Size, Size };
+			rect.layerCount = 1;
+			vkCmdClearAttachments(cmd, 2, cas, 1, &rect);
+			vkCmdEndRenderPass(cmd);
+			VkEndOneTimeCommands(cmd);	// submits + waits idle
+
+			std::uint8_t px0[Size * Size * 4] = {};
+			std::uint8_t px1[Size * Size * 4] = {};
+			tex0.GetTexImage(0, PixelFormat::RGBA8, false, px0);
+			tex1.GetTexImage(0, PixelFormat::RGBA8, false, px1);
+			bool ok0 = true, ok1 = true;
+			for (std::int32_t i = 0; i < Size * Size; i++) {
+				ok0 = ok0 && (px0[i * 4 + 0] == 255 && px0[i * 4 + 1] == 0 && px0[i * 4 + 2] == 0 && px0[i * 4 + 3] == 255);
+				ok1 = ok1 && (px1[i * 4 + 0] == 0 && px1[i * 4 + 1] == 255 && px1[i * 4 + 2] == 0 && px1[i * 4 + 3] == 255);
+			}
+			if (ok0 && ok1) {
+				LOGI("MRT probe PASSED: attachment 0 = red, attachment 1 = green (2-attachment render pass / framebuffer / clears verified)");
+			} else {
+				LOGE("MRT probe FAILED: attachment 0 {} (got {},{},{},{}), attachment 1 {} (got {},{},{},{})",
+					ok0 ? "OK" : "WRONG", px0[0], px0[1], px0[2], px0[3],
+					ok1 ? "OK" : "WRONG", px1[0], px1[1], px1[2], px1[3]);
+			}
+		}
+	}
+#endif
 
 	bool VulkanDevice::CreateSwapchain(void* windowHandle, std::int32_t width, std::int32_t height, bool vsync)
 	{
@@ -1960,7 +2178,7 @@ namespace nCine::RhiVulkan
 
 		VkApplicationInfo appInfo = {};
 		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		appInfo.pApplicationName = "Jazz2";
+		appInfo.pApplicationName = NCINE_APP;
 		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 		appInfo.pEngineName = "nCine";
 		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -2011,6 +2229,8 @@ namespace nCine::RhiVulkan
 			if (s_minUboAlign == 0) {
 				s_minUboAlign = 16;
 			}
+			s_maxImageDim2D = props.limits.maxImageDimension2D;
+			s_maxUniformRange = props.limits.maxUniformBufferRange;
 			VkPhysicalDeviceFeatures feats;
 			vkGetPhysicalDeviceFeatures(s_physicalDevice, &feats);
 			s_depthClamp = (feats.depthClamp == VK_TRUE);
@@ -2118,8 +2338,11 @@ namespace nCine::RhiVulkan
 			SetViewport(Recti(0, 0, width, height));
 		}
 		s_ready = true;
-		LOGI("Vulkan device ready (real render pipeline; depthClamp {}, minUboAlign {})",
+		LOGI("Vulkan device ready (depthClamp: {}, minUboAlign: {} bytes)",
 			s_depthClamp ? "on" : "off", static_cast<std::int32_t>(s_minUboAlign));
+#	if defined(VULKAN_MRT_PROBE)
+		RunMrtProbe();
+#	endif
 		return true;
 #else
 		static_cast<void>(windowHandle);

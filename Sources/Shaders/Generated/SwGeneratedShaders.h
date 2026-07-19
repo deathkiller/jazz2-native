@@ -13,6 +13,141 @@ namespace nCine::RhiSoftware
 {
 	namespace
 	{
+		// --- BatchedShieldFire ---
+struct BatchedShieldFire_Uniforms
+{
+	nCine::RhiSoftware::sw::vec4 vShieldRect;
+};
+
+void BatchedShieldFire_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
+{
+	using namespace nCine::RhiSoftware::sw;
+	BatchedShieldFire_Uniforms* io = static_cast<BatchedShieldFire_Uniforms*>(inputs);
+	(void)io;
+	(void)instanceBlock;
+	io->vShieldRect = (*reinterpret_cast<const vec4*>(instanceBlock + 80));
+}
+
+static float BatchedShieldFire_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedShieldFire_Uniforms* unis = static_cast<const BatchedShieldFire_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757f;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+static float BatchedShieldFire_triangleWave(const nCine::RhiSoftware::FragmentShaderInput& in, float x, float period)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedShieldFire_Uniforms* unis = static_cast<const BatchedShieldFire_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float p = x / period;
+	float f = fract(p);
+	return abs(f - 0.5f) * 2.0f;
+}
+
+void BatchedShieldFire_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedShieldFire_Uniforms* unis = static_cast<const BatchedShieldFire_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	vec2 scale = vec4(in.color[0], in.color[1], in.color[2], in.color[3]).xy();
+	vec2 shift1 = unis->vShieldRect.xy();
+	vec2 shift2 = unis->vShieldRect.zw();
+	vec2 vPos = vec2(in.u, in.v).xy() * vec2(2.0f) - vec2(1.0f);
+	float darkness = vec4(in.color[0], in.color[1], in.color[2], in.color[3]).z;
+	float alpha = vec4(in.color[0], in.color[1], in.color[2], in.color[3]).w;
+	float dist = length(vPos);
+	if (dist > 1.0f) {
+		COLOR = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	} else {
+		vec3 v = vec3(vPos.x, vPos.y, sqrt(1.0f - vPos.x * vPos.x - vPos.y * vPos.y));
+		vec3 n = normalize(v);
+		float b = dot(n, vec3(0.0f, 0.0f, 1.0f));
+		vec2 q = vec2(0.5f - 0.5f * atan(n.z, n.x) / 3.1415926f, -acos(vPos.y) / 3.1415926f);
+		float isNearBorder = 1.0f - BatchedShieldFire_aastep(in, 0.96f, dist);
+		float mask1 = swTexture(in, 0, mod(shift1 + q * scale, 1.0f)).r;
+		float maskNormalized1 = max(1.0f - abs(BatchedShieldFire_triangleWave(in, shift2.y + 0.5f, 2.0f) - mask1) * 6.0f, 0.0f);
+		float mask2 = swTexture(in, 0, mod(shift2 + q * scale, 1.0f)).r;
+		float maskNormalized2 = max(1.0f - abs(BatchedShieldFire_triangleWave(in, shift1.x, 1.333f) - mask2) * 6.0f, 0.0f);
+		float maskSum = min(maskNormalized1 + maskNormalized2, 1.0f);
+		COLOR = vec4(mix(vec3(1.0f, 0.3f, 0.0f), vec3(1.0f, 1.0f, 1.0f), max(maskSum * 2.0f - 1.0f, 0.0f)) * darkness, min(maskSum * b * isNearBorder * 1.3f + 0.1f, 1.0f) * alpha);
+	}
+	packColor(COLOR, in.rgba);
+}
+
+		// --- BatchedShieldLightning ---
+struct BatchedShieldLightning_Uniforms
+{
+	nCine::RhiSoftware::sw::vec4 vShieldRect;
+};
+
+void BatchedShieldLightning_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
+{
+	using namespace nCine::RhiSoftware::sw;
+	BatchedShieldLightning_Uniforms* io = static_cast<BatchedShieldLightning_Uniforms*>(inputs);
+	(void)io;
+	(void)instanceBlock;
+	io->vShieldRect = (*reinterpret_cast<const vec4*>(instanceBlock + 80));
+}
+
+static float BatchedShieldLightning_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedShieldLightning_Uniforms* unis = static_cast<const BatchedShieldLightning_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757f;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+static float BatchedShieldLightning_triangleWave(const nCine::RhiSoftware::FragmentShaderInput& in, float x, float period)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedShieldLightning_Uniforms* unis = static_cast<const BatchedShieldLightning_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float p = x / period;
+	float f = fract(p);
+	return abs(f - 0.5f) * 2.0f;
+}
+
+void BatchedShieldLightning_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const BatchedShieldLightning_Uniforms* unis = static_cast<const BatchedShieldLightning_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	vec2 scale = vec4(in.color[0], in.color[1], in.color[2], in.color[3]).xy();
+	vec2 shift1 = unis->vShieldRect.xy();
+	vec2 shift2 = unis->vShieldRect.zw();
+	vec2 vPos = vec2(in.u, in.v).xy() * vec2(2.0f) - vec2(1.0f);
+	float darkness = vec4(in.color[0], in.color[1], in.color[2], in.color[3]).z;
+	float alpha = vec4(in.color[0], in.color[1], in.color[2], in.color[3]).w;
+	float dist = length(vPos);
+	if (dist > 1.0f) {
+		COLOR = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	} else {
+		vec3 v = vec3(vPos.x, vPos.y, sqrt(1.0f - vPos.x * vPos.x - vPos.y * vPos.y));
+		vec3 n = normalize(v);
+		float b = dot(n, vec3(0.0f, 0.0f, 1.0f));
+		vec2 q = vec2(0.5f - 0.5f * atan(n.z, n.x) / 3.1415926f, -acos(vPos.y) / 3.1415926f);
+		float isNearBorder = 1.0f - BatchedShieldLightning_aastep(in, 0.96f, dist);
+		float mask = swTexture(in, 0, mod(shift1 + q * scale, 1.0f)).r;
+		float maskNormalized = max(1.0f - abs(BatchedShieldLightning_triangleWave(in, shift2.y + 0.5f, 2.0f) - mask) * 8.0f, 0.0f);
+		float isVeryNearBorder = 1.0f - BatchedShieldLightning_aastep(in, 0.024f, abs(dist - 0.94f));
+		float maskSum = max(maskNormalized, isVeryNearBorder);
+		COLOR = vec4(mix(vec3(0.1f, 1.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), max(maskSum * 2.0f - 1.0f, 0.0f)) * darkness, min(maskSum * b * isNearBorder * 1.3f + 0.1f, 1.0f) * alpha);
+	}
+	packColor(COLOR, in.rgba);
+}
+
 		// --- Blur ---
 struct Blur_Uniforms
 {
@@ -30,7 +165,7 @@ void Blur_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 	vec4 color = vec4(0.0f);
 	vec2 off1 = vec2(1.3846153846f) * unis->uPixelOffset * unis->uDirection;
 	vec2 off2 = vec2(3.2307692308f) * unis->uPixelOffset * unis->uDirection;
-	color += swTexture(in, 0, vec2(in.u, in.v)) * 0.2270270270f;
+	color += swTexturePrimary(in, 0) * 0.2270270270f;
 	color += swTexture(in, 0, vec2(in.u, in.v) + off1) * 0.3162162162f;
 	color += swTexture(in, 0, vec2(in.u, in.v) - off1) * 0.3162162162f;
 	color += swTexture(in, 0, vec2(in.u, in.v) + off2) * 0.0702702703f;
@@ -53,7 +188,7 @@ void Colorized_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 	vec4 COLOR;
 	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
 	vec4 dye = vec4(1.0f) + (COLOR - vec4(0.5f)) * vec4(4.0f);
-	vec4 original = swTexture(in, 0, vec2(in.u, in.v));
+	vec4 original = swTexturePrimary(in, 0);
 	float average = (original.r + original.g + original.b) * 0.5f;
 	vec4 gray = vec4(average, average, average, original.a);
 	COLOR = gray * dye;
@@ -74,7 +209,7 @@ void BatchedColorized_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in
 	vec4 COLOR;
 	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
 	vec4 dye = vec4(1.0f) + (COLOR - vec4(0.5f)) * vec4(4.0f);
-	vec4 original = swTexture(in, 0, vec2(in.u, in.v));
+	vec4 original = swTexturePrimary(in, 0);
 	float average = (original.r + original.g + original.b) * 0.5f;
 	vec4 gray = vec4(average, average, average, original.a);
 	COLOR = gray * dye;
@@ -128,7 +263,7 @@ void Combine_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 	vec4 COLOR;
 	vec4 blur1 = swTexture(in, 2, vec2(in.u, in.v));
 	vec4 blur2 = swTexture(in, 3, vec2(in.u, in.v));
-	vec4 main = swTexture(in, 0, vec2(in.u, in.v));
+	vec4 main = swTexturePrimary(in, 0);
 	vec4 light = swTexture(in, 1, Combine_noiseTexCoords(in, vec2(in.u, in.v)));
 	vec4 blur = (blur1 + blur2) * vec4(0.5f);
 	float gray = dot(blur.rgb(), vec3(0.299f, 0.587f, 0.114f));
@@ -226,7 +361,7 @@ void DefaultBatchedMeshSprites_Fragment(const nCine::RhiSoftware::FragmentShader
 	(void)unis;
 	(void)in;
 	vec4 COLOR;
-	COLOR = swTexture(in, 0, vec2(in.u, in.v)) * vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
+	COLOR = swTexturePrimary(in, 0) * vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
 	packColor(COLOR, in.rgba);
 }
 
@@ -274,7 +409,7 @@ void DefaultImGui_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 	(void)unis;
 	(void)in;
 	vec4 COLOR;
-	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]) * swTexture(in, 0, vec2(in.u, in.v));
+	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]) * swTexturePrimary(in, 0);
 	packColor(COLOR, in.rgba);
 }
 
@@ -290,7 +425,7 @@ void DefaultMeshSprite_Fragment(const nCine::RhiSoftware::FragmentShaderInput& i
 	(void)unis;
 	(void)in;
 	vec4 COLOR;
-	COLOR = swTexture(in, 0, vec2(in.u, in.v)) * vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
+	COLOR = swTexturePrimary(in, 0) * vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
 	packColor(COLOR, in.rgba);
 }
 
@@ -323,7 +458,7 @@ void DefaultSprite_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 	(void)in;
 	vec4 COLOR;
 	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
-	COLOR = swTexture(in, 0, vec2(in.u, in.v)) * COLOR;
+	COLOR = swTexturePrimary(in, 0) * COLOR;
 	packColor(COLOR, in.rgba);
 }
 
@@ -340,7 +475,7 @@ void DefaultBatchedSprites_Fragment(const nCine::RhiSoftware::FragmentShaderInpu
 	(void)in;
 	vec4 COLOR;
 	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
-	COLOR = swTexture(in, 0, vec2(in.u, in.v)) * COLOR;
+	COLOR = swTexturePrimary(in, 0) * COLOR;
 	packColor(COLOR, in.rgba);
 }
 
@@ -373,7 +508,7 @@ void Downsample_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 	(void)unis;
 	(void)in;
 	vec4 COLOR;
-	vec4 color = swTexture(in, 0, vec2(in.u, in.v));
+	vec4 color = swTexturePrimary(in, 0);
 	color += swTexture(in, 0, vec2(in.u, in.v) + vec2(0.0f, unis->uPixelOffset.y));
 	color += swTexture(in, 0, vec2(in.u, in.v) + vec2(unis->uPixelOffset.x, 0.0f));
 	color += swTexture(in, 0, vec2(in.u, in.v) + unis->uPixelOffset);
@@ -667,7 +802,7 @@ void Outline_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(-2.0f * size.x, -2.0f * size.y)).a;
 	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(2.0f * size.x, -2.0f * size.y)).a;
 	outline2 = Outline_aastep(in, 1.0f, outline2);
-	vec4 color = swTexture(in, 0, vec2(in.u, in.v));
+	vec4 color = swTexturePrimary(in, 0);
 	COLOR = mix(color, mix(vec4(0.0f, 0.0f, 0.0f, COLOR.w * 0.5f), vec4(COLOR.z, COLOR.z, COLOR.z, COLOR.w), outline), max(outline, outline2) - color.a);
 	packColor(COLOR, in.rgba);
 }
@@ -714,7 +849,7 @@ void BatchedOutline_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(-2.0f * size.x, -2.0f * size.y)).a;
 	outline2 += swTexture(in, 0, vec2(in.u, in.v) + vec2(2.0f * size.x, -2.0f * size.y)).a;
 	outline2 = BatchedOutline_aastep(in, 1.0f, outline2);
-	vec4 color = swTexture(in, 0, vec2(in.u, in.v));
+	vec4 color = swTexturePrimary(in, 0);
 	COLOR = mix(color, mix(vec4(0.0f, 0.0f, 0.0f, COLOR.w * 0.5f), vec4(COLOR.z, COLOR.z, COLOR.z, COLOR.w), outline), max(outline, outline2) - color.a);
 	packColor(COLOR, in.rgba);
 }
@@ -910,7 +1045,7 @@ void PaletteRemap_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 	(void)in;
 	vec4 COLOR;
 	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
-	vec4 src = swTexture(in, 0, vec2(in.u, in.v));
+	vec4 src = swTexturePrimary(in, 0);
 	float palIndex = floor(unis->vPaletteOffset + 0.5f) + floor(src.r * 255.0f + 0.5f);
 	float palX = (mod(palIndex, 256.0f) + 0.5f) / 256.0f;
 	float palY = (floor(palIndex / 256.0f) + 0.5f) / 256.0f;
@@ -942,7 +1077,7 @@ void BatchedPaletteRemap_Fragment(const nCine::RhiSoftware::FragmentShaderInput&
 	(void)in;
 	vec4 COLOR;
 	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
-	vec4 src = swTexture(in, 0, vec2(in.u, in.v));
+	vec4 src = swTexturePrimary(in, 0);
 	float palIndex = floor(unis->vPaletteOffset + 0.5f) + floor(src.r * 255.0f + 0.5f);
 	float palX = (mod(palIndex, 256.0f) + 0.5f) / 256.0f;
 	float palY = (floor(palIndex / 256.0f) + 0.5f) / 256.0f;
@@ -1629,6 +1764,141 @@ void ResizeCrtShadowMask_Fragment(const nCine::RhiSoftware::FragmentShaderInput&
 	packColor(COLOR, in.rgba);
 }
 
+		// --- ShieldFire ---
+struct ShieldFire_Uniforms
+{
+	nCine::RhiSoftware::sw::vec4 vShieldRect;
+};
+
+void ShieldFire_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
+{
+	using namespace nCine::RhiSoftware::sw;
+	ShieldFire_Uniforms* io = static_cast<ShieldFire_Uniforms*>(inputs);
+	(void)io;
+	(void)instanceBlock;
+	io->vShieldRect = (*reinterpret_cast<const vec4*>(instanceBlock + 80));
+}
+
+static float ShieldFire_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const ShieldFire_Uniforms* unis = static_cast<const ShieldFire_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757f;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+static float ShieldFire_triangleWave(const nCine::RhiSoftware::FragmentShaderInput& in, float x, float period)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const ShieldFire_Uniforms* unis = static_cast<const ShieldFire_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float p = x / period;
+	float f = fract(p);
+	return abs(f - 0.5f) * 2.0f;
+}
+
+void ShieldFire_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const ShieldFire_Uniforms* unis = static_cast<const ShieldFire_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	vec2 scale = vec4(in.color[0], in.color[1], in.color[2], in.color[3]).xy();
+	vec2 shift1 = unis->vShieldRect.xy();
+	vec2 shift2 = unis->vShieldRect.zw();
+	vec2 vPos = vec2(in.u, in.v).xy() * vec2(2.0f) - vec2(1.0f);
+	float darkness = vec4(in.color[0], in.color[1], in.color[2], in.color[3]).z;
+	float alpha = vec4(in.color[0], in.color[1], in.color[2], in.color[3]).w;
+	float dist = length(vPos);
+	if (dist > 1.0f) {
+		COLOR = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	} else {
+		vec3 v = vec3(vPos.x, vPos.y, sqrt(1.0f - vPos.x * vPos.x - vPos.y * vPos.y));
+		vec3 n = normalize(v);
+		float b = dot(n, vec3(0.0f, 0.0f, 1.0f));
+		vec2 q = vec2(0.5f - 0.5f * atan(n.z, n.x) / 3.1415926f, -acos(vPos.y) / 3.1415926f);
+		float isNearBorder = 1.0f - ShieldFire_aastep(in, 0.96f, dist);
+		float mask1 = swTexture(in, 0, mod(shift1 + q * scale, 1.0f)).r;
+		float maskNormalized1 = max(1.0f - abs(ShieldFire_triangleWave(in, shift2.y + 0.5f, 2.0f) - mask1) * 6.0f, 0.0f);
+		float mask2 = swTexture(in, 0, mod(shift2 + q * scale, 1.0f)).r;
+		float maskNormalized2 = max(1.0f - abs(ShieldFire_triangleWave(in, shift1.x, 1.333f) - mask2) * 6.0f, 0.0f);
+		float maskSum = min(maskNormalized1 + maskNormalized2, 1.0f);
+		COLOR = vec4(mix(vec3(1.0f, 0.3f, 0.0f), vec3(1.0f, 1.0f, 1.0f), max(maskSum * 2.0f - 1.0f, 0.0f)) * darkness, min(maskSum * b * isNearBorder * 1.3f + 0.1f, 1.0f) * alpha);
+	}
+	packColor(COLOR, in.rgba);
+}
+
+		// --- ShieldLightning ---
+struct ShieldLightning_Uniforms
+{
+	nCine::RhiSoftware::sw::vec4 vShieldRect;
+};
+
+void ShieldLightning_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
+{
+	using namespace nCine::RhiSoftware::sw;
+	ShieldLightning_Uniforms* io = static_cast<ShieldLightning_Uniforms*>(inputs);
+	(void)io;
+	(void)instanceBlock;
+	io->vShieldRect = (*reinterpret_cast<const vec4*>(instanceBlock + 80));
+}
+
+static float ShieldLightning_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const ShieldLightning_Uniforms* unis = static_cast<const ShieldLightning_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757f;
+	return smoothstep(threshold - afwidth, threshold + afwidth, value);
+}
+
+static float ShieldLightning_triangleWave(const nCine::RhiSoftware::FragmentShaderInput& in, float x, float period)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const ShieldLightning_Uniforms* unis = static_cast<const ShieldLightning_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	float p = x / period;
+	float f = fract(p);
+	return abs(f - 0.5f) * 2.0f;
+}
+
+void ShieldLightning_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+{
+	using namespace nCine::RhiSoftware::sw;
+	const ShieldLightning_Uniforms* unis = static_cast<const ShieldLightning_Uniforms*>(in.userData);
+	(void)unis;
+	(void)in;
+	vec4 COLOR;
+	vec2 scale = vec4(in.color[0], in.color[1], in.color[2], in.color[3]).xy();
+	vec2 shift1 = unis->vShieldRect.xy();
+	vec2 shift2 = unis->vShieldRect.zw();
+	vec2 vPos = vec2(in.u, in.v).xy() * vec2(2.0f) - vec2(1.0f);
+	float darkness = vec4(in.color[0], in.color[1], in.color[2], in.color[3]).z;
+	float alpha = vec4(in.color[0], in.color[1], in.color[2], in.color[3]).w;
+	float dist = length(vPos);
+	if (dist > 1.0f) {
+		COLOR = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+	} else {
+		vec3 v = vec3(vPos.x, vPos.y, sqrt(1.0f - vPos.x * vPos.x - vPos.y * vPos.y));
+		vec3 n = normalize(v);
+		float b = dot(n, vec3(0.0f, 0.0f, 1.0f));
+		vec2 q = vec2(0.5f - 0.5f * atan(n.z, n.x) / 3.1415926f, -acos(vPos.y) / 3.1415926f);
+		float isNearBorder = 1.0f - ShieldLightning_aastep(in, 0.96f, dist);
+		float mask = swTexture(in, 0, mod(shift1 + q * scale, 1.0f)).r;
+		float maskNormalized = max(1.0f - abs(ShieldLightning_triangleWave(in, shift2.y + 0.5f, 2.0f) - mask) * 8.0f, 0.0f);
+		float isVeryNearBorder = 1.0f - ShieldLightning_aastep(in, 0.024f, abs(dist - 0.94f));
+		float maskSum = max(maskNormalized, isVeryNearBorder);
+		COLOR = vec4(mix(vec3(0.1f, 1.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), max(maskSum * 2.0f - 1.0f, 0.0f)) * darkness, min(maskSum * b * isNearBorder * 1.3f + 0.1f, 1.0f) * alpha);
+	}
+	packColor(COLOR, in.rgba);
+}
+
 		// --- TexturedBackground ---
 struct TexturedBackground_Uniforms
 {
@@ -1965,7 +2235,7 @@ void TileMapMesh_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 	(void)unis;
 	(void)in;
 	vec4 COLOR;
-	COLOR = swTexture(in, 0, vec2(in.u, in.v)) * vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
+	COLOR = swTexturePrimary(in, 0) * vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
 	packColor(COLOR, in.rgba);
 }
 
@@ -1982,7 +2252,7 @@ void Tinted_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 	(void)in;
 	vec4 COLOR;
 	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
-	vec4 original = swTexture(in, 0, vec2(in.u, in.v));
+	vec4 original = swTexturePrimary(in, 0);
 	vec3 tinted = mix(original.rgb(), COLOR.rgb(), 0.45f);
 	COLOR = vec4(tinted.r, tinted.g, tinted.b, original.a * COLOR.a);
 	packColor(COLOR, in.rgba);
@@ -2011,7 +2281,7 @@ void Tinted_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentShaderInput& 
 	(void)in;
 	vec4 COLOR;
 	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
-	vec4 src = swTexture(in, 0, vec2(in.u, in.v));
+	vec4 src = swTexturePrimary(in, 0);
 	float palIndex = floor(unis->vPaletteOffset + 0.5f) + floor(src.r * 255.0f + 0.5f);
 	float palX = (mod(palIndex, 256.0f) + 0.5f) / 256.0f;
 	float palY = (floor(palIndex / 256.0f) + 0.5f) / 256.0f;
@@ -2035,7 +2305,7 @@ void BatchedTinted_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 	(void)in;
 	vec4 COLOR;
 	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
-	vec4 original = swTexture(in, 0, vec2(in.u, in.v));
+	vec4 original = swTexturePrimary(in, 0);
 	vec3 tinted = mix(original.rgb(), COLOR.rgb(), 0.45f);
 	COLOR = vec4(tinted.r, tinted.g, tinted.b, original.a * COLOR.a);
 	packColor(COLOR, in.rgba);
@@ -2064,7 +2334,7 @@ void BatchedTinted_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentShader
 	(void)in;
 	vec4 COLOR;
 	COLOR = vec4(in.color[0], in.color[1], in.color[2], in.color[3]);
-	vec4 src = swTexture(in, 0, vec2(in.u, in.v));
+	vec4 src = swTexturePrimary(in, 0);
 	float palIndex = floor(unis->vPaletteOffset + 0.5f) + floor(src.r * 255.0f + 0.5f);
 	float palX = (mod(palIndex, 256.0f) + 0.5f) / 256.0f;
 	float palY = (floor(palIndex / 256.0f) + 0.5f) / 256.0f;
@@ -2323,6 +2593,8 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentSha
 		};
 
 		const SwGeneratedShaderInfo SwGeneratedShaders[] = {
+			{ "BatchedShieldFire", &BatchedShieldFire_Fragment, (std::uint32_t)sizeof(BatchedShieldFire_Uniforms), nullptr, 0, &BatchedShieldFire_ComputeVaryings },
+			{ "BatchedShieldLightning", &BatchedShieldLightning_Fragment, (std::uint32_t)sizeof(BatchedShieldLightning_Uniforms), nullptr, 0, &BatchedShieldLightning_ComputeVaryings },
 			{ "Blur", &Blur_Fragment, (std::uint32_t)sizeof(Blur_Uniforms), Blur_Fields, 2, nullptr },
 			{ "Colorized", &Colorized_Fragment, (std::uint32_t)sizeof(Colorized_Uniforms), nullptr, 0, nullptr },
 			{ "BatchedColorized", &BatchedColorized_Fragment, (std::uint32_t)sizeof(BatchedColorized_Uniforms), nullptr, 0, nullptr },
@@ -2354,6 +2626,8 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentSha
 			{ "BatchedPartialWhiteMask_USE_PALETTE", &BatchedPartialWhiteMask_USE_PALETTE_Fragment, (std::uint32_t)sizeof(BatchedPartialWhiteMask_USE_PALETTE_Uniforms), nullptr, 0, &BatchedPartialWhiteMask_USE_PALETTE_ComputeVaryings },
 			{ "ResizeCrtApertureGrille", &ResizeCrtApertureGrille_Fragment, (std::uint32_t)sizeof(ResizeCrtApertureGrille_Uniforms), nullptr, 0, &ResizeCrtApertureGrille_ComputeVaryings },
 			{ "ResizeCrtShadowMask", &ResizeCrtShadowMask_Fragment, (std::uint32_t)sizeof(ResizeCrtShadowMask_Uniforms), nullptr, 0, &ResizeCrtShadowMask_ComputeVaryings },
+			{ "ShieldFire", &ShieldFire_Fragment, (std::uint32_t)sizeof(ShieldFire_Uniforms), nullptr, 0, &ShieldFire_ComputeVaryings },
+			{ "ShieldLightning", &ShieldLightning_Fragment, (std::uint32_t)sizeof(ShieldLightning_Uniforms), nullptr, 0, &ShieldLightning_ComputeVaryings },
 			{ "TexturedBackground", &TexturedBackground_Fragment, (std::uint32_t)sizeof(TexturedBackground_Uniforms), TexturedBackground_Fields, 4, nullptr },
 			{ "TexturedBackground_DITHER", &TexturedBackground_DITHER_Fragment, (std::uint32_t)sizeof(TexturedBackground_DITHER_Uniforms), TexturedBackground_DITHER_Fields, 4, nullptr },
 			{ "TexturedBackgroundCircle", &TexturedBackgroundCircle_Fragment, (std::uint32_t)sizeof(TexturedBackgroundCircle_Uniforms), TexturedBackgroundCircle_Fields, 4, nullptr },

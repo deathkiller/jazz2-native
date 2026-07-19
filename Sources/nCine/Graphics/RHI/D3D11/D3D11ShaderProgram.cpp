@@ -476,6 +476,15 @@ namespace nCine::RhiD3D11
 			desc.SemanticName = "TEXCOORD";
 			desc.SemanticIndex = static_cast<UINT>(loc);
 			desc.Format = AttributeFormat(a.GetType());
+			// A vertex format may override the component type to unsigned byte (SetType/SetNormalized - e.g.
+			// the ImGui vertex color, 4 x u8 normalized read as float4); honor it like glVertexAttribPointer does
+			if (fa.GetType() == std::uint32_t(VertexAttribType::UnsignedByte)) {
+				switch (fa.GetSize()) {
+					case 1: desc.Format = (fa.IsNormalized() ? DXGI_FORMAT_R8_UNORM : DXGI_FORMAT_R8_UINT); break;
+					case 2: desc.Format = (fa.IsNormalized() ? DXGI_FORMAT_R8G8_UNORM : DXGI_FORMAT_R8G8_UINT); break;
+					default: desc.Format = (fa.IsNormalized() ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGI_FORMAT_R8G8B8A8_UINT); break;
+				}
+			}
 			desc.InputSlot = 0;
 			desc.AlignedByteOffset = static_cast<UINT>(reinterpret_cast<std::uintptr_t>(fa.GetPointer()));
 			desc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;

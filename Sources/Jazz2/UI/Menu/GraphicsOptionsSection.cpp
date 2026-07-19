@@ -37,8 +37,12 @@ namespace Jazz2::UI::Menu
 
 		auto list = std::make_unique<ScrollView>();
 
+#if !defined(WITH_RHI_SOFTWARE)
+		// The software backend has no rescale/antialiasing shader passes (the scene is rendered at the logical
+		// resolution directly into the screen framebuffer, see UpscaleRenderPass), so the option is hidden there
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ListItem>(_("Rescale Mode"), [root]() { root->SwitchToSection<RescaleModeSection>(); });
+#endif
 
 		// Display-only row (no OnChange): shows the current drawable resolution without arrows
 		// TRANSLATORS: Menu item in Options > Graphics section
@@ -72,6 +76,9 @@ namespace Jazz2::UI::Menu
 				});
 		}
 #endif
+#if !defined(WITH_RHI_SOFTWARE)
+		// The antialiasing subpass is part of the rescale shader chain, which the software backend bypasses
+		// entirely, so the option is hidden there too
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Antialiasing"),
 			[]() -> StringView { return ((PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing ? _("Enabled") : _("Disabled")); },
@@ -84,6 +91,7 @@ namespace Jazz2::UI::Menu
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 			});
+#endif
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Background Dithering"),
 			[]() -> StringView { return (PreferencesCache::BackgroundDithering ? _("Enabled") : _("Disabled")); },
@@ -92,6 +100,8 @@ namespace Jazz2::UI::Menu
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 			});
+#if !defined(WITH_RHI_SOFTWARE)
+		// Blur effects are not supported by software renderer
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Blur Effects"),
 			[]() -> StringView { return (PreferencesCache::BlurEffects ? _("Enabled") : _("Disabled")); },
@@ -100,6 +110,7 @@ namespace Jazz2::UI::Menu
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 			});
+#endif
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Lighting Resolution"),
 			[this]() -> StringView {

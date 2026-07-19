@@ -460,6 +460,311 @@ namespace nCine::RhiSoftware
 		DEATH_CPU_DISPATCHED(tintScanlineImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(tintScanline)(std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA))({
 			return tintScanlineImplementation(Cpu::DefaultBase)(buf, count, tR, tG, tB, tA);
 		})
+
+		// =====================================================================
+		// CPU-dispatched constant-source blend (solid no-texture fills)
+		// dst = (src * a + dst * (255 - a)) >> 8 per channel, alpha = (a * 255 + dst.a * (255 - a)) >> 8,
+		// i.e. exactly the per-pixel fast-blend including its destination-alpha convention. The numerators
+		// are per-call constants, so the SIMD forms are one multiply-add per 16-bit lane; every sum is a
+		// convex combination bounded by 255 * 255, so it never overflows the 16-bit intermediate.
+		// =====================================================================
+		extern void DEATH_CPU_DISPATCHED_DECLARATION(blendScanlineConstSrcAlpha)(std::uint8_t* DEATH_RESTRICT dst, std::int32_t count, const std::uint8_t* DEATH_RESTRICT src);
+		DEATH_CPU_DISPATCHER_DECLARATION(blendScanlineConstSrcAlpha)
+
+		// Scalar fallback
+		DEATH_CPU_MAYBE_UNUSED typename std::decay<decltype(blendScanlineConstSrcAlpha)>::type blendScanlineConstSrcAlphaImplementation(Cpu::ScalarT) {
+			return [](std::uint8_t* DEATH_RESTRICT dst, std::int32_t count, const std::uint8_t* DEATH_RESTRICT src) {
+				const std::int32_t sA = src[3];
+				const std::int32_t inv = 255 - sA;
+				const std::int32_t nR = src[0] * sA, nG = src[1] * sA, nB = src[2] * sA, nA = sA * 255;
+				for (std::int32_t i = 0; i < count; ++i, dst += 4) {
+					dst[0] = static_cast<std::uint8_t>((nR + dst[0] * inv) >> 8);
+					dst[1] = static_cast<std::uint8_t>((nG + dst[1] * inv) >> 8);
+					dst[2] = static_cast<std::uint8_t>((nB + dst[2] * inv) >> 8);
+					dst[3] = static_cast<std::uint8_t>((nA + dst[3] * inv) >> 8);
+				}
+			};
+		}
+
+#if defined(DEATH_ENABLE_SSE2)
+		DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_SSE2 typename std::decay<decltype(blendScanlineConstSrcAlpha)>::type blendScanlineConstSrcAlphaImplementation(Cpu::Sse2T) {
+			return [](std::uint8_t* DEATH_RESTRICT dst, std::int32_t count, const std::uint8_t* DEATH_RESTRICT src) DEATH_ENABLE_SSE2 {
+				const std::int32_t sA = src[3];
+				const std::int32_t inv = 255 - sA;
+				const std::int32_t nR = src[0] * sA, nG = src[1] * sA, nB = src[2] * sA, nA = sA * 255;
+				const __m128i zero = _mm_setzero_si128();
+				const __m128i num = _mm_set_epi16((std::int16_t)nA, (std::int16_t)nB, (std::int16_t)nG, (std::int16_t)nR,
+				                                  (std::int16_t)nA, (std::int16_t)nB, (std::int16_t)nG, (std::int16_t)nR);
+				const __m128i vinv = _mm_set1_epi16((std::int16_t)inv);
+
+				std::int32_t i = 0;
+				for (; i + 4 <= count; i += 4, dst += 16) {
+					__m128i dstPx = _mm_loadu_si128(reinterpret_cast<const __m128i*>(dst));
+					__m128i lo = _mm_srli_epi16(_mm_add_epi16(num, _mm_mullo_epi16(_mm_unpacklo_epi8(dstPx, zero), vinv)), 8);
+					__m128i hi = _mm_srli_epi16(_mm_add_epi16(num, _mm_mullo_epi16(_mm_unpackhi_epi8(dstPx, zero), vinv)), 8);
+					_mm_storeu_si128(reinterpret_cast<__m128i*>(dst), _mm_packus_epi16(lo, hi));
+				}
+				// Scalar tail
+				for (; i < count; ++i, dst += 4) {
+					dst[0] = static_cast<std::uint8_t>((nR + dst[0] * inv) >> 8);
+					dst[1] = static_cast<std::uint8_t>((nG + dst[1] * inv) >> 8);
+					dst[2] = static_cast<std::uint8_t>((nB + dst[2] * inv) >> 8);
+					dst[3] = static_cast<std::uint8_t>((nA + dst[3] * inv) >> 8);
+				}
+			};
+		}
+#endif
+
+#if defined(DEATH_ENABLE_AVX2)
+		DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_AVX2 typename std::decay<decltype(blendScanlineConstSrcAlpha)>::type blendScanlineConstSrcAlphaImplementation(Cpu::Avx2T) {
+			return [](std::uint8_t* DEATH_RESTRICT dst, std::int32_t count, const std::uint8_t* DEATH_RESTRICT src) DEATH_ENABLE_AVX2 {
+				const std::int32_t sA = src[3];
+				const std::int32_t inv = 255 - sA;
+				const std::int32_t nR = src[0] * sA, nG = src[1] * sA, nB = src[2] * sA, nA = sA * 255;
+				const __m256i zero = _mm256_setzero_si256();
+				const __m256i num = _mm256_set_epi16(
+					(std::int16_t)nA, (std::int16_t)nB, (std::int16_t)nG, (std::int16_t)nR,
+					(std::int16_t)nA, (std::int16_t)nB, (std::int16_t)nG, (std::int16_t)nR,
+					(std::int16_t)nA, (std::int16_t)nB, (std::int16_t)nG, (std::int16_t)nR,
+					(std::int16_t)nA, (std::int16_t)nB, (std::int16_t)nG, (std::int16_t)nR);
+				const __m256i vinv = _mm256_set1_epi16((std::int16_t)inv);
+
+				std::int32_t i = 0;
+				for (; i + 8 <= count; i += 8, dst += 32) {
+					__m256i dstPx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(dst));
+					__m256i lo = _mm256_srli_epi16(_mm256_add_epi16(num, _mm256_mullo_epi16(_mm256_unpacklo_epi8(dstPx, zero), vinv)), 8);
+					__m256i hi = _mm256_srli_epi16(_mm256_add_epi16(num, _mm256_mullo_epi16(_mm256_unpackhi_epi8(dstPx, zero), vinv)), 8);
+					_mm256_storeu_si256(reinterpret_cast<__m256i*>(dst), _mm256_packus_epi16(lo, hi));
+				}
+				// SSE2 tail (4 pixels at a time)
+				const __m128i zero128 = _mm_setzero_si128();
+				const __m128i num128 = _mm_set_epi16((std::int16_t)nA, (std::int16_t)nB, (std::int16_t)nG, (std::int16_t)nR,
+				                                     (std::int16_t)nA, (std::int16_t)nB, (std::int16_t)nG, (std::int16_t)nR);
+				const __m128i vinv128 = _mm_set1_epi16((std::int16_t)inv);
+				for (; i + 4 <= count; i += 4, dst += 16) {
+					__m128i dstPx = _mm_loadu_si128(reinterpret_cast<const __m128i*>(dst));
+					__m128i lo = _mm_srli_epi16(_mm_add_epi16(num128, _mm_mullo_epi16(_mm_unpacklo_epi8(dstPx, zero128), vinv128)), 8);
+					__m128i hi = _mm_srli_epi16(_mm_add_epi16(num128, _mm_mullo_epi16(_mm_unpackhi_epi8(dstPx, zero128), vinv128)), 8);
+					_mm_storeu_si128(reinterpret_cast<__m128i*>(dst), _mm_packus_epi16(lo, hi));
+				}
+				// Scalar tail
+				for (; i < count; ++i, dst += 4) {
+					dst[0] = static_cast<std::uint8_t>((nR + dst[0] * inv) >> 8);
+					dst[1] = static_cast<std::uint8_t>((nG + dst[1] * inv) >> 8);
+					dst[2] = static_cast<std::uint8_t>((nB + dst[2] * inv) >> 8);
+					dst[3] = static_cast<std::uint8_t>((nA + dst[3] * inv) >> 8);
+				}
+			};
+		}
+#endif
+
+#if defined(DEATH_ENABLE_NEON)
+		DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_NEON typename std::decay<decltype(blendScanlineConstSrcAlpha)>::type blendScanlineConstSrcAlphaImplementation(Cpu::NeonT) {
+			return [](std::uint8_t* DEATH_RESTRICT dst, std::int32_t count, const std::uint8_t* DEATH_RESTRICT src) DEATH_ENABLE_NEON {
+				const std::int32_t sA = src[3];
+				const std::int32_t inv = 255 - sA;
+				const std::int32_t nR = src[0] * sA, nG = src[1] * sA, nB = src[2] * sA, nA = sA * 255;
+				const std::uint16_t numArr[8] = {
+					(std::uint16_t)nR, (std::uint16_t)nG, (std::uint16_t)nB, (std::uint16_t)nA,
+					(std::uint16_t)nR, (std::uint16_t)nG, (std::uint16_t)nB, (std::uint16_t)nA
+				};
+				const uint16x8_t num = vld1q_u16(numArr);
+				const uint8x8_t vinv = vdup_n_u8((std::uint8_t)inv);
+
+				std::int32_t i = 0;
+				for (; i + 4 <= count; i += 4, dst += 16) {
+					uint8x16_t dstPx = vld1q_u8(dst);
+					uint16x8_t lo = vaddq_u16(num, vmull_u8(vget_low_u8(dstPx), vinv));
+					uint16x8_t hi = vaddq_u16(num, vmull_u8(vget_high_u8(dstPx), vinv));
+					vst1q_u8(dst, vcombine_u8(vshrn_n_u16(lo, 8), vshrn_n_u16(hi, 8)));
+				}
+				// Scalar tail
+				for (; i < count; ++i, dst += 4) {
+					dst[0] = static_cast<std::uint8_t>((nR + dst[0] * inv) >> 8);
+					dst[1] = static_cast<std::uint8_t>((nG + dst[1] * inv) >> 8);
+					dst[2] = static_cast<std::uint8_t>((nB + dst[2] * inv) >> 8);
+					dst[3] = static_cast<std::uint8_t>((nA + dst[3] * inv) >> 8);
+				}
+			};
+		}
+#endif
+
+#if defined(DEATH_ENABLE_SIMD128)
+		DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_SIMD128 typename std::decay<decltype(blendScanlineConstSrcAlpha)>::type blendScanlineConstSrcAlphaImplementation(Cpu::Simd128T) {
+			return [](std::uint8_t* DEATH_RESTRICT dst, std::int32_t count, const std::uint8_t* DEATH_RESTRICT src) DEATH_ENABLE_SIMD128 {
+				const std::int32_t sA = src[3];
+				const std::int32_t inv = 255 - sA;
+				const std::int32_t nR = src[0] * sA, nG = src[1] * sA, nB = src[2] * sA, nA = sA * 255;
+				const v128_t num = wasm_i16x8_make((std::int16_t)nR, (std::int16_t)nG, (std::int16_t)nB, (std::int16_t)nA,
+				                                   (std::int16_t)nR, (std::int16_t)nG, (std::int16_t)nB, (std::int16_t)nA);
+				const v128_t vinv = wasm_i16x8_splat((std::int16_t)inv);
+
+				std::int32_t i = 0;
+				for (; i + 4 <= count; i += 4, dst += 16) {
+					v128_t dstPx = wasm_v128_load(dst);
+					v128_t lo = wasm_u16x8_shr(wasm_i16x8_add(num, wasm_i16x8_mul(wasm_u16x8_extend_low_u8x16(dstPx), vinv)), 8);
+					v128_t hi = wasm_u16x8_shr(wasm_i16x8_add(num, wasm_i16x8_mul(wasm_u16x8_extend_high_u8x16(dstPx), vinv)), 8);
+					wasm_v128_store(dst, wasm_u8x16_narrow_i16x8(lo, hi));
+				}
+				// Scalar tail
+				for (; i < count; ++i, dst += 4) {
+					dst[0] = static_cast<std::uint8_t>((nR + dst[0] * inv) >> 8);
+					dst[1] = static_cast<std::uint8_t>((nG + dst[1] * inv) >> 8);
+					dst[2] = static_cast<std::uint8_t>((nB + dst[2] * inv) >> 8);
+					dst[3] = static_cast<std::uint8_t>((nA + dst[3] * inv) >> 8);
+				}
+			};
+		}
+#endif
+
+		DEATH_CPU_DISPATCHER_BASE(blendScanlineConstSrcAlphaImplementation)
+		DEATH_CPU_DISPATCHED(blendScanlineConstSrcAlphaImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(blendScanlineConstSrcAlpha)(std::uint8_t* DEATH_RESTRICT dst, std::int32_t count, const std::uint8_t* DEATH_RESTRICT src))({
+			return blendScanlineConstSrcAlphaImplementation(Cpu::DefaultBase)(dst, count, src);
+		})
+
+		// =====================================================================
+		// CPU-dispatched dynamic-lighting combine row (see SwScanlineOps.h)
+		// The SSE2 variant processes 4 pixels per step with the scalar float operations replayed in the
+		// same order per 4-wide lane, so its output is bit-identical to the scalar loop: a fully lit lane
+		// computes (px / 255) * 1 + 0 whose re-quantization is exact for every byte, and the alpha lane
+		// is carried through the transpose untouched. Only a scalar fallback exists for NEON/WASM (the
+		// combine runs on dark levels only; those targets keep the previous per-pixel cost).
+		// =====================================================================
+		extern void DEATH_CPU_DISPATCHED_DECLARATION(combineLightingScanline)(std::uint8_t* DEATH_RESTRICT px, std::int32_t width, const float* DEATH_RESTRICT lmRow, std::int32_t lmW, std::int32_t scale, float ambR, float ambG, float ambB);
+		DEATH_CPU_DISPATCHER_DECLARATION(combineLightingScanline)
+
+		// Scalar fallback: the exact per-pixel loop the device ran inline before
+		DEATH_CPU_MAYBE_UNUSED typename std::decay<decltype(combineLightingScanline)>::type combineLightingScanlineImplementation(Cpu::ScalarT) {
+			return [](std::uint8_t* DEATH_RESTRICT px, std::int32_t width, const float* DEATH_RESTRICT lmRow, std::int32_t lmW, std::int32_t scale, float ambR, float ambG, float ambB) {
+				for (std::int32_t x = 0; x < width; x++, px += 4) {
+					const std::int32_t lmX = std::min(x / scale, lmW - 1);
+					const float r = std::clamp(lmRow[lmX * 2], 0.0f, 1.0f);
+					const float g = std::clamp(lmRow[lmX * 2 + 1], 0.0f, 1.0f);
+					const float darkT = std::clamp(1.0f - r, 0.0f, 1.0f);
+					if (darkT <= 0.0f && g <= 0.0f) {
+						continue; // Fully lit, no brightness core: leave the scene pixel as-is
+					}
+					const float lit = 1.0f + g;
+					const float core = (g > 0.7f ? g - 0.7f : 0.0f);
+					float cr = (px[0] / 255.0f) * lit + core;
+					float cg = (px[1] / 255.0f) * lit + core;
+					float cb = (px[2] / 255.0f) * lit + core;
+					cr += (ambR - cr) * darkT;
+					cg += (ambG - cg) * darkT;
+					cb += (ambB - cb) * darkT;
+					px[0] = (std::uint8_t)std::clamp(cr * 255.0f + 0.5f, 0.0f, 255.0f);
+					px[1] = (std::uint8_t)std::clamp(cg * 255.0f + 0.5f, 0.0f, 255.0f);
+					px[2] = (std::uint8_t)std::clamp(cb * 255.0f + 0.5f, 0.0f, 255.0f);
+				}
+			};
+		}
+
+#if defined(DEATH_ENABLE_SSE2)
+		DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_SSE2 typename std::decay<decltype(combineLightingScanline)>::type combineLightingScanlineImplementation(Cpu::Sse2T) {
+			return [](std::uint8_t* DEATH_RESTRICT px, std::int32_t width, const float* DEATH_RESTRICT lmRow, std::int32_t lmW, std::int32_t scale, float ambR, float ambG, float ambB) DEATH_ENABLE_SSE2 {
+				const __m128 zerof = _mm_setzero_ps();
+				const __m128 onef = _mm_set1_ps(1.0f);
+				const __m128 halff = _mm_set1_ps(0.5f);
+				const __m128 c255f = _mm_set1_ps(255.0f);
+				const __m128 coreT = _mm_set1_ps(0.7f);
+				const __m128 vAmbR = _mm_set1_ps(ambR);
+				const __m128 vAmbG = _mm_set1_ps(ambG);
+				const __m128 vAmbB = _mm_set1_ps(ambB);
+				const __m128i zeroi = _mm_setzero_si128();
+
+				// x / scale collapses to a shift when the scale is a power of two (the compositor uses 2)
+				std::int32_t shift = -1;
+				if ((scale & (scale - 1)) == 0) {
+					shift = 0;
+					while ((1 << shift) < scale) shift++;
+				}
+				const std::int32_t lmLast = lmW - 1;
+
+				std::int32_t x = 0;
+				for (; x + 4 <= width; x += 4, px += 16) {
+					std::int32_t i0, i1, i2, i3;
+					if (shift >= 0) {
+						i0 = (x) >> shift; i1 = (x + 1) >> shift; i2 = (x + 2) >> shift; i3 = (x + 3) >> shift;
+					} else {
+						i0 = (x) / scale; i1 = (x + 1) / scale; i2 = (x + 2) / scale; i3 = (x + 3) / scale;
+					}
+					if (i0 > lmLast) i0 = lmLast;
+					if (i1 > lmLast) i1 = lmLast;
+					if (i2 > lmLast) i2 = lmLast;
+					if (i3 > lmLast) i3 = lmLast;
+
+					__m128 r = _mm_setr_ps(lmRow[i0 * 2], lmRow[i1 * 2], lmRow[i2 * 2], lmRow[i3 * 2]);
+					__m128 g = _mm_setr_ps(lmRow[i0 * 2 + 1], lmRow[i1 * 2 + 1], lmRow[i2 * 2 + 1], lmRow[i3 * 2 + 1]);
+					r = _mm_min_ps(_mm_max_ps(r, zerof), onef);
+					g = _mm_min_ps(_mm_max_ps(g, zerof), onef);
+					const __m128 darkT = _mm_min_ps(_mm_max_ps(_mm_sub_ps(onef, r), zerof), onef);
+
+					// Per-4-pixel early out (the block form of the scalar per-pixel fully-lit skip)
+					const __m128 active = _mm_or_ps(_mm_cmpgt_ps(darkT, zerof), _mm_cmpgt_ps(g, zerof));
+					if (_mm_movemask_ps(active) == 0) {
+						continue;
+					}
+
+					const __m128 lit = _mm_add_ps(onef, g);
+					const __m128 core = _mm_and_ps(_mm_sub_ps(g, coreT), _mm_cmpgt_ps(g, coreT));
+
+					// Deinterleave the 4 RGBA8 pixels into per-channel float vectors
+					const __m128i pix = _mm_loadu_si128(reinterpret_cast<const __m128i*>(px));
+					const __m128i lo16 = _mm_unpacklo_epi8(pix, zeroi);
+					const __m128i hi16 = _mm_unpackhi_epi8(pix, zeroi);
+					__m128 p0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(lo16, zeroi));
+					__m128 p1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(lo16, zeroi));
+					__m128 p2 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(hi16, zeroi));
+					__m128 p3 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(hi16, zeroi));
+					_MM_TRANSPOSE4_PS(p0, p1, p2, p3); // p0 = R, p1 = G, p2 = B, p3 = A across the 4 pixels
+
+					// (px / 255) * lit + core, then += (amb - c) * darkT, then quantize - same op order as scalar
+					p0 = _mm_add_ps(_mm_mul_ps(_mm_div_ps(p0, c255f), lit), core);
+					p0 = _mm_add_ps(p0, _mm_mul_ps(_mm_sub_ps(vAmbR, p0), darkT));
+					p0 = _mm_min_ps(_mm_max_ps(_mm_add_ps(_mm_mul_ps(p0, c255f), halff), zerof), c255f);
+					p1 = _mm_add_ps(_mm_mul_ps(_mm_div_ps(p1, c255f), lit), core);
+					p1 = _mm_add_ps(p1, _mm_mul_ps(_mm_sub_ps(vAmbG, p1), darkT));
+					p1 = _mm_min_ps(_mm_max_ps(_mm_add_ps(_mm_mul_ps(p1, c255f), halff), zerof), c255f);
+					p2 = _mm_add_ps(_mm_mul_ps(_mm_div_ps(p2, c255f), lit), core);
+					p2 = _mm_add_ps(p2, _mm_mul_ps(_mm_sub_ps(vAmbB, p2), darkT));
+					p2 = _mm_min_ps(_mm_max_ps(_mm_add_ps(_mm_mul_ps(p2, c255f), halff), zerof), c255f);
+					// p3 (alpha) is left as loaded; the truncating convert below restores the exact byte
+
+					// Reinterleave and store (values are in [0, 255], so the signed 16-bit pack is lossless)
+					_MM_TRANSPOSE4_PS(p0, p1, p2, p3);
+					const __m128i q01 = _mm_packs_epi32(_mm_cvttps_epi32(p0), _mm_cvttps_epi32(p1));
+					const __m128i q23 = _mm_packs_epi32(_mm_cvttps_epi32(p2), _mm_cvttps_epi32(p3));
+					_mm_storeu_si128(reinterpret_cast<__m128i*>(px), _mm_packus_epi16(q01, q23));
+				}
+				// Scalar tail
+				for (; x < width; x++, px += 4) {
+					const std::int32_t lmX = std::min(x / scale, lmW - 1);
+					const float r = std::clamp(lmRow[lmX * 2], 0.0f, 1.0f);
+					const float g = std::clamp(lmRow[lmX * 2 + 1], 0.0f, 1.0f);
+					const float darkT = std::clamp(1.0f - r, 0.0f, 1.0f);
+					if (darkT <= 0.0f && g <= 0.0f) {
+						continue;
+					}
+					const float lit = 1.0f + g;
+					const float core = (g > 0.7f ? g - 0.7f : 0.0f);
+					float cr = (px[0] / 255.0f) * lit + core;
+					float cg = (px[1] / 255.0f) * lit + core;
+					float cb = (px[2] / 255.0f) * lit + core;
+					cr += (ambR - cr) * darkT;
+					cg += (ambG - cg) * darkT;
+					cb += (ambB - cb) * darkT;
+					px[0] = (std::uint8_t)std::clamp(cr * 255.0f + 0.5f, 0.0f, 255.0f);
+					px[1] = (std::uint8_t)std::clamp(cg * 255.0f + 0.5f, 0.0f, 255.0f);
+					px[2] = (std::uint8_t)std::clamp(cb * 255.0f + 0.5f, 0.0f, 255.0f);
+				}
+			};
+		}
+#endif
+
+		DEATH_CPU_DISPATCHER_BASE(combineLightingScanlineImplementation)
+		DEATH_CPU_DISPATCHED(combineLightingScanlineImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(combineLightingScanline)(std::uint8_t* DEATH_RESTRICT px, std::int32_t width, const float* DEATH_RESTRICT lmRow, std::int32_t lmW, std::int32_t scale, float ambR, float ambG, float ambB))({
+			return combineLightingScanlineImplementation(Cpu::DefaultBase)(px, width, lmRow, lmW, scale, ambR, ambG, ambB);
+		})
 	}
 
 	// Externally-visible entry points (see SwScanlineOps.h) so the tile rasterizer TU runs the exact same
@@ -472,6 +777,17 @@ namespace nCine::RhiSoftware
 	void TintScanline(std::uint8_t* buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA)
 	{
 		tintScanline(buf, count, tR, tG, tB, tA);
+	}
+
+	void BlendScanlineConstSrcAlpha(std::uint8_t* dst, std::int32_t count, const std::uint8_t src[4])
+	{
+		blendScanlineConstSrcAlpha(dst, count, src);
+	}
+
+	void CombineLightingScanline(std::uint8_t* px, std::int32_t width, const float* lmRow, std::int32_t lmW,
+		std::int32_t scale, float ambR, float ambG, float ambB)
+	{
+		combineLightingScanline(px, width, lmRow, lmW, scale, ambR, ambG, ambB);
 	}
 
 	// =========================================================================
@@ -1218,20 +1534,32 @@ namespace nCine::RhiSoftware
 
 			// Edge function: E(A→B, P) = (B.x-A.x)*(P.y-A.y) - (B.y-A.y)*(P.x-A.x)
 			// Incremental: dE/dx = -(B.y-A.y),  dE/dy = (B.x-A.x)
-			const float w0_dx = v1.y - v2.y, w0_dy = v2.x - v1.x;
-			const float w1_dx = v2.y - v0.y, w1_dy = v0.x - v2.x;
-			const float w2_dx = v0.y - v1.y, w2_dy = v1.x - v0.x;
+			float w0_dx = v1.y - v2.y, w0_dy = v2.x - v1.x;
+			float w1_dx = v2.y - v0.y, w1_dy = v0.x - v2.x;
+			float w2_dx = v0.y - v1.y, w2_dy = v1.x - v0.x;
 
-			const float area = (v2.x - v1.x) * (v0.y - v1.y) - (v2.y - v1.y) * (v0.x - v1.x);
+			float area = (v2.x - v1.x) * (v0.y - v1.y) - (v2.y - v1.y) * (v0.x - v1.x);
 			if (std::fabs(area) < 1e-6f) return; // degenerate
+			// Orientation-normalize so the interior is POSITIVE for every winding, then decide the exact
+			// w == 0 edge pixels with a top-left fill rule (include when the normalized edge gradient
+			// points right, or straight down for horizontal edges). Two strip triangles sharing a
+			// diagonal then cover each of its pixels EXACTLY once (kept identical in the tile
+			// rasterizer's rasterTri, see SwTileRasterizer.cpp).
+			const float orient = (area > 0.0f ? 1.0f : -1.0f);
+			area *= orient;
+			w0_dx *= orient; w0_dy *= orient;
+			w1_dx *= orient; w1_dy *= orient;
+			w2_dx *= orient; w2_dy *= orient;
 			const float invArea = 1.0f / area;
-			const bool signPos = (area > 0.0f);
+			const bool incl0 = (w0_dx > 0.0f || (w0_dx == 0.0f && w0_dy > 0.0f));
+			const bool incl1 = (w1_dx > 0.0f || (w1_dx == 0.0f && w1_dy > 0.0f));
+			const bool incl2 = (w2_dx > 0.0f || (w2_dx == 0.0f && w2_dy > 0.0f));
 
 			// Edge functions at pixel center (minX+0.5, minY+0.5)
 			const float px0 = minX + 0.5f, py0 = minY + 0.5f;
-			float w0_row = (v2.x - v1.x) * (py0 - v1.y) - (v2.y - v1.y) * (px0 - v1.x);
-			float w1_row = (v0.x - v2.x) * (py0 - v2.y) - (v0.y - v2.y) * (px0 - v2.x);
-			float w2_row = (v1.x - v0.x) * (py0 - v0.y) - (v1.y - v0.y) * (px0 - v0.x);
+			float w0_row = orient * ((v2.x - v1.x) * (py0 - v1.y) - (v2.y - v1.y) * (px0 - v1.x));
+			float w1_row = orient * ((v0.x - v2.x) * (py0 - v2.y) - (v0.y - v2.y) * (px0 - v2.x));
+			float w2_row = orient * ((v1.x - v0.x) * (py0 - v0.y) - (v1.y - v0.y) * (px0 - v0.x));
 
 			const SwTexture* tex = (ctx.ff.hasTexture && ctx.ff.textureUnit < static_cast<std::int32_t>(MaxTextureUnits)
 							? ctx.textures[ctx.ff.textureUnit] : nullptr);
@@ -1259,7 +1587,9 @@ namespace nCine::RhiSoftware
 				std::uint8_t* dstRow = (g_state.colorBuffer + (storeY * g_state.bufferWidth + minX) * 4);
 
 				for (std::int32_t px = minX; px <= maxX; ++px, dstRow += 4, w0 += w0_dx, w1 += w1_dx, w2 += w2_dx) {
-					if ((w0 >= 0.0f) != signPos || (w1 >= 0.0f) != signPos || (w2 >= 0.0f) != signPos)
+					if ((w0 < 0.0f || (w0 == 0.0f && !incl0)) ||
+					    (w1 < 0.0f || (w1 == 0.0f && !incl1)) ||
+					    (w2 < 0.0f || (w2 == 0.0f && !incl2)))
 						continue;
 
 					const float b0 = w0 * invArea;
@@ -1677,6 +2007,148 @@ namespace nCine::RhiSoftware
 			}
 		}
 
+		// =====================================================================
+		// Line rasterizer - a clipped DDA with interpolated texture coordinates.
+		// Walks one pixel per major-axis step from the start toward the end,
+		// excluding the final endpoint (the GL diamond-exit convention), so the
+		// shared joint of two strip segments is never blended twice. Each pixel
+		// runs the same sample -> fragment/tint -> blend pipeline as
+		// RasterizeTriangle. Consumers: the HUD weapon wheel draws its arcs as
+		// textured LineStrip mesh commands.
+		// =====================================================================
+		void RasterizeLine(const DrawContext& ctx, const Vertex2D& v0, const Vertex2D& v1)
+		{
+			if DEATH_UNLIKELY(g_state.colorBuffer == nullptr) {
+				return;
+			}
+
+			// Inclusive pixel clip rectangle (scissor Y flipped - it is in bottom-up window coordinates)
+			std::int32_t clipMinX = 0, clipMaxX = g_state.bufferWidth - 1;
+			std::int32_t clipMinY = 0, clipMaxY = g_state.bufferHeight - 1;
+			if DEATH_UNLIKELY(g_state.scissorEnabled) {
+				clipMinX = std::max(clipMinX, g_state.scissorX);
+				clipMaxX = std::min(clipMaxX, g_state.scissorX + g_state.scissorW - 1);
+				clipMinY = std::max(clipMinY, g_state.bufferHeight - g_state.scissorY - g_state.scissorH);
+				clipMaxY = std::min(clipMaxY, g_state.bufferHeight - 1 - g_state.scissorY);
+			}
+			if DEATH_UNLIKELY(clipMinX > clipMaxX || clipMinY > clipMaxY) {
+				return;
+			}
+
+			const SwTexture* tex = (ctx.ff.hasTexture && ctx.ff.textureUnit < static_cast<std::int32_t>(MaxTextureUnits)
+							? ctx.textures[ctx.ff.textureUnit] : nullptr);
+			const std::uint8_t* texPixels = (tex != nullptr ? tex->GetPixels(0) : nullptr);
+			const std::int32_t texW = (tex != nullptr ? tex->GetWidth() : 0);
+			const std::int32_t texH = (tex != nullptr ? tex->GetHeight() : 0);
+			if DEATH_UNLIKELY(texPixels != nullptr && (texW <= 0 || texH <= 0)) {
+				texPixels = nullptr;	// Malformed texture - treat as untextured
+			}
+			const SamplerWrapping wrapS = (tex != nullptr ? tex->GetWrapS() : SamplerWrapping::ClampToEdge);
+			const SamplerWrapping wrapT = (tex != nullptr ? tex->GetWrapT() : SamplerWrapping::ClampToEdge);
+			const bool useLinear = (tex != nullptr && tex->GetMagFilter() == SamplerFilter::Linear && texW > 1 && texH > 1);
+
+			const std::int32_t tR = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[0]) * 255.0f + 0.5f);
+			const std::int32_t tG = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[1]) * 255.0f + 0.5f);
+			const std::int32_t tB = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[2]) * 255.0f + 0.5f);
+			const std::int32_t tA = static_cast<std::int32_t>(std::min(1.0f, ctx.ff.color[3]) * 255.0f + 0.5f);
+
+			const bool useBlend = g_state.blendingEnabled;
+			const bool useFastBlend = (useBlend &&
+				g_state.blendSrc == SwBlendFactor::SrcAlpha &&
+				g_state.blendDst == SwBlendFactor::OneMinusSrcAlpha);
+
+			const float dx = v1.x - v0.x;
+			const float dy = v1.y - v0.y;
+			const std::int32_t steps = std::max(1, static_cast<std::int32_t>(std::ceil(std::max(std::fabs(dx), std::fabs(dy)))));
+			const float invSteps = 1.0f / static_cast<float>(steps);
+
+			for (std::int32_t i = 0; i < steps; i++) {
+				const float t = static_cast<float>(i) * invSteps;
+				const std::int32_t px = static_cast<std::int32_t>(v0.x + dx * t);
+				const std::int32_t py = static_cast<std::int32_t>(v0.y + dy * t);
+				if (px < clipMinX || px > clipMaxX || py < clipMinY || py > clipMaxY) {
+					continue;
+				}
+
+				float u = v0.u + (v1.u - v0.u) * t;
+				float vv = v0.v + (v1.v - v0.v) * t;
+
+				std::int32_t sR, sG, sB, sA;
+				if (texPixels != nullptr && useLinear) {
+					u = WrapUV(u, wrapS);
+					vv = WrapUV(vv, wrapT);
+					std::uint8_t raw[4];
+					SampleBilinearFloat(texPixels, texW, texH, u, vv, wrapS, wrapT, raw);
+					sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
+				} else if (texPixels != nullptr) {
+					u = WrapUV(u, wrapS);
+					vv = WrapUV(vv, wrapT);
+					const std::int32_t srcX = std::max(0, std::min(texW - 1, static_cast<std::int32_t>(u * (texW - 1) + 0.5f)));
+					const std::int32_t srcY = std::max(0, std::min(texH - 1, static_cast<std::int32_t>(vv * (texH - 1) + 0.5f)));
+					const std::uint8_t* src = texPixels + (srcY * texW + srcX) * 4;
+					sR = src[0]; sG = src[1]; sB = src[2]; sA = src[3];
+				} else {
+					sR = 255; sG = 255; sB = 255; sA = 255;
+				}
+
+				if DEATH_UNLIKELY(ctx.fragmentShader != nullptr) {
+					std::uint8_t px4[4] = {
+						static_cast<std::uint8_t>(sR), static_cast<std::uint8_t>(sG),
+						static_cast<std::uint8_t>(sB), static_cast<std::uint8_t>(sA)
+					};
+					FragmentShaderInput fsInput;
+					fsInput.rgba = px4;
+					fsInput.u = u;
+					fsInput.v = vv;
+					fsInput.x = px;
+					fsInput.y = py;
+					fsInput.texWidth = texW;
+					fsInput.texHeight = texH;
+					fsInput.textures = ctx.textures;
+					fsInput.color = ctx.ff.color;
+					fsInput.userData = ctx.fragmentShaderUserData;
+					ctx.fragmentShader(fsInput);
+					sR = px4[0]; sG = px4[1]; sB = px4[2]; sA = px4[3];
+				} else {
+					sR = (sR * tR) >> 8;
+					sG = (sG * tG) >> 8;
+					sB = (sB * tB) >> 8;
+					sA = (sA * tA) >> 8;
+				}
+
+				// Y is flipped when the destination is a render-target texture (stored bottom-up)
+				const std::int32_t storeY = (g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py);
+				std::uint8_t* dstPx = g_state.colorBuffer + (static_cast<std::size_t>(storeY) * g_state.bufferWidth + px) * 4;
+
+				if (useBlend) {
+					if (sA == 0) {
+						continue;
+					}
+					if (useFastBlend) {
+						if (sA >= 255) {
+							dstPx[0] = static_cast<std::uint8_t>(sR);
+							dstPx[1] = static_cast<std::uint8_t>(sG);
+							dstPx[2] = static_cast<std::uint8_t>(sB);
+							dstPx[3] = static_cast<std::uint8_t>(sA);
+						} else {
+							const std::int32_t inv = 255 - sA;
+							dstPx[0] = static_cast<std::uint8_t>((sR * sA + dstPx[0] * inv) >> 8);
+							dstPx[1] = static_cast<std::uint8_t>((sG * sA + dstPx[1] * inv) >> 8);
+							dstPx[2] = static_cast<std::uint8_t>((sB * sA + dstPx[2] * inv) >> 8);
+							dstPx[3] = static_cast<std::uint8_t>((sA * 255 + dstPx[3] * inv) >> 8);
+						}
+					} else {
+						BlendPixelGeneric(dstPx, sR, sG, sB, sA, g_state.blendSrc, g_state.blendDst);
+					}
+				} else {
+					dstPx[0] = static_cast<std::uint8_t>(sR);
+					dstPx[1] = static_cast<std::uint8_t>(sG);
+					dstPx[2] = static_cast<std::uint8_t>(sB);
+					dstPx[3] = static_cast<std::uint8_t>(sA);
+				}
+			}
+		}
+
 		void DrawPrimitive(const DrawContext& ctx, PrimitiveType type, const SmallVectorImpl<std::int32_t>& indices)
 		{
 			switch (type) {
@@ -1714,7 +2186,31 @@ namespace nCine::RhiSoftware
 					}
 					break;
 				}
+				case PrimitiveType::Lines: {
+					for (std::size_t i = 0; i + 1 < indices.size(); i += 2) {
+						RasterizeLine(ctx, FetchVertex(ctx, indices[i]), FetchVertex(ctx, indices[i + 1]));
+					}
+					break;
+				}
+				case PrimitiveType::LineStrip: {
+					for (std::size_t i = 0; i + 1 < indices.size(); i++) {
+						RasterizeLine(ctx, FetchVertex(ctx, indices[i]), FetchVertex(ctx, indices[i + 1]));
+					}
+					break;
+				}
+				case PrimitiveType::LineLoop: {
+					for (std::size_t i = 0; i + 1 < indices.size(); i++) {
+						RasterizeLine(ctx, FetchVertex(ctx, indices[i]), FetchVertex(ctx, indices[i + 1]));
+					}
+					if (indices.size() > 2) {
+						RasterizeLine(ctx, FetchVertex(ctx, indices[indices.size() - 1]), FetchVertex(ctx, indices[0]));
+					}
+					break;
+				}
 				default:
+					// PrimitiveType::Points stays unimplemented: nothing in the engine submits point
+					// primitives (repo-wide, the only PrimitiveType::Points mentions are the backend
+					// topology-mapping tables), so a point rasterizer would be dead code.
 					break;
 			}
 		}

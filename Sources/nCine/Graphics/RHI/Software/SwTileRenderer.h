@@ -39,16 +39,138 @@ namespace nCine::RhiSoftware
 		/** @brief Upper bound on the commands deferred in one flush window (fixed, statically allocated) */
 		static constexpr std::int32_t MaxCommands = 4096;
 
-		/** @brief Largest destination width the static tile-bin array is sized for */
-		static constexpr std::int32_t MaxWidth = 1920;
-		/** @brief Largest destination height the static tile-bin array is sized for */
-		static constexpr std::int32_t MaxHeight = 1080;
+		/** @brief Largest destination width the static tile-bin array is sized for (4K UHD; ~1.2 MB of bins) */
+		static constexpr std::int32_t MaxWidth = 3840;
+		/** @brief Largest destination height the static tile-bin array is sized for (4K UHD) */
+		static constexpr std::int32_t MaxHeight = 2160;
 		/** @brief Number of tile columns at @ref MaxWidth */
 		static constexpr std::int32_t MaxTilesX = (MaxWidth + TileSize - 1) / TileSize;
 		/** @brief Number of tile rows at @ref MaxHeight */
 		static constexpr std::int32_t MaxTilesY = (MaxHeight + TileSize - 1) / TileSize;
 		/** @brief Total number of tile bins the layer can address */
 		static constexpr std::int32_t MaxTiles = MaxTilesX * MaxTilesY;
+
+		/**
+			@brief Submit-time precomputed state of a procedural sprite-quad command
+
+			Everything a quad command re-derived per tile before is computed once in
+			@ref SubmitCommand() (via `TileInternal::PrepareQuad`) and carried here: the four transformed
+			screen-space vertices (the exact @c FetchVertex output, including the pixel snap), the
+			texture / tint / blend derivation shared by both quad rasterizers, and the axis-aligned or
+			affine setup (fixed-point UV steps resp. UV gradients and edge-function increments). A
+			full-screen quad at 720p used to redo all of this ~900x per flush - once per binned tile.
+			Only the tile/scissor clip and the per-row state remain per-tile, computed from these fields
+			with the identical expressions, so the rasterized pixels are bit-identical.
+
+			`valid == false` marks a command the tile path treats as a no-op (a degenerate quad the
+			rasterizers would reject) or a non-quad command that takes the generic primitive path.
+		*/
+		struct PreparedQuad
+		{
+			/** @brief Whether the fields below are filled (procedural quad); `false` = generic path / no-op */
+			bool valid;
+			/** @brief Whether the quad is axis-aligned (selects the axis-aligned or the affine rasterizer) */
+			bool axisAligned;
+			/** @brief The four transformed screen-space vertices (exact `FetchVertex` output, snap included) */
+			Vertex2D v[4];
+
+			// -- Shared derived state (both quad rasterizers) --
+
+			/** @brief Level-0 texel base of the sampled texture, or `nullptr` for an untextured draw */
+			const std::uint8_t* texPixels;
+			/** @brief Sampled texture width in texels (0 when untextured) */
+			std::int32_t texW;
+			/** @brief Sampled texture height in texels (0 when untextured) */
+			std::int32_t texH;
+			/** @brief Horizontal wrap mode of the sampled texture */
+			nCine::SamplerWrapping wrapS;
+			/** @brief Vertical wrap mode of the sampled texture */
+			nCine::SamplerWrapping wrapT;
+			/** @brief Whether the texture is sampled bilinearly */
+			bool useLinear;
+			/** @brief Tint red in `[0, 255]` */
+			std::int32_t tR;
+			/** @brief Tint green in `[0, 255]` */
+			std::int32_t tG;
+			/** @brief Tint blue in `[0, 255]` */
+			std::int32_t tB;
+			/** @brief Tint alpha in `[0, 255]` */
+			std::int32_t tA;
+			/** @brief Whether the tint is a full-white no-op */
+			bool whiteTint;
+			/** @brief Whether blending is enabled */
+			bool useBlend;
+			/** @brief Whether the blend factors are the SrcAlpha / OneMinusSrcAlpha fast pair */
+			bool useFastBlend;
+			/** @brief Whether the draw is a constant-color solid fill (no texture, constant fragment output) */
+			bool constantFill;
+			/** @brief The constant fill color (the fragment's packed output), valid when @ref constantFill */
+			std::uint8_t constColor[4];
+
+			// -- Axis-aligned setup (valid when axisAligned) --
+
+			/** @brief Screen-space bounding box minimum X */
+			float fxMin;
+			/** @brief Screen-space bounding box maximum X */
+			float fxMax;
+			/** @brief Screen-space bounding box minimum Y */
+			float fyMin;
+			/** @brief Screen-space bounding box maximum Y */
+			float fyMax;
+			/** @brief Bounding box width (`fxMax - fxMin`) */
+			float fullW;
+			/** @brief Bounding box height (`fyMax - fyMin`) */
+			float fullH;
+			/** @brief U at the left edge */
+			float uLeft;
+			/** @brief U at the right edge */
+			float uRight;
+			/** @brief V at the top edge */
+			float vTop;
+			/** @brief V at the bottom edge */
+			float vBot;
+			/** @brief Texture width in 16.16 fixed point */
+			std::int32_t texWFix;
+			/** @brief Horizontal fixed-point UV step per pixel */
+			std::int32_t dtxFix;
+			/** @brief Vertical fixed-point UV step per pixel */
+			std::int32_t dtyFix;
+			/** @brief Whether the horizontal wrap is Repeat */
+			bool useRepeatS;
+			/** @brief Whether the vertical wrap is Repeat */
+			bool useRepeatT;
+			/** @brief Whether the horizontal wrap is ClampToEdge */
+			bool useClampS;
+			/** @brief Whether the scanline-buffer (gather + SIMD blend) path applies */
+			bool useScanBuf;
+
+			// -- Affine setup (valid when !axisAligned) --
+
+			/** @brief Affine UV gradient du/dx */
+			float dudx;
+			/** @brief Affine UV gradient du/dy */
+			float dudy;
+			/** @brief Affine UV gradient dv/dx */
+			float dvdx;
+			/** @brief Affine UV gradient dv/dy */
+			float dvdy;
+			/** @brief Per-pixel edge-function increments of triangle 1 (v0, v1, v2) */
+			float t1w0dx, t1w1dx, t1w2dx;
+			/** @brief Per-pixel edge-function increments of triangle 2 (v2, v1, v3) */
+			float t2w0dx, t2w1dx, t2w2dx;
+			/** @brief Whether triangle 1 has non-degenerate area */
+			bool tri1Valid;
+			/** @brief Whether triangle 2 has non-degenerate area */
+			bool tri2Valid;
+			/** @brief Sign of triangle 1's area (coverage-test orientation) */
+			bool sign1;
+			/** @brief Sign of triangle 2's area */
+			bool sign2;
+			/** @brief du/dx in 16.16 fixed point, premultiplied by the texture width */
+			std::int32_t dudxFix;
+			/** @brief dv/dx in 16.16 fixed point, premultiplied by the texture height */
+			std::int32_t dvdxFix;
+		};
 
 		/**
 			@brief One deferred draw call together with its pre-computed screen-space bounds
@@ -101,6 +223,27 @@ namespace nCine::RhiSoftware
 			 * @ref ctx.fragmentShaderUserData at it, making the deferred draw fully self-contained.
 			 */
 			alignas(16) std::uint8_t userDataStorage[MaxFragmentShaderUserDataSize];
+
+			/**
+			 * @brief Index of this command's @ref SwPaletteLut in the flush window's LUT pool, or `-1`
+			 *
+			 * An index rather than a pointer because the pool still grows while commands are being
+			 * submitted; @ref Flush() resolves it into @ref DrawContext::paletteLut once the pool is final.
+			 */
+			std::int32_t paletteLutIndex;
+
+			/**
+			 * @brief Snapshot of a general (vertex-fed) draw's interleaved clip-space vertices
+			 *
+			 * @ref DrawContext::vertexData points into the device's per-draw scratch buffer, which is
+			 * overwritten by the next draw; deferral outlives that, so @ref SubmitCommand copies the
+			 * vertex floats here and repoints @ref ctx.vertexData at it (mirrors @ref userDataStorage).
+			 * Heap capacity is retained across reuse of the command slot.
+			 */
+			SmallVector<float, 0> vertexStorage;
+
+			/** @brief Submit-time precomputed vertices and derived state of a procedural quad command */
+			PreparedQuad prep;
 		};
 
 		/** @brief Spins up the worker pool and resets the queue (idempotent; called once at startup) */

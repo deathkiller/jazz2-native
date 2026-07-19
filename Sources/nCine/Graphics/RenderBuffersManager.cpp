@@ -70,6 +70,13 @@ namespace nCine
 
 		// Create the first buffer for each type right away
 		for (std::uint32_t i = 0; i < std::uint32_t(BufferTypes::Count); i++) {
+#if defined(RHI_GL_PROFILE_ES2)
+			// ES2 has no uniform buffer objects (binding GL_UNIFORM_BUFFER would be an invalid enum) and nothing
+			// acquires uniform-type memory on this profile (GLShaderUniformBlocks pushes loose glUniform* instead)
+			if (specs_[i].type == BufferTypes::Uniform) {
+				continue;
+			}
+#endif
 			CreateBuffer(specs_[i]);
 		}
 	}

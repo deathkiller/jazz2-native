@@ -34,8 +34,8 @@ namespace nCine::RhiSoftware
 		SwTexture(const SwTexture&) = delete;
 		SwTexture& operator=(const SwTexture&) = delete;
 
-		/** @brief Returns a synthetic handle uniquely identifying the texture (used by material sort keys) */
-		inline std::uint32_t GetGLHandle() const {
+		/** @brief Returns a backend-neutral identifier uniquely identifying the texture (feeds material sort keys) */
+		inline std::uint32_t GetUniqueId() const {
 			return handle_;
 		}
 		/** @brief Returns the texture target */
@@ -95,6 +95,10 @@ namespace nCine::RhiSoftware
 		/** @brief Returns a writable base pointer of the level-0 texel store (for render-target output) */
 		inline std::uint8_t* MutablePixels() {
 			return pixels_.empty() ? nullptr : pixels_.data();
+		}
+		/** @brief Returns a globally monotonic stamp of the texel store, advanced by every allocation or upload (used to key content-derived caches; render-target writes bypass it) */
+		inline std::uint32_t GetContentVersion() const {
+			return contentVersion_;
 		}
 
 		/** @brief Binds the texture to the specified texture unit on the device */
@@ -161,8 +165,10 @@ namespace nCine::RhiSoftware
 
 	private:
 		static std::uint32_t nextHandle_;
+		static std::uint32_t nextContentVersion_;
 
 		std::uint32_t handle_;
+		std::uint32_t contentVersion_;
 		TextureTarget target_;
 		PixelFormat format_;
 		PixelFormat uploadFormat_;

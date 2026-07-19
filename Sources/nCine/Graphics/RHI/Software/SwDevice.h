@@ -226,9 +226,17 @@ namespace nCine::RhiSoftware
 			@param ambR      Ambient colour red the unlit scene is blended toward
 			@param ambG      Ambient colour green the unlit scene is blended toward
 			@param ambB      Ambient colour blue the unlit scene is blended toward
+			@param waterActive   Whether the waterline is inside this viewport - enables the lightweight per-row
+			                     water effect (the CPU replacement of the CombineWithWater shader variants). With
+			                     water active, @p lightmap may be `nullptr` for a water-only combine (fully lit scene).
+			@param waterLevelPx  Waterline position in viewport-local pixels from the TOP edge (the shader path's
+			                     `viewWaterLevel`); may be negative when the whole viewport is underwater
+			@param waterTime     Wave animation time, the shader path's `uTime` (elapsed frames * 0.0018)
+			@param waterCamY     Camera world-space Y, anchors the per-row wave phase to the world while scrolling
 		*/
 		static void SetPendingSoftwareLighting(const float* lightmap, std::int32_t lmW, std::int32_t lmH, std::int32_t scale,
-			std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB);
+			std::int32_t vpX, std::int32_t vpY, std::int32_t vpW, std::int32_t vpH, float ambR, float ambG, float ambB,
+			bool waterActive = false, float waterLevelPx = 0.0f, float waterTime = 0.0f, float waterCamY = 0.0f);
 
 	private:
 		static constexpr std::uint32_t MaxTextureUnits = 8;
@@ -258,22 +266,24 @@ namespace nCine::RhiSoftware
 		/** @brief Backend-owned pixel store for the screen back-buffer (only used by the present path) */
 		static std::vector<std::uint8_t> screenPixels_;
 
-		/** @brief One queued software-lighting combine, submitted by the compositor and applied at the next Combine draw */
+		/** @brief One queued software-lighting/water combine, submitted by the compositor and applied at the next Combine draw */
 		struct PendingSoftwareLight
 		{
 			const float* Lightmap = nullptr;
 			std::int32_t LmW = 0, LmH = 0, Scale = 1;
 			std::int32_t VpX = 0, VpY = 0, VpW = 0, VpH = 0;
 			float AmbR = 0.0f, AmbG = 0.0f, AmbB = 0.0f;
+			bool WaterActive = false;
+			float WaterLevelPx = 0.0f, WaterTime = 0.0f, WaterCamY = 0.0f;
 		};
 		/** @brief FIFO of pending software-lighting combines (one per viewport, in submission order) */
 		static std::vector<PendingSoftwareLight> pendingSoftwareLights_;
 
 		/** @brief Resolves the color framebuffer that draws and clears write into (RT color 0, else default) */
 		static bool ResolveFramebuffer(Framebuffer& out);
-		/** @brief Runs the correct C++ effect for the bound program over the given draw range */
-		static void Dispatch(PrimitiveType primitive, std::int32_t numVertices);
-		/** @brief Consumes the front queued software lightmap and blends it in place over its viewport rectangle */
+		/** @brief Runs the correct C++ effect for the bound program over the given draw range (@p firstVertex indexes the bound vertex buffer; only the vertex-attribute mesh path consumes it) */
+		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
+		/** @brief Consumes the front queued software combine (lightmap and/or water effect) and blends it in place over its viewport rectangle */
 		static void ApplyPendingSoftwareLighting();
 	};
 }

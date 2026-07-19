@@ -677,6 +677,12 @@ namespace ShaderCompiler
 			String Declaration;	// Declaration without the "varying"/"flat" keywords, e.g. "highp float vExtra"
 			bool Flat = false;
 			std::int32_t Line = 0;
+			// Backend selector of a varying wrapped in a global-scope "#ifdef/#ifndef SOFTWARE_RENDERER"
+			// conditional: 0 = every backend, 1 = software renderer only, 2 = every backend EXCEPT the
+			// software renderer. The lowering re-emits a tagged declaration wrapped in the matching
+			// directive so BuildStageSource resolves it per backend (the transpiler sees SW-only varyings,
+			// the GL/ES2/HLSL/SPIR-V emissions never do - their output stays byte-identical).
+			std::int32_t SwMode = 0;
 		};
 
 		/** @brief Parsed "attribute" declaration (lowered to a vertex-stage-only "in" global) */
@@ -1021,6 +1027,14 @@ R"GLSL(void main()
 			std::int32_t captureDepth = 0;
 			std::int32_t captureStartLine = 0;
 			bool awaitingBrace = false;
+			// Global-scope "#ifdef/#ifndef SOFTWARE_RENDERER" conditional around varying declarations:
+			// which backend the lines currently parsed belong to (VaryingDecl::SwMode semantics), and
+			// whether the conditional's "#else" was already seen. Such a conditional may only wrap varying
+			// declarations (plus comments/blank lines) - its directive lines are consumed here so they
+			// cannot leak into the shared globals, and the tagged varyings are re-wrapped by the lowering.
+			std::int32_t swVaryingMode = 0;
+			bool swVaryingSeenElse = false;
+			std::int32_t swVaryingLine = 0;
 
 			for (std::size_t index = 0; index < lines.size(); index++) {
 				const SourceLine& line = lines[index];
@@ -1069,8 +1083,59 @@ R"GLSL(void main()
 					continue;
 				}
 
+				// A global-scope "#ifdef/#ifndef SOFTWARE_RENDERER" conditional selects backend-specific
+				// varying declarations (the transpiler's per-instance-constant varying machinery). The
+				// directive lines are consumed here - the collected varyings are tagged instead and the
+				// lowering re-wraps them, so the shared globals never carry the (empty) resolved block and
+				// every other backend's emitted text stays byte-identical. Only varying declarations,
+				// comments and blank lines are allowed inside such a conditional.
+				{
+					std::size_t hash = FindFirstNotOf(bare, " \t"_s);
+					if (hash != Npos && bare[hash] == '#') {
+						std::size_t p = hash + 1;
+						while (p < bare.size() && IsSpace(bare[p])) {
+							p++;
+						}
+						std::size_t nameBegin = p;
+						while (p < bare.size() && IsIdentChar(bare[p])) {
+							p++;
+						}
+						String directive = Substr(bare, nameBegin, p - nameBegin);
+						if ((directive == "ifdef" || directive == "ifndef") && FirstIdentifier(Substr(bare, p)) == "SOFTWARE_RENDERER") {
+							if (swVaryingMode != 0) {
+								return Fail(diag, "nested SOFTWARE_RENDERER conditionals are not supported at global scope", line.Line);
+							}
+							swVaryingMode = (directive == "ifdef" ? 1 : 2);
+							swVaryingSeenElse = false;
+							swVaryingLine = line.Line;
+							continue;
+						}
+						if (swVaryingMode != 0) {
+							if (directive == "else") {
+								if (swVaryingSeenElse) {
+									return Fail(diag, "duplicate #else in a SOFTWARE_RENDERER conditional", line.Line);
+								}
+								swVaryingSeenElse = true;
+								swVaryingMode = (swVaryingMode == 1 ? 2 : 1);
+								continue;
+							}
+							if (directive == "endif") {
+								swVaryingMode = 0;
+								continue;
+							}
+							return Fail(diag, "a global-scope SOFTWARE_RENDERER conditional supports only #else/#endif inside (no nested directives)", line.Line);
+						}
+					}
+				}
+				if (swVaryingMode != 0 && Trim(bare).empty()) {
+					continue;		// Comment-only or blank lines inside the conditional are dropped with it
+				}
+
 				std::size_t cursor = 0;
 				String word = WordAt(bare, cursor);
+				if (swVaryingMode != 0 && word != "varying") {
+					return Fail(diag, "a global-scope SOFTWARE_RENDERER conditional may only contain varying declarations", line.Line);
+				}
 
 				if (word == "program" || word == "batched" || word == "variant") {
 					if (!ParseDirective(word, bare, cursor, line.Line, src, seenProgram, diag)) {
@@ -1148,6 +1213,7 @@ R"GLSL(void main()
 					}
 					varying.Declaration = std::move(decl);
 					varying.Line = line.Line;
+					varying.SwMode = swVaryingMode;
 					src.Varyings.push_back(std::move(varying));
 					continue;
 				}
@@ -1259,6 +1325,9 @@ R"GLSL(void main()
 
 			if (capturing != 0) {
 				return Fail(diag, "unterminated \""_s + (capturing == 1 ? "vertex()" : "fragment()") + "\" body"_s, captureStartLine);
+			}
+			if (swVaryingMode != 0) {
+				return Fail(diag, "unterminated SOFTWARE_RENDERER conditional at global scope", swVaryingLine);
 			}
 			if (globalDepth != 0) {
 				return Fail(diag, "unbalanced braces at global scope", lines.empty() ? 1 : lines.back().Line);
@@ -3417,13 +3486,31 @@ R"GLSL(void main()
 			return false;		// No qualifying occurrence (or an unterminated statement) - keep the init
 		}
 
+		/**
+			Appends one lowered varying declaration. A backend-tagged varying (VaryingDecl::SwMode, from a
+			global-scope SOFTWARE_RENDERER conditional) is re-wrapped in the matching directive so
+			BuildStageSource resolves it per backend; an untagged one is emitted verbatim as before.
+		*/
+		void AppendVaryingDecl(std::vector<SourceLine>& lines, const VaryingDecl& varying, const char* prefix, const char* flatPrefix)
+		{
+			if (varying.SwMode == 1) {
+				lines.push_back({ "#ifdef SOFTWARE_RENDERER", 0 });
+			} else if (varying.SwMode == 2) {
+				lines.push_back({ "#ifndef SOFTWARE_RENDERER", 0 });
+			}
+			lines.push_back({ String(varying.Flat ? flatPrefix : prefix) + varying.Declaration + ";"_s, varying.Line });
+			if (varying.SwMode != 0) {
+				lines.push_back({ "#endif", 0 });
+			}
+		}
+
 		/** Builds the vertex stage of a lowered canvas_item document (default template or vertex() epilogue form) */
 		void BuildCanvasVertexStage(const ParsedShader& src, bool batched, bool implicitTexture, ShaderDocument& document)
 		{
 			std::vector<SourceLine>& lines = document.VertexLines;
 			AppendTemplate(lines, batched ? CanvasBatchedVsHead : CanvasSpriteVsHead);
 			for (const VaryingDecl& varying : src.Varyings) {
-				lines.push_back({ (varying.Flat ? "flat out "_s : "out "_s) + varying.Declaration + ";"_s, varying.Line });
+				AppendVaryingDecl(lines, varying, "out ", "flat out ");
 			}
 			for (const AttributeDecl& attribute : src.Attributes) {
 				lines.push_back({ FormatAttributeDecl(attribute.Declaration), attribute.Line });
@@ -3486,7 +3573,7 @@ R"GLSL(void main()
 			lines.push_back({ "in vec4 vColor;", 0 });
 			lines.push_back({ "in highp float vPaletteOffset;", 0 });
 			for (const VaryingDecl& varying : src.Varyings) {
-				lines.push_back({ (varying.Flat ? "flat in "_s : "in "_s) + varying.Declaration + ";"_s, varying.Line });
+				AppendVaryingDecl(lines, varying, "in ", "flat in ");
 			}
 			lines.push_back({ "", 0 });
 			// An implicit TEXTURE declaration takes the head of the globals — exactly where the
@@ -3556,7 +3643,7 @@ R"GLSL(void main()
 				lines.push_back({ "", 0 });
 			}
 			for (const VaryingDecl& varying : src.Varyings) {
-				lines.push_back({ (varying.Flat ? "flat out "_s : "out "_s) + varying.Declaration + ";"_s, varying.Line });
+				AppendVaryingDecl(lines, varying, "out ", "flat out ");
 			}
 			if (!src.Varyings.empty()) {
 				lines.push_back({ "", 0 });
@@ -3585,7 +3672,7 @@ R"GLSL(void main()
 			lines.push_back({ "", 0 });
 			// The varyings come before the globals, so helper functions there can reference them
 			for (const VaryingDecl& varying : src.Varyings) {
-				lines.push_back({ (varying.Flat ? "flat in "_s : "in "_s) + varying.Declaration + ";"_s, varying.Line });
+				AppendVaryingDecl(lines, varying, "in ", "flat in ");
 			}
 			if (!src.Varyings.empty()) {
 				lines.push_back({ "", 0 });

@@ -9,7 +9,11 @@
 
 #include <memory>
 
+#include <Containers/SmallVector.h>
+
 #include <imgui.h>
+
+using namespace Death::Containers;
 
 struct ImTextureData;
 

@@ -420,6 +420,75 @@ $fs = Get-Essl100Stage $d 'fragment'
 Assert ($vs.Contains('attribute vec2 aQuadCorner;') -and -not $vs.Contains('gl_VertexID')) 'Essl100 TexturePassthrough: VS gl_VertexID not lowered to the corner attribute'
 Assert ($fs.Contains('texture2D(TEXTURE, vTexCoords)') -and $fs.Contains('gl_FragColor = COLOR;')) 'Essl100 TexturePassthrough: FS not transformed'
 
+# --- software (GlslToCpp) emission: primary-texel fast path -------------------------------------
+# The transpiler emits swTexturePrimary(in, N) for the exact `texture(uTexture, vTexCoords)` pattern
+# (the software rasterizer's gather has already fetched that texel into in.rgba); every other sample
+# (an offset UV, a computed UV, or a sampler that is not the device's primary "uTexture") must keep
+# the generic swTexture(in, N, uv) re-sample.
+$swOut = Join-Path $tempDir 'SwGenerated.h'
+& $tool --emit-sw-generated $swOut (Join-Path $testsDir 'Sprite.shader') (Join-Path $testsDir 'TexturePassthrough.shader') | Out-Null
+$swText = [System.IO.File]::ReadAllText($swOut)
+Assert ($swText.Contains('swTexturePrimary(in, 0)')) 'SwEmission: texture(uTexture, vTexCoords) not lowered to the primary-texel fast path'
+Assert (-not $swText.Contains('swTexture(in, 0, vec2(in.u, in.v))')) 'SwEmission: the primary sample still re-samples through swTexture()'
+Assert ($swText.Contains('swTexture(in, 2, vec2(in.u, in.v))')) 'SwEmission: a non-primary sampler (TEXTURE, unit 2) must keep the generic swTexture()'
+Assert (($swText.IndexOf('swTexturePrimary') -eq $swText.LastIndexOf('swTexturePrimary'))) 'SwEmission: swTexturePrimary emitted for a sampler other than uTexture'
+
+# --- software-only varyings: global-scope "#ifdef/#ifndef SOFTWARE_RENDERER" around varying
+# declarations selects per-backend declarations. The GL/ES2/HLSL/SPIR-V emissions must carry only
+# the non-software branch (and never the macro itself); the SW transpile must see the software
+# branch and lower the per-instance-constant varying through ComputeVaryings/the uniforms struct.
+$h = Emit 'SwVarying'
+$vs = Get-Source $h 'SwVarying_Vs'
+$fs = Get-Source $h 'SwVarying_Fs'
+Assert ($null -ne $vs -and $null -ne $fs) 'SwVarying: sources missing'
+Assert ($vs.Contains('out vec2 vPos;') -and $vs.Contains('vPos = aPosition * vec2(2.0) - vec2(1.0);')) 'SwVarying: GL VS lost the non-software varying/store'
+Assert ($fs.Contains('in vec2 vPos;') -and $fs.Contains('vec2 pos = vPos;')) 'SwVarying: GL FS lost the non-software varying/read'
+Assert (-not $h.Contains('vRect')) 'SwVarying: software-only varying leaked into the emitted header'
+Assert (-not $h.Contains('SOFTWARE_RENDERER')) 'SwVarying: SOFTWARE_RENDERER macro leaked into the emitted header'
+$swOut2 = Join-Path $tempDir 'SwGeneratedVarying.h'
+& $tool --emit-sw-generated $swOut2 (Join-Path $testsDir 'SwVarying.shader') | Out-Null
+$swText2 = [System.IO.File]::ReadAllText($swOut2)
+Assert ($swText2.Contains('io->vRect = (*reinterpret_cast<const vec4*>(instanceBlock + 80));')) 'SwVarying: SW ComputeVaryings does not fill the constant varying from the instance block'
+Assert ($swText2.Contains('unis->vRect.xy()')) 'SwVarying: SW fragment does not read the constant varying from the uniforms struct'
+Assert (-not $swText2.Contains('vPos')) 'SwVarying: non-software branch leaked into the SW transpile'
+
+# --- MultiOutput: multiple fragment outputs (MRT) across the offline targets ----------------------
+# The render-target contract: fragment "out" declarations map to render targets in DECLARATION ORDER
+# of the emitted stage source (user-declared extras precede the tool-appended COLOR). The GL source
+# carries both declarations verbatim; the Vulkan GLSL assigns layout(location = 0..N); the HLSL maps
+# the same order to SV_Target0..N through a PsOutput struct (a single output keeps the plain
+# "PSMain(...) : SV_Target" shape - asserted all over section 3 above). ES2 (only gl_FragColor) and
+# the software rasterizer (single color target) cannot express MRT and must DECLINE with a clear
+# diagnostic instead of silently mangling the extra output.
+$h = Emit 'MultiOutput'
+$fs = Get-Source $h 'MultiOutput_Fs'
+Assert ($null -ne $fs) 'MultiOutput: FS source missing'
+Assert ($fs.Contains('out vec4 NORMAL;') -and $fs.Contains('out vec4 COLOR;')) 'MultiOutput: GL FS must carry both out declarations'
+Assert ($fs.IndexOf('out vec4 NORMAL;') -lt $fs.IndexOf('out vec4 COLOR;')) 'MultiOutput: user-declared out must precede the tool-appended COLOR'
+
+$previousPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+$vk = (& $tool (Join-Path $testsDir 'MultiOutput.shader') --vulkan 2>&1 | Out-String -Width 4096) -replace "`r`n", "`n"
+$hl = (& $tool (Join-Path $testsDir 'MultiOutput.shader') --hlsl 2>&1 | Out-String -Width 4096) -replace "`r`n", "`n"
+$es = (& $tool (Join-Path $testsDir 'MultiOutput.shader') --essl100-check 2>&1 | Out-String -Width 4096) -replace "`r`n", "`n"
+$ErrorActionPreference = $previousPreference
+Assert ($vk.Contains('layout(location = 0) out vec4 NORMAL;')) 'MultiOutput: Vulkan GLSL did not assign location 0 to the first declared output'
+Assert ($vk.Contains('layout(location = 1) out vec4 COLOR;')) 'MultiOutput: Vulkan GLSL did not assign location 1 to the second declared output (COLOR)'
+Assert ($hl.Contains('float4 NORMAL : SV_Target0;') -and $hl.Contains('float4 COLOR : SV_Target1;')) 'MultiOutput: HLSL did not map the outputs to SV_Target0/SV_Target1 in declaration order'
+Assert ($hl.Contains('PsOutput PSMain(PsInput _input)') -and $hl.Contains('return _output;')) 'MultiOutput: HLSL multi-output entry does not return the PsOutput struct'
+Assert (-not $hl.Contains(': SV_Target`n')) 'MultiOutput: the single-output SV_Target return shape leaked into the multi-output entry'
+Assert ($es.Contains('multiple fragment outputs')) 'MultiOutput: ESSL100 did not decline the multi-output fragment stage'
+Assert (-not $es.Contains('NORMAL =')) 'MultiOutput: ESSL100 emitted a mangled fragment stage instead of declining'
+
+$swOut3 = Join-Path $tempDir 'SwGeneratedMultiOut.h'
+$previousPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+$swMsg = (& $tool --emit-sw-generated $swOut3 (Join-Path $testsDir 'MultiOutput.shader') 2>&1 | Out-String -Width 4096)
+$ErrorActionPreference = $previousPreference
+$swText3 = [System.IO.File]::ReadAllText($swOut3)
+Assert ($swMsg.Contains("declined: MultiOutput") -and $swMsg.Contains("fragment output 'NORMAL' is unsupported")) 'MultiOutput: SW transpile did not decline with the MRT diagnostic'
+Assert (-not $swText3.Contains('MultiOutput_Fragment')) 'MultiOutput: a fragment function for the declined shader leaked into the SW header'
+
 Write-Host ''
 if ($failures -eq 0) {
     Write-Host "All tests passed ($passed assertions)."
