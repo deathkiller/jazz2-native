@@ -877,8 +877,8 @@ namespace nCine::RhiD3D11
 	namespace
 	{
 		// Synthetic multi-render-target self-test, compiled only when D3D11_MRT_PROBE is defined (no runtime
-		// cost otherwise; mirrors the Vulkan backend's VULKAN_MRT_PROBE). Run once at device creation: attaches
-		// TWO color textures to one render target, binds both through a single OMSetRenderTargets (the regular
+		// cost otherwise, mirrors the Vulkan backend's VULKAN_MRT_PROBE). Run once at device creation: attaches
+		// two color textures to one render target, binds both through a single OMSetRenderTargets (the regular
 		// BindCurrentRenderTarget path), verifies the multi-attachment device Clear() covers both, then clears
 		// attachment 0 red and attachment 1 green through their per-attachment RTVs, reads both back through
 		// the regular staging readback and logs PASS/FAIL. Exercises per-attachment RTV creation, the
@@ -1024,7 +1024,7 @@ namespace nCine::RhiD3D11
 		hr = factory->CreateSwapChainForCoreWindow(device_, reinterpret_cast<IUnknown*>(windowHandle), &sd, nullptr, &swapchain1);
 		SafeRelease(factory);
 		if (FAILED(hr) || swapchain1 == nullptr) {
-			LOGE("IDXGIFactory2::CreateSwapChainForCoreWindow failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
+			LOGE("IDXGIFactory2::CreateSwapChainForCoreWindow() failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
 			DestroySwapchain();
 			return false;
 		}
@@ -1097,14 +1097,14 @@ namespace nCine::RhiD3D11
 		ID3D11Texture2D* backBuffer = nullptr;
 		HRESULT hr = swapchain_->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer));
 		if (FAILED(hr) || backBuffer == nullptr) {
-			LOGE("IDXGISwapChain::GetBuffer failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
+			LOGE("IDXGISwapChain::GetBuffer() failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
 			return false;
 		}
 
 		hr = device_->CreateRenderTargetView(backBuffer, nullptr, &backbufferRtv_);
 		backBuffer->Release();
 		if (FAILED(hr)) {
-			LOGE("ID3D11Device::CreateRenderTargetView failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
+			LOGE("ID3D11Device::CreateRenderTargetView() failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
 			return false;
 		}
 
@@ -1124,7 +1124,7 @@ namespace nCine::RhiD3D11
 
 		HRESULT hr = swapchain_->ResizeBuffers(0, static_cast<UINT>(width), static_cast<UINT>(height), DXGI_FORMAT_UNKNOWN, 0);
 		if (FAILED(hr)) {
-			LOGE("IDXGISwapChain::ResizeBuffers failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
+			LOGE("IDXGISwapChain::ResizeBuffers() failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
 			return;
 		}
 

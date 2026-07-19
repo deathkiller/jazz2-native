@@ -78,8 +78,8 @@ else()
 			set(NCINE_UWP_CERTIFICATE_PATH "" CACHE STRING "Code-signing certificate path (Windows RT only)")
 			set(NCINE_UWP_CERTIFICATE_PASSWORD "" CACHE STRING "Code-signing certificate password (Windows RT only)")
 
-			# Rendering backend (RHI) on UWP (Windows Store / Xbox): Direct3D 11 is the DEFAULT. Unlike the
-			# desktop D3D11 build it must NOT force the SDL2 backend: UWP renders through UwpGfxDevice, which
+			# Rendering backend (RHI) on UWP (Windows Store / Xbox): Direct3D 11 is the default. Unlike the
+			# desktop D3D11 build it must not force the SDL2 backend: UWP renders through UwpGfxDevice, which
 			# drives a DXGI flip-model swap chain from the CoreWindow (see UwpGfxDevice / D3D11Device).
 			# Selecting "OpenGL" chooses the ANGLE (OpenGL|ES) renderer instead. Picking D3D11 demotes ANGLE to
 			# an opt-in fallback (its libs are then not required); "OpenGL" restores ANGLE as the renderer so

@@ -1386,7 +1386,7 @@ namespace nCine::RhiVulkan
 			}
 
 			// The framebuffer stores rows exactly like GL (bottom-up), so the GL scissor (bottom-left origin)
-			// maps to the Vulkan framebuffer scissor with no flip; clamp it to the current render area.
+			// maps to Vulkan framebuffer scissor with no flip; clamp it to the current render area.
 			const VkExtent2D extent = (s_activeRenderPassTarget == nullptr) ? s_screenExtent
 				: VkExtent2D{ std::uint32_t(s_activeRenderPassTarget->GetColorTexture(0) ? s_activeRenderPassTarget->GetColorTexture(0)->GetWidth() : 0),
 							  std::uint32_t(s_activeRenderPassTarget->GetColorTexture(0) ? s_activeRenderPassTarget->GetColorTexture(0)->GetHeight() : 0) };
@@ -2121,28 +2121,28 @@ namespace nCine::RhiVulkan
 		SDL_Window* window = reinterpret_cast<SDL_Window*>(windowHandle);
 
 		if (SDL_Vulkan_LoadLibrary(nullptr) != 0) {
-			LOGE("SDL_Vulkan_LoadLibrary failed: {}", SDL_GetError());
+			LOGE("SDL_Vulkan_LoadLibrary() failed: {}", SDL_GetError());
 			return false;
 		}
 		vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(SDL_Vulkan_GetVkGetInstanceProcAddr());
 		if (vkGetInstanceProcAddr == nullptr) {
-			LOGE("SDL_Vulkan_GetVkGetInstanceProcAddr returned null");
+			LOGE("SDL_Vulkan_GetVkGetInstanceProcAddr() returned null");
 			return false;
 		}
 		LoadGlobalFunctions();
 		if (vkCreateInstance == nullptr) {
-			LOGE("Failed to load vkCreateInstance from the Vulkan loader");
+			LOGE("Failed to load vkCreateInstance() from Vulkan loader");
 			return false;
 		}
 
 		std::uint32_t sdlExtCount = 0;
 		if (!SDL_Vulkan_GetInstanceExtensions(window, &sdlExtCount, nullptr)) {
-			LOGE("SDL_Vulkan_GetInstanceExtensions (count) failed: {}", SDL_GetError());
+			LOGE("SDL_Vulkan_GetInstanceExtensions(count) failed: {}", SDL_GetError());
 			return false;
 		}
 		std::vector<const char*> instanceExts(sdlExtCount);
 		if (sdlExtCount > 0 && !SDL_Vulkan_GetInstanceExtensions(window, &sdlExtCount, instanceExts.data())) {
-			LOGE("SDL_Vulkan_GetInstanceExtensions (names) failed: {}", SDL_GetError());
+			LOGE("SDL_Vulkan_GetInstanceExtensions(names) failed: {}", SDL_GetError());
 			return false;
 		}
 
@@ -2210,7 +2210,7 @@ namespace nCine::RhiVulkan
 		}
 
 		if (!SDL_Vulkan_CreateSurface(window, s_instance, &s_surface)) {
-			LOGE("SDL_Vulkan_CreateSurface failed: {}", SDL_GetError());
+			LOGE("SDL_Vulkan_CreateSurface() failed: {}", SDL_GetError());
 			DestroySwapchain();
 			return false;
 		}
@@ -2349,7 +2349,7 @@ namespace nCine::RhiVulkan
 		static_cast<void>(width);
 		static_cast<void>(height);
 		static_cast<void>(vsync);
-		LOGE("The Vulkan backend requires the SDL2 window backend");
+		LOGE("Vulkan backend requires the SDL2 window backend");
 		return false;
 #endif
 	}

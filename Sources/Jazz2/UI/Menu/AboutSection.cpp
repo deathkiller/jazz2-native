@@ -4,18 +4,31 @@
 #include "../../../nCine/Application.h"
 #include "../../../nCine/I18n.h"
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+// Rendering backend (RHI) currently compiled in. The software, Direct3D 11 and Vulkan backends take
+// precedence - the OpenGL family backend then distinguishes WebGL / OpenGL|ES.
+#if defined(WITH_RHI_SOFTWARE)
+#	define _i1 "\nSoftware renderer"
+#elif defined(WITH_RHI_D3D11)
+#	define _i1 "\nDirect3D 11"
+#elif defined(WITH_RHI_VULKAN)
+#	define _i1 "\nVulkan"
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
 #	define _i1 "\nWebGL"
-#elif defined(DEATH_TARGET_WINDOWS_RT)
-#	define _i1 "\nUWP"
 #elif defined(WITH_OPENGLES)
-#	define _i1 "\nOpenGL│ES"
+#	if defined(RHI_GL_PROFILE_ES2)
+#		define _i1 "\nOpenGL│ES 2.0"
+#	else
+#		define _i1 "\nOpenGL│ES"
+#	endif
 #else
 #	define _i1 "\nOpenGL"
 #endif
 
-// Reserved for future use
-#define _i2 ""
+#if defined(DEATH_TARGET_WINDOWS_RT)
+#	define _i2 " (UWP)"
+#else
+#	define _i2 ""
+#endif
 
 #if defined(DEATH_CPU_USE_RUNTIME_DISPATCH)
 #	if defined(DEATH_CPU_USE_IFUNC)
@@ -27,9 +40,10 @@
 #	define _i3 ""
 #endif
 
-#if defined(WITH_ANGLE)
+// OpenGL implementation attribution - only meaningful when the OpenGL family backend is active
+#if defined(WITH_RHI_GL) && defined(WITH_ANGLE)
 #	define _i4 "\nANGLE \f[c:#707070]· \f[h:80]https://github.com/google/angle\f[/h]\f[/c]"
-#elif defined(DEATH_TARGET_WINDOWS_RT)
+#elif defined(WITH_RHI_GL) && defined(DEATH_TARGET_WINDOWS_RT)
 #	define _i4 "\nMesa \f[c:#707070]· \f[h:80]https://gitlab.freedesktop.org/mesa/mesa\f[/h]\f[/c]"
 #else
 #	define _i4 ""
@@ -49,7 +63,8 @@
 #	define _i5 ""
 #endif
 
-#if defined(WITH_GLEW)
+// GLEW is an OpenGL extension loader - irrelevant to the non-OpenGL backends
+#if defined(WITH_GLEW) && defined(WITH_RHI_GL)
 #	define _i6 "\nGLEW \f[c:#707070]· \f[h:80]https://glew.sourceforge.net/\f[/h]\f[/c]"
 #else
 #	define _i6 ""

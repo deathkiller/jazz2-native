@@ -21,12 +21,21 @@ jobs:
         - BuildType: Release
           Platform: aarch64
           Backend: GLFW
+          RHI: OpenGL
           CC: gcc
           CXX: g++
           
         - BuildType: Release
           Platform: aarch64
           Backend: SDL2
+          RHI: OpenGL
+          CC: gcc
+          CXX: g++
+
+        - BuildType: Release
+          Platform: aarch64
+          Backend: SDL2
+          RHI: Vulkan
           CC: gcc
           CXX: g++
 
@@ -59,7 +68,7 @@ jobs:
         
         rm -f ./Content/Translations/*.po
         
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=Linux -D CMAKE_SYSTEM_PROCESSOR=aarch64 -D CMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=Linux -D CMAKE_SYSTEM_PROCESSOR=aarch64 -D CMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_WITH_GLEW=OFF
         #cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF
 
     - name: 'Build'
@@ -73,10 +82,13 @@ jobs:
         cp -f -r ./Content/ ./_package/Content/
         cp -f ./LICENSE ./_package/LICENSE
         
+        # Keep the OpenGL artifact names backward-compatible - only non-OpenGL rendering backends are suffixed
+        rhiSuffix=""
+        if [ "${{ matrix.RHI }}" != "OpenGL" ]; then rhiSuffix="_${{ matrix.RHI }}"; fi
         case "${{ matrix.CC }}" in
-          gcc ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}" ;;
-          clang ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}_Clang" ;;
-          * ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}_${{ matrix.CC }}" ;;
+          gcc ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}${rhiSuffix}" ;;
+          clang ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}${rhiSuffix}_Clang" ;;
+          * ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}${rhiSuffix}_${{ matrix.CC }}" ;;
         esac
         echo "artifactPath=$artifactPath" >> $GITHUB_ENV
         

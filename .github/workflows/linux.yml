@@ -21,26 +21,37 @@ jobs:
         - BuildType: Release
           Platform: x64
           Backend: GLFW
+          RHI: OpenGL
           CC: gcc
           CXX: g++
 
         - BuildType: Release
           Platform: x64
           Backend: GLFW
+          RHI: OpenGL
           CC: clang
           CXX: clang++
           
         - BuildType: Release
           Platform: x64
           Backend: SDL2
+          RHI: OpenGL
           CC: gcc
           CXX: g++
 
         - BuildType: Release
           Platform: x64
           Backend: SDL2
+          RHI: OpenGL
           CC: clang
           CXX: clang++
+
+        - BuildType: Release
+          Platform: x64
+          Backend: SDL2
+          RHI: Vulkan
+          CC: gcc
+          CXX: g++
 
     #runs-on: 'ubuntu-latest'
     runs-on: 'ubuntu-22.04'
@@ -69,7 +80,7 @@ jobs:
         
         rm -f ./Content/Translations/*.po
         
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_ASSEMBLE_DEB=ON -D NCINE_ASSEMBLE_RPM=ON -D NCINE_WITH_GLEW=OFF
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_ASSEMBLE_DEB=ON -D NCINE_ASSEMBLE_RPM=ON -D NCINE_WITH_GLEW=OFF
 
     - name: 'Build'
       run: |
@@ -85,10 +96,13 @@ jobs:
         cp -f -r ./Content/ ./_package/Content/
         cp -f ./LICENSE ./_package/LICENSE
         
+        # Keep the OpenGL artifact names backward-compatible - only non-OpenGL rendering backends are suffixed
+        rhiSuffix=""
+        if [ "${{ matrix.RHI }}" != "OpenGL" ]; then rhiSuffix="_${{ matrix.RHI }}"; fi
         case "${{ matrix.CC }}" in
-          gcc ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}" ;;
-          clang ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}_Clang" ;;
-          * ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}_${{ matrix.CC }}" ;;
+          gcc ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}${rhiSuffix}" ;;
+          clang ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}${rhiSuffix}_Clang" ;;
+          * ) artifactPath="Jazz2_Linux_${{ matrix.Platform }}_${{ matrix.Backend }}${rhiSuffix}_${{ matrix.CC }}" ;;
         esac
         echo "artifactPath=$artifactPath" >> $GITHUB_ENV
         
@@ -106,11 +120,13 @@ jobs:
         - BuildType: Release
           Platform: x64
           Backend: GLFW
+          RHI: OpenGL
           CC: gcc
           CXX: g++
         - BuildType: Release
           Platform: x64
           Backend: SDL2
+          RHI: OpenGL
           CC: gcc
           CXX: g++
 
@@ -200,74 +216,3 @@ jobs:
         
     - name: 'Perform CodeQL Analysis'
       uses: github/codeql-action/analyze@v4
-
-
-  # Testing builds with online multiplayer
-  MultiplayerPreview:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-        - BuildType: Release
-          Platform: x64
-          Backend: SDL2
-          CC: gcc
-          CXX: g++
-
-    #runs-on: 'ubuntu-latest'
-    runs-on: 'ubuntu-22.04'
-
-    steps:
-    - name: 'Checkout Repository'
-      uses: actions/checkout@v6
-      with:
-        fetch-depth: 0
-
-    - name: 'Create Build Environment'
-      run: |
-        sudo apt update -y
-        sudo apt install -y cmake curl g++ libgl1-mesa-dev libopenmpt-dev libcurl4-openssl-dev rpm
-        sudo apt install -y libdw-dev
-        sudo apt install -y libssl-dev
-
-    - if: matrix.CC == 'clang'
-      name: 'Configure Clang Compiler'
-      uses: egor-tensin/setup-clang@v1
-      with:
-        version: 15
-        
-    - name: 'Configure CMake'
-      run: |
-        export CC=${{ matrix.CC }}
-        export CXX=${{ matrix.CXX }}
-        
-        rm -f ./Content/Translations/*.po
-        
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF -D DEATH_DEBUG_SYMBOLS=ON -D WITH_MULTIPLAYER=ON -D WITH_WEBSOCKET=ON
-
-    - name: 'Build'
-      run: |
-        make -j $(nproc) -C ./_build/
-
-    - name: 'Create Package'
-      run: |
-        make package -C ./_build/
-        mkdir ./_package/
-        cp -f ./_build/jazz2 ./_package/jazz2
-        cp -f ./_build/jazz2.pdb ./_package/jazz2.pdb
-        cp -f -r ./Content/ ./_package/Content/
-        cp -f ./LICENSE ./_package/LICENSE
-        cp -f ./Docs/Snippets/ServerConfiguration.json ./_package/Jazz2.Server.config
-        
-        case "${{ matrix.CC }}" in
-          gcc ) artifactPath="Jazz2_Linux_MultiplayerPreview_${{ matrix.Platform }}_${{ matrix.Backend }}" ;;
-          clang ) artifactPath="Jazz2_Linux_MultiplayerPreview_${{ matrix.Platform }}_${{ matrix.Backend }}_Clang" ;;
-          * ) artifactPath="Jazz2_Linux_MultiplayerPreview_${{ matrix.Platform }}_${{ matrix.Backend }}_${{ matrix.CC }}" ;;
-        esac
-        echo "artifactPath=$artifactPath" >> $GITHUB_ENV
-        
-    - name: 'Upload Package'
-      uses: actions/upload-artifact@v7
-      with:
-        name: ${{ env.artifactPath }}
-        path: ./_package/
