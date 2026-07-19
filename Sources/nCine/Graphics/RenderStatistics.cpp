@@ -40,7 +40,7 @@ namespace nCine
 
 	void RenderStatistics::GatherStatistics(const RenderCommand& command)
 	{
-		const GLsizei numVertices = command.GetGeometry().GetVertexCount();
+		const std::int32_t numVertices = command.GetGeometry().GetVertexCount();
 		const unsigned int numIndices = command.GetGeometry().GetIndexCount();
 
 		if (numVertices == 0 && numIndices == 0) {

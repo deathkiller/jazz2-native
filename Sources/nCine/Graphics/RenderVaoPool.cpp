@@ -30,16 +30,16 @@ namespace nCine
 			if (binding.fingerprint == fingerprint && binding.format == vertexFormat) {
 				vaoFound = true;
 				const bool bindChanged = binding.object->Bind();
-				const GLuint iboHandle = vertexFormat.GetIbo() ? vertexFormat.GetIbo()->GetGLHandle() : 0;
+				const std::uint32_t iboHandle = vertexFormat.GetIbo() ? vertexFormat.GetIbo()->GetGLHandle() : 0;
 				if (bindChanged) {
 					if (Rhi::Debug::IsAvailable()) {
 						InsertGLDebugMessage(binding);
 					}
 					// Binding a VAO changes the current bound element array buffer
-					Rhi::Buffer::SetBoundHandle(GL_ELEMENT_ARRAY_BUFFER, iboHandle);
+					Rhi::Buffer::SetBoundHandle(std::uint32_t(BufferTarget::Index), iboHandle);
 				} else {
 					// The VAO was already bound but it is not known if the bound element array buffer changed in the meantime
-					Rhi::Buffer::BindHandle(GL_ELEMENT_ARRAY_BUFFER, iboHandle);
+					Rhi::Buffer::BindHandle(std::uint32_t(BufferTarget::Index), iboHandle);
 				}
 				binding.lastBindIndex = ++bindIndex_;
 #if defined(NCINE_PROFILING)
@@ -86,8 +86,8 @@ namespace nCine
 			const bool bindChanged = vaoPool_[index].object->Bind();
 			DEATH_ASSERT(bindChanged || vaoPool_.size() == 1);
 			// Binding a VAO changes the current bound element array buffer
-			const GLuint oldIboHandle = vaoPool_[index].format.GetIbo() ? vaoPool_[index].format.GetIbo()->GetGLHandle() : 0;
-			Rhi::Buffer::SetBoundHandle(GL_ELEMENT_ARRAY_BUFFER, oldIboHandle);
+			const std::uint32_t oldIboHandle = vaoPool_[index].format.GetIbo() ? vaoPool_[index].format.GetIbo()->GetGLHandle() : 0;
+			Rhi::Buffer::SetBoundHandle(std::uint32_t(BufferTarget::Index), oldIboHandle);
 			vaoPool_[index].format = vertexFormat;
 			vaoPool_[index].fingerprint = fingerprint;
 			vaoPool_[index].format.Define();

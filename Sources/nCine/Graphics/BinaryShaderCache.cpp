@@ -27,39 +27,37 @@ namespace nCine
 	BinaryShaderCache::BinaryShaderCache(StringView path)
 		: isAvailable_(false), platformHash_(0)
 	{
-		if (path.empty()) {
-			LOGD("Binary shader cache is disabled");
-			return;
-		}
-
-#if defined(WITH_RHI_SOFTWARE) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN)
+#if !defined(WITH_RHI_GL)
 		// The software backend compiles no shaders, the Direct3D 11 backend does not use GL program binaries,
 		// and the Vulkan backend runs from pre-compiled SPIR-V shader modules (no GL program binary exists to
 		// cache), so there is nothing to cache on any of these. Stay silently disabled (isAvailable_ is already
 		// false, so every cache operation is a no-op) instead of querying GL capabilities and logging a
 		// missing-extension warning that does not apply here.
-		return;
-#endif
+#else
+		if (path.empty()) {
+			LOGD("Binary shader cache is disabled");
+			return;
+		}
 
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-#if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
+#	if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
 		const bool isSupported = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_GET_PROGRAM_BINARY) ||
 								 gfxCaps.HasExtension(IGfxCapabilities::Extensions::OES_GET_PROGRAM_BINARY);
-#else
+#	else
 		const bool isSupported = gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_GET_PROGRAM_BINARY);
-#endif
+#	endif
 		if (!isSupported) {
 			LOGW("GL_ARB_get_program_binary extensions not supported, binary shader cache is disabled");
 			return;
 		}
 
-#if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX) && (!defined(DEATH_TARGET_WINDOWS_RT) || defined(WITH_ANGLE))
+#	if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX) && (!defined(DEATH_TARGET_WINDOWS_RT) || defined(WITH_ANGLE))
 		if (gfxCaps.HasExtension(IGfxCapabilities::Extensions::OES_GET_PROGRAM_BINARY)) {
 			_glGetProgramBinary = glGetProgramBinaryOES;
 			_glProgramBinary = glProgramBinaryOES;
 			_glProgramBinaryLength = GL_PROGRAM_BINARY_LENGTH_OES;
 		} else
-#endif
+#	endif
 		{
 			_glGetProgramBinary = glGetProgramBinary;
 			_glProgramBinary = glProgramBinary;
@@ -82,6 +80,7 @@ namespace nCine
 
 		const bool pathExists = fs::DirectoryExists(path_);
 		isAvailable_ = (isSupported && pathExists);
+#endif
 	}
 
 	String BinaryShaderCache::GetCachedShaderPath(const char* shaderName)
@@ -99,7 +98,7 @@ namespace nCine
 
 	bool BinaryShaderCache::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program, Rhi::ShaderProgram::Introspection introspection)
 	{
-#if defined(WITH_RHI_SOFTWARE) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN)
+#if !defined(WITH_RHI_GL)
 		// No GL program binaries exist on these backends and the cache is permanently disabled (see the constructor)
 		return false;
 #else
@@ -158,7 +157,7 @@ namespace nCine
 
 	bool BinaryShaderCache::SaveToCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program)
 	{
-#if defined(WITH_RHI_SOFTWARE) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN)
+#if !defined(WITH_RHI_GL)
 		// No GL program binaries exist on these backends and the cache is permanently disabled (see the constructor)
 		return false;
 #else

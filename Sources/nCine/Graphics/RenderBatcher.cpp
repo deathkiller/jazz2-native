@@ -197,7 +197,7 @@ namespace nCine
 		// Setting sampler uniforms for GL_TEXTURE* units
 		const Rhi::ShaderUniforms::UniformHashMapType& allUniforms = refCommand->GetMaterial().GetAllUniforms();
 		for (const Rhi::UniformCache& uniformCache : allUniforms) {
-			if (uniformCache.GetUniform()->GetType() == GL_SAMPLER_2D) {
+			if (uniformCache.GetUniform()->GetType() == ShaderCompiler::UniformType::Sampler2D) {
 				Rhi::UniformCache* batchUniformCache = batchCommand->GetMaterial().Uniform(uniformCache.GetUniform()->GetName());
 				const std::int32_t refValue = uniformCache.GetIntValue(0);
 				const std::int32_t batchValue = batchUniformCache->GetIntValue(0);
@@ -224,7 +224,7 @@ namespace nCine
 					numVertices += 2; // plus two degenerates if indices are not used
 				}
 				const std::uint32_t numElementsPerVertex = (*it)->GetGeometry().GetElementsPerVertex() + 1; // plus the mesh index
-				vertexDataSize = numVertices * numElementsPerVertex * sizeof(GLfloat);
+				vertexDataSize = numVertices * numElementsPerVertex * sizeof(float);
 
 				if (batchingWithIndices) {
 					numIndices = (numIndices > 0) ? numIndices + 2 : numVertices + 2;
@@ -233,7 +233,7 @@ namespace nCine
 
 			// Don't request more bytes than a common VBO or IBO can hold
 			if (instancesVertexDataSize + vertexDataSize > maxVertexDataSize ||
-				(instancesIndicesAmount + numIndices) * sizeof(GLushort) > maxIndexDataSize ||
+				(instancesIndicesAmount + numIndices) * sizeof(std::uint16_t) > maxIndexDataSize ||
 				instancesIndicesAmount + numIndices > 65535) {
 				break;
 			}
@@ -245,7 +245,7 @@ namespace nCine
 		nextStart = it;
 
 		// Remove the two missing degenerate vertices or indices from first and last elements
-		const std::uint32_t twoVerticesDataSize = 2 * (refCommand->GetGeometry().GetElementsPerVertex() + 1) * sizeof(GLfloat);
+		const std::uint32_t twoVerticesDataSize = 2 * (refCommand->GetGeometry().GetElementsPerVertex() + 1) * sizeof(float);
 		if (instancesIndicesAmount >= 2) {
 			instancesIndicesAmount -= 2;
 		} else if (instancesVertexDataSize >= twoVerticesDataSize) {
@@ -258,11 +258,11 @@ namespace nCine
 		const std::uint32_t SizeVertexFormatAndIndex = SizeVertexFormat + sizeof(std::uint32_t);
 
 		float* destVtx = nullptr;
-		GLushort* destIdx = nullptr;
+		std::uint16_t* destIdx = nullptr;
 
 		const bool batchedShaderHasAttributes = (batchedShader->GetAttributeCount() > 1);
 		if (batchedShaderHasAttributes) {
-			const std::uint32_t numFloats = instancesVertexDataSize / sizeof(GLfloat);
+			const std::uint32_t numFloats = instancesVertexDataSize / sizeof(float);
 			destVtx = batchCommand->GetGeometry().AcquireVertexPointer(numFloats, NumFloatsVertexFormat + 1); // aligned to vertex format with index
 
 			if (instancesIndicesAmount > 0) {
@@ -311,7 +311,7 @@ namespace nCine
 				if (instancesIndicesAmount > 0) {
 					std::uint16_t vertexId = 0;
 					const std::uint32_t numIndices = command->GetGeometry().GetIndexCount() ? command->GetGeometry().GetIndexCount() : numVertices;
-					const GLushort* srcIdx = command->GetGeometry().GetHostIndexPointer();
+					const std::uint16_t* srcIdx = command->GetGeometry().GetHostIndexPointer();
 
 					// Index of a degenerate triangle, if not a starting element and there are more than one in the batch
 					if (it != start && nextStart - start > 1) {

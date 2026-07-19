@@ -6,6 +6,7 @@
 #endif
 
 #include "../../../../Main.h"
+#include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
 
 namespace nCine::RhiGL
 {
@@ -49,10 +50,12 @@ namespace nCine::RhiGL
 		inline GLint GetSize() const {
 			return size_;
 		}
-		/** @brief Returns the GL type enum of the uniform (e.g., `GL_FLOAT_VEC4`) */
-		inline GLenum GetType() const {
+		/** @brief Returns the native GL type enum of the uniform (e.g., `GL_FLOAT_VEC4`) */
+		inline GLenum GetGLType() const {
 			return type_;
 		}
+		/** @brief Returns the reflected (backend-neutral) type of the uniform, converted from the native GL type enum */
+		ShaderCompiler::UniformType GetType() const;
 		/** @brief Returns the byte offset of the uniform within its uniform block */
 		inline GLint GetOffset() const {
 			return offset_;

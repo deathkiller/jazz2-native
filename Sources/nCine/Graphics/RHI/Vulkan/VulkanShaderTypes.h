@@ -2,11 +2,6 @@
 
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
-#define NCINE_INCLUDE_OPENGL
-#include "../../../CommonHeaders.h"
-#endif
-
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -68,36 +63,6 @@ namespace nCine::RhiVulkan
 					return false;
 			}
 		}
-
-		/** @brief Maps a reflected uniform type to the equivalent OpenGL type enum, mirroring the GL backend's `UniformTypeToGL` so the render pipeline's `GetType()` comparisons (e.g. `== GL_SAMPLER_2D`) behave identically */
-		inline GLenum ToGLType(ShaderCompiler::UniformType type)
-		{
-			switch (type) {
-				case ShaderCompiler::UniformType::Float: return GL_FLOAT;
-				case ShaderCompiler::UniformType::Int: return GL_INT;
-				case ShaderCompiler::UniformType::UInt: return GL_UNSIGNED_INT;
-				case ShaderCompiler::UniformType::Bool: return GL_BOOL;
-				case ShaderCompiler::UniformType::Vec2: return GL_FLOAT_VEC2;
-				case ShaderCompiler::UniformType::Vec3: return GL_FLOAT_VEC3;
-				case ShaderCompiler::UniformType::Vec4: return GL_FLOAT_VEC4;
-				case ShaderCompiler::UniformType::IVec2: return GL_INT_VEC2;
-				case ShaderCompiler::UniformType::IVec3: return GL_INT_VEC3;
-				case ShaderCompiler::UniformType::IVec4: return GL_INT_VEC4;
-				case ShaderCompiler::UniformType::UVec2: return GL_UNSIGNED_INT_VEC2;
-				case ShaderCompiler::UniformType::UVec3: return GL_UNSIGNED_INT_VEC3;
-				case ShaderCompiler::UniformType::UVec4: return GL_UNSIGNED_INT_VEC4;
-				case ShaderCompiler::UniformType::BVec2: return GL_BOOL_VEC2;
-				case ShaderCompiler::UniformType::BVec3: return GL_BOOL_VEC3;
-				case ShaderCompiler::UniformType::BVec4: return GL_BOOL_VEC4;
-				case ShaderCompiler::UniformType::Mat2: return GL_FLOAT_MAT2;
-				case ShaderCompiler::UniformType::Mat3: return GL_FLOAT_MAT3;
-				case ShaderCompiler::UniformType::Mat4: return GL_FLOAT_MAT4;
-				case ShaderCompiler::UniformType::Sampler2D: return GL_SAMPLER_2D;
-				case ShaderCompiler::UniformType::Sampler3D: return GL_SAMPLER_3D;
-				case ShaderCompiler::UniformType::SamplerCube: return GL_SAMPLER_CUBE;
-				default: return GL_FLOAT;
-			}
-		}
 	}
 
 	/**
@@ -137,12 +102,8 @@ namespace nCine::RhiVulkan
 		inline std::int32_t GetSize() const {
 			return size_;
 		}
-		/** @brief Returns the OpenGL type enum of the uniform (e.g. `GL_FLOAT_VEC4`), matching the GL backend so pipeline comparisons like `== GL_SAMPLER_2D` work */
-		inline GLenum GetType() const {
-			return UniformTypeInfo::ToGLType(type_);
-		}
 		/** @brief Returns the reflected (backend-neutral) type of the uniform */
-		inline ShaderCompiler::UniformType GetReflectedType() const {
+		inline ShaderCompiler::UniformType GetType() const {
 			return type_;
 		}
 		inline std::int32_t GetOffset() const {

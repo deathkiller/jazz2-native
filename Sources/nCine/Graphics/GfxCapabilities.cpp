@@ -298,7 +298,10 @@ namespace nCine
 
 	void GfxCapabilities::CheckGLExtensions(const char* extensionNames[], bool results[], std::uint32_t numExtensionsToCheck) const
 	{
-#if defined(RHI_GL_PROFILE_ES2)
+#if !defined(WITH_RHI_GL)
+		// Supported only with GL backend
+#else
+#	if defined(RHI_GL_PROFILE_ES2)
 		// ES2 has neither GL_NUM_EXTENSIONS nor glGetStringi() (both ES 3.0) - the extension list is the classic
 		// single space-separated glGetString(GL_EXTENSIONS) string, matched here token by token
 		const char* extensions = reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
@@ -327,7 +330,7 @@ namespace nCine
 			}
 			extension += extLength;
 		}
-#else
+#	else
 		GLint numExtensions;
 		glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
 		if (numExtensions <= 0) {
@@ -345,6 +348,7 @@ namespace nCine
 				}
 			}
 		}
+#	endif
 #endif
 	}
 }
