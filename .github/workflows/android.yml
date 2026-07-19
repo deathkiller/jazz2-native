@@ -78,9 +78,9 @@ jobs:
         cp -f ./LICENSE ./_package/LICENSE
         
         if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
-          echo 'Pull requests are not signed!'
+          echo '-- Pull requests are not signed!'
         else
-          echo 'Signing APK file...'
+          echo '-- Signing APK file...'
           echo '${{ secrets.ANDROID_KEYSTORE_FILE }}' | base64 --decode > ./_keystore.jks
           $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks-key-alias Main --ks "./_keystore.jks" --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" --key-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" "./_package/Jazz2.apk"
         fi
@@ -161,9 +161,9 @@ jobs:
         cp -f ./LICENSE ./_package/LICENSE
         
         if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
-          echo 'Pull requests are not signed!'
+          echo '-- Pull requests are not signed!'
         else
-          echo 'Signing APK file...'
+          echo '-- Signing APK file...'
           echo '${{ secrets.ANDROID_KEYSTORE_FILE }}' | base64 --decode > ./_keystore.jks
           $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks-key-alias Main --ks "./_keystore.jks" --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" --key-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" "./_package/Jazz2d.apk"
         fi
@@ -242,9 +242,9 @@ jobs:
         cp -f ./LICENSE ./_package/LICENSE
         
         if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
-          echo 'Pull requests are not signed!'
+          echo '-- Pull requests are not signed!'
         else
-          echo 'Signing APK file...'
+          echo '-- Signing APK file...'
           echo '${{ secrets.ANDROID_KEYSTORE_FILE }}' | base64 --decode > ./_keystore.jks
           $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks-key-alias Main --ks "./_keystore.jks" --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" --key-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" "./_package/Jazz2.apk"
         fi
