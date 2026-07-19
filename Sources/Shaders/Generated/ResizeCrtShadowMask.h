@@ -5,7 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char ResizeCrtShadowMask_Vs[] =
 R"__SHDR__(#line 1
 
@@ -43,7 +43,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char ResizeCrtShadowMask_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -219,7 +219,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char ResizeCrtShadowMask_Fs[] =
 R"__SHDR__(#line 1
 
@@ -433,7 +433,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char ResizeCrtShadowMask_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -1589,13 +1589,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant ResizeCrtShadowMask_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			ResizeCrtShadowMask_Vs, ResizeCrtShadowMask_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, ResizeCrtShadowMask_Uniforms, 1, ResizeCrtShadowMask_Blocks, 1, ResizeCrtShadowMask_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			ResizeCrtShadowMask_Vs100, ResizeCrtShadowMask_Fs100,
 #else
 			nullptr, nullptr,

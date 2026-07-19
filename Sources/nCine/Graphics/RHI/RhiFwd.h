@@ -319,5 +319,5 @@ namespace nCine::Rhi
 }
 
 #else
-#	error No RHI backend selected — define WITH_RHI_GL (or another WITH_RHI_* backend)
+#	error No RHI backend selected - define WITH_RHI_GL (or another WITH_RHI_* backend)
 #endif

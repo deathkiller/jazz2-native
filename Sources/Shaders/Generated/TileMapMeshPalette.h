@@ -5,7 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshPalette_Vs[] =
 R"__SHDR__(#line 1
 
@@ -42,7 +42,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshPalette_Vs100[] =
 R"__SHDR__(#line 1
 
@@ -213,7 +213,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshPalette_Fs[] =
 R"__SHDR__(#line 1
 
@@ -255,7 +255,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char TileMapMeshPalette_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -445,13 +445,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant TileMapMeshPalette_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			TileMapMeshPalette_Vs, TileMapMeshPalette_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, TileMapMeshPalette_Uniforms, 1, TileMapMeshPalette_Blocks, 2, TileMapMeshPalette_Textures, 3, TileMapMeshPalette_Attributes,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			TileMapMeshPalette_Vs100, TileMapMeshPalette_Fs100,
 #else
 			nullptr, nullptr,

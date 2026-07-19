@@ -5,7 +5,7 @@
 
 namespace nCine::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultImGui_Vs[] =
 R"__SHDR__(#line 1
 
@@ -31,7 +31,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultImGui_Vs100[] =
 R"__SHDR__(#line 1
 
@@ -157,7 +157,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultImGui_Fs[] =
 R"__SHDR__(#line 1
 
@@ -179,7 +179,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultImGui_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -270,13 +270,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant DefaultImGui_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			DefaultImGui_Vs, DefaultImGui_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, DefaultImGui_Uniforms, 0, nullptr, 1, DefaultImGui_Textures, 3, DefaultImGui_Attributes,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			DefaultImGui_Vs100, DefaultImGui_Fs100,
 #else
 			nullptr, nullptr,

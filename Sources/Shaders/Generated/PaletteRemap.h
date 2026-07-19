@@ -5,7 +5,7 @@
 
 namespace Jazz2::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char PaletteRemap_Vs[] =
 R"__SHDR__(#line 1
 
@@ -40,7 +40,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char PaletteRemap_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -226,7 +226,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char PaletteRemap_Fs[] =
 R"__SHDR__(#line 1
 
@@ -257,7 +257,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char PaletteRemap_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -413,13 +413,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant PaletteRemap_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			PaletteRemap_Vs, PaletteRemap_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, PaletteRemap_Uniforms, 1, PaletteRemap_Blocks, 2, PaletteRemap_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			PaletteRemap_Vs100, PaletteRemap_Fs100,
 #else
 			nullptr, nullptr,
@@ -438,7 +438,7 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::Program PaletteRemap = { "PaletteRemap", 0, 1, PaletteRemap_Variants };
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedPaletteRemap_Vs[] =
 R"__SHDR__(#line 1
 
@@ -482,7 +482,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedPaletteRemap_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -705,7 +705,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedPaletteRemap_Fs[] =
 R"__SHDR__(#line 1
 
@@ -736,7 +736,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char BatchedPaletteRemap_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -888,13 +888,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant BatchedPaletteRemap_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			BatchedPaletteRemap_Vs, BatchedPaletteRemap_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, BatchedPaletteRemap_Uniforms, 1, BatchedPaletteRemap_Blocks, 2, BatchedPaletteRemap_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			BatchedPaletteRemap_Vs100, BatchedPaletteRemap_Fs100,
 #else
 			nullptr, nullptr,

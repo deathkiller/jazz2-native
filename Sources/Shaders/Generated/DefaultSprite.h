@@ -5,7 +5,7 @@
 
 namespace nCine::ShadersGen
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultSprite_Vs[] =
 R"__SHDR__(#line 1
 
@@ -38,7 +38,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultSprite_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 #line 1
@@ -214,7 +214,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultSprite_Fs[] =
 R"__SHDR__(#line 1
 
@@ -237,7 +237,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultSprite_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -337,13 +337,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant DefaultSprite_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			DefaultSprite_Vs, DefaultSprite_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, DefaultSprite_Uniforms, 1, DefaultSprite_Blocks, 1, DefaultSprite_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			DefaultSprite_Vs100, DefaultSprite_Fs100,
 #else
 			nullptr, nullptr,
@@ -362,7 +362,7 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::Program DefaultSprite = { "DefaultSprite", 0, 1, DefaultSprite_Variants };
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultBatchedSprites_Vs[] =
 R"__SHDR__(#line 1
 
@@ -404,7 +404,7 @@ void main()
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultBatchedSprites_Vs100[] =
 R"__SHDR__(attribute vec2 aQuadCorner;
 attribute float aInstanceIndex;
@@ -615,7 +615,7 @@ VsOutput VSMain(VsInput _input)
 	};
 
 #endif
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultBatchedSprites_Fs[] =
 R"__SHDR__(#line 1
 
@@ -638,7 +638,7 @@ void main() {
 )__SHDR__";
 #endif
 
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 	inline constexpr char DefaultBatchedSprites_Fs100[] =
 R"__SHDR__(#line 1
 
@@ -734,13 +734,13 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::ProgramVariant DefaultBatchedSprites_Variants[] = {
 		{ "", "",
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
 			DefaultBatchedSprites_Vs, DefaultBatchedSprites_Fs,
 #else
 			nullptr, nullptr,
 #endif
 			2, DefaultBatchedSprites_Uniforms, 1, DefaultBatchedSprites_Blocks, 1, DefaultBatchedSprites_Textures, 0, nullptr,
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES2)
 			DefaultBatchedSprites_Vs100, DefaultBatchedSprites_Fs100,
 #else
 			nullptr, nullptr,
