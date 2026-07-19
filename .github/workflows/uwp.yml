@@ -64,7 +64,7 @@ jobs:
         rm -force ".\Content\Translations\*.po"
         
         if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
-          Write-Output "Pull requests are not signed!"
+          Write-Output "-- Pull requests are not signed!"
           $certPath = ""
           $certPass = ""
         } else {
@@ -148,7 +148,7 @@ jobs:
         rm -force ".\Content\Translations\*.po"
         
         if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
-          Write-Output "Pull requests are not signed!"
+          Write-Output "-- Pull requests are not signed!"
           $certPath = ""
           $certPass = ""
         } else {
