@@ -5,15 +5,6 @@
 #include "../../../CommonHeaders.h"
 #endif
 
-// On desktop Linux OpenGL ES the KHR_debug object-type enums (`GL_BUFFER_KHR`, ...) are not reliably
-// exposed by <GLES2/gl2ext.h>. Pull in the GLES 3.2 core header, which both defines `GL_ES_VERSION_3_2`
-// and provides the unsuffixed core object-type enums (`GL_BUFFER`, `GL_SHADER`, ...) that KHR_debug was
-// promoted to; the LabelTypes enum below then uses them. This mirrors what GLDebug.cpp already does for
-// the debug entry points on the same platform.
-#if !defined(DOXYGEN_GENERATING_OUTPUT) && !defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES) && defined(__linux__)
-#	include <GLES3/gl32.h>
-#endif
-
 #include "../../../../Main.h"
 
 #include <Containers/StringView.h>
@@ -42,6 +33,36 @@ namespace nCine
 {
 	class IGfxCapabilities;
 }
+
+// Some OpenGL|ES 3.0/3.1 headers (notably aarch64 Mesa) ship a <GLES2/gl2ext.h> that omits the KHR_debug
+// object-type enums, and their unsuffixed 3.2 core spellings are only available via <GLES3/gl32.h>. Define the
+// _KHR names from their fixed, spec-mandated KHR_debug values so the LabelTypes enum below compiles on such
+// headers; the #ifndef guards make this a no-op wherever the GL/ES headers already provide them. (This avoids
+// pulling <GLES3/gl32.h> into the header, which would define GL_ES_VERSION_3_2 mid-translation-unit and flip
+// GL_ES_VERSION_3_2-gated declarations, e.g. GLBufferObject::TexBuffer.)
+#if defined(WITH_OPENGLES) && GL_ES_VERSION_3_0
+#	ifndef GL_BUFFER_KHR
+#		define GL_BUFFER_KHR 0x82E0
+#	endif
+#	ifndef GL_SHADER_KHR
+#		define GL_SHADER_KHR 0x82E1
+#	endif
+#	ifndef GL_PROGRAM_KHR
+#		define GL_PROGRAM_KHR 0x82E2
+#	endif
+#	ifndef GL_VERTEX_ARRAY_KHR
+#		define GL_VERTEX_ARRAY_KHR 0x8074
+#	endif
+#	ifndef GL_QUERY_KHR
+#		define GL_QUERY_KHR 0x82E3
+#	endif
+#	ifndef GL_PROGRAM_PIPELINE_KHR
+#		define GL_PROGRAM_PIPELINE_KHR 0x82E4
+#	endif
+#	ifndef GL_SAMPLER_KHR
+#		define GL_SAMPLER_KHR 0x82E6
+#	endif
+#endif
 
 namespace nCine::RhiGL
 {
@@ -79,7 +100,7 @@ namespace nCine::RhiGL
 			Texture = GL_TEXTURE,
 			RenderBuffer = GL_RENDERBUFFER,
 			FrameBuffer = GL_FRAMEBUFFER,
-#	if ((defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21) || (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES))) && GL_ES_VERSION_3_0 && !GL_ES_VERSION_3_2
+#	if ((defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21) || (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES))) && GL_ES_VERSION_3_0
 			Buffer = GL_BUFFER_KHR,
 			Shader = GL_SHADER_KHR,
 			Program = GL_PROGRAM_KHR,
