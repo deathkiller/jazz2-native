@@ -5,6 +5,7 @@
 #include <cstring>
 
 #if defined(DEATH_TARGET_WINDOWS)
+#	include <intrin.h>
 #	include <process.h>
 #	include <processthreadsapi.h>
 #	include <synchapi.h>
@@ -33,6 +34,8 @@
 
 #if defined(DEATH_TARGET_SWITCH)
 #	include <switch.h>
+#elif defined(DEATH_TARGET_VITA)
+#	include <vitasdk.h>
 #endif
 
 #if defined(WITH_TRACY)
@@ -42,7 +45,7 @@
 namespace nCine
 {
 #if !defined(DEATH_TARGET_MSVC)
-	DEATH_ALWAYS_INLINE void InterlockedOperationBarrier()
+	DEATH_ALWAYS_INLINE void InterlockedOperationBarrier() noexcept
 	{
 #	if defined(DEATH_TARGET_ARM) || defined(DEATH_TARGET_RISCV)
 		__sync_synchronize();
@@ -51,7 +54,7 @@ namespace nCine
 #endif
 
 	template<typename T>
-	DEATH_ALWAYS_INLINE T ExchangePointer(T volatile* destination, T value)
+	DEATH_ALWAYS_INLINE T ExchangePointer(T volatile* destination, T value) noexcept
 	{
 #if defined(DEATH_TARGET_MSVC)
 #	if !defined(DEATH_TARGET_32BIT)
@@ -67,7 +70,7 @@ namespace nCine
 	}
 
 	template<typename T>
-	DEATH_ALWAYS_INLINE T ExchangePointer(T volatile* destination, std::nullptr_t value)
+	DEATH_ALWAYS_INLINE T ExchangePointer(T volatile* destination, std::nullptr_t value) noexcept
 	{
 #if defined(DEATH_TARGET_MSVC)
 #	if !defined(DEATH_TARGET_32BIT)
@@ -82,17 +85,20 @@ namespace nCine
 #endif
 	}
 
-	void Thread::Sleep(std::uint32_t milliseconds)
+	void Thread::Sleep(std::uint32_t milliseconds) noexcept
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN)
 		emscripten_sleep(milliseconds);
 #elif defined(DEATH_TARGET_SWITCH)
-		const std::int64_t nanoseconds = static_cast<std::int64_t>(milliseconds) * 1000000;
+		std::int64_t nanoseconds = static_cast<std::int64_t>(milliseconds) * 1000000;
 		svcSleepThread(nanoseconds);
+#elif defined(DEATH_TARGET_VITA)
+		std::uint32_t microseconds = static_cast<std::uint32_t>(milliseconds) * 1000;
+		sceKernelDelayThread(microseconds);
 #elif defined(DEATH_TARGET_WINDOWS)
 		::SleepEx(static_cast<DWORD>(milliseconds), FALSE);
 #else
-		const unsigned int microseconds = static_cast<unsigned int>(milliseconds) * 1000;
+		std::uint32_t microseconds = static_cast<std::uint32_t>(milliseconds) * 1000;
 		::usleep(microseconds);
 #endif
 	}
@@ -265,7 +271,7 @@ namespace nCine
 		return *this;
 	}
 
-	Thread::operator bool() const
+	Thread::operator bool() const noexcept
 	{
 		if (_sharedBlock == nullptr) {
 			return false;
@@ -281,7 +287,7 @@ namespace nCine
 #endif
 	}
 
-	std::uint32_t Thread::GetProcessorCount()
+	std::uint32_t Thread::GetProcessorCount() noexcept
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		SYSTEM_INFO si;
@@ -321,7 +327,15 @@ namespace nCine
 			return false;
 		}
 #else
+#	if defined(DEATH_TARGET_VITA)
+		pthread_attr_t attr;
+		pthread_attr_init(&attr);
+		pthread_attr_setstacksize(&attr, 256 * 1024);
+		const int error = pthread_create(&_sharedBlock->_handle, &attr, Thread::Process, _sharedBlock);
+		pthread_attr_destroy(&attr);
+#	else
 		const int error = pthread_create(&_sharedBlock->_handle, nullptr, Thread::Process, _sharedBlock);
+#	endif
 		if (error != 0) {
 			delete _sharedBlock;
 			_sharedBlock = nullptr;
@@ -333,7 +347,7 @@ namespace nCine
 		return true;
 	}
 
-	bool Thread::Join()
+	bool Thread::Join() noexcept
 	{
 		bool result = false;
 
@@ -363,8 +377,8 @@ namespace nCine
 
 		return result;
 	}
-	
-	void Thread::Detach()
+
+	void Thread::Detach() noexcept
 	{
 		auto* sharedBlock = ExchangePointer(&_sharedBlock, nullptr);
 		if (sharedBlock == nullptr) {
@@ -392,7 +406,7 @@ namespace nCine
 
 #if defined(DEATH_TARGET_WINDOWS)
 		SetThreadName(_sharedBlock->_handle, name);
-#elif !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
+#elif !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
 		const auto nameLength = strnlen(name, MaxThreadNameLength);
 		if (nameLength <= MaxThreadNameLength - 1) {
 			pthread_setname_np(_sharedBlock->_handle, name);
@@ -411,7 +425,7 @@ namespace nCine
 		tracy::SetThreadName(name);
 #elif defined(DEATH_TARGET_WINDOWS)
 		SetThreadName(reinterpret_cast<HANDLE>(-1), name);
-#elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
+#elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
 		const auto nameLength = strnlen(name, MaxThreadNameLength);
 		if (nameLength <= MaxThreadNameLength - 1) {
 #	if !defined(DEATH_TARGET_APPLE)
@@ -468,7 +482,7 @@ namespace nCine
 	}
 #endif
 
-	std::uintptr_t Thread::GetCurrentId()
+	std::uintptr_t Thread::GetCurrentId() noexcept
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		return static_cast<std::uintptr_t>(::GetCurrentThreadId());
@@ -479,7 +493,135 @@ namespace nCine
 #endif
 	}
 
-	[[noreturn]] void Thread::Exit()
+	static inline std::uintptr_t GetCurrentStackPointer() noexcept
+	{
+#if defined(DEATH_TARGET_GCC) || defined(DEATH_TARGET_CLANG)
+		return reinterpret_cast<std::uintptr_t>(__builtin_frame_address(0));
+#elif defined(DEATH_TARGET_MSVC) && defined(_M_X64)
+		return reinterpret_cast<std::uintptr_t>(_AddressOfReturnAddress());
+#elif defined(DEATH_TARGET_MSVC) && defined(_M_IX86)
+		__asm { mov eax, esp }
+#else
+		// Portable fallback - stack variable address
+		volatile char probe = 0;
+		return reinterpret_cast<std::uintptr_t>(&probe);
+#endif
+	}
+
+	void Thread::GetCurrentStackInfo(std::size_t& stackSize, std::size_t& stackRemaining) noexcept
+	{
+		const std::uintptr_t sp = GetCurrentStackPointer();
+		stackSize = 0; stackRemaining = 0;
+
+#if defined(DEATH_TARGET_WINDOWS)
+		MEMORY_BASIC_INFORMATION mbi {};
+		if (!::VirtualQuery(reinterpret_cast<LPCVOID>(sp), &mbi, sizeof(mbi))) {
+			return;
+		}
+
+		// Scan upward from AllocationBase to find the top of this reservation
+		// and accumulate guard page bytes along the way
+		std::uintptr_t base = reinterpret_cast<std::uintptr_t>(mbi.AllocationBase);
+		std::uintptr_t cursor = base, guardBytes = 0, top = 0;
+		while (::VirtualQuery(reinterpret_cast<LPCVOID>(cursor), &mbi, sizeof(mbi))) {
+			if (reinterpret_cast<std::uintptr_t>(mbi.AllocationBase) != base) {
+				break;
+			}
+			if (mbi.Protect & PAGE_GUARD) {
+				guardBytes += mbi.RegionSize;
+			}
+			top = reinterpret_cast<std::uintptr_t>(mbi.BaseAddress) + mbi.RegionSize;
+			cursor = top;
+			if (mbi.RegionSize == 0) {
+				break;
+			}
+		}
+
+		if (top > base) {
+			const std::size_t reserved = static_cast<std::size_t>(top - base);
+			const std::size_t used = static_cast<std::size_t>(top - sp);
+			stackSize = reserved;
+			if (reserved > used + guardBytes) {
+				stackRemaining = reserved - used - guardBytes;
+			}
+		}
+#elif defined(DEATH_TARGET_EMSCRIPTEN)
+		// Emscripten provides __stack_high and __stack_low as linker-generated symbols (available since 3.1.x
+		// with -sSTACK_SIZE). Stack grows DOWN from __stack_high to __stack_low.
+#	if defined(__has_builtin) && __has_builtin(__builtin_wasm_memory_size)
+		extern "C" {
+			extern char __stack_high;
+			extern char __stack_low;
+		}
+		const auto high = reinterpret_cast<std::uintptr_t>(&__stack_high);
+		const auto low = reinterpret_cast<std::uintptr_t>(&__stack_low);
+		if (high > low) {
+			stackSize = static_cast<std::size_t>(high - low);
+			if (sp >= low && sp <= high) {
+				stackRemaining = static_cast<std::size_t>(sp - low);
+			}
+		}
+#	endif
+#elif defined(DEATH_TARGET_SWITCH)
+		const Thread* t = threadGetSelf();
+		if (!t || !t->stack_mem || t->stack_sz == 0) {
+			return;
+		}
+
+		stackSize = t->stack_sz;
+		const std::uintptr_t sp = GetCurrentStackPointer();
+		const std::uintptr_t low = reinterpret_cast<std::uintptr_t>(t->stack_mem);
+		if (sp >= low && sp <= low + t->stack_sz) {
+			stackRemaining = static_cast<std::size_t>(sp - low);
+		}
+#elif defined(DEATH_TARGET_VITA)
+		SceUID thid = sceKernelGetThreadId();
+		if (thid >= 0) {
+			SceKernelThreadInfo tinfo {};
+			tinfo.size = sizeof(SceKernelThreadInfo);
+			if (sceKernelGetThreadInfo(thid, &tinfo) == 0 && tinfo.stackSize > 0) {
+				stackSize = static_cast<std::size_t>(tinfo.stackSize);
+				const std::uintptr_t sp = GetCurrentStackPointer();
+				const std::uintptr_t low = reinterpret_cast<std::uintptr_t>(tinfo.stack);
+				if (sp > low && sp <= low + tinfo.stackSize) {
+					stackRemaining = static_cast<std::size_t>(sp - low);
+				}
+			}
+		}
+#else
+		pthread_t self = pthread_self();
+		pthread_attr_t attr;
+
+#	if defined(DEATH_TARGET_APPLE)
+		void* stackAddr = pthread_get_stackaddr_np(self);
+		stackSize = pthread_get_stacksize_np(self);
+
+		// stackAddr is the HIGH end (base) on macOS (stack grows down)
+		const auto base = reinterpret_cast<std::uintptr_t>(stackAddr);
+		if (sp < base) {
+			stackRemaining = static_cast<std::size_t>(sp - (base - stackSize));
+		}
+#	else
+		if (pthread_getattr_np(self, &attr) == 0) {
+			void* stackAddr = nullptr;
+			std::size_t stackSize2 = 0;
+			if (pthread_attr_getstack(&attr, &stackAddr, &stackSize2) == 0) {
+				std::size_t guard = 0;
+				pthread_attr_getguardsize(&attr, &guard);
+
+				stackSize = stackSize2;
+				const auto low = reinterpret_cast<std::uintptr_t>(stackAddr);
+				if (sp >= low && sp <= low + stackSize2) {
+					stackRemaining = static_cast<std::size_t>((sp - low) > guard ? (sp - low) - guard : 0u);
+				}
+			}
+			pthread_attr_destroy(&attr);
+		}
+#	endif
+#endif
+	}
+
+	[[noreturn]] void Thread::Exit() noexcept
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		_endthreadex(0);
@@ -488,7 +630,7 @@ namespace nCine
 #endif
 	}
 
-	void Thread::YieldExecution()
+	void Thread::YieldExecution() noexcept
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		::Sleep(0);

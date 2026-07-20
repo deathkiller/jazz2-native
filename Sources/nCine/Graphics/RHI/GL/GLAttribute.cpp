@@ -57,15 +57,19 @@ namespace nCine::RhiGL
 			case GL_INT_VEC3:
 			case GL_INT_VEC4:
 				return GL_INT;
+#if !defined(DEATH_TARGET_VITA)	// vitaGL declares none of the bool / unsigned-int vector types
 			case GL_BOOL:
 			case GL_BOOL_VEC2:
 			case GL_BOOL_VEC3:
 			case GL_BOOL_VEC4:
 				return GL_BOOL;
+#endif
 			case GL_UNSIGNED_INT:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_UNSIGNED_INT_VEC2:
 			case GL_UNSIGNED_INT_VEC3:
 			case GL_UNSIGNED_INT_VEC4:
+#endif
 				return GL_UNSIGNED_INT;
 			default:
 				LOGW("No available case to handle type: {}", type_);
@@ -83,23 +87,31 @@ namespace nCine::RhiGL
 				return 1;
 			case GL_FLOAT:
 			case GL_INT:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_BOOL:
+#endif
 			case GL_UNSIGNED_INT:
 				return 1;
 			case GL_FLOAT_VEC2:
 			case GL_INT_VEC2:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_BOOL_VEC2:
 			case GL_UNSIGNED_INT_VEC2:
+#endif
 				return 2;
 			case GL_FLOAT_VEC3:
 			case GL_INT_VEC3:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_BOOL_VEC3:
 			case GL_UNSIGNED_INT_VEC3:
+#endif
 				return 3;
 			case GL_FLOAT_VEC4:
 			case GL_INT_VEC4:
+#if !defined(DEATH_TARGET_VITA)
 			case GL_BOOL_VEC4:
 			case GL_UNSIGNED_INT_VEC4:
+#endif
 				return 4;
 			default:
 				LOGW("No available case to handle type: {}", type_);

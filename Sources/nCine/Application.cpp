@@ -778,6 +778,12 @@ namespace nCine
 			RenderDocCapture::init();
 #endif
 
+#if defined(DEATH_TRACE)
+			std::size_t stackSize, stackRemaining;
+			Thread::GetCurrentStackInfo(stackSize, stackRemaining);
+			LOGI("Current thread stack size: {}/{} bytes", stackSize - stackRemaining, stackSize);
+#endif
+
 			LOGI("Creating rendering resources...");
 
 			// Create a minimal set of render resources before compiling the first shader

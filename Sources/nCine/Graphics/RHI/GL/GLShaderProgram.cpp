@@ -23,24 +23,30 @@ namespace nCine::RhiGL
 				case ShaderCompiler::UniformType::Float: return GL_FLOAT;
 				case ShaderCompiler::UniformType::Int: return GL_INT;
 				case ShaderCompiler::UniformType::UInt: return GL_UNSIGNED_INT;
+#if !defined(DEATH_TARGET_VITA)
 				case ShaderCompiler::UniformType::Bool: return GL_BOOL;
+#endif
 				case ShaderCompiler::UniformType::Vec2: return GL_FLOAT_VEC2;
 				case ShaderCompiler::UniformType::Vec3: return GL_FLOAT_VEC3;
 				case ShaderCompiler::UniformType::Vec4: return GL_FLOAT_VEC4;
 				case ShaderCompiler::UniformType::IVec2: return GL_INT_VEC2;
 				case ShaderCompiler::UniformType::IVec3: return GL_INT_VEC3;
 				case ShaderCompiler::UniformType::IVec4: return GL_INT_VEC4;
+#if !defined(DEATH_TARGET_VITA)	// vitaGL declares none of the bool / unsigned-int vector types
 				case ShaderCompiler::UniformType::UVec2: return GL_UNSIGNED_INT_VEC2;
 				case ShaderCompiler::UniformType::UVec3: return GL_UNSIGNED_INT_VEC3;
 				case ShaderCompiler::UniformType::UVec4: return GL_UNSIGNED_INT_VEC4;
 				case ShaderCompiler::UniformType::BVec2: return GL_BOOL_VEC2;
 				case ShaderCompiler::UniformType::BVec3: return GL_BOOL_VEC3;
 				case ShaderCompiler::UniformType::BVec4: return GL_BOOL_VEC4;
+#endif
 				case ShaderCompiler::UniformType::Mat2: return GL_FLOAT_MAT2;
 				case ShaderCompiler::UniformType::Mat3: return GL_FLOAT_MAT3;
 				case ShaderCompiler::UniformType::Mat4: return GL_FLOAT_MAT4;
 				case ShaderCompiler::UniformType::Sampler2D: return GL_SAMPLER_2D;
+#if !defined(DEATH_TARGET_VITA)	// GL_SAMPLER_3D is not declared by vitaGL
 				case ShaderCompiler::UniformType::Sampler3D: return GL_SAMPLER_3D;
+#endif
 				case ShaderCompiler::UniformType::SamplerCube: return GL_SAMPLER_CUBE;
 				default:
 					LOGW("No available case to handle reflected type: {}", std::uint32_t(type));
@@ -190,10 +196,15 @@ namespace nCine::RhiGL
 
 	bool GLShaderProgram::Validate()
 	{
+#if defined(DEATH_TARGET_VITA)
+		// vitaGL provides no glValidateProgram(), program validation is a debug-only aid, so assume success
+		return true;
+#else
 		glValidateProgram(glHandle_);
 		GLint status;
 		glGetProgramiv(glHandle_, GL_VALIDATE_STATUS, &status);
 		return (status == GL_TRUE);
+#endif
 	}
 
 	bool GLShaderProgram::FinalizeAfterLinking(Introspection introspection)
@@ -208,9 +219,12 @@ namespace nCine::RhiGL
 			}
 
 			// After linking, shader objects are not needed anymore
+#if !defined(DEATH_TARGET_VITA)
+			// vitaGL has no glDetachShader(), the shader objects are released with the program instead
 			for (auto& shader : attachedShaders_) {
 				glDetachShader(glHandle_, shader->GetGLHandle());
 			}
+#endif
 
 			attachedShaders_.clear();
 
@@ -291,9 +305,12 @@ namespace nCine::RhiGL
 				glUseProgram(0);
 			}
 
+#if !defined(DEATH_TARGET_VITA)
+			// vitaGL has no glDetachShader(), the shader objects are released with the program instead
 			for (auto& shader : attachedShaders_) {
 				glDetachShader(glHandle_, shader->GetGLHandle());
 			}
+#endif
 
 			attachedShaders_.clear();
 			glDeleteProgram(glHandle_);
@@ -332,9 +349,12 @@ namespace nCine::RhiGL
 			}
 
 			// After linking, shader objects are not needed anymore
+#if !defined(DEATH_TARGET_VITA)
+			// vitaGL has no glDetachShader(), the shader objects are released with the program instead
 			for (auto& shader : attachedShaders_) {
 				glDetachShader(glHandle_, shader->GetGLHandle());
 			}
+#endif
 
 			attachedShaders_.clear();
 

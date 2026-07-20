@@ -18,7 +18,7 @@ static constexpr std::uint16_t Version = 1 | 0x1000;
 
 namespace nCine
 {
-#if defined(WITH_RHI_GL)
+#if defined(WITH_RHI_GL) && !defined(DEATH_TARGET_VITA)
 	namespace
 	{
 		std::uint32_t bufferSize = 0;
@@ -29,7 +29,7 @@ namespace nCine
 	BinaryShaderCache::BinaryShaderCache(StringView path)
 		: isAvailable_(false), platformHash_(0)
 	{
-#if !defined(WITH_RHI_GL)
+#if !defined(WITH_RHI_GL) || defined(DEATH_TARGET_VITA)
 		// The software backend compiles no shaders, the Direct3D 11 backend does not use GL program binaries,
 		// and the Vulkan backend runs from pre-compiled SPIR-V shader modules (no GL program binary exists to
 		// cache), so there is nothing to cache on any of these. Stay silently disabled (isAvailable_ is already
@@ -100,7 +100,7 @@ namespace nCine
 
 	bool BinaryShaderCache::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program, Rhi::ShaderProgram::Introspection introspection)
 	{
-#if !defined(WITH_RHI_GL)
+#if !defined(WITH_RHI_GL) || defined(DEATH_TARGET_VITA)
 		// No GL program binaries exist on these backends and the cache is permanently disabled (see the constructor)
 		return false;
 #else
@@ -159,7 +159,7 @@ namespace nCine
 
 	bool BinaryShaderCache::SaveToCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program)
 	{
-#if !defined(WITH_RHI_GL)
+#if !defined(WITH_RHI_GL) || defined(DEATH_TARGET_VITA)
 		// No GL program binaries exist on these backends and the cache is permanently disabled (see the constructor)
 		return false;
 #else

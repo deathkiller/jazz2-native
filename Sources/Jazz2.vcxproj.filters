@@ -196,9 +196,6 @@
     <Filter Include="Source Files\nCine\Graphics">
       <UniqueIdentifier>{91ccf582-924e-4b60-813c-738218e484f2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\nCine\Graphics\RHI\GL">
-      <UniqueIdentifier>{bcee5bd1-18ac-41d1-823a-18478dcf8523}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\nCine\Input">
       <UniqueIdentifier>{9f55d519-1d20-4371-8846-4414bdb959cc}</UniqueIdentifier>
     </Filter>
@@ -285,6 +282,12 @@
     </Filter>
     <Filter Include="Header Files\Dependencies\enet">
       <UniqueIdentifier>{f215a314-e60a-49c9-b571-ee7f2911cc51}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Graphics\RHI">
+      <UniqueIdentifier>{b5544acc-3de8-44b2-bd5a-c872cd6c6f73}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\nCine\Graphics\RHI\GL">
+      <UniqueIdentifier>{7f90cfaa-a93e-4683-b10b-b54928bdacbd}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -1931,81 +1934,6 @@
     <ClCompile Include="nCine\Graphics\GfxCapabilities.cpp">
       <Filter>Source Files\nCine\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLAttribute.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLBlending.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLBufferObject.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLCullFace.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLClearColor.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLDepthTest.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLDebug.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLDevice.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLFramebuffer.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLRenderbuffer.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLRenderTarget.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLScissorTest.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLShader.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderProgram.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderUniformBlocks.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderUniforms.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLTexture.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLTextureFormat.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniform.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniformBlock.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniformBlockCache.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniformCache.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLVertexArrayObject.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLVertexFormat.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
-    <ClCompile Include="nCine\Graphics\RHI\GL\GLViewport.cpp">
-      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
-    </ClCompile>
     <ClCompile Include="nCine\Audio\IAudioLoader.cpp">
       <Filter>Source Files\nCine\Audio</Filter>
     </ClCompile>
@@ -2902,6 +2830,81 @@
     </ClCompile>
     <ClCompile Include="Jazz2\Multiplayer\Peer.cpp">
       <Filter>Source Files\Jazz2\Multiplayer</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLAttribute.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLBlending.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLBufferObject.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLClearColor.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLCullFace.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLDebug.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLDepthTest.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLDevice.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLFramebuffer.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLRenderbuffer.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLRenderTarget.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLScissorTest.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLShader.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderProgram.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderUniformBlocks.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderUniforms.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLTexture.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLTextureFormat.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniform.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniformBlock.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniformBlockCache.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLUniformCache.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLVertexArrayObject.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLVertexFormat.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLViewport.cpp">
+      <Filter>Source Files\nCine\Graphics\RHI\GL</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

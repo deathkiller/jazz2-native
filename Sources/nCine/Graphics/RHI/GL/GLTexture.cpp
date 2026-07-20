@@ -173,10 +173,13 @@ namespace nCine::RhiGL
 		TracyGpuZone("glCompressedTexSubImage2D");
 		GLTextureFormat::CheckSupport(format);
 		Bind();
+#if !defined(DEATH_TARGET_VITA)
+		// vitaGL provides no glCompressedTexSubImage2D(), compressed-texture sub-uploads are unsupported there
 		GLint internalFormat;
 		GLenum externalFormat, dataType;
 		GLTextureFormat::Resolve(format, false, internalFormat, externalFormat, dataType);
 		glCompressedTexSubImage2D(target_, level, xoffset, yoffset, width, height, internalFormat, imageSize, data);
+#endif
 		GL_LOG_ERRORS();
 	}
 
@@ -185,10 +188,13 @@ namespace nCine::RhiGL
 		TracyGpuZone("glTexStorage2D");
 		GLTextureFormat::CheckSupport(format);
 		Bind();
+#if !defined(DEATH_TARGET_VITA)
+		// vitaGL provides no glTexStorage2D(), the ES 2.0 profile allocates textures via glTexImage2D instead
 		GLint internalFormat;
 		GLenum externalFormat, dataType;
 		GLTextureFormat::Resolve(format, false, internalFormat, externalFormat, dataType);
 		glTexStorage2D(target_, levels, internalFormat, width, height);
+#endif
 		GL_LOG_ERRORS();
 	}
 

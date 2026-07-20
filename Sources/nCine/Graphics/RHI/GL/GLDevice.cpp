@@ -30,10 +30,13 @@ namespace nCine::RhiGL
 	static_assert(static_cast<GLenum>(BlendingFactor::DstColor) == GL_DST_COLOR);
 	static_assert(static_cast<GLenum>(BlendingFactor::OneMinusDstColor) == GL_ONE_MINUS_DST_COLOR);
 	static_assert(static_cast<GLenum>(BlendingFactor::SrcAlphaSaturate) == GL_SRC_ALPHA_SATURATE);
+#if !defined(DEATH_TARGET_VITA)
+	// vitaGL declares none of the constant-colour blend factors, ConstantColor/-Alpha blending is unused there
 	static_assert(static_cast<GLenum>(BlendingFactor::ConstantColor) == GL_CONSTANT_COLOR);
 	static_assert(static_cast<GLenum>(BlendingFactor::OneMinusConstantColor) == GL_ONE_MINUS_CONSTANT_COLOR);
 	static_assert(static_cast<GLenum>(BlendingFactor::ConstantAlpha) == GL_CONSTANT_ALPHA);
 	static_assert(static_cast<GLenum>(BlendingFactor::OneMinusConstantAlpha) == GL_ONE_MINUS_CONSTANT_ALPHA);
+#endif
 	static_assert(static_cast<GLenum>(BufferTarget::Vertex) == GL_ARRAY_BUFFER);
 	static_assert(static_cast<GLenum>(BufferTarget::Index) == GL_ELEMENT_ARRAY_BUFFER);
 	static_assert(static_cast<GLenum>(BufferTarget::Uniform) == GL_UNIFORM_BUFFER);
@@ -278,7 +281,10 @@ namespace nCine::RhiGL
 
 	void GLDevice::SetupInitialState()
 	{
+#if !defined(DEATH_TARGET_VITA)
+		// vitaGL does not declare GL_DITHER, dithering is not part of its fixed-function state
 		glDisable(GL_DITHER);
+#endif
 		GLBlending::SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GLDepthTest::Enable();
 	}

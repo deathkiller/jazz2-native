@@ -1,10 +1,12 @@
 #include "GLVertexArrayObject.h"
 #include "GLDebug.h"
 
-#if defined(RHI_GL_PROFILE_ES2)
+#if defined(RHI_GL_PROFILE_ES2) && !defined(DEATH_TARGET_VITA)
 // Vertex array objects are not ES 2.0 core - this profile relies on GL_OES_vertex_array_object, whose
-// entry points carry the OES suffix on a true ES2 context (ANGLE and Vita-class drivers export them;
-// the extension is required by this engine's render loop, which binds all vertex state through VAOs)
+// entry points carry the OES suffix on a true ES2 context (ANGLE exports them this way, the extension is
+// required by this engine's render loop, which binds all vertex state through VAOs). PS Vita's vitaGL is
+// the exception, it exports the unsuffixed glGenVertexArrays()/glDeleteVertexArrays()/glBindVertexArray()
+// directly, so no remap is applied there.
 #	define glGenVertexArrays glGenVertexArraysOES
 #	define glDeleteVertexArrays glDeleteVertexArraysOES
 #	define glBindVertexArray glBindVertexArrayOES

@@ -17,6 +17,14 @@ namespace nCine::RhiGL
 	GLUniformBlock::GLUniformBlock(GLuint program, GLuint index, DiscoverUniforms discover)
 		: GLUniformBlock()
 	{
+#if defined(DEATH_TARGET_VITA)
+		// Uniform buffer objects are unused under the OpenGL|ES 2.0 profile, and vitaGL exposes none of the
+		// glGetActiveUniformBlock*/glGetActiveUniformsiv() reflection entry points, so this discovery constructor
+		// is never invoked on Vita, leave the members at their default-constructed values.
+		static_cast<void>(program);
+		static_cast<void>(index);
+		static_cast<void>(discover);
+#else
 		GLint nameLength = 0;
 		GLint uniformCount = 0;
 		program_ = program;
@@ -79,6 +87,7 @@ namespace nCine::RhiGL
 		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 		alignAmount_ = (offsetAlignment - size_ % offsetAlignment) % offsetAlignment;
 		size_ += alignAmount_;
+#endif
 	}
 
 	GLUniformBlock::GLUniformBlock(GLuint program, GLuint index)

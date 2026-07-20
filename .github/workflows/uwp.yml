@@ -92,7 +92,7 @@ jobs:
         Move-Item -Path "$msixbundlePath" -Destination ".\_package\Jazz2.msixbundle"
         Move-Item -Path ".\LICENSE" -Destination ".\_package\LICENSE"
         
-        if ('${{ matrix.ArchExts }}') { $artifactPath = 'Jazz2_UWP_${{ matrix.RHI }}_${{ matrix.Platform }}_${{ matrix.ArchExts }}' } else { $artifactPath = 'Jazz2_UWP_${{ matrix.RHI }}_${{ matrix.Platform }}' }
+        if ('${{ matrix.ArchExts }}') { $artifactPath = 'Jazz2_UWP_${{ matrix.Platform }}_${{ matrix.ArchExts }}_${{ matrix.RHI }}' } else { $artifactPath = 'Jazz2_UWP_${{ matrix.Platform }}_${{ matrix.RHI }}' }
         Add-Content -Path $env:GITHUB_ENV -Value "artifactPath=$artifactPath"
         
     - name: 'Upload Package'

@@ -61,12 +61,14 @@ namespace nCine::RhiGL
 			// Floating-point formats (external pixel type is always GL_FLOAT)
 			case PixelFormat::RGBA16F:
 				internalFormat = GL_RGBA16F; externalFormat = GL_RGBA; dataType = GL_FLOAT; break;
+#if !defined(DEATH_TARGET_VITA)	// vitaGL declares GL_RGBA16F but not the 32-bit-float / RGB-float internal formats
 			case PixelFormat::RGBA32F:
 				internalFormat = GL_RGBA32F; externalFormat = GL_RGBA; dataType = GL_FLOAT; break;
 			case PixelFormat::RGB16F:
 				internalFormat = GL_RGB16F; externalFormat = GL_RGB; dataType = GL_FLOAT; break;
 			case PixelFormat::RGB32F:
 				internalFormat = GL_RGB32F; externalFormat = GL_RGB; dataType = GL_FLOAT; break;
+#endif
 			case PixelFormat::Depth32F:
 				internalFormat = GL_DEPTH_COMPONENT32F; externalFormat = GL_DEPTH_COMPONENT; dataType = GL_FLOAT; break;
 
@@ -92,9 +94,11 @@ namespace nCine::RhiGL
 				internalFormat = GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG; externalFormat = GL_RGBA; dataType = GL_UNSIGNED_BYTE; break;
 			case PixelFormat::ETC2RGBA8:
 				internalFormat = GL_COMPRESSED_RGBA8_ETC2_EAC; externalFormat = GL_RGBA; dataType = GL_UNSIGNED_BYTE; break;
+#	if !defined(DEATH_TARGET_VITA)	// GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2 is not declared by vitaGL
 			case PixelFormat::ETC2RGB8A1:
 				internalFormat = GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2; externalFormat = GL_RGBA; dataType = GL_UNSIGNED_BYTE; break;
-#	if (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)
+#	endif
+#	if ((!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)) || (defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21)) && !defined(DEATH_TARGET_VITA)
 			case PixelFormat::ASTC_4x4:
 				internalFormat = GL_COMPRESSED_RGBA_ASTC_4x4_KHR; externalFormat = GL_RGBA; dataType = GL_UNSIGNED_BYTE; break;
 			case PixelFormat::ASTC_5x4:
@@ -126,18 +130,22 @@ namespace nCine::RhiGL
 #	endif
 			case PixelFormat::ETC1:
 				internalFormat = GL_ETC1_RGB8_OES; externalFormat = GL_RGB; dataType = GL_UNSIGNED_BYTE; break;
+#	if !defined(DEATH_TARGET_VITA)	// GL_COMPRESSED_RGB8_ETC2 is not declared by vitaGL
 			case PixelFormat::ETC2RGB8:
 				internalFormat = GL_COMPRESSED_RGB8_ETC2; externalFormat = GL_RGB; dataType = GL_UNSIGNED_BYTE; break;
+#	endif
 			case PixelFormat::ATC_RGB:
 				internalFormat = GL_ATC_RGB_AMD; externalFormat = GL_RGB; dataType = GL_UNSIGNED_BYTE; break;
 			case PixelFormat::PVRTC_2BPP_RGB:
 				internalFormat = GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG; externalFormat = GL_RGB; dataType = GL_UNSIGNED_BYTE; break;
 			case PixelFormat::PVRTC_4BPP_RGB:
 				internalFormat = GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG; externalFormat = GL_RGB; dataType = GL_UNSIGNED_BYTE; break;
+#	if !defined(DEATH_TARGET_VITA)	// GL_COMPRESSED_RG11_EAC / GL_COMPRESSED_R11_EAC are not declared by vitaGL
 			case PixelFormat::EAC_RG11:
 				internalFormat = GL_COMPRESSED_RG11_EAC; externalFormat = GL_RG; dataType = GL_UNSIGNED_BYTE; break;
 			case PixelFormat::EAC_R11:
 				internalFormat = GL_COMPRESSED_R11_EAC; externalFormat = GL_RED; dataType = GL_UNSIGNED_BYTE; break;
+#	endif
 #endif
 
 			default:
@@ -148,7 +156,9 @@ namespace nCine::RhiGL
 		// Convert the external format to the corresponding BGR/BGRA one, matching the former `TextureFormat::bgrFormat()`
 		if (bgr) {
 			if (externalFormat == GL_RGBA) {
-#if defined(RHI_GL_PROFILE_ES2)
+#if defined(DEATH_TARGET_VITA)
+				// vitaGL declares no GL_BGRA_EXT, BGRA source data is left unswizzled (the bgr path is unused on Vita)
+#elif defined(RHI_GL_PROFILE_ES2)
 				// ES2's GL_EXT_texture_format_BGRA8888 requires `internalformat` to be GL_BGRA_EXT as well
 				// (ES2 core mandates internal == external), unlike ES3 where only the external format changes
 				externalFormat = GL_BGRA_EXT;
