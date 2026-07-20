@@ -90,7 +90,7 @@ namespace ShaderCompiler
 	public:
 		/**
 			Transpiles @p fragmentGlsl (the lowered `<Program>_Fs` text of one variant) into a
-			`void <programName>_Fragment(const nCine::RhiSoftware::FragmentShaderInput&)` function.
+			`void <programName>_Fragment(const nCine::RHI::Software::FragmentShaderInput&)` function.
 			@p samplers maps each sampler uniform to the texture unit it is bound to (from reflection),
 			so `texture(sampler, uv)` lowers to `sw::swTexture(in, <unit>, uv)`. @p vertexGlsl is the lowered
 			`<Program>_Vs` text of the same variant: it is analyzed for per-instance-constant varyings (a

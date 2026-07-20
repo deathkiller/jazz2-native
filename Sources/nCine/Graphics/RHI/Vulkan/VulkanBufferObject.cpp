@@ -4,7 +4,7 @@
 
 #include <cstring>
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	std::uint32_t VulkanBufferObject::nextHandle_ = 1;
 

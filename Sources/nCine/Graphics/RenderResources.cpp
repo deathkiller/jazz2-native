@@ -30,9 +30,9 @@ namespace nCine
 
 		struct ShaderLoad
 		{
-			std::unique_ptr<Rhi::ShaderProgram>& shaderProgram;
+			std::unique_ptr<RHI::ShaderProgram>& shaderProgram;
 			const ShaderCompiler::Program& program;
-			Rhi::ShaderProgram::Introspection introspection;
+			RHI::ShaderProgram::Introspection introspection;
 			const char* shaderName;
 		};
 	}
@@ -44,31 +44,31 @@ namespace nCine
 	std::unique_ptr<RenderBatcher> RenderResources::renderBatcher_;
 
 #if defined(RHI_GL_PROFILE_ES2)
-	std::unique_ptr<Rhi::Buffer> RenderResources::quadCornerVbo_;
+	std::unique_ptr<RHI::Buffer> RenderResources::quadCornerVbo_;
 #endif
 
-	std::unique_ptr<Rhi::ShaderProgram> RenderResources::defaultShaderPrograms_[DefaultShaderProgramsCount];
-	HashMap<const Rhi::ShaderProgram*, Rhi::ShaderProgram*> RenderResources::batchedShaders_(32);
+	std::unique_ptr<RHI::ShaderProgram> RenderResources::defaultShaderPrograms_[DefaultShaderProgramsCount];
+	HashMap<const RHI::ShaderProgram*, RHI::ShaderProgram*> RenderResources::batchedShaders_(32);
 
 	std::uint8_t RenderResources::cameraUniformsBuffer_[UniformsBufferSize];
-	HashMap<Rhi::ShaderProgram*, RenderResources::CameraUniformData> RenderResources::cameraUniformDataMap_(32);
+	HashMap<RHI::ShaderProgram*, RenderResources::CameraUniformData> RenderResources::cameraUniformDataMap_(32);
 
 	Camera* RenderResources::currentCamera_ = nullptr;
 	std::unique_ptr<Camera> RenderResources::defaultCamera_;
 	Viewport* RenderResources::currentViewport_ = nullptr;
 
-	Rhi::ShaderProgram* RenderResources::GetShaderProgram(Material::ShaderProgramType shaderProgramType)
+	RHI::ShaderProgram* RenderResources::GetShaderProgram(Material::ShaderProgramType shaderProgramType)
 	{
 		return (shaderProgramType != Material::ShaderProgramType::Custom ? defaultShaderPrograms_[std::int32_t(shaderProgramType)].get() : nullptr);
 	}
 
-	Rhi::ShaderProgram* RenderResources::GetBatchedShader(const Rhi::ShaderProgram* shader)
+	RHI::ShaderProgram* RenderResources::GetBatchedShader(const RHI::ShaderProgram* shader)
 	{
 		auto it = batchedShaders_.find(shader);
 		return (it != batchedShaders_.end() ? it->second : nullptr);
 	}
 
-	bool RenderResources::RegisterBatchedShader(const Rhi::ShaderProgram* shader, Rhi::ShaderProgram* batchedShader)
+	bool RenderResources::RegisterBatchedShader(const RHI::ShaderProgram* shader, RHI::ShaderProgram* batchedShader)
 	{
 		FATAL_ASSERT(shader != nullptr);
 		FATAL_ASSERT(batchedShader != nullptr);
@@ -77,19 +77,19 @@ namespace nCine
 		return batchedShaders_.emplace(shader, batchedShader).second;
 	}
 
-	bool RenderResources::UnregisterBatchedShader(const Rhi::ShaderProgram* shader)
+	bool RenderResources::UnregisterBatchedShader(const RHI::ShaderProgram* shader)
 	{
 		DEATH_ASSERT(shader != nullptr);
 		return (batchedShaders_.erase(shader) > 0);
 	}
 
-	RenderResources::CameraUniformData* RenderResources::FindCameraUniformData(Rhi::ShaderProgram* shaderProgram)
+	RenderResources::CameraUniformData* RenderResources::FindCameraUniformData(RHI::ShaderProgram* shaderProgram)
 	{
 		auto it = cameraUniformDataMap_.find(shaderProgram);
 		return (it != cameraUniformDataMap_.end() ? &it->second : nullptr);
 	}
 
-	void RenderResources::InsertCameraUniformData(Rhi::ShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData)
+	void RenderResources::InsertCameraUniformData(RHI::ShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData)
 	{
 		FATAL_ASSERT(shaderProgram != nullptr);
 
@@ -99,20 +99,20 @@ namespace nCine
 		cameraUniformDataMap_.emplace(shaderProgram, std::move(cameraUniformData));
 	}
 
-	bool RenderResources::RemoveCameraUniformData(Rhi::ShaderProgram* shaderProgram)
+	bool RenderResources::RemoveCameraUniformData(RHI::ShaderProgram* shaderProgram)
 	{
 		return cameraUniformDataMap_.erase(shaderProgram);
 	}
 
-	void RenderResources::SetDefaultAttributesParameters(Rhi::ShaderProgram& shaderProgram)
+	void RenderResources::SetDefaultAttributesParameters(RHI::ShaderProgram& shaderProgram)
 	{
 		if (shaderProgram.GetAttributeCount() <= 0) {
 			return;
 		}
 
-		Rhi::VertexFormat::Attribute* positionAttribute = shaderProgram.GetAttribute(Material::PositionAttributeName);
-		Rhi::VertexFormat::Attribute* texCoordsAttribute = shaderProgram.GetAttribute(Material::TexCoordsAttributeName);
-		Rhi::VertexFormat::Attribute* meshIndexAttribute = shaderProgram.GetAttribute(Material::MeshIndexAttributeName);
+		RHI::VertexFormat::Attribute* positionAttribute = shaderProgram.GetAttribute(Material::PositionAttributeName);
+		RHI::VertexFormat::Attribute* texCoordsAttribute = shaderProgram.GetAttribute(Material::TexCoordsAttributeName);
+		RHI::VertexFormat::Attribute* meshIndexAttribute = shaderProgram.GetAttribute(Material::MeshIndexAttributeName);
 
 		// The stride check avoid overwriting VBO parameters for custom mesh shaders attributes
 		if (positionAttribute != nullptr && texCoordsAttribute != nullptr && meshIndexAttribute != nullptr) {
@@ -208,7 +208,7 @@ namespace nCine
 		}
 		// The backend places committed uniform blocks into the streaming uniform buffer through this hook,
 		// so it doesn't have to know the pipeline's buffer suballocator
-		Rhi::ShaderUniformBlocks::SetUniformRangeAllocator([](std::uint32_t bytes) {
+		RHI::ShaderUniformBlocks::SetUniformRangeAllocator([](std::uint32_t bytes) {
 			return buffersManager_->AcquireMemory(RenderBuffersManager::BufferTypes::Uniform, bytes);
 		});
 		if (vaoPool_ == nullptr) {
@@ -225,21 +225,21 @@ namespace nCine
 		// TRIANGLE_STRIP draw (matching the old "vec2(1.0 - float(gl_VertexID >> 1), float(gl_VertexID % 2))").
 		if (quadCornerVbo_ == nullptr) {
 			static const float quadCorners[] = { 1.0f, 0.0f,  1.0f, 1.0f,  0.0f, 0.0f,  0.0f, 1.0f };
-			quadCornerVbo_ = std::make_unique<Rhi::Buffer>(BufferTarget::Vertex);
+			quadCornerVbo_ = std::make_unique<RHI::Buffer>(BufferTarget::Vertex);
 			quadCornerVbo_->BufferData(sizeof(quadCorners), quadCorners, BufferUsage::StaticDraw);
 			quadCornerVbo_->SetObjectLabel("QuadCornerVBO");
 		}
 #endif
 
 		ShaderLoad shadersToLoad[] = {
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::Sprite)], ShadersGen::DefaultSprite, Rhi::ShaderProgram::Introspection::Enabled, "Sprite" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteNoTexture)], ShadersGen::DefaultSpriteNoTexture, Rhi::ShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSprite)], ShadersGen::DefaultMeshSprite, Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteNoTexture)], ShadersGen::DefaultMeshSpriteNoTexture, Rhi::ShaderProgram::Introspection::Enabled, "MeshSprite_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSprites)], ShadersGen::DefaultBatchedSprites, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesNoTexture)], ShadersGen::DefaultBatchedSpritesNoTexture, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_NoTexture" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSprites)], ShadersGen::DefaultBatchedMeshSprites, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites" },
-			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesNoTexture)], ShadersGen::DefaultBatchedMeshSpritesNoTexture, Rhi::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::Sprite)], ShadersGen::DefaultSprite, RHI::ShaderProgram::Introspection::Enabled, "Sprite" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::SpriteNoTexture)], ShadersGen::DefaultSpriteNoTexture, RHI::ShaderProgram::Introspection::Enabled, "Sprite_NoTexture" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSprite)], ShadersGen::DefaultMeshSprite, RHI::ShaderProgram::Introspection::Enabled, "MeshSprite" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::MeshSpriteNoTexture)], ShadersGen::DefaultMeshSpriteNoTexture, RHI::ShaderProgram::Introspection::Enabled, "MeshSprite_NoTexture" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSprites)], ShadersGen::DefaultBatchedSprites, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedSpritesNoTexture)], ShadersGen::DefaultBatchedSpritesNoTexture, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_Sprites_NoTexture" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSprites)], ShadersGen::DefaultBatchedMeshSprites, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites" },
+			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesNoTexture)], ShadersGen::DefaultBatchedMeshSpritesNoTexture, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
 		};
 
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
@@ -253,7 +253,7 @@ namespace nCine
 			// All default programs use the base variant of their generated ShaderCompiler artifact
 			const ShaderCompiler::ProgramVariant& variant = shaderToLoad.program.Variants[0];
 
-			shaderToLoad.shaderProgram = std::make_unique<Rhi::ShaderProgram>(Rhi::ShaderProgram::QueryPhase::Immediate);
+			shaderToLoad.shaderProgram = std::make_unique<RHI::ShaderProgram>(RHI::ShaderProgram::QueryPhase::Immediate);
 			// Uniforms, blocks and attributes come from the offline reflection instead of GL introspection
 			shaderToLoad.shaderProgram->SetReflection(&variant);
 #if defined(RHI_GL_PROFILE_ES2)
@@ -261,7 +261,7 @@ namespace nCine
 			// form is also not valid ES2 (a "uint aMeshIndex" integer attribute), so skip compiling them -
 			// the program object stays created (RegisterDefaultBatchedShaders only stores its pointer) but
 			// unlinked, which is fine because nothing ever draws with it.
-			if (shaderToLoad.introspection == Rhi::ShaderProgram::Introspection::NoUniformsInBlocks) {
+			if (shaderToLoad.introspection == RHI::ShaderProgram::Introspection::NoUniformsInBlocks) {
 				continue;
 			}
 #endif
@@ -275,7 +275,7 @@ namespace nCine
 			// the probe compilation that used to run each batched shader twice
 			std::int32_t batchSize = 0;
 			bool hasBatchSizeDefine = false;
-			if (shaderToLoad.introspection == Rhi::ShaderProgram::Introspection::NoUniformsInBlocks) {
+			if (shaderToLoad.introspection == RHI::ShaderProgram::Introspection::NoUniformsInBlocks) {
 				if (appCfg.fixedBatchSize > 0) {
 					batchSize = appCfg.fixedBatchSize;
 					hasBatchSizeDefine = true;
@@ -318,7 +318,7 @@ namespace nCine
 			// ES2 has no UBOs: the InstancesBlock becomes a "uniform Instance instances[BATCH_SIZE];" array
 			// that must fit in the (small) ES2 vertex uniform space, so force a small batch regardless of the
 			// reported max uniform block size (desktop ANGLE reports 64 KB, which would keep the 682 default).
-			if (shaderToLoad.introspection == Rhi::ShaderProgram::Introspection::NoUniformsInBlocks &&
+			if (shaderToLoad.introspection == RHI::ShaderProgram::Introspection::NoUniformsInBlocks &&
 				(batchSize <= 0 || batchSize > 12)) {
 				batchSize = 8;
 				hasBatchSizeDefine = true;
@@ -372,7 +372,7 @@ namespace nCine
 
 	void RenderResources::Dispose()
 	{
-		Rhi::ShaderUniformBlocks::SetUniformRangeAllocator(nullptr);
+		RHI::ShaderUniformBlocks::SetUniformRangeAllocator(nullptr);
 
 		for (auto& shaderProgram : defaultShaderPrograms_) {
 			shaderProgram.reset(nullptr);

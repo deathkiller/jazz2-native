@@ -40,9 +40,9 @@ namespace nCine
 		material_.Bind();
 		material_.CommitUniforms();
 
-		Rhi::Device::ScissorState scissorState = Rhi::Device::GetScissorState();
+		RHI::Device::ScissorState scissorState = RHI::Device::GetScissorState();
 		if (scissorRect_.W > 0 && scissorRect_.H > 0) {
-			Rhi::Device::SetScissor(scissorRect_);
+			RHI::Device::SetScissor(scissorRect_);
 		}
 
 		std::uint32_t offset = 0;
@@ -56,7 +56,7 @@ namespace nCine
 		geometry_.Bind();
 		geometry_.Draw(numInstances_);
 
-		Rhi::Device::SetScissorState(scissorState);
+		RHI::Device::SetScissorState(scissorState);
 	}
 
 	void RenderCommand::SetScissor(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height)
@@ -86,7 +86,7 @@ namespace nCine
 		cachedShaderChangeCounter_ = material_.shaderChangeCounter_;
 	}
 
-	Rhi::UniformBlockCache* RenderCommand::GetInstanceBlock()
+	RHI::UniformBlockCache* RenderCommand::GetInstanceBlock()
 	{
 		if (material_.shaderProgram_ == nullptr) {
 			return nullptr;
@@ -106,7 +106,7 @@ namespace nCine
 		const Camera::ProjectionValues cameraValues = RenderResources::GetCurrentCamera()->GetProjectionValues();
 		modelMatrix_[3][2] = CalculateDepth(layer_, cameraValues.nearClip, cameraValues.farClip);
 
-		if (material_.shaderProgram_ && material_.shaderProgram_->GetStatus() == Rhi::ShaderProgram::Status::LinkedWithIntrospection) {
+		if (material_.shaderProgram_ && material_.shaderProgram_->GetStatus() == RHI::ShaderProgram::Status::LinkedWithIntrospection) {
 			RefreshCachedUniforms();
 			if (modelMatrixUniform_) {
 				//ZoneScopedNC("Set model matrix", 0x81A861);

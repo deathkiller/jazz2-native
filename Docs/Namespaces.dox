@@ -90,6 +90,44 @@ See also @ref third-party for the licenses of the libraries used.
 /** @namespace nCine::Primitives::Literals
 	@brief Literals for primitives
 */
+/** @dir nCine/Graphics/RHI
+	@brief Namespace @ref nCine::RHI
+*/
+/** @namespace nCine::RHI
+	@brief Render Hardware Interface — compile-time-selectable graphics backend abstraction
+
+	Exactly one backend is compiled into a binary, selected by a `WITH_RHI_*` macro (the OpenGL
+	family is the default). The render pipeline refers only to the backend-neutral aliases declared
+	here (e.g. @ref nCine::RHI::Device, @ref nCine::RHI::Texture), so each backend only has to provide
+	the same set of names with the same surface.
+*/
+/** @dir nCine/Graphics/RHI/GL
+	@brief Namespace @ref nCine::RHI::GL
+*/
+/** @namespace nCine::RHI::GL
+	@brief OpenGL 3.3 core, OpenGL|ES 3.0/2.0 and WebGL 2.0 backend, selected by `WITH_RHI_GL`
+*/
+/** @dir nCine/Graphics/RHI/Software
+	@brief Namespace @ref nCine::RHI::Software
+*/
+/** @namespace nCine::RHI::Software
+	@brief CPU software rasterizer backend, selected by `WITH_RHI_SOFTWARE`
+*/
+/** @namespace nCine::RHI::Software::sw
+	@brief Runtime support types for the transpiled (GLSL→C++) software shaders
+*/
+/** @dir nCine/Graphics/RHI/D3D11
+	@brief Namespace @ref nCine::RHI::D3D11
+*/
+/** @namespace nCine::RHI::D3D11
+	@brief Direct3D 11 backend, selected by `WITH_RHI_D3D11`
+*/
+/** @dir nCine/Graphics/RHI/Vulkan
+	@brief Namespace @ref nCine::RHI::Vulkan
+*/
+/** @namespace nCine::RHI::Vulkan
+	@brief Vulkan backend, selected by `WITH_RHI_VULKAN`
+*/
 
 /** @dir Jazz2
 	@brief Namespace @ref Jazz2

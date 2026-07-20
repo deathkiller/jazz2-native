@@ -7,7 +7,7 @@
 
 #include <cstring> // for memcpy()
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLShaderUniformBlocks::UniformRangeAllocator GLShaderUniformBlocks::uniformRangeAllocator_ = nullptr;
 
@@ -40,7 +40,7 @@ namespace nCine::RhiGL
 		for (GLUniformBlockCache& uniformBlockCache : uniformBlockCaches_) {
 			uniformBlockCache.CommitAsLooseUniforms();
 		}
-		// Dead code when the software backend is selected: `Rhi::BufferRange::object` is then a `SwBuffer*`
+		// Dead code when the software backend is selected: `RHI::BufferRange::object` is then a `SwBuffer*`
 		// whose definition this GL translation unit does not include, and the pipeline never calls this here
 #elif !defined(WITH_RHI_SOFTWARE)
 #if defined(DEATH_DEBUG)

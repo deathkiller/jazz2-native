@@ -1464,7 +1464,7 @@ namespace Jazz2::Actors
 					if (defaultPalette != nullptr) {
 						command->GetMaterial().SetTexture(1, *defaultPalette);
 					}
-					Rhi::UniformCache* palOffsetUniform = instanceBlock->GetUniform(Material::PaletteOffsetUniformName);
+					RHI::UniformCache* palOffsetUniform = instanceBlock->GetUniform(Material::PaletteOffsetUniformName);
 					if (palOffsetUniform != nullptr) {
 						palOffsetUniform->SetFloatValue(0.0f);
 					}

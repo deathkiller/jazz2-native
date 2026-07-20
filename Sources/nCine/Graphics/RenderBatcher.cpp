@@ -56,7 +56,7 @@ namespace nCine
 
 			// Split point if last command or split condition
 			if (i == srcQueue.size() - 1 || shouldSplit) {
-				const Rhi::ShaderProgram* batchedShader = RenderResources::GetBatchedShader(prevCommand->GetMaterial().GetShaderProgram());
+				const RHI::ShaderProgram* batchedShader = RenderResources::GetBatchedShader(prevCommand->GetMaterial().GetShaderProgram());
 				if (batchedShader && (endSplit - lastSplit) >= minBatchSize) {
 					// Split point for the maximum batch size
 					while (lastSplit < endSplit) {
@@ -119,22 +119,22 @@ namespace nCine
 
 		const RenderCommand* refCommand = *start;
 		RenderCommand* batchCommand = nullptr;
-		Rhi::UniformBlockCache* instancesBlock = nullptr;
+		RHI::UniformBlockCache* instancesBlock = nullptr;
 
 		// Tracking the amount of memory required by uniform blocks, vertices and indices of all instances
 		std::uint32_t instancesBlockSize = 0;
 		std::uint32_t instancesVertexDataSize = 0;
 		std::uint32_t instancesIndicesAmount = 0;
 
-		const Rhi::ShaderProgram* refShader = refCommand->GetMaterial().GetShaderProgram();
-		Rhi::ShaderProgram* batchedShader = RenderResources::GetBatchedShader(refShader);
+		const RHI::ShaderProgram* refShader = refCommand->GetMaterial().GetShaderProgram();
+		RHI::ShaderProgram* batchedShader = RenderResources::GetBatchedShader(refShader);
 		// The following check should never fail as it is already checked by the calling function
 		FATAL_ASSERT_MSG(batchedShader != nullptr, "Unsupported shader for batch element");
 		bool commandAdded = false;
 		batchCommand = RenderResources::GetRenderCommandPool().RetrieveOrAdd(batchedShader, commandAdded);
 
 		// Retrieving the original block instance size without the uniform buffer offset alignment
-		const Rhi::UniformBlockCache* singleInstanceBlock = (*start)->GetInstanceBlock();
+		const RHI::UniformBlockCache* singleInstanceBlock = (*start)->GetInstanceBlock();
 		const std::uint32_t singleInstanceBlockSizePacked = singleInstanceBlock->GetSize() - singleInstanceBlock->GetAlignAmount(); // remove the uniform buffer offset alignment
 		const std::uint32_t singleInstanceBlockSize = singleInstanceBlockSizePacked + (16 - singleInstanceBlockSizePacked % 16) % 16; // but add the std140 vec4 layout alignment
 
@@ -147,14 +147,14 @@ namespace nCine
 		const std::uint32_t nonBlockUniformsSize = batchCommand->GetMaterial().GetShaderProgram()->GetUniformsSize();
 		// Determine how much memory is needed by uniform blocks that are not for instances
 		std::uint32_t nonInstancesBlocksSize = 0;
-		const Rhi::ShaderUniformBlocks::UniformHashMapType& allUniformBlocks = refCommand->GetMaterial().GetAllUniformBlocks();
-		for (const Rhi::UniformBlockCache& uniformBlockCache : allUniformBlocks) {
+		const RHI::ShaderUniformBlocks::UniformHashMapType& allUniformBlocks = refCommand->GetMaterial().GetAllUniformBlocks();
+		for (const RHI::UniformBlockCache& uniformBlockCache : allUniformBlocks) {
 			// The instance block was already resolved, comparing addresses avoids a string comparison
 			if (&uniformBlockCache == singleInstanceBlock) {
 				continue;
 			}
 
-			Rhi::UniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockCache.uniformBlock()->GetName());
+			RHI::UniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockCache.uniformBlock()->GetName());
 			DEATH_ASSERT(batchBlock);
 			if (batchBlock) {
 				nonInstancesBlocksSize += uniformBlockCache.GetSize() - uniformBlockCache.GetAlignAmount();
@@ -183,22 +183,22 @@ namespace nCine
 
 		batchCommand->GetMaterial().SetUniformsDataPointer(AcquireMemory(nonBlockUniformsSize + nonInstancesBlocksSize + instancesBlockSize));
 		// Copying data for non-instances uniform blocks from the first command in the batch
-		for (const Rhi::UniformBlockCache& uniformBlockCache : allUniformBlocks) {
+		for (const RHI::UniformBlockCache& uniformBlockCache : allUniformBlocks) {
 			if (&uniformBlockCache == singleInstanceBlock) {
 				continue;
 			}
 
-			Rhi::UniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockCache.uniformBlock()->GetName());
+			RHI::UniformBlockCache* batchBlock = batchCommand->GetMaterial().UniformBlock(uniformBlockCache.uniformBlock()->GetName());
 			const bool dataCopied = batchBlock->CopyData(uniformBlockCache.GetDataPointer());
 			DEATH_ASSERT(dataCopied);
 			batchBlock->SetUsedSize(uniformBlockCache.usedSize());
 		}
 
 		// Setting sampler uniforms for GL_TEXTURE* units
-		const Rhi::ShaderUniforms::UniformHashMapType& allUniforms = refCommand->GetMaterial().GetAllUniforms();
-		for (const Rhi::UniformCache& uniformCache : allUniforms) {
+		const RHI::ShaderUniforms::UniformHashMapType& allUniforms = refCommand->GetMaterial().GetAllUniforms();
+		for (const RHI::UniformCache& uniformCache : allUniforms) {
 			if (uniformCache.GetUniform()->GetType() == ShaderCompiler::UniformType::Sampler2D) {
-				Rhi::UniformCache* batchUniformCache = batchCommand->GetMaterial().Uniform(uniformCache.GetUniform()->GetName());
+				RHI::UniformCache* batchUniformCache = batchCommand->GetMaterial().Uniform(uniformCache.GetUniform()->GetName());
 				const std::int32_t refValue = uniformCache.GetIntValue(0);
 				const std::int32_t batchValue = batchUniformCache->GetIntValue(0);
 				// Also checking if the command has just been added, as the memory at the
@@ -277,7 +277,7 @@ namespace nCine
 			RenderCommand* command = *it;
 			command->CommitNodeTransformation();
 
-			const Rhi::UniformBlockCache* singleInstanceBlock = command->GetInstanceBlock();
+			const RHI::UniformBlockCache* singleInstanceBlock = command->GetInstanceBlock();
 			const bool dataCopied = instancesBlock->CopyData(instancesBlockOffset, singleInstanceBlock->GetDataPointer(), singleInstanceBlockSize);
 			DEATH_ASSERT(dataCopied);
 			instancesBlockOffset += singleInstanceBlockSize;
@@ -350,7 +350,7 @@ namespace nCine
 			}
 		}
 
-		for (std::uint32_t i = 0; i < Rhi::Texture::MaxTextureUnits; i++) {
+		for (std::uint32_t i = 0; i < RHI::Texture::MaxTextureUnits; i++) {
 			batchCommand->GetMaterial().SetTexture(i, refCommand->GetMaterial().GetTexture(i));
 		}
 		batchCommand->GetMaterial().SetBlendingEnabled(refCommand->GetMaterial().IsBlendingEnabled());

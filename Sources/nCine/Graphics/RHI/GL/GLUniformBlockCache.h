@@ -8,7 +8,7 @@
 #include "GLUniformCache.h"
 #include "../../../Base/StaticHashMap.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	class GLUniformBlock;
 	class GLBufferObject;

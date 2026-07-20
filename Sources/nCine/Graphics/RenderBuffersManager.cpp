@@ -85,7 +85,7 @@ namespace nCine
 	{
 #if defined(NCINE_HAS_PERSISTENT_MAPPING)
 		for (std::uint32_t i = 0; i < NumPersistentSections; i++) {
-			Rhi::Device::DeleteFence(sectionFences_[i]);
+			RHI::Device::DeleteFence(sectionFences_[i]);
 		}
 #endif
 	}
@@ -150,7 +150,7 @@ namespace nCine
 	void RenderBuffersManager::FlushUnmap()
 	{
 		ZoneScopedC(0x81A861);
-		Rhi::Debug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()"_s);
+		RHI::Debug::ScopedGroup scoped("RenderBuffersManager::flushUnmap()"_s);
 
 		for (ManagedBuffer& buffer : buffers_) {
 #if defined(NCINE_PROFILING)
@@ -185,22 +185,22 @@ namespace nCine
 	void RenderBuffersManager::Remap()
 	{
 		ZoneScopedC(0x81A861);
-		Rhi::Debug::ScopedGroup scoped("RenderBuffersManager::remap()"_s);
+		RHI::Debug::ScopedGroup scoped("RenderBuffersManager::remap()"_s);
 
 #if defined(NCINE_HAS_PERSISTENT_MAPPING)
 		if (usePersistentMapping_) {
 			// This runs right after the frame's draw calls were submitted, so a fence here protects
 			// everything the GPU may still read from the current section. Advancing then waits on the
 			// fence inserted `NumPersistentSections - 1` frames ago before its section is reused.
-			Rhi::Device::DeleteFence(sectionFences_[currentSection_]);
-			sectionFences_[currentSection_] = Rhi::Device::InsertFence();
+			RHI::Device::DeleteFence(sectionFences_[currentSection_]);
+			sectionFences_[currentSection_] = RHI::Device::InsertFence();
 
 			currentSection_ = (currentSection_ + 1) % NumPersistentSections;
 			if (sectionFences_[currentSection_] != nullptr) {
-				if (!Rhi::Device::ClientWaitFence(sectionFences_[currentSection_], 1000000000)) {
+				if (!RHI::Device::ClientWaitFence(sectionFences_[currentSection_], 1000000000)) {
 					LOGW("Wait for persistent buffer section {} failed", currentSection_);
 				}
-				Rhi::Device::DeleteFence(sectionFences_[currentSection_]);
+				RHI::Device::DeleteFence(sectionFences_[currentSection_]);
 			}
 		}
 #endif
@@ -232,7 +232,7 @@ namespace nCine
 		ManagedBuffer& managedBuffer = buffers_.emplace_back();
 		managedBuffer.type = specs.type;
 		managedBuffer.size = specs.maxSize;
-		managedBuffer.object = std::make_unique<Rhi::Buffer>(specs.target);
+		managedBuffer.object = std::make_unique<RHI::Buffer>(specs.target);
 #if defined(NCINE_HAS_PERSISTENT_MAPPING)
 		if (specs.persistent) {
 			// The immutable storage holds all ring sections and stays mapped for the buffer's whole lifetime
@@ -273,10 +273,10 @@ namespace nCine
 		FATAL_ASSERT(managedBuffer.mapBase != nullptr);
 
 #if defined(DEATH_DEBUG)
-		if (Rhi::Debug::IsAvailable()) {
+		if (RHI::Debug::IsAvailable()) {
 			char debugString[128];
 			std::size_t length = formatInto(debugString, "Create {} buffer 0x{:x}", bufferTypeToString(specs.type), std::uintptr_t(buffers_.back().object.get()));
-			Rhi::Debug::MessageInsert({ debugString, length });
+			RHI::Debug::MessageInsert({ debugString, length });
 		}
 #endif
 	}

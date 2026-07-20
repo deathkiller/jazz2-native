@@ -5,7 +5,7 @@
 
 #include <string>
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	class GLShaderProgram;
 

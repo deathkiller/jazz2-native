@@ -7,7 +7,7 @@
 
 #include "../../../Primitives/Rect.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	/**
 		@brief Manages the OpenGL scissor test state

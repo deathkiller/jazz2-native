@@ -4,7 +4,7 @@
 
 #include <cstring> // for memcpy()
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLUniformCache::GLUniformCache()
 		: uniform_(nullptr), dataPointer_(nullptr), isDirty_(false)

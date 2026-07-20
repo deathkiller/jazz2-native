@@ -29,7 +29,7 @@
 
 #include <Asserts.h>
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	// -- Loader entry points (declared extern in VulkanCommon.h; resolved through vkGetInstanceProcAddr /
 	// vkGetDeviceProcAddr in the Load*Functions() below). Defined here at namespace scope so every backend

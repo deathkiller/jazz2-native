@@ -42,29 +42,29 @@ namespace nCine
 
 		Shader();
 
-		Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		Shader(const char* shaderName, LoadMode loadMode, const char* vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		Shader(LoadMode loadMode, const char* vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
+		Shader(const char* shaderName, LoadMode loadMode, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		Shader(const char* shaderName, LoadMode loadMode, const char* vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		Shader(LoadMode loadMode, const char* vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
 
 		~Shader() override;
 
 		Shader(const Shader&) = delete;
 		Shader& operator=(const Shader&) = delete;
 
-		bool LoadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
-		bool LoadFromMemory(const char* shaderName, const char* vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		bool LoadFromMemory(const char* vertex, const char* fragment, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(const char* shaderName, Introspection introspection, const char* vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
+		bool LoadFromMemory(const char* shaderName, const char* vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(const char* vertex, const char* fragment, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
 		/**
 		 * @brief Loads a ShaderCompiler program variant, using its reflection instead of GL introspection
 		 *
 		 * The variant's sources are compiled like with the plain-string overloads, but uniforms, uniform
 		 * blocks and attributes come from the offline reflection data, with targeted location queries only.
 		 */
-		bool LoadFromMemory(const char* shaderName, Introspection introspection, const ShaderCompiler::ProgramVariant& variant, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(const char* shaderName, Introspection introspection, const ShaderCompiler::ProgramVariant& variant, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
 
-		bool LoadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
-		bool LoadFromFile(const char* shaderName, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
-		bool LoadFromFile(StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
+		bool LoadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
+		bool LoadFromFile(const char* shaderName, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		bool LoadFromFile(StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
 
 		/**
 		 * @brief Loads one variant of an annotated ".shader" program file (ShaderCompiler format)
@@ -74,7 +74,7 @@ namespace nCine
 		 * shaders behave exactly like the precompiled ones. Pass `nullptr` as @p variantName
 		 * for the unnamed base variant (`Variants[0]`).
 		 */
-		bool LoadFromShaderFile(const char* shaderName, Introspection introspection, StringView path, const char* variantName = nullptr, std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize);
+		bool LoadFromShaderFile(const char* shaderName, Introspection introspection, StringView path, const char* variantName = nullptr, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
 
 		/**
 		 * @brief Compiles an annotated ".shader" program file (ShaderCompiler format) into @p program without creating any GPU objects
@@ -130,7 +130,7 @@ namespace nCine
 			renderModes_ = renderModes;
 		}
 
-		Rhi::ShaderProgram* GetHandle() {
+		RHI::ShaderProgram* GetHandle() {
 			return glShaderProgram_.get();
 		}
 
@@ -140,7 +140,7 @@ namespace nCine
 
 	private:
 		/** @brief Underlying OpenGL shader program */
-		std::unique_ptr<Rhi::ShaderProgram> glShaderProgram_;
+		std::unique_ptr<RHI::ShaderProgram> glShaderProgram_;
 		// "render_mode" bitmask (ShaderCompiler::RenderMode), 0 when none were declared
 		std::uint32_t renderModes_;
 	};

@@ -1,6 +1,6 @@
 // Standalone harness for the integrated software RHI backend.
 //
-// It drives the `RhiSoftware::Sw*` types through the `nCine::Rhi::` contract aliases exactly the way
+// It drives the `RHI::Software::Sw*` types through the `nCine::RHI::` contract aliases exactly the way
 // `RenderCommand::Issue()` drives them for a sprite: it builds a render-target framebuffer, a DefaultSprite
 // program fed the offline reflection, a checker/solid texture, vertex/index buffers and a vertex array,
 // fills the InstanceBlock (ortho projection, identity view, a placing model matrix, color, texRect,
@@ -167,12 +167,12 @@ namespace
 
 	// ---- Uniform-buffer suballocator (registered with the backend, backed by one host buffer) ----
 
-	Rhi::Buffer* g_uniformBuffer = nullptr;
+	RHI::Buffer* g_uniformBuffer = nullptr;
 	std::uint32_t g_uniformBump = 0;
 
-	Rhi::BufferRange AllocUniformRange(std::uint32_t bytes)
+	RHI::BufferRange AllocUniformRange(std::uint32_t bytes)
 	{
-		Rhi::BufferRange range;
+		RHI::BufferRange range;
 		const std::uint32_t alignedOffset = (g_uniformBump + 15u) & ~15u;
 		range.object = g_uniformBuffer;
 		range.offset = alignedOffset;
@@ -186,8 +186,8 @@ namespace
 
 	enum class DrawKind { Arrays, Elements };
 
-	void DrawSprite(Rhi::ShaderProgram& program, Rhi::ShaderUniforms& camera, Rhi::ShaderUniformBlocks& blocks,
-		Rhi::Texture& texture, Rhi::Buffer& vbo, Rhi::Buffer& ibo,
+	void DrawSprite(RHI::ShaderProgram& program, RHI::ShaderUniforms& camera, RHI::ShaderUniformBlocks& blocks,
+		RHI::Texture& texture, RHI::Buffer& vbo, RHI::Buffer& ibo,
 		const float* model, const float* color, const float* texRect, const float* spriteSize,
 		bool blend, BlendingFactor srcFactor, BlendingFactor dstFactor, const Recti* scissor, DrawKind kind)
 	{
@@ -209,28 +209,28 @@ namespace
 		camera.CommitUniforms();
 
 		// Blend + scissor state, as RenderCommand::Issue() sets around the draw
-		Rhi::Device::SetBlendingEnabled(blend);
+		RHI::Device::SetBlendingEnabled(blend);
 		if (blend) {
-			Rhi::Device::SetBlendingFactors(srcFactor, dstFactor, BlendingFactor::One, dstFactor);
+			RHI::Device::SetBlendingFactors(srcFactor, dstFactor, BlendingFactor::One, dstFactor);
 		}
-		Rhi::Device::ScissorState savedScissor = Rhi::Device::GetScissorState();
+		RHI::Device::ScissorState savedScissor = RHI::Device::GetScissorState();
 		if (scissor != nullptr) {
-			Rhi::Device::SetScissor(*scissor);
+			RHI::Device::SetScissor(*scissor);
 		} else {
-			Rhi::Device::SetScissorTestEnabled(false);
+			RHI::Device::SetScissorTestEnabled(false);
 		}
 
 		// material.DefineVertexFormat() + geometry.Bind() + geometry.Draw()
 		program.DefineVertexFormat(&vbo, &ibo, 0);
 		vbo.Bind();
 		if (kind == DrawKind::Arrays) {
-			Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+			RHI::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
 		} else {
 			ibo.Bind();
-			Rhi::Device::DrawElements(PrimitiveType::Triangles, 6, 0, 0);
+			RHI::Device::DrawElements(PrimitiveType::Triangles, 6, 0, 0);
 		}
 
-		Rhi::Device::SetScissorState(savedScissor);
+		RHI::Device::SetScissorState(savedScissor);
 	}
 }
 
@@ -281,20 +281,20 @@ bool RunSpriteTest(const char* baseDir)
 	std::printf("\n=== DefaultSprite (regression) ===\n");
 
 	// --- Program from the offline DefaultSprite reflection ---
-	Rhi::ShaderProgram program(Rhi::ShaderProgram::QueryPhase::Immediate);
+	RHI::ShaderProgram program(RHI::ShaderProgram::QueryPhase::Immediate);
 	program.SetReflection(&nCine::ShadersGen::DefaultSprite.Variants[0]);
-	program.Link(Rhi::ShaderProgram::Introspection::Enabled);
+	program.Link(RHI::ShaderProgram::Introspection::Enabled);
 	program.SetObjectLabel("DefaultSprite");
 
 	// --- Streaming uniform buffer + suballocator ---
-	Rhi::Buffer uniformBuffer(BufferTarget::Uniform);
+	RHI::Buffer uniformBuffer(BufferTarget::Uniform);
 	uniformBuffer.BufferData(64 * 1024, nullptr, BufferUsage::StreamDraw);
 	g_uniformBuffer = &uniformBuffer;
-	Rhi::ShaderUniformBlocks::SetUniformRangeAllocator(&AllocUniformRange);
+	RHI::ShaderUniformBlocks::SetUniformRangeAllocator(&AllocUniformRange);
 
 	// --- Camera (loose) uniforms: an ortho projection (top-left origin) and an identity view ---
 	std::vector<std::uint8_t> cameraBuffer(program.GetUniformsSize() + 16, 0);
-	Rhi::ShaderUniforms camera(&program);
+	RHI::ShaderUniforms camera(&program);
 	camera.SetUniformsDataPointer(cameraBuffer.data());
 
 	const float near = -1.0f, far = 1.0f;
@@ -312,7 +312,7 @@ bool RunSpriteTest(const char* baseDir)
 
 	// --- Instance block storage ---
 	std::vector<std::uint8_t> blockBuffer(program.GetUniformBlocksSize() + 16, 0);
-	Rhi::ShaderUniformBlocks blocks(&program);
+	RHI::ShaderUniformBlocks blocks(&program);
 	blocks.SetUniformsDataPointer(blockBuffer.data());
 
 	// --- Textures ---
@@ -321,35 +321,35 @@ bool RunSpriteTest(const char* baseDir)
 		255, 0, 0, 255,    0, 255, 0, 255,
 		0, 0, 255, 255,    255, 255, 0, 255
 	};
-	Rhi::Texture checkerTexture(TextureTarget::Texture2D);
+	RHI::Texture checkerTexture(TextureTarget::Texture2D);
 	checkerTexture.TexImage2D(0, PixelFormat::RGBA8, false, 2, 2, checker);
 
 	// 1x1 solid white (for color-modulation and blend tests)
 	const std::uint8_t white[4] = {255, 255, 255, 255};
-	Rhi::Texture whiteTexture(TextureTarget::Texture2D);
+	RHI::Texture whiteTexture(TextureTarget::Texture2D);
 	whiteTexture.TexImage2D(0, PixelFormat::RGBA8, false, 1, 1, white);
 
 	// --- Vertex/index buffers + vertex array (mirroring the sprite draw protocol) ---
-	Rhi::Buffer vbo(BufferTarget::Vertex);
+	RHI::Buffer vbo(BufferTarget::Vertex);
 	vbo.BufferData(4 * 4 * sizeof(float), nullptr, BufferUsage::StaticDraw);
-	Rhi::Buffer ibo(BufferTarget::Index);
+	RHI::Buffer ibo(BufferTarget::Index);
 	const std::uint16_t indices[6] = {0, 1, 2, 2, 1, 3};
 	ibo.BufferData(sizeof(indices), indices, BufferUsage::StaticDraw);
-	Rhi::VertexArray vao;
+	RHI::VertexArray vao;
 	vao.SetObjectLabel("SpriteQuad");
 
 	// --- Render target ---
-	Rhi::Texture colorTexture(TextureTarget::Texture2D);
+	RHI::Texture colorTexture(TextureTarget::Texture2D);
 	colorTexture.TexImage2D(0, PixelFormat::RGBA8, false, Width, Height, nullptr);
-	Rhi::RenderTarget renderTarget;
+	RHI::RenderTarget renderTarget;
 	renderTarget.AttachColorTexture(colorTexture, 0);
 	renderTarget.SetDrawBuffers(1);
 	renderTarget.BindDraw();
 
-	Rhi::Device::SetupInitialState();
-	Rhi::Device::SetViewport(Recti(0, 0, Width, Height));
-	Rhi::Device::SetClearColor(Colorf(40.0f / 255.0f, 40.0f / 255.0f, 40.0f / 255.0f, 1.0f));
-	Rhi::Device::Clear(ClearFlags::Color);
+	RHI::Device::SetupInitialState();
+	RHI::Device::SetViewport(Recti(0, 0, Width, Height));
+	RHI::Device::SetClearColor(Colorf(40.0f / 255.0f, 40.0f / 255.0f, 40.0f / 255.0f, 1.0f));
+	RHI::Device::Clear(ClearFlags::Color);
 
 	const float texRectFull[4] = {1.0f, 0.0f, 1.0f, 0.0f};
 	const float sizeSprite[2] = {64.0f, 48.0f};
@@ -384,7 +384,7 @@ bool RunSpriteTest(const char* baseDir)
 	// present/readback paths flush implicitly; the harness bypasses them, and reading (or letting the
 	// test's textures die) with commands still queued reads a stale target - or worse, a later flush
 	// rasterizes commands whose textures are already destroyed.
-	RhiSoftware::SwRaster::Flush();
+	RHI::Software::SwRaster::Flush();
 	const std::uint8_t* pixels = colorTexture.GetPixels();
 	const std::int32_t stride = colorTexture.GetStrideBytes();
 
@@ -424,7 +424,7 @@ bool RunSpriteTest(const char* baseDir)
 
 // Uploads a full RGBA8 image built by a per-texel callback (helps stage the combine/scene textures)
 template<class Fn>
-void UploadRgba(Rhi::Texture& texture, std::int32_t w, std::int32_t h, Fn texel)
+void UploadRgba(RHI::Texture& texture, std::int32_t w, std::int32_t h, Fn texel)
 {
 	std::vector<std::uint8_t> data(std::size_t(w) * std::size_t(h) * 4);
 	for (std::int32_t y = 0; y < h; y++) {
@@ -447,18 +447,18 @@ bool RunBackgroundTest(const char* baseDir, bool circle)
 	const char* label = (circle ? "TexturedBackgroundCircle" : "TexturedBackground");
 	std::printf("\n=== %s (solid source) ===\n", label);
 
-	Rhi::ShaderProgram program(Rhi::ShaderProgram::QueryPhase::Immediate);
+	RHI::ShaderProgram program(RHI::ShaderProgram::QueryPhase::Immediate);
 	program.SetReflection(&prog.Variants[0]);
-	program.Link(Rhi::ShaderProgram::Introspection::Enabled);
+	program.Link(RHI::ShaderProgram::Introspection::Enabled);
 	program.SetObjectLabel(label);
 
-	Rhi::Buffer uniformBuffer(BufferTarget::Uniform);
+	RHI::Buffer uniformBuffer(BufferTarget::Uniform);
 	uniformBuffer.BufferData(64 * 1024, nullptr, BufferUsage::StreamDraw);
 	g_uniformBuffer = &uniformBuffer;
-	Rhi::ShaderUniformBlocks::SetUniformRangeAllocator(&AllocUniformRange);
+	RHI::ShaderUniformBlocks::SetUniformRangeAllocator(&AllocUniformRange);
 
 	std::vector<std::uint8_t> cameraBuffer(program.GetUniformsSize() + 16, 0);
-	Rhi::ShaderUniforms camera(&program);
+	RHI::ShaderUniforms camera(&program);
 	camera.SetUniformsDataPointer(cameraBuffer.data());
 	float projection[16];
 	BuildOrtho(W, H, projection);
@@ -472,30 +472,30 @@ bool RunBackgroundTest(const char* baseDir, bool circle)
 	camera.GetUniform("uShift")->SetFloatValue(0.0f, 0.0f);
 
 	std::vector<std::uint8_t> blockBuffer(program.GetUniformBlocksSize() + 16, 0);
-	Rhi::ShaderUniformBlocks blocks(&program);
+	RHI::ShaderUniformBlocks blocks(&program);
 	blocks.SetUniformsDataPointer(blockBuffer.data());
 
 	const std::uint8_t solid[4] = {0, 180, 90, 255};
-	Rhi::Texture srcTexture(TextureTarget::Texture2D);
+	RHI::Texture srcTexture(TextureTarget::Texture2D);
 	srcTexture.TexImage2D(0, PixelFormat::RGBA8, false, 1, 1, solid);
 
-	Rhi::Buffer vbo(BufferTarget::Vertex);
+	RHI::Buffer vbo(BufferTarget::Vertex);
 	vbo.BufferData(4 * 4 * sizeof(float), nullptr, BufferUsage::StaticDraw);
-	Rhi::Buffer ibo(BufferTarget::Index);
+	RHI::Buffer ibo(BufferTarget::Index);
 	const std::uint16_t indices[6] = {0, 1, 2, 2, 1, 3};
 	ibo.BufferData(sizeof(indices), indices, BufferUsage::StaticDraw);
 
-	Rhi::Texture colorTexture(TextureTarget::Texture2D);
+	RHI::Texture colorTexture(TextureTarget::Texture2D);
 	colorTexture.TexImage2D(0, PixelFormat::RGBA8, false, W, H, nullptr);
-	Rhi::RenderTarget renderTarget;
+	RHI::RenderTarget renderTarget;
 	renderTarget.AttachColorTexture(colorTexture, 0);
 	renderTarget.SetDrawBuffers(1);
 	renderTarget.BindDraw();
 
-	Rhi::Device::SetupInitialState();
-	Rhi::Device::SetViewport(Recti(0, 0, W, H));
-	Rhi::Device::SetClearColor(Colorf(0.0f, 0.0f, 0.0f, 1.0f));
-	Rhi::Device::Clear(ClearFlags::Color);
+	RHI::Device::SetupInitialState();
+	RHI::Device::SetViewport(Recti(0, 0, W, H));
+	RHI::Device::SetClearColor(Colorf(0.0f, 0.0f, 0.0f, 1.0f));
+	RHI::Device::Clear(ClearFlags::Color);
 
 	float model[16];
 	MakeTranslation(0.0f, 0.0f, model);
@@ -510,17 +510,17 @@ bool RunBackgroundTest(const char* baseDir, bool circle)
 	program.Use();
 	blocks.Bind();
 	camera.CommitUniforms();
-	Rhi::Device::SetBlendingEnabled(false);
-	Rhi::Device::SetScissorTestEnabled(false);
+	RHI::Device::SetBlendingEnabled(false);
+	RHI::Device::SetScissorTestEnabled(false);
 	program.DefineVertexFormat(&vbo, &ibo, 0);
 	vbo.Bind();
-	Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+	RHI::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
 
 	// Drain the tile renderer's deferred draws before touching the texel store directly. The engine's
 	// present/readback paths flush implicitly; the harness bypasses them, and reading (or letting the
 	// test's textures die) with commands still queued reads a stale target - or worse, a later flush
 	// rasterizes commands whose textures are already destroyed.
-	RhiSoftware::SwRaster::Flush();
+	RHI::Software::SwRaster::Flush();
 	const std::uint8_t* pixels = colorTexture.GetPixels();
 	const std::int32_t stride = colorTexture.GetStrideBytes();
 	const int hr = 230, hg = 51, hb = 26;		// round(horizon.rgb * 255)
@@ -555,17 +555,17 @@ bool RunBackgroundWarpTest(const char* baseDir)
 	g_uniformBump = 0;
 	std::printf("\n=== TexturedBackground / Dither (patterned source, warp) ===\n");
 
-	Rhi::ShaderProgram program(Rhi::ShaderProgram::QueryPhase::Immediate);
+	RHI::ShaderProgram program(RHI::ShaderProgram::QueryPhase::Immediate);
 	program.SetReflection(&Jazz2::ShadersGen::TexturedBackground.Variants[0]);
-	program.Link(Rhi::ShaderProgram::Introspection::Enabled);
+	program.Link(RHI::ShaderProgram::Introspection::Enabled);
 
-	Rhi::Buffer uniformBuffer(BufferTarget::Uniform);
+	RHI::Buffer uniformBuffer(BufferTarget::Uniform);
 	uniformBuffer.BufferData(64 * 1024, nullptr, BufferUsage::StreamDraw);
 	g_uniformBuffer = &uniformBuffer;
-	Rhi::ShaderUniformBlocks::SetUniformRangeAllocator(&AllocUniformRange);
+	RHI::ShaderUniformBlocks::SetUniformRangeAllocator(&AllocUniformRange);
 
 	std::vector<std::uint8_t> cameraBuffer(program.GetUniformsSize() + 16, 0);
-	Rhi::ShaderUniforms camera(&program);
+	RHI::ShaderUniforms camera(&program);
 	camera.SetUniformsDataPointer(cameraBuffer.data());
 	float projection[16];
 	BuildOrtho(W, H, projection);
@@ -578,11 +578,11 @@ bool RunBackgroundWarpTest(const char* baseDir)
 	camera.GetUniform("uShift")->SetFloatValue(0.0f, 0.0f);
 
 	std::vector<std::uint8_t> blockBuffer(program.GetUniformBlocksSize() + 16, 0);
-	Rhi::ShaderUniformBlocks blocks(&program);
+	RHI::ShaderUniformBlocks blocks(&program);
 	blocks.SetUniformsDataPointer(blockBuffer.data());
 
 	// A distinct per-texel pattern so the warp maps different screen positions to different texels
-	Rhi::Texture srcTexture(TextureTarget::Texture2D);
+	RHI::Texture srcTexture(TextureTarget::Texture2D);
 	UploadRgba(srcTexture, 8, 8, [](std::int32_t x, std::int32_t y, std::uint8_t* p) {
 		p[0] = std::uint8_t((x * 32) & 0xFF);
 		p[1] = std::uint8_t((y * 32) & 0xFF);
@@ -590,22 +590,22 @@ bool RunBackgroundWarpTest(const char* baseDir)
 		p[3] = 255;
 	});
 
-	Rhi::Buffer vbo(BufferTarget::Vertex);
+	RHI::Buffer vbo(BufferTarget::Vertex);
 	vbo.BufferData(4 * 4 * sizeof(float), nullptr, BufferUsage::StaticDraw);
-	Rhi::Buffer ibo(BufferTarget::Index);
+	RHI::Buffer ibo(BufferTarget::Index);
 	const std::uint16_t indices[6] = {0, 1, 2, 2, 1, 3};
 	ibo.BufferData(sizeof(indices), indices, BufferUsage::StaticDraw);
 
-	Rhi::Texture colorTexture(TextureTarget::Texture2D);
+	RHI::Texture colorTexture(TextureTarget::Texture2D);
 	colorTexture.TexImage2D(0, PixelFormat::RGBA8, false, W, H, nullptr);
-	Rhi::RenderTarget renderTarget;
+	RHI::RenderTarget renderTarget;
 	renderTarget.AttachColorTexture(colorTexture, 0);
 	renderTarget.SetDrawBuffers(1);
 	renderTarget.BindDraw();
 
-	Rhi::Device::SetupInitialState();
-	Rhi::Device::SetViewport(Recti(0, 0, W, H));
-	Rhi::Device::SetClearColor(Colorf(0.0f, 0.0f, 0.0f, 1.0f));
+	RHI::Device::SetupInitialState();
+	RHI::Device::SetViewport(Recti(0, 0, W, H));
+	RHI::Device::SetClearColor(Colorf(0.0f, 0.0f, 0.0f, 1.0f));
 
 	float model[16];
 	MakeTranslation(0.0f, 0.0f, model);
@@ -631,21 +631,21 @@ bool RunBackgroundWarpTest(const char* baseDir)
 		program.Use();
 		blocks.Bind();
 		camera.CommitUniforms();
-		Rhi::Device::SetBlendingEnabled(false);
-		Rhi::Device::SetScissorTestEnabled(false);
+		RHI::Device::SetBlendingEnabled(false);
+		RHI::Device::SetScissorTestEnabled(false);
 		program.DefineVertexFormat(&vbo, &ibo, 0);
 		vbo.Bind();
-		Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
-		RhiSoftware::SwRaster::Flush();
+		RHI::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+		RHI::Software::SwRaster::Flush();
 	};
 
 	// Non-dither pass, captured for comparison
-	Rhi::Device::Clear(ClearFlags::Color);
+	RHI::Device::Clear(ClearFlags::Color);
 	issueDraw("TexturedBackground");
 	std::vector<std::uint8_t> nonDither(pixels, pixels + std::size_t(H) * stride);
 
 	// Dither pass (the PNG)
-	Rhi::Device::Clear(ClearFlags::Color);
+	RHI::Device::Clear(ClearFlags::Color);
 	issueDraw("TexturedBackgroundDither");
 
 	std::printf("Horizon band still resolves to the horizon colour:\n");
@@ -751,20 +751,20 @@ bool RunCombineTest(const char* baseDir)
 	g_uniformBump = 0;
 	std::printf("\n=== Combine (device-intercepted CPU lighting combine) ===\n");
 
-	Rhi::ShaderProgram program(Rhi::ShaderProgram::QueryPhase::Immediate);
+	RHI::ShaderProgram program(RHI::ShaderProgram::QueryPhase::Immediate);
 	program.SetReflection(&Jazz2::ShadersGen::Combine.Variants[0]);
-	program.Link(Rhi::ShaderProgram::Introspection::Enabled);
+	program.Link(RHI::ShaderProgram::Introspection::Enabled);
 	program.SetObjectLabel("Combine");
 
-	Rhi::Buffer uniformBuffer(BufferTarget::Uniform);
+	RHI::Buffer uniformBuffer(BufferTarget::Uniform);
 	uniformBuffer.BufferData(64 * 1024, nullptr, BufferUsage::StreamDraw);
 	g_uniformBuffer = &uniformBuffer;
-	Rhi::ShaderUniformBlocks::SetUniformRangeAllocator(&AllocUniformRange);
+	RHI::ShaderUniformBlocks::SetUniformRangeAllocator(&AllocUniformRange);
 
 	// The intercept composites over the SCREEN back-buffer, not a render target
-	RhiSoftware::SwDevice::SetRenderTarget(nullptr);
-	RhiSoftware::SwDevice::ResizeScreenFramebuffer(W, H);
-	RhiSoftware::Framebuffer fb = RhiSoftware::SwDevice::GetScreenFramebuffer();
+	RHI::Software::SwDevice::SetRenderTarget(nullptr);
+	RHI::Software::SwDevice::ResizeScreenFramebuffer(W, H);
+	RHI::Software::Framebuffer fb = RHI::Software::SwDevice::GetScreenFramebuffer();
 	g_checks++;
 	if (fb.pixels == nullptr) {
 		g_failures++;
@@ -785,14 +785,14 @@ bool RunCombineTest(const char* baseDir)
 	}
 	std::vector<std::uint8_t> expected(fb.pixels, fb.pixels + std::size_t(H) * fb.strideBytes);
 
-	Rhi::Device::SetupInitialState();
-	Rhi::Device::SetViewport(Recti(0, 0, W, H));
-	Rhi::Device::SetBlendingEnabled(false);
-	Rhi::Device::SetScissorTestEnabled(false);
+	RHI::Device::SetupInitialState();
+	RHI::Device::SetViewport(Recti(0, 0, W, H));
+	RHI::Device::SetBlendingEnabled(false);
+	RHI::Device::SetScissorTestEnabled(false);
 	program.Use();
 
 	// 1: a Combine draw with NO queued lighting must leave the buffer untouched (no-op intercept)
-	Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+	RHI::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
 	g_checks++;
 	if (std::memcmp(fb.pixels, expected.data(), expected.size()) == 0) {
 		std::printf("  ok   no queued lighting -> buffer untouched\n");
@@ -817,8 +817,8 @@ bool RunCombineTest(const char* baseDir)
 	}
 	const float ambR = 0.15f, ambG = 0.10f, ambB = 0.30f;
 	RefCombineLighting(expected.data(), fb.width, fb.height, fb.strideBytes, lightmap.data(), lmW, lmH, scale, 0, 0, W, H, ambR, ambG, ambB);
-	RhiSoftware::SwDevice::SetPendingSoftwareLighting(lightmap.data(), lmW, lmH, scale, 0, 0, W, H, ambR, ambG, ambB);
-	Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+	RHI::Software::SwDevice::SetPendingSoftwareLighting(lightmap.data(), lmW, lmH, scale, 0, 0, W, H, ambR, ambG, ambB);
+	RHI::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
 
 	std::size_t diffs = 0;
 	std::int32_t firstX = -1, firstY = -1;
@@ -840,7 +840,7 @@ bool RunCombineTest(const char* baseDir)
 
 	// 3: the queue must be consumed - a further draw with nothing queued is a no-op again
 	std::vector<std::uint8_t> afterCombine(fb.pixels, fb.pixels + std::size_t(H) * fb.strideBytes);
-	Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+	RHI::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
 	g_checks++;
 	if (std::memcmp(fb.pixels, afterCombine.data(), afterCombine.size()) == 0) {
 		std::printf("  ok   queue consumed - next Combine draw is a no-op\n");
@@ -864,15 +864,15 @@ bool RunPaletteTest(const char* baseDir)
 	g_uniformBump = 0;
 	std::printf("\n=== PaletteRemap / BatchedPaletteRemap ===\n");
 
-	Rhi::Buffer uniformBuffer(BufferTarget::Uniform);
+	RHI::Buffer uniformBuffer(BufferTarget::Uniform);
 	uniformBuffer.BufferData(64 * 1024, nullptr, BufferUsage::StreamDraw);
 	g_uniformBuffer = &uniformBuffer;
-	Rhi::ShaderUniformBlocks::SetUniformRangeAllocator(&AllocUniformRange);
+	RHI::ShaderUniformBlocks::SetUniformRangeAllocator(&AllocUniformRange);
 
 	// 256x256 palette texture, matching the engine's shared palette store (the fragment maps the flat
 	// palette index into a 256x256 texture: palY = floor(palIndex / 256) / 256, so a shorter texture
 	// would fold every row back onto row 0). Row 0 and row 1 hold two distinct 256-colour palettes.
-	Rhi::Texture paletteTexture(TextureTarget::Texture2D);
+	RHI::Texture paletteTexture(TextureTarget::Texture2D);
 	UploadRgba(paletteTexture, 256, 256, [](std::int32_t x, std::int32_t y, std::uint8_t* p) {
 		if (y == 0) {
 			if (x == 0) { p[0] = 0; p[1] = 0; p[2] = 0; p[3] = 0; }	// index 0 = transparent
@@ -883,7 +883,7 @@ bool RunPaletteTest(const char* baseDir)
 	});
 
 	// R8 index sprite: index = column * 16 (0, 16, ... 240), uniform down each column
-	Rhi::Texture indexTexture(TextureTarget::Texture2D);
+	RHI::Texture indexTexture(TextureTarget::Texture2D);
 	{
 		std::vector<std::uint8_t> data(16 * 16);
 		for (std::int32_t y = 0; y < 16; y++) {
@@ -894,15 +894,15 @@ bool RunPaletteTest(const char* baseDir)
 		indexTexture.TexImage2D(0, PixelFormat::R8, false, 16, 16, data.data());
 	}
 
-	Rhi::Buffer vbo(BufferTarget::Vertex);
+	RHI::Buffer vbo(BufferTarget::Vertex);
 	vbo.BufferData(4 * 4 * sizeof(float), nullptr, BufferUsage::StaticDraw);
-	Rhi::Buffer ibo(BufferTarget::Index);
+	RHI::Buffer ibo(BufferTarget::Index);
 	const std::uint16_t indices6[6] = {0, 1, 2, 2, 1, 3};
 	ibo.BufferData(sizeof(indices6), indices6, BufferUsage::StaticDraw);
 
-	Rhi::Texture colorTexture(TextureTarget::Texture2D);
+	RHI::Texture colorTexture(TextureTarget::Texture2D);
 	colorTexture.TexImage2D(0, PixelFormat::RGBA8, false, W, H, nullptr);
-	Rhi::RenderTarget renderTarget;
+	RHI::RenderTarget renderTarget;
 	renderTarget.AttachColorTexture(colorTexture, 0);
 	renderTarget.SetDrawBuffers(1);
 	renderTarget.BindDraw();
@@ -911,20 +911,20 @@ bool RunPaletteTest(const char* baseDir)
 	// present/readback paths flush implicitly; the harness bypasses them, and reading (or letting the
 	// test's textures die) with commands still queued reads a stale target - or worse, a later flush
 	// rasterizes commands whose textures are already destroyed.
-	RhiSoftware::SwRaster::Flush();
+	RHI::Software::SwRaster::Flush();
 	const std::uint8_t* pixels = colorTexture.GetPixels();
 	const std::int32_t stride = colorTexture.GetStrideBytes();
 	bool wroteAll = true;
 
 	// ---- Draw 1: single PaletteRemap, palette row 0, opaque, white modulation ----
 	{
-		Rhi::ShaderProgram program(Rhi::ShaderProgram::QueryPhase::Immediate);
+		RHI::ShaderProgram program(RHI::ShaderProgram::QueryPhase::Immediate);
 		program.SetReflection(&Jazz2::ShadersGen::PaletteRemap.Variants[0]);
-		program.Link(Rhi::ShaderProgram::Introspection::Enabled);
+		program.Link(RHI::ShaderProgram::Introspection::Enabled);
 		program.SetObjectLabel("PaletteRemap");
 
 		std::vector<std::uint8_t> cameraBuffer(program.GetUniformsSize() + 16, 0);
-		Rhi::ShaderUniforms camera(&program);
+		RHI::ShaderUniforms camera(&program);
 		camera.SetUniformsDataPointer(cameraBuffer.data());
 		float projection[16];
 		BuildOrtho(W, H, projection);
@@ -932,13 +932,13 @@ bool RunPaletteTest(const char* baseDir)
 		camera.GetUniform("uViewMatrix")->SetFloatVector(kIdentityView);
 
 		std::vector<std::uint8_t> blockBuffer(program.GetUniformBlocksSize() + 16, 0);
-		Rhi::ShaderUniformBlocks blocks(&program);
+		RHI::ShaderUniformBlocks blocks(&program);
 		blocks.SetUniformsDataPointer(blockBuffer.data());
 
-		Rhi::Device::SetupInitialState();
-		Rhi::Device::SetViewport(Recti(0, 0, W, H));
-		Rhi::Device::SetClearColor(Colorf(40.0f / 255.0f, 40.0f / 255.0f, 40.0f / 255.0f, 1.0f));
-		Rhi::Device::Clear(ClearFlags::Color);
+		RHI::Device::SetupInitialState();
+		RHI::Device::SetViewport(Recti(0, 0, W, H));
+		RHI::Device::SetClearColor(Colorf(40.0f / 255.0f, 40.0f / 255.0f, 40.0f / 255.0f, 1.0f));
+		RHI::Device::Clear(ClearFlags::Color);
 
 		float model[16];
 		MakeTranslation(0.0f, 0.0f, model);
@@ -956,12 +956,12 @@ bool RunPaletteTest(const char* baseDir)
 		program.Use();
 		blocks.Bind();
 		camera.CommitUniforms();
-		Rhi::Device::SetBlendingEnabled(false);
-		Rhi::Device::SetScissorTestEnabled(false);
+		RHI::Device::SetBlendingEnabled(false);
+		RHI::Device::SetScissorTestEnabled(false);
 		program.DefineVertexFormat(&vbo, &ibo, 0);
 		vbo.Bind();
-		Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
-		RhiSoftware::SwRaster::Flush();	// Drain the deferred tiles before asserting texels
+		RHI::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+		RHI::Software::SwRaster::Flush();	// Drain the deferred tiles before asserting texels
 
 		std::printf("Row 0 lookups (opaque, white):\n");
 		CheckPixel(pixels, stride, 2, 10, 0, 0, 0, 0, 0, "index 0 = transparent entry");
@@ -978,13 +978,13 @@ bool RunPaletteTest(const char* baseDir)
 
 	// ---- Draw 2: single PaletteRemap, palette row 1 (offset 256), colour modulation ----
 	{
-		Rhi::ShaderProgram program(Rhi::ShaderProgram::QueryPhase::Immediate);
+		RHI::ShaderProgram program(RHI::ShaderProgram::QueryPhase::Immediate);
 		program.SetReflection(&Jazz2::ShadersGen::PaletteRemap.Variants[0]);
-		program.Link(Rhi::ShaderProgram::Introspection::Enabled);
+		program.Link(RHI::ShaderProgram::Introspection::Enabled);
 		program.SetObjectLabel("PaletteRemap");
 
 		std::vector<std::uint8_t> cameraBuffer(program.GetUniformsSize() + 16, 0);
-		Rhi::ShaderUniforms camera(&program);
+		RHI::ShaderUniforms camera(&program);
 		camera.SetUniformsDataPointer(cameraBuffer.data());
 		float projection[16];
 		BuildOrtho(W, H, projection);
@@ -992,11 +992,11 @@ bool RunPaletteTest(const char* baseDir)
 		camera.GetUniform("uViewMatrix")->SetFloatVector(kIdentityView);
 
 		std::vector<std::uint8_t> blockBuffer(program.GetUniformBlocksSize() + 16, 0);
-		Rhi::ShaderUniformBlocks blocks(&program);
+		RHI::ShaderUniformBlocks blocks(&program);
 		blocks.SetUniformsDataPointer(blockBuffer.data());
 
-		Rhi::Device::SetClearColor(Colorf(40.0f / 255.0f, 40.0f / 255.0f, 40.0f / 255.0f, 1.0f));
-		Rhi::Device::Clear(ClearFlags::Color);
+		RHI::Device::SetClearColor(Colorf(40.0f / 255.0f, 40.0f / 255.0f, 40.0f / 255.0f, 1.0f));
+		RHI::Device::Clear(ClearFlags::Color);
 
 		float model[16];
 		MakeTranslation(0.0f, 0.0f, model);
@@ -1015,12 +1015,12 @@ bool RunPaletteTest(const char* baseDir)
 		program.Use();
 		blocks.Bind();
 		camera.CommitUniforms();
-		Rhi::Device::SetBlendingEnabled(false);
-		Rhi::Device::SetScissorTestEnabled(false);
+		RHI::Device::SetBlendingEnabled(false);
+		RHI::Device::SetScissorTestEnabled(false);
 		program.DefineVertexFormat(&vbo, &ibo, 0);
 		vbo.Bind();
-		Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
-		RhiSoftware::SwRaster::Flush();	// Drain the deferred tiles before asserting texels
+		RHI::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+		RHI::Software::SwRaster::Flush();	// Drain the deferred tiles before asserting texels
 
 		std::printf("Row 1 lookups (offset 256) with colour modulation (1, 0.5, 1):\n");
 		CheckPixel(pixels, stride, 6, 10, 239, 8, 64, 255, 1, "row 1 index 16 x mod");
@@ -1029,14 +1029,14 @@ bool RunPaletteTest(const char* baseDir)
 
 	// ---- Draw 3: BatchedPaletteRemap, two instances (row 0 left half, row 1 right half) ----
 	{
-		Rhi::ShaderProgram program(Rhi::ShaderProgram::QueryPhase::Immediate);
+		RHI::ShaderProgram program(RHI::ShaderProgram::QueryPhase::Immediate);
 		program.SetBatchSize(2);
 		program.SetReflection(&Jazz2::ShadersGen::BatchedPaletteRemap.Variants[0]);
-		program.Link(Rhi::ShaderProgram::Introspection::Enabled);
+		program.Link(RHI::ShaderProgram::Introspection::Enabled);
 		program.SetObjectLabel("BatchedPaletteRemap");
 
 		std::vector<std::uint8_t> cameraBuffer(program.GetUniformsSize() + 16, 0);
-		Rhi::ShaderUniforms camera(&program);
+		RHI::ShaderUniforms camera(&program);
 		camera.SetUniformsDataPointer(cameraBuffer.data());
 		float projection[16];
 		BuildOrtho(W, H, projection);
@@ -1044,11 +1044,11 @@ bool RunPaletteTest(const char* baseDir)
 		camera.GetUniform("uViewMatrix")->SetFloatVector(kIdentityView);
 
 		std::vector<std::uint8_t> blockBuffer(program.GetUniformBlocksSize() + 16, 0);
-		Rhi::ShaderUniformBlocks blocks(&program);
+		RHI::ShaderUniformBlocks blocks(&program);
 		blocks.SetUniformsDataPointer(blockBuffer.data());
 
-		Rhi::Device::SetClearColor(Colorf(40.0f / 255.0f, 40.0f / 255.0f, 40.0f / 255.0f, 1.0f));
-		Rhi::Device::Clear(ClearFlags::Color);
+		RHI::Device::SetClearColor(Colorf(40.0f / 255.0f, 40.0f / 255.0f, 40.0f / 255.0f, 1.0f));
+		RHI::Device::Clear(ClearFlags::Color);
 
 		// Instance 0: left half [0,32) using palette row 0; instance 1: right half [32,64) using row 1
 		float model0[16], model1[16];
@@ -1064,16 +1064,16 @@ bool RunPaletteTest(const char* baseDir)
 		program.Use();
 		blocks.Bind();
 		camera.CommitUniforms();
-		Rhi::Device::SetBlendingEnabled(false);
-		Rhi::Device::SetScissorTestEnabled(false);
+		RHI::Device::SetBlendingEnabled(false);
+		RHI::Device::SetScissorTestEnabled(false);
 		program.DefineVertexFormat(&vbo, &ibo, 0);
 		vbo.Bind();
-		Rhi::Buffer ibo12(BufferTarget::Index);
+		RHI::Buffer ibo12(BufferTarget::Index);
 		const std::uint16_t indices12[12] = {0, 1, 2, 2, 1, 3, 0, 1, 2, 2, 1, 3};
 		ibo12.BufferData(sizeof(indices12), indices12, BufferUsage::StaticDraw);
 		ibo12.Bind();
-		Rhi::Device::DrawElements(PrimitiveType::Triangles, 12, 0, 0);
-		RhiSoftware::SwRaster::Flush();	// Drain the deferred tiles before asserting texels
+		RHI::Device::DrawElements(PrimitiveType::Triangles, 12, 0, 0);
+		RHI::Software::SwRaster::Flush();	// Drain the deferred tiles before asserting texels
 
 		std::printf("Batched: left half = row 0, right half = row 1 (index 48 in each):\n");
 		CheckPixel(pixels, stride, 6, 10, 48, 207, 128, 255, 1, "instance 0 row 0 index 48");
@@ -1088,7 +1088,7 @@ bool RunPaletteTest(const char* baseDir)
 
 	// ---- Draw 4: PaletteRemap with an RG8 index (alpha carried in G), alpha-blended over the clear ----
 	{
-		Rhi::Texture rgTexture(TextureTarget::Texture2D);
+		RHI::Texture rgTexture(TextureTarget::Texture2D);
 		{
 			std::vector<std::uint8_t> data(std::size_t(16) * 16 * 2);
 			for (std::int32_t y = 0; y < 16; y++) {
@@ -1104,13 +1104,13 @@ bool RunPaletteTest(const char* baseDir)
 			rgTexture.SetSwizzle(SwizzleChannel::Red, SwizzleChannel::Green, SwizzleChannel::Blue, SwizzleChannel::Green);
 		}
 
-		Rhi::ShaderProgram program(Rhi::ShaderProgram::QueryPhase::Immediate);
+		RHI::ShaderProgram program(RHI::ShaderProgram::QueryPhase::Immediate);
 		program.SetReflection(&Jazz2::ShadersGen::PaletteRemap.Variants[0]);
-		program.Link(Rhi::ShaderProgram::Introspection::Enabled);
+		program.Link(RHI::ShaderProgram::Introspection::Enabled);
 		program.SetObjectLabel("PaletteRemap");
 
 		std::vector<std::uint8_t> cameraBuffer(program.GetUniformsSize() + 16, 0);
-		Rhi::ShaderUniforms camera(&program);
+		RHI::ShaderUniforms camera(&program);
 		camera.SetUniformsDataPointer(cameraBuffer.data());
 		float projection[16];
 		BuildOrtho(W, H, projection);
@@ -1118,11 +1118,11 @@ bool RunPaletteTest(const char* baseDir)
 		camera.GetUniform("uViewMatrix")->SetFloatVector(kIdentityView);
 
 		std::vector<std::uint8_t> blockBuffer(program.GetUniformBlocksSize() + 16, 0);
-		Rhi::ShaderUniformBlocks blocks(&program);
+		RHI::ShaderUniformBlocks blocks(&program);
 		blocks.SetUniformsDataPointer(blockBuffer.data());
 
-		Rhi::Device::SetClearColor(Colorf(40.0f / 255.0f, 40.0f / 255.0f, 40.0f / 255.0f, 1.0f));
-		Rhi::Device::Clear(ClearFlags::Color);
+		RHI::Device::SetClearColor(Colorf(40.0f / 255.0f, 40.0f / 255.0f, 40.0f / 255.0f, 1.0f));
+		RHI::Device::Clear(ClearFlags::Color);
 
 		float model[16];
 		MakeTranslation(0.0f, 0.0f, model);
@@ -1140,13 +1140,13 @@ bool RunPaletteTest(const char* baseDir)
 		program.Use();
 		blocks.Bind();
 		camera.CommitUniforms();
-		Rhi::Device::SetBlendingEnabled(true);
-		Rhi::Device::SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
-		Rhi::Device::SetScissorTestEnabled(false);
+		RHI::Device::SetBlendingEnabled(true);
+		RHI::Device::SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+		RHI::Device::SetScissorTestEnabled(false);
 		program.DefineVertexFormat(&vbo, &ibo, 0);
 		vbo.Bind();
-		Rhi::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
-		RhiSoftware::SwRaster::Flush();	// Drain the deferred tiles before asserting texels
+		RHI::Device::DrawArrays(PrimitiveType::TriangleStrip, 0, 4);
+		RHI::Software::SwRaster::Flush();	// Drain the deferred tiles before asserting texels
 
 		// index 16 with G = 128 alpha, palette[0][16] = (16,239,128), blended over the (40,40,40) clear
 		const float sa = 128.0f / 255.0f;

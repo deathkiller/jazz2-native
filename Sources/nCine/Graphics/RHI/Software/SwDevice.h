@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	class SwShaderProgram;
 	class SwRenderTarget;
@@ -35,7 +35,7 @@ namespace nCine::RhiSoftware
 	};
 
 	/**
-		@brief Pipeline-state and draw-call facade of the software backend (aliased as `Rhi::Device`)
+		@brief Pipeline-state and draw-call facade of the software backend (aliased as `RHI::Device`)
 
 		Mirrors the OpenGL device's surface (blending, depth, cull, scissor, viewport, clear and the draw
 		calls) but instead of talking to a GPU it is a small immediate-mode state machine: `Bind*` calls

@@ -55,7 +55,7 @@ namespace nCine::Backends
 		LOGD("Disposing graphics device...");
 
 		// Uniform across backends: tears down the D3D11 / Vulkan device + swap chain, no-op on OpenGL / software
-		Rhi::Device::DestroySwapchain();
+		RHI::Device::DestroySwapchain();
 #if defined(WITH_RHI_SOFTWARE)
 		if (softwareTexture_ != nullptr) {
 			SDL_DestroyTexture(softwareTexture_);
@@ -143,7 +143,7 @@ namespace nCine::Backends
 
 		SDL_GetWindowSize(windowHandle_, &width_, &height_);
 		queryDrawableSize(windowHandle_, width_, height_, drawableWidth_, drawableHeight_);
-		Rhi::Device::ResizeSwapchain(drawableWidth_, drawableHeight_);	// no-op on OpenGL / software
+		RHI::Device::ResizeSwapchain(drawableWidth_, drawableHeight_);	// no-op on OpenGL / software
 #if defined(WITH_RHI_SOFTWARE)
 		resizeSoftwareTarget(drawableWidth_, drawableHeight_);
 #endif
@@ -159,7 +159,7 @@ namespace nCine::Backends
 		// loop would otherwise spin at 100% CPU rendering frames nobody sees. PresentFrame() is still called so
 		// the backend can tidy up any partially-recorded frame, then the loop is throttled to a low rate while
 		// minimized. (The OpenGL and software arms are not compiled here, so they are unaffected.)
-		Rhi::Device::PresentFrame();
+		RHI::Device::PresentFrame();
 		if ((SDL_GetWindowFlags(windowHandle_) & SDL_WINDOW_MINIMIZED) != 0) {
 			SDL_Delay(12);
 		}
@@ -221,7 +221,7 @@ namespace nCine::Backends
 			SDL_SetWindowSize(windowHandle_, width, height);
 			SDL_GetWindowSize(windowHandle_, &width_, &height_);
 			queryDrawableSize(windowHandle_, width_, height_, drawableWidth_, drawableHeight_);
-			Rhi::Device::ResizeSwapchain(drawableWidth_, drawableHeight_);	// no-op on OpenGL / software
+			RHI::Device::ResizeSwapchain(drawableWidth_, drawableHeight_);	// no-op on OpenGL / software
 #	if defined(WITH_RHI_SOFTWARE)
 			resizeSoftwareTarget(drawableWidth_, drawableHeight_);
 #	endif
@@ -369,7 +369,7 @@ namespace nCine::Backends
 			SDL_VERSION(&wmInfo.version);
 			const SDL_bool gotInfo = SDL_GetWindowWMInfo(windowHandle_, &wmInfo);
 			FATAL_ASSERT_MSG(gotInfo == SDL_TRUE, "SDL_GetWindowWMInfo failed: {}", SDL_GetError());
-			const bool created = Rhi::Device::CreateSwapchain(reinterpret_cast<void*>(wmInfo.info.win.window),
+			const bool created = RHI::Device::CreateSwapchain(reinterpret_cast<void*>(wmInfo.info.win.window),
 				drawableWidth_, drawableHeight_, displayMode_.hasVSync());
 			FATAL_ASSERT_MSG(created, "Failed to create the Direct3D 11 device and swap chain");
 		}
@@ -377,7 +377,7 @@ namespace nCine::Backends
 		{
 			// The Vulkan backend takes the SDL_Window* directly (it queries the required instance extensions
 			// and creates the presentation surface from it via the SDL Vulkan API)
-			const bool created = Rhi::Device::CreateSwapchain(reinterpret_cast<void*>(windowHandle_),
+			const bool created = RHI::Device::CreateSwapchain(reinterpret_cast<void*>(windowHandle_),
 				drawableWidth_, drawableHeight_, displayMode_.hasVSync());
 			FATAL_ASSERT_MSG(created, "Failed to create the Vulkan device and swap chain");
 		}
@@ -548,7 +548,7 @@ namespace nCine::Backends
 		softwareTextureWidth_ = width;
 		softwareTextureHeight_ = height;
 		// Give the root screen viewport a CPU framebuffer of the same size to render into
-		Rhi::Device::ResizeScreenFramebuffer(width, height);
+		RHI::Device::ResizeScreenFramebuffer(width, height);
 	}
 
 	void SdlGfxDevice::presentSoftware()
@@ -557,10 +557,10 @@ namespace nCine::Backends
 			return;
 		}
 		// Render any draws the tile renderer deferred this frame into the screen buffer before we read it
-		Rhi::Device::FlushSoftwareRenderer();
+		RHI::Device::FlushSoftwareRenderer();
 		// All of this frame's Combine draws have run by now, so any lighting entries still queued are leftovers
-		Rhi::Device::EndFrame();
-		const auto fb = Rhi::Device::GetScreenFramebuffer();
+		RHI::Device::EndFrame();
+		const auto fb = RHI::Device::GetScreenFramebuffer();
 		// The render pipeline sizes the screen framebuffer to the internal/logical resolution (see
 		// UpscaleRenderPass, which resizes it on the software backend); keep the streaming texture matched to
 		// that size so SDL_RenderCopyEx below stretches the low-resolution image up to the window. The window

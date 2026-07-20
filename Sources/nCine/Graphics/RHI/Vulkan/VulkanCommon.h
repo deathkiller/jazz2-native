@@ -13,7 +13,7 @@
 
 #include <cstdint>
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	// -- Dynamically-loaded Vulkan entry points --
 	// Defined in VulkanDevice.cpp and resolved through vkGetInstanceProcAddr / vkGetDeviceProcAddr (no

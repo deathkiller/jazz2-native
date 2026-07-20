@@ -4,7 +4,7 @@
 
 #include <d3d11.h>
 
-namespace nCine::RhiD3D11
+namespace nCine::RHI::D3D11
 {
 	D3D11RenderTarget::D3D11RenderTarget()
 		: numDrawBuffers_(1)

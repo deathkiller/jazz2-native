@@ -36,13 +36,13 @@ namespace nCine
 		 *
 		 * @note Usually called only after @ref Retrieve() fails to find a matching command.
 		 */
-		RenderCommand* Add(Rhi::ShaderProgram* shaderProgram);
+		RenderCommand* Add(RHI::ShaderProgram* shaderProgram);
 
 		/** @brief Returns an unused command bound to the specified shader program, or `nullptr` if none is available */
-		RenderCommand* Retrieve(Rhi::ShaderProgram* shaderProgram);
+		RenderCommand* Retrieve(RHI::ShaderProgram* shaderProgram);
 
 		/** @brief Returns a command bound to the specified shader program, adding a new one if none can be reused */
-		RenderCommand* RetrieveOrAdd(Rhi::ShaderProgram* shaderProgram, bool& commandAdded);
+		RenderCommand* RetrieveOrAdd(RHI::ShaderProgram* shaderProgram, bool& commandAdded);
 
 		/** @brief Releases all used commands back to the free pool */
 		void Reset();

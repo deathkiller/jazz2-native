@@ -41,7 +41,7 @@
 #	pragma warning(disable: 4201)
 #endif
 
-namespace nCine::RhiSoftware::sw
+namespace nCine::RHI::Software::sw
 {
 	struct vec2;
 	struct vec3;

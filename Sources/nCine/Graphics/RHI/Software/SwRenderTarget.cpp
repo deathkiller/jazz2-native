@@ -2,7 +2,7 @@
 #include "SwDevice.h"
 #include "SwTexture.h"
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	SwRenderTarget::SwRenderTarget()
 		: numDrawBuffers_(1)

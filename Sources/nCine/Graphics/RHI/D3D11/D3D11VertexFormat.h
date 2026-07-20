@@ -8,12 +8,12 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiD3D11
+namespace nCine::RHI::D3D11
 {
 	class D3D11BufferObject;
 
 	/**
-		@brief Vertex layout description of the Direct3D 11 backend (aliased as `Rhi::VertexFormat`)
+		@brief Vertex layout description of the Direct3D 11 backend (aliased as `RHI::VertexFormat`)
 
 		Records the set of vertex attributes (component count, type, stride, offset and source buffer) the
 		way the OpenGL backend does, so the pipeline's attribute setup code compiles unchanged. The backend
@@ -177,7 +177,7 @@ namespace nCine::RhiD3D11
 	};
 
 	/**
-		@brief Vertex array object stub of the Direct3D 11 backend (aliased as `Rhi::VertexArray`)
+		@brief Vertex array object stub of the Direct3D 11 backend (aliased as `RHI::VertexArray`)
 
 		Direct3D 11 has no vertex-array object; the input layout and buffer bindings are set per draw. This
 		only satisfies the contract alias with inert bind/label operations.

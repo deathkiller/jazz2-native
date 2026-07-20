@@ -1,6 +1,6 @@
 #include "GLCullFace.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLCullFace::State GLCullFace::state_;
 

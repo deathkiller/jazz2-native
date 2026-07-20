@@ -3,7 +3,7 @@
 
 #include <cstring>
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	const float* SwUniformCache::GetFloatVector() const
 	{

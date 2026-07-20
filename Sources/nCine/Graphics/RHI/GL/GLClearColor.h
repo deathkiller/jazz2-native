@@ -7,7 +7,7 @@
 
 #include "../../../Primitives/Colorf.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	/**
 		@brief Manages the OpenGL clear color

@@ -11,7 +11,7 @@
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	namespace
 	{

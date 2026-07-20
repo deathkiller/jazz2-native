@@ -5,7 +5,7 @@
 #include "../../../CommonHeaders.h"
 #endif
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	/**
 		@brief Manages the OpenGL face culling state

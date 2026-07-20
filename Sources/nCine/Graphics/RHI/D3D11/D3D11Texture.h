@@ -15,10 +15,10 @@ struct ID3D11Texture2D;
 struct ID3D11ShaderResourceView;
 struct ID3D11SamplerState;
 
-namespace nCine::RhiD3D11
+namespace nCine::RHI::D3D11
 {
 	/**
-		@brief Texture object of the Direct3D 11 backend (aliased as `Rhi::Texture`)
+		@brief Texture object of the Direct3D 11 backend (aliased as `RHI::Texture`)
 
 		Wraps a single, tightly-packed level-0 pixel buffer in host memory and exposes the neutral upload
 		surface `Texture.cpp` drives (`TexImage2D`, `TexSubImage2D`, `TexStorage2D`, filter/wrap/swizzle

@@ -85,7 +85,7 @@ namespace nCine
 		if (texture != nullptr) {
 			// Adding a new texture
 			if (fbo_ == nullptr) {
-				fbo_ = std::make_unique<Rhi::RenderTarget>();
+				fbo_ = std::make_unique<RHI::RenderTarget>();
 			}
 
 			fbo_->AttachColorTexture(*texture->rhiTexture_, index);
@@ -137,7 +137,7 @@ namespace nCine
 		if (depthStencilFormat != Viewport::DepthStencilFormat::None) {
 			// Adding a depth/stencil render target
 			if (fbo_ == nullptr) {
-				fbo_ = std::make_unique<Rhi::RenderTarget>();
+				fbo_ = std::make_unique<RHI::RenderTarget>();
 			}
 			if (depthStencilFormat_ != Viewport::DepthStencilFormat::None) {
 				fbo_->DetachDepthStencil(depthStencilFormat_);
@@ -330,7 +330,7 @@ namespace nCine
 
 		ZoneScopedC(0x81A861);
 #if defined(DEATH_DEBUG)
-		// TODO: Rhi::Debug
+		// TODO: RHI::Debug
 		/*char debugString[128];
 		std::size_t length;
 		if (type_ == Type::Screen) {
@@ -340,7 +340,7 @@ namespace nCine
 		} else {
 			length = formatInto(debugString, "Draw viewport (0x{:x})", std::uintptr_t(this));
 		}
-		Rhi::Debug::ScopedGroup scoped({ debugString, length });*/
+		RHI::Debug::ScopedGroup scoped({ debugString, length });*/
 #endif
 
 		RenderResources::SetCurrentViewport(this);
@@ -359,25 +359,25 @@ namespace nCine
 			const unsigned long int numFrames = theApplication().GetFrameCount();
 			if ((lastFrameCleared_ < numFrames && (clearMode_ == ClearMode::EveryFrame || clearMode_ == ClearMode::ThisFrameOnly)) ||
 				 clearMode_ == ClearMode::EveryDraw) {
-				const Colorf previousClearColor = Rhi::Device::GetClearColor();
-				Rhi::Device::SetClearColor(clearColor_);
+				const Colorf previousClearColor = RHI::Device::GetClearColor();
+				RHI::Device::SetClearColor(clearColor_);
 
 				switch (depthStencilFormat_) {
 					default:
 					case DepthStencilFormat::Depth24_Stencil8:
-						Rhi::Device::Clear(ClearFlags::Color | ClearFlags::Depth | ClearFlags::Stencil);
+						RHI::Device::Clear(ClearFlags::Color | ClearFlags::Depth | ClearFlags::Stencil);
 						break;
 					case DepthStencilFormat::Depth24:
 					case DepthStencilFormat::Depth16:
-						Rhi::Device::Clear(ClearFlags::Color | ClearFlags::Depth);
+						RHI::Device::Clear(ClearFlags::Color | ClearFlags::Depth);
 						break;
 					case DepthStencilFormat::None:
-						Rhi::Device::Clear(ClearFlags::Color);
+						RHI::Device::Clear(ClearFlags::Color);
 						break;
 				}
 				lastFrameCleared_ = numFrames;
 
-				Rhi::Device::SetClearColor(previousClearColor);
+				RHI::Device::SetClearColor(previousClearColor);
 			}
 		}
 
@@ -396,24 +396,24 @@ namespace nCine
 
 		if (!renderQueue_.IsEmpty()) {
 			const bool viewportRectNonZeroArea = (viewportRect_.W > 0 && viewportRect_.H > 0);
-			const Recti previousViewport = Rhi::Device::GetViewport();
+			const Recti previousViewport = RHI::Device::GetViewport();
 			if (viewportRectNonZeroArea) {
-				Rhi::Device::SetViewport(viewportRect_);
+				RHI::Device::SetViewport(viewportRect_);
 			}
 
 			const bool scissorRectNonZeroArea = (scissorRect_.W > 0 && scissorRect_.H > 0);
-			Rhi::Device::ScissorState scissorState = Rhi::Device::GetScissorState();
+			RHI::Device::ScissorState scissorState = RHI::Device::GetScissorState();
 			if (scissorRectNonZeroArea) {
-				Rhi::Device::SetScissor(scissorRect_);
+				RHI::Device::SetScissor(scissorRect_);
 			}
 
 			renderQueue_.Draw();
 
 			if (scissorRectNonZeroArea) {
-				Rhi::Device::SetScissorState(scissorState);
+				RHI::Device::SetScissorState(scissorState);
 			}
 			if (viewportRectNonZeroArea) {
-				Rhi::Device::SetViewport(previousViewport);
+				RHI::Device::SetViewport(previousViewport);
 			}
 		}
 
@@ -433,7 +433,7 @@ namespace nCine
 			Qt5GfxDevice& gfxDevice = static_cast<Qt5GfxDevice&>(theApplication().gfxDevice());
 			gfxDevice.bindDefaultDrawFramebufferObject();
 #else
-			Rhi::RenderTarget::UnbindDraw();
+			RHI::RenderTarget::UnbindDraw();
 #endif
 		}
 	}

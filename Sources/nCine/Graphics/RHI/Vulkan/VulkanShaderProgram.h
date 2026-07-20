@@ -19,14 +19,14 @@ namespace ShaderCompiler
 	struct ProgramVariant;
 }
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	class VulkanBufferObject;
 	class VulkanShaderUniforms;
 	class VulkanShaderUniformBlocks;
 
 	/**
-		@brief Shader program of the Vulkan backend (aliased as `Rhi::ShaderProgram`)
+		@brief Shader program of the Vulkan backend (aliased as `RHI::ShaderProgram`)
 
 		Carries the offline ShaderCompiler reflection (set with @ref SetReflection() like the OpenGL backend)
 		from which it imports uniforms, uniform blocks and attributes so the pipeline's uniform machinery runs.

@@ -6,7 +6,7 @@
 
 #include <cstring>
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLUniformBlock::GLUniformBlock()
 		: program_(0), index_(0), size_(0), alignAmount_(0), bindingIndex_(-1)

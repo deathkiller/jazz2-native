@@ -38,9 +38,9 @@ namespace Jazz2::Rendering
 		struct LightCommand
 		{
 			std::unique_ptr<RenderCommand> Command;
-			Rhi::UniformCache* TexRectUniform;
-			Rhi::UniformCache* SpriteSizeUniform;
-			Rhi::UniformCache* ColorUniform;
+			RHI::UniformCache* TexRectUniform;
+			RHI::UniformCache* SpriteSizeUniform;
+			RHI::UniformCache* ColorUniform;
 		};
 
 		SmallVector<LightCommand, 0> _renderCommands;

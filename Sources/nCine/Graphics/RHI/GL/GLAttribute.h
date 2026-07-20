@@ -7,7 +7,7 @@
 
 #include "../../../../Main.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	/**
 		@brief Stores information about an active vertex shader attribute

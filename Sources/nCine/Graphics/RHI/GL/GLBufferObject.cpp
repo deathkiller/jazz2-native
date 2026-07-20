@@ -3,7 +3,7 @@
 #include "../../../../Main.h"
 #include "../../../tracy_opengl.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLHashMap<GLBufferObjectMappingFunc::Size, GLBufferObjectMappingFunc> GLBufferObject::boundBuffers_;
 	GLuint GLBufferObject::boundIndexBase_[MaxIndexBufferRange];

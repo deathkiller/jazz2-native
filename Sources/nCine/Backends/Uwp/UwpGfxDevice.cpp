@@ -62,7 +62,7 @@ namespace nCine::Backends
 
 		// The CoreWindow is passed as its raw ABI (IUnknown-compatible) pointer; CreateSwapChainForCoreWindow
 		// keeps its own reference, and `_window` owns the CoreWindow for the device's lifetime.
-		const bool created = RhiD3D11::D3D11Device::CreateSwapchain(winrt::get_abi(_window), initialWidth, initialHeight, displayMode_.hasVSync());
+		const bool created = RHI::D3D11::D3D11Device::CreateSwapchain(winrt::get_abi(_window), initialWidth, initialHeight, displayMode_.hasVSync());
 		FATAL_ASSERT_MSG(created, "Failed to create the Direct3D 11 device and CoreWindow swap chain");
 #elif defined(WITH_OPENGLES)
 #	if defined(WITH_ANGLE)
@@ -221,7 +221,7 @@ namespace nCine::Backends
 	void UwpGfxDevice::Cleanup()
 	{
 #if defined(WITH_RHI_D3D11)
-		RhiD3D11::D3D11Device::DestroySwapchain();
+		RHI::D3D11::D3D11Device::DestroySwapchain();
 #elif defined(WITH_OPENGLES)
 		if (_renderSurface != EGL_NO_SURFACE) {
 			eglDestroySurface(_eglDisplay, _renderSurface);
@@ -254,7 +254,7 @@ namespace nCine::Backends
 #if defined(WITH_RHI_D3D11)
 		// Present the frame just rendered, then reconcile any pending CoreWindow resize so the swap chain and
 		// screen viewport are updated before the next frame is drawn.
-		RhiD3D11::D3D11Device::PresentFrame();
+		RHI::D3D11::D3D11Device::PresentFrame();
 
 		if (_sizeChanged > 0) {
 			auto displayInfo = winrtWGD::DisplayInformation::GetForCurrentView();
@@ -270,7 +270,7 @@ namespace nCine::Backends
 					height_ = currentHeight;
 					drawableWidth_ = width_;
 					drawableHeight_ = height_;
-					RhiD3D11::D3D11Device::ResizeSwapchain(drawableWidth_, drawableHeight_);
+					RHI::D3D11::D3D11Device::ResizeSwapchain(drawableWidth_, drawableHeight_);
 					theApplication().ResizeScreenViewport(drawableWidth_, drawableHeight_);
 				}
 			}

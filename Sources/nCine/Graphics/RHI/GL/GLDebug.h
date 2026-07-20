@@ -64,7 +64,7 @@ namespace nCine
 #	endif
 #endif
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	/**
 		@brief Wrapper around OpenGL debug output and object labelling

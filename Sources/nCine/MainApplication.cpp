@@ -546,7 +546,7 @@ namespace nCine
 								// surface caps for the authoritative extent (this value is the hint/fallback).
 								SdlGfxDevice::queryDrawableSize(windowHandle, event.window.data1, event.window.data2,
 									gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
-								Rhi::Device::ResizeSwapchain(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
+								RHI::Device::ResizeSwapchain(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
 								ResizeScreenViewport(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
 								break;
 						}

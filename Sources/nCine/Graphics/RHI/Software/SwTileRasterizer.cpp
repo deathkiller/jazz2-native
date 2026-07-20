@@ -10,7 +10,7 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	// The sampler/filter enums live in the parent nCine namespace; pull them in so the ported rasterizer
 	// bodies can name them unqualified (this TU never sees any legacy shadow of the same names)

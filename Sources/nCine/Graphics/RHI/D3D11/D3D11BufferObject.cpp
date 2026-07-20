@@ -5,7 +5,7 @@
 
 #include <d3d11.h>
 
-namespace nCine::RhiD3D11
+namespace nCine::RHI::D3D11
 {
 	std::uint32_t D3D11BufferObject::nextHandle_ = 1;
 

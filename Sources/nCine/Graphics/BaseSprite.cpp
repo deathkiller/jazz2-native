@@ -106,7 +106,7 @@ namespace nCine
 	{
 		renderCommand_.GetMaterial().ReserveUniformsDataMemory();
 		instanceBlock_ = renderCommand_.GetMaterial().UniformBlock(Material::InstanceBlockName);
-		Rhi::UniformCache* textureUniform = renderCommand_.GetMaterial().Uniform(Material::TextureUniformName);
+		RHI::UniformCache* textureUniform = renderCommand_.GetMaterial().Uniform(Material::TextureUniformName);
 		if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
 			textureUniform->SetIntValue(0); // GL_TEXTURE0
 		}
@@ -126,19 +126,19 @@ namespace nCine
 			//dirtyBits_.reset(DirtyBitPositions::TransformationUploadBit);
 		}
 		if (dirtyBits_.test(DirtyBitPositions::ColorUploadBit)) {
-			Rhi::UniformCache* colorUniform = instanceBlock_->GetUniform(Material::ColorUniformName);
+			RHI::UniformCache* colorUniform = instanceBlock_->GetUniform(Material::ColorUniformName);
 			if (colorUniform != nullptr) {
 				colorUniform->SetFloatVector(absColor().Data());
 			}
 			//dirtyBits_.reset(DirtyBitPositions::ColorUploadBit);
 		}
 		if (dirtyBits_.test(DirtyBitPositions::SizeBit)) {
-			Rhi::UniformCache* spriteSizeUniform = instanceBlock_->GetUniform(Material::SpriteSizeUniformName);
+			RHI::UniformCache* spriteSizeUniform = instanceBlock_->GetUniform(Material::SpriteSizeUniformName);
 			if (spriteSizeUniform != nullptr) {
 				spriteSizeUniform->SetFloatValue(width_, height_);
 			}
 			// Present only in palette shaders (sprite_vs/batched_sprites_vs); null elsewhere
-			Rhi::UniformCache* palOffsetUniform = instanceBlock_->GetUniform(Material::PaletteOffsetUniformName);
+			RHI::UniformCache* palOffsetUniform = instanceBlock_->GetUniform(Material::PaletteOffsetUniformName);
 			if (palOffsetUniform != nullptr) {
 				palOffsetUniform->SetFloatValue(paletteOffset_);
 			}
@@ -149,7 +149,7 @@ namespace nCine
 			if (texture_ != nullptr) {
 				renderCommand_.GetMaterial().SetTexture(*texture_);
 
-				Rhi::UniformCache* texRectUniform = instanceBlock_->GetUniform(Material::TexRectUniformName);
+				RHI::UniformCache* texRectUniform = instanceBlock_->GetUniform(Material::TexRectUniformName);
 				if (texRectUniform != nullptr) {
 					const Vector2i texSize = texture_->GetSize();
 					const float texScaleX = texRect_.W / float(texSize.X);

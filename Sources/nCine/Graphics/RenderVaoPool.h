@@ -23,20 +23,20 @@ namespace nCine
 		explicit RenderVaoPool(std::uint32_t vaoPoolSize);
 
 		/** @brief Binds a VAO matching the specified vertex format, reusing a pooled one or creating it */
-		void BindVao(const Rhi::VertexFormat& vertexFormat);
+		void BindVao(const RHI::VertexFormat& vertexFormat);
 
 	private:
 #ifndef DOXYGEN_GENERATING_OUTPUT
 		// Doxygen 1.12.0 outputs also private structs/unions even if it shouldn't
 		struct VaoBinding
 		{
-			std::unique_ptr<Rhi::VertexArray> object;
+			std::unique_ptr<RHI::VertexArray> object;
 			// Value of the pool bind counter when this VAO was last bound, used for LRU eviction
 			// (kept before the large vertex format so the LRU scan stays within the first cache line)
 			std::uint64_t lastBindIndex = 0;
 			// Fingerprint of the format, so a scan rejects mismatches without a deep comparison
 			std::uint64_t fingerprint = 0;
-			Rhi::VertexFormat format;
+			RHI::VertexFormat format;
 		};
 #endif
 

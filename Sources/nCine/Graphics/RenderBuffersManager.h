@@ -55,7 +55,7 @@ namespace nCine
 		};
 
 		/** @brief Result of a memory request, locating a sub-range within a buffer object */
-		using Parameters = Rhi::BufferRange;
+		using Parameters = RHI::BufferRange;
 
 		RenderBuffersManager(bool useBufferMapping, bool useBufferStorage, std::uint32_t vboMaxSize, std::uint32_t iboMaxSize);
 		~RenderBuffersManager();
@@ -82,7 +82,7 @@ namespace nCine
 				: type(BufferTypes::Array), size(0), freeSpace(0), sectionOffset(0), object(nullptr), mapBase(nullptr), hostBuffer(nullptr) {}
 
 			BufferTypes type;
-			std::unique_ptr<Rhi::Buffer> object;
+			std::unique_ptr<RHI::Buffer> object;
 			std::uint32_t size;
 			std::uint32_t freeSpace;
 			// Byte offset of the current ring section, always zero without persistent storage

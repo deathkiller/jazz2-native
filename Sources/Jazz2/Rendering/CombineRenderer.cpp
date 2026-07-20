@@ -188,7 +188,7 @@ namespace Jazz2::Rendering
 
 		if (fullyLit) {
 			// Water-only combine: no lightmap is needed, the device applies just the per-row water effect
-			Rhi::Device::SetPendingSoftwareLighting(nullptr, 0, 0, 1, vpX, vpY, vpW, vpH, ambR, ambG, ambB,
+			RHI::Device::SetPendingSoftwareLighting(nullptr, 0, 0, 1, vpX, vpY, vpW, vpH, ambR, ambG, ambB,
 				true, viewWaterLevel, waterTime, _owner->_cameraPos.Y);
 			return true;
 		}
@@ -265,7 +265,7 @@ namespace Jazz2::Rendering
 		// the Draw phase, once the scene is in the screen buffer and before the HUD. The lightmap pointer must
 		// outlive this call: _swLightmap is a member reused across frames, and the device consumes the entry in
 		// the same frame's Draw phase (before the next PrepareSoftwareLighting reassigns it).
-		Rhi::Device::SetPendingSoftwareLighting(_swLightmap.data(), lmW, lmH, Scale, vpX, vpY, vpW, vpH, ambR, ambG, ambB,
+		RHI::Device::SetPendingSoftwareLighting(_swLightmap.data(), lmW, lmH, Scale, vpX, vpY, vpW, vpH, ambR, ambG, ambB,
 			viewHasWater, viewWaterLevel, waterTime, _owner->_cameraPos.Y);
 		return true;
 	}

@@ -2,7 +2,7 @@
 
 #include <Containers/StringView.h>
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	namespace
 	{

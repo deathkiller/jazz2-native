@@ -7,14 +7,14 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	/**
 		@brief Shader-object stub of the Vulkan backend
 
 		The offline emitter already produces `VkVsSpirv`/`VkFsSpirv` per program-variant, and the program object
 		creates the `VkShaderModule` objects and pipelines from them. This class therefore carries no source and
-		every operation succeeds trivially, only to satisfy the `Rhi::Shader` contract alias.
+		every operation succeeds trivially, only to satisfy the `RHI::Shader` contract alias.
 	*/
 	class VulkanShader
 	{

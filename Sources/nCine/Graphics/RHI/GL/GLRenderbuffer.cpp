@@ -1,7 +1,7 @@
 #include "GLRenderbuffer.h"
 #include "GLDebug.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLuint GLRenderbuffer::boundBuffer_ = 0;
 

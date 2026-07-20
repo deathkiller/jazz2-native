@@ -7,7 +7,7 @@
 #include <cstring>
 #include <vector>
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	class SwShaderProgram;
 
@@ -66,7 +66,7 @@ namespace nCine::RhiSoftware
 	}
 
 	/**
-		@brief Reflected metadata of a single active uniform (aliased as `Rhi::Uniform`)
+		@brief Reflected metadata of a single active uniform (aliased as `RHI::Uniform`)
 
 		Holds everything the software backend needs about one uniform imported from the offline
 		reflection: its name, scalar/vector/matrix type, array size, a synthetic sequential location and,
@@ -145,7 +145,7 @@ namespace nCine::RhiSoftware
 	};
 
 	/**
-		@brief Reflected metadata of a single active uniform block (aliased as `Rhi::UniformBlock`)
+		@brief Reflected metadata of a single active uniform block (aliased as `RHI::UniformBlock`)
 
 		Holds the block name, a synthetic sequential index and binding index, its std140 byte size and the
 		metadata of its member uniforms (each with a std140 offset). The software backend does not pad the
@@ -224,7 +224,7 @@ namespace nCine::RhiSoftware
 	};
 
 	/**
-		@brief Reflected metadata of a single active vertex attribute (aliased as `Rhi::Attribute`)
+		@brief Reflected metadata of a single active vertex attribute (aliased as `RHI::Attribute`)
 	*/
 	class SwAttribute
 	{

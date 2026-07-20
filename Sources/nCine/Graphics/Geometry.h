@@ -133,12 +133,12 @@ namespace nCine
 		const float* hostVertexPointer_;
 		const std::uint16_t* hostIndexPointer_;
 
-		std::unique_ptr<Rhi::Buffer> vbo_;
+		std::unique_ptr<RHI::Buffer> vbo_;
 		BufferUsage vboUsageFlags_;
 		RenderBuffersManager::Parameters vboParams_;
 		const RenderBuffersManager::Parameters* sharedVboParams_;
 
-		std::unique_ptr<Rhi::Buffer> ibo_;
+		std::unique_ptr<RHI::Buffer> ibo_;
 		BufferUsage iboUsageFlags_;
 		RenderBuffersManager::Parameters iboParams_;
 		const RenderBuffersManager::Parameters* sharedIboParams_;

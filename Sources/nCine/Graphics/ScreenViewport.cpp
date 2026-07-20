@@ -98,6 +98,6 @@ namespace nCine
 
 		RenderResources::GetBuffersManager().Remap();
 		RenderResources::GetRenderCommandPool().Reset();
-		Rhi::Debug::Reset();
+		RHI::Debug::Reset();
 	}
 }

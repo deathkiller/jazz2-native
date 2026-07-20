@@ -93,7 +93,7 @@ namespace nCine
 		// cbuffer per draw (offsets never reach the API), so the offset alignment is only the engine-side
 		// suballocation granularity: 16 bytes, one std140 vec4. MAX_COLOR_ATTACHMENTS is
 		// D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT (8).
-		glIntValues_[(std::int32_t)IntValues::MAX_TEXTURE_SIZE] = Rhi::Device::GetMaxTextureDimension();
+		glIntValues_[(std::int32_t)IntValues::MAX_TEXTURE_SIZE] = RHI::Device::GetMaxTextureDimension();
 		glIntValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE] = 64 * 1024;
 		glIntValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = 64 * 1024;
 		glIntValues_[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT] = 16;
@@ -107,12 +107,12 @@ namespace nCine
 		// follows it anyway so the published value is the real one. The render passes drive a single color
 		// attachment today (MRT unimplemented); 8 mirrors the common device limit and only bounds
 		// Viewport::SetTexture().
-		glIntValues_[(std::int32_t)IntValues::MAX_TEXTURE_SIZE] = Rhi::Device::GetMaxTextureDimension();
-		const std::int32_t maxUniformRange = Rhi::Device::GetMaxUniformBufferRange();
+		glIntValues_[(std::int32_t)IntValues::MAX_TEXTURE_SIZE] = RHI::Device::GetMaxTextureDimension();
+		const std::int32_t maxUniformRange = RHI::Device::GetMaxUniformBufferRange();
 		glIntValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE] = maxUniformRange;
 		glIntValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] =
 			(maxUniformRange > 64 * 1024 ? 64 * 1024 : (maxUniformRange <= 0 ? 16 * 1024 : maxUniformRange));
-		glIntValues_[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT] = Rhi::Device::GetUniformBufferOffsetAlignment();
+		glIntValues_[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT] = RHI::Device::GetUniformBufferOffsetAlignment();
 		glIntValues_[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS] = 8;
 #	else
 		glInfoStrings_.renderer = "Software Rasterizer";
@@ -125,16 +125,16 @@ namespace nCine
 		glIntValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE] = 64 * 1024;
 		glIntValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = 64 * 1024;
 		glIntValues_[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT] = 16;
-		glIntValues_[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS] = std::int32_t(RhiSoftware::SwRenderTarget::MaxColorAttachments);
+		glIntValues_[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS] = std::int32_t(RHI::Software::SwRenderTarget::MaxColorAttachments);
 
 		LOGI("Software renderer is enabled");
 #	endif
 		// Values shared by all three backends: the per-draw texture-unit budget every backend's bind tracking
-		// supports (Rhi::Texture::MaxTextureUnits), the pipeline's uniform-binding budget (8, matching the
+		// supports (RHI::Texture::MaxTextureUnits), the pipeline's uniform-binding budget (8, matching the
 		// backends' MaxUniformBindings), the 2048-byte vertex stride every target guarantees (the Direct3D 11
 		// input-layout limit, the Vulkan spec minimum for maxVertexInputBindingStride, unconstrained on the CPU
 		// rasterizer) and no GL program-binary formats (BinaryShaderCache is disabled on these backends).
-		glIntValues_[(std::int32_t)IntValues::MAX_TEXTURE_IMAGE_UNITS] = std::int32_t(Rhi::Texture::MaxTextureUnits);
+		glIntValues_[(std::int32_t)IntValues::MAX_TEXTURE_IMAGE_UNITS] = std::int32_t(RHI::Texture::MaxTextureUnits);
 		glIntValues_[(std::int32_t)IntValues::MAX_UNIFORM_BUFFER_BINDINGS] = 8;
 		glIntValues_[(std::int32_t)IntValues::MAX_VERTEX_UNIFORM_BLOCKS] = 8;
 		glIntValues_[(std::int32_t)IntValues::MAX_FRAGMENT_UNIFORM_BLOCKS] = 8;

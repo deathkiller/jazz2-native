@@ -8,12 +8,12 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	class VulkanTexture;
 
 	/**
-		@brief Renderbuffer stub of the Vulkan backend (aliased as `Rhi::Renderbuffer`)
+		@brief Renderbuffer stub of the Vulkan backend (aliased as `RHI::Renderbuffer`)
 
 		Carries no depth/stencil storage (the renderer is 2D); the class just records the format and
 		size to satisfy the contract alias. A depth/stencil `VkImage` could be added here when needed.
@@ -38,7 +38,7 @@ namespace nCine::RhiVulkan
 	};
 
 	/**
-		@brief Framebuffer stub of the Vulkan backend (aliased as `Rhi::Framebuffer`)
+		@brief Framebuffer stub of the Vulkan backend (aliased as `RHI::Framebuffer`)
 
 		Provided only for the contract alias (the default-framebuffer rebinding some window backends use).
 		Off-screen rendering is routed through @ref VulkanRenderTarget instead.
@@ -59,7 +59,7 @@ namespace nCine::RhiVulkan
 	};
 
 	/**
-		@brief Off-screen render target of the Vulkan backend (aliased as `Rhi::RenderTarget`)
+		@brief Off-screen render target of the Vulkan backend (aliased as `RHI::RenderTarget`)
 
 		Records the color textures addressed by attachment index and an optional depth/stencil (ignored for
 		2D). @ref BindDraw() records the target on the device so the following clears and draws are associated

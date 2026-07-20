@@ -32,7 +32,7 @@
 using namespace Death;
 using namespace Death::Containers;
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	// The sampler/filter enums live in the parent nCine namespace; pull them in so the ported rasterizer
 	// bodies can name them unqualified (this TU never sees the SwRasterizer legacy shadow of the same names)

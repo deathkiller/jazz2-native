@@ -7,7 +7,7 @@
 
 #include "../../../../Main.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	class GLUniform;
 

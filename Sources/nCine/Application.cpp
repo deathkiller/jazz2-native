@@ -754,7 +754,7 @@ namespace nCine
 		if (appCfg_.withGraphics) {
 			theServiceLocator().RegisterGfxCapabilities(std::make_unique<GfxCapabilities>());
 			const auto& gfxCapabilities = theServiceLocator().GetGfxCapabilities();
-			Rhi::Debug::Init(gfxCapabilities);
+			RHI::Debug::Init(gfxCapabilities);
 
 #if !defined(WITH_ANGLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
 			if (appCfg_.fixedBatchSize > 0) {

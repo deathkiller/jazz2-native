@@ -8,7 +8,7 @@
 #include "../../../../Main.h"
 #include "../RhiTypes.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	/**
 		@brief Translates backend-neutral pixel formats into OpenGL formats

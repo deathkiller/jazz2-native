@@ -13,7 +13,7 @@
 
 #include <cstdint>
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	/**
 		@brief Tile-based deferred rasterization layer sitting in front of @ref SwRaster

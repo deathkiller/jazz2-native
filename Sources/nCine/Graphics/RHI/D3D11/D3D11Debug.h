@@ -11,13 +11,13 @@ namespace nCine
 	class IGfxCapabilities;
 }
 
-namespace nCine::RhiD3D11
+namespace nCine::RHI::D3D11
 {
 	/**
 		@brief Debug-output and object-labelling stub of the Direct3D 11 backend
 
 		The backend has no device-side debug facility wired up, so every entry point is a no-op. The class
-		exists to satisfy the `Rhi::Debug` contract alias (debug groups, message insertion and object labels
+		exists to satisfy the `RHI::Debug` contract alias (debug groups, message insertion and object labels
 		used by the render pipeline). These could later route to `ID3DUserDefinedAnnotation`.
 	*/
 	class D3D11Debug

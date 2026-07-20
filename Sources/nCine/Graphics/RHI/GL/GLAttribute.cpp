@@ -4,7 +4,7 @@
 
 #include <cstring>
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLAttribute::GLAttribute()
 		: location_(-1), size_(0), type_(GL_FLOAT)

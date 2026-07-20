@@ -7,14 +7,14 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	/**
 		@brief Shader-object stub of the software backend
 
 		The software backend does not compile GLSL — it drives hand-written C++ effects selected from the
 		offline reflection instead — so this class carries no source and every operation succeeds trivially.
-		It exists only to satisfy the `Rhi::Shader` contract alias.
+		It exists only to satisfy the `RHI::Shader` contract alias.
 	*/
 	class SwShader
 	{

@@ -98,7 +98,7 @@ namespace nCine
 		return fs::CombinePath(path_, { filename, filenameLength });
 	}
 
-	bool BinaryShaderCache::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program, Rhi::ShaderProgram::Introspection introspection)
+	bool BinaryShaderCache::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, RHI::ShaderProgram* program, RHI::ShaderProgram::Introspection introspection)
 	{
 #if !defined(WITH_RHI_GL) || defined(DEATH_TARGET_VITA)
 		// No GL program binaries exist on these backends and the cache is permanently disabled (see the constructor)
@@ -157,7 +157,7 @@ namespace nCine
 #endif
 	}
 
-	bool BinaryShaderCache::SaveToCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program)
+	bool BinaryShaderCache::SaveToCache(const char* shaderName, std::uint64_t shaderVersion, RHI::ShaderProgram* program)
 	{
 #if !defined(WITH_RHI_GL) || defined(DEATH_TARGET_VITA)
 		// No GL program binaries exist on these backends and the cache is permanently disabled (see the constructor)

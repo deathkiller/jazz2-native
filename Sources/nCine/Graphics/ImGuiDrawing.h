@@ -56,19 +56,19 @@ namespace nCine
 
 	private:
 		bool withSceneGraph_;
-		HashMap<Rhi::Texture*, std::unique_ptr<Rhi::Texture>> textures_;
+		HashMap<RHI::Texture*, std::unique_ptr<RHI::Texture>> textures_;
 #if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN) || !defined(WITH_RHI_GL)
 		// Sub-rect updates are repacked into a contiguous buffer where GL_UNPACK_ROW_LENGTH is unavailable
 		// (OpenGL ES / WebGL) or the backend is not OpenGL at all
 		SmallVector<char, 0> tempTexBuffer_;
 #endif
-		std::unique_ptr<Rhi::ShaderProgram> imguiShaderProgram_;
-		std::unique_ptr<Rhi::Buffer> vbo_;
-		std::unique_ptr<Rhi::Buffer> ibo_;
+		std::unique_ptr<RHI::ShaderProgram> imguiShaderProgram_;
+		std::unique_ptr<RHI::Buffer> vbo_;
+		std::unique_ptr<RHI::Buffer> ibo_;
 
 		static const std::int32_t UniformsBufferSize = 65;
 		std::uint8_t uniformsBuffer_[UniformsBufferSize];
-		std::unique_ptr<Rhi::ShaderUniforms> imguiShaderUniforms_;
+		std::unique_ptr<RHI::ShaderUniforms> imguiShaderUniforms_;
 		IInputEventHandler* appInputHandler_;
 
 		std::int32_t lastFrameWidth_;

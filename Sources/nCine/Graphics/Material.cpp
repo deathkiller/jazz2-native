@@ -14,14 +14,14 @@ namespace nCine
 	{
 	}
 
-	Material::Material(Rhi::ShaderProgram* program, Rhi::Texture* texture)
+	Material::Material(RHI::ShaderProgram* program, RHI::Texture* texture)
 		: isBlendingEnabled_(false), sortKeyDirty_(true), usedTextureUnits_(texture != nullptr ? 1 : 0),
 			srcBlendingFactor_(BlendingFactor::SrcAlpha), destBlendingFactor_(BlendingFactor::OneMinusSrcAlpha),
 			srcAlphaBlendingFactor_(BlendingFactor::One), destAlphaBlendingFactor_(BlendingFactor::OneMinusSrcAlpha),
 			sortKey_(0), shaderChangeCounter_(0),
 			shaderProgramType_(ShaderProgramType::Custom), shaderProgram_(program), uniformsHostBufferSize_(0)
 	{
-		for (std::uint32_t i = 0; i < Rhi::Texture::MaxTextureUnits; i++) {
+		for (std::uint32_t i = 0; i < RHI::Texture::MaxTextureUnits; i++) {
 			textures_[i] = nullptr;
 		}
 		textures_[0] = texture;
@@ -66,7 +66,7 @@ namespace nCine
 
 	bool Material::SetShaderProgramType(ShaderProgramType shaderProgramType)
 	{
-		Rhi::ShaderProgram* shaderProgram = RenderResources::GetShaderProgram(shaderProgramType);
+		RHI::ShaderProgram* shaderProgram = RenderResources::GetShaderProgram(shaderProgramType);
 		if (shaderProgram == nullptr || shaderProgram == shaderProgram_) {
 			return false;
 		}
@@ -78,7 +78,7 @@ namespace nCine
 		return true;
 	}
 
-	void Material::SetShaderProgram(Rhi::ShaderProgram* program)
+	void Material::SetShaderProgram(RHI::ShaderProgram* program)
 	{
 		// Allow self-assignment to take into account the case where the shader program loads new shaders
 
@@ -95,7 +95,7 @@ namespace nCine
 
 	bool Material::SetShader(Shader* shader)
 	{
-		Rhi::ShaderProgram* shaderProgram = shader->glShaderProgram_.get();
+		RHI::ShaderProgram* shaderProgram = shader->glShaderProgram_.get();
 		if (shaderProgram == shaderProgram_) {
 			return false;
 		}
@@ -155,19 +155,19 @@ namespace nCine
 		shaderUniformBlocks_.SetUniformsDataPointer(&dataPointer[shaderProgram_->GetUniformsSize()]);
 	}
 
-	const Rhi::Texture* Material::GetTexture(std::uint32_t unit) const
+	const RHI::Texture* Material::GetTexture(std::uint32_t unit) const
 	{
-		const Rhi::Texture* texture = nullptr;
-		if (unit < Rhi::Texture::MaxTextureUnits) {
+		const RHI::Texture* texture = nullptr;
+		if (unit < RHI::Texture::MaxTextureUnits) {
 			texture = textures_[unit];
 		}
 		return texture;
 	}
 
-	bool Material::SetTexture(std::uint32_t unit, const Rhi::Texture* texture)
+	bool Material::SetTexture(std::uint32_t unit, const RHI::Texture* texture)
 	{
 		bool result = false;
-		if (unit < Rhi::Texture::MaxTextureUnits) {
+		if (unit < RHI::Texture::MaxTextureUnits) {
 			textures_[unit] = texture;
 			sortKeyDirty_ = true;
 			UpdateUsedTextureUnits(unit, texture != nullptr);
@@ -184,7 +184,7 @@ namespace nCine
 	bool Material::SetTexture(std::uint32_t unit, std::nullptr_t)
 	{
 		bool result = false;
-		if (unit < Rhi::Texture::MaxTextureUnits) {
+		if (unit < RHI::Texture::MaxTextureUnits) {
 			textures_[unit] = nullptr;
 			sortKeyDirty_ = true;
 			UpdateUsedTextureUnits(unit, false);
@@ -217,7 +217,7 @@ namespace nCine
 			if (textures_[i] != nullptr) {
 				textures_[i]->Bind(i);
 			} else {
-				Rhi::Texture::Unbind(i);
+				RHI::Texture::Unbind(i);
 			}
 		}
 
@@ -227,7 +227,7 @@ namespace nCine
 		}
 	}
 
-	void Material::DefineVertexFormat(const Rhi::Buffer* vbo, const Rhi::Buffer* ibo, std::uint32_t vboOffset)
+	void Material::DefineVertexFormat(const RHI::Buffer* vbo, const RHI::Buffer* ibo, std::uint32_t vboOffset)
 	{
 		shaderProgram_->DefineVertexFormat(vbo, ibo, vboOffset);
 	}
@@ -258,7 +258,7 @@ namespace nCine
 
 		struct SortHashData
 		{
-			std::uint32_t textures[Rhi::Texture::MaxTextureUnits];
+			std::uint32_t textures[RHI::Texture::MaxTextureUnits];
 			std::uint32_t shaderProgram;
 			std::uint8_t srcBlendingFactor;
 			std::uint8_t destBlendingFactor;
@@ -277,7 +277,7 @@ namespace nCine
 		// Align to 64 bits for `fasthash64()` to properly work on Emscripten without alignment faults
 		SortHashData hashData alignas(8);
 
-		for (std::uint32_t i = 0; i < Rhi::Texture::MaxTextureUnits; i++) {
+		for (std::uint32_t i = 0; i < RHI::Texture::MaxTextureUnits; i++) {
 			hashData.textures[i] = (textures_[i] != nullptr) ? textures_[i]->GetUniqueId() : 0;
 		}
 		hashData.shaderProgram = shaderProgram_->GetUniqueId();

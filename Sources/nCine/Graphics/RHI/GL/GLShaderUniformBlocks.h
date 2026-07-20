@@ -5,7 +5,7 @@
 #include "GLUniformBlockCache.h"
 #include "../RhiFwd.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	class GLShaderProgram;
 	class GLBufferObject;
@@ -26,7 +26,7 @@ namespace nCine::RhiGL
 		using UniformHashMapType = StaticHashMap<String, GLUniformBlockCache, UniformBlockCachesHashSize>;
 
 		/** @brief Function that suballocates a range of the given size from the streaming uniform buffer */
-		using UniformRangeAllocator = Rhi::BufferRange (*)(std::uint32_t bytes);
+		using UniformRangeAllocator = RHI::BufferRange (*)(std::uint32_t bytes);
 
 		/** @brief Sets the allocator used by @ref CommitUniformBlocks() to place block data into a uniform buffer (registered by the render pipeline at startup) */
 		static void SetUniformRangeAllocator(UniformRangeAllocator allocator);
@@ -75,7 +75,7 @@ namespace nCine::RhiGL
 		GLubyte* dataPointer_;
 
 		// Uniform buffer range for binding
-		Rhi::BufferRange uboParams_;
+		RHI::BufferRange uboParams_;
 
 		UniformHashMapType uniformBlockCaches_;
 

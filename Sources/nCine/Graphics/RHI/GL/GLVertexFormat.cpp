@@ -4,7 +4,7 @@
 #include "../../../ServiceLocator.h"
 #include "../../../../Main.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLVertexFormat::Attribute::Attribute()
 		: vbo_(nullptr), pointer_(nullptr), index_(0), size_(-1), type_(GL_FLOAT), stride_(0), baseOffset_(0), enabled_(false), normalized_(GL_FALSE)

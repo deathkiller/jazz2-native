@@ -5,7 +5,7 @@
 #	include <android/api-level.h>
 #endif
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	void GLTextureFormat::Resolve(PixelFormat format, bool bgr, GLint& internalFormat, GLenum& externalFormat, GLenum& dataType)
 	{

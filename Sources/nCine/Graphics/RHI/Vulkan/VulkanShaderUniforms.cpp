@@ -4,7 +4,7 @@
 
 #include <cstring>
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	namespace
 	{

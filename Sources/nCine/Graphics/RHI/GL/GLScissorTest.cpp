@@ -1,7 +1,7 @@
 #include "GLScissorTest.h"
 #include "../../../../Main.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLScissorTest::State GLScissorTest::state_;
 

@@ -12,7 +12,7 @@
 #	define glBindVertexArray glBindVertexArrayOES
 #endif
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	unsigned int GLVertexArrayObject::boundVAO_ = 0;
 

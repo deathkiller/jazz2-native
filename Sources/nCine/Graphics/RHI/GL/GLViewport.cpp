@@ -1,6 +1,6 @@
 #include "GLViewport.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLViewport::State GLViewport::state_;
 

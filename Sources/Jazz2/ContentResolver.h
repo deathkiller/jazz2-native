@@ -258,7 +258,7 @@ namespace Jazz2
 		 * Binds `diffuse` to texture unit 0 and, when `indexed`, the shared palette texture to unit 1 plus the
 		 * per-instance palette offset on `instanceBlock`. Call at draw time, after the other instance uniforms.
 		 */
-		void BindSpritePalette(RenderCommand& command, Rhi::UniformBlockCache& instanceBlock, const Texture& diffuse, bool indexed, std::uint16_t paletteOffset);
+		void BindSpritePalette(RenderCommand& command, RHI::UniformBlockCache& instanceBlock, const Texture& diffuse, bool indexed, std::uint16_t paletteOffset);
 
 		/**
 		 * @brief Loads specified tile set and its palette

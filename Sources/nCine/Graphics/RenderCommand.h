@@ -144,7 +144,7 @@ namespace nCine
 		}
 
 		/** @brief Returns the material's "InstanceBlock" uniform block cache, resolved once per shader change */
-		Rhi::UniformBlockCache* GetInstanceBlock();
+		RHI::UniformBlockCache* GetInstanceBlock();
 
 		/** @brief Commits the model matrix uniform block */
 		void CommitNodeTransformation();
@@ -166,8 +166,8 @@ namespace nCine
 		std::uint64_t materialSortKey_;
 		// Cached model matrix uniform and "InstanceBlock" uniform block cache, avoiding name-based
 		// lookups on every use. Valid as long as the cached shader change counter matches the material's one.
-		Rhi::UniformCache* modelMatrixUniform_;
-		Rhi::UniformBlockCache* instanceBlock_;
+		RHI::UniformCache* modelMatrixUniform_;
+		RHI::UniformBlockCache* instanceBlock_;
 		/** @brief Id based secondary sort key that stabilizes render command sorting */
 		std::uint32_t idSortKey_;
 		// Value of the material's shader change counter when the cached uniforms were resolved

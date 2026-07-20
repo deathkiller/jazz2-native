@@ -7,7 +7,7 @@
 
 #include "../../../../Main.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	/** @brief Key type, an OpenGL target enum */
 	using key_t = GLenum;

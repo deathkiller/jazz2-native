@@ -157,11 +157,11 @@ namespace nCine
 
 	void IGfxDevice::initDeviceViewport()
 	{
-		Rhi::Device::InitViewport(0, 0, drawableWidth_, drawableHeight_);
+		RHI::Device::InitViewport(0, 0, drawableWidth_, drawableHeight_);
 	}
 
 	void IGfxDevice::setupDevice()
 	{
-		Rhi::Device::SetupInitialState();
+		RHI::Device::SetupInitialState();
 	}
 }

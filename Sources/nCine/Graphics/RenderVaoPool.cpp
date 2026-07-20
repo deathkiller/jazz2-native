@@ -11,11 +11,11 @@ namespace nCine
 		vaoPool_.reserve(vaoPoolSize);
 
 		// Start with a VAO bound to the OpenGL context
-		Rhi::VertexFormat format;
+		RHI::VertexFormat format;
 		BindVao(format);
 	}
 
-	void RenderVaoPool::BindVao(const Rhi::VertexFormat& vertexFormat)
+	void RenderVaoPool::BindVao(const RHI::VertexFormat& vertexFormat)
 	{
 #if defined(DEATH_DEBUG)
 		char debugString[128];
@@ -32,14 +32,14 @@ namespace nCine
 				const bool bindChanged = binding.object->Bind();
 				const std::uint32_t iboHandle = vertexFormat.GetIbo() ? vertexFormat.GetIbo()->GetGLHandle() : 0;
 				if (bindChanged) {
-					if (Rhi::Debug::IsAvailable()) {
+					if (RHI::Debug::IsAvailable()) {
 						InsertGLDebugMessage(binding);
 					}
 					// Binding a VAO changes the current bound element array buffer
-					Rhi::Buffer::SetBoundHandle(std::uint32_t(BufferTarget::Index), iboHandle);
+					RHI::Buffer::SetBoundHandle(std::uint32_t(BufferTarget::Index), iboHandle);
 				} else {
 					// The VAO was already bound but it is not known if the bound element array buffer changed in the meantime
-					Rhi::Buffer::BindHandle(std::uint32_t(BufferTarget::Index), iboHandle);
+					RHI::Buffer::BindHandle(std::uint32_t(BufferTarget::Index), iboHandle);
 				}
 				binding.lastBindIndex = ++bindIndex_;
 #if defined(NCINE_PROFILING)
@@ -53,12 +53,12 @@ namespace nCine
 			std::uint32_t index = 0;
 			if (vaoPool_.size() < vaoPool_.capacity()) {
 				auto& item = vaoPool_.emplace_back();
-				item.object = std::make_unique<Rhi::VertexArray>();
+				item.object = std::make_unique<RHI::VertexArray>();
 				index = std::uint32_t(vaoPool_.size() - 1);
 #if defined(DEATH_DEBUG)
-				if (Rhi::Debug::IsAvailable()) {
+				if (RHI::Debug::IsAvailable()) {
 					std::size_t length = formatInto(debugString, "Created and defined VAO 0x{:x} ({})", std::uintptr_t(vaoPool_[index].object.get()), index);
-					Rhi::Debug::MessageInsert({ debugString, length });
+					RHI::Debug::MessageInsert({ debugString, length });
 
 					length = formatInto(debugString, "VAO_#{}", index);
 					vaoPool_.back().object->SetObjectLabel({ debugString, length });
@@ -76,7 +76,7 @@ namespace nCine
 
 #if defined(DEATH_DEBUG)
 				std::size_t length = formatInto(debugString, "Reuse and define VAO 0x{:x} ({})", std::uintptr_t(vaoPool_[index].object.get()), index);
-				Rhi::Debug::MessageInsert({ debugString, length });
+				RHI::Debug::MessageInsert({ debugString, length });
 #endif
 #if defined(NCINE_PROFILING)
 				RenderStatistics::AddVaoPoolReuse();
@@ -87,7 +87,7 @@ namespace nCine
 			DEATH_ASSERT(bindChanged || vaoPool_.size() == 1);
 			// Binding a VAO changes the current bound element array buffer
 			const std::uint32_t oldIboHandle = vaoPool_[index].format.GetIbo() ? vaoPool_[index].format.GetIbo()->GetGLHandle() : 0;
-			Rhi::Buffer::SetBoundHandle(std::uint32_t(BufferTarget::Index), oldIboHandle);
+			RHI::Buffer::SetBoundHandle(std::uint32_t(BufferTarget::Index), oldIboHandle);
 			vaoPool_[index].format = vertexFormat;
 			vaoPool_[index].fingerprint = fingerprint;
 			vaoPool_[index].format.Define();
@@ -108,7 +108,7 @@ namespace nCine
 		static char debugString[128];
 		std::size_t length = formatInto(debugString, "Bind VAO 0x{:x}", std::uintptr_t(binding.object.get()));
 
-		// TODO: Rhi::Debug
+		// TODO: RHI::Debug
 		/*bool firstVbo = true;
 		for (std::uint32_t i = 0; i < binding.format.numAttributes(); i++)
 		{
@@ -124,7 +124,7 @@ namespace nCine
 			debugString.formatAppend(", ibo: 0x%lx", std::uintptr_t(binding.format.ibo()));
 		debugString.formatAppend(")");*/
 
-		Rhi::Debug::MessageInsert({ debugString, length });
+		RHI::Debug::MessageInsert({ debugString, length });
 #endif
 	}
 }

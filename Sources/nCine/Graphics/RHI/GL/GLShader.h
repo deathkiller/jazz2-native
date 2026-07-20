@@ -11,7 +11,7 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	/**
 		@brief Wraps an OpenGL shader object

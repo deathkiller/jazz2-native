@@ -5,7 +5,7 @@
 #include <cstring>
 #include <vector>
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLUniformBlockCache::GLUniformBlockCache()
 		: uniformBlock_(nullptr), dataPointer_(nullptr), usedSize_(0)

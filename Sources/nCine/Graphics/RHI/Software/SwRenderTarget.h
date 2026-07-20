@@ -8,12 +8,12 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	class SwTexture;
 
 	/**
-		@brief Renderbuffer stub of the software backend (aliased as `Rhi::Renderbuffer`)
+		@brief Renderbuffer stub of the software backend (aliased as `RHI::Renderbuffer`)
 
 		The software backend renders 2D only, so depth/stencil renderbuffers carry no storage; the class
 		just records the format and size to satisfy the contract alias.
@@ -38,7 +38,7 @@ namespace nCine::RhiSoftware
 	};
 
 	/**
-		@brief Framebuffer stub of the software backend (aliased as `Rhi::Framebuffer`)
+		@brief Framebuffer stub of the software backend (aliased as `RHI::Framebuffer`)
 
 		Provided only for the contract alias (the default-framebuffer rebinding some window backends use).
 		The software backend routes off-screen rendering through @ref SwRenderTarget instead.
@@ -59,7 +59,7 @@ namespace nCine::RhiSoftware
 	};
 
 	/**
-		@brief Off-screen render target of the software backend (aliased as `Rhi::RenderTarget`)
+		@brief Off-screen render target of the software backend (aliased as `RHI::RenderTarget`)
 
 		Holds the color textures the rasterizer writes into (addressed by attachment index) and an
 		optional depth/stencil (ignored for 2D). @ref BindDraw() records the target on the device so the

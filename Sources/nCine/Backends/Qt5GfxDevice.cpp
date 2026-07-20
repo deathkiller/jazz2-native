@@ -141,13 +141,13 @@ namespace nCine::Backends
 
 	void Qt5GfxDevice::resetTextureBinding()
 	{
-		Rhi::Texture::bindHandle(GL_TEXTURE_2D, 0);
+		RHI::Texture::bindHandle(GL_TEXTURE_2D, 0);
 	}
 
 	void Qt5GfxDevice::bindDefaultDrawFramebufferObject()
 	{
 		const GLuint glHandle = widget_.defaultFramebufferObject();
-		Rhi::Framebuffer::bindHandle(GL_DRAW_FRAMEBUFFER, glHandle);
+		RHI::Framebuffer::bindHandle(GL_DRAW_FRAMEBUFFER, glHandle);
 	}
 
 	void Qt5GfxDevice::initDevice(bool isFullscreen)

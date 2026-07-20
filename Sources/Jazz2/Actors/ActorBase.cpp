@@ -1496,7 +1496,7 @@ namespace Jazz2::Actors
 		// after shaderHasChanged() (which (re)allocates the uniform data and resets uTexture to unit 0) so the
 		// sampler/texture binding sticks. Every render type has a palette variant now.
 		if (hasPalette) {
-			Rhi::UniformCache* paletteUniform = renderCommand_.GetMaterial().Uniform("uTexturePalette");
+			RHI::UniformCache* paletteUniform = renderCommand_.GetMaterial().Uniform("uTexturePalette");
 			if (paletteUniform != nullptr) {
 				paletteUniform->SetIntValue(1); // GL_TEXTURE1
 			}

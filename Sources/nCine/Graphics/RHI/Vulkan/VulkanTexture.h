@@ -10,10 +10,10 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	/**
-		@brief Texture object of the Vulkan backend (aliased as `Rhi::Texture`)
+		@brief Texture object of the Vulkan backend (aliased as `RHI::Texture`)
 
 		Wraps a single, tightly-packed level-0 pixel buffer in host memory and exposes the neutral upload
 		surface `Texture.cpp` drives (`TexImage2D`, `TexSubImage2D`, `TexStorage2D`, filter/wrap/swizzle

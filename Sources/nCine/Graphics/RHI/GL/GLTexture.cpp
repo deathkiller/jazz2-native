@@ -17,7 +17,7 @@
 #	define GL_TEXTURE_SWIZZLE_A 0x8E45
 #endif
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	namespace
 	{

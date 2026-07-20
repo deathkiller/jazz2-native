@@ -16,7 +16,7 @@ namespace nCine
 	class Qt5GfxDevice;
 }
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	class GLRenderbuffer;
 	class GLTexture;

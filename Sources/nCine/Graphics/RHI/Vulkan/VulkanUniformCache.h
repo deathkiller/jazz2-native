@@ -10,10 +10,10 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	/**
-		@brief Caches the host-side value of a single uniform (aliased as `Rhi::UniformCache`)
+		@brief Caches the host-side value of a single uniform (aliased as `RHI::UniformCache`)
 
 		Mirrors the OpenGL backend's uniform cache: it holds a pointer into a shared host data buffer and the
 		`Set*` methods that write values into it, plus a dirty flag. For a loose uniform, @ref CommitValue()
@@ -74,7 +74,7 @@ namespace nCine::RhiVulkan
 	};
 
 	/**
-		@brief Caches the contents of a uniform block (aliased as `Rhi::UniformBlockCache`)
+		@brief Caches the contents of a uniform block (aliased as `RHI::UniformBlockCache`)
 
 		Holds a pointer into a shared host data buffer mirroring the block's std140 layout and a @ref
 		VulkanUniformCache for each member, each pointing at its member offset within that buffer. The block is

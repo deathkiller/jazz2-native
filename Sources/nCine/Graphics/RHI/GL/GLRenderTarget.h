@@ -3,13 +3,13 @@
 #include "GLFramebuffer.h"
 #include "../RhiTypes.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	/**
 		@brief Off-screen render target of the OpenGL backend
 
 		Folds a framebuffer object and its owned depth/stencil renderbuffer behind a backend-neutral
-		surface (aliased as `Rhi::RenderTarget`): color attachments are textures addressed by index,
+		surface (aliased as `RHI::RenderTarget`): color attachments are textures addressed by index,
 		the depth/stencil attachment is described by @ref DepthStencilFormat, and the backend translates
 		both to its own attachment points and storage formats.
 	*/

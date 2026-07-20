@@ -24,7 +24,7 @@ namespace ShaderCompiler
 	struct ProgramVariant;
 }
 
-namespace nCine::RhiD3D11
+namespace nCine::RHI::D3D11
 {
 	class D3D11ShaderUniforms;
 	class D3D11ShaderUniformBlocks;
@@ -54,7 +54,7 @@ namespace nCine::RhiD3D11
 	};
 
 	/**
-		@brief Shader program of the Direct3D 11 backend (aliased as `Rhi::ShaderProgram`)
+		@brief Shader program of the Direct3D 11 backend (aliased as `RHI::ShaderProgram`)
 
 		Carries the offline ShaderCompiler reflection (set with @ref SetReflection() like the OpenGL backend)
 		from which it imports uniforms, uniform blocks and attributes, and compiles

@@ -10,7 +10,7 @@
 namespace nCine
 {
 	Texture::Texture()
-		: Object(ObjectType::Texture), rhiTexture_(std::make_unique<Rhi::Texture>(TextureTarget::Texture2D)), width_(0), height_(0),
+		: Object(ObjectType::Texture), rhiTexture_(std::make_unique<RHI::Texture>(TextureTarget::Texture2D)), width_(0), height_(0),
 			mipMapLevels_(0), isCompressed_(false), format_(Format::Unknown), dataSize_(0), minFiltering_(SamplerFilter::Nearest),
 			magFiltering_(SamplerFilter::Nearest), wrapMode_(SamplerWrapping::ClampToEdge)
 	{
@@ -160,16 +160,16 @@ namespace nCine
 			case Format::RGB8:	alignment = 1; break;
 			default:			alignment = 4; break;
 		}
-		Rhi::Texture::ClearErrors();
+		RHI::Texture::ClearErrors();
 		if (alignment != 4) {
-			Rhi::Texture::SetUnpackAlignment(alignment);
+			RHI::Texture::SetUnpackAlignment(alignment);
 		}
 		rhiTexture_->TexSubImage2D(level, x, y, width, height, format_, false, data);
 		if (alignment != 4) {
-			Rhi::Texture::SetUnpackAlignment(4);
+			RHI::Texture::SetUnpackAlignment(4);
 		}
 
-		return !Rhi::Texture::CheckErrors();
+		return !RHI::Texture::CheckErrors();
 	}
 
 	/** @note Loads uncompressed pixel data from memory using the `Format` specified in the constructor */
@@ -185,13 +185,13 @@ namespace nCine
 
 	bool Texture::SaveToMemory(std::uint8_t* bufferPtr, std::int32_t level)
 	{
-		if (!Rhi::Texture::SupportsTextureReadback()) {
+		if (!RHI::Texture::SupportsTextureReadback()) {
 			return false;
 		}
 
-		Rhi::Texture::ClearErrors();
+		RHI::Texture::ClearErrors();
 		rhiTexture_->GetTexImage(level, format_, false, bufferPtr);
-		return !Rhi::Texture::CheckErrors();
+		return !RHI::Texture::CheckErrors();
 	}
 
 	std::uint32_t Texture::GetChannelCount() const
@@ -272,14 +272,14 @@ namespace nCine
 		const bool bgr = texFormat.isBgr();
 		std::uint32_t dataSize = texLoader.dataSize();
 
-		const bool withTexStorage = Rhi::Texture::SupportsImmutableStorage();
+		const bool withTexStorage = RHI::Texture::SupportsImmutableStorage();
 
 		// Specify texture storage because it's either the very first time or there have been a change in size or format
 		if (dataSize_ == 0 || (width_ != texLoader.width() || height_ != texLoader.height() || format_ != pixelFormat)) {
 			if (withTexStorage) {
 				if (dataSize_ > 0) {
 					// The texture needs to be recreated as its storage is immutable
-					rhiTexture_ = std::make_unique<Rhi::Texture>(TextureTarget::Texture2D);
+					rhiTexture_ = std::make_unique<RHI::Texture>(TextureTarget::Texture2D);
 					dataSize_ = 0;
 				}
 
@@ -325,7 +325,7 @@ namespace nCine
 
 	void Texture::Load(const ITextureLoader& texLoader)
 	{
-		const bool withTexStorage = Rhi::Texture::SupportsImmutableStorage();
+		const bool withTexStorage = RHI::Texture::SupportsImmutableStorage();
 
 		const TextureFormat& texFormat = texLoader.texFormat();
 		const PixelFormat pixelFormat = texFormat.pixelFormat();

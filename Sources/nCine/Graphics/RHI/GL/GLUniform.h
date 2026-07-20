@@ -8,7 +8,7 @@
 #include "../../../../Main.h"
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	/**
 		@brief Stores information about an active shader uniform

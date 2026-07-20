@@ -8,7 +8,7 @@
 #include "GLUniform.h"
 #include "../../../Base/StaticHashMapIterator.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	class GLShaderProgram;
 

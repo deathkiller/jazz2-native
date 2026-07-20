@@ -11,13 +11,13 @@ namespace nCine
 	class IGfxCapabilities;
 }
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	/**
 		@brief Debug-output and object-labelling stub of the software backend
 
 		The software backend has no device-side debug facility, so every entry point is a no-op. The
-		class exists only to satisfy the `Rhi::Debug` contract alias (debug groups, message insertion and
+		class exists only to satisfy the `RHI::Debug` contract alias (debug groups, message insertion and
 		object labels used by the render pipeline).
 	*/
 	class SwDebug

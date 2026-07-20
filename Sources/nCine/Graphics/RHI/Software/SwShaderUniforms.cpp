@@ -4,7 +4,7 @@
 
 #include <cstring>
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	namespace
 	{

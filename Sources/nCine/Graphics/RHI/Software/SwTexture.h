@@ -10,10 +10,10 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	/**
-		@brief CPU texture object of the software backend (aliased as `Rhi::Texture`)
+		@brief CPU texture object of the software backend (aliased as `RHI::Texture`)
 
 		Wraps a single, tightly-packed level-0 pixel buffer in one of the formats the rasterizer can
 		sample (@ref PixelFormat::RGBA8 for the textured path, @ref PixelFormat::R8 / @ref PixelFormat::RG8

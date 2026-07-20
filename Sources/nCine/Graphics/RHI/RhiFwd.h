@@ -21,7 +21,7 @@
 #define RHI_CAP_SHADERS
 #define RHI_CAP_FRAMEBUFFERS
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	class GLDevice;
 	class GLTexture;
@@ -43,31 +43,31 @@ namespace nCine::RhiGL
 	class GLDebug;
 }
 
-namespace nCine::Rhi
+namespace nCine::RHI
 {
 	// Backend-neutral names for the classes of the selected backend. The render pipeline only refers
 	// to these aliases, so that additional backends only have to provide the same set of names with
 	// the same surface. This header only forward-declares them — include `Rhi.h` for the definitions.
-	using Device = RhiGL::GLDevice;
-	using Texture = RhiGL::GLTexture;
-	using Buffer = RhiGL::GLBufferObject;
-	using Shader = RhiGL::GLShader;
-	using ShaderProgram = RhiGL::GLShaderProgram;
-	using ShaderUniforms = RhiGL::GLShaderUniforms;
-	using ShaderUniformBlocks = RhiGL::GLShaderUniformBlocks;
-	using Uniform = RhiGL::GLUniform;
-	using UniformBlock = RhiGL::GLUniformBlock;
-	using UniformCache = RhiGL::GLUniformCache;
-	using UniformBlockCache = RhiGL::GLUniformBlockCache;
-	using Attribute = RhiGL::GLAttribute;
-	using Framebuffer = RhiGL::GLFramebuffer;
-	using Renderbuffer = RhiGL::GLRenderbuffer;
-	using RenderTarget = RhiGL::GLRenderTarget;
-	using VertexArray = RhiGL::GLVertexArrayObject;
-	using VertexFormat = RhiGL::GLVertexFormat;
+	using Device = RHI::GL::GLDevice;
+	using Texture = RHI::GL::GLTexture;
+	using Buffer = RHI::GL::GLBufferObject;
+	using Shader = RHI::GL::GLShader;
+	using ShaderProgram = RHI::GL::GLShaderProgram;
+	using ShaderUniforms = RHI::GL::GLShaderUniforms;
+	using ShaderUniformBlocks = RHI::GL::GLShaderUniformBlocks;
+	using Uniform = RHI::GL::GLUniform;
+	using UniformBlock = RHI::GL::GLUniformBlock;
+	using UniformCache = RHI::GL::GLUniformCache;
+	using UniformBlockCache = RHI::GL::GLUniformBlockCache;
+	using Attribute = RHI::GL::GLAttribute;
+	using Framebuffer = RHI::GL::GLFramebuffer;
+	using Renderbuffer = RHI::GL::GLRenderbuffer;
+	using RenderTarget = RHI::GL::GLRenderTarget;
+	using VertexArray = RHI::GL::GLVertexArrayObject;
+	using VertexFormat = RHI::GL::GLVertexFormat;
 
 	// Debug output and object labelling
-	using Debug = RhiGL::GLDebug;
+	using Debug = RHI::GL::GLDebug;
 
 	/**
 		@brief Locates a sub-range within a buffer object, together with its mapped memory
@@ -91,14 +91,14 @@ namespace nCine::Rhi
 #elif defined(WITH_RHI_SOFTWARE)
 
 // Rendering capability flags of the selected backend (see the OpenGL arm above for the meaning). The software
-// backend has off-screen render targets (@ref RhiSoftware::SwRenderTarget), so `RHI_CAP_FRAMEBUFFERS` is
+// backend has off-screen render targets (@ref RHI::Software::SwRenderTarget), so `RHI_CAP_FRAMEBUFFERS` is
 // defined; but its "shaders" are slow CPU-transpiled effects that must NOT drive full-screen post-processing,
 // so `RHI_CAP_SHADERS` is deliberately left undefined. The pipeline then skips the bloom chain, uses the cheap
 // no-shader lighting path and renders the scene directly to the screen buffer instead of through the shader
 // combine/rescale passes.
 #define RHI_CAP_FRAMEBUFFERS
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	class SwDevice;
 	class SwTexture;
@@ -120,31 +120,31 @@ namespace nCine::RhiSoftware
 	class SwDebug;
 }
 
-namespace nCine::Rhi
+namespace nCine::RHI
 {
 	// Backend-neutral names for the classes of the selected backend. The render pipeline only refers
 	// to these aliases, so that additional backends only have to provide the same set of names with
 	// the same surface. This header only forward-declares them — include `Rhi.h` for the definitions.
-	using Device = RhiSoftware::SwDevice;
-	using Texture = RhiSoftware::SwTexture;
-	using Buffer = RhiSoftware::SwBuffer;
-	using Shader = RhiSoftware::SwShader;
-	using ShaderProgram = RhiSoftware::SwShaderProgram;
-	using ShaderUniforms = RhiSoftware::SwShaderUniforms;
-	using ShaderUniformBlocks = RhiSoftware::SwShaderUniformBlocks;
-	using Uniform = RhiSoftware::SwUniform;
-	using UniformBlock = RhiSoftware::SwUniformBlock;
-	using UniformCache = RhiSoftware::SwUniformCache;
-	using UniformBlockCache = RhiSoftware::SwUniformBlockCache;
-	using Attribute = RhiSoftware::SwAttribute;
-	using Framebuffer = RhiSoftware::SwFramebuffer;
-	using Renderbuffer = RhiSoftware::SwRenderbuffer;
-	using RenderTarget = RhiSoftware::SwRenderTarget;
-	using VertexArray = RhiSoftware::SwVertexArray;
-	using VertexFormat = RhiSoftware::SwVertexFormat;
+	using Device = RHI::Software::SwDevice;
+	using Texture = RHI::Software::SwTexture;
+	using Buffer = RHI::Software::SwBuffer;
+	using Shader = RHI::Software::SwShader;
+	using ShaderProgram = RHI::Software::SwShaderProgram;
+	using ShaderUniforms = RHI::Software::SwShaderUniforms;
+	using ShaderUniformBlocks = RHI::Software::SwShaderUniformBlocks;
+	using Uniform = RHI::Software::SwUniform;
+	using UniformBlock = RHI::Software::SwUniformBlock;
+	using UniformCache = RHI::Software::SwUniformCache;
+	using UniformBlockCache = RHI::Software::SwUniformBlockCache;
+	using Attribute = RHI::Software::SwAttribute;
+	using Framebuffer = RHI::Software::SwFramebuffer;
+	using Renderbuffer = RHI::Software::SwRenderbuffer;
+	using RenderTarget = RHI::Software::SwRenderTarget;
+	using VertexArray = RHI::Software::SwVertexArray;
+	using VertexFormat = RHI::Software::SwVertexFormat;
 
 	// Debug output and object labelling
-	using Debug = RhiSoftware::SwDebug;
+	using Debug = RHI::Software::SwDebug;
 
 	/**
 		@brief Locates a sub-range within a buffer object, together with its mapped memory
@@ -174,7 +174,7 @@ namespace nCine::Rhi
 #define RHI_CAP_SHADERS
 #define RHI_CAP_FRAMEBUFFERS
 
-namespace nCine::RhiD3D11
+namespace nCine::RHI::D3D11
 {
 	class D3D11Device;
 	class D3D11Texture;
@@ -196,31 +196,31 @@ namespace nCine::RhiD3D11
 	class D3D11Debug;
 }
 
-namespace nCine::Rhi
+namespace nCine::RHI
 {
 	// Backend-neutral names for the classes of the selected backend. The render pipeline only refers
 	// to these aliases, so that additional backends only have to provide the same set of names with
 	// the same surface. This header only forward-declares them — include `Rhi.h` for the definitions.
-	using Device = RhiD3D11::D3D11Device;
-	using Texture = RhiD3D11::D3D11Texture;
-	using Buffer = RhiD3D11::D3D11BufferObject;
-	using Shader = RhiD3D11::D3D11Shader;
-	using ShaderProgram = RhiD3D11::D3D11ShaderProgram;
-	using ShaderUniforms = RhiD3D11::D3D11ShaderUniforms;
-	using ShaderUniformBlocks = RhiD3D11::D3D11ShaderUniformBlocks;
-	using Uniform = RhiD3D11::D3D11Uniform;
-	using UniformBlock = RhiD3D11::D3D11UniformBlock;
-	using UniformCache = RhiD3D11::D3D11UniformCache;
-	using UniformBlockCache = RhiD3D11::D3D11UniformBlockCache;
-	using Attribute = RhiD3D11::D3D11Attribute;
-	using Framebuffer = RhiD3D11::D3D11Framebuffer;
-	using Renderbuffer = RhiD3D11::D3D11Renderbuffer;
-	using RenderTarget = RhiD3D11::D3D11RenderTarget;
-	using VertexArray = RhiD3D11::D3D11VertexArray;
-	using VertexFormat = RhiD3D11::D3D11VertexFormat;
+	using Device = RHI::D3D11::D3D11Device;
+	using Texture = RHI::D3D11::D3D11Texture;
+	using Buffer = RHI::D3D11::D3D11BufferObject;
+	using Shader = RHI::D3D11::D3D11Shader;
+	using ShaderProgram = RHI::D3D11::D3D11ShaderProgram;
+	using ShaderUniforms = RHI::D3D11::D3D11ShaderUniforms;
+	using ShaderUniformBlocks = RHI::D3D11::D3D11ShaderUniformBlocks;
+	using Uniform = RHI::D3D11::D3D11Uniform;
+	using UniformBlock = RHI::D3D11::D3D11UniformBlock;
+	using UniformCache = RHI::D3D11::D3D11UniformCache;
+	using UniformBlockCache = RHI::D3D11::D3D11UniformBlockCache;
+	using Attribute = RHI::D3D11::D3D11Attribute;
+	using Framebuffer = RHI::D3D11::D3D11Framebuffer;
+	using Renderbuffer = RHI::D3D11::D3D11Renderbuffer;
+	using RenderTarget = RHI::D3D11::D3D11RenderTarget;
+	using VertexArray = RHI::D3D11::D3D11VertexArray;
+	using VertexFormat = RHI::D3D11::D3D11VertexFormat;
 
 	// Debug output and object labelling
-	using Debug = RhiD3D11::D3D11Debug;
+	using Debug = RHI::D3D11::D3D11Debug;
 
 	/**
 		@brief Locates a sub-range within a buffer object, together with its mapped memory
@@ -251,7 +251,7 @@ namespace nCine::Rhi
 #define RHI_CAP_SHADERS
 #define RHI_CAP_FRAMEBUFFERS
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	class VulkanDevice;
 	class VulkanTexture;
@@ -273,31 +273,31 @@ namespace nCine::RhiVulkan
 	class VulkanDebug;
 }
 
-namespace nCine::Rhi
+namespace nCine::RHI
 {
 	// Backend-neutral names for the classes of the selected backend. The render pipeline only refers
 	// to these aliases, so that additional backends only have to provide the same set of names with
 	// the same surface. This header only forward-declares them — include `Rhi.h` for the definitions.
-	using Device = RhiVulkan::VulkanDevice;
-	using Texture = RhiVulkan::VulkanTexture;
-	using Buffer = RhiVulkan::VulkanBufferObject;
-	using Shader = RhiVulkan::VulkanShader;
-	using ShaderProgram = RhiVulkan::VulkanShaderProgram;
-	using ShaderUniforms = RhiVulkan::VulkanShaderUniforms;
-	using ShaderUniformBlocks = RhiVulkan::VulkanShaderUniformBlocks;
-	using Uniform = RhiVulkan::VulkanUniform;
-	using UniformBlock = RhiVulkan::VulkanUniformBlock;
-	using UniformCache = RhiVulkan::VulkanUniformCache;
-	using UniformBlockCache = RhiVulkan::VulkanUniformBlockCache;
-	using Attribute = RhiVulkan::VulkanAttribute;
-	using Framebuffer = RhiVulkan::VulkanFramebuffer;
-	using Renderbuffer = RhiVulkan::VulkanRenderbuffer;
-	using RenderTarget = RhiVulkan::VulkanRenderTarget;
-	using VertexArray = RhiVulkan::VulkanVertexArray;
-	using VertexFormat = RhiVulkan::VulkanVertexFormat;
+	using Device = RHI::Vulkan::VulkanDevice;
+	using Texture = RHI::Vulkan::VulkanTexture;
+	using Buffer = RHI::Vulkan::VulkanBufferObject;
+	using Shader = RHI::Vulkan::VulkanShader;
+	using ShaderProgram = RHI::Vulkan::VulkanShaderProgram;
+	using ShaderUniforms = RHI::Vulkan::VulkanShaderUniforms;
+	using ShaderUniformBlocks = RHI::Vulkan::VulkanShaderUniformBlocks;
+	using Uniform = RHI::Vulkan::VulkanUniform;
+	using UniformBlock = RHI::Vulkan::VulkanUniformBlock;
+	using UniformCache = RHI::Vulkan::VulkanUniformCache;
+	using UniformBlockCache = RHI::Vulkan::VulkanUniformBlockCache;
+	using Attribute = RHI::Vulkan::VulkanAttribute;
+	using Framebuffer = RHI::Vulkan::VulkanFramebuffer;
+	using Renderbuffer = RHI::Vulkan::VulkanRenderbuffer;
+	using RenderTarget = RHI::Vulkan::VulkanRenderTarget;
+	using VertexArray = RHI::Vulkan::VulkanVertexArray;
+	using VertexFormat = RHI::Vulkan::VulkanVertexFormat;
 
 	// Debug output and object labelling
-	using Debug = RhiVulkan::VulkanDebug;
+	using Debug = RHI::Vulkan::VulkanDebug;
 
 	/**
 		@brief Locates a sub-range within a buffer object, together with its mapped memory

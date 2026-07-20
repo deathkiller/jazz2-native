@@ -3,7 +3,7 @@
 
 #include <cstring>
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	std::uint32_t SwBuffer::nextHandle_ = 1;
 

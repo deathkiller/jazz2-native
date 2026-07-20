@@ -1,6 +1,6 @@
 #include "GLBlending.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLBlending::State GLBlending::state_;
 

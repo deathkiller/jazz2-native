@@ -13,7 +13,7 @@
 #include <cstring>
 #include <string>
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	namespace
 	{
@@ -112,7 +112,7 @@ namespace nCine::RhiGL
 		glDeleteProgram(glHandle_);
 
 #if !defined(WITH_RHI_SOFTWARE)
-		// The render pipeline is built against a single backend's `Rhi::` aliases; when the software
+		// The render pipeline is built against a single backend's `RHI::` aliases; when the software
 		// backend is selected these GL-typed pipeline calls do not apply (this file is dead code there)
 		RenderResources::RemoveCameraUniformData(this);
 #endif

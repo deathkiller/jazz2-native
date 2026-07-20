@@ -5,7 +5,7 @@
 
 #include <cstring>
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	VulkanRenderTarget::VulkanRenderTarget()
 		: numDrawBuffers_(1), framebuffer_(0), framebufferViewCount_(0)

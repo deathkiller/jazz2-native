@@ -12,7 +12,7 @@ namespace nCine
 	class RenderVaoPool;
 }
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	/**
 		@brief Wraps an OpenGL buffer object

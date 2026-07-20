@@ -11,14 +11,14 @@
 // (transitively included across the whole pipeline through Rhi.h) stays free of the Vulkan headers and does
 // not force the Vulkan-Headers include directory onto unrelated translation units.
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	class VulkanShaderProgram;
 	class VulkanRenderTarget;
 	class VulkanTexture;
 
 	/**
-		@brief Pipeline-state and draw-call facade of the Vulkan backend (aliased as `Rhi::Device`)
+		@brief Pipeline-state and draw-call facade of the Vulkan backend (aliased as `RHI::Device`)
 
 		Exposes the OpenGL device's surface (blending, depth, cull, scissor, viewport, clear and the draw
 		calls) so the backend-neutral render pipeline drives it unchanged.

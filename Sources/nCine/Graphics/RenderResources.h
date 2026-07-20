@@ -71,7 +71,7 @@ namespace nCine
 			CameraUniformData()
 				: camera(nullptr), updateFrameProjectionMatrix(0), updateFrameViewMatrix(0) {}
 
-			Rhi::ShaderUniforms shaderUniforms;
+			RHI::ShaderUniforms shaderUniforms;
 			Camera* camera;
 			std::uint32_t updateFrameProjectionMatrix;
 			std::uint32_t updateFrameViewMatrix;
@@ -95,23 +95,23 @@ namespace nCine
 
 #if defined(RHI_GL_PROFILE_ES2)
 		/** @brief OpenGL|ES 2.0 only: shared static VBO of the 4 quad corners feeding the aQuadCorner attribute (replaces gl_VertexID) */
-		static inline Rhi::Buffer* GetQuadCornerVbo() {
+		static inline RHI::Buffer* GetQuadCornerVbo() {
 			return quadCornerVbo_.get();
 		}
 #endif
 
-		static Rhi::ShaderProgram* GetShaderProgram(Material::ShaderProgramType shaderProgramType);
+		static RHI::ShaderProgram* GetShaderProgram(Material::ShaderProgramType shaderProgramType);
 
-		static Rhi::ShaderProgram* GetBatchedShader(const Rhi::ShaderProgram* shader);
-		static bool RegisterBatchedShader(const Rhi::ShaderProgram* shader, Rhi::ShaderProgram* batchedShader);
-		static bool UnregisterBatchedShader(const Rhi::ShaderProgram* shader);
+		static RHI::ShaderProgram* GetBatchedShader(const RHI::ShaderProgram* shader);
+		static bool RegisterBatchedShader(const RHI::ShaderProgram* shader, RHI::ShaderProgram* batchedShader);
+		static bool UnregisterBatchedShader(const RHI::ShaderProgram* shader);
 
 		static inline std::uint8_t* GetCameraUniformsBuffer() {
 			return cameraUniformsBuffer_;
 		}
-		static CameraUniformData* FindCameraUniformData(Rhi::ShaderProgram* shaderProgram);
-		static void InsertCameraUniformData(Rhi::ShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData);
-		static bool RemoveCameraUniformData(Rhi::ShaderProgram* shaderProgram);
+		static CameraUniformData* FindCameraUniformData(RHI::ShaderProgram* shaderProgram);
+		static void InsertCameraUniformData(RHI::ShaderProgram* shaderProgram, CameraUniformData&& cameraUniformData);
+		static bool RemoveCameraUniformData(RHI::ShaderProgram* shaderProgram);
 
 		static inline const Camera* GetCurrentCamera() {
 			return currentCamera_;
@@ -120,7 +120,7 @@ namespace nCine
 			return currentViewport_;
 		}
 
-		static void SetDefaultAttributesParameters(Rhi::ShaderProgram& shaderProgram);
+		static void SetDefaultAttributesParameters(RHI::ShaderProgram& shaderProgram);
 
 	private:
 		static std::unique_ptr<BinaryShaderCache> binaryShaderCache_;
@@ -131,16 +131,16 @@ namespace nCine
 
 #if defined(RHI_GL_PROFILE_ES2)
 		// Static 4-corner (TRIANGLE_STRIP order) VBO for the single-quad ES2 sprite/full-screen path
-		static std::unique_ptr<Rhi::Buffer> quadCornerVbo_;
+		static std::unique_ptr<RHI::Buffer> quadCornerVbo_;
 #endif
 
 		static constexpr std::uint32_t DefaultShaderProgramsCount = std::uint32_t(Material::ShaderProgramType::Custom);
-		static std::unique_ptr<Rhi::ShaderProgram> defaultShaderPrograms_[DefaultShaderProgramsCount];
-		static HashMap<const Rhi::ShaderProgram*, Rhi::ShaderProgram*> batchedShaders_;
+		static std::unique_ptr<RHI::ShaderProgram> defaultShaderPrograms_[DefaultShaderProgramsCount];
+		static HashMap<const RHI::ShaderProgram*, RHI::ShaderProgram*> batchedShaders_;
 
 		static constexpr std::uint32_t UniformsBufferSize = 128; // two 4x4 float matrices
 		static std::uint8_t cameraUniformsBuffer_[UniformsBufferSize];
-		static HashMap<Rhi::ShaderProgram*, CameraUniformData> cameraUniformDataMap_;
+		static HashMap<RHI::ShaderProgram*, CameraUniformData> cameraUniformDataMap_;
 
 		static Camera* currentCamera_;
 		static std::unique_ptr<Camera> defaultCamera_;

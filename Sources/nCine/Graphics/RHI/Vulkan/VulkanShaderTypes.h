@@ -7,7 +7,7 @@
 #include <cstring>
 #include <vector>
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	class VulkanShaderProgram;
 
@@ -66,7 +66,7 @@ namespace nCine::RhiVulkan
 	}
 
 	/**
-		@brief Reflected metadata of a single active uniform (aliased as `Rhi::Uniform`)
+		@brief Reflected metadata of a single active uniform (aliased as `RHI::Uniform`)
 
 		Holds everything the backend needs about one uniform imported from the offline reflection: its name,
 		scalar/vector/matrix type, array size, a synthetic sequential location and, for uniforms living inside
@@ -145,7 +145,7 @@ namespace nCine::RhiVulkan
 	};
 
 	/**
-		@brief Reflected metadata of a single active uniform block (aliased as `Rhi::UniformBlock`)
+		@brief Reflected metadata of a single active uniform block (aliased as `RHI::UniformBlock`)
 
 		Holds the block name, a synthetic sequential index and binding index, its std140 byte size and the
 		metadata of its member uniforms (each with a std140 offset). The backend does not pad the size to any
@@ -224,7 +224,7 @@ namespace nCine::RhiVulkan
 	};
 
 	/**
-		@brief Reflected metadata of a single active vertex attribute (aliased as `Rhi::Attribute`)
+		@brief Reflected metadata of a single active vertex attribute (aliased as `RHI::Attribute`)
 	*/
 	class VulkanAttribute
 	{

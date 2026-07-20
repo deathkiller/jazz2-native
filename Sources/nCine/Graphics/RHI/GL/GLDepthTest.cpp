@@ -1,6 +1,6 @@
 #include "GLDepthTest.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLDepthTest::State GLDepthTest::state_;
 

@@ -34,7 +34,7 @@ namespace nCine
 
 	void Geometry::CreateCustomVbo(std::uint32_t numFloats, BufferUsage usage)
 	{
-		vbo_ = std::make_unique<Rhi::Buffer>(BufferTarget::Vertex);
+		vbo_ = std::make_unique<RHI::Buffer>(BufferTarget::Vertex);
 		vbo_->BufferData(numFloats * sizeof(float), nullptr, usage);
 
 		vboUsageFlags_ = usage;
@@ -112,7 +112,7 @@ namespace nCine
 
 	void Geometry::CreateCustomIbo(std::uint32_t numIndices, BufferUsage usage)
 	{
-		ibo_ = std::make_unique<Rhi::Buffer>(BufferTarget::Index);
+		ibo_ = std::make_unique<RHI::Buffer>(BufferTarget::Index);
 		ibo_->BufferData(numIndices * sizeof(std::uint16_t), nullptr, usage);
 
 		iboUsageFlags_ = usage;
@@ -206,15 +206,15 @@ namespace nCine
 
 		if (numInstances == 0) {
 			if (numIndices_ > 0) {
-				Rhi::Device::DrawElements(primitiveType_, numIndices_, indexOffset, baseVertex);
+				RHI::Device::DrawElements(primitiveType_, numIndices_, indexOffset, baseVertex);
 			} else {
-				Rhi::Device::DrawArrays(primitiveType_, baseVertex, numVertices_);
+				RHI::Device::DrawArrays(primitiveType_, baseVertex, numVertices_);
 			}
 		} else if (numInstances > 0) {
 			if (numIndices_ > 0) {
-				Rhi::Device::DrawElementsInstanced(primitiveType_, numIndices_, indexOffset, numInstances, baseVertex);
+				RHI::Device::DrawElementsInstanced(primitiveType_, numIndices_, indexOffset, numInstances, baseVertex);
 			} else {
-				Rhi::Device::DrawArraysInstanced(primitiveType_, baseVertex, numVertices_, numInstances);
+				RHI::Device::DrawArraysInstanced(primitiveType_, baseVertex, numVertices_, numInstances);
 			}
 		}
 	}

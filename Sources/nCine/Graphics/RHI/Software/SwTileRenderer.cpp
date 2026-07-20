@@ -16,7 +16,7 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	// Per-tile rasterization entry points, defined in SwTileRasterizer.cpp. Kept in this internal namespace
 	// so they have external linkage across the two translation units without leaking into the public API.

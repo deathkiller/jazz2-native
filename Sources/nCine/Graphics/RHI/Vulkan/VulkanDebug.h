@@ -11,13 +11,13 @@ namespace nCine
 	class IGfxCapabilities;
 }
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	/**
 		@brief Debug-output and object-labelling stub of the Vulkan backend
 
 		The backend has no device-side debug facility wired up, so every entry point is a no-op. The class
-		exists to satisfy the `Rhi::Debug` contract alias (debug groups, message insertion and object labels
+		exists to satisfy the `RHI::Debug` contract alias (debug groups, message insertion and object labels
 		used by the render pipeline). These could later route to `VK_EXT_debug_utils` labels / object names
 		when the validation layer or a debugger is present.
 	*/

@@ -10,10 +10,10 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiVulkan
+namespace nCine::RHI::Vulkan
 {
 	/**
-		@brief Buffer object of the Vulkan backend (aliased as `Rhi::Buffer`)
+		@brief Buffer object of the Vulkan backend (aliased as `RHI::Buffer`)
 
 		A vertex, index or uniform buffer keeps a resizable host byte store the pipeline maps and writes into.
 		@ref MapBufferRange() hands back a pointer into the store and @ref BindBufferRange() forwards a
@@ -85,7 +85,7 @@ namespace nCine::RhiVulkan
 		// Static bound-handle helpers used by the shared VAO pool. The OpenGL backend keeps a per-target
 		// bound-buffer cache here; this backend has no such state, so these are inert. They mirror the OpenGL
 		// backend's static helpers so `RenderVaoPool` (which tracks a VAO's element array buffer) compiles
-		// unchanged against the `Rhi::Buffer` alias.
+		// unchanged against the `RHI::Buffer` alias.
 		/** @brief Records the buffer handle bound for a target (inert) */
 		inline static void SetBoundHandle(std::uint32_t target, std::uint32_t glHandle) {
 			static_cast<void>(target);

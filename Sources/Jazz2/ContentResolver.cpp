@@ -1932,7 +1932,7 @@ namespace Jazz2
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
 		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
-		std::int32_t batchSize = Rhi::ShaderProgram::DefaultBatchSize;
+		std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize;
 		bool batchSizeComputed = false;
 		if (introspection == Shader::Introspection::NoUniformsInBlocks) {
 			if (appCfg.fixedBatchSize > 0) {
@@ -2327,11 +2327,11 @@ namespace Jazz2
 			command.GetMaterial().ReserveUniformsDataMemory();
 			command.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
-			Rhi::UniformCache* textureUniform = command.GetMaterial().Uniform(Material::TextureUniformName);
+			RHI::UniformCache* textureUniform = command.GetMaterial().Uniform(Material::TextureUniformName);
 			if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
 				textureUniform->SetIntValue(0); // GL_TEXTURE0
 			}
-			Rhi::UniformCache* paletteUniform = command.GetMaterial().Uniform("uTexturePalette");
+			RHI::UniformCache* paletteUniform = command.GetMaterial().Uniform("uTexturePalette");
 			if (paletteUniform != nullptr) {
 				paletteUniform->SetIntValue(1); // GL_TEXTURE1
 			}
@@ -2339,7 +2339,7 @@ namespace Jazz2
 		return shaderChanged;
 	}
 
-	void ContentResolver::BindSpritePalette(RenderCommand& command, Rhi::UniformBlockCache& instanceBlock, const Texture& diffuse, bool indexed, std::uint16_t paletteOffset)
+	void ContentResolver::BindSpritePalette(RenderCommand& command, RHI::UniformBlockCache& instanceBlock, const Texture& diffuse, bool indexed, std::uint16_t paletteOffset)
 	{
 		command.GetMaterial().SetTexture(0, diffuse);
 		if (indexed) {
@@ -2347,7 +2347,7 @@ namespace Jazz2
 			if (palette != nullptr) {
 				command.GetMaterial().SetTexture(1, *palette);
 			}
-			Rhi::UniformCache* palOffsetUniform = instanceBlock.GetUniform(Material::PaletteOffsetUniformName);
+			RHI::UniformCache* palOffsetUniform = instanceBlock.GetUniform(Material::PaletteOffsetUniformName);
 			if (palOffsetUniform != nullptr) {
 				palOffsetUniform->SetFloatValue((float)paletteOffset);
 			}

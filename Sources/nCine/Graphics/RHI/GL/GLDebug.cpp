@@ -48,7 +48,7 @@
 #	define GL_DEBUG_SEVERITY_HIGH GL_DEBUG_SEVERITY_HIGH_KHR
 #endif
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 #if defined(GL_DEBUG_SUPPORTED)
 	namespace

@@ -4,7 +4,7 @@
 
 #include <cstring>
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLUniform::GLUniform()
 		: index_(0), blockIndex_(-1), location_(-1), size_(0), type_(GL_FLOAT), offset_(0)

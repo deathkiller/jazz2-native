@@ -9,28 +9,28 @@
 #include <cstdint>
 #include <cstring>
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	namespace
 	{
 		// --- BatchedShieldFire ---
 struct BatchedShieldFire_Uniforms
 {
-	nCine::RhiSoftware::sw::vec4 vShieldRect;
+	nCine::RHI::Software::sw::vec4 vShieldRect;
 };
 
 void BatchedShieldFire_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	BatchedShieldFire_Uniforms* io = static_cast<BatchedShieldFire_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vShieldRect = (*reinterpret_cast<const vec4*>(instanceBlock + 80));
 }
 
-static float BatchedShieldFire_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+static float BatchedShieldFire_aastep(const nCine::RHI::Software::FragmentShaderInput& in, float threshold, float value)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedShieldFire_Uniforms* unis = static_cast<const BatchedShieldFire_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -38,9 +38,9 @@ static float BatchedShieldFire_aastep(const nCine::RhiSoftware::FragmentShaderIn
 	return smoothstep(threshold - afwidth, threshold + afwidth, value);
 }
 
-static float BatchedShieldFire_triangleWave(const nCine::RhiSoftware::FragmentShaderInput& in, float x, float period)
+static float BatchedShieldFire_triangleWave(const nCine::RHI::Software::FragmentShaderInput& in, float x, float period)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedShieldFire_Uniforms* unis = static_cast<const BatchedShieldFire_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -49,9 +49,9 @@ static float BatchedShieldFire_triangleWave(const nCine::RhiSoftware::FragmentSh
 	return abs(f - 0.5f) * 2.0f;
 }
 
-void BatchedShieldFire_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void BatchedShieldFire_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedShieldFire_Uniforms* unis = static_cast<const BatchedShieldFire_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -84,21 +84,21 @@ void BatchedShieldFire_Fragment(const nCine::RhiSoftware::FragmentShaderInput& i
 		// --- BatchedShieldLightning ---
 struct BatchedShieldLightning_Uniforms
 {
-	nCine::RhiSoftware::sw::vec4 vShieldRect;
+	nCine::RHI::Software::sw::vec4 vShieldRect;
 };
 
 void BatchedShieldLightning_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	BatchedShieldLightning_Uniforms* io = static_cast<BatchedShieldLightning_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vShieldRect = (*reinterpret_cast<const vec4*>(instanceBlock + 80));
 }
 
-static float BatchedShieldLightning_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+static float BatchedShieldLightning_aastep(const nCine::RHI::Software::FragmentShaderInput& in, float threshold, float value)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedShieldLightning_Uniforms* unis = static_cast<const BatchedShieldLightning_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -106,9 +106,9 @@ static float BatchedShieldLightning_aastep(const nCine::RhiSoftware::FragmentSha
 	return smoothstep(threshold - afwidth, threshold + afwidth, value);
 }
 
-static float BatchedShieldLightning_triangleWave(const nCine::RhiSoftware::FragmentShaderInput& in, float x, float period)
+static float BatchedShieldLightning_triangleWave(const nCine::RHI::Software::FragmentShaderInput& in, float x, float period)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedShieldLightning_Uniforms* unis = static_cast<const BatchedShieldLightning_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -117,9 +117,9 @@ static float BatchedShieldLightning_triangleWave(const nCine::RhiSoftware::Fragm
 	return abs(f - 0.5f) * 2.0f;
 }
 
-void BatchedShieldLightning_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void BatchedShieldLightning_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedShieldLightning_Uniforms* unis = static_cast<const BatchedShieldLightning_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -151,13 +151,13 @@ void BatchedShieldLightning_Fragment(const nCine::RhiSoftware::FragmentShaderInp
 		// --- Blur ---
 struct Blur_Uniforms
 {
-	nCine::RhiSoftware::sw::vec2 uPixelOffset;
-	nCine::RhiSoftware::sw::vec2 uDirection;
+	nCine::RHI::Software::sw::vec2 uPixelOffset;
+	nCine::RHI::Software::sw::vec2 uDirection;
 };
 
-void Blur_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void Blur_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const Blur_Uniforms* unis = static_cast<const Blur_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -179,9 +179,9 @@ struct Colorized_Uniforms
 {
 };
 
-void Colorized_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void Colorized_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const Colorized_Uniforms* unis = static_cast<const Colorized_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -200,9 +200,9 @@ struct BatchedColorized_Uniforms
 {
 };
 
-void BatchedColorized_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void BatchedColorized_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedColorized_Uniforms* unis = static_cast<const BatchedColorized_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -219,23 +219,23 @@ void BatchedColorized_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in
 		// --- Combine ---
 struct Combine_Uniforms
 {
-	nCine::RhiSoftware::sw::vec4 uAmbientColor;
+	nCine::RHI::Software::sw::vec4 uAmbientColor;
 	float uTime;
-	nCine::RhiSoftware::sw::vec2 vViewSizeInv;
+	nCine::RHI::Software::sw::vec2 vViewSizeInv;
 };
 
 void Combine_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	Combine_Uniforms* io = static_cast<Combine_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vViewSizeInv = (vec2(1.0f) / (*reinterpret_cast<const vec2*>(instanceBlock + 96)));
 }
 
-static nCine::RhiSoftware::sw::vec2 Combine_hash2D(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 p)
+static nCine::RHI::Software::sw::vec2 Combine_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const Combine_Uniforms* unis = static_cast<const Combine_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -244,9 +244,9 @@ static nCine::RhiSoftware::sw::vec2 Combine_hash2D(const nCine::RhiSoftware::Fra
 	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
 }
 
-static nCine::RhiSoftware::sw::vec2 Combine_noiseTexCoords(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 position)
+static nCine::RHI::Software::sw::vec2 Combine_noiseTexCoords(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 position)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const Combine_Uniforms* unis = static_cast<const Combine_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -254,9 +254,9 @@ static nCine::RhiSoftware::sw::vec2 Combine_noiseTexCoords(const nCine::RhiSoftw
 	return clamp(position + Combine_hash2D(in, seed) * unis->vViewSizeInv * 1.4f, vec2(0.0f), vec2(1.0f));
 }
 
-void Combine_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void Combine_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const Combine_Uniforms* unis = static_cast<const Combine_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -276,25 +276,25 @@ void Combine_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 		// --- CombineWithWaterLow ---
 struct CombineWithWaterLow_Uniforms
 {
-	nCine::RhiSoftware::sw::vec4 uAmbientColor;
+	nCine::RHI::Software::sw::vec4 uAmbientColor;
 	float uTime;
-	nCine::RhiSoftware::sw::vec2 uCameraPos;
+	nCine::RHI::Software::sw::vec2 uCameraPos;
 	float uWaterLevel;
-	nCine::RhiSoftware::sw::vec2 vViewSizeInv;
+	nCine::RHI::Software::sw::vec2 vViewSizeInv;
 };
 
 void CombineWithWaterLow_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	CombineWithWaterLow_Uniforms* io = static_cast<CombineWithWaterLow_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vViewSizeInv = (vec2(1.0f) / (*reinterpret_cast<const vec2*>(instanceBlock + 96)));
 }
 
-static nCine::RhiSoftware::sw::vec2 CombineWithWaterLow_hash2D(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 p)
+static nCine::RHI::Software::sw::vec2 CombineWithWaterLow_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const CombineWithWaterLow_Uniforms* unis = static_cast<const CombineWithWaterLow_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -303,9 +303,9 @@ static nCine::RhiSoftware::sw::vec2 CombineWithWaterLow_hash2D(const nCine::RhiS
 	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
 }
 
-static nCine::RhiSoftware::sw::vec2 CombineWithWaterLow_noiseTexCoords(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 position)
+static nCine::RHI::Software::sw::vec2 CombineWithWaterLow_noiseTexCoords(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 position)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const CombineWithWaterLow_Uniforms* unis = static_cast<const CombineWithWaterLow_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -313,9 +313,9 @@ static nCine::RhiSoftware::sw::vec2 CombineWithWaterLow_noiseTexCoords(const nCi
 	return clamp(position + CombineWithWaterLow_hash2D(in, seed) * unis->vViewSizeInv * 1.4f, vec2(0.0f), vec2(1.0f));
 }
 
-void CombineWithWaterLow_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void CombineWithWaterLow_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const CombineWithWaterLow_Uniforms* unis = static_cast<const CombineWithWaterLow_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -354,9 +354,9 @@ struct DefaultBatchedMeshSprites_Uniforms
 {
 };
 
-void DefaultBatchedMeshSprites_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void DefaultBatchedMeshSprites_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const DefaultBatchedMeshSprites_Uniforms* unis = static_cast<const DefaultBatchedMeshSprites_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -370,9 +370,9 @@ struct DefaultBatchedMeshSpritesNoTexture_Uniforms
 {
 };
 
-void DefaultBatchedMeshSpritesNoTexture_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void DefaultBatchedMeshSpritesNoTexture_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const DefaultBatchedMeshSpritesNoTexture_Uniforms* unis = static_cast<const DefaultBatchedMeshSpritesNoTexture_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -386,9 +386,9 @@ struct DefaultBatchedSpritesNoTexture_Uniforms
 {
 };
 
-void DefaultBatchedSpritesNoTexture_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void DefaultBatchedSpritesNoTexture_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const DefaultBatchedSpritesNoTexture_Uniforms* unis = static_cast<const DefaultBatchedSpritesNoTexture_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -402,9 +402,9 @@ struct DefaultImGui_Uniforms
 {
 };
 
-void DefaultImGui_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void DefaultImGui_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const DefaultImGui_Uniforms* unis = static_cast<const DefaultImGui_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -418,9 +418,9 @@ struct DefaultMeshSprite_Uniforms
 {
 };
 
-void DefaultMeshSprite_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void DefaultMeshSprite_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const DefaultMeshSprite_Uniforms* unis = static_cast<const DefaultMeshSprite_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -434,9 +434,9 @@ struct DefaultMeshSpriteNoTexture_Uniforms
 {
 };
 
-void DefaultMeshSpriteNoTexture_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void DefaultMeshSpriteNoTexture_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const DefaultMeshSpriteNoTexture_Uniforms* unis = static_cast<const DefaultMeshSpriteNoTexture_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -450,9 +450,9 @@ struct DefaultSprite_Uniforms
 {
 };
 
-void DefaultSprite_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void DefaultSprite_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const DefaultSprite_Uniforms* unis = static_cast<const DefaultSprite_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -467,9 +467,9 @@ struct DefaultBatchedSprites_Uniforms
 {
 };
 
-void DefaultBatchedSprites_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void DefaultBatchedSprites_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const DefaultBatchedSprites_Uniforms* unis = static_cast<const DefaultBatchedSprites_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -484,9 +484,9 @@ struct DefaultSpriteNoTexture_Uniforms
 {
 };
 
-void DefaultSpriteNoTexture_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void DefaultSpriteNoTexture_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const DefaultSpriteNoTexture_Uniforms* unis = static_cast<const DefaultSpriteNoTexture_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -498,12 +498,12 @@ void DefaultSpriteNoTexture_Fragment(const nCine::RhiSoftware::FragmentShaderInp
 		// --- Downsample ---
 struct Downsample_Uniforms
 {
-	nCine::RhiSoftware::sw::vec2 uPixelOffset;
+	nCine::RHI::Software::sw::vec2 uPixelOffset;
 };
 
-void Downsample_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void Downsample_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const Downsample_Uniforms* unis = static_cast<const Downsample_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -521,9 +521,9 @@ struct FrozenMask_Uniforms
 {
 };
 
-static float FrozenMask_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+static float FrozenMask_aastep(const nCine::RHI::Software::FragmentShaderInput& in, float threshold, float value)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const FrozenMask_Uniforms* unis = static_cast<const FrozenMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -531,9 +531,9 @@ static float FrozenMask_aastep(const nCine::RhiSoftware::FragmentShaderInput& in
 	return smoothstep(threshold - afwidth, threshold + afwidth, value);
 }
 
-static nCine::RhiSoftware::sw::vec4 FrozenMask_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static nCine::RHI::Software::sw::vec4 FrozenMask_maskSample(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const FrozenMask_Uniforms* unis = static_cast<const FrozenMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -541,9 +541,9 @@ static nCine::RhiSoftware::sw::vec4 FrozenMask_maskSample(const nCine::RhiSoftwa
 	return src;
 }
 
-void FrozenMask_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void FrozenMask_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const FrozenMask_Uniforms* unis = static_cast<const FrozenMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -578,16 +578,16 @@ struct FrozenMask_USE_PALETTE_Uniforms
 
 void FrozenMask_USE_PALETTE_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	FrozenMask_USE_PALETTE_Uniforms* io = static_cast<FrozenMask_USE_PALETTE_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
 }
 
-static float FrozenMask_USE_PALETTE_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+static float FrozenMask_USE_PALETTE_aastep(const nCine::RHI::Software::FragmentShaderInput& in, float threshold, float value)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const FrozenMask_USE_PALETTE_Uniforms* unis = static_cast<const FrozenMask_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -595,9 +595,9 @@ static float FrozenMask_USE_PALETTE_aastep(const nCine::RhiSoftware::FragmentSha
 	return smoothstep(threshold - afwidth, threshold + afwidth, value);
 }
 
-static nCine::RhiSoftware::sw::vec4 FrozenMask_USE_PALETTE_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static nCine::RHI::Software::sw::vec4 FrozenMask_USE_PALETTE_maskSample(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const FrozenMask_USE_PALETTE_Uniforms* unis = static_cast<const FrozenMask_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -609,9 +609,9 @@ static nCine::RhiSoftware::sw::vec4 FrozenMask_USE_PALETTE_maskSample(const nCin
 	return vec4(c.rgb(), c.a * src.a);
 }
 
-void FrozenMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void FrozenMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const FrozenMask_USE_PALETTE_Uniforms* unis = static_cast<const FrozenMask_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -643,9 +643,9 @@ struct BatchedFrozenMask_Uniforms
 {
 };
 
-static float BatchedFrozenMask_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+static float BatchedFrozenMask_aastep(const nCine::RHI::Software::FragmentShaderInput& in, float threshold, float value)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedFrozenMask_Uniforms* unis = static_cast<const BatchedFrozenMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -653,9 +653,9 @@ static float BatchedFrozenMask_aastep(const nCine::RhiSoftware::FragmentShaderIn
 	return smoothstep(threshold - afwidth, threshold + afwidth, value);
 }
 
-static nCine::RhiSoftware::sw::vec4 BatchedFrozenMask_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static nCine::RHI::Software::sw::vec4 BatchedFrozenMask_maskSample(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedFrozenMask_Uniforms* unis = static_cast<const BatchedFrozenMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -663,9 +663,9 @@ static nCine::RhiSoftware::sw::vec4 BatchedFrozenMask_maskSample(const nCine::Rh
 	return src;
 }
 
-void BatchedFrozenMask_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void BatchedFrozenMask_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedFrozenMask_Uniforms* unis = static_cast<const BatchedFrozenMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -700,16 +700,16 @@ struct BatchedFrozenMask_USE_PALETTE_Uniforms
 
 void BatchedFrozenMask_USE_PALETTE_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	BatchedFrozenMask_USE_PALETTE_Uniforms* io = static_cast<BatchedFrozenMask_USE_PALETTE_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
 }
 
-static float BatchedFrozenMask_USE_PALETTE_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+static float BatchedFrozenMask_USE_PALETTE_aastep(const nCine::RHI::Software::FragmentShaderInput& in, float threshold, float value)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedFrozenMask_USE_PALETTE_Uniforms* unis = static_cast<const BatchedFrozenMask_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -717,9 +717,9 @@ static float BatchedFrozenMask_USE_PALETTE_aastep(const nCine::RhiSoftware::Frag
 	return smoothstep(threshold - afwidth, threshold + afwidth, value);
 }
 
-static nCine::RhiSoftware::sw::vec4 BatchedFrozenMask_USE_PALETTE_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static nCine::RHI::Software::sw::vec4 BatchedFrozenMask_USE_PALETTE_maskSample(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedFrozenMask_USE_PALETTE_Uniforms* unis = static_cast<const BatchedFrozenMask_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -731,9 +731,9 @@ static nCine::RhiSoftware::sw::vec4 BatchedFrozenMask_USE_PALETTE_maskSample(con
 	return vec4(c.rgb(), c.a * src.a);
 }
 
-void BatchedFrozenMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void BatchedFrozenMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedFrozenMask_USE_PALETTE_Uniforms* unis = static_cast<const BatchedFrozenMask_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -765,9 +765,9 @@ struct Outline_Uniforms
 {
 };
 
-static float Outline_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+static float Outline_aastep(const nCine::RHI::Software::FragmentShaderInput& in, float threshold, float value)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const Outline_Uniforms* unis = static_cast<const Outline_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -775,9 +775,9 @@ static float Outline_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, f
 	return smoothstep(threshold - afwidth, threshold + afwidth, value);
 }
 
-void Outline_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void Outline_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const Outline_Uniforms* unis = static_cast<const Outline_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -812,9 +812,9 @@ struct BatchedOutline_Uniforms
 {
 };
 
-static float BatchedOutline_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+static float BatchedOutline_aastep(const nCine::RHI::Software::FragmentShaderInput& in, float threshold, float value)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedOutline_Uniforms* unis = static_cast<const BatchedOutline_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -822,9 +822,9 @@ static float BatchedOutline_aastep(const nCine::RhiSoftware::FragmentShaderInput
 	return smoothstep(threshold - afwidth, threshold + afwidth, value);
 }
 
-void BatchedOutline_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void BatchedOutline_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedOutline_Uniforms* unis = static_cast<const BatchedOutline_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -862,16 +862,16 @@ struct OutlinePalette_Uniforms
 
 void OutlinePalette_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	OutlinePalette_Uniforms* io = static_cast<OutlinePalette_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
 }
 
-static float OutlinePalette_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+static float OutlinePalette_aastep(const nCine::RHI::Software::FragmentShaderInput& in, float threshold, float value)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const OutlinePalette_Uniforms* unis = static_cast<const OutlinePalette_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -879,9 +879,9 @@ static float OutlinePalette_aastep(const nCine::RhiSoftware::FragmentShaderInput
 	return smoothstep(threshold - afwidth, threshold + afwidth, value);
 }
 
-static nCine::RhiSoftware::sw::vec4 OutlinePalette_palette(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static nCine::RHI::Software::sw::vec4 OutlinePalette_palette(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const OutlinePalette_Uniforms* unis = static_cast<const OutlinePalette_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -893,9 +893,9 @@ static nCine::RhiSoftware::sw::vec4 OutlinePalette_palette(const nCine::RhiSoftw
 	return vec4(c.rgb(), c.a * src.a);
 }
 
-static float OutlinePalette_alphaAt(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static float OutlinePalette_alphaAt(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const OutlinePalette_Uniforms* unis = static_cast<const OutlinePalette_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -906,9 +906,9 @@ static float OutlinePalette_alphaAt(const nCine::RhiSoftware::FragmentShaderInpu
 	return swTexture(in, 1, vec2(palX, palY)).a * src.a;
 }
 
-void OutlinePalette_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void OutlinePalette_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const OutlinePalette_Uniforms* unis = static_cast<const OutlinePalette_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -946,16 +946,16 @@ struct BatchedOutlinePalette_Uniforms
 
 void BatchedOutlinePalette_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	BatchedOutlinePalette_Uniforms* io = static_cast<BatchedOutlinePalette_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
 }
 
-static float BatchedOutlinePalette_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+static float BatchedOutlinePalette_aastep(const nCine::RHI::Software::FragmentShaderInput& in, float threshold, float value)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedOutlinePalette_Uniforms* unis = static_cast<const BatchedOutlinePalette_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -963,9 +963,9 @@ static float BatchedOutlinePalette_aastep(const nCine::RhiSoftware::FragmentShad
 	return smoothstep(threshold - afwidth, threshold + afwidth, value);
 }
 
-static nCine::RhiSoftware::sw::vec4 BatchedOutlinePalette_palette(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static nCine::RHI::Software::sw::vec4 BatchedOutlinePalette_palette(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedOutlinePalette_Uniforms* unis = static_cast<const BatchedOutlinePalette_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -977,9 +977,9 @@ static nCine::RhiSoftware::sw::vec4 BatchedOutlinePalette_palette(const nCine::R
 	return vec4(c.rgb(), c.a * src.a);
 }
 
-static float BatchedOutlinePalette_alphaAt(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static float BatchedOutlinePalette_alphaAt(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedOutlinePalette_Uniforms* unis = static_cast<const BatchedOutlinePalette_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -990,9 +990,9 @@ static float BatchedOutlinePalette_alphaAt(const nCine::RhiSoftware::FragmentSha
 	return swTexture(in, 1, vec2(palX, palY)).a * src.a;
 }
 
-void BatchedOutlinePalette_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void BatchedOutlinePalette_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedOutlinePalette_Uniforms* unis = static_cast<const BatchedOutlinePalette_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1030,16 +1030,16 @@ struct PaletteRemap_Uniforms
 
 void PaletteRemap_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	PaletteRemap_Uniforms* io = static_cast<PaletteRemap_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
 }
 
-void PaletteRemap_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void PaletteRemap_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const PaletteRemap_Uniforms* unis = static_cast<const PaletteRemap_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1062,16 +1062,16 @@ struct BatchedPaletteRemap_Uniforms
 
 void BatchedPaletteRemap_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	BatchedPaletteRemap_Uniforms* io = static_cast<BatchedPaletteRemap_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
 }
 
-void BatchedPaletteRemap_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void BatchedPaletteRemap_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedPaletteRemap_Uniforms* unis = static_cast<const BatchedPaletteRemap_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1091,9 +1091,9 @@ struct PartialWhiteMask_Uniforms
 {
 };
 
-static nCine::RhiSoftware::sw::vec4 PartialWhiteMask_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static nCine::RHI::Software::sw::vec4 PartialWhiteMask_maskSample(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const PartialWhiteMask_Uniforms* unis = static_cast<const PartialWhiteMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1101,9 +1101,9 @@ static nCine::RhiSoftware::sw::vec4 PartialWhiteMask_maskSample(const nCine::Rhi
 	return src;
 }
 
-void PartialWhiteMask_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void PartialWhiteMask_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const PartialWhiteMask_Uniforms* unis = static_cast<const PartialWhiteMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1123,16 +1123,16 @@ struct PartialWhiteMask_USE_PALETTE_Uniforms
 
 void PartialWhiteMask_USE_PALETTE_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	PartialWhiteMask_USE_PALETTE_Uniforms* io = static_cast<PartialWhiteMask_USE_PALETTE_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
 }
 
-static nCine::RhiSoftware::sw::vec4 PartialWhiteMask_USE_PALETTE_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static nCine::RHI::Software::sw::vec4 PartialWhiteMask_USE_PALETTE_maskSample(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const PartialWhiteMask_USE_PALETTE_Uniforms* unis = static_cast<const PartialWhiteMask_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1144,9 +1144,9 @@ static nCine::RhiSoftware::sw::vec4 PartialWhiteMask_USE_PALETTE_maskSample(cons
 	return vec4(c.rgb(), c.a * src.a);
 }
 
-void PartialWhiteMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void PartialWhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const PartialWhiteMask_USE_PALETTE_Uniforms* unis = static_cast<const PartialWhiteMask_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1163,9 +1163,9 @@ struct BatchedPartialWhiteMask_Uniforms
 {
 };
 
-static nCine::RhiSoftware::sw::vec4 BatchedPartialWhiteMask_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static nCine::RHI::Software::sw::vec4 BatchedPartialWhiteMask_maskSample(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedPartialWhiteMask_Uniforms* unis = static_cast<const BatchedPartialWhiteMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1173,9 +1173,9 @@ static nCine::RhiSoftware::sw::vec4 BatchedPartialWhiteMask_maskSample(const nCi
 	return src;
 }
 
-void BatchedPartialWhiteMask_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void BatchedPartialWhiteMask_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedPartialWhiteMask_Uniforms* unis = static_cast<const BatchedPartialWhiteMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1195,16 +1195,16 @@ struct BatchedPartialWhiteMask_USE_PALETTE_Uniforms
 
 void BatchedPartialWhiteMask_USE_PALETTE_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	BatchedPartialWhiteMask_USE_PALETTE_Uniforms* io = static_cast<BatchedPartialWhiteMask_USE_PALETTE_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
 }
 
-static nCine::RhiSoftware::sw::vec4 BatchedPartialWhiteMask_USE_PALETTE_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static nCine::RHI::Software::sw::vec4 BatchedPartialWhiteMask_USE_PALETTE_maskSample(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedPartialWhiteMask_USE_PALETTE_Uniforms* unis = static_cast<const BatchedPartialWhiteMask_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1216,9 +1216,9 @@ static nCine::RhiSoftware::sw::vec4 BatchedPartialWhiteMask_USE_PALETTE_maskSamp
 	return vec4(c.rgb(), c.a * src.a);
 }
 
-void BatchedPartialWhiteMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void BatchedPartialWhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedPartialWhiteMask_USE_PALETTE_Uniforms* unis = static_cast<const BatchedPartialWhiteMask_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1233,13 +1233,13 @@ void BatchedPartialWhiteMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::Frag
 		// --- ResizeCrtApertureGrille ---
 struct ResizeCrtApertureGrille_Uniforms
 {
-	nCine::RhiSoftware::sw::vec2 vTexSize;
-	nCine::RhiSoftware::sw::vec2 vViewSize;
+	nCine::RHI::Software::sw::vec2 vTexSize;
+	nCine::RHI::Software::sw::vec2 vViewSize;
 };
 
 void ResizeCrtApertureGrille_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	ResizeCrtApertureGrille_Uniforms* io = static_cast<ResizeCrtApertureGrille_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
@@ -1247,9 +1247,9 @@ void ResizeCrtApertureGrille_ComputeVaryings(void* inputs, const std::uint8_t* i
 	io->vViewSize = (*reinterpret_cast<const vec2*>(instanceBlock + 96));
 }
 
-static float ResizeCrtApertureGrille_ToLinear1(const nCine::RhiSoftware::FragmentShaderInput& in, float c)
+static float ResizeCrtApertureGrille_ToLinear1(const nCine::RHI::Software::FragmentShaderInput& in, float c)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1259,9 +1259,9 @@ static float ResizeCrtApertureGrille_ToLinear1(const nCine::RhiSoftware::Fragmen
 	return c <= 0.04045f ? c / 12.92f : pow((c + 0.055f) / 1.055f, 2.4f);
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_ToLinear(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec3 c)
+static nCine::RHI::Software::sw::vec3 ResizeCrtApertureGrille_ToLinear(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec3 c)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1271,9 +1271,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_ToLinear(const nCine
 	return vec3(ResizeCrtApertureGrille_ToLinear1(in, c.r), ResizeCrtApertureGrille_ToLinear1(in, c.g), ResizeCrtApertureGrille_ToLinear1(in, c.b));
 }
 
-static float ResizeCrtApertureGrille_ToSrgb1(const nCine::RhiSoftware::FragmentShaderInput& in, float c)
+static float ResizeCrtApertureGrille_ToSrgb1(const nCine::RHI::Software::FragmentShaderInput& in, float c)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1283,9 +1283,9 @@ static float ResizeCrtApertureGrille_ToSrgb1(const nCine::RhiSoftware::FragmentS
 	return c < 0.0031308f ? c * 12.92f : 1.055f * pow(c, 0.41666f) - 0.055f;
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_ToSrgb(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec3 c)
+static nCine::RHI::Software::sw::vec3 ResizeCrtApertureGrille_ToSrgb(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec3 c)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1295,9 +1295,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_ToSrgb(const nCine::
 	return vec3(ResizeCrtApertureGrille_ToSrgb1(in, c.r), ResizeCrtApertureGrille_ToSrgb1(in, c.g), ResizeCrtApertureGrille_ToSrgb1(in, c.b));
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_Fetch(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, nCine::RhiSoftware::sw::vec2 off, nCine::RhiSoftware::sw::vec2 texture_size)
+static nCine::RHI::Software::sw::vec3 ResizeCrtApertureGrille_Fetch(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, nCine::RHI::Software::sw::vec2 off, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1305,9 +1305,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_Fetch(const nCine::R
 	return ResizeCrtApertureGrille_ToLinear(in, vec3(1.1f) * swTexture(in, 0, pos.xy()).rgb());
 }
 
-static nCine::RhiSoftware::sw::vec2 ResizeCrtApertureGrille_Dist(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, nCine::RhiSoftware::sw::vec2 texture_size)
+static nCine::RHI::Software::sw::vec2 ResizeCrtApertureGrille_Dist(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1315,18 +1315,18 @@ static nCine::RhiSoftware::sw::vec2 ResizeCrtApertureGrille_Dist(const nCine::Rh
 	return -(pos - floor(pos) - vec2(0.5f, 0.5f));
 }
 
-static float ResizeCrtApertureGrille_Gaus(const nCine::RhiSoftware::FragmentShaderInput& in, float pos, float scale)
+static float ResizeCrtApertureGrille_Gaus(const nCine::RHI::Software::FragmentShaderInput& in, float pos, float scale)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
 	return exp2(scale * pow(abs(pos), 2.0f));
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_Horz3(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, float off, nCine::RhiSoftware::sw::vec2 texture_size)
+static nCine::RHI::Software::sw::vec3 ResizeCrtApertureGrille_Horz3(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, float off, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1341,9 +1341,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_Horz3(const nCine::R
 	return (b * wb + c * wc + d * wd) / (wb + wc + wd);
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_Horz5(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, float off, nCine::RhiSoftware::sw::vec2 texture_size)
+static nCine::RHI::Software::sw::vec3 ResizeCrtApertureGrille_Horz5(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, float off, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1362,9 +1362,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_Horz5(const nCine::R
 	return (a * wa + b * wb + c * wc + d * wd + e * we) / (wa + wb + wc + wd + we);
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_Horz7(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, float off, nCine::RhiSoftware::sw::vec2 texture_size)
+static nCine::RHI::Software::sw::vec3 ResizeCrtApertureGrille_Horz7(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, float off, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1387,9 +1387,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_Horz7(const nCine::R
 	return (a * wa + b * wb + c * wc + d * wd + e * we + f * wf + g * wg) / (wa + wb + wc + wd + we + wf + wg);
 }
 
-static float ResizeCrtApertureGrille_Scan(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, float off, nCine::RhiSoftware::sw::vec2 texture_size)
+static float ResizeCrtApertureGrille_Scan(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, float off, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1397,9 +1397,9 @@ static float ResizeCrtApertureGrille_Scan(const nCine::RhiSoftware::FragmentShad
 	return ResizeCrtApertureGrille_Gaus(in, dst + off, -8.0f);
 }
 
-static float ResizeCrtApertureGrille_BloomScan(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, float off, nCine::RhiSoftware::sw::vec2 texture_size)
+static float ResizeCrtApertureGrille_BloomScan(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, float off, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1407,9 +1407,9 @@ static float ResizeCrtApertureGrille_BloomScan(const nCine::RhiSoftware::Fragmen
 	return ResizeCrtApertureGrille_Gaus(in, dst + off, -2.0f);
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_Tri(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, nCine::RhiSoftware::sw::vec2 texture_size)
+static nCine::RHI::Software::sw::vec3 ResizeCrtApertureGrille_Tri(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1422,9 +1422,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_Tri(const nCine::Rhi
 	return a * wa + b * wb + c * wc;
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_Bloom(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, nCine::RhiSoftware::sw::vec2 texture_size)
+static nCine::RHI::Software::sw::vec3 ResizeCrtApertureGrille_Bloom(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1441,9 +1441,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_Bloom(const nCine::R
 	return a * wa + b * wb + c * wc + d * wd + e * we;
 }
 
-static nCine::RhiSoftware::sw::vec2 ResizeCrtApertureGrille_Warp(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos)
+static nCine::RHI::Software::sw::vec2 ResizeCrtApertureGrille_Warp(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1452,9 +1452,9 @@ static nCine::RhiSoftware::sw::vec2 ResizeCrtApertureGrille_Warp(const nCine::Rh
 	return pos * 0.5f + 0.5f;
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_Mask(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos)
+static nCine::RHI::Software::sw::vec3 ResizeCrtApertureGrille_Mask(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1472,9 +1472,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtApertureGrille_Mask(const nCine::Rh
 	return mask;
 }
 
-static nCine::RhiSoftware::sw::vec4 ResizeCrtApertureGrille_crt_lottes(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 texture_size, nCine::RhiSoftware::sw::vec2 video_size, nCine::RhiSoftware::sw::vec2 output_size, nCine::RhiSoftware::sw::vec2 tex)
+static nCine::RHI::Software::sw::vec4 ResizeCrtApertureGrille_crt_lottes(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 texture_size, nCine::RHI::Software::sw::vec2 video_size, nCine::RHI::Software::sw::vec2 output_size, nCine::RHI::Software::sw::vec2 tex)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1485,9 +1485,9 @@ static nCine::RhiSoftware::sw::vec4 ResizeCrtApertureGrille_crt_lottes(const nCi
 	return vec4(ResizeCrtApertureGrille_ToSrgb(in, outColor.rgb()), 1.0f);
 }
 
-void ResizeCrtApertureGrille_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void ResizeCrtApertureGrille_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtApertureGrille_Uniforms* unis = static_cast<const ResizeCrtApertureGrille_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1499,13 +1499,13 @@ void ResizeCrtApertureGrille_Fragment(const nCine::RhiSoftware::FragmentShaderIn
 		// --- ResizeCrtShadowMask ---
 struct ResizeCrtShadowMask_Uniforms
 {
-	nCine::RhiSoftware::sw::vec2 vTexSize;
-	nCine::RhiSoftware::sw::vec2 vViewSize;
+	nCine::RHI::Software::sw::vec2 vTexSize;
+	nCine::RHI::Software::sw::vec2 vViewSize;
 };
 
 void ResizeCrtShadowMask_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	ResizeCrtShadowMask_Uniforms* io = static_cast<ResizeCrtShadowMask_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
@@ -1513,9 +1513,9 @@ void ResizeCrtShadowMask_ComputeVaryings(void* inputs, const std::uint8_t* insta
 	io->vViewSize = (*reinterpret_cast<const vec2*>(instanceBlock + 96));
 }
 
-static float ResizeCrtShadowMask_ToLinear1(const nCine::RhiSoftware::FragmentShaderInput& in, float c)
+static float ResizeCrtShadowMask_ToLinear1(const nCine::RHI::Software::FragmentShaderInput& in, float c)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1525,9 +1525,9 @@ static float ResizeCrtShadowMask_ToLinear1(const nCine::RhiSoftware::FragmentSha
 	return c <= 0.04045f ? c / 12.92f : pow((c + 0.055f) / 1.055f, 2.4f);
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_ToLinear(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec3 c)
+static nCine::RHI::Software::sw::vec3 ResizeCrtShadowMask_ToLinear(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec3 c)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1537,9 +1537,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_ToLinear(const nCine::Rh
 	return vec3(ResizeCrtShadowMask_ToLinear1(in, c.r), ResizeCrtShadowMask_ToLinear1(in, c.g), ResizeCrtShadowMask_ToLinear1(in, c.b));
 }
 
-static float ResizeCrtShadowMask_ToSrgb1(const nCine::RhiSoftware::FragmentShaderInput& in, float c)
+static float ResizeCrtShadowMask_ToSrgb1(const nCine::RHI::Software::FragmentShaderInput& in, float c)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1549,9 +1549,9 @@ static float ResizeCrtShadowMask_ToSrgb1(const nCine::RhiSoftware::FragmentShade
 	return c < 0.0031308f ? c * 12.92f : 1.055f * pow(c, 0.41666f) - 0.055f;
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_ToSrgb(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec3 c)
+static nCine::RHI::Software::sw::vec3 ResizeCrtShadowMask_ToSrgb(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec3 c)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1561,9 +1561,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_ToSrgb(const nCine::RhiS
 	return vec3(ResizeCrtShadowMask_ToSrgb1(in, c.r), ResizeCrtShadowMask_ToSrgb1(in, c.g), ResizeCrtShadowMask_ToSrgb1(in, c.b));
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_Fetch(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, nCine::RhiSoftware::sw::vec2 off, nCine::RhiSoftware::sw::vec2 texture_size)
+static nCine::RHI::Software::sw::vec3 ResizeCrtShadowMask_Fetch(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, nCine::RHI::Software::sw::vec2 off, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1571,9 +1571,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_Fetch(const nCine::RhiSo
 	return ResizeCrtShadowMask_ToLinear(in, vec3(1.0f) * swTexture(in, 0, pos.xy()).rgb());
 }
 
-static nCine::RhiSoftware::sw::vec2 ResizeCrtShadowMask_Dist(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, nCine::RhiSoftware::sw::vec2 texture_size)
+static nCine::RHI::Software::sw::vec2 ResizeCrtShadowMask_Dist(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1581,18 +1581,18 @@ static nCine::RhiSoftware::sw::vec2 ResizeCrtShadowMask_Dist(const nCine::RhiSof
 	return -(pos - floor(pos) - vec2(0.5f, 0.5f));
 }
 
-static float ResizeCrtShadowMask_Gaus(const nCine::RhiSoftware::FragmentShaderInput& in, float pos, float scale)
+static float ResizeCrtShadowMask_Gaus(const nCine::RHI::Software::FragmentShaderInput& in, float pos, float scale)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
 	return exp2(scale * pow(abs(pos), 2.0f));
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_Horz3(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, float off, nCine::RhiSoftware::sw::vec2 texture_size)
+static nCine::RHI::Software::sw::vec3 ResizeCrtShadowMask_Horz3(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, float off, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1607,9 +1607,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_Horz3(const nCine::RhiSo
 	return (b * wb + c * wc + d * wd) / (wb + wc + wd);
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_Horz5(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, float off, nCine::RhiSoftware::sw::vec2 texture_size)
+static nCine::RHI::Software::sw::vec3 ResizeCrtShadowMask_Horz5(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, float off, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1628,9 +1628,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_Horz5(const nCine::RhiSo
 	return (a * wa + b * wb + c * wc + d * wd + e * we) / (wa + wb + wc + wd + we);
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_Horz7(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, float off, nCine::RhiSoftware::sw::vec2 texture_size)
+static nCine::RHI::Software::sw::vec3 ResizeCrtShadowMask_Horz7(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, float off, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1653,9 +1653,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_Horz7(const nCine::RhiSo
 	return (a * wa + b * wb + c * wc + d * wd + e * we + f * wf + g * wg) / (wa + wb + wc + wd + we + wf + wg);
 }
 
-static float ResizeCrtShadowMask_Scan(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, float off, nCine::RhiSoftware::sw::vec2 texture_size)
+static float ResizeCrtShadowMask_Scan(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, float off, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1663,9 +1663,9 @@ static float ResizeCrtShadowMask_Scan(const nCine::RhiSoftware::FragmentShaderIn
 	return ResizeCrtShadowMask_Gaus(in, dst + off, -6.0f);
 }
 
-static float ResizeCrtShadowMask_BloomScan(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, float off, nCine::RhiSoftware::sw::vec2 texture_size)
+static float ResizeCrtShadowMask_BloomScan(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, float off, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1673,9 +1673,9 @@ static float ResizeCrtShadowMask_BloomScan(const nCine::RhiSoftware::FragmentSha
 	return ResizeCrtShadowMask_Gaus(in, dst + off, -2.0f);
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_Tri(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, nCine::RhiSoftware::sw::vec2 texture_size)
+static nCine::RHI::Software::sw::vec3 ResizeCrtShadowMask_Tri(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1688,9 +1688,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_Tri(const nCine::RhiSoft
 	return a * wa + b * wb + c * wc;
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_Bloom(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos, nCine::RhiSoftware::sw::vec2 texture_size)
+static nCine::RHI::Software::sw::vec3 ResizeCrtShadowMask_Bloom(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos, nCine::RHI::Software::sw::vec2 texture_size)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1707,9 +1707,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_Bloom(const nCine::RhiSo
 	return a * wa + b * wb + c * wc + d * wd + e * we;
 }
 
-static nCine::RhiSoftware::sw::vec2 ResizeCrtShadowMask_Warp(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos)
+static nCine::RHI::Software::sw::vec2 ResizeCrtShadowMask_Warp(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1718,9 +1718,9 @@ static nCine::RhiSoftware::sw::vec2 ResizeCrtShadowMask_Warp(const nCine::RhiSof
 	return pos * 0.5f + 0.5f;
 }
 
-static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_Mask(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 pos)
+static nCine::RHI::Software::sw::vec3 ResizeCrtShadowMask_Mask(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 pos)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1740,9 +1740,9 @@ static nCine::RhiSoftware::sw::vec3 ResizeCrtShadowMask_Mask(const nCine::RhiSof
 	return mask;
 }
 
-static nCine::RhiSoftware::sw::vec4 ResizeCrtShadowMask_crt_lottes(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 texture_size, nCine::RhiSoftware::sw::vec2 video_size, nCine::RhiSoftware::sw::vec2 output_size, nCine::RhiSoftware::sw::vec2 tex)
+static nCine::RHI::Software::sw::vec4 ResizeCrtShadowMask_crt_lottes(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 texture_size, nCine::RHI::Software::sw::vec2 video_size, nCine::RHI::Software::sw::vec2 output_size, nCine::RHI::Software::sw::vec2 tex)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1753,9 +1753,9 @@ static nCine::RhiSoftware::sw::vec4 ResizeCrtShadowMask_crt_lottes(const nCine::
 	return vec4(ResizeCrtShadowMask_ToSrgb(in, outColor.rgb()), 1.0f);
 }
 
-void ResizeCrtShadowMask_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void ResizeCrtShadowMask_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ResizeCrtShadowMask_Uniforms* unis = static_cast<const ResizeCrtShadowMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1767,21 +1767,21 @@ void ResizeCrtShadowMask_Fragment(const nCine::RhiSoftware::FragmentShaderInput&
 		// --- ShieldFire ---
 struct ShieldFire_Uniforms
 {
-	nCine::RhiSoftware::sw::vec4 vShieldRect;
+	nCine::RHI::Software::sw::vec4 vShieldRect;
 };
 
 void ShieldFire_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	ShieldFire_Uniforms* io = static_cast<ShieldFire_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vShieldRect = (*reinterpret_cast<const vec4*>(instanceBlock + 80));
 }
 
-static float ShieldFire_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+static float ShieldFire_aastep(const nCine::RHI::Software::FragmentShaderInput& in, float threshold, float value)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ShieldFire_Uniforms* unis = static_cast<const ShieldFire_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1789,9 +1789,9 @@ static float ShieldFire_aastep(const nCine::RhiSoftware::FragmentShaderInput& in
 	return smoothstep(threshold - afwidth, threshold + afwidth, value);
 }
 
-static float ShieldFire_triangleWave(const nCine::RhiSoftware::FragmentShaderInput& in, float x, float period)
+static float ShieldFire_triangleWave(const nCine::RHI::Software::FragmentShaderInput& in, float x, float period)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ShieldFire_Uniforms* unis = static_cast<const ShieldFire_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1800,9 +1800,9 @@ static float ShieldFire_triangleWave(const nCine::RhiSoftware::FragmentShaderInp
 	return abs(f - 0.5f) * 2.0f;
 }
 
-void ShieldFire_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void ShieldFire_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ShieldFire_Uniforms* unis = static_cast<const ShieldFire_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1835,21 +1835,21 @@ void ShieldFire_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 		// --- ShieldLightning ---
 struct ShieldLightning_Uniforms
 {
-	nCine::RhiSoftware::sw::vec4 vShieldRect;
+	nCine::RHI::Software::sw::vec4 vShieldRect;
 };
 
 void ShieldLightning_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	ShieldLightning_Uniforms* io = static_cast<ShieldLightning_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vShieldRect = (*reinterpret_cast<const vec4*>(instanceBlock + 80));
 }
 
-static float ShieldLightning_aastep(const nCine::RhiSoftware::FragmentShaderInput& in, float threshold, float value)
+static float ShieldLightning_aastep(const nCine::RHI::Software::FragmentShaderInput& in, float threshold, float value)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ShieldLightning_Uniforms* unis = static_cast<const ShieldLightning_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1857,9 +1857,9 @@ static float ShieldLightning_aastep(const nCine::RhiSoftware::FragmentShaderInpu
 	return smoothstep(threshold - afwidth, threshold + afwidth, value);
 }
 
-static float ShieldLightning_triangleWave(const nCine::RhiSoftware::FragmentShaderInput& in, float x, float period)
+static float ShieldLightning_triangleWave(const nCine::RHI::Software::FragmentShaderInput& in, float x, float period)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ShieldLightning_Uniforms* unis = static_cast<const ShieldLightning_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1868,9 +1868,9 @@ static float ShieldLightning_triangleWave(const nCine::RhiSoftware::FragmentShad
 	return abs(f - 0.5f) * 2.0f;
 }
 
-void ShieldLightning_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void ShieldLightning_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const ShieldLightning_Uniforms* unis = static_cast<const ShieldLightning_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1902,15 +1902,15 @@ void ShieldLightning_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
 		// --- TexturedBackground ---
 struct TexturedBackground_Uniforms
 {
-	nCine::RhiSoftware::sw::vec2 uViewSize;
-	nCine::RhiSoftware::sw::vec2 uCameraPos;
-	nCine::RhiSoftware::sw::vec4 uHorizonColor;
-	nCine::RhiSoftware::sw::vec2 uShift;
+	nCine::RHI::Software::sw::vec2 uViewSize;
+	nCine::RHI::Software::sw::vec2 uCameraPos;
+	nCine::RHI::Software::sw::vec4 uHorizonColor;
+	nCine::RHI::Software::sw::vec2 uShift;
 };
 
-static nCine::RhiSoftware::sw::vec2 TexturedBackground_hash2D(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 p)
+static nCine::RHI::Software::sw::vec2 TexturedBackground_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackground_Uniforms* unis = static_cast<const TexturedBackground_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1919,9 +1919,9 @@ static nCine::RhiSoftware::sw::vec2 TexturedBackground_hash2D(const nCine::RhiSo
 	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
 }
 
-static nCine::RhiSoftware::sw::vec3 TexturedBackground_voronoi(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 p)
+static nCine::RHI::Software::sw::vec3 TexturedBackground_voronoi(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackground_Uniforms* unis = static_cast<const TexturedBackground_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1946,9 +1946,9 @@ static nCine::RhiSoftware::sw::vec3 TexturedBackground_voronoi(const nCine::RhiS
 	return vec3(md, mr);
 }
 
-static float TexturedBackground_addStarField(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 samplePosition, float threshold)
+static float TexturedBackground_addStarField(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 samplePosition, float threshold)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackground_Uniforms* unis = static_cast<const TexturedBackground_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1960,9 +1960,9 @@ static float TexturedBackground_addStarField(const nCine::RhiSoftware::FragmentS
 	return 0.0f;
 }
 
-void TexturedBackground_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void TexturedBackground_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackground_Uniforms* unis = static_cast<const TexturedBackground_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -1983,15 +1983,15 @@ void TexturedBackground_Fragment(const nCine::RhiSoftware::FragmentShaderInput& 
 		// --- TexturedBackground_DITHER ---
 struct TexturedBackground_DITHER_Uniforms
 {
-	nCine::RhiSoftware::sw::vec2 uViewSize;
-	nCine::RhiSoftware::sw::vec2 uCameraPos;
-	nCine::RhiSoftware::sw::vec4 uHorizonColor;
-	nCine::RhiSoftware::sw::vec2 uShift;
+	nCine::RHI::Software::sw::vec2 uViewSize;
+	nCine::RHI::Software::sw::vec2 uCameraPos;
+	nCine::RHI::Software::sw::vec4 uHorizonColor;
+	nCine::RHI::Software::sw::vec2 uShift;
 };
 
-static nCine::RhiSoftware::sw::vec2 TexturedBackground_DITHER_hash2D(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 p)
+static nCine::RHI::Software::sw::vec2 TexturedBackground_DITHER_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackground_DITHER_Uniforms* unis = static_cast<const TexturedBackground_DITHER_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2000,9 +2000,9 @@ static nCine::RhiSoftware::sw::vec2 TexturedBackground_DITHER_hash2D(const nCine
 	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
 }
 
-static nCine::RhiSoftware::sw::vec3 TexturedBackground_DITHER_voronoi(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 p)
+static nCine::RHI::Software::sw::vec3 TexturedBackground_DITHER_voronoi(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackground_DITHER_Uniforms* unis = static_cast<const TexturedBackground_DITHER_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2027,9 +2027,9 @@ static nCine::RhiSoftware::sw::vec3 TexturedBackground_DITHER_voronoi(const nCin
 	return vec3(md, mr);
 }
 
-static float TexturedBackground_DITHER_addStarField(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 samplePosition, float threshold)
+static float TexturedBackground_DITHER_addStarField(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 samplePosition, float threshold)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackground_DITHER_Uniforms* unis = static_cast<const TexturedBackground_DITHER_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2041,9 +2041,9 @@ static float TexturedBackground_DITHER_addStarField(const nCine::RhiSoftware::Fr
 	return 0.0f;
 }
 
-void TexturedBackground_DITHER_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void TexturedBackground_DITHER_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackground_DITHER_Uniforms* unis = static_cast<const TexturedBackground_DITHER_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2064,15 +2064,15 @@ void TexturedBackground_DITHER_Fragment(const nCine::RhiSoftware::FragmentShader
 		// --- TexturedBackgroundCircle ---
 struct TexturedBackgroundCircle_Uniforms
 {
-	nCine::RhiSoftware::sw::vec2 uViewSize;
-	nCine::RhiSoftware::sw::vec2 uCameraPos;
-	nCine::RhiSoftware::sw::vec4 uHorizonColor;
-	nCine::RhiSoftware::sw::vec2 uShift;
+	nCine::RHI::Software::sw::vec2 uViewSize;
+	nCine::RHI::Software::sw::vec2 uCameraPos;
+	nCine::RHI::Software::sw::vec4 uHorizonColor;
+	nCine::RHI::Software::sw::vec2 uShift;
 };
 
-static nCine::RhiSoftware::sw::vec2 TexturedBackgroundCircle_hash2D(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 p)
+static nCine::RHI::Software::sw::vec2 TexturedBackgroundCircle_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackgroundCircle_Uniforms* unis = static_cast<const TexturedBackgroundCircle_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2081,9 +2081,9 @@ static nCine::RhiSoftware::sw::vec2 TexturedBackgroundCircle_hash2D(const nCine:
 	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
 }
 
-static nCine::RhiSoftware::sw::vec3 TexturedBackgroundCircle_voronoi(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 p)
+static nCine::RHI::Software::sw::vec3 TexturedBackgroundCircle_voronoi(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackgroundCircle_Uniforms* unis = static_cast<const TexturedBackgroundCircle_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2108,9 +2108,9 @@ static nCine::RhiSoftware::sw::vec3 TexturedBackgroundCircle_voronoi(const nCine
 	return vec3(md, mr);
 }
 
-static float TexturedBackgroundCircle_addStarField(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 samplePosition, float threshold)
+static float TexturedBackgroundCircle_addStarField(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 samplePosition, float threshold)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackgroundCircle_Uniforms* unis = static_cast<const TexturedBackgroundCircle_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2122,9 +2122,9 @@ static float TexturedBackgroundCircle_addStarField(const nCine::RhiSoftware::Fra
 	return 0.0f;
 }
 
-void TexturedBackgroundCircle_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void TexturedBackgroundCircle_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackgroundCircle_Uniforms* unis = static_cast<const TexturedBackgroundCircle_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2145,15 +2145,15 @@ void TexturedBackgroundCircle_Fragment(const nCine::RhiSoftware::FragmentShaderI
 		// --- TexturedBackgroundCircle_DITHER ---
 struct TexturedBackgroundCircle_DITHER_Uniforms
 {
-	nCine::RhiSoftware::sw::vec2 uViewSize;
-	nCine::RhiSoftware::sw::vec2 uCameraPos;
-	nCine::RhiSoftware::sw::vec4 uHorizonColor;
-	nCine::RhiSoftware::sw::vec2 uShift;
+	nCine::RHI::Software::sw::vec2 uViewSize;
+	nCine::RHI::Software::sw::vec2 uCameraPos;
+	nCine::RHI::Software::sw::vec4 uHorizonColor;
+	nCine::RHI::Software::sw::vec2 uShift;
 };
 
-static nCine::RhiSoftware::sw::vec2 TexturedBackgroundCircle_DITHER_hash2D(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 p)
+static nCine::RHI::Software::sw::vec2 TexturedBackgroundCircle_DITHER_hash2D(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackgroundCircle_DITHER_Uniforms* unis = static_cast<const TexturedBackgroundCircle_DITHER_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2162,9 +2162,9 @@ static nCine::RhiSoftware::sw::vec2 TexturedBackgroundCircle_DITHER_hash2D(const
 	return -1.0f + 2.0f * vec2(fract(sin(h) * 43758.5453f), fract(sin(h2) * 43758.5453f));
 }
 
-static nCine::RhiSoftware::sw::vec3 TexturedBackgroundCircle_DITHER_voronoi(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 p)
+static nCine::RHI::Software::sw::vec3 TexturedBackgroundCircle_DITHER_voronoi(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 p)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackgroundCircle_DITHER_Uniforms* unis = static_cast<const TexturedBackgroundCircle_DITHER_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2189,9 +2189,9 @@ static nCine::RhiSoftware::sw::vec3 TexturedBackgroundCircle_DITHER_voronoi(cons
 	return vec3(md, mr);
 }
 
-static float TexturedBackgroundCircle_DITHER_addStarField(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 samplePosition, float threshold)
+static float TexturedBackgroundCircle_DITHER_addStarField(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 samplePosition, float threshold)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackgroundCircle_DITHER_Uniforms* unis = static_cast<const TexturedBackgroundCircle_DITHER_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2203,9 +2203,9 @@ static float TexturedBackgroundCircle_DITHER_addStarField(const nCine::RhiSoftwa
 	return 0.0f;
 }
 
-void TexturedBackgroundCircle_DITHER_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void TexturedBackgroundCircle_DITHER_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TexturedBackgroundCircle_DITHER_Uniforms* unis = static_cast<const TexturedBackgroundCircle_DITHER_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2228,9 +2228,9 @@ struct TileMapMesh_Uniforms
 {
 };
 
-void TileMapMesh_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void TileMapMesh_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const TileMapMesh_Uniforms* unis = static_cast<const TileMapMesh_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2244,9 +2244,9 @@ struct Tinted_Uniforms
 {
 };
 
-void Tinted_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void Tinted_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const Tinted_Uniforms* unis = static_cast<const Tinted_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2266,16 +2266,16 @@ struct Tinted_USE_PALETTE_Uniforms
 
 void Tinted_USE_PALETTE_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	Tinted_USE_PALETTE_Uniforms* io = static_cast<Tinted_USE_PALETTE_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
 }
 
-void Tinted_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void Tinted_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const Tinted_USE_PALETTE_Uniforms* unis = static_cast<const Tinted_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2297,9 +2297,9 @@ struct BatchedTinted_Uniforms
 {
 };
 
-void BatchedTinted_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void BatchedTinted_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedTinted_Uniforms* unis = static_cast<const BatchedTinted_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2319,16 +2319,16 @@ struct BatchedTinted_USE_PALETTE_Uniforms
 
 void BatchedTinted_USE_PALETTE_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	BatchedTinted_USE_PALETTE_Uniforms* io = static_cast<BatchedTinted_USE_PALETTE_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
 }
 
-void BatchedTinted_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void BatchedTinted_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedTinted_USE_PALETTE_Uniforms* unis = static_cast<const BatchedTinted_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2348,13 +2348,13 @@ void BatchedTinted_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentShader
 		// --- Transition ---
 struct Transition_Uniforms
 {
-	nCine::RhiSoftware::sw::vec2 vCorrection;
+	nCine::RHI::Software::sw::vec2 vCorrection;
 	float vProgressTime;
 };
 
 void Transition_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	Transition_Uniforms* io = static_cast<Transition_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
@@ -2362,18 +2362,18 @@ void Transition_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 	io->vProgressTime = (*reinterpret_cast<const vec4*>(instanceBlock + 64)).a;
 }
 
-static float Transition_rand(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 xy)
+static float Transition_rand(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 xy)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const Transition_Uniforms* unis = static_cast<const Transition_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
 	return fract(sin(dot(xy.xy(), vec2(12.9898f, 78.233f))) * 43758.5453f);
 }
 
-static float Transition_ease(const nCine::RhiSoftware::FragmentShaderInput& in, float time)
+static float Transition_ease(const nCine::RHI::Software::FragmentShaderInput& in, float time)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const Transition_Uniforms* unis = static_cast<const Transition_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2385,9 +2385,9 @@ static float Transition_ease(const nCine::RhiSoftware::FragmentShaderInput& in, 
 	return -0.5f * (time * (time - 2.0f) - 1.0f);
 }
 
-void Transition_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void Transition_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const Transition_Uniforms* unis = static_cast<const Transition_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2407,9 +2407,9 @@ struct WhiteMask_Uniforms
 {
 };
 
-static nCine::RhiSoftware::sw::vec4 WhiteMask_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static nCine::RHI::Software::sw::vec4 WhiteMask_maskSample(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const WhiteMask_Uniforms* unis = static_cast<const WhiteMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2417,9 +2417,9 @@ static nCine::RhiSoftware::sw::vec4 WhiteMask_maskSample(const nCine::RhiSoftwar
 	return src;
 }
 
-void WhiteMask_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void WhiteMask_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const WhiteMask_Uniforms* unis = static_cast<const WhiteMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2439,16 +2439,16 @@ struct WhiteMask_USE_PALETTE_Uniforms
 
 void WhiteMask_USE_PALETTE_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	WhiteMask_USE_PALETTE_Uniforms* io = static_cast<WhiteMask_USE_PALETTE_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
 }
 
-static nCine::RhiSoftware::sw::vec4 WhiteMask_USE_PALETTE_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static nCine::RHI::Software::sw::vec4 WhiteMask_USE_PALETTE_maskSample(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const WhiteMask_USE_PALETTE_Uniforms* unis = static_cast<const WhiteMask_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2460,9 +2460,9 @@ static nCine::RhiSoftware::sw::vec4 WhiteMask_USE_PALETTE_maskSample(const nCine
 	return vec4(c.rgb(), c.a * src.a);
 }
 
-void WhiteMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void WhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const WhiteMask_USE_PALETTE_Uniforms* unis = static_cast<const WhiteMask_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2479,9 +2479,9 @@ struct BatchedWhiteMask_Uniforms
 {
 };
 
-static nCine::RhiSoftware::sw::vec4 BatchedWhiteMask_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static nCine::RHI::Software::sw::vec4 BatchedWhiteMask_maskSample(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedWhiteMask_Uniforms* unis = static_cast<const BatchedWhiteMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2489,9 +2489,9 @@ static nCine::RhiSoftware::sw::vec4 BatchedWhiteMask_maskSample(const nCine::Rhi
 	return src;
 }
 
-void BatchedWhiteMask_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void BatchedWhiteMask_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedWhiteMask_Uniforms* unis = static_cast<const BatchedWhiteMask_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2511,16 +2511,16 @@ struct BatchedWhiteMask_USE_PALETTE_Uniforms
 
 void BatchedWhiteMask_USE_PALETTE_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	BatchedWhiteMask_USE_PALETTE_Uniforms* io = static_cast<BatchedWhiteMask_USE_PALETTE_Uniforms*>(inputs);
 	(void)io;
 	(void)instanceBlock;
 	io->vPaletteOffset = (*reinterpret_cast<const float*>(instanceBlock + 104));
 }
 
-static nCine::RhiSoftware::sw::vec4 BatchedWhiteMask_USE_PALETTE_maskSample(const nCine::RhiSoftware::FragmentShaderInput& in, nCine::RhiSoftware::sw::vec2 uv)
+static nCine::RHI::Software::sw::vec4 BatchedWhiteMask_USE_PALETTE_maskSample(const nCine::RHI::Software::FragmentShaderInput& in, nCine::RHI::Software::sw::vec2 uv)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedWhiteMask_USE_PALETTE_Uniforms* unis = static_cast<const BatchedWhiteMask_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2532,9 +2532,9 @@ static nCine::RhiSoftware::sw::vec4 BatchedWhiteMask_USE_PALETTE_maskSample(cons
 	return vec4(c.rgb(), c.a * src.a);
 }
 
-void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)
+void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)
 {
-	using namespace nCine::RhiSoftware::sw;
+	using namespace nCine::RHI::Software::sw;
 	const BatchedWhiteMask_USE_PALETTE_Uniforms* unis = static_cast<const BatchedWhiteMask_USE_PALETTE_Uniforms*>(in.userData);
 	(void)unis;
 	(void)in;
@@ -2548,7 +2548,7 @@ void BatchedWhiteMask_USE_PALETTE_Fragment(const nCine::RhiSoftware::FragmentSha
 
 		struct SwGeneratedUniformField { const char* name; std::uint32_t offset; std::uint32_t componentCount; };
 		using SwGeneratedComputeVaryingsFn = void (*)(void* inputs, const std::uint8_t* instanceBlock);
-		struct SwGeneratedShaderInfo { const char* name; nCine::RhiSoftware::FragmentShaderFn fragment; std::uint32_t uniformsSize; const SwGeneratedUniformField* uniformFields; std::uint32_t uniformFieldCount; SwGeneratedComputeVaryingsFn computeVaryings; };
+		struct SwGeneratedShaderInfo { const char* name; nCine::RHI::Software::FragmentShaderFn fragment; std::uint32_t uniformsSize; const SwGeneratedUniformField* uniformFields; std::uint32_t uniformFieldCount; SwGeneratedComputeVaryingsFn computeVaryings; };
 
 		const SwGeneratedUniformField Blur_Fields[] = {
 			{ "uPixelOffset", (std::uint32_t)offsetof(Blur_Uniforms, uPixelOffset), 2 },

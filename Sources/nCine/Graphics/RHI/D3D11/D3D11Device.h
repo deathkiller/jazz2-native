@@ -23,14 +23,14 @@ struct ID3D11VertexShader;
 struct ID3D11PixelShader;
 struct ID3D11SamplerState;
 
-namespace nCine::RhiD3D11
+namespace nCine::RHI::D3D11
 {
 	class D3D11ShaderProgram;
 	class D3D11RenderTarget;
 	class D3D11Texture;
 
 	/**
-		@brief Pipeline-state and draw-call facade of the Direct3D 11 backend (aliased as `Rhi::Device`)
+		@brief Pipeline-state and draw-call facade of the Direct3D 11 backend (aliased as `RHI::Device`)
 
 		Exposes the OpenGL device's surface (blending, depth, cull, scissor, viewport, clear and the draw
 		calls) so the backend-neutral render pipeline drives it unchanged.

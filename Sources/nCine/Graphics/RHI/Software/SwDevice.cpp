@@ -18,7 +18,7 @@
 
 #include <Containers/StringStl.h>
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	namespace
 	{

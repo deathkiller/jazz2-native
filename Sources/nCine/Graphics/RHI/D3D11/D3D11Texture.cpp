@@ -7,7 +7,7 @@
 
 #include <Asserts.h>
 
-namespace nCine::RhiD3D11
+namespace nCine::RHI::D3D11
 {
 	namespace
 	{

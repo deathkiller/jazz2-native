@@ -4,7 +4,7 @@
 
 #include <cstdint>
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	// CPU-dispatched scanline operations shared by the immediate rasterizer (SwRaster.cpp, which owns the
 	// implementations and their SSE2/AVX2/NEON/SIMD128 variants) and the tile rasterizer (SwTileRasterizer.cpp).

@@ -5,7 +5,7 @@
 #include "../../../Base/StaticHashMapIterator.h"
 #include "../../../../Main.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLShaderUniforms::GLShaderUniforms()
 		: shaderProgram_(nullptr), maybeDirty_(true)

@@ -19,7 +19,7 @@ namespace ShaderCompiler
 	struct ProgramVariant;
 }
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	class SwShaderUniforms;
 	class SwShaderUniformBlocks;
@@ -46,7 +46,7 @@ namespace nCine::RhiSoftware
 	};
 
 	/**
-		@brief Shader program of the software backend (aliased as `Rhi::ShaderProgram`)
+		@brief Shader program of the software backend (aliased as `RHI::ShaderProgram`)
 
 		Does not compile or link GLSL. Instead it carries the offline ShaderCompiler reflection (set with
 		@ref SetReflection() exactly like the OpenGL backend) from which it imports uniforms, uniform

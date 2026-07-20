@@ -6,12 +6,12 @@
 #include <cstdint>
 #include <vector>
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	class SwShaderProgram;
 
 	/**
-		@brief Manages the loose-uniform caches of a program (aliased as `Rhi::ShaderUniforms`)
+		@brief Manages the loose-uniform caches of a program (aliased as `RHI::ShaderUniforms`)
 
 		Owns a @ref SwUniformCache for every active uniform of a program that is not part of a block,
 		distributes a shared host data buffer across them, and on @ref CommitUniforms() publishes every
@@ -62,7 +62,7 @@ namespace nCine::RhiSoftware
 	};
 
 	/**
-		@brief Manages the uniform-block caches of a program (aliased as `Rhi::ShaderUniformBlocks`)
+		@brief Manages the uniform-block caches of a program (aliased as `RHI::ShaderUniformBlocks`)
 
 		Owns a @ref SwUniformBlockCache per active block, distributes a shared host data buffer across
 		them, copies the block contents into a suballocated range of the streaming uniform buffer on
@@ -77,7 +77,7 @@ namespace nCine::RhiSoftware
 		using UniformHashMapType = std::vector<SwUniformBlockCache>;
 
 		/** @brief Function that suballocates a range of the given size from the streaming uniform buffer */
-		using UniformRangeAllocator = Rhi::BufferRange (*)(std::uint32_t bytes);
+		using UniformRangeAllocator = RHI::BufferRange (*)(std::uint32_t bytes);
 
 		/** @brief Sets the allocator used by @ref CommitUniformBlocks() (registered by the pipeline at startup) */
 		static void SetUniformRangeAllocator(UniformRangeAllocator allocator);
@@ -109,7 +109,7 @@ namespace nCine::RhiSoftware
 
 		SwShaderProgram* shaderProgram_;
 		std::uint8_t* dataPointer_;
-		Rhi::BufferRange uboParams_;
+		RHI::BufferRange uboParams_;
 
 		UniformHashMapType uniformBlockCaches_;
 

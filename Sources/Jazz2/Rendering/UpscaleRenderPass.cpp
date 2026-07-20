@@ -7,7 +7,7 @@
 #include "../../nCine/Graphics/Viewport.h"
 
 #if defined(WITH_RHI_SOFTWARE)
-// The software backend renders the upscale passes directly into the screen framebuffer (Rhi::Device is SwDevice)
+// The software backend renders the upscale passes directly into the screen framebuffer (RHI::Device is SwDevice)
 #	include "../../nCine/Graphics/RHI/Rhi.h"
 #endif
 
@@ -39,7 +39,7 @@ namespace Jazz2::Rendering
 		_targetSize = Vector2f((float)targetWidth, (float)targetHeight);
 
 		// Size the backend screen framebuffer to the logical resolution; the SDL present layer follows this size
-		Rhi::Device::ResizeScreenFramebuffer(width, height);
+		RHI::Device::ResizeScreenFramebuffer(width, height);
 
 		_camera.SetOrthoProjection(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f);
 		_camera.SetView(0, 0, 0, 1);

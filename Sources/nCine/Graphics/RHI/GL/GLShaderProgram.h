@@ -24,7 +24,7 @@ namespace ShaderCompiler
 	struct ProgramVariant;
 }
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	class GLShader;
 

@@ -7,14 +7,14 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiD3D11
+namespace nCine::RHI::D3D11
 {
 	/**
 		@brief Shader-object stub of the Direct3D 11 backend
 
 		The offline emitter already produces `HlslVsSource`/`HlslFsSource` per program-variant, and the
 		program object compiles them via d3dcompiler. This class therefore carries no source and every
-		operation succeeds trivially, only to satisfy the `Rhi::Shader` contract alias.
+		operation succeeds trivially, only to satisfy the `RHI::Shader` contract alias.
 	*/
 	class D3D11Shader
 	{

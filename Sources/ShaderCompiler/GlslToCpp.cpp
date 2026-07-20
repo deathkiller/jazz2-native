@@ -54,7 +54,7 @@ namespace ShaderCompiler
 		// outside a function body (struct fields, helper signatures) where the `using` is not in scope.
 		String CppTypeName(Ty t, bool qualified)
 		{
-			StringView ns = (qualified ? "nCine::RhiSoftware::sw::"_s : ""_s);
+			StringView ns = (qualified ? "nCine::RHI::Software::sw::"_s : ""_s);
 			switch (t) {
 				case Ty::Void: return "void"_s;
 				case Ty::Float: return "float"_s;
@@ -89,7 +89,7 @@ namespace ShaderCompiler
 		// C++ float scalar/vector type spelling for a component count (float / vec2 / vec3 / vec4)
 		String CppFloatVecType(std::uint32_t componentCount, bool qualified)
 		{
-			StringView ns = (qualified ? "nCine::RhiSoftware::sw::"_s : ""_s);
+			StringView ns = (qualified ? "nCine::RHI::Software::sw::"_s : ""_s);
 			switch (componentCount) {
 				case 2: return ns + "vec2"_s;
 				case 3: return ns + "vec3"_s;
@@ -1115,7 +1115,7 @@ namespace ShaderCompiler
 				// The per-instance constant-varying filler the device calls once per instance before the draw
 				if (!_usedVaryings.empty()) {
 					out += "void "_s + _prog + "_ComputeVaryings(void* inputs, const std::uint8_t* instanceBlock)\n{\n"_s;
-					out += "\tusing namespace nCine::RhiSoftware::sw;\n"_s;
+					out += "\tusing namespace nCine::RHI::Software::sw;\n"_s;
 					out += "\t"_s + _prog + "_Uniforms* io = static_cast<"_s + _prog + "_Uniforms*>(inputs);\n"_s;
 					out += "\t(void)io;\n\t(void)instanceBlock;\n"_s;
 					for (const std::pair<const String, ConstVaryingInfo>& v : _usedVaryings) {
@@ -1156,8 +1156,8 @@ namespace ShaderCompiler
 			String EmitMain(const Function& fn)
 			{
 				String out;
-				out += "void "_s + _prog + "_Fragment(const nCine::RhiSoftware::FragmentShaderInput& in)\n{\n"_s;
-				out += "\tusing namespace nCine::RhiSoftware::sw;\n"_s;
+				out += "void "_s + _prog + "_Fragment(const nCine::RHI::Software::FragmentShaderInput& in)\n{\n"_s;
+				out += "\tusing namespace nCine::RHI::Software::sw;\n"_s;
 				out += "\tconst "_s + _prog + "_Uniforms* unis = static_cast<const "_s + _prog + "_Uniforms*>(in.userData);\n"_s;
 				out += "\t(void)unis;\n\t(void)in;\n"_s;
 				out += "\tvec4 COLOR;\n"_s;
@@ -1173,11 +1173,11 @@ namespace ShaderCompiler
 				// helper that samples a texture, reads a uniform or reads a constant varying compiles the same
 				// as the entry point (the caller threads `in` through). Unused ones just ignore it.
 				out += "static "_s + CppTypeName(fn.RetType, true) + " "_s + _prog + "_"_s + fn.Name +
-					"(const nCine::RhiSoftware::FragmentShaderInput& in"_s;
+					"(const nCine::RHI::Software::FragmentShaderInput& in"_s;
 				for (std::size_t i = 0; i < fn.Params.size(); i++) {
 					out += ", "_s + CppTypeName(fn.Params[i].Type, true) + " "_s + fn.Params[i].Name;
 				}
-				out += ")\n{\n\tusing namespace nCine::RhiSoftware::sw;\n"_s;
+				out += ")\n{\n\tusing namespace nCine::RHI::Software::sw;\n"_s;
 				out += "\tconst "_s + _prog + "_Uniforms* unis = static_cast<const "_s + _prog + "_Uniforms*>(in.userData);\n"_s;
 				out += "\t(void)unis;\n\t(void)in;\n"_s;
 				EmitBlockInner(fn.Body.get(), "\t"_s, out);

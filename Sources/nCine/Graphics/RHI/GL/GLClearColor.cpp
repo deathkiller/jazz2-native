@@ -1,6 +1,6 @@
 #include "GLClearColor.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	GLClearColor::State GLClearColor::state_;
 

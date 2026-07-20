@@ -4,7 +4,7 @@
 #include "GLDebug.h"
 #include "../../../../Main.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	std::uint32_t GLFramebuffer::readBoundBuffer_ = 0;
 	std::uint32_t GLFramebuffer::drawBoundBuffer_ = 0;

@@ -10,10 +10,10 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	/**
-		@brief Host-memory buffer object of the software backend (aliased as `Rhi::Buffer`)
+		@brief Host-memory buffer object of the software backend (aliased as `RHI::Buffer`)
 
 		Backs a vertex, index or uniform buffer with a plain resizable byte store. Because the software
 		backend reads everything from host memory there is no device-side upload: @ref MapBufferRange()
@@ -80,7 +80,7 @@ namespace nCine::RhiSoftware
 		// Static bound-handle helpers used by the shared VAO pool. The OpenGL backend keeps a per-target
 		// bound-buffer cache here; the software backend has no such state, so these are inert. They mirror
 		// the OpenGL backend's static helpers so `RenderVaoPool` (which tracks a VAO's element array buffer)
-		// compiles unchanged against the `Rhi::Buffer` alias.
+		// compiles unchanged against the `RHI::Buffer` alias.
 		/** @brief Records the buffer handle bound for a target (inert for the software backend) */
 		inline static void SetBoundHandle(std::uint32_t target, std::uint32_t glHandle) {
 			static_cast<void>(target);

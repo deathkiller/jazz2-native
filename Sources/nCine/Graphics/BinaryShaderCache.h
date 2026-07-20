@@ -44,9 +44,9 @@ namespace nCine
 		String GetCachedShaderPath(const char* shaderName);
 
 		/** @brief Loads a binary into the program from the cache, returning `true` on success */
-		bool LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program, Rhi::ShaderProgram::Introspection introspection);
+		bool LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, RHI::ShaderProgram* program, RHI::ShaderProgram::Introspection introspection);
 		/** @brief Saves the program binary to the cache, returning `true` on success */
-		bool SaveToCache(const char* shaderName, std::uint64_t shaderVersion, Rhi::ShaderProgram* program);
+		bool SaveToCache(const char* shaderName, std::uint64_t shaderVersion, RHI::ShaderProgram* program);
 
 		/** @brief Deletes all binary shaders that don't belong to this platform from the cache directory */
 		std::uint32_t Prune();

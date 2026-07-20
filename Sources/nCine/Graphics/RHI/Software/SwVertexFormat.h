@@ -8,12 +8,12 @@
 
 using namespace Death::Containers;
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	class SwBuffer;
 
 	/**
-		@brief Vertex layout description of the software backend (aliased as `Rhi::VertexFormat`)
+		@brief Vertex layout description of the software backend (aliased as `RHI::VertexFormat`)
 
 		Records the set of vertex attributes (component count, type, stride, offset and source buffer) the
 		way the OpenGL backend does, so the pipeline's attribute setup code compiles unchanged. The
@@ -179,7 +179,7 @@ namespace nCine::RhiSoftware
 	};
 
 	/**
-		@brief Vertex array object stub of the software backend (aliased as `Rhi::VertexArray`)
+		@brief Vertex array object stub of the software backend (aliased as `RHI::VertexArray`)
 
 		The software backend has no vertex-array state to capture, so this only satisfies the contract
 		alias with inert bind/label operations.

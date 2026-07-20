@@ -157,7 +157,7 @@ namespace nCine
 		}
 
 	private:
-		std::unique_ptr<Rhi::Texture> rhiTexture_;
+		std::unique_ptr<RHI::Texture> rhiTexture_;
 		std::int32_t width_;
 		std::int32_t height_;
 		std::int32_t mipMapLevels_;

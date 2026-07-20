@@ -8,7 +8,7 @@
 
 #include <cstdint>
 
-namespace nCine::RhiSoftware
+namespace nCine::RHI::Software
 {
 	/** @brief Number of texture units the rasterizer can sample from in a single draw */
 	static constexpr std::uint32_t MaxTextureUnits = SwTexture::MaxTextureUnits;

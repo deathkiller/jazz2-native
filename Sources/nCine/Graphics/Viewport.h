@@ -239,7 +239,7 @@ namespace nCine
 		/** @brief Render queue of commands for this viewport or render target */
 		RenderQueue renderQueue_;
 
-		std::unique_ptr<Rhi::RenderTarget> fbo_;
+		std::unique_ptr<RHI::RenderTarget> fbo_;
 
 		static const std::uint32_t MaxNumTextures = 4;
 		Texture* textures_[MaxNumTextures];

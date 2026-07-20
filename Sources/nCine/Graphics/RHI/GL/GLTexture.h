@@ -13,7 +13,7 @@ namespace nCine
 	class ImGuiDrawing;
 }
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	/**
 		@brief Wraps an OpenGL texture object
@@ -22,7 +22,7 @@ namespace nCine::RhiGL
 		cached per texture unit, and the currently active unit is tracked, so that redundant
 		`glActiveTexture()` and `glBindTexture()` calls are skipped. Provides image upload, immutable
 		storage allocation, readback and parameter setting through a backend-neutral surface (aliased as
-		`Rhi::Texture`): all OpenGL formats, filters, wrap and swizzle enums are translated inside the
+		`RHI::Texture`): all OpenGL formats, filters, wrap and swizzle enums are translated inside the
 		backend, so callers only ever pass @ref PixelFormat, @ref SamplerFilter, @ref SamplerWrapping and
 		@ref SwizzleChannel values.
 	*/

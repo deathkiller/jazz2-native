@@ -4,13 +4,13 @@
 #include "../../../Primitives/Rect.h"
 #include "../../../Primitives/Colorf.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	/**
 		@brief Pipeline-state and draw-call facade of the OpenGL backend
 
 		Exposes everything the render pipeline sets between draws — blending, depth, scissor, viewport,
-		clear — plus the draw calls themselves, with backend-neutral signatures (aliased as `Rhi::Device`).
+		clear — plus the draw calls themselves, with backend-neutral signatures (aliased as `RHI::Device`).
 		Delegates to the individual OpenGL state-cache wrappers, so redundant state changes keep being
 		filtered exactly as before.
 	*/

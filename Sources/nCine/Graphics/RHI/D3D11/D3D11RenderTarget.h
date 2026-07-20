@@ -11,12 +11,12 @@ using namespace Death::Containers;
 // Direct3D 11 interface referenced only as an opaque pointer here (definition pulled in by the .cpp)
 struct ID3D11RenderTargetView;
 
-namespace nCine::RhiD3D11
+namespace nCine::RHI::D3D11
 {
 	class D3D11Texture;
 
 	/**
-		@brief Renderbuffer stub of the Direct3D 11 backend (aliased as `Rhi::Renderbuffer`)
+		@brief Renderbuffer stub of the Direct3D 11 backend (aliased as `RHI::Renderbuffer`)
 
 		Carries no depth/stencil storage (the renderer is 2D); the class just records the format and
 		size to satisfy the contract alias. An `ID3D11Texture2D` depth/stencil could be added here when needed.
@@ -41,7 +41,7 @@ namespace nCine::RhiD3D11
 	};
 
 	/**
-		@brief Framebuffer stub of the Direct3D 11 backend (aliased as `Rhi::Framebuffer`)
+		@brief Framebuffer stub of the Direct3D 11 backend (aliased as `RHI::Framebuffer`)
 
 		Provided only for the contract alias (the default-framebuffer rebinding some window backends use).
 		Off-screen rendering is routed through @ref D3D11RenderTarget instead.
@@ -62,7 +62,7 @@ namespace nCine::RhiD3D11
 	};
 
 	/**
-		@brief Off-screen render target of the Direct3D 11 backend (aliased as `Rhi::RenderTarget`)
+		@brief Off-screen render target of the Direct3D 11 backend (aliased as `RHI::RenderTarget`)
 
 		Records the color textures addressed by attachment index and an optional depth/stencil (ignored for
 		2D). @ref BindDraw() records the target on the device so the following clears and draws are associated

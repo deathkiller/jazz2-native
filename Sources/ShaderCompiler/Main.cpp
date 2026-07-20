@@ -898,7 +898,7 @@ namespace
 		out += "#include <cstddef>\n";
 		out += "#include <cstdint>\n";
 		out += "#include <cstring>\n\n";
-		out += "namespace nCine::RhiSoftware\n{\n";
+		out += "namespace nCine::RHI::Software\n{\n";
 		// The transpiled fragment functions are plain (non-inline) free functions. Wrapping the whole payload
 		// in an anonymous namespace gives them internal linkage so the header is ODR-safe even if it is ever
 		// included by more than one translation unit (today only SwDevice.cpp includes it).
@@ -917,7 +917,7 @@ namespace
 		// computeVaryings is null unless the shader reads per-instance-constant varyings; the device calls it
 		// once per instance (with that instance's block pointer) to fill those varyings before the draw
 		out += "\t\tusing SwGeneratedComputeVaryingsFn = void (*)(void* inputs, const std::uint8_t* instanceBlock);\n";
-		out += "\t\tstruct SwGeneratedShaderInfo { const char* name; nCine::RhiSoftware::FragmentShaderFn fragment; std::uint32_t uniformsSize; const SwGeneratedUniformField* uniformFields; std::uint32_t uniformFieldCount; SwGeneratedComputeVaryingsFn computeVaryings; };\n\n";
+		out += "\t\tstruct SwGeneratedShaderInfo { const char* name; nCine::RHI::Software::FragmentShaderFn fragment; std::uint32_t uniformsSize; const SwGeneratedUniformField* uniformFields; std::uint32_t uniformFieldCount; SwGeneratedComputeVaryingsFn computeVaryings; };\n\n";
 
 		for (const GeneratedShaderEntry& e : supported) {
 			if (e.Fields.empty()) {
@@ -976,7 +976,7 @@ namespace
 		}
 
 		out += "\t}\n";	// anonymous namespace
-		out += "}\n";		// namespace nCine::RhiSoftware
+		out += "}\n";		// namespace nCine::RHI::Software
 		out += "\n#endif\n";
 		return out;
 	}

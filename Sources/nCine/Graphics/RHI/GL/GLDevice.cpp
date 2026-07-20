@@ -6,7 +6,7 @@
 #include "GLClearColor.h"
 #include "GLViewport.h"
 
-namespace nCine::RhiGL
+namespace nCine::RHI::GL
 {
 	// The backend-neutral enums promise GL-compatible numeric values, so this backend can translate with a plain cast
 	static_assert(static_cast<GLenum>(PrimitiveType::Points) == GL_POINTS);
