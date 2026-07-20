@@ -143,20 +143,22 @@ namespace Jazz2::UI
 		if (!s->IsValid()) {
 			if (auto alternativePath = fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), String(path + ".j2v"_s)))) {
 				s = fs::Open(alternativePath, FileAccess::Read, 64 * 1024);
-				if (!s->IsValid()) {
-					return false;
-				}
 			}
+		}
+
+		if (!s->IsValid()) {
+			LOGW("Cannot load \"{}.j2v\" - Cinematics skipped");
+			return false;
 		}
 		
 		DEATH_ASSERT(s->GetSize() > 32 && s->GetSize() < 64 * 1024 * 1024,
-			("Cannot load \"{}.j2v\" - unexpected file size", path), false);
+			("Cannot load \"{}.j2v\" - Unexpected file size", path), false);
 
 		// "CineFeed" + file size (uint32_t) + CRC of lowercase filename (uint32_t)
 		std::uint8_t internalBuffer[16];
 		s->Read(internalBuffer, 16);
 		DEATH_ASSERT(strncmp((const char*)internalBuffer, "CineFeed", sizeof("CineFeed") - 1) == 0,
-			("Cannot load \"{}.j2v\" - invalid signature", path), false);
+			("Cannot load \"{}.j2v\" - Invalid signature", path), false);
 
 		_width = s->ReadValueAsLE<std::uint32_t>();
 		_height = s->ReadValueAsLE<std::uint32_t>();
@@ -202,7 +204,7 @@ namespace Jazz2::UI
 		}
 
 		if (s->GetSize() <= 16 || s->GetSize() >= 64 * 1024 * 1024) {
-			LOGE("Cannot load SFX playlist for \"{}.j2v\" - unexpected file size", path);
+			LOGE("Cannot load SFX playlist for \"{}.j2v\" - Unexpected file size", path);
 			return false;
 		}
 
@@ -210,7 +212,7 @@ namespace Jazz2::UI
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		std::uint16_t version = s->ReadValueAsLE<std::uint16_t>();
 		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::SfxListFile || version > SfxListVersion) {
-			LOGE("Cannot load SFX playlist for \"{}.j2v\" - invalid signature", path);
+			LOGE("Cannot load SFX playlist for \"{}.j2v\" - Invalid signature", path);
 			return false;
 		}
 

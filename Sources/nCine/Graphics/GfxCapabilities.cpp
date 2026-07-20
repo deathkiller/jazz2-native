@@ -225,18 +225,23 @@ namespace nCine
 
 		CheckGLExtensions(ExtensionNames, glExtensions_, (std::int32_t)Extensions::Count);
 
-#	if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
+		// PS Vita's vitaGL exposes no program-binary format enums (neither the ARB `GL_PROGRAM_BINARY_FORMATS` nor
+		// the OES spelling) and does not support shader binary caching, so this query is skipped there,
+		// NUM_PROGRAM_BINARY_FORMATS then stays 0 and the cache stays off.
+#	if !defined(DEATH_TARGET_VITA)
+#		if defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_UNIX)
 		if (HasExtension(Extensions::OES_GET_PROGRAM_BINARY)) {
 			glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS_OES, &glIntValues_[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS]);
 			DEATH_ASSERT(glIntValues_[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS] <= MaxProgramBinaryFormats);
 			glGetIntegerv(GL_PROGRAM_BINARY_FORMATS_OES, programBinaryFormats_);
 		} else
-#	endif
+#		endif
 		if (HasExtension(Extensions::ARB_GET_PROGRAM_BINARY)) {
 			glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &glIntValues_[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS]);
 			DEATH_ASSERT(glIntValues_[(std::int32_t)IntValues::NUM_PROGRAM_BINARY_FORMATS] <= MaxProgramBinaryFormats);
 			glGetIntegerv(GL_PROGRAM_BINARY_FORMATS, programBinaryFormats_);
 		}
+#	endif
 
 #	if defined(DEATH_TRACE)
 		// Log OpenGL device info

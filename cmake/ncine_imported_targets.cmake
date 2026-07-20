@@ -495,7 +495,7 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	if(NCINE_WITH_GLEW)
 		find_package(GLEW)
 	endif()
-	if(NOT NINTENDO_SWITCH)
+	if(NOT NINTENDO_SWITCH AND NOT VITA)
 		set(OPENGL_USE_OPENGL ON)
 		find_package(OpenGL)
 	endif()
@@ -566,8 +566,8 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			INTERFACE_LINK_LIBRARIES atomic)
 	endif()
 
-	if(NINTENDO_SWITCH)
-		# Nintendo Switch supports only static linking
+	if(NINTENDO_SWITCH OR VITA)
+		# Nintendo Switch and PS Vita support only static linking
 		set(LIBRARY_LINKAGE STATIC)
 	else()
 		set(LIBRARY_LINKAGE SHARED)

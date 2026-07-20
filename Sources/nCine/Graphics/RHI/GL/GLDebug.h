@@ -83,7 +83,11 @@ namespace nCine::RhiGL
 		 */
 		enum class LabelTypes
 		{
-#if defined(DEATH_TARGET_APPLE)
+			// Apple's OpenGL headers don't expose the KHR_debug object-type enums, and PS Vita's vitaGL has no
+			// KHR_debug at all (object labelling is compiled out entirely in GLDebug.cpp - GL_DEBUG_SUPPORTED is
+			// never defined there for Vita). On both, these values are never passed to the driver, so use plain
+			// sequential enumerators instead of the GL_* object-identifier tokens.
+#if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_VITA)
 			Buffer,
 			Shader,
 			Program,
