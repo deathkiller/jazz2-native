@@ -571,7 +571,6 @@ namespace nCine
 		}
 
 		stackSize = t->stack_sz;
-		const std::uintptr_t sp = GetCurrentStackPointer();
 		const std::uintptr_t low = reinterpret_cast<std::uintptr_t>(t->stack_mem);
 		if (sp >= low && sp <= low + t->stack_sz) {
 			stackRemaining = static_cast<std::size_t>(sp - low);
@@ -584,7 +583,6 @@ namespace nCine
 			tinfo.size = sizeof(SceKernelThreadInfo);
 			if (sceKernelGetThreadInfo(thid, &tinfo) == 0 && tinfo.stackSize > 0) {
 				stackSize = static_cast<std::size_t>(tinfo.stackSize);
-				const std::uintptr_t sp = GetCurrentStackPointer();
 				const std::uintptr_t low = reinterpret_cast<std::uintptr_t>(tinfo.stack);
 				if (sp > low && sp <= low + tinfo.stackSize) {
 					stackRemaining = static_cast<std::size_t>(sp - low);

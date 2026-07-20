@@ -3,6 +3,7 @@
 
 #include "ShaderCompilerTypes.h"
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 namespace nCine::ShadersGen
 {
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
@@ -402,3 +403,4 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::Program DefaultBatchedMeshSprites = { "DefaultBatchedMeshSprites", 0, 1, DefaultBatchedMeshSprites_Variants };
 }
+#endif

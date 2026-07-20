@@ -15,6 +15,7 @@
 
 namespace nCine::RHI::Vulkan
 {
+#ifndef DOXYGEN_GENERATING_OUTPUT
 	// -- Dynamically-loaded Vulkan entry points --
 	// Defined in VulkanDevice.cpp and resolved through vkGetInstanceProcAddr / vkGetDeviceProcAddr (no
 	// vulkan-1.lib is linked; the loader is bootstrapped from SDL). Each shares the API name (legal under
@@ -121,6 +122,7 @@ namespace nCine::RHI::Vulkan
 	extern PFN_vkCmdCopyBufferToImage vkCmdCopyBufferToImage;
 	extern PFN_vkCmdClearAttachments vkCmdClearAttachments;
 	extern PFN_vkCmdBlitImage vkCmdBlitImage;
+#endif
 
 	// -- Shared device context accessors (defined in VulkanDevice.cpp) --
 

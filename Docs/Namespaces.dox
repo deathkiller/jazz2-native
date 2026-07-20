@@ -116,17 +116,26 @@ See also @ref third-party for the licenses of the libraries used.
 /** @namespace nCine::RHI::Software::sw
 	@brief Runtime support types for the transpiled (GLSL→C++) software shaders
 */
+/** @namespace nCine::RHI::Software::UniformTypeInfo
+	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
+*/
 /** @dir nCine/Graphics/RHI/D3D11
 	@brief Namespace @ref nCine::RHI::D3D11
 */
 /** @namespace nCine::RHI::D3D11
 	@brief Direct3D 11 backend, selected by `WITH_RHI_D3D11`
 */
+/** @namespace nCine::RHI::D3D11::UniformTypeInfo
+	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
+*/
 /** @dir nCine/Graphics/RHI/Vulkan
 	@brief Namespace @ref nCine::RHI::Vulkan
 */
 /** @namespace nCine::RHI::Vulkan
 	@brief Vulkan backend, selected by `WITH_RHI_VULKAN`
+*/
+/** @namespace nCine::RHI::Vulkan::UniformTypeInfo
+	@brief Free-function helpers that classify reflected uniform types (component count, float-ness)
 */
 
 /** @dir Jazz2

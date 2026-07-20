@@ -134,6 +134,9 @@ foreach ($name in ($shaders | ForEach-Object { $_.BaseName } | Sort-Object)) {
     [void]$sb.AppendLine("#include `"$name.h`"")
 }
 [void]$sb.AppendLine('')
+# The generated shader data namespaces carry no public API and are excluded from the API
+# documentation (Doxygen defines `DOXYGEN_GENERATING_OUTPUT`), keeping this header out of it.
+[void]$sb.AppendLine('#ifndef DOXYGEN_GENERATING_OUTPUT')
 [void]$sb.AppendLine('namespace Jazz2::ShadersGen')
 [void]$sb.AppendLine('{')
 [void]$sb.AppendLine("`t// All generated Jazz2 shader programs, sorted by name")
@@ -153,6 +156,7 @@ foreach ($name in $ncineNames) {
 }
 [void]$sb.AppendLine("`t};")
 [void]$sb.AppendLine('}')
+[void]$sb.AppendLine('#endif')
 
 $umbrellaPath = Join-Path $outDir 'ShadersGen.h'
 [System.IO.File]::WriteAllText($umbrellaPath, $sb.ToString().Replace("`r`n", "`n").Replace("`n", "`r`n"), (New-Object System.Text.UTF8Encoding($false)))

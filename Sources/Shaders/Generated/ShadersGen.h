@@ -44,6 +44,7 @@
 #include "Transition.h"
 #include "WhiteMask.h"
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 namespace Jazz2::ShadersGen
 {
 	// All generated Jazz2 shader programs, sorted by name
@@ -108,3 +109,4 @@ namespace nCine::ShadersGen
 		&DefaultSpriteNoTexture,
 	};
 }
+#endif

@@ -497,6 +497,9 @@ namespace ShaderCompiler
 		output += "\n";
 		output += "#include \"ShaderCompilerTypes.h\"\n";
 		output += "\n";
+		// The generated shader data namespace carries no public API and is excluded from the API
+		// documentation (Doxygen defines `DOXYGEN_GENERATING_OUTPUT`), keeping these headers out of it.
+		output += "#ifndef DOXYGEN_GENERATING_OUTPUT\n";
 		output += "namespace " + ns + "\n";
 		output += "{\n";
 
@@ -510,6 +513,7 @@ namespace ShaderCompiler
 		}
 
 		output += "}\n";
+		output += "#endif\n";
 		return true;
 	}
 

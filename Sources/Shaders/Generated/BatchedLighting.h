@@ -3,6 +3,7 @@
 
 #include "ShaderCompilerTypes.h"
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 namespace Jazz2::ShadersGen
 {
 #if defined(WITH_RHI_GL) && !defined(RHI_GL_PROFILE_ES2)
@@ -512,3 +513,4 @@ float4 PSMain(PsInput _input) : SV_Target
 
 	inline constexpr ShaderCompiler::Program BatchedLighting = { "BatchedLighting", 0, 1, BatchedLighting_Variants };
 }
+#endif
