@@ -24,6 +24,9 @@
 #	include <emscripten/emscripten.h>
 #elif defined(DEATH_TARGET_SWITCH)
 #	include <switch.h>
+#elif defined(DEATH_TARGET_VITA)
+#	include <vitasdk.h>
+#	include <vitaGL.h>
 #elif defined(DEATH_TARGET_UNIX)
 #	include <pwd.h>
 #	include <unistd.h>
@@ -105,6 +108,13 @@ namespace nCine
 		socketInitializeDefault();
 		nxlinkStdio();
 		romfsInit();
+#elif defined(DEATH_TARGET_VITA)
+		// Enable analog sampling for controllers
+		sceTouchSetSamplingState(SCE_TOUCH_PORT_FRONT, SCE_TOUCH_SAMPLING_STATE_START);
+		sceTouchSetSamplingState(SCE_TOUCH_PORT_BACK, SCE_TOUCH_SAMPLING_STATE_START);
+
+		// Enabling sampling for the analogs
+		sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG_WIDE);
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
 		wchar_t workingDir[fs::MaxPathLength];
@@ -153,6 +163,8 @@ namespace nCine
 #if defined(DEATH_TARGET_SWITCH)
 		romfsExit();
 		socketExit();
+#elif defined(DEATH_TARGET_VITA)
+		sceKernelExitProcess(0);
 #elif defined(DEATH_TARGET_WINDOWS)
 		timeEndPeriod(1);
 #endif

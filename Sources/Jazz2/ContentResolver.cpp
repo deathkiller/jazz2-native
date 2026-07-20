@@ -100,6 +100,8 @@ namespace Jazz2
 		return "assets:/"_s;
 #elif defined(DEATH_TARGET_SWITCH)
 		return "romfs:/"_s;
+#elif defined(DEATH_TARGET_VITA)
+		return "ux0:/data/jazz2/Content/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Content\\"_s;
 #else
@@ -114,6 +116,8 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_SWITCH)
 		// Switch has some issues with UTF-8 characters, so use "Jazz2" instead
 		return "sdmc:/Games/Jazz2/Cache/"_s;
+#elif defined(DEATH_TARGET_VITA)
+		return "ux0:/data/jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Cache\\"_s;
 #else
@@ -128,6 +132,8 @@ namespace Jazz2
 #elif defined(DEATH_TARGET_SWITCH)
 		// Switch has some issues with UTF-8 characters, so use "Jazz2" instead
 		return "sdmc:/Games/Jazz2/Source/"_s;
+#elif defined(DEATH_TARGET_VITA)
+		return "ux0:/data/jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Source\\"_s;
 #else
@@ -1886,7 +1892,11 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeSabr] = CompileShader("ResizeSabr", ShadersGen::ResizeSabr);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::ResizeCleanEdge] = CompileShader("ResizeCleanEdge", ShadersGen::ResizeCleanEdge);
 #endif
+#if !defined(DEATH_TARGET_VITA)
+		// vitaGL's runtime shader compiler (SceShaccCg) crashes while building the antialiasing resolve shader,
+		// and the AA subpass is force-disabled on Vita anyway (see UpscaleRenderPass), so it is not compiled there
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Antialiasing] = CompileShader("Antialiasing", ShadersGen::Antialiasing);
+#endif
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Transition] = CompileShader("Transition", ShadersGen::Transition);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TouchCircle] = CompileShader("TouchCircle", ShadersGen::TouchCircle);

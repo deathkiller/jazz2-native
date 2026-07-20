@@ -236,7 +236,7 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 			config.withVSync = false;
 			config.frameLimit = PreferencesCache::MaxFps;
 		}
-#if !defined(DEATH_TARGET_SWITCH)
+#if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
 		config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
 #endif
 

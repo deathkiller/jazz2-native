@@ -76,9 +76,10 @@ namespace Jazz2::UI::Menu
 				});
 		}
 #endif
-#if !defined(WITH_RHI_SOFTWARE)
+#if !defined(WITH_RHI_SOFTWARE) && !defined(DEATH_TARGET_VITA)
 		// The antialiasing subpass is part of the rescale shader chain, which the software backend bypasses
-		// entirely, so the option is hidden there too
+		// entirely, so the option is hidden there too. It is likewise hidden on PS Vita: vitaGL's runtime shader
+		// compiler cannot build the antialiasing resolve shader (see ContentResolver / UpscaleRenderPass).
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Antialiasing"),
 			[]() -> StringView { return ((PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing ? _("Enabled") : _("Disabled")); },

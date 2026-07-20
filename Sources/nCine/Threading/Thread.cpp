@@ -508,7 +508,7 @@ namespace nCine
 #endif
 	}
 
-	void Thread::GetCurrentStackInfo(std::size_t& stackSize, std::size_t& stackRemaining) noexcept
+	bool Thread::GetCurrentStackInfo(std::size_t& stackSize, std::size_t& stackRemaining) noexcept
 	{
 		const std::uintptr_t sp = GetCurrentStackPointer();
 		stackSize = 0; stackRemaining = 0;
@@ -516,7 +516,7 @@ namespace nCine
 #if defined(DEATH_TARGET_WINDOWS)
 		MEMORY_BASIC_INFORMATION mbi {};
 		if (!::VirtualQuery(reinterpret_cast<LPCVOID>(sp), &mbi, sizeof(mbi))) {
-			return;
+			return false;
 		}
 
 		// Scan upward from AllocationBase to find the top of this reservation
@@ -544,6 +544,7 @@ namespace nCine
 			if (reserved > used + guardBytes) {
 				stackRemaining = reserved - used - guardBytes;
 			}
+			return true;
 		}
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
 		// Emscripten provides __stack_high and __stack_low as linker-generated symbols (available since 3.1.x
@@ -560,12 +561,13 @@ namespace nCine
 			if (sp >= low && sp <= high) {
 				stackRemaining = static_cast<std::size_t>(sp - low);
 			}
+			return true;
 		}
 #	endif
 #elif defined(DEATH_TARGET_SWITCH)
-		const Thread* t = threadGetSelf();
+		const auto* t = threadGetSelf();
 		if (!t || !t->stack_mem || t->stack_sz == 0) {
-			return;
+			return false;
 		}
 
 		stackSize = t->stack_sz;
@@ -574,6 +576,7 @@ namespace nCine
 		if (sp >= low && sp <= low + t->stack_sz) {
 			stackRemaining = static_cast<std::size_t>(sp - low);
 		}
+		return true;
 #elif defined(DEATH_TARGET_VITA)
 		SceUID thid = sceKernelGetThreadId();
 		if (thid >= 0) {
@@ -586,6 +589,7 @@ namespace nCine
 				if (sp > low && sp <= low + tinfo.stackSize) {
 					stackRemaining = static_cast<std::size_t>(sp - low);
 				}
+				return true;
 			}
 		}
 #else
@@ -601,6 +605,7 @@ namespace nCine
 		if (sp < base) {
 			stackRemaining = static_cast<std::size_t>(sp - (base - stackSize));
 		}
+		return true;
 #	else
 		if (pthread_getattr_np(self, &attr) == 0) {
 			void* stackAddr = nullptr;
@@ -616,9 +621,12 @@ namespace nCine
 				}
 			}
 			pthread_attr_destroy(&attr);
+			return (stackSize2 != 0);
 		}
 #	endif
 #endif
+
+		return false;
 	}
 
 	[[noreturn]] void Thread::Exit() noexcept

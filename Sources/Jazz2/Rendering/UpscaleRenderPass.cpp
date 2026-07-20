@@ -19,8 +19,16 @@ namespace Jazz2::Rendering
 	void UpscaleRenderPass::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample, bool overlay)
 	{
 		_logicalSize = Vector2i(width, height);
+
+#if defined(DEATH_TARGET_VITA)
+		// Supersampling is a GPU-only quality mode too costly for the Vita, and its resolve step would need the
+		// antialiasing shader that vitaGL cannot compile at runtime (not precompiled there - see ContentResolver).
+		// Forcing it to 1, together with the disabled AA option below, keeps the AA subpass from ever being created.
+		_supersample = 1;
+#else
 		// An overlay layer (the HUD) is always at native resolution, only the scene is supersampled
 		_supersample = (overlay ? 1 : (supersample > 1 ? supersample : 1));
+#endif
 
 #if defined(WITH_RHI_SOFTWARE)
 		// Software renderer: render at the internal/logical resolution directly into the screen framebuffer
@@ -69,6 +77,11 @@ namespace Jazz2::Rendering
 		// shimmers as the camera moves; the subpass turns it into a clean integer upscale followed by a smooth
 		// downsample. The integer multiple is computed from the actual (supersampled) texture size. Never for the overlay.
 		bool useAntialiasing = ((PreferencesCache::ActiveRescaleMode & RescaleMode::UseAntialiasing) == RescaleMode::UseAntialiasing);
+#if defined(DEATH_TARGET_VITA)
+		// The antialiasing resolve shader is unavailable on Vita, so the subpass is always off here - supersampling
+		// is likewise forced to 1 above, making this condition false.
+		useAntialiasing = false;
+#endif
 		if (!overlay && (_supersample > 1 || useAntialiasing)) {
 			float widthRatio, heightRatio;
 			float widthFrac = modff((float)targetWidth / textureWidth, &widthRatio);

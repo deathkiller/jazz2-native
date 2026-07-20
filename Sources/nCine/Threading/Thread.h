@@ -127,7 +127,7 @@ namespace nCine
 		/** @brief Returns the calling thread ID */
 		static std::uintptr_t GetCurrentId() noexcept;
 		/** @brief Returns stack information of the calling thread */
-		static void GetCurrentStackInfo(std::size_t& stackSize, std::size_t& stackRemaining) noexcept;
+		static bool GetCurrentStackInfo(std::size_t& stackSize, std::size_t& stackRemaining) noexcept;
 		/** @brief Terminates the calling thread */
 		[[noreturn]] static void Exit() noexcept;
 		/** @brief Yields the calling thread in favour of another one with the same priority */

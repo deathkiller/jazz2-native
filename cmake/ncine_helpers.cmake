@@ -531,7 +531,7 @@ function(ncine_apply_compiler_options target)
 			endif()
 			target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-funsafe-loop-optimizations -ftree-loop-if-convert-stores>)
 
-			if(NCINE_LINKTIME_OPTIMIZATION AND NOT (MINGW OR MSYS OR ANDROID))
+			if(NCINE_LINKTIME_OPTIMIZATION AND NOT (MINGW OR MSYS OR ANDROID OR VITA))
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-flto=auto>)
 				target_link_options(${target} PRIVATE $<$<CONFIG:Release>:-flto=auto>)
 			endif()

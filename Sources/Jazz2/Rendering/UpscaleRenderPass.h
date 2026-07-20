@@ -23,9 +23,12 @@ namespace Jazz2::Rendering
 	public:
 		/** @brief Creates a new instance */
 		UpscaleRenderPass()
-			: _supersample(1), _resizeAtLogicalScale(false), _resizeShader(nullptr)
+			: _supersample(1), _resizeAtLogicalScale(false)	
+#if !defined(DISABLE_RESCALE_SHADERS)
+				, _resizeShader(nullptr)
+#endif
 		{
-			setVisitOrderState(SceneNode::VisitOrderState::Disabled);
+			setVisitOrderState(VisitOrderState::Disabled);
 		}
 
 		/**

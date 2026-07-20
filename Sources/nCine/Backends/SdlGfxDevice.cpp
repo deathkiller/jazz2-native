@@ -65,6 +65,9 @@ namespace nCine::Backends
 			SDL_DestroyRenderer(softwareRenderer_);
 			softwareRenderer_ = nullptr;
 		}
+#elif defined(DEATH_TARGET_VITA)
+		// Vita renders through vitaGL (brought up with vglInit() in initDevice), not an SDL-managed GL context.
+		// No explicit teardown is issued here.
 #elif !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN)
 		SDL_GL_DeleteContext(glContextHandle_);
 		glContextHandle_ = nullptr;
@@ -160,6 +163,10 @@ namespace nCine::Backends
 		if ((SDL_GetWindowFlags(windowHandle_) & SDL_WINDOW_MINIMIZED) != 0) {
 			SDL_Delay(12);
 		}
+#elif defined(DEATH_TARGET_VITA)
+		// Vita renders through vitaGL, which owns the GXM display; present its backbuffer directly (SDL neither
+		// created nor manages this GL context). GL_FALSE = do not pump the SceCommonDialog overlay here.
+		vglSwapBuffers(GL_FALSE);
 #else
 		SDL_GL_SwapWindow(windowHandle_);
 #endif
@@ -172,8 +179,16 @@ namespace nCine::Backends
 		SDL_SetWindowSize(windowHandle_, width, height);
 	}
 
+	void SdlGfxDevice::setWindowTitle(StringView windowTitle)
+	{
+#if !defined(DEATH_TARGET_VITA)
+		SDL_SetWindowTitle(windowHandle_, String::nullTerminatedView(windowTitle).data());
+#endif
+	}
+
 	void SdlGfxDevice::setWindowIcon(StringView windowIconFilename)
 	{
+#if !defined(DEATH_TARGET_VITA)
 		std::unique_ptr<ITextureLoader> image = ITextureLoader::createFromFile(windowIconFilename);
 		const unsigned int bytesPerPixel = image->texFormat().numChannels();
 		const Uint32 pixelFormat = (bytesPerPixel == 4) ? SDL_PIXELFORMAT_ABGR8888 : SDL_PIXELFORMAT_BGR888;
@@ -184,10 +199,19 @@ namespace nCine::Backends
 		surface = SDL_CreateRGBSurfaceWithFormatFrom(pixels, image->width(), image->height(), bytesPerPixel * 8, pitch, pixelFormat);
 		SDL_SetWindowIcon(windowHandle_, surface);
 		SDL_FreeSurface(surface);
+#endif
+	}
+
+	void SdlGfxDevice::setWindowPosition(int x, int y)
+	{
+#if !defined(DEATH_TARGET_VITA)
+		SDL_SetWindowPosition(windowHandle_, x, y);
+#endif
 	}
 
 	void SdlGfxDevice::setWindowSize(int width, int height)
 	{
+#if !defined(DEATH_TARGET_VITA)
 		// Change resolution only in case it is valid and it really changes
 		if (width == 0 || height == 0 || (width == width_ && height == height_)) {
 			return;
@@ -198,30 +222,37 @@ namespace nCine::Backends
 			SDL_GetWindowSize(windowHandle_, &width_, &height_);
 			queryDrawableSize(windowHandle_, width_, height_, drawableWidth_, drawableHeight_);
 			Rhi::Device::ResizeSwapchain(drawableWidth_, drawableHeight_);	// no-op on OpenGL / software
-#if defined(WITH_RHI_SOFTWARE)
+#	if defined(WITH_RHI_SOFTWARE)
 			resizeSoftwareTarget(drawableWidth_, drawableHeight_);
-#endif
+#	endif
 		}
+#endif
 	}
 
 	const Vector2i SdlGfxDevice::windowPosition() const
 	{
 		Vector2i position(0, 0);
+#if !defined(DEATH_TARGET_VITA)
 		SDL_GetWindowPosition(windowHandle_, &position.X, &position.Y);
+#endif
 		return position;
 	}
 
 	void SdlGfxDevice::flashWindow() const
 	{
-#if SDL_VERSION_ATLEAST(2, 0, 16) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if SDL_VERSION_ATLEAST(2, 0, 16) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_VITA)
 		SDL_FlashWindow(windowHandle_, SDL_FLASH_UNTIL_FOCUSED);
 #endif
 	}
 
 	unsigned int SdlGfxDevice::windowMonitorIndex() const
 	{
+#if defined(DEATH_TARGET_VITA)
+		return 0;
+#else
 		const int retrievedIndex = (windowHandle_ != nullptr ? SDL_GetWindowDisplayIndex(windowHandle_) : 0);
 		return (retrievedIndex >= 0 ? static_cast<unsigned int>(retrievedIndex) : 0);
+#endif
 	}
 
 	const IGfxDevice::VideoMode& SdlGfxDevice::currentVideoMode(unsigned int monitorIndex) const
@@ -238,6 +269,7 @@ namespace nCine::Backends
 
 	bool SdlGfxDevice::setVideoMode(unsigned int modeIndex)
 	{
+#if !defined(DEATH_TARGET_VITA)
 		std::int32_t displayIndex = SDL_GetWindowDisplayIndex(windowHandle_);
 		if (displayIndex < 0 || displayIndex >= (std::int32_t)numMonitors_) {
 			displayIndex = 0;
@@ -248,6 +280,7 @@ namespace nCine::Backends
 			SDL_GetDisplayMode(displayIndex, modeIndex, &mode);
 			return SDL_SetWindowDisplayMode(windowHandle_, &mode);
 		}
+#endif
 		return false;
 	}
 
@@ -274,11 +307,13 @@ namespace nCine::Backends
 		SDL_SetHint(SDL_HINT_APP_NAME, NCINE_APP_NAME);
 #endif
 
-#if SDL_VERSION_ATLEAST(2, 24, 0) && defined(SDL_HINT_WINDOWS_DPI_SCALING)
+#if !defined(DEATH_TARGET_VITA)
+#	if SDL_VERSION_ATLEAST(2, 24, 0) && defined(SDL_HINT_WINDOWS_DPI_SCALING)
 		// Scaling is handled automatically by SDL (since v2.24.0)
 		if (enableWindowScaling) {
 			SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
 		}
+#	endif
 #endif
 		const int err = SDL_InitSubSystem(SDL_INIT_VIDEO);
 		FATAL_ASSERT_MSG(!err, "SDL_InitSubSystem(SDL_INIT_VIDEO) failed: {}", SDL_GetError());
@@ -402,7 +437,15 @@ namespace nCine::Backends
 		// Creating a window with SDL2
 		windowHandle_ = SDL_CreateWindow("", windowPosX, windowPosY, width_, height_, flags);
 		FATAL_ASSERT_MSG(windowHandle_, "SDL_CreateWindow failed: {}", SDL_GetError());
+#if defined(DEATH_TARGET_VITA)
+		// vitaGL renders to the Vita's fixed 960x544 panel and owns the framebuffer, so SDL's drawable size (which
+		// can be skewed by the window size or HighDPI scaling) is not authoritative here - pin it to the panel so
+		// the device viewport matches vitaGL's backbuffer exactly. Otherwise the scene renders into a screen corner.
+		drawableWidth_ = 960;
+		drawableHeight_ = 544;
+#else
 		SDL_GL_GetDrawableSize(windowHandle_, &drawableWidth_, &drawableHeight_);
+#endif
 		initDeviceViewport();
 
 		SDL_SetWindowResizable(windowHandle_, isResizable ? SDL_TRUE : SDL_FALSE);
@@ -419,6 +462,17 @@ namespace nCine::Backends
 			contextInfo_.coreProfile ? "Core" : "Compatibility");
 #endif
 
+#if defined(DEATH_TARGET_VITA)
+		// PS Vita renders through vitaGL, a static OpenGL|ES 2.0 implementation layered over SceGxm. This is not
+		// an SDL/EGL-managed context - SDL_GL_CreateContext() does not initialize vitaGL's internal GXM state - so
+		// it must be brought up explicitly here. Otherwise the very first gl* call (GLDevice::SetupInitialState's
+		// glEnable(GL_DEPTH_TEST)) dereferences vitaGL's still-null internal state and faults with a read
+		// violation at a tiny address. vglInit() sets up GXM, the GPU memory pools and the 960x544 display
+		// framebuffers, frames are presented with vglSwapBuffers() in update(). The argument is the size of the
+		// legacy immediate-mode vertex pool - this engine is fully shader/VBO based, so 1 MB is ample (the main
+		// GPU pools are reserved internally from free RAM).
+		vglInit(0x100000);
+#else
 	Retry:
 		glContextHandle_ = SDL_GL_CreateContext(windowHandle_);
 
@@ -446,6 +500,7 @@ namespace nCine::Backends
 
 		const int interval = (displayMode_.hasVSync() ? 1 : 0);
 		SDL_GL_SetSwapInterval(interval);
+#endif
 
 #if defined(WITH_GLEW)
 		const GLenum err = glewInit();
@@ -531,6 +586,7 @@ namespace nCine::Backends
 
 	void SdlGfxDevice::updateMonitors()
 	{
+#if !defined(DEATH_TARGET_VITA)
 		LOGD("Updating list of monitors...");
 
 		const int monitorCount = SDL_GetNumVideoDisplays();
@@ -560,6 +616,7 @@ namespace nCine::Backends
 				convertVideoModeInfo(mode, monitors_[i].videoModes[j]);
 			}
 		}
+#endif
 	}
 
 	void SdlGfxDevice::convertVideoModeInfo(const SDL_DisplayMode& sdlVideoMode, IGfxDevice::VideoMode& videoMode) const

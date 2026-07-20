@@ -60,7 +60,7 @@ namespace Jazz2
 	bool PreferencesCache::EnableLedgeClimb = true;
 	WeaponWheelStyle PreferencesCache::WeaponWheel = WeaponWheelStyle::Enabled;
 	bool PreferencesCache::SwitchToNewWeapon = true;
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WINDOWS_RT)
 	bool PreferencesCache::EnableRgbLights = false;
 #else
 	bool PreferencesCache::EnableRgbLights = true;
@@ -81,6 +81,8 @@ namespace Jazz2
 	bool PreferencesCache::ToggleRunAction = false;
 #if defined(DEATH_TARGET_SWITCH)
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Switch;
+#elif defined(DEATH_TARGET_VITA)
+	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::PlayStation;
 #else
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Xbox;
 #endif
@@ -174,7 +176,7 @@ namespace Jazz2
 		_configPath = "Jazz2.config"_s;
 		bool overrideConfigPath = false;
 
-#	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
+#	if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
 		for (std::int32_t i = 0; i < config.argc(); i++) {
 			auto arg = config.argv(i);
 			if (arg == "/config"_s) {
@@ -191,7 +193,7 @@ namespace Jazz2
 
 		// If config path is not overriden and portable config doesn't exist, use common path for current user
 		if (!overrideConfigPath && !fs::IsReadableFile(_configPath)) {
-#	if defined(DEATH_TARGET_SWITCH)
+#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 			// Save config file next to `Source` directory
 			auto& resolver = ContentResolver::Get();
 			_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
@@ -228,7 +230,7 @@ namespace Jazz2
 		// (Apple, Unix, Windows) it also forces tracing to the file even without
 		// using any command-line argument
 #	if defined(DEATH_TRACE)
-#		if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_SWITCH)
+#		if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 		fs::CreateDirectories(configDir);
 #			if defined(DEATH_TRACE_LOG_PATH)
 		theApplication().AttachTraceTarget(fs::CombinePath(configDir, DEATH_TRACE_LOG_PATH));
@@ -528,6 +530,12 @@ namespace Jazz2
 #	if defined(DEATH_TARGET_ANDROID)
 			// Use native Back button as default on smart watches
 			UseNativeBackButton = static_cast<AndroidApplication&>(theApplication()).IsScreenRound();
+#	elif defined(DEATH_TARGET_SWITCH)
+			// Use Switch button labels
+			GamepadButtonLabels = GamepadType::Switch;
+#	elif defined(DEATH_TARGET_VITA)
+			// Use PlayStation button labels on PS Vita
+			GamepadButtonLabels = GamepadType::PlayStation;
 #	elif defined(DEATH_TARGET_UNIX)
 			StringView isSteamDeck = ::getenv("SteamDeck");
 			if (isSteamDeck == "1"_s) {
@@ -868,6 +876,9 @@ namespace Jazz2
 		char DeviceDesc[128];
 		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|Nintendo Switch {}.{}.{}{}||9|{}",
 			((switchVersion >> 16) & 0xFF), ((switchVersion >> 8) & 0xFF), (switchVersion & 0xFF), isAtmosphere ? " (Atmosphère)"_s : ""_s, arch);
+#elif defined(DEATH_TARGET_VITA)
+		char DeviceDesc[128];
+		std::int32_t DeviceDescLength = formatInto(DeviceDesc, "|Vita||10|{}", arch);
 #elif defined(DEATH_TARGET_UNIX)
 #	if defined(DEATH_TARGET_CLANG)
 		arch |= 0x100000;
