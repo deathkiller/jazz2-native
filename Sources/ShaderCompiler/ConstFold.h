@@ -44,41 +44,62 @@ namespace ShaderCompiler
 	/** @brief Classification of one GLSL expression token */
 	enum class GlslTokenType : std::uint8_t
 	{
-		Identifier,			// Identifiers and keywords ("true"/"false" are BoolLiteral instead)
-		IntLiteral,			// Decimal, hex or octal integer without a suffix
-		UIntLiteral,		// Integer with a u/U suffix (never folded)
-		FloatLiteral,		// Contains '.' or an exponent; Suffixed marks 1.0f/1.0lf forms (never folded)
-		BoolLiteral,		// "true" or "false"
-		Operator,			// Operators and punctuation, longest-match ("<<=", "==", "(", ";", ...)
-		End					// Synthetic terminator
+		/** @brief Identifiers and keywords (`true`/`false` are @ref BoolLiteral instead) */
+		Identifier,
+		/** @brief Decimal, hex or octal integer without a suffix */
+		IntLiteral,
+		/** @brief Integer with a `u`/`U` suffix (never folded) */
+		UIntLiteral,
+		/** @brief Contains `.` or an exponent; @ref GlslToken::Suffixed marks `1.0f`/`1.0lf` forms (never folded) */
+		FloatLiteral,
+		/** @brief `true` or `false` */
+		BoolLiteral,
+		/** @brief Operators and punctuation, longest-match (`<<=`, `==`, `(`, `;`, ...) */
+		Operator,
+		/** @brief Synthetic terminator */
+		End
 	};
 
 	/** @brief One GLSL expression token with its position in the source line it came from */
 	struct GlslToken
 	{
+		/** @brief Token classification */
 		GlslTokenType Type = GlslTokenType::End;
+		/** @brief Verbatim token text */
 		String Text;
-		std::size_t Index = 0;		// Caller-defined line identifier (FoldInputLine::Index)
-		std::size_t Begin = 0;		// First column of the token on its line
-		std::size_t End = 0;		// One past the last column of the token
-		bool Suffixed = false;		// Numeric literal carries a non-'u' suffix (1.0f, 1.0lf) — opaque
+		/** @brief Caller-defined line identifier (@ref FoldInputLine::Index) */
+		std::size_t Index = 0;
+		/** @brief First column of the token on its line */
+		std::size_t Begin = 0;
+		/** @brief One past the last column of the token */
+		std::size_t End = 0;
+		/** @brief Whether a numeric literal carries a non-`u` suffix (`1.0f`, `1.0lf`) — opaque, never folded */
+		bool Suffixed = false;
 	};
 
 	/** @brief One input line range of a fold unit (positions must be valid in the rewritable original text) */
 	struct FoldInputLine
 	{
-		const String* Text = nullptr;		// Comment-stripped line text
-		std::size_t Begin = 0;				// First column of the foldable range on this line
-		std::size_t End = 0;				// One past the last foldable column on this line
-		std::size_t Index = 0;				// Caller-defined line identifier reported back in FoldEdit
+		/** @brief Comment-stripped line text */
+		const String* Text = nullptr;
+		/** @brief First column of the foldable range on this line */
+		std::size_t Begin = 0;
+		/** @brief One past the last foldable column on this line */
+		std::size_t End = 0;
+		/** @brief Caller-defined line identifier reported back in @ref FoldEdit::Index */
+		std::size_t Index = 0;
 	};
 
 	/** @brief One computed rewrite: columns [Begin, End) of line Index collapse to Replacement */
 	struct FoldEdit
 	{
+		/** @brief Identifier of the line the edit applies to (@ref FoldInputLine::Index) */
 		std::size_t Index = 0;
+		/** @brief First column of the rewritten range */
 		std::size_t Begin = 0;
+		/** @brief One past the last column of the rewritten range */
 		std::size_t End = 0;
+		/** @brief Literal text the range collapses to */
 		String Replacement;
 	};
 

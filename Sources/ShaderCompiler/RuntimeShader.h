@@ -23,10 +23,15 @@ namespace ShaderCompiler
 	/** @brief One variant of a runtime-compiled program: lowered stage sources plus merged reflection */
 	struct RuntimeVariant
 	{
+		/** @brief Variant name; empty for the unnamed base variant */
 		String Name;
+		/** @brief Baked variant define; empty for the unnamed base variant */
 		String Define;
+		/** @brief Lowered vertex-stage GLSL source */
 		String VsSource;
+		/** @brief Lowered fragment-stage GLSL source */
 		String FsSource;
+		/** @brief Reflection merged across both stages */
 		StageReflection Reflection;
 	};
 
@@ -45,9 +50,11 @@ namespace ShaderCompiler
 		RuntimeProgram(const RuntimeProgram&) = delete;
 		RuntimeProgram& operator=(const RuntimeProgram&) = delete;
 
+		/** @brief Program name */
 		String Name;
 		/** @brief "render_mode" flags (bitmask of ShaderCompiler::RenderMode; 0 when no render_mode is declared) */
 		std::uint32_t RenderModes = 0;
+		/** @brief Compiled variants (the unnamed base variant is `Variants[0]`) */
 		std::vector<RuntimeVariant> Variants;
 
 		/** @brief Returns the variant with the given name, or `nullptr` if not found; an empty name returns the unnamed base variant (`Variants[0]`) */

@@ -1,9 +1,9 @@
 #pragma once
 
-// Backend-INTERNAL header of the Vulkan RHI. Unlike the contract headers (VulkanDevice.h,
+// Backend-internal header of the Vulkan RHI. Unlike the contract headers (VulkanDevice.h,
 // VulkanTexture.h, ...) — which stay free of <vulkan/vulkan.h> because they are pulled in across the whole
 // render pipeline through Rhi.h — this header pulls in the Vulkan headers and the dynamically-resolved loader
-// entry points, and is included ONLY by the Vulkan backend translation units (VulkanDevice.cpp,
+// entry points, and is included only by the Vulkan backend translation units (VulkanDevice.cpp,
 // VulkanShaderProgram.cpp, VulkanBufferObject.cpp, VulkanTexture.cpp, VulkanRenderTarget.cpp). The backend
 // needs the Vulkan symbols in several .cpp to build the real GPU resources, so the loader is exposed here
 // (the whole file only ever compiles in a WITH_RHI_VULKAN build).

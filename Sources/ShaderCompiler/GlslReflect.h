@@ -66,66 +66,97 @@ namespace ShaderCompiler
 	/** @brief Member of a struct or std140 uniform block */
 	struct MemberInfo
 	{
+		/** @brief Member name */
 		String Name;
+		/** @brief Data type of the member */
 		GlslType Type = GlslType::Float;
+		/** @brief Name of the user struct type (only when @ref Type is @ref GlslType::Struct) */
 		String TypeName;
-		std::uint32_t ArraySize = 0;	// 0 = not an array
-		bool SymbolicArray = false;		// sized by the symbolic BATCH_SIZE constant
-		std::uint32_t Offset = 0;		// std140 offset from the start of the aggregate
-		std::uint32_t ArrayStride = 0;	// std140 element stride (arrays only)
+		/** @brief Array element count, or `0` when the member is not an array */
+		std::uint32_t ArraySize = 0;
+		/** @brief Whether the array is sized by the symbolic `BATCH_SIZE` constant */
+		bool SymbolicArray = false;
+		/** @brief std140 offset from the start of the aggregate */
+		std::uint32_t Offset = 0;
+		/** @brief std140 element stride (arrays only) */
+		std::uint32_t ArrayStride = 0;
 	};
 
 	/** @brief User struct declaration with its computed std140 layout */
 	struct StructInfo
 	{
+		/** @brief Struct type name */
 		String Name;
+		/** @brief Struct members in declaration order */
 		std::vector<MemberInfo> Fields;
+		/** @brief std140 size rounded up to the struct alignment */
 		std::uint32_t Size = 0;
+		/** @brief std140 base alignment (largest member alignment rounded up to 16) */
 		std::uint32_t Align = 0;
 	};
 
 	/** @brief Loose (non-block, non-sampler) uniform */
 	struct UniformInfo
 	{
+		/** @brief Uniform name */
 		String Name;
+		/** @brief Data type of the uniform */
 		GlslType Type = GlslType::Float;
+		/** @brief Name of the user struct type (only when @ref Type is @ref GlslType::Struct) */
 		String TypeName;
-		std::uint32_t ArraySize = 0;	// 0 = not an array
+		/** @brief Array element count, or `0` when the uniform is not an array */
+		std::uint32_t ArraySize = 0;
 	};
 
 	/** @brief std140 uniform block */
 	struct BlockInfo
 	{
+		/** @brief Block name */
 		String Name;
-		std::uint32_t BaseSize = 0;			// std140 size covering everything except symbolic arrays
-		std::uint32_t InstanceStride = 0;	// element stride of the symbolic BATCH_SIZE array (0 if none)
+		/** @brief std140 size covering everything except symbolic arrays */
+		std::uint32_t BaseSize = 0;
+		/** @brief Element stride of the symbolic `BATCH_SIZE` array, or `0` when the block has none */
+		std::uint32_t InstanceStride = 0;
+		/** @brief Block members in declaration order */
 		std::vector<MemberInfo> Members;
 	};
 
 	/** @brief Sampler uniform with its optional "texture_unit(N)" hint unit assignment */
 	struct TextureInfo
 	{
+		/** @brief Sampler uniform name */
 		String Name;
+		/** @brief Sampler type (@ref GlslType::Sampler2D, @ref GlslType::Sampler3D or @ref GlslType::SamplerCube) */
 		GlslType Type = GlslType::Sampler2D;
-		std::int32_t Unit = -1;		// -1 = not assigned
+		/** @brief Texture unit from a `texture_unit(N)` hint, or `-1` when unassigned */
+		std::int32_t Unit = -1;
 	};
 
 	/** @brief Vertex attribute ("in" declaration in the vertex stage) */
 	struct AttributeInfo
 	{
+		/** @brief Attribute name */
 		String Name;
+		/** @brief Data type of the attribute */
 		GlslType Type = GlslType::Float;
+		/** @brief Name of the user struct type (only when @ref Type is @ref GlslType::Struct) */
 		String TypeName;
-		std::int32_t Location = -1;	// -1 = unspecified
+		/** @brief Explicit `layout(location = N)` index, or `-1` when unspecified */
+		std::int32_t Location = -1;
 	};
 
 	/** @brief Reflection data collected from one stage (or merged for a whole program) */
 	struct StageReflection
 	{
+		/** @brief User struct declarations with their computed std140 layouts */
 		std::vector<StructInfo> Structs;
+		/** @brief Loose (non-block, non-sampler) uniforms */
 		std::vector<UniformInfo> Uniforms;
+		/** @brief std140 uniform blocks */
 		std::vector<BlockInfo> Blocks;
+		/** @brief Sampler uniforms (texture bindings) */
 		std::vector<TextureInfo> Textures;
+		/** @brief Vertex attributes (empty for the fragment stage) */
 		std::vector<AttributeInfo> Attributes;
 	};
 

@@ -915,7 +915,7 @@ if(WITH_MULTIPLAYER)
 			)
 		endif()
 		
-		if(WITH_WEBSOCKET)
+		if(WITH_WEBSOCKET OR EMSCRIPTEN) # Emscripten always uses the browser's native WebSocket
 			message(STATUS "Building the game with WebSocket transport support")
 			target_compile_definitions(${NCINE_APP} PUBLIC "WITH_WEBSOCKET")
 

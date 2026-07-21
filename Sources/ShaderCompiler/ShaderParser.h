@@ -67,22 +67,29 @@ namespace ShaderCompiler
 	/** @brief One line of source text together with its 1-based line number in the original ".shader" file */
 	struct SourceLine
 	{
+		/** @brief The line of source text */
 		String Text;
+		/** @brief 1-based line number in the original ".shader" file */
 		std::int32_t Line = 0;
 	};
 
 	/** @brief Error description pointing into the input file */
 	struct Diagnostic
 	{
+		/** @brief Human-readable error message */
 		String Message;
+		/** @brief 1-based line number the error points to in the input file */
 		std::int32_t Line = 0;
 	};
 
 	/** @brief Texture unit assignment for a sampler uniform — from a "texture_unit(N)" uniform hint or the implicit canvas TEXTURE registration */
 	struct TextureDirective
 	{
+		/** @brief Sampler uniform name */
 		String Name;
+		/** @brief Assigned texture unit, or `-1` when unassigned */
 		std::int32_t Unit = -1;
+		/** @brief 1-based line number the directive came from */
 		std::int32_t Line = 0;
 	};
 
@@ -100,14 +107,23 @@ namespace ShaderCompiler
 	/** @brief Lowered ".shader" document — directives plus raw (unpreprocessed) per-stage GLSL line streams */
 	struct ShaderDocument
 	{
+		/** @brief Program name from the "program" directive */
 		String ProgramName;
+		/** @brief Variant names; the unnamed base variant is always `Variants[0]` (empty name) */
 		std::vector<String> Variants;
+		/** @brief Sampler texture-unit assignments (explicit hints and the implicit canvas TEXTURE) */
 		std::vector<TextureDirective> Textures;
+		/** @brief Shared globals emitted before both stage bodies */
 		std::vector<SourceLine> Prelude;
+		/** @brief Raw (unpreprocessed) vertex-stage GLSL line stream */
 		std::vector<SourceLine> VertexLines;
+		/** @brief Raw (unpreprocessed) fragment-stage GLSL line stream */
 		std::vector<SourceLine> FragmentLines;
-		std::uint32_t RenderModes = 0;		// Bitmask of RenderModeMask flags (0 when no render_mode is declared)
+		/** @brief Bitmask of @ref RenderModeMask flags (`0` when no "render_mode" is declared) */
+		std::uint32_t RenderModes = 0;
+		/** @brief Whether the document declares a vertex stage */
 		bool HasVertexStage = false;
+		/** @brief Whether the document declares a fragment stage */
 		bool HasFragmentStage = false;
 	};
 

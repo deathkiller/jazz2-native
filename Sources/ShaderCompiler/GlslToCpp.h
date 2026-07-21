@@ -38,7 +38,9 @@ namespace ShaderCompiler
 	/** @brief A sampler uniform's texture-unit assignment, taken from the program's reflection */
 	struct SamplerBinding
 	{
+		/** @brief Sampler uniform name */
 		String Name;
+		/** @brief Texture unit the sampler is bound to, or `-1` when unassigned */
 		std::int32_t Unit = -1;
 	};
 
@@ -53,9 +55,12 @@ namespace ShaderCompiler
 	*/
 	struct GlslInstanceMember
 	{
+		/** @brief Instance-block member name */
 		String Name;
-		std::uint32_t Offset = 0;			// std140 offset from the start of one instance
-		std::uint32_t ComponentCount = 1;	// 1 for float/int/bool, N for vecN
+		/** @brief std140 offset from the start of one instance */
+		std::uint32_t Offset = 0;
+		/** @brief Component count (`1` for float/int/bool, `N` for vecN) */
+		std::uint32_t ComponentCount = 1;
 	};
 
 	/** @brief Outcome of transpiling one fragment shader to C++ */

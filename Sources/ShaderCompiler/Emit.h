@@ -34,8 +34,11 @@ namespace ShaderCompiler
 	/** @brief Reflection of one program variant (the unnamed base or a named variant), merged across stages */
 	struct VariantReflection
 	{
-		String Name;				// empty for the base variant, otherwise the variant name
-		String Define;				// empty for the base variant, otherwise the baked define
+		/** @brief Variant name; empty for the unnamed base variant */
+		String Name;
+		/** @brief Baked variant define; empty for the unnamed base variant */
+		String Define;
+		/** @brief Reflection merged across the vertex and fragment stages */
 		StageReflection Reflection;
 	};
 
@@ -53,7 +56,9 @@ namespace ShaderCompiler
 	/** @brief One lowered program (document plus per-variant reflection) to be emitted into a generated header */
 	struct ProgramReflection
 	{
+		/** @brief The lowered source document this reflection was computed from */
 		const ShaderDocument* Document = nullptr;
+		/** @brief Per-variant merged reflection (the unnamed base variant is `Variants[0]`) */
 		std::vector<VariantReflection> Variants;
 	};
 

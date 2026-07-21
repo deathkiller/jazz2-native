@@ -157,9 +157,15 @@ The following parameters can be used to customize the build:
     -   Ignored on **Android**, **Emscripten**, **Nintendo Switch** and **UWP** platforms
 -   `NCINE_DOWNLOAD_DEPENDENCIES` (default @cpp ON @ce) --- Download all missing dependencies automatically
 -   `NCINE_EMBED_SHADERS` (default @cpp ON @ce) --- Embed shader files in executable
--   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce) --- Preferred backend on desktop
+-   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce) --- Preferred core backend
     -   Possible values: `GLFW`, `SDL2`
     -   Ignored on **Android** and **UWP** platforms
+-   `NCINE_PREFERRED_RHI` (default @cpp "OpenGL" @ce) --- Preferred rendering backend (RHI)
+    -   Possible values:
+        - `OpenGL` --- Uses OpenGL 3.3, OpenGL|ES 3.0 or WebGL 2.0 depending on platform (use `NCINE_RHI_GL_PROFILE_ES2` to force OpenGL|ES 2.0 profile)
+        - `D3D11` --- Uses Direct3D 11 (Windows only)
+        - `Vulkan` --- Uses Vulkan
+        - `Software` --- Uses custom software renderer (no hardware acceleration, lower visual quality and performance)
 -   `NCINE_VERSION_FROM_GIT` (default @cpp ON @ce) --- Set current game version from Git repository automatically
 -   `NCINE_WITH_THREADS` (default @cpp ON @ce except on Emscripten) --- Allow to use multiple threads for better performance
 -   `NCINE_WITH_OPENGLES` (default @cpp OFF @ce) --- Use **OpenGL|ES** library instead of **OpenGL**
@@ -254,11 +260,12 @@ The following parameters can be used to customize the build:
 @subsubsection building-config-params-game Game-specific parameters
 
 -   `DISABLE_RESCALE_SHADERS` (default @cpp OFF @ce) --- Disable rescale shaders and use only nearest neighbor
+    - Rescale shaders are not available with software renderer
 -   `TILEMAP_USE_SINGLE_DRAW` (default @cpp ON @ce) --- Aggregate draw calls for each tilemap layer
 -   `SHAREWARE_DEMO_ONLY` (default @cpp OFF @ce) --- Shareware Demo only, usually used on **Emscripten** platform
 -   `WITH_MULTIPLAYER` (default @cpp ON @ce) --- Enable multiplayer support
 -   `WITH_ONLINE_MULTIPLAYER` (default @cpp ON @ce if `WITH_MULTIPLAYER`) --- Enable also online multiplayer support, otherwise only local splitscreen is enabled
--   `WITH_WEBSOCKET` (default @cpp OFF @ce except on Emscripten) --- Enable WebSocket transport for online multiplayer
+-   `WITH_WEBSOCKET` (default @cpp ON @ce) --- Enable WebSocket transport for online multiplayer
 -   `WITH_WEBSOCKET_TLS_BACKEND` (default @cpp OpenSSL @ce) --- TLS backend for WebSocket transport
     -   Possible values: `OpenSSL`, `mbedTLS`, `None`
 -   `DEDICATED_SERVER` (default @cpp OFF @ce) --- Build the application as dedicated server only, `WITH_MULTIPLAYER` must be enabled
