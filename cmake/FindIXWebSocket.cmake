@@ -135,7 +135,7 @@ if(USE_TLS)
 	endif()
 endif()
 
-ncine_add_dependency(IXWebSocket STATIC ALLOW_EXCEPTIONS)
+ncine_add_dependency(IXWebSocket STATIC)
 
 target_sources(IXWebSocket PRIVATE ${_IXWEBSOCKET_HEADERS} ${_IXWEBSOCKET_SOURCES})
 
@@ -161,6 +161,17 @@ if(USE_TLS)
 	else()
 		message(FATAL_ERROR "TLS Configuration error: Unknown backend")
 	endif()
+endif()
+
+if(MSVC)
+	# IXWebSocket uses classic CRT functions (strerror/sscanf/strncpy) that MSVC flags as deprecated
+	# (C4996, which is an error under the stricter UWP settings)
+	target_compile_definitions(IXWebSocket PRIVATE "_CRT_SECURE_NO_WARNINGS")
+endif()
+
+if(WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
+	# Winsock for the sockets, Crypt32 for the OpenSSL backend's Windows certificate store loader
+	target_link_libraries(IXWebSocket PUBLIC ws2_32 crypt32)
 endif()
 
 set(IXWebSocket_FOUND TRUE)

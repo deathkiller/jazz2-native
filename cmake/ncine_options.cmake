@@ -11,7 +11,7 @@ option(NCINE_DOWNLOAD_DEPENDENCIES "Download all build dependencies" ON)
 # static libraries, which fixes the "archive has no index; run ranlib to add one" link error. Probe once
 # here (before any dependency targets in `ncine_imported_targets.cmake`) and just turn the option off if
 # the toolchain can't do it.
-option(NCINE_LINKTIME_OPTIMIZATION "Compile the game with link-time optimization when in release" ON)
+cmake_dependent_option(NCINE_LINKTIME_OPTIMIZATION "Compile the game with link-time optimization when in release" ON "NOT NCINE_BUILD_ANDROID" OFF)
 if(NCINE_LINKTIME_OPTIMIZATION)
 	include(CheckIPOSupported)
 	check_ipo_supported(RESULT _ipoSupported OUTPUT _ipoOutput)
@@ -261,7 +261,9 @@ cmake_dependent_option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each ti
 option(WITH_MULTIPLAYER "Enable multiplayer support" ON)
 cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN" OFF)
 cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_ONLINE_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
-cmake_dependent_option(WITH_WEBSOCKET "Enable WebSocket transport for multiplayer" ON "WITH_ONLINE_MULTIPLAYER;NOT EMSCRIPTEN" OFF)
+# IXWebSocket requires a full BSD sockets stack (e.g. <netinet/ip.h>), which the Nintendo Switch and
+# PS Vita toolchains don't provide, so WebSocket transport is unavailable there (enet is still used).
+cmake_dependent_option(WITH_WEBSOCKET "Enable WebSocket transport for multiplayer" ON "WITH_ONLINE_MULTIPLAYER;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT VITA" OFF)
 if(WITH_WEBSOCKET AND NOT EMSCRIPTEN)
 	set(WITH_WEBSOCKET_TLS_BACKEND "OpenSSL" CACHE STRING "TLS backend for WebSocket transport (None, OpenSSL, mbedTLS)")
 	set_property(CACHE WITH_WEBSOCKET_TLS_BACKEND PROPERTY STRINGS "None" "OpenSSL" "mbedTLS")
