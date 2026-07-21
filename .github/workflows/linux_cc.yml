@@ -56,7 +56,7 @@ jobs:
     - name: 'Create Build Environment'
       run: |
         sudo apt install -y cmake curl
-        sudo apt install -y libgl1-mesa-dev:arm64 libglfw3-dev:arm64 libsdl2-dev:arm64 libopenal-dev:arm64 libopenmpt-dev:arm64 libcurl4-openssl-dev:arm64 zlib1g:arm64
+        sudo apt install -y libgl1-mesa-dev:arm64 libglfw3-dev:arm64 libsdl2-dev:arm64 libopenal-dev:arm64 libopenmpt-dev:arm64 libcurl4-openssl-dev:arm64 libssl-dev:arm64 zlib1g:arm64
         #sudo apt install -y libgl1-mesa-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev libcurl4-openssl-dev zlib1g
 
     - name: 'Configure CMake'
@@ -68,7 +68,10 @@ jobs:
         
         rm -f ./Content/Translations/*.po
         
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=Linux -D CMAKE_SYSTEM_PROCESSOR=aarch64 -D CMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_WITH_GLEW=OFF
+        # OpenSSL is multiarch: headers are shared under /usr/include (arch-specific opensslconf.h is
+        # found via the cross-compiler's /usr/include/aarch64-linux-gnu search), but the libraries must be
+        # pinned to the arm64 ones so find_package(OpenSSL) doesn't pick up the host's x86_64 libraries.
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=Linux -D CMAKE_SYSTEM_PROCESSOR=aarch64 -D CMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu -D OPENSSL_INCLUDE_DIR=/usr/include -D OPENSSL_CRYPTO_LIBRARY=/usr/lib/aarch64-linux-gnu/libcrypto.so -D OPENSSL_SSL_LIBRARY=/usr/lib/aarch64-linux-gnu/libssl.so -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_WITH_GLEW=OFF
         #cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF
 
     - name: 'Build'

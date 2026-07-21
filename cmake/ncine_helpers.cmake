@@ -276,8 +276,10 @@ function(ncine_apply_compiler_options target)
 	set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
 	target_compile_definitions(${target} PRIVATE "CMAKE_BUILD")
 
-	# Enable interprocedural optimization (LTO on GCC/Clang, /GL + /LTCG on MSVC) in Release when requested and supported.
-	if(NCINE_LINKTIME_OPTIMIZATION)
+	# Enable interprocedural optimization (LTO on GCC/Clang, /GL + /LTCG on MSVC) in Release, but skip it for
+	# static libraries: an LTO static archive's slim objects don't resolve reliably when linked into the
+	# also-LTO executable (undefined references to its symbols), whereas plain objects link cleanly.
+	if(NCINE_LINKTIME_OPTIMIZATION AND NOT (target_type STREQUAL "STATIC_LIBRARY"))
 		set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 	endif()
 

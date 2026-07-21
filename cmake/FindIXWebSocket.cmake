@@ -158,6 +158,8 @@ if(USE_TLS)
 		target_compile_definitions(IXWebSocket PUBLIC IXWEBSOCKET_USE_LIBRE_SSL)
 	elseif(USE_SECURE_TRANSPORT)
 		target_compile_definitions(IXWebSocket PUBLIC IXWEBSOCKET_USE_SECURE_TRANSPORT)
+		# SecureTransport lives in the Security framework and uses CoreFoundation types
+		target_link_libraries(IXWebSocket PUBLIC "-framework Security" "-framework CoreFoundation")
 	else()
 		message(FATAL_ERROR "TLS Configuration error: Unknown backend")
 	endif()

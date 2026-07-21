@@ -265,8 +265,15 @@ cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_
 # PS Vita toolchains don't provide, so WebSocket transport is unavailable there (enet is still used).
 cmake_dependent_option(WITH_WEBSOCKET "Enable WebSocket transport for multiplayer" ON "WITH_ONLINE_MULTIPLAYER;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT VITA" OFF)
 if(WITH_WEBSOCKET AND NOT EMSCRIPTEN)
-	set(WITH_WEBSOCKET_TLS_BACKEND "OpenSSL" CACHE STRING "TLS backend for WebSocket transport (None, OpenSSL, mbedTLS)")
-	set_property(CACHE WITH_WEBSOCKET_TLS_BACKEND PROPERTY STRINGS "None" "OpenSSL" "mbedTLS")
+	# Default to the OS-native TLS backend on Apple (SecureTransport, a system framework) to avoid depending on
+	# a Homebrew OpenSSL whose architecture must match the build — the x86_64 cross-build on Apple Silicon runners
+	# otherwise links the arm64-only Homebrew OpenSSL and fails with undefined symbols.
+	if(APPLE)
+		set(WITH_WEBSOCKET_TLS_BACKEND "SecureTransport" CACHE STRING "TLS backend for WebSocket transport (None, SecureTransport, OpenSSL, mbedTLS)")
+	else()
+		set(WITH_WEBSOCKET_TLS_BACKEND "OpenSSL" CACHE STRING "TLS backend for WebSocket transport (None, SecureTransport, OpenSSL, mbedTLS)")
+	endif()
+	set_property(CACHE WITH_WEBSOCKET_TLS_BACKEND PROPERTY STRINGS "None" "SecureTransport" "OpenSSL" "mbedTLS")
 endif()
 
 cmake_dependent_option(SHAREWARE_DEMO_ALLOW_MULTIPLAYER "Enable multiplayer support also in Shareware Demo" ON "SHAREWARE_DEMO_ONLY;WITH_ONLINE_MULTIPLAYER" OFF)
