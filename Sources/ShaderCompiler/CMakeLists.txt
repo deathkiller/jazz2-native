@@ -14,6 +14,7 @@ target_include_directories(ShaderCompiler PRIVATE
 
 set(SOURCES
 	Main.cpp
+	Trace.cpp
 	ConstFold.cpp
 	ConstFold.h
 	Emit.cpp
@@ -41,6 +42,7 @@ set(SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/../Shared/Containers/StringView.h
 	${CMAKE_CURRENT_SOURCE_DIR}/../Shared/Base/Format.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/../Shared/Base/Format.h
+	${CMAKE_CURRENT_SOURCE_DIR}/../Shared/Asserts.h
 	${CMAKE_CURRENT_SOURCE_DIR}/../Shared/Common.h
 	${CMAKE_CURRENT_SOURCE_DIR}/../Shared/CommonBase.h
 	${CMAKE_CURRENT_SOURCE_DIR}/../Shared/Cpu.cpp
@@ -50,3 +52,6 @@ set(SOURCES
 ncine_assign_source_group(PATH_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/../ ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 target_sources(ShaderCompiler PRIVATE ${SOURCES})
+
+include(ncine_helpers)
+ncine_apply_compiler_options(ShaderCompiler ALLOW_EXCEPTIONS)

@@ -276,6 +276,11 @@ function(ncine_apply_compiler_options target)
 	set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
 	target_compile_definitions(${target} PRIVATE "CMAKE_BUILD")
 
+	# Enable interprocedural optimization (LTO on GCC/Clang, /GL + /LTCG on MSVC) in Release when requested and supported.
+	if(NCINE_LINKTIME_OPTIMIZATION)
+		set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+	endif()
+
 	if(DEFINED DEATH_DEBUG)
 		if(DEATH_DEBUG)
 			target_compile_definitions(${target} PRIVATE "DEATH_DEBUG")
@@ -347,6 +352,16 @@ function(ncine_apply_compiler_options target)
 		# Always use the non-debug version of the runtime library
 		if(VC_LTL_FOUND)
 			set_property(TARGET ${target} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
+			# VC-LTL rewrites the CRT "RuntimeLibrary" detect_mismatch token (MT -> MT_LTL), so the
+			# application and every static library linked into it must be built with VC-LTL or linking
+			# fails with LNK2038. Import the helper props into each target so they stay consistent.
+			target_compile_definitions(${target} PRIVATE "_DISABLE_DEPRECATE_LTL_MESSAGE")
+			set_target_properties(${target} PROPERTIES VS_GLOBAL_VC_LTL_Root ${VC_LTL_Root})
+			if(EXISTS "${NCINE_ROOT}/VC-LTL helper for Visual Studio.props")
+				set_target_properties(${target} PROPERTIES VS_PROJECT_IMPORT "${NCINE_ROOT}/VC-LTL helper for Visual Studio.props")
+			else()
+				set_target_properties(${target} PROPERTIES VS_PROJECT_IMPORT "${VC_LTL_Root}/VC-LTL helper for Visual Studio.props")
+			endif()
 		else()
 			set_property(TARGET ${target} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 		endif()
@@ -401,12 +416,6 @@ function(ncine_apply_compiler_options target)
 				message(STATUS "Specified architecture extensions for code generation: ${NCINE_ARCH_EXTENSIONS}")
 			endif()
 			target_compile_options(${target} PRIVATE "/arch:${NCINE_ARCH_EXTENSIONS}")
-		endif()
-
-		# Enable Whole Program Optimization
-		if(NCINE_LINKTIME_OPTIMIZATION)
-			target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:/GL>)
-			target_link_options(${target} PRIVATE $<$<CONFIG:Release>:/LTCG>)
 		endif()
 
 		if(NCINE_AUTOVECTORIZATION_REPORT)
@@ -531,11 +540,6 @@ function(ncine_apply_compiler_options target)
 			endif()
 			target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-funsafe-loop-optimizations -ftree-loop-if-convert-stores>)
 
-			if(NCINE_LINKTIME_OPTIMIZATION AND NOT (MINGW OR MSYS OR ANDROID OR VITA))
-				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-flto=auto>)
-				target_link_options(${target} PRIVATE $<$<CONFIG:Release>:-flto=auto>)
-			endif()
-
 			if(NCINE_AUTOVECTORIZATION_REPORT)
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-fopt-info-vec-optimized>)
 			endif()
@@ -559,17 +563,6 @@ function(ncine_apply_compiler_options target)
 			if(NOT EMSCRIPTEN)
 				# Extra optimizations in Release
 				target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-Ofast>)
-			endif()
-
-			# Enable ThinLTO of Clang 4
-			if(NCINE_LINKTIME_OPTIMIZATION)
-				if(EMSCRIPTEN)
-					target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-flto>)
-					target_link_options(${target} PRIVATE $<$<CONFIG:Release>:-flto>)
-				elseif(NOT (MINGW OR MSYS OR ANDROID))
-					target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-flto=thin>)
-					target_link_options(${target} PRIVATE $<$<CONFIG:Release>:-flto=thin>)
-				endif()
 			endif()
 
 			if(NCINE_AUTOVECTORIZATION_REPORT)

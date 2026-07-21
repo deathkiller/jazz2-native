@@ -93,16 +93,7 @@ if(WIN32)
 		# Link to WinMM for high-precision timers and Windows HTTP library
 		target_link_libraries(${NCINE_APP} PRIVATE winmm)
 		
-		# Try to use VC-LTL library (if not disabled)
-		if(VC_LTL_FOUND AND MSVC)
-			target_compile_definitions(${NCINE_APP} PRIVATE "_DISABLE_DEPRECATE_LTL_MESSAGE")
-			set_target_properties(${NCINE_APP} PROPERTIES VS_GLOBAL_VC_LTL_Root ${VC_LTL_Root})
-			if(EXISTS "${NCINE_ROOT}/VC-LTL helper for Visual Studio.props")
-				set_target_properties(${NCINE_APP} PROPERTIES VS_PROJECT_IMPORT "${NCINE_ROOT}/VC-LTL helper for Visual Studio.props")
-			else()
-				set_target_properties(${NCINE_APP} PROPERTIES VS_PROJECT_IMPORT "${VC_LTL_Root}/VC-LTL helper for Visual Studio.props")
-			endif()
-		endif()
+		# VC-LTL (when found) is imported into every target by `ncine_apply_compiler_options()`
 	endif()
 endif()
 

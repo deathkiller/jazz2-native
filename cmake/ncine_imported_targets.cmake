@@ -32,9 +32,8 @@ endif()
 
 set(EXTERNAL_INCLUDES_DIR "${NCINE_LIBS}/Includes/" CACHE PATH "Set the path to external header files")
 
-# Vulkan backend: fetch the header-only Khronos Vulkan-Headers (no Vulkan SDK required — the loader is
-# resolved dynamically at runtime against vulkan-1.dll, which ships with GPU drivers, so no import library
-# is linked). Mirrors the ncine_libraries download above.
+# Vulkan backend: fetch the header-only Khronos Vulkan-Headers (no Vulkan SDK required - the loader is resolved
+# dynamically at runtime against vulkan-1.dll, which ships with GPU drivers, so no import library is linked).
 if(NCINE_PREFERRED_RHI STREQUAL "Vulkan")
 	if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.14.0")
 		include(FetchContent)
@@ -42,11 +41,11 @@ if(NCINE_PREFERRED_RHI STREQUAL "Vulkan")
 		FetchContent_Declare(
 			vulkan_headers
 			DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-			URL "https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/vulkan-sdk-1.3.283.0.tar.gz"
+			URL "https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/vulkan-sdk-1.4.350.1.tar.gz"
 		)
 		FetchContent_MakeAvailable(vulkan_headers)
 		set(VULKAN_HEADERS_INCLUDE_DIR "${vulkan_headers_SOURCE_DIR}/include" CACHE PATH "Path to the Khronos Vulkan headers" FORCE)
-		message(STATUS "Using Khronos Vulkan-Headers at ${VULKAN_HEADERS_INCLUDE_DIR}")
+		message(STATUS "Using Khronos Vulkan-Headers: ${VULKAN_HEADERS_INCLUDE_DIR}")
 	else()
 		message(FATAL_ERROR "The Vulkan backend requires CMake 3.14.0 or newer to download Vulkan-Headers")
 	endif()

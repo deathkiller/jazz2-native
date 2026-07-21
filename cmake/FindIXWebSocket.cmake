@@ -135,9 +135,13 @@ if(USE_TLS)
 	endif()
 endif()
 
-ncine_add_dependency(IXWebSocket STATIC)
+ncine_add_dependency(IXWebSocket STATIC ALLOW_EXCEPTIONS)
 
-target_sources(IXWebSocket PUBLIC ${_IXWEBSOCKET_HEADERS} ${_IXWEBSOCKET_SOURCES})
+target_sources(IXWebSocket PRIVATE ${_IXWEBSOCKET_HEADERS} ${_IXWEBSOCKET_SOURCES})
+
+target_include_directories(IXWebSocket
+	PRIVATE "${_IXWEBSOCKET_ROOT}"
+	INTERFACE "${NCINE_SOURCE_DIR}/Dependencies")
 
 source_group("Header Files" FILES ${_IXWEBSOCKET_HEADERS})
 source_group("Source Files" FILES ${_IXWEBSOCKET_SOURCES})
@@ -158,3 +162,5 @@ if(USE_TLS)
 		message(FATAL_ERROR "TLS Configuration error: Unknown backend")
 	endif()
 endif()
+
+set(IXWebSocket_FOUND TRUE)

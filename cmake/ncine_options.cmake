@@ -4,7 +4,23 @@ include(CMakeDependentOption)
 cmake_dependent_option(NCINE_BUILD_ANDROID "Build Android version of the game" OFF "NOT EMSCRIPTEN;NOT NINTENDO_SWITCH" OFF)
 option(NCINE_PROFILING "Enable runtime profiling" OFF)
 option(NCINE_DOWNLOAD_DEPENDENCIES "Download all build dependencies" ON)
-option(NCINE_LINKTIME_OPTIMIZATION "Compile the game with link time optimization when in release" ON)
+
+# Targets opt into interprocedural optimization (LTO/LTCG) through the INTERPROCEDURAL_OPTIMIZATION
+# property in `ncine_apply_compiler_options()`. Letting CMake drive LTO (instead of passing `-flto`/`/GL`
+# by hand) also makes it use the LTO-aware archiver wrappers (gcc-ar/gcc-ranlib, llvm-ar/llvm-ranlib) for
+# static libraries, which fixes the "archive has no index; run ranlib to add one" link error. Probe once
+# here (before any dependency targets in `ncine_imported_targets.cmake`) and just turn the option off if
+# the toolchain can't do it.
+option(NCINE_LINKTIME_OPTIMIZATION "Compile the game with link-time optimization when in release" ON)
+if(NCINE_LINKTIME_OPTIMIZATION)
+	include(CheckIPOSupported)
+	check_ipo_supported(RESULT _ipoSupported OUTPUT _ipoOutput)
+	if(NOT _ipoSupported)
+		message(STATUS "Link-time optimization is not supported by the toolchain, disabling it: ${_ipoOutput}")
+		set(NCINE_LINKTIME_OPTIMIZATION OFF)
+	endif()
+endif()
+
 option(NCINE_AUTOVECTORIZATION_REPORT "Enable report generation from compiler auto-vectorization" OFF)
 option(NCINE_STRIP_BINARIES "Enable symbols stripping from libraries and executables when in release" OFF)
 option(NCINE_VERSION_FROM_GIT "Try to set current game version from GIT repository" ON)
