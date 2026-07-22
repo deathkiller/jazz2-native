@@ -21,6 +21,7 @@ set(SOURCES
 	Emit.h
 	Essl100.cpp
 	Essl100.h
+	GlslAst.h
 	GlslReflect.cpp
 	GlslReflect.h
 	GlslToCpp.cpp

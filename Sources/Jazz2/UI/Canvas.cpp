@@ -71,7 +71,7 @@ namespace Jazz2::UI
 			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 		}
 
-		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+		auto instanceBlock = command->GetInstanceBlock();
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(finalColor.Data());
@@ -132,7 +132,7 @@ namespace Jazz2::UI
 
 		command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 
-		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+		auto instanceBlock = command->GetInstanceBlock();
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(finalColor.Data());
@@ -170,7 +170,7 @@ namespace Jazz2::UI
 			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 		}
 
-		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+		auto instanceBlock = command->GetInstanceBlock();
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(finalColor.Data());
 

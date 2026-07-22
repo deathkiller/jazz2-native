@@ -223,7 +223,7 @@ namespace Death { namespace Memory {
 		// It seems like a strange requirement -- it could just overalign for lower alignment values instead of failing.
 		// Which is what we do here. The Windows _aligned_malloc() API doesn't have this requirement.
 		void* data = {};
-		int result = posix_memalign(&data, alignment < sizeof(void*) ? sizeof(void*) : alignment, size * sizeof(T));
+		DEATH_UNUSED int result = posix_memalign(&data, alignment < sizeof(void*) ? sizeof(void*) : alignment, size * sizeof(T));
 		DEATH_DEBUG_ASSERT(result == 0);
 		return Containers::Array<T>{static_cast<T*>(data), size, Implementation::AlignedDeleter<T>};
 #elif defined(DEATH_TARGET_WINDOWS)

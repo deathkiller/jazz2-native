@@ -8,6 +8,8 @@
 #	define SDL_PLATFORM_ANDROID (1)
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
 #	define SDL_JOYSTICK_EMSCRIPTEN (1)
+#elif defined(DEATH_TARGET_VITA)
+#	define SDL_JOYSTICK_VITA (1)
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 #	define SDL_JOYSTICK_XINPUT (1)
 #elif defined(DEATH_TARGET_WINDOWS)

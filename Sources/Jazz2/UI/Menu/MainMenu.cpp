@@ -559,7 +559,7 @@ namespace Jazz2::UI::Menu
 
 			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+			auto instanceBlock = command->GetInstanceBlock();
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
 			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(debris.Size.X, debris.Size.Y);
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, debris.Alpha).Data());
@@ -570,7 +570,7 @@ namespace Jazz2::UI::Menu
 			worldMatrix.Translate(debris.Size.X * -0.5f, debris.Size.Y * -0.5f, 0.0f);
 			command->SetTransformation(worldMatrix);
 			command->SetLayer(debris.Depth);
-			ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *debris.DiffuseTexture, debris.PaletteOffset >= 0, (std::uint16_t)(debris.PaletteOffset >= 0 ? debris.PaletteOffset : 0));
+			ContentResolver::Get().BindSpritePalette(*command, *debris.DiffuseTexture, debris.PaletteOffset >= 0, (std::uint16_t)(debris.PaletteOffset >= 0 ? debris.PaletteOffset : 0));
 
 			renderQueue.AddCommand(command);
 		}
@@ -674,7 +674,7 @@ namespace Jazz2::UI::Menu
 		Vector2i viewSize = _canvasBackground->ViewSize;
 		auto command = &_texturedBackgroundPass._outputRenderCommand;
 
-		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+		auto instanceBlock = command->GetInstanceBlock();
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
@@ -719,7 +719,7 @@ namespace Jazz2::UI::Menu
 
 			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+			auto instanceBlock = command->GetInstanceBlock();
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(repeats, 0.0f, repeats, 0.0f);
 			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
@@ -729,7 +729,7 @@ namespace Jazz2::UI::Menu
 			worldMatrix.Translate(size.X * -0.5f, size.Y * -0.5f, 0.0f);
 			command->SetTransformation(worldMatrix);
 			command->SetLayer(100);
-			ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *base->TextureDiffuse.get(), indexed, 0);
+			ContentResolver::Get().BindSpritePalette(*command, *base->TextureDiffuse.get(), indexed, 0);
 
 			renderQueue.AddCommand(command);
 		}
@@ -756,7 +756,7 @@ namespace Jazz2::UI::Menu
 
 			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+			auto instanceBlock = command->GetInstanceBlock();
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(repeats, 0.0f, repeats, 0.0f);
 			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
@@ -766,7 +766,7 @@ namespace Jazz2::UI::Menu
 			worldMatrix.Translate(size.X * -0.5f, size.Y * -0.5f, 0.0f);
 			command->SetTransformation(worldMatrix);
 			command->SetLayer(110);
-			ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *base->TextureDiffuse.get(), indexed, 0);
+			ContentResolver::Get().BindSpritePalette(*command, *base->TextureDiffuse.get(), indexed, 0);
 
 			renderQueue.AddCommand(command);
 		}
@@ -793,7 +793,7 @@ namespace Jazz2::UI::Menu
 
 			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+			auto instanceBlock = command->GetInstanceBlock();
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(repeats, 0.0f, repeats, 0.0f);
 			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
@@ -803,7 +803,7 @@ namespace Jazz2::UI::Menu
 			worldMatrix.Translate(size.X * -0.5f, size.Y * -0.5f, 0.0f);
 			command->SetTransformation(worldMatrix);
 			command->SetLayer(120);
-			ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *base->TextureDiffuse.get(), indexed, 0);
+			ContentResolver::Get().BindSpritePalette(*command, *base->TextureDiffuse.get(), indexed, 0);
 
 			renderQueue.AddCommand(command);
 		}
@@ -888,13 +888,13 @@ namespace Jazz2::UI::Menu
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
 				float texBiasY = ((tile.TileID / _owner->_tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.Y);
 
-				auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+				auto instanceBlock = command->GetInstanceBlock();
 				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 				
 				command->SetTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize, y * TileSet::DefaultTileSize, 0.0f));
-				ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *_owner->_tileSet->TextureDiffuse, _owner->_tileSet->IsIndexed, 0);
+				ContentResolver::Get().BindSpritePalette(*command, *_owner->_tileSet->TextureDiffuse, _owner->_tileSet->IsIndexed, 0);
 
 				renderQueue.AddCommand(command);
 			}

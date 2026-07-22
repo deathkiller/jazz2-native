@@ -5,7 +5,7 @@
 namespace nCine
 {
 	BaseSprite::BaseSprite(SceneNode* parent, Texture* texture, float xx, float yy)
-		: DrawableNode(parent, xx, yy), texture_(texture), texRect_(0, 0, 0, 0), flippedX_(false), flippedY_(false), paletteOffset_(0.0f), instanceBlock_(nullptr)
+		: DrawableNode(parent, xx, yy), texture_(texture), texRect_(0, 0, 0, 0), flippedX_(false), flippedY_(false), paletteOffset_(0.0f)
 	{
 		renderCommand_.GetMaterial().SetBlendingEnabled(true);
 	}
@@ -89,7 +89,7 @@ namespace nCine
 
 	BaseSprite::BaseSprite(const BaseSprite& other)
 		: DrawableNode(other), texture_(other.texture_), texRect_(other.texRect_),
-			flippedX_(other.flippedX_), flippedY_(other.flippedY_), paletteOffset_(other.paletteOffset_), instanceBlock_(nullptr)
+			flippedX_(other.flippedX_), flippedY_(other.flippedY_), paletteOffset_(other.paletteOffset_)
 	{
 	}
 
@@ -105,7 +105,6 @@ namespace nCine
 	void BaseSprite::shaderHasChanged()
 	{
 		renderCommand_.GetMaterial().ReserveUniformsDataMemory();
-		instanceBlock_ = renderCommand_.GetMaterial().UniformBlock(Material::InstanceBlockName);
 		RHI::UniformCache* textureUniform = renderCommand_.GetMaterial().Uniform(Material::TextureUniformName);
 		if (textureUniform != nullptr && textureUniform->GetIntValue(0) != 0) {
 			textureUniform->SetIntValue(0); // GL_TEXTURE0
@@ -121,24 +120,26 @@ namespace nCine
 	{
 		ZoneScopedC(0x81A861);
 
+		RHI::UniformBlockCache* instanceBlock = renderCommand_.GetInstanceBlock();
+
 		if (dirtyBits_.test(DirtyBitPositions::TransformationUploadBit)) {
 			renderCommand_.SetTransformation(worldMatrix_);
 			//dirtyBits_.reset(DirtyBitPositions::TransformationUploadBit);
 		}
 		if (dirtyBits_.test(DirtyBitPositions::ColorUploadBit)) {
-			RHI::UniformCache* colorUniform = instanceBlock_->GetUniform(Material::ColorUniformName);
+			RHI::UniformCache* colorUniform = instanceBlock->GetUniform(Material::ColorUniformName);
 			if (colorUniform != nullptr) {
 				colorUniform->SetFloatVector(absColor().Data());
 			}
 			//dirtyBits_.reset(DirtyBitPositions::ColorUploadBit);
 		}
 		if (dirtyBits_.test(DirtyBitPositions::SizeBit)) {
-			RHI::UniformCache* spriteSizeUniform = instanceBlock_->GetUniform(Material::SpriteSizeUniformName);
+			RHI::UniformCache* spriteSizeUniform = instanceBlock->GetUniform(Material::SpriteSizeUniformName);
 			if (spriteSizeUniform != nullptr) {
 				spriteSizeUniform->SetFloatValue(width_, height_);
 			}
 			// Present only in palette shaders (sprite_vs/batched_sprites_vs); null elsewhere
-			RHI::UniformCache* palOffsetUniform = instanceBlock_->GetUniform(Material::PaletteOffsetUniformName);
+			RHI::UniformCache* palOffsetUniform = instanceBlock->GetUniform(Material::PaletteOffsetUniformName);
 			if (palOffsetUniform != nullptr) {
 				palOffsetUniform->SetFloatValue(paletteOffset_);
 			}
@@ -149,7 +150,7 @@ namespace nCine
 			if (texture_ != nullptr) {
 				renderCommand_.GetMaterial().SetTexture(*texture_);
 
-				RHI::UniformCache* texRectUniform = instanceBlock_->GetUniform(Material::TexRectUniformName);
+				RHI::UniformCache* texRectUniform = instanceBlock->GetUniform(Material::TexRectUniformName);
 				if (texRectUniform != nullptr) {
 					const Vector2i texSize = texture_->GetSize();
 					const float texScaleX = texRect_.W / float(texSize.X);

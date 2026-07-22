@@ -279,7 +279,7 @@ namespace Jazz2::UI
 
 			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+			auto instanceBlock = command->GetInstanceBlock();
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(Vector4f(1.0f, 0.0f, 1.0f, 0.0f).Data());
 			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(Vector2f(static_cast<float>(ViewSize.X), static_cast<float>(ViewSize.Y)).Data());
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(0.0f, 0.0f, 0.0f, _transitionTime).Data());
@@ -1221,7 +1221,7 @@ namespace Jazz2::UI
 			paletteUniform->SetIntValue(1); // GL_TEXTURE1
 		}
 
-		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+		auto instanceBlock = command->GetInstanceBlock();
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(size.Data());
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
@@ -1640,7 +1640,7 @@ namespace Jazz2::UI
 
 		command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
-		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+		auto instanceBlock = command->GetInstanceBlock();
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(1.0f, 1.0f);
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
@@ -1789,8 +1789,8 @@ namespace Jazz2::UI
 			}
 			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 			// texRect: x=inner radius fraction (0=filled, e.g., 0.75=ring), y=softness, zw=unused
+			auto instanceBlock = command->GetInstanceBlock();
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(Vector4f(ringInnerFraction, 0.018f, 0.0f, 0.0f).Data());
 			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatVector(Vector2f(radius * 2.0f, radius * 2.0f).Data());
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());

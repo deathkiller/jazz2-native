@@ -1444,7 +1444,7 @@ namespace Jazz2::Actors
 					gunspotPosY = std::floor(gunspotPosY);
 				}
 
-				auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+				auto instanceBlock = command->GetInstanceBlock();
 				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(res->Base->FrameDimensions.X, res->Base->FrameDimensions.Y * scaleY);
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(1.0f, 1.0f, 1.0f, 1.8f);
@@ -1525,7 +1525,7 @@ namespace Jazz2::Actors
 							}
 						}
 
-						auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+						auto instanceBlock = command->GetInstanceBlock();
 						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
 							frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinf(frames * 0.006f),
 							-sinf(frames * 0.015f), frames * 0.006f + _pos.Y * PosMultiplier);
@@ -1556,7 +1556,7 @@ namespace Jazz2::Actors
 							}
 						}
 
-						auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+						auto instanceBlock = command->GetInstanceBlock();
 						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
 							frames * 0.006f, sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
 							sinf(frames * 0.015f) + _pos.X * PosMultiplier, frames * -0.006f);
@@ -1608,7 +1608,7 @@ namespace Jazz2::Actors
 						shieldPosY = std::floor(shieldPosY);
 					}
 
-					auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+					auto instanceBlock = command->GetInstanceBlock();
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(res->Base->FrameDimensions.X * shieldScale, res->Base->FrameDimensions.Y * shieldScale);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(1.0f, 1.0f, 1.0f, shieldAlpha);
@@ -1616,7 +1616,7 @@ namespace Jazz2::Actors
 					command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));
 					command->SetLayer(baseLayer + 4);
 					// Use the default palette (offset 0) so the shield keeps its own colors, not the player's fur recolor
-					ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *res->Base->TextureDiffuse.get(), shieldIndexed, res->PaletteOffset);
+					ContentResolver::Get().BindSpritePalette(*command, *res->Base->TextureDiffuse.get(), shieldIndexed, res->PaletteOffset);
 
 					renderQueue.AddCommand(command.get());
 				}
@@ -1657,7 +1657,7 @@ namespace Jazz2::Actors
 							}
 						}
 
-						auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+						auto instanceBlock = command->GetInstanceBlock();
 						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
 							frames * -0.008f + _pos.X * PosMultiplier, frames * 0.006f - sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
 							-sinf(frames * 0.015f), frames * 0.006f);
@@ -1688,7 +1688,7 @@ namespace Jazz2::Actors
 							}
 						}
 
-						auto* instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+						auto* instanceBlock = command->GetInstanceBlock();
 						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
 							frames * 0.006f + _pos.X * PosMultiplier, sinf(frames * 0.006f) + _pos.Y * PosMultiplier,
 							sinf(frames * 0.015f), frames * -0.006f);

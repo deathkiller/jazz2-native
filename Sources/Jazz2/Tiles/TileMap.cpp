@@ -199,7 +199,7 @@ namespace Jazz2::Tiles
 					auto command = RentRenderCommand(LayerRendererType::Solid);
 					command->SetType(RenderCommand::Type::TileMap);
 
-					auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+					auto instanceBlock = command->GetInstanceBlock();
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(w, cullingRect.H);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -213,7 +213,7 @@ namespace Jazz2::Tiles
 					auto command = RentRenderCommand(LayerRendererType::Solid);
 					command->SetType(RenderCommand::Type::TileMap);
 
-					auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+					auto instanceBlock = command->GetInstanceBlock();
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(w, cullingRect.H);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -996,7 +996,7 @@ namespace Jazz2::Tiles
 					command->SetType(RenderCommand::Type::TileMap);
 					command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
-					auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+					auto instanceBlock = command->GetInstanceBlock();
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 
@@ -1007,7 +1007,7 @@ namespace Jazz2::Tiles
 					command->SetTransformation(Matrix4x4f::Translation(x2r, y2r, 0.0f));
 					command->SetLayer(layer.Description.Depth);
 					// Tiles use the default sprite palette (row 0, offset 0); binds the shared palette texture when indexed
-					ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *tileSet->TextureDiffuse, tileSet->IsIndexed, 0);
+					ContentResolver::Get().BindSpritePalette(*command, *tileSet->TextureDiffuse, tileSet->IsIndexed, 0);
 
 					renderQueue.AddCommand(command);
 				}
@@ -1136,8 +1136,8 @@ namespace Jazz2::Tiles
 				}
 			}
 
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
 			// Layer tint goes in the instance color; the per-vertex color carries each tile's alpha. palOffset stays 0.
+			auto instanceBlock = command->GetInstanceBlock();
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(layerColor.Data());
 
 			auto& geometry = command->GetGeometry();
@@ -1150,7 +1150,7 @@ namespace Jazz2::Tiles
 			command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
 			command->SetLayer(depth);
 			// Tiles use the default sprite palette (row 0, offset 0); binds diffuse on unit 0, palette on unit 1
-			ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *tileSet->TextureDiffuse, indexed, 0);
+			ContentResolver::Get().BindSpritePalette(*command, *tileSet->TextureDiffuse, indexed, 0);
 
 			renderQueue.AddCommand(command);
 		}
@@ -1683,7 +1683,7 @@ namespace Jazz2::Tiles
 				command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 			}
 
-			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+			auto instanceBlock = command->GetInstanceBlock();
 			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
 			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(debris.Size.X, debris.Size.Y);
 			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, debris.Alpha).Data());
@@ -1694,7 +1694,7 @@ namespace Jazz2::Tiles
 			worldMatrix.Translate(debris.Size.X  * -0.5f, debris.Size.Y * -0.5f, 0.0f);
 			command->SetTransformation(worldMatrix);
 			command->SetLayer(debris.Depth);
-			ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *debris.DiffuseTexture, debrisIndexed, (std::uint16_t)(debrisIndexed ? debris.PaletteOffset : 0));
+			ContentResolver::Get().BindSpritePalette(*command, *debris.DiffuseTexture, debrisIndexed, (std::uint16_t)(debrisIndexed ? debris.PaletteOffset : 0));
 
 			renderQueue.AddCommand(command);
 		}
@@ -1898,7 +1898,7 @@ namespace Jazz2::Tiles
 
 		auto* command = RentRenderCommand(layer.Description.RendererType);
 
-		auto* instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+		auto* instanceBlock = command->GetInstanceBlock();
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue((float)cullingRect.W, (float)cullingRect.H);
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
@@ -2031,13 +2031,13 @@ namespace Jazz2::Tiles
 					texScaleY *= -1;
 				}
 
-				auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+				auto instanceBlock = command->GetInstanceBlock();
 				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 				command->SetTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize, y * TileSet::DefaultTileSize, 0.0f));
-				ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *tileSet->TextureDiffuse, tileSet->IsIndexed, 0);
+				ContentResolver::Get().BindSpritePalette(*command, *tileSet->TextureDiffuse, tileSet->IsIndexed, 0);
 
 				renderQueue.AddCommand(command);
 			}

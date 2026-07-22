@@ -255,7 +255,7 @@ option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-depen
 
 # Jazz² Resurrection options
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)
-option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF)
+cmake_dependent_option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT VITA" ON)
 cmake_dependent_option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each tilemap layer" ON "NOT NCINE_PREFERRED_RHI STREQUAL Software" OFF)
 
 option(WITH_MULTIPLAYER "Enable multiplayer support" ON)

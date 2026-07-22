@@ -692,7 +692,7 @@ namespace Jazz2::UI::Multiplayer
 		command->GetGeometry().SetElementsPerVertex(4);
 		command->GetGeometry().SetHostVertexPointer(&_minimapVertices[startFloat]);
 
-		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+		auto instanceBlock = command->GetInstanceBlock();
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(1.0f, 1.0f);
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());

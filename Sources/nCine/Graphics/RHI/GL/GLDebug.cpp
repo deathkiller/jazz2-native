@@ -13,7 +13,9 @@
 #	define GL_DEBUG_SUPPORTED
 #endif
 
-#if defined(GL_DEBUG_SUPPORTED) && defined(WITH_OPENGLES) && GL_ES_VERSION_3_0 && !GL_ES_VERSION_3_2
+// The strict-ES2 profile compiling against gl2.h has no GL_ES_VERSION_3_0 macro, but KHR_debug (gl2ext.h)
+// provides the same *KHR-suffixed entry points and enums, so route to them here as well
+#if defined(GL_DEBUG_SUPPORTED) && defined(WITH_OPENGLES) && (GL_ES_VERSION_3_0 || defined(RHI_GL_PROFILE_ES2)) && !GL_ES_VERSION_3_2
 #	define glPushDebugGroup glPushDebugGroupKHR
 #	define glPopDebugGroup glPopDebugGroupKHR
 #	define glDebugMessageInsert glDebugMessageInsertKHR

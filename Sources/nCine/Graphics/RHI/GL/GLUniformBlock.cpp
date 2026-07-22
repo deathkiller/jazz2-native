@@ -17,10 +17,12 @@ namespace nCine::RHI::GL
 	GLUniformBlock::GLUniformBlock(GLuint program, GLuint index, DiscoverUniforms discover)
 		: GLUniformBlock()
 	{
-#if defined(DEATH_TARGET_VITA)
-		// Uniform buffer objects are unused under the OpenGL|ES 2.0 profile, and vitaGL exposes none of the
-		// glGetActiveUniformBlock*/glGetActiveUniformsiv() reflection entry points, so this discovery constructor
-		// is never invoked on Vita, leave the members at their default-constructed values.
+#if defined(RHI_GL_PROFILE_ES2)
+		// Uniform buffer objects are unused under the OpenGL|ES 2.0 profile, whose reflection path never
+		// invokes this discovery constructor (DiscoverUniformBlocks() is a no-op there). The block-introspection
+		// entry points (glGetActiveUniformBlock*/glGetActiveUniformsiv) and their GL_UNIFORM_BLOCK_* enums are
+		// ES 3.0 and strict ES 2.0 headers such as vitaGL's declare none of them, so leave the members at their
+		// default-constructed values.
 		static_cast<void>(program);
 		static_cast<void>(index);
 		static_cast<void>(discover);
@@ -115,6 +117,11 @@ namespace nCine::RHI::GL
 
 	void GLUniformBlock::SetBlockBinding(GLuint blockBinding)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// glUniformBlockBinding is ES 3.0; the OpenGL|ES 2.0 profile has no uniform blocks to bind, so this is
+		// never called (block members are pushed as loose uniforms)
+		static_cast<void>(blockBinding);
+#else
 		DEATH_ASSERT(program_ != 0);
 
 		if (bindingIndex_ != static_cast<GLint>(blockBinding)) {
@@ -122,5 +129,6 @@ namespace nCine::RHI::GL
 			GL_LOG_ERRORS();
 			bindingIndex_ = static_cast<GLint>(blockBinding);
 		}
+#endif
 	}
 }

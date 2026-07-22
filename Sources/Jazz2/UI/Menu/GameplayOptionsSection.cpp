@@ -109,7 +109,7 @@ namespace Jazz2::UI::Menu
 #endif
 #if defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_UNIX)
 		// TRANSLATORS: Menu item in Options > Gameplay section
-		list->Add<ListItem>(_("Browse \"Source\" Directory"), [root]() {
+		list->Add<ListItem>(_("Browse \"Source\" Directory"), []() {
 			auto& resolver = ContentResolver::Get();
 			String sourcePath = fs::GetAbsolutePath(resolver.GetSourcePath());
 			if (sourcePath.empty()) {

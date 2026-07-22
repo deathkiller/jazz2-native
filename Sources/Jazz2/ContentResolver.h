@@ -256,9 +256,10 @@ namespace Jazz2
 		 * @brief Binds the diffuse (and, when `indexed`, the palette) textures for a sprite render command
 		 *
 		 * Binds `diffuse` to texture unit 0 and, when `indexed`, the shared palette texture to unit 1 plus the
-		 * per-instance palette offset on `instanceBlock`. Call at draw time, after the other instance uniforms.
+		 * per-instance palette offset (resolved through the command's cached instance uniforms). Call at draw
+		 * time, after the other instance uniforms.
 		 */
-		void BindSpritePalette(RenderCommand& command, RHI::UniformBlockCache& instanceBlock, const Texture& diffuse, bool indexed, std::uint16_t paletteOffset);
+		void BindSpritePalette(RenderCommand& command, const Texture& diffuse, bool indexed, std::uint16_t paletteOffset);
 
 		/**
 		 * @brief Loads specified tile set and its palette

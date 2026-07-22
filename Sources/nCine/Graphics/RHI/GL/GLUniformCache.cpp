@@ -35,7 +35,7 @@ namespace nCine::RHI::GL
 		GLfloat value = 0.0f;
 
 		if (dataPointer_ != nullptr) {
-			value = static_cast<GLfloat>(*dataPointer_);
+			value = reinterpret_cast<const GLfloat*>(dataPointer_)[index];
 		}
 		return value;
 	}
@@ -57,7 +57,7 @@ namespace nCine::RHI::GL
 		GLint value = 0;
 
 		if (dataPointer_ != nullptr) {
-			value = static_cast<GLint>(*dataPointer_);
+			value = reinterpret_cast<const GLint*>(dataPointer_)[index];
 		}
 		return value;
 	}

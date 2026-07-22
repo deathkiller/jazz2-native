@@ -5,8 +5,17 @@
 #		include <vitaGL.h>
 #	elif defined(WITH_OPENGLES)
 #		define GL_GLEXT_PROTOTYPES
-#		include <GLES3/gl3.h>
-#		include <GLES2/gl2ext.h>
+#		if defined(RHI_GL_PROFILE_ES2)
+			// The true OpenGL|ES 2.0 profile compiles against the real ES 2.0 headers (exactly as a PlayStation
+			// Vita / vitaGL port would), proving no ES 3.x symbol leaks into the profile. The shim below defines
+			// the handful of enums that only profile-gated-out code paths still reference; see GLEs2HeaderShims.h.
+#			include <GLES2/gl2.h>
+#			include <GLES2/gl2ext.h>
+#			include "Graphics/RHI/GL/GLEs2HeaderShims.h"
+#		else
+#			include <GLES3/gl3.h>
+#			include <GLES2/gl2ext.h>
+#		endif
 #	elif defined(WITH_GLEW)
 #		define GLEW_NO_GLU
 #		include <GL/glew.h>

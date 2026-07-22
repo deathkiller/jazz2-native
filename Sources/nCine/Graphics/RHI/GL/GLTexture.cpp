@@ -188,12 +188,18 @@ namespace nCine::RHI::GL
 		TracyGpuZone("glTexStorage2D");
 		GLTextureFormat::CheckSupport(format);
 		Bind();
-#if !defined(DEATH_TARGET_VITA)
-		// vitaGL provides no glTexStorage2D(), the ES 2.0 profile allocates textures via glTexImage2D instead
+#if !defined(RHI_GL_PROFILE_ES2)
+		// glTexStorage2D() is ES 3.0 (and strict ES 2.0 headers such as vitaGL's declare none of it); the ES2
+		// profile reports SupportsImmutableStorage()==false and allocates textures via glTexImage2D instead,
+		// so this immutable-storage path is never reached here
 		GLint internalFormat;
 		GLenum externalFormat, dataType;
 		GLTextureFormat::Resolve(format, false, internalFormat, externalFormat, dataType);
 		glTexStorage2D(target_, levels, internalFormat, width, height);
+#else
+		static_cast<void>(levels);
+		static_cast<void>(width);
+		static_cast<void>(height);
 #endif
 		GL_LOG_ERRORS();
 	}

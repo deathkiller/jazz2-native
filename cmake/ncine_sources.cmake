@@ -101,6 +101,14 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/ShaderCompiler/ShaderParser.cpp
 )
 
+if(NCINE_RHI_GL_PROFILE_ES2)
+	# The OpenGL|ES 2.0 profile additionally links the offline ShaderCompiler's ESSL 100 emitter into the
+	# engine, so runtime-compiled (".shader") shaders get the same lowering the precompiled ones receive
+	# offline (Shader.cpp calls Essl100Emitter::Transform under RHI_GL_PROFILE_ES2). The GL 3.3 / other RHI
+	# builds never define the profile and therefore never reference or compile this file.
+	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/ShaderCompiler/Essl100.cpp)
+endif()
+
 if(NCINE_PREFERRED_RHI STREQUAL "Software")
 	# CPU software rendering backend
 	list(APPEND SOURCES

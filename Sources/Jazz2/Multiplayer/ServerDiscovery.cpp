@@ -789,7 +789,7 @@ namespace Jazz2::Multiplayer
 			auto reader = std::unique_ptr<Json::CharReader>(builder.newCharReader());
 			Json::Value doc; std::string errors;
 			if (reader->parse(buffer.get(), buffer.get() + size, &doc, &errors)) {
-				bool success; std::string_view endpoints;
+				bool success;
 				if (doc["r"].get(success) == Json::SUCCESS && success) {
 					LOGD("Server delisted successfully");
 				} else {

@@ -1,4 +1,5 @@
 #include "GlslToCpp.h"
+#include "GlslAst.h"
 #include "ShaderParser.h"
 #include "ConstFold.h"
 
@@ -110,12 +111,6 @@ namespace ShaderCompiler
 			return s + "f"_s;
 		}
 
-		bool IsQualifier(StringView k)
-		{
-			return (k == "const" || k == "highp" || k == "mediump" || k == "lowp" ||
-				k == "flat" || k == "smooth" || k == "invariant" || k == "centroid" || k == "noperspective");
-		}
-
 		bool IsBuiltin(StringView name)
 		{
 			static const char* const kNames[] = {
@@ -168,47 +163,11 @@ namespace ShaderCompiler
 			return false;
 		}
 
-		// Precedence of a binary/assignment operator, mirroring ConstFold's model (assignment = 1,
-		// ternary handled separately at 2). Returns -1 for anything that is not a binary operator.
-		std::int32_t BinPrec(StringView op)
-		{
-			if (op == "=" || op == "+=" || op == "-=" || op == "*=" || op == "/=" ||
-				op == "%=" || op == "&=" || op == "|=" || op == "^=" || op == "<<=" || op == ">>=") return 1;
-			if (op == "||") return 3;
-			if (op == "^^") return 4;
-			if (op == "&&") return 5;
-			if (op == "|") return 6;
-			if (op == "^") return 7;
-			if (op == "&") return 8;
-			if (op == "==" || op == "!=") return 9;
-			if (op == "<" || op == ">" || op == "<=" || op == ">=") return 10;
-			if (op == "<<" || op == ">>") return 11;
-			if (op == "+" || op == "-") return 12;
-			if (op == "*" || op == "/" || op == "%") return 13;
-			return -1;
-		}
-
 		// --- Abstract syntax tree --------------------------------------------------------------------
-
-		enum class ExprKind { IntLit, FloatLit, BoolLit, Ident, Member, Index, Call, Unary, Binary, Assign, Conditional };
-
-		struct Expr
-		{
-			ExprKind Kind;
-			String Text;		// literal text / identifier / member field / callee name / operator
-			bool Postfix = false;	// Unary: `x++`/`x--` (operator follows the operand) vs. a prefix `++x`
-			std::unique_ptr<Expr> A, B, C;	// Index: A = base, B = index
-			std::vector<std::unique_ptr<Expr>> Args;
-		};
-		using ExprPtr = std::unique_ptr<Expr>;
-
-		ExprPtr MakeExpr(ExprKind kind, String text = {})
-		{
-			auto e = std::make_unique<Expr>();
-			e->Kind = kind;
-			e->Text = std::move(text);
-			return e;
-		}
+		// The expression AST (Expr / ExprKind / ExprPtr / MakeExpr) is shared with the HLSL emitter and
+		// lives in GlslAst.h; only the statement/declaration model is software-transpiler-local. The
+		// shared ExprKind carries a UIntLit the HLSL emitter needs; this path folds `2u` to a signed
+		// IntLit while parsing (see ParsePrimary), so it never builds a UIntLit node.
 
 		enum class StmtKind { Block, VarDecl, ExprStmt, If, For, Return };
 
@@ -939,7 +898,7 @@ namespace ShaderCompiler
 			{
 				if (e == nullptr) return false;
 				switch (e->Kind) {
-					case ExprKind::IntLit: case ExprKind::FloatLit: case ExprKind::BoolLit:
+					case ExprKind::IntLit: case ExprKind::UIntLit: case ExprKind::FloatLit: case ExprKind::BoolLit:
 						return false;
 					case ExprKind::Ident:
 						if (e->Text == "gl_VertexID" || e->Text == "gl_InstanceID") return true;
@@ -973,7 +932,7 @@ namespace ShaderCompiler
 			{
 				if (e == nullptr) { return {}; }
 				switch (e->Kind) {
-					case ExprKind::IntLit: return e->Text;
+					case ExprKind::IntLit: case ExprKind::UIntLit: return e->Text;
 					case ExprKind::FloatLit: return NormalizeFloatLiteral(e->Text);
 					case ExprKind::BoolLit: return e->Text;
 					case ExprKind::Ident: {
@@ -1299,7 +1258,8 @@ namespace ShaderCompiler
 			String EmitCore(const Expr* e)
 			{
 				switch (e->Kind) {
-					case ExprKind::IntLit: return e->Text;
+					// UIntLit never occurs here (ParsePrimary folds `2u` to a signed IntLit); handled for exhaustiveness
+					case ExprKind::IntLit: case ExprKind::UIntLit: return e->Text;
 					case ExprKind::FloatLit: return EmitFloatLiteral(e->Text);
 					case ExprKind::BoolLit: return e->Text;
 					case ExprKind::Ident: return EmitIdent(e->Text);
@@ -1451,35 +1411,6 @@ namespace ShaderCompiler
 	}
 
 	// --- Public entry point --------------------------------------------------------------------------
-
-	namespace
-	{
-		// Splits, strips comments from, preprocesses and tokenizes a GLSL stage source, appending a trailing
-		// End token. Returns false (with a reason) only if preprocessing fails.
-		bool TokenizeStage(StringView glsl, std::vector<GlslToken>& tokens, String& reason)
-		{
-			std::vector<SourceLine> lines;
-			ShaderParser::SplitLines(glsl, lines);
-			ShaderParser::StripComments(lines);
-
-			Preprocessor preprocessor;
-			std::vector<SourceLine> preprocessed;
-			Diagnostic diag;
-			if (!preprocessor.Run(lines, preprocessed, diag)) {
-				reason = "preprocessing failed: "_s + diag.Message;
-				return false;
-			}
-
-			for (std::size_t i = 0; i < preprocessed.size(); i++) {
-				const String& text = preprocessed[i].Text;
-				GlslExprTokenizer::Tokenize(text, 0, text.size(), i, tokens);
-			}
-			GlslToken end;
-			end.Type = GlslTokenType::End;
-			tokens.push_back(std::move(end));
-			return true;
-		}
-	}
 
 	GlslToCppResult GlslToCpp::TranspileFragment(StringView programName, StringView fragmentGlsl,
 		StringView vertexGlsl, const std::vector<SamplerBinding>& samplers,

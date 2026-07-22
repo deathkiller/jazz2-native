@@ -104,7 +104,7 @@ namespace nCine::RHI::GL
 			Texture = GL_TEXTURE,
 			RenderBuffer = GL_RENDERBUFFER,
 			FrameBuffer = GL_FRAMEBUFFER,
-#	if ((defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21) || (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES))) && GL_ES_VERSION_3_0
+#	if ((defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21) || (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES))) && (GL_ES_VERSION_3_0 || (defined(RHI_GL_PROFILE_ES2) && !defined(DEATH_TARGET_VITA)))
 			Buffer = GL_BUFFER_KHR,
 			Shader = GL_SHADER_KHR,
 			Program = GL_PROGRAM_KHR,

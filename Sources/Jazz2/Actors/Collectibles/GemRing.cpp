@@ -112,7 +112,7 @@ namespace Jazz2::Actors::Collectibles
 					float texScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
 					float texBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
 
-					auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+					auto instanceBlock = command->GetInstanceBlock();
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(res->Base->FrameDimensions.X * _pieces[i].Scale, res->Base->FrameDimensions.Y * _pieces[i].Scale);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 0.7f).Data());
@@ -120,7 +120,7 @@ namespace Jazz2::Actors::Collectibles
 					auto& pos = _pieces[i].Pos;
 					command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f).RotateZ(_pieces[i].Angle));
 					command->SetLayer(_renderer.layer() - 2);
-					resolver.BindSpritePalette(*command, *instanceBlock, *res->Base->TextureDiffuse.get(), indexed, res->PaletteOffset);
+					resolver.BindSpritePalette(*command, *res->Base->TextureDiffuse.get(), indexed, res->PaletteOffset);
 
 					renderQueue.AddCommand(command);
 				}

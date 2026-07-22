@@ -2339,7 +2339,7 @@ namespace Jazz2
 		return shaderChanged;
 	}
 
-	void ContentResolver::BindSpritePalette(RenderCommand& command, RHI::UniformBlockCache& instanceBlock, const Texture& diffuse, bool indexed, std::uint16_t paletteOffset)
+	void ContentResolver::BindSpritePalette(RenderCommand& command, const Texture& diffuse, bool indexed, std::uint16_t paletteOffset)
 	{
 		command.GetMaterial().SetTexture(0, diffuse);
 		if (indexed) {
@@ -2347,7 +2347,7 @@ namespace Jazz2
 			if (palette != nullptr) {
 				command.GetMaterial().SetTexture(1, *palette);
 			}
-			RHI::UniformCache* palOffsetUniform = instanceBlock.GetUniform(Material::PaletteOffsetUniformName);
+			RHI::UniformCache* palOffsetUniform = command.GetInstanceBlock()->GetUniform(Material::PaletteOffsetUniformName);
 			if (palOffsetUniform != nullptr) {
 				palOffsetUniform->SetFloatValue((float)paletteOffset);
 			}

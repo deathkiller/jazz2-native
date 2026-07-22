@@ -561,7 +561,7 @@ namespace Jazz2::UI
 					// when drawn into an RGBA render target, harmless for opaque/RGB targets
 					command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
 
-					auto* instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+					auto* instanceBlock = command->GetInstanceBlock();
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
 					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(charWidth * glyphScale, uvRect.H * glyphScale);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(glyphColor.Data());

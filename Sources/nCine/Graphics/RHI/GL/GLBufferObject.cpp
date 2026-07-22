@@ -90,6 +90,11 @@ namespace nCine::RHI::GL
 
 	void GLBufferObject::BindBufferBase(GLuint index)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// Indexed uniform-buffer bindings (glBindBufferBase) are ES 3.0; nothing binds a UBO on the OpenGL|ES 2.0
+		// profile - the block members are pushed as loose uniforms and CommitUniformBlocks() is a no-op
+		static_cast<void>(index);
+#else
 		DEATH_ASSERT(target_ == GL_UNIFORM_BUFFER);
 		DEATH_ASSERT(index < MaxIndexBufferRange);
 
@@ -103,10 +108,17 @@ namespace nCine::RHI::GL
 			glBindBufferBase(target_, index, glHandle_);
 		}
 		GL_LOG_ERRORS();
+#endif
 	}
 
 	void GLBufferObject::BindBufferRange(GLuint index, GLintptr offset, GLsizei ptrsize)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// glBindBufferRange is ES 3.0; see BindBufferBase() above - no UBO is ever bound on this profile
+		static_cast<void>(index);
+		static_cast<void>(offset);
+		static_cast<void>(ptrsize);
+#else
 		DEATH_ASSERT(target_ == GL_UNIFORM_BUFFER);
 		DEATH_ASSERT(index < MaxIndexBufferRange);
 
@@ -122,34 +134,55 @@ namespace nCine::RHI::GL
 			glBindBufferRange(target_, index, glHandle_, offset, ptrsize);
 		}
 		GL_LOG_ERRORS();
+#endif
 	}
 
 	void* GLBufferObject::MapBufferRange(GLintptr offset, GLsizeiptr length, GLbitfield access)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// Buffer mapping (glMapBufferRange) is ES 3.0; the ES2 profile forces useBufferMapping=false and streams
+		// via glBufferSubData instead, so this is never reached
+		static_cast<void>(offset);
+		static_cast<void>(length);
+		static_cast<void>(access);
+		return nullptr;
+#else
 		FATAL_ASSERT(mapped_ == false);
 		mapped_ = true;
 		Bind();
 		void* result = glMapBufferRange(target_, offset, length, access);
 		GL_LOG_ERRORS();
 		return result;
+#endif
 	}
 
 	void GLBufferObject::FlushMappedBufferRange(GLintptr offset, GLsizeiptr length)
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// glFlushMappedBufferRange is ES 3.0; unreached on this profile (see MapBufferRange above)
+		static_cast<void>(offset);
+		static_cast<void>(length);
+#else
 		FATAL_ASSERT(mapped_ == true);
 		Bind();
 		glFlushMappedBufferRange(target_, offset, length);
 		GL_LOG_ERRORS();
+#endif
 	}
 
 	GLboolean GLBufferObject::Unmap()
 	{
+#if defined(RHI_GL_PROFILE_ES2)
+		// glUnmapBuffer's ES 3.0 signature is unreached on this profile (see MapBufferRange above)
+		return GL_TRUE;
+#else
 		FATAL_ASSERT(mapped_ == true);
 		mapped_ = false;
 		Bind();
 		GLboolean result = glUnmapBuffer(target_);
 		GL_LOG_ERRORS();
 		return result;
+#endif
 	}
 
 #if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)

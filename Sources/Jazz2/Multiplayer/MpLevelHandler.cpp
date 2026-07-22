@@ -2393,7 +2393,7 @@ namespace Jazz2::Multiplayer
 
 					serverConfig.ServerName = value.trimmed();
 
-					std::size_t length;
+					std::size_t length = 0;
 					if (!serverConfig.ServerName.empty()) {
 						length = formatInto(infoBuffer, "Server name set to \f[w:80]\f[c:#707070]{}\f[/c]\f[/w]", serverConfig.ServerName);
 					} else if (!serverConfig.IsPrivate) {
@@ -4768,7 +4768,8 @@ namespace Jazz2::Multiplayer
 	{
 		MemoryStream packet(data);
 		std::uint32_t actorId = packet.ReadVariableUint32();
-		std::uint8_t flags = packet.ReadValue<std::uint8_t>();
+		// TODO: Flags are unused
+		DEATH_UNUSED std::uint8_t flags = packet.ReadValue<std::uint8_t>();
 		std::uint32_t metadataLength = packet.ReadVariableUint32();
 		if DEATH_UNLIKELY(metadataLength > 512) {
 			// Refuse an implausibly long (attacker-controlled) length before allocating a buffer for it
@@ -5721,7 +5722,7 @@ namespace Jazz2::Multiplayer
 			// load no client is connected yet, so spawning now would only reach late joiners via the per-peer sync
 
 			if (serverConfig.GameMode == MpGameMode::Cooperation) {
-				_eventMap->ForEachEvent([this](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
+				_eventMap->ForEachEvent([](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
 					if (e.Event == EventType::OneUp) {
 						// Replace all 1ups with max carrots
 						// TODO: Reset it back to 1ups when starting a different mode with limited lives
@@ -5743,7 +5744,7 @@ namespace Jazz2::Multiplayer
 				_eventMap->SetPitType(PitType::FallForever);
 			}
 
-			_eventMap->ForEachEvent([this](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
+			_eventMap->ForEachEvent([](Events::EventMap::EventTile& e, std::int32_t x, std::int32_t y) {
 				switch (e.Event) {
 					case EventType::WarpOrigin:
 					case EventType::ModifierHurt:

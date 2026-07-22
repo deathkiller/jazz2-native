@@ -6,6 +6,9 @@
 #include "../tracy.h"
 #include "../../Main.h"
 #include "../../ShaderCompiler/RuntimeShader.h"
+#if defined(RHI_GL_PROFILE_ES2)
+#	include "../../ShaderCompiler/Essl100.h"
+#endif
 
 #include <IO/FileSystem.h>
 
@@ -151,11 +154,31 @@ namespace nCine
 		const char* vsSource = variant.VsSource;
 		const char* fsSource = variant.FsSource;
 #if defined(RHI_GL_PROFILE_ES2)
+		// Storage for the on-the-fly lowering of runtime-compiled shaders - kept alive for the whole call
+		// because the C-string views below point into it.
+		String vsSource100, fsSource100;
 		if (variant.VsSource100 != nullptr) {
 			vsSource = variant.VsSource100;
+		} else if (vsSource != nullptr) {
+			// Runtime-compiled (".shader") programs carry no baked ESSL 100 source, so lower it here with the
+			// same Essl100Emitter the offline tool runs on the fully-assembled stage source. On decline keep the
+			// modern source (the strict ES2 compile then fails non-fatally) and log which shader and why.
+			ShaderCompiler::Diagnostic diag;
+			if (ShaderCompiler::Essl100Emitter::Transform(vsSource, true, vsSource100, diag)) {
+				vsSource = vsSource100.data();
+			} else {
+				LOGW("ESSL 100 lowering declined for shader \"{}\" vertex stage (line {}): {} - falling back to the modern source", shaderName != nullptr ? shaderName : "(unnamed)", diag.Line, diag.Message.data());
+			}
 		}
 		if (variant.FsSource100 != nullptr) {
 			fsSource = variant.FsSource100;
+		} else if (fsSource != nullptr) {
+			ShaderCompiler::Diagnostic diag;
+			if (ShaderCompiler::Essl100Emitter::Transform(fsSource, false, fsSource100, diag)) {
+				fsSource = fsSource100.data();
+			} else {
+				LOGW("ESSL 100 lowering declined for shader \"{}\" fragment stage (line {}): {} - falling back to the modern source", shaderName != nullptr ? shaderName : "(unnamed)", diag.Line, diag.Message.data());
+			}
 		}
 		if (batchSize > 12) {
 			batchSize = 8;

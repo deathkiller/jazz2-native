@@ -132,6 +132,8 @@
   <ItemGroup>
     <ClInclude Include="ConstFold.h" />
     <ClInclude Include="Emit.h" />
+    <ClInclude Include="GlslAst.h" />
+    <ClInclude Include="GlslTypedAst.h" />
     <ClInclude Include="GlslToCpp.h" />
     <ClInclude Include="Essl100.h" />
     <ClInclude Include="Hlsl.h" />

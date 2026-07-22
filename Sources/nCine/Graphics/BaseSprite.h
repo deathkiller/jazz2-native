@@ -78,8 +78,6 @@ namespace nCine
 		bool flippedY_;
 		/** @brief Flat index into the palette texture, uploaded per-instance for palette shaders (0 = first palette row) */
 		float paletteOffset_;
-
-		RHI::UniformBlockCache* instanceBlock_;
 #endif
 
 		/** @brief Protected constructor accessible only by derived sprite classes */

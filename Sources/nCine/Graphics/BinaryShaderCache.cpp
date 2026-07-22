@@ -61,9 +61,17 @@ namespace nCine
 		} else
 #	endif
 		{
+#if defined(RHI_GL_PROFILE_ES2)
+			// The core program-binary entry points (glGetProgramBinary/glProgramBinary) and GL_PROGRAM_BINARY_LENGTH
+			// are ES 3.0 / ARB - strict ES 2.0 only has the OES_get_program_binary spelling, which isSupported()
+			// above already requires on WITH_OPENGLES, so this core/ARB fallback is unreachable on this profile
+			LOGW("Program binary retrieval is unavailable without OES_get_program_binary, binary shader cache is disabled");
+			return;
+#else
 			_glGetProgramBinary = glGetProgramBinary;
 			_glProgramBinary = glProgramBinary;
 			_glProgramBinaryLength = GL_PROGRAM_BINARY_LENGTH;
+#endif
 		}
 
 		const auto& infoStrings = gfxCaps.GetInfoStrings();

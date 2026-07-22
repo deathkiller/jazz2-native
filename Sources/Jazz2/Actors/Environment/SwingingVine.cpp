@@ -125,7 +125,7 @@ namespace Jazz2::Actors::Environment
 				float chunkTexSize = ChunkSize / texSize.Y;
 				float chunkAngle = sinf(currentPhase - i * 0.08f) * 1.2f;
 
-				auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+				auto instanceBlock = command->GetInstanceBlock();
 				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, chunkTexSize, chunkTexSize * i);
 				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(texSize.X, ChunkSize);
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
@@ -134,7 +134,7 @@ namespace Jazz2::Actors::Environment
 				worldMatrix.RotateZ(chunkAngle);
 				command->SetTransformation(worldMatrix);
 				command->SetLayer(_renderer.layer());
-				resolver.BindSpritePalette(*command, *instanceBlock, *resBase->TextureDiffuse, indexed, _currentAnimation->PaletteOffset);
+				resolver.BindSpritePalette(*command, *resBase->TextureDiffuse, indexed, _currentAnimation->PaletteOffset);
 
 				renderQueue.AddCommand(command);
 			}
