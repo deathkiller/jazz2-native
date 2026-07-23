@@ -67,7 +67,15 @@ namespace Jazz2::Rendering
 		std::int32_t textureHeight = height * _supersample;
 
 		// An overlay layer needs an alpha channel so the scene shows through where nothing is drawn
-		Texture::Format targetFormat = (overlay ? Texture::Format::RGBA8 : Texture::Format::RGB8);
+		// vitaGL/GXM render targets use a four-byte pixel stride. RGB8 can expose an uninitialized
+		// right or bottom edge when the target is composited to the 960x544 display.
+		Texture::Format targetFormat = (overlay ? Texture::Format::RGBA8 :
+#if defined(DEATH_TARGET_VITA)
+			Texture::Format::RGBA8
+#else
+			Texture::Format::RGB8
+#endif
+		);
 
 		_targetSize = Vector2f((float)targetWidth, (float)targetHeight);
 
@@ -170,7 +178,7 @@ namespace Jazz2::Rendering
 		}
 
 		// Prepare render command
-#if !defined(DISABLE_RESCALE_SHADERS)
+#if !defined(DISABLE_RESCALE_SHADERS) && !defined(DEATH_TARGET_VITA)
 		_resizeAtLogicalScale = false;
 		if (overlay) {
 			// The overlay layer is composited at the native logical resolution straight onto the screen, so it must

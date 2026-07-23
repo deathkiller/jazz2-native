@@ -40,6 +40,7 @@ namespace Jazz2::Input
 		first[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(0, ButtonName::A));
 		first[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(Keys::C));
 		first[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(0, ButtonName::B));
+		first[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(0, ButtonName::LeftBumper));
 		first[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(0, AxisName::LeftTrigger));
 		first[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(Keys::X));
 		first[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(0, ButtonName::Y));
@@ -118,6 +119,7 @@ namespace Jazz2::Input
 				current[(std::int32_t)PlayerAction::Fire].Targets.push_back(CreateTarget(i, AxisName::RightTrigger));
 				current[(std::int32_t)PlayerAction::Jump].Targets.push_back(CreateTarget(i, ButtonName::A));
 				current[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(i, ButtonName::B));
+				current[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(i, ButtonName::LeftBumper));
 				current[(std::int32_t)PlayerAction::Run].Targets.push_back(CreateTarget(i, AxisName::LeftTrigger));
 				current[(std::int32_t)PlayerAction::ChangeWeapon].Targets.push_back(CreateTarget(i, ButtonName::Y));
 				current[(std::int32_t)PlayerAction::Menu].Targets.push_back(CreateTarget(i, ButtonName::Start));

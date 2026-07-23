@@ -678,10 +678,19 @@ else()
 		)
 	elseif(VITA)
 		include("${VITASDK}/share/vita.cmake" REQUIRED)
+		# Reserve space after the executable segment for Vita SELF metadata. Without this gap,
+		# vita-elf-create can overlap the data segment as the binary grows.
+		target_link_options(${NCINE_APP} PRIVATE "-Wl,--section-start,.init_array=0x81610000")
 
 		# Link to all required libraries and stubs
+		set(NCINE_VITAGL_LIBRARY "" CACHE FILEPATH "Optional custom static vitaGL library")
+		if(NCINE_VITAGL_LIBRARY)
+			set(_NCINE_VITAGL_LIBRARY "${NCINE_VITAGL_LIBRARY}")
+		else()
+			set(_NCINE_VITAGL_LIBRARY vitaGL)
+		endif()
 		target_link_libraries(${NCINE_APP} PRIVATE
-			vitaGL
+			${_NCINE_VITAGL_LIBRARY}
 			vitashark
 			SceShaccCgExt
 
@@ -726,16 +735,22 @@ else()
 		else()
 			set(VITA_VERSION "${VITA_VERSION}.${CMAKE_MATCH_2}")
 		endif()
-		set(VITA_TITLEID ${NCINE_APP})
-		string(LENGTH ${VITA_TITLEID} _TITLEID_LEN)
-		while(_TITLEID_LEN LESS 9)
-			set(VITA_TITLEID "${VITA_TITLEID}0")
-			string(LENGTH ${VITA_TITLEID} _TITLEID_LEN)
-		endwhile()
+		set(VITA_TITLEID "JAZZ2VITA" CACHE STRING "Nine-character title ID for the PS Vita VPK")
+		string(LENGTH "${VITA_TITLEID}" _TITLEID_LEN)
+		if(NOT _TITLEID_LEN EQUAL 9 OR NOT VITA_TITLEID MATCHES "^[A-Z0-9]+$")
+			message(FATAL_ERROR "VITA_TITLEID must contain exactly nine uppercase letters or digits")
+		endif()
+		file(GLOB_RECURSE VITA_CONTENT_FILES LIST_DIRECTORIES FALSE "${NCINE_CONTENT_DIR}/*")
+		set(VITA_VPK_CONTENT)
+		foreach(CONTENT_FILE IN LISTS VITA_CONTENT_FILES)
+			file(RELATIVE_PATH CONTENT_FILE_RELPATH "${NCINE_CONTENT_DIR}" "${CONTENT_FILE}")
+			list(APPEND VITA_VPK_CONTENT FILE "${CONTENT_FILE}" "Content/${CONTENT_FILE_RELPATH}")
+		endforeach()
 		vita_create_self(${NCINE_APP}.self ${NCINE_APP})
 		vita_create_vpk(${NCINE_APP}.vpk ${VITA_TITLEID} ${NCINE_APP}.self
 			VERSION ${VITA_VERSION} NAME ${NCINE_APP_NAME}
-			FILE "${NCINE_SOURCE_DIR}/Icons/128px.png" "sce_sys/icon0.png")
+			FILE "${NCINE_SOURCE_DIR}/Icons/VitaIcon.png" "sce_sys/icon0.png"
+			${VITA_VPK_CONTENT})
 	elseif(WIN32 AND NCINE_COPY_DEPENDENCIES)
 		set(WIN32_DEPENDENCIES "")
 		

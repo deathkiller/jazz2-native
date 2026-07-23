@@ -445,6 +445,12 @@ namespace Jazz2
 						if (menuMapping.Targets.empty()) {
 							mappings[(std::int32_t)PlayerAction::Menu].Targets.push_back(ControlScheme::CreateTarget(Keys::Escape));
 						}
+
+#if defined(DEATH_TARGET_VITA)
+						if (version < 16) {
+							ControlScheme::Reset();
+						}
+#endif
 					} else {
 						// Skip old control mapping definitions
 						std::uint8_t controlMappingCount = uc.ReadValue<std::uint8_t>();

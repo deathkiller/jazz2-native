@@ -32,12 +32,16 @@ namespace nCine
 		LOGD("Initializing OpenAL audio device...");
 
 		device_ = alcOpenDevice(nullptr);
-		DEATH_ASSERT(device_ != nullptr, ("alcOpenDevice() failed with error 0x{:x}", alGetError()), );
+		if (device_ == nullptr) {
+			LOGE("alcOpenDevice() failed with error 0x{:x}", alGetError());
+			return;
+		}
 		deviceName_ = alcGetString(device_, ALC_DEVICE_SPECIFIER);
 
 		context_ = alcCreateContext(device_, nullptr);
 		if (context_ == nullptr) {
 			alcCloseDevice(device_);
+			device_ = nullptr;
 			LOGE("alcCreateContext() failed with error 0x{:x}", alGetError());
 			return;
 		}
@@ -54,6 +58,8 @@ namespace nCine
 		if (!alcMakeContextCurrent(context_)) {
 			alcDestroyContext(context_);
 			alcCloseDevice(device_);
+			context_ = nullptr;
+			device_ = nullptr;
 			LOGE("alcMakeContextCurrent() failed with error 0x{:x}", alGetError());
 			return;
 		}
@@ -215,14 +221,15 @@ namespace nCine
 		unregisterAudioEvents();
 #endif
 
-		for (ALuint sourceId : sources_) {
-			alSourcei(sourceId, AL_BUFFER, AL_NONE);
+		if (context_ != nullptr) {
+			for (ALuint sourceId : sources_) {
+				alSourcei(sourceId, AL_BUFFER, AL_NONE);
+			}
+			alDeleteSources(MaxSources, sources_);
+			alcDestroyContext(context_);
 		}
-		alDeleteSources(MaxSources, sources_);
 
-		alcDestroyContext(context_);
-
-		if (!alcCloseDevice(device_)) {
+		if (device_ != nullptr && !alcCloseDevice(device_)) {
 			LOGW("alcCloseDevice() failed with error 0x{:x}", alGetError());
 		}
 	}

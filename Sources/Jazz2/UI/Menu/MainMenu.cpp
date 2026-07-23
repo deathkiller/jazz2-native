@@ -231,9 +231,18 @@ namespace Jazz2::UI::Menu
 
 		_owner->_activeCanvas = ActiveCanvas::Background;
 
+		#if defined(DEATH_TARGET_VITA) && defined(VITA_DIAGNOSTIC_FLAT_MENU)
+		// Isolate the menu UI from its animated background when profiling VitaGL fill-rate.
+		DrawSolid(Vector2f::Zero, 0, ViewSize.As<float>(), Colorf(0.08f, 0.12f, 0.2f, 1.0f));
+		#elif defined(DEATH_TARGET_VITA)
+		// Render the tilemap once into a small target and composite it, avoiding legacy palette-remap
+		// layers that reduce VitaGL's main menu to a few frames per second.
+		_owner->RenderTexturedBackground(renderQueue);
+		#else
 		if (PreferencesCache::EnableReforgedMainMenu || !_owner->RenderLegacyBackground(renderQueue)) {
 			_owner->RenderTexturedBackground(renderQueue);
 		}
+		#endif
 
 		Vector2i center = ViewSize / 2;
 		std::int32_t charOffset = 0;
@@ -675,13 +684,21 @@ namespace Jazz2::UI::Menu
 		auto command = &_texturedBackgroundPass._outputRenderCommand;
 
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+#if defined(DEATH_TARGET_VITA)
+		// Animate the baked background by scrolling its repeat-wrapped texture instead of running a
+		// procedural full-screen shader or re-rendering the tilemap every frame.
+		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, _texturedBackgroundPos.X / 256.0f, 1.0f, _texturedBackgroundPos.Y / 256.0f);
+#else
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+#endif
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
+#if !defined(DEATH_TARGET_VITA)
 		command->GetMaterial().Uniform("uViewSize")->SetFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
 		command->GetMaterial().Uniform("uShift")->SetFloatVector(_texturedBackgroundPos.Data());
 		command->GetMaterial().Uniform("uHorizonColor")->SetFloatVector(horizonColor.Data());
+#endif
 
 		command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
 		command->GetMaterial().SetTexture(*target);
@@ -691,17 +708,28 @@ namespace Jazz2::UI::Menu
 
 	bool MainMenu::RenderLegacyBackground(RenderQueue& renderQueue)
 	{
+		auto* res128 = _metadata->FindAnimation(Menu128);
+
+#if defined(DEATH_TARGET_VITA)
+		// Three blended fullscreen palette layers are fill-rate bound on Vita. Keep the distant layer,
+		// which preserves the animated menu look at one third of the fragment work.
+		if (res128 == nullptr) {
+			return false;
+		}
+#else
 		auto* res16 = _metadata->FindAnimation(Menu16);
 		auto* res32 = _metadata->FindAnimation(Menu32);
-		auto* res128 = _metadata->FindAnimation(Menu128);
 		if (res16 == nullptr || res32 == nullptr || res128 == nullptr) {
 			return false;
 		}
+#endif
 
 		float animTime = _canvasBackground->AnimTime;
 		Vector2f center = (_canvasBackground->ViewSize / 2).As<float>();
 
 		// 16
+
+#if !defined(DEATH_TARGET_VITA)
 		{
 			GenericGraphicResource* base = res16->Base;
 			base->TextureDiffuse->SetMinFiltering(SamplerFilter::Nearest);
@@ -733,7 +761,7 @@ namespace Jazz2::UI::Menu
 
 			renderQueue.AddCommand(command);
 		}
-		
+
 		// 32
 		{
 			GenericGraphicResource* base = res32->Base;
@@ -770,6 +798,8 @@ namespace Jazz2::UI::Menu
 
 			renderQueue.AddCommand(command);
 		}
+
+#endif
 		
 		// 128
 		{
@@ -827,7 +857,13 @@ namespace Jazz2::UI::Menu
 			_camera = std::make_unique<Camera>();
 			_camera->SetOrthoProjection(0, static_cast<float>(width), 0, static_cast<float>(height));
 			_camera->SetView(0, 0, 0, 1);
-			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+			_target = std::make_unique<Texture>(nullptr,
+#if defined(DEATH_TARGET_VITA)
+				Texture::Format::RGBA8,
+#else
+				Texture::Format::RGB8,
+#endif
+				width, height);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->SetRootNode(this);
 			_view->SetCamera(_camera.get());
@@ -852,7 +888,12 @@ namespace Jazz2::UI::Menu
 		}
 
 		// Prepare output render command
+#if defined(DEATH_TARGET_VITA)
+		// Avoid the procedural full-screen shader (Voronoi star-field and pow operations) on Vita.
+		bool shaderChanged = _outputRenderCommand.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+#else
 		bool shaderChanged = _outputRenderCommand.GetMaterial().SetShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground));
+#endif
 		if (shaderChanged) {
 			_outputRenderCommand.GetMaterial().ReserveUniformsDataMemory();
 			_outputRenderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);

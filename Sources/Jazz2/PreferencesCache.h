@@ -447,7 +447,7 @@ namespace Jazz2
 
 		DEATH_PRIVATE_ENUM_FLAGS(BoolOptions);
 
-		static constexpr std::uint8_t FileVersion = 15;
+		static constexpr std::uint8_t FileVersion = 16;
 
 		PreferencesCache(const PreferencesCache&) = delete;
 		PreferencesCache& operator=(const PreferencesCache&) = delete;

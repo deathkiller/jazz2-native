@@ -31,6 +31,8 @@
 // No GLEW on the OpenGL|ES (ANGLE) path; pull in the GL/ES headers (GLubyte, glGetString, ...) directly
 #	define NCINE_INCLUDE_OPENGL
 #	include "../CommonHeaders.h"
+#elif defined(DEATH_TARGET_VITA)
+#	include <vitaGL.h>
 #endif
 
 #if defined(DEATH_TARGET_EMSCRIPTEN)

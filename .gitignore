@@ -1,5 +1,7 @@
 /Sign.props
 /Libs/
+/build-*/
+/dump/
 
 /desktop.ini
 /desktop.ico

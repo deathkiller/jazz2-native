@@ -116,6 +116,13 @@ namespace nCine::RHI::GL
 
 	bool GLShader::Compile(ErrorChecking errorChecking, bool logOnErrors)
 	{
+#if defined(DEATH_TARGET_VITA)
+		auto marker = FileSystem::Open("ux0:/data/Jazz2/LastGLCall.txt"_s, FileAccess::Write);
+		if (marker->IsValid()) {
+			marker->Write("glCompileShader", 15);
+			marker->Flush();
+		}
+#endif
 		glCompileShader(glHandle_);
 
 		if (errorChecking == ErrorChecking::Immediate) {

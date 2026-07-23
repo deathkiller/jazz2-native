@@ -856,6 +856,10 @@ namespace Death { namespace IO {
 #if !defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_SWITCH)
 	String FileSystem::FindPathCaseInsensitive(StringView path)
 	{
+	#if defined(DEATH_TARGET_VITA)
+		// ux0: is a case-insensitive filesystem and cannot be traversed as a POSIX absolute path.
+		return String(path);
+	#else
 		if (path.empty() || Exists(path)) {
 			return path;
 		}
@@ -945,6 +949,7 @@ namespace Death { namespace IO {
 				return {};
 			}
 		}
+	#endif
 	}
 #endif
 
@@ -1700,7 +1705,11 @@ namespace Death { namespace IO {
 #	endif
 		struct stat sb;
 		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+	#if defined(DEATH_TARGET_VITA)
+			return true;
+	#else
 			return ((sb.st_mode & S_IRUSR) != 0);
+	#endif
 		}
 		return false;
 #endif
@@ -1730,7 +1739,11 @@ namespace Death { namespace IO {
 #	endif
 		struct stat sb;
 		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+	#if defined(DEATH_TARGET_VITA)
+			return true;
+	#else
 			return ((sb.st_mode & S_IWUSR) != 0);
+	#endif
 		}
 		return false;
 #endif
@@ -1791,7 +1804,12 @@ namespace Death { namespace IO {
 #	endif
 		struct stat sb;
 		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+	#if defined(DEATH_TARGET_VITA)
+			// Vita newlib keeps only the file type in st_mode, not POSIX permissions.
+			return ((sb.st_mode & S_IFMT) == S_IFREG);
+	#else
 			return ((sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IRUSR) != 0);
+	#endif
 		}
 #endif
 		return false;
@@ -1821,7 +1839,11 @@ namespace Death { namespace IO {
 #	endif
 		struct stat sb;
 		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
+	#if defined(DEATH_TARGET_VITA)
+			return ((sb.st_mode & S_IFMT) == S_IFREG);
+	#else
 			return ((sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IWUSR) != 0);
+	#endif
 		}
 #endif
 		return false;
@@ -2333,11 +2355,16 @@ namespace Death { namespace IO {
 			return false;
 		}
 
+#if defined(DEATH_TARGET_VITA)
+		// Vita newlib reports no permission bits in st_mode.
+		mode_t destMode = S_IRUSR | S_IWUSR;
+#else
 		mode_t sourceMode = sb.st_mode;
 		mode_t destMode = sourceMode;
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
 		// Enable writing for the newly created files, needed for some file systems
 		destMode |= S_IWUSR;
+#	endif
 #endif
 		if ((destFd = ::open(nullTerminatedNewPath.data(), O_WRONLY | O_CREAT | O_TRUNC | commonFlags, destMode)) == -1) {
 			::close(sourceFd);
@@ -2439,7 +2466,7 @@ namespace Death { namespace IO {
 	End:
 #	endif
 
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_VITA)
 		// If we created a new file with an explicitly added S_IWUSR permission, we may need to update its mode bits to match the source file.
 		if (destMode != sourceMode && ::fchmod(destFd, sourceMode) != 0) {
 			success = false;

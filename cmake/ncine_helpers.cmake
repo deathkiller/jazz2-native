@@ -446,6 +446,10 @@ function(ncine_apply_compiler_options target)
 		else()
 			target_compile_options(${target} PRIVATE "-fno-exceptions")
 		endif()
+		if(VITA)
+			# VitaSDK's __cxa_guard_acquire() locks an uninitialized pthread mutex.
+			target_compile_options(${target} PRIVATE "-fno-threadsafe-statics")
+		endif()
 		target_compile_options(${target} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
 
 		#if(NCINE_DYNAMIC_LIBRARY)

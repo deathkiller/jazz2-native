@@ -1,6 +1,10 @@
 #pragma once
 
-#if defined(__EMSCRIPTEN__)
+#if defined(__vita__)
+#	if !defined(DEATH_TARGET_VITA)
+#		define DEATH_TARGET_VITA
+#	endif
+#elif defined(__EMSCRIPTEN__)
 #	define DEATH_TARGET_EMSCRIPTEN
 #elif defined(_WIN32)
 #	define DEATH_TARGET_WINDOWS

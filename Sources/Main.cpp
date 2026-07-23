@@ -1562,6 +1562,13 @@ void GameEventHandler::OnBeginInitialize()
 	}
 #endif
 
+#if defined(DEATH_TARGET_VITA)
+	auto marker = fs::Open("ux0:/data/Jazz2/LastStage.txt"_s, FileAccess::Write);
+	if (marker->IsValid()) {
+		marker->Write("CompileShaders", 14);
+		marker->Flush();
+	}
+#endif
 	resolver.CompileShaders();
 }
 

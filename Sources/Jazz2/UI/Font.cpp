@@ -13,6 +13,12 @@ using namespace Death;
 
 namespace Jazz2::UI
 {
+	#if defined(DEATH_TARGET_VITA)
+		constexpr float PlatformFontScale = 1.3f;
+	#else
+		constexpr float PlatformFontScale = 1.0f;
+	#endif
+
 	Font::Font(StringView path, const std::uint32_t* palette)
 		: _baseSpacing(0)
 	{
@@ -148,6 +154,8 @@ namespace Jazz2::UI
 
 	Vector2f Font::MeasureString(StringView text, float scale, float charSpacing, float lineSpacing)
 	{
+		scale *= PlatformFontScale;
+
 		std::size_t textLength = text.size();
 		if (textLength == 0 || _charSize.Y <= 0) {
 			return Vector2f::Zero;
@@ -201,6 +209,8 @@ namespace Jazz2::UI
 
 	Vector2f Font::MeasureStringEx(StringView text, float scale, float charSpacing, float maxWidth, std::int32_t* charFit, float* charFitWidths)
 	{
+		scale *= PlatformFontScale;
+
 		if (charFit != nullptr) {
 			*charFit = 0;
 		}
@@ -245,6 +255,8 @@ namespace Jazz2::UI
 
 	void Font::DrawString(Canvas* canvas, StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, Colorf color, float scale, float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
+		scale *= PlatformFontScale;
+
 		std::size_t textLength = text.size();
 		if (textLength == 0 || _charSize.Y <= 0) {
 			return;
