@@ -218,7 +218,7 @@ namespace Jazz2::UI::Menu
 				_root->PlaySfx("MenuSelect"_s, 0.6f);
 			}
 		};
-		uniqueIdItem->DrawValue = [](IMenuContainer* r, float centerX, float y, std::int32_t& charOffset, bool selected, bool readOnly) {
+		uniqueIdItem->DrawValue = [this](IMenuContainer* r, float centerX, float y, std::int32_t& charOffset, bool selected, bool readOnly) {
 			auto& uuid = PreferencesCache::UniquePlayerID;
 			char uniquePlayerId[128];
 			std::size_t length = formatInto(uniquePlayerId, "{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}:{:.2X}{:.2X}",
