@@ -54,14 +54,14 @@ jobs:
           CXX: g++
 
         # SDL3 backend (testing only for now). libsdl3-dev isn't in the ubuntu-22.04 repos, so this entry runs
-        # on ubuntu-24.04 where it can be installed via apt (see the SDL3 dependency step below).
+        # on ubuntu-26.04 where it can be installed via apt (see the SDL3 dependency step below).
         - BuildType: Release
           Platform: x64
           Backend: SDL3
           RHI: OpenGL
           CC: gcc
           CXX: g++
-          OS: ubuntu-24.04
+          OS: ubuntu-26.04
 
     #runs-on: 'ubuntu-latest'
     runs-on: ${{ matrix.OS || 'ubuntu-22.04' }}
