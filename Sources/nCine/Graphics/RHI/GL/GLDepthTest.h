@@ -57,6 +57,12 @@ namespace nCine::RHI::GL
 		/** @brief Restores the whole depth test state */
 		static void SetState(State newState);
 
+		/** @brief Re-applies the cached state to the driver (external code changed the real state) */
+		static void Reapply() {
+			if (state_.enabled) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
+			glDepthMask(state_.depthMaskEnabled ? GL_TRUE : GL_FALSE);
+		}
+
 	private:
 		static State state_;
 	};

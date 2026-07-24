@@ -8,6 +8,7 @@ namespace nCine::RHI::GL
 {
 	std::uint32_t GLFramebuffer::readBoundBuffer_ = 0;
 	std::uint32_t GLFramebuffer::drawBoundBuffer_ = 0;
+	GLuint GLFramebuffer::defaultHandle_ = 0;
 
 	GLFramebuffer::GLFramebuffer()
 		: glHandle_(0), numDrawBuffers_(0)
@@ -45,7 +46,7 @@ namespace nCine::RHI::GL
 
 	bool GLFramebuffer::Unbind(GLenum target)
 	{
-		return BindHandle(target, 0);
+		return BindHandle(target, defaultHandle_);
 	}
 
 	bool GLFramebuffer::DrawBuffers(std::uint32_t numDrawBuffers)

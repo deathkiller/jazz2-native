@@ -36,7 +36,8 @@ if(VITA OR ANGLE_FOUND OR OPENGLES2_FOUND)
 
 	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.h)
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.cpp)
-elseif(OPENGL_FOUND)
+elseif(OPENGL_FOUND AND NOT NCINE_PREFERRED_RHI STREQUAL "Software")
+	# The software backend rasterizes on the CPU and must not drag in a GL runtime dependency
 	if(TARGET OpenGL::OpenGL)
 		target_link_libraries(${NCINE_APP} PRIVATE OpenGL::OpenGL)
 	else()
@@ -107,7 +108,7 @@ else()
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GL")
 endif()
 
-if(NOT DEDICATED_SERVER)
+if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 	if(NINTENDO_WII OR NINTENDO_GAMECUBE)
 		# libogc window/input backend (no SDL/GLFW on these consoles); GX is linked by the
 		# devkitPro toolchain's standard libraries (ogc), listed with the platform packaging below
@@ -195,7 +196,10 @@ if(NOT DEDICATED_SERVER)
 		list(REMOVE_ITEM SOURCES ${NCINE_SOURCE_DIR}/nCine/Input/JoyMapping.cpp)
 		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/Qt5JoyMapping.cpp)
 	endif()
+endif()
 
+# Audio is also used by the libretro core (OpenAL outputs directly, bypassing the frontend)
+if(NOT DEDICATED_SERVER)
 	if(OPENAL_FOUND)
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AUDIO")
 		target_link_libraries(${NCINE_APP} PRIVATE OpenAL::OpenAL)
@@ -447,7 +451,7 @@ if(ANGELSCRIPT_FOUND)
 	target_link_libraries(${NCINE_APP} PRIVATE Angelscript)
 endif()
 
-if(NCINE_WITH_IMGUI AND NOT DEDICATED_SERVER)
+if(NCINE_WITH_IMGUI AND NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_IMGUI")
 
 	# For external projects compiling using an nCine build directory
@@ -711,8 +715,15 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 		source_group("Content/${CONTENT_FILE_RELPATH}" FILES ${CONTENT_FILE})
 	endforeach()
 else()
-	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/MainApplication.h)
-	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/MainApplication.cpp)
+	if(NCINE_BUILD_LIBRETRO)
+		# The libretro entry point replaces MainApplication (the frontend drives the game loop)
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_LIBRETRO" "NCINE_PACKAGED_CONTENT_PATH")
+		list(APPEND HEADERS ${NCINE_SOURCE_DIR}/libretro/libretro.h)
+		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/libretro.cpp)
+	else()
+		list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/MainApplication.h)
+		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/MainApplication.cpp)
+	endif()
 
 	if(NINTENDO_SWITCH)
 		nx_generate_nacp(${NCINE_APP}.nacp

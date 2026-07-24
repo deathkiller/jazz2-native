@@ -26,6 +26,33 @@ option(NCINE_STRIP_BINARIES "Enable symbols stripping from libraries and executa
 option(NCINE_VERSION_FROM_GIT "Try to set current game version from GIT repository" ON)
 #cmake_dependent_option(NCINE_DYNAMIC_LIBRARY "Compile the engine as a dynamic library" OFF "NOT EMSCRIPTEN" OFF)
 
+# Libretro core: shared library driven by the frontend, CPU software renderer, no window backend
+option(NCINE_BUILD_LIBRETRO "Build as a libretro core (jazz2_libretro shared library)" OFF)
+if(NCINE_BUILD_LIBRETRO)
+	# "Software" presents the CPU rasterizer's framebuffer through retro_video_refresh (works
+	# everywhere); "GL" renders on the GPU into the frontend's FBO via SET_HW_RENDER
+	set(NCINE_LIBRETRO_RHI "Software" CACHE STRING "Rendering backend for the libretro core (Software or OpenGL)")
+	set(NCINE_PREFERRED_RHI "${NCINE_LIBRETRO_RHI}" CACHE STRING "Rendering backend" FORCE)
+	if(NCINE_LIBRETRO_RHI STREQUAL "OpenGL")
+		# The hardware core targets OpenGL|ES 3.0 only - the common denominator of RetroArch's
+		# GPU platforms (KMS/GLES boards like Recalbox on Pi, desktop Mesa via EGL)
+		set(NCINE_WITH_OPENGLES ON CACHE BOOL "Use OpenGL|ES 2 library instead of OpenGL" FORCE)
+	endif()
+	# Static helper libs (IXWebSocket, ...) are linked into the shared core
+	set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+	# IFUNC resolvers hang when the core is dlopen'd by the frontend; use plain runtime dispatch
+	set(DEATH_CPU_USE_IFUNC OFF CACHE BOOL "Allow using GNU IFUNC for runtime CPU dispatch" FORCE)
+	# The async trace logger thread races with the frontend's core load/unload cycle; log synchronously
+	set(DEATH_TRACE_ASYNC OFF CACHE BOOL "Enable asynchronous processing of event tracing" FORCE)
+	# No curl in the core: the update check is pointless under a frontend (the package/frontend
+	# updates the core) and the online server-list lobby goes with it; direct multiplayer
+	# connections use ENet/IXWebSocket, not curl
+	set(CMAKE_DISABLE_FIND_PACKAGE_CURL TRUE)
+	# No online multiplayer in the core (drops ENet, IXWebSocket and the OpenSSL dependency);
+	# WITH_MULTIPLAYER stays on - it also powers LOCAL splitscreen games
+	set(WITH_ONLINE_MULTIPLAYER OFF CACHE BOOL "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" FORCE)
+endif()
+
 if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
 	if(NINTENDO_SWITCH OR VITA)
 		set(_NCINE_DEFAULT_BACKEND "SDL2")

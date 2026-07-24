@@ -65,6 +65,11 @@ using namespace Jazz2::Multiplayer;
 #include <IO/PakFile.h>
 #include <IO/Compression/DeflateStream.h>
 #include <IO/WebRequest.h>
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && (defined(DEATH_TARGET_WINDOWS) || defined(WITH_CURL))
+// The update check needs a WebRequest HTTP backend (WinHTTP or curl)
+#	define WITH_UPDATE_CHECK
+#endif
 #include <Utf8.h>
 
 #if defined(WITH_THREADS)
@@ -113,6 +118,8 @@ public:
 	void GoToMainMenu(bool afterIntro) override;
 	void ChangeLevel(LevelInitialization&& levelInit) override;
 	bool HasResumableState() const override;
+	bool SaveStateToStream(Stream& dest);
+	void ResumeStateFromStream(std::shared_ptr<Stream> src);
 	void ResumeSavedState() override;
 	bool SaveCurrentStateIfAny() override;
 
@@ -161,6 +168,8 @@ private:
 	void WaitForVerify();
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RefreshCache();
+#endif
+#if defined(WITH_UPDATE_CHECK)
 	void CheckUpdates();
 #endif
 	bool SetLevelHandler(const LevelInitialization& levelInit);
@@ -285,13 +294,13 @@ void GameEventHandler::OnInitialize()
 		DEATH_ASSERT(handler != nullptr);
 
 		handler->OnAfterInitialize();
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if defined(WITH_UPDATE_CHECK)
 		handler->CheckUpdates();
 #	endif
 	}, this);
 #else
 	OnAfterInitialize();
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if defined(WITH_UPDATE_CHECK)
 	CheckUpdates();
 #	endif
 #endif
@@ -772,14 +781,19 @@ bool GameEventHandler::HasResumableState() const
 
 void GameEventHandler::ResumeSavedState()
 {
-	InvokeAsync([this]() {
+	auto configDir = PreferencesCache::GetDirectory();
+	ResumeStateFromStream(fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Read));
+}
+
+void GameEventHandler::ResumeStateFromStream(std::shared_ptr<Stream> src)
+{
+	InvokeAsync([this, src = std::move(src)]() {
 		ZoneScopedNC("GameEventHandler::ResumeSavedState", 0x888888);
 
 		LOGI("Resuming saved state...");
 
-		auto configDir = PreferencesCache::GetDirectory();
-		auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Read);
-		if (*s) {
+		auto& s = src;
+		if (s != nullptr && *s) {
 			std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
 			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 			std::uint16_t version = s->ReadValueAsLE<std::uint16_t>();
@@ -834,6 +848,34 @@ void GameEventHandler::ResumeSavedState()
 	});
 }
 
+bool GameEventHandler::SaveStateToStream(Stream& dest)
+{
+	auto* levelHandler = runtime_cast<LevelHandler>(_currentHandler.get());
+	if (levelHandler == nullptr || !levelHandler->IsLocalSession()) {
+		return false;
+	}
+
+	dest.WriteValueAsLE<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
+	dest.WriteValue<std::uint8_t>(ContentResolver::StateFile);
+	dest.WriteValueAsLE<std::uint16_t>(StateVersion);
+
+	bool serialized;
+	{
+		DeflateWriter co(dest);
+		// Session kind: 0 = single player / classic local session, 1 = local splitscreen multiplayer
+		// (cooperative). Read back in ResumeSavedState() to recreate the matching level handler.
+		std::uint8_t sessionKind = 0;
+#if defined(WITH_MULTIPLAYER)
+		if (runtime_cast<MpLevelHandler>(levelHandler) != nullptr) {
+			sessionKind = 1;
+		}
+#endif
+		co.WriteValue<std::uint8_t>(sessionKind);
+		serialized = levelHandler->SerializeResumableToStream(co);
+	}
+	return serialized;
+}
+
 bool GameEventHandler::SaveCurrentStateIfAny()
 {
 	ZoneScopedNC("GameEventHandler::SaveCurrentStateIfAny", 0x888888);
@@ -844,25 +886,7 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 			auto statePath = fs::CombinePath(configDir, StateFileName);
 			auto s = fs::Open(statePath, FileAccess::Write);
 			if (*s) {
-				s->WriteValueAsLE<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
-				s->WriteValue<std::uint8_t>(ContentResolver::StateFile);
-				s->WriteValueAsLE<std::uint16_t>(StateVersion);
-
-				bool serialized;
-				{
-					DeflateWriter co(*s);
-					// Session kind: 0 = single player / classic local session, 1 = local splitscreen multiplayer
-					// (cooperative). Read back in ResumeSavedState() to recreate the matching level handler.
-					std::uint8_t sessionKind = 0;
-#if defined(WITH_MULTIPLAYER)
-					if (runtime_cast<MpLevelHandler>(levelHandler) != nullptr) {
-						sessionKind = 1;
-					}
-#endif
-					co.WriteValue<std::uint8_t>(sessionKind);
-					serialized = levelHandler->SerializeResumableToStream(co);
-				}
-				if (!serialized) {
+				if (!SaveStateToStream(*s)) {
 					// The current session can't be resumed (e.g. a competitive local multiplayer mode); don't leave
 					// a partial state file behind that would offer a broken "Continue" on the next launch
 					s = nullptr;
@@ -2051,6 +2075,7 @@ void GameEventHandler::RefreshCacheLevels(bool recreateAll)
 	}
 }
 
+#if defined(WITH_UPDATE_CHECK)
 void GameEventHandler::CheckUpdates()
 {
 #if !defined(DEATH_DEBUG)
@@ -2071,6 +2096,7 @@ void GameEventHandler::CheckUpdates()
 	}
 #endif
 }
+#endif
 #endif
 
 bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
@@ -2296,10 +2322,33 @@ void GameEventHandler::ExtractPakFile(StringView pakFile, StringView targetPath)
 	LOGI("{} files extracted successfully, {} files failed with error", successCount, errorCount);
 }
 
-#if defined(DEATH_TARGET_ANDROID)
+#if defined(DEATH_TARGET_ANDROID) || defined(WITH_LIBRETRO)
+#	if defined(WITH_LIBRETRO)
+// Bridge for the libretro save states (retro_serialize/retro_unserialize in libretro.cpp)
+static GameEventHandler* _libretroHandler = nullptr;
+
+bool Jazz2_SaveStateToStream(Stream& dest)
+{
+	return (_libretroHandler != nullptr && _libretroHandler->SaveStateToStream(dest));
+}
+
+bool Jazz2_LoadStateFromStream(std::shared_ptr<Stream> src)
+{
+	if (_libretroHandler == nullptr) {
+		return false;
+	}
+	_libretroHandler->ResumeStateFromStream(std::move(src));
+	return true;
+}
+#	endif
+
 std::unique_ptr<IAppEventHandler> CreateAppEventHandler()
 {
-	return std::make_unique<GameEventHandler>();
+	auto handler = std::make_unique<GameEventHandler>();
+#	if defined(WITH_LIBRETRO)
+	_libretroHandler = handler.get();
+#	endif
+	return handler;
 }
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)

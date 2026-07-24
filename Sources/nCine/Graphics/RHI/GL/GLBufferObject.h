@@ -102,6 +102,15 @@ namespace nCine::RHI::GL
 		/** @brief Sets an OpenGL object label for the buffer, for debugging */
 		void SetObjectLabel(StringView label);
 
+		/** @brief Drops the cached bindings so the next binds re-apply (external code changed them) */
+		static void InvalidateCachedBindings() {
+			boundBuffers_.SetAll(~0u);
+			for (std::int32_t i = 0; i < MaxIndexBufferRange; i++) {
+				boundIndexBase_[i] = ~0u;
+				boundBufferRange_[i].glHandle = ~0u;
+			}
+		}
+
 	private:
 		static class GLHashMap<GLBufferObjectMappingFunc::Size, GLBufferObjectMappingFunc> boundBuffers_;
 

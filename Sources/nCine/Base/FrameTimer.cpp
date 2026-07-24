@@ -14,6 +14,11 @@ namespace nCine
 	void FrameTimer::AddFrame()
 	{
 		_frameDuration = _frameStart.secondsSince();
+#if defined(WITH_LIBRETRO)
+		// libretro: the frontend paces retro_run at exactly one frame, so use a fixed timestep —
+		// wall-clock jitter would otherwise leak into game speed and cause scrolling judder
+		_frameDuration = SecondsPerFrame;
+#endif
 
 		// Start counting for the next frame interval
 		_frameStart = TimeStamp::now();

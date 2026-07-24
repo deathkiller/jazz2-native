@@ -145,6 +145,11 @@ namespace Jazz2
 		/** @brief Sets whether the application is running in headless mode */
 		void SetHeadless(bool value);
 
+#if defined(WITH_LIBRETRO)
+		/** @brief Overrides `"Source"` and `"Cache"` directories (used by the libretro core to point into the frontend's system directory) */
+		void OverridePaths(StringView sourcePath, StringView cachePath);
+#endif
+
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		/** @brief Scans the `"Content"` and `"Cache"` directories for `.pak` files and mounts them  */
 		void RemountPaks();

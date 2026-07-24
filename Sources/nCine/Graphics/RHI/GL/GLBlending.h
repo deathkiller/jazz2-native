@@ -69,6 +69,12 @@ namespace nCine::RHI::GL
 		/** @brief Restores the whole blending state */
 		static void SetState(State newState);
 
+		/** @brief Re-applies the cached state to the driver (external code changed the real state) */
+		static void Reapply() {
+			if (state_.enabled) glEnable(GL_BLEND); else glDisable(GL_BLEND);
+			glBlendFuncSeparate(state_.srcRgb, state_.dstRgb, state_.srcAlpha, state_.dstAlpha);
+		}
+
 	private:
 		static State state_;
 	};

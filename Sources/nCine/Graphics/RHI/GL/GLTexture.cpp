@@ -87,6 +87,14 @@ namespace nCine::RHI::GL
 	GLHashMap<GLTextureMappingFunc::Size, GLTextureMappingFunc> GLTexture::boundTextures_[MaxTextureUnits];
 	std::uint32_t GLTexture::boundUnit_ = 0;
 
+	void GLTexture::InvalidateCachedBindings()
+	{
+		for (std::uint32_t i = 0; i < MaxTextureUnits; i++) {
+			boundTextures_[i].SetAll(~0u);
+		}
+		boundUnit_ = ~0u;
+	}
+
 	GLTexture::GLTexture(TextureTarget target)
 		: glHandle_(0), target_(TextureTargetToGL(target)), textureUnit_(0)
 	{

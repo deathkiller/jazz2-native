@@ -68,6 +68,12 @@ namespace nCine::RHI::GL
 		/** @brief Restores the whole scissor test state */
 		static void SetState(State newState);
 
+		/** @brief Re-applies the cached state to the driver (external code changed the real state) */
+		static void Reapply() {
+			if (state_.enabled) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
+			glScissor(state_.rect.X, state_.rect.Y, state_.rect.W, state_.rect.H);
+		}
+
 	private:
 		static State state_;
 	};

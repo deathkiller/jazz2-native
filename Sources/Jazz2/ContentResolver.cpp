@@ -169,6 +169,16 @@ namespace Jazz2
 		_isHeadless = value;
 	}
 
+#if defined(WITH_LIBRETRO)
+	void ContentResolver::OverridePaths(StringView sourcePath, StringView cachePath)
+	{
+		_sourcePath = sourcePath;
+		_cachePath = cachePath;
+		// The constructor already mounted .paks from the default cache path, remount from the new one
+		RemountPaks();
+	}
+#endif
+
 	void ContentResolver::InitializePaths()
 	{
 #if defined(DEATH_TARGET_ANDROID)

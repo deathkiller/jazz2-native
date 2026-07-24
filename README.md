@@ -97,6 +97,15 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
 
 *The game requires browser with **WebAssembly** and **WebGL 2.0** support – usually any modern web browser.*
 
+### Libretro core (RetroArch)
+* Copy `jazz2_libretro.so` (and `jazz2_libretro.info`, if provided) to the frontend's *cores* directory
+* Copy the `Content/` directory next to the game files, then copy contents of original *Jazz Jackrabbit 2* directory to `Source/` beside it:
+  * `‹Game›/Content/` and `‹Game›/Source/` – `Cache/` is generated next to them
+  * Alternatively, place them in the frontend's *system* directory as `‹System›/jazz2/Content/` and `‹System›/jazz2/Source/`
+* Load any file from `‹Game›/Source/` (for example `Anims.j2a`) as content, or start the core without content if `‹System›/jazz2/Content/` exists
+
+*The core exposes the RetroPad as a gamepad (up to 4 players, local splitscreen included), online multiplayer and the update check are not compiled in. Save states use the game's own level-resume snapshot – they restore the current level and players, but are not frame-exact, so netplay, run-ahead and rewind are not supported. Cache is recreated during the intro cinematics on the first startup, so it can't be skipped.*
+
 ### Xbox (Universal Windows Platform)
 * Download the game
 * Install `Jazz2.cer` certificate if needed (the application is self-signed)
@@ -159,6 +168,17 @@ cd emsdk
   * Can be disabled with `NCINE_DOWNLOAD_DEPENDENCIES` option
 * Copy required game files to `./Content/` directory – the files must be provided in advance
 * Build the project with *CMake* and Emscripten toolchain
+
+### Libretro core (RetroArch)
+* Build the project with *CMake* and `NCINE_BUILD_LIBRETRO` option, the result is a `jazz2_libretro` shared library instead of an executable
+```bash
+cmake -D NCINE_BUILD_LIBRETRO=ON
+```
+* By default the core uses the software renderer, so it runs on any frontend. Use `NCINE_LIBRETRO_RHI` to render on the GPU instead – the hardware core requires **OpenGL ES 3.0** and a frontend context obtained through `SET_HW_RENDER`
+```bash
+cmake -D NCINE_BUILD_LIBRETRO=ON -D NCINE_LIBRETRO_RHI=OpenGL
+```
+* No window backend (*GLFW*, *SDL2* or *Qt5*) is needed, *cURL* is not used and online multiplayer is disabled, local splitscreen multiplayer is still included
 
 ### Xbox (Universal Windows Platform)
 * Build dependencies will be downloaded automatically by *CMake*
