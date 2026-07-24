@@ -97,11 +97,12 @@ jobs:
 
         rm -f ./Content/Translations/*.po
 
-        # The ubuntu-24.04 system libopenmpt.so has undefined mpg123_*64 symbols it expects from its libmpg123
-        # dependency, but modern ld defaults to --no-copy-dt-needed-entries and won't resolve them transitively.
-        # --copy-dt-needed-entries lets ld pull the symbols from libopenmpt's DT_NEEDED libmpg123 (installed below).
+        # The ubuntu-24.04 system libopenmpt.so has undefined mpg123_*64 symbols but is underlinked (libmpg123 is
+        # not in its DT_NEEDED), so the final link fails. Explicitly link libmpg123 (installed below) after all
+        # target libraries via CMAKE_CXX_STANDARD_LIBRARIES, which appends it at the end of every link line so it
+        # resolves libopenmpt's references regardless of --as-needed.
         extraArgs=""
-        if [ "${{ matrix.Backend }}" = "SDL3" ]; then extraArgs="-D CMAKE_EXE_LINKER_FLAGS=-Wl,--copy-dt-needed-entries"; fi
+        if [ "${{ matrix.Backend }}" = "SDL3" ]; then extraArgs="-D CMAKE_CXX_STANDARD_LIBRARIES=-lmpg123"; fi
 
         cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} $extraArgs -D NCINE_ASSEMBLE_DEB=ON -D NCINE_ASSEMBLE_RPM=ON -D NCINE_WITH_GLEW=OFF
 
