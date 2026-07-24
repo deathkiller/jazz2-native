@@ -81,7 +81,7 @@ namespace nCine
 		useBufferMapping = false;
 #endif
 
-#if defined(DEATH_TARGET_UNIX) && defined(WITH_SDL)
+#if defined(DEATH_TARGET_UNIX) && (defined(WITH_SDL2) || defined(WITH_SDL3))
 		// DPI queries do not seem to work reliably on X11 with SDL2
 		windowScaling = false;
 #endif

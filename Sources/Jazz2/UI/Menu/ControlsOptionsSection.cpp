@@ -94,7 +94,7 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 			});
 #endif
-#if defined(WITH_SDL)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3))
 		list->Add<ChoiceItem>(_("Extended PlayStation™ Support"),
 			[]() -> StringView { return (PreferencesCache::PlayStationExtendedSupport ? _("Enabled") : _("Disabled")); },
 			[this](std::int32_t) {

@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(WITH_IMGUI) && defined(WITH_SDL)
+#if defined(WITH_IMGUI) && (defined(WITH_SDL2) || defined(WITH_SDL3))
 
 #include <imgui.h>
 
@@ -8,7 +8,13 @@ struct SDL_Renderer;
 struct SDL_Window;
 union SDL_Event;
 struct SDL_Cursor;
+#if defined(WITH_SDL3)
+// SDL3 renamed the game-controller subsystem to "gamepad"; alias the SDL2 spelling to the SDL3 struct so the
+// shared class/implementation keeps using the SDL_GameController name (a pointer to the same opaque type)
+typedef struct SDL_Gamepad SDL_GameController;
+#else
 typedef struct _SDL_GameController SDL_GameController;
+#endif
 typedef void* SDL_GLContext;
 
 namespace nCine::Backends

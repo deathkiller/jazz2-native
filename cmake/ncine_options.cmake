@@ -33,7 +33,7 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
 		set(_NCINE_DEFAULT_BACKEND "GLFW")
 	endif()
 	set(NCINE_PREFERRED_BACKEND ${_NCINE_DEFAULT_BACKEND} CACHE STRING "Specify preferred core backend")
-	set_property(CACHE NCINE_PREFERRED_BACKEND PROPERTY STRINGS "GLFW;SDL2")
+	set_property(CACHE NCINE_PREFERRED_BACKEND PROPERTY STRINGS "GLFW;SDL2;SDL3")
 
 	if(VITA)
 		# PS Vita (the VitaSDK toolchain sets VITA): the OpenGL family runs through vitaGL, which is an
@@ -65,8 +65,9 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" (expected OpenGL, Software, D3D11, or Vulkan)")
 		endif()
 
-		# The non-OpenGL backends present through the SDL2 window, so force the SDL2 window backend
-		if(NOT NCINE_PREFERRED_RHI STREQUAL "OpenGL")
+		# The non-OpenGL backends present through the SDL window, so force an SDL window backend.
+		# An explicit SDL3 choice is honored; otherwise fall back to SDL2.
+		if(NOT NCINE_PREFERRED_RHI STREQUAL "OpenGL" AND NOT NCINE_PREFERRED_BACKEND MATCHES "^(SDL2|SDL3)$")
 			set(NCINE_PREFERRED_BACKEND "SDL2" CACHE STRING "Specify preferred core backend" FORCE)
 		endif()
 	endif()

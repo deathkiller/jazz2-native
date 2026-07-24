@@ -629,7 +629,7 @@ namespace nCine
 			return;
 		}
 
-#if defined(WITH_SDL)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3))
 		// Compacting the array of mapping indices
 		for (std::int32_t i = event.joyId; i < MaxNumJoysticks - 1; i++) {
 			assignedMappings_[i] = assignedMappings_[i + 1];

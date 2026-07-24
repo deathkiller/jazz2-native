@@ -1,17 +1,27 @@
 #pragma once
 
-#if defined(WITH_SDL) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if defined(WITH_SDL2) || defined(WITH_SDL3) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../Input/IInputManager.h"
 
 #include <Containers/SmallVector.h>
 
 #if !defined(CMAKE_BUILD) && defined(__has_include)
-#	if __has_include("SDL2/SDL.h")
+#	if defined(WITH_SDL3) && __has_include("SDL3/SDL.h")
+#		define __HAS_LOCAL_SDL3
+#	elif __has_include("SDL2/SDL.h")
 #		define __HAS_LOCAL_SDL
 #	endif
 #endif
-#if defined(__HAS_LOCAL_SDL)
+#if defined(WITH_SDL3)
+#	if defined(__HAS_LOCAL_SDL3)
+#		include "SDL3/SDL_events.h"
+#		include "SDL3/SDL_mouse.h"
+#	else
+#		include <SDL3/SDL_events.h>
+#		include <SDL3/SDL_mouse.h>
+#	endif
+#elif defined(__HAS_LOCAL_SDL)
 #	include "SDL2/SDL_events.h"
 #	include "SDL2/SDL_mouse.h"
 #else
@@ -86,7 +96,12 @@ namespace nCine::Backends
 		friend class SdlInputManager;
 
 	private:
+#if defined(WITH_SDL3)
+		// SDL3: SDL_GetKeyboardState returns a const bool array (was const Uint8 in SDL2)
+		const bool *keyState_;
+#else
 		const unsigned char *keyState_;
+#endif
 	};
 
 	/**
@@ -135,7 +150,15 @@ namespace nCine::Backends
 
 		inline const MouseState& mouseState() const override
 		{
+#if defined(WITH_SDL3)
+			// SDL3: SDL_GetMouseState reports the cursor position as float
+			float mouseX = 0.0f, mouseY = 0.0f;
+			mouseState_.buttons_ = SDL_GetMouseState(&mouseX, &mouseY);
+			mouseState_.x = static_cast<int>(mouseX);
+			mouseState_.y = static_cast<int>(mouseY);
+#else
 			mouseState_.buttons_ = SDL_GetMouseState(&mouseState_.x, &mouseState_.y);
+#endif
 			return mouseState_;
 		}
 

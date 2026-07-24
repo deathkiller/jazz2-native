@@ -29,7 +29,7 @@ namespace nCine
 	class IGfxDevice
 	{
 		friend class Application;
-#if defined(WITH_SDL)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3))
 		friend class MainApplication;
 #endif
 

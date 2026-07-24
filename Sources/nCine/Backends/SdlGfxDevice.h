@@ -1,17 +1,25 @@
 #pragma once
 
-#if defined(WITH_SDL) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if defined(WITH_SDL2) || defined(WITH_SDL3) || defined(DOXYGEN_GENERATING_OUTPUT)
 
 #include "../Primitives/Vector2.h"
 #include "../Graphics/IGfxDevice.h"
 #include "../Graphics/DisplayMode.h"
 
 #if !defined(CMAKE_BUILD) && defined(__has_include)
-#	if __has_include("SDL2/SDL.h")
+#	if defined(WITH_SDL3) && __has_include("SDL3/SDL.h")
+#		define __HAS_LOCAL_SDL3
+#	elif __has_include("SDL2/SDL.h")
 #		define __HAS_LOCAL_SDL
 #	endif
 #endif
-#if defined(__HAS_LOCAL_SDL)
+#if defined(WITH_SDL3)
+#	if defined(__HAS_LOCAL_SDL3)
+#		include "SDL3/SDL.h"
+#	else
+#		include <SDL3/SDL.h>
+#	endif
+#elif defined(__HAS_LOCAL_SDL)
 #	include "SDL2/SDL.h"
 #else
 #	include <SDL.h>

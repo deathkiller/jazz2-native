@@ -12,13 +12,23 @@
 
 // vulkan.h comes from VulkanCommon.h (with VK_NO_PROTOTYPES). SDL_vulkan.h is included only here (the loader
 // bootstrap + surface creation live in this translation unit); it must see the real Vulkan handle types.
-#if defined(WITH_SDL)
+#if defined(WITH_SDL2) || defined(WITH_SDL3)
 #	if !defined(CMAKE_BUILD) && defined(__has_include)
-#		if __has_include("SDL2/SDL_vulkan.h")
+#		if defined(WITH_SDL3) && __has_include("SDL3/SDL_vulkan.h")
+#			define __HAS_LOCAL_SDL3_VULKAN
+#		elif __has_include("SDL2/SDL_vulkan.h")
 #			define __HAS_LOCAL_SDL_VULKAN
 #		endif
 #	endif
-#	if defined(__HAS_LOCAL_SDL_VULKAN)
+#	if defined(WITH_SDL3)
+#		if defined(__HAS_LOCAL_SDL3_VULKAN)
+#			include "SDL3/SDL.h"
+#			include "SDL3/SDL_vulkan.h"
+#		else
+#			include <SDL3/SDL.h>
+#			include <SDL3/SDL_vulkan.h>
+#		endif
+#	elif defined(__HAS_LOCAL_SDL_VULKAN)
 #		include "SDL2/SDL.h"
 #		include "SDL2/SDL_vulkan.h"
 #	else
@@ -2115,12 +2125,17 @@ namespace nCine::RHI::Vulkan
 
 	bool VulkanDevice::CreateSwapchain(void* windowHandle, std::int32_t width, std::int32_t height, bool vsync)
 	{
-#if defined(WITH_SDL)
+#if defined(WITH_SDL2) || defined(WITH_SDL3)
 		s_vsync = vsync;
 		s_sdlWindow = windowHandle;
 		SDL_Window* window = reinterpret_cast<SDL_Window*>(windowHandle);
 
+#	if defined(WITH_SDL3)
+		// SDL3 reports success as a bool (true), SDL2 as int 0
+		if (!SDL_Vulkan_LoadLibrary(nullptr)) {
+#	else
 		if (SDL_Vulkan_LoadLibrary(nullptr) != 0) {
+#	endif
 			LOGE("SDL_Vulkan_LoadLibrary() failed: {}", SDL_GetError());
 			return false;
 		}
@@ -2136,6 +2151,15 @@ namespace nCine::RHI::Vulkan
 		}
 
 		std::uint32_t sdlExtCount = 0;
+#	if defined(WITH_SDL3)
+		// SDL3: a single call returns the extension-name array directly (no window argument, no caller buffer)
+		const char* const* sdlExts = SDL_Vulkan_GetInstanceExtensions(&sdlExtCount);
+		if (sdlExts == nullptr) {
+			LOGE("SDL_Vulkan_GetInstanceExtensions() failed: {}", SDL_GetError());
+			return false;
+		}
+		std::vector<const char*> instanceExts(sdlExts, sdlExts + sdlExtCount);
+#	else
 		if (!SDL_Vulkan_GetInstanceExtensions(window, &sdlExtCount, nullptr)) {
 			LOGE("SDL_Vulkan_GetInstanceExtensions(count) failed: {}", SDL_GetError());
 			return false;
@@ -2145,6 +2169,7 @@ namespace nCine::RHI::Vulkan
 			LOGE("SDL_Vulkan_GetInstanceExtensions(names) failed: {}", SDL_GetError());
 			return false;
 		}
+#	endif
 
 		std::uint32_t availExtCount = 0;
 		vkEnumerateInstanceExtensionProperties(nullptr, &availExtCount, nullptr);
@@ -2209,7 +2234,12 @@ namespace nCine::RHI::Vulkan
 			vkCreateDebugUtilsMessengerEXT(s_instance, &dci, nullptr, &s_debugMessenger);
 		}
 
+#if defined(WITH_SDL3)
+		// SDL3 added a VkAllocationCallbacks* parameter (null = default allocator)
+		if (!SDL_Vulkan_CreateSurface(window, s_instance, nullptr, &s_surface)) {
+#else
 		if (!SDL_Vulkan_CreateSurface(window, s_instance, &s_surface)) {
+#endif
 			LOGE("SDL_Vulkan_CreateSurface() failed: {}", SDL_GetError());
 			DestroySwapchain();
 			return false;
@@ -2363,10 +2393,15 @@ namespace nCine::RHI::Vulkan
 		{
 			outW = 0;
 			outH = 0;
-#if defined(WITH_SDL)
+#if defined(WITH_SDL2) || defined(WITH_SDL3)
 			if (s_sdlWindow != nullptr) {
 				int w = 0, h = 0;
+#	if defined(WITH_SDL3)
+				// SDL3 removed SDL_Vulkan_GetDrawableSize; the pixel size is queried via SDL_GetWindowSizeInPixels
+				SDL_GetWindowSizeInPixels(reinterpret_cast<SDL_Window*>(s_sdlWindow), &w, &h);
+#	else
 				SDL_Vulkan_GetDrawableSize(reinterpret_cast<SDL_Window*>(s_sdlWindow), &w, &h);
+#	endif
 				outW = w;
 				outH = h;
 			}

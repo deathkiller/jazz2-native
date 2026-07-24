@@ -57,7 +57,9 @@
 #	endif
 #elif defined(WITH_QT5)
 #	define _i5 "\nQt5 \f[c:#707070]· \f[h:80]https://www.qt.io/\f[/h]\f[/c]"
-#elif defined(WITH_SDL)
+#elif defined(WITH_SDL3)
+#	define _i5 "\nSDL3 \f[c:#707070]· \f[h:80]https://www.libsdl.org/\f[/h]\f[/c]"
+#elif defined(WITH_SDL2)
 #	define _i5 "\nSDL2 \f[c:#707070]· \f[h:80]https://www.libsdl.org/\f[/h]\f[/c]"
 #else
 #	define _i5 ""

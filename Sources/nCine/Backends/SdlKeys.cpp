@@ -1,6 +1,52 @@
-#if defined(WITH_SDL)
+#if defined(WITH_SDL2) || defined(WITH_SDL3)
 
 #include "SdlInputManager.h"
+
+#if defined(WITH_SDL3)
+// SDL3 keycode renames: the lowercase-letter keycodes became uppercase-named (same numeric values), a few
+// punctuation keys were renamed, and the KMOD_* modifier flags gained an SDL_ prefix. Scancodes (SDL_SCANCODE_*)
+// are unchanged. These shims keep the large keySymValueToEnum()/enumToKeysValue() switch statements shared.
+#	define SDLK_a SDLK_A
+#	define SDLK_b SDLK_B
+#	define SDLK_c SDLK_C
+#	define SDLK_d SDLK_D
+#	define SDLK_e SDLK_E
+#	define SDLK_f SDLK_F
+#	define SDLK_g SDLK_G
+#	define SDLK_h SDLK_H
+#	define SDLK_i SDLK_I
+#	define SDLK_j SDLK_J
+#	define SDLK_k SDLK_K
+#	define SDLK_l SDLK_L
+#	define SDLK_m SDLK_M
+#	define SDLK_n SDLK_N
+#	define SDLK_o SDLK_O
+#	define SDLK_p SDLK_P
+#	define SDLK_q SDLK_Q
+#	define SDLK_r SDLK_R
+#	define SDLK_s SDLK_S
+#	define SDLK_t SDLK_T
+#	define SDLK_u SDLK_U
+#	define SDLK_v SDLK_V
+#	define SDLK_w SDLK_W
+#	define SDLK_x SDLK_X
+#	define SDLK_y SDLK_Y
+#	define SDLK_z SDLK_Z
+#	define SDLK_QUOTE     SDLK_APOSTROPHE
+#	define SDLK_QUOTEDBL  SDLK_DBLAPOSTROPHE
+#	define SDLK_BACKQUOTE SDLK_GRAVE
+#	define KMOD_LSHIFT SDL_KMOD_LSHIFT
+#	define KMOD_RSHIFT SDL_KMOD_RSHIFT
+#	define KMOD_LCTRL  SDL_KMOD_LCTRL
+#	define KMOD_RCTRL  SDL_KMOD_RCTRL
+#	define KMOD_LALT   SDL_KMOD_LALT
+#	define KMOD_RALT   SDL_KMOD_RALT
+#	define KMOD_LGUI   SDL_KMOD_LGUI
+#	define KMOD_RGUI   SDL_KMOD_RGUI
+#	define KMOD_NUM    SDL_KMOD_NUM
+#	define KMOD_CAPS   SDL_KMOD_CAPS
+#	define KMOD_MODE   SDL_KMOD_MODE
+#endif
 
 namespace nCine::Backends
 {

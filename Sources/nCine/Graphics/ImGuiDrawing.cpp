@@ -12,7 +12,7 @@
 
 #if defined(WITH_GLFW)
 #	include "../Backends/ImGuiGlfwInput.h"
-#elif defined(WITH_SDL)
+#elif (defined(WITH_SDL2) || defined(WITH_SDL3))
 #	include "../Backends/ImGuiSdlInput.h"
 #elif defined(WITH_QT5)
 #	include "../Backends/ImGuiQt5Input.h"
@@ -224,7 +224,7 @@ namespace nCine
 	{
 #if defined(WITH_GLFW)
 		ImGuiGlfwInput::newFrame();
-#elif defined(WITH_SDL)
+#elif (defined(WITH_SDL2) || defined(WITH_SDL3))
 		ImGuiSdlInput::newFrame();
 #elif defined(WITH_QT5)
 		ImGuiQt5Input::newFrame();
@@ -258,7 +258,7 @@ namespace nCine
 
 #if defined(WITH_GLFW)
 		ImGuiGlfwInput::endFrame();
-#elif defined(WITH_SDL)
+#elif (defined(WITH_SDL2) || defined(WITH_SDL3))
 		ImGuiSdlInput::endFrame();
 #endif
 

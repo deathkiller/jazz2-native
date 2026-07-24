@@ -56,6 +56,11 @@ jobs:
           Platform: ARM64
           Backend: SDL2
 
+        - BuildType: Release
+          Platform: ARM64
+          Backend: SDL2
+          RHI: D3D11
+
     #runs-on: 'windows-latest'
     runs-on: 'windows-2022'
 
@@ -92,8 +97,11 @@ jobs:
         }
         
         rm -force ".\Content\Translations\*.po"
-        
-        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D CMAKE_SYSTEM_VERSION=10 -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_STRIP_BINARIES=ON -D CMAKE_GENERATOR_TOOLSET=v143
+
+        $rhiArg = ''
+        if ('${{ matrix.RHI }}' -ne '') { $rhiArg = '-D NCINE_PREFERRED_RHI=${{ matrix.RHI }}' }
+
+        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D CMAKE_SYSTEM_VERSION=10 -D NCINE_ARCH_EXTENSIONS=$archexts -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} $rhiArg -D NCINE_STRIP_BINARIES=ON -D CMAKE_GENERATOR_TOOLSET=v143
 
     - name: 'Build'
       run: |
@@ -108,6 +116,10 @@ jobs:
 
     - name: 'Create Package'
       run: |
+        $rhiSuffix = ''
+        if (('${{ matrix.RHI }}' -ne '') -and ('${{ matrix.RHI }}' -ne 'OpenGL')) { $rhiSuffix = '_${{ matrix.RHI }}' }
+        echo "rhiSuffix=$rhiSuffix" >> $env:GITHUB_ENV
+
         mkdir _package
         Move-Item -Path ".\_build\Release\Jazz2.exe" -Destination ".\_package\Jazz2.exe"
         Move-Item -Path ".\_build\Release\Jazz2.pdb" -Destination ".\_package\Jazz2.pdb"
@@ -118,5 +130,5 @@ jobs:
     - name: 'Upload Package'
       uses: actions/upload-artifact@v7
       with:
-        name: Jazz2_Windows_${{ matrix.Platform }}_${{ matrix.ArchExts }}_${{ matrix.Backend }}_v143
+        name: Jazz2_Windows_${{ matrix.Platform }}_${{ matrix.ArchExts }}_${{ matrix.Backend }}${{ env.rhiSuffix }}_v143
         path: ./_package/

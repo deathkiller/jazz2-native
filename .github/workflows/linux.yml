@@ -53,8 +53,18 @@ jobs:
           CC: gcc
           CXX: g++
 
+        # SDL3 backend (testing only for now). libsdl3-dev isn't in the ubuntu-22.04 repos, so this entry runs
+        # on ubuntu-24.04 where it can be installed via apt (see the SDL3 dependency step below).
+        - BuildType: Release
+          Platform: x64
+          Backend: SDL3
+          RHI: OpenGL
+          CC: gcc
+          CXX: g++
+          OS: ubuntu-24.04
+
     #runs-on: 'ubuntu-latest'
-    runs-on: 'ubuntu-22.04'
+    runs-on: ${{ matrix.OS || 'ubuntu-22.04' }}
 
     steps:
     - name: 'Checkout Repository'
@@ -72,7 +82,13 @@ jobs:
       uses: egor-tensin/setup-clang@v1
       with:
         version: 15
-        
+
+    - if: matrix.Backend == 'SDL3'
+      name: 'Install SDL3'
+      run: |
+        # libsdl3-dev is available from the ubuntu-24.04 repositories (this entry runs on ubuntu-24.04)
+        sudo apt install -y libsdl3-dev
+
     - name: 'Configure CMake'
       run: |
         export CC=${{ matrix.CC }}

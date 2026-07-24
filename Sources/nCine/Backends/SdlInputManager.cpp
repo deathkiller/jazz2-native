@@ -1,4 +1,4 @@
-#if defined(WITH_SDL)
+#if defined(WITH_SDL2) || defined(WITH_SDL3)
 
 #include "SdlInputManager.h"
 #include "SdlGfxDevice.h"
@@ -7,7 +7,13 @@
 #include "../Input/JoyMapping.h"
 #include "../Application.h"
 
-#if defined(__HAS_LOCAL_SDL)
+#if defined(WITH_SDL3)
+#	if defined(__HAS_LOCAL_SDL3)
+#		include "SDL3/SDL.h"
+#	else
+#		include <SDL3/SDL.h>
+#	endif
+#elif defined(__HAS_LOCAL_SDL)
 #	include "SDL2/SDL.h"
 #else
 #	include <SDL.h>
@@ -17,6 +23,44 @@
 
 #if defined(WITH_IMGUI)
 #	include "ImGuiSdlInput.h"
+#endif
+
+#if defined(WITH_SDL3)
+// SDL2 -> SDL3 renamed most of the joystick API and the event-type enum, but kept the signatures identical.
+// These shims map the old names onto the new ones so the shared body below only needs explicit #if forks where
+// the semantics (return convention, arguments, device-index vs instance-id model) actually changed.
+using SDL_JoystickGUID = SDL_GUID;
+#define SDL_JoystickClose            SDL_CloseJoystick
+#define SDL_JoystickGetPlayerIndex   SDL_GetJoystickPlayerIndex
+#define SDL_JoystickGetGUID          SDL_GetJoystickGUID
+#define SDL_JoystickGetGUIDString    SDL_GUIDToString
+#define SDL_JoystickName             SDL_GetJoystickName
+#define SDL_JoystickNumHats          SDL_GetNumJoystickHats
+#define SDL_JoystickNumAxes          SDL_GetNumJoystickAxes
+#define SDL_JoystickNumButtons       SDL_GetNumJoystickButtons
+#define SDL_JoystickNumBalls         SDL_GetNumJoystickBalls
+#define SDL_JoystickGetButton        SDL_GetJoystickButton
+#define SDL_JoystickGetHat           SDL_GetJoystickHat
+#define SDL_JoystickGetAxis          SDL_GetJoystickAxis
+#define SDL_JoystickGetAttached      SDL_JoystickConnected
+#define SDL_JoystickInstanceID       SDL_GetJoystickID
+// Event-type enum renames (the switch/case bodies stay shared)
+#define SDL_JOYDEVICEADDED           SDL_EVENT_JOYSTICK_ADDED
+#define SDL_JOYDEVICEREMOVED         SDL_EVENT_JOYSTICK_REMOVED
+#define SDL_KEYDOWN                  SDL_EVENT_KEY_DOWN
+#define SDL_KEYUP                    SDL_EVENT_KEY_UP
+#define SDL_TEXTINPUT                SDL_EVENT_TEXT_INPUT
+#define SDL_MOUSEBUTTONDOWN          SDL_EVENT_MOUSE_BUTTON_DOWN
+#define SDL_MOUSEBUTTONUP            SDL_EVENT_MOUSE_BUTTON_UP
+#define SDL_MOUSEMOTION              SDL_EVENT_MOUSE_MOTION
+#define SDL_MOUSEWHEEL               SDL_EVENT_MOUSE_WHEEL
+#define SDL_JOYBUTTONDOWN            SDL_EVENT_JOYSTICK_BUTTON_DOWN
+#define SDL_JOYBUTTONUP              SDL_EVENT_JOYSTICK_BUTTON_UP
+#define SDL_JOYAXISMOTION            SDL_EVENT_JOYSTICK_AXIS_MOTION
+#define SDL_JOYHATMOTION             SDL_EVENT_JOYSTICK_HAT_MOTION
+#define SDL_FINGERDOWN               SDL_EVENT_FINGER_DOWN
+#define SDL_FINGERMOTION             SDL_EVENT_FINGER_MOTION
+#define SDL_FINGERUP                 SDL_EVENT_FINGER_UP
 #endif
 
 namespace nCine
@@ -93,11 +137,35 @@ namespace nCine::Backends
 		// Initializing the joystick subsystem
 		SDL_InitSubSystem(SDL_INIT_JOYSTICK);
 		// Enabling joystick event processing
+#if defined(WITH_SDL3)
+		SDL_SetJoystickEventsEnabled(true);
+#else
 		SDL_JoystickEventState(SDL_ENABLE);
+#endif
 
 		std::memset(sdlJoysticks_, 0, sizeof(SDL_Joystick*) * MaxNumJoysticks);
 
 		// Opening attached joysticks
+#if defined(WITH_SDL3)
+		// SDL3 enumerates connected joysticks as an array of opaque instance IDs (SDL2 used a 0-based count)
+		int numJoysticks = 0;
+		SDL_JoystickID* joystickIds = SDL_GetJoysticks(&numJoysticks);
+		for (std::int32_t i = 0; i < numJoysticks && i < MaxNumJoysticks; i++) {
+			sdlJoysticks_[i] = SDL_OpenJoystick(joystickIds[i]);
+#	if defined(DEATH_TRACE)
+			if (sdlJoysticks_[i] != nullptr) {
+				SDL_Joystick* joy = sdlJoysticks_[i];
+				std::int32_t playerIndex = SDL_JoystickGetPlayerIndex(joy);
+				const SDL_JoystickGUID joystickGuid = SDL_JoystickGetGUID(joy);
+				SDL_JoystickGetGUIDString(joystickGuid, joyGuidString_, 33);
+				LOGI("Gamepad {} [{}] \"{}\" [{}] has been connected - {} hats, {} axes, {} buttons, {} balls",
+						i, playerIndex, SDL_JoystickName(joy), joyGuidString_, SDL_JoystickNumHats(joy),
+						SDL_JoystickNumAxes(joy), SDL_JoystickNumButtons(joy), SDL_JoystickNumBalls(joy));
+			}
+#	endif
+		}
+		SDL_free(joystickIds);
+#else
 		const std::int32_t numJoysticks = SDL_NumJoysticks();
 		for (std::int32_t i = 0; i < numJoysticks; i++) {
 			sdlJoysticks_[i] = SDL_JoystickOpen(i);
@@ -113,6 +181,7 @@ namespace nCine::Backends
 			}
 #endif
 		}
+#endif
 
 		joyMapping_.Init(this);
 
@@ -181,9 +250,16 @@ namespace nCine::Backends
 				if (!SdlGfxDevice::isMainWindow(event.key.windowID)) {
 					return;
 				}
+#if defined(WITH_SDL3)
+				// SDL3 removed the nested SDL_Keysym; scancode/keycode/modifiers are now fields of the event
+				keyboardEvent_.scancode = event.key.scancode;
+				keyboardEvent_.sym = SdlKeys::keySymValueToEnum(event.key.key);
+				keyboardEvent_.mod = SdlKeys::keyModMaskToEnumMask(event.key.mod);
+#else
 				keyboardEvent_.scancode = event.key.keysym.scancode;
 				keyboardEvent_.sym = SdlKeys::keySymValueToEnum(event.key.keysym.sym);
 				keyboardEvent_.mod = SdlKeys::keyModMaskToEnumMask(event.key.keysym.mod);
+#endif
 				break;
 			case SDL_TEXTINPUT: {
 				if (!SdlGfxDevice::isMainWindow(event.text.windowID)) {
@@ -197,8 +273,9 @@ namespace nCine::Backends
 				if (!SdlGfxDevice::isMainWindow(event.button.windowID)) {
 					return;
 				}
-				mouseEvent_.x = event.button.x;
-				mouseEvent_.y = event.button.y;
+				// SDL3 reports mouse coordinates as float; the engine's event structures store integers
+				mouseEvent_.x = static_cast<int>(event.button.x);
+				mouseEvent_.y = static_cast<int>(event.button.y);
 				mouseEvent_.button = sdlToNcineMouseButton(event.button.button);
 				break;
 			case SDL_MOUSEMOTION:
@@ -206,11 +283,11 @@ namespace nCine::Backends
 					return;
 				}
 				if (cursor_ != Cursor::HiddenLocked) {
-					mouseState_.x = event.motion.x;
-					mouseState_.y = event.motion.y;
+					mouseState_.x = static_cast<int>(event.motion.x);
+					mouseState_.y = static_cast<int>(event.motion.y);
 				} else {
-					mouseState_.x += event.motion.xrel;
-					mouseState_.y -= event.motion.yrel;
+					mouseState_.x += static_cast<int>(event.motion.xrel);
+					mouseState_.y -= static_cast<int>(event.motion.yrel);
 				}
 				mouseState_.buttons_ = event.motion.state;
 				break;
@@ -243,7 +320,14 @@ namespace nCine::Backends
 					return;
 				}
 
+#if defined(WITH_SDL3)
+				// SDL3: SDL_GetNumTouchFingers + SDL_GetTouchFinger(index) -> SDL_GetTouchFingers (array of pointers)
+				int fingerCount = 0;
+				SDL_Finger** fingers = SDL_GetTouchFingers(event.tfinger.touchId, &fingerCount);
+				touchEvent_.count = fingerCount;
+#else
 				touchEvent_.count = SDL_GetNumTouchFingers(event.tfinger.touchId);
+#endif
 				touchEvent_.actionIndex = (std::int32_t)event.tfinger.fingerId;
 
 				switch (event.type) {
@@ -253,13 +337,20 @@ namespace nCine::Backends
 				}
 
 				for (unsigned int i = 0; i < touchEvent_.count; i++) {
+#if defined(WITH_SDL3)
+					SDL_Finger* finger = fingers[i];
+#else
 					SDL_Finger* finger = SDL_GetTouchFinger(event.tfinger.touchId, i);
+#endif
 					TouchEvent::Pointer& pointer = touchEvent_.pointers[i];
 					pointer.id = static_cast<std::int32_t>(finger->id);
 					pointer.x = finger->x;
 					pointer.y = finger->y;
 					pointer.pressure = finger->pressure;
 				}
+#if defined(WITH_SDL3)
+				SDL_free(fingers);
+#endif
 				break;
 		}
 
@@ -322,7 +413,12 @@ namespace nCine::Backends
 
 	bool SdlInputManager::setClipboardText(StringView text)
 	{
+#if defined(WITH_SDL3)
+		// SDL3: SDL_SetClipboardText returns a bool (true on success) instead of SDL2's int (0 on success)
+		return SDL_SetClipboardText(String::nullTerminatedView(text).data());
+#else
 		return SDL_SetClipboardText(String::nullTerminatedView(text).data()) == 0;
+#endif
 	}
 
 	StringView SdlInputManager::getKeyName(Keys key) const
@@ -407,15 +503,32 @@ namespace nCine::Backends
 		if (!isJoyPresent(joyId))
 			return false;
 
+#if defined(WITH_SDL3)
+		// SDL3: SDL_JoystickRumble -> SDL_RumbleJoystick, which reports success directly as a bool
+		return SDL_RumbleJoystick(sdlJoysticks_[joyId],
+			(std::uint16_t)(std::clamp(lowFreqIntensity, 0.0f, 1.0f) * UINT16_MAX),
+			(std::uint16_t)(std::clamp(highFreqIntensity, 0.0f, 1.0f) * UINT16_MAX),
+			durationMs);
+#else
 		return SDL_JoystickRumble(sdlJoysticks_[joyId],
 			(std::uint16_t)(std::clamp(lowFreqIntensity, 0.0f, 1.0f) * UINT16_MAX),
 			(std::uint16_t)(std::clamp(highFreqIntensity, 0.0f, 1.0f) * UINT16_MAX),
 			durationMs) == 0;
+#endif
 	}
 
 	bool SdlInputManager::joystickRumbleTriggers(int joyId, float left, float right, uint32_t durationMs)
 	{
-#if SDL_VERSION_ATLEAST(2, 0, 14)
+#if defined(WITH_SDL3)
+		if (!isJoyPresent(joyId))
+			return false;
+
+		// SDL3: SDL_JoystickRumbleTriggers -> SDL_RumbleJoystickTriggers, reporting success directly as a bool
+		return SDL_RumbleJoystickTriggers(sdlJoysticks_[joyId],
+			(std::uint16_t)(std::clamp(left, 0.0f, 1.0f) * UINT16_MAX),
+			(std::uint16_t)(std::clamp(right, 0.0f, 1.0f) * UINT16_MAX),
+			durationMs);
+#elif SDL_VERSION_ATLEAST(2, 0, 14)
 		if (!isJoyPresent(joyId))
 			return false;
 
@@ -432,6 +545,24 @@ namespace nCine::Backends
 	{
 		if (cursor != cursor_) {
 			bool isChanged = true;
+#if defined(WITH_SDL3)
+			// SDL3: SDL_ShowCursor(SDL_ENABLE/DISABLE) -> SDL_ShowCursor()/SDL_HideCursor(); relative mouse mode
+			// is now per-window via SDL_SetWindowRelativeMouseMode (returns bool)
+			SDL_Window* window = SdlGfxDevice::windowHandle();
+			switch (cursor) {
+				case Cursor::Arrow:
+					SDL_ShowCursor();
+					SDL_SetWindowRelativeMouseMode(window, false);
+					break;
+				case Cursor::Hidden:
+					SDL_HideCursor();
+					SDL_SetWindowRelativeMouseMode(window, false);
+					break;
+				case Cursor::HiddenLocked:
+					isChanged = SDL_SetWindowRelativeMouseMode(window, true);
+					break;
+			}
+#else
 			switch (cursor) {
 				case Cursor::Arrow:
 					SDL_ShowCursor(SDL_ENABLE);
@@ -446,6 +577,7 @@ namespace nCine::Backends
 					isChanged = (supported == 0);
 					break;
 			}
+#endif
 
 			if (isChanged) {
 				// Handling ImGui cursor changes
@@ -458,6 +590,32 @@ namespace nCine::Backends
 	void SdlInputManager::handleJoyDeviceEvent(const SDL_Event& event)
 	{
 		if (event.type == SDL_JOYDEVICEADDED) {
+#if defined(WITH_SDL3)
+			// SDL3: jdevice.which is the joystick's opaque instance ID (SDL2 gave a device index here). Place it
+			// in the first free slot so the rest of the engine keeps addressing joysticks by compact 0-based ids.
+			std::int32_t deviceIndex = -1;
+			for (std::int32_t i = 0; i < MaxNumJoysticks; i++) {
+				if (sdlJoysticks_[i] == nullptr) {
+					deviceIndex = i;
+					break;
+				}
+			}
+			if (deviceIndex < 0) {
+				return;
+			}
+			joyConnectionEvent_.joyId = deviceIndex;
+			sdlJoysticks_[deviceIndex] = SDL_OpenJoystick(event.jdevice.which);
+
+#	if defined(DEATH_TRACE)
+			SDL_Joystick* joy = sdlJoysticks_[deviceIndex];
+			std::int32_t playerIndex = SDL_JoystickGetPlayerIndex(joy);
+			const SDL_JoystickGUID joystickGuid = SDL_JoystickGetGUID(joy);
+			SDL_JoystickGetGUIDString(joystickGuid, joyGuidString_, 33);
+			LOGI("Gamepad {} [{}] \"{}\" [{}] has been connected - {} hats, {} axes, {} buttons, {} balls",
+					deviceIndex, playerIndex, SDL_JoystickName(joy), joyGuidString_,
+					SDL_JoystickNumHats(joy), SDL_JoystickNumAxes(joy), SDL_JoystickNumButtons(joy), SDL_JoystickNumBalls(joy));
+#	endif
+#else
 			const std::int32_t deviceIndex = event.jdevice.which;
 			joyConnectionEvent_.joyId = deviceIndex;
 
@@ -468,7 +626,7 @@ namespace nCine::Backends
 				SDL_JoystickClose(prevInstance);
 			}
 
-#if defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if defined(DEATH_TRACE) && !defined(DEATH_TARGET_EMSCRIPTEN)
 			SDL_Joystick* joy = sdlJoysticks_[deviceIndex];
 			std::int32_t playerIndex = SDL_JoystickGetPlayerIndex(joy);
 			const SDL_JoystickGUID joystickGuid = SDL_JoystickGetGUID(joy);
@@ -476,6 +634,7 @@ namespace nCine::Backends
 			LOGI("Gamepad {} [{}] \"{}\" [{}] has been {} - {} hats, {} axes, {} buttons, {} balls",
 					deviceIndex, playerIndex, SDL_JoystickName(joy), joyGuidString_, prevInstance != nullptr ? "reattached" : "connected",
 					SDL_JoystickNumHats(joy), SDL_JoystickNumAxes(joy), SDL_JoystickNumButtons(joy), SDL_JoystickNumBalls(joy));
+#	endif
 #endif
 			joyMapping_.OnJoyConnected(joyConnectionEvent_);
 			inputEventHandler_->OnJoyConnected(joyConnectionEvent_);

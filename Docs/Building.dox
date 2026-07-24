@@ -158,7 +158,7 @@ The following parameters can be used to customize the build:
 -   `NCINE_DOWNLOAD_DEPENDENCIES` (default @cpp ON @ce) --- Download all missing dependencies automatically
 -   `NCINE_EMBED_SHADERS` (default @cpp ON @ce) --- Embed shader files in executable
 -   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce) --- Preferred core backend
-    -   Possible values: `GLFW`, `SDL2`
+    -   Possible values: `GLFW`, `SDL2`, `SDL3`
     -   Ignored on **Android** and **UWP** platforms
 -   `NCINE_PREFERRED_RHI` (default @cpp "OpenGL" @ce) --- Preferred rendering backend (RHI)
     -   Possible values:

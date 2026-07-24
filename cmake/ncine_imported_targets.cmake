@@ -161,6 +161,12 @@ if(EMSCRIPTEN)
 			INTERFACE_COMPILE_OPTIONS "SHELL:-s USE_SDL=2"
 			INTERFACE_LINK_OPTIONS "SHELL:-s USE_SDL=2")
 		set(SDL2_FOUND 1)
+	elseif(NCINE_PREFERRED_BACKEND STREQUAL "SDL3")
+		add_library(SDL3::SDL3 INTERFACE IMPORTED)
+		set_target_properties(SDL3::SDL3 PROPERTIES
+			INTERFACE_COMPILE_OPTIONS "SHELL:-s USE_SDL=3"
+			INTERFACE_LINK_OPTIONS "SHELL:-s USE_SDL=3")
+		set(SDL3_FOUND 1)
 	endif()
 
 	#if(NCINE_WITH_PNG)
@@ -395,6 +401,16 @@ elseif(WIN32)
 				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}/SDL2/")
 			set(SDL2_FOUND 1)
 		endif()
+
+		if(NCINE_PREFERRED_BACKEND STREQUAL "SDL3" AND NOT TARGET SDL3::SDL3 AND
+			EXISTS "${MSVC_LIBDIR}/SDL3.lib" AND EXISTS "${MSVC_BINDIR}/SDL3.dll")
+			add_library(SDL3::SDL3 SHARED IMPORTED)
+			set_target_properties(SDL3::SDL3 PROPERTIES
+				IMPORTED_IMPLIB "${MSVC_LIBDIR}/SDL3.lib"
+				IMPORTED_LOCATION "${MSVC_BINDIR}/SDL3.dll"
+				INTERFACE_INCLUDE_DIRECTORIES "${EXTERNAL_INCLUDES_DIR}/SDL3/")
+			set(SDL3_FOUND 1)
+		endif()
 	endif()
 
 	#if(NCINE_WITH_PNG AND
@@ -507,6 +523,8 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	# Look for both GLFW and SDL2 to make the fallback logic work
 	find_package(GLFW)
 	find_package(SDL2)
+	# SDL3 ships a proper CMake config package (defines the SDL3::SDL3 imported target directly)
+	find_package(SDL3 CONFIG QUIET)
 	
 	#if(NOT APPLE)
 		find_package(CURL)
@@ -601,6 +619,17 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			INTERFACE_LINK_LIBRARIES "${SDL2_EXTRA_LIBRARIES}")
 	endif()
 
+	# The SDL3 config package (found above) already provides the SDL3::SDL3 target; this only mirrors the
+	# manual fallback used for SDL2 when a config package is unavailable but raw find variables were set
+	if(SDL3_FOUND AND NOT TARGET SDL3::SDL3 AND SDL3_LIBRARY)
+		split_extra_libraries(SDL3 "${SDL3_LIBRARY}")
+		add_library(SDL3::SDL3 ${LIBRARY_LINKAGE} IMPORTED)
+		set_target_properties(SDL3::SDL3 PROPERTIES
+			IMPORTED_LOCATION "${SDL3_LIBRARY_FILE}" # On macOS it's a list
+			INTERFACE_INCLUDE_DIRECTORIES "${SDL3_INCLUDE_DIR}"
+			INTERFACE_LINK_LIBRARIES "${SDL3_EXTRA_LIBRARIES}")
+	endif()
+
 	if(WEBP_FOUND AND NOT TARGET WebP::WebP)
 		add_library(WebP::WebP ${LIBRARY_LINKAGE} IMPORTED)
 		set_target_properties(WebP::WebP PROPERTIES
@@ -679,6 +708,13 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			set_target_properties(SDL2::SDL2 PROPERTIES
 				IMPORTED_LOCATION "${SDL2_FRAMEWORK_DIR}/sdl2"
 				INTERFACE_LINK_LIBRARIES "${SDL2_FRAMEWORK_LINKS}")
+		endif()
+
+		if(SDL3_FOUND AND SDL3_LIBRARY AND TARGET SDL3::SDL3)
+			split_extra_frameworks(SDL3 "${SDL3_LIBRARY}")
+			set_target_properties(SDL3::SDL3 PROPERTIES
+				IMPORTED_LOCATION "${SDL3_FRAMEWORK_DIR}/sdl3"
+				INTERFACE_LINK_LIBRARIES "${SDL3_FRAMEWORK_LINKS}")
 		endif()
 
 		#if(PNG_FOUND)

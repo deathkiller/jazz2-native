@@ -106,9 +106,16 @@ if(NOT DEDICATED_SERVER)
 			${NCINE_SOURCE_DIR}/nCine/Backends/GlfwKeys.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/GlfwGfxDevice.cpp
 		)
-	elseif(SDL2_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
-		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_SDL")
-		target_link_libraries(${NCINE_APP} PRIVATE SDL2::SDL2)
+	elseif((SDL2_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL2") OR (SDL3_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL3"))
+		# Both SDL versions share the same backend sources (SDL2/SDL3 API differences are handled inline
+		# with WITH_SDL2 / WITH_SDL3 preprocessor forks), so only the compile definition and linked library differ
+		if(NCINE_PREFERRED_BACKEND STREQUAL "SDL3")
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_SDL3")
+			target_link_libraries(${NCINE_APP} PRIVATE SDL3::SDL3)
+		else()
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_SDL2")
+			target_link_libraries(${NCINE_APP} PRIVATE SDL2::SDL2)
+		endif()
 
 		list(APPEND HEADERS
 			${NCINE_SOURCE_DIR}/nCine/Backends/SdlInputManager.h
@@ -429,7 +436,7 @@ if(NCINE_WITH_IMGUI AND NOT DEDICATED_SERVER)
 	if(GLFW_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "GLFW")
 		list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Backends/ImGuiGlfwInput.h)
 		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/ImGuiGlfwInput.cpp)
-	elseif(SDL2_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL2")
+	elseif((SDL2_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL2") OR (SDL3_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "SDL3"))
 		list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Backends/ImGuiSdlInput.h)
 		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/ImGuiSdlInput.cpp)
 	elseif(Qt5_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "QT5")
@@ -755,6 +762,9 @@ else()
 			endif()
 			if(NCINE_PREFERRED_BACKEND STREQUAL "SDL2" AND SDL2_FOUND)
 				list(APPEND WIN32_DEPENDENCIES "${MSVC_BINDIR}/SDL2.dll")
+			endif()
+			if(NCINE_PREFERRED_BACKEND STREQUAL "SDL3" AND SDL3_FOUND AND EXISTS "${MSVC_BINDIR}/SDL3.dll")
+				list(APPEND WIN32_DEPENDENCIES "${MSVC_BINDIR}/SDL3.dll")
 			endif()
 
 			if(NCINE_WITH_AUDIO AND OPENAL_FOUND)

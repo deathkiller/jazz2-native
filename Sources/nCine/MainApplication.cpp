@@ -5,7 +5,7 @@
 
 #include <IO/FileSystem.h>
 
-#if defined(WITH_SDL)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3))
 #	include "Backends/SdlGfxDevice.h"
 #	include "Backends/SdlInputManager.h"
 #elif defined(WITH_GLFW)
@@ -40,7 +40,7 @@
 using namespace Death;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
-#if defined(WITH_SDL) || defined(WITH_GLFW) || defined(WITH_QT5)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5)
 using namespace nCine::Backends;
 #endif
 
@@ -185,7 +185,7 @@ namespace nCine
 
 	bool MainApplication::EnablePlayStationExtendedSupport(bool enable)
 	{
-#if defined(WITH_SDL)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3))
 		SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE, enable ? "1" : "0");
 		// SDL_HINT_JOYSTICK_HIDAPI_PS5_RUMBLE inherits value from SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE
 		//SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5_RUMBLE, enable ? "1" : "0");
@@ -256,7 +256,7 @@ namespace nCine
 				if (url) window.open(url, '_blank');
 			}, url.data(), url.size());
 			return true;
-#elif defined(WITH_SDL)
+#elif (defined(WITH_SDL2) || defined(WITH_SDL3))
 #	if SDL_VERSION_ATLEAST(2, 0, 14)
 			return SDL_OpenURL(String::nullTerminatedView(url).data()) == 0;
 #	endif
@@ -422,7 +422,9 @@ namespace nCine
 		if (appCfg_.withGraphics) {
 #if defined(WITH_GLFW)
 			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (GLFW) initializing" INIT_MESSAGE_SUFFIX "...");
-#elif defined(WITH_SDL)
+#elif defined(WITH_SDL3)
+			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (SDL3) initializing" INIT_MESSAGE_SUFFIX "...");
+#elif defined(WITH_SDL2)
 			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " (SDL2) initializing" INIT_MESSAGE_SUFFIX "...");
 #else
 			LOGI(NCINE_APP_NAME " v" NCINE_VERSION " initializing" INIT_MESSAGE_SUFFIX "...");
@@ -438,7 +440,7 @@ namespace nCine
 			const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.windowPosition.X,
 				appCfg_.windowPosition.Y, appCfg_.fullscreen, appCfg_.resizable, appCfg_.windowScaling);
 
-#if defined(WITH_SDL)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3))
 			gfxDevice_ = std::make_unique<SdlGfxDevice>(windowMode, contextInfo, displayMode);
 			inputManager_ = std::make_unique<SdlInputManager>();
 #elif defined(WITH_GLFW)
@@ -475,7 +477,7 @@ namespace nCine
 	void MainApplication::ProcessStep()
 	{
 		if (appCfg_.withGraphics) {
-#if defined(WITH_GLFW) || defined(WITH_SDL)
+#if defined(WITH_GLFW) || (defined(WITH_SDL2) || defined(WITH_SDL3))
 			ProcessEvents();
 #elif defined(WITH_QT5GAMEPAD)
 			static_cast<Qt5InputManager&>(*inputManager_).updateJoystickStates();
@@ -497,7 +499,7 @@ namespace nCine
 		}
 	}
 
-#if defined(WITH_SDL)
+#if defined(WITH_SDL3)
 	void MainApplication::ProcessEvents()
 	{
 		ZoneScoped;
@@ -513,7 +515,70 @@ namespace nCine
 			}
 		}
 #	endif
-		
+
+		while (SDL_PollEvent(&event)) {
+			// SDL3 flattened the SDL2 SDL_WINDOWEVENT/SDL_DISPLAYEVENT umbrellas into one event type per action,
+			// so the sub-events are dispatched directly off event.type here instead of event.window.event
+			switch (event.type) {
+				case SDL_EVENT_QUIT:
+					if (SdlInputManager::shouldQuitOnRequest()) {
+						shouldQuit_ = true;
+					}
+					break;
+				case SDL_EVENT_WINDOW_FOCUS_GAINED:
+					if (SdlGfxDevice::isMainWindow(event.window.windowID)) {
+						SetFocus(true);
+					}
+					break;
+				case SDL_EVENT_WINDOW_FOCUS_LOST:
+					if (SdlGfxDevice::isMainWindow(event.window.windowID)) {
+						SetFocus(false);
+					}
+					break;
+				case SDL_EVENT_WINDOW_RESIZED:
+				case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+					if (SdlGfxDevice::isMainWindow(event.window.windowID)) {
+						SDL_Window* windowHandle = SDL_GetWindowFromID(event.window.windowID);
+						int logicalWidth = 0, logicalHeight = 0;
+						SDL_GetWindowSize(windowHandle, &logicalWidth, &logicalHeight);
+						gfxDevice_->width_ = logicalWidth;
+						gfxDevice_->height_ = logicalHeight;
+						gfxDevice_->isFullscreen_ = (SDL_GetWindowFlags(windowHandle) & SDL_WINDOW_FULLSCREEN) != 0;
+						// Query the pixel size the way the active backend measures it, then resize the backend
+						// swap chain to match (no-op on OpenGL / software); see the SDL2 branch for the rationale
+						SdlGfxDevice::queryDrawableSize(windowHandle, logicalWidth, logicalHeight,
+							gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
+						RHI::Device::ResizeSwapchain(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
+						ResizeScreenViewport(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
+					}
+					break;
+				default:
+					if (event.type >= SDL_EVENT_DISPLAY_FIRST && event.type <= SDL_EVENT_DISPLAY_LAST) {
+						gfxDevice_->updateMonitors();
+					} else if (appCfg_.withGraphics) {
+						SdlInputManager::parseEvent(event);
+					}
+					break;
+			}
+		}
+	}
+#elif defined(WITH_SDL2)
+	void MainApplication::ProcessEvents()
+	{
+		ZoneScoped;
+
+		SDL_Event event;
+#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+		if (ShouldSuspend()) {
+			SDL_WaitEvent(&event);
+			SDL_PushEvent(&event);
+			// Don't lose any events when resuming
+			while (SDL_PollEvent(&event)) {
+				SDL_PushEvent(&event);
+			}
+		}
+#	endif
+
 		while (SDL_PollEvent(&event)) {
 			switch (event.type) {
 				case SDL_QUIT:

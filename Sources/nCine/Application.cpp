@@ -18,7 +18,9 @@ extern "C"
 #		if defined(WITH_GLFW)
 #			pragma comment(lib, "../Libs/Windows/x64/glfw3dll.lib")
 #		endif
-#		if defined(WITH_SDL)
+#		if defined(WITH_SDL3)
+#			pragma comment(lib, "../Libs/Windows/x64/SDL3.lib")
+#		elif defined(WITH_SDL2)
 #			pragma comment(lib, "../Libs/Windows/x64/SDL2.lib")
 #		endif
 #		if defined(WITH_AUDIO)
@@ -31,7 +33,9 @@ extern "C"
 #		if defined(WITH_GLFW)
 #			pragma comment(lib, "../Libs/Windows/x86/glfw3dll.lib")
 #		endif
-#		if defined(WITH_SDL)
+#		if defined(WITH_SDL3)
+#			pragma comment(lib, "../Libs/Windows/x86/SDL3.lib")
+#		elif defined(WITH_SDL2)
 #			pragma comment(lib, "../Libs/Windows/x86/SDL2.lib")
 #		endif
 #		if defined(WITH_AUDIO)

@@ -1,14 +1,103 @@
-// Based on "imgui/backends/imgui_impl_sdl.cpp"
-#if defined(WITH_IMGUI) && defined(WITH_SDL)
+// Based on "imgui/backends/imgui_impl_sdl.cpp" (SDL3 support added on top of the original SDL2 backend)
+#if defined(WITH_IMGUI) && (defined(WITH_SDL2) || defined(WITH_SDL3))
 
 #include "ImGuiSdlInput.h"
 #include "SdlGfxDevice.h"
 #include "../Input/ImGuiJoyMappedInput.h"
 
-#if defined(__HAS_LOCAL_SDL)
-#	include "SDL2/SDL_syswm.h"
-#else
-#	include <SDL_syswm.h>
+#if defined(WITH_SDL2)
+// SDL3 removed SDL_syswm.h; native handles are read from the window property store instead (see below)
+#	if defined(__HAS_LOCAL_SDL)
+#		include "SDL2/SDL_syswm.h"
+#	else
+#		include <SDL_syswm.h>
+#	endif
+#endif
+
+#if defined(WITH_SDL3)
+// SDL2 -> SDL3 renamed the game-controller/gamepad API, the system-cursor and event-type enums, the keymod
+// flags and a couple of letter/punctuation keycodes, mostly keeping signatures identical. These shims keep the
+// shared body below readable; only genuinely divergent spots (removed APIs, float coordinates, flattened window
+// events, changed return conventions) are handled with explicit #if forks.
+#define SDL_GameControllerGetButton  SDL_GetGamepadButton
+#define SDL_GameControllerGetAxis    SDL_GetGamepadAxis
+#define SDL_GameControllerClose      SDL_CloseGamepad
+#define SDL_GameControllerOpen       SDL_OpenGamepad
+#define SDL_IsGameController          SDL_IsGamepad
+#define SDL_GameControllerButton     SDL_GamepadButton
+#define SDL_GameControllerAxis       SDL_GamepadAxis
+#define SDL_CONTROLLER_BUTTON_START        SDL_GAMEPAD_BUTTON_START
+#define SDL_CONTROLLER_BUTTON_BACK         SDL_GAMEPAD_BUTTON_BACK
+#define SDL_CONTROLLER_BUTTON_X            SDL_GAMEPAD_BUTTON_WEST
+#define SDL_CONTROLLER_BUTTON_B            SDL_GAMEPAD_BUTTON_EAST
+#define SDL_CONTROLLER_BUTTON_Y            SDL_GAMEPAD_BUTTON_NORTH
+#define SDL_CONTROLLER_BUTTON_A            SDL_GAMEPAD_BUTTON_SOUTH
+#define SDL_CONTROLLER_BUTTON_DPAD_LEFT    SDL_GAMEPAD_BUTTON_DPAD_LEFT
+#define SDL_CONTROLLER_BUTTON_DPAD_RIGHT   SDL_GAMEPAD_BUTTON_DPAD_RIGHT
+#define SDL_CONTROLLER_BUTTON_DPAD_UP      SDL_GAMEPAD_BUTTON_DPAD_UP
+#define SDL_CONTROLLER_BUTTON_DPAD_DOWN    SDL_GAMEPAD_BUTTON_DPAD_DOWN
+#define SDL_CONTROLLER_BUTTON_LEFTSHOULDER  SDL_GAMEPAD_BUTTON_LEFT_SHOULDER
+#define SDL_CONTROLLER_BUTTON_RIGHTSHOULDER SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER
+#define SDL_CONTROLLER_BUTTON_LEFTSTICK    SDL_GAMEPAD_BUTTON_LEFT_STICK
+#define SDL_CONTROLLER_BUTTON_RIGHTSTICK   SDL_GAMEPAD_BUTTON_RIGHT_STICK
+#define SDL_CONTROLLER_AXIS_TRIGGERLEFT    SDL_GAMEPAD_AXIS_LEFT_TRIGGER
+#define SDL_CONTROLLER_AXIS_TRIGGERRIGHT   SDL_GAMEPAD_AXIS_RIGHT_TRIGGER
+#define SDL_CONTROLLER_AXIS_LEFTX          SDL_GAMEPAD_AXIS_LEFTX
+#define SDL_CONTROLLER_AXIS_LEFTY          SDL_GAMEPAD_AXIS_LEFTY
+#define SDL_CONTROLLER_AXIS_RIGHTX         SDL_GAMEPAD_AXIS_RIGHTX
+#define SDL_CONTROLLER_AXIS_RIGHTY         SDL_GAMEPAD_AXIS_RIGHTY
+#define SDL_CONTROLLERDEVICEADDED    SDL_EVENT_GAMEPAD_ADDED
+#define SDL_CONTROLLERDEVICEREMOVED  SDL_EVENT_GAMEPAD_REMOVED
+#define SDL_SYSTEM_CURSOR_ARROW      SDL_SYSTEM_CURSOR_DEFAULT
+#define SDL_SYSTEM_CURSOR_IBEAM      SDL_SYSTEM_CURSOR_TEXT
+#define SDL_SYSTEM_CURSOR_SIZEALL    SDL_SYSTEM_CURSOR_MOVE
+#define SDL_SYSTEM_CURSOR_SIZENS     SDL_SYSTEM_CURSOR_NS_RESIZE
+#define SDL_SYSTEM_CURSOR_SIZEWE     SDL_SYSTEM_CURSOR_EW_RESIZE
+#define SDL_SYSTEM_CURSOR_SIZENESW   SDL_SYSTEM_CURSOR_NESW_RESIZE
+#define SDL_SYSTEM_CURSOR_SIZENWSE   SDL_SYSTEM_CURSOR_NWSE_RESIZE
+#define SDL_SYSTEM_CURSOR_HAND       SDL_SYSTEM_CURSOR_POINTER
+#define SDL_SYSTEM_CURSOR_NO         SDL_SYSTEM_CURSOR_NOT_ALLOWED
+#define SDL_MOUSEMOTION       SDL_EVENT_MOUSE_MOTION
+#define SDL_MOUSEWHEEL        SDL_EVENT_MOUSE_WHEEL
+#define SDL_MOUSEBUTTONDOWN   SDL_EVENT_MOUSE_BUTTON_DOWN
+#define SDL_MOUSEBUTTONUP     SDL_EVENT_MOUSE_BUTTON_UP
+#define SDL_TEXTINPUT         SDL_EVENT_TEXT_INPUT
+#define SDL_KEYDOWN           SDL_EVENT_KEY_DOWN
+#define SDL_KEYUP             SDL_EVENT_KEY_UP
+#define SDL_FreeCursor        SDL_DestroyCursor
+#define SDL_GL_DeleteContext  SDL_GL_DestroyContext
+#define KMOD_CTRL   SDL_KMOD_CTRL
+#define KMOD_SHIFT  SDL_KMOD_SHIFT
+#define KMOD_ALT    SDL_KMOD_ALT
+#define KMOD_GUI    SDL_KMOD_GUI
+#define SDLK_a SDLK_A
+#define SDLK_b SDLK_B
+#define SDLK_c SDLK_C
+#define SDLK_d SDLK_D
+#define SDLK_e SDLK_E
+#define SDLK_f SDLK_F
+#define SDLK_g SDLK_G
+#define SDLK_h SDLK_H
+#define SDLK_i SDLK_I
+#define SDLK_j SDLK_J
+#define SDLK_k SDLK_K
+#define SDLK_l SDLK_L
+#define SDLK_m SDLK_M
+#define SDLK_n SDLK_N
+#define SDLK_o SDLK_O
+#define SDLK_p SDLK_P
+#define SDLK_q SDLK_Q
+#define SDLK_r SDLK_R
+#define SDLK_s SDLK_S
+#define SDLK_t SDLK_T
+#define SDLK_u SDLK_U
+#define SDLK_v SDLK_V
+#define SDLK_w SDLK_W
+#define SDLK_x SDLK_X
+#define SDLK_y SDLK_Y
+#define SDLK_z SDLK_Z
+#define SDLK_QUOTE     SDLK_APOSTROPHE
+#define SDLK_BACKQUOTE SDLK_GRAVE
 #endif
 
 #if SDL_VERSION_ATLEAST(2, 0, 4) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_ANDROID) && !(defined(DEATH_TARGET_APPLE) && TARGET_OS_IOS)
@@ -24,7 +113,7 @@
 #define SDL_HAS_DISPLAY_EVENT	SDL_VERSION_ATLEAST(2, 0, 9)
 #define SDL_HAS_SHOW_WINDOW_ACTIVATION_HINT	SDL_VERSION_ATLEAST(2, 0, 18)
 
-#if SDL_HAS_VULKAN
+#if SDL_HAS_VULKAN && defined(WITH_SDL2)
 extern "C" { extern DECLSPEC void SDLCALL SDL_Vulkan_GetDrawableSize(SDL_Window* window, int* w, int* h); }
 #endif
 
@@ -79,7 +168,15 @@ namespace nCine::Backends
 				r.y = static_cast<int>(data->InputPos.y);
 				r.w = 1;
 				r.h = static_cast<int>(data->InputLineHeight);
+#if defined(WITH_SDL3)
+				// SDL3: SDL_SetTextInputRect -> SDL_SetTextInputArea (per-window, plus a cursor offset)
+				SDL_Window* imeWindow = SDL_GetKeyboardFocus();
+				if (imeWindow != nullptr) {
+					SDL_SetTextInputArea(imeWindow, &r, 0);
+				}
+#else
 				SDL_SetTextInputRect(&r);
+#endif
 			}
 		}
 
@@ -269,7 +366,11 @@ namespace nCine::Backends
 #endif
 
 		// Setup backend capabilities flags
+#if defined(WITH_SDL3)
+		io.BackendPlatformName = "nCine_SDL3";
+#else
 		io.BackendPlatformName = "nCine_SDL2";
+#endif
 		io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors; // We can honor GetMouseCursor() values (optional)
 		io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos; // We can honor io.WantSetMousePos requests (optional, rarely used)
 
@@ -304,6 +405,14 @@ namespace nCine::Backends
 		// Our mouse update function expect PlatformHandle to be filled for the main viewport
 		ImGuiViewport* mainViewport = ImGui::GetMainViewport();
 		mainViewport->PlatformHandleRaw = nullptr;
+#if defined(WITH_SDL3)
+		// SDL3 removed SDL_syswm.h; native window handles are read from the window property store
+#	if defined(DEATH_TARGET_WINDOWS)
+		mainViewport->PlatformHandleRaw = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
+#	elif defined(DEATH_TARGET_APPLE)
+		mainViewport->PlatformHandleRaw = SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, nullptr);
+#	endif
+#else
 		SDL_SysWMinfo info;
 		SDL_VERSION(&info.version);
 		if (SDL_GetWindowWMInfo(window, &info)) {
@@ -313,6 +422,7 @@ namespace nCine::Backends
 			mainViewport->PlatformHandleRaw = (void*)info.info.cocoa.window;
 #endif
 		}
+#endif
 
 		// From 2.0.5: Set SDL hint to receive mouse click events on window focus, otherwise SDL doesn't emit the event.
 		// Without this, when clicking to gain focus, our widgets wouldn't activate even though they showed as hovered.
@@ -491,7 +601,11 @@ namespace nCine::Backends
 			case SDL_MOUSEWHEEL: {
 				if (getViewportForWindowID(event->wheel.windowID) == nullptr)
 					return false;
-#if SDL_VERSION_ATLEAST(2, 0, 18) // If this fails to compile on Emscripten: update to latest Emscripten!
+#if defined(WITH_SDL3)
+				// SDL3: wheel deltas are always float (preciseX/preciseY were merged into x/y)
+				float wheelX = -event->wheel.x;
+				const float wheelY = event->wheel.y;
+#elif SDL_VERSION_ATLEAST(2, 0, 18) // If this fails to compile on Emscripten: update to latest Emscripten!
 				float wheelX = -event->wheel.preciseX;
 				const float wheelY = event->wheel.preciseY;
 #else
@@ -537,13 +651,63 @@ namespace nCine::Backends
 			case SDL_KEYUP: {
 				if (getViewportForWindowID(event->key.windowID) == nullptr)
 					return false;
+#if defined(WITH_SDL3)
+				// SDL3 removed the nested SDL_Keysym; keycode/scancode/modifiers are fields on the event
+				updateKeyModifiers(static_cast<SDL_Keymod>(event->key.mod));
+				const ImGuiKey key = sdlKeycodeToImGuiKey(event->key.key);
+				io.AddKeyEvent(key, (event->type == SDL_KEYDOWN));
+				io.SetKeyEventNativeData(key, event->key.key, event->key.scancode, event->key.scancode);
+#else
 				updateKeyModifiers(static_cast<SDL_Keymod>(event->key.keysym.mod));
 				const ImGuiKey key = sdlKeycodeToImGuiKey(event->key.keysym.sym);
 				io.AddKeyEvent(key, (event->type == SDL_KEYDOWN));
 				// To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
 				io.SetKeyEventNativeData(key, event->key.keysym.sym, event->key.keysym.scancode, event->key.keysym.scancode);
+#endif
 				return true;
 			}
+#if defined(WITH_SDL3)
+			case SDL_EVENT_DISPLAY_ORIENTATION:
+			case SDL_EVENT_DISPLAY_ADDED:
+			case SDL_EVENT_DISPLAY_REMOVED:
+			case SDL_EVENT_DISPLAY_MOVED:
+			case SDL_EVENT_DISPLAY_CONTENT_SCALE_CHANGED:
+			{
+				wantUpdateMonitors_ = true;
+				return true;
+			}
+			// SDL3 flattened SDL_WINDOWEVENT into individual event types (there is no event->window.event sub-field)
+			case SDL_EVENT_WINDOW_MOUSE_ENTER:
+				mouseWindowID_ = event->window.windowID;
+				mouseLastLeaveFrame_ = 0;
+				return true;
+			case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+				mouseLastLeaveFrame_ = ImGui::GetFrameCount() + 1;
+				return true;
+			case SDL_EVENT_WINDOW_FOCUS_GAINED:
+				io.AddFocusEvent(true);
+				return true;
+			case SDL_EVENT_WINDOW_FOCUS_LOST:
+				io.AddFocusEvent(false);
+				return true;
+#	if defined(IMGUI_HAS_VIEWPORT)
+			case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+				if (ImGuiViewport* viewport = getViewportForWindowID(event->window.windowID)) {
+					viewport->PlatformRequestClose = true;
+				}
+				return true;
+			case SDL_EVENT_WINDOW_MOVED:
+				if (ImGuiViewport* viewport = getViewportForWindowID(event->window.windowID)) {
+					viewport->PlatformRequestMove = true;
+				}
+				return true;
+			case SDL_EVENT_WINDOW_RESIZED:
+				if (ImGuiViewport* viewport = getViewportForWindowID(event->window.windowID)) {
+					viewport->PlatformRequestResize = true;
+				}
+				return true;
+#	endif
+#else
 #if SDL_HAS_DISPLAY_EVENT
 			case SDL_DISPLAYEVENT:
 			{
@@ -587,6 +751,7 @@ namespace nCine::Backends
 #endif
 				return true;
 			}
+#endif
 			case SDL_CONTROLLERDEVICEADDED:
 			case SDL_CONTROLLERDEVICEREMOVED: {
 				wantUpdateGamepadsList_ = true;
@@ -619,7 +784,11 @@ namespace nCine::Backends
 				if (ImGui::IsMouseDragging(buttonN, 1.0f))
 					wantCapture = true;
 			}
+#if defined(WITH_SDL3)
+			SDL_CaptureMouse(wantCapture);
+#else
 			SDL_CaptureMouse(wantCapture ? SDL_TRUE : SDL_FALSE);
+#endif
 		}
 
 		SDL_Window* focusedWindow = SDL_GetKeyboardFocus();
@@ -632,15 +801,43 @@ namespace nCine::Backends
 		if (isAppFocused) {
 			// (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
 			if (io.WantSetMousePos) {
+#if defined(WITH_SDL3)
+				// SDL3: the warp functions take float coordinates
+#	if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
+				if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+					SDL_WarpMouseGlobal(io.MousePos.x, io.MousePos.y);
+				else
+#	endif
+					SDL_WarpMouseInWindow(window_, io.MousePos.x, io.MousePos.y);
+#else
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
 				if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 					SDL_WarpMouseGlobal((int)io.MousePos.x, (int)io.MousePos.y);
 				else
 #endif
 					SDL_WarpMouseInWindow(window_, (int)io.MousePos.x, (int)io.MousePos.y);
+#endif
 			}
 
 			// (Optional) Fallback to provide mouse position when focused (SDL_MOUSEMOTION already provides this when hovered or captured)
+#if defined(WITH_SDL3)
+			// SDL3: relative mouse mode is per-window; the global mouse state reports float coordinates
+			const bool isRelativeMouseMode = SDL_GetWindowRelativeMouseMode(window_);
+			if (mouseCanUseGlobalState_ && mouseButtonsDown_ == 0 && !isRelativeMouseMode) {
+				float mouseXGlobal = 0.0f, mouseYGlobal = 0.0f;
+				SDL_GetGlobalMouseState(&mouseXGlobal, &mouseYGlobal);
+				int windowX = 0, windowY = 0;
+				SDL_GetWindowPosition(window_, &windowX, &windowY);
+#if defined(IMGUI_HAS_VIEWPORT)
+				if (!(io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)) {
+					SDL_GetWindowPosition(focusedWindow, &windowX, &windowY);
+					mouseXGlobal -= static_cast<float>(windowX);
+					mouseYGlobal -= static_cast<float>(windowY);
+				}
+#endif
+				io.AddMousePosEvent(mouseXGlobal, mouseYGlobal);
+			}
+#else
 			const bool isRelativeMouseMode = SDL_GetRelativeMouseMode() != 0;
 			if (mouseCanUseGlobalState_ && mouseButtonsDown_ == 0 && !isRelativeMouseMode) {
 				int windowX, windowY, mouseXGlobal, mouseYGlobal;
@@ -655,6 +852,7 @@ namespace nCine::Backends
 #endif
 				io.AddMousePosEvent(static_cast<float>(mouseXGlobal), static_cast<float>(mouseYGlobal));
 			}
+#endif
 		}
 
 #if defined(IMGUI_HAS_VIEWPORT)
@@ -678,7 +876,11 @@ namespace nCine::Backends
 		ImGuiMouseCursor imguiCursor = ImGui::GetMouseCursor();
 		if (io.MouseDrawCursor || imguiCursor == ImGuiMouseCursor_None) {
 			// Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
+#if defined(WITH_SDL3)
+			SDL_HideCursor();
+#else
 			SDL_ShowCursor(SDL_FALSE);
+#endif
 		} else {
 			// Show OS mouse cursor
 			SDL_Cursor* expectedCursor = (mouseCursors_[imguiCursor] ? mouseCursors_[imguiCursor] : mouseCursors_[ImGuiMouseCursor_Arrow]);
@@ -686,7 +888,11 @@ namespace nCine::Backends
 				SDL_SetCursor(expectedCursor); // SDL function doesn't have an early out (see #6113)
 				mouseLastCursor_ = expectedCursor;
 			}
+#if defined(WITH_SDL3)
+			SDL_ShowCursor();
+#else
 			SDL_ShowCursor(SDL_TRUE);
+#endif
 		}
 	}
 
@@ -695,11 +901,20 @@ namespace nCine::Backends
 	// - Some accessibility applications are declaring virtual monitors with a DPI of 0.0f, see #7902. We preserve this value for caller to handle.
 	float ImGuiSdlInput::getContentScaleForWindow(SDL_Window* window)
 	{
+#if defined(WITH_SDL3)
+		return getContentScaleForDisplay(static_cast<int>(SDL_GetDisplayForWindow(window)));
+#else
 		return getContentScaleForDisplay(SDL_GetWindowDisplayIndex(window));
+#endif
 	}
 
 	float ImGuiSdlInput::getContentScaleForDisplay(int displayIndex)
 	{
+#if defined(WITH_SDL3)
+		// SDL3: SDL_GetDisplayDPI was replaced by a single content-scale factor keyed by SDL_DisplayID
+		const float contentScale = SDL_GetDisplayContentScale(static_cast<SDL_DisplayID>(displayIndex));
+		return (contentScale > 0.0f ? contentScale : 1.0f);
+#else
 #if SDL_HAS_PER_MONITOR_DPI
 #	if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_ANDROID)
 		float dpi = 0.0f;
@@ -710,6 +925,7 @@ namespace nCine::Backends
 #endif
 		IM_UNUSED(displayIndex);
 		return 1.0f;
+#endif
 	}
 
 	void ImGuiSdlInput::closeGamepads()
@@ -744,6 +960,19 @@ namespace nCine::Backends
 		// Update list of controller(s) to use
 		if (wantUpdateGamepadsList_ && gamepadMode_ != GamepadMode::MANUAL) {
 			closeGamepads();
+#if defined(WITH_SDL3)
+			// SDL3 enumerates already-gamepad-capable devices directly (as instance IDs), so no SDL_IsGamepad check
+			int gamepadCount = 0;
+			SDL_JoystickID* gamepadIds = SDL_GetGamepads(&gamepadCount);
+			for (int n = 0; n < gamepadCount; n++) {
+				if (SDL_GameController* gamepad = SDL_GameControllerOpen(gamepadIds[n])) {
+					gamepads_.push_back(gamepad);
+					if (gamepadMode_ == GamepadMode::AUTO_FIRST)
+						break;
+				}
+			}
+			SDL_free(gamepadIds);
+#else
 			const int joystickCount = SDL_NumJoysticks();
 			for (int n = 0; n < joystickCount; n++) {
 				if (SDL_IsGameController(n)) {
@@ -754,6 +983,7 @@ namespace nCine::Backends
 					}
 				}
 			}
+#endif
 			wantUpdateGamepadsList_ = false;
 		}
 
@@ -804,6 +1034,13 @@ namespace nCine::Backends
 		SDL_GetWindowSize(window, &w, &h);
 		if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
 			w = h = 0;
+#if defined(WITH_SDL3)
+		// SDL3: unified pixel-size query (SDL_GL_GetDrawableSize / SDL_Vulkan_GetDrawableSize were removed)
+		if (renderer != nullptr)
+			SDL_GetRenderOutputSize(renderer, &displayW, &displayH);
+		else
+			SDL_GetWindowSizeInPixels(window, &displayW, &displayH);
+#else
 		if (renderer != nullptr)
 			SDL_GetRendererOutputSize(renderer, &displayW, &displayH);
 #if SDL_HAS_VULKAN
@@ -812,6 +1049,7 @@ namespace nCine::Backends
 #endif
 		else
 			SDL_GL_GetDrawableSize(window, &displayW, &displayH);
+#endif
 
 		if (outSize != nullptr)
 			*outSize = ImVec2(static_cast<float>(w), static_cast<float>(h));
@@ -825,6 +1063,30 @@ namespace nCine::Backends
 		ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
 		pio.Monitors.resize(0);
 		wantUpdateMonitors_ = false;
+#	if defined(WITH_SDL3)
+		// SDL3 enumerates displays as opaque SDL_DisplayID values (SDL2 used a 0-based count/index)
+		int display_count = 0;
+		SDL_DisplayID* displays = SDL_GetDisplays(&display_count);
+		for (int n = 0; n < display_count; n++) {
+			const SDL_DisplayID displayId = displays[n];
+			ImGuiPlatformMonitor monitor;
+			SDL_Rect r;
+			SDL_GetDisplayBounds(displayId, &r);
+			monitor.MainPos = monitor.WorkPos = ImVec2((float)r.x, (float)r.y);
+			monitor.MainSize = monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
+			if (SDL_GetDisplayUsableBounds(displayId, &r) && r.w > 0 && r.h > 0) {
+				monitor.WorkPos = ImVec2((float)r.x, (float)r.y);
+				monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
+			}
+			float dpi_scale = getContentScaleForDisplay((int)displayId);
+			if (dpi_scale <= 0.0f)
+				continue; // Some accessibility applications are declaring virtual monitors with a DPI of 0, see #7902.
+			monitor.DpiScale = dpi_scale;
+			monitor.PlatformHandle = (void*)(intptr_t)displayId;
+			pio.Monitors.push_back(monitor);
+		}
+		SDL_free(displays);
+#	else
 		int display_count = SDL_GetNumVideoDisplays();
 		for (int n = 0; n < display_count; n++) {
 			// Warning: the validity of monitor DPI information on Windows depends on the application DPI awareness settings, which generally needs to be set in the manifest or at runtime.
@@ -833,12 +1095,12 @@ namespace nCine::Backends
 			SDL_GetDisplayBounds(n, &r);
 			monitor.MainPos = monitor.WorkPos = ImVec2((float)r.x, (float)r.y);
 			monitor.MainSize = monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
-#if SDL_HAS_USABLE_DISPLAY_BOUNDS
+#		if SDL_HAS_USABLE_DISPLAY_BOUNDS
 			if (SDL_GetDisplayUsableBounds(n, &r) == 0 && r.w > 0 && r.h > 0) {
 				monitor.WorkPos = ImVec2((float)r.x, (float)r.y);
 				monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
 			}
-#endif
+#		endif
 			float dpi_scale = getContentScaleForDisplay(n);
 			if (dpi_scale <= 0.0f)
 				continue; // Some accessibility applications are declaring virtual monitors with a DPI of 0, see #7902.
@@ -846,6 +1108,7 @@ namespace nCine::Backends
 			monitor.PlatformHandle = (void*)(intptr_t)n;
 			pio.Monitors.push_back(monitor);
 		}
+#	endif
 	}
 #endif
 
@@ -869,17 +1132,32 @@ namespace nCine::Backends
 
 		Uint32 sdl_flags = 0;
 		sdl_flags |= useOpenGL ? SDL_WINDOW_OPENGL : (/*bd->UseVulkan ? SDL_WINDOW_VULKAN :*/ 0);
+#	if defined(WITH_SDL3)
+		sdl_flags |= (Uint32)(SDL_GetWindowFlags(window_) & SDL_WINDOW_HIGH_PIXEL_DENSITY);
+#	else
 		sdl_flags |= SDL_GetWindowFlags(window_) & SDL_WINDOW_ALLOW_HIGHDPI;
+#	endif
 		sdl_flags |= SDL_WINDOW_HIDDEN;
 		sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? SDL_WINDOW_BORDERLESS : 0;
 		sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? 0 : SDL_WINDOW_RESIZABLE;
 #	if !defined(DEATH_TARGET_WINDOWS)
+#		if defined(WITH_SDL3)
+		// SDL3 removed SDL_WINDOW_SKIP_TASKBAR; SDL_WINDOW_UTILITY keeps the window out of the taskbar
+		sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon) ? SDL_WINDOW_UTILITY : 0;
+#		else
 		sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon) ? SDL_WINDOW_SKIP_TASKBAR : 0;
+#		endif
 #	endif
 #	if SDL_HAS_ALWAYS_ON_TOP
 		sdl_flags |= (viewport->Flags & ImGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
 #	endif
+#	if defined(WITH_SDL3)
+		// SDL3 dropped the x/y parameters from SDL_CreateWindow; the position is applied separately afterwards
+		vd->Window = SDL_CreateWindow("ImGui", (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+		SDL_SetWindowPosition(vd->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
+#	else
 		vd->Window = SDL_CreateWindow("ImGui", (int)viewport->Pos.x, (int)viewport->Pos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+#	endif
 		vd->WindowOwned = true;
 		if (useOpenGL) {
 			vd->GLContext = SDL_GL_CreateContext(vd->Window);
@@ -891,6 +1169,17 @@ namespace nCine::Backends
 
 		viewport->PlatformHandle = (void*)(std::intptr_t)SDL_GetWindowID(vd->Window);
 		viewport->PlatformHandleRaw = nullptr;
+#	if defined(WITH_SDL3)
+		// SDL3 removed SDL_syswm.h; native window handles come from the window property store
+#		if defined(DEATH_TARGET_WINDOWS)
+		HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(vd->Window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
+		viewport->PlatformHandleRaw = (void*)hwnd;
+		if (windowIconSmall != NULL) ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)windowIconSmall);
+		if (windowIcon != NULL) ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)windowIcon);
+#		elif defined(DEATH_TARGET_APPLE)
+		viewport->PlatformHandleRaw = SDL_GetPointerProperty(SDL_GetWindowProperties(vd->Window), SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, nullptr);
+#		endif
+#	else
 		SDL_SysWMinfo info;
 		SDL_VERSION(&info.version);
 		if (SDL_GetWindowWMInfo(vd->Window, &info)) {
@@ -905,6 +1194,7 @@ namespace nCine::Backends
 			if (windowIcon != NULL) ::SendMessage(info.info.win.window, WM_SETICON, ICON_BIG, (LPARAM)windowIcon);
 #	endif
 		}
+#	endif
 	}
 
 	void ImGuiSdlInput::onDestroyWindow(ImGuiViewport* viewport)
