@@ -185,7 +185,11 @@ namespace nCine
 
 	bool MainApplication::EnablePlayStationExtendedSupport(bool enable)
 	{
-#if (defined(WITH_SDL2) || defined(WITH_SDL3))
+#if defined(WITH_SDL3)
+		// SDL3 merged the per-controller HIDAPI rumble hints into SDL_HINT_JOYSTICK_ENHANCED_REPORTS
+		SDL_SetHint(SDL_HINT_JOYSTICK_ENHANCED_REPORTS, enable ? "1" : "0");
+		return true;
+#elif defined(WITH_SDL2)
 		SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE, enable ? "1" : "0");
 		// SDL_HINT_JOYSTICK_HIDAPI_PS5_RUMBLE inherits value from SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE
 		//SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5_RUMBLE, enable ? "1" : "0");
