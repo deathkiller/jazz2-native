@@ -86,17 +86,24 @@ jobs:
     - if: matrix.Backend == 'SDL3'
       name: 'Install SDL3'
       run: |
-        # libsdl3-dev is available from the ubuntu-24.04 repositories (this entry runs on ubuntu-24.04)
-        sudo apt install -y libsdl3-dev
+        # libsdl3-dev is available from the ubuntu-24.04 repositories (this entry runs on ubuntu-24.04).
+        # libmpg123-dev is added so the linker can satisfy libopenmpt's transitive libmpg123 dependency.
+        sudo apt install -y libsdl3-dev libmpg123-dev
 
     - name: 'Configure CMake'
       run: |
         export CC=${{ matrix.CC }}
         export CXX=${{ matrix.CXX }}
-        
+
         rm -f ./Content/Translations/*.po
-        
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_ASSEMBLE_DEB=ON -D NCINE_ASSEMBLE_RPM=ON -D NCINE_WITH_GLEW=OFF
+
+        # The ubuntu-24.04 system libopenmpt.so has undefined mpg123_*64 symbols it expects from its libmpg123
+        # dependency, but modern ld defaults to --no-copy-dt-needed-entries and won't resolve them transitively.
+        # --copy-dt-needed-entries lets ld pull the symbols from libopenmpt's DT_NEEDED libmpg123 (installed below).
+        extraArgs=""
+        if [ "${{ matrix.Backend }}" = "SDL3" ]; then extraArgs="-D CMAKE_EXE_LINKER_FLAGS=-Wl,--copy-dt-needed-entries"; fi
+
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} $extraArgs -D NCINE_ASSEMBLE_DEB=ON -D NCINE_ASSEMBLE_RPM=ON -D NCINE_WITH_GLEW=OFF
 
     - name: 'Build'
       run: |
