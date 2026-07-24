@@ -18,7 +18,60 @@
 // SDL2 -> SDL3 renamed the game-controller/gamepad API, the system-cursor and event-type enums, the keymod
 // flags and a couple of letter/punctuation keycodes, mostly keeping signatures identical. These shims keep the
 // shared body below readable; only genuinely divergent spots (removed APIs, float coordinates, flattened window
-// events, changed return conventions) are handled with explicit #if forks.
+// events, changed return conventions) are handled with explicit #if forks. Most of these names are also mapped
+// in <SDL3/SDL_oldnames.h> (as sentinels when old names are disabled), so #undef them first to avoid
+// redefinition warnings.
+#undef SDL_GameControllerGetButton
+#undef SDL_GameControllerGetAxis
+#undef SDL_GameControllerClose
+#undef SDL_GameControllerOpen
+#undef SDL_IsGameController
+#undef SDL_GameControllerButton
+#undef SDL_GameControllerAxis
+#undef SDL_CONTROLLER_BUTTON_START
+#undef SDL_CONTROLLER_BUTTON_BACK
+#undef SDL_CONTROLLER_BUTTON_X
+#undef SDL_CONTROLLER_BUTTON_B
+#undef SDL_CONTROLLER_BUTTON_Y
+#undef SDL_CONTROLLER_BUTTON_A
+#undef SDL_CONTROLLER_BUTTON_DPAD_LEFT
+#undef SDL_CONTROLLER_BUTTON_DPAD_RIGHT
+#undef SDL_CONTROLLER_BUTTON_DPAD_UP
+#undef SDL_CONTROLLER_BUTTON_DPAD_DOWN
+#undef SDL_CONTROLLER_BUTTON_LEFTSHOULDER
+#undef SDL_CONTROLLER_BUTTON_RIGHTSHOULDER
+#undef SDL_CONTROLLER_BUTTON_LEFTSTICK
+#undef SDL_CONTROLLER_BUTTON_RIGHTSTICK
+#undef SDL_CONTROLLER_AXIS_TRIGGERLEFT
+#undef SDL_CONTROLLER_AXIS_TRIGGERRIGHT
+#undef SDL_CONTROLLER_AXIS_LEFTX
+#undef SDL_CONTROLLER_AXIS_LEFTY
+#undef SDL_CONTROLLER_AXIS_RIGHTX
+#undef SDL_CONTROLLER_AXIS_RIGHTY
+#undef SDL_CONTROLLERDEVICEADDED
+#undef SDL_CONTROLLERDEVICEREMOVED
+#undef SDL_SYSTEM_CURSOR_ARROW
+#undef SDL_SYSTEM_CURSOR_IBEAM
+#undef SDL_SYSTEM_CURSOR_SIZEALL
+#undef SDL_SYSTEM_CURSOR_SIZENS
+#undef SDL_SYSTEM_CURSOR_SIZEWE
+#undef SDL_SYSTEM_CURSOR_SIZENESW
+#undef SDL_SYSTEM_CURSOR_SIZENWSE
+#undef SDL_SYSTEM_CURSOR_HAND
+#undef SDL_SYSTEM_CURSOR_NO
+#undef SDL_MOUSEMOTION
+#undef SDL_MOUSEWHEEL
+#undef SDL_MOUSEBUTTONDOWN
+#undef SDL_MOUSEBUTTONUP
+#undef SDL_TEXTINPUT
+#undef SDL_KEYDOWN
+#undef SDL_KEYUP
+#undef SDL_FreeCursor
+#undef SDL_GL_DeleteContext
+#undef KMOD_CTRL
+#undef KMOD_SHIFT
+#undef KMOD_ALT
+#undef KMOD_GUI
 #define SDL_GameControllerGetButton  SDL_GetGamepadButton
 #define SDL_GameControllerGetAxis    SDL_GetGamepadAxis
 #define SDL_GameControllerClose      SDL_CloseGamepad

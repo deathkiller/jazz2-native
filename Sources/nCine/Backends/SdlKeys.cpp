@@ -6,6 +6,19 @@
 // SDL3 keycode renames: the lowercase-letter keycodes became uppercase-named (same numeric values), a few
 // punctuation keys were renamed, and the KMOD_* modifier flags gained an SDL_ prefix. Scancodes (SDL_SCANCODE_*)
 // are unchanged. These shims keep the large keySymValueToEnum()/enumToKeysValue() switch statements shared.
+// The KMOD_* names are also mapped in <SDL3/SDL_oldnames.h> (as sentinels when old names are disabled), so
+// #undef them first to avoid redefinition warnings.
+#	undef KMOD_LSHIFT
+#	undef KMOD_RSHIFT
+#	undef KMOD_LCTRL
+#	undef KMOD_RCTRL
+#	undef KMOD_LALT
+#	undef KMOD_RALT
+#	undef KMOD_LGUI
+#	undef KMOD_RGUI
+#	undef KMOD_NUM
+#	undef KMOD_CAPS
+#	undef KMOD_MODE
 #	define SDLK_a SDLK_A
 #	define SDLK_b SDLK_B
 #	define SDLK_c SDLK_C

@@ -29,7 +29,42 @@
 // SDL2 -> SDL3 renamed most of the joystick API and the event-type enum, but kept the signatures identical.
 // These shims map the old names onto the new ones so the shared body below only needs explicit #if forks where
 // the semantics (return convention, arguments, device-index vs instance-id model) actually changed.
+// SDL3 ships these same old->new mappings in <SDL3/SDL_oldnames.h>, but as error sentinels when old names are
+// disabled; #undef each before redefining so our mapping to the real SDL3 name installs without a redefinition warning.
+#ifdef SDL_JoystickGUID
+#	undef SDL_JoystickGUID
+#endif
 using SDL_JoystickGUID = SDL_GUID;
+#undef SDL_JoystickClose
+#undef SDL_JoystickGetPlayerIndex
+#undef SDL_JoystickGetGUID
+#undef SDL_JoystickGetGUIDString
+#undef SDL_JoystickName
+#undef SDL_JoystickNumHats
+#undef SDL_JoystickNumAxes
+#undef SDL_JoystickNumButtons
+#undef SDL_JoystickNumBalls
+#undef SDL_JoystickGetButton
+#undef SDL_JoystickGetHat
+#undef SDL_JoystickGetAxis
+#undef SDL_JoystickGetAttached
+#undef SDL_JoystickInstanceID
+#undef SDL_JOYDEVICEADDED
+#undef SDL_JOYDEVICEREMOVED
+#undef SDL_KEYDOWN
+#undef SDL_KEYUP
+#undef SDL_TEXTINPUT
+#undef SDL_MOUSEBUTTONDOWN
+#undef SDL_MOUSEBUTTONUP
+#undef SDL_MOUSEMOTION
+#undef SDL_MOUSEWHEEL
+#undef SDL_JOYBUTTONDOWN
+#undef SDL_JOYBUTTONUP
+#undef SDL_JOYAXISMOTION
+#undef SDL_JOYHATMOTION
+#undef SDL_FINGERDOWN
+#undef SDL_FINGERMOTION
+#undef SDL_FINGERUP
 #define SDL_JoystickClose            SDL_CloseJoystick
 #define SDL_JoystickGetPlayerIndex   SDL_GetJoystickPlayerIndex
 #define SDL_JoystickGetGUID          SDL_GetJoystickGUID
@@ -323,12 +358,14 @@ namespace nCine::Backends
 #if defined(WITH_SDL3)
 				// SDL3: SDL_GetNumTouchFingers + SDL_GetTouchFinger(index) -> SDL_GetTouchFingers (array of pointers)
 				int fingerCount = 0;
-				SDL_Finger** fingers = SDL_GetTouchFingers(event.tfinger.touchId, &fingerCount);
+				// SDL3 renamed the SDL_TouchFingerEvent members touchId/fingerId to touchID/fingerID
+				SDL_Finger** fingers = SDL_GetTouchFingers(event.tfinger.touchID, &fingerCount);
 				touchEvent_.count = fingerCount;
+				touchEvent_.actionIndex = (std::int32_t)event.tfinger.fingerID;
 #else
 				touchEvent_.count = SDL_GetNumTouchFingers(event.tfinger.touchId);
-#endif
 				touchEvent_.actionIndex = (std::int32_t)event.tfinger.fingerId;
+#endif
 
 				switch (event.type) {
 					case SDL_FINGERDOWN: touchEvent_.type = (touchEvent_.count == 1 ? TouchEventType::Down : TouchEventType::PointerDown); break;
