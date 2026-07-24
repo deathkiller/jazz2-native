@@ -170,11 +170,12 @@ namespace Jazz2
 	}
 
 #if defined(WITH_LIBRETRO)
-	void ContentResolver::OverridePaths(StringView sourcePath, StringView cachePath)
+	void ContentResolver::OverridePaths(StringView contentPath, StringView sourcePath, StringView cachePath)
 	{
+		_contentPath = contentPath;
 		_sourcePath = sourcePath;
 		_cachePath = cachePath;
-		// The constructor already mounted .paks from the default cache path, remount from the new one
+		// The constructor already mounted .paks from the default paths, remount from the new ones
 		RemountPaks();
 	}
 #endif

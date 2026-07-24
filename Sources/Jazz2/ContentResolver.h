@@ -146,8 +146,8 @@ namespace Jazz2
 		void SetHeadless(bool value);
 
 #if defined(WITH_LIBRETRO)
-		/** @brief Overrides `"Source"` and `"Cache"` directories (used by the libretro core to point into the frontend's system directory) */
-		void OverridePaths(StringView sourcePath, StringView cachePath);
+		/** @brief Overrides `"Content"`, `"Source"` and `"Cache"` directories (used by the libretro core, which cannot rely on the working directory of the frontend process) */
+		void OverridePaths(StringView contentPath, StringView sourcePath, StringView cachePath);
 #endif
 
 #if !defined(DEATH_TARGET_EMSCRIPTEN)

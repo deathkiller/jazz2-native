@@ -46,12 +46,41 @@ static retro_audio_sample_batch_t _audioBatchCb;
 // The engine presents once during initialization (inside retro_load_game), but the frontend's
 // video driver only becomes callable inside retro_run
 static bool _inRetroRun = false;
+// Largest framebuffer advertised to the frontend so far - the engine resolution comes from the
+// game configuration, so it can exceed the default the core starts with
+static std::int32_t _maxWidth = 1920;
+static std::int32_t _maxHeight = 1080;
 #if defined(WITH_RHI_GL)
 // Hardware rendering: the frontend owns the GL context, which only exists once it calls
 // context_reset - engine initialization is deferred until then
 static retro_hw_render_callback _hwRender = {};
 static bool _pendingInit = false;
 #endif
+
+static void FillSystemAvInfo(retro_system_av_info& info, std::int32_t width, std::int32_t height)
+{
+	std::memset(&info, 0, sizeof(info));
+	info.geometry.base_width = (unsigned)width;
+	info.geometry.base_height = (unsigned)height;
+	info.geometry.max_width = (unsigned)_maxWidth;
+	info.geometry.max_height = (unsigned)_maxHeight;
+	info.geometry.aspect_ratio = (float)width / (float)height;
+	info.timing.fps = 60.0;
+	// ponytail: audio goes straight out through OpenAL, this rate only satisfies the frontend
+	info.timing.sample_rate = 48000.0;
+}
+
+/** @brief Shows a short notice in the frontend's on-screen display */
+static void ShowMessage(const char* text)
+{
+	if (_environCb == nullptr) {
+		return;
+	}
+	retro_message message = {};
+	message.msg = text;
+	message.frames = 180;
+	_environCb(RETRO_ENVIRONMENT_SET_MESSAGE, &message);
+}
 
 namespace nCine
 {
@@ -127,13 +156,23 @@ namespace nCine
 			if (fb.width != _lastWidth || fb.height != _lastHeight) {
 				_lastWidth = fb.width;
 				_lastHeight = fb.height;
-				retro_game_geometry geometry = {};
-				geometry.base_width = (unsigned)fb.width;
-				geometry.base_height = (unsigned)fb.height;
-				geometry.max_width = 1920;
-				geometry.max_height = 1080;
-				geometry.aspect_ratio = (float)fb.width / (float)fb.height;
-				_environCb(RETRO_ENVIRONMENT_SET_GEOMETRY, &geometry);
+				if (fb.width > _maxWidth || fb.height > _maxHeight) {
+					// SET_GEOMETRY ignores max_width/max_height, only SET_SYSTEM_AV_INFO can raise
+					// the advertised maximum (at the cost of reinitializing the frontend's drivers)
+					_maxWidth = (fb.width > _maxWidth ? fb.width : _maxWidth);
+					_maxHeight = (fb.height > _maxHeight ? fb.height : _maxHeight);
+					retro_system_av_info avInfo;
+					FillSystemAvInfo(avInfo, fb.width, fb.height);
+					_environCb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &avInfo);
+				} else {
+					retro_game_geometry geometry = {};
+					geometry.base_width = (unsigned)fb.width;
+					geometry.base_height = (unsigned)fb.height;
+					geometry.max_width = (unsigned)_maxWidth;
+					geometry.max_height = (unsigned)_maxHeight;
+					geometry.aspect_ratio = (float)fb.width / (float)fb.height;
+					_environCb(RETRO_ENVIRONMENT_SET_GEOMETRY, &geometry);
+				}
 			}
 
 			// The engine framebuffer is R,G,B,A bytes with the bottom scanline first (OpenGL convention);
@@ -366,9 +405,13 @@ static void OnContextReset()
 	if (_pendingInit) {
 		_pendingInit = false;
 		_gameInitialized = theLibretroApplication().Init();
+	} else if (_gameInitialized) {
+		// A reset without a preceding context_destroy means the context was lost without notice:
+		// every GPU resource the engine holds is gone and it cannot recreate them in place
+		ShowMessage("Graphics context was lost, please restart the core");
+		theLibretroApplication().Shutdown();
+		_gameInitialized = false;
 	}
-	// ponytail: first-time init only - recreating every GPU resource after a real context loss
-	// is not supported by the engine, cache_context asks the frontend to avoid that
 }
 
 static void OnContextDestroy()
@@ -378,6 +421,9 @@ static void OnContextDestroy()
 		theLibretroApplication().Shutdown();
 		_gameInitialized = false;
 	}
+	// cache_context is only a request, the frontend may recreate the context at any time: re-arm
+	// initialization so the next context_reset brings the engine back up
+	_pendingInit = true;
 }
 #endif
 
@@ -389,6 +435,12 @@ RETRO_API void retro_set_environment(retro_environment_t cb)
 	bool supportNoGame = true;
 	cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &supportNoGame);
 
+	// Save states are the game's own level-resume snapshot written in host byte order: usable for
+	// manual save/load, but the frontend must not build rewind, run-ahead or netplay on top of it,
+	// and the resulting file cannot travel to a machine with a different endianness or word size
+	std::uint64_t quirks = RETRO_SERIALIZATION_QUIRK_INCOMPLETE | RETRO_SERIALIZATION_QUIRK_MUST_INITIALIZE |
+		RETRO_SERIALIZATION_QUIRK_ENDIAN_DEPENDENT | RETRO_SERIALIZATION_QUIRK_PLATFORM_DEPENDENT;
+	cb(RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS, &quirks);
 }
 
 RETRO_API void retro_set_video_refresh(retro_video_refresh_t cb) { _videoCb = cb; }
@@ -409,7 +461,9 @@ RETRO_API unsigned retro_api_version(void)
 RETRO_API void retro_get_system_info(struct retro_system_info* info)
 {
 	std::memset(info, 0, sizeof(*info));
-	info->library_name = NCINE_APP_NAME;
+	// Plain ASCII on purpose - frontends derive core info files, playlist entries and per-core
+	// config/save paths from this name, NCINE_APP_NAME contains a superscript character
+	info->library_name = "Jazz2 Resurrection";
 	info->library_version = NCINE_VERSION;
 	// Load any file inside the game directory (the one containing Content/ and Source/)
 	info->valid_extensions = "pak|j2a|j2l|j2e";
@@ -419,20 +473,17 @@ RETRO_API void retro_get_system_info(struct retro_system_info* info)
 
 RETRO_API void retro_get_system_av_info(struct retro_system_av_info* info)
 {
-	std::memset(info, 0, sizeof(*info));
-	info->geometry.base_width = 720;
-	info->geometry.base_height = 405;
-	info->geometry.max_width = 1920;
-	info->geometry.max_height = 1080;
-	info->geometry.aspect_ratio = 16.0f / 9.0f;
-	info->timing.fps = 60.0;
-	// ponytail: audio goes straight out through OpenAL, this rate only satisfies the frontend
-	info->timing.sample_rate = 48000.0;
+	FillSystemAvInfo(*info, 720, 405);
 }
 
 RETRO_API void retro_set_controller_port_device(unsigned port, unsigned device) {}
 
-RETRO_API void retro_reset(void) {}
+RETRO_API void retro_reset(void)
+{
+	// The game has no reset state to return to and the engine cannot be restarted in place, so
+	// say it instead of leaving the frontend's Reset command looking like a hang
+	ShowMessage("Reset is not supported, quit to the main menu instead");
+}
 
 RETRO_API void retro_run(void)
 {
@@ -446,8 +497,12 @@ RETRO_API void retro_run(void)
 	theLibretroApplication().SetFrameLimiter(!fastForwarding);
 #if defined(WITH_RHI_GL)
 	// The frontend renders its own UI with the same GL context between two frames: repoint the
-	// "screen" at its FBO (the id can change every frame) and re-sync every cached GL state
-	nCine::RHI::GL::GLFramebuffer::SetDefaultHandle((GLuint)_hwRender.get_current_framebuffer());
+	// "screen" at its FBO (the id can change every frame) and re-sync every cached GL state.
+	// get_current_framebuffer is obsolete upstream, so a frontend is not obliged to provide it -
+	// without it the default framebuffer is the only target left
+	GLuint defaultHandle = (_hwRender.get_current_framebuffer != nullptr
+		? (GLuint)_hwRender.get_current_framebuffer() : 0);
+	nCine::RHI::GL::GLFramebuffer::SetDefaultHandle(defaultHandle);
 	nCine::RHI::GL::GLDevice::ResyncExternalStateChanges();
 #endif
 	_inRetroRun = true;
@@ -529,10 +584,8 @@ RETRO_API bool retro_load_game(const struct retro_game_info* game)
 	const char* assetsDir = nullptr;
 	_environCb(RETRO_ENVIRONMENT_GET_CORE_ASSETS_DIRECTORY, &assetsDir);
 
-	// Find the game root (the directory containing Content/) starting from the loaded file
-	// and make it the working directory, so the engine's relative Content/, Source/ and
-	// Cache/ paths (NCINE_PACKAGED_CONTENT_PATH build) resolve there.
-	// ponytail: chdir affects the whole frontend process, revisit if it ever conflicts
+	// Find the game root (the directory containing Content/) starting from the loaded file, it
+	// is what the engine's Content/, Source/ and Cache/ paths are resolved against below
 	String baseDir;
 	if (game != nullptr && game->path != nullptr) {
 		baseDir = (fs::DirectoryExists(game->path) ? String(game->path) : String(fs::GetDirectoryName(game->path)));
@@ -556,33 +609,40 @@ RETRO_API bool retro_load_game(const struct retro_game_info* game)
 	if (baseDir.empty() && !systemBase.empty() && fs::DirectoryExists(fs::CombinePath(systemBase, "Content"_s))) {
 		baseDir = systemBase;
 	}
-	if (baseDir.empty() || !fs::SetWorkingDirectory(baseDir)) {
+	if (baseDir.empty()) {
 		return false;
 	}
 
 	// Source/ next to the game content wins (portable layout, same Anims.j2a check as
 	// ContentResolver), otherwise fall back to the frontend's system directory:
 	// "<system>/jazz2/Source" or ".../Sources" (with Cache/ alongside)
-	String localSource = fs::CombinePath(baseDir, "Source"_s);
-	bool localSourceValid = !fs::FindPathCaseInsensitive(fs::CombinePath(localSource, "Anims.j2a"_s)).empty() ||
-		!fs::FindPathCaseInsensitive(fs::CombinePath(localSource, "AnimsSw.j2a"_s)).empty();
+	String sourcePath = fs::CombinePath(baseDir, "Source/"_s);
+	String cachePath = fs::CombinePath(baseDir, "Cache/"_s);
+	bool sourceFound = !fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, "Anims.j2a"_s)).empty() ||
+		!fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, "AnimsSw.j2a"_s)).empty();
 	// The system directory may BE the Source folder (Recalbox: system = the rom's directory,
-	// which holds Anims.j2a); the Cache then goes next to Content/ in the working directory
-	if (!localSourceValid && systemDir != nullptr && systemDir[0] != '\0' &&
+	// which holds Anims.j2a); the Cache then goes next to Content/ in the game directory
+	if (!sourceFound && systemDir != nullptr && systemDir[0] != '\0' &&
 		(!fs::FindPathCaseInsensitive(fs::CombinePath(systemDir, "Anims.j2a"_s)).empty() ||
 		 !fs::FindPathCaseInsensitive(fs::CombinePath(systemDir, "AnimsSw.j2a"_s)).empty())) {
-		Jazz2::ContentResolver::Get().OverridePaths(systemDir, fs::CombinePath(baseDir, "Cache/"_s));
-		localSourceValid = true;
+		sourcePath = systemDir;
+		sourceFound = true;
 	}
-	if (!localSourceValid && !systemBase.empty()) {
+	if (!sourceFound && !systemBase.empty()) {
 		for (StringView sourceName : { "Source/"_s, "Sources/"_s }) {
 			String systemSource = fs::CombinePath(systemBase, sourceName);
 			if (fs::DirectoryExists(systemSource)) {
-				Jazz2::ContentResolver::Get().OverridePaths(systemSource, fs::CombinePath(systemBase, "Cache/"_s));
+				sourcePath = std::move(systemSource);
+				cachePath = fs::CombinePath(systemBase, "Cache/"_s);
 				break;
 			}
 		}
 	}
+
+	// A libretro core shares its process with the frontend, so the working directory is not the
+	// core's to change - the engine gets absolute paths instead of the relative ones it would
+	// resolve against the frontend's own working directory (NCINE_PACKAGED_CONTENT_PATH build)
+	Jazz2::ContentResolver::Get().OverridePaths(fs::CombinePath(baseDir, "Content/"_s), sourcePath, cachePath);
 
 	retro_pixel_format pixelFormat = RETRO_PIXEL_FORMAT_XRGB8888;
 	if (!_environCb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &pixelFormat)) {

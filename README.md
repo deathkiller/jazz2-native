@@ -104,7 +104,7 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
   * Alternatively, place them in the frontend's *system* directory as `‹System›/jazz2/Content/` and `‹System›/jazz2/Source/`
 * Load any file from `‹Game›/Source/` (for example `Anims.j2a`) as content, or start the core without content if `‹System›/jazz2/Content/` exists
 
-*The core exposes the RetroPad as a gamepad (up to 4 players, local splitscreen included), online multiplayer and the update check are not compiled in. Save states use the game's own level-resume snapshot – they restore the current level and players, but are not frame-exact, so netplay, run-ahead and rewind are not supported. Cache is recreated during the intro cinematics on the first startup, so it can't be skipped.*
+*The core is currently built and tested on **Linux** only, Windows, macOS and console frontends are not supported yet. The core exposes the RetroPad as a gamepad (up to 4 players, local splitscreen included), online multiplayer and the update check are not compiled in. Sound is played directly through **OpenAL** instead of the frontend's audio driver, so the frontend's volume, audio filters and recording don't apply to it. Save states use the game's own level-resume snapshot – they restore the current level and players, but are not frame-exact, so netplay, run-ahead and rewind are not supported, and the files can't be moved to a machine with a different architecture. Reset is not supported either. Cache is recreated during the intro cinematics on the first startup, so it can't be skipped.*
 
 ### Xbox (Universal Windows Platform)
 * Download the game
@@ -179,6 +179,7 @@ cmake -D NCINE_BUILD_LIBRETRO=ON
 cmake -D NCINE_BUILD_LIBRETRO=ON -D NCINE_LIBRETRO_RHI=OpenGL
 ```
 * No window backend (*GLFW*, *SDL2* or *Qt5*) is needed, *cURL* is not used and online multiplayer is disabled, local splitscreen multiplayer is still included
+* Only **Linux** is supported for now – the core is not built or tested on Windows, macOS or console frontends
 
 ### Xbox (Universal Windows Platform)
 * Build dependencies will be downloaded automatically by *CMake*
