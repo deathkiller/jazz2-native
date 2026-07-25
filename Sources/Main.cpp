@@ -3,6 +3,8 @@
 #if defined(DEATH_TARGET_ANDROID)
 #	include "nCine/Backends/Android/AndroidApplication.h"
 #	include "nCine/Backends/Android/AndroidJniHelper.h"
+#elif defined(WITH_LIBRETRO)
+#	include "nCine/Backends/LibretroApplication.h"
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 #	include "nCine/Backends/Uwp/UwpApplication.h"
 #else
@@ -120,6 +122,10 @@ public:
 	bool HasResumableState() const override;
 	bool SaveStateToStream(Stream& dest);
 	void ResumeStateFromStream(std::shared_ptr<Stream> src);
+#if defined(WITH_LIBRETRO)
+	bool OnSaveState(Stream& dest) override;
+	bool OnLoadState(std::shared_ptr<Stream> src) override;
+#endif
 	void ResumeSavedState() override;
 	bool SaveCurrentStateIfAny() override;
 
@@ -188,9 +194,95 @@ private:
 	static void ExtractPakFile(StringView pakFile, StringView targetPath);
 };
 
+#if defined(WITH_LIBRETRO)
+/** @brief Locates `Content`, `Source` and `Cache` in the directories advertised by the libretro frontend */
+static bool OverridePathsFromHost()
+{
+	const auto& hostPaths = Backends::theLibretroApplication().GetHostPaths();
+
+	// The frontend may point its system directory straight at the game root, otherwise the
+	// "<system>/jazz2" convention applies
+	String systemBase;
+	if (!hostPaths.System.empty()) {
+		systemBase = (fs::DirectoryExists(fs::CombinePath(hostPaths.System, "Content"_s))
+			? hostPaths.System : fs::CombinePath(hostPaths.System, "jazz2"_s));
+	}
+
+	// Find the game root (the directory containing Content/) starting from the loaded file, it is
+	// what the Content/, Source/ and Cache/ paths are resolved against below
+	String baseDir;
+	if (!hostPaths.Content.empty()) {
+		baseDir = (fs::DirectoryExists(hostPaths.Content) ? hostPaths.Content : String(fs::GetDirectoryName(hostPaths.Content)));
+		bool found = false;
+		for (std::int32_t i = 0; i < 3 && !baseDir.empty(); i++) {
+			if (fs::DirectoryExists(fs::CombinePath(baseDir, "Content"_s))) {
+				found = true;
+				break;
+			}
+			String parent = fs::GetDirectoryName(baseDir);
+			baseDir = std::move(parent);
+		}
+		if (!found) {
+			baseDir = {};
+		}
+	}
+	// Frontends that separate engine data from the user's game files keep Content/ (and the
+	// generated Cache/) in the core assets directory (Recalbox: core_assets = bios/jazz2)
+	if (baseDir.empty() && !hostPaths.CoreAssets.empty() && fs::DirectoryExists(fs::CombinePath(hostPaths.CoreAssets, "Content"_s))) {
+		baseDir = hostPaths.CoreAssets;
+	}
+	if (baseDir.empty() && !systemBase.empty() && fs::DirectoryExists(fs::CombinePath(systemBase, "Content"_s))) {
+		baseDir = systemBase;
+	}
+	if (baseDir.empty()) {
+		LOGE("Cannot find \"Content\" directory in any of the directories provided by the frontend");
+		return false;
+	}
+
+	// Source/ next to the game content wins (portable layout, same Anims.j2a check as
+	// ContentResolver), otherwise fall back to the frontend's system directory:
+	// "<system>/jazz2/Source" or ".../Sources" (with Cache/ alongside)
+	String sourcePath = fs::CombinePath(baseDir, "Source/"_s);
+	String cachePath = fs::CombinePath(baseDir, "Cache/"_s);
+	bool sourceFound = !fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, "Anims.j2a"_s)).empty() ||
+		!fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, "AnimsSw.j2a"_s)).empty();
+	// The system directory may BE the Source folder (Recalbox: system = the rom's directory, which
+	// holds Anims.j2a); the Cache then goes next to Content/ in the game directory
+	if (!sourceFound && !hostPaths.System.empty() &&
+		(!fs::FindPathCaseInsensitive(fs::CombinePath(hostPaths.System, "Anims.j2a"_s)).empty() ||
+		 !fs::FindPathCaseInsensitive(fs::CombinePath(hostPaths.System, "AnimsSw.j2a"_s)).empty())) {
+		sourcePath = hostPaths.System;
+		sourceFound = true;
+	}
+	if (!sourceFound && !systemBase.empty()) {
+		for (StringView sourceName : { "Source/"_s, "Sources/"_s }) {
+			String systemSource = fs::CombinePath(systemBase, sourceName);
+			if (fs::DirectoryExists(systemSource)) {
+				sourcePath = std::move(systemSource);
+				cachePath = fs::CombinePath(systemBase, "Cache/"_s);
+				break;
+			}
+		}
+	}
+
+	// A libretro core shares its process with the frontend, so the working directory is not the
+	// core's to change - absolute paths are used instead of the relative ones that would otherwise
+	// be resolved against the working directory of the frontend (NCINE_PACKAGED_CONTENT_PATH build)
+	ContentResolver::Get().OverridePaths(fs::CombinePath(baseDir, "Content/"_s), sourcePath, cachePath);
+	return true;
+}
+#endif
+
 void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 {
 	ZoneScopedC(0x888888);
+
+#if defined(WITH_LIBRETRO)
+	if (!OverridePathsFromHost()) {
+		theApplication().Quit();
+		return;
+	}
+#endif
 
 #if defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER)
 	constexpr bool isServer = true;
@@ -875,6 +967,30 @@ bool GameEventHandler::SaveStateToStream(Stream& dest)
 	}
 	return serialized;
 }
+
+#if defined(WITH_LIBRETRO)
+bool GameEventHandler::OnSaveState(Stream& dest)
+{
+	return SaveStateToStream(dest);
+}
+
+bool GameEventHandler::OnLoadState(std::shared_ptr<Stream> src)
+{
+	// The frontend expects an immediate answer, so validate the signature here - the level itself
+	// is reloaded asynchronously, on one of the next frames
+	if (src == nullptr || !*src || src->GetSize() < 11) {
+		return false;
+	}
+	std::uint64_t signature = src->ReadValueAsLE<std::uint64_t>();
+	src->Seek(0, SeekOrigin::Begin);
+	if (signature != 0x2095A59FF0BFBBEF) {
+		return false;
+	}
+
+	ResumeStateFromStream(std::move(src));
+	return true;
+}
+#endif
 
 bool GameEventHandler::SaveCurrentStateIfAny()
 {
@@ -2323,32 +2439,9 @@ void GameEventHandler::ExtractPakFile(StringView pakFile, StringView targetPath)
 }
 
 #if defined(DEATH_TARGET_ANDROID) || defined(WITH_LIBRETRO)
-#	if defined(WITH_LIBRETRO)
-// Bridge for the libretro save states (retro_serialize/retro_unserialize in libretro.cpp)
-static GameEventHandler* _libretroHandler = nullptr;
-
-bool Jazz2_SaveStateToStream(Stream& dest)
-{
-	return (_libretroHandler != nullptr && _libretroHandler->SaveStateToStream(dest));
-}
-
-bool Jazz2_LoadStateFromStream(std::shared_ptr<Stream> src)
-{
-	if (_libretroHandler == nullptr) {
-		return false;
-	}
-	_libretroHandler->ResumeStateFromStream(std::move(src));
-	return true;
-}
-#	endif
-
 std::unique_ptr<IAppEventHandler> CreateAppEventHandler()
 {
-	auto handler = std::make_unique<GameEventHandler>();
-#	if defined(WITH_LIBRETRO)
-	_libretroHandler = handler.get();
-#	endif
-	return handler;
+	return std::make_unique<GameEventHandler>();
 }
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)

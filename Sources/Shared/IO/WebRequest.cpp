@@ -1,10 +1,5 @@
 #include "WebRequest.h"
 
-#if !defined(DEATH_TARGET_WINDOWS) && !defined(WITH_CURL)
-// WebRequest needs an HTTP backend: WinHTTP on Windows, curl everywhere else - without curl the
-// whole implementation is compiled out (every caller is gated on the same condition)
-#else
-
 #include "FileStream.h"
 #include "FileSystem.h"
 #include "MemoryStream.h"
@@ -3149,4 +3144,3 @@ namespace Death { namespace IO {
 #endif
 
 }}
-#endif

@@ -44,12 +44,12 @@ if(NCINE_BUILD_LIBRETRO)
 	set(DEATH_CPU_USE_IFUNC OFF CACHE BOOL "Allow using GNU IFUNC for runtime CPU dispatch" FORCE)
 	# The async trace logger thread races with the frontend's core load/unload cycle; log synchronously
 	set(DEATH_TRACE_ASYNC OFF CACHE BOOL "Enable asynchronous processing of event tracing" FORCE)
-	# No curl in the core: the update check is pointless under a frontend (the package/frontend
-	# updates the core) and the online server-list lobby goes with it; direct multiplayer
-	# connections use ENet/IXWebSocket, not curl
+	# No curl in the core: the update check is pointless under a frontend, which updates the core
+	# itself, so `WebRequest` is left without an HTTP backend and excluded from the build
 	set(CMAKE_DISABLE_FIND_PACKAGE_CURL TRUE)
-	# No online multiplayer in the core (drops ENet, IXWebSocket and the OpenSSL dependency);
-	# WITH_MULTIPLAYER stays on - it also powers LOCAL splitscreen games
+	# The online server list is downloaded with `WebRequest`, so online multiplayer goes away with
+	# it (which drops ENet, IXWebSocket and the OpenSSL dependency as well); `WITH_MULTIPLAYER`
+	# stays on, it also powers LOCAL splitscreen games
 	set(WITH_ONLINE_MULTIPLAYER OFF CACHE BOOL "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" FORCE)
 endif()
 
