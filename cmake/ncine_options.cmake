@@ -32,6 +32,12 @@ if(NCINE_BUILD_LIBRETRO)
 	# "Software" presents the CPU rasterizer's framebuffer through retro_video_refresh (works
 	# everywhere); "GL" renders on the GPU into the frontend's FBO via SET_HW_RENDER
 	set(NCINE_LIBRETRO_RHI "Software" CACHE STRING "Rendering backend for the libretro core (Software or OpenGL)")
+	set_property(CACHE NCINE_LIBRETRO_RHI PROPERTY STRINGS "Software;OpenGL")
+	if(NOT NCINE_LIBRETRO_RHI MATCHES "^(Software|OpenGL)$")
+		# The core can only present through these two, the other backends would pass the generic
+		# `NCINE_PREFERRED_RHI` validation below and configure a core that cannot render anything
+		message(FATAL_ERROR "Invalid NCINE_LIBRETRO_RHI \"${NCINE_LIBRETRO_RHI}\" (expected Software or OpenGL)")
+	endif()
 	set(NCINE_PREFERRED_RHI "${NCINE_LIBRETRO_RHI}" CACHE STRING "Rendering backend" FORCE)
 	if(NCINE_LIBRETRO_RHI STREQUAL "OpenGL")
 		# The hardware core targets OpenGL|ES 3.0 only - the common denominator of RetroArch's

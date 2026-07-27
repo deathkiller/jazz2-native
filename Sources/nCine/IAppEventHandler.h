@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(WITH_LIBRETRO)
+#if defined(WITH_LIBRETRO) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	include <memory>
 
 namespace Death { namespace IO {

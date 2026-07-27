@@ -195,6 +195,67 @@ private:
 };
 
 #if defined(WITH_LIBRETRO)
+/** @brief Returns whether the specified directory contains the original game files */
+static bool ContainsOriginalGameFiles(StringView path)
+{
+	// Same check as `ContentResolver`, the shareware demo ships `AnimsSw.j2a` instead
+	return !fs::FindPathCaseInsensitive(fs::CombinePath(path, "Anims.j2a"_s)).empty() ||
+		!fs::FindPathCaseInsensitive(fs::CombinePath(path, "AnimsSw.j2a"_s)).empty();
+}
+
+/** @brief Returns the game root (the directory containing `Content`) in the directories advertised by the frontend */
+static String FindGameRoot(const Backends::LibretroApplication::HostPaths& hostPaths, StringView systemBase)
+{
+	// Walk up from the loaded file, the frontend can be pointed at any file of the game directory
+	if (!hostPaths.Content.empty()) {
+		String baseDir = (fs::DirectoryExists(hostPaths.Content) ? hostPaths.Content : String(fs::GetDirectoryName(hostPaths.Content)));
+		for (std::int32_t i = 0; i < 3 && !baseDir.empty(); i++) {
+			if (fs::DirectoryExists(fs::CombinePath(baseDir, "Content"_s))) {
+				return baseDir;
+			}
+			// `GetDirectoryName()` returns a view into its argument, so it can't be assigned in place
+			String parent = fs::GetDirectoryName(baseDir);
+			baseDir = std::move(parent);
+		}
+	}
+	// Frontends that separate engine data from the user's game files keep Content/ (and the
+	// generated Cache/) in the core assets directory (Recalbox: core_assets = bios/jazz2)
+	if (!hostPaths.CoreAssets.empty() && fs::DirectoryExists(fs::CombinePath(hostPaths.CoreAssets, "Content"_s))) {
+		return hostPaths.CoreAssets;
+	}
+	if (!systemBase.empty() && fs::DirectoryExists(fs::CombinePath(systemBase, "Content"_s))) {
+		return systemBase;
+	}
+	return {};
+}
+
+/** @brief Returns the directory with the original game files, `cachePath` is moved along with it */
+static String FindSourcePath(const Backends::LibretroApplication::HostPaths& hostPaths, StringView systemBase,
+	StringView baseDir, String& cachePath)
+{
+	// Source/ next to the game content wins (portable layout)
+	String sourcePath = fs::CombinePath(baseDir, "Source/"_s);
+	if (ContainsOriginalGameFiles(sourcePath)) {
+		return sourcePath;
+	}
+	// The system directory may BE the Source folder (Recalbox: system = the rom's directory, which
+	// holds Anims.j2a); the Cache then stays next to Content/ in the game directory
+	if (!hostPaths.System.empty() && ContainsOriginalGameFiles(hostPaths.System)) {
+		return hostPaths.System;
+	}
+	// Otherwise fall back to "<system>/jazz2/Source" or ".../Sources", with Cache/ alongside
+	if (!systemBase.empty()) {
+		for (StringView sourceName : { "Source/"_s, "Sources/"_s }) {
+			String systemSource = fs::CombinePath(systemBase, sourceName);
+			if (fs::DirectoryExists(systemSource)) {
+				cachePath = fs::CombinePath(systemBase, "Cache/"_s);
+				return systemSource;
+			}
+		}
+	}
+	return sourcePath;
+}
+
 /** @brief Locates `Content`, `Source` and `Cache` in the directories advertised by the libretro frontend */
 static bool OverridePathsFromHost()
 {
@@ -208,62 +269,14 @@ static bool OverridePathsFromHost()
 			? hostPaths.System : fs::CombinePath(hostPaths.System, "jazz2"_s));
 	}
 
-	// Find the game root (the directory containing Content/) starting from the loaded file, it is
-	// what the Content/, Source/ and Cache/ paths are resolved against below
-	String baseDir;
-	if (!hostPaths.Content.empty()) {
-		baseDir = (fs::DirectoryExists(hostPaths.Content) ? hostPaths.Content : String(fs::GetDirectoryName(hostPaths.Content)));
-		bool found = false;
-		for (std::int32_t i = 0; i < 3 && !baseDir.empty(); i++) {
-			if (fs::DirectoryExists(fs::CombinePath(baseDir, "Content"_s))) {
-				found = true;
-				break;
-			}
-			String parent = fs::GetDirectoryName(baseDir);
-			baseDir = std::move(parent);
-		}
-		if (!found) {
-			baseDir = {};
-		}
-	}
-	// Frontends that separate engine data from the user's game files keep Content/ (and the
-	// generated Cache/) in the core assets directory (Recalbox: core_assets = bios/jazz2)
-	if (baseDir.empty() && !hostPaths.CoreAssets.empty() && fs::DirectoryExists(fs::CombinePath(hostPaths.CoreAssets, "Content"_s))) {
-		baseDir = hostPaths.CoreAssets;
-	}
-	if (baseDir.empty() && !systemBase.empty() && fs::DirectoryExists(fs::CombinePath(systemBase, "Content"_s))) {
-		baseDir = systemBase;
-	}
+	String baseDir = FindGameRoot(hostPaths, systemBase);
 	if (baseDir.empty()) {
 		LOGE("Cannot find \"Content\" directory in any of the directories provided by the frontend");
 		return false;
 	}
 
-	// Source/ next to the game content wins (portable layout, same Anims.j2a check as
-	// ContentResolver), otherwise fall back to the frontend's system directory:
-	// "<system>/jazz2/Source" or ".../Sources" (with Cache/ alongside)
-	String sourcePath = fs::CombinePath(baseDir, "Source/"_s);
 	String cachePath = fs::CombinePath(baseDir, "Cache/"_s);
-	bool sourceFound = !fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, "Anims.j2a"_s)).empty() ||
-		!fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, "AnimsSw.j2a"_s)).empty();
-	// The system directory may BE the Source folder (Recalbox: system = the rom's directory, which
-	// holds Anims.j2a); the Cache then goes next to Content/ in the game directory
-	if (!sourceFound && !hostPaths.System.empty() &&
-		(!fs::FindPathCaseInsensitive(fs::CombinePath(hostPaths.System, "Anims.j2a"_s)).empty() ||
-		 !fs::FindPathCaseInsensitive(fs::CombinePath(hostPaths.System, "AnimsSw.j2a"_s)).empty())) {
-		sourcePath = hostPaths.System;
-		sourceFound = true;
-	}
-	if (!sourceFound && !systemBase.empty()) {
-		for (StringView sourceName : { "Source/"_s, "Sources/"_s }) {
-			String systemSource = fs::CombinePath(systemBase, sourceName);
-			if (fs::DirectoryExists(systemSource)) {
-				sourcePath = std::move(systemSource);
-				cachePath = fs::CombinePath(systemBase, "Cache/"_s);
-				break;
-			}
-		}
-	}
+	String sourcePath = FindSourcePath(hostPaths, systemBase, baseDir, cachePath);
 
 	// A libretro core shares its process with the frontend, so the working directory is not the
 	// core's to change - absolute paths are used instead of the relative ones that would otherwise

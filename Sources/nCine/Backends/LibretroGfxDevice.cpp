@@ -58,7 +58,7 @@ namespace nCine::Backends
 		info.geometry.max_height = (unsigned)_maxHeight;
 		info.geometry.aspect_ratio = (float)width / (float)height;
 		info.timing.fps = 60.0;
-		// ponytail: audio goes straight out through OpenAL, this rate only satisfies the frontend
+		// Audio goes straight out through OpenAL, this rate only satisfies the frontend
 		info.timing.sample_rate = 48000.0;
 	}
 

@@ -4089,7 +4089,6 @@ struct retro_controller_description
  */
 struct retro_controller_info
 {
-
    /**
     * A pointer to an array of device types supported by this controller port.
     *
