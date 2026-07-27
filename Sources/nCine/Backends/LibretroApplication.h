@@ -24,6 +24,8 @@ namespace nCine::Backends
 			String System;
 			/** @brief Frontend's core assets directory */
 			String CoreAssets;
+			/** @brief Frontend's save directory, where the application should write its own files */
+			String Save;
 			/** @brief Path of the content the frontend has been asked to load */
 			String Content;
 		};

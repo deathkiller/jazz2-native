@@ -134,7 +134,7 @@ RETRO_API void retro_run(void)
 	theLibretroApplication().RunFrame();
 	LibretroApplication::IsInsideFrame = false;
 
-	// ponytail: real audio goes out through OpenAL; this silence only feeds the frontend's
+	// Real audio goes out through OpenAL; this silence only feeds the frontend's
 	// audio sync so retro_run is paced at 60 fps even with vsync off (48000 Hz / 60)
 	if (_audioBatchCb != nullptr) {
 		static const std::int16_t silence[800 * 2] = {};
@@ -148,7 +148,7 @@ RETRO_API void retro_run(void)
 // Save states piggyback on the application's own resumable session snapshot: it is restored on the
 // next frame instead of the current one, so it is fine for manual save/load but unsuitable for
 // netplay/run-ahead/rewind.
-// ponytail: fixed generous cap - the snapshot is deflate-compressed and typically tens of KB
+// Fixed generous cap, the snapshot is deflate-compressed and typically tens of KB
 static constexpr std::size_t StateBufferSize = 2 * 1024 * 1024;
 
 RETRO_API size_t retro_serialize_size(void)
@@ -199,6 +199,12 @@ RETRO_API bool retro_load_game(const struct retro_game_info* game)
 	const char* assetsDir = nullptr;
 	if (LibretroApplication::EnvironmentCallback(RETRO_ENVIRONMENT_GET_CORE_ASSETS_DIRECTORY, &assetsDir) && assetsDir != nullptr) {
 		hostPaths.CoreAssets = assetsDir;
+	}
+	// Everything the application writes (configuration, progress, highscores) belongs here, the
+	// frontend backs this directory up and lets the user relocate it
+	const char* saveDir = nullptr;
+	if (LibretroApplication::EnvironmentCallback(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &saveDir) && saveDir != nullptr) {
+		hostPaths.Save = saveDir;
 	}
 	if (game != nullptr && game->path != nullptr) {
 		hostPaths.Content = game->path;

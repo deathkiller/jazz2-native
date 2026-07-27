@@ -103,6 +103,7 @@ Alternatively, you can install it using <sub><sub>[![Homebrew](https://img.shiel
   * `‹Game›/Content/` and `‹Game›/Source/` – `Cache/` is generated next to them
   * Alternatively, place them in the frontend's *system* directory as `‹System›/jazz2/Content/` and `‹System›/jazz2/Source/`
 * Load any file from `‹Game›/Source/` (for example `Anims.j2a`) as content, or start the core without content if `‹System›/jazz2/Content/` exists
+* Settings, progress, highscores and the resumable state are written to `‹Saves›/jazz2/` in the frontend's *saves* directory
 
 *The core is currently built and tested on **Linux** only, Windows, macOS and console frontends are not supported yet. The core exposes the RetroPad as a gamepad (up to 4 players, local splitscreen included), online multiplayer and the update check are not compiled in. Sound is played directly through **OpenAL** instead of the frontend's audio driver, so the frontend's volume, audio filters and recording don't apply to it. Save states use the game's own level-resume snapshot – they restore the current level and players, but are not frame-exact, so netplay, run-ahead and rewind are not supported, and the files can't be moved to a machine with a different architecture. Reset is not supported either. Cache is recreated during the intro cinematics on the first startup, so it can't be skipped.*
 
