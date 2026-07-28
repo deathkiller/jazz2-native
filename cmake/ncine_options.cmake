@@ -50,13 +50,6 @@ if(NCINE_BUILD_LIBRETRO)
 	set(DEATH_CPU_USE_IFUNC OFF CACHE BOOL "Allow using GNU IFUNC for runtime CPU dispatch" FORCE)
 	# The async trace logger thread races with the frontend's core load/unload cycle; log synchronously
 	set(DEATH_TRACE_ASYNC OFF CACHE BOOL "Enable asynchronous processing of event tracing" FORCE)
-	# No curl in the core: the update check is pointless under a frontend, which updates the core
-	# itself, so `WebRequest` is left without an HTTP backend and excluded from the build
-	set(CMAKE_DISABLE_FIND_PACKAGE_CURL TRUE)
-	# The online server list is downloaded with `WebRequest`, so online multiplayer goes away with
-	# it (which drops ENet, IXWebSocket and the OpenSSL dependency as well); `WITH_MULTIPLAYER`
-	# stays on, it also powers LOCAL splitscreen games
-	set(WITH_ONLINE_MULTIPLAYER OFF CACHE BOOL "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" FORCE)
 endif()
 
 if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
@@ -329,6 +322,11 @@ option(WITH_MULTIPLAYER "Enable multiplayer support" ON)
 # The libogc consoles keep local splitscreen (WITH_MULTIPLAYER) but have no online transport (no enet/BSD
 # sockets stack wired up) - the transport split keeps the engine+local path fully functional without it
 cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST" OFF)
+# A libretro core built without online multiplayer needs no HTTP at all (the server list is the only
+# other `WebRequest` user and the update check is pointless under a frontend), so curl is left out
+if(NCINE_BUILD_LIBRETRO AND NOT WITH_ONLINE_MULTIPLAYER)
+	set(CMAKE_DISABLE_FIND_PACKAGE_CURL TRUE)
+endif()
 cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_ONLINE_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
 # IXWebSocket requires a full BSD sockets stack (e.g. <netinet/ip.h>), which the Nintendo Switch and
 # PS Vita toolchains don't provide, so WebSocket transport is unavailable there (enet is still used).
