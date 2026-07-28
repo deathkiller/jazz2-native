@@ -39,8 +39,8 @@ jobs:
           CC: gcc
           CXX: g++
 
-    runs-on: 'ubuntu-22.04'
-    #runs-on: 'ubuntu-22.04-arm'
+    runs-on: 'ubuntu-22.04-arm'
+    #runs-on: 'ubuntu-22.04'
 
     steps:
     - name: 'Checkout Repository'
@@ -48,31 +48,22 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: 'Configure Cross-Compile Support (ARM64)'
-      uses: cyberjunk/gha-ubuntu-cross@v5
-      with:
-        arch: arm64
-
     - name: 'Create Build Environment'
       run: |
-        sudo apt install -y cmake curl
-        sudo apt install -y libgl1-mesa-dev:arm64 libglfw3-dev:arm64 libsdl2-dev:arm64 libopenal-dev:arm64 libopenmpt-dev:arm64 libcurl4-openssl-dev:arm64 libssl-dev:arm64 zlib1g:arm64
-        #sudo apt install -y libgl1-mesa-dev libglfw3-dev libsdl2-dev libopenal-dev libopenmpt-dev libcurl4-openssl-dev zlib1g
+        sudo apt-get update -y
+        # Unlike x86_64, `Libs/Linux/` contains no prebuilt aarch64 libraries, so every dependency has to come
+        # from the system. The `-dev` packages are required, because the runtime ones provide neither the headers
+        # nor the unversioned `.so` symlinks that `find_package()` needs (without them no backend would be found).
+        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libvorbisfile3 libopenmpt-dev libcurl4-openssl-dev libssl-dev zlib1g-dev
 
     - name: 'Configure CMake'
       run: |
-        export CC=aarch64-linux-gnu-${{ matrix.CC }}
-        export CXX=aarch64-linux-gnu-${{ matrix.CXX }}
-        #export CC=${{ matrix.CC }}
-        #export CXX=${{ matrix.CXX }}
+        export CC=${{ matrix.CC }}
+        export CXX=${{ matrix.CXX }}
         
         rm -f ./Content/Translations/*.po
         
-        # OpenSSL is multiarch: headers are shared under /usr/include (arch-specific opensslconf.h is
-        # found via the cross-compiler's /usr/include/aarch64-linux-gnu search), but the libraries must be
-        # pinned to the arm64 ones so find_package(OpenSSL) doesn't pick up the host's x86_64 libraries.
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=Linux -D CMAKE_SYSTEM_PROCESSOR=aarch64 -D CMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu -D OPENSSL_INCLUDE_DIR=/usr/include -D OPENSSL_CRYPTO_LIBRARY=/usr/lib/aarch64-linux-gnu/libcrypto.so -D OPENSSL_SSL_LIBRARY=/usr/lib/aarch64-linux-gnu/libssl.so -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_WITH_GLEW=OFF
-        #cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_WITH_GLEW=OFF
 
     - name: 'Build'
       run: |
@@ -138,7 +129,10 @@ jobs:
     - name: 'Create Build Environment'
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libglew2.2 libglfw3 libsdl2-2.0-0 libopenal1 libvorbisfile3 libopenmpt-dev libcurl4-openssl-dev fuse
+        # Unlike x86_64, `Libs/Linux/` contains no prebuilt aarch64 libraries, so every dependency has to come
+        # from the system. The `-dev` packages are required, because the runtime ones provide neither the headers
+        # nor the unversioned `.so` symlinks that `find_package()` needs (without them no backend would be found).
+        sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libglew-dev libglfw3-dev libsdl2-dev libopenal-dev libvorbisfile3 libopenmpt-dev libcurl4-openssl-dev libssl-dev zlib1g-dev fuse
 
     - name: 'Configure CMake'
       run: |
