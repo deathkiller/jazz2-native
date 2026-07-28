@@ -53,6 +53,7 @@ static void ApplyTargetFps(double fps)
 	LibretroGfxDevice::SetTargetFps(fps);
 	FrameTimer::FixedFrameDuration = (float)(1.0 / fps);
 }
+
 #if defined(WITH_RHI_GL)
 // Hardware rendering: the frontend owns the GL context, which only exists once it calls
 // context_reset - engine initialization is deferred until then
@@ -224,7 +225,7 @@ RETRO_API bool retro_serialize(void* data, size_t size)
 	}
 	// The snapshot is checkpoint-grade, it cannot serve the frame-exact contexts: refuse them right
 	// away instead of producing a state that would only corrupt run-ahead or rollback netplay
-	int context = RETRO_SAVESTATE_CONTEXT_NORMAL;
+	retro_savestate_context context = RETRO_SAVESTATE_CONTEXT_NORMAL;
 	if (LibretroApplication::EnvironmentCallback(RETRO_ENVIRONMENT_GET_SAVESTATE_CONTEXT, &context) &&
 		context != RETRO_SAVESTATE_CONTEXT_NORMAL && context != RETRO_SAVESTATE_CONTEXT_UNKNOWN) {
 		return false;

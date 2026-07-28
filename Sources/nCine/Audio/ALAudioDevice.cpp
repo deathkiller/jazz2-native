@@ -40,9 +40,11 @@ namespace nCine
 		// always built against OpenAL Soft, which has the extension since v1.14.
 		auto alcLoopbackOpenDeviceSOFT = (LPALCLOOPBACKOPENDEVICESOFT)alcGetProcAddress(nullptr, "alcLoopbackOpenDeviceSOFT");
 		alcRenderSamplesSOFT_ = (LPALCRENDERSAMPLESSOFT)alcGetProcAddress(nullptr, "alcRenderSamplesSOFT");
-		DEATH_ASSERT(alcLoopbackOpenDeviceSOFT != nullptr && alcRenderSamplesSOFT_ != nullptr,
-			("The OpenAL library does not support ALC_SOFT_loopback"), );
-		device_ = alcLoopbackOpenDeviceSOFT(nullptr);
+		if (alcLoopbackOpenDeviceSOFT != nullptr && alcRenderSamplesSOFT_ != nullptr) {
+			device_ = alcLoopbackOpenDeviceSOFT(nullptr);
+		} else {
+			LOGE("The OpenAL library does not support ALC_SOFT_loopback");
+		}
 #else
 		device_ = alcOpenDevice(nullptr);
 #endif

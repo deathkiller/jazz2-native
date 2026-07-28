@@ -162,9 +162,7 @@ namespace nCine
 		 *
 		 * @return `false` when the device cannot render on demand and the caller has to supply silence
 		 */
-		virtual bool renderSamples(std::int16_t* buffer, std::int32_t numFrames) {
-			return false;
-		}
+		virtual bool renderSamples(std::int16_t* buffer, std::int32_t numFrames) = 0;
 #endif
 
 		/** @brief Suspends the audio device */
@@ -222,6 +220,10 @@ namespace nCine
 		const Vector3f& getListenerPosition() const override { return Vector3f::Zero; }
 		void updateListener(const Vector3f& position, const Vector3f& velocity) override { }
 		std::int32_t nativeFrequency() override { return 0; }
+
+#if defined(WITH_LIBRETRO)
+		bool renderSamples(std::int16_t* buffer, std::int32_t numFrames) override { return false; }
+#endif
 
 		void suspendDevice() override { }
 		void resumeDevice() override { }
