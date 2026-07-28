@@ -924,7 +924,7 @@ namespace Death { namespace IO {
 
 	bool PakWriter::IsValid() const
 	{
-		return _outputStream->IsValid();
+		return (_outputStream != nullptr && _outputStream->IsValid());
 	}
 
 	bool PakWriter::AddFile(Stream& stream, StringView path, PakPreferredCompression preferredCompression)
@@ -1024,6 +1024,11 @@ namespace Death { namespace IO {
 		}
 
 		_finalized = true;
+
+		if DEATH_UNLIKELY(_outputStream == nullptr) {
+			// The output stream was never opened successfully
+			return;
+		}
 
 		Array<PakFile::Item*> queuedDirectories;
 		bool hasFiles = false;

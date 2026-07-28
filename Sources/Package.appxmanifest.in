@@ -36,7 +36,10 @@
   </Applications>
   <Capabilities>
     <Capability Name="internetClientServer" />
-    <rescap:Capability Name="runFullTrust"/>
+    <!-- "runFullTrust" only works on the desktop, a console app container is never granted full trust -->
+    <!-- <rescap:Capability Name="runFullTrust"/> -->
+    <!-- "broadFileSystemAccess" lets the game reach raw paths outside its own package, which is how
+         `ContentResolver` picks up game files from an external drive (the "\\?\D:\" probing on Xbox) -->
     <rescap:Capability Name="broadFileSystemAccess"/>
   </Capabilities>
 </Package>

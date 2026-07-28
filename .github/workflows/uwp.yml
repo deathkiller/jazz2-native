@@ -33,8 +33,7 @@ jobs:
           Platform: x64
           ArchExts: AVX2
 
-    #runs-on: 'windows-latest'
-    runs-on: 'windows-2022'
+    runs-on: 'windows-latest'
 
     steps:
     - name: 'Checkout Repository'
@@ -66,7 +65,7 @@ jobs:
           $certPass = "${{ secrets.UWP_CERTIFICATE_PASSWORD }}"
         }
         
-        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION="10.0" -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS="${{ matrix.ArchExts }}" -D NCINE_STRIP_BINARIES=ON -D NCINE_UWP_CERTIFICATE_PATH="$certPath" -D NCINE_UWP_CERTIFICATE_PASSWORD="$certPass" -D DEATH_TRACE=OFF
+        cmake -B ".\_build\" -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION="10.0" -A $arch -D CMAKE_SYSTEM_PROCESSOR=$arch -D NCINE_ARCH_EXTENSIONS="${{ matrix.ArchExts }}" -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_STRIP_BINARIES=ON -D NCINE_UWP_CERTIFICATE_PATH="$certPath" -D NCINE_UWP_CERTIFICATE_PASSWORD="$certPass" -D DEATH_TRACE=OFF
 
     - name: 'Build'
       run: |
@@ -76,7 +75,13 @@ jobs:
         }
         
         cd .\_build\
-        msbuild ".\Jazz2.sln" -p:Configuration=${{ matrix.BuildType }} -p:Platform=$arch -p:UapAppxPackageBuildMode="Sideload" -p:AppxBundlePlatforms="${{ matrix.Platform }}" -p:AppxPackageDir=".\_out\"
+
+        # Visual Studio 2026 generators emit "Jazz2.slnx", older ones "Jazz2.sln"
+        $solution = Get-ChildItem -Path ".\Jazz2.sln*" | Where-Object { $_.Extension -in '.sln', '.slnx' } | Select-Object -First 1
+        if (-not $solution) { throw "No solution file was generated in _build" }
+        Write-Output "-- Building $($solution.Name)"
+
+        msbuild "$($solution.FullName)" -p:Configuration=${{ matrix.BuildType }} -p:Platform=$arch -p:UapAppxPackageBuildMode="Sideload" -p:AppxBundlePlatforms="${{ matrix.Platform }}" -p:AppxPackageDir=".\_out\"
 
     - name: 'Create Package'
       run: |

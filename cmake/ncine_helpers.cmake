@@ -337,10 +337,18 @@ function(ncine_apply_compiler_options target)
 		if(WINDOWS_PHONE OR WINDOWS_STORE)
 			target_compile_definitions(${target} PUBLIC "DEATH_TARGET_WINDOWS_RT")
 
-			# Workaround for "error C1189: The <experimental/coroutine> and <experimental/resumable> headers are only supported with /await"
-			target_compile_options(${target} PRIVATE "/await")
-			# Workaround for "error C2039: 'wait_for': is not a member of 'winrt::impl'"
-			target_compile_options(${target} PRIVATE "/Zc:twoPhase-")
+			# C++/WinRT requires coroutine support. In C++17 mode it falls back to <experimental/coroutine>,
+			# which MSVC 14.51 turned into a hard error, so enable standard C++20 coroutines instead
+			# (/await:strict defines __cpp_impl_coroutine, which makes C++/WinRT pick <coroutine>).
+			# The older /await switch is deprecated and slated for removal.
+			if(MSVC_VERSION GREATER_EQUAL 1929)
+				target_compile_options(${target} PRIVATE "/await:strict")
+			else()
+				# Workaround for "error C1189: The <experimental/coroutine> and <experimental/resumable> headers are only supported with /await"
+				target_compile_options(${target} PRIVATE "/await")
+				# Workaround for "error C2039: 'wait_for': is not a member of 'winrt::impl'"
+				target_compile_options(${target} PRIVATE "/Zc:twoPhase-")
+			endif()
 		endif()
 	endif()
 

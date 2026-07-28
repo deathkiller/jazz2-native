@@ -153,6 +153,12 @@ jobs:
           RHI: OpenGL
           CC: gcc
           CXX: g++
+        - BuildType: Release
+          Platform: x64
+          Backend: SDL2
+          RHI: Vulkan
+          CC: gcc
+          CXX: g++
 
     #runs-on: 'ubuntu-latest'
     runs-on: 'ubuntu-22.04'
@@ -167,15 +173,15 @@ jobs:
       run: |
         sudo apt-get update -y
         sudo apt-get install -y cmake curl g++ libgl1-mesa-dev libglew2.2 libglfw3 libsdl2-2.0-0 libopenal1 libvorbisfile3 libopenmpt-dev libcurl4-openssl-dev fuse
-        
+
     - name: 'Configure CMake'
       run: |
         export CC=${{ matrix.CC }}
         export CXX=${{ matrix.CXX }}
-        
+
         rm -f ./Content/Translations/*.po
-        
-        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_WITH_GLEW=OFF -D NCINE_LINUX_PACKAGE=jazz2 -D NCINE_PACKAGED_CONTENT_PATH=ON -D CMAKE_INSTALL_PREFIX=/usr
+
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} -D NCINE_WITH_GLEW=OFF -D NCINE_LINUX_PACKAGE=jazz2 -D NCINE_PACKAGED_CONTENT_PATH=ON -D CMAKE_INSTALL_PREFIX=/usr
 
     - name: 'Build'
       run: |
@@ -194,8 +200,10 @@ jobs:
         rm -f -r ./_appdir/usr/share/doc/
         
         LDAI_OUTPUT="./_build/jazz2.AppImage" ARCH=x86_64 ./linuxdeploy-x86_64.AppImage --appdir=./_appdir/ --icon-filename=jazz2 --desktop-file=./_appdir/usr/share/applications/jazz2.desktop --executable=./_appdir/usr/bin/jazz2 --custom-apprun=./Sources/AppRun --output=appimage --plugin checkrt
-        
-        artifactPath="Jazz2_${{ matrix.Platform }}_${{ matrix.Backend }}.AppImage"
+
+        rhiSuffix=""
+        if [ "${{ matrix.RHI }}" != "OpenGL" ]; then rhiSuffix="_${{ matrix.RHI }}"; fi
+        artifactPath="Jazz2_${{ matrix.Platform }}_${{ matrix.Backend }}${rhiSuffix}.AppImage"
         echo "artifactPath=$artifactPath" >> $GITHUB_ENV
         
     - name: 'Upload Package'

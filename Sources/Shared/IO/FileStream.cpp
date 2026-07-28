@@ -18,6 +18,9 @@
 #	include <fcntl.h>
 #	include <sys/stat.h>
 #	include <unistd.h>
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
+#		include <sys/file.h>	// For flock()
+#	endif
 #endif
 
 using namespace Death::Containers;
@@ -49,6 +52,7 @@ namespace Death { namespace IO {
 			case EIO: return " (Input/output error)"; break;
 			case ENXIO: return " (No such device or address)"; break;
 			case EACCES: return " (Permission denied)"; break;
+			case EAGAIN: return " (Resource temporarily unavailable)"; break;
 			case EBUSY: return " (Device or resource busy)"; break;
 			case EEXIST: return " (File exists)"; break;
 			case ENODEV: return " (No such device)"; break;
@@ -373,8 +377,12 @@ namespace Death { namespace IO {
 				_filePos = newPos;
 			}
 		}
+#else
+		// The file size cannot be changed on this platform
+		return Stream::Invalid;
 #endif
 
+		_size = size;
 		_readPos = 0;
 		_readLength = 0;
 		_writePos = 0;
@@ -505,6 +513,23 @@ namespace Death { namespace IO {
 #	endif
 			return;
 		}
+
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
+		if ((mode & FileAccess::Exclusive) == FileAccess::Exclusive) {
+			// Windows opens exclusive files with a share mode of 0, denying any other opener. Modern Linux has no
+			// usable mandatory locking, so emulate it with an advisory whole-file lock bound to the open file
+			// description (released automatically on close). LOCK_NB fails immediately - similar to
+			// ERROR_SHARING_VIOLATION on Windows - instead of blocking when another process already holds the lock.
+			if (::flock(_fileDescriptor, LOCK_EX | LOCK_NB) < 0) {
+#	if defined(DEATH_TRACE_VERBOSE_IO)
+				LOGE("Failed to exclusively lock file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
+#	endif
+				::close(_fileDescriptor);
+				_fileDescriptor = -1;
+				return;
+			}
+		}
+#	endif
 
 #	if defined(POSIX_FADV_SEQUENTIAL) && (!defined(__ANDROID__) || __ANDROID_API__ >= 21) && !defined(DEATH_TARGET_SWITCH)
 		if ((mode & FileAccess::Sequential) == FileAccess::Sequential) {
