@@ -82,6 +82,10 @@ namespace nCine
 
 		std::int32_t nativeFrequency() override;
 
+#if defined(WITH_LIBRETRO)
+		bool renderSamples(std::int16_t* buffer, std::int32_t numFrames) override;
+#endif
+
 		void suspendDevice() override;
 		void resumeDevice() override;
 
@@ -135,6 +139,11 @@ namespace nCine
 #endif
 
 		void Init();
+
+#if defined(WITH_LIBRETRO)
+		/** @brief `alcRenderSamplesSOFT()` of the `ALC_SOFT_loopback` extension, `nullptr` when unavailable */
+		LPALCRENDERSAMPLESSOFT alcRenderSamplesSOFT_;
+#endif
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		static constexpr std::uint64_t DeviceChangeLimitMs = 250;

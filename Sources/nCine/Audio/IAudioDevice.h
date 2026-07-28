@@ -156,6 +156,17 @@ namespace nCine
 		/** @brief Returns the native sample rate of the device */
 		virtual std::int32_t nativeFrequency() = 0;
 
+#if defined(WITH_LIBRETRO)
+		/**
+		 * @brief Renders the next block of mixed audio into the caller's buffer (16-bit interleaved stereo)
+		 *
+		 * @return `false` when the device cannot render on demand and the caller has to supply silence
+		 */
+		virtual bool renderSamples(std::int16_t* buffer, std::int32_t numFrames) {
+			return false;
+		}
+#endif
+
 		/** @brief Suspends the audio device */
 		virtual void suspendDevice() = 0;
 		/** @brief Resumes the audio device */

@@ -5,6 +5,7 @@
 #include "libretro/libretro.h"
 
 #include "nCine/IAppEventHandler.h"
+#include "nCine/ServiceLocator.h"
 #include "nCine/Backends/LibretroApplication.h"
 #include "nCine/Backends/LibretroGfxDevice.h"
 
@@ -134,11 +135,17 @@ RETRO_API void retro_run(void)
 	theLibretroApplication().RunFrame();
 	LibretroApplication::IsInsideFrame = false;
 
-	// Real audio goes out through OpenAL; this silence only feeds the frontend's
-	// audio sync so retro_run is paced at 60 fps even with vsync off (48000 Hz / 60)
+	// One frame of the mixed OpenAL output (48000 Hz / 60 fps, matching FillSystemAvInfo) is pulled
+	// from the loopback device and handed to the frontend; it also feeds the frontend's audio sync
+	// so retro_run is paced at 60 fps even with vsync off
 	if (_audioBatchCb != nullptr) {
-		static const std::int16_t silence[800 * 2] = {};
-		_audioBatchCb(silence, 800);
+		constexpr std::int32_t AudioFramesPerRun = 48000 / 60;
+		static std::int16_t audioBuffer[AudioFramesPerRun * 2];
+		if (!theServiceLocator().GetAudioDevice().renderSamples(audioBuffer, AudioFramesPerRun)) {
+			// No loopback rendering available, keep the frontend's pacing fed with silence
+			std::memset(audioBuffer, 0, sizeof(audioBuffer));
+		}
+		_audioBatchCb(audioBuffer, AudioFramesPerRun);
 	}
 	if (theLibretroApplication().ShouldQuit()) {
 		LibretroApplication::EnvironmentCallback(RETRO_ENVIRONMENT_SHUTDOWN, nullptr);
