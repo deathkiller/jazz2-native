@@ -24,6 +24,12 @@ namespace nCine::Backends
 
 		/** @brief Fills the structure describing the video and audio output to the frontend */
 		static void FillSystemAvInfo(retro_system_av_info& info, std::int32_t width, std::int32_t height);
+		/** @brief Sets the rate the game runs at: one `retro_run` advances one frame of `1/fps` seconds */
+		static void SetTargetFps(double fps);
+		/** @brief Returns the rate the game runs at */
+		static double GetTargetFps();
+		/** @brief Re-announces the AV info to the frontend with the last advertised geometry, after a timing change */
+		static void ReannounceAvInfo();
 		/** @brief Initializes the OpenGL function pointers, must be called with the context current */
 		static bool InitializeGraphicsLibrary();
 		/** @brief Sets the frontend callback returning the framebuffer object to render into */

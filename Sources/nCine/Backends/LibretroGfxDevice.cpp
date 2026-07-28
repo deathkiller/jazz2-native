@@ -20,6 +20,12 @@ namespace nCine::Backends
 		// game configuration, so it can exceed the default the core starts with
 		std::int32_t _maxWidth = 1920;
 		std::int32_t _maxHeight = 1080;
+		// Geometry last advertised to the frontend, needed to re-announce the AV info when only the
+		// timing changes (frame rate switched through the core option)
+		std::int32_t _lastAnnouncedWidth = 720;
+		std::int32_t _lastAnnouncedHeight = 405;
+		// Rate the game runs and renders at: one retro_run = one frame of 1/_targetFps seconds
+		double _targetFps = 60.0;
 #if defined(WITH_RHI_GL)
 		retro_hw_get_current_framebuffer_t _currentFramebufferCb = nullptr;
 #endif
@@ -38,7 +44,7 @@ namespace nCine::Backends
 		monitors_[0].numVideoModes = 1;
 		currentVideoMode_.width = width_;
 		currentVideoMode_.height = height_;
-		currentVideoMode_.refreshRate = 60.0f;
+		currentVideoMode_.refreshRate = (float)_targetFps;
 		monitors_[0].videoModes[0] = currentVideoMode_;
 
 #if defined(WITH_RHI_SOFTWARE)
@@ -57,9 +63,26 @@ namespace nCine::Backends
 		info.geometry.max_width = (unsigned)_maxWidth;
 		info.geometry.max_height = (unsigned)_maxHeight;
 		info.geometry.aspect_ratio = (float)width / (float)height;
-		info.timing.fps = 60.0;
-		// Audio goes straight out through OpenAL, this rate only satisfies the frontend
+		info.timing.fps = _targetFps;
+		// Rate of the OpenAL loopback mixer the frontend audio is pulled from
 		info.timing.sample_rate = 48000.0;
+	}
+
+	void LibretroGfxDevice::SetTargetFps(double fps)
+	{
+		_targetFps = fps;
+	}
+
+	double LibretroGfxDevice::GetTargetFps()
+	{
+		return _targetFps;
+	}
+
+	void LibretroGfxDevice::ReannounceAvInfo()
+	{
+		retro_system_av_info avInfo;
+		FillSystemAvInfo(avInfo, _lastAnnouncedWidth, _lastAnnouncedHeight);
+		LibretroApplication::EnvironmentCallback(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &avInfo);
 	}
 
 	bool LibretroGfxDevice::InitializeGraphicsLibrary()
@@ -101,6 +124,8 @@ namespace nCine::Backends
 		// Hardware rendering: the frame was drawn straight into the frontend's FBO
 		// (GLFramebuffer::SetDefaultHandle), just tell the frontend it is ready
 		if (LibretroApplication::IsInsideFrame) {
+			_lastAnnouncedWidth = drawableWidth_;
+			_lastAnnouncedHeight = drawableHeight_;
 			LibretroApplication::VideoRefreshCallback(RETRO_HW_FRAME_BUFFER_VALID, (unsigned)drawableWidth_, (unsigned)drawableHeight_, 0);
 		}
 #else
@@ -119,6 +144,8 @@ namespace nCine::Backends
 		if (fb.width != _lastWidth || fb.height != _lastHeight) {
 			_lastWidth = fb.width;
 			_lastHeight = fb.height;
+			_lastAnnouncedWidth = fb.width;
+			_lastAnnouncedHeight = fb.height;
 			if (fb.width > _maxWidth || fb.height > _maxHeight) {
 				// SET_GEOMETRY ignores max_width/max_height, only SET_SYSTEM_AV_INFO can raise
 				// the advertised maximum (at the cost of reinitializing the frontend's drivers)

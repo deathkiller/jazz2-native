@@ -48,8 +48,8 @@ namespace nCine::Backends
 		}
 
 		// Pacing is normally the frontend's job (vsync or audio sync), but the engine steps a
-		// fixed 1/60 s per retro_run, so an unthrottled frontend would fast-forward the game:
-		// keep the engine's own 60 fps limiter as a backstop. It is bypassed automatically
+		// fixed 1/fps per retro_run, so an unthrottled frontend would fast-forward the game:
+		// keep the engine's own frame limiter as a backstop. It is bypassed automatically
 		// while the frontend reports fast-forwarding (see retro_run).
 		SetFrameLimiter(true);
 		appCfg_.withVSync = false;
@@ -80,7 +80,7 @@ namespace nCine::Backends
 
 	void LibretroApplication::SetFrameLimiter(bool enabled)
 	{
-		appCfg_.frameLimit = (enabled ? 60 : 0);
+		appCfg_.frameLimit = (enabled ? (std::uint32_t)(LibretroGfxDevice::GetTargetFps() + 0.5) : 0);
 	}
 
 	void LibretroApplication::Shutdown()

@@ -8,6 +8,7 @@
 #include "nCine/ServiceLocator.h"
 #include "nCine/Backends/LibretroApplication.h"
 #include "nCine/Backends/LibretroGfxDevice.h"
+#include "nCine/Base/FrameTimer.h"
 
 #include <IO/MemoryStream.h>
 
@@ -26,6 +27,32 @@ std::unique_ptr<IAppEventHandler> CreateAppEventHandler();
 static retro_audio_sample_t _audioCb;
 static retro_audio_sample_batch_t _audioBatchCb;
 static bool _gameInitialized = false;
+
+static constexpr double AudioSampleRate = 48000.0;
+
+// The game logic is frame-rate independent (it advances by GetTimeMult() units), so the core can run
+// at the display rate of the frontend instead of a hardcoded 60 fps. The "jazz2_frame_rate" core
+// option switches back to fixed 60 fps.
+static double QueryTargetFps()
+{
+	retro_variable var = { "jazz2_frame_rate", nullptr };
+	if (LibretroApplication::EnvironmentCallback(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value != nullptr &&
+		std::strcmp(var.value, "auto") != 0) {
+		return 60.0;
+	}
+	float refreshRate = 0.0f;
+	if (LibretroApplication::EnvironmentCallback(RETRO_ENVIRONMENT_GET_TARGET_REFRESH_RATE, &refreshRate) &&
+		refreshRate >= 50.0f && refreshRate <= 240.0f) {
+		return (double)refreshRate;
+	}
+	return 60.0;
+}
+
+static void ApplyTargetFps(double fps)
+{
+	LibretroGfxDevice::SetTargetFps(fps);
+	FrameTimer::FixedFrameDuration = (float)(1.0 / fps);
+}
 #if defined(WITH_RHI_GL)
 // Hardware rendering: the frontend owns the GL context, which only exists once it calls
 // context_reset - engine initialization is deferred until then
@@ -70,6 +97,13 @@ RETRO_API void retro_set_environment(retro_environment_t cb)
 	bool supportNoGame = true;
 	cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &supportNoGame);
 
+	// "auto" follows the target refresh rate of the frontend, "60" forces the original fixed rate
+	static const retro_variable variables[] = {
+		{ "jazz2_frame_rate", "Frame rate; auto|60" },
+		{ nullptr, nullptr }
+	};
+	cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)variables);
+
 	// Save states are the game's own level-resume snapshot written in host byte order: usable for
 	// manual save/load, but the frontend must not build rewind, run-ahead or netplay on top of it,
 	// and the resulting file cannot travel to a machine with a different endianness or word size
@@ -108,6 +142,7 @@ RETRO_API void retro_get_system_info(struct retro_system_info* info)
 
 RETRO_API void retro_get_system_av_info(struct retro_system_av_info* info)
 {
+	ApplyTargetFps(QueryTargetFps());
 	LibretroGfxDevice::FillSystemAvInfo(*info, 720, 405);
 }
 
@@ -125,7 +160,18 @@ RETRO_API void retro_run(void)
 	if (!_gameInitialized) {
 		return;
 	}
-	// The internal 60 fps limiter is only a backstop for unthrottled frontends; lift it while
+	// Follow the "Frame rate" core option: on a change, retime the game and tell the frontend
+	// (SET_SYSTEM_AV_INFO reinitializes its audio/video drivers, so only when it actually changed)
+	bool variablesUpdated = false;
+	if (LibretroApplication::EnvironmentCallback(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &variablesUpdated) && variablesUpdated) {
+		double fps = QueryTargetFps();
+		if (fps != LibretroGfxDevice::GetTargetFps()) {
+			ApplyTargetFps(fps);
+			LibretroGfxDevice::ReannounceAvInfo();
+		}
+	}
+
+	// The internal frame limiter is only a backstop for unthrottled frontends; lift it while
 	// the frontend fast-forwards so the feature actually speeds the application up
 	bool fastForwarding = false;
 	LibretroApplication::EnvironmentCallback(RETRO_ENVIRONMENT_GET_FASTFORWARDING, &fastForwarding);
@@ -135,17 +181,25 @@ RETRO_API void retro_run(void)
 	theLibretroApplication().RunFrame();
 	LibretroApplication::IsInsideFrame = false;
 
-	// One frame of the mixed OpenAL output (48000 Hz / 60 fps, matching FillSystemAvInfo) is pulled
-	// from the loopback device and handed to the frontend; it also feeds the frontend's audio sync
-	// so retro_run is paced at 60 fps even with vsync off
+	// One frame of the mixed OpenAL output (48000 Hz / fps) is pulled from the loopback device and
+	// handed to the frontend; it also feeds the frontend's audio sync so retro_run stays paced at
+	// the announced rate even with vsync off. A fractional accumulator keeps the long-run sample
+	// count exact for rates that don't divide 48000 (e.g. 144 fps)
 	if (_audioBatchCb != nullptr) {
-		constexpr std::int32_t AudioFramesPerRun = 48000 / 60;
-		static std::int16_t audioBuffer[AudioFramesPerRun * 2];
-		if (!theServiceLocator().GetAudioDevice().renderSamples(audioBuffer, AudioFramesPerRun)) {
-			// No loopback rendering available, keep the frontend's pacing fed with silence
-			std::memset(audioBuffer, 0, sizeof(audioBuffer));
+		constexpr std::int32_t MaxAudioFramesPerRun = 48000 / 50 + 1;	// QueryTargetFps() floors at 50 fps
+		static std::int16_t audioBuffer[MaxAudioFramesPerRun * 2];
+		static double audioFramesAcc = 0.0;
+		audioFramesAcc += AudioSampleRate / LibretroGfxDevice::GetTargetFps();
+		std::int32_t numFrames = (std::int32_t)audioFramesAcc;
+		audioFramesAcc -= numFrames;
+		if (numFrames > MaxAudioFramesPerRun) {
+			numFrames = MaxAudioFramesPerRun;
 		}
-		_audioBatchCb(audioBuffer, AudioFramesPerRun);
+		if (!theServiceLocator().GetAudioDevice().renderSamples(audioBuffer, numFrames)) {
+			// No audio device available, keep the frontend's pacing fed with silence
+			std::memset(audioBuffer, 0, (std::size_t)numFrames * 2 * sizeof(std::int16_t));
+		}
+		_audioBatchCb(audioBuffer, numFrames);
 	}
 	if (theLibretroApplication().ShouldQuit()) {
 		LibretroApplication::EnvironmentCallback(RETRO_ENVIRONMENT_SHUTDOWN, nullptr);
@@ -194,6 +248,9 @@ RETRO_API void retro_cheat_set(unsigned index, bool enabled, const char* code) {
 
 RETRO_API bool retro_load_game(const struct retro_game_info* game)
 {
+	// The engine may initialize right below, so the game rate must be known before that
+	ApplyTargetFps(QueryTargetFps());
+
 	// A libretro core shares its process with the frontend, so the working directory is not the
 	// core's to change - the application resolves its data directories from these paths instead
 	LibretroApplication::HostPaths hostPaths;
