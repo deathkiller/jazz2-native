@@ -100,7 +100,7 @@ endif()
 
 if(NCINE_BUILD_LIBRETRO)
 	add_library(${NCINE_APP} SHARED)
-	set_target_properties(${NCINE_APP} PROPERTIES PREFIX "" OUTPUT_NAME "jazz2_libretro")
+	set_target_properties(${NCINE_APP} PROPERTIES PREFIX "" OUTPUT_NAME "${NCINE_APP}_libretro")
 else()
 	add_executable(${NCINE_APP})
 endif()
