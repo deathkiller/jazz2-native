@@ -61,6 +61,11 @@
 #	define NCINE_HAS_WINDOWS
 #endif
 
+/** @brief Signature of a libretro save state written outside a resumable session, loading it goes back to the main menu */
+#if defined(WITH_LIBRETRO) || defined(DOXYGEN_GENERATING_OUTPUT)
+constexpr std::uint64_t LibretroEmptyStateSignature = 0x5954504D45325A4AULL;	// "JZ2EMPTY"
+#endif
+
 /** @brief Function name */
 #if defined(__DEATH_CURRENT_FUNCTION)
 #	define NCINE_CURRENT_FUNCTION __DEATH_CURRENT_FUNCTION

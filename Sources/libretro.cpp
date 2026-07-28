@@ -222,14 +222,28 @@ RETRO_API bool retro_serialize(void* data, size_t size)
 	if (!_gameInitialized) {
 		return false;
 	}
-	MemoryStream ms;
-	// Fails outside a resumable session (menus, cinematics) - the frontend just reports that
-	// saving failed
-	if (!theLibretroApplication().SaveState(ms) || (std::size_t)ms.GetSize() > size) {
+	// The snapshot is checkpoint-grade, it cannot serve the frame-exact contexts: refuse them right
+	// away instead of producing a state that would only corrupt run-ahead or rollback netplay
+	int context = RETRO_SAVESTATE_CONTEXT_NORMAL;
+	if (LibretroApplication::EnvironmentCallback(RETRO_ENVIRONMENT_GET_SAVESTATE_CONTEXT, &context) &&
+		context != RETRO_SAVESTATE_CONTEXT_NORMAL && context != RETRO_SAVESTATE_CONTEXT_UNKNOWN) {
 		return false;
 	}
-	std::memcpy(data, ms.GetBuffer(), (std::size_t)ms.GetSize());
-	std::memset((std::uint8_t*)data + ms.GetSize(), 0, size - (std::size_t)ms.GetSize());
+	MemoryStream session;
+	MemoryStream empty;
+	MemoryStream* state = &session;
+	if (!theLibretroApplication().SaveState(session)) {
+		// Saving must work at any point (auto-states on exit, manual saves in the menus): outside a
+		// resumable session a tiny "empty session" state is written instead of failing - loading it
+		// goes back to the main menu
+		empty.WriteValueAsLE<std::uint64_t>(LibretroEmptyStateSignature);
+		state = &empty;
+	}
+	if ((std::size_t)state->GetSize() > size) {
+		return false;
+	}
+	std::memcpy(data, state->GetBuffer(), (std::size_t)state->GetSize());
+	std::memset((std::uint8_t*)data + state->GetSize(), 0, size - (std::size_t)state->GetSize());
 	return true;
 }
 

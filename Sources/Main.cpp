@@ -991,14 +991,20 @@ bool GameEventHandler::OnLoadState(std::shared_ptr<Stream> src)
 {
 	// The frontend expects an immediate answer, so validate the signature here - the level itself
 	// is reloaded asynchronously, on one of the next frames
-	if (src == nullptr || !*src || src->GetSize() < 11) {
+	if (src == nullptr || !*src || src->GetSize() < (std::int64_t)sizeof(std::uint64_t)) {
 		return false;
 	}
 	std::uint64_t signature = src->ReadValueAsLE<std::uint64_t>();
-	src->Seek(0, SeekOrigin::Begin);
-	if (signature != 0x2095A59FF0BFBBEF) {
+	if (signature == LibretroEmptyStateSignature) {
+		// The state was saved outside a resumable session, so loading it goes back where it was
+		// saved - the main menu
+		GoToMainMenu(false);
+		return true;
+	}
+	if (signature != 0x2095A59FF0BFBBEF || src->GetSize() < 11) {
 		return false;
 	}
+	src->Seek(0, SeekOrigin::Begin);
 
 	ResumeStateFromStream(std::move(src));
 	return true;
