@@ -38,6 +38,11 @@ endif()
 add_library(ncine_main STATIC main.cpp)
 add_library(jnicall_functions STATIC jnicall_functions.cpp)
 
+# These static libraries end up linked into the "game" shared library, so they must be compiled as
+# position-independent code. Clang targeting Android does it by default, but state it explicitly,
+# because the Android build resets all the toolchain-provided compiler flags.
+set_target_properties(${NCINE_APP} ncine_main jnicall_functions PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 target_link_libraries(${NCINE_APP} PRIVATE ${ANDROID_LIBRARY} ${EGL_LIBRARY} ${GLES3_LIBRARY} ${LOG_LIBRARY})
 if(ANDROID_PLATFORM GREATER_EQUAL 30)
 	target_link_libraries(${NCINE_APP} PRIVATE ${NATIVEWINDOW_LIBRARY})

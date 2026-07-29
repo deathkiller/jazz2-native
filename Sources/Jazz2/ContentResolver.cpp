@@ -1187,11 +1187,11 @@ namespace Jazz2
 			uc.Seek((tileCount + 7) / 8, SeekOrigin::Current);
 		}
 
-		// Mask
-		std::uint32_t maskSizeBits;
-		std::unique_ptr<std::uint8_t[]> mask = ReadTilesetMask(uc, maskSizeBits);
+		// Mask (kept packed, 1 bit per pixel - see ReadTilesetMask)
+		std::uint32_t maskSize;
+		std::unique_ptr<std::uint8_t[]> mask = ReadTilesetMask(uc, maskSize);
 
-		std::unique_ptr<Texture> textureDiffuse;
+		SmallVector<std::unique_ptr<Texture>, 1> textureDiffuse;
 		std::unique_ptr<Color[]> captionTile;
 		// Per-tile flag (1 = fully opaque diffuse); used to cull hidden debris. Set by BuildTilesetDiffuse().
 		std::unique_ptr<std::uint8_t[]> tileDiffuseOpaque;
@@ -1210,7 +1210,7 @@ namespace Jazz2
 
 		auto tileSet = std::make_unique<Tiles::TileSet>(path,
 			tileCount, Death::move(textureDiffuse), Death::move(mask),
-			maskSizeBits, Death::move(captionTile), tileDiffuseOpaque.get());
+			maskSize, Death::move(captionTile), tileDiffuseOpaque.get());
 		tileSet->IsIndexed = indexTiles;
 		return tileSet;
 	}
@@ -1241,23 +1241,20 @@ namespace Jazz2
 		}
 	}
 
-	std::unique_ptr<std::uint8_t[]> ContentResolver::ReadTilesetMask(Stream& uc, std::uint32_t& maskSizeBits)
+	std::unique_ptr<std::uint8_t[]> ContentResolver::ReadTilesetMask(Stream& uc, std::uint32_t& maskSize)
 	{
-		std::uint32_t maskSize = uc.ReadValueAsLE<std::uint32_t>();
-		maskSizeBits = maskSize * 8;
+		maskSize = uc.ReadValueAsLE<std::uint32_t>();
 
-		// Unpack the bitmask to one byte per pixel
-		std::unique_ptr<std::uint8_t[]> mask = std::make_unique<std::uint8_t[]>(maskSizeBits);
-		for (std::uint32_t j = 0; j < maskSize; j++) {
-			std::uint8_t idx = uc.ReadValue<std::uint8_t>();
-			for (std::uint32_t k = 0; k < 8; k++) {
-				mask[8 * j + k] = (((idx >> k) & 0x01) != 0);
-			}
-		}
+		// The cache already stores the mask packed (1 bit per pixel, LSB-first, row-major) - keep it packed:
+		// TileSet and every collision query consume the packed form directly, which is 8x smaller than the
+		// former byte-per-pixel expansion (~1 MB -> 128 KB for a big tileset) and lets the rectangle scans
+		// test a whole 32-pixel row with one 32-bit AND
+		std::unique_ptr<std::uint8_t[]> mask = std::make_unique<std::uint8_t[]>(maskSize);
+		uc.Read(mask.get(), maskSize);
 		return mask;
 	}
 
-	std::unique_ptr<Texture> ContentResolver::BuildTilesetDiffuse(std::unique_ptr<Stream>& s, const char* name, std::uint8_t channelCount,
+	SmallVector<std::unique_ptr<Texture>, 1> ContentResolver::BuildTilesetDiffuse(std::unique_ptr<Stream>& s, const char* name, std::uint8_t channelCount,
 		std::uint32_t width, std::uint32_t height, std::uint16_t tileCount, const std::uint8_t* is32bitTile,
 		const std::uint8_t* paletteRemapping, std::uint16_t captionTileId, bool& indexTiles,
 		std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<Color[]>& captionTile)
@@ -1352,17 +1349,39 @@ namespace Jazz2
 			}
 		}
 
-		std::unique_ptr<Texture> textureDiffuse;
-		if (indexTiles) {
-			// Index 0 is the transparent palette entry (row 0), so this uploads directly as R8 (no per-pixel alpha)
-			const bool paletteBaseTransparent = (((_palettes[0] >> 24) & 0xFF) == 0);
-			textureDiffuse = CreateIndexedTexture(name, atlas.get(), paddedWidth, paddedHeight, 1, paletteBaseTransparent);
-		} else {
-			textureDiffuse = std::make_unique<Texture>(name, Texture::Format::RGBA8, paddedWidth, paddedHeight);
-			textureDiffuse->LoadFromTexels(atlas.get(), 0, 0, paddedWidth, paddedHeight);
+		// Upload the atlas, splitting it into consecutive row-band textures when it exceeds the device's
+		// texture-size limit (a 4096-limit desktop always gets a single texture - identical to before; a
+		// 1024-limit console splits e.g. a 2790-tile set into 4 chunks). Bands are aligned to whole padded
+		// tile rows, so a tile never straddles two textures; TileSet derives TilesPerTexture from chunk 0.
+		const std::int32_t maxTextureSize = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::IntValues::MAX_TEXTURE_SIZE);
+		const std::uint32_t paddedTileSize = TileSet::DefaultTileSize + 2;
+		std::uint32_t tileRowsPerChunk = (maxTextureSize > 0 ? std::uint32_t(maxTextureSize) / paddedTileSize : tilesPerColumn);
+		if (tileRowsPerChunk == 0) {
+			tileRowsPerChunk = 1;
 		}
-		textureDiffuse->SetMinFiltering(SamplerFilter::Nearest);
-		textureDiffuse->SetMagFiltering(SamplerFilter::Nearest);
+		if ((std::int32_t)paddedWidth > maxTextureSize && maxTextureSize > 0) {
+			LOGW("Tileset atlas width {} exceeds the device texture-size limit {}", paddedWidth, maxTextureSize);
+		}
+
+		SmallVector<std::unique_ptr<Texture>, 1> textures;
+		const bool paletteBaseTransparent = (((_palettes[0] >> 24) & 0xFF) == 0);
+		for (std::uint32_t firstTileRow = 0; firstTileRow < tilesPerColumn; firstTileRow += tileRowsPerChunk) {
+			const std::uint32_t chunkTileRows = std::min(tileRowsPerChunk, tilesPerColumn - firstTileRow);
+			const std::uint32_t chunkHeight = chunkTileRows * paddedTileSize;
+			const std::uint8_t* chunkBase = &atlas[std::size_t(firstTileRow) * paddedTileSize * paddedWidth * dstChannels];
+
+			std::unique_ptr<Texture> textureDiffuse;
+			if (indexTiles) {
+				// Index 0 is the transparent palette entry (row 0), so this uploads directly as R8 (no per-pixel alpha)
+				textureDiffuse = CreateIndexedTexture(name, chunkBase, paddedWidth, chunkHeight, 1, paletteBaseTransparent);
+			} else {
+				textureDiffuse = std::make_unique<Texture>(name, Texture::Format::RGBA8, paddedWidth, chunkHeight);
+				textureDiffuse->LoadFromTexels(chunkBase, 0, 0, paddedWidth, chunkHeight);
+			}
+			textureDiffuse->SetMinFiltering(SamplerFilter::Nearest);
+			textureDiffuse->SetMagFiltering(SamplerFilter::Nearest);
+			textures.push_back(Death::move(textureDiffuse));
+		}
 
 		// Caption tile (level-select thumbnail): downscale one tile 1:3 vertically, averaging 3 source rows. Resolve
 		// 8-bit indices through the palette here (32-bit tiles already hold RGB).
@@ -1391,7 +1410,7 @@ namespace Jazz2
 			}
 		}
 
-		return textureDiffuse;
+		return textures;
 	}
 
 	bool ContentResolver::LevelExists(StringView levelName)

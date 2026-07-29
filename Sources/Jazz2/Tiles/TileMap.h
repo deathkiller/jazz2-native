@@ -128,10 +128,19 @@ namespace Jazz2::Tiles
 		also tracks the associated animation and the currently active frame (reused as collapse delay or trigger ID).
 	*/
 	struct LayerTile {
+		// The struct is a dense per-tile grid (layoutWidth * layoutHeight entries per layer, plus a full
+		// rollback copy of the sprite layer), so it is packed to 16 bytes: the two destruct fields are
+		// 16-bit (an animated-tile ID fits comfortably, -1 stays the "none" sentinel; the frame index is
+		// a small frame/delay/trigger number) and the three enums carry explicit 8-bit bases.
+
 		/** @brief Tile ID */
 		std::int32_t TileID;
 		/** @brief Tile parameters */
 		std::uint16_t TileParams;
+		/** @brief Animation ID for destructible tile (`-1` = none) */
+		std::int16_t DestructAnimation;
+		/** @brief Denotes the specific frame from the above animation that is currently active --- Collapsible: Delay ("wait" parameter); Trigger: Trigger ID */
+		std::int16_t DestructFrameIndex;
 		/** @brief Tile flags */
 		LayerTileFlags Flags;
 		/** @brief Tile transparency */
@@ -140,10 +149,6 @@ namespace Jazz2::Tiles
 		SuspendType HasSuspendType;
 		/** @brief Destruct type of tile */
 		TileDestructType DestructType;
-		/** @brief Animation ID for destructible tile */
-		std::int32_t DestructAnimation;
-		/** @brief Denotes the specific frame from the above animation that is currently active --- Collapsible: Delay ("wait" parameter); Trigger: Trigger ID */
-		std::int32_t DestructFrameIndex;
 	};
 
 	/**

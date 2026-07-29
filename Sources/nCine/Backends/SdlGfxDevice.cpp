@@ -693,7 +693,7 @@ namespace nCine::Backends
 #if defined(WITH_RHI_SOFTWARE)
 	void SdlGfxDevice::initSoftwarePresent(bool hasVSync)
 	{
-#if defined(WITH_SDL3)
+#	if defined(WITH_SDL3)
 		// SDL3: SDL_CreateRenderer takes only (window, driver-name); the accelerated/vsync flags are gone.
 		// Passing a null driver name lets SDL pick a suitable (accelerated when available) renderer, and vsync
 		// is configured afterwards through SDL_SetRenderVSync.
@@ -703,7 +703,7 @@ namespace nCine::Backends
 
 		SDL_GetRenderOutputSize(softwareRenderer_, &drawableWidth_, &drawableHeight_);
 		resizeSoftwareTarget(drawableWidth_, drawableHeight_);
-#else
+#	else
 		Uint32 rendererFlags = SDL_RENDERER_ACCELERATED;
 		if (hasVSync) {
 			rendererFlags |= SDL_RENDERER_PRESENTVSYNC;
@@ -717,7 +717,7 @@ namespace nCine::Backends
 
 		SDL_GetRendererOutputSize(softwareRenderer_, &drawableWidth_, &drawableHeight_);
 		resizeSoftwareTarget(drawableWidth_, drawableHeight_);
-#endif
+#	endif
 	}
 
 	void SdlGfxDevice::resizeSoftwareTarget(int width, int height)
@@ -732,10 +732,16 @@ namespace nCine::Backends
 			SDL_DestroyTexture(softwareTexture_);
 			softwareTexture_ = nullptr;
 		}
+#	if defined(RHI_SOFTWARE_FB16)
+		// 16-bit mode: the backend framebuffer stores native-endian RGB565 texels, SDL's RGB565 packed format
+		softwareTexture_ = SDL_CreateTexture(softwareRenderer_, SDL_PIXELFORMAT_RGB565,
+			SDL_TEXTUREACCESS_STREAMING, width, height);
+#	else
 		// The backend framebuffer is laid out as R,G,B,A bytes per texel; on a little-endian host that byte
 		// order is SDL's ABGR8888 packed format
 		softwareTexture_ = SDL_CreateTexture(softwareRenderer_, SDL_PIXELFORMAT_ABGR8888,
 			SDL_TEXTUREACCESS_STREAMING, width, height);
+#	endif
 		FATAL_ASSERT_MSG(softwareTexture_, "SDL_CreateTexture failed: {}", SDL_GetError());
 		softwareTextureWidth_ = width;
 		softwareTextureHeight_ = height;
@@ -771,12 +777,12 @@ namespace nCine::Backends
 		SDL_RenderClear(softwareRenderer_);
 		// The SwRaster engine renders the screen color buffer bottom-up (OpenGL framebuffer convention), so
 		// present it flipped vertically into the top-left-origin window
-#if defined(WITH_SDL3)
+#	if defined(WITH_SDL3)
 		// SDL3: SDL_RenderCopyEx -> SDL_RenderTextureRotated (float rects; null = whole texture / whole target)
 		SDL_RenderTextureRotated(softwareRenderer_, softwareTexture_, nullptr, nullptr, 0.0, nullptr, SDL_FLIP_VERTICAL);
-#else
+#	else
 		SDL_RenderCopyEx(softwareRenderer_, softwareTexture_, nullptr, nullptr, 0.0, nullptr, SDL_FLIP_VERTICAL);
-#endif
+#	endif
 		SDL_RenderPresent(softwareRenderer_);
 	}
 #endif

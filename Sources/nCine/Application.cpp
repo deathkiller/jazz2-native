@@ -1030,6 +1030,15 @@ namespace nCine
 				}
 				clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &dueTime, nullptr);
 			}
+#else
+			// Generic fallback for platforms without a dedicated high-precision arm (console ports and other
+			// new targets): a coarse millisecond sleep covers the bulk of the wait so the spin below only tops
+			// up the last couple of milliseconds instead of burning a full core for the whole frame remainder
+			const std::int64_t remainingTimeMs = (((std::int64_t)frameTimeDuration - (std::int64_t)frameTimer_->GetFrameDurationAsTicks())
+				* 1'000LL) / (std::int64_t)clock().frequency() - 2; // 2 ms slack for coarse sleep granularity
+			if (remainingTimeMs > 0) {
+				Thread::Sleep((std::uint32_t)remainingTimeMs);
+			}
 #endif
 
 			while ((std::int64_t)frameTimer_->GetFrameDurationAsTicks() < frameTimeDuration) {

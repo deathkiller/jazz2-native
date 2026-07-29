@@ -7,6 +7,13 @@
 #include "../../../Primitives/Rect.h"
 
 #include <cstdint>
+#include <cstring>
+
+#if defined(DEATH_TARGET_SSE2)
+#	include <emmintrin.h>
+#elif defined(DEATH_TARGET_NEON)
+#	include <arm_neon.h>
+#endif
 
 namespace nCine::RHI::Software
 {
@@ -100,6 +107,53 @@ namespace nCine::RHI::Software
 	/** @brief Optional per-pixel fragment callback; runs after sampling, before blending */
 	using FragmentShaderFn = void (*)(const FragmentShaderInput& input);
 
+#if defined(RHI_SOFTWARE_FB16)
+	/**
+		@brief Packs one 4-byte RGBA working pixel into an RGB565 framebuffer texel (alpha is dropped)
+
+		Part of the optional 16-bit screen-framebuffer mode (`NCINE_RHI_SOFTWARE_FB16`): the screen buffer
+		stores native-endian RGB565 (2 bytes per pixel - half the memory and present bandwidth of RGBA8),
+		while render-target textures and all intermediate rasterization stay 4-byte RGBA. The rasterizers
+		stage each touched framebuffer row through @ref SwLoadFbSpan565 / @ref SwStoreFbSpan565, so their
+		inner loops are unchanged. The mode has no destination alpha - blend factors reading it see 255.
+	*/
+	inline std::uint16_t SwPack565(const std::uint8_t* rgba)
+	{
+		return std::uint16_t(((rgba[0] & 0xF8) << 8) | ((rgba[1] & 0xFC) << 3) | (rgba[2] >> 3));
+	}
+
+	/** @brief Unpacks one RGB565 framebuffer texel to 4-byte RGBA (bit-replicated, so a load-store round trip is lossless; alpha reads 255) */
+	inline void SwUnpack565(std::uint16_t px, std::uint8_t* rgba)
+	{
+		const std::uint32_t r5 = (px >> 11) & 0x1F;
+		const std::uint32_t g6 = (px >> 5) & 0x3F;
+		const std::uint32_t b5 = px & 0x1F;
+		rgba[0] = std::uint8_t((r5 << 3) | (r5 >> 2));
+		rgba[1] = std::uint8_t((g6 << 2) | (g6 >> 4));
+		rgba[2] = std::uint8_t((b5 << 3) | (b5 >> 2));
+		rgba[3] = 255;
+	}
+
+	/** @brief Expands a run of RGB565 framebuffer texels into a 4-byte RGBA staging row */
+	inline void SwLoadFbSpan565(std::uint8_t* DEATH_RESTRICT rgba, const std::uint8_t* DEATH_RESTRICT fb16, std::int32_t count)
+	{
+		for (std::int32_t i = 0; i < count; i++, rgba += 4, fb16 += 2) {
+			std::uint16_t px;
+			std::memcpy(&px, fb16, 2);
+			SwUnpack565(px, rgba);
+		}
+	}
+
+	/** @brief Packs a 4-byte RGBA staging row back into a run of RGB565 framebuffer texels */
+	inline void SwStoreFbSpan565(std::uint8_t* DEATH_RESTRICT fb16, const std::uint8_t* DEATH_RESTRICT rgba, std::int32_t count)
+	{
+		for (std::int32_t i = 0; i < count; i++, rgba += 4, fb16 += 2) {
+			const std::uint16_t px = SwPack565(rgba);
+			std::memcpy(fb16, &px, 2);
+		}
+	}
+#endif
+
 	/**
 		@brief Quantizes a normalized channel to a byte exactly like the shader runtime's `packColor()`
 
@@ -111,6 +165,106 @@ namespace nCine::RHI::Software
 		v = (v < 0.0f) ? 0.0f : (v > 1.0f ? 1.0f : v);
 		const std::int32_t i = static_cast<std::int32_t>(v * 255.0f + 0.5f);
 		return static_cast<std::uint8_t>((i < 0) ? 0 : (i > 255 ? 255 : i));
+	}
+
+	/**
+		@brief Expands one stored texel to the rasterizer's 4-byte RGBA working form
+
+		@ref SwTexture stores R8 / RG8 index textures natively (1 / 2 bytes per texel); every gather
+		expands the fetched texel through this helper, filling the missing channels with 255 - the exact
+		bytes the former promoted-to-RGBA8 store held, so everything downstream of a gather (tint, palette
+		LUT, fragment callbacks, blending) is bit-identical whatever the store width. A 4-byte store is a
+		single 32-bit copy, kept first as the branch the RGBA8 paths take every time.
+	*/
+	DEATH_ALWAYS_INLINE void SwExpandTexel(std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT src, std::int32_t bpp)
+	{
+		if DEATH_LIKELY(bpp == 4) {
+			std::memcpy(dst, src, 4);
+		} else {
+			dst[0] = src[0];
+			dst[1] = (bpp >= 2 ? src[1] : std::uint8_t(255));
+			dst[2] = 255;
+			dst[3] = 255;
+		}
+	}
+
+	/**
+		@brief Expands a contiguous run of stored texels to the 4-byte RGBA working form
+
+		The vector form of @ref SwExpandTexel for the 1:1-mapped scanline gather (source texels are
+		consecutive in the store). R8 expands to `[v,255,255,255]` and RG8 to `[v,a,255,255]` - SSE2 /
+		NEON widen 16 resp. 8 texels per iteration by interleaving with all-ones lanes; the scalar tail
+		(and the scalar-only build) emits one 32-bit store per texel. A 4-byte store is a plain copy.
+	*/
+	inline void SwExpandTexelRun(std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT src, std::int32_t count, std::int32_t bpp)
+	{
+		if (bpp == 4) {
+			std::memcpy(dst, src, std::size_t(count) * 4);
+			return;
+		}
+		std::int32_t i = 0;
+		if (bpp == 1) {
+#if defined(DEATH_TARGET_SSE2)
+			const __m128i ones = _mm_set1_epi8(char(0xFF));
+			for (; i + 16 <= count; i += 16, src += 16, dst += 64) {
+				const __m128i v = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src));
+				// [v,FF] byte pairs, then [v,FF,FF,FF] dwords
+				const __m128i loVF = _mm_unpacklo_epi8(v, ones);
+				const __m128i hiVF = _mm_unpackhi_epi8(v, ones);
+				const __m128i ffff = ones;
+				_mm_storeu_si128(reinterpret_cast<__m128i*>(dst), _mm_unpacklo_epi16(loVF, ffff));
+				_mm_storeu_si128(reinterpret_cast<__m128i*>(dst + 16), _mm_unpackhi_epi16(loVF, ffff));
+				_mm_storeu_si128(reinterpret_cast<__m128i*>(dst + 32), _mm_unpacklo_epi16(hiVF, ffff));
+				_mm_storeu_si128(reinterpret_cast<__m128i*>(dst + 48), _mm_unpackhi_epi16(hiVF, ffff));
+			}
+#elif defined(DEATH_TARGET_NEON)
+			const uint8x8_t ones8 = vdup_n_u8(0xFF);
+			for (; i + 8 <= count; i += 8, src += 8, dst += 32) {
+				const uint8x8_t v = vld1_u8(src);
+				const uint8x8x2_t vf = vzip_u8(v, ones8);				// [v,FF] byte pairs
+				const uint16x4_t ffff = vdup_n_u16(0xFFFF);
+				const uint16x4x2_t lo = vzip_u16(vreinterpret_u16_u8(vf.val[0]), ffff);
+				const uint16x4x2_t hi = vzip_u16(vreinterpret_u16_u8(vf.val[1]), ffff);
+				vst1_u8(dst,      vreinterpret_u8_u16(lo.val[0]));
+				vst1_u8(dst + 8,  vreinterpret_u8_u16(lo.val[1]));
+				vst1_u8(dst + 16, vreinterpret_u8_u16(hi.val[0]));
+				vst1_u8(dst + 24, vreinterpret_u8_u16(hi.val[1]));
+			}
+#endif
+			for (; i < count; i++, src++, dst += 4) {
+				dst[0] = src[0];
+				dst[1] = 255;
+				dst[2] = 255;
+				dst[3] = 255;
+			}
+		} else {
+			// RG8: [index, alpha] pairs widen to [index, alpha, 255, 255]
+#if defined(DEATH_TARGET_SSE2)
+			const __m128i ones = _mm_set1_epi8(char(0xFF));
+			for (; i + 8 <= count; i += 8, src += 16, dst += 32) {
+				const __m128i v = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src));	// 8 x [v,a]
+				const __m128i vaFF = ones;
+				_mm_storeu_si128(reinterpret_cast<__m128i*>(dst),
+					_mm_unpacklo_epi16(v, vaFF));
+				_mm_storeu_si128(reinterpret_cast<__m128i*>(dst + 16),
+					_mm_unpackhi_epi16(v, vaFF));
+			}
+#elif defined(DEATH_TARGET_NEON)
+			const uint16x4_t ffff = vdup_n_u16(0xFFFF);
+			for (; i + 4 <= count; i += 4, src += 8, dst += 16) {
+				const uint16x4_t v = vreinterpret_u16_u8(vld1_u8(src));	// 4 x [v,a]
+				const uint16x4x2_t widened = vzip_u16(v, ffff);
+				vst1_u8(dst,     vreinterpret_u8_u16(widened.val[0]));
+				vst1_u8(dst + 8, vreinterpret_u8_u16(widened.val[1]));
+			}
+#endif
+			for (; i < count; i++, src += 2, dst += 4) {
+				dst[0] = src[0];
+				dst[1] = src[1];
+				dst[2] = 255;
+				dst[3] = 255;
+			}
+		}
 	}
 
 	/**
@@ -137,9 +291,9 @@ namespace nCine::RHI::Software
 		std::uint8_t palAlphaByte[256];
 		/** @brief Tint (instance color) alpha the fragment multiplies last */
 		float tintAlpha;
-		/** @brief Raw texel byte carrying the palette index (the unit-0 sampling swizzle's `.r` source) */
+		/** @brief Byte of the gathered (4-byte expanded) texel carrying the palette index (the unit-0 sampling swizzle's `.r` source) */
 		std::int32_t indexByteOffset;
-		/** @brief Raw texel byte carrying source alpha (swizzle `.a` source), or `-1` (constant 1) / `-2` (constant 0) */
+		/** @brief Byte of the gathered texel carrying source alpha (swizzle `.a` source), or `-1` (constant 1) / `-2` (constant 0) */
 		std::int32_t alphaByteOffset;
 	};
 

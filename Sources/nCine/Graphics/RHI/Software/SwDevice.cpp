@@ -347,7 +347,14 @@ namespace nCine::RHI::Software
 		if (width <= 0 || height <= 0) {
 			return;
 		}
-		const std::size_t required = std::size_t(width) * std::size_t(height) * 4;
+#if defined(RHI_SOFTWARE_FB16)
+		// 16-bit mode: the screen buffer stores native-endian RGB565 (2 bytes per pixel - half the memory
+		// and present bandwidth); render-target textures stay RGBA8 (see SwRaster.h)
+		constexpr std::size_t ScreenBpp = 2;
+#else
+		constexpr std::size_t ScreenBpp = 4;
+#endif
+		const std::size_t required = std::size_t(width) * std::size_t(height) * ScreenBpp;
 		if (screenPixels_.size() != required) {
 			screenPixels_.assign(required, 0);
 		}
@@ -355,7 +362,7 @@ namespace nCine::RHI::Software
 		fb.pixels = screenPixels_.data();
 		fb.width = width;
 		fb.height = height;
-		fb.strideBytes = width * 4;
+		fb.strideBytes = width * std::int32_t(ScreenBpp);
 		SetDefaultFramebuffer(fb);
 	}
 
@@ -446,6 +453,13 @@ namespace nCine::RHI::Software
 		}
 	}
 
+#if defined(RHI_SOFTWARE_FB16)
+	// RGBA8 staging row for the RGB565 screen framebuffer, used by ApplyPendingSoftwareLighting below (its
+	// row kernels operate on 4-byte pixels). Main-thread-only, like the whole Combine intercept. Sized for
+	// the widest surface the tile renderer accepts.
+	alignas(32) static std::uint8_t g_fb16RowStage[8192 * 4];
+#endif
+
 	void SwDevice::ApplyPendingSoftwareLighting()
 	{
 		if (pendingSoftwareLights_.empty()) {
@@ -532,7 +546,16 @@ namespace nCine::RHI::Software
 		// texel leaves the scene pixel as-is. The row cores are the CPU-dispatched SIMD kernels (the lighting one
 		// bit-identical to the scalar loop it replaced, see SwScanlineOps.h).
 		for (std::int32_t y = 0; y < vpH; y++) {
-			std::uint8_t* px = fb.pixels + (std::size_t)(vpY + y) * fb.strideBytes + (std::size_t)vpX * 4;
+			std::uint8_t* px;
+#if defined(RHI_SOFTWARE_FB16)
+			// The screen framebuffer is RGB565 in this mode; stage each touched row as RGBA8 so the row
+			// kernels below (wave shift, water tint, lighting combine) stay unchanged, then store it back
+			std::uint8_t* fbRow16 = fb.pixels + (std::size_t)(vpY + y) * fb.strideBytes + (std::size_t)vpX * 2;
+			SwLoadFbSpan565(g_fb16RowStage, fbRow16, vpW);
+			px = g_fb16RowStage;
+#else
+			px = fb.pixels + (std::size_t)(vpY + y) * fb.strideBytes + (std::size_t)vpX * 4;
+#endif
 
 			const bool isUnderwaterRow = (hasWater && y < belowEndExcl);
 			if (isUnderwaterRow) {
@@ -571,6 +594,10 @@ namespace nCine::RHI::Software
 			if (hasWater && !isUnderwaterRow && aboveWaterBlend[3] != 0) {
 				BlendScanlineConstSrcAlpha(px, vpW, aboveWaterBlend);
 			}
+
+#if defined(RHI_SOFTWARE_FB16)
+			SwStoreFbSpan565(fbRow16, g_fb16RowStage, vpW);
+#endif
 		}
 	}
 
@@ -1038,7 +1065,8 @@ namespace nCine::RHI::Software
 		switch (effect) {
 			case SwEffect::DefaultSprite:
 			case SwEffect::DefaultBatchedSprites: {
-				// The promotion in SwTexture guarantees an RGBA8 store, so the primary sample is always 4 bytes
+				// The rasterizer's gathers expand every stored texel (native R8/RG8 included) to the 4-byte
+				// working form, so the primary sample is always 4 bytes
 				const std::int32_t uTextureUnit = samplerUnit("uTexture", 0);
 				const SwTexture* texture = GetBoundTexture(std::uint32_t(uTextureUnit));
 				if (texture == nullptr || texture->GetPixels() == nullptr) {

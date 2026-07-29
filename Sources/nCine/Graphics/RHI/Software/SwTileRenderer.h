@@ -36,19 +36,24 @@ namespace nCine::RHI::Software
 		static constexpr std::int32_t TileSize = 32;
 		/** @brief `log2(TileSize)`, used to turn pixel coordinates into tile coordinates with a shift */
 		static constexpr std::int32_t TileSizeShift = 5;
-		/** @brief Upper bound on the commands deferred in one flush window (fixed, statically allocated) */
+		/**
+			@brief Upper bound on the commands deferred in one flush window
+
+			A flush threshold, not a static allocation: the command arena grows on demand (geometrically,
+			retaining capacity across frames), so a typical frame only ever allocates as many ~900-byte
+			command slots as it actually submits at once - instead of the former fixed 4096-slot (~3.6 MB)
+			static array sized for the worst case. Hitting the bound flushes and reuses the arena.
+		*/
 		static constexpr std::int32_t MaxCommands = 4096;
 
-		/** @brief Largest destination width the static tile-bin array is sized for (4K UHD; ~1.2 MB of bins) */
-		static constexpr std::int32_t MaxWidth = 3840;
-		/** @brief Largest destination height the static tile-bin array is sized for (4K UHD) */
-		static constexpr std::int32_t MaxHeight = 2160;
-		/** @brief Number of tile columns at @ref MaxWidth */
-		static constexpr std::int32_t MaxTilesX = (MaxWidth + TileSize - 1) / TileSize;
-		/** @brief Number of tile rows at @ref MaxHeight */
-		static constexpr std::int32_t MaxTilesY = (MaxHeight + TileSize - 1) / TileSize;
-		/** @brief Total number of tile bins the layer can address */
-		static constexpr std::int32_t MaxTiles = MaxTilesX * MaxTilesY;
+		/**
+			@brief Sanity ceiling on a destination surface edge
+
+			The tile-bin table is sized dynamically from the actual destination (a 720x405 target needs
+			~300 bins, not the ~8160 a statically 4K-sized table held), so this is only a guard against a
+			nonsensical target disabling the layer, not a supported-resolution limit.
+		*/
+		static constexpr std::int32_t MaxSurfaceDimension = 8192;
 
 		/**
 			@brief Submit-time precomputed state of a procedural sprite-quad command
@@ -82,6 +87,8 @@ namespace nCine::RHI::Software
 			std::int32_t texW;
 			/** @brief Sampled texture height in texels (0 when untextured) */
 			std::int32_t texH;
+			/** @brief Byte size of one stored texel (@ref SwTexture stores R8/RG8 natively; 4 when untextured) */
+			std::int32_t texBpp;
 			/** @brief Horizontal wrap mode of the sampled texture */
 			nCine::SamplerWrapping wrapS;
 			/** @brief Vertical wrap mode of the sampled texture */
@@ -219,8 +226,10 @@ namespace nCine::RHI::Software
 			 *
 			 * The device fills @ref DrawContext::fragmentShaderUserData with a pointer into its own
 			 * caller-stack storage, which dies when the draw call returns; deferral outlives that, so
-			 * @ref SubmitCommand copies the block here (it is trivially copyable) and repoints
-			 * @ref ctx.fragmentShaderUserData at it, making the deferred draw fully self-contained.
+			 * @ref SubmitCommand copies the block here (it is trivially copyable). The repointing of
+			 * @ref ctx.fragmentShaderUserData at this storage happens in @ref Flush() - not at submit -
+			 * because the command arena may still reallocate (and move every live command) while
+			 * submissions continue; nothing dereferences the pointer between submit and the flush fixup.
 			 */
 			alignas(16) std::uint8_t userDataStorage[MaxFragmentShaderUserDataSize];
 
@@ -237,8 +246,9 @@ namespace nCine::RHI::Software
 			 *
 			 * @ref DrawContext::vertexData points into the device's per-draw scratch buffer, which is
 			 * overwritten by the next draw; deferral outlives that, so @ref SubmitCommand copies the
-			 * vertex floats here and repoints @ref ctx.vertexData at it (mirrors @ref userDataStorage).
-			 * Heap capacity is retained across reuse of the command slot.
+			 * vertex floats here and @ref Flush() repoints @ref ctx.vertexData at it (mirrors
+			 * @ref userDataStorage - the flush-time fixup survives arena reallocation). Heap capacity is
+			 * retained across reuse of the command slot.
 			 */
 			SmallVector<float, 0> vertexStorage;
 
@@ -262,8 +272,9 @@ namespace nCine::RHI::Software
 			@brief Points the layer at a new destination surface, flushing the previous one first
 
 			Flushes any commands still queued for the old target when the target actually changes, then
-			reconfigures the tile grid for the new one. A surface larger than @ref MaxWidth x @ref MaxHeight
-			disables the layer until a valid target is set again. Passing an unchanged target is a no-op.
+			reconfigures the tile grid for the new one (the bin table grows on demand to fit it). A surface
+			edge beyond @ref MaxSurfaceDimension disables the layer until a valid target is set again.
+			Passing an unchanged target is a no-op.
 
 			@param buffer		Base of the tightly packed `width * height * 4` RGBA8 destination
 			@param width		Destination width in pixels

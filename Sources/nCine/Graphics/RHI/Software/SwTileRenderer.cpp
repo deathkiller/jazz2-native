@@ -71,12 +71,17 @@ namespace nCine::RHI::Software
 				std::int32_t viewportW = 0;
 				std::int32_t viewportH = 0;
 
-				// Command buffer (flat array, reused each frame)
-				DeferredCommand commands[MaxCommands];
+				// Command arena: grows on demand up to MaxCommands and keeps both its capacity and each
+				// slot's heap allocations (vertexStorage) across frames, so steady state allocates nothing -
+				// exactly like the former fixed array, minus the ~3.6 MB worst-case static footprint. Slots
+				// [0, commandCount) are live; growth may MOVE live slots, which is safe because the
+				// self-referential ctx pointers (fragmentShaderUserData, vertexData) are fixed up in Flush.
+				SmallVector<DeferredCommand, 0> commands;
 				std::int32_t commandCount = 0;
 
-				// Per-tile command index lists for binning (uint16_t indices into the commands array)
-				SmallVector<std::uint16_t, 64> tileBins[MaxTiles];
+				// Per-tile command index lists for binning (uint16_t indices into the commands arena), sized
+				// by SetTargetBuffer to the actual destination's tile count (kept at the largest seen)
+				SmallVector<SmallVector<std::uint16_t, 64>, 0> tileBins;
 
 				// Palette-LUT pool of the current flush window (parallel arrays; commands store indices,
 				// resolved to pointers by Flush once the pool stops growing). Reset by DiscardPending.
@@ -86,6 +91,11 @@ namespace nCine::RHI::Software
 				// Current render target buffer
 				std::uint8_t* targetBuffer = nullptr;
 				bool isFboTarget = false;
+#if defined(RHI_SOFTWARE_FB16)
+				// Whether targetBuffer is the RGB565 screen framebuffer (tiles are rasterized in RGBA8
+				// scratch either way; only the tile <-> framebuffer copies convert)
+				bool is16Bit = false;
+#endif
 
 				// Worker threads for parallel tile processing
 #if defined(WITH_THREADS)
@@ -134,7 +144,7 @@ namespace nCine::RHI::Software
 			// Palette-LUT builder for the PaletteRemap fast path (see SwPaletteLut in SwRaster.h)
 			// =====================================================================
 
-			// Maps a sampling-swizzle source channel to its byte offset in the promoted RGBA8 texel, or a
+			// Maps a sampling-swizzle source channel to its byte offset in the gathered (4-byte expanded) texel, or a
 			// negative value for the non-byte sources (Zero / One)
 			inline std::int32_t SwizzleChannelByte(SwizzleChannel channel)
 			{
@@ -174,9 +184,11 @@ namespace nCine::RHI::Software
 					return -1;
 				}
 				// The fragment reads the index through the texture's sampling swizzle: `.r` selects the index
-				// byte and `.a` the source-alpha byte. An R8 index texture keeps the identity swizzle (its
-				// promoted store is [index,255,255,255], so `.a` reads the constant 255 = opaque); an RG8 one
-				// maps `.a` to green ([index,alpha,255,255]). Zero / One in `.a` fold to a constant.
+				// byte and `.a` the source-alpha byte. The offsets index the gathered, 4-byte EXPANDED texel
+				// (SwTexture stores R8/RG8 natively; every gather expands with 255 fill): an R8 index texture
+				// keeps the identity swizzle (the expanded texel is [index,255,255,255], so `.a` reads the
+				// constant 255 = opaque); an RG8 one maps `.a` to green ([index,alpha,255,255]). Zero / One
+				// in `.a` fold to a constant.
 				const SwizzleChannel* swizzle = indexTex->GetSwizzle();
 				const std::int32_t indexByteOffset = SwizzleChannelByte(swizzle[0]);
 				if (indexByteOffset < 0) {
@@ -311,6 +323,13 @@ namespace nCine::RHI::Software
 					if DEATH_UNLIKELY(dstY < 0 || dstY >= fbHeight) {
 						continue;
 					}
+#if defined(RHI_SOFTWARE_FB16)
+					if (g_tile.is16Bit) {
+						// Tiles are rasterized as RGBA8; the 565 conversion happens once here, per copied row
+						SwStoreFbSpan565(fb + (dstY * fbWidth + tileX) * 2, src, tileW);
+						continue;
+					}
+#endif
 					std::uint8_t* dst = fb + (dstY * fbWidth + tileX) * 4;
 					std::memcpy(dst, src, rowBytes);
 				}
@@ -333,6 +352,12 @@ namespace nCine::RHI::Software
 						std::memset(dst, 0, rowBytes);
 						continue;
 					}
+#if defined(RHI_SOFTWARE_FB16)
+					if (g_tile.is16Bit) {
+						SwLoadFbSpan565(dst, fb + (srcY * fbWidth + tileX) * 2, tileW);
+						continue;
+					}
+#endif
 					const std::uint8_t* src = fb + (srcY * fbWidth + tileX) * 4;
 					std::memcpy(dst, src, rowBytes);
 				}
@@ -548,9 +573,9 @@ namespace nCine::RHI::Software
 				Flush();
 			}
 
-			// Validate that the dimensions fit within our static tile-bin array
-			if DEATH_UNLIKELY(width > MaxWidth || height > MaxHeight || width <= 0 || height <= 0) {
-				// Too large for the tile renderer - disable until the next valid target
+			// Sanity guard only (the bin table below is sized dynamically); a nonsensical target disables
+			// the layer until the next valid one
+			if DEATH_UNLIKELY(width > MaxSurfaceDimension || height > MaxSurfaceDimension || width <= 0 || height <= 0) {
 				g_tile.targetBuffer = nullptr;
 				g_tile.fbWidth = 0;
 				g_tile.fbHeight = 0;
@@ -561,11 +586,20 @@ namespace nCine::RHI::Software
 
 			g_tile.targetBuffer = buffer;
 			g_tile.isFboTarget = isFboTarget;
+#if defined(RHI_SOFTWARE_FB16)
+			// On the software backend a non-FBO target IS the screen framebuffer - the only 16-bit surface
+			g_tile.is16Bit = !isFboTarget;
+#endif
 			g_tile.fbWidth = width;
 			g_tile.fbHeight = height;
 			g_tile.tilesX = (width + TileSize - 1) >> TileSizeShift;
 			g_tile.tilesY = (height + TileSize - 1) >> TileSizeShift;
 			g_tile.totalTiles = g_tile.tilesX * g_tile.tilesY;
+			// Grow the bin table to the actual destination's tile count (never shrunk: bins keep their
+			// heap capacity so steady state allocates nothing; the largest target seen wins)
+			if (std::int32_t(g_tile.tileBins.size()) < g_tile.totalTiles) {
+				g_tile.tileBins.resize(g_tile.totalTiles);
+			}
 		}
 
 		bool SubmitCommand(const DrawContext& ctx, PrimitiveType type,
@@ -614,26 +648,32 @@ namespace nCine::RHI::Software
 				vpH = g_tile.fbHeight;
 			}
 
-			// Fill the command slot first: the submit-time quad preparation below runs on the snapshot (its
-			// userData pointer must already be the stable per-command copy). A discarded command simply never
-			// increments commandCount, so the slot is reused by the next submission.
+			// Acquire a command slot, growing the arena on demand (geometric growth, capacity and each
+			// slot's heap allocations retained across frames). Growth may move the live slots below cmdIdx;
+			// that is safe because their self-referential ctx pointers are only fixed up (and dereferenced)
+			// at Flush. A discarded command simply never increments commandCount, so the slot is reused by
+			// the next submission.
 			const std::int32_t cmdIdx = g_tile.commandCount;
+			if (cmdIdx >= std::int32_t(g_tile.commands.size())) {
+				g_tile.commands.emplace_back();
+			}
 			DeferredCommand& cmd = g_tile.commands[cmdIdx];
 			cmd.ctx = ctx;
 			// Snapshot the fragment-callback parameter block into the command's own storage (ctx points at
-			// caller-stack memory) and repoint, so the deferred draw carries its own copy.
+			// caller-stack memory, which is still alive here). cmd.ctx.fragmentShaderUserData keeps the
+			// caller pointer for the submit-time consumers below (PrepareQuad's constant-fill evaluation,
+			// AcquirePaletteLut); Flush repoints it at userDataStorage before any deferred dereference.
 			if (ctx.fragmentShader != nullptr && ctx.fragmentShaderUserData != nullptr) {
 				std::memcpy(cmd.userDataStorage, ctx.fragmentShaderUserData, ctx.fragmentShaderUserDataSize);
-				cmd.ctx.fragmentShaderUserData = cmd.userDataStorage;
 			}
 			// Snapshot a general draw's vertices the same way: ctx.vertexData points into the device's
-			// per-draw scratch buffer, which the next draw overwrites, whereas the deferred draw outlives it.
+			// per-draw scratch buffer, which the next draw overwrites, whereas the deferred draw outlives
+			// it. The repoint at vertexStorage likewise happens in Flush.
 			if (ctx.vertexData != nullptr) {
 				const std::int32_t strideFloats = (ctx.vertexStride > 0 ? ctx.vertexStride / std::int32_t(sizeof(float)) : 4);
 				const std::size_t floatCount = (std::size_t(firstVertex) + std::size_t(count)) * std::size_t(strideFloats);
 				const float* src = static_cast<const float*>(ctx.vertexData);
 				cmd.vertexStorage.assign(src, src + floatCount);
-				cmd.ctx.vertexData = cmd.vertexStorage.data();
 			}
 			// scissorRect.Y is stored in top-down screen space so the tile rasterizer can use it directly as a
 			// pixel-row clip. ctx.scissorRect.Y is bottom-up (the RHI scissor convention), so flip it here.
@@ -708,7 +748,8 @@ namespace nCine::RHI::Software
 
 			// PaletteRemap fast path: bake the command's palette row + tint into a pooled 256-entry LUT the
 			// tile rasterizer indexes instead of calling the transpiled fragment per pixel. -1 (constraint
-			// not met) keeps the generic fragment. Uses the snapshot ctx so the userData pointer is stable.
+			// not met) keeps the generic fragment. Runs at submit time, while the caller's userData pointer
+			// is still alive.
 			cmd.paletteLutIndex = (ctx.paletteRemapHint ? AcquirePaletteLut(cmd.ctx) : -1);
 			cmd.primType = type;
 			cmd.firstVertex = firstVertex;
@@ -752,11 +793,21 @@ namespace nCine::RHI::Software
 				return;
 			}
 
-			// Resolve the palette-LUT pool indices into pointers: submissions are done for this window, so
-			// the pool no longer grows and the pointers stay stable for every worker
+			// Fix up the per-command pointers now that submissions are done for this window and neither the
+			// command arena nor the LUT pool grows any further, so everything stays stable for every worker:
+			// - palette-LUT pool indices resolve into pointers
+			// - the self-referential ctx pointers (fragment userData, general-draw vertices) repoint at the
+			//   command's own storage; they held the submit-time caller pointers (dead by now, but never
+			//   dereferenced since) because arena growth may have MOVED the commands after submission
 			for (std::int32_t i = 0; i < g_tile.commandCount; i++) {
 				DeferredCommand& cmd = g_tile.commands[i];
 				cmd.ctx.paletteLut = (cmd.paletteLutIndex >= 0 ? &g_tile.paletteLuts[cmd.paletteLutIndex] : nullptr);
+				if (cmd.ctx.fragmentShader != nullptr && cmd.ctx.fragmentShaderUserData != nullptr) {
+					cmd.ctx.fragmentShaderUserData = cmd.userDataStorage;
+				}
+				if (cmd.ctx.vertexData != nullptr) {
+					cmd.ctx.vertexData = cmd.vertexStorage.data();
+				}
 			}
 
 #if defined(WITH_THREADS)

@@ -331,12 +331,12 @@ namespace Jazz2::Tiles
 			bottom = (Size - 1 - top2);
 		}
 
-		std::uint8_t* mask = tileSet->GetTileMask(tileId);
+		// Packed mask: one 32-bit row word tests the whole [left..right] column range at once
+		const std::uint8_t* mask = tileSet->GetTileMask(tileId);
+		const std::uint32_t rangeMask = (~0u >> (31 - right)) & (~0u << left);
 		for (std::int32_t ry = top; ry <= bottom; ry++) {
-			for (std::int32_t rx = left; rx <= right; rx++) {
-				if (mask[ry * Size + rx]) {
-					return false;
-				}
+			if (TileSet::GetTileMaskRow(mask, ry) & rangeMask) {
+				return false;
 			}
 		}
 		return true;
@@ -504,15 +504,12 @@ namespace Jazz2::Tiles
 						continue;
 					}
 
-					top *= TileSet::DefaultTileSize;
-					bottom *= TileSet::DefaultTileSize;
-
-					std::uint8_t* mask = tileSet->GetTileMask(tileId);
-					for (std::int32_t ry = top; ry <= bottom; ry += TileSet::DefaultTileSize) {
-						for (std::int32_t rx = left; rx <= right; rx++) {
-							if (mask[ry | rx]) {
-								return false;
-							}
+					// Packed mask: one 32-bit row word tests the whole [left..right] column range at once
+					const std::uint8_t* mask = tileSet->GetTileMask(tileId);
+					const std::uint32_t rangeMask = (~0u >> (31 - right)) & (~0u << left);
+					for (std::int32_t ry = top; ry <= bottom; ry++) {
+						if (TileSet::GetTileMaskRow(mask, ry) & rangeMask) {
+							return false;
 						}
 					}
 				}
@@ -630,15 +627,12 @@ namespace Jazz2::Tiles
 						continue;
 					}
 
-					top *= TileSet::DefaultTileSize;
-					bottom *= TileSet::DefaultTileSize;
-
-					std::uint8_t* mask = tileSet->GetTileMask(tileId);
-					for (std::int32_t ry = top; ry <= bottom; ry += TileSet::DefaultTileSize) {
-						for (std::int32_t rx = left; rx <= right; rx++) {
-							if (mask[ry | rx]) {
-								return false;
-							}
+					// Packed mask: one 32-bit row word tests the whole [left..right] column range at once
+					const std::uint8_t* mask = tileSet->GetTileMask(tileId);
+					const std::uint32_t rangeMask = (~0u >> (31 - right)) & (~0u << left);
+					for (std::int32_t ry = top; ry <= bottom; ry++) {
+						if (TileSet::GetTileMaskRow(mask, ry) & rangeMask) {
+							return false;
 						}
 					}
 				}
@@ -676,7 +670,7 @@ namespace Jazz2::Tiles
 			return SuspendType::None;
 		}
 
-		std::uint8_t* mask = tileSet->GetTileMask(tileId);
+		const std::uint8_t* mask = tileSet->GetTileMask(tileId);
 
 		std::int32_t rx = (std::int32_t)x & 31;
 		std::int32_t ry = (std::int32_t)y & 31;
@@ -688,11 +682,12 @@ namespace Jazz2::Tiles
 			ry = (TileSet::DefaultTileSize - 1 - ry);
 		}
 
-		std::int32_t top = std::max(ry - Tolerance, 0) << 5;
-		std::int32_t bottom = std::min(ry + Tolerance, TileSet::DefaultTileSize - 1) << 5;
+		// Walk the tolerance window bottom-up, testing column rx's bit in each packed row
+		const std::int32_t top = std::max(ry - Tolerance, 0);
+		const std::int32_t bottom = std::min(ry + Tolerance, TileSet::DefaultTileSize - 1);
 
-		for (std::int32_t ti = bottom | rx; ti >= top; ti -= TileSet::DefaultTileSize) {
-			if (mask[ti]) {
+		for (std::int32_t row = bottom; row >= top; row--) {
+			if (TileSet::IsTileMaskBitSet(mask, rx, row)) {
 				return tile.HasSuspendType;
 			}
 		}
@@ -720,7 +715,7 @@ namespace Jazz2::Tiles
 				// Tile not destroyed yet, advance counter by one
 				std::int32_t frameCount = std::min(amount, max - tile.DestructFrameIndex);
 
-				tile.DestructFrameIndex += frameCount;
+				tile.DestructFrameIndex = std::int16_t(tile.DestructFrameIndex + frameCount);
 				tile.TileID = anim.Tiles[tile.DestructFrameIndex].TileID;
 				if (tile.DestructFrameIndex >= max) {
 					if (!soundName.empty()) {
@@ -738,7 +733,7 @@ namespace Jazz2::Tiles
 		} else {
 			if (tile.DestructFrameIndex == 0) {
 				std::int32_t frameCount = 1;
-				tile.DestructFrameIndex += frameCount;
+				tile.DestructFrameIndex = std::int16_t(tile.DestructFrameIndex + frameCount);
 				tile.TileID = 0; // Set to empty tile
 
 				if (!soundName.empty()) {
@@ -913,10 +908,11 @@ namespace Jazz2::Tiles
 			float y3 = y1 + (TileSet::DefaultTileSize * 2) + cullingRect.H;
 
 			// Standard tile layers backed by a single tileset are drawn as one mesh (one draw call for the whole
-			// visible layer). Other renderer types (tinted/solid) and multi-tileset levels fall back to one command
-			// per tile below.
+			// visible layer). Other renderer types (tinted/solid), multi-tileset levels and tilesets split
+			// across several texture chunks (small-texture-limit platforms) fall back to one command per tile.
 #if defined(TILEMAP_USE_SINGLE_DRAW)
-			bool meshMode = (layer.Description.RendererType == LayerRendererType::Default && _tileSets.size() == 1);
+			bool meshMode = (layer.Description.RendererType == LayerRendererType::Default && _tileSets.size() == 1 &&
+				_tileSets[0].Data->GetTextureCount() == 1);
 			SmallVector<float, 0>* layerVertices = nullptr;
 			if DEATH_LIKELY(meshMode) {
 				if (_layerMeshVerticesCount >= (std::int32_t)_layerMeshVertices.size()) {
@@ -961,7 +957,13 @@ namespace Jazz2::Tiles
 						continue;
 					}
 
-					Vector2i texSize = tileSet->TextureDiffuse->GetSize();
+					// Rebase into the containing texture chunk (a no-op single-texture lookup normally)
+					Texture* tileTexture = tileSet->ResolveTextureDiffuse(tileId);
+					if DEATH_UNLIKELY(tileTexture == nullptr) {
+						continue;
+					}
+
+					Vector2i texSize = tileTexture->GetSize();
 					float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
 					float texBiasX = ((tileId % tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
 					float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
@@ -1007,7 +1009,7 @@ namespace Jazz2::Tiles
 					command->SetTransformation(Matrix4x4f::Translation(x2r, y2r, 0.0f));
 					command->SetLayer(layer.Description.Depth);
 					// Tiles use the default sprite palette (row 0, offset 0); binds the shared palette texture when indexed
-					ContentResolver::Get().BindSpritePalette(*command, *tileSet->TextureDiffuse, tileSet->IsIndexed, 0);
+					ContentResolver::Get().BindSpritePalette(*command, *tileTexture, tileSet->IsIndexed, 0);
 
 					renderQueue.AddCommand(command);
 				}
@@ -1149,8 +1151,9 @@ namespace Jazz2::Tiles
 			// Vertex positions are already in world space, so the model matrix is identity
 			command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
 			command->SetLayer(depth);
-			// Tiles use the default sprite palette (row 0, offset 0); binds diffuse on unit 0, palette on unit 1
-			ContentResolver::Get().BindSpritePalette(*command, *tileSet->TextureDiffuse, indexed, 0);
+			// Tiles use the default sprite palette (row 0, offset 0); binds diffuse on unit 0, palette on unit 1.
+			// Mesh mode only runs for single-chunk tilesets (see DrawLayer), so chunk 0 is the whole atlas.
+			ContentResolver::Get().BindSpritePalette(*command, *tileSet->TextureDiffuse[0], indexed, 0);
 
 			renderQueue.AddCommand(command);
 		}
@@ -1359,7 +1362,7 @@ namespace Jazz2::Tiles
 	void TileMap::SetTileDestructibleEventParams(LayerTile& tile, TileDestructType type, std::uint16_t tileParams)
 	{
 		tile.DestructType = type;
-		tile.DestructAnimation = tile.TileID;
+		tile.DestructAnimation = std::int16_t(tile.TileID);
 		if (tile.TileID >= _animatedTilesOffset) {
 			tile.TileID = _animatedTiles[tile.DestructAnimation - _animatedTilesOffset].Tiles[0].TileID;
 		}
@@ -1429,13 +1432,18 @@ namespace Jazz2::Tiles
 		}
 
 		TileSet* tileSet = ResolveTileSet(tileId);
-		if (tileSet == nullptr || tileSet->TextureDiffuse == nullptr) {
+		if (tileSet == nullptr) {
+			return;
+		}
+		// Rebase into the containing texture chunk (a no-op single-texture lookup normally)
+		Texture* tileTexture = tileSet->ResolveTextureDiffuse(tileId);
+		if (tileTexture == nullptr) {
 			return;
 		}
 
 		std::uint16_t z = _layers[_sprLayerIndex].Description.Depth + 80;
 
-		Vector2i texSize = tileSet->TextureDiffuse->GetSize();
+		Vector2i texSize = tileTexture->GetSize();
 		float texScaleX = float(QuarterSize) / float(texSize.X);
 		float texBiasX = ((tileId % tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
 		float texScaleY = float(QuarterSize) / float(texSize.Y);
@@ -1474,7 +1482,7 @@ namespace Jazz2::Tiles
 			debris.TexScaleY = texScaleY;
 			debris.TexBiasY = texBiasY + ((i / 2) * QuarterSize / float(texSize.Y));
 
-			debris.DiffuseTexture = tileSet->TextureDiffuse.get();
+			debris.DiffuseTexture = tileTexture;
 			// The tileset atlas is indexed now, so recolor tile debris through palette row 0 (or -1 if baked)
 			debris.PaletteOffset = (tileSet->IsIndexed ? 0 : -1);
 			debris.Flags = DebrisFlags::None;
@@ -1837,7 +1845,7 @@ namespace Jazz2::Tiles
 
 		for (std::int32_t i = 0; i < layoutSize; i++) {
 			auto& tile = spriteLayer.Layout[i];
-			tile.DestructFrameIndex = src.ReadVariableInt32();
+			tile.DestructFrameIndex = std::int16_t(src.ReadVariableInt32());
 			if (tile.DestructAnimation >= 0) {
 				if (tile.DestructAnimation >= _animatedTilesOffset) {
 					if (tile.DestructAnimation - _animatedTilesOffset < (std::int32_t)_animatedTiles.size()) {
@@ -1845,7 +1853,7 @@ namespace Jazz2::Tiles
 						std::int32_t max = (std::int32_t)anim.Tiles.size() - 2;
 						if (tile.DestructFrameIndex > max) {
 							LOGW("Serialized tile {} with animation frame {} is out of range", i, tile.DestructFrameIndex);
-							tile.DestructFrameIndex = max;
+							tile.DestructFrameIndex = std::int16_t(max);
 						}
 						if (tile.DestructFrameIndex < 0) {
 							LOGW("Serialized tile {} with animation frame {} is out of range", i, tile.DestructFrameIndex);
@@ -2011,11 +2019,17 @@ namespace Jazz2::Tiles
 					continue;
 				}
 
+				// Rebase into the containing texture chunk (a no-op single-texture lookup normally)
+				Texture* tileTexture = tileSet->ResolveTextureDiffuse(tileId);
+				if DEATH_UNLIKELY(tileTexture == nullptr) {
+					continue;
+				}
+
 				auto command = _renderCommands[renderCommandIndex++].get();
 				// Indexed tilesets bake their colors into the background render target through the palette shader
 				ContentResolver::Get().ConfigureSpriteShader(*command, tileSet->IsIndexed);
 
-				Vector2i texSize = tileSet->TextureDiffuse->GetSize();
+				Vector2i texSize = tileTexture->GetSize();
 				float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
 				float texBiasX = ((tileId % tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
@@ -2037,7 +2051,7 @@ namespace Jazz2::Tiles
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 				command->SetTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize, y * TileSet::DefaultTileSize, 0.0f));
-				ContentResolver::Get().BindSpritePalette(*command, *tileSet->TextureDiffuse, tileSet->IsIndexed, 0);
+				ContentResolver::Get().BindSpritePalette(*command, *tileTexture, tileSet->IsIndexed, 0);
 
 				renderQueue.AddCommand(command);
 			}

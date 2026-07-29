@@ -379,9 +379,10 @@ namespace nCine::RHI::Software::sw
 	 * @brief Samples a bound texture, the software counterpart of GLSL `texture(sampler, uv)`
 	 *
 	 * Reads the texture bound to @p unit of @p in with nearest filtering, honoring the texture's wrap
-	 * mode, and returns its texel as normalized `0..1` RGBA. Since @ref SwTexture promotes R8/RG8/RGB8
-	 * stores to RGBA8, every store is treated as four bytes. An unbound unit or empty store yields
-	 * transparent black.
+	 * mode, and returns its texel as normalized `0..1` RGBA. @ref SwTexture stores R8/RG8 natively
+	 * (1 / 2 bytes per texel), so a fetched texel is first expanded to the 4-byte working form (missing
+	 * channels fill with 255, the exact bytes the former RGBA8-promoted store held). An unbound unit or
+	 * empty store yields transparent black.
 	 */
 	inline vec4 swTexture(const FragmentShaderInput& in, int unit, const vec2& uv)
 	{
@@ -399,15 +400,24 @@ namespace nCine::RHI::Software::sw
 			return vec4(0.0f);
 		}
 		std::int32_t stride = tex->GetStrideBytes();
+		const std::int32_t bpp = tex->GetBytesPerPixel();
 		std::int32_t tx = detail::wrapTexel(detail::floorToInt(uv.x * static_cast<float>(width)), width, tex->GetWrapS());
 		std::int32_t ty = detail::wrapTexel(detail::floorToInt(uv.y * static_cast<float>(height)), height, tex->GetWrapT());
-		const std::uint8_t* texel = pixels + static_cast<std::size_t>(ty) * static_cast<std::size_t>(stride) + static_cast<std::size_t>(tx) * 4;
+		const std::uint8_t* texel = pixels + static_cast<std::size_t>(ty) * static_cast<std::size_t>(stride) + static_cast<std::size_t>(tx) * bpp;
+		std::uint8_t expanded[4];
+		if (bpp != 4) {
+			expanded[0] = texel[0];
+			expanded[1] = (bpp >= 2 ? texel[1] : std::uint8_t(255));
+			expanded[2] = 255;
+			expanded[3] = 255;
+			texel = expanded;
+		}
 
 		// Honor the texture's sampling swizzle, exactly as GLSL texture() does. It is identity for normal
 		// textures, so a four-way compare short-circuits the per-channel switch on the hot path; only the
 		// palette-index RG8 textures take the generic remap below (their swizzle maps the sampled `.a` to
 		// the green channel - the packed per-pixel alpha - the same source the hand-ported palette effect
-		// reads. Without this the promoted RGBA8 store's opaque byte-3 would drop that alpha).
+		// reads. Without this the expanded texel's opaque byte-3 would drop that alpha).
 		//
 		// NOTE: the `/ 255.0f` byte normalization is kept verbatim (no reciprocal multiply, no lookup
 		// table): the Debug (/fp:precise) build compiles it as a true division while the Release
@@ -440,8 +450,8 @@ namespace nCine::RHI::Software::sw
 	 * The transpiler emits this for the exact `texture(uTexture, vTexCoords)` pattern - the sampler the
 	 * device keys the gather on (`FFState::textureUnit` is set from the same reflected `uTexture` unit
 	 * baked into @p unit here), sampled at the unmodified interpolated texcoord. For that pattern the
-	 * rasterizer's gather phase has already fetched the texel of this pixel into `in.rgba` (raw store
-	 * bytes, before the sampling swizzle), so the fragment reads it back - applying the unit's swizzle -
+	 * rasterizer's gather phase has already fetched the texel of this pixel into `in.rgba` (the 4-byte
+	 * expanded texel, before the sampling swizzle), so the fragment reads it back - applying the unit's swizzle -
 	 * instead of re-deriving the texel address and re-fetching through the full sampler. For a
 	 * bilinear-filtered texture the gather holds the FILTERED sample - exactly what GL's `texture()`
 	 * returns there - so reading it back is what keeps `texture(uTexture, vTexCoords)` bilinear on the

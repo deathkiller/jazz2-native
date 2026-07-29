@@ -57,6 +57,12 @@ if(NCINE_PREFERRED_RHI STREQUAL "Software")
 	# Selects the CPU software backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	message(STATUS "Rendering backend: Software (CPU rasterizer)")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_SOFTWARE")
+	if(NCINE_RHI_SOFTWARE_FB16)
+		# Optional 16-bit (RGB565) screen framebuffer: half the framebuffer memory and present bandwidth at
+		# the cost of color depth; intended for low-memory targets. Render-target textures stay RGBA8.
+		message(STATUS "Software renderer screen framebuffer: RGB565 (16-bit)")
+		target_compile_definitions(${NCINE_APP} PRIVATE "RHI_SOFTWARE_FB16")
+	endif()
 elseif(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 	# Selects the Direct3D 11 backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	message(STATUS "Rendering backend: Direct3D 11")

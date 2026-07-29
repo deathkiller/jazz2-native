@@ -71,6 +71,11 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
 			set(NCINE_PREFERRED_BACKEND "SDL2" CACHE STRING "Specify preferred core backend" FORCE)
 		endif()
 	endif()
+
+	# Optional 16-bit (RGB565) screen framebuffer for the software renderer: half the framebuffer memory
+	# and present bandwidth at the cost of color depth (intended for low-memory targets; render-target
+	# textures stay RGBA8, destination alpha reads as opaque). Ignored by the other backends.
+	cmake_dependent_option(NCINE_RHI_SOFTWARE_FB16 "Use a 16-bit (RGB565) screen framebuffer with the software renderer" OFF "NCINE_PREFERRED_RHI STREQUAL Software" OFF)
 endif()
 
 if(EMSCRIPTEN)
@@ -180,6 +185,15 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQ
 endif()
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	option(NCINE_GCC_HARDENING "Enable memory corruption mitigation methods of GCC" OFF)
+	if(NCINE_GCC_HARDENING)
+		# Required for `POSITION_INDEPENDENT_CODE` to also add the PIE link options to executables (CMP0083).
+		# It has to be called in directory scope, so it can't be part of `ncine_apply_compiler_options()`.
+		include(CheckPIESupported)
+		check_pie_supported(OUTPUT_VARIABLE _pieSupportOutput LANGUAGES C CXX)
+		if(NOT CMAKE_CXX_LINK_PIE_SUPPORTED)
+			message(WARNING "Position independent executables are not supported: ${_pieSupportOutput}")
+		endif()
+	endif()
 endif()
 
 #set(NCINE_WITH_FIXED_BATCH_SIZE "0" CACHE PATH "Set custom fixed batch size (unsafe)")

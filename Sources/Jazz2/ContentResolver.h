@@ -336,13 +336,15 @@ namespace Jazz2
 		// Reads the tileset's 256-color palette from the decompressed stream and applies it to the live sprite palette
 		// (drops baked fonts, regenerates gem palettes); just skips the bytes when headless or `applyPalette` is false
 		void ReadTilesetPalette(Stream& uc, bool applyPalette);
-		// Reads the tileset's per-pixel collision mask from the decompressed stream (1 byte per pixel); `maskSizeBits`
-		// receives the total number of mask pixels
-		static std::unique_ptr<std::uint8_t[]> ReadTilesetMask(Stream& uc, std::uint32_t& maskSizeBits);
+		// Reads the tileset's packed collision mask from the decompressed stream (kept in the cache's 1-bit-per-pixel
+		// form, see TileSet::MaskBytesPerTile); `maskSize` receives its size in bytes
+		static std::unique_ptr<std::uint8_t[]> ReadTilesetMask(Stream& uc, std::uint32_t& maskSize);
 		// Builds the padded tileset diffuse atlas (R8 indexed for all-8-bit tilesets, RGBA8 baked when any tile is
 		// 32-bit), the per-tile fully-opaque flags and the optional caption thumbnail. Reads pixels from the raw stream
 		// `s` (the image content follows the compressed block). Sets `indexTiles` to the chosen mode.
-		std::unique_ptr<Texture> BuildTilesetDiffuse(std::unique_ptr<Stream>& s, const char* name, std::uint8_t channelCount,
+		// Returns one texture normally, or several consecutive row-band chunks when the atlas exceeds the
+		// device's texture-size limit (console targets); see TileSet::ResolveTextureDiffuse
+		SmallVector<std::unique_ptr<Texture>, 1> BuildTilesetDiffuse(std::unique_ptr<Stream>& s, const char* name, std::uint8_t channelCount,
 			std::uint32_t width, std::uint32_t height, std::uint16_t tileCount, const std::uint8_t* is32bitTile,
 			const std::uint8_t* paletteRemapping, std::uint16_t captionTileId, bool& indexTiles,
 			std::unique_ptr<std::uint8_t[]>& tileDiffuseOpaque, std::unique_ptr<Color[]>& captionTile);

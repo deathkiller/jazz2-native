@@ -321,3 +321,15 @@ namespace nCine::RHI
 #else
 #	error No RHI backend selected - define WITH_RHI_GL (or another WITH_RHI_* backend)
 #endif
+
+// Derived tier macro: the full GPU post-processing pipeline (scene FBO + lighting FBO + blur chain +
+// rescale/antialiasing passes) requires BOTH programmable shaders and off-screen render targets, so
+// game code gates it on this single macro instead of ad-hoc compounds of the two capabilities (or a
+// backend-identity test like WITH_RHI_SOFTWARE, which would silently misroute a future fixed-function
+// console backend). Backends lacking either capability take the direct tier: the scene renders
+// straight into the screen buffer at the logical resolution (the backend's presentation stretches it
+// to the display - a backend without RHI_CAP_SHADERS must provide Device::ResizeScreenFramebuffer())
+// and lighting is composited by the CPU lightmap path in CombineRenderer.
+#if defined(RHI_CAP_SHADERS) && defined(RHI_CAP_FRAMEBUFFERS)
+#	define RHI_CAP_POSTPROCESSING
+#endif

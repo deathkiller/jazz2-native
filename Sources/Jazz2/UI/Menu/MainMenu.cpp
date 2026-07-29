@@ -878,23 +878,30 @@ namespace Jazz2::UI::Menu
 			for (std::int32_t x = 0; x < layoutSize.X; x++) {
 				LayerTile& tile = layer.Layout[y * layer.LayoutSize.X + x];
 
+				// Rebase into the containing texture chunk (a no-op single-texture lookup normally)
+				std::int32_t tileId = tile.TileID;
+				Texture* tileTexture = _owner->_tileSet->ResolveTextureDiffuse(tileId);
+				if DEATH_UNLIKELY(tileTexture == nullptr) {
+					continue;
+				}
+
 				auto command = _renderCommands[renderCommandIndex++].get();
 				// The menu tileset is indexed too - bake it into the background render target through the palette shader
 				ContentResolver::Get().ConfigureSpriteShader(*command, _owner->_tileSet->IsIndexed);
 
-				Vector2i texSize = _owner->_tileSet->TextureDiffuse->GetSize();
+				Vector2i texSize = tileTexture->GetSize();
 				float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
-				float texBiasX = ((tile.TileID % _owner->_tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
+				float texBiasX = ((tileId % _owner->_tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
 				float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
-				float texBiasY = ((tile.TileID / _owner->_tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.Y);
+				float texBiasY = ((tileId / _owner->_tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.Y);
 
 				auto instanceBlock = command->GetInstanceBlock();
 				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
-				
+
 				command->SetTransformation(Matrix4x4f::Translation(x * TileSet::DefaultTileSize, y * TileSet::DefaultTileSize, 0.0f));
-				ContentResolver::Get().BindSpritePalette(*command, *_owner->_tileSet->TextureDiffuse, _owner->_tileSet->IsIndexed, 0);
+				ContentResolver::Get().BindSpritePalette(*command, *tileTexture, _owner->_tileSet->IsIndexed, 0);
 
 				renderQueue.AddCommand(command);
 			}

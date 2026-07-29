@@ -17,10 +17,15 @@ namespace nCine::RHI::Software
 
 		Wraps a single, tightly-packed level-0 pixel buffer in one of the formats the rasterizer can
 		sample (@ref PixelFormat::RGBA8 for the textured path, @ref PixelFormat::R8 / @ref PixelFormat::RG8
-		for the palette path). It exposes the neutral upload surface `Texture.cpp` drives (`TexImage2D`,
-		`TexSubImage2D`, `TexStorage2D`, filter/wrap/swizzle setters); binding records the texture on the
-		device so the effect running the draw can read its texels. Mip levels above 0 and compressed
-		formats are accepted but not stored (the fast path samples level 0 only).
+		for the palette path). R8 / RG8 uploads are stored NATIVELY at 1 / 2 bytes per texel (4x / 2x less
+		memory than an RGBA8 store and correspondingly less gather bandwidth); the samplers expand each
+		fetched texel to the 4-byte RGBA working form, filling the missing channels with 255. Only RGB8 is
+		widened to RGBA8 at upload (3-byte texels are unaligned), and any store becomes RGBA8 the moment
+		the texture is attached as a render target (the rasterizer composites 4 bytes per pixel). It
+		exposes the neutral upload surface `Texture.cpp` drives (`TexImage2D`, `TexSubImage2D`,
+		`TexStorage2D`, filter/wrap/swizzle setters); binding records the texture on the device so the
+		effect running the draw can read its texels. Mip levels above 0 and compressed formats are
+		accepted but not stored (the fast path samples level 0 only).
 	*/
 	class SwTexture
 	{
@@ -51,17 +56,21 @@ namespace nCine::RHI::Software
 		inline std::int32_t GetHeight() const {
 			return height_;
 		}
-		/** @brief Returns the pixel format of the stored texels (after any promotion to the RGBA8 store) */
+		/** @brief Returns the pixel format of the stored texels (native for R8/RG8; RGBA8 after the RGB8 or render-target widening) */
 		inline PixelFormat GetFormat() const {
 			return format_;
 		}
-		/** @brief Returns the original upload format before promotion (R8/RG8/RGB8 kept, so the palette path can tell an R8 index texture from an RG8 index+alpha one) */
+		/** @brief Returns the original upload format before any widening (R8/RG8/RGB8 kept, so the palette path can tell an R8 index texture from an RG8 index+alpha one even after a render-target promotion) */
 		inline PixelFormat GetUploadFormat() const {
 			return uploadFormat_;
 		}
 		/** @brief Returns the byte distance between two consecutive rows of level 0 */
 		inline std::int32_t GetStrideBytes() const {
 			return strideBytes_;
+		}
+		/** @brief Returns the byte size of one stored texel (1 for R8, 2 for RG8, 4 for RGBA8 and widened stores) */
+		inline std::int32_t GetBytesPerPixel() const {
+			return bytesPerPixel_;
 		}
 		/** @brief Returns the base pointer of the level-0 texel store (may be `nullptr` before an upload); the single-level store ignores @p level */
 		inline const std::uint8_t* GetPixels(std::int32_t level = 0) const {
@@ -88,10 +97,14 @@ namespace nCine::RHI::Software
 		inline bool IsRenderTarget() const {
 			return isRenderTarget_;
 		}
-		/** @brief Marks the texture as (or no longer as) a color render target */
-		inline void SetRenderTarget(bool isRenderTarget) {
-			isRenderTarget_ = isRenderTarget;
-		}
+		/**
+		 * @brief Marks the texture as (or no longer as) a color render target
+		 *
+		 * Becoming a render target widens a native R8/RG8 store to RGBA8 (discarding the texels - render
+		 * targets are always fully drawn or cleared before being read): the rasterizer composites 4 bytes
+		 * per pixel, so a narrower store would be overflowed by the first draw into it.
+		 */
+		void SetRenderTarget(bool isRenderTarget);
 		/** @brief Returns a writable base pointer of the level-0 texel store (for render-target output) */
 		inline std::uint8_t* MutablePixels() {
 			return pixels_.empty() ? nullptr : pixels_.data();
@@ -175,6 +188,7 @@ namespace nCine::RHI::Software
 		std::int32_t width_;
 		std::int32_t height_;
 		std::int32_t strideBytes_;
+		std::int32_t bytesPerPixel_;
 		nCine::SamplerFilter minFilter_;
 		nCine::SamplerFilter magFilter_;
 		SamplerWrapping wrap_;

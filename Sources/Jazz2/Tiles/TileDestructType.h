@@ -11,7 +11,7 @@ namespace Jazz2::Tiles
 		collapsing or acting as a trigger) along with collision modifiers such as ignoring solid tiles or restricting
 		movement to the vertical axis. Supports a bitwise combination of its member values.
 	*/
-	enum class TileDestructType
+	enum class TileDestructType : std::uint8_t
 	{
 		None = 0x00,			/**< No collision */
 

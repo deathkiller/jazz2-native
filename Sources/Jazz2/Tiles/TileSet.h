@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <Containers/ArrayView.h>
+#include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 
@@ -28,28 +29,33 @@ namespace Jazz2::Tiles
 	public:
 		/** @brief Size of a tile */
 		static constexpr std::int32_t DefaultTileSize = 32;
+		/** @brief Byte size of one tile's packed collision mask (1 bit per pixel, LSB-first, row-major - the cache file format) */
+		static constexpr std::int32_t MaskBytesPerTile = DefaultTileSize * DefaultTileSize / 8;
 
 		/**
 		 * @brief Creates a new instance
 		 *
 		 * @param path               Relative path to the source file
 		 * @param tileCount          Total number of tiles
-		 * @param textureDiffuse     Main (diffuse) texture
-		 * @param mask               Collision mask of all tiles
-		 * @param maskSize           Size of the collision mask in bytes
+		 * @param textureDiffuse     Main (diffuse) texture, or several row-band chunks when the device
+		 *                           texture-size limit forced a split (see `ContentResolver::BuildTilesetDiffuse`)
+		 * @param mask               Packed collision mask of all tiles (@ref MaskBytesPerTile bytes each)
+		 * @param maskSize           Size of the packed collision mask in bytes
 		 * @param captionTile        Pixels of the caption tile
 		 * @param tileDiffuseOpaque  Optional table marking fully opaque tiles
 		 */
-		TileSet(StringView path, std::uint16_t tileCount, std::unique_ptr<Texture> textureDiffuse, std::unique_ptr<std::uint8_t[]> mask, std::uint32_t maskSize, std::unique_ptr<Color[]> captionTile, const std::uint8_t* tileDiffuseOpaque = nullptr);
+		TileSet(StringView path, std::uint16_t tileCount, SmallVector<std::unique_ptr<Texture>, 1>&& textureDiffuse, std::unique_ptr<std::uint8_t[]> mask, std::uint32_t maskSize, std::unique_ptr<Color[]> captionTile, const std::uint8_t* tileDiffuseOpaque = nullptr);
 
 		/** @brief Relative path to source file */
 		String FilePath;
-		/** @brief Main (diffuse) texture */
-		std::unique_ptr<Texture> TextureDiffuse;
+		/** @brief Main (diffuse) texture(s): a single texture normally, consecutive row-band chunks when the device texture-size limit forced a split */
+		SmallVector<std::unique_ptr<Texture>, 1> TextureDiffuse;
 		/** @brief Total number of tiles */
 		std::int32_t TileCount;
 		/** @brief Number of tiles per row */
 		std::int32_t TilesPerRow;
+		/** @brief Number of tiles covered by each diffuse texture chunk (0 when untextured/headless) */
+		std::int32_t TilesPerTexture;
 		/**
 		 * @brief Whether @ref TextureDiffuse stores raw palette indices instead of baked colors
 		 *
@@ -58,14 +64,58 @@ namespace Jazz2::Tiles
 		 */
 		bool IsIndexed = false;
 
-		/** @brief Returns mask for specified tile */
-		std::uint8_t* GetTileMask(std::int32_t tileId) const
+		/**
+		 * @brief Resolves the diffuse texture chunk containing @p tileId, rebasing the ID into the chunk's
+		 *        local space (mirrors `TileMap::ResolveTileSet`)
+		 *
+		 * The returned texture's tile grid starts at the rebased @p tileId 0, so the usual
+		 * `(tileId % TilesPerRow, tileId / TilesPerRow)` UV math applies against ITS size. Returns `nullptr`
+		 * when untextured (headless) or out of range.
+		 */
+		Texture* ResolveTextureDiffuse(std::int32_t& tileId) const
+		{
+			if (TextureDiffuse.empty()) {
+				return nullptr;
+			}
+			if (tileId >= TilesPerTexture && TilesPerTexture > 0) {
+				std::int32_t chunk = tileId / TilesPerTexture;
+				if (chunk >= std::int32_t(TextureDiffuse.size())) {
+					return nullptr;
+				}
+				tileId -= chunk * TilesPerTexture;
+				return TextureDiffuse[chunk].get();
+			}
+			return TextureDiffuse[0].get();
+		}
+
+		/** @brief Returns the number of diffuse texture chunks (1 unless the device texture-size limit forced a split) */
+		std::int32_t GetTextureCount() const
+		{
+			return std::int32_t(TextureDiffuse.size());
+		}
+
+		/** @brief Returns the packed mask (@ref MaskBytesPerTile bytes, 1 bit per pixel) for the specified tile */
+		const std::uint8_t* GetTileMask(std::int32_t tileId) const
 		{
 			if (tileId >= TileCount) {
 				return nullptr;
 			}
 
-			return &_mask[tileId * DefaultTileSize * DefaultTileSize];
+			return &_mask[tileId * MaskBytesPerTile];
+		}
+
+		/** @brief Returns one row of a packed tile mask as a 32-bit word (bit `x` set = column `x` solid) */
+		static std::uint32_t GetTileMaskRow(const std::uint8_t* packedMask, std::int32_t y)
+		{
+			const std::uint8_t* row = packedMask + y * (DefaultTileSize / 8);
+			return std::uint32_t(row[0]) | (std::uint32_t(row[1]) << 8) | (std::uint32_t(row[2]) << 16) | (std::uint32_t(row[3]) << 24);
+		}
+
+		/** @brief Returns whether pixel `(x, y)` of a packed tile mask is solid */
+		static bool IsTileMaskBitSet(const std::uint8_t* packedMask, std::int32_t x, std::int32_t y)
+		{
+			// Bit index is y * 32 + x with LSB-first bytes, so the bit-within-byte is just x & 7
+			return ((packedMask[(y * DefaultTileSize + x) >> 3] >> (x & 7)) & 1) != 0;
 		}
 
 		/** @brief Returns `true` if the mask of a tile is completely empty */

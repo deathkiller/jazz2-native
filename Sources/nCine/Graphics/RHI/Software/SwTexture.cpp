@@ -34,7 +34,7 @@ namespace nCine::RHI::Software
 
 	SwTexture::SwTexture(TextureTarget target)
 		: handle_(nextHandle_++), contentVersion_(0), target_(target), format_(PixelFormat::Unknown), uploadFormat_(PixelFormat::Unknown),
-			width_(0), height_(0), strideBytes_(0),
+			width_(0), height_(0), strideBytes_(0), bytesPerPixel_(0),
 			minFilter_(nCine::SamplerFilter::Nearest), magFilter_(nCine::SamplerFilter::Nearest), wrap_(SamplerWrapping::ClampToEdge),
 			textureUnit_(0), isRenderTarget_(false)
 	{
@@ -64,21 +64,24 @@ namespace nCine::RHI::Software
 
 	void SwTexture::Allocate(PixelFormat format, std::int32_t width, std::int32_t height)
 	{
-		// The CPU rasterizer composites in RGBA8 and always writes 4 bytes per texel, so a narrower store
-		// would be overflowed the moment it is drawn into or the moment the engine takes its 4-byte primary
-		// sample. Promote every narrower runtime format to an RGBA8 store: RGB8 (opaque render targets) and
-		// the palette-index formats R8 / RG8. Uploads expand each row (see TexImage2D/TexSubImage2D, which
-		// fills the extra channels with 255), so an R8 index lands as [index,255,255,255] and an RG8 one as
-		// [index,alpha,255,255] - the index stays in byte 0 for the palette path, and sampling reads 4 bpp,
-		// keeping the surface self-consistent whether it is later rendered into or sampled as a source. The
-		// pre-promotion format is remembered in uploadFormat_ so the palette effect can still distinguish an
-		// R8 index texture (alpha from the palette entry) from an RG8 one (alpha from the index texture's G).
+		// R8 / RG8 index textures are stored NATIVELY (1 / 2 bytes per texel): the samplers expand each
+		// fetched texel to the 4-byte RGBA working form on the fly, filling the missing channels with 255 -
+		// so an R8 index samples as [index,255,255,255] and an RG8 one as [index,alpha,255,255], the exact
+		// bytes the former promoted-to-RGBA8 store held. That makes indexed sprite atlases and tilesets
+		// (the bulk of this game's texel data) 4x / 2x smaller in memory and in gather bandwidth. Only two
+		// cases still widen to an RGBA8 store: RGB8 (3-byte texels are unaligned, and it is the render-
+		// target format of the shader path), and any texture attached as a render target (the rasterizer
+		// composites 4 bytes per pixel - see SetRenderTarget, which re-widens an already-native store).
+		// The requested format is remembered in uploadFormat_ so the palette effect can still distinguish
+		// an R8 index texture (alpha from the palette entry) from an RG8 one (alpha from the texture's G)
+		// even after such a widening.
 		uploadFormat_ = format;
-		format_ = (format == PixelFormat::RGB8 || format == PixelFormat::R8 || format == PixelFormat::RG8) ? PixelFormat::RGBA8 : format;
+		format_ = (format == PixelFormat::RGB8 || (isRenderTarget_ && (format == PixelFormat::R8 || format == PixelFormat::RG8))
+			? PixelFormat::RGBA8 : format);
 		width_ = width;
 		height_ = height;
-		const std::int32_t bpp = BytesPerPixel(format_);
-		strideBytes_ = width * bpp;
+		bytesPerPixel_ = BytesPerPixel(format_);
+		strideBytes_ = width * bytesPerPixel_;
 		// A deferred tile-renderer command may still reference this texture's current store (the prepared
 		// command snapshots the level-0 pixel pointer at submit); drain the queue before the buffer can be
 		// reallocated so no worker rasterizes from freed memory. A no-op when nothing is queued.
@@ -89,6 +92,18 @@ namespace nCine::RHI::Software
 		// The store content changed; the counter is process-global so a stamp is never repeated, even by
 		// a different texture object reusing this one's address
 		contentVersion_ = ++nextContentVersion_;
+	}
+
+	void SwTexture::SetRenderTarget(bool isRenderTarget)
+	{
+		isRenderTarget_ = isRenderTarget;
+		if (isRenderTarget && format_ != PixelFormat::Unknown && bytesPerPixel_ != 4) {
+			// Widen a native R8/RG8 store to RGBA8 (the rasterizer composites 4 bytes per pixel). The texels
+			// are discarded - a render target is always fully drawn or cleared before it is read - and
+			// Allocate keeps uploadFormat_ at the originally requested format and re-widens because
+			// isRenderTarget_ is already set.
+			Allocate(uploadFormat_, width_, height_);
+		}
 	}
 
 	bool SwTexture::Bind(std::uint32_t textureUnit) const
@@ -119,8 +134,9 @@ namespace nCine::RHI::Software
 		}
 		Allocate(format, width, height);
 		if (data != nullptr && !pixels_.empty()) {
-			// `format_` may have been promoted (RGB8 -> RGBA8), so copy against the source's own bpp and
-			// let CopyExpandRow widen each row when the two differ
+			// `format_` may be wider than the upload (RGB8, or a render-target-widened R8/RG8), so copy
+			// against the source's own bpp and let CopyExpandRow widen each row when the two differ; for
+			// the native R8/RG8 stores the two match and the copy is a plain memcpy
 			const std::int32_t srcBpp = BytesPerPixel(format);
 			const std::int32_t dstBpp = BytesPerPixel(format_);
 			if (srcBpp == dstBpp) {
@@ -203,10 +219,34 @@ namespace nCine::RHI::Software
 	void SwTexture::GetTexImage(std::int32_t level, PixelFormat format, bool bgr, void* pixels)
 	{
 		static_cast<void>(level);
-		static_cast<void>(format);
 		static_cast<void>(bgr);
-		if (pixels != nullptr && !pixels_.empty()) {
+		if (pixels == nullptr || pixels_.empty()) {
+			return;
+		}
+		const std::int32_t dstBpp = BytesPerPixel(format);
+		if (dstBpp <= 0 || dstBpp == bytesPerPixel_) {
+			// The store already matches the requested layout (the common case - native R8/RG8 reads back
+			// exactly the bytes that were uploaded, which the promoted store never did)
 			std::memcpy(pixels, pixels_.data(), pixels_.size());
+			return;
+		}
+		// A widened store read back at the original format (RGB8 upload, or a render-target-widened
+		// R8/RG8): narrow each texel to the requested channel count (or widen with 255, matching the
+		// samplers' expansion, if the caller asks for more channels than are stored)
+		const std::size_t count = std::size_t(width_) * std::size_t(height_ > 0 ? height_ : 0);
+		const std::uint8_t* src = pixels_.data();
+		std::uint8_t* dst = static_cast<std::uint8_t*>(pixels);
+		const std::int32_t shared = (bytesPerPixel_ < dstBpp ? bytesPerPixel_ : dstBpp);
+		for (std::size_t i = 0; i < count; i++) {
+			std::int32_t c = 0;
+			for (; c < shared; c++) {
+				dst[c] = src[c];
+			}
+			for (; c < dstBpp; c++) {
+				dst[c] = 255;
+			}
+			src += bytesPerPixel_;
+			dst += dstBpp;
 		}
 	}
 

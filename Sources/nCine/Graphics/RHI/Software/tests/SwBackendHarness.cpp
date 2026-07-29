@@ -1100,7 +1100,7 @@ bool RunPaletteTest(const char* baseDir)
 			}
 			rgTexture.TexImage2D(0, PixelFormat::RG8, false, 16, 16, data.data());
 			// The engine samples RG8 index textures with `.a` mapped to green (ContentResolver sets this
-			// swizzle on every RG8 index upload); without it the promoted store's opaque byte 3 is read
+			// swizzle on every RG8 index upload); without it the expanded texel's opaque byte 3 is read
 			rgTexture.SetSwizzle(SwizzleChannel::Red, SwizzleChannel::Green, SwizzleChannel::Blue, SwizzleChannel::Green);
 		}
 

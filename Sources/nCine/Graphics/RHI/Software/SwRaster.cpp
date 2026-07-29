@@ -46,12 +46,18 @@ namespace nCine::RHI::Software
 	{
 		struct SWState
 		{
-			// Active destination color buffer (owned by the device, RGBA8, width*height*4 bytes)
+			// Active destination color buffer (owned by the device, RGBA8, width*height*4 bytes - unless
+			// is16Bit, then native-endian RGB565 at width*height*2 bytes)
 			std::uint8_t* colorBuffer = nullptr;
 			std::int32_t  bufferWidth = 0;
 			std::int32_t  bufferHeight = 0;
 			// When true the buffer is a render-target texture and rows are written bottom-up (GL convention)
 			bool          isFboTarget = false;
+#if defined(RHI_SOFTWARE_FB16)
+			// When true the buffer is the RGB565 screen framebuffer (only the screen is ever 16-bit; render
+			// targets stay RGBA8). Touched rows are staged through g_fbRowStage as RGBA8, see SwRaster.h.
+			bool          is16Bit = false;
+#endif
 
 			bool          blendingEnabled = false;
 			SwBlendFactor blendSrc = SwBlendFactor::SrcAlpha;
@@ -79,6 +85,23 @@ namespace nCine::RHI::Software
 	namespace
 	{
 		// =====================================================================
+		// Shared scanline staging buffer of the immediate quad rasterizers (axis-aligned + affine).
+		// The immediate path runs only on the main thread (the deferred tile workers rasterize through
+		// SwTileRasterizer's per-worker tile scratch instead), so one static buffer safely replaces the
+		// former two 16 KB stack arrays - stack a small-stack platform cannot afford.
+		constexpr std::int32_t MaxScanBuf = 4096;
+		alignas(32) std::uint8_t g_scanBuf[MaxScanBuf * 4];
+
+#if defined(RHI_SOFTWARE_FB16)
+		// RGBA8 staging row for the 16-bit screen framebuffer: each rasterizer row-loop iteration loads the
+		// touched span (565 -> RGBA8), runs its unchanged inner loop against it, and stores it back. Distinct
+		// from g_scanBuf, which holds gathered SOURCE texels concurrently within the same row. Main-thread-only
+		// like g_scanBuf (the deferred tile workers write RGBA8 tile scratch; only the tile copy converts).
+		// Sized for the widest surface the tile renderer accepts, so any screen row fits.
+		constexpr std::int32_t MaxFbRowStage = 8192;
+		alignas(32) std::uint8_t g_fbRowStage[MaxFbRowStage * 4];
+#endif
+
 		// SIMD-dispatched scanline blending (SrcAlpha / OneMinusSrcAlpha)
 		// =====================================================================
 		extern void DEATH_CPU_DISPATCHED_DECLARATION(blendScanlineSrcAlpha)(std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT src, std::int32_t count);
@@ -919,8 +942,10 @@ namespace nCine::RHI::Software
 
 		// Bilinear texture sample from 16.16 fixed-point UV coordinates.
 		// uFix/vFix represent pixel coords (u * texW * 65536, v * texH * 65536).
+		// texBpp is the store's bytes per texel (SwTexture stores R8/RG8 natively); narrow texels are
+		// expanded to the 4-byte working form before weighting, identical to the promoted store's bytes.
 		// Result is written to out[0..3] as RGBA bytes.
-		inline void SampleBilinearFix(const std::uint8_t* texPixels, std::int32_t texW, std::int32_t texH,
+		inline void SampleBilinearFix(const std::uint8_t* texPixels, std::int32_t texW, std::int32_t texH, std::int32_t texBpp,
 		                              std::int32_t uFix, std::int32_t vFix,
 		                              SamplerWrapping wrapS, SamplerWrapping wrapT,
 		                              std::uint8_t* out)
@@ -942,10 +967,17 @@ namespace nCine::RHI::Software
 			x0 = WrapTexelCoord(x0, texW, wrapS);
 			y0 = WrapTexelCoord(y0, texH, wrapT);
 
-			const std::uint8_t* c00 = texPixels + (static_cast<std::size_t>(y0) * texW + x0) * 4;
-			const std::uint8_t* c10 = texPixels + (static_cast<std::size_t>(y0) * texW + x1) * 4;
-			const std::uint8_t* c01 = texPixels + (static_cast<std::size_t>(y1) * texW + x0) * 4;
-			const std::uint8_t* c11 = texPixels + (static_cast<std::size_t>(y1) * texW + x1) * 4;
+			const std::uint8_t* c00 = texPixels + (static_cast<std::size_t>(y0) * texW + x0) * texBpp;
+			const std::uint8_t* c10 = texPixels + (static_cast<std::size_t>(y0) * texW + x1) * texBpp;
+			const std::uint8_t* c01 = texPixels + (static_cast<std::size_t>(y1) * texW + x0) * texBpp;
+			const std::uint8_t* c11 = texPixels + (static_cast<std::size_t>(y1) * texW + x1) * texBpp;
+			std::uint8_t e00[4], e10[4], e01[4], e11[4];
+			if DEATH_UNLIKELY(texBpp != 4) {
+				SwExpandTexel(e00, c00, texBpp); c00 = e00;
+				SwExpandTexel(e10, c10, texBpp); c10 = e10;
+				SwExpandTexel(e01, c01, texBpp); c01 = e01;
+				SwExpandTexel(e11, c11, texBpp); c11 = e11;
+			}
 
 			const std::int32_t ifx = 255 - fx;
 			const std::int32_t ify = 255 - fy;
@@ -970,7 +1002,7 @@ namespace nCine::RHI::Software
 			std::int32_t fy;  // fy (bottom row weight)
 		};
 
-		inline BilinearRowCtx PrepareBilinearRow(const std::uint8_t* texPixels, std::int32_t texW, std::int32_t texH,
+		inline BilinearRowCtx PrepareBilinearRow(const std::uint8_t* texPixels, std::int32_t texW, std::int32_t texH, std::int32_t texBpp,
 		                                         std::int32_t vFix, SamplerWrapping wrapT)
 		{
 			const std::int32_t vf = vFix - (1 << 15);
@@ -979,13 +1011,13 @@ namespace nCine::RHI::Software
 			std::int32_t y1 = WrapTexelCoord(y0 + 1, texH, wrapT);
 			y0 = WrapTexelCoord(y0, texH, wrapT);
 			return {
-				texPixels + static_cast<std::size_t>(y0) * texW * 4,
-				texPixels + static_cast<std::size_t>(y1) * texW * 4,
+				texPixels + static_cast<std::size_t>(y0) * texW * texBpp,
+				texPixels + static_cast<std::size_t>(y1) * texW * texBpp,
 				255 - fy, fy
 			};
 		}
 
-		inline void SampleBilinearFixRow(const BilinearRowCtx& row, std::int32_t texW,
+		inline void SampleBilinearFixRow(const BilinearRowCtx& row, std::int32_t texW, std::int32_t texBpp,
 		                                 std::int32_t uFix, SamplerWrapping wrapS,
 		                                 std::uint8_t* out)
 		{
@@ -995,10 +1027,17 @@ namespace nCine::RHI::Software
 			std::int32_t x1 = WrapTexelCoord(x0 + 1, texW, wrapS);
 			x0 = WrapTexelCoord(x0, texW, wrapS);
 
-			const std::uint8_t* c00 = row.row0 + x0 * 4;
-			const std::uint8_t* c10 = row.row0 + x1 * 4;
-			const std::uint8_t* c01 = row.row1 + x0 * 4;
-			const std::uint8_t* c11 = row.row1 + x1 * 4;
+			const std::uint8_t* c00 = row.row0 + x0 * texBpp;
+			const std::uint8_t* c10 = row.row0 + x1 * texBpp;
+			const std::uint8_t* c01 = row.row1 + x0 * texBpp;
+			const std::uint8_t* c11 = row.row1 + x1 * texBpp;
+			std::uint8_t e00[4], e10[4], e01[4], e11[4];
+			if DEATH_UNLIKELY(texBpp != 4) {
+				SwExpandTexel(e00, c00, texBpp); c00 = e00;
+				SwExpandTexel(e10, c10, texBpp); c10 = e10;
+				SwExpandTexel(e01, c01, texBpp); c01 = e01;
+				SwExpandTexel(e11, c11, texBpp); c11 = e11;
+			}
 
 			const std::int32_t ifx = 255 - fx;
 			const std::int32_t w00 = ifx * row.ify;
@@ -1014,7 +1053,7 @@ namespace nCine::RHI::Software
 
 		// Bilinear texture sample from float UV coordinates in [0..1] range.
 		// Used by the triangle rasterizer.
-		inline void SampleBilinearFloat(const std::uint8_t* texPixels, std::int32_t texW, std::int32_t texH,
+		inline void SampleBilinearFloat(const std::uint8_t* texPixels, std::int32_t texW, std::int32_t texH, std::int32_t texBpp,
 		                                float u, float v,
 		                                SamplerWrapping wrapS, SamplerWrapping wrapT,
 		                                std::uint8_t* out)
@@ -1035,10 +1074,17 @@ namespace nCine::RHI::Software
 			x0 = WrapTexelCoord(x0, texW, wrapS);
 			y0 = WrapTexelCoord(y0, texH, wrapT);
 
-			const std::uint8_t* c00 = texPixels + (static_cast<std::size_t>(y0) * texW + x0) * 4;
-			const std::uint8_t* c10 = texPixels + (static_cast<std::size_t>(y0) * texW + x1) * 4;
-			const std::uint8_t* c01 = texPixels + (static_cast<std::size_t>(y1) * texW + x0) * 4;
-			const std::uint8_t* c11 = texPixels + (static_cast<std::size_t>(y1) * texW + x1) * 4;
+			const std::uint8_t* c00 = texPixels + (static_cast<std::size_t>(y0) * texW + x0) * texBpp;
+			const std::uint8_t* c10 = texPixels + (static_cast<std::size_t>(y0) * texW + x1) * texBpp;
+			const std::uint8_t* c01 = texPixels + (static_cast<std::size_t>(y1) * texW + x0) * texBpp;
+			const std::uint8_t* c11 = texPixels + (static_cast<std::size_t>(y1) * texW + x1) * texBpp;
+			std::uint8_t e00[4], e10[4], e01[4], e11[4];
+			if DEATH_UNLIKELY(texBpp != 4) {
+				SwExpandTexel(e00, c00, texBpp); c00 = e00;
+				SwExpandTexel(e10, c10, texBpp); c10 = e10;
+				SwExpandTexel(e01, c01, texBpp); c01 = e01;
+				SwExpandTexel(e11, c11, texBpp); c11 = e11;
+			}
 
 			const std::int32_t ifx = 255 - fx;
 			const std::int32_t ify = 255 - fy;
@@ -1064,6 +1110,11 @@ namespace nCine::RHI::Software
 			if (ctx.vertexData != nullptr) return false;
 			if (ctx.fragmentShader != nullptr) return false;
 			if (ctx.scissorEnabled) return false;
+#if defined(RHI_SOFTWARE_FB16)
+			// The blit copies 4-byte rows verbatim; a 16-bit destination falls through to the axis-aligned
+			// quad rasterizer, whose row staging converts (fullscreen blits are rare on the direct tier)
+			if (g_state.is16Bit) return false;
+#endif
 
 			// Must be textured with white tint (pure blit)
 			if (!ctx.ff.hasTexture) return false;
@@ -1078,6 +1129,9 @@ namespace nCine::RHI::Software
 
 			const SwTexture* tex = ctx.textures[ctx.ff.textureUnit];
 			if (tex == nullptr) return false;
+			// The blit copies 4-byte rows verbatim; a native R8/RG8 store would need per-texel expansion
+			// (only screen-sized RGBA8 sources ever hit this path, so nothing real is lost)
+			if (tex->GetBytesPerPixel() != 4) return false;
 			const std::uint8_t* srcPixels = tex->GetPixels(0);
 			if (srcPixels == nullptr) return false;
 
@@ -1287,6 +1341,7 @@ namespace nCine::RHI::Software
 			const std::uint8_t* texPixels = (tex != nullptr ? tex->GetPixels(0) : nullptr);
 			const std::int32_t texW = (tex != nullptr ? tex->GetWidth()  : 0);
 			const std::int32_t texH = (tex != nullptr ? tex->GetHeight() : 0);
+			const std::int32_t texBpp = (tex != nullptr ? tex->GetBytesPerPixel() : 4);
 			const SamplerWrapping wrapS = (tex != nullptr ? tex->GetWrapS() : SamplerWrapping::ClampToEdge);
 			const SamplerWrapping wrapT = (tex != nullptr ? tex->GetWrapT() : SamplerWrapping::ClampToEdge);
 			const bool useLinear = (tex != nullptr && tex->GetMagFilter() == SamplerFilter::Linear && texW > 1 && texH > 1);
@@ -1321,15 +1376,26 @@ namespace nCine::RHI::Software
 
 			const std::int32_t scanWidth = xMax - xMin + 1;
 
-			// Stack-allocated scanline buffer for SIMD blending or direct copy
-			constexpr std::int32_t MaxScanBuf = 4096;
-			alignas(32) std::uint8_t scanBuf[MaxScanBuf * 4];
+			// Scanline staging buffer for SIMD blending or direct copy (static, main-thread-only)
+			std::uint8_t* const scanBuf = g_scanBuf;
 			const bool useScanBuf = ((useFastBlend || !useBlend) && scanWidth <= MaxScanBuf && texPixels != nullptr);
 
 			for (std::int32_t py = yMin; py <= yMax; py++, tyFix += dtyFix) {
 				// Y is flipped when the destination is a render-target texture (stored bottom-up)
 				const std::int32_t storeY = (g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py);
-				std::uint8_t* dstRow = (g_state.colorBuffer + (storeY * g_state.bufferWidth + xMin) * 4);
+				std::uint8_t* dstRow;
+#if defined(RHI_SOFTWARE_FB16)
+				std::uint8_t* fbRow16 = nullptr;
+				if (g_state.is16Bit) {
+					// Stage the touched 565 span as RGBA8; stored back at the end of the row (see SwRaster.h)
+					fbRow16 = g_state.colorBuffer + (storeY * g_state.bufferWidth + xMin) * 2;
+					SwLoadFbSpan565(g_fbRowStage, fbRow16, scanWidth);
+					dstRow = g_fbRowStage;
+				} else
+#endif
+				{
+					dstRow = (g_state.colorBuffer + (storeY * g_state.bufferWidth + xMin) * 4);
+				}
 
 				// Get source Y with wrapping
 				std::int32_t srcY;
@@ -1342,7 +1408,7 @@ namespace nCine::RHI::Software
 				} else {
 					srcY = 0;
 				}
-				const std::uint8_t* texRow = (texPixels != nullptr ? texPixels + static_cast<std::size_t>(srcY) * texW * 4 : nullptr);
+				const std::uint8_t* texRow = (texPixels != nullptr ? texPixels + static_cast<std::size_t>(srcY) * texW * texBpp : nullptr);
 
 				if DEATH_LIKELY(useScanBuf) {
 					// === Scanline buffer path: gather raw texels → callback/tint → SIMD blend ===
@@ -1352,35 +1418,36 @@ namespace nCine::RHI::Software
 						txFix = NormalizeRepeatFix(txFix, texWFix);
 					}
 
-					// Phase 1: gather RAW texels into scanBuf (no tint applied)
+					// Phase 1: gather RAW texels into scanBuf (no tint applied; narrow native stores are
+					// expanded to the 4-byte working form here, so phases 2/3 see the same bytes as ever)
 					if (useLinear && texPixels != nullptr) {
-						const BilinearRowCtx brow = PrepareBilinearRow(texPixels, texW, texH, tyFix, wrapT);
+						const BilinearRowCtx brow = PrepareBilinearRow(texPixels, texW, texH, texBpp, tyFix, wrapT);
 						for (std::int32_t i = 0; i < scanWidth; ++i) {
-							SampleBilinearFixRow(brow, texW, txFix, wrapS, &scanBuf[i * 4]);
+							SampleBilinearFixRow(brow, texW, texBpp, txFix, wrapS, &scanBuf[i * 4]);
 							txFix += dtxFix;
 						}
 					} else if DEATH_LIKELY(texRow != nullptr) {
 						if (uvSafeX && dtxFix == 65536) {
-							// 1:1 texel mapping - direct memcpy
+							// 1:1 texel mapping - direct memcpy (4-byte stores) or a SIMD expand run
 							const std::int32_t srcX = txFix >> 16;
-							std::memcpy(scanBuf, &texRow[srcX * 4], static_cast<std::size_t>(scanWidth) * 4);
+							SwExpandTexelRun(scanBuf, &texRow[srcX * texBpp], scanWidth, texBpp);
 							txFix += dtxFix * scanWidth;
 						} else if (uvSafeX) {
 							for (std::int32_t i = 0; i < scanWidth; i++) {
 								const std::int32_t srcX = txFix >> 16;
-								std::memcpy(&scanBuf[i * 4], &texRow[srcX * 4], 4);
+								SwExpandTexel(&scanBuf[i * 4], &texRow[srcX * texBpp], texBpp);
 								txFix += dtxFix;
 							}
 						} else if (useRepeatS) {
 							for (std::int32_t i = 0; i < scanWidth; i++) {
 								const std::int32_t srcX = txFix >> 16;
-								std::memcpy(&scanBuf[i * 4], &texRow[srcX * 4], 4);
+								SwExpandTexel(&scanBuf[i * 4], &texRow[srcX * texBpp], texBpp);
 								txFix = AdvanceRepeatFix(txFix, dtxFix, texWFix);
 							}
 						} else {
 							for (std::int32_t i = 0; i < scanWidth; i++) {
 								const std::int32_t srcX = WrapTexelFix(txFix, texW, wrapS);
-								std::memcpy(&scanBuf[i * 4], &texRow[srcX * 4], 4);
+								SwExpandTexel(&scanBuf[i * 4], &texRow[srcX * texBpp], texBpp);
 								txFix += dtxFix;
 							}
 						}
@@ -1427,7 +1494,7 @@ namespace nCine::RHI::Software
 						std::int32_t sR, sG, sB, sA;
 						if (useLinear && texPixels != nullptr) {
 							std::uint8_t raw[4];
-							SampleBilinearFix(texPixels, texW, texH, txFix, tyFix, wrapS, wrapT, raw);
+							SampleBilinearFix(texPixels, texW, texH, texBpp, txFix, tyFix, wrapS, wrapT, raw);
 							txFix += dtxFix;
 							sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 						} else if (texRow != nullptr) {
@@ -1442,8 +1509,9 @@ namespace nCine::RHI::Software
 								srcX = WrapTexelFix(txFix, texW, wrapS);
 								txFix += dtxFix;
 							}
-							const std::uint8_t* src = &texRow[srcX * 4];
-							sR = src[0]; sG = src[1]; sB = src[2]; sA = src[3];
+							std::uint8_t raw[4];
+							SwExpandTexel(raw, &texRow[srcX * texBpp], texBpp);
+							sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 						} else {
 							sR = 255; sG = 255; sB = 255; sA = 255;
 							txFix += dtxFix;
@@ -1504,6 +1572,12 @@ namespace nCine::RHI::Software
 						}
 					}
 				}
+
+#if defined(RHI_SOFTWARE_FB16)
+				if (fbRow16 != nullptr) {
+					SwStoreFbSpan565(fbRow16, g_fbRowStage, scanWidth);
+				}
+#endif
 			}
 		}
 
@@ -1566,6 +1640,7 @@ namespace nCine::RHI::Software
 			const std::uint8_t* texPixels = (tex != nullptr ? tex->GetPixels(0) : nullptr);
 			const std::int32_t texW = (tex != nullptr ? tex->GetWidth() : 0);
 			const std::int32_t texH = (tex != nullptr ? tex->GetHeight() : 0);
+			const std::int32_t texBpp = (tex != nullptr ? tex->GetBytesPerPixel() : 4);
 			const SamplerWrapping wrapS = (tex != nullptr ? tex->GetWrapS() : SamplerWrapping::ClampToEdge);
 			const SamplerWrapping wrapT = (tex != nullptr ? tex->GetWrapT() : SamplerWrapping::ClampToEdge);
 			const bool useLinear = (tex != nullptr && tex->GetMagFilter() == SamplerFilter::Linear && texW > 1 && texH > 1);
@@ -1584,7 +1659,20 @@ namespace nCine::RHI::Software
 				float w0 = w0_row, w1 = w1_row, w2 = w2_row;
 				// Y is flipped when the destination is a render-target texture (stored bottom-up)
 				const std::int32_t storeY = (g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py);
-				std::uint8_t* dstRow = (g_state.colorBuffer + (storeY * g_state.bufferWidth + minX) * 4);
+				std::uint8_t* dstRow;
+#if defined(RHI_SOFTWARE_FB16)
+				std::uint8_t* fbRow16 = nullptr;
+				if (g_state.is16Bit) {
+					// Stage the bounding-box 565 span as RGBA8; the lossless round trip leaves untouched
+					// (coverage-rejected) pixels unchanged when stored back at the end of the row
+					fbRow16 = g_state.colorBuffer + (storeY * g_state.bufferWidth + minX) * 2;
+					SwLoadFbSpan565(g_fbRowStage, fbRow16, maxX - minX + 1);
+					dstRow = g_fbRowStage;
+				} else
+#endif
+				{
+					dstRow = (g_state.colorBuffer + (storeY * g_state.bufferWidth + minX) * 4);
+				}
 
 				for (std::int32_t px = minX; px <= maxX; ++px, dstRow += 4, w0 += w0_dx, w1 += w1_dx, w2 += w2_dx) {
 					if ((w0 < 0.0f || (w0 == 0.0f && !incl0)) ||
@@ -1604,15 +1692,16 @@ namespace nCine::RHI::Software
 						u = WrapUV(u, wrapS);
 						vv = WrapUV(vv, wrapT);
 						std::uint8_t raw[4];
-						SampleBilinearFloat(texPixels, texW, texH, u, vv, wrapS, wrapT, raw);
+						SampleBilinearFloat(texPixels, texW, texH, texBpp, u, vv, wrapS, wrapT, raw);
 						sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 					} else if (texPixels != nullptr) {
 						u = WrapUV(u, wrapS);
 						vv = WrapUV(vv, wrapT);
 						const std::int32_t srcX = std::max(0, std::min(texW - 1, static_cast<std::int32_t>(u * (texW - 1) + 0.5f)));
 						const std::int32_t srcY = std::max(0, std::min(texH - 1, static_cast<std::int32_t>(vv * (texH - 1) + 0.5f)));
-						const std::uint8_t* src = texPixels + (srcY * texW + srcX) * 4;
-						sR = src[0]; sG = src[1]; sB = src[2]; sA = src[3];
+						std::uint8_t raw[4];
+						SwExpandTexel(raw, texPixels + (srcY * texW + srcX) * texBpp, texBpp);
+						sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 					} else {
 						sR = 255; sG = 255; sB = 255; sA = 255;
 					}
@@ -1672,6 +1761,11 @@ namespace nCine::RHI::Software
 					}
 				}
 
+#if defined(RHI_SOFTWARE_FB16)
+				if (fbRow16 != nullptr) {
+					SwStoreFbSpan565(fbRow16, g_fbRowStage, maxX - minX + 1);
+				}
+#endif
 				w0_row += w0_dy;
 				w1_row += w1_dy;
 				w2_row += w2_dy;
@@ -1741,6 +1835,7 @@ namespace nCine::RHI::Software
 			const std::uint8_t* texPixels = (tex != nullptr ? tex->GetPixels(0) : nullptr);
 			const std::int32_t texW = (tex != nullptr ? tex->GetWidth() : 0);
 			const std::int32_t texH = (tex != nullptr ? tex->GetHeight() : 0);
+			const std::int32_t texBpp = (tex != nullptr ? tex->GetBytesPerPixel() : 4);
 			const SamplerWrapping wrapS = (tex != nullptr ? tex->GetWrapS() : SamplerWrapping::ClampToEdge);
 			const SamplerWrapping wrapT = (tex != nullptr ? tex->GetWrapT() : SamplerWrapping::ClampToEdge);
 			const bool useLinear = (tex != nullptr && tex->GetMagFilter() == SamplerFilter::Linear && texW > 1 && texH > 1);
@@ -1776,9 +1871,8 @@ namespace nCine::RHI::Software
 			float dvdx = dv_s * ds_dx + dv_t * dt_dx;
 			float dvdy = dv_s * ds_dy + dv_t * dt_dy;
 
-			// Scanline buffer for SIMD blending
-			constexpr std::int32_t MaxScanBuf = 4096;
-			alignas(32) std::uint8_t scanBuf[MaxScanBuf * 4];
+			// Scanline staging buffer for SIMD blending (static, main-thread-only)
+			std::uint8_t* const scanBuf = g_scanBuf;
 
 			// Edge functions for triangle 1 (v0, v1, v2)
 			const float t1_w0_dx = v1.y - v2.y, t1_w0_dy = v2.x - v1.x;
@@ -1879,7 +1973,7 @@ namespace nCine::RHI::Software
 					// Gather texels into scanline buffer
 					if (useLinear) {
 						for (std::int32_t i = 0; i < scanWidth; i++) {
-							SampleBilinearFix(texPixels, texW, texH, uFix, vFix, wrapS, wrapT, &scanBuf[i * 4]);
+							SampleBilinearFix(texPixels, texW, texH, texBpp, uFix, vFix, wrapS, wrapT, &scanBuf[i * 4]);
 							uFix += dudxFix;
 							vFix += dvdxFix;
 						}
@@ -1887,8 +1981,7 @@ namespace nCine::RHI::Software
 						for (std::int32_t i = 0; i < scanWidth; i++) {
 							std::int32_t srcX = WrapTexelFix(uFix, texW, wrapS);
 							std::int32_t srcY = WrapTexelFix(vFix, texH, wrapT);
-							const std::uint8_t* src = texPixels + (static_cast<std::size_t>(srcY) * texW + srcX) * 4;
-							std::memcpy(&scanBuf[i * 4], src, 4);
+							SwExpandTexel(&scanBuf[i * 4], texPixels + (static_cast<std::size_t>(srcY) * texW + srcX) * texBpp, texBpp);
 							uFix += dudxFix;
 							vFix += dvdxFix;
 						}
@@ -1921,15 +2014,42 @@ namespace nCine::RHI::Software
 					}
 
 					// Blend or copy to framebuffer
-					std::uint8_t* dstRow = g_state.colorBuffer + (storeY * g_state.bufferWidth + xLeft) * 4;
+					std::uint8_t* dstRow;
+#if defined(RHI_SOFTWARE_FB16)
+					std::uint8_t* fbRow16 = nullptr;
+					if (g_state.is16Bit) {
+						fbRow16 = g_state.colorBuffer + (storeY * g_state.bufferWidth + xLeft) * 2;
+						SwLoadFbSpan565(g_fbRowStage, fbRow16, scanWidth);
+						dstRow = g_fbRowStage;
+					} else
+#endif
+					{
+						dstRow = g_state.colorBuffer + (storeY * g_state.bufferWidth + xLeft) * 4;
+					}
 					if (useFastBlend) {
 						blendScanlineSrcAlpha(dstRow, scanBuf, scanWidth);
 					} else {
 						std::memcpy(dstRow, scanBuf, static_cast<std::size_t>(scanWidth) * 4);
 					}
+#if defined(RHI_SOFTWARE_FB16)
+					if (fbRow16 != nullptr) {
+						SwStoreFbSpan565(fbRow16, g_fbRowStage, scanWidth);
+					}
+#endif
 				} else {
 					// Per-pixel path (generic blend modes or no texture)
-					std::uint8_t* dstRow = g_state.colorBuffer + (storeY * g_state.bufferWidth + xLeft) * 4;
+					std::uint8_t* dstRow;
+#if defined(RHI_SOFTWARE_FB16)
+					std::uint8_t* fbRow16 = nullptr;
+					if (g_state.is16Bit) {
+						fbRow16 = g_state.colorBuffer + (storeY * g_state.bufferWidth + xLeft) * 2;
+						SwLoadFbSpan565(g_fbRowStage, fbRow16, xRight - xLeft + 1);
+						dstRow = g_fbRowStage;
+					} else
+#endif
+					{
+						dstRow = g_state.colorBuffer + (storeY * g_state.bufferWidth + xLeft) * 4;
+					}
 					float u = uStart, vv = vStart;
 
 					for (std::int32_t px = xLeft; px <= xRight; px++, dstRow += 4) {
@@ -1938,15 +2058,16 @@ namespace nCine::RHI::Software
 							float wu = WrapUV(u, wrapS);
 							float wv = WrapUV(vv, wrapT);
 							std::uint8_t raw[4];
-							SampleBilinearFloat(texPixels, texW, texH, wu, wv, wrapS, wrapT, raw);
+							SampleBilinearFloat(texPixels, texW, texH, texBpp, wu, wv, wrapS, wrapT, raw);
 							sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 						} else if (texPixels != nullptr) {
 							float wu = WrapUV(u, wrapS);
 							float wv = WrapUV(vv, wrapT);
 							std::int32_t srcX = std::max(0, std::min(texW - 1, static_cast<std::int32_t>(wu * (texW - 1) + 0.5f)));
 							std::int32_t srcY = std::max(0, std::min(texH - 1, static_cast<std::int32_t>(wv * (texH - 1) + 0.5f)));
-							const std::uint8_t* src = texPixels + (srcY * texW + srcX) * 4;
-							sR = src[0]; sG = src[1]; sB = src[2]; sA = src[3];
+							std::uint8_t raw[4];
+							SwExpandTexel(raw, texPixels + (srcY * texW + srcX) * texBpp, texBpp);
+							sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 						} else {
 							sR = 255; sG = 255; sB = 255; sA = 255;
 						}
@@ -2003,6 +2124,12 @@ namespace nCine::RHI::Software
 							dstRow[3] = static_cast<std::uint8_t>(sA);
 						}
 					}
+
+#if defined(RHI_SOFTWARE_FB16)
+					if (fbRow16 != nullptr) {
+						SwStoreFbSpan565(fbRow16, g_fbRowStage, xRight - xLeft + 1);
+					}
+#endif
 				}
 			}
 		}
@@ -2040,6 +2167,7 @@ namespace nCine::RHI::Software
 			const std::uint8_t* texPixels = (tex != nullptr ? tex->GetPixels(0) : nullptr);
 			const std::int32_t texW = (tex != nullptr ? tex->GetWidth() : 0);
 			const std::int32_t texH = (tex != nullptr ? tex->GetHeight() : 0);
+			const std::int32_t texBpp = (tex != nullptr ? tex->GetBytesPerPixel() : 4);
 			if DEATH_UNLIKELY(texPixels != nullptr && (texW <= 0 || texH <= 0)) {
 				texPixels = nullptr;	// Malformed texture - treat as untextured
 			}
@@ -2078,15 +2206,16 @@ namespace nCine::RHI::Software
 					u = WrapUV(u, wrapS);
 					vv = WrapUV(vv, wrapT);
 					std::uint8_t raw[4];
-					SampleBilinearFloat(texPixels, texW, texH, u, vv, wrapS, wrapT, raw);
+					SampleBilinearFloat(texPixels, texW, texH, texBpp, u, vv, wrapS, wrapT, raw);
 					sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 				} else if (texPixels != nullptr) {
 					u = WrapUV(u, wrapS);
 					vv = WrapUV(vv, wrapT);
 					const std::int32_t srcX = std::max(0, std::min(texW - 1, static_cast<std::int32_t>(u * (texW - 1) + 0.5f)));
 					const std::int32_t srcY = std::max(0, std::min(texH - 1, static_cast<std::int32_t>(vv * (texH - 1) + 0.5f)));
-					const std::uint8_t* src = texPixels + (srcY * texW + srcX) * 4;
-					sR = src[0]; sG = src[1]; sB = src[2]; sA = src[3];
+					std::uint8_t raw[4];
+					SwExpandTexel(raw, texPixels + (srcY * texW + srcX) * texBpp, texBpp);
+					sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 				} else {
 					sR = 255; sG = 255; sB = 255; sA = 255;
 				}
@@ -2118,7 +2247,22 @@ namespace nCine::RHI::Software
 
 				// Y is flipped when the destination is a render-target texture (stored bottom-up)
 				const std::int32_t storeY = (g_state.isFboTarget ? (g_state.bufferHeight - 1 - py) : py);
-				std::uint8_t* dstPx = g_state.colorBuffer + (static_cast<std::size_t>(storeY) * g_state.bufferWidth + px) * 4;
+				std::uint8_t* dstPx;
+#if defined(RHI_SOFTWARE_FB16)
+				std::uint8_t fbPxStage[4];
+				std::uint8_t* fbPx16 = nullptr;
+				if (g_state.is16Bit) {
+					// Stage the single 565 pixel as RGBA8; packed back after the write below
+					fbPx16 = g_state.colorBuffer + (static_cast<std::size_t>(storeY) * g_state.bufferWidth + px) * 2;
+					std::uint16_t fbPx;
+					std::memcpy(&fbPx, fbPx16, 2);
+					SwUnpack565(fbPx, fbPxStage);
+					dstPx = fbPxStage;
+				} else
+#endif
+				{
+					dstPx = g_state.colorBuffer + (static_cast<std::size_t>(storeY) * g_state.bufferWidth + px) * 4;
+				}
 
 				if (useBlend) {
 					if (sA == 0) {
@@ -2146,6 +2290,13 @@ namespace nCine::RHI::Software
 					dstPx[2] = static_cast<std::uint8_t>(sB);
 					dstPx[3] = static_cast<std::uint8_t>(sA);
 				}
+
+#if defined(RHI_SOFTWARE_FB16)
+				if (fbPx16 != nullptr) {
+					const std::uint16_t fbPx = SwPack565(fbPxStage);
+					std::memcpy(fbPx16, &fbPx, 2);
+				}
+#endif
 			}
 		}
 
@@ -2225,6 +2376,11 @@ namespace nCine::RHI::Software
 		g_state.bufferWidth = width;
 		g_state.bufferHeight = height;
 		g_state.isFboTarget = isFboTarget;
+#if defined(RHI_SOFTWARE_FB16)
+		// On the software backend a non-FBO target is the screen framebuffer, which is the only 16-bit
+		// surface in this mode (render-target textures stay RGBA8)
+		g_state.is16Bit = !isFboTarget;
+#endif
 
 		// Keep the tile renderer pointed at the same surface. Initialize() is idempotent (spins up the worker
 		// pool once); SetTargetBuffer() early-returns when the target is unchanged (the device calls this
@@ -2278,6 +2434,17 @@ namespace nCine::RHI::Software
 		const std::uint8_t bb = static_cast<std::uint8_t>(b * 255.0f);
 		const std::uint8_t ab = static_cast<std::uint8_t>(a * 255.0f);
 		const std::int32_t totalPixels = g_state.bufferWidth * g_state.bufferHeight;
+#if defined(RHI_SOFTWARE_FB16)
+		if (g_state.is16Bit) {
+			const std::uint8_t rgba[4] = { rb, gb, bb, ab };
+			const std::uint16_t pattern16 = SwPack565(rgba);
+			std::uint16_t* dst16 = reinterpret_cast<std::uint16_t*>(g_state.colorBuffer);
+			for (std::int32_t i = 0; i < totalPixels; ++i) {
+				dst16[i] = pattern16;
+			}
+			return;
+		}
+#endif
 		if (rb == gb && gb == bb && bb == ab) {
 			// All channels identical: single memset
 			std::memset(g_state.colorBuffer, rb, static_cast<std::size_t>(totalPixels) * 4);

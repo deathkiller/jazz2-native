@@ -2,6 +2,7 @@
 #include "../../PreferencesCache.h"
 
 #include "../../../nCine/I18n.h"
+#include "../../../nCine/Graphics/RHI/RhiFwd.h"	// RHI_CAP_POSTPROCESSING (a header macro, not a build define)
 
 namespace Jazz2::UI::Menu
 {
@@ -45,9 +46,9 @@ namespace Jazz2::UI::Menu
 
 		// TRANSLATORS: Menu item in Options > Graphics > Rescale Mode section
 		add(RescaleMode::None, _("None / Pixel-perfect"));
-#if !defined(WITH_RHI_SOFTWARE)
-		// The software backend has no rescale shader passes (see UpscaleRenderPass), only the default
-		// pixel-perfect mode works there — the section itself is already hidden in GraphicsOptionsSection,
+#if defined(RHI_CAP_POSTPROCESSING)
+		// The direct rendering tier has no rescale shader passes (see UpscaleRenderPass), only the default
+		// pixel-perfect mode works there - the section itself is already hidden in GraphicsOptionsSection,
 		// this is just defense in depth
 		add(RescaleMode::CleanEdge, "CleanEdge"_s);
 		add(RescaleMode::HQ2x, "HQ2×"_s);

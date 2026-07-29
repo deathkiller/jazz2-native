@@ -119,7 +119,7 @@ namespace nCine::RHI::Software
 			std::int32_t fy;
 		};
 
-		static inline BilinearRowCtx PrepareBilinearRow(const std::uint8_t* texPixels, std::int32_t texW, std::int32_t texH,
+		static inline BilinearRowCtx PrepareBilinearRow(const std::uint8_t* texPixels, std::int32_t texW, std::int32_t texH, std::int32_t texBpp,
 		                                                std::int32_t vFix, SamplerWrapping wrapT)
 		{
 			const std::int32_t vf = vFix - (1 << 15);
@@ -128,13 +128,13 @@ namespace nCine::RHI::Software
 			std::int32_t y1 = WrapTexelCoord(y0 + 1, texH, wrapT);
 			y0 = WrapTexelCoord(y0, texH, wrapT);
 			return {
-				texPixels + static_cast<std::size_t>(y0) * texW * 4,
-				texPixels + static_cast<std::size_t>(y1) * texW * 4,
+				texPixels + static_cast<std::size_t>(y0) * texW * texBpp,
+				texPixels + static_cast<std::size_t>(y1) * texW * texBpp,
 				255 - fy, fy
 			};
 		}
 
-		static inline void SampleBilinearFixRow(const BilinearRowCtx& row, std::int32_t texW,
+		static inline void SampleBilinearFixRow(const BilinearRowCtx& row, std::int32_t texW, std::int32_t texBpp,
 		                                        std::int32_t uFix, SamplerWrapping wrapS,
 		                                        std::uint8_t* out)
 		{
@@ -144,10 +144,17 @@ namespace nCine::RHI::Software
 			std::int32_t x1 = WrapTexelCoord(x0 + 1, texW, wrapS);
 			x0 = WrapTexelCoord(x0, texW, wrapS);
 
-			const std::uint8_t* c00 = row.row0 + x0 * 4;
-			const std::uint8_t* c10 = row.row0 + x1 * 4;
-			const std::uint8_t* c01 = row.row1 + x0 * 4;
-			const std::uint8_t* c11 = row.row1 + x1 * 4;
+			const std::uint8_t* c00 = row.row0 + x0 * texBpp;
+			const std::uint8_t* c10 = row.row0 + x1 * texBpp;
+			const std::uint8_t* c01 = row.row1 + x0 * texBpp;
+			const std::uint8_t* c11 = row.row1 + x1 * texBpp;
+			std::uint8_t e00[4], e10[4], e01[4], e11[4];
+			if DEATH_UNLIKELY(texBpp != 4) {
+				SwExpandTexel(e00, c00, texBpp); c00 = e00;
+				SwExpandTexel(e10, c10, texBpp); c10 = e10;
+				SwExpandTexel(e01, c01, texBpp); c01 = e01;
+				SwExpandTexel(e11, c11, texBpp); c11 = e11;
+			}
 
 			const std::int32_t ifx = 255 - fx;
 			const std::int32_t w00 = ifx * row.ify;
@@ -163,7 +170,7 @@ namespace nCine::RHI::Software
 
 		// Float-coordinate bilinear sample for the generic triangle path - a verbatim copy of
 		// SwRaster.cpp's SampleBilinearFloat (see WrapUV above for why the copies must match).
-		static inline void SampleBilinearFloat(const std::uint8_t* texPixels, std::int32_t texW, std::int32_t texH,
+		static inline void SampleBilinearFloat(const std::uint8_t* texPixels, std::int32_t texW, std::int32_t texH, std::int32_t texBpp,
 		                                       float u, float v,
 		                                       SamplerWrapping wrapS, SamplerWrapping wrapT,
 		                                       std::uint8_t* out)
@@ -184,10 +191,17 @@ namespace nCine::RHI::Software
 			x0 = WrapTexelCoord(x0, texW, wrapS);
 			y0 = WrapTexelCoord(y0, texH, wrapT);
 
-			const std::uint8_t* c00 = texPixels + (static_cast<std::size_t>(y0) * texW + x0) * 4;
-			const std::uint8_t* c10 = texPixels + (static_cast<std::size_t>(y0) * texW + x1) * 4;
-			const std::uint8_t* c01 = texPixels + (static_cast<std::size_t>(y1) * texW + x0) * 4;
-			const std::uint8_t* c11 = texPixels + (static_cast<std::size_t>(y1) * texW + x1) * 4;
+			const std::uint8_t* c00 = texPixels + (static_cast<std::size_t>(y0) * texW + x0) * texBpp;
+			const std::uint8_t* c10 = texPixels + (static_cast<std::size_t>(y0) * texW + x1) * texBpp;
+			const std::uint8_t* c01 = texPixels + (static_cast<std::size_t>(y1) * texW + x0) * texBpp;
+			const std::uint8_t* c11 = texPixels + (static_cast<std::size_t>(y1) * texW + x1) * texBpp;
+			std::uint8_t e00[4], e10[4], e01[4], e11[4];
+			if DEATH_UNLIKELY(texBpp != 4) {
+				SwExpandTexel(e00, c00, texBpp); c00 = e00;
+				SwExpandTexel(e10, c10, texBpp); c10 = e10;
+				SwExpandTexel(e01, c01, texBpp); c01 = e01;
+				SwExpandTexel(e11, c11, texBpp); c11 = e11;
+			}
 
 			const std::int32_t ifx = 255 - fx;
 			const std::int32_t ify = 255 - fy;
@@ -202,7 +216,7 @@ namespace nCine::RHI::Software
 			out[3] = static_cast<std::uint8_t>((c00[3] * w00 + c10[3] * w10 + c01[3] * w01 + c11[3] * w11) >> 16);
 		}
 
-		static inline void SampleBilinearFix(const std::uint8_t* texPixels, std::int32_t texW, std::int32_t texH,
+		static inline void SampleBilinearFix(const std::uint8_t* texPixels, std::int32_t texW, std::int32_t texH, std::int32_t texBpp,
 		                                     std::int32_t uFix, std::int32_t vFix,
 		                                     SamplerWrapping wrapS, SamplerWrapping wrapT,
 		                                     std::uint8_t* out)
@@ -218,10 +232,17 @@ namespace nCine::RHI::Software
 			x0 = WrapTexelCoord(x0, texW, wrapS);
 			y0 = WrapTexelCoord(y0, texH, wrapT);
 
-			const std::uint8_t* c00 = texPixels + (static_cast<std::size_t>(y0) * texW + x0) * 4;
-			const std::uint8_t* c10 = texPixels + (static_cast<std::size_t>(y0) * texW + x1) * 4;
-			const std::uint8_t* c01 = texPixels + (static_cast<std::size_t>(y1) * texW + x0) * 4;
-			const std::uint8_t* c11 = texPixels + (static_cast<std::size_t>(y1) * texW + x1) * 4;
+			const std::uint8_t* c00 = texPixels + (static_cast<std::size_t>(y0) * texW + x0) * texBpp;
+			const std::uint8_t* c10 = texPixels + (static_cast<std::size_t>(y0) * texW + x1) * texBpp;
+			const std::uint8_t* c01 = texPixels + (static_cast<std::size_t>(y1) * texW + x0) * texBpp;
+			const std::uint8_t* c11 = texPixels + (static_cast<std::size_t>(y1) * texW + x1) * texBpp;
+			std::uint8_t f00[4], f10[4], f01[4], f11[4];
+			if DEATH_UNLIKELY(texBpp != 4) {
+				SwExpandTexel(f00, c00, texBpp); c00 = f00;
+				SwExpandTexel(f10, c10, texBpp); c10 = f10;
+				SwExpandTexel(f01, c01, texBpp); c01 = f01;
+				SwExpandTexel(f11, c11, texBpp); c11 = f11;
+			}
 
 			const std::int32_t ifx = 255 - fx;
 			const std::int32_t ify = 255 - fy;
@@ -290,6 +311,37 @@ namespace nCine::RHI::Software
 			} else {
 				for (std::int32_t i = 0; i < width; i++) {
 					ApplyPaletteLutPixel(lut, &scanBuf[i * 4]);
+				}
+			}
+		}
+
+		// Fused gather + palette LUT for one texel of a nearest-sampled PaletteRemap draw: reads the index
+		// (and source-alpha) byte straight from the texture STORE and writes the final LUT'd pixel, skipping
+		// the intermediate 4-byte expansion the two-pass gather-then-ApplyPaletteLut pair produced. The
+		// store-byte selection mirrors SwExpandTexel exactly (a LUT byte offset beyond the store width reads
+		// the constant 255 fill), so the output is bit-identical to the two-pass path for every store width.
+		static DEATH_ALWAYS_INLINE void FusedPaletteLutTexel(const SwPaletteLut& lut, const std::uint8_t* DEATH_RESTRICT src,
+		                                                     std::int32_t texBpp, std::uint8_t* DEATH_RESTRICT dst)
+		{
+			const std::uint8_t idx = (lut.indexByteOffset < texBpp ? src[lut.indexByteOffset] : std::uint8_t(255));
+			const std::uint8_t* entry = lut.packed[idx];
+			if (lut.alphaByteOffset < 0) {
+				// Constant source alpha: the entire output pixel is the 4-byte table entry
+				std::memcpy(dst, entry, 4);
+			} else {
+				const std::uint8_t alphaByte = (lut.alphaByteOffset < texBpp ? src[lut.alphaByteOffset] : std::uint8_t(255));
+				dst[0] = entry[0];
+				dst[1] = entry[1];
+				dst[2] = entry[2];
+				if (alphaByte == 255) {
+					dst[3] = entry[3];
+				} else if (alphaByte == 0) {
+					dst[3] = 0;
+				} else {
+					// Exactly the fragment's (palette.a * src.a) * tint.a, quantized like packColor
+					const float palA = lut.palAlphaByte[idx] / 255.0f;
+					const float srcA = alphaByte / 255.0f;
+					dst[3] = SwQuantizeColor((palA * srcA) * lut.tintAlpha);
 				}
 			}
 		}
@@ -392,6 +444,7 @@ namespace nCine::RHI::Software
 			prep.texPixels = (tex != nullptr ? tex->GetPixels(0) : nullptr);
 			prep.texW = (tex != nullptr ? tex->GetWidth() : 0);
 			prep.texH = (tex != nullptr ? tex->GetHeight() : 0);
+			prep.texBpp = (tex != nullptr ? tex->GetBytesPerPixel() : 4);
 			prep.wrapS = (tex != nullptr ? tex->GetWrapS() : SamplerWrapping::ClampToEdge);
 			prep.wrapT = (tex != nullptr ? tex->GetWrapT() : SamplerWrapping::ClampToEdge);
 			prep.useLinear = (tex != nullptr && tex->GetMagFilter() == SamplerFilter::Linear && prep.texW > 1 && prep.texH > 1);
@@ -534,6 +587,7 @@ namespace nCine::RHI::Software
 			const std::uint8_t* texPixels = prep.texPixels;
 			const std::int32_t texW = prep.texW;
 			const std::int32_t texH = prep.texH;
+			const std::int32_t texBpp = prep.texBpp;
 			const SamplerWrapping wrapS = prep.wrapS;
 			const SamplerWrapping wrapT = prep.wrapT;
 			const bool useLinear = prep.useLinear;
@@ -609,12 +663,12 @@ namespace nCine::RHI::Software
 						? WrapTexelFix(tyFix, texH, SamplerWrapping::Repeat)
 						: WrapTexelFix(tyFix, texH, wrapT);
 				}
-				const std::uint8_t* texRow = (texPixels != nullptr ? texPixels + static_cast<std::size_t>(srcY) * texW * 4 : nullptr);
+				const std::uint8_t* texRow = (texPixels != nullptr ? texPixels + static_cast<std::size_t>(srcY) * texW * texBpp : nullptr);
 
 #if defined(DEATH_TARGET_ARM)
 				// Prefetch the next texture row
 				if (texPixels != nullptr) {
-					__builtin_prefetch(texPixels + static_cast<std::size_t>(WrapTexelFix(tyFix + dtyFix, texH, wrapT)) * texW * 4, 0, 1);
+					__builtin_prefetch(texPixels + static_cast<std::size_t>(WrapTexelFix(tyFix + dtyFix, texH, wrapT)) * texW * texBpp, 0, 1);
 				}
 #endif
 
@@ -624,34 +678,71 @@ namespace nCine::RHI::Software
 						txFix = NormalizeRepeatFix(txFix, texWFix);
 					}
 
-					// Phase 1: gather texels
-					if (useLinear) {
-						const BilinearRowCtx brow = PrepareBilinearRow(texPixels, texW, texH, tyFix, wrapT);
-						for (std::int32_t i = 0; i < scanWidth; ++i) {
-							SampleBilinearFixRow(brow, texW, txFix, wrapS, &scanBuf[i * 4]);
-							txFix += dtxFix;
-						}
-					} else if (texRow != nullptr) {
+					// Phases 1+2 fused for PaletteRemap: gather the index byte straight from the store and
+					// write the final LUT'd pixel in one pass - a native R8 index draw (tile layers, most
+					// sprites) reads 1 byte and writes 4 per pixel instead of expand-4 + re-read-4 + LUT.
+					// AcquirePaletteLut guarantees the guards (nearest sampling, a bound non-empty texture),
+					// they are re-checked only so an impossible state falls back to the generic path.
+					if DEATH_UNLIKELY(ctx.paletteLut != nullptr && texRow != nullptr && !useLinear) {
+						const SwPaletteLut& lut = *ctx.paletteLut;
 						if (uvSafeX && dtxFix == 65536) {
 							// uvSafeX guarantees (srcX + scanWidth - 1) < texW, so the full scanline is in-bounds
 							const std::int32_t srcX = std::max(0, std::min(texW - 1, txFix >> 16));
-							std::memcpy(scanBuf, &texRow[srcX * 4], static_cast<std::size_t>(scanWidth) * 4);
+							const std::uint8_t* src = &texRow[srcX * texBpp];
+							for (std::int32_t i = 0; i < scanWidth; i++) {
+								FusedPaletteLutTexel(lut, src + i * texBpp, texBpp, &scanBuf[i * 4]);
+							}
 						} else if (uvSafeX) {
 							for (std::int32_t i = 0; i < scanWidth; i++) {
 								const std::int32_t srcX = std::max(0, std::min(texW - 1, txFix >> 16));
-								std::memcpy(&scanBuf[i * 4], &texRow[srcX * 4], 4);
+								FusedPaletteLutTexel(lut, &texRow[srcX * texBpp], texBpp, &scanBuf[i * 4]);
 								txFix += dtxFix;
 							}
 						} else if (useRepeatS) {
 							for (std::int32_t i = 0; i < scanWidth; i++) {
 								const std::int32_t srcX = txFix >> 16;
-								std::memcpy(&scanBuf[i * 4], &texRow[srcX * 4], 4);
+								FusedPaletteLutTexel(lut, &texRow[srcX * texBpp], texBpp, &scanBuf[i * 4]);
 								txFix = AdvanceRepeatFix(txFix, dtxFix, texWFix);
 							}
 						} else {
 							for (std::int32_t i = 0; i < scanWidth; i++) {
 								const std::int32_t srcX = WrapTexelFix(txFix, texW, wrapS);
-								std::memcpy(&scanBuf[i * 4], &texRow[srcX * 4], 4);
+								FusedPaletteLutTexel(lut, &texRow[srcX * texBpp], texBpp, &scanBuf[i * 4]);
+								txFix += dtxFix;
+							}
+						}
+						goto ScanlineReady;
+					}
+
+					// Phase 1: gather texels (narrow native stores expand to the 4-byte working form here)
+					if (useLinear) {
+						const BilinearRowCtx brow = PrepareBilinearRow(texPixels, texW, texH, texBpp, tyFix, wrapT);
+						for (std::int32_t i = 0; i < scanWidth; ++i) {
+							SampleBilinearFixRow(brow, texW, texBpp, txFix, wrapS, &scanBuf[i * 4]);
+							txFix += dtxFix;
+						}
+					} else if (texRow != nullptr) {
+						if (uvSafeX && dtxFix == 65536) {
+							// uvSafeX guarantees (srcX + scanWidth - 1) < texW, so the full scanline is
+							// in-bounds; direct memcpy (4-byte stores) or a SIMD expand run
+							const std::int32_t srcX = std::max(0, std::min(texW - 1, txFix >> 16));
+							SwExpandTexelRun(scanBuf, &texRow[srcX * texBpp], scanWidth, texBpp);
+						} else if (uvSafeX) {
+							for (std::int32_t i = 0; i < scanWidth; i++) {
+								const std::int32_t srcX = std::max(0, std::min(texW - 1, txFix >> 16));
+								SwExpandTexel(&scanBuf[i * 4], &texRow[srcX * texBpp], texBpp);
+								txFix += dtxFix;
+							}
+						} else if (useRepeatS) {
+							for (std::int32_t i = 0; i < scanWidth; i++) {
+								const std::int32_t srcX = txFix >> 16;
+								SwExpandTexel(&scanBuf[i * 4], &texRow[srcX * texBpp], texBpp);
+								txFix = AdvanceRepeatFix(txFix, dtxFix, texWFix);
+							}
+						} else {
+							for (std::int32_t i = 0; i < scanWidth; i++) {
+								const std::int32_t srcX = WrapTexelFix(txFix, texW, wrapS);
+								SwExpandTexel(&scanBuf[i * 4], &texRow[srcX * texBpp], texBpp);
 								txFix += dtxFix;
 							}
 						}
@@ -659,9 +750,9 @@ namespace nCine::RHI::Software
 
 					// Phase 2: palette LUT, fragment shader or tint
 					if DEATH_UNLIKELY(ctx.paletteLut != nullptr) {
-						// PaletteRemap fast path: the gather above already fetched the raw index texels, so
-						// each pixel is a table lookup (the generic fragment would re-sample and redo the
-						// palette math per pixel). Phase 3 below blends the result unchanged.
+						// PaletteRemap fallback for states the fused path above declined (it cannot occur for
+						// a LUT the submit-time validation accepted; kept so the two-pass result is always
+						// available): the gather already fetched the expanded texels, each pixel is a lookup.
 						ApplyPaletteLutScanline(*ctx.paletteLut, scanBuf, scanWidth);
 					} else if DEATH_UNLIKELY(cachedShader != nullptr) {
 						FragmentShaderInput fsInput;
@@ -685,6 +776,7 @@ namespace nCine::RHI::Software
 						TintScanline(scanBuf, scanWidth, tR, tG, tB, tA);
 					}
 
+				ScanlineReady:
 					// Phase 3: blend or copy
 					if (useFastBlend) {
 						BlendScanlineSrcAlpha(dstRow, scanBuf, scanWidth);
@@ -702,7 +794,7 @@ namespace nCine::RHI::Software
 						std::int32_t sR, sG, sB, sA;
 						if (useLinear && texPixels != nullptr) {
 							std::uint8_t raw[4];
-							SampleBilinearFix(texPixels, texW, texH, txFix, tyFix, wrapS, wrapT, raw);
+							SampleBilinearFix(texPixels, texW, texH, texBpp, txFix, tyFix, wrapS, wrapT, raw);
 							txFix += dtxFix;
 							sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 						} else if (texRow != nullptr) {
@@ -717,8 +809,9 @@ namespace nCine::RHI::Software
 								srcX = WrapTexelFix(txFix, texW, wrapS);
 								txFix += dtxFix;
 							}
-							const std::uint8_t* src = &texRow[srcX * 4];
-							sR = src[0]; sG = src[1]; sB = src[2]; sA = src[3];
+							std::uint8_t raw[4];
+							SwExpandTexel(raw, &texRow[srcX * texBpp], texBpp);
+							sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 						} else {
 							sR = 255; sG = 255; sB = 255; sA = 255;
 							txFix += dtxFix;
@@ -848,6 +941,7 @@ namespace nCine::RHI::Software
 			const std::uint8_t* texPixels = prep.texPixels;
 			const std::int32_t texW = prep.texW;
 			const std::int32_t texH = prep.texH;
+			const std::int32_t texBpp = prep.texBpp;
 			const SamplerWrapping wrapS = prep.wrapS;
 			const SamplerWrapping wrapT = prep.wrapT;
 			const bool useLinear = prep.useLinear;
@@ -904,13 +998,14 @@ namespace nCine::RHI::Software
 							if (texPixels != nullptr) {
 								if (useLinear) {
 									std::uint8_t raw[4];
-									SampleBilinearFix(texPixels, texW, texH, uFix, vFix, wrapS, wrapT, raw);
+									SampleBilinearFix(texPixels, texW, texH, texBpp, uFix, vFix, wrapS, wrapT, raw);
 									sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 								} else {
 									std::int32_t srcX = std::max(0, std::min(texW - 1, WrapTexelFix(uFix, texW, wrapS)));
 									std::int32_t srcY = std::max(0, std::min(texH - 1, WrapTexelFix(vFix, texH, wrapT)));
-									const std::uint8_t* src = texPixels + (static_cast<std::size_t>(srcY) * texW + srcX) * 4;
-									sR = src[0]; sG = src[1]; sB = src[2]; sA = src[3];
+									std::uint8_t raw[4];
+									SwExpandTexel(raw, texPixels + (static_cast<std::size_t>(srcY) * texW + srcX) * texBpp, texBpp);
+									sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 								}
 							} else {
 								sR = 255; sG = 255; sB = 255; sA = 255;
@@ -1093,6 +1188,7 @@ namespace nCine::RHI::Software
 				const std::uint8_t* texPixels = (tex != nullptr ? tex->GetPixels(0) : nullptr);
 				const std::int32_t texW = (tex != nullptr ? tex->GetWidth() : 0);
 				const std::int32_t texH = (tex != nullptr ? tex->GetHeight() : 0);
+				const std::int32_t texBpp = (tex != nullptr ? tex->GetBytesPerPixel() : 4);
 				if DEATH_UNLIKELY(texPixels != nullptr && (texW <= 0 || texH <= 0)) {
 					texPixels = nullptr;	// Malformed texture - treat as untextured (see PrepareQuad's guard)
 				}
@@ -1133,15 +1229,16 @@ namespace nCine::RHI::Software
 							u = WrapUV(u, wrapS);
 							vv = WrapUV(vv, wrapT);
 							std::uint8_t raw[4];
-							SampleBilinearFloat(texPixels, texW, texH, u, vv, wrapS, wrapT, raw);
+							SampleBilinearFloat(texPixels, texW, texH, texBpp, u, vv, wrapS, wrapT, raw);
 							sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 						} else if (texPixels != nullptr) {
 							u = WrapUV(u, wrapS);
 							vv = WrapUV(vv, wrapT);
 							const std::int32_t srcX = std::max(0, std::min(texW - 1, static_cast<std::int32_t>(u * (texW - 1) + 0.5f)));
 							const std::int32_t srcY = std::max(0, std::min(texH - 1, static_cast<std::int32_t>(vv * (texH - 1) + 0.5f)));
-							const std::uint8_t* src = texPixels + (srcY * texW + srcX) * 4;
-							sR = src[0]; sG = src[1]; sB = src[2]; sA = src[3];
+							std::uint8_t raw[4];
+							SwExpandTexel(raw, texPixels + (srcY * texW + srcX) * texBpp, texBpp);
+							sR = raw[0]; sG = raw[1]; sB = raw[2]; sA = raw[3];
 						} else {
 							sR = 255; sG = 255; sB = 255; sA = 255;
 						}

@@ -5,9 +5,12 @@
 #include "../../nCine/Application.h"
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Graphics/Viewport.h"
+#include "../../nCine/Graphics/RHI/RhiFwd.h"	// RHI_CAP_POSTPROCESSING must be resolved before the #if below
 
-#if defined(WITH_RHI_SOFTWARE)
-// The software backend renders the upscale passes directly into the screen framebuffer (RHI::Device is SwDevice)
+#if !defined(RHI_CAP_POSTPROCESSING)
+// The direct tier (no shaders or no framebuffers - the software backend today, fixed-function console
+// backends later) renders straight into the backend screen framebuffer, whose size the pass drives via
+// Device::ResizeScreenFramebuffer (part of the no-shader presentation contract, see RhiFwd.h)
 #	include "../../nCine/Graphics/RHI/Rhi.h"
 #endif
 
@@ -30,15 +33,15 @@ namespace Jazz2::Rendering
 		_supersample = (overlay ? 1 : (supersample > 1 ? supersample : 1));
 #endif
 
-#if defined(WITH_RHI_SOFTWARE)
-		// Software renderer: render at the internal/logical resolution directly into the screen framebuffer
-		// through a textureless viewport; the presentation layer stretches it to the window. This bypasses the
-		// intermediate scene FBO and the rescale/antialiasing shader passes entirely (there is nothing to blit).
-		// Supersampling is a GPU-only quality mode, so it is forced off here.
+#if !defined(RHI_CAP_POSTPROCESSING)
+		// Direct tier: render at the internal/logical resolution directly into the screen framebuffer
+		// through a textureless viewport; the backend's presentation stretches it to the display. This
+		// bypasses the intermediate scene FBO and the rescale/antialiasing shader passes entirely (there
+		// is nothing to blit). Supersampling is a full-tier quality mode, so it is forced off here.
 		_supersample = 1;
 		_targetSize = Vector2f((float)targetWidth, (float)targetHeight);
 
-		// Size the backend screen framebuffer to the logical resolution; the SDL present layer follows this size
+		// Size the backend screen framebuffer to the logical resolution; the presentation layer follows this size
 		RHI::Device::ResizeScreenFramebuffer(width, height);
 
 		_camera.SetOrthoProjection(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f);
@@ -55,7 +58,7 @@ namespace Jazz2::Rendering
 		}
 		_view->SetViewportRect(Recti(0, 0, width, height));
 
-		// No rescale/antialiasing subpass on the software backend; OnDraw is a no-op (nothing to blit)
+		// No rescale/antialiasing subpass on the direct tier; OnDraw is a no-op (nothing to blit)
 		_antialiasing._view = nullptr;
 #else
 		// The scene is always drawn in [0, width]x[0, height] coordinates (the ortho projection below), but the target
@@ -234,8 +237,8 @@ namespace Jazz2::Rendering
 
 	bool UpscaleRenderPass::OnDraw(RenderQueue& renderQueue)
 	{
-#if defined(WITH_RHI_SOFTWARE)
-		// Software renderer draws the scene directly into the screen framebuffer, so there is no target to blit
+#if !defined(RHI_CAP_POSTPROCESSING)
+		// The direct tier draws the scene straight into the screen framebuffer, so there is no target to blit
 		return false;
 #else
 		auto instanceBlock = _renderCommand.GetMaterial().UniformBlock(Material::InstanceBlockName);
@@ -297,7 +300,7 @@ namespace Jazz2::Rendering
 
 	void UpscaleRenderPassWithClipping::Initialize(std::int32_t width, std::int32_t height, std::int32_t targetWidth, std::int32_t targetHeight, std::int32_t supersample, bool overlay)
 	{
-#if !defined(WITH_RHI_SOFTWARE)
+#if defined(RHI_CAP_POSTPROCESSING)
 		if (_clippedView != nullptr) {
 			_clippedView->RemoveAllTextures();
 		}
@@ -308,8 +311,8 @@ namespace Jazz2::Rendering
 
 		UpscaleRenderPass::Initialize(width, height, targetWidth, targetHeight, supersample, overlay);
 
-#if defined(WITH_RHI_SOFTWARE)
-		// Software renderer: the clipped and overlay layers are textureless viewports rendering directly into the
+#if !defined(RHI_CAP_POSTPROCESSING)
+		// Direct tier: the clipped and overlay layers are textureless viewports rendering directly into the
 		// screen framebuffer (like the base scene view), so they carry no FBO target
 		if (_clippedView == nullptr) {
 			_clippedNode = std::make_unique<SceneNode>();

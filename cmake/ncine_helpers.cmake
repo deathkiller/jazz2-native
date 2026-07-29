@@ -556,9 +556,13 @@ function(ncine_apply_compiler_options target)
 
 			# Enabling strong stack protector of GCC 4.9
 			if(NCINE_GCC_HARDENING AND NOT (MINGW OR MSYS))
-				target_compile_options(${target} PUBLIC $<$<CONFIG:Release>:-Wformat -Wformat-security -fstack-protector-strong -fPIE -fPIC>)
+				target_compile_options(${target} PUBLIC $<$<CONFIG:Release>:-Wformat -Wformat-security -fstack-protector-strong>)
 				target_compile_definitions(${target} PUBLIC $<$<CONFIG:Release>:_FORTIFY_SOURCE=2>)
-				target_link_options(${target} PUBLIC $<$<CONFIG:Release>:-Wl,-z,relro -Wl,-z,now -pie>)
+				target_link_options(${target} PUBLIC $<$<CONFIG:Release>:-Wl,-z,relro -Wl,-z,now>)
+				# Let CMake pick the correct flags for the target type (`-fPIC` for static libraries, `-fPIE`
+				# together with `-pie` for the executable). Unlike the options above, this property can't
+				# be restricted to Release, so PIE applies to all configurations.
+				set_target_properties(${target} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 			endif()
 		elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
 			target_compile_options(${target} PRIVATE "-fcolor-diagnostics")

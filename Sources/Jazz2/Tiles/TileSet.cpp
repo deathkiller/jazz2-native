@@ -1,17 +1,22 @@
 ﻿#include "TileSet.h"
 
+#include <cstring>
+
 namespace Jazz2::Tiles
 {
-	TileSet::TileSet(StringView path, std::uint16_t tileCount, std::unique_ptr<Texture> textureDiffuse, std::unique_ptr<uint8_t[]> mask, std::uint32_t maskSize, std::unique_ptr<Color[]> captionTile, const std::uint8_t* tileDiffuseOpaque)
+	TileSet::TileSet(StringView path, std::uint16_t tileCount, SmallVector<std::unique_ptr<Texture>, 1>&& textureDiffuse, std::unique_ptr<uint8_t[]> mask, std::uint32_t maskSize, std::unique_ptr<Color[]> captionTile, const std::uint8_t* tileDiffuseOpaque)
 		: FilePath(path), TextureDiffuse(std::move(textureDiffuse)), _mask(std::move(mask)), _captionTile(std::move(captionTile)),
 			_isMaskEmpty(), _isMaskFilled(), _isTileFilled(), _isColumnContiguous()
 	{
-		// TilesPerRow is used only for rendering
-		if (TextureDiffuse != nullptr) {
-			Vector2i texSize = TextureDiffuse->GetSize();
+		// TilesPerRow/TilesPerTexture are used only for rendering. Every chunk shares the layout of chunk 0
+		// (the last one may be shorter), so its size defines how many tiles each chunk covers.
+		if (!TextureDiffuse.empty() && TextureDiffuse[0] != nullptr) {
+			Vector2i texSize = TextureDiffuse[0]->GetSize();
 			TilesPerRow = (texSize.X / (DefaultTileSize + 2));
+			TilesPerTexture = TilesPerRow * (texSize.Y / (DefaultTileSize + 2));
 		} else {
 			TilesPerRow = 0;
+			TilesPerTexture = 0;
 		}
 
 		TileCount = tileCount;
@@ -22,18 +27,19 @@ namespace Jazz2::Tiles
 		// 2 bytes per column (first/last solid row); zero-initialized by make_unique
 		_columnSpans = std::make_unique<std::uint8_t[]>((std::size_t)TileCount * DefaultTileSize * 2);
 
-		std::uint32_t maskMaxTiles = maskSize / (DefaultTileSize * DefaultTileSize);
+		std::uint32_t maskMaxTiles = maskSize / MaskBytesPerTile;
 
 		for (std::uint32_t i = 0; i < tileCount; i++) {
 			bool maskEmpty = true;
 			bool maskFilled = true;
 
 			if (i < maskMaxTiles) {
-				auto* maskOffset = &_mask[i * DefaultTileSize * DefaultTileSize];
-				for (std::int32_t j = 0; j < DefaultTileSize * DefaultTileSize; j++) {
-					bool masked = (maskOffset[j] > 0);
-					maskEmpty &= !masked;
-					maskFilled &= masked;
+				// The mask is packed (1 bit per pixel, the cache file format), so empty/filled collapse
+				// to byte compares over the tile's 128 bytes
+				auto* maskOffset = &_mask[i * MaskBytesPerTile];
+				for (std::int32_t j = 0; j < MaskBytesPerTile; j++) {
+					maskEmpty &= (maskOffset[j] == 0x00);
+					maskFilled &= (maskOffset[j] == 0xFF);
 				}
 			}
 
@@ -59,11 +65,16 @@ namespace Jazz2::Tiles
 			std::uint8_t* spans = &_columnSpans[(std::size_t)i * DefaultTileSize * 2];
 			bool columnContiguous = (i < maskMaxTiles && !maskEmpty);
 			if (columnContiguous) {
-				auto* maskOffset = &_mask[i * DefaultTileSize * DefaultTileSize];
+				// Load each packed row once as a 32-bit word, then walk columns as bit tests
+				const std::uint8_t* maskOffset = &_mask[i * MaskBytesPerTile];
+				std::uint32_t rows[DefaultTileSize];
+				for (std::int32_t row = 0; row < DefaultTileSize; row++) {
+					rows[row] = GetTileMaskRow(maskOffset, row);
+				}
 				for (std::int32_t col = 0; col < DefaultTileSize; col++) {
 					std::int32_t firstSolid = -1, lastSolid = -1, solidCount = 0;
 					for (std::int32_t row = 0; row < DefaultTileSize; row++) {
-						if (maskOffset[row * DefaultTileSize + col] > 0) {
+						if ((rows[row] >> col) & 1) {
 							if (firstSolid < 0) {
 								firstSolid = row;
 							}
@@ -96,13 +107,20 @@ namespace Jazz2::Tiles
 			return false;
 		}
 
-		std::int32_t x = (tileId % TilesPerRow) * (DefaultTileSize + 2);
-		std::int32_t y = (tileId / TilesPerRow) * (DefaultTileSize + 2);
+		// The tile may live in any texture chunk when the atlas was split by the device texture-size limit
+		std::int32_t localTileId = tileId;
+		Texture* texture = ResolveTextureDiffuse(localTileId);
+		if (texture == nullptr) {
+			return false;
+		}
+
+		std::int32_t x = (localTileId % TilesPerRow) * (DefaultTileSize + 2);
+		std::int32_t y = (localTileId / TilesPerRow) * (DefaultTileSize + 2);
 
 		// The incoming tile is RGBA (palette index in red, alpha in alpha). Repack it to match the atlas format,
 		// which may have been reduced to R8 (index only) or RG8 (index + alpha) to save VRAM (see CreateIndexedTexture)
 		constexpr std::int32_t Count = (DefaultTileSize + 2) * (DefaultTileSize + 2);
-		std::uint32_t channels = TextureDiffuse->GetChannelCount();
+		std::uint32_t channels = texture->GetChannelCount();
 		// TODO: _isTileFilled is not properly set
 		if (channels == 1) {
 			std::uint8_t packed[Count];
@@ -110,7 +128,7 @@ namespace Jazz2::Tiles
 				std::uint32_t c = tileDiffuse[i];
 				packed[i] = (((c >> 24) & 0xFF) == 0 ? 0 : (std::uint8_t)(c & 0xFF));
 			}
-			return TextureDiffuse->LoadFromTexels(packed, x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+			return texture->LoadFromTexels(packed, x, y, DefaultTileSize + 2, DefaultTileSize + 2);
 		} else if (channels == 2) {
 			std::uint8_t packed[Count * 2];
 			for (std::int32_t i = 0; i < Count; i++) {
@@ -118,9 +136,9 @@ namespace Jazz2::Tiles
 				packed[(i * 2) + 0] = (std::uint8_t)(c & 0xFF);
 				packed[(i * 2) + 1] = (std::uint8_t)((c >> 24) & 0xFF);
 			}
-			return TextureDiffuse->LoadFromTexels(packed, x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+			return texture->LoadFromTexels(packed, x, y, DefaultTileSize + 2, DefaultTileSize + 2);
 		} else {
-			return TextureDiffuse->LoadFromTexels((std::uint8_t*)tileDiffuse.data(), x, y, DefaultTileSize + 2, DefaultTileSize + 2);
+			return texture->LoadFromTexels((std::uint8_t*)tileDiffuse.data(), x, y, DefaultTileSize + 2, DefaultTileSize + 2);
 		}
 	}
 
@@ -130,13 +148,17 @@ namespace Jazz2::Tiles
 			return false;
 		}
 
-		auto* maskOffset = &_mask[tileId * DefaultTileSize * DefaultTileSize];
+		// The level cache delivers overridden masks byte-per-pixel; pack them into the tile's 1-bit store
+		auto* maskOffset = &_mask[tileId * MaskBytesPerTile];
+		std::memset(maskOffset, 0, MaskBytesPerTile);
 
 		bool maskEmpty = true;
 		bool maskFilled = true;
 		for (std::int32_t j = 0; j < DefaultTileSize * DefaultTileSize; j++) {
-			maskOffset[j] = tileMask[j];
 			bool masked = (tileMask[j] > 0);
+			if (masked) {
+				maskOffset[j >> 3] |= std::uint8_t(1u << (j & 7));
+			}
 			maskEmpty &= !masked;
 			maskFilled &= masked;
 		}

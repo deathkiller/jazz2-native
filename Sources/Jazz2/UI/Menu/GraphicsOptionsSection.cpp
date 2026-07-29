@@ -7,6 +7,7 @@
 #include "../../../nCine/Application.h"
 #include "../../../nCine/Base/FrameTimer.h"
 #include "../../../nCine/I18n.h"
+#include "../../../nCine/Graphics/RHI/RhiFwd.h"	// RHI_CAP_POSTPROCESSING (a header macro, not a build define)
 
 #include <Environment.h>
 #include <Utf8.h>
@@ -37,9 +38,10 @@ namespace Jazz2::UI::Menu
 
 		auto list = std::make_unique<ScrollView>();
 
-#if !defined(WITH_RHI_SOFTWARE)
-		// The software backend has no rescale/antialiasing shader passes (the scene is rendered at the logical
-		// resolution directly into the screen framebuffer, see UpscaleRenderPass), so the option is hidden there
+#if defined(RHI_CAP_POSTPROCESSING)
+		// The direct rendering tier has no rescale/antialiasing shader passes (the scene is rendered at the
+		// logical resolution directly into the screen framebuffer, see UpscaleRenderPass), so the option is
+		// hidden there
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ListItem>(_("Rescale Mode"), [root]() { root->SwitchToSection<RescaleModeSection>(); });
 #endif
@@ -76,8 +78,8 @@ namespace Jazz2::UI::Menu
 				});
 		}
 #endif
-#if !defined(WITH_RHI_SOFTWARE) && !defined(DEATH_TARGET_VITA)
-		// The antialiasing subpass is part of the rescale shader chain, which the software backend bypasses
+#if defined(RHI_CAP_POSTPROCESSING) && !defined(DEATH_TARGET_VITA)
+		// The antialiasing subpass is part of the rescale shader chain, which the direct tier bypasses
 		// entirely, so the option is hidden there too. It is likewise hidden on PS Vita: vitaGL's runtime shader
 		// compiler cannot build the antialiasing resolve shader (see ContentResolver / UpscaleRenderPass).
 		// TRANSLATORS: Menu item in Options > Graphics section
@@ -101,8 +103,8 @@ namespace Jazz2::UI::Menu
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 			});
-#if !defined(WITH_RHI_SOFTWARE)
-		// Blur effects are not supported by software renderer
+#if defined(RHI_CAP_POSTPROCESSING)
+		// Blur effects are not supported by the direct rendering tier
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Blur Effects"),
 			[]() -> StringView { return (PreferencesCache::BlurEffects ? _("Enabled") : _("Disabled")); },

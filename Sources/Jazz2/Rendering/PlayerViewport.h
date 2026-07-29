@@ -23,14 +23,15 @@ namespace Jazz2::Rendering
 		LevelHandler* _levelHandler;
 		Actors::ActorBase* _targetActor;
 
-		std::unique_ptr<LightingRenderer> _lightingRenderer;
 		std::unique_ptr<CombineRenderer> _combineRenderer;
+
+#if defined(RHI_CAP_POSTPROCESSING)
+		// Lighting render target + bloom blur chain. Only the full post-processing tier (shaders AND
+		// framebuffers, see RhiFwd.h) renders lighting into an off-screen buffer and blurs it; the direct
+		// tier renders the scene straight to the screen buffer and composites the CPU lightmap instead
+		std::unique_ptr<LightingRenderer> _lightingRenderer;
 		std::unique_ptr<Viewport> _lightingView;
 		std::unique_ptr<Texture> _lightingBuffer;
-
-#if defined(RHI_CAP_SHADERS)
-		// Bloom blur chain. Only backends with cheap shaders run the post-process bloom; the software backend
-		// renders the scene straight to the screen buffer with no blur passes (see RhiFwd.h)
 		BlurRenderPass _downsamplePass;
 		BlurRenderPass _blurPass2;
 		BlurRenderPass _blurPass1;
@@ -39,7 +40,7 @@ namespace Jazz2::Rendering
 #endif
 
 		std::unique_ptr<Viewport> _view;
-		std::unique_ptr<Texture> _viewTexture;	// Scene render target for the shader path; unused (null) on the software backend
+		std::unique_ptr<Texture> _viewTexture;	// Scene render target for the full tier; unused (null) on the direct tier
 		std::unique_ptr<Camera> _camera;
 
 		Rectf _viewBounds;
