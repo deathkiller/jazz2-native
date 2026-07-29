@@ -236,7 +236,7 @@ namespace ShaderCompiler
 							return {};
 						}
 						char buffer[64];
-						std::snprintf(buffer, sizeof(buffer), "%.9g", v.F);
+						::snprintf(buffer, sizeof(buffer), "%.9g", v.F);
 						// Emit only when the printed text round-trips to the exact computed value
 						if (std::strtod(buffer, nullptr) != v.F) {
 							return {};
@@ -411,7 +411,7 @@ namespace ShaderCompiler
 						if (!t.Suffixed) {
 							const char* text = t.Text.data();
 							char* end = nullptr;
-							long long parsed = std::strtoll(text, &end, 0);	// Base 0 handles decimal, hex and octal
+							long long parsed = ::strtoll(text, &end, 0);	// Base 0 handles decimal, hex and octal
 							if (end != nullptr && *end == '\0' && parsed >= 0 && parsed <= Int32Max) {
 								v.K = Value::Kind::Int;
 								v.I = parsed;

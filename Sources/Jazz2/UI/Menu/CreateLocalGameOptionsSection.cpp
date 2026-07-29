@@ -206,7 +206,7 @@ namespace Jazz2::UI::Menu
 		// progress (continue); the remaining players keep their defaults and can still be configured below
 		if (!_resumeEpisodeName.empty()) {
 			if (auto* episodeContinue = PreferencesCache::GetEpisodeContinue(_resumeEpisodeName)) {
-				_difficulty = std::clamp((std::int32_t)(episodeContinue->State.DifficultyAndPlayerType & 0x0f) - (std::int32_t)GameDifficulty::Easy, 0, 2);
+				_difficulty = std::clamp<std::int32_t>((std::int32_t)(episodeContinue->State.DifficultyAndPlayerType & 0x0f) - (std::int32_t)GameDifficulty::Easy, 0, 2);
 				std::int32_t savedType = (std::int32_t)((episodeContinue->State.DifficultyAndPlayerType >> 4) & 0x0f) - (std::int32_t)PlayerType::Jazz;
 				if (savedType >= 0 && savedType < _availableCharacters) {
 					_playerTypes[0] = savedType;
@@ -249,7 +249,7 @@ namespace Jazz2::UI::Menu
 		list->Add<ChoiceItem>(_("Difficulty"),
 			[this]() -> StringView { return GetDifficultyName(_difficulty); },
 			[this](std::int32_t direction) {
-				_difficulty = std::clamp(_difficulty + direction, 0, 2);
+				_difficulty = std::clamp<std::int32_t>(_difficulty + direction, 0, 2);
 			});
 
 		// Game mode is selected through the shared MultiplayerGameModeSelectSection (same as the create server screens)
@@ -347,7 +347,7 @@ namespace Jazz2::UI::Menu
 
 	void CreateLocalGameOptionsSection::ChangePlayerCount(std::int32_t direction)
 	{
-		_playerCount = std::clamp(_playerCount + direction, 2, ControlScheme::MaxSupportedPlayers);
+		_playerCount = std::clamp<std::int32_t>(_playerCount + direction, 2, ControlScheme::MaxSupportedPlayers);
 
 		// Show only the character rows for the active players; the scroll view skips the hidden ones, so the
 		// character area resizes with the player count

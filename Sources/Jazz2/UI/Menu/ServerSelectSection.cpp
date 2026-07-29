@@ -167,7 +167,7 @@ namespace Jazz2::UI::Menu
 								offset = 0;
 							}
 							EnsureVisibleSelected(offset);
-							_pressedCount = std::min(_pressedCount + 6, 10);
+							_pressedCount = std::min<std::int32_t>(_pressedCount + 6, 10);
 						}
 					} else if (_root->ActionPressed(PlayerAction::Down)) {
 						if (_animation >= 1.0f - (_pressedCount * 0.096f) || _root->ActionHit(PlayerAction::Down)) {
@@ -186,7 +186,7 @@ namespace Jazz2::UI::Menu
 								offset = 0;
 							}
 							EnsureVisibleSelected(offset);
-							_pressedCount = std::min(_pressedCount + 6, 10);
+							_pressedCount = std::min<std::int32_t>(_pressedCount + 6, 10);
 						}
 					} else {
 						_pressedCount = 0;

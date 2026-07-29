@@ -152,7 +152,7 @@ namespace nCine
 #endif
 	}
 
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
 
 	void ThreadAffinityMask::Zero()
 	{
@@ -283,7 +283,12 @@ namespace nCine
 		return (exitCode == STILL_ACTIVE);
 #else
 		pthread_t handle = _sharedBlock->_handle;
+#	if defined(DEATH_TARGET_DREAMCAST)
+		// pthread_kill() is not available in KOS
+		return (handle != 0);
+#	else
 		return (handle != 0 && pthread_kill(handle, 0) == 0);
+#	endif
 #endif
 	}
 
@@ -295,6 +300,8 @@ namespace nCine
 		return si.dwNumberOfProcessors;
 #elif defined(DEATH_TARGET_SWITCH)
 		return svcGetCurrentProcessorNumber();
+#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+		return 1;
 #else
 		long int confRet = -1;
 #	if defined(_SC_NPROCESSORS_ONLN)
@@ -406,7 +413,7 @@ namespace nCine
 
 #if defined(DEATH_TARGET_WINDOWS)
 		SetThreadName(_sharedBlock->_handle, name);
-#elif !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
+#elif !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
 		const auto nameLength = strnlen(name, MaxThreadNameLength);
 		if (nameLength <= MaxThreadNameLength - 1) {
 			pthread_setname_np(_sharedBlock->_handle, name);
@@ -425,7 +432,7 @@ namespace nCine
 		tracy::SetThreadName(name);
 #elif defined(DEATH_TARGET_WINDOWS)
 		SetThreadName(reinterpret_cast<HANDLE>(-1), name);
-#elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
+#elif !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
 		const auto nameLength = strnlen(name, MaxThreadNameLength);
 		if (nameLength <= MaxThreadNameLength - 1) {
 #	if !defined(DEATH_TARGET_APPLE)
@@ -446,7 +453,7 @@ namespace nCine
 #endif
 	}
 
-#if !defined(DEATH_TARGET_SWITCH)
+#if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
 	std::int32_t Thread::GetPriority() const
 	{
 		if (_sharedBlock == nullptr || _sharedBlock->_handle == 0) {
@@ -486,7 +493,7 @@ namespace nCine
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		return static_cast<std::uintptr_t>(::GetCurrentThreadId());
-#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(__FreeBSD__) || defined(__DragonFly__)
+#elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(__FreeBSD__) || defined(__DragonFly__)
 		return reinterpret_cast<std::uintptr_t>(pthread_self());
 #else
 		return static_cast<std::uintptr_t>(pthread_self());
@@ -590,6 +597,9 @@ namespace nCine
 				return true;
 			}
 		}
+#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+		// Stack information is not available on these platforms
+		return false;
 #else
 		pthread_t self = pthread_self();
 		pthread_attr_t attr;
@@ -640,6 +650,9 @@ namespace nCine
 	{
 #if defined(DEATH_TARGET_WINDOWS)
 		::Sleep(0);
+#elif defined(DEATH_TARGET_DREAMCAST)
+		// sched_yield() is not available in KOS
+		pthread_yield();
 #else
 		sched_yield();
 #endif
@@ -647,7 +660,7 @@ namespace nCine
 
 	bool Thread::Abort()
 	{
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_WINDOWS_RT) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
 		// TerminateThread() is not supported on WinRT and Android doesn't have any similar function
 		return false;
 #elif defined(DEATH_TARGET_WINDOWS)
@@ -657,7 +670,7 @@ namespace nCine
 #endif
 	}
 
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
 	ThreadAffinityMask Thread::GetAffinityMask() const
 	{
 		ThreadAffinityMask affinityMask;

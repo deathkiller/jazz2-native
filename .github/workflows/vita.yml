@@ -1,0 +1,55 @@
+name: 'PS Vita'
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+
+    runs-on: 'ubuntu-latest'
+    container:
+      image: vitasdk/vitasdk:latest
+      options: --user root
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: 'Configure CMake'
+      run: |
+        rm -f ./Content/Translations/*.po
+
+        git config --global --add safe.directory '*'
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${VITASDK}/share/vita.toolchain.cmake
+
+    - name: 'Build'
+      run: |
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        mkdir ./_package/
+        cp -f ./_build/jazz2.vpk ./_package/Jazz2.vpk
+        cp -f ./LICENSE ./_package/LICENSE
+
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v7
+      with:
+        name: Jazz2_Vita
+        path: ./_package/

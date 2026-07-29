@@ -2,6 +2,7 @@
 
 #include "OgcInputManager.h"
 #include "../../Input/JoyMapping.h"
+#include "../../Input/IInputEventHandler.h"
 #include "../../../Main.h"
 
 #include <cstring>
@@ -11,6 +12,11 @@
 #if defined(DEATH_TARGET_WII)
 #	include <wiiuse/wpad.h>
 #endif
+
+namespace nCine
+{
+	const std::int32_t IInputManager::MaxNumJoysticks = 4;
+}
 
 namespace nCine::Backends
 {
@@ -46,12 +52,10 @@ namespace nCine::Backends
 		}
 	}
 
-	const std::int32_t IInputManager::MaxNumJoysticks = 4;
-
 	OgcInputManager::PadInfo OgcInputManager::pads_[OgcInputManager::MaxJoysticks];
 
 	OgcJoystickState::OgcJoystickState()
-		: joyId_(-1), hatState_(HatState::CENTERED)
+		: joyId_(-1), hatState_(HatState::Centered)
 	{
 		std::memset(buttonsState_, 0, sizeof(buttonsState_));
 		std::memset(axesValuesState_, 0, sizeof(axesValuesState_));
@@ -64,7 +68,7 @@ namespace nCine::Backends
 
 	unsigned char OgcJoystickState::hatState(int hatId) const
 	{
-		return (hatId == 0 ? hatState_ : static_cast<unsigned char>(HatState::CENTERED));
+		return (hatId == 0 ? hatState_ : static_cast<unsigned char>(HatState::Centered));
 	}
 
 	float OgcJoystickState::axisValue(int axisId) const
@@ -75,7 +79,7 @@ namespace nCine::Backends
 	void OgcJoystickState::resetJoystickState(int joyId)
 	{
 		joyId_ = joyId;
-		hatState_ = HatState::CENTERED;
+		hatState_ = HatState::Centered;
 		std::memset(buttonsState_, 0, sizeof(buttonsState_));
 		std::memset(axesValuesState_, 0, sizeof(axesValuesState_));
 	}
@@ -278,11 +282,11 @@ namespace nCine::Backends
 				state.simulateButtonEvent(ButtonRShoulder, (held & PAD_TRIGGER_Z) != 0);
 				state.simulateButtonEvent(ButtonLShoulder, (held & PAD_TRIGGER_L) != 0);
 
-				unsigned char hat = HatState::CENTERED;
-				if (held & PAD_BUTTON_UP) hat |= HatState::UP;
-				if (held & PAD_BUTTON_RIGHT) hat |= HatState::RIGHT;
-				if (held & PAD_BUTTON_DOWN) hat |= HatState::DOWN;
-				if (held & PAD_BUTTON_LEFT) hat |= HatState::LEFT;
+				unsigned char hat = HatState::Centered;
+				if (held & PAD_BUTTON_UP) hat |= HatState::Up;
+				if (held & PAD_BUTTON_RIGHT) hat |= HatState::Right;
+				if (held & PAD_BUTTON_DOWN) hat |= HatState::Down;
+				if (held & PAD_BUTTON_LEFT) hat |= HatState::Left;
 				state.simulateHatEvent(hat);
 
 				state.simulateAxisEvent(0, NormalizeStick(PAD_StickX(i)));
@@ -310,11 +314,11 @@ namespace nCine::Backends
 					state.simulateButtonEvent(ButtonLShoulder, (held & WPAD_CLASSIC_BUTTON_FULL_L) != 0);
 					state.simulateButtonEvent(ButtonRShoulder, (held & WPAD_CLASSIC_BUTTON_FULL_R) != 0);
 
-					unsigned char hat = HatState::CENTERED;
-					if (held & WPAD_CLASSIC_BUTTON_UP) hat |= HatState::UP;
-					if (held & WPAD_CLASSIC_BUTTON_RIGHT) hat |= HatState::RIGHT;
-					if (held & WPAD_CLASSIC_BUTTON_DOWN) hat |= HatState::DOWN;
-					if (held & WPAD_CLASSIC_BUTTON_LEFT) hat |= HatState::LEFT;
+					unsigned char hat = HatState::Centered;
+					if (held & WPAD_CLASSIC_BUTTON_UP) hat |= HatState::Up;
+					if (held & WPAD_CLASSIC_BUTTON_RIGHT) hat |= HatState::Right;
+					if (held & WPAD_CLASSIC_BUTTON_DOWN) hat |= HatState::Down;
+					if (held & WPAD_CLASSIC_BUTTON_LEFT) hat |= HatState::Left;
 					state.simulateHatEvent(hat);
 
 					const joystick_t& left = data->exp.classic.ljs;
@@ -343,11 +347,11 @@ namespace nCine::Backends
 					state.simulateButtonEvent(ButtonGuide, (held & WPAD_BUTTON_HOME) != 0);
 					state.simulateButtonEvent(ButtonStart, (held & WPAD_BUTTON_PLUS) != 0);
 
-					unsigned char hat = HatState::CENTERED;
-					if (held & WPAD_BUTTON_RIGHT) hat |= HatState::UP;
-					if (held & WPAD_BUTTON_DOWN) hat |= HatState::RIGHT;
-					if (held & WPAD_BUTTON_LEFT) hat |= HatState::DOWN;
-					if (held & WPAD_BUTTON_UP) hat |= HatState::LEFT;
+					unsigned char hat = HatState::Centered;
+					if (held & WPAD_BUTTON_RIGHT) hat |= HatState::Up;
+					if (held & WPAD_BUTTON_DOWN) hat |= HatState::Right;
+					if (held & WPAD_BUTTON_LEFT) hat |= HatState::Down;
+					if (held & WPAD_BUTTON_UP) hat |= HatState::Left;
 					state.simulateHatEvent(hat);
 				}
 			}

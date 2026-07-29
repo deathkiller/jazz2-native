@@ -1,0 +1,90 @@
+name: 'Dreamcast'
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+
+    runs-on: 'ubuntu-latest'
+    container:
+      # sh-elf/arm-eabi toolchains prebuilt by the KallistiOS CI (see utils/kos-chain/docker in the KOS repository)
+      image: pcercuei/dreamcast-toolchain:stable
+      options: --user root
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: 'Install Dependencies'
+      shell: bash
+      run: |
+        apk add --no-cache cmake meson ninja pkgconf libisofs-dev zlib-dev
+
+        # mkdcdisc is used to create a bootable CDI image with the game content included
+        git clone --depth 1 https://gitlab.com/simulant/mkdcdisc.git /tmp/mkdcdisc
+        cd /tmp/mkdcdisc
+        meson setup build
+        ninja -C build
+        cp ./build/mkdcdisc /usr/local/bin/
+
+    - name: 'Build KallistiOS'
+      shell: bash
+      run: |
+        # The toolchain image contains only the compilers, KOS itself has to be built from source
+        git clone --depth 1 https://github.com/KallistiOS/KallistiOS.git /opt/toolchains/dc/kos
+        cd /opt/toolchains/dc/kos
+        # The defaults in the sample match the toolchain paths inside the image
+        cp doc/environ.sh.sample environ.sh
+        mkdir -p /opt/toolchains/dc/bin
+        source environ.sh
+        make -j $(nproc)
+
+        # zlib is required for compressed game content
+        git clone --depth 1 https://github.com/KallistiOS/kos-ports.git /opt/toolchains/dc/kos-ports
+        make -C /opt/toolchains/dc/kos-ports/zlib install
+
+    - name: 'Configure CMake'
+      shell: bash
+      run: |
+        rm -f ./Content/Translations/*.po
+
+        git config --global --add safe.directory '*'
+        source /opt/toolchains/dc/kos/environ.sh
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${KOS_BASE}/utils/cmake/kallistios.toolchain.cmake
+
+    - name: 'Build'
+      shell: bash
+      run: |
+        source /opt/toolchains/dc/kos/environ.sh
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        # The CDI image is bootable directly in emulators and contains the game content
+        mkdir ./_package/
+        cp -f ./_build/jazz2.cdi ./_package/Jazz2.cdi
+        cp -f ./_build/jazz2.elf ./_package/Jazz2.elf
+        cp -f ./LICENSE ./_package/LICENSE
+
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v7
+      with:
+        name: Jazz2_Dreamcast
+        path: ./_package/

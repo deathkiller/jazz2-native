@@ -178,8 +178,8 @@ namespace Jazz2::Rendering
 		// in rasterizer space); the final vertical flip happens at present, so no flip is applied - light rows and
 		// scene rows already share the same convention. The width/height are left unclamped here; the device
 		// clamps them against the actual screen buffer when it applies the combine.
-		const std::int32_t vpX = std::max(0, (std::int32_t)_bounds.X);
-		const std::int32_t vpY = std::max(0, (std::int32_t)_bounds.Y);
+		const std::int32_t vpX = std::max<std::int32_t>(0, (std::int32_t)_bounds.X);
+		const std::int32_t vpY = std::max<std::int32_t>(0, (std::int32_t)_bounds.Y);
 		const std::int32_t vpW = (std::int32_t)_bounds.W;
 		const std::int32_t vpH = (std::int32_t)_bounds.H;
 		if (vpW <= 0 || vpH <= 0) {
@@ -235,9 +235,9 @@ namespace Jazz2::Rendering
 				continue;
 			}
 
-			const std::int32_t x0 = std::max(0, (std::int32_t)(cx - rLm));
+			const std::int32_t x0 = std::max<std::int32_t>(0, (std::int32_t)(cx - rLm));
 			const std::int32_t x1 = std::min(lmW - 1, (std::int32_t)(cx + rLm));
-			const std::int32_t y0 = std::max(0, (std::int32_t)(cy - rLm));
+			const std::int32_t y0 = std::max<std::int32_t>(0, (std::int32_t)(cy - rLm));
 			const std::int32_t y1 = std::min(lmH - 1, (std::int32_t)(cy + rLm));
 
 			for (std::int32_t y = y0; y <= y1; y++) {

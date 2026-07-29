@@ -375,14 +375,14 @@ namespace Death { namespace Implementation {
 		std::int32_t precision = context.Precision;
 		if (precision == -1) precision = std::numeric_limits<float>::digits10;
 		const char format[] { '%', '.', '*', formatTypeChar<float>(context.Type), '\0' };
-		return clampSnprintfResult(std::snprintf(buffer.data(), buffer.size(), format, precision, double(value)));
+		return clampSnprintfResult(::snprintf(buffer.data(), buffer.size(), format, precision, double(value)));
 	}
 
 	std::size_t Formatter<double>::format(const Containers::MutableStringView& buffer, double value, FormatContext& context) {
 		std::int32_t precision = context.Precision;
 		if (precision == -1) precision = std::numeric_limits<double>::digits10;
 		const char format[] { '%', '.', '*', formatTypeChar<float>(context.Type), '\0' };
-		return clampSnprintfResult(std::snprintf(buffer.data(), buffer.size(), format, precision, value));
+		return clampSnprintfResult(::snprintf(buffer.data(), buffer.size(), format, precision, value));
 	}
 
 	std::size_t Formatter<long double>::format(const Containers::MutableStringView& buffer, long double value, FormatContext& context) {
@@ -393,7 +393,7 @@ namespace Death { namespace Implementation {
 		if (precision == -1) precision = std::numeric_limits<double>::digits10;
 #endif
 		const char format[] { '%', '.', '*', 'L', formatTypeChar<float>(context.Type), '\0' };
-		return clampSnprintfResult(std::snprintf(buffer.data(), buffer.size(), format, precision, value));
+		return clampSnprintfResult(::snprintf(buffer.data(), buffer.size(), format, precision, value));
 	}
 
 	std::size_t Formatter<bool>::format(const Containers::MutableStringView& buffer, bool value, FormatContext& context) {

@@ -971,7 +971,7 @@ namespace Death { namespace IO {
 		return _impl->GetContentType();
 	}
 
-	int WebResponse::GetStatus() const
+	std::int32_t WebResponse::GetStatus() const
 	{
 		DEATH_ASSERT(_impl != nullptr, "Cannot be called with an uninitialized object", -1);
 

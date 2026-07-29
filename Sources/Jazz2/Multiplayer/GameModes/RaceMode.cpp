@@ -25,9 +25,9 @@ namespace Jazz2::Multiplayer::GameModes
 
 		// Current lap time (top-left, next to the lap counter)
 		float sinceLapStarted = state.LapStarted.secondsSince();
-		std::int32_t minutes = std::max(0, (std::int32_t)(sinceLapStarted / 60));
-		std::int32_t seconds = std::max(0, (std::int32_t)fmod(sinceLapStarted, 60));
-		std::int32_t milliseconds = std::max(0, (std::int32_t)(fmod(sinceLapStarted, 1) * 100));
+		std::int32_t minutes = std::max<std::int32_t>(0, (std::int32_t)(sinceLapStarted / 60));
+		std::int32_t seconds = std::max<std::int32_t>(0, (std::int32_t)fmod(sinceLapStarted, 60));
+		std::int32_t milliseconds = std::max<std::int32_t>(0, (std::int32_t)(fmod(sinceLapStarted, 1) * 100));
 		length = formatInto(stringBuffer, "{}:{:.2}:{:.2}", minutes, seconds, milliseconds);
 		hud.DrawHudText(GameModeFontType::Medium, { stringBuffer, length }, view.X + 14.0f + 80.0f, view.Y + 10.0f, 1.4f,
 			UI::Alignment::TopLeft, UI::Font::DefaultColor, 0.7f, 1.0f);

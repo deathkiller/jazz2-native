@@ -123,12 +123,12 @@ namespace nCine
 		inline bool AABB<S>::Contains(S px, S py) const
 		{
 			// Using epsilon to try and guard against float rounding errors
-			return (px > (L + std::numeric_limits<S>::epsilon) && px < (R - std::numeric_limits<S>::epsilon) &&
-				   (py > (T + std::numeric_limits<S>::epsilon) && py < (B - std::numeric_limits<S>::epsilon)));
+			return (px > (L + std::numeric_limits<S>::epsilon()) && px < (R - std::numeric_limits<S>::epsilon()) &&
+				   (py > (T + std::numeric_limits<S>::epsilon()) && py < (B - std::numeric_limits<S>::epsilon())));
 		}
 
 		template<>
-		inline bool AABB<std::int32_t>::Contains(std::int32_t px, std::int32_t py) const
+		inline bool AABB<int>::Contains(int px, int py) const
 		{
 			return (px >= L && px <= R && py >= T && py <= B);
 		}

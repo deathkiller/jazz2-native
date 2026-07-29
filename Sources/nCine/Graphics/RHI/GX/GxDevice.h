@@ -42,6 +42,12 @@ namespace nCine::RHI::GX
 	class GxDevice
 	{
 	public:
+		/** @brief Monotonic count of presented frames, used to detect "still referenced by the in-flight FIFO" resources */
+		static std::uint32_t GetFrameCounter() {
+			return frameCounter_;
+		}
+
+
 		GxDevice() = delete;
 		~GxDevice() = delete;
 
@@ -248,6 +254,7 @@ namespace nCine::RHI::GX
 		static std::uint32_t paletteGeneration_;
 		static TlutSlot tlutSlots_[MaxTlutSlots];
 		static std::uint32_t tlutUseCounter_;
+		static std::uint32_t frameCounter_;
 
 		static std::vector<PendingSoftwareLight> pendingSoftwareLights_;
 

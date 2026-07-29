@@ -746,6 +746,41 @@ else()
 			ICON "${NCINE_SOURCE_DIR}/Icons/256px.png"
 			ROMFS "${NCINE_CONTENT_DIR}"
 		)
+	elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
+		# Converts the ELF to the .dol format loadable by Swiss/Homebrew Channel/Dolphin
+		ogc_create_dol(${NCINE_APP})
+
+		# Stage the SD card layout expected by ContentResolver ("sd:/apps/Jazz2/" on Wii, which is
+		# the standard Homebrew Channel layout, and "carda:/Jazz2/" on GameCube) into "sd/" in the
+		# build directory, so its contents can be copied directly to a (virtual) SD card
+		if(NINTENDO_WII)
+			set(OGC_SD_APP_DIR "${CMAKE_BINARY_DIR}/sd/apps/Jazz2")
+			set(OGC_SD_DOL_NAME "boot.dol")
+		else()
+			set(OGC_SD_APP_DIR "${CMAKE_BINARY_DIR}/sd/Jazz2")
+			set(OGC_SD_DOL_NAME "Jazz2.dol")
+		endif()
+		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E make_directory "${OGC_SD_APP_DIR}"
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/${NCINE_APP}.dol" "${OGC_SD_APP_DIR}/${OGC_SD_DOL_NAME}"
+			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${OGC_SD_APP_DIR}/Content"
+			COMMENT "Staging SD card layout with game content"
+			VERBATIM)
+	elseif(PLATFORM_DREAMCAST)
+		# Package a bootable CDI image with the game content included ("/cd/Content/"), so it can be
+		# started directly in an emulator (Flycast) or burned to a disc; requires mkdcdisc
+		find_program(MKDCDISC_EXECUTABLE mkdcdisc)
+		if(MKDCDISC_EXECUTABLE)
+			# The content is staged as "cd/Content" first, so the directory on the disc is always named
+			# "Content" regardless of the source directory name (e.g. "ContentEmscripten" for the demo)
+			add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${CMAKE_BINARY_DIR}/cd/Content"
+				COMMAND "${MKDCDISC_EXECUTABLE}" -e "$<TARGET_FILE:${NCINE_APP}>" -d "${CMAKE_BINARY_DIR}/cd/Content" -n "Jazz2 Resurrection" -o "${CMAKE_BINARY_DIR}/${NCINE_APP}.cdi"
+				COMMENT "Creating bootable CDI image with game content"
+				VERBATIM)
+		else()
+			message(STATUS "mkdcdisc not found, bootable CDI image will not be created")
+		endif()
 	elseif(VITA)
 		include("${VITASDK}/share/vita.cmake" REQUIRED)
 

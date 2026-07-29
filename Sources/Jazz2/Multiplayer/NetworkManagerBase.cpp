@@ -21,14 +21,16 @@
 #include <Containers/StringStlView.h>
 #include <IO/FileSystem.h>
 
-#if defined(DEATH_TARGET_ANDROID)
-#	include <enet/ifaddrs-android.h>
-#elif defined(DEATH_TARGET_SWITCH)
-#	include <net/if.h>
-#elif defined(DEATH_TARGET_WINDOWS)
-#	include <iphlpapi.h>
-#elif !defined(DEATH_TARGET_EMSCRIPTEN)
-#	include <ifaddrs.h>
+#if defined(WITH_ONLINE_MULTIPLAYER)
+#	if defined(DEATH_TARGET_ANDROID)
+#		include <enet/ifaddrs-android.h>
+#	elif defined(DEATH_TARGET_SWITCH)
+#		include <net/if.h>
+#	elif defined(DEATH_TARGET_WINDOWS)
+#		include <iphlpapi.h>
+#	elif !defined(DEATH_TARGET_EMSCRIPTEN)
+#		include <ifaddrs.h>
+#	endif
 #endif
 
 #if defined(WITH_WEBSOCKET)
@@ -427,6 +429,8 @@ namespace Jazz2::Multiplayer
 	{
 #if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
 		return _emWsRtt;
+#elif !defined(WITH_ONLINE_MULTIPLAYER)
+		return 0;
 #else
 		// Guard against the network thread erasing _connectedPeers (disconnect) while the UI polls the RTT
 		std::unique_lock<Spinlock> lock(_lock);
@@ -444,7 +448,7 @@ namespace Jazz2::Multiplayer
 
 	std::uint32_t NetworkManagerBase::GetRoundTripTimeMs(const Peer& peer) const
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_EMSCRIPTEN) || !defined(WITH_ONLINE_MULTIPLAYER)
 		return 0;
 #else
 #	if defined(WITH_WEBSOCKET)
@@ -463,7 +467,7 @@ namespace Jazz2::Multiplayer
 
 	Array<String> NetworkManagerBase::GetServerEndpoints() const
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_EMSCRIPTEN) || !defined(WITH_ONLINE_MULTIPLAYER)
 		// Creating a server is not supported on Emscripten
 		return {};
 #else
@@ -591,7 +595,7 @@ namespace Jazz2::Multiplayer
 
 	std::uint16_t NetworkManagerBase::GetServerPort() const
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(DEATH_TARGET_EMSCRIPTEN) || !defined(WITH_ONLINE_MULTIPLAYER)
 		// Creating a server is not supported on Emscripten
 		return 0;
 #else
@@ -878,7 +882,7 @@ namespace Jazz2::Multiplayer
 
 	String NetworkManagerBase::AddressToString(const struct in_addr& address, std::uint16_t port)
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
+#if (defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)) || !defined(WITH_ONLINE_MULTIPLAYER)
 		// TODO: Implement this properly on Emscripten
 		return {};
 #else
@@ -944,7 +948,7 @@ namespace Jazz2::Multiplayer
 	}
 #endif
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_ONLINE_MULTIPLAYER)
 	String NetworkManagerBase::AddressToString(const ENetAddress& address, bool includePort)
 	{
 #	if ENET_IPV6
@@ -971,16 +975,18 @@ namespace Jazz2::Multiplayer
 		}
 #	endif
 
+#	if defined(WITH_ONLINE_MULTIPLAYER)
 		if DEATH_LIKELY(peer._enet != nullptr) {
 			return AddressToString(peer._enet->address);
 		}
+#	endif
 		return {};
 #endif
 	}
 
 	bool NetworkManagerBase::IsAddressValid(StringView address)
 	{
-#if defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)
+#if (defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_WEBSOCKET)) || !defined(WITH_ONLINE_MULTIPLAYER)
 		// TODO: Implement this properly on Emscripten
 		return true;
 #else

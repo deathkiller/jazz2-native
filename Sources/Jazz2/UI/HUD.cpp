@@ -1572,7 +1572,7 @@ namespace Jazz2::UI
 		height *= 0.5f; y += height;
 
 		float angleRange = std::min(maxAngle - minAngle, fRadAngle360);
-		std::int32_t segmentNum = std::clamp((std::int32_t)std::round(powf(std::max(width, height), 0.65f) * 3.5f * angleRange / fRadAngle360), 4, 128);
+		std::int32_t segmentNum = std::clamp<std::int32_t>((std::int32_t)std::round(powf(std::max(width, height), 0.65f) * 3.5f * angleRange / fRadAngle360), 4, 128);
 		float angleStep = angleRange / (segmentNum - 1);
 		std::int32_t vertexCount = segmentNum + 2;
 		float angle = minAngle;
@@ -1856,11 +1856,11 @@ namespace Jazz2::UI
 		percent = (std::int32_t)(_rgbHealthLast * 255);
 		percentG = percent * percent / 255;
 		percentR = (255 - (percent - 120) * 2);
-		percentR = std::clamp(percentR, 0, 255);
+		percentR = std::clamp<std::int32_t>(percentR, 0, 255);
 
 		for (std::int32_t i = 0; i < KeyMax2; i++) {
 			std::int32_t intensity = (std::int32_t)((_rgbHealthLast - ((float)i / KeyMax2)) * 255 * KeyMax2);
-			intensity = std::clamp(intensity, 0, 200);
+			intensity = std::clamp<std::int32_t>(intensity, 0, 200);
 
 			if (intensity > 0) {
 				colors[(std::int32_t)AuraLight::Tilde + i] = Color(percentR * intensity / 255, percentG * intensity / 255, 0);
@@ -1885,7 +1885,7 @@ namespace Jazz2::UI
 		float distance = sqrtf(powf((float)(Width - x), 2) + powf((float)(Height - y), 2));
 		float value = cosf(AnimationMult * distance / (0.1f * Spacing) + animProgress);
 		float alpha = lerp(powf((value + 1) * 0.5f, 12.0f) * ambientLightLower, 0.8f, ambientLightUpper);
-		return Color(std::clamp((std::uint32_t)(color.R * alpha), 0u, 255u), std::clamp((std::uint32_t)(color.G * alpha), 0u, 255u), std::clamp((std::uint32_t)(color.B * alpha), 0u, 255u));
+		return Color(std::clamp<std::uint32_t>((std::uint32_t)(color.R * alpha), 0u, 255u), std::clamp<std::uint32_t>((std::uint32_t)(color.G * alpha), 0u, 255u), std::clamp<std::uint32_t>((std::uint32_t)(color.B * alpha), 0u, 255u));
 	}
 
 	AuraLight HUD::KeyToAuraLight(Keys key)

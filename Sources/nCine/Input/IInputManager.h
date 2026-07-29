@@ -197,7 +197,7 @@ namespace nCine
 
 		void setCursor(Cursor cursor) override {}
 
-	private:
+	public:
 		class NullMouseState : public MouseState
 		{
 		public:
@@ -218,6 +218,7 @@ namespace nCine
 			float axisValue(int axisId) const override { return 0.0f; }
 		};
 
+	private:
 		NullMouseState mouseState_;
 		NullKeyboardState keyState_;
 		NullJoystickState joyState_;

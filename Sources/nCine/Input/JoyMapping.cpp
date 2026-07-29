@@ -62,7 +62,7 @@ namespace nCine
 		//}
 	}
 
-	const unsigned int JoyMapping::MaxNameLength;
+	constexpr std::uint32_t JoyMapping::MaxNameLength;
 
 	const char* JoyMapping::AxesStrings[] = {
 		"leftx",

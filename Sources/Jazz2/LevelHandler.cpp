@@ -1741,7 +1741,7 @@ namespace Jazz2
 			}
 		}
 
-		std::int32_t weatherIntensity = std::max((std::int32_t)(_weatherIntensity * timeMult), 1);
+		std::int32_t weatherIntensity = std::max<std::int32_t>((std::int32_t)(_weatherIntensity * timeMult), 1);
 
 		bool isRain = ((_weatherType & ~WeatherType::OutdoorsOnly) == WeatherType::Rain);
 		auto* res = _commonResources->FindAnimation(isRain ? Rain : Snow);

@@ -110,6 +110,7 @@ namespace nCine::RHI::PVR
 	std::int32_t PvrDevice::logicalWidth_ = 640;
 	std::int32_t PvrDevice::logicalHeight_ = 480;
 	PvrDevice::SceneTarget PvrDevice::sceneTarget_ = PvrDevice::SceneTarget::None;
+	std::uint32_t PvrDevice::sceneCounter_ = 0;
 	PvrRenderTarget* PvrDevice::sceneRenderTarget_ = nullptr;
 
 	PvrTexture* PvrDevice::paletteTexture_ = nullptr;
@@ -187,6 +188,7 @@ namespace nCine::RHI::PVR
 		pvr_scene_finish();
 		sceneTarget_ = SceneTarget::None;
 		sceneRenderTarget_ = nullptr;
+		sceneCounter_++;
 	}
 
 	void PvrDevice::PresentFrame()
@@ -635,12 +637,11 @@ namespace nCine::RHI::PVR
 		// v1 renders the procedural sprite-quad families only (see the GX device for the same policy)
 		const bool isQuadFamily = (effect == PvrEffect::DefaultSprite || effect == PvrEffect::DefaultBatchedSprites ||
 			effect == PvrEffect::DefaultSpriteNoTexture || effect == PvrEffect::DefaultBatchedSpritesNoTexture ||
+			effect == PvrEffect::Colorized || effect == PvrEffect::BatchedColorized ||
 			effect == PvrEffect::PaletteRemap || effect == PvrEffect::BatchedPaletteRemap ||
 			effect == PvrEffect::TexturedBackground || effect == PvrEffect::TexturedBackgroundCircle);
-		if (!isQuadFamily || primitive != PrimitiveType::TriangleStrip) {
-			static bool warnedUnsupported = false;
-			if (!warnedUnsupported) {
-				warnedUnsupported = true;
+		if (!isQuadFamily || (primitive != PrimitiveType::TriangleStrip && primitive != PrimitiveType::Triangles)) {
+			if (!currentProgram_->FetchUnsupportedWarned()) {
 				LOGW("Skipping draws of program \"{}\": Effect not supported by the PVR v1 dispatch", currentProgram_->GetObjectLabel());
 			}
 			return;
@@ -692,7 +693,7 @@ namespace nCine::RHI::PVR
 		Mat4Mul(projMat, viewMat, pv);
 
 		const bool batched = (effect == PvrEffect::DefaultBatchedSprites || effect == PvrEffect::DefaultBatchedSpritesNoTexture ||
-			effect == PvrEffect::BatchedPaletteRemap || instanceStride > 0);
+			effect == PvrEffect::BatchedPaletteRemap || effect == PvrEffect::BatchedColorized || instanceStride > 0);
 		std::int32_t numInstances = 1;
 		if (batched) {
 			numInstances = numVertices / 6;
@@ -738,6 +739,12 @@ namespace nCine::RHI::PVR
 		bool hdrValid = false;
 		pvr_ptr_t lastVram = nullptr;
 		std::int32_t lastBank = -2;
+
+		// The engine's NDC orientation matches the software backend, whose top-down raster is flipped at
+		// present time; the PVR scans out its buffer top-down directly, so screen passes mirror NDC here
+		// instead (+1 = bottom row). Render-to-texture passes keep the unmirrored top-down store, which is
+		// what the sampling passes already expect.
+		const bool screenPass = (currentRenderTarget_ == nullptr);
 
 		for (std::int32_t k = 0; k < numInstances; k++) {
 			const std::uint8_t* inst = blockData + std::size_t(k) * (batched ? instanceStride : 0);
@@ -790,12 +797,12 @@ namespace nCine::RHI::PVR
 				if (!hdrValid || vram != lastVram || bank != lastBank) {
 					pvr_poly_cxt_t cxt;
 					pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY, int(format),
-						texture->GetPaddedWidth(), texture->GetPaddedHeight(), vram, filter);
+						texture->GetPaddedWidth(), texture->GetPaddedHeight(), vram, pvr_filter_mode_t(filter));
 					cxt.gen.culling = PVR_CULLING_NONE;
 					cxt.depth.comparison = PVR_DEPTHCMP_ALWAYS;
 					cxt.depth.write = PVR_DEPTHWRITE_DISABLE;
-					cxt.blend.src = blendSrc;
-					cxt.blend.dst = blendDst;
+					cxt.blend.src = pvr_blend_mode_t(blendSrc);
+					cxt.blend.dst = pvr_blend_mode_t(blendDst);
 					cxt.txr.env = PVR_TXRENV_MODULATEALPHA;
 					pvr_poly_compile(&hdr, &cxt);
 					hdrValid = true;
@@ -808,8 +815,8 @@ namespace nCine::RHI::PVR
 				cxt.gen.culling = PVR_CULLING_NONE;
 				cxt.depth.comparison = PVR_DEPTHCMP_ALWAYS;
 				cxt.depth.write = PVR_DEPTHWRITE_DISABLE;
-				cxt.blend.src = blendSrc;
-				cxt.blend.dst = blendDst;
+				cxt.blend.src = pvr_blend_mode_t(blendSrc);
+				cxt.blend.dst = pvr_blend_mode_t(blendDst);
 				pvr_poly_compile(&hdr, &cxt);
 				hdrValid = true;
 			}
@@ -825,11 +832,18 @@ namespace nCine::RHI::PVR
 				const float ndcX = mvp[0] * wx + mvp[4] * wy + mvp[12];
 				const float ndcY = mvp[1] * wx + mvp[5] * wy + mvp[13];
 				px[i] = ((ndcX + 1.0f) * 0.5f * float(viewport.W) + float(viewport.X)) * scaleX + offsetX;
-				py[i] = ((1.0f - ndcY) * 0.5f * float(viewport.H) + float(viewport.Y)) * scaleY + offsetY;
+				py[i] = ((screenPass ? (ndcY + 1.0f) : (1.0f - ndcY)) * 0.5f * float(viewport.H) + float(viewport.Y)) * scaleY + offsetY;
 				pu[i] = (ax * texRect[0] + texRect[1]) * uvScaleU;
 				pvv[i] = (ay * texRect[2] + texRect[3]) * uvScaleV;
 			}
 
+			if (effect == PvrEffect::Colorized || effect == PvrEffect::BatchedColorized) {
+				// Amplified dye of the Colorized shader (the grayscale step is dropped, but the affected
+				// textures - mostly font glyphs - are grayscale already)
+				for (std::int32_t c = 0; c < 4; c++) {
+					color[c] = 1.0f + (color[c] - 0.5f) * 4.0f;
+				}
+			}
 			const std::uint32_t argb = PackArgb(QuantizeChannel(color[0]), QuantizeChannel(color[1]),
 				QuantizeChannel(color[2]), QuantizeChannel(color[3]));
 			SubmitQuad(hdr, px, py, pu, pvv, argb);

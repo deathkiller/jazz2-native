@@ -47,6 +47,7 @@ namespace nCine::Backends
 		updateMonitors();
 
 		RHI::Device::InitializeGx(rmode_);
+
 		initDeviceViewport();
 
 		LOGI("Video mode initialized: {}x{} ({})", width_, height_,
@@ -64,6 +65,7 @@ namespace nCine::Backends
 		// Finish the frame's GX draws into the back external framebuffer, then flip and pace to vsync
 		fbIndex_ ^= 1;
 		RHI::Device::PresentToXfb(xfb_[fbIndex_]);
+
 		VIDEO_SetNextFramebuffer(xfb_[fbIndex_]);
 		VIDEO_Flush();
 		VIDEO_WaitVSync();

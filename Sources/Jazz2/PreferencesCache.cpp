@@ -210,7 +210,7 @@ namespace Jazz2
 
 		// If config path is not overriden and portable config doesn't exist, use common path for current user
 		if (!overrideConfigPath && !fs::IsReadableFile(_configPath)) {
-#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
 			// Save config file next to `Source` directory
 			auto& resolver = ContentResolver::Get();
 			_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
@@ -247,7 +247,7 @@ namespace Jazz2
 		// (Apple, Unix, Windows) it also forces tracing to the file even without
 		// using any command-line argument
 #	if defined(DEATH_TRACE)
-#		if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+#		if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		fs::CreateDirectories(configDir);
 #			if defined(DEATH_TRACE_LOG_PATH)
 		theApplication().AttachTraceTarget(fs::CombinePath(configDir, DEATH_TRACE_LOG_PATH));

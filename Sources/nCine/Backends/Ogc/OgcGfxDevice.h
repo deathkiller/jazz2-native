@@ -7,6 +7,11 @@
 
 #include <gccore.h>
 
+namespace nCine
+{
+	class MainApplication;
+}
+
 namespace nCine::Backends
 {
 	/**

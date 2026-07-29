@@ -551,6 +551,9 @@ namespace Jazz2
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit
+			if (s->IsValid()) {
+				LOGE("Cannot load metadata \"{}\" with unexpected file size of {} bytes", path, fileSize);
+			}
 			return nullptr;
 		}
 
@@ -741,6 +744,9 @@ namespace Jazz2
 		auto fileSize = s->GetSize();
 		if (fileSize < 4 || fileSize > 64 * 1024 * 1024) {
 			// 64 MB file size limit, also if not found try to use cache
+			if (s->IsValid()) {
+				LOGE("Cannot load animation \"{}\" with unexpected file size of {} bytes", path, fileSize);
+			}
 			return nullptr;
 		}
 
@@ -1516,6 +1522,7 @@ namespace Jazz2
 
 		std::uint16_t captionTileId = uc.ReadValueAsLE<std::uint16_t>();
 
+
 		PitType pitType;
 		if ((flags & LevelFlags::HasPit) == LevelFlags::HasPit) {
 			pitType = ((flags & LevelFlags::HasPitInstantDeath) == LevelFlags::HasPitInstantDeath ? PitType::InstantDeathPit : PitType::FallForever);
@@ -1978,7 +1985,7 @@ namespace Jazz2
 		const AppConfiguration& appCfg = theApplication().GetAppConfiguration();
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		// Clamping the value as some drivers report a maximum size similar to SSBO one
-		std::int32_t maxUniformBlockSize = std::clamp(gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
+		std::int32_t maxUniformBlockSize = std::clamp<std::int32_t>(gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE), 0, 64 * 1024);
 
 		std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize;
 		bool batchSizeComputed = false;

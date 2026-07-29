@@ -16,7 +16,7 @@
 #include <Containers/StringUtils.h>
 #include <IO/MemoryStream.h>
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_ONLINE_MULTIPLAYER)
 #	include "../../nCine/Threading/Thread.h"
 #	include <IO/WebRequest.h>
 #endif
@@ -41,7 +41,7 @@ struct ipv6_mreq {
 
 using namespace std::string_view_literals;
 using namespace Death::Containers::Literals;
-#if !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_ONLINE_MULTIPLAYER)
 using namespace Death::IO;
 #endif
 using namespace nCine;

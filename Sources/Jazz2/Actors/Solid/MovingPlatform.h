@@ -60,6 +60,6 @@ namespace Jazz2::Actors::Solid
 
 		SmallVector<ChainPiece, 0> _pieces;
 
-		Vector2f GetPhasePosition(int distance);
+		Vector2f GetPhasePosition(std::int32_t distance);
 	};
 }

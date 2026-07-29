@@ -40,7 +40,7 @@ namespace Jazz2::UI::Menu
 
 	Recti ScoreboardSection::GetClipRectangle(const Recti& contentBounds)
 	{
-		return Recti(contentBounds.X, contentBounds.Y + RowsTop, contentBounds.W, std::max(0, contentBounds.H - RowsTop - BottomMargin));
+		return Recti(contentBounds.X, contentBounds.Y + RowsTop, contentBounds.W, std::max<std::int32_t>(0, contentBounds.H - RowsTop - BottomMargin));
 	}
 
 	void ScoreboardSection::OnShow(IMenuContainer* root)
@@ -72,7 +72,7 @@ namespace Jazz2::UI::Menu
 		_availableHeight = GetClipRectangle(contentBounds).H;
 		_contentHeight = (std::int32_t)(count * RowHeight);
 		_scrollable = (_contentHeight > _availableHeight);
-		std::int32_t minScroll = std::min(0, _availableHeight - _contentHeight);
+		std::int32_t minScroll = std::min<std::int32_t>(0, _availableHeight - _contentHeight);
 
 		// Kinetic touch momentum (mirrors ScrollView): coast after release, bounce slightly at the edges
 		if (_touchSpeed > 0.0f) {
@@ -93,7 +93,7 @@ namespace Jazz2::UI::Menu
 			_touchSpeed = std::max(_touchSpeed - TouchKineticFriction * TouchKineticDivider * timeMult, 0.0f);
 		}
 
-		_scrollY = std::clamp(_scrollY, minScroll, 0);
+		_scrollY = std::clamp<std::int32_t>(_scrollY, minScroll, 0);
 		_touchTime += timeMult;
 
 		// Hold Up/Down to scroll continuously (one row per repeat, matching the menu lists)
@@ -105,7 +105,7 @@ namespace Jazz2::UI::Menu
 			_root->LeaveSection();
 		} else if (navUp) {
 			if (_scrollable && _scrollY < 0) {
-				_scrollY = std::min(0, _scrollY + (std::int32_t)RowHeight);
+				_scrollY = std::min<std::int32_t>(0, _scrollY + (std::int32_t)RowHeight);
 				if (navSound) _root->PlaySfx("MenuSelect"_s, 0.4f);
 			}
 		} else if (navDown) {
@@ -319,7 +319,7 @@ namespace Jazz2::UI::Menu
 					_touchSpeed = 0.0f;
 					// Remember whether the scroll is already at the bottom (or the list isn't scrollable) - a swipe
 					// up from there closes the scoreboard, whereas a swipe up mid-list just scrolls
-					std::int32_t minScroll = std::min(0, _availableHeight - _contentHeight);
+					std::int32_t minScroll = std::min<std::int32_t>(0, _availableHeight - _contentHeight);
 					_touchStartedAtBottom = (_scrollY <= minScroll);
 				}
 				break;

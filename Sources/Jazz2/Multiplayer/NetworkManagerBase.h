@@ -160,7 +160,7 @@ namespace Jazz2::Multiplayer
 		/** @brief Converts the specified IPv6 endpoint to the string representation */
 		static String AddressToString(const struct in6_addr& address, std::uint16_t scopeId, std::uint16_t port = 0);
 #endif
-#if !defined(DEATH_TARGET_EMSCRIPTEN) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if (!defined(DEATH_TARGET_EMSCRIPTEN) && defined(WITH_ONLINE_MULTIPLAYER)) || defined(DOXYGEN_GENERATING_OUTPUT)
 		/** @brief Converts the specified ENet address to the string representation */
 		static String AddressToString(const ENetAddress& address, bool includePort = false);
 #endif
@@ -203,7 +203,9 @@ namespace Jazz2::Multiplayer
 		_ENetHost* _host;
 		Thread _thread;
 		SmallVector<Peer, 1> _connectedPeers;
+#	if defined(WITH_ONLINE_MULTIPLAYER)
 		SmallVector<ENetAddress, 0> _desiredEndpoints;
+#	endif
 #endif
 		NetworkState _state;
 		std::uint32_t _clientData;

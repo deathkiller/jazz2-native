@@ -273,7 +273,12 @@ function(ncine_apply_compiler_options target)
 	endif()
 
 	target_compile_features(${target} PUBLIC cxx_std_17)
-	set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
+	if(PLATFORM_DREAMCAST)
+		# KOS newlib hides C99 stdio (snprintf, strtoll) behind !__STRICT_ANSI__, so GNU extensions are required
+		set_target_properties(${target} PROPERTIES CXX_EXTENSIONS ON)
+	else()
+		set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
+	endif()
 	target_compile_definitions(${target} PRIVATE "CMAKE_BUILD")
 	if(NCINE_BUILD_LIBRETRO)
 		# Static helper libs are linked into the shared core
@@ -283,7 +288,9 @@ function(ncine_apply_compiler_options target)
 	# Enable interprocedural optimization (LTO on GCC/Clang, /GL + /LTCG on MSVC) in Release, but skip it for
 	# static libraries: an LTO static archive's slim objects don't resolve reliably when linked into the
 	# also-LTO executable (undefined references to its symbols), whereas plain objects link cleanly.
-	if(NCINE_LINKTIME_OPTIMIZATION AND NOT (target_type STREQUAL "STATIC_LIBRARY"))
+	if(NCINE_LINKTIME_OPTIMIZATION AND NOT (target_type STREQUAL "STATIC_LIBRARY") AND NOT PLATFORM_DREAMCAST)
+		# LTO is also skipped on Sega Dreamcast: GCC 15.2 sh-elf crashes with an internal compiler error
+		# (gen_reg_rtx) when streaming some units back in during the LTO link
 		set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 	endif()
 
