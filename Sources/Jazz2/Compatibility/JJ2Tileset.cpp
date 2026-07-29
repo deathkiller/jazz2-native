@@ -272,7 +272,7 @@ namespace Jazz2::Compatibility
 			// Mark individual tiles as 32-bit or 8-bit
 			for (std::int32_t i = 0; i < (tileCount + 7) / 8; i++) {
 				std::uint32_t is32bitAggregated = 0;
-				std::int32_t tilesPerByte = std::min(8, tileCount - i * 8);
+				std::int32_t tilesPerByte = std::min<std::int32_t>(8, tileCount - i * 8);
 				for (std::int32_t j = 0; j < tilesPerByte; j++) {
 					const auto& tile = _tiles[i * 8 + j];
 					if (tile.ImageDataOffset & Is32bitTile) {

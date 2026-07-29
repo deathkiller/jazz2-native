@@ -110,7 +110,7 @@ namespace nCine
 		{
 			for (std::uint32_t i = 0; i < NumChannels; i++) {
 				std::uint32_t channelValue = Data()[i] + color.Data()[i];
-				channelValue = std::clamp(channelValue, 0U, 255U);
+				channelValue = std::clamp<std::uint32_t>(channelValue, 0U, 255U);
 				Data()[i] = static_cast<std::uint8_t>(channelValue);
 			}
 
@@ -121,7 +121,7 @@ namespace nCine
 		{
 			for (std::uint32_t i = 0; i < NumChannels; i++) {
 				std::uint32_t channelValue = Data()[i] - color.Data()[i];
-				channelValue = std::clamp(channelValue, 0U, 255U);
+				channelValue = std::clamp<std::uint32_t>(channelValue, 0U, 255U);
 				Data()[i] = static_cast<std::uint8_t>(channelValue);
 			}
 
@@ -156,7 +156,7 @@ namespace nCine
 
 			for (std::uint32_t i = 0; i < NumChannels; i++) {
 				std::uint32_t channelValue = Data()[i] + color.Data()[i];
-				channelValue = std::clamp(channelValue, 0U, 255U);
+				channelValue = std::clamp<std::uint32_t>(channelValue, 0U, 255U);
 				result.Data()[i] = static_cast<std::uint8_t>(channelValue);
 			}
 
@@ -169,7 +169,7 @@ namespace nCine
 
 			for (std::uint32_t i = 0; i < NumChannels; i++) {
 				std::uint32_t channelValue = Data()[i] - color.Data()[i];
-				channelValue = std::clamp(channelValue, 0U, 255U);
+				channelValue = std::clamp<std::uint32_t>(channelValue, 0U, 255U);
 				result.Data()[i] = static_cast<std::uint8_t>(channelValue);
 			}
 

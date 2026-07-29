@@ -823,7 +823,7 @@ namespace Jazz2::UI
 	{
 		std::int32_t ascent = _font->GetAscentInPixels();
 		// Max. thickness is 5px, because it's shared also with rounded rectangles (with height >= 6px)
-		std::int32_t thickness = std::clamp(ascent / 16, 1, 5);
+		std::int32_t thickness = std::clamp<std::int32_t>(ascent / 16, 1, 5);
 
 		BackgroundPart& underline = _background.emplace_back(part.CurrentColor);
 		underline.Bounds.X = part.Location.X;

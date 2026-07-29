@@ -813,8 +813,8 @@ namespace Jazz2::Multiplayer
 		}
 		boundsMin.X = std::max(0, boundsMin.X - 2);
 		boundsMin.Y = std::max(0, boundsMin.Y - 2);
-		boundsMax.X = std::min(W - 1, boundsMax.X + 2);
-		boundsMax.Y = std::min(H - 1, boundsMax.Y + 2);
+		boundsMax.X = std::min<std::int32_t>(W - 1, boundsMax.X + 2);
+		boundsMax.Y = std::min<std::int32_t>(H - 1, boundsMax.Y + 2);
 		outBoundsMin = boundsMin;
 		outBoundsMax = boundsMax;
 

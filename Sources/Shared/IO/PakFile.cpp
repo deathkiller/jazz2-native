@@ -692,6 +692,10 @@ namespace Death { namespace IO {
 
 	PakFile::Item* PakFile::FindItemByHash(std::uint64_t hashedPath)
 	{
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+		// The hash bytes are stored in little-endian order by PakWriter
+		hashedPath = Memory::SwapBytes(hashedPath);
+#endif
 		// Items are always sorted by PakWriter
 		Item* foundItem = std::lower_bound(_rootItems.begin(), _rootItems.end(), hashedPath, [](const PakFile::Item& a, std::uint64_t b) {
 			return std::memcmp(a.Name.data(), &b, HashIndexLength) < 0;
@@ -1005,6 +1009,10 @@ namespace Death { namespace IO {
 		if (_useHashIndex) {
 			newItem->Name = String{NoInit, HashIndexLength};
 			std::uint64_t hash = FileNameToHash(path);
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+			// The hash bytes are always stored in little-endian order
+			hash = Memory::SwapBytes(hash);
+#endif
 			std::memcpy(newItem->Name.data(), &hash, HashIndexLength);
 		} else {
 			newItem->Name = path;

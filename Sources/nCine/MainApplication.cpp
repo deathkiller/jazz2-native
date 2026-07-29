@@ -134,11 +134,31 @@ namespace nCine
 		// Bring up the shared subsystems before any device exists: the video hardware (OgcGfxDevice picks
 		// the mode and allocates framebuffers later), the SD/storage FAT layer and the controller ports
 		VIDEO_Init();
+
+		// Early boot console: everything written to stdout (including all trace messages) is shown
+		// directly on the screen until OgcGfxDevice reconfigures the video mode during initialization,
+		// so startup crashes are visible without a USB Gecko attached
+		GXRModeObj* earlyMode = VIDEO_GetPreferredMode(NULL);
+		void* earlyXfb = MEM_K0_TO_K1(SYS_AllocateFramebuffer(earlyMode));
+		CON_Init(earlyXfb, 20, 20, earlyMode->fbWidth, earlyMode->xfbHeight, earlyMode->fbWidth * VI_DISPLAY_PIX_SZ);
+		VIDEO_Configure(earlyMode);
+		VIDEO_SetNextFramebuffer(earlyXfb);
+		VIDEO_SetBlack(FALSE);
+		VIDEO_Flush();
+		VIDEO_WaitVSync();
+		printf("Application starting...\n");
+
 		fatInitDefault();
 		PAD_Init();
 #	if defined(DEATH_TARGET_WII)
 		WPAD_Init();
 #	endif
+#elif defined(DEATH_TARGET_DREAMCAST)
+		// Early boot log on the framebuffer console: startup messages (including all trace messages)
+		// are shown directly on the screen, so crashes are visible without a serial cable attached;
+		// DcGfxDevice switches dbgio back to the serial port when the real renderer takes over
+		dbgio_dev_select("fb");
+		printf("Application starting...\n");
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
 		wchar_t workingDir[fs::MaxPathLength];

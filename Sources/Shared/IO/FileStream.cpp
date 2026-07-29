@@ -319,6 +319,9 @@ namespace Death { namespace IO {
 		return ::FlushFileBuffers(_fileHandle);
 #elif defined(_POSIX_SYNCHRONIZED_IO) && _POSIX_SYNCHRONIZED_IO > 0
 		return ::fdatasync(_fileDescriptor) == 0;
+#elif defined(DEATH_TARGET_DREAMCAST)
+		// fsync() is not implemented in KOS
+		return true;
 #else
 		return ::fsync(_fileDescriptor) == 0;
 #endif
@@ -359,7 +362,7 @@ namespace Death { namespace IO {
 		if (_filePos > size) {
 			_filePos = size;
 		}
-#elif !defined(DEATH_TARGET_VITA) // TODO: ftruncate() is not defined on VITA
+#elif !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST) // TODO: ftruncate() is not defined on VITA and KOS
 		if (::ftruncate(_fileDescriptor, size) < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Failed to resize file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
@@ -514,7 +517,7 @@ namespace Death { namespace IO {
 			return;
 		}
 
-#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
 		if ((mode & FileAccess::Exclusive) == FileAccess::Exclusive) {
 			// Windows opens exclusive files with a share mode of 0, denying any other opener. Modern Linux has no
 			// usable mandatory locking, so emulate it with an advisory whole-file lock bound to the open file
@@ -542,6 +545,16 @@ namespace Death { namespace IO {
 		if (::fstat(_fileDescriptor, &sb) == 0 && S_ISREG(sb.st_mode)) {
 			_size = std::int64_t(sb.st_size);
 		}
+#	if defined(DEATH_TARGET_DREAMCAST)
+		else {
+			// fstat() is not fully supported by some KOS filesystems (e.g. iso9660), measure the size by seeking instead
+			off_t seekEnd = ::lseek(_fileDescriptor, 0, SEEK_END);
+			if (seekEnd >= 0) {
+				_size = std::int64_t(seekEnd);
+				::lseek(_fileDescriptor, 0, SEEK_SET);
+			}
+		}
+#	endif
 #endif
 
 #if defined(DEATH_TRACE_VERBOSE_IO)
@@ -602,6 +615,23 @@ namespace Death { namespace IO {
 		_filePos += std::int32_t(bytesRead);
 		return std::int32_t(bytesRead);
 #else
+#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+		// libfat and the KOS filesystems can return short reads in the middle of a file (e.g. on cluster
+		// boundaries), which the buffered caller treats as end-of-data, so keep reading until done
+		std::int32_t bytesRead = 0;
+		while (bytesRead < bytesToRead) {
+			std::int32_t partial = std::int32_t(::read(_fileDescriptor, static_cast<std::uint8_t*>(destination) + bytesRead, bytesToRead - bytesRead));
+			if (partial < 0) {
+#		if defined(DEATH_TRACE_VERBOSE_IO)
+				LOGE("Failed to read from file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
+#		endif
+				return -1;
+			} else if (partial == 0) {
+				break;
+			}
+			bytesRead += partial;
+		}
+#	else
 		std::int32_t bytesRead = std::int32_t(::read(_fileDescriptor, destination, bytesToRead));
 		if (bytesRead < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
@@ -609,6 +639,7 @@ namespace Death { namespace IO {
 #	endif
 			return -1;
 		}
+#	endif
 		_filePos += bytesRead;
 		return bytesRead;
 #endif
@@ -631,6 +662,22 @@ namespace Death { namespace IO {
 		_filePos += std::int32_t(bytesWritten);
 		return std::int32_t(bytesWritten);
 #else
+#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+		// libfat and the KOS filesystems can write fewer bytes than requested, so keep writing until done
+		std::int32_t bytesWritten = 0;
+		while (bytesWritten < bytesToWrite) {
+			std::int32_t partial = std::int32_t(::write(_fileDescriptor, static_cast<const std::uint8_t*>(source) + bytesWritten, bytesToWrite - bytesWritten));
+			if (partial < 0) {
+#		if defined(DEATH_TRACE_VERBOSE_IO)
+				LOGE("Failed to write to file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
+#		endif
+				return -1;
+			} else if (partial == 0) {
+				break;
+			}
+			bytesWritten += partial;
+		}
+#	else
 		std::int32_t bytesWritten = std::int32_t(::write(_fileDescriptor, source, bytesToWrite));
 		if (bytesWritten < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
@@ -638,6 +685,7 @@ namespace Death { namespace IO {
 #	endif
 			return -1;
 		}
+#	endif
 		_filePos += bytesWritten;
 		return bytesWritten;
 #endif

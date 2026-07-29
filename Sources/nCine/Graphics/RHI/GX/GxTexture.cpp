@@ -8,6 +8,8 @@
 
 #include <ogc/cache.h>	// DCFlushRange
 
+using namespace Death::Containers::Literals;
+
 namespace nCine::RHI::GX
 {
 	namespace
@@ -93,7 +95,7 @@ namespace nCine::RHI::GX
 			minFilter_(nCine::SamplerFilter::Nearest), magFilter_(nCine::SamplerFilter::Nearest), wrap_(SamplerWrapping::ClampToEdge),
 			textureUnit_(0), isRenderTarget_(false), isPaletteTexture_(false),
 			tiledStore_(nullptr), tiledStoreSize_(0), texObjValid_(false),
-			bakedStore_(nullptr), bakedValid_(false), bakedPaletteRow_(0), bakedPaletteGeneration_(0), bakedContentVersion_(0)
+			bakedSlots_{}, nextBakedSlot_(0)
 	{
 		swizzle_[0] = SwizzleChannel::Red;
 		swizzle_[1] = SwizzleChannel::Green;
@@ -116,11 +118,13 @@ namespace nCine::RHI::GX
 			tiledStoreSize_ = 0;
 		}
 		texObjValid_ = false;
-		if (bakedStore_ != nullptr) {
-			free(bakedStore_);
-			bakedStore_ = nullptr;
+		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
+			if (bakedSlots_[i].Store != nullptr) {
+				free(bakedSlots_[i].Store);
+				bakedSlots_[i].Store = nullptr;
+			}
+			bakedSlots_[i].Valid = false;
 		}
-		bakedValid_ = false;
 	}
 
 	std::int32_t GxTexture::BytesPerPixel(PixelFormat format)
@@ -216,15 +220,52 @@ namespace nCine::RHI::GX
 		if (pixels_.empty() || uploadFormat_ != PixelFormat::RG8 || paletteRow == nullptr) {
 			return nullptr;
 		}
-		if (bakedValid_ && bakedPaletteRow_ == paletteRowIndex && bakedPaletteGeneration_ == paletteGeneration &&
-			bakedContentVersion_ == contentVersion_) {
-			return &bakedTexObj_;
+		const std::uint32_t currentFrame = GxDevice::GetFrameCounter();
+		BakedSlot* slot = nullptr;
+		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
+			if (bakedSlots_[i].Valid && bakedSlots_[i].PaletteRow == paletteRowIndex) {
+				if (bakedSlots_[i].PaletteGeneration == paletteGeneration && bakedSlots_[i].ContentVersion == contentVersion_) {
+					bakedSlots_[i].LastUsedFrame = currentFrame;
+					return &bakedSlots_[i].TexObj;
+				}
+				slot = &bakedSlots_[i];	// Stale bake of the same row, refresh it in place
+				break;
+			}
+		}
+		if (slot == nullptr) {
+			for (std::int32_t i = 0; i < BakedSlotCount; i++) {
+				if (!bakedSlots_[i].Valid) {
+					slot = &bakedSlots_[i];
+					break;
+				}
+			}
+		}
+		if (slot == nullptr) {
+			// Never evict a bake the current frame still references - the FIFO consumes draws
+			// asynchronously, so overwriting one could corrupt the already submitted quads
+			for (std::int32_t i = 0; i < BakedSlotCount; i++) {
+				const std::int32_t candidate = (nextBakedSlot_ + i) % BakedSlotCount;
+				if (bakedSlots_[candidate].LastUsedFrame != currentFrame) {
+					slot = &bakedSlots_[candidate];
+					nextBakedSlot_ = (candidate + 1) % BakedSlotCount;
+					break;
+				}
+			}
+		}
+		if (slot == nullptr) {
+			static bool warnedSlots = false;
+			if (!warnedSlots) {
+				warnedSlots = true;
+				LOGW("More than {} palette rows used with one texture in a single frame, expect glitches", BakedSlotCount);
+			}
+			slot = &bakedSlots_[nextBakedSlot_];
+			nextBakedSlot_ = (nextBakedSlot_ + 1) % BakedSlotCount;
 		}
 
 		const std::size_t required = TiledSizeRgba8(width_, height_);
-		if (bakedStore_ == nullptr) {
-			bakedStore_ = static_cast<std::uint8_t*>(memalign(32, required));
-			if (bakedStore_ == nullptr) {
+		if (slot->Store == nullptr) {
+			slot->Store = static_cast<std::uint8_t*>(memalign(32, required));
+			if (slot->Store == nullptr) {
 				LOGE("Out of memory allocating a {} B baked texture store", required);
 				return nullptr;
 			}
@@ -244,16 +285,17 @@ namespace nCine::RHI::GX
 				dst[x * 4 + 3] = src[x * 2 + 1];
 			}
 		}
-		TileRgba8(bakedStore_, linear.data(), width_, height_, width_ * 4, 4);
-		InitTexObj(bakedTexObj_, bakedStore_, GX_TF_RGBA8, false);
-		DCFlushRange(bakedStore_, std::uint32_t(required));
+		TileRgba8(slot->Store, linear.data(), width_, height_, width_ * 4, 4);
+		InitTexObj(slot->TexObj, slot->Store, GX_TF_RGBA8, false);
+		DCFlushRange(slot->Store, std::uint32_t(required));
 		GX_InvalidateTexAll();
 
-		bakedValid_ = true;
-		bakedPaletteRow_ = paletteRowIndex;
-		bakedPaletteGeneration_ = paletteGeneration;
-		bakedContentVersion_ = contentVersion_;
-		return &bakedTexObj_;
+		slot->Valid = true;
+		slot->PaletteRow = paletteRowIndex;
+		slot->PaletteGeneration = paletteGeneration;
+		slot->ContentVersion = contentVersion_;
+		slot->LastUsedFrame = currentFrame;
+		return &slot->TexObj;
 	}
 
 	void GxTexture::SetRenderTarget(bool isRenderTarget)

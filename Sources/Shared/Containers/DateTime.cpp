@@ -164,7 +164,8 @@ namespace Death { namespace Containers {
 			static bool _tzSet = (tzset(), true);
 			(void)_tzSet;
 
-#	if defined(DEATH_TARGET_MINGW) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+#	if defined(DEATH_TARGET_MINGW) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || \
+		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
 			return _timezone;
 #	else // Unknown platform - assume it has timezone variable
 			return timezone;

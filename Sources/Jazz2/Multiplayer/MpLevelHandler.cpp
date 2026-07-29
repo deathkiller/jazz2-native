@@ -2153,11 +2153,11 @@ namespace Jazz2::Multiplayer
 			std::int32_t playerCount = (std::int32_t)_players.size();
 			if (playerCount > 0) {
 				// Take 80% of all the treasure and divide it by clamped number of players
-				serverConfig.TotalTreasureCollected = (_totalTreasureCount * 8) / (10 * std::max(playerCount, 3));
+				serverConfig.TotalTreasureCollected = (_totalTreasureCount * 8) / (10 * std::max<std::int32_t>(playerCount, 3));
 				// Round to multiples of 5
 				serverConfig.TotalTreasureCollected = (std::int32_t)roundf(serverConfig.TotalTreasureCollected / 5.0f) * 5;
 				if (serverConfig.TotalTreasureCollected < 20) {
-					serverConfig.TotalTreasureCollected = std::min(20, _totalTreasureCount);
+					serverConfig.TotalTreasureCollected = std::min<std::int32_t>(20, _totalTreasureCount);
 				}
 			}
 		}
@@ -3192,7 +3192,7 @@ namespace Jazz2::Multiplayer
 										float force = Random().Next(10.0f, 20.0f);
 										Vector3f spawnPos = Vector3f(pos.X, pos.Y, MainPlaneZ);
 										std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x04 };
-										auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos.As<std::int32_t>());
+										auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos.As<int>());
 										if (actor != nullptr) {
 											actor->AddExternalForce(dir * force, force);
 											AddActor(actor);
@@ -6191,7 +6191,7 @@ namespace Jazz2::Multiplayer
 
 			if (serverConfig.GameMode == MpGameMode::TreasureHunt || serverConfig.GameMode == MpGameMode::TeamTreasureHunt) {
 				// TODO: Drop number of gems accorting to the gun strength (usually 3 times)
-				std::uint32_t treasureLost = std::min(peerDesc->TreasureCollected, 3u);
+				std::uint32_t treasureLost = std::min<std::uint32_t>(peerDesc->TreasureCollected, 3u);
 				if (treasureLost > 0) {
 					// If the player is dead, drop half of the collected treasure instead
 					if (mpPlayer->_health <= 0 && treasureLost < peerDesc->TreasureCollected / 2) {
@@ -6214,7 +6214,7 @@ namespace Jazz2::Multiplayer
 						float force = Random().NextFloat(10.0f, 20.0f);
 						Vector3f spawnPos = Vector3f(pos.X, pos.Y, MainPlaneZ);
 						std::uint8_t spawnParams[Events::EventSpawner::SpawnParamsSize] = { 0, 0x04 };
-						auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos.As<std::int32_t>());
+						auto actor = _eventSpawner.SpawnEvent(EventType::Gem, spawnParams, Actors::ActorState::None, spawnPos.As<int>());
 						if (actor != nullptr) {
 							actor->AddExternalForce(dir * force, force);
 							AddActor(actor);

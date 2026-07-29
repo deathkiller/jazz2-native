@@ -35,6 +35,12 @@ namespace nCine::RHI::PVR
 	class PvrDevice
 	{
 	public:
+		/** @brief Monotonic count of finished scenes, used to detect "still referenced by the current scene" resources */
+		static std::uint32_t GetSceneCounter() {
+			return sceneCounter_;
+		}
+
+
 		PvrDevice() = delete;
 		~PvrDevice() = delete;
 
@@ -232,6 +238,7 @@ namespace nCine::RHI::PVR
 		static std::uint32_t paletteGeneration_;
 		static PaletteBank paletteBanks_[MaxPaletteBanks];
 		static std::uint32_t paletteUseCounter_;
+		static std::uint32_t sceneCounter_;
 
 		static std::vector<PendingSoftwareLight> pendingSoftwareLights_;
 

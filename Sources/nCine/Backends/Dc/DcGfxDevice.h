@@ -5,6 +5,11 @@
 #include "../../Graphics/IGfxDevice.h"
 #include "../../Primitives/Vector2.h"
 
+namespace nCine
+{
+	class MainApplication;
+}
+
 namespace nCine::Backends
 {
 	/**

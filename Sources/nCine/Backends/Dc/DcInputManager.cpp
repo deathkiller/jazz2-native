@@ -2,6 +2,7 @@
 
 #include "DcInputManager.h"
 #include "../../Input/JoyMapping.h"
+#include "../../Input/IInputEventHandler.h"
 #include "../../../Main.h"
 
 #include <cmath>
@@ -10,6 +11,11 @@
 #include <kos.h>
 #include <dc/maple.h>
 #include <dc/maple/controller.h>
+
+namespace nCine
+{
+	const std::int32_t IInputManager::MaxNumJoysticks = 4;
+}
 
 namespace nCine::Backends
 {
@@ -47,12 +53,10 @@ namespace nCine::Backends
 		}
 	}
 
-	const std::int32_t IInputManager::MaxNumJoysticks = 4;
-
 	DcInputManager::PadInfo DcInputManager::pads_[DcInputManager::MaxJoysticks];
 
 	DcJoystickState::DcJoystickState()
-		: joyId_(-1), hatState_(HatState::CENTERED)
+		: joyId_(-1), hatState_(HatState::Centered)
 	{
 		std::memset(buttonsState_, 0, sizeof(buttonsState_));
 		std::memset(axesValuesState_, 0, sizeof(axesValuesState_));
@@ -65,7 +69,7 @@ namespace nCine::Backends
 
 	unsigned char DcJoystickState::hatState(int hatId) const
 	{
-		return (hatId == 0 ? hatState_ : static_cast<unsigned char>(HatState::CENTERED));
+		return (hatId == 0 ? hatState_ : static_cast<unsigned char>(HatState::Centered));
 	}
 
 	float DcJoystickState::axisValue(int axisId) const
@@ -76,7 +80,7 @@ namespace nCine::Backends
 	void DcJoystickState::resetJoystickState(int joyId)
 	{
 		joyId_ = joyId;
-		hatState_ = HatState::CENTERED;
+		hatState_ = HatState::Centered;
 		std::memset(buttonsState_, 0, sizeof(buttonsState_));
 		std::memset(axesValuesState_, 0, sizeof(axesValuesState_));
 	}
@@ -261,11 +265,11 @@ namespace nCine::Backends
 			state.simulateButtonEvent(ButtonLShoulder, st->ltrig > 224);
 			state.simulateButtonEvent(ButtonRShoulder, st->rtrig > 224);
 
-			unsigned char hat = HatState::CENTERED;
-			if (st->buttons & CONT_DPAD_UP) hat |= HatState::UP;
-			if (st->buttons & CONT_DPAD_RIGHT) hat |= HatState::RIGHT;
-			if (st->buttons & CONT_DPAD_DOWN) hat |= HatState::DOWN;
-			if (st->buttons & CONT_DPAD_LEFT) hat |= HatState::LEFT;
+			unsigned char hat = HatState::Centered;
+			if (st->buttons & CONT_DPAD_UP) hat |= HatState::Up;
+			if (st->buttons & CONT_DPAD_RIGHT) hat |= HatState::Right;
+			if (st->buttons & CONT_DPAD_DOWN) hat |= HatState::Down;
+			if (st->buttons & CONT_DPAD_LEFT) hat |= HatState::Left;
 			state.simulateHatEvent(hat);
 
 			state.simulateAxisEvent(0, NormalizeStick(st->joyx));

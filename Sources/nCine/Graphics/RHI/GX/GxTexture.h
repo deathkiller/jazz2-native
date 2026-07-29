@@ -233,13 +233,22 @@ namespace nCine::RHI::GX
 		GXTexObj texObj_;
 		bool texObjValid_;
 
-		// Per-palette-row baked RGBA8 copy of an RG8 store (see EnsureBakedRgba)
-		std::uint8_t* bakedStore_;
-		GXTexObj bakedTexObj_;
-		bool bakedValid_;
-		std::uint32_t bakedPaletteRow_;
-		std::uint32_t bakedPaletteGeneration_;
-		std::uint32_t bakedContentVersion_;
+		// Per-palette-row baked RGBA8 copies of an RG8 store (see EnsureBakedRgba). One copy is kept per
+		// palette row: the GX FIFO consumes draws asynchronously, so rebaking a row that an already
+		// submitted quad references would corrupt that quad (several rows are commonly alive within one
+		// frame, e.g. text and its shadow)
+		static constexpr std::int32_t BakedSlotCount = 8;
+		struct BakedSlot {
+			std::uint8_t* Store;
+			GXTexObj TexObj;
+			bool Valid;
+			std::uint32_t PaletteRow;
+			std::uint32_t PaletteGeneration;
+			std::uint32_t ContentVersion;
+			std::uint32_t LastUsedFrame;
+		};
+		BakedSlot bakedSlots_[BakedSlotCount];
+		std::int32_t nextBakedSlot_;
 
 		void Allocate(PixelFormat format, std::int32_t width, std::int32_t height);
 		void RefreshTiledStore();

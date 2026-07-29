@@ -7,7 +7,10 @@
 
 #include "../../nCine/Base/TimeStamp.h"
 
-#if !defined(DEATH_TARGET_EMSCRIPTEN) || defined(DOXYGEN_GENERATING_OUTPUT)
+#if defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DOXYGEN_GENERATING_OUTPUT)
+#	include <emscripten/fetch.h>
+#	include <emscripten/html5.h>
+#elif defined(WITH_ONLINE_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	include "../../nCine/Threading/Thread.h"
 // <mmeapi.h> included by "enet.h" still uses `far` macro
 #	define far
@@ -20,9 +23,6 @@
 
 // Undefine it again after include
 #	undef far
-#else
-#	include <emscripten/fetch.h>
-#	include <emscripten/html5.h>
 #endif
 
 #include <Base/TypeInfo.h>
@@ -154,7 +154,7 @@ namespace Jazz2::Multiplayer
 		static void OnFetchSuccess(emscripten_fetch_t* fetch);
 		static void OnFetchError(emscripten_fetch_t* fetch);
 		static void OnRefreshTimer(void* userData);
-#else
+#elif defined(WITH_ONLINE_MULTIPLAYER) || defined(DOXYGEN_GENERATING_OUTPUT)
 		static constexpr std::uint64_t PacketSignature = 0x2095A59FF0BFBBEF;
 
 		ENetSocket _socket;

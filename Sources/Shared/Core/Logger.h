@@ -109,6 +109,9 @@ namespace Death { namespace Trace {
 			return static_cast<std::uint32_t>(lwp_gettid());
 #	elif defined(__OpenBSD__)
 			return static_cast<std::uint32_t>(getthrid());
+#	elif defined(DEATH_TARGET_DREAMCAST)
+			// pthread_t is an integer type in KOS
+			return static_cast<std::uintptr_t>(pthread_self());
 #	else
 			return reinterpret_cast<std::uintptr_t>(pthread_self());
 #	endif

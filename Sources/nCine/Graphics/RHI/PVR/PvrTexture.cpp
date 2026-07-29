@@ -5,6 +5,8 @@
 
 #include <cstring>
 
+using namespace Death::Containers::Literals;
+
 namespace nCine::RHI::PVR
 {
 	namespace
@@ -34,7 +36,7 @@ namespace nCine::RHI::PVR
 			minFilter_(nCine::SamplerFilter::Nearest), magFilter_(nCine::SamplerFilter::Nearest), wrap_(SamplerWrapping::ClampToEdge),
 			textureUnit_(0), isRenderTarget_(false), isPaletteTexture_(false),
 			vram_(nullptr), vramFormat_(0), paddedWidth_(0), paddedHeight_(0), uScale_(1.0f), vScale_(1.0f),
-			bakedVram_(nullptr), bakedValid_(false), bakedPaletteRow_(0), bakedPaletteGeneration_(0), bakedContentVersion_(0)
+			bakedSlots_{}, nextBakedSlot_(0)
 	{
 		swizzle_[0] = SwizzleChannel::Red;
 		swizzle_[1] = SwizzleChannel::Green;
@@ -54,11 +56,13 @@ namespace nCine::RHI::PVR
 			pvr_mem_free(vram_);
 			vram_ = nullptr;
 		}
-		if (bakedVram_ != nullptr) {
-			pvr_mem_free(bakedVram_);
-			bakedVram_ = nullptr;
+		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
+			if (bakedSlots_[i].Vram != nullptr) {
+				pvr_mem_free(bakedSlots_[i].Vram);
+				bakedSlots_[i].Vram = nullptr;
+			}
+			bakedSlots_[i].Valid = false;
 		}
-		bakedValid_ = false;
 	}
 
 	std::int32_t PvrTexture::BytesPerPixel(PixelFormat format)
@@ -145,15 +149,52 @@ namespace nCine::RHI::PVR
 		if (pixels_.empty() || uploadFormat_ != PixelFormat::RG8 || paletteRow == nullptr) {
 			return nullptr;
 		}
-		if (bakedValid_ && bakedPaletteRow_ == paletteRowIndex && bakedPaletteGeneration_ == paletteGeneration &&
-			bakedContentVersion_ == contentVersion_) {
-			return bakedVram_;
+		const std::uint32_t currentScene = PvrDevice::GetSceneCounter();
+		BakedSlot* slot = nullptr;
+		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
+			if (bakedSlots_[i].Valid && bakedSlots_[i].PaletteRow == paletteRowIndex) {
+				if (bakedSlots_[i].PaletteGeneration == paletteGeneration && bakedSlots_[i].ContentVersion == contentVersion_) {
+					bakedSlots_[i].LastUsedScene = currentScene;
+					return bakedSlots_[i].Vram;
+				}
+				slot = &bakedSlots_[i];	// Stale bake of the same row, refresh it in place
+				break;
+			}
+		}
+		if (slot == nullptr) {
+			for (std::int32_t i = 0; i < BakedSlotCount; i++) {
+				if (!bakedSlots_[i].Valid) {
+					slot = &bakedSlots_[i];
+					break;
+				}
+			}
+		}
+		if (slot == nullptr) {
+			// Never evict a bake the current scene still references - the tile accelerator reads the
+			// textures only at scene end, so overwriting one would corrupt the already submitted quads
+			for (std::int32_t i = 0; i < BakedSlotCount; i++) {
+				const std::int32_t candidate = (nextBakedSlot_ + i) % BakedSlotCount;
+				if (bakedSlots_[candidate].LastUsedScene != currentScene) {
+					slot = &bakedSlots_[candidate];
+					nextBakedSlot_ = (candidate + 1) % BakedSlotCount;
+					break;
+				}
+			}
+		}
+		if (slot == nullptr) {
+			static bool warnedSlots = false;
+			if (!warnedSlots) {
+				warnedSlots = true;
+				LOGW("More than {} palette rows used with one texture in a single scene, expect glitches", BakedSlotCount);
+			}
+			slot = &bakedSlots_[nextBakedSlot_];
+			nextBakedSlot_ = (nextBakedSlot_ + 1) % BakedSlotCount;
 		}
 
 		const std::size_t size = std::size_t(paddedWidth_) * std::size_t(paddedHeight_) * 2;
-		if (bakedVram_ == nullptr) {
-			bakedVram_ = pvr_mem_malloc(size);
-			if (bakedVram_ == nullptr) {
+		if (slot->Vram == nullptr) {
+			slot->Vram = pvr_mem_malloc(size);
+			if (slot->Vram == nullptr) {
 				LOGE("Out of PVR memory allocating {} B (baked ARGB4444 {}x{})", size, paddedWidth_, paddedHeight_);
 				return nullptr;
 			}
@@ -169,13 +210,14 @@ namespace nCine::RHI::PVR
 					std::uint8_t((color >> 16) & 0xFF), src[x * 2 + 1]);
 			}
 		}
-		pvr_txr_load_ex(staging.data(), bakedVram_, std::uint32_t(paddedWidth_), std::uint32_t(paddedHeight_), PVR_TXRLOAD_16BPP);
+		pvr_txr_load_ex(staging.data(), slot->Vram, std::uint32_t(paddedWidth_), std::uint32_t(paddedHeight_), PVR_TXRLOAD_16BPP);
 
-		bakedValid_ = true;
-		bakedPaletteRow_ = paletteRowIndex;
-		bakedPaletteGeneration_ = paletteGeneration;
-		bakedContentVersion_ = contentVersion_;
-		return bakedVram_;
+		slot->Valid = true;
+		slot->PaletteRow = paletteRowIndex;
+		slot->PaletteGeneration = paletteGeneration;
+		slot->ContentVersion = contentVersion_;
+		slot->LastUsedScene = currentScene;
+		return slot->Vram;
 	}
 
 	void PvrTexture::SetRenderTarget(bool isRenderTarget)

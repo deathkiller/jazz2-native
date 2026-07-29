@@ -321,8 +321,8 @@ namespace Jazz2::Compatibility
 			// Each asset must fit into a 4096 by 4096 texture,
 			// as that is the smallest texture size we have decided to support.
 			if (anim.FrameCount > 1) {
-				std::int32_t rows = std::max(1, (std::int32_t)std::ceil(sqrt(anim.FrameCount * sizeX / sizeY)));
-				std::int32_t columns = std::max(1, (std::int32_t)std::ceil(anim.FrameCount * 1.0 / rows));
+				std::int32_t rows = std::max<std::int32_t>(1, (std::int32_t)std::ceil(sqrt(anim.FrameCount * sizeX / sizeY)));
+				std::int32_t columns = std::max<std::int32_t>(1, (std::int32_t)std::ceil(anim.FrameCount * 1.0 / rows));
 
 				// Do a bit of optimization, as the above algorithm ends occasionally with some extra space
 				// (it is careful with not underestimating the required space)

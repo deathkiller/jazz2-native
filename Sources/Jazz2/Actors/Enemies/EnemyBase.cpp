@@ -60,7 +60,7 @@ namespace Jazz2::Actors::Enemies
 			case GameDifficulty::Hard: health = (std::int32_t)std::round(health * 1.4f); break;
 		}
 
-		_health = std::max(health, 1);
+		_health = std::max<std::int32_t>(health, 1);
 		_maxHealth = _health;
 	}
 

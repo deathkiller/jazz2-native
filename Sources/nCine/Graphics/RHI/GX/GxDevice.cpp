@@ -117,6 +117,7 @@ namespace nCine::RHI::GX
 			if (textured) {
 				GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
 			}
+			GX_SetNumChans(1);
 			GX_SetNumTevStages(1);
 			GX_SetTevOrder(GX_TEVSTAGE0, textured ? GX_TEXCOORD0 : GX_TEXCOORDNULL,
 				textured ? GX_TEXMAP0 : GX_TEXMAP_NULL, GX_COLOR0A0);
@@ -146,6 +147,7 @@ namespace nCine::RHI::GX
 	std::uint32_t GxDevice::paletteGeneration_ = 1;
 	GxDevice::TlutSlot GxDevice::tlutSlots_[GxDevice::MaxTlutSlots] = {};
 	std::uint32_t GxDevice::tlutUseCounter_ = 0;
+	std::uint32_t GxDevice::frameCounter_ = 0;
 
 	std::vector<GxDevice::PendingSoftwareLight> GxDevice::pendingSoftwareLights_;
 
@@ -163,7 +165,8 @@ namespace nCine::RHI::GX
 		}
 		rmode_ = rmode;
 
-		gxFifo_ = memalign(32, GxFifoSize);
+		// The FIFO must be accessed through the uncached alias, so the GP sees the commands immediately
+		gxFifo_ = MEM_K0_TO_K1(memalign(32, GxFifoSize));
 		std::memset(gxFifo_, 0, GxFifoSize);
 		GX_Init(gxFifo_, GxFifoSize);
 
@@ -177,17 +180,16 @@ namespace nCine::RHI::GX
 		GX_SetDispCopyDst(rmode->fbWidth, rmode->xfbHeight);
 		GX_SetCopyFilter(rmode->aa, rmode->sample_pattern, GX_TRUE, rmode->vfilter);
 		GX_SetFieldMode(rmode->field_rendering, (rmode->viHeight == 2 * rmode->xfbHeight ? GX_ENABLE : GX_DISABLE));
-		GX_SetPixelFmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
+		GX_SetDispCopyGamma(GX_GM_1_0);
 
 		// 2D painter's-order pipeline: no depth, no culling, premultiplied ortho quads
 		GX_SetZMode(GX_FALSE, GX_LEQUAL, GX_FALSE);
 		GX_SetCullMode(GX_CULL_NONE);
 		GX_SetColorUpdate(GX_TRUE);
-		GX_SetAlphaUpdate(GX_TRUE);
 
 		// Force the initial descriptor setup through the mode toggle
-		g_vertexModeTextured = false;
-		SetVertexModeTextured(true);
+		g_vertexModeTextured = true;
+		SetVertexModeTextured(false);
 
 		logicalWidth_ = rmode->fbWidth;
 		logicalHeight_ = rmode->efbHeight;
@@ -201,10 +203,13 @@ namespace nCine::RHI::GX
 			return;
 		}
 		FlushCurrentRenderTarget();
-		GX_DrawDone();
+
+		// The display copy runs asynchronously on the GP; GX_DrawDone() after it drains the FIFO and waits
+		// until the copy has finished, so the following flip never displays a not-yet-copied buffer
 		GX_SetColorUpdate(GX_TRUE);
 		GX_CopyDisp(xfb, GX_TRUE);	// The copy also clears the EFB for the next frame (GX_SetCopyClear)
-		GX_Flush();
+		GX_DrawDone();
+		frameCounter_++;
 	}
 
 	void GxDevice::ResizeScreenFramebuffer(std::int32_t width, std::int32_t height)
@@ -328,8 +333,11 @@ namespace nCine::RHI::GX
 			scaleY = float(rmode_->efbHeight) / float(targetH);
 		}
 		if (scissor_.Enabled && targetH > 0) {
-			const std::int32_t topDownY = targetH - scissor_.Rect.Y - scissor_.Rect.H;
-			GX_SetScissor(std::uint32_t(float(scissor_.Rect.X) * scaleX), std::uint32_t(float(topDownY) * scaleY),
+			// Screen passes mirror NDC (see Dispatch), so the engine's bottom-up scissor maps to raster
+			// rows directly; render-to-texture passes keep the unmirrored top-down store and flip it
+			const std::int32_t rasterY = (currentRenderTarget_ == nullptr
+				? scissor_.Rect.Y : targetH - scissor_.Rect.Y - scissor_.Rect.H);
+			GX_SetScissor(std::uint32_t(float(scissor_.Rect.X) * scaleX), std::uint32_t(float(rasterY) * scaleY),
 				std::uint32_t(float(scissor_.Rect.W) * scaleX), std::uint32_t(float(scissor_.Rect.H) * scaleY));
 		} else if (rmode_ != nullptr) {
 			GX_SetScissor(0, 0, rmode_->fbWidth, rmode_->efbHeight);
@@ -711,12 +719,11 @@ namespace nCine::RHI::GX
 		// mesh sprites) and unclassified effects are skipped with a one-time warning
 		const bool isQuadFamily = (effect == GxEffect::DefaultSprite || effect == GxEffect::DefaultBatchedSprites ||
 			effect == GxEffect::DefaultSpriteNoTexture || effect == GxEffect::DefaultBatchedSpritesNoTexture ||
+			effect == GxEffect::Colorized || effect == GxEffect::BatchedColorized ||
 			effect == GxEffect::PaletteRemap || effect == GxEffect::BatchedPaletteRemap ||
 			effect == GxEffect::TexturedBackground || effect == GxEffect::TexturedBackgroundCircle);
-		if (!isQuadFamily || primitive != PrimitiveType::TriangleStrip) {
-			static bool warnedUnsupported = false;
-			if (!warnedUnsupported) {
-				warnedUnsupported = true;
+		if (!isQuadFamily || (primitive != PrimitiveType::TriangleStrip && primitive != PrimitiveType::Triangles)) {
+			if (!currentProgram_->FetchUnsupportedWarned()) {
 				LOGW("Skipping draws of program \"{}\": Effect not supported by the GX v1 dispatch", currentProgram_->GetObjectLabel());
 			}
 			return;
@@ -768,7 +775,7 @@ namespace nCine::RHI::GX
 		Mat4Mul(projMat, viewMat, pv);
 
 		const bool batched = (effect == GxEffect::DefaultBatchedSprites || effect == GxEffect::DefaultBatchedSpritesNoTexture ||
-			effect == GxEffect::BatchedPaletteRemap || instanceStride > 0);
+			effect == GxEffect::BatchedPaletteRemap || effect == GxEffect::BatchedColorized || instanceStride > 0);
 		std::int32_t numInstances = 1;
 		if (batched) {
 			numInstances = numVertices / 6;
@@ -799,6 +806,12 @@ namespace nCine::RHI::GX
 		}
 
 		// The viewport rect maps NDC to logical pixels exactly like the software FetchVertex
+		// The engine's NDC orientation matches the software backend, whose top-down raster is flipped at
+		// present time; the EFB is scanned out top-down directly, so screen passes mirror NDC here instead
+		// (+1 = bottom row). Render-to-texture passes keep the unmirrored top-down store, which is what the
+		// sampling passes already expect.
+		const bool screenPass = (currentRenderTarget_ == nullptr);
+
 		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
 			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
 
@@ -866,11 +879,18 @@ namespace nCine::RHI::GX
 				const float ndcX = mvp[0] * wx + mvp[4] * wy + mvp[12];
 				const float ndcY = mvp[1] * wx + mvp[5] * wy + mvp[13];
 				px[i] = (ndcX + 1.0f) * 0.5f * float(viewport.W) + float(viewport.X);
-				py[i] = (1.0f - ndcY) * 0.5f * float(viewport.H) + float(viewport.Y);
+				py[i] = (screenPass ? (ndcY + 1.0f) : (1.0f - ndcY)) * 0.5f * float(viewport.H) + float(viewport.Y);
 				pu[i] = ax * texRect[0] + texRect[1];
 				pvv[i] = ay * texRect[2] + texRect[3];
 			}
 
+			if (effect == GxEffect::Colorized || effect == GxEffect::BatchedColorized) {
+				// Amplified dye of the Colorized shader (the grayscale step is dropped, but the affected
+				// textures - mostly font glyphs - are grayscale already)
+				for (std::int32_t c = 0; c < 4; c++) {
+					color[c] = 1.0f + (color[c] - 0.5f) * 4.0f;
+				}
+			}
 			const std::uint8_t r = QuantizeChannel(color[0]);
 			const std::uint8_t g = QuantizeChannel(color[1]);
 			const std::uint8_t b = QuantizeChannel(color[2]);

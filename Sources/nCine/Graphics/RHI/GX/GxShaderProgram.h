@@ -40,6 +40,8 @@ namespace nCine::RHI::GX
 		DefaultBatchedSpritesNoTexture,	/**< The solid-colour sprite over an array of batched instances */
 		TexturedBackground,		/**< The animated, per-pixel-warped menu/level background (planar tunnel) */
 		TexturedBackgroundCircle,	/**< The circular ("tube") variant of the textured background */
+		Colorized,				/**< Grayscale + dye tint, approximated by modulating with the amplified dye colour */
+		BatchedColorized,		/**< The colorized effect over an array of batched instances */
 		PaletteRemap,			/**< An R8/RG8 index sprite recolored through the shared palette texture */
 		BatchedPaletteRemap,	/**< The palette-remap effect over an array of batched instances */
 		Combine					/**< The viewport compositor (scene + lighting + blur + ambient) */
@@ -166,6 +168,13 @@ namespace nCine::RHI::GX
 		void Reset();
 		void SetObjectLabel(StringView label);
 
+		/** @brief Returns whether the "unsupported effect" warning was already emitted for this program, and marks it emitted */
+		bool FetchUnsupportedWarned() {
+			bool value = unsupportedWarned_;
+			unsupportedWarned_ = true;
+			return value;
+		}
+
 		inline bool GetLogOnErrors() const {
 			return shouldLogOnErrors_;
 		}
@@ -218,6 +227,7 @@ namespace nCine::RHI::GX
 		// Kept after introspection so the effects can read member offsets/texture bindings at draw time
 		const ShaderCompiler::ProgramVariant* effectReflection_;
 		GxEffect effect_;
+		bool unsupportedWarned_ = false;
 		bool ditherVariant_;
 		// The shader name the program was tagged with (used to look up an offline-transpiled generated fragment)
 		String label_;

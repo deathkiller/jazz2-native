@@ -612,7 +612,7 @@ namespace Jazz2::UI::Menu
 
 		float value = (Value ? Value() : 0.0f);
 		std::int32_t currentBlockCount = (std::int32_t)std::round(value * BlockCount);
-		currentBlockCount = std::clamp(currentBlockCount, 0, (std::int32_t)BlockCount);
+		currentBlockCount = std::clamp<std::int32_t>(currentBlockCount, 0, (std::int32_t)BlockCount);
 
 		// Dim background bar (all blocks) then the bright filled portion on top
 		char stringBuffer[BlockCount + 1];
@@ -638,7 +638,7 @@ namespace Jazz2::UI::Menu
 			if (_pressedCooldown >= 1.0f - (_pressedCount * 0.096f) || input.Left || input.Right) {
 				Apply(root, input.LeftHeld ? -StepSize : StepSize);
 				_pressedCooldown = 0.0f;
-				_pressedCount = std::min(_pressedCount + 6, 10);
+				_pressedCount = std::min<std::int32_t>(_pressedCount + 6, 10);
 			}
 			return true;
 		}

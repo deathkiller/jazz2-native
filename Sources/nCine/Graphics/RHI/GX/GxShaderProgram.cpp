@@ -24,6 +24,11 @@ namespace nCine::RHI::GX
 			if (Contains(label, "PaletteRemap")) {
 				return Contains(label, "Batched") ? GxEffect::BatchedPaletteRemap : GxEffect::PaletteRemap;
 			}
+			// Colorized text/sprites (grayscale + dye in GLSL): the fixed-function approximation modulates
+			// the mostly grayscale textures with an amplified dye colour computed in Dispatch
+			if (Contains(label, "Colorized")) {
+				return Contains(label, "Batched") ? GxEffect::BatchedColorized : GxEffect::Colorized;
+			}
 			// Animated background (planar tunnel and its circular variant)
 			if (Contains(label, "TexturedBackground")) {
 				return Contains(label, "Circle") ? GxEffect::TexturedBackgroundCircle : GxEffect::TexturedBackground;

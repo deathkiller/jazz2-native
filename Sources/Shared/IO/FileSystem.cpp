@@ -349,7 +349,7 @@ namespace Death { namespace IO {
 			return currentMode;
 		}
 
-#	if !defined(DEATH_TARGET_SWITCH)
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
 		static std::int32_t DeleteDirectoryInternalCallback(const char* fpath, const struct stat* sb, std::int32_t typeflag, struct FTW* ftwbuf)
 		{
 			return ::remove(fpath);
@@ -358,8 +358,8 @@ namespace Death { namespace IO {
 
 		static bool DeleteDirectoryInternal(StringView path)
 		{
-#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
-			// nftw() is missing in libnx and Vita
+#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+			// nftw() is missing in libnx, Vita, libogc and KOS
 			auto nullTerminatedPath = String::nullTerminatedView(path);
 			DIR* d = ::opendir(nullTerminatedPath.data());
 			std::int32_t r = -1;
@@ -1614,10 +1614,18 @@ namespace Death { namespace IO {
 			return AndroidAssetStream::TryOpenDirectory(strippedPath);
 		}
 #	endif
+#	if defined(DEATH_TARGET_DREAMCAST)
+		// stat() is unreliable on some KOS filesystems (e.g. iso9660), probe by opening the directory instead
+		if (DIR* d = ::opendir(nullTerminatedPath.data())) {
+			::closedir(d);
+			return true;
+		}
+#	else
 		struct stat sb;
 		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
 			return ((sb.st_mode & S_IFMT) == S_IFDIR);
 		}
+#	endif
 		return false;
 #endif
 	}
@@ -1643,10 +1651,19 @@ namespace Death { namespace IO {
 			return AndroidAssetStream::TryOpenFile(strippedPath);
 		}
 #	endif
+#	if defined(DEATH_TARGET_DREAMCAST)
+		// stat() is unreliable on some KOS filesystems (e.g. iso9660), probe by opening the file instead
+		std::int32_t fd = ::open(nullTerminatedPath.data(), O_RDONLY);
+		if (fd >= 0) {
+			::close(fd);
+			return true;
+		}
+#	else
 		struct stat sb;
 		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
 			return ((sb.st_mode & S_IFMT) == S_IFREG);
 		}
+#	endif
 		return false;
 #endif
 	}
@@ -1789,10 +1806,19 @@ namespace Death { namespace IO {
 			return AndroidAssetStream::TryOpenFile(strippedPath);
 		}
 #	endif
+#	if defined(DEATH_TARGET_DREAMCAST)
+		// stat() is unreliable on some KOS filesystems (e.g. iso9660), probe by opening the file instead
+		std::int32_t fd = ::open(nullTerminatedPath.data(), O_RDONLY);
+		if (fd >= 0) {
+			::close(fd);
+			return true;
+		}
+#	else
 		struct stat sb;
 		if (::stat(nullTerminatedPath.data(), &sb) == 0) {
 			return ((sb.st_mode & S_IFMT) == S_IFREG && (sb.st_mode & S_IRUSR) != 0);
 		}
+#	endif
 #endif
 		return false;
 	}
@@ -2344,7 +2370,7 @@ namespace Death { namespace IO {
 			return false;
 		}
 
-#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(__FreeBSD__)
+#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(__FreeBSD__)
 		while (true) {
 			if (::fallocate(destFd, FALLOC_FL_KEEP_SIZE, 0, sb.st_size) == 0) {
 				break;
@@ -2439,7 +2465,7 @@ namespace Death { namespace IO {
 	End:
 #	endif
 
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_DREAMCAST)
 		// If we created a new file with an explicitly added S_IWUSR permission, we may need to update its mode bits to match the source file.
 		if (destMode != sourceMode && ::fchmod(destFd, sourceMode) != 0) {
 			success = false;

@@ -191,10 +191,10 @@ namespace Jazz2::Events
 	{
 		ZoneScopedC(0x9D5BA3);
 
-		std::int32_t x1 = std::max(0, tx1);
-		std::int32_t x2 = std::min(_layoutSize.X - 1, tx2);
-		std::int32_t y1 = std::max(0, ty1);
-		std::int32_t y2 = std::min(_layoutSize.Y - 1, ty2);
+		std::int32_t x1 = std::max<std::int32_t>(0, tx1);
+		std::int32_t x2 = std::min<std::int32_t>(_layoutSize.X - 1, tx2);
+		std::int32_t y1 = std::max<std::int32_t>(0, ty1);
+		std::int32_t y2 = std::min<std::int32_t>(_layoutSize.Y - 1, ty2);
 
 		for (std::int32_t x = x1; x <= x2; x++) {
 			for (std::int32_t y = y1; y <= y2; y++) {

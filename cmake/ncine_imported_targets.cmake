@@ -506,6 +506,10 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		endif()
 	endif()
 
+	if(PLATFORM_DREAMCAST)
+		# kos-ports installs each port's headers into its own subdirectory (e.g. include/zlib)
+		find_path(ZLIB_INCLUDE_DIR zlib.h PATHS "${KOS_PORTS}/include/zlib" NO_DEFAULT_PATH)
+	endif()
 	find_package(ZLIB)
 	if(NCINE_WITH_GLEW)
 		find_package(GLEW)

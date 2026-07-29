@@ -247,11 +247,20 @@ namespace nCine::RHI::PVR
 		float uScale_;
 		float vScale_;
 
-		pvr_ptr_t bakedVram_;
-		bool bakedValid_;
-		std::uint32_t bakedPaletteRow_;
-		std::uint32_t bakedPaletteGeneration_;
-		std::uint32_t bakedContentVersion_;
+		// One baked copy is kept per palette row: the tile accelerator consumes textures only at scene end,
+		// so rebaking a row that an already submitted quad references would corrupt that quad (several rows
+		// are commonly alive within one scene, e.g. text and its shadow)
+		static constexpr std::int32_t BakedSlotCount = 8;
+		struct BakedSlot {
+			pvr_ptr_t Vram;
+			bool Valid;
+			std::uint32_t PaletteRow;
+			std::uint32_t PaletteGeneration;
+			std::uint32_t ContentVersion;
+			std::uint32_t LastUsedScene;
+		};
+		BakedSlot bakedSlots_[BakedSlotCount];
+		std::int32_t nextBakedSlot_;
 
 		void Allocate(PixelFormat format, std::int32_t width, std::int32_t height);
 		void RefreshVramStore();

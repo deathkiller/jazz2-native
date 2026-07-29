@@ -397,10 +397,10 @@ namespace Jazz2::Tiles
 		}
 
 		// Check all covered tiles for collisions; if all are empty, no need to do pixel collision checking
-		std::int32_t hx1 = std::max((std::int32_t)aabb.L, 0);
+		std::int32_t hx1 = std::max<std::int32_t>((std::int32_t)aabb.L, 0);
 		std::int32_t hx2 = std::min((std::int32_t)std::ceil(aabb.R), limitRightPx - 1);
-		std::int32_t hy1 = std::clamp((std::int32_t)aabb.T, 0, limitBottomPx - 2);
-		std::int32_t hy2 = std::clamp((std::int32_t)std::ceil(aabb.B), 1, limitBottomPx - 1);
+		std::int32_t hy1 = std::clamp<std::int32_t>((std::int32_t)aabb.T, 0, limitBottomPx - 2);
+		std::int32_t hy2 = std::clamp<std::int32_t>((std::int32_t)std::ceil(aabb.B), 1, limitBottomPx - 1);
 
 		std::int32_t hx1t = hx1 / TileSet::DefaultTileSize;
 		std::int32_t hx2t = hx2 / TileSet::DefaultTileSize;
@@ -472,9 +472,9 @@ namespace Jazz2::Tiles
 					std::int32_t tx = x * TileSet::DefaultTileSize;
 					std::int32_t ty = y * TileSet::DefaultTileSize;
 
-					std::int32_t left = std::max(hx1 - tx, 0);
+					std::int32_t left = std::max<std::int32_t>(hx1 - tx, 0);
 					std::int32_t right = std::min(hx2 - tx, TileSet::DefaultTileSize - 1);
-					std::int32_t top = std::max(hy1 - ty, 0);
+					std::int32_t top = std::max<std::int32_t>(hy1 - ty, 0);
 					std::int32_t bottom = std::min(hy2 - ty, TileSet::DefaultTileSize - 1);
 
 					if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
@@ -539,10 +539,10 @@ namespace Jazz2::Tiles
 		}
 
 		// Check all covered tiles for collisions; if all are empty, no need to do pixel collision checking
-		std::int32_t hx1 = std::max((std::int32_t)aabb.L, 0);
+		std::int32_t hx1 = std::max<std::int32_t>((std::int32_t)aabb.L, 0);
 		std::int32_t hx2 = std::min((std::int32_t)std::ceil(aabb.R), limitRightPx - 1);
-		std::int32_t hy1 = std::clamp((std::int32_t)aabb.T, 0, limitBottomPx - 2);
-		std::int32_t hy2 = std::clamp((std::int32_t)std::ceil(aabb.B), 1, limitBottomPx - 1);
+		std::int32_t hy1 = std::clamp<std::int32_t>((std::int32_t)aabb.T, 0, limitBottomPx - 2);
+		std::int32_t hy2 = std::clamp<std::int32_t>((std::int32_t)std::ceil(aabb.B), 1, limitBottomPx - 1);
 
 		std::int32_t hx1t = hx1 / TileSet::DefaultTileSize;
 		std::int32_t hx2t = hx2 / TileSet::DefaultTileSize;
@@ -595,9 +595,9 @@ namespace Jazz2::Tiles
 					std::int32_t tx = x * TileSet::DefaultTileSize;
 					std::int32_t ty = y * TileSet::DefaultTileSize;
 
-					std::int32_t left = std::max(hx1 - tx, 0);
+					std::int32_t left = std::max<std::int32_t>(hx1 - tx, 0);
 					std::int32_t right = std::min(hx2 - tx, TileSet::DefaultTileSize - 1);
-					std::int32_t top = std::max(hy1 - ty, 0);
+					std::int32_t top = std::max<std::int32_t>(hy1 - ty, 0);
 					std::int32_t bottom = std::min(hy2 - ty, TileSet::DefaultTileSize - 1);
 
 					if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
@@ -683,7 +683,7 @@ namespace Jazz2::Tiles
 		}
 
 		// Walk the tolerance window bottom-up, testing column rx's bit in each packed row
-		const std::int32_t top = std::max(ry - Tolerance, 0);
+		const std::int32_t top = std::max<std::int32_t>(ry - Tolerance, 0);
 		const std::int32_t bottom = std::min(ry + Tolerance, TileSet::DefaultTileSize - 1);
 
 		for (std::int32_t row = bottom; row >= top; row--) {

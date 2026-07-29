@@ -147,7 +147,7 @@ namespace Jazz2::UI
 		}
 
 		if (!s->IsValid()) {
-			LOGW("Cannot load \"{}.j2v\" - Cinematics skipped");
+			LOGW("Cannot load \"{}.j2v\" - Cinematics skipped", path);
 			return false;
 		}
 		

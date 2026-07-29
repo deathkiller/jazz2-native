@@ -1655,12 +1655,12 @@ namespace Jazz2::Actors
 
 			// Normalize current frame when exceeding anim duration
 			if (LoopMode == AnimationLoopMode::Once || LoopMode == AnimationLoopMode::FixedSingle) {
-				CurrentFrame = std::clamp(CurrentFrame, 0, FrameCount - 1);
+				CurrentFrame = std::clamp<std::int32_t>(CurrentFrame, 0, FrameCount - 1);
 			} else {
 				CurrentFrame = NormalizeFrame(CurrentFrame, 0, FrameCount);
 			}
 		}
-		CurrentFrame = FirstFrame + std::clamp(CurrentFrame, 0, FrameCount - 1);
+		CurrentFrame = FirstFrame + std::clamp<std::int32_t>(CurrentFrame, 0, FrameCount - 1);
 
 		// Set current animation frame rectangle
 		std::int32_t col = CurrentFrame % FrameConfiguration.X;
@@ -1669,7 +1669,7 @@ namespace Jazz2::Actors
 		setAbsAnchorPoint(Hotspot.X, Hotspot.Y);
 	}
 
-	int ActorBase::ActorRenderer::NormalizeFrame(std::int32_t frame, std::int32_t min, std::int32_t max)
+	std::int32_t ActorBase::ActorRenderer::NormalizeFrame(std::int32_t frame, std::int32_t min, std::int32_t max)
 	{
 		if (frame >= min && frame < max) {
 			return frame;

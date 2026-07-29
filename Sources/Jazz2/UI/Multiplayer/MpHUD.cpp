@@ -174,9 +174,9 @@ namespace Jazz2::UI::Multiplayer
 
 		if (mpLevelHandler->_levelState == MpLevelHandler::LevelState::PreGame) {
 			float timeLeftSecs = mpLevelHandler->_gameTimeLeft / FrameTimer::FramesPerSecond;
-			std::int32_t minutes = std::max(0, (std::int32_t)(timeLeftSecs / 60));
-			std::int32_t seconds = std::max(0, (std::int32_t)fmod(timeLeftSecs, 60));
-			std::int32_t milliseconds = std::max(0, (std::int32_t)(fmod(timeLeftSecs, 1) * 100));
+			std::int32_t minutes = std::max<std::int32_t>(0, (std::int32_t)(timeLeftSecs / 60));
+			std::int32_t seconds = std::max<std::int32_t>(0, (std::int32_t)fmod(timeLeftSecs, 60));
+			std::int32_t milliseconds = std::max<std::int32_t>(0, (std::int32_t)(fmod(timeLeftSecs, 1) * 100));
 
 			std::size_t length = formatInto(stringBuffer, "{}:{:.2}:{:.2}", minutes, seconds, milliseconds);
 			auto gameStartsInText = _f("Game starts in {}", StringView { stringBuffer, length });
@@ -593,7 +593,7 @@ namespace Jazz2::UI::Multiplayer
 
 					std::int32_t m = (std::int32_t)ctrl.size();
 					for (std::int32_t s = 0; s < m - 1 && (std::int32_t)_minimapPoints.size() < MaxPoints; s++) {
-						Vector2f p0 = ctrl[std::max(0, s - 1)];
+						Vector2f p0 = ctrl[std::max<std::int32_t>(0, s - 1)];
 						Vector2f p1 = ctrl[s];
 						Vector2f p2 = ctrl[s + 1];
 						Vector2f p3 = ctrl[std::min(m - 1, s + 2)];

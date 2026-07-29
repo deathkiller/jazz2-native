@@ -12,6 +12,10 @@ namespace nCine::Backends
 	DcGfxDevice::DcGfxDevice(const WindowMode& windowMode, const ContextInfo& contextInfo, const DisplayMode& displayMode)
 		: IGfxDevice(windowMode, contextInfo, displayMode)
 	{
+		// The early boot log used the framebuffer console, which the PVR takes over now; route dbgio
+		// back to the serial port (shown in the Flycast log and the dc-tool console)
+		dbgio_dev_select("scif");
+
 		// 640x480 RGB565 is the PVR's canonical output; the cable/region variant is negotiated by KOS
 		vid_set_mode(DM_640x480, PM_RGB565);
 

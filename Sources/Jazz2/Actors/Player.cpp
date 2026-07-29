@@ -4253,7 +4253,7 @@ namespace Jazz2::Actors
 
 	void Player::AddScore(std::int32_t amount)
 	{
-		_score = std::min(std::max(_score + amount, 0), 999999999);
+		_score = std::min<std::int32_t>(std::max<std::int32_t>(_score + amount, 0), 999999999);
 	}
 
 	bool Player::AddHealth(std::int32_t amount)

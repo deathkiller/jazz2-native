@@ -480,7 +480,10 @@ void GameEventHandler::OnInitialize()
 	}
 #	endif
 
-#	if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if defined(DEATH_TARGET_DREAMCAST)
+	// The Dreamcast has only 16 MB of memory, so there is not enough space to buffer the intro video
+	GoToMainMenu(false);
+#	elif defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	SetStateHandler(std::make_shared<Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) mutable {
 		if ((root->GetFlags() & Flags::IsVerified) == Flags::IsVerified) {
 			root->GoToMainMenu(endOfStream);
@@ -1735,8 +1738,9 @@ void GameEventHandler::OnAfterInitialize()
 		}
 	}
 
-#if defined(DEATH_TARGET_EMSCRIPTEN)
-	// All required files are already included in Emscripten version, so nothing is verified
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+	// All required files are already included in the prebaked "Content" directory of the Emscripten and
+	// console versions, so nothing is verified
 	_flags |= Flags::IsVerified | Flags::IsPlayable;
 #else
 	RefreshCache();
@@ -1779,6 +1783,7 @@ void GameEventHandler::RefreshCache()
 		_flags |= Flags::IsVerified | Flags::IsPlayable;
 		return;
 	}
+
 
 	constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
 
