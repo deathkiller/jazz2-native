@@ -4,14 +4,23 @@
 #include "../../../nCine/Application.h"
 #include "../../../nCine/I18n.h"
 
-// Rendering backend (RHI) currently compiled in. The software, Direct3D 11 and Vulkan backends take
-// precedence - the OpenGL family backend then distinguishes WebGL / OpenGL|ES.
+// Rendering backend (RHI) currently compiled in. The non-OpenGL backends take precedence - the OpenGL
+// family backend then distinguishes WebGL / OpenGL|ES. The software renderer additionally reports the
+// optional 16-bit (RGB565) screen-framebuffer mode.
 #if defined(WITH_RHI_SOFTWARE)
-#	define _i1 "\nSoftware renderer"
+#	if defined(RHI_SOFTWARE_FB16)
+#		define _i1 "\nSoftware renderer (16-bit)"
+#	else
+#		define _i1 "\nSoftware renderer"
+#	endif
 #elif defined(WITH_RHI_D3D11)
 #	define _i1 "\nDirect3D 11"
 #elif defined(WITH_RHI_VULKAN)
 #	define _i1 "\nVulkan"
+#elif defined(WITH_RHI_GX)
+#	define _i1 "\nGX (fixed-function)"
+#elif defined(WITH_RHI_PVR)
+#	define _i1 "\nPowerVR (fixed-function)"
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
 #	define _i1 "\nWebGL"
 #elif defined(WITH_OPENGLES)

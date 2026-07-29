@@ -7,7 +7,7 @@
 // Compile-time RHI backend selection — exactly one backend is compiled into a binary. The OpenGL
 // family backend (OpenGL 3.3 core / OpenGL ES 3.0 / WebGL 2 / ANGLE) is the default when no
 // `WITH_RHI_*` macro is defined by the build.
-#if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && !defined(WITH_RHI_SOFTWARE)
+#if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && !defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PVR)
 #	define WITH_RHI_GL
 #endif
 
@@ -145,6 +145,157 @@ namespace nCine::RHI
 
 	// Debug output and object labelling
 	using Debug = RHI::Software::SwDebug;
+
+	/**
+		@brief Locates a sub-range within a buffer object, together with its mapped memory
+	*/
+	struct BufferRange
+	{
+		BufferRange()
+			: object(nullptr), size(0), offset(0), mapBase(nullptr) {}
+
+		/** @brief Buffer object the range belongs to */
+		Buffer* object;
+		/** @brief Size of the range in bytes */
+		std::uint32_t size;
+		/** @brief Byte offset of the range within the buffer object */
+		std::uint32_t offset;
+		/** @brief Base pointer of the mapped (or host) buffer memory */
+		std::uint8_t* mapBase;
+	};
+}
+
+#elif defined(WITH_RHI_GX)
+
+// Rendering capability flags of the selected backend (see the OpenGL arm above for the meaning). The GX
+// backend (Nintendo GameCube/Wii "Flipper"/"Hollywood") is a fixed-function hardware backend: it has
+// off-screen render targets (EFB copy-out, needed by the textured-background passes), so
+// `RHI_CAP_FRAMEBUFFERS` is defined; but it has no programmable shaders, so `RHI_CAP_SHADERS` stays
+// undefined and the game runs the direct tier (scene straight to the screen at the logical resolution,
+// CPU lightmap composited by the device's lighting hook - the same tier as the software backend).
+#define RHI_CAP_FRAMEBUFFERS
+
+namespace nCine::RHI::GX
+{
+	class GxDevice;
+	class GxTexture;
+	class GxBuffer;
+	class GxShader;
+	class GxShaderProgram;
+	class GxShaderUniforms;
+	class GxShaderUniformBlocks;
+	class GxUniform;
+	class GxUniformBlock;
+	class GxUniformCache;
+	class GxUniformBlockCache;
+	class GxAttribute;
+	class GxFramebuffer;
+	class GxRenderbuffer;
+	class GxRenderTarget;
+	class GxVertexArray;
+	class GxVertexFormat;
+	class GxDebug;
+}
+
+namespace nCine::RHI
+{
+	// Backend-neutral names for the classes of the selected backend (see the OpenGL arm above)
+	using Device = RHI::GX::GxDevice;
+	using Texture = RHI::GX::GxTexture;
+	using Buffer = RHI::GX::GxBuffer;
+	using Shader = RHI::GX::GxShader;
+	using ShaderProgram = RHI::GX::GxShaderProgram;
+	using ShaderUniforms = RHI::GX::GxShaderUniforms;
+	using ShaderUniformBlocks = RHI::GX::GxShaderUniformBlocks;
+	using Uniform = RHI::GX::GxUniform;
+	using UniformBlock = RHI::GX::GxUniformBlock;
+	using UniformCache = RHI::GX::GxUniformCache;
+	using UniformBlockCache = RHI::GX::GxUniformBlockCache;
+	using Attribute = RHI::GX::GxAttribute;
+	using Framebuffer = RHI::GX::GxFramebuffer;
+	using Renderbuffer = RHI::GX::GxRenderbuffer;
+	using RenderTarget = RHI::GX::GxRenderTarget;
+	using VertexArray = RHI::GX::GxVertexArray;
+	using VertexFormat = RHI::GX::GxVertexFormat;
+
+	// Debug output and object labelling
+	using Debug = RHI::GX::GxDebug;
+
+	/**
+		@brief Locates a sub-range within a buffer object, together with its mapped memory
+	*/
+	struct BufferRange
+	{
+		BufferRange()
+			: object(nullptr), size(0), offset(0), mapBase(nullptr) {}
+
+		/** @brief Buffer object the range belongs to */
+		Buffer* object;
+		/** @brief Size of the range in bytes */
+		std::uint32_t size;
+		/** @brief Byte offset of the range within the buffer object */
+		std::uint32_t offset;
+		/** @brief Base pointer of the mapped (or host) buffer memory */
+		std::uint8_t* mapBase;
+	};
+}
+
+#elif defined(WITH_RHI_PVR)
+
+// Rendering capability flags of the selected backend (see the OpenGL arm above for the meaning). The PVR
+// backend (Sega Dreamcast "PowerVR CLX2" via KallistiOS) is a fixed-function hardware backend: it has
+// off-screen render targets (the tile accelerator can render a scene into a texture, needed by the
+// textured-background passes), so `RHI_CAP_FRAMEBUFFERS` is defined; but it has no programmable shaders,
+// so `RHI_CAP_SHADERS` stays undefined and the game runs the direct tier (the same tier as the software
+// and GX backends: scene straight to the display at the logical resolution, CPU lightmap composited by
+// the device's lighting hook).
+#define RHI_CAP_FRAMEBUFFERS
+
+namespace nCine::RHI::PVR
+{
+	class PvrDevice;
+	class PvrTexture;
+	class PvrBuffer;
+	class PvrShader;
+	class PvrShaderProgram;
+	class PvrShaderUniforms;
+	class PvrShaderUniformBlocks;
+	class PvrUniform;
+	class PvrUniformBlock;
+	class PvrUniformCache;
+	class PvrUniformBlockCache;
+	class PvrAttribute;
+	class PvrFramebuffer;
+	class PvrRenderbuffer;
+	class PvrRenderTarget;
+	class PvrVertexArray;
+	class PvrVertexFormat;
+	class PvrDebug;
+}
+
+namespace nCine::RHI
+{
+	// Backend-neutral names for the classes of the selected backend (see the OpenGL arm above)
+	using Device = RHI::PVR::PvrDevice;
+	using Texture = RHI::PVR::PvrTexture;
+	using Buffer = RHI::PVR::PvrBuffer;
+	using Shader = RHI::PVR::PvrShader;
+	using ShaderProgram = RHI::PVR::PvrShaderProgram;
+	using ShaderUniforms = RHI::PVR::PvrShaderUniforms;
+	using ShaderUniformBlocks = RHI::PVR::PvrShaderUniformBlocks;
+	using Uniform = RHI::PVR::PvrUniform;
+	using UniformBlock = RHI::PVR::PvrUniformBlock;
+	using UniformCache = RHI::PVR::PvrUniformCache;
+	using UniformBlockCache = RHI::PVR::PvrUniformBlockCache;
+	using Attribute = RHI::PVR::PvrAttribute;
+	using Framebuffer = RHI::PVR::PvrFramebuffer;
+	using Renderbuffer = RHI::PVR::PvrRenderbuffer;
+	using RenderTarget = RHI::PVR::PvrRenderTarget;
+	using VertexArray = RHI::PVR::PvrVertexArray;
+	using VertexFormat = RHI::PVR::PvrVertexFormat;
+
+	// Debug output and object labelling
+	using Debug = RHI::PVR::PvrDebug;
 
 	/**
 		@brief Locates a sub-range within a buffer object, together with its mapped memory

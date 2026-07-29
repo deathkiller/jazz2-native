@@ -63,6 +63,15 @@ if(NCINE_PREFERRED_RHI STREQUAL "Software")
 		message(STATUS "Software renderer screen framebuffer: RGB565 (16-bit)")
 		target_compile_definitions(${NCINE_APP} PRIVATE "RHI_SOFTWARE_FB16")
 	endif()
+elseif(NCINE_PREFERRED_RHI STREQUAL "GX")
+	# Selects the Nintendo GameCube/Wii fixed-function GX backend in RhiFwd.h/Rhi.h
+	message(STATUS "Rendering backend: GX (Nintendo GameCube/Wii)")
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GX")
+elseif(NCINE_PREFERRED_RHI STREQUAL "PVR")
+	# Selects the Sega Dreamcast fixed-function PowerVR backend in RhiFwd.h/Rhi.h; the KOS toolchain
+	# environment links the PVR/maple libraries itself
+	message(STATUS "Rendering backend: PowerVR (Sega Dreamcast)")
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_PVR")
 elseif(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 	# Selects the Direct3D 11 backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	message(STATUS "Rendering backend: Direct3D 11")
@@ -99,7 +108,35 @@ else()
 endif()
 
 if(NOT DEDICATED_SERVER)
-	if(GLFW_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "GLFW")
+	if(NINTENDO_WII OR NINTENDO_GAMECUBE)
+		# libogc window/input backend (no SDL/GLFW on these consoles); GX is linked by the
+		# devkitPro toolchain's standard libraries (ogc), listed with the platform packaging below
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OGC")
+		list(APPEND HEADERS
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ogc/OgcInputManager.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ogc/OgcGfxDevice.h
+		)
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ogc/OgcInputManager.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Ogc/OgcGfxDevice.cpp
+		)
+		if(NINTENDO_WII)
+			target_link_libraries(${NCINE_APP} PRIVATE wiiuse bte fat ogc m)
+		else()
+			target_link_libraries(${NCINE_APP} PRIVATE fat ogc m)
+		endif()
+	elseif(PLATFORM_DREAMCAST)
+		# KallistiOS window/input backend (no SDL/GLFW); the KOS toolchain links its own libraries
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_DC")
+		list(APPEND HEADERS
+			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcInputManager.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcGfxDevice.h
+		)
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcInputManager.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcGfxDevice.cpp
+		)
+	elseif(GLFW_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "GLFW")
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_GLFW")
 		target_link_libraries(${NCINE_APP} PRIVATE GLFW::GLFW)
 

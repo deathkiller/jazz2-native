@@ -102,6 +102,12 @@ namespace Jazz2
 		return "romfs:/"_s;
 #elif defined(DEATH_TARGET_VITA)
 		return "ux0:/data/jazz2/Content/"_s;
+#elif defined(DEATH_TARGET_WII)
+		return "sd:/apps/Jazz2/Content/"_s;
+#elif defined(DEATH_TARGET_GAMECUBE)
+		return "carda:/Jazz2/Content/"_s;
+#elif defined(DEATH_TARGET_DREAMCAST)
+		return "/cd/Content/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Content\\"_s;
 #else
@@ -118,6 +124,12 @@ namespace Jazz2
 		return "sdmc:/Games/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_VITA)
 		return "ux0:/data/jazz2/Cache/"_s;
+#elif defined(DEATH_TARGET_WII)
+		return "sd:/apps/Jazz2/Cache/"_s;
+#elif defined(DEATH_TARGET_GAMECUBE)
+		return "carda:/Jazz2/Cache/"_s;
+#elif defined(DEATH_TARGET_DREAMCAST)
+		return "/cd/Cache/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Cache\\"_s;
 #else
@@ -134,6 +146,12 @@ namespace Jazz2
 		return "sdmc:/Games/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_VITA)
 		return "ux0:/data/jazz2/Source/"_s;
+#elif defined(DEATH_TARGET_WII)
+		return "sd:/apps/Jazz2/Source/"_s;
+#elif defined(DEATH_TARGET_GAMECUBE)
+		return "carda:/Jazz2/Source/"_s;
+#elif defined(DEATH_TARGET_DREAMCAST)
+		return "/cd/Source/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Source\\"_s;
 #else

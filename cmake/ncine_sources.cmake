@@ -123,6 +123,28 @@ if(NCINE_PREFERRED_RHI STREQUAL "Software")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwTileRenderer.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwUniformCache.cpp
 	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "GX")
+	# Nintendo GameCube/Wii fixed-function GX rendering backend (libogc)
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX/GxBuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX/GxDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX/GxRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX/GxShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX/GxShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX/GxTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GX/GxUniformCache.cpp
+	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "PVR")
+	# Sega Dreamcast fixed-function PowerVR rendering backend (KallistiOS)
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PVR/PvrBuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PVR/PvrDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PVR/PvrRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PVR/PvrShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PVR/PvrShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PVR/PvrTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PVR/PvrUniformCache.cpp
+	)
 elseif(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 	# Direct3D 11 rendering backend
 	list(APPEND SOURCES

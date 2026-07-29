@@ -47,6 +47,34 @@
 #include "Software/SwRaster.h"
 #include "Software/SwDevice.h"
 
+#elif defined(WITH_RHI_GX)
+
+#include "GX/GxDebug.h"
+#include "GX/GxShader.h"
+#include "GX/GxBuffer.h"
+#include "GX/GxTexture.h"
+#include "GX/GxVertexFormat.h"
+#include "GX/GxShaderTypes.h"
+#include "GX/GxUniformCache.h"
+#include "GX/GxShaderUniforms.h"
+#include "GX/GxShaderProgram.h"
+#include "GX/GxRenderTarget.h"
+#include "GX/GxDevice.h"
+
+#elif defined(WITH_RHI_PVR)
+
+#include "PVR/PvrDebug.h"
+#include "PVR/PvrShader.h"
+#include "PVR/PvrBuffer.h"
+#include "PVR/PvrTexture.h"
+#include "PVR/PvrVertexFormat.h"
+#include "PVR/PvrShaderTypes.h"
+#include "PVR/PvrUniformCache.h"
+#include "PVR/PvrShaderUniforms.h"
+#include "PVR/PvrShaderProgram.h"
+#include "PVR/PvrRenderTarget.h"
+#include "PVR/PvrDevice.h"
+
 #elif defined(WITH_RHI_D3D11)
 
 #include "D3D11/D3D11Debug.h"

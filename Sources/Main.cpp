@@ -236,7 +236,9 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 			config.withVSync = false;
 			config.frameLimit = PreferencesCache::MaxFps;
 		}
-#if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
+#if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
+		// Fixed-panel consoles keep the native output resolution (the device pins it); the level viewport
+		// aspect-fits the logical view into it, so no explicit override is wanted there
 		config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
 #endif
 

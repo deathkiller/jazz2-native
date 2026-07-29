@@ -93,7 +93,7 @@ if(NCINE_BUILD_ANDROID)
 endif()
 
 # The offline shader preprocessing tool runs on the build machine, so it's skipped when cross-compiling
-if(NOT EMSCRIPTEN AND NOT NINTENDO_SWITCH AND NOT VITA AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
+if(NOT EMSCRIPTEN AND NOT NINTENDO_SWITCH AND NOT VITA AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT NINTENDO_WII AND NOT NINTENDO_GAMECUBE AND NOT PLATFORM_DREAMCAST)
 	add_subdirectory("${NCINE_SOURCE_DIR}/ShaderCompiler")
 	set_target_properties(ShaderCompiler PROPERTIES FOLDER "Utilities")
 endif()
@@ -102,6 +102,12 @@ add_executable(${NCINE_APP})
 
 if(WINDOWS_PHONE OR WINDOWS_STORE)
 	message(STATUS "Compiling for Windows RT")
+elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
+	# The libogc consoles use the Ogc window/input backend (no SDL/GLFW), see Sources/nCine/Backends/Ogc
+	message(STATUS "Compiling for Nintendo Wii/GameCube (libogc backend)")
+elseif(PLATFORM_DREAMCAST)
+	# The Dreamcast uses the Dc window/input backend (KallistiOS), see Sources/nCine/Backends/Dc
+	message(STATUS "Compiling for Sega Dreamcast (KallistiOS backend)")
 else()
 	# Falling back to either GLFW or SDL2 if the other one is not available
 	if(NOT GLFW_FOUND AND NOT SDL2_FOUND AND NOT SDL3_FOUND AND NOT Qt5_FOUND)

@@ -14,6 +14,12 @@
 #elif defined(WITH_QT5)
 #	include "Backends/Qt5GfxDevice.h"
 #	include "Backends/Qt5InputManager.h"
+#elif defined(WITH_OGC)
+#	include "Backends/Ogc/OgcGfxDevice.h"
+#	include "Backends/Ogc/OgcInputManager.h"
+#elif defined(WITH_DC)
+#	include "Backends/Dc/DcGfxDevice.h"
+#	include "Backends/Dc/DcInputManager.h"
 #endif
 
 // For resizing the swap chain when the window size changes (the call is uniform across the backends;
@@ -27,6 +33,15 @@
 #elif defined(DEATH_TARGET_VITA)
 #	include <vitasdk.h>
 #	include <vitaGL.h>
+#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+#	include <gccore.h>
+#	include <fat.h>
+#	include <ogc/pad.h>
+#	if defined(DEATH_TARGET_WII)
+#		include <wiiuse/wpad.h>
+#	endif
+#elif defined(DEATH_TARGET_DREAMCAST)
+#	include <kos.h>
 #elif defined(DEATH_TARGET_UNIX)
 #	include <pwd.h>
 #	include <unistd.h>
@@ -40,7 +55,7 @@
 using namespace Death;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
-#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5) || defined(WITH_OGC) || defined(WITH_DC)
 using namespace nCine::Backends;
 #endif
 
@@ -115,6 +130,15 @@ namespace nCine
 
 		// Enabling sampling for the analogs
 		sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG_WIDE);
+#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+		// Bring up the shared subsystems before any device exists: the video hardware (OgcGfxDevice picks
+		// the mode and allocates framebuffers later), the SD/storage FAT layer and the controller ports
+		VIDEO_Init();
+		fatInitDefault();
+		PAD_Init();
+#	if defined(DEATH_TARGET_WII)
+		WPAD_Init();
+#	endif
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
 		wchar_t workingDir[fs::MaxPathLength];
@@ -454,6 +478,12 @@ namespace nCine
 			FATAL_ASSERT_MSG(qt5Widget_, "The Qt5 widget has not been assigned");
 			gfxDevice_ = std::make_unique<Qt5GfxDevice>(windowMode, contextInfo, displayMode, *qt5Widget_);
 			inputManager_ = std::make_unique<Qt5InputManager>(*qt5Widget_);
+#elif defined(WITH_OGC)
+			gfxDevice_ = std::make_unique<OgcGfxDevice>(windowMode, contextInfo, displayMode);
+			inputManager_ = std::make_unique<OgcInputManager>();
+#elif defined(WITH_DC)
+			gfxDevice_ = std::make_unique<DcGfxDevice>(windowMode, contextInfo, displayMode);
+			inputManager_ = std::make_unique<DcInputManager>();
 #endif
 			gfxDevice_->setWindowTitle(appCfg_.windowTitle.data());
 			if (!appCfg_.windowIconFilename.empty()) {
@@ -485,6 +515,12 @@ namespace nCine
 			ProcessEvents();
 #elif defined(WITH_QT5GAMEPAD)
 			static_cast<Qt5InputManager&>(*inputManager_).updateJoystickStates();
+#elif defined(WITH_OGC)
+			// No window events on a console; polling the controller ports is the whole event pump
+			OgcInputManager::updateJoystickStates();
+#elif defined(WITH_DC)
+			// No window events on a console; polling the maple bus is the whole event pump
+			DcInputManager::updateJoystickStates();
 #endif
 		}
 

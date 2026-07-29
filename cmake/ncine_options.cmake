@@ -35,7 +35,24 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
 	set(NCINE_PREFERRED_BACKEND ${_NCINE_DEFAULT_BACKEND} CACHE STRING "Specify preferred core backend")
 	set_property(CACHE NCINE_PREFERRED_BACKEND PROPERTY STRINGS "GLFW;SDL2;SDL3")
 
-	if(VITA)
+	if(NINTENDO_WII OR NINTENDO_GAMECUBE)
+		# Nintendo Wii/GameCube (the devkitPro toolchain files set NINTENDO_WII/NINTENDO_GAMECUBE): the only
+		# rendering backend is the fixed-function GX one (Flipper/Hollywood), presented through the bespoke
+		# Ogc window backend (no SDL/GLFW on these consoles in this engine).
+		set(NCINE_PREFERRED_RHI "GX" CACHE STRING "Rendering backend on Nintendo Wii/GameCube: GX")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "GX")
+		if(NOT NCINE_PREFERRED_RHI STREQUAL "GX")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Nintendo Wii/GameCube (expected GX)")
+		endif()
+	elseif(PLATFORM_DREAMCAST)
+		# Sega Dreamcast (the KallistiOS toolchain file sets PLATFORM_DREAMCAST): the only rendering backend
+		# is the fixed-function PowerVR one, presented through the bespoke Dc window backend.
+		set(NCINE_PREFERRED_RHI "PVR" CACHE STRING "Rendering backend on Sega Dreamcast: PVR")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "PVR")
+		if(NOT NCINE_PREFERRED_RHI STREQUAL "PVR")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Sega Dreamcast (expected PVR)")
+		endif()
+	elseif(VITA)
 		# PS Vita (the VitaSDK toolchain sets VITA): the OpenGL family runs through vitaGL, which is an
 		# OpenGL|ES 2.0 implementation - selecting "OpenGL" therefore force-enables the GLES path and the
 		# strict ES 2.0 profile below. The CPU software renderer is the only alternative. Direct3D 11 and
@@ -201,7 +218,7 @@ endif()
 # Shared library options
 option(DEATH_DEBUG_SYMBOLS "Create debug symbols for executable" ${WIN32})
 option(DEATH_TRACE "Enable runtime event tracing" ON)
-cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA" OFF)
+cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST" OFF)
 if(DEATH_TRACE)
 	set(DEATH_TRACE_LOG_PATH "" CACHE PATH "Override path to trace log file if specified (and force writing traces to file on some platforms)")
 endif()
@@ -270,11 +287,15 @@ option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-depen
 
 # Jazz² Resurrection options
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)
-cmake_dependent_option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT VITA" ON)
-cmake_dependent_option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each tilemap layer" ON "NOT NCINE_PREFERRED_RHI STREQUAL Software" OFF)
+cmake_dependent_option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT NCINE_PREFERRED_RHI STREQUAL GX;NOT NCINE_PREFERRED_RHI STREQUAL PVR;NOT VITA" ON)
+# The single-draw tilemap mesh is a full-tier optimization; the software backend rasterizes per tile and
+# the GX/PVR backends' v1 dispatch handles the procedural sprite-quad path only, so all three keep it off
+cmake_dependent_option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each tilemap layer" ON "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT NCINE_PREFERRED_RHI STREQUAL GX;NOT NCINE_PREFERRED_RHI STREQUAL PVR" OFF)
 
 option(WITH_MULTIPLAYER "Enable multiplayer support" ON)
-cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN" OFF)
+# The libogc consoles keep local splitscreen (WITH_MULTIPLAYER) but have no online transport (no enet/BSD
+# sockets stack wired up) - the transport split keeps the engine+local path fully functional without it
+cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST" OFF)
 cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_ONLINE_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
 # IXWebSocket requires a full BSD sockets stack (e.g. <netinet/ip.h>), which the Nintendo Switch and
 # PS Vita toolchains don't provide, so WebSocket transport is unavailable there (enet is still used).
