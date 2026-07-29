@@ -2,7 +2,7 @@
 
 #if defined(WITH_LIBRETRO)
 
-#include "libretro/libretro.h"
+#include <libretro/libretro.h>
 
 #include "nCine/IAppEventHandler.h"
 #include "nCine/ServiceLocator.h"

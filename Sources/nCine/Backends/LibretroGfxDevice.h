@@ -4,7 +4,8 @@
 
 #include "../Graphics/IGfxDevice.h"
 #include "../Graphics/DisplayMode.h"
-#include "../../libretro/libretro.h"
+
+#include <libretro/libretro.h>
 
 #include <vector>
 
