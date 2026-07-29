@@ -22,6 +22,9 @@
 #elif defined(DEATH_TARGET_APPLE) || defined(DEATH_TARGET_UNIX)
 #	include <unistd.h>
 #endif
+#if defined(WITH_LIBRETRO)
+#	include "../nCine/Backends/LibretroApplication.h"
+#endif
 
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
@@ -187,6 +190,20 @@ namespace Jazz2
 				}
 			} else if (arg == "/reset-config"_s) {
 				resetConfig = true;
+			}
+		}
+#	endif
+
+#	if defined(WITH_LIBRETRO)
+		// The frontend owns the save directory, so use it instead of the common path for current user;
+		// the portable config is skipped as well, the working directory belongs to the frontend
+		if (!overrideConfigPath) {
+			StringView saveDir = Backends::theLibretroApplication().GetHostPaths().Save;
+			if (!saveDir.empty()) {
+				// Own subdirectory, the save directory is shared by all the cores of the frontend
+				_configPath = fs::CombinePath({saveDir, NCINE_APP, "Jazz2.config"_s});
+				fs::CreateDirectories(fs::GetDirectoryName(_configPath));
+				overrideConfigPath = true;
 			}
 		}
 #	endif

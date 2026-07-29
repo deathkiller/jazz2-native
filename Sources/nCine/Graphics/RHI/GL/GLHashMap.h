@@ -30,6 +30,13 @@ namespace nCine::RHI::GL
 		/** @brief Returns the bucket for a target, mapping the key through the mapping function */
 		value_t& operator[](key_t key);
 
+		/** @brief Overwrites every bucket with the same value (used to drop the cache when external code changed the bindings) */
+		void SetAll(value_t value) {
+			for (std::uint32_t i = 0; i < S; i++) {
+				buckets_[i] = value;
+			}
+		}
+
 	private:
 		value_t buckets_[S];
 		MappingFunc mappingFunc;

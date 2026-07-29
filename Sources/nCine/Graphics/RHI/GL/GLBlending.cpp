@@ -44,6 +44,12 @@ namespace nCine::RHI::GL
 		}
 	}
 
+	void GLBlending::Reapply()
+	{
+		if (state_.enabled) glEnable(GL_BLEND); else glDisable(GL_BLEND);
+		glBlendFuncSeparate(state_.srcRgb, state_.dstRgb, state_.srcAlpha, state_.dstAlpha);
+	}
+
 	void GLBlending::SetState(State newState)
 	{
 		if (newState.enabled)

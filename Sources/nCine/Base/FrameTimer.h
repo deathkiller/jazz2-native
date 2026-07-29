@@ -20,6 +20,11 @@ namespace nCine
 		/** @brief Nominal seconds per frame */
 		static constexpr float SecondsPerFrame = 1.0f / FramesPerSecond;
 
+#if defined(WITH_LIBRETRO)
+		/** @brief Fixed timestep used instead of the wall clock, set by the libretro glue to 1/fps of the frontend */
+		static float FixedFrameDuration;
+#endif
+
 		/**
 		 * @brief Constructor
 		 *

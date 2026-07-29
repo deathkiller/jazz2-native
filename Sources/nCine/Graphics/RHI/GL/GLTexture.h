@@ -120,6 +120,9 @@ namespace nCine::RHI::GL
 		/** @brief Verifies that the device supports the given pixel format, aborting if it does not */
 		static void CheckFormatSupport(PixelFormat format);
 
+		/** @brief Drops the cached unit/texture bindings so the next binds re-apply (external code changed them) */
+		static void InvalidateCachedBindings();
+
 	private:
 		static class GLHashMap<GLTextureMappingFunc::Size, GLTextureMappingFunc> boundTextures_[MaxTextureUnits];
 		static std::uint32_t boundUnit_;

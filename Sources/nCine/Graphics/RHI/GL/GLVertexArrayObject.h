@@ -45,6 +45,11 @@ namespace nCine::RHI::GL
 		/** @brief Sets an OpenGL object label for the vertex array object, for debugging */
 		void SetObjectLabel(StringView label);
 
+		/** @brief Drops the cached bound VAO so the next bind re-applies (external code changed it) */
+		static void InvalidateCachedBinding() {
+			boundVAO_ = ~0u;
+		}
+
 	private:
 		static GLuint boundVAO_;
 

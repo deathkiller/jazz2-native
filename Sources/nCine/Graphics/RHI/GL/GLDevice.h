@@ -151,6 +151,10 @@ namespace nCine::RHI::GL
 		/** @brief Applies the initial pipeline state once after context creation */
 		static void SetupInitialState();
 
+		/** @brief Re-synchronizes the driver with every cached GL state after external code (e.g. a libretro
+			frontend sharing the context) changed bindings and fixed-function state behind the caches */
+		static void ResyncExternalStateChanges();
+
 		// -- Swap-chain / presentation surface (uniform across every backend) --
 		// The OpenGL backend renders through a GL context the WINDOW backend owns (SDL / GLFW / EGL), which
 		// also performs the buffer swap (e.g. SDL_GL_SwapWindow) - so this whole quartet is inert here. It

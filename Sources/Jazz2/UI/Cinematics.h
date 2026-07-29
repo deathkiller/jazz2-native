@@ -111,7 +111,10 @@ namespace Jazz2::UI
 		float _frameDelay, _frameProgress;
 		std::int32_t _frameIndex;
 		std::int32_t _framesLeft;
-		std::unique_ptr<Texture> _texture;
+		// Double-buffered: uploading into the texture the GPU may still sample from the previous
+		// frame forces a driver sync stall (costly on tiled GPUs), so uploads ping-pong
+		std::unique_ptr<Texture> _textures[2];
+		std::int32_t _textureIndex;
 		std::unique_ptr<std::uint8_t[]> _buffer;
 		std::unique_ptr<std::uint8_t[]> _lastBuffer;
 		std::unique_ptr<std::uint32_t[]> _currentFrame;

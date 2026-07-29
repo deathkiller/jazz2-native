@@ -60,6 +60,9 @@ namespace nCine::RHI::GL
 		/** @brief Restores the whole viewport state */
 		static void SetState(State newState);
 
+		/** @brief Re-applies the cached state to the driver (external code changed the real state) */
+		static void Reapply();
+
 	private:
 		static State state_;
 

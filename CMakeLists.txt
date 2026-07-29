@@ -98,7 +98,12 @@ if(NOT EMSCRIPTEN AND NOT NINTENDO_SWITCH AND NOT VITA AND NOT WINDOWS_PHONE AND
 	set_target_properties(ShaderCompiler PROPERTIES FOLDER "Utilities")
 endif()
 
-add_executable(${NCINE_APP})
+if(NCINE_BUILD_LIBRETRO)
+	add_library(${NCINE_APP} SHARED)
+	set_target_properties(${NCINE_APP} PROPERTIES PREFIX "" OUTPUT_NAME "${NCINE_APP}_libretro")
+else()
+	add_executable(${NCINE_APP})
+endif()
 
 if(WINDOWS_PHONE OR WINDOWS_STORE)
 	message(STATUS "Compiling for Windows RT")
@@ -108,6 +113,8 @@ elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
 elseif(PLATFORM_DREAMCAST)
 	# The Dreamcast uses the Dc window/input backend (KallistiOS), see Sources/nCine/Backends/Dc
 	message(STATUS "Compiling for Sega Dreamcast (KallistiOS backend)")
+elseif(NCINE_BUILD_LIBRETRO)
+	message(STATUS "Compiling as a libretro core (no window backend)")
 else()
 	# Falling back to either GLFW or SDL2 if the other one is not available
 	if(NOT GLFW_FOUND AND NOT SDL2_FOUND AND NOT SDL3_FOUND AND NOT Qt5_FOUND)
@@ -144,7 +151,7 @@ endforeach()
 target_sources(${NCINE_APP} PRIVATE ${SOURCES} ${HEADERS} ${GENERATED_SOURCES})
 
 # Windows RT uses custom packaging, enable it only for other platforms
-if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH AND NOT VITA)
+if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH AND NOT VITA AND NOT NCINE_BUILD_LIBRETRO)
 	include(ncine_installation)
 endif()
 include(ncine_strip_binaries)

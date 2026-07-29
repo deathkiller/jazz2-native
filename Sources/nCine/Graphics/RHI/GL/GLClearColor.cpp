@@ -17,6 +17,11 @@ namespace nCine::RHI::GL
 		SetColor(Colorf(red, green, blue, alpha));
 	}
 
+	void GLClearColor::Reapply()
+	{
+		glClearColor(state_.color.R, state_.color.G, state_.color.B, state_.color.A);
+	}
+
 	void GLClearColor::SetState(State newState)
 	{
 		SetColor(newState.color);

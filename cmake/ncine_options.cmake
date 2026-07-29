@@ -26,7 +26,26 @@ option(NCINE_STRIP_BINARIES "Enable symbols stripping from libraries and executa
 option(NCINE_VERSION_FROM_GIT "Try to set current game version from GIT repository" ON)
 #cmake_dependent_option(NCINE_DYNAMIC_LIBRARY "Compile the engine as a dynamic library" OFF "NOT EMSCRIPTEN" OFF)
 
-if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
+# Libretro core: shared library driven by the frontend, no window backend
+option(NCINE_BUILD_LIBRETRO "Build as a libretro core (shared library)" OFF)
+if(NCINE_BUILD_LIBRETRO)
+	# Rendering backend (RHI) of the libretro core: "Software" presents the CPU rasterizer's
+	# framebuffer through retro_video_refresh (works everywhere); "OpenGL" renders on the GPU into
+	# the frontend's FBO via SET_HW_RENDER. The other backends cannot present through the libretro
+	# API, so the generic RHI selection below is skipped for this build.
+	set(NCINE_PREFERRED_RHI "Software" CACHE STRING "Rendering backend for the libretro core: Software or OpenGL")
+	set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "Software;OpenGL")
+	if(NOT NCINE_PREFERRED_RHI MATCHES "^(Software|OpenGL)$")
+		message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" for the libretro core (expected Software or OpenGL)")
+	endif()
+	if(NCINE_PREFERRED_RHI STREQUAL "OpenGL")
+		# The hardware core targets OpenGL|ES 3.0 only - the common denominator of RetroArch's
+		# GPU platforms (KMS/GLES boards like Recalbox on Pi, desktop Mesa via EGL)
+		set(NCINE_WITH_OPENGLES ON)
+	endif()
+endif()
+
+if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT NCINE_BUILD_LIBRETRO)
 	if(NINTENDO_SWITCH OR VITA)
 		set(_NCINE_DEFAULT_BACKEND "SDL2")
 	else()
@@ -218,7 +237,8 @@ endif()
 # Shared library options
 option(DEATH_DEBUG_SYMBOLS "Create debug symbols for executable" ${WIN32})
 option(DEATH_TRACE "Enable runtime event tracing" ON)
-cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST" OFF)
+# In the libretro core the async trace logger thread races with the frontend's core load/unload cycle
+cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT NCINE_BUILD_LIBRETRO" OFF)
 if(DEATH_TRACE)
 	set(DEATH_TRACE_LOG_PATH "" CACHE PATH "Override path to trace log file if specified (and force writing traces to file on some platforms)")
 endif()
@@ -235,7 +255,8 @@ if(NCINE_BUILD_ANDROID)
 	# Support is checked later against Android NDK toolchain (see "/android/app/src/main/cpp/CMakeLists.txt").
 	set(_DEATH_CPU_CAN_USE_IFUNC ON)
 	set(_DEATH_CPU_USE_IFUNC_DEFAULT ON)
-elseif(UNIX AND NOT APPLE)
+elseif(UNIX AND NOT APPLE AND NOT NCINE_BUILD_LIBRETRO)
+	# IFUNC resolvers hang when the libretro core is dlopen'd by the frontend, so plain dispatch is used there
 	include(CheckCXXSourceCompiles)
 	set(CMAKE_REQUIRED_QUIET ON)
 	check_cxx_source_compiles("\

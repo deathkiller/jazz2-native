@@ -20,7 +20,7 @@ namespace Jazz2::UI
 {
 	Cinematics::Cinematics(IRootController* root, StringView path, Function<bool(IRootController*, bool)>&& callback)
 		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
-			_pressedKeys(ValueInit, (std::size_t)Keys::Count), _pressedActions(0)
+			_textureIndex(0), _pressedKeys(ValueInit, (std::size_t)Keys::Count), _pressedActions(0)
 	{
 		Initialize(path);
 	}
@@ -167,7 +167,9 @@ namespace Jazz2::UI
 		_framesLeft = s->ReadValueAsLE<std::uint32_t>();
 		s->Seek(20, SeekOrigin::Current);
 
-		_texture = std::make_unique<Texture>("Cinematics", Texture::Format::RGBA8, _width, _height);
+		_textures[0] = std::make_unique<Texture>("Cinematics", Texture::Format::RGBA8, _width, _height);
+		_textures[1] = std::make_unique<Texture>("Cinematics", Texture::Format::RGBA8, _width, _height);
+		_textureIndex = 0;
 		_buffer = std::make_unique<std::uint8_t[]>(_width * _height);
 		_lastBuffer = std::make_unique<std::uint8_t[]>(_width * _height);
 		_currentFrame = std::make_unique<std::uint32_t[]>(_width * _height);
@@ -298,8 +300,9 @@ namespace Jazz2::UI
 			_currentFrame[i] = _palette[_buffer[i]];
 		}
 
-		// Upload new texture to GPU
-		_texture->LoadFromTexels((std::uint8_t*)_currentFrame.get(), 0, 0, _width, _height);
+		// Upload new texture to GPU (into the buffer the GPU is not currently sampling)
+		_textureIndex ^= 1;
+		_textures[_textureIndex]->LoadFromTexels((std::uint8_t*)_currentFrame.get(), 0, 0, _width, _height);
 
 		// Create copy of the buffer
 		std::memcpy(_lastBuffer.get(), _buffer.get(), _width * _height);
@@ -398,7 +401,7 @@ namespace Jazz2::UI
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 		_renderCommand.SetTransformation(Matrix4x4f::Translation(frameOffset.X, frameOffset.Y, 0.0f));
-		_renderCommand.GetMaterial().SetTexture(*_owner->_texture);
+		_renderCommand.GetMaterial().SetTexture(*_owner->_textures[_owner->_textureIndex]);
 
 		renderQueue.AddCommand(&_renderCommand);
 

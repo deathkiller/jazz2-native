@@ -1,5 +1,13 @@
 #pragma once
 
+#if defined(WITH_LIBRETRO) || defined(DOXYGEN_GENERATING_OUTPUT)
+#	include <memory>
+
+namespace Death { namespace IO {
+	class Stream;
+}}
+#endif
+
 namespace nCine
 {
 	class AppConfiguration;
@@ -38,6 +46,16 @@ namespace nCine
 		virtual void OnResume() {}
 		/** @brief Called when the `Back` gesture is invoked */
 		virtual void OnBackInvoked() {}
+#if defined(WITH_LIBRETRO) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/** @brief Called when the host frontend asks for a snapshot of the current session */
+		virtual bool OnSaveState(Death::IO::Stream& dest) {
+			return false;
+		}
+		/** @brief Called when the host frontend restores a snapshot written by @ref OnSaveState() */
+		virtual bool OnLoadState(std::shared_ptr<Death::IO::Stream> src) {
+			return false;
+		}
+#endif
 	};
 
 	inline IAppEventHandler::~IAppEventHandler() {}

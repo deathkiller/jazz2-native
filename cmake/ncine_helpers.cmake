@@ -275,6 +275,10 @@ function(ncine_apply_compiler_options target)
 	target_compile_features(${target} PUBLIC cxx_std_17)
 	set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
 	target_compile_definitions(${target} PRIVATE "CMAKE_BUILD")
+	if(NCINE_BUILD_LIBRETRO)
+		# Static helper libs are linked into the shared core
+		set_target_properties(${target} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+	endif()
 
 	# Enable interprocedural optimization (LTO on GCC/Clang, /GL + /LTCG on MSVC) in Release, but skip it for
 	# static libraries: an LTO static archive's slim objects don't resolve reliably when linked into the

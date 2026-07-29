@@ -5,6 +5,11 @@
 #include "GLScissorTest.h"
 #include "GLClearColor.h"
 #include "GLViewport.h"
+#include "GLFramebuffer.h"
+#include "GLBufferObject.h"
+#include "GLShaderProgram.h"
+#include "GLTexture.h"
+#include "GLVertexArrayObject.h"
 
 namespace nCine::RHI::GL
 {
@@ -287,5 +292,22 @@ namespace nCine::RHI::GL
 #endif
 		GLBlending::SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GLDepthTest::Enable();
+	}
+
+	void GLDevice::ResyncExternalStateChanges()
+	{
+		// Object bindings: drop the caches so the next bind of each object re-applies
+		GLFramebuffer::InvalidateCachedBindings();
+		GLBufferObject::InvalidateCachedBindings();
+		GLShaderProgram::InvalidateCachedBinding();
+		GLTexture::InvalidateCachedBindings();
+		GLVertexArrayObject::InvalidateCachedBinding();
+		// Fixed-function state: force the driver back to what the caches say
+		GLBlending::Reapply();
+		GLDepthTest::Reapply();
+		GLCullFace::Reapply();
+		GLScissorTest::Reapply();
+		GLClearColor::Reapply();
+		GLViewport::Reapply();
 	}
 }

@@ -19,6 +19,11 @@ namespace nCine::RHI::GL
 		SetRect(Recti(x, y, width, height));
 	}
 
+	void GLViewport::Reapply()
+	{
+		glViewport(state_.rect.X, state_.rect.Y, state_.rect.W, state_.rect.H);
+	}
+
 	void GLViewport::SetState(State newState)
 	{
 		SetRect(newState.rect);

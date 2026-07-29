@@ -258,6 +258,11 @@ namespace nCine::RHI::GL
 			shouldLogOnErrors_ = shouldLogOnErrors;
 		}
 
+		/** @brief Drops the cached bound program so the next @ref Use() re-applies (external code changed it) */
+		static void InvalidateCachedBinding() {
+			boundProgram_ = ~0u;
+		}
+
 	private:
 		/** @brief Maximum number of discoverable uniforms outside of blocks */
 		static constexpr std::uint32_t MaxNumUniforms = 32;

@@ -17,6 +17,9 @@ namespace nCine
 {
 	ALAudioDevice::ALAudioDevice()
 		: device_(nullptr), context_(nullptr), gain_(1.0f), sources_ {}, deviceName_(nullptr), nativeFreq_(44100)
+#if defined(WITH_LIBRETRO)
+		, alcRenderSamplesSOFT_(nullptr)
+#endif
 #if defined(WITH_THREADS)
 		, decodeThreadCreated_(false), decodeThreadShouldQuit_(false)
 #endif
@@ -31,11 +34,36 @@ namespace nCine
 	{
 		LOGD("Initializing OpenAL audio device...");
 
+#if defined(WITH_LIBRETRO)
+		// The core hands mixed audio to the frontend instead of playing it itself: an ALC_SOFT_loopback
+		// device mixes on demand and retro_run pulls the samples through renderSamples(). The core is
+		// always built against OpenAL Soft, which has the extension since v1.14.
+		auto alcLoopbackOpenDeviceSOFT = (LPALCLOOPBACKOPENDEVICESOFT)alcGetProcAddress(nullptr, "alcLoopbackOpenDeviceSOFT");
+		alcRenderSamplesSOFT_ = (LPALCRENDERSAMPLESSOFT)alcGetProcAddress(nullptr, "alcRenderSamplesSOFT");
+		if (alcLoopbackOpenDeviceSOFT != nullptr && alcRenderSamplesSOFT_ != nullptr) {
+			device_ = alcLoopbackOpenDeviceSOFT(nullptr);
+		} else {
+			LOGE("The OpenAL library does not support ALC_SOFT_loopback");
+		}
+#else
 		device_ = alcOpenDevice(nullptr);
+#endif
 		DEATH_ASSERT(device_ != nullptr, ("alcOpenDevice() failed with error 0x{:x}", alGetError()), );
 		deviceName_ = alcGetString(device_, ALC_DEVICE_SPECIFIER);
 
+#if defined(WITH_LIBRETRO)
+		// A loopback context must be created with its render format: 16-bit interleaved stereo (what
+		// retro_audio_sample_batch expects) at the rate advertised in retro_system_av_info
+		const ALCint loopbackAttrs[] = {
+			ALC_FORMAT_CHANNELS_SOFT, ALC_STEREO_SOFT,
+			ALC_FORMAT_TYPE_SOFT, ALC_SHORT_SOFT,
+			ALC_FREQUENCY, 48000,
+			0
+		};
+		context_ = alcCreateContext(device_, loopbackAttrs);
+#else
 		context_ = alcCreateContext(device_, nullptr);
+#endif
 		if (context_ == nullptr) {
 			alcCloseDevice(device_);
 			LOGE("alcCreateContext() failed with error 0x{:x}", alGetError());
@@ -463,6 +491,17 @@ namespace nCine
 	{
 		return nativeFreq_;
 	}
+
+#if defined(WITH_LIBRETRO)
+	bool ALAudioDevice::renderSamples(std::int16_t* buffer, std::int32_t numFrames)
+	{
+		if (device_ == nullptr) {
+			return false;
+		}
+		alcRenderSamplesSOFT_(device_, buffer, numFrames);
+		return true;
+	}
+#endif
 
 	void ALAudioDevice::suspendDevice()
 	{

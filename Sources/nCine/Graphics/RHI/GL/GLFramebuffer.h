@@ -60,6 +60,17 @@ namespace nCine::RHI::GL
 		/** @brief Unbinds any framebuffer from the specified target (read, draw or both) */
 		static bool Unbind(GLenum target);
 
+		/** @brief Sets the handle @ref Unbind() binds as the "default" framebuffer — non-zero when the
+			screen is a framebuffer owned by a host (e.g. the libretro frontend's render FBO) */
+		static void SetDefaultHandle(GLuint handle) {
+			defaultHandle_ = handle;
+		}
+		/** @brief Drops the cached read/draw bindings so the next bind re-applies (external code changed them) */
+		static void InvalidateCachedBindings() {
+			readBoundBuffer_ = ~0u;
+			drawBoundBuffer_ = ~0u;
+		}
+
 		/** @brief Returns the number of active color draw buffers */
 		inline std::uint32_t GetDrawbufferCount() const { return numDrawBuffers_; }
 		/** @brief Sets the number of color attachments enabled as draw buffers */
@@ -92,6 +103,7 @@ namespace nCine::RHI::GL
 	private:
 		static std::uint32_t readBoundBuffer_;
 		static std::uint32_t drawBoundBuffer_;
+		static GLuint defaultHandle_;
 
 		std::uint32_t numDrawBuffers_;
 		SmallVector<std::unique_ptr<GLRenderbuffer>, MaxRenderbuffers> attachedRenderbuffers_;

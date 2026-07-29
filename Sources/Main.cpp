@@ -3,6 +3,8 @@
 #if defined(DEATH_TARGET_ANDROID)
 #	include "nCine/Backends/Android/AndroidApplication.h"
 #	include "nCine/Backends/Android/AndroidJniHelper.h"
+#elif defined(WITH_LIBRETRO)
+#	include "nCine/Backends/LibretroApplication.h"
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 #	include "nCine/Backends/Uwp/UwpApplication.h"
 #else
@@ -65,6 +67,11 @@ using namespace Jazz2::Multiplayer;
 #include <IO/PakFile.h>
 #include <IO/Compression/DeflateStream.h>
 #include <IO/WebRequest.h>
+
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && (defined(DEATH_TARGET_WINDOWS) || defined(WITH_CURL))
+// The update check needs a WebRequest HTTP backend (WinHTTP or curl)
+#	define WITH_UPDATE_CHECK
+#endif
 #include <Utf8.h>
 
 #if defined(WITH_THREADS)
@@ -113,6 +120,12 @@ public:
 	void GoToMainMenu(bool afterIntro) override;
 	void ChangeLevel(LevelInitialization&& levelInit) override;
 	bool HasResumableState() const override;
+	bool SaveStateToStream(Stream& dest);
+	void ResumeStateFromStream(std::shared_ptr<Stream> src);
+#if defined(WITH_LIBRETRO)
+	bool OnSaveState(Stream& dest) override;
+	bool OnLoadState(std::shared_ptr<Stream> src) override;
+#endif
 	void ResumeSavedState() override;
 	bool SaveCurrentStateIfAny() override;
 
@@ -161,6 +174,8 @@ private:
 	void WaitForVerify();
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RefreshCache();
+#endif
+#if defined(WITH_UPDATE_CHECK)
 	void CheckUpdates();
 #endif
 	bool SetLevelHandler(const LevelInitialization& levelInit);
@@ -179,9 +194,107 @@ private:
 	static void ExtractPakFile(StringView pakFile, StringView targetPath);
 };
 
+#if defined(WITH_LIBRETRO)
+/** @brief Returns whether the specified directory contains the original game files */
+static bool ContainsOriginalGameFiles(StringView path)
+{
+	// Same check as `ContentResolver`, the shareware demo ships `AnimsSw.j2a` instead
+	return !fs::FindPathCaseInsensitive(fs::CombinePath(path, "Anims.j2a"_s)).empty() ||
+		!fs::FindPathCaseInsensitive(fs::CombinePath(path, "AnimsSw.j2a"_s)).empty();
+}
+
+/** @brief Returns the game root (the directory containing `Content`) in the directories advertised by the frontend */
+static String FindGameRoot(const Backends::LibretroApplication::HostPaths& hostPaths, StringView systemBase)
+{
+	// Walk up from the loaded file, the frontend can be pointed at any file of the game directory
+	if (!hostPaths.Content.empty()) {
+		String baseDir = (fs::DirectoryExists(hostPaths.Content) ? hostPaths.Content : String(fs::GetDirectoryName(hostPaths.Content)));
+		for (std::int32_t i = 0; i < 3 && !baseDir.empty(); i++) {
+			if (fs::DirectoryExists(fs::CombinePath(baseDir, "Content"_s))) {
+				return baseDir;
+			}
+			// `GetDirectoryName()` returns a view into its argument, so it can't be assigned in place
+			String parent = fs::GetDirectoryName(baseDir);
+			baseDir = std::move(parent);
+		}
+	}
+	// Frontends that separate engine data from the user's game files keep Content/ (and the
+	// generated Cache/) in the core assets directory (Recalbox: core_assets = bios/jazz2)
+	if (!hostPaths.CoreAssets.empty() && fs::DirectoryExists(fs::CombinePath(hostPaths.CoreAssets, "Content"_s))) {
+		return hostPaths.CoreAssets;
+	}
+	if (!systemBase.empty() && fs::DirectoryExists(fs::CombinePath(systemBase, "Content"_s))) {
+		return systemBase;
+	}
+	return {};
+}
+
+/** @brief Returns the directory with the original game files, `cachePath` is moved along with it */
+static String FindSourcePath(const Backends::LibretroApplication::HostPaths& hostPaths, StringView systemBase,
+	StringView baseDir, String& cachePath)
+{
+	// Source/ next to the game content wins (portable layout)
+	String sourcePath = fs::CombinePath(baseDir, "Source/"_s);
+	if (ContainsOriginalGameFiles(sourcePath)) {
+		return sourcePath;
+	}
+	// The system directory may BE the Source folder (Recalbox: system = the rom's directory, which
+	// holds Anims.j2a); the Cache then stays next to Content/ in the game directory
+	if (!hostPaths.System.empty() && ContainsOriginalGameFiles(hostPaths.System)) {
+		return hostPaths.System;
+	}
+	// Otherwise fall back to "<system>/jazz2/Source" or ".../Sources", with Cache/ alongside
+	if (!systemBase.empty()) {
+		for (StringView sourceName : { "Source/"_s, "Sources/"_s }) {
+			String systemSource = fs::CombinePath(systemBase, sourceName);
+			if (fs::DirectoryExists(systemSource)) {
+				cachePath = fs::CombinePath(systemBase, "Cache/"_s);
+				return systemSource;
+			}
+		}
+	}
+	return sourcePath;
+}
+
+/** @brief Locates `Content`, `Source` and `Cache` in the directories advertised by the libretro frontend */
+static bool OverridePathsFromHost()
+{
+	const auto& hostPaths = Backends::theLibretroApplication().GetHostPaths();
+
+	// The frontend may point its system directory straight at the game root, otherwise the
+	// "<system>/jazz2" convention applies
+	String systemBase;
+	if (!hostPaths.System.empty()) {
+		systemBase = (fs::DirectoryExists(fs::CombinePath(hostPaths.System, "Content"_s))
+			? hostPaths.System : fs::CombinePath(hostPaths.System, "jazz2"_s));
+	}
+
+	String baseDir = FindGameRoot(hostPaths, systemBase);
+	if (baseDir.empty()) {
+		LOGE("Cannot find \"Content\" directory in any of the directories provided by the frontend");
+		return false;
+	}
+
+	String cachePath = fs::CombinePath(baseDir, "Cache/"_s);
+	String sourcePath = FindSourcePath(hostPaths, systemBase, baseDir, cachePath);
+
+	// A libretro core shares its process with the frontend, so the working directory is not the
+	// core's to change - absolute paths are used
+	ContentResolver::Get().OverridePaths(fs::CombinePath(baseDir, "Content/"_s), sourcePath, cachePath);
+	return true;
+}
+#endif
+
 void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 {
 	ZoneScopedC(0x888888);
+
+#if defined(WITH_LIBRETRO)
+	if (!OverridePathsFromHost()) {
+		theApplication().Quit();
+		return;
+	}
+#endif
 
 #if defined(WITH_MULTIPLAYER) && defined(DEDICATED_SERVER)
 	constexpr bool isServer = true;
@@ -285,13 +398,13 @@ void GameEventHandler::OnInitialize()
 		DEATH_ASSERT(handler != nullptr);
 
 		handler->OnAfterInitialize();
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if defined(WITH_UPDATE_CHECK)
 		handler->CheckUpdates();
 #	endif
 	}, this);
 #else
 	OnAfterInitialize();
-#	if !defined(DEATH_TARGET_EMSCRIPTEN)
+#	if defined(WITH_UPDATE_CHECK)
 	CheckUpdates();
 #	endif
 #endif
@@ -772,14 +885,19 @@ bool GameEventHandler::HasResumableState() const
 
 void GameEventHandler::ResumeSavedState()
 {
-	InvokeAsync([this]() {
+	auto configDir = PreferencesCache::GetDirectory();
+	ResumeStateFromStream(fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Read));
+}
+
+void GameEventHandler::ResumeStateFromStream(std::shared_ptr<Stream> src)
+{
+	InvokeAsync([this, src = std::move(src)]() {
 		ZoneScopedNC("GameEventHandler::ResumeSavedState", 0x888888);
 
 		LOGI("Resuming saved state...");
 
-		auto configDir = PreferencesCache::GetDirectory();
-		auto s = fs::Open(fs::CombinePath(configDir, StateFileName), FileAccess::Read);
-		if (*s) {
+		auto& s = src;
+		if (s != nullptr && *s) {
 			std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
 			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 			std::uint16_t version = s->ReadValueAsLE<std::uint16_t>();
@@ -834,6 +952,58 @@ void GameEventHandler::ResumeSavedState()
 	});
 }
 
+bool GameEventHandler::SaveStateToStream(Stream& dest)
+{
+	auto* levelHandler = runtime_cast<LevelHandler>(_currentHandler.get());
+	if (levelHandler == nullptr || !levelHandler->IsLocalSession()) {
+		return false;
+	}
+
+	dest.WriteValueAsLE<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
+	dest.WriteValue<std::uint8_t>(ContentResolver::StateFile);
+	dest.WriteValueAsLE<std::uint16_t>(StateVersion);
+
+	bool serialized;
+	{
+		DeflateWriter co(dest);
+		// Session kind: 0 = single player / classic local session, 1 = local splitscreen multiplayer
+		// (cooperative). Read back in ResumeSavedState() to recreate the matching level handler.
+		std::uint8_t sessionKind = 0;
+#if defined(WITH_MULTIPLAYER)
+		if (runtime_cast<MpLevelHandler>(levelHandler) != nullptr) {
+			sessionKind = 1;
+		}
+#endif
+		co.WriteValue<std::uint8_t>(sessionKind);
+		serialized = levelHandler->SerializeResumableToStream(co);
+	}
+	return serialized;
+}
+
+#if defined(WITH_LIBRETRO)
+bool GameEventHandler::OnSaveState(Stream& dest)
+{
+	return SaveStateToStream(dest);
+}
+
+bool GameEventHandler::OnLoadState(std::shared_ptr<Stream> src)
+{
+	// The frontend expects an immediate answer, so validate the signature here - the level itself
+	// is reloaded asynchronously, on one of the next frames
+	if (src == nullptr || !*src || src->GetSize() < (std::int64_t)sizeof(std::uint64_t)) {
+		return false;
+	}
+	std::uint64_t signature = src->ReadValueAsLE<std::uint64_t>();
+	if (signature != 0x2095A59FF0BFBBEF || src->GetSize() < 11) {
+		return false;
+	}
+	src->Seek(0, SeekOrigin::Begin);
+
+	ResumeStateFromStream(std::move(src));
+	return true;
+}
+#endif
+
 bool GameEventHandler::SaveCurrentStateIfAny()
 {
 	ZoneScopedNC("GameEventHandler::SaveCurrentStateIfAny", 0x888888);
@@ -844,25 +1014,7 @@ bool GameEventHandler::SaveCurrentStateIfAny()
 			auto statePath = fs::CombinePath(configDir, StateFileName);
 			auto s = fs::Open(statePath, FileAccess::Write);
 			if (*s) {
-				s->WriteValueAsLE<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
-				s->WriteValue<std::uint8_t>(ContentResolver::StateFile);
-				s->WriteValueAsLE<std::uint16_t>(StateVersion);
-
-				bool serialized;
-				{
-					DeflateWriter co(*s);
-					// Session kind: 0 = single player / classic local session, 1 = local splitscreen multiplayer
-					// (cooperative). Read back in ResumeSavedState() to recreate the matching level handler.
-					std::uint8_t sessionKind = 0;
-#if defined(WITH_MULTIPLAYER)
-					if (runtime_cast<MpLevelHandler>(levelHandler) != nullptr) {
-						sessionKind = 1;
-					}
-#endif
-					co.WriteValue<std::uint8_t>(sessionKind);
-					serialized = levelHandler->SerializeResumableToStream(co);
-				}
-				if (!serialized) {
+				if (!SaveStateToStream(*s)) {
 					// The current session can't be resumed (e.g. a competitive local multiplayer mode); don't leave
 					// a partial state file behind that would offer a broken "Continue" on the next launch
 					s = nullptr;
@@ -2051,6 +2203,7 @@ void GameEventHandler::RefreshCacheLevels(bool recreateAll)
 	}
 }
 
+#if defined(WITH_UPDATE_CHECK)
 void GameEventHandler::CheckUpdates()
 {
 #if !defined(DEATH_DEBUG)
@@ -2071,6 +2224,7 @@ void GameEventHandler::CheckUpdates()
 	}
 #endif
 }
+#endif
 #endif
 
 bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
@@ -2296,7 +2450,7 @@ void GameEventHandler::ExtractPakFile(StringView pakFile, StringView targetPath)
 	LOGI("{} files extracted successfully, {} files failed with error", successCount, errorCount);
 }
 
-#if defined(DEATH_TARGET_ANDROID)
+#if defined(DEATH_TARGET_ANDROID) || defined(WITH_LIBRETRO)
 std::unique_ptr<IAppEventHandler> CreateAppEventHandler()
 {
 	return std::make_unique<GameEventHandler>();
