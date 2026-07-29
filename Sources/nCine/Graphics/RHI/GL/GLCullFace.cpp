@@ -28,6 +28,12 @@ namespace nCine::RHI::GL
 		}
 	}
 
+	void GLCullFace::Reapply()
+	{
+		if (state_.enabled) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
+		glCullFace(state_.mode);
+	}
+
 	void GLCullFace::SetState(State newState)
 	{
 		if (newState.enabled) {

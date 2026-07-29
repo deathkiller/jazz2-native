@@ -54,10 +54,7 @@ namespace nCine::RHI::GL
 		static void SetState(State newState);
 
 		/** @brief Re-applies the cached state to the driver (external code changed the real state) */
-		static void Reapply() {
-			if (state_.enabled) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
-			glCullFace(state_.mode);
-		}
+		static void Reapply();
 
 	private:
 		static State state_;

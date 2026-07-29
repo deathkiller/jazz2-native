@@ -231,20 +231,17 @@ RETRO_API bool retro_serialize(void* data, size_t size)
 		return false;
 	}
 	MemoryStream session;
-	MemoryStream empty;
-	MemoryStream* state = &session;
 	if (!theLibretroApplication().SaveState(session)) {
 		// Saving must work at any point (auto-states on exit, manual saves in the menus): outside a
-		// resumable session a tiny "empty session" state is written instead of failing - loading it
-		// goes back to the main menu
-		empty.WriteValueAsLE<std::uint64_t>(LibretroEmptyStateSignature);
-		state = &empty;
+		// resumable session an all-zero state is written instead of failing - loading it is a no-op
+		std::memset(data, 0, size);
+		return true;
 	}
-	if ((std::size_t)state->GetSize() > size) {
+	if ((std::size_t)session.GetSize() > size) {
 		return false;
 	}
-	std::memcpy(data, state->GetBuffer(), (std::size_t)state->GetSize());
-	std::memset((std::uint8_t*)data + state->GetSize(), 0, size - (std::size_t)state->GetSize());
+	std::memcpy(data, session.GetBuffer(), (std::size_t)session.GetSize());
+	std::memset((std::uint8_t*)data + session.GetSize(), 0, size - (std::size_t)session.GetSize());
 	return true;
 }
 
@@ -253,8 +250,14 @@ RETRO_API bool retro_unserialize(const void* data, size_t size)
 	if (!_gameInitialized || size == 0) {
 		return false;
 	}
+	const std::uint8_t* bytes = (const std::uint8_t*)data;
+	static const std::uint8_t EmptySignature[8] = {};
+	if (size < sizeof(EmptySignature) || std::memcmp(bytes, EmptySignature, sizeof(EmptySignature)) == 0) {
+		// The state was saved outside a resumable session, there is nothing to restore
+		return true;
+	}
 	auto ms = std::make_shared<MemoryStream>(Containers::InPlaceInit,
-		Containers::ArrayView<const std::uint8_t>((const std::uint8_t*)data, (std::size_t)size));
+		Containers::ArrayView<const std::uint8_t>(bytes, (std::size_t)size));
 	return theLibretroApplication().LoadState(std::move(ms));
 }
 

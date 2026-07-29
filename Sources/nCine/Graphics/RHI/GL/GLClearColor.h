@@ -55,9 +55,7 @@ namespace nCine::RHI::GL
 		static void SetState(State newState);
 
 		/** @brief Re-applies the cached state to the driver (external code changed the real state) */
-		static void Reapply() {
-			glClearColor(state_.color.R, state_.color.G, state_.color.B, state_.color.A);
-		}
+		static void Reapply();
 
 	private:
 		static State state_;

@@ -279,8 +279,7 @@ static bool OverridePathsFromHost()
 	String sourcePath = FindSourcePath(hostPaths, systemBase, baseDir, cachePath);
 
 	// A libretro core shares its process with the frontend, so the working directory is not the
-	// core's to change - absolute paths are used instead of the relative ones that would otherwise
-	// be resolved against the working directory of the frontend (NCINE_PACKAGED_CONTENT_PATH build)
+	// core's to change - absolute paths are used
 	ContentResolver::Get().OverridePaths(fs::CombinePath(baseDir, "Content/"_s), sourcePath, cachePath);
 	return true;
 }
@@ -995,12 +994,6 @@ bool GameEventHandler::OnLoadState(std::shared_ptr<Stream> src)
 		return false;
 	}
 	std::uint64_t signature = src->ReadValueAsLE<std::uint64_t>();
-	if (signature == LibretroEmptyStateSignature) {
-		// The state was saved outside a resumable session, so loading it goes back where it was
-		// saved - the main menu
-		GoToMainMenu(false);
-		return true;
-	}
 	if (signature != 0x2095A59FF0BFBBEF || src->GetSize() < 11) {
 		return false;
 	}

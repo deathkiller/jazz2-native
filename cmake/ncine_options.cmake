@@ -43,8 +43,6 @@ if(NCINE_BUILD_LIBRETRO)
 		# GPU platforms (KMS/GLES boards like Recalbox on Pi, desktop Mesa via EGL)
 		set(NCINE_WITH_OPENGLES ON)
 	endif()
-	# Static helper libs are linked into the shared core
-	set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
 if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT NCINE_BUILD_LIBRETRO)
@@ -257,7 +255,8 @@ if(NCINE_BUILD_ANDROID)
 	# Support is checked later against Android NDK toolchain (see "/android/app/src/main/cpp/CMakeLists.txt").
 	set(_DEATH_CPU_CAN_USE_IFUNC ON)
 	set(_DEATH_CPU_USE_IFUNC_DEFAULT ON)
-elseif(UNIX AND NOT APPLE)
+elseif(UNIX AND NOT APPLE AND NOT NCINE_BUILD_LIBRETRO)
+	# IFUNC resolvers hang when the libretro core is dlopen'd by the frontend, so plain dispatch is used there
 	include(CheckCXXSourceCompiles)
 	set(CMAKE_REQUIRED_QUIET ON)
 	check_cxx_source_compiles("\
@@ -301,8 +300,7 @@ else()
 	set(_DEATH_CPU_CAN_USE_IFUNC OFF)
 	set(_DEATH_CPU_USE_IFUNC_DEFAULT OFF)
 endif()
-# IFUNC resolvers hang when the libretro core is dlopen'd by the frontend, so plain runtime dispatch is used there
-cmake_dependent_option(DEATH_CPU_USE_IFUNC "Allow using GNU IFUNC for runtime CPU dispatch" ${_DEATH_CPU_USE_IFUNC_DEFAULT} "_DEATH_CPU_CAN_USE_IFUNC;NOT NCINE_BUILD_LIBRETRO" OFF)
+cmake_dependent_option(DEATH_CPU_USE_IFUNC "Allow using GNU IFUNC for runtime CPU dispatch" ${_DEATH_CPU_USE_IFUNC_DEFAULT} "_DEATH_CPU_CAN_USE_IFUNC" OFF)
 
 # Runtime CPU dispatch. Because going through a function pointer may have negative perf consequences,
 # enable it by default only on platforms that have IFUNC, and thus can avoid the function pointer indirection.
@@ -319,11 +317,6 @@ option(WITH_MULTIPLAYER "Enable multiplayer support" ON)
 # The libogc consoles keep local splitscreen (WITH_MULTIPLAYER) but have no online transport (no enet/BSD
 # sockets stack wired up) - the transport split keeps the engine+local path fully functional without it
 cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST" OFF)
-# A libretro core built without online multiplayer needs no HTTP at all (the server list is the only
-# other `WebRequest` user and the update check is pointless under a frontend), so curl is left out
-if(NCINE_BUILD_LIBRETRO AND NOT WITH_ONLINE_MULTIPLAYER)
-	set(CMAKE_DISABLE_FIND_PACKAGE_CURL TRUE)
-endif()
 cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_ONLINE_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
 # IXWebSocket requires a full BSD sockets stack (e.g. <netinet/ip.h>), which the Nintendo Switch and
 # PS Vita toolchains don't provide, so WebSocket transport is unavailable there (enet is still used).
