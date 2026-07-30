@@ -107,6 +107,12 @@ static DWORD GetTabTipPathFromRegistry(wchar_t* dstPath, DWORD dstSize)
 
 namespace nCine
 {
+#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+	// Set from the power/reset event callbacks, which run in interrupt context and must not do more
+	// than this - the main loop picks it up and shuts the game down in an orderly way
+	static volatile bool ogcShutdownRequested = false;
+#endif
+
 	Application& theApplication()
 	{
 		static MainApplication instance;
@@ -164,6 +170,21 @@ namespace nCine
 #	if defined(DEATH_TARGET_WII)
 		WPAD_Init();
 #	endif
+
+		// The console (and an emulator asking the title to stop) requests shutdown through these events;
+		// a title that ignores them keeps running until it is killed, so each one asks the game to quit
+		SYS_SetResetCallback([](std::uint32_t irq, void* ctx) {
+			static_cast<void>(irq); static_cast<void>(ctx);
+			ogcShutdownRequested = true;
+		});
+#	if defined(DEATH_TARGET_WII)
+		// The GameCube has no power event - its power switch cuts the supply directly
+		SYS_SetPowerCallback([]() { ogcShutdownRequested = true; });
+		WPAD_SetPowerButtonCallback([](std::int32_t chan) {
+			static_cast<void>(chan);
+			ogcShutdownRequested = true;
+		});
+#	endif
 #elif defined(DEATH_TARGET_DREAMCAST)
 		// Early boot log on the framebuffer console: startup messages (including all trace messages)
 		// are shown directly on the screen, so crashes are visible without a serial cable attached;
@@ -210,6 +231,11 @@ namespace nCine
 #else
 		while (!app.shouldQuit_) {
 			app.ProcessStep();
+#	if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+			if (ogcShutdownRequested) {
+				app.Quit();
+			}
+#	endif
 		}
 #endif
 
@@ -220,6 +246,19 @@ namespace nCine
 		socketExit();
 #elif defined(DEATH_TARGET_VITA)
 		sceKernelExitProcess(0);
+#elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+		// Returning from main() only reaches a loader when one left its return stub behind (the Homebrew
+		// Channel and friends); booted directly there is nothing to return to, so the console is asked to
+		// end the title instead of running off into whatever follows the entry point
+		fatUnmount("sd:");
+		fatUnmount("carda:");
+#	if defined(DEATH_TARGET_WII)
+		if (*(volatile std::uint32_t*)0x80001804 != 0x53545542 /*"STUB"*/) {
+			SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
+		}
+#	else
+		SYS_ResetSystem(SYS_HOTRESET, 0, 0);
+#	endif
 #elif defined(DEATH_TARGET_WINDOWS)
 		timeEndPeriod(1);
 #endif

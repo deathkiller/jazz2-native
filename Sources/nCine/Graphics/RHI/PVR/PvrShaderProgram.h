@@ -44,6 +44,19 @@ namespace nCine::RHI::PVR
 		BatchedColorized,		/**< The colorized effect over an array of batched instances */
 		PaletteRemap,			/**< An R8/RG8 index sprite recolored through the shared palette texture */
 		BatchedPaletteRemap,	/**< The palette-remap effect over an array of batched instances */
+		WhiteMask,				/**< Fully brightened silhouette of the sprite (hit flash) */
+		BatchedWhiteMask,		/**< The white-mask effect over an array of batched instances */
+		PartialWhiteMask,		/**< Brightened sprite that keeps some of its own shading */
+		BatchedPartialWhiteMask,	/**< The partial white mask over an array of batched instances */
+		FrozenMask,				/**< Sprite tinted toward ice blue by the per-instance transition */
+		BatchedFrozenMask,		/**< The frozen mask over an array of batched instances */
+		Outline,				/**< Sprite with a contrasting border, drawn as offset silhouettes */
+		BatchedOutline,			/**< The outline effect over an array of batched instances */
+		ShieldFire,				/**< Additive fire-coloured glow around the sprite */
+		BatchedShieldFire,		/**< The fire shield glow over an array of batched instances */
+		ShieldLightning,		/**< Additive lightning-coloured glow around the sprite */
+		BatchedShieldLightning,	/**< The lightning shield glow over an array of batched instances */
+		Transition,				/**< The level transition iris, flattened into a full-screen fade */
 		Combine					/**< The viewport compositor (scene + lighting + blur + ambient) */
 	};
 
@@ -196,6 +209,10 @@ namespace nCine::RHI::PVR
 		inline bool IsDitherVariant() const {
 			return ditherVariant_;
 		}
+		/** @brief Returns `true` if the program samples indexed textures through the palette texture */
+		inline bool UsesPalette() const {
+			return usesPalette_;
+		}
 		/** @brief Returns the offline reflection last set on the program (kept for the effects to read) */
 		inline const ShaderCompiler::ProgramVariant* GetReflection() const {
 			return effectReflection_;
@@ -229,6 +246,7 @@ namespace nCine::RHI::PVR
 		PvrEffect effect_;
 		bool unsupportedWarned_ = false;
 		bool ditherVariant_;
+		bool usesPalette_;
 		// The shader name the program was tagged with (used to look up an offline-transpiled generated fragment)
 		String label_;
 

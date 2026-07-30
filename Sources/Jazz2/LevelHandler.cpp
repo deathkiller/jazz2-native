@@ -1151,7 +1151,7 @@ namespace Jazz2
 			}
 			case EventType::ModifierSetWater: {
 				// TODO: Implement Instant (non-instant transition), Lighting
-				_waterLevel = *(std::uint16_t*)&eventParams[0];
+				_waterLevel = Actors::EventParamsReader(eventParams).GetUint16(0);
 				break;
 			}
 		}

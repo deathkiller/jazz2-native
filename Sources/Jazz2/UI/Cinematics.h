@@ -110,6 +110,12 @@ namespace Jazz2::UI
 #endif
 		Function<bool(IRootController*, bool)> _callback;
 		std::uint32_t _width, _height;
+		// Every frame is decoded at full resolution (the delta encoding requires it), but the texture can
+		// be built from every n-th pixel of every n-th row. Uploading a 640x480 frame costs several
+		// megabytes of memory traffic per frame, which platforms without the bandwidth for it cannot
+		// sustain, so they trade sharpness for a video that plays at its intended speed.
+		std::uint32_t _videoDownscale;
+		std::uint32_t _textureWidth, _textureHeight;
 		float _frameDelay, _frameProgress;
 		std::int32_t _frameIndex;
 		std::int32_t _framesLeft;
@@ -123,17 +129,46 @@ namespace Jazz2::UI
 		std::uint32_t _palette[256];
 		
 		/**
+			@brief Forward-only window over the video file, shared by the four compressed streams
+
+			Reading slices straight from the file dominates playback: on an optical drive one read costs more
+			than decoding an entire frame, and the four streams each need a few every frame. Their chunks are
+			interleaved in file order and consumed at the same rate, so at any moment all four read within a
+			few kilobytes of each other - one large window covers them all. It keeps a margin behind the
+			latest request so a stream that lags slightly still hits it, and only ever moves forward, which
+			turns the whole video into a couple of dozen sequential reads.
+		*/
+		class FileWindow
+		{
+		public:
+			static constexpr std::int32_t WindowSize = 512 * 1024;
+			// Kept behind a repositioned window for the streams that trail the one that triggered it
+			static constexpr std::int32_t WindowMargin = 32 * 1024;
+
+			void Initialize(Stream* file);
+			/** @brief Reads through the window, repositioning it when the range is not covered */
+			std::int32_t Read(std::int64_t offset, void* destination, std::int32_t bytes);
+
+
+		private:
+			Stream* _file = nullptr;
+			std::unique_ptr<std::uint8_t[]> _data;
+			std::int64_t _start = 0;
+			std::int32_t _length = 0;
+		};
+
+		/**
 			@brief Reads one of the four interleaved compressed streams of a \".j2v\" file from the source file
 
 			The file stores the streams as interleaved chunks; this stream walks the chunk list of one of
-			them on demand, so the whole video never has to be buffered into memory.
+			them on demand through the shared window, so the whole video never has to be buffered into memory.
 		*/
 		class ChunkedStream : public Stream
 		{
 		public:
 			ChunkedStream();
 
-			void Initialize(Stream* source, SmallVector<Pair<std::int64_t, std::int32_t>, 0>&& chunks, std::int64_t initialOffset);
+			void Initialize(FileWindow* window, SmallVector<Pair<std::int64_t, std::int32_t>, 0>&& chunks, std::int64_t initialOffset);
 
 			void Dispose() override;
 			std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
@@ -146,7 +181,7 @@ namespace Jazz2::UI
 			std::int64_t SetSize(std::int64_t size) override;
 
 		private:
-			Stream* _source;
+			FileWindow* _window;
 			SmallVector<Pair<std::int64_t, std::int32_t>, 0> _chunks;
 			std::int64_t _size;
 			std::int64_t _position;
@@ -156,10 +191,33 @@ namespace Jazz2::UI
 			std::int64_t _chunkStart;
 		};
 
+		/**
+			@brief Buffers the decompressed output of one of the four streams
+
+			The frame decoding reads the streams one byte at a time, and every such read would otherwise
+			reach the decompressor - which inflates into a one-byte window, paying the full setup for each
+			of the hundreds of thousands of bytes in a frame. Inflating into a block and handing out bytes
+			from it makes the decoding an order of magnitude cheaper.
+		*/
+		struct StreamBuffer {
+			static constexpr std::int32_t Capacity = 8 * 1024;
+
+			Stream* Source = nullptr;
+			std::unique_ptr<std::uint8_t[]> Data;
+			std::int32_t Position = 0;
+			std::int32_t Length = 0;
+
+			void Initialize(Stream* source);
+			/** @brief Refills the block; returns the number of bytes available afterwards */
+			std::int32_t Refill();
+		};
+
 		// The file must outlive the streams reading from it, so it is declared first
 		std::unique_ptr<Stream> _videoFile;
+		FileWindow _fileWindow;
 		ChunkedStream _compressedStreams[4];
 		Compression::DeflateStream _decompressedStreams[4];
+		StreamBuffer _streamBuffers[4];
 
 		BitArray _pressedKeys;
 		std::uint32_t _pressedActions;
@@ -170,6 +228,8 @@ namespace Jazz2::UI
 		bool LoadSfxList(StringView path);
 		void PrepareNextFrame(bool prepareTexture = true);
 		void Read(std::int32_t streamIndex, void* buffer, std::uint32_t bytes);
+		/** @brief Discards the given number of bytes of a stream */
+		void Skip(std::int32_t streamIndex, std::uint32_t bytes);
 		void UpdatePressedActions();
 
 		template<typename T>
@@ -177,6 +237,15 @@ namespace Jazz2::UI
 			T buffer;
 			Read(streamIndex, &buffer, sizeof(T));
 			return buffer;
+		}
+
+		/** @brief Reads a single byte, the hot path of the frame decoding */
+		inline std::uint8_t ReadByte(std::int32_t streamIndex) {
+			StreamBuffer& buffer = _streamBuffers[streamIndex];
+			if DEATH_LIKELY(buffer.Position < buffer.Length) {
+				return buffer.Data[buffer.Position++];
+			}
+			return ReadValue<std::uint8_t>(streamIndex);
 		}
 	};
 }

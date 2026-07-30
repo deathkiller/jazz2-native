@@ -56,8 +56,13 @@ namespace nCine::Backends
 
 	OgcGfxDevice::~OgcGfxDevice()
 	{
+		// Drain the graphics pipe before the video output goes away, otherwise the GP can still be
+		// processing a frame while the title is exiting
+		RHI::Device::ShutdownGx();
+
 		VIDEO_SetBlack(TRUE);
 		VIDEO_Flush();
+		VIDEO_WaitVSync();
 	}
 
 	void OgcGfxDevice::update()

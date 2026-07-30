@@ -36,7 +36,7 @@ namespace nCine::RHI::PVR
 			minFilter_(nCine::SamplerFilter::Nearest), magFilter_(nCine::SamplerFilter::Nearest), wrap_(SamplerWrapping::ClampToEdge),
 			textureUnit_(0), isRenderTarget_(false), isPaletteTexture_(false),
 			vram_(nullptr), vramFormat_(0), paddedWidth_(0), paddedHeight_(0), uScale_(1.0f), vScale_(1.0f),
-			bakedSlots_{}, nextBakedSlot_(0)
+			bakedSlots_{}, nextBakedSlot_(0), livePrev_(nullptr), liveNext_(nullptr), lastUsedScene_(0)
 	{
 		swizzle_[0] = SwizzleChannel::Red;
 		swizzle_[1] = SwizzleChannel::Green;
@@ -48,6 +48,114 @@ namespace nCine::RHI::PVR
 	{
 		PvrDevice::UnbindTexture(this);
 		FreeVramStores();
+		Unlink();
+	}
+
+	PvrTexture* PvrTexture::liveHead_ = nullptr;
+	PvrTexture* PvrTexture::liveTail_ = nullptr;
+
+	// TODO: Temporary diagnostics for video memory usage
+	std::size_t PvrTexture::dbgTotalAllocated_ = 0;
+	std::int32_t PvrTexture::dbgAllocCount_ = 0;
+
+	std::size_t PvrTexture::DbgVramBytes() const
+	{
+		const std::size_t perStore = std::size_t(paddedWidth_) * std::size_t(paddedHeight_) *
+			(uploadFormat_ == PixelFormat::R8 ? 1 : 2);
+		std::size_t total = (vram_ != nullptr ? perStore : 0);
+		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
+			if (bakedSlots_[i].Vram != nullptr) {
+				total += perStore;
+			}
+		}
+		return total;
+	}
+
+	void PvrTexture::Unlink()
+	{
+		if (livePrev_ != nullptr) {
+			livePrev_->liveNext_ = liveNext_;
+		} else if (liveHead_ == this) {
+			liveHead_ = liveNext_;
+		}
+		if (liveNext_ != nullptr) {
+			liveNext_->livePrev_ = livePrev_;
+		} else if (liveTail_ == this) {
+			liveTail_ = livePrev_;
+		}
+		livePrev_ = nullptr;
+		liveNext_ = nullptr;
+	}
+
+	void PvrTexture::Touch()
+	{
+		lastUsedScene_ = PvrDevice::GetSceneCounter();
+		if (liveHead_ == this) {
+			return;
+		}
+		Unlink();
+		liveNext_ = liveHead_;
+		if (liveHead_ != nullptr) {
+			liveHead_->livePrev_ = this;
+		}
+		liveHead_ = this;
+		if (liveTail_ == nullptr) {
+			liveTail_ = this;
+		}
+	}
+
+	pvr_ptr_t PvrTexture::AllocateVram(std::size_t size, const PvrTexture* keepAlive)
+	{
+		if (pvr_ptr_t result = pvr_mem_malloc(size)) {
+			// TODO: Temporary diagnostics for video memory usage
+			dbgTotalAllocated_ += size;
+			dbgAllocCount_++;
+			if (size >= 32 * 1024) {
+				LOGI("PVR alloc {} KB ({}x{} padded), {} allocations, {} KB live, {} KB free",
+					size / 1024, keepAlive != nullptr ? keepAlive->paddedWidth_ : 0,
+					keepAlive != nullptr ? keepAlive->paddedHeight_ : 0,
+					dbgAllocCount_, dbgTotalAllocated_ / 1024, pvr_mem_available() / 1024);
+			}
+			return result;
+		}
+		LOGW("PVR out of memory for {} KB ({} KB live, {} KB free), reclaiming", size / 1024,
+			dbgTotalAllocated_ / 1024, pvr_mem_available() / 1024);
+
+		// Out of video memory: drop the stores of the textures that have gone unused the longest and try
+		// again. Textures still referenced by the scene being built (the current one) are left alone, as
+		// the tile accelerator only reads them when the scene is submitted.
+		const std::uint32_t currentScene = PvrDevice::GetSceneCounter();
+		PvrTexture* victim = liveTail_;
+		while (victim != nullptr) {
+			PvrTexture* next = victim->livePrev_;
+			// Render targets have no copy in main memory to rebuild from, and anything already drawn into
+			// the scene being assembled is still read when that scene is submitted
+			const bool evictable = (victim != keepAlive && !victim->isRenderTarget_ &&
+				victim->lastUsedScene_ != currentScene);
+			if (evictable) {
+				dbgTotalAllocated_ -= victim->DbgVramBytes();
+				victim->FreeVramStores();
+				victim->Unlink();
+
+				if (pvr_ptr_t result = pvr_mem_malloc(size)) {
+					return result;
+				}
+			}
+			victim = next;
+		}
+
+		return nullptr;
+	}
+
+	pvr_ptr_t PvrTexture::AcquireVramPointer()
+	{
+		if (vram_ == nullptr) {
+			RefreshVramStore();
+		}
+		if (vram_ != nullptr) {
+			Touch();
+		}
+		return vram_;
 	}
 
 	void PvrTexture::FreeVramStores()
@@ -106,7 +214,7 @@ namespace nCine::RHI::PVR
 			// 8bpp paletted, twiddled; the palette bank is or-ed into the format word per draw
 			const std::size_t size = std::size_t(paddedWidth_) * std::size_t(paddedHeight_);
 			if (vram_ == nullptr) {
-				vram_ = pvr_mem_malloc(size);
+				vram_ = AllocateVram(size, this);
 				if (vram_ == nullptr) {
 					LOGE("Out of PVR memory allocating {} B (8bpp {}x{})", size, paddedWidth_, paddedHeight_);
 					return;
@@ -123,23 +231,41 @@ namespace nCine::RHI::PVR
 			// True-color converts to twiddled ARGB4444 (the PVR has no 32-bit sampled format)
 			const std::size_t size = std::size_t(paddedWidth_) * std::size_t(paddedHeight_) * 2;
 			if (vram_ == nullptr) {
-				vram_ = pvr_mem_malloc(size);
+				vram_ = AllocateVram(size, this);
 				if (vram_ == nullptr) {
 					LOGE("Out of PVR memory allocating {} B (ARGB4444 {}x{})", size, paddedWidth_, paddedHeight_);
 					return;
 				}
 			}
-			std::vector<std::uint16_t> staging(std::size_t(paddedWidth_) * std::size_t(paddedHeight_), 0);
+			// Converted straight into video memory, row by row, without the twiddling pass: interleaving
+			// the texel order costs more than the conversion itself, and it only pays off for the sampling
+			// patterns of 3D geometry - these are axis-aligned sprite blits. Skipping it also avoids a
+			// second full-size copy in main memory.
+			std::uint16_t* dst = static_cast<std::uint16_t*>(vram_);
 			for (std::int32_t y = 0; y < height_; y++) {
-				const std::uint8_t* src = pixels_.data() + std::size_t(y) * strideBytes_;
-				std::uint16_t* dst = staging.data() + std::size_t(y) * paddedWidth_;
-				for (std::int32_t x = 0; x < width_; x++) {
-					const std::uint8_t* px = src + std::size_t(x) * bytesPerPixel_;
-					dst[x] = Argb4444FromRgba(px[0], px[1], px[2], (bytesPerPixel_ >= 4 ? px[3] : std::uint8_t(255)));
+				const std::uint8_t* DEATH_RESTRICT src = pixels_.data() + std::size_t(y) * strideBytes_;
+				std::uint16_t* DEATH_RESTRICT row = dst + std::size_t(y) * paddedWidth_;
+				if (bytesPerPixel_ >= 4) {
+					for (std::int32_t x = 0; x < width_; x++) {
+						row[x] = Argb4444FromRgba(src[0], src[1], src[2], src[3]);
+						src += 4;
+					}
+				} else {
+					for (std::int32_t x = 0; x < width_; x++) {
+						row[x] = Argb4444FromRgba(src[0], src[1], src[2], 255);
+						src += bytesPerPixel_;
+					}
+				}
+				// The padding columns are only sampled through the compensated texture coordinates, but
+				// leaving them uninitialised would show up as fringing on the last texel
+				for (std::int32_t x = width_; x < paddedWidth_; x++) {
+					row[x] = 0;
 				}
 			}
-			pvr_txr_load_ex(staging.data(), vram_, std::uint32_t(paddedWidth_), std::uint32_t(paddedHeight_), PVR_TXRLOAD_16BPP);
-			vramFormat_ = PVR_TXRFMT_ARGB4444 | PVR_TXRFMT_TWIDDLED;
+			for (std::int32_t y = height_; y < paddedHeight_; y++) {
+				std::memset(dst + std::size_t(y) * paddedWidth_, 0, std::size_t(paddedWidth_) * 2);
+			}
+			vramFormat_ = PVR_TXRFMT_ARGB4444 | PVR_TXRFMT_NONTWIDDLED;
 		}
 		// RG8 keeps only the linear store; the ARGB4444 copy is baked per palette row on demand
 	}
@@ -155,6 +281,7 @@ namespace nCine::RHI::PVR
 			if (bakedSlots_[i].Valid && bakedSlots_[i].PaletteRow == paletteRowIndex && bakedSlots_[i].Palette == palette) {
 				if (bakedSlots_[i].PaletteGeneration == paletteGeneration && bakedSlots_[i].ContentVersion == contentVersion_) {
 					bakedSlots_[i].LastUsedScene = currentScene;
+					Touch();
 					return bakedSlots_[i].Vram;
 				}
 				slot = &bakedSlots_[i];	// Stale bake of the same row, refresh it in place
@@ -193,7 +320,7 @@ namespace nCine::RHI::PVR
 
 		const std::size_t size = std::size_t(paddedWidth_) * std::size_t(paddedHeight_) * 2;
 		if (slot->Vram == nullptr) {
-			slot->Vram = pvr_mem_malloc(size);
+			slot->Vram = AllocateVram(size, this);
 			if (slot->Vram == nullptr) {
 				LOGE("Out of PVR memory allocating {} B (baked ARGB4444 {}x{})", size, paddedWidth_, paddedHeight_);
 				return nullptr;
@@ -218,6 +345,7 @@ namespace nCine::RHI::PVR
 		slot->ContentVersion = contentVersion_;
 		slot->LastUsedScene = currentScene;
 		slot->Palette = palette;
+		Touch();
 		return slot->Vram;
 	}
 
@@ -228,7 +356,7 @@ namespace nCine::RHI::PVR
 			// The tile accelerator renders into a non-twiddled RGB565 surface of power-of-two width
 			const std::size_t size = std::size_t(paddedWidth_) * std::size_t(paddedHeight_) * 2;
 			if (vram_ == nullptr) {
-				vram_ = pvr_mem_malloc(size);
+				vram_ = AllocateVram(size, this);
 				if (vram_ == nullptr) {
 					LOGE("Out of PVR memory allocating {} B (RTT {}x{})", size, paddedWidth_, paddedHeight_);
 					return;

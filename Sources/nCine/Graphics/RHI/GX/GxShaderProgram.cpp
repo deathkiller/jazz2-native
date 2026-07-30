@@ -24,6 +24,29 @@ namespace nCine::RHI::GX
 			if (Contains(label, "PaletteRemap")) {
 				return Contains(label, "Batched") ? GxEffect::BatchedPaletteRemap : GxEffect::PaletteRemap;
 			}
+
+			// Actor state effects. Each has a plain and a "...Palette" variant (indexed sprites); both map
+			// to the same effect because the palette lookup is driven by UsesPalette() instead. The partial
+			// mask is checked first - "PartialWhiteMask" also contains "WhiteMask".
+			const bool batched = Contains(label, "Batched");
+			if (Contains(label, "PartialWhiteMask")) {
+				return batched ? GxEffect::BatchedPartialWhiteMask : GxEffect::PartialWhiteMask;
+			}
+			if (Contains(label, "WhiteMask")) {
+				return batched ? GxEffect::BatchedWhiteMask : GxEffect::WhiteMask;
+			}
+			if (Contains(label, "FrozenMask")) {
+				return batched ? GxEffect::BatchedFrozenMask : GxEffect::FrozenMask;
+			}
+			if (Contains(label, "Outline")) {
+				return batched ? GxEffect::BatchedOutline : GxEffect::Outline;
+			}
+			if (Contains(label, "ShieldFire")) {
+				return batched ? GxEffect::BatchedShieldFire : GxEffect::ShieldFire;
+			}
+			if (Contains(label, "ShieldLightning")) {
+				return batched ? GxEffect::BatchedShieldLightning : GxEffect::ShieldLightning;
+			}
 			// Colorized text/sprites (grayscale + dye in GLSL): the fixed-function approximation modulates
 			// the mostly grayscale textures with an amplified dye colour computed in Dispatch
 			if (Contains(label, "Colorized")) {
@@ -36,6 +59,10 @@ namespace nCine::RHI::GX
 			// Viewport compositor (the plain and water variants share the base composite in C++)
 			if (Contains(label, "Combine")) {
 				return GxEffect::Combine;
+			}
+			// Level transition (a radial wipe in GLSL, a plain fade here)
+			if (Contains(label, "Transition")) {
+				return GxEffect::Transition;
 			}
 
 			// No-texture solid-colour sprite family (labels "Sprite_NoTexture" / "Batched_Sprites_NoTexture").
@@ -67,7 +94,7 @@ namespace nCine::RHI::GX
 	GxShaderProgram::GxShaderProgram(QueryPhase queryPhase)
 		: handle_(nextHandle_++), status_(Status::NotLinked), introspection_(Introspection::Disabled), queryPhase_(queryPhase),
 			batchSize_(DefaultBatchSize), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0),
-			reflection_(nullptr), effectReflection_(nullptr), effect_(GxEffect::Unknown), ditherVariant_(false),
+			reflection_(nullptr), effectReflection_(nullptr), effect_(GxEffect::Unknown), ditherVariant_(false), usesPalette_(false),
 			boundVbo_(nullptr), boundIbo_(nullptr)
 	{
 	}
@@ -286,6 +313,9 @@ namespace nCine::RHI::GX
 		// The variant is baked into the shader name (e.g. "TexturedBackgroundDither"), so the dithering
 		// path is selected from the label rather than re-deriving it from the reflection's defines
 		ditherVariant_ = label.contains("Dither");
+		// "PaletteRemap" and the "...Palette" variants of the actor state effects all sample indexed
+		// textures through the palette texture bound at unit 1
+		usesPalette_ = label.contains("Palette");
 	}
 
 	const GxUniformBlock* GxShaderProgram::FindBlock(const char* name) const

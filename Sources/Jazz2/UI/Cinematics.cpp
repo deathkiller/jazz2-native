@@ -20,7 +20,8 @@ namespace Jazz2::UI
 {
 	Cinematics::Cinematics(IRootController* root, StringView path, Function<bool(IRootController*, bool)>&& callback)
 		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
-			_textureIndex(0), _pressedKeys(ValueInit, (std::size_t)Keys::Count), _pressedActions(0), _decodingFailed(false)
+			_videoDownscale(1), _textureWidth(0), _textureHeight(0), _textureIndex(0),
+			_pressedKeys(ValueInit, (std::size_t)Keys::Count), _pressedActions(0), _decodingFailed(false)
 	{
 		Initialize(path);
 	}
@@ -58,28 +59,24 @@ namespace Jazz2::UI
 
 		_frameProgress += timeMult;
 
-		// Cap the catch-up backlog: on a machine that cannot even decode the video in real time the
-		// backlog would otherwise grow without bound and the whole video would be consumed by the decode
-		// loop without ever rendering a frame. Capping trades A/V sync for visible playback there;
-		// machines that merely dropped a slow frame stay in sync.
-		const float maxBacklog = _frameDelay * 12.0f;
-		if (_frameProgress > maxBacklog) {
-			_frameProgress = maxBacklog;
+		// At most one frame is decoded per rendered frame. Frames are delta-encoded against their
+		// predecessor, so a frame cannot be skipped - it always has to be decoded, and decoding is nearly
+		// the whole cost (applying the palette and uploading the texture is a few percent on top). Running
+		// several decodes to catch up therefore buys almost nothing while hiding all but the last of those
+		// frames, so a machine that decodes slower than the video's frame rate is far better off showing
+		// every frame and letting the picture fall behind the music than showing one frame in ten.
+		if (_frameProgress > _frameDelay) {
+			_frameProgress = _frameDelay;
 		}
 
-		while (_framesLeft > 0 && _frameProgress >= _frameDelay) {
+		if (_framesLeft > 0 && _frameProgress >= _frameDelay) {
 			_frameProgress -= _frameDelay;
 			_framesLeft--;
-			// When playback lags behind (slow hardware), several frames are decoded per rendered frame to
-			// stay in sync; only the last one becomes visible, so the palette-apply and texture upload are
-			// skipped for the intermediate ones (the upload dominates the cost on the consoles)
-			const bool isDisplayedFrame = (_frameProgress < _frameDelay || _framesLeft <= 0);
-			PrepareNextFrame(isDisplayedFrame);
+			PrepareNextFrame();
 			if DEATH_UNLIKELY(_decodingFailed) {
 				// The compressed streams ended prematurely (truncated or corrupted file), finish playback
 				// instead of looping on a dead stream
 				_framesLeft = 0;
-				break;
 			}
 		}
 
@@ -196,12 +193,22 @@ namespace Jazz2::UI
 		_framesLeft = s->ReadValueAsLE<std::uint32_t>();
 		s->Seek(20, SeekOrigin::Current);
 
-		_textures[0] = std::make_unique<Texture>("Cinematics", Texture::Format::RGBA8, _width, _height);
-		_textures[1] = std::make_unique<Texture>("Cinematics", Texture::Format::RGBA8, _width, _height);
+#if defined(DEATH_TARGET_DREAMCAST)
+		// The 200 MHz SH-4 cannot move the ~4 MB per frame that a full-resolution upload needs (palette
+		// apply, texture copy, then the conversion and twiddling into video memory)
+		_videoDownscale = 2;
+#else
+		_videoDownscale = 1;
+#endif
+		_textureWidth = _width / _videoDownscale;
+		_textureHeight = _height / _videoDownscale;
+
+		_textures[0] = std::make_unique<Texture>("Cinematics", Texture::Format::RGBA8, _textureWidth, _textureHeight);
+		_textures[1] = std::make_unique<Texture>("Cinematics", Texture::Format::RGBA8, _textureWidth, _textureHeight);
 		_textureIndex = 0;
 		_buffer = std::make_unique<std::uint8_t[]>(_width * _height);
 		_lastBuffer = std::make_unique<std::uint8_t[]>(_width * _height);
-		_currentFrame = std::make_unique<std::uint32_t[]>(_width * _height);
+		_currentFrame = std::make_unique<std::uint32_t[]>(_textureWidth * _textureHeight);
 
 		// Build the chunk index of the 4 interleaved compressed streams - only chunk positions are kept
 		// and the data is read from the file on demand while the video plays, so the whole video never
@@ -220,10 +227,14 @@ namespace Jazz2::UI
 			}
 		}
 
+		// All four streams read the file through one forward-only window (see FileWindow)
+		_fileWindow.Initialize(s.get());
+
 		for (std::int32_t i = 0; i < std::int32_t(arraySize(_decompressedStreams)); i++) {
 			// Skip first two bytes (zlib header 0x78 0xDA)
-			_compressedStreams[i].Initialize(s.get(), std::move(chunks[i]), 2);
+			_compressedStreams[i].Initialize(&_fileWindow, std::move(chunks[i]), 2);
 			_decompressedStreams[i].Open(_compressedStreams[i]);
+			_streamBuffers[i].Initialize(&_decompressedStreams[i]);
 		}
 
 		_videoFile = std::move(s);
@@ -291,67 +302,75 @@ namespace Jazz2::UI
 	void Cinematics::PrepareNextFrame(bool prepareTexture)
 	{
 		// Check if palette was changed
-		if (ReadValue<std::uint8_t>(0) == 0x01) {
+		if (ReadByte(0) == 0x01) {
 			Read(3, _palette, sizeof(_palette));
 		}
 
-		// Read pixels into the buffer
-		for (std::int32_t y = 0; y < _height && !_decodingFailed; y++) {
+		// Read pixels into the buffer. Both kinds of run are copied in one go rather than a pixel at a
+		// time - a frame is a few hundred thousand pixels, and per-pixel calls into the stream dominated
+		// the decoding cost on the slower platforms.
+		const std::int32_t rowWidth = std::int32_t(_width);
+		const std::int32_t totalPixels = rowWidth * std::int32_t(_height);
+		for (std::int32_t y = 0; y < std::int32_t(_height) && !_decodingFailed; y++) {
+			std::uint8_t* DEATH_RESTRICT row = &_buffer[std::size_t(y) * rowWidth];
 			std::uint8_t c;
 			std::int32_t x = 0;
-			while ((c = ReadValue<std::uint8_t>(0)) != 0x80) {
+			while ((c = ReadByte(0)) != 0x80) {
 				// A dead stream keeps returning zeros (c = 0 with a zero run length), which would spin
 				// here forever - bail out as soon as the short read is detected
 				if DEATH_UNLIKELY(_decodingFailed) {
 					return;
 				}
 				if (c < 0x80) {
-					std::int32_t u;
-					if (c == 0x00) {
-						u = AsLE(ReadValue<std::uint16_t>(0));
-					} else {
-						u = c;
+					// Run of new pixels
+					std::int32_t u = (c == 0x00 ? AsLE(ReadValue<std::uint16_t>(0)) : c);
+					const std::int32_t fits = std::min(u, rowWidth - x);
+					if (fits > 0) {
+						Read(3, &row[x], std::uint32_t(fits));
 					}
-
-					// Read specified number of pixels in row
-					for (std::int32_t i = 0; i < u; i++) {
-						DEATH_DEBUG_ASSERT(x < _width, "Frame decoding overrun");
-						_buffer[y * _width + x] = ReadValue<std::uint8_t>(3);
-						x++;
+					// A run overhanging the row would be a corrupted frame; its bytes are still consumed
+					// so the stream stays aligned with the following runs
+					if (u > fits) {
+						Skip(3, std::uint32_t(u - fits));
 					}
+					x += u;
 				} else {
-					std::int32_t u;
-					if (c == 0x81) {
-						u = AsLE(ReadValue<std::uint16_t>(0));
-					} else {
-						u = c - 0x6A;
+					// Run copied from the previous frame
+					std::int32_t u = (c == 0x81 ? AsLE(ReadValue<std::uint16_t>(0)) : c - 0x6A);
+					const std::int32_t n = AsLE(ReadValue<std::uint16_t>(1)) + (ReadByte(2) + y - 127) * rowWidth;
+					const std::int32_t fits = std::min(u, rowWidth - x);
+					if (fits > 0 && n >= 0 && n + fits <= totalPixels) {
+						std::memcpy(&row[x], &_lastBuffer[n], std::size_t(fits));
 					}
-
-					// Copy specified number of pixels from previous frame
-					std::int32_t n = AsLE(ReadValue<std::uint16_t>(1)) + (ReadValue<std::uint8_t>(2) + y - 127) * _width;
-					for (std::int32_t i = 0; i < u; i++) {
-						DEATH_DEBUG_ASSERT(x < _width, "Frame decoding overrun");
-						_buffer[y * _width + x] = _lastBuffer[n];
-						x++;
-						n++;
-					}
+					x += u;
 				}
 			}
 		}
 
+		// Keep a copy of this frame; the next one is encoded as changes against it
+		std::memcpy(_lastBuffer.get(), _buffer.get(), _width * _height);
+
 		if (prepareTexture) {
-			// Apply current palette to indices
-			for (std::int32_t i = 0; i < _width * _height; i++) {
-				_currentFrame[i] = _palette[_buffer[i]];
+			// Apply current palette to indices, picking up every n-th pixel of every n-th row
+			if (_videoDownscale == 1) {
+				for (std::int32_t i = 0; i < _width * _height; i++) {
+					_currentFrame[i] = _palette[_buffer[i]];
+				}
+			} else {
+				const std::uint32_t step = _videoDownscale;
+				std::uint32_t* dst = _currentFrame.get();
+				for (std::uint32_t y = 0; y < _textureHeight; y++) {
+					const std::uint8_t* src = &_buffer[y * step * _width];
+					for (std::uint32_t x = 0; x < _textureWidth; x++) {
+						*dst++ = _palette[src[x * step]];
+					}
+				}
 			}
 
 			// Upload new texture to GPU (into the buffer the GPU is not currently sampling)
 			_textureIndex ^= 1;
-			_textures[_textureIndex]->LoadFromTexels((std::uint8_t*)_currentFrame.get(), 0, 0, _width, _height);
+			_textures[_textureIndex]->LoadFromTexels((std::uint8_t*)_currentFrame.get(), 0, 0, _textureWidth, _textureHeight);
 		}
-
-		// Create copy of the buffer
-		std::memcpy(_lastBuffer.get(), _buffer.get(), _width * _height);
 
 #if defined(WITH_AUDIO)
 		for (std::size_t i = 0; i < _sfxPlaylist.size(); i++) {
@@ -381,9 +400,69 @@ namespace Jazz2::UI
 #endif
 	}
 
+	void Cinematics::StreamBuffer::Initialize(Stream* source)
+	{
+		Source = source;
+		if (Data == nullptr) {
+			Data = std::make_unique<std::uint8_t[]>(Capacity);
+		}
+		Position = 0;
+		Length = 0;
+	}
+
+	std::int32_t Cinematics::StreamBuffer::Refill()
+	{
+		Position = 0;
+		Length = 0;
+		if (Source == nullptr) {
+			return 0;
+		}
+		const std::int64_t bytesRead = Source->Read(Data.get(), Capacity);
+		if (bytesRead > 0) {
+			Length = std::int32_t(bytesRead);
+		}
+		return Length;
+	}
+
+	void Cinematics::Skip(std::int32_t streamIndex, std::uint32_t bytes)
+	{
+		StreamBuffer& src = _streamBuffers[streamIndex];
+		while (bytes > 0) {
+			const std::int32_t available = src.Length - src.Position;
+			if (available <= 0) {
+				if (src.Refill() <= 0) {
+					return;
+				}
+				continue;
+			}
+			const std::uint32_t n = (bytes < std::uint32_t(available) ? bytes : std::uint32_t(available));
+			src.Position += std::int32_t(n);
+			bytes -= n;
+		}
+	}
+
 	void Cinematics::Read(std::int32_t streamIndex, void* buffer, std::uint32_t bytes)
 	{
-		std::int64_t bytesRead = _decompressedStreams[streamIndex].Read(buffer, bytes);
+		StreamBuffer& src = _streamBuffers[streamIndex];
+		std::uint8_t* dst = static_cast<std::uint8_t*>(buffer);
+		std::uint32_t remaining = bytes;
+
+		while (remaining > 0) {
+			const std::int32_t available = src.Length - src.Position;
+			if (available <= 0) {
+				if (src.Refill() <= 0) {
+					break;
+				}
+				continue;
+			}
+			const std::uint32_t n = (remaining < std::uint32_t(available) ? remaining : std::uint32_t(available));
+			std::memcpy(dst, &src.Data[src.Position], n);
+			src.Position += std::int32_t(n);
+			dst += n;
+			remaining -= n;
+		}
+
+		std::int64_t bytesRead = std::int64_t(bytes - remaining);
 		if DEATH_UNLIKELY(bytesRead < std::int64_t(bytes)) {
 			if (!_decodingFailed) {
 				_decodingFailed = true;
@@ -471,14 +550,65 @@ namespace Jazz2::UI
 		return true;
 	}
 
+	void Cinematics::FileWindow::Initialize(Stream* file)
+	{
+		_file = file;
+		if (_data == nullptr) {
+			_data = std::make_unique<std::uint8_t[]>(WindowSize);
+		}
+		_start = 0;
+		_length = 0;
+	}
+
+	std::int32_t Cinematics::FileWindow::Read(std::int64_t offset, void* destination, std::int32_t bytes)
+	{
+		if (_file == nullptr || bytes <= 0) {
+			return 0;
+		}
+
+		// Anything larger than the window (or a backward jump the window no longer covers) goes straight
+		// to the file; in practice the streams only ever move forward through it
+		if (bytes > WindowSize) {
+			if (_file->Seek(offset, SeekOrigin::Begin) < 0) {
+				return 0;
+			}
+			_length = 0;
+			return std::int32_t(_file->Read(destination, bytes));
+		}
+
+		if (offset < _start || offset + bytes > _start + _length) {
+			// Reposition the window, starting a little before the request so the streams trailing this one
+			// stay covered, and fill it in one sequential read
+			const std::int64_t newStart = (offset > WindowMargin ? offset - WindowMargin : 0);
+			if (_file->Seek(newStart, SeekOrigin::Begin) < 0) {
+				return 0;
+			}
+			const std::int64_t bytesRead = _file->Read(_data.get(), WindowSize);
+			_start = newStart;
+			_length = (bytesRead > 0 ? std::int32_t(bytesRead) : 0);
+			const std::int64_t availableAt = _start + _length - offset;
+			if (availableAt <= 0) {
+				return 0;
+			}
+			if (bytes > availableAt) {
+				bytes = std::int32_t(availableAt);
+			}
+		}
+
+		if (bytes > 0) {
+			std::memcpy(destination, &_data[offset - _start], std::size_t(bytes));
+		}
+		return bytes;
+	}
+
 	Cinematics::ChunkedStream::ChunkedStream()
-		: _source(nullptr), _size(0), _position(0), _chunkIndex(0), _chunkStart(0)
+		: _window(nullptr), _size(0), _position(0), _chunkIndex(0), _chunkStart(0)
 	{
 	}
 
-	void Cinematics::ChunkedStream::Initialize(Stream* source, SmallVector<Pair<std::int64_t, std::int32_t>, 0>&& chunks, std::int64_t initialOffset)
+	void Cinematics::ChunkedStream::Initialize(FileWindow* window, SmallVector<Pair<std::int64_t, std::int32_t>, 0>&& chunks, std::int64_t initialOffset)
 	{
-		_source = source;
+		_window = window;
 		_chunks = std::move(chunks);
 		_size = 0;
 		for (auto& chunk : _chunks) {
@@ -491,7 +621,7 @@ namespace Jazz2::UI
 
 	void Cinematics::ChunkedStream::Dispose()
 	{
-		_source = nullptr;
+		_window = nullptr;
 		_chunks.clear();
 	}
 
@@ -512,7 +642,7 @@ namespace Jazz2::UI
 
 	std::int64_t Cinematics::ChunkedStream::Read(void* destination, std::int64_t bytesToRead)
 	{
-		if (_source == nullptr || bytesToRead <= 0) {
+		if (_window == nullptr || bytesToRead <= 0) {
 			return 0;
 		}
 
@@ -534,10 +664,7 @@ namespace Jazz2::UI
 				// The source is shared by the four interleaved streams; skip the seek when the previous
 				// read already left it at the right offset (a plain seek still costs syscalls)
 				const std::int64_t sourceOffset = chunk.first() + within;
-				if (_source->GetPosition() != sourceOffset) {
-					_source->Seek(sourceOffset, SeekOrigin::Begin);
-				}
-				const std::int64_t bytesRead = _source->Read(&typedBuffer[bytesReadTotal], n);
+				const std::int64_t bytesRead = _window->Read(sourceOffset, &typedBuffer[bytesReadTotal], std::int32_t(n));
 				if (bytesRead <= 0) {
 					break;
 				}
@@ -568,7 +695,7 @@ namespace Jazz2::UI
 
 	bool Cinematics::ChunkedStream::IsValid()
 	{
-		return (_source != nullptr && !_chunks.empty());
+		return (_window != nullptr && !_chunks.empty());
 	}
 
 	std::int64_t Cinematics::ChunkedStream::GetSize() const

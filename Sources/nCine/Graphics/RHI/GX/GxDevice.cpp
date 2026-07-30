@@ -96,6 +96,15 @@ namespace nCine::RHI::GX
 		// Whether the vertex descriptor currently includes texture coordinates
 		bool g_vertexModeTextured = true;
 
+		enum class TevMode
+		{
+			Modulate,			// texel * vertex colour (the default sprite combine)
+			Silhouette,			// vertex colour, masked by the texel alpha
+			ModulateBrighten	// texel * vertex colour, scaled x2 and clamped
+		};
+
+		TevMode g_tevMode = TevMode::Modulate;
+
 		void SetVertexModeTextured(bool textured)
 		{
 			if (g_vertexModeTextured == textured) {
@@ -122,6 +131,39 @@ namespace nCine::RHI::GX
 			GX_SetTevOrder(GX_TEVSTAGE0, textured ? GX_TEXCOORD0 : GX_TEXCOORDNULL,
 				textured ? GX_TEXMAP0 : GX_TEXMAP_NULL, GX_COLOR0A0);
 			GX_SetTevOp(GX_TEVSTAGE0, textured ? GX_MODULATE : GX_PASSCLR);
+			g_tevMode = TevMode::Modulate;
+		}
+
+		// How the TEV stage combines the sampled texel with the vertex colour. The actor state effects are
+		// per-texel colour transforms in GLSL, which the fixed-function pipe expresses by choosing the
+		// combine mode (and, for the outline, by drawing offset silhouettes - see Dispatch).
+		void SetTevMode(TevMode mode)
+		{
+			if (g_tevMode == mode) {
+				return;
+			}
+			g_tevMode = mode;
+			switch (mode) {
+				case TevMode::Modulate:
+					GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE);
+					break;
+				case TevMode::Silhouette:
+					// rgb = vertex colour, alpha = texel alpha * vertex alpha: the sprite shape filled with
+					// a flat colour, which is what a fully saturated mask (luma * 6 in the shader) becomes
+					GX_SetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_RASC);
+					GX_SetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					GX_SetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_TEXA, GX_CA_RASA, GX_CA_ZERO);
+					GX_SetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					break;
+				case TevMode::ModulateBrighten:
+					// The clamped x2 colour scale stands in for the shader's "luma * 2.5, saturated": the
+					// sprite keeps its shading but is pushed toward white
+					GX_SetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_TEXC, GX_CC_RASC, GX_CC_ZERO);
+					GX_SetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_2, GX_TRUE, GX_TEVPREV);
+					GX_SetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_TEXA, GX_CA_RASA, GX_CA_ZERO);
+					GX_SetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					break;
+			}
 		}
 	}
 
@@ -195,6 +237,36 @@ namespace nCine::RHI::GX
 		logicalHeight_ = rmode->efbHeight;
 
 		gxInitialized_ = true;
+	}
+
+	void GxDevice::ShutdownGx()
+	{
+		if (!gxInitialized_) {
+			return;
+		}
+
+		// Drop anything still queued and wait until the GP is idle. Leaving GP work in flight while the
+		// title exits keeps the graphics pipe busy after the CPU is gone, which stalls the shutdown.
+		GX_AbortFrame();
+		GX_Flush();
+		GX_DrawDone();
+
+		for (std::uint32_t i = 0; i < MaxTlutSlots; i++) {
+			if (tlutSlots_[i].Data != nullptr) {
+				free(tlutSlots_[i].Data);
+				tlutSlots_[i].Data = nullptr;
+			}
+			tlutSlots_[i].PaletteOffset = -1;
+			tlutSlots_[i].Palette = nullptr;
+		}
+
+		if (gxFifo_ != nullptr) {
+			free(MEM_K1_TO_K0(gxFifo_));
+			gxFifo_ = nullptr;
+		}
+
+		rmode_ = nullptr;
+		gxInitialized_ = false;
 	}
 
 	void GxDevice::PresentToXfb(void* xfb)
@@ -744,6 +816,13 @@ namespace nCine::RHI::GX
 			effect == GxEffect::DefaultSpriteNoTexture || effect == GxEffect::DefaultBatchedSpritesNoTexture ||
 			effect == GxEffect::Colorized || effect == GxEffect::BatchedColorized ||
 			effect == GxEffect::PaletteRemap || effect == GxEffect::BatchedPaletteRemap ||
+			effect == GxEffect::WhiteMask || effect == GxEffect::BatchedWhiteMask ||
+			effect == GxEffect::PartialWhiteMask || effect == GxEffect::BatchedPartialWhiteMask ||
+			effect == GxEffect::FrozenMask || effect == GxEffect::BatchedFrozenMask ||
+			effect == GxEffect::Outline || effect == GxEffect::BatchedOutline ||
+			effect == GxEffect::ShieldFire || effect == GxEffect::BatchedShieldFire ||
+			effect == GxEffect::ShieldLightning || effect == GxEffect::BatchedShieldLightning ||
+			effect == GxEffect::Transition ||
 			effect == GxEffect::TexturedBackground || effect == GxEffect::TexturedBackgroundCircle);
 		if (!isQuadFamily || (primitive != PrimitiveType::TriangleStrip && primitive != PrimitiveType::Triangles)) {
 			if (!currentProgram_->FetchUnsupportedWarned()) {
@@ -798,7 +877,10 @@ namespace nCine::RHI::GX
 		Mat4Mul(projMat, viewMat, pv);
 
 		const bool batched = (effect == GxEffect::DefaultBatchedSprites || effect == GxEffect::DefaultBatchedSpritesNoTexture ||
-			effect == GxEffect::BatchedPaletteRemap || effect == GxEffect::BatchedColorized || instanceStride > 0);
+			effect == GxEffect::BatchedPaletteRemap || effect == GxEffect::BatchedColorized ||
+			effect == GxEffect::BatchedWhiteMask || effect == GxEffect::BatchedPartialWhiteMask ||
+			effect == GxEffect::BatchedFrozenMask || effect == GxEffect::BatchedOutline ||
+			effect == GxEffect::BatchedShieldFire || effect == GxEffect::BatchedShieldLightning || instanceStride > 0);
 		std::int32_t numInstances = 1;
 		if (batched) {
 			numInstances = numVertices / 6;
@@ -810,8 +892,15 @@ namespace nCine::RHI::GX
 			}
 		}
 
-		const bool hasTexture = (effect != GxEffect::DefaultSpriteNoTexture && effect != GxEffect::DefaultBatchedSpritesNoTexture);
-		const bool isPaletteRemap = (effect == GxEffect::PaletteRemap || effect == GxEffect::BatchedPaletteRemap);
+		// The transition covers the screen with a flat colour, but its uniform block carries texRect (so the
+		// sprite size sits at the textured offset) - the layout and the sampling are decided separately
+		const bool hasTexture = (effect != GxEffect::DefaultSpriteNoTexture && effect != GxEffect::DefaultBatchedSpritesNoTexture &&
+			effect != GxEffect::Transition);
+		const bool texturedLayout = (hasTexture || effect == GxEffect::Transition);
+		// Every effect that samples indexed sprites through the palette texture: PaletteRemap and the
+		// "...Palette" variants of the actor state effects (reported by the program itself)
+		const bool isPaletteRemap = (effect == GxEffect::PaletteRemap || effect == GxEffect::BatchedPaletteRemap ||
+			currentProgram_->UsesPalette());
 		const std::int32_t textureUnit = samplerUnit("uTexture", 0);
 		const GxTexture* texture = (hasTexture ? boundTextures_[std::uint32_t(textureUnit) < MaxTextureUnits ? textureUnit : 0] : nullptr);
 		if (hasTexture && texture == nullptr) {
@@ -861,7 +950,7 @@ namespace nCine::RHI::GX
 			std::memcpy(color, inst + kColorOffset, sizeof(color));
 			float texRect[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
 			float spriteSize[2];
-			if (hasTexture) {
+			if (texturedLayout) {
 				std::memcpy(texRect, inst + kTexRectOffset, sizeof(texRect));
 				std::memcpy(spriteSize, inst + kSpriteSizeOffset, sizeof(spriteSize));
 			} else {
@@ -926,25 +1015,123 @@ namespace nCine::RHI::GX
 					color[c] = 1.0f + (color[c] - 0.5f) * 4.0f;
 				}
 			}
-			const std::uint8_t r = QuantizeChannel(color[0]);
-			const std::uint8_t g = QuantizeChannel(color[1]);
-			const std::uint8_t b = QuantizeChannel(color[2]);
-			const std::uint8_t a = QuantizeChannel(color[3]);
 
-			// Strip order (v0, v1, v2, v3) forms the quad perimeter (v0, v1, v3, v2)
-			GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-			if (hasTexture) {
-				GX_Position3f32(px[0], py[0], 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(pu[0], pvv[0]);
-				GX_Position3f32(px[1], py[1], 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(pu[1], pvv[1]);
-				GX_Position3f32(px[3], py[3], 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(pu[3], pvv[3]);
-				GX_Position3f32(px[2], py[2], 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(pu[2], pvv[2]);
-			} else {
-				GX_Position3f32(px[0], py[0], 0.0f);	GX_Color4u8(r, g, b, a);
-				GX_Position3f32(px[1], py[1], 0.0f);	GX_Color4u8(r, g, b, a);
-				GX_Position3f32(px[3], py[3], 0.0f);	GX_Color4u8(r, g, b, a);
-				GX_Position3f32(px[2], py[2], 0.0f);	GX_Color4u8(r, g, b, a);
+			// Emits the quad at an optional screen-space offset, in the given colour
+			auto emitQuad = [&](float dx, float dy, float cr, float cg, float cb, float ca) {
+				const std::uint8_t r = QuantizeChannel(cr);
+				const std::uint8_t g = QuantizeChannel(cg);
+				const std::uint8_t b = QuantizeChannel(cb);
+				const std::uint8_t a = QuantizeChannel(ca);
+				// Strip order (v0, v1, v2, v3) forms the quad perimeter (v0, v1, v3, v2)
+				GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+				if (hasTexture) {
+					GX_Position3f32(px[0] + dx, py[0] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(pu[0], pvv[0]);
+					GX_Position3f32(px[1] + dx, py[1] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(pu[1], pvv[1]);
+					GX_Position3f32(px[3] + dx, py[3] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(pu[3], pvv[3]);
+					GX_Position3f32(px[2] + dx, py[2] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(pu[2], pvv[2]);
+				} else {
+					GX_Position3f32(px[0] + dx, py[0] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
+					GX_Position3f32(px[1] + dx, py[1] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
+					GX_Position3f32(px[3] + dx, py[3] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
+					GX_Position3f32(px[2] + dx, py[2] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
+				}
+				GX_End();
+			};
+
+			switch (effect) {
+				case GxEffect::WhiteMask:
+				case GxEffect::BatchedWhiteMask: {
+					// The shader saturates the luma (x6) into a flat silhouette of the instance colour
+					SetTevMode(TevMode::Silhouette);
+					emitQuad(0.0f, 0.0f, color[0], color[1], color[2], color[3]);
+					break;
+				}
+				case GxEffect::PartialWhiteMask:
+				case GxEffect::BatchedPartialWhiteMask: {
+					// Brightened but still shaded (the shader's luma x2.5)
+					SetTevMode(TevMode::ModulateBrighten);
+					emitQuad(0.0f, 0.0f, color[0], color[1], color[2], color[3]);
+					break;
+				}
+				case GxEffect::FrozenMask:
+				case GxEffect::BatchedFrozenMask: {
+					// color = (1/texWidth, 1/texHeight, unused, transition). The shader mixes the sprite
+					// toward ice blue by the transition, which two blended passes reproduce: the untouched
+					// sprite, then an ice-coloured silhouette at the transition's alpha
+					const float transition = color[3];
+					SetTevMode(TevMode::Modulate);
+					emitQuad(0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+					if (transition > 0.0f) {
+						SetTevMode(TevMode::Silhouette);
+						emitQuad(0.0f, 0.0f, 0.2f, 0.82f, 0.8f, transition * 0.95f);
+					}
+					break;
+				}
+				case GxEffect::Outline:
+				case GxEffect::BatchedOutline: {
+					// color = (1/texWidth, 1/texHeight, outline grey, alpha). The shader finds the border
+					// by summing eight neighbour taps, which the fixed-function pipe draws instead as eight
+					// silhouettes offset by one texel, covered by the sprite itself. (The shader's second,
+					// dimmer ring at two texels is dropped - it costs another eight quads and barely
+					// registers at these resolutions.)
+					const float alpha = color[3];
+					if (alpha > 0.0f && texRect[0] != 0.0f && texRect[2] != 0.0f) {
+						// One texel in UV maps to this fraction of the quad's on-screen extent
+						const float dx = (px[0] - px[2]) * (color[0] / texRect[0]);
+						const float dy = (py[1] - py[0]) * (color[1] / texRect[2]);
+						const float grey = color[2];
+						SetTevMode(TevMode::Silhouette);
+						for (std::int32_t oy = -1; oy <= 1; oy++) {
+							for (std::int32_t ox = -1; ox <= 1; ox++) {
+								if (ox != 0 || oy != 0) {
+									emitQuad(dx * ox, dy * oy, grey, grey, grey, alpha);
+								}
+							}
+						}
+					}
+					SetTevMode(TevMode::Modulate);
+					emitQuad(0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+					break;
+				}
+				case GxEffect::Transition: {
+					// The GLSL wipe clears a growing circle out of a black screen; flattened to a plain
+					// fade whose opacity tracks the same progress (fully clear once the circle covers the
+					// furthest corner, fully black at zero)
+					const float progress = color[3] / 0.927f;
+					const float alpha = (progress < 0.0f ? 1.0f : (progress > 1.0f ? 0.0f : 1.0f - progress));
+					if (alpha > 0.0f) {
+						SetTevMode(TevMode::Modulate);
+						emitQuad(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, alpha);
+					}
+					break;
+				}
+				case GxEffect::ShieldFire:
+				case GxEffect::BatchedShieldFire:
+				case GxEffect::BatchedShieldLightning:
+				case GxEffect::ShieldLightning: {
+					// color = (scaleX, scaleY, darkness, alpha). The shader's animated noise sphere is out
+					// of reach here, so the shield becomes a flat additively blended glow in its own
+					// colour, masked by the noise texture to keep some movement
+					const bool fire = (effect == GxEffect::ShieldFire || effect == GxEffect::BatchedShieldFire);
+					const float darkness = color[2];
+					const float alpha = color[3] * 0.5f;
+					SetTevMode(TevMode::Silhouette);
+					if (fire) {
+						emitQuad(0.0f, 0.0f, darkness, darkness * 0.45f, darkness * 0.1f, alpha);
+					} else {
+						emitQuad(0.0f, 0.0f, darkness * 0.6f, darkness * 0.8f, darkness, alpha);
+					}
+					break;
+				}
+				default: {
+					SetTevMode(TevMode::Modulate);
+					emitQuad(0.0f, 0.0f, color[0], color[1], color[2], color[3]);
+					break;
+				}
 			}
-			GX_End();
 		}
+
+		// Leave the pipe in the default combine for the next draw
+		SetTevMode(TevMode::Modulate);
 	}
 }
