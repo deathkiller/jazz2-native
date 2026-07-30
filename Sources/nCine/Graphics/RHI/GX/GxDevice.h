@@ -164,6 +164,8 @@ namespace nCine::RHI::GX
 
 		/** @brief Brings up the GX pipe (FIFO, vertex descriptors, TEV baseline) for the given render mode */
 		static void InitializeGx(GXRModeObj* rmode);
+		/** @brief Drains the GX pipe and releases the FIFO, so no GP work is left pending at exit */
+		static void ShutdownGx();
 		/** @brief Finishes the frame's draws, copies the EFB to the given external framebuffer and flushes */
 		static void PresentToXfb(void* xfb);
 

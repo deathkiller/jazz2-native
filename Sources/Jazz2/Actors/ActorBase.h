@@ -13,6 +13,7 @@
 
 #include <cstring>
 
+#include <Base/Memory.h>
 #include <Base/TypeInfo.h>
 #include <Containers/Function.h>
 #include <Containers/StringView.h>
@@ -188,29 +189,74 @@ namespace Jazz2::Actors
 		std::uint16_t GetUint16(std::int32_t offset) const noexcept {
 			std::uint16_t value;
 			std::memcpy(&value, &_params[offset], sizeof(value));
-			return value;
+			return Death::Memory::AsLE(value);
 		}
 		/** @brief Reads a signed 16-bit value at the given byte offset */
 		std::int16_t GetInt16(std::int32_t offset) const noexcept {
 			std::int16_t value;
 			std::memcpy(&value, &_params[offset], sizeof(value));
-			return value;
+			return Death::Memory::AsLE(value);
 		}
 		/** @brief Reads an unsigned 32-bit value at the given byte offset */
 		std::uint32_t GetUint32(std::int32_t offset) const noexcept {
 			std::uint32_t value;
 			std::memcpy(&value, &_params[offset], sizeof(value));
-			return value;
+			return Death::Memory::AsLE(value);
 		}
 		/** @brief Reads a 32-bit floating-point value at the given byte offset */
 		float GetFloat(std::int32_t offset) const noexcept {
-			float value;
+			std::uint32_t value;
 			std::memcpy(&value, &_params[offset], sizeof(value));
-			return value;
+			value = Death::Memory::AsLE(value);
+			float result;
+			std::memcpy(&result, &value, sizeof(result));
+			return result;
 		}
 
 	private:
 		const std::uint8_t* _params;
+	};
+
+	/**
+		@brief Writes typed values into a packed event parameter buffer
+
+		The counterpart of @ref EventParamsReader for parameters that are built at runtime instead of being
+		loaded from a level file. Multi-byte values are stored unaligned and little-endian, which is the
+		packed layout of the level file, so both sources decode identically on any platform.
+	*/
+	struct EventParamsWriter {
+		explicit EventParamsWriter(std::uint8_t* params) noexcept
+			: _params(params) {}
+
+		/** @brief Writes an unsigned 8-bit value at the given byte offset */
+		void SetUint8(std::int32_t offset, std::uint8_t value) noexcept {
+			_params[offset] = value;
+		}
+		/** @brief Writes an unsigned 16-bit value at the given byte offset */
+		void SetUint16(std::int32_t offset, std::uint16_t value) noexcept {
+			value = Death::Memory::AsLE(value);
+			std::memcpy(&_params[offset], &value, sizeof(value));
+		}
+		/** @brief Writes a signed 16-bit value at the given byte offset */
+		void SetInt16(std::int32_t offset, std::int16_t value) noexcept {
+			value = Death::Memory::AsLE(value);
+			std::memcpy(&_params[offset], &value, sizeof(value));
+		}
+		/** @brief Writes an unsigned 32-bit value at the given byte offset */
+		void SetUint32(std::int32_t offset, std::uint32_t value) noexcept {
+			value = Death::Memory::AsLE(value);
+			std::memcpy(&_params[offset], &value, sizeof(value));
+		}
+		/** @brief Writes a 32-bit floating-point value at the given byte offset */
+		void SetFloat(std::int32_t offset, float value) noexcept {
+			std::uint32_t raw;
+			std::memcpy(&raw, &value, sizeof(raw));
+			raw = Death::Memory::AsLE(raw);
+			std::memcpy(&_params[offset], &raw, sizeof(raw));
+		}
+
+	private:
+		std::uint8_t* _params;
 	};
 
 	/**

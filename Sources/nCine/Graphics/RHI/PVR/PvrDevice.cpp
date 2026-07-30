@@ -97,17 +97,20 @@ namespace nCine::RHI::PVR
 
 		// Submits one quad to the open translucent list as a 4-vertex strip. The corner order matches the
 		// procedural sprite strip (v0, v1, v2, v3) exactly like the software FetchVertex synthesizes it.
-		void SubmitQuad(const pvr_poly_hdr_t& hdr, const float* px, const float* py, const float* pu, const float* pv, std::uint32_t argb)
+		// The offset colour is added after texturing (only when the polygon enables it), which is how the
+		// actor state effects brighten or tint the sprite - see the effect handling in Dispatch.
+		void SubmitQuad(const pvr_poly_hdr_t& hdr, const float* px, const float* py, const float* pu, const float* pv,
+			std::uint32_t argb, std::uint32_t oargb = 0, float dx = 0.0f, float dy = 0.0f)
 		{
 			pvr_prim(const_cast<pvr_poly_hdr_t*>(&hdr), sizeof(hdr));
 			pvr_vertex_t vert;
-			vert.oargb = 0;
+			vert.oargb = oargb;
 			vert.argb = argb;
 			vert.z = 1.0f;
 			for (std::int32_t i = 0; i < 4; i++) {
 				vert.flags = (i == 3 ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX);
-				vert.x = px[i];
-				vert.y = py[i];
+				vert.x = px[i] + dx;
+				vert.y = py[i] + dy;
 				vert.u = pu[i];
 				vert.v = pv[i];
 				pvr_prim(&vert, sizeof(vert));
@@ -678,7 +681,14 @@ namespace nCine::RHI::PVR
 		}
 
 		// v1 renders the procedural sprite-quad families only (see the GX device for the same policy)
-		const bool isQuadFamily = (effect == PvrEffect::DefaultSprite || effect == PvrEffect::DefaultBatchedSprites ||
+		const bool isQuadFamily = (effect == PvrEffect::WhiteMask || effect == PvrEffect::BatchedWhiteMask ||
+			effect == PvrEffect::PartialWhiteMask || effect == PvrEffect::BatchedPartialWhiteMask ||
+			effect == PvrEffect::FrozenMask || effect == PvrEffect::BatchedFrozenMask ||
+			effect == PvrEffect::Outline || effect == PvrEffect::BatchedOutline ||
+			effect == PvrEffect::ShieldFire || effect == PvrEffect::BatchedShieldFire ||
+			effect == PvrEffect::ShieldLightning || effect == PvrEffect::BatchedShieldLightning ||
+			effect == PvrEffect::Transition ||
+			effect == PvrEffect::DefaultSprite || effect == PvrEffect::DefaultBatchedSprites ||
 			effect == PvrEffect::DefaultSpriteNoTexture || effect == PvrEffect::DefaultBatchedSpritesNoTexture ||
 			effect == PvrEffect::Colorized || effect == PvrEffect::BatchedColorized ||
 			effect == PvrEffect::PaletteRemap || effect == PvrEffect::BatchedPaletteRemap ||
@@ -736,7 +746,10 @@ namespace nCine::RHI::PVR
 		Mat4Mul(projMat, viewMat, pv);
 
 		const bool batched = (effect == PvrEffect::DefaultBatchedSprites || effect == PvrEffect::DefaultBatchedSpritesNoTexture ||
-			effect == PvrEffect::BatchedPaletteRemap || effect == PvrEffect::BatchedColorized || instanceStride > 0);
+			effect == PvrEffect::BatchedPaletteRemap || effect == PvrEffect::BatchedColorized ||
+			effect == PvrEffect::BatchedWhiteMask || effect == PvrEffect::BatchedPartialWhiteMask ||
+			effect == PvrEffect::BatchedFrozenMask || effect == PvrEffect::BatchedOutline ||
+			effect == PvrEffect::BatchedShieldFire || effect == PvrEffect::BatchedShieldLightning || instanceStride > 0);
 		std::int32_t numInstances = 1;
 		if (batched) {
 			numInstances = numVertices / 6;
@@ -748,8 +761,24 @@ namespace nCine::RHI::PVR
 			}
 		}
 
-		const bool hasTexture = (effect != PvrEffect::DefaultSpriteNoTexture && effect != PvrEffect::DefaultBatchedSpritesNoTexture);
-		const bool isPaletteRemap = (effect == PvrEffect::PaletteRemap || effect == PvrEffect::BatchedPaletteRemap);
+		// The transition covers the screen with a flat colour, but its uniform block carries texRect (so the
+		// sprite size sits at the textured offset) - the layout and the sampling are decided separately
+		const bool hasTexture = (effect != PvrEffect::DefaultSpriteNoTexture && effect != PvrEffect::DefaultBatchedSpritesNoTexture &&
+			effect != PvrEffect::Transition);
+		const bool texturedLayout = (hasTexture || effect == PvrEffect::Transition);
+		// Every effect that samples indexed sprites through the palette texture: PaletteRemap and the
+		// "...Palette" variants of the actor state effects (reported by the program itself)
+		const bool isPaletteRemap = (effect == PvrEffect::PaletteRemap || effect == PvrEffect::BatchedPaletteRemap ||
+			currentProgram_->UsesPalette());
+
+		// The actor state effects express their colour transform through the offset colour, which has to
+		// be enabled on the polygon itself
+		const bool usesOffsetColor = (effect == PvrEffect::WhiteMask || effect == PvrEffect::BatchedWhiteMask ||
+			effect == PvrEffect::PartialWhiteMask || effect == PvrEffect::BatchedPartialWhiteMask ||
+			effect == PvrEffect::FrozenMask || effect == PvrEffect::BatchedFrozenMask ||
+			effect == PvrEffect::Outline || effect == PvrEffect::BatchedOutline ||
+			effect == PvrEffect::ShieldFire || effect == PvrEffect::BatchedShieldFire ||
+			effect == PvrEffect::ShieldLightning || effect == PvrEffect::BatchedShieldLightning);
 		const std::int32_t textureUnit = samplerUnit("uTexture", 0);
 		PvrTexture* texture = const_cast<PvrTexture*>(hasTexture
 			? boundTextures_[std::uint32_t(textureUnit) < MaxTextureUnits ? textureUnit : 0] : nullptr);
@@ -823,7 +852,7 @@ namespace nCine::RHI::PVR
 			std::memcpy(color, inst + kColorOffset, sizeof(color));
 			float texRect[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
 			float spriteSize[2];
-			if (hasTexture) {
+			if (texturedLayout) {
 				std::memcpy(texRect, inst + kTexRectOffset, sizeof(texRect));
 				std::memcpy(spriteSize, inst + kSpriteSizeOffset, sizeof(spriteSize));
 			} else {
@@ -843,7 +872,7 @@ namespace nCine::RHI::PVR
 					if (bank < 0) {
 						bank = 0;
 					}
-					vram = texture->GetVramPointer();
+					vram = texture->AcquireVramPointer();
 					format = texture->GetVramFormat() | PVR_TXRFMT_8BPP_PAL(std::uint32_t(bank));
 				} else if (isPaletteRemap && texture->NeedsPaletteBake() && paletteTex != nullptr && paletteTex->GetPixels() != nullptr) {
 					float palOffset = 0.0f;
@@ -855,7 +884,7 @@ namespace nCine::RHI::PVR
 						(paletteTex == paletteTexture_ ? paletteGeneration_ : paletteTex->GetContentVersion()), paletteTex);
 					format = PVR_TXRFMT_ARGB4444 | PVR_TXRFMT_TWIDDLED;
 				} else {
-					vram = texture->GetVramPointer();
+					vram = texture->AcquireVramPointer();
 					format = texture->GetVramFormat();
 				}
 				if (vram == nullptr) {
@@ -873,6 +902,11 @@ namespace nCine::RHI::PVR
 					cxt.blend.src = pvr_blend_mode_t(blendSrc);
 					cxt.blend.dst = pvr_blend_mode_t(blendDst);
 					cxt.txr.env = PVR_TXRENV_MODULATEALPHA;
+					// The offset colour is added to the texturing result, which is how the actor state
+					// effects brighten and tint the sprite (see the effect handling below)
+					if (usesOffsetColor) {
+						cxt.gen.specular = PVR_SPECULAR_ENABLE;
+					}
 					pvr_poly_compile(&hdr, &cxt);
 					hdrValid = true;
 					lastVram = vram;
@@ -943,9 +977,99 @@ namespace nCine::RHI::PVR
 					color[c] = 1.0f + (color[c] - 0.5f) * 4.0f;
 				}
 			}
-			const std::uint32_t argb = PackArgb(QuantizeChannel(color[0]), QuantizeChannel(color[1]),
-				QuantizeChannel(color[2]), QuantizeChannel(color[3]));
-			SubmitQuad(hdr, px, py, pu, pvv, argb);
+
+			switch (effect) {
+				case PvrEffect::WhiteMask:
+				case PvrEffect::BatchedWhiteMask: {
+					// The shader saturates the luma (x6), which the offset colour reproduces by adding
+					// white on top of the sampled sprite; the alpha still comes from the texture
+					const std::uint32_t argb = PackArgb(0, 0, 0, QuantizeChannel(color[3]));
+					const std::uint32_t oargb = PackArgb(QuantizeChannel(color[0]), QuantizeChannel(color[1]),
+						QuantizeChannel(color[2]), 0);
+					SubmitQuad(hdr, px, py, pu, pvv, argb, oargb);
+					break;
+				}
+				case PvrEffect::PartialWhiteMask:
+				case PvrEffect::BatchedPartialWhiteMask: {
+					// Brightened but still shaded (the shader's luma x2.5): keep the sprite and lift it
+					const std::uint32_t argb = PackArgb(QuantizeChannel(color[0]), QuantizeChannel(color[1]),
+						QuantizeChannel(color[2]), QuantizeChannel(color[3]));
+					const std::uint32_t oargb = PackArgb(96, 96, 96, 0);
+					SubmitQuad(hdr, px, py, pu, pvv, argb, oargb);
+					break;
+				}
+				case PvrEffect::FrozenMask:
+				case PvrEffect::BatchedFrozenMask: {
+					// color = (1/texWidth, 1/texHeight, unused, transition). Scaling the sprite down by
+					// the transition and adding the ice colour scaled by it is exactly the shader's mix
+					const float t = (color[3] < 0.0f ? 0.0f : (color[3] > 1.0f ? 1.0f : color[3]));
+					const float keep = 1.0f - t;
+					const std::uint32_t argb = PackArgb(QuantizeChannel(keep), QuantizeChannel(keep),
+						QuantizeChannel(keep), 255);
+					const std::uint32_t oargb = PackArgb(QuantizeChannel(0.2f * t), QuantizeChannel(0.82f * t),
+						QuantizeChannel(0.8f * t), 0);
+					SubmitQuad(hdr, px, py, pu, pvv, argb, oargb);
+					break;
+				}
+				case PvrEffect::Outline:
+				case PvrEffect::BatchedOutline: {
+					// color = (1/texWidth, 1/texHeight, outline grey, alpha). The shader finds the border
+					// by summing eight neighbour taps, which is drawn here instead as eight silhouettes
+					// offset by one texel (a black sprite lifted to the outline colour), covered by the
+					// sprite itself. (The shader's dimmer second ring at two texels is dropped.)
+					const float alpha = color[3];
+					if (alpha > 0.0f && texRect[0] != 0.0f && texRect[2] != 0.0f) {
+						// One texel maps to this fraction of the quad's on-screen extent (the padding scale
+						// applies to both the texel size and the quad's span, so it cancels out)
+						const float dx = (px[0] - px[2]) * (color[0] / texRect[0]);
+						const float dy = (py[1] - py[0]) * (color[1] / texRect[2]);
+						const std::uint32_t oargb = PackArgb(QuantizeChannel(color[2]), QuantizeChannel(color[2]),
+							QuantizeChannel(color[2]), 0);
+						const std::uint32_t argb = PackArgb(0, 0, 0, QuantizeChannel(alpha));
+						for (std::int32_t oy = -1; oy <= 1; oy++) {
+							for (std::int32_t ox = -1; ox <= 1; ox++) {
+								if (ox != 0 || oy != 0) {
+									SubmitQuad(hdr, px, py, pu, pvv, argb, oargb, dx * ox, dy * oy);
+								}
+							}
+						}
+					}
+					SubmitQuad(hdr, px, py, pu, pvv, PackArgb(255, 255, 255, 255));
+					break;
+				}
+				case PvrEffect::Transition: {
+					// The GLSL wipe clears a growing circle out of a black screen; flattened to a plain
+					// fade whose opacity tracks the same progress (fully clear once the circle covers the
+					// furthest corner, fully black at zero)
+					const float progress = color[3] / 0.927f;
+					const float alpha = (progress < 0.0f ? 1.0f : (progress > 1.0f ? 0.0f : 1.0f - progress));
+					if (alpha > 0.0f) {
+						SubmitQuad(hdr, px, py, pu, pvv, PackArgb(0, 0, 0, QuantizeChannel(alpha)));
+					}
+					break;
+				}
+				case PvrEffect::ShieldFire:
+				case PvrEffect::BatchedShieldFire:
+				case PvrEffect::ShieldLightning:
+				case PvrEffect::BatchedShieldLightning: {
+					// color = (scaleX, scaleY, darkness, alpha). The shader's animated noise sphere is out
+					// of reach here, so the shield becomes a flat glow in its own colour
+					const bool fire = (effect == PvrEffect::ShieldFire || effect == PvrEffect::BatchedShieldFire);
+					const float darkness = color[2];
+					const std::uint32_t argb = PackArgb(0, 0, 0, QuantizeChannel(color[3] * 0.5f));
+					const std::uint32_t oargb = (fire
+						? PackArgb(QuantizeChannel(darkness), QuantizeChannel(darkness * 0.45f), QuantizeChannel(darkness * 0.1f), 0)
+						: PackArgb(QuantizeChannel(darkness * 0.6f), QuantizeChannel(darkness * 0.8f), QuantizeChannel(darkness), 0));
+					SubmitQuad(hdr, px, py, pu, pvv, argb, oargb);
+					break;
+				}
+				default: {
+					const std::uint32_t argb = PackArgb(QuantizeChannel(color[0]), QuantizeChannel(color[1]),
+						QuantizeChannel(color[2]), QuantizeChannel(color[3]));
+					SubmitQuad(hdr, px, py, pu, pvv, argb);
+					break;
+				}
+			}
 		}
 	}
 }

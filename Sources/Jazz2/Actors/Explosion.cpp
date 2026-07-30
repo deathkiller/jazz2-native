@@ -14,9 +14,10 @@ namespace Jazz2::Actors
 	{
 		std::shared_ptr<Explosion> explosion = std::make_shared<Explosion>();
 		std::uint8_t explosionParams[8];
-		*(std::uint16_t*)&explosionParams[0] = (uint16_t)type;
+		EventParamsWriter writer(explosionParams);
+		writer.SetUint16(0, (std::uint16_t)type);
 		// 2-3: unused
-		*(float*)&explosionParams[4] = scale;
+		writer.SetFloat(4, scale);
 		explosion->OnActivated(ActorActivationDetails(
 			levelHandler,
 			pos,

@@ -167,9 +167,10 @@ namespace Jazz2::Actors::Enemies
 
 			std::shared_ptr<TurtleShell> shell = std::make_shared<TurtleShell>();
 			uint8_t shellParams[9];
-			*(float*)&shellParams[0] = _speed.X * 1.1f;
-			*(float*)&shellParams[4] = shellSpeedY;
-			shellParams[8] = _theme;
+			EventParamsWriter writer(shellParams);
+			writer.SetFloat(0, _speed.X * 1.1f);
+			writer.SetFloat(4, shellSpeedY);
+			writer.SetUint8(8, _theme);
 			shell->OnActivated(ActorActivationDetails(
 				_levelHandler,
 				Vector3i((std::int32_t)_pos.X, (std::int32_t)_pos.Y, _renderer.layer()),

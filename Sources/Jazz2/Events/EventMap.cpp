@@ -231,7 +231,7 @@ namespace Jazz2::Events
 	{
 		// Linked actor was deactivated, but not destroyed
 		// Reset its generator, so it can be respawned immediately
-		std::uint32_t generatorIdx = *(std::uint32_t*)_eventLayout[tx + ty * _layoutSize.X].EventParams;
+		std::uint32_t generatorIdx = Actors::EventParamsReader(_eventLayout[tx + ty * _layoutSize.X].EventParams).GetUint32(0);
 		if (generatorIdx >= _generators.size()) {
 			// Do nothing if generator if wrongly configured
 			return;
@@ -391,7 +391,7 @@ namespace Jazz2::Events
 						generator.Delay = generatorDelay;
 						generator.TimeLeft = timeLeft;
 
-						*(std::uint32_t*)eventParams = generatorIdx;
+						Actors::EventParamsWriter(eventParams).SetUint32(0, generatorIdx);
 						StoreTileEvent(x, y, EventType::Generator, actorFlags, eventParams);
 					}
 					continue;

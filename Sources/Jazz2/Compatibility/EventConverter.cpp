@@ -3,10 +3,30 @@
 #include "../Direction.h"
 #include "../Actors/Collectibles/FoodCollectible.h"
 
+#include <Base/Memory.h>
+
 using FoodType = Jazz2::Actors::Collectibles::FoodType;
 
 namespace Jazz2::Compatibility
 {
+	namespace
+	{
+		// The packed event parameter layout is little-endian (see Actors::EventParamsReader), so the
+		// converted values must be stored independently of the host byte order
+		DEATH_ALWAYS_INLINE void WriteUint16(std::uint8_t* params, std::int32_t offset, std::uint16_t value)
+		{
+			value = Death::Memory::AsLE(value);
+			std::memcpy(&params[offset], &value, sizeof(value));
+		}
+
+		DEATH_ALWAYS_INLINE std::uint16_t ReadUint16(const std::uint8_t* params, std::int32_t offset)
+		{
+			std::uint16_t value;
+			std::memcpy(&value, &params[offset], sizeof(value));
+			return Death::Memory::AsLE(value);
+		}
+	}
+
 	EventConverter::EventConverter()
 	{
 		AddDefaultConverters();
@@ -89,7 +109,7 @@ namespace Jazz2::Compatibility
 				case JJ2ParamUInt: {
 					std::uint32_t value = (paramInt & ((1 << param.second()) - 1));
 					if (param.second() > 8) {
-						*(std::uint16_t*)&eventParams[i] = (std::uint16_t)value;
+						WriteUint16(eventParams, i, (std::uint16_t)value);
 						i += 2;
 					} else {
 						eventParams[i++] = (std::uint8_t)value;
@@ -106,7 +126,7 @@ namespace Jazz2::Compatibility
 						value = (uint32_t)(-highestBitValue + (value - highestBitValue));
 					}
 					if (param.second() > 8) {
-						*(std::uint16_t*)&eventParams[i] = (std::uint16_t)value;
+						WriteUint16(eventParams, i, (std::uint16_t)value);
 						i += 2;
 					} else {
 						eventParams[i++] = (std::uint8_t)value;
@@ -179,7 +199,7 @@ namespace Jazz2::Compatibility
 				{ JJ2ParamUInt, 5 }		// FPS
 			}, eventParams);
 
-			std::uint16_t waitTime = *(std::uint16_t*)&eventParams[0] * 25;
+			std::uint16_t waitTime = ReadUint16(eventParams, 0) * 25;
 			return { EventType::SceneryCollapse, { (std::uint8_t)(waitTime & 0xff), (std::uint8_t)((waitTime >> 8) & 0xff), eventParams[1] } };
 		});
 
@@ -314,8 +334,8 @@ namespace Jazz2::Compatibility
 				{ JJ2ParamUInt, 10 }	// Width (Tiles)
 			}, eventParams);
 
-			std::uint16_t left = *(std::uint16_t*)&eventParams[0];
-			std::uint16_t width = *(std::uint16_t*)&eventParams[2];
+			std::uint16_t left = ReadUint16(eventParams, 0);
+			std::uint16_t width = ReadUint16(eventParams, 2);
 			return { EventType::ModifierLimitCameraView, { (std::uint8_t)(left & 0xff), (std::uint8_t)((left >> 8) & 0xff), (std::uint8_t)(width & 0xff), (std::uint8_t)((width >> 8) & 0xff) } };
 		});
 
@@ -373,7 +393,7 @@ namespace Jazz2::Compatibility
 				level->AddLevelTokenTextID(eventParams[2]);
 			}
 
-			std::uint16_t coins = *(std::uint16_t*)&eventParams[0];
+			std::uint16_t coins = ReadUint16(eventParams, 0);
 			return { EventType::AreaEndOfLevel, { 3, 0, eventParams[2], eventParams[3], (std::uint8_t)(coins & 0xff), (std::uint8_t)((coins >> 8) & 0xff) } };
 		});
 

@@ -131,6 +131,14 @@ namespace nCine::RHI::PVR
 		inline pvr_ptr_t GetVramPointer() const {
 			return vram_;
 		}
+		/**
+			@brief Returns the VRAM texture pointer, rebuilding the store if it was reclaimed
+
+			Should be used by the draw path: running out of video memory drops the least recently used
+			stores (see @ref AllocateVram()), and a texture that is drawn again afterwards has to be
+			uploaded from its main-memory copy once more.
+		*/
+		pvr_ptr_t AcquireVramPointer();
 		/** @brief Returns the PVR texture format word of the VRAM store WITHOUT the palette-bank bits (the device ors them in) */
 		inline std::uint32_t GetVramFormat() const {
 			return vramFormat_;
@@ -249,8 +257,10 @@ namespace nCine::RHI::PVR
 
 		// One baked copy is kept per palette row: the tile accelerator consumes textures only at scene end,
 		// so rebaking a row that an already submitted quad references would corrupt that quad (several rows
-		// are commonly alive within one scene, e.g. text and its shadow)
-		static constexpr std::int32_t BakedSlotCount = 8;
+		// are commonly alive within one scene, e.g. text and its shadow). Each copy costs as much video
+		// memory as the texture itself, and there are only 8 MB of it shared with the framebuffers, so the
+		// count is a compromise between reuse and pressure on the video memory.
+		static constexpr std::int32_t BakedSlotCount = 3;
 		struct BakedSlot {
 			pvr_ptr_t Vram;
 			bool Valid;
@@ -263,8 +273,36 @@ namespace nCine::RHI::PVR
 		BakedSlot bakedSlots_[BakedSlotCount];
 		std::int32_t nextBakedSlot_;
 
+		// Every texture with video memory attached is linked into this list, most recently used first, so
+		// an allocation that runs out of memory can reclaim the least recently used stores (see Reclaim())
+		static PvrTexture* liveHead_;
+		static PvrTexture* liveTail_;
+		PvrTexture* livePrev_;
+		PvrTexture* liveNext_;
+		std::uint32_t lastUsedScene_;
+
 		void Allocate(PixelFormat format, std::int32_t width, std::int32_t height);
 		void RefreshVramStore();
 		void FreeVramStores();
+
+		/** @brief Moves this texture to the front of the live list and stamps it with the current scene */
+		void Touch();
+		/** @brief Unlinks this texture from the live list */
+		void Unlink();
+
+		/**
+			@brief Allocates video memory, freeing the least recently used stores if necessary
+
+			The 8 MB of video memory is shared by the framebuffers, the vertex buffer and every texture, so
+			a level with many tilesets (or a menu section that pulls in more graphics) can exhaust it. The
+			stores are a cache of the copies kept in main memory, so instead of failing the allocation the
+			oldest ones are dropped and rebuilt when they are needed again.
+		*/
+		static pvr_ptr_t AllocateVram(std::size_t size, const PvrTexture* keepAlive);
+
+		// TODO: Temporary diagnostics for video memory usage
+		static std::size_t dbgTotalAllocated_;
+		static std::int32_t dbgAllocCount_;
+		std::size_t DbgVramBytes() const;
 	};
 }
