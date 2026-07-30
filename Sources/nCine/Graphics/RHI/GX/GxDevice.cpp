@@ -244,7 +244,13 @@ namespace nCine::RHI::GX
 
 	GxDevice::ScissorState GxDevice::GetScissorState() { return scissor_; }
 	void GxDevice::SetScissorState(const ScissorState& state) { scissor_ = state; }
-	void GxDevice::SetScissor(const Recti& rect) { scissor_.Rect = rect; }
+	void GxDevice::SetScissor(const Recti& rect)
+	{
+		// Same contract as the GL device: setting a rect also enables the test (callers like
+		// RenderCommand and Viewport rely on it and restore via SetScissorState afterwards)
+		scissor_.Enabled = true;
+		scissor_.Rect = rect;
+	}
 	void GxDevice::SetScissorTestEnabled(bool enabled) { scissor_.Enabled = enabled; }
 
 	Recti GxDevice::GetViewport() { return viewport_; }
@@ -435,6 +441,13 @@ namespace nCine::RHI::GX
 		if (paletteTexture_ == texture) {
 			paletteTexture_ = nullptr;
 		}
+		// Drop TLUTs built from the destroyed palette so a stale pointer can never match
+		for (std::uint32_t i = 0; i < MaxTlutSlots; i++) {
+			if (tlutSlots_[i].Palette == texture) {
+				tlutSlots_[i].PaletteOffset = -1;
+				tlutSlots_[i].Palette = nullptr;
+			}
+		}
 	}
 
 	const GxTexture* GxDevice::GetBoundTexture(std::uint32_t unit)
@@ -482,27 +495,35 @@ namespace nCine::RHI::GX
 		}
 		paletteGeneration_++;
 		for (std::uint32_t i = 0; i < MaxTlutSlots; i++) {
-			if (tlutSlots_[i].PaletteRow >= firstRow && tlutSlots_[i].PaletteRow < firstRow + rowCount) {
-				tlutSlots_[i].PaletteRow = -1;
+			if (tlutSlots_[i].PaletteOffset >= (firstRow - 1) * 256 && tlutSlots_[i].PaletteOffset < (firstRow + rowCount) * 256) {
+				tlutSlots_[i].PaletteOffset = -1;
 			}
 		}
 	}
 
-	std::int32_t GxDevice::AcquireTlutForRow(std::int32_t paletteRow)
+	std::int32_t GxDevice::AcquireTlutForRow(const GxTexture* palette, std::int32_t paletteOffset)
 	{
-		if (paletteTexture_ == nullptr || paletteTexture_->GetPixels() == nullptr ||
-			paletteRow < 0 || paletteRow >= paletteTexture_->GetHeight()) {
+		// The offset is a flat index into the palette texture and does not need to be row-aligned
+		// (e.g. the gem gradients pack two palettes into a single 256-entry row). The palette is usually
+		// the registered global one, but effects like the profile character previews bind their own
+		// recolored palette texture instead.
+		const std::int32_t maxOffset = palette != nullptr
+			? palette->GetWidth() * palette->GetHeight() - 256 : 0;
+		if (palette == nullptr || palette->GetPixels() == nullptr ||
+			paletteOffset < 0 || paletteOffset > maxOffset) {
 			return -1;
 		}
 
 		tlutUseCounter_++;
 
-		// Reuse a slot already holding this row, or evict the least recently used one
+		// Reuse a slot already holding this row of this palette (and its current content), or evict the
+		// least recently used one
 		std::int32_t slot = -1;
 		std::uint32_t oldestUse = UINT32_MAX;
 		std::int32_t oldestSlot = 0;
 		for (std::uint32_t i = 0; i < MaxTlutSlots; i++) {
-			if (tlutSlots_[i].PaletteRow == paletteRow) {
+			if (tlutSlots_[i].PaletteOffset == paletteOffset && tlutSlots_[i].Palette == palette &&
+				tlutSlots_[i].PaletteVersion == palette->GetContentVersion()) {
 				slot = std::int32_t(i);
 				break;
 			}
@@ -521,17 +542,19 @@ namespace nCine::RHI::GX
 					return -1;
 				}
 			}
-			const std::uint32_t* row = reinterpret_cast<const std::uint32_t*>(
-				paletteTexture_->GetPixels() + std::size_t(paletteRow) * paletteTexture_->GetStrideBytes());
+			const std::uint32_t* entries = reinterpret_cast<const std::uint32_t*>(
+				palette->GetPixels()) + paletteOffset;
 			for (std::int32_t i = 0; i < 256; i++) {
-				s.Data[i] = Rgb5a3FromRgba(row[i]);
+				s.Data[i] = Rgb5a3FromRgba(entries[i]);
 			}
 			DCFlushRange(s.Data, 256 * sizeof(std::uint16_t));
 
 			GXTlutObj tlut;
 			GX_InitTlutObj(&tlut, s.Data, GX_TL_RGB5A3, 256);
 			GX_LoadTlut(&tlut, GX_TLUT0 + std::uint32_t(slot));
-			s.PaletteRow = paletteRow;
+			s.PaletteOffset = paletteOffset;
+			s.Palette = palette;
+			s.PaletteVersion = palette->GetContentVersion();
 		}
 
 		tlutSlots_[slot].LastUse = tlutUseCounter_;
@@ -795,6 +818,17 @@ namespace nCine::RHI::GX
 			return;
 		}
 
+		// The palette to remap with is whatever the material bound to the palette sampler (e.g. the
+		// recolored preview palettes of the profile menu); the registered global palette is the fallback
+		const GxTexture* paletteTex = nullptr;
+		if (isPaletteRemap) {
+			const std::int32_t paletteUnit = samplerUnit("uTexturePalette", 1);
+			paletteTex = (std::uint32_t(paletteUnit) < MaxTextureUnits ? boundTextures_[paletteUnit] : nullptr);
+			if (paletteTex == nullptr || paletteTex == texture) {
+				paletteTex = paletteTexture_;
+			}
+		}
+
 		ApplyProjection();
 		ApplyRenderState();
 		SetVertexModeTextured(hasTexture);
@@ -841,21 +875,22 @@ namespace nCine::RHI::GX
 				if (isPaletteRemap && texture->IsIndexed()) {
 					float palOffset = 0.0f;
 					std::memcpy(&palOffset, inst + kPaletteOffsetOffset, sizeof(palOffset));
-					const std::int32_t paletteRow = std::int32_t(palOffset + 0.5f) / 256;
-					const std::int32_t slot = AcquireTlutForRow(paletteRow);
+					const std::int32_t paletteOffset = std::int32_t(palOffset + 0.5f);
+					const std::int32_t slot = AcquireTlutForRow(paletteTex, paletteOffset);
 					texObj = mutableTexture->GetTexObj();
 					if (texObj != nullptr && slot >= 0 && slot != lastTlutSlot) {
 						GX_InitTexObjTlut(texObj, GX_TLUT0 + std::uint32_t(slot));
 						lastTlutSlot = slot;
 						loadedTexObj = nullptr;		// Force a reload with the new TLUT binding
 					}
-				} else if (isPaletteRemap && texture->NeedsPaletteBake() && paletteTexture_ != nullptr && paletteTexture_->GetPixels() != nullptr) {
+				} else if (isPaletteRemap && texture->NeedsPaletteBake() && paletteTex != nullptr && paletteTex->GetPixels() != nullptr) {
 					float palOffset = 0.0f;
 					std::memcpy(&palOffset, inst + kPaletteOffsetOffset, sizeof(palOffset));
-					const std::uint32_t paletteRow = std::uint32_t(std::int32_t(palOffset + 0.5f) / 256);
-					const std::uint32_t* row = reinterpret_cast<const std::uint32_t*>(
-						paletteTexture_->GetPixels() + std::size_t(paletteRow) * paletteTexture_->GetStrideBytes());
-					texObj = mutableTexture->EnsureBakedRgba(row, paletteRow, paletteGeneration_);
+					const std::uint32_t paletteOffset = std::uint32_t(std::int32_t(palOffset + 0.5f));
+					const std::uint32_t* entries = reinterpret_cast<const std::uint32_t*>(
+						paletteTex->GetPixels()) + paletteOffset;
+					texObj = mutableTexture->EnsureBakedRgba(entries, paletteOffset,
+						(paletteTex == paletteTexture_ ? paletteGeneration_ : paletteTex->GetContentVersion()), paletteTex);
 				} else {
 					texObj = mutableTexture->GetTexObj();
 				}

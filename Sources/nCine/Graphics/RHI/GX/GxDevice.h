@@ -227,7 +227,9 @@ namespace nCine::RHI::GX
 
 		struct TlutSlot
 		{
-			std::int32_t PaletteRow = -1;
+			std::int32_t PaletteOffset = -1;
+			const GxTexture* Palette = nullptr;
+			std::uint32_t PaletteVersion = 0;
 			std::uint32_t LastUse = 0;
 			std::uint16_t* Data = nullptr;		// 256 RGB5A3 entries, 32-byte aligned
 		};
@@ -268,6 +270,6 @@ namespace nCine::RHI::GX
 		static void ApplyRenderState();
 		static void ApplyProjection();
 		static void FlushCurrentRenderTarget();
-		static std::int32_t AcquireTlutForRow(std::int32_t paletteRow);
+		static std::int32_t AcquireTlutForRow(const GxTexture* palette, std::int32_t paletteRow);
 	};
 }

@@ -141,7 +141,7 @@ namespace nCine::RHI::GX
 		 * alpha from the texel's own alpha byte. One baked copy is cached; it is rebuilt when a different
 		 * palette row, a newer palette generation or newer texel content is requested.
 		 */
-		GXTexObj* EnsureBakedRgba(const std::uint32_t* paletteRow, std::uint32_t paletteRowIndex, std::uint32_t paletteGeneration);
+		GXTexObj* EnsureBakedRgba(const std::uint32_t* paletteRow, std::uint32_t paletteRowIndex, std::uint32_t paletteGeneration, const void* palette);
 
 		/** @brief Binds the texture to the specified texture unit on the device */
 		bool Bind(std::uint32_t textureUnit) const;
@@ -246,6 +246,7 @@ namespace nCine::RHI::GX
 			std::uint32_t PaletteGeneration;
 			std::uint32_t ContentVersion;
 			std::uint32_t LastUsedFrame;
+			const void* Palette;
 		};
 		BakedSlot bakedSlots_[BakedSlotCount];
 		std::int32_t nextBakedSlot_;
