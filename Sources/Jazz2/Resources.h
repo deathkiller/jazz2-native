@@ -278,6 +278,7 @@ namespace Jazz2::Resources
 	{
 		Lighting,							/**< Lighting */
 		BatchedLighting,					/**< Batched variant of @ref Lighting */
+		LightingMeshBatch,					/**< Vita mesh-batched lighting */
 
 		Blur,								/**< Blur */
 		Downsample,							/**< Downsample */

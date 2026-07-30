@@ -250,9 +250,16 @@ namespace Jazz2::UI
 	void Cinematics::PrepareNextFrame()
 	{
 		// Check if palette was changed
-		if (ReadValue<std::uint8_t>(0) == 0x01) {
+		const bool paletteChanged = (ReadValue<std::uint8_t>(0) == 0x01);
+		if (paletteChanged) {
 			Read(3, _palette, sizeof(_palette));
 		}
+
+		// Track changed indices while decoding so Vita does not need a second full-frame comparison pass.
+#if defined(DEATH_TARGET_VITA)
+		std::int32_t minX = _width, minY = _height, maxX = -1, maxY = -1;
+		const bool uploadFullFrame = (paletteChanged || _frameIndex == 0);
+#endif
 
 		// Read pixels into the buffer
 		for (std::int32_t y = 0; y < _height; y++) {
@@ -270,7 +277,15 @@ namespace Jazz2::UI
 					// Read specified number of pixels in row
 					for (std::int32_t i = 0; i < u; i++) {
 						DEATH_DEBUG_ASSERT(x < _width, "Frame decoding overrun");
-						_buffer[y * _width + x] = ReadValue<std::uint8_t>(3);
+						const std::int32_t targetIndex = y * _width + x;
+						const std::uint8_t pixel = ReadValue<std::uint8_t>(3);
+						_buffer[targetIndex] = pixel;
+#if defined(DEATH_TARGET_VITA)
+						if (!uploadFullFrame && pixel != _lastBuffer[targetIndex]) {
+							minX = std::min(minX, x); minY = std::min(minY, y);
+							maxX = std::max(maxX, x); maxY = std::max(maxY, y);
+						}
+#endif
 						x++;
 					}
 				} else {
@@ -285,7 +300,15 @@ namespace Jazz2::UI
 					std::int32_t n = AsLE(ReadValue<std::uint16_t>(1)) + (ReadValue<std::uint8_t>(2) + y - 127) * _width;
 					for (std::int32_t i = 0; i < u; i++) {
 						DEATH_DEBUG_ASSERT(x < _width, "Frame decoding overrun");
-						_buffer[y * _width + x] = _lastBuffer[n];
+						const std::int32_t targetIndex = y * _width + x;
+						const std::uint8_t pixel = _lastBuffer[n];
+						_buffer[targetIndex] = pixel;
+#if defined(DEATH_TARGET_VITA)
+						if (!uploadFullFrame && pixel != _lastBuffer[targetIndex]) {
+							minX = std::min(minX, x); minY = std::min(minY, y);
+							maxX = std::max(maxX, x); maxY = std::max(maxY, y);
+						}
+#endif
 						x++;
 						n++;
 					}
@@ -294,12 +317,34 @@ namespace Jazz2::UI
 		}
 
 		// Apply current palette to indices
+#if defined(DEATH_TARGET_VITA)
+		// Delta-coded frames usually change only a small area. ES2 has no unpack row length, so pack
+		// the changed rectangle before uploading it with TexSubImage2D.
+		if (uploadFullFrame) {
+			minX = 0;
+			minY = 0;
+			maxX = _width - 1;
+			maxY = _height - 1;
+		}
+
+		if (maxX >= minX) {
+			const std::int32_t uploadWidth = maxX - minX + 1;
+			const std::int32_t uploadHeight = maxY - minY + 1;
+			for (std::int32_t y = 0; y < uploadHeight; y++) {
+				for (std::int32_t x = 0; x < uploadWidth; x++) {
+					_currentFrame[y * uploadWidth + x] = _palette[_buffer[(minY + y) * _width + minX + x]];
+				}
+			}
+			_texture->LoadFromTexels(reinterpret_cast<std::uint8_t*>(_currentFrame.get()), minX, minY, uploadWidth, uploadHeight);
+		}
+#else
 		for (std::int32_t i = 0; i < _width * _height; i++) {
 			_currentFrame[i] = _palette[_buffer[i]];
 		}
 
 		// Upload new texture to GPU
 		_texture->LoadFromTexels((std::uint8_t*)_currentFrame.get(), 0, 0, _width, _height);
+#endif
 
 		// Create copy of the buffer
 		std::memcpy(_lastBuffer.get(), _buffer.get(), _width * _height);

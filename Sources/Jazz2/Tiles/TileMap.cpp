@@ -170,6 +170,10 @@ namespace Jazz2::Tiles
 		// The command cache must be reset every frame,
 		// OnDraw() is called multiple times if multiple viewports are active
 		_renderCommandsCount = 0;
+#if defined(DEATH_TARGET_VITA)
+		_debrisMeshVerticesCount = 0;
+		_debrisMeshCommandCount = 0;
+#endif
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 		_layerMeshVerticesCount = 0;
 		_layerMeshCommandCount = 0;
@@ -1044,8 +1048,18 @@ namespace Jazz2::Tiles
 		switch (type) {
 			case LayerRendererType::Solid: shaderChanged = command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::SpriteNoTexture); break;
 			case LayerRendererType::Tinted: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(indexed ? PrecompiledShader::TintedPalette : PrecompiledShader::Tinted)); break;
-			case LayerRendererType::Sky: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground)); break;
-			case LayerRendererType::Circle: shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundCircleDither : PrecompiledShader::TexturedBackgroundCircle)); break;
+			case LayerRendererType::Sky:
+			case LayerRendererType::Circle:
+#if defined(DEATH_TARGET_VITA)
+				// The procedural Sky/Circle shaders still saturate the Vita fragment pipeline. Repeat and
+				// scroll the baked background texture through the normal sprite path instead.
+				shaderChanged = command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+#else
+				shaderChanged = command->GetMaterial().SetShader(ContentResolver::Get().GetShader(type == LayerRendererType::Sky
+					? (PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundDither : PrecompiledShader::TexturedBackground)
+					: (PreferencesCache::BackgroundDithering ? PrecompiledShader::TexturedBackgroundCircleDither : PrecompiledShader::TexturedBackgroundCircle)));
+#endif
+				break;
 			default: shaderChanged = (indexed
 				? command->GetMaterial().SetShader(ContentResolver::Get().GetShader(PrecompiledShader::PaletteRemap))
 				: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite)); break;
@@ -1452,6 +1466,12 @@ namespace Jazz2::Tiles
 		}*/
 
 		for (std::int32_t i = 0; i < 4; i++) {
+#if defined(DEATH_TARGET_VITA)
+			// Each debris fragment is an individual transparent draw on Vita's ES2 renderer.
+			if (_debrisList.size() >= 32) {
+				return;
+			}
+#endif
 			DestructibleDebris& debris = _debrisList.emplace_back();
 			debris.Pos = Vector2f(x * TileSet::DefaultTileSize + (i % 2) * QuarterSize, y * TileSet::DefaultTileSize + (i / 2) * QuarterSize);
 			debris.Depth = z;
@@ -1495,6 +1515,11 @@ namespace Jazz2::Tiles
 
 		for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
 			for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+#if defined(DEATH_TARGET_VITA)
+				if (_debrisList.size() >= 32) {
+					return;
+				}
+#endif
 				float currentSize = DebrisSize * Random().FastFloat(0.2f, 1.1f);
 
 				DestructibleDebris& debris = _debrisList.emplace_back();
@@ -1539,6 +1564,11 @@ namespace Jazz2::Tiles
 		Vector2i texSize = res->Base->TextureDiffuse->GetSize();
 
 		for (std::int32_t i = 0; i < count; i++) {
+#if defined(DEATH_TARGET_VITA)
+			if (_debrisList.size() >= 32) {
+				return;
+			}
+#endif
 			float speedX = Random().FastFloat(-1.0f, 1.0f) * Random().FastFloat(0.2f, 0.8f) * count;
 
 			DestructibleDebris& debris = _debrisList.emplace_back();
@@ -1665,6 +1695,70 @@ namespace Jazz2::Tiles
 		viewportRect.W += MaxDebrisSize * 2.0f;
 		viewportRect.H += MaxDebrisSize * 2.0f;
 
+#if defined(DEATH_TARGET_VITA)
+		const DestructibleDebris* firstInBatch = nullptr;
+		SmallVector<float, 0>* batchVertices = nullptr;
+		auto flushBatch = [&]() {
+			if (firstInBatch == nullptr || batchVertices->empty()) {
+				return;
+			}
+			if (_debrisMeshCommandCount >= (std::int32_t)_debrisMeshCommands.size()) {
+				_debrisMeshCommands.emplace_back(std::make_unique<RenderCommand>(RenderCommand::Type::Particle));
+			}
+			RenderCommand* command = _debrisMeshCommands[_debrisMeshCommandCount++].get();
+			const bool indexed = (firstInBatch->PaletteOffset >= 0);
+			command->GetMaterial().SetShader(ContentResolver::Get().GetShader(indexed ? PrecompiledShader::TileMapMeshPalette : PrecompiledShader::TileMapMesh));
+			command->GetMaterial().SetBlendingEnabled(true);
+			command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha,
+				((firstInBatch->Flags & DebrisFlags::AdditiveBlending) == DebrisFlags::AdditiveBlending ? BlendingFactor::One : BlendingFactor::OneMinusSrcAlpha));
+			command->GetMaterial().ReserveUniformsDataMemory();
+			auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
+			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+			auto& geometry = command->GetGeometry();
+			geometry.SetElementsPerVertex(8);
+			geometry.SetVertexCount((std::int32_t)(batchVertices->size() / 8));
+			geometry.SetHostVertexPointer(batchVertices->data());
+			geometry.SetDrawParameters(PrimitiveType::Triangles, 0, geometry.GetVertexCount());
+			command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
+			command->SetLayer(firstInBatch->Depth);
+			ContentResolver::Get().BindSpritePalette(*command, *instanceBlock, *firstInBatch->DiffuseTexture, indexed, (std::uint16_t)(indexed ? firstInBatch->PaletteOffset : 0));
+			renderQueue.AddCommand(command);
+			firstInBatch = nullptr;
+		};
+
+		for (const auto& debris : _debrisList) {
+			if (!viewportRect.Contains(debris.Pos)) {
+				continue;
+			}
+			const bool indexed = (debris.PaletteOffset >= 0);
+			if (firstInBatch == nullptr || firstInBatch->DiffuseTexture != debris.DiffuseTexture ||
+				(firstInBatch->PaletteOffset >= 0) != indexed || firstInBatch->PaletteOffset != debris.PaletteOffset ||
+				firstInBatch->Depth != debris.Depth || ((firstInBatch->Flags ^ debris.Flags) & DebrisFlags::AdditiveBlending) != DebrisFlags::None) {
+				flushBatch();
+				firstInBatch = &debris;
+				if (_debrisMeshVerticesCount >= (std::int32_t)_debrisMeshVertices.size()) {
+					_debrisMeshVertices.emplace_back();
+				}
+				batchVertices = &_debrisMeshVertices[_debrisMeshVerticesCount++];
+				batchVertices->clear();
+			}
+
+			const float cosAngle = cosf(debris.Angle);
+			const float sinAngle = sinf(debris.Angle);
+			const float halfWidth = debris.Size.X * debris.Scale * 0.5f;
+			const float halfHeight = debris.Size.Y * debris.Scale * 0.5f;
+			constexpr float Corners[6][2] = { { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, -1 }, { 1, 1 }, { -1, 1 } };
+			for (const auto& corner : Corners) {
+				const float localX = corner[0] * halfWidth;
+				const float localY = corner[1] * halfHeight;
+				batchVertices->push_back(debris.Pos.X + localX * cosAngle - localY * sinAngle);
+				batchVertices->push_back(debris.Pos.Y + localX * sinAngle + localY * cosAngle);
+				batchVertices->push_back(debris.TexBiasX + (corner[0] + 1.0f) * 0.5f * debris.TexScaleX);
+				batchVertices->push_back(debris.TexBiasY + (corner[1] + 1.0f) * 0.5f * debris.TexScaleY);
+				batchVertices->push_back(1.0f); batchVertices->push_back(1.0f); batchVertices->push_back(1.0f); batchVertices->push_back(debris.Alpha);
+			}
+		}
+#else
 		for (const auto& debris : _debrisList) {
 			if (!viewportRect.Contains(debris.Pos)) {
 				continue;
@@ -1698,6 +1792,11 @@ namespace Jazz2::Tiles
 
 			renderQueue.AddCommand(command);
 		}
+#endif
+
+#if defined(DEATH_TARGET_VITA)
+		flushBatch();
+#endif
 	}
 
 	bool TileMap::GetTrigger(std::uint8_t triggerId)
@@ -1899,14 +1998,23 @@ namespace Jazz2::Tiles
 		auto* command = RentRenderCommand(layer.Description.RendererType);
 
 		auto* instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
+		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(
+#if defined(DEATH_TARGET_VITA)
+			// Match the menu fallback: one wrapped background image with a scrolling offset.
+			1.0f, x / target->GetWidth(), 1.0f, y / target->GetHeight()
+#else
+			1.0f, 0.0f, 1.0f, 0.0f
+#endif
+		);
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue((float)cullingRect.W, (float)cullingRect.H);
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 
+#if !defined(DEATH_TARGET_VITA)
 		command->GetMaterial().Uniform("uViewSize")->SetFloatValue((float)cullingRect.W, (float)cullingRect.H);
 		command->GetMaterial().Uniform("uCameraPos")->SetFloatVector(viewCenter.Data());
 		command->GetMaterial().Uniform("uShift")->SetFloatValue(x, y);
 		command->GetMaterial().Uniform("uHorizonColor")->SetFloatVector(layer.Description.Color.Data());
+#endif
 
 		command->SetTransformation(Matrix4x4f::Translation(cullingRect.X, cullingRect.Y, 0.0f));
 		command->SetLayer(layer.Description.Depth);
@@ -2001,6 +2109,7 @@ namespace Jazz2::Tiles
 		for (std::int32_t y = 0; y < layoutSize.Y; y++) {
 			for (std::int32_t x = 0; x < layoutSize.X; x++) {
 				LayerTile& tile = layer.Layout[x + y * layer.LayoutSize.X];
+				isAnimated |= (tile.TileID >= _owner->_animatedTilesOffset);
 
 				std::int32_t tileId = _owner->ResolveTileID(tile);
 				if (tileId == 0) {

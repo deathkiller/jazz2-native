@@ -1,5 +1,6 @@
 program TexturedBackground;
 variant DITHER;
+variant VITA_LIGHTWEIGHT;
 
 shader_type canvas_item;
 precision highp;
@@ -53,7 +54,7 @@ float addStarField(vec2 samplePosition, float threshold) {
 void fragment() {
 	// Distance to center of screen from top or bottom (1: center of screen, 0: edge of screen)
 	float distance = 1.3 - abs(2.0 * UV.y - 1.0);
-#ifndef SOFTWARE_RENDERER
+#if !defined(SOFTWARE_RENDERER) && !defined(VITA_LIGHTWEIGHT)
 	float horizonDepth = pow(distance, 1.4);
 #else
 	// Software-renderer variant: this full-screen per-pixel fragment is dominated by transcendentals
@@ -76,13 +77,13 @@ void fragment() {
 	vec4 texColor = texture(TEXTURE, texturePos);
 
 #ifdef DITHER
-#ifndef SOFTWARE_RENDERER
+#if !defined(SOFTWARE_RENDERER) && !defined(VITA_LIGHTWEIGHT)
 	texturePos += hash2D(UV * uViewSize + (uCameraPos + uShift) * 0.001).xy * 8.0 / uViewSize;
 	texColor = mix(texColor, texture(TEXTURE, texturePos), 0.333);
 #endif
 #endif
 
-#ifndef SOFTWARE_RENDERER
+#if !defined(SOFTWARE_RENDERER) && !defined(VITA_LIGHTWEIGHT)
 	float horizonOpacity = clamp(pow(distance, 1.5) - 0.3, 0.0, 1.0);
 #else
 	float horizonOpacity = clamp(distance * distance - 0.3, 0.0, 1.0);	// Approximates pow(distance, 1.5)

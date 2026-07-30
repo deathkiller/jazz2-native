@@ -62,6 +62,11 @@ The result is `build-vita/jazz2.vpk`. The default title ID is `JAZZ2VITA` and
 can be changed with `-DVITA_TITLEID=XXXXXXXXX`; it must be exactly nine
 uppercase letters or digits.
 
+The configure output must contain `PS Vita audio: OpenAL and libopenmpt
+enabled`. If it does not, do not package the build: its `build.ninja` lacks
+`WITH_AUDIO`, so it cannot produce sound. Delete the previous build directory
+and configure it again with the audio options above.
+
 VitaSDK's `vita-pack-vpk` does not quote asset paths. Build from a source and
 output path without spaces. When the repository is under a Windows directory
 with spaces, use a WSL symlink such as `ln -s /mnt/c/.../jazz2\ vita
@@ -70,6 +75,106 @@ with spaces, use a WSL symlink such as `ln -s /mnt/c/.../jazz2\ vita
 `icon0.png` is Vita-specific: it must be an opaque 8-bit indexed PNG. The
 package uses `Sources/Icons/VitaIcon.png`; do not replace it with a truecolor
 or RGBA PNG, or VitaShell will reject the VPK with `0x8010113D`.
+
+## WSL Audio Debug Build
+
+This is the reproducible command sequence used for Vita audio development. It
+creates a separate build directory so an audio build cannot reuse cached values
+from a previous graphics-only configuration.
+
+The source and build paths must not contain spaces. If the Windows checkout has
+spaces in its path, expose it in WSL through a symlink:
+
+```sh
+ln -s "/mnt/c/Users/ASvinin/Desktop/opencode/jazz2 vita" /root/jazz2-vita
+export VITASDK=/usr/local/vitasdk
+export PATH="$VITASDK/bin:$PATH"
+```
+
+### Optional: VitaGL Without Its Startup Screen
+
+VitaGL displays its own startup screen for at least one second whenever
+`vglInit()` runs. Build a private static library with its supported
+`NO_SPLASHSCREEN=1` flag to remove it. This is linked into the VPK; it does not
+modify the installed VitaSDK.
+
+```sh
+git clone --depth 1 https://github.com/Rinnegatamante/vitaGL.git /root/vitaGL
+make -C /root/vitaGL clean
+make -C /root/vitaGL NO_SPLASHSCREEN=1 --jobs "$(nproc)"
+arm-vita-eabi-strip --strip-debug /root/vitaGL/libvitaGL.a
+```
+
+The project accepts this library through `NCINE_VITAGL_LIBRARY`. Omit that
+argument to use VitaSDK's normal `libvitaGL.a`, which retains the VitaGL splash.
+
+### Configure And Package
+
+Delete the directory before changing audio switches. `CMakeCache.txt` preserves
+options from a prior configuration.
+
+```sh
+rm -rf /root/jazz2-vita-audio-build
+
+cmake -S /root/jazz2-vita -B /root/jazz2-vita-audio-build -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE="$VITASDK/share/vita.toolchain.cmake" \
+  -DNCINE_PREFERRED_BACKEND=SDL2 \
+  -DNCINE_PREFERRED_RHI=OpenGL \
+  -DNCINE_WITH_AUDIO=ON \
+  -DNCINE_WITH_OPENMPT=ON \
+  -DNCINE_WITH_VORBIS=OFF \
+  -DWITH_MULTIPLAYER=OFF \
+  -DNCINE_DOWNLOAD_DEPENDENCIES=OFF \
+  -DNCINE_VITAGL_LIBRARY=/root/vitaGL/libvitaGL.a \
+  -DVITA_TITLEID=JAZZ2AUD1 \
+  -DCMAKE_BUILD_TYPE=Release
+
+cmake --build /root/jazz2-vita-audio-build --parallel
+unzip -t /root/jazz2-vita-audio-build/jazz2.vpk
+```
+
+`JAZZ2AUD1` is a nine-character test title ID. Reuse the same ID to install an
+update over the previous audio test, or change it to another unique nine-letter
+or digit ID to retain multiple builds on the Vita.
+
+The VPK is `jazz2.vpk` in the build directory. Copy it to the shared Windows
+workspace if needed:
+
+```sh
+cp /root/jazz2-vita-audio-build/jazz2.vpk \
+  "/mnt/c/Users/ASvinin/Desktop/opencode/jazz2 vita/build-vita-p0-ubuntu24/Jazz2Vita-audio-debug.vpk"
+```
+
+Successful configuration prints:
+
+```text
+PS Vita audio: OpenAL and libopenmpt enabled; Vorbis=OFF
+```
+
+Treat a missing line, an OpenAL error, or a libopenmpt error as a failed audio
+configuration. Install the missing VitaSDK development library and configure
+again; do not turn audio off for an audio test. `Content` is packaged into the
+VPK automatically. Original JJ2 data remains external at
+`ux0:/data/Jazz2/Source/`.
+
+## Performance Log
+
+Vita builds create `ux0:/data/Jazz2/VitaPerformance.log` at startup and write a
+throttled slow-frame diagnostic there. After at least 0.5 seconds below 25 FPS, it records
+one entry at most every two seconds, for example:
+
+```text
+VitaPerf: 31.2 ms, 32.1 FPS; draws 184 (sprite 143, tile 12, particle 24, text 5), vertices 736, transparent 171
+```
+
+`sprite` rising when an object enters view points to actors, decorations, or UI;
+`particle` points to particle effects; `tile` points to tile layers; `light` points
+to dynamic lighting; `mesh` covers mesh sprites; `other` identifies commands not
+yet categorized by their caller. The counters
+are gathered from the previous rendered frame, so walk into the problematic
+area, wait for the FPS drop, then exit and copy `VitaPerformance.log` for analysis.
+The Vita build also displays the measured FPS and last frame time in the upper
+left corner.
 
 ## Device Layout
 

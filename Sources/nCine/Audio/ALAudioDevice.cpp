@@ -16,7 +16,7 @@ using namespace Death::Containers::Literals;
 namespace nCine
 {
 	ALAudioDevice::ALAudioDevice()
-		: device_(nullptr), context_(nullptr), gain_(1.0f), sources_ {}, deviceName_(nullptr), nativeFreq_(44100)
+		: device_(nullptr), context_(nullptr), gain_(1.0f), sources_ {}, sourcePoolExhausted_(false), nativeFreq_(44100), deviceName_(nullptr)
 #if defined(WITH_THREADS)
 		, decodeThreadCreated_(false), decodeThreadShouldQuit_(false)
 #endif
@@ -73,6 +73,10 @@ namespace nCine
 			for (std::int32_t i = MaxSources - 1; i >= 0; i--) {
 				sourcePool_.push_back(sources_[i]);
 			}
+
+#if defined(DEATH_TARGET_VITA)
+			LOGI("Vita audio: {} OpenAL sources, {} Hz output", MaxSources, nativeFreq_);
+#endif
 		}
 
 		alDistanceModel(AL_LINEAR_DISTANCE_CLAMPED);
@@ -332,6 +336,10 @@ namespace nCine
 	unsigned int ALAudioDevice::registerPlayer(IAudioPlayer* player)
 	{
 		if (sourcePool_.empty()) {
+			if (!sourcePoolExhausted_) {
+				LOGW("Audio source pool exhausted: {} active players (limit {})", players_.size(), MaxSources);
+				sourcePoolExhausted_ = true;
+			}
 			return UnavailableSource;
 		}
 
@@ -351,6 +359,7 @@ namespace nCine
 		}
 
 		sourcePool_.push_back(player->sourceId_);
+		sourcePoolExhausted_ = false;
 		player->sourceId_ = UnavailableSource;
 
 		auto it = players_.begin();

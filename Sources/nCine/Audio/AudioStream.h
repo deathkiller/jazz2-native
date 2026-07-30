@@ -84,7 +84,13 @@ namespace nCine
 
 	private:
 		/** @brief Number of buffers used for streaming */
-		static const std::int32_t NumBuffers = 3;
+#if defined(DEATH_TARGET_VITA)
+		// A Vita frame can exceed the 279 ms covered by three 16 KiB PCM buffers.
+		// Eight buffers keep music fed through short rendering stalls.
+		static constexpr std::int32_t NumBuffers = 8;
+#else
+		static constexpr std::int32_t NumBuffers = 3;
+#endif
 		/** @brief OpenAL buffer queue used for streaming */
 		SmallVector<std::uint32_t, NumBuffers> buffersIds_;
 		/** @brief Index of the next available OpenAL buffer */

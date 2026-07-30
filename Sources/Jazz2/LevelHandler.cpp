@@ -774,10 +774,12 @@ namespace Jazz2
 
 			_lightingShader = resolver.GetShader(PrecompiledShader::Lighting);
 			if (_lightingShader == nullptr) { LOGW("PrecompiledShader::Lighting failed"); }
+#if !defined(DEATH_TARGET_VITA)
 			_blurShader = resolver.GetShader(PrecompiledShader::Blur);
 			if (_blurShader == nullptr) { LOGW("PrecompiledShader::Blur failed"); }
 			_downsampleShader = resolver.GetShader(PrecompiledShader::Downsample);
 			if (_downsampleShader == nullptr) { LOGW("PrecompiledShader::Downsample failed"); }
+#endif
 			_combineShader = resolver.GetShader(PrecompiledShader::Combine);
 			if (_combineShader == nullptr) { LOGW("PrecompiledShader::Combine failed"); }
 		}

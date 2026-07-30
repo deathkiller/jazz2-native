@@ -3,6 +3,7 @@ include(ncine_helpers)
 if(NOT NCINE_COMPILE_OPENMPT)
 	find_path(LIBOPENMPT_INCLUDE_DIR DOC "Path to libopenmpt include directory"
 		NAMES libopenmpt.h
+		PATH_SUFFIXES libopenmpt
 		PATHS
 		/usr/include/
 		/usr/local/include/
@@ -39,7 +40,7 @@ if(NOT NCINE_COMPILE_OPENMPT)
 
 	if(NOT TARGET libopenmpt::libopenmpt)
 		if(LIBOPENMPT_INCLUDE_DIR AND LIBOPENMPT_LIBRARY)
-			if(EMSCRIPTEN)
+			if(EMSCRIPTEN OR VITA)
 				add_library(libopenmpt::libopenmpt STATIC IMPORTED)
 				set(LIBOPENMPT_STATIC TRUE)
 				mark_as_advanced(LIBOPENMPT_STATIC)
@@ -50,6 +51,12 @@ if(NOT NCINE_COMPILE_OPENMPT)
 			set_target_properties(libopenmpt::libopenmpt PROPERTIES
 				IMPORTED_LOCATION ${LIBOPENMPT_LIBRARY}
 				INTERFACE_INCLUDE_DIRECTORIES ${LIBOPENMPT_INCLUDE_DIR})
+			if(VITA)
+				# The VitaSDK static libopenmpt package is built with optional Vorbis and
+				# mpg123 support, so its transitive static dependencies must be explicit.
+				set_property(TARGET libopenmpt::libopenmpt APPEND PROPERTY
+					INTERFACE_LINK_LIBRARIES "vorbisfile;vorbis;ogg;mpg123")
+			endif()
 		else()
 		endif()
 	endif()

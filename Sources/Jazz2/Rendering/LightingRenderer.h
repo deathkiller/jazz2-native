@@ -46,6 +46,11 @@ namespace Jazz2::Rendering
 		SmallVector<LightCommand, 0> _renderCommands;
 		std::int32_t _renderCommandsCount;
 
+#if defined(DEATH_TARGET_VITA)
+		std::unique_ptr<RenderCommand> _meshBatchCommand;
+		SmallVector<float, 0> _meshBatchVertices;
+#endif
+
 		LightCommand& RentRenderCommand();
 #endif
 	};

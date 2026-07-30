@@ -684,13 +684,7 @@ namespace Jazz2::UI::Menu
 		auto command = &_texturedBackgroundPass._outputRenderCommand;
 
 		auto instanceBlock = command->GetMaterial().UniformBlock(Material::InstanceBlockName);
-#if defined(DEATH_TARGET_VITA)
-		// Animate the baked background by scrolling its repeat-wrapped texture instead of running a
-		// procedural full-screen shader or re-rendering the tilemap every frame.
 		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, _texturedBackgroundPos.X / 256.0f, 1.0f, _texturedBackgroundPos.Y / 256.0f);
-#else
-		instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(1.0f, 0.0f, 1.0f, 0.0f);
-#endif
 		instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(static_cast<float>(viewSize.X), static_cast<float>(viewSize.Y));
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 1.0f).Data());
 

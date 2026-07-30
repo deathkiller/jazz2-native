@@ -52,7 +52,7 @@ namespace Jazz2
 	// Cache-busting version of the precompiled shader set — bump whenever any ".shader" source in
 	// "Sources/Shaders/" or the ShaderCompiler artifact format changes, so stale binary program caches
 	// are invalidated (12 = the switch from embedded sources to ShaderCompiler-generated artifacts)
-	static constexpr std::uint64_t ShadersVersion = 13;
+	static constexpr std::uint64_t ShadersVersion = 14;
 
 	ContentResolver& ContentResolver::Get()
 	{
@@ -1793,17 +1793,32 @@ namespace Jazz2
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Lighting] = CompileShader("Lighting", ShadersGen::Lighting);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedLighting] = CompileShader("BatchedLighting", ShadersGen::BatchedLighting, Shader::Introspection::NoUniformsInBlocks);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Lighting]->RegisterBatchedShader(*_precompiledShaders[(int32_t)PrecompiledShader::BatchedLighting]);
+#if defined(DEATH_TARGET_VITA)
+		_precompiledShaders[(std::int32_t)PrecompiledShader::LightingMeshBatch] = CompileShader("LightingMeshBatch", ShadersGen::LightingMeshBatch);
+		{
+			Shader* shader = _precompiledShaders[(std::int32_t)PrecompiledShader::LightingMeshBatch].get();
+			constexpr std::int32_t Stride = 8 * sizeof(float);
+			shader->SetAttribute("aLightCorner", Stride, reinterpret_cast<void*>(0 * sizeof(float)));
+			shader->SetAttribute("aLightCenter", Stride, reinterpret_cast<void*>(2 * sizeof(float)));
+			shader->SetAttribute("aLightParams", Stride, reinterpret_cast<void*>(4 * sizeof(float)));
+			shader->SetAttribute("aLightColor", Stride, reinterpret_cast<void*>(6 * sizeof(float)));
+		}
+#endif
 
+#if !defined(DEATH_TARGET_VITA)
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Blur] = CompileShader("Blur", ShadersGen::Blur);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Downsample] = CompileShader("Downsample", ShadersGen::Downsample);
+#endif
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Combine] = CompileShader("Combine", ShadersGen::Combine);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::CombineWithWater] = CompileShader("CombineWithWater", ShadersGen::CombineWithWater);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::CombineWithWaterLow] = CompileShader("CombineWithWaterLow", ShadersGen::CombineWithWaterLow);
 
+#if !defined(DEATH_TARGET_VITA)
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackground] = CompileShader("TexturedBackground", ShadersGen::TexturedBackground);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundDither] = CompileShader("TexturedBackgroundDither", ShadersGen::TexturedBackground, "DITHER");
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCircle] = CompileShader("TexturedBackgroundCircle", ShadersGen::TexturedBackgroundCircle);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::TexturedBackgroundCircleDither] = CompileShader("TexturedBackgroundCircleDither", ShadersGen::TexturedBackgroundCircle, "DITHER");
+#endif
 
 		_precompiledShaders[(std::int32_t)PrecompiledShader::Colorized] = CompileShader("Colorized", ShadersGen::Colorized);
 		_precompiledShaders[(std::int32_t)PrecompiledShader::BatchedColorized] = CompileShader("BatchedColorized", ShadersGen::BatchedColorized, Shader::Introspection::NoUniformsInBlocks);

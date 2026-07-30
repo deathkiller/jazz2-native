@@ -37,7 +37,7 @@ namespace Jazz2::UI::Menu
 
 		auto list = std::make_unique<ScrollView>();
 
-#if !defined(WITH_RHI_SOFTWARE)
+#if !defined(WITH_RHI_SOFTWARE) && !defined(DEATH_TARGET_VITA)
 		// The software backend has no rescale/antialiasing shader passes (the scene is rendered at the logical
 		// resolution directly into the screen framebuffer, see UpscaleRenderPass), so the option is hidden there
 		// TRANSLATORS: Menu item in Options > Graphics section
@@ -122,7 +122,11 @@ namespace Jazz2::UI::Menu
 			},
 			[this](std::int32_t direction) {
 				// Ascending presets so Right increases and Left decreases; clamped at the ends (no wraparound)
+#if defined(DEATH_TARGET_VITA)
+				static const std::int32_t presets[] = { 12, 25, 50 };
+#else
 				static const std::int32_t presets[] = { 12, 25, 50, 75, 100 };
+#endif
 				constexpr std::int32_t count = (std::int32_t)(sizeof(presets) / sizeof(presets[0]));
 				std::int32_t index = count - 1;
 				for (std::int32_t i = 0; i < count; i++) {

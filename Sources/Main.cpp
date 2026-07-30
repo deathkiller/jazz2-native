@@ -217,6 +217,12 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 
 	PreferencesCache::Initialize(config);
 
+#if defined(DEATH_TARGET_VITA)
+	// Five post-processing passes and a full-resolution light buffer dominate Vita fill-rate after draw-call batching.
+	PreferencesCache::BlurEffects = false;
+	PreferencesCache::LightingResolutionPercent = 50;
+#endif
+
 	// Write crash memory dumps next to the config file instead of next to the executable
 	theApplication().SetCrashDumpDirectory(PreferencesCache::GetDirectory());
 

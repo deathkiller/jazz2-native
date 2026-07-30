@@ -93,6 +93,7 @@ if(VITA AND NCINE_WITH_AUDIO)
 	if(NCINE_WITH_OPENMPT AND NOT OPENMPT_FOUND)
 		message(FATAL_ERROR "PS Vita module music requires libopenmpt installed in VitaSDK. Configure with -DNCINE_WITH_OPENMPT=OFF to omit .j2b music support.")
 	endif()
+	message(STATUS "PS Vita audio: OpenAL and libopenmpt enabled; Vorbis=${NCINE_WITH_VORBIS}")
 endif()
 	
 if(NCINE_BUILD_ANDROID)

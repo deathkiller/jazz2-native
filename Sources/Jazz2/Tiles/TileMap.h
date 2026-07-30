@@ -482,6 +482,13 @@ namespace Jazz2::Tiles
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
 		std::int32_t _renderCommandsCount;
 
+#if defined(DEATH_TARGET_VITA)
+		SmallVector<SmallVector<float, 0>, 0> _debrisMeshVertices;
+		SmallVector<std::unique_ptr<RenderCommand>, 0> _debrisMeshCommands;
+		std::int32_t _debrisMeshVerticesCount = 0;
+		std::int32_t _debrisMeshCommandCount = 0;
+#endif
+
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 		// Per-frame pools for whole-layer tile meshes, replacing the per-tile commands. One vertex buffer is filled
 		// per drawn tile layer; each layer mesh is then split into chunks that individually fit the shared array

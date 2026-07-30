@@ -21,6 +21,7 @@
 #include "Downsample.h"
 #include "FrozenMask.h"
 #include "Lighting.h"
+#include "LightingMeshBatch.h"
 #include "Outline.h"
 #include "OutlinePalette.h"
 #include "PaletteRemap.h"
@@ -63,6 +64,7 @@ namespace Jazz2::ShadersGen
 		&FrozenMask,
 		&BatchedFrozenMask,
 		&Lighting,
+		&LightingMeshBatch,
 		&Outline,
 		&BatchedOutline,
 		&OutlinePalette,

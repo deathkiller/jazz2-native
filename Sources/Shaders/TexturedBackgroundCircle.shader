@@ -1,5 +1,6 @@
 program TexturedBackgroundCircle;
 variant DITHER;
+variant VITA_LIGHTWEIGHT;
 
 shader_type canvas_item;
 precision highp;
@@ -53,6 +54,16 @@ float addStarField(vec2 samplePosition, float threshold) {
 }
 
 void fragment() {
+#ifdef VITA_LIGHTWEIGHT
+	// Avoid atan(), reciprocal distance, Voronoi stars, and pow() in the full-screen Vita path.
+	// This retains animated texture motion and a horizon tint at a cost close to a normal sprite.
+	float distance = 1.3 - abs(2.0 * UV.y - 1.0);
+	vec2 texturePos = vec2(uShift.x / 256.0 + UV.x, uShift.y / 256.0 + UV.y * distance);
+	vec4 texColor = texture(TEXTURE, texturePos);
+	float horizonOpacity = clamp(distance * distance - 0.3, 0.0, 1.0);
+	COLOR = mix(texColor, vec4(uHorizonColor.xyz, 1.0), horizonOpacity);
+	COLOR.a = 1.0;
+#else
 	// Position of pixel on screen (between -1 and 1)
 	vec2 targetCoord = vec2(2.0) * UV - vec2(1.0);
 
@@ -102,4 +113,5 @@ void fragment() {
 
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.a = 1.0;
+#endif
 }
