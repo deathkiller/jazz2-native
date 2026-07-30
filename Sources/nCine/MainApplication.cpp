@@ -148,7 +148,18 @@ namespace nCine
 		VIDEO_WaitVSync();
 		printf("Application starting...\n");
 
-		fatInitDefault();
+		if (!fatInitDefault()) {
+			// Without a FAT device there is no game content and no writable storage, so halt with
+			// a readable message instead of crashing on the missing device later
+#	if defined(DEATH_TARGET_GAMECUBE)
+			printf("\n  Cannot access the SD card!\n\n  Insert an SD card with the game files into the SD Gecko adapter.\n");
+#	else
+			printf("\n  Cannot access the SD card!\n\n  Insert an SD card with the game files and restart the console.\n");
+#	endif
+			while (true) {
+				VIDEO_WaitVSync();
+			}
+		}
 		PAD_Init();
 #	if defined(DEATH_TARGET_WII)
 		WPAD_Init();

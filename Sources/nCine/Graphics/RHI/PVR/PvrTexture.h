@@ -159,7 +159,7 @@ namespace nCine::RHI::PVR
 		 * alpha from the texel's own alpha byte; one cached copy, rebuilt when the row/generation/content
 		 * changes. Returns `nullptr` on allocation failure.
 		 */
-		pvr_ptr_t EnsureBakedArgb4444(const std::uint32_t* paletteRow, std::uint32_t paletteRowIndex, std::uint32_t paletteGeneration);
+		pvr_ptr_t EnsureBakedArgb4444(const std::uint32_t* paletteRow, std::uint32_t paletteRowIndex, std::uint32_t paletteGeneration, const void* palette);
 
 		/** @brief Binds the texture to the specified texture unit on the device */
 		bool Bind(std::uint32_t textureUnit) const;
@@ -258,6 +258,7 @@ namespace nCine::RHI::PVR
 			std::uint32_t PaletteGeneration;
 			std::uint32_t ContentVersion;
 			std::uint32_t LastUsedScene;
+			const void* Palette;
 		};
 		BakedSlot bakedSlots_[BakedSlotCount];
 		std::int32_t nextBakedSlot_;

@@ -1166,8 +1166,8 @@ namespace Death { namespace IO {
 		}
 
 		return Utf8::FromUtf16(buffer, length);
-#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
-		// realpath() is missing in libnx and Vita
+#elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_DREAMCAST)
+		// realpath() is missing in libnx and Vita, and unreliable in KOS (lstat() fails on iso9660)
 		char left[MaxPathLength];
 		char nextToken[MaxPathLength];
 		char result[MaxPathLength];

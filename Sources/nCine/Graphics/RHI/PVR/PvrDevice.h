@@ -212,7 +212,9 @@ namespace nCine::RHI::PVR
 
 		struct PaletteBank
 		{
-			std::int32_t PaletteRow = -1;
+			std::int32_t PaletteOffset = -1;
+			const PvrTexture* Palette = nullptr;
+			std::uint32_t PaletteVersion = 0;
 			std::uint32_t LastUse = 0;
 		};
 
@@ -252,7 +254,7 @@ namespace nCine::RHI::PVR
 		static void ApplyPendingSoftwareLighting();
 		static void EnsureScene();
 		static void FinishScene();
-		static std::int32_t AcquirePaletteBankForRow(std::int32_t paletteRow);
+		static std::int32_t AcquirePaletteBankForRow(const PvrTexture* palette, std::int32_t paletteRow);
 		static void GetTargetScale(float& scaleX, float& scaleY, float& offsetX, float& offsetY);
 	};
 }

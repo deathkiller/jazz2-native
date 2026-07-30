@@ -10,6 +10,8 @@
 #include "../../nCine/Audio/AudioStreamPlayer.h"
 #include "../../nCine/Input/InputEvents.h"
 
+#include <Containers/Pair.h>
+#include <Containers/SmallVector.h>
 #include <IO/MemoryStream.h>
 #include <IO/Compression/DeflateStream.h>
 
@@ -119,16 +121,54 @@ namespace Jazz2::UI
 		std::unique_ptr<std::uint8_t[]> _lastBuffer;
 		std::unique_ptr<std::uint32_t[]> _currentFrame;
 		std::uint32_t _palette[256];
-		MemoryStream _compressedStreams[4];
+		
+		/**
+			@brief Reads one of the four interleaved compressed streams of a \".j2v\" file from the source file
+
+			The file stores the streams as interleaved chunks; this stream walks the chunk list of one of
+			them on demand, so the whole video never has to be buffered into memory.
+		*/
+		class ChunkedStream : public Stream
+		{
+		public:
+			ChunkedStream();
+
+			void Initialize(Stream* source, SmallVector<Pair<std::int64_t, std::int32_t>, 0>&& chunks, std::int64_t initialOffset);
+
+			void Dispose() override;
+			std::int64_t Seek(std::int64_t offset, SeekOrigin origin) override;
+			std::int64_t GetPosition() const override;
+			std::int64_t Read(void* destination, std::int64_t bytesToRead) override;
+			std::int64_t Write(const void* source, std::int64_t bytesToWrite) override;
+			bool Flush() override;
+			bool IsValid() override;
+			std::int64_t GetSize() const override;
+			std::int64_t SetSize(std::int64_t size) override;
+
+		private:
+			Stream* _source;
+			SmallVector<Pair<std::int64_t, std::int32_t>, 0> _chunks;
+			std::int64_t _size;
+			std::int64_t _position;
+			// Cursor of the last read (chunk index and its start in the decompressed stream), so the
+			// mostly-sequential reads don't rescan the chunk list from the beginning every time
+			std::size_t _chunkIndex;
+			std::int64_t _chunkStart;
+		};
+
+		// The file must outlive the streams reading from it, so it is declared first
+		std::unique_ptr<Stream> _videoFile;
+		ChunkedStream _compressedStreams[4];
 		Compression::DeflateStream _decompressedStreams[4];
 
 		BitArray _pressedKeys;
 		std::uint32_t _pressedActions;
+		bool _decodingFailed;
 
 		void Initialize(StringView path);
 		bool LoadCinematicsFromFile(StringView path);
 		bool LoadSfxList(StringView path);
-		void PrepareNextFrame();
+		void PrepareNextFrame(bool prepareTexture = true);
 		void Read(std::int32_t streamIndex, void* buffer, std::uint32_t bytes);
 		void UpdatePressedActions();
 

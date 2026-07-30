@@ -215,7 +215,7 @@ namespace nCine::RHI::GX
 		return (texObjValid_ ? &texObj_ : nullptr);
 	}
 
-	GXTexObj* GxTexture::EnsureBakedRgba(const std::uint32_t* paletteRow, std::uint32_t paletteRowIndex, std::uint32_t paletteGeneration)
+	GXTexObj* GxTexture::EnsureBakedRgba(const std::uint32_t* paletteRow, std::uint32_t paletteRowIndex, std::uint32_t paletteGeneration, const void* palette)
 	{
 		if (pixels_.empty() || uploadFormat_ != PixelFormat::RG8 || paletteRow == nullptr) {
 			return nullptr;
@@ -223,7 +223,7 @@ namespace nCine::RHI::GX
 		const std::uint32_t currentFrame = GxDevice::GetFrameCounter();
 		BakedSlot* slot = nullptr;
 		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
-			if (bakedSlots_[i].Valid && bakedSlots_[i].PaletteRow == paletteRowIndex) {
+			if (bakedSlots_[i].Valid && bakedSlots_[i].PaletteRow == paletteRowIndex && bakedSlots_[i].Palette == palette) {
 				if (bakedSlots_[i].PaletteGeneration == paletteGeneration && bakedSlots_[i].ContentVersion == contentVersion_) {
 					bakedSlots_[i].LastUsedFrame = currentFrame;
 					return &bakedSlots_[i].TexObj;
@@ -295,6 +295,7 @@ namespace nCine::RHI::GX
 		slot->PaletteGeneration = paletteGeneration;
 		slot->ContentVersion = contentVersion_;
 		slot->LastUsedFrame = currentFrame;
+		slot->Palette = palette;
 		return &slot->TexObj;
 	}
 

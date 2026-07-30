@@ -35,9 +35,16 @@ namespace Jazz2::Rendering
 #if !defined(RHI_CAP_POSTPROCESSING)
 			// Direct tier (no shaders or no framebuffers): the scene is rasterized straight into the screen
 			// buffer via a textureless viewport (no intermediate FBO); the combine and rescale shader passes
-			// are skipped downstream
+			// are skipped downstream. The viewport rect keeps the on-screen position so splitscreen players
+			// land in their own region (on the shader tier the position comes from the CombineRenderer quad
+			// instead), and the scissor clips sprites overhanging the region into a neighbouring player's view
 			_view = std::make_unique<Viewport>();
-			_view->SetViewportRect(Recti(0, 0, w, h));
+			_view->SetViewportRect(bounds);
+			_view->SetScissorRect(bounds);
+			// The device clear of a screen pass covers the whole screen, which would wipe the other
+			// players' already-drawn regions in splitscreen; the screen buffer is cleared once per frame
+			// by the backend instead
+			_view->SetClearMode(Viewport::ClearMode::Never);
 #else
 			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
 			_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::None);
@@ -49,7 +56,8 @@ namespace Jazz2::Rendering
 			_view->SetRootNode(sceneNode);
 		} else {
 #if !defined(RHI_CAP_POSTPROCESSING)
-			_view->SetViewportRect(Recti(0, 0, w, h));
+			_view->SetViewportRect(bounds);
+			_view->SetScissorRect(bounds);
 #else
 			_view->RemoveAllTextures();
 			_viewTexture->Init(nullptr, Texture::Format::RGB8, w, h);

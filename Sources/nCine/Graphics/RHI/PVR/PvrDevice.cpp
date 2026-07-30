@@ -7,6 +7,7 @@
 #include "../../../../Main.h"
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -72,6 +73,26 @@ namespace nCine::RHI::PVR
 		inline std::uint32_t PackArgb(std::uint8_t r, std::uint8_t g, std::uint8_t b, std::uint8_t a)
 		{
 			return (std::uint32_t(a) << 24) | (std::uint32_t(r) << 16) | (std::uint32_t(g) << 8) | std::uint32_t(b);
+		}
+
+		// Clamps one screen-space quad edge pair (a..b with linearly mapped texture coordinates ua..ub)
+		// into [lo, hi]; returns false when the whole span lies outside. Works for either edge direction.
+		bool ClipQuadEdge(float& a, float& b, float& ua, float& ub, float lo, float hi)
+		{
+			if ((a <= lo && b <= lo) || (a >= hi && b >= hi)) {
+				return false;
+			}
+			const float d = b - a;
+			if (d != 0.0f) {
+				const float du = (ub - ua) / d;
+				const float na = (a < lo ? lo : (a > hi ? hi : a));
+				const float nb = (b < lo ? lo : (b > hi ? hi : b));
+				ua += (na - a) * du;
+				ub += (nb - b) * du;
+				a = na;
+				b = nb;
+			}
+			return true;
 		}
 
 		// Submits one quad to the open translucent list as a 4-vertex strip. The corner order matches the
@@ -252,7 +273,13 @@ namespace nCine::RHI::PVR
 
 	PvrDevice::ScissorState PvrDevice::GetScissorState() { return scissor_; }
 	void PvrDevice::SetScissorState(const ScissorState& state) { scissor_ = state; }
-	void PvrDevice::SetScissor(const Recti& rect) { scissor_.Rect = rect; }
+	void PvrDevice::SetScissor(const Recti& rect)
+	{
+		// Same contract as the GL device: setting a rect also enables the test (callers like
+		// RenderCommand and Viewport rely on it and restore via SetScissorState afterwards)
+		scissor_.Enabled = true;
+		scissor_.Rect = rect;
+	}
 	void PvrDevice::SetScissorTestEnabled(bool enabled) { scissor_.Enabled = enabled; }
 
 	Recti PvrDevice::GetViewport() { return viewport_; }
@@ -375,6 +402,13 @@ namespace nCine::RHI::PVR
 		if (paletteTexture_ == texture) {
 			paletteTexture_ = nullptr;
 		}
+		// Drop palette banks built from the destroyed palette so a stale pointer can never match
+		for (std::uint32_t i = 0; i < MaxPaletteBanks; i++) {
+			if (paletteBanks_[i].Palette == texture) {
+				paletteBanks_[i].PaletteOffset = -1;
+				paletteBanks_[i].Palette = nullptr;
+			}
+		}
 	}
 
 	const PvrTexture* PvrDevice::GetBoundTexture(std::uint32_t unit)
@@ -422,16 +456,22 @@ namespace nCine::RHI::PVR
 		}
 		paletteGeneration_++;
 		for (std::uint32_t i = 0; i < MaxPaletteBanks; i++) {
-			if (paletteBanks_[i].PaletteRow >= firstRow && paletteBanks_[i].PaletteRow < firstRow + rowCount) {
-				paletteBanks_[i].PaletteRow = -1;
+			if (paletteBanks_[i].PaletteOffset >= (firstRow - 1) * 256 && paletteBanks_[i].PaletteOffset < (firstRow + rowCount) * 256) {
+				paletteBanks_[i].PaletteOffset = -1;
 			}
 		}
 	}
 
-	std::int32_t PvrDevice::AcquirePaletteBankForRow(std::int32_t paletteRow)
+	std::int32_t PvrDevice::AcquirePaletteBankForRow(const PvrTexture* palette, std::int32_t paletteOffset)
 	{
-		if (paletteTexture_ == nullptr || paletteTexture_->GetPixels() == nullptr ||
-			paletteRow < 0 || paletteRow >= paletteTexture_->GetHeight()) {
+		// The offset is a flat index into the palette texture and does not need to be row-aligned
+		// (e.g. the gem gradients pack two palettes into a single 256-entry row). The palette is usually
+		// the registered global one, but effects like the profile character previews bind their own
+		// recolored palette texture instead.
+		const std::int32_t maxOffset = palette != nullptr
+			? palette->GetWidth() * palette->GetHeight() - 256 : 0;
+		if (palette == nullptr || palette->GetPixels() == nullptr ||
+			paletteOffset < 0 || paletteOffset > maxOffset) {
 			return -1;
 		}
 
@@ -441,7 +481,8 @@ namespace nCine::RHI::PVR
 		std::uint32_t oldestUse = UINT32_MAX;
 		std::int32_t oldestBank = 0;
 		for (std::uint32_t i = 0; i < MaxPaletteBanks; i++) {
-			if (paletteBanks_[i].PaletteRow == paletteRow) {
+			if (paletteBanks_[i].PaletteOffset == paletteOffset && paletteBanks_[i].Palette == palette &&
+				paletteBanks_[i].PaletteVersion == palette->GetContentVersion()) {
 				bank = std::int32_t(i);
 				break;
 			}
@@ -453,15 +494,17 @@ namespace nCine::RHI::PVR
 
 		if (bank < 0) {
 			bank = oldestBank;
-			const std::uint32_t* row = reinterpret_cast<const std::uint32_t*>(
-				paletteTexture_->GetPixels() + std::size_t(paletteRow) * paletteTexture_->GetStrideBytes());
+			const std::uint32_t* entries = reinterpret_cast<const std::uint32_t*>(
+				palette->GetPixels()) + paletteOffset;
 			for (std::int32_t i = 0; i < 256; i++) {
-				const std::uint32_t rgba = row[i];
+				const std::uint32_t rgba = entries[i];
 				pvr_set_pal_entry(std::uint32_t(bank) * 256 + std::uint32_t(i),
 					PackArgb(std::uint8_t(rgba & 0xFF), std::uint8_t((rgba >> 8) & 0xFF),
 						std::uint8_t((rgba >> 16) & 0xFF), std::uint8_t((rgba >> 24) & 0xFF)));
 			}
-			paletteBanks_[bank].PaletteRow = paletteRow;
+			paletteBanks_[bank].PaletteOffset = paletteOffset;
+			paletteBanks_[bank].Palette = palette;
+			paletteBanks_[bank].PaletteVersion = palette->GetContentVersion();
 		}
 
 		paletteBanks_[bank].LastUse = paletteUseCounter_;
@@ -714,6 +757,17 @@ namespace nCine::RHI::PVR
 			return;
 		}
 
+		// The palette to remap with is whatever the material bound to the palette sampler (e.g. the
+		// recolored preview palettes of the profile menu); the registered global palette is the fallback
+		const PvrTexture* paletteTex = nullptr;
+		if (isPaletteRemap) {
+			const std::int32_t paletteUnit = samplerUnit("uTexturePalette", 1);
+			paletteTex = (std::uint32_t(paletteUnit) < MaxTextureUnits ? boundTextures_[paletteUnit] : nullptr);
+			if (paletteTex == nullptr || paletteTex == texture) {
+				paletteTex = paletteTexture_;
+			}
+		}
+
 		EnsureScene();
 		if (sceneTarget_ == SceneTarget::None) {
 			return;
@@ -746,6 +800,20 @@ namespace nCine::RHI::PVR
 		// what the sampling passes already expect.
 		const bool screenPass = (currentRenderTarget_ == nullptr);
 
+		// The PVR rasterizer has no scissor for the general case, so scissored quads are clipped
+		// geometrically. The rect maps to raster coordinates the same way the vertices do (screen passes
+		// mirror NDC, so the engine rect's Y addresses raster rows directly - see the GX device); only
+		// screen passes are clipped, which covers every scissor user on this tier (menu clipping,
+		// splitscreen viewports)
+		const bool clipActive = (scissor_.Enabled && screenPass);
+		float clipX0 = 0.0f, clipY0 = 0.0f, clipX1 = 0.0f, clipY1 = 0.0f;
+		if (clipActive) {
+			clipX0 = float(scissor_.Rect.X) * scaleX + offsetX;
+			clipY0 = float(scissor_.Rect.Y) * scaleY + offsetY;
+			clipX1 = float(scissor_.Rect.X + scissor_.Rect.W) * scaleX + offsetX;
+			clipY1 = float(scissor_.Rect.Y + scissor_.Rect.H) * scaleY + offsetY;
+		}
+
 		for (std::int32_t k = 0; k < numInstances; k++) {
 			const std::uint8_t* inst = blockData + std::size_t(k) * (batched ? instanceStride : 0);
 
@@ -771,19 +839,20 @@ namespace nCine::RHI::PVR
 				if (isPaletteRemap && texture->IsIndexed()) {
 					float palOffset = 0.0f;
 					std::memcpy(&palOffset, inst + kPaletteOffsetOffset, sizeof(palOffset));
-					bank = AcquirePaletteBankForRow(std::int32_t(palOffset + 0.5f) / 256);
+					bank = AcquirePaletteBankForRow(paletteTex, std::int32_t(palOffset + 0.5f));
 					if (bank < 0) {
 						bank = 0;
 					}
 					vram = texture->GetVramPointer();
 					format = texture->GetVramFormat() | PVR_TXRFMT_8BPP_PAL(std::uint32_t(bank));
-				} else if (isPaletteRemap && texture->NeedsPaletteBake() && paletteTexture_ != nullptr && paletteTexture_->GetPixels() != nullptr) {
+				} else if (isPaletteRemap && texture->NeedsPaletteBake() && paletteTex != nullptr && paletteTex->GetPixels() != nullptr) {
 					float palOffset = 0.0f;
 					std::memcpy(&palOffset, inst + kPaletteOffsetOffset, sizeof(palOffset));
-					const std::uint32_t paletteRow = std::uint32_t(std::int32_t(palOffset + 0.5f) / 256);
-					const std::uint32_t* row = reinterpret_cast<const std::uint32_t*>(
-						paletteTexture_->GetPixels() + std::size_t(paletteRow) * paletteTexture_->GetStrideBytes());
-					vram = texture->EnsureBakedArgb4444(row, paletteRow, paletteGeneration_);
+					const std::uint32_t paletteOffset = std::uint32_t(std::int32_t(palOffset + 0.5f));
+					const std::uint32_t* entries = reinterpret_cast<const std::uint32_t*>(
+						paletteTex->GetPixels()) + paletteOffset;
+					vram = texture->EnsureBakedArgb4444(entries, paletteOffset,
+						(paletteTex == paletteTexture_ ? paletteGeneration_ : paletteTex->GetContentVersion()), paletteTex);
 					format = PVR_TXRFMT_ARGB4444 | PVR_TXRFMT_TWIDDLED;
 				} else {
 					vram = texture->GetVramPointer();
@@ -835,6 +904,36 @@ namespace nCine::RHI::PVR
 				py[i] = ((screenPass ? (ndcY + 1.0f) : (1.0f - ndcY)) * 0.5f * float(viewport.H) + float(viewport.Y)) * scaleY + offsetY;
 				pu[i] = (ax * texRect[0] + texRect[1]) * uvScaleU;
 				pvv[i] = (ay * texRect[2] + texRect[3]) * uvScaleV;
+			}
+
+			if (clipActive) {
+				// Corners 2/3 share the left edge and 0/1 the right one (ax); 0/2 share the top edge and
+				// 1/3 the bottom one (ay) - see the corner synthesis above
+				const bool axisAligned = (px[0] == px[1] && px[2] == px[3] && py[0] == py[2] && py[1] == py[3]);
+				if (axisAligned) {
+					float xA = px[2], xB = px[0], uA = pu[2], uB = pu[0];
+					if (!ClipQuadEdge(xA, xB, uA, uB, clipX0, clipX1)) {
+						continue;
+					}
+					px[2] = px[3] = xA; px[0] = px[1] = xB;
+					pu[2] = pu[3] = uA; pu[0] = pu[1] = uB;
+					float yA = py[0], yB = py[1], vA = pvv[0], vB = pvv[1];
+					if (!ClipQuadEdge(yA, yB, vA, vB, clipY0, clipY1)) {
+						continue;
+					}
+					py[0] = py[2] = yA; py[1] = py[3] = yB;
+					pvv[0] = pvv[2] = vA; pvv[1] = pvv[3] = vB;
+				} else {
+					// Rotated quad: conservative bounding-box reject only (exact clipping of rotated
+					// sprites is not worth it for the scissor users on this tier)
+					const float minX = std::min(std::min(px[0], px[1]), std::min(px[2], px[3]));
+					const float maxX = std::max(std::max(px[0], px[1]), std::max(px[2], px[3]));
+					const float minY = std::min(std::min(py[0], py[1]), std::min(py[2], py[3]));
+					const float maxY = std::max(std::max(py[0], py[1]), std::max(py[2], py[3]));
+					if (maxX <= clipX0 || minX >= clipX1 || maxY <= clipY0 || minY >= clipY1) {
+						continue;
+					}
+				}
 			}
 
 			if (effect == PvrEffect::Colorized || effect == PvrEffect::BatchedColorized) {

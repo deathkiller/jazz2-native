@@ -144,7 +144,7 @@ namespace nCine::RHI::PVR
 		// RG8 keeps only the linear store; the ARGB4444 copy is baked per palette row on demand
 	}
 
-	pvr_ptr_t PvrTexture::EnsureBakedArgb4444(const std::uint32_t* paletteRow, std::uint32_t paletteRowIndex, std::uint32_t paletteGeneration)
+	pvr_ptr_t PvrTexture::EnsureBakedArgb4444(const std::uint32_t* paletteRow, std::uint32_t paletteRowIndex, std::uint32_t paletteGeneration, const void* palette)
 	{
 		if (pixels_.empty() || uploadFormat_ != PixelFormat::RG8 || paletteRow == nullptr) {
 			return nullptr;
@@ -152,7 +152,7 @@ namespace nCine::RHI::PVR
 		const std::uint32_t currentScene = PvrDevice::GetSceneCounter();
 		BakedSlot* slot = nullptr;
 		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
-			if (bakedSlots_[i].Valid && bakedSlots_[i].PaletteRow == paletteRowIndex) {
+			if (bakedSlots_[i].Valid && bakedSlots_[i].PaletteRow == paletteRowIndex && bakedSlots_[i].Palette == palette) {
 				if (bakedSlots_[i].PaletteGeneration == paletteGeneration && bakedSlots_[i].ContentVersion == contentVersion_) {
 					bakedSlots_[i].LastUsedScene = currentScene;
 					return bakedSlots_[i].Vram;
@@ -217,6 +217,7 @@ namespace nCine::RHI::PVR
 		slot->PaletteGeneration = paletteGeneration;
 		slot->ContentVersion = contentVersion_;
 		slot->LastUsedScene = currentScene;
+		slot->Palette = palette;
 		return slot->Vram;
 	}
 
