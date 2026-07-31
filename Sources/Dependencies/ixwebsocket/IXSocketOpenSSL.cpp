@@ -14,11 +14,6 @@
 #include <cassert>
 #include <errno.h>
 #include <vector>
-#ifdef _WIN32
-#include <shlwapi.h>
-#else
-#include <fnmatch.h>
-#endif
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 #include <openssl/x509v3.h>
 #endif
@@ -77,6 +72,58 @@ namespace
         }
 
         return true;
+    }
+}
+#endif
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+namespace
+{
+    // Host names are case-insensitive, but always ASCII (internationalized ones are punycode
+    // encoded), so the locale-dependent std::tolower() is deliberately not used here
+    char toLowerAscii(char c)
+    {
+        return (c >= 'A' && c <= 'Z') ? (char) (c - 'A' + 'a') : c;
+    }
+
+    // Case-insensitive wildcard match, supporting the `*` and `?` patterns that can appear
+    // in a certificate host name. Available on every platform to keep the behaviour identical
+    bool matchPattern(const char* text, const char* pattern)
+    {
+        const char* textBacktrack = nullptr;
+        const char* patternBacktrack = nullptr;
+
+        while (*text != '\0')
+        {
+            if (*pattern == '*')
+            {
+                // Skip the wildcard and remember where to resume if the rest doesn't match
+                patternBacktrack = ++pattern;
+                textBacktrack = text;
+            }
+            else if (*pattern == '?' || toLowerAscii(*pattern) == toLowerAscii(*text))
+            {
+                ++pattern;
+                ++text;
+            }
+            else if (patternBacktrack != nullptr)
+            {
+                // Let the last wildcard consume one more character
+                pattern = patternBacktrack;
+                text = ++textBacktrack;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        while (*pattern == '*')
+        {
+            ++pattern;
+        }
+
+        return (*pattern == '\0');
     }
 }
 #endif
@@ -293,12 +340,7 @@ namespace ix
         return true;
 #else
 
-#ifdef _WIN32
-        return PathMatchSpecA(host.c_str(), pattern);
-#else
-        return fnmatch(pattern, host.c_str(), 0) != FNM_NOMATCH;
-#endif
-
+        return matchPattern(host.c_str(), pattern);
 #endif
     }
 
