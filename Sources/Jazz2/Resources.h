@@ -47,6 +47,19 @@ namespace Jazz2::Resources
 	DEATH_ENUM_FLAGS(GenericGraphicResourceFlags);
 
 	/**
+		@brief Placement of a single frame in a tightly packed sprite sheet
+
+		@ref X, @ref Y, @ref W and @ref H are the frame's area in the sheet. The offsets say where that area
+		begins inside the frame's logical cell, which is what keeps the animation aligned: trimming away the
+		transparent margin moves the content, and the offset moves the hotspot with it.
+	*/
+	struct FrameRect
+	{
+		std::uint16_t X, Y, W, H;
+		std::int16_t OffsetX, OffsetY;
+	};
+
+	/**
 		@brief Shared graphic resource
 		
 		Loaded, cached representation of a sprite sheet: the diffuse texture (optionally indexed), an optional
@@ -77,9 +90,65 @@ namespace Jazz2::Resources
 		Vector2i Coldspot;
 		/** @brief Optional gunspot */
 		Vector2i Gunspot;
+		/**
+			@brief Where each frame sits in the sheet, empty when the frames form a regular grid
+
+			Sprite sheets can be packed two ways. The regular grid gives every frame a cell of @ref
+			FrameDimensions, which wastes the difference between each frame's own extent and the largest one
+			in the animation - on a sheet padded to power-of-two dimensions that easily doubles its size.
+			When the frames are packed tightly instead, each one keeps only the space its opaque pixels need
+			and this table says where it ended up; @ref GetFrameRect() and @ref GetFrameAnchor() hide the
+			difference from everything that draws a frame.
+		*/
+		SmallVector<FrameRect, 0> FrameRects;
+		/** @brief Byte distance between two rows of @ref Mask (the sheet width) */
+		std::int32_t MaskStride;
 
 		/** @brief Creates a new instance */
 		GenericGraphicResource() noexcept;
+
+		/** @brief Returns the byte distance between two rows of @ref Mask */
+		inline std::int32_t GetMaskStride() const {
+			return (MaskStride > 0 ? MaskStride : FrameConfiguration.X * FrameDimensions.X);
+		}
+		/** @brief Returns the area the given frame occupies in the sheet, in pixels */
+		inline Recti GetFrameRect(std::int32_t frame) const {
+			if (!FrameRects.empty()) {
+				const FrameRect& rect = FrameRects[frame < (std::int32_t)FrameRects.size() ? frame : 0];
+				return Recti(rect.X, rect.Y, rect.W, rect.H);
+			}
+			const std::int32_t columns = (FrameConfiguration.X > 0 ? FrameConfiguration.X : 1);
+			return Recti((frame % columns) * FrameDimensions.X, (frame / columns) * FrameDimensions.Y,
+				FrameDimensions.X, FrameDimensions.Y);
+		}
+		/**
+			@brief Returns where the given frame's area begins inside its logical cell
+
+			Anything that positions a frame by aligning @ref FrameDimensions should add this, so trimming the
+			transparent margin away does not move the frame on screen.
+		*/
+		inline Vector2i GetFrameOffset(std::int32_t frame) const {
+			if (!FrameRects.empty()) {
+				const FrameRect& rect = FrameRects[frame < (std::int32_t)FrameRects.size() ? frame : 0];
+				return Vector2i(rect.OffsetX, rect.OffsetY);
+			}
+			return Vector2i(0, 0);
+		}
+		/**
+			@brief Returns the hotspot of the given frame, relative to the frame's own area
+
+			Flipping mirrors the texture inside the quad that the frame is drawn on, so a flipped frame needs
+			its hotspot mirrored within that same area. For a regular grid the area is the whole cell, which
+			is why mirroring within @ref FrameDimensions is right there; for a packed frame the area is only
+			the space its pixels occupy, and mirroring within the cell would displace it by the trimmed
+			margin. Both cases fall out of the same expression.
+		*/
+		inline Vector2i GetFrameAnchor(std::int32_t frame, bool flippedX = false, bool flippedY = false) const {
+			const Recti rect = GetFrameRect(frame);
+			const Vector2i offset = GetFrameOffset(frame);
+			return Vector2i(flippedX ? (offset.X + rect.W - Hotspot.X) : (Hotspot.X - offset.X),
+				flippedY ? (offset.Y + rect.H - Hotspot.Y) : (Hotspot.Y - offset.Y));
+		}
 	};
 
 	/**

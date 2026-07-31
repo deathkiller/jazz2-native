@@ -1800,12 +1800,11 @@ namespace Jazz2
 				debris.Time = 180.0f;
 
 				std::uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
-				std::uint32_t col = curAnimFrame % resBase->FrameConfiguration.X;
-				std::uint32_t row = curAnimFrame / resBase->FrameConfiguration.X;
-				debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
-				debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
-				debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
-				debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
+				Recti frameRect = resBase->GetFrameRect(curAnimFrame);
+				debris.TexScaleX = (float(frameRect.W) / float(texSize.X));
+				debris.TexBiasX = (float(frameRect.X) / float(texSize.X));
+				debris.TexScaleY = (float(frameRect.H) / float(texSize.Y));
+				debris.TexBiasY = (float(frameRect.Y) / float(texSize.Y));
 
 				debris.DiffuseTexture = resBase->TextureDiffuse.get();
 				debris.PaletteOffset = paletteOffset;

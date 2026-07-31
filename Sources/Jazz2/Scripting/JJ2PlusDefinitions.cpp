@@ -202,17 +202,18 @@ namespace Jazz2::Scripting
 				if (scaleX < 0.0f) { flipX = !flipX; scaleX = -scaleX; }
 				if (scaleY < 0.0f) { flipY = true; scaleY = -scaleY; }
 
-				Vector2f size(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
+				const Recti spriteRect = base->GetFrameRect(frame);
+				Vector2f size(spriteRect.W * scaleX, spriteRect.H * scaleY);
 				// Anchor the sprite at its hotspot, so the given coordinates are where the hotspot lands
-				Vector2f pos(x - base->Hotspot.X * scaleX, y - base->Hotspot.Y * scaleY);
+				const Vector2i frameAnchor = base->GetFrameAnchor(frame, flipX, flipY);
+				Vector2f pos(x - frameAnchor.X * scaleX, y - frameAnchor.Y * scaleY);
 
 				Vector2i texSize = base->TextureDiffuse->GetSize();
-				std::int32_t col = frame % base->FrameConfiguration.X;
-				std::int32_t row = frame / base->FrameConfiguration.X;
-				float wFrac = (float)base->FrameDimensions.X / texSize.X;
-				float hFrac = (float)base->FrameDimensions.Y / texSize.Y;
-				Vector4f texCoords(wFrac, (float)(base->FrameDimensions.X * col) / texSize.X,
-					hFrac, (float)(base->FrameDimensions.Y * row) / texSize.Y);
+				const Recti& frameRect = spriteRect;
+				float wFrac = (float)frameRect.W / texSize.X;
+				float hFrac = (float)frameRect.H / texSize.Y;
+				Vector4f texCoords(wFrac, (float)frameRect.X / texSize.X,
+					hFrac, (float)frameRect.Y / texSize.Y);
 				if (flipX) { texCoords.X = -wFrac; texCoords.Y += wFrac; }
 				if (flipY) { texCoords.Z = -hFrac; texCoords.W += hFrac; }
 
@@ -276,17 +277,18 @@ namespace Jazz2::Scripting
 				}
 
 				_renderer.FrameConfiguration = base->FrameConfiguration;
+				_renderer.FrameSource = base;
 				_renderer.FrameDimensions = base->FrameDimensions;
 				_renderer.FirstFrame = 0;
 				_renderer.FrameCount = base->FrameCount;
 				_renderer.AnimDuration = base->AnimDuration;
 				_renderer.LoopMode = AnimationLoopMode::Loop;
 				_renderer.AnimTime = 0.0f;
-				_renderer.Hotspot.X = (float)(IsFacingLeft() ? (base->FrameDimensions.X - base->Hotspot.X) : base->Hotspot.X);
+				_renderer.Hotspot.X = (float)base->Hotspot.X;
 				_renderer.Hotspot.Y = (float)base->Hotspot.Y;
 				_renderer.setTexture(base->TextureDiffuse.get());
 				_renderer.SetIndexed((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed, 0);
-				_renderer.setAbsAnchorPoint(_renderer.Hotspot.X, _renderer.Hotspot.Y);
+				_renderer.UpdateAnchor();
 				_renderer.Initialize(Actors::ActorRendererType::Default);
 				// The renderer recomputes the visible frame each frame in its own OnUpdate (UpdateVisibleFrames is private)
 			}

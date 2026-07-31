@@ -86,13 +86,16 @@ namespace Jazz2::UI
 			Vector2f pos = Vector2f(ViewSize.X - size.X - 50.0f, ViewSize.Y - size.Y - 40.0f);
 
 			Vector2i texSize = base->TextureDiffuse->GetSize();
-			std::int32_t col = frame % base->FrameConfiguration.X;
-			std::int32_t row = frame / base->FrameConfiguration.X;
+			Recti frameRect = base->GetFrameRect(frame);
+			// A trimmed frame covers less than its cell, so it shifts into place instead of being stretched
+			Vector2i frameOffset = base->GetFrameOffset(frame);
+			size = Vector2f((float)frameRect.W, (float)frameRect.H);
+			pos += Vector2f((float)frameOffset.X, (float)frameOffset.Y);
 			Vector4f texCoords = Vector4f(
-				float(base->FrameDimensions.X) / float(texSize.X),
-				float(base->FrameDimensions.X * col) / float(texSize.X),
-				float(base->FrameDimensions.Y) / float(texSize.Y),
-				float(base->FrameDimensions.Y * row) / float(texSize.Y)
+				float(frameRect.W) / float(texSize.X),
+				float(frameRect.X) / float(texSize.X),
+				float(frameRect.H) / float(texSize.Y),
+				float(frameRect.Y) / float(texSize.Y)
 			);
 
 			Colorf color = Colorf(1.0f, 1.0f, 1.0f, (_owner->_darkMode ? 0.8f : 1.0f) * _owner->_transition);

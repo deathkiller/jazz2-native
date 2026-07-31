@@ -418,6 +418,8 @@ namespace Jazz2::Actors
 			Vector2i FrameConfiguration;
 			/** @brief Frame dimensions */
 			Vector2i FrameDimensions;
+			/** @brief Sheet the frames come from, or `nullptr` when the frames form a regular grid */
+			const Resources::GenericGraphicResource* FrameSource;
 			/** @brief Animation loop mode */
 			AnimationLoopMode LoopMode;
 			/** @brief Frame offset */
@@ -430,7 +432,7 @@ namespace Jazz2::Actors
 			float AnimTime;
 			/** @brief Current animation frame */
 			std::int32_t CurrentFrame;
-			/** @brief Hotspot */
+			/** @brief Hotspot of the current animation, as authored (never mirrored - see UpdateAnchor()) */
 			Vector2f Hotspot;
 
 			/** @brief Initializes the renderer to the specified renderer type */
@@ -461,6 +463,16 @@ namespace Jazz2::Actors
 			bool IsAnimationRunning();
 			/** @brief Returns active renderer type */
 			ActorRendererType GetRendererType() const;
+
+			/**
+				@brief Points the sprite's anchor at the hotspot of the frame being shown
+
+				Flipping mirrors the texture inside the sprite's quad, so the hotspot has to be mirrored with
+				it. The quad covers the frame's own area, which for a tightly packed sheet is smaller than the
+				animation's cell, so the mirroring has to happen within that area - doing it within the cell
+				(as a regular grid can) would displace every flipped frame by the trimmed margin.
+			*/
+			void UpdateAnchor();
 
 		protected:
 			void textureHasChanged(Texture* newTexture) override;

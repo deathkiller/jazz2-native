@@ -109,16 +109,15 @@ namespace Jazz2::Actors::Solid
 					float scale = _pieces[i].Scale;
 
 					std::int32_t curAnimFrame = chainAnim->FrameOffset + (i % chainAnim->FrameCount);
-					std::int32_t col = curAnimFrame % chainAnim->Base->FrameConfiguration.X;
-					std::int32_t row = curAnimFrame / chainAnim->Base->FrameConfiguration.X;
-					float texScaleX = (float(chainAnim->Base->FrameDimensions.X) / float(texSize.X));
-					float texBiasX = (float(chainAnim->Base->FrameDimensions.X * col) / float(texSize.X));
-					float texScaleY = (float(chainAnim->Base->FrameDimensions.Y) / float(texSize.Y));
-					float texBiasY = (float(chainAnim->Base->FrameDimensions.Y * row) / float(texSize.Y));
+					Recti frameRect = chainAnim->Base->GetFrameRect(curAnimFrame);
+					float texScaleX = (float(frameRect.W) / float(texSize.X));
+					float texBiasX = (float(frameRect.X) / float(texSize.X));
+					float texScaleY = (float(frameRect.H) / float(texSize.Y));
+					float texBiasY = (float(frameRect.Y) / float(texSize.Y));
 
 					auto instanceBlock = command->GetInstanceBlock();
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue((float)chainAnim->Base->FrameDimensions.X, (float)chainAnim->Base->FrameDimensions.Y);
+					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue((float)frameRect.W, (float)frameRect.H);
 					if (_shade) {
 						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector((scale < 1.0f ? Colorf(scale, scale, scale, 1.0f) : Colorf::White).Data());
 					} else {
@@ -126,7 +125,7 @@ namespace Jazz2::Actors::Solid
 					}
 
 					auto& pos = _pieces[i].Pos;
-					command->SetTransformation(Matrix4x4f::Translation(pos.X - chainAnim->Base->FrameDimensions.X / 2, pos.Y - chainAnim->Base->FrameDimensions.Y / 2, 0.0f));
+					command->SetTransformation(Matrix4x4f::Translation(pos.X - frameRect.W / 2, pos.Y - frameRect.H / 2, 0.0f));
 					command->SetLayer(_originLayer + (uint16_t)(scale * 20));
 					resolver.BindSpritePalette(*command, *chainAnim->Base->TextureDiffuse.get(), chainIndexed, chainAnim->PaletteOffset);
 

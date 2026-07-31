@@ -1,5 +1,10 @@
 ﻿#include "Main.h"
 
+// TODO: Temporary test hook - define one of these to boot straight into a level or a menu section,
+// which is the only way to reach them on the consoles (no arguments, no way to drive the menu)
+//#define JAZZ2_TEST_BOOT_LEVEL "prince/01_castle1"
+//#define JAZZ2_TEST_BOOT_SECTION EpisodeSelectSection
+
 #if defined(DEATH_TARGET_ANDROID)
 #	include "nCine/Backends/Android/AndroidApplication.h"
 #	include "nCine/Backends/Android/AndroidJniHelper.h"
@@ -33,6 +38,9 @@
 #include "Jazz2/UI/LoadingHandler.h"
 #include "Jazz2/UI/Menu/MainMenu.h"
 #include "Jazz2/UI/Menu/HighscoresSection.h"
+#include "Jazz2/UI/Menu/EpisodeSelectSection.h"
+#include "Jazz2/UI/Menu/UserProfileOptionsSection.h"
+#include "Jazz2/UI/Menu/BeginSection.h"
 #include "Jazz2/UI/Menu/SimpleMessageSection.h"
 
 #include "Jazz2/Compatibility/JJ2Anims.h"
@@ -477,6 +485,28 @@ void GameEventHandler::OnInitialize()
 		}
 #			endif
 #		endif
+	}
+#	endif
+
+	// TODO: Temporary test hook for the console builds, which have no way to pass arguments or drive the
+	// menu from a test harness. Define one of these to boot straight into a level or a menu section.
+#	if defined(JAZZ2_TEST_BOOT_LEVEL)
+	{
+		WaitForVerify();
+		LevelInitialization levelInit(JAZZ2_TEST_BOOT_LEVEL, GameDifficulty::Normal,
+			PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
+		LOGI("Test hook: booting into level \"{}\"", JAZZ2_TEST_BOOT_LEVEL);
+		ChangeLevel(std::move(levelInit));
+		return;
+	}
+#	elif defined(JAZZ2_TEST_BOOT_SECTION)
+	{
+		WaitForVerify();
+		LOGI("Test hook: booting into the main menu section");
+		auto mainMenu = std::make_shared<Menu::MainMenu>(this, false);
+		mainMenu->SwitchToSection<Menu::JAZZ2_TEST_BOOT_SECTION>();
+		SetStateHandler(std::move(mainMenu));
+		return;
 	}
 #	endif
 

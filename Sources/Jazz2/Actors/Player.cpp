@@ -1412,12 +1412,11 @@ namespace Jazz2::Actors
 
 				Vector2i texSize = res->Base->TextureDiffuse->GetSize();
 				std::int32_t curAnimFrame = res->FrameOffset + (_weaponFlareFrame % res->FrameCount);
-				std::int32_t col = curAnimFrame % res->Base->FrameConfiguration.X;
-				std::int32_t row = curAnimFrame / res->Base->FrameConfiguration.X;
-				float texScaleX = (float(res->Base->FrameDimensions.X) / float(texSize.X));
-				float texBiasX = (float(res->Base->FrameDimensions.X * col) / float(texSize.X));
-				float texScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
-				float texBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
+				Recti frameRect = res->Base->GetFrameRect(curAnimFrame);
+				float texScaleX = (float(frameRect.W) / float(texSize.X));
+				float texBiasX = (float(frameRect.X) / float(texSize.X));
+				float texScaleY = (float(frameRect.H) / float(texSize.Y));
+				float texBiasY = (float(frameRect.Y) / float(texSize.Y));
 
 				float scaleY = std::max(_weaponFlareTime / 8.0f, 0.4f) * GetCharacterTraits(_playerType).WeaponFlareScaleY;
 
@@ -1593,12 +1592,11 @@ namespace Jazz2::Actors
 
 					Vector2i texSize = res->Base->TextureDiffuse->GetSize();
 					std::int32_t curAnimFrame = res->FrameOffset + ((std::int32_t)(frames * 0.24f) % res->FrameCount);
-					std::int32_t col = curAnimFrame % res->Base->FrameConfiguration.X;
-					std::int32_t row = curAnimFrame / res->Base->FrameConfiguration.X;
-					float texScaleX = (float(res->Base->FrameDimensions.X) / float(texSize.X));
-					float texBiasX = (float(res->Base->FrameDimensions.X * col) / float(texSize.X));
-					float texScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
-					float texBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
+					Recti frameRect = res->Base->GetFrameRect(curAnimFrame);
+					float texScaleX = (float(frameRect.W) / float(texSize.X));
+					float texBiasX = (float(frameRect.X) / float(texSize.X));
+					float texScaleY = (float(frameRect.H) / float(texSize.Y));
+					float texBiasY = (float(frameRect.Y) / float(texSize.Y));
 
 					float shieldPosX = _pos.X - res->Base->FrameDimensions.X * shieldScale * 0.5f;
 					float shieldPosY = _pos.Y - res->Base->FrameDimensions.Y * shieldScale * 0.5f;

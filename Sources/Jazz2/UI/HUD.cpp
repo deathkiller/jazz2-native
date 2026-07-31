@@ -1146,17 +1146,21 @@ namespace Jazz2::UI
 		}
 
 		GenericGraphicResource* base = res->Base;
-		Vector2f size = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
-		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x, y), size);
+		Vector2f cellSize = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
+		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x, y), cellSize);
 
 		Vector2i texSize = base->TextureDiffuse->GetSize();
-		std::int32_t col = frame % base->FrameConfiguration.X;
-		std::int32_t row = frame / base->FrameConfiguration.X;
+		Recti frameRect = base->GetFrameRect(frame);
+		// A trimmed frame covers less than its cell, so it keeps the cell's alignment and shifts
+		// into place instead of being stretched over the whole cell
+		Vector2i frameOffset = base->GetFrameOffset(frame);
+		Vector2f size = Vector2f(frameRect.W * scaleX, frameRect.H * scaleY);
+		adjustedPos += Vector2f(frameOffset.X * scaleX, frameOffset.Y * scaleY);
 		Vector4f texCoords = Vector4f(
-			float(base->FrameDimensions.X) / float(texSize.X),
-			float(base->FrameDimensions.X * col) / float(texSize.X),
-			float(base->FrameDimensions.Y) / float(texSize.Y),
-			float(base->FrameDimensions.Y * row) / float(texSize.Y)
+			float(frameRect.W) / float(texSize.X),
+			float(frameRect.X) / float(texSize.X),
+			float(frameRect.H) / float(texSize.Y),
+			float(frameRect.Y) / float(texSize.Y)
 		);
 
 		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);
@@ -1192,17 +1196,21 @@ namespace Jazz2::UI
 			frame = res->FrameOffset + ((std::int32_t)(AnimTime * res->FrameCount / res->AnimDuration) % res->FrameCount);
 		}
 
-		Vector2f size = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
-		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x, y), size);
+		Vector2f cellSize = Vector2f(base->FrameDimensions.X * scaleX, base->FrameDimensions.Y * scaleY);
+		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x, y), cellSize);
 
 		Vector2i texSize = base->TextureDiffuse->GetSize();
-		std::int32_t col = frame % base->FrameConfiguration.X;
-		std::int32_t row = frame / base->FrameConfiguration.X;
+		Recti frameRect = base->GetFrameRect(frame);
+		// A trimmed frame covers less than its cell, so it keeps the cell's alignment and shifts
+		// into place instead of being stretched over the whole cell
+		Vector2i frameOffset = base->GetFrameOffset(frame);
+		Vector2f size = Vector2f(frameRect.W * scaleX, frameRect.H * scaleY);
+		adjustedPos += Vector2f(frameOffset.X * scaleX, frameOffset.Y * scaleY);
 		Vector4f texCoords = Vector4f(
-			float(base->FrameDimensions.X) / float(texSize.X),
-			float(base->FrameDimensions.X * col) / float(texSize.X),
-			float(base->FrameDimensions.Y) / float(texSize.Y),
-			float(base->FrameDimensions.Y * row) / float(texSize.Y)
+			float(frameRect.W) / float(texSize.X),
+			float(frameRect.X) / float(texSize.X),
+			float(frameRect.H) / float(texSize.Y),
+			float(frameRect.Y) / float(texSize.Y)
 		);
 
 		auto command = RentRenderCommand();
@@ -1251,17 +1259,20 @@ namespace Jazz2::UI
 		}
 
 		GenericGraphicResource* base = res->Base;
-		Vector2f size = Vector2f(base->FrameDimensions.X * clipX, base->FrameDimensions.Y * clipY);
+		// Aligned by the full cell, then shifted to where this frame's area begins in it (see GetFrameOffset)
 		Vector2f adjustedPos = ApplyAlignment(align, Vector2f(x, y), base->FrameDimensions.As<float>());
+		Recti clippedRect = base->GetFrameRect(frame);
+		Vector2i clippedOffset = base->GetFrameOffset(frame);
+		Vector2f size = Vector2f(clippedRect.W * clipX, clippedRect.H * clipY);
+		adjustedPos += Vector2f((float)clippedOffset.X, (float)clippedOffset.Y);
 
 		Vector2i texSize = base->TextureDiffuse->GetSize();
-		std::int32_t col = frame % base->FrameConfiguration.X;
-		std::int32_t row = frame / base->FrameConfiguration.X;
+		const Recti& frameRect = clippedRect;
 		Vector4f texCoords = Vector4f(
-			std::floor(float(base->FrameDimensions.X) * clipX) / float(texSize.X),
-			float(base->FrameDimensions.X * col) / float(texSize.X),
-			std::floor(float(base->FrameDimensions.Y) * clipY) / float(texSize.Y),
-			float(base->FrameDimensions.Y * row) / float(texSize.Y)
+			std::floor(float(frameRect.W) * clipX) / float(texSize.X),
+			float(frameRect.X) / float(texSize.X),
+			std::floor(float(frameRect.H) * clipY) / float(texSize.Y),
+			float(frameRect.Y) / float(texSize.Y)
 		);
 
 		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);

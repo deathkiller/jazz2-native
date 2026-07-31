@@ -105,16 +105,15 @@ namespace Jazz2::Actors::Collectibles
 					resolver.ConfigureSpriteShader(*command, indexed);
 
 					std::int32_t curAnimFrame = res->FrameOffset + (i % res->FrameCount);
-					std::int32_t col = curAnimFrame % res->Base->FrameConfiguration.X;
-					std::int32_t row = curAnimFrame / res->Base->FrameConfiguration.X;
-					float texScaleX = (float(res->Base->FrameDimensions.X) / float(texSize.X));
-					float texBiasX = (float(res->Base->FrameDimensions.X * col) / float(texSize.X));
-					float texScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
-					float texBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
+					Recti frameRect = res->Base->GetFrameRect(curAnimFrame);
+					float texScaleX = (float(frameRect.W) / float(texSize.X));
+					float texBiasX = (float(frameRect.X) / float(texSize.X));
+					float texScaleY = (float(frameRect.H) / float(texSize.Y));
+					float texBiasY = (float(frameRect.Y) / float(texSize.Y));
 
 					auto instanceBlock = command->GetInstanceBlock();
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(res->Base->FrameDimensions.X * _pieces[i].Scale, res->Base->FrameDimensions.Y * _pieces[i].Scale);
+					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(frameRect.W * _pieces[i].Scale, frameRect.H * _pieces[i].Scale);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, 0.7f).Data());
 
 					auto& pos = _pieces[i].Pos;

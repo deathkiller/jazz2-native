@@ -114,12 +114,11 @@ namespace Jazz2::Actors::Weapons
 							debris.Time = 60.0f;
 
 							std::int32_t curAnimFrame = ((_upgrades & 0x1) != 0 ? 2 : 0) + Random().Fast(0, 2);
-							std::int32_t col = curAnimFrame % resBase->FrameConfiguration.X;
-							std::int32_t row = curAnimFrame / resBase->FrameConfiguration.X;
-							debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
-							debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
-							debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
-							debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
+							Recti frameRect = resBase->GetFrameRect(curAnimFrame);
+							debris.TexScaleX = (float(frameRect.W) / float(texSize.X));
+							debris.TexBiasX = (float(frameRect.X) / float(texSize.X));
+							debris.TexScaleY = (float(frameRect.H) / float(texSize.Y));
+							debris.TexBiasY = (float(frameRect.Y) / float(texSize.Y));
 
 							debris.DiffuseTexture = resBase->TextureDiffuse.get();
 							// Recolor through the palette when the sprite is indexed (-1 = baked/RGBA, behavior unchanged)

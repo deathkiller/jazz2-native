@@ -279,6 +279,10 @@ namespace nCine::RHI::PVR
 		static PvrTexture* liveTail_;
 		PvrTexture* livePrev_;
 		PvrTexture* liveNext_;
+		// The scene this texture was last drawn in. NeverUsed marks one that has been uploaded but not
+		// drawn yet, which must stay evictable - during level loading the scene counter does not advance,
+		// so an untouched texture would otherwise look like part of the scene being assembled
+		static constexpr std::uint32_t NeverUsed = ~std::uint32_t(0);
 		std::uint32_t lastUsedScene_;
 
 		void Allocate(PixelFormat format, std::int32_t width, std::int32_t height);
@@ -299,10 +303,5 @@ namespace nCine::RHI::PVR
 			oldest ones are dropped and rebuilt when they are needed again.
 		*/
 		static pvr_ptr_t AllocateVram(std::size_t size, const PvrTexture* keepAlive);
-
-		// TODO: Temporary diagnostics for video memory usage
-		static std::size_t dbgTotalAllocated_;
-		static std::int32_t dbgAllocCount_;
-		std::size_t DbgVramBytes() const;
 	};
 }
