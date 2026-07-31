@@ -103,12 +103,24 @@ namespace nCine
 			static Matrix4x4 Translation(T xx, T yy, T zz);
 			/** @overload */
 			static Matrix4x4 Translation(const Vector3<T>& v);
+			// SH4 (Dreamcast) codegen note, which the rotation helpers below depend on: the negation of a
+			// sine *value* is lost wherever the result is consumed by arithmetic in the same optimized
+			// region - it survives neither a temporary, a volatile, nor a memory barrier - leaving the
+			// matrix symmetric, i.e. a shear along a screen diagonal instead of a rotation. It is exact at
+			// 0 degrees and worst at 45, so it only appears once something actually rotates. Two things
+			// avoid it together: taking the opposite-signed sine from the negated ANGLE (sin(-x)), and
+			// keeping these builders real calls so their result cannot be folded into the caller.
+#if defined(DEATH_TARGET_DREAMCAST)
+#	define DEATH_MATRIX_ROTATION_BUILDER DEATH_NEVER_INLINE
+#else
+#	define DEATH_MATRIX_ROTATION_BUILDER
+#endif
 			/** @brief Creates a rotation matrix around the X axis */
-			static Matrix4x4 RotationX(T radians);
+			DEATH_MATRIX_ROTATION_BUILDER static Matrix4x4 RotationX(T radians);
 			/** @brief Creates a rotation matrix around the Y axis */
-			static Matrix4x4 RotationY(T radians);
+			DEATH_MATRIX_ROTATION_BUILDER static Matrix4x4 RotationY(T radians);
 			/** @brief Creates a rotation matrix around the Z axis */
-			static Matrix4x4 RotationZ(T radians);
+			DEATH_MATRIX_ROTATION_BUILDER static Matrix4x4 RotationZ(T radians);
 			/** @brief Creates a non-uniform scaling matrix */
 			static Matrix4x4 Scaling(T xx, T yy, T zz);
 			/** @overload */
@@ -338,15 +350,28 @@ namespace nCine
 		}
 
 		template<class T>
+		// Not inlined on Dreamcast, and written over the flat storage rather than as four Vector4
+		// expressions: both keep the composition of a freshly built rotation from being folded into the
+		// caller, where its negated sine term loses its sign (see the note next to RotationZ's declaration).
+		// This is also the shape the software and PVR backends use to combine matrices.
+#if defined(DEATH_TARGET_DREAMCAST)
+		DEATH_NEVER_INLINE
+#endif
 		inline Matrix4x4<T> Matrix4x4<T>::operator*(const Matrix4x4& m2) const
 		{
-			const Matrix4x4& m1 = *this;
 			Matrix4x4 result;
-
-			result[0] = m1[0] * m2[0][0] + m1[1] * m2[0][1] + m1[2] * m2[0][2] + m1[3] * m2[0][3];
-			result[1] = m1[0] * m2[1][0] + m1[1] * m2[1][1] + m1[2] * m2[1][2] + m1[3] * m2[1][3];
-			result[2] = m1[0] * m2[2][0] + m1[1] * m2[2][1] + m1[2] * m2[2][2] + m1[3] * m2[2][3];
-			result[3] = m1[0] * m2[3][0] + m1[1] * m2[3][1] + m1[2] * m2[3][2] + m1[3] * m2[3][3];
+			const T* DEATH_RESTRICT a = Data();
+			const T* DEATH_RESTRICT b = m2.Data();
+			T* DEATH_RESTRICT out = result.Data();
+			for (std::int32_t col = 0; col < 4; col++) {
+				for (std::int32_t row = 0; row < 4; row++) {
+					out[col * 4 + row] =
+						a[0 * 4 + row] * b[col * 4 + 0] +
+						a[1 * 4 + row] * b[col * 4 + 1] +
+						a[2 * 4 + row] * b[col * 4 + 2] +
+						a[3 * 4 + row] * b[col * 4 + 3];
+				}
+			}
 
 			return result;
 		}
@@ -533,88 +558,40 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::RotateX(T radians)
 		{
-			Matrix4x4& m = *this;
-			const T m10 = m[1][0];
-			const T m20 = m[2][0];
-			const T m11 = m[1][1];
-			const T m21 = m[2][1];
-			const T m12 = m[1][2];
-			const T m22 = m[2][2];
-			const T m13 = m[1][3];
-			const T m23 = m[2][3];
-
-			const T c = cos(radians);
-			const T s = sin(radians);
-
-			m[1][0] = c * m10 + s * m20;
-			m[1][1] = c * m11 + s * m21;
-			m[1][2] = c * m12 + s * m22;
-			m[1][3] = c * m13 + s * m23;
-
-			m[2][0] = -s * m10 + c * m20;
-			m[2][1] = -s * m11 + c * m21;
-			m[2][2] = -s * m12 + c * m22;
-			m[2][3] = -s * m13 + c * m23;
-
-			return *this;
+			// Composed from RotationX() instead of updating the columns in place - see the note next to the
+			// builder declarations. The barrier forces the freshly built rotation out to memory so the
+			// composition below cannot re-derive (and drop the sign of) its negated sine term.
+			Matrix4x4 r = RotationX(radians);
+#if defined(DEATH_TARGET_DREAMCAST)
+			asm volatile("" : "+m"(r));
+#endif
+			return (*this = *this * r);
 		}
 
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::RotateY(T radians)
 		{
-			Matrix4x4& m = *this;
-			const T m00 = m[0][0];
-			const T m20 = m[2][0];
-			const T m01 = m[0][1];
-			const T m21 = m[2][1];
-			const T m02 = m[0][2];
-			const T m22 = m[2][2];
-			const T m03 = m[0][3];
-			const T m23 = m[2][3];
-
-			const T c = cos(radians);
-			const T s = sin(radians);
-
-			m[0][0] = c * m00 - s * m20;
-			m[0][1] = c * m01 - s * m21;
-			m[0][2] = c * m02 - s * m22;
-			m[0][3] = c * m03 - s * m23;
-
-			m[2][0] = s * m00 + c * m20;
-			m[2][1] = s * m01 + c * m21;
-			m[2][2] = s * m02 + c * m22;
-			m[2][3] = s * m03 + c * m23;
-
-			return *this;
+			// Composed from RotationY() instead of updating the columns in place - see the note next to the
+			// builder declarations. The barrier forces the freshly built rotation out to memory so the
+			// composition below cannot re-derive (and drop the sign of) its negated sine term.
+			Matrix4x4 r = RotationY(radians);
+#if defined(DEATH_TARGET_DREAMCAST)
+			asm volatile("" : "+m"(r));
+#endif
+			return (*this = *this * r);
 		}
 
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::RotateZ(T radians)
 		{
-			Matrix4x4& m = *this;
-			const T m00 = m[0][0];
-			const T m10 = m[1][0];
-			const T m01 = m[0][1];
-			const T m11 = m[1][1];
-			const T m02 = m[0][2];
-			const T m12 = m[1][2];
-			const T m03 = m[0][3];
-			const T m13 = m[1][3];
-
-			const T c = cos(radians);
-			const T s = sin(radians);
-
-			m[0][0] = c * m00 + s * m10;
-			m[0][1] = c * m01 + s * m11;
-			m[0][2] = c * m02 + s * m12;
-			m[0][3] = c * m03 + s * m13;
-
-			m[1][0] = -s * m00 + c * m10;
-			m[1][1] = -s * m01 + c * m11;
-			m[1][2] = -s * m02 + c * m12;
-			m[1][3] = -s * m03 + c * m13;
-
-			return *this;
+			// Composed from RotationZ() instead of updating the columns in place - see the note next to the
+			// builder declarations. The barrier forces the freshly built rotation out to memory so the
+			// composition below cannot re-derive (and drop the sign of) its negated sine term.
+			Matrix4x4 r = RotationZ(radians);
+#if defined(DEATH_TARGET_DREAMCAST)
+			asm volatile("" : "+m"(r));
+#endif
+			return (*this = *this * r);
 		}
 
 		template<class T>
@@ -669,10 +646,11 @@ namespace nCine
 		{
 			const T c = cos(radians);
 			const T s = sin(radians);
+			const T ns = sin(-radians);	// Never "-s", see the note next to the declarations
 
 			return Matrix4x4(Vector4<T>(1, 0, 0, 0),
 				Vector4<T>(0, c, s, 0),
-				Vector4<T>(0, -s, c, 0),
+				Vector4<T>(0, ns, c, 0),
 				Vector4<T>(0, 0, 0, 1));
 		}
 
@@ -681,8 +659,9 @@ namespace nCine
 		{
 			const T c = cos(radians);
 			const T s = sin(radians);
+			const T ns = sin(-radians);	// Never "-s", see the note next to the declarations
 
-			return Matrix4x4(Vector4<T>(c, 0, -s, 0),
+			return Matrix4x4(Vector4<T>(c, 0, ns, 0),
 				Vector4<T>(0, 1, 0, 0),
 				Vector4<T>(s, 0, c, 0),
 				Vector4<T>(0, 0, 0, 1));
@@ -693,9 +672,10 @@ namespace nCine
 		{
 			const T c = cos(radians);
 			const T s = sin(radians);
+			const T ns = sin(-radians);	// Never "-s", see the note next to the declarations
 
 			return Matrix4x4(Vector4<T>(c, s, 0, 0),
-				Vector4<T>(-s, c, 0, 0),
+				Vector4<T>(ns, c, 0, 0),
 				Vector4<T>(0, 0, 1, 0),
 				Vector4<T>(0, 0, 0, 1));
 		}

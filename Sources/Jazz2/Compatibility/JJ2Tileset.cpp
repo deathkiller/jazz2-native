@@ -208,10 +208,38 @@ namespace Jazz2::Compatibility
 
 	void JJ2Tileset::Convert(StringView targetPath) const
 	{
-		// Rearrange tiles from '10 tiles per row' to '30 tiles per row'
-		constexpr std::int32_t TilesPerRow = 30;
-
 		std::int32_t tileCount = _tileCount;
+
+		// Rearrange the tiles from the original '10 tiles per row' into the row count whose texture wastes
+		// the least memory once rounded up to power-of-two dimensions, which is what hardware that cannot
+		// sample non-power-of-two textures has to pad it to (the runtime derives the row count back from the
+		// texture width, so this is free to change). Bounded by the smallest texture size among the
+		// supported platforms, so one converted tileset serves all of them.
+		constexpr std::int32_t MaxTextureSize = 1024;
+		std::int32_t TilesPerRow = std::max<std::int32_t>(1, MaxTextureSize / BlockSize);
+		{
+			std::int64_t bestCost = INT64_MAX;
+			for (std::int32_t columns = 1; columns <= tileCount; columns++) {
+				const std::int32_t candidateWidth = columns * BlockSize;
+				const std::int32_t candidateHeight = ((tileCount - 1) / columns + 1) * BlockSize;
+				if (candidateWidth > MaxTextureSize || candidateHeight > MaxTextureSize) {
+					continue;
+				}
+
+				std::int32_t paddedWidth = 1, paddedHeight = 1;
+				while (paddedWidth < candidateWidth) { paddedWidth <<= 1; }
+				while (paddedHeight < candidateHeight) { paddedHeight <<= 1; }
+
+				// Among layouts that pad to the same texture, prefer the one with fewer unused cells
+				const std::int64_t emptyCells = std::int64_t(columns) * ((tileCount - 1) / columns + 1) - tileCount;
+				const std::int64_t cost = std::int64_t(paddedWidth) * paddedHeight * 1024 + emptyCells;
+				if (cost < bestCost) {
+					bestCost = cost;
+					TilesPerRow = columns;
+				}
+			}
+		}
+
 		std::int32_t width = TilesPerRow * BlockSize;
 		std::int32_t height = ((tileCount - 1) / TilesPerRow + 1) * BlockSize;
 

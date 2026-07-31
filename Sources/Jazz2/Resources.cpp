@@ -3,7 +3,7 @@
 namespace Jazz2::Resources
 {
 	GenericGraphicResource::GenericGraphicResource() noexcept
-		: Flags(GenericGraphicResourceFlags::None)
+		: Flags(GenericGraphicResourceFlags::None), MaskStride(0)
 	{
 	}
 

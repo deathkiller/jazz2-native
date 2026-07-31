@@ -27,6 +27,13 @@ namespace Jazz2::UI::Menu
 		// colors). 0x38 is intentionally omitted - it has no proper gradient in the original game.
 		static const std::uint8_t FurGradientStarts[] = { 0x00, 0x10, 0x18, 0x20, 0x28, 0x30, 0x40, 0x48, 0x50, 0x58 };
 
+		// Dedicated metadata holding nothing but the idle animation of each character, one animation state
+		// per character. The full player metadata pulls in every animation and sound that character has
+		// (70-ish each), which is far more than the Dreamcast's 16 MB of main RAM can hold next to the menu
+		// itself - it ran out of both RAM and video memory and aborted. These previews draw one idle frame.
+		static constexpr StringView PreviewMetadataPath = "UI/CharacterPreviews"_s;
+		static constexpr std::int32_t PreviewCount = 3;
+
 		static Colorf ColorFromPacked(std::uint32_t c, float alpha)
 		{
 			return Colorf((c & 0xFF) / 255.0f, ((c >> 8) & 0xFF) / 255.0f, ((c >> 16) & 0xFF) / 255.0f, alpha * ((c >> 24) & 0xFF) / 255.0f);
@@ -49,7 +56,7 @@ namespace Jazz2::UI::Menu
 
 		_furColor = PreferencesCache::PlayerFurColor;
 		_colorMode = PreferencesCache::PlayerColors;
-		_previewMetadata[0] = _previewMetadata[1] = _previewMetadata[2] = nullptr;
+		_previewMetadata = nullptr;
 		_previewLoaded = false;
 		_previewPaletteColor = 0;
 
@@ -281,24 +288,23 @@ namespace Jazz2::UI::Menu
 		// panel, reflecting the chosen colors
 		if (!_previewLoaded) {
 			_previewLoaded = true;
-			_previewMetadata[0] = ContentResolver::Get().RequestMetadata("Interactive/PlayerJazz"_s, true);
-			_previewMetadata[1] = ContentResolver::Get().RequestMetadata("Interactive/PlayerSpaz"_s, true);
-			_previewMetadata[2] = ContentResolver::Get().RequestMetadata("Interactive/PlayerLori"_s, true);
+			_previewMetadata = ContentResolver::Get().RequestMetadata(PreviewMetadataPath, true);
 		}
 
 		// Each character uses a different recolor scheme, so build one preview palette per character from the fur color
 		if (_previewPalette[0] == nullptr || _previewPaletteColor != _furColor) {
 			const PlayerType previewTypes[] = { PlayerType::Jazz, PlayerType::Spaz, PlayerType::Lori };
-			for (std::int32_t i = 0; i < 3; i++) {
+			for (std::int32_t i = 0; i < PreviewCount; i++) {
 				ContentResolver::Get().ApplyPlayerColorPalette(_previewPalette[i], _furColor, previewTypes[i]);
 			}
 			_previewPaletteColor = _furColor;
 		}
 
-		if (_previewPalette[0] != nullptr) {
+		if (_previewPalette[0] != nullptr && _previewMetadata != nullptr) {
+			// One animation state per character, in the same order as the palettes above
 			std::int32_t available = 0;
-			for (std::int32_t i = 0; i < 3; i++) {
-				if (_previewMetadata[i] != nullptr) {
+			for (std::int32_t i = 0; i < PreviewCount; i++) {
+				if (_previewMetadata->FindAnimation((AnimState)i) != nullptr) {
 					available++;
 				}
 			}
@@ -309,28 +315,32 @@ namespace Jazz2::UI::Menu
 				float rowY = (topLine + bottomLine) * 0.5f;
 				float slotX = centerX + 200.0f - step * (available - 1) * 0.5f;
 
-				for (std::int32_t i = 0; i < 3; i++) {
-					if (_previewMetadata[i] == nullptr || _previewPalette[i] == nullptr) {
+				for (std::int32_t i = 0; i < PreviewCount; i++) {
+					if (_previewPalette[i] == nullptr) {
 						continue;
 					}
 
-					auto* res = _previewMetadata[i]->FindAnimation(AnimState::Idle);
+					auto* res = _previewMetadata->FindAnimation((AnimState)i);
 					if (res != nullptr && res->Base != nullptr && res->Base->TextureDiffuse != nullptr) {
 						GenericGraphicResource* base = res->Base;
 						std::int32_t frameCount = (res->FrameCount > 0 ? res->FrameCount : 1);
 						float animDuration = (res->AnimDuration > 0.0f ? res->AnimDuration : 1.0f);
 						std::int32_t frame = res->FrameOffset + ((std::int32_t)(canvas->AnimTime * frameCount / animDuration) % frameCount);
 						Vector2i texSize = base->TextureDiffuse->GetSize();
-						std::int32_t col = frame % base->FrameConfiguration.X;
-						std::int32_t row = frame / base->FrameConfiguration.X;
+						Recti frameRect = base->GetFrameRect(frame);
 						Vector4f texCoords = Vector4f(
-							(float)base->FrameDimensions.X / texSize.X,
-							(float)(base->FrameDimensions.X * col) / texSize.X,
-							(float)base->FrameDimensions.Y / texSize.Y,
-							(float)(base->FrameDimensions.Y * row) / texSize.Y);
+							(float)frameRect.W / texSize.X,
+							(float)frameRect.X / texSize.X,
+							(float)frameRect.H / texSize.Y,
+							(float)frameRect.Y / texSize.Y);
 
-						Vector2f size = Vector2f(base->FrameDimensions.X * scale, base->FrameDimensions.Y * scale);
-						Vector2f pos = Canvas::ApplyAlignment(Alignment::Center, Vector2f(slotX, rowY), size);
+						// Centred by the full cell, then shifted to this frame's area within it, so a trimmed
+						// frame stays where the untrimmed one would have been
+						Vector2f size = Vector2f(frameRect.W * scale, frameRect.H * scale);
+						Vector2i frameOffset = base->GetFrameOffset(frame);
+						Vector2f pos = Canvas::ApplyAlignment(Alignment::Center, Vector2f(slotX, rowY),
+							base->FrameDimensions.As<float>() * scale);
+						pos += Vector2f(frameOffset.X * scale, frameOffset.Y * scale);
 						canvas->DrawTextureWithPalette(*base->TextureDiffuse, *_previewPalette[i], pos, IMenuContainer::MainLayer, size, texCoords, Colorf::White);
 					}
 

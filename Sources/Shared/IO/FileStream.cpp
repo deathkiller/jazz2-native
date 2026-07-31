@@ -26,6 +26,26 @@
 using namespace Death::Containers;
 
 namespace Death { namespace IO {
+	namespace
+	{
+#if defined(DEATH_TARGET_DREAMCAST)
+		// The Dreamcast's storage drivers transfer straight into memory only when the destination is
+		// 32-byte aligned and otherwise fall back to a copy loop that is orders of magnitude slower, so
+		// reads with an unsuitable destination are routed through the stream's own aligned buffer
+		constexpr std::uintptr_t DmaAlignment = 32;
+
+		DEATH_ALWAYS_INLINE bool IsDmaFriendly(const void* ptr)
+		{
+			return ((std::uintptr_t(ptr) & (DmaAlignment - 1)) == 0);
+		}
+#else
+		// Every other platform copies through the kernel, so any destination performs the same
+		DEATH_ALWAYS_INLINE bool IsDmaFriendly(const void*)
+		{
+			return true;
+		}
+#endif
+	}
 //###==##====#=====--==~--~=~- --- -- -  -  -   -
 
 #if defined(DEATH_TARGET_WINDOWS)
@@ -186,7 +206,10 @@ namespace Death { namespace IO {
 			if (_writePos > 0) {
 				FlushWriteBuffer();
 			}
-			if (bytesToRead >= _bufferSize) {
+			// A read at least as large as the buffer normally goes straight to the caller's memory, but
+			// some storage drivers only use their fast path for suitably aligned destinations - those fall
+			// back to the buffered path below, which copies through the aligned buffer
+			if (bytesToRead >= _bufferSize && IsDmaFriendly(&typedBuffer[n])) {
 				_readPos = 0;
 				_readLength = 0;
 
@@ -206,7 +229,7 @@ namespace Death { namespace IO {
 			}
 
 			InitializeBuffer();
-			n = ReadInternal(&_buffer[0], _bufferSize);
+			n = ReadInternal(BufferForIo(), _bufferSize);
 			if DEATH_UNLIKELY(n <= 0) {
 				return n;
 			}
@@ -219,7 +242,7 @@ namespace Death { namespace IO {
 			n = bytesToRead;
 		}
 
-		std::memcpy(typedBuffer, &_buffer[_readPos], std::size_t(n));
+		std::memcpy(typedBuffer, &BufferForIo()[_readPos], std::size_t(n));
 		_readPos += std::int32_t(n);
 
 		bytesToRead -= n;
@@ -228,9 +251,20 @@ namespace Death { namespace IO {
 			_readPos = 0;
 			_readLength = 0;
 
-			do {
-				std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? std::int32_t(bytesToRead) : INT32_MAX);
-				std::int32_t bytesRead = ReadInternal(&typedBuffer[n], partialBytesToRead);
+			while (bytesToRead > 0) {
+				std::int32_t bytesRead;
+				if (IsDmaFriendly(&typedBuffer[n])) {
+					std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? std::int32_t(bytesToRead) : INT32_MAX);
+					bytesRead = ReadInternal(&typedBuffer[n], partialBytesToRead);
+				} else {
+					// Unsuitable destination: read into the aligned buffer and copy across
+					InitializeBuffer();
+					const std::int32_t partialBytesToRead = (bytesToRead < _bufferSize ? std::int32_t(bytesToRead) : _bufferSize);
+					bytesRead = ReadInternal(BufferForIo(), partialBytesToRead);
+					if (bytesRead > 0) {
+						std::memcpy(&typedBuffer[n], BufferForIo(), std::size_t(bytesRead));
+					}
+				}
 				if DEATH_UNLIKELY(bytesRead < 0) {
 					return bytesRead;
 				} else if DEATH_UNLIKELY(bytesRead == 0) {
@@ -238,7 +272,7 @@ namespace Death { namespace IO {
 				}
 				n += bytesRead;
 				bytesToRead -= bytesRead;
-			} while (bytesToRead > 0);
+			}
 		}
 
 		return n;
@@ -266,11 +300,11 @@ namespace Death { namespace IO {
 			std::int32_t bufferBytesLeft = (_bufferSize - _writePos);
 			if (bufferBytesLeft > 0) {
 				if (bytesToWrite <= bufferBytesLeft) {
-					std::memcpy(&_buffer[_writePos], typedBuffer, std::size_t(bytesToWrite));
+					std::memcpy(&BufferForIo()[_writePos], typedBuffer, std::size_t(bytesToWrite));
 					_writePos += std::int32_t(bytesToWrite);
 					return bytesToWrite;
 				} else {
-					std::memcpy(&_buffer[_writePos], typedBuffer, bufferBytesLeft);
+					std::memcpy(&BufferForIo()[_writePos], typedBuffer, bufferBytesLeft);
 					_writePos += bufferBytesLeft;
 					typedBuffer += bufferBytesLeft;
 					bytesWrittenTotal += bufferBytesLeft;
@@ -278,7 +312,7 @@ namespace Death { namespace IO {
 				}
 			}
 
-			WriteInternal(&_buffer[0], _writePos);
+			WriteInternal(BufferForIo(), _writePos);
 			_writePos = 0;
 		}
 
@@ -301,7 +335,7 @@ namespace Death { namespace IO {
 
 		// Copy remaining bytes into buffer, it will be written to the file later
 		InitializeBuffer();
-		std::memcpy(&_buffer[_writePos], typedBuffer, std::size_t(bytesToWrite));
+		std::memcpy(&BufferForIo()[_writePos], typedBuffer, std::size_t(bytesToWrite));
 		_writePos = std::int32_t(bytesToWrite);
 		bytesWrittenTotal += bytesToWrite;
 		return bytesWrittenTotal;
@@ -400,7 +434,15 @@ namespace Death { namespace IO {
 	void FileStream::InitializeBuffer()
 	{
 		if DEATH_UNLIKELY(_buffer == nullptr) {
+#if defined(DEATH_TARGET_DREAMCAST)
+			// The buffer is the destination of every read, so it has to satisfy the alignment the storage
+			// driver needs for its fast path (see IsDmaFriendly); the padding leaves room to align it
+			_buffer = std::make_unique<char[]>(_bufferSize + DmaAlignment);
+			const std::uintptr_t address = std::uintptr_t(_buffer.get());
+			_bufferAligned = _buffer.get() + ((DmaAlignment - (address & (DmaAlignment - 1))) & (DmaAlignment - 1));
+#else
 			_buffer = std::make_unique<char[]>(_bufferSize);
+#endif
 		}
 	}
 
@@ -417,7 +459,7 @@ namespace Death { namespace IO {
 	void FileStream::FlushWriteBuffer()
 	{
 		if (_writePos > 0) {
-			WriteInternal(&_buffer[0], _writePos);
+			WriteInternal(BufferForIo(), _writePos);
 			_writePos = 0;
 		}
 	}

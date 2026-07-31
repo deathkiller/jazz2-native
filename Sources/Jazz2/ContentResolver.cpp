@@ -903,8 +903,28 @@ namespace Jazz2
 		std::uint16_t gunspotX = s->ReadValueAsLE<std::uint16_t>();
 		std::uint16_t gunspotY = s->ReadValueAsLE<std::uint16_t>();
 
-		std::uint32_t width = frameDimensionsX * frameConfigurationX;
-		std::uint32_t height = frameDimensionsY * frameConfigurationY;
+		// A tightly packed sheet lists where every frame sits instead of laying them out in a grid, so it
+		// carries its own size (see JJ2Anims::PackFramesTightly)
+		SmallVector<FrameRect, 0> frameRects;
+		std::uint32_t width, height;
+		if ((flags & 0x04) == 0x04) {
+			width = s->ReadValueAsLE<std::uint16_t>();
+			height = s->ReadValueAsLE<std::uint16_t>();
+
+			frameRects.reserve(frameCount);
+			for (std::uint32_t i = 0; i < frameCount; i++) {
+				FrameRect& rect = frameRects.emplace_back();
+				rect.X = s->ReadValueAsLE<std::uint16_t>();
+				rect.Y = s->ReadValueAsLE<std::uint16_t>();
+				rect.W = s->ReadValueAsLE<std::uint16_t>();
+				rect.H = s->ReadValueAsLE<std::uint16_t>();
+				rect.OffsetX = s->ReadValueAsLE<std::int16_t>();
+				rect.OffsetY = s->ReadValueAsLE<std::int16_t>();
+			}
+		} else {
+			width = frameDimensionsX * frameConfigurationX;
+			height = frameDimensionsY * frameConfigurationY;
+		}
 
 		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * PixelSize);
 
@@ -982,6 +1002,9 @@ namespace Jazz2
 		graphics->FrameDimensions = Vector2i(frameDimensionsX, frameDimensionsY);
 		graphics->FrameConfiguration = Vector2i(frameConfigurationX, frameConfigurationY);
 		graphics->FrameCount = frameCount;
+		graphics->FrameRects = std::move(frameRects);
+		// The collision mask covers the whole sheet, so its rows are as wide as the sheet
+		graphics->MaskStride = (std::int32_t)width;
 
 		if (hotspotX != UINT16_MAX || hotspotY != UINT16_MAX) {
 			graphics->Hotspot = Vector2i(hotspotX, hotspotY);
@@ -1757,7 +1780,17 @@ namespace Jazz2
 
 			std::uint16_t backgroundWidth = s->ReadValueAsLE<std::uint16_t>();
 			std::uint16_t backgroundHeight = s->ReadValueAsLE<std::uint16_t>();
-			if (backgroundWidth > 0 && backgroundHeight > 0) {
+			// Every episode carries a full-colour backdrop of around half a megabyte of video memory once
+			// padded, and the episode list keeps all of them loaded at once. That does not fit next to the
+			// rest of the menu on a console with a few megabytes of it, where they would either fail to
+			// allocate or evict each other on every scroll; the section draws without them when they are
+			// absent, which looks better than the flicker.
+#if defined(DEATH_TARGET_DREAMCAST)
+			constexpr bool LoadEpisodeBackgrounds = false;
+#else
+			constexpr bool LoadEpisodeBackgrounds = true;
+#endif
+			if (LoadEpisodeBackgrounds && backgroundWidth > 0 && backgroundHeight > 0) {
 				std::unique_ptr<std::uint32_t[]> pixels = std::make_unique<std::uint32_t[]>(backgroundWidth * backgroundHeight);
 				ReadImageFromFile(s, (std::uint8_t*)pixels.get(), backgroundWidth, backgroundHeight, 4);
 

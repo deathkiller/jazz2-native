@@ -3,6 +3,9 @@
 #include "JJ2Block.h"
 #include "AnimSetMapping.h"
 
+#include <algorithm>
+#include <cstdlib>
+
 #include <Containers/GrowableArray.h>
 #include <Containers/StringConcatenable.h>
 #include <IO/FileSystem.h>
@@ -13,6 +16,127 @@ using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
+	namespace
+	{
+		// Largest sprite sheet any supported platform can sample. The smallest limit among them decides it,
+		// so a sheet that fits here needs no per-platform variant of the converted assets.
+		constexpr std::int32_t MaxTextureSize = 1024;
+
+		std::int32_t NextPowerOfTwo(std::int32_t value)
+		{
+			std::int32_t result = 1;
+			while (result < value) {
+				result <<= 1;
+			}
+			return result;
+		}
+
+	}
+
+		/**
+		@brief Packs the frames of one animation so each keeps only the space it needs
+
+		A frame's own extent is usually much smaller than the largest frame of its animation, and a grid
+		of equal cells pays for the difference in every single frame. The frames are placed in rows
+		ordered by height (shelf packing), which for sprite sheets - many similar heights, few outliers -
+		comes within a few percent of the theoretical minimum while staying simple enough to reason about.
+		The sheet is sized to the power-of-two dimensions that waste the least memory, since hardware that
+		cannot sample non-power-of-two textures pads it to exactly that.
+	*/
+	bool JJ2Anims::PackFramesTightly(const AnimSection& anim, std::int32_t border,
+		SmallVector<PackedFrame, 0>& packed, std::int32_t& sheetWidth, std::int32_t& sheetHeight)
+	{
+		const std::int32_t frameCount = std::int32_t(anim.Frames.size());
+		if (frameCount <= 0) {
+			return false;
+		}
+
+		packed.clear();
+		packed.reserve(frameCount);
+		std::int32_t widest = 0, totalArea = 0;
+		for (std::int32_t i = 0; i < frameCount; i++) {
+			const AnimFrameSection& frame = anim.Frames[i];
+			PackedFrame& p = packed.emplace_back();
+			// The frame covers exactly its own pixels. The gap that stops a neighbour bleeding in under
+			// bilinear filtering is placed between frames instead of around each one, so it is paid once
+			// per boundary rather than twice.
+			p.W = frame.SizeX;
+			p.H = frame.SizeY;
+			p.X = p.Y = 0;
+			// Where this frame's pixels begin inside its logical cell. The cell keeps its border, so that
+			// is included here - it is what makes the hotspot and every cell-aligned position come out right
+			// (see GenericGraphicResource::GetFrameAnchor / GetFrameOffset).
+			p.OffsetX = anim.NormalizedHotspotX + frame.HotspotX + border;
+			p.OffsetY = anim.NormalizedHotspotY + frame.HotspotY + border;
+			widest = std::max(widest, p.W);
+			totalArea += p.W * p.H;
+		}
+
+		// Tallest first, so each row is filled by frames of similar height
+		SmallVector<std::int32_t, 0> order(frameCount);
+		for (std::int32_t i = 0; i < frameCount; i++) {
+			order[i] = i;
+		}
+		std::sort(order.begin(), order.end(), [&packed](std::int32_t a, std::int32_t b) {
+			if (packed[a].H != packed[b].H) {
+				return packed[a].H > packed[b].H;
+			}
+			return packed[a].W > packed[b].W;
+		});
+
+		// Try every sheet width that could hold the widest frame and keep the best result
+		std::int32_t bestWidth = 0, bestHeight = 0;
+		std::int64_t bestArea = INT64_MAX;
+		for (std::int32_t width = NextPowerOfTwo(widest); width <= MaxTextureSize; width <<= 1) {
+			std::int32_t x = 0, rowY = 0, rowHeight = 0;
+			for (std::int32_t i = 0; i < frameCount; i++) {
+				const PackedFrame& p = packed[order[i]];
+				if (x > 0 && x + p.W > width) {
+					rowY += rowHeight + border;
+					x = 0;
+					rowHeight = 0;
+				}
+				x += p.W + border;
+				rowHeight = std::max(rowHeight, p.H);
+			}
+			const std::int32_t height = NextPowerOfTwo(rowY + rowHeight);
+			if (height > MaxTextureSize) {
+				continue;
+			}
+
+			// Several widths usually pad to the same area; among those prefer the squarest sheet, which keeps
+			// the sheet away from the maximum texture size and samples better than a long narrow strip
+			const std::int64_t cost = std::int64_t(width) * height * 4096 + std::abs(width - height);
+			if (cost < bestArea) {
+				bestArea = cost;
+				bestWidth = width;
+				bestHeight = height;
+			}
+		}
+		if (bestWidth <= 0) {
+			return false;		// Does not fit, fall back to the regular grid
+		}
+
+		// Lay the frames out for real at the chosen size
+		std::int32_t x = 0, rowY = 0, rowHeight = 0;
+		for (std::int32_t i = 0; i < frameCount; i++) {
+			PackedFrame& p = packed[order[i]];
+			if (x > 0 && x + p.W > bestWidth) {
+				rowY += rowHeight + border;
+				x = 0;
+				rowHeight = 0;
+			}
+			p.X = x;
+			p.Y = rowY;
+			x += p.W + border;
+			rowHeight = std::max(rowHeight, p.H);
+		}
+
+		sheetWidth = bestWidth;
+		sheetHeight = bestHeight;
+		return true;
+	}
+
 	JJ2Version JJ2Anims::Convert(StringView path, PakWriter& pakWriter, bool isPlus)
 	{
 		JJ2Version version;
@@ -321,17 +445,36 @@ namespace Jazz2::Compatibility
 			// Each asset must fit into a 4096 by 4096 texture,
 			// as that is the smallest texture size we have decided to support.
 			if (anim.FrameCount > 1) {
-				std::int32_t rows = std::max<std::int32_t>(1, (std::int32_t)std::ceil(sqrt(anim.FrameCount * sizeX / sizeY)));
-				std::int32_t columns = std::max<std::int32_t>(1, (std::int32_t)std::ceil(anim.FrameCount * 1.0 / rows));
+				// Pick the grid whose texture wastes the least memory once it is rounded up to power-of-two
+				// dimensions. Graphics hardware that cannot sample non-power-of-two textures has to pad them,
+				// and a layout chosen only to be roughly square lands just past a power of two surprisingly
+				// often - a 669x552 sheet occupies a 1024x1024 texture, so almost two thirds of it is unused.
+				// Choosing by padded area instead usually fills the texture almost completely, at no cost to
+				// platforms that sample the sheet at its exact size.
+				std::int32_t bestColumns = anim.FrameCount, bestRows = 1;
+				std::int64_t bestCost = INT64_MAX;
+				for (std::int32_t columns = 1; columns <= anim.FrameCount; columns++) {
+					const std::int32_t rows = (anim.FrameCount + columns - 1) / columns;
+					const std::int32_t width = columns * sizeX;
+					const std::int32_t height = rows * sizeY;
+					if (width > MaxTextureSize || height > MaxTextureSize) {
+						continue;
+					}
 
-				// Do a bit of optimization, as the above algorithm ends occasionally with some extra space
-				// (it is careful with not underestimating the required space)
-				while (columns * (rows - 1) >= anim.FrameCount) {
-					rows--;
+					const std::int64_t paddedArea = std::int64_t(NextPowerOfTwo(width)) * NextPowerOfTwo(height);
+					// Prefer the layout that pads to the smallest texture; among equals prefer the one that
+					// wastes fewer cells in the grid itself, then the more square one, so the choice is stable
+					const std::int64_t emptyCells = std::int64_t(columns) * rows - anim.FrameCount;
+					const std::int64_t cost = (paddedArea * 1024 + emptyCells * 16) * 1024 + std::abs(width - height);
+					if (cost < bestCost) {
+						bestCost = cost;
+						bestColumns = columns;
+						bestRows = rows;
+					}
 				}
 
-				anim.FrameConfigurationX = (std::uint8_t)columns;
-				anim.FrameConfigurationY = (std::uint8_t)rows;
+				anim.FrameConfigurationX = (std::uint8_t)bestColumns;
+				anim.FrameConfigurationY = (std::uint8_t)bestRows;
 			} else {
 				anim.FrameConfigurationX = (std::uint8_t)anim.FrameCount;
 				anim.FrameConfigurationY = 1;
@@ -368,8 +511,17 @@ namespace Jazz2::Compatibility
 
 			filename = fs::CombinePath({ "Animations"_s, entry->Category, String(entry->Name + ".aura"_s) });
 
-			std::int32_t stride = sizeX * anim.FrameConfigurationX;
-			std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(stride * sizeY * anim.FrameConfigurationY * 4);
+			// Pack the frames tightly when they fit that way, otherwise keep the regular grid
+			SmallVector<PackedFrame, 0> packedFrames;
+			std::int32_t sheetWidth = 0, sheetHeight = 0;
+			const bool tightlyPacked = PackFramesTightly(anim, AddBorder, packedFrames, sheetWidth, sheetHeight);
+			if (!tightlyPacked) {
+				sheetWidth = sizeX * anim.FrameConfigurationX;
+				sheetHeight = sizeY * anim.FrameConfigurationY;
+			}
+
+			std::int32_t stride = sheetWidth;
+			std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(sheetWidth * sheetHeight * 4);
 
 			for (std::int32_t j = 0; j < anim.Frames.size(); j++) {
 				auto& frame = anim.Frames[j];
@@ -377,10 +529,20 @@ namespace Jazz2::Compatibility
 				std::int32_t offsetX = anim.NormalizedHotspotX + frame.HotspotX;
 				std::int32_t offsetY = anim.NormalizedHotspotY + frame.HotspotY;
 
+				// Where this frame's top-left corner lands in the sheet
+				std::int32_t frameBaseX, frameBaseY;
+				if (tightlyPacked) {
+					frameBaseX = packedFrames[j].X;
+					frameBaseY = packedFrames[j].Y;
+				} else {
+					frameBaseX = (j % anim.FrameConfigurationX) * sizeX + offsetX;
+					frameBaseY = (j / anim.FrameConfigurationX) * sizeY + offsetY;
+				}
+
 				for (std::int32_t y = 0; y < frame.SizeY; y++) {
 					for (std::int32_t x = 0; x < frame.SizeX; x++) {
-						std::int32_t targetX = (j % anim.FrameConfigurationX) * sizeX + offsetX + x + AddBorder;
-						std::int32_t targetY = (j / anim.FrameConfigurationX) * sizeY + offsetY + y + AddBorder;
+						std::int32_t targetX = frameBaseX + x + (tightlyPacked ? 0 : AddBorder);
+						std::int32_t targetY = frameBaseY + y + (tightlyPacked ? 0 : AddBorder);
 						std::uint8_t colorIdx = frame.ImageData[frame.SizeX * y + x];
 
 						// Apply palette fixes
@@ -444,7 +606,7 @@ namespace Jazz2::Compatibility
 			}
 
 			MemoryStream so(16384);
-			std::int32_t totalPixels = stride * sizeY * anim.FrameConfigurationY;
+			std::int32_t totalPixels = sheetWidth * sheetHeight;
 			std::int32_t outChannels = 4;
 			std::unique_ptr<std::uint8_t[]> packed;
 			const std::uint8_t* outData = pixels.get();
@@ -476,7 +638,13 @@ namespace Jazz2::Compatibility
 				outData = packed.get();
 			}
 
-			WriteImageToStream(so, outData, sizeX, sizeY, outChannels, anim, entry);
+			PackedSheet packedSheet;
+			if (tightlyPacked) {
+				packedSheet.Frames = &packedFrames;
+				packedSheet.Width = sheetWidth;
+				packedSheet.Height = sheetHeight;
+			}
+			WriteImageToStream(so, outData, sizeX, sizeY, outChannels, anim, entry, packedSheet);
 			so.Seek(0, SeekOrigin::Begin);
 			bool success = pakWriter.AddFile(so, filename, PakPreferredCompression::Deflate);
 			DEATH_ASSERT(success, "Failed to add file to .pak container", );
@@ -563,11 +731,12 @@ namespace Jazz2::Compatibility
 	{
 		FileStream so(targetPath, FileAccess::Write);
 		DEATH_ASSERT(so.IsValid(), "Cannot open file for writing", );
-		WriteImageToStream(so, data, width, height, channelCount, anim, entry);
+		WriteImageToStream(so, data, width, height, channelCount, anim, entry, PackedSheet());
 	}
 
-	void JJ2Anims::WriteImageToStream(Stream& targetStream, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry)
+	void JJ2Anims::WriteImageToStream(Stream& targetStream, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount, const AnimSection& anim, AnimSetMapping::Entry* entry, const PackedSheet& packedSheet)
 	{
+		const bool tightlyPacked = (packedSheet.Frames != nullptr && !packedSheet.Frames->empty());
 		std::uint8_t flags = 0x00;
 		if (entry != nullptr) {
 			flags |= 0x80;
@@ -583,6 +752,10 @@ namespace Jazz2::Compatibility
 			}
 			if (entry->SkipNormalMap) {
 				flags |= 0x02;
+			}
+			if (tightlyPacked) {
+				// The frames don't form a grid, so their positions are listed after the header
+				flags |= 0x04;
 			}
 		}
 
@@ -624,8 +797,26 @@ namespace Jazz2::Compatibility
 				targetStream.WriteValueAsLE<std::uint16_t>(UINT16_MAX);
 			}
 
-			width *= anim.FrameConfigurationX;
-			height *= anim.FrameConfigurationY;
+			if (tightlyPacked) {
+				// The sheet's own size, then where every frame sits in it
+				targetStream.WriteValueAsLE<std::uint16_t>((std::uint16_t)packedSheet.Width);
+				targetStream.WriteValueAsLE<std::uint16_t>((std::uint16_t)packedSheet.Height);
+
+				for (const PackedFrame& frame : *packedSheet.Frames) {
+					targetStream.WriteValueAsLE<std::uint16_t>((std::uint16_t)frame.X);
+					targetStream.WriteValueAsLE<std::uint16_t>((std::uint16_t)frame.Y);
+					targetStream.WriteValueAsLE<std::uint16_t>((std::uint16_t)frame.W);
+					targetStream.WriteValueAsLE<std::uint16_t>((std::uint16_t)frame.H);
+					targetStream.WriteValueAsLE<std::int16_t>((std::int16_t)frame.OffsetX);
+					targetStream.WriteValueAsLE<std::int16_t>((std::int16_t)frame.OffsetY);
+				}
+
+				width = packedSheet.Width;
+				height = packedSheet.Height;
+			} else {
+				width *= anim.FrameConfigurationX;
+				height *= anim.FrameConfigurationY;
+			}
 		}
 
 		WriteImageContent(targetStream, data, width, height, channelCount);

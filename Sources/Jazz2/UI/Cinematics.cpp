@@ -227,8 +227,9 @@ namespace Jazz2::UI
 			}
 		}
 
-		// All four streams read the file through one forward-only window (see FileWindow)
-		_fileWindow.Initialize(s.get());
+		// All four streams read the file through one shared read-ahead buffer (see FileWindow), which
+		// starts where the first chunk does
+		_fileWindow.Initialize(s.get(), (chunks[0].empty() ? 0 : chunks[0][0].first()));
 
 		for (std::int32_t i = 0; i < std::int32_t(arraySize(_decompressedStreams)); i++) {
 			// Skip first two bytes (zlib header 0x78 0xDA)
@@ -391,13 +392,6 @@ namespace Jazz2::UI
 #endif
 
 		_frameIndex++;
-
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
-		// TODO: Temporary diagnostics for playback progress on slow consoles
-		if ((_frameIndex % 100) == 0) {
-			LOGI("Cinematics frame {} ({} left)", _frameIndex, _framesLeft);
-		}
-#endif
 	}
 
 	void Cinematics::StreamBuffer::Initialize(Stream* source)
@@ -550,13 +544,13 @@ namespace Jazz2::UI
 		return true;
 	}
 
-	void Cinematics::FileWindow::Initialize(Stream* file)
+	void Cinematics::FileWindow::Initialize(Stream* file, std::int64_t startOffset)
 	{
 		_file = file;
 		if (_data == nullptr) {
 			_data = std::make_unique<std::uint8_t[]>(WindowSize);
 		}
-		_start = 0;
+		_start = startOffset;
 		_length = 0;
 	}
 
@@ -566,8 +560,7 @@ namespace Jazz2::UI
 			return 0;
 		}
 
-		// Anything larger than the window (or a backward jump the window no longer covers) goes straight
-		// to the file; in practice the streams only ever move forward through it
+		// Anything larger than the window goes straight to the file; the streams never ask for that much
 		if (bytes > WindowSize) {
 			if (_file->Seek(offset, SeekOrigin::Begin) < 0) {
 				return 0;
@@ -577,8 +570,7 @@ namespace Jazz2::UI
 		}
 
 		if (offset < _start || offset + bytes > _start + _length) {
-			// Reposition the window, starting a little before the request so the streams trailing this one
-			// stay covered, and fill it in one sequential read
+			// Refill, starting a little before the request so the streams trailing this one stay covered
 			const std::int64_t newStart = (offset > WindowMargin ? offset - WindowMargin : 0);
 			if (_file->Seek(newStart, SeekOrigin::Begin) < 0) {
 				return 0;
@@ -595,9 +587,7 @@ namespace Jazz2::UI
 			}
 		}
 
-		if (bytes > 0) {
-			std::memcpy(destination, &_data[offset - _start], std::size_t(bytes));
-		}
+		std::memcpy(destination, &_data[offset - _start], std::size_t(bytes));
 		return bytes;
 	}
 

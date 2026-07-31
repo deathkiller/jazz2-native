@@ -205,13 +205,17 @@ namespace Jazz2::UI::Menu
 		}
 
 		Vector2i texSize = base->TextureDiffuse->GetSize();
-		std::int32_t col = frame % base->FrameConfiguration.X;
-		std::int32_t row = frame / base->FrameConfiguration.X;
+		Recti frameRect = base->GetFrameRect(frame);
+		// A trimmed frame covers less than its cell, so it keeps the cell's alignment computed above and
+		// shifts into place instead of being stretched over the whole cell
+		Vector2i frameOffset = base->GetFrameOffset(frame);
+		size = Vector2f(frameRect.W * scaleX, frameRect.H * scaleY);
+		adjustedPos += Vector2f(frameOffset.X * scaleX, frameOffset.Y * scaleY);
 		Vector4f texCoords = Vector4f(
-			float(base->FrameDimensions.X) / float(texSize.X),
-			float(base->FrameDimensions.X * col) / float(texSize.X),
-			float(base->FrameDimensions.Y) / float(texSize.Y),
-			float(base->FrameDimensions.Y * row) / float(texSize.Y)
+			float(frameRect.W) / float(texSize.X),
+			float(frameRect.X) / float(texSize.X),
+			float(frameRect.H) / float(texSize.Y),
+			float(frameRect.Y) / float(texSize.Y)
 		);
 
 		std::int32_t paletteOffset = ((base->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);

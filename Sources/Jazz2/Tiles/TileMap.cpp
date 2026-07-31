@@ -1524,9 +1524,9 @@ namespace Jazz2::Tiles
 				debris.Time = 320.0f;
 
 				debris.TexScaleX = (currentSize / float(texSize.X));
-				debris.TexBiasX = (((float)(currentFrame % res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.X) + ((float)fx / float(texSize.X)));
+				debris.TexBiasX = ((float(res->Base->GetFrameRect(currentFrame).X) + (float)fx) / float(texSize.X));
 				debris.TexScaleY = (currentSize / float(texSize.Y));
-				debris.TexBiasY = (((float)(currentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
+				debris.TexBiasY = ((float(res->Base->GetFrameRect(currentFrame).Y) + (float)fy) / float(texSize.Y));
 
 				debris.DiffuseTexture = res->Base->TextureDiffuse.get();
 				// Indexed sprite debris is recolored at draw time; -1 keeps a baked (e.g., tileset) texture on plain Sprite
@@ -1567,12 +1567,11 @@ namespace Jazz2::Tiles
 			debris.Time = 560.0f;
 
 			std::int32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
-			std::int32_t col = curAnimFrame % res->Base->FrameConfiguration.X;
-			std::int32_t row = curAnimFrame / res->Base->FrameConfiguration.X;
-			debris.TexScaleX = (float(res->Base->FrameDimensions.X) / float(texSize.X));
-			debris.TexBiasX = (float(res->Base->FrameDimensions.X * col) / float(texSize.X));
-			debris.TexScaleY = (float(res->Base->FrameDimensions.Y) / float(texSize.Y));
-			debris.TexBiasY = (float(res->Base->FrameDimensions.Y * row) / float(texSize.Y));
+			Recti frameRect = res->Base->GetFrameRect(curAnimFrame);
+			debris.TexScaleX = (float(frameRect.W) / float(texSize.X));
+			debris.TexBiasX = (float(frameRect.X) / float(texSize.X));
+			debris.TexScaleY = (float(frameRect.H) / float(texSize.Y));
+			debris.TexBiasY = (float(frameRect.Y) / float(texSize.Y));
 
 			debris.DiffuseTexture = res->Base->TextureDiffuse.get();
 			// Indexed sprite debris is recolored at draw time; -1 keeps a baked texture on the plain Sprite shader

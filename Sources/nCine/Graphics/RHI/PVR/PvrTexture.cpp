@@ -36,7 +36,7 @@ namespace nCine::RHI::PVR
 			minFilter_(nCine::SamplerFilter::Nearest), magFilter_(nCine::SamplerFilter::Nearest), wrap_(SamplerWrapping::ClampToEdge),
 			textureUnit_(0), isRenderTarget_(false), isPaletteTexture_(false),
 			vram_(nullptr), vramFormat_(0), paddedWidth_(0), paddedHeight_(0), uScale_(1.0f), vScale_(1.0f),
-			bakedSlots_{}, nextBakedSlot_(0), livePrev_(nullptr), liveNext_(nullptr), lastUsedScene_(0)
+			bakedSlots_{}, nextBakedSlot_(0), livePrev_(nullptr), liveNext_(nullptr), lastUsedScene_(NeverUsed)
 	{
 		swizzle_[0] = SwizzleChannel::Red;
 		swizzle_[1] = SwizzleChannel::Green;
@@ -53,23 +53,6 @@ namespace nCine::RHI::PVR
 
 	PvrTexture* PvrTexture::liveHead_ = nullptr;
 	PvrTexture* PvrTexture::liveTail_ = nullptr;
-
-	// TODO: Temporary diagnostics for video memory usage
-	std::size_t PvrTexture::dbgTotalAllocated_ = 0;
-	std::int32_t PvrTexture::dbgAllocCount_ = 0;
-
-	std::size_t PvrTexture::DbgVramBytes() const
-	{
-		const std::size_t perStore = std::size_t(paddedWidth_) * std::size_t(paddedHeight_) *
-			(uploadFormat_ == PixelFormat::R8 ? 1 : 2);
-		std::size_t total = (vram_ != nullptr ? perStore : 0);
-		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
-			if (bakedSlots_[i].Vram != nullptr) {
-				total += perStore;
-			}
-		}
-		return total;
-	}
 
 	void PvrTexture::Unlink()
 	{
@@ -107,19 +90,8 @@ namespace nCine::RHI::PVR
 	pvr_ptr_t PvrTexture::AllocateVram(std::size_t size, const PvrTexture* keepAlive)
 	{
 		if (pvr_ptr_t result = pvr_mem_malloc(size)) {
-			// TODO: Temporary diagnostics for video memory usage
-			dbgTotalAllocated_ += size;
-			dbgAllocCount_++;
-			if (size >= 32 * 1024) {
-				LOGI("PVR alloc {} KB ({}x{} padded), {} allocations, {} KB live, {} KB free",
-					size / 1024, keepAlive != nullptr ? keepAlive->paddedWidth_ : 0,
-					keepAlive != nullptr ? keepAlive->paddedHeight_ : 0,
-					dbgAllocCount_, dbgTotalAllocated_ / 1024, pvr_mem_available() / 1024);
-			}
 			return result;
 		}
-		LOGW("PVR out of memory for {} KB ({} KB live, {} KB free), reclaiming", size / 1024,
-			dbgTotalAllocated_ / 1024, pvr_mem_available() / 1024);
 
 		// Out of video memory: drop the stores of the textures that have gone unused the longest and try
 		// again. Textures still referenced by the scene being built (the current one) are left alone, as
@@ -133,7 +105,6 @@ namespace nCine::RHI::PVR
 			const bool evictable = (victim != keepAlive && !victim->isRenderTarget_ &&
 				victim->lastUsedScene_ != currentScene);
 			if (evictable) {
-				dbgTotalAllocated_ -= victim->DbgVramBytes();
 				victim->FreeVramStores();
 				victim->Unlink();
 

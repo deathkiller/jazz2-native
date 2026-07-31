@@ -484,10 +484,13 @@ namespace Jazz2::UI::Menu
 					float speedY = Random().FastFloat(3.0f, 4.0f) * scale;
 					float accel = Random().FastFloat(-0.008f, 0.008f) * scale;
 
+					std::int32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
+					Recti frameRect = resBase->GetFrameRect(curAnimFrame);
+
 					TileMap::DestructibleDebris debris = { };
 					debris.Pos = debrisPos;
 					debris.Depth = MainLayer - 100 + 200 * scale;
-					debris.Size = Vector2f(resBase->FrameDimensions.X, resBase->FrameDimensions.Y);
+					debris.Size = Vector2f((float)frameRect.W, (float)frameRect.H);
 					debris.Speed = Vector2f(speedX, speedY);
 					debris.Acceleration = Vector2f(accel, std::abs(accel));
 
@@ -500,13 +503,10 @@ namespace Jazz2::UI::Menu
 
 					debris.Time = 160.0f;
 
-					std::int32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
-					std::int32_t col = curAnimFrame % resBase->FrameConfiguration.X;
-					std::int32_t row = curAnimFrame / resBase->FrameConfiguration.X;
-					debris.TexScaleX = (float(resBase->FrameDimensions.X) / float(texSize.X));
-					debris.TexBiasX = (float(resBase->FrameDimensions.X * col) / float(texSize.X));
-					debris.TexScaleY = (float(resBase->FrameDimensions.Y) / float(texSize.Y));
-					debris.TexBiasY = (float(resBase->FrameDimensions.Y * row) / float(texSize.Y));
+					debris.TexScaleX = (float(frameRect.W) / float(texSize.X));
+					debris.TexBiasX = (float(frameRect.X) / float(texSize.X));
+					debris.TexScaleY = (float(frameRect.H) / float(texSize.Y));
+					debris.TexBiasY = (float(frameRect.Y) / float(texSize.Y));
 
 					debris.DiffuseTexture = resBase->TextureDiffuse.get();
 					debris.PaletteOffset = ((resBase->Flags & GenericGraphicResourceFlags::Indexed) == GenericGraphicResourceFlags::Indexed ? res->PaletteOffset : -1);

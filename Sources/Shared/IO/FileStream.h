@@ -72,6 +72,20 @@ namespace Death { namespace IO {
 		std::int32_t _writePos;
 		std::int32_t _bufferSize;
 		std::unique_ptr<char[]> _buffer;
+#if defined(DEATH_TARGET_DREAMCAST)
+		// Points into _buffer at the first offset the storage driver can transfer to directly; only this
+		// platform needs it, elsewhere the allocation's own base is already suitable (see InitializeBuffer())
+		char* _bufferAligned = nullptr;
+#endif
+
+		/** @brief Returns the buffer address used for reads and writes */
+		DEATH_ALWAYS_INLINE char* BufferForIo() const {
+#if defined(DEATH_TARGET_DREAMCAST)
+			return _bufferAligned;
+#else
+			return _buffer.get();
+#endif
+		}
 
 		void InitializeBuffer();
 		void FlushReadBuffer();

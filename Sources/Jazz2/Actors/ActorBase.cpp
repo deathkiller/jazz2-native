@@ -56,11 +56,10 @@ namespace Jazz2::Actors
 		SetState(ActorState::IsFacingLeft, value);
 		_renderer.setFlippedX(value);
 		
-		// Recalculate hotspot
+		// The anchor follows the flip (see ActorRenderer::UpdateAnchor())
 		GraphicResource* res = (_currentTransition != nullptr ? _currentTransition : _currentAnimation);
 		if (res != nullptr) {
-			_renderer.Hotspot.X = static_cast<float>(IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X);
-			_renderer.setAbsAnchorPoint(_renderer.Hotspot.X, _renderer.Hotspot.Y);
+			_renderer.UpdateAnchor();
 		}
 	}
 
@@ -499,16 +498,18 @@ namespace Jazz2::Actors
 			constexpr std::int32_t DebrisSize = 3;
 
 			Vector2i texSize = texture->GetSize();
+			// Walk the frame's own area - anything outside it belongs to another frame in the sheet
+			const Recti debrisRect = res->Base->GetFrameRect(_renderer.CurrentFrame);
 
-			for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
-				for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+			for (std::int32_t fy = 0; fy < debrisRect.H; fy += DebrisSize + 1) {
+				for (std::int32_t fx = 0; fx < debrisRect.W; fx += DebrisSize + 1) {
 					float currentSize = DebrisSize * Random().FastFloat(0.8f, 1.1f);
 
 					Tiles::TileMap::DestructibleDebris debris{};
-					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
+					debris.Pos = Vector2f(x + (IsFacingLeft() ? debrisRect.W - fx : fx), y + fy);
 					debris.Depth = _renderer.layer();
 					debris.Size = Vector2f(currentSize, currentSize);
-					debris.Speed = Vector2f(((fx - res->Base->FrameDimensions.X / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(0.5f, 2.0f) / res->Base->FrameDimensions.X,
+					debris.Speed = Vector2f(((fx - debrisRect.W / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(0.5f, 2.0f) / debrisRect.W,
 						 Random().FastFloat(0.0f, 0.2f));
 					debris.Acceleration = Vector2(0.0f, 0.06f);
 
@@ -519,9 +520,9 @@ namespace Jazz2::Actors
 					debris.Time = 320.0f;
 
 					debris.TexScaleX = (currentSize / float(texSize.X));
-					debris.TexBiasX = (((float)(_renderer.CurrentFrame % res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.X) + ((float)fx / float(texSize.X)));
+					debris.TexBiasX = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).X) + (float)fx) / float(texSize.X));
 					debris.TexScaleY = (currentSize / float(texSize.Y));
-					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
+					debris.TexBiasY = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).Y) + (float)fy) / float(texSize.Y));
 
 					debris.DiffuseTexture = texture;
 					debris.PaletteOffset = paletteDebrisOffset;
@@ -537,17 +538,19 @@ namespace Jazz2::Actors
 			constexpr std::int32_t DebrisSize = 3;
 
 			Vector2i texSize = texture->GetSize();
+			// Walk the frame's own area - anything outside it belongs to another frame in the sheet
+			const Recti debrisRect = res->Base->GetFrameRect(_renderer.CurrentFrame);
 
-			for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
-				for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+			for (std::int32_t fy = 0; fy < debrisRect.H; fy += DebrisSize + 1) {
+				for (std::int32_t fx = 0; fx < debrisRect.W; fx += DebrisSize + 1) {
 					float currentSize = DebrisSize * Random().FastFloat(0.4f, 1.1f);
 
 					Tiles::TileMap::DestructibleDebris debris{};
-					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
+					debris.Pos = Vector2f(x + (IsFacingLeft() ? debrisRect.W - fx : fx), y + fy);
 					debris.Depth = _renderer.layer();
 					debris.Size = Vector2f(currentSize, currentSize);
-					debris.Speed = Vector2f(((fx - res->Base->FrameDimensions.X / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 4.0f) / res->Base->FrameDimensions.X,
-						 ((fy - res->Base->FrameDimensions.Y / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 4.0f) / res->Base->FrameDimensions.Y);
+					debris.Speed = Vector2f(((fx - debrisRect.W / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 4.0f) / debrisRect.W,
+						 ((fy - debrisRect.H / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 4.0f) / debrisRect.H);
 					debris.Acceleration = Vector2f::Zero;
 
 					debris.Scale = 1.0f;
@@ -558,9 +561,9 @@ namespace Jazz2::Actors
 					debris.Time = Random().FastFloat(10.0f, 50.0f);
 
 					debris.TexScaleX = (currentSize / float(texSize.X));
-					debris.TexBiasX = (((float)(_renderer.CurrentFrame % res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.X) + ((float)fx / float(texSize.X)));
+					debris.TexBiasX = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).X) + (float)fx) / float(texSize.X));
 					debris.TexScaleY = (currentSize / float(texSize.Y));
-					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
+					debris.TexBiasY = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).Y) + (float)fy) / float(texSize.Y));
 
 					debris.DiffuseTexture = texture;
 					debris.PaletteOffset = paletteDebrisOffset;
@@ -576,20 +579,22 @@ namespace Jazz2::Actors
 			constexpr int DebrisSize = 2;
 
 			Vector2i texSize = texture->GetSize();
+			// Walk the frame's own area - anything outside it belongs to another frame in the sheet
+			const Recti debrisRect = res->Base->GetFrameRect(_renderer.CurrentFrame);
 
 			float x = _pos.X - res->Base->Hotspot.X;
 			float y = _pos.Y - res->Base->Hotspot.Y;
 
-			for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
-				for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+			for (std::int32_t fy = 0; fy < debrisRect.H; fy += DebrisSize + 1) {
+				for (std::int32_t fx = 0; fx < debrisRect.W; fx += DebrisSize + 1) {
 					float currentSize = DebrisSize * Random().FastFloat(0.4f, 1.1f);
 
 					Tiles::TileMap::DestructibleDebris debris = { };
-					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
+					debris.Pos = Vector2f(x + (IsFacingLeft() ? debrisRect.W - fx : fx), y + fy);
 					debris.Depth = _renderer.layer();
 					debris.Size = Vector2f(currentSize, currentSize);
-					debris.Speed = Vector2f(((fx - res->Base->FrameDimensions.X / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 5.0f) / res->Base->FrameDimensions.X,
-							((fy - res->Base->FrameDimensions.Y / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 5.0f) / res->Base->FrameDimensions.Y);
+					debris.Speed = Vector2f(((fx - debrisRect.W / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 5.0f) / debrisRect.W,
+							((fy - debrisRect.H / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 5.0f) / debrisRect.H);
 					debris.Acceleration = Vector2f::Zero;
 
 					debris.Scale = 1.2f;
@@ -600,9 +605,9 @@ namespace Jazz2::Actors
 					debris.Time = 280.0f;
 
 					debris.TexScaleX = (currentSize / float(texSize.X));
-					debris.TexBiasX = (((float)(_renderer.CurrentFrame % res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.X) + ((float)fx / float(texSize.X)));
+					debris.TexBiasX = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).X) + (float)fx) / float(texSize.X));
 					debris.TexScaleY = (currentSize / float(texSize.Y));
-					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
+					debris.TexBiasY = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).Y) + (float)fy) / float(texSize.Y));
 
 					debris.DiffuseTexture = texture;
 					debris.PaletteOffset = paletteDebrisOffset;
@@ -618,17 +623,19 @@ namespace Jazz2::Actors
 			constexpr std::int32_t DebrisSize = 3;
 
 			Vector2i texSize = texture->GetSize();
+			// Walk the frame's own area - anything outside it belongs to another frame in the sheet
+			const Recti debrisRect = res->Base->GetFrameRect(_renderer.CurrentFrame);
 
-			for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
-				for (int fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+			for (std::int32_t fy = 0; fy < debrisRect.H; fy += DebrisSize + 1) {
+				for (int fx = 0; fx < debrisRect.W; fx += DebrisSize + 1) {
 					float currentSize = DebrisSize * Random().FastFloat(0.2f, 1.1f);
 
 					Tiles::TileMap::DestructibleDebris debris{};
-					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - fx : fx), y + fy);
+					debris.Pos = Vector2f(x + (IsFacingLeft() ? debrisRect.W - fx : fx), y + fy);
 					debris.Depth = _renderer.layer();
 					debris.Size = Vector2f(currentSize, currentSize);
-					debris.Speed = Vector2f(((fx - res->Base->FrameDimensions.X / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(1.0f, 3.0f) / res->Base->FrameDimensions.X,
-						 ((fy - res->Base->FrameDimensions.Y / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(1.0f, 3.0f) / res->Base->FrameDimensions.Y);
+					debris.Speed = Vector2f(((fx - debrisRect.W / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(1.0f, 3.0f) / debrisRect.W,
+						 ((fy - debrisRect.H / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(1.0f, 3.0f) / debrisRect.H);
 					debris.Acceleration = Vector2f::Zero;
 
 					debris.Scale = 1.0f;
@@ -638,9 +645,9 @@ namespace Jazz2::Actors
 					debris.Time = Random().FastFloat(300.0f, 340.0f);;
 
 					debris.TexScaleX = (currentSize / float(texSize.X));
-					debris.TexBiasX = (((float)(_renderer.CurrentFrame % res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.X) + ((float)fx / float(texSize.X)));
+					debris.TexBiasX = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).X) + (float)fx) / float(texSize.X));
 					debris.TexScaleY = (currentSize / float(texSize.Y));
-					debris.TexBiasY = (((float)(_renderer.CurrentFrame / res->Base->FrameConfiguration.X) / res->Base->FrameConfiguration.Y) + ((float)fy / float(texSize.Y)));
+					debris.TexBiasY = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).Y) + (float)fy) / float(texSize.Y));
 
 					debris.DiffuseTexture = texture;
 					debris.PaletteOffset = paletteDebrisOffset;
@@ -844,32 +851,33 @@ namespace Jazz2::Actors
 			return false;
 		}
 
-		Vector2i& hotspot1 = res1->Base->Hotspot;
-		Vector2i& hotspot2 = res2->Base->Hotspot;
-
-		Vector2i& size1 = res1->Base->FrameDimensions;
-		Vector2i& size2 = res2->Base->FrameDimensions;
+		// The box has to describe the frame exactly as it is drawn, because the per-pixel test below turns a
+		// world coordinate into an offset into that frame's area of the sheet. Taking the animation's cell
+		// instead would leave the two in different coordinate spaces whenever a frame is packed tightly (its
+		// area is then smaller than the cell), and the mask would be sampled at the wrong place.
+		const std::int32_t maskFrame1 = std::min(_renderer.CurrentFrame, res1->FrameCount - 1);
+		const std::int32_t maskFrame2 = std::min(other->_renderer.CurrentFrame, res2->FrameCount - 1);
+		const bool facingLeft1 = GetState(ActorState::IsFacingLeft);
+		const bool facingLeft2 = other->GetState(ActorState::IsFacingLeft);
+		const Recti frameRect1 = res1->Base->GetFrameRect(maskFrame1);
+		const Recti frameRect2 = res2->Base->GetFrameRect(maskFrame2);
+		const Vector2i frameAnchor1 = res1->Base->GetFrameAnchor(maskFrame1, facingLeft1);
+		const Vector2i frameAnchor2 = res2->Base->GetFrameAnchor(maskFrame2, facingLeft2);
 
 		AABBf aabb1, aabb2;
 		if (!perPixel1) {
 			aabb1 = AABBInner;
-		} else if (GetState(ActorState::IsFacingLeft)) {
-			aabb1 = AABBf(_pos.X + hotspot1.X - size1.X, _pos.Y - hotspot1.Y, (float)size1.X, (float)size1.Y);
-			aabb1.B += aabb1.T;
-			aabb1.R += aabb1.L;
 		} else {
-			aabb1 = AABBf(_pos.X - hotspot1.X, _pos.Y - hotspot1.Y, (float)size1.X, (float)size1.Y);
+			aabb1 = AABBf(_pos.X - frameAnchor1.X, _pos.Y - frameAnchor1.Y,
+				(float)frameRect1.W, (float)frameRect1.H);
 			aabb1.B += aabb1.T;
 			aabb1.R += aabb1.L;
 		}
 		if (!perPixel2) {
 			aabb2 = other->AABBInner;
-		} else if (other->GetState(ActorState::IsFacingLeft)) {
-			aabb2 = AABBf(other->_pos.X + hotspot2.X - size2.X, other->_pos.Y - hotspot2.Y, (float)size2.X, (float)size2.Y);
-			aabb2.B += aabb2.T;
-			aabb2.R += aabb2.L;
 		} else {
-			aabb2 = AABBf(other->_pos.X - hotspot2.X, other->_pos.Y - hotspot2.Y, (float)size2.X, (float)size2.Y);
+			aabb2 = AABBf(other->_pos.X - frameAnchor2.X, other->_pos.Y - frameAnchor2.Y,
+				(float)frameRect2.W, (float)frameRect2.H);
 			aabb2.B += aabb2.T;
 			aabb2.R += aabb2.L;
 		}
@@ -889,12 +897,12 @@ namespace Jazz2::Actors
 			uint8_t* p;
 			GraphicResource* res;
 			bool isFacingLeftCurrent;
-			std::int32_t x1, y1, x2, y2, xs, dx, dy, stride;
+			std::int32_t x1, y1, x2, y2, xs, dx, dy, stride, frameWidth;
 			if (perPixel1) {
 				res = res1;
 				p = res->Base->Mask.get();
 
-				isFacingLeftCurrent = GetState(ActorState::IsFacingLeft);
+				isFacingLeftCurrent = facingLeft1;
 
 				x1 = (std::int32_t)std::max(inter.L, other->AABBInner.L);
 				y1 = (std::int32_t)std::max(inter.T, other->AABBInner.T);
@@ -903,15 +911,15 @@ namespace Jazz2::Actors
 
 				xs = (std::int32_t)aabb1.L;
 
-				std::int32_t frame1 = std::min(_renderer.CurrentFrame, res->FrameCount - 1);
-				dx = (frame1 % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
-				dy = (frame1 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (std::int32_t)aabb1.T;
+				dx = frameRect1.X;
+				dy = frameRect1.Y - (std::int32_t)aabb1.T;
+				frameWidth = frameRect1.W;
 
 			} else {
 				res = res2;
 				p = res->Base->Mask.get();
 
-				isFacingLeftCurrent = other->GetState(ActorState::IsFacingLeft);
+				isFacingLeftCurrent = facingLeft2;
 
 				x1 = (std::int32_t)std::max(inter.L, AABBInner.L);
 				y1 = (std::int32_t)std::max(inter.T, AABBInner.T);
@@ -920,19 +928,20 @@ namespace Jazz2::Actors
 
 				xs = (std::int32_t)aabb2.L;
 
-				std::int32_t frame2 = std::min(other->_renderer.CurrentFrame, res->FrameCount - 1);
-				dx = (frame2 % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
-				dy = (frame2 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (std::int32_t)aabb2.T;
+				dx = frameRect2.X;
+				dy = frameRect2.Y - (std::int32_t)aabb2.T;
+				frameWidth = frameRect2.W;
 			}
 
-			stride = res->Base->FrameConfiguration.X * res->Base->FrameDimensions.X;
+			stride = res->Base->GetMaskStride();
 
 			// Per-pixel collision check
 			for (std::int32_t i = x1; i < x2; i += PerPixelCollisionStep) {
 				for (std::int32_t j = y1; j < y2; j += PerPixelCollisionStep) {
 					std::int32_t i1 = i - xs;
 					if (isFacingLeftCurrent) {
-						i1 = res->Base->FrameDimensions.X - i1 - 1;
+						// Mirrored within the frame's own width, which a tightly packed frame determines
+						i1 = frameWidth - i1 - 1;
 					}
 
 					if (p[((j + dy) * stride) + i1 + dx] > AlphaThreshold) {
@@ -949,15 +958,13 @@ namespace Jazz2::Actors
 			std::int32_t x1s = (std::int32_t)aabb1.L;
 			std::int32_t x2s = (std::int32_t)aabb2.L;
 
-			std::int32_t frame1 = std::min(_renderer.CurrentFrame, res1->FrameCount - 1);
-			std::int32_t dx1 = (frame1 % res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.X;
-			std::int32_t dy1 = (frame1 / res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.Y - (std::int32_t)aabb1.T;
-			std::int32_t stride1 = res1->Base->FrameConfiguration.X * res1->Base->FrameDimensions.X;
+			std::int32_t dx1 = frameRect1.X;
+			std::int32_t dy1 = frameRect1.Y - (std::int32_t)aabb1.T;
+			std::int32_t stride1 = res1->Base->GetMaskStride();
 
-			std::int32_t frame2 = std::min(other->_renderer.CurrentFrame, res2->FrameCount - 1);
-			std::int32_t dx2 = (frame2 % res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.X;
-			std::int32_t dy2 = (frame2 / res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.Y - (std::int32_t)aabb2.T;
-			std::int32_t stride2 = res2->Base->FrameConfiguration.X * res2->Base->FrameDimensions.X;
+			std::int32_t dx2 = frameRect2.X;
+			std::int32_t dy2 = frameRect2.Y - (std::int32_t)aabb2.T;
+			std::int32_t stride2 = res2->Base->GetMaskStride();
 
 			// Per-pixel collision check
 			auto p1 = res1->Base->Mask.get();
@@ -967,11 +974,11 @@ namespace Jazz2::Actors
 				for (std::int32_t j = y1; j < y2; j += PerPixelCollisionStep) {
 					std::int32_t i1 = i - x1s;
 					if (GetState(ActorState::IsFacingLeft)) {
-						i1 = res1->Base->FrameDimensions.X - i1 - 1;
+						i1 = frameRect1.W - i1 - 1;
 					}
 					std::int32_t i2 = i - x2s;
 					if (other->GetState(ActorState::IsFacingLeft)) {
-						i2 = res2->Base->FrameDimensions.X - i2 - 1;
+						i2 = frameRect2.W - i2 - 1;
 					}
 
 					if (p1[((j + dy1) * stride1) + i1 + dx1] > AlphaThreshold && p2[((j + dy2) * stride2) + i2 + dx2] > AlphaThreshold) {
@@ -998,19 +1005,17 @@ namespace Jazz2::Actors
 			return false;
 		}
 
-		Vector2i& hotspot = res->Base->Hotspot;
-		Vector2i& size = res->Base->FrameDimensions;
+		// Sized and placed exactly like the drawn frame, so the per-pixel test below can turn a world
+		// coordinate straight into an offset into that frame's area of the sheet (see IsCollidingWith above)
+		const std::int32_t maskFrame = std::min(_renderer.CurrentFrame, res->FrameCount - 1);
+		const bool facingLeft = GetState(ActorState::IsFacingLeft);
+		const Recti frameRectSelf = res->Base->GetFrameRect(maskFrame);
+		const Vector2i frameAnchorSelf = res->Base->GetFrameAnchor(maskFrame, facingLeft);
 
-		AABBf aabbSelf;
-		if (GetState(ActorState::IsFacingLeft)) {
-			aabbSelf = AABBf(_pos.X + hotspot.X - size.X, _pos.Y - hotspot.Y, (float)size.X, (float)size.Y);
-			aabbSelf.B += aabbSelf.T;
-			aabbSelf.R += aabbSelf.L;
-		} else {
-			aabbSelf = AABBf(_pos.X - hotspot.X, _pos.Y - hotspot.Y, (float)size.X, (float)size.Y);
-			aabbSelf.B += aabbSelf.T;
-			aabbSelf.R += aabbSelf.L;
-		}
+		AABBf aabbSelf = AABBf(_pos.X - frameAnchorSelf.X, _pos.Y - frameAnchorSelf.Y,
+			(float)frameRectSelf.W, (float)frameRectSelf.H);
+		aabbSelf.B += aabbSelf.T;
+		aabbSelf.R += aabbSelf.L;
 
 		// Bounding Box intersection
 		AABBf inter = AABBf::Intersect(aabb, aabbSelf);
@@ -1025,10 +1030,9 @@ namespace Jazz2::Actors
 
 		std::int32_t xs = (std::int32_t)aabbSelf.L;
 
-		std::int32_t frame1 = std::min(_renderer.CurrentFrame, res->FrameCount - 1);
-		std::int32_t dx = (frame1 % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
-		std::int32_t dy = (frame1 / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y - (int)aabbSelf.T;
-		std::int32_t stride = res->Base->FrameConfiguration.X * res->Base->FrameDimensions.X;
+		std::int32_t dx = frameRectSelf.X;
+		std::int32_t dy = frameRectSelf.Y - (std::int32_t)aabbSelf.T;
+		std::int32_t stride = res->Base->GetMaskStride();
 
 		// Per-pixel collision check
 		auto p = res->Base->Mask.get();
@@ -1037,7 +1041,7 @@ namespace Jazz2::Actors
 			for (std::int32_t j = y1; j < y2; j += PerPixelCollisionStep) {
 				std::int32_t i1 = i - xs;
 				if (GetState(ActorState::IsFacingLeft)) {
-					i1 = res->Base->FrameDimensions.X - i1 - 1;
+					i1 = frameRectSelf.W - i1 - 1;
 				}
 
 				if (p[((j + dy) * stride) + i1 + dx] > AlphaThreshold) {
@@ -1057,22 +1061,32 @@ namespace Jazz2::Actors
 			return false;
 		}
 
-		Matrix4x4f transform1 = Matrix4x4f::Translation((float)-res1->Base->Hotspot.X, (float)-res1->Base->Hotspot.Y, 0.0f);
+		// The loop below walks the frame's own area and samples the mask at the matching offset, so the
+		// transform has to map that area - not the animation's cell - into the world. The mirroring stays
+		// geometric here (the Scaling below), so the anchor is taken unflipped.
+		const std::int32_t maskFrame1 = std::min(_renderer.CurrentFrame, res1->FrameCount - 1);
+		const std::int32_t maskFrame2 = std::min(other->_renderer.CurrentFrame, res2->FrameCount - 1);
+		const Recti frameRect1 = res1->Base->GetFrameRect(maskFrame1);
+		const Recti frameRect2 = res2->Base->GetFrameRect(maskFrame2);
+		const Vector2i frameAnchor1 = res1->Base->GetFrameAnchor(maskFrame1);
+		const Vector2i frameAnchor2 = res2->Base->GetFrameAnchor(maskFrame2);
+
+		Matrix4x4f transform1 = Matrix4x4f::Translation((float)-frameAnchor1.X, (float)-frameAnchor1.Y, 0.0f);
 		if (GetState(ActorState::IsFacingLeft)) {
 			transform1 = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform1;
 		}
 		transform1 = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.rotation()) * transform1;
 
-		Matrix4x4f transform2 = Matrix4x4f::Translation((float)-res2->Base->Hotspot.X, (float)-res2->Base->Hotspot.Y, 0.0f);
+		Matrix4x4f transform2 = Matrix4x4f::Translation((float)-frameAnchor2.X, (float)-frameAnchor2.Y, 0.0f);
 		if (other->GetState(ActorState::IsFacingLeft)) {
 			transform2 = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform2;
 		}
 		transform2 = Matrix4x4f::Translation(other->_pos.X, other->_pos.Y, 0.0f) * Matrix4x4f::RotationZ(other->_renderer.rotation()) * transform2;
 
-		std::int32_t width1 = res1->Base->FrameDimensions.X;
-		std::int32_t height1 = res1->Base->FrameDimensions.Y;
-		std::int32_t width2 = res2->Base->FrameDimensions.X;
-		std::int32_t height2 = res2->Base->FrameDimensions.Y;
+		std::int32_t width1 = frameRect1.W;
+		std::int32_t height1 = frameRect1.H;
+		std::int32_t width2 = frameRect2.W;
+		std::int32_t height2 = frameRect2.H;
 
 		// Bounding Box intersection
 		AABBf aabb1, aabb2;
@@ -1116,15 +1130,13 @@ namespace Jazz2::Actors
 
 		Vector3f yPosIn2 = Vector3f::Zero * transformAToB;
 
-		std::int32_t frame1 = std::min(_renderer.CurrentFrame, res1->FrameCount - 1);
-		std::int32_t dx1 = (frame1 % res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.X;
-		std::int32_t dy1 = (frame1 / res1->Base->FrameConfiguration.X) * res1->Base->FrameDimensions.Y;
-		std::int32_t stride1 = res1->Base->FrameConfiguration.X * res1->Base->FrameDimensions.X;
+		std::int32_t dx1 = frameRect1.X;
+		std::int32_t dy1 = frameRect1.Y;
+		std::int32_t stride1 = res1->Base->GetMaskStride();
 
-		std::int32_t frame2 = std::min(other->_renderer.CurrentFrame, res2->FrameCount - 1);
-		std::int32_t dx2 = (frame2 % res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.X;
-		std::int32_t dy2 = (frame2 / res2->Base->FrameConfiguration.X) * res2->Base->FrameDimensions.Y;
-		std::int32_t stride2 = res2->Base->FrameConfiguration.X * res2->Base->FrameDimensions.X;
+		std::int32_t dx2 = frameRect2.X;
+		std::int32_t dy2 = frameRect2.Y;
+		std::int32_t stride2 = res2->Base->GetMaskStride();
 
 		auto p1 = res1->Base->Mask.get();
 		auto p2 = res2->Base->Mask.get();
@@ -1156,14 +1168,19 @@ namespace Jazz2::Actors
 			return false;
 		}
 
-		Matrix4x4f transform = Matrix4x4f::Translation((float)-res->Base->Hotspot.X, (float)-res->Base->Hotspot.Y, 0.0f);
+		// As above: the loop walks the frame's own area, so the transform maps that area into the world
+		const std::int32_t maskFrame = std::min(_renderer.CurrentFrame, res->FrameCount - 1);
+		const Recti frameRectSelf = res->Base->GetFrameRect(maskFrame);
+		const Vector2i frameAnchorSelf = res->Base->GetFrameAnchor(maskFrame);
+
+		Matrix4x4f transform = Matrix4x4f::Translation((float)-frameAnchorSelf.X, (float)-frameAnchorSelf.Y, 0.0f);
 		if (GetState(ActorState::IsFacingLeft)) {
 			transform = Matrix4x4f::Scaling(-1.0f, 1.0f, 1.0f) * transform;
 		}
 		transform = Matrix4x4f::Translation(_pos.X, _pos.Y, 0.0f) * Matrix4x4f::RotationZ(_renderer.rotation()) * transform;
 
-		std::int32_t width = res->Base->FrameDimensions.X;
-		std::int32_t height = res->Base->FrameDimensions.Y;
+		std::int32_t width = frameRectSelf.W;
+		std::int32_t height = frameRectSelf.H;
 
 		// Bounding Box intersection
 		AABBf aabbSelf;
@@ -1192,9 +1209,9 @@ namespace Jazz2::Actors
 		Vector3f yPosInAABB = Vector3f::Zero * transform;
 
 		std::int32_t frame = std::min(_renderer.CurrentFrame, res->FrameCount - 1);
-		std::int32_t dx = (frame % res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.X;
-		std::int32_t dy = (frame / res->Base->FrameConfiguration.X) * res->Base->FrameDimensions.Y;
-		std::int32_t stride = res->Base->FrameConfiguration.X * res->Base->FrameDimensions.X;
+		std::int32_t dx = frameRectSelf.X;
+		std::int32_t dy = frameRectSelf.Y;
+		std::int32_t stride = res->Base->GetMaskStride();
 
 		auto p = res->Base->Mask.get();
 
@@ -1276,6 +1293,7 @@ namespace Jazz2::Actors
 
 		_renderer.FrameConfiguration = res->Base->FrameConfiguration;
 		_renderer.FrameDimensions = res->Base->FrameDimensions;
+		_renderer.FrameSource = res->Base;
 		if (res->AnimDuration < 0.0f) {
 			if (res->FrameCount > 1) {
 				_renderer.FirstFrame = res->FrameOffset + nCine::Random().Next(0, res->FrameCount);
@@ -1293,7 +1311,7 @@ namespace Jazz2::Actors
 		_renderer.AnimDuration = res->AnimDuration;
 		_renderer.AnimTime = (skipAnimation && res->AnimDuration >= 0.0f && _renderer.LoopMode != AnimationLoopMode::FixedSingle ? _renderer.AnimDuration : 0.0f);
 
-		_renderer.Hotspot.X = static_cast<float>(IsFacingLeft() ? (res->Base->FrameDimensions.X - res->Base->Hotspot.X) : res->Base->Hotspot.X);
+		_renderer.Hotspot.X = static_cast<float>(res->Base->Hotspot.X);
 		_renderer.Hotspot.Y = static_cast<float>(res->Base->Hotspot.Y);
 
 		_renderer.setTexture(res->Base->TextureDiffuse.get());
@@ -1437,7 +1455,7 @@ namespace Jazz2::Actors
 	}
 
 	ActorBase::ActorRenderer::ActorRenderer(ActorBase* owner)
-		: BaseSprite(nullptr, nullptr, 0.0f, 0.0f), AnimPaused(false), LoopMode(AnimationLoopMode::Loop), FirstFrame(0),
+		: BaseSprite(nullptr, nullptr, 0.0f, 0.0f), AnimPaused(false), FrameSource(nullptr), LoopMode(AnimationLoopMode::Loop), FirstFrame(0),
 			FrameCount(0), AnimDuration(0.0f), AnimTime(0.0f), CurrentFrame(0), _owner(owner),
 			_rendererType((ActorRendererType)-1), _rendererTransition(0.0f), _paletteOffset(-1), _baseIndexed(false), _basePaletteOffset(0)
 	{
@@ -1663,10 +1681,27 @@ namespace Jazz2::Actors
 		CurrentFrame = FirstFrame + std::clamp<std::int32_t>(CurrentFrame, 0, FrameCount - 1);
 
 		// Set current animation frame rectangle
-		std::int32_t col = CurrentFrame % FrameConfiguration.X;
-		std::int32_t row = CurrentFrame / FrameConfiguration.X;
-		setTexRect(Recti(FrameDimensions.X * col, FrameDimensions.Y * row, FrameDimensions.X, FrameDimensions.Y));
-		setAbsAnchorPoint(Hotspot.X, Hotspot.Y);
+		// A tightly packed sheet gives every frame its own area and its own hotspot within it, so both the
+		// sampled rectangle and the anchor follow the frame (setTexRect() sizes the sprite from the rect)
+		setTexRect(FrameSource != nullptr ? FrameSource->GetFrameRect(CurrentFrame)
+			: Recti(FrameDimensions.X * (CurrentFrame % FrameConfiguration.X),
+				FrameDimensions.Y * (CurrentFrame / FrameConfiguration.X), FrameDimensions.X, FrameDimensions.Y));
+		UpdateAnchor();
+	}
+
+	void ActorBase::ActorRenderer::UpdateAnchor()
+	{
+		// The sprite's quad covers the frame's own area, and flipping mirrors the texture inside that quad,
+		// so a mirrored hotspot has to be measured from the same area. On a regular grid the area is the
+		// whole cell, which is why mirroring within FrameDimensions is right there and wrong for a packed
+		// sheet, where the frame keeps only the space its pixels need.
+		if (FrameSource != nullptr) {
+			const Vector2i anchor = FrameSource->GetFrameAnchor(CurrentFrame, isFlippedX(), isFlippedY());
+			setAbsAnchorPoint((float)anchor.X, (float)anchor.Y);
+		} else {
+			setAbsAnchorPoint(isFlippedX() ? (float)FrameDimensions.X - Hotspot.X : Hotspot.X,
+				isFlippedY() ? (float)FrameDimensions.Y - Hotspot.Y : Hotspot.Y);
+		}
 	}
 
 	std::int32_t ActorBase::ActorRenderer::NormalizeFrame(std::int32_t frame, std::int32_t min, std::int32_t max)

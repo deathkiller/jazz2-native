@@ -129,30 +129,30 @@ namespace Jazz2::UI
 		std::uint32_t _palette[256];
 		
 		/**
-			@brief Forward-only window over the video file, shared by the four compressed streams
+			@brief Sliding window over the video file, shared by the four compressed streams
 
-			Reading slices straight from the file dominates playback: on an optical drive one read costs more
-			than decoding an entire frame, and the four streams each need a few every frame. Their chunks are
-			interleaved in file order and consumed at the same rate, so at any moment all four read within a
-			few kilobytes of each other - one large window covers them all. It keeps a margin behind the
-			latest request so a stream that lags slightly still hits it, and only ever moves forward, which
-			turns the whole video into a couple of dozen sequential reads.
+			Reading slices straight from the file dominates playback: on an optical drive one read costs far
+			more than decoding a frame. The four streams' chunks are interleaved in file order and consumed at
+			the same rate, so at any moment all four read within a few kilobytes of each other and one window
+			covers them all; it keeps a margin behind the latest request so a stream that trails slightly
+			still hits it. The window is deliberately small: refilling it is the one part of playback that can
+			stall a frame, so it is better to read a little often than a lot rarely.
 		*/
 		class FileWindow
 		{
 		public:
-			static constexpr std::int32_t WindowSize = 512 * 1024;
-			// Kept behind a repositioned window for the streams that trail the one that triggered it
-			static constexpr std::int32_t WindowMargin = 32 * 1024;
+			static constexpr std::int32_t WindowSize = 64 * 1024;
+			// Kept behind a refilled window for the streams that trail the one that triggered it
+			static constexpr std::int32_t WindowMargin = 16 * 1024;
 
-			void Initialize(Stream* file);
-			/** @brief Reads through the window, repositioning it when the range is not covered */
+			void Initialize(Stream* file, std::int64_t startOffset);
+			/** @brief Reads through the window, refilling it when the range is not covered */
 			std::int32_t Read(std::int64_t offset, void* destination, std::int32_t bytes);
-
 
 		private:
 			Stream* _file = nullptr;
 			std::unique_ptr<std::uint8_t[]> _data;
+			// File offset of _data[0] and the number of valid bytes from there
 			std::int64_t _start = 0;
 			std::int32_t _length = 0;
 		};
