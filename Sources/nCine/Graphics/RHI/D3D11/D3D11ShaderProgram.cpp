@@ -34,10 +34,12 @@ namespace nCine::RHI::D3D11
 			}
 		}
 
-		// On-disk DXBC blob cache (gated to the D3D11 backend). Compiling ~120 HLSL stages with D3DCompile at
-		// startup takes many seconds; caching the compiled bytecode keyed by a hash of the HLSL source means a
-		// warm run only recompiles shaders whose source actually changed. Format: magic, version, VS size, PS
-		// size, then the two raw DXBC blobs. Stored under <shaderCachePath>/D3D11.
+		// On-disk DXBC blob cache for the runtime-compile FALLBACK path (headers generated without embedded
+		// DXBC). Compiling ~120 HLSL stages with D3DCompile at startup takes many seconds; caching the compiled
+		// bytecode keyed by a hash of the HLSL source means a warm run only recompiles shaders whose source
+		// actually changed. Format: magic, version, VS size, PS size, then the two raw DXBC blobs. Stored under
+		// <shaderCachePath>/D3D11. Shaders with offline-precompiled DXBC embedded in the generated headers (the
+		// normal case) never touch this cache.
 		constexpr std::uint32_t kBlobCacheMagic = 0x31314458u;	// 'XD11'
 		constexpr std::uint32_t kBlobCacheVersion = 1u;
 
@@ -56,7 +58,7 @@ namespace nCine::RHI::D3D11
 			return fs::CombinePath(fs::CombinePath(base, "D3D11"_s), StringView(name, 21));
 		}
 
-		bool LoadBlobCache(const String& path, std::vector<std::uint8_t>& vs, std::vector<std::uint8_t>& ps)
+		bool LoadBlobCache(const String& path, ShaderByteCode& vs, ShaderByteCode& ps)
 		{
 			std::unique_ptr<Stream> s = fs::Open(path, FileAccess::Read);
 			if (s == nullptr || !s->IsValid() || s->GetSize() < 16) {
@@ -76,7 +78,7 @@ namespace nCine::RHI::D3D11
 					s->Read(ps.data(), std::int64_t(psSize)) == std::int64_t(psSize));
 		}
 
-		void SaveBlobCache(const String& path, const std::vector<std::uint8_t>& vs, const std::vector<std::uint8_t>& ps)
+		void SaveBlobCache(const String& path, const ShaderByteCode& vs, const ShaderByteCode& ps)
 		{
 			fs::CreateDirectories(fs::GetDirectoryName(path));
 			std::unique_ptr<Stream> s = fs::Open(path, FileAccess::Write);
@@ -292,68 +294,78 @@ namespace nCine::RHI::D3D11
 
 	void D3D11ShaderProgram::CompileHlsl()
 	{
-		const char* vsSource = reflection_->HlslVsSource;
-		const char* fsSource = reflection_->HlslFsSource;
-		if (vsSource == nullptr || fsSource == nullptr) {
-			// No HLSL lowering available (e.g. a runtime-compiled shader outside the emitter's subset)
-			if (shouldLogOnErrors_) {
-				LOGW("Program {} has no HLSL sources; draws with it are skipped", handle_);
-			}
-			return;
-		}
-
 		ID3D11Device* device = D3D11Device::GetD3DDevice();
 		if (device == nullptr) {
-			LOGE("Cannot compile HLSL: Direct3D 11 device is not created yet");
+			LOGE("Cannot create shaders: Direct3D 11 device is not created yet");
 			return;
 		}
 
-		std::vector<std::uint8_t> vsBytes;
-		std::vector<std::uint8_t> psBytes;
+		ShaderByteCode vsBytes;
+		ShaderByteCode psBytes;
 
-		// Warm path: load the precompiled DXBC from the on-disk cache (keyed by the HLSL source hash)
-		const String cachePath = BlobCachePath(vsSource, fsSource);
-		bool loaded = (!cachePath.empty() && LoadBlobCache(cachePath, vsBytes, psBytes));
+		const char* vsSource = reflection_->HlslVsSource;
+		const char* fsSource = reflection_->HlslFsSource;
+		if (reflection_->HlslVsDxbc != nullptr && reflection_->HlslFsDxbc != nullptr &&
+			reflection_->HlslVsDxbcSize > 0 && reflection_->HlslFsDxbcSize > 0) {
+			// Precompiled path: ShaderCompiler embedded offline-compiled DXBC (same entry points/targets and
+			// column-major packing as the runtime compile below, but fully optimized) - no D3DCompile at
+			// startup and no on-disk cache needed. This is also what UWP/Xbox builds run.
+			vsBytes.assign(reflection_->HlslVsDxbc, reflection_->HlslVsDxbc + reflection_->HlslVsDxbcSize);
+			psBytes.assign(reflection_->HlslFsDxbc, reflection_->HlslFsDxbc + reflection_->HlslFsDxbcSize);
+		} else if (vsSource != nullptr && fsSource != nullptr) {
+			// Runtime-compile fallback for variants that carry only HLSL text (headers generated without
+			// d3dcompiler_47 or with --no-dxbc)
 
-		if (!loaded) {
-			// Force column-major cbuffer matrix packing so the emitter's mul(M, v) column-vector algebra reads
-			// the engine's column-major (OpenGL-convention) uniform data verbatim - no per-matrix transpose
-			// needed. Skip optimization to keep the cold-start compile fast (this is a debug backend build).
-			const UINT compileFlags = D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR | D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_SKIP_OPTIMIZATION;
+			// Warm path: load the precompiled DXBC from the on-disk cache (keyed by the HLSL source hash)
+			const String cachePath = BlobCachePath(vsSource, fsSource);
+			bool loaded = (!cachePath.empty() && LoadBlobCache(cachePath, vsBytes, psBytes));
 
-			auto compileStage = [&](const char* source, const char* entry, const char* target, std::vector<std::uint8_t>& out) -> bool {
-				ID3DBlob* blob = nullptr;
-				ID3DBlob* errorBlob = nullptr;
-				const HRESULT hr = D3DCompile(source, std::strlen(source), nullptr, nullptr, nullptr,
-					entry, target, compileFlags, 0, &blob, &errorBlob);
-				if (FAILED(hr)) {
+			if (!loaded) {
+				// Force column-major cbuffer matrix packing so the emitter's mul(M, v) column-vector algebra reads
+				// the engine's column-major (OpenGL-convention) uniform data verbatim - no per-matrix transpose
+				// needed. Skip optimization to keep the cold-start compile fast (this is a fallback path).
+				const UINT compileFlags = D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR | D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_SKIP_OPTIMIZATION;
+
+				auto compileStage = [&](const char* source, const char* entry, const char* target, ShaderByteCode& out) -> bool {
+					ID3DBlob* blob = nullptr;
+					ID3DBlob* errorBlob = nullptr;
+					const HRESULT hr = D3DCompile(source, std::strlen(source), nullptr, nullptr, nullptr,
+						entry, target, compileFlags, 0, &blob, &errorBlob);
+					if (FAILED(hr)) {
+						if (errorBlob != nullptr) {
+							LOGE("HLSL {} compile failed: {}", entry, reinterpret_cast<const char*>(errorBlob->GetBufferPointer()));
+							errorBlob->Release();
+						} else {
+							LOGE("HLSL {} compile failed: 0x{:.8x}", entry, static_cast<std::uint32_t>(hr));
+						}
+						if (blob != nullptr) {
+							blob->Release();
+						}
+						return false;
+					}
 					if (errorBlob != nullptr) {
-						LOGE("HLSL {} compile failed: {}", entry, reinterpret_cast<const char*>(errorBlob->GetBufferPointer()));
 						errorBlob->Release();
-					} else {
-						LOGE("HLSL {} compile failed: 0x{:.8x}", entry, static_cast<std::uint32_t>(hr));
 					}
-					if (blob != nullptr) {
-						blob->Release();
-					}
-					return false;
-				}
-				if (errorBlob != nullptr) {
-					errorBlob->Release();
-				}
-				out.assign(reinterpret_cast<const std::uint8_t*>(blob->GetBufferPointer()),
-					reinterpret_cast<const std::uint8_t*>(blob->GetBufferPointer()) + blob->GetBufferSize());
-				blob->Release();
-				return true;
-			};
+					out.assign(reinterpret_cast<const std::uint8_t*>(blob->GetBufferPointer()),
+						reinterpret_cast<const std::uint8_t*>(blob->GetBufferPointer()) + blob->GetBufferSize());
+					blob->Release();
+					return true;
+				};
 
-			if (!compileStage(vsSource, "VSMain", "vs_4_0", vsBytes) || !compileStage(fsSource, "PSMain", "ps_4_0", psBytes)) {
-				status_ = Status::CompilationFailed;
-				return;
+				if (!compileStage(vsSource, "VSMain", "vs_4_0", vsBytes) || !compileStage(fsSource, "PSMain", "ps_4_0", psBytes)) {
+					status_ = Status::CompilationFailed;
+					return;
+				}
+				if (!cachePath.empty()) {
+					SaveBlobCache(cachePath, vsBytes, psBytes);
+				}
 			}
-			if (!cachePath.empty()) {
-				SaveBlobCache(cachePath, vsBytes, psBytes);
+		} else {
+			// No HLSL lowering available (e.g. a runtime-compiled shader outside the emitter's subset)
+			if (shouldLogOnErrors_) {
+				LOGW("Program {} has no HLSL bytecode or sources; draws with it are skipped", handle_);
 			}
+			return;
 		}
 
 		HRESULT hr = device->CreateVertexShader(vsBytes.data(), vsBytes.size(), nullptr, &vertexShader_);
@@ -375,7 +387,7 @@ namespace nCine::RHI::D3D11
 		ReflectStageCBuffers(psBytes.data(), psBytes.size(), psCBuffers_, psTextureMask_);
 	}
 
-	void D3D11ShaderProgram::ReflectStageCBuffers(const void* byteCode, std::size_t byteCodeSize, std::vector<D3D11CBufferSlot>& slots, std::uint32_t& textureMask)
+	void D3D11ShaderProgram::ReflectStageCBuffers(const void* byteCode, std::size_t byteCodeSize, CBufferSlotList& slots, std::uint32_t& textureMask)
 	{
 		ID3D11ShaderReflection* refl = nullptr;
 		if (FAILED(D3DReflect(byteCode, byteCodeSize, __uuidof(ID3D11ShaderReflection), reinterpret_cast<void**>(&refl))) || refl == nullptr) {
@@ -464,7 +476,8 @@ namespace nCine::RHI::D3D11
 		// TEXCOORD<location>, so the semantic index is the attribute location; the within-vertex byte offset
 		// comes from the vertex format the pipeline defined (its `pointer_`), matching the GL backend which
 		// feeds that same value to glVertexAttribPointer.
-		std::vector<D3D11_INPUT_ELEMENT_DESC> elements;
+		// One element per attribute; the shipped attribute-based shaders stay well inside the inline capacity
+		SmallVector<D3D11_INPUT_ELEMENT_DESC, D3D11VertexFormat::MaxAttributes> elements;
 		elements.reserve(attributes_.size());
 		for (const D3D11Attribute& a : attributes_) {
 			const std::int32_t loc = a.GetLocation();

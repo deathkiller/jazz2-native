@@ -93,7 +93,7 @@ if(NCINE_BUILD_ANDROID)
 endif()
 
 # The offline shader preprocessing tool runs on the build machine, so it's skipped when cross-compiling
-if(NOT EMSCRIPTEN AND NOT NINTENDO_SWITCH AND NOT VITA AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT NINTENDO_WII AND NOT NINTENDO_GAMECUBE AND NOT PLATFORM_DREAMCAST)
+if(NOT CMAKE_CROSSCOMPILING)
 	add_subdirectory("${NCINE_SOURCE_DIR}/ShaderCompiler")
 	set_target_properties(ShaderCompiler PROPERTIES FOLDER "Utilities")
 endif()

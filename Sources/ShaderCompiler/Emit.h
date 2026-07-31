@@ -53,6 +53,17 @@ namespace ShaderCompiler
 	*/
 	using SpirvCompileFn = std::function<bool(StringView vulkanGlsl, bool vertexStage, std::vector<std::uint32_t>& spirv, String& log)>;
 
+	/**
+		@brief Offline DXBC compiler callback injected into EmitHeader
+
+		Compiles the HLSL @p hlsl of one stage (@p vertexStage selects vertex vs. fragment) to DXBC bytecode
+		in @p dxbc, returning false (and optionally filling @p log) when the compile fails. Passing an empty
+		function omits DXBC — the HLSL sources are embedded instead (the HlslVsDxbc/HlslFsDxbc fields are
+		emitted as nullptr/0 and the D3D11 backend runtime-compiles the text). Injected by the caller so Emit
+		stays free of the d3dcompiler_47-loading code, which lives in the offline Main.cpp.
+	*/
+	using DxbcCompileFn = std::function<bool(StringView hlsl, bool vertexStage, std::vector<std::uint8_t>& dxbc, String& log)>;
+
 	/** @brief One lowered program (document plus per-variant reflection) to be emitted into a generated header */
 	struct ProgramReflection
 	{
@@ -75,7 +86,7 @@ namespace ShaderCompiler
 			document plus its "batched" twin) — all of them are emitted into the same namespace.
 		*/
 		static bool EmitHeader(const std::vector<ProgramReflection>& programs, StringView ns, StringView inputFileName,
-			const SpirvCompileFn& compileSpirv, String& output, Diagnostic& diag);
+			const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc, String& output, Diagnostic& diag);
 
 		/** Builds the human-readable reflection dump printed by "--check" (called once per program) */
 		static String BuildCheckDump(const ShaderDocument& document, const std::vector<VariantReflection>& variants);

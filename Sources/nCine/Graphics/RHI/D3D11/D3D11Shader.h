@@ -12,8 +12,9 @@ namespace nCine::RHI::D3D11
 	/**
 		@brief Shader-object stub of the Direct3D 11 backend
 
-		The offline emitter already produces `HlslVsSource`/`HlslFsSource` per program-variant, and the
-		program object compiles them via d3dcompiler. This class therefore carries no source and every
+		The offline emitter already produces precompiled DXBC bytecode (`HlslVsDxbc`/`HlslFsDxbc`) — or, as a
+		fallback, HLSL sources (`HlslVsSource`/`HlslFsSource`) — per program-variant, and the program object
+		creates/compiles the shader objects from those. This class therefore carries no source and every
 		operation succeeds trivially, only to satisfy the `RHI::Shader` contract alias.
 	*/
 	class D3D11Shader

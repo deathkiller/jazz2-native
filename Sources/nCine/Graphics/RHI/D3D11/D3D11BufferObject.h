@@ -4,8 +4,8 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <vector>
 
+#include <Containers/SmallVector.h>
 #include <Containers/StringView.h>
 
 using namespace Death::Containers;
@@ -104,7 +104,7 @@ namespace nCine::RHI::D3D11
 
 		std::uint32_t handle_;
 		BufferTarget target_;
-		std::vector<std::uint8_t> storage_;
+		SmallVector<std::uint8_t, 0> storage_;
 
 		// GPU buffer mirroring the host store for the vertex/index targets (uniform buffers stay host-only and
 		// are forwarded as ranges). Refreshed lazily from the store when @ref gpuDirty_ is set.

@@ -20,6 +20,7 @@ ShaderCompiler <input.shader> -o <output.h> [-n <namespace>] [--check] [--essl10
 | `-n <namespace>` | Namespace for the generated program data (default `ShaderArtifacts`) |
 | `--check` | Parse and print a human-readable reflection dump to stdout instead of writing output |
 | `--essl100-check` (or `--target essl100`) | Print the ESSL 100 (OpenGL ES 2.0) transform of every variant's stage sources to stdout, for inspection (see below) — tool-only, does not write or change any header |
+| `--no-dxbc` | Embed the HLSL stage sources instead of precompiled DXBC bytecode (see the Direct3D 11 section below) |
 
 Errors are reported to stderr as `<file>:<line>: error: <message>` with a non-zero exit code.
 
@@ -366,6 +367,28 @@ the batched twin **and** its non-batched primary trip the deferral. Of the shipp
 `DefaultImGui` (hand-written `attribute`/`varying`, no UBO, no `gl_VertexID`) translates today.
 The real transforms the rest need — UBO → uniform array, `gl_VertexID` → a supplied corner
 attribute — are intentionally not attempted here.
+
+## Direct3D 11 target (HLSL → DXBC)
+
+Each already-lowered modern-GLSL stage is also transformed to HLSL (Shader Model 4/5) by
+`Hlsl.h`/`.cpp` (`--hlsl` prints the transform, `--hlsl-check` emits + `D3DCompile`s every stage and
+prints a pass/fail table). When emitting a header, the tool then loads `d3dcompiler_47.dll` (ships
+with every Windows) and **precompiles both stages of every variant offline** — entry points
+`VSMain`/`PSMain`, targets `vs_4_0`/`ps_4_0`, column-major matrix packing plus strictness (the same
+contract the D3D11 backend's runtime compilation uses) and full optimization. When both stages
+compile, the header embeds **only the DXBC bytecode blobs** (`<Prefix>_VsDxbc`/`_FsDxbc` +
+`HlslVsDxbc`/`HlslFsDxbc` pointers/sizes on the `ProgramVariant`) and the HLSL text stays out of the
+binary; the runtime — desktop and UWP/Xbox alike, since the blobs live in the shared generated
+headers — creates its shader objects directly from the blobs, with no startup `D3DCompile` and no
+on-disk shader cache.
+
+The HLSL **source** form remains fully supported as the fallback: with `--no-dxbc`, on a non-Windows
+generation machine, or when a stage fails to compile (a warning is printed), the header embeds the
+HLSL sources (`HlslVsSource`/`HlslFsSource`) as before and the D3D11 backend runtime-compiles them
+(with its on-disk DXBC cache). Like SPIR-V/glslang, `d3dcompiler_47` is a **build-time-only**
+dependency of the generated artifacts — headers built without it still compile everywhere. All the
+D3D11 artifacts (blobs or sources) are gated behind `#if defined(WITH_RHI_D3D11)`, so other backend
+builds carry none of them.
 
 ## Known limitations
 

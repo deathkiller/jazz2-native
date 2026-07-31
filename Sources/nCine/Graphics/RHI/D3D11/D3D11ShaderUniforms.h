@@ -4,7 +4,10 @@
 #include "../RhiFwd.h"
 
 #include <cstdint>
-#include <vector>
+
+#include <Containers/SmallVector.h>
+
+using namespace Death::Containers;
 
 namespace nCine::RHI::D3D11
 {
@@ -24,7 +27,7 @@ namespace nCine::RHI::D3D11
 		// The caches are stored in a flat container whose value type is the cache itself (the name lives
 		// inside each cache's uniform), so range-iteration yields `D3D11UniformCache&` directly — matching
 		// the OpenGL backend's `GetAllUniforms()` iteration semantics that the render batcher relies on.
-		using UniformHashMapType = std::vector<D3D11UniformCache>;
+		using UniformHashMapType = SmallVector<D3D11UniformCache, 0>;
 
 		D3D11ShaderUniforms();
 		explicit D3D11ShaderUniforms(D3D11ShaderProgram* shaderProgram);
@@ -72,7 +75,7 @@ namespace nCine::RHI::D3D11
 	public:
 		// Flat container whose value type is the block cache itself (the name lives inside each cache's
 		// block), so range-iteration yields `D3D11UniformBlockCache&` directly, matching the OpenGL backend.
-		using UniformHashMapType = std::vector<D3D11UniformBlockCache>;
+		using UniformHashMapType = SmallVector<D3D11UniformBlockCache, 0>;
 
 		/** @brief Function that suballocates a range of the given size from the streaming uniform buffer */
 		using UniformRangeAllocator = RHI::BufferRange (*)(std::uint32_t bytes);

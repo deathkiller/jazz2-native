@@ -102,6 +102,8 @@ namespace ShaderCompiler
 				viewAttributes_[i].size(), viewAttributes_[i].data(),
 				// No baked ES2 (ESSL 100) sources for runtime-compiled ".shader" files — the offline
 				// Essl100Emitter is not linked into the engine, so the ES2 profile falls back for these.
+				// The remaining backend fields (HLSL sources, DXBC blobs, SPIR-V modules) are likewise
+				// offline-only and stay null/0 via aggregate value-initialization.
 				nullptr, nullptr
 			};
 		}

@@ -105,6 +105,33 @@ namespace ShaderCompiler
 			return String{buffer, sizeof(buffer)};
 		}
 
+		/** "0x"-prefixed, 2-digit hexadecimal of one DXBC byte */
+		String Hex8(std::uint8_t v)
+		{
+			static const char* const Digits = "0123456789abcdef";
+			char buffer[4];
+			buffer[0] = '0';
+			buffer[1] = 'x';
+			buffer[2] = Digits[(v >> 4) & 0xFu];
+			buffer[3] = Digits[v & 0xFu];
+			return String{buffer, sizeof(buffer)};
+		}
+
+		/** Emits an embedded DXBC blob as a "constexpr std::uint8_t <symbol>[] = { ... };" byte array */
+		void EmitDxbcArray(String& output, const String& symbol, const std::vector<std::uint8_t>& bytes)
+		{
+			output += "\tinline constexpr std::uint8_t " + symbol + "[] = {\n";
+			for (std::size_t i = 0; i < bytes.size(); i++) {
+				if ((i % 16) == 0) {
+					output += "\t\t";
+				}
+				output += Hex8(bytes[i]) + ",";
+				output += (((i % 16) == 15 || i + 1 == bytes.size()) ? "\n"_s : ""_s);
+			}
+			output += "\t};\n";
+			output += "\n";
+		}
+
 		/** Emits an embedded SPIR-V module as a "constexpr std::uint32_t <symbol>[] = { ... };" word array */
 		void EmitSpirvArray(String& output, const String& symbol, const std::vector<std::uint32_t>& words)
 		{
@@ -225,9 +252,21 @@ namespace ShaderCompiler
 		// Direct3D 11 (HLSL, Shader Model 4/5) stage sources: the HlslEmitter lowering of VsSource/FsSource —
 		// VSMain/PSMain entry points, std140 blocks as cbuffers, separate Texture2D + SamplerState objects and
 		// mul()-based matrix algebra. Consumed by the D3D11 backend; GL/ES/software ignore these.
-		// Null when the HLSL lowering was not available (a construct outside the emitter's subset).
+		// Null when the HLSL lowering was not available (a construct outside the emitter's subset) — or when
+		// the stages were precompiled to DXBC below (the blob replaces the text in the binary).
 		const char* HlslVsSource;
 		const char* HlslFsSource;
+		// Direct3D 11 precompiled DXBC bytecode: the HLSL lowering of both stages compiled offline through
+		// d3dcompiler_47 (VSMain/PSMain, vs_4_0/ps_4_0, column-major matrix packing — the same contract the
+		// backend's runtime compilation uses), so the D3D11 backend (desktop and UWP/Xbox alike) creates its
+		// shader objects straight from these blobs with no runtime D3DCompile and no on-disk cache. Emitted
+		// all-or-nothing per variant: when present (both stages), HlslVsSource/HlslFsSource are null; null/0
+		// when d3dcompiler_47 was unavailable at generation time, a stage failed to compile or the shader is
+		// runtime-compiled — the backend then falls back to runtime-compiling the HLSL sources above.
+		const std::uint8_t* HlslVsDxbc;
+		std::size_t HlslVsDxbcSize;
+		const std::uint8_t* HlslFsDxbc;
+		std::size_t HlslFsDxbcSize;
 		// Vulkan (SPIR-V) stage modules: the VulkanGlslEmitter lowering of VsSource/FsSource ("#version 450",
 		// explicit set/binding + location decorations, gathered "_Globals" UBO, gl_VertexIndex) compiled offline
 		// through glslang to SPIR-V words. Consumed by the Vulkan backend, which builds pipelines
@@ -279,15 +318,26 @@ namespace ShaderCompiler
 			std::size_t FsSize = 0;
 		};
 
+		/** Per-variant HLSL artifact symbol names: either the source strings or the precompiled DXBC blobs */
+		struct HlslSymbols
+		{
+			String VsSource = "nullptr";
+			String FsSource = "nullptr";
+			String VsDxbc = "nullptr";
+			std::size_t VsDxbcSize = 0;
+			String FsDxbc = "nullptr";
+			std::size_t FsDxbcSize = 0;
+		};
+
 		/** Emits one program (per-variant sources, reflection arrays, variant list and Program descriptor) into @p output */
 		bool EmitProgram(const ShaderDocument& document, const std::vector<VariantReflection>& variants,
-			const SpirvCompileFn& compileSpirv, String& output, Diagnostic& diag)
+			const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc, String& output, Diagnostic& diag)
 		{
 			const String& program = document.ProgramName;
 
-			// Per-variant HLSL source symbol names (or "nullptr" when the HLSL lowering declined the stage),
-			// filled below and referenced by the ProgramVariant initializers.
-			std::vector<std::pair<String, String>> hlslSymbols;
+			// Per-variant HLSL artifact symbol names (source strings or DXBC blobs; "nullptr" when the HLSL
+			// lowering declined the stage), filled below and referenced by the ProgramVariant initializers.
+			std::vector<HlslSymbols> hlslSymbols;
 			// Per-variant embedded-SPIR-V symbol names + sizes (or "nullptr"/0 when no SPIR-V was emitted)
 			std::vector<VkSpirvSymbols> vkSymbols;
 
@@ -295,8 +345,12 @@ namespace ShaderCompiler
 				// The unnamed base variant carries no infix ("Lighting_Vs"), named variants keep theirs ("Tinted_USE_PALETTE_Vs")
 				const String prefix = (v.Name.empty() ? program : String(program + "_" + v.Name));
 				const StageReflection& r = v.Reflection;
-				String hlslVsSym = "nullptr";
-				String hlslFsSym = "nullptr";
+				HlslSymbols hlsl;
+				// Per-stage HLSL text (empty = the lowering declined) and its offline-compiled DXBC (empty =
+				// no compiler or the compile failed), buffered so the emission below is all-or-nothing per
+				// variant: blobs replace the source text only when BOTH stages compiled.
+				String hlslSources[2];
+				std::vector<std::uint8_t> hlslDxbc[2];
 				VkSpirvSymbols vk;
 
 				for (std::int32_t stage = 0; stage < 2; stage++) {
@@ -341,23 +395,24 @@ namespace ShaderCompiler
 					output += "#endif\n";
 					output += "\n";
 
-					// Direct3D 11 (HLSL) lowering of the same stage. Unlike the ES2 path there is no
-					// GLSL fallback — a decline leaves the field null (the D3D11 backend will fall back
-					// to runtime compilation for such a shader). The terminator guard mirrors the modern/ES2 paths.
-					String hlslSource;
-					Diagnostic hlslDiag;
-					if (HlslEmitter::Transform(source, vertexStage, r, hlslSource, hlslDiag) &&
-						!hlslSource.contains(")__SHDR__\""_s)) {
-						String sym = prefix + (vertexStage ? "_VsHlsl" : "_FsHlsl");
-						// Direct3D 11 (HLSL) stage source — compiled only into the Direct3D 11 backend build
-						output += "#if defined(WITH_RHI_D3D11)\n";
-						output += "\tinline constexpr char " + sym + "[] =\n";
-						output += "R\"__SHDR__(";
-						output += hlslSource;
-						output += ")__SHDR__\";\n";
-						output += "#endif\n";
-						output += "\n";
-						(vertexStage ? hlslVsSym : hlslFsSym) = std::move(sym);
+					// Direct3D 11 (HLSL) lowering of the same stage, buffered for the per-variant emission
+					// after this loop (blob-vs-source is an all-or-nothing choice across both stages). Unlike
+					// the ES2 path there is no GLSL fallback — a decline leaves the fields null (the D3D11
+					// backend will skip draws with such a shader). The terminator guard mirrors the modern/ES2
+					// paths but only matters for the source form (a DXBC blob is emitted as a byte array).
+					{
+						String hlslSource;
+						Diagnostic hlslDiag;
+						if (HlslEmitter::Transform(source, vertexStage, r, hlslSource, hlslDiag) &&
+							!hlslSource.contains(")__SHDR__\""_s)) {
+							if (compileDxbc) {
+								String log;
+								if (!compileDxbc(hlslSource, vertexStage, hlslDxbc[stage], log)) {
+									hlslDxbc[stage].clear();
+								}
+							}
+							hlslSources[stage] = std::move(hlslSource);
+						}
 					}
 
 					// Vulkan (SPIR-V) lowering of the same stage: emit the Vulkan GLSL and, when a
@@ -382,7 +437,37 @@ namespace ShaderCompiler
 						}
 					}
 				}
-				hlslSymbols.emplace_back(std::move(hlslVsSym), std::move(hlslFsSym));
+				// Direct3D 11 artifacts: when BOTH stages precompiled, embed only the DXBC blobs — the HLSL
+				// text stays out of the binary. Otherwise fall back to the HLSL source strings (whichever
+				// stages lowered) and the backend runtime-compiles them.
+				if (!hlslDxbc[0].empty() && !hlslDxbc[1].empty()) {
+					for (std::int32_t stage = 0; stage < 2; stage++) {
+						String sym = prefix + (stage == 0 ? "_VsDxbc" : "_FsDxbc");
+						// Direct3D 11 (DXBC) stage bytecode — compiled only into the Direct3D 11 backend build
+						output += "#if defined(WITH_RHI_D3D11)\n";
+						EmitDxbcArray(output, sym, hlslDxbc[stage]);
+						output += "#endif\n";
+						if (stage == 0) { hlsl.VsDxbc = std::move(sym); hlsl.VsDxbcSize = hlslDxbc[stage].size(); }
+						else { hlsl.FsDxbc = std::move(sym); hlsl.FsDxbcSize = hlslDxbc[stage].size(); }
+					}
+				} else {
+					for (std::int32_t stage = 0; stage < 2; stage++) {
+						if (hlslSources[stage].empty()) {
+							continue;
+						}
+						String sym = prefix + (stage == 0 ? "_VsHlsl" : "_FsHlsl");
+						// Direct3D 11 (HLSL) stage source — compiled only into the Direct3D 11 backend build
+						output += "#if defined(WITH_RHI_D3D11)\n";
+						output += "\tinline constexpr char " + sym + "[] =\n";
+						output += "R\"__SHDR__(";
+						output += hlslSources[stage];
+						output += ")__SHDR__\";\n";
+						output += "#endif\n";
+						output += "\n";
+						(stage == 0 ? hlsl.VsSource : hlsl.FsSource) = std::move(sym);
+					}
+				}
+				hlslSymbols.push_back(std::move(hlsl));
 				vkSymbols.push_back(std::move(vk));
 
 				if (!r.Uniforms.empty()) {
@@ -461,9 +546,12 @@ namespace ShaderCompiler
 				output += "\t\t\tnullptr, nullptr,\n";
 				output += "#endif\n";
 				output += "#if defined(WITH_RHI_D3D11)\n";
-				output += "\t\t\t" + hlslSymbols[variantIndex].first + ", " + hlslSymbols[variantIndex].second + ",\n";
+				output += "\t\t\t" + hlslSymbols[variantIndex].VsSource + ", " + hlslSymbols[variantIndex].FsSource + ",\n";
+				output += "\t\t\t" + hlslSymbols[variantIndex].VsDxbc + ", " + Death::format("{}", hlslSymbols[variantIndex].VsDxbcSize) + ", " +
+					hlslSymbols[variantIndex].FsDxbc + ", " + Death::format("{}", hlslSymbols[variantIndex].FsDxbcSize) + ",\n";
 				output += "#else\n";
 				output += "\t\t\tnullptr, nullptr,\n";
+				output += "\t\t\tnullptr, 0, nullptr, 0,\n";
 				output += "#endif\n";
 				output += "#if defined(WITH_RHI_VULKAN)\n";
 					output += "\t\t\t" + vkSymbols[variantIndex].VsSymbol + ", " + Death::format("{}", vkSymbols[variantIndex].VsSize) + ", " +
@@ -482,7 +570,7 @@ namespace ShaderCompiler
 	}
 
 	bool Emitter::EmitHeader(const std::vector<ProgramReflection>& programs, StringView ns, StringView inputFileName,
-		const SpirvCompileFn& compileSpirv, String& output, Diagnostic& diag)
+		const SpirvCompileFn& compileSpirv, const DxbcCompileFn& compileDxbc, String& output, Diagnostic& diag)
 	{
 		// Only the file name is embedded, so generated headers don't differ between machines
 		String inputName = inputFileName;
@@ -507,7 +595,7 @@ namespace ShaderCompiler
 			if (i != 0) {
 				output += "\n";
 			}
-			if (!EmitProgram(*programs[i].Document, programs[i].Variants, compileSpirv, output, diag)) {
+			if (!EmitProgram(*programs[i].Document, programs[i].Variants, compileSpirv, compileDxbc, output, diag)) {
 				return false;
 			}
 		}

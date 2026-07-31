@@ -5,7 +5,10 @@
 #include "../../../Primitives/Colorf.h"
 
 #include <cstdint>
-#include <vector>
+
+#include <Containers/SmallVector.h>
+
+using namespace Death::Containers;
 
 // Direct3D 11 / DXGI COM interfaces referenced only as opaque pointers here, so <d3d11.h> stays out of the
 // contract headers the whole pipeline pulls in through Rhi.h — it is included only by D3D11Device.cpp.
@@ -236,10 +239,10 @@ namespace nCine::RHI::D3D11
 			std::uint64_t ContentHash = 0;	// xxHash3 of the bytes last uploaded to Buffer
 			std::uint32_t ContentSize = 0;	// number of those bytes (0 = buffer just (re)created, cache invalid)
 		};
-		static std::vector<PooledCBuffer> cbufferPool_;
+		static SmallVector<PooledCBuffer, 0> cbufferPool_;
 		// Reusable scratch for gathering a _Globals cbuffer's scattered loose uniforms into one contiguous
 		// block so it can be hashed and uploaded in a single copy
-		static std::vector<std::uint8_t> cbufferStaging_;
+		static SmallVector<std::uint8_t, 0> cbufferStaging_;
 
 		// Cached pipeline-state objects, created on demand from the recorded blend/cull/scissor state
 		struct BlendStateEntry
@@ -247,13 +250,13 @@ namespace nCine::RHI::D3D11
 			std::uint64_t Key;
 			ID3D11BlendState* State;
 		};
-		static std::vector<BlendStateEntry> blendStates_;
+		static SmallVector<BlendStateEntry, 8> blendStates_;
 		struct RasterStateEntry
 		{
 			std::uint32_t Key;
 			ID3D11RasterizerState* State;
 		};
-		static std::vector<RasterStateEntry> rasterStates_;
+		static SmallVector<RasterStateEntry, 8> rasterStates_;
 		static ID3D11DepthStencilState* depthDisabledState_;
 
 		// Last-applied context state (redundant-bind elimination). DrawCommon re-applies everything each draw

@@ -12,12 +12,19 @@
 # is a BUILD-TIME-only dependency: when it is unavailable the SPIR-V fields are emitted as nullptr/0 and a
 # warning is printed (the headers still build; the Vulkan backend is then not buildable).
 #
+# DXBC for the Direct3D 11 backend (desktop and UWP/Xbox) is embedded automatically: the tool loads
+# d3dcompiler_47.dll (ships with every Windows) and precompiles each variant's HLSL stages offline, so
+# the generated headers carry only the bytecode blobs (no HLSL text) and the runtime creates its shader
+# objects directly from them - no startup D3DCompile, no on-disk shader cache. -NoDxbc (or generating on
+# a non-Windows machine) embeds the HLSL sources instead; the backend then falls back to runtime
+# compilation, exactly as before.
+#
 # -Check: staleness guard. Generates into a temporary directory instead and byte-compares the result
 # against the committed Sources/Shaders/Generated headers; exits non-zero (listing the stale files) if
 # they differ, without modifying the tree. Run it after editing a .shader (or in CI) to catch a
 # forgotten regeneration - the build itself never detects stale committed headers.
 
-param([string]$Glslang = '', [switch]$Check)
+param([string]$Glslang = '', [switch]$Check, [switch]$NoDxbc)
 
 $ErrorActionPreference = 'Stop'
 
@@ -70,6 +77,12 @@ if ($glslangPath) {
     Write-Host "warning: glslangValidator not found - Vulkan SPIR-V will be omitted (install the Vulkan SDK for the Vulkan backend)"
 }
 
+$dxbcArgs = @()
+if ($NoDxbc) {
+    Write-Host "DXBC embedding disabled (-NoDxbc) - HLSL sources will be embedded instead"
+    $dxbcArgs = @('--no-dxbc')
+}
+
 New-Item -ItemType Directory -Force $outDir | Out-Null
 
 # Shared reflection types included by every generated header (and by engine code that consumes reflection)
@@ -95,7 +108,7 @@ foreach ($shader in $shaders) {
     }
     $outPath = Join-Path $outDir ($name + '.h')
 
-    & $tool $shader.FullName -o $outPath -n $ns @glslangArgs
+    & $tool $shader.FullName -o $outPath -n $ns @glslangArgs @dxbcArgs
     if ($LASTEXITCODE -ne 0) {
         Write-Host "error: '$($shader.Name)' failed with exit code $LASTEXITCODE"
         $failed++
@@ -179,6 +192,9 @@ if ($Check) {
     # artifacts are stale (or were edited by hand). Missing/extra files count as stale too.
     if (-not $glslangPath) {
         Write-Host "warning: -Check without glslang - committed headers with embedded SPIR-V will be reported stale"
+    }
+    if ($NoDxbc) {
+        Write-Host "warning: -Check with -NoDxbc - committed headers with embedded DXBC will be reported stale"
     }
     $stale = @()
     $freshFiles = @(Get-ChildItem (Join-Path $outDir '*.h') | Sort-Object Name)

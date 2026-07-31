@@ -6,9 +6,9 @@
 
 #include <cstdint>
 #include <string>
-#include <vector>
 
 #include <Containers/ArrayView.h>
+#include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 
@@ -50,19 +50,35 @@ namespace nCine::RHI::D3D11
 		std::uint32_t ByteSize = 0;		// full cbuffer size (16-aligned), as declared in the bytecode
 		bool IsGlobals = false;			// true = built from loose uniforms; false = a uniform block
 		std::int32_t BlockIndex = -1;	// if a block: index into the device's bound-uniform-range table
-		std::vector<GlobalVar> Globals;	// if IsGlobals: the members to gather
+		// If IsGlobals: the members to gather. Heap-only (no inline storage) because the slot itself lives
+		// inside the per-stage slot lists below, where inline elements would bloat every entry.
+		SmallVector<GlobalVar, 0> Globals;
 	};
+
+	/**
+		@brief Constant-buffer slots one shader stage expects
+
+		A stage binds one or two cbuffers in practice (the gathered `_Globals` plus at most one uniform
+		block), so the inline capacity covers the usual case without a heap allocation, and the draw path
+		walks the slots inline.
+	*/
+	using CBufferSlotList = SmallVector<D3D11CBufferSlot, 2>;
+
+	/** @brief Compiled DXBC bytecode of one shader stage (kilobytes — always heap-allocated) */
+	using ShaderByteCode = SmallVector<std::uint8_t, 0>;
 
 	/**
 		@brief Shader program of the Direct3D 11 backend (aliased as `RHI::ShaderProgram`)
 
 		Carries the offline ShaderCompiler reflection (set with @ref SetReflection() like the OpenGL backend)
-		from which it imports uniforms, uniform blocks and attributes, and compiles
-		the reflection's `HlslVsSource`/`HlslFsSource` into real `ID3D11VertexShader`/`ID3D11PixelShader`
-		objects (matrix packing forced column-major so the emitter's `mul(M,v)` column-vector algebra matches
-		the engine's column-major uniform data verbatim), reflects their constant buffers into @ref
-		D3D11CBufferSlot lists the device rebinds each draw, and keeps the VS bytecode for building the input
-		layout of attribute-based (mesh/tilemap) shaders. @ref Use() records the program as current on the device.
+		from which it imports uniforms, uniform blocks and attributes, and creates real
+		`ID3D11VertexShader`/`ID3D11PixelShader` objects from the reflection's precompiled DXBC bytecode
+		(`HlslVsDxbc`/`HlslFsDxbc`, the normal case) — or, when only HLSL text is embedded, by runtime-compiling
+		`HlslVsSource`/`HlslFsSource` (matrix packing forced column-major so the emitter's `mul(M,v)`
+		column-vector algebra matches the engine's column-major uniform data verbatim; both paths use the same
+		contract). It then reflects the constant buffers into @ref D3D11CBufferSlot lists the device rebinds
+		each draw, and keeps the VS bytecode for building the input layout of attribute-based (mesh/tilemap)
+		shaders. @ref Use() records the program as current on the device.
 	*/
 	class D3D11ShaderProgram
 	{
@@ -216,11 +232,11 @@ namespace nCine::RHI::D3D11
 		std::uint32_t GetVertexStride() const;
 
 		/** @brief Constant-buffer slots the vertex stage expects (rebuilt and bound each draw) */
-		inline const std::vector<D3D11CBufferSlot>& GetVsCBuffers() const {
+		inline const CBufferSlotList& GetVsCBuffers() const {
 			return vsCBuffers_;
 		}
 		/** @brief Constant-buffer slots the pixel stage expects */
-		inline const std::vector<D3D11CBufferSlot>& GetPsCBuffers() const {
+		inline const CBufferSlotList& GetPsCBuffers() const {
 			return psCBuffers_;
 		}
 		/** @brief Bitmask of the texture/sampler registers the vertex stage actually reads (bit N = slot tN/sN) */
@@ -244,9 +260,9 @@ namespace nCine::RHI::D3D11
 		std::uint32_t uniformsSize_;
 		std::uint32_t uniformBlocksSize_;
 
-		std::vector<D3D11Uniform> uniforms_;
-		std::vector<D3D11UniformBlock> uniformBlocks_;
-		std::vector<D3D11Attribute> attributes_;
+		SmallVector<D3D11Uniform, 0> uniforms_;
+		SmallVector<D3D11UniformBlock, 0> uniformBlocks_;
+		SmallVector<D3D11Attribute, 0> attributes_;
 
 		const ShaderCompiler::ProgramVariant* reflection_;
 
@@ -259,16 +275,16 @@ namespace nCine::RHI::D3D11
 			String Name;
 			const std::uint8_t* Data;
 		};
-		std::vector<ResolvedUniform> resolvedUniforms_;
+		SmallVector<ResolvedUniform, 0> resolvedUniforms_;
 
 		// Compiled Direct3D 11 objects (owned)
 		ID3D11VertexShader* vertexShader_;
 		ID3D11PixelShader* pixelShader_;
 		ID3D11InputLayout* inputLayout_;
 		std::uint64_t inputLayoutFingerprint_;		// vertex-format fingerprint the cached input layout was built for
-		std::vector<std::uint8_t> vsByteCode_;		// kept for building input layouts
-		std::vector<D3D11CBufferSlot> vsCBuffers_;
-		std::vector<D3D11CBufferSlot> psCBuffers_;
+		ShaderByteCode vsByteCode_;					// kept for building input layouts
+		CBufferSlotList vsCBuffers_;
+		CBufferSlotList psCBuffers_;
 		std::uint32_t vsTextureMask_ = 0;			// texture/sampler registers the stage binds (from bytecode reflection)
 		std::uint32_t psTextureMask_ = 0;
 
@@ -277,6 +293,6 @@ namespace nCine::RHI::D3D11
 		/** @brief Compiles `reflection_`'s HLSL stage sources and reflects their constant buffers (called during introspection) */
 		void CompileHlsl();
 		/** @brief Reflects the constant buffers and used texture/sampler registers of one compiled stage bytecode */
-		void ReflectStageCBuffers(const void* byteCode, std::size_t byteCodeSize, std::vector<D3D11CBufferSlot>& slots, std::uint32_t& textureMask);
+		void ReflectStageCBuffers(const void* byteCode, std::size_t byteCodeSize, CBufferSlotList& slots, std::uint32_t& textureMask);
 	};
 }

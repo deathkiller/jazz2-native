@@ -1609,6 +1609,29 @@ namespace nCine
 	}
 
 #	if !defined(DEATH_TARGET_EMSCRIPTEN)
+	// Operating system reported in the TraceDigger metadata header, the values must match `MetadataPlatform`
+	// on the reader side - they are part of the wire format, so they must never be reassigned
+	enum class MetadataPlatform : std::uint32_t {
+		Unknown = 0,
+		Other = 1,
+
+		Windows = 2,
+		WindowsRT = 3,
+		Unix = 4,
+		Linux = 5,
+		Bsd = 6,
+		Apple = 7,
+		iOS = 8,
+		Android = 12,
+		Web = 14,
+
+		GameCube = 67,
+		Wii = 68,
+		Switch = 70,
+		PlayStationVita = 102,
+		SegaDreamcast = 117
+	};
+
 	void Application::AppendLogFileHeader(Stream& s)
 	{
 		// Write TraceDigger metadata header
@@ -1624,6 +1647,38 @@ namespace nCine
 #		endif
 #		if defined(DEATH_TARGET_BIG_ENDIAN)
 		flags |= 0x80;	// IsBigEndian
+#		endif
+
+#		if defined(DEATH_TARGET_WINDOWS_RT)
+		constexpr MetadataPlatform platform = MetadataPlatform::WindowsRT;
+#		elif defined(DEATH_TARGET_WINDOWS)
+		constexpr MetadataPlatform platform = MetadataPlatform::Windows;
+#		elif defined(DEATH_TARGET_ANDROID)
+		constexpr MetadataPlatform platform = MetadataPlatform::Android;
+#		elif defined(DEATH_TARGET_SWITCH)
+		constexpr MetadataPlatform platform = MetadataPlatform::Switch;
+#		elif defined(DEATH_TARGET_VITA)
+		constexpr MetadataPlatform platform = MetadataPlatform::PlayStationVita;
+#		elif defined(DEATH_TARGET_WII)
+		constexpr MetadataPlatform platform = MetadataPlatform::Wii;
+#		elif defined(DEATH_TARGET_GAMECUBE)
+		constexpr MetadataPlatform platform = MetadataPlatform::GameCube;
+#		elif defined(DEATH_TARGET_DREAMCAST)
+		constexpr MetadataPlatform platform = MetadataPlatform::SegaDreamcast;
+#		elif defined(DEATH_TARGET_IOS)
+		constexpr MetadataPlatform platform = MetadataPlatform::iOS;
+#		elif defined(DEATH_TARGET_APPLE)
+		constexpr MetadataPlatform platform = MetadataPlatform::Apple;
+#		elif defined(DEATH_TARGET_EMSCRIPTEN)
+		constexpr MetadataPlatform platform = MetadataPlatform::Web;
+#		elif defined(__linux__)
+		constexpr MetadataPlatform platform = MetadataPlatform::Linux;
+#		elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+		constexpr MetadataPlatform platform = MetadataPlatform::Bsd;
+#		elif defined(DEATH_TARGET_UNIX)
+		constexpr MetadataPlatform platform = MetadataPlatform::Unix;
+#		else
+		constexpr MetadataPlatform platform = MetadataPlatform::Unknown;
 #		endif
 
 #		if defined(DEATH_TARGET_WINDOWS)
@@ -1672,9 +1727,33 @@ namespace nCine
 		MemoryStream ms(buffer, sizeof(buffer));
 		ms.WriteVariableUint32(1);	// Version
 		ms.WriteVariableUint32(flags);
+		ms.WriteVariableUint32((std::uint32_t)platform);
 		ms.WriteVariableInt64(timestampMs);
 		ms.WriteVariableUint32(processId);
 		ms.WriteVariableUint32(_mainThreadId);
+
+		// The reader drops any string that doesn't fit in the header entirely, so clamp each one to the space
+		// that is left in the buffer instead of letting it be cut in half by the stream - `reserve` keeps room
+		// for the strings that are still to be written after it
+		auto writeLengthPrefixedString = [&ms](StringView value, std::int64_t reserve = 0) {
+			// Up to 4 bytes are needed for the length prefix itself
+			std::int64_t available = ms.GetSize() - ms.GetPosition() - reserve - 4;
+			std::int64_t length = (std::int64_t)value.size();
+			if (length > available) {
+				length = (available > 0 ? available : 0);
+				// Don't cut in the middle of a multi-byte UTF-8 sequence
+				while (length > 0 && (value[length] & 0xC0) == 0x80) {
+					length--;
+				}
+			}
+			ms.WriteVariableUint32((std::uint32_t)length);
+			if (length > 0) {
+				ms.Write(value.data(), length);
+			}
+		};
+
+		// Room the version, host name and compatibility layer need at the end of the header
+		constexpr std::int64_t ReservedForTrailingStrings = 64;
 
 #		if defined(DEATH_TARGET_ANDROID)
 		auto executableFileName = nCine::Backends::AndroidJniWrap_Activity::getPackageName();
@@ -1685,10 +1764,7 @@ namespace nCine
 			executableFileName = NCINE_APP;
 		}
 #		endif
-		ms.WriteVariableUint32((std::uint32_t)executableFileName.size());
-		if (!executableFileName.empty()) {
-			ms.Write(executableFileName.data(), (std::int64_t)executableFileName.size());
-		}
+		writeLengthPrefixedString(executableFileName, ReservedForTrailingStrings);
 
 		std::string arguments;
 		for (std::size_t i = 0; i < appCfg_.argc(); i++) {
@@ -1697,19 +1773,10 @@ namespace nCine
 			}
 			arguments += appCfg_.argv(i);
 		}
-		ms.WriteVariableUint32((std::uint32_t)arguments.size());
-		if (!arguments.empty()) {
-			ms.Write(arguments.data(), (std::int64_t)arguments.size());
-		}
+		writeLengthPrefixedString({arguments.data(), arguments.size()}, ReservedForTrailingStrings);
 
-		StringView executableVersion = NCINE_VERSION;
-		ms.WriteVariableUint32((std::uint32_t)executableVersion.size());
-		if (!executableVersion.empty()) {
-			ms.Write(executableVersion.data(), (std::int64_t)executableVersion.size());
-		}
-
-		ms.WriteVariableUint32((std::uint32_t)hostNameLength);
-		ms.Write(hostName, (std::int64_t)hostNameLength);
+		writeLengthPrefixedString(NCINE_VERSION);
+		writeLengthPrefixedString({hostName, (std::size_t)hostNameLength});
 
 #		if defined(DEATH_TARGET_WINDOWS)
 		if (compatLayerLength > 0) {
@@ -1717,10 +1784,7 @@ namespace nCine
 				compatLayerLength = (std::uint32_t)arraySize(bufferW);
 			}
 			auto compatLayer = Utf8::FromUtf16(bufferW, compatLayerLength);
-			ms.WriteVariableUint32((std::uint32_t)compatLayer.size());
-			if (compatLayer) {
-				ms.Write(compatLayer.data(), (std::int64_t)compatLayer.size());
-			}
+			writeLengthPrefixedString(compatLayer);
 		}
 #		endif
 

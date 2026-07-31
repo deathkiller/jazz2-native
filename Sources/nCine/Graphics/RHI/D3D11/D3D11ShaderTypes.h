@@ -5,7 +5,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <vector>
+
+#include <Containers/SmallVector.h>
+
+using namespace Death::Containers;
 
 namespace nCine::RHI::D3D11
 {
@@ -211,7 +214,7 @@ namespace nCine::RHI::D3D11
 		std::int32_t size_;
 		std::uint8_t alignAmount_;
 		std::int32_t bindingIndex_;
-		std::vector<D3D11Uniform> members_;
+		SmallVector<D3D11Uniform, 0> members_;
 
 		void SetName(const char* name) {
 			std::size_t length = std::strlen(name);

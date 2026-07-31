@@ -4,8 +4,8 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <vector>
 
+#include <Containers/SmallVector.h>
 #include <Containers/StringView.h>
 
 using namespace Death::Containers;
@@ -200,11 +200,11 @@ namespace nCine::RHI::D3D11
 		SamplerWrapping wrap_;
 		SwizzleChannel swizzle_[4];
 		mutable std::uint32_t textureUnit_;
-		std::vector<std::uint8_t> pixels_;
+		SmallVector<std::uint8_t, 0> pixels_;
 		// Swizzled copy of pixels_ uploaded to the GPU when the sampling swizzle is not the identity. D3D11's
 		// base SRV has no per-channel swizzle (unlike GL's GL_TEXTURE_SWIZZLE_*), so the swizzle is baked into
 		// the texels instead. Rebuilt lazily whenever the contents or swizzle change.
-		mutable std::vector<std::uint8_t> swizzledPixels_;
+		mutable SmallVector<std::uint8_t, 0> swizzledPixels_;
 		bool isRenderTarget_;
 
 		// GPU objects, created lazily from the host store on first bind (mutable so the const bind-time

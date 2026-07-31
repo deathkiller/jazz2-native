@@ -105,9 +105,21 @@ namespace ShaderCompiler
 		// Direct3D 11 (HLSL, Shader Model 4/5) stage sources: the HlslEmitter lowering of VsSource/FsSource —
 		// VSMain/PSMain entry points, std140 blocks as cbuffers, separate Texture2D + SamplerState objects and
 		// mul()-based matrix algebra. Consumed by the D3D11 backend; GL/ES/software ignore these.
-		// Null when the HLSL lowering was not available (a construct outside the emitter's subset).
+		// Null when the HLSL lowering was not available (a construct outside the emitter's subset) — or when
+		// the stages were precompiled to DXBC below (the blob replaces the text in the binary).
 		const char* HlslVsSource;
 		const char* HlslFsSource;
+		// Direct3D 11 precompiled DXBC bytecode: the HLSL lowering of both stages compiled offline through
+		// d3dcompiler_47 (VSMain/PSMain, vs_4_0/ps_4_0, column-major matrix packing — the same contract the
+		// backend's runtime compilation uses), so the D3D11 backend (desktop and UWP/Xbox alike) creates its
+		// shader objects straight from these blobs with no runtime D3DCompile and no on-disk cache. Emitted
+		// all-or-nothing per variant: when present (both stages), HlslVsSource/HlslFsSource are null; null/0
+		// when d3dcompiler_47 was unavailable at generation time, a stage failed to compile or the shader is
+		// runtime-compiled — the backend then falls back to runtime-compiling the HLSL sources above.
+		const std::uint8_t* HlslVsDxbc;
+		std::size_t HlslVsDxbcSize;
+		const std::uint8_t* HlslFsDxbc;
+		std::size_t HlslFsDxbcSize;
 		// Vulkan (SPIR-V) stage modules: the VulkanGlslEmitter lowering of VsSource/FsSource ("#version 450",
 		// explicit set/binding + location decorations, gathered "_Globals" UBO, gl_VertexIndex) compiled offline
 		// through glslang to SPIR-V words. Consumed by the Vulkan backend, which builds pipelines

@@ -107,6 +107,8 @@ namespace
 			"  --check           Parse only and print a reflection dump to stdout (no output written)\n"
 			"  --essl100-check   Print the ESSL 100 (OpenGL ES 2.0) transform of every stage to stdout\n"
 			"  --hlsl            Print the HLSL (Shader Model 4/5) transform of every stage to stdout\n"
+			"  --no-dxbc         Embed HLSL sources instead of precompiled DXBC bytecode (default: DXBC via\n"
+			"                    d3dcompiler_47 when available, with the HLSL text left out of the header)\n"
 			"  --vulkan          Print the Vulkan GLSL (#version 450) transform of every stage to stdout\n"
 			"  --glslang <path>  glslangValidator to compile SPIR-V with (default: VULKAN_SDK / PATH)\n"
 			"  --target <t>      Selects an inspection target for the transform dump (only: essl100)\n"
@@ -523,21 +525,39 @@ namespace
 		return true;
 	}
 
-	/** Compiles @p source as HLSL (entry @p entry, profile @p target); returns success + the compiler log */
-	bool CompileHlsl(const String& source, const char* entry, const char* target, String& log)
+	/**
+		Compiles @p source as HLSL (entry @p entry, profile @p target) to DXBC bytes in @p dxbc; returns
+		success + the compiler log. The flags match the D3D11 backend's runtime-compilation contract —
+		column-major cbuffer matrix packing (the emitter's mul(M, v) column-vector algebra reads the engine's
+		OpenGL-convention uniform data verbatim) and strictness — but with full optimization, since this runs
+		offline where compile time doesn't matter.
+	*/
+	bool CompileHlslToDxbc(const String& source, const char* entry, const char* target, std::vector<std::uint8_t>& dxbc, String& log)
 	{
 		ID3DBlob* code = nullptr;
 		ID3DBlob* errors = nullptr;
+		const UINT flags = D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR | D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3;
 		HRESULT hr = g_D3DCompile(source.data(), source.size(), nullptr, nullptr, nullptr,
-			entry, target, 0, 0, &code, &errors);
+			entry, target, flags, 0, &code, &errors);
 		if (errors != nullptr) {
 			log = String{reinterpret_cast<const char*>(errors->GetBufferPointer())};
 			errors->Release();
 		}
 		if (code != nullptr) {
+			if (SUCCEEDED(hr)) {
+				dxbc.assign(reinterpret_cast<const std::uint8_t*>(code->GetBufferPointer()),
+					reinterpret_cast<const std::uint8_t*>(code->GetBufferPointer()) + code->GetBufferSize());
+			}
 			code->Release();
 		}
-		return SUCCEEDED(hr);
+		return SUCCEEDED(hr) && !dxbc.empty();
+	}
+
+	/** Compiles @p source as HLSL (entry @p entry, profile @p target); returns success + the compiler log */
+	bool CompileHlsl(const String& source, const char* entry, const char* target, String& log)
+	{
+		std::vector<std::uint8_t> dxbc;
+		return CompileHlslToDxbc(source, entry, target, dxbc, log);
 	}
 
 	// --- Vulkan SPIR-V compilation via a child glslangValidator process ---------------------------
@@ -686,6 +706,7 @@ namespace
 	}
 #else
 	bool LoadD3DCompiler(String& error) { error = "D3DCompile is only available on Windows"; return false; }
+	bool CompileHlslToDxbc(const String&, const char*, const char*, std::vector<std::uint8_t>&, String&) { return false; }
 	bool CompileHlsl(const String&, const char*, const char*, String&) { return false; }
 	bool LocateGlslang(StringView, String&) { return false; }
 	bool CompileSpirvWithGlslang(const String&, const String&, bool, std::vector<std::uint32_t>&, String& log)
@@ -707,7 +728,8 @@ namespace
 
 	/**
 		Emits the VS + PS HLSL of every program variant across all @p inputPaths and compiles each stage via
-		D3DCompile (vs_5_0 / ps_5_0). Prints a pass/fail table and a summary. Tool-only validation surface.
+		D3DCompile (vs_4_0 / ps_4_0 with the same flags the embedded DXBC and the D3D11 backend's runtime
+		compilation use). Prints a pass/fail table and a summary. Tool-only validation surface.
 	*/
 	int RunHlslCheck(char** inputPaths, int inputCount)
 	{
@@ -741,7 +763,7 @@ namespace
 						bool vertexStage = (stage == 0);
 						const char* stageName = (vertexStage ? "VS" : "PS");
 						const char* entry = (vertexStage ? "VSMain" : "PSMain");
-						const char* target = (vertexStage ? "vs_5_0" : "ps_5_0");
+						const char* target = (vertexStage ? "vs_4_0" : "ps_4_0");
 						stagesTotal++;
 
 						String source = ShaderParser::BuildStageSource(*program.Document, vertexStage, v.Define);
@@ -1116,6 +1138,7 @@ int main(int argc, char* argv[])
 
 	bool hlslDump = false;
 	bool vulkanDump = false;
+	bool noDxbc = false;
 	const char* glslangOverride = nullptr;
 	for (int i = 1; i < argc; i++) {
 		StringView arg = argv[i];
@@ -1137,6 +1160,8 @@ int main(int argc, char* argv[])
 			essl100Check = true;
 		} else if (arg == "--hlsl") {
 			hlslDump = true;
+		} else if (arg == "--no-dxbc") {
+			noDxbc = true;
 		} else if (arg == "--vulkan") {
 			vulkanDump = true;
 		} else if (arg == "--glslang") {
@@ -1292,8 +1317,36 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	// Load d3dcompiler_47 (ships with every Windows) and, when available, embed offline-compiled DXBC
+	// bytecode per stage INSTEAD of the HLSL text — the D3D11 backend (desktop and UWP/Xbox) then creates
+	// its shader objects straight from the blobs, with no runtime D3DCompile and no on-disk cache. When it
+	// is unavailable (non-Windows generation) or --no-dxbc is given, the HLSL sources are embedded as
+	// before and the backend falls back to runtime compilation.
+	DxbcCompileFn compileDxbc;
+	if (!noDxbc) {
+		String loadError;
+		if (LoadD3DCompiler(loadError)) {
+			compileDxbc = [](StringView hlsl, bool vertexStage, std::vector<std::uint8_t>& dxbc, String& log) {
+				bool ok = CompileHlslToDxbc(String{hlsl}, vertexStage ? "VSMain" : "PSMain",
+					vertexStage ? "vs_4_0" : "ps_4_0", dxbc, log);
+				if (!ok) {
+					// A lowered stage that fails D3DCompile falls back to embedding its HLSL source (the
+					// runtime compile will fail the same way, so surface it here; --hlsl-check has details)
+					std::fprintf(stderr, "warning: D3DCompile (%s) failed - embedding the HLSL source instead: %s\n",
+						vertexStage ? "vs_4_0" : "ps_4_0", FirstLine(log).data());
+				}
+				return ok;
+			};
+		}
+#if defined(_WIN32)
+		else {
+			std::fprintf(stderr, "warning: %s - DXBC will be omitted (HLSL sources embedded instead)\n", loadError.data());
+		}
+#endif
+	}
+
 	String output;
-	if (!Emitter::EmitHeader(programs, ns, inputPath, compileSpirv, output, diag)) {
+	if (!Emitter::EmitHeader(programs, ns, inputPath, compileSpirv, compileDxbc, output, diag)) {
 		return ReportError(inputPath, diag);
 	}
 	if (!WriteStringToFile(outputPath, output)) {

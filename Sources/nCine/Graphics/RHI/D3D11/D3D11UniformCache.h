@@ -3,8 +3,8 @@
 #include "D3D11ShaderTypes.h"
 
 #include <cstdint>
-#include <vector>
 
+#include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringView.h>
 
@@ -127,6 +127,6 @@ namespace nCine::RHI::D3D11
 			String Name;
 			D3D11UniformCache Cache;
 		};
-		std::vector<NamedCache> uniformCaches_;
+		SmallVector<NamedCache, 0> uniformCaches_;
 	};
 }

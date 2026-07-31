@@ -164,10 +164,10 @@ namespace nCine::RHI::D3D11
 	ID3D11PixelShader* D3D11Device::presentPs_ = nullptr;
 	ID3D11SamplerState* D3D11Device::presentSampler_ = nullptr;
 
-	std::vector<D3D11Device::PooledCBuffer> D3D11Device::cbufferPool_;
-	std::vector<std::uint8_t> D3D11Device::cbufferStaging_;
-	std::vector<D3D11Device::BlendStateEntry> D3D11Device::blendStates_;
-	std::vector<D3D11Device::RasterStateEntry> D3D11Device::rasterStates_;
+	SmallVector<D3D11Device::PooledCBuffer, 0> D3D11Device::cbufferPool_;
+	SmallVector<std::uint8_t, 0> D3D11Device::cbufferStaging_;
+	SmallVector<D3D11Device::BlendStateEntry, 8> D3D11Device::blendStates_;
+	SmallVector<D3D11Device::RasterStateEntry, 8> D3D11Device::rasterStates_;
 	ID3D11DepthStencilState* D3D11Device::depthDisabledState_ = nullptr;
 
 	ID3D11BlendState* D3D11Device::lastBlendState_ = nullptr;
@@ -466,7 +466,7 @@ namespace nCine::RHI::D3D11
 		D3D11ShaderProgram* prog = currentProgram_;
 		s_cbufferCursor = 0;
 
-		auto buildAndBind = [&](const std::vector<D3D11CBufferSlot>& slots, bool vertexStage) {
+		auto buildAndBind = [&](const CBufferSlotList& slots, bool vertexStage) {
 			for (const D3D11CBufferSlot& slot : slots) {
 				std::uint32_t uploadSize = slot.ByteSize;
 				// Assemble the exact bytes to upload into one contiguous span (`srcBytes`), so they can be
