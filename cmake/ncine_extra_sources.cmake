@@ -1012,17 +1012,38 @@ if(WITH_MULTIPLAYER)
 
 						# `NCINE_COPY_DEPENDENCIES` doesn't exist on UWP, which always deploys its dependencies
 						if(WIN32 AND NOT OPENSSL_USE_STATIC_LIBS AND (NCINE_COPY_DEPENDENCIES OR WINDOWS_PHONE OR WINDOWS_STORE))
-							# A dynamically linked OpenSSL needs its runtime libraries next to the executable.
-							# `FindOpenSSL` only reports the import libraries, so the DLLs are looked up in the
-							# usual layouts: next to the import libraries (vcpkg) or in a sibling `bin` directory
-							get_filename_component(OPENSSL_SSL_LIBDIR "${OPENSSL_SSL_LIBRARY}" DIRECTORY)
-							get_filename_component(OPENSSL_CRYPTO_LIBDIR "${OPENSSL_CRYPTO_LIBRARY}" DIRECTORY)
-							set(OPENSSL_DLL_HINTS
-								"${OPENSSL_SSL_LIBDIR}" "${OPENSSL_SSL_LIBDIR}/../bin"
-								"${OPENSSL_CRYPTO_LIBDIR}" "${OPENSSL_CRYPTO_LIBDIR}/../bin")
+							# A dynamically linked OpenSSL needs its runtime libraries next to the executable, but
+							# `FindOpenSSL` reports only the import libraries, so the DLLs have to be looked up
+							set(OPENSSL_DLL_HINTS "")
+
+							# The include directory is the most reliable anchor, because it's always directly in the
+							# installation root, while the import libraries can be nested arbitrarily deep in it
+							# (the official Windows builds put them in `lib/VC/x64/MD`, vcpkg in just `lib`)
+							if(OPENSSL_INCLUDE_DIR)
+								get_filename_component(OPENSSL_INSTALL_DIR "${OPENSSL_INCLUDE_DIR}" DIRECTORY)
+								list(APPEND OPENSSL_DLL_HINTS "${OPENSSL_INSTALL_DIR}/bin" "${OPENSSL_INSTALL_DIR}")
+							endif()
 							if(OPENSSL_ROOT_DIR)
 								list(APPEND OPENSSL_DLL_HINTS "${OPENSSL_ROOT_DIR}/bin" "${OPENSSL_ROOT_DIR}")
 							endif()
+
+							# Otherwise walk up from the import libraries, looking for a `bin` directory on the way
+							foreach(OPENSSL_LIBRARY ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} ${OPENSSL_LIBRARIES})
+								# Skip the `optimized` and `debug` keywords of a per-configuration library list
+								if(OPENSSL_LIBRARY MATCHES "\\.(lib|a|dll)$")
+									get_filename_component(OPENSSL_LIBDIR "${OPENSSL_LIBRARY}" DIRECTORY)
+									foreach(OPENSSL_ANCESTOR "" "/.." "/../.." "/../../.." "/../../../..")
+										list(APPEND OPENSSL_DLL_HINTS
+											"${OPENSSL_LIBDIR}${OPENSSL_ANCESTOR}" "${OPENSSL_LIBDIR}${OPENSSL_ANCESTOR}/bin")
+									endforeach()
+								endif()
+							endforeach()
+
+							# Finally, the libraries can also be dropped in with the other bundled dependencies
+							if(MSVC_BINDIR)
+								list(APPEND OPENSSL_DLL_HINTS "${MSVC_BINDIR}")
+							endif()
+							list(REMOVE_DUPLICATES OPENSSL_DLL_HINTS)
 
 							# The official Windows builds append the architecture to the file name
 							if(CMAKE_SYSTEM_PROCESSOR MATCHES "[Aa][Rr][Mm]|[Aa][Aa][Rr][Cc][Hh]")
@@ -1040,10 +1061,12 @@ if(WITH_MULTIPLAYER)
 							# Only the directories of the found OpenSSL are searched, a DLL from an unrelated
 							# installation in `PATH` (e.g. the one bundled with Git) wouldn't match the import libraries
 							find_file(OPENSSL_SSL_DLL
-								NAMES "libssl-3${OPENSSL_DLL_SUFFIX}.dll" "libssl-3.dll" "libssl-1_1${OPENSSL_DLL_SUFFIX}.dll" "libssl-1_1.dll" "libssl.dll"
+								NAMES "libssl-3${OPENSSL_DLL_SUFFIX}.dll" "libssl-3.dll"
+									"libssl-1_1${OPENSSL_DLL_SUFFIX}.dll" "libssl-1_1.dll" "libssl.dll" "ssleay32.dll"
 								PATHS ${OPENSSL_DLL_HINTS} NO_DEFAULT_PATH)
 							find_file(OPENSSL_CRYPTO_DLL
-								NAMES "libcrypto-3${OPENSSL_DLL_SUFFIX}.dll" "libcrypto-3.dll" "libcrypto-1_1${OPENSSL_DLL_SUFFIX}.dll" "libcrypto-1_1.dll" "libcrypto.dll"
+								NAMES "libcrypto-3${OPENSSL_DLL_SUFFIX}.dll" "libcrypto-3.dll"
+									"libcrypto-1_1${OPENSSL_DLL_SUFFIX}.dll" "libcrypto-1_1.dll" "libcrypto.dll" "libeay32.dll"
 								PATHS ${OPENSSL_DLL_HINTS} NO_DEFAULT_PATH)
 							mark_as_advanced(OPENSSL_SSL_DLL OPENSSL_CRYPTO_DLL)
 
@@ -1052,7 +1075,10 @@ if(WITH_MULTIPLAYER)
 								# On UWP the libraries have to come from a UWP build of OpenSSL to be deployable
 								ncine_deploy_runtime_dependencies(${OPENSSL_SSL_DLL} ${OPENSSL_CRYPTO_DLL})
 							else()
-								message(WARNING "OpenSSL runtime libraries not found, they have to be copied next to the executable manually")
+								string(REPLACE ";" "\n  " OPENSSL_SEARCHED_DIRS "${OPENSSL_DLL_HINTS}")
+								message(WARNING "OpenSSL runtime libraries not found, set OPENSSL_SSL_DLL and "
+									"OPENSSL_CRYPTO_DLL manually or copy them next to the executable. Searched in:\n  "
+									"${OPENSSL_SEARCHED_DIRS}")
 							endif()
 						endif()
 					else()
