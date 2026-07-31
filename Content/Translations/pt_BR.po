@@ -2593,7 +2593,7 @@ msgstr "Vibração"
 
 #: Sources/Jazz2/UI/Menu/TouchControlsOptionsSection.cpp:145
 msgid "Drag to move · Pinch or corner to resize"
-msgstr "Arrasta para mover · Pinçar ou no canto para mudar de tamanho"
+msgstr "Arrastar para mover · Pinçar ou no canto para mudar de tamanho"
 
 #. TRANSLATORS: Menu item in Options > User Profile section
 #: Sources/Jazz2/UI/Menu/UserProfileOptionsSection.cpp:95
