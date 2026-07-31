@@ -1597,7 +1597,7 @@ msgid ""
 msgstr ""
 "\n"
 "\n"
-"La partie a fini ex-aequo"
+"La manche s'est terminée par un match nul"
 
 #: Sources/Jazz2/UI/HUD.cpp:543
 msgid "Spectating"
@@ -1938,7 +1938,7 @@ msgstr "Coopération"
 #: Sources/Jazz2/UI/Menu/EpisodeSelectSection.cpp:172
 #: Sources/Jazz2/UI/Menu/PlayMultiplayerSection.cpp:34
 msgid "Create Local Splitscreen Game"
-msgstr "Créer une partie locale en écran séparé"
+msgstr "Créer une partie locale en écran partagé"
 
 #. TRANSLATORS: Menu item to select the number of local splitscreen players
 #: Sources/Jazz2/UI/Menu/CreateLocalGameOptionsSection.cpp:222
@@ -2111,7 +2111,7 @@ msgstr "Jouabilité moderne"
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:57
 msgid "Reforged HUD"
-msgstr "Informations à l'écran moderne"
+msgstr "Informations à l'écran modernes"
 
 #. TRANSLATORS: Menu item in Options > Gameplay > Enhancements section
 #: Sources/Jazz2/UI/Menu/GameplayEnhancementsSection.cpp:61
@@ -2689,7 +2689,7 @@ msgstr "Auto"
 #: Sources/Jazz2/UI/Multiplayer/MpInGameLobby.cpp:223
 msgid "Use \f[c:#d0705d]Up/Down\f[/c] to switch between character and team"
 msgstr ""
-"Utiliser \f[c:#d0705d]Haut/Bas\f[/c] pour choisir entre personnage et équipe"
+"Utiliser \f[c:#d0705d]Haut/Bas\f[/c] pour basculer entre personnage et équipe"
 
 #: Sources/Main.cpp:669 Sources/Main.cpp:740
 msgid ""
