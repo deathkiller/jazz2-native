@@ -1394,15 +1394,15 @@ msgstr "Trapaças não são permitidos neste contexto"
 
 #: Sources/Jazz2/Multiplayer/GameModes/CaptureTheFlagMode.cpp:16
 msgid "home"
-msgstr "casa"
+msgstr "base"
 
 #: Sources/Jazz2/Multiplayer/GameModes/CaptureTheFlagMode.cpp:16
 msgid "taken"
-msgstr "pegou"
+msgstr "adquirido"
 
 #: Sources/Jazz2/Multiplayer/GameModes/CaptureTheFlagMode.cpp:16
 msgid "dropped"
-msgstr "soltou"
+msgstr "solto"
 
 #: Sources/Jazz2/Multiplayer/GameModes/TreasureHuntMode.cpp:32
 msgid "Find exit!"
@@ -2242,7 +2242,7 @@ msgstr "Efeitos de borrão"
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:104
 msgid "Lighting Resolution"
-msgstr "Resolução do raio"
+msgstr "Resolução da iluminação"
 
 #. TRANSLATORS: Menu item in Options > Graphics section
 #: Sources/Jazz2/UI/Menu/GraphicsOptionsSection.cpp:133
