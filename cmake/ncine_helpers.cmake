@@ -609,6 +609,29 @@ function(ncine_add_dependency target target_type)
 	ncine_apply_compiler_options(${ARGV})
 endfunction()
 
+# Makes the specified runtime libraries (DLLs) available to the application. UWP has to deploy them as
+# package content, because a post-build copy would never end up in the package, while all other Windows
+# builds copy them next to the executable if `NCINE_COPY_DEPENDENCIES` is enabled. Other platforms
+# resolve their dependencies without any help, so the call is a no-op there.
+function(ncine_deploy_runtime_dependencies)
+	if(NOT WIN32 OR NOT ARGN)
+		return()
+	endif()
+
+	if(WINDOWS_PHONE OR WINDOWS_STORE)
+		target_sources(${NCINE_APP} PRIVATE ${ARGN})
+		set_property(SOURCE ${ARGN} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+		set_property(SOURCE ${ARGN} PROPERTY VS_DEPLOYMENT_LOCATION ".")
+		source_group("Dependencies" FILES ${ARGN})
+	elseif(NCINE_COPY_DEPENDENCIES)
+		foreach(DEPENDENCY ${ARGN})
+			add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DEPENDENCY} $<TARGET_FILE_DIR:${NCINE_APP}>
+				VERBATIM)
+		endforeach()
+	endif()
+endfunction()
+
 function(ncine_assign_source_group)
 	cmake_parse_arguments(PARSE_ARGV 0 ARGS "SKIP_EXTERNAL" "" "PATH_PREFIX;FILES")
 	

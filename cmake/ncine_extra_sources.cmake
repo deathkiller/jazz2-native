@@ -703,11 +703,8 @@ elseif(WINDOWS_PHONE OR WINDOWS_STORE)
 		endif()
 	endif()
 
-	target_sources(${NCINE_APP} PRIVATE ${UWP_DEPENDENCIES})
-	set_property(SOURCE ${UWP_DEPENDENCIES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
-	set_property(SOURCE ${UWP_DEPENDENCIES} PROPERTY VS_DEPLOYMENT_LOCATION ".")
-	source_group("Dependencies" FILES ${UWP_DEPENDENCIES})
-	
+	ncine_deploy_runtime_dependencies(${UWP_DEPENDENCIES})
+
 	# Include `Content` directory
 	file(GLOB_RECURSE PACKAGE_CONTENT_FILES "${NCINE_CONTENT_DIR}/*")
 	foreach(CONTENT_FILE ${PACKAGE_CONTENT_FILES})
@@ -850,11 +847,7 @@ else()
 			list(APPEND WIN32_DEPENDENCIES "${MSVC_BINDIR}/libwebp.dll")
 		endif()
 		
-		foreach(DEPENDENCY ${WIN32_DEPENDENCIES})
-			add_custom_command(TARGET ${NCINE_APP} POST_BUILD
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DEPENDENCY} $<TARGET_FILE_DIR:${NCINE_APP}>
-				VERBATIM)
-		endforeach()
+		ncine_deploy_runtime_dependencies(${WIN32_DEPENDENCIES})
 	endif()
 	
 	if(NCINE_CREATE_CONTENT_SYMLINK)
@@ -1016,6 +1009,52 @@ if(WITH_MULTIPLAYER)
 						set(USE_OPEN_SSL ON CACHE BOOL "" FORCE)
 						set(USE_MBED_TLS OFF CACHE BOOL "" FORCE)
 						target_compile_definitions(${NCINE_APP} PUBLIC "WITH_WEBSOCKET_TLS")
+
+						# `NCINE_COPY_DEPENDENCIES` doesn't exist on UWP, which always deploys its dependencies
+						if(WIN32 AND NOT OPENSSL_USE_STATIC_LIBS AND (NCINE_COPY_DEPENDENCIES OR WINDOWS_PHONE OR WINDOWS_STORE))
+							# A dynamically linked OpenSSL needs its runtime libraries next to the executable.
+							# `FindOpenSSL` only reports the import libraries, so the DLLs are looked up in the
+							# usual layouts: next to the import libraries (vcpkg) or in a sibling `bin` directory
+							get_filename_component(OPENSSL_SSL_LIBDIR "${OPENSSL_SSL_LIBRARY}" DIRECTORY)
+							get_filename_component(OPENSSL_CRYPTO_LIBDIR "${OPENSSL_CRYPTO_LIBRARY}" DIRECTORY)
+							set(OPENSSL_DLL_HINTS
+								"${OPENSSL_SSL_LIBDIR}" "${OPENSSL_SSL_LIBDIR}/../bin"
+								"${OPENSSL_CRYPTO_LIBDIR}" "${OPENSSL_CRYPTO_LIBDIR}/../bin")
+							if(OPENSSL_ROOT_DIR)
+								list(APPEND OPENSSL_DLL_HINTS "${OPENSSL_ROOT_DIR}/bin" "${OPENSSL_ROOT_DIR}")
+							endif()
+
+							# The official Windows builds append the architecture to the file name
+							if(CMAKE_SYSTEM_PROCESSOR MATCHES "[Aa][Rr][Mm]|[Aa][Aa][Rr][Cc][Hh]")
+								if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+									set(OPENSSL_DLL_SUFFIX "-arm64")
+								else()
+									set(OPENSSL_DLL_SUFFIX "-arm")
+								endif()
+							elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
+								set(OPENSSL_DLL_SUFFIX "-x64")
+							else()
+								set(OPENSSL_DLL_SUFFIX "")
+							endif()
+
+							# Only the directories of the found OpenSSL are searched, a DLL from an unrelated
+							# installation in `PATH` (e.g. the one bundled with Git) wouldn't match the import libraries
+							find_file(OPENSSL_SSL_DLL
+								NAMES "libssl-3${OPENSSL_DLL_SUFFIX}.dll" "libssl-3.dll" "libssl-1_1${OPENSSL_DLL_SUFFIX}.dll" "libssl-1_1.dll" "libssl.dll"
+								PATHS ${OPENSSL_DLL_HINTS} NO_DEFAULT_PATH)
+							find_file(OPENSSL_CRYPTO_DLL
+								NAMES "libcrypto-3${OPENSSL_DLL_SUFFIX}.dll" "libcrypto-3.dll" "libcrypto-1_1${OPENSSL_DLL_SUFFIX}.dll" "libcrypto-1_1.dll" "libcrypto.dll"
+								PATHS ${OPENSSL_DLL_HINTS} NO_DEFAULT_PATH)
+							mark_as_advanced(OPENSSL_SSL_DLL OPENSSL_CRYPTO_DLL)
+
+							if(OPENSSL_SSL_DLL AND OPENSSL_CRYPTO_DLL)
+								message(STATUS "OpenSSL runtime libraries: ${OPENSSL_SSL_DLL}, ${OPENSSL_CRYPTO_DLL}")
+								# On UWP the libraries have to come from a UWP build of OpenSSL to be deployable
+								ncine_deploy_runtime_dependencies(${OPENSSL_SSL_DLL} ${OPENSSL_CRYPTO_DLL})
+							else()
+								message(WARNING "OpenSSL runtime libraries not found, they have to be copied next to the executable manually")
+							endif()
+						endif()
 					else()
 						message(WARNING "OpenSSL not found, building WebSocket without TLS support")
 						set(USE_TLS OFF CACHE BOOL "" FORCE)
