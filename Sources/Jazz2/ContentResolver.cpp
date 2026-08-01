@@ -926,7 +926,16 @@ namespace Jazz2
 			height = frameDimensionsY * frameConfigurationY;
 		}
 
-		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * PixelSize);
+		// Baking the palette expands the image to RGBA in place, so that case needs the full 4 bytes/pixel;
+		// otherwise the decoded data stays packed to `channelCount` bytes/pixel and only the decoder's final
+		// (overlapping) 4-byte store runs past it, which the few bytes of slack cover. Sizing every sprite
+		// for 4 bytes/pixel meant allocating four times what an 8-bit sheet needs.
+		// Only a sprite that keeps its indices needs no expansion; everything else is either baked in place or
+		// uploaded as RGBA, both of which read the buffer as 4 bytes/pixel. The condition mirrors exactly the
+		// one that sets GenericGraphicResourceFlags::Indexed below.
+		const bool willStayIndexed = (keepIndexed && (flags & 0x01) != 0x01);
+		const std::uint32_t sourceStride = (willStayIndexed ? channelCount : PixelSize);
+		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * sourceStride + 3);
 
 		ReadImageFromFile(s, pixels.get(), width, height, channelCount);
 
@@ -967,20 +976,33 @@ namespace Jazz2
 			}
 		}
 		if (palette != nullptr) {
-			for (std::uint32_t i = 0; i < width * height; i++) {
-				std::uint32_t srcIdx = i * PixelSize;
-				std::uint32_t color = palette[pixels[srcIdx]];
-				std::uint8_t alpha = pixels[srcIdx + 3];
+			// Expanded from the back: the destination stride (RGBA) is never narrower than the decoded one, so
+			// working downwards guarantees a pixel is read before anything can be written over it. Reading at
+			// PixelSize regardless of `channelCount` used to be wrong for the packed 1- and 2-channel sheets,
+			// which took their indices (and alpha) from the wrong bytes.
+			for (std::uint32_t i = width * height; i-- > 0; ) {
+				const std::uint32_t srcIdx = i * channelCount;
+				const std::uint32_t dstIdx = i * PixelSize;
+				const std::uint32_t color = palette[pixels[srcIdx]];
+				std::uint8_t alpha;
+				if (channelCount == 1) {
+					// Index only: transparency comes from the palette entry itself
+					alpha = 255;
+				} else if (channelCount == 2) {
+					alpha = pixels[srcIdx + 1];
+				} else {
+					alpha = pixels[srcIdx + 3];
+				}
 
-				std::uint8_t r = (color >> 0) & 0xFF;
-				std::uint8_t g = (color >> 8) & 0xFF;
-				std::uint8_t b = (color >> 16) & 0xFF;
-				std::uint8_t a = ((color >> 24) & 0xFF) * alpha / 255;
+				const std::uint8_t r = (color >> 0) & 0xFF;
+				const std::uint8_t g = (color >> 8) & 0xFF;
+				const std::uint8_t b = (color >> 16) & 0xFF;
+				const std::uint8_t a = ((color >> 24) & 0xFF) * alpha / 255;
 
-				pixels[srcIdx + 0] = r;
-				pixels[srcIdx + 1] = g;
-				pixels[srcIdx + 2] = b;
-				pixels[srcIdx + 3] = a;
+				pixels[dstIdx + 0] = r;
+				pixels[dstIdx + 1] = g;
+				pixels[dstIdx + 2] = b;
+				pixels[dstIdx + 3] = a;
 			}
 		}
 
@@ -1328,10 +1350,12 @@ namespace Jazz2
 		}
 
 		// Load raw pixels. The data is laid out `channelCount` bytes per pixel (1 = index only, 4 = RGBA / index-in-red;
-		// an 8-bit tile keeps its palette index in the first byte either way), but ReadImageFromFile always writes a full
-		// 4-byte RGBA per pixel (overlapping for narrower strides), so the buffer must be sized for 4 bytes/pixel even
-		// when channelCount is 1 - otherwise the final pixel's write overruns the heap.
-		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * 4);
+		// an 8-bit tile keeps its palette index in the first byte either way). ReadImageFromFile always stores a full
+		// 4-byte RGBA per pixel and advances by `channelCount`, so the writes overlap for narrower strides and only the
+		// very last one runs past the pixel data - hence the few bytes of slack rather than sizing the whole buffer for
+		// 4 bytes/pixel, which for an 8-bit tileset meant allocating four times what it needs (2.6 MB instead of 660 KB
+		// on the larger ones, at a point where the level's own data is already resident).
+		std::unique_ptr<std::uint8_t[]> pixels = std::make_unique<std::uint8_t[]>(width * height * channelCount + 3);
 		ReadImageFromFile(s, pixels.get(), width, height, channelCount);
 
 		// Build the atlas with 1px padding around each tile (so sampling never bleeds across tiles). Indexed output
@@ -1498,7 +1522,7 @@ namespace Jazz2
 
 		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
-		DEATH_ASSERT(signature == 0x2095A59FF0BFBBEF && fileType == LevelFile,
+		DEATH_ASSERT(signature == 0x2095A59FF0BFBBEF && fileType == ContentFileType::Level,
 			("Level \"{}\" has invalid signature", descriptor.FullPath), false);
 
 		LevelFlags flags = (LevelFlags)s->ReadValueAsLE<std::uint16_t>();
@@ -1738,7 +1762,7 @@ namespace Jazz2
 
 		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
-		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::EpisodeFile) {
+		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentFileType::Episode) {
 			return std::nullopt;
 		}
 

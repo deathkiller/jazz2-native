@@ -43,6 +43,7 @@
 #include "Jazz2/UI/Menu/BeginSection.h"
 #include "Jazz2/UI/Menu/SimpleMessageSection.h"
 
+#include "Jazz2/Compatibility/AssetConverter.h"
 #include "Jazz2/Compatibility/JJ2Anims.h"
 #include "Jazz2/Compatibility/JJ2Data.h"
 #include "Jazz2/Compatibility/JJ2Episode.h"
@@ -93,6 +94,18 @@ using namespace Death::IO::Compression;
 using namespace nCine;
 using namespace Jazz2;
 using namespace Jazz2::UI;
+
+namespace
+{
+	// Whether a state change releases the outgoing handler's assets before loading the incoming ones, instead
+	// of keeping both sets resident until the load finishes (see GameEventHandler::ChangeLevel). Trades some
+	// reloading of shared assets for a much lower peak, which the consoles with little main memory need.
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+	constexpr bool ReleaseAssetsBeforeLoading = true;
+#else
+	constexpr bool ReleaseAssetsBeforeLoading = false;
+#endif
+}
 
 class GameEventHandler : public IAppEventHandler, public IInputEventHandler, public IRootController
 #if defined(WITH_MULTIPLAYER)
@@ -776,6 +789,21 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 	InvokeAsync([this, levelInit = std::move(levelInit)]() mutable {
 		ZoneScopedNC("GameEventHandler::ChangeLevel", 0x888888);
 
+		// Release the outgoing handler, and everything it was the last owner of, BEFORE the incoming one
+		// starts loading. The resource cache is mark-and-sweep - BeginLoading() only clears the Referenced
+		// flags and EndLoading() frees what stayed unmarked - so the old and the new set would otherwise both
+		// be resident for the whole load. That peak is what a main menu -> level transition cannot fit into
+		// the Dreamcast's 16 MB. The handler is destroyed first because the sweep must not run while it is
+		// still using its resources, and the viewport chain has to let go of its viewports before that.
+		if (ReleaseAssetsBeforeLoading && _currentHandler != nullptr) {
+			Viewport::GetChain().clear();
+			_currentHandler = nullptr;
+
+			auto& resolver = ContentResolver::Get();
+			resolver.BeginLoading();
+			resolver.EndLoading();
+		}
+
 		auto p = levelInit.LevelName.partition('/');
 		auto levelName = (!p[2].empty() ? p[2] : p[0]);
 
@@ -931,7 +959,7 @@ void GameEventHandler::ResumeStateFromStream(std::shared_ptr<Stream> src)
 			std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
 			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 			std::uint16_t version = s->ReadValueAsLE<std::uint16_t>();
-			if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::StateFile || version > StateVersion) {
+			if (signature != 0x2095A59FF0BFBBEF || fileType != ContentFileType::State || version > StateVersion) {
 				return;
 			}
 
@@ -990,7 +1018,7 @@ bool GameEventHandler::SaveStateToStream(Stream& dest)
 	}
 
 	dest.WriteValueAsLE<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
-	dest.WriteValue<std::uint8_t>(ContentResolver::StateFile);
+	dest.WriteValue<std::uint8_t>(ContentFileType::State);
 	dest.WriteValueAsLE<std::uint16_t>(StateVersion);
 
 	bool serialized;
@@ -1827,7 +1855,7 @@ void GameEventHandler::RefreshCache()
 		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		std::uint16_t version = s->ReadValueAsLE<std::uint16_t>();
-		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::CacheIndexFile || version != Compatibility::JJ2Anims::CacheVersion) {
+		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentFileType::CacheIndex || version != Compatibility::JJ2Anims::CacheVersion) {
 			goto RecreateCache;
 		}
 
@@ -1909,33 +1937,25 @@ RecreateCache:
 	fs::RemoveDirectoryRecursive(animationsPath);
 	fs::RemoveDirectoryRecursive(fs::CombinePath(resolver.GetCachePath(), "Downloads"_s));
 
-	// Create .pak file
+	// Create .pak file, retrying a few times in case it is still held by something
 	{
-		std::int32_t t = 1;
-		std::unique_ptr<PakWriter> pakWriter = std::make_unique<PakWriter>(fs::CombinePath(resolver.GetCachePath(), "Source.pak"_s), true);
-		while (!pakWriter->IsValid()) {
-			if (t > 5) {
-				LOGE("Cannot open \"…{}Cache{}Source.pak\" file for writing! Please check if this file is accessible and try again.", fs::PathSeparator, fs::PathSeparator);
-				_flags |= Flags::IsVerified;
-				return;
+		Compatibility::JJ2Version version;
+		Compatibility::AssetConverter::Result result = Compatibility::AssetConverter::Result::CannotWriteTarget;
+		for (std::int32_t t = 1; t <= 5 && result == Compatibility::AssetConverter::Result::CannotWriteTarget; t++) {
+			if (t > 1) {
+				Thread::Sleep(t * 100);
 			}
-
-			pakWriter = nullptr;
-			Thread::Sleep(t * 100);
-			t++;
-			pakWriter = std::make_unique<PakWriter>(fs::CombinePath(resolver.GetCachePath(), "Source.pak"_s), true);
+			result = Compatibility::AssetConverter::ConvertSourceAssets(animsPath, resolver.GetSourcePath(), resolver.GetCachePath(), version);
 		}
 
-		Compatibility::JJ2Version version = Compatibility::JJ2Anims::Convert(animsPath, *pakWriter);
-		if (version == Compatibility::JJ2Version::Unknown) {
+		if (result == Compatibility::AssetConverter::Result::CannotWriteTarget) {
+			LOGE("Cannot open \"…{}Cache{}Source.pak\" file for writing! Please check if this file is accessible and try again.", fs::PathSeparator, fs::PathSeparator);
+			_flags |= Flags::IsVerified;
+			return;
+		} else if (result == Compatibility::AssetConverter::Result::UnsupportedVersion) {
 			LOGE("Provided Jazz Jackrabbit 2 version is not supported. Make sure supported Jazz Jackrabbit 2 version is present in \"{}\" directory.", resolver.GetSourcePath());
 			_flags |= Flags::IsVerified;
 			return;
-		}
-
-		Compatibility::JJ2Data data;
-		if (data.Open(fs::CombinePath(resolver.GetSourcePath(), "Data.j2d"_s), false)) {
-			data.Convert(*pakWriter, version);
 		}
 	}
 
@@ -1959,280 +1979,8 @@ void GameEventHandler::RefreshCacheLevels(bool recreateAll)
 {
 	ZoneScopedC(0x888888);
 
-	LOGI("Searching for levels...");
-
 	auto& resolver = ContentResolver::Get();
-
-	Compatibility::EventConverter eventConverter;
-
-	bool hasChristmasChronicles = fs::IsReadableFile(fs::FindPathCaseInsensitive(fs::CombinePath(resolver.GetSourcePath(), "xmas99.j2e"_s)));
-	const HashMap<String, Pair<String, String>> knownLevels = {
-		{ "trainer"_s, { "prince"_s, {} } },
-		{ "castle1"_s, { "prince"_s, "01"_s } },
-		{ "castle1n"_s, { "prince"_s, "02"_s } },
-		{ "carrot1"_s, { "prince"_s, "03"_s } },
-		{ "carrot1n"_s, { "prince"_s, "04"_s } },
-		{ "labrat1"_s, { "prince"_s, "05"_s } },
-		{ "labrat2"_s, { "prince"_s, "06"_s } },
-		{ "labrat3"_s, { "prince"_s, "bonus"_s } },
-
-		{ "colon1"_s, { "rescue"_s, "01"_s } },
-		{ "colon2"_s, { "rescue"_s, "02"_s } },
-		{ "psych1"_s, { "rescue"_s, "03"_s } },
-		{ "psych2"_s, { "rescue"_s, "04"_s } },
-		{ "beach"_s, { "rescue"_s, "05"_s } },
-		{ "beach2"_s, { "rescue"_s, "06"_s } },
-		{ "psych3"_s, { "rescue"_s, "bonus"_s } },
-
-		{ "diam1"_s, { "flash"_s, "01"_s } },
-		{ "diam3"_s, { "flash"_s, "02"_s } },
-		{ "tube1"_s, { "flash"_s, "03"_s } },
-		{ "tube2"_s, { "flash"_s, "04"_s } },
-		{ "medivo1"_s, { "flash"_s, "05"_s } },
-		{ "medivo2"_s, { "flash"_s, "06"_s } },
-		{ "garglair"_s, { "flash"_s, "bonus"_s } },
-		{ "tube3"_s, { "flash"_s, "bonus"_s } },
-
-		{ "jung1"_s, { "monk"_s, "01"_s } },
-		{ "jung2"_s, { "monk"_s, "02"_s } },
-		{ "hell"_s, { "monk"_s, "03"_s } },
-		{ "hell2"_s, { "monk"_s, "04"_s } },
-		{ "damn"_s, { "monk"_s, "05"_s } },
-		{ "damn2"_s, { "monk"_s, "06"_s } },
-
-		{ "share1"_s, { "share"_s, "01"_s } },
-		{ "share2"_s, { "share"_s, "02"_s } },
-		{ "share3"_s, { "share"_s, "03"_s } },
-
-		{ "xmas1"_s, { "xmas99"_s, "01"_s } },
-		{ "xmas2"_s, { "xmas99"_s, "02"_s } },
-		{ "xmas3"_s, { "xmas99"_s, "03"_s } },
-
-		{ "easter1"_s, { "secretf"_s, "01"_s } },
-		{ "easter2"_s, { "secretf"_s, "02"_s } },
-		{ "easter3"_s, { "secretf"_s, "03"_s } },
-		{ "haunted1"_s, { "secretf"_s, "04"_s } },
-		{ "haunted2"_s, { "secretf"_s, "05"_s } },
-		{ "haunted3"_s, { "secretf"_s, "06"_s } },
-		{ "town1"_s, { "secretf"_s, "07"_s } },
-		{ "town2"_s, { "secretf"_s, "08"_s } },
-		{ "town3"_s, { "secretf"_s, "09"_s } },
-
-		// Holiday Hare '17
-		{ "hh17_level00"_s, { "hh17"_s, {} } },
-		{ "hh17_level01"_s, { "hh17"_s, {} } },
-		{ "hh17_level01_save"_s, { "hh17"_s, {} } },
-		{ "hh17_level02"_s, { "hh17"_s, {} } },
-		{ "hh17_level02_save"_s, { "hh17"_s, {} } },
-		{ "hh17_level03"_s, { "hh17"_s, {} } },
-		{ "hh17_level03_save"_s, { "hh17"_s, {} } },
-		{ "hh17_level04"_s, { "hh17"_s, {} } },
-		{ "hh17_level04_save"_s, { "hh17"_s, {} } },
-		{ "hh17_level05"_s, { "hh17"_s, {} } },
-		{ "hh17_level05_save"_s, { "hh17"_s, {} } },
-		{ "hh17_level06"_s, { "hh17"_s, {} } },
-		{ "hh17_level06_save"_s, { "hh17"_s, {} } },
-		{ "hh17_level07"_s, { "hh17"_s, {} } },
-		{ "hh17_level07_save"_s, { "hh17"_s, {} } },
-		{ "hh17_ending"_s, { "hh17"_s, {} } },
-		{ "hh17_guardian"_s, { "hh17"_s, {} } },
-
-		// Holiday Hare '18
-		{ "hh18_level01"_s, { "hh18"_s, {} } },
-		{ "hh18_level02"_s, { "hh18"_s, {} } },
-		{ "hh18_level03"_s, { "hh18"_s, {} } },
-		{ "hh18_level04"_s, { "hh18"_s, {} } },
-		{ "hh18_level05"_s, { "hh18"_s, {} } },
-		{ "hh18_level06"_s, { "hh18"_s, {} } },
-		{ "hh18_level07"_s, { "hh18"_s, {} } },
-		{ "hh18_save01"_s, { "hh18"_s, {} } },
-		{ "hh18_save02"_s, { "hh18"_s, {} } },
-		{ "hh18_save03"_s, { "hh18"_s, {} } },
-		{ "hh18_save04"_s, { "hh18"_s, {} } },
-		{ "hh18_save05"_s, { "hh18"_s, {} } },
-		{ "hh18_save06"_s, { "hh18"_s, {} } },
-		{ "hh18_save07"_s, { "hh18"_s, {} } },
-		{ "hh18_ending"_s, { "hh18"_s, {} } },
-		{ "hh18_guardian"_s, { "hh18"_s, {} } },
-
-		// Special names
-		{ "end"_s, { {}, ":end"_s } },
-		{ "endepis"_s, { {}, ":end"_s } },
-		{ "ending"_s, { {}, ":credits"_s } }
-	};
-
-	auto LevelTokenConversion = [&knownLevels](StringView levelToken) -> Compatibility::JJ2Level::LevelToken {
-		auto it = knownLevels.find(levelToken);
-		if (it != knownLevels.end()) {
-			if (it->second.second().empty()) {
-				return { it->second.first(), levelToken };
-			}
-			return { it->second.first(), (it->second.second()[0] == ':' ? it->second.second() : (it->second.second() + "_"_s + levelToken)) };
-		}
-		return { {}, levelToken };
-	};
-
-	auto EpisodeNameConversion = [](Compatibility::JJ2Episode* episode) -> String {
-		if (episode->Name == "share"_s && episode->DisplayName == "#Shareware@Levels"_s) {
-			return "Shareware Demo"_s;
-		} else if (episode->Name == "xmas98"_s && episode->DisplayName == "#Xmas 98@Levels"_s) {
-			return "Holiday Hare '98"_s;
-		} else if (episode->Name == "xmas99"_s && episode->DisplayName == "#Xmas 99@Levels"_s) {
-			return "The Christmas Chronicles"_s;
-		} else if (episode->Name == "secretf"_s && episode->DisplayName == "#Secret@Files"_s) {
-			return "The Secret Files"_s;
-		} else if (episode->Name == "hh17"_s && episode->DisplayName == "Holiday Hare 17"_s) {
-			return "Holiday Hare '17"_s;
-		} else if (episode->Name == "hh18"_s && episode->DisplayName == "Holiday Hare 18"_s) {
-			return "Holiday Hare '18"_s;
-		} else if (episode->Name == "hh24"_s && episode->DisplayName == "HH24"_s) {
-			return "Holiday Hare '24"_s;
-		} else {
-			// Strip formatting
-			return Compatibility::JJ2Strings::RecodeString(episode->DisplayName, true);
-		}
-	};
-
-	auto EpisodePrevNext = [](Compatibility::JJ2Episode* episode) -> Pair<String, String> {
-		if (episode->Name == "prince"_s) {
-			return { {}, "rescue"_s };
-		} else if (episode->Name == "rescue"_s) {
-			return { "prince"_s, "flash"_s };
-		} else if (episode->Name == "flash"_s) {
-			return { "rescue"_s, "monk"_s };
-		} else if (episode->Name == "monk"_s) {
-			return { "flash"_s, {} };
-		} else {
-			return { {}, {} };
-		}
-	};
-
-	String episodesPath = fs::CombinePath(resolver.GetCachePath(), "Episodes"_s);
-	if (recreateAll) {
-		fs::RemoveDirectoryRecursive(episodesPath);
-		fs::CreateDirectories(episodesPath);
-	}
-
-	HashMap<String, bool> usedTilesets;
-
-	for (auto item : fs::Directory(fs::FindPathCaseInsensitive(resolver.GetSourcePath()), fs::EnumerationOptions::SkipDirectories)) {
-		auto extension = fs::GetExtension(item);
-		if (extension == "j2e"_s || extension == "j2pe"_s) {
-			// Episode
-			if (!recreateAll) {
-				String episodeName = fs::GetFileNameWithoutExtension(item);
-				StringUtils::lowercaseInPlace(episodeName);
-				String fullPath = fs::CombinePath(episodesPath, String((episodeName == "xmas98"_s ? "xmas99"_s : StringView(episodeName)) + ".j2e"_s));
-				if (fs::FileExists(fullPath)) {
-					continue;
-				}
-			}
-
-			Compatibility::JJ2Episode episode;
-			if (episode.Open(item)) {
-				if (hasChristmasChronicles && episode.Name == "xmas98"_s) {
-					continue;
-				}
-				if (episode.Name == "home"_s) {
-					episode.FirstLevel = ":custom-levels"_s;
-					episode.Position = UINT16_MAX;
-				} else if (episode.Position >= UINT32_MAX) {
-					episode.Position = UINT16_MAX - 1;
-				}
-
-				String fullPath = fs::CombinePath(episodesPath, String((episode.Name == "xmas98"_s ? "xmas99"_s : StringView(episode.Name)) + ".j2e"_s));
-				episode.Convert(fullPath, std::move(LevelTokenConversion), std::move(EpisodeNameConversion), std::move(EpisodePrevNext));
-			}
-		} else if (extension == "j2l"_s) {
-			// Level
-			String levelName = fs::GetFileNameWithoutExtension(item);
-			if (levelName.find("-MLLE-Data-"_s) == nullptr) {
-				if (!recreateAll) {
-					StringUtils::lowercaseInPlace(levelName);
-
-					String fullPath;
-					auto it = knownLevels.find(levelName);
-					if (it != knownLevels.end()) {
-						if (it->second.second().empty()) {
-							fullPath = fs::CombinePath({ episodesPath, it->second.first(), String(levelName + ".j2l"_s) });
-						} else {
-							fullPath = fs::CombinePath({ episodesPath, it->second.first(), String(it->second.second() + '_' + levelName + ".j2l"_s) });
-						}
-					} else {
-						fullPath = fs::CombinePath({ episodesPath, "unknown"_s, String(levelName + ".j2l"_s) });
-					}
-
-					if (fs::FileExists(fullPath)) {
-						continue;
-					}
-				}
-
-				Compatibility::JJ2Level level;
-				if (level.Open(item, false)) {
-					String fullPath;
-					auto it = knownLevels.find(level.LevelName);
-					if (it != knownLevels.end()) {
-						if (it->second.second().empty()) {
-							fullPath = fs::CombinePath({ episodesPath, it->second.first(), String(level.LevelName + ".j2l"_s) });
-						} else {
-							fullPath = fs::CombinePath({ episodesPath, it->second.first(), String(it->second.second() + '_' + level.LevelName + ".j2l"_s) });
-						}
-					} else {
-						fullPath = fs::CombinePath({ episodesPath, "unknown"_s, String(level.LevelName + ".j2l"_s) });
-					}
-
-					fs::CreateDirectories(fs::GetDirectoryName(fullPath));
-					level.Convert(fullPath, eventConverter, LevelTokenConversion);
-
-					usedTilesets.emplace(level.Tileset, true);
-					for (auto& extraTileset : level.ExtraTilesets) {
-						usedTilesets.emplace(extraTileset.Name, true);
-					}
-
-					// Also copy level script file if exists
-					StringView foundDot = item.findLastOr('.', item.end());
-					String scriptPath = item.prefix(foundDot.begin()) + ".j2as"_s;
-					auto adjustedPath = fs::FindPathCaseInsensitive(scriptPath);
-					if (fs::IsReadableFile(adjustedPath)) {
-						foundDot = fullPath.findLastOr('.', fullPath.end());
-						fs::Copy(adjustedPath, String(fullPath.prefix(foundDot.begin()) + ".j2as"_s));
-					}
-				}
-			}
-		}
-#if defined(DEATH_DEBUG)
-		/*else if (extension == "j2s"_s && recreateAll) {
-			// Translations
-			Compatibility::JJ2Strings strings;
-			strings.Open(item);
-
-			String fullPath = fs::CombinePath({ resolver.GetCachePath(), "ExtractedTranslations"_s, String(strings.Name + ".h"_s) });
-			fs::CreateDirectories(fs::GetDirectoryName(fullPath));
-			strings.Convert(fullPath, LevelTokenConversion);
-		}*/
-#endif
-	}
-
-	if (recreateAll || !usedTilesets.empty()) {
-		// Convert only used tilesets
-		LOGI("Converting used tilesets...");
-		String tilesetsPath = fs::CombinePath(resolver.GetCachePath(), "Tilesets"_s);
-		if (recreateAll) {
-			fs::RemoveDirectoryRecursive(tilesetsPath);
-			fs::CreateDirectories(tilesetsPath);
-		}
-
-		for (auto& pair : usedTilesets) {
-			String tilesetPath = fs::CombinePath(resolver.GetSourcePath(), String(pair.first + ".j2t"_s));
-			auto adjustedPath = fs::FindPathCaseInsensitive(tilesetPath);
-			if (fs::IsReadableFile(adjustedPath)) {
-				Compatibility::JJ2Tileset tileset;
-				if (tileset.Open(adjustedPath, false)) {
-					tileset.Convert(fs::CombinePath({ tilesetsPath, String(pair.first + ".j2t"_s) }));
-				}
-			}
-		}
-	}
+	Compatibility::AssetConverter::ConvertLevels(resolver.GetSourcePath(), resolver.GetCachePath(), recreateAll);
 }
 
 #if defined(WITH_UPDATE_CHECK)
@@ -2342,7 +2090,7 @@ void GameEventHandler::WriteCacheDescriptor(StringView path, std::uint64_t curre
 {
 	auto so = fs::Open(path, FileAccess::Write);
 	so->WriteValueAsLE<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
-	so->WriteValue<std::uint8_t>(ContentResolver::CacheIndexFile);
+	so->WriteValue<std::uint8_t>(ContentFileType::CacheIndex);
 	so->WriteValueAsLE<std::uint16_t>(Compatibility::JJ2Anims::CacheVersion);
 	so->WriteValue<std::uint8_t>(0x00);	// Flags
 	so->WriteValueAsLE<std::int64_t>(animsModified);

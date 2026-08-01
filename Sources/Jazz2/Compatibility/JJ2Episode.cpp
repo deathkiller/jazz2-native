@@ -1,7 +1,7 @@
 ﻿#include "JJ2Episode.h"
 #include "JJ2Anims.h"
 #include "JJ2Anims.Palettes.h"
-#include "../ContentResolver.h"
+#include "../ContentFileTypes.h"
 
 #include "../../nCine/Base/Algorithms.h"
 
@@ -126,7 +126,7 @@ namespace Jazz2::Compatibility
 		DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );
 
 		so->WriteValueAsLE<std::uint64_t>(0x2095A59FF0BFBBEF);
-		so->WriteValue<std::uint8_t>(ContentResolver::EpisodeFile);
+		so->WriteValue<std::uint8_t>(ContentFileType::Episode);
 
 		std::uint16_t flags = 0x00;
 		so->WriteValueAsLE<std::uint16_t>(flags);

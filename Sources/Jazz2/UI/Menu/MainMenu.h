@@ -182,6 +182,7 @@ namespace Jazz2::UI::Menu
 		void PrepareTexturedBackground();
 		bool TryLoadBackgroundPreset(Preset preset);
 		void RenderTexturedBackground(RenderQueue& renderQueue);
+		void RenderTexturedBackgroundAsTilemap(RenderQueue& renderQueue);
 		bool RenderLegacyBackground(RenderQueue& renderQueue);
 
 	protected:

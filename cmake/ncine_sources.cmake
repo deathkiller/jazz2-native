@@ -1,4 +1,6 @@
-set(SOURCES
+# The platform-neutral base layer (containers, IO, logging). Kept in its own variable so the offline
+# AssetPacker tool can reuse exactly the same set without pulling in the engine.
+set(SHARED_SOURCES
 	${NCINE_SOURCE_DIR}/Shared/Environment.cpp
 	${NCINE_SOURCE_DIR}/Shared/Cpu.cpp
 	${NCINE_SOURCE_DIR}/Shared/Utf8.cpp
@@ -25,6 +27,26 @@ set(SOURCES
 	${NCINE_SOURCE_DIR}/Shared/Threading/Implementation/WaitOnAddress.cpp
 )
 
+set(SOURCES ${SHARED_SOURCES})
+
+# The original-data converters, shared with the AssetPacker tool
+set(CONVERTER_SOURCES
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/AnimSetMapping.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/AssetConverter.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/EventConverter.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/J2vRecompressor.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Anims.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Block.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Data.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Episode.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Level.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Strings.cpp
+	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Tileset.cpp
+	${NCINE_SOURCE_DIR}/nCine/Base/Algorithms.cpp
+)
+
+list(APPEND SOURCES ${CONVERTER_SOURCES})
+
 list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/reader.cpp
 	${NCINE_SOURCE_DIR}/Dependencies/jsoncpp/value.cpp
@@ -40,7 +62,6 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/nCine/Audio/AudioStream.cpp
 	${NCINE_SOURCE_DIR}/nCine/Audio/IAudioLoader.cpp
 	${NCINE_SOURCE_DIR}/nCine/Audio/IAudioPlayer.cpp
-	${NCINE_SOURCE_DIR}/nCine/Base/Algorithms.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/BitArray.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/Clock.cpp
 	${NCINE_SOURCE_DIR}/nCine/Base/FrameTimer.cpp
@@ -316,15 +337,6 @@ list(APPEND SOURCES
 	${NCINE_SOURCE_DIR}/Jazz2/Actors/Weapons/TNT.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Collisions/DynamicTree.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Collisions/DynamicTreeBroadPhase.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/AnimSetMapping.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/EventConverter.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Anims.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Block.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Data.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Episode.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Level.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Strings.cpp
-	${NCINE_SOURCE_DIR}/Jazz2/Compatibility/JJ2Tileset.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventMap.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Events/EventSpawner.cpp
 	${NCINE_SOURCE_DIR}/Jazz2/Input/ControlScheme.cpp

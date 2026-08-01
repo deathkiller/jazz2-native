@@ -13,6 +13,19 @@
 
 namespace Jazz2::Tiles
 {
+	namespace
+	{
+		// The textured background ("Sky"/"Circle" layers) is a per-pixel procedural effect. The GX
+		// (Wii/GameCube) and PVR (Dreamcast) backends have no programmable stage at all, so it cannot be
+		// rendered there - not even in a simplified form - and the layer is drawn as an ordinary repeating
+		// tile layer instead, which is what DrawLayer() falls through to when this is false.
+#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+		constexpr bool SupportsTexturedBackground = false;
+#else
+		constexpr bool SupportsTexturedBackground = true;
+#endif
+	}
+
 	TileMap::TileMap(StringView tileSetPath, std::uint16_t captionTileId, bool applyPalette)
 		: _owner(nullptr), _sprLayerIndex(-1), _pitType(PitType::FallForever), _renderCommandsCount(0), _collapsingTimer(0.0f),
 			_animatedTilesOffset(0), _triggerState(ValueInit, TriggerCount), _triggerStateForRollback(ValueInit, TriggerCount),
@@ -803,7 +816,7 @@ namespace Jazz2::Tiles
 		float x1 = cullingRect.X - HardcodedOffset;
 		float y1 = cullingRect.Y - HardcodedOffset;
 
-		if (layer.Description.RendererType >= LayerRendererType::Sky && layer.Description.RendererType <= LayerRendererType::Circle && tileCount.Y == 8 && tileCount.X == 8) {
+		if (SupportsTexturedBackground && layer.Description.RendererType >= LayerRendererType::Sky && layer.Description.RendererType <= LayerRendererType::Circle && tileCount.Y == 8 && tileCount.X == 8) {
 			constexpr float PerspectiveSpeedX = 0.4f;
 			constexpr float PerspectiveSpeedY = 0.16f;
 			RenderTexturedBackground(renderQueue, cullingRect, viewCenter, layer, x1 * PerspectiveSpeedX + loX, y1 * PerspectiveSpeedY + loY);
@@ -1924,7 +1937,8 @@ namespace Jazz2::Tiles
 
 	void TileMap::OnInitializeViewport()
 	{
-		if (_texturedBackgroundLayer != -1) {
+		if (SupportsTexturedBackground && _texturedBackgroundLayer != -1) {
+			// Skipped entirely when unsupported, which also saves the pass's render target
 			_texturedBackgroundPass.Initialize();
 		}
 	}

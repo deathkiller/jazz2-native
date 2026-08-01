@@ -1,7 +1,6 @@
 ﻿#include "JJ2Tileset.h"
 #include "JJ2Anims.h"
 #include "JJ2Block.h"
-#include "../ContentResolver.h"
 
 #include <IO/FileSystem.h>
 #include <IO/MemoryStream.h>

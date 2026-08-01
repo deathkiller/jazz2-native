@@ -1,4 +1,5 @@
 #include "HighscoresSection.h"
+#include "../../ContentFileTypes.h"
 #include "MenuResources.h"
 #include "../Font.h"
 #include "../DiscordRpcClient.h"
@@ -550,7 +551,7 @@ namespace Jazz2::UI::Menu
 			std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
 			std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 			std::uint16_t version = s->ReadValueAsLE<std::uint16_t>();
-			if (signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::HighscoresFile && version <= FileVersion) {
+			if (signature == 0x2095A59FF0BFBBEF && fileType == ContentFileType::Highscores && version <= FileVersion) {
 				DeflateStream uc(*s);
 				std::uint32_t seriesCount = uc.ReadVariableUint32();
 				if (seriesCount > (std::uint32_t)SeriesName::Count) {
@@ -597,7 +598,7 @@ namespace Jazz2::UI::Menu
 		auto s = fs::Open(fs::CombinePath(configDir, FileName), FileAccess::Write);
 		if (*s) {
 			s->WriteValueAsLE<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
-			s->WriteValue<std::uint8_t>(ContentResolver::HighscoresFile);
+			s->WriteValue<std::uint8_t>(ContentFileType::Highscores);
 			s->WriteValueAsLE<std::uint16_t>(FileVersion);
 
 			DeflateWriter co(*s);

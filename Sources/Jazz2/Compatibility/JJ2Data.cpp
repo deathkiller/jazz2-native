@@ -2,7 +2,7 @@
 #include "JJ2Anims.h"
 #include "JJ2Anims.Palettes.h"
 #include "JJ2Block.h"
-#include "../ContentResolver.h"
+#include "../ContentFileTypes.h"
 
 #include "../../nCine/Base/Algorithms.h"
 
@@ -118,7 +118,7 @@ namespace Jazz2::Compatibility
 		MemoryStream so(16384);
 
 		so.WriteValueAsLE<std::uint64_t>(0x2095A59FF0BFBBEF);	// Signature
-		so.WriteValue<std::uint8_t>(ContentResolver::SfxListFile);
+		so.WriteValue<std::uint8_t>(ContentFileType::SfxList);
 		so.WriteValueAsLE<std::uint16_t>(1);
 
 		HashMap<std::uint32_t, std::uint32_t> sampleToIndex;

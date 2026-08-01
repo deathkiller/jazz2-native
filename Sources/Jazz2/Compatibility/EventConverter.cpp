@@ -1,11 +1,14 @@
 ﻿#include "EventConverter.h"
 #include "JJ2Level.h"
 #include "../Direction.h"
-#include "../Actors/Collectibles/FoodCollectible.h"
+#include "../Actors/Collectibles/FoodType.h"
+#include "../WeaponType.h"
 
 #include <Base/Memory.h>
 
 using FoodType = Jazz2::Actors::Collectibles::FoodType;
+
+using namespace Death::Containers::Literals;
 
 namespace Jazz2::Compatibility
 {
