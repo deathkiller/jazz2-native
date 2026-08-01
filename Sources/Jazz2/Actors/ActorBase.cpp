@@ -944,7 +944,7 @@ namespace Jazz2::Actors
 						i1 = frameWidth - i1 - 1;
 					}
 
-					if (p[((j + dy) * stride) + i1 + dx] > AlphaThreshold) {
+					if (IsMaskPixelSolid(p, ((j + dy) * stride) + i1 + dx)) {
 						return true;
 					}
 				}
@@ -981,7 +981,7 @@ namespace Jazz2::Actors
 						i2 = frameRect2.W - i2 - 1;
 					}
 
-					if (p1[((j + dy1) * stride1) + i1 + dx1] > AlphaThreshold && p2[((j + dy2) * stride2) + i2 + dx2] > AlphaThreshold) {
+					if (IsMaskPixelSolid(p1, ((j + dy1) * stride1) + i1 + dx1) && IsMaskPixelSolid(p2, ((j + dy2) * stride2) + i2 + dx2)) {
 						return true;
 					}
 				}
@@ -1044,7 +1044,7 @@ namespace Jazz2::Actors
 					i1 = frameRectSelf.W - i1 - 1;
 				}
 
-				if (p[((j + dy) * stride) + i1 + dx] > AlphaThreshold) {
+				if (IsMaskPixelSolid(p, ((j + dy) * stride) + i1 + dx)) {
 					return true;
 				}
 			}
@@ -1149,7 +1149,7 @@ namespace Jazz2::Actors
 				std::int32_t y2 = (std::int32_t)std::round(posIn2.Y);
 
 				if (x2 >= 0 && x2 < width2 && y2 >= 0 && y2 < height2) {
-					if (p1[((y1 + dy1) * stride1) + x1 + dx1] > AlphaThreshold && p2[((y2 + dy2) * stride2) + x2 + dx2] > AlphaThreshold) {
+					if (IsMaskPixelSolid(p1, ((y1 + dy1) * stride1) + x1 + dx1) && IsMaskPixelSolid(p2, ((y2 + dy2) * stride2) + x2 + dx2)) {
 						return true;
 					}
 				}
@@ -1222,7 +1222,7 @@ namespace Jazz2::Actors
 				std::int32_t x2 = (std::int32_t)std::round(posInAABB.X);
 				std::int32_t y2 = (std::int32_t)std::round(posInAABB.Y);
 
-				if (p[((y1 + dy) * stride) + x1 + dx] > AlphaThreshold &&
+				if (IsMaskPixelSolid(p, ((y1 + dy) * stride) + x1 + dx) &&
 					x2 >= aabb.L && x2 < aabb.R && y2 >= aabb.T && y2 < aabb.B) {
 					return true;
 				}

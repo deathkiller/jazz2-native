@@ -56,6 +56,8 @@ namespace nCine::RHI::PVR
 		BatchedShieldFire,		/**< The fire shield glow over an array of batched instances */
 		ShieldLightning,		/**< Additive lightning-coloured glow around the sprite */
 		BatchedShieldLightning,	/**< The lightning shield glow over an array of batched instances */
+		TileMapMesh,			/**< A whole tile-layer submitted as one triangle-list mesh */
+		TileMapMeshPalette,		/**< The tile-layer mesh with indexed tiles recolored through the palette texture */
 		Transition,				/**< The level transition iris, flattened into a full-screen fade */
 		Combine					/**< The viewport compositor (scene + lighting + blur + ambient) */
 	};
@@ -177,6 +179,14 @@ namespace nCine::RHI::PVR
 			DefineVertexFormat(vbo, ibo, 0);
 		}
 		void DefineVertexFormat(const PvrBuffer* vbo, const PvrBuffer* ibo, std::uint32_t vboOffset);
+		/** @brief Returns the vertex buffer last bound by @ref DefineVertexFormat(), or `nullptr` */
+		inline const PvrBuffer* GetBoundVbo() const {
+			return boundVbo_;
+		}
+		/** @brief Returns the byte offset into @ref GetBoundVbo() the vertex data starts at */
+		inline std::uint32_t GetBoundVboOffset() const {
+			return boundVboOffset_;
+		}
 
 		void Reset();
 		void SetObjectLabel(StringView label);
@@ -252,6 +262,7 @@ namespace nCine::RHI::PVR
 
 		PvrVertexFormat vertexFormat_;
 		const PvrBuffer* boundVbo_;
+		std::uint32_t boundVboOffset_;
 		const PvrBuffer* boundIbo_;
 
 		struct ResolvedUniform

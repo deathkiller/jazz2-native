@@ -67,6 +67,15 @@ namespace Jazz2::Resources
 		hotspot, coldspot and gunspot offsets. Owned by @ref ContentResolver and referenced by the per-animation
 		@ref GraphicResource entries that map an @ref AnimState onto a slice of these frames.
 	*/
+	/** @brief Alpha above which a sprite pixel counts as solid when its collision mask is built */
+	static constexpr std::uint8_t MaskAlphaThreshold = 40;
+
+	/** @brief Returns whether the pixel at the given flat index is solid in a @ref GenericGraphicResource::Mask */
+	DEATH_ALWAYS_INLINE bool IsMaskPixelSolid(const std::uint8_t* mask, std::int32_t index)
+	{
+		return (mask[index >> 3] & (std::uint8_t(1) << (index & 7))) != 0;
+	}
+
 	struct GenericGraphicResource
 	{
 		/** @brief Resource flags */
@@ -74,7 +83,14 @@ namespace Jazz2::Resources
 		/** @brief Diffuse texture */
 		std::unique_ptr<Texture> TextureDiffuse;
 		//std::unique_ptr<Texture> TextureNormal;
-		/** @brief Collision mask */
+		/**
+			@brief Collision mask, one **bit** per pixel (set = solid), rows packed continuously
+
+			Per-pixel collision only ever asks whether a pixel is solid, so the mask stores a single bit
+			instead of the source alpha - at one byte per pixel the masks of a large level's sprite sheets
+			ran to several megabytes, which is a sizeable share of a console's whole heap. Index it with
+			@ref IsMaskPixelSolid() rather than by hand.
+		*/
 		std::unique_ptr<uint8_t[]> Mask;
 		/** @brief Frame dimensions */
 		Vector2i FrameDimensions;

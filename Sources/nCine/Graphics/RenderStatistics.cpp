@@ -11,8 +11,8 @@ namespace nCine
 	RenderStatistics::Textures RenderStatistics::textures_;
 	RenderStatistics::CustomBuffers RenderStatistics::customVbos_;
 	RenderStatistics::CustomBuffers RenderStatistics::customIbos_;
-	unsigned int RenderStatistics::index_ = 0;
-	unsigned int RenderStatistics::culledNodes_[2] = { 0, 0 };
+	std::uint32_t RenderStatistics::index_ = 0;
+	std::uint32_t RenderStatistics::culledNodes_[2] = { 0, 0 };
 	RenderStatistics::VaoPool RenderStatistics::vaoPool_;
 	RenderStatistics::CommandPool RenderStatistics::commandPool_;
 

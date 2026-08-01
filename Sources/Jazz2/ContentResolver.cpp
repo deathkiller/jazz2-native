@@ -800,10 +800,14 @@ namespace Jazz2
 				}
 
 				if (needsMask) {
-					graphics->Mask = std::make_unique<std::uint8_t[]>(w * h);
+					// One bit per pixel: collision only tests solidity against MaskAlphaThreshold
+					const std::int32_t maskBytes = (w * h + 7) / 8;
+					graphics->Mask = std::make_unique<std::uint8_t[]>(maskBytes);
+					std::memset(graphics->Mask.get(), 0, maskBytes);
 					for (std::int32_t i = 0; i < w * h; i++) {
-						// Save original alpha value for collision checking
-						graphics->Mask[i] = pixels[(i * PixelSize) + 3];
+						if (pixels[(i * PixelSize) + 3] > MaskAlphaThreshold) {
+							graphics->Mask[i >> 3] |= std::uint8_t(1) << (i & 7);
+						}
 					}
 				}
 				if (palette != nullptr) {
@@ -961,17 +965,24 @@ namespace Jazz2
 		}
 
 		if (needsMask) {
-			graphics->Mask = std::make_unique<std::uint8_t[]>(width * height);
+			// One bit per pixel: collision only tests solidity against MaskAlphaThreshold
+			const std::uint32_t maskBytes = (width * height + 7) / 8;
+			graphics->Mask = std::make_unique<std::uint8_t[]>(maskBytes);
+			std::memset(graphics->Mask.get(), 0, maskBytes);
 			for (std::uint32_t i = 0; i < width * height; i++) {
-				// Save the original alpha for collision checking. The decoded buffer is tightly packed to
-				// `channelCount` bytes/pixel: a 1-channel (index-only) sprite is opaque except index 0 (transparent),
-				// a 2-channel sprite has explicit alpha in green, anything wider keeps alpha in the 4th byte.
+				// The decoded buffer is tightly packed to `channelCount` bytes/pixel: a 1-channel (index-only)
+				// sprite is opaque except index 0 (transparent), a 2-channel sprite has explicit alpha in green,
+				// anything wider keeps alpha in the 4th byte.
+				std::uint8_t alpha;
 				if (channelCount == 1) {
-					graphics->Mask[i] = (pixels[i] != 0 ? 255 : 0);
+					alpha = (pixels[i] != 0 ? 255 : 0);
 				} else if (channelCount == 2) {
-					graphics->Mask[i] = pixels[(i * 2) + 1];
+					alpha = pixels[(i * 2) + 1];
 				} else {
-					graphics->Mask[i] = pixels[(i * channelCount) + 3];
+					alpha = pixels[(i * channelCount) + 3];
+				}
+				if (alpha > MaskAlphaThreshold) {
+					graphics->Mask[i >> 3] |= std::uint8_t(1) << (i & 7);
 				}
 			}
 		}

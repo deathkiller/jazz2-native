@@ -4,6 +4,10 @@
 // which is the only way to reach them on the consoles (no arguments, no way to drive the menu)
 //#define JAZZ2_TEST_BOOT_LEVEL "prince/01_castle1"
 //#define JAZZ2_TEST_BOOT_SECTION EpisodeSelectSection
+// TODO: Temporary - with JAZZ2_TEST_BOOT_LEVEL, switches to this level after a few seconds
+//#define JAZZ2_TEST_LEVEL_THEN_LEVEL "prince/02_castle1n"
+// TODO: Temporary - boots into the main menu (skipping the intro) and loads this level a few seconds later
+//#define JAZZ2_TEST_MENU_THEN_LEVEL "xmas99/01_xmas1"
 
 #if defined(DEATH_TARGET_ANDROID)
 #	include "nCine/Backends/Android/AndroidApplication.h"
@@ -179,6 +183,9 @@ private:
 	Flags _flags = Flags::None;
 	std::int32_t _backInvokedTimeLeft = 0;
 	std::shared_ptr<IStateHandler> _currentHandler;
+#if defined(JAZZ2_TEST_LEVEL_THEN_LEVEL) || defined(JAZZ2_TEST_MENU_THEN_LEVEL)
+	float _testNextLevelTimeLeft = 0.0f;
+#endif
 	SmallVector<Pair<std::weak_ptr<void>, Function<void()>>> _pendingCallbacks;
 #if defined(WITH_THREADS)
 	std::mutex _pendingCallbacksLock;
@@ -192,6 +199,7 @@ private:
 	void OnBeginInitialize();
 	void OnAfterInitialize();
 	void SetStateHandler(std::shared_ptr<IStateHandler>&& handler);
+	void ReleasePreviousHandler();
 	void WaitForVerify();
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 	void RefreshCache();
@@ -503,13 +511,24 @@ void GameEventHandler::OnInitialize()
 
 	// TODO: Temporary test hook for the console builds, which have no way to pass arguments or drive the
 	// menu from a test harness. Define one of these to boot straight into a level or a menu section.
-#	if defined(JAZZ2_TEST_BOOT_LEVEL)
+#	if defined(JAZZ2_TEST_MENU_THEN_LEVEL)
+	{
+		WaitForVerify();
+		LOGI("Test hook: booting into the main menu, then loading \"{}\"", JAZZ2_TEST_MENU_THEN_LEVEL);
+		SetStateHandler(std::make_shared<Menu::MainMenu>(this, false));
+		_testNextLevelTimeLeft = 5.0f * FrameTimer::FramesPerSecond;
+		return;
+	}
+#	elif defined(JAZZ2_TEST_BOOT_LEVEL)
 	{
 		WaitForVerify();
 		LevelInitialization levelInit(JAZZ2_TEST_BOOT_LEVEL, GameDifficulty::Normal,
 			PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
 		LOGI("Test hook: booting into level \"{}\"", JAZZ2_TEST_BOOT_LEVEL);
 		ChangeLevel(std::move(levelInit));
+#	if defined(JAZZ2_TEST_LEVEL_THEN_LEVEL)
+		_testNextLevelTimeLeft = 12.0f * FrameTimer::FramesPerSecond;
+#	endif
 		return;
 	}
 #	elif defined(JAZZ2_TEST_BOOT_SECTION)
@@ -599,6 +618,30 @@ void GameEventHandler::OnBeginFrame()
 
 		_pendingCallbacks.clear();
 	}
+
+#if defined(JAZZ2_TEST_MENU_THEN_LEVEL)
+	if (_testNextLevelTimeLeft > 0.0f) {
+		_testNextLevelTimeLeft -= theApplication().GetTimeMult();
+		if (_testNextLevelTimeLeft <= 0.0f) {
+			LOGI("Test hook: loading level \"{}\" from the main menu now", JAZZ2_TEST_MENU_THEN_LEVEL);
+			LevelInitialization levelInit(JAZZ2_TEST_MENU_THEN_LEVEL, GameDifficulty::Normal,
+				PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
+			ChangeLevel(std::move(levelInit));
+		}
+	}
+#endif
+#if defined(JAZZ2_TEST_LEVEL_THEN_LEVEL)
+	if (_testNextLevelTimeLeft > 0.0f) {
+		_testNextLevelTimeLeft -= theApplication().GetTimeMult();
+		if (_testNextLevelTimeLeft <= 0.0f) {
+			LOGI("Test hook: switching to level \"{}\" now", JAZZ2_TEST_LEVEL_THEN_LEVEL);
+			LevelInitialization levelInit(JAZZ2_TEST_LEVEL_THEN_LEVEL, GameDifficulty::Normal,
+				PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
+			ChangeLevel(std::move(levelInit));
+		}
+	}
+#endif
+
 
 	_currentHandler->OnBeginFrame();
 }
@@ -779,6 +822,8 @@ void GameEventHandler::GoToMainMenu(bool afterIntro)
 		if (auto* mainMenu = runtime_cast<Menu::MainMenu>(_currentHandler.get())) {
 			mainMenu->Reset();
 		} else {
+			// Coming from a level (or the intro), so its assets go before the menu's are loaded
+			ReleasePreviousHandler();
 			SetStateHandler(std::make_shared<Menu::MainMenu>(this, afterIntro));
 		}
 	});
@@ -795,14 +840,7 @@ void GameEventHandler::ChangeLevel(LevelInitialization&& levelInit)
 		// be resident for the whole load. That peak is what a main menu -> level transition cannot fit into
 		// the Dreamcast's 16 MB. The handler is destroyed first because the sweep must not run while it is
 		// still using its resources, and the viewport chain has to let go of its viewports before that.
-		if (ReleaseAssetsBeforeLoading && _currentHandler != nullptr) {
-			Viewport::GetChain().clear();
-			_currentHandler = nullptr;
-
-			auto& resolver = ContentResolver::Get();
-			resolver.BeginLoading();
-			resolver.EndLoading();
-		}
+		ReleasePreviousHandler();
 
 		auto p = levelInit.LevelName.partition('/');
 		auto levelName = (!p[2].empty() ? p[2] : p[0]);
@@ -1802,6 +1840,30 @@ void GameEventHandler::OnAfterInitialize()
 #endif
 }
 
+void GameEventHandler::ReleasePreviousHandler()
+{
+	// Releases the outgoing handler, and everything it was the last owner of, BEFORE the incoming one starts
+	// loading. The resource cache is mark-and-sweep - BeginLoading() only clears the Referenced flags and
+	// EndLoading() frees what stayed unmarked - so both sets would otherwise be resident for the whole load.
+	// That peak is what the consoles with little main memory cannot fit. The handler is destroyed first
+	// because the sweep must not run while it is still using its resources, and the viewport chain has to let
+	// go of its viewports before that.
+	//
+	// Every place that builds a new handler while the previous one is still alive has to call this: a level
+	// being loaded (SetLevelHandler), a level change (ChangeLevel) and returning to the menu (GoToMainMenu)
+	// all hit the same peak.
+	if (!ReleaseAssetsBeforeLoading || _currentHandler == nullptr) {
+		return;
+	}
+
+	Viewport::GetChain().clear();
+	_currentHandler = nullptr;
+
+	auto& resolver = ContentResolver::Get();
+	resolver.BeginLoading();
+	resolver.EndLoading();
+}
+
 void GameEventHandler::SetStateHandler(std::shared_ptr<IStateHandler>&& handler)
 {
 	_currentHandler = std::move(handler);
@@ -2052,6 +2114,8 @@ bool GameEventHandler::SetLevelHandler(const LevelInitialization& levelInit)
 		_networkManager = nullptr;
 	}
 #endif
+
+	ReleasePreviousHandler();
 
 	auto levelHandler = std::make_shared<LevelHandler>(this);
 	if (!levelHandler->Initialize(levelInit)) {
