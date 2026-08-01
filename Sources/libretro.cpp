@@ -309,7 +309,16 @@ RETRO_API bool retro_load_game(const struct retro_game_info* game)
 	_hwRender.context_reset = OnContextReset;
 	_hwRender.context_destroy = OnContextDestroy;
 	if (!LibretroApplication::EnvironmentCallback(RETRO_ENVIRONMENT_SET_HW_RENDER, &_hwRender)) {
+#if defined(RHI_GL_PROFILE_ES2)
+		// The ES 2.0 profile (ESSL 100 shaders, no UBOs) runs on both context versions, so when the
+		// frontend has no ES 3.0 support fall back to a plain ES 2.0 context
+		_hwRender.context_type = RETRO_HW_CONTEXT_OPENGLES2;
+		if (!LibretroApplication::EnvironmentCallback(RETRO_ENVIRONMENT_SET_HW_RENDER, &_hwRender)) {
+			return false;
+		}
+#else
 		return false;
+#endif
 	}
 	LibretroGfxDevice::SetCurrentFramebufferCallback(_hwRender.get_current_framebuffer);
 	_pendingInit = true;
