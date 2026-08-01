@@ -1770,10 +1770,18 @@ namespace Jazz2
 
 				float scale = Random().FastFloat(0.4f, 1.1f);
 
+				std::uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
+				Recti frameRect = resBase->GetFrameRect(curAnimFrame);
+				Vector2i frameOffset = resBase->GetFrameOffset(curAnimFrame);
+
 				TileMap::DestructibleDebris debris = { };
 				debris.Pos = debrisPos;
 				debris.Depth = MainPlaneZ - 100 + (std::uint16_t)(200 * scale);
-				debris.Size = resBase->FrameDimensions.As<float>();
+				// Sized by the frame's own area rather than the logical cell: with trimmed frames the two
+				// differ per frame, and stretching a trimmed frame over the whole cell visibly distorts it
+				debris.Size = Vector2f((float)frameRect.W, (float)frameRect.H);
+				debris.FrameOffset = Vector2f(frameOffset.X + (frameRect.W - resBase->FrameDimensions.X) * 0.5f,
+					frameOffset.Y + (frameRect.H - resBase->FrameDimensions.Y) * 0.5f);
 
 				if (isRain) {
 					float speedX = Random().FastFloat(2.2f, 2.7f) * scale;
@@ -1799,8 +1807,6 @@ namespace Jazz2
 
 				debris.Time = 180.0f;
 
-				std::uint32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
-				Recti frameRect = resBase->GetFrameRect(curAnimFrame);
 				debris.TexScaleX = (float(frameRect.W) / float(texSize.X));
 				debris.TexBiasX = (float(frameRect.X) / float(texSize.X));
 				debris.TexScaleY = (float(frameRect.H) / float(texSize.Y));

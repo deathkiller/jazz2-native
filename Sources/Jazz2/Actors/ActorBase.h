@@ -496,8 +496,8 @@ namespace Jazz2::Actors
 
 		/** @{ @name Constants */
 
-		/** @brief Alpha transparency threshold */
-		static constexpr std::uint8_t AlphaThreshold = 40;
+		/** @brief Alpha transparency threshold --- the same one the collision masks are built with */
+		static constexpr std::uint8_t AlphaThreshold = MaskAlphaThreshold;
 		/** @brief Step for collision checking */
 		static constexpr float CollisionCheckStep = 0.5f;
 		/** @brief Step for per-pixel collisions */

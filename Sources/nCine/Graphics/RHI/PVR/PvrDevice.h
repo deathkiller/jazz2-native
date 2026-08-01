@@ -251,6 +251,8 @@ namespace nCine::RHI::PVR
 		static std::int32_t lightmapH_;
 
 		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
+		// Draws a whole tile-layer mesh (a triangle list of position/texcoord/colour vertices)
+		static void DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
 		static void ApplyPendingSoftwareLighting();
 		static void EnsureScene();
 		static void FinishScene();

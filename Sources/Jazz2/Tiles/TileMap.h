@@ -224,8 +224,16 @@ namespace Jazz2::Tiles
 			/** @brief Depth (layer) */
 			std::uint16_t Depth;
 
-			/** @brief Size */
+			/** @brief Size of the drawn area */
 			Vector2f Size;
+			/**
+				@brief Displacement of the drawn area from the centre of its logical frame cell
+
+				Zero for debris that is its own little quad. A trimmed sprite frame covers less than its
+				cell, so drawing it needs to know where inside that cell it belongs - otherwise the frame
+				is stretched over the whole cell (see @ref GenericGraphicResource::GetFrameOffset()).
+			*/
+			Vector2f FrameOffset;
 			/** @brief Speed */
 			Vector2f Speed;
 			/** @brief Acceleration */
@@ -450,8 +458,21 @@ namespace Jazz2::Tiles
 		BitArray _triggerState;
 		BitArray _triggerStateForRollback;
 
+		/// Cached instance-block uniforms of one pooled per-tile render command
+		struct TileCommandUniforms
+		{
+			RHI::UniformCache* TexRect = nullptr;
+			RHI::UniformCache* SpriteSize = nullptr;
+			RHI::UniformCache* Color = nullptr;
+			RHI::UniformCache* PaletteOffset = nullptr;
+		};
+
 		SmallVector<DestructibleDebris, 0> _debrisList;
 		SmallVector<std::unique_ptr<RenderCommand>, 0> _renderCommands;
+		/// Instance-block uniforms of the correspondingly indexed pooled command. Resolving them by name costs
+		/// a linear scan of the block, which at one command per visible tile dominated the layer build - they
+		/// only have to be looked up again when a pool slot's shader changes (see @ref RentRenderCommand).
+		SmallVector<TileCommandUniforms, 0> _renderCommandUniforms;
 		std::int32_t _renderCommandsCount;
 
 #if defined(TILEMAP_USE_SINGLE_DRAW)
@@ -471,14 +492,14 @@ namespace Jazz2::Tiles
 
 		void DrawLayer(RenderQueue& renderQueue, TileMapLayer& layer, const Rectf& cullingRect, Vector2f viewCenter);
 		static float TranslateCoordinate(float coordinate, float speed, float offset, std::int32_t viewSize, bool isY);
-		RenderCommand* RentRenderCommand(LayerRendererType type, bool indexed = false);
+		RenderCommand* RentRenderCommand(LayerRendererType type, bool indexed = false, TileCommandUniforms** uniforms = nullptr);
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 		// Appends one tile's two triangles (6 vertices, 8 floats each: position.xy, texcoords.xy, color.rgba) to a
 		// layer mesh buffer. Color is (1,1,1,alpha); the layer tint is applied via the command's instance color.
 		static void AppendTileQuad(SmallVector<float, 0>& vertices, float x, float y, float size,
 			float texScaleX, float texBiasX, float texScaleY, float texBiasY, float alpha);
 		// Emits the accumulated tile-layer mesh as one or more render commands (split into <=64 KB chunks)
-		void EmitLayerMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, TileSet* tileSet, const Vector4f& layerColor, std::uint16_t depth);
+		void EmitLayerMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, TileSet* tileSet, std::int32_t chunk, const Vector4f& layerColor, std::uint16_t depth);
 #endif
 
 		bool AdvanceDestructibleTileAnimation(LayerTile& tile, std::int32_t tx, std::int32_t ty, std::int32_t& amount, StringView soundName);

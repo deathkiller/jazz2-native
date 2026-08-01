@@ -46,6 +46,26 @@ namespace nCine::RHI::PVR
 			}
 		}
 
+		// Both draw paths only ever transform points of the form (x, y, 0, 1), so just six of the sixteen
+		// products of projection*view*model are ever read back. Sprites pay this per instance, which made
+		// the full 4x4 multiply the most expensive step of the per-instance loop.
+		struct Transform2D
+		{
+			float Xx, Xy;	// Column 0, rows 0 and 1
+			float Yx, Yy;	// Column 1, rows 0 and 1
+			float Tx, Ty;	// Column 3, rows 0 and 1
+		};
+
+		void Mat4MulTransform2D(const float* DEATH_RESTRICT pv, const float* DEATH_RESTRICT model, Transform2D& out)
+		{
+			out.Xx = pv[0] * model[0] + pv[4] * model[1] + pv[8] * model[2] + pv[12] * model[3];
+			out.Xy = pv[1] * model[0] + pv[5] * model[1] + pv[9] * model[2] + pv[13] * model[3];
+			out.Yx = pv[0] * model[4] + pv[4] * model[5] + pv[8] * model[6] + pv[12] * model[7];
+			out.Yy = pv[1] * model[4] + pv[5] * model[5] + pv[9] * model[6] + pv[13] * model[7];
+			out.Tx = pv[0] * model[12] + pv[4] * model[13] + pv[8] * model[14] + pv[12] * model[15];
+			out.Ty = pv[1] * model[12] + pv[5] * model[13] + pv[9] * model[14] + pv[13] * model[15];
+		}
+
 		// Maps a pipeline-neutral blend factor onto the PVR factor set
 		std::int32_t MapBlendPvr(nCine::BlendingFactor factor)
 		{
@@ -68,6 +88,13 @@ namespace nCine::RHI::PVR
 		{
 			v = (v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v));
 			return std::uint8_t(v * 255.0f + 0.5f);
+		}
+
+		// Straight to the 4 bits an ARGB4444 channel actually keeps, skipping the round trip through 8 bits
+		inline std::uint32_t Quantize4Bit(float v)
+		{
+			v = (v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v));
+			return std::uint32_t(v * 15.0f + 0.5f);
 		}
 
 		inline std::uint32_t PackArgb(std::uint8_t r, std::uint8_t g, std::uint8_t b, std::uint8_t a)
@@ -99,22 +126,40 @@ namespace nCine::RHI::PVR
 		// procedural sprite strip (v0, v1, v2, v3) exactly like the software FetchVertex synthesizes it.
 		// The offset colour is added after texturing (only when the polygon enables it), which is how the
 		// actor state effects brighten or tint the sprite - see the effect handling in Dispatch.
+		// Submits one strip of `count` vertices (3 = a single triangle, 4 = a quad) under the given header.
+		// The header and the vertices are assembled contiguously and handed to the store queues in a single
+		// burst: pvr_prim() copies 32 bytes per call, so submitting them one at a time cost a call and a
+		// separate burst setup for every vertex of every sprite and tile.
+		void SubmitStrip(const pvr_poly_hdr_t& hdr, const float* px, const float* py, const float* pu, const float* pv,
+			std::int32_t count, std::uint32_t argb, std::uint32_t oargb = 0, float dx = 0.0f, float dy = 0.0f)
+		{
+			struct alignas(32) StripBuffer
+			{
+				pvr_poly_hdr_t Header;
+				pvr_vertex_t Vertices[4];
+			} buffer;
+			static_assert(sizeof(pvr_vertex_t) == 32 && sizeof(pvr_poly_hdr_t) == 32,
+				"The store-queue burst assumes 32 byte primitives");
+
+			buffer.Header = hdr;
+			for (std::int32_t i = 0; i < count; i++) {
+				pvr_vertex_t& vert = buffer.Vertices[i];
+				vert.flags = (i == count - 1 ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX);
+				vert.x = px[i] + dx;
+				vert.y = py[i] + dy;
+				vert.z = 1.0f;
+				vert.u = pu[i];
+				vert.v = pv[i];
+				vert.argb = argb;
+				vert.oargb = oargb;
+			}
+			pvr_prim(&buffer, sizeof(pvr_poly_hdr_t) + std::size_t(count) * sizeof(pvr_vertex_t));
+		}
+
 		void SubmitQuad(const pvr_poly_hdr_t& hdr, const float* px, const float* py, const float* pu, const float* pv,
 			std::uint32_t argb, std::uint32_t oargb = 0, float dx = 0.0f, float dy = 0.0f)
 		{
-			pvr_prim(const_cast<pvr_poly_hdr_t*>(&hdr), sizeof(hdr));
-			pvr_vertex_t vert;
-			vert.oargb = oargb;
-			vert.argb = argb;
-			vert.z = 1.0f;
-			for (std::int32_t i = 0; i < 4; i++) {
-				vert.flags = (i == 3 ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX);
-				vert.x = px[i] + dx;
-				vert.y = py[i] + dy;
-				vert.u = pu[i];
-				vert.v = pv[i];
-				pvr_prim(&vert, sizeof(vert));
-			}
+			SubmitStrip(hdr, px, py, pu, pv, 4, argb, oargb, dx, dy);
 		}
 	}
 
@@ -582,36 +627,58 @@ namespace nCine::RHI::PVR
 			while (texW < light.LmW && texW < 1024) texW <<= 1;
 			while (texH < light.LmH && texH < 1024) texH <<= 1;
 			const std::size_t size = std::size_t(texW) * std::size_t(texH) * 2;
+			bool layoutChanged = (lightmapW_ != texW || lightmapH_ != texH);
 			if (lightmapVram_ == nullptr || lightmapVramSize_ < size) {
 				if (lightmapVram_ != nullptr) {
 					pvr_mem_free(lightmapVram_);
 				}
 				lightmapVram_ = pvr_mem_malloc(size);
 				lightmapVramSize_ = size;
+				layoutChanged = true;
 			}
 			if (lightmapVram_ != nullptr) {
-				std::vector<std::uint16_t> staging(std::size_t(texW) * std::size_t(texH), 0xFFFF);
-				for (std::int32_t y = 0; y < light.LmH; y++) {
-					const float* src = light.Lightmap + std::size_t(y) * light.LmW * 2;
-					std::uint16_t* dst = staging.data() + std::size_t(y) * texW;
-					for (std::int32_t x = 0; x < light.LmW; x++) {
-						float r = src[x * 2];
-						float g = src[x * 2 + 1];
-						r = (r < 0.0f ? 0.0f : (r > 1.0f ? 1.0f : r));
-						g = (g < 0.0f ? 0.0f : (g > 1.0f ? 1.0f : g));
-						const float lit = r * (1.0f + g);
-						const std::uint8_t fr = QuantizeChannel(lit + light.AmbR * (1.0f - r));
-						const std::uint8_t fg = QuantizeChannel(lit + light.AmbG * (1.0f - r));
-						const std::uint8_t fb = QuantizeChannel(lit + light.AmbB * (1.0f - r));
-						dst[x] = std::uint16_t(0xF000 | ((fr >> 4) << 8) | ((fg >> 4) << 4) | (fb >> 4));
-					}
-				}
-				pvr_txr_load_ex(staging.data(), lightmapVram_, std::uint32_t(texW), std::uint32_t(texH), PVR_TXRLOAD_16BPP);
 				lightmapW_ = texW;
 				lightmapH_ = texH;
+				// The factors are written straight into video memory as a non-twiddled surface. This is a
+				// single screen-aligned quad, so the interleaved texel order would buy nothing at sampling
+				// time while costing a full twiddling pass (plus a same-sized staging copy) every frame -
+				// the same trade-off the sprite uploads make in PvrTexture::RefreshVramStore().
+				std::uint16_t* const surface = static_cast<std::uint16_t*>(lightmapVram_);
+				if (layoutChanged) {
+					// Only the used LmW x LmH region is rewritten per frame; the padding is sampled through
+					// the compensated texture coordinates only at the very edge, and is filled just once
+					std::memset(surface, 0xFF, size);
+				}
+				for (std::int32_t y = 0; y < light.LmH; y++) {
+					const float* DEATH_RESTRICT src = light.Lightmap + std::size_t(y) * light.LmW * 2;
+					std::uint16_t* DEATH_RESTRICT dst = surface + std::size_t(y) * texW;
+					// Unlit runs repeat the same pair of factors across long spans, so remembering the last
+					// converted texel turns most of the surface into a compare and a store
+					float prevR = -1.0f, prevG = -1.0f;
+					std::uint16_t prevTexel = 0;
+					for (std::int32_t x = 0; x < light.LmW; x++) {
+						const float rawR = src[x * 2];
+						const float rawG = src[x * 2 + 1];
+						if (rawR == prevR && rawG == prevG) {
+							dst[x] = prevTexel;
+							continue;
+						}
+						prevR = rawR;
+						prevG = rawG;
+						const float r = (rawR < 0.0f ? 0.0f : (rawR > 1.0f ? 1.0f : rawR));
+						const float g = (rawG < 0.0f ? 0.0f : (rawG > 1.0f ? 1.0f : rawG));
+						const float lit = r * (1.0f + g);
+						const float inv = 1.0f - r;
+						const std::uint32_t fr = Quantize4Bit(lit + light.AmbR * inv);
+						const std::uint32_t fg = Quantize4Bit(lit + light.AmbG * inv);
+						const std::uint32_t fb = Quantize4Bit(lit + light.AmbB * inv);
+						prevTexel = std::uint16_t(0xF000 | (fr << 8) | (fg << 4) | fb);
+						dst[x] = prevTexel;
+					}
+				}
 
 				pvr_poly_cxt_t cxt;
-				pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY, PVR_TXRFMT_ARGB4444 | PVR_TXRFMT_TWIDDLED,
+				pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY, PVR_TXRFMT_ARGB4444 | PVR_TXRFMT_NONTWIDDLED,
 					texW, texH, lightmapVram_, PVR_FILTER_BILINEAR);
 				cxt.gen.culling = PVR_CULLING_NONE;
 				cxt.depth.comparison = PVR_DEPTHCMP_ALWAYS;
@@ -665,6 +732,198 @@ namespace nCine::RHI::PVR
 
 	// ------------------------------------------------------------------ draw dispatch
 
+	void PvrDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
+	{
+		// A tile-layer mesh is a plain triangle list of 8-float vertices (position.xy, texcoords.uv,
+		// color.rgba) - the layout TileMap::AppendTileQuad() writes and TileMapVs.inc declares. It is a
+		// hard contract of this shader family exactly like the std140 instance block is of the sprite one.
+		constexpr std::int32_t FloatsPerVertex = 8;
+		constexpr std::int32_t VerticesPerTile = 6;
+		if (primitive != PrimitiveType::Triangles || numVertices < 3) {
+			return;
+		}
+
+		const PvrBuffer* vbo = currentProgram_->GetBoundVbo();
+		if (vbo == nullptr) {
+			return;
+		}
+		const std::size_t firstFloat = (std::size_t(currentProgram_->GetBoundVboOffset()) / sizeof(float)) +
+			std::size_t(firstVertex) * FloatsPerVertex;
+		const std::size_t floatCount = std::size_t(numVertices) * FloatsPerVertex;
+		if ((firstFloat + floatCount) * sizeof(float) > vbo->GetSize()) {
+			return;
+		}
+		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
+
+		const PvrUniformBlock* block = currentProgram_->FindBlock("InstanceBlock");
+		if (block == nullptr) {
+			return;
+		}
+		std::int32_t binding = block->GetBindingIndex();
+		if (binding < 0 || std::uint32_t(binding) >= MaxUniformBindings) {
+			binding = 0;
+		}
+		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
+		if (blockData == nullptr) {
+			return;
+		}
+
+		PvrTexture* texture = const_cast<PvrTexture*>(boundTextures_[0]);
+		if (texture == nullptr) {
+			return;
+		}
+
+		const std::uint8_t* projBytes = currentProgram_->ResolveUniform("uProjectionMatrix");
+		const std::uint8_t* viewBytes = currentProgram_->ResolveUniform("uViewMatrix");
+		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
+		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
+		float pv[16];
+		Mat4Mul(projMat, viewMat, pv);
+		Transform2D mvp;
+		Mat4MulTransform2D(pv, reinterpret_cast<const float*>(blockData + kModelMatrixOffset), mvp);
+
+		// The layer tint modulates every vertex colour, which already carries the per-tile alpha
+		float layerColor[4];
+		std::memcpy(layerColor, blockData + kColorOffset, sizeof(layerColor));
+
+		// The palette to remap with is whatever the material bound to the palette sampler; the registered
+		// global palette is the fallback (mirrors the sprite path)
+		const bool isPaletteRemap = (currentProgram_->GetEffect() == PvrEffect::TileMapMeshPalette ||
+			currentProgram_->UsesPalette());
+		const PvrTexture* paletteTex = nullptr;
+		if (isPaletteRemap) {
+			paletteTex = boundTextures_[1];
+			if (paletteTex == nullptr || paletteTex == texture) {
+				paletteTex = paletteTexture_;
+			}
+		}
+
+		// Unlike a sprite batch, the whole mesh shares one texture and one palette offset, so the texture
+		// residency, the palette bank and the polygon header are resolved once for the entire layer
+		pvr_ptr_t vram = nullptr;
+		std::uint32_t format = 0;
+		if (isPaletteRemap && texture->IsIndexed()) {
+			float palOffset = 0.0f;
+			std::memcpy(&palOffset, blockData + kPaletteOffsetOffset, sizeof(palOffset));
+			std::int32_t bank = AcquirePaletteBankForRow(paletteTex, std::int32_t(palOffset + 0.5f));
+			if (bank < 0) {
+				bank = 0;
+			}
+			vram = texture->AcquireVramPointer();
+			format = texture->GetVramFormat() | PVR_TXRFMT_8BPP_PAL(std::uint32_t(bank));
+		} else if (isPaletteRemap && texture->NeedsPaletteBake() && paletteTex != nullptr && paletteTex->GetPixels() != nullptr) {
+			float palOffset = 0.0f;
+			std::memcpy(&palOffset, blockData + kPaletteOffsetOffset, sizeof(palOffset));
+			const std::uint32_t paletteOffset = std::uint32_t(std::int32_t(palOffset + 0.5f));
+			const std::uint32_t* entries = reinterpret_cast<const std::uint32_t*>(paletteTex->GetPixels()) + paletteOffset;
+			vram = texture->EnsureBakedArgb4444(entries, paletteOffset,
+				(paletteTex == paletteTexture_ ? paletteGeneration_ : paletteTex->GetContentVersion()), paletteTex);
+			format = PVR_TXRFMT_ARGB4444 | PVR_TXRFMT_TWIDDLED;
+		} else {
+			vram = texture->AcquireVramPointer();
+			format = texture->GetVramFormat();
+		}
+		if (vram == nullptr) {
+			return;
+		}
+
+		EnsureScene();
+		if (sceneTarget_ == SceneTarget::None) {
+			return;
+		}
+
+		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
+			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
+		float scaleX, scaleY, offsetX, offsetY;
+		GetTargetScale(scaleX, scaleY, offsetX, offsetY);
+		const bool screenPass = (currentRenderTarget_ == nullptr);
+		const float uvScaleU = texture->GetUScale();
+		const float uvScaleV = texture->GetVScale();
+
+		pvr_poly_cxt_t cxt;
+		pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY, int(format), texture->GetPaddedWidth(), texture->GetPaddedHeight(),
+			vram, (texture->GetMagFilter() == nCine::SamplerFilter::Linear ? PVR_FILTER_BILINEAR : PVR_FILTER_NEAREST));
+		cxt.gen.culling = PVR_CULLING_NONE;
+		cxt.depth.comparison = PVR_DEPTHCMP_ALWAYS;
+		cxt.depth.write = PVR_DEPTHWRITE_DISABLE;
+		cxt.blend.src = (blending_.Enabled ? pvr_blend_mode_t(MapBlendPvr(blending_.SrcRgb)) : PVR_BLEND_ONE);
+		cxt.blend.dst = (blending_.Enabled ? pvr_blend_mode_t(MapBlendPvr(blending_.DstRgb)) : PVR_BLEND_ZERO);
+		cxt.txr.env = PVR_TXRENV_MODULATEALPHA;
+		pvr_poly_hdr_t hdr;
+		pvr_poly_compile(&hdr, &cxt);
+
+		const bool clipActive = (scissor_.Enabled && screenPass);
+		float clipX0 = 0.0f, clipY0 = 0.0f, clipX1 = 0.0f, clipY1 = 0.0f;
+		if (clipActive) {
+			clipX0 = float(scissor_.Rect.X) * scaleX + offsetX;
+			clipY0 = float(scissor_.Rect.Y) * scaleY + offsetY;
+			clipX1 = float(scissor_.Rect.X + scissor_.Rect.W) * scaleX + offsetX;
+			clipY1 = float(scissor_.Rect.Y + scissor_.Rect.H) * scaleY + offsetY;
+		}
+
+		// Projects one mesh vertex into raster space, matching the sprite path's corner synthesis
+		auto project = [&](const float* v, float& outX, float& outY, float& outU, float& outV) {
+			const float ndcX = mvp.Xx * v[0] + mvp.Yx * v[1] + mvp.Tx;
+			const float ndcY = mvp.Xy * v[0] + mvp.Yy * v[1] + mvp.Ty;
+			outX = ((ndcX + 1.0f) * 0.5f * float(viewport.W) + float(viewport.X)) * scaleX + offsetX;
+			outY = ((screenPass ? (ndcY + 1.0f) : (1.0f - ndcY)) * 0.5f * float(viewport.H) + float(viewport.Y)) * scaleY + offsetY;
+			outU = v[2] * uvScaleU;
+			outV = v[3] * uvScaleV;
+		};
+
+		const std::int32_t triangleCount = numVertices / 3;
+		std::int32_t triangle = 0;
+		while (triangle < triangleCount) {
+			// Tiles reach here as the six vertices of two triangles, of which the third and fourth repeat
+			// the first and third. Recognizing that pattern lets a tile go out as a single four-vertex
+			// strip rather than two three-vertex ones, which is a third less vertex traffic and half the
+			// polygon headers. Anything that doesn't match is emitted as plain triangles.
+			const float* group = vertices + std::size_t(triangle) * 3 * FloatsPerVertex;
+			const bool isQuad = (triangle + 2 <= triangleCount &&
+				group[3 * FloatsPerVertex + 0] == group[0] && group[3 * FloatsPerVertex + 1] == group[1] &&
+				group[4 * FloatsPerVertex + 0] == group[2 * FloatsPerVertex + 0] &&
+				group[4 * FloatsPerVertex + 1] == group[2 * FloatsPerVertex + 1]);
+
+			float px[4], py[4], pu[4], pvv[4];
+			std::int32_t cornerCount;
+			if (isQuad) {
+				// Strip order (see SubmitQuad): the two corners of one edge, then the two of the opposite
+				// one - vertices 1, 2, 0 and 5 of the tile's six
+				static const std::int32_t QuadOrder[4] = { 1, 2, 0, 5 };
+				for (std::int32_t i = 0; i < 4; i++) {
+					project(group + std::size_t(QuadOrder[i]) * FloatsPerVertex, px[i], py[i], pu[i], pvv[i]);
+				}
+				cornerCount = 4;
+				triangle += 2;
+			} else {
+				for (std::int32_t i = 0; i < 3; i++) {
+					project(group + std::size_t(i) * FloatsPerVertex, px[i], py[i], pu[i], pvv[i]);
+				}
+				cornerCount = 3;
+				triangle++;
+			}
+
+			if (clipActive) {
+				// Tiles are axis-aligned, so a bounding-box reject is exact for the fully outside case and
+				// conservative otherwise - the same trade-off the sprite path makes for rotated quads
+				float minX = px[0], maxX = px[0], minY = py[0], maxY = py[0];
+				for (std::int32_t i = 1; i < cornerCount; i++) {
+					minX = std::min(minX, px[i]); maxX = std::max(maxX, px[i]);
+					minY = std::min(minY, py[i]); maxY = std::max(maxY, py[i]);
+				}
+				if (maxX <= clipX0 || minX >= clipX1 || maxY <= clipY0 || minY >= clipY1) {
+					continue;
+				}
+			}
+
+			// Every vertex of a tile carries the same colour, so it only has to be packed once
+			const std::uint32_t argb = PackArgb(QuantizeChannel(group[4] * layerColor[0]),
+				QuantizeChannel(group[5] * layerColor[1]), QuantizeChannel(group[6] * layerColor[2]),
+				QuantizeChannel(group[7] * layerColor[3]));
+			SubmitStrip(hdr, px, py, pu, pvv, cornerCount, argb);
+		}
+	}
+
 	void PvrDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
 		static_cast<void>(firstVertex);
@@ -677,6 +936,12 @@ namespace nCine::RHI::PVR
 		// The Combine draw is the direct-tier lighting hook (see the software backend)
 		if (effect == PvrEffect::Combine) {
 			ApplyPendingSoftwareLighting();
+			return;
+		}
+
+		// A whole tile layer arrives as one mesh instead of one command per tile
+		if (effect == PvrEffect::TileMapMesh || effect == PvrEffect::TileMapMeshPalette) {
+			DispatchTileMesh(primitive, firstVertex, numVertices);
 			return;
 		}
 
@@ -808,6 +1073,7 @@ namespace nCine::RHI::PVR
 			numInstances = std::int32_t(rangeSize / instanceStride);
 		}
 
+
 		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
 			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
 		float scaleX, scaleY, offsetX, offsetY;
@@ -846,8 +1112,8 @@ namespace nCine::RHI::PVR
 		for (std::int32_t k = 0; k < numInstances; k++) {
 			const std::uint8_t* inst = blockData + std::size_t(k) * (batched ? instanceStride : 0);
 
-			float mvp[16];
-			Mat4Mul(pv, reinterpret_cast<const float*>(inst + kModelMatrixOffset), mvp);
+			Transform2D mvp;
+			Mat4MulTransform2D(pv, reinterpret_cast<const float*>(inst + kModelMatrixOffset), mvp);
 			float color[4];
 			std::memcpy(color, inst + kColorOffset, sizeof(color));
 			float texRect[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
@@ -893,7 +1159,7 @@ namespace nCine::RHI::PVR
 				uvScaleU = texture->GetUScale();
 				uvScaleV = texture->GetVScale();
 				if (!hdrValid || vram != lastVram || bank != lastBank) {
-					pvr_poly_cxt_t cxt;
+						pvr_poly_cxt_t cxt;
 					pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY, int(format),
 						texture->GetPaddedWidth(), texture->GetPaddedHeight(), vram, pvr_filter_mode_t(filter));
 					cxt.gen.culling = PVR_CULLING_NONE;
@@ -932,8 +1198,8 @@ namespace nCine::RHI::PVR
 				const float ay = (i & 1) ? 1.0f : 0.0f;
 				const float wx = ax * spriteSize[0];
 				const float wy = ay * spriteSize[1];
-				const float ndcX = mvp[0] * wx + mvp[4] * wy + mvp[12];
-				const float ndcY = mvp[1] * wx + mvp[5] * wy + mvp[13];
+				const float ndcX = mvp.Xx * wx + mvp.Yx * wy + mvp.Tx;
+				const float ndcY = mvp.Xy * wx + mvp.Yy * wy + mvp.Ty;
 				px[i] = ((ndcX + 1.0f) * 0.5f * float(viewport.W) + float(viewport.X)) * scaleX + offsetX;
 				py[i] = ((screenPass ? (ndcY + 1.0f) : (1.0f - ndcY)) * 0.5f * float(viewport.H) + float(viewport.Y)) * scaleY + offsetY;
 				pu[i] = (ax * texRect[0] + texRect[1]) * uvScaleU;

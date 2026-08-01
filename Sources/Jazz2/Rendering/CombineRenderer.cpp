@@ -193,15 +193,28 @@ namespace Jazz2::Rendering
 			return true;
 		}
 
-		// A half-resolution lightmap keeps the per-light splat cheap; the combine samples it point-wise
+		// A reduced-resolution lightmap keeps the per-light splat cheap; the combine samples it point-wise
+#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+		// The consoles pay for every texel twice on the CPU - once resetting and splatting it here, once
+		// converting it into a texture in the device - and that pair of passes was the single largest cost
+		// left in the frame. Quarter resolution trades a slightly softer light edge for a quarter of the
+		// work; the map is stretched over the viewport with bilinear filtering either way, and the lights
+		// themselves are smooth cubic falloffs with nothing sharp to lose.
+		constexpr std::int32_t Scale = 4;
+#else
 		constexpr std::int32_t Scale = 2;
+#endif
 		const std::int32_t lmW = (vpW + Scale - 1) / Scale;
 		const std::int32_t lmH = (vpH + Scale - 1) / Scale;
 		const std::size_t texelCount = (std::size_t)lmW * lmH;
-		_swLightmap.assign(texelCount * 2, 0.0f);
-		// R (intensity) starts at the ambient level everywhere; G (brightness core) starts at zero
+		// R (intensity) starts at the ambient level everywhere; G (brightness core) starts at zero. The
+		// reset writes both channels in one sequential pass - clearing the whole buffer first and then
+		// striding back over it to set R touched every cache line twice for no benefit.
+		_swLightmap.resize_for_overwrite(texelCount * 2);
+		float* DEATH_RESTRICT lightmap = _swLightmap.data();
 		for (std::size_t i = 0; i < texelCount; i++) {
-			_swLightmap[i * 2] = ambientLevel;
+			lightmap[i * 2] = ambientLevel;
+			lightmap[i * 2 + 1] = 0.0f;
 		}
 
 		// World -> screen pixel mapping of the scene camera (orthographic, unit scale, Y flipped by the

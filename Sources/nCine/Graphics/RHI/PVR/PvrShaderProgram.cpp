@@ -19,6 +19,12 @@ namespace nCine::RHI::PVR
 			// ContentResolver::CompileShader, which bakes the variant into the name, e.g. "...Dither").
 			// Labels with no matching C++ effect fall through to a logged, skipped draw.
 
+			// Tile-layer meshes: a whole visible layer as one triangle list. Checked before the palette
+			// family - "TileMapMeshPalette" would otherwise have to be excluded from every later test.
+			if (Contains(label, "TileMapMesh")) {
+				return Contains(label, "Palette") ? PvrEffect::TileMapMeshPalette : PvrEffect::TileMapMesh;
+			}
+
 			// Palette family: recolors an R8/RG8 index sprite through the shared palette texture. Checked
 			// before the sprite family - "BatchedPaletteRemap" contains "Batched" but not "Sprite".
 			if (Contains(label, "PaletteRemap")) {
@@ -95,7 +101,7 @@ namespace nCine::RHI::PVR
 		: handle_(nextHandle_++), status_(Status::NotLinked), introspection_(Introspection::Disabled), queryPhase_(queryPhase),
 			batchSize_(DefaultBatchSize), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0),
 			reflection_(nullptr), effectReflection_(nullptr), effect_(PvrEffect::Unknown), ditherVariant_(false), usesPalette_(false),
-			boundVbo_(nullptr), boundIbo_(nullptr)
+			boundVbo_(nullptr), boundVboOffset_(0), boundIbo_(nullptr)
 	{
 	}
 
@@ -280,6 +286,7 @@ namespace nCine::RHI::PVR
 	void PvrShaderProgram::DefineVertexFormat(const PvrBuffer* vbo, const PvrBuffer* ibo, std::uint32_t vboOffset)
 	{
 		boundVbo_ = vbo;
+		boundVboOffset_ = vboOffset;
 		boundIbo_ = ibo;
 		if (vbo != nullptr) {
 			for (const PvrAttribute& a : attributes_) {

@@ -816,6 +816,15 @@ namespace Jazz2::Tiles
 		float x1 = cullingRect.X - HardcodedOffset;
 		float y1 = cullingRect.Y - HardcodedOffset;
 
+		// Without the warped background pass, a sky layer is just an ordinary repeating tile layer and has to
+		// be drawn with the plain tile renderer. Leaving it on the TexturedBackground shader made every tile
+		// its own draw call - that effect is not batched, so a single 8x8 sky layer covering the screen cost
+		// a few hundred of them - and fed flat tiles through a shader that samples a whole warped sheet.
+		LayerRendererType rendererType = layer.Description.RendererType;
+		if (!SupportsTexturedBackground && rendererType >= LayerRendererType::Sky && rendererType <= LayerRendererType::Circle) {
+			rendererType = LayerRendererType::Default;
+		}
+
 		if (SupportsTexturedBackground && layer.Description.RendererType >= LayerRendererType::Sky && layer.Description.RendererType <= LayerRendererType::Circle && tileCount.Y == 8 && tileCount.X == 8) {
 			constexpr float PerspectiveSpeedX = 0.4f;
 			constexpr float PerspectiveSpeedY = 0.16f;
@@ -921,18 +930,17 @@ namespace Jazz2::Tiles
 			float y3 = y1 + (TileSet::DefaultTileSize * 2) + cullingRect.H;
 
 			// Standard tile layers backed by a single tileset are drawn as one mesh (one draw call for the whole
-			// visible layer). Other renderer types (tinted/solid), multi-tileset levels and tilesets split
-			// across several texture chunks (small-texture-limit platforms) fall back to one command per tile.
+			// visible layer, or one per texture chunk when the device texture-size limit split the tileset
+			// atlas). Other renderer types (tinted/solid) and multi-tileset levels fall back to one command
+			// per tile.
 #if defined(TILEMAP_USE_SINGLE_DRAW)
-			bool meshMode = (layer.Description.RendererType == LayerRendererType::Default && _tileSets.size() == 1 &&
-				_tileSets[0].Data->GetTextureCount() == 1);
-			SmallVector<float, 0>* layerVertices = nullptr;
+			bool meshMode = (rendererType == LayerRendererType::Default && _tileSets.size() == 1);
+			TileSet* meshTileSet = (meshMode ? _tileSets[0].Data.get() : nullptr);
+			// One vertex buffer per chunk, rented on first use - a layer usually touches only some of them.
+			// Indices rather than pointers, because renting can grow (and so reallocate) _layerMeshVertices.
+			SmallVector<std::int32_t, 2> chunkVertices;
 			if DEATH_LIKELY(meshMode) {
-				if (_layerMeshVerticesCount >= (std::int32_t)_layerMeshVertices.size()) {
-					_layerMeshVertices.emplace_back();
-				}
-				layerVertices = &_layerMeshVertices[_layerMeshVerticesCount++];
-				layerVertices->clear();
+				chunkVertices.resize(meshTileSet->GetTextureCount(), -1);
 			}
 #endif
 
@@ -971,6 +979,8 @@ namespace Jazz2::Tiles
 					}
 
 					// Rebase into the containing texture chunk (a no-op single-texture lookup normally)
+					const std::int32_t tileChunk = (tileSet->TilesPerTexture > 0 && tileId >= tileSet->TilesPerTexture
+						? tileId / tileSet->TilesPerTexture : 0);
 					Texture* tileTexture = tileSet->ResolveTextureDiffuse(tileId);
 					if DEATH_UNLIKELY(tileTexture == nullptr) {
 						continue;
@@ -999,39 +1009,67 @@ namespace Jazz2::Tiles
 
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 					if DEATH_LIKELY(meshMode) {
-						// Accumulate this tile into the layer mesh; the layer tint and palette are applied once per
-						// layer in EmitLayerMesh(). The per-tile alpha rides along in the vertex color.
-						AppendTileQuad(*layerVertices, x2r, y2r, (float)TileSet::DefaultTileSize,
+						// Accumulate this tile into its chunk's mesh; the layer tint and palette are applied once
+						// per emitted mesh in EmitLayerMesh(). The per-tile alpha rides along in the vertex color.
+						std::int32_t& verticesIndex = chunkVertices[tileChunk];
+						if (verticesIndex < 0) {
+							if (_layerMeshVerticesCount >= (std::int32_t)_layerMeshVertices.size()) {
+								_layerMeshVertices.emplace_back();
+							}
+							verticesIndex = _layerMeshVerticesCount++;
+							_layerMeshVertices[verticesIndex].clear();
+						}
+						AppendTileQuad(_layerMeshVertices[verticesIndex], x2r, y2r, (float)TileSet::DefaultTileSize,
 							texScaleX, texBiasX, texScaleY, texBiasY, tile.Alpha / 255.0f);
 						continue;
 					}
 #endif
 
-					auto command = RentRenderCommand(layer.Description.RendererType, tileSet->IsIndexed);
+					TileCommandUniforms* commandUniforms;
+					auto command = RentRenderCommand(rendererType, tileSet->IsIndexed, &commandUniforms);
 					command->SetType(RenderCommand::Type::TileMap);
 					command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 
-					auto instanceBlock = command->GetInstanceBlock();
-					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
+					commandUniforms->TexRect->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+					commandUniforms->SpriteSize->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 
 					Vector4f color = layer.Description.Color;
 					color.W *= tile.Alpha / 255.0f;
-					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(color.Data());
+					commandUniforms->Color->SetFloatVector(color.Data());
 
 					command->SetTransformation(Matrix4x4f::Translation(x2r, y2r, 0.0f));
 					command->SetLayer(layer.Description.Depth);
-					// Tiles use the default sprite palette (row 0, offset 0); binds the shared palette texture when indexed
-					ContentResolver::Get().BindSpritePalette(*command, *tileTexture, tileSet->IsIndexed, 0);
+					// Tiles use the default sprite palette (row 0, offset 0); binds the shared palette texture when
+					// indexed. Open-coded rather than through ContentResolver::BindSpritePalette() so the palette
+					// offset goes through the cached uniform instead of a by-name lookup per tile.
+					command->GetMaterial().SetTexture(0, *tileTexture);
+					if (tileSet->IsIndexed) {
+						Texture* paletteTexture = ContentResolver::Get().GetPaletteTexture();
+						if (paletteTexture != nullptr) {
+							command->GetMaterial().SetTexture(1, *paletteTexture);
+						}
+						if (commandUniforms->PaletteOffset != nullptr) {
+							commandUniforms->PaletteOffset->SetFloatValue(0.0f);
+						}
+					}
 
 					renderQueue.AddCommand(command);
 				}
 			}
 
 #if defined(TILEMAP_USE_SINGLE_DRAW)
-			if DEATH_LIKELY(meshMode && layerVertices != nullptr && !layerVertices->empty()) {
-				// Whole visible layer is submitted as one command (or a few <=64 KB chunks for very large layers)
-				EmitLayerMesh(renderQueue, *layerVertices, _tileSets[0].Data.get(), layer.Description.Color, layer.Description.Depth);
+			if DEATH_LIKELY(meshMode) {
+				// Whole visible layer is submitted as one command per touched texture chunk (or a few
+				// <=64 KB pieces for very large layers). Tiles within a layer never overlap, so the order
+				// between chunks doesn't matter - they all share the layer's depth.
+				for (std::int32_t chunk = 0; chunk < (std::int32_t)chunkVertices.size(); chunk++) {
+					const std::int32_t verticesIndex = chunkVertices[chunk];
+					if (verticesIndex < 0 || _layerMeshVertices[verticesIndex].empty()) {
+						continue;
+					}
+					EmitLayerMesh(renderQueue, _layerMeshVertices[verticesIndex], meshTileSet, chunk,
+						layer.Description.Color, layer.Description.Depth);
+				}
 			}
 #endif
 		}
@@ -1043,9 +1081,10 @@ namespace Jazz2::Tiles
 		return (coordinate * speed + offset + alignment * (speed - 1.0f));
 	}
 
-	RenderCommand* TileMap::RentRenderCommand(LayerRendererType type, bool indexed)
+	RenderCommand* TileMap::RentRenderCommand(LayerRendererType type, bool indexed, TileCommandUniforms** uniforms)
 	{
 		RenderCommand* command;
+		bool freshSlot = false;
 		if (_renderCommandsCount < _renderCommands.size()) {
 			command = _renderCommands[_renderCommandsCount].get();
 			_renderCommandsCount++;
@@ -1053,6 +1092,11 @@ namespace Jazz2::Tiles
 			command = _renderCommands.emplace_back(std::make_unique<RenderCommand>()).get();
 			_renderCommandsCount++;
 			command->GetMaterial().SetBlendingEnabled(true);
+			freshSlot = true;
+		}
+		const std::int32_t slot = _renderCommandsCount - 1;
+		if (_renderCommandUniforms.size() < _renderCommands.size()) {
+			_renderCommandUniforms.resize(_renderCommands.size());
 		}
 
 		bool shaderChanged;
@@ -1080,6 +1124,20 @@ namespace Jazz2::Tiles
 			}
 		}
 
+		if (uniforms != nullptr) {
+			// The block caches - and so these pointers - are only rebuilt by a shader change, so the
+			// by-name lookups run once per pool slot instead of once per tile
+			TileCommandUniforms& cached = _renderCommandUniforms[slot];
+			if (shaderChanged || freshSlot) {
+				auto* instanceBlock = command->GetInstanceBlock();
+				cached.TexRect = (instanceBlock != nullptr ? instanceBlock->GetUniform(Material::TexRectUniformName) : nullptr);
+				cached.SpriteSize = (instanceBlock != nullptr ? instanceBlock->GetUniform(Material::SpriteSizeUniformName) : nullptr);
+				cached.Color = (instanceBlock != nullptr ? instanceBlock->GetUniform(Material::ColorUniformName) : nullptr);
+				cached.PaletteOffset = (instanceBlock != nullptr ? instanceBlock->GetUniform(Material::PaletteOffsetUniformName) : nullptr);
+			}
+			*uniforms = &cached;
+		}
+
 		return command;
 	}
 
@@ -1096,7 +1154,8 @@ namespace Jazz2::Tiles
 		// Two triangles, 8 floats per vertex: position.xy, texcoords.uv, color.rgba (white * per-tile alpha; the
 		// layer tint is applied via the command's instance color in EmitLayerMesh)
 		std::size_t base = vertices.size();
-		vertices.resize(base + 6 * 8);
+		// Every float is written below, so the zero-initialization resize() would do first is wasted work
+		vertices.resize_for_overwrite(base + 6 * 8);
 		float* v = vertices.data() + base;
 		auto put = [&](float px, float py, float pu, float pv) {
 			*v++ = px; *v++ = py; *v++ = pu; *v++ = pv;
@@ -1110,7 +1169,7 @@ namespace Jazz2::Tiles
 		put(x,  yr, u0, v1);
 	}
 
-	void TileMap::EmitLayerMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, TileSet* tileSet, const Vector4f& layerColor, std::uint16_t depth)
+	void TileMap::EmitLayerMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, TileSet* tileSet, std::int32_t chunk, const Vector4f& layerColor, std::uint16_t depth)
 	{
 		constexpr std::uint32_t FloatsPerVertex = 8;
 		// Cap vertices per command to whatever the shared array buffer can actually hold, queried at runtime from the
@@ -1165,8 +1224,8 @@ namespace Jazz2::Tiles
 			command->SetTransformation(Matrix4x4f::Translation(0.0f, 0.0f, 0.0f));
 			command->SetLayer(depth);
 			// Tiles use the default sprite palette (row 0, offset 0); binds diffuse on unit 0, palette on unit 1.
-			// Mesh mode only runs for single-chunk tilesets (see DrawLayer), so chunk 0 is the whole atlas.
-			ContentResolver::Get().BindSpritePalette(*command, *tileSet->TextureDiffuse[0], indexed, 0);
+			// Every tile accumulated into these vertices resolved to this chunk of the tileset atlas.
+			ContentResolver::Get().BindSpritePalette(*command, *tileSet->TextureDiffuse[chunk], indexed, 0);
 
 			renderQueue.AddCommand(command);
 		}
@@ -1690,12 +1749,14 @@ namespace Jazz2::Tiles
 				continue;
 			}
 
-			auto command = RentRenderCommand(LayerRendererType::Default);
-			command->SetType(RenderCommand::Type::Particle);
-
-			// Indexed sprite debris is recolored at draw time through the palette shader; baked debris stays on Sprite
+			// Indexed sprite debris is recolored at draw time through the palette shader; baked debris stays
+			// on Sprite. Renting with that choice picks the same shader ConfigureSpriteShader() would, and
+			// hands back the instance uniforms already resolved - an exploding enemy emits hundreds of these
+			// in one frame, so a by-name lookup per uniform per debris is worth avoiding.
 			bool debrisIndexed = (debris.PaletteOffset >= 0);
-			ContentResolver::Get().ConfigureSpriteShader(*command, debrisIndexed);
+			TileCommandUniforms* commandUniforms;
+			auto command = RentRenderCommand(LayerRendererType::Default, debrisIndexed, &commandUniforms);
+			command->SetType(RenderCommand::Type::Particle);
 
 			if ((debris.Flags & DebrisFlags::AdditiveBlending) == DebrisFlags::AdditiveBlending) {
 				command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::One);
@@ -1703,18 +1764,26 @@ namespace Jazz2::Tiles
 				command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
 			}
 
-			auto instanceBlock = command->GetInstanceBlock();
-			instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
-			instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(debris.Size.X, debris.Size.Y);
-			instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, debris.Alpha).Data());
+			commandUniforms->TexRect->SetFloatValue(debris.TexScaleX, debris.TexBiasX, debris.TexScaleY, debris.TexBiasY);
+			commandUniforms->SpriteSize->SetFloatValue(debris.Size.X, debris.Size.Y);
+			commandUniforms->Color->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, debris.Alpha).Data());
 
 			Matrix4x4f worldMatrix = Matrix4x4f::Translation(debris.Pos.X, debris.Pos.Y, 0.0f);
 			worldMatrix.RotateZ(debris.Angle);
 			worldMatrix.Scale(debris.Scale, debris.Scale, 1.0f);
-			worldMatrix.Translate(debris.Size.X  * -0.5f, debris.Size.Y * -0.5f, 0.0f);
+			worldMatrix.Translate(debris.FrameOffset.X - debris.Size.X * 0.5f, debris.FrameOffset.Y - debris.Size.Y * 0.5f, 0.0f);
 			command->SetTransformation(worldMatrix);
 			command->SetLayer(debris.Depth);
-			ContentResolver::Get().BindSpritePalette(*command, *debris.DiffuseTexture, debrisIndexed, (std::uint16_t)(debrisIndexed ? debris.PaletteOffset : 0));
+			command->GetMaterial().SetTexture(0, *debris.DiffuseTexture);
+			if (debrisIndexed) {
+				Texture* paletteTexture = ContentResolver::Get().GetPaletteTexture();
+				if (paletteTexture != nullptr) {
+					command->GetMaterial().SetTexture(1, *paletteTexture);
+				}
+				if (commandUniforms->PaletteOffset != nullptr) {
+					commandUniforms->PaletteOffset->SetFloatValue((float)debris.PaletteOffset);
+				}
+			}
 
 			renderQueue.AddCommand(command);
 		}
