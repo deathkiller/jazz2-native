@@ -42,9 +42,7 @@ namespace Jazz2::UI::Menu
 		DEATH_ASSERT(_metadata != nullptr, "Cannot load required metadata", );
 
 		_smallFont = resolver.GetFont(FontType::Small);
-#if !defined(JAZZ2_INGAME_MENU_WITHOUT_LOGO)
 		_mediumFont = resolver.GetFont(FontType::Medium);
-#endif
 
 		// Mark Menu button as already pressed to avoid some issues
 		_pressedActions = (1 << (std::int32_t)PlayerAction::Menu) | (1 << ((std::int32_t)PlayerAction::Menu + 16));
@@ -181,7 +179,6 @@ namespace Jazz2::UI::Menu
 		}
 
 		// Title
-#if !defined(JAZZ2_INGAME_MENU_WITHOUT_LOGO)
 		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY + 2.0f, ShadowLayer + 200, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.3f), 0.8f * logoScale, 0.8f * logoScale);
 		_owner->DrawElement(MenuCarrot, -1, center.X - 76.0f * logoTranslateX, titleY - 6.0f + logoTranslateY, MainLayer + 200, Alignment::Center, Colorf::White, 0.8f * logoScale, 0.8f * logoScale);
 
@@ -198,7 +195,6 @@ namespace Jazz2::UI::Menu
 			Alignment::Left, Colorf(0.54f, 0.44f, 0.34f, 0.5f), 0.5f * logoTextScale, 0.0f, 0.0f, 0.0f, 0.0f);
 		_owner->_mediumFont->DrawString(this, "Resurrection"_s, charOffset, center.X - 10.0f * logoTranslateX + logoTextTranslate, titleY + 4.0f + logoTranslateY, FontLayer + 200,
 			Alignment::Left, Colorf(0.6f, 0.42f, 0.42f, 0.5f), 0.5f * logoTextScale, 0.4f, 1.2f, 1.2f, 0.46f, 0.8f);
-#endif
 
 #if defined(DEATH_TARGET_ANDROID)
 		if (!static_cast<AndroidApplication&>(theApplication()).IsScreenRound())

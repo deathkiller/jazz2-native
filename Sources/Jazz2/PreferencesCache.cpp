@@ -68,10 +68,11 @@ namespace Jazz2
 	bool PreferencesCache::EnableLedgeClimb = true;
 	WeaponWheelStyle PreferencesCache::WeaponWheel = WeaponWheelStyle::Enabled;
 	bool PreferencesCache::SwitchToNewWeapon = true;
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WINDOWS_RT)
-	bool PreferencesCache::EnableRgbLights = false;
-#else
+	// The web build has a backend but needs a local bridge running, so it stays off until asked for
+#if defined(NCINE_HAS_RGB_LIGHTS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	bool PreferencesCache::EnableRgbLights = true;
+#else
+	bool PreferencesCache::EnableRgbLights = false;
 #endif
 	bool PreferencesCache::AllowUnsignedScripts = true;
 

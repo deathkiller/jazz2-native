@@ -1,155 +1,156 @@
 ﻿#include "Font.h"
 
 #include "../ContentResolver.h"
+#include "../Compatibility/JJ2Anims.h"
 
-#include "../../nCine/Graphics/ITextureLoader.h"
 #include "../../nCine/Graphics/RenderQueue.h"
 #include "../../nCine/Base/Random.h"
 
-#include <Containers/StringConcatenable.h>
+#include <IO/Compression/DeflateStream.h>
+
 #include <Utf8.h>
 
 using namespace Death;
+using namespace Death::IO::Compression;
 
 namespace Jazz2::UI
 {
 	Font::Font(StringView path, const std::uint32_t* palette)
-		: _baseSpacing(0)
+		: _asciiChars{}, _lineHeight(0), _baseSpacing(0)
 	{
-		auto s = fs::Open(String(path + ".font"_s), FileAccess::Read);
+		auto s = fs::Open(path, FileAccess::Read);
 		auto fileSize = s->GetSize();
-		if (fileSize < 4 || fileSize > 8 * 1024 * 1024) {
+		if (fileSize < 24 || fileSize > 8 * 1024 * 1024) {
 			// 8 MB file size limit
 			return;
 		}
 
-		std::unique_ptr<ITextureLoader> texLoader = ITextureLoader::createFromFile(path);
-		if (texLoader->hasLoaded()) {
-			auto texFormat = texLoader->texFormat().pixelFormat();
-			if (texFormat != PixelFormat::RGBA8 && texFormat != PixelFormat::RGB8) {
-				return;
-			}
-
-			std::int32_t w = texLoader->width();
-			std::int32_t h = texLoader->height();
-			auto* pixels = (std::uint8_t*)texLoader->pixels();
-
-			/*std::uint8_t flags =*/ s->ReadValue<std::uint8_t>();
-			std::uint16_t width = s->ReadValueAsLE<std::uint16_t>();
-			std::uint16_t height = s->ReadValueAsLE<std::uint16_t>();
-			std::uint8_t cols = s->ReadValue<std::uint8_t>();
-			std::int32_t rows = h / height;
-			std::int16_t spacing = s->ReadValueAsLE<std::int16_t>();
-			std::uint8_t asciiFirst = s->ReadValue<std::uint8_t>();
-			std::uint8_t asciiCount = s->ReadValue<std::uint8_t>();
-
-			std::uint8_t widths[128];
-			s->Read(widths, asciiCount);
-
-			std::int32_t i = 0;
-			for (; i < asciiCount; i++) {
-				_asciiChars[i + asciiFirst] = Rectf(
-					(float)(i % cols) / cols,
-					(float)(i / cols) / rows,
-					widths[i],
-					height
-				);
-			}
-
-			std::int32_t unicodeCharCount = asciiCount + s->ReadValueAsLE<std::int32_t>();
-			for (; i < unicodeCharCount; i++) {
-				char c[5] {};
-				s->Read(c, 1);
-
-				std::int32_t remainingBytes =
-					((c[0] & 240) == 240) ? 3 : (
-					((c[0] & 224) == 224) ? 2 : (
-					((c[0] & 192) == 192) ? 1 : 0
-				));
-				if (remainingBytes == 0) {
-					// Placeholder for unknown characters
-					std::uint8_t charWidth = s->ReadValue<std::uint8_t>();
-					if (c[0] == 0) {
-						_asciiChars[0] = Rectf(
-							(float)(i % cols) / cols,
-							(float)(i / cols) / rows,
-							charWidth,
-							height
-						);
-					}
-					continue;
-				}
-
-				s->Read(c + 1, remainingBytes);
-				std::uint8_t charWidth = s->ReadValue<std::uint8_t>();
-
-				Pair<char32_t, std::size_t> cursor = Utf8::NextChar(c, 0);
-				_unicodeChars[cursor.first()] = Rectf(
-					(float)(i % cols) / cols,
-					(float)(i / cols) / rows,
-					charWidth,
-					height
-				);
-			}
-
-			_charSize = Vector2i(width, height);
-			_baseSpacing = spacing;
-
-			for (std::uint32_t i = 0; i < w * h; i++) {
-				std::uint32_t srcIdx = i * ContentResolver::PixelSize;
-				std::uint32_t color = palette[pixels[srcIdx]];
-				std::uint8_t alpha = pixels[srcIdx + 3];
-
-				std::uint8_t r = (color >> 0) & 0xFF;
-				std::uint8_t g = (color >> 8) & 0xFF;
-				std::uint8_t b = (color >> 16) & 0xFF;
-				std::uint8_t a = ((color >> 24) & 0xFF) * alpha / 255;
-
-				pixels[srcIdx + 0] = r;
-				pixels[srcIdx + 1] = g;
-				pixels[srcIdx + 2] = b;
-				pixels[srcIdx + 3] = a;
-			}
-
-			_texture = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, w, h);
-			_texture->LoadFromTexels(pixels, 0, 0, w, h);
-			_texture->SetMinFiltering(SamplerFilter::Linear);
-			_texture->SetMagFiltering(SamplerFilter::Linear);
+		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
+		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
+		std::uint8_t version = s->ReadValue<std::uint8_t>();
+		std::uint8_t flags = s->ReadValue<std::uint8_t>();
+		if (signature != FontFormat::Signature || fileType != ContentFileType::Font || version != FontFormat::CurrentVersion) {
+			LOGE("\"{}\" is not a supported font file", path);
+			return;
 		}
+
+		// Everything past the identifying bytes is deflated, the glyph metrics and the atlas together
+		std::int32_t compressedSize = s->ReadValueAsLE<std::int32_t>();
+		DeflateStream uc(*s, compressedSize);
+
+		std::int32_t w = uc.ReadValueAsLE<std::uint16_t>();
+		std::int32_t h = uc.ReadValueAsLE<std::uint16_t>();
+		_lineHeight = uc.ReadValueAsLE<std::uint16_t>();
+		_baseSpacing = uc.ReadValueAsLE<std::int16_t>();
+		std::uint8_t asciiFirst = uc.ReadValue<std::uint8_t>();
+		std::uint8_t asciiCount = uc.ReadValue<std::uint8_t>();
+		std::uint16_t unicodeCount = uc.ReadValueAsLE<std::uint16_t>();
+
+		if (w <= 0 || h <= 0 || _lineHeight <= 0) {
+			LOGE("\"{}\" is corrupted", path);
+			_lineHeight = 0;
+			return;
+		}
+
+		auto readGlyph = [&uc]() {
+			FontFormat::Glyph glyph;
+			glyph.X = uc.ReadValueAsLE<std::uint16_t>();
+			glyph.Y = uc.ReadValueAsLE<std::uint16_t>();
+			glyph.Width = uc.ReadValue<std::uint8_t>();
+			glyph.Height = uc.ReadValue<std::uint8_t>();
+			glyph.BearingX = uc.ReadValue<std::int8_t>();
+			glyph.BearingY = uc.ReadValue<std::int8_t>();
+			glyph.Advance = uc.ReadValue<std::uint8_t>();
+			return glyph;
+		};
+
+		for (std::int32_t i = 0; i < asciiCount; i++) {
+			const std::int32_t c = asciiFirst + i;
+			FontFormat::Glyph glyph = readGlyph();
+			if (c < std::int32_t(arraySize(_asciiChars))) {
+				_asciiChars[c] = glyph;
+			}
+		}
+
+		for (std::int32_t i = 0; i < unicodeCount; i++) {
+			const std::uint32_t codepoint = uc.ReadValueAsLE<std::uint32_t>();
+			FontFormat::Glyph glyph = readGlyph();
+			if (codepoint == FontFormat::FallbackCodepoint) {
+				// The character drawn in place of anything the font doesn't have, kept where the lookup below
+				// can reach it without a second branch
+				_asciiChars[0] = glyph;
+			} else {
+				_unicodeChars[codepoint] = glyph;
+			}
+		}
+
+		if (!uc.IsValid()) {
+			LOGE("\"{}\" is corrupted", path);
+			_lineHeight = 0;
+			return;
+		}
+
+		// The atlas holds one palette index per pixel, and a second byte of coverage if the font is antialiased.
+		// The decoder stores four bytes per pixel whatever it reads, so the buffer is sized for the colors it is
+		// about to be turned into anyway.
+		const std::int32_t channelCount = ((flags & FontFormat::Flags::HasAlpha) != 0 ? 2 : 1);
+		auto pixels = std::make_unique<std::uint8_t[]>(std::size_t(w) * h * ContentResolver::PixelSize);
+		Compatibility::JJ2Anims::ReadImageContent(uc, pixels.get(), w, h, channelCount);
+
+		// Expanded from the back, so a pixel is always read before anything can be written over it
+		for (std::uint32_t i = std::uint32_t(w) * h; i-- > 0; ) {
+			const std::uint32_t srcIdx = i * channelCount;
+			const std::uint32_t dstIdx = i * ContentResolver::PixelSize;
+			const std::uint8_t index = pixels[srcIdx];
+			const std::uint8_t coverage = (channelCount >= 2 ? pixels[srcIdx + 1] : (index != 0 ? 255 : 0));
+			const std::uint32_t color = palette[index];
+
+			pixels[dstIdx + 0] = (color >> 0) & 0xFF;
+			pixels[dstIdx + 1] = (color >> 8) & 0xFF;
+			pixels[dstIdx + 2] = (color >> 16) & 0xFF;
+			pixels[dstIdx + 3] = ((color >> 24) & 0xFF) * coverage / 255;
+		}
+
+		_texture = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, w, h);
+		_texture->LoadFromTexels(pixels.get(), 0, 0, w, h);
+		_texture->SetMinFiltering(SamplerFilter::Linear);
+		_texture->SetMagFiltering(SamplerFilter::Linear);
 	}
 
 	std::int32_t Font::GetSizeInPixels() const
 	{
 		// TODO
-		return _charSize.Y;
+		return _lineHeight;
 	}
 
 	std::int32_t Font::GetAscentInPixels() const
 	{
 		// TODO
-		return (_charSize.Y * 4 / 5);
+		return (_lineHeight * 4 / 5);
+	}
+
+	const FontFormat::Glyph& Font::GetGlyph(char32_t c) const
+	{
+		if (c < arraySize(_asciiChars)) {
+			return _asciiChars[c];
+		}
+
+		auto it = _unicodeChars.find(std::uint32_t(c));
+		return (it != _unicodeChars.end() ? it->second : _asciiChars[0]);
 	}
 
 	Vector2f Font::MeasureChar(char32_t c) const
 	{
-		Rectf uvRect;
-		if (c < 128) {
-			uvRect = _asciiChars[c];
-		} else {
-			auto it = _unicodeChars.find(c);
-			if (it != _unicodeChars.end()) {
-				uvRect = it->second;
-			} else {
-				uvRect = _asciiChars[0];
-			}
-		}
-		return Vector2f(uvRect.W, uvRect.H);
+		// A character is as wide as the pen moves for it, not as wide as its pixels - two adjacent glyphs are
+		// meant to overlap slightly, which is what the negative base spacing of these fonts arranges
+		const FontFormat::Glyph& glyph = GetGlyph(c);
+		return Vector2f(float(glyph.Advance), float(_lineHeight));
 	}
 
 	Vector2f Font::MeasureString(StringView text, float scale, float charSpacing, float lineSpacing)
 	{
 		std::size_t textLength = text.size();
-		if (textLength == 0 || _charSize.Y <= 0) {
+		if (textLength == 0 || _lineHeight <= 0) {
 			return Vector2f::Zero;
 		}
 
@@ -167,7 +168,7 @@ namespace Jazz2::UI
 					totalWidth = lastWidth;
 				}
 				lastWidth = 0.0f;
-				totalHeight += (_charSize.Y * scale * lineSpacing);
+				totalHeight += (_lineHeight * scale * lineSpacing);
 			} else if (cursor.first() == '\f') {
 				// Formatting
 				cursor = Utf8::NextChar(text, cursor.second());
@@ -194,7 +195,7 @@ namespace Jazz2::UI
 		if (totalWidth < lastWidth) {
 			totalWidth = lastWidth;
 		}
-		totalHeight += (_charSize.Y * scale * lineSpacing);
+		totalHeight += (_lineHeight * scale * lineSpacing);
 
 		return Vector2f(ceilf(totalWidth), ceilf(totalHeight));
 	}
@@ -206,7 +207,7 @@ namespace Jazz2::UI
 		}
 
 		std::size_t textLength = text.size();
-		if (textLength == 0 || _charSize.Y <= 0) {
+		if (textLength == 0 || _lineHeight <= 0) {
 			return Vector2f::Zero;
 		}
 
@@ -238,7 +239,7 @@ namespace Jazz2::UI
 			*charFit = static_cast<std::int32_t>(idx);
 		}
 
-		totalHeight += (_charSize.Y * scale);
+		totalHeight += (_lineHeight * scale);
 
 		return Vector2f(ceilf(totalWidth), ceilf(totalHeight));
 	}
@@ -246,7 +247,7 @@ namespace Jazz2::UI
 	void Font::DrawString(Canvas* canvas, StringView text, std::int32_t& charOffset, float x, float y, std::uint16_t z, Alignment align, Colorf color, float scale, float angleOffset, float varianceX, float varianceY, float speed, float charSpacing, float lineSpacing)
 	{
 		std::size_t textLength = text.size();
-		if (textLength == 0 || _charSize.Y <= 0) {
+		if (textLength == 0 || _lineHeight <= 0) {
 			return;
 		}
 
@@ -275,7 +276,7 @@ namespace Jazz2::UI
 				lineWidths[line & (MaxLines - 1)] = lastWidth;
 				line++;
 				lastWidth = 0.0f;
-				totalHeight += (_charSize.Y * scale * lineSpacing);
+				totalHeight += (_lineHeight * scale * lineSpacing);
 			} else if (cursor.first() == '\f') {
 				// Formatting
 				cursor = Utf8::NextChar(text, cursor.second());
@@ -324,20 +325,9 @@ namespace Jazz2::UI
 					}
 				}
 			} else {
-				Rectf uvRect;
-				if (cursor.first() < 128) {
-					uvRect = _asciiChars[cursor.first()];
-				} else {
-					auto it = _unicodeChars.find(cursor.first());
-					if (it != _unicodeChars.end()) {
-						uvRect = it->second;
-					} else {
-						uvRect = _asciiChars[0];
-					}
-				}
-
-				if (uvRect.W > 0 && uvRect.H > 0) {
-					lastWidth += (uvRect.W + _baseSpacing) * charSpacing * scalePre;
+				const FontFormat::Glyph& glyph = GetGlyph(cursor.first());
+				if (glyph.Advance > 0) {
+					lastWidth += (glyph.Advance + _baseSpacing) * charSpacing * scalePre;
 				}
 			}
 
@@ -348,7 +338,7 @@ namespace Jazz2::UI
 			totalWidth = lastWidth;
 		}
 		lineWidths[line & (MaxLines - 1)] = lastWidth;
-		totalHeight += (_charSize.Y * scale * lineSpacing);
+		totalHeight += (_lineHeight * scale * lineSpacing);
 
 		charSpacing = charSpacingPre;
 
@@ -400,7 +390,7 @@ namespace Jazz2::UI
 					case Alignment::Center: originPos.X += (totalWidth - lineWidths[line & (MaxLines - 1)]) * 0.5f; break;
 					case Alignment::Right: originPos.X += (totalWidth - lineWidths[line & (MaxLines - 1)]); break;
 				}
-				originPos.Y += (_charSize.Y * scale * lineSpacing);
+				originPos.Y += (_lineHeight * scale * lineSpacing);
 			} else if (cursor.first() == '\f') {
 				// Formatting
 				cursor = Utf8::NextChar(text, cursor.second());
@@ -490,89 +480,78 @@ namespace Jazz2::UI
 					cursor = Utf8::NextChar(text, cursor.second());
 				}
 			} else {
-				Rectf uvRect;
-				if (cursor.first() < 128) {
-					uvRect = _asciiChars[cursor.first()];
-				} else {
-					auto it = _unicodeChars.find(cursor.first());
-					if (it != _unicodeChars.end()) {
-						uvRect = it->second;
-					} else {
-						uvRect = _asciiChars[0];
-					}
-				}
+				const FontFormat::Glyph& glyph = GetGlyph(cursor.first());
 
-				if (uvRect.W > 0 && uvRect.H > 0) {
-					if (useRandomColor) {
-						const Colorf& newColor = RandomColors[charOffset % std::int32_t(arraySize(RandomColors))];
-						color = Colorf(newColor.R, newColor.G, newColor.B, color.A);
-					}
-
-					Vector2f pos = Vector2f(originPos);
-
-					if (angleOffset > 0.0f) {
-						float currentPhase = (phase + charOffset) * angleOffset * fPi;
-						if (speed > 0.0f && (charOffset % 2) == 1) {
-							currentPhase = -currentPhase;
+				if (glyph.Advance > 0) {
+					// A glyph is stored trimmed to the pixels it inks, so it draws at its bearing from the pen
+					// rather than at the pen itself. One with no pixels at all - a space - only moves the pen.
+					if (glyph.Width > 0 && glyph.Height > 0) {
+						if (useRandomColor) {
+							const Colorf& newColor = RandomColors[charOffset % std::int32_t(arraySize(RandomColors))];
+							color = Colorf(newColor.R, newColor.G, newColor.B, color.A);
 						}
 
-						pos.X += cosf(currentPhase) * varianceX * scale;
-						pos.Y += sinf(currentPhase) * varianceY * scale;
-					}
+						Vector2f pos = Vector2f(originPos.X + glyph.BearingX * scale, originPos.Y + glyph.BearingY * scale);
 
-					// Apply the canvas-wide draw transform (menu section transitions; identity by default)
-					pos = pos * canvas->LayerScale + canvas->LayerOffset;
-					float glyphScale = scale * canvas->LayerScale;
-					Colorf glyphColor = color * canvas->LayerColor;
+						if (angleOffset > 0.0f) {
+							float currentPhase = (phase + charOffset) * angleOffset * fPi;
+							if (speed > 0.0f && (charOffset % 2) == 1) {
+								currentPhase = -currentPhase;
+							}
 
-					pos.X = std::round(pos.X);
-					pos.Y = std::round(pos.Y);
-
-					std::int32_t charWidth = _charSize.X;
-					if (charWidth > uvRect.W) {
-						charWidth--;
-					}
-
-					Vector4f texCoords = Vector4f(
-						charWidth / float(texSize.X),
-						uvRect.X,
-						uvRect.H / float(texSize.Y),
-						uvRect.Y
-					);
-
-					auto command = canvas->RentRenderCommand();
-					command->SetType(RenderCommand::Type::Text);
-					bool shaderChanged = (colorizeShader
-						? command->GetMaterial().SetShader(colorizeShader)
-						: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
-					if (shaderChanged) {
-						command->GetMaterial().ReserveUniformsDataMemory();
-						command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
-						// Required to reset render command properly
-						//command->SetTransformation(command->transformation());
-
-						auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
-						if (textureUniform && textureUniform->GetIntValue(0) != 0) {
-							textureUniform->SetIntValue(0); // GL_TEXTURE0
+							pos.X += cosf(currentPhase) * varianceX * scale;
+							pos.Y += sinf(currentPhase) * varianceY * scale;
 						}
+
+						// Apply the canvas-wide draw transform (menu section transitions; identity by default)
+						pos = pos * canvas->LayerScale + canvas->LayerOffset;
+						float glyphScale = scale * canvas->LayerScale;
+						Colorf glyphColor = color * canvas->LayerColor;
+
+						pos.X = std::round(pos.X);
+						pos.Y = std::round(pos.Y);
+
+						Vector4f texCoords = Vector4f(
+							glyph.Width / float(texSize.X),
+							glyph.X / float(texSize.X),
+							glyph.Height / float(texSize.Y),
+							glyph.Y / float(texSize.Y)
+						);
+
+						auto command = canvas->RentRenderCommand();
+						command->SetType(RenderCommand::Type::Text);
+						bool shaderChanged = (colorizeShader
+							? command->GetMaterial().SetShader(colorizeShader)
+							: command->GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite));
+						if (shaderChanged) {
+							command->GetMaterial().ReserveUniformsDataMemory();
+							command->GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
+							// Required to reset render command properly
+							//command->SetTransformation(command->transformation());
+
+							auto* textureUniform = command->GetMaterial().Uniform(Material::TextureUniformName);
+							if (textureUniform && textureUniform->GetIntValue(0) != 0) {
+								textureUniform->SetIntValue(0); // GL_TEXTURE0
+							}
+						}
+
+						// Separate alpha blend so text (e.g. semi-transparent shadows) accumulates correct alpha coverage
+						// when drawn into an RGBA render target, harmless for opaque/RGB targets
+						command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
+
+						auto* instanceBlock = command->GetInstanceBlock();
+						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
+						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(glyph.Width * glyphScale, glyph.Height * glyphScale);
+						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(glyphColor.Data());
+
+						command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
+						command->SetLayer(z - (charOffset & 1));
+						command->GetMaterial().SetTexture(*_texture.get());
+
+						canvas->_currentRenderQueue->AddCommand(command);
 					}
 
-					// Separate alpha blend so text (e.g. semi-transparent shadows) accumulates correct alpha coverage
-					// when drawn into an RGBA render target, harmless for opaque/RGB targets
-					command->GetMaterial().SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::One, BlendingFactor::OneMinusSrcAlpha);
-
-					auto* instanceBlock = command->GetInstanceBlock();
-					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatVector(texCoords.Data());
-					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(charWidth * glyphScale, uvRect.H * glyphScale);
-					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(glyphColor.Data());
-
-					command->SetTransformation(Matrix4x4f::Translation(pos.X, pos.Y, 0.0f));
-					command->SetLayer(z - (charOffset & 1));
-					command->GetMaterial().SetTexture(*_texture.get());
-
-					canvas->_currentRenderQueue->AddCommand(command);
-
-					originPos.X += ((uvRect.W + _baseSpacing) * scale * charSpacing);
+					originPos.X += ((glyph.Advance + _baseSpacing) * scale * charSpacing);
 					charOffset++;
 				}
 			}

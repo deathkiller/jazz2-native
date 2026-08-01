@@ -95,7 +95,7 @@ namespace Jazz2::UI::Menu
 			},
 			isInGame);
 
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_WINDOWS_RT)
+#if defined(NCINE_HAS_RGB_LIGHTS)
 		// TRANSLATORS: Menu item in Options > Gameplay section
 		list->Add<ChoiceItem>(_("Razer Chroma™"),
 			[]() -> StringView { return (PreferencesCache::EnableRgbLights ? _("Enabled") : _("Disabled")); },

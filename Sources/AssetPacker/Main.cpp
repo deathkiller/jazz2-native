@@ -4,6 +4,8 @@
 // the second, in-game way of doing it. This tool exists so the data can be prepared ahead of time - for the
 // platforms that cannot convert anything themselves, and for build pipelines.
 
+#include "FontPacker.h"
+
 #include "../Main.h"
 #include "../Jazz2/ContentFileTypes.h"
 #include "../Jazz2/Compatibility/AssetConverter.h"
@@ -77,13 +79,46 @@ namespace
 		Emscripten
 	};
 
+	/** @brief What the tool was asked to do */
+	enum class Command {
+		/** @brief Convert the original game data, which is what the tool exists for */
+		Convert,
+		/** @brief Pack an authored bitmap font into the file the game loads */
+		PackFont,
+		/** @brief Unpack a bitmap font back into the form it is authored in */
+		UnpackFont,
+		/** @brief Replace the palette indices of an image with the colors they stand for */
+		ApplyPalette,
+		/** @brief Resolve the colors of an image back to palette indices */
+		ToIndices
+	};
+
 	struct Options {
+		Command Action = Command::Convert;
 		String SourcePath;
 		String TargetPath;
 		TargetProfile Profile = TargetProfile::Desktop;
 		/** @brief How much the cinematics are downscaled; 1 leaves them alone (and copies nothing) */
 		std::int32_t VideoDownscale = 1;
 	};
+
+	bool TryParseCommand(StringView value, Command& command)
+	{
+		if (value == "convert"_s) {
+			command = Command::Convert;
+		} else if (value == "pack-font"_s) {
+			command = Command::PackFont;
+		} else if (value == "unpack-font"_s) {
+			command = Command::UnpackFont;
+		} else if (value == "apply-palette"_s) {
+			command = Command::ApplyPalette;
+		} else if (value == "to-indices"_s) {
+			command = Command::ToIndices;
+		} else {
+			return false;
+		}
+		return true;
+	}
 
 	bool TryParseProfile(StringView value, TargetProfile& profile)
 	{
@@ -102,19 +137,34 @@ namespace
 
 	void PrintUsage()
 	{
-		LOGI("Usage: AssetPacker <source directory> <target directory> [--target=<profile>]");
+		LOGI("Usage: AssetPacker [<command>] <source> <target> [options]");
 		LOGI("");
-		LOGI("  <source directory>   Directory containing the original game files (Anims.j2a, *.j2l, *.j2t, ...)");
-		LOGI("  <target directory>   Directory the converted data is written to (created if needed)");
-		LOGI("  --target=<profile>   desktop (default) | console | dreamcast | wii | gamecube | emscripten");
-		LOGI("  --video-downscale=N  Downscale cinematics by N (1-4); defaults to 2 for console, 1 otherwise");
+		LOGI("  convert <source directory> <target directory>   (the default command)");
+		LOGI("    <source directory>   Directory containing the original game files (Anims.j2a, *.j2l, *.j2t, ...)");
+		LOGI("    <target directory>   Directory the converted data is written to (created if needed)");
+		LOGI("    --target=<profile>   desktop (default) | console | dreamcast | wii | gamecube | emscripten");
+		LOGI("    --video-downscale=N  Downscale cinematics by N (1-4); defaults to 2 for console, 1 otherwise");
+		LOGI("");
+		LOGI("  pack-font <source .png> <target .font>");
+		LOGI("    Packs a grid image and the character list next to it (<source .png>.font) into a single file");
+		LOGI("  unpack-font <source .font> <target .png>");
+		LOGI("    Unpacks a font back into a grid image and a character list, ready to be edited and packed again");
+		LOGI("  apply-palette <source .png> <target .png>");
+		LOGI("    Replaces the palette indices of an image with the colors they stand for, so it can be edited");
+		LOGI("  to-indices <source .png> <target .png>");
+		LOGI("    Resolves the colors of an edited image back to the nearest palette indices");
 	}
 
 	bool ParseOptions(std::int32_t argc, char** argv, Options& options)
 	{
 		bool videoDownscaleSet = false;
 
-		for (std::int32_t i = 1; i < argc; i++) {
+		std::int32_t firstArgument = 1;
+		if (argc > 1 && TryParseCommand(argv[1], options.Action)) {
+			firstArgument = 2;
+		}
+
+		for (std::int32_t i = firstArgument; i < argc; i++) {
 			StringView arg = argv[i];
 			if (arg.hasPrefix("--target="_s)) {
 				if (!TryParseProfile(arg.exceptPrefix("--target="_s), options.Profile)) {
@@ -191,6 +241,22 @@ int main(int argc, char** argv)
 	if (!ParseOptions(argc, argv, options)) {
 		PrintUsage();
 		return 1;
+	}
+
+	// The asset-level commands work on single files and share nothing with the conversion below
+	if (options.Action != Command::Convert) {
+		bool success;
+		switch (options.Action) {
+			case Command::PackFont: success = AssetPacker::FontPacker::Pack(options.SourcePath, options.TargetPath); break;
+			case Command::UnpackFont: success = AssetPacker::FontPacker::Unpack(options.SourcePath, options.TargetPath); break;
+			case Command::ApplyPalette: success = AssetPacker::FontPacker::ApplyPalette(options.SourcePath, options.TargetPath); break;
+			default: success = AssetPacker::FontPacker::ConvertToIndices(options.SourcePath, options.TargetPath); break;
+		}
+		if (!success) {
+			return 1;
+		}
+		LOGI("Done");
+		return 0;
 	}
 
 	if (!fs::DirectoryExists(options.SourcePath)) {

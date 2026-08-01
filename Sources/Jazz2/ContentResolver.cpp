@@ -4,9 +4,7 @@
 #include "LevelFlags.h"
 #include "LevelHandler.h"
 #include "Tiles/TileSet.h"
-#if defined(DEATH_DEBUG)
-#	include "Compatibility/JJ2Anims.h"
-#endif
+#include "Compatibility/JJ2Anims.h"
 
 #include "../nCine/Application.h"
 #include "../nCine/AppConfiguration.h"
@@ -1065,70 +1063,8 @@ namespace Jazz2
 
 	void ContentResolver::ReadImageFromFile(std::unique_ptr<Stream>& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount)
 	{
-		typedef union {
-			struct {
-				unsigned char r, g, b, a;
-			} rgba;
-			unsigned int v;
-		} rgba_t;
-
-		#define QOI_OP_INDEX  0x00 /* 00xxxxxx */
-		#define QOI_OP_DIFF   0x40 /* 01xxxxxx */
-		#define QOI_OP_LUMA   0x80 /* 10xxxxxx */
-		#define QOI_OP_RUN    0xc0 /* 11xxxxxx */
-		#define QOI_OP_RGB    0xfe /* 11111110 */
-		#define QOI_OP_RGBA   0xff /* 11111111 */
-
-		#define QOI_MASK_2    0xc0 /* 11000000 */
-
-		#define QOI_COLOR_HASH(C) (C.rgba.r*3 + C.rgba.g*5 + C.rgba.b*7 + C.rgba.a*11)
-
-		rgba_t index[64] { };
-		rgba_t px;
-		std::int32_t run = 0;
-		std::int32_t px_len = width * height * channelCount;
-
-		px.rgba.r = 0;
-		px.rgba.g = 0;
-		px.rgba.b = 0;
-		px.rgba.a = 255;
-
-		for (std::int32_t px_pos = 0; px_pos < px_len; px_pos += channelCount) {
-			if (run > 0) {
-				run--;
-			} else {
-				std::int32_t b1 = s->ReadValue<std::uint8_t>();
-
-				if (b1 == QOI_OP_RGB) {
-					px.rgba.r = s->ReadValue<std::uint8_t>();
-					px.rgba.g = (channelCount >= 2 ? s->ReadValue<std::uint8_t>() : 0);
-					px.rgba.b = (channelCount >= 3 ? s->ReadValue<std::uint8_t>() : 0);
-				} else if (b1 == QOI_OP_RGBA) {
-					px.rgba.r = s->ReadValue<std::uint8_t>();
-					px.rgba.g = s->ReadValue<std::uint8_t>();
-					px.rgba.b = s->ReadValue<std::uint8_t>();
-					px.rgba.a = s->ReadValue<std::uint8_t>();
-				} else if ((b1 & QOI_MASK_2) == QOI_OP_INDEX) {
-					px = index[b1];
-				} else if ((b1 & QOI_MASK_2) == QOI_OP_DIFF) {
-					px.rgba.r += ((b1 >> 4) & 0x03) - 2;
-					px.rgba.g += ((b1 >> 2) & 0x03) - 2;
-					px.rgba.b += (b1 & 0x03) - 2;
-				} else if ((b1 & QOI_MASK_2) == QOI_OP_LUMA) {
-					std::int32_t b2 = s->ReadValue<std::uint8_t>();
-					std::int32_t vg = (b1 & 0x3f) - 32;
-					px.rgba.r += vg - 8 + ((b2 >> 4) & 0x0f);
-					px.rgba.g += vg;
-					px.rgba.b += vg - 8 + (b2 & 0x0f);
-				} else if ((b1 & QOI_MASK_2) == QOI_OP_RUN) {
-					run = (b1 & 0x3f);
-				}
-
-				index[QOI_COLOR_HASH(px) & (64 - 1)] = px;
-			}
-
-			*(rgba_t*)(data + px_pos) = px;
-		}
+		// The decoder lives next to the encoder that produced the file, so the two can't drift apart
+		Compatibility::JJ2Anims::ReadImageContent(*s, data, width, height, channelCount);
 	}
 
 	void ContentResolver::ExpandTileDiffuse(std::uint8_t* pixelsOffset, std::uint32_t widthWithPadding, std::uint32_t bytesPerPixel)
@@ -1913,10 +1849,10 @@ namespace Jazz2
 		if (font == nullptr) {
 			switch (fontType) {
 				case FontType::Small: font = std::make_unique<UI::Font>(fs::CombinePath(
-					{ GetContentPath(), "Animations"_s, "UI"_s, "font_small.png"_s }), _palettes);
+					{ GetContentPath(), "Animations"_s, "UI"_s, "font_small.font"_s }), _palettes);
 					break;
 				case FontType::Medium: font = std::make_unique<UI::Font>(fs::CombinePath(
-					{ GetContentPath(), "Animations"_s, "UI"_s, "font_medium.png"_s }), _palettes);
+					{ GetContentPath(), "Animations"_s, "UI"_s, "font_medium.font"_s }), _palettes);
 					break;
 				default:
 					return nullptr;

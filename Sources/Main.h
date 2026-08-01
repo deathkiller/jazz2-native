@@ -61,6 +61,28 @@
 		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE)
 #	define NCINE_HAS_WINDOWS
 #endif
+/**
+	@brief Whether the current platform can have a touchscreen
+
+	Listed rather than excluded, so a platform that has no touchscreen doesn't acquire one by not being
+	mentioned - which is how the consoles ended up offering to configure touch controls.
+*/
+#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_EMSCRIPTEN) || \
+		defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_UNIX) || defined(DOXYGEN_GENERATING_OUTPUT)
+#	define NCINE_HAS_TOUCH_CONTROLS
+#endif
+/**
+	@brief Whether the current platform can drive the RGB lighting of connected devices
+
+	Only Windows (through the Razer Chroma™ SDK) and the web build (through a local bridge) actually do so;
+	the other desktop platforms are included because that is where such a device is plugged in, and where
+	@relativeref{Jazz2::Input,RgbLights} could gain a backend without the option having to reappear.
+*/
+#if (defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)) || defined(DEATH_TARGET_EMSCRIPTEN) || \
+		defined(DEATH_TARGET_UNIX) || (defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_IOS)) || \
+		defined(DOXYGEN_GENERATING_OUTPUT)
+#	define NCINE_HAS_RGB_LIGHTS
+#endif
 
 /** @brief Function name */
 #if defined(__DEATH_CURRENT_FUNCTION)

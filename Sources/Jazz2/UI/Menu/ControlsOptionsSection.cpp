@@ -52,9 +52,11 @@ namespace Jazz2::UI::Menu
 				[root]() { root->SwitchToSection<RemapControlsSection>(0); }, RemapHeight);
 		}
 
+#if defined(NCINE_HAS_TOUCH_CONTROLS)
 		// TRANSLATORS: Menu item in Options > Controls section
 		list->Add<ListItem>(_("Touch Controls"),
 			[root]() { root->SwitchToSection<TouchControlsOptionsSection>(); }, ActionHeight);
+#endif
 
 		// TRANSLATORS: Menu item in Options > Controls section
 		list->Add<ChoiceItem>(_("Toggle Run"),
