@@ -16,6 +16,11 @@
 #include <IO/Compression/DeflateStream.h>
 #include <Utf8.h>
 
+#if defined(DEATH_TARGET_DREAMCAST)
+#	include <dc/maple.h>
+#	include <dc/maple/vmu.h>
+#endif
+
 #if defined(DEATH_TARGET_ANDROID)
 #	include "../nCine/Backends/Android/AndroidApplication.h"
 #	include "../nCine/Backends/Android/AndroidJniHelper.h"
@@ -210,8 +215,24 @@ namespace Jazz2
 
 		// If config path is not overriden and portable config doesn't exist, use common path for current user
 		if (!overrideConfigPath && !fs::IsReadableFile(_configPath)) {
-#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
-			// Save config file next to `Source` directory
+#	if defined(DEATH_TARGET_DREAMCAST)
+			// The game runs from a disc, so the only writable storage is a memory card. KallistiOS mounts
+			// each one as "/vmu/<port><unit>", buffers the whole file in RAM and commits it to the card when
+			// the handle closes, so it can be streamed like any other file. VMU names are limited to twelve
+			// characters. The first attached card wins; with none inserted there is nowhere to save and the
+			// path is left on the disc, where opening it for writing simply fails as before.
+			if (maple_device_t* memoryCard = maple_enum_type(0, MAPLE_FUNC_MEMCARD)) {
+				char vmuPath[] = "/vmu/a1/JAZZ2CFG";
+				vmuPath[5] = char('a' + memoryCard->port);
+				vmuPath[6] = char('0' + memoryCard->unit);
+				_configPath = String(vmuPath, sizeof(vmuPath) - 1);
+			} else {
+				LOGW("No memory card found, settings and progress cannot be saved");
+				auto& resolver = ContentResolver::Get();
+				_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
+			}
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+			// Save config file next to `Source` directory (on the SD card the content is read from)
 			auto& resolver = ContentResolver::Get();
 			_configPath = fs::CombinePath(fs::GetDirectoryName(resolver.GetSourcePath()), "Jazz2.config"_s);
 #	elif defined(DEATH_TARGET_UNIX) && defined(NCINE_PACKAGED_CONTENT_PATH)
@@ -627,7 +648,10 @@ namespace Jazz2
 		// `FirstRun` is true only if config file doesn't exist yet
 		FirstRun = false;
 
+#if !defined(DEATH_TARGET_DREAMCAST)
+		// A memory card's mount point always exists and has no subdirectories to create
 		fs::CreateDirectories(fs::GetDirectoryName(_configPath));
+#endif
 
 		auto so = fs::Open(_configPath, FileAccess::Write);
 		if (!so->IsValid()) {

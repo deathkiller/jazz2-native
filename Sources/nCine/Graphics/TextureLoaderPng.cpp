@@ -105,7 +105,13 @@ namespace nCine
 				}
 
 				case 'IEND': {
-					std::size_t dataLength = 16 + (width_ * height_ * 5);
+					// The decode loop below consumes exactly one filter byte per row plus that row's samples,
+					// which is all this staging buffer has to hold. Sizing it at 5 bytes per pixel regardless
+					// asked for five times what a paletted image needs (and a quarter more than an RGBA one) -
+					// a megabyte-sized contiguous block for a font atlas, which is the kind of request that
+					// fails on a console heap long before it is actually out of memory.
+					const std::int32_t pxStride = (isPaletted ? 1 : (is24Bit ? 3 : 4));
+					std::size_t dataLength = 16 + std::size_t(height_) * (1 + std::size_t(width_) * pxStride);
 					auto buffer = std::make_unique<std::uint8_t[]>(dataLength);
 
 					MemoryStream ms(data.data() + 2, data.size() - 2);
@@ -114,7 +120,6 @@ namespace nCine
 					DEATH_ASSERT(uc.IsValid(), "PNG file cannot be decompressed", );
 
 					std::int32_t o = 0;
-					std::int32_t pxStride = (isPaletted ? 1 : (is24Bit ? 3 : 4));
 					std::int32_t srcStride = width_ * pxStride;
 					std::int32_t dstStride = width_ * (isPaletted ? 1 : 4);
 

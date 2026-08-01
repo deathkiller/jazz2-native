@@ -1371,22 +1371,39 @@ namespace Jazz2
 
 		// Build the atlas with 1px padding around each tile (so sampling never bleeds across tiles). Indexed output
 		// is a single index channel (-> R8), baked output is RGBA.
-		const std::uint32_t tilesPerRow = width / TileSet::DefaultTileSize;
-		const std::uint32_t tilesPerColumn = height / TileSet::DefaultTileSize;
-		const std::uint32_t paddedWidth = width + (2 * tilesPerRow);
-		const std::uint32_t paddedHeight = height + (2 * tilesPerColumn);
+		const std::uint32_t srcTilesPerRow = width / TileSet::DefaultTileSize;
+		const std::uint32_t srcTilesPerColumn = height / TileSet::DefaultTileSize;
+		const std::uint32_t paddedTileSizeSrc = TileSet::DefaultTileSize + 2;
+
+		// The atlas does not have to keep the source sheet's row width - a tile is found by its index, and
+		// TileSet reads the row width back from the texture. The consoles round every texture up to a power
+		// of two, so a sheet laid out 22 tiles wide became a 748 px atlas padded to 1024: a quarter of the
+		// video memory wasted, in megabyte-sized blocks. Fifteen tiles is 510 px, which pads to 512 with two
+		// pixels to spare, so a 15-row chunk is an exactly-filled 512x512 texture.
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+		constexpr std::uint32_t PreferredAtlasTilesPerRow = 15;
+#else
+		constexpr std::uint32_t PreferredAtlasTilesPerRow = 0;
+#endif
+		const std::uint32_t totalTiles = srcTilesPerRow * srcTilesPerColumn;
+		const std::uint32_t tilesPerRow = (PreferredAtlasTilesPerRow > 0 && totalTiles > PreferredAtlasTilesPerRow
+			? PreferredAtlasTilesPerRow : srcTilesPerRow);
+		const std::uint32_t tilesPerColumn = (tilesPerRow > 0 ? (totalTiles + tilesPerRow - 1) / tilesPerRow : 0);
+		const std::uint32_t paddedWidth = tilesPerRow * paddedTileSizeSrc;
+		const std::uint32_t paddedHeight = tilesPerColumn * paddedTileSizeSrc;
 		const std::uint32_t dstChannels = (indexTiles ? 1u : 4u);
 
 		std::unique_ptr<std::uint8_t[]> atlas = std::make_unique<std::uint8_t[]>(paddedWidth * paddedHeight * dstChannels);
 		tileDiffuseOpaque = std::make_unique<std::uint8_t[]>(tileCount);
 
-		for (std::uint32_t ty = 0; ty < tilesPerColumn; ty++) {
-			for (std::uint32_t tx = 0; tx < tilesPerRow; tx++) {
+		for (std::uint32_t ty = 0; ty < srcTilesPerColumn; ty++) {
+			for (std::uint32_t tx = 0; tx < srcTilesPerRow; tx++) {
 				const std::uint32_t srcX = tx * TileSet::DefaultTileSize;
 				const std::uint32_t srcY = ty * TileSet::DefaultTileSize;
-				const std::uint32_t dstX = tx * (TileSet::DefaultTileSize + 2);
-				const std::uint32_t dstY = ty * (TileSet::DefaultTileSize + 2);
-				const std::int32_t tileIdx = ty * tilesPerRow + tx;
+				const std::int32_t tileIdx = ty * srcTilesPerRow + tx;
+				// The tile keeps its index, but sits wherever that index falls in the atlas's own layout
+				const std::uint32_t dstX = (tileIdx % (std::int32_t)tilesPerRow) * paddedTileSizeSrc;
+				const std::uint32_t dstY = (tileIdx / (std::int32_t)tilesPerRow) * paddedTileSizeSrc;
 				const bool is32bit = ((is32bitTile[tileIdx / 8] & (1 << (tileIdx & 7))) != 0);
 
 				std::uint8_t* dstTile = &atlas[(dstY * paddedWidth + dstX) * dstChannels];
@@ -1448,7 +1465,21 @@ namespace Jazz2
 		// tile rows, so a tile never straddles two textures; TileSet derives TilesPerTexture from chunk 0.
 		const std::int32_t maxTextureSize = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::IntValues::MAX_TEXTURE_SIZE);
 		const std::uint32_t paddedTileSize = TileSet::DefaultTileSize + 2;
-		std::uint32_t tileRowsPerChunk = (maxTextureSize > 0 ? std::uint32_t(maxTextureSize) / paddedTileSize : tilesPerColumn);
+
+		// The fixed-function consoles round every texture up to a power of two, so chunking right at their
+		// 1024 limit makes each chunk ask video memory for a single megabyte-sized contiguous block. That is
+		// the first allocation to fail once the heap is fragmented: the tileset lost its store as soon as the
+		// pause menu's textures arrived and could never get it back, leaving the tilemap to flicker out.
+		// Halving the chunk height costs the same total memory - two 512-tall chunks instead of one 1024-tall
+		// one, both exactly filling their power-of-two height - but asks for it in half-sized pieces.
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+		constexpr std::int32_t PreferredChunkHeight = 512;
+#else
+		constexpr std::int32_t PreferredChunkHeight = 0;
+#endif
+		const std::int32_t chunkHeightLimit = (PreferredChunkHeight > 0 &&
+			(maxTextureSize <= 0 || PreferredChunkHeight < maxTextureSize) ? PreferredChunkHeight : maxTextureSize);
+		std::uint32_t tileRowsPerChunk = (chunkHeightLimit > 0 ? std::uint32_t(chunkHeightLimit) / paddedTileSize : tilesPerColumn);
 		if (tileRowsPerChunk == 0) {
 			tileRowsPerChunk = 1;
 		}
@@ -1479,8 +1510,8 @@ namespace Jazz2
 		// Caption tile (level-select thumbnail): downscale one tile 1:3 vertically, averaging 3 source rows. Resolve
 		// 8-bit indices through the palette here (32-bit tiles already hold RGB).
 		if (captionTileId > 0) {
-			const std::uint32_t tileX = (captionTileId % tilesPerRow) * TileSet::DefaultTileSize;
-			const std::uint32_t tileY = (captionTileId / tilesPerRow) * TileSet::DefaultTileSize;
+			const std::uint32_t tileX = (captionTileId % srcTilesPerRow) * TileSet::DefaultTileSize;
+			const std::uint32_t tileY = (captionTileId / srcTilesPerRow) * TileSet::DefaultTileSize;
 			if (tileX + TileSet::DefaultTileSize <= width && tileY + TileSet::DefaultTileSize <= height) {
 				const bool captionIs32bit = ((is32bitTile[captionTileId / 8] & (1 << (captionTileId & 7))) != 0);
 				captionTile = std::make_unique<Color[]>(TileSet::DefaultTileSize * TileSet::DefaultTileSize / 3);

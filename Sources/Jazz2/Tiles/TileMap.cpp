@@ -15,14 +15,24 @@ namespace Jazz2::Tiles
 {
 	namespace
 	{
-		// The textured background ("Sky"/"Circle" layers) is a per-pixel procedural effect. The GX
-		// (Wii/GameCube) and PVR (Dreamcast) backends have no programmable stage at all, so it cannot be
-		// rendered there - not even in a simplified form - and the layer is drawn as an ordinary repeating
-		// tile layer instead, which is what DrawLayer() falls through to when this is false.
-#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+		// The textured background ("Sky"/"Circle" layers) is a per-pixel procedural effect in GLSL. Its planar
+		// variant is affine along every screen row, though, so the PVR (Dreamcast) backend rebuilds it out of
+		// horizontal bands instead of a fragment shader - see the TexturedBackground effect in PvrDevice. The
+		// circular variant has no such structure, and the GX (Wii/GameCube) backend has no equivalent yet;
+		// both fall through to DrawLayer() drawing the layer as an ordinary repeating tile layer.
+#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		constexpr bool SupportsTexturedBackground = false;
+		constexpr bool SupportsTexturedBackgroundCircle = false;
+#elif defined(DEATH_TARGET_DREAMCAST)
+		// Both are rebuilt from geometry (see the TexturedBackground effect in PvrDevice). The circular
+		// variant's per-pixel tube mapping has no affine structure to exploit, so it borrows the planar
+		// reconstruction rather than falling back to a flat tilemap - much closer to the original than
+		// no warp at all.
+		constexpr bool SupportsTexturedBackground = true;
+		constexpr bool SupportsTexturedBackgroundCircle = true;
 #else
 		constexpr bool SupportsTexturedBackground = true;
+		constexpr bool SupportsTexturedBackgroundCircle = true;
 #endif
 	}
 
@@ -388,6 +398,55 @@ namespace Jazz2::Tiles
 		// A trigger-controlled tile, toggled solid/empty by a trigger crate (see SetTrigger)
 		const LayerTile& tile = _layers[_sprLayerIndex].Layout[ty * layoutSize.X + tx];
 		return ((tile.DestructType & TileDestructType::Trigger) == TileDestructType::Trigger);
+	}
+
+	bool TileMap::IsTilePointEmpty(std::int32_t x, std::int32_t y, bool downwards)
+	{
+		if (_sprLayerIndex == -1) {
+			return true;
+		}
+
+		auto& sprLayer = _layers[_sprLayerIndex];
+		const std::int32_t limitRightPx = sprLayer.LayoutSize.X * TileSet::DefaultTileSize;
+		const std::int32_t limitBottomPx = sprLayer.LayoutSize.Y * TileSet::DefaultTileSize;
+
+		// Out-of-level coordinates count as solid walls, exactly as in IsTileEmpty()
+		if (x < 0 || x >= limitRightPx) {
+			return false;
+		}
+		if (y >= limitBottomPx) {
+			if (_pitType == PitType::StandOnPlatform) {
+				return false;
+			}
+			y = limitBottomPx - 1;
+		} else if (y < 0) {
+			y = 0;
+		}
+
+		LayerTile& tile = sprLayer.Layout[(y / TileSet::DefaultTileSize) * sprLayer.LayoutSize.X + (x / TileSet::DefaultTileSize)];
+		if (tile.HasSuspendType != SuspendType::None ||
+			((tile.Flags & LayerTileFlags::OneWay) == LayerTileFlags::OneWay && !downwards)) {
+			return true;
+		}
+
+		std::int32_t tileId = ResolveTileID(tile);
+		TileSet* tileSet = ResolveTileSet(tileId);
+		if (tileSet == nullptr || tileSet->IsTileMaskEmpty(tileId)) {
+			return true;
+		}
+		if (tileSet->IsTileMaskFilled(tileId)) {
+			return false;
+		}
+
+		std::int32_t px = x % TileSet::DefaultTileSize;
+		std::int32_t py = y % TileSet::DefaultTileSize;
+		if ((tile.Flags & LayerTileFlags::FlipX) == LayerTileFlags::FlipX) {
+			px = TileSet::DefaultTileSize - 1 - px;
+		}
+		if ((tile.Flags & LayerTileFlags::FlipY) == LayerTileFlags::FlipY) {
+			py = TileSet::DefaultTileSize - 1 - py;
+		}
+		return (TileSet::GetTileMaskRow(tileSet->GetTileMask(tileId), py) & (1u << px)) == 0;
 	}
 
 	bool TileMap::IsTileEmpty(const AABBf& aabb, TileCollisionParams& params)
@@ -820,12 +879,21 @@ namespace Jazz2::Tiles
 		// be drawn with the plain tile renderer. Leaving it on the TexturedBackground shader made every tile
 		// its own draw call - that effect is not batched, so a single 8x8 sky layer covering the screen cost
 		// a few hundred of them - and fed flat tiles through a shader that samples a whole warped sheet.
+		const bool isProceduralLayer = (layer.Description.RendererType == LayerRendererType::Circle
+			? SupportsTexturedBackgroundCircle
+			: (layer.Description.RendererType == LayerRendererType::Sky ? SupportsTexturedBackground : false));
+
 		LayerRendererType rendererType = layer.Description.RendererType;
-		if (!SupportsTexturedBackground && rendererType >= LayerRendererType::Sky && rendererType <= LayerRendererType::Circle) {
+		Vector4f layerColor = layer.Description.Color;
+		if (!isProceduralLayer && rendererType >= LayerRendererType::Sky && rendererType <= LayerRendererType::Circle) {
 			rendererType = LayerRendererType::Default;
+			// A sky layer's colour is the horizon tint the warped background shader blends towards (and its
+			// W enables the star field), not a per-tile modulation. Handing it to the plain tile renderer
+			// darkened the whole layer - and a level with a black horizon lost its background entirely.
+			layerColor = Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
 		}
 
-		if (SupportsTexturedBackground && layer.Description.RendererType >= LayerRendererType::Sky && layer.Description.RendererType <= LayerRendererType::Circle && tileCount.Y == 8 && tileCount.X == 8) {
+		if (isProceduralLayer && tileCount.Y == 8 && tileCount.X == 8) {
 			constexpr float PerspectiveSpeedX = 0.4f;
 			constexpr float PerspectiveSpeedY = 0.16f;
 			RenderTexturedBackground(renderQueue, cullingRect, viewCenter, layer, x1 * PerspectiveSpeedX + loX, y1 * PerspectiveSpeedY + loY);
@@ -1033,7 +1101,7 @@ namespace Jazz2::Tiles
 					commandUniforms->TexRect->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
 					commandUniforms->SpriteSize->SetFloatValue(TileSet::DefaultTileSize, TileSet::DefaultTileSize);
 
-					Vector4f color = layer.Description.Color;
+					Vector4f color = layerColor;
 					color.W *= tile.Alpha / 255.0f;
 					commandUniforms->Color->SetFloatVector(color.Data());
 
@@ -1068,7 +1136,7 @@ namespace Jazz2::Tiles
 						continue;
 					}
 					EmitLayerMesh(renderQueue, _layerMeshVertices[verticesIndex], meshTileSet, chunk,
-						layer.Description.Color, layer.Description.Depth);
+						layerColor, layer.Description.Depth);
 				}
 			}
 #endif
@@ -1679,9 +1747,10 @@ namespace Jazz2::Tiles
 				// Debris should collide with tilemap
 				float nx = debris.Pos.X + debris.Speed.X * timeMult;
 				float ny = debris.Pos.Y + debris.Speed.Y * timeMult;
-				AABB aabb = AABBf(nx - 1, ny - 1, nx + 1, ny + 1);
-				TileCollisionParams params = { TileDestructType::None, true };
-				if (IsTileEmpty(aabb, params)) {
+				// Debris is a few pixels across and destroys nothing, so it samples the collision mask at
+				// its centre rather than sweeping its whole box - a burst after an enemy dies is hundreds
+				// of these, and the box test carries setup a point sample does not need
+				if (IsTilePointEmpty((std::int32_t)nx, (std::int32_t)ny, true)) {
 					// Nothing...
 				} else if ((debris.Flags & DebrisFlags::Disappear) == DebrisFlags::Disappear) {
 					debris.ScaleSpeed = -0.02f;
@@ -1692,10 +1761,7 @@ namespace Jazz2::Tiles
 					// Place us to the ground only if no horizontal movement was
 					// involved (this prevents speeds resetting if the actor
 					// collides with a wall from the side while in the air)
-					aabb.T = debris.Pos.Y - 1;
-					aabb.B = debris.Pos.Y + 1;
-
-					if (IsTileEmpty(aabb, params)) {
+					if (IsTilePointEmpty((std::int32_t)nx, (std::int32_t)debris.Pos.Y, true)) {
 						if (debris.Speed.Y > 0.0f) {
 							debris.Speed.Y = -(0.8f/*elasticity*/ * debris.Speed.Y);
 							//OnHitFloorHook();
@@ -1707,8 +1773,7 @@ namespace Jazz2::Tiles
 
 					// If the actor didn't move all the way horizontally,
 					// it hit a wall (or was already touching it)
-					aabb = AABBf(debris.Pos.X - 1, ny - 1, debris.Pos.X + 1, ny + 1);
-					if (IsTileEmpty(aabb, params)) {
+					if (IsTilePointEmpty((std::int32_t)debris.Pos.X, (std::int32_t)ny, true)) {
 						debris.Speed.X = -(0.8f/*elasticity*/ * debris.Speed.X);
 						debris.AngleSpeed = -(0.8f/*elasticity*/ * debris.AngleSpeed);
 						//OnHitWallHook();
@@ -1744,6 +1809,10 @@ namespace Jazz2::Tiles
 		viewportRect.W += MaxDebrisSize * 2.0f;
 		viewportRect.H += MaxDebrisSize * 2.0f;
 
+		// Constant for every debris of the frame, so resolved once instead of per particle
+		auto& resolver = ContentResolver::Get();
+		Texture* paletteTexture = resolver.GetPaletteTexture();
+
 		for (const auto& debris : _debrisList) {
 			if (!viewportRect.Contains(debris.Pos)) {
 				continue;
@@ -1768,15 +1837,25 @@ namespace Jazz2::Tiles
 			commandUniforms->SpriteSize->SetFloatValue(debris.Size.X, debris.Size.Y);
 			commandUniforms->Color->SetFloatVector(Colorf(1.0f, 1.0f, 1.0f, debris.Alpha).Data());
 
-			Matrix4x4f worldMatrix = Matrix4x4f::Translation(debris.Pos.X, debris.Pos.Y, 0.0f);
-			worldMatrix.RotateZ(debris.Angle);
-			worldMatrix.Scale(debris.Scale, debris.Scale, 1.0f);
-			worldMatrix.Translate(debris.FrameOffset.X - debris.Size.X * 0.5f, debris.FrameOffset.Y - debris.Size.Y * 0.5f, 0.0f);
-			command->SetTransformation(worldMatrix);
+			// Translation * RotationZ * Scaling * Translation, composed directly. Chaining the four
+			// operations meant three 4x4 multiplies per particle - and a burst of debris is hundreds of
+			// them in one frame - where the result is just a scaled rotation plus an offset origin.
+			const float c = std::cos(debris.Angle);
+			const float s = std::sin(debris.Angle);
+			const float ns = std::sin(-debris.Angle);	// Never "-s", see the note in Matrix4x4::RotationZ()
+			const float xx = c * debris.Scale, xy = s * debris.Scale;
+			const float yx = ns * debris.Scale, yy = c * debris.Scale;
+			const float localX = debris.FrameOffset.X - debris.Size.X * 0.5f;
+			const float localY = debris.FrameOffset.Y - debris.Size.Y * 0.5f;
+			command->SetTransformation(Matrix4x4f(
+				Vector4f(xx, xy, 0.0f, 0.0f),
+				Vector4f(yx, yy, 0.0f, 0.0f),
+				Vector4f(0.0f, 0.0f, 1.0f, 0.0f),
+				Vector4f(debris.Pos.X + xx * localX + yx * localY,
+					debris.Pos.Y + xy * localX + yy * localY, 0.0f, 1.0f)));
 			command->SetLayer(debris.Depth);
 			command->GetMaterial().SetTexture(0, *debris.DiffuseTexture);
 			if (debrisIndexed) {
-				Texture* paletteTexture = ContentResolver::Get().GetPaletteTexture();
 				if (paletteTexture != nullptr) {
 					command->GetMaterial().SetTexture(1, *paletteTexture);
 				}
@@ -2006,7 +2085,7 @@ namespace Jazz2::Tiles
 
 	void TileMap::OnInitializeViewport()
 	{
-		if (SupportsTexturedBackground && _texturedBackgroundLayer != -1) {
+		if ((SupportsTexturedBackground || SupportsTexturedBackgroundCircle) && _texturedBackgroundLayer != -1) {
 			// Skipped entirely when unsupported, which also saves the pass's render target
 			_texturedBackgroundPass.Initialize();
 		}

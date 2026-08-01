@@ -100,7 +100,8 @@ namespace nCine::RHI::GX
 		{
 			Modulate,			// texel * vertex colour (the default sprite combine)
 			Silhouette,			// vertex colour, masked by the texel alpha
-			ModulateBrighten	// texel * vertex colour, scaled x2 and clamped
+			ModulateBrighten,	// texel * vertex colour, scaled x2 and clamped
+			ModulateScaled4		// texel * vertex colour, scaled x4 and clamped
 		};
 
 		TevMode g_tevMode = TevMode::Modulate;
@@ -152,6 +153,14 @@ namespace nCine::RHI::GX
 					// a flat colour, which is what a fully saturated mask (luma * 6 in the shader) becomes
 					GX_SetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_RASC);
 					GX_SetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					GX_SetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_TEXA, GX_CA_RASA, GX_CA_ZERO);
+					GX_SetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					break;
+				case TevMode::ModulateScaled4:
+					// Same combine as ModulateBrighten with a x4 output scale, which lets a vertex colour
+					// carry a multiplier of up to 4.0 (encoded as a quarter of it) instead of just 1.0
+					GX_SetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_TEXC, GX_CC_RASC, GX_CC_ZERO);
+					GX_SetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_4, GX_TRUE, GX_TEVPREV);
 					GX_SetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_TEXA, GX_CA_RASA, GX_CA_ZERO);
 					GX_SetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
 					break;
@@ -1008,14 +1017,6 @@ namespace nCine::RHI::GX
 				pvv[i] = ay * texRect[2] + texRect[3];
 			}
 
-			if (effect == GxEffect::Colorized || effect == GxEffect::BatchedColorized) {
-				// Amplified dye of the Colorized shader (the grayscale step is dropped, but the affected
-				// textures - mostly font glyphs - are grayscale already)
-				for (std::int32_t c = 0; c < 4; c++) {
-					color[c] = 1.0f + (color[c] - 0.5f) * 4.0f;
-				}
-			}
-
 			// Emits the quad at an optional screen-space offset, in the given colour
 			auto emitQuad = [&](float dx, float dy, float cr, float cg, float cb, float ca) {
 				const std::uint8_t r = QuantizeChannel(cr);
@@ -1121,6 +1122,22 @@ namespace nCine::RHI::GX
 					} else {
 						emitQuad(0.0f, 0.0f, darkness * 0.6f, darkness * 0.8f, darkness, alpha);
 					}
+					break;
+				}
+				case GxEffect::Colorized:
+				case GxEffect::BatchedColorized: {
+					// gray = (r + g + b) * 0.5 and COLOR = gray * dye, with dye = 1 + (color - 0.5) * 4.
+					// The textures this runs on are grayscale (fonts), so r = g = b and that "average" is
+					// really a 1.5x brightening - dropping it left every glyph noticeably dark. The dye also
+					// exceeds 1.0 for any tint brighter than neutral, which a vertex colour cannot carry, so
+					// both are folded in at a quarter strength and the TEV stage scales the result back up.
+					constexpr float GrayGain = 1.5f;
+					SetTevMode(TevMode::ModulateScaled4);
+					emitQuad(0.0f, 0.0f,
+						GrayGain * (1.0f + (color[0] - 0.5f) * 4.0f) * 0.25f,
+						GrayGain * (1.0f + (color[1] - 0.5f) * 4.0f) * 0.25f,
+						GrayGain * (1.0f + (color[2] - 0.5f) * 4.0f) * 0.25f,
+						1.0f + (color[3] - 0.5f) * 4.0f);
 					break;
 				}
 				default: {

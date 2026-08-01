@@ -94,25 +94,33 @@ namespace nCine::RHI::PVR
 		}
 
 		// Out of video memory: drop the stores of the textures that have gone unused the longest and try
-		// again. Textures still referenced by the scene being built (the current one) are left alone, as
-		// the tile accelerator only reads them when the scene is submitted.
+		// again. The first pass spares anything already drawn into the scene being assembled, as the tile
+		// accelerator still reads those when the scene is submitted.
 		const std::uint32_t currentScene = PvrDevice::GetSceneCounter();
-		PvrTexture* victim = liveTail_;
-		while (victim != nullptr) {
-			PvrTexture* next = victim->livePrev_;
-			// Render targets have no copy in main memory to rebuild from, and anything already drawn into
-			// the scene being assembled is still read when that scene is submitted
-			const bool evictable = (victim != keepAlive && !victim->isRenderTarget_ &&
-				victim->lastUsedScene_ != currentScene);
-			if (evictable) {
-				victim->FreeVramStores();
-				victim->Unlink();
+		for (std::int32_t pass = 0; pass < 2; pass++) {
+			// Nothing outside the current scene was left to free. Rather than fail the allocation - which
+			// used to abort the whole frame and take the process with it, as happens when a level's working
+			// set suddenly has to make room for the pause menu's - the second pass evicts from the current
+			// scene too. The tile accelerator then samples a store that has been reused, so the primitives
+			// already submitted this frame can come out wrong; that is a single frame of artifacts against
+			// a hard crash, and the store is rebuilt from main memory on the next draw.
+			const bool sparingCurrentScene = (pass == 0);
+			PvrTexture* victim = liveTail_;
+			while (victim != nullptr) {
+				PvrTexture* next = victim->livePrev_;
+				// Render targets have no copy in main memory to rebuild from, so they are never evicted
+				const bool evictable = (victim != keepAlive && !victim->isRenderTarget_ &&
+					(!sparingCurrentScene || victim->lastUsedScene_ != currentScene));
+				if (evictable) {
+					victim->FreeVramStores();
+					victim->Unlink();
 
-				if (pvr_ptr_t result = pvr_mem_malloc(size)) {
-					return result;
+					if (pvr_ptr_t result = pvr_mem_malloc(size)) {
+						return result;
+					}
 				}
+				victim = next;
 			}
-			victim = next;
 		}
 
 		return nullptr;
@@ -188,7 +196,7 @@ namespace nCine::RHI::PVR
 			if (vram_ == nullptr) {
 				vram_ = AllocateVram(size, this);
 				if (vram_ == nullptr) {
-					LOGE("Out of PVR memory allocating {} B (8bpp {}x{})", size, paddedWidth_, paddedHeight_);
+					LOGE("Out of PVR memory allocating {} B (8bpp {}x{}, source {}x{})", size, paddedWidth_, paddedHeight_, width_, height_);
 					return;
 				}
 			}

@@ -15,7 +15,7 @@ using namespace Jazz2::UI::Menu::Resources;
 namespace Jazz2::UI::Menu
 {
 	MenuContainerBase::MenuContainerBase()
-		: _contentBounds(), _activeCanvas(ActiveCanvas::Background), _metadata(nullptr), _smallFont(nullptr),
+		: _contentBounds(), _activeCanvas(ActiveCanvas::Background), _metadata(nullptr), _optionalMetadata(nullptr), _smallFont(nullptr),
 			_mediumFont(nullptr), _pressedActions(0), _lastNavigationFlags(NavigationFlags::AllowAll), _touchButtonsTimer(0.0f)
 	{
 	}
@@ -184,9 +184,28 @@ namespace Jazz2::UI::Menu
 		return ((_pressedActions & ((1 << (std::int32_t)action) | (1 << (16 + (std::int32_t)action)))) == (1 << (std::int32_t)action));
 	}
 
+	GraphicResource* MenuContainerBase::FindElement(AnimState state)
+	{
+		if (auto* res = _metadata->FindAnimation(state)) {
+			return res;
+		}
+
+		// The difficulty portraits are true-colour art of a few hundred kilobytes each - over two megabytes
+		// between them once the decode buffer and the texture copy are both counted. Only the start-game and
+		// create-game sections show them, so they live in their own metadata and load the first time one is
+		// drawn. The in-game menu never asks, which is what lets it open inside a level at all.
+		if (_optionalMetadata == nullptr) {
+			_optionalMetadata = ContentResolver::Get().RequestMetadata("UI/CharacterArt"_s);
+			if (_optionalMetadata == nullptr) {
+				return nullptr;
+			}
+		}
+		return _optionalMetadata->FindAnimation(state);
+	}
+
 	void MenuContainerBase::DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, float scaleX, float scaleY, bool additiveBlending, bool unaligned)
 	{
-		auto* res = _metadata->FindAnimation(state);
+		auto* res = FindElement(state);
 		if (res == nullptr) {
 			return;
 		}
@@ -224,7 +243,7 @@ namespace Jazz2::UI::Menu
 
 	void MenuContainerBase::DrawElement(AnimState state, float x, float y, std::uint16_t z, Alignment align, const Colorf& color, Vector2f size, const Vector4f& texCoords, bool unaligned)
 	{
-		auto* res = _metadata->FindAnimation(state);
+		auto* res = FindElement(state);
 		if (res == nullptr) {
 			return;
 		}
