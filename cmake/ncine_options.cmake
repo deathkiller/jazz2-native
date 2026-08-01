@@ -324,13 +324,18 @@ cmake_dependent_option(WITH_WEBSOCKET "Enable WebSocket transport for multiplaye
 if(WITH_WEBSOCKET AND NOT EMSCRIPTEN)
 	# Default to the OS-native TLS backend on Apple (SecureTransport, a system framework) to avoid depending on
 	# a Homebrew OpenSSL whose architecture must match the build — the x86_64 cross-build on Apple Silicon runners
-	# otherwise links the arm64-only Homebrew OpenSSL and fails with undefined symbols.
+	# otherwise links the arm64-only Homebrew OpenSSL and fails with undefined symbols. Windows defaults to its
+	# own native provider (Schannel) for the same reason, as it additionally needs no OpenSSL runtime libraries
+	# next to the executable. This includes UWP, where every entry point it uses is exported by `WindowsApp`
+	# (only the headers hide them behind the desktop API family, which `IXSocketSChannel.h` works around).
 	if(APPLE)
-		set(WITH_WEBSOCKET_TLS_BACKEND "SecureTransport" CACHE STRING "TLS backend for WebSocket transport (None, SecureTransport, OpenSSL, mbedTLS)")
+		set(WITH_WEBSOCKET_TLS_BACKEND "SecureTransport" CACHE STRING "TLS backend for WebSocket transport (None, SecureTransport, Schannel, OpenSSL, mbedTLS)")
+	elseif(WIN32)
+		set(WITH_WEBSOCKET_TLS_BACKEND "Schannel" CACHE STRING "TLS backend for WebSocket transport (None, SecureTransport, Schannel, OpenSSL, mbedTLS)")
 	else()
-		set(WITH_WEBSOCKET_TLS_BACKEND "OpenSSL" CACHE STRING "TLS backend for WebSocket transport (None, SecureTransport, OpenSSL, mbedTLS)")
+		set(WITH_WEBSOCKET_TLS_BACKEND "OpenSSL" CACHE STRING "TLS backend for WebSocket transport (None, SecureTransport, Schannel, OpenSSL, mbedTLS)")
 	endif()
-	set_property(CACHE WITH_WEBSOCKET_TLS_BACKEND PROPERTY STRINGS "None" "SecureTransport" "OpenSSL" "mbedTLS")
+	set_property(CACHE WITH_WEBSOCKET_TLS_BACKEND PROPERTY STRINGS "None" "SecureTransport" "Schannel" "OpenSSL" "mbedTLS")
 endif()
 
 cmake_dependent_option(SHAREWARE_DEMO_ALLOW_MULTIPLAYER "Enable multiplayer support also in Shareware Demo" ON "SHAREWARE_DEMO_ONLY;WITH_ONLINE_MULTIPLAYER" OFF)

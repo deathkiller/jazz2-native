@@ -109,10 +109,10 @@ if(USE_TLS)
 		if(NOT USE_MBED_TLS AND NOT USE_OPEN_SSL AND NOT USE_LIBRE_SSL) # unless we want something else
 			set(USE_SECURE_TRANSPORT ON)
 		endif()
-	# default to mbedtls on windows if nothing is configured
+	# default to the native Schannel on windows if nothing is configured
 	elseif(WIN32)
-		if(NOT USE_OPEN_SSL AND NOT USE_LIBRE_SSL) # unless we want something else
-			set(USE_MBED_TLS ON)
+		if(NOT USE_OPEN_SSL AND NOT USE_LIBRE_SSL AND NOT USE_MBED_TLS) # unless we want something else
+			set(USE_SCHANNEL ON)
 		endif()
 	else() # default to OpenSSL on all other platforms
 		if(NOT USE_MBED_TLS AND NOT USE_LIBRE_SSL) # Unless mbedtls or libressl is requested
@@ -127,6 +127,9 @@ if(USE_TLS)
 	elseif(USE_SECURE_TRANSPORT)
 		list(APPEND _IXWEBSOCKET_HEADERS ${_IXWEBSOCKET_ROOT}/IXSocketAppleSSL.h)
 		list(APPEND _IXWEBSOCKET_SOURCES ${_IXWEBSOCKET_ROOT}/IXSocketAppleSSL.cpp)
+	elseif(USE_SCHANNEL)
+		list(APPEND _IXWEBSOCKET_HEADERS ${_IXWEBSOCKET_ROOT}/IXSocketSChannel.h)
+		list(APPEND _IXWEBSOCKET_SOURCES ${_IXWEBSOCKET_ROOT}/IXSocketSChannel.cpp)
 	elseif(USE_OPEN_SSL OR USE_LIBRE_SSL)
 		list(APPEND _IXWEBSOCKET_HEADERS ${_IXWEBSOCKET_ROOT}/IXSocketOpenSSL.h)
 		list(APPEND _IXWEBSOCKET_SOURCES ${_IXWEBSOCKET_ROOT}/IXSocketOpenSSL.cpp)
@@ -151,6 +154,18 @@ if(USE_TLS)
 	if(USE_MBED_TLS)
 		target_compile_definitions(IXWebSocket PUBLIC IXWEBSOCKET_USE_MBED_TLS)
 		target_link_libraries(IXWebSocket PUBLIC MbedTLS::mbedtls)
+	elseif(USE_SECURE_TRANSPORT)
+		target_compile_definitions(IXWebSocket PUBLIC IXWEBSOCKET_USE_SECURE_TRANSPORT)
+		# SecureTransport lives in the Security framework and uses CoreFoundation types
+		target_link_libraries(IXWebSocket PUBLIC "-framework Security" "-framework CoreFoundation")
+	elseif(USE_SCHANNEL)
+		target_compile_definitions(IXWebSocket PUBLIC IXWEBSOCKET_USE_SCHANNEL)
+		if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)
+			# Schannel itself lives in `secur32`, the certificates are handled by `crypt32` and the
+			# private key of a server certificate is imported with `ncrypt` (UWP applications get
+			# all three from `WindowsApp.lib`, which is the only import library they may link)
+			target_link_libraries(IXWebSocket PUBLIC secur32 crypt32 ncrypt)
+		endif()
 	elseif(USE_OPEN_SSL)
 		target_compile_definitions(IXWebSocket PUBLIC IXWEBSOCKET_USE_OPEN_SSL)
 		target_link_libraries(IXWebSocket PUBLIC OpenSSL::SSL OpenSSL::Crypto)
@@ -159,10 +174,6 @@ if(USE_TLS)
 		endif()
 	elseif(USE_LIBRE_SSL)
 		target_compile_definitions(IXWebSocket PUBLIC IXWEBSOCKET_USE_LIBRE_SSL)
-	elseif(USE_SECURE_TRANSPORT)
-		target_compile_definitions(IXWebSocket PUBLIC IXWEBSOCKET_USE_SECURE_TRANSPORT)
-		# SecureTransport lives in the Security framework and uses CoreFoundation types
-		target_link_libraries(IXWebSocket PUBLIC "-framework Security" "-framework CoreFoundation")
 	else()
 		message(FATAL_ERROR "TLS Configuration error: Unknown backend")
 	endif()
