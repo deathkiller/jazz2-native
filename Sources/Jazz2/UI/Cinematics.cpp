@@ -1,5 +1,7 @@
 ﻿#include "Cinematics.h"
 #include "../PreferencesCache.h"
+#include "../ContentFileTypes.h"
+#include "../VideoFormat.h"
 #include "../PlayerAction.h"
 #include "../Input/ControlScheme.h"
 
@@ -21,7 +23,9 @@ namespace Jazz2::UI
 	Cinematics::Cinematics(IRootController* root, StringView path, Function<bool(IRootController*, bool)>&& callback)
 		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
 			_videoDownscale(1), _textureWidth(0), _textureHeight(0), _textureIndex(0),
-			_pressedKeys(ValueInit, (std::size_t)Keys::Count), _pressedActions(0), _decodingFailed(false)
+			_pressedKeys(ValueInit, (std::size_t)Keys::Count), _pressedActions(0), _decodingFailed(false),
+			_nativeFormat(false), _indexedUpload(false), _convertTo565(false), _paletteDirty(true),
+			_paletteTextureDirty(false)
 	{
 		Initialize(path);
 	}
@@ -180,11 +184,28 @@ namespace Jazz2::UI
 		DEATH_ASSERT(s->GetSize() > 32 && s->GetSize() < 64 * 1024 * 1024,
 			("Cannot load \"{}.j2v\" - Unexpected file size", path), false);
 
-		// "CineFeed" + file size (uint32_t) + CRC of lowercase filename (uint32_t)
+		// Both formats are accepted and told apart by their signature: the original one starts with
+		// "CineFeed", the game's own with the signature every file it writes uses (see VideoFormat)
 		std::uint8_t internalBuffer[16];
 		s->Read(internalBuffer, 16);
-		DEATH_ASSERT(strncmp((const char*)internalBuffer, "CineFeed", sizeof("CineFeed") - 1) == 0,
-			("Cannot load \"{}.j2v\" - Invalid signature", path), false);
+		if (strncmp((const char*)internalBuffer, "CineFeed", sizeof("CineFeed") - 1) == 0) {
+			return LoadLegacyVideo(std::move(s), path);
+		}
+
+		std::uint64_t signature = 0;
+		std::memcpy(&signature, internalBuffer, sizeof(signature));
+		if (AsLE(signature) == VideoFormat::Signature && internalBuffer[8] == ContentFileType::Video) {
+			s->Seek(9, SeekOrigin::Begin);
+			return LoadNativeVideo(std::move(s), path);
+		}
+
+		LOGE("Cannot load \"{}.j2v\" - Invalid signature", path);
+		return false;
+	}
+
+	bool Cinematics::LoadLegacyVideo(std::unique_ptr<Stream>&& s, StringView path)
+	{
+		_nativeFormat = false;
 
 		_width = s->ReadValueAsLE<std::uint32_t>();
 		_height = s->ReadValueAsLE<std::uint32_t>();
@@ -195,20 +216,46 @@ namespace Jazz2::UI
 
 #if defined(DEATH_TARGET_DREAMCAST)
 		// The 200 MHz SH-4 cannot move the ~4 MB per frame that a full-resolution upload needs (palette
-		// apply, texture copy, then the conversion and twiddling into video memory)
-		_videoDownscale = 2;
+		// apply, texture copy, then the conversion and twiddling into video memory). Videos that were already
+		// downscaled offline by the AssetPacker are played as they are - halving them twice would throw away
+		// detail the platform can afford to show.
+		_videoDownscale = (_width > 400 ? 2 : 1);
 #else
 		_videoDownscale = 1;
 #endif
 		_textureWidth = _width / _videoDownscale;
 		_textureHeight = _height / _videoDownscale;
 
-		_textures[0] = std::make_unique<Texture>("Cinematics", Texture::Format::RGBA8, _textureWidth, _textureHeight);
-		_textures[1] = std::make_unique<Texture>("Cinematics", Texture::Format::RGBA8, _textureWidth, _textureHeight);
+		// Frames are palette indices. Where the hardware can sample those directly they are uploaded as they
+		// are; where a paletted texture would have to be twiddled every frame they are converted instead (see
+		// _convertTo565).
+#if defined(DEATH_TARGET_DREAMCAST)
+		_convertTo565 = true;
+#else
+		_convertTo565 = false;
+#endif
+		_indexedUpload = !_convertTo565;
+		const Texture::Format textureFormat = (_convertTo565 ? Texture::Format::RGB565 : Texture::Format::R8);
+		_textures[0] = std::make_unique<Texture>("Cinematics", textureFormat, _textureWidth, _textureHeight);
+		_textures[1] = std::make_unique<Texture>("Cinematics", textureFormat, _textureWidth, _textureHeight);
+		_textures[0]->SetMinFiltering(SamplerFilter::Nearest);
+		_textures[0]->SetMagFiltering(SamplerFilter::Nearest);
+		_textures[1]->SetMinFiltering(SamplerFilter::Nearest);
+		_textures[1]->SetMagFiltering(SamplerFilter::Nearest);
+		_paletteTexture = std::make_unique<Texture>("CinematicsPalette", Texture::Format::RGBA8, 256, 1);
+		_paletteTexture->SetMinFiltering(SamplerFilter::Nearest);
+		_paletteTexture->SetMagFiltering(SamplerFilter::Nearest);
+		_paletteTexture->SetWrap(SamplerWrapping::ClampToEdge);
+		_paletteDirty = true;
 		_textureIndex = 0;
 		_buffer = std::make_unique<std::uint8_t[]>(_width * _height);
 		_lastBuffer = std::make_unique<std::uint8_t[]>(_width * _height);
-		_currentFrame = std::make_unique<std::uint32_t[]>(_textureWidth * _textureHeight);
+		if (_videoDownscale > 1) {
+			_indexedFrame = std::make_unique<std::uint8_t[]>(_textureWidth * _textureHeight);
+		}
+		if (_convertTo565) {
+			_frame565 = std::make_unique<std::uint16_t[]>(_textureWidth * _textureHeight);
+		}
 
 		// Build the chunk index of the 4 interleaved compressed streams - only chunk positions are kept
 		// and the data is read from the file on demand while the video plays, so the whole video never
@@ -240,11 +287,240 @@ namespace Jazz2::UI
 
 		_videoFile = std::move(s);
 
-		LOGI("Playing cinematic \"{}.j2v\" ({}x{}, {} frames)", path, _width, _height, _framesLeft);
+		LOGI("Playing cinematic \"{}.j2v\" ({}x{}, {} frames, original format)", path, _width, _height, _framesLeft);
 
 		LoadSfxList(path);
 
 		return true;
+	}
+
+	bool Cinematics::LoadNativeVideo(std::unique_ptr<Stream>&& s, StringView path)
+	{
+		_nativeFormat = true;
+
+		std::uint16_t version = s->ReadValueAsLE<std::uint16_t>();
+		if (version > VideoFormat::CurrentVersion) {
+			LOGE("Cannot load \"{}.j2v\" - Version {} is newer than supported", path, version);
+			return false;
+		}
+
+		_width = s->ReadValueAsLE<std::uint16_t>();
+		_height = s->ReadValueAsLE<std::uint16_t>();
+		_frameDelay = s->ReadValueAsLE<std::uint16_t>() / (FrameTimer::SecondsPerFrame * 1000);
+		_framesLeft = std::int32_t(s->ReadValueAsLE<std::uint32_t>());
+		std::uint8_t pixelFormat = s->ReadValue<std::uint8_t>();
+		std::uint8_t codec = s->ReadValue<std::uint8_t>();
+		// Anything the writer added beyond what this build knows about is skipped
+		std::uint16_t extensionSize = s->ReadValueAsLE<std::uint16_t>();
+		if (extensionSize > 0) {
+			s->Seek(extensionSize, SeekOrigin::Current);
+		}
+
+		if (pixelFormat != VideoFormat::PixelFormatIndexed8 || codec != VideoFormat::CodecDeltaRle) {
+			LOGE("Cannot load \"{}.j2v\" - Unsupported pixel format {} or codec {}", path, pixelFormat, codec);
+			return false;
+		}
+		if (_width == 0 || _height == 0 || _framesLeft <= 0) {
+			LOGE("Cannot load \"{}.j2v\" - Unexpected dimensions", path);
+			return false;
+		}
+
+		// Frames are already stored at the size they are shown at, so nothing is downscaled here
+		_videoDownscale = 1;
+		_textureWidth = _width;
+		_textureHeight = _height;
+
+		// Frames are palette indices. Where the hardware can sample those directly they are uploaded as they
+		// are; where a paletted texture would have to be twiddled every frame they are converted instead (see
+		// _convertTo565).
+#if defined(DEATH_TARGET_DREAMCAST)
+		_convertTo565 = true;
+#else
+		_convertTo565 = false;
+#endif
+		_indexedUpload = !_convertTo565;
+		const Texture::Format textureFormat = (_convertTo565 ? Texture::Format::RGB565 : Texture::Format::R8);
+		_textures[0] = std::make_unique<Texture>("Cinematics", textureFormat, _textureWidth, _textureHeight);
+		_textures[1] = std::make_unique<Texture>("Cinematics", textureFormat, _textureWidth, _textureHeight);
+		_textures[0]->SetMinFiltering(SamplerFilter::Nearest);
+		_textures[0]->SetMagFiltering(SamplerFilter::Nearest);
+		_textures[1]->SetMinFiltering(SamplerFilter::Nearest);
+		_textures[1]->SetMagFiltering(SamplerFilter::Nearest);
+		_paletteTexture = std::make_unique<Texture>("CinematicsPalette", Texture::Format::RGBA8, 256, 1);
+		_paletteTexture->SetMinFiltering(SamplerFilter::Nearest);
+		_paletteTexture->SetMagFiltering(SamplerFilter::Nearest);
+		_paletteTexture->SetWrap(SamplerWrapping::ClampToEdge);
+		_paletteDirty = true;
+		_textureIndex = 0;
+		_buffer = std::make_unique<std::uint8_t[]>(_width * _height);
+		_lastBuffer = std::make_unique<std::uint8_t[]>(_width * _height);
+		if (_videoDownscale > 1) {
+			_indexedFrame = std::make_unique<std::uint8_t[]>(_textureWidth * _textureHeight);
+		}
+		if (_convertTo565) {
+			_frame565 = std::make_unique<std::uint16_t[]>(_textureWidth * _textureHeight);
+		}
+		std::memset(_buffer.get(), 0, _width * _height);
+
+		_framePayloadCapacity = 0;
+		// Over-allocated so the buffer itself can start on an aligned address
+		_blockAllocation = std::make_unique<std::uint8_t[]>(VideoBlockCapacity + VideoBlockAlignment);
+		_blockBuffer = reinterpret_cast<std::uint8_t*>(
+			(reinterpret_cast<std::uintptr_t>(_blockAllocation.get()) + VideoBlockAlignment - 1)
+				& ~std::uintptr_t(VideoBlockAlignment - 1));
+		_blockSize = 0;
+		_blockOffset = 0;
+		_blockFilePosition = s->GetPosition();
+		_videoFile = std::move(s);
+
+		LOGI("Playing cinematic \"{}.j2v\" ({}x{}, {} frames)", path, _width, _height, _framesLeft);
+		return true;
+	}
+
+	bool Cinematics::EnsureBuffered(std::uint32_t bytes)
+	{
+		if (_blockSize - _blockOffset >= bytes) {
+			return true;
+		}
+		if (bytes > VideoBlockCapacity - VideoBlockAlignment) {
+			return false;
+		}
+
+		// The Dreamcast's disc driver only transfers by DMA when both the destination and the position within
+		// the file are 32 byte aligned (it checks `ptr & 31`), and falls back to PIO otherwise - which is
+		// slower by orders of magnitude and turns each refill into a multi-second stall. So the block always
+		// starts at an aligned offset in the file and is read into an aligned buffer, with whatever part of
+		// the current frame precedes that offset simply re-read. Nothing is carried over, which also keeps
+		// the destination aligned - a memmove'd remainder would push it off again.
+		std::int64_t wanted = _blockFilePosition + _blockOffset;
+		std::int64_t aligned = wanted & ~std::int64_t(VideoBlockAlignment - 1);
+
+		_videoFile->Seek(aligned, SeekOrigin::Begin);
+		std::int32_t bytesRead = _videoFile->Read(_blockBuffer, VideoBlockCapacity);
+		_blockFilePosition = aligned;
+		_blockSize = (bytesRead > 0 ? std::uint32_t(bytesRead) : 0);
+		_blockOffset = std::uint32_t(wanted - aligned);
+		return (_blockSize > _blockOffset && _blockSize - _blockOffset >= bytes);
+	}
+
+	void Cinematics::DecodeFrameNative()
+	{
+		// One length-prefixed payload per frame, served out of the read-ahead block
+		if (!EnsureBuffered(4)) {
+			_decodingFailed = true;
+			return;
+		}
+
+		const std::uint8_t* sizeBytes = _blockBuffer + _blockOffset;
+		std::uint32_t payloadSize = std::uint32_t(sizeBytes[0]) | (std::uint32_t(sizeBytes[1]) << 8)
+			| (std::uint32_t(sizeBytes[2]) << 16) | (std::uint32_t(sizeBytes[3]) << 24);
+		_blockOffset += 4;
+		if (payloadSize == 0 || payloadSize > 8 * 1024 * 1024) {
+			_decodingFailed = true;
+			return;
+		}
+
+		const std::uint8_t* payload;
+		if (payloadSize <= VideoBlockCapacity) {
+			if (!EnsureBuffered(payloadSize)) {
+				_decodingFailed = true;
+				return;
+			}
+			// Decoded straight out of the block, so there is no per-frame copy at all
+			payload = _blockBuffer + _blockOffset;
+			_blockOffset += payloadSize;
+		} else {
+			// Only a corrupted file could hold a frame larger than the whole block
+			if (payloadSize > _framePayloadCapacity) {
+				_framePayload = std::make_unique<std::uint8_t[]>(payloadSize);
+				_framePayloadCapacity = payloadSize;
+			}
+			if (_videoFile->Read(_framePayload.get(), payloadSize) != std::int32_t(payloadSize)) {
+				_decodingFailed = true;
+				return;
+			}
+			payload = _framePayload.get();
+		}
+
+		const std::uint8_t* DEATH_RESTRICT src = payload;
+		const std::uint8_t* const srcEnd = src + payloadSize;
+
+		if ((*src++ & VideoFormat::FrameFlagPalette) != 0) {
+			if (src + sizeof(_palette) > srcEnd) {
+				_decodingFailed = true;
+				return;
+			}
+			std::memcpy(_palette, src, sizeof(_palette));
+			src += sizeof(_palette);
+			_paletteDirty = true;
+		}
+
+		// Skipped spans need no work at all: the buffer still holds the previous frame
+		std::uint8_t* DEATH_RESTRICT dst = _buffer.get();
+		std::uint8_t* const dstEnd = dst + std::size_t(_width) * _height;
+
+		while (src < srcEnd) {
+			const std::uint8_t command = *src++;
+			if (command == VideoFormat::CommandEndOfFrame) {
+				break;
+			}
+
+			std::int32_t length;
+			if (command <= VideoFormat::CommandLiteralMax) {
+				length = command + 1;
+				if (src + length > srcEnd || dst + length > dstEnd) {
+					break;
+				}
+				std::memcpy(dst, src, std::size_t(length));
+				src += length;
+				dst += length;
+			} else if (command <= VideoFormat::CommandRunMax) {
+				length = command - VideoFormat::CommandRunBase + VideoFormat::CommandRunMinLength;
+				if (src >= srcEnd || dst + length > dstEnd) {
+					break;
+				}
+				std::memset(dst, *src++, std::size_t(length));
+				dst += length;
+			} else if (command <= VideoFormat::CommandSkipMax) {
+				dst += command - VideoFormat::CommandSkipBase + 1;
+			} else if (command == VideoFormat::CommandSkipLong) {
+				if (src + 2 > srcEnd) {
+					break;
+				}
+				length = src[0] | (src[1] << 8);
+				src += 2;
+				dst += length;
+			} else if (command == VideoFormat::CommandLiteralLong) {
+				if (src + 2 > srcEnd) {
+					break;
+				}
+				length = src[0] | (src[1] << 8);
+				src += 2;
+				if (src + length > srcEnd || dst + length > dstEnd) {
+					break;
+				}
+				std::memcpy(dst, src, std::size_t(length));
+				src += length;
+				dst += length;
+			} else if (command == VideoFormat::CommandRunLong) {
+				if (src + 3 > srcEnd) {
+					break;
+				}
+				length = src[0] | (src[1] << 8);
+				src += 2;
+				if (dst + length > dstEnd) {
+					break;
+				}
+				std::memset(dst, *src++, std::size_t(length));
+				dst += length;
+			} else {
+				break;
+			}
+
+			if (dst > dstEnd) {
+				break;
+			}
+		}
 	}
 
 	bool Cinematics::LoadSfxList(StringView path)
@@ -264,7 +540,7 @@ namespace Jazz2::UI
 		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		std::uint16_t version = s->ReadValueAsLE<std::uint16_t>();
-		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentResolver::SfxListFile || version > SfxListVersion) {
+		if (signature != 0x2095A59FF0BFBBEF || fileType != ContentFileType::SfxList || version > SfxListVersion) {
 			LOGE("Cannot load SFX playlist for \"{}.j2v\" - Invalid signature", path);
 			return false;
 		}
@@ -302,9 +578,31 @@ namespace Jazz2::UI
 
 	void Cinematics::PrepareNextFrame(bool prepareTexture)
 	{
+		if (_nativeFormat) {
+			DecodeFrameNative();
+		} else {
+			DecodeFrameLegacy();
+		}
+
+		if (_paletteDirty) {
+			_paletteDirty = false;
+			std::memcpy(_uploadPalette, _palette, sizeof(_uploadPalette));
+			_paletteTextureDirty = true;
+		}
+
+		if (prepareTexture) {
+			ApplyPaletteAndUpload(_buffer.get());
+		}
+
+		PlayFrameSounds();
+	}
+
+	void Cinematics::DecodeFrameLegacy()
+	{
 		// Check if palette was changed
 		if (ReadByte(0) == 0x01) {
 			Read(3, _palette, sizeof(_palette));
+			_paletteDirty = true;
 		}
 
 		// Read pixels into the buffer. Both kinds of run are copied in one go rather than a pixel at a
@@ -350,29 +648,61 @@ namespace Jazz2::UI
 
 		// Keep a copy of this frame; the next one is encoded as changes against it
 		std::memcpy(_lastBuffer.get(), _buffer.get(), _width * _height);
+	}
 
-		if (prepareTexture) {
-			// Apply current palette to indices, picking up every n-th pixel of every n-th row
-			if (_videoDownscale == 1) {
-				for (std::int32_t i = 0; i < _width * _height; i++) {
-					_currentFrame[i] = _palette[_buffer[i]];
+	void Cinematics::ApplyPaletteAndUpload(const std::uint8_t* indices)
+	{
+		// The palette only changes on a few frames, and it is a single 256 entry row
+		if (_paletteTextureDirty) {
+			_paletteTextureDirty = false;
+			if (_convertTo565) {
+				// Packed once here, so converting a frame is a lookup and a 16-bit store per pixel
+				for (std::int32_t i = 0; i < 256; i++) {
+					const std::uint32_t color = _uploadPalette[i];
+					_palette565[i] = std::uint16_t((((color >> 3) & 0x1F) << 11)
+						| ((((color >> 8) >> 2) & 0x3F) << 5) | (((color >> 16) >> 3) & 0x1F));
 				}
 			} else {
-				const std::uint32_t step = _videoDownscale;
-				std::uint32_t* dst = _currentFrame.get();
-				for (std::uint32_t y = 0; y < _textureHeight; y++) {
-					const std::uint8_t* src = &_buffer[y * step * _width];
-					for (std::uint32_t x = 0; x < _textureWidth; x++) {
-						*dst++ = _palette[src[x * step]];
-					}
+				std::uint32_t opaquePalette[256];
+				for (std::int32_t i = 0; i < 256; i++) {
+					// Videos are opaque; entry 0 of a sprite palette is transparent, which must not apply here
+					opaquePalette[i] = _uploadPalette[i] | 0xFF000000u;
 				}
+				_paletteTexture->LoadFromTexels((std::uint8_t*)opaquePalette, 0, 0, 256, 1);
 			}
-
-			// Upload new texture to GPU (into the buffer the GPU is not currently sampling)
-			_textureIndex ^= 1;
-			_textures[_textureIndex]->LoadFromTexels((std::uint8_t*)_currentFrame.get(), 0, 0, _textureWidth, _textureHeight);
 		}
 
+		// The indices go to the GPU as they are - no palette is applied on the CPU at all. Only a video that
+		// is still larger than its texture needs a pass here, and even that one just picks every n-th index.
+		const std::uint8_t* texels = indices;
+		if (_videoDownscale > 1) {
+			const std::uint32_t step = _videoDownscale;
+			std::uint8_t* dst = _indexedFrame.get();
+			for (std::uint32_t y = 0; y < _textureHeight; y++) {
+				const std::uint8_t* src = &indices[y * step * _width];
+				for (std::uint32_t x = 0; x < _textureWidth; x++) {
+					*dst++ = src[x * step];
+				}
+			}
+			texels = _indexedFrame.get();
+		}
+
+		if (_convertTo565) {
+			const std::int32_t count = _textureWidth * _textureHeight;
+			std::uint16_t* DEATH_RESTRICT dst = _frame565.get();
+			for (std::int32_t i = 0; i < count; i++) {
+				dst[i] = _palette565[texels[i]];
+			}
+			texels = reinterpret_cast<const std::uint8_t*>(_frame565.get());
+		}
+
+		// Upload new texture to GPU (into the buffer the GPU is not currently sampling)
+		_textureIndex ^= 1;
+		_textures[_textureIndex]->LoadFromTexels(texels, 0, 0, _textureWidth, _textureHeight);
+	}
+
+	void Cinematics::PlayFrameSounds()
+	{
 #if defined(WITH_AUDIO)
 		for (std::size_t i = 0; i < _sfxPlaylist.size(); i++) {
 			if (_sfxPlaylist[i].Frame == _frameIndex) {
@@ -494,7 +824,8 @@ namespace Jazz2::UI
 	{
 		// Prepare output render command
 		_renderCommand.SetType(RenderCommand::Type::Sprite);
-		_renderCommand.GetMaterial().SetShaderProgramType(Material::ShaderProgramType::Sprite);
+		// Indexed frames are sampled through the palette; converted ones are plain textures
+		ContentResolver::Get().ConfigureSpriteShader(_renderCommand, !_owner->_convertTo565);
 		_renderCommand.GetMaterial().ReserveUniformsDataMemory();
 		_renderCommand.GetGeometry().SetDrawParameters(PrimitiveType::TriangleStrip, 0, 4);
 
@@ -537,7 +868,13 @@ namespace Jazz2::UI
 		instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
 
 		_renderCommand.SetTransformation(Matrix4x4f::Translation(frameOffset.X, frameOffset.Y, 0.0f));
-		_renderCommand.GetMaterial().SetTexture(*_owner->_textures[_owner->_textureIndex]);
+		_renderCommand.GetMaterial().SetTexture(0, *_owner->_textures[_owner->_textureIndex]);
+		if (!_owner->_convertTo565) {
+			_renderCommand.GetMaterial().SetTexture(1, *_owner->_paletteTexture);
+			if (auto* palOffset = instanceBlock->GetUniform(Material::PaletteOffsetUniformName)) {
+				palOffset->SetFloatValue(0.0f);
+			}
+		}
 
 		renderQueue.AddCommand(&_renderCommand);
 

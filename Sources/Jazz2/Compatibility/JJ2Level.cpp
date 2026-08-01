@@ -1,9 +1,9 @@
 ﻿#include "JJ2Level.h"
 #include "JJ2Strings.h"
 #include "EventConverter.h"
-#include "../ContentResolver.h"
+#include "../ContentFileTypes.h"
 #include "../LevelFlags.h"
-#include "../Tiles/TileMap.h"
+#include "../Tiles/LayerTypes.h"
 
 #include "../../nCine/Base/Algorithms.h"
 
@@ -13,6 +13,7 @@
 #include <IO/FileSystem.h>
 #include <IO/Compression/DeflateStream.h>
 
+using namespace Death::Containers::Literals;
 using namespace Death::IO;
 using namespace Death::IO::Compression;
 
@@ -598,7 +599,7 @@ namespace Jazz2::Compatibility
 		DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );
 
 		so->WriteValueAsLE<uint64_t>(0x2095A59FF0BFBBEF);
-		so->WriteValue<uint8_t>(ContentResolver::LevelFile);
+		so->WriteValue<uint8_t>(ContentFileType::Level);
 
 		// Preprocess events first, so they can change some level properties
 		bool hasMultiplayerSpawnPoints = false;

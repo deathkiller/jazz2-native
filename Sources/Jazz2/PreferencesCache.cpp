@@ -297,7 +297,7 @@ namespace Jazz2
 				std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 				std::uint8_t version = s->ReadValue<std::uint8_t>();
 
-				if (signature == 0x2095A59FF0BFBBEF && fileType == ContentResolver::ConfigFile && version <= FileVersion) {
+				if (signature == 0x2095A59FF0BFBBEF && fileType == ContentFileType::Config && version <= FileVersion) {
 					if (version == 1) {
 						// Version 1 included compressedSize and decompressedSize, it's not needed anymore
 						/*std::int32_t compressedSize =*/ s->ReadValue<std::int32_t>();
@@ -635,7 +635,7 @@ namespace Jazz2
 		}
 
 		so->WriteValueAsLE<std::uint64_t>(0x2095A59FF0BFBBEF);
-		so->WriteValue<std::uint8_t>(ContentResolver::ConfigFile);
+		so->WriteValue<std::uint8_t>(ContentFileType::Config);
 		so->WriteValue<std::uint8_t>(FileVersion);
 
 		DeflateWriter co(*so);

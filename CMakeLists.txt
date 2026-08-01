@@ -150,6 +150,34 @@ endforeach()
 
 target_sources(${NCINE_APP} PRIVATE ${SOURCES} ${HEADERS} ${GENERATED_SOURCES})
 
+# AssetPacker: converts original game data ahead of time (see Sources/AssetPacker/Main.cpp). Host-only - it is
+# a build tool, so it is skipped for every cross-compiled target, and it links only the base layer and the
+# converters rather than the engine.
+option(NCINE_BUILD_ASSET_PACKER "Build the offline AssetPacker tool" ON)
+if(NCINE_BUILD_ASSET_PACKER AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT EMSCRIPTEN AND NOT NINTENDO_SWITCH
+		AND NOT VITA AND NOT PLATFORM_DREAMCAST AND NOT NINTENDO_WII AND NOT NINTENDO_GAMECUBE
+		AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT NCINE_BUILD_LIBRETRO)
+	# The packer does no networking, and WebRequest would drag in libcurl for nothing
+	set(ASSET_PACKER_SOURCES ${SHARED_SOURCES})
+	list(REMOVE_ITEM ASSET_PACKER_SOURCES ${NCINE_SOURCE_DIR}/Shared/IO/WebRequest.cpp)
+
+	add_executable(AssetPacker
+		${NCINE_SOURCE_DIR}/AssetPacker/Main.cpp
+		${ASSET_PACKER_SOURCES}
+		${CONVERTER_SOURCES})
+	target_include_directories(AssetPacker PRIVATE ${NCINE_SOURCE_DIR} ${NCINE_SOURCE_DIR}/Shared ${NCINE_SOURCE_DIR}/Dependencies)
+	# The same version the game reports, so the index it writes is not seen as coming from a different build
+	target_compile_definitions(AssetPacker PRIVATE "CMAKE_BUILD" "DEATH_NO_THREADS" "DEATH_TRACE" "NCINE_VERSION=\"${NCINE_VERSION}\"")
+	set_target_properties(AssetPacker PROPERTIES CXX_STANDARD 20)
+	if(TARGET ZLIB::ZLIB)
+		target_link_libraries(AssetPacker PRIVATE ZLIB::ZLIB)
+		target_compile_definitions(AssetPacker PRIVATE "WITH_ZLIB")
+	endif()
+	if(TARGET Threads::Threads)
+		target_link_libraries(AssetPacker PRIVATE Threads::Threads)
+	endif()
+endif()
+
 # Windows RT uses custom packaging, enable it only for other platforms
 if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH AND NOT VITA AND NOT NCINE_BUILD_LIBRETRO)
 	include(ncine_installation)

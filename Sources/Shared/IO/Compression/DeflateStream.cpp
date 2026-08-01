@@ -115,6 +115,13 @@ namespace Death { namespace IO { namespace Compression {
 			std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? (std::int32_t)bytesToRead : INT32_MAX);
 			std::int32_t bytesRead = ReadInternal(&typedBuffer[bytesReadTotal], partialBytesToRead);
 			if DEATH_UNLIKELY(bytesRead < 0) {
+				// Whatever was already decompressed into the caller's buffer is returned rather than thrown
+				// away with the error: a stream that ends without its end marker fails on the very call that
+				// gathers its final bytes, and reporting the failure here would lose them. The state stays
+				// Failed, so the error surfaces on the next call instead.
+				if (bytesReadTotal > 0) {
+					break;
+				}
 				return bytesRead;
 			} else if DEATH_UNLIKELY(bytesRead == 0) {
 				break;
@@ -214,22 +221,35 @@ namespace Death { namespace IO { namespace Compression {
 		_strm.next_out = (std::uint8_t*)ptr;
 		_strm.avail_out = size;
 
-		std::int32_t res = inflate(&_strm, Z_NO_FLUSH);
+		// Z_SYNC_FLUSH rather than Z_NO_FLUSH: with the latter zlib may hold decompressed data back while it
+		// waits for enough input to finish a block, and a stream that simply stops (truncated, or one of the
+		// several streams interleaved) then never gives up its last few kilobytes.
+		std::int32_t res = inflate(&_strm, Z_SYNC_FLUSH);
 
 		// If input buffer is empty, fill it and try it again
 		if (res == Z_BUF_ERROR && _strm.avail_in == 0 && FillInputBuffer()) {
-			res = inflate(&_strm, Z_NO_FLUSH);
+			res = inflate(&_strm, Z_SYNC_FLUSH);
 		}
+
+		// Whatever this call already decompressed is kept even when it then fails: a truncated stream (one
+		// that simply stops, without an end marker) reports the error on the very call that produces its
+		// final bytes, and returning the failure straight away would discard them. The error is reported on
+		// the next call instead, because the state stays Failed.
+		const std::int32_t produced = size - std::int32_t(_strm.avail_out);
 
 		if (res != Z_OK && res != Z_STREAM_END) {
 			CeaseReading();
 			_state = State::Failed;
 #if defined(DEATH_TRACE_VERBOSE_IO)
-			LOGE("Failed to inflate compressed stream with error {}", res);
+			if (produced <= 0) {
+				LOGE("Failed to inflate compressed stream with error {}", res);
+			} else {
+				LOGD("Compressed stream ended prematurely with error {} after {} bytes", res, produced);
+			}
 #endif
-			return Stream::Invalid;
+			return (produced > 0 ? produced : Stream::Invalid);
 		}
-		size -= _strm.avail_out;
+		size = produced;
 
 		if (res == Z_STREAM_END && !CeaseReading()) {
 			return Stream::Invalid;

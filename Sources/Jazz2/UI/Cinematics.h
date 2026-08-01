@@ -125,7 +125,6 @@ namespace Jazz2::UI
 		std::int32_t _textureIndex;
 		std::unique_ptr<std::uint8_t[]> _buffer;
 		std::unique_ptr<std::uint8_t[]> _lastBuffer;
-		std::unique_ptr<std::uint32_t[]> _currentFrame;
 		std::uint32_t _palette[256];
 		
 		/**
@@ -219,6 +218,71 @@ namespace Jazz2::UI
 		Compression::DeflateStream _decompressedStreams[4];
 		StreamBuffer _streamBuffers[4];
 
+		/** @brief Set when the file uses the game's own format instead of the original one */
+		bool _nativeFormat;
+		/**
+			@brief Set when frames are uploaded as palette indices instead of expanded to texels
+
+			Saves both the per-pixel palette lookup and three quarters of the upload - the palette is applied
+			by the sampler through @ref _paletteTexture instead.
+		*/
+		bool _indexedUpload;
+		/**
+			@brief Whether the frames are converted to RGB565 on the CPU instead of uploaded as indices
+
+			Indexed frames are the cheaper choice wherever the hardware can sample them as they are, but the
+			PowerVR only supports paletted textures in its twiddled layout, so every upload would pay for a
+			bit-interleave over the whole (power-of-two padded) surface - measured at some 36 ms per frame,
+			more than everything else in a frame put together. Converting to RGB565 instead keeps the upload
+			a plain row copy, and a 16-bit palette makes the conversion one lookup and one store per pixel.
+		*/
+		bool _convertTo565;
+		std::unique_ptr<std::uint16_t[]> _frame565;
+		std::uint16_t _palette565[256];
+
+		/** @brief 256x1 palette the indexed frames are sampled through */
+		std::unique_ptr<nCine::Texture> _paletteTexture;
+		/** @brief Downscaled indices, only needed when the frames are larger than the texture */
+		std::unique_ptr<std::uint8_t[]> _indexedFrame;
+		/**
+			@brief Palette the decoder is currently using
+
+			Owned by whoever decodes - which is the prefetch thread when one is running, so the main thread
+			never touches it. Frames carry their palette along, and the main thread keeps its own copy below.
+		*/
+		bool _paletteDirty;
+		std::uint32_t _uploadPalette[256];
+		bool _paletteTextureDirty;
+
+		/** @brief Scratch buffer for a frame whose payload does not fit in the block buffer (never happens in practice) */
+		std::unique_ptr<std::uint8_t[]> _framePayload;
+		std::uint32_t _framePayloadCapacity;
+
+		/**
+			@brief Sequential read-ahead buffer for the native format
+
+			Each frame is only a few kilobytes, and asking the drive for them one at a time is dominated by
+			per-request overhead - measured at 58 ms per frame on average with spikes past half a second, far
+			more than the transfer itself. Reading in large blocks amortizes that: one request covers several
+			seconds of video, and the frames are then served from memory.
+		*/
+		static constexpr std::uint32_t VideoBlockCapacity =
+#if defined(DEATH_TARGET_DREAMCAST)
+			1024 * 1024;
+#else
+			256 * 1024;
+#endif
+		/** @brief Alignment both the destination and the file offset need for the DMA path (see EnsureBuffered) */
+		static constexpr std::uint32_t VideoBlockAlignment = 32;
+		std::unique_ptr<std::uint8_t[]> _blockAllocation;
+		std::uint8_t* _blockBuffer;
+		std::uint32_t _blockSize;
+		std::uint32_t _blockOffset;
+		std::int64_t _blockFilePosition;
+
+		/** @brief Makes sure at least @p bytes are buffered, refilling from the file when needed */
+		bool EnsureBuffered(std::uint32_t bytes);
+
 		BitArray _pressedKeys;
 		std::uint32_t _pressedActions;
 		bool _decodingFailed;
@@ -227,6 +291,16 @@ namespace Jazz2::UI
 		bool LoadCinematicsFromFile(StringView path);
 		bool LoadSfxList(StringView path);
 		void PrepareNextFrame(bool prepareTexture = true);
+		bool LoadLegacyVideo(std::unique_ptr<Stream>&& s, StringView path);
+		bool LoadNativeVideo(std::unique_ptr<Stream>&& s, StringView path);
+		/** @brief Decodes one frame of the original format into @ref _buffer */
+		void DecodeFrameLegacy();
+		/** @brief Decodes one frame of the game's own format into @ref _buffer */
+		void DecodeFrameNative();
+		/** @brief Uploads the given indices, and the palette if it changed */
+		void ApplyPaletteAndUpload(const std::uint8_t* indices);
+		/** @brief Starts any sounds scheduled for the current frame */
+		void PlayFrameSounds();
 		void Read(std::int32_t streamIndex, void* buffer, std::uint32_t bytes);
 		/** @brief Discards the given number of bytes of a stream */
 		void Skip(std::int32_t streamIndex, std::uint32_t bytes);

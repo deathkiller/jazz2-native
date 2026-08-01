@@ -149,6 +149,7 @@ namespace nCine::RHI::PVR
 		switch (format) {
 			case PixelFormat::R8: return 1;
 			case PixelFormat::RG8: return 2;
+			case PixelFormat::RGB565: return 2;
 			case PixelFormat::RGB8: return 3;
 			case PixelFormat::RGBA8: return 4;
 			default: return 0;
@@ -198,6 +199,30 @@ namespace nCine::RHI::PVR
 			}
 			pvr_txr_load_ex(staging.data(), vram_, std::uint32_t(paddedWidth_), std::uint32_t(paddedHeight_), PVR_TXRLOAD_8BPP);
 			vramFormat_ = PVR_TXRFMT_PAL8BPP | PVR_TXRFMT_TWIDDLED;
+		} else if (uploadFormat_ == PixelFormat::RGB565) {
+			// Already in a format the hardware samples directly, so the rows go straight into video memory -
+			// no conversion and no twiddling. This is the cheap path for textures that are replaced every
+			// frame (the cinematic player), where a twiddle would cost more than the whole upload.
+			const std::size_t size = std::size_t(paddedWidth_) * std::size_t(paddedHeight_) * 2;
+			if (vram_ == nullptr) {
+				vram_ = AllocateVram(size, this);
+				if (vram_ == nullptr) {
+					LOGE("Out of PVR memory allocating {} B (RGB565 {}x{})", size, paddedWidth_, paddedHeight_);
+					return;
+				}
+			}
+
+			std::uint16_t* dst = static_cast<std::uint16_t*>(vram_);
+			const std::uint16_t* src = reinterpret_cast<const std::uint16_t*>(pixels_.data());
+			if (paddedWidth_ == width_) {
+				std::memcpy(dst, src, std::size_t(width_) * height_ * 2);
+			} else {
+				for (std::int32_t y = 0; y < height_; y++) {
+					std::memcpy(dst + std::size_t(y) * paddedWidth_, src + std::size_t(y) * (strideBytes_ / 2),
+						std::size_t(width_) * 2);
+				}
+			}
+			vramFormat_ = PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED;
 		} else if (uploadFormat_ == PixelFormat::RGB8 || uploadFormat_ == PixelFormat::RGBA8) {
 			// True-color converts to twiddled ARGB4444 (the PVR has no 32-bit sampled format)
 			const std::size_t size = std::size_t(paddedWidth_) * std::size_t(paddedHeight_) * 2;

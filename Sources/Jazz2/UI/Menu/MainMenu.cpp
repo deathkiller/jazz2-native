@@ -23,6 +23,18 @@ using namespace Jazz2::UI::Menu::Resources;
 
 namespace Jazz2::UI::Menu
 {
+	namespace
+	{
+		// The menu's animated background is the same per-pixel procedural effect the level's "Sky" layer
+		// uses (see TileMap.cpp). The GX (Wii/GameCube) and PVR (Dreamcast) backends have no programmable
+		// stage, so it is drawn as a flat repeating tilemap instead - see RenderTexturedBackgroundAsTilemap().
+#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+		constexpr bool SupportsTexturedBackground = false;
+#else
+		constexpr bool SupportsTexturedBackground = true;
+#endif
+	}
+
 	MainMenu::MainMenu(IRootController* root, bool afterIntro)
 		: _root(root), _transitionWhite(afterIntro ? 1.0f : 0.0f),
 			_logoTransition(0.0f), _texturedBackgroundPass(this), _texturedBackgroundPhase(0.0f),
@@ -182,7 +194,10 @@ namespace Jazz2::UI::Menu
 		_canvasClipped->setParent(_upscalePass.GetClippedNode());
 		_canvasOverlay->setParent(_upscalePass.GetOverlayNode());
 
-		_texturedBackgroundPass.Initialize();
+		if (SupportsTexturedBackground) {
+			// Skipped entirely when unsupported, which also saves the pass's render target
+			_texturedBackgroundPass.Initialize();
+		}
 	}
 
 	void MainMenu::OnKeyPressed(const KeyboardEvent& event)
@@ -232,7 +247,11 @@ namespace Jazz2::UI::Menu
 		_owner->_activeCanvas = ActiveCanvas::Background;
 
 		if (PreferencesCache::EnableReforgedMainMenu || !_owner->RenderLegacyBackground(renderQueue)) {
-			_owner->RenderTexturedBackground(renderQueue);
+			if (SupportsTexturedBackground) {
+				_owner->RenderTexturedBackground(renderQueue);
+			} else {
+				_owner->RenderTexturedBackgroundAsTilemap(renderQueue);
+			}
 		}
 
 		Vector2i center = ViewSize / 2;
@@ -656,6 +675,83 @@ namespace Jazz2::UI::Menu
 
 		_preset = preset;
 		return true;
+	}
+
+	void MainMenu::RenderTexturedBackgroundAsTilemap(RenderQueue& renderQueue)
+	{
+		// Flat stand-in for the procedural background on the backends without a programmable stage: the 8x8
+		// tile layout is drawn straight to the screen, repeated to cover the viewport and scrolled by the
+		// same offset the shader would have sampled with, instead of being baked into a render target and
+		// warped per pixel. The tiles are drawn at twice their size, which keeps the pattern close to the
+		// scale the warped version shows and keeps the quad count down.
+		if (_tileSet == nullptr) {
+			return;
+		}
+
+		TileMapLayer& layer = _texturedBackgroundLayer;
+		Vector2i layoutSize = layer.LayoutSize;
+		if (layoutSize.X <= 0 || layoutSize.Y <= 0 || layer.Layout == nullptr) {
+			return;
+		}
+
+		constexpr float TileScale = 2.0f;
+		constexpr float TileSize = TileSet::DefaultTileSize * TileScale;
+		Vector2f viewSize = _canvasBackground->ViewSize.As<float>();
+		float blockW = layoutSize.X * TileSize;
+		float blockH = layoutSize.Y * TileSize;
+
+		// Wrap the scroll offset into (-block, 0], so the first block always starts just off screen
+		float startX = fmodf(_texturedBackgroundPos.X * TileScale, blockW);
+		if (startX > 0.0f) {
+			startX -= blockW;
+		}
+		float startY = fmodf(_texturedBackgroundPos.Y * TileScale, blockH);
+		if (startY > 0.0f) {
+			startY -= blockH;
+		}
+
+		for (float blockY = startY; blockY < viewSize.Y; blockY += blockH) {
+			for (float blockX = startX; blockX < viewSize.X; blockX += blockW) {
+				for (std::int32_t y = 0; y < layoutSize.Y; y++) {
+					float posY = blockY + y * TileSize;
+					if (posY + TileSize <= 0.0f || posY >= viewSize.Y) {
+						continue;
+					}
+					for (std::int32_t x = 0; x < layoutSize.X; x++) {
+						float posX = blockX + x * TileSize;
+						if (posX + TileSize <= 0.0f || posX >= viewSize.X) {
+							continue;
+						}
+
+						std::int32_t tileId = layer.Layout[y * layoutSize.X + x].TileID;
+						Texture* tileTexture = _tileSet->ResolveTextureDiffuse(tileId);
+						if DEATH_UNLIKELY(tileTexture == nullptr) {
+							continue;
+						}
+
+						auto command = _canvasBackground->RentRenderCommand();
+						ContentResolver::Get().ConfigureSpriteShader(*command, _tileSet->IsIndexed);
+
+						Vector2i texSize = tileTexture->GetSize();
+						float texScaleX = TileSet::DefaultTileSize / float(texSize.X);
+						float texBiasX = ((tileId % _tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.X);
+						float texScaleY = TileSet::DefaultTileSize / float(texSize.Y);
+						float texBiasY = ((tileId / _tileSet->TilesPerRow) * (TileSet::DefaultTileSize + 2.0f) + 1.0f) / float(texSize.Y);
+
+						auto instanceBlock = command->GetInstanceBlock();
+						instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
+						instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(TileSize, TileSize);
+						instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatVector(Colorf::White.Data());
+
+						command->SetTransformation(Matrix4x4f::Translation(posX, posY, 0.0f));
+						command->SetLayer(0);
+						ContentResolver::Get().BindSpritePalette(*command, *tileTexture, _tileSet->IsIndexed, 0);
+
+						renderQueue.AddCommand(command);
+					}
+				}
+			}
+		}
 	}
 
 	void MainMenu::RenderTexturedBackground(RenderQueue& renderQueue)

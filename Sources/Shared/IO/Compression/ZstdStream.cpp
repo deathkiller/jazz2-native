@@ -136,6 +136,12 @@ namespace Death { namespace IO { namespace Compression {
 			std::int32_t partialBytesToRead = (bytesToRead < INT32_MAX ? (std::int32_t)bytesToRead : INT32_MAX);
 			std::int32_t bytesRead = ReadInternal(&typedBuffer[bytesReadTotal], partialBytesToRead);
 			if DEATH_UNLIKELY(bytesRead < 0) {
+				// Whatever was already decompressed into the caller's buffer is returned rather than thrown
+				// away with the error - a stream that ends without its end marker fails on the very call that
+				// gathers its final bytes. The state stays Failed, so the error surfaces on the next call.
+				if (bytesReadTotal > 0) {
+					break;
+				}
 				return bytesRead;
 			} else if DEATH_UNLIKELY(bytesRead == 0) {
 				break;
