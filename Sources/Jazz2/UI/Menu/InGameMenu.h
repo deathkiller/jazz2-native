@@ -1,5 +1,12 @@
 #pragma once
 
+// The in-game menu drops its "Jazz 2 Resurrection" logo where memory is tight. The logo is the only thing
+// in it that needs the medium font, and in a level nothing else does - so it would be loaded, and its
+// megabyte-sized decode buffer allocated, at the exact moment the heap is fullest: when the menu opens.
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+#	define JAZZ2_INGAME_MENU_WITHOUT_LOGO
+#endif
+
 #include "MenuContainerBase.h"
 #include "../../LevelHandler.h"
 

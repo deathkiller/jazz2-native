@@ -57,7 +57,8 @@
 #	define NCINE_HAS_VIBRATIONS
 #endif
 /** @brief Whether the current platform has non-fullscreen windows */
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_IOS) && !defined(DEATH_TARGET_SWITCH) && \
+		!defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE)
 #	define NCINE_HAS_WINDOWS
 #endif
 

@@ -95,6 +95,11 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 			});
 #endif
+#if defined(RHI_CAP_POSTPROCESSING)
+		// The dithering is a second texture sample inside the warped background shader, which the direct
+		// tier never runs: the fixed-function backends draw those layers as a flat repeating tilemap (see
+		// TileMap's SupportsTexturedBackground), and the shader itself compiles the dither sample out for
+		// the software renderer. The option would have no effect anywhere on this tier.
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Background Dithering"),
 			[]() -> StringView { return (PreferencesCache::BackgroundDithering ? _("Enabled") : _("Disabled")); },
@@ -103,6 +108,7 @@ namespace Jazz2::UI::Menu
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 			});
+#endif
 #if defined(RHI_CAP_POSTPROCESSING)
 		// Blur effects are not supported by the direct rendering tier
 		// TRANSLATORS: Menu item in Options > Graphics section
@@ -114,6 +120,9 @@ namespace Jazz2::UI::Menu
 				_isDirty = true;
 			});
 #endif
+#if defined(RHI_CAP_POSTPROCESSING)
+		// Sizes the off-screen lighting buffer of the shader lighting path (see PlayerViewport), which the
+		// direct tier does not create at all - it composites a CPU lightmap of its own instead
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Lighting Resolution"),
 			[this]() -> StringView {
@@ -143,6 +152,8 @@ namespace Jazz2::UI::Menu
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 			});
+		// Selects between the two Combine shader variants (see LevelHandler), neither of which the direct
+		// tier uses - its water is the per-row tint and wave applied by the device's software compositor
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Water Quality"),
 			[]() -> StringView { return (PreferencesCache::LowWaterQuality ? _("Low") : _("High")); },
@@ -151,6 +162,7 @@ namespace Jazz2::UI::Menu
 				_root->ApplyPreferencesChanges(ChangedPreferencesType::Graphics);
 				_isDirty = true;
 			});
+#endif
 		// TRANSLATORS: Menu item in Options > Graphics section
 		list->Add<ChoiceItem>(_("Show Player Trails"),
 			[]() -> StringView { return (PreferencesCache::ShowPlayerTrails ? _("Enabled") : _("Disabled")); },

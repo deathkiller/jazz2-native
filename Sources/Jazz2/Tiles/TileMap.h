@@ -323,6 +323,15 @@ namespace Jazz2::Tiles
 		bool IsTileTrigger(std::int32_t tx, std::int32_t ty);
 		/** @brief Returns `true` if the mask of tiles on the main (sprite) layer intersecting a given AABB is empty */
 		bool IsTileEmpty(const AABBf& aabb, TileCollisionParams& params);
+		/**
+			@brief Returns `true` if the collision mask of the main (sprite) layer is empty at a single point
+
+			A stripped-down @ref IsTileEmpty() for things small enough that one sample is all the precision
+			they need - debris in particular, which is a few pixels across but can be several hundred strong
+			after an enemy dies. It resolves one tile and tests one mask bit, skipping the covered-tile
+			iteration and the whole destructible/collapsing tile machinery that a point sample cannot use.
+		*/
+		bool IsTilePointEmpty(std::int32_t x, std::int32_t y, bool downwards);
 		/** @brief Returns `true` if tiles on the main (sprite) layer intersecting a given AABB can be destroyed */
 		bool CanBeDestroyed(const AABBf& aabb, TileCollisionParams& params);
 		/** @brief Returns suspend state of a given position */

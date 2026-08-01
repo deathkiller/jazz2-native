@@ -25,10 +25,11 @@ namespace Jazz2::UI::Menu
 {
 	namespace
 	{
-		// The menu's animated background is the same per-pixel procedural effect the level's "Sky" layer
-		// uses (see TileMap.cpp). The GX (Wii/GameCube) and PVR (Dreamcast) backends have no programmable
-		// stage, so it is drawn as a flat repeating tilemap instead - see RenderTexturedBackgroundAsTilemap().
-#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+		// The menu's animated background is the same procedural effect the level's "Sky" layer uses (see
+		// TileMap.cpp): a fragment shader on the full tier, and a band mesh on the PVR (Dreamcast) backend.
+		// The GX (Wii/GameCube) backend has no equivalent yet and draws a flat repeating tilemap instead -
+		// see RenderTexturedBackgroundAsTilemap().
+#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		constexpr bool SupportsTexturedBackground = false;
 #else
 		constexpr bool SupportsTexturedBackground = true;

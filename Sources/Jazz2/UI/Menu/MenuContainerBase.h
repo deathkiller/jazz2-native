@@ -47,6 +47,10 @@ namespace Jazz2::UI::Menu
 			return _contentBounds;
 		}
 
+		// Resolves a menu element, falling back to the optional set (loading it on first use)
+		// when the shared one does not have it
+		GraphicResource* FindElement(AnimState state);
+
 		void DrawElement(AnimState state, std::int32_t frame, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
 			float scaleX = 1.0f, float scaleY = 1.0f, bool additiveBlending = false, bool unaligned = false) override;
 		void DrawElement(AnimState state, float x, float y, std::uint16_t z, Alignment align, const Colorf& color,
@@ -79,6 +83,9 @@ namespace Jazz2::UI::Menu
 		std::unique_ptr<Canvas> _canvasOverlay;
 		ActiveCanvas _activeCanvas;
 		Metadata* _metadata;
+		/// Secondary set holding the few large elements that only some sections draw, requested the first
+		/// time one of them is actually asked for (see @ref FindElement())
+		Metadata* _optionalMetadata;
 		Font* _smallFont;
 		Font* _mediumFont;
 		std::uint32_t _pressedActions;

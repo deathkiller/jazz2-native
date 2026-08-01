@@ -33,30 +33,36 @@ namespace nCine
 
 	void Material::SetBlendingFactors(BlendingFactor srcBlendingFactor, BlendingFactor destBlendingFactor)
 	{
-		srcBlendingFactor_ = srcBlendingFactor;
-		destBlendingFactor_ = destBlendingFactor;
-		sortKeyDirty_ = true;
-
 		// Derive correct "over" factors for the alpha channel from the common color-blend presets, so RGBA render
 		// targets accumulate proper coverage even though callers only specify color factors. Drawing semi-transparent
 		// content with SrcAlpha on the alpha channel would erode the destination alpha (a = src.a*src.a + dst.a*(1-src.a));
 		// the alpha source factor must be One instead. This is harmless for opaque/RGB render targets, where the
 		// alpha channel is unused.
+		BlendingFactor srcAlphaBlendingFactor, destAlphaBlendingFactor;
 		if (srcBlendingFactor == BlendingFactor::SrcAlpha && destBlendingFactor == BlendingFactor::OneMinusSrcAlpha) {
-			srcAlphaBlendingFactor_ = BlendingFactor::One;
-			destAlphaBlendingFactor_ = BlendingFactor::OneMinusSrcAlpha;
+			srcAlphaBlendingFactor = BlendingFactor::One;
+			destAlphaBlendingFactor = BlendingFactor::OneMinusSrcAlpha;
 		} else if (srcBlendingFactor == BlendingFactor::SrcAlpha && destBlendingFactor == BlendingFactor::One) {
 			// Additive: keep the destination coverage unchanged (the source adds light, it does not cover)
-			srcAlphaBlendingFactor_ = BlendingFactor::Zero;
-			destAlphaBlendingFactor_ = BlendingFactor::One;
+			srcAlphaBlendingFactor = BlendingFactor::Zero;
+			destAlphaBlendingFactor = BlendingFactor::One;
 		} else {
-			srcAlphaBlendingFactor_ = srcBlendingFactor;
-			destAlphaBlendingFactor_ = destBlendingFactor;
+			srcAlphaBlendingFactor = srcBlendingFactor;
+			destAlphaBlendingFactor = destBlendingFactor;
 		}
+		SetBlendingFactors(srcBlendingFactor, destBlendingFactor, srcAlphaBlendingFactor, destAlphaBlendingFactor);
 	}
 
 	void Material::SetBlendingFactors(BlendingFactor srcRgbBlendingFactor, BlendingFactor destRgbBlendingFactor, BlendingFactor srcAlphaBlendingFactor, BlendingFactor destAlphaBlendingFactor)
 	{
+		// Only an actual change invalidates the sort key. Re-setting the same factors is the norm for pooled
+		// commands - a burst of particles or a tile layer sets them identically on every object, every frame -
+		// and each invalidation costs a full hash of the material state in GetSortKey().
+		if (srcBlendingFactor_ == srcRgbBlendingFactor && destBlendingFactor_ == destRgbBlendingFactor &&
+			srcAlphaBlendingFactor_ == srcAlphaBlendingFactor && destAlphaBlendingFactor_ == destAlphaBlendingFactor) {
+			return;
+		}
+
 		srcBlendingFactor_ = srcRgbBlendingFactor;
 		destBlendingFactor_ = destRgbBlendingFactor;
 		srcAlphaBlendingFactor_ = srcAlphaBlendingFactor;
@@ -168,9 +174,12 @@ namespace nCine
 	{
 		bool result = false;
 		if (unit < RHI::Texture::MaxTextureUnits) {
-			textures_[unit] = texture;
-			sortKeyDirty_ = true;
-			UpdateUsedTextureUnits(unit, texture != nullptr);
+			// Rebinding the texture already on the unit leaves the sort key valid (see SetBlendingFactors)
+			if (textures_[unit] != texture) {
+				textures_[unit] = texture;
+				sortKeyDirty_ = true;
+				UpdateUsedTextureUnits(unit, texture != nullptr);
+			}
 			result = true;
 		}
 		return result;
@@ -185,9 +194,11 @@ namespace nCine
 	{
 		bool result = false;
 		if (unit < RHI::Texture::MaxTextureUnits) {
-			textures_[unit] = nullptr;
-			sortKeyDirty_ = true;
-			UpdateUsedTextureUnits(unit, false);
+			if (textures_[unit] != nullptr) {
+				textures_[unit] = nullptr;
+				sortKeyDirty_ = true;
+				UpdateUsedTextureUnits(unit, false);
+			}
 			result = true;
 		}
 		return result;

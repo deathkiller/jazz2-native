@@ -21,18 +21,21 @@ namespace nCine::Backends
 {
 	namespace
 	{
-		// XInput-shaped button indices (the SDL "standard gamepad" order the built-in mapping consumes)
+		// Raw button indices of the built-in "xinput" mapping this platform resolves to (see JoyMappingDb.h).
+		// These are the indices that mapping reads, NOT the order of the SDL_GameControllerButton enum -
+		// the two differ from the shoulders onwards, which used to report Start as Back and both shoulders
+		// as stick clicks.
 		constexpr std::int32_t ButtonA = 0;
 		constexpr std::int32_t ButtonB = 1;
 		constexpr std::int32_t ButtonX = 2;
 		constexpr std::int32_t ButtonY = 3;
-		constexpr std::int32_t ButtonBack = 4;
-		constexpr std::int32_t ButtonGuide = 5;
-		constexpr std::int32_t ButtonStart = 6;
-		constexpr std::int32_t ButtonLStick = 7;
-		constexpr std::int32_t ButtonRStick = 8;
-		constexpr std::int32_t ButtonLShoulder = 9;
-		constexpr std::int32_t ButtonRShoulder = 10;
+		constexpr std::int32_t ButtonLShoulder = 4;
+		constexpr std::int32_t ButtonRShoulder = 5;
+		constexpr std::int32_t ButtonBack = 6;
+		constexpr std::int32_t ButtonStart = 7;
+		constexpr std::int32_t ButtonLStick = 8;
+		constexpr std::int32_t ButtonRStick = 9;
+		constexpr std::int32_t ButtonGuide = 10;
 
 		// Event scratch (single-threaded poll)
 		JoyButtonEvent joyButtonEvent_;
@@ -264,6 +267,14 @@ namespace nCine::Backends
 			// The digital clicks of the analog triggers double as the shoulder buttons
 			state.simulateButtonEvent(ButtonLShoulder, st->ltrig > 224);
 			state.simulateButtonEvent(ButtonRShoulder, st->rtrig > 224);
+			// The pad has no Back or Guide button, so C and Z stand in for them. Both are absent from a
+			// standard controller - their bits simply never set there - but arcade sticks and the six-button
+			// pads have them, and without this they would do nothing at all.
+			state.simulateButtonEvent(ButtonBack, (st->buttons & CONT_C) != 0);
+			state.simulateButtonEvent(ButtonGuide, (st->buttons & CONT_Z) != 0);
+			// Nothing on the pad clicks the stick
+			state.simulateButtonEvent(ButtonLStick, false);
+			state.simulateButtonEvent(ButtonRStick, false);
 
 			unsigned char hat = HatState::Centered;
 			if (st->buttons & CONT_DPAD_UP) hat |= HatState::Up;

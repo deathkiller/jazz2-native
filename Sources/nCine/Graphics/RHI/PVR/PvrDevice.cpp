@@ -11,6 +11,8 @@
 #include <cmath>
 #include <cstring>
 
+#include <dc/sq.h>
+
 namespace nCine::RHI::PVR
 {
 	namespace
@@ -130,36 +132,71 @@ namespace nCine::RHI::PVR
 		// The header and the vertices are assembled contiguously and handed to the store queues in a single
 		// burst: pvr_prim() copies 32 bytes per call, so submitting them one at a time cost a call and a
 		// separate burst setup for every vertex of every sprite and tile.
+		// Submits one strip of `count` vertices (3 = a single triangle, 4 = a quad) under the given header.
+		//
+		// The primitives are written straight into the store queues rather than assembled in main memory
+		// and handed to pvr_prim(): that path copies every 32-byte primitive a second time on its way out,
+		// which at four vertices per sprite and per tile was a large part of the submission cost. The queue
+		// pointer advances a block at a time exactly as sq_cpy() does, which alternates the two hardware
+		// banks so a bank is never rewritten while its write-back is still in flight. The PVR driver has
+		// already pointed the queues at the TA FIFO (pvr_prim() itself relies on that), so no lock is taken.
 		void SubmitStrip(const pvr_poly_hdr_t& hdr, const float* px, const float* py, const float* pu, const float* pv,
 			std::int32_t count, std::uint32_t argb, std::uint32_t oargb = 0, float dx = 0.0f, float dy = 0.0f)
 		{
-			struct alignas(32) StripBuffer
-			{
-				pvr_poly_hdr_t Header;
-				pvr_vertex_t Vertices[4];
-			} buffer;
 			static_assert(sizeof(pvr_vertex_t) == 32 && sizeof(pvr_poly_hdr_t) == 32,
-				"The store-queue burst assumes 32 byte primitives");
+				"The store queues submit whole 32 byte blocks");
 
-			buffer.Header = hdr;
+			std::uint32_t* DEATH_RESTRICT sq = SQ_MASK_DEST(PVR_TA_INPUT);
+			const std::uint32_t* DEATH_RESTRICT header = reinterpret_cast<const std::uint32_t*>(&hdr);
+			sq[0] = header[0]; sq[1] = header[1]; sq[2] = header[2]; sq[3] = header[3];
+			sq[4] = header[4]; sq[5] = header[5]; sq[6] = header[6]; sq[7] = header[7];
+			sq_flush(sq);
+			sq += 8;
+
 			for (std::int32_t i = 0; i < count; i++) {
-				pvr_vertex_t& vert = buffer.Vertices[i];
-				vert.flags = (i == count - 1 ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX);
-				vert.x = px[i] + dx;
-				vert.y = py[i] + dy;
-				vert.z = 1.0f;
-				vert.u = pu[i];
-				vert.v = pv[i];
-				vert.argb = argb;
-				vert.oargb = oargb;
+				sq[0] = (i == count - 1 ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX);
+				reinterpret_cast<float*>(sq)[1] = px[i] + dx;
+				reinterpret_cast<float*>(sq)[2] = py[i] + dy;
+				reinterpret_cast<float*>(sq)[3] = 1.0f;
+				reinterpret_cast<float*>(sq)[4] = pu[i];
+				reinterpret_cast<float*>(sq)[5] = pv[i];
+				sq[6] = argb;
+				sq[7] = oargb;
+				sq_flush(sq);
+				sq += 8;
 			}
-			pvr_prim(&buffer, sizeof(pvr_poly_hdr_t) + std::size_t(count) * sizeof(pvr_vertex_t));
 		}
 
 		void SubmitQuad(const pvr_poly_hdr_t& hdr, const float* px, const float* py, const float* pu, const float* pv,
 			std::uint32_t argb, std::uint32_t oargb = 0, float dx = 0.0f, float dy = 0.0f)
 		{
 			SubmitStrip(hdr, px, py, pu, pv, 4, argb, oargb, dx, dy);
+		}
+
+		// As SubmitStrip(), but each vertex carries its own colour so the rasterizer interpolates it across
+		// the primitive - which is how a gradient is expressed without a fragment shader
+		void SubmitStripShaded(const pvr_poly_hdr_t& hdr, const float* px, const float* py, std::int32_t count,
+			const std::uint32_t* argb)
+		{
+			std::uint32_t* DEATH_RESTRICT sq = SQ_MASK_DEST(PVR_TA_INPUT);
+			const std::uint32_t* DEATH_RESTRICT header = reinterpret_cast<const std::uint32_t*>(&hdr);
+			sq[0] = header[0]; sq[1] = header[1]; sq[2] = header[2]; sq[3] = header[3];
+			sq[4] = header[4]; sq[5] = header[5]; sq[6] = header[6]; sq[7] = header[7];
+			sq_flush(sq);
+			sq += 8;
+
+			for (std::int32_t i = 0; i < count; i++) {
+				sq[0] = (i == count - 1 ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX);
+				reinterpret_cast<float*>(sq)[1] = px[i];
+				reinterpret_cast<float*>(sq)[2] = py[i];
+				reinterpret_cast<float*>(sq)[3] = 1.0f;
+				reinterpret_cast<float*>(sq)[4] = 0.0f;
+				reinterpret_cast<float*>(sq)[5] = 0.0f;
+				sq[6] = argb[i];
+				sq[7] = 0;
+				sq_flush(sq);
+				sq += 8;
+			}
 		}
 	}
 
@@ -235,10 +272,18 @@ namespace nCine::RHI::PVR
 			if (texture == nullptr || texture->GetVramPointer() == nullptr) {
 				return;		// No surface to render into; draws will be skipped
 			}
-			// Render-to-texture scene into the target's RGB565 surface
-			std::uint32_t rx = std::uint32_t(texture->GetPaddedWidth());
-			std::uint32_t ry = std::uint32_t(texture->GetPaddedHeight());
-			pvr_scene_begin_txr(texture->GetVramPointer(), &rx, &ry);
+			// Render-to-texture scene into the target's RGB565 surface. Deliberately not through
+			// pvr_scene_begin_txr(): that wrapper is deprecated, and it forwards the *screen* dimensions as
+			// the render size while using the width it is given only as the stride. For any target narrower
+			// than the display that trips the "stride < width" check inside pvr_scene_begin_rtt(), which
+			// then returns without starting a scene at all - so nothing was ever rendered and the target
+			// kept whatever its memory held.
+			const std::uint32_t renderWidth = std::uint32_t(texture->GetPaddedWidth());
+			const std::uint32_t renderHeight = std::uint32_t(texture->GetPaddedHeight());
+			if (pvr_scene_begin_rtt(texture->GetVramPointer(), renderWidth, renderHeight, renderWidth) < 0) {
+				LOGE("Cannot start a render-to-texture scene for a {}x{} target", renderWidth, renderHeight);
+				return;
+			}
 			sceneRenderTarget_ = currentRenderTarget_;
 		} else {
 			pvr_scene_begin();
@@ -738,7 +783,6 @@ namespace nCine::RHI::PVR
 		// color.rgba) - the layout TileMap::AppendTileQuad() writes and TileMapVs.inc declares. It is a
 		// hard contract of this shader family exactly like the std140 instance block is of the sprite one.
 		constexpr std::int32_t FloatsPerVertex = 8;
-		constexpr std::int32_t VerticesPerTile = 6;
 		if (primitive != PrimitiveType::Triangles || numVertices < 3) {
 			return;
 		}
@@ -862,11 +906,22 @@ namespace nCine::RHI::PVR
 		}
 
 		// Projects one mesh vertex into raster space, matching the sprite path's corner synthesis
+		// The NDC-to-raster mapping is affine and constant for the whole mesh, so it is folded into the
+		// transform once instead of being reapplied per vertex - every vertex then costs one multiply-add
+		// per axis. A screen pass mirrors NDC, which is just the sign of the Y scale (see below).
+		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
+		const float rasterBiasX = rasterScaleX + float(viewport.X) * scaleX + offsetX;
+		const float rasterScaleY = 0.5f * float(viewport.H) * scaleY * (screenPass ? 1.0f : -1.0f);
+		const float rasterBiasY = 0.5f * float(viewport.H) * scaleY + float(viewport.Y) * scaleY + offsetY;
+		const Transform2D raster = {
+			mvp.Xx * rasterScaleX, mvp.Xy * rasterScaleY,
+			mvp.Yx * rasterScaleX, mvp.Yy * rasterScaleY,
+			mvp.Tx * rasterScaleX + rasterBiasX, mvp.Ty * rasterScaleY + rasterBiasY
+		};
+
 		auto project = [&](const float* v, float& outX, float& outY, float& outU, float& outV) {
-			const float ndcX = mvp.Xx * v[0] + mvp.Yx * v[1] + mvp.Tx;
-			const float ndcY = mvp.Xy * v[0] + mvp.Yy * v[1] + mvp.Ty;
-			outX = ((ndcX + 1.0f) * 0.5f * float(viewport.W) + float(viewport.X)) * scaleX + offsetX;
-			outY = ((screenPass ? (ndcY + 1.0f) : (1.0f - ndcY)) * 0.5f * float(viewport.H) + float(viewport.Y)) * scaleY + offsetY;
+			outX = raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx;
+			outY = raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty;
 			outU = v[2] * uvScaleU;
 			outV = v[3] * uvScaleV;
 		};
@@ -1088,12 +1143,22 @@ namespace nCine::RHI::PVR
 		bool hdrValid = false;
 		pvr_ptr_t lastVram = nullptr;
 		std::int32_t lastBank = -2;
+		// An additive twin of the same polygon, for effects that build their result out of several passes
+		const bool needsAdditivePass = (effect == PvrEffect::Colorized || effect == PvrEffect::BatchedColorized);
+		pvr_poly_hdr_t hdrAdditive;
+		bool hdrAdditiveValid = false;
 
 		// The engine's NDC orientation matches the software backend, whose top-down raster is flipped at
 		// present time; the PVR scans out its buffer top-down directly, so screen passes mirror NDC here
 		// instead (+1 = bottom row). Render-to-texture passes keep the unmirrored top-down store, which is
-		// what the sampling passes already expect.
+		// what the sampling passes already expect - which is just the sign of the raster Y scale below.
 		const bool screenPass = (currentRenderTarget_ == nullptr);
+
+		// Constant NDC-to-raster mapping, folded in once rather than reapplied for every sprite corner
+		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
+		const float rasterBiasX = rasterScaleX + float(viewport.X) * scaleX + offsetX;
+		const float rasterScaleY = 0.5f * float(viewport.H) * scaleY * (screenPass ? 1.0f : -1.0f);
+		const float rasterBiasY = 0.5f * float(viewport.H) * scaleY + float(viewport.Y) * scaleY + offsetY;
 
 		// The PVR rasterizer has no scissor for the general case, so scissored quads are clipped
 		// geometrically. The rect maps to raster coordinates the same way the vertices do (screen passes
@@ -1174,6 +1239,12 @@ namespace nCine::RHI::PVR
 						cxt.gen.specular = PVR_SPECULAR_ENABLE;
 					}
 					pvr_poly_compile(&hdr, &cxt);
+					if (needsAdditivePass) {
+						cxt.blend.src = PVR_BLEND_SRCALPHA;
+						cxt.blend.dst = PVR_BLEND_ONE;
+						pvr_poly_compile(&hdrAdditive, &cxt);
+						hdrAdditiveValid = true;
+					}
 					hdrValid = true;
 					lastVram = vram;
 					lastBank = bank;
@@ -1190,18 +1261,22 @@ namespace nCine::RHI::PVR
 				hdrValid = true;
 			}
 
-			// Synthesize the four sprite corners exactly like the software FetchVertex, then scale the
-			// logical pixels to the display (or 1:1 for a render-to-texture pass)
+			// Synthesize the four sprite corners exactly like the software FetchVertex, with the constant
+			// NDC-to-raster mapping folded into the transform (see DispatchTileMesh) so a corner costs one
+			// multiply-add per axis. The corner weights are 0 or 1, so the sprite's extent in raster space
+			// is just the transformed axes scaled by its size, and the corners are sums of those.
+			const float originX = mvp.Tx * rasterScaleX + rasterBiasX;
+			const float originY = mvp.Ty * rasterScaleY + rasterBiasY;
+			const float spanXx = mvp.Xx * rasterScaleX * spriteSize[0];
+			const float spanXy = mvp.Xy * rasterScaleY * spriteSize[0];
+			const float spanYx = mvp.Yx * rasterScaleX * spriteSize[1];
+			const float spanYy = mvp.Yy * rasterScaleY * spriteSize[1];
 			float px[4], py[4], pu[4], pvv[4];
 			for (std::int32_t i = 0; i < 4; i++) {
 				const float ax = ((i & ~1) == 0) ? 1.0f : 0.0f;
 				const float ay = (i & 1) ? 1.0f : 0.0f;
-				const float wx = ax * spriteSize[0];
-				const float wy = ay * spriteSize[1];
-				const float ndcX = mvp.Xx * wx + mvp.Yx * wy + mvp.Tx;
-				const float ndcY = mvp.Xy * wx + mvp.Yy * wy + mvp.Ty;
-				px[i] = ((ndcX + 1.0f) * 0.5f * float(viewport.W) + float(viewport.X)) * scaleX + offsetX;
-				py[i] = ((screenPass ? (ndcY + 1.0f) : (1.0f - ndcY)) * 0.5f * float(viewport.H) + float(viewport.Y)) * scaleY + offsetY;
+				px[i] = originX + ax * spanXx + ay * spanYx;
+				py[i] = originY + ax * spanXy + ay * spanYy;
 				pu[i] = (ax * texRect[0] + texRect[1]) * uvScaleU;
 				pvv[i] = (ay * texRect[2] + texRect[3]) * uvScaleV;
 			}
@@ -1233,14 +1308,6 @@ namespace nCine::RHI::PVR
 					if (maxX <= clipX0 || minX >= clipX1 || maxY <= clipY0 || minY >= clipY1) {
 						continue;
 					}
-				}
-			}
-
-			if (effect == PvrEffect::Colorized || effect == PvrEffect::BatchedColorized) {
-				// Amplified dye of the Colorized shader (the grayscale step is dropped, but the affected
-				// textures - mostly font glyphs - are grayscale already)
-				for (std::int32_t c = 0; c < 4; c++) {
-					color[c] = 1.0f + (color[c] - 0.5f) * 4.0f;
 				}
 			}
 
@@ -1304,13 +1371,60 @@ namespace nCine::RHI::PVR
 					break;
 				}
 				case PvrEffect::Transition: {
-					// The GLSL wipe clears a growing circle out of a black screen; flattened to a plain
-					// fade whose opacity tracks the same progress (fully clear once the circle covers the
-					// furthest corner, fully black at zero)
-					const float progress = color[3] / 0.927f;
-					const float alpha = (progress < 0.0f ? 1.0f : (progress > 1.0f ? 0.0f : 1.0f - progress));
-					if (alpha > 0.0f) {
-						SubmitQuad(hdr, px, py, pu, pvv, PackArgb(0, 0, 0, QuantizeChannel(alpha)));
+					// The GLSL effect is a circular iris: black everywhere outside a circle of radius
+					// `progress`, clear inside it, with a soft 0.22-wide edge in between (see
+					// Transition.shader, whose iso-distance curves are circles of radius
+					// progress * max(spriteSize) about the sprite centre).
+					//
+					// Without a fragment shader the same shape is built out of geometry instead: a fan of
+					// segments approximating the soft edge, with the alpha interpolated across it by the
+					// vertex colours, then a second fan filling everything from there out past the corners.
+					// The centre and extent come from the transformed sprite axes rather than the corner
+					// array, so scissor clipping of the quad cannot distort the circle.
+					constexpr std::int32_t Segments = 32;
+					constexpr float EdgeWidth = 0.22f;
+					constexpr float TwoPi = 6.28318530718f;
+
+					const float centreX = originX + 0.5f * (spanXx + spanYx);
+					const float centreY = originY + 0.5f * (spanXy + spanYy);
+					const float extentX = std::abs(spanXx) + std::abs(spanYx);
+					const float extentY = std::abs(spanXy) + std::abs(spanYy);
+					const float radiusScale = (extentX > extentY ? extentX : extentY);
+					// Far enough that the polygon's flat edges still cover the corners
+					const float corner = 0.5f * std::sqrt(extentX * extentX + extentY * extentY) * 1.05f;
+
+					const float progress = color[3];
+					const float outer = progress * radiusScale;
+					const float innerRaw = (progress - EdgeWidth) * radiusScale;
+					const float inner = (innerRaw > 0.0f ? innerRaw : 0.0f);
+					if (outer >= corner) {
+						break;		// The iris has swallowed the whole screen, nothing left to darken
+					}
+
+					const std::uint32_t opaque = PackArgb(0, 0, 0, 255);
+					const std::uint32_t clear = PackArgb(0, 0, 0, 0);
+					for (std::int32_t i = 0; i < Segments; i++) {
+						const float a0 = float(i) * (TwoPi / float(Segments));
+						const float a1 = float(i + 1) * (TwoPi / float(Segments));
+						const float c0 = std::cos(a0), s0 = std::sin(a0);
+						const float c1 = std::cos(a1), s1 = std::sin(a1);
+
+						// Soft edge: transparent at the inner radius, fully black at the outer one
+						if (outer > inner) {
+							const float rx[4] = { centreX + inner * c0, centreX + outer * c0,
+								centreX + inner * c1, centreX + outer * c1 };
+							const float ry[4] = { centreY + inner * s0, centreY + outer * s0,
+								centreY + inner * s1, centreY + outer * s1 };
+							const std::uint32_t shade[4] = { clear, opaque, clear, opaque };
+							SubmitStripShaded(hdr, rx, ry, 4, shade);
+						}
+						// Solid black from the edge out past the corners
+						const float fx[4] = { centreX + outer * c0, centreX + corner * c0,
+							centreX + outer * c1, centreX + corner * c1 };
+						const float fy[4] = { centreY + outer * s0, centreY + corner * s0,
+							centreY + outer * s1, centreY + corner * s1 };
+						const std::uint32_t solid[4] = { opaque, opaque, opaque, opaque };
+						SubmitStripShaded(hdr, fx, fy, 4, solid);
 					}
 					break;
 				}
@@ -1327,6 +1441,223 @@ namespace nCine::RHI::PVR
 						? PackArgb(QuantizeChannel(darkness), QuantizeChannel(darkness * 0.45f), QuantizeChannel(darkness * 0.1f), 0)
 						: PackArgb(QuantizeChannel(darkness * 0.6f), QuantizeChannel(darkness * 0.8f), QuantizeChannel(darkness), 0));
 					SubmitQuad(hdr, px, py, pu, pvv, argb, oargb);
+					break;
+				}
+				case PvrEffect::TexturedBackgroundCircle:
+				case PvrEffect::TexturedBackground: {
+					// The warped background of TexturedBackground.shader, rebuilt out of geometry.
+					//
+					// Its mapping is affine along every screen row - texturePos.x is linear in UV.x for a fixed
+					// row and texturePos.y depends on UV.y alone - so a stack of horizontal bands carrying
+					// interpolated texture coordinates reproduces it. The horizon tint is likewise a per-row
+					// value, so it goes on as a second pass whose vertex alpha the rasterizer interpolates down
+					// the band.
+					//
+					// The shader relies on the texture repeating: the warp spans roughly two periods across the
+					// screen. The source here is a render target, which the tile accelerator writes as a linear
+					// surface that the hardware cannot tile, so instead each band is cut at every whole-texture
+					// boundary and the pieces are emitted with coordinates inside a single period. A cut follows
+					// the line where the coordinate crosses the boundary, which is slanted (the row's span
+					// widens toward the horizon) - so the pieces are trapezoids rather than columns, and their
+					// corners land exactly on the boundary. That is exact, not an approximation: the shader's
+					// mapping is affine across each row and so is the interpolation across each trapezoid.
+					//
+					// The two curve approximations are the shader's own SOFTWARE_RENDERER branch (distance for
+					// pow(distance, 1.4), distance squared for pow(distance, 1.5)), which is what every tier
+					// without real shaders already draws; it drops the per-pixel star field along with them.
+					constexpr std::int32_t BandsPerHalf = 16;
+					constexpr std::int32_t MaxHorizontalPieces = 8;
+
+					const std::uint8_t* viewSizeBytes = currentProgram_->ResolveUniform("uViewSize");
+					const std::uint8_t* shiftBytes = currentProgram_->ResolveUniform("uShift");
+					const std::uint8_t* horizonBytes = currentProgram_->ResolveUniform("uHorizonColor");
+					if (viewSizeBytes == nullptr || shiftBytes == nullptr || horizonBytes == nullptr) {
+						SubmitQuad(hdr, px, py, pu, pvv, PackArgb(255, 255, 255, 255));
+						break;
+					}
+					float viewSize[2], shift[2], horizon[4];
+					std::memcpy(viewSize, viewSizeBytes, sizeof(viewSize));
+					std::memcpy(shift, shiftBytes, sizeof(shift));
+					std::memcpy(horizon, horizonBytes, sizeof(horizon));
+
+					const float correction = (viewSize[1] > 0.0f ? (viewSize[0] * 9.0f) / (viewSize[1] * 16.0f) : 1.0f);
+					const float shiftU = shift[0] / 256.0f;
+					const float shiftV = shift[1] / 256.0f;
+					const float leftX = originX;
+					const float spanX = spanXx;
+
+					// Row geometry of the effect, straight from the shader
+					auto distanceAt = [](float t) {
+						return 1.3f - std::abs(2.0f * t - 1.0f);
+					};
+					auto halfSpanAt = [&](float t) {
+						return 0.5f * (0.5f + 1.5f * distanceAt(t)) * correction;
+					};
+					auto textureVAt = [&](float t, float yShift) {
+						return shiftV + (t - yShift) * 1.4f * distanceAt(t);
+					};
+					auto horizonAlphaAt = [&](float t) {
+						const float d = distanceAt(t);
+						const float opacity = d * d - 0.3f;
+						return (opacity < 0.0f ? 0.0f : (opacity > 1.0f ? 1.0f : opacity));
+					};
+
+					// A flat-colour twin of the polygon, for the horizon pass
+					pvr_poly_hdr_t horizonHdr;
+					{
+						pvr_poly_cxt_t cxt;
+						pvr_poly_cxt_col(&cxt, PVR_LIST_TR_POLY);
+						cxt.gen.culling = PVR_CULLING_NONE;
+						cxt.depth.comparison = PVR_DEPTHCMP_ALWAYS;
+						cxt.depth.write = PVR_DEPTHWRITE_DISABLE;
+						cxt.blend.src = PVR_BLEND_SRCALPHA;
+						cxt.blend.dst = PVR_BLEND_INVSRCALPHA;
+						pvr_poly_compile(&horizonHdr, &cxt);
+					}
+					const std::uint32_t horizonRgb = PackArgb(QuantizeChannel(horizon[0]),
+						QuantizeChannel(horizon[1]), QuantizeChannel(horizon[2]), 0) & 0x00FFFFFFu;
+
+					for (std::int32_t half = 0; half < 2; half++) {
+						const float yShift = float(half);
+						for (std::int32_t band = 0; band < BandsPerHalf; band++) {
+							float t0 = (float(half) + float(band) / float(BandsPerHalf)) * 0.5f;
+							float t1 = (float(half) + float(band + 1) / float(BandsPerHalf)) * 0.5f;
+
+							// The vertical coordinate rises monotonically across each half, so a band crosses at
+							// most one whole-texture boundary; splitting there keeps every piece inside a period
+							float split = -1.0f;
+							{
+								const float vStart = textureVAt(t0, yShift);
+								const float vEnd = textureVAt(t1, yShift);
+								if (std::floor(vStart) != std::floor(vEnd)) {
+									const float boundary = std::floor(vEnd);
+									float lo = t0, hi = t1;
+									for (std::int32_t i = 0; i < 12; i++) {
+										const float mid = 0.5f * (lo + hi);
+										if (textureVAt(mid, yShift) < boundary) {
+											lo = mid;
+										} else {
+											hi = mid;
+										}
+									}
+									split = 0.5f * (lo + hi);
+								}
+							}
+
+							for (std::int32_t part = 0; part < 2; part++) {
+								float bandT0 = (part == 0 ? t0 : split);
+								float bandT1 = (part == 0 ? (split > 0.0f ? split : t1) : t1);
+								if (part == 1 && split <= 0.0f) {
+									break;
+								}
+								if (bandT1 <= bandT0) {
+									continue;
+								}
+
+								const float y0 = originY + spanYy * bandT0;
+								const float y1 = originY + spanYy * bandT1;
+
+								// One period of the vertical coordinate for the whole band. The period is taken from
+								// the band's middle rather than an end, because a band produced by the split above
+								// starts exactly on a boundary and an endpoint would pick the neighbouring period.
+								float v0 = textureVAt(bandT0, yShift);
+								float v1 = textureVAt(bandT1, yShift);
+								const float vBase = std::floor(0.5f * (v0 + v1));
+								v0 -= vBase;
+								v1 -= vBase;
+
+								const float halfSpan0 = halfSpanAt(bandT0);
+								const float halfSpan1 = halfSpanAt(bandT1);
+								const float uLeft0 = shiftU - halfSpan0, uRight0 = shiftU + halfSpan0;
+								const float uLeft1 = shiftU - halfSpan1, uRight1 = shiftU + halfSpan1;
+
+								const std::int32_t firstPiece = (std::int32_t)std::floor(uLeft0 < uLeft1 ? uLeft0 : uLeft1);
+								const std::int32_t lastPiece = (std::int32_t)std::ceil(uRight0 > uRight1 ? uRight0 : uRight1);
+								std::int32_t emitted = 0;
+								for (std::int32_t piece = firstPiece; piece < lastPiece && emitted < MaxHorizontalPieces; piece++) {
+									// Where this period begins and ends along each edge of the band. Deliberately not
+									// clamped to the band: a piece at either end reaches past the screen because the
+									// row's span differs between the band's edges, and letting it do so keeps the
+									// corner exactly on the boundary - so its coordinate is exactly 0 or 1 - while
+									// the rasterizer discards whatever falls outside. Clamping instead would pull
+									// the coordinate off the boundary and tear the seam open.
+									auto edgeFraction = [](float u, float uLeft, float uRight) {
+										const float span = uRight - uLeft;
+										return (span > 0.0f ? (u - uLeft) / span : 0.0f);
+									};
+									const float topA = edgeFraction(float(piece), uLeft0, uRight0);
+									const float topB = edgeFraction(float(piece + 1), uLeft0, uRight0);
+									const float botA = edgeFraction(float(piece), uLeft1, uRight1);
+									const float botB = edgeFraction(float(piece + 1), uLeft1, uRight1);
+									// Wholly off one side of the screen along both edges
+									if ((topB <= 0.0f && botB <= 0.0f) || (topA >= 1.0f && botA >= 1.0f)) {
+										continue;
+									}
+									emitted++;
+
+									// Strip order matches the sprite corners: the far edge first, then the near one
+									const float bx[4] = { leftX + topB * spanX, leftX + botB * spanX,
+										leftX + topA * spanX, leftX + botA * spanX };
+									const float by[4] = { y0, y1, y0, y1 };
+									const float bu[4] = {
+										((uLeft0 + topB * (uRight0 - uLeft0)) - float(piece)) * uvScaleU,
+										((uLeft1 + botB * (uRight1 - uLeft1)) - float(piece)) * uvScaleU,
+										((uLeft0 + topA * (uRight0 - uLeft0)) - float(piece)) * uvScaleU,
+										((uLeft1 + botA * (uRight1 - uLeft1)) - float(piece)) * uvScaleU
+									};
+									const float bv[4] = { v0 * uvScaleV, v1 * uvScaleV, v0 * uvScaleV, v1 * uvScaleV };
+									SubmitStrip(hdr, bx, by, bu, bv, 4, PackArgb(255, 255, 255, 255));
+								}
+
+								const float alpha0 = horizonAlphaAt(bandT0);
+								const float alpha1 = horizonAlphaAt(bandT1);
+								if (alpha0 > 0.0f || alpha1 > 0.0f) {
+									const float hx[4] = { leftX + spanX, leftX + spanX, leftX, leftX };
+									const float hy[4] = { y0, y1, y0, y1 };
+									const std::uint32_t a0 = std::uint32_t(QuantizeChannel(alpha0)) << 24;
+									const std::uint32_t a1 = std::uint32_t(QuantizeChannel(alpha1)) << 24;
+									const std::uint32_t shade[4] = { horizonRgb | a0, horizonRgb | a1,
+										horizonRgb | a0, horizonRgb | a1 };
+									SubmitStripShaded(horizonHdr, hx, hy, 4, shade);
+								}
+							}
+						}
+					}
+					break;
+				}
+				case PvrEffect::Colorized:
+				case PvrEffect::BatchedColorized: {
+					// gray = (r + g + b) * 0.5 and COLOR = gray * dye, with dye = 1 + (color - 0.5) * 4.
+					// The textures this runs on are grayscale (fonts), so r = g = b and that "average" is
+					// really a 1.5x brightening; the product reaches 4.5 for a fully bright tint.
+					//
+					// A vertex colour cannot carry a multiplier above 1.0, and neither workaround alone is
+					// right: folding the excess into the offset colour adds a constant, which lifts a
+					// glyph's dark texels as much as its bright ones and blows the antialiased edges out,
+					// while simply clamping the multiplier leaves bright tints looking washed out. So the
+					// multiplier is split into whole units drawn as successive additive passes - the sum
+					// stays proportional to the texel, and the framebuffer saturates it exactly where the
+					// shader's own clamp would.
+					constexpr float GrayGain = 1.5f;
+					constexpr std::int32_t MaxColorizePasses = 3;
+					float gain[3];
+					float maxGain = 0.0f;
+					for (std::int32_t c = 0; c < 3; c++) {
+						gain[c] = GrayGain * (1.0f + (color[c] - 0.5f) * 4.0f);
+						if (gain[c] > maxGain) {
+							maxGain = gain[c];
+						}
+					}
+					const std::uint8_t alpha = QuantizeChannel(1.0f + (color[3] - 0.5f) * 4.0f);
+					std::int32_t passes = std::int32_t(std::ceil(maxGain));
+					const std::int32_t passLimit = (hdrAdditiveValid ? MaxColorizePasses : 1);
+					passes = (passes < 1 ? 1 : (passes > passLimit ? passLimit : passes));
+					for (std::int32_t p = 0; p < passes; p++) {
+						// Pass p carries whatever of the multiplier is left above p, clamped to one unit
+						const std::uint32_t argb = PackArgb(QuantizeChannel(gain[0] - float(p)),
+							QuantizeChannel(gain[1] - float(p)), QuantizeChannel(gain[2] - float(p)), alpha);
+						SubmitQuad(p == 0 ? hdr : hdrAdditive, px, py, pu, pvv, argb);
+					}
 					break;
 				}
 				default: {
