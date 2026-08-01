@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Canvas.h"
+#include "FontFormat.h"
 #include "../../nCine/Primitives/Colorf.h"
 #include "../../nCine/Primitives/Rect.h"
 #include "../../nCine/Base/HashMap.h"
@@ -81,10 +82,14 @@ namespace Jazz2::UI
 			Colorf(0.56f, 0.50f, 0.42f, 0.5f),
 		};
 
-		Rectf _asciiChars[128];
-		HashMap<std::uint32_t, Rectf> _unicodeChars;
-		Vector2i _charSize;
+		FontFormat::Glyph _asciiChars[128];
+		HashMap<std::uint32_t, FontFormat::Glyph> _unicodeChars;
+		/** @brief How far one line of text sits below the previous one */
+		std::int32_t _lineHeight;
 		std::int32_t _baseSpacing;
 		std::unique_ptr<Texture> _texture;
+
+		/** @brief Returns the glyph of the specified character, or the placeholder if the font doesn't have it */
+		const FontFormat::Glyph& GetGlyph(char32_t c) const;
 	};
 }

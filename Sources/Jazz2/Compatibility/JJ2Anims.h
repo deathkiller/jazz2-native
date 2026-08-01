@@ -37,6 +37,16 @@ namespace Jazz2::Compatibility
 		/** @brief Writes raw image content to the specified stream */
 		static void WriteImageContent(Stream& so, const std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount);
 
+		/**
+			@brief Reads raw image content from the specified stream
+
+			The counterpart of @ref WriteImageContent, and the only decoder for it - the game reads its sprites,
+			tilesets and fonts through this. `data` is written `channelCount` bytes per pixel, but each pixel is
+			stored with a single four byte write, so the buffer needs three bytes of slack past the last pixel
+			when fewer channels are read.
+		*/
+		static void ReadImageContent(Stream& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount);
+
 		/** @brief Where one frame ends up in a tightly packed sheet */
 		struct PackedFrame
 		{

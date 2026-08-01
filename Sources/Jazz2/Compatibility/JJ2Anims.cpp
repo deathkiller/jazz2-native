@@ -932,4 +932,61 @@ namespace Jazz2::Compatibility
 			px_prev = px;
 		}
 	}
+
+	void JJ2Anims::ReadImageContent(Stream& s, std::uint8_t* data, std::int32_t width, std::int32_t height, std::int32_t channelCount)
+	{
+		typedef union {
+			struct {
+				std::uint8_t r, g, b, a;
+			} rgba;
+			std::uint32_t v;
+		} rgba_t;
+
+		rgba_t index[64] {};
+		rgba_t px;
+		std::int32_t run = 0;
+		std::int32_t px_len = width * height * channelCount;
+
+		px.rgba.r = 0;
+		px.rgba.g = 0;
+		px.rgba.b = 0;
+		px.rgba.a = 255;
+
+		for (std::int32_t px_pos = 0; px_pos < px_len; px_pos += channelCount) {
+			if (run > 0) {
+				run--;
+			} else {
+				std::int32_t b1 = s.ReadValue<std::uint8_t>();
+
+				if (b1 == QOI_OP_RGB) {
+					px.rgba.r = s.ReadValue<std::uint8_t>();
+					px.rgba.g = (channelCount >= 2 ? s.ReadValue<std::uint8_t>() : 0);
+					px.rgba.b = (channelCount >= 3 ? s.ReadValue<std::uint8_t>() : 0);
+				} else if (b1 == QOI_OP_RGBA) {
+					px.rgba.r = s.ReadValue<std::uint8_t>();
+					px.rgba.g = s.ReadValue<std::uint8_t>();
+					px.rgba.b = s.ReadValue<std::uint8_t>();
+					px.rgba.a = s.ReadValue<std::uint8_t>();
+				} else if ((b1 & QOI_MASK_2) == QOI_OP_INDEX) {
+					px = index[b1];
+				} else if ((b1 & QOI_MASK_2) == QOI_OP_DIFF) {
+					px.rgba.r += ((b1 >> 4) & 0x03) - 2;
+					px.rgba.g += ((b1 >> 2) & 0x03) - 2;
+					px.rgba.b += (b1 & 0x03) - 2;
+				} else if ((b1 & QOI_MASK_2) == QOI_OP_LUMA) {
+					std::int32_t b2 = s.ReadValue<std::uint8_t>();
+					std::int32_t vg = (b1 & 0x3f) - 32;
+					px.rgba.r += vg - 8 + ((b2 >> 4) & 0x0f);
+					px.rgba.g += vg;
+					px.rgba.b += vg - 8 + (b2 & 0x0f);
+				} else if ((b1 & QOI_MASK_2) == QOI_OP_RUN) {
+					run = (b1 & 0x3f);
+				}
+
+				index[QOI_COLOR_HASH(px) & (64 - 1)] = px;
+			}
+
+			*(rgba_t*)(data + px_pos) = px;
+		}
+	}
 }

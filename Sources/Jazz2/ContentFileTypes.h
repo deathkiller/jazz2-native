@@ -21,5 +21,6 @@ namespace Jazz2
 		static constexpr std::uint8_t SfxList = 6;
 		static constexpr std::uint8_t Highscores = 7;
 		static constexpr std::uint8_t Video = 8;
+		static constexpr std::uint8_t Font = 9;
 	};
 }
