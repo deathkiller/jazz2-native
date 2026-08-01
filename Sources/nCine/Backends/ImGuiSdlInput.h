@@ -53,6 +53,16 @@ namespace nCine::Backends
 			inputEnabled_ = inputEnabled;
 		}
 
+#if defined(IMGUI_HAS_VIEWPORT)
+		/**
+		 * @brief Returns the SDL window backing a multi-viewport platform window, as an opaque pointer
+		 *
+		 * A renderer that has to create a presentation object per platform window (the Vulkan backend needs a
+		 * `VkSurfaceKHR`) gets the window from here; `ImGuiViewport::PlatformHandle` only carries its SDL id.
+		 */
+		static void* getPlatformWindowHandle(ImGuiViewport* viewport);
+#endif
+
 	private:
 		enum class GamepadMode
 		{

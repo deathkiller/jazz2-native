@@ -170,6 +170,31 @@ namespace nCine::RHI::D3D11
 		/** @brief Blits the rendered scene into the back-buffer and presents it (the buffer-swap equivalent) */
 		static void PresentFrame();
 
+		/**
+			@brief Creates an additional swap chain for a secondary window
+
+			Used by the ImGui multi-viewport support to render into the platform windows it spawns when a panel
+			is dragged out of the main window. Unlike the main swap chain, a secondary one is rendered into and
+			presented directly - there is no intermediate present texture, and hence no flip-blit - so
+			@ref BeginSecondaryFrame() also suppresses the projection Y flip for its draws.
+
+			@param windowHandle  Native `HWND` of the secondary window, passed as a `void*`
+			@param width         Back-buffer width in pixels
+			@param height        Back-buffer height in pixels
+			@returns An opaque handle to pass to the other `*Secondary*` functions, or `nullptr` on failure
+		*/
+		static void* CreateSecondarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height);
+		/** @brief Releases a secondary swap chain created by @ref CreateSecondarySwapchain() */
+		static void DestroySecondarySwapchain(void* handle);
+		/** @brief Resizes a secondary swap chain's back-buffer */
+		static void ResizeSecondarySwapchain(void* handle, std::int32_t width, std::int32_t height);
+		/** @brief Directs the following draws (and clears) into a secondary swap chain's back-buffer, optionally clearing it first */
+		static void BeginSecondaryFrame(void* handle, bool clear);
+		/** @brief Ends the redirection started by @ref BeginSecondaryFrame() (the next draw targets the main window again) */
+		static void EndSecondaryFrame();
+		/** @brief Presents a secondary swap chain */
+		static void PresentSecondaryFrame(void* handle);
+
 		/** @brief Returns the D3D11 device (for resource creation), or `nullptr` before creation */
 		static ID3D11Device* GetD3DDevice();
 		/** @brief Returns the D3D11 immediate context, or `nullptr` before creation */
@@ -208,6 +233,10 @@ namespace nCine::RHI::D3D11
 		static IDXGISwapChain* swapchain_;
 		static ID3D11RenderTargetView* backbufferRtv_;
 		static bool vsync_;
+		// DXGI_SWAP_CHAIN_FLAGs the swap chain was actually created with (the presentation model is negotiated
+		// with fallbacks, see CreateSwapchain): ResizeBuffers() must repeat them, and tearing may only be
+		// requested at present time when the chain carries DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING
+		static std::uint32_t swapchainFlags_;
 		static std::int32_t backbufferWidth_;
 		static std::int32_t backbufferHeight_;
 		// Largest 2D texture dimension of the obtained feature level (set by CreateSwapchain)
@@ -223,6 +252,14 @@ namespace nCine::RHI::D3D11
 		static ID3D11Texture2D* presentTexture_;
 		static ID3D11RenderTargetView* presentRtv_;
 		static ID3D11ShaderResourceView* presentSrv_;
+
+		// Set while BeginSecondaryFrame() redirects drawing into a secondary swap chain (an ImGui platform
+		// window): its back-buffer view stands in for the screen target, and because it is presented directly -
+		// without the intermediate texture and its flip-blit - that surface is the one place the backend renders
+		// TOP-DOWN. Both exceptions the orientation implies are keyed on these: no projection Y flip
+		// (BindConstantBuffers) and a flipped scissor rectangle (ApplyRenderState, hence the height).
+		static ID3D11RenderTargetView* secondaryTargetRtv_;
+		static std::int32_t secondaryTargetHeight_;
 		static ID3D11VertexShader* presentVs_;
 		static ID3D11PixelShader* presentPs_;
 		static ID3D11SamplerState* presentSampler_;
@@ -288,6 +325,9 @@ namespace nCine::RHI::D3D11
 
 		/** @brief Forgets all last-applied context state so the next draw re-issues every binding */
 		static void InvalidateCachedState();
+
+		/** @brief Returns the view standing in for the "screen" target: the present texture, or a secondary swap chain's back-buffer while one is bound */
+		static ID3D11RenderTargetView* ScreenRtv();
 
 		/** @brief (Re)creates @ref backbufferRtv_ from the current swap-chain back-buffer and binds it */
 		static bool CreateBackbufferRtv();

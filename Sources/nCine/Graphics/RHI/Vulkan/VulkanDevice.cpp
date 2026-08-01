@@ -1858,8 +1858,14 @@ namespace nCine::RHI::Vulkan
 		// across in a signalled state - the core resize-freeze fix. The per-frame image-available semaphore + fence
 		// are recreated too (belt and braces: guarantees no stale signalled state survives the resize).
 
+		// Defined with the secondary swap chains further down: they track which frame fence last used each of their
+		// images, so every one of those references has to be dropped when the fences themselves are destroyed
+		void ForgetFrameFencesInSecondarySwapchains();
+
 		void DestroyFrameSyncObjects()
 		{
+			ForgetFrameFencesInSecondarySwapchains();
+
 			for (FrameData& fr : s_frames) {
 				if (fr.ImageAvailable != VK_NULL_HANDLE) { vkDestroySemaphore(s_device, fr.ImageAvailable, nullptr); fr.ImageAvailable = VK_NULL_HANDLE; }
 				if (fr.InFlightFence != VK_NULL_HANDLE) { vkDestroyFence(s_device, fr.InFlightFence, nullptr); fr.InFlightFence = VK_NULL_HANDLE; }
@@ -2042,6 +2048,189 @@ namespace nCine::RHI::Vulkan
 			}
 
 			LOGI("Vulkan swap chain created: {}x{}, {} images, format {}, {} frames in flight", extent.width, extent.height, realCount, static_cast<std::int32_t>(s_swapchainFormat), MaxFramesInFlight);
+			return true;
+		}
+
+		// -- Secondary swap chains (the windows ImGui spawns when a panel is dragged out of the main one) --
+		// Only the PRESENTATION of such a window lives here; its contents are rendered through the ordinary RHI
+		// path into an off-screen render target, so every usual convention (bottom-up rows, scissor mapping,
+		// pipeline/render-pass caches) applies unchanged. QueueSecondaryPresent() then hands that target's texture
+		// over for the frame, and PresentFrame() blits each one into its window's acquired image and joins it into
+		// the single submit + present the frame already does. While nothing is undocked the pending list stays
+		// empty and none of it runs, so the ordinary path keeps its exact behavior and cost.
+
+		struct SecondarySwapchain
+		{
+			VkSurfaceKHR Surface = VK_NULL_HANDLE;
+			VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
+			VkExtent2D Extent = { 0, 0 };
+			// The size that was asked for, which the platform may have clamped into Extent. Resize compares
+			// against THIS, so a clamping platform cannot make every frame recreate the swap chain.
+			std::int32_t RequestedWidth = 0;
+			std::int32_t RequestedHeight = 0;
+			std::vector<VkImage> Images;
+			// Mirrors the main chain's synchronization exactly: render-finished is per swap-chain IMAGE (a binary
+			// semaphore is then never re-signalled before the present waiting on it consumed it) and the fence of
+			// the frame that last used an image is tracked so it is not re-acquired while that frame still runs.
+			std::vector<VkSemaphore> RenderFinishedPerImage;
+			std::vector<VkFence> ImagesInFlight;
+			VkSemaphore ImageAvailable[MaxFramesInFlight] = {};
+			bool Ready = false;
+		};
+
+		struct PendingSecondaryPresent
+		{
+			SecondarySwapchain* Chain;
+			const VulkanTexture* Source;
+		};
+
+		// Every live secondary swap chain, so the per-frame fences they reference can be forgotten when those are
+		// destroyed - a swap-chain resize recreates all of them, and a stale handle would then be waited on
+		std::vector<SecondarySwapchain*> s_secondarySwapchains;
+		std::vector<PendingSecondaryPresent> s_pendingSecondaryPresents;
+		// Submit/present argument arrays, kept allocated across frames so the common path (nothing undocked, one
+		// swap chain) only clears and refills them instead of allocating
+		std::vector<VkSemaphore> s_submitWaitSemaphores;
+		std::vector<VkPipelineStageFlags> s_submitWaitStages;
+		std::vector<VkSemaphore> s_submitSignalSemaphores;
+		std::vector<VkSwapchainKHR> s_presentSwapchains;
+		std::vector<std::uint32_t> s_presentImageIndices;
+		std::vector<VkResult> s_presentResults;
+		// Aligned with s_presentSwapchains, so a per-swap-chain present result can be attributed back to its
+		// window (entry 0 is the main swap chain and stays null)
+		std::vector<SecondarySwapchain*> s_presentChains;
+
+		void ForgetFrameFencesInSecondarySwapchains()
+		{
+			for (SecondarySwapchain* sc : s_secondarySwapchains) {
+				sc->ImagesInFlight.assign(sc->ImagesInFlight.size(), VK_NULL_HANDLE);
+			}
+		}
+
+		void DestroySecondarySwapchainObjects(SecondarySwapchain& sc)
+		{
+			// The caller has waited the device idle (or the objects were never used), so this is safe here
+			sc.Ready = false;
+			for (VkSemaphore sem : sc.RenderFinishedPerImage) {
+				if (sem != VK_NULL_HANDLE) { vkDestroySemaphore(s_device, sem, nullptr); }
+			}
+			sc.RenderFinishedPerImage.clear();
+			sc.ImagesInFlight.clear();
+			for (VkSemaphore& sem : sc.ImageAvailable) {
+				if (sem != VK_NULL_HANDLE) { vkDestroySemaphore(s_device, sem, nullptr); sem = VK_NULL_HANDLE; }
+			}
+			sc.Images.clear();
+			if (sc.Swapchain != VK_NULL_HANDLE) {
+				vkDestroySwapchainKHR(s_device, sc.Swapchain, nullptr);
+				sc.Swapchain = VK_NULL_HANDLE;
+			}
+		}
+
+		bool CreateSecondarySwapchainObjects(SecondarySwapchain& sc, std::int32_t width, std::int32_t height)
+		{
+			sc.RequestedWidth = width;
+			sc.RequestedHeight = height;
+
+			VkBool32 presentSupported = VK_FALSE;
+			vkGetPhysicalDeviceSurfaceSupportKHR(s_physicalDevice, s_presentFamily, sc.Surface, &presentSupported);
+			if (presentSupported != VK_TRUE) {
+				LOGE("The present queue family cannot present to a secondary window's surface");
+				return false;
+			}
+
+			VkSurfaceCapabilitiesKHR caps;
+			if (!CheckVk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(s_physicalDevice, sc.Surface, &caps), "vkGetPhysicalDeviceSurfaceCapabilitiesKHR(secondary)")) {
+				return false;
+			}
+
+			std::uint32_t fmtCount = 0;
+			vkGetPhysicalDeviceSurfaceFormatsKHR(s_physicalDevice, sc.Surface, &fmtCount, nullptr);
+			std::vector<VkSurfaceFormatKHR> formats(fmtCount);
+			vkGetPhysicalDeviceSurfaceFormatsKHR(s_physicalDevice, sc.Surface, &fmtCount, formats.data());
+			VkSurfaceFormatKHR chosenFormat = formats.empty() ? VkSurfaceFormatKHR{ VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR } : formats[0];
+			for (const VkSurfaceFormatKHR& f : formats) {
+				if ((f.format == VK_FORMAT_B8G8R8A8_UNORM || f.format == VK_FORMAT_R8G8B8A8_UNORM) &&
+					f.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+					chosenFormat = f;
+					break;
+				}
+			}
+
+			VkExtent2D extent;
+			if (caps.currentExtent.width != 0xFFFFFFFFu) {
+				extent = caps.currentExtent;
+			} else {
+				extent.width = std::uint32_t(width < 1 ? 1 : width);
+				extent.height = std::uint32_t(height < 1 ? 1 : height);
+				if (extent.width < caps.minImageExtent.width) extent.width = caps.minImageExtent.width;
+				if (extent.width > caps.maxImageExtent.width) extent.width = caps.maxImageExtent.width;
+				if (extent.height < caps.minImageExtent.height) extent.height = caps.minImageExtent.height;
+				if (extent.height > caps.maxImageExtent.height) extent.height = caps.maxImageExtent.height;
+			}
+			if (extent.width == 0 || extent.height == 0) {
+				return false;	// hidden or zero-sized window; retried on the next resize / present
+			}
+
+			std::uint32_t imageCount = caps.minImageCount + 1;
+			if (caps.maxImageCount > 0 && imageCount > caps.maxImageCount) {
+				imageCount = caps.maxImageCount;
+			}
+
+			if ((caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == 0) {
+				LOGE("A secondary window's swap-chain images lack TRANSFER_DST usage, cannot present into them");
+				return false;
+			}
+
+			VkSwapchainCreateInfoKHR sci = {};
+			sci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+			sci.surface = sc.Surface;
+			sci.minImageCount = imageCount;
+			sci.imageFormat = chosenFormat.format;
+			sci.imageColorSpace = chosenFormat.colorSpace;
+			sci.imageExtent = extent;
+			sci.imageArrayLayers = 1;
+			sci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			const std::uint32_t families[2] = { s_graphicsFamily, s_presentFamily };
+			if (s_graphicsFamily != s_presentFamily) {
+				sci.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+				sci.queueFamilyIndexCount = 2;
+				sci.pQueueFamilyIndices = families;
+			} else {
+				sci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			}
+			sci.preTransform = caps.currentTransform;
+			sci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+			// Always FIFO: these windows carry UI, and the acquire below blocks, so a mode that can starve on an
+			// occluded window is not worth the latency it would save
+			sci.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+			sci.clipped = VK_TRUE;
+
+			if (!CheckVk(vkCreateSwapchainKHR(s_device, &sci, nullptr, &sc.Swapchain), "vkCreateSwapchainKHR(secondary)")) {
+				return false;
+			}
+			sc.Extent = extent;
+
+			std::uint32_t realCount = 0;
+			vkGetSwapchainImagesKHR(s_device, sc.Swapchain, &realCount, nullptr);
+			sc.Images.resize(realCount);
+			vkGetSwapchainImagesKHR(s_device, sc.Swapchain, &realCount, sc.Images.data());
+
+			VkSemaphoreCreateInfo semInfo = {};
+			semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			sc.RenderFinishedPerImage.assign(realCount, VK_NULL_HANDLE);
+			for (std::uint32_t i = 0; i < realCount; i++) {
+				if (!CheckVk(vkCreateSemaphore(s_device, &semInfo, nullptr, &sc.RenderFinishedPerImage[i]), "vkCreateSemaphore(secondary renderFinished)")) {
+					return false;
+				}
+			}
+			sc.ImagesInFlight.assign(realCount, VK_NULL_HANDLE);
+			for (VkSemaphore& sem : sc.ImageAvailable) {
+				if (!CheckVk(vkCreateSemaphore(s_device, &semInfo, nullptr, &sem), "vkCreateSemaphore(secondary imageAvailable)")) {
+					return false;
+				}
+			}
+
+			sc.Ready = true;
 			return true;
 		}
 	}
@@ -2437,8 +2626,110 @@ namespace nCine::RHI::Vulkan
 		}
 	}
 
+	void* VulkanDevice::CreateSecondarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height)
+	{
+		if (s_device == VK_NULL_HANDLE || s_instance == VK_NULL_HANDLE || windowHandle == nullptr) {
+			return nullptr;
+		}
+
+		SecondarySwapchain* sc = new SecondarySwapchain();
+		SDL_Window* window = static_cast<SDL_Window*>(windowHandle);
+#if defined(WITH_SDL3)
+		// SDL3 added a VkAllocationCallbacks* parameter (null = default allocator)
+		const bool surfaceCreated = SDL_Vulkan_CreateSurface(window, s_instance, nullptr, &sc->Surface);
+#else
+		const bool surfaceCreated = (SDL_Vulkan_CreateSurface(window, s_instance, &sc->Surface) == SDL_TRUE);
+#endif
+		if (!surfaceCreated || sc->Surface == VK_NULL_HANDLE) {
+			LOGE("SDL_Vulkan_CreateSurface() failed for a secondary window: {}", SDL_GetError());
+			delete sc;
+			return nullptr;
+		}
+
+		s_secondarySwapchains.push_back(sc);
+		if (!CreateSecondarySwapchainObjects(*sc, width, height)) {
+			// Keep the handle alive without a swap chain: the window may still be zero-sized (hidden), and the
+			// next resize retries. Only a failed surface is fatal.
+			DestroySecondarySwapchainObjects(*sc);
+		}
+		return sc;
+	}
+
+	void VulkanDevice::DestroySecondarySwapchain(void* handle)
+	{
+		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		if (sc == nullptr) {
+			return;
+		}
+
+		// Anything queued for this chain this frame must go before its objects do
+		for (std::size_t i = 0; i < s_pendingSecondaryPresents.size();) {
+			if (s_pendingSecondaryPresents[i].Chain == sc) {
+				s_pendingSecondaryPresents.erase(s_pendingSecondaryPresents.begin() + i);
+			} else {
+				i++;
+			}
+		}
+		for (std::size_t i = 0; i < s_secondarySwapchains.size(); i++) {
+			if (s_secondarySwapchains[i] == sc) {
+				s_secondarySwapchains.erase(s_secondarySwapchains.begin() + i);
+				break;
+			}
+		}
+		if (s_device != VK_NULL_HANDLE) {
+			// Its semaphores may still be in flight from the frame that just presented
+			vkDeviceWaitIdle(s_device);
+			DestroySecondarySwapchainObjects(*sc);
+			if (sc->Surface != VK_NULL_HANDLE && vkDestroySurfaceKHR != nullptr) {
+				vkDestroySurfaceKHR(s_instance, sc->Surface, nullptr);
+			}
+		}
+		delete sc;
+	}
+
+	void VulkanDevice::ResizeSecondarySwapchain(void* handle, std::int32_t width, std::int32_t height)
+	{
+		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		if (sc == nullptr || s_device == VK_NULL_HANDLE || sc->Surface == VK_NULL_HANDLE) {
+			return;
+		}
+		if (sc->Ready && sc->RequestedWidth == width && sc->RequestedHeight == height) {
+			return;
+		}
+
+		vkDeviceWaitIdle(s_device);
+		DestroySecondarySwapchainObjects(*sc);
+		if (!CreateSecondarySwapchainObjects(*sc, width, height)) {
+			DestroySecondarySwapchainObjects(*sc);	// leaves it not-ready; retried on the next resize
+		}
+	}
+
+	void VulkanDevice::QueueSecondaryPresent(void* handle, const VulkanTexture* source)
+	{
+		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		if (sc == nullptr || !sc->Ready || source == nullptr) {
+			return;
+		}
+		for (PendingSecondaryPresent& pending : s_pendingSecondaryPresents) {
+			if (pending.Chain == sc) {
+				pending.Source = source;	// re-rendered within the same frame: the last content wins
+				return;
+			}
+		}
+		s_pendingSecondaryPresents.push_back(PendingSecondaryPresent{ sc, source });
+	}
+
 	void VulkanDevice::PresentFrame()
 	{
+		// The queue of undocked ImGui windows is refilled every frame, so it must not survive this one - not even
+		// through the early returns below that abandon the frame outright
+		struct PendingPresentsReset
+		{
+			~PendingPresentsReset() {
+				s_pendingSecondaryPresents.clear();
+			}
+		} pendingPresentsReset;
+
 		if (s_device == VK_NULL_HANDLE) {
 			return;
 		}
@@ -2526,32 +2817,111 @@ namespace nCine::RHI::Vulkan
 			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
 		s_screenLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		vkEndCommandBuffer(s_commandBuffer);
-
 		// Submit waits on THIS frame's image-available semaphore and signals the PER-IMAGE render-finished
 		// semaphore (never a per-frame one), which the present then waits on. A binary semaphore is therefore
 		// never re-signalled before the present that consumes it has run (the image is not re-acquired until its
 		// present has drained render-finished), so the resize / out-of-date semaphore-reuse deadlock cannot occur.
+		// The arguments are gathered into arrays because an undocked ImGui window adds one entry to each: its own
+		// acquired image to wait on, its own render-finished to signal and its own swap chain to present.
 		VkSemaphore renderFinished = s_renderFinishedPerImage[imageIndex];
-		const VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		s_submitWaitSemaphores.clear();
+		s_submitWaitStages.clear();
+		s_submitSignalSemaphores.clear();
+		s_presentSwapchains.clear();
+		s_presentImageIndices.clear();
+		s_presentChains.clear();
+		s_submitWaitSemaphores.push_back(fr.ImageAvailable);
+		s_submitWaitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
+		s_submitSignalSemaphores.push_back(renderFinished);
+		s_presentSwapchains.push_back(s_swapchain);
+		s_presentImageIndices.push_back(imageIndex);
+		s_presentChains.push_back(nullptr);
+
+		// Undocked ImGui windows: each one's contents were rendered into an off-screen target earlier this frame
+		// (through the ordinary RHI path), so all that is left is the same flipped blit the main window gets. The
+		// loop does not run at all while nothing is undocked.
+		for (PendingSecondaryPresent& pending : s_pendingSecondaryPresents) {
+			SecondarySwapchain& sc = *pending.Chain;
+			if (!sc.Ready) {
+				continue;
+			}
+			VkSemaphore secImageAvailable = sc.ImageAvailable[s_currentFrame];
+			std::uint32_t secImageIndex = 0;
+			// Bounded wait, unlike the main window's: a UI window whose images nobody is consuming (occluded,
+			// hidden but not reported minimized) must never be able to stall the game. TIMEOUT / NOT_READY leave
+			// the semaphore unsignalled and no image acquired, so the window simply keeps last frame's contents
+			// and is retried next frame.
+			constexpr std::uint64_t SecondaryAcquireTimeout = 32 * 1000 * 1000;	// ns, ~2 frames at 60 Hz
+			const VkResult secAcquire = vkAcquireNextImageKHR(s_device, sc.Swapchain, SecondaryAcquireTimeout, secImageAvailable, VK_NULL_HANDLE, &secImageIndex);
+			if (secAcquire == VK_TIMEOUT || secAcquire == VK_NOT_READY) {
+				continue;
+			}
+			if (secAcquire != VK_SUCCESS && secAcquire != VK_SUBOPTIMAL_KHR) {
+				// A real failure (out of date, surface lost) also leaves nothing signalled, so nothing dangles; the
+				// window is left not-ready and rebuilt by the next resize (ImGui reports one whenever it changes)
+				sc.Ready = false;
+				continue;
+			}
+			// Do not reuse an image a still-running frame targets (the same guard as the main chain)
+			if (sc.ImagesInFlight[secImageIndex] != VK_NULL_HANDLE) {
+				vkWaitForFences(s_device, 1, &sc.ImagesInFlight[secImageIndex], VK_TRUE, UINT64_MAX);
+			}
+			sc.ImagesInFlight[secImageIndex] = fr.InFlightFence;
+
+			VkImage sourceImage = reinterpret_cast<VkImage>(pending.Source->GpuImage());
+			VkImage secImage = sc.Images[secImageIndex];
+			ImageBarrier(s_commandBuffer, sourceImage, VkImageLayout(pending.Source->GetCurrentLayout()), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+			// Leave the tracked layout truthful: the next render pass into this texture transitions it back
+			pending.Source->SetCurrentLayout(std::uint32_t(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL));
+			ImageBarrier(s_commandBuffer, secImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, VK_ACCESS_TRANSFER_WRITE_BIT);
+
+			// Vertically flipped, exactly like the main present: the texture holds a GL-bottom-up image
+			VkImageBlit secBlit = {};
+			secBlit.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+			secBlit.srcOffsets[0] = { 0, 0, 0 };
+			secBlit.srcOffsets[1] = { pending.Source->GetWidth(), pending.Source->GetHeight(), 1 };
+			secBlit.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+			secBlit.dstOffsets[0] = { 0, std::int32_t(sc.Extent.height), 0 };
+			secBlit.dstOffsets[1] = { std::int32_t(sc.Extent.width), 0, 1 };
+			vkCmdBlitImage(s_commandBuffer, sourceImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				secImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &secBlit, VK_FILTER_NEAREST);
+
+			ImageBarrier(s_commandBuffer, secImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, 0);
+
+			s_submitWaitSemaphores.push_back(secImageAvailable);
+			s_submitWaitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
+			s_submitSignalSemaphores.push_back(sc.RenderFinishedPerImage[secImageIndex]);
+			s_presentSwapchains.push_back(sc.Swapchain);
+			s_presentImageIndices.push_back(secImageIndex);
+			s_presentChains.push_back(&sc);
+		}
+
+		vkEndCommandBuffer(s_commandBuffer);
+
 		VkSubmitInfo submit = {};
 		submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submit.waitSemaphoreCount = 1;
-		submit.pWaitSemaphores = &fr.ImageAvailable;
-		submit.pWaitDstStageMask = &waitStage;
+		submit.waitSemaphoreCount = std::uint32_t(s_submitWaitSemaphores.size());
+		submit.pWaitSemaphores = s_submitWaitSemaphores.data();
+		submit.pWaitDstStageMask = s_submitWaitStages.data();
 		submit.commandBufferCount = 1;
 		submit.pCommandBuffers = &s_commandBuffer;
-		submit.signalSemaphoreCount = 1;
-		submit.pSignalSemaphores = &renderFinished;
+		submit.signalSemaphoreCount = std::uint32_t(s_submitSignalSemaphores.size());
+		submit.pSignalSemaphores = s_submitSignalSemaphores.data();
 		vkResetFences(s_device, 1, &fr.InFlightFence);
 		s_frameActive = false;
 		if (vkQueueSubmit(s_graphicsQueue, 1, &submit, fr.InFlightFence) != VK_SUCCESS) {
 			// Submit failed: the fence was reset but never enqueued, so it will never signal - FenceInFlight stays
-			// false so the next BeginFrame does not deadlock waiting on it, and the image-in-flight entry is
-			// cleared so a future acquire of this image does not wait on the same never-signalled fence.
+			// false so the next BeginFrame does not deadlock waiting on it, and the image-in-flight entries are
+			// cleared so a future acquire of those images does not wait on the same never-signalled fence.
 			// fr.ImageAvailable stays signalled, but the next successful submit for this slot consumes it
 			// (or the next resize recreates it).
 			s_imagesInFlight[imageIndex] = VK_NULL_HANDLE;
+			for (std::size_t i = 1; i < s_presentChains.size(); i++) {
+				s_presentChains[i]->ImagesInFlight[s_presentImageIndices[i]] = VK_NULL_HANDLE;
+			}
 			LOGE("vkQueueSubmit() failed, dropping the frame");
 			return;
 		}
@@ -2559,15 +2929,31 @@ namespace nCine::RHI::Vulkan
 
 		VkPresentInfoKHR present = {};
 		present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		present.waitSemaphoreCount = 1;
-		present.pWaitSemaphores = &renderFinished;
-		present.swapchainCount = 1;
-		present.pSwapchains = &s_swapchain;
-		present.pImageIndices = &imageIndex;
+		present.waitSemaphoreCount = std::uint32_t(s_submitSignalSemaphores.size());
+		present.pWaitSemaphores = s_submitSignalSemaphores.data();
+		present.swapchainCount = std::uint32_t(s_presentSwapchains.size());
+		present.pSwapchains = s_presentSwapchains.data();
+		present.pImageIndices = s_presentImageIndices.data();
+		if (s_presentSwapchains.size() > 1) {
+			// With several swap chains the aggregate result cannot say WHICH one is out of date, so ask per chain
+			s_presentResults.assign(s_presentSwapchains.size(), VK_SUCCESS);
+			present.pResults = s_presentResults.data();
+		}
 		VkResult res = vkQueuePresentKHR(s_presentQueue, &present);
 
 		// Advance to the next in-flight slot (round-robin) now that this frame's fence/semaphores are in flight
 		s_currentFrame = (s_currentFrame + 1) % MaxFramesInFlight;
+
+		if (present.pResults != nullptr) {
+			// An undocked window going out of date must not drag the main swap chain into a recreation, so the
+			// aggregate result is replaced by the main chain's own and the others only mark their window for rebuild
+			res = s_presentResults[0];
+			for (std::size_t i = 1; i < s_presentChains.size(); i++) {
+				if (s_presentResults[i] == VK_ERROR_OUT_OF_DATE_KHR || s_presentResults[i] == VK_SUBOPTIMAL_KHR) {
+					s_presentChains[i]->Ready = false;
+				}
+			}
+		}
 
 		if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR) {
 			// The recreate destroys + rebuilds every sync object, so any render-finished semaphore left signalled

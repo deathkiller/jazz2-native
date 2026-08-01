@@ -94,14 +94,41 @@ namespace nCine
 
 		void SetupBuffersAndShader();
 		void Draw();
+		/**
+		 * @brief Draws one ImGui draw list directly (the main window's, or a multi-viewport platform window's)
+		 *
+		 * The geometry buffers are a parameter because each platform window must own a pair: the draws are only
+		 * recorded here, and a backend that executes them later would find a shared buffer holding whichever
+		 * window's geometry was uploaded last.
+		 */
+		void DrawData(ImDrawData* drawData, RHI::Buffer* vbo, RHI::Buffer* ibo);
 
-		// Multi-viewport platform windows are an OpenGL-backend-only feature: they render with raw GL into
-		// per-window GL contexts the RHI wrappers must not touch (their bind caches describe the main context)
+		// Multi-viewport platform windows need a renderer that can draw into a window of its own, which the
+		// OpenGL and Direct3D 11 backends provide in fundamentally different ways: GL renders with raw GL calls
+		// into per-window GL contexts (the RHI wrappers must not touch those - their bind caches describe the
+		// main context), D3D11 redirects the one device into a per-window swap chain and reuses the RHI path.
 #if defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_GL)
 		void PrepareForViewports();
 		static void OnRenderPlatformWindow(ImGuiViewport* viewport, void*);
 		void DrawPlatformWindow(ImGuiViewport* viewport);
 		void SetupRenderStateForPlatformWindow(ImDrawData* drawData, std::int32_t fbWidth, std::int32_t fbHeight, std::uint32_t vertexArrayObject);
+#elif defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_D3D11)
+		void PrepareForViewports();
+		static void OnCreatePlatformWindow(ImGuiViewport* viewport);
+		static void OnDestroyPlatformWindow(ImGuiViewport* viewport);
+		static void OnResizePlatformWindow(ImGuiViewport* viewport, ImVec2 size);
+		static void OnRenderPlatformWindow(ImGuiViewport* viewport, void*);
+		static void OnSwapPlatformWindowBuffers(ImGuiViewport* viewport, void*);
+		void DrawPlatformWindow(ImGuiViewport* viewport);
+#elif defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_VULKAN) && (defined(WITH_SDL2) || defined(WITH_SDL3))
+		// No swap-buffers hook here: every window is presented from the device's PresentFrame(), together with the
+		// main one, because they all share the frame's single command buffer and submit
+		void PrepareForViewports();
+		static void OnCreatePlatformWindow(ImGuiViewport* viewport);
+		static void OnDestroyPlatformWindow(ImGuiViewport* viewport);
+		static void OnResizePlatformWindow(ImGuiViewport* viewport, ImVec2 size);
+		static void OnRenderPlatformWindow(ImGuiViewport* viewport, void*);
+		void DrawPlatformWindow(ImGuiViewport* viewport);
 #endif
 	};
 }

@@ -261,7 +261,11 @@ namespace nCine::Backends
 
 	bool SdlInputManager::shouldQuitOnRequest()
 	{
-		return (inputEventHandler_ != nullptr && inputEventHandler_->OnQuitRequest());
+		// Only an installed handler can veto a quit; without one there is nobody to object, so the request stands.
+		// Requiring a handler would make the window impossible to close whenever something else has temporarily
+		// taken it away - ImGuiDrawing does exactly that for as long as ImGui wants the keyboard, which is from the
+		// moment one of its windows is focused.
+		return (inputEventHandler_ == nullptr || inputEventHandler_->OnQuitRequest());
 	}
 
 	void SdlInputManager::parseEvent(const SDL_Event& event)

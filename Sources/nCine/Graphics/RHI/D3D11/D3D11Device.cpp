@@ -154,6 +154,7 @@ namespace nCine::RHI::D3D11
 	IDXGISwapChain* D3D11Device::swapchain_ = nullptr;
 	ID3D11RenderTargetView* D3D11Device::backbufferRtv_ = nullptr;
 	bool D3D11Device::vsync_ = true;
+	std::uint32_t D3D11Device::swapchainFlags_ = 0;
 	std::int32_t D3D11Device::backbufferWidth_ = 0;
 	std::int32_t D3D11Device::backbufferHeight_ = 0;
 	std::int32_t D3D11Device::maxTextureDimension_ = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
@@ -163,6 +164,8 @@ namespace nCine::RHI::D3D11
 	ID3D11VertexShader* D3D11Device::presentVs_ = nullptr;
 	ID3D11PixelShader* D3D11Device::presentPs_ = nullptr;
 	ID3D11SamplerState* D3D11Device::presentSampler_ = nullptr;
+	ID3D11RenderTargetView* D3D11Device::secondaryTargetRtv_ = nullptr;
+	std::int32_t D3D11Device::secondaryTargetHeight_ = 0;
 
 	SmallVector<D3D11Device::PooledCBuffer, 0> D3D11Device::cbufferPool_;
 	SmallVector<std::uint8_t, 0> D3D11Device::cbufferStaging_;
@@ -271,7 +274,7 @@ namespace nCine::RHI::D3D11
 					context_->ClearRenderTargetView(rtvs[i], c);
 				}
 			} else {
-				ID3D11RenderTargetView* screenRtv = (presentRtv_ != nullptr ? presentRtv_ : backbufferRtv_);
+				ID3D11RenderTargetView* screenRtv = ScreenRtv();
 				if (screenRtv != nullptr) {
 					context_->ClearRenderTargetView(screenRtv, c);
 				}
@@ -377,6 +380,17 @@ namespace nCine::RHI::D3D11
 		}
 	}
 
+	ID3D11RenderTargetView* D3D11Device::ScreenRtv()
+	{
+		// "Screen" is the intermediate present texture (flip-blitted into the back-buffer at present time), or the
+		// back-buffer itself if that texture is missing - unless drawing is currently redirected into a secondary
+		// swap chain, whose back-buffer then stands in for the screen target
+		if (secondaryTargetRtv_ != nullptr) {
+			return secondaryTargetRtv_;
+		}
+		return (presentRtv_ != nullptr ? presentRtv_ : backbufferRtv_);
+	}
+
 	void D3D11Device::BindCurrentRenderTarget()
 	{
 		static_assert(MaxRenderTargets == D3D11RenderTarget::MaxColorAttachments,
@@ -396,7 +410,7 @@ namespace nCine::RHI::D3D11
 				numRtvs = 1;
 			}
 		} else {
-			rtvs[0] = (presentRtv_ != nullptr ? presentRtv_ : backbufferRtv_);
+			rtvs[0] = ScreenRtv();
 			numRtvs = 1;
 		}
 		if (lastRtvValid_ && lastRtvCount_ == numRtvs &&
@@ -491,7 +505,9 @@ namespace nCine::RHI::D3D11
 							// mat4). Applied uniformly to every shader (all use uProjectionMatrix; ImGui uses
 							// uGuiProjection), this renders every target bottom-up exactly like GL, keeping the scene
 							// composite and direct-drawn HUD consistent; PresentFrame() flip-blits once for D3D scan-out.
-							if (gv.Size >= 64 && (gv.Name == "uProjectionMatrix" || gv.Name == "uGuiProjection")) {
+							// The exception is a secondary swap chain (an ImGui platform window): it is presented
+							// directly, with no flip-blit to undo the flip, so it is drawn top-down as D3D expects.
+							if (secondaryTargetHeight_ == 0 && gv.Size >= 64 && (gv.Name == "uProjectionMatrix" || gv.Name == "uGuiProjection")) {
 								float* m = reinterpret_cast<float*>(dst + gv.Offset);
 								m[1] = -m[1];
 								m[5] = -m[5];
@@ -693,7 +709,13 @@ namespace nCine::RHI::D3D11
 					desc.CullMode = (cullFace_.Mode == CullFaceMode::Front ? D3D11_CULL_FRONT : D3D11_CULL_BACK);
 				}
 				desc.FrontCounterClockwise = TRUE;	// GL default winding
-				desc.DepthClipEnable = TRUE;
+				// A command's layer is turned into a clip-space Z spanning the camera's near..far planes, which are
+				// GL's [-1,1] - so the upper half of the 16-bit layer range lands on a negative Z. D3D clips against
+				// [0,w] (unlike GL's [-w,w]), which would silently discard every draw on a layer above ~32767 (the
+				// splitscreen HUD overlay composite, for one). Skipping Z from the clip test keeps the whole layer
+				// range renderable; there is nothing to lose, the renderer is 2D and never attaches a depth buffer
+				// (see the always-disabled depth-stencil state above). Mirrors the Vulkan backend's depth clamp.
+				desc.DepthClipEnable = FALSE;
 				desc.ScissorEnable = scissor_.Enabled ? TRUE : FALSE;
 				if (SUCCEEDED(device_->CreateRasterizerState(&desc, &state))) {
 					rasterStates_.push_back({ key, state });
@@ -705,34 +727,29 @@ namespace nCine::RHI::D3D11
 			}
 		}
 
-		// Scissor rectangle. The engine specifies it in GL window space (bottom-left origin); convert it to match
-		// the current target's viewport (see DrawCommon / MakeViewport). Off-screen render targets use a
-		// negative-height (bottom-up) viewport, so their stored rows run bottom-up and GL Y maps straight to D3D
-		// rows (top = glY). The back-buffer / screen path uses a normal (top-down) viewport, so its scissor needs
-		// the standard flip against the target height (top = height - glY - glH).
+		// Scissor rectangle. The engine specifies it in GL window space (bottom-left origin), and every draw is
+		// rasterized bottom-up because clip-space Y is flipped in the projection (see BindConstantBuffers), so
+		// virtually every surface drawn into stores its rows bottom-up: off-screen render targets and equally the
+		// intermediate present texture the "screen" path is redirected to. A GL Y therefore maps straight to a
+		// D3D row index (top = glY) - the correction is PresentFrame()'s flip-blit. The real back-buffer is
+		// top-down but is never scissored into (that blit runs with the default rasterizer state, which has
+		// scissoring disabled); a secondary swap chain, drawn top-down because it skips the flip-blit, is not.
 		if (scissor_.Enabled) {
-			std::int32_t targetHeight = backbufferHeight_;
-			bool targetFlipped = false;
-			if (currentRenderTarget_ != nullptr) {
-				D3D11Texture* colorTex = currentRenderTarget_->GetColorTexture(0);
-				if (colorTex != nullptr && colorTex->GetHeight() > 0) {
-					targetHeight = colorTex->GetHeight();
-				}
-				targetFlipped = true;
-			}
 			const Recti& r = scissor_.Rect;
-			D3D11_RECT sr;
-			sr.left = r.X;
-			sr.right = r.X + r.W;
-			if (targetFlipped) {
-				// Off-screen render target: rows are stored GL bottom-up, so GL Y maps straight to D3D rows
-				sr.top = r.Y;
-				sr.bottom = r.Y + r.H;
-			} else {
-				// Back-buffer / screen: flip against the target height (corrected again by the present flip-blit)
-				sr.top = targetHeight - (r.Y + r.H);
-				sr.bottom = targetHeight - r.Y;
+			// The one top-down surface is a secondary swap chain's back-buffer (see secondaryTargetHeight_), whose
+			// rows therefore need the standard flip against the target height
+			std::int32_t top = r.Y;
+			if (secondaryTargetHeight_ > 0) {
+				top = secondaryTargetHeight_ - (r.Y + r.H);
 			}
+			D3D11_RECT sr;
+			// A rectangle may reach outside the target (an ImGui window dragged past the left/top edge gives
+			// negative coordinates); D3D11 rejects negative scissor bounds outright, which would leave the
+			// previous rectangle in effect, so clamp instead - oversized bounds the rasterizer handles itself
+			sr.left = (r.X > 0 ? r.X : 0);
+			sr.top = (top > 0 ? top : 0);
+			sr.right = (r.X + r.W > sr.left ? r.X + r.W : sr.left);
+			sr.bottom = (top + r.H > sr.top ? top + r.H : sr.top);
 			if (!lastScissorValid_ || lastScissorRect_.L != sr.left || lastScissorRect_.T != sr.top ||
 				lastScissorRect_.R != sr.right || lastScissorRect_.B != sr.bottom) {
 				context_->RSSetScissorRects(1, &sr);
@@ -951,6 +968,7 @@ namespace nCine::RHI::D3D11
 	bool D3D11Device::CreateSwapchain(void* windowHandle, std::int32_t width, std::int32_t height, bool vsync)
 	{
 		vsync_ = vsync;
+		swapchainFlags_ = 0;	// negotiated below on the desktop path; the UWP CoreWindow chain carries no flags
 
 		if (width <= 0) width = 1;
 		if (height <= 0) height = 1;
@@ -960,6 +978,13 @@ namespace nCine::RHI::D3D11
 		};
 		const UINT numRequestedLevels = static_cast<UINT>(sizeof(requestedLevels) / sizeof(requestedLevels[0]));
 		D3D_FEATURE_LEVEL obtainedLevel = D3D_FEATURE_LEVEL_11_0;
+
+		// Presentation model of the swap chain, reported in the one summary trace at the end. The UWP CoreWindow
+		// chain below is unconditionally a two-buffer flip-model one with no tearing flag; the desktop path
+		// negotiates its model and overwrites these.
+		const char* swapchainModel = "flip";
+		std::uint32_t swapchainBuffers = 2;
+		bool swapchainTearing = false;
 
 #if defined(DEATH_TARGET_WINDOWS_RT)
 		// -- UWP (Windows Store / Xbox) path --
@@ -1030,37 +1055,86 @@ namespace nCine::RHI::D3D11
 		}
 		swapchain_ = swapchain1;							// IDXGISwapChain1 derives from IDXGISwapChain
 #else
-		// -- Desktop (SDL2 HWND) path: an ordinary windowed bitblt swap chain created from the native HWND --
-		DXGI_SWAP_CHAIN_DESC sd = {};
-		sd.BufferCount = 1;
-		sd.BufferDesc.Width = static_cast<UINT>(width);
-		sd.BufferDesc.Height = static_cast<UINT>(height);
-		sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		sd.BufferDesc.RefreshRate.Numerator = 0;
-		sd.BufferDesc.RefreshRate.Denominator = 1;
-		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		sd.OutputWindow = reinterpret_cast<HWND>(windowHandle);
-		sd.SampleDesc.Count = 1;
-		sd.SampleDesc.Quality = 0;
-		sd.Windowed = TRUE;
-		sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-		sd.Flags = 0;
+		// -- Desktop (SDL2 HWND) path: a windowed swap chain created from the native HWND --
+		// The *flip model* is preferred over the legacy bitblt one: its buffers can be handed straight to the
+		// display (DirectFlip) when the window covers the whole output, which is what makes a borderless
+		// fullscreen window actually cover the taskbar instead of being composited under it - a bitblt swap
+		// chain always goes through the compositor, so the (topmost) taskbar stays painted on top. It is also
+		// the lower-latency, lower-power path Microsoft recommends for every new app. The presentation model is
+		// negotiated downwards, most capable first, because each step needs a newer Windows/DXGI than the last:
+		// flip + tearing (an uncapped, tearing present with vsync off - the legacy model's behavior, which the
+		// flip model otherwise replaces with a vblank-paced discard), then plain flip, then legacy bitblt.
+		auto createDeviceAndSwapchain = [&](D3D_DRIVER_TYPE driverType, DXGI_SWAP_EFFECT swapEffect, UINT flags) -> HRESULT {
+			// A failed attempt may have handed back some of the objects; start from a clean slate every time
+			SafeRelease(swapchain_);
+			SafeRelease(context_);
+			SafeRelease(device_);
+			swapchainFlags_ = flags;
 
-		HRESULT hr = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0,
-			requestedLevels, numRequestedLevels, D3D11_SDK_VERSION,
-			&sd, &swapchain_, &device_, &obtainedLevel, &context_);
+			DXGI_SWAP_CHAIN_DESC sd = {};
+			// The flip model requires at least two buffers (and forbids multisampling, which is unused here)
+			sd.BufferCount = (swapEffect == DXGI_SWAP_EFFECT_DISCARD ? 1 : 2);
+			sd.BufferDesc.Width = static_cast<UINT>(width);
+			sd.BufferDesc.Height = static_cast<UINT>(height);
+			sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			sd.BufferDesc.RefreshRate.Numerator = 0;
+			sd.BufferDesc.RefreshRate.Denominator = 1;
+			sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			sd.OutputWindow = reinterpret_cast<HWND>(windowHandle);
+			sd.SampleDesc.Count = 1;
+			sd.SampleDesc.Quality = 0;
+			sd.Windowed = TRUE;
+			sd.SwapEffect = swapEffect;
+			sd.Flags = flags;
 
-		if (FAILED(hr)) {
-			LOGW("D3D11CreateDeviceAndSwapChain (hardware) failed (0x{:.8x}), falling back to WARP", static_cast<std::uint32_t>(hr));
-			hr = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, 0,
+			return D3D11CreateDeviceAndSwapChain(nullptr, driverType, nullptr, 0,
 				requestedLevels, numRequestedLevels, D3D11_SDK_VERSION,
 				&sd, &swapchain_, &device_, &obtainedLevel, &context_);
+		};
+		auto negotiateSwapchain = [&](D3D_DRIVER_TYPE driverType) -> HRESULT {
+			HRESULT result = createDeviceAndSwapchain(driverType, DXGI_SWAP_EFFECT_FLIP_DISCARD, DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
+			if (FAILED(result)) {
+				result = createDeviceAndSwapchain(driverType, DXGI_SWAP_EFFECT_FLIP_DISCARD, 0);
+			}
+			if (FAILED(result)) {
+				result = createDeviceAndSwapchain(driverType, DXGI_SWAP_EFFECT_DISCARD, 0);
+			}
+			return result;
+		};
+
+		HRESULT hr = negotiateSwapchain(D3D_DRIVER_TYPE_HARDWARE);
+		if (FAILED(hr)) {
+			LOGW("D3D11CreateDeviceAndSwapChain (hardware) failed (0x{:.8x}), falling back to WARP", static_cast<std::uint32_t>(hr));
+			hr = negotiateSwapchain(D3D_DRIVER_TYPE_WARP);
 		}
 
 		if (FAILED(hr)) {
 			LOGE("D3D11CreateDeviceAndSwapChain failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
 			DestroySwapchain();
 			return false;
+		}
+
+		{
+			// Remember the negotiated model for the summary trace below - it is worth knowing when a presentation
+			// problem is reported (a bitblt chain cannot cover the taskbar in borderless fullscreen, nor tear)
+			DXGI_SWAP_CHAIN_DESC obtained = {};
+			if (SUCCEEDED(swapchain_->GetDesc(&obtained))) {
+				swapchainModel = (obtained.SwapEffect == DXGI_SWAP_EFFECT_DISCARD || obtained.SwapEffect == DXGI_SWAP_EFFECT_SEQUENTIAL ? "bitblt" : "flip");
+				swapchainBuffers = static_cast<std::uint32_t>(obtained.BufferCount);
+			}
+			swapchainTearing = ((swapchainFlags_ & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) != 0);
+		}
+
+		// DXGI hooks the output window and turns Alt+Enter into its own exclusive-fullscreen toggle. The game
+		// drives fullscreen itself (F11 / Alt+Enter -> a borderless window sized to the display, through SDL),
+		// so both handlers would react to the same keystroke and leave the window and the swap chain
+		// disagreeing about the fullscreen state. Opt out and leave SDL as the only authority.
+		{
+			IDXGIFactory* factory = nullptr;
+			if (SUCCEEDED(swapchain_->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&factory))) && factory != nullptr) {
+				factory->MakeWindowAssociation(reinterpret_cast<HWND>(windowHandle), DXGI_MWA_NO_ALT_ENTER);
+				SafeRelease(factory);
+			}
 		}
 #endif
 
@@ -1079,8 +1153,9 @@ namespace nCine::RHI::D3D11
 
 		SetViewport(Recti(0, 0, width, height));
 
-		LOGI("Direct3D 11 device created (feature level {}.{}), {}x{} swap chain",
-			(static_cast<int>(obtainedLevel) >> 12) & 0xF, (static_cast<int>(obtainedLevel) >> 8) & 0xF, width, height);
+		LOGI("Direct3D 11 device created (feature level {}.{}), {}x{} {}-model swap chain ({} buffers, tearing {})",
+			(static_cast<int>(obtainedLevel) >> 12) & 0xF, (static_cast<int>(obtainedLevel) >> 8) & 0xF, width, height,
+			swapchainModel, swapchainBuffers, swapchainTearing ? "allowed" : "unavailable");
 
 #if defined(D3D11_MRT_PROBE)
 		RunMrtProbe();
@@ -1122,7 +1197,10 @@ namespace nCine::RHI::D3D11
 		context_->OMSetRenderTargets(0, nullptr, nullptr);
 		SafeRelease(backbufferRtv_);
 
-		HRESULT hr = swapchain_->ResizeBuffers(0, static_cast<UINT>(width), static_cast<UINT>(height), DXGI_FORMAT_UNKNOWN, 0);
+		// The creation flags must be repeated here (0 would silently drop DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING and
+		// make the next tearing present fail); 0 buffers / DXGI_FORMAT_UNKNOWN keep the existing count and format
+		HRESULT hr = swapchain_->ResizeBuffers(0, static_cast<UINT>(width), static_cast<UINT>(height),
+			DXGI_FORMAT_UNKNOWN, static_cast<UINT>(swapchainFlags_));
 		if (FAILED(hr)) {
 			LOGE("IDXGISwapChain::ResizeBuffers() failed: 0x{:.8x}", static_cast<std::uint32_t>(hr));
 			return;
@@ -1226,7 +1304,181 @@ namespace nCine::RHI::D3D11
 			InvalidateCachedState();
 		}
 		if (swapchain_ != nullptr) {
-			swapchain_->Present(vsync_ ? 1 : 0, 0);
+			// With vsync off, a flip-model chain created with ALLOW_TEARING must also be *presented* with the
+			// tearing flag to actually run uncapped; without it the flip model paces every present to vblank
+			// (the flag is only legal at sync interval 0, which is exactly the vsync-off case)
+			const UINT presentFlags = (!vsync_ && (swapchainFlags_ & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) != 0
+				? DXGI_PRESENT_ALLOW_TEARING : 0u);
+			swapchain_->Present(vsync_ ? 1 : 0, presentFlags);
+		}
+	}
+
+	namespace
+	{
+		// Opaque payload behind the void* handle the *Secondary* functions hand out (ImGui keeps it in
+		// ImGuiViewport::RendererUserData). Deliberately not a member type: nothing outside this file needs it.
+		struct SecondarySwapchain
+		{
+			IDXGISwapChain* Swapchain = nullptr;
+			ID3D11RenderTargetView* Rtv = nullptr;
+			std::int32_t Width = 0;
+			std::int32_t Height = 0;
+		};
+	}
+
+	void* D3D11Device::CreateSecondarySwapchain(void* windowHandle, std::int32_t width, std::int32_t height)
+	{
+		if (device_ == nullptr || swapchain_ == nullptr || windowHandle == nullptr) {
+			return nullptr;
+		}
+		if (width <= 0) width = 1;
+		if (height <= 0) height = 1;
+
+		// Every swap chain of a device must come from the factory that owns its adapter - reuse the main one's
+		IDXGIFactory* factory = nullptr;
+		if (FAILED(swapchain_->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&factory))) || factory == nullptr) {
+			LOGE("Failed to obtain the DXGI factory for a secondary swap chain");
+			return nullptr;
+		}
+
+		// Same presentation-model preference as the main window (flip first, bitblt as the fallback), without
+		// tearing: these windows carry UI, not gameplay, so they always present at the display's pace
+		auto createChain = [&](DXGI_SWAP_EFFECT swapEffect) -> IDXGISwapChain* {
+			DXGI_SWAP_CHAIN_DESC sd = {};
+			sd.BufferCount = (swapEffect == DXGI_SWAP_EFFECT_DISCARD ? 1 : 2);
+			sd.BufferDesc.Width = static_cast<UINT>(width);
+			sd.BufferDesc.Height = static_cast<UINT>(height);
+			sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			sd.OutputWindow = reinterpret_cast<HWND>(windowHandle);
+			sd.SampleDesc.Count = 1;
+			sd.Windowed = TRUE;
+			sd.SwapEffect = swapEffect;
+			IDXGISwapChain* result = nullptr;
+			if (FAILED(factory->CreateSwapChain(device_, &sd, &result))) {
+				return nullptr;
+			}
+			return result;
+		};
+
+		IDXGISwapChain* chain = createChain(DXGI_SWAP_EFFECT_FLIP_DISCARD);
+		if (chain == nullptr) {
+			chain = createChain(DXGI_SWAP_EFFECT_DISCARD);
+		}
+		// The Alt+Enter association is deliberately left pointing at the main window (it is per factory, so
+		// re-associating it here would move DXGI's fullscreen handling onto a transient UI window)
+		SafeRelease(factory);
+		if (chain == nullptr) {
+			LOGE("Failed to create a secondary swap chain");
+			return nullptr;
+		}
+
+		SecondarySwapchain* sc = new SecondarySwapchain();
+		sc->Swapchain = chain;
+		sc->Width = width;
+		sc->Height = height;
+
+		ID3D11Texture2D* backBuffer = nullptr;
+		if (SUCCEEDED(chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer))) && backBuffer != nullptr) {
+			device_->CreateRenderTargetView(backBuffer, nullptr, &sc->Rtv);
+			backBuffer->Release();
+		}
+		if (sc->Rtv == nullptr) {
+			LOGE("Failed to create the render target view of a secondary swap chain");
+			DestroySecondarySwapchain(sc);
+			return nullptr;
+		}
+		return sc;
+	}
+
+	void D3D11Device::DestroySecondarySwapchain(void* handle)
+	{
+		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		if (sc == nullptr) {
+			return;
+		}
+		if (secondaryTargetRtv_ == sc->Rtv) {
+			EndSecondaryFrame();
+		}
+		if (sc->Rtv != nullptr) {
+			// Scrub the view from the last-bound shadow first: it is released right below and a new view
+			// recycling the same pointer would otherwise be mistaken for still bound and its bind skipped
+			OnRtvReleased(sc->Rtv);
+		}
+		SafeRelease(sc->Rtv);
+		SafeRelease(sc->Swapchain);
+		delete sc;
+	}
+
+	void D3D11Device::ResizeSecondarySwapchain(void* handle, std::int32_t width, std::int32_t height)
+	{
+		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		if (sc == nullptr || sc->Swapchain == nullptr || device_ == nullptr || width <= 0 || height <= 0) {
+			return;
+		}
+		if (sc->Width == width && sc->Height == height) {
+			return;
+		}
+
+		// Every reference to the back-buffer must be gone before ResizeBuffers
+		if (secondaryTargetRtv_ == sc->Rtv) {
+			EndSecondaryFrame();
+		}
+		if (sc->Rtv != nullptr) {
+			OnRtvReleased(sc->Rtv);
+		}
+		SafeRelease(sc->Rtv);
+
+		if (FAILED(sc->Swapchain->ResizeBuffers(0, static_cast<UINT>(width), static_cast<UINT>(height), DXGI_FORMAT_UNKNOWN, 0))) {
+			LOGE("IDXGISwapChain::ResizeBuffers() failed for a secondary swap chain");
+			return;
+		}
+		sc->Width = width;
+		sc->Height = height;
+
+		ID3D11Texture2D* backBuffer = nullptr;
+		if (SUCCEEDED(sc->Swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer))) && backBuffer != nullptr) {
+			device_->CreateRenderTargetView(backBuffer, nullptr, &sc->Rtv);
+			backBuffer->Release();
+		}
+	}
+
+	void D3D11Device::BeginSecondaryFrame(void* handle, bool clear)
+	{
+		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		if (context_ == nullptr || sc == nullptr || sc->Rtv == nullptr) {
+			return;
+		}
+
+		// The redirection works through the "screen" target (see ScreenRtv()), so any off-screen render target
+		// left bound by the scene must be cleared first, and the shadow state dropped so the next draw rebinds
+		currentRenderTarget_ = nullptr;
+		secondaryTargetRtv_ = sc->Rtv;
+		secondaryTargetHeight_ = sc->Height;
+		InvalidateCachedState();
+
+		if (clear) {
+			const float black[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+			context_->ClearRenderTargetView(sc->Rtv, black);
+		}
+	}
+
+	void D3D11Device::EndSecondaryFrame()
+	{
+		if (secondaryTargetRtv_ == nullptr) {
+			return;
+		}
+		secondaryTargetRtv_ = nullptr;
+		secondaryTargetHeight_ = 0;
+		// The next draw must not keep writing into the window that is no longer bound
+		InvalidateCachedState();
+	}
+
+	void D3D11Device::PresentSecondaryFrame(void* handle)
+	{
+		SecondarySwapchain* sc = static_cast<SecondarySwapchain*>(handle);
+		if (sc != nullptr && sc->Swapchain != nullptr) {
+			sc->Swapchain->Present(0, 0);
 		}
 	}
 
@@ -1254,6 +1506,10 @@ namespace nCine::RHI::D3D11
 			context_->ClearState();
 			context_->Flush();
 		}
+		// Secondary swap chains are owned by whoever created them (ImGui destroys its platform windows on
+		// shutdown); just make sure a redirection cannot outlive the device
+		secondaryTargetRtv_ = nullptr;
+		secondaryTargetHeight_ = 0;
 		InvalidateCachedState();
 		ReleasePipelineObjects();
 		ReleasePresentResources();
@@ -1264,6 +1520,7 @@ namespace nCine::RHI::D3D11
 		SafeRelease(swapchain_);
 		SafeRelease(context_);
 		SafeRelease(device_);
+		swapchainFlags_ = 0;
 	}
 
 	ID3D11Device* D3D11Device::GetD3DDevice() { return device_; }

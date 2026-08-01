@@ -50,9 +50,13 @@ namespace nCine
 #if defined(IMGUI_HAS_DOCK)
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;		// Enable Docking
 #endif
-#if defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_GL)
-		// Multi-viewport platform windows render with raw OpenGL into per-window GL contexts, so the
-		// feature is only offered on the OpenGL backend
+#if defined(IMGUI_HAS_VIEWPORT) && (defined(WITH_RHI_GL) || defined(WITH_RHI_D3D11) || \
+		(defined(WITH_RHI_VULKAN) && (defined(WITH_SDL2) || defined(WITH_SDL3))))
+		// Multi-viewport platform windows need the renderer to draw into a window of its own: the OpenGL backend
+		// renders with raw GL into per-window GL contexts, Direct3D 11 into a per-window swap chain, Vulkan into an
+		// off-screen target blitted into a per-window swap chain. The remaining backends have no such path, so the
+		// feature is not offered there (a panel dragged out of the main window stays docked instead of opening an
+		// empty one).
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;		// Enable Multi-Viewport / Platform Windows
 #endif
 
@@ -98,7 +102,8 @@ namespace nCine
 			SetupBuffersAndShader();
 		}
 
-#if defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_GL)
+#if defined(IMGUI_HAS_VIEWPORT) && (defined(WITH_RHI_GL) || defined(WITH_RHI_D3D11) || \
+		(defined(WITH_RHI_VULKAN) && (defined(WITH_SDL2) || defined(WITH_SDL3))))
 		PrepareForViewports();
 #endif
 
@@ -249,6 +254,26 @@ namespace nCine
 #endif
 
 		ImGui::NewFrame();
+
+		// Decide who owns the mouse cursor this frame. The application hides it in fullscreen, and
+		// IInputManager::setCursor() then also forbids ImGui from touching it (ImGuiConfigFlags_NoMouseCursorChange)
+		// so the game's choice sticks - but that leaves any ImGui window on screen unusable, with no pointer to aim
+		// with. So ImGui is allowed to drive the cursor whenever it has a window up, and told to want none
+		// (ImGuiMouseCursor_None, which the platform backend turns into a hidden OS cursor) when it does not and the
+		// application asked for a hidden one. A locked cursor is never interfered with: relative mouse mode needs it
+		// hidden and captured. The application's own cursor state is never changed here, only ImGui's permission.
+		// MetricsRenderWindows counts the windows of the last frame, so this follows them appearing and disappearing
+		// on its own; note that a permanently visible overlay panel keeps the cursor visible in fullscreen too.
+		IInputManager& inputManager = theApplication().GetInputManager();
+		const IInputManager::Cursor appCursor = inputManager.cursor();
+		if (appCursor == IInputManager::Cursor::HiddenLocked) {
+			ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+		} else {
+			ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
+			if (appCursor == IInputManager::Cursor::Hidden && ImGui::GetIO().MetricsRenderWindows == 0) {
+				ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+			}
+		}
 	}
 
 	void ImGuiDrawing::EndFrame(RenderQueue& renderQueue)
@@ -508,8 +533,11 @@ namespace nCine
 
 	void ImGuiDrawing::Draw()
 	{
-		ImDrawData* drawData = ImGui::GetDrawData();
+		DrawData(ImGui::GetDrawData(), vbo_.get(), ibo_.get());
+	}
 
+	void ImGuiDrawing::DrawData(ImDrawData* drawData, RHI::Buffer* vbo, RHI::Buffer* ibo)
+	{
 		const std::int32_t fbWidth = std::int32_t(drawData->DisplaySize.x * drawData->FramebufferScale.x);
 		const std::int32_t fbHeight = std::int32_t(drawData->DisplaySize.y * drawData->FramebufferScale.y);
 		if (fbWidth <= 0 || fbHeight <= 0) {
@@ -527,6 +555,15 @@ namespace nCine
 			}
 		}
 
+		// The projection is derived from this draw data, not from the display size: a multi-viewport platform
+		// window has its own origin (DisplayPos), and its geometry is expressed in the same virtual desktop space
+		imguiShaderProgram_->Use();
+		Matrix4x4f projection = Matrix4x4f::Ortho(drawData->DisplayPos.x, drawData->DisplayPos.x + drawData->DisplaySize.x,
+			drawData->DisplayPos.y + drawData->DisplaySize.y, drawData->DisplayPos.y, -1.0f, 1.0f);
+		imguiShaderUniforms_->GetUniform(Material::GuiProjectionMatrixUniformName)->SetFloatVector(projection.Data());
+		imguiShaderUniforms_->GetUniform(Material::DepthUniformName)->SetFloatValue(0.0f);
+		imguiShaderUniforms_->CommitUniforms();
+
 		RHI::Device::BlendingState blendingState = RHI::Device::GetBlendingState();
 		RHI::Device::SetBlendingEnabled(true);
 		RHI::Device::SetBlendingFactors(BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha, BlendingFactor::SrcAlpha, BlendingFactor::OneMinusSrcAlpha);
@@ -537,14 +574,35 @@ namespace nCine
 
 		const IndexFormat indexFormat = (sizeof(ImDrawIdx) == 2 ? IndexFormat::UInt16 : IndexFormat::UInt32);
 
+		// Every command list's geometry is uploaded first, contiguously, and only then drawn from with per-list
+		// base offsets. Uploading and drawing one list at a time would corrupt the output on a backend that defers
+		// execution (Vulkan records the draws and runs them at submit time, when only the last upload into the
+		// reused buffer is still there) - and multi-list draw data is exactly what a busy window produces.
+		std::size_t totalVertices = 0, totalIndices = 0;
+		for (std::int32_t n = 0; n < drawData->CmdListsCount; n++) {
+			totalVertices += std::size_t(drawData->CmdLists[n]->VtxBuffer.Size);
+			totalIndices += std::size_t(drawData->CmdLists[n]->IdxBuffer.Size);
+		}
+		if (totalVertices > 0 && totalIndices > 0) {
+			// Always define vertex format (and bind VAO) before uploading data to buffers
+			imguiShaderProgram_->DefineVertexFormat(vbo, ibo);
+			vbo->BufferData(totalVertices * sizeof(ImDrawVert), nullptr, BufferUsage::StreamDraw);
+			ibo->BufferData(totalIndices * sizeof(ImDrawIdx), nullptr, BufferUsage::StreamDraw);
+
+			std::size_t vertexOffset = 0, indexOffset = 0;
+			for (std::int32_t n = 0; n < drawData->CmdListsCount; n++) {
+				const ImDrawList* imCmdList = drawData->CmdLists[n];
+				vbo->BufferSubData(vertexOffset * sizeof(ImDrawVert), std::size_t(imCmdList->VtxBuffer.Size) * sizeof(ImDrawVert), imCmdList->VtxBuffer.Data);
+				ibo->BufferSubData(indexOffset * sizeof(ImDrawIdx), std::size_t(imCmdList->IdxBuffer.Size) * sizeof(ImDrawIdx), imCmdList->IdxBuffer.Data);
+				vertexOffset += std::size_t(imCmdList->VtxBuffer.Size);
+				indexOffset += std::size_t(imCmdList->IdxBuffer.Size);
+			}
+			imguiShaderProgram_->Use();
+		}
+
+		std::size_t vertexBase = 0, indexBase = 0;
 		for (std::int32_t n = 0; n < drawData->CmdListsCount; n++) {
 			const ImDrawList* imCmdList = drawData->CmdLists[n];
-
-			// Always define vertex format (and bind VAO) before uploading data to buffers
-			imguiShaderProgram_->DefineVertexFormat(vbo_.get(), ibo_.get());
-			vbo_->BufferData(std::int64_t(imCmdList->VtxBuffer.Size) * sizeof(ImDrawVert), imCmdList->VtxBuffer.Data, BufferUsage::StreamDraw);
-			ibo_->BufferData(std::int64_t(imCmdList->IdxBuffer.Size) * sizeof(ImDrawIdx), imCmdList->IdxBuffer.Data, BufferUsage::StreamDraw);
-			imguiShaderProgram_->Use();
 
 			for (std::int32_t cmdIdx = 0; cmdIdx < imCmdList->CmdBuffer.Size; cmdIdx++) {
 				const ImDrawCmd* imCmd = &imCmdList->CmdBuffer[cmdIdx];
@@ -562,11 +620,15 @@ namespace nCine
 
 				// Bind texture, Draw
 				reinterpret_cast<RHI::Texture*>(imCmd->GetTexID())->Bind();
-				// The index offset comes from the command itself, so commands skipped by an empty clip
-				// rectangle cannot desynchronize the offsets of the following ones
+				// Both offsets come from the command itself (plus this list's base in the shared upload), so
+				// commands skipped by an empty clip rectangle cannot desynchronize the ones that follow
 				RHI::Device::DrawElements(PrimitiveType::Triangles, imCmd->ElemCount, indexFormat,
-					std::uintptr_t(imCmd->IdxOffset) * sizeof(ImDrawIdx), std::int32_t(imCmd->VtxOffset));
+					(indexBase + std::uintptr_t(imCmd->IdxOffset)) * sizeof(ImDrawIdx),
+					std::int32_t(vertexBase + std::size_t(imCmd->VtxOffset)));
 			}
+
+			vertexBase += std::size_t(imCmdList->VtxBuffer.Size);
+			indexBase += std::size_t(imCmdList->IdxBuffer.Size);
 		}
 
 		RHI::Device::SetScissorTestEnabled(false);
@@ -736,6 +798,204 @@ namespace nCine
 		GL_CALL(glVertexAttribPointer(attribLocationVtxPos_, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, pos)));
 		GL_CALL(glVertexAttribPointer(attribLocationVtxUV_, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, uv)));
 		GL_CALL(glVertexAttribPointer(attribLocationVtxColor_, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, col)));
+	}
+#elif defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_D3D11)
+	// The Direct3D 11 multi-viewport path renders through the ordinary RHI pipeline: one device serves every
+	// window, so a platform window only needs a swap chain of its own that the device can be redirected into
+	// (D3D11Device::BeginSecondaryFrame). No second context, and no backend calls behind the RHI's back.
+	void ImGuiDrawing::PrepareForViewports()
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
+
+		ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
+		platformIo.Renderer_CreateWindow = OnCreatePlatformWindow;
+		platformIo.Renderer_DestroyWindow = OnDestroyPlatformWindow;
+		platformIo.Renderer_SetWindowSize = OnResizePlatformWindow;
+		platformIo.Renderer_RenderWindow = OnRenderPlatformWindow;
+		platformIo.Renderer_SwapBuffers = OnSwapPlatformWindowBuffers;
+
+		// Platform windows are drawn outside the scene graph, so they need the vertex/index buffers and uniform
+		// storage of the direct path even when the main window renders through the render-command path
+		if (vbo_ == nullptr) {
+			SetupBuffersAndShader();
+		}
+	}
+
+	void ImGuiDrawing::OnCreatePlatformWindow(ImGuiViewport* viewport)
+	{
+		// PlatformHandleRaw is the native handle of the window the platform backend created for this viewport
+		viewport->RendererUserData = RHI::Device::CreateSecondarySwapchain(viewport->PlatformHandleRaw,
+			std::int32_t(viewport->Size.x), std::int32_t(viewport->Size.y));
+	}
+
+	void ImGuiDrawing::OnDestroyPlatformWindow(ImGuiViewport* viewport)
+	{
+		RHI::Device::DestroySecondarySwapchain(viewport->RendererUserData);
+		viewport->RendererUserData = nullptr;
+	}
+
+	void ImGuiDrawing::OnResizePlatformWindow(ImGuiViewport* viewport, ImVec2 size)
+	{
+		RHI::Device::ResizeSecondarySwapchain(viewport->RendererUserData, std::int32_t(size.x), std::int32_t(size.y));
+	}
+
+	void ImGuiDrawing::OnRenderPlatformWindow(ImGuiViewport* viewport, void*)
+	{
+		ImGuiDrawing* _this = static_cast<ImGuiDrawing*>(ImGui::GetIO().BackendRendererUserData);
+		_this->DrawPlatformWindow(viewport);
+	}
+
+	void ImGuiDrawing::OnSwapPlatformWindowBuffers(ImGuiViewport* viewport, void*)
+	{
+		RHI::Device::PresentSecondaryFrame(viewport->RendererUserData);
+	}
+
+	void ImGuiDrawing::DrawPlatformWindow(ImGuiViewport* viewport)
+	{
+		if (viewport->RendererUserData == nullptr) {
+			return;
+		}
+
+		ImDrawData* drawData = viewport->DrawData;
+		const std::int32_t fbWidth = std::int32_t(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+		const std::int32_t fbHeight = std::int32_t(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+		if (fbWidth <= 0 || fbHeight <= 0) {
+			return;
+		}
+
+		// Point the device at this window's back-buffer, draw into it with the shared direct path, then hand the
+		// device back to the main window. The swap chain is presented afterwards, from Renderer_SwapBuffers -
+		// ImGui renders every platform window first and only then swaps them all.
+		const Recti previousViewport = RHI::Device::GetViewport();
+		RHI::Device::BeginSecondaryFrame(viewport->RendererUserData, (viewport->Flags & ImGuiViewportFlags_NoRendererClear) == 0);
+		RHI::Device::SetViewport(Recti(0, 0, fbWidth, fbHeight));
+
+		// The shared buffers are enough here: this backend executes each draw as it is issued, so the next window
+		// overwriting them cannot affect the draws already made
+		DrawData(drawData, vbo_.get(), ibo_.get());
+
+		RHI::Device::EndSecondaryFrame();
+		RHI::Device::SetViewport(previousViewport);
+	}
+#elif defined(IMGUI_HAS_VIEWPORT) && defined(WITH_RHI_VULKAN) && (defined(WITH_SDL2) || defined(WITH_SDL3))
+	// The Vulkan multi-viewport path keeps everything it can inside the ordinary RHI: a platform window's contents
+	// are rendered into an off-screen render target like any other pass (so the usual bottom-up rows, scissor
+	// mapping and pipeline caches apply), and only the presentation is backend business - the device blits that
+	// texture into the window's own swap chain and joins it into the frame's single submit and present.
+	namespace
+	{
+		struct PlatformWindowData
+		{
+			std::unique_ptr<RHI::Texture> Target;
+			std::unique_ptr<RHI::RenderTarget> Framebuffer;
+			// Geometry buffers of this window alone. Sharing one pair across windows would corrupt them: the draws
+			// are recorded now and executed at submit time, by which point a shared buffer would only hold the
+			// geometry of whichever window was rendered last.
+			std::unique_ptr<RHI::Buffer> Vbo;
+			std::unique_ptr<RHI::Buffer> Ibo;
+			void* Swapchain = nullptr;
+			std::int32_t Width = 0;
+			std::int32_t Height = 0;
+		};
+	}
+
+	void ImGuiDrawing::PrepareForViewports()
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
+
+		ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
+		platformIo.Renderer_CreateWindow = OnCreatePlatformWindow;
+		platformIo.Renderer_DestroyWindow = OnDestroyPlatformWindow;
+		platformIo.Renderer_SetWindowSize = OnResizePlatformWindow;
+		platformIo.Renderer_RenderWindow = OnRenderPlatformWindow;
+		// Renderer_SwapBuffers is deliberately left unset: every window is presented from PresentFrame(), together
+		// with the main one, because they all share the frame's single command buffer and submit
+
+		// Platform windows are drawn outside the scene graph, so they need the vertex/index buffers and uniform
+		// storage of the direct path even when the main window renders through the render-command path
+		if (vbo_ == nullptr) {
+			SetupBuffersAndShader();
+		}
+	}
+
+	void ImGuiDrawing::OnCreatePlatformWindow(ImGuiViewport* viewport)
+	{
+		PlatformWindowData* data = new PlatformWindowData();
+		data->Vbo = std::make_unique<RHI::Buffer>(BufferTarget::Vertex);
+		data->Ibo = std::make_unique<RHI::Buffer>(BufferTarget::Index);
+		// The surface is created from the SDL window itself (SDL only allows that on a Vulkan window, which the
+		// platform backend creates because the RHI is Vulkan)
+		data->Swapchain = RHI::Device::CreateSecondarySwapchain(ImGuiSdlInput::getPlatformWindowHandle(viewport),
+			std::int32_t(viewport->Size.x), std::int32_t(viewport->Size.y));
+		viewport->RendererUserData = data;
+	}
+
+	void ImGuiDrawing::OnDestroyPlatformWindow(ImGuiViewport* viewport)
+	{
+		if (PlatformWindowData* data = static_cast<PlatformWindowData*>(viewport->RendererUserData)) {
+			RHI::Device::DestroySecondarySwapchain(data->Swapchain);
+			delete data;	// releases the render target and the texture behind it
+		}
+		viewport->RendererUserData = nullptr;
+	}
+
+	void ImGuiDrawing::OnResizePlatformWindow(ImGuiViewport* viewport, ImVec2 size)
+	{
+		if (PlatformWindowData* data = static_cast<PlatformWindowData*>(viewport->RendererUserData)) {
+			RHI::Device::ResizeSecondarySwapchain(data->Swapchain, std::int32_t(size.x), std::int32_t(size.y));
+		}
+	}
+
+	void ImGuiDrawing::OnRenderPlatformWindow(ImGuiViewport* viewport, void*)
+	{
+		ImGuiDrawing* _this = static_cast<ImGuiDrawing*>(ImGui::GetIO().BackendRendererUserData);
+		_this->DrawPlatformWindow(viewport);
+	}
+
+	void ImGuiDrawing::DrawPlatformWindow(ImGuiViewport* viewport)
+	{
+		PlatformWindowData* data = static_cast<PlatformWindowData*>(viewport->RendererUserData);
+		if (data == nullptr || data->Swapchain == nullptr) {
+			return;
+		}
+
+		ImDrawData* drawData = viewport->DrawData;
+		const std::int32_t fbWidth = std::int32_t(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+		const std::int32_t fbHeight = std::int32_t(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+		if (fbWidth <= 0 || fbHeight <= 0) {
+			return;
+		}
+
+		if (data->Target == nullptr || data->Width != fbWidth || data->Height != fbHeight) {
+			// Drop the framebuffer before the texture it was built from goes away
+			data->Framebuffer = nullptr;
+			data->Target = std::make_unique<RHI::Texture>(TextureTarget::Texture2D);
+			data->Target->TexStorage2D(1, PixelFormat::RGBA8, fbWidth, fbHeight);
+			data->Framebuffer = std::make_unique<RHI::RenderTarget>();
+			data->Framebuffer->AttachColorTexture(*data->Target, 0);
+			data->Width = fbWidth;
+			data->Height = fbHeight;
+		}
+
+		const Recti previousViewport = RHI::Device::GetViewport();
+		data->Framebuffer->BindDraw();
+		RHI::Device::SetViewport(Recti(0, 0, fbWidth, fbHeight));
+		if ((viewport->Flags & ImGuiViewportFlags_NoRendererClear) == 0) {
+			const Colorf previousClearColor = RHI::Device::GetClearColor();
+			RHI::Device::SetClearColor(Colorf(0.0f, 0.0f, 0.0f, 1.0f));
+			RHI::Device::Clear(ClearFlags::Color);
+			RHI::Device::SetClearColor(previousClearColor);
+		}
+
+		DrawData(drawData, data->Vbo.get(), data->Ibo.get());
+
+		RHI::RenderTarget::UnbindDraw();
+		RHI::Device::SetViewport(previousViewport);
+
+		// Hand the rendered texture over for this frame; the device presents it with the main window
+		RHI::Device::QueueSecondaryPresent(data->Swapchain, data->Target.get());
 	}
 #endif
 }

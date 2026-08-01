@@ -65,6 +65,16 @@ namespace Jazz2::Rendering
 			return (_antialiasing._target != nullptr ? _antialiasing._targetSize : _targetSize);
 		}
 
+		/**
+		 * @brief Returns the render-resolution multiplier the pass actually applied (1 if not supersampled)
+		 *
+		 * Not necessarily the value requested in @ref Initialize() - supersampling is refused on the direct
+		 * tier (no framebuffers) and on Vita, so callers that adapt to it must ask the pass, not assume.
+		 */
+		std::int32_t GetSupersample() const {
+			return _supersample;
+		}
+
 	protected:
 		/**
 		 * @brief Optional antialiasing subpass

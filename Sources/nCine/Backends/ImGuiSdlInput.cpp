@@ -615,10 +615,14 @@ namespace nCine::Backends
 			ImGui::UpdatePlatformWindows();
 			ImGui::RenderPlatformWindowsDefault();
 
-			// Restore the OpenGL rendering context to the main window DC, since platform windows might have changed it.
+			// Restore the OpenGL rendering context to the main window DC, since platform windows might have
+			// changed it. Only the OpenGL backend has contexts to juggle - the others (Direct3D 11, Vulkan,
+			// software) run on a context-less window, where this would just raise an SDL error.
 			ImGuiViewport* mainViewport = ImGui::GetMainViewport();
 			ViewportData* mainViewportData = (ViewportData*)mainViewport->PlatformUserData;
-			SDL_GL_MakeCurrent(mainViewportData->Window, mainViewportData->GLContext);
+			if (mainViewportData != nullptr && mainViewportData->GLContext != nullptr) {
+				SDL_GL_MakeCurrent(mainViewportData->Window, mainViewportData->GLContext);
+			}
 		}
 #endif
 	}
@@ -1166,6 +1170,12 @@ namespace nCine::Backends
 #endif
 
 #if defined(IMGUI_HAS_VIEWPORT)
+	void* ImGuiSdlInput::getPlatformWindowHandle(ImGuiViewport* viewport)
+	{
+		ViewportData* vd = (viewport != nullptr ? (ViewportData*)viewport->PlatformUserData : nullptr);
+		return (vd != nullptr ? vd->Window : nullptr);
+	}
+
 	void ImGuiSdlInput::onCreateWindow(ImGuiViewport* viewport)
 	{
 		ViewportData* vd = new ViewportData();
@@ -1184,7 +1194,12 @@ namespace nCine::Backends
 		}
 
 		Uint32 sdl_flags = 0;
-		sdl_flags |= useOpenGL ? SDL_WINDOW_OPENGL : (/*bd->UseVulkan ? SDL_WINDOW_VULKAN :*/ 0);
+#	if defined(WITH_RHI_VULKAN)
+		// The renderer creates a VkSurfaceKHR from this window, which SDL only allows on a Vulkan window
+		sdl_flags |= (useOpenGL ? SDL_WINDOW_OPENGL : SDL_WINDOW_VULKAN);
+#	else
+		sdl_flags |= (useOpenGL ? SDL_WINDOW_OPENGL : 0);
+#	endif
 #	if defined(WITH_SDL3)
 		sdl_flags |= (Uint32)(SDL_GetWindowFlags(window_) & SDL_WINDOW_HIGH_PIXEL_DENSITY);
 #	else

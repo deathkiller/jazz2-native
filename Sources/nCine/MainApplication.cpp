@@ -592,6 +592,15 @@ namespace nCine
 						ResizeScreenViewport(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
 					}
 					break;
+				case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+					// SDL only turns a close request into SDL_EVENT_QUIT when the closed window is the LAST one, which
+					// stops being true as soon as another window exists (ImGui opens one per panel dragged out of the
+					// main window), so the main window's close button is honored here. The event still falls through
+					// to the input manager below, which is how ImGui closes a window of its own.
+					if (SdlGfxDevice::isMainWindow(event.window.windowID) && SdlInputManager::shouldQuitOnRequest()) {
+						shouldQuit_ = true;
+					}
+					DEATH_FALLTHROUGH
 				default:
 					if (event.type >= SDL_EVENT_DISPLAY_FIRST && event.type <= SDL_EVENT_DISPLAY_LAST) {
 						gfxDevice_->updateMonitors();
@@ -638,7 +647,15 @@ namespace nCine
 							case SDL_WINDOWEVENT_FOCUS_LOST:
 								SetFocus(false);
 								break;
-							case SDL_WINDOWEVENT_SIZE_CHANGED:
+							case SDL_WINDOWEVENT_CLOSE:
+								// SDL only turns a close into SDL_QUIT when the closed window is the LAST one, which
+								// stops being true as soon as another window exists (ImGui opens one per panel
+								// dragged out of the main window), so the main window's close button is honored here
+								if (SdlInputManager::shouldQuitOnRequest()) {
+									shouldQuit_ = true;
+								}
+								break;
+							case SDL_WINDOWEVENT_SIZE_CHANGED: {
 								gfxDevice_->width_ = event.window.data1;
 								gfxDevice_->height_ = event.window.data2;
 								SDL_Window* windowHandle = SDL_GetWindowFromID(event.window.windowID);
@@ -654,7 +671,14 @@ namespace nCine
 								RHI::Device::ResizeSwapchain(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
 								ResizeScreenViewport(gfxDevice_->drawableWidth_, gfxDevice_->drawableHeight_);
 								break;
+							}
 						}
+					}
+					// Unlike every other event type, these were not reaching the input manager at all - and ImGui
+					// drives its platform windows off them (closing, moving, focusing, entering one), so a window
+					// it owns could not even be closed. Nothing in the engine's own input handling reads them.
+					if (appCfg_.withGraphics) {
+						SdlInputManager::parseEvent(event);
 					}
 					break;
 				}

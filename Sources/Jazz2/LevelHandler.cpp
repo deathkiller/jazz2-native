@@ -753,8 +753,10 @@ namespace Jazz2
 		// native resolution and then composited (nearest, so clean integer scaling) into the supersampled scene buffer,
 		// on top of the player viewports. The combined buffer is then upscaled to the window by the scene pass, so the
 		// rescale/upscale effect (HQ2x etc.) applies to everything at the end. When not supersampling, the HUD stays in
-		// the scene pass directly as before.
-		_hudOverlayActive = (supersample > 1);
+		// the scene pass directly as before. The pass can refuse to supersample (the direct tier renders straight into
+		// the screen framebuffer, and it is forced off on Vita), and there the overlay would render its UI before the
+		// scene instead of compositing on top of it, so it follows the factor the pass actually applied.
+		_hudOverlayActive = (_upscalePass.GetSupersample() > 1);
 		if (_hudOverlayActive) {
 			// The overlay renders at the logical size; its composite quad is also logical, so it fills the logical view
 			// and is rasterized into the (supersampled) scene buffer at an integer scale
