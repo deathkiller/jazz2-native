@@ -35,7 +35,7 @@ namespace nCine::RHI::PVR
 			width_(0), height_(0), strideBytes_(0), bytesPerPixel_(0),
 			minFilter_(nCine::SamplerFilter::Nearest), magFilter_(nCine::SamplerFilter::Nearest), wrap_(SamplerWrapping::ClampToEdge),
 			textureUnit_(0), isRenderTarget_(false), isPaletteTexture_(false),
-			vram_(nullptr), vramFormat_(0), paddedWidth_(0), paddedHeight_(0), uScale_(1.0f), vScale_(1.0f),
+			vram_(nullptr), vramFormat_(0), vramBytesPerTexel_(0), paddedWidth_(0), paddedHeight_(0), uScale_(1.0f), vScale_(1.0f),
 			bakedSlots_{}, nextBakedSlot_(0), livePrev_(nullptr), liveNext_(nullptr), lastUsedScene_(NeverUsed)
 	{
 		swizzle_[0] = SwizzleChannel::Red;
@@ -142,6 +142,7 @@ namespace nCine::RHI::PVR
 		if (vram_ != nullptr) {
 			pvr_mem_free(vram_);
 			vram_ = nullptr;
+			vramBytesPerTexel_ = 0;
 		}
 		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
 			if (bakedSlots_[i].Vram != nullptr) {
@@ -184,6 +185,39 @@ namespace nCine::RHI::PVR
 		contentVersion_ = ++nextContentVersion_;
 	}
 
+	bool PvrTexture::EnsureVramStore(std::int32_t bytesPerTexel)
+	{
+		if (vram_ != nullptr && vramBytesPerTexel_ != bytesPerTexel) {
+			pvr_mem_free(vram_);
+			vram_ = nullptr;
+		}
+		if (vram_ == nullptr) {
+			vram_ = AllocateVram(std::size_t(paddedWidth_) * std::size_t(paddedHeight_) * std::size_t(bytesPerTexel), this);
+			if (vram_ == nullptr) {
+				return false;
+			}
+		}
+		vramBytesPerTexel_ = bytesPerTexel;
+		return true;
+	}
+
+	void* PvrTexture::MapStreamingTexels(std::int32_t& strideBytes)
+	{
+		if (uploadFormat_ != PixelFormat::RGB565 || isRenderTarget_ || isPaletteTexture_) {
+			return nullptr;
+		}
+
+		// The store is allocated on demand and can be reclaimed when video memory runs short, so it is asked
+		// for again every frame rather than remembered
+		pvr_ptr_t vram = AcquireVramPointer();
+		if (vram == nullptr) {
+			return nullptr;
+		}
+
+		strideBytes = paddedWidth_ * 2;
+		return vram;
+	}
+
 	void PvrTexture::RefreshVramStore()
 	{
 		if (pixels_.empty() || width_ <= 0 || height_ <= 0 || isPaletteTexture_ || isRenderTarget_) {
@@ -193,15 +227,13 @@ namespace nCine::RHI::PVR
 		if (uploadFormat_ == PixelFormat::R8) {
 			// 8bpp paletted, twiddled; the palette bank is or-ed into the format word per draw
 			const std::size_t size = std::size_t(paddedWidth_) * std::size_t(paddedHeight_);
-			if (vram_ == nullptr) {
-				vram_ = AllocateVram(size, this);
-				if (vram_ == nullptr) {
-					LOGE("Out of PVR memory allocating {} B (8bpp {}x{}, source {}x{})", size, paddedWidth_, paddedHeight_, width_, height_);
-					return;
-				}
+			if (!EnsureVramStore(1)) {
+				LOGE("Out of PVR memory allocating {} B (8bpp {}x{}, source {}x{})", size, paddedWidth_, paddedHeight_, width_, height_);
+				return;
 			}
 			// Pad the linear image into a power-of-two staging buffer, then let the loader twiddle it
-			std::vector<std::uint8_t> staging(size, 0);
+			SmallVector<std::uint8_t, 0> staging;
+			staging.assign(size, 0);
 			for (std::int32_t y = 0; y < height_; y++) {
 				std::memcpy(staging.data() + std::size_t(y) * paddedWidth_, pixels_.data() + std::size_t(y) * strideBytes_, std::size_t(width_));
 			}
@@ -212,12 +244,9 @@ namespace nCine::RHI::PVR
 			// no conversion and no twiddling. This is the cheap path for textures that are replaced every
 			// frame (the cinematic player), where a twiddle would cost more than the whole upload.
 			const std::size_t size = std::size_t(paddedWidth_) * std::size_t(paddedHeight_) * 2;
-			if (vram_ == nullptr) {
-				vram_ = AllocateVram(size, this);
-				if (vram_ == nullptr) {
-					LOGE("Out of PVR memory allocating {} B (RGB565 {}x{})", size, paddedWidth_, paddedHeight_);
-					return;
-				}
+			if (!EnsureVramStore(2)) {
+				LOGE("Out of PVR memory allocating {} B (RGB565 {}x{})", size, paddedWidth_, paddedHeight_);
+				return;
 			}
 
 			std::uint16_t* dst = static_cast<std::uint16_t*>(vram_);
@@ -234,12 +263,9 @@ namespace nCine::RHI::PVR
 		} else if (uploadFormat_ == PixelFormat::RGB8 || uploadFormat_ == PixelFormat::RGBA8) {
 			// True-color converts to twiddled ARGB4444 (the PVR has no 32-bit sampled format)
 			const std::size_t size = std::size_t(paddedWidth_) * std::size_t(paddedHeight_) * 2;
-			if (vram_ == nullptr) {
-				vram_ = AllocateVram(size, this);
-				if (vram_ == nullptr) {
-					LOGE("Out of PVR memory allocating {} B (ARGB4444 {}x{})", size, paddedWidth_, paddedHeight_);
-					return;
-				}
+			if (!EnsureVramStore(2)) {
+				LOGE("Out of PVR memory allocating {} B (ARGB4444 {}x{})", size, paddedWidth_, paddedHeight_);
+				return;
 			}
 			// Converted straight into video memory, row by row, without the twiddling pass: interleaving
 			// the texel order costs more than the conversion itself, and it only pays off for the sampling
@@ -331,7 +357,8 @@ namespace nCine::RHI::PVR
 			}
 		}
 
-		std::vector<std::uint16_t> staging(std::size_t(paddedWidth_) * std::size_t(paddedHeight_), 0);
+		SmallVector<std::uint16_t, 0> staging;
+		staging.assign(std::size_t(paddedWidth_) * std::size_t(paddedHeight_), 0);
 		for (std::int32_t y = 0; y < height_; y++) {
 			const std::uint8_t* src = pixels_.data() + std::size_t(y) * strideBytes_;
 			std::uint16_t* dst = staging.data() + std::size_t(y) * paddedWidth_;
@@ -359,12 +386,9 @@ namespace nCine::RHI::PVR
 		if (isRenderTarget && width_ > 0 && height_ > 0) {
 			// The tile accelerator renders into a non-twiddled RGB565 surface of power-of-two width
 			const std::size_t size = std::size_t(paddedWidth_) * std::size_t(paddedHeight_) * 2;
-			if (vram_ == nullptr) {
-				vram_ = AllocateVram(size, this);
-				if (vram_ == nullptr) {
-					LOGE("Out of PVR memory allocating {} B (RTT {}x{})", size, paddedWidth_, paddedHeight_);
-					return;
-				}
+			if (!EnsureVramStore(2)) {
+				LOGE("Out of PVR memory allocating {} B (RTT {}x{})", size, paddedWidth_, paddedHeight_);
+				return;
 			}
 			vramFormat_ = PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED;
 		}

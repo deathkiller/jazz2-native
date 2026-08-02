@@ -81,6 +81,21 @@ namespace nCine
 		/** @brief Loads texels in raw format from a memory buffer into a rectangular sub-region of the specified MIP level */
 		bool LoadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, Recti region);
 
+#if defined(RHI_CAP_STREAMING_TEXTURES) || defined(DOXYGEN_GENERATING_OUTPUT)
+		/**
+			@brief Returns a writable pointer to the texture's own storage, for content rebuilt every frame
+
+			Only backends that advertise @cpp RHI_CAP_STREAMING_TEXTURES @ce have this, and even there it is
+			only answered for the formats the hardware stores verbatim; it returns `nullptr` otherwise, and the
+			caller has to go through @ref LoadFromTexels() instead. @p strideBytes receives the distance between
+			rows, which is not @cpp width * bytesPerPixel @ce when the storage is padded.
+
+			What is written is not mirrored into the host copy the texture keeps, so a texture written this way
+			must be written whole, every time, and never read back.
+		*/
+		void* MapStreamingTexels(std::int32_t& strideBytes);
+#endif
+
 		/** @brief Saves all texels of the first MIP level in raw format to a memory buffer */
 		bool SaveToMemory(std::uint8_t* bufferPtr);
 		/** @brief Saves all texels of the specified MIP level in raw format to a memory buffer */

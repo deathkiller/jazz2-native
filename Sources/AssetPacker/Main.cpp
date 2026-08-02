@@ -1,4 +1,4 @@
-// AssetPacker --- converts original Jazz Jackrabbit 2 data into the layout a given platform loads.
+// AssetPacker - converts original Jazz Jackrabbit 2 data into the layout a given platform loads.
 //
 // The game performs the same conversion on its first run (see GameEventHandler::RefreshCache), which stays
 // the second, in-game way of doing it. This tool exists so the data can be prepared ahead of time - for the
@@ -14,7 +14,9 @@
 #include "../Jazz2/EventType.h"
 #include "../nCine/Base/Algorithms.h"
 
+#include <Containers/Array.h>
 #include <Containers/DateTime.h>
+#include <Containers/SmallVector.h>
 #include <Containers/String.h>
 #include <Containers/StringUtils.h>
 #include <Containers/StringConcatenable.h>
@@ -79,6 +81,23 @@ namespace
 		Emscripten
 	};
 
+	/** @brief How the cinematics end up in the output */
+	enum class VideoHandling {
+		/** @brief Not at all - the game reads the original files where they are */
+		None,
+		/** @brief Copied across unchanged */
+		Copy,
+		/**
+			@brief Re-encoded into the container the game decodes cheaply
+
+			Only the Dreamcast needs this: the original container costs 55-115 ms a frame to inflate there
+			against a 42 ms budget, where the re-encoded one costs under one. Everything else decodes the
+			original perfectly well and is better off with the smaller file. Downscaling also requires it,
+			since the frames have to be re-encoded either way.
+		*/
+		Recompress
+	};
+
 	/** @brief What the tool was asked to do */
 	enum class Command {
 		/** @brief Convert the original game data, which is what the tool exists for */
@@ -90,7 +109,9 @@ namespace
 		/** @brief Replace the palette indices of an image with the colors they stand for */
 		ApplyPalette,
 		/** @brief Resolve the colors of an image back to palette indices */
-		ToIndices
+		ToIndices,
+		/** @brief Re-encode one cinematic into the container the game plays, optionally downscaling it */
+		RecompressVideo
 	};
 
 	struct Options {
@@ -98,8 +119,32 @@ namespace
 		String SourcePath;
 		String TargetPath;
 		TargetProfile Profile = TargetProfile::Desktop;
-		/** @brief How much the cinematics are downscaled; 1 leaves them alone (and copies nothing) */
+		/** @brief How much the cinematics are downscaled; 1 keeps their original resolution */
 		std::int32_t VideoDownscale = 1;
+		/** @brief What happens to the cinematics */
+		VideoHandling Videos = VideoHandling::None;
+		/** @brief Deploy every cinematic present, not just the two the game plays */
+		bool AllVideos = false;
+		/** @brief Convert only the levels the original game shipped */
+		bool OriginalsOnly = false;
+		/** @brief Convert only what the Shareware Demo shipped */
+		bool SharewareOnly = false;
+		/** @brief Skip the levels that belong to no episode */
+		bool SkipNonEpisodeLevels = false;
+	};
+
+	/**
+		@brief Where the original files, and optionally the game's own content, live under a given directory
+
+		The source can be either a directory of original game files or a whole game installation, which keeps
+		them in a `Source` subdirectory next to the `Content` the game ships and the `Cache` it converts into.
+		Pointing the tool at the installation is the convenient thing to do, so it looks for both layouts.
+	*/
+	struct SourceLayout {
+		/** @brief Directory holding `Anims.j2a` and the rest of the original files */
+		String OriginalsPath;
+		/** @brief The game's own content directory, if the source turned out to be an installation */
+		String ContentPath;
 	};
 
 	bool TryParseCommand(StringView value, Command& command)
@@ -114,19 +159,24 @@ namespace
 			command = Command::ApplyPalette;
 		} else if (value == "to-indices"_s) {
 			command = Command::ToIndices;
+		} else if (value == "recompress-video"_s) {
+			command = Command::RecompressVideo;
 		} else {
 			return false;
 		}
 		return true;
 	}
 
-	bool TryParseProfile(StringView value, TargetProfile& profile)
+	bool TryParseProfile(StringView value, TargetProfile& profile, bool& isDreamcast)
 	{
+		isDreamcast = false;
 		if (value == "desktop"_s) {
 			profile = TargetProfile::Desktop;
 		} else if (value == "console"_s || value == "dreamcast"_s || value == "wii"_s || value == "gamecube"_s) {
-			// The consoles all consume the same staged tree, so they share one profile
+			// The consoles all consume the same staged tree, so they share one profile - only the cinematics
+			// are decided per platform, so that is tracked separately
 			profile = TargetProfile::Console;
+			isDreamcast = (value == "dreamcast"_s);
 		} else if (value == "emscripten"_s || value == "web"_s) {
 			profile = TargetProfile::Emscripten;
 		} else {
@@ -140,10 +190,19 @@ namespace
 		LOGI("Usage: AssetPacker [<command>] <source> <target> [options]");
 		LOGI("");
 		LOGI("  convert <source directory> <target directory>   (the default command)");
-		LOGI("    <source directory>   Directory containing the original game files (Anims.j2a, *.j2l, *.j2t, ...)");
+		LOGI("    <source directory>   Directory containing the original game files (Anims.j2a, *.j2l, *.j2t, ...),");
+		LOGI("                         or a game installation that keeps them in a \"Source\" subdirectory - in which");
+		LOGI("                         case its \"Content\" is copied to the target as well");
 		LOGI("    <target directory>   Directory the converted data is written to (created if needed)");
 		LOGI("    --target=<profile>   desktop (default) | console | dreamcast | wii | gamecube | emscripten");
-		LOGI("    --video-downscale=N  Downscale cinematics by N (1-4); defaults to 2 for console, 1 otherwise");
+		LOGI("    --video-downscale=N  Downscale cinematics by N (1-4); 1 (the default) keeps them as they are.");
+		LOGI("                         Cinematics are re-encoded for dreamcast (or any N > 1) and otherwise");
+		LOGI("                         copied unchanged; desktop gets none, as the game reads the originals");
+		LOGI("    --originals-only     Convert only the episodes and levels the original game shipped");
+		LOGI("    --shareware-only     Convert only what the Shareware Demo shipped (implies --originals-only)");
+		LOGI("    --all-videos         Deploy every cinematic found, not just the two the game plays");
+		LOGI("    --skip-non-episode-levels");
+		LOGI("                         Convert only levels that belong to an episode");
 		LOGI("");
 		LOGI("  pack-font <source .png> <target .font>");
 		LOGI("    Packs a grid image and the character list next to it (<source .png>.font) into a single file");
@@ -153,11 +212,14 @@ namespace
 		LOGI("    Replaces the palette indices of an image with the colors they stand for, so it can be edited");
 		LOGI("  to-indices <source .png> <target .png>");
 		LOGI("    Resolves the colors of an edited image back to the nearest palette indices");
+		LOGI("  recompress-video <source .j2v> <target .j2v> [--video-downscale=N]");
+		LOGI("    Re-encodes one cinematic on its own; N defaults to 1, which keeps the original resolution");
 	}
 
 	bool ParseOptions(std::int32_t argc, char** argv, Options& options)
 	{
 		bool videoDownscaleSet = false;
+		bool isDreamcast = false;
 
 		std::int32_t firstArgument = 1;
 		if (argc > 1 && TryParseCommand(argv[1], options.Action)) {
@@ -167,7 +229,7 @@ namespace
 		for (std::int32_t i = firstArgument; i < argc; i++) {
 			StringView arg = argv[i];
 			if (arg.hasPrefix("--target="_s)) {
-				if (!TryParseProfile(arg.exceptPrefix("--target="_s), options.Profile)) {
+				if (!TryParseProfile(arg.exceptPrefix("--target="_s), options.Profile, isDreamcast)) {
 					LOGE("Unknown target profile \"{}\"", arg.exceptPrefix("--target="_s));
 					return false;
 				}
@@ -178,6 +240,14 @@ namespace
 					return false;
 				}
 				videoDownscaleSet = true;
+			} else if (arg == "--originals-only"_s) {
+				options.OriginalsOnly = true;
+			} else if (arg == "--shareware-only"_s) {
+				options.SharewareOnly = true;
+			} else if (arg == "--all-videos"_s) {
+				options.AllVideos = true;
+			} else if (arg == "--skip-non-episode-levels"_s) {
+				options.SkipNonEpisodeLevels = true;
 			} else if (arg == "--help"_s || arg == "-h"_s) {
 				return false;
 			} else if (options.SourcePath.empty()) {
@@ -190,23 +260,69 @@ namespace
 			}
 		}
 
-		if (!videoDownscaleSet) {
-			// Only the Dreamcast cannot keep up with the full-resolution videos; everything else plays them
-			// as they are, and downscaling would only throw detail away
-			options.VideoDownscale = (options.Profile == TargetProfile::Console ? 2 : 1);
+		// The desktop game finds the originals on its own, so nothing has to be done for it unless a downscale
+		// was asked for; every other target needs them in the output tree
+		if (options.VideoDownscale > 1 || isDreamcast) {
+			options.Videos = VideoHandling::Recompress;
+		} else if (options.Profile != TargetProfile::Desktop) {
+			options.Videos = VideoHandling::Copy;
+		} else if (videoDownscaleSet) {
+			options.Videos = VideoHandling::Recompress;
 		}
 
 		return !options.SourcePath.empty() && !options.TargetPath.empty();
 	}
 
-	/** @brief Locates `Anims.j2a`, or the shareware `AnimsSw.j2a`, in the source directory */
-	String FindAnimsFile(StringView sourcePath)
+	/** @brief Locates `Anims.j2a`, or the shareware `AnimsSw.j2a`, in the specified directory */
+	String FindAnimsFile(StringView path)
 	{
-		String path = fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, "Anims.j2a"_s));
-		if (!fs::IsReadableFile(path)) {
-			path = fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, "AnimsSw.j2a"_s));
+		String result = fs::FindPathCaseInsensitive(fs::CombinePath(path, "Anims.j2a"_s));
+		if (!fs::IsReadableFile(result)) {
+			result = fs::FindPathCaseInsensitive(fs::CombinePath(path, "AnimsSw.j2a"_s));
 		}
-		return path;
+		return result;
+	}
+
+	/** @brief Works out whether the source is a directory of original files or a whole game installation */
+	SourceLayout ResolveSourceLayout(StringView sourcePath)
+	{
+		SourceLayout layout;
+
+		// An installation keeps the original files one level down, so that is where to look first - a directory
+		// that has them at the top is taken as they are
+		String nested = fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, "Source"_s));
+		if (fs::DirectoryExists(nested) && fs::IsReadableFile(FindAnimsFile(nested))) {
+			layout.OriginalsPath = std::move(nested);
+
+			String content = fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, "Content"_s));
+			if (fs::DirectoryExists(content)) {
+				layout.ContentPath = std::move(content);
+			}
+		} else {
+			layout.OriginalsPath = sourcePath;
+		}
+
+		return layout;
+	}
+
+	/** @brief Copies a directory tree, adding to whatever is already at the target */
+	bool CopyDirectoryRecursive(StringView sourcePath, StringView targetPath)
+	{
+		if (!fs::CreateDirectories(targetPath)) {
+			return false;
+		}
+
+		bool success = true;
+		for (auto item : fs::Directory(sourcePath)) {
+			String targetItem = fs::CombinePath(targetPath, fs::GetFileName(item));
+			if (fs::DirectoryExists(item)) {
+				success &= CopyDirectoryRecursive(item, targetItem);
+			} else if (!fs::Copy(item, targetItem)) {
+				LOGW("Cannot copy \"{}\" to \"{}\"", item, targetItem);
+				success = false;
+			}
+		}
+		return success;
 	}
 
 	/**
@@ -250,6 +366,13 @@ int main(int argc, char** argv)
 			case Command::PackFont: success = AssetPacker::FontPacker::Pack(options.SourcePath, options.TargetPath); break;
 			case Command::UnpackFont: success = AssetPacker::FontPacker::Unpack(options.SourcePath, options.TargetPath); break;
 			case Command::ApplyPalette: success = AssetPacker::FontPacker::ApplyPalette(options.SourcePath, options.TargetPath); break;
+			case Command::RecompressVideo:
+				success = Compatibility::J2vRecompressor::Recompress(options.SourcePath, options.TargetPath, options.VideoDownscale);
+				if (success) {
+					LOGI("\"{}\" re-encoded to \"{}\" at 1/{} scale, {} bytes", options.SourcePath, options.TargetPath,
+						options.VideoDownscale, fs::GetFileSize(options.TargetPath));
+				}
+				break;
 			default: success = AssetPacker::FontPacker::ConvertToIndices(options.SourcePath, options.TargetPath); break;
 		}
 		if (!success) {
@@ -264,9 +387,10 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	String animsPath = FindAnimsFile(options.SourcePath);
+	SourceLayout layout = ResolveSourceLayout(options.SourcePath);
+	String animsPath = FindAnimsFile(layout.OriginalsPath);
 	if (!fs::IsReadableFile(animsPath)) {
-		LOGE("Cannot find \"Anims.j2a\" in \"{}\". Make sure a supported Jazz Jackrabbit 2 version is present there.", options.SourcePath);
+		LOGE("Cannot find \"Anims.j2a\" in \"{}\" or in its \"Source\" subdirectory. Make sure a supported Jazz Jackrabbit 2 version is present there.", options.SourcePath);
 		return 1;
 	}
 
@@ -277,10 +401,17 @@ int main(int argc, char** argv)
 		: options.TargetPath);
 	fs::CreateDirectories(outputPath);
 
-	LOGI("Converting \"{}\" to \"{}\"...", options.SourcePath, outputPath);
+	LOGI("Converting \"{}\" to \"{}\"...", layout.OriginalsPath, outputPath);
+
+	// The game's own content (fonts, metadata, translations, shaders) is not derived from anything in the
+	// original data, so a target that has to be self-contained needs it copied in alongside
+	if (!layout.ContentPath.empty() && options.Profile != TargetProfile::Desktop) {
+		LOGI("Copying \"{}\"...", layout.ContentPath);
+		CopyDirectoryRecursive(layout.ContentPath, outputPath);
+	}
 
 	Compatibility::JJ2Version version;
-	switch (Compatibility::AssetConverter::ConvertSourceAssets(animsPath, options.SourcePath, outputPath, version)) {
+	switch (Compatibility::AssetConverter::ConvertSourceAssets(animsPath, layout.OriginalsPath, outputPath, version)) {
 		case Compatibility::AssetConverter::Result::CannotWriteTarget:
 			LOGE("Cannot open \"{}\" for writing", fs::CombinePath(outputPath, "Source.pak"_s));
 			return 1;
@@ -291,25 +422,55 @@ int main(int argc, char** argv)
 			break;
 	}
 
-	Compatibility::AssetConverter::ConvertLevels(options.SourcePath, outputPath, true);
+	SmallVector<String, 0> skippedLevels;
+	Compatibility::AssetConverter::ConversionOptions conversionOptions;
+	conversionOptions.OriginalsOnly = options.OriginalsOnly;
+	conversionOptions.SharewareOnly = options.SharewareOnly;
+	conversionOptions.SkipNonEpisodeLevels = options.SkipNonEpisodeLevels;
+	// The desktop game reads music from its own content directory, not from the cache this writes
+	conversionOptions.CopyUsedMusic = (options.Profile != TargetProfile::Desktop);
+	conversionOptions.SkippedLevels = &skippedLevels;
+	Compatibility::AssetConverter::ConvertLevels(layout.OriginalsPath, outputPath, true, conversionOptions);
 
-	// The cinematics are downscaled once here for the platforms that cannot afford to do it per frame while
-	// playing. They keep the same container, so the result plays anywhere the original does.
-	if (options.VideoDownscale > 1) {
-		static const StringView videoNames[] = { "Intro"_s, "Ending"_s, "Logo"_s };
+	if (!skippedLevels.empty()) {
+		// Listed rather than only counted, because the list of levels the original game shipped is maintained
+		// by hand and this is how a name missing from it shows up
+		LOGI("{} levels were skipped:", skippedLevels.size());
+		for (String& levelName : skippedLevels) {
+			LOGI("  {}", levelName);
+		}
+	}
+
+	if (options.Videos != VideoHandling::None) {
+		// Only the first two are ever played (see the Cinematics handlers in Main.cpp); "Logo" is in the
+		// original data but nothing asks for it, so it is left out unless everything was asked for
+		static const StringView everyVideo[] = { "Intro"_s, "Ending"_s, "Logo"_s };
+		const ArrayView<const StringView> videoNames = ArrayView<const StringView>(everyVideo)
+			.prefix(options.AllVideos ? arraySize(everyVideo) : 2);
+
 		String cinematicsPath = fs::CombinePath(outputPath, "Cinematics"_s);
 		fs::CreateDirectories(cinematicsPath);
 
+		if (options.Videos == VideoHandling::Recompress) {
+			LOGI("Recompressing cinematics...");
+		} else {
+			LOGI("Copying cinematics...");
+		}
+
 		for (StringView name : videoNames) {
-			String videoPath = fs::FindPathCaseInsensitive(fs::CombinePath(options.SourcePath, String(name + ".j2v"_s)));
+			String videoPath = fs::FindPathCaseInsensitive(fs::CombinePath(layout.OriginalsPath, String(name + ".j2v"_s)));
 			if (!fs::IsReadableFile(videoPath)) {
 				continue;
 			}
 
 			// The player looks the files up in lower case
 			String targetVideoPath = fs::CombinePath(cinematicsPath, StringUtils::lowercase(name + ".j2v"_s));
-			if (!Compatibility::J2vRecompressor::Recompress(videoPath, targetVideoPath, options.VideoDownscale)) {
-				LOGW("Cannot recompress \"{}\", skipping it", videoPath);
+			if (options.Videos == VideoHandling::Recompress) {
+				if (!Compatibility::J2vRecompressor::Recompress(videoPath, targetVideoPath, options.VideoDownscale)) {
+					LOGW("Cannot recompress \"{}\", skipping it", videoPath);
+				}
+			} else if (!fs::Copy(videoPath, targetVideoPath)) {
+				LOGW("Cannot copy \"{}\", skipping it", videoPath);
 			}
 		}
 	}

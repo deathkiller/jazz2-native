@@ -18,6 +18,124 @@ using namespace Death::IO;
 
 namespace Jazz2::Compatibility
 {
+	namespace
+	{
+		/**
+			@brief Episodes the original game and its expansions came with
+
+			`hh24` has no levels in the table of known ones below, which is exactly why the filter follows each
+			episode's chain instead of trusting that table to be complete.
+		*/
+		static const StringView OriginalEpisodes[] = {
+			"prince"_s, "rescue"_s, "flash"_s, "monk"_s, "share"_s,
+			"xmas98"_s, "xmas99"_s, "secretf"_s, "hh17"_s, "hh18"_s, "hh24"_s
+		};
+
+		/**
+			@brief Levels the original game came with that belong to no episode
+
+			The multiplayer levels, which no episode references, so nothing in the data says they are original -
+			this list is the only record of it. It is drawn from the levels the retail game, the shareware demo,
+			The Secret Files and the Christmas Chronicles install; a source directory that has collected levels
+			from elsewhere will have many more, and those are what @ref AssetConverter::ConversionOptions::OriginalsOnly
+			is meant to leave out. Worth reviewing against a clean installation - a name missing from here is
+			silently dropped, and `ConversionOptions::SkippedLevels` reports everything that was.
+		*/
+		static const StringView StockStandaloneLevels[] = {
+			// Battle
+			"battle1"_s, "battle2"_s, "battle3"_s,
+			// Race
+			"race1"_s, "race2"_s, "race3"_s,
+			// Treasure hunt
+			"treasur1"_s, "treasur2"_s, "treasur3"_s,
+			// Capture the flag
+			"capture1"_s, "capture2"_s, "capture3"_s,
+			// Shareware demo multiplayer
+			"sharectf"_s, "sharect2"_s, "sharetrs"_s,
+			// The Secret Files multiplayer
+			"abattle1"_s, "arace1"_s, "arace2"_s, "battlea"_s,
+			// Christmas Chronicles multiplayer
+			"xmbattle1"_s, "xmbattle2"_s
+		};
+
+		/** @brief The one episode the Shareware Demo came with */
+		static const StringView SharewareEpisode = "share"_s;
+
+		/** @brief The multiplayer levels the Shareware Demo came with, a subset of the stock ones above */
+		static const StringView SharewareStandaloneLevels[] = {
+			"sharectf"_s, "sharect2"_s, "sharetrs"_s
+		};
+
+		bool IsOriginalEpisode(StringView name)
+		{
+			for (StringView episode : OriginalEpisodes) {
+				if (name == episode) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		/** @brief Whether an episode survives the filter, and so whether its levels are worth following */
+		bool IsAllowedEpisode(StringView name, const AssetConverter::ConversionOptions& options)
+		{
+			if (options.SharewareOnly) {
+				return (name == SharewareEpisode);
+			}
+			if (options.OriginalsOnly) {
+				return IsOriginalEpisode(name);
+			}
+			return true;
+		}
+
+		/** @brief Lowercased level token, with the extension and any directory dropped */
+		String NormalizeLevelToken(StringView token)
+		{
+			String result = fs::GetFileNameWithoutExtension(token);
+			StringUtils::lowercaseInPlace(result);
+			return result;
+		}
+
+		/**
+			@brief Collects every level an episode can reach, following each level's exits
+
+			An episode names only its first level; the rest of it is discovered by opening that level and taking
+			whatever it points at next, and so on. Levels are keyed by file name because that is what the exits
+			refer to - a level's own recorded name is not always the same thing.
+		*/
+		void CollectEpisodeLevels(const HashMap<String, String>& levelFiles, StringView firstLevel,
+			HashMap<String, bool>& reachable)
+		{
+			SmallVector<String, 0> pending;
+			pending.push_back(NormalizeLevelToken(firstLevel));
+
+			while (!pending.empty()) {
+				String current = std::move(pending.back());
+				pending.pop_back();
+				// A token starting with ':' is an instruction to the game ("end of episode", "credits"), not a level
+				if (current.empty() || current[0] == ':' || reachable.contains(current)) {
+					continue;
+				}
+
+				auto file = levelFiles.find(current);
+				if (file == levelFiles.end()) {
+					continue;
+				}
+				reachable.emplace(current, true);
+
+				JJ2Level level;
+				if (!level.Open(file->second, false)) {
+					continue;
+				}
+				for (StringView exit : { StringView(level.NextLevel), StringView(level.SecretLevel), StringView(level.BonusLevel) }) {
+					if (!exit.empty()) {
+						pending.push_back(NormalizeLevelToken(exit));
+					}
+				}
+			}
+		}
+	}
+
 	AssetConverter::Result AssetConverter::ConvertSourceAssets(StringView animsPath, StringView sourcePath, StringView targetPath, JJ2Version& version)
 	{
 		version = JJ2Version::Unknown;
@@ -41,6 +159,12 @@ namespace Jazz2::Compatibility
 	}
 
 	void AssetConverter::ConvertLevels(StringView sourcePath, StringView targetPath, bool recreateAll)
+	{
+		ConversionOptions everything;
+		ConvertLevels(sourcePath, targetPath, recreateAll, everything);
+	}
+
+	void AssetConverter::ConvertLevels(StringView sourcePath, StringView targetPath, bool recreateAll, const ConversionOptions& options)
 	{
 	LOGI("Searching for levels...");
 
@@ -194,7 +318,58 @@ namespace Jazz2::Compatibility
 		fs::CreateDirectories(episodesPath);
 	}
 
-	HashMap<String, bool> usedTilesets;
+	HashMap<String, bool> usedTilesets, usedMusic;
+
+	// What the filter allows through is decided up front, because it depends on the directory as a whole:
+	// which levels each episode can reach can only be answered once every level's file is known
+	const bool filtering = (options.OriginalsOnly || options.SharewareOnly || options.SkipNonEpisodeLevels);
+	HashMap<String, bool> episodeLevels, allowedLevels;
+	if (filtering) {
+		HashMap<String, String> levelFiles;
+		for (auto item : fs::Directory(fs::FindPathCaseInsensitive(sourcePath), fs::EnumerationOptions::SkipDirectories)) {
+			if (fs::GetExtension(item) == "j2l"_s) {
+				levelFiles.emplace(NormalizeLevelToken(item), String(item));
+			}
+		}
+
+		for (auto item : fs::Directory(fs::FindPathCaseInsensitive(sourcePath), fs::EnumerationOptions::SkipDirectories)) {
+			auto extension = fs::GetExtension(item);
+			if (extension != "j2e"_s && extension != "j2pe"_s) {
+				continue;
+			}
+			JJ2Episode episode;
+			if (!episode.Open(item) || episode.Name == "home"_s) {
+				// "home" is the custom-levels entry and reaches nothing
+				continue;
+			}
+			// Every episode contributes to "belongs to an episode"; only the original ones contribute to
+			// "the original game shipped this"
+			CollectEpisodeLevels(levelFiles, episode.FirstLevel, episodeLevels);
+			if (IsAllowedEpisode(episode.Name, options)) {
+				CollectEpisodeLevels(levelFiles, episode.FirstLevel, allowedLevels);
+			}
+		}
+
+		// The table of known levels covers the original episodes whether or not their episode file is present
+		for (auto& knownLevel : knownLevels) {
+			if (!knownLevel.second.first().empty()) {
+				episodeLevels.emplace(knownLevel.first, true);
+				if (IsAllowedEpisode(knownLevel.second.first(), options)) {
+					allowedLevels.emplace(knownLevel.first, true);
+				}
+			}
+		}
+		// Nothing in the data says a multiplayer level is original, so the lists above are the only record
+		if (options.SharewareOnly) {
+			for (StringView stockLevel : SharewareStandaloneLevels) {
+				allowedLevels.emplace(String(stockLevel), true);
+			}
+		} else if (options.OriginalsOnly) {
+			for (StringView stockLevel : StockStandaloneLevels) {
+				allowedLevels.emplace(String(stockLevel), true);
+			}
+		}
+	}
 
 	for (auto item : fs::Directory(fs::FindPathCaseInsensitive(sourcePath), fs::EnumerationOptions::SkipDirectories)) {
 		auto extension = fs::GetExtension(item);
@@ -214,6 +389,10 @@ namespace Jazz2::Compatibility
 				if (hasChristmasChronicles && episode.Name == "xmas98"_s) {
 					continue;
 				}
+				// "home" is how the game offers custom levels, so it is kept even when they are not converted
+				if (episode.Name != "home"_s && !IsAllowedEpisode(episode.Name, options)) {
+					continue;
+				}
 				if (episode.Name == "home"_s) {
 					episode.FirstLevel = ":custom-levels"_s;
 					episode.Position = UINT16_MAX;
@@ -228,6 +407,20 @@ namespace Jazz2::Compatibility
 			// Level
 			String levelName = fs::GetFileNameWithoutExtension(item);
 			if (levelName.find("-MLLE-Data-"_s) == nullptr) {
+				if (filtering) {
+					// Decided on the file name rather than the level's own recorded name, so a level that is
+					// filtered out never has to be opened at all
+					String token = NormalizeLevelToken(item);
+					const bool allowed = ((!options.OriginalsOnly && !options.SharewareOnly) || allowedLevels.contains(token))
+						&& (!options.SkipNonEpisodeLevels || episodeLevels.contains(token));
+					if (!allowed) {
+						if (options.SkippedLevels != nullptr) {
+							options.SkippedLevels->push_back(std::move(token));
+						}
+						continue;
+					}
+				}
+
 				if (!recreateAll) {
 					StringUtils::lowercaseInPlace(levelName);
 
@@ -269,6 +462,15 @@ namespace Jazz2::Compatibility
 					for (auto& extraTileset : level.ExtraTilesets) {
 						usedTilesets.emplace(extraTileset.Name, true);
 					}
+					if (!level.Music.empty()) {
+						// Recorded exactly as the converted level will ask for it: the original data leaves the
+						// extension off its own music, and JJ2Level::Convert fills in ".j2b" (see there)
+						String music = StringUtils::lowercase(level.Music);
+						if (music.find('.') == nullptr) {
+							music += ".j2b"_s;
+						}
+						usedMusic.emplace(std::move(music), true);
+					}
 
 					// Also copy level script file if exists
 					StringView foundDot = item.findLastOr('.', item.end());
@@ -292,6 +494,30 @@ namespace Jazz2::Compatibility
 			strings.Convert(fullPath, LevelTokenConversion);
 		}*/
 #endif
+	}
+
+	if (options.CopyUsedMusic && !usedMusic.empty()) {
+		// The music is not converted, only carried over - but only what the levels that survived the filter
+		// ask for, the same way the tilesets are. The game looks for it in a "Music" directory of its own,
+		// which is not where the original data keeps it.
+		LOGI("Copying used music...");
+		String musicPath = fs::CombinePath(targetPath, "Music"_s);
+		fs::CreateDirectories(musicPath);
+
+		std::int32_t copied = 0;
+		for (auto& pair : usedMusic) {
+			auto adjustedPath = fs::FindPathCaseInsensitive(fs::CombinePath(sourcePath, pair.first));
+			if (fs::IsReadableFile(adjustedPath)) {
+				if (fs::Copy(adjustedPath, fs::CombinePath(musicPath, pair.first))) {
+					copied++;
+				} else {
+					LOGW("Cannot copy \"{}\"", adjustedPath);
+				}
+			} else {
+				LOGW("Cannot find music file \"{}\"", pair.first);
+			}
+		}
+		LOGI("{} music files copied", copied);
 	}
 
 	if (recreateAll || !usedTilesets.empty()) {

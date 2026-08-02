@@ -9,8 +9,12 @@ namespace Jazz2::UI
 
 		A font is a single self-contained file: the glyph metrics and the glyph atlas together, the atlas in the
 		same QOI-based encoding every other image asset uses, all of it deflated. It holds one palette index per
-		pixel (plus alpha where the font needs it) rather than the expanded colours the old two-file (`.png` +
-		`.png.font`) form carried, which cost four bytes per pixel on disk and again in memory.
+		pixel rather than the expanded colours the old two-file (`.png` + `.png.font`) form carried, which cost
+		four bytes per pixel on disk and again in memory.
+
+		A font is entirely index based: every pixel either names a palette color or is index 0 and draws nothing.
+		There is no per-pixel coverage - the shading of a glyph comes from the colors it names, not from blending
+		it into what is behind it - so the packer resolves anything in between and says so.
 
 		Glyphs are packed tightly: every one is measured to its actual inked area rather than sitting in a fixed
 		cell, and each keeps a bearing so it still lands where it belongs on the line. A one pixel margin is left
@@ -22,7 +26,7 @@ namespace Jazz2::UI
 		-   the size of the deflated block that follows, everything below being inside it
 		-   the atlas size, the line height, the base spacing and the character counts
 		-   a @ref Glyph for each ASCII character, then a codepoint and a @ref Glyph for each Unicode one
-		-   the atlas itself, @ref FontFlags::HasAlpha deciding whether it carries one or two channels
+		-   the atlas itself, one palette index per pixel
 	*/
 	struct FontFormat
 	{
@@ -34,18 +38,6 @@ namespace Jazz2::UI
 		static constexpr std::int32_t GlyphMargin = 1;
 		/** @brief Codepoint of the glyph drawn in place of a character the font doesn't have */
 		static constexpr std::uint32_t FallbackCodepoint = 0;
-
-		/** @brief Flags of a packed font */
-		struct Flags
-		{
-			/**
-				@brief The atlas carries an explicit alpha channel
-
-				A font whose glyphs are antialiased needs one; a font with hard edges is fully described by its
-				indices alone, index 0 being the transparent one, and stores a single channel per pixel.
-			*/
-			static constexpr std::uint8_t HasAlpha = 0x01;
-		};
 
 		/**
 			@brief Metrics of a single glyph

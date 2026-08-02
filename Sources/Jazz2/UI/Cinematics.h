@@ -237,7 +237,10 @@ namespace Jazz2::UI
 			a plain row copy, and a 16-bit palette makes the conversion one lookup and one store per pixel.
 		*/
 		bool _convertTo565;
+		/** @brief Whole converted frame, only used where the texture's storage cannot be written directly */
 		std::unique_ptr<std::uint16_t[]> _frame565;
+		/** @brief One converted row, small enough to stay in the cache between converting it and copying it out */
+		std::unique_ptr<std::uint16_t[]> _frameRow;
 		std::uint16_t _palette565[256];
 
 		/** @brief 256x1 palette the indexed frames are sampled through */

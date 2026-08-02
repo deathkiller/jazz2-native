@@ -249,7 +249,20 @@ namespace nCine::RHI
 // so `RHI_CAP_SHADERS` stays undefined and the game runs the direct tier (the same tier as the software
 // and GX backends: scene straight to the display at the logical resolution, CPU lightmap composited by
 // the device's lighting hook).
+//
+// `RHI_CAP_PALETTED_TEXTURES` means an R8 texture of palette indices is resolved through the palette by the
+// hardware itself, under every effect - on the PowerVR the lookup belongs to the texture read rather than to
+// a shader, so an image that is already indices can be uploaded as they are instead of being expanded to
+// colors first. The GX backend has the same hardware format (CI8) but only reads it through the palette when
+// the effect asks for it, so it does not advertise this yet.
+//
+// `RHI_CAP_STREAMING_TEXTURES` means a texture's storage can be written by the CPU in place, so content
+// that is regenerated every frame (the cinematics) can be produced straight into it instead of into a
+// buffer that is then copied twice - the tile accelerator reads textures out of ordinary video memory,
+// which is addressable, unlike a driver-owned object that has to be uploaded through an API.
 #define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_PALETTED_TEXTURES
+#define RHI_CAP_STREAMING_TEXTURES
 
 namespace nCine::RHI::PVR
 {

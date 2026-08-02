@@ -4,8 +4,8 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <vector>
 
+#include <Containers/SmallVector.h>
 #include <Containers/StringView.h>
 
 #include <dc/pvr.h>
@@ -169,6 +169,20 @@ namespace nCine::RHI::PVR
 		 */
 		pvr_ptr_t EnsureBakedArgb4444(const std::uint32_t* paletteRow, std::uint32_t paletteRowIndex, std::uint32_t paletteGeneration, const void* palette);
 
+		/**
+			@brief Returns a writable pointer to the VRAM store, for content that is rebuilt every frame
+
+			Answered only for the formats the hardware samples verbatim from video memory (RGB565), which is
+			what lets the cinematics build a frame straight where it will be read from instead of into a buffer
+			that is then copied into the host store and copied again into video memory. Returns `nullptr` for
+			anything else, and for a store that cannot be allocated.
+
+			@p strideBytes receives the row pitch, which is the power-of-two padded width rather than the
+			texture's own. Nothing written here reaches the host copy, so such a texture must be rewritten in
+			full every frame and never read back.
+		*/
+		void* MapStreamingTexels(std::int32_t& strideBytes);
+
 		/** @brief Binds the texture to the specified texture unit on the device */
 		bool Bind(std::uint32_t textureUnit) const;
 		/** @brief Binds the texture to texture unit 0 */
@@ -244,12 +258,14 @@ namespace nCine::RHI::PVR
 		SamplerWrapping wrap_;
 		SwizzleChannel swizzle_[4];
 		mutable std::uint32_t textureUnit_;
-		std::vector<std::uint8_t> pixels_;
+		SmallVector<std::uint8_t, 0> pixels_;
 		bool isRenderTarget_;
 		bool isPaletteTexture_;
 
 		pvr_ptr_t vram_;
 		std::uint32_t vramFormat_;
+		/** @brief Bytes per texel the current VRAM store was allocated for, so a format change reallocates it */
+		std::int32_t vramBytesPerTexel_;
 		std::int32_t paddedWidth_;
 		std::int32_t paddedHeight_;
 		float uScale_;
@@ -272,6 +288,16 @@ namespace nCine::RHI::PVR
 		};
 		BakedSlot bakedSlots_[BakedSlotCount];
 		std::int32_t nextBakedSlot_;
+
+
+		/**
+			@brief Makes sure a VRAM store of the right size exists, reallocating it if the format changed
+
+			A texture does not always end up in the format it was first uploaded in - a true-color one that
+			turns out to fit a color table halves in size - and writing the new format into the old allocation
+			would either waste half of it or, the other way round, run past the end of it.
+		*/
+		bool EnsureVramStore(std::int32_t bytesPerTexel);
 
 		// Every texture with video memory attached is linked into this list, most recently used first, so
 		// an allocation that runs out of memory can reclaim the least recently used stores (see Reclaim())
