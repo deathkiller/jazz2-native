@@ -427,6 +427,7 @@ namespace Jazz2::Multiplayer
 		float _gameTimeLeft;
 		LevelState _levelState;
 		bool _isServer;
+		bool _isLocalSession;	// Local splitscreen session - there are no peers, so no packets are ever built
 		bool _forceResyncPending;
 		bool _enableSpawning;
 		bool _enqueuedPlaylistChange; // Server: apply the next playlist entry once the end-of-level transition finishes

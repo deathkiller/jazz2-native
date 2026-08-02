@@ -172,6 +172,13 @@ namespace Jazz2::Multiplayer
 
 	bool NetworkManager::HasInboundConnections() const
 	{
+		if DEATH_UNLIKELY(GetState() == NetworkState::Local) {
+			// A local session binds no socket, so it can never have inbound connections. The peer map still holds
+			// one synthetic descriptor per local splitscreen player (see AddLocalPlayer()), so the size check below
+			// would report them as connected clients and make the server broadcast state nobody can receive.
+			return false;
+		}
+
 		std::unique_lock<Spinlock> l(_lock);
 		// Local peer is always present
 		return (_peerDesc.size() > 1);
