@@ -26,6 +26,13 @@ jobs:
       image: pcercuei/dreamcast-toolchain:stable
       options: --user root
 
+    env:
+      # Pinned to the revisions the game is developed and tested against - an unpinned clone of KOS
+      # master can break this workflow (or silently change the runtime) with no change in this repository
+      KOS_COMMIT: 1c6398f9faa55eb397018ef830b3285e6839421b
+      KOS_PORTS_COMMIT: f4faacc42faaf552625777b7709e871a827e1055
+      MKDCDISC_COMMIT: ade5d8a54f5e0e729faedf5a0ceadffec6aa8ccb
+
     steps:
     - name: 'Checkout Repository'
       uses: actions/checkout@v6
@@ -38,18 +45,34 @@ jobs:
         apk add --no-cache cmake meson ninja pkgconf libisofs-dev zlib-dev
 
         # mkdcdisc is used to create a bootable CDI image with the game content included
-        git clone --depth 1 https://gitlab.com/simulant/mkdcdisc.git /tmp/mkdcdisc
+        git init /tmp/mkdcdisc
         cd /tmp/mkdcdisc
+        git remote add origin https://gitlab.com/simulant/mkdcdisc.git
+        git fetch --depth 1 origin ${MKDCDISC_COMMIT}
+        git checkout FETCH_HEAD
         meson setup build
         ninja -C build
         cp ./build/mkdcdisc /usr/local/bin/
 
+    - name: 'Cache KallistiOS'
+      id: cache-kos
+      uses: actions/cache@v4
+      with:
+        path: |
+          /opt/toolchains/dc/kos
+          /opt/toolchains/dc/kos-ports
+        key: kos-${{ env.KOS_COMMIT }}-${{ env.KOS_PORTS_COMMIT }}
+
     - name: 'Build KallistiOS'
+      if: steps.cache-kos.outputs.cache-hit != 'true'
       shell: bash
       run: |
         # The toolchain image contains only the compilers, KOS itself has to be built from source
-        git clone --depth 1 https://github.com/KallistiOS/KallistiOS.git /opt/toolchains/dc/kos
+        git init /opt/toolchains/dc/kos
         cd /opt/toolchains/dc/kos
+        git remote add origin https://github.com/KallistiOS/KallistiOS.git
+        git fetch --depth 1 origin ${KOS_COMMIT}
+        git checkout FETCH_HEAD
         # The defaults in the sample match the toolchain paths inside the image
         cp doc/environ.sh.sample environ.sh
         mkdir -p /opt/toolchains/dc/bin
@@ -57,7 +80,12 @@ jobs:
         make -j $(nproc)
 
         # zlib is required for compressed game content
-        git clone --depth 1 https://github.com/KallistiOS/kos-ports.git /opt/toolchains/dc/kos-ports
+        git init /opt/toolchains/dc/kos-ports
+        cd /opt/toolchains/dc/kos-ports
+        git remote add origin https://github.com/KallistiOS/kos-ports.git
+        git fetch --depth 1 origin ${KOS_PORTS_COMMIT}
+        git checkout FETCH_HEAD
+        # The port installs into the KOS tree itself, so the cache above covers it too
         make -C /opt/toolchains/dc/kos-ports/zlib install
 
     - name: 'Configure CMake'

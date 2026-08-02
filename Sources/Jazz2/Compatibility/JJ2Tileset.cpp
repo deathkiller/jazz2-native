@@ -241,6 +241,12 @@ namespace Jazz2::Compatibility
 
 		std::int32_t width = TilesPerRow * BlockSize;
 		std::int32_t height = ((tileCount - 1) / TilesPerRow + 1) * BlockSize;
+		if (height > MaxTextureSize) {
+			// More tiles than a MaxTextureSize² texture can hold at all - platforms limited to that size
+			// cannot sample the result, so at least make the oversize visible at conversion time
+			LOGW("Tileset has {} tiles, its {}x{} texture exceeds the smallest supported size of {}x{}",
+				tileCount, width, height, MaxTextureSize, MaxTextureSize);
+		}
 
 		auto so = fs::Open(targetPath, FileAccess::Write);
 		DEATH_ASSERT(so->IsValid(), "Cannot open file for writing", );

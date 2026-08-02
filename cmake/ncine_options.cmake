@@ -309,9 +309,10 @@ option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-depen
 # Jazz² Resurrection options
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)
 cmake_dependent_option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT NCINE_PREFERRED_RHI STREQUAL GX;NOT NCINE_PREFERRED_RHI STREQUAL PVR;NOT VITA" ON)
-# The single-draw tilemap mesh is a full-tier optimization; the software backend rasterizes per tile and
-# the GX/PVR backends' v1 dispatch handles the procedural sprite-quad path only, so all three keep it off
-cmake_dependent_option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each tilemap layer" ON "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT NCINE_PREFERRED_RHI STREQUAL GX" OFF)
+# The single-draw tilemap mesh stays off where the backend cannot consume it: the software backend
+# rasterizes per tile. The GX and PVR backends both consume the whole-layer mesh directly (see
+# GxDevice::DispatchTileMesh and PvrDevice::DispatchTileMesh), so they keep it on
+cmake_dependent_option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each tilemap layer" ON "NOT NCINE_PREFERRED_RHI STREQUAL Software" OFF)
 
 option(WITH_MULTIPLAYER "Enable multiplayer support" ON)
 # The libogc consoles keep local splitscreen (WITH_MULTIPLAYER) but have no online transport (no enet/BSD

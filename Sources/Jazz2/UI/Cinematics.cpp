@@ -64,7 +64,7 @@ namespace Jazz2::UI
 		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
 			_videoDownscale(1), _textureWidth(0), _textureHeight(0), _textureIndex(0),
 			_pressedKeys(ValueInit, (std::size_t)Keys::Count), _pressedActions(0), _decodingFailed(false),
-			_nativeFormat(false), _indexedUpload(false), _convertTo565(false), _paletteDirty(true),
+			_nativeFormat(false), _convertTo565(false), _paletteDirty(true),
 			_paletteTextureDirty(false)
 	{
 		Initialize(path);
@@ -84,8 +84,7 @@ namespace Jazz2::UI
 	{
 		// The frame timer clamps GetTimeMult() to keep gameplay stable on slow frames, but the video has
 		// to track real time - the music plays in real time, and on platforms that can't render 60 FPS
-		// the clamp would stretch the video far beyond its runtime (with the catch-up below decoding the
-		// skipped frames, only the displayed ones are uploaded)
+		// the clamp would stretch the video far beyond its runtime
 		float timeMult = theApplication().GetFrameTimer().GetLastFrameDuration() / FrameTimer::SecondsPerFrame;
 
 		if (_framesLeft <= 0) {
@@ -103,17 +102,26 @@ namespace Jazz2::UI
 
 		_frameProgress += timeMult;
 
-		// At most one frame is decoded per rendered frame. Frames are delta-encoded against their
-		// predecessor, so a frame cannot be skipped - it always has to be decoded, and decoding is nearly
-		// the whole cost (applying the palette and uploading the texture is a few percent on top). Running
-		// several decodes to catch up therefore buys almost nothing while hiding all but the last of those
-		// frames, so a machine that decodes slower than the video's frame rate is far better off showing
-		// every frame and letting the picture fall behind the music than showing one frame in ten.
-		if (_frameProgress > _frameDelay) {
-			_frameProgress = _frameDelay;
+		// Frames are delta-encoded against their predecessor, so a frame cannot be skipped - it always has
+		// to be decoded, and decoding is nearly the whole cost (applying the palette and uploading the
+		// texture is a few percent on top).
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+		// On a machine that decodes slower than the video's frame rate, catching up buys nothing: it hides
+		// all but the last of the decoded frames while making the stall worse. At most one frame is decoded
+		// per rendered frame, every frame is shown, and the picture may fall behind the music.
+		constexpr std::int32_t MaxDecodesPerFrame = 1;
+#else
+		// Decoding is cheap here, but a single long frame (a window drag, a driver compiling shaders) would
+		// with a one-decode cap delay the video against the already-playing music for the rest of playback.
+		// A small bounded catch-up recovers from such a hitch within a few frames, while a sustained decode
+		// backlog still cannot snowball into an unbounded burst.
+		constexpr std::int32_t MaxDecodesPerFrame = 3;
+#endif
+		if (_frameProgress > _frameDelay * MaxDecodesPerFrame) {
+			_frameProgress = _frameDelay * MaxDecodesPerFrame;
 		}
 
-		if (_framesLeft > 0 && _frameProgress >= _frameDelay) {
+		for (std::int32_t i = 0; i < MaxDecodesPerFrame && _framesLeft > 0 && _frameProgress >= _frameDelay; i++) {
 			_frameProgress -= _frameDelay;
 			_framesLeft--;
 			PrepareNextFrame();
@@ -274,7 +282,6 @@ namespace Jazz2::UI
 #else
 		_convertTo565 = false;
 #endif
-		_indexedUpload = !_convertTo565;
 		const Texture::Format textureFormat = (_convertTo565 ? Texture::Format::RGB565 : Texture::Format::R8);
 		_textures[0] = std::make_unique<Texture>("Cinematics", textureFormat, _textureWidth, _textureHeight);
 		_textures[1] = std::make_unique<Texture>("Cinematics", textureFormat, _textureWidth, _textureHeight);
@@ -378,7 +385,6 @@ namespace Jazz2::UI
 #else
 		_convertTo565 = false;
 #endif
-		_indexedUpload = !_convertTo565;
 		const Texture::Format textureFormat = (_convertTo565 ? Texture::Format::RGB565 : Texture::Format::R8);
 		_textures[0] = std::make_unique<Texture>("Cinematics", textureFormat, _textureWidth, _textureHeight);
 		_textures[1] = std::make_unique<Texture>("Cinematics", textureFormat, _textureWidth, _textureHeight);
@@ -392,8 +398,9 @@ namespace Jazz2::UI
 		_paletteTexture->SetWrap(SamplerWrapping::ClampToEdge);
 		_paletteDirty = true;
 		_textureIndex = 0;
+		// No _lastBuffer here: the native codec deltas in place inside _buffer (skipped spans just leave
+		// the previous frame's pixels), so the legacy decoder's separate previous-frame copy is not needed
 		_buffer = std::make_unique<std::uint8_t[]>(_width * _height);
-		_lastBuffer = std::make_unique<std::uint8_t[]>(_width * _height);
 		if (_videoDownscale > 1) {
 			_indexedFrame = std::make_unique<std::uint8_t[]>(_textureWidth * _textureHeight);
 		}
@@ -461,7 +468,9 @@ namespace Jazz2::UI
 		}
 
 		const std::uint8_t* payload;
-		if (payloadSize <= VideoBlockCapacity) {
+		// The same limit EnsureBuffered enforces - a refill can start up to an alignment's worth of
+		// bytes before the payload, so a payload within that of the capacity still cannot fit
+		if (payloadSize <= VideoBlockCapacity - VideoBlockAlignment) {
 			if (!EnsureBuffered(payloadSize)) {
 				_decodingFailed = true;
 				return;
@@ -470,15 +479,22 @@ namespace Jazz2::UI
 			payload = _blockBuffer + _blockOffset;
 			_blockOffset += payloadSize;
 		} else {
-			// Only a corrupted file could hold a frame larger than the whole block
+			// A frame larger than the read-ahead block (e.g., the keyframe of a full-resolution video)
+			// is read from the file directly. The file's physical position is wherever the last refill
+			// ended, not the payload, so it has to be sought explicitly - and the block is dropped so
+			// the next frame starts with a refill right past this payload
 			if (payloadSize > _framePayloadCapacity) {
 				_framePayload = std::make_unique<std::uint8_t[]>(payloadSize);
 				_framePayloadCapacity = payloadSize;
 			}
+			_videoFile->Seek(_blockFilePosition + _blockOffset, SeekOrigin::Begin);
 			if (_videoFile->Read(_framePayload.get(), payloadSize) != std::int32_t(payloadSize)) {
 				_decodingFailed = true;
 				return;
 			}
+			_blockFilePosition += std::int64_t(_blockOffset) + payloadSize;
+			_blockOffset = 0;
+			_blockSize = 0;
 			payload = _framePayload.get();
 		}
 
@@ -616,7 +632,7 @@ namespace Jazz2::UI
 #endif
 	}
 
-	void Cinematics::PrepareNextFrame(bool prepareTexture)
+	void Cinematics::PrepareNextFrame()
 	{
 		if (_nativeFormat) {
 			DecodeFrameNative();
@@ -630,9 +646,7 @@ namespace Jazz2::UI
 			_paletteTextureDirty = true;
 		}
 
-		if (prepareTexture) {
-			ApplyPaletteAndUpload(_buffer.get());
-		}
+		ApplyPaletteAndUpload(_buffer.get());
 
 		PlayFrameSounds();
 	}
@@ -763,7 +777,16 @@ namespace Jazz2::UI
 #endif
 				for (std::uint32_t y = 0; y < _textureHeight; y++) {
 					ConvertIndicesTo565(&texels[std::size_t(y) * _textureWidth], row, _palette565, _textureWidth);
+#if defined(DEATH_TARGET_DREAMCAST)
+					// Whatever ruled the store queues out, accesses to video memory still have to stay
+					// 16/32-bit wide, which libc memcpy does not guarantee for every size and alignment
+					std::uint16_t* DEATH_RESTRICT dst = reinterpret_cast<std::uint16_t*>(mapped + std::size_t(y) * strideBytes);
+					for (std::uint32_t x = 0; x < _textureWidth; x++) {
+						dst[x] = row[x];
+					}
+#else
 					std::memcpy(mapped + std::size_t(y) * strideBytes, row, rowBytes);
+#endif
 				}
 				return;
 			}

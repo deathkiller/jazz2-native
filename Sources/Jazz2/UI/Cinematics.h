@@ -221,13 +221,6 @@ namespace Jazz2::UI
 		/** @brief Set when the file uses the game's own format instead of the original one */
 		bool _nativeFormat;
 		/**
-			@brief Set when frames are uploaded as palette indices instead of expanded to texels
-
-			Saves both the per-pixel palette lookup and three quarters of the upload - the palette is applied
-			by the sampler through @ref _paletteTexture instead.
-		*/
-		bool _indexedUpload;
-		/**
 			@brief Whether the frames are converted to RGB565 on the CPU instead of uploaded as indices
 
 			Indexed frames are the cheaper choice wherever the hardware can sample them as they are, but the
@@ -247,17 +240,12 @@ namespace Jazz2::UI
 		std::unique_ptr<nCine::Texture> _paletteTexture;
 		/** @brief Downscaled indices, only needed when the frames are larger than the texture */
 		std::unique_ptr<std::uint8_t[]> _indexedFrame;
-		/**
-			@brief Palette the decoder is currently using
-
-			Owned by whoever decodes - which is the prefetch thread when one is running, so the main thread
-			never touches it. Frames carry their palette along, and the main thread keeps its own copy below.
-		*/
+		/** @brief Set when a decoded frame carried a new palette that has not been picked up yet */
 		bool _paletteDirty;
 		std::uint32_t _uploadPalette[256];
 		bool _paletteTextureDirty;
 
-		/** @brief Scratch buffer for a frame whose payload does not fit in the block buffer (never happens in practice) */
+		/** @brief Scratch buffer for a frame whose payload does not fit in the block buffer (e.g., the keyframe of a full-resolution video) */
 		std::unique_ptr<std::uint8_t[]> _framePayload;
 		std::uint32_t _framePayloadCapacity;
 
@@ -293,7 +281,7 @@ namespace Jazz2::UI
 		void Initialize(StringView path);
 		bool LoadCinematicsFromFile(StringView path);
 		bool LoadSfxList(StringView path);
-		void PrepareNextFrame(bool prepareTexture = true);
+		void PrepareNextFrame();
 		bool LoadLegacyVideo(std::unique_ptr<Stream>&& s, StringView path);
 		bool LoadNativeVideo(std::unique_ptr<Stream>&& s, StringView path);
 		/** @brief Decodes one frame of the original format into @ref _buffer */

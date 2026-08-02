@@ -19,6 +19,12 @@ namespace nCine::RHI::GX
 			// ContentResolver::CompileShader, which bakes the variant into the name, e.g. "...Dither").
 			// Labels with no matching C++ effect fall through to a logged, skipped draw.
 
+			// Tile-layer meshes: a whole visible layer as one triangle list. Checked before the palette
+			// family - "TileMapMeshPalette" would otherwise have to be excluded from every later test.
+			if (Contains(label, "TileMapMesh")) {
+				return Contains(label, "Palette") ? GxEffect::TileMapMeshPalette : GxEffect::TileMapMesh;
+			}
+
 			// Palette family: recolors an R8/RG8 index sprite through the shared palette texture. Checked
 			// before the sprite family - "BatchedPaletteRemap" contains "Batched" but not "Sprite".
 			if (Contains(label, "PaletteRemap")) {
@@ -95,7 +101,7 @@ namespace nCine::RHI::GX
 		: handle_(nextHandle_++), status_(Status::NotLinked), introspection_(Introspection::Disabled), queryPhase_(queryPhase),
 			batchSize_(DefaultBatchSize), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0),
 			reflection_(nullptr), effectReflection_(nullptr), effect_(GxEffect::Unknown), ditherVariant_(false), usesPalette_(false),
-			boundVbo_(nullptr), boundIbo_(nullptr)
+			boundVbo_(nullptr), boundVboOffset_(0), boundIbo_(nullptr)
 	{
 	}
 
@@ -280,6 +286,7 @@ namespace nCine::RHI::GX
 	void GxShaderProgram::DefineVertexFormat(const GxBuffer* vbo, const GxBuffer* ibo, std::uint32_t vboOffset)
 	{
 		boundVbo_ = vbo;
+		boundVboOffset_ = vboOffset;
 		boundIbo_ = ibo;
 		if (vbo != nullptr) {
 			for (const GxAttribute& a : attributes_) {
@@ -299,6 +306,8 @@ namespace nCine::RHI::GX
 		uniformBlocks_.clear();
 		attributes_.clear();
 		resolvedUniforms_.clear();
+		resolvedProjectionMatrix_ = nullptr;
+		resolvedViewMatrix_ = nullptr;
 		vertexFormat_.Reset();
 		status_ = Status::NotLinked;
 		batchSize_ = DefaultBatchSize;
@@ -330,6 +339,14 @@ namespace nCine::RHI::GX
 
 	void GxShaderProgram::SetResolvedUniform(const char* name, const std::uint8_t* data)
 	{
+		// The device dispatch reads the camera matrices on every draw; recognizing the two names here,
+		// where a value is published at most once per commit, turns that per-draw linear scan with
+		// string compares into a plain member read (see GetResolvedProjectionMatrix())
+		if (std::strcmp(name, "uProjectionMatrix") == 0) {
+			resolvedProjectionMatrix_ = data;
+		} else if (std::strcmp(name, "uViewMatrix") == 0) {
+			resolvedViewMatrix_ = data;
+		}
 		for (ResolvedUniform& r : resolvedUniforms_) {
 			if (r.Name == name) {
 				r.Data = data;

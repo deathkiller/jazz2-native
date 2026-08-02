@@ -37,6 +37,7 @@
 #	include <gccore.h>
 #	include <fat.h>
 #	include <ogc/pad.h>
+#	include <sys/iosupport.h>
 #	if defined(DEATH_TARGET_WII)
 #		include <wiiuse/wpad.h>
 #	endif
@@ -111,6 +112,14 @@ namespace nCine
 	// Set from the power/reset event callbacks, which run in interrupt context and must not do more
 	// than this - the main loop picks it up and shuts the game down in an orderly way
 	static volatile bool ogcShutdownRequested = false;
+
+	static ssize_t OgcNullWrite(struct _reent* r, void* fd, const char* ptr, size_t len)
+	{
+		return len;
+	}
+
+	// Replaces the boot console's stdout once the real video device owns the screen (see below)
+	static const devoptab_t ogcNullOut = { "stdout", 0, nullptr, nullptr, OgcNullWrite };
 #endif
 
 	Application& theApplication()
@@ -218,6 +227,15 @@ namespace nCine
 
 		MainApplication& app = static_cast<MainApplication&>(theApplication());
 		app.Init(createAppEventHandler, argc, argv);
+
+#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+		// The boot console is invisible from the moment OgcGfxDevice installed its own framebuffers
+		// during Init() (its constructor waits for the flip), but the console driver would keep
+		// rendering every log line into the old buffer. So stdout is routed into the void first,
+		// and only then can the boot framebuffer's ~600 KB go back to MEM1.
+		devoptab_list[STD_OUT] = &ogcNullOut;
+		free(MEM_K1_TO_K0(earlyXfb));
+#endif
 
 #if defined(DEATH_TARGET_WINDOWS)
 		if (workingDirLength > 0) {

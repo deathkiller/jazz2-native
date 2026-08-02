@@ -221,6 +221,19 @@ namespace nCine::RHI::GX
 			return nullptr;
 		}
 		const std::uint32_t currentFrame = GxDevice::GetFrameCounter();
+
+		// Bakes that have gone unused for a while give their memory back: every copy costs as much as a
+		// full RGBA8 texture, and a row only a menu screen needed would otherwise stay resident for the
+		// texture's whole lifetime. Far older than anything the asynchronous FIFO could still read.
+		constexpr std::uint32_t ReclaimAfterFrames = 300;
+		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
+			if (bakedSlots_[i].Store != nullptr && currentFrame - bakedSlots_[i].LastUsedFrame > ReclaimAfterFrames) {
+				free(bakedSlots_[i].Store);
+				bakedSlots_[i].Store = nullptr;
+				bakedSlots_[i].Valid = false;
+			}
+		}
+
 		BakedSlot* slot = nullptr;
 		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
 			if (bakedSlots_[i].Valid && bakedSlots_[i].PaletteRow == paletteRowIndex && bakedSlots_[i].Palette == palette) {
@@ -461,9 +474,26 @@ namespace nCine::RHI::GX
 
 	void GxTexture::SetWrap(SamplerWrapping wrap)
 	{
+		if (wrap_ == wrap) {
+			return;
+		}
 		wrap_ = wrap;
-		if (texObjValid_) {
-			RefreshTiledStore();
+		// Wrap only parameterizes GX_InitTexObj (read by InitTexObj), so the texture objects are
+		// re-initialized in place over the existing stores - the texel data is unaffected, and re-tiling
+		// the whole level through RefreshTiledStore() here was pure wasted work
+		if (texObjValid_ && tiledStore_ != nullptr) {
+			// Render targets always hold an RGBA8 store, whatever the upload format was (see SetRenderTarget)
+			if (uploadFormat_ == PixelFormat::R8 && !isRenderTarget_) {
+				InitTexObj(texObj_, tiledStore_, GX_TF_CI8, true);
+			} else {
+				InitTexObj(texObj_, tiledStore_, GX_TF_RGBA8, false);
+			}
+		}
+		// The baked RGBA8 copies of an RG8 store carry their own texture objects with the same wrap state
+		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
+			if (bakedSlots_[i].Valid && bakedSlots_[i].Store != nullptr) {
+				InitTexObj(bakedSlots_[i].TexObj, bakedSlots_[i].Store, GX_TF_RGBA8, false);
+			}
 		}
 	}
 

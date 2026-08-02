@@ -1192,17 +1192,19 @@ namespace Jazz2::Tiles
 			}
 		}
 
+		// The block caches - and so these pointers - are only rebuilt by a shader change, so the
+		// by-name lookups run once per pool slot instead of once per tile. The refresh runs even when
+		// the caller doesn't ask for the uniforms: a shader change rebuilds the instance block, and a
+		// later rent of this slot with an unchanged shader must not hand out pointers into the old one
+		TileCommandUniforms& cached = _renderCommandUniforms[slot];
+		if (shaderChanged || freshSlot) {
+			auto* instanceBlock = command->GetInstanceBlock();
+			cached.TexRect = (instanceBlock != nullptr ? instanceBlock->GetUniform(Material::TexRectUniformName) : nullptr);
+			cached.SpriteSize = (instanceBlock != nullptr ? instanceBlock->GetUniform(Material::SpriteSizeUniformName) : nullptr);
+			cached.Color = (instanceBlock != nullptr ? instanceBlock->GetUniform(Material::ColorUniformName) : nullptr);
+			cached.PaletteOffset = (instanceBlock != nullptr ? instanceBlock->GetUniform(Material::PaletteOffsetUniformName) : nullptr);
+		}
 		if (uniforms != nullptr) {
-			// The block caches - and so these pointers - are only rebuilt by a shader change, so the
-			// by-name lookups run once per pool slot instead of once per tile
-			TileCommandUniforms& cached = _renderCommandUniforms[slot];
-			if (shaderChanged || freshSlot) {
-				auto* instanceBlock = command->GetInstanceBlock();
-				cached.TexRect = (instanceBlock != nullptr ? instanceBlock->GetUniform(Material::TexRectUniformName) : nullptr);
-				cached.SpriteSize = (instanceBlock != nullptr ? instanceBlock->GetUniform(Material::SpriteSizeUniformName) : nullptr);
-				cached.Color = (instanceBlock != nullptr ? instanceBlock->GetUniform(Material::ColorUniformName) : nullptr);
-				cached.PaletteOffset = (instanceBlock != nullptr ? instanceBlock->GetUniform(Material::PaletteOffsetUniformName) : nullptr);
-			}
 			*uniforms = &cached;
 		}
 
@@ -1640,16 +1642,20 @@ namespace Jazz2::Tiles
 		float x = pos.X - res->Base->Hotspot.X;
 		float y = pos.Y - res->Base->Hotspot.Y;
 		Vector2i texSize = res->Base->TextureDiffuse->GetSize();
+		// Walk the frame's own area - anything outside it belongs to another frame in the sheet - and
+		// spawn the particles where the trimmed frame is drawn, shifted by its offset inside the cell
+		const Recti debrisRect = res->Base->GetFrameRect(currentFrame);
+		const Vector2i frameOffset = res->Base->GetFrameOffset(currentFrame);
 
-		for (std::int32_t fy = 0; fy < res->Base->FrameDimensions.Y; fy += DebrisSize + 1) {
-			for (std::int32_t fx = 0; fx < res->Base->FrameDimensions.X; fx += DebrisSize + 1) {
+		for (std::int32_t fy = 0; fy < debrisRect.H; fy += DebrisSize + 1) {
+			for (std::int32_t fx = 0; fx < debrisRect.W; fx += DebrisSize + 1) {
 				float currentSize = DebrisSize * Random().FastFloat(0.2f, 1.1f);
 
 				DestructibleDebris& debris = _debrisList.emplace_back();
-				debris.Pos = Vector2f(x + (isFacingLeft ? res->Base->FrameDimensions.X - fx : fx), y + fy);
+				debris.Pos = Vector2f(x + (isFacingLeft ? res->Base->FrameDimensions.X - frameOffset.X - fx : frameOffset.X + fx), y + frameOffset.Y + fy);
 				debris.Depth = (std::uint16_t)pos.Z;
 				debris.Size = Vector2f(currentSize, currentSize);
-				debris.Speed = Vector2f(force.X + ((fx - res->Base->FrameDimensions.X / 2) + Random().FastFloat(-2.0f, 2.0f)) * (isFacingLeft ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 8.0f) / res->Base->FrameDimensions.X,
+				debris.Speed = Vector2f(force.X + ((fx - debrisRect.W / 2) + Random().FastFloat(-2.0f, 2.0f)) * (isFacingLeft ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 8.0f) / debrisRect.W,
 						force.Y - 1.0f * Random().FastFloat(2.2f, 4.0f));
 				debris.Acceleration = Vector2f(0.0f, 0.2f);
 
@@ -1664,9 +1670,9 @@ namespace Jazz2::Tiles
 				debris.Time = 320.0f;
 
 				debris.TexScaleX = (currentSize / float(texSize.X));
-				debris.TexBiasX = ((float(res->Base->GetFrameRect(currentFrame).X) + (float)fx) / float(texSize.X));
+				debris.TexBiasX = ((float(debrisRect.X) + (float)fx) / float(texSize.X));
 				debris.TexScaleY = (currentSize / float(texSize.Y));
-				debris.TexBiasY = ((float(res->Base->GetFrameRect(currentFrame).Y) + (float)fy) / float(texSize.Y));
+				debris.TexBiasY = ((float(debrisRect.Y) + (float)fy) / float(texSize.Y));
 
 				debris.DiffuseTexture = res->Base->TextureDiffuse.get();
 				// Indexed sprite debris is recolored at draw time; -1 keeps a baked (e.g., tileset) texture on plain Sprite
@@ -1689,10 +1695,18 @@ namespace Jazz2::Tiles
 		for (std::int32_t i = 0; i < count; i++) {
 			float speedX = Random().FastFloat(-1.0f, 1.0f) * Random().FastFloat(0.2f, 0.8f) * count;
 
+			std::int32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
+			Recti frameRect = res->Base->GetFrameRect(curAnimFrame);
+			Vector2i frameOffset = res->Base->GetFrameOffset(curAnimFrame);
+
 			DestructibleDebris& debris = _debrisList.emplace_back();
 			debris.Pos = Vector2f(x, y);
 			debris.Depth = (std::uint16_t)pos.Z;
-			debris.Size = Vector2f((float)res->Base->FrameDimensions.X, (float)res->Base->FrameDimensions.Y);
+			// Sized by the frame's own area rather than the logical cell: with trimmed frames the two
+			// differ per frame, and stretching a trimmed frame over the whole cell visibly distorts it
+			debris.Size = Vector2f((float)frameRect.W, (float)frameRect.H);
+			debris.FrameOffset = Vector2f(frameOffset.X + (frameRect.W - res->Base->FrameDimensions.X) * 0.5f,
+				frameOffset.Y + (frameRect.H - res->Base->FrameDimensions.Y) * 0.5f);
 			debris.Speed = Vector2f(speedX, -1.0f * Random().FastFloat(2.2f, 4.0f));
 			debris.Acceleration = Vector2f(0.0f, 0.2f);
 
@@ -1706,8 +1720,6 @@ namespace Jazz2::Tiles
 
 			debris.Time = 560.0f;
 
-			std::int32_t curAnimFrame = res->FrameOffset + Random().Next(0, res->FrameCount);
-			Recti frameRect = res->Base->GetFrameRect(curAnimFrame);
 			debris.TexScaleX = (float(frameRect.W) / float(texSize.X));
 			debris.TexBiasX = (float(frameRect.X) / float(texSize.X));
 			debris.TexScaleY = (float(frameRect.H) / float(texSize.Y));

@@ -27,6 +27,12 @@ namespace nCine::RHI::PVR
 	void PvrBuffer::BufferData(std::size_t size, const void* data, BufferUsage usage)
 	{
 		static_cast<void>(usage);
+		if (data == nullptr && size == storage_.size()) {
+			// Same-size orphaning (BufferData with no data is how the streaming buffers discard last
+			// frame's contents) - the contract leaves the contents undefined, so re-zeroing the whole
+			// store every frame is nothing but wasted memory traffic
+			return;
+		}
 		storage_.assign(size, std::uint8_t(0));
 		if (data != nullptr && size > 0) {
 			std::memcpy(storage_.data(), data, size);

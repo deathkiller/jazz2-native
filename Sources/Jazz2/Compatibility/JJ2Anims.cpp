@@ -30,10 +30,9 @@ namespace Jazz2::Compatibility
 			}
 			return result;
 		}
-
 	}
 
-		/**
+	/**
 		@brief Packs the frames of one animation so each keeps only the space it needs
 
 		A frame's own extent is usually much smaller than the largest frame of its animation, and a grid
@@ -53,7 +52,7 @@ namespace Jazz2::Compatibility
 
 		packed.clear();
 		packed.reserve(frameCount);
-		std::int32_t widest = 0, totalArea = 0;
+		std::int32_t widest = 0;
 		for (std::int32_t i = 0; i < frameCount; i++) {
 			const AnimFrameSection& frame = anim.Frames[i];
 			PackedFrame& p = packed.emplace_back();
@@ -69,7 +68,6 @@ namespace Jazz2::Compatibility
 			p.OffsetX = anim.NormalizedHotspotX + frame.HotspotX + border;
 			p.OffsetY = anim.NormalizedHotspotY + frame.HotspotY + border;
 			widest = std::max(widest, p.W);
-			totalArea += p.W * p.H;
 		}
 
 		// Tallest first, so each row is filled by frames of similar height
@@ -441,9 +439,8 @@ namespace Jazz2::Compatibility
 
 			std::int32_t sizeX = (anim.AdjustedSizeX + AddBorder * 2);
 			std::int32_t sizeY = (anim.AdjustedSizeY + AddBorder * 2);
-			// Determine the frame configuration to use.
-			// Each asset must fit into a 4096 by 4096 texture,
-			// as that is the smallest texture size we have decided to support.
+			// Determine the frame configuration to use. Each asset should fit into a texture of
+			// MaxTextureSize², the smallest limit among the supported platforms.
 			if (anim.FrameCount > 1) {
 				// Pick the grid whose texture wastes the least memory once it is rounded up to power-of-two
 				// dimensions. Graphics hardware that cannot sample non-power-of-two textures has to pad them,
@@ -451,17 +448,31 @@ namespace Jazz2::Compatibility
 				// often - a 669x552 sheet occupies a 1024x1024 texture, so almost two thirds of it is unused.
 				// Choosing by padded area instead usually fills the texture almost completely, at no cost to
 				// platforms that sample the sheet at its exact size.
-				std::int32_t bestColumns = anim.FrameCount, bestRows = 1;
+				std::int32_t bestColumns = 0, bestRows = 0;
 				std::int64_t bestCost = INT64_MAX;
-				for (std::int32_t columns = 1; columns <= anim.FrameCount; columns++) {
+				// If no layout fits (kept below as a fallback), take the one that pads to the smallest
+				// texture anyway - a mildly oversized square sheet still beats a FrameCount x 1 strip
+				std::int32_t fallbackColumns = 0, fallbackRows = 0;
+				std::int64_t fallbackCost = INT64_MAX;
+				// The configuration is stored in a byte per axis, so neither may exceed 255
+				const std::int32_t maxColumns = std::min<std::int32_t>(anim.FrameCount, 255);
+				for (std::int32_t columns = 1; columns <= maxColumns; columns++) {
 					const std::int32_t rows = (anim.FrameCount + columns - 1) / columns;
+					if (rows > 255) {
+						continue;
+					}
 					const std::int32_t width = columns * sizeX;
 					const std::int32_t height = rows * sizeY;
+					const std::int64_t paddedArea = std::int64_t(NextPowerOfTwo(width)) * NextPowerOfTwo(height);
 					if (width > MaxTextureSize || height > MaxTextureSize) {
+						if (paddedArea < fallbackCost) {
+							fallbackCost = paddedArea;
+							fallbackColumns = columns;
+							fallbackRows = rows;
+						}
 						continue;
 					}
 
-					const std::int64_t paddedArea = std::int64_t(NextPowerOfTwo(width)) * NextPowerOfTwo(height);
 					// Prefer the layout that pads to the smallest texture; among equals prefer the one that
 					// wastes fewer cells in the grid itself, then the more square one, so the choice is stable
 					const std::int64_t emptyCells = std::int64_t(columns) * rows - anim.FrameCount;
@@ -471,6 +482,12 @@ namespace Jazz2::Compatibility
 						bestColumns = columns;
 						bestRows = rows;
 					}
+				}
+				if (bestColumns == 0) {
+					LOGW("No frame configuration of {}:{} fits into a {}x{} texture ({} frames of {}x{})",
+						anim.Set, anim.Anim, MaxTextureSize, MaxTextureSize, anim.FrameCount, sizeX, sizeY);
+					bestColumns = (fallbackColumns > 0 ? fallbackColumns : maxColumns);
+					bestRows = (fallbackRows > 0 ? fallbackRows : 255);
 				}
 
 				anim.FrameConfigurationX = (std::uint8_t)bestColumns;

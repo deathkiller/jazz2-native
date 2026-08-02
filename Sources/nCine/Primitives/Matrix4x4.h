@@ -558,40 +558,115 @@ namespace nCine
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::RotateX(T radians)
 		{
+#if defined(DEATH_TARGET_DREAMCAST)
 			// Composed from RotationX() instead of updating the columns in place - see the note next to the
 			// builder declarations. The barrier forces the freshly built rotation out to memory so the
 			// composition below cannot re-derive (and drop the sign of) its negated sine term.
 			Matrix4x4 r = RotationX(radians);
-#if defined(DEATH_TARGET_DREAMCAST)
 			asm volatile("" : "+m"(r));
-#endif
 			return (*this = *this * r);
+#else
+			Matrix4x4& m = *this;
+			const T m10 = m[1][0];
+			const T m20 = m[2][0];
+			const T m11 = m[1][1];
+			const T m21 = m[2][1];
+			const T m12 = m[1][2];
+			const T m22 = m[2][2];
+			const T m13 = m[1][3];
+			const T m23 = m[2][3];
+
+			const T c = cos(radians);
+			const T s = sin(radians);
+
+			m[1][0] = c * m10 + s * m20;
+			m[1][1] = c * m11 + s * m21;
+			m[1][2] = c * m12 + s * m22;
+			m[1][3] = c * m13 + s * m23;
+
+			m[2][0] = -s * m10 + c * m20;
+			m[2][1] = -s * m11 + c * m21;
+			m[2][2] = -s * m12 + c * m22;
+			m[2][3] = -s * m13 + c * m23;
+
+			return *this;
+#endif
 		}
 
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::RotateY(T radians)
 		{
+#if defined(DEATH_TARGET_DREAMCAST)
 			// Composed from RotationY() instead of updating the columns in place - see the note next to the
 			// builder declarations. The barrier forces the freshly built rotation out to memory so the
 			// composition below cannot re-derive (and drop the sign of) its negated sine term.
 			Matrix4x4 r = RotationY(radians);
-#if defined(DEATH_TARGET_DREAMCAST)
 			asm volatile("" : "+m"(r));
-#endif
 			return (*this = *this * r);
+#else
+			Matrix4x4& m = *this;
+			const T m00 = m[0][0];
+			const T m20 = m[2][0];
+			const T m01 = m[0][1];
+			const T m21 = m[2][1];
+			const T m02 = m[0][2];
+			const T m22 = m[2][2];
+			const T m03 = m[0][3];
+			const T m23 = m[2][3];
+
+			const T c = cos(radians);
+			const T s = sin(radians);
+
+			m[0][0] = c * m00 - s * m20;
+			m[0][1] = c * m01 - s * m21;
+			m[0][2] = c * m02 - s * m22;
+			m[0][3] = c * m03 - s * m23;
+
+			m[2][0] = s * m00 + c * m20;
+			m[2][1] = s * m01 + c * m21;
+			m[2][2] = s * m02 + c * m22;
+			m[2][3] = s * m03 + c * m23;
+
+			return *this;
+#endif
 		}
 
 		template<class T>
 		inline Matrix4x4<T>& Matrix4x4<T>::RotateZ(T radians)
 		{
+#if defined(DEATH_TARGET_DREAMCAST)
 			// Composed from RotationZ() instead of updating the columns in place - see the note next to the
 			// builder declarations. The barrier forces the freshly built rotation out to memory so the
 			// composition below cannot re-derive (and drop the sign of) its negated sine term.
 			Matrix4x4 r = RotationZ(radians);
-#if defined(DEATH_TARGET_DREAMCAST)
 			asm volatile("" : "+m"(r));
-#endif
 			return (*this = *this * r);
+#else
+			Matrix4x4& m = *this;
+			const T m00 = m[0][0];
+			const T m10 = m[1][0];
+			const T m01 = m[0][1];
+			const T m11 = m[1][1];
+			const T m02 = m[0][2];
+			const T m12 = m[1][2];
+			const T m03 = m[0][3];
+			const T m13 = m[1][3];
+
+			const T c = cos(radians);
+			const T s = sin(radians);
+
+			m[0][0] = c * m00 + s * m10;
+			m[0][1] = c * m01 + s * m11;
+			m[0][2] = c * m02 + s * m12;
+			m[0][3] = c * m03 + s * m13;
+
+			m[1][0] = -s * m00 + c * m10;
+			m[1][1] = -s * m01 + c * m11;
+			m[1][2] = -s * m02 + c * m12;
+			m[1][3] = -s * m03 + c * m13;
+
+			return *this;
+#endif
 		}
 
 		template<class T>
@@ -646,7 +721,11 @@ namespace nCine
 		{
 			const T c = cos(radians);
 			const T s = sin(radians);
+#if defined(DEATH_TARGET_DREAMCAST)
 			const T ns = sin(-radians);	// Never "-s", see the note next to the declarations
+#else
+			const T ns = -s;
+#endif
 
 			return Matrix4x4(Vector4<T>(1, 0, 0, 0),
 				Vector4<T>(0, c, s, 0),
@@ -659,7 +738,11 @@ namespace nCine
 		{
 			const T c = cos(radians);
 			const T s = sin(radians);
+#if defined(DEATH_TARGET_DREAMCAST)
 			const T ns = sin(-radians);	// Never "-s", see the note next to the declarations
+#else
+			const T ns = -s;
+#endif
 
 			return Matrix4x4(Vector4<T>(c, 0, ns, 0),
 				Vector4<T>(0, 1, 0, 0),
@@ -672,7 +755,11 @@ namespace nCine
 		{
 			const T c = cos(radians);
 			const T s = sin(radians);
+#if defined(DEATH_TARGET_DREAMCAST)
 			const T ns = sin(-radians);	// Never "-s", see the note next to the declarations
+#else
+			const T ns = -s;
+#endif
 
 			return Matrix4x4(Vector4<T>(c, s, 0, 0),
 				Vector4<T>(ns, c, 0, 0),
@@ -740,3 +827,5 @@ namespace nCine
 		const Matrix4x4<T> Matrix4x4<T>::Identity(Vector4<T>(1, 0, 0, 0), Vector4<T>(0, 1, 0, 0), Vector4<T>(0, 0, 1, 0), Vector4<T>(0, 0, 0, 1));
 	}
 }
+
+#undef DEATH_MATRIX_ROTATION_BUILDER

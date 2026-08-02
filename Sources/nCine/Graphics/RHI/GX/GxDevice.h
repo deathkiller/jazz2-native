@@ -28,6 +28,8 @@ namespace nCine::RHI::GX
 		- `PaletteRemap` family: CI8 texture with the TLUT of the instance's `palOffset` row; RG8 index+alpha
 		  textures use a per-row CPU-baked RGBA copy (see @ref GxTexture::EnsureBakedRgba)
 		- `NoTexture` family: flat color quad (`GX_PASSCLR`)
+		- `TileMapMesh` family: a whole tile layer arrives as one triangle-list mesh (see
+		  @ref DispatchTileMesh) and is submitted as batched `GX_QUADS` runs sharing one texture/TEV setup
 		- `TexturedBackground` family: rendered as a plain textured quad (the per-pixel tunnel warp needs
 		  shaders; the flat fallback keeps those layers visible)
 		- `Combine`: intercepted - applies the queued CPU lightmap as a multiply quad plus the water tint
@@ -46,7 +48,6 @@ namespace nCine::RHI::GX
 		static std::uint32_t GetFrameCounter() {
 			return frameCounter_;
 		}
-
 
 		GxDevice() = delete;
 		~GxDevice() = delete;
@@ -266,8 +267,14 @@ namespace nCine::RHI::GX
 		static std::uint8_t* lightmapStore_;
 		static std::size_t lightmapStoreSize_;
 		static GXTexObj lightmapTexObj_;
+		// Linear staging buffer the lightmap texels are combined into before tiling; persists across
+		// frames and grows monotonically, because reallocating (and zero-filling) it per lit frame is
+		// wasted work - every byte is overwritten anyway
+		static std::uint8_t* lightmapLinear_;
+		static std::size_t lightmapLinearSize_;
 
 		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
+		static void DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
 		static void ApplyPendingSoftwareLighting();
 		static void ApplyRenderState();
 		static void ApplyProjection();

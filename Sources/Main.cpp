@@ -1,14 +1,5 @@
 ﻿#include "Main.h"
 
-// TODO: Temporary test hook - define one of these to boot straight into a level or a menu section,
-// which is the only way to reach them on the consoles (no arguments, no way to drive the menu)
-//#define JAZZ2_TEST_BOOT_LEVEL "prince/01_castle1"
-//#define JAZZ2_TEST_BOOT_SECTION EpisodeSelectSection
-// TODO: Temporary - with JAZZ2_TEST_BOOT_LEVEL, switches to this level after a few seconds
-//#define JAZZ2_TEST_LEVEL_THEN_LEVEL "prince/02_castle1n"
-// TODO: Temporary - boots into the main menu (skipping the intro) and loads this level a few seconds later
-//#define JAZZ2_TEST_MENU_THEN_LEVEL "xmas99/01_xmas1"
-
 #if defined(DEATH_TARGET_ANDROID)
 #	include "nCine/Backends/Android/AndroidApplication.h"
 #	include "nCine/Backends/Android/AndroidJniHelper.h"
@@ -42,9 +33,6 @@
 #include "Jazz2/UI/LoadingHandler.h"
 #include "Jazz2/UI/Menu/MainMenu.h"
 #include "Jazz2/UI/Menu/HighscoresSection.h"
-#include "Jazz2/UI/Menu/EpisodeSelectSection.h"
-#include "Jazz2/UI/Menu/UserProfileOptionsSection.h"
-#include "Jazz2/UI/Menu/BeginSection.h"
 #include "Jazz2/UI/Menu/SimpleMessageSection.h"
 
 #include "Jazz2/Compatibility/AssetConverter.h"
@@ -183,9 +171,6 @@ private:
 	Flags _flags = Flags::None;
 	std::int32_t _backInvokedTimeLeft = 0;
 	std::shared_ptr<IStateHandler> _currentHandler;
-#if defined(JAZZ2_TEST_LEVEL_THEN_LEVEL) || defined(JAZZ2_TEST_MENU_THEN_LEVEL)
-	float _testNextLevelTimeLeft = 0.0f;
-#endif
 	SmallVector<Pair<std::weak_ptr<void>, Function<void()>>> _pendingCallbacks;
 #if defined(WITH_THREADS)
 	std::mutex _pendingCallbacksLock;
@@ -509,39 +494,6 @@ void GameEventHandler::OnInitialize()
 	}
 #	endif
 
-	// TODO: Temporary test hook for the console builds, which have no way to pass arguments or drive the
-	// menu from a test harness. Define one of these to boot straight into a level or a menu section.
-#	if defined(JAZZ2_TEST_MENU_THEN_LEVEL)
-	{
-		WaitForVerify();
-		LOGI("Test hook: booting into the main menu, then loading \"{}\"", JAZZ2_TEST_MENU_THEN_LEVEL);
-		SetStateHandler(std::make_shared<Menu::MainMenu>(this, false));
-		_testNextLevelTimeLeft = 5.0f * FrameTimer::FramesPerSecond;
-		return;
-	}
-#	elif defined(JAZZ2_TEST_BOOT_LEVEL)
-	{
-		WaitForVerify();
-		LevelInitialization levelInit(JAZZ2_TEST_BOOT_LEVEL, GameDifficulty::Normal,
-			PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
-		LOGI("Test hook: booting into level \"{}\"", JAZZ2_TEST_BOOT_LEVEL);
-		ChangeLevel(std::move(levelInit));
-#	if defined(JAZZ2_TEST_LEVEL_THEN_LEVEL)
-		_testNextLevelTimeLeft = 12.0f * FrameTimer::FramesPerSecond;
-#	endif
-		return;
-	}
-#	elif defined(JAZZ2_TEST_BOOT_SECTION)
-	{
-		WaitForVerify();
-		LOGI("Test hook: booting into the main menu section");
-		auto mainMenu = std::make_shared<Menu::MainMenu>(this, false);
-		mainMenu->SwitchToSection<Menu::JAZZ2_TEST_BOOT_SECTION>();
-		SetStateHandler(std::move(mainMenu));
-		return;
-	}
-#	endif
-
 #	if defined(WITH_THREADS) && !defined(DEATH_TARGET_EMSCRIPTEN)
 	SetStateHandler(std::make_shared<Cinematics>(this, "intro"_s, [](IRootController* root, bool endOfStream) mutable {
 		if ((root->GetFlags() & Flags::IsVerified) == Flags::IsVerified) {
@@ -618,30 +570,6 @@ void GameEventHandler::OnBeginFrame()
 
 		_pendingCallbacks.clear();
 	}
-
-#if defined(JAZZ2_TEST_MENU_THEN_LEVEL)
-	if (_testNextLevelTimeLeft > 0.0f) {
-		_testNextLevelTimeLeft -= theApplication().GetTimeMult();
-		if (_testNextLevelTimeLeft <= 0.0f) {
-			LOGI("Test hook: loading level \"{}\" from the main menu now", JAZZ2_TEST_MENU_THEN_LEVEL);
-			LevelInitialization levelInit(JAZZ2_TEST_MENU_THEN_LEVEL, GameDifficulty::Normal,
-				PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
-			ChangeLevel(std::move(levelInit));
-		}
-	}
-#endif
-#if defined(JAZZ2_TEST_LEVEL_THEN_LEVEL)
-	if (_testNextLevelTimeLeft > 0.0f) {
-		_testNextLevelTimeLeft -= theApplication().GetTimeMult();
-		if (_testNextLevelTimeLeft <= 0.0f) {
-			LOGI("Test hook: switching to level \"{}\" now", JAZZ2_TEST_LEVEL_THEN_LEVEL);
-			LevelInitialization levelInit(JAZZ2_TEST_LEVEL_THEN_LEVEL, GameDifficulty::Normal,
-				PreferencesCache::EnableReforgedGameplay, false, PlayerType::Jazz);
-			ChangeLevel(std::move(levelInit));
-		}
-	}
-#endif
-
 
 	_currentHandler->OnBeginFrame();
 }
@@ -1900,7 +1828,6 @@ void GameEventHandler::RefreshCache()
 		_flags |= Flags::IsVerified | Flags::IsPlayable;
 		return;
 	}
-
 
 	constexpr std::uint64_t currentVersion = parseVersion(NCINE_VERSION_s);
 

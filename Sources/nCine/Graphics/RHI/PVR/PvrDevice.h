@@ -40,7 +40,6 @@ namespace nCine::RHI::PVR
 			return sceneCounter_;
 		}
 
-
 		PvrDevice() = delete;
 		~PvrDevice() = delete;
 
