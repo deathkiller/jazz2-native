@@ -337,6 +337,12 @@ namespace nCine::RHI::PVR
 
 	void PvrShaderProgram::SetResolvedUniform(const char* name, const std::uint8_t* data)
 	{
+		// The two names every dispatch reads get direct slots, so the draw path never scans by name
+		if (std::strcmp(name, "uProjectionMatrix") == 0) {
+			resolvedProjection_ = data;
+		} else if (std::strcmp(name, "uViewMatrix") == 0) {
+			resolvedView_ = data;
+		}
 		for (ResolvedUniform& r : resolvedUniforms_) {
 			if (r.Name == name) {
 				r.Data = data;

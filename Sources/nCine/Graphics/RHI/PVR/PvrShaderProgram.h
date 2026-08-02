@@ -233,6 +233,14 @@ namespace nCine::RHI::PVR
 		void SetResolvedUniform(const char* name, const std::uint8_t* data);
 		/** @brief Returns the last published value pointer of the named loose uniform, or `nullptr` */
 		const std::uint8_t* ResolveUniform(const char* name) const;
+		/** @brief Returns the published `uProjectionMatrix` value without the by-name scan (it runs per draw) */
+		inline const std::uint8_t* GetResolvedProjection() const {
+			return resolvedProjection_;
+		}
+		/** @brief Returns the published `uViewMatrix` value without the by-name scan (it runs per draw) */
+		inline const std::uint8_t* GetResolvedView() const {
+			return resolvedView_;
+		}
 
 	private:
 		static std::uint32_t nextHandle_;
@@ -271,6 +279,9 @@ namespace nCine::RHI::PVR
 			const std::uint8_t* Data;
 		};
 		std::vector<ResolvedUniform> resolvedUniforms_;
+		// The two names every dispatch reads are kept as direct pointers, bypassing the by-name scan
+		const std::uint8_t* resolvedProjection_ = nullptr;
+		const std::uint8_t* resolvedView_ = nullptr;
 
 		void PerformIntrospection();
 		void ImportReflection();

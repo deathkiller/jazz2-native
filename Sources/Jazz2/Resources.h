@@ -117,13 +117,13 @@ namespace Jazz2::Resources
 			difference from everything that draws a frame.
 		*/
 		SmallVector<FrameRect, 0> FrameRects;
-		/** @brief Byte distance between two rows of @ref Mask (the sheet width) */
+		/** @brief Distance between two rows of @ref Mask, in bits (the sheet width in pixels) */
 		std::int32_t MaskStride;
 
 		/** @brief Creates a new instance */
 		GenericGraphicResource() noexcept;
 
-		/** @brief Returns the byte distance between two rows of @ref Mask */
+		/** @brief Returns the distance between two rows of @ref Mask, in bits (the sheet width in pixels) */
 		inline std::int32_t GetMaskStride() const {
 			return (MaskStride > 0 ? MaskStride : FrameConfiguration.X * FrameDimensions.X);
 		}

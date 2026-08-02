@@ -498,15 +498,17 @@ namespace Jazz2::Actors
 			constexpr std::int32_t DebrisSize = 3;
 
 			Vector2i texSize = texture->GetSize();
-			// Walk the frame's own area - anything outside it belongs to another frame in the sheet
+			// Walk the frame's own area - anything outside it belongs to another frame in the sheet - and
+			// spawn the particles where the trimmed frame is drawn, shifted by its offset inside the cell
 			const Recti debrisRect = res->Base->GetFrameRect(_renderer.CurrentFrame);
+			const Vector2i frameOffset = res->Base->GetFrameOffset(_renderer.CurrentFrame);
 
 			for (std::int32_t fy = 0; fy < debrisRect.H; fy += DebrisSize + 1) {
 				for (std::int32_t fx = 0; fx < debrisRect.W; fx += DebrisSize + 1) {
 					float currentSize = DebrisSize * Random().FastFloat(0.8f, 1.1f);
 
 					Tiles::TileMap::DestructibleDebris debris{};
-					debris.Pos = Vector2f(x + (IsFacingLeft() ? debrisRect.W - fx : fx), y + fy);
+					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - frameOffset.X - fx : frameOffset.X + fx), y + frameOffset.Y + fy);
 					debris.Depth = _renderer.layer();
 					debris.Size = Vector2f(currentSize, currentSize);
 					debris.Speed = Vector2f(((fx - debrisRect.W / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(0.5f, 2.0f) / debrisRect.W,
@@ -520,9 +522,9 @@ namespace Jazz2::Actors
 					debris.Time = 320.0f;
 
 					debris.TexScaleX = (currentSize / float(texSize.X));
-					debris.TexBiasX = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).X) + (float)fx) / float(texSize.X));
+					debris.TexBiasX = ((float(debrisRect.X) + (float)fx) / float(texSize.X));
 					debris.TexScaleY = (currentSize / float(texSize.Y));
-					debris.TexBiasY = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).Y) + (float)fy) / float(texSize.Y));
+					debris.TexBiasY = ((float(debrisRect.Y) + (float)fy) / float(texSize.Y));
 
 					debris.DiffuseTexture = texture;
 					debris.PaletteOffset = paletteDebrisOffset;
@@ -538,15 +540,17 @@ namespace Jazz2::Actors
 			constexpr std::int32_t DebrisSize = 3;
 
 			Vector2i texSize = texture->GetSize();
-			// Walk the frame's own area - anything outside it belongs to another frame in the sheet
+			// Walk the frame's own area - anything outside it belongs to another frame in the sheet - and
+			// spawn the particles where the trimmed frame is drawn, shifted by its offset inside the cell
 			const Recti debrisRect = res->Base->GetFrameRect(_renderer.CurrentFrame);
+			const Vector2i frameOffset = res->Base->GetFrameOffset(_renderer.CurrentFrame);
 
 			for (std::int32_t fy = 0; fy < debrisRect.H; fy += DebrisSize + 1) {
 				for (std::int32_t fx = 0; fx < debrisRect.W; fx += DebrisSize + 1) {
 					float currentSize = DebrisSize * Random().FastFloat(0.4f, 1.1f);
 
 					Tiles::TileMap::DestructibleDebris debris{};
-					debris.Pos = Vector2f(x + (IsFacingLeft() ? debrisRect.W - fx : fx), y + fy);
+					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - frameOffset.X - fx : frameOffset.X + fx), y + frameOffset.Y + fy);
 					debris.Depth = _renderer.layer();
 					debris.Size = Vector2f(currentSize, currentSize);
 					debris.Speed = Vector2f(((fx - debrisRect.W / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 4.0f) / debrisRect.W,
@@ -561,9 +565,9 @@ namespace Jazz2::Actors
 					debris.Time = Random().FastFloat(10.0f, 50.0f);
 
 					debris.TexScaleX = (currentSize / float(texSize.X));
-					debris.TexBiasX = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).X) + (float)fx) / float(texSize.X));
+					debris.TexBiasX = ((float(debrisRect.X) + (float)fx) / float(texSize.X));
 					debris.TexScaleY = (currentSize / float(texSize.Y));
-					debris.TexBiasY = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).Y) + (float)fy) / float(texSize.Y));
+					debris.TexBiasY = ((float(debrisRect.Y) + (float)fy) / float(texSize.Y));
 
 					debris.DiffuseTexture = texture;
 					debris.PaletteOffset = paletteDebrisOffset;
@@ -579,8 +583,10 @@ namespace Jazz2::Actors
 			constexpr int DebrisSize = 2;
 
 			Vector2i texSize = texture->GetSize();
-			// Walk the frame's own area - anything outside it belongs to another frame in the sheet
+			// Walk the frame's own area - anything outside it belongs to another frame in the sheet - and
+			// spawn the particles where the trimmed frame is drawn, shifted by its offset inside the cell
 			const Recti debrisRect = res->Base->GetFrameRect(_renderer.CurrentFrame);
+			const Vector2i frameOffset = res->Base->GetFrameOffset(_renderer.CurrentFrame);
 
 			float x = _pos.X - res->Base->Hotspot.X;
 			float y = _pos.Y - res->Base->Hotspot.Y;
@@ -590,7 +596,7 @@ namespace Jazz2::Actors
 					float currentSize = DebrisSize * Random().FastFloat(0.4f, 1.1f);
 
 					Tiles::TileMap::DestructibleDebris debris = { };
-					debris.Pos = Vector2f(x + (IsFacingLeft() ? debrisRect.W - fx : fx), y + fy);
+					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - frameOffset.X - fx : frameOffset.X + fx), y + frameOffset.Y + fy);
 					debris.Depth = _renderer.layer();
 					debris.Size = Vector2f(currentSize, currentSize);
 					debris.Speed = Vector2f(((fx - debrisRect.W / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(2.0f, 5.0f) / debrisRect.W,
@@ -605,9 +611,9 @@ namespace Jazz2::Actors
 					debris.Time = 280.0f;
 
 					debris.TexScaleX = (currentSize / float(texSize.X));
-					debris.TexBiasX = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).X) + (float)fx) / float(texSize.X));
+					debris.TexBiasX = ((float(debrisRect.X) + (float)fx) / float(texSize.X));
 					debris.TexScaleY = (currentSize / float(texSize.Y));
-					debris.TexBiasY = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).Y) + (float)fy) / float(texSize.Y));
+					debris.TexBiasY = ((float(debrisRect.Y) + (float)fy) / float(texSize.Y));
 
 					debris.DiffuseTexture = texture;
 					debris.PaletteOffset = paletteDebrisOffset;
@@ -623,15 +629,17 @@ namespace Jazz2::Actors
 			constexpr std::int32_t DebrisSize = 3;
 
 			Vector2i texSize = texture->GetSize();
-			// Walk the frame's own area - anything outside it belongs to another frame in the sheet
+			// Walk the frame's own area - anything outside it belongs to another frame in the sheet - and
+			// spawn the particles where the trimmed frame is drawn, shifted by its offset inside the cell
 			const Recti debrisRect = res->Base->GetFrameRect(_renderer.CurrentFrame);
+			const Vector2i frameOffset = res->Base->GetFrameOffset(_renderer.CurrentFrame);
 
 			for (std::int32_t fy = 0; fy < debrisRect.H; fy += DebrisSize + 1) {
 				for (int fx = 0; fx < debrisRect.W; fx += DebrisSize + 1) {
 					float currentSize = DebrisSize * Random().FastFloat(0.2f, 1.1f);
 
 					Tiles::TileMap::DestructibleDebris debris{};
-					debris.Pos = Vector2f(x + (IsFacingLeft() ? debrisRect.W - fx : fx), y + fy);
+					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - frameOffset.X - fx : frameOffset.X + fx), y + frameOffset.Y + fy);
 					debris.Depth = _renderer.layer();
 					debris.Size = Vector2f(currentSize, currentSize);
 					debris.Speed = Vector2f(((fx - debrisRect.W / 2) + Random().FastFloat(-2.0f, 2.0f)) * (IsFacingLeft() ? -1.0f : 1.0f) * Random().FastFloat(1.0f, 3.0f) / debrisRect.W,
@@ -645,9 +653,9 @@ namespace Jazz2::Actors
 					debris.Time = Random().FastFloat(300.0f, 340.0f);;
 
 					debris.TexScaleX = (currentSize / float(texSize.X));
-					debris.TexBiasX = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).X) + (float)fx) / float(texSize.X));
+					debris.TexBiasX = ((float(debrisRect.X) + (float)fx) / float(texSize.X));
 					debris.TexScaleY = (currentSize / float(texSize.Y));
-					debris.TexBiasY = ((float(res->Base->GetFrameRect(_renderer.CurrentFrame).Y) + (float)fy) / float(texSize.Y));
+					debris.TexBiasY = ((float(debrisRect.Y) + (float)fy) / float(texSize.Y));
 
 					debris.DiffuseTexture = texture;
 					debris.PaletteOffset = paletteDebrisOffset;

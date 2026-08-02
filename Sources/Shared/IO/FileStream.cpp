@@ -259,7 +259,16 @@ namespace Death { namespace IO {
 				} else {
 					// Unsuitable destination: read into the aligned buffer and copy across
 					InitializeBuffer();
-					const std::int32_t partialBytesToRead = (bytesToRead < _bufferSize ? std::int32_t(bytesToRead) : _bufferSize);
+					std::int32_t partialBytesToRead = (bytesToRead < _bufferSize ? std::int32_t(bytesToRead) : _bufferSize);
+#if defined(DEATH_TARGET_DREAMCAST)
+					// Bounce only up to the next aligned destination address: the buffer size is a multiple
+					// of the alignment, so a full-buffer bounce would keep the destination misaligned - and
+					// every remaining chunk on this slow path - for the whole rest of the read
+					const std::int32_t alignPrefix = std::int32_t(DmaAlignment - (std::uintptr_t(&typedBuffer[n]) & (DmaAlignment - 1)));
+					if (partialBytesToRead > alignPrefix) {
+						partialBytesToRead = alignPrefix;
+					}
+#endif
 					bytesRead = ReadInternal(BufferForIo(), partialBytesToRead);
 					if (bytesRead > 0) {
 						std::memcpy(&typedBuffer[n], BufferForIo(), std::size_t(bytesRead));
@@ -667,6 +676,9 @@ namespace Death { namespace IO {
 #		if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Failed to read from file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
 #		endif
+				// Earlier iterations already advanced the kernel offset, so it has to be accounted for
+				// even on failure - GetPosition() would otherwise be wrong for the rest of the stream's life
+				_filePos += bytesRead;
 				return -1;
 			} else if (partial == 0) {
 				break;
@@ -713,6 +725,9 @@ namespace Death { namespace IO {
 #		if defined(DEATH_TRACE_VERBOSE_IO)
 				LOGE("Failed to write to file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
 #		endif
+				// Earlier iterations already advanced the kernel offset, so it has to be accounted for
+				// even on failure - GetPosition() would otherwise be wrong for the rest of the stream's life
+				_filePos += bytesWritten;
 				return -1;
 			} else if (partial == 0) {
 				break;

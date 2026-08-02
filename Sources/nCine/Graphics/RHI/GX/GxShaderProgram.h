@@ -56,6 +56,8 @@ namespace nCine::RHI::GX
 		BatchedShieldFire,		/**< The fire shield glow over an array of batched instances */
 		ShieldLightning,		/**< Additive lightning-coloured glow around the sprite */
 		BatchedShieldLightning,	/**< The lightning shield glow over an array of batched instances */
+		TileMapMesh,			/**< A whole tile-layer submitted as one triangle-list mesh */
+		TileMapMeshPalette,		/**< The tile-layer mesh with indexed tiles recolored through the palette texture */
 		Transition,				/**< The level transition iris, flattened into a full-screen fade */
 		Combine					/**< The viewport compositor (scene + lighting + blur + ambient) */
 	};
@@ -177,6 +179,14 @@ namespace nCine::RHI::GX
 			DefineVertexFormat(vbo, ibo, 0);
 		}
 		void DefineVertexFormat(const GxBuffer* vbo, const GxBuffer* ibo, std::uint32_t vboOffset);
+		/** @brief Returns the vertex buffer last bound by @ref DefineVertexFormat(), or `nullptr` */
+		inline const GxBuffer* GetBoundVbo() const {
+			return boundVbo_;
+		}
+		/** @brief Returns the byte offset into @ref GetBoundVbo() the vertex data starts at */
+		inline std::uint32_t GetBoundVboOffset() const {
+			return boundVboOffset_;
+		}
 
 		void Reset();
 		void SetObjectLabel(StringView label);
@@ -223,6 +233,14 @@ namespace nCine::RHI::GX
 		void SetResolvedUniform(const char* name, const std::uint8_t* data);
 		/** @brief Returns the last published value pointer of the named loose uniform, or `nullptr` */
 		const std::uint8_t* ResolveUniform(const char* name) const;
+		/** @brief Returns the last published `uProjectionMatrix` value pointer without the by-name scan (read per draw) */
+		inline const std::uint8_t* GetResolvedProjectionMatrix() const {
+			return resolvedProjectionMatrix_;
+		}
+		/** @brief Returns the last published `uViewMatrix` value pointer without the by-name scan (read per draw) */
+		inline const std::uint8_t* GetResolvedViewMatrix() const {
+			return resolvedViewMatrix_;
+		}
 
 	private:
 		static std::uint32_t nextHandle_;
@@ -252,6 +270,7 @@ namespace nCine::RHI::GX
 
 		GxVertexFormat vertexFormat_;
 		const GxBuffer* boundVbo_;
+		std::uint32_t boundVboOffset_;
 		const GxBuffer* boundIbo_;
 
 		struct ResolvedUniform
@@ -260,6 +279,10 @@ namespace nCine::RHI::GX
 			const std::uint8_t* Data;
 		};
 		std::vector<ResolvedUniform> resolvedUniforms_;
+		// The camera matrices are read by the device on every draw, so they bypass the by-name list scan
+		// above; recognized once in SetResolvedUniform() (see there)
+		const std::uint8_t* resolvedProjectionMatrix_ = nullptr;
+		const std::uint8_t* resolvedViewMatrix_ = nullptr;
 
 		void PerformIntrospection();
 		void ImportReflection();

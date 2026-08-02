@@ -317,6 +317,15 @@ namespace nCine::RHI::PVR
 
 		/** @brief Moves this texture to the front of the live list and stamps it with the current scene */
 		void Touch();
+		/**
+			@brief Links this texture at the back of the live list if it is not in it yet
+
+			Attaching video memory has to make the texture visible to the eviction walk right away - a store
+			uploaded during level loading would otherwise be unreachable (and its memory unreclaimable) until
+			the first draw calls @ref Touch(). Linked least recently used, so untouched uploads are also the
+			first to go when memory runs short.
+		*/
+		void LinkAsLeastRecent();
 		/** @brief Unlinks this texture from the live list */
 		void Unlink();
 

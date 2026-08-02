@@ -124,15 +124,45 @@ namespace nCine::RHI::PVR
 			return true;
 		}
 
-		// Submits one quad to the open translucent list as a 4-vertex strip. The corner order matches the
-		// procedural sprite strip (v0, v1, v2, v3) exactly like the software FetchVertex synthesizes it.
-		// The offset colour is added after texturing (only when the polygon enables it), which is how the
-		// actor state effects brighten or tint the sprite - see the effect handling in Dispatch.
-		// Submits one strip of `count` vertices (3 = a single triangle, 4 = a quad) under the given header.
-		// The header and the vertices are assembled contiguously and handed to the store queues in a single
-		// burst: pvr_prim() copies 32 bytes per call, so submitting them one at a time cost a call and a
-		// separate burst setup for every vertex of every sprite and tile.
-		// Submits one strip of `count` vertices (3 = a single triangle, 4 = a quad) under the given header.
+		// The tile accelerator is a state machine: a polygon header stays in effect for every strip that
+		// follows it within the open list, so a header identical to the last submitted one does not have
+		// to go out again - it is 32 of the 160 bytes of a typical quad, and batches reuse one header for
+		// hundreds of primitives. Cleared whenever a new list opens (see InvalidateSubmittedHeader()).
+		std::uint32_t lastHeaderWords[8];
+		bool lastHeaderValid = false;
+
+		void InvalidateSubmittedHeader()
+		{
+			lastHeaderValid = false;
+		}
+
+		// Writes the header into the store queues only when it differs from the last submitted one, and
+		// returns the queue pointer for the vertices that follow
+		DEATH_ALWAYS_INLINE std::uint32_t* SubmitHeaderIfChanged(const pvr_poly_hdr_t& hdr)
+		{
+			std::uint32_t* DEATH_RESTRICT sq = SQ_MASK_DEST(PVR_TA_INPUT);
+			const std::uint32_t* DEATH_RESTRICT header = reinterpret_cast<const std::uint32_t*>(&hdr);
+			if (lastHeaderValid &&
+					lastHeaderWords[0] == header[0] && lastHeaderWords[1] == header[1] &&
+					lastHeaderWords[2] == header[2] && lastHeaderWords[3] == header[3] &&
+					lastHeaderWords[4] == header[4] && lastHeaderWords[5] == header[5] &&
+					lastHeaderWords[6] == header[6] && lastHeaderWords[7] == header[7]) {
+				return sq;
+			}
+			sq[0] = lastHeaderWords[0] = header[0]; sq[1] = lastHeaderWords[1] = header[1];
+			sq[2] = lastHeaderWords[2] = header[2]; sq[3] = lastHeaderWords[3] = header[3];
+			sq[4] = lastHeaderWords[4] = header[4]; sq[5] = lastHeaderWords[5] = header[5];
+			sq[6] = lastHeaderWords[6] = header[6]; sq[7] = lastHeaderWords[7] = header[7];
+			lastHeaderValid = true;
+			sq_flush(sq);
+			return sq + 8;
+		}
+
+		// Submits one strip of `count` vertices (3 = a single triangle, 4 = a quad) under the given header
+		// to the open translucent list. The corner order matches the procedural sprite strip (v0, v1, v2,
+		// v3) exactly like the software FetchVertex synthesizes it. The offset colour is added after
+		// texturing (only when the polygon enables it), which is how the actor state effects brighten or
+		// tint the sprite - see the effect handling in Dispatch.
 		//
 		// The primitives are written straight into the store queues rather than assembled in main memory
 		// and handed to pvr_prim(): that path copies every 32-byte primitive a second time on its way out,
@@ -146,12 +176,7 @@ namespace nCine::RHI::PVR
 			static_assert(sizeof(pvr_vertex_t) == 32 && sizeof(pvr_poly_hdr_t) == 32,
 				"The store queues submit whole 32 byte blocks");
 
-			std::uint32_t* DEATH_RESTRICT sq = SQ_MASK_DEST(PVR_TA_INPUT);
-			const std::uint32_t* DEATH_RESTRICT header = reinterpret_cast<const std::uint32_t*>(&hdr);
-			sq[0] = header[0]; sq[1] = header[1]; sq[2] = header[2]; sq[3] = header[3];
-			sq[4] = header[4]; sq[5] = header[5]; sq[6] = header[6]; sq[7] = header[7];
-			sq_flush(sq);
-			sq += 8;
+			std::uint32_t* DEATH_RESTRICT sq = SubmitHeaderIfChanged(hdr);
 
 			for (std::int32_t i = 0; i < count; i++) {
 				sq[0] = (i == count - 1 ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX);
@@ -178,12 +203,7 @@ namespace nCine::RHI::PVR
 		void SubmitStripShaded(const pvr_poly_hdr_t& hdr, const float* px, const float* py, std::int32_t count,
 			const std::uint32_t* argb)
 		{
-			std::uint32_t* DEATH_RESTRICT sq = SQ_MASK_DEST(PVR_TA_INPUT);
-			const std::uint32_t* DEATH_RESTRICT header = reinterpret_cast<const std::uint32_t*>(&hdr);
-			sq[0] = header[0]; sq[1] = header[1]; sq[2] = header[2]; sq[3] = header[3];
-			sq[4] = header[4]; sq[5] = header[5]; sq[6] = header[6]; sq[7] = header[7];
-			sq_flush(sq);
-			sq += 8;
+			std::uint32_t* DEATH_RESTRICT sq = SubmitHeaderIfChanged(hdr);
 
 			for (std::int32_t i = 0; i < count; i++) {
 				sq[0] = (i == count - 1 ? PVR_CMD_VERTEX_EOL : PVR_CMD_VERTEX);
@@ -290,6 +310,8 @@ namespace nCine::RHI::PVR
 			sceneRenderTarget_ = nullptr;
 		}
 		pvr_list_begin(PVR_LIST_TR_POLY);
+		// A new list starts with no polygon-header state in the tile accelerator
+		InvalidateSubmittedHeader();
 		sceneTarget_ = wanted;
 	}
 
@@ -315,6 +337,7 @@ namespace nCine::RHI::PVR
 			pvr_wait_ready();
 			pvr_scene_begin();
 			pvr_list_begin(PVR_LIST_TR_POLY);
+			InvalidateSubmittedHeader();
 			sceneTarget_ = SceneTarget::Screen;
 		}
 		FinishScene();
@@ -395,6 +418,14 @@ namespace nCine::RHI::PVR
 	{
 		static_cast<void>(flags);
 		if (!pvrInitialized_) {
+			return;
+		}
+		if (currentRenderTarget_ == nullptr && sceneTarget_ == SceneTarget::None) {
+			// The first clear of a screen frame is provided for free by the scene background plane -
+			// pushing ~300k blended pixels through the translucent pipe for it again would be one of
+			// the most expensive draws of the whole frame. Only mid-scene clears (and render targets,
+			// which have no reliable background plane) paint the quad below.
+			pvr_set_bg_color(clearColor_.R, clearColor_.G, clearColor_.B);
 			return;
 		}
 		// The scene background provides the frame clear; an explicit mid-scene clear draws a flat quad
@@ -700,8 +731,13 @@ namespace nCine::RHI::PVR
 				std::uint16_t* const surface = static_cast<std::uint16_t*>(lightmapVram_);
 				if (layoutChanged) {
 					// Only the used LmW x LmH region is rewritten per frame; the padding is sampled through
-					// the compensated texture coordinates only at the very edge, and is filled just once
-					std::memset(surface, 0xFF, size);
+					// the compensated texture coordinates only at the very edge, and is filled just once.
+					// Spelled out as word stores - video memory only takes 16/32-bit accesses, and libc
+					// memset does not guarantee that (the size is always a multiple of four here)
+					std::uint32_t* DEATH_RESTRICT fill = reinterpret_cast<std::uint32_t*>(surface);
+					for (std::size_t i = 0, n = size / 4; i < n; i++) {
+						fill[i] = 0xFFFFFFFFu;
+					}
 				}
 				for (std::int32_t y = 0; y < light.LmH; y++) {
 					const float* DEATH_RESTRICT src = light.Lightmap + std::size_t(y) * light.LmW * 2;
@@ -826,8 +862,8 @@ namespace nCine::RHI::PVR
 			return;
 		}
 
-		const std::uint8_t* projBytes = currentProgram_->ResolveUniform("uProjectionMatrix");
-		const std::uint8_t* viewBytes = currentProgram_->ResolveUniform("uViewMatrix");
+		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjection();
+		const std::uint8_t* viewBytes = currentProgram_->GetResolvedView();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 		float pv[16];
@@ -944,6 +980,10 @@ namespace nCine::RHI::PVR
 
 		const std::int32_t triangleCount = numVertices / 3;
 		std::int32_t triangle = 0;
+		// Virtually every tile of a layer carries the same colour (white at the layer's alpha), so the
+		// four clamp+float-to-int quantizations run once per change instead of once per tile
+		float lastColor[4] = { -1.0f, -1.0f, -1.0f, -1.0f };
+		std::uint32_t lastArgb = 0;
 		while (triangle < triangleCount) {
 			// Tiles reach here as the six vertices of two triangles, of which the third and fourth repeat
 			// the first and third. Recognizing that pattern lets a tile go out as a single four-vertex
@@ -975,8 +1015,7 @@ namespace nCine::RHI::PVR
 			}
 
 			if (clipActive) {
-				// Tiles are axis-aligned, so a bounding-box reject is exact for the fully outside case and
-				// conservative otherwise - the same trade-off the sprite path makes for rotated quads
+				// The bounding-box reject is exact for the fully outside case
 				float minX = px[0], maxX = px[0], minY = py[0], maxY = py[0];
 				for (std::int32_t i = 1; i < cornerCount; i++) {
 					minX = std::min(minX, px[i]); maxX = std::max(maxX, px[i]);
@@ -985,13 +1024,35 @@ namespace nCine::RHI::PVR
 				if (maxX <= clipX0 || minX >= clipX1 || maxY <= clipY0 || minY >= clipY1) {
 					continue;
 				}
+				// A tile straddling the scissor edge is clipped exactly like the sprite path clips its
+				// axis-aligned quads: there is no hardware scissor on this tier, and on the splitscreen
+				// boundary an unclipped tile would draw up to a full tile into the other player's viewport.
+				// The corner-sharing test mirrors the sprite path; anything else (the raw-triangle fallback,
+				// a rotated layer) keeps the conservative bounding-box reject above.
+				if (cornerCount == 4 && px[0] == px[1] && px[2] == px[3] && py[0] == py[2] && py[1] == py[3]) {
+					float xA = px[2], xB = px[0], uA = pu[2], uB = pu[0];
+					if (!ClipQuadEdge(xA, xB, uA, uB, clipX0, clipX1)) {
+						continue;
+					}
+					px[2] = px[3] = xA; px[0] = px[1] = xB;
+					pu[2] = pu[3] = uA; pu[0] = pu[1] = uB;
+					float yA = py[0], yB = py[1], vA = pvv[0], vB = pvv[1];
+					if (!ClipQuadEdge(yA, yB, vA, vB, clipY0, clipY1)) {
+						continue;
+					}
+					py[0] = py[2] = yA; py[1] = py[3] = yB;
+					pvv[0] = pvv[2] = vA; pvv[1] = pvv[3] = vB;
+				}
 			}
 
-			// Every vertex of a tile carries the same colour, so it only has to be packed once
-			const std::uint32_t argb = PackArgb(QuantizeChannel(group[4] * layerColor[0]),
-				QuantizeChannel(group[5] * layerColor[1]), QuantizeChannel(group[6] * layerColor[2]),
-				QuantizeChannel(group[7] * layerColor[3]));
-			SubmitStrip(hdr, px, py, pu, pvv, cornerCount, argb);
+			// Every vertex of a tile carries the same colour, so it only has to be packed once per change
+			if (group[4] != lastColor[0] || group[5] != lastColor[1] || group[6] != lastColor[2] || group[7] != lastColor[3]) {
+				lastColor[0] = group[4]; lastColor[1] = group[5]; lastColor[2] = group[6]; lastColor[3] = group[7];
+				lastArgb = PackArgb(QuantizeChannel(group[4] * layerColor[0]),
+					QuantizeChannel(group[5] * layerColor[1]), QuantizeChannel(group[6] * layerColor[2]),
+					QuantizeChannel(group[7] * layerColor[3]));
+			}
+			SubmitStrip(hdr, px, py, pu, pvv, cornerCount, lastArgb);
 		}
 	}
 
@@ -1036,8 +1097,8 @@ namespace nCine::RHI::PVR
 			return;
 		}
 
-		const std::uint8_t* projBytes = currentProgram_->ResolveUniform("uProjectionMatrix");
-		const std::uint8_t* viewBytes = currentProgram_->ResolveUniform("uViewMatrix");
+		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjection();
+		const std::uint8_t* viewBytes = currentProgram_->GetResolvedView();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 
@@ -1144,7 +1205,6 @@ namespace nCine::RHI::PVR
 			numInstances = std::int32_t(rangeSize / instanceStride);
 		}
 
-
 		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
 			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
 		float scaleX, scaleY, offsetX, offsetY;
@@ -1245,7 +1305,7 @@ namespace nCine::RHI::PVR
 				uvScaleU = texture->GetUScale();
 				uvScaleV = texture->GetVScale();
 				if (!hdrValid || vram != lastVram || bank != lastBank) {
-						pvr_poly_cxt_t cxt;
+					pvr_poly_cxt_t cxt;
 					pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY, int(format),
 						texture->GetPaddedWidth(), texture->GetPaddedHeight(), vram, pvr_filter_mode_t(filter));
 					cxt.gen.culling = PVR_CULLING_NONE;

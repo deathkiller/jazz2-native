@@ -52,6 +52,26 @@ namespace nCine::RHI::GX
 			}
 		}
 
+		// Both draw paths only ever transform points of the form (x, y, 0, 1), so just six of the sixteen
+		// products of projection*view*model are ever read back. Sprites pay this per instance, which made
+		// the full 4x4 multiply the most expensive step of the per-instance loop.
+		struct Transform2D
+		{
+			float Xx, Xy;	// Column 0, rows 0 and 1
+			float Yx, Yy;	// Column 1, rows 0 and 1
+			float Tx, Ty;	// Column 3, rows 0 and 1
+		};
+
+		void Mat4MulTransform2D(const float* DEATH_RESTRICT pv, const float* DEATH_RESTRICT model, Transform2D& out)
+		{
+			out.Xx = pv[0] * model[0] + pv[4] * model[1] + pv[8] * model[2] + pv[12] * model[3];
+			out.Xy = pv[1] * model[0] + pv[5] * model[1] + pv[9] * model[2] + pv[13] * model[3];
+			out.Yx = pv[0] * model[4] + pv[4] * model[5] + pv[8] * model[6] + pv[12] * model[7];
+			out.Yy = pv[1] * model[4] + pv[5] * model[5] + pv[9] * model[6] + pv[13] * model[7];
+			out.Tx = pv[0] * model[12] + pv[4] * model[13] + pv[8] * model[14] + pv[12] * model[15];
+			out.Ty = pv[1] * model[12] + pv[5] * model[13] + pv[9] * model[14] + pv[13] * model[15];
+		}
+
 		// Maps a pipeline-neutral blend factor onto the GX factor set. GX names the color-source factors
 		// from the destination's viewpoint (GX_BL_SRCCLR is only valid as a destination factor and
 		// GX_BL_DSTCLR as a source factor), which matches how the game uses them.
@@ -95,6 +115,33 @@ namespace nCine::RHI::GX
 
 		// Whether the vertex descriptor currently includes texture coordinates
 		bool g_vertexModeTextured = true;
+
+		// GX register state persists across draws (the same reason SetVertexModeTextured/SetTevMode below
+		// can early-out), so ApplyProjection() and ApplyRenderState() track what they last issued and skip
+		// the reissue when nothing changed - both used to run unconditionally for every draw. Anything
+		// that bypasses them to touch the same registers (target switches, EFB copies, the frame present,
+		// the immediate clear and the lighting hook) invalidates the caches below.
+		bool g_appliedProjectionValid = false;
+		const void* g_appliedProjectionTarget = nullptr;
+		std::int32_t g_appliedProjectionW = 0;
+		std::int32_t g_appliedProjectionH = 0;
+
+		bool g_appliedBlendValid = false;
+		bool g_appliedBlendEnabled = false;
+		nCine::BlendingFactor g_appliedBlendSrc = nCine::BlendingFactor::One;
+		nCine::BlendingFactor g_appliedBlendDst = nCine::BlendingFactor::Zero;
+
+		bool g_appliedScissorValid = false;
+		bool g_appliedScissorEnabled = false;
+		Recti g_appliedScissorRect(0, 0, 0, 0);
+		const void* g_appliedScissorTarget = nullptr;
+
+		void InvalidateAppliedState()
+		{
+			g_appliedProjectionValid = false;
+			g_appliedBlendValid = false;
+			g_appliedScissorValid = false;
+		}
 
 		enum class TevMode
 		{
@@ -205,6 +252,8 @@ namespace nCine::RHI::GX
 	std::uint8_t* GxDevice::lightmapStore_ = nullptr;
 	std::size_t GxDevice::lightmapStoreSize_ = 0;
 	GXTexObj GxDevice::lightmapTexObj_;
+	std::uint8_t* GxDevice::lightmapLinear_ = nullptr;
+	std::size_t GxDevice::lightmapLinearSize_ = 0;
 
 	// ------------------------------------------------------------------ session
 
@@ -238,9 +287,11 @@ namespace nCine::RHI::GX
 		GX_SetCullMode(GX_CULL_NONE);
 		GX_SetColorUpdate(GX_TRUE);
 
-		// Force the initial descriptor setup through the mode toggle
+		// Force the initial descriptor setup through the mode toggle, and start with no per-draw state
+		// assumed to be applied (a fresh GX session resets every register the caches stand in for)
 		g_vertexModeTextured = true;
 		SetVertexModeTextured(false);
+		InvalidateAppliedState();
 
 		logicalWidth_ = rmode->fbWidth;
 		logicalHeight_ = rmode->efbHeight;
@@ -291,6 +342,9 @@ namespace nCine::RHI::GX
 		GX_CopyDisp(xfb, GX_TRUE);	// The copy also clears the EFB for the next frame (GX_SetCopyClear)
 		GX_DrawDone();
 		frameCounter_++;
+		// Nothing is assumed applied across the frame boundary - the first draw of the next frame
+		// reissues projection and render state from scratch
+		InvalidateAppliedState();
 	}
 
 	void GxDevice::ResizeScreenFramebuffer(std::int32_t width, std::int32_t height)
@@ -298,6 +352,8 @@ namespace nCine::RHI::GX
 		if (width > 0 && height > 0) {
 			logicalWidth_ = width;
 			logicalHeight_ = height;
+			// The logical size feeds both the ortho projection and the scissor scaling
+			InvalidateAppliedState();
 		}
 	}
 
@@ -359,6 +415,8 @@ namespace nCine::RHI::GX
 		}
 		// Immediate clear: a full-target flat quad (the EFB copy-clear only applies at copy time)
 		ApplyProjection();
+		// The direct blend-mode write below bypasses ApplyRenderState(), so its cache no longer matches
+		g_appliedBlendValid = false;
 		GX_SetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_CLEAR);
 		const std::int32_t w = (currentRenderTarget_ != nullptr ? viewport_.W : logicalWidth_);
 		const std::int32_t h = (currentRenderTarget_ != nullptr ? viewport_.H : logicalHeight_);
@@ -380,20 +438,29 @@ namespace nCine::RHI::GX
 		// Ortho projection over the current target's logical space; the GX viewport spans the whole EFB for
 		// the screen (that maps the logical resolution onto the display copy = free upscale) and the target
 		// rect for a render-target pass (rendered 1:1 into the EFB corner, then copied out)
-		Mtx44 proj;
 		std::int32_t w, h;
 		if (currentRenderTarget_ != nullptr) {
 			GxTexture* texture = currentRenderTarget_->GetColorTexture(0);
 			w = (texture != nullptr ? texture->GetWidth() : viewport_.W);
 			h = (texture != nullptr ? texture->GetHeight() : viewport_.H);
-			GX_SetViewport(0.0f, 0.0f, float(w), float(h), 0.0f, 1.0f);
 		} else {
 			w = (logicalWidth_ > 0 ? logicalWidth_ : (rmode_ != nullptr ? rmode_->fbWidth : 640));
 			h = (logicalHeight_ > 0 ? logicalHeight_ : (rmode_ != nullptr ? rmode_->efbHeight : 480));
-			if (rmode_ != nullptr) {
-				GX_SetViewport(0.0f, 0.0f, float(rmode_->fbWidth), float(rmode_->efbHeight), 0.0f, 1.0f);
-			}
 		}
+
+		// The projection, viewport and position matrix only depend on the target and its logical size,
+		// which are identical for whole runs of consecutive draws - skip the reissue when nothing changed
+		if (g_appliedProjectionValid && g_appliedProjectionTarget == currentRenderTarget_ &&
+			g_appliedProjectionW == w && g_appliedProjectionH == h) {
+			return;
+		}
+
+		if (currentRenderTarget_ != nullptr) {
+			GX_SetViewport(0.0f, 0.0f, float(w), float(h), 0.0f, 1.0f);
+		} else if (rmode_ != nullptr) {
+			GX_SetViewport(0.0f, 0.0f, float(rmode_->fbWidth), float(rmode_->efbHeight), 0.0f, 1.0f);
+		}
+		Mtx44 proj;
 		guOrtho(proj, 0.0f, float(h), 0.0f, float(w), 0.0f, 1.0f);
 		GX_LoadProjectionMtx(proj, GX_ORTHOGRAPHIC);
 
@@ -401,14 +468,36 @@ namespace nCine::RHI::GX
 		guMtxIdentity(identity);
 		GX_LoadPosMtxImm(identity, GX_PNMTX0);
 		GX_SetCurrentMtx(GX_PNMTX0);
+
+		g_appliedProjectionValid = true;
+		g_appliedProjectionTarget = currentRenderTarget_;
+		g_appliedProjectionW = w;
+		g_appliedProjectionH = h;
 	}
 
 	void GxDevice::ApplyRenderState()
 	{
-		if (blending_.Enabled) {
-			GX_SetBlendMode(GX_BM_BLEND, MapBlendGx(blending_.SrcRgb), MapBlendGx(blending_.DstRgb), GX_LO_CLEAR);
-		} else {
-			GX_SetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_CLEAR);
+		// The blend factors only matter while blending is enabled, so a disabled state always matches a
+		// cached disabled one whatever factors it carries
+		if (!g_appliedBlendValid || g_appliedBlendEnabled != blending_.Enabled ||
+			(blending_.Enabled && (g_appliedBlendSrc != blending_.SrcRgb || g_appliedBlendDst != blending_.DstRgb))) {
+			if (blending_.Enabled) {
+				GX_SetBlendMode(GX_BM_BLEND, MapBlendGx(blending_.SrcRgb), MapBlendGx(blending_.DstRgb), GX_LO_CLEAR);
+			} else {
+				GX_SetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_CLEAR);
+			}
+			g_appliedBlendValid = true;
+			g_appliedBlendEnabled = blending_.Enabled;
+			g_appliedBlendSrc = blending_.SrcRgb;
+			g_appliedBlendDst = blending_.DstRgb;
+		}
+
+		// The scissor mapping depends on the target (the flip and the EFB scale), so the target pointer is
+		// part of the cache key; a disabled state always maps to the same full-EFB rect
+		if (g_appliedScissorValid && g_appliedScissorEnabled == scissor_.Enabled &&
+			g_appliedScissorTarget == currentRenderTarget_ &&
+			(!scissor_.Enabled || g_appliedScissorRect == scissor_.Rect)) {
+			return;
 		}
 
 		// The engine hands scissor rectangles in bottom-up (OpenGL) window coordinates of the logical
@@ -429,6 +518,11 @@ namespace nCine::RHI::GX
 		} else if (rmode_ != nullptr) {
 			GX_SetScissor(0, 0, rmode_->fbWidth, rmode_->efbHeight);
 		}
+
+		g_appliedScissorValid = true;
+		g_appliedScissorEnabled = scissor_.Enabled;
+		g_appliedScissorRect = scissor_.Rect;
+		g_appliedScissorTarget = currentRenderTarget_;
 	}
 
 	void GxDevice::FlushCurrentRenderTarget()
@@ -450,6 +544,8 @@ namespace nCine::RHI::GX
 		GX_CopyTex(texture->GetRenderTargetStore(), GX_TRUE);
 		GX_PixModeSync();
 		GX_InvalidateTexAll();
+		// Whatever renders next runs against a different target context; reissue everything once
+		InvalidateAppliedState();
 	}
 
 	// ------------------------------------------------------------------ draw entry points
@@ -552,6 +648,8 @@ namespace nCine::RHI::GX
 		// Leaving a target resolves it into its texture before anything else renders over the EFB
 		FlushCurrentRenderTarget();
 		currentRenderTarget_ = renderTarget;
+		// The projection space and the scissor mapping are keyed on the target
+		InvalidateAppliedState();
 	}
 
 	void GxDevice::UnbindRenderTarget(const GxRenderTarget* renderTarget)
@@ -694,6 +792,9 @@ namespace nCine::RHI::GX
 		}
 
 		ApplyProjection();
+		// Both the lightmap multiply and the water bands set their blend modes directly, bypassing
+		// ApplyRenderState() - its cache no longer matches once this hook ran
+		g_appliedBlendValid = false;
 		const float vpX = float(light.VpX), vpY = float(light.VpY);
 		const float vpW = float(light.VpW), vpH = float(light.VpH);
 
@@ -712,11 +813,20 @@ namespace nCine::RHI::GX
 				lightmapStore_ = static_cast<std::uint8_t*>(memalign(32, tiledSize));
 				lightmapStoreSize_ = tiledSize;
 			}
-			if (lightmapStore_ != nullptr) {
-				std::vector<std::uint8_t> linear(linearSize);
+			// The linear staging buffer persists across frames like the tiled store above - allocating
+			// (and zero-initializing) it per lit frame is wasted work, every byte is written below
+			if (lightmapLinear_ == nullptr || lightmapLinearSize_ < linearSize) {
+				if (lightmapLinear_ != nullptr) {
+					free(lightmapLinear_);
+				}
+				lightmapLinear_ = static_cast<std::uint8_t*>(malloc(linearSize));
+				lightmapLinearSize_ = (lightmapLinear_ != nullptr ? linearSize : 0);
+			}
+			if (lightmapStore_ != nullptr && lightmapLinear_ != nullptr) {
+				std::uint8_t* const linear = lightmapLinear_;
 				for (std::int32_t y = 0; y < h; y++) {
 					const float* src = light.Lightmap + std::size_t(y) * w * 2;
-					std::uint8_t* dst = linear.data() + std::size_t(y) * w * 4;
+					std::uint8_t* dst = linear + std::size_t(y) * w * 4;
 					for (std::int32_t x = 0; x < w; x++) {
 						float r = src[x * 2];
 						float g = src[x * 2 + 1];
@@ -742,7 +852,7 @@ namespace nCine::RHI::GX
 								const std::int32_t y = ty * 4 + row;
 								std::uint8_t r = 255, g = 255, b = 255, a = 255;
 								if (x < w && y < h) {
-									const std::uint8_t* px = linear.data() + (std::size_t(y) * w + x) * 4;
+									const std::uint8_t* px = linear + (std::size_t(y) * w + x) * 4;
 									r = px[0]; g = px[1]; b = px[2]; a = px[3];
 								}
 								const std::int32_t i = row * 4 + col;
@@ -804,9 +914,205 @@ namespace nCine::RHI::GX
 
 	// ------------------------------------------------------------------ draw dispatch
 
+	void GxDevice::DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
+	{
+		// A tile-layer mesh is a plain triangle list of 8-float vertices (position.xy, texcoords.uv,
+		// color.rgba) - the layout TileMap::AppendTileQuad() writes and TileMapVs.inc declares. It is a
+		// hard contract of this shader family exactly like the std140 instance block is of the sprite one.
+		constexpr std::int32_t FloatsPerVertex = 8;
+		if (primitive != PrimitiveType::Triangles || numVertices < 3) {
+			return;
+		}
+
+		const GxBuffer* vbo = currentProgram_->GetBoundVbo();
+		if (vbo == nullptr) {
+			return;
+		}
+		const std::size_t firstFloat = (std::size_t(currentProgram_->GetBoundVboOffset()) / sizeof(float)) +
+			std::size_t(firstVertex) * FloatsPerVertex;
+		const std::size_t floatCount = std::size_t(numVertices) * FloatsPerVertex;
+		if ((firstFloat + floatCount) * sizeof(float) > vbo->GetSize()) {
+			return;
+		}
+		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
+
+		const GxUniformBlock* block = currentProgram_->FindBlock("InstanceBlock");
+		if (block == nullptr) {
+			return;
+		}
+		std::int32_t binding = block->GetBindingIndex();
+		if (binding < 0 || std::uint32_t(binding) >= MaxUniformBindings) {
+			binding = 0;
+		}
+		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
+		if (blockData == nullptr) {
+			return;
+		}
+
+		GxTexture* texture = const_cast<GxTexture*>(boundTextures_[0]);
+		if (texture == nullptr) {
+			return;
+		}
+
+		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjectionMatrix();
+		const std::uint8_t* viewBytes = currentProgram_->GetResolvedViewMatrix();
+		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
+		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
+		float pv[16];
+		Mat4Mul(projMat, viewMat, pv);
+		Transform2D mvp;
+		Mat4MulTransform2D(pv, reinterpret_cast<const float*>(blockData + kModelMatrixOffset), mvp);
+
+		// The layer tint modulates every vertex colour, which already carries the per-tile alpha
+		float layerColor[4];
+		std::memcpy(layerColor, blockData + kColorOffset, sizeof(layerColor));
+
+		// The palette to remap with is whatever the material bound to the palette sampler; the registered
+		// global palette is the fallback (mirrors the sprite path)
+		const bool isPaletteRemap = (currentProgram_->GetEffect() == GxEffect::TileMapMeshPalette ||
+			currentProgram_->UsesPalette());
+		const GxTexture* paletteTex = nullptr;
+		if (isPaletteRemap || texture->IsIndexed()) {
+			paletteTex = boundTextures_[1];
+			if (paletteTex == nullptr || paletteTex == texture) {
+				paletteTex = paletteTexture_;
+			}
+		}
+
+		// Unlike a sprite batch, the whole mesh shares one texture and one palette offset, so the texture
+		// variant (TLUT row for CI8 indices, palette-baked copy for RG8) is resolved and loaded once for
+		// the entire layer
+		GXTexObj* texObj = nullptr;
+		if (texture->IsIndexed()) {
+			// An 8bpp store can only be read through a palette, whatever it is being drawn with - the lookup
+			// belongs to the texture read rather than to the effect. An effect that remaps takes the row from
+			// the instance; anything else uses the base row.
+			std::int32_t paletteOffset = 0;
+			if (isPaletteRemap) {
+				float palOffset = 0.0f;
+				std::memcpy(&palOffset, blockData + kPaletteOffsetOffset, sizeof(palOffset));
+				paletteOffset = std::int32_t(palOffset + 0.5f);
+			}
+			const std::int32_t slot = AcquireTlutForRow(paletteTex, paletteOffset);
+			texObj = texture->GetTexObj();
+			if (texObj != nullptr && slot >= 0) {
+				GX_InitTexObjTlut(texObj, GX_TLUT0 + std::uint32_t(slot));
+			}
+		} else if (isPaletteRemap && texture->NeedsPaletteBake() && paletteTex != nullptr && paletteTex->GetPixels() != nullptr) {
+			float palOffset = 0.0f;
+			std::memcpy(&palOffset, blockData + kPaletteOffsetOffset, sizeof(palOffset));
+			const std::uint32_t paletteOffset = std::uint32_t(std::int32_t(palOffset + 0.5f));
+			const std::uint32_t* entries = reinterpret_cast<const std::uint32_t*>(
+				paletteTex->GetPixels()) + paletteOffset;
+			texObj = texture->EnsureBakedRgba(entries, paletteOffset,
+				(paletteTex == paletteTexture_ ? paletteGeneration_ : paletteTex->GetContentVersion()), paletteTex);
+		} else {
+			texObj = texture->GetTexObj();
+		}
+		if (texObj == nullptr) {
+			return;
+		}
+
+		ApplyProjection();
+		ApplyRenderState();
+		SetVertexModeTextured(true);
+		SetTevMode(TevMode::Modulate);
+		GX_LoadTexObj(texObj, GX_TEXMAP0);
+
+		const bool screenPass = (currentRenderTarget_ == nullptr);
+		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
+			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
+
+		// The NDC-to-raster mapping is affine and constant for the whole mesh, so it is folded into the
+		// transform once instead of being reapplied per vertex - every vertex then costs one multiply-add
+		// per axis (matching the sprite path's corner synthesis). A screen pass mirrors NDC, which is
+		// just the sign of the Y scale.
+		const float rasterScaleX = 0.5f * float(viewport.W);
+		const float rasterBiasX = rasterScaleX + float(viewport.X);
+		const float rasterScaleY = 0.5f * float(viewport.H) * (screenPass ? 1.0f : -1.0f);
+		const float rasterBiasY = 0.5f * float(viewport.H) + float(viewport.Y);
+		const Transform2D raster = {
+			mvp.Xx * rasterScaleX, mvp.Xy * rasterScaleY,
+			mvp.Yx * rasterScaleX, mvp.Yy * rasterScaleY,
+			mvp.Tx * rasterScaleX + rasterBiasX, mvp.Ty * rasterScaleY + rasterBiasY
+		};
+
+		const std::int32_t triangleCount = numVertices / 3;
+
+		// Tiles reach here as the six vertices of two triangles, of which the fourth repeats the first
+		// and the fifth repeats the third. Recognizing that pattern lets a tile go out as one four-vertex
+		// GX quad instead of two triangles, and consecutive tiles share a single GX_Begin run, so the
+		// begin/end register writes are paid once per run instead of once per tile. GX has a hardware
+		// scissor (applied by ApplyRenderState above), so unlike the PVR path everything is submitted
+		// as-is and the GP clips it - no geometric clipping or bounding-box rejection is needed.
+		auto isTileQuad = [vertices, triangleCount](std::int32_t triangle) {
+			if (triangle + 2 > triangleCount) {
+				return false;
+			}
+			const float* group = vertices + std::size_t(triangle) * 3 * FloatsPerVertex;
+			return (group[3 * FloatsPerVertex + 0] == group[0] && group[3 * FloatsPerVertex + 1] == group[1] &&
+				group[4 * FloatsPerVertex + 0] == group[2 * FloatsPerVertex + 0] &&
+				group[4 * FloatsPerVertex + 1] == group[2 * FloatsPerVertex + 1]);
+		};
+
+		// GX_Begin carries the vertex count in a 16-bit register, so runs are chopped below that limit
+		constexpr std::int32_t MaxQuadsPerRun = 0x3FFF;
+		constexpr std::int32_t MaxTrianglesPerRun = 0x5554;
+
+		std::int32_t triangle = 0;
+		while (triangle < triangleCount) {
+			if (isTileQuad(triangle)) {
+				const std::int32_t runStart = triangle;
+				std::int32_t quadRun = 0;
+				do {
+					quadRun++;
+					triangle += 2;
+				} while (quadRun < MaxQuadsPerRun && isTileQuad(triangle));
+
+				GX_Begin(GX_QUADS, GX_VTXFMT0, std::uint16_t(quadRun * 4));
+				for (std::int32_t q = 0; q < quadRun; q++) {
+					const float* group = vertices + std::size_t(runStart + q * 2) * 3 * FloatsPerVertex;
+					// Every vertex of a tile carries the same colour, so it only has to be folded with the
+					// layer tint and quantized once
+					const std::uint8_t r = QuantizeChannel(group[4] * layerColor[0]);
+					const std::uint8_t g = QuantizeChannel(group[5] * layerColor[1]);
+					const std::uint8_t b = QuantizeChannel(group[6] * layerColor[2]);
+					const std::uint8_t a = QuantizeChannel(group[7] * layerColor[3]);
+					// Perimeter order of the tile's six strip-ordered vertices (see AppendTileQuad)
+					static const std::int32_t QuadOrder[4] = { 0, 1, 2, 5 };
+					for (std::int32_t i = 0; i < 4; i++) {
+						const float* v = group + std::size_t(QuadOrder[i]) * FloatsPerVertex;
+						GX_Position3f32(raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx,
+							raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty, 0.0f);
+						GX_Color4u8(r, g, b, a);
+						GX_TexCoord2f32(v[2], v[3]);
+					}
+				}
+				GX_End();
+			} else {
+				const std::int32_t runStart = triangle;
+				std::int32_t triRun = 0;
+				do {
+					triRun++;
+					triangle++;
+				} while (triangle < triangleCount && triRun < MaxTrianglesPerRun && !isTileQuad(triangle));
+
+				GX_Begin(GX_TRIANGLES, GX_VTXFMT0, std::uint16_t(triRun * 3));
+				for (std::int32_t i = 0; i < triRun * 3; i++) {
+					const float* v = vertices + std::size_t(runStart) * 3 * FloatsPerVertex + std::size_t(i) * FloatsPerVertex;
+					GX_Position3f32(raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx,
+						raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty, 0.0f);
+					GX_Color4u8(QuantizeChannel(v[4] * layerColor[0]), QuantizeChannel(v[5] * layerColor[1]),
+						QuantizeChannel(v[6] * layerColor[2]), QuantizeChannel(v[7] * layerColor[3]));
+					GX_TexCoord2f32(v[2], v[3]);
+				}
+				GX_End();
+			}
+		}
+	}
+
 	void GxDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
-		static_cast<void>(firstVertex);
 		if (currentProgram_ == nullptr || numVertices <= 0 || !gxInitialized_) {
 			return;
 		}
@@ -816,6 +1122,12 @@ namespace nCine::RHI::GX
 		// The Combine draw is the direct-tier lighting hook (see the software backend)
 		if (effect == GxEffect::Combine) {
 			ApplyPendingSoftwareLighting();
+			return;
+		}
+
+		// A whole tile layer arrives as one mesh instead of one command per tile
+		if (effect == GxEffect::TileMapMesh || effect == GxEffect::TileMapMeshPalette) {
+			DispatchTileMesh(primitive, firstVertex, numVertices);
 			return;
 		}
 
@@ -840,8 +1152,8 @@ namespace nCine::RHI::GX
 			return;
 		}
 
-		const std::uint8_t* projBytes = currentProgram_->ResolveUniform("uProjectionMatrix");
-		const std::uint8_t* viewBytes = currentProgram_->ResolveUniform("uViewMatrix");
+		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjectionMatrix();
+		const std::uint8_t* viewBytes = currentProgram_->GetResolvedViewMatrix();
 		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
 		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
 
@@ -947,14 +1259,21 @@ namespace nCine::RHI::GX
 		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
 			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
 
+		// Constant NDC-to-raster mapping, folded in once rather than reapplied for every sprite corner;
+		// the screen-pass NDC mirror is just the sign of the Y scale
+		const float rasterScaleX = 0.5f * float(viewport.W);
+		const float rasterBiasX = rasterScaleX + float(viewport.X);
+		const float rasterScaleY = 0.5f * float(viewport.H) * (screenPass ? 1.0f : -1.0f);
+		const float rasterBiasY = 0.5f * float(viewport.H) + float(viewport.Y);
+
 		std::int32_t lastTlutSlot = -2;
 		GXTexObj* loadedTexObj = nullptr;
 
 		for (std::int32_t k = 0; k < numInstances; k++) {
 			const std::uint8_t* inst = blockData + std::size_t(k) * (batched ? instanceStride : 0);
 
-			float mvp[16];
-			Mat4Mul(pv, reinterpret_cast<const float*>(inst + kModelMatrixOffset), mvp);
+			Transform2D mvp;
+			Mat4MulTransform2D(pv, reinterpret_cast<const float*>(inst + kModelMatrixOffset), mvp);
 			float color[4];
 			std::memcpy(color, inst + kColorOffset, sizeof(color));
 			float texRect[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
@@ -1001,18 +1320,22 @@ namespace nCine::RHI::GX
 				}
 			}
 
-			// Synthesize the four sprite corners exactly like the software FetchVertex: unit corner ->
-			// spriteSize scale -> mvp -> NDC -> viewport pixels (top-down logical space)
+			// Synthesize the four sprite corners exactly like the software FetchVertex, with the constant
+			// NDC-to-raster mapping folded into the transform (see the PVR device) so a corner costs one
+			// multiply-add per axis. The corner weights are 0 or 1, so the sprite's extent in raster space
+			// is just the transformed axes scaled by its size, and the corners are sums of those.
+			const float originX = mvp.Tx * rasterScaleX + rasterBiasX;
+			const float originY = mvp.Ty * rasterScaleY + rasterBiasY;
+			const float spanXx = mvp.Xx * rasterScaleX * spriteSize[0];
+			const float spanXy = mvp.Xy * rasterScaleY * spriteSize[0];
+			const float spanYx = mvp.Yx * rasterScaleX * spriteSize[1];
+			const float spanYy = mvp.Yy * rasterScaleY * spriteSize[1];
 			float px[4], py[4], pu[4], pvv[4];
 			for (std::int32_t i = 0; i < 4; i++) {
 				const float ax = ((i & ~1) == 0) ? 1.0f : 0.0f;
 				const float ay = (i & 1) ? 1.0f : 0.0f;
-				const float wx = ax * spriteSize[0];
-				const float wy = ay * spriteSize[1];
-				const float ndcX = mvp[0] * wx + mvp[4] * wy + mvp[12];
-				const float ndcY = mvp[1] * wx + mvp[5] * wy + mvp[13];
-				px[i] = (ndcX + 1.0f) * 0.5f * float(viewport.W) + float(viewport.X);
-				py[i] = (screenPass ? (ndcY + 1.0f) : (1.0f - ndcY)) * 0.5f * float(viewport.H) + float(viewport.Y);
+				px[i] = originX + ax * spanXx + ay * spanYx;
+				py[i] = originY + ax * spanXy + ay * spanYy;
 				pu[i] = ax * texRect[0] + texRect[1];
 				pvv[i] = ay * texRect[2] + texRect[3];
 			}

@@ -106,6 +106,10 @@ namespace Jazz2::AssetPacker
 
 			const std::int32_t unicodeCount = s.ReadValueAsLE<std::int32_t>();
 			for (std::int32_t i = 0; i < unicodeCount; i++) {
+				// A corrupted count would otherwise try to emplace billions of glyphs before the final check
+				if (!s.IsValid()) {
+					break;
+				}
 				char encoded[5] {};
 				s.Read(encoded, 1);
 
@@ -528,6 +532,15 @@ namespace Jazz2::AssetPacker
 		if (!uc.IsValid() || atlasWidth <= 0 || atlasHeight <= 0) {
 			LOGE("\"{}\" is corrupted", sourcePath);
 			return false;
+		}
+		for (const Glyph& glyph : font.Glyphs) {
+			// Each glyph has to lie inside the atlas and sit inside its rebuilt cell, otherwise the copy
+			// below would run out of both buffers
+			if (glyph.X + glyph.Width > atlasWidth || glyph.Y + glyph.Height > atlasHeight
+					|| glyph.BearingX < 0 || glyph.BearingY < 0) {
+				LOGE("\"{}\" is corrupted", sourcePath);
+				return false;
+			}
 		}
 
 		constexpr std::int32_t channelCount = 1;

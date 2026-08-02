@@ -5,6 +5,8 @@
 
 #include <cstring>
 
+#include <dc/sq.h>
+
 using namespace Death::Containers::Literals;
 
 namespace nCine::RHI::PVR
@@ -24,6 +26,28 @@ namespace nCine::RHI::PVR
 		inline std::uint16_t Argb4444FromRgba(std::uint8_t r, std::uint8_t g, std::uint8_t b, std::uint8_t a)
 		{
 			return std::uint16_t(((a >> 4) << 12) | ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4));
+		}
+
+		// Texture memory only supports 16 and 32-bit accesses. libc memcpy is free to fall back to byte
+		// writes for unaligned heads and odd tails, which silently corrupts texels on real hardware while
+		// emulators tolerate it - so copies into video memory spell their access width out
+		void CopyTexelsToVram(std::uint16_t* DEATH_RESTRICT dst, const std::uint16_t* DEATH_RESTRICT src, std::size_t count)
+		{
+			if (((reinterpret_cast<std::uintptr_t>(dst) | reinterpret_cast<std::uintptr_t>(src)) & 3) == 0) {
+				std::uint32_t* DEATH_RESTRICT dst32 = reinterpret_cast<std::uint32_t*>(dst);
+				const std::uint32_t* DEATH_RESTRICT src32 = reinterpret_cast<const std::uint32_t*>(src);
+				const std::size_t words = count >> 1;
+				for (std::size_t i = 0; i < words; i++) {
+					dst32[i] = src32[i];
+				}
+				if ((count & 1) != 0) {
+					dst[count - 1] = src[count - 1];
+				}
+			} else {
+				for (std::size_t i = 0; i < count; i++) {
+					dst[i] = src[i];
+				}
+			}
 		}
 	}
 
@@ -84,6 +108,21 @@ namespace nCine::RHI::PVR
 		liveHead_ = this;
 		if (liveTail_ == nullptr) {
 			liveTail_ = this;
+		}
+	}
+
+	void PvrTexture::LinkAsLeastRecent()
+	{
+		if (livePrev_ != nullptr || liveNext_ != nullptr || liveHead_ == this) {
+			return;		// Already in the list, keep its position (and its scene stamp)
+		}
+		livePrev_ = liveTail_;
+		if (liveTail_ != nullptr) {
+			liveTail_->liveNext_ = this;
+		}
+		liveTail_ = this;
+		if (liveHead_ == nullptr) {
+			liveHead_ = this;
 		}
 	}
 
@@ -198,6 +237,8 @@ namespace nCine::RHI::PVR
 			}
 		}
 		vramBytesPerTexel_ = bytesPerTexel;
+		// The store has to be reachable by the eviction walk immediately, not only from the first draw
+		LinkAsLeastRecent();
 		return true;
 	}
 
@@ -231,11 +272,17 @@ namespace nCine::RHI::PVR
 				LOGE("Out of PVR memory allocating {} B (8bpp {}x{}, source {}x{})", size, paddedWidth_, paddedHeight_, width_, height_);
 				return;
 			}
-			// Pad the linear image into a power-of-two staging buffer, then let the loader twiddle it
-			SmallVector<std::uint8_t, 0> staging;
-			staging.assign(size, 0);
+			// Pad the linear image into a power-of-two staging buffer, then let the loader twiddle it.
+			// The buffer persists across uploads (the renderer is single-threaded), and only the padding
+			// is zeroed - the image area is overwritten right after
+			static SmallVector<std::uint8_t, 0> staging;
+			staging.resize_for_overwrite(size);
 			for (std::int32_t y = 0; y < height_; y++) {
 				std::memcpy(staging.data() + std::size_t(y) * paddedWidth_, pixels_.data() + std::size_t(y) * strideBytes_, std::size_t(width_));
+				std::memset(staging.data() + std::size_t(y) * paddedWidth_ + width_, 0, std::size_t(paddedWidth_ - width_));
+			}
+			if (height_ < paddedHeight_) {
+				std::memset(staging.data() + std::size_t(height_) * paddedWidth_, 0, std::size_t(paddedHeight_ - height_) * paddedWidth_);
 			}
 			pvr_txr_load_ex(staging.data(), vram_, std::uint32_t(paddedWidth_), std::uint32_t(paddedHeight_), PVR_TXRLOAD_8BPP);
 			vramFormat_ = PVR_TXRFMT_PAL8BPP | PVR_TXRFMT_TWIDDLED;
@@ -252,11 +299,11 @@ namespace nCine::RHI::PVR
 			std::uint16_t* dst = static_cast<std::uint16_t*>(vram_);
 			const std::uint16_t* src = reinterpret_cast<const std::uint16_t*>(pixels_.data());
 			if (paddedWidth_ == width_) {
-				std::memcpy(dst, src, std::size_t(width_) * height_ * 2);
+				CopyTexelsToVram(dst, src, std::size_t(width_) * height_);
 			} else {
 				for (std::int32_t y = 0; y < height_; y++) {
-					std::memcpy(dst + std::size_t(y) * paddedWidth_, src + std::size_t(y) * (strideBytes_ / 2),
-						std::size_t(width_) * 2);
+					CopyTexelsToVram(dst + std::size_t(y) * paddedWidth_, src + std::size_t(y) * (strideBytes_ / 2),
+						std::size_t(width_));
 				}
 			}
 			vramFormat_ = PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED;
@@ -267,14 +314,23 @@ namespace nCine::RHI::PVR
 				LOGE("Out of PVR memory allocating {} B (ARGB4444 {}x{})", size, paddedWidth_, paddedHeight_);
 				return;
 			}
-			// Converted straight into video memory, row by row, without the twiddling pass: interleaving
-			// the texel order costs more than the conversion itself, and it only pays off for the sampling
-			// patterns of 3D geometry - these are axis-aligned sprite blits. Skipping it also avoids a
-			// second full-size copy in main memory.
+			// Converted without the twiddling pass: interleaving the texel order costs more than the
+			// conversion itself, and it only pays off for the sampling patterns of 3D geometry - these
+			// are axis-aligned sprite blits. Each row is converted into a small cached scratch line and
+			// then burst out through the store queues: texture memory is uncached, and the per-texel
+			// 16-bit stores made an eviction rebuild several times more expensive than the conversion.
+			// Only rows narrower than one 32-byte block (padded width 8) keep the direct stores; the
+			// padded width never exceeds 1024 (see NextPow2).
 			std::uint16_t* dst = static_cast<std::uint16_t*>(vram_);
+			alignas(32) static std::uint16_t scratchRow[1024];
+			const std::size_t rowBytes = std::size_t(paddedWidth_) * 2;
+			const bool useStoreQueues = ((rowBytes & 31) == 0);
+			if (useStoreQueues) {
+				sq_lock(dst);
+			}
 			for (std::int32_t y = 0; y < height_; y++) {
 				const std::uint8_t* DEATH_RESTRICT src = pixels_.data() + std::size_t(y) * strideBytes_;
-				std::uint16_t* DEATH_RESTRICT row = dst + std::size_t(y) * paddedWidth_;
+				std::uint16_t* DEATH_RESTRICT row = (useStoreQueues ? scratchRow : dst + std::size_t(y) * paddedWidth_);
 				if (bytesPerPixel_ >= 4) {
 					for (std::int32_t x = 0; x < width_; x++) {
 						row[x] = Argb4444FromRgba(src[0], src[1], src[2], src[3]);
@@ -291,9 +347,27 @@ namespace nCine::RHI::PVR
 				for (std::int32_t x = width_; x < paddedWidth_; x++) {
 					row[x] = 0;
 				}
+				if (useStoreQueues) {
+					sq_fast_cpy(SQ_MASK_DEST(dst + std::size_t(y) * paddedWidth_), scratchRow, rowBytes / 32);
+				}
 			}
-			for (std::int32_t y = height_; y < paddedHeight_; y++) {
-				std::memset(dst + std::size_t(y) * paddedWidth_, 0, std::size_t(paddedWidth_) * 2);
+			if (useStoreQueues) {
+				// One zeroed line serves every padding row below the image
+				for (std::int32_t x = 0; x < paddedWidth_; x++) {
+					scratchRow[x] = 0;
+				}
+				for (std::int32_t y = height_; y < paddedHeight_; y++) {
+					sq_fast_cpy(SQ_MASK_DEST(dst + std::size_t(y) * paddedWidth_), scratchRow, rowBytes / 32);
+				}
+				sq_unlock();
+			} else {
+				for (std::int32_t y = height_; y < paddedHeight_; y++) {
+					// Word stores - video memory only takes 16/32-bit accesses (padded width is even)
+					std::uint32_t* DEATH_RESTRICT fill = reinterpret_cast<std::uint32_t*>(dst + std::size_t(y) * paddedWidth_);
+					for (std::int32_t x = 0, n = paddedWidth_ / 2; x < n; x++) {
+						fill[x] = 0;
+					}
+				}
 			}
 			vramFormat_ = PVR_TXRFMT_ARGB4444 | PVR_TXRFMT_NONTWIDDLED;
 		}
@@ -306,6 +380,19 @@ namespace nCine::RHI::PVR
 			return nullptr;
 		}
 		const std::uint32_t currentScene = PvrDevice::GetSceneCounter();
+
+		// Bakes that have gone unused for a while give their video memory back proactively instead of
+		// waiting for an allocation failure to evict them - each one costs as much as the texture itself.
+		// Far older than anything the tile accelerator could still read.
+		constexpr std::uint32_t ReclaimAfterScenes = 300;
+		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
+			if (bakedSlots_[i].Vram != nullptr && currentScene - bakedSlots_[i].LastUsedScene > ReclaimAfterScenes) {
+				pvr_mem_free(bakedSlots_[i].Vram);
+				bakedSlots_[i].Vram = nullptr;
+				bakedSlots_[i].Valid = false;
+			}
+		}
+
 		BakedSlot* slot = nullptr;
 		for (std::int32_t i = 0; i < BakedSlotCount; i++) {
 			if (bakedSlots_[i].Valid && bakedSlots_[i].PaletteRow == paletteRowIndex && bakedSlots_[i].Palette == palette) {
@@ -357,16 +444,31 @@ namespace nCine::RHI::PVR
 			}
 		}
 
-		SmallVector<std::uint16_t, 0> staging;
-		staging.assign(std::size_t(paddedWidth_) * std::size_t(paddedHeight_), 0);
+		// The 256 palette entries collapse into packed 12-bit RGB once per bake, so the texel loop below
+		// is one table lookup and an alpha merge instead of unpacking and requantizing every pixel
+		std::uint16_t rgb444[256];
+		for (std::int32_t i = 0; i < 256; i++) {
+			const std::uint32_t color = paletteRow[i];
+			rgb444[i] = std::uint16_t(((( color        & 0xFF) >> 4) << 8)
+				| ((((color >> 8)  & 0xFF) >> 4) << 4)
+				|  (((color >> 16) & 0xFF) >> 4));
+		}
+
+		// The staging buffer persists across bakes (the renderer is single-threaded); only the padding
+		// is zeroed, the image area is overwritten right after
+		static SmallVector<std::uint16_t, 0> staging;
+		staging.resize_for_overwrite(std::size_t(paddedWidth_) * std::size_t(paddedHeight_));
 		for (std::int32_t y = 0; y < height_; y++) {
-			const std::uint8_t* src = pixels_.data() + std::size_t(y) * strideBytes_;
-			std::uint16_t* dst = staging.data() + std::size_t(y) * paddedWidth_;
+			const std::uint8_t* DEATH_RESTRICT src = pixels_.data() + std::size_t(y) * strideBytes_;
+			std::uint16_t* DEATH_RESTRICT dst = staging.data() + std::size_t(y) * paddedWidth_;
 			for (std::int32_t x = 0; x < width_; x++) {
-				const std::uint32_t color = paletteRow[src[x * 2]];
-				dst[x] = Argb4444FromRgba(std::uint8_t(color & 0xFF), std::uint8_t((color >> 8) & 0xFF),
-					std::uint8_t((color >> 16) & 0xFF), src[x * 2 + 1]);
+				dst[x] = std::uint16_t(rgb444[src[x * 2]] | ((src[x * 2 + 1] >> 4) << 12));
 			}
+			std::memset(dst + width_, 0, std::size_t(paddedWidth_ - width_) * 2);
+		}
+		if (height_ < paddedHeight_) {
+			std::memset(staging.data() + std::size_t(height_) * paddedWidth_, 0,
+				std::size_t(paddedHeight_ - height_) * paddedWidth_ * 2);
 		}
 		pvr_txr_load_ex(staging.data(), slot->Vram, std::uint32_t(paddedWidth_), std::uint32_t(paddedHeight_), PVR_TXRLOAD_16BPP);
 

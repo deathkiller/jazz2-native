@@ -1445,14 +1445,16 @@ namespace Jazz2::Actors
 
 				auto instanceBlock = command->GetInstanceBlock();
 				instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(res->Base->FrameDimensions.X, res->Base->FrameDimensions.Y * scaleY);
+				// The quad is sized by the frame's own area - the texture rectangle above covers exactly
+				// that, and stretching a trimmed frame over the whole cell would visibly distort it
+				instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(frameRect.W, frameRect.H * scaleY);
 				instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(1.0f, 1.0f, 1.0f, 1.8f);
 
 				Matrix4x4f worldMatrix = Matrix4x4f::Translation(gunspotPosX, gunspotPosY, 0.0f);
 				if (lookUp) {
 					worldMatrix.RotateZ(-fRadAngle90);
 				}
-				worldMatrix.Translate(res->Base->FrameDimensions.X * -0.5f, res->Base->FrameDimensions.Y * scaleY * -0.5f, 0.0f);
+				worldMatrix.Translate(frameRect.W * -0.5f, frameRect.H * scaleY * -0.5f, 0.0f);
 				command->SetTransformation(worldMatrix);
 				command->SetLayer(_renderer.layer() + 2);
 				command->GetMaterial().SetTexture(*res->Base->TextureDiffuse.get());
@@ -1598,8 +1600,10 @@ namespace Jazz2::Actors
 					float texScaleY = (float(frameRect.H) / float(texSize.Y));
 					float texBiasY = (float(frameRect.Y) / float(texSize.Y));
 
-					float shieldPosX = _pos.X - res->Base->FrameDimensions.X * shieldScale * 0.5f;
-					float shieldPosY = _pos.Y - res->Base->FrameDimensions.Y * shieldScale * 0.5f;
+					// The quad is sized by the frame's own area - the texture rectangle above covers exactly
+					// that, and stretching a trimmed frame over the whole cell would visibly distort it
+					float shieldPosX = _pos.X - frameRect.W * shieldScale * 0.5f;
+					float shieldPosY = _pos.Y - frameRect.H * shieldScale * 0.5f;
 
 					if (!PreferencesCache::UnalignedViewport) {
 						shieldPosX = std::floor(shieldPosX);
@@ -1608,7 +1612,7 @@ namespace Jazz2::Actors
 
 					auto instanceBlock = command->GetInstanceBlock();
 					instanceBlock->GetUniform(Material::TexRectUniformName)->SetFloatValue(texScaleX, texBiasX, texScaleY, texBiasY);
-					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(res->Base->FrameDimensions.X * shieldScale, res->Base->FrameDimensions.Y * shieldScale);
+					instanceBlock->GetUniform(Material::SpriteSizeUniformName)->SetFloatValue(frameRect.W * shieldScale, frameRect.H * shieldScale);
 					instanceBlock->GetUniform(Material::ColorUniformName)->SetFloatValue(1.0f, 1.0f, 1.0f, shieldAlpha);
 
 					command->SetTransformation(Matrix4x4f::Translation(shieldPosX, shieldPosY, 0.0f));

@@ -32,10 +32,15 @@ namespace Jazz2::Compatibility
 		{
 			Array<std::uint8_t> Data;
 			std::size_t Position = 0;
+			bool Exhausted = false;
 
 			std::uint8_t ReadByte()
 			{
-				return (Position < Data.size() ? Data[Position++] : 0);
+				if (Position >= Data.size()) {
+					Exhausted = true;
+					return 0;
+				}
+				return Data[Position++];
 			}
 
 			std::uint16_t ReadUint16()
@@ -53,6 +58,7 @@ namespace Jazz2::Compatibility
 				}
 				if (available < length) {
 					std::memset(destination + available, 0, length - available);
+					Exhausted = true;
 				}
 				Position += length;
 			}
@@ -60,6 +66,9 @@ namespace Jazz2::Compatibility
 			void Skip(std::size_t length)
 			{
 				Position += length;
+				if (Position > Data.size()) {
+					Exhausted = true;
+				}
 			}
 		};
 
@@ -114,6 +123,10 @@ namespace Jazz2::Compatibility
 					break;
 				}
 				std::int32_t part = std::min(length, std::int32_t(0xFFFF));
+				if (length - part > 0 && length - part < VideoFormat::CommandRunMinLength) {
+					// A remainder of 1-2 pixels has no run encoding, so leave a full short run instead
+					part = length - VideoFormat::CommandRunMinLength;
+				}
 				arrayAppend(payload, std::uint8_t(VideoFormat::CommandRunLong));
 				WriteUint16(payload, std::uint16_t(part));
 				arrayAppend(payload, value);
@@ -225,7 +238,7 @@ namespace Jazz2::Compatibility
 
 		Array<std::uint32_t> frameSizes;
 		Array<std::uint8_t> frameData;
-		std::uint8_t palette[256 * 4];
+		std::uint8_t palette[256 * 4] = {};
 		std::int32_t framesWritten = 0;
 
 		for (std::int32_t f = 0; f < frameCount; f++) {
@@ -241,12 +254,20 @@ namespace Jazz2::Compatibility
 				std::uint8_t c;
 				std::int32_t x = 0;
 				while ((c = streams[0].ReadByte()) != 0x80) {
+					// A dead stream keeps returning zeros (c = 0 with a zero run length), which would spin
+					// here forever - bail out as soon as the short read is detected, like the player does
+					if (streams[0].Exhausted) {
+						LOGE("\"{}\" is truncated at frame {}", sourcePath, f);
+						return false;
+					}
 					if (c < 0x80) {
 						std::int32_t u = (c == 0x00 ? streams[0].ReadUint16() : c);
 						std::int32_t fits = std::min(u, std::int32_t(width - x));
 						if (fits > 0) {
 							streams[3].Read(&row[x], std::size_t(fits));
 						}
+						// A run overhanging the row would be a corrupted frame; its bytes are still consumed
+						// so the stream stays aligned with the following runs
 						if (u > fits) {
 							streams[3].Skip(std::size_t(u - fits));
 						}
@@ -259,10 +280,6 @@ namespace Jazz2::Compatibility
 							std::memcpy(&row[x], &previousFrame[n], std::size_t(fits));
 						}
 						x += u;
-					}
-
-					if (x > width) {
-						break;
 					}
 				}
 			}
@@ -378,6 +395,11 @@ namespace Jazz2::Compatibility
 			output_->WriteValueAsLE<std::uint32_t>(frameSize);
 			output_->Write(&frameData[position], std::int64_t(frameSize));
 			position += frameSize;
+		}
+
+		if (!output_->IsValid()) {
+			LOGE("Cannot write \"{}\"", targetPath);
+			return false;
 		}
 
 		LOGI("Recompressed \"{}\": {}x{} -> {}x{}, {} frames, {} KB -> {} KB", fs::GetFileName(sourcePath),

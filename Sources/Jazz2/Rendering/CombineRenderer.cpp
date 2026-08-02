@@ -258,10 +258,13 @@ namespace Jazz2::Rendering
 				float* texelRow = &_swLightmap[((std::size_t)y * lmW + x0) * 2];
 				for (std::int32_t x = x0; x <= x1; x++, texelRow += 2) {
 					const float dx = (x - cx) / rLm;
-					const float dist = std::sqrt(dx * dx + dy * dy);
-					if (dist > 1.0f) {
+					// About a fifth of the bounding box lies outside the circle - reject on the squared
+					// distance so those texels never pay for the square root
+					const float dist2 = dx * dx + dy * dy;
+					if (dist2 > 1.0f) {
 						continue;
 					}
+					const float dist = std::sqrt(dist2);
 					// Cubic falloff, identical to lightBlend() in LightingFs.inc
 					float t = (denom > 0.0f ? 1.0f - ((dist - radiusNearNorm) / denom) : 1.0f);
 					t = std::clamp(t, 0.0f, 1.0f);

@@ -1547,7 +1547,6 @@ namespace Jazz2
 
 		std::uint16_t captionTileId = uc.ReadValueAsLE<std::uint16_t>();
 
-
 		PitType pitType;
 		if ((flags & LevelFlags::HasPit) == LevelFlags::HasPit) {
 			pitType = ((flags & LevelFlags::HasPitInstantDeath) == LevelFlags::HasPitInstantDeath ? PitType::InstantDeathPit : PitType::FallForever);

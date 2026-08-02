@@ -68,6 +68,7 @@
 	mentioned - which is how the consoles ended up offering to configure touch controls.
 */
 #if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_EMSCRIPTEN) || \
+		defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || \
 		defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_UNIX) || defined(DOXYGEN_GENERATING_OUTPUT)
 #	define NCINE_HAS_TOUCH_CONTROLS
 #endif
