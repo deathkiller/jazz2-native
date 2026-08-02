@@ -15,11 +15,51 @@
 #include <Containers/StringConcatenable.h>
 #include <IO/Compression/DeflateStream.h>
 
+#if defined(DEATH_TARGET_DREAMCAST)
+#	include <dc/sq.h>
+#endif
+
 using namespace Death::Memory;
 using namespace Jazz2::Input;
 
 namespace Jazz2::UI
 {
+	namespace
+	{
+		/**
+			@brief Resolves a run of palette indices into RGB565
+
+			Four indices arrive in one 32-bit load and two colors leave in one 32-bit store, which is the fewest
+			memory operations this can be done in - the straightforward byte-at-a-time loop is what the whole
+			frame conversion costs most of its time in. Anything the wide path cannot cover (an odd length, or a
+			buffer that is not 32-bit aligned) is done one index at a time.
+		*/
+		DEATH_ALWAYS_INLINE void ConvertIndicesTo565(const std::uint8_t* DEATH_RESTRICT src,
+			std::uint16_t* DEATH_RESTRICT dst, const std::uint16_t* DEATH_RESTRICT palette, std::uint32_t count)
+		{
+			std::uint32_t i = 0;
+#if !defined(DEATH_TARGET_BIG_ENDIAN)
+			if (((reinterpret_cast<std::uintptr_t>(src) | reinterpret_cast<std::uintptr_t>(dst)) & 3) == 0) {
+				const std::uint32_t* DEATH_RESTRICT src32 = reinterpret_cast<const std::uint32_t*>(src);
+				std::uint32_t* DEATH_RESTRICT dst32 = reinterpret_cast<std::uint32_t*>(dst);
+				const std::uint32_t quads = count / 4;
+				for (std::uint32_t q = 0; q < quads; q++) {
+					const std::uint32_t four = src32[q];
+					const std::uint32_t c0 = palette[four & 0xFF];
+					const std::uint32_t c1 = palette[(four >> 8) & 0xFF];
+					const std::uint32_t c2 = palette[(four >> 16) & 0xFF];
+					const std::uint32_t c3 = palette[four >> 24];
+					dst32[(q * 2) + 0] = c0 | (c1 << 16);
+					dst32[(q * 2) + 1] = c2 | (c3 << 16);
+				}
+				i = quads * 4;
+			}
+#endif
+			for (; i < count; i++) {
+				dst[i] = palette[src[i]];
+			}
+		}
+	}
 	Cinematics::Cinematics(IRootController* root, StringView path, Function<bool(IRootController*, bool)>&& callback)
 		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
 			_videoDownscale(1), _textureWidth(0), _textureHeight(0), _textureIndex(0),
@@ -254,7 +294,7 @@ namespace Jazz2::UI
 			_indexedFrame = std::make_unique<std::uint8_t[]>(_textureWidth * _textureHeight);
 		}
 		if (_convertTo565) {
-			_frame565 = std::make_unique<std::uint16_t[]>(_textureWidth * _textureHeight);
+			_frameRow = std::make_unique<std::uint16_t[]>(_textureWidth);
 		}
 
 		// Build the chunk index of the 4 interleaved compressed streams - only chunk positions are kept
@@ -358,7 +398,7 @@ namespace Jazz2::UI
 			_indexedFrame = std::make_unique<std::uint8_t[]>(_textureWidth * _textureHeight);
 		}
 		if (_convertTo565) {
-			_frame565 = std::make_unique<std::uint16_t[]>(_textureWidth * _textureHeight);
+			_frameRow = std::make_unique<std::uint16_t[]>(_textureWidth);
 		}
 		std::memset(_buffer.get(), 0, _width * _height);
 
@@ -687,17 +727,55 @@ namespace Jazz2::UI
 			texels = _indexedFrame.get();
 		}
 
+		// Upload new texture to GPU (into the buffer the GPU is not currently sampling)
+		_textureIndex ^= 1;
+
 		if (_convertTo565) {
-			const std::int32_t count = _textureWidth * _textureHeight;
-			std::uint16_t* DEATH_RESTRICT dst = _frame565.get();
-			for (std::int32_t i = 0; i < count; i++) {
-				dst[i] = _palette565[texels[i]];
+#if defined(RHI_CAP_STREAMING_TEXTURES)
+			// Where the texture's storage can be written directly, the frame is converted into it a row at a
+			// time. The obvious way - convert the whole frame into a buffer and hand that to LoadFromTexels -
+			// walks the frame three times over: once to convert, once to copy it into the texture's host copy,
+			// once to copy that where the hardware reads it. A row stays in the cache between being converted
+			// and being copied out, so only the last of those three passes is left.
+			std::int32_t strideBytes = 0;
+			if (std::uint8_t* mapped = static_cast<std::uint8_t*>(_textures[_textureIndex]->MapStreamingTexels(strideBytes))) {
+				const std::size_t rowBytes = std::size_t(_textureWidth) * 2;
+				std::uint16_t* DEATH_RESTRICT row = _frameRow.get();
+#if defined(DEATH_TARGET_DREAMCAST)
+				// The rows go out through the store queues, which burst 32 bytes at a time instead of pushing
+				// each write to video memory on its own. Their requirements - a 32-byte aligned destination, a
+				// 32-bit aligned source and a whole number of blocks - are all satisfied by the usual sizes,
+				// but not by every possible one, so the plain copy stays as the alternative.
+				// (sq_fast_cpy wants the source 8-byte aligned, which is stricter than the 4 bytes the wide
+				// conversion above needs.)
+				const bool useStoreQueues = ((rowBytes & 31) == 0 && (strideBytes & 31) == 0
+					&& (reinterpret_cast<std::uintptr_t>(mapped) & 31) == 0
+					&& (reinterpret_cast<std::uintptr_t>(row) & 7) == 0);
+				if (useStoreQueues) {
+					sq_lock(mapped);
+					for (std::uint32_t y = 0; y < _textureHeight; y++) {
+						ConvertIndicesTo565(&texels[std::size_t(y) * _textureWidth], row, _palette565, _textureWidth);
+						sq_fast_cpy(SQ_MASK_DEST(mapped + std::size_t(y) * strideBytes), row, rowBytes / 32);
+					}
+					sq_unlock();
+					return;
+				}
+#endif
+				for (std::uint32_t y = 0; y < _textureHeight; y++) {
+					ConvertIndicesTo565(&texels[std::size_t(y) * _textureWidth], row, _palette565, _textureWidth);
+					std::memcpy(mapped + std::size_t(y) * strideBytes, row, rowBytes);
+				}
+				return;
 			}
+#endif
+			// The whole-frame buffer is only needed by this fallback, so it is allocated if it is ever reached
+			if (_frame565 == nullptr) {
+				_frame565 = std::make_unique<std::uint16_t[]>(std::size_t(_textureWidth) * _textureHeight);
+			}
+			ConvertIndicesTo565(texels, _frame565.get(), _palette565, _textureWidth * _textureHeight);
 			texels = reinterpret_cast<const std::uint8_t*>(_frame565.get());
 		}
 
-		// Upload new texture to GPU (into the buffer the GPU is not currently sampling)
-		_textureIndex ^= 1;
 		_textures[_textureIndex]->LoadFromTexels(texels, 0, 0, _textureWidth, _textureHeight);
 	}
 

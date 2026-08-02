@@ -356,27 +356,37 @@ namespace Jazz2::AssetPacker
 			}
 		}
 
-		// A pixel is invisible if it has no coverage or if it is the transparent palette entry, and the source
-		// images use both spellings - a handful of pixels even combine one with the other. They all become the
-		// same thing here, so that "no pixel" has a single representation and a font whose coverage is implied
-		// by its indices is recognised as such below.
+		// Every pixel of a font is either one of the palette's colors or nothing at all - the shading comes from
+		// the palette entry, not from blending the glyph into what is behind it. The source images say that two
+		// different ways (the transparent index, and no coverage) and a few pixels manage to say neither, so
+		// they are all resolved to one of the two here. What that leaves is an image of palette indices, which
+		// is how it is stored.
+		std::int32_t transparentFixed = 0, coverageFixed = 0;
 		for (std::size_t i = 0; i < std::size_t(image.Width) * image.Height; i++) {
 			std::uint8_t* pixel = &image.Pixels[i * 4];
 			if (pixel[0] == 0 || pixel[3] == 0) {
+				if (pixel[0] != 0 || pixel[3] != 0) {
+					transparentFixed++;
+				}
 				pixel[0] = 0;
 				pixel[3] = 0;
+			} else if (pixel[3] != 255) {
+				// Partially covered, which a font cannot express - it is drawn as the color it names
+				coverageFixed++;
+				pixel[3] = 255;
 			}
 		}
 
-		// A glyph that antialiases its edges needs its coverage kept alongside the palette index; one with hard
-		// edges is fully described by the index alone, and stores half as much
-		bool hasAlpha = false;
-		for (std::size_t i = 0; i < std::size_t(image.Width) * image.Height && !hasAlpha; i++) {
-			const std::uint8_t index = image.Pixels[(i * 4) + 0];
-			const std::uint8_t alpha = image.Pixels[(i * 4) + 3];
-			hasAlpha = (alpha != (index != 0 ? 255 : 0));
+		if (transparentFixed > 0) {
+			LOGW("{} pixels of \"{}\" were transparent in one channel but not the other, and were made fully transparent",
+				transparentFixed, sourcePath);
 		}
-		const std::int32_t channelCount = (hasAlpha ? 2 : 1);
+		if (coverageFixed > 0) {
+			LOGW("{} pixels of \"{}\" were partially covered, which a font cannot store, and were made fully opaque",
+				coverageFixed, sourcePath);
+		}
+
+		constexpr std::int32_t channelCount = 1;
 
 		SmallVector<std::int32_t, 0> positions;
 		std::int32_t atlasWidth, atlasHeight;
@@ -401,9 +411,6 @@ namespace Jazz2::AssetPacker
 					const std::uint8_t* source = &image.Pixels[(std::size_t(glyph.Y + y) * image.Width + (glyph.X + x)) * 4];
 					std::uint8_t* target = &atlas[(std::size_t(targetY + y) * atlasWidth + (targetX + x)) * channelCount];
 					target[0] = source[0];
-					if (channelCount >= 2) {
-						target[1] = source[3];
-					}
 				}
 			}
 
@@ -450,10 +457,11 @@ namespace Jazz2::AssetPacker
 			Compatibility::JJ2Anims::WriteImageContent(co, atlas.get(), atlasWidth, atlasHeight, channelCount);
 		}
 
+		constexpr std::int64_t headerSize = sizeof(std::uint64_t) + 3 * sizeof(std::uint8_t) + sizeof(std::int32_t);
 		so.WriteValueAsLE<std::uint64_t>(FontFormat::Signature);
 		so.WriteValue<std::uint8_t>(ContentFileType::Font);
 		so.WriteValue<std::uint8_t>(FontFormat::CurrentVersion);
-		so.WriteValue<std::uint8_t>(hasAlpha ? FontFormat::Flags::HasAlpha : 0x00);
+		so.WriteValue<std::uint8_t>(0x00);	// Flags
 		so.WriteValueAsLE<std::int32_t>(std::int32_t(ms.GetSize()));
 		so.Write(ms.GetBuffer(), ms.GetSize());
 
@@ -461,7 +469,7 @@ namespace Jazz2::AssetPacker
 		const std::int64_t targetArea = std::int64_t(atlasWidth) * atlasHeight;
 		LOGI("{} glyphs packed into {}x{} ({}% of the {}x{} grid), {} bytes",
 			font.Glyphs.size(), atlasWidth, atlasHeight, (sourceArea > 0 ? targetArea * 100 / sourceArea : 0),
-			image.Width, image.Height, so.GetSize());
+			image.Width, image.Height, headerSize + ms.GetSize());
 
 		return so.IsValid();
 	}
@@ -477,7 +485,7 @@ namespace Jazz2::AssetPacker
 		const std::uint64_t signature = s.ReadValueAsLE<std::uint64_t>();
 		const std::uint8_t fileType = s.ReadValue<std::uint8_t>();
 		const std::uint8_t version = s.ReadValue<std::uint8_t>();
-		const std::uint8_t flags = s.ReadValue<std::uint8_t>();
+		/*std::uint8_t flags =*/ s.ReadValue<std::uint8_t>();
 		if (signature != FontFormat::Signature || fileType != ContentFileType::Font) {
 			LOGE("\"{}\" is not a packed font", sourcePath);
 			return false;
@@ -522,7 +530,7 @@ namespace Jazz2::AssetPacker
 			return false;
 		}
 
-		const std::int32_t channelCount = ((flags & FontFormat::Flags::HasAlpha) != 0 ? 2 : 1);
+		constexpr std::int32_t channelCount = 1;
 		const std::size_t atlasPixels = std::size_t(atlasWidth) * atlasHeight;
 		// The decoder always stores four bytes per pixel, however few of them the image carries, so the buffer
 		// is sized for that and the result is spread out afterwards
@@ -563,7 +571,7 @@ namespace Jazz2::AssetPacker
 					std::uint8_t* target = &image.Pixels[(std::size_t(cellY + glyph.BearingY + y) * image.Width
 						+ (cellX + glyph.BearingX + x)) * 4];
 					target[0] = target[1] = target[2] = source[0];
-					target[3] = (channelCount >= 2 ? source[1] : (source[0] != 0 ? 255 : 0));
+					target[3] = (source[0] != 0 ? 255 : 0);
 				}
 			}
 		}

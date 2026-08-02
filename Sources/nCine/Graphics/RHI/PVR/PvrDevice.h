@@ -257,6 +257,9 @@ namespace nCine::RHI::PVR
 		static void EnsureScene();
 		static void FinishScene();
 		static std::int32_t AcquirePaletteBankForRow(const PvrTexture* palette, std::int32_t paletteRow);
+		/** @brief Loads 256 entries into one of the hardware palette banks, reusing the bank if they are already there */
+		static std::int32_t AcquirePaletteBank(const PvrTexture* palette, std::int32_t paletteOffset,
+			std::uint32_t version, const std::uint32_t* entries);
 		static void GetTargetScale(float& scaleX, float& scaleY, float& offsetX, float& offsetY);
 	};
 }

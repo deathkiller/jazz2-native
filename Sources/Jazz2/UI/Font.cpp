@@ -28,7 +28,7 @@ namespace Jazz2::UI
 		std::uint64_t signature = s->ReadValueAsLE<std::uint64_t>();
 		std::uint8_t fileType = s->ReadValue<std::uint8_t>();
 		std::uint8_t version = s->ReadValue<std::uint8_t>();
-		std::uint8_t flags = s->ReadValue<std::uint8_t>();
+		/*std::uint8_t flags =*/ s->ReadValue<std::uint8_t>();
 		if (signature != FontFormat::Signature || fileType != ContentFileType::Font || version != FontFormat::CurrentVersion) {
 			LOGE("\"{}\" is not a supported font file", path);
 			return;
@@ -90,28 +90,43 @@ namespace Jazz2::UI
 			return;
 		}
 
-		// The atlas holds one palette index per pixel, and a second byte of coverage if the font is antialiased.
-		// The decoder stores four bytes per pixel whatever it reads, so the buffer is sized for the colors it is
-		// about to be turned into anyway.
-		const std::int32_t channelCount = ((flags & FontFormat::Flags::HasAlpha) != 0 ? 2 : 1);
-		auto pixels = std::make_unique<std::uint8_t[]>(std::size_t(w) * h * ContentResolver::PixelSize);
-		Compatibility::JJ2Anims::ReadImageContent(uc, pixels.get(), w, h, channelCount);
+		// The atlas holds one palette index per pixel, with index 0 standing for no pixel at all. The PowerVR
+		// samples such an image directly - a paletted texture is one of its native formats - so there it is
+		// uploaded as it is and the hardware resolves the colors, which costs a quarter of the video memory
+		// and none of the main memory an expanded copy would. That only works while the palette's first entry
+		// is the transparent one, since transparency has nowhere else to live.
+#if defined(RHI_CAP_PALETTED_TEXTURES)
+		const bool keepIndexed = (((palette[0] >> 24) & 0xFF) == 0);
+#else
+		constexpr bool keepIndexed = false;
+#endif
 
-		// Expanded from the back, so a pixel is always read before anything can be written over it
-		for (std::uint32_t i = std::uint32_t(w) * h; i-- > 0; ) {
-			const std::uint32_t srcIdx = i * channelCount;
-			const std::uint32_t dstIdx = i * ContentResolver::PixelSize;
-			const std::uint8_t index = pixels[srcIdx];
-			const std::uint8_t coverage = (channelCount >= 2 ? pixels[srcIdx + 1] : (index != 0 ? 255 : 0));
-			const std::uint32_t color = palette[index];
+		// The decoder stores four bytes per pixel whatever it reads, so an expanded copy needs no more room
+		// than the indices plus the slack of that last write
+		const std::size_t bufferSize = (keepIndexed
+			? std::size_t(w) * h + ContentResolver::PixelSize
+			: std::size_t(w) * h * ContentResolver::PixelSize);
+		auto pixels = std::make_unique<std::uint8_t[]>(bufferSize);
+		Compatibility::JJ2Anims::ReadImageContent(uc, pixels.get(), w, h, 1);
 
-			pixels[dstIdx + 0] = (color >> 0) & 0xFF;
-			pixels[dstIdx + 1] = (color >> 8) & 0xFF;
-			pixels[dstIdx + 2] = (color >> 16) & 0xFF;
-			pixels[dstIdx + 3] = ((color >> 24) & 0xFF) * coverage / 255;
+		if (keepIndexed) {
+			_texture = std::make_unique<Texture>(path.data(), Texture::Format::R8, w, h);
+		} else {
+			// Expanded from the back, so a pixel is always read before anything can be written over it
+			for (std::uint32_t i = std::uint32_t(w) * h; i-- > 0; ) {
+				const std::uint32_t dstIdx = i * ContentResolver::PixelSize;
+				const std::uint8_t index = pixels[i];
+				const std::uint32_t color = palette[index];
+
+				pixels[dstIdx + 0] = (color >> 0) & 0xFF;
+				pixels[dstIdx + 1] = (color >> 8) & 0xFF;
+				pixels[dstIdx + 2] = (color >> 16) & 0xFF;
+				pixels[dstIdx + 3] = (index != 0 ? (color >> 24) & 0xFF : 0);
+			}
+
+			_texture = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, w, h);
 		}
 
-		_texture = std::make_unique<Texture>(path.data(), Texture::Format::RGBA8, w, h);
 		_texture->LoadFromTexels(pixels.get(), 0, 0, w, h);
 		_texture->SetMinFiltering(SamplerFilter::Linear);
 		_texture->SetMagFiltering(SamplerFilter::Linear);

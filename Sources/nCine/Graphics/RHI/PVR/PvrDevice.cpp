@@ -568,6 +568,17 @@ namespace nCine::RHI::PVR
 			return -1;
 		}
 
+		return AcquirePaletteBank(palette, paletteOffset, palette->GetContentVersion(),
+			reinterpret_cast<const std::uint32_t*>(palette->GetPixels()) + paletteOffset);
+	}
+
+	std::int32_t PvrDevice::AcquirePaletteBank(const PvrTexture* palette, std::int32_t paletteOffset,
+		std::uint32_t version, const std::uint32_t* entries)
+	{
+		if (palette == nullptr || entries == nullptr) {
+			return -1;
+		}
+
 		paletteUseCounter_++;
 
 		std::int32_t bank = -1;
@@ -575,7 +586,7 @@ namespace nCine::RHI::PVR
 		std::int32_t oldestBank = 0;
 		for (std::uint32_t i = 0; i < MaxPaletteBanks; i++) {
 			if (paletteBanks_[i].PaletteOffset == paletteOffset && paletteBanks_[i].Palette == palette &&
-				paletteBanks_[i].PaletteVersion == palette->GetContentVersion()) {
+				paletteBanks_[i].PaletteVersion == version) {
 				bank = std::int32_t(i);
 				break;
 			}
@@ -587,8 +598,6 @@ namespace nCine::RHI::PVR
 
 		if (bank < 0) {
 			bank = oldestBank;
-			const std::uint32_t* entries = reinterpret_cast<const std::uint32_t*>(
-				palette->GetPixels()) + paletteOffset;
 			for (std::int32_t i = 0; i < 256; i++) {
 				const std::uint32_t rgba = entries[i];
 				pvr_set_pal_entry(std::uint32_t(bank) * 256 + std::uint32_t(i),
@@ -597,7 +606,7 @@ namespace nCine::RHI::PVR
 			}
 			paletteBanks_[bank].PaletteOffset = paletteOffset;
 			paletteBanks_[bank].Palette = palette;
-			paletteBanks_[bank].PaletteVersion = palette->GetContentVersion();
+			paletteBanks_[bank].PaletteVersion = version;
 		}
 
 		paletteBanks_[bank].LastUse = paletteUseCounter_;
@@ -835,7 +844,7 @@ namespace nCine::RHI::PVR
 		const bool isPaletteRemap = (currentProgram_->GetEffect() == PvrEffect::TileMapMeshPalette ||
 			currentProgram_->UsesPalette());
 		const PvrTexture* paletteTex = nullptr;
-		if (isPaletteRemap) {
+		if (isPaletteRemap || texture->IsIndexed()) {
 			paletteTex = boundTextures_[1];
 			if (paletteTex == nullptr || paletteTex == texture) {
 				paletteTex = paletteTexture_;
@@ -846,10 +855,17 @@ namespace nCine::RHI::PVR
 		// residency, the palette bank and the polygon header are resolved once for the entire layer
 		pvr_ptr_t vram = nullptr;
 		std::uint32_t format = 0;
-		if (isPaletteRemap && texture->IsIndexed()) {
-			float palOffset = 0.0f;
-			std::memcpy(&palOffset, blockData + kPaletteOffsetOffset, sizeof(palOffset));
-			std::int32_t bank = AcquirePaletteBankForRow(paletteTex, std::int32_t(palOffset + 0.5f));
+		if (texture->IsIndexed()) {
+			// An 8bpp store can only be read through a palette, whatever it is being drawn with - the lookup
+			// belongs to the texture read rather than to the effect. An effect that remaps takes the row from
+			// the instance; anything else (the fonts, which are palette indices too) uses the base row.
+			std::int32_t paletteOffset = 0;
+			if (isPaletteRemap) {
+				float palOffset = 0.0f;
+				std::memcpy(&palOffset, blockData + kPaletteOffsetOffset, sizeof(palOffset));
+				paletteOffset = std::int32_t(palOffset + 0.5f);
+			}
+			std::int32_t bank = AcquirePaletteBankForRow(paletteTex, paletteOffset);
 			if (bank < 0) {
 				bank = 0;
 			}
@@ -1109,7 +1125,7 @@ namespace nCine::RHI::PVR
 		// The palette to remap with is whatever the material bound to the palette sampler (e.g. the
 		// recolored preview palettes of the profile menu); the registered global palette is the fallback
 		const PvrTexture* paletteTex = nullptr;
-		if (isPaletteRemap) {
+		if (isPaletteRemap || (texture != nullptr && texture->IsIndexed())) {
 			const std::int32_t paletteUnit = samplerUnit("uTexturePalette", 1);
 			paletteTex = (std::uint32_t(paletteUnit) < MaxTextureUnits ? boundTextures_[paletteUnit] : nullptr);
 			if (paletteTex == nullptr || paletteTex == texture) {
@@ -1196,10 +1212,15 @@ namespace nCine::RHI::PVR
 				pvr_ptr_t vram = nullptr;
 				std::uint32_t format = 0;
 				std::int32_t bank = -1;
-				if (isPaletteRemap && texture->IsIndexed()) {
-					float palOffset = 0.0f;
-					std::memcpy(&palOffset, inst + kPaletteOffsetOffset, sizeof(palOffset));
-					bank = AcquirePaletteBankForRow(paletteTex, std::int32_t(palOffset + 0.5f));
+				if (texture->IsIndexed()) {
+					// See the mesh path: a paletted store needs a bank selected under every effect
+					std::int32_t paletteOffset = 0;
+					if (isPaletteRemap) {
+						float palOffset = 0.0f;
+						std::memcpy(&palOffset, inst + kPaletteOffsetOffset, sizeof(palOffset));
+						paletteOffset = std::int32_t(palOffset + 0.5f);
+					}
+					bank = AcquirePaletteBankForRow(paletteTex, paletteOffset);
 					if (bank < 0) {
 						bank = 0;
 					}

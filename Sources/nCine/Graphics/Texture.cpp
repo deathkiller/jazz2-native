@@ -172,6 +172,13 @@ namespace nCine
 		return !RHI::Texture::CheckErrors();
 	}
 
+#if defined(RHI_CAP_STREAMING_TEXTURES)
+	void* Texture::MapStreamingTexels(std::int32_t& strideBytes)
+	{
+		return rhiTexture_->MapStreamingTexels(strideBytes);
+	}
+#endif
+
 	/** @note Loads uncompressed pixel data from memory using the `Format` specified in the constructor */
 	bool Texture::LoadFromTexels(const std::uint8_t* bufferPtr, std::int32_t level, Recti region)
 	{
