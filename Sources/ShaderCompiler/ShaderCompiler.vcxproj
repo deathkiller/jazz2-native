@@ -113,6 +113,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ConsoleFixedFunction.cpp" />
     <ClCompile Include="ConstFold.cpp" />
     <ClCompile Include="Emit.cpp" />
     <ClCompile Include="GlslToCpp.cpp" />
@@ -130,6 +131,7 @@
     <ClCompile Include="..\Shared\Cpu.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ConsoleFixedFunction.h" />
     <ClInclude Include="ConstFold.h" />
     <ClInclude Include="Emit.h" />
     <ClInclude Include="GlslAst.h" />

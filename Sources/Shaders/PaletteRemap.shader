@@ -14,3 +14,12 @@ void fragment() {
 	vec4 color = texture(uTexturePalette, vec2(palX, palY));
 	COLOR = vec4(color.rgb, color.a * src.a) * COLOR;
 }
+
+void fixed_function() {
+	// Console fixed-function tier: shading-wise a plain modulated sprite - the remap itself is texture
+	// state (palette bank on the PVR, TLUT slot on the GX, or a baked variant), selected by the
+	// dispatch's per-instance loop before submission
+	pass p;
+	p.color = COLOR;
+	submit_quad(p);
+}

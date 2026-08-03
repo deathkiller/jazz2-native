@@ -15,6 +15,8 @@ target_include_directories(ShaderCompiler PRIVATE
 set(SOURCES
 	Main.cpp
 	Trace.cpp
+	ConsoleFixedFunction.cpp
+	ConsoleFixedFunction.h
 	ConstFold.cpp
 	ConstFold.h
 	Emit.cpp

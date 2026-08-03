@@ -26,3 +26,10 @@ void vertex() {
 }
 
 #include "Include/DefaultSpriteFs.inc"
+
+void fixed_function() {
+	// The weapon wheel: a vertex-fed textured line strip. The consoles consume the vertex stream in
+	// their line-strip pipeline stage (PVR expands segments into thin quads - no line primitive on
+	// the TA; GX draws native lines); only the LineStrip primitive form is drawn.
+	pipeline line_strip_mesh;
+}

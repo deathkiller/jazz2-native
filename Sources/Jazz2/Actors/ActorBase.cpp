@@ -503,9 +503,13 @@ namespace Jazz2::Actors
 			const Recti debrisRect = res->Base->GetFrameRect(_renderer.CurrentFrame);
 			const Vector2i frameOffset = res->Base->GetFrameOffset(_renderer.CurrentFrame);
 
-			for (std::int32_t fy = 0; fy < debrisRect.H; fy += DebrisSize + 1) {
-				for (std::int32_t fx = 0; fx < debrisRect.W; fx += DebrisSize + 1) {
-					float currentSize = DebrisSize * Random().FastFloat(0.8f, 1.1f);
+			// A big sprite would emit over a thousand particles at the plain step, which the consoles cannot afford
+			const std::int32_t step = Tiles::TileMap::GetParticleDebrisStep(DebrisSize, debrisRect.W, debrisRect.H);
+			const float particleSize = (float)(step - 1);
+
+			for (std::int32_t fy = 0; fy < debrisRect.H; fy += step) {
+				for (std::int32_t fx = 0; fx < debrisRect.W; fx += step) {
+					float currentSize = particleSize * Random().FastFloat(0.8f, 1.1f);
 
 					Tiles::TileMap::DestructibleDebris debris{};
 					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - frameOffset.X - fx : frameOffset.X + fx), y + frameOffset.Y + fy);
@@ -545,9 +549,13 @@ namespace Jazz2::Actors
 			const Recti debrisRect = res->Base->GetFrameRect(_renderer.CurrentFrame);
 			const Vector2i frameOffset = res->Base->GetFrameOffset(_renderer.CurrentFrame);
 
-			for (std::int32_t fy = 0; fy < debrisRect.H; fy += DebrisSize + 1) {
-				for (std::int32_t fx = 0; fx < debrisRect.W; fx += DebrisSize + 1) {
-					float currentSize = DebrisSize * Random().FastFloat(0.4f, 1.1f);
+			// A big sprite would emit over a thousand particles at the plain step, which the consoles cannot afford
+			const std::int32_t step = Tiles::TileMap::GetParticleDebrisStep(DebrisSize, debrisRect.W, debrisRect.H);
+			const float particleSize = (float)(step - 1);
+
+			for (std::int32_t fy = 0; fy < debrisRect.H; fy += step) {
+				for (std::int32_t fx = 0; fx < debrisRect.W; fx += step) {
+					float currentSize = particleSize * Random().FastFloat(0.4f, 1.1f);
 
 					Tiles::TileMap::DestructibleDebris debris{};
 					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - frameOffset.X - fx : frameOffset.X + fx), y + frameOffset.Y + fy);
@@ -591,9 +599,13 @@ namespace Jazz2::Actors
 			float x = _pos.X - res->Base->Hotspot.X;
 			float y = _pos.Y - res->Base->Hotspot.Y;
 
-			for (std::int32_t fy = 0; fy < debrisRect.H; fy += DebrisSize + 1) {
-				for (std::int32_t fx = 0; fx < debrisRect.W; fx += DebrisSize + 1) {
-					float currentSize = DebrisSize * Random().FastFloat(0.4f, 1.1f);
+			// A big sprite would emit over a thousand particles at the plain step, which the consoles cannot afford
+			const std::int32_t step = Tiles::TileMap::GetParticleDebrisStep(DebrisSize, debrisRect.W, debrisRect.H);
+			const float particleSize = (float)(step - 1);
+
+			for (std::int32_t fy = 0; fy < debrisRect.H; fy += step) {
+				for (std::int32_t fx = 0; fx < debrisRect.W; fx += step) {
+					float currentSize = particleSize * Random().FastFloat(0.4f, 1.1f);
 
 					Tiles::TileMap::DestructibleDebris debris = { };
 					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - frameOffset.X - fx : frameOffset.X + fx), y + frameOffset.Y + fy);
@@ -634,9 +646,13 @@ namespace Jazz2::Actors
 			const Recti debrisRect = res->Base->GetFrameRect(_renderer.CurrentFrame);
 			const Vector2i frameOffset = res->Base->GetFrameOffset(_renderer.CurrentFrame);
 
-			for (std::int32_t fy = 0; fy < debrisRect.H; fy += DebrisSize + 1) {
-				for (int fx = 0; fx < debrisRect.W; fx += DebrisSize + 1) {
-					float currentSize = DebrisSize * Random().FastFloat(0.2f, 1.1f);
+			// A big sprite would emit over a thousand particles at the plain step, which the consoles cannot afford
+			const std::int32_t step = Tiles::TileMap::GetParticleDebrisStep(DebrisSize, debrisRect.W, debrisRect.H);
+			const float particleSize = (float)(step - 1);
+
+			for (std::int32_t fy = 0; fy < debrisRect.H; fy += step) {
+				for (std::int32_t fx = 0; fx < debrisRect.W; fx += step) {
+					float currentSize = particleSize * Random().FastFloat(0.2f, 1.1f);
 
 					Tiles::TileMap::DestructibleDebris debris{};
 					debris.Pos = Vector2f(x + (IsFacingLeft() ? res->Base->FrameDimensions.X - frameOffset.X - fx : frameOffset.X + fx), y + frameOffset.Y + fy);

@@ -102,11 +102,63 @@ namespace nCine::RHI::Software
 		alignas(32) std::uint8_t g_fbRowStage[MaxFbRowStage * 4];
 #endif
 
-		// SIMD-dispatched scanline blending (SrcAlpha / OneMinusSrcAlpha)
-		// =====================================================================
-		extern void DEATH_CPU_DISPATCHED_DECLARATION(blendScanlineSrcAlpha)(std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT src, std::int32_t count);
-		DEATH_CPU_DISPATCHER_DECLARATION(blendScanlineSrcAlpha)
+	}
 
+	// =====================================================================
+	// SIMD-dispatched scanline blending (SrcAlpha / OneMinusSrcAlpha)
+	//
+	// The dispatched entry points, their DEATH_CPU_DISPATCHER_DECLARATION()s and the
+	// DEATH_CPU_DISPATCHER_BASE()/DEATH_CPU_DISPATCHED() pairs below all have to sit in this named namespace,
+	// with only the per-tag `xxxImplementation(Cpu::ScalarT/Sse2T/Avx2T/NeonT/Simd128T)` overloads inside the
+	// unnamed namespaces - the same layout Shared/Containers/StringUtils.cpp uses.
+	//
+	// The reason is that in an IFUNC build (DEATH_CPU_USE_RUNTIME_DISPATCH + DEATH_CPU_USE_IFUNC, the desktop
+	// default) DEATH_CPU_DISPATCHER_BASE() expands to `namespace { <dispatcher> }`, i.e. it wraps the generated
+	// `xxxImplementation(Cpu::Features)` overload in an unnamed namespace itself. Invoked from the enclosing
+	// named namespace, that generated `namespace {}` refers to the *same* unnamed namespace the tag overloads
+	// live in, so all of them form one overload set and `return xxxImplementation(Cpu::Avx2)` picks the exact
+	// Cpu::Avx2T match.
+	// Invoked from *inside* the unnamed namespace it would nest a second, distinct one; unqualified lookup then
+	// stops at the dispatcher's own declaration in that inner namespace and never reaches the tag overloads, so
+	// every `return xxxImplementation(Cpu::Avx2)` binds back to the dispatcher through the implicit
+	// Cpu::Avx2T -> Cpu::Features conversion. That still compiles (the return types match) but recurses
+	// infinitely, overflowing the stack while the loader resolves the IFUNC relocations before main().
+	//
+	// ---------------------------------------------------------------------
+	// Quantization contract - every variant below MUST be bit-identical to its Cpu::ScalarT sibling
+	//
+	// The blend quantizes with `>> 8`, i.e. it divides by 256 rather than by 255. That is deliberate and NOT
+	// something to "improve" here in isolation: the same expression is inlined per pixel in
+	// SwTileRasterizer.cpp's fast-blend path, so the scanline ops and the per-pixel path have to round the
+	// same way or a sprite would seam where one path takes over from the other.
+	//
+	// The exact division would be the well-known identity
+	//     round(n / 255) == (t + (t >> 8)) >> 8   with   t = n + 0x80,   valid for n in [0, 255*255]
+	// (equivalently `_mm_mulhi_epu16(n + 0x80, 0x8081) >> 7`), and it happens to be exact at both endpoints:
+	// a == 255 gives back src and a == 0 gives back dst. Switching to it would fix the endpoints for free but
+	// would also shift *every* intermediate alpha by up to 1 LSB away from the scalar reference and away from
+	// SwTileRasterizer.cpp - 16.6M of the 16.7M (srcAlpha, src, dst) byte triples change value. So `>> 8`
+	// stays, and the two endpoints the truncation gets wrong are instead replayed the way the scalar variant
+	// replays them - as the `sA == 0` / `sA >= 255` shortcuts - only branchlessly, as a per-pixel select.
+	// Without that select the vector bodies computed `(src * 255 + dst * 0) >> 8 == src - 1` for an opaque
+	// source (every opaque sprite pixel 1 LSB dark) and `(0 + dst * 255) >> 8 == dst - 1` for a fully
+	// transparent one (a *transparent* pixel darkening the destination, cumulative across overlapping draws).
+	//
+	// Because that select is what a whole *block* of same-class pixels collapses to, the vector variants
+	// additionally branch straight past the multiply chain when every pixel of a block is opaque (a plain
+	// 16-byte copy) or every pixel is transparent (nothing to do at all). Those shortcuts are what stops the
+	// exactness above from costing throughput - without them the SSE2 body was slower than the scalar one on
+	// opaque sprite interiors, since the scalar variant gets the same two shortcuts for free from its
+	// per-pixel branches. Being shortcuts of the *select* and not of the arithmetic they cannot perturb the
+	// quantization, but they are the first thing to re-verify against the Cpu::ScalarT sibling if this
+	// function is ever touched again, and the near-miss block (one lane out of four or eight in a different
+	// alpha class) is the case that breaks a careless one.
+	// =====================================================================
+	extern void DEATH_CPU_DISPATCHED_DECLARATION(blendScanlineSrcAlpha)(std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT src, std::int32_t count);
+	DEATH_CPU_DISPATCHER_DECLARATION(blendScanlineSrcAlpha)
+
+	namespace
+	{
 		// Scalar fallback
 		DEATH_CPU_MAYBE_UNUSED typename std::decay<decltype(blendScanlineSrcAlpha)>::type blendScanlineSrcAlphaImplementation(Cpu::ScalarT) {
 			return [](std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT src, std::int32_t count) {
@@ -131,10 +183,52 @@ namespace nCine::RHI::Software
 			return [](std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT src, std::int32_t count) DEATH_ENABLE_SSE2 {
 				const __m128i zero = _mm_setzero_si128();
 				const __m128i c255 = _mm_set1_epi16(255);
+				const __m128i c255d = _mm_set1_epi32(255);
+				// Raises the source ALPHA word of each widened pixel to 255 so its product with the broadcast
+				// alpha is the scalar's `sA * 255` numerator and not `sA * sA` (the broadcast is taken from the
+				// untouched vector first). A bitwise OR suffices because any byte value OR 0xFF is 0xFF.
+				const __m128i alphaOne = _mm_set_epi16(255, 0, 0, 0, 255, 0, 0, 0);
 
 				std::int32_t i = 0;
 				for (; i + 4 <= count; i += 4, dst += 16, src += 16) {
 					__m128i srcPx = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src));
+
+					// Classify the four pixels up front as whole-lane masks. Shifting each 32-bit pixel down
+					// by 24 leaves just its alpha, so a *dword* compare yields 0xFFFFFFFF for exactly those
+					// pixels whose alpha is 255 (resp. 0) - which is precisely the per-pixel select the blend
+					// has to apply at the end anyway. Doing it here instead of from the packed alpha bytes is
+					// therefore free: these three ops replace the packus + two byte compares that used to sit
+					// at the bottom of the loop.
+					__m128i alpha32 = _mm_srli_epi32(srcPx, 24);
+					__m128i opaque = _mm_cmpeq_epi32(alpha32, c255d);
+
+					// Uniform-block shortcuts: when *all four* pixels land in one of those two classes the
+					// ~40-op body below is dead code - the block is either a plain 16-byte copy or a no-op -
+					// and all it costs to find out is a movemask plus a compare per class. Without them the
+					// vector path was *slower than scalar* on the content that dominates sprite drawing,
+					// because the scalar variant gets the same two shortcuts for free from its per-pixel
+					// branches while the vector path paid the full multiply chain regardless.
+					//
+					// Sprite content is what makes this pay: interiors are long runs of alpha 255 and the
+					// margins of a sprite's bounding box are long runs of alpha 0, so both branches predict
+					// near-perfectly across a scanline. The blend therefore becomes data-dependent in timing.
+					// That is a deliberate, acceptable tradeoff here - this is a rasterizer, and the "secret"
+					// would be the picture the user is already looking at - but it is called out because the
+					// identical construction in a crypto primitive would be a side-channel bug.
+					if (_mm_movemask_epi8(opaque) == 0xFFFF) {
+						// Every pixel opaque - the select would pick srcPx for all 16 bytes
+						_mm_storeu_si128(reinterpret_cast<__m128i*>(dst), srcPx);
+						continue;
+					}
+					// Deliberately computed after the test above so the all-opaque path, the most common one
+					// by far, does not pay for a mask it cannot use
+					__m128i clear = _mm_cmpeq_epi32(alpha32, zero);
+					if (_mm_movemask_epi8(clear) == 0xFFFF) {
+						// Every pixel fully transparent - the select would pick dstPx for all 16 bytes, so
+						// dst is already the answer and does not even need to be loaded
+						continue;
+					}
+
 					__m128i dstPx = _mm_loadu_si128(reinterpret_cast<const __m128i*>(dst));
 
 					// Low 2 pixels: unpack bytes to 16-bit
@@ -143,6 +237,7 @@ namespace nCine::RHI::Software
 					// Broadcast alpha of each pixel: word[3]→[0..3], word[7]→[4..7]
 					__m128i aLo = _mm_shufflelo_epi16(sLo, _MM_SHUFFLE(3, 3, 3, 3));
 					aLo = _mm_shufflehi_epi16(aLo, _MM_SHUFFLE(3, 3, 3, 3));
+					sLo = _mm_or_si128(sLo, alphaOne);
 					__m128i iaLo = _mm_sub_epi16(c255, aLo);
 					__m128i rLo = _mm_add_epi16(_mm_mullo_epi16(sLo, aLo), _mm_mullo_epi16(dLo, iaLo));
 					rLo = _mm_srli_epi16(rLo, 8);
@@ -152,11 +247,19 @@ namespace nCine::RHI::Software
 					__m128i dHi = _mm_unpackhi_epi8(dstPx, zero);
 					__m128i aHi = _mm_shufflelo_epi16(sHi, _MM_SHUFFLE(3, 3, 3, 3));
 					aHi = _mm_shufflehi_epi16(aHi, _MM_SHUFFLE(3, 3, 3, 3));
+					sHi = _mm_or_si128(sHi, alphaOne);
 					__m128i iaHi = _mm_sub_epi16(c255, aHi);
 					__m128i rHi = _mm_add_epi16(_mm_mullo_epi16(sHi, aHi), _mm_mullo_epi16(dHi, iaHi));
 					rHi = _mm_srli_epi16(rHi, 8);
 
-					_mm_storeu_si128(reinterpret_cast<__m128i*>(dst), _mm_packus_epi16(rLo, rHi));
+					// Mixed block, so the two shortcuts still have to be applied per pixel - branchlessly,
+					// which is also what makes them safe to skip wholesale above (see the quantization
+					// contract): take src where alpha is 255, dst where it is 0 and the `>> 8` blend
+					// everywhere else. SSE2 has no _mm_blendv_epi8, hence the and/or form.
+					__m128i blended = _mm_packus_epi16(rLo, rHi);
+					__m128i picked = _mm_or_si128(_mm_and_si128(opaque, srcPx), _mm_and_si128(clear, dstPx));
+					__m128i keep = _mm_andnot_si128(_mm_or_si128(opaque, clear), blended);
+					_mm_storeu_si128(reinterpret_cast<__m128i*>(dst), _mm_or_si128(picked, keep));
 				}
 				// Scalar tail
 				for (; i < count; ++i, dst += 4, src += 4) {
@@ -178,10 +281,31 @@ namespace nCine::RHI::Software
 			return [](std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT src, std::int32_t count) DEATH_ENABLE_AVX2 {
 				const __m256i zero = _mm256_setzero_si256();
 				const __m256i c255 = _mm256_set1_epi16(255);
+				const __m256i c255d = _mm256_set1_epi32(255);
+				// See the SSE2 variant: forces the widened source alpha word to 255 so the alpha lane's
+				// numerator is the scalar's `sA * 255`
+				const __m256i alphaOne = _mm256_set1_epi64x(0x00FF000000000000LL);
 
 				std::int32_t i = 0;
 				for (; i + 8 <= count; i += 8, dst += 32, src += 32) {
 					__m256i srcPx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(src));
+
+					// Same whole-lane classify and uniform-block shortcuts as the SSE2 variant (see there).
+					// The eight-pixel granularity makes a uniform block rarer than it is at four, so this
+					// trades a few percent on alpha gradients for 2-2.7x on what a 2D sprite renderer
+					// actually spends its time on: opaque tile and sprite interiors, and the transparent
+					// margins of a sprite's bounding box (whose destination is not even loaded)
+					__m256i alpha32 = _mm256_srli_epi32(srcPx, 24);
+					__m256i opaque = _mm256_cmpeq_epi32(alpha32, c255d);
+					if (_mm256_movemask_epi8(opaque) == -1) {
+						_mm256_storeu_si256(reinterpret_cast<__m256i*>(dst), srcPx);
+						continue;
+					}
+					__m256i clear = _mm256_cmpeq_epi32(alpha32, zero);
+					if (_mm256_movemask_epi8(clear) == -1) {
+						continue;
+					}
+
 					__m256i dstPx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(dst));
 
 					// Within each 128-bit lane: unpacklo processes first 2 pixels, unpackhi the next 2
@@ -189,6 +313,7 @@ namespace nCine::RHI::Software
 					__m256i dLo = _mm256_unpacklo_epi8(dstPx, zero);
 					__m256i aLo = _mm256_shufflelo_epi16(sLo, _MM_SHUFFLE(3, 3, 3, 3));
 					aLo = _mm256_shufflehi_epi16(aLo, _MM_SHUFFLE(3, 3, 3, 3));
+					sLo = _mm256_or_si256(sLo, alphaOne);
 					__m256i iaLo = _mm256_sub_epi16(c255, aLo);
 					__m256i rLo = _mm256_add_epi16(_mm256_mullo_epi16(sLo, aLo), _mm256_mullo_epi16(dLo, iaLo));
 					rLo = _mm256_srli_epi16(rLo, 8);
@@ -197,22 +322,47 @@ namespace nCine::RHI::Software
 					__m256i dHi = _mm256_unpackhi_epi8(dstPx, zero);
 					__m256i aHi = _mm256_shufflelo_epi16(sHi, _MM_SHUFFLE(3, 3, 3, 3));
 					aHi = _mm256_shufflehi_epi16(aHi, _MM_SHUFFLE(3, 3, 3, 3));
+					sHi = _mm256_or_si256(sHi, alphaOne);
 					__m256i iaHi = _mm256_sub_epi16(c255, aHi);
 					__m256i rHi = _mm256_add_epi16(_mm256_mullo_epi16(sHi, aHi), _mm256_mullo_epi16(dHi, iaHi));
 					rHi = _mm256_srli_epi16(rHi, 8);
 
-					_mm256_storeu_si256(reinterpret_cast<__m256i*>(dst), _mm256_packus_epi16(rLo, rHi));
+					// Branchless replay of the scalar's `sA == 0` / `sA >= 255` shortcuts for the pixels a
+					// mixed block holds. The classify above already produced these selects as whole-lane
+					// masks, so reusing them replaces the packus + two byte compares this used to need
+					__m256i blended = _mm256_packus_epi16(rLo, rHi);
+					__m256i out = _mm256_blendv_epi8(blended, srcPx, opaque);
+					out = _mm256_blendv_epi8(out, dstPx, clear);
+					_mm256_storeu_si256(reinterpret_cast<__m256i*>(dst), out);
 				}
 				// SSE2 tail (4 pixels at a time)
 				const __m128i zero128 = _mm_setzero_si128();
 				const __m128i c255_128 = _mm_set1_epi16(255);
+				const __m128i c255d128 = _mm_set1_epi32(255);
+				const __m128i alphaOne128 = _mm_set_epi16(255, 0, 0, 0, 255, 0, 0, 0);
 				for (; i + 4 <= count; i += 4, dst += 16, src += 16) {
 					__m128i srcPx = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src));
+					// Same whole-lane classify and uniform-block shortcuts as the SSE2 variant (see there for
+					// why they are free for the general path and why the data-dependent timing is fine). This
+					// loop runs at most once per call, so it only shows up on scanlines shorter than 8 px -
+					// narrow spans, clipped sprite edges, glyphs - where it is worth up to a third of the
+					// call: 4 opaque pixels measured 1.06 -> 0.71 ns/px
+					__m128i alpha32 = _mm_srli_epi32(srcPx, 24);
+					__m128i opaque = _mm_cmpeq_epi32(alpha32, c255d128);
+					if (_mm_movemask_epi8(opaque) == 0xFFFF) {
+						_mm_storeu_si128(reinterpret_cast<__m128i*>(dst), srcPx);
+						continue;
+					}
+					__m128i clear = _mm_cmpeq_epi32(alpha32, zero128);
+					if (_mm_movemask_epi8(clear) == 0xFFFF) {
+						continue;
+					}
 					__m128i dstPx = _mm_loadu_si128(reinterpret_cast<const __m128i*>(dst));
 					__m128i sLo = _mm_unpacklo_epi8(srcPx, zero128);
 					__m128i dLo = _mm_unpacklo_epi8(dstPx, zero128);
 					__m128i aLo = _mm_shufflelo_epi16(sLo, _MM_SHUFFLE(3, 3, 3, 3));
 					aLo = _mm_shufflehi_epi16(aLo, _MM_SHUFFLE(3, 3, 3, 3));
+					sLo = _mm_or_si128(sLo, alphaOne128);
 					__m128i iaLo = _mm_sub_epi16(c255_128, aLo);
 					__m128i rLo = _mm_add_epi16(_mm_mullo_epi16(sLo, aLo), _mm_mullo_epi16(dLo, iaLo));
 					rLo = _mm_srli_epi16(rLo, 8);
@@ -220,10 +370,15 @@ namespace nCine::RHI::Software
 					__m128i dHi = _mm_unpackhi_epi8(dstPx, zero128);
 					__m128i aHi = _mm_shufflelo_epi16(sHi, _MM_SHUFFLE(3, 3, 3, 3));
 					aHi = _mm_shufflehi_epi16(aHi, _MM_SHUFFLE(3, 3, 3, 3));
+					sHi = _mm_or_si128(sHi, alphaOne128);
 					__m128i iaHi = _mm_sub_epi16(c255_128, aHi);
 					__m128i rHi = _mm_add_epi16(_mm_mullo_epi16(sHi, aHi), _mm_mullo_epi16(dHi, iaHi));
 					rHi = _mm_srli_epi16(rHi, 8);
-					_mm_storeu_si128(reinterpret_cast<__m128i*>(dst), _mm_packus_epi16(rLo, rHi));
+					// AVX2 implies SSE4.1, so the 128-bit tail can use the two-blend form as well, driven by
+					// the lane masks the classify above already produced
+					__m128i out = _mm_blendv_epi8(_mm_packus_epi16(rLo, rHi), srcPx, opaque);
+					out = _mm_blendv_epi8(out, dstPx, clear);
+					_mm_storeu_si128(reinterpret_cast<__m128i*>(dst), out);
 				}
 				// Scalar tail
 				for (; i < count; ++i, dst += 4, src += 4) {
@@ -244,8 +399,14 @@ namespace nCine::RHI::Software
 		DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_NEON typename std::decay<decltype(blendScanlineSrcAlpha)>::type blendScanlineSrcAlphaImplementation(Cpu::NeonT) {
 			return [](std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT src, std::int32_t count) DEATH_ENABLE_NEON {
 				static const std::uint8_t alphaIdxData[8] = { 3, 3, 3, 3, 7, 7, 7, 7 };
+				static const std::uint8_t alphaOneData[8] = { 0, 0, 0, 255, 0, 0, 0, 255 };
 				const uint8x8_t alphaIdx = vld1_u8(alphaIdxData);
+				// See the SSE2 variant: raises the source alpha byte to 255 so the alpha lane's numerator is
+				// the scalar's `sA * 255` rather than `sA * sA`
+				const uint8x8_t alphaOne = vld1_u8(alphaOneData);
 				const uint8x8_t c255x8 = vdup_n_u8(255);
+				const uint8x16_t c255x16 = vdupq_n_u8(255);
+				const uint8x16_t zerox16 = vdupq_n_u8(0);
 
 				std::int32_t i = 0;
 				for (; i + 4 <= count; i += 4, dst += 16, src += 16) {
@@ -257,16 +418,21 @@ namespace nCine::RHI::Software
 					uint8x8_t dstLo = vget_low_u8(dstPx);
 					uint8x8_t aLo = vtbl1_u8(srcLo, alphaIdx);
 					uint8x8_t iaLo = vsub_u8(c255x8, aLo);
-					uint16x8_t rLo = vaddq_u16(vmull_u8(srcLo, aLo), vmull_u8(dstLo, iaLo));
+					uint16x8_t rLo = vaddq_u16(vmull_u8(vorr_u8(srcLo, alphaOne), aLo), vmull_u8(dstLo, iaLo));
 
 					// High 2 pixels
 					uint8x8_t srcHi = vget_high_u8(srcPx);
 					uint8x8_t dstHi = vget_high_u8(dstPx);
 					uint8x8_t aHi = vtbl1_u8(srcHi, alphaIdx);
 					uint8x8_t iaHi = vsub_u8(c255x8, aHi);
-					uint16x8_t rHi = vaddq_u16(vmull_u8(srcHi, aHi), vmull_u8(dstHi, iaHi));
+					uint16x8_t rHi = vaddq_u16(vmull_u8(vorr_u8(srcHi, alphaOne), aHi), vmull_u8(dstHi, iaHi));
 
-					vst1q_u8(dst, vcombine_u8(vshrn_n_u16(rLo, 8), vshrn_n_u16(rHi, 8)));
+					// Branchless replay of the scalar's `sA == 0` / `sA >= 255` shortcuts
+					uint8x16_t blended = vcombine_u8(vshrn_n_u16(rLo, 8), vshrn_n_u16(rHi, 8));
+					uint8x16_t aBytes = vcombine_u8(aLo, aHi);
+					uint8x16_t out = vbslq_u8(vceqq_u8(aBytes, c255x16), srcPx, blended);
+					out = vbslq_u8(vceqq_u8(aBytes, zerox16), dstPx, out);
+					vst1q_u8(dst, out);
 				}
 				// Scalar tail
 				for (; i < count; ++i, dst += 4, src += 4) {
@@ -287,6 +453,11 @@ namespace nCine::RHI::Software
 		DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_SIMD128 typename std::decay<decltype(blendScanlineSrcAlpha)>::type blendScanlineSrcAlphaImplementation(Cpu::Simd128T) {
 			return [](std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT src, std::int32_t count) DEATH_ENABLE_SIMD128 {
 				const v128_t c255 = wasm_i16x8_splat(255);
+				const v128_t c255b = wasm_i8x16_splat((std::int8_t)255);
+				const v128_t zerob = wasm_i8x16_splat(0);
+				// See the SSE2 variant: raises the source alpha word to 255 so the alpha lane's numerator is
+				// the scalar's `sA * 255` rather than `sA * sA`
+				const v128_t alphaOne = wasm_i16x8_make(0, 0, 0, 255, 0, 0, 0, 255);
 
 				std::int32_t i = 0;
 				for (; i + 4 <= count; i += 4, dst += 16, src += 16) {
@@ -299,16 +470,22 @@ namespace nCine::RHI::Software
 					// Broadcast alpha: byte shuffle on 16-bit data
 					v128_t aLo = wasm_i8x16_shuffle(sLo, sLo, 6, 7, 6, 7, 6, 7, 6, 7, 14, 15, 14, 15, 14, 15, 14, 15);
 					v128_t iaLo = wasm_i16x8_sub(c255, aLo);
-					v128_t rLo = wasm_u16x8_shr(wasm_i16x8_add(wasm_i16x8_mul(sLo, aLo), wasm_i16x8_mul(dLo, iaLo)), 8);
+					v128_t rLo = wasm_u16x8_shr(wasm_i16x8_add(wasm_i16x8_mul(wasm_v128_or(sLo, alphaOne), aLo), wasm_i16x8_mul(dLo, iaLo)), 8);
 
 					// High 2 pixels
 					v128_t sHi = wasm_u16x8_extend_high_u8x16(srcPx);
 					v128_t dHi = wasm_u16x8_extend_high_u8x16(dstPx);
 					v128_t aHi = wasm_i8x16_shuffle(sHi, sHi, 6, 7, 6, 7, 6, 7, 6, 7, 14, 15, 14, 15, 14, 15, 14, 15);
 					v128_t iaHi = wasm_i16x8_sub(c255, aHi);
-					v128_t rHi = wasm_u16x8_shr(wasm_i16x8_add(wasm_i16x8_mul(sHi, aHi), wasm_i16x8_mul(dHi, iaHi)), 8);
+					v128_t rHi = wasm_u16x8_shr(wasm_i16x8_add(wasm_i16x8_mul(wasm_v128_or(sHi, alphaOne), aHi), wasm_i16x8_mul(dHi, iaHi)), 8);
 
-					wasm_v128_store(dst, wasm_u8x16_narrow_i16x8(rLo, rHi));
+					// Branchless replay of the scalar's `sA == 0` / `sA >= 255` shortcuts (the alpha words are
+					// all in [0, 255], so narrowing them back to bytes is lossless)
+					v128_t blended = wasm_u8x16_narrow_i16x8(rLo, rHi);
+					v128_t aBytes = wasm_u8x16_narrow_i16x8(aLo, aHi);
+					v128_t out = wasm_v128_bitselect(srcPx, blended, wasm_i8x16_eq(aBytes, c255b));
+					out = wasm_v128_bitselect(dstPx, out, wasm_i8x16_eq(aBytes, zerob));
+					wasm_v128_store(dst, out);
 				}
 				// Scalar tail
 				for (; i < count; ++i, dst += 4, src += 4) {
@@ -325,17 +502,21 @@ namespace nCine::RHI::Software
 		}
 #endif
 
-		DEATH_CPU_DISPATCHER_BASE(blendScanlineSrcAlphaImplementation)
-		DEATH_CPU_DISPATCHED(blendScanlineSrcAlphaImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(blendScanlineSrcAlpha)(std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT src, std::int32_t count))({
-			return blendScanlineSrcAlphaImplementation(Cpu::DefaultBase)(dst, src, count);
-		})
+	}
 
-		// =====================================================================
-		// CPU-dispatched scanline tint (multiply RGBA by constant color)
-		// =====================================================================
-		extern void DEATH_CPU_DISPATCHED_DECLARATION(tintScanline)(std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA);
-		DEATH_CPU_DISPATCHER_DECLARATION(tintScanline)
+	DEATH_CPU_DISPATCHER_BASE(blendScanlineSrcAlphaImplementation)
+	DEATH_CPU_DISPATCHED(blendScanlineSrcAlphaImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(blendScanlineSrcAlpha)(std::uint8_t* DEATH_RESTRICT dst, const std::uint8_t* DEATH_RESTRICT src, std::int32_t count))({
+		return blendScanlineSrcAlphaImplementation(Cpu::DefaultBase)(dst, src, count);
+	})
 
+	// =====================================================================
+	// CPU-dispatched scanline tint (multiply RGBA by constant color)
+	// =====================================================================
+	extern void DEATH_CPU_DISPATCHED_DECLARATION(tintScanline)(std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA);
+	DEATH_CPU_DISPATCHER_DECLARATION(tintScanline)
+
+	namespace
+	{
 		// Scalar fallback
 		DEATH_CPU_MAYBE_UNUSED typename std::decay<decltype(tintScanline)>::type tintScanlineImplementation(Cpu::ScalarT) {
 			return [](std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA) {
@@ -427,19 +608,23 @@ namespace nCine::RHI::Software
 #if defined(DEATH_ENABLE_NEON)
 		DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_NEON typename std::decay<decltype(tintScanline)>::type tintScanlineImplementation(Cpu::NeonT) {
 			return [](std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA) DEATH_ENABLE_NEON {
-				const uint8x8_t vtR = vdup_n_u8((std::uint8_t)tR);
-				const uint8x8_t vtG = vdup_n_u8((std::uint8_t)tG);
-				const uint8x8_t vtB = vdup_n_u8((std::uint8_t)tB);
-				const uint8x8_t vtA = vdup_n_u8((std::uint8_t)tA);
+				// The multipliers span 0-256 (256 being the identity for the `>> 8` convention), so they have to
+				// be held as 16-bit lanes - a vdup_n_u8() would truncate 256 to 0 and turn an unscaled channel
+				// black. 255 * 256 still fits the 16-bit product, and for out-of-contract multipliers the
+				// mod-2^16 wraparound before the shift equals the scalar's mod-2^8 wraparound after it.
+				const uint16x8_t vtR = vdupq_n_u16((std::uint16_t)tR);
+				const uint16x8_t vtG = vdupq_n_u16((std::uint16_t)tG);
+				const uint16x8_t vtB = vdupq_n_u16((std::uint16_t)tB);
+				const uint16x8_t vtA = vdupq_n_u16((std::uint16_t)tA);
 
 				std::int32_t i = 0;
 				for (; i + 8 <= count; i += 8, buf += 32) {
 					uint8x8x4_t px = vld4_u8(buf);
 					// Multiply and shift: (val * tint) >> 8
-					px.val[0] = vshrn_n_u16(vmull_u8(px.val[0], vtR), 8);
-					px.val[1] = vshrn_n_u16(vmull_u8(px.val[1], vtG), 8);
-					px.val[2] = vshrn_n_u16(vmull_u8(px.val[2], vtB), 8);
-					px.val[3] = vshrn_n_u16(vmull_u8(px.val[3], vtA), 8);
+					px.val[0] = vshrn_n_u16(vmulq_u16(vmovl_u8(px.val[0]), vtR), 8);
+					px.val[1] = vshrn_n_u16(vmulq_u16(vmovl_u8(px.val[1]), vtG), 8);
+					px.val[2] = vshrn_n_u16(vmulq_u16(vmovl_u8(px.val[2]), vtB), 8);
+					px.val[3] = vshrn_n_u16(vmulq_u16(vmovl_u8(px.val[3]), vtA), 8);
 					vst4_u8(buf, px);
 				}
 				// Scalar tail
@@ -456,15 +641,17 @@ namespace nCine::RHI::Software
 #if defined(DEATH_ENABLE_SIMD128)
 		DEATH_CPU_MAYBE_UNUSED DEATH_ENABLE_SIMD128 typename std::decay<decltype(tintScanline)>::type tintScanlineImplementation(Cpu::Simd128T) {
 			return [](std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA) DEATH_ENABLE_SIMD128 {
-				const v128_t zero = wasm_i32x4_splat(0);
 				const v128_t tint = wasm_i16x8_make(tR, tG, tB, tA, tR, tG, tB, tA);
 
 				std::int32_t i = 0;
 				for (; i + 4 <= count; i += 4, buf += 16) {
 					v128_t px = wasm_v128_load(buf);
 
-					v128_t lo = wasm_i16x8_shr(wasm_i16x8_mul(wasm_u16x8_extend_low_u8x16(px), tint), 8);
-					v128_t hi = wasm_i16x8_shr(wasm_i16x8_mul(wasm_u16x8_extend_high_u8x16(px), tint), 8);
+					// The shift has to be the UNSIGNED one: a product of 32768 or more (any channel above 128
+					// with a near-white tint) reads as a negative i16, so an arithmetic shift would hand
+					// wasm_u8x16_narrow_i16x8() a negative value and it would saturate the channel to 0
+					v128_t lo = wasm_u16x8_shr(wasm_i16x8_mul(wasm_u16x8_extend_low_u8x16(px), tint), 8);
+					v128_t hi = wasm_u16x8_shr(wasm_i16x8_mul(wasm_u16x8_extend_high_u8x16(px), tint), 8);
 
 					wasm_v128_store(buf, wasm_u8x16_narrow_i16x8(lo, hi));
 				}
@@ -479,21 +666,25 @@ namespace nCine::RHI::Software
 		}
 #endif
 
-		DEATH_CPU_DISPATCHER_BASE(tintScanlineImplementation)
-		DEATH_CPU_DISPATCHED(tintScanlineImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(tintScanline)(std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA))({
-			return tintScanlineImplementation(Cpu::DefaultBase)(buf, count, tR, tG, tB, tA);
-		})
+	}
 
-		// =====================================================================
-		// CPU-dispatched constant-source blend (solid no-texture fills)
-		// dst = (src * a + dst * (255 - a)) >> 8 per channel, alpha = (a * 255 + dst.a * (255 - a)) >> 8,
-		// i.e. exactly the per-pixel fast-blend including its destination-alpha convention. The numerators
-		// are per-call constants, so the SIMD forms are one multiply-add per 16-bit lane; every sum is a
-		// convex combination bounded by 255 * 255, so it never overflows the 16-bit intermediate.
-		// =====================================================================
-		extern void DEATH_CPU_DISPATCHED_DECLARATION(blendScanlineConstSrcAlpha)(std::uint8_t* DEATH_RESTRICT dst, std::int32_t count, const std::uint8_t* DEATH_RESTRICT src);
-		DEATH_CPU_DISPATCHER_DECLARATION(blendScanlineConstSrcAlpha)
+	DEATH_CPU_DISPATCHER_BASE(tintScanlineImplementation)
+	DEATH_CPU_DISPATCHED(tintScanlineImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(tintScanline)(std::uint8_t* DEATH_RESTRICT buf, std::int32_t count, std::int32_t tR, std::int32_t tG, std::int32_t tB, std::int32_t tA))({
+		return tintScanlineImplementation(Cpu::DefaultBase)(buf, count, tR, tG, tB, tA);
+	})
 
+	// =====================================================================
+	// CPU-dispatched constant-source blend (solid no-texture fills)
+	// dst = (src * a + dst * (255 - a)) >> 8 per channel, alpha = (a * 255 + dst.a * (255 - a)) >> 8,
+	// i.e. exactly the per-pixel fast-blend including its destination-alpha convention. The numerators
+	// are per-call constants, so the SIMD forms are one multiply-add per 16-bit lane; every sum is a
+	// convex combination bounded by 255 * 255, so it never overflows the 16-bit intermediate.
+	// =====================================================================
+	extern void DEATH_CPU_DISPATCHED_DECLARATION(blendScanlineConstSrcAlpha)(std::uint8_t* DEATH_RESTRICT dst, std::int32_t count, const std::uint8_t* DEATH_RESTRICT src);
+	DEATH_CPU_DISPATCHER_DECLARATION(blendScanlineConstSrcAlpha)
+
+	namespace
+	{
 		// Scalar fallback
 		DEATH_CPU_MAYBE_UNUSED typename std::decay<decltype(blendScanlineConstSrcAlpha)>::type blendScanlineConstSrcAlphaImplementation(Cpu::ScalarT) {
 			return [](std::uint8_t* DEATH_RESTRICT dst, std::int32_t count, const std::uint8_t* DEATH_RESTRICT src) {
@@ -640,22 +831,26 @@ namespace nCine::RHI::Software
 		}
 #endif
 
-		DEATH_CPU_DISPATCHER_BASE(blendScanlineConstSrcAlphaImplementation)
-		DEATH_CPU_DISPATCHED(blendScanlineConstSrcAlphaImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(blendScanlineConstSrcAlpha)(std::uint8_t* DEATH_RESTRICT dst, std::int32_t count, const std::uint8_t* DEATH_RESTRICT src))({
-			return blendScanlineConstSrcAlphaImplementation(Cpu::DefaultBase)(dst, count, src);
-		})
+	}
 
-		// =====================================================================
-		// CPU-dispatched dynamic-lighting combine row (see SwScanlineOps.h)
-		// The SSE2 variant processes 4 pixels per step with the scalar float operations replayed in the
-		// same order per 4-wide lane, so its output is bit-identical to the scalar loop: a fully lit lane
-		// computes (px / 255) * 1 + 0 whose re-quantization is exact for every byte, and the alpha lane
-		// is carried through the transpose untouched. Only a scalar fallback exists for NEON/WASM (the
-		// combine runs on dark levels only; those targets keep the previous per-pixel cost).
-		// =====================================================================
-		extern void DEATH_CPU_DISPATCHED_DECLARATION(combineLightingScanline)(std::uint8_t* DEATH_RESTRICT px, std::int32_t width, const float* DEATH_RESTRICT lmRow, std::int32_t lmW, std::int32_t scale, float ambR, float ambG, float ambB);
-		DEATH_CPU_DISPATCHER_DECLARATION(combineLightingScanline)
+	DEATH_CPU_DISPATCHER_BASE(blendScanlineConstSrcAlphaImplementation)
+	DEATH_CPU_DISPATCHED(blendScanlineConstSrcAlphaImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(blendScanlineConstSrcAlpha)(std::uint8_t* DEATH_RESTRICT dst, std::int32_t count, const std::uint8_t* DEATH_RESTRICT src))({
+		return blendScanlineConstSrcAlphaImplementation(Cpu::DefaultBase)(dst, count, src);
+	})
 
+	// =====================================================================
+	// CPU-dispatched dynamic-lighting combine row (see SwScanlineOps.h)
+	// The SSE2 variant processes 4 pixels per step with the scalar float operations replayed in the
+	// same order per 4-wide lane, so its output is bit-identical to the scalar loop: a fully lit lane
+	// computes (px / 255) * 1 + 0 whose re-quantization is exact for every byte, and the alpha lane
+	// is carried through the transpose untouched. Only a scalar fallback exists for NEON/WASM (the
+	// combine runs on dark levels only; those targets keep the previous per-pixel cost).
+	// =====================================================================
+	extern void DEATH_CPU_DISPATCHED_DECLARATION(combineLightingScanline)(std::uint8_t* DEATH_RESTRICT px, std::int32_t width, const float* DEATH_RESTRICT lmRow, std::int32_t lmW, std::int32_t scale, float ambR, float ambG, float ambB);
+	DEATH_CPU_DISPATCHER_DECLARATION(combineLightingScanline)
+
+	namespace
+	{
 		// Scalar fallback: the exact per-pixel loop the device ran inline before
 		DEATH_CPU_MAYBE_UNUSED typename std::decay<decltype(combineLightingScanline)>::type combineLightingScanlineImplementation(Cpu::ScalarT) {
 			return [](std::uint8_t* DEATH_RESTRICT px, std::int32_t width, const float* DEATH_RESTRICT lmRow, std::int32_t lmW, std::int32_t scale, float ambR, float ambG, float ambB) {
@@ -784,11 +979,12 @@ namespace nCine::RHI::Software
 		}
 #endif
 
-		DEATH_CPU_DISPATCHER_BASE(combineLightingScanlineImplementation)
-		DEATH_CPU_DISPATCHED(combineLightingScanlineImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(combineLightingScanline)(std::uint8_t* DEATH_RESTRICT px, std::int32_t width, const float* DEATH_RESTRICT lmRow, std::int32_t lmW, std::int32_t scale, float ambR, float ambG, float ambB))({
-			return combineLightingScanlineImplementation(Cpu::DefaultBase)(px, width, lmRow, lmW, scale, ambR, ambG, ambB);
-		})
 	}
+
+	DEATH_CPU_DISPATCHER_BASE(combineLightingScanlineImplementation)
+	DEATH_CPU_DISPATCHED(combineLightingScanlineImplementation, void DEATH_CPU_DISPATCHED_DECLARATION(combineLightingScanline)(std::uint8_t* DEATH_RESTRICT px, std::int32_t width, const float* DEATH_RESTRICT lmRow, std::int32_t lmW, std::int32_t scale, float ambR, float ambG, float ambB))({
+		return combineLightingScanlineImplementation(Cpu::DefaultBase)(px, width, lmRow, lmW, scale, ambR, ambG, ambB);
+	})
 
 	// Externally-visible entry points (see SwScanlineOps.h) so the tile rasterizer TU runs the exact same
 	// CPU-dispatched implementations instead of keeping its own (previously scalar-on-x86) copies

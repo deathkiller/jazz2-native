@@ -14,6 +14,9 @@ namespace nCine::RHI::PVR
 	class PvrShaderProgram;
 	class PvrRenderTarget;
 	class PvrTexture;
+	// Defined by the generated PvrGeneratedEffects.h inside the device translation unit; everyone
+	// else only ever holds an opaque entry pointer resolved at program load
+	struct FixedFunctionGeneratedEffect;
 
 	/**
 		@brief Pipeline-state and draw-call facade of the PVR backend (aliased as `RHI::Device`)
@@ -39,6 +42,16 @@ namespace nCine::RHI::PVR
 		static std::uint32_t GetSceneCounter() {
 			return sceneCounter_;
 		}
+
+		/**
+			@brief Returns the generated fixed-function effect of a (program, variant) key, or `nullptr`
+
+			Scans the table transpiled from the shaders' `fixed_function` blocks
+			(`Shaders/Generated/PvrGeneratedEffects.h`). Called once per program load from
+			@ref PvrShaderProgram::SetObjectLabel(), which maps the object label onto the key
+			through its exact-name table - the draw path only ever reads the stored pointer.
+		*/
+		static const FixedFunctionGeneratedEffect* FindGeneratedEffect(const char* program, const char* variant);
 
 		PvrDevice() = delete;
 		~PvrDevice() = delete;
@@ -252,6 +265,9 @@ namespace nCine::RHI::PVR
 		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
 		// Draws a whole tile-layer mesh (a triangle list of position/texcoord/colour vertices)
 		static void DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
+		// Draws a vertex-fed textured line strip (the weapon wheel); the TA has no line primitive,
+		// so every segment goes out as a thin screen-space quad
+		static void DispatchLineStrip(std::int32_t firstVertex, std::int32_t numVertices);
 		static void ApplyPendingSoftwareLighting();
 		static void EnsureScene();
 		static void FinishScene();

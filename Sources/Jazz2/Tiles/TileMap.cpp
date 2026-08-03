@@ -16,28 +16,40 @@ namespace Jazz2::Tiles
 	namespace
 	{
 		// The textured background ("Sky"/"Circle" layers) is a per-pixel procedural effect in GLSL. Its planar
-		// variant is affine along every screen row, though, so the PVR (Dreamcast) backend rebuilds it out of
-		// horizontal bands instead of a fragment shader - see the TexturedBackground effect in PvrDevice. The
-		// circular variant has no such structure, and the GX (Wii/GameCube) backend has no equivalent yet;
-		// both fall through to DrawLayer() drawing the layer as an ordinary repeating tile layer.
-#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
-		constexpr bool SupportsTexturedBackground = false;
-		constexpr bool SupportsTexturedBackgroundCircle = false;
-#elif defined(DEATH_TARGET_DREAMCAST)
-		// Both are rebuilt from geometry (see the TexturedBackground effect in PvrDevice). The circular
-		// variant's per-pixel tube mapping has no affine structure to exploit, so it borrows the planar
-		// reconstruction rather than falling back to a flat tilemap - much closer to the original than
-		// no warp at all.
+		// variant is affine along every screen row, though, so the fixed-function tiers rebuild it out of
+		// horizontal bands instead of a fragment shader - the shared geometry lives in
+		// Shaders/Include/TexturedBackgroundWarp.inc, included by both consoles' fixed_function blocks. The
+		// circular variant has no such structure, so it borrows the planar reconstruction rather than falling
+		// back to a flat tilemap - much closer to the original than no warp at all.
 		constexpr bool SupportsTexturedBackground = true;
 		constexpr bool SupportsTexturedBackgroundCircle = true;
+
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+		// Absolute ceiling on the render command pool, which is what a burst of debris really costs (one command
+		// per visible particle, ~840 bytes each on the Dreamcast). TileMap::MaxDebrisCount already bounds it for a
+		// single viewport, but OnDraw() runs once per viewport and the count only resets at the end of the frame,
+		// so in splitscreen the pool would grow with the number of players. Particles beyond this are not drawn.
+		constexpr std::int32_t MaxPooledRenderCommands = 768;
+		// Slots the pool keeps even when nothing needs them - roughly what one viewport of a level without debris
+		// asks for, so the common case never reallocates
+		constexpr std::int32_t MinPooledRenderCommands = 32;
+		// How long the pool has to stay below its peak before the slots above it are released again. A burst
+		// fades out over about 300 frames, so trimming sooner would only fight the effect that is still running.
+		constexpr std::int32_t RenderCommandPoolTrimInterval = 600;
+		// Capacity _debrisList keeps around, so the usual handful of particles never reallocates
+		constexpr std::int32_t MinDebrisCapacity = 64;
 #else
-		constexpr bool SupportsTexturedBackground = true;
-		constexpr bool SupportsTexturedBackgroundCircle = true;
+		// Desktop targets have the memory for the effect at full detail, so nothing is bounded or trimmed
+		constexpr std::int32_t MaxPooledRenderCommands = 0;
+		constexpr std::int32_t MinPooledRenderCommands = 0;
+		constexpr std::int32_t RenderCommandPoolTrimInterval = 0;
+		constexpr std::int32_t MinDebrisCapacity = 0;
 #endif
 	}
 
 	TileMap::TileMap(StringView tileSetPath, std::uint16_t captionTileId, bool applyPalette)
-		: _owner(nullptr), _sprLayerIndex(-1), _pitType(PitType::FallForever), _renderCommandsCount(0), _collapsingTimer(0.0f),
+		: _owner(nullptr), _sprLayerIndex(-1), _pitType(PitType::FallForever), _hasRollbackCheckpoint(false),
+			_renderCommandsCount(0), _renderCommandsPeak(0), _renderCommandsPeakAge(0), _collapsingTimer(0.0f),
 			_animatedTilesOffset(0), _triggerState(ValueInit, TriggerCount), _triggerStateForRollback(ValueInit, TriggerCount),
 			_texturedBackgroundLayer(-1), _texturedBackgroundPass(this)
 	{
@@ -190,6 +202,38 @@ namespace Jazz2::Tiles
 
 	void TileMap::OnEndFrame()
 	{
+		if (RenderCommandPoolTrimInterval > 0) {
+			// The pool only ever grew to its high-water mark, so a single burst of debris - one command per
+			// visible particle - pinned a few hundred kilobytes for the rest of the level. Hand the slots above
+			// the recent peak back once the burst is long over; they are recreated on demand if it happens again.
+			if (_renderCommandsPeak < _renderCommandsCount) {
+				_renderCommandsPeak = _renderCommandsCount;
+			}
+			_renderCommandsPeakAge++;
+			if (_renderCommandsPeakAge >= RenderCommandPoolTrimInterval) {
+				std::size_t target = (std::size_t)std::max(_renderCommandsPeak, MinPooledRenderCommands);
+				if (_renderCommands.size() > target) {
+					// Destroying the owning pointers is what actually frees the commands; the slot array itself is
+					// four bytes per slot and stays at its high-water mark, as shrinking it would have to relocate
+					// the surviving `unique_ptr`s bitwise
+					_renderCommands.pop_back_n(_renderCommands.size() - target);
+					// Kept in sync with the pool, the cached pointers of the surviving slots stay valid because
+					// only the tail is dropped (and a slot recreated later is refreshed as a fresh one anyway)
+					if (_renderCommandUniforms.size() > target) {
+						_renderCommandUniforms.pop_back_n(_renderCommandUniforms.size() - target);
+						_renderCommandUniforms.shrink(target);
+					}
+				}
+				_renderCommandsPeak = 0;
+				_renderCommandsPeakAge = 0;
+			}
+
+			// Same for the particle storage itself: 100 bytes per particle stayed reserved for the level's lifetime
+			if (_debrisList.capacity() > (std::size_t)MinDebrisCapacity && _debrisList.size() * 4 < _debrisList.capacity()) {
+				_debrisList.shrink(std::max(_debrisList.size() * 2, (std::size_t)MinDebrisCapacity));
+			}
+		}
+
 		// The command cache must be reset every frame,
 		// OnDraw() is called multiple times if multiple viewports are active
 		_renderCommandsCount = 0;
@@ -1387,6 +1431,7 @@ namespace Jazz2::Tiles
 
 		for (std::int32_t i = 0; i < (width * height); i++) {
 			std::uint8_t tileFlags = s.ReadValue<std::uint8_t>();
+			// A tile index is masked down to the tile set bound by the converter, so it always fits LayerTile::TileID
 			std::uint16_t tileIdx = s.ReadValueAsLE<std::uint16_t>();
 
 			std::uint8_t tileModifier = (std::uint8_t)(tileFlags >> 4);
@@ -1534,8 +1579,29 @@ namespace Jazz2::Tiles
 		return result;
 	}
 
+	std::int32_t TileMap::GetParticleDebrisStep(std::int32_t debrisSize, std::int32_t frameWidth, std::int32_t frameHeight)
+	{
+		std::int32_t step = debrisSize + 1;
+		if (MaxParticleDebrisPerBurst > 0) {
+			// Walk the frame in coarser steps until the burst fits the budget. The producers derive the particle
+			// size from the step, so the sprite is still covered edge to edge - by fewer, bigger particles, which
+			// for an exploding sprite is nearly indistinguishable in motion. The upper bound keeps the loop
+			// finite for a degenerate frame; the biggest sprite in the game needs 9.
+			while (step < 64 && ((frameWidth + step - 1) / step) * ((frameHeight + step - 1) / step) > MaxParticleDebrisPerBurst) {
+				step++;
+			}
+		}
+		return step;
+	}
+
 	void TileMap::CreateDebris(const DestructibleDebris& debris)
 	{
+		// Every live particle pins a pooled render command and a slice of the streaming uniform buffers, so on the
+		// consoles the effect has a budget (see MaxDebrisCount) and new particles are dropped once it is used up
+		if (MaxDebrisCount > 0 && (std::int32_t)_debrisList.size() >= MaxDebrisCount) {
+			return;
+		}
+
 		auto& spriteLayer = _layers[_sprLayerIndex];
 		if ((debris.Flags & DebrisFlags::Disappear) == DebrisFlags::Disappear && debris.Depth <= spriteLayer.Description.Depth) {
 			std::int32_t x = (std::int32_t)debris.Pos.X / TileSet::DefaultTileSize;
@@ -1570,6 +1636,11 @@ namespace Jazz2::Tiles
 
 		// Tile #0 is always empty
 		if (tileId == 0) {
+			return;
+		}
+
+		// A tile always breaks into its four quarters, so it is dropped as a whole once the budget is used up
+		if (MaxDebrisCount > 0 && (std::int32_t)_debrisList.size() + 4 > MaxDebrisCount) {
 			return;
 		}
 
@@ -1647,9 +1718,16 @@ namespace Jazz2::Tiles
 		const Recti debrisRect = res->Base->GetFrameRect(currentFrame);
 		const Vector2i frameOffset = res->Base->GetFrameOffset(currentFrame);
 
-		for (std::int32_t fy = 0; fy < debrisRect.H; fy += DebrisSize + 1) {
-			for (std::int32_t fx = 0; fx < debrisRect.W; fx += DebrisSize + 1) {
-				float currentSize = DebrisSize * Random().FastFloat(0.2f, 1.1f);
+		// A big sprite would emit over a thousand particles at the plain step, which the consoles cannot afford
+		const std::int32_t step = GetParticleDebrisStep(DebrisSize, debrisRect.W, debrisRect.H);
+		const float particleSize = (float)(step - 1);
+
+		for (std::int32_t fy = 0; fy < debrisRect.H; fy += step) {
+			if (MaxDebrisCount > 0 && (std::int32_t)_debrisList.size() >= MaxDebrisCount) {
+				break;
+			}
+			for (std::int32_t fx = 0; fx < debrisRect.W; fx += step) {
+				float currentSize = particleSize * Random().FastFloat(0.2f, 1.1f);
 
 				DestructibleDebris& debris = _debrisList.emplace_back();
 				debris.Pos = Vector2f(x + (isFacingLeft ? res->Base->FrameDimensions.X - frameOffset.X - fx : frameOffset.X + fx), y + frameOffset.Y + fy);
@@ -1691,6 +1769,12 @@ namespace Jazz2::Tiles
 		float x = pos.X - res->Base->Hotspot.X;
 		float y = pos.Y - res->Base->Hotspot.Y;
 		Vector2i texSize = res->Base->TextureDiffuse->GetSize();
+
+		if (MaxDebrisCount > 0) {
+			// Clamped instead of dropped: the count is the caller's intent (and also scales the speed below),
+			// so a partial burst still reads as the same effect
+			count = std::min(count, MaxDebrisCount - (std::int32_t)_debrisList.size());
+		}
 
 		for (std::int32_t i = 0; i < count; i++) {
 			float speedX = Random().FastFloat(-1.0f, 1.0f) * Random().FastFloat(0.2f, 0.8f) * count;
@@ -1830,6 +1914,13 @@ namespace Jazz2::Tiles
 				continue;
 			}
 
+			// Backstop for the command pool the loop rents from: it grows to its high-water mark and one slot is
+			// ~840 bytes, so the consoles refuse to draw beyond the budget rather than risk the heap. The live
+			// count is already capped, this only bites when several viewports draw the same particles.
+			if (MaxPooledRenderCommands > 0 && _renderCommandsCount >= MaxPooledRenderCommands) {
+				break;
+			}
+
 			// Indexed sprite debris is recolored at draw time through the palette shader; baked debris stays
 			// on Sprite. Renting with that choice picks the same shader ConfigureSpriteShader() would, and
 			// hands back the instance uniforms already resolved - an exploding enemy emits hundreds of these
@@ -1906,7 +1997,7 @@ namespace Jazz2::Tiles
 					}
 				} else {
 					tile.DestructFrameIndex = (newState ? 1 : 0);
-					tile.TileID = (newState ? 0 /*Empty*/ : tile.DestructAnimation);
+					tile.TileID = (newState ? std::uint16_t(0) /*Empty*/ : std::uint16_t(tile.DestructAnimation));
 				}
 			}
 		}
@@ -1959,11 +2050,18 @@ namespace Jazz2::Tiles
 			return false;
 		}
 
-		LayerTile& tile = layer.Layout[y * layer.LayoutSize.X + x];
+		std::int32_t layoutIndex = y * layer.LayoutSize.X + x;
+		LayerTile& tile = layer.Layout[layoutIndex];
 
-		std::int32_t tileIndex = (tileValue & TileIndexMask);
+		// A script can overwrite any tile, including one the checkpoint scan didn't consider mutable, so the
+		// value it replaces has to join the checkpoint - otherwise a rollback would keep the scripted tile
+		if (_hasRollbackCheckpoint && layerIndex == _sprLayerIndex) {
+			SaveTileForRollback((std::uint32_t)layoutIndex, tile);
+		}
+
+		std::uint16_t tileIndex = (tileValue & TileIndexMask);
 		if ((tileValue & TileFlagAnimated) == TileFlagAnimated) {
-			tile.TileID = _animatedTilesOffset + tileIndex;
+			tile.TileID = (std::uint16_t)(_animatedTilesOffset + tileIndex);
 		} else {
 			tile.TileID = tileIndex;
 		}
@@ -1980,25 +2078,59 @@ namespace Jazz2::Tiles
 		return true;
 	}
 
-	void TileMap::CreateCheckpointForRollback()
+	void TileMap::SaveTileForRollback(std::uint32_t tileIndex, const LayerTile& tile)
 	{
-		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
-		if (_sprLayerForRollback == nullptr) {
-			_sprLayerForRollback = std::make_unique<LayerTile[]>(layoutSize.X * layoutSize.Y);
+		// Binary search keeps the list sorted by index and doubles as the duplicate check: only the first
+		// saved value of a tile is its checkpoint value, later overwrites must not replace it
+		std::size_t lo = 0, hi = _sprLayerForRollback.size();
+		while (lo < hi) {
+			std::size_t mid = lo + (hi - lo) / 2;
+			if (_sprLayerForRollback[mid].TileIndex < tileIndex) {
+				lo = mid + 1;
+			} else {
+				hi = mid;
+			}
 		}
 
-		std::memcpy(_sprLayerForRollback.get(), _layers[_sprLayerIndex].Layout.get(), layoutSize.X * layoutSize.Y * sizeof(LayerTile));
+		if (lo < _sprLayerForRollback.size() && _sprLayerForRollback[lo].TileIndex == tileIndex) {
+			return;
+		}
+
+		_sprLayerForRollback.insert(_sprLayerForRollback.begin() + lo, RollbackTile { tileIndex, tile });
+	}
+
+	void TileMap::CreateCheckpointForRollback()
+	{
+		// Only tiles that can still change are saved, in ascending index order. A destructible tile moves its
+		// ID, frame index, params, flags and (when it collapses) its destruct type; every other tile is fixed
+		// for the level's lifetime unless a script overwrites it, which SetTile() records as it happens. And a
+		// destruct type is only ever cleared, never gained, so this set cannot grow behind our back.
+		auto& sprLayer = _layers[_sprLayerIndex];
+		std::int32_t layoutSize = sprLayer.LayoutSize.X * sprLayer.LayoutSize.Y;
+		const LayerTile* layout = sprLayer.Layout.get();
+
+		_sprLayerForRollback.clear();
+		for (std::int32_t i = 0; i < layoutSize; i++) {
+			if (layout[i].DestructType != TileDestructType::None) {
+				_sprLayerForRollback.push_back(RollbackTile { (std::uint32_t)i, layout[i] });
+			}
+		}
+		_hasRollbackCheckpoint = true;
+
 		std::memcpy(_triggerStateForRollback.data(), _triggerState.data(), _triggerState.sizeInBytes());
 	}
 
 	void TileMap::RollbackToCheckpoint()
 	{
-		if (_sprLayerForRollback == nullptr) {
+		if (!_hasRollbackCheckpoint) {
 			return;
 		}
 
-		Vector2i layoutSize = _layers[_sprLayerIndex].LayoutSize;
-		std::memcpy(_layers[_sprLayerIndex].Layout.get(), _sprLayerForRollback.get(), layoutSize.X * layoutSize.Y * sizeof(LayerTile));
+		LayerTile* layout = _layers[_sprLayerIndex].Layout.get();
+		for (const auto& saved : _sprLayerForRollback) {
+			layout[saved.TileIndex] = saved.Tile;
+		}
+
 		std::memcpy(_triggerState.data(), _triggerStateForRollback.data(), _triggerState.sizeInBytes());
 	}
 
@@ -2056,15 +2188,28 @@ namespace Jazz2::Tiles
 
 		auto& spriteLayer = _layers[_sprLayerIndex];
 		std::int32_t layoutSize = spriteLayer.LayoutSize.X * spriteLayer.LayoutSize.Y;
-		const LayerTile* source = (fromCheckpoint && _sprLayerForRollback != nullptr ? _sprLayerForRollback.get() : spriteLayer.Layout.get());
+		const LayerTile* layout = spriteLayer.Layout.get();
 		dest.WriteVariableInt32(layoutSize);
-		for (std::int32_t i = 0; i < layoutSize; i++) {
-			dest.WriteVariableInt32(source[i].DestructFrameIndex);
-		}
 
-		if (fromCheckpoint && _sprLayerForRollback != nullptr) {
+		if (fromCheckpoint && _hasRollbackCheckpoint) {
+			// A tile missing from the checkpoint hasn't changed since it was taken, so the live layer already
+			// holds its checkpoint value; the saved ones are merged in by index, the list being sorted
+			std::size_t next = 0;
+			for (std::int32_t i = 0; i < layoutSize; i++) {
+				if (next < _sprLayerForRollback.size() && _sprLayerForRollback[next].TileIndex == (std::uint32_t)i) {
+					dest.WriteVariableInt32(_sprLayerForRollback[next].Tile.DestructFrameIndex);
+					next++;
+				} else {
+					dest.WriteVariableInt32(layout[i].DestructFrameIndex);
+				}
+			}
+
 			dest.Write(_triggerStateForRollback.data(), _triggerStateForRollback.sizeInBytes());
 		} else {
+			for (std::int32_t i = 0; i < layoutSize; i++) {
+				dest.WriteVariableInt32(layout[i].DestructFrameIndex);
+			}
+
 			dest.Write(_triggerState.data(), _triggerState.sizeInBytes());
 		}
 	}

@@ -1,0 +1,247 @@
+namespace Jazz2 {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+/** @page asset-packer AssetPacker
+@brief Offline data conversion tool of Jazz² Resurrection
+
+@tableofcontents
+
+@m_class{m-noindent}
+
+**AssetPacker** is a standalone command-line tool in @cpp "Sources/AssetPacker" @ce that
+converts original Jazz Jackrabbit 2 data into the layout a given platform loads. The game
+performs the same conversion on its first run @m_span{m-text m-dim} (see
+`GameEventHandler::RefreshCache`, which forwards to the shared
+@ref Jazz2::Compatibility::AssetConverter driver) @m_endspan, and that stays the second,
+in-game way of doing it. This tool exists so the data can be prepared **ahead of time** ---
+for the platforms that cannot convert anything themselves @m_span{m-text m-dim} (the consoles
+and the web build) @m_endspan, and for build pipelines.
+
+Beside the full conversion it offers several single-file commands: packing and unpacking
+bitmap fonts (see @ref Jazz2::UI::FontFormat), making the indexed font images editable, and
+re-encoding `.j2v` cinematics into the game's own @ref Jazz2::VideoFormat container.
+
+@section asset-packer-building Building the tool
+
+The tool is host-only --- it is built by default as part of the desktop CMake build
+(`NCINE_BUILD_ASSET_PACKER`, default @cpp ON @ce) and skipped for every cross-compiled
+target. It links only the base layer and the original-data converters, deliberately not the
+engine, so it has no renderer, no window backend and no networking. After a regular
+@ref building "desktop build" the binary is at @cpp "build/Sources/AssetPacker/AssetPacker" @ce.
+
+@section asset-packer-usage Command-line reference
+
+@code{.sh}
+AssetPacker [<command>] <source> <target> [options]
+@endcode
+
+@m_class{m-noindent}
+
+The command may be omitted, in which case `convert` is assumed:
+
+-   `convert <source directory> <target directory>` --- Converts the original game data
+    -   `<source directory>` --- Directory containing the original game files (`Anims.j2a`,
+        `*.j2l`, `*.j2t`, ...), or a game installation that keeps them in a `Source`
+        subdirectory --- in which case its `Content` is copied to the target as well
+    -   `<target directory>` --- Directory the converted data is written to (created if needed)
+    -   `--target=<profile>` --- `desktop` (default) | `console` | `dreamcast` | `wii` |
+        `gamecube` | `emscripten` (or `web`)
+    -   `--video-downscale=N` --- Downscale cinematics by N (1--4); 1 (the default) keeps
+        them as they are. Cinematics are re-encoded for `dreamcast` (or any N > 1) and
+        otherwise copied unchanged; `desktop` gets none, as the game reads the originals
+    -   `--originals-only` --- Convert only the episodes and levels the original game shipped
+    -   `--shareware-only` --- Convert only what the Shareware Demo shipped
+        @m_span{m-text m-dim} (implies `--originals-only`) @m_endspan
+    -   `--all-videos` --- Deploy every cinematic found, not just the two the game plays
+    -   `--skip-non-episode-levels` --- Convert only levels that belong to an episode
+-   `pack-font <source .png> <target .font>` --- Packs a grid image and the character list
+    next to it (`<source .png>.font`) into a single file
+-   `unpack-font <source .font> <target .png>` --- Unpacks a font back into a grid image and
+    a character list, ready to be edited and packed again
+-   `apply-palette <source .png> <target .png>` --- Replaces the palette indices of an image
+    with the colors they stand for, so it can be edited
+-   `to-indices <source .png> <target .png>` --- Resolves the colors of an edited image back
+    to the nearest palette indices
+-   `recompress-video <source .j2v> <target .j2v> [--video-downscale=N]` --- Re-encodes one
+    cinematic on its own; N defaults to 1, which keeps the original resolution
+
+Progress and warnings are printed to stdout, errors to stderr, and the exit code is non-zero
+on failure.
+
+@section asset-packer-convert Converting the game data
+
+The source can be either a directory of original game files or a whole game installation,
+which keeps them in a `Source` subdirectory next to the `Content` the game ships and the
+`Cache` it converts into. Pointing the tool at the installation is the convenient thing to
+do, so it looks for both layouts --- and when the source turns out to be an installation and
+the target is not the desktop profile, the installation's own `Content` (fonts, metadata,
+translations, shaders --- nothing of which is derived from the original data) is copied into
+the target first, which is what makes the output a complete self-contained tree. The tool
+requires `Anims.j2a` (or the shareware `AnimsSw.j2a`) to be present; sprites and sounds are
+converted from it into `Source.pak`, and the levels, tilesets, episodes and music follow via
+@ref Jazz2::Compatibility::AssetConverter.
+
+@subsection asset-packer-convert-profiles Target profiles
+
+What the output directory is going to be loaded by decides its layout:
+
+-   **desktop** --- The converted data goes into a `Cache` subdirectory of the target, and an
+    index file (`Source.idx`) is written alongside --- the descriptor the game checks on
+    startup before deciding to reconvert. It must stay identical to what
+    `GameEventHandler::WriteCacheDescriptor` writes, field for field (signature, file type,
+    cache version, flags, the modification time of `Anims.j2a`, the event count and the build
+    version) --- the game compares every one of them and reconverts everything if any
+    disagrees. Music is not copied, because the desktop game reads it from its own
+    `Content/Music`, and cinematics are left alone, because the game reads the originals
+    where they are.
+-   **console** (also selected by `dreamcast`, `wii` and `gamecube`) --- A staged `Content`
+    tree written directly into the target, for the consoles which cannot rewrite a cache of
+    their own. The consoles all consume the same staged tree, so they share one profile ---
+    only the cinematics are decided per platform, which is why `dreamcast` is tracked
+    separately (see below). No index is written, deliberately: the consoles never rewrite
+    their data, and an index there would only invite the game to try.
+-   **emscripten** --- Likewise a tree prepared entirely ahead of time for the web build,
+    without an index.
+
+@subsection asset-packer-convert-filters Level filters
+
+`--originals-only` keeps the episodes the original game shipped plus every level reachable
+from one of them, `--shareware-only` narrows that to the Shareware Demo content, and
+`--skip-non-episode-levels` drops the levels that belong to no episode. Whatever is skipped
+is listed by name rather than only counted --- the list of levels the original game shipped
+is maintained by hand, and this is how a name missing from it shows up.
+
+@section asset-packer-cinematics Cinematics
+
+Only two cinematics are ever played by the game (`Intro` and `Ending`); `Logo` is present in
+the original data but nothing asks for it, so it is deployed only with `--all-videos`. The
+files land in a `Cinematics` subdirectory under lowercase names, which is how the player
+looks them up. What happens to them depends on the target:
+
+-   **Nothing** for the desktop profile --- the game reads the original files where they are
+-   **Copied unchanged** for every other target except the Dreamcast --- they decode the
+    original format perfectly well and are better off with the smaller file
+-   **Re-encoded** for `dreamcast`, or whenever `--video-downscale` is greater than 1 (on any
+    profile), since downscaling means re-encoding either way
+
+Only the Dreamcast needs the re-encoding: inflating the original container there costs
+55--115 ms per frame against a 42 ms budget, where the re-encoded one costs under one
+millisecond.
+
+@subsection asset-packer-cinematics-format The .j2v recompression
+
+The original `.j2v` videos (`CineFeed` signature) are 640×480 in four interleaved zlib
+streams --- opcodes, the offset and row parts of copy-from-previous-frame runs, and the
+literal pixels plus palettes --- and the decoder has to inflate every frame at playback time.
+@ref Jazz2::Compatibility::J2vRecompressor decodes the video exactly the way the player does
+@m_span{m-text m-dim} (including decoding into one reused frame buffer, so pixels no run
+covers keep the previous frame's value) @m_endspan, optionally downscales it once by picking
+every n-th pixel of every n-th row --- matching what the player used to do at runtime --- and
+re-encodes it into the game's own @ref Jazz2::VideoFormat container. The player detects the
+format by its signature and accepts both.
+
+The output container keeps the same idea --- 8-bit indexed frames encoded as changes against
+the previous one --- but replaces the entropy coding with a byte-oriented delta-RLE codec
+whose decoder is nothing but @cpp memcpy @ce and @cpp memset @ce over a reused frame buffer.
+A file starts with the same signature and type/version fields every other file the game
+writes uses, followed by width, height, frame delay, frame count, pixel format, codec and an
+extension area older players skip, then one size-prefixed payload per frame. Each frame is a
+flag byte @m_span{m-text m-dim} (bit 0 --- a 256-entry BGRA palette follows) @m_endspan and
+then commands until the end-of-frame marker: *literal* spans stored as they are, *runs* of
+one repeated byte, and *skips* that leave the previous frame's pixels in place --- which is
+what makes an unchanged region nearly free. Each command has a short single-byte form and a
+long form with a 16-bit count; the exact opcode ranges are documented on
+@ref Jazz2::VideoFormat.
+
+Note the recompressed file is substantially larger than the zlib-compressed original at the
+same resolution --- that is the deliberate trade: entropy coding is exchanged for a decoder
+that fits the weakest platform's frame budget. Platforms that can afford the inflation get
+the original file copied instead. `recompress-video` re-encodes a single file outside a full
+conversion, which is the way to experiment with resolutions per target.
+
+@section asset-packer-fonts Font packing
+
+A font is authored as a grid image --- one equally sized cell per character --- next to a
+small sidecar file (`<image>.png.font`) listing the cell size, the character set and how far
+the pen moves for each character, with characters outside the ASCII range spelled out in
+UTF-8. The game instead loads a single self-contained `.font` file (version 2, described by
+@ref Jazz2::UI::FontFormat) in which every glyph has been measured down to the pixels it
+actually inks, packed against its neighbours and stored as palette indices. `pack-font` and
+`unpack-font` are the two directions of that conversion, so a shipped font can be opened up,
+changed and packed again without the grid form having to be kept around in the repository.
+
+What `pack-font` does:
+
+-   **Trimming** --- Every glyph is reduced to its inked bounding box; what is left of the
+    cell is recorded as the glyph's bearing, so drawing it at the trimmed size in the trimmed
+    place puts every pixel exactly where the full cell used to put it. A glyph with no inked
+    pixels at all (a space) has zero size and is only advanced over.
+-   **Index normalization** --- A font is entirely index based: every pixel either names a
+    palette color or is index 0 and draws nothing; there is no per-pixel coverage. Pixels
+    that say otherwise (transparent in one channel but not the other, or partially covered)
+    are resolved to one of the two, with a warning listing how many were touched.
+-   **Packing** --- Shelf packing, tallest glyph first, with a margin of
+    @cpp FontFormat::GlyphMargin @ce (one pixel) on each side, so neighbours are two pixels
+    apart --- enough that a bilinear sample taken at the very edge of one glyph cannot reach
+    the next. The atlas width is a power of two chosen to minimize the *padded* area (which
+    is what the console backends that need power-of-two textures pay), while the height is
+    left at whatever the shelves come to (which is what everyone else pays). The atlas may
+    not exceed 1024×1024, a glyph may not exceed 255 pixels in either direction and a bearing
+    may not exceed 127 --- exceeding any of these is an error.
+-   **Encoding** --- Everything except the few identifying bytes (signature, file type,
+    version, flags, compressed size) is one deflate block: the atlas size, line height, base
+    spacing and character counts, then a 9-byte glyph record per character
+    @m_span{m-text m-dim} (position, size, bearings, advance --- with a 32-bit codepoint
+    prefix for the non-ASCII ones) @m_endspan, then the atlas itself as one palette index per
+    pixel in the same QOI-based encoding every other image asset uses.
+
+`unpack-font` rebuilds the grid image and the sidecar from a packed font --- the glyphs are
+placed back into cells at their bearings, so packing the result again measures the pixels
+afresh and arrives back at the same font. Because the unpacked atlas holds palette indices,
+it looks like near-black noise in an image editor; `apply-palette` and `to-indices` are the
+two halves of making it editable --- the first replaces the indices with the colors they
+stand for, the second resolves an edited image back to the nearest palette entries (warning
+when a color had no exact match). The tool carries its own minimal PNG codec
+(@ref Jazz2::AssetPacker::PngCodec) precisely because it does not link the renderer.
+
+@section asset-packer-platforms Platform notes
+
+-   **Desktop** builds do not need the tool at all --- the game converts on first run.
+    Running it is still useful to prepare the cache in a build pipeline, or to pre-downscale
+    cinematics with `--video-downscale`.
+-   **Dreamcast, Wii and GameCube** cannot convert anything themselves, so their build
+    scripts consume a tree prepared with `--target=dreamcast` / `wii` / `gamecube`. All three
+    share the same layout; the target name only decides the cinematics --- the Dreamcast gets
+    them re-encoded into @ref Jazz2::VideoFormat, the others get the smaller originals copied.
+-   **Emscripten** likewise ships a fully prepared tree (`--target=emscripten`), typically
+    with `--shareware-only` for the public demo.
+-   The packed `.font` files are what all platforms load, but the consoles benefit the most:
+    one palette index per pixel instead of expanded RGBA cuts both the file size and the
+    texture memory, and the tightly packed atlas minimizes the power-of-two padding the PVR
+    and GX have to pay.
+
+@section asset-packer-pitfalls Pitfalls
+
+-   **The desktop cache descriptor must match the game exactly.** `Source.idx` is compared
+    field for field against what the running game would write --- including the event count
+    and the build version --- and the game silently reconverts everything on startup when any
+    field disagrees. Prepare the cache with a tool built from the same sources as the game.
+-   **Never write an index for the console or web profiles.** The tool deliberately omits it
+    there; those platforms cannot rewrite their data, and an index would only invite the game
+    to try.
+-   **The source must contain a supported version of the game data.** The tool looks for
+    `Anims.j2a` (or `AnimsSw.j2a`) at the top of the source directory or in its `Source`
+    subdirectory and refuses to run without it.
+-   **Skipped levels are listed on purpose.** The list of original levels is maintained by
+    hand, so read the skipped-levels output after a `--originals-only` conversion --- a level
+    that should have been kept shows up there by name.
+-   **Recompressed cinematics are larger than the originals.** Only re-encode where the
+    platform needs it (the tool's per-target defaults already do the right thing); everything
+    else wants the original file.
+-   The game plays pre-downscaled cinematics as they are --- the player picks its runtime
+    downscale from the actual frame width, so a file reduced by the tool is not halved a
+    second time.
+
+*/
+
+}

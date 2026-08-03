@@ -140,7 +140,7 @@ namespace nCine
 		return LoadFromMemory(nullptr, vertex, fragment, batchSize);
 	}
 
-	bool Shader::LoadFromMemory(const char* shaderName, Introspection introspection, const ShaderCompiler::ProgramVariant& variant, std::int32_t batchSize)
+	bool Shader::LoadFromMemory(const char* shaderName, Introspection introspection, const ShaderCompiler::ProgramVariant& variant, std::int32_t batchSize, const char* programName)
 	{
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
@@ -201,6 +201,11 @@ namespace nCine
 
 		// Set after Reset(), which clears any previous reflection
 		glShaderProgram_->SetReflection(&variant);
+		// The fixed-function console backends resolve their generated effects from this true
+		// (program, variant) identity at link time - never from the object label
+		if (programName != nullptr) {
+			glShaderProgram_->SetProgramIdentity(programName, variant.Name);
+		}
 		glShaderProgram_->Link(shaderToShaderProgramIntrospection(introspection));
 
 		return IsLinked();
@@ -308,7 +313,7 @@ namespace nCine
 		return RenderResources::GetBinaryShaderCache().LoadFromCache(shaderName, shaderVersion, glShaderProgram_.get(), shaderToShaderProgramIntrospection(introspection));
 	}
 
-	bool Shader::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Introspection introspection, const ShaderCompiler::ProgramVariant& variant)
+	bool Shader::LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Introspection introspection, const ShaderCompiler::ProgramVariant& variant, const char* programName)
 	{
 		ZoneScopedC(0x81A861);
 		if (shaderName != nullptr) {
@@ -319,6 +324,12 @@ namespace nCine
 		glShaderProgram_->Reset();
 		glShaderProgram_->SetObjectLabel(shaderName);
 		glShaderProgram_->SetReflection(&variant);
+		// Identity travels with the reflection so a cache hit resolves console effects the same way
+		// a fresh compile does (the binary cache is disabled on the fixed-function tiers today, but
+		// the invariant is kept regardless)
+		if (programName != nullptr) {
+			glShaderProgram_->SetProgramIdentity(programName, variant.Name);
+		}
 		return RenderResources::GetBinaryShaderCache().LoadFromCache(shaderName, shaderVersion, glShaderProgram_.get(), shaderToShaderProgramIntrospection(introspection));
 	}
 

@@ -4,92 +4,10 @@
 
 #include <cstring>
 
+#include <Asserts.h>
+
 namespace nCine::RHI::GX
 {
-	namespace
-	{
-		bool Contains(StringView haystack, const char* needle)
-		{
-			return haystack.contains(needle);
-		}
-
-		GxEffect ClassifyEffect(StringView label)
-		{
-			// The effect is derived from the program's object label (the shader name registered by
-			// ContentResolver::CompileShader, which bakes the variant into the name, e.g. "...Dither").
-			// Labels with no matching C++ effect fall through to a logged, skipped draw.
-
-			// Tile-layer meshes: a whole visible layer as one triangle list. Checked before the palette
-			// family - "TileMapMeshPalette" would otherwise have to be excluded from every later test.
-			if (Contains(label, "TileMapMesh")) {
-				return Contains(label, "Palette") ? GxEffect::TileMapMeshPalette : GxEffect::TileMapMesh;
-			}
-
-			// Palette family: recolors an R8/RG8 index sprite through the shared palette texture. Checked
-			// before the sprite family - "BatchedPaletteRemap" contains "Batched" but not "Sprite".
-			if (Contains(label, "PaletteRemap")) {
-				return Contains(label, "Batched") ? GxEffect::BatchedPaletteRemap : GxEffect::PaletteRemap;
-			}
-
-			// Actor state effects. Each has a plain and a "...Palette" variant (indexed sprites); both map
-			// to the same effect because the palette lookup is driven by UsesPalette() instead. The partial
-			// mask is checked first - "PartialWhiteMask" also contains "WhiteMask".
-			const bool batched = Contains(label, "Batched");
-			if (Contains(label, "PartialWhiteMask")) {
-				return batched ? GxEffect::BatchedPartialWhiteMask : GxEffect::PartialWhiteMask;
-			}
-			if (Contains(label, "WhiteMask")) {
-				return batched ? GxEffect::BatchedWhiteMask : GxEffect::WhiteMask;
-			}
-			if (Contains(label, "FrozenMask")) {
-				return batched ? GxEffect::BatchedFrozenMask : GxEffect::FrozenMask;
-			}
-			if (Contains(label, "Outline")) {
-				return batched ? GxEffect::BatchedOutline : GxEffect::Outline;
-			}
-			if (Contains(label, "ShieldFire")) {
-				return batched ? GxEffect::BatchedShieldFire : GxEffect::ShieldFire;
-			}
-			if (Contains(label, "ShieldLightning")) {
-				return batched ? GxEffect::BatchedShieldLightning : GxEffect::ShieldLightning;
-			}
-			// Colorized text/sprites (grayscale + dye in GLSL): the fixed-function approximation modulates
-			// the mostly grayscale textures with an amplified dye colour computed in Dispatch
-			if (Contains(label, "Colorized")) {
-				return Contains(label, "Batched") ? GxEffect::BatchedColorized : GxEffect::Colorized;
-			}
-			// Animated background (planar tunnel and its circular variant)
-			if (Contains(label, "TexturedBackground")) {
-				return Contains(label, "Circle") ? GxEffect::TexturedBackgroundCircle : GxEffect::TexturedBackground;
-			}
-			// Viewport compositor (the plain and water variants share the base composite in C++)
-			if (Contains(label, "Combine")) {
-				return GxEffect::Combine;
-			}
-			// Level transition (a radial wipe in GLSL, a plain fade here)
-			if (Contains(label, "Transition")) {
-				return GxEffect::Transition;
-			}
-
-			// No-texture solid-colour sprite family (labels "Sprite_NoTexture" / "Batched_Sprites_NoTexture").
-			// The block omits texRect, so it needs a dedicated fast path (different std140 offsets) rather than
-			// the generated fragment. The mesh no-texture variants keep the generated-fragment path.
-			if (Contains(label, "Sprite") && Contains(label, "NoTexture") && !Contains(label, "Mesh")) {
-				return Contains(label, "Batched") ? GxEffect::DefaultBatchedSpritesNoTexture : GxEffect::DefaultSpriteNoTexture;
-			}
-
-			// Default textured sprite family
-			const bool isSprite = Contains(label, "Sprite") && !Contains(label, "Mesh") && !Contains(label, "NoTexture");
-			if (isSprite && Contains(label, "Batched")) {
-				return GxEffect::DefaultBatchedSprites;
-			}
-			if (isSprite && !Contains(label, "Batched")) {
-				return GxEffect::DefaultSprite;
-			}
-			return GxEffect::Unknown;
-		}
-	}
-
 	std::uint32_t GxShaderProgram::nextHandle_ = 1;
 
 	GxShaderProgram::GxShaderProgram()
@@ -100,7 +18,7 @@ namespace nCine::RHI::GX
 	GxShaderProgram::GxShaderProgram(QueryPhase queryPhase)
 		: handle_(nextHandle_++), status_(Status::NotLinked), introspection_(Introspection::Disabled), queryPhase_(queryPhase),
 			batchSize_(DefaultBatchSize), shouldLogOnErrors_(true), uniformsSize_(0), uniformBlocksSize_(0),
-			reflection_(nullptr), effectReflection_(nullptr), effect_(GxEffect::Unknown), ditherVariant_(false), usesPalette_(false),
+			reflection_(nullptr), effectReflection_(nullptr), generatedEffect_(nullptr), ditherVariant_(false), usesPalette_(false),
 			boundVbo_(nullptr), boundVboOffset_(0), boundIbo_(nullptr)
 	{
 	}
@@ -190,7 +108,23 @@ namespace nCine::RHI::GX
 			if (reflection_ != nullptr) {
 				effectReflection_ = reflection_;
 				ImportReflection();
+				// A program samples indexed textures through the shared palette exactly when its
+				// (variant-resolved) reflection binds the palette sampler - the "...Palette" programs
+				// and the USE_PALETTE variants all declare it, everything else cannot possibly remap
+				usesPalette_ = false;
+				for (std::size_t i = 0; i < reflection_->TextureCount; i++) {
+					if (std::strcmp(reflection_->Textures[i].Name, "uTexturePalette") == 0) {
+						usesPalette_ = true;
+						break;
+					}
+				}
 			}
+			// Resolve the generated fixed-function effect of this (program, variant) once here, so the
+			// draw path only reads a pointer. The key is the TRUE identity plumbed by the loaders via
+			// SetProgramIdentity() - no shader name is ever matched; a program that never received an
+			// identity (runtime-compiled .shader files) simply has no console effect and is skipped.
+			generatedEffect_ = (!programName_.empty()
+				? GxDevice::FindGeneratedEffect(programName_.data(), variantName_.data()) : nullptr);
 			status_ = Status::LinkedWithIntrospection;
 		}
 		// The reflection is consumed by introspection (a copy of its layout is kept in effectReflection_)
@@ -313,18 +247,32 @@ namespace nCine::RHI::GX
 		batchSize_ = DefaultBatchSize;
 		reflection_ = nullptr;
 		effectReflection_ = nullptr;
+		// A reloaded program gets a fresh identity from its loader (SetProgramIdentity), so nothing
+		// stale can leak into the effect resolution of the next PerformIntrospection()
+		programName_ = {};
+		variantName_ = {};
+		generatedEffect_ = nullptr;
+		ditherVariant_ = false;
+		usesPalette_ = false;
 	}
 
 	void GxShaderProgram::SetObjectLabel(StringView label)
 	{
+		// The label is kept for log messages only - effect identity comes from SetProgramIdentity()
 		label_ = label;
-		effect_ = ClassifyEffect(label);
-		// The variant is baked into the shader name (e.g. "TexturedBackgroundDither"), so the dithering
-		// path is selected from the label rather than re-deriving it from the reflection's defines
-		ditherVariant_ = label.contains("Dither");
-		// "PaletteRemap" and the "...Palette" variants of the actor state effects all sample indexed
-		// textures through the palette texture bound at unit 1
-		usesPalette_ = label.contains("Palette");
+	}
+
+	void GxShaderProgram::SetProgramIdentity(const char* programName, const char* variantName)
+	{
+		// The true (program, variant) identity the loader compiled this program from: the .shader
+		// program name and the variant define (both baked into the generated tables). Stored as
+		// copies because runtime-compiled programs hand in transient strings; the generated-table
+		// lookup itself runs in PerformIntrospection(), after the reflection is set alongside.
+		programName_ = (programName != nullptr ? programName : "");
+		variantName_ = (variantName != nullptr ? variantName : "");
+		// The dithering variant is a variant of the SAME program (TexturedBackground and its circle
+		// twin declare "variant DITHER;"), so the flag is exactly the variant name
+		ditherVariant_ = (variantName_ == "DITHER");
 	}
 
 	const GxUniformBlock* GxShaderProgram::FindBlock(const char* name) const

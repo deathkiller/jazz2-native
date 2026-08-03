@@ -2,6 +2,12 @@
 
 #if defined(__EMSCRIPTEN__)
 #	define DEATH_TARGET_EMSCRIPTEN
+// Since Emscripten 3.1.4 the version macros are no longer predefined by the compiler driver but declared in this header
+#	if defined(__has_include)
+#		if __has_include(<emscripten/version.h>)
+#			include <emscripten/version.h>
+#		endif
+#	endif
 #elif defined(_WIN32)
 #	define DEATH_TARGET_WINDOWS
 #elif defined(__ANDROID__)
@@ -309,7 +315,7 @@
 // Clang 13. That's only since 2.0.18, thus to avoid nasty issues we have to check Emscripten version as well :(
 // https://github.com/emscripten-core/emscripten/commit/deab7783df407b260f46352ffad2a77ca8fb0a4c
 #elif defined(DEATH_TARGET_WASM)
-#	if defined(__wasm_simd128__) && __clang_major__ >= 13 && __EMSCRIPTEN_major__*10000 + __EMSCRIPTEN_minor__*100 + __EMSCRIPTEN_tiny__ >= 20018
+#	if defined(__wasm_simd128__) && __clang_major__ >= 13 && __EMSCRIPTEN_MAJOR__*10000 + __EMSCRIPTEN_MINOR__*100 + __EMSCRIPTEN_TINY__ >= 20018
 #		define DEATH_TARGET_SIMD128
 #	endif
 #endif

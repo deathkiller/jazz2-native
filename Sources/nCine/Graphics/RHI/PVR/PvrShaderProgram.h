@@ -23,53 +23,18 @@ namespace nCine::RHI::PVR
 {
 	class PvrShaderUniforms;
 	class PvrShaderUniformBlocks;
-
-	/**
-		@brief The hand-written C++ effect a software program dispatches to at draw time
-
-		The PVR backend does not run GLSL — instead each program is tagged with the effect that
-		reproduces its shader, derived from the program's object label. New effects (palette remap, tinted,
-		outline, ...) are added here as the backend grows; @ref Unknown programs log a skipped draw.
-	*/
-	enum class PvrEffect
-	{
-		Unknown,				/**< No matching C++ effect — draws are skipped with a log message */
-		DefaultSprite,			/**< `texture(uTexture, vTexCoords) * vColor` over a single instance */
-		DefaultBatchedSprites,	/**< The same effect over an array of batched instances */
-		DefaultSpriteNoTexture,	/**< Solid-colour sprite (`vColor`, no texture) over a single instance */
-		DefaultBatchedSpritesNoTexture,	/**< The solid-colour sprite over an array of batched instances */
-		TexturedBackground,		/**< The animated, per-pixel-warped menu/level background (planar tunnel) */
-		TexturedBackgroundCircle,	/**< The circular ("tube") variant of the textured background */
-		Colorized,				/**< Grayscale + dye tint, approximated by modulating with the amplified dye colour */
-		BatchedColorized,		/**< The colorized effect over an array of batched instances */
-		PaletteRemap,			/**< An R8/RG8 index sprite recolored through the shared palette texture */
-		BatchedPaletteRemap,	/**< The palette-remap effect over an array of batched instances */
-		WhiteMask,				/**< Fully brightened silhouette of the sprite (hit flash) */
-		BatchedWhiteMask,		/**< The white-mask effect over an array of batched instances */
-		PartialWhiteMask,		/**< Brightened sprite that keeps some of its own shading */
-		BatchedPartialWhiteMask,	/**< The partial white mask over an array of batched instances */
-		FrozenMask,				/**< Sprite tinted toward ice blue by the per-instance transition */
-		BatchedFrozenMask,		/**< The frozen mask over an array of batched instances */
-		Outline,				/**< Sprite with a contrasting border, drawn as offset silhouettes */
-		BatchedOutline,			/**< The outline effect over an array of batched instances */
-		ShieldFire,				/**< Additive fire-coloured glow around the sprite */
-		BatchedShieldFire,		/**< The fire shield glow over an array of batched instances */
-		ShieldLightning,		/**< Additive lightning-coloured glow around the sprite */
-		BatchedShieldLightning,	/**< The lightning shield glow over an array of batched instances */
-		TileMapMesh,			/**< A whole tile-layer submitted as one triangle-list mesh */
-		TileMapMeshPalette,		/**< The tile-layer mesh with indexed tiles recolored through the palette texture */
-		Transition,				/**< The level transition iris, flattened into a full-screen fade */
-		Combine					/**< The viewport compositor (scene + lighting + blur + ambient) */
-	};
+	struct FixedFunctionGeneratedEffect;
 
 	/**
 		@brief Shader program of the PVR backend (aliased as `RHI::ShaderProgram`)
 
 		Does not compile or link GLSL. Instead it carries the offline ShaderCompiler reflection (set with
 		@ref SetReflection() exactly like the OpenGL backend) from which it imports uniforms, uniform
-		blocks and attributes, and a @ref PvrEffect identity derived from its object label that tells the
-		device which hand-written C++ effect to run. @ref Use() records the program as current on the
-		device; committed loose-uniform values are published back here so the effect can read them.
+		blocks and attributes, and the true (program, variant) identity plumbed by the loaders with
+		@ref SetProgramIdentity(), from which the generated fixed-function effect of the program is
+		resolved (see @ref GetGeneratedEffect()) - the object label is kept for logging only. @ref Use()
+		records the program as current on the device; committed loose-uniform values are published back
+		here so the effect can read them.
 	*/
 	class PvrShaderProgram
 	{
@@ -158,6 +123,15 @@ namespace nCine::RHI::PVR
 		inline void SetReflection(const ShaderCompiler::ProgramVariant* reflection) {
 			reflection_ = reflection;
 		}
+		/**
+			@brief Records the true (program, variant) identity of the loaded shader
+
+			@p programName is the `.shader` program name and @p variantName the variant define it was
+			compiled with (empty/null for the base variant) - the exact key of the generated
+			fixed-function tables, plumbed by ContentResolver and RenderResources. Set it together
+			with @ref SetReflection(), before @ref Link(); the table lookup runs at link time.
+		*/
+		void SetProgramIdentity(const char* programName, const char* variantName);
 
 		bool Link(Introspection introspection);
 		void Use();
@@ -207,19 +181,27 @@ namespace nCine::RHI::PVR
 
 		// -- PVR backend extensions (used by the device and the effects) --
 
-		/** @brief Returns the C++ effect this program dispatches to */
-		inline PvrEffect GetEffect() const {
-			return effect_;
+		/**
+			@brief Returns the generated fixed-function effect of this program variant, or `nullptr`
+
+			Resolved once at link time from the (program, variant) identity set with
+			@ref SetProgramIdentity() against the table the ShaderCompiler transpiled from the
+			shaders' `fixed_function` blocks. The dispatch runs its function (or the backend
+			pipeline stage its `pipeline` intrinsic names); a null entry is skipped with a
+			one-time warning.
+		*/
+		inline const FixedFunctionGeneratedEffect* GetGeneratedEffect() const {
+			return generatedEffect_;
 		}
 		/** @brief Returns the object label the program was tagged with (the shader name), or an empty string */
 		inline const char* GetObjectLabel() const {
 			return label_.data();
 		}
-		/** @brief Returns `true` if the program is the dithering variant of its effect (derived from the label) */
+		/** @brief Returns `true` if the program was compiled as the DITHER variant of its shader */
 		inline bool IsDitherVariant() const {
 			return ditherVariant_;
 		}
-		/** @brief Returns `true` if the program samples indexed textures through the palette texture */
+		/** @brief Returns `true` if the program samples indexed textures through the palette texture (its reflection binds `uTexturePalette`) */
 		inline bool UsesPalette() const {
 			return usesPalette_;
 		}
@@ -261,11 +243,17 @@ namespace nCine::RHI::PVR
 		const ShaderCompiler::ProgramVariant* reflection_;
 		// Kept after introspection so the effects can read member offsets/texture bindings at draw time
 		const ShaderCompiler::ProgramVariant* effectReflection_;
-		PvrEffect effect_;
+		// The generated-table entry of this (program, variant) (see GetGeneratedEffect()); null when
+		// the shader has no fixed_function block (the draw is then skipped with a one-time warning)
+		const FixedFunctionGeneratedEffect* generatedEffect_;
 		bool unsupportedWarned_ = false;
 		bool ditherVariant_;
 		bool usesPalette_;
-		// The shader name the program was tagged with (used to look up an offline-transpiled generated fragment)
+		// The true identity set by SetProgramIdentity(): the .shader program name and the variant
+		// define - the generated-table key. Copies, because runtime loaders hand in transient strings.
+		String programName_;
+		String variantName_;
+		// The shader name the program was tagged with (kept for log messages only)
 		String label_;
 
 		PvrVertexFormat vertexFormat_;

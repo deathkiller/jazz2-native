@@ -3,6 +3,7 @@
 #include "PvrShaderProgram.h"
 #include "PvrRenderTarget.h"
 #include "PvrTexture.h"
+#include "../FixedFunctionPass.h"
 
 #include "../../../../Main.h"
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
@@ -218,6 +219,284 @@ namespace nCine::RHI::PVR
 				sq += 8;
 			}
 		}
+
+	}
+
+	// EffectContext deliberately has EXTERNAL linkage (namespace scope, though it is still
+	// defined only in this translation unit): the generated table struct below is itself at
+	// namespace scope - so the backend's ShaderProgram can forward-declare it and hold a typed
+	// entry pointer - and names EffectContext in a member type; the console toolchain's GCC
+	// ICEs when such an external struct member references an internal-linkage type.
+	// ---------------------------------------------------------- fixed-function quad effects
+	//
+	// The quad-family effects are expressed as FixedFunctionPass descriptors handed to this
+	// EffectContext - the structural contract documented in FixedFunctionPass.h. The per-effect
+	// functions live in the shaders' fixed_function blocks and are transpiled by the
+	// ShaderCompiler into Shaders/Generated/PvrGeneratedEffects.h, included below against this
+	// concrete context (see Docs/FixedFunctionShaderDesign.md); only the submission machinery
+	// stays here.
+
+	struct EffectContext
+	{
+		// The strip builder is deliberately small: every geometry effect submits trapezoid or fan
+		// pieces of at most 4 vertices, and a bigger scratch would only grow the per-instance stack
+		static constexpr std::int32_t MaxStripVertices = 8;
+
+		// Decoded instance data of the draw being dispatched (the documented contract)
+		const float* InstanceColor;
+		float TexelW;
+		float TexelH;
+		bool Batched;
+
+		// Backend internals the pass state maps onto: the compiled base material header, its
+		// build context (for deriving blend twins on demand) and the current instance's
+		// post-clip corner arrays
+		const pvr_poly_hdr_t* Hdr;
+		pvr_poly_cxt_t* BaseCxt;
+		pvr_poly_hdr_t* HdrAdditive;
+		bool* HdrAdditiveValid;
+		pvr_poly_hdr_t* HdrOpaque;
+		bool* HdrOpaqueValid;
+		pvr_poly_hdr_t* HdrAlpha;
+		bool* HdrAlphaValid;
+		const float* Px;
+		const float* Py;
+		const float* Pu;
+		const float* Pv;
+		const float* TexRect;
+
+		// Pre-clip quad geometry (the quad_origin/quad_axis_* built-ins), the program (for resolved
+		// uniforms), the material blend factors (the shaded-strip Material twin cannot read them
+		// back from BaseCxt - the blend twins above mutate its blend fields) and the UV scale of the
+		// padded texture store (folded into strip UVs exactly like the quad corner synthesis)
+		float OriginX, OriginY;
+		float AxisXx, AxisXy;
+		float AxisYx, AxisYy;
+		const PvrShaderProgram* Program;
+		std::int32_t MaterialBlendSrc;
+		std::int32_t MaterialBlendDst;
+		float UvScaleU, UvScaleV;
+
+		// Colour-polygon twins for shaded strips, one per BlendMode, compiled lazily per draw (see
+		// SubmitStripShaded); they do not depend on the instance's texture variant, so they are
+		// never invalidated within a draw
+		pvr_poly_hdr_t* HdrShaded;
+		bool* HdrShadedValid;
+
+		// The strip builder scratch; colours are packed at set time (same quantization as the quad
+		// path, so identical float inputs produce identical vertex words)
+		float StripX[MaxStripVertices];
+		float StripY[MaxStripVertices];
+		float StripU[MaxStripVertices];
+		float StripV[MaxStripVertices];
+		std::uint32_t StripArgb[MaxStripVertices];
+
+		const float* Color() const { return InstanceColor; }
+		float TexelWidth() const { return TexelW; }
+		float TexelHeight() const { return TexelH; }
+		bool IsBatched() const { return Batched; }
+
+		float QuadOriginX() const { return OriginX; }
+		float QuadOriginY() const { return OriginY; }
+		float QuadAxisXx() const { return AxisXx; }
+		float QuadAxisXy() const { return AxisXy; }
+		float QuadAxisYx() const { return AxisYx; }
+		float QuadAxisYy() const { return AxisYy; }
+
+		bool HasUniform(const char* name) const
+		{
+			return (Program->ResolveUniform(name) != nullptr);
+		}
+		void LoadUniform(const char* name, float* out, std::int32_t floatCount) const
+		{
+			// An unresolved name leaves the caller's zeros in place - blocks guard with
+			// has_uniform() exactly like the handwritten code null-checked the pointers
+			const std::uint8_t* bytes = Program->ResolveUniform(name);
+			if (bytes != nullptr) {
+				std::memcpy(out, bytes, std::size_t(floatCount) * sizeof(float));
+			}
+		}
+
+		void SetStripVertexPosition(std::int32_t i, float x, float y)
+		{
+			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
+				StripX[i] = x;
+				StripY[i] = y;
+			}
+		}
+		void SetStripVertexUv(std::int32_t i, float u, float v)
+		{
+			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
+				StripU[i] = u * UvScaleU;
+				StripV[i] = v * UvScaleV;
+			}
+		}
+		void SetStripVertexColor(std::int32_t i, float r, float g, float b, float a)
+		{
+			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
+				StripArgb[i] = PackArgb(QuantizeChannel(r), QuantizeChannel(g), QuantizeChannel(b), QuantizeChannel(a));
+			}
+		}
+
+		// Whether a UV span can be mapped onto the screen at all (a zero texRect has no scale)
+		bool HasTexelStep() const { return TexRect[0] != 0.0f && TexRect[2] != 0.0f; }
+		// Maps a span in the sprite's UV space onto the quad's on-screen extent - the texel step
+		// the Outline ring taps use. The corners are already in raster space, so the result is a
+		// raster displacement (the padding scale applies to both the texel size and the quad's
+		// span, so it cancels out).
+		float TexelToScreenX(float uvSpan) const { return (Px[0] - Px[2]) * (uvSpan / TexRect[0]); }
+		float TexelToScreenY(float uvSpan) const { return (Py[1] - Py[0]) * (uvSpan / TexRect[2]); }
+		// The documented texel_size() built-in of the fixed_function contract: the Outline shader
+		// family carries the sprite's UV-space texel size in its instance color.xy (exactly like
+		// the GLSL derives its tap offsets), folded through the raster-space conversion above
+		float TexelStepX() const { return TexelToScreenX(InstanceColor[0]); }
+		float TexelStepY() const { return TexelToScreenY(InstanceColor[1]); }
+
+		// The material header (or its lazily compiled blend twin) a pass's blend mode maps onto -
+		// shared by the quad and the textured-strip submissions
+		const pvr_poly_hdr_t* MaterialHeaderFor(FixedFunctionPass::BlendMode blend)
+		{
+			switch (blend) {
+				case FixedFunctionPass::BlendMode::Additive:
+					// Deliberately SRCALPHA rather than a literal ONE source factor: it is the
+					// additive mechanism Colorized has always used, and its split-multiplier
+					// passes rely on the source alpha scaling each contribution
+					if (!*HdrAdditiveValid) {
+						BaseCxt->blend.src = PVR_BLEND_SRCALPHA;
+						BaseCxt->blend.dst = PVR_BLEND_ONE;
+						pvr_poly_compile(HdrAdditive, BaseCxt);
+						*HdrAdditiveValid = true;
+					}
+					return HdrAdditive;
+				case FixedFunctionPass::BlendMode::Opaque:
+					if (!*HdrOpaqueValid) {
+						BaseCxt->blend.src = PVR_BLEND_ONE;
+						BaseCxt->blend.dst = PVR_BLEND_ZERO;
+						pvr_poly_compile(HdrOpaque, BaseCxt);
+						*HdrOpaqueValid = true;
+					}
+					return HdrOpaque;
+				case FixedFunctionPass::BlendMode::Alpha:
+					if (!*HdrAlphaValid) {
+						BaseCxt->blend.src = PVR_BLEND_SRCALPHA;
+						BaseCxt->blend.dst = PVR_BLEND_INVSRCALPHA;
+						pvr_poly_compile(HdrAlpha, BaseCxt);
+						*HdrAlphaValid = true;
+					}
+					return HdrAlpha;
+				default:
+					return Hdr;
+			}
+		}
+
+		// The packed offset colour of a pass: added after texturing only on polygons compiled with
+		// specular enabled (a per-effect property of the base material, see usesOffsetColor in
+		// Dispatch); a pass without one submits 0, which is also what specular-enabled polygons
+		// expect for "no offset"
+		std::uint32_t PackOffsetColor(const FixedFunctionPass& pass) const
+		{
+			return (pass.HasOffsetColor
+				? PackArgb(QuantizeChannel(pass.OffsetColor[0]), QuantizeChannel(pass.OffsetColor[1]),
+					QuantizeChannel(pass.OffsetColor[2]), 0)
+				: 0);
+		}
+
+		void SubmitQuad(const FixedFunctionPass& pass)
+		{
+			const pvr_poly_hdr_t* hdr = MaterialHeaderFor(pass.Blend);
+			const std::uint32_t argb = PackArgb(QuantizeChannel(pass.Color[0]), QuantizeChannel(pass.Color[1]),
+				QuantizeChannel(pass.Color[2]), QuantizeChannel(pass.Color[3]));
+			// Qualified: the SubmitStrip member above hides the free helper of the same name
+			nCine::RHI::PVR::SubmitStrip(*hdr, Px, Py, Pu, Pv, 4, argb, PackOffsetColor(pass),
+				pass.ScreenOffset[0], pass.ScreenOffset[1]);
+		}
+
+		// Textured strip out of the builder scratch: the pass's flat colour over the material state
+		// (the warp's band pieces). Qualified call - the free SubmitStrip helper would otherwise be
+		// hidden by this member's own name.
+		void SubmitStrip(const FixedFunctionPass& pass, std::int32_t count)
+		{
+			if (count > MaxStripVertices) {
+				count = MaxStripVertices;
+			}
+			if (count < 3) {
+				return;
+			}
+			const pvr_poly_hdr_t* hdr = MaterialHeaderFor(pass.Blend);
+			const std::uint32_t argb = PackArgb(QuantizeChannel(pass.Color[0]), QuantizeChannel(pass.Color[1]),
+				QuantizeChannel(pass.Color[2]), QuantizeChannel(pass.Color[3]));
+			nCine::RHI::PVR::SubmitStrip(*hdr, StripX, StripY, StripU, StripV, count, argb,
+				PackOffsetColor(pass), pass.ScreenOffset[0], pass.ScreenOffset[1]);
+		}
+
+		// Shaded (per-vertex-colour) strip out of the builder scratch: always an UNTEXTURED colour
+		// polygon - a gradient has no texture to modulate - whose blend comes from the pass. For an
+		// untextured material the Material twin compiles to the exact words of the base header, so
+		// the TA header dedup keeps the submitted stream identical to reusing the base (which is
+		// what the handwritten iris did).
+		void SubmitStripShaded(const FixedFunctionPass& pass, std::int32_t count)
+		{
+			if (count > MaxStripVertices) {
+				count = MaxStripVertices;
+			}
+			if (count < 3) {
+				return;
+			}
+			std::int32_t mode = std::int32_t(pass.Blend);
+			if (std::uint32_t(mode) > std::uint32_t(FixedFunctionPass::BlendMode::Alpha)) {
+				mode = 0;
+			}
+			if (!HdrShadedValid[mode]) {
+				pvr_poly_cxt_t scxt;
+				pvr_poly_cxt_col(&scxt, PVR_LIST_TR_POLY);
+				scxt.gen.culling = PVR_CULLING_NONE;
+				scxt.depth.comparison = PVR_DEPTHCMP_ALWAYS;
+				scxt.depth.write = PVR_DEPTHWRITE_DISABLE;
+				switch (FixedFunctionPass::BlendMode(mode)) {
+					case FixedFunctionPass::BlendMode::Additive:
+						scxt.blend.src = PVR_BLEND_SRCALPHA;
+						scxt.blend.dst = PVR_BLEND_ONE;
+						break;
+					case FixedFunctionPass::BlendMode::Opaque:
+						scxt.blend.src = PVR_BLEND_ONE;
+						scxt.blend.dst = PVR_BLEND_ZERO;
+						break;
+					case FixedFunctionPass::BlendMode::Alpha:
+						scxt.blend.src = PVR_BLEND_SRCALPHA;
+						scxt.blend.dst = PVR_BLEND_INVSRCALPHA;
+						break;
+					default:
+						scxt.blend.src = pvr_blend_mode_t(MaterialBlendSrc);
+						scxt.blend.dst = pvr_blend_mode_t(MaterialBlendDst);
+						break;
+				}
+				pvr_poly_compile(&HdrShaded[mode], &scxt);
+				HdrShadedValid[mode] = true;
+			}
+			nCine::RHI::PVR::SubmitStripShaded(HdrShaded[mode], StripX, StripY, count, StripArgb);
+		}
+	};
+}
+
+// The per-effect functions themselves are GENERATED: the ShaderCompiler transpiles each shader's
+// fixed_function block into C++ over the EffectContext defined above (the type name itself is the
+// "using EffectContext = ...;" alias the header expects - the anonymous namespace above is the same
+// namespace the header's payload reopens within this translation unit). Included at global scope
+// because the header opens nCine::RHI::PVR itself.
+#include "../../../../Shaders/Generated/PvrGeneratedEffects.h"
+
+namespace nCine::RHI::PVR
+{
+	const FixedFunctionGeneratedEffect* PvrDevice::FindGeneratedEffect(const char* program, const char* variant)
+	{
+		// A linear scan is fine - the lookup runs once per program load, not per draw
+		for (std::size_t i = 0; i < FixedFunctionGeneratedEffectCount; i++) {
+			const FixedFunctionGeneratedEffect& e = FixedFunctionGeneratedEffects[i];
+			if (std::strcmp(e.Program, program) == 0 && std::strcmp(e.Variant, variant) == 0) {
+				return &e;
+			}
+		}
+		return nullptr;
 	}
 
 	PvrDevice::BlendingState PvrDevice::blending_;
@@ -260,8 +539,12 @@ namespace nCine::RHI::PVR
 		}
 
 		// Everything renders through the translucent list with autosort DISABLED, so the list preserves
-		// submission order - the engine's painter's-order queue maps 1:1 (splitting opaque/color-keyed
-		// sprites into the punch-through list to save fill rate is a later optimization here)
+		// submission order - the engine's painter's-order queue maps 1:1. Splitting cutout sprites into
+		// the punch-through list was evaluated and REJECTED: the CLX2 renders PT in its own per-tile
+		// phase BEFORE the translucent pass, so a PT sprite would fall under every TR draw regardless
+		// of submission order (the background layers alone are TR quads under all sprites), and with
+		// depth compare ALWAYS / writes off there is no Z to arbitrate - see the ordering analysis in
+		// Docs/FixedFunctionShaderDesign.md section 5.
 		pvr_init_params_t params = {
 			// Opaque, opaque modifier, translucent, translucent modifier, punch-through
 			{ PVR_BINSIZE_0, PVR_BINSIZE_0, PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_0 },
@@ -876,9 +1159,10 @@ namespace nCine::RHI::PVR
 		std::memcpy(layerColor, blockData + kColorOffset, sizeof(layerColor));
 
 		// The palette to remap with is whatever the material bound to the palette sampler; the registered
-		// global palette is the fallback (mirrors the sprite path)
-		const bool isPaletteRemap = (currentProgram_->GetEffect() == PvrEffect::TileMapMeshPalette ||
-			currentProgram_->UsesPalette());
+		// global palette is the fallback (mirrors the sprite path). TileMapMeshPalette binds
+		// uTexturePalette in its reflection, which is exactly what UsesPalette() reports - the remap
+		// intent needs no effect identity of its own.
+		const bool isPaletteRemap = currentProgram_->UsesPalette();
 		const PvrTexture* paletteTex = nullptr;
 		if (isPaletteRemap || texture->IsIndexed()) {
 			paletteTex = boundTextures_[1];
@@ -1056,6 +1340,183 @@ namespace nCine::RHI::PVR
 		}
 	}
 
+	void PvrDevice::DispatchLineStrip(std::int32_t firstVertex, std::int32_t numVertices)
+	{
+		// The weapon wheel arrives as a textured line strip of 4-float vertices (position.xy,
+		// texcoords.uv) - the layout the MeshSprite shader's attributes declare. The tile accelerator
+		// has no line primitive, so every segment goes out as a quad half a pixel to each side of the
+		// line, which is what the 1-wide GL lines this stands in for rasterize to.
+		constexpr std::int32_t FloatsPerVertex = 4;
+		if (numVertices < 2) {
+			return;
+		}
+
+		const PvrBuffer* vbo = currentProgram_->GetBoundVbo();
+		if (vbo == nullptr) {
+			return;
+		}
+		const std::size_t firstFloat = (std::size_t(currentProgram_->GetBoundVboOffset()) / sizeof(float)) +
+			std::size_t(firstVertex) * FloatsPerVertex;
+		const std::size_t floatCount = std::size_t(numVertices) * FloatsPerVertex;
+		if ((firstFloat + floatCount) * sizeof(float) > vbo->GetSize()) {
+			return;
+		}
+		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
+
+		const PvrUniformBlock* block = currentProgram_->FindBlock("InstanceBlock");
+		if (block == nullptr) {
+			return;
+		}
+		std::int32_t binding = block->GetBindingIndex();
+		if (binding < 0 || std::uint32_t(binding) >= MaxUniformBindings) {
+			binding = 0;
+		}
+		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
+		if (blockData == nullptr) {
+			return;
+		}
+
+		PvrTexture* texture = const_cast<PvrTexture*>(boundTextures_[0]);
+		if (texture == nullptr) {
+			return;
+		}
+
+		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjection();
+		const std::uint8_t* viewBytes = currentProgram_->GetResolvedView();
+		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
+		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
+		float pv[16];
+		Mat4Mul(projMat, viewMat, pv);
+		Transform2D mvp;
+		Mat4MulTransform2D(pv, reinterpret_cast<const float*>(blockData + kModelMatrixOffset), mvp);
+
+		// Every vertex of the strip carries the instance colour, so it is packed once
+		float color[4];
+		std::memcpy(color, blockData + kColorOffset, sizeof(color));
+		const std::uint32_t argb = PackArgb(QuantizeChannel(color[0]), QuantizeChannel(color[1]),
+			QuantizeChannel(color[2]), QuantizeChannel(color[3]));
+
+		// The strip shares one texture, so residency (with the palette bank for indexed assets, which
+		// use the base row like the fonts do) and the polygon header are resolved once
+		pvr_ptr_t vram = nullptr;
+		std::uint32_t format = 0;
+		if (texture->IsIndexed()) {
+			const PvrTexture* paletteTex = boundTextures_[1];
+			if (paletteTex == nullptr || paletteTex == texture) {
+				paletteTex = paletteTexture_;
+			}
+			std::int32_t bank = AcquirePaletteBankForRow(paletteTex, 0);
+			if (bank < 0) {
+				bank = 0;
+			}
+			vram = texture->AcquireVramPointer();
+			format = texture->GetVramFormat() | PVR_TXRFMT_8BPP_PAL(std::uint32_t(bank));
+		} else {
+			vram = texture->AcquireVramPointer();
+			format = texture->GetVramFormat();
+		}
+		if (vram == nullptr) {
+			return;
+		}
+
+		EnsureScene();
+		if (sceneTarget_ == SceneTarget::None) {
+			return;
+		}
+
+		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
+			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
+		float scaleX, scaleY, offsetX, offsetY;
+		GetTargetScale(scaleX, scaleY, offsetX, offsetY);
+		const bool screenPass = (currentRenderTarget_ == nullptr);
+		const float uvScaleU = texture->GetUScale();
+		const float uvScaleV = texture->GetVScale();
+
+		pvr_poly_cxt_t cxt;
+		pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY, int(format), texture->GetPaddedWidth(), texture->GetPaddedHeight(),
+			vram, (texture->GetMagFilter() == nCine::SamplerFilter::Linear ? PVR_FILTER_BILINEAR : PVR_FILTER_NEAREST));
+		cxt.gen.culling = PVR_CULLING_NONE;
+		cxt.depth.comparison = PVR_DEPTHCMP_ALWAYS;
+		cxt.depth.write = PVR_DEPTHWRITE_DISABLE;
+		cxt.blend.src = (blending_.Enabled ? pvr_blend_mode_t(MapBlendPvr(blending_.SrcRgb)) : PVR_BLEND_ONE);
+		cxt.blend.dst = (blending_.Enabled ? pvr_blend_mode_t(MapBlendPvr(blending_.DstRgb)) : PVR_BLEND_ZERO);
+		cxt.txr.env = PVR_TXRENV_MODULATEALPHA;
+		// Match the desktop sampler's ClampToEdge (the engine's texture default): with the KOS default
+		// wrap mode, the strip's V=0 bilinear fetch on the power-of-two-padded texture blends row 0
+		// half-and-half with the zeroed bottom padding row, halving both the colour and the alpha of
+		// the whole line (the weapon-wheel gradient is a 400x1 image padded to 512x8)
+		cxt.txr.uv_clamp = PVR_UVCLAMP_UV;
+		pvr_poly_hdr_t hdr;
+		pvr_poly_compile(&hdr, &cxt);
+
+		const bool clipActive = (scissor_.Enabled && screenPass);
+		float clipX0 = 0.0f, clipY0 = 0.0f, clipX1 = 0.0f, clipY1 = 0.0f;
+		if (clipActive) {
+			clipX0 = float(scissor_.Rect.X) * scaleX + offsetX;
+			clipY0 = float(scissor_.Rect.Y) * scaleY + offsetY;
+			clipX1 = float(scissor_.Rect.X + scissor_.Rect.W) * scaleX + offsetX;
+			clipY1 = float(scissor_.Rect.Y + scissor_.Rect.H) * scaleY + offsetY;
+		}
+
+		// The NDC-to-raster mapping is folded into the transform once, like the other mesh paths
+		const float rasterScaleX = 0.5f * float(viewport.W) * scaleX;
+		const float rasterBiasX = rasterScaleX + float(viewport.X) * scaleX + offsetX;
+		const float rasterScaleY = 0.5f * float(viewport.H) * scaleY * (screenPass ? 1.0f : -1.0f);
+		const float rasterBiasY = 0.5f * float(viewport.H) * scaleY + float(viewport.Y) * scaleY + offsetY;
+		const Transform2D raster = {
+			mvp.Xx * rasterScaleX, mvp.Xy * rasterScaleY,
+			mvp.Yx * rasterScaleX, mvp.Yy * rasterScaleY,
+			mvp.Tx * rasterScaleX + rasterBiasX, mvp.Ty * rasterScaleY + rasterBiasY
+		};
+
+		const float pixelScale = std::max(scaleX, scaleY);
+
+		float prevX = raster.Xx * vertices[0] + raster.Yx * vertices[1] + raster.Tx;
+		float prevY = raster.Xy * vertices[0] + raster.Yy * vertices[1] + raster.Ty;
+		float prevU = vertices[2] * uvScaleU;
+		float prevV = vertices[3] * uvScaleV;
+		for (std::int32_t i = 1; i < numVertices; i++) {
+			const float* v = vertices + std::size_t(i) * FloatsPerVertex;
+			const float curX = raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx;
+			const float curY = raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty;
+			const float curU = v[2] * uvScaleU;
+			const float curV = v[3] * uvScaleV;
+
+			const float dx = curX - prevX, dy = curY - prevY;
+			const float len2 = dx * dx + dy * dy;
+			if (len2 > 0.000001f) {
+				const float len = std::sqrt(len2);
+				// GL's line rasterization guarantees an unbroken one-pixel chain whatever the slope; a
+				// quad exactly one pixel wide covers too few pixel centres on diagonals and the line
+				// comes out dashed and dimmer. Widening by the slope's Manhattan factor (1 for axis
+				// aligned, sqrt(2) at 45 degrees) restores the same continuous coverage.
+				const float halfWidth = 0.5f * pixelScale * (std::abs(dx) + std::abs(dy)) / len;
+				bool visible = true;
+				if (clipActive) {
+					// Segments are about a pixel wide, so a conservative reject is enough - exact
+					// clipping could never make a visible difference
+					const float minX = std::min(prevX, curX) - halfWidth, maxX = std::max(prevX, curX) + halfWidth;
+					const float minY = std::min(prevY, curY) - halfWidth, maxY = std::max(prevY, curY) + halfWidth;
+					visible = !(maxX <= clipX0 || minX >= clipX1 || maxY <= clipY0 || minY >= clipY1);
+				}
+				if (visible) {
+					// Perpendicular of the segment, half a (slope-compensated) pixel long
+					const float invLen = halfWidth / len;
+					const float nx = -dy * invLen;
+					const float ny = dx * invLen;
+
+					const float px[4] = { prevX + nx, prevX - nx, curX + nx, curX - nx };
+					const float py[4] = { prevY + ny, prevY - ny, curY + ny, curY - ny };
+					const float pu[4] = { prevU, prevU, curU, curU };
+					const float pvv[4] = { prevV, prevV, curV, curV };
+					SubmitQuad(hdr, px, py, pu, pvv, argb);
+				}
+			}
+
+			prevX = curX; prevY = curY; prevU = curU; prevV = curV;
+		}
+	}
+
 	void PvrDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
 		static_cast<void>(firstVertex);
@@ -1063,36 +1524,47 @@ namespace nCine::RHI::PVR
 			return;
 		}
 
-		const PvrEffect effect = currentProgram_->GetEffect();
+		// The program's whole console identity is its generated-table entry, resolved at load from the
+		// true (program, variant) the loaders plumbed in - a program without an entry has no
+		// fixed_function block in its .shader file (Lighting, Blur, the Resize* family,
+		// runtime-compiled shaders, ...) and keeps the logged, skipped draw.
+		const FixedFunctionGeneratedEffect* generated = currentProgram_->GetGeneratedEffect();
+		if (generated == nullptr) {
+			if (!currentProgram_->FetchUnsupportedWarned()) {
+				LOGW("Skipping draws of program \"{}\": No fixed_function effect declared by the shader", currentProgram_->GetObjectLabel());
+			}
+			return;
+		}
+		const FixedFunctionIntrinsic intrinsic = generated->Intrinsic;
 
 		// The Combine draw is the direct-tier lighting hook (see the software backend)
-		if (effect == PvrEffect::Combine) {
+		if (intrinsic == FixedFunctionIntrinsic::LightingCombine) {
 			ApplyPendingSoftwareLighting();
 			return;
 		}
 
 		// A whole tile layer arrives as one mesh instead of one command per tile
-		if (effect == PvrEffect::TileMapMesh || effect == PvrEffect::TileMapMeshPalette) {
+		if (intrinsic == FixedFunctionIntrinsic::TileMapMesh) {
 			DispatchTileMesh(primitive, firstVertex, numVertices);
 			return;
 		}
 
-		// v1 renders the procedural sprite-quad families only (see the GX device for the same policy)
-		const bool isQuadFamily = (effect == PvrEffect::WhiteMask || effect == PvrEffect::BatchedWhiteMask ||
-			effect == PvrEffect::PartialWhiteMask || effect == PvrEffect::BatchedPartialWhiteMask ||
-			effect == PvrEffect::FrozenMask || effect == PvrEffect::BatchedFrozenMask ||
-			effect == PvrEffect::Outline || effect == PvrEffect::BatchedOutline ||
-			effect == PvrEffect::ShieldFire || effect == PvrEffect::BatchedShieldFire ||
-			effect == PvrEffect::ShieldLightning || effect == PvrEffect::BatchedShieldLightning ||
-			effect == PvrEffect::Transition ||
-			effect == PvrEffect::DefaultSprite || effect == PvrEffect::DefaultBatchedSprites ||
-			effect == PvrEffect::DefaultSpriteNoTexture || effect == PvrEffect::DefaultBatchedSpritesNoTexture ||
-			effect == PvrEffect::Colorized || effect == PvrEffect::BatchedColorized ||
-			effect == PvrEffect::PaletteRemap || effect == PvrEffect::BatchedPaletteRemap ||
-			effect == PvrEffect::TexturedBackground || effect == PvrEffect::TexturedBackgroundCircle);
+		// The weapon wheel is the one vertex-fed mesh on this tier, a textured line strip
+		if (intrinsic == FixedFunctionIntrinsic::LineStripMesh) {
+			if (primitive == PrimitiveType::LineStrip) {
+				DispatchLineStrip(firstVertex, numVertices);
+			} else if (!currentProgram_->FetchUnsupportedWarned()) {
+				LOGW("Skipping draws of program \"{}\": Only the line-strip form of the mesh pipeline is supported by the PVR dispatch", currentProgram_->GetObjectLabel());
+			}
+			return;
+		}
+
+		// Everything else is the procedural sprite-quad family: a transpiled effect function
+		// (geometry synthesis included - the iris and the warp are ordinary blocks since phase 4)
+		const bool isQuadFamily = (generated->Fn != nullptr);
 		if (!isQuadFamily || (primitive != PrimitiveType::TriangleStrip && primitive != PrimitiveType::Triangles)) {
 			if (!currentProgram_->FetchUnsupportedWarned()) {
-				LOGW("Skipping draws of program \"{}\": Effect not supported by the PVR v1 dispatch", currentProgram_->GetObjectLabel());
+				LOGW("Skipping draws of program \"{}\": Effect not supported by the PVR dispatch", currentProgram_->GetObjectLabel());
 			}
 			return;
 		}
@@ -1142,11 +1614,10 @@ namespace nCine::RHI::PVR
 		float pv[16];
 		Mat4Mul(projMat, viewMat, pv);
 
-		const bool batched = (effect == PvrEffect::DefaultBatchedSprites || effect == PvrEffect::DefaultBatchedSpritesNoTexture ||
-			effect == PvrEffect::BatchedPaletteRemap || effect == PvrEffect::BatchedColorized ||
-			effect == PvrEffect::BatchedWhiteMask || effect == PvrEffect::BatchedPartialWhiteMask ||
-			effect == PvrEffect::BatchedFrozenMask || effect == PvrEffect::BatchedOutline ||
-			effect == PvrEffect::BatchedShieldFire || effect == PvrEffect::BatchedShieldLightning || instanceStride > 0);
+		// Batched programs are exactly the ones whose reflection declares a BATCH_SIZE-strided
+		// InstancesBlock (non-batched programs use a flat InstanceBlock with no stride), so the
+		// reflected stride IS the batching signal - no per-program identity needed
+		const bool batched = (instanceStride > 0);
 		std::int32_t numInstances = 1;
 		if (batched) {
 			numInstances = numVertices / 6;
@@ -1158,24 +1629,51 @@ namespace nCine::RHI::PVR
 			}
 		}
 
-		// The transition covers the screen with a flat colour, but its uniform block carries texRect (so the
-		// sprite size sits at the textured offset) - the layout and the sampling are decided separately
-		const bool hasTexture = (effect != PvrEffect::DefaultSpriteNoTexture && effect != PvrEffect::DefaultBatchedSpritesNoTexture &&
-			effect != PvrEffect::Transition);
-		const bool texturedLayout = (hasTexture || effect == PvrEffect::Transition);
-		// Every effect that samples indexed sprites through the palette texture: PaletteRemap and the
-		// "...Palette" variants of the actor state effects (reported by the program itself)
-		const bool isPaletteRemap = (effect == PvrEffect::PaletteRemap || effect == PvrEffect::BatchedPaletteRemap ||
-			currentProgram_->UsesPalette());
+		// A program samples the sprite texture exactly when its reflection binds uTexture - the
+		// no-texture sprite programs and the Transition (which carries texRect in its block but
+		// samples nothing, hence the separate layout flag) simply do not declare it
+		bool hasTexture = false;
+		if (reflection != nullptr) {
+			for (std::size_t i = 0; i < reflection->TextureCount; i++) {
+				if (std::strcmp(reflection->Textures[i].Name, "uTexture") == 0) {
+					hasTexture = true;
+					break;
+				}
+			}
+		}
+		// The instance layout follows the block's own reflected declaration rather than any effect
+		// identity: a block that declares texRect uses the textured member offsets whether or not
+		// the program samples a texture (the Transition carries texRect but samples nothing)
+		bool texturedLayout = hasTexture;
+		if (!texturedLayout && reflection != nullptr) {
+			for (std::size_t i = 0; i < reflection->BlockCount && !texturedLayout; i++) {
+				const ShaderCompiler::UniformBlock& b = reflection->Blocks[i];
+				for (std::size_t j = 0; j < b.MemberCount; j++) {
+					if (std::strcmp(b.Members[j].Name, "texRect") == 0) {
+						texturedLayout = true;
+						break;
+					}
+				}
+			}
+		}
+		// Every effect that samples indexed sprites through the palette texture binds uTexturePalette
+		// in its reflection, which is what UsesPalette() reports (PaletteRemap and the "...Palette"
+		// variants of the actor state effects alike)
+		const bool isPaletteRemap = currentProgram_->UsesPalette();
 
-		// The actor state effects express their colour transform through the offset colour, which has to
-		// be enabled on the polygon itself
-		const bool usesOffsetColor = (effect == PvrEffect::WhiteMask || effect == PvrEffect::BatchedWhiteMask ||
-			effect == PvrEffect::PartialWhiteMask || effect == PvrEffect::BatchedPartialWhiteMask ||
-			effect == PvrEffect::FrozenMask || effect == PvrEffect::BatchedFrozenMask ||
-			effect == PvrEffect::Outline || effect == PvrEffect::BatchedOutline ||
-			effect == PvrEffect::ShieldFire || effect == PvrEffect::BatchedShieldFire ||
-			effect == PvrEffect::ShieldLightning || effect == PvrEffect::BatchedShieldLightning);
+		// The offset colour is added after texturing only on polygons compiled with specular enabled,
+		// which is a per-program property of the base material - so it comes from the generated
+		// table's static analysis (does any pass of the effect write p.offset_color?), not from a pass
+		const bool usesOffsetColor = generated->UsesOffsetColor;
+		// Same static analysis, for the optional context facilities: the flags record exactly which
+		// builtin families the transpiled function calls, so the setup that only feeds an uncalled
+		// facility is skipped below. Skipping is invisible to the effect by construction - it cannot
+		// read what it never calls - so every submitted primitive stays bit-identical.
+		const FixedFunctionRequirements reqs = generated->Requirements;
+		const bool needsTexelStep = ((reqs & FixedFunctionRequirements::NeedsTexelStep) == FixedFunctionRequirements::NeedsTexelStep);
+		const bool needsUniforms = ((reqs & FixedFunctionRequirements::NeedsUniforms) == FixedFunctionRequirements::NeedsUniforms);
+		const bool needsStripBuilder = ((reqs & FixedFunctionRequirements::NeedsStripBuilder) == FixedFunctionRequirements::NeedsStripBuilder);
+		const bool needsQuadAxes = ((reqs & FixedFunctionRequirements::NeedsQuadAxes) == FixedFunctionRequirements::NeedsQuadAxes);
 		const std::int32_t textureUnit = samplerUnit("uTexture", 0);
 		PvrTexture* texture = const_cast<PvrTexture*>(hasTexture
 			? boundTextures_[std::uint32_t(textureUnit) < MaxTextureUnits ? textureUnit : 0] : nullptr);
@@ -1215,14 +1713,33 @@ namespace nCine::RHI::PVR
 		const std::int32_t filter = (hasTexture && texture->GetMagFilter() == nCine::SamplerFilter::Linear
 			? PVR_FILTER_BILINEAR : PVR_FILTER_NEAREST);
 
+		// The build context outlives the compile so EffectContext::SubmitQuad can derive blend twins
+		// (the additive passes of Colorized, an opaque pass) from the compiled base state on demand
+		pvr_poly_cxt_t cxt;
 		pvr_poly_hdr_t hdr;
 		bool hdrValid = false;
 		pvr_ptr_t lastVram = nullptr;
 		std::int32_t lastBank = -2;
-		// An additive twin of the same polygon, for effects that build their result out of several passes
-		const bool needsAdditivePass = (effect == PvrEffect::Colorized || effect == PvrEffect::BatchedColorized);
+		// Blend twins of the same polygon, compiled lazily for effects that build their result out
+		// of several differently blended passes
 		pvr_poly_hdr_t hdrAdditive;
 		bool hdrAdditiveValid = false;
+		pvr_poly_hdr_t hdrOpaque;
+		bool hdrOpaqueValid = false;
+		pvr_poly_hdr_t hdrAlpha;
+		bool hdrAlphaValid = false;
+		// Colour-polygon twins for shaded strips, one per BlendMode; they depend only on the
+		// material blend factors (constant across the draw), so they are compiled at most once per
+		// draw and never invalidated by texture-variant changes
+		pvr_poly_hdr_t hdrShaded[4];
+		bool hdrShadedValid[4] = { false, false, false, false };
+
+		// Texel sizes of the sprite texture in texture space (part of the EffectContext contract;
+		// the effects that need an on-screen texel step derive it from the instance colour instead,
+		// exactly like their GLSL does). Derived only for effects flagged with the texel-size
+		// facility - everything else gets deterministic zeros without the divides.
+		const float texelWidth = (needsTexelStep && hasTexture && texture->GetWidth() > 0 ? 1.0f / float(texture->GetWidth()) : 0.0f);
+		const float texelHeight = (needsTexelStep && hasTexture && texture->GetHeight() > 0 ? 1.0f / float(texture->GetHeight()) : 0.0f);
 
 		// The engine's NDC orientation matches the software backend, whose top-down raster is flipped at
 		// present time; the PVR scans out its buffer top-down directly, so screen passes mirror NDC here
@@ -1305,7 +1822,6 @@ namespace nCine::RHI::PVR
 				uvScaleU = texture->GetUScale();
 				uvScaleV = texture->GetVScale();
 				if (!hdrValid || vram != lastVram || bank != lastBank) {
-					pvr_poly_cxt_t cxt;
 					pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY, int(format),
 						texture->GetPaddedWidth(), texture->GetPaddedHeight(), vram, pvr_filter_mode_t(filter));
 					cxt.gen.culling = PVR_CULLING_NONE;
@@ -1315,23 +1831,20 @@ namespace nCine::RHI::PVR
 					cxt.blend.dst = pvr_blend_mode_t(blendDst);
 					cxt.txr.env = PVR_TXRENV_MODULATEALPHA;
 					// The offset colour is added to the texturing result, which is how the actor state
-					// effects brighten and tint the sprite (see the effect handling below)
+					// effects brighten and tint the sprite (see the generated effect functions)
 					if (usesOffsetColor) {
 						cxt.gen.specular = PVR_SPECULAR_ENABLE;
 					}
 					pvr_poly_compile(&hdr, &cxt);
-					if (needsAdditivePass) {
-						cxt.blend.src = PVR_BLEND_SRCALPHA;
-						cxt.blend.dst = PVR_BLEND_ONE;
-						pvr_poly_compile(&hdrAdditive, &cxt);
-						hdrAdditiveValid = true;
-					}
+					// The compiled base changed, so any blend twins derived from it are stale
+					hdrAdditiveValid = false;
+					hdrOpaqueValid = false;
+					hdrAlphaValid = false;
 					hdrValid = true;
 					lastVram = vram;
 					lastBank = bank;
 				}
 			} else if (!hdrValid) {
-				pvr_poly_cxt_t cxt;
 				pvr_poly_cxt_col(&cxt, PVR_LIST_TR_POLY);
 				cxt.gen.culling = PVR_CULLING_NONE;
 				cxt.depth.comparison = PVR_DEPTHCMP_ALWAYS;
@@ -1392,362 +1905,55 @@ namespace nCine::RHI::PVR
 				}
 			}
 
-			switch (effect) {
-				case PvrEffect::WhiteMask:
-				case PvrEffect::BatchedWhiteMask: {
-					// The shader saturates the luma (x6), which the offset colour reproduces by adding
-					// white on top of the sampled sprite; the alpha still comes from the texture
-					const std::uint32_t argb = PackArgb(0, 0, 0, QuantizeChannel(color[3]));
-					const std::uint32_t oargb = PackArgb(QuantizeChannel(color[0]), QuantizeChannel(color[1]),
-						QuantizeChannel(color[2]), 0);
-					SubmitQuad(hdr, px, py, pu, pvv, argb, oargb);
-					break;
-				}
-				case PvrEffect::PartialWhiteMask:
-				case PvrEffect::BatchedPartialWhiteMask: {
-					// Brightened but still shaded (the shader's luma x2.5): keep the sprite and lift it
-					const std::uint32_t argb = PackArgb(QuantizeChannel(color[0]), QuantizeChannel(color[1]),
-						QuantizeChannel(color[2]), QuantizeChannel(color[3]));
-					const std::uint32_t oargb = PackArgb(96, 96, 96, 0);
-					SubmitQuad(hdr, px, py, pu, pvv, argb, oargb);
-					break;
-				}
-				case PvrEffect::FrozenMask:
-				case PvrEffect::BatchedFrozenMask: {
-					// color = (1/texWidth, 1/texHeight, unused, transition). Scaling the sprite down by
-					// the transition and adding the ice colour scaled by it is exactly the shader's mix
-					const float t = (color[3] < 0.0f ? 0.0f : (color[3] > 1.0f ? 1.0f : color[3]));
-					const float keep = 1.0f - t;
-					const std::uint32_t argb = PackArgb(QuantizeChannel(keep), QuantizeChannel(keep),
-						QuantizeChannel(keep), 255);
-					const std::uint32_t oargb = PackArgb(QuantizeChannel(0.2f * t), QuantizeChannel(0.82f * t),
-						QuantizeChannel(0.8f * t), 0);
-					SubmitQuad(hdr, px, py, pu, pvv, argb, oargb);
-					break;
-				}
-				case PvrEffect::Outline:
-				case PvrEffect::BatchedOutline: {
-					// color = (1/texWidth, 1/texHeight, outline grey, alpha). The shader finds the border
-					// by summing eight neighbour taps, which is drawn here instead as eight silhouettes
-					// offset by one texel (a black sprite lifted to the outline colour), covered by the
-					// sprite itself. (The shader's dimmer second ring at two texels is dropped.)
-					const float alpha = color[3];
-					if (alpha > 0.0f && texRect[0] != 0.0f && texRect[2] != 0.0f) {
-						// One texel maps to this fraction of the quad's on-screen extent (the padding scale
-						// applies to both the texel size and the quad's span, so it cancels out)
-						const float dx = (px[0] - px[2]) * (color[0] / texRect[0]);
-						const float dy = (py[1] - py[0]) * (color[1] / texRect[2]);
-						const std::uint32_t oargb = PackArgb(QuantizeChannel(color[2]), QuantizeChannel(color[2]),
-							QuantizeChannel(color[2]), 0);
-						const std::uint32_t argb = PackArgb(0, 0, 0, QuantizeChannel(alpha));
-						for (std::int32_t oy = -1; oy <= 1; oy++) {
-							for (std::int32_t ox = -1; ox <= 1; ox++) {
-								if (ox != 0 || oy != 0) {
-									SubmitQuad(hdr, px, py, pu, pvv, argb, oargb, dx * ox, dy * oy);
-								}
-							}
-						}
-					}
-					SubmitQuad(hdr, px, py, pu, pvv, PackArgb(255, 255, 255, 255));
-					break;
-				}
-				case PvrEffect::Transition: {
-					// The GLSL effect is a circular iris: black everywhere outside a circle of radius
-					// `progress`, clear inside it, with a soft 0.22-wide edge in between (see
-					// Transition.shader, whose iso-distance curves are circles of radius
-					// progress * max(spriteSize) about the sprite centre).
-					//
-					// Without a fragment shader the same shape is built out of geometry instead: a fan of
-					// segments approximating the soft edge, with the alpha interpolated across it by the
-					// vertex colours, then a second fan filling everything from there out past the corners.
-					// The centre and extent come from the transformed sprite axes rather than the corner
-					// array, so scissor clipping of the quad cannot distort the circle.
-					constexpr std::int32_t Segments = 32;
-					constexpr float EdgeWidth = 0.22f;
-					constexpr float TwoPi = 6.28318530718f;
-
-					const float centreX = originX + 0.5f * (spanXx + spanYx);
-					const float centreY = originY + 0.5f * (spanXy + spanYy);
-					const float extentX = std::abs(spanXx) + std::abs(spanYx);
-					const float extentY = std::abs(spanXy) + std::abs(spanYy);
-					const float radiusScale = (extentX > extentY ? extentX : extentY);
-					// Far enough that the polygon's flat edges still cover the corners
-					const float corner = 0.5f * std::sqrt(extentX * extentX + extentY * extentY) * 1.05f;
-
-					const float progress = color[3];
-					const float outer = progress * radiusScale;
-					const float innerRaw = (progress - EdgeWidth) * radiusScale;
-					const float inner = (innerRaw > 0.0f ? innerRaw : 0.0f);
-					if (outer >= corner) {
-						break;		// The iris has swallowed the whole screen, nothing left to darken
-					}
-
-					const std::uint32_t opaque = PackArgb(0, 0, 0, 255);
-					const std::uint32_t clear = PackArgb(0, 0, 0, 0);
-					for (std::int32_t i = 0; i < Segments; i++) {
-						const float a0 = float(i) * (TwoPi / float(Segments));
-						const float a1 = float(i + 1) * (TwoPi / float(Segments));
-						const float c0 = std::cos(a0), s0 = std::sin(a0);
-						const float c1 = std::cos(a1), s1 = std::sin(a1);
-
-						// Soft edge: transparent at the inner radius, fully black at the outer one
-						if (outer > inner) {
-							const float rx[4] = { centreX + inner * c0, centreX + outer * c0,
-								centreX + inner * c1, centreX + outer * c1 };
-							const float ry[4] = { centreY + inner * s0, centreY + outer * s0,
-								centreY + inner * s1, centreY + outer * s1 };
-							const std::uint32_t shade[4] = { clear, opaque, clear, opaque };
-							SubmitStripShaded(hdr, rx, ry, 4, shade);
-						}
-						// Solid black from the edge out past the corners
-						const float fx[4] = { centreX + outer * c0, centreX + corner * c0,
-							centreX + outer * c1, centreX + corner * c1 };
-						const float fy[4] = { centreY + outer * s0, centreY + corner * s0,
-							centreY + outer * s1, centreY + corner * s1 };
-						const std::uint32_t solid[4] = { opaque, opaque, opaque, opaque };
-						SubmitStripShaded(hdr, fx, fy, 4, solid);
-					}
-					break;
-				}
-				case PvrEffect::ShieldFire:
-				case PvrEffect::BatchedShieldFire:
-				case PvrEffect::ShieldLightning:
-				case PvrEffect::BatchedShieldLightning: {
-					// color = (scaleX, scaleY, darkness, alpha). The shader's animated noise sphere is out
-					// of reach here, so the shield becomes a flat glow in its own colour
-					const bool fire = (effect == PvrEffect::ShieldFire || effect == PvrEffect::BatchedShieldFire);
-					const float darkness = color[2];
-					const std::uint32_t argb = PackArgb(0, 0, 0, QuantizeChannel(color[3] * 0.5f));
-					const std::uint32_t oargb = (fire
-						? PackArgb(QuantizeChannel(darkness), QuantizeChannel(darkness * 0.45f), QuantizeChannel(darkness * 0.1f), 0)
-						: PackArgb(QuantizeChannel(darkness * 0.6f), QuantizeChannel(darkness * 0.8f), QuantizeChannel(darkness), 0));
-					SubmitQuad(hdr, px, py, pu, pvv, argb, oargb);
-					break;
-				}
-				case PvrEffect::TexturedBackgroundCircle:
-				case PvrEffect::TexturedBackground: {
-					// The warped background of TexturedBackground.shader, rebuilt out of geometry.
-					//
-					// Its mapping is affine along every screen row - texturePos.x is linear in UV.x for a fixed
-					// row and texturePos.y depends on UV.y alone - so a stack of horizontal bands carrying
-					// interpolated texture coordinates reproduces it. The horizon tint is likewise a per-row
-					// value, so it goes on as a second pass whose vertex alpha the rasterizer interpolates down
-					// the band.
-					//
-					// The shader relies on the texture repeating: the warp spans roughly two periods across the
-					// screen. The source here is a render target, which the tile accelerator writes as a linear
-					// surface that the hardware cannot tile, so instead each band is cut at every whole-texture
-					// boundary and the pieces are emitted with coordinates inside a single period. A cut follows
-					// the line where the coordinate crosses the boundary, which is slanted (the row's span
-					// widens toward the horizon) - so the pieces are trapezoids rather than columns, and their
-					// corners land exactly on the boundary. That is exact, not an approximation: the shader's
-					// mapping is affine across each row and so is the interpolation across each trapezoid.
-					//
-					// The two curve approximations are the shader's own SOFTWARE_RENDERER branch (distance for
-					// pow(distance, 1.4), distance squared for pow(distance, 1.5)), which is what every tier
-					// without real shaders already draws; it drops the per-pixel star field along with them.
-					constexpr std::int32_t BandsPerHalf = 16;
-					constexpr std::int32_t MaxHorizontalPieces = 8;
-
-					const std::uint8_t* viewSizeBytes = currentProgram_->ResolveUniform("uViewSize");
-					const std::uint8_t* shiftBytes = currentProgram_->ResolveUniform("uShift");
-					const std::uint8_t* horizonBytes = currentProgram_->ResolveUniform("uHorizonColor");
-					if (viewSizeBytes == nullptr || shiftBytes == nullptr || horizonBytes == nullptr) {
-						SubmitQuad(hdr, px, py, pu, pvv, PackArgb(255, 255, 255, 255));
-						break;
-					}
-					float viewSize[2], shift[2], horizon[4];
-					std::memcpy(viewSize, viewSizeBytes, sizeof(viewSize));
-					std::memcpy(shift, shiftBytes, sizeof(shift));
-					std::memcpy(horizon, horizonBytes, sizeof(horizon));
-
-					const float correction = (viewSize[1] > 0.0f ? (viewSize[0] * 9.0f) / (viewSize[1] * 16.0f) : 1.0f);
-					const float shiftU = shift[0] / 256.0f;
-					const float shiftV = shift[1] / 256.0f;
-					const float leftX = originX;
-					const float spanX = spanXx;
-
-					// Row geometry of the effect, straight from the shader
-					auto distanceAt = [](float t) {
-						return 1.3f - std::abs(2.0f * t - 1.0f);
-					};
-					auto halfSpanAt = [&](float t) {
-						return 0.5f * (0.5f + 1.5f * distanceAt(t)) * correction;
-					};
-					auto textureVAt = [&](float t, float yShift) {
-						return shiftV + (t - yShift) * 1.4f * distanceAt(t);
-					};
-					auto horizonAlphaAt = [&](float t) {
-						const float d = distanceAt(t);
-						const float opacity = d * d - 0.3f;
-						return (opacity < 0.0f ? 0.0f : (opacity > 1.0f ? 1.0f : opacity));
-					};
-
-					// A flat-colour twin of the polygon, for the horizon pass
-					pvr_poly_hdr_t horizonHdr;
-					{
-						pvr_poly_cxt_t cxt;
-						pvr_poly_cxt_col(&cxt, PVR_LIST_TR_POLY);
-						cxt.gen.culling = PVR_CULLING_NONE;
-						cxt.depth.comparison = PVR_DEPTHCMP_ALWAYS;
-						cxt.depth.write = PVR_DEPTHWRITE_DISABLE;
-						cxt.blend.src = PVR_BLEND_SRCALPHA;
-						cxt.blend.dst = PVR_BLEND_INVSRCALPHA;
-						pvr_poly_compile(&horizonHdr, &cxt);
-					}
-					const std::uint32_t horizonRgb = PackArgb(QuantizeChannel(horizon[0]),
-						QuantizeChannel(horizon[1]), QuantizeChannel(horizon[2]), 0) & 0x00FFFFFFu;
-
-					for (std::int32_t half = 0; half < 2; half++) {
-						const float yShift = float(half);
-						for (std::int32_t band = 0; band < BandsPerHalf; band++) {
-							float t0 = (float(half) + float(band) / float(BandsPerHalf)) * 0.5f;
-							float t1 = (float(half) + float(band + 1) / float(BandsPerHalf)) * 0.5f;
-
-							// The vertical coordinate rises monotonically across each half, so a band crosses at
-							// most one whole-texture boundary; splitting there keeps every piece inside a period
-							float split = -1.0f;
-							{
-								const float vStart = textureVAt(t0, yShift);
-								const float vEnd = textureVAt(t1, yShift);
-								if (std::floor(vStart) != std::floor(vEnd)) {
-									const float boundary = std::floor(vEnd);
-									float lo = t0, hi = t1;
-									for (std::int32_t i = 0; i < 12; i++) {
-										const float mid = 0.5f * (lo + hi);
-										if (textureVAt(mid, yShift) < boundary) {
-											lo = mid;
-										} else {
-											hi = mid;
-										}
-									}
-									split = 0.5f * (lo + hi);
-								}
-							}
-
-							for (std::int32_t part = 0; part < 2; part++) {
-								float bandT0 = (part == 0 ? t0 : split);
-								float bandT1 = (part == 0 ? (split > 0.0f ? split : t1) : t1);
-								if (part == 1 && split <= 0.0f) {
-									break;
-								}
-								if (bandT1 <= bandT0) {
-									continue;
-								}
-
-								const float y0 = originY + spanYy * bandT0;
-								const float y1 = originY + spanYy * bandT1;
-
-								// One period of the vertical coordinate for the whole band. The period is taken from
-								// the band's middle rather than an end, because a band produced by the split above
-								// starts exactly on a boundary and an endpoint would pick the neighbouring period.
-								float v0 = textureVAt(bandT0, yShift);
-								float v1 = textureVAt(bandT1, yShift);
-								const float vBase = std::floor(0.5f * (v0 + v1));
-								v0 -= vBase;
-								v1 -= vBase;
-
-								const float halfSpan0 = halfSpanAt(bandT0);
-								const float halfSpan1 = halfSpanAt(bandT1);
-								const float uLeft0 = shiftU - halfSpan0, uRight0 = shiftU + halfSpan0;
-								const float uLeft1 = shiftU - halfSpan1, uRight1 = shiftU + halfSpan1;
-
-								const std::int32_t firstPiece = (std::int32_t)std::floor(uLeft0 < uLeft1 ? uLeft0 : uLeft1);
-								const std::int32_t lastPiece = (std::int32_t)std::ceil(uRight0 > uRight1 ? uRight0 : uRight1);
-								std::int32_t emitted = 0;
-								for (std::int32_t piece = firstPiece; piece < lastPiece && emitted < MaxHorizontalPieces; piece++) {
-									// Where this period begins and ends along each edge of the band. Deliberately not
-									// clamped to the band: a piece at either end reaches past the screen because the
-									// row's span differs between the band's edges, and letting it do so keeps the
-									// corner exactly on the boundary - so its coordinate is exactly 0 or 1 - while
-									// the rasterizer discards whatever falls outside. Clamping instead would pull
-									// the coordinate off the boundary and tear the seam open.
-									auto edgeFraction = [](float u, float uLeft, float uRight) {
-										const float span = uRight - uLeft;
-										return (span > 0.0f ? (u - uLeft) / span : 0.0f);
-									};
-									const float topA = edgeFraction(float(piece), uLeft0, uRight0);
-									const float topB = edgeFraction(float(piece + 1), uLeft0, uRight0);
-									const float botA = edgeFraction(float(piece), uLeft1, uRight1);
-									const float botB = edgeFraction(float(piece + 1), uLeft1, uRight1);
-									// Wholly off one side of the screen along both edges
-									if ((topB <= 0.0f && botB <= 0.0f) || (topA >= 1.0f && botA >= 1.0f)) {
-										continue;
-									}
-									emitted++;
-
-									// Strip order matches the sprite corners: the far edge first, then the near one
-									const float bx[4] = { leftX + topB * spanX, leftX + botB * spanX,
-										leftX + topA * spanX, leftX + botA * spanX };
-									const float by[4] = { y0, y1, y0, y1 };
-									const float bu[4] = {
-										((uLeft0 + topB * (uRight0 - uLeft0)) - float(piece)) * uvScaleU,
-										((uLeft1 + botB * (uRight1 - uLeft1)) - float(piece)) * uvScaleU,
-										((uLeft0 + topA * (uRight0 - uLeft0)) - float(piece)) * uvScaleU,
-										((uLeft1 + botA * (uRight1 - uLeft1)) - float(piece)) * uvScaleU
-									};
-									const float bv[4] = { v0 * uvScaleV, v1 * uvScaleV, v0 * uvScaleV, v1 * uvScaleV };
-									SubmitStrip(hdr, bx, by, bu, bv, 4, PackArgb(255, 255, 255, 255));
-								}
-
-								const float alpha0 = horizonAlphaAt(bandT0);
-								const float alpha1 = horizonAlphaAt(bandT1);
-								if (alpha0 > 0.0f || alpha1 > 0.0f) {
-									const float hx[4] = { leftX + spanX, leftX + spanX, leftX, leftX };
-									const float hy[4] = { y0, y1, y0, y1 };
-									const std::uint32_t a0 = std::uint32_t(QuantizeChannel(alpha0)) << 24;
-									const std::uint32_t a1 = std::uint32_t(QuantizeChannel(alpha1)) << 24;
-									const std::uint32_t shade[4] = { horizonRgb | a0, horizonRgb | a1,
-										horizonRgb | a0, horizonRgb | a1 };
-									SubmitStripShaded(horizonHdr, hx, hy, 4, shade);
-								}
-							}
-						}
-					}
-					break;
-				}
-				case PvrEffect::Colorized:
-				case PvrEffect::BatchedColorized: {
-					// gray = (r + g + b) * 0.5 and COLOR = gray * dye, with dye = 1 + (color - 0.5) * 4.
-					// The textures this runs on are grayscale (fonts), so r = g = b and that "average" is
-					// really a 1.5x brightening; the product reaches 4.5 for a fully bright tint.
-					//
-					// A vertex colour cannot carry a multiplier above 1.0, and neither workaround alone is
-					// right: folding the excess into the offset colour adds a constant, which lifts a
-					// glyph's dark texels as much as its bright ones and blows the antialiased edges out,
-					// while simply clamping the multiplier leaves bright tints looking washed out. So the
-					// multiplier is split into whole units drawn as successive additive passes - the sum
-					// stays proportional to the texel, and the framebuffer saturates it exactly where the
-					// shader's own clamp would.
-					constexpr float GrayGain = 1.5f;
-					constexpr std::int32_t MaxColorizePasses = 3;
-					float gain[3];
-					float maxGain = 0.0f;
-					for (std::int32_t c = 0; c < 3; c++) {
-						gain[c] = GrayGain * (1.0f + (color[c] - 0.5f) * 4.0f);
-						if (gain[c] > maxGain) {
-							maxGain = gain[c];
-						}
-					}
-					const std::uint8_t alpha = QuantizeChannel(1.0f + (color[3] - 0.5f) * 4.0f);
-					std::int32_t passes = std::int32_t(std::ceil(maxGain));
-					const std::int32_t passLimit = (hdrAdditiveValid ? MaxColorizePasses : 1);
-					passes = (passes < 1 ? 1 : (passes > passLimit ? passLimit : passes));
-					for (std::int32_t p = 0; p < passes; p++) {
-						// Pass p carries whatever of the multiplier is left above p, clamped to one unit
-						const std::uint32_t argb = PackArgb(QuantizeChannel(gain[0] - float(p)),
-							QuantizeChannel(gain[1] - float(p)), QuantizeChannel(gain[2] - float(p)), alpha);
-						SubmitQuad(p == 0 ? hdr : hdrAdditive, px, py, pu, pvv, argb);
-					}
-					break;
-				}
-				default: {
-					const std::uint32_t argb = PackArgb(QuantizeChannel(color[0]), QuantizeChannel(color[1]),
-						QuantizeChannel(color[2]), QuantizeChannel(color[3]));
-					SubmitQuad(hdr, px, py, pu, pvv, argb);
-					break;
-				}
+			// The pass descriptors the per-effect functions declare are mapped onto this instance's
+			// corners and the compiled material state through the context
+			EffectContext ctx;
+			ctx.InstanceColor = color;
+			ctx.TexelW = texelWidth;
+			ctx.TexelH = texelHeight;
+			ctx.Batched = batched;
+			ctx.Hdr = &hdr;
+			ctx.BaseCxt = &cxt;
+			ctx.HdrAdditive = &hdrAdditive;
+			ctx.HdrAdditiveValid = &hdrAdditiveValid;
+			ctx.HdrOpaque = &hdrOpaque;
+			ctx.HdrOpaqueValid = &hdrOpaqueValid;
+			ctx.HdrAlpha = &hdrAlpha;
+			ctx.HdrAlphaValid = &hdrAlphaValid;
+			ctx.Px = px;
+			ctx.Py = py;
+			ctx.Pu = pu;
+			ctx.Pv = pvv;
+			ctx.TexRect = texRect;
+			// The optional context facilities are only wired up for effects whose static analysis
+			// says they can call them (see reqs above); the loop-invariant conditions predict
+			// perfectly, and members of an unused facility are simply never read
+			if (needsQuadAxes) {
+				ctx.OriginX = originX;
+				ctx.OriginY = originY;
+				ctx.AxisXx = spanXx;
+				ctx.AxisXy = spanXy;
+				ctx.AxisYx = spanYx;
+				ctx.AxisYy = spanYy;
 			}
+			// Resolved uniforms are the only thing the context needs the program for, so effects
+			// without the facility get no program plumbed at all (no resolution can ever run)
+			ctx.Program = (needsUniforms ? currentProgram_ : nullptr);
+			if (needsStripBuilder) {
+				// The shaded-strip Material twin and the strip UV scale exist only for the strip
+				// builder; the material blend factors feed that twin's compilation
+				ctx.MaterialBlendSrc = blendSrc;
+				ctx.MaterialBlendDst = blendDst;
+				ctx.UvScaleU = uvScaleU;
+				ctx.UvScaleV = uvScaleV;
+				ctx.HdrShaded = hdrShaded;
+				ctx.HdrShadedValid = hdrShadedValid;
+			}
+
+			// Every quad-family effect is the transpiled form of its shader's fixed_function block
+			// (masks, outline, shields, colorized, palette remap, the default sprites - batched
+			// twins and palette variants included - and the geometry-synthesized iris and warp)
+			generated->Fn(ctx);
 		}
 	}
 }

@@ -74,14 +74,21 @@ namespace nCine::RHI::PVR
 		inline std::int32_t GetStrideBytes() const {
 			return strideBytes_;
 		}
-		/** @brief Returns the base pointer of the linear host store (may be `nullptr` before an upload) */
+		/**
+			@brief Returns the base pointer of the linear host store (may be `nullptr` before an upload)
+
+			Static R8/RG8 content keeps its host store run-length compressed to save main memory (see
+			@ref StorePixels()), in which case there is no linear pointer to hand out and this returns
+			`nullptr`. The only external consumer on this backend is the device's palette-texture path,
+			and the palette texture is never compressed.
+		*/
 		inline const std::uint8_t* GetPixels(std::int32_t level = 0) const {
 			static_cast<void>(level);
-			return pixels_.empty() ? nullptr : pixels_.data();
+			return (pixels_.empty() || pixelsCompressed_) ? nullptr : pixels_.data();
 		}
-		/** @brief Returns a writable base pointer of the linear host store */
+		/** @brief Returns a writable base pointer of the linear host store (`nullptr` when the store is compressed) */
 		inline std::uint8_t* MutablePixels() {
-			return pixels_.empty() ? nullptr : pixels_.data();
+			return (pixels_.empty() || pixelsCompressed_) ? nullptr : pixels_.data();
 		}
 		/** @brief Returns the horizontal texture-coordinate wrap mode */
 		inline SamplerWrapping GetWrapS() const {
@@ -259,6 +266,13 @@ namespace nCine::RHI::PVR
 		SwizzleChannel swizzle_[4];
 		mutable std::uint32_t textureUnit_;
 		SmallVector<std::uint8_t, 0> pixels_;
+		// Whether pixels_ holds the PackBits-compressed image instead of the linear one. The host store
+		// exists only so the VRAM store can be rebuilt after eviction (and rows baked per palette), and all
+		// of those paths read it strictly front to back - while a full set of linear copies costs several
+		// megabytes of the console's 16 MB per level (the two biggest stock levels did not fit). Static
+		// indexed content (R8/RG8) compresses to roughly a third, so it is kept compressed and streamed
+		// through RlePixelReader where it is consumed.
+		bool pixelsCompressed_;
 		bool isRenderTarget_;
 		bool isPaletteTexture_;
 
@@ -314,6 +328,31 @@ namespace nCine::RHI::PVR
 		void Allocate(PixelFormat format, std::int32_t width, std::int32_t height);
 		void RefreshVramStore();
 		void FreeVramStores();
+
+		/** @brief Returns the size of the linear (uncompressed) level-0 image in bytes */
+		inline std::int32_t RawPixelsSize() const {
+			return strideBytes_ * (height_ > 0 ? height_ : 0);
+		}
+		/**
+			@brief Returns `true` when this texture keeps its host store compressed
+
+			Only static indexed content (R8/RG8) qualifies: those stores are read strictly sequentially
+			(VRAM rebuild, per-palette-row bake), so they can be streamed out of a compressed form. The
+			palette texture is excluded because the device reads its rows directly through @ref GetPixels(),
+			and render targets have no meaningful host store at all.
+		*/
+		bool CanCompressPixels() const;
+		/** @brief Replaces the whole host store with @p data (compressed when @ref CanCompressPixels()) */
+		void StorePixels(const std::uint8_t* data);
+		/**
+			@brief Makes the host store linear and writable, decompressing (or zero-filling) it if needed
+
+			Used by partial sub-uploads (tileset overrides), which patch arbitrary rows in place - the only
+			access pattern the compressed form cannot serve.
+		*/
+		void MaterializePixelsRaw();
+		/** @brief Re-compresses a linear host store after an in-place patch, if this texture qualifies */
+		void RecompressPixels();
 
 		/** @brief Moves this texture to the front of the live list and stamps it with the current scene */
 		void Touch();

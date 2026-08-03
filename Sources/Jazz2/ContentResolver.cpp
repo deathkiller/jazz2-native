@@ -2012,7 +2012,9 @@ namespace Jazz2
 		std::unique_ptr shader = std::make_unique<Shader>();
 		// "render_mode" flags are program-level metadata applied by Material::SetShader()
 		shader->SetRenderModes(program.RenderModes);
-		if (shader->LoadFromCache(shaderName, ShadersVersion, introspection, *variant)) {
+		// The program name + the variant's own name are the true identity the fixed-function console
+		// backends resolve their generated effect tables from - the shaderName label is only a label
+		if (shader->LoadFromCache(shaderName, ShadersVersion, introspection, *variant, program.Name)) {
 			return shader;
 		}
 
@@ -2056,7 +2058,7 @@ namespace Jazz2
 
 		bool hasLinked;
 		while (true) {
-			hasLinked = shader->LoadFromMemory(shaderName, introspection, *variant, batchSize);
+			hasLinked = shader->LoadFromMemory(shaderName, introspection, *variant, batchSize, program.Name);
 			if (hasLinked || !batchSizeComputed || batchSize <= 1) {
 				break;
 			}

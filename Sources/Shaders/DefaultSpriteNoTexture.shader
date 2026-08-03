@@ -21,3 +21,13 @@ void vertex() {
 }
 
 #include "Include/DefaultSpriteNoTextureFs.inc"
+
+void fixed_function() {
+	// Console fixed-function tier: a plain solid-colour quad - the dispatch already knows the program
+	// has no texture, so the same modulate pass degrades to the flat vertex colour. Stated here rather
+	// than in the shared no-texture fragment include, because the MeshSprite programs also include
+	// that file and stay on the handwritten vertex-fed tier.
+	pass p;
+	p.color = COLOR;
+	submit_quad(p);
+}

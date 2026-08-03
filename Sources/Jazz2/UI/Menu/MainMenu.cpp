@@ -26,14 +26,11 @@ namespace Jazz2::UI::Menu
 	namespace
 	{
 		// The menu's animated background is the same procedural effect the level's "Sky" layer uses (see
-		// TileMap.cpp): a fragment shader on the full tier, and a band mesh on the PVR (Dreamcast) backend.
-		// The GX (Wii/GameCube) backend has no equivalent yet and draws a flat repeating tilemap instead -
-		// see RenderTexturedBackgroundAsTilemap().
-#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
-		constexpr bool SupportsTexturedBackground = false;
-#else
+		// TileMap.cpp): a fragment shader on the full tier, and the band mesh of the shared warp block
+		// (Shaders/Include/TexturedBackgroundWarp.inc) on both fixed-function console backends. The
+		// flat-tilemap fallback in RenderTexturedBackgroundAsTilemap() is kept for any tier that ends up
+		// without the warp again.
 		constexpr bool SupportsTexturedBackground = true;
-#endif
 	}
 
 	MainMenu::MainMenu(IRootController* root, bool afterIntro)

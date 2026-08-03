@@ -9,7 +9,7 @@
 namespace Jazz2::Events
 {
 	EventMap::EventMap(Vector2i layoutSize)
-		: _levelHandler(nullptr), _layoutSize(layoutSize), _pitType(PitType::FallForever)
+		: _levelHandler(nullptr), _layoutSize(layoutSize), _pitType(PitType::FallForever), _hasRollbackCheckpoint(false)
 	{
 	}
 
@@ -58,31 +58,74 @@ namespace Jazz2::Events
 		return Vector2f(-1, -1);
 	}
 
-	void EventMap::CreateCheckpointForRollback()
+	void EventMap::SaveTileForRollback(std::uint32_t tileIndex, const EventTile& tile)
 	{
-		if (_eventLayoutForRollback == nullptr) {
-			_eventLayoutForRollback = std::make_unique<EventTile[]>(_layoutSize.X * _layoutSize.Y);
+		// Binary search keeps the list sorted by index and doubles as the duplicate check: only the first
+		// saved value of a tile is its checkpoint value, later overwrites must not replace it
+		std::size_t lo = 0, hi = _eventLayoutForRollback.size();
+		while (lo < hi) {
+			std::size_t mid = lo + (hi - lo) / 2;
+			if (_eventLayoutForRollback[mid].TileIndex < tileIndex) {
+				lo = mid + 1;
+			} else {
+				hi = mid;
+			}
 		}
 
-		std::memcpy(_eventLayoutForRollback.get(), _eventLayout.get(), _layoutSize.X * _layoutSize.Y * sizeof(EventTile));
+		if (lo < _eventLayoutForRollback.size() && _eventLayoutForRollback[lo].TileIndex == tileIndex) {
+			return;
+		}
+
+		_eventLayoutForRollback.insert(_eventLayoutForRollback.begin() + lo, RollbackTile { tileIndex, tile });
+	}
+
+	void EventMap::CreateCheckpointForRollback()
+	{
+		std::int32_t layoutSize = _layoutSize.X * _layoutSize.Y;
+
+		// Everything but IsEventActive stays as it is until StoreTileEvent() consumes a tile, which saves the
+		// previous value itself, so the checkpoint starts out as just the active bits (see RollbackTile)
+		if (_eventActiveForRollback.size() != (std::size_t)layoutSize) {
+			_eventActiveForRollback.resize(ValueInit, layoutSize);
+		}
+		for (std::int32_t i = 0; i < layoutSize; i++) {
+			_eventActiveForRollback.set(i, _eventLayout[i].IsEventActive);
+		}
+
+		_eventLayoutForRollback.clear();
+		_hasRollbackCheckpoint = true;
 	}
 
 	void EventMap::RollbackToCheckpoint()
 	{
-		if (_eventLayoutForRollback == nullptr) {
+		if (!_hasRollbackCheckpoint) {
 			return;
 		}
 
+		// Moved aside for the walk below, which spawns actors and so runs game code that could consume an event
+		// tile and insert into the very list being iterated
+		SmallVector<RollbackTile, 0> saved = std::move(_eventLayoutForRollback);
+
+		// The saved tiles are merged into this walk of the grid rather than restored up front, so that an actor
+		// spawned below observes exactly the same partially rolled back grid as it did with the full copy
+		std::size_t nextSaved = 0;
 		for (std::int32_t y = 0; y < _layoutSize.Y; y++) {
 			for (std::int32_t x = 0; x < _layoutSize.X; x++) {
 				std::int32_t tileID = y * _layoutSize.X + x;
 				EventTile& tile = _eventLayout[tileID];
-				EventTile& tilePrev = _eventLayoutForRollback[tileID];
 
-				bool respawn = (tilePrev.IsEventActive && !tile.IsEventActive);
+				bool wasEventActive = _eventActiveForRollback[tileID];
+				bool respawn = (wasEventActive && !tile.IsEventActive);
 
 				// Rollback tile
-				tile = tilePrev;
+				if (nextSaved < saved.size() && saved[nextSaved].TileIndex == (std::uint32_t)tileID) {
+					const EventTile& tilePrev = saved[nextSaved].Tile;
+					tile.Event = tilePrev.Event;
+					tile.EventFlags = tilePrev.EventFlags;
+					std::memcpy(tile.EventParams, tilePrev.EventParams, sizeof(tile.EventParams));
+					nextSaved++;
+				}
+				tile.IsEventActive = wasEventActive;
 
 				if (respawn && tile.Event != EventType::Empty) {
 					tile.IsEventActive = true;
@@ -100,6 +143,14 @@ namespace Jazz2::Events
 			}
 		}
 
+		// The checkpoint stays valid, it can be rolled back to again, so the list goes back where it was. Its own
+		// values win over anything the walk consumed, whose tile was restored right afterwards.
+		SmallVector<RollbackTile, 0> consumedWhileRollingBack = std::move(_eventLayoutForRollback);
+		_eventLayoutForRollback = std::move(saved);
+		for (const auto& entry : consumedWhileRollingBack) {
+			SaveTileForRollback(entry.TileIndex, entry.Tile);
+		}
+
 		// Reset cooldown of all generators
 		// TODO: Save also cooldown of all generators to be able to restore them
 		for (auto& generator : _generators) {
@@ -113,7 +164,13 @@ namespace Jazz2::Events
 			return;
 		}
 
-		EventTile& previousEvent = _eventLayout[x + y * _layoutSize.X];
+		std::int32_t tileIndex = x + y * _layoutSize.X;
+		EventTile& previousEvent = _eventLayout[tileIndex];
+
+		// The checkpoint doesn't hold a copy of the grid, so the value about to be lost is saved to it here
+		if (_hasRollbackCheckpoint) {
+			SaveTileForRollback((std::uint32_t)tileIndex, previousEvent);
+		}
 
 		EventTile newEvent = {};
 		newEvent.Event = eventType,
@@ -505,13 +562,23 @@ namespace Jazz2::Events
 	void EventMap::SerializeResumableToStream(Stream& dest, bool fromCheckpoint)
 	{
 		std::int32_t layoutSize = _layoutSize.X * _layoutSize.Y;
-		const EventTile* source = (fromCheckpoint && _eventLayoutForRollback != nullptr ? _eventLayoutForRollback.get() : _eventLayout.get());
+		bool useCheckpoint = (fromCheckpoint && _hasRollbackCheckpoint);
 		dest.WriteVariableInt32(layoutSize);
+
+		std::size_t nextSaved = 0;
 		for (std::int32_t i = 0; i < layoutSize; i++) {
-			const EventTile& tile = source[i];
-			dest.WriteVariableUint32((std::uint32_t)tile.Event);
-			dest.WriteVariableUint32((std::uint32_t)tile.EventFlags);
-			dest.Write(tile.EventParams, sizeof(tile.EventParams)); // TODO: Optimize this
+			// A tile missing from the checkpoint list hasn't changed since the checkpoint was taken (only its
+			// active bit could have, and that isn't serialized), so the live grid already holds its value
+			const EventTile* tile = &_eventLayout[i];
+			if (useCheckpoint && nextSaved < _eventLayoutForRollback.size() &&
+				_eventLayoutForRollback[nextSaved].TileIndex == (std::uint32_t)i) {
+				tile = &_eventLayoutForRollback[nextSaved].Tile;
+				nextSaved++;
+			}
+
+			dest.WriteVariableUint32((std::uint32_t)tile->Event);
+			dest.WriteVariableUint32((std::uint32_t)tile->EventFlags);
+			dest.Write(tile->EventParams, sizeof(tile->EventParams)); // TODO: Optimize this
 		}
 	}
 }

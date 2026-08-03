@@ -27,3 +27,14 @@ void fragment() {
 	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 6.0, 1.0);
 	COLOR = vec4(color, color, color, tex.a) * COLOR;
 }
+
+void fixed_function() {
+	// Console fixed-function tier: the shader saturates the luma (x6) into a flat mask of the instance
+	// colour, which the offset colour reproduces by adding it on top of the black-modulated sprite
+	// (oargb+specular on the PVR, the silhouette TEV preset on the GX); the alpha still comes from the
+	// texture
+	pass p;
+	p.color = vec4(0.0, 0.0, 0.0, COLOR.a);
+	p.offset_color = COLOR.rgb;
+	submit_quad(p);
+}

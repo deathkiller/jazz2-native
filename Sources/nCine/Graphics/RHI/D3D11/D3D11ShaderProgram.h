@@ -167,6 +167,18 @@ namespace nCine::RHI::D3D11
 		inline void SetReflection(const ShaderCompiler::ProgramVariant* reflection) {
 			reflection_ = reflection;
 		}
+		/**
+			@brief Records the true (program, variant) identity of the loaded shader
+
+			Only the fixed-function console backends consume it (they resolve their generated
+			effect tables from this identity instead of the object label); this backend runs
+			real shaders and ignores it.
+		*/
+		inline void SetProgramIdentity(const char* programName, const char* variantName) {
+			static_cast<void>(programName);
+			static_cast<void>(variantName);
+		}
+
 
 		bool Link(Introspection introspection);
 		void Use();

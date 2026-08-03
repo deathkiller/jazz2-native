@@ -68,3 +68,8 @@ void fragment() {
 	), uAmbientColor, vec4(darknessStrength));
 	COLOR.a = 1.0;
 }
+
+void fixed_function() {
+	// The low-quality water compositor shares the direct-tier base composite too
+	pipeline lighting_combine;
+}

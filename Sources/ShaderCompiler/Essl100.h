@@ -27,12 +27,12 @@
 	The "#version" line is NOT emitted here (the engine injects it) — same as the modern path;
 	ES2 wants "#version 100".
 
-	DEFERRED CONSTRUCTS (out of scope for this emitter): ES2 has neither uniform buffer objects nor
-	gl_VertexID. A source that uses a "layout(std140)" block and/or gl_VertexID (every batched twin
-	AND every sprite-template primary, since the template uses gl_VertexID for the corner formula
-	and an InstanceBlock UBO) is NOT transformed — Transform() returns false with a clear diagnostic.
-	The real transforms those need (UBO -> uniform array, gl_VertexID -> a supplied corner attribute)
-	remain a hard problem and are intentionally not attempted here.
+	ES2 has neither uniform buffer objects nor gl_VertexID, and both ARE transformed here: a
+	"layout(std140)" block becomes loose uniforms (an array of a uniform struct for the batched
+	twins), and the sprite template's gl_VertexID corner formulas are folded into the aQuadCorner /
+	aInstanceIndex attributes the ES2 runtime supplies. What remains genuinely unexpressible - most
+	notably multiple render targets, and the "uint"/"uvec"/round()/integer-%/float-suffix/derivative
+	safety net - makes Transform() return false with a diagnostic naming the offending line.
 */
 
 #include "ShaderParser.h"	// Diagnostic, SourceLine, ShaderParser::StripComments
@@ -47,8 +47,7 @@ namespace ShaderCompiler
 			Transforms @p modernSource (as produced by ShaderParser::BuildStageSource) into ESSL 100,
 			writing the result to @p out. @p vertexStage selects the vertex-vs-fragment lowering.
 			Returns false and fills @p diag (with the offending line) when the source uses a feature
-			ES2 cannot express — a "layout(std140)" uniform block or gl_VertexID — which this
-			emitter does not attempt (see the file comment).
+			ES2 cannot express and this emitter does not rewrite (see the file comment).
 		*/
 		static bool Transform(StringView modernSource, bool vertexStage, String& out, Diagnostic& diag);
 	};

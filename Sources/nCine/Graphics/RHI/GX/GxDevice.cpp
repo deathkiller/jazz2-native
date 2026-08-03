@@ -3,6 +3,7 @@
 #include "GxShaderProgram.h"
 #include "GxRenderTarget.h"
 #include "GxTexture.h"
+#include "../FixedFunctionPass.h"
 
 #include "../../../../Main.h"
 #include "../../../../Shaders/Generated/ShaderCompilerTypes.h"
@@ -148,10 +149,43 @@ namespace nCine::RHI::GX
 			Modulate,			// texel * vertex colour (the default sprite combine)
 			Silhouette,			// vertex colour, masked by the texel alpha
 			ModulateBrighten,	// texel * vertex colour, scaled x2 and clamped
-			ModulateScaled4		// texel * vertex colour, scaled x4 and clamped
+			ModulateScaled4,	// texel * vertex colour, scaled x4 and clamped
+			TintMix,			// mix(texel, vertex colour, vertex alpha), opaque (the warp's horizon tint)
+			// The two-stage program: a modulate pass with a flat silhouette alpha-blended over
+			// it, folded into a single premultiplied draw (the FrozenMask pair - see the equivalence
+			// derivation at EffectContext::SubmitMergedSilhouetteOver)
+			ModulateSilhouetteOver,
+			// The same fold, but the silhouette's tone is picked per texel from a two-endpoint ramp by
+			// the texel's amplified luminance instead of being flat (FrozenMask's ice - six stages,
+			// see the stage-by-stage derivation in SetTevMode)
+			ModulateLumaRampOver
 		};
 
 		TevMode g_tevMode = TevMode::Modulate;
+
+		// Whether the luminance program's per-stage channel swizzles are currently installed. They are
+		// the only thing in this renderer that touches GX_SetTevSwapMode, and stage swap selections are
+		// persistent register state, so leaving the mode has to put stages 1-3 back on the identity
+		// table or every later draw would sample a replicated channel instead of the texel.
+		bool g_tevSwizzledStages = false;
+
+		// How the luminance ramp weighs the texel channels: Rec.601, the same coefficients the GLSL
+		// above every LUMA_RAMP pass uses
+		constexpr float LumaWeights[3] = { 0.299f, 0.587f, 0.114f };
+
+		// Puts the channel swizzles the luminance program installs back on the identity table. Stage
+		// swap selections persist like every other TEV register, so this runs on every path that leaves
+		// that program (SetTevMode's mode change and the vertex-format reset below).
+		void ResetTevSwizzles()
+		{
+			if (!g_tevSwizzledStages) {
+				return;
+			}
+			g_tevSwizzledStages = false;
+			GX_SetTevSwapMode(GX_TEVSTAGE1, GX_TEV_SWAP0, GX_TEV_SWAP0);
+			GX_SetTevSwapMode(GX_TEVSTAGE2, GX_TEV_SWAP0, GX_TEV_SWAP0);
+			GX_SetTevSwapMode(GX_TEVSTAGE3, GX_TEV_SWAP0, GX_TEV_SWAP0);
+		}
 
 		void SetVertexModeTextured(bool textured)
 		{
@@ -179,7 +213,18 @@ namespace nCine::RHI::GX
 			GX_SetTevOrder(GX_TEVSTAGE0, textured ? GX_TEXCOORD0 : GX_TEXCOORDNULL,
 				textured ? GX_TEXMAP0 : GX_TEXMAP_NULL, GX_COLOR0A0);
 			GX_SetTevOp(GX_TEVSTAGE0, textured ? GX_MODULATE : GX_PASSCLR);
+			ResetTevSwizzles();
 			g_tevMode = TevMode::Modulate;
+		}
+
+		// How many TEV stages a mode's program occupies
+		std::uint8_t TevStageCount(TevMode mode)
+		{
+			switch (mode) {
+				case TevMode::ModulateSilhouetteOver: return 2;
+				case TevMode::ModulateLumaRampOver: return 6;
+				default: return 1;
+			}
 		}
 
 		// How the TEV stage combines the sampled texel with the vertex colour. The actor state effects are
@@ -189,6 +234,15 @@ namespace nCine::RHI::GX
 		{
 			if (g_tevMode == mode) {
 				return;
+			}
+			// Only the merged modes run more than one stage; the register write is paid solely when the
+			// count actually changes (SetVertexModeTextured also resets it to 1 and the mode to Modulate)
+			if (TevStageCount(mode) != TevStageCount(g_tevMode)) {
+				GX_SetNumTevStages(TevStageCount(mode));
+			}
+			// Only the luminance program swizzles its texture inputs; anything else needs the identity
+			if (mode != TevMode::ModulateLumaRampOver) {
+				ResetTevSwizzles();
 			}
 			g_tevMode = mode;
 			switch (mode) {
@@ -219,8 +273,601 @@ namespace nCine::RHI::GX
 					GX_SetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_TEXA, GX_CA_RASA, GX_CA_ZERO);
 					GX_SetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
 					break;
+				case TevMode::TintMix:
+					// One stage of `d + mix(a, b, c)`: the texel lerped toward the vertex colour by the
+					// vertex ALPHA, which is how a per-row tint becomes part of the textured draw
+					// instead of a second gradient pass over it (the TexturedBackground horizon).
+					//   rgb = tex * (1 - rasa) + rasc * rasa
+					GX_SetTevColorIn(GX_TEVSTAGE0, GX_CC_TEXC, GX_CC_RASC, GX_CC_RASA, GX_CC_ZERO);
+					GX_SetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					// alpha = 1: the vertex alpha is spent on the lerp, and the effects using this are
+					// opaque (their GLSL ends with "COLOR.a = 1.0"). The konst-alpha SELECTION is the
+					// 1.0 constant, so no KONST register is consumed.
+					GX_SetTevKAlphaSel(GX_TEVSTAGE0, GX_TEV_KASEL_1);
+					GX_SetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_KONST);
+					GX_SetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					break;
+				case TevMode::ModulateLumaRampOver:
+					/*
+						The luminance-ramp form of the merged draw below: same premultiplied output and
+						same ONE + INVSRCALPHA blend, but the silhouette's tone is picked per TEXEL from a
+						two-endpoint ramp instead of being one flat colour, so a dark sprite pixel keeps a
+						darker ice than a bright one (the GLSL's "grey" term). Six stages, with
+
+						  t     = texel alpha            iceA  = KONST0.a       s = t * iceA
+						  W     = KONST0.rgb             ramp0 = REG1.rgb       ramp1 = KONST1.rgb
+						  grey  = min(2 * dot(tex.rgb, W), 1)
+						  ice   = mix(ramp0, ramp1, grey)
+
+						  stage 0  C: REG2 = tex.rgb * t          (the premultiplied sprite)
+						           A: REG0 = t * iceA = s
+						  stage 1  C: PREV = W.r * tex.r          (texture swap table 1 -> rrr)
+						  stage 2  C: PREV = PREV + W.g * tex.g   (swap table 2 -> ggg)
+						  stage 3  C: PREV = (PREV + W.b * tex.b) * 2, clamped = grey   (swap 3 -> bbb)
+						  stage 4  C: PREV = mix(ramp0, ramp1, grey) = ice
+						  stage 5  C: PREV = mix(REG2, ice, s)    = the premultiplied colour
+						           A: PREV = mix(t, 1, s)         = the coverage
+
+						The x2 output scale of stage 3 is where the caller's LumaGain lives: it hands the
+						weights in as W = Rec.601 * gain/2, so any gain up to ~3.4 fits the 0..1 KONST
+						range exactly. Clamping a PARTIAL sum at stage 2 or 3 cannot lose anything: a
+						partial sum reaching 1 already implies 2 * dot >= 2, i.e. grey saturates anyway.
+						The alpha pipes of stages 1-4 have no work, so they park their result in REG1's
+						alpha (only REG1's RGB is ever read back).
+					*/
+					for (std::uint8_t stage = GX_TEVSTAGE1; stage <= GX_TEVSTAGE5; stage++) {
+						GX_SetTevOrder(stage, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
+					}
+					// The identity table plus the three single-channel replications the dot product needs.
+					// Set explicitly rather than trusting the GX defaults, and undone by ResetTevSwizzles()
+					// as soon as any other program is installed.
+					GX_SetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
+					GX_SetTevSwapModeTable(GX_TEV_SWAP1, GX_CH_RED, GX_CH_RED, GX_CH_RED, GX_CH_ALPHA);
+					GX_SetTevSwapModeTable(GX_TEV_SWAP2, GX_CH_GREEN, GX_CH_GREEN, GX_CH_GREEN, GX_CH_ALPHA);
+					GX_SetTevSwapModeTable(GX_TEV_SWAP3, GX_CH_BLUE, GX_CH_BLUE, GX_CH_BLUE, GX_CH_ALPHA);
+					GX_SetTevSwapMode(GX_TEVSTAGE1, GX_TEV_SWAP0, GX_TEV_SWAP1);
+					GX_SetTevSwapMode(GX_TEVSTAGE2, GX_TEV_SWAP0, GX_TEV_SWAP2);
+					GX_SetTevSwapMode(GX_TEVSTAGE3, GX_TEV_SWAP0, GX_TEV_SWAP3);
+					g_tevSwizzledStages = true;
+					GX_SetTevKAlphaSel(GX_TEVSTAGE0, GX_TEV_KASEL_K0_A);
+					GX_SetTevKColorSel(GX_TEVSTAGE1, GX_TEV_KCSEL_K0_R);
+					GX_SetTevKColorSel(GX_TEVSTAGE2, GX_TEV_KCSEL_K0_G);
+					GX_SetTevKColorSel(GX_TEVSTAGE3, GX_TEV_KCSEL_K0_B);
+					GX_SetTevKColorSel(GX_TEVSTAGE4, GX_TEV_KCSEL_K1);
+					GX_SetTevKAlphaSel(GX_TEVSTAGE5, GX_TEV_KASEL_1);
+					// Stage 0 - premultiply the sprite, and the merged silhouette weight
+					GX_SetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_TEXC, GX_CC_TEXA, GX_CC_ZERO);
+					GX_SetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVREG2);
+					GX_SetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_TEXA, GX_CA_KONST, GX_CA_ZERO);
+					GX_SetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVREG0);
+					// Stages 1-3 - the weighted channel sum, scaled and saturated into `grey`
+					GX_SetTevColorIn(GX_TEVSTAGE1, GX_CC_ZERO, GX_CC_TEXC, GX_CC_KONST, GX_CC_ZERO);
+					GX_SetTevColorOp(GX_TEVSTAGE1, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					GX_SetTevColorIn(GX_TEVSTAGE2, GX_CC_ZERO, GX_CC_TEXC, GX_CC_KONST, GX_CC_CPREV);
+					GX_SetTevColorOp(GX_TEVSTAGE2, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					GX_SetTevColorIn(GX_TEVSTAGE3, GX_CC_ZERO, GX_CC_TEXC, GX_CC_KONST, GX_CC_CPREV);
+					GX_SetTevColorOp(GX_TEVSTAGE3, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_2, GX_TRUE, GX_TEVPREV);
+					// Stage 4 - the ramp lookup, stage 5 - the premultiplied mix and the coverage
+					GX_SetTevColorIn(GX_TEVSTAGE4, GX_CC_C1, GX_CC_KONST, GX_CC_CPREV, GX_CC_ZERO);
+					GX_SetTevColorOp(GX_TEVSTAGE4, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					GX_SetTevColorIn(GX_TEVSTAGE5, GX_CC_C2, GX_CC_CPREV, GX_CC_A0, GX_CC_ZERO);
+					GX_SetTevColorOp(GX_TEVSTAGE5, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					GX_SetTevAlphaIn(GX_TEVSTAGE5, GX_CA_TEXA, GX_CA_KONST, GX_CA_A0, GX_CA_ZERO);
+					GX_SetTevAlphaOp(GX_TEVSTAGE5, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					// The idle alpha pipes; REG1's alpha is scratch, only its RGB (the ramp's low end) is read
+					for (std::uint8_t stage = GX_TEVSTAGE1; stage <= GX_TEVSTAGE4; stage++) {
+						GX_SetTevAlphaIn(stage, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO);
+						GX_SetTevAlphaOp(stage, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVREG1);
+					}
+					break;
+				case TevMode::ModulateSilhouetteOver:
+					// The merged FrozenMask draw emits the PREMULTIPLIED source of its two original
+					// passes and blends with ONE + INVSRCALPHA (set by the caller). With t = texel
+					// alpha, iceA = KONST0.a and s = t * iceA, the stages compute
+					//   colour = mix(tex.rgb * t, KONST0.rgb, s)
+					//   alpha  = mix(t, 1, s) = 1 - (1 - t)*(1 - s)
+					// which SubmitMergedSilhouetteOver derives to be exactly the two-pass result. The
+					// silhouette colour rides in KONST0 (per-draw), the raster colour is unused.
+					GX_SetTevOrder(GX_TEVSTAGE1, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
+					GX_SetTevKAlphaSel(GX_TEVSTAGE0, GX_TEV_KASEL_K0_A);
+					GX_SetTevKColorSel(GX_TEVSTAGE1, GX_TEV_KCSEL_K0);
+					// Stage 1 lerps its alpha toward the CONSTANT 1.0, so its konst-alpha selection is
+					// the 1.0 constant, not the K0 register stage 0 reads
+					GX_SetTevKAlphaSel(GX_TEVSTAGE1, GX_TEV_KASEL_1);
+					// Stage 0: PREV.rgb = tex.rgb * t (the premultiplied sprite), PREV.a = s = t * iceA
+					GX_SetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_TEXC, GX_CC_TEXA, GX_CC_ZERO);
+					GX_SetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					GX_SetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_TEXA, GX_CA_KONST, GX_CA_ZERO);
+					GX_SetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					// Stage 1: PREV.rgb = mix(PREV.rgb, ice.rgb, s), PREV.a = mix(t, 1, s)
+					GX_SetTevColorIn(GX_TEVSTAGE1, GX_CC_CPREV, GX_CC_KONST, GX_CC_APREV, GX_CC_ZERO);
+					GX_SetTevColorOp(GX_TEVSTAGE1, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					GX_SetTevAlphaIn(GX_TEVSTAGE1, GX_CA_TEXA, GX_CA_KONST, GX_CA_APREV, GX_CA_ZERO);
+					GX_SetTevAlphaOp(GX_TEVSTAGE1, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+					break;
 			}
 		}
+
+	}
+
+	// EffectContext deliberately has EXTERNAL linkage (namespace scope, though it is still
+	// defined only in this translation unit): the generated table struct below is itself at
+	// namespace scope - so the backend's ShaderProgram can forward-declare it and hold a typed
+	// entry pointer - and names EffectContext in a member type; the console toolchain's GCC
+	// ICEs when such an external struct member references an internal-linkage type.
+	// ---------------------------------------------------------- fixed-function quad effects
+	//
+	// The quad-family effects are expressed as FixedFunctionPass descriptors handed to this
+	// EffectContext - the structural contract documented in FixedFunctionPass.h. The per-effect
+	// functions live in the shaders' fixed_function blocks and are transpiled by the
+	// ShaderCompiler into Shaders/Generated/GxGeneratedEffects.h, included below against this
+	// concrete context (see Docs/FixedFunctionShaderDesign.md); only the submission machinery
+	// stays here.
+
+	struct EffectContext
+	{
+		// The strip builder stays small - a bigger scratch would only grow the per-instance stack -
+		// but the GP is happier with fewer, longer primitives than with many 4-vertex ones, so this
+		// holds 16 (twice the contract's floor): enough for the iris fan to submit one angular wedge
+		// with all five of its radii as a SINGLE strip. The fixed-function transpiler knows this
+		// number and rejects literal strip indices/counts above it.
+		static constexpr std::int32_t MaxStripVertices = 16;
+
+		// Decoded instance data of the draw being dispatched (the documented contract)
+		const float* InstanceColor;
+		float TexelW;
+		float TexelH;
+		bool Batched;
+
+		// Backend internals the pass state maps onto: the current instance's corner arrays,
+		// whether the vertex stream carries texture coordinates, and the material blend
+		// arguments (for restoring after a pass-level blend override)
+		const float* Px;
+		const float* Py;
+		const float* Pu;
+		const float* Pv;
+		const float* TexRect;
+		bool HasTexture;
+		std::uint8_t MaterialBlendOp;
+		std::uint8_t MaterialBlendSrc;
+		std::uint8_t MaterialBlendDst;
+		bool* BlendOverridden;
+
+		// The pass merger's whole state: whether the previous SubmitQuad was buffered instead of
+		// submitted. Only one pass shape is ever buffered - the fully DEFAULT modulate pass (the
+		// first half of the FrozenMask pair, see SubmitQuad) - so a flag carries everything and a
+		// flush can simply rebuild that default pass.
+		bool PendingBasePass = false;
+
+		// Pre-clip quad geometry (the quad_origin/quad_axis_* built-ins - on the GX the corners are
+		// never clipped, the hardware scissor does that, but the contract stays shared with the
+		// PVR) and the program, for resolved uniforms
+		float OriginX, OriginY;
+		float AxisXx, AxisXy;
+		float AxisYx, AxisYy;
+		const GxShaderProgram* Program;
+
+		// The strip builder scratch; colours are quantized at set time (same quantization as the
+		// quad path, so identical float inputs produce identical vertex words). GX textures are
+		// not padded, so UVs pass through unscaled - the scale fields exist for contract parity.
+		float UvScaleU, UvScaleV;
+		float StripX[MaxStripVertices];
+		float StripY[MaxStripVertices];
+		float StripU[MaxStripVertices];
+		float StripV[MaxStripVertices];
+		std::uint8_t StripR[MaxStripVertices];
+		std::uint8_t StripG[MaxStripVertices];
+		std::uint8_t StripB[MaxStripVertices];
+		std::uint8_t StripA[MaxStripVertices];
+
+		const float* Color() const { return InstanceColor; }
+		float TexelWidth() const { return TexelW; }
+		float TexelHeight() const { return TexelH; }
+		bool IsBatched() const { return Batched; }
+
+		float QuadOriginX() const { return OriginX; }
+		float QuadOriginY() const { return OriginY; }
+		float QuadAxisXx() const { return AxisXx; }
+		float QuadAxisXy() const { return AxisXy; }
+		float QuadAxisYx() const { return AxisYx; }
+		float QuadAxisYy() const { return AxisYy; }
+
+		bool HasUniform(const char* name) const
+		{
+			return (Program->ResolveUniform(name) != nullptr);
+		}
+		void LoadUniform(const char* name, float* out, std::int32_t floatCount) const
+		{
+			// An unresolved name leaves the caller's zeros in place - blocks guard with
+			// has_uniform() exactly like handwritten code null-checked the pointers
+			const std::uint8_t* bytes = Program->ResolveUniform(name);
+			if (bytes != nullptr) {
+				std::memcpy(out, bytes, std::size_t(floatCount) * sizeof(float));
+			}
+		}
+
+		void SetStripVertexPosition(std::int32_t i, float x, float y)
+		{
+			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
+				StripX[i] = x;
+				StripY[i] = y;
+			}
+		}
+		void SetStripVertexUv(std::int32_t i, float u, float v)
+		{
+			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
+				StripU[i] = u * UvScaleU;
+				StripV[i] = v * UvScaleV;
+			}
+		}
+		void SetStripVertexColor(std::int32_t i, float r, float g, float b, float a)
+		{
+			if (std::uint32_t(i) < std::uint32_t(MaxStripVertices)) {
+				StripR[i] = QuantizeChannel(r);
+				StripG[i] = QuantizeChannel(g);
+				StripB[i] = QuantizeChannel(b);
+				StripA[i] = QuantizeChannel(a);
+			}
+		}
+
+		// Whether a UV span can be mapped onto the screen at all (a zero texRect has no scale)
+		bool HasTexelStep() const { return TexRect[0] != 0.0f && TexRect[2] != 0.0f; }
+		// Maps a span in the sprite's UV space onto the quad's on-screen extent - the texel step
+		// the Outline ring taps use (logical pixels, the space the corners live in)
+		float TexelToScreenX(float uvSpan) const { return (Px[0] - Px[2]) * (uvSpan / TexRect[0]); }
+		float TexelToScreenY(float uvSpan) const { return (Py[1] - Py[0]) * (uvSpan / TexRect[2]); }
+		// The documented texel_size() built-in of the fixed_function contract: the Outline shader
+		// family carries the sprite's UV-space texel size in its instance color.xy (exactly like
+		// the GLSL derives its tap offsets), mapped into the logical pixels the corners live in
+		float TexelStepX() const { return TexelToScreenX(InstanceColor[0]); }
+		float TexelStepY() const { return TexelToScreenY(InstanceColor[1]); }
+
+		// Emits the quad at an optional screen-space offset, in the given colour
+		void Emit(float dx, float dy, float cr, float cg, float cb, float ca) const
+		{
+			const std::uint8_t r = QuantizeChannel(cr);
+			const std::uint8_t g = QuantizeChannel(cg);
+			const std::uint8_t b = QuantizeChannel(cb);
+			const std::uint8_t a = QuantizeChannel(ca);
+			// Strip order (v0, v1, v2, v3) forms the quad perimeter (v0, v1, v3, v2)
+			GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+			if (HasTexture) {
+				GX_Position3f32(Px[0] + dx, Py[0] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(Pu[0], Pv[0]);
+				GX_Position3f32(Px[1] + dx, Py[1] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(Pu[1], Pv[1]);
+				GX_Position3f32(Px[3] + dx, Py[3] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(Pu[3], Pv[3]);
+				GX_Position3f32(Px[2] + dx, Py[2] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(Pu[2], Pv[2]);
+			} else {
+				GX_Position3f32(Px[0] + dx, Py[0] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
+				GX_Position3f32(Px[1] + dx, Py[1] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
+				GX_Position3f32(Px[3] + dx, Py[3] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
+				GX_Position3f32(Px[2] + dx, Py[2] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
+			}
+			GX_End();
+		}
+
+		// A pass-level blend override bypasses ApplyRenderState(), so its cache no longer
+		// matches; the material blend is reissued as soon as a Material pass follows
+		void ApplyPassBlend(const FixedFunctionPass& pass)
+		{
+			if (pass.Blend != FixedFunctionPass::BlendMode::Material) {
+				switch (pass.Blend) {
+					case FixedFunctionPass::BlendMode::Additive:
+						GX_SetBlendMode(GX_BM_BLEND, GX_BL_ONE, GX_BL_ONE, GX_LO_CLEAR);
+						break;
+					case FixedFunctionPass::BlendMode::Alpha:
+						GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
+						break;
+					default:	// Opaque
+						GX_SetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_CLEAR);
+						break;
+				}
+				g_appliedBlendValid = false;
+				*BlendOverridden = true;
+			} else if (*BlendOverridden) {
+				GX_SetBlendMode(MaterialBlendOp, MaterialBlendSrc, MaterialBlendDst, GX_LO_CLEAR);
+				*BlendOverridden = false;
+			}
+		}
+
+		// The TEV combine a pass's intent maps onto (shared by the quad and strip submissions)
+		void ApplyPassTev(const FixedFunctionPass& pass) const
+		{
+			TevMode mode;
+			switch (pass.Tev) {
+				case FixedFunctionPass::TevPreset::Silhouette: mode = TevMode::Silhouette; break;
+				case FixedFunctionPass::TevPreset::ModulateX2: mode = TevMode::ModulateBrighten; break;
+				case FixedFunctionPass::TevPreset::ModulateX4: mode = TevMode::ModulateScaled4; break;
+				// The lerp needs the texel; without one the stage would blend toward garbage, so an
+				// untextured draw falls back to the plain interpolated colour
+				case FixedFunctionPass::TevPreset::TintMix: mode = (HasTexture ? TevMode::TintMix : TevMode::Modulate); break;
+				// LUMA_RAMP lands in the default only if it never found a base pass to merge with, and
+				// it always carries an offset colour, so both submission paths have already peeled it
+				// off into their flat-silhouette branch before reaching here
+				default: mode = TevMode::Modulate; break;
+			}
+			SetTevMode(mode);
+		}
+
+		// Loads the per-draw registers of the luminance-ramp program: the Rec.601 weights prescaled by
+		// the pass's gain (halved, because stage 3 applies the combiner's x2 output scale) plus the
+		// merged silhouette weight in KONST0's alpha, the ramp's high end in KONST1 and its low end in
+		// TEV register 1. Only three register writes, and the stage program itself stays cached.
+		void LoadLumaRampRegisters(const FixedFunctionPass& pass) const
+		{
+			const float half = 0.5f * (pass.LumaGain > 0.0f ? pass.LumaGain : 0.0f);
+			GXColor weights = {
+				QuantizeChannel(LumaWeights[0] * half), QuantizeChannel(LumaWeights[1] * half),
+				QuantizeChannel(LumaWeights[2] * half), QuantizeChannel(pass.Color[3])
+			};
+			GX_SetTevKColor(GX_KCOLOR0, weights);
+			// The ramp: pass.color.rgb is the tone at grey = 0, pass.offset_color the tone at grey = 1
+			GXColor rampHigh = {
+				QuantizeChannel(pass.OffsetColor[0]), QuantizeChannel(pass.OffsetColor[1]),
+				QuantizeChannel(pass.OffsetColor[2]), 255
+			};
+			GX_SetTevKColor(GX_KCOLOR1, rampHigh);
+			GXColor rampLow = {
+				QuantizeChannel(pass.Color[0]), QuantizeChannel(pass.Color[1]),
+				QuantizeChannel(pass.Color[2]), 255
+			};
+			GX_SetTevColor(GX_TEVREG1, rampLow);
+		}
+
+		// Whether a pass is exactly the first half the merger buffers: the default "modulate the
+		// sprite by white over the material blend" pass. The colour must be white because the fold
+		// below has no stage input left to modulate the texel by a vertex colour, and the material
+		// blend must be the standard alpha-over - the fold bakes THAT equation into the TEV.
+		bool IsMergeableBasePass(const FixedFunctionPass& pass) const
+		{
+			return HasTexture && !pass.HasOffsetColor &&
+				pass.Blend == FixedFunctionPass::BlendMode::Material &&
+				pass.Tev == FixedFunctionPass::TevPreset::Modulate &&
+				pass.ScreenOffset[0] == 0.0f && pass.ScreenOffset[1] == 0.0f &&
+				pass.Color[0] == 1.0f && pass.Color[1] == 1.0f && pass.Color[2] == 1.0f && pass.Color[3] == 1.0f &&
+				MaterialBlendOp == GX_BM_BLEND && MaterialBlendSrc == GX_BL_SRCALPHA && MaterialBlendDst == GX_BL_INVSRCALPHA;
+		}
+
+		// Whether a pass is the second half: a silhouette alpha-blended over the sprite (the
+		// FrozenMask ice pass), either flat or with its tone picked per texel from a luminance ramp.
+		// Material blend was already verified to BE alpha-over by the base matcher, so both spellings
+		// of the same equation qualify. LUMA_RAMP is the one preset that legitimately carries an offset
+		// colour (the ramp's high end), which is why the offset-colour veto is per preset.
+		bool IsMergeableSilhouettePass(const FixedFunctionPass& pass) const
+		{
+			if (pass.Blend != FixedFunctionPass::BlendMode::Material && pass.Blend != FixedFunctionPass::BlendMode::Alpha) {
+				return false;
+			}
+			if (pass.ScreenOffset[0] != 0.0f || pass.ScreenOffset[1] != 0.0f) {
+				return false;
+			}
+			if (pass.Tev == FixedFunctionPass::TevPreset::LumaRamp) {
+				return true;
+			}
+			return (!pass.HasOffsetColor && pass.Tev == FixedFunctionPass::TevPreset::Silhouette);
+		}
+
+		/*
+			The merged form of the FrozenMask pair: the buffered default modulate pass plus this
+			silhouette pass, over the same corners, as ONE draw with a two-stage TEV program.
+
+			Equivalence derivation (t = texel alpha, iceA = the silhouette pass's alpha as its
+			vertex colour would have carried it, s = t * iceA; both original passes blended
+			SRCALPHA + INVSRCALPHA over the destination dst0):
+
+				pass 0 (modulate, white):   dst1 = tex.rgb*t + dst0*(1 - t)
+				pass 1 (silhouette):        dst2 = ice.rgb*s + dst1*(1 - s)
+				                                 = [ice.rgb*s + tex.rgb*t*(1 - s)] + dst0*(1 - t)*(1 - s)
+
+			A single SRCALPHA-blended draw cannot express this - its source term would need the
+			division C = [...] / A - but a PREMULTIPLIED draw can. With blend ONE + INVSRCALPHA,
+
+				dst2' = C + dst0*(1 - A)
+
+			matches dst2 exactly when
+
+				C = ice.rgb*s + tex.rgb*t*(1 - s) = mix(tex.rgb*t, ice.rgb, s)
+				A = 1 - (1 - t)*(1 - s)           = mix(t, 1, s)
+
+			which is precisely the two-stage program of TevMode::ModulateSilhouetteOver: stage 0
+			computes tex.rgb*t and s = t*KONST0.a, stage 1 lerps the colour toward KONST0.rgb and
+			the alpha toward 1.0, both by s. Exact in real arithmetic for EVERY texel alpha, not
+			only the 0/1 of cutout art. (Hardware-wise the TEV rounds each stage to 8 bits where
+			the two-pass form rounded in the blender per pass, so the last bit can differ; the
+			ice colour/alpha quantization itself is the same 8 bits the vertex colour used to
+			carry. EFB destination alpha is not stored on this pipe - RGB8_Z24 - so only the
+			colour equation has to match.)
+
+			The derivation only ever assumed that ice.rgb is SOME colour the combiner can produce per
+			fragment, so it holds unchanged when the silhouette asks for a LUMA_RAMP tone instead of a
+			flat one: the six-stage program of TevMode::ModulateLumaRampOver computes exactly the same
+			C and A, with ice.rgb = mix(ramp0, ramp1, grey) evaluated per texel.
+		*/
+		void SubmitMergedSilhouetteOver(const FixedFunctionPass& silhouette)
+		{
+			// The fold replaces the material's SRCALPHA + INVSRCALPHA with its premultiplied form
+			// for this one draw; the next Material pass restores it through ApplyPassBlend
+			GX_SetBlendMode(GX_BM_BLEND, GX_BL_ONE, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
+			g_appliedBlendValid = false;
+			*BlendOverridden = true;
+			if (silhouette.Tev == FixedFunctionPass::TevPreset::LumaRamp) {
+				// The ramp needs three registers instead of one, on the same per-draw terms: the tone
+				// endpoints are constants of the effect, the merged weight animates per sprite
+				LoadLumaRampRegisters(silhouette);
+				SetTevMode(TevMode::ModulateLumaRampOver);
+			} else {
+				// KONST0 carries the silhouette colour and alpha; reloaded per merged draw because the
+				// ice alpha animates per sprite (the stage program itself is cached by SetTevMode)
+				GXColor konst = {
+					QuantizeChannel(silhouette.Color[0]), QuantizeChannel(silhouette.Color[1]),
+					QuantizeChannel(silhouette.Color[2]), QuantizeChannel(silhouette.Color[3])
+				};
+				GX_SetTevKColor(GX_KCOLOR0, konst);
+				SetTevMode(TevMode::ModulateSilhouetteOver);
+			}
+			// Every stage ignores the raster colour (the colour terms live in TEXC and the registers)
+			Emit(0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+		}
+
+		// Immediate single-pass submission (the pre-merger SubmitQuad, byte-identical state math)
+		void SubmitQuadDirect(const FixedFunctionPass& pass)
+		{
+			ApplyPassBlend(pass);
+
+			if (pass.HasOffsetColor) {
+				// The GX has no post-texture offset add; a pass carrying an offset colour is the
+				// silhouette form of the same intent - the sprite's shape filled flat with that
+				// colour at the pass alpha (see the TevMode::Silhouette combine). A LUMA_RAMP pass
+				// that reached here never found its base pass to merge with (no texture, or a
+				// material blend the fold cannot absorb), and degrades to the same flat silhouette
+				// filled with the ramp's high end - which is the tone every saturated texel would
+				// have picked anyway.
+				SetTevMode(TevMode::Silhouette);
+				Emit(pass.ScreenOffset[0], pass.ScreenOffset[1],
+					pass.OffsetColor[0], pass.OffsetColor[1], pass.OffsetColor[2], pass.Color[3]);
+				return;
+			}
+			ApplyPassTev(pass);
+			Emit(pass.ScreenOffset[0], pass.ScreenOffset[1],
+				pass.Color[0], pass.Color[1], pass.Color[2], pass.Color[3]);
+		}
+
+		// Submits a buffered first-half pass that never found its silhouette partner (a strip
+		// followed, or the effect function returned) - the buffered shape is exactly the default
+		// pass, in its original submission slot: nothing else was emitted since it was buffered
+		void FlushPendingQuad()
+		{
+			if (PendingBasePass) {
+				PendingBasePass = false;
+				FixedFunctionPass base;
+				SubmitQuadDirect(base);
+			}
+		}
+
+		void SubmitQuad(const FixedFunctionPass& pass)
+		{
+			// Two consecutive passes over the SAME quad that together read "sprite, then flat
+			// silhouette alpha-blended over it" (the FrozenMask pair) collapse into one draw with
+			// two TEV stages. The first half is buffered instead of submitted eagerly and flushed
+			// unmerged as soon as anything else follows; the corners cannot change between the two
+			// halves because the context is built per instance, so "same quad" holds by scope, and
+			// both matchers require zero screen offsets and a compatible blend up front.
+			if (PendingBasePass) {
+				PendingBasePass = false;
+				if (IsMergeableSilhouettePass(pass)) {
+					SubmitMergedSilhouetteOver(pass);
+					return;
+				}
+				FixedFunctionPass base;
+				SubmitQuadDirect(base);
+			} else if (IsMergeableBasePass(pass)) {
+				PendingBasePass = true;
+				return;
+			}
+			SubmitQuadDirect(pass);
+		}
+
+		// Textured strip out of the builder scratch: the pass's flat colour over the material
+		// state, drawn through the GP's native triangle strip
+		void SubmitStrip(const FixedFunctionPass& pass, std::int32_t count)
+		{
+			// A strip is different geometry - a buffered quad pass can no longer find its partner
+			FlushPendingQuad();
+			if (count > MaxStripVertices) {
+				count = MaxStripVertices;
+			}
+			if (count < 3) {
+				return;
+			}
+			ApplyPassBlend(pass);
+			float cr = pass.Color[0], cg = pass.Color[1], cb = pass.Color[2];
+			if (pass.HasOffsetColor) {
+				// Same intent mapping as SubmitQuad: no post-texture add on the GX, so an offset
+				// colour becomes the silhouette form filled flat with it at the pass alpha
+				SetTevMode(TevMode::Silhouette);
+				cr = pass.OffsetColor[0]; cg = pass.OffsetColor[1]; cb = pass.OffsetColor[2];
+			} else {
+				ApplyPassTev(pass);
+			}
+			const std::uint8_t r = QuantizeChannel(cr);
+			const std::uint8_t g = QuantizeChannel(cg);
+			const std::uint8_t b = QuantizeChannel(cb);
+			const std::uint8_t a = QuantizeChannel(pass.Color[3]);
+			const float dx = pass.ScreenOffset[0], dy = pass.ScreenOffset[1];
+			GX_Begin(GX_TRIANGLESTRIP, GX_VTXFMT0, std::uint16_t(count));
+			for (std::int32_t i = 0; i < count; i++) {
+				GX_Position3f32(StripX[i] + dx, StripY[i] + dy, 0.0f);
+				GX_Color4u8(r, g, b, a);
+				if (HasTexture) {
+					GX_TexCoord2f32(StripU[i], StripV[i]);
+				}
+			}
+			GX_End();
+		}
+
+		// Shaded (per-vertex-colour) strip out of the builder scratch. A pure gradient has no texture
+		// to modulate, so the vertex descriptor drops to the colour-only layout (whose PASSCLR combine
+		// is exactly "the interpolated vertex colour") for the strip and is restored right after,
+		// keeping later passes of the same instance intact. The exception is a pass whose TEV preset
+		// CONSUMES the texel alongside the interpolated colour (TevPreset::TintMix): that strip stays
+		// textured and carries its UVs, which is how the warp's horizon tint rides along inside the
+		// band's own draw instead of needing a second gradient pass over it.
+		void SubmitStripShaded(const FixedFunctionPass& pass, std::int32_t count)
+		{
+			// A strip is different geometry - a buffered quad pass can no longer find its partner
+			FlushPendingQuad();
+			if (count > MaxStripVertices) {
+				count = MaxStripVertices;
+			}
+			if (count < 3) {
+				return;
+			}
+			ApplyPassBlend(pass);
+			const bool textured = (HasTexture && pass.Tev == FixedFunctionPass::TevPreset::TintMix);
+			if (HasTexture) {
+				// A gradient must not carry texture coordinates and a tinted strip must; either way
+				// the format is only reprogrammed when it actually differs from the current one
+				SetVertexModeTextured(textured);
+			}
+			if (textured) {
+				// The combine is programmed AFTER any vertex-format change, which resets it
+				ApplyPassTev(pass);
+			}
+			const float dx = pass.ScreenOffset[0], dy = pass.ScreenOffset[1];
+			GX_Begin(GX_TRIANGLESTRIP, GX_VTXFMT0, std::uint16_t(count));
+			for (std::int32_t i = 0; i < count; i++) {
+				GX_Position3f32(StripX[i] + dx, StripY[i] + dy, 0.0f);
+				GX_Color4u8(StripR[i], StripG[i], StripB[i], StripA[i]);
+				if (textured) {
+					GX_TexCoord2f32(StripU[i], StripV[i]);
+				}
+			}
+			GX_End();
+			if (HasTexture && !textured) {
+				SetVertexModeTextured(true);
+			}
+		}
+	};
+}
+
+// The per-effect functions themselves are GENERATED: the ShaderCompiler transpiles each shader's
+// fixed_function block into C++ over the EffectContext defined above (the type name itself is the
+// "using EffectContext = ...;" alias the header expects - the anonymous namespace above is the same
+// namespace the header's payload reopens within this translation unit). Included at global scope
+// because the header opens nCine::RHI::GX itself.
+#include "../../../../Shaders/Generated/GxGeneratedEffects.h"
+
+namespace nCine::RHI::GX
+{
+	const FixedFunctionGeneratedEffect* GxDevice::FindGeneratedEffect(const char* program, const char* variant)
+	{
+		// A linear scan is fine - the lookup runs once per program load, not per draw
+		for (std::size_t i = 0; i < FixedFunctionGeneratedEffectCount; i++) {
+			const FixedFunctionGeneratedEffect& e = FixedFunctionGeneratedEffects[i];
+			if (std::strcmp(e.Program, program) == 0 && std::strcmp(e.Variant, variant) == 0) {
+				return &e;
+			}
+		}
+		return nullptr;
 	}
 
 	GxDevice::BlendingState GxDevice::blending_;
@@ -968,9 +1615,10 @@ namespace nCine::RHI::GX
 		std::memcpy(layerColor, blockData + kColorOffset, sizeof(layerColor));
 
 		// The palette to remap with is whatever the material bound to the palette sampler; the registered
-		// global palette is the fallback (mirrors the sprite path)
-		const bool isPaletteRemap = (currentProgram_->GetEffect() == GxEffect::TileMapMeshPalette ||
-			currentProgram_->UsesPalette());
+		// global palette is the fallback (mirrors the sprite path). TileMapMeshPalette binds
+		// uTexturePalette in its reflection, which is exactly what UsesPalette() reports - the remap
+		// intent needs no effect identity of its own.
+		const bool isPaletteRemap = currentProgram_->UsesPalette();
 		const GxTexture* paletteTex = nullptr;
 		if (isPaletteRemap || texture->IsIndexed()) {
 			paletteTex = boundTextures_[1];
@@ -1111,43 +1759,164 @@ namespace nCine::RHI::GX
 		}
 	}
 
+	void GxDevice::DispatchLineStrip(std::int32_t firstVertex, std::int32_t numVertices)
+	{
+		// The weapon wheel arrives as a textured line strip of 4-float vertices (position.xy,
+		// texcoords.uv) - the layout the MeshSprite shader's attributes declare. Unlike the PVR,
+		// the GP draws lines natively, so the strip is passed through as GX_LINESTRIP.
+		constexpr std::int32_t FloatsPerVertex = 4;
+		if (numVertices < 2 || numVertices > 0xFFFF) {
+			return;
+		}
+
+		const GxBuffer* vbo = currentProgram_->GetBoundVbo();
+		if (vbo == nullptr) {
+			return;
+		}
+		const std::size_t firstFloat = (std::size_t(currentProgram_->GetBoundVboOffset()) / sizeof(float)) +
+			std::size_t(firstVertex) * FloatsPerVertex;
+		const std::size_t floatCount = std::size_t(numVertices) * FloatsPerVertex;
+		if ((firstFloat + floatCount) * sizeof(float) > vbo->GetSize()) {
+			return;
+		}
+		const float* DEATH_RESTRICT vertices = reinterpret_cast<const float*>(vbo->HostData()) + firstFloat;
+
+		const GxUniformBlock* block = currentProgram_->FindBlock("InstanceBlock");
+		if (block == nullptr) {
+			return;
+		}
+		std::int32_t binding = block->GetBindingIndex();
+		if (binding < 0 || std::uint32_t(binding) >= MaxUniformBindings) {
+			binding = 0;
+		}
+		const std::uint8_t* blockData = boundUniformRanges_[binding].Data;
+		if (blockData == nullptr) {
+			return;
+		}
+
+		GxTexture* texture = const_cast<GxTexture*>(boundTextures_[0]);
+		if (texture == nullptr) {
+			return;
+		}
+
+		const std::uint8_t* projBytes = currentProgram_->GetResolvedProjectionMatrix();
+		const std::uint8_t* viewBytes = currentProgram_->GetResolvedViewMatrix();
+		const float* projMat = (projBytes != nullptr ? reinterpret_cast<const float*>(projBytes) : IdentityMatrix);
+		const float* viewMat = (viewBytes != nullptr ? reinterpret_cast<const float*>(viewBytes) : IdentityMatrix);
+		float pv[16];
+		Mat4Mul(projMat, viewMat, pv);
+		Transform2D mvp;
+		Mat4MulTransform2D(pv, reinterpret_cast<const float*>(blockData + kModelMatrixOffset), mvp);
+
+		// Every vertex of the strip carries the instance colour, so it is quantized once
+		float color[4];
+		std::memcpy(color, blockData + kColorOffset, sizeof(color));
+		const std::uint8_t r = QuantizeChannel(color[0]);
+		const std::uint8_t g = QuantizeChannel(color[1]);
+		const std::uint8_t b = QuantizeChannel(color[2]);
+		const std::uint8_t a = QuantizeChannel(color[3]);
+
+		// The strip shares one texture; indexed assets read through the base TLUT row like the fonts do
+		GXTexObj* texObj = nullptr;
+		if (texture->IsIndexed()) {
+			const GxTexture* paletteTex = boundTextures_[1];
+			if (paletteTex == nullptr || paletteTex == texture) {
+				paletteTex = paletteTexture_;
+			}
+			const std::int32_t slot = AcquireTlutForRow(paletteTex, 0);
+			texObj = texture->GetTexObj();
+			if (texObj != nullptr && slot >= 0) {
+				GX_InitTexObjTlut(texObj, GX_TLUT0 + std::uint32_t(slot));
+			}
+		} else {
+			texObj = texture->GetTexObj();
+		}
+		if (texObj == nullptr) {
+			return;
+		}
+
+		ApplyProjection();
+		ApplyRenderState();
+		SetVertexModeTextured(true);
+		SetTevMode(TevMode::Modulate);
+		GX_LoadTexObj(texObj, GX_TEXMAP0);
+		// Width is in sixths of a pixel, so 6 matches the 1-wide GL lines this stands in for
+		GX_SetLineWidth(6, GX_TO_ZERO);
+
+		const bool screenPass = (currentRenderTarget_ == nullptr);
+		const Recti viewport = (viewport_.W > 0 && viewport_.H > 0)
+			? viewport_ : Recti(0, 0, logicalWidth_, logicalHeight_);
+
+		// The NDC-to-raster mapping is folded into the transform once, like the other mesh paths
+		const float rasterScaleX = 0.5f * float(viewport.W);
+		const float rasterBiasX = rasterScaleX + float(viewport.X);
+		const float rasterScaleY = 0.5f * float(viewport.H) * (screenPass ? 1.0f : -1.0f);
+		const float rasterBiasY = 0.5f * float(viewport.H) + float(viewport.Y);
+		const Transform2D raster = {
+			mvp.Xx * rasterScaleX, mvp.Xy * rasterScaleY,
+			mvp.Yx * rasterScaleX, mvp.Yy * rasterScaleY,
+			mvp.Tx * rasterScaleX + rasterBiasX, mvp.Ty * rasterScaleY + rasterBiasY
+		};
+
+		GX_Begin(GX_LINESTRIP, GX_VTXFMT0, std::uint16_t(numVertices));
+		for (std::int32_t i = 0; i < numVertices; i++) {
+			const float* v = vertices + std::size_t(i) * FloatsPerVertex;
+			GX_Position3f32(raster.Xx * v[0] + raster.Yx * v[1] + raster.Tx,
+				raster.Xy * v[0] + raster.Yy * v[1] + raster.Ty, 0.0f);
+			GX_Color4u8(r, g, b, a);
+			GX_TexCoord2f32(v[2], v[3]);
+		}
+		GX_End();
+	}
+
 	void GxDevice::Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices)
 	{
 		if (currentProgram_ == nullptr || numVertices <= 0 || !gxInitialized_) {
 			return;
 		}
 
-		const GxEffect effect = currentProgram_->GetEffect();
+		// The program's whole console identity is its generated-table entry, resolved at load from the
+		// true (program, variant) the loaders plumbed in - a program without an entry has no
+		// fixed_function block in its .shader file (Lighting, Blur, the Resize* family,
+		// runtime-compiled shaders, ...) and keeps the logged, skipped draw.
+		const FixedFunctionGeneratedEffect* generated = currentProgram_->GetGeneratedEffect();
+		if (generated == nullptr) {
+			if (!currentProgram_->FetchUnsupportedWarned()) {
+				LOGW("Skipping draws of program \"{}\": No fixed_function effect declared by the shader", currentProgram_->GetObjectLabel());
+			}
+			return;
+		}
+		const FixedFunctionIntrinsic intrinsic = generated->Intrinsic;
 
 		// The Combine draw is the direct-tier lighting hook (see the software backend)
-		if (effect == GxEffect::Combine) {
+		if (intrinsic == FixedFunctionIntrinsic::LightingCombine) {
 			ApplyPendingSoftwareLighting();
 			return;
 		}
 
 		// A whole tile layer arrives as one mesh instead of one command per tile
-		if (effect == GxEffect::TileMapMesh || effect == GxEffect::TileMapMeshPalette) {
+		if (intrinsic == FixedFunctionIntrinsic::TileMapMesh) {
 			DispatchTileMesh(primitive, firstVertex, numVertices);
 			return;
 		}
 
-		// v1 renders the procedural sprite-quad families only; vertex-fed meshes (LineStrip weapon wheel,
-		// mesh sprites) and unclassified effects are skipped with a one-time warning
-		const bool isQuadFamily = (effect == GxEffect::DefaultSprite || effect == GxEffect::DefaultBatchedSprites ||
-			effect == GxEffect::DefaultSpriteNoTexture || effect == GxEffect::DefaultBatchedSpritesNoTexture ||
-			effect == GxEffect::Colorized || effect == GxEffect::BatchedColorized ||
-			effect == GxEffect::PaletteRemap || effect == GxEffect::BatchedPaletteRemap ||
-			effect == GxEffect::WhiteMask || effect == GxEffect::BatchedWhiteMask ||
-			effect == GxEffect::PartialWhiteMask || effect == GxEffect::BatchedPartialWhiteMask ||
-			effect == GxEffect::FrozenMask || effect == GxEffect::BatchedFrozenMask ||
-			effect == GxEffect::Outline || effect == GxEffect::BatchedOutline ||
-			effect == GxEffect::ShieldFire || effect == GxEffect::BatchedShieldFire ||
-			effect == GxEffect::ShieldLightning || effect == GxEffect::BatchedShieldLightning ||
-			effect == GxEffect::Transition ||
-			effect == GxEffect::TexturedBackground || effect == GxEffect::TexturedBackgroundCircle);
+		// The weapon wheel is the one vertex-fed mesh on this tier, a textured line strip
+		if (intrinsic == FixedFunctionIntrinsic::LineStripMesh) {
+			if (primitive == PrimitiveType::LineStrip) {
+				DispatchLineStrip(firstVertex, numVertices);
+			} else if (!currentProgram_->FetchUnsupportedWarned()) {
+				LOGW("Skipping draws of program \"{}\": Only the line-strip form of the mesh pipeline is supported by the GX dispatch", currentProgram_->GetObjectLabel());
+			}
+			return;
+		}
+
+		// Everything else is the procedural sprite-quad family: a transpiled effect function
+		// (geometry synthesis included - the iris fan and the warped background are ordinary blocks
+		// since phase 4)
+		const bool isQuadFamily = (generated->Fn != nullptr);
 		if (!isQuadFamily || (primitive != PrimitiveType::TriangleStrip && primitive != PrimitiveType::Triangles)) {
 			if (!currentProgram_->FetchUnsupportedWarned()) {
-				LOGW("Skipping draws of program \"{}\": Effect not supported by the GX v1 dispatch", currentProgram_->GetObjectLabel());
+				LOGW("Skipping draws of program \"{}\": Effect not supported by the GX dispatch", currentProgram_->GetObjectLabel());
 			}
 			return;
 		}
@@ -1197,11 +1966,10 @@ namespace nCine::RHI::GX
 		float pv[16];
 		Mat4Mul(projMat, viewMat, pv);
 
-		const bool batched = (effect == GxEffect::DefaultBatchedSprites || effect == GxEffect::DefaultBatchedSpritesNoTexture ||
-			effect == GxEffect::BatchedPaletteRemap || effect == GxEffect::BatchedColorized ||
-			effect == GxEffect::BatchedWhiteMask || effect == GxEffect::BatchedPartialWhiteMask ||
-			effect == GxEffect::BatchedFrozenMask || effect == GxEffect::BatchedOutline ||
-			effect == GxEffect::BatchedShieldFire || effect == GxEffect::BatchedShieldLightning || instanceStride > 0);
+		// Batched programs are exactly the ones whose reflection declares a BATCH_SIZE-strided
+		// InstancesBlock (non-batched programs use a flat InstanceBlock with no stride), so the
+		// reflected stride IS the batching signal - no per-program identity needed
+		const bool batched = (instanceStride > 0);
 		std::int32_t numInstances = 1;
 		if (batched) {
 			numInstances = numVertices / 6;
@@ -1213,15 +1981,37 @@ namespace nCine::RHI::GX
 			}
 		}
 
-		// The transition covers the screen with a flat colour, but its uniform block carries texRect (so the
-		// sprite size sits at the textured offset) - the layout and the sampling are decided separately
-		const bool hasTexture = (effect != GxEffect::DefaultSpriteNoTexture && effect != GxEffect::DefaultBatchedSpritesNoTexture &&
-			effect != GxEffect::Transition);
-		const bool texturedLayout = (hasTexture || effect == GxEffect::Transition);
-		// Every effect that samples indexed sprites through the palette texture: PaletteRemap and the
-		// "...Palette" variants of the actor state effects (reported by the program itself)
-		const bool isPaletteRemap = (effect == GxEffect::PaletteRemap || effect == GxEffect::BatchedPaletteRemap ||
-			currentProgram_->UsesPalette());
+		// A program samples the sprite texture exactly when its reflection binds uTexture - the
+		// no-texture sprite programs and the Transition (which carries texRect in its block but
+		// samples nothing, hence the separate layout flag) simply do not declare it
+		bool hasTexture = false;
+		if (reflection != nullptr) {
+			for (std::size_t i = 0; i < reflection->TextureCount; i++) {
+				if (std::strcmp(reflection->Textures[i].Name, "uTexture") == 0) {
+					hasTexture = true;
+					break;
+				}
+			}
+		}
+		// The instance layout follows the block's own reflected declaration rather than any effect
+		// identity: a block that declares texRect uses the textured member offsets whether or not
+		// the program samples a texture (the Transition carries texRect but samples nothing)
+		bool texturedLayout = hasTexture;
+		if (!texturedLayout && reflection != nullptr) {
+			for (std::size_t i = 0; i < reflection->BlockCount && !texturedLayout; i++) {
+				const ShaderCompiler::UniformBlock& b = reflection->Blocks[i];
+				for (std::size_t j = 0; j < b.MemberCount; j++) {
+					if (std::strcmp(b.Members[j].Name, "texRect") == 0) {
+						texturedLayout = true;
+						break;
+					}
+				}
+			}
+		}
+		// Every effect that samples indexed sprites through the palette texture binds uTexturePalette
+		// in its reflection, which is what UsesPalette() reports (PaletteRemap and the "...Palette"
+		// variants of the actor state effects alike)
+		const bool isPaletteRemap = currentProgram_->UsesPalette();
 		const std::int32_t textureUnit = samplerUnit("uTexture", 0);
 		const GxTexture* texture = (hasTexture ? boundTextures_[std::uint32_t(textureUnit) < MaxTextureUnits ? textureUnit : 0] : nullptr);
 		if (hasTexture && texture == nullptr) {
@@ -1268,6 +2058,30 @@ namespace nCine::RHI::GX
 
 		std::int32_t lastTlutSlot = -2;
 		GXTexObj* loadedTexObj = nullptr;
+
+		// Statically computed per generated function: which optional context facilities the effect's
+		// code can ever call. The setup gated on these flags only feeds those facilities, so skipping
+		// it is invisible to the effect - it cannot read what it never calls - and every submitted
+		// primitive stays bit-identical.
+		const FixedFunctionRequirements reqs = generated->Requirements;
+		const bool needsTexelStep = ((reqs & FixedFunctionRequirements::NeedsTexelStep) == FixedFunctionRequirements::NeedsTexelStep);
+		const bool needsUniforms = ((reqs & FixedFunctionRequirements::NeedsUniforms) == FixedFunctionRequirements::NeedsUniforms);
+		const bool needsStripBuilder = ((reqs & FixedFunctionRequirements::NeedsStripBuilder) == FixedFunctionRequirements::NeedsStripBuilder);
+		const bool needsQuadAxes = ((reqs & FixedFunctionRequirements::NeedsQuadAxes) == FixedFunctionRequirements::NeedsQuadAxes);
+
+		// Texel sizes of the sprite texture in texture space (part of the EffectContext contract;
+		// the effects that need an on-screen texel step derive it from the instance colour instead,
+		// exactly like their GLSL does). Derived only for effects flagged with the texel-size
+		// facility - everything else gets deterministic zeros without the divides.
+		const float texelWidth = (needsTexelStep && hasTexture && texture->GetWidth() > 0 ? 1.0f / float(texture->GetWidth()) : 0.0f);
+		const float texelHeight = (needsTexelStep && hasTexture && texture->GetHeight() > 0 ? 1.0f / float(texture->GetHeight()) : 0.0f);
+		// The material blend arguments, mirroring what ApplyRenderState() issued above, so
+		// EffectContext::SubmitQuad can restore them after a pass-level blend override. The override
+		// flag outlives one instance because the material state does too.
+		const std::uint8_t materialBlendOp = std::uint8_t(blending_.Enabled ? GX_BM_BLEND : GX_BM_NONE);
+		const std::uint8_t materialBlendSrc = (blending_.Enabled ? MapBlendGx(blending_.SrcRgb) : std::uint8_t(GX_BL_ONE));
+		const std::uint8_t materialBlendDst = (blending_.Enabled ? MapBlendGx(blending_.DstRgb) : std::uint8_t(GX_BL_ZERO));
+		bool blendOverridden = false;
 
 		for (std::int32_t k = 0; k < numInstances; k++) {
 			const std::uint8_t* inst = blockData + std::size_t(k) * (batched ? instanceStride : 0);
@@ -1340,135 +2154,51 @@ namespace nCine::RHI::GX
 				pvv[i] = ay * texRect[2] + texRect[3];
 			}
 
-			// Emits the quad at an optional screen-space offset, in the given colour
-			auto emitQuad = [&](float dx, float dy, float cr, float cg, float cb, float ca) {
-				const std::uint8_t r = QuantizeChannel(cr);
-				const std::uint8_t g = QuantizeChannel(cg);
-				const std::uint8_t b = QuantizeChannel(cb);
-				const std::uint8_t a = QuantizeChannel(ca);
-				// Strip order (v0, v1, v2, v3) forms the quad perimeter (v0, v1, v3, v2)
-				GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-				if (hasTexture) {
-					GX_Position3f32(px[0] + dx, py[0] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(pu[0], pvv[0]);
-					GX_Position3f32(px[1] + dx, py[1] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(pu[1], pvv[1]);
-					GX_Position3f32(px[3] + dx, py[3] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(pu[3], pvv[3]);
-					GX_Position3f32(px[2] + dx, py[2] + dy, 0.0f);	GX_Color4u8(r, g, b, a);	GX_TexCoord2f32(pu[2], pvv[2]);
-				} else {
-					GX_Position3f32(px[0] + dx, py[0] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
-					GX_Position3f32(px[1] + dx, py[1] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
-					GX_Position3f32(px[3] + dx, py[3] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
-					GX_Position3f32(px[2] + dx, py[2] + dy, 0.0f);	GX_Color4u8(r, g, b, a);
-				}
-				GX_End();
-			};
-
-			switch (effect) {
-				case GxEffect::WhiteMask:
-				case GxEffect::BatchedWhiteMask: {
-					// The shader saturates the luma (x6) into a flat silhouette of the instance colour
-					SetTevMode(TevMode::Silhouette);
-					emitQuad(0.0f, 0.0f, color[0], color[1], color[2], color[3]);
-					break;
-				}
-				case GxEffect::PartialWhiteMask:
-				case GxEffect::BatchedPartialWhiteMask: {
-					// Brightened but still shaded (the shader's luma x2.5)
-					SetTevMode(TevMode::ModulateBrighten);
-					emitQuad(0.0f, 0.0f, color[0], color[1], color[2], color[3]);
-					break;
-				}
-				case GxEffect::FrozenMask:
-				case GxEffect::BatchedFrozenMask: {
-					// color = (1/texWidth, 1/texHeight, unused, transition). The shader mixes the sprite
-					// toward ice blue by the transition, which two blended passes reproduce: the untouched
-					// sprite, then an ice-coloured silhouette at the transition's alpha
-					const float transition = color[3];
-					SetTevMode(TevMode::Modulate);
-					emitQuad(0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f);
-					if (transition > 0.0f) {
-						SetTevMode(TevMode::Silhouette);
-						emitQuad(0.0f, 0.0f, 0.2f, 0.82f, 0.8f, transition * 0.95f);
-					}
-					break;
-				}
-				case GxEffect::Outline:
-				case GxEffect::BatchedOutline: {
-					// color = (1/texWidth, 1/texHeight, outline grey, alpha). The shader finds the border
-					// by summing eight neighbour taps, which the fixed-function pipe draws instead as eight
-					// silhouettes offset by one texel, covered by the sprite itself. (The shader's second,
-					// dimmer ring at two texels is dropped - it costs another eight quads and barely
-					// registers at these resolutions.)
-					const float alpha = color[3];
-					if (alpha > 0.0f && texRect[0] != 0.0f && texRect[2] != 0.0f) {
-						// One texel in UV maps to this fraction of the quad's on-screen extent
-						const float dx = (px[0] - px[2]) * (color[0] / texRect[0]);
-						const float dy = (py[1] - py[0]) * (color[1] / texRect[2]);
-						const float grey = color[2];
-						SetTevMode(TevMode::Silhouette);
-						for (std::int32_t oy = -1; oy <= 1; oy++) {
-							for (std::int32_t ox = -1; ox <= 1; ox++) {
-								if (ox != 0 || oy != 0) {
-									emitQuad(dx * ox, dy * oy, grey, grey, grey, alpha);
-								}
-							}
-						}
-					}
-					SetTevMode(TevMode::Modulate);
-					emitQuad(0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f);
-					break;
-				}
-				case GxEffect::Transition: {
-					// The GLSL wipe clears a growing circle out of a black screen; flattened to a plain
-					// fade whose opacity tracks the same progress (fully clear once the circle covers the
-					// furthest corner, fully black at zero)
-					const float progress = color[3] / 0.927f;
-					const float alpha = (progress < 0.0f ? 1.0f : (progress > 1.0f ? 0.0f : 1.0f - progress));
-					if (alpha > 0.0f) {
-						SetTevMode(TevMode::Modulate);
-						emitQuad(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, alpha);
-					}
-					break;
-				}
-				case GxEffect::ShieldFire:
-				case GxEffect::BatchedShieldFire:
-				case GxEffect::BatchedShieldLightning:
-				case GxEffect::ShieldLightning: {
-					// color = (scaleX, scaleY, darkness, alpha). The shader's animated noise sphere is out
-					// of reach here, so the shield becomes a flat additively blended glow in its own
-					// colour, masked by the noise texture to keep some movement
-					const bool fire = (effect == GxEffect::ShieldFire || effect == GxEffect::BatchedShieldFire);
-					const float darkness = color[2];
-					const float alpha = color[3] * 0.5f;
-					SetTevMode(TevMode::Silhouette);
-					if (fire) {
-						emitQuad(0.0f, 0.0f, darkness, darkness * 0.45f, darkness * 0.1f, alpha);
-					} else {
-						emitQuad(0.0f, 0.0f, darkness * 0.6f, darkness * 0.8f, darkness, alpha);
-					}
-					break;
-				}
-				case GxEffect::Colorized:
-				case GxEffect::BatchedColorized: {
-					// gray = (r + g + b) * 0.5 and COLOR = gray * dye, with dye = 1 + (color - 0.5) * 4.
-					// The textures this runs on are grayscale (fonts), so r = g = b and that "average" is
-					// really a 1.5x brightening - dropping it left every glyph noticeably dark. The dye also
-					// exceeds 1.0 for any tint brighter than neutral, which a vertex colour cannot carry, so
-					// both are folded in at a quarter strength and the TEV stage scales the result back up.
-					constexpr float GrayGain = 1.5f;
-					SetTevMode(TevMode::ModulateScaled4);
-					emitQuad(0.0f, 0.0f,
-						GrayGain * (1.0f + (color[0] - 0.5f) * 4.0f) * 0.25f,
-						GrayGain * (1.0f + (color[1] - 0.5f) * 4.0f) * 0.25f,
-						GrayGain * (1.0f + (color[2] - 0.5f) * 4.0f) * 0.25f,
-						1.0f + (color[3] - 0.5f) * 4.0f);
-					break;
-				}
-				default: {
-					SetTevMode(TevMode::Modulate);
-					emitQuad(0.0f, 0.0f, color[0], color[1], color[2], color[3]);
-					break;
-				}
+			// The pass descriptors the per-effect functions declare are mapped onto this instance's
+			// corners and the surrounding material state through the context
+			EffectContext ctx;
+			ctx.InstanceColor = color;
+			ctx.TexelW = texelWidth;
+			ctx.TexelH = texelHeight;
+			ctx.Batched = batched;
+			ctx.Px = px;
+			ctx.Py = py;
+			ctx.Pu = pu;
+			ctx.Pv = pvv;
+			ctx.TexRect = texRect;
+			ctx.HasTexture = hasTexture;
+			ctx.MaterialBlendOp = materialBlendOp;
+			ctx.MaterialBlendSrc = materialBlendSrc;
+			ctx.MaterialBlendDst = materialBlendDst;
+			ctx.BlendOverridden = &blendOverridden;
+			// The optional context facilities are only wired up for effects whose static analysis
+			// says they can call them (see reqs above); the loop-invariant conditions predict
+			// perfectly, and members of an unused facility are simply never read
+			if (needsQuadAxes) {
+				ctx.OriginX = originX;
+				ctx.OriginY = originY;
+				ctx.AxisXx = spanXx;
+				ctx.AxisXy = spanXy;
+				ctx.AxisYx = spanYx;
+				ctx.AxisYy = spanYy;
 			}
+			// Resolved uniforms are the only thing the context needs the program for, so effects
+			// without the facility get no program plumbed at all (no resolution can ever run)
+			ctx.Program = (needsUniforms ? currentProgram_ : nullptr);
+			if (needsStripBuilder) {
+				// GX textures are not padded, so strip UVs pass through 1:1 (contract parity with the PVR)
+				ctx.UvScaleU = 1.0f;
+				ctx.UvScaleV = 1.0f;
+			}
+
+			// Every quad-family effect is the transpiled form of its shader's fixed_function block
+			// (masks, outline, shields, colorized, palette remap, the default sprites - batched
+			// twins and palette variants included - and the geometry-synthesized iris fan and
+			// warped background)
+			generated->Fn(ctx);
+			// The dispatch end of this instance: a pass the merger buffered but never paired
+			// (a single default pass, or FrozenMask with a zero ice alpha) goes out unmerged
+			ctx.FlushPendingQuad();
 		}
 
 		// Leave the pipe in the default combine for the next draw
