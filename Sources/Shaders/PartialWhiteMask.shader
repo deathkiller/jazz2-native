@@ -26,3 +26,20 @@ void fragment() {
 	float color = min((0.299 * tex.r + 0.587 * tex.g + 0.114 * tex.b) * 2.5, 1.0);
 	COLOR = vec4(color, color, color, tex.a) * COLOR;
 }
+
+void fixed_function(pvr) {
+	// Console fixed-function tier: brightened but still shaded (the shader's luma x2.5), which the two
+	// consoles express differently. PVR: keep the sprite and lift it by a constant through the
+	// post-texture offset colour.
+	pass p;
+	p.color = COLOR;
+	p.offset_color = vec3(96.0 / 255.0);
+	submit_quad(p);
+}
+void fixed_function(gx) {
+	// GX: no post-texture add exists, so the combiner's clamped x2 output scale stands in for the boost
+	pass p;
+	p.tev = MODULATE_X2;
+	p.color = COLOR;
+	submit_quad(p);
+}

@@ -102,3 +102,17 @@ void fragment() {
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.a = 1.0;
 }
+
+void fixed_function(pvr) {
+	// Banded trapezoid rebuild of the warp (shared with TexturedBackgroundCircle.shader)
+#include "Include/TexturedBackgroundWarp.inc"
+}
+
+void fixed_function(gx) {
+	// The same banded trapezoid rebuild as the PVR, from the same include - the geometry is portable
+	// vocabulary. The GX additionally folds the horizon tint into each band piece's own draw with a
+	// TINT_MIX combiner stage instead of laying a second gradient pass over it (same pixels, half
+	// the primitives, and the textured vertex format is never left).
+#define WARP_TINT_IN_VERTEX_COLOR
+#include "Include/TexturedBackgroundWarp.inc"
+}

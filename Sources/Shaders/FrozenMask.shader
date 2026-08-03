@@ -49,3 +49,55 @@ void fragment() {
 	float grey = min((0.299 * color.r + 0.587 * color.g + 0.114 * color.b) * 2.6, 1.0);
 	COLOR = mix(tex, vec4(0.2 * grey, 0.2 + grey * 0.62, 0.6 + 0.2 * grey, outline * 0.95), COLOR.a);
 }
+
+void fixed_function(pvr) {
+	// Console fixed-function tier: color = (1/texWidth, 1/texHeight, unused, transition). The GLSL is
+	// mix(tex, vec4(0.2*grey, 0.2+0.62*grey, 0.6+0.2*grey, 0.95*outline), transition) - two passes
+	// reproduce that mix: the untouched sprite carries the (1-t) side, then an ice silhouette blended
+	// on top at alpha 0.95*t carries the ice side. The silhouette is the offset-colour trick (argb rgb
+	// zero, so rgb comes from oargb alone while the alpha still modulates the texel alpha - which also
+	// stands in for the shader's `outline` term, the sprite's own coverage). The ice tone is the GLSL
+	// target at grey = 1 - sprite interiors saturate grey (luma * 2.6, clamped) almost everywhere, and
+	// it matches the constant the gx block below already uses. The tone is NOT scaled by t: the pass
+	// alpha already applies the transition weighting, and scaling both would darken quadratically.
+	float t = clamp(COLOR.a, 0.0, 1.0);
+	pass sprite;
+	submit_quad(sprite);
+	if (t > 0.0) {
+		pass ice;
+		ice.color = vec4(0.0, 0.0, 0.0, 0.95 * t);
+		ice.offset_color = vec3(0.2, 0.82, 0.8);
+		submit_quad(ice);
+	}
+}
+void fixed_function(gx) {
+	// Same two passes as the PVR block above - the untouched sprite carries the (1-t) side of the
+	// mix, an ice silhouette at alpha 0.95*t carries the ice side - but the GX does NOT have to
+	// settle for a constant ice tone. The GLSL picks it per pixel from `grey` (the texel's luminance
+	// amplified 2.6x and saturated): dark texels stay a deep blue, bright ones wash out to pale
+	// cyan. LUMA_RAMP is exactly that - the combiner dots the texel against the Rec.601 weights,
+	// saturates the scaled result and looks the tone up on a two-endpoint ramp:
+	//
+	//   grey = 0  ->  vec3(0.2*0, 0.2 + 0.62*0, 0.6 + 0.2*0) = (0.0,  0.2,  0.6)   = ice.color.rgb
+	//   grey = 1  ->  vec3(0.2*1, 0.2 + 0.62*1, 0.6 + 0.2*1) = (0.2, 0.82,  0.8)   = ice.offset_color
+	//
+	// which is linear in grey, so the ramp reproduces the GLSL's tone for EVERY grey, not just the
+	// saturated end the flat tone stood for. The texel alpha stands in for the shader's `outline`
+	// term (the sprite's own coverage) and the tone is NOT scaled by t - the pass alpha already
+	// applies the transition weighting, and scaling both would darken quadratically.
+	//
+	// The backend still merges the two passes into ONE draw (the premultiplied fold at
+	// SubmitMergedSilhouetteOver); the ramp just makes it a six-stage TEV program instead of a
+	// two-stage one, which costs nothing per pixel on this hardware.
+	pass sprite;
+	submit_quad(sprite);
+	float t = clamp(COLOR.a, 0.0, 1.0);
+	if (t > 0.0) {
+		pass ice;
+		ice.tev = LUMA_RAMP;
+		ice.luma_gain = 2.6;
+		ice.color = vec4(0.0, 0.2, 0.6, 0.95 * t);
+		ice.offset_color = vec3(0.2, 0.82, 0.8);
+		submit_quad(ice);
+	}
+}

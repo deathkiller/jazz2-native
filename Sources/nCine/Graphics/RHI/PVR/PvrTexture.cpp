@@ -28,6 +28,101 @@ namespace nCine::RHI::PVR
 			return std::uint16_t(((a >> 4) << 12) | ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4));
 		}
 
+		// PackBits run-length coding for the host pixel stores. Indexed pixel art is dominated by runs
+		// (transparent texels, flat fills), and measured on the stock levels the R8/RG8 stores shrink to
+		// 33-42% - about 3 MB less main memory per level, which is what makes the biggest levels (e.g.
+		// "secretf/04_haunted1", "xmas99/02_xmas2") fit into the console's 16 MB at all. Header byte n:
+		// 0..127 = copy the next n+1 bytes verbatim, 129..255 = repeat the next byte 257-n times; worst
+		// case grows by 1 byte per 128 (on data that would not stay compressed anyway - see StorePixels).
+		void EncodePackBits(const std::uint8_t* src, std::size_t size, SmallVector<std::uint8_t, 0>& out)
+		{
+			out.clear();
+			// Half is a safe upper estimate for the content that qualifies; growing past it is harmless
+			out.reserve(size / 2);
+
+			std::size_t i = 0;
+			while (i < size) {
+				// A repeat packet only pays off from 3 bytes (2 bytes of output either way at 2,
+				// but a run of 2 inside a literal costs nothing extra and avoids a packet break)
+				std::size_t run = 1;
+				while (i + run < size && run < 128 && src[i + run] == src[i]) {
+					run++;
+				}
+				if (run >= 3) {
+					out.push_back(std::uint8_t(257 - run));
+					out.push_back(src[i]);
+					i += run;
+					continue;
+				}
+
+				// Literal packet: extend until a worthwhile run starts or the packet is full
+				std::size_t literal = run;
+				while (i + literal < size && literal < 128) {
+					std::size_t nextRun = 1;
+					while (i + literal + nextRun < size && nextRun < 3 && src[i + literal + nextRun] == src[i + literal]) {
+						nextRun++;
+					}
+					if (nextRun >= 3) {
+						break;
+					}
+					literal += nextRun;
+				}
+				if (literal > 128) {
+					literal = 128;
+				}
+				out.push_back(std::uint8_t(literal - 1));
+				const std::uint8_t* from = &src[i];
+				for (std::size_t b = 0; b < literal; b++) {
+					out.push_back(from[b]);
+				}
+				i += literal;
+			}
+		}
+
+		// Streaming PackBits decoder: the consumers (VRAM rebuild, palette bake) walk the image strictly
+		// front to back one row at a time, so the store never has to be inflated whole - each Read() call
+		// hands out the next `count` bytes and keeps the packet state across calls
+		struct RlePixelReader
+		{
+			const std::uint8_t* Src;
+			// Remaining bytes of the packet in progress; positive = literal (copied from Src),
+			// negative = repeat (of RunValue)
+			std::int32_t Pending;
+			std::uint8_t RunValue;
+
+			explicit RlePixelReader(const std::uint8_t* src)
+				: Src(src), Pending(0), RunValue(0) {}
+
+			void Read(std::uint8_t* DEATH_RESTRICT dst, std::size_t count)
+			{
+				while (count > 0) {
+					if (Pending == 0) {
+						std::uint8_t header = *Src++;
+						if (header < 128) {
+							Pending = std::int32_t(header) + 1;
+						} else {
+							Pending = -(257 - std::int32_t(header));
+							RunValue = *Src++;
+						}
+					}
+					if (Pending > 0) {
+						std::size_t n = (std::size_t(Pending) < count ? std::size_t(Pending) : count);
+						std::memcpy(dst, Src, n);
+						Src += n;
+						dst += n;
+						Pending -= std::int32_t(n);
+						count -= n;
+					} else {
+						std::size_t n = (std::size_t(-Pending) < count ? std::size_t(-Pending) : count);
+						std::memset(dst, RunValue, n);
+						dst += n;
+						Pending += std::int32_t(n);
+						count -= n;
+					}
+				}
+			}
+		};
+
 		// Texture memory only supports 16 and 32-bit accesses. libc memcpy is free to fall back to byte
 		// writes for unaligned heads and odd tails, which silently corrupts texels on real hardware while
 		// emulators tolerate it - so copies into video memory spell their access width out
@@ -58,7 +153,7 @@ namespace nCine::RHI::PVR
 		: handle_(nextHandle_++), contentVersion_(0), target_(target), format_(PixelFormat::Unknown), uploadFormat_(PixelFormat::Unknown),
 			width_(0), height_(0), strideBytes_(0), bytesPerPixel_(0),
 			minFilter_(nCine::SamplerFilter::Nearest), magFilter_(nCine::SamplerFilter::Nearest), wrap_(SamplerWrapping::ClampToEdge),
-			textureUnit_(0), isRenderTarget_(false), isPaletteTexture_(false),
+			textureUnit_(0), pixelsCompressed_(false), isRenderTarget_(false), isPaletteTexture_(false),
 			vram_(nullptr), vramFormat_(0), vramBytesPerTexel_(0), paddedWidth_(0), paddedHeight_(0), uScale_(1.0f), vScale_(1.0f),
 			bakedSlots_{}, nextBakedSlot_(0), livePrev_(nullptr), liveNext_(nullptr), lastUsedScene_(NeverUsed)
 	{
@@ -212,7 +307,14 @@ namespace nCine::RHI::PVR
 		height_ = height;
 		bytesPerPixel_ = BytesPerPixel(format_);
 		strideBytes_ = width * bytesPerPixel_;
-		pixels_.assign(std::size_t(strideBytes_) * std::size_t(height > 0 ? height : 0), std::uint8_t(0));
+		if (CanCompressPixels()) {
+			// The compressible formats defer their host store to the first upload (StorePixels), so the
+			// full-size linear buffer never exists for them - not even between allocation and upload
+			pixels_.clear();
+		} else {
+			pixels_.assign(std::size_t(strideBytes_) * std::size_t(height > 0 ? height : 0), std::uint8_t(0));
+		}
+		pixelsCompressed_ = false;
 		FreeVramStores();
 		paddedWidth_ = NextPow2(width);
 		paddedHeight_ = NextPow2(height);
@@ -222,6 +324,73 @@ namespace nCine::RHI::PVR
 			LOGE("Texture {}x{} exceeds the PowerVR 1024 limit", width, height);
 		}
 		contentVersion_ = ++nextContentVersion_;
+	}
+
+	bool PvrTexture::CanCompressPixels() const
+	{
+		// Only static indexed content: R8 (paletted tiles/sprites) and RG8 (index + alpha). Their host
+		// stores are consumed strictly sequentially (RefreshVramStore, EnsureBakedArgb4444), so they can
+		// be streamed out of the compressed form. RGB565 belongs to the streaming path (cinematics) that
+		// rewrites the store every frame, RGBA8 covers the palette texture (read in place by the device)
+		// and the few baked sheets, and render targets have no host content to keep at all. The width
+		// limit matches both the bake path's fixed row scratch and the widest texture the PVR can sample.
+		return (uploadFormat_ == PixelFormat::R8 || uploadFormat_ == PixelFormat::RG8) &&
+			!isPaletteTexture_ && !isRenderTarget_ && width_ <= 1024;
+	}
+
+	void PvrTexture::StorePixels(const std::uint8_t* data)
+	{
+		const std::size_t rawSize = std::size_t(RawPixelsSize());
+		if (rawSize == 0) {
+			return;
+		}
+		if (CanCompressPixels()) {
+			EncodePackBits(data, rawSize, pixels_);
+			if (pixels_.size() < rawSize) {
+				pixelsCompressed_ = true;
+			} else {
+				// Content that does not compress is kept linear, so the read paths skip the decoder
+				pixels_.assign(data, data + rawSize);
+				pixelsCompressed_ = false;
+			}
+		} else {
+			pixels_.assign(data, data + rawSize);
+			pixelsCompressed_ = false;
+		}
+	}
+
+	void PvrTexture::MaterializePixelsRaw()
+	{
+		const std::size_t rawSize = std::size_t(RawPixelsSize());
+		if (rawSize == 0) {
+			return;
+		}
+		if (pixelsCompressed_) {
+			SmallVector<std::uint8_t, 0> raw;
+			raw.resize_for_overwrite(rawSize);
+			RlePixelReader reader(pixels_.data());
+			reader.Read(raw.data(), rawSize);
+			pixels_ = std::move(raw);
+			pixelsCompressed_ = false;
+		} else if (pixels_.empty()) {
+			// A compressible texture defers its store until the first upload; a partial first upload
+			// gets the zero-filled base the uncompressed formats always had
+			pixels_.assign(rawSize, std::uint8_t(0));
+		}
+	}
+
+	void PvrTexture::RecompressPixels()
+	{
+		const std::size_t rawSize = std::size_t(RawPixelsSize());
+		if (!CanCompressPixels() || pixelsCompressed_ || pixels_.size() != rawSize || rawSize == 0) {
+			return;
+		}
+		SmallVector<std::uint8_t, 0> compressed;
+		EncodePackBits(pixels_.data(), rawSize, compressed);
+		if (compressed.size() < rawSize) {
+			pixels_ = std::move(compressed);
+			pixelsCompressed_ = true;
+		}
 	}
 
 	bool PvrTexture::EnsureVramStore(std::int32_t bytesPerTexel)
@@ -274,11 +443,17 @@ namespace nCine::RHI::PVR
 			}
 			// Pad the linear image into a power-of-two staging buffer, then let the loader twiddle it.
 			// The buffer persists across uploads (the renderer is single-threaded), and only the padding
-			// is zeroed - the image area is overwritten right after
+			// is zeroed - the image area is overwritten right after. A compressed store streams its rows
+			// through the decoder (it is walked strictly front to back), so it is never inflated whole.
 			static SmallVector<std::uint8_t, 0> staging;
 			staging.resize_for_overwrite(size);
+			RlePixelReader reader(pixels_.data());
 			for (std::int32_t y = 0; y < height_; y++) {
-				std::memcpy(staging.data() + std::size_t(y) * paddedWidth_, pixels_.data() + std::size_t(y) * strideBytes_, std::size_t(width_));
+				if (pixelsCompressed_) {
+					reader.Read(staging.data() + std::size_t(y) * paddedWidth_, std::size_t(width_));
+				} else {
+					std::memcpy(staging.data() + std::size_t(y) * paddedWidth_, pixels_.data() + std::size_t(y) * strideBytes_, std::size_t(width_));
+				}
 				std::memset(staging.data() + std::size_t(y) * paddedWidth_ + width_, 0, std::size_t(paddedWidth_ - width_));
 			}
 			if (height_ < paddedHeight_) {
@@ -455,11 +630,22 @@ namespace nCine::RHI::PVR
 		}
 
 		// The staging buffer persists across bakes (the renderer is single-threaded); only the padding
-		// is zeroed, the image area is overwritten right after
+		// is zeroed, the image area is overwritten right after. A compressed store is streamed row by
+		// row through a fixed scratch line - the bake walks the image strictly front to back, so the
+		// linear form never has to exist in full.
 		static SmallVector<std::uint16_t, 0> staging;
 		staging.resize_for_overwrite(std::size_t(paddedWidth_) * std::size_t(paddedHeight_));
+		// Widest supported source row: 1024 texels of 2 bytes (see NextPow2's 1024 clamp)
+		static std::uint8_t rowScratch[1024 * 2];
+		RlePixelReader reader(pixels_.data());
 		for (std::int32_t y = 0; y < height_; y++) {
-			const std::uint8_t* DEATH_RESTRICT src = pixels_.data() + std::size_t(y) * strideBytes_;
+			const std::uint8_t* DEATH_RESTRICT src;
+			if (pixelsCompressed_) {
+				reader.Read(rowScratch, std::size_t(strideBytes_));
+				src = rowScratch;
+			} else {
+				src = pixels_.data() + std::size_t(y) * strideBytes_;
+			}
 			std::uint16_t* DEATH_RESTRICT dst = staging.data() + std::size_t(y) * paddedWidth_;
 			for (std::int32_t x = 0; x < width_; x++) {
 				dst[x] = std::uint16_t(rgb444[src[x * 2]] | ((src[x * 2 + 1] >> 4) << 12));
@@ -522,8 +708,10 @@ namespace nCine::RHI::PVR
 			return;		// Level 0 only
 		}
 		Allocate(format, width, height);
-		if (data != nullptr && !pixels_.empty()) {
-			std::memcpy(pixels_.data(), data, pixels_.size());
+		if (data != nullptr && RawPixelsSize() > 0) {
+			// Full upload - the store is (re)built straight from the caller's buffer, compressed when
+			// the format qualifies, so the linear copy never exists on this side
+			StorePixels(static_cast<const std::uint8_t*>(data));
 			contentVersion_ = ++nextContentVersion_;
 		}
 		if (isPaletteTexture_) {
@@ -536,46 +724,58 @@ namespace nCine::RHI::PVR
 	void PvrTexture::TexSubImage2D(std::int32_t level, std::int32_t xoffset, std::int32_t yoffset, std::int32_t width, std::int32_t height, PixelFormat format, bool bgr, const void* data)
 	{
 		static_cast<void>(bgr);
-		if (level != 0 || data == nullptr || pixels_.empty()) {
+		if (level != 0 || data == nullptr || RawPixelsSize() <= 0) {
 			return;
 		}
 		const std::int32_t srcBpp = BytesPerPixel(format);
 		const std::int32_t dstBpp = bytesPerPixel_;
 		const std::int32_t copyBpp = (srcBpp < dstBpp ? srcBpp : dstBpp);
-		for (std::int32_t y = 0; y < height; y++) {
-			const std::int32_t dstY = yoffset + y;
-			if (dstY < 0 || dstY >= height_) {
-				continue;
-			}
-			std::int32_t dstX = xoffset;
-			std::int32_t copyW = width;
-			std::int32_t srcX0 = 0;
-			if (dstX < 0) {
-				srcX0 = -dstX;
-				copyW += dstX;
-				dstX = 0;
-			}
-			if (dstX + copyW > width_) {
-				copyW = width_ - dstX;
-			}
-			if (copyW <= 0) {
-				continue;
-			}
-			const std::uint8_t* srcRow = static_cast<const std::uint8_t*>(data) + std::size_t(y) * std::size_t(width) * srcBpp + std::size_t(srcX0) * srcBpp;
-			std::uint8_t* dstRow = pixels_.data() + std::size_t(dstY) * strideBytes_ + std::size_t(dstX) * dstBpp;
-			if (srcBpp == dstBpp) {
-				std::memcpy(dstRow, srcRow, std::size_t(copyW) * dstBpp);
-			} else {
-				for (std::int32_t x = 0; x < copyW; x++) {
-					std::int32_t c = 0;
-					for (; c < copyBpp; c++) {
-						dstRow[x * dstBpp + c] = srcRow[x * srcBpp + c];
-					}
-					for (; c < dstBpp; c++) {
-						dstRow[x * dstBpp + c] = 255;
+
+		if (xoffset == 0 && yoffset == 0 && width == width_ && height == height_ && srcBpp == dstBpp) {
+			// Full replacement (the common upload path goes TexStorage2D + full-rect TexSubImage2D):
+			// skip the patch loop and rebuild the store from the caller's buffer directly, compressed
+			// when the format qualifies - the full-size linear copy never exists on this side
+			StorePixels(static_cast<const std::uint8_t*>(data));
+		} else {
+			// Partial patch (tileset overrides): the only writer that needs the store linear. Rare and
+			// load-time only, so the compressed form is inflated for the patch and compressed again after
+			MaterializePixelsRaw();
+			for (std::int32_t y = 0; y < height; y++) {
+				const std::int32_t dstY = yoffset + y;
+				if (dstY < 0 || dstY >= height_) {
+					continue;
+				}
+				std::int32_t dstX = xoffset;
+				std::int32_t copyW = width;
+				std::int32_t srcX0 = 0;
+				if (dstX < 0) {
+					srcX0 = -dstX;
+					copyW += dstX;
+					dstX = 0;
+				}
+				if (dstX + copyW > width_) {
+					copyW = width_ - dstX;
+				}
+				if (copyW <= 0) {
+					continue;
+				}
+				const std::uint8_t* srcRow = static_cast<const std::uint8_t*>(data) + std::size_t(y) * std::size_t(width) * srcBpp + std::size_t(srcX0) * srcBpp;
+				std::uint8_t* dstRow = pixels_.data() + std::size_t(dstY) * strideBytes_ + std::size_t(dstX) * dstBpp;
+				if (srcBpp == dstBpp) {
+					std::memcpy(dstRow, srcRow, std::size_t(copyW) * dstBpp);
+				} else {
+					for (std::int32_t x = 0; x < copyW; x++) {
+						std::int32_t c = 0;
+						for (; c < copyBpp; c++) {
+							dstRow[x * dstBpp + c] = srcRow[x * srcBpp + c];
+						}
+						for (; c < dstBpp; c++) {
+							dstRow[x * dstBpp + c] = 255;
+						}
 					}
 				}
 			}
+			RecompressPixels();
 		}
 		contentVersion_ = ++nextContentVersion_;
 		if (isPaletteTexture_) {
@@ -614,7 +814,12 @@ namespace nCine::RHI::PVR
 		static_cast<void>(format);
 		static_cast<void>(bgr);
 		if (pixels != nullptr && !pixels_.empty()) {
-			std::memcpy(pixels, pixels_.data(), pixels_.size());
+			if (pixelsCompressed_) {
+				RlePixelReader reader(pixels_.data());
+				reader.Read(static_cast<std::uint8_t*>(pixels), std::size_t(RawPixelsSize()));
+			} else {
+				std::memcpy(pixels, pixels_.data(), pixels_.size());
+			}
 		}
 	}
 

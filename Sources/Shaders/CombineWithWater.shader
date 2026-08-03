@@ -132,3 +132,8 @@ void fragment() {
 	), uAmbientColor, vec4(darknessStrength));
 	COLOR.a = 1.0;
 }
+
+void fixed_function() {
+	// The water compositor shares the direct-tier base composite (the consoles have no water pass)
+	pipeline lighting_combine;
+}

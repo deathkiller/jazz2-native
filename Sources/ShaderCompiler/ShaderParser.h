@@ -93,6 +93,31 @@ namespace ShaderCompiler
 		std::int32_t Line = 0;
 	};
 
+	/** @brief Backend selector of a "void fixed_function([pvr|gx]) { ... }" block */
+	enum class FixedFunctionTarget : std::uint8_t
+	{
+		Generic,	/**< "void fixed_function()" — the generic implementation, used by every backend without its own block */
+		Pvr,		/**< Dreamcast-specific override (wins over Generic for that backend) */
+		Gx			/**< Wii/GameCube-specific override (wins over Generic for that backend) */
+	};
+
+	/**
+		@brief One captured "void fixed_function([pvr|gx]) { ... }" block
+
+		The body is captured verbatim (like the vertex()/fragment() entry bodies) and transpiled to C++
+		offline by the fixed-function emitter (@ref ConsoleFixedFunction) — it never becomes part of the
+		lowered GLSL stages, so a shader that carries a block emits byte-identical per-shader headers.
+	*/
+	struct FixedFunctionBlock
+	{
+		/** @brief Which backend the block targets */
+		FixedFunctionTarget Target = FixedFunctionTarget::Generic;
+		/** @brief Raw (unpreprocessed) statement lines of the block body */
+		std::vector<SourceLine> Lines;
+		/** @brief 1-based line number of the block header */
+		std::int32_t Line = 0;
+	};
+
 	/** @brief "render_mode" flags (bit values match ShaderCompiler::RenderMode in the generated ShaderCompilerTypes.h) */
 	enum RenderModeMask : std::uint32_t
 	{
@@ -119,6 +144,8 @@ namespace ShaderCompiler
 		std::vector<SourceLine> VertexLines;
 		/** @brief Raw (unpreprocessed) fragment-stage GLSL line stream */
 		std::vector<SourceLine> FragmentLines;
+		/** @brief Captured "fixed_function" blocks (empty for shaders with no console fixed-function implementation); a batched twin shares its primary's blocks */
+		std::vector<FixedFunctionBlock> FixedFunctionBlocks;
 		/** @brief Bitmask of @ref RenderModeMask flags (`0` when no "render_mode" is declared) */
 		std::uint32_t RenderModes = 0;
 		/** @brief Whether the document declares a vertex stage */

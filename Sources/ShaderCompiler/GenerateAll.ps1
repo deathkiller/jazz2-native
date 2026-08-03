@@ -187,6 +187,22 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "ok: software fragments -> Generated\SwGeneratedShaders.h"
 
+# Emit the aggregate fixed-function effect headers consumed by the console backends: the
+# fixed-function transpiler lowers each program variant's void fixed_function([pvr|gx]) block into a
+# C++ effect function over the EffectContext contract (FixedFunctionPass.h). A backend-specific
+# block overrides the generic void fixed_function() block for that backend. Programs without a block
+# are simply absent from the emitted table; an INVALID block is a hard error (unlike the software
+# transpiler's declines), so this step fails the run.
+foreach ($ff in @(@('pvr', 'PvrGeneratedEffects.h'), @('gx', 'GxGeneratedEffects.h'))) {
+    $ffPath = Join-Path $outDir $ff[1]
+    & $tool --emit-fixed-function $ff[0] $ffPath @($shaders | ForEach-Object { $_.FullName })
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "error: failed to emit $($ff[1])"
+        exit 1
+    }
+    Write-Host "ok: fixed-function effects ($($ff[0])) -> Generated\$($ff[1])"
+}
+
 if ($Check) {
     # Compare the freshly generated headers against the committed ones; any difference means the committed
     # artifacts are stale (or were edited by hand). Missing/extra files count as stale too.

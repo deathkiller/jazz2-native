@@ -48,3 +48,13 @@ void fragment() {
 		COLOR = vec4(mix(vec3(0.1, 1.0, 0.0), vec3(1.0, 1.0, 1.0), max((maskSum * 2.0) - 1.0, 0.0)) * darkness, min(maskSum * b * isNearBorder * 1.3 + 0.1, 1.0) * alpha);
 	}
 }
+
+void fixed_function() {
+	// Console fixed-function tier (shared by ShieldLightning and BatchedShieldLightning exactly like
+	// the fragment stage above): as ShieldFireFs.inc, in the lightning shield's blue
+	float darkness = COLOR.b;
+	pass p;
+	p.color = vec4(0.0, 0.0, 0.0, COLOR.a * 0.5);
+	p.offset_color = vec3(darkness * 0.6, darkness * 0.8, darkness);
+	submit_quad(p);
+}

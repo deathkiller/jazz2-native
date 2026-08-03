@@ -59,6 +59,32 @@ namespace Jazz2::UI
 				dst[i] = palette[src[i]];
 			}
 		}
+
+		/**
+			@brief Reorders a palette read from the video file into the engine's numeric RGBA convention
+
+			The file stores an entry as the byte sequence R, G, B, X, but everything downstream treats an
+			entry as a `std::uint32_t` VALUE with red in the lowest byte - the opaque-alpha override in
+			`ApplyPaletteAndUpload()` (`| 0xFF000000`), the RGB565 packing, and the console backends' TLUT
+			and bake conversions (`GxDevice::AcquireTlutForRow()`, `GxTexture::EnsureBakedRgba()`) all
+			extract channels that way, matching what `nCine::Color` guarantees on both endiannesses by
+			reordering its members. A raw byte copy only produces that value on little-endian hosts; a
+			big-endian load (Wii, GameCube) reverses the channels - the alpha override then lands on RED
+			and the TLUT reads R from the padding byte - so the value is byte-swapped back once here,
+			right where the palette leaves the file.
+		*/
+		DEATH_ALWAYS_INLINE void NormalizePaletteByteOrder(std::uint32_t* palette, std::size_t count)
+		{
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+			for (std::size_t i = 0; i < count; i++) {
+				palette[i] = AsLE(palette[i]);
+			}
+#else
+			// Little-endian hosts already read the file bytes into the expected value layout
+			static_cast<void>(palette);
+			static_cast<void>(count);
+#endif
+		}
 	}
 	Cinematics::Cinematics(IRootController* root, StringView path, Function<bool(IRootController*, bool)>&& callback)
 		: _root(root), _callback(std::move(callback)), _frameDelay(0.0f), _frameProgress(0.0f), _framesLeft(0), _frameIndex(0),
@@ -507,6 +533,8 @@ namespace Jazz2::UI
 				return;
 			}
 			std::memcpy(_palette, src, sizeof(_palette));
+			// The file's R,G,B,X byte order only matches the uint32 convention on little-endian hosts
+			NormalizePaletteByteOrder(_palette, arraySize(_palette));
 			src += sizeof(_palette);
 			_paletteDirty = true;
 		}
@@ -656,6 +684,8 @@ namespace Jazz2::UI
 		// Check if palette was changed
 		if (ReadByte(0) == 0x01) {
 			Read(3, _palette, sizeof(_palette));
+			// The file's R,G,B,X byte order only matches the uint32 convention on little-endian hosts
+			NormalizePaletteByteOrder(_palette, arraySize(_palette));
 			_paletteDirty = true;
 		}
 

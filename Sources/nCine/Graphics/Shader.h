@@ -59,8 +59,12 @@ namespace nCine
 		 *
 		 * The variant's sources are compiled like with the plain-string overloads, but uniforms, uniform
 		 * blocks and attributes come from the offline reflection data, with targeted location queries only.
+		 * @p programName is the `.shader` program name the variant belongs to; together with the variant's
+		 * own name it forms the identity the fixed-function console backends resolve their generated
+		 * effect tables from (`RHI::ShaderProgram::SetProgramIdentity()`) - backends with real shaders
+		 * ignore it, and `nullptr` (runtime-compiled shaders) leaves the program without a console effect.
 		 */
-		bool LoadFromMemory(const char* shaderName, Introspection introspection, const ShaderCompiler::ProgramVariant& variant, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
+		bool LoadFromMemory(const char* shaderName, Introspection introspection, const ShaderCompiler::ProgramVariant& variant, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize, const char* programName = nullptr);
 
 		bool LoadFromFile(const char* shaderName, Introspection introspection, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize, ArrayView<const StringView> defines = {});
 		bool LoadFromFile(const char* shaderName, StringView vertexPath, StringView fragmentPath, std::int32_t batchSize = RHI::ShaderProgram::DefaultBatchSize);
@@ -85,8 +89,8 @@ namespace nCine
 		static bool CompileShaderFile(StringView path, ShaderCompiler::RuntimeProgram& program);
 
 		bool LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Introspection introspection);
-		/** @brief Loads a binary-cached program, importing uniforms, blocks and attributes from ShaderCompiler reflection instead of GL introspection */
-		bool LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Introspection introspection, const ShaderCompiler::ProgramVariant& variant);
+		/** @brief Loads a binary-cached program, importing uniforms, blocks and attributes from ShaderCompiler reflection instead of GL introspection; @p programName as in the variant @ref LoadFromMemory() overload */
+		bool LoadFromCache(const char* shaderName, std::uint64_t shaderVersion, Introspection introspection, const ShaderCompiler::ProgramVariant& variant, const char* programName = nullptr);
 
 		bool SaveToCache(const char* shaderName, std::uint64_t shaderVersion) const;
 

@@ -224,11 +224,31 @@ namespace Death { namespace IO { namespace Compression {
 		// Z_SYNC_FLUSH rather than Z_NO_FLUSH: with the latter zlib may hold decompressed data back while it
 		// waits for enough input to finish a block, and a stream that simply stops (truncated, or one of the
 		// several streams interleaved) then never gives up its last few kilobytes.
-		std::int32_t res = inflate(&_strm, Z_SYNC_FLUSH);
-
-		// If input buffer is empty, fill it and try it again
-		if (res == Z_BUF_ERROR && _strm.avail_in == 0 && FillInputBuffer()) {
+		std::int32_t res;
+		while (true) {
 			res = inflate(&_strm, Z_SYNC_FLUSH);
+			if (res != Z_OK && res != Z_BUF_ERROR) {
+				// The end of the stream, or a real error
+				break;
+			}
+			if (_strm.avail_out < std::uint32_t(size)) {
+				// Something was decompressed, hand it to the caller
+				break;
+			}
+			if (_strm.avail_in != 0) {
+				// Input is still available yet nothing came out of it, so another call cannot do better either
+				break;
+			}
+			// Nothing was decompressed only because the input ran dry mid-stream - which zlib reports either
+			// as Z_BUF_ERROR or, when it consumed the last bytes without emitting anything yet (a block
+			// header, or too few bytes for the next symbol), as a plain Z_OK. Both must be refilled and
+			// retried rather than returned as zero, because a zero-length read is indistinguishable from the
+			// end of the stream to the caller - and Stream::ReadValue() doesn't even look at the count, so a
+			// fixed-size read of a value would silently yield zeroes.
+			if (!FillInputBuffer()) {
+				// The underlying stream is exhausted, so the count below (zero) is the truth
+				break;
+			}
 		}
 
 		// Whatever this call already decompressed is kept even when it then fails: a truncated stream (one

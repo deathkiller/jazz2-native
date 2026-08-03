@@ -14,6 +14,9 @@ namespace nCine::RHI::GX
 	class GxShaderProgram;
 	class GxRenderTarget;
 	class GxTexture;
+	// Defined by the generated GxGeneratedEffects.h inside the device translation unit; everyone
+	// else only ever holds an opaque entry pointer resolved at program load
+	struct FixedFunctionGeneratedEffect;
 
 	/**
 		@brief Pipeline-state and draw-call facade of the GX backend (aliased as `RHI::Device`)
@@ -48,6 +51,16 @@ namespace nCine::RHI::GX
 		static std::uint32_t GetFrameCounter() {
 			return frameCounter_;
 		}
+
+		/**
+			@brief Returns the generated fixed-function effect of a (program, variant) key, or `nullptr`
+
+			Scans the table transpiled from the shaders' `fixed_function` blocks
+			(`Shaders/Generated/GxGeneratedEffects.h`). Called once per program load from
+			@ref GxShaderProgram::SetObjectLabel(), which maps the object label onto the key
+			through its exact-name table - the draw path only ever reads the stored pointer.
+		*/
+		static const FixedFunctionGeneratedEffect* FindGeneratedEffect(const char* program, const char* variant);
 
 		GxDevice() = delete;
 		~GxDevice() = delete;
@@ -275,6 +288,8 @@ namespace nCine::RHI::GX
 
 		static void Dispatch(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
 		static void DispatchTileMesh(PrimitiveType primitive, std::int32_t firstVertex, std::int32_t numVertices);
+		// Draws a vertex-fed textured line strip (the weapon wheel) through the GP's native line primitive
+		static void DispatchLineStrip(std::int32_t firstVertex, std::int32_t numVertices);
 		static void ApplyPendingSoftwareLighting();
 		static void ApplyRenderState();
 		static void ApplyProjection();

@@ -19,9 +19,20 @@ namespace Jazz2::UI
 		: _asciiChars{}, _lineHeight(0), _baseSpacing(0)
 	{
 		auto s = fs::Open(path, FileAccess::Read);
+		if (!s->IsValid()) {
+			// A font that can't be opened at all used to fail silently here, which then looked like a
+			// rendering problem instead of a missing file: every string measures to nothing and draws
+			// nothing, with not a word in the log. That happens whenever the content tree next to the
+			// executable is stale or incomplete - a common state on consoles, where it lives on a
+			// removable card that is updated by hand.
+			LOGE("\"{}\" cannot be opened", path);
+			return;
+		}
+
 		auto fileSize = s->GetSize();
 		if (fileSize < 24 || fileSize > 8 * 1024 * 1024) {
 			// 8 MB file size limit
+			LOGE("\"{}\" has an implausible size of {} bytes", path, fileSize);
 			return;
 		}
 

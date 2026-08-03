@@ -103,3 +103,16 @@ void fragment() {
 	COLOR = mix(texColor, horizonColorWithStars, horizonOpacity);
 	COLOR.a = 1.0;
 }
+
+void fixed_function(pvr) {
+	// The circular ("tube") variant keeps the same planar geometry rebuild on this tier (shared
+	// with TexturedBackground.shader)
+#include "Include/TexturedBackgroundWarp.inc"
+}
+
+void fixed_function(gx) {
+	// The circular ("tube") variant borrows the same planar rebuild on this tier as well, with the
+	// horizon tint folded into the band pieces' own draw (see the include)
+#define WARP_TINT_IN_VERTEX_COLOR
+#include "Include/TexturedBackgroundWarp.inc"
+}

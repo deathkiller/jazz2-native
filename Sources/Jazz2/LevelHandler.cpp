@@ -1756,6 +1756,13 @@ namespace Jazz2
 
 		for (auto& zone : playerZones) {
 			for (std::int32_t i = 0; i < weatherIntensity; i++) {
+				// Weather respawns every frame while its particles live for about three seconds, so it settles at
+				// a few hundred live particles - on the consoles that is the whole debris budget, and a death
+				// burst (the effect that actually matters) would find nothing left. Give it its own smaller share.
+				if (TileMap::MaxWeatherDebrisCount > 0 && _tileMap->GetDebrisCount() >= TileMap::MaxWeatherDebrisCount) {
+					return;
+				}
+
 				TileMap::DebrisFlags debrisFlags;
 				if ((_weatherType & WeatherType::OutdoorsOnly) == WeatherType::OutdoorsOnly) {
 					debrisFlags = TileMap::DebrisFlags::Disappear;

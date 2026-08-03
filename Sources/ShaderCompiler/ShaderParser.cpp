@@ -707,6 +707,7 @@ namespace ShaderCompiler
 			std::vector<SourceLine> Globals;
 			std::vector<SourceLine> VertexBody;
 			std::vector<SourceLine> FragmentBody;
+			std::vector<FixedFunctionBlock> FixedFunctionBlocks;
 			std::int32_t BatchedLine = 0;
 			bool CanvasItem = false;		// "shader_type canvas_item;" seen ("custom" is the default)
 			bool HasVertexBody = false;
@@ -1024,10 +1025,14 @@ R"GLSL(void main()
 			bool seenShaderType = false;
 			bool seenPrecision = false;
 			std::int32_t globalDepth = 0;
-			std::int32_t capturing = 0;			// 0 = none, 1 = vertex(), 2 = fragment()
+			std::int32_t capturing = 0;			// 0 = none, 1 = vertex(), 2 = fragment(), 3 = fixed_function(...)
 			std::int32_t captureDepth = 0;
 			std::int32_t captureStartLine = 0;
 			bool awaitingBrace = false;
+			// Human-readable label of the entry being captured, for diagnostics only
+			auto captureLabel = [&capturing]() {
+				return (capturing == 1 ? "vertex()" : capturing == 2 ? "fragment()" : "fixed_function(...)");
+			};
 			// Global-scope "#ifdef/#ifndef SOFTWARE_RENDERER" conditional around varying declarations:
 			// which backend the lines currently parsed belong to (VaryingDecl::SwMode semantics), and
 			// whether the conditional's "#else" was already seen. Such a conditional may only wrap varying
@@ -1042,9 +1047,10 @@ R"GLSL(void main()
 				const String& text = line.Text;
 				const String& bare = stripped[index].Text;
 
-				// Inside a vertex()/fragment() body — capture verbatim until the matching brace
+				// Inside a vertex()/fragment()/fixed_function() body — capture verbatim until the matching brace
 				if (capturing != 0) {
-					std::vector<SourceLine>& body = (capturing == 1 ? src.VertexBody : src.FragmentBody);
+					std::vector<SourceLine>& body = (capturing == 1 ? src.VertexBody :
+						capturing == 2 ? src.FragmentBody : src.FixedFunctionBlocks.back().Lines);
 					std::size_t bodyBegin = 0;
 					if (awaitingBrace) {
 						std::size_t open = FindFirstNotOf(bare, " \t");
@@ -1052,7 +1058,7 @@ R"GLSL(void main()
 							continue;
 						}
 						if (bare[open] != '{') {
-							return Fail(diag, "expected '{' after \""_s + (capturing == 1 ? "vertex()" : "fragment()") + "\""_s, line.Line);
+							return Fail(diag, "expected '{' after \""_s + captureLabel() + "\""_s, line.Line);
 						}
 						awaitingBrace = false;
 						captureDepth = 1;
@@ -1235,6 +1241,86 @@ R"GLSL(void main()
 					continue;
 				}
 
+				if (word == "fixed_function") {
+					// The old standalone spelling — the block is an entry point like vertex()/fragment()
+					// and is written the same way since the "void" spelling landed
+					return Fail(diag, "fixed_function blocks are spelled \"void fixed_function([pvr|gx]) { ... }\" now (like \"void vertex()\")", line.Line);
+				}
+
+				// "void fixed_function([pvr|gx]) { ... }" — the body is captured verbatim (like the
+				// vertex()/fragment() entries) and transpiled to C++ separately by the offline
+				// fixed-function emitter. It never joins the lowered GLSL stages, so a shader
+				// carrying a block still emits a byte-identical per-shader header. Empty
+				// parentheses mark the generic implementation, used by every backend that has
+				// no more specific "void fixed_function(pvr)"/"(gx)" block in the file. The
+				// spelling matches the other entry points; unlike them the parentheses may name
+				// a backend, which is why the branch below does not share their parsing.
+				std::size_t ffCursor = cursor;
+				if (word == "void" && WordAt(bare, ffCursor) == "fixed_function") {
+					if (!seenProgram) {
+						return Fail(diag, "the first directive must be \"program <Name>;\"", line.Line);
+					}
+					// WordAt() consumed the "fixed_function" word into ffCursor; continue from there
+					cursor = ffCursor;
+					while (cursor < bare.size() && IsSpace(bare[cursor])) {
+						cursor++;
+					}
+					if (cursor >= bare.size() || bare[cursor] != '(') {
+						return Fail(diag, "usage: void fixed_function([pvr|gx]) { ... }", line.Line);
+					}
+					cursor++;
+					String target = WordAt(bare, cursor);
+					FixedFunctionTarget targetKind;
+					if (target.empty()) {
+						targetKind = FixedFunctionTarget::Generic;
+					} else if (target == "pvr") {
+						targetKind = FixedFunctionTarget::Pvr;
+					} else if (target == "gx") {
+						targetKind = FixedFunctionTarget::Gx;
+					} else {
+						return Fail(diag, "unknown fixed_function target \""_s + target + "\" (expected pvr, gx, or empty parentheses for the generic block)"_s, line.Line);
+					}
+					while (cursor < bare.size() && IsSpace(bare[cursor])) {
+						cursor++;
+					}
+					if (cursor >= bare.size() || bare[cursor] != ')') {
+						return Fail(diag, "expected ')' after the fixed_function target", line.Line);
+					}
+					cursor++;
+					for (const FixedFunctionBlock& block : src.FixedFunctionBlocks) {
+						if (block.Target == targetKind) {
+							return Fail(diag, "duplicate \"void fixed_function("_s + target + ")\" block"_s, line.Line);
+						}
+					}
+					{
+						FixedFunctionBlock block;
+						block.Target = targetKind;
+						block.Line = line.Line;
+						src.FixedFunctionBlocks.push_back(std::move(block));
+					}
+					while (cursor < bare.size() && IsSpace(bare[cursor])) {
+						cursor++;
+					}
+					capturing = 3;
+					captureStartLine = line.Line;
+					if (cursor >= bare.size()) {
+						awaitingBrace = true;
+					} else if (bare[cursor] == '{') {
+						awaitingBrace = false;
+						captureDepth = 1;
+						bool done = false;
+						if (!CaptureBodyLine(text, bare, cursor + 1, line.Line, src.FixedFunctionBlocks.back().Lines, captureDepth, done, diag)) {
+							return false;
+						}
+						if (done) {
+							capturing = 0;
+						}
+					} else {
+						return Fail(diag, "expected '{' after \"void fixed_function("_s + target + ")\""_s, line.Line);
+					}
+					continue;
+				}
+
 				if (word == "void") {
 					std::size_t nameCursor = cursor;
 					String name = WordAt(bare, nameCursor);
@@ -1325,7 +1411,7 @@ R"GLSL(void main()
 			}
 
 			if (capturing != 0) {
-				return Fail(diag, "unterminated \""_s + (capturing == 1 ? "vertex()" : "fragment()") + "\" body"_s, captureStartLine);
+				return Fail(diag, "unterminated \""_s + captureLabel() + "\" body"_s, captureStartLine);
 			}
 			if (swVaryingMode != 0) {
 				return Fail(diag, "unterminated SOFTWARE_RENDERER conditional at global scope", swVaryingLine);
@@ -3609,6 +3695,8 @@ R"GLSL(void main()
 			document.ProgramName = (batched ? src.BatchedName : src.ProgramName);
 			document.Variants = src.Variants;
 			document.Textures = src.Textures;
+			// The batched twin shares the fragment stage, so it shares the fixed-function description too
+			document.FixedFunctionBlocks = src.FixedFunctionBlocks;
 			document.RenderModes = src.RenderModes;
 			document.HasVertexStage = true;
 			document.HasFragmentStage = true;
@@ -3702,6 +3790,7 @@ R"GLSL(void main()
 			document.ProgramName = src.ProgramName;
 			document.Variants = src.Variants;
 			document.Textures = src.Textures;
+			document.FixedFunctionBlocks = src.FixedFunctionBlocks;
 			document.RenderModes = src.RenderModes;
 			document.HasVertexStage = true;
 			document.HasFragmentStage = true;

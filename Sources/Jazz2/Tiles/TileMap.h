@@ -95,13 +95,17 @@ namespace Jazz2::Tiles
 		also tracks the associated animation and the currently active frame (reused as collapse delay or trigger ID).
 	*/
 	struct LayerTile {
-		// The struct is a dense per-tile grid (layoutWidth * layoutHeight entries per layer, plus a full
-		// rollback copy of the sprite layer), so it is packed to 16 bytes: the two destruct fields are
-		// 16-bit (an animated-tile ID fits comfortably, -1 stays the "none" sentinel; the frame index is
-		// a small frame/delay/trigger number) and the three enums carry explicit 8-bit bases.
+		// The struct is a dense per-tile grid (layoutWidth * layoutHeight entries per layer), so it is packed
+		// to 12 bytes: every field is 16-bit or smaller. The three enums carry explicit 8-bit bases, the two
+		// destruct fields are 16-bit (an animated-tile ID fits comfortably, -1 stays the "none" sentinel; the
+		// frame index is a small frame/delay/trigger number) and the ID is 16-bit because a tile ID is bounded
+		// by the tile set size plus the animated tiles behind it: a J2L level stores it in 16 bits and the
+		// converter masks it down to JJ2Tileset::GetMaxSupportedTiles() (at most 4096), animated tiles start at
+		// that same bound, and the only other writer - SetTile() from scripting - adds a 12-bit index to it. So
+		// the highest reachable value is under 8192 and there is no negative sentinel (tile #0 means "empty").
 
 		/** @brief Tile ID */
-		std::int32_t TileID;
+		std::uint16_t TileID;
 		/** @brief Tile parameters */
 		std::uint16_t TileParams;
 		/** @brief Animation ID for destructible tile (`-1` = none) */
@@ -117,6 +121,8 @@ namespace Jazz2::Tiles
 		/** @brief Destruct type of tile */
 		TileDestructType DestructType;
 	};
+
+	static_assert(sizeof(LayerTile) == 12, "LayerTile must stay packed, it is allocated per tile of every layer");
 
 	/**
 		@brief Represents a single tile map layer
@@ -144,7 +150,7 @@ namespace Jazz2::Tiles
 	*/
 	struct AnimatedTileFrame {
 		/** @brief Tile ID */
-		std::int32_t TileID;
+		std::uint16_t TileID;
 	};
 
 	/**
@@ -365,7 +371,65 @@ namespace Jazz2::Tiles
 
 		/** @brief Returns relative paths of all used tile sets */
 		Array<StringView> GetUsedTileSetPaths() const;
-		
+
+		/** @{ @name Debris budget */
+
+		/**
+			@brief Maximum number of live debris particles, or `0` if the effect is unbounded
+
+			A live particle is far more expensive than its 100 bytes in @ref _debrisList: it also rents a pooled
+			@ref RenderCommand for every frame it is visible (~840 bytes on the Dreamcast, see @ref
+			RentRenderCommand()) and its instance uniforms take a slice of both the render batcher's and the
+			streaming uniform buffer's pools, which only ever grow to their high-water mark. Together that is
+			roughly 1.3 KB per particle that a burst pins until the level ends, and one boss death emits over a
+			thousand of them - more than the whole heap the consoles have left. Desktop targets have the memory,
+			so the effect stays unbounded there.
+		*/
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+		static constexpr std::int32_t MaxDebrisCount = 448;
+#else
+		static constexpr std::int32_t MaxDebrisCount = 0;
+#endif
+		/**
+			@brief Maximum number of live debris particles the weather effect may occupy, or `0` if unbounded
+
+			Weather spawns every frame and its particles live for about three seconds, so it settles at
+			`intensity * ~190` live particles. Left alone it would sit at @ref MaxDebrisCount on its own and
+			leave nothing for a death burst, which is the effect that actually matters.
+		*/
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+		static constexpr std::int32_t MaxWeatherDebrisCount = 128;
+#else
+		static constexpr std::int32_t MaxWeatherDebrisCount = 0;
+#endif
+		/**
+			@brief Maximum number of particles one @ref CreateParticleDebris() burst emits, or `0` if unbounded
+
+			The producers walk the sprite frame in fixed steps, so the count grows with the sprite's area: the
+			biggest one that can perish this way (Devan's demon form, 154x115) yields 1131 particles. Widening
+			the step instead of dropping the tail keeps the burst covering the whole sprite - the particles just
+			get proportionally fewer and bigger (see @ref GetParticleDebrisStep()).
+		*/
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+		static constexpr std::int32_t MaxParticleDebrisPerBurst = 256;
+#else
+		static constexpr std::int32_t MaxParticleDebrisPerBurst = 0;
+#endif
+
+		/** @brief Returns number of live debris particles */
+		std::int32_t GetDebrisCount() const {
+			return (std::int32_t)_debrisList.size();
+		}
+		/**
+		 * @brief Returns the step in which a particle debris burst walks a sprite frame of the given size
+		 *
+		 * `debrisSize + 1` (the particle size plus a one pixel gap) unless the frame is big enough for the
+		 * burst to exceed @ref MaxParticleDebrisPerBurst; the particle size is then the returned step minus one.
+		 */
+		static std::int32_t GetParticleDebrisStep(std::int32_t debrisSize, std::int32_t frameWidth, std::int32_t frameHeight);
+
+		/** @} */
+
 		/** @brief Creates a generic debris */
 		void CreateDebris(const DestructibleDebris& debris);
 		/** @brief Creates a tile debris */
@@ -429,6 +493,17 @@ namespace Jazz2::Tiles
 			std::int32_t Count;
 		};
 
+		// One sprite-layer tile as it looked when the last checkpoint was taken. The checkpoint used to be a
+		// full copy of the layer - a second grid as big as the layer itself, megabytes on a large level - even
+		// though only a fraction of a percent of the tiles can ever differ from it: a tile only changes if it
+		// is destructible (shot, collapsing or trigger-controlled) or if a script overwrites it via SetTile().
+		// The list is kept sorted by index, both to dedupe (only the first saved value of a tile is the
+		// checkpoint value) and so that SerializeResumableToStream() can merge-walk it against the live layer.
+		struct RollbackTile {
+			std::uint32_t TileIndex;
+			LayerTile Tile;
+		};
+
 		class TexturedBackgroundPass : public SceneNode
 		{
 			friend class TileMap;
@@ -459,7 +534,10 @@ namespace Jazz2::Tiles
 
 		SmallVector<TileSetPart, 2> _tileSets;
 		SmallVector<TileMapLayer, 0> _layers;
-		std::unique_ptr<LayerTile[]> _sprLayerForRollback;
+		SmallVector<RollbackTile, 0> _sprLayerForRollback;
+		/// Whether a checkpoint was ever taken. Not implied by @ref _sprLayerForRollback being non-empty --- a
+		/// level without a single destructible tile has an empty (but valid) checkpoint.
+		bool _hasRollbackCheckpoint;
 		SmallVector<AnimatedTile, 0> _animatedTiles;
 		SmallVector<Vector2i, 0> _activeCollapsingTiles;
 		float _collapsingTimer;
@@ -483,6 +561,10 @@ namespace Jazz2::Tiles
 		/// only have to be looked up again when a pool slot's shader changes (see @ref RentRenderCommand).
 		SmallVector<TileCommandUniforms, 0> _renderCommandUniforms;
 		std::int32_t _renderCommandsCount;
+		/// Highest number of commands rented in one frame since the pool was last trimmed, and how many frames
+		/// ago that was. Only the memory-constrained consoles trim (see @ref OnEndFrame()).
+		std::int32_t _renderCommandsPeak;
+		std::int32_t _renderCommandsPeakAge;
 
 #if defined(TILEMAP_USE_SINGLE_DRAW)
 		// Per-frame pools for whole-layer tile meshes, replacing the per-tile commands. One vertex buffer is filled
@@ -510,6 +592,8 @@ namespace Jazz2::Tiles
 		// Emits the accumulated tile-layer mesh as one or more render commands (split into <=64 KB chunks)
 		void EmitLayerMesh(RenderQueue& renderQueue, SmallVector<float, 0>& vertices, TileSet* tileSet, std::int32_t chunk, const Vector4f& layerColor, std::uint16_t depth);
 #endif
+
+		void SaveTileForRollback(std::uint32_t tileIndex, const LayerTile& tile);
 
 		bool AdvanceDestructibleTileAnimation(LayerTile& tile, std::int32_t tx, std::int32_t ty, std::int32_t& amount, StringView soundName);
 		void AdvanceCollapsingTileTimers(float timeMult);

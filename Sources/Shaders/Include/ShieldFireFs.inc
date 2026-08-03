@@ -51,3 +51,15 @@ void fragment() {
 		COLOR = vec4(mix(vec3(1.0, 0.3, 0.0), vec3(1.0, 1.0, 1.0), max((maskSum * 2.0) - 1.0, 0.0)) * darkness, min(maskSum * b * isNearBorder * 1.3 + 0.1, 1.0) * alpha);
 	}
 }
+
+void fixed_function() {
+	// Console fixed-function tier (shared by ShieldFire and BatchedShieldFire exactly like the fragment
+	// stage above): color = (scaleX, scaleY, darkness, alpha). The animated noise sphere is out of
+	// reach without fragment shaders, so the shield becomes a flat glow in its own colour - the sprite
+	// modulated to black at half alpha, lifted to the fire palette by the offset colour
+	float darkness = COLOR.b;
+	pass p;
+	p.color = vec4(0.0, 0.0, 0.0, COLOR.a * 0.5);
+	p.offset_color = vec3(darkness, darkness * 0.45, darkness * 0.1);
+	submit_quad(p);
+}

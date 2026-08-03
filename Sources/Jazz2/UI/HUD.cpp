@@ -1475,10 +1475,17 @@ namespace Jazz2::UI
 				DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 - 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 				DrawWeaponWheelSegment(state, center.X - distance2 + 1.0f, center.Y - distance2 + 1.0f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 
+#if !defined(DEATH_TARGET_DREAMCAST)
+				// The half-pixel copies thicken the shadow between the whole-pixel ones under GL's line
+				// rasterization, which snaps them to neighbouring pixel columns. The Dreamcast draws
+				// lines as exact-coverage quads instead, where these four land almost entirely on the
+				// same pixels as the main segment - stacking four more layers of darkness under it -
+				// while the whole-pixel ring above already forms the complete halo.
 				DrawWeaponWheelSegment(state, center.X - distance2 - 0.5f, center.Y - distance2, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 				DrawWeaponWheelSegment(state, center.X - distance2 + 0.5f, center.Y - distance2, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 				DrawWeaponWheelSegment(state, center.X - distance2, center.Y - distance2 - 0.5f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
 				DrawWeaponWheelSegment(state, center.X - distance2, center.Y - distance2 + 0.5f, distance3, distance3, ShadowLayer, angleFrom, angleTo, lineTexture, color1);
+#endif
 
 				DrawWeaponWheelSegment(state, center.X - distance2, center.Y - distance2, distance3, distance3, MainLayer, angleFrom, angleTo, lineTexture, color2);
 				if (isSelected) {

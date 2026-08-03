@@ -5,6 +5,8 @@
 #include "../GameDifficulty.h"
 #include "../PitType.h"
 
+#include "../../nCine/Base/BitArray.h"
+
 #include <IO/Stream.h>
 
 using namespace Death::IO;
@@ -28,15 +30,22 @@ namespace Jazz2::Events
 	public:
 		/** @brief Represents an event tile */
 		struct EventTile {
-			/** @brief Event type */
-			EventType Event;
+			// One of these exists for every tile of the sprite layer, plus a full rollback copy of the grid, so
+			// the fields are ordered widest first: the naturally-written order left the 16-bit event type padded
+			// out to the alignment of the following flags and the trailing bool padded to the struct's own, which
+			// cost four bytes per tile twice over.
+
 			/** @brief Event flags */
 			Actors::ActorState EventFlags;
-			/** @brief Event parameters */
-			std::uint8_t EventParams[EventSpawner::SpawnParamsSize];
+			/** @brief Event type */
+			EventType Event;
 			/** @brief Whether the event is active */
 			bool IsEventActive;
+			/** @brief Event parameters */
+			std::uint8_t EventParams[EventSpawner::SpawnParamsSize];
 		};
+
+		static_assert(sizeof(EventTile) == 24, "EventTile must stay packed, it is allocated per tile of the sprite layer");
 
 		/** @brief Creates a new instance with the specified layout size */
 		EventMap(Vector2i layoutSize);
@@ -125,15 +134,32 @@ namespace Jazz2::Events
 			std::uint16_t Id;
 			Vector2f Pos;
 		};
+
+		// One event tile as it looked when the last checkpoint was taken. The checkpoint used to be a full copy
+		// of the grid - a second 24-bytes-per-tile array as big as the sprite layer - although the only field
+		// that changes as the player walks the level is IsEventActive, which is now a single bit per tile. The
+		// rest of a tile only ever changes through StoreTileEvent() (an event consumed for good: a collected
+		// item, an opened bird cage, a passed checkpoint), which saves the value it replaces here, once per
+		// tile. The list is kept sorted by index so the rollback can merge it into its own walk of the grid.
+		struct RollbackTile {
+			std::uint32_t TileIndex;
+			EventTile Tile;
+		};
 #endif
 
 		ILevelHandler* _levelHandler;
 		Vector2i _layoutSize;
 		PitType _pitType;
 		std::unique_ptr<EventTile[]> _eventLayout;
-		std::unique_ptr<EventTile[]> _eventLayoutForRollback;
+		SmallVector<RollbackTile, 0> _eventLayoutForRollback;
+		BitArray _eventActiveForRollback;
+		/// Whether a checkpoint was ever taken. Not implied by the two members above having contents --- a
+		/// checkpoint starts out with an empty tile list, and a level may have no event tiles at all.
+		bool _hasRollbackCheckpoint;
 		SmallVector<GeneratorInfo, 0> _generators;
 		SmallVector<SpawnPoint, 0> _spawnPoints;
 		SmallVector<WarpTarget, 0> _warpTargets;
+
+		void SaveTileForRollback(std::uint32_t tileIndex, const EventTile& tile);
 	};
 }

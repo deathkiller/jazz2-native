@@ -4,21 +4,70 @@
 
 #include <cstring>
 
+#include <Asserts.h>
+
 namespace nCine::RHI::Software
 {
 	namespace
 	{
+		/** @brief One row of the exact-name effect table: a shader label and everything derived from it */
+		struct EffectMapping
+		{
+			const char* Label;
+			SwEffect Effect;
+			// The dithering variant is baked into the shader name ("...Dither" is a separate program),
+			// so the flag travels with the table entry instead of being re-derived by substring
+			bool Dither;
+		};
+
+		// Every shader label with a hand-written software effect, mapped by exact name. The label set is
+		// closed: ContentResolver::CompileShader() bakes each variant into the name and RenderResources
+		// registers the built-in defaults, so nothing else reaches SetObjectLabel(). Substring matching
+		// made every shader rename a silent behavior change; a label absent from this table stays
+		// Unknown and takes the offline-transpiled generated-fragment path (or a logged, skipped draw).
+		constexpr EffectMapping EffectMappings[] = {
+			// Default sprite programs registered by RenderResources; the mesh variants deliberately keep
+			// the generated-fragment path
+			{ "Sprite", SwEffect::DefaultSprite, false },
+			{ "Sprite_NoTexture", SwEffect::DefaultSpriteNoTexture, false },
+			{ "Batched_Sprites", SwEffect::DefaultBatchedSprites, false },
+			{ "Batched_Sprites_NoTexture", SwEffect::DefaultBatchedSpritesNoTexture, false },
+
+			// Precompiled shaders registered by ContentResolver::CompileShaders(). The plain and water
+			// compositor variants share the base composite in C++.
+			{ "Combine", SwEffect::Combine, false },
+			{ "CombineWithWater", SwEffect::Combine, false },
+			{ "CombineWithWaterLow", SwEffect::Combine, false },
+			{ "TexturedBackground", SwEffect::TexturedBackground, false },
+			{ "TexturedBackgroundDither", SwEffect::TexturedBackground, true },
+			{ "TexturedBackgroundCircle", SwEffect::TexturedBackgroundCircle, false },
+			{ "TexturedBackgroundCircleDither", SwEffect::TexturedBackgroundCircle, true },
+			{ "PaletteRemap", SwEffect::PaletteRemap, false },
+			{ "BatchedPaletteRemap", SwEffect::BatchedPaletteRemap, false },
+		};
+
+		const EffectMapping* FindEffectMapping(const char* label)
+		{
+			// A linear scan is fine - the lookup runs once per program load, not per draw
+			for (const EffectMapping& mapping : EffectMappings) {
+				if (std::strcmp(mapping.Label, label) == 0) {
+					return &mapping;
+				}
+			}
+			return nullptr;
+		}
+
+#if defined(DEATH_DEBUG)
 		bool Contains(StringView haystack, const char* needle)
 		{
 			return haystack.contains(needle);
 		}
 
-		SwEffect ClassifyEffect(StringView label)
+		// The retired substring classifier, kept only to cross-check the table above: debug builds
+		// assert the two agree for every classified label. The parity check ships for one release,
+		// then this function is deleted (see Docs/FixedFunctionShaderDesign.md, migration plan phase 1).
+		SwEffect ClassifyEffectBySubstrings(StringView label)
 		{
-			// The effect is derived from the program's object label (the shader name registered by
-			// ContentResolver::CompileShader, which bakes the variant into the name, e.g. "...Dither").
-			// Labels with no matching C++ effect fall through to a logged, skipped draw.
-
 			// Palette family: recolors an R8/RG8 index sprite through the shared palette texture. Checked
 			// before the sprite family - "BatchedPaletteRemap" contains "Batched" but not "Sprite".
 			if (Contains(label, "PaletteRemap")) {
@@ -50,6 +99,7 @@ namespace nCine::RHI::Software
 			}
 			return SwEffect::Unknown;
 		}
+#endif
 	}
 
 	std::uint32_t SwShaderProgram::nextHandle_ = 1;
@@ -276,11 +326,25 @@ namespace nCine::RHI::Software
 
 	void SwShaderProgram::SetObjectLabel(StringView label)
 	{
+		// The effect is looked up by the program's exact object label (the shader name registered by
+		// ContentResolver::CompileShader, which bakes the variant into the name, e.g. "...Dither").
+		// Labels with no table entry stay Unknown and take the generated-fragment path.
 		label_ = label;
-		effect_ = ClassifyEffect(label);
-		// The variant is baked into the shader name (e.g. "TexturedBackgroundDither"), so the dithering
-		// path is selected from the label rather than re-deriving it from the reflection's defines
-		ditherVariant_ = label.contains("Dither");
+		const EffectMapping* mapping = FindEffectMapping(label_.data());
+		effect_ = (mapping != nullptr ? mapping->Effect : SwEffect::Unknown);
+		ditherVariant_ = (mapping != nullptr && mapping->Dither);
+#if defined(DEATH_DEBUG)
+		// Migration parity check (Docs/FixedFunctionShaderDesign.md, phase 1): the table must reproduce
+		// the substring classification for every label either side classifies. Ships for one release,
+		// then ClassifyEffectBySubstrings() is deleted.
+		SwEffect bySubstrings = ClassifyEffectBySubstrings(label);
+		if (mapping != nullptr || bySubstrings != SwEffect::Unknown) {
+			DEATH_DEBUG_ASSERT(effect_ == bySubstrings,
+				("Effect table disagrees with the substring classifier for shader label \"{}\"", label_.data()));
+			DEATH_DEBUG_ASSERT(ditherVariant_ == label.contains("Dither"),
+				("Dither flag disagrees with the substring derivation for shader label \"{}\"", label_.data()));
+		}
+#endif
 	}
 
 	const SwUniformBlock* SwShaderProgram::FindBlock(const char* name) const

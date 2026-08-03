@@ -1157,7 +1157,8 @@ namespace nCine
 		::fwrite(logEntryWithColors, 1, length2, stdout);
 
 		// Also send it to a USB Gecko in memory card slot B - the Dolphin emulator exposes it as a raw
-		// TCP socket on port 55556 and it also works with the real adapter
+		// TCP socket on port 55020 (0xd6ec, with "SlotB = 7" in Dolphin.ini) and it also works with
+		// the real adapter
 		static const bool __geckoAlive = (usb_isgeckoalive(EXI_CHANNEL_1) != 0);
 		if (__geckoAlive) {
 			usb_sendbuffer_safe(EXI_CHANNEL_1, logEntryWithColors, length2);

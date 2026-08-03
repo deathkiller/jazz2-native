@@ -40,3 +40,9 @@ void fragment() {
 	), uAmbientColor, vec4(1.0 - light.r));
 	COLOR.a = 1.0;
 }
+
+void fixed_function() {
+	// The viewport compositor is the direct-tier CPU-lightmap lighting hook (shared with the software
+	// backend's SetPendingSoftwareLighting state) - bound here by name instead of by shader label
+	pipeline lighting_combine;
+}
