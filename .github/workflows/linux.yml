@@ -100,10 +100,8 @@ jobs:
         extraArgs=""
         if [ "${{ matrix.Backend }}" = "SDL3" ]; then extraArgs="-D CMAKE_CXX_STANDARD_LIBRARIES=-lmpg123"; fi
 
-        # Čistá portable konfigurace bez instalačních flagů
         cmake -B ./_build_portable/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} $extraArgs -D NCINE_WITH_GLEW=OFF
         
-        # Sestavení binárky pro přenosný archiv
         make -j $(nproc) -C ./_build_portable/
 
     - name: 'Configure & Build System Packages (DEB/RPM)'
@@ -113,17 +111,12 @@ jobs:
 
         extraArgs=""
         if [ "${{ matrix.Backend }}" = "SDL3" ]; then extraArgs="-D CMAKE_CXX_STANDARD_LIBRARIES=-lmpg123"; fi
-
-        # Konfigurace se systémovými flagy vynucujícími správné vyhledávací cesty pro instalaci
-        cmake -B ./_build_packages/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} $extraArgs -D NCINE_ASSEMBLE_DEB=ON -D NCINE_ASSEMBLE_RPM=ON -D NCINE_WITH_GLEW=OFF -D NCINE_LINUX_PACKAGE=jazz2 -D NCINE_PACKAGED_CONTENT_PATH=ON -D CMAKE_INSTALL_PREFIX=/usr
-        
-        # Generování balíčků .deb a .rpm
+        cmake -B ./_build_packages/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D NCINE_STRIP_BINARIES=ON -D NCINE_PREFERRED_BACKEND=${{ matrix.Backend }} -D NCINE_PREFERRED_RHI=${{ matrix.RHI }} $extraArgs -D NCINE_ASSEMBLE_DEB=ON -D NCINE_ASSEMBLE_RPM=ON -D NCINE_WITH_GLEW=OFF -D NCINE_LINUX_PACKAGE=jazz2 -D CMAKE_INSTALL_PREFIX=/usr
         make package -j $(nproc) -C ./_build_packages/
 
     - name: 'Create Package'
       run: |
         mkdir ./_package/
-        # Surová binárka se bere z čistého portable buildu
         cp -f ./_build_portable/jazz2 ./_package/jazz2
         # Instalační balíčky se berou z package buildu
         cp -f ./_build_packages/*.deb ./_package/jazz2.deb
