@@ -1,17 +1,18 @@
 // Console rebuild of the TexturedBackground warp out of geometry, shared by the
-// void fixed_function(pvr) AND void fixed_function(gx) blocks of TexturedBackground.shader and
-// TexturedBackgroundCircle.shader (the tunnel keeps the same planar approximation on this tier,
-// exactly as the handwritten backend code did).
+// void fixed_function(pvr, psp) AND void fixed_function(gx) blocks of
+// TexturedBackground.shader and TexturedBackgroundCircle.shader (the tunnel keeps the same planar
+// approximation on this tier, exactly as the handwritten backend code did).
 //
 // Everything below is portable extended vocabulary (the strip builder, the pre-clip quad axes and
-// resolved uniforms), so the band geometry is literally the same code on both consoles. The one
+// resolved uniforms), so the band geometry is literally the same code on every console. The one
 // place they differ is how the horizon tint is delivered, and the difference is a capability, not a
 // policy: a block that defines WARP_TINT_IN_VERTEX_COLOR before including this file asks for the
 // tint to ride in the band pieces' own per-vertex colours, folded into their draw by the TINT_MIX
-// combiner stage. The PVR has no texture environment that can lerp a texel toward a colour, so it
-// leaves the macro undefined and gets the tint as a second, alpha-blended gradient pass over each
-// band instead - the two produce the same pixels (`mix(texel, tint, a)` either way), the folded
-// form just costs one draw per band instead of two and never leaves the textured vertex format.
+// combiner stage. Only the gx block does - neither the PVR's texture environment nor the PSP's GE
+// can lerp a texel toward an interpolated colour, so they leave the macro undefined and get the
+// tint as a second, alpha-blended gradient pass over each band instead. The two produce the same
+// pixels (`mix(texel, tint, a)` either way); the folded form just costs one draw per band instead
+// of two and never leaves the textured vertex format.
 //
 // The warp's mapping is affine along every screen row - texturePos.x is linear in UV.x for a fixed
 // row and texturePos.y depends on UV.y alone - so a stack of horizontal bands carrying

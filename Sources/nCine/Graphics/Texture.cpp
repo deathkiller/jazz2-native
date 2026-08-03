@@ -271,8 +271,20 @@ namespace nCine
 	{
 		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
 		const std::int32_t maxTextureSize = gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_TEXTURE_SIZE);
+#if defined(WITH_RHI_GU)
+		// The PSP's GE tops out at 512 texels per axis, which is what the backend reports so the tileset
+		// atlases get chunked to fit it - but a few prebaked assets are taller anyway (the small font atlas
+		// is 128x529), and RHI::GU::GuTexture handles those by splitting the image into 512x512 pages that
+		// the draw path selects between. So an oversized source image degrades (a primitive that samples
+		// across a page boundary loses its overhang) instead of aborting the game before its first frame.
+		if (texLoader.width() > maxTextureSize || texLoader.height() > maxTextureSize) {
+			LOGW("Texture {}x{} is bigger than the device maximum {} and will be split into pages",
+				texLoader.width(), texLoader.height(), maxTextureSize);
+		}
+#else
 		FATAL_ASSERT_MSG(texLoader.width() <= maxTextureSize, "Texture width {} is bigger than device maximum {}", texLoader.width(), maxTextureSize);
 		FATAL_ASSERT_MSG(texLoader.height() <= maxTextureSize, "Texture height {} is bigger than device maximum {}", texLoader.height(), maxTextureSize);
+#endif
 
 		const TextureFormat& texFormat = texLoader.texFormat();
 		const PixelFormat pixelFormat = texFormat.pixelFormat();

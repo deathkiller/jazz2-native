@@ -40,7 +40,7 @@ rejected as an unknown option):
 ```
 ShaderCompiler --emit-types <output.h>
 ShaderCompiler --emit-sw-generated <output.h> <input.shader ...>
-ShaderCompiler --emit-fixed-function <pvr|gx> <output.h> <input.shader ...>
+ShaderCompiler --emit-fixed-function <pvr|gx|psp> <output.h> <input.shader ...>
 ShaderCompiler --hlsl-check <input.shader ...>
 ShaderCompiler --spirv-check [--glslang <path>] <input.shader ...>
 ```
@@ -49,7 +49,7 @@ ShaderCompiler --spirv-check [--glslang <path>] <input.shader ...>
 | --- | --- |
 | `--emit-types` | Write the shared reflection-types header (`Generated/ShaderCompilerTypes.h`) and nothing else |
 | `--emit-sw-generated` | Transpile the fragment stage of every variant of every input to C++ and write the aggregate `SwGeneratedShaders.h` consumed by the software renderer. Shaders outside the supported subset are **declined** and omitted (the printed summary lists each with its reason), so this mode never fails on unsupported input. It is also the only path that builds stage sources with `SOFTWARE_RENDERER` defined |
-| `--emit-fixed-function` | Transpile the applicable `fixed_function` block of every variant of every input and write the aggregate `PvrGeneratedEffects.h` / `GxGeneratedEffects.h` (see below). Unlike the software transpiler, an invalid block is a **hard error** |
+| `--emit-fixed-function` | Transpile the applicable `fixed_function` block of every variant of every input and write the aggregate `PvrGeneratedEffects.h` / `GxGeneratedEffects.h` / `GuGeneratedEffects.h` (see below). Unlike the software transpiler, an invalid block is a **hard error** |
 | `--hlsl-check` | Emit the VS + PS HLSL of every variant and compile each stage via `D3DCompile` (`vs_5_0`/`ps_5_0`), printing a pass/fail table. Windows only (`d3dcompiler_47.dll`); writes nothing |
 | `--spirv-check` | Emit the Vulkan GLSL of every variant and compile each stage to SPIR-V via `glslangValidator`, printing a pass/fail table. Windows only; writes nothing |
 
@@ -84,7 +84,7 @@ emitted sources.
 | `precision mediump;` or `precision highp;` | Optional (default `mediump`) — selects the float precision of the auto-emitted `#ifdef GL_ES precision X float; #endif` fragment prologue in both modes; anything else is an error. **Only the two-token form is a directive**: a real GLSL global precision statement with a type (`precision highp float;`) passes through as ordinary GLSL. |
 | `batched <Name>;` | `canvas_item` only — also emits the batched twin program (`InstancesBlock` + 6-vertex corner formula) into the same header, sharing the fragment stage and variants. An error in custom mode. Offline-only for now — the runtime `CompileRuntimeProgram` compiles just the primary program. |
 | `#include "relative/path"` | Replaced **textually** by the contents of the referenced file (relative to the including file), recursively up to depth 8. Runs on the raw text before parsing, so both reflection and the emitted sources see the included text inlined and the generated artifacts stay self-contained. Note: line numbers in diagnostics refer to the include-expanded stream. |
-| `void fixed_function([pvr\|gx]) { ... }` | Console fixed-function implementation of the effect, transpiled to C++ by `--emit-fixed-function` (see below). Never part of the GLSL stages — a file with a block emits a byte-identical per-shader header. Empty parentheses declare the generic block; a `pvr`/`gx` block overrides it for that backend. At most one block per target per file. |
+| `void fixed_function([<target>[, <target>...]]) { ... }` | Console fixed-function implementation of the effect, transpiled to C++ by `--emit-fixed-function` (see below). Never part of the GLSL stages — a file with a block emits a byte-identical per-shader header. Empty parentheses declare the generic block; a `pvr`/`gx`/`psp` block overrides it for that backend, and a comma-separated **target list** (`void fixed_function(pvr, psp)`) declares one implementation shared by all of them. Every target belongs to exactly one block per file. |
 
 Elements shared by both modes:
 
@@ -297,8 +297,9 @@ engine code can include it directly to consume reflection without pulling in any
 
 ### Console fixed-function blocks (`fixed_function`)
 
-The console backends (PVR on the Dreamcast, GX on the Wii/GameCube) have no fragment shaders — an
-effect there is a short list of passes over the sprite quad, each a small bundle of hardware state
+The console backends (PVR on the Dreamcast, GX on the Wii/GameCube, GU on the PlayStation Portable)
+have no fragment shaders — an effect there is a short list of passes over the sprite quad, each a
+small bundle of hardware state
 (see `Docs/FixedFunctionShaderDesign.md` and the runtime contract in
 `nCine/Graphics/RHI/FixedFunctionPass.h`). A `fixed_function` block states that pass list in the
 shader file itself, next to the GLSL it approximates:
@@ -313,18 +314,40 @@ void fixed_function() {
 ```
 
 `void fixed_function()` (empty parentheses) is the generic implementation — the spelling matches
-the `void vertex()` / `void fragment()` entry points; `void fixed_function(pvr)` /
-`void fixed_function(gx)` override it for one backend. The standalone mode
+the `void vertex()` / `void fragment()` entry points; `void fixed_function(pvr)`,
+`void fixed_function(gx)` and `void fixed_function(psp)` override it for one backend, and a
+comma-separated **target list** overrides it for several at once:
+
+| Spelling | Serves |
+| --- | --- |
+| `void fixed_function() { ... }` | every backend that has no more specific block — the generic implementation, restricted to the portable core |
+| `void fixed_function(pvr) { ... }` | the Dreamcast only |
+| `void fixed_function(gx) { ... }` | the Wii/GameCube only |
+| `void fixed_function(psp) { ... }` | the PlayStation Portable only |
+| `void fixed_function(pvr, psp) { ... }` | the Dreamcast **and** the PlayStation Portable, from one body |
+| `void fixed_function(gx, psp) { ... }` | the Wii/GameCube **and** the PlayStation Portable, from one body |
+| `void fixed_function(psp, gx, pvr) { ... }` | any subset in any order; whitespace is free (`(pvr,psp)` and `( pvr , psp )` are the same declaration) |
+
+A block that names a backend — on its own or inside a list — always wins over the generic block for
+it, regardless of declaration order, and every target belongs to exactly **one** block per file (a
+target claimed twice is an error, whether it was spelled singly or in a list). The list form exists
+so a shader whose description for two consoles is *literally the same code* keeps one copy of it
+instead of two that can drift apart; when the bodies genuinely differ, write separate blocks.
+**Capabilities are then validated against the intersection of the listed targets** — see
+[below](#capability-rules-for-a-target-list).
+
+The standalone mode
 
 ```
-ShaderCompiler --emit-fixed-function <pvr|gx> <output.h> <input.shader ...>
+ShaderCompiler --emit-fixed-function <pvr|gx|psp> <output.h> <input.shader ...>
 ```
 
 transpiles the applicable block of every program variant into a
 `void <Program>[_<VARIANT>]_Effect(EffectContext&)` C++ function — the block is preprocessed **once
 per variant** with the variant define baked in, exactly like the fragment stage, so `#ifdef`s on
 variant names work inside it — and collects them into one aggregate header per backend
-(`Generated/PvrGeneratedEffects.h` / `GxGeneratedEffects.h`, written by GenerateAll.ps1) with a
+(`Generated/PvrGeneratedEffects.h` / `GxGeneratedEffects.h` / `GuGeneratedEffects.h`, written by
+GenerateAll.ps1) with a
 `FixedFunctionGeneratedEffects[]` table of
 `{ program, variant, usesOffsetColor, requirements, intrinsic, &function }` entries.
 **Byte-identical function bodies are deduplicated**: batched twins and `USE_PALETTE` variants
@@ -366,7 +389,8 @@ unlike the software transpiler's silent declines). The **portable core**, valid 
 - Pass fields (write-only): `p.color = <vec4>;`, `p.offset_color = <vec3>;` (marks
   `HasOffsetColor`), `p.screen_offset = <vec2>;`, `p.blend = MATERIAL|ADD|OPAQUE|ALPHA;`
   (`ALPHA` = plain source-alpha over, independent of the material — the warp's horizon tint),
-  `p.tev = MODULATE|SILHOUETTE|MODULATE_X2|MODULATE_X4;` (portable intent — the PVR ignores it),
+  `p.tev = MODULATE|SILHOUETTE|MODULATE_X2|MODULATE_X4;` (portable intent — the PVR ignores it;
+  the two output scales are **rejected for every block the psp target reaches**, see below),
   `p.luma_gain = <float>;` (parameterizes the GX-only `LUMA_RAMP` preset below).
 - `submit_quad(p);`, locals of the GLSL scalar/vector subset (`float`/`int`/`bool`, `vec2/3/4`),
   `if`/`else`, C-style `for` with an int counter, (compound) assignment, `++`/`--`.
@@ -375,15 +399,16 @@ unlike the software transpiler's silent declines). The **portable core**, valid 
   (float), vec/`float()`/`int()` constructors, and the built-ins:
   - `COLOR` — the instance color (`ctx.Color()`), exactly the shader's `COLOR` input.
   - `texel_size()` — `vec2` displacement of one texel in the quad's own coordinate space, already
-    converted per backend (raster space on the PVR, logical pixels on the GX), derived from the
-    UV-space texel size the Outline shader family carries in its instance `color.xy`
-    (`vec2(ctx.TexelStepX(), ctx.TexelStepY())`).
+    converted per backend (raster space on the PVR, logical pixels on the GX, screen pixels on the
+    GU), derived from the UV-space texel size the Outline shader family carries in its instance
+    `color.xy` (`vec2(ctx.TexelStepX(), ctx.TexelStepY())`).
   - `has_texel_size()` — `bool`, whether that step is derivable at all (`ctx.HasTexelStep()`; a
     zero texRect has no scale). Blocks guard their `texel_size()` uses with it.
 
-The **extended vocabulary** is valid only in a backend-specific `pvr` or `gx` block —
-a generic block stays in the portable quad-only core, so a shared description can never silently
-depend on one console's geometry synthesis (using it in a generic block is a hard error):
+The **extended vocabulary** is valid only in a block that names its backends — a single `pvr`, `gx`
+or `psp` block, or a target list such as `pvr, psp` — because a generic block stays in the portable
+quad-only core, so a shared description can never silently depend on one console's geometry synthesis
+(using it in a generic block is a hard error):
 
 - `quad_origin()`, `quad_axis_x()`, `quad_axis_y()` — `vec2`s: the **pre-clip** raster position
   of the sprite's (0,0) corner and the raster displacements of its local axes. Geometry synthesis
@@ -400,14 +425,17 @@ depend on one console's geometry synthesis (using it in a generic block is a har
   or `submit_strip_shaded(p, count)` (per-vertex colours — the iris soft edge and the horizon
   tint express gradients without a fragment shader; **untextured** unless the pass's TEV preset
   consumes the texel as well, i.e. `TINT_MIX`, in which case the strip keeps its texture and UVs).
-  The scratch capacity is a backend capability — **8** vertices on the PVR, **16** on the GX (whose
-  GP prefers fewer, longer primitives) — and a **literal** index or count outside it is a hard
-  error, because at runtime an out-of-range index is dropped and an oversized count clamped, which
-  would silently draw the wrong geometry. Computed indices/counts stay unchecked.
+  The scratch capacity is a backend capability — **8** vertices on the PVR, **16** on the GX and the
+  GU (both prefer fewer, longer primitives; on the GE every strip is a draw call of its own) — and a
+  **literal** index or count outside it is a hard error, because at runtime an out-of-range index is
+  dropped and an oversized count clamped, which would silently draw the wrong geometry. A block
+  serving several targets is held to the **minimum** capacity among them (a `pvr, gx` block gets the
+  PVR's 8). Computed indices/counts stay unchecked.
 
-Two TEV presets need the GX's programmable combiner and have no PVR equivalent at all (the CLX2
-modulates a texel by the vertex colour and adds an offset colour — that is the whole vocabulary),
-so using them outside a backend-specific `gx` block is a hard error rather than a silently wrong
+Two TEV presets need the GX's programmable combiner and have no PVR or GE equivalent at all (the
+CLX2 modulates a texel by the vertex colour and adds an offset colour — that is the whole
+vocabulary; the GE has five fixed texture functions over one texel and the fragment colour), so
+using them outside a block targeting the GX **alone** is a hard error rather than a silently wrong
 console frame:
 
 - `TINT_MIX` — one stage of `d + mix(a, b, c)`: the texel lerped toward the pass/vertex colour by
@@ -421,11 +449,62 @@ console frame:
   channel swizzles through the TEV swap tables, a KONST-weighted dot product, then the ramp — and
   the GX's pass merger still folds it with the sprite pass below it into a single draw.
 
-Worked examples: `Transition.shader` (the iris fan, 32 segments on the PVR and 64 with a radially
-eased edge on the GX) and `Include/TexturedBackgroundWarp.inc` (the warp rebuild, shared by both
-background shaders **and** both backends — the band geometry is portable vocabulary; only the
-horizon-tint delivery is switched by a `WARP_TINT_IN_VERTEX_COLOR` macro the including block
-defines, which is also the idiom for specializing a shared include per backend).
+`MODULATE_X2`/`MODULATE_X4` are the mirror-image case: the GE has no combiner **output scale** at
+all, so they are rejected for every block the psp target can reach — a `psp` block, a target list
+naming `psp`, AND a generic one, since a generic block is transpiled for every backend and the PVR
+*silently ignores* the preset. A shared block using one would therefore be honoured by only some of
+the consoles it serves, which is the "silently depends on one console's feature" case these checks
+exist to prevent; on this tier a boost is expressed as passes instead (`Colorized.shader` splits its
+multiplier into up to three additive passes in its shared `pvr, psp` block for the same reason).
+
+### Capability rules for a target list
+
+A block naming several backends is validated against the **intersection** of what they can do, not
+against the backend whose header happens to be generated at that moment — otherwise a shared body
+would be accepted while being silently wrong on the other backends it serves. Concretely:
+
+| Rule | Effect on a target list |
+| --- | --- |
+| Extended vocabulary (strip builder, pre-clip quad axes, resolved uniforms) | allowed — every backend a list names is named in it, so nothing is implicit. Only the generic block is restricted to the portable core |
+| `TINT_MIX` / `LUMA_RAMP` (GX-only) | allowed **only** in a block targeting `gx` and nothing else; `void fixed_function(gx, psp)` is rejected, because the GE cannot express them |
+| `MODULATE_X2` / `MODULATE_X4` (no GE output scale) | rejected as soon as `psp` appears in the list; `void fixed_function(pvr, psp)` cannot use them even while the PVR header is being written |
+| Strip-builder capacity | the **minimum** across the listed targets — `void fixed_function(pvr, gx)` is limited to the PVR's 8 vertices, so a literal index `8` or a count above `8` is an error there |
+
+The diagnostics name which of the block's own targets rejects the feature, so the fix (split the
+list back into separate blocks) is obvious:
+
+```
+error: LUMA_RAMP is a GX-only capability - it needs the programmable TEV combiner, so it is only
+       available in a fixed_function(gx) block, not in one that also targets psp
+error: MODULATE_X2 has no GE equivalent - ... it cannot be expressed for the psp target this block
+       also names (write the boost as passes in a fixed_function(psp) block, e.g. an additive one)
+error: vertex index 8 is outside the pvr strip builder's capacity of 8 vertices (the smallest
+       capacity among the block's targets)
+```
+
+The GE also has no post-texture additive term (`GU_TFX_ADD` adds the texel to the fragment colour,
+not a third value), so `p.offset_color` is not one GE draw either. That one is handled in the
+**mechanism** rather than in the shaders: the GU `EffectContext::SubmitQuad` expands a pass carrying
+an offset colour into the modulated sprite plus an additive flat-colour (silhouette) pass over it,
+which is algebraically the same result the PVR's offset colour produces in a single draw — and
+collapses to ONE draw when the pass colour's RGB is zero (the mask/outline/shield idiom, where the
+offset colour *is* the effect). So a generic block that writes `p.offset_color` keeps working
+unchanged on all three consoles; the GX likewise reinterprets it as its silhouette form.
+
+Worked examples: `Transition.shader` (the iris fan, 32 segments in its `pvr` block and 64 with a
+radially eased edge in one shared `gx, psp` block — the iris is pure geometry, so what it needs from
+the hardware is only a 16-vertex strip taken in one draw call, which is exactly what those two agree
+on and the PVR's 8-vertex scratch cannot give) and `Include/TexturedBackgroundWarp.inc` (the warp
+rebuild, shared by both background shaders **and** all three backends — the band geometry is portable
+vocabulary; only the horizon-tint delivery is switched by a `WARP_TINT_IN_VERTEX_COLOR` macro the
+including block defines, which only the `gx` block sets, so the other two consoles share a
+`pvr, psp` block that just includes the file — and which is also the idiom for specializing a shared
+include per backend).
+
+`PartialWhiteMask.shader`, `Colorized.shader` and `FrozenMask.shader` show the other half of the
+pattern: each has one `pvr, psp` block (the two no-combiner tiers, which reach the effect the same
+way) plus a `gx` block that uses the combiner. Those six files are the reason the list form exists —
+they used to carry two byte-identical bodies each.
 
 ## Preprocessing semantics (reflection only)
 
@@ -534,8 +613,8 @@ order:
    `AllPrograms[]` index arrays. Program symbols come from the `program` and `batched` directives, so
    a file with a batched twin contributes two entries.
 4. `SwGeneratedShaders.h` — the software-renderer fragment functions (`--emit-sw-generated`).
-5. `PvrGeneratedEffects.h` and `GxGeneratedEffects.h` — the console fixed-function effects
-   (`--emit-fixed-function pvr` / `gx`).
+5. `PvrGeneratedEffects.h`, `GxGeneratedEffects.h` and `GuGeneratedEffects.h` — the console
+   fixed-function effects (`--emit-fixed-function pvr` / `gx` / `psp`).
 
 ```
 cd Sources\ShaderCompiler

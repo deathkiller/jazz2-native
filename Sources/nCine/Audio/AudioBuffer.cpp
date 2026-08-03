@@ -40,7 +40,12 @@ namespace nCine
 	{
 #if defined(WITH_AUDIO)
 		alGetError();
-		alGenBuffers(1, &bufferId_);
+		// Through a local of OpenAL's own type: `ALuint` is `unsigned int` while `std::uint32_t` can be
+		// `long unsigned int` (it is on MIPS), and taking the address of the member would then hand the
+		// library a pointer to the wrong type even though both are 32 bits wide
+		ALuint bufferId = 0;
+		alGenBuffers(1, &bufferId);
+		bufferId_ = bufferId;
 		const ALenum error = alGetError();
 		if DEATH_UNLIKELY(error != AL_NO_ERROR) {
 			LOGW("alGenBuffers() failed with error 0x{:x}", error);
@@ -102,7 +107,8 @@ namespace nCine
 			}
 		}
 
-		alDeleteBuffers(1, &bufferId_);
+		const ALuint bufferId = bufferId_;
+		alDeleteBuffers(1, &bufferId);
 		AL_LOG_ERRORS();
 #endif
 	}

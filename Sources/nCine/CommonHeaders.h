@@ -60,7 +60,12 @@
 #			include <al.h>
 #			include <alext.h>
 #		endif
-#		define OPENAL_FILTERS_SUPPORTED
+#		if !defined(DEATH_TARGET_PSP)
+			// The PSP's OpenAL is an early OpenAL Soft that predates EFX being a header: the library exports
+			// alGenFilters() but ships no efx.h, so the enums the low-pass path needs do not exist there and
+			// IAudioPlayer::updateFilters() has to compile out (sounds are then simply not muffled underwater)
+#			define OPENAL_FILTERS_SUPPORTED
+#		endif
 #	endif
 #endif
 

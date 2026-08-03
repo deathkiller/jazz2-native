@@ -2,7 +2,7 @@
 
 #if defined(WITH_LIBRETRO) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "../Input/IInputManager.h"
+#include "../../Input/IInputManager.h"
 
 namespace nCine::Backends
 {

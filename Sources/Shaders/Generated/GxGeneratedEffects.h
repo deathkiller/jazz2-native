@@ -403,7 +403,7 @@ namespace nCine::RHI::GX
 			}
 		}
 
-		// Transition - from Transition.shader:fixed_function(gx)
+		// Transition - from Transition.shader:fixed_function(gx, psp)
 		void Transition_Effect(EffectContext& ctx)
 		{
 			using namespace ff;

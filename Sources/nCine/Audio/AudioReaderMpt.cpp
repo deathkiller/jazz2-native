@@ -32,7 +32,9 @@ namespace nCine
 	AudioReaderMpt::openmpt_module_set_repeat_count_t* AudioReaderMpt::_openmpt_module_set_repeat_count = nullptr;
 #endif
 
-	AudioReaderMpt::AudioReaderMpt(std::unique_ptr<Stream> fileHandle, int frequency)
+	// Spelled with the fixed-width type the declaration uses: where `std::int32_t` is `long int` (MIPS,
+	// among others) a plain `int` parameter would be a different signature and match nothing
+	AudioReaderMpt::AudioReaderMpt(std::unique_ptr<Stream> fileHandle, std::int32_t frequency)
 		: _fileHandle(std::move(fileHandle)), _frequency(frequency), _module(nullptr)
 	{
 		if (!_fileHandle->IsValid()) {
@@ -156,7 +158,7 @@ namespace nCine
 		return _this->_fileHandle->Read(dst, (unsigned long)bytes);
 	}
 
-	std::int32_t AudioReaderMpt::stream_seek_func(void* stream, std::int64_t offset, std::int32_t whence)
+	int AudioReaderMpt::stream_seek_func(void* stream, std::int64_t offset, int whence)
 	{
 		SeekOrigin origin;
 		switch (whence) {

@@ -20,7 +20,7 @@
 #	endif
 #	if TARGET_IPHONE_SIMULATOR
 #		define DEATH_TARGET_IOS
-#		define DEATH_TARGET_IOS_SIMULATOR 
+#		define DEATH_TARGET_IOS_SIMULATOR
 #	endif
 #elif defined(__unix__) || defined(__linux__)
 #	define DEATH_TARGET_UNIX
@@ -42,6 +42,10 @@
 #elif defined(__riscv)
 #	define DEATH_TARGET_RISCV
 
+// First two is GCC/Clang, third is MSVC.
+#elif defined(__mips__) || defined(__mips) || defined(_M_MRX000)
+#	define DEATH_TARGET_MIPS
+
 // WebAssembly (on Emscripten). Old pure asm.js toolchains did not define this, recent Emscripten does that even with `-s WASM=0`.
 #elif defined(__wasm__)
 #	define DEATH_TARGET_WASM
@@ -49,8 +53,8 @@
 #endif
 
 // Sanity checks. This might happen when using Emscripten-compiled code with native compilers, at which point we should just die.
-#if defined(DEATH_TARGET_EMSCRIPTEN) && (defined(DEATH_TARGET_X86) || defined(DEATH_TARGET_ARM) || defined(DEATH_TARGET_POWERPC) || defined(DEATH_TARGET_RISCV))
-#	error DEATH_TARGET_X86 / _ARM / _POWERPC / _RISCV defined on Emscripten
+#if defined(DEATH_TARGET_EMSCRIPTEN) && (defined(DEATH_TARGET_X86) || defined(DEATH_TARGET_ARM) || defined(DEATH_TARGET_POWERPC) || defined(DEATH_TARGET_RISCV) || defined(DEATH_TARGET_MIPS))
+#	error DEATH_TARGET_X86 / _ARM / _POWERPC / _RISCV / _MIPS defined on Emscripten
 #endif
 
 // 64-bit WebAssembly macro was tested by passing -m64 to emcc

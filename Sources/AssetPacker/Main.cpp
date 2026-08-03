@@ -172,7 +172,7 @@ namespace
 		isDreamcast = false;
 		if (value == "desktop"_s) {
 			profile = TargetProfile::Desktop;
-		} else if (value == "console"_s || value == "dreamcast"_s || value == "wii"_s || value == "gamecube"_s) {
+		} else if (value == "console"_s || value == "dreamcast"_s || value == "wii"_s || value == "gamecube"_s || value == "psp"_s) {
 			// The consoles all consume the same staged tree, so they share one profile - only the cinematics
 			// are decided per platform, so that is tracked separately
 			profile = TargetProfile::Console;
@@ -194,7 +194,7 @@ namespace
 		LOGI("                         or a game installation that keeps them in a \"Source\" subdirectory - in which");
 		LOGI("                         case its \"Content\" is copied to the target as well");
 		LOGI("    <target directory>   Directory the converted data is written to (created if needed)");
-		LOGI("    --target=<profile>   desktop (default) | console | dreamcast | wii | gamecube | emscripten");
+		LOGI("    --target=<profile>   desktop (default) | console | dreamcast | wii | gamecube | psp | emscripten");
 		LOGI("    --video-downscale=N  Downscale cinematics by N (1-4); 1 (the default) keeps them as they are.");
 		LOGI("                         Cinematics are re-encoded for dreamcast (or any N > 1) and otherwise");
 		LOGI("                         copied unchanged; desktop gets none, as the game reads the originals");

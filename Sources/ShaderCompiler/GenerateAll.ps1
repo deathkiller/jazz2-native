@@ -188,12 +188,12 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "ok: software fragments -> Generated\SwGeneratedShaders.h"
 
 # Emit the aggregate fixed-function effect headers consumed by the console backends: the
-# fixed-function transpiler lowers each program variant's void fixed_function([pvr|gx]) block into a
-# C++ effect function over the EffectContext contract (FixedFunctionPass.h). A backend-specific
-# block overrides the generic void fixed_function() block for that backend. Programs without a block
-# are simply absent from the emitted table; an INVALID block is a hard error (unlike the software
-# transpiler's declines), so this step fails the run.
-foreach ($ff in @(@('pvr', 'PvrGeneratedEffects.h'), @('gx', 'GxGeneratedEffects.h'))) {
+# fixed-function transpiler lowers each program variant's void fixed_function([pvr|gx|psp]) block
+# into a C++ effect function over the EffectContext contract (FixedFunctionPass.h). A
+# backend-specific block overrides the generic void fixed_function() block for that backend.
+# Programs without a block are simply absent from the emitted table; an INVALID block is a hard
+# error (unlike the software transpiler's declines), so this step fails the run.
+foreach ($ff in @(@('pvr', 'PvrGeneratedEffects.h'), @('gx', 'GxGeneratedEffects.h'), @('psp', 'GuGeneratedEffects.h'))) {
     $ffPath = Join-Path $outDir $ff[1]
     & $tool --emit-fixed-function $ff[0] $ffPath @($shaders | ForEach-Object { $_.FullName })
     if ($LASTEXITCODE -ne 0) {

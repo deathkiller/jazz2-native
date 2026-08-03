@@ -18,7 +18,7 @@
 #	include <fcntl.h>
 #	include <sys/stat.h>
 #	include <unistd.h>
-#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA)
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_PSP)
 #		include <sys/file.h>	// For flock()
 #	endif
 #endif
@@ -405,7 +405,7 @@ namespace Death { namespace IO {
 		if (_filePos > size) {
 			_filePos = size;
 		}
-#elif !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST) // TODO: ftruncate() is not defined on VITA and KOS
+#elif !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PSP) // TODO: ftruncate() is not defined on VITA, KOS and PSPSDK
 		if (::ftruncate(_fileDescriptor, size) < 0) {
 #	if defined(DEATH_TRACE_VERBOSE_IO)
 			LOGE("Failed to resize file \"{}\" with error {}{}", _path, errno, __GetUnixErrorSuffix(errno));
@@ -568,7 +568,8 @@ namespace Death { namespace IO {
 			return;
 		}
 
-#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(DEATH_TARGET_PSP)
+		// (There is no flock() on the consoles: PSPSDK declares it but links nothing, the others lack it outright)
 		if ((mode & FileAccess::Exclusive) == FileAccess::Exclusive) {
 			// Windows opens exclusive files with a share mode of 0, denying any other opener. Modern Linux has no
 			// usable mandatory locking, so emulate it with an advisory whole-file lock bound to the open file

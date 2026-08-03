@@ -22,7 +22,13 @@ namespace nCine
 	{
 #if defined(WITH_AUDIO)
 		alGetError();
-		alGenBuffers(NumBuffers, buffersIds_.data());
+		// Through locals of OpenAL's own type, for the same reason as in AudioBuffer: `ALuint` and
+		// `std::uint32_t` are not the same type everywhere, so the array cannot simply be handed over
+		ALuint bufferIds[NumBuffers] {};
+		alGenBuffers(NumBuffers, bufferIds);
+		for (std::int32_t i = 0; i < NumBuffers; i++) {
+			buffersIds_[i] = bufferIds[i];
+		}
 		const ALenum error = alGetError();
 		if DEATH_UNLIKELY(error != AL_NO_ERROR) {
 			LOGW("alGenBuffers() failed with error 0x{:x}", error);
@@ -50,7 +56,11 @@ namespace nCine
 #if defined(WITH_AUDIO)
 		// Don't delete buffers if this is a moved out object
 		if (buffersIds_.size() == NumBuffers) {
-			alDeleteBuffers(NumBuffers, buffersIds_.data());
+			ALuint bufferIds[NumBuffers];
+			for (std::int32_t i = 0; i < NumBuffers; i++) {
+				bufferIds[i] = buffersIds_[i];
+			}
+			alDeleteBuffers(NumBuffers, bufferIds);
 			AL_LOG_ERRORS();
 		}
 #endif
@@ -123,7 +133,8 @@ namespace nCine
 				currentBufferId_ = buffersIds_[nextAvailableBufferIndex_];
 				// On iOS `alBufferDataStatic()` could be used instead
 				alBufferData(currentBufferId_, format_, decodeRequest_->buffer.get(), bytes, frequency_);
-				alSourceQueueBuffers(source, 1, &currentBufferId_);
+				const ALuint currentBufferId = currentBufferId_;
+				alSourceQueueBuffers(source, 1, &currentBufferId);
 				nextAvailableBufferIndex_++;
 			} else {
 				reachedEndOfData = true;

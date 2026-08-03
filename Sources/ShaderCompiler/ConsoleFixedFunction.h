@@ -6,22 +6,23 @@
 	Fixed-function-effect transpiler for ShaderCompiler — the third C++ emitter beside the
 	GLSL-to-C++ software transpiler (@ref GlslToCpp.h).
 
-	The consoles (PVR on the Dreamcast, GX on the Wii/GameCube) have no fragment shaders; a shader
-	describes how to drive their fixed-function hardware in a `void fixed_function([pvr|gx]) { ... }`
-	block — empty parentheses for the generic implementation, a backend name for an override (see
-	`Docs/FixedFunctionShaderDesign.md`). This unit transpiles one such block — once per
-	program variant, with the variant's define baked in exactly like the fragment stage — into the
-	BODY of a plain C++ effect function
+	The consoles (PVR on the Dreamcast, GX on the Wii/GameCube, GU on the PlayStation Portable) have
+	no fragment shaders; a shader describes how to drive their fixed-function hardware in a
+	`void fixed_function([<target>[, <target>...]]) { ... }` block — empty parentheses for the generic
+	implementation, one backend name for an override, a comma-separated list for one implementation
+	shared by several backends (see `Docs/FixedFunctionShaderDesign.md`). This
+	unit transpiles one such block — once per program variant, with the variant's define baked in
+	exactly like the fragment stage — into the BODY of a plain C++ effect function
 
 		void <Program>[_<VARIANT>]_Effect(EffectContext& ctx)
 
 	written against the runtime contract in `nCine/Graphics/RHI/FixedFunctionPass.h`: the function
 	fills `FixedFunctionPass` descriptors and submits them through the backend's `EffectContext`.
 	Main.cpp's `--emit-fixed-function` mode names and collects the functions into per-backend
-	aggregate headers (`PvrGeneratedEffects.h` / `GxGeneratedEffects.h`), deduplicating
-	byte-identical bodies into one shared function per backend (batched twins and palette variants
-	usually differ only in dispatch-side decoding), mirroring how `--emit-sw-generated` produces
-	`SwGeneratedShaders.h`.
+	aggregate headers (`PvrGeneratedEffects.h` / `GxGeneratedEffects.h` / `GuGeneratedEffects.h`),
+	deduplicating byte-identical bodies into one shared function per backend (batched twins and
+	palette variants usually differ only in dispatch-side decoding), mirroring how
+	`--emit-sw-generated` produces `SwGeneratedShaders.h`.
 
 	Unlike the software transpiler, which DECLINES shaders outside its subset (they simply stay
 	absent from the table), a fixed_function block is authored intent: anything outside the block
@@ -33,7 +34,8 @@
 	- `pass p;` declares a `nCine::RHI::FixedFunctionPass` local (no initializer)
 	- assignments to pass fields: `p.color = <vec4>;`, `p.offset_color = <vec3>;` (marks
 	  HasOffsetColor), `p.screen_offset = <vec2>;`, `p.blend = MATERIAL|ADD|OPAQUE|ALPHA;`,
-	  `p.tev = MODULATE|SILHOUETTE|MODULATE_X2|MODULATE_X4;` (portable intent — the PVR ignores it),
+	  `p.tev = MODULATE|SILHOUETTE|MODULATE_X2|MODULATE_X4;` (portable intent — the PVR ignores it;
+	  the two output scales have no GE form at all, so they are rejected for the psp target below),
 	  `p.luma_gain = <float>;` (parameterizes the GX-only LUMA_RAMP preset below)
 	- `submit_quad(p);`, locals of the GLSL scalar/vector subset (float/int/bool, vec2/3/4),
 	  `if`/`else`, C-style `for` with integer bounds, (compound) assignment, `++`/`--`
@@ -43,9 +45,10 @@
 	  displacement of one texel in the quad's own coordinate space, already converted per backend)
 	  and `has_texel_size()` (`ctx.HasTexelStep()` - whether that step is derivable at all)
 
-	The EXTENDED vocabulary is valid only in a backend-specific `void fixed_function(pvr|gx)` block —
-	a generic block stays in the portable quad-only core, so a shared description can never
-	silently depend on one console's geometry synthesis (rejected with a hard error otherwise):
+	The EXTENDED vocabulary is valid only in a block that NAMES its backends —
+	`void fixed_function(pvr)` … `void fixed_function(gx, psp)` — since a generic block stays in the
+	portable quad-only core, so a shared description can never silently depend on one console's
+	geometry synthesis (rejected with a hard error otherwise):
 
 	- `quad_origin()`, `quad_axis_x()`, `quad_axis_y()` (vec2) — the PRE-CLIP raster position of
 	  the sprite's (0,0) corner and the raster displacements of its local axes; geometry synthesis
@@ -57,15 +60,28 @@
 	  the backend folds its padded-store scale), `strip_color(i, <vec4>)`, then
 	  `submit_strip(p, count)` (textured, flat pass colour) or `submit_strip_shaded(p, count)`
 	  (per-vertex colours — gradients without a fragment shader; untextured unless the pass's TEV
-	  preset consumes the texel too). Literal indices and counts are checked against the target
-	  backend's scratch capacity (8 vertices on the PVR, 16 on the GX), because at runtime an
-	  out-of-range index is dropped and an oversized count clamped — silently wrong geometry.
+	  preset consumes the texel too). Literal indices and counts are checked against the scratch
+	  capacity of the block's targets (8 vertices on the PVR, 16 on the GX and the GU), because at
+	  runtime an out-of-range index is dropped and an oversized count clamped — silently wrong
+	  geometry. A block naming several targets is held to the SMALLEST of their capacities.
 
-	Two TEV presets need the GX's programmable combiner and have no PVR equivalent at all, so they
-	are rejected outside a `void fixed_function(gx)` block: `TINT_MIX` (`mix(texel, colour, alpha)`, one
-	stage — the TexturedBackground warp folds its horizon tint into the band's own draw with it) and
-	`LUMA_RAMP` (a silhouette whose tone is picked per texel from a two-endpoint ramp by the texel's
-	amplified luminance — FrozenMask's ice).
+	A block declaring a comma-separated target list is validated against the INTERSECTION of what its
+	targets can do, so it may only use capabilities all of them have — the rule that keeps one shared
+	description honest, since the alternative (checking only the backend whose header is being
+	written) would accept a block that is silently wrong on the other backends it serves.
+
+	Two TEV presets need the GX's programmable combiner and have no PVR or GE equivalent at all, so
+	they are rejected outside a block targeting the GX ALONE (`void fixed_function(gx)`): `TINT_MIX`
+	(`mix(texel, colour, alpha)`, one stage — the TexturedBackground warp folds its horizon tint into
+	the band's own draw with it) and `LUMA_RAMP` (a silhouette whose tone is picked per texel from a
+	two-endpoint ramp by the texel's amplified luminance — FrozenMask's ice).
+
+	The GE's texture environment has no combiner output scale, so `MODULATE_X2`/`MODULATE_X4` are
+	rejected for every block the PSP reaches (a `psp` block, a target list naming `psp`, AND a generic
+	one, which is transpiled for every backend): the PVR silently ignores them, so a shared block using
+	one would be honoured by only some of the backends it serves - the "silently depends on one
+	console's feature" case the capability checks exist to prevent. Express the boost as passes instead
+	(an additive pass, the way Colorized splits its multiplier on the PVR and the PSP).
 */
 
 #include <cstdint>
@@ -84,7 +100,8 @@ namespace ShaderCompiler
 	enum class FixedFunctionBackend
 	{
 		Pvr,	/**< Dreamcast (CLX2 via KallistiOS) */
-		Gx		/**< Wii/GameCube (Flipper/Hollywood) */
+		Gx,		/**< Wii/GameCube (Flipper/Hollywood) */
+		Psp		/**< PlayStation Portable (Graphics Engine via sceGu) */
 	};
 
 	/**
@@ -159,9 +176,12 @@ namespace ShaderCompiler
 			(program, variant) entries whose bodies came out byte-identical. @p define is the variant
 			define baked into the block's preprocessing (empty for the base variant), so
 			`#ifdef <VARIANT>` conditionals inside the block resolve per variant. The portable core
-			emits identically for both backends (the PVR ignores `tev`, the GX approximates
-			`offset_color` with its silhouette preset); the extended vocabulary is gated on the
-			block's own target — backend-specific blocks only.
+			emits identically for every backend (the PVR ignores `tev`, the GX approximates
+			`offset_color` with its silhouette preset, the GU expands it into modulate + additive
+			silhouette); the extended vocabulary and the per-hardware capabilities are gated on the
+			block's own target LIST — blocks that name their backends only, and against the
+			intersection of what those backends can do, so @p backend selects which aggregate header
+			the body is destined for, never how strictly it is checked.
 		*/
 		static FixedFunctionResult TranspileBlock(const FixedFunctionBlock& block,
 			StringView define, FixedFunctionBackend backend);

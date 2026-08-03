@@ -59,7 +59,9 @@ namespace nCine
 		inline std::uint32_t numPlayers() const override {
 			return std::uint32_t(players_.size());
 		}
-		const IAudioPlayer* player(unsigned int index) const override;
+		// Spelled with the fixed-width type the interface uses: on targets where `std::uint32_t` is `long
+		// unsigned int` (MIPS, among others) `unsigned int` is a different type and would not override it
+		const IAudioPlayer* player(std::uint32_t index) const override;
 		IAudioPlayer* player(std::uint32_t index) override;
 
 		void stopPlayers() override;
@@ -91,7 +93,14 @@ namespace nCine
 
 	private:
 		/** @brief Maximum number of OpenAL sources */
-#if defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+#if defined(DEATH_TARGET_PSP)
+		// Every source is mixed in software on the main CPU here, so this is a frame-time budget rather than
+		// a memory one: each one that is actually playing costs a resample-and-accumulate pass over the
+		// output block. Sixteen is well above what the game ever has sounding at once (the level handler
+		// reaps finished players every frame), and it is the point past which a burst of simultaneous
+		// explosions would start showing up in the frame time instead of just in the mix.
+		static const std::int32_t MaxSources = 16;
+#elif defined(DEATH_TARGET_ANDROID) || defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_IOS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 		static const std::int32_t MaxSources = 48;
 #else
 		static const std::int32_t MaxSources = 64;

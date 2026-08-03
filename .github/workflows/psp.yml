@@ -1,0 +1,59 @@
+name: 'PSP'
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - BuildType: Release
+
+    runs-on: 'ubuntu-latest'
+    container:
+      # Contains the psp-gcc toolchain and the PSPSDK - including zlib, libvorbis and the OpenAL
+      # the audio backend needs - so no additional packages have to be installed
+      image: pspdev/pspdev:latest
+      options: --user root
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: 'Configure CMake'
+      run: |
+        rm -f ./Content/Translations/*.po
+
+        git config --global --add safe.directory '*'
+        cmake -B ./_build/ -D CMAKE_BUILD_TYPE=${{ matrix.BuildType }} -D CMAKE_TOOLCHAIN_FILE=${PSPDEV}/psp/share/pspdev.cmake
+
+    - name: 'Build'
+      run: |
+        make -j $(nproc) -C ./_build/
+
+    - name: 'Create Package'
+      run: |
+        # The "ms0" directory contains the staged memory stick layout ("PSP/GAME/Jazz2/" with the
+        # EBOOT.PBP and the game content), so its contents can be copied to a memory stick directly
+        mkdir ./_package/
+        cp -r ./_build/ms0/. ./_package/
+        cp -f ./LICENSE ./_package/LICENSE
+
+    - name: 'Upload Package'
+      uses: actions/upload-artifact@v7
+      with:
+        name: Jazz2_PSP
+        path: ./_package/

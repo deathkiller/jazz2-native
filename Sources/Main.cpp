@@ -4,7 +4,7 @@
 #	include "nCine/Backends/Android/AndroidApplication.h"
 #	include "nCine/Backends/Android/AndroidJniHelper.h"
 #elif defined(WITH_LIBRETRO)
-#	include "nCine/Backends/LibretroApplication.h"
+#	include "nCine/Backends/Libretro/LibretroApplication.h"
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 #	include "nCine/Backends/Uwp/UwpApplication.h"
 #else
@@ -92,7 +92,7 @@ namespace
 	// Whether a state change releases the outgoing handler's assets before loading the incoming ones, instead
 	// of keeping both sets resident until the load finishes (see GameEventHandler::ChangeLevel). Trades some
 	// reloading of shared assets for a much lower peak, which the consoles with little main memory need.
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+#if defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 	constexpr bool ReleaseAssetsBeforeLoading = true;
 #else
 	constexpr bool ReleaseAssetsBeforeLoading = false;
@@ -363,7 +363,7 @@ void GameEventHandler::OnPreInitialize(AppConfiguration& config)
 			config.withVSync = false;
 			config.frameLimit = PreferencesCache::MaxFps;
 		}
-#if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
+#if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
 		// Fixed-panel consoles keep the native output resolution (the device pins it); the level viewport
 		// aspect-fits the logical view into it, so no explicit override is wanted there
 		config.resolution.Set(LevelHandler::DefaultWidth, LevelHandler::DefaultHeight);
@@ -1759,7 +1759,7 @@ void GameEventHandler::OnAfterInitialize()
 		}
 	}
 
-#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+#if defined(DEATH_TARGET_EMSCRIPTEN) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
 	// All required files are already included in the prebaked "Content" directory of the Emscripten and
 	// console versions, so nothing is verified
 	_flags |= Flags::IsVerified | Flags::IsPlayable;

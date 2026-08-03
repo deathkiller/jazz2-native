@@ -4,7 +4,7 @@
 
 #include "LibretroGfxDevice.h"
 #include "LibretroInputManager.h"
-#include "../IAppEventHandler.h"
+#include "../../IAppEventHandler.h"
 
 namespace nCine
 {

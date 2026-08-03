@@ -93,16 +93,45 @@ namespace ShaderCompiler
 		std::int32_t Line = 0;
 	};
 
-	/** @brief Backend selector of a "void fixed_function([pvr|gx]) { ... }" block */
+	/** @brief One backend a "void fixed_function(...) { ... }" block can name in its parentheses */
 	enum class FixedFunctionTarget : std::uint8_t
 	{
-		Generic,	/**< "void fixed_function()" — the generic implementation, used by every backend without its own block */
-		Pvr,		/**< Dreamcast-specific override (wins over Generic for that backend) */
-		Gx			/**< Wii/GameCube-specific override (wins over Generic for that backend) */
+		Pvr,		/**< Dreamcast-specific override (wins over the generic block for that backend) */
+		Gx,			/**< Wii/GameCube-specific override (wins over the generic block for that backend) */
+		Psp			/**< PlayStation Portable-specific override (wins over the generic block for that backend) */
 	};
 
+	/** @brief Spelling of @p target as it is written inside a block's parentheses */
+	inline const char* FixedFunctionTargetName(FixedFunctionTarget target)
+	{
+		switch (target) {
+			case FixedFunctionTarget::Gx: return "gx";
+			case FixedFunctionTarget::Psp: return "psp";
+			default: return "pvr";
+		}
+	}
+
 	/**
-		@brief One captured "void fixed_function([pvr|gx]) { ... }" block
+		@brief The target list of a block, spelled the way the block declares it — e.g. `pvr, psp` (empty for the generic block)
+
+		The canonical spelling (declaration order, one ", " between entries) rather than the raw
+		source text, so a provenance comment in a generated header cannot change just because
+		somebody reformatted the parentheses in the shader file.
+	*/
+	inline String FixedFunctionTargetList(const std::vector<FixedFunctionTarget>& targets)
+	{
+		String result;
+		for (std::size_t i = 0; i < targets.size(); i++) {
+			if (i != 0) {
+				result += ", ";
+			}
+			result += FixedFunctionTargetName(targets[i]);
+		}
+		return result;
+	}
+
+	/**
+		@brief One captured "void fixed_function([<target>[, <target>...]]) { ... }" block
 
 		The body is captured verbatim (like the vertex()/fragment() entry bodies) and transpiled to C++
 		offline by the fixed-function emitter (@ref ConsoleFixedFunction) — it never becomes part of the
@@ -110,8 +139,15 @@ namespace ShaderCompiler
 	*/
 	struct FixedFunctionBlock
 	{
-		/** @brief Which backend the block targets */
-		FixedFunctionTarget Target = FixedFunctionTarget::Generic;
+		/**
+			@brief Which backends the block implements, in declaration order — EMPTY for the generic block
+
+			A comma-separated target list lets one block serve several backends, which is what shaders
+			whose implementation for two consoles is literally the same code use instead of keeping two
+			byte-identical copies. Capabilities are then validated against the INTERSECTION of the
+			listed targets, so a shared block can only use what every one of them can do.
+		*/
+		std::vector<FixedFunctionTarget> Targets;
 		/** @brief Raw (unpreprocessed) statement lines of the block body */
 		std::vector<SourceLine> Lines;
 		/** @brief 1-based line number of the block header */

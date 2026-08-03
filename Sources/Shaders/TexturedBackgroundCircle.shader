@@ -104,9 +104,12 @@ void fragment() {
 	COLOR.a = 1.0;
 }
 
-void fixed_function(pvr) {
+void fixed_function(pvr, psp) {
 	// The circular ("tube") variant keeps the same planar geometry rebuild on this tier (shared
-	// with TexturedBackground.shader)
+	// with TexturedBackground.shader). One block for both consoles for the same reason it is one there:
+	// neither has a combiner stage to fold the horizon tint into (the PVR only modulates and adds, and
+	// the GE's GU_TFX_BLEND weighs by the texel), so both leave the tint macro undefined and get the
+	// include's own second gradient pass over each band.
 #include "Include/TexturedBackgroundWarp.inc"
 }
 

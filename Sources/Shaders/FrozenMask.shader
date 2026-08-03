@@ -50,16 +50,22 @@ void fragment() {
 	COLOR = mix(tex, vec4(0.2 * grey, 0.2 + grey * 0.62, 0.6 + 0.2 * grey, outline * 0.95), COLOR.a);
 }
 
-void fixed_function(pvr) {
+void fixed_function(pvr, psp) {
 	// Console fixed-function tier: color = (1/texWidth, 1/texHeight, unused, transition). The GLSL is
 	// mix(tex, vec4(0.2*grey, 0.2+0.62*grey, 0.6+0.2*grey, 0.95*outline), transition) - two passes
 	// reproduce that mix: the untouched sprite carries the (1-t) side, then an ice silhouette blended
 	// on top at alpha 0.95*t carries the ice side. The silhouette is the offset-colour trick (argb rgb
 	// zero, so rgb comes from oargb alone while the alpha still modulates the texel alpha - which also
-	// stands in for the shader's `outline` term, the sprite's own coverage). The ice tone is the GLSL
-	// target at grey = 1 - sprite interiors saturate grey (luma * 2.6, clamped) almost everywhere, and
-	// it matches the constant the gx block below already uses. The tone is NOT scaled by t: the pass
-	// alpha already applies the transition weighting, and scaling both would darken quadratically.
+	// stands in for the shader's `outline` term, the sprite's own coverage); the PVR draws that as one
+	// specular-enabled pass and the GE as its own GU_TFX_BLEND silhouette, so the ice pass is ONE draw
+	// on both. The tone is NOT scaled by t: the pass alpha already applies the transition weighting,
+	// and scaling both would darken quadratically.
+	//
+	// Both consoles share this block because both are stuck with a CONSTANT ice tone: neither can do
+	// per-texel arithmetic (the PVR modulates and adds, the GE has no combiner at all), so the ramp the
+	// gx block below uses is out of reach and the flat tone stands in for it. That constant is the GLSL
+	// target at grey = 1, which sprite interiors - grey is luma * 2.6, clamped - saturate almost
+	// everywhere, and it is the same value the gx ramp reaches at its high end.
 	float t = clamp(COLOR.a, 0.0, 1.0);
 	pass sprite;
 	submit_quad(sprite);
@@ -71,7 +77,7 @@ void fixed_function(pvr) {
 	}
 }
 void fixed_function(gx) {
-	// Same two passes as the PVR block above - the untouched sprite carries the (1-t) side of the
+	// Same two passes as the shared block above - the untouched sprite carries the (1-t) side of the
 	// mix, an ice silhouette at alpha 0.95*t carries the ice side - but the GX does NOT have to
 	// settle for a constant ice tone. The GLSL picks it per pixel from `grey` (the texel's luminance
 	// amplified 2.6x and saturated): dark texels stay a deep blue, bright ones wash out to pale

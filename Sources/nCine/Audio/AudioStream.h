@@ -91,7 +91,18 @@ namespace nCine
 		std::int32_t nextAvailableBufferIndex_;
 
 		/** @brief Size in bytes of each streaming buffer */
+#if defined(DEATH_TARGET_PSP)
+		// The PSP has no decoding thread, so a buffer is filled synchronously in the middle of a frame and
+		// the whole cost of it lands on that one frame. Decoding a quarter as much at a time is the same
+		// total work spread over four times as many frames, which is what keeps a refill inside the frame
+		// budget instead of visibly dropping one - measured with module music, where quartering this (along
+		// with halving the decoder's output rate) took the dropped frames of a two-and-a-half minute session
+		// from 85 down to 13. Three of these still queue over a hundred milliseconds ahead, far more than a
+		// frame hitch can eat into.
+		static const std::int32_t BufferSize = 4 * 1024;
+#else
 		static const std::int32_t BufferSize = 16 * 1024;
+#endif
 		/** @brief Reusable decode request holding the intermediate buffer, executed ahead of time on the decoding thread when available */
 		std::shared_ptr<StreamDecodeRequest> decodeRequest_;
 

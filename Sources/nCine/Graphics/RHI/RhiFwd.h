@@ -7,7 +7,7 @@
 // Compile-time RHI backend selection — exactly one backend is compiled into a binary. The OpenGL
 // family backend (OpenGL 3.3 core / OpenGL ES 3.0 / WebGL 2 / ANGLE) is the default when no
 // `WITH_RHI_*` macro is defined by the build.
-#if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && !defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PVR)
+#if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && !defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PVR) && !defined(WITH_RHI_GU)
 #	define WITH_RHI_GL
 #endif
 
@@ -309,6 +309,96 @@ namespace nCine::RHI
 
 	// Debug output and object labelling
 	using Debug = RHI::PVR::PvrDebug;
+
+	/**
+		@brief Locates a sub-range within a buffer object, together with its mapped memory
+	*/
+	struct BufferRange
+	{
+		BufferRange()
+			: object(nullptr), size(0), offset(0), mapBase(nullptr) {}
+
+		/** @brief Buffer object the range belongs to */
+		Buffer* object;
+		/** @brief Size of the range in bytes */
+		std::uint32_t size;
+		/** @brief Byte offset of the range within the buffer object */
+		std::uint32_t offset;
+		/** @brief Base pointer of the mapped (or host) buffer memory */
+		std::uint8_t* mapBase;
+	};
+}
+
+#elif defined(WITH_RHI_GU)
+
+// Rendering capability flags of the selected backend (see the OpenGL arm above for the meaning). The GU
+// backend (PlayStation Portable "Allegrex GE" via PSPSDK) is a fixed-function hardware backend just like GX
+// and PVR: the GE can render into any 16/32-bit surface in memory and the draw target is nothing but a
+// pointer handed to sceGuDrawBufferList, so off-screen render targets are available (needed by the
+// textured-background passes) and `RHI_CAP_FRAMEBUFFERS` is defined; but it has no programmable shaders, so
+// `RHI_CAP_SHADERS` stays undefined and the game runs the direct tier (the same tier as the software, GX and
+// PVR backends: scene straight to the display at the logical resolution, CPU lightmap composited by the
+// device's lighting hook).
+//
+// `RHI_CAP_PALETTED_TEXTURES` means an R8 texture of palette indices is resolved through the palette by the
+// hardware itself, under every effect. The GE has exactly that in the form of the CLUT (GU_PSM_T8 plus
+// sceGuClutLoad), and the lookup belongs to the texture read rather than to any programmable stage, so the
+// meaning PVR gives this flag carries over verbatim - an image that is already indices can be uploaded as
+// they are instead of being expanded to colors first.
+//
+// `RHI_CAP_STREAMING_TEXTURES` means a texture's storage can be written by the CPU in place, so content that
+// is regenerated every frame (the cinematics) can be produced straight into it. The GE reads textures out of
+// ordinary addressable memory (either main RAM or VRAM through sceGeEdramGetAddr), never out of a
+// driver-owned object, so this holds on the PSP as well.
+#define RHI_CAP_FRAMEBUFFERS
+#define RHI_CAP_PALETTED_TEXTURES
+#define RHI_CAP_STREAMING_TEXTURES
+
+namespace nCine::RHI::GU
+{
+	class GuDevice;
+	class GuTexture;
+	class GuBuffer;
+	class GuShader;
+	class GuShaderProgram;
+	class GuShaderUniforms;
+	class GuShaderUniformBlocks;
+	class GuUniform;
+	class GuUniformBlock;
+	class GuUniformCache;
+	class GuUniformBlockCache;
+	class GuAttribute;
+	class GuFramebuffer;
+	class GuRenderbuffer;
+	class GuRenderTarget;
+	class GuVertexArray;
+	class GuVertexFormat;
+	class GuDebug;
+}
+
+namespace nCine::RHI
+{
+	// Backend-neutral names for the classes of the selected backend (see the OpenGL arm above)
+	using Device = RHI::GU::GuDevice;
+	using Texture = RHI::GU::GuTexture;
+	using Buffer = RHI::GU::GuBuffer;
+	using Shader = RHI::GU::GuShader;
+	using ShaderProgram = RHI::GU::GuShaderProgram;
+	using ShaderUniforms = RHI::GU::GuShaderUniforms;
+	using ShaderUniformBlocks = RHI::GU::GuShaderUniformBlocks;
+	using Uniform = RHI::GU::GuUniform;
+	using UniformBlock = RHI::GU::GuUniformBlock;
+	using UniformCache = RHI::GU::GuUniformCache;
+	using UniformBlockCache = RHI::GU::GuUniformBlockCache;
+	using Attribute = RHI::GU::GuAttribute;
+	using Framebuffer = RHI::GU::GuFramebuffer;
+	using Renderbuffer = RHI::GU::GuRenderbuffer;
+	using RenderTarget = RHI::GU::GuRenderTarget;
+	using VertexArray = RHI::GU::GuVertexArray;
+	using VertexFormat = RHI::GU::GuVertexFormat;
+
+	// Debug output and object labelling
+	using Debug = RHI::GU::GuDebug;
 
 	/**
 		@brief Locates a sub-range within a buffer object, together with its mapped memory

@@ -520,4 +520,8 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "PVR")
 	list(APPEND HEADERS
 		${NCINE_SOURCE_DIR}/Shaders/Generated/PvrGeneratedEffects.h
 	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "GU")
+	list(APPEND HEADERS
+		${NCINE_SOURCE_DIR}/Shaders/Generated/GuGeneratedEffects.h
+	)
 endif()

@@ -45,7 +45,7 @@ The command may be omitted, in which case `convert` is assumed:
         subdirectory --- in which case its `Content` is copied to the target as well
     -   `<target directory>` --- Directory the converted data is written to (created if needed)
     -   `--target=<profile>` --- `desktop` (default) | `console` | `dreamcast` | `wii` |
-        `gamecube` | `emscripten` (or `web`)
+        `gamecube` | `psp` | `emscripten` (or `web`)
     -   `--video-downscale=N` --- Downscale cinematics by N (1--4); 1 (the default) keeps
         them as they are. Cinematics are re-encoded for `dreamcast` (or any N > 1) and
         otherwise copied unchanged; `desktop` gets none, as the game reads the originals
@@ -94,7 +94,7 @@ What the output directory is going to be loaded by decides its layout:
     disagrees. Music is not copied, because the desktop game reads it from its own
     `Content/Music`, and cinematics are left alone, because the game reads the originals
     where they are.
--   **console** (also selected by `dreamcast`, `wii` and `gamecube`) --- A staged `Content`
+-   **console** (also selected by `dreamcast`, `wii`, `gamecube` and `psp`) --- A staged `Content`
     tree written directly into the target, for the consoles which cannot rewrite a cache of
     their own. The consoles all consume the same staged tree, so they share one profile ---
     only the cinematics are decided per platform, which is why `dreamcast` is tracked
@@ -209,16 +209,20 @@ when a color had no exact match). The tool carries its own minimal PNG codec
 -   **Desktop** builds do not need the tool at all --- the game converts on first run.
     Running it is still useful to prepare the cache in a build pipeline, or to pre-downscale
     cinematics with `--video-downscale`.
--   **Dreamcast, Wii and GameCube** cannot convert anything themselves, so their build
-    scripts consume a tree prepared with `--target=dreamcast` / `wii` / `gamecube`. All three
-    share the same layout; the target name only decides the cinematics --- the Dreamcast gets
-    them re-encoded into @ref Jazz2::VideoFormat, the others get the smaller originals copied.
+-   **Dreamcast, PlayStation Portable, Wii and GameCube** cannot convert anything themselves, so
+    their build scripts consume a tree prepared with `--target=dreamcast` / `psp` / `wii` /
+    `gamecube`. All four share the same layout; the target name only decides the cinematics --- the
+    Dreamcast gets them re-encoded into @ref Jazz2::VideoFormat, the others get the smaller
+    originals copied. Where each console expects that tree, and how it gets there, is described in
+    @ref consoles-common-content "Building for consoles".
+-   **PS Vita** and **Nintendo Switch** do convert the data themselves on first run, so the tool is
+    only a way to skip that wait there.
 -   **Emscripten** likewise ships a fully prepared tree (`--target=emscripten`), typically
     with `--shareware-only` for the public demo.
 -   The packed `.font` files are what all platforms load, but the consoles benefit the most:
     one palette index per pixel instead of expanded RGBA cuts both the file size and the
-    texture memory, and the tightly packed atlas minimizes the power-of-two padding the PVR
-    and GX have to pay.
+    texture memory, and the tightly packed atlas minimizes the power-of-two padding the PVR, the
+    GX and the PSP's GE all have to pay.
 
 @section asset-packer-pitfalls Pitfalls
 

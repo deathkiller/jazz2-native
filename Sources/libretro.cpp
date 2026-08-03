@@ -6,8 +6,8 @@
 
 #include "nCine/IAppEventHandler.h"
 #include "nCine/ServiceLocator.h"
-#include "nCine/Backends/LibretroApplication.h"
-#include "nCine/Backends/LibretroGfxDevice.h"
+#include "nCine/Backends/Libretro/LibretroApplication.h"
+#include "nCine/Backends/Libretro/LibretroGfxDevice.h"
 #include "nCine/Base/FrameTimer.h"
 
 #include <IO/MemoryStream.h>

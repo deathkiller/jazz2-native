@@ -28,7 +28,7 @@
 #	include <unistd.h>
 #endif
 #if defined(WITH_LIBRETRO)
-#	include "../nCine/Backends/LibretroApplication.h"
+#	include "../nCine/Backends/Libretro/LibretroApplication.h"
 #endif
 
 using namespace Death::Containers::Literals;
@@ -90,7 +90,7 @@ namespace Jazz2
 	bool PreferencesCache::ToggleRunAction = false;
 #if defined(DEATH_TARGET_SWITCH)
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Switch;
-#elif defined(DEATH_TARGET_VITA)
+#elif defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PSP)
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::PlayStation;
 #else
 	GamepadType PreferencesCache::GamepadButtonLabels = GamepadType::Xbox;
@@ -572,8 +572,8 @@ namespace Jazz2
 #	elif defined(DEATH_TARGET_SWITCH)
 			// Use Switch button labels
 			GamepadButtonLabels = GamepadType::Switch;
-#	elif defined(DEATH_TARGET_VITA)
-			// Use PlayStation button labels on PS Vita
+#	elif defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_PSP)
+			// Use PlayStation button labels on the PlayStation consoles
 			GamepadButtonLabels = GamepadType::PlayStation;
 #	elif defined(DEATH_TARGET_UNIX)
 			StringView isSteamDeck = ::getenv("SteamDeck");

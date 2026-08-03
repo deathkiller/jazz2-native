@@ -225,7 +225,7 @@ namespace nCine::RHI::PVR
 			ctx.SubmitQuad(p);
 		}
 
-		// Colorized - from Colorized.shader:fixed_function(pvr)
+		// Colorized - from Colorized.shader:fixed_function(pvr, psp)
 		// Shared by: Colorized, BatchedColorized
 		void Colorized_Effect(EffectContext& ctx)
 		{
@@ -255,7 +255,7 @@ namespace nCine::RHI::PVR
 			ctx.SubmitQuad(p);
 		}
 
-		// FrozenMask - from FrozenMask.shader:fixed_function(pvr)
+		// FrozenMask - from FrozenMask.shader:fixed_function(pvr, psp)
 		// Shared by: FrozenMask, FrozenMask (USE_PALETTE), BatchedFrozenMask, BatchedFrozenMask (USE_PALETTE)
 		void FrozenMask_Effect(EffectContext& ctx)
 		{
@@ -298,7 +298,7 @@ namespace nCine::RHI::PVR
 			ctx.SubmitQuad(sprite);
 		}
 
-		// PartialWhiteMask - from PartialWhiteMask.shader:fixed_function(pvr)
+		// PartialWhiteMask - from PartialWhiteMask.shader:fixed_function(pvr, psp)
 		// Shared by: PartialWhiteMask, PartialWhiteMask (USE_PALETTE), BatchedPartialWhiteMask, BatchedPartialWhiteMask (USE_PALETTE)
 		void PartialWhiteMask_Effect(EffectContext& ctx)
 		{
@@ -311,8 +311,8 @@ namespace nCine::RHI::PVR
 			ctx.SubmitQuad(p);
 		}
 
-		// TexturedBackgroundCircle - from TexturedBackgroundCircle.shader:fixed_function(pvr)
-		// Shared by: TexturedBackgroundCircle, TexturedBackgroundCircle (DITHER), TexturedBackground [TexturedBackground.shader:fixed_function(pvr)], TexturedBackground (DITHER) [TexturedBackground.shader:fixed_function(pvr)]
+		// TexturedBackgroundCircle - from TexturedBackgroundCircle.shader:fixed_function(pvr, psp)
+		// Shared by: TexturedBackgroundCircle, TexturedBackgroundCircle (DITHER), TexturedBackground [TexturedBackground.shader:fixed_function(pvr, psp)], TexturedBackground (DITHER) [TexturedBackground.shader:fixed_function(pvr, psp)]
 		void TexturedBackgroundCircle_Effect(EffectContext& ctx)
 		{
 			using namespace ff;

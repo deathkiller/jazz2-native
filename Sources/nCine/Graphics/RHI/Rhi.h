@@ -75,6 +75,20 @@
 #include "PVR/PvrRenderTarget.h"
 #include "PVR/PvrDevice.h"
 
+#elif defined(WITH_RHI_GU)
+
+#include "GU/GuDebug.h"
+#include "GU/GuShader.h"
+#include "GU/GuBuffer.h"
+#include "GU/GuTexture.h"
+#include "GU/GuVertexFormat.h"
+#include "GU/GuShaderTypes.h"
+#include "GU/GuUniformCache.h"
+#include "GU/GuShaderUniforms.h"
+#include "GU/GuShaderProgram.h"
+#include "GU/GuRenderTarget.h"
+#include "GU/GuDevice.h"
+
 #elif defined(WITH_RHI_D3D11)
 
 #include "D3D11/D3D11Debug.h"

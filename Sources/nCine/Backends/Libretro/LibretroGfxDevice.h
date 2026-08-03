@@ -2,8 +2,8 @@
 
 #if defined(WITH_LIBRETRO) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "../Graphics/IGfxDevice.h"
-#include "../Graphics/DisplayMode.h"
+#include "../../Graphics/IGfxDevice.h"
+#include "../../Graphics/DisplayMode.h"
 
 #include <libretro/libretro.h>
 

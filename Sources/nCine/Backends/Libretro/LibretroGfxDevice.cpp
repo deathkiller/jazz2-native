@@ -3,11 +3,11 @@
 #if defined(WITH_LIBRETRO)
 
 #include "LibretroApplication.h"
-#include "../Graphics/RHI/Rhi.h"
+#include "../../Graphics/RHI/Rhi.h"
 
 #if defined(WITH_RHI_GL)
-#	include "../Graphics/RHI/GL/GLDevice.h"
-#	include "../Graphics/RHI/GL/GLFramebuffer.h"
+#	include "../../Graphics/RHI/GL/GLDevice.h"
+#	include "../../Graphics/RHI/GL/GLFramebuffer.h"
 #endif
 
 #include <cstring>

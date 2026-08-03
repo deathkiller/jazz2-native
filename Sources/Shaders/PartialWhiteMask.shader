@@ -27,10 +27,14 @@ void fragment() {
 	COLOR = vec4(color, color, color, tex.a) * COLOR;
 }
 
-void fixed_function(pvr) {
-	// Console fixed-function tier: brightened but still shaded (the shader's luma x2.5), which the two
-	// consoles express differently. PVR: keep the sprite and lift it by a constant through the
-	// post-texture offset colour.
+void fixed_function(pvr, psp) {
+	// Console fixed-function tier: brightened but still shaded (the shader's luma x2.5), which the
+	// consoles express in two ways - and these two share the same one. Keep the sprite and lift it by a
+	// constant through the post-texture offset colour: on the PVR that is one specular-enabled draw, and
+	// the GE reaches the identical result because SubmitQuad expands a pass carrying an offset colour
+	// into the modulated sprite plus an additive flat-colour pass over it. Neither has the GX's output
+	// scale, so neither can use the gx block below; the offset-colour lift is what both are left with,
+	// so it is written once.
 	pass p;
 	p.color = COLOR;
 	p.offset_color = vec3(96.0 / 255.0);

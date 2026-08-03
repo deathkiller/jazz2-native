@@ -194,12 +194,16 @@ namespace Jazz2::Rendering
 		}
 
 		// A reduced-resolution lightmap keeps the per-light splat cheap; the combine samples it point-wise
-#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+#if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PSP)
 		// The consoles pay for every texel twice on the CPU - once resetting and splatting it here, once
 		// converting it into a texture in the device - and that pair of passes was the single largest cost
 		// left in the frame. Quarter resolution trades a slightly softer light edge for a quarter of the
 		// work; the map is stretched over the viewport with bilinear filtering either way, and the lights
 		// themselves are smooth cubic falloffs with nothing sharp to lose.
+		//
+		// The 333 MHz Allegrex is the slowest of the four at this, and its screen is the smallest, so the
+		// absolute size of the map matters least there: a full 480x272 viewport comes to 120x68 texels, which
+		// is small enough that the whole thing stays in cache for both passes.
 		constexpr std::int32_t Scale = 4;
 #else
 		constexpr std::int32_t Scale = 2;
