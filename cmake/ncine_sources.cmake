@@ -166,6 +166,17 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "PVR")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PVR/PvrTexture.cpp
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/PVR/PvrUniformCache.cpp
 	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "GU")
+	# PlayStation Portable fixed-function GE rendering backend (PSPSDK sceGu)
+	list(APPEND SOURCES
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuBuffer.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuDevice.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuRenderTarget.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuShaderProgram.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuShaderUniforms.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuTexture.cpp
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GU/GuUniformCache.cpp
+	)
 elseif(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 	# Direct3D 11 rendering backend
 	list(APPEND SOURCES

@@ -71,6 +71,16 @@ if(NOT NCINE_BUILD_ANDROID AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT N
 		if(NOT NCINE_PREFERRED_RHI STREQUAL "PVR")
 			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on Sega Dreamcast (expected PVR)")
 		endif()
+	elseif(PLATFORM_PSP)
+		# PlayStation Portable (the pspdev toolchain file sets PLATFORM_PSP/PSP): the only rendering backend
+		# is the fixed-function GU one (the Allegrex GE, driven through sceGu), presented through the bespoke
+		# Psp window backend. There is an OpenGL|ES wrapper on the platform (libGL/pspgl), but it is layered
+		# on the very same GE this backend drives directly, so it could only cost performance.
+		set(NCINE_PREFERRED_RHI "GU" CACHE STRING "Rendering backend on PlayStation Portable: GU")
+		set_property(CACHE NCINE_PREFERRED_RHI PROPERTY STRINGS "GU")
+		if(NOT NCINE_PREFERRED_RHI STREQUAL "GU")
+			message(FATAL_ERROR "Invalid NCINE_PREFERRED_RHI \"${NCINE_PREFERRED_RHI}\" on PlayStation Portable (expected GU)")
+		endif()
 	elseif(VITA)
 		# PS Vita (the VitaSDK toolchain sets VITA): the OpenGL family runs through vitaGL, which is an
 		# OpenGL|ES 2.0 implementation - selecting "OpenGL" therefore force-enables the GLES path and the
@@ -116,6 +126,15 @@ endif()
 
 if(EMSCRIPTEN)
 	option(NCINE_WITH_THREADS "Enable Emscripten Pthreads support" OFF)
+elseif(PLATFORM_PSP)
+	# PlayStation Portable: pspdev does ship a pthreads implementation (pthread-embedded on top of the
+	# firmware's own threads), but the engine's threading layer wants more than the bare create/join -
+	# thread names, affinity and priorities, none of which map onto sceKernelCreateThread as they stand.
+	# The game is single-threaded everywhere those are unavailable (see the console arms in Thread.cpp),
+	# so it starts out that way here too rather than half-supported.
+	# TODO: Revisit once the engine's console threading arms cover the PSP; the Allegrex has a second core
+	# (the Media Engine) that a background asset loader could use.
+	option(NCINE_WITH_THREADS "Enable support for threads" OFF)
 else()
 	option(NCINE_WITH_THREADS "Enable support for threads" ON)
 
@@ -198,13 +217,38 @@ cmake_dependent_option(NCINE_WITH_BACKWARD "Enable integration with Backward lib
 option(NCINE_WITH_WEBP "Enable WebP image file support" OFF)
 option(NCINE_WITH_AUDIO "Enable OpenAL support and thus sound" ON)
 cmake_dependent_option(NCINE_WITH_VORBIS "Enable Ogg Vorbis audio file support" ON "NCINE_WITH_AUDIO" OFF)
-cmake_dependent_option(NCINE_WITH_OPENMPT "Enable module (libopenmpt) audio file support" ON "NCINE_WITH_AUDIO" OFF)
+if(PLATFORM_PSP)
+	# PlayStation Portable: sound effects work (see NCINE_WITH_AUDIO above - pspdev ships an OpenAL Soft
+	# whose output backend drives sceAudio), but the game's music is entirely tracker modules, and
+	# libopenmpt is not usable on this CPU yet. It does build for the platform and it does play - the
+	# soundtrack came out correctly in an emulator capture, and with the tuning in AudioLoaderMpt and
+	# AudioStream the steady-state cost is 0.2 FPS - but the FIRST module a process loads costs a fixed
+	# ~29 seconds inside the library (measured twice: 28.1 s when the intro loaded first, 29.8 s when the
+	# menu did, independent of which module it was), and every load after that only ~1.8 s. Something in
+	# there initialises once and does it at roughly 10000x the cost it has on a desktop, which points at
+	# the Allegrex having no double-precision unit; until that is found there is nowhere to hide a
+	# half-minute freeze on a handheld, so module music stays off.
+	# TODO: Either find that initialisation, or pre-render the modules to a streamable form offline (the
+	# AssetPacker already re-encodes cinematics for the Dreamcast, so it is the natural place for it).
+	# libmodplug, which pspdev does package, is not an alternative: its J2B loader is compiled out for want
+	# of zlib (`load_j2b.cpp.obj` in the archive is empty) so it cannot read one of the game's modules.
+	set(NCINE_WITH_OPENMPT OFF)
+else()
+	cmake_dependent_option(NCINE_WITH_OPENMPT "Enable module (libopenmpt) audio file support" ON "NCINE_WITH_AUDIO" OFF)
+endif()
 option(NCINE_WITH_ANGELSCRIPT "Enable AngelScript scripting support" OFF)
 option(NCINE_WITH_IMGUI "Enable integration with Dear ImGui" OFF)
 option(NCINE_WITH_TRACY "Enable integration with Tracy frame profiler" OFF)
 #option(NCINE_WITH_RENDERDOC "Enable integration with RenderDoc" OFF)
 
 cmake_dependent_option(NCINE_COMPILE_OPENMPT "Compile libopenmpt from sources instead of using library" OFF "NCINE_WITH_OPENMPT" OFF)
+if(PLATFORM_PSP AND NCINE_WITH_OPENMPT)
+	# pspdev packages no libopenmpt, and the fallback the other platforms take when the library is missing -
+	# resolving it at run time - cannot work on a console that has no dynamic loader. So if module music is
+	# turned back on here (see the note above), the library has to come from sources; it does cross-compile
+	# and link for the platform as it stands.
+	set(NCINE_COMPILE_OPENMPT ON)
+endif()
 
 set(NCINE_CONTENT_DIR "${CMAKE_SOURCE_DIR}/Content" CACHE PATH "Set path to the game data directory")
 cmake_dependent_option(NCINE_CREATE_CONTENT_SYMLINK "Create symbolic link to the game data directory in target directory" OFF "(APPLE OR LINUX OR (WIN32 AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE)) AND NOT EMSCRIPTEN AND NOT NCINE_BUILD_ANDROID AND NOT VITA" OFF)
@@ -238,7 +282,7 @@ endif()
 option(DEATH_DEBUG_SYMBOLS "Create debug symbols for executable" ${WIN32})
 option(DEATH_TRACE "Enable runtime event tracing" ON)
 # In the libretro core the async trace logger thread races with the frontend's core load/unload cycle
-cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT NCINE_BUILD_LIBRETRO" OFF)
+cmake_dependent_option(DEATH_TRACE_ASYNC "Enable asynchronous processing of event tracing" ON "DEATH_TRACE;NCINE_WITH_THREADS;NOT VITA;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP;NOT NCINE_BUILD_LIBRETRO" OFF)
 if(DEATH_TRACE)
 	set(DEATH_TRACE_LOG_PATH "" CACHE PATH "Override path to trace log file if specified (and force writing traces to file on some platforms)")
 endif()
@@ -308,16 +352,21 @@ option(DEATH_CPU_USE_RUNTIME_DISPATCH "Build with runtime dispatch for CPU-depen
 
 # Jazz² Resurrection options
 option(SHAREWARE_DEMO_ONLY "Show only Shareware Demo episode" OFF)
-cmake_dependent_option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT NCINE_PREFERRED_RHI STREQUAL GX;NOT NCINE_PREFERRED_RHI STREQUAL PVR;NOT VITA" ON)
+cmake_dependent_option(DISABLE_RESCALE_SHADERS "Disable all rescaling options" OFF "NOT NCINE_PREFERRED_RHI STREQUAL Software;NOT NCINE_PREFERRED_RHI STREQUAL GX;NOT NCINE_PREFERRED_RHI STREQUAL PVR;NOT NCINE_PREFERRED_RHI STREQUAL GU;NOT VITA" ON)
 # The single-draw tilemap mesh stays off where the backend cannot consume it: the software backend
-# rasterizes per tile. The GX and PVR backends both consume the whole-layer mesh directly (see
-# GxDevice::DispatchTileMesh and PvrDevice::DispatchTileMesh), so they keep it on
+# rasterizes per tile. The GX, PVR and GU backends all consume the whole-layer mesh directly (see
+# GxDevice::DispatchTileMesh, PvrDevice::DispatchTileMesh and GuDevice::DispatchTileMesh), so they
+# keep it on - on the GU it is also what lets a whole layer go out as one GE draw call
 cmake_dependent_option(TILEMAP_USE_SINGLE_DRAW "Aggregate draw calls for each tilemap layer" ON "NOT NCINE_PREFERRED_RHI STREQUAL Software" OFF)
 
-option(WITH_MULTIPLAYER "Enable multiplayer support" ON)
+# Even the local (splitscreen) half of multiplayer is built on NetworkManagerBase, which owns an
+# `nCine::Thread` unconditionally on every non-Emscripten platform, so the whole feature needs threads.
+# This only ever excludes a target that has none at all (the PSP today) - every other platform defaults
+# NCINE_WITH_THREADS to ON, and Emscripten reaches NetworkManagerBase through its own thread-free arm.
+cmake_dependent_option(WITH_MULTIPLAYER "Enable multiplayer support" ON "NCINE_WITH_THREADS OR EMSCRIPTEN" OFF)
 # The libogc consoles keep local splitscreen (WITH_MULTIPLAYER) but have no online transport (no enet/BSD
 # sockets stack wired up) - the transport split keeps the engine+local path fully functional without it
-cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST" OFF)
+cmake_dependent_option(WITH_ONLINE_MULTIPLAYER "Enable online multiplayer transport (requires WITH_MULTIPLAYER)" ON "WITH_MULTIPLAYER;NCINE_WITH_THREADS OR EMSCRIPTEN;NOT NINTENDO_WII;NOT NINTENDO_GAMECUBE;NOT PLATFORM_DREAMCAST;NOT PLATFORM_PSP" OFF)
 cmake_dependent_option(DEDICATED_SERVER "Build dedicated server only" OFF "WITH_ONLINE_MULTIPLAYER;NOT NCINE_BUILD_ANDROID;NOT EMSCRIPTEN;NOT NINTENDO_SWITCH;NOT WINDOWS_PHONE;NOT WINDOWS_STORE" OFF)
 # IXWebSocket requires a full BSD sockets stack (e.g. <netinet/ip.h>), which the Nintendo Switch and
 # PS Vita toolchains don't provide, so WebSocket transport is unavailable there (enet is still used).

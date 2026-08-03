@@ -350,7 +350,7 @@ namespace nCine
 		}
 	}
 
-	unsigned int ALAudioDevice::registerPlayer(IAudioPlayer* player)
+	std::uint32_t ALAudioDevice::registerPlayer(IAudioPlayer* player)
 	{
 		if (sourcePool_.empty()) {
 			return UnavailableSource;

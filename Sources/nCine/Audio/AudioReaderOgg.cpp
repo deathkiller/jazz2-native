@@ -45,7 +45,9 @@ namespace nCine
 
 	std::int32_t AudioReaderOgg::read(void* buffer, std::int32_t bufferSize) const
 	{
-		std::int32_t bitStream = 0;
+		// Declared as plain `int` because that is what ov_read() takes a pointer to - on targets where
+		// `std::int32_t` is `long int` (MIPS, among others) the two are distinct types of the same width
+		int bitStream = 0;
 		long bytes = 0;
 		std::int32_t bufferSeek = 0;
 

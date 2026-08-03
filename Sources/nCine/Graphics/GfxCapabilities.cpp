@@ -6,7 +6,7 @@
 #include "GfxCapabilities.h"
 #include "../../Main.h"
 
-#if defined(WITH_RHI_SOFTWARE) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN) || defined(WITH_RHI_GX) || defined(WITH_RHI_PVR)
+#if defined(WITH_RHI_SOFTWARE) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN) || defined(WITH_RHI_GX) || defined(WITH_RHI_PVR) || defined(WITH_RHI_GU)
 #	include "RHI/Rhi.h"
 #endif
 
@@ -73,7 +73,7 @@ namespace nCine
 
 	void GfxCapabilities::Init()
 	{
-#if defined(WITH_RHI_SOFTWARE) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN) || defined(WITH_RHI_GX) || defined(WITH_RHI_PVR)
+#if defined(WITH_RHI_SOFTWARE) || defined(WITH_RHI_D3D11) || defined(WITH_RHI_VULKAN) || defined(WITH_RHI_GX) || defined(WITH_RHI_PVR) || defined(WITH_RHI_GU)
 		// These backends have no OpenGL context to query. The published values keep the GL-era names the
 		// pipeline reads, but each backend fills them from its own source of truth below (the window backend
 		// creates the device before GfxCapabilities is constructed, so the real device limits are already
@@ -137,6 +137,19 @@ namespace nCine
 		glIntValues_[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS] = std::int32_t(RHI::PVR::PvrRenderTarget::MaxColorAttachments);
 
 		LOGI("PowerVR renderer is enabled");
+#	elif defined(WITH_RHI_GU)
+		glInfoStrings_.renderer = "GU";
+		// The GE's true texture-dimension limit (512) drives the tileset texture chunking in ContentResolver;
+		// prebaked content that is larger anyway is paged internally by GuTexture rather than rejected (see
+		// the note on GuDevice::GetMaxTextureDimension()). Uniforms are plain host memory decoded by the
+		// draw dispatch
+		glIntValues_[(std::int32_t)IntValues::MAX_TEXTURE_SIZE] = RHI::Device::GetMaxTextureDimension();
+		glIntValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE] = 64 * 1024;
+		glIntValues_[(std::int32_t)IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED] = 64 * 1024;
+		glIntValues_[(std::int32_t)IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT] = 16;
+		glIntValues_[(std::int32_t)IntValues::MAX_COLOR_ATTACHMENTS] = std::int32_t(RHI::GU::GuRenderTarget::MaxColorAttachments);
+
+		LOGI("GU renderer is enabled");
 #	else
 		glInfoStrings_.renderer = "Software Rasterizer";
 		// The CPU rasterizer samples heap-allocated texel stores addressed with 32-bit coordinates, so it has no

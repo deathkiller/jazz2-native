@@ -20,6 +20,9 @@
 #elif defined(WITH_DC)
 #	include "Backends/Dc/DcGfxDevice.h"
 #	include "Backends/Dc/DcInputManager.h"
+#elif defined(WITH_PSP)
+#	include "Backends/Psp/PspGfxDevice.h"
+#	include "Backends/Psp/PspInputManager.h"
 #endif
 
 // For resizing the swap chain when the window size changes (the call is uniform across the backends;
@@ -43,6 +46,10 @@
 #	endif
 #elif defined(DEATH_TARGET_DREAMCAST)
 #	include <kos.h>
+#elif defined(DEATH_TARGET_PSP)
+#	include <pspkernel.h>
+#	include <pspdebug.h>
+#	include <psppower.h>
 #elif defined(DEATH_TARGET_UNIX)
 #	include <pwd.h>
 #	include <unistd.h>
@@ -56,7 +63,7 @@
 using namespace Death;
 using namespace Death::Containers::Literals;
 using namespace Death::IO;
-#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5) || defined(WITH_OGC) || defined(WITH_DC)
+#if (defined(WITH_SDL2) || defined(WITH_SDL3)) || defined(WITH_GLFW) || defined(WITH_QT5) || defined(WITH_OGC) || defined(WITH_DC) || defined(WITH_PSP)
 using namespace nCine::Backends;
 #endif
 
@@ -106,6 +113,23 @@ static DWORD GetTabTipPathFromRegistry(wchar_t* dstPath, DWORD dstSize)
 }
 #endif
 
+#if defined(DEATH_TARGET_PSP)
+// The firmware reads these out of the ELF to decide how to load it, so they have to exist at namespace
+// scope in the executable itself, and the module name has to stay plain ASCII (it goes into a 27-byte
+// field), which is why it is NCINE_APP rather than NCINE_APP_NAME.
+//
+// A negative heap size means "everything that is free, less the threshold the firmware keeps for itself"
+// (PSPSDK's _sbrk reads the value as kilobytes and treats any negative one that way), which is what a
+// game that loads its assets into main memory wants - a fixed budget would only leave memory unusable.
+//
+// PSP_MAIN_THREAD_ATTR asks for the VFPU, whose vector unit is the Allegrex's only fast float path. The
+// shared math code compiles to ordinary FPU instructions today, but a thread that was not created with
+// THREAD_ATTR_VFPU cannot use it at all, so the attribute is set now rather than being a surprise later.
+PSP_MODULE_INFO(NCINE_APP, PSP_MODULE_USER, 1, 0);
+PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
+PSP_HEAP_SIZE_KB(-1);
+#endif
+
 namespace nCine
 {
 #if defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
@@ -120,6 +144,33 @@ namespace nCine
 
 	// Replaces the boot console's stdout once the real video device owns the screen (see below)
 	static const devoptab_t ogcNullOut = { "stdout", 0, nullptr, nullptr, OgcNullWrite };
+#endif
+
+#if defined(DEATH_TARGET_PSP)
+	// Set from the HOME-button exit callback, which runs on its own firmware thread and must not do more
+	// than this - the main loop picks it up and shuts the game down in an orderly way (exactly like the
+	// libogc power/reset callbacks above)
+	static volatile bool pspShutdownRequested = false;
+
+	static int PspExitCallback(int arg1, int arg2, void* common)
+	{
+		static_cast<void>(arg1); static_cast<void>(arg2); static_cast<void>(common);
+		pspShutdownRequested = true;
+		return 0;
+	}
+
+	// The callback can only be registered from a thread that then sleeps waiting for callbacks, so it needs
+	// a thread of its own - this is the standard PSPSDK arrangement (sceKernelSleepThreadCB is what makes
+	// the firmware deliver them). Without it the HOME button does nothing and the console can only be
+	// switched off, which is why every PSP title sets this up before anything else.
+	static int PspCallbackThread(SceSize args, void* argp)
+	{
+		static_cast<void>(args); static_cast<void>(argp);
+		int callbackId = sceKernelCreateCallback("JazzExitCallback", PspExitCallback, nullptr);
+		sceKernelRegisterExitCallback(callbackId);
+		sceKernelSleepThreadCB();
+		return 0;
+	}
 #endif
 
 	Application& theApplication()
@@ -200,6 +251,27 @@ namespace nCine
 		// DcGfxDevice switches dbgio back to the serial port when the real renderer takes over
 		dbgio_dev_select("fb");
 		printf("Application starting...\n");
+#elif defined(DEATH_TARGET_PSP)
+		// The HOME button has to be answered by the application itself, so its callback goes up first -
+		// before anything can go wrong during initialization and leave the console with no way out
+		{
+			int threadId = sceKernelCreateThread("CallbackThread", PspCallbackThread, 0x11, 0xFA0, 0, nullptr);
+			if (threadId >= 0) {
+				sceKernelStartThread(threadId, 0, nullptr);
+			}
+		}
+
+		// The console boots at 222 MHz to save battery; every game raises it to the maximum the hardware
+		// allows. The bus clock has to be exactly half the CPU clock, which is why 333/166 rather than
+		// 333/333 - the firmware rejects any other ratio.
+		scePowerSetClockFrequency(333, 333, 166);
+
+		// Early boot log on the debug screen: startup messages (including all trace messages) are shown
+		// directly on the screen, so crashes are visible before the renderer exists. PspGfxDevice's GU
+		// session takes the framebuffer over during Init(), after which the trace sink keeps writing to
+		// stdout alone - which the firmware discards, but PPSSPP shows in its log.
+		pspDebugScreenInit();
+		printf("Application starting...\n");
 #elif defined(DEATH_TARGET_WINDOWS)
 		// Force set current directory, so everything is loaded correctly, because it's not usually intended
 		wchar_t workingDir[fs::MaxPathLength];
@@ -253,6 +325,10 @@ namespace nCine
 			if (ogcShutdownRequested) {
 				app.Quit();
 			}
+#	elif defined(DEATH_TARGET_PSP)
+			if (pspShutdownRequested) {
+				app.Quit();
+			}
 #	endif
 		}
 #endif
@@ -264,6 +340,10 @@ namespace nCine
 		socketExit();
 #elif defined(DEATH_TARGET_VITA)
 		sceKernelExitProcess(0);
+#elif defined(DEATH_TARGET_PSP)
+		// Returning from main() would land back in the crt0 stub, which halts; the firmware expects a
+		// finished application to hand control back to whatever launched it instead
+		sceKernelExitGame();
 #elif defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
 		// Returning from main() only reaches a loader when one left its return stub behind (the Homebrew
 		// Channel and friends); booted directly there is nothing to return to, so the console is asked to
@@ -572,6 +652,9 @@ namespace nCine
 #elif defined(WITH_DC)
 			gfxDevice_ = std::make_unique<DcGfxDevice>(windowMode, contextInfo, displayMode);
 			inputManager_ = std::make_unique<DcInputManager>();
+#elif defined(WITH_PSP)
+			gfxDevice_ = std::make_unique<PspGfxDevice>(windowMode, contextInfo, displayMode);
+			inputManager_ = std::make_unique<PspInputManager>();
 #endif
 			gfxDevice_->setWindowTitle(appCfg_.windowTitle.data());
 			if (!appCfg_.windowIconFilename.empty()) {
@@ -609,6 +692,9 @@ namespace nCine
 #elif defined(WITH_DC)
 			// No window events on a console; polling the maple bus is the whole event pump
 			DcInputManager::updateJoystickStates();
+#elif defined(WITH_PSP)
+			// No window events on a console; polling the controller service is the whole event pump
+			PspInputManager::updateJoystickStates();
 #endif
 		}
 

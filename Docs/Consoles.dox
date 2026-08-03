@@ -1,0 +1,667 @@
+namespace Death {
+//###==##====#=====--==~--~=~- --- -- -  -  -   -
+
+/** @page consoles Building for consoles
+@brief Guide how to build, deploy and run Jazz² Resurrection on game consoles
+
+@tableofcontents
+
+@m_class{m-noindent}
+
+Beside the desktop and mobile platforms the game runs on six consoles. Each of them is
+cross-compiled with its own SDK, most of them have a bespoke window/input backend instead of
+**SDL2** or **GLFW**, and four of them have no programmable shaders at all --- so they are driven by
+one of three rendering backends written for their fixed-function graphics hardware. This page covers the
+whole path for each one: installing the toolchain, configuring the build, packaging the result,
+copying it to the device and getting a log back out of it. For everything that is not
+console-specific see @ref building "Building the project".
+
+Console | Toolchain @m_span{m-text m-dim} (CMake toolchain file) @m_endspan | Rendering backend | Window backend | Build artifact
+------- | -------------------------------------------------------------- | ----------------- | -------------- | --------------
+@ref consoles-dreamcast "Sega Dreamcast" | KallistiOS @m_span{m-text m-dim} (`kallistios.toolchain.cmake`) @m_endspan | `PVR` --- fixed-function | `Dc` | `jazz2.cdi` @m_span{m-text m-dim} (bootable disc image) @m_endspan
+@ref consoles-psp "PlayStation Portable" | pspdev @m_span{m-text m-dim} (`pspdev.cmake`) @m_endspan | `GU` --- fixed-function | `Psp` | `EBOOT.PBP` @m_span{m-text m-dim} (in a staged `ms0/` tree) @m_endspan
+@ref consoles-wii "Nintendo Wii" | devkitPPC + libogc @m_span{m-text m-dim} (`Wii.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `boot.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
+@ref consoles-gamecube "Nintendo GameCube" | devkitPPC + libogc @m_span{m-text m-dim} (`GameCube.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `Jazz2.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
+@ref consoles-vita "PS Vita" | VitaSDK @m_span{m-text m-dim} (`vita.toolchain.cmake`) @m_endspan | `OpenGL` via **vitaGL** @m_span{m-text m-dim} (ES 2.0 profile) @m_endspan or `Software` | SDL2 | `jazz2.vpk`
+@ref consoles-switch "Nintendo Switch" | devkitA64 @m_span{m-text m-dim} (`Switch.cmake`) @m_endspan | `OpenGL` | SDL2 | `jazz2.nro`
+
+@m_class{m-noindent}
+
+The rendering backend is not a choice on the first four --- `NCINE_PREFERRED_RHI` is pinned to the
+one backend the console has and any other value is a configure error. The PS Vita and the Switch are
+ordinary shader platforms that happen to be consoles, so most of what follows applies to them only
+in the deployment part.
+
+@section consoles-common What every console build shares
+
+Three properties separate a console build from a desktop one, and they explain most of the extra
+steps below.
+
+-   **The host tools are not built.** @ref shader-compiler "ShaderCompiler" and
+    @ref asset-packer "AssetPacker" run on the build machine, so they are skipped for every
+    cross-compiled target. Everything they produce is either committed to the repository
+    @m_span{m-text m-dim} (the generated shader headers) @m_endspan or prepared by hand ahead of
+    time @m_span{m-text m-dim} (the game content) @m_endspan.
+-   **The game data has to be converted in advance** on the Dreamcast, the PSP, the Wii and the
+    GameCube. Those four skip the first-run conversion entirely and mark their content as verified,
+    because none of them can rewrite a cache of its own; a build without a prepared content tree
+    reaches the main menu and finds no episode to play. The Vita and the Switch have a writable
+    filesystem and convert on first run like a desktop build does.
+-   **Four of them have no shaders.** The `PVR`, `GX` and `GU` backends
+    @m_span{m-text m-dim} (the Wii and the GameCube share `GX`) @m_endspan implement each effect as a
+    short list of fixed-function hardware passes, transpiled from the very same `.shader` files by
+    ShaderCompiler --- see @ref shader-compiler-fixed-function "console fixed-function blocks".
+    Because those backends expose no shader capability, the post-processing chain
+    @m_span{m-text m-dim} (and with it the rescale filters) @m_endspan does not exist there; the
+    level viewport is aspect-fitted into the console's native output instead.
+
+@subsection consoles-common-content Preparing the game content
+
+The content tree is prepared with @ref asset-packer "AssetPacker", built as part of an ordinary
+desktop build. All four data-prepared consoles consume the **same** tree, so it is built once:
+
+@code{.sh}
+# Build the tool first (part of the regular desktop build)
+cmake -B build -D CMAKE_BUILD_TYPE=Release
+make -j $(nproc) -C build
+
+# Convert an installed copy of the original game into a console content tree
+./build/Sources/AssetPacker/AssetPacker <path to the game installation> ./build/ConsoleContent --target=console
+@endcode
+
+@m_class{m-noindent}
+
+Point the console build at that directory with `NCINE_CONTENT_DIR`; the build stages it into the
+package it creates, under the name @cpp "Content" @ce, at the place the console looks for it. The PS
+Vita is the one exception --- its VPK carries only the executable, and the data is installed next to
+it on the device:
+
+Console | Content directory the game reads | Cache / save data
+------- | -------------------------------- | -----------------
+Dreamcast | @cpp "/cd/Content/" @ce @m_span{m-text m-dim} (inside the disc image) @m_endspan | @cpp "/cd/Cache/" @ce --- read-only, so nothing is ever written
+PlayStation Portable | @cpp "ms0:/PSP/GAME/Jazz2/Content/" @ce | @cpp "ms0:/PSP/GAME/Jazz2/Cache/" @ce
+Wii | @cpp "sd:/apps/Jazz2/Content/" @ce | @cpp "sd:/apps/Jazz2/Cache/" @ce
+GameCube | @cpp "carda:/Jazz2/Content/" @ce | @cpp "carda:/Jazz2/Cache/" @ce
+PS Vita | @cpp "ux0:/data/jazz2/Content/" @ce | @cpp "ux0:/data/jazz2/Cache/" @ce
+Switch | @cpp "romfs:/" @ce @m_span{m-text m-dim} (embedded in the `.nro`) @m_endspan | @cpp "sdmc:/Games/Jazz2/Cache/" @ce
+
+@m_class{m-block m-warning}
+
+@par The tool and the game must come from the same sources
+The converted data carries a cache format version, and the consoles cannot rebuild it. A tree
+produced by an older AssetPacker is not rejected with a message --- the game simply fails to load
+what changed, which looks like missing text, missing tilesets or a level that will not start. After
+pulling changes that touch the data formats, regenerate the tree with a freshly built tool.
+
+@subsection consoles-common-features What is available on which console
+
+Everything below is decided at configure time from the platform, not from a build parameter. The
+values are what a default `Release` configuration of each console produces.
+
+Feature | Dreamcast | PSP | Wii | GameCube | Vita | Switch
+------- | --------- | --- | --- | -------- | ---- | ------
+Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | yes | **no** | yes | yes | yes | yes
+Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | no | no | no | no | no | no
+Sound effects | **no** --- no OpenAL for the platform | yes | **no** --- no OpenAL for the platform | **no** --- no OpenAL for the platform | SDK-dependent | SDK-dependent
+Module music @m_span{m-text m-dim} (**libopenmpt**) @m_endspan | no | **off on purpose** @m_span{m-text m-dim} (see @ref consoles-psp-limits) @m_endspan | no | no | SDK-dependent | SDK-dependent
+Local splitscreen | yes | **no** --- needs threads | yes | yes | yes | yes
+Online multiplayer | **no** | **no** | **no** | **no** | yes | yes
+Post-processing and rescale filters | **no** --- fixed-function | **no** --- fixed-function | **no** --- fixed-function | **no** --- fixed-function | yes | yes
+External `.shader` files | **no** | **no** | **no** | **no** | yes | yes
+Converts the game data itself | **no** | **no** | **no** | **no** | yes | yes
+
+@m_class{m-noindent}
+
+The three consoles without sound are not missing an engine feature --- their SDKs simply have no
+**OpenAL** implementation to link, so `WITH_AUDIO` is never defined and the audio subsystem is
+compiled out. `NCINE_WITH_AUDIO` is left at @cpp ON @ce there and has no effect; nothing has to be
+turned off by hand.
+
+@subsection consoles-common-logging Getting a log out of a console
+
+Every console writes the same @ref Asserts.h "trace" output the desktop build does, but each one
+needs a different receiver. This is the single most useful thing to set up before debugging
+anything.
+
+Console | Where the trace goes
+------- | --------------------
+Dreamcast | `dbgio` --- the **framebuffer console** during startup @m_span{m-text m-dim} (visible on screen) @m_endspan, then the **SCIF serial port** once the renderer takes over. Emulators print it to their own log, `dc-tool` shows it in its console
+PlayStation Portable | `stdout` through `sceIoWrite` on fd 1 --- **PPSSPP** prints it into its log, `psplink` into its console; plus the **debug screen** on the display until the GU session takes the framebuffer over
+Wii / GameCube | A **USB Gecko** on EXI channel 1 @m_span{m-text m-dim} (memory-card slot B) @m_endspan, probed once at startup; without the adapter nothing is written and the game runs normally
+PS Vita | `sceClibPrintf` --- picked up by the usual host-side console tools @m_span{m-text m-dim} (`psp2shell`, VitaCompanion) @m_endspan
+Switch | `svcOutputDebugString` --- picked up by a debug logger on the host; writing the trace to a file on the SD card is forced on this platform as well
+
+@m_class{m-noindent}
+
+`DEATH_TRACE_LOG_PATH` additionally forces the trace into a file, which is worth using on the
+platforms with writable storage @m_span{m-text m-dim} (not the Dreamcast, whose only medium is a
+read-only disc) @m_endspan. Verbose I/O lines use the deferred trace level and are only flushed when
+an error follows them, so a sparse log is normal and does not mean files are not being opened.
+
+- - -
+
+@section consoles-dreamcast Sega Dreamcast
+
+The oldest and by far the tightest target: a 200 MHz SH-4 with **16 MB** of main memory, **8 MB** of
+video memory and a PowerVR2 (CLX2) that has no programmable shading, no hardware scissor and reads
+textures in 16-bit formats only. The port renders through the `PVR` backend
+@m_span{m-text m-dim} (@cpp "Sources/nCine/Graphics/RHI/PVR" @ce) @m_endspan on top of
+**KallistiOS**, presented by the `Dc` window backend in 640x480 RGB565.
+
+@subsection consoles-dreamcast-toolchain Toolchain
+
+KallistiOS is built from source together with its `sh-elf` cross-compiler; there is no prebuilt
+package.
+
+@code{.sh}
+git clone https://github.com/KallistiOS/KallistiOS.git kos
+cd kos
+
+# Build the sh-elf (SH-4) cross-compiler
+make -C utils/kos-chain
+
+# The sample configuration matches the paths the toolchain just used
+cp doc/environ.sh.sample environ.sh
+source environ.sh
+make -j $(nproc)
+
+# zlib is required for the compressed game content and comes from kos-ports
+git clone https://github.com/KallistiOS/kos-ports.git ../kos-ports
+make -C ../kos-ports/zlib install
+@endcode
+
+@m_class{m-noindent}
+
+Edit @cpp "utils/kos-chain/Makefile.cfg" @ce first if the compilers should not be installed into the
+default prefix, and @cpp "environ.sh" @ce afterwards so `KOS_BASE`, `KOS_CC_BASE` and `KOS_PORTS`
+point at the tree that was just built.
+
+@m_class{m-block m-warning}
+
+@par environ.sh has to be sourced before CMake
+The KOS toolchain file resolves the compiler, the linker script and the ports through those
+environment variables and fails without them, so `source environ.sh` is part of every build --- and
+of every terminal a build is started from. `$KOS_CMAKE_TOOLCHAIN` then points at the toolchain file,
+and the `kos-cmake` wrapper in @cpp "utils/build_wrappers" @ce passes it automatically. Use
+`kallistios.toolchain.cmake`; the `dreamcast.toolchain.cmake` next to it is a deprecated alias that
+only prints a warning and includes it.
+
+@m_class{m-noindent}
+
+To get a bootable disc image, **mkdcdisc** has to be on `PATH` as well:
+
+@code{.sh}
+git clone https://gitlab.com/simulant/mkdcdisc.git
+cd mkdcdisc
+meson setup build && ninja -C build
+sudo cp ./build/mkdcdisc /usr/local/bin/
+@endcode
+
+@subsection consoles-dreamcast-build Building
+
+@code{.sh}
+source <path to KOS>/environ.sh
+cmake -B ./build/dreamcast/ -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_TOOLCHAIN_FILE=${KOS_BASE}/utils/cmake/kallistios.toolchain.cmake \
+    -D NCINE_CONTENT_DIR=$PWD/build/ConsoleContent
+make -j $(nproc) -C ./build/dreamcast/
+@endcode
+
+@m_class{m-noindent}
+
+@cpp "BuildDreamcast.sh" @ce in the repository root wraps both commands @m_span{m-text m-dim} (it
+sources `environ.sh` itself; override the SDK location with the `KOS_BASE` environment variable)
+@m_endspan. It leaves `NCINE_CONTENT_DIR` at its default, which is the repository's own
+@cpp "Content" @ce --- enough to reach the main menu, but pass the parameter on the first
+configuration of the build directory to get a playable disc. Only
+@cpp "BuildPsp.sh" @ce defaults to the staged tree on its own.
+Link-time optimization is force-disabled for this platform because it makes the
+`sh-elf` GCC 15.2 abort, and `Release` compiles with `-O2` rather than `-Ofast` --- fast-math
+reordering is untested on the SH-4 and code size matters here.
+
+The build produces @cpp "build/dreamcast/jazz2.elf" @ce and, if `mkdcdisc` was found, the bootable
+@cpp "build/dreamcast/jazz2.cdi" @ce with the content tree included as @cpp "/cd/Content" @ce.
+
+@m_class{m-block m-danger}
+
+@par Install mkdcdisc before configuring
+The disc image step is added only when `find_program(mkdcdisc)` succeeds **at configure time**, and
+the result is cached. Installing it afterwards changes nothing until the cache entry is dropped
+@m_span{m-text m-dim} (re-run CMake with `-U MKDCDISC_EXECUTABLE`, or delete the build directory)
+@m_endspan. A configuration without it prints `mkdcdisc not found, bootable CDI image will not be
+created` and then builds only the ELF.
+
+@subsection consoles-dreamcast-deploy Deploying and running
+
+-   **Emulator** --- @cpp "jazz2.cdi" @ce boots directly in **Flycast**, **lxdream** or
+    **redream**, no further preparation.
+-   **Real hardware** --- burn the CDI image with a tool that understands the Dreamcast's
+    multi-session layout, or serve it from an optical-drive emulator such as GDEMU/MODE.
+-   **`dc-tool` over serial or a Broadband Adapter** uploads @cpp "jazz2.elf" @ce for a fast
+    edit-run cycle, but the game reads its content from @cpp "/cd/Content/" @ce --- so a disc with
+    the content still has to be present.
+
+To read the log in **Flycast**, set `Debug.SerialConsoleEnabled = yes` in
+@cpp "flycast/emu.cfg" @ce while the emulator is **not** running --- it rewrites that file on exit
+and can silently revert the setting, which looks exactly like a game that died before `main()`.
+Startup messages go to the on-screen framebuffer console, not to serial, so a crash during
+initialization has to be read off the screen; the guest's serial output is block-buffered, so a
+crash also loses everything written since the last flush.
+
+@subsection consoles-dreamcast-limits Limits and known issues
+
+-   **Main memory is the binding constraint.** The heap window between the loaded ELF and the top of
+    RAM is roughly **13.8 MB**. Exhaustion is not a clean error --- it appears in the log as
+    `Out of memory. Requested sbrk_base …` followed by `std::bad_alloc` and an abort, which the
+    emulator reports only as a CPU exception. Video memory has its own message,
+    `Out of PVR memory allocating …`, and the render-to-texture variant of it names the target size.
+-   The engine keeps several console-only budgets for this reason: live debris particles are capped
+    @m_span{m-text m-dim} (bursts are coarsened rather than truncated, so an explosion still looks
+    like one) @m_endspan, the outgoing level's assets are released before the incoming level loads,
+    and the host copies of PVR textures are kept RLE-compressed.
+-   **There is no sound.** No OpenAL implementation is available for KallistiOS, so `WITH_AUDIO` is
+    never defined and the audio subsystem is compiled out entirely.
+-   Textures are 16-bit @m_span{m-text m-dim} (ARGB4444, or palettized with the hardware's palette
+    banks) @m_endspan, the PVR has no hardware scissor @m_span{m-text m-dim} (clipping is
+    geometric) @m_endspan, and there is no post-processing tier, so the rescale filters and the
+    lightmap's shader path are unavailable --- the lightmap is combined on the CPU instead.
+-   Online multiplayer is disabled; local splitscreen works.
+
+- - -
+
+@section consoles-psp PlayStation Portable
+
+A 222 MHz @m_span{m-text m-dim} (raised to 333 MHz at startup) @m_endspan MIPS Allegrex with 32 MB
+of memory @m_span{m-text m-dim} (24 MB usable, 64 MB on the 2000/3000 models) @m_endspan and a
+Graphics Engine driven through `sceGu`. The port renders through the `GU` backend
+@m_span{m-text m-dim} (@cpp "Sources/nCine/Graphics/RHI/GU" @ce) @m_endspan, presented by the `Psp`
+window backend in the console's native 480x272.
+
+@subsection consoles-psp-toolchain Toolchain
+
+**pspdev** ships prebuilt for Linux, macOS and Windows, can be built from source with its
+`build-all.sh`, and is also published as the `pspdev/pspdev` container image
+@m_span{m-text m-dim} (which is what the CI workflow uses) @m_endspan:
+
+@code{.sh}
+# Prebuilt SDK (see https://github.com/pspdev/pspdev/releases)
+tar -xJf pspdev-<platform>.tar.xz -C ~/sdk
+
+export PSPDEV=~/sdk/pspdev
+export PATH=$PSPDEV/bin:$PATH
+@endcode
+
+@m_class{m-noindent}
+
+Everything the game needs is in the SDK itself --- **zlib**, **libvorbis** and an **OpenAL Soft**
+whose output backend drives `sceAudio`. Further ports are installed with `psp-pacman`. The CMake
+toolchain file is @cpp "$PSPDEV/psp/share/pspdev.cmake" @ce; the `psp-cmake` wrapper passes it
+automatically, and `$PSPDEV/bin` must stay on `PATH` because the packaging step invokes
+`psp-fixup-imports`, `mksfoex` and `pack-pbp` from there.
+
+@subsection consoles-psp-build Building
+
+@code{.sh}
+export PSPDEV=~/sdk/pspdev
+export PATH=$PSPDEV/bin:$PATH
+cmake -B ./build/psp/ -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_TOOLCHAIN_FILE=$PSPDEV/psp/share/pspdev.cmake \
+    -D NCINE_CONTENT_DIR=$PWD/build/ConsoleContent
+make -j $(nproc) -C ./build/psp/
+@endcode
+
+@m_class{m-noindent}
+
+@cpp "BuildPsp.sh" @ce does this and defaults `NCINE_CONTENT_DIR` to
+@cpp "build/ConsoleContent" @ce, warning and falling back to the repository's own
+@cpp "Content" @ce if that tree has not been prepared. `Release` compiles with `-O2` for the same
+reasons as the other consoles --- the Allegrex FPU is single-precision only.
+
+The build produces @cpp "build/psp/jazz2.elf" @ce and stages the complete memory-stick layout under
+@cpp "build/psp/ms0/" @ce:
+
+@code{.shell-session}
+build/psp/ms0/PSP/GAME/Jazz2/EBOOT.PBP
+build/psp/ms0/PSP/GAME/Jazz2/Content/…
+@endcode
+
+@m_class{m-noindent}
+
+The `EBOOT.PBP` is packed by `create_pbp_file()` from the stripped ELF with `MEMSIZE=1` in its SFO,
+which asks the firmware for the extra memory of the 2000/3000 models; a PSP-1000 keeps its 24 MB.
+
+@subsection consoles-psp-deploy Deploying and running
+
+-   **Real hardware** --- copy @cpp "build/psp/ms0/PSP/GAME/Jazz2" @ce onto the memory stick at
+    exactly that path. Requires custom firmware or another way to start unsigned homebrew.
+-   **PPSSPP** --- copy the same directory into the emulator's **configured memory stick**, then
+    start it from the game list.
+
+@m_class{m-block m-warning}
+
+@par PPSSPP boots from its own memory stick, not from the path passed to it
+Handing PPSSPP a path outside its memory-stick directory can silently run a **stale** copy of the
+game. Copy the staged tree into the emulator's memory stick every time --- for the flatpak that is
+@cpp "~/.var/app/org.ppsspp.PPSSPP/config/ppsspp/PSP/GAME/Jazz2/" @ce, which the build directory is
+not writable from. The emulator's `--log=FILE` option does not work either; capture its stdout
+instead, where the game's trace appears prefixed with `I[PRINTF]: stdout:`.
+
+@m_class{m-noindent}
+
+The application raises the CPU to 333 MHz itself and installs its HOME-button callback before
+anything else can fail, so the console always has a way out even if initialization goes wrong.
+
+@subsection consoles-psp-limits Limits and known issues
+
+-   **Module music is disabled.** The game's soundtrack is tracker modules, and while **libopenmpt**
+    does cross-compile, play correctly and cost only ~0.2 FPS in steady state, the **first** module
+    a process loads costs a fixed ~29 seconds inside the library on this CPU
+    @m_span{m-text m-dim} (every later load takes ~1.8 s) @m_endspan --- most likely because the
+    Allegrex has no double-precision unit. There is nowhere to hide a half-minute freeze on a
+    handheld, so `NCINE_WITH_OPENMPT` is forced off; sound effects work normally.
+-   **Threads are off**, so multiplayer @m_span{m-text m-dim} (including local splitscreen) @m_endspan
+    is compiled out and asset loading is synchronous. pspdev does ship a pthreads implementation,
+    but the engine's threading layer also wants thread names, priorities and affinity, which do not
+    map onto `sceKernelCreateThread` as they stand.
+-   The underwater and pause low-pass filters are absent, because pspdev's OpenAL has no `efx.h`.
+-   Textures are limited to **512 pixels per axis**, so larger atlases are split into pages with
+    per-primitive page selection; palettized textures use the hardware CLUT, of which only one is
+    resident at a time, so the palette is part of the batch key.
+-   The GE has no post-texture additive term and no combiner output scale, which is why an
+    `offset_color` pass expands into a modulated draw plus an additive silhouette, and why the
+    `MODULATE_X2`/`MODULATE_X4` presets are rejected for this target.
+
+- - -
+
+@section consoles-wii Nintendo Wii
+
+A 729 MHz PowerPC @m_span{m-text m-dim} (Broadway) @m_endspan with 24 MB of fast MEM1 and 64 MB of
+MEM2, and the Hollywood GPU --- a fixed-function design with a 16-stage TEV combiner. The port
+renders through the `GX` backend @m_span{m-text m-dim} (@cpp "Sources/nCine/Graphics/RHI/GX" @ce)
+@m_endspan on **libogc**, presented by the `Ogc` window backend, which adopts whatever video mode
+the console prefers @m_span{m-text m-dim} (PAL 50 Hz or NTSC/EDTV 60 Hz, interlaced or
+progressive) @m_endspan.
+
+@subsection consoles-wii-toolchain Toolchain
+
+@code{.sh}
+# Install devkitPro's pacman, then the Wii group and zlib
+sudo dkp-pacman -S --needed wii-dev ppc-zlib
+
+export DEVKITPRO=/opt/devkitpro
+@endcode
+
+@m_class{m-noindent}
+
+`ppc-zlib` is **not** part of the `wii-dev` group but is required for the compressed game content.
+The toolchain file is @cpp "$DEVKITPRO/cmake/Wii.cmake" @ce.
+
+@subsection consoles-wii-build Building
+
+@code{.sh}
+cmake -B ./build/wii/ -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Wii.cmake \
+    -D NCINE_CONTENT_DIR=$PWD/build/ConsoleContent
+make -j $(nproc) -C ./build/wii/
+@endcode
+
+@m_class{m-noindent}
+
+@cpp "BuildWii.sh" @ce wraps this @m_span{m-text m-dim} (override the SDK location with the
+`DEVKITPRO` environment variable) @m_endspan, with the same `NCINE_CONTENT_DIR` caveat as the
+Dreamcast script above. Beside @cpp "build/wii/jazz2.dol" @ce the build stages
+the SD card layout the Homebrew Channel expects, so its contents can be copied to a card as they
+are:
+
+@code{.shell-session}
+build/wii/sd/apps/Jazz2/boot.dol
+build/wii/sd/apps/Jazz2/Content/…
+@endcode
+
+@subsection consoles-wii-deploy Deploying and running
+
+-   **Real hardware** --- copy the contents of @cpp "build/wii/sd/" @ce to the root of an SD card
+    or USB storage device and launch *Jazz² Resurrection* from the **Homebrew Channel**. An
+    @cpp "apps/Jazz2/meta.xml" @ce is optional; without it the entry is listed under its directory
+    name.
+-   **Dolphin** --- build a FAT32 image from the same staging tree and enable the virtual SD card:
+
+@code{.sh}
+truncate -s 512M sd.raw && mkfs.vfat -F 32 sd.raw
+mcopy -i sd.raw -s ./build/wii/sd/apps ::/
+# Dolphin.ini: [Core] WiiSDCard = True, WiiSDCardPath = <path to sd.raw>
+flatpak run org.DolphinEmu.dolphin-emu -e ./build/wii/jazz2.dol -b
+@endcode
+
+@m_class{m-block m-warning}
+
+@par The Wii build needs an SD card even in an emulator
+Without one the game stops at *Cannot access the SD card* --- there is nowhere to read the content
+from. Dolphin can also synchronise a host directory instead of an image
+@m_span{m-text m-dim} (`WiiSDCardEnableFolderSync`) @m_endspan, which is more convenient while
+iterating.
+
+@m_class{m-noindent}
+
+For the log, set a **USB Gecko** in memory-card slot B @m_span{m-text m-dim} (`SlotB = 7` in
+`Dolphin.ini`) @m_endspan and read the TCP socket Dolphin opens for it on port **55020**. The
+adapter is probed once at startup, so a build without one behaves normally and simply writes
+nothing. Frame dumps are the practical way to check rendering: `DumpXFBTarget = True` in
+@cpp "GFX.ini" @ce writes every displayed frame as a PNG.
+
+@subsection consoles-wii-limits Limits and known issues
+
+-   **There is no sound** --- devkitPro has no OpenAL for PowerPC, so audio is compiled out.
+-   Online multiplayer is disabled; local splitscreen works.
+-   No post-processing tier, so no rescale filters; the lightmap is combined on the CPU.
+-   Textures are converted to the GX formats @m_span{m-text m-dim} (including CI8 with a hardware
+    TLUT for palettized ones) @m_endspan and the effect passes are expressed as TEV stages with
+    swap tables and a KONST colour, all generated from the `.shader` files.
+-   Palette data is byte-swapped for the big-endian CPU on load --- worth knowing when comparing a
+    palette dump with the desktop build.
+
+- - -
+
+@section consoles-gamecube Nintendo GameCube
+
+The Wii's predecessor and the same code path: a 486 MHz Gekko and the Flipper GPU, driven by the
+same `GX` backend and `Ogc` window backend. The one difference that matters in practice is memory
+--- **24 MB of main RAM and no MEM2**, which makes it the tighter of the two PowerPC targets --- and
+that its storage is an SD card in a memory-card slot.
+
+@subsection consoles-gamecube-toolchain Toolchain
+
+@code{.sh}
+sudo dkp-pacman -S --needed gamecube-dev ppc-zlib
+
+export DEVKITPRO=/opt/devkitpro
+@endcode
+
+@m_class{m-noindent}
+
+As on the Wii, `ppc-zlib` is not part of the console's package group. The toolchain file is
+@cpp "$DEVKITPRO/cmake/GameCube.cmake" @ce.
+
+@subsection consoles-gamecube-build Building
+
+@code{.sh}
+cmake -B ./build/gamecube/ -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/GameCube.cmake \
+    -D NCINE_CONTENT_DIR=$PWD/build/ConsoleContent
+make -j $(nproc) -C ./build/gamecube/
+@endcode
+
+@m_class{m-noindent}
+
+@cpp "BuildGameCube.sh" @ce wraps this, again without `NCINE_CONTENT_DIR`. The staged layout differs
+from the Wii's, because the GameCube has no Homebrew Channel and reads the card directly:
+
+@code{.shell-session}
+build/gamecube/sd/Jazz2/Jazz2.dol
+build/gamecube/sd/Jazz2/Content/…
+@endcode
+
+@subsection consoles-gamecube-deploy Deploying and running
+
+-   **Real hardware** --- copy the contents of @cpp "build/gamecube/sd/" @ce to an SD card in an
+    **SD Gecko** @m_span{m-text m-dim} (memory-card slot A) @m_endspan or an **SD2SP2** adapter, and
+    start @cpp "Jazz2/Jazz2.dol" @ce from **Swiss**. The game reads its content from
+    @cpp "carda:/Jazz2/Content/" @ce, which is slot A by definition.
+-   **Dolphin** --- attach an SD adapter to **slot A** and point it at a FAT32 image built exactly
+    like the Wii one above. Keep slot B free for the USB Gecko if the log is needed; the game writes
+    its trace to EXI channel 1, which is slot B.
+
+@subsection consoles-gamecube-limits Limits and known issues
+
+Everything in @ref consoles-wii-limits applies, with two additions:
+
+-   **Memory is much tighter than on the Wii** --- 24 MB total, with no second pool to fall back
+    on. The console budgets described for the Dreamcast are active here as well.
+-   There is no Bluetooth, so only GameCube controllers are read
+    @m_span{m-text m-dim} (the Wii build additionally links `wiiuse` and `bte` for Wii Remotes)
+    @m_endspan.
+
+- - -
+
+@section consoles-vita PS Vita
+
+The Vita is a shader platform: **vitaGL** provides OpenGL|ES 2.0 on top of the console's GPU, and
+the window and input come from **SDL2**, so the build differs from a desktop one mostly in its
+packaging. `NCINE_PREFERRED_RHI=OpenGL` @m_span{m-text m-dim} (the default) @m_endspan force-enables
+the OpenGL|ES path and the strict ES 2.0 profile; `Software` selects the CPU rasterizer instead.
+
+@subsection consoles-vita-toolchain Toolchain
+
+Install **VitaSDK** with `vdpm` @m_span{m-text m-dim} (see
+[vitasdk.org](https://vitasdk.org/)) @m_endspan and export `VITASDK`, then use
+@cpp "$VITASDK/share/vita.toolchain.cmake" @ce.
+
+@subsection consoles-vita-build Building
+
+@code{.sh}
+export VITASDK=/usr/local/vitasdk
+cmake -B ./build/vita/ -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_TOOLCHAIN_FILE=$VITASDK/share/vita.toolchain.cmake
+make -j $(nproc) -C ./build/vita/
+@endcode
+
+@m_class{m-noindent}
+
+@cpp "BuildVita.sh" @ce currently configures a **Debug** build with synchronous tracing enabled,
+which is what a bring-up build wants; edit it or use the command above for a release build. The
+result is @cpp "build/vita/jazz2.vpk" @ce.
+
+@subsection consoles-vita-deploy Deploying and running
+
+Install the VPK with **VitaShell** @m_span{m-text m-dim} (or over FTP) @m_endspan. Unlike the four
+consoles above, the Vita **converts the original game data itself** on first run, so copy an
+original installation to @cpp "ux0:/data/jazz2/Source/" @ce and let it build
+@cpp "ux0:/data/jazz2/Cache/" @ce --- or prepare the tree with AssetPacker anyway to skip the wait.
+
+@subsection consoles-vita-limits Limits and known issues
+
+-   The ES 2.0 profile has no uniform buffer objects and no @cpp gl_VertexID @ce, so the shaders
+    come from the **ESSL 100** lowering that ShaderCompiler bakes into the same generated headers,
+    see @ref shader-compiler-platforms.
+-   Asynchronous tracing is disabled; threads are available.
+-   Sound depends on the SDK providing an OpenAL implementation --- without one, audio is compiled
+    out exactly as on the fixed-function consoles.
+
+- - -
+
+@section consoles-switch Nintendo Switch
+
+Also a shader platform, built with **devkitA64** and using **SDL2** and desktop OpenGL. Install the
+`switch-dev` group and use @cpp "$DEVKITPRO/cmake/Switch.cmake" @ce:
+
+@code{.sh}
+sudo dkp-pacman -S --needed switch-dev
+cmake -B ./build/switch/ -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_TOOLCHAIN_FILE=${DEVKITPRO}/cmake/Switch.cmake \
+    -D DEATH_TRACE_ASYNC=OFF
+make -j $(nproc) -C ./build/switch/
+@endcode
+
+@m_class{m-noindent}
+
+`DEATH_TRACE_ASYNC` has to be off --- it crashes on startup on this platform. The build produces
+@cpp "build/switch/jazz2.nro" @ce with the shipped game content **embedded in its RomFS**, so the
+application is self-contained: copy the `.nro` to @cpp "sd:/switch/" @ce and start it from `hbmenu`.
+Like the Vita, the Switch converts the original game data itself --- put an original installation
+into @cpp "sdmc:/Games/Jazz2/Source/" @ce and the converted cache and save data appear next to it in
+@cpp "sdmc:/Games/Jazz2/" @ce.
+
+- - -
+
+@section consoles-libretro Libretro core
+
+Not a console target in itself, but the other way to reach a console-like device: with
+`NCINE_BUILD_LIBRETRO=ON` the game builds as a **libretro core**
+@m_span{m-text m-dim} (@cpp "jazz2_libretro.so" @ce, sources in
+@cpp "Sources/nCine/Backends/Libretro" @ce) @m_endspan that RetroArch drives, with no window backend
+of its own. `NCINE_PREFERRED_RHI` accepts `Software` @m_span{m-text m-dim} (the CPU rasterizer's
+framebuffer is handed to `retro_video_refresh`, which works on every frontend) @m_endspan or
+`OpenGL` @m_span{m-text m-dim} (rendering into the frontend's FBO through `SET_HW_RENDER`, targeting
+OpenGL|ES 3.0 as the common denominator of RetroArch's GPU platforms) @m_endspan.
+
+@code{.sh}
+cmake -B ./build/libretro/ -D CMAKE_BUILD_TYPE=Release \
+    -D NCINE_BUILD_LIBRETRO=ON -D NCINE_PREFERRED_RHI=Software
+make -j $(nproc) -C ./build/libretro/
+@endcode
+
+- - -
+
+@section consoles-ci Continuous integration
+
+Every console is built on each push by its own workflow in @cpp ".github/workflows" @ce, all of them
+inside the SDK's container image, and each uploads a ready-to-deploy package as an artifact:
+
+Workflow | Container image | Artifact
+-------- | --------------- | --------
+`dreamcast.yml` | `pcercuei/dreamcast-toolchain` @m_span{m-text m-dim} (compilers only --- KOS, kos-ports and mkdcdisc are built in the job and cached) @m_endspan | `Jazz2.cdi` + `Jazz2.elf`
+`psp.yml` | `pspdev/pspdev` | the `ms0/` memory-stick tree with `EBOOT.PBP`
+`wii.yml` | `devkitpro/devkitppc` | the `sd/` card tree with `apps/Jazz2/boot.dol`
+`gamecube.yml` | `devkitpro/devkitppc` | the `sd/` card tree with `Jazz2/Jazz2.dol`
+`vita.yml` | `vitasdk/vitasdk` | `Jazz2.vpk`
+`switch.yml` | `devkitpro/devkita64` | `Jazz2.nro`
+
+@m_class{m-noindent}
+
+The KallistiOS, kos-ports and mkdcdisc revisions in `dreamcast.yml` are **pinned to specific
+commits** and their build output is cached against those commits: an unpinned clone of KOS master
+can otherwise break the workflow --- or silently change the runtime --- without any change in this
+repository. The workflows build against the repository's own @cpp "Content" @ce
+@m_span{m-text m-dim} (they cannot ship converted original game data) @m_endspan, so their artifacts
+boot into the main menu and need a content tree prepared as described in
+@ref consoles-common-content to actually play a level.
+
+@section consoles-troubleshooting Troubleshooting
+
+-   **The game starts, but no episode can be played.** The content tree is missing. The four
+    data-prepared consoles mark their content as verified without checking it, so this is what a
+    missing or misplaced @cpp "Content" @ce directory looks like; check the path for the console in
+    @ref consoles-common-content.
+-   **Text is missing, tilesets look wrong, or a level refuses to load.** Almost always a **stale**
+    content tree --- regenerate it with an AssetPacker built from the current sources. On the Wii
+    and GameCube also make sure the card really was rewritten; an emulator's SD image and a physical
+    card both keep an old copy convincingly.
+-   **No CDI image after a Dreamcast build.** `mkdcdisc` was not on `PATH` when CMake configured the
+    build directory, see @ref consoles-dreamcast-build.
+-   **An empty log.** Each console needs its receiver enabled --- the serial console in Flycast's
+    configuration, a USB Gecko in slot B on the PowerPC consoles, PPSSPP's stdout. On the Dreamcast
+    and the PSP the startup messages go to the screen rather than to the log, which is exactly the
+    window in which a crash would otherwise be invisible.
+-   **`std::bad_alloc`, an `sbrk` message, or a CPU exception with no explanation** on the Dreamcast
+    or GameCube is main memory running out; `Out of PVR memory allocating …` on the Dreamcast is
+    video memory, see @ref consoles-dreamcast-limits.
+-   **PPSSPP runs an old build.** It boots from its own configured memory stick, see
+    @ref consoles-psp-deploy.
+-   **CMake cannot find the compiler on the Dreamcast.** @cpp "environ.sh" @ce was not sourced in
+    that shell, see @ref consoles-dreamcast-toolchain.
+-   **The whole build is silent on the Dreamcast, Wii or GameCube.** Expected --- there is no
+    OpenAL implementation for those SDKs, see @ref consoles-common-features.
+
+*/
+
+}

@@ -108,9 +108,9 @@ void fixed_function(pvr) {
 	}
 }
 
-void fixed_function(gx) {
-	// The same iris the PVR block above synthesizes, at the detail the GP can afford: 64 angular
-	// segments instead of 32 (a segment's flat chord then misses the true circle by under half a
+void fixed_function(gx, psp) {
+	// The same iris the PVR block above synthesizes, at the detail the GP and the GE can afford: 64
+	// angular segments instead of 32 (a segment's flat chord then misses the true circle by under half a
 	// pixel at 640x480, where 32 segments were off by about one and a half), and the soft edge is
 	// split into THREE radial bands instead of one so the vertex colours trace the GLSL's `ease()`
 	// curve piecewise-linearly rather than as a straight ramp - ease is an S-curve, and a single
@@ -118,7 +118,14 @@ void fixed_function(gx) {
 	//
 	// Each angular segment is one 10-vertex triangle strip: the vertex pairs walk outward through
 	// the five radii (inner, two soft-edge steps, outer, past the corner), which the strip turns
-	// into the four quads between them. The GX strip scratch holds 16 vertices for exactly this.
+	// into the four quads between them. Both strip scratches hold 16 vertices for exactly this.
+	//
+	// The iris is pure geometry plus per-vertex colours, so nothing about it depends on a combiner -
+	// which is why the two consoles that share nothing else here share this: what the block needs from
+	// the hardware is only a long strip, and both take one in a single draw call (on the GE every strip
+	// costs a draw call of its own, so the 10-vertex form that walks all five radii is one draw per
+	// segment where the PVR's 8-vertex scratch needs two). The PVR keeps its own block above purely
+	// because of that scratch limit.
 	vec2 axisX = quad_axis_x();
 	vec2 axisY = quad_axis_y();
 	vec2 centre = quad_origin() + 0.5 * (axisX + axisY);

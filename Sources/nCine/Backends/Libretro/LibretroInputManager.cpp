@@ -3,8 +3,8 @@
 #if defined(WITH_LIBRETRO)
 
 #include "LibretroApplication.h"
-#include "../Input/IInputEventHandler.h"
-#include "../Input/JoyMapping.h"
+#include "../../Input/IInputEventHandler.h"
+#include "../../Input/JoyMapping.h"
 
 namespace nCine::Backends
 {

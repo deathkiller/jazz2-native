@@ -113,6 +113,9 @@ elseif(NINTENDO_WII OR NINTENDO_GAMECUBE)
 elseif(PLATFORM_DREAMCAST)
 	# The Dreamcast uses the Dc window/input backend (KallistiOS), see Sources/nCine/Backends/Dc
 	message(STATUS "Compiling for Sega Dreamcast (KallistiOS backend)")
+elseif(PLATFORM_PSP)
+	# The PSP uses the Psp window/input backend (PSPSDK), see Sources/nCine/Backends/Psp
+	message(STATUS "Compiling for PlayStation Portable (PSPSDK backend)")
 elseif(NCINE_BUILD_LIBRETRO)
 	message(STATUS "Compiling as a libretro core (no window backend)")
 else()
@@ -155,14 +158,14 @@ target_sources(${NCINE_APP} PRIVATE ${SOURCES} ${HEADERS} ${GENERATED_SOURCES})
 # converters rather than the engine.
 option(NCINE_BUILD_ASSET_PACKER "Build the offline AssetPacker tool" ON)
 if(NCINE_BUILD_ASSET_PACKER AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT EMSCRIPTEN AND NOT NINTENDO_SWITCH
-		AND NOT VITA AND NOT PLATFORM_DREAMCAST AND NOT NINTENDO_WII AND NOT NINTENDO_GAMECUBE
+		AND NOT VITA AND NOT PLATFORM_DREAMCAST AND NOT PLATFORM_PSP AND NOT NINTENDO_WII AND NOT NINTENDO_GAMECUBE
 		AND NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT NCINE_BUILD_LIBRETRO)
 	add_subdirectory("${NCINE_SOURCE_DIR}/AssetPacker")
 	set_target_properties(AssetPacker PROPERTIES FOLDER "Utilities")
 endif()
 
 # Windows RT uses custom packaging, enable it only for other platforms
-if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH AND NOT VITA AND NOT NCINE_BUILD_LIBRETRO)
+if(NOT WINDOWS_PHONE AND NOT WINDOWS_STORE AND NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT NINTENDO_SWITCH AND NOT VITA AND NOT PLATFORM_PSP AND NOT NCINE_BUILD_LIBRETRO)
 	include(ncine_installation)
 endif()
 include(ncine_strip_binaries)

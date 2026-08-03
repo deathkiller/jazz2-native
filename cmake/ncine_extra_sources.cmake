@@ -36,8 +36,10 @@ if(VITA OR ANGLE_FOUND OR OPENGLES2_FOUND)
 
 	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.h)
 	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.cpp)
-elseif(OPENGL_FOUND AND NOT NCINE_PREFERRED_RHI STREQUAL "Software")
-	# The software backend rasterizes on the CPU and must not drag in a GL runtime dependency
+elseif(OPENGL_FOUND AND NOT NCINE_PREFERRED_RHI STREQUAL "Software" AND NOT NCINE_PREFERRED_RHI STREQUAL "GU")
+	# The software backend rasterizes on the CPU and must not drag in a GL runtime dependency. Neither must
+	# the GU backend: pspdev ships a libGL (pspgl) that find_package(OpenGL) does locate, but it is a wrapper
+	# around the very GE this backend drives itself, so linking it would only add dead weight.
 	if(TARGET OpenGL::OpenGL)
 		target_link_libraries(${NCINE_APP} PRIVATE OpenGL::OpenGL)
 	else()
@@ -69,10 +71,15 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "GX")
 	message(STATUS "Rendering backend: GX (Nintendo GameCube/Wii)")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GX")
 elseif(NCINE_PREFERRED_RHI STREQUAL "PVR")
-	# Selects the Sega Dreamcast fixed-function PowerVR backend in RhiFwd.h/Rhi.h; the KOS toolchain
+	# Selects the Sega Dreamcast fixed-function PowerVR backend in RhiFwd.h/Rhi.h - the KOS toolchain
 	# environment links the PVR/maple libraries itself
 	message(STATUS "Rendering backend: PowerVR (Sega Dreamcast)")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_PVR")
+elseif(NCINE_PREFERRED_RHI STREQUAL "GU")
+	# Selects the PlayStation Portable fixed-function GE backend in RhiFwd.h/Rhi.h - the PSPSDK graphics
+	# libraries it calls into are linked with the platform packaging below
+	message(STATUS "Rendering backend: GU (PlayStation Portable)")
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GU")
 elseif(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 	# Selects the Direct3D 11 backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	message(STATUS "Rendering backend: Direct3D 11")
@@ -136,6 +143,17 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 		list(APPEND SOURCES
 			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcInputManager.cpp
 			${NCINE_SOURCE_DIR}/nCine/Backends/Dc/DcGfxDevice.cpp
+		)
+	elseif(PLATFORM_PSP)
+		# PSPSDK window/input backend (no SDL/GLFW); the PSP libraries are linked with the packaging below
+		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_PSP")
+		list(APPEND HEADERS
+			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspInputManager.h
+			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspGfxDevice.h
+		)
+		list(APPEND SOURCES
+			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspInputManager.cpp
+			${NCINE_SOURCE_DIR}/nCine/Backends/Psp/PspGfxDevice.cpp
 		)
 	elseif(GLFW_FOUND AND NCINE_PREFERRED_BACKEND STREQUAL "GLFW")
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_GLFW")
@@ -722,13 +740,13 @@ else()
 		# The libretro entry point replaces MainApplication (the frontend drives the game loop)
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_LIBRETRO")
 		list(APPEND HEADERS ${NCINE_SOURCE_DIR}/Dependencies/libretro/libretro.h)
-		list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Backends/LibretroApplication.h)
-		list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Backends/LibretroGfxDevice.h)
-		list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Backends/LibretroInputManager.h)
+		list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Backends/Libretro/LibretroApplication.h)
+		list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Backends/Libretro/LibretroGfxDevice.h)
+		list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Backends/Libretro/LibretroInputManager.h)
 		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/libretro.cpp)
-		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/LibretroApplication.cpp)
-		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/LibretroGfxDevice.cpp)
-		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/LibretroInputManager.cpp)
+		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/Libretro/LibretroApplication.cpp)
+		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/Libretro/LibretroGfxDevice.cpp)
+		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Backends/Libretro/LibretroInputManager.cpp)
 	else()
 		list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/MainApplication.h)
 		list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/MainApplication.cpp)
@@ -781,6 +799,65 @@ else()
 		else()
 			message(STATUS "mkdcdisc not found, bootable CDI image will not be created")
 		endif()
+	elseif(PLATFORM_PSP)
+		# The pspdev toolchain leaves the executable suffix empty; name it like the other console targets do,
+		# so the intermediate ELF is recognizable next to the EBOOT that is packed from it
+		set_target_properties(${NCINE_APP} PROPERTIES SUFFIX ".elf")
+
+		# The PSPSDK libraries the engine calls into. The pspdev toolchain file already adds the default set
+		# from build.mak (pspdebug/pspdisplay/pspge/pspctrl and the net stubs), but linking them explicitly
+		# keeps the dependency visible here the way the other consoles list theirs - and pspgu/pspgum/psppower
+		# are NOT in that default set.
+		target_link_libraries(${NCINE_APP} PRIVATE
+			pspgum
+			pspgu
+			pspge
+			pspdisplay
+			pspctrl
+			psppower
+			psprtc
+			pspdebug
+			m
+		)
+
+		if(OPENAL_FOUND)
+			# pspdev's OpenAL is an OpenAL Soft whose only output backend ("src/Alc/psp.c") drives
+			# sceAudioOutputBlocking() from a thread of its own, so the audio stubs it imports have to be
+			# linked here - the toolchain's default set does not include them. psphprm comes with it because
+			# the same backend also implements capture and probes for the headset microphone.
+			target_link_libraries(${NCINE_APP} PRIVATE
+				pspaudio
+				psphprm
+			)
+		endif()
+
+		# Package an EBOOT.PBP into the standard homebrew layout ("ms0:/PSP/GAME/Jazz2/"), staged under
+		# "ms0/" in the build directory together with the game content, so its contents can be copied
+		# straight onto a memory stick (or handed to PPSSPP, which mounts a directory as the memory stick).
+		# create_pbp_file() runs psp-strip / psp-fixup-imports / mksfoex / pack-pbp on the built ELF - see
+		# "$PSPDEV/psp/share/CreatePBP.cmake", included by the toolchain file.
+		set(PSP_EBOOT_DIR "${CMAKE_BINARY_DIR}/ms0/PSP/GAME/Jazz2")
+		file(MAKE_DIRECTORY "${PSP_EBOOT_DIR}")
+		create_pbp_file(
+			TARGET ${NCINE_APP}
+			TITLE "${NCINE_APP_NAME}"
+			VERSION "${NCINE_VERSION}"
+			# ICON0 is nominally 144x82; the firmware (and PPSSPP) scale whatever they are given, so the
+			# existing square icon is reused instead of adding a PSP-shaped copy of it to the repository
+			ICON_PATH "${NCINE_SOURCE_DIR}/Icons/128px.png"
+			BACKGROUND_PATH NULL
+			PREVIEW_PATH NULL
+			OUTPUT_DIR "${PSP_EBOOT_DIR}"
+			# MEMSIZE=1 asks the firmware for the extra memory of the 2000/3000 models (and is what PPSSPP
+			# emulates by default); without it a user-mode application is capped at the 24 MB of a PSP-1000
+			MEMSIZE 1
+		)
+		# The content is staged as "Content" next to the EBOOT, which is where the PSP branch of
+		# ContentResolver::GetContentPath() looks for it
+		add_custom_command(TARGET ${NCINE_APP} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_directory "${NCINE_CONTENT_DIR}" "${PSP_EBOOT_DIR}/Content"
+			COMMENT "Staging memory stick layout with game content"
+			VERBATIM)
 	elseif(VITA)
 		include("${VITASDK}/share/vita.cmake" REQUIRED)
 

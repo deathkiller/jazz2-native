@@ -106,6 +106,11 @@ namespace Jazz2
 		return "carda:/Jazz2/Content/"_s;
 #elif defined(DEATH_TARGET_DREAMCAST)
 		return "/cd/Content/"_s;
+#elif defined(DEATH_TARGET_PSP)
+		// Next to the EBOOT in the standard homebrew layout. Relative paths would work as well (the
+		// firmware makes the EBOOT's directory the current one), but the absolute form is what shows up in
+		// the trace log when a file is missing, and it also survives a loader that does not set it.
+		return "ms0:/PSP/GAME/Jazz2/Content/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Content\\"_s;
 #else
@@ -128,6 +133,8 @@ namespace Jazz2
 		return "carda:/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_DREAMCAST)
 		return "/cd/Cache/"_s;
+#elif defined(DEATH_TARGET_PSP)
+		return "ms0:/PSP/GAME/Jazz2/Cache/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Cache\\"_s;
 #else
@@ -150,6 +157,8 @@ namespace Jazz2
 		return "carda:/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_DREAMCAST)
 		return "/cd/Source/"_s;
+#elif defined(DEATH_TARGET_PSP)
+		return "ms0:/PSP/GAME/Jazz2/Source/"_s;
 #elif defined(DEATH_TARGET_WINDOWS)
 		return "Source\\"_s;
 #else
@@ -1316,7 +1325,12 @@ namespace Jazz2
 		// of two, so a sheet laid out 22 tiles wide became a 748 px atlas padded to 1024: a quarter of the
 		// video memory wasted, in megabyte-sized blocks. Fifteen tiles is 510 px, which pads to 512 with two
 		// pixels to spare, so a 15-row chunk is an exactly-filled 512x512 texture.
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+		//
+		// The PSP wants the same number for a second reason: 512 is not just what its textures pad to, it is
+		// the largest dimension the GE can address at all. A wider atlas has to be split into side-by-side
+		// pages and drawn one page at a time, which puts a per-tile page lookup into the tilemap's hot loop,
+		// keeping every atlas 510 px wide means the paged path is never taken by a tileset.
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PSP)
 		constexpr std::uint32_t PreferredAtlasTilesPerRow = 15;
 #else
 		constexpr std::uint32_t PreferredAtlasTilesPerRow = 0;
@@ -1408,7 +1422,12 @@ namespace Jazz2
 		// pause menu's textures arrived and could never get it back, leaving the tilemap to flicker out.
 		// Halving the chunk height costs the same total memory - two 512-tall chunks instead of one 1024-tall
 		// one, both exactly filling their power-of-two height - but asks for it in half-sized pieces.
-#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE)
+		//
+		// On the PSP this coincides with the device limit rather than halving it (the GE cannot address more
+		// than 512 texels per axis anyway), so it changes nothing there today - it is stated explicitly all
+		// the same, because the pairing with PreferredAtlasTilesPerRow above is what makes a chunk exactly one
+		// GE texture, and that should not silently depend on what the backend happens to report.
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_PSP)
 		constexpr std::int32_t PreferredChunkHeight = 512;
 #else
 		constexpr std::int32_t PreferredChunkHeight = 0;
@@ -1781,12 +1800,20 @@ namespace Jazz2
 
 			std::uint16_t backgroundWidth = s->ReadValueAsLE<std::uint16_t>();
 			std::uint16_t backgroundHeight = s->ReadValueAsLE<std::uint16_t>();
+			
 			// Every episode carries a full-colour backdrop of around half a megabyte of video memory once
 			// padded, and the episode list keeps all of them loaded at once. That does not fit next to the
 			// rest of the menu on a console with a few megabytes of it, where they would either fail to
 			// allocate or evict each other on every scroll; the section draws without them when they are
 			// absent, which looks better than the flicker.
-#if defined(DEATH_TARGET_DREAMCAST)
+			//
+			// The PSP is in the same position for a different reason: its textures live in main memory rather
+			// than in a separate video pool, so the eleven 320x200 backdrops (512x256 once padded, half a
+			// megabyte each) come to over five megabytes of it - to show one at a time, on a 480x272 screen.
+			// The original model only hands a user application around twenty of those megabytes in total (the
+			// later ones with PSP_LARGE_MEMORY do give roughly fifty), and it is the smaller one that has to
+			// fit.
+#if defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PSP)
 			constexpr bool LoadEpisodeBackgrounds = false;
 #else
 			constexpr bool LoadEpisodeBackgrounds = true;

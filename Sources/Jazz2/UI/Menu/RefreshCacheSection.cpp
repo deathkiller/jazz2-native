@@ -36,11 +36,11 @@ namespace Jazz2::UI::Menu
 			_this->_done = true;
 		}, this);
 #else
-		if (auto mainMenu = runtime_cast<MainMenu*>(_root)) {
+		if (auto mainMenu = runtime_cast<MainMenu>(_root)) {
 			mainMenu->_root->RefreshCacheLevels(true);
 		}
 
-		std::uint32_t filesRemoved = RenderResources::binaryShaderCache().Prune();
+		std::uint32_t filesRemoved = RenderResources::GetBinaryShaderCache().Prune();
 		LOGI("Pruning binary shader cache (removed {} directories)...", filesRemoved);
 
 		_done = true;

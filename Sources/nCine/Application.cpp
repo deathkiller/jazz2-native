@@ -126,6 +126,8 @@ using namespace Death::IO;
 #		include <ogc/usbgecko.h>
 #	elif defined(DEATH_TARGET_DREAMCAST)
 #		include <kos/dbgio.h>
+#	elif defined(DEATH_TARGET_PSP)
+#		include <pspdebug.h>
 #	endif
 #endif
 
@@ -1175,6 +1177,24 @@ namespace nCine
 		}
 		logEntryWithColors[length2++] = '\n';
 		dbgio_write_buffer_xlat(reinterpret_cast<const std::uint8_t*>(logEntryWithColors), length2);
+#elif defined(DEATH_TARGET_PSP)
+		// Write the message to stdout, which PSPSDK routes to the host through sceIoWrite on fd 1: the
+		// PPSSPP emulator prints it into its log and psplink shows it in its console. On real hardware
+		// launched from the firmware there is nobody listening, but pspDebugScreenPrintf below still puts
+		// it on the screen for as long as the GU session has not taken the framebuffer over - which covers
+		// exactly the startup window where a failure would otherwise be invisible.
+		std::int32_t length2 = 0;
+		AppendLevel(logEntryWithColors, length2, level, threadId);
+		AppendFunctionName(logEntryWithColors, length2, functionName);
+		AppendPart(logEntryWithColors, length2, content.data(), (std::int32_t)content.size());
+		if (length2 >= MaxLogEntryLength - 2) {
+			length2 = MaxLogEntryLength - 2;
+		}
+		logEntryWithColors[length2++] = '\n';
+		logEntryWithColors[length2] = '\0';
+		::fwrite(logEntryWithColors, 1, length2, stdout);
+		::fflush(stdout);
+		pspDebugScreenPrintf("%s", logEntryWithColors);
 #elif defined(DEATH_TARGET_WINDOWS_RT)
 		// Use OutputDebugStringA() to avoid conversion UTF-8 => UTF-16 => current code page
 		std::int32_t length2 = 0;
@@ -1744,10 +1764,10 @@ namespace nCine
 		auto androidId = nCine::Backends::AndroidJniWrap_Secure::getAndroidId();
 		const char* hostName = androidId.data();
 		std::int32_t hostNameLength = (std::int32_t)androidId.size();
-#		elif defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+#		elif defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST) || defined(DEATH_TARGET_PSP)
 		flags |= 0x20;	// RemoteDevice
 		std::uint32_t processId = (std::uint32_t)::getpid();
-		// TODO: Hostname is not implemented on Vita, libogc and KOS
+		// TODO: Hostname is not implemented on Vita, libogc, KOS and PSPSDK
 		char hostName[32] {}; std::int32_t hostNameLength = 0;
 #		else
 #			if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_EMSCRIPTEN)

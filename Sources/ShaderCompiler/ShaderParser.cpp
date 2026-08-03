@@ -5,6 +5,7 @@
 #include <cstring>
 #include <string>
 
+#include <Base/Format.h>
 #include <Containers/GrowableArray.h>
 #include <Containers/StringConcatenable.h>
 
@@ -1244,17 +1245,19 @@ R"GLSL(void main()
 				if (word == "fixed_function") {
 					// The old standalone spelling — the block is an entry point like vertex()/fragment()
 					// and is written the same way since the "void" spelling landed
-					return Fail(diag, "fixed_function blocks are spelled \"void fixed_function([pvr|gx]) { ... }\" now (like \"void vertex()\")", line.Line);
+					return Fail(diag, "fixed_function blocks are spelled \"void fixed_function([pvr|gx|psp]) { ... }\" now (like \"void vertex()\")", line.Line);
 				}
 
-				// "void fixed_function([pvr|gx]) { ... }" — the body is captured verbatim (like the
-				// vertex()/fragment() entries) and transpiled to C++ separately by the offline
-				// fixed-function emitter. It never joins the lowered GLSL stages, so a shader
-				// carrying a block still emits a byte-identical per-shader header. Empty
+				// "void fixed_function([<target>[, <target>...]]) { ... }" — the body is captured
+				// verbatim (like the vertex()/fragment() entries) and transpiled to C++ separately by
+				// the offline fixed-function emitter. It never joins the lowered GLSL stages, so a
+				// shader carrying a block still emits a byte-identical per-shader header. Empty
 				// parentheses mark the generic implementation, used by every backend that has
-				// no more specific "void fixed_function(pvr)"/"(gx)" block in the file. The
+				// no more specific block in the file; a comma-separated list of backends declares ONE
+				// implementation shared by all of them, which is what a shader whose description for
+				// two consoles is literally the same code writes instead of two identical copies. The
 				// spelling matches the other entry points; unlike them the parentheses may name
-				// a backend, which is why the branch below does not share their parsing.
+				// backends, which is why the branch below does not share their parsing.
 				std::size_t ffCursor = cursor;
 				if (word == "void" && WordAt(bare, ffCursor) == "fixed_function") {
 					if (!seenProgram) {
@@ -1266,35 +1269,78 @@ R"GLSL(void main()
 						cursor++;
 					}
 					if (cursor >= bare.size() || bare[cursor] != '(') {
-						return Fail(diag, "usage: void fixed_function([pvr|gx]) { ... }", line.Line);
+						return Fail(diag, "usage: void fixed_function([<target>[, <target>...]]) { ... }", line.Line);
 					}
 					cursor++;
-					String target = WordAt(bare, cursor);
-					FixedFunctionTarget targetKind;
-					if (target.empty()) {
-						targetKind = FixedFunctionTarget::Generic;
-					} else if (target == "pvr") {
-						targetKind = FixedFunctionTarget::Pvr;
-					} else if (target == "gx") {
-						targetKind = FixedFunctionTarget::Gx;
-					} else {
-						return Fail(diag, "unknown fixed_function target \""_s + target + "\" (expected pvr, gx, or empty parentheses for the generic block)"_s, line.Line);
+					// The target list, whitespace-tolerant in every position ("(pvr,psp)" and
+					// "( pvr , psp )" are the same declaration). A comma commits to another entry, so
+					// a trailing one is rejected rather than silently dropped.
+					std::vector<FixedFunctionTarget> targets;
+					bool afterComma = false;
+					while (true) {
+						while (cursor < bare.size() && IsSpace(bare[cursor])) {
+							cursor++;
+						}
+						if (!afterComma && cursor < bare.size() && bare[cursor] == ')') {
+							break;		// Empty parentheses — the generic block
+						}
+						String target = WordAt(bare, cursor);
+						if (target.empty()) {
+							return Fail(diag, "empty fixed_function target list entry", line.Line);
+						}
+						FixedFunctionTarget targetKind;
+						if (target == "pvr") {
+							targetKind = FixedFunctionTarget::Pvr;
+						} else if (target == "gx") {
+							targetKind = FixedFunctionTarget::Gx;
+						} else if (target == "psp") {
+							targetKind = FixedFunctionTarget::Psp;
+						} else {
+							return Fail(diag, "unknown fixed_function target \""_s + target + "\" (expected pvr, gx, psp, a comma-separated list of them, or empty parentheses for the generic block)"_s, line.Line);
+						}
+						for (FixedFunctionTarget listed : targets) {
+							if (listed == targetKind) {
+								return Fail(diag, "duplicate target \""_s + target + "\" in the fixed_function target list"_s, line.Line);
+							}
+						}
+						targets.push_back(targetKind);
+						afterComma = false;
+						while (cursor < bare.size() && IsSpace(bare[cursor])) {
+							cursor++;
+						}
+						if (cursor < bare.size() && bare[cursor] == ',') {
+							cursor++;
+							afterComma = true;
+							continue;
+						}
+						break;
 					}
-					while (cursor < bare.size() && IsSpace(bare[cursor])) {
-						cursor++;
-					}
+					String targetList = FixedFunctionTargetList(targets);
 					if (cursor >= bare.size() || bare[cursor] != ')') {
-						return Fail(diag, "expected ')' after the fixed_function target", line.Line);
+						return Fail(diag, "expected ')' after the fixed_function target list", line.Line);
 					}
 					cursor++;
+					// Every target belongs to exactly one block, no matter whether it was spelled on
+					// its own or inside a list: two blocks claiming the same backend would both be its
+					// implementation, and which one won would depend on declaration order.
 					for (const FixedFunctionBlock& block : src.FixedFunctionBlocks) {
-						if (block.Target == targetKind) {
-							return Fail(diag, "duplicate \"void fixed_function("_s + target + ")\" block"_s, line.Line);
+						if (targets.empty() && block.Targets.empty()) {
+							return Fail(diag, "duplicate \"void fixed_function()\" block - the generic block is already declared on line "_s +
+								Death::format("{}", block.Line), line.Line);
+						}
+						for (FixedFunctionTarget claimed : block.Targets) {
+							for (FixedFunctionTarget listed : targets) {
+								if (claimed == listed) {
+									return Fail(diag, "duplicate \"void fixed_function("_s + FixedFunctionTargetName(listed) +
+										")\" block - the "_s + FixedFunctionTargetName(listed) + " target is already claimed by the block on line "_s +
+										Death::format("{}", block.Line), line.Line);
+								}
+							}
 						}
 					}
 					{
 						FixedFunctionBlock block;
-						block.Target = targetKind;
+						block.Targets = std::move(targets);
 						block.Line = line.Line;
 						src.FixedFunctionBlocks.push_back(std::move(block));
 					}
@@ -1316,7 +1362,7 @@ R"GLSL(void main()
 							capturing = 0;
 						}
 					} else {
-						return Fail(diag, "expected '{' after \"void fixed_function("_s + target + ")\""_s, line.Line);
+						return Fail(diag, "expected '{' after \"void fixed_function("_s + targetList + ")\""_s, line.Line);
 					}
 					continue;
 				}

@@ -21,6 +21,8 @@
 #	define _i1 "\nGX (fixed-function)"
 #elif defined(WITH_RHI_PVR)
 #	define _i1 "\nPowerVR (fixed-function)"
+#elif defined(WITH_RHI_GU)
+#	define _i1 "\nGU (fixed-function)"
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
 #	define _i1 "\nWebGL"
 #elif defined(WITH_OPENGLES)

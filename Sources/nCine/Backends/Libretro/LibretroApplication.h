@@ -2,7 +2,7 @@
 
 #if defined(WITH_LIBRETRO) || defined(DOXYGEN_GENERATING_OUTPUT)
 
-#include "../Application.h"
+#include "../../Application.h"
 
 #include <libretro/libretro.h>
 

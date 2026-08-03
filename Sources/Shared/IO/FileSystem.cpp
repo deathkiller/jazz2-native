@@ -162,10 +162,17 @@ namespace Death { namespace IO {
 			if (path.hasPrefix(AndroidAssetStream::Prefix)) {
 				return AndroidAssetStream::Prefix.size();
 			}
-#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
+#	elif defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA)
 			// Switch mount points: romfs:, sdmc:, etc.
 			// Vita mount points: ux0:, os0:, vs0:, ur0:, sa0:, tm0:, etc.
-			for (std::size_t i = 0; i < 5 && i < path.size(); i++) {
+			// PSP mount points: ms0:, ef0:, disc0:, umd0:, host0:, flash0:, etc.
+#		if defined(DEATH_TARGET_PSP)
+			// "flash0" is one character longer than anything the other two platforms mount
+			constexpr std::size_t MaxMountPointLength = 7;
+#		else
+			constexpr std::size_t MaxMountPointLength = 5;
+#		endif
+			for (std::size_t i = 0; i < MaxMountPointLength && i < path.size(); i++) {
 				char c = path.data()[i];
 				if (c == ':') {
 					if (i + 1 < path.size() && (path.data()[i + 1] == '/' || path.data()[i + 1] == '\\')) {
@@ -349,7 +356,7 @@ namespace Death { namespace IO {
 			return currentMode;
 		}
 
-#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
+#	if !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST)
 		static std::int32_t DeleteDirectoryInternalCallback(const char* fpath, const struct stat* sb, std::int32_t typeflag, struct FTW* ftwbuf)
 		{
 			return ::remove(fpath);
@@ -358,8 +365,9 @@ namespace Death { namespace IO {
 
 		static bool DeleteDirectoryInternal(StringView path)
 		{
-#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
-			// nftw() is missing in libnx, Vita, libogc and KOS
+#	if defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_PSP) || defined(DEATH_TARGET_VITA) || defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
+			// nftw() is missing in libnx, Vita, libogc and KOS, and on PSPSDK it is only declared (there is
+			// no implementation behind it), so the walk is done by hand everywhere on the consoles
 			auto nullTerminatedPath = String::nullTerminatedView(path);
 			DIR* d = ::opendir(nullTerminatedPath.data());
 			std::int32_t r = -1;
@@ -2370,7 +2378,7 @@ namespace Death { namespace IO {
 			return false;
 		}
 
-#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(__FreeBSD__)
+#if !defined(DEATH_TARGET_APPLE) && !defined(DEATH_TARGET_SWITCH) && !defined(DEATH_TARGET_PSP) && !defined(DEATH_TARGET_VITA) && !defined(DEATH_TARGET_WII) && !defined(DEATH_TARGET_GAMECUBE) && !defined(DEATH_TARGET_DREAMCAST) && !defined(__FreeBSD__)
 		while (true) {
 			if (::fallocate(destFd, FALLOC_FL_KEEP_SIZE, 0, sb.st_size) == 0) {
 				break;

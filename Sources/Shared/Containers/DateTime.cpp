@@ -167,6 +167,12 @@ namespace Death { namespace Containers {
 #	if defined(DEATH_TARGET_MINGW) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA) || \
 		defined(DEATH_TARGET_WII) || defined(DEATH_TARGET_GAMECUBE) || defined(DEATH_TARGET_DREAMCAST)
 			return _timezone;
+#	elif defined(DEATH_TARGET_PSP)
+			// PSPSDK's newlib exposes neither `timezone` nor `_timezone`, and the console has no timezone
+			// database at all - the firmware keeps the offset in its own settings, reachable through
+			// sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_TIMEZONE), which returns minutes east of UTC.
+			// TODO: Read that instead of assuming UTC, once the utility library is linked
+			return 0;
 #	else // Unknown platform - assume it has timezone variable
 			return timezone;
 #	endif

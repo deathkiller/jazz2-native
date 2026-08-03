@@ -14,7 +14,8 @@ story episodes fully playable in cooperation, is already implemented.
 
 To get in touch with the developers and the community, you can use the official [Discord server](https://discord.gg/Y7SBvkD).
 
-For getting started guide, see @ref building. For game-specific API documentation, see @ref Jazz2
+For getting started guide, see @ref building --- and @ref consoles "Building for consoles" for the
+console targets. For game-specific API documentation, see @ref Jazz2
 namespace. For common utility functions and generic containers, see @ref Death "the shared root namespace".
 In addition, @ref CommonBase.h contains common configuration-specific and platform-specific
 definitions. For **nCine** game engine documentation, see @ref nCine namespace. The **nCine** game
@@ -28,15 +29,27 @@ matches the current implementation.
 - **Linux** and other Unix-like systems
 - **macOS**
 - **Windows**
-- **Nintendo Switch** using [devkitPro toolchain](https://devkitpro.org/wiki/devkitPro_pacman)
 - **Xbox** (Universal Windows Platform) using ANGLE/Mesa
 - **Web** (WebAssembly) using [Emscripten](https://kripken.github.io/emscripten-site/)
+- **Nintendo Switch** using [devkitPro toolchain](https://devkitpro.org/wiki/devkitPro_pacman),
+  see @ref consoles-switch
+- **Nintendo Wii** and **Nintendo GameCube** using devkitPro toolchain and a fixed-function GX
+  rendering backend, see @ref consoles-wii and @ref consoles-gamecube
+- **Sega Dreamcast** using [KallistiOS](https://github.com/KallistiOS/KallistiOS) and a
+  fixed-function PowerVR rendering backend, see @ref consoles-dreamcast
+- **PlayStation Portable** using [pspdev](https://github.com/pspdev/pspdev) and a fixed-function
+  GU rendering backend, see @ref consoles-psp
+- **PlayStation Vita** using [VitaSDK](https://vitasdk.org/) and vitaGL, see @ref consoles-vita
+- **libretro** core for RetroArch, see @ref consoles-libretro
 
 The code is mainly optimized to run on 64-bit **x86** and **ARM** processors including advanced
-instruction sets. Additionally, **OpenGL** 3.3, **OpenGL|ES** 3.0 or **WebGL** 2.0 is required
-to run the application. However, Google ANGLE or Mesa can be used to translate OpenGL calls to
-the native graphics API. See also @ref death-partialsupport "the list of partially supported features"
-that depend on specific platforms.
+instruction sets. Additionally, **OpenGL** 3.3, **OpenGL|ES** 3.0 or **WebGL** 2.0 is usually
+required to run the application --- Google ANGLE or Mesa can be used to translate OpenGL calls to
+the native graphics API, and Direct3D 11, Vulkan and a CPU software rasterizer are available as
+alternative rendering backends. The consoles above are the exception: four of them have no
+programmable shaders at all and are driven by a rendering backend written for their fixed-function
+graphics hardware. See also @ref consoles-common-features "the list of features each console
+supports", which is where the platform differences are the largest.
 	
 @section mainpage-license License
 

@@ -66,7 +66,9 @@ namespace nCine
 #endif
 
 		static std::size_t stream_read_func(void* stream, void* dst, std::size_t bytes);
-		static std::int32_t stream_seek_func(void* stream, std::int64_t offset, std::int32_t whence);
+		// `int` rather than `std::int32_t`, because this has to match libopenmpt's function-pointer type
+		// exactly, and the two are distinct types wherever `std::int32_t` is `long int` (MIPS, among others)
+		static int stream_seek_func(void* stream, std::int64_t offset, int whence);
 		static std::int64_t stream_tell_func(void* stream);
 
 		static void InternalLog(const char* message, void* user);

@@ -112,6 +112,26 @@ namespace Jazz2::UI::Menu
 		Vector2i viewSize = canvas->ViewSize;
 		Vector2f center = Vector2f(viewSize.X * 0.5f, viewSize.Y * 0.5f * 0.86f);
 
+		// This section is laid out in absolute pixels, which a panel as small as the PSP's 480x272 cannot
+		// fit: the 176x165 character art would reach into the left option column and "Start" would end up
+		// on the bottom edge. Shrinking the art block and the spacing by the same factors keeps the
+		// composition proportionally what it is on a large view. The threshold is the one the other
+		// sections and MenuContainerBase::UpdateContentBounds() already use.
+		bool compactLayout = (viewSize.Y < 300);
+		float artZoom = (compactLayout ? 0.6f : 1.0f);
+		float itemSpacing = (compactLayout ? 52.0f : 60.0f);
+		float subItemOffset = (compactLayout ? 22.0f : 28.0f);
+		float columnScale = (compactLayout ? 0.7f : 1.0f);
+		if (compactLayout) {
+			// The rows keep nearly their full-size rhythm, so the block is anchored higher instead: the
+			// panel's header ends at 38 px and its footer starts at 250, and leaving the slack above the
+			// first row is what balances the two margins
+			center.Y = viewSize.Y * 0.33f;
+		}
+		// Vertical middle of the row block, which is where the character art is centred - the 1.4x of the
+		// anchor lands there on a full-size view
+		float artCenterY = (compactLayout ? center.Y + itemSpacing + 3.0f : center.Y * 1.4f);
+
 		AnimState selectedDifficultyImage;
 		switch (_selectedPlayerType) {
 			default:
@@ -120,9 +140,9 @@ namespace Jazz2::UI::Menu
 			case 2: selectedDifficultyImage = MenuDifficultyLori; break;
 		}
 
-		_root->DrawElement(MenuDim, 0, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::ShadowLayer - 2, Alignment::Center, Colorf::White, 24.0f, 36.0f);
+		_root->DrawElement(MenuDim, 0, center.X * 0.36f, artCenterY, IMenuContainer::ShadowLayer - 2, Alignment::Center, Colorf::White, 24.0f * artZoom, 36.0f * artZoom);
 
-		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, center.Y * 1.4f + 3.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * _imageTransition), 0.88f, 0.88f);
+		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, artCenterY + 3.0f, IMenuContainer::ShadowLayer, Alignment::Center, Colorf(0.0f, 0.0f, 0.0f, 0.2f * _imageTransition), 0.88f * artZoom, 0.88f * artZoom);
 
 		if (_imageTransition < 1.0f) {
 			AnimState lastDifficultyImage;
@@ -132,10 +152,10 @@ namespace Jazz2::UI::Menu
 				case 1: lastDifficultyImage = MenuDifficultySpaz; break;
 				case 2: lastDifficultyImage = MenuDifficultyLori; break;
 			}
-			_root->DrawElement(lastDifficultyImage, _lastDifficulty, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 1.0f - _imageTransition), 0.88f, 0.88f);
+			_root->DrawElement(lastDifficultyImage, _lastDifficulty, center.X * 0.36f, artCenterY, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, 1.0f - _imageTransition), 0.88f * artZoom, 0.88f * artZoom);
 		}
 
-		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, center.Y * 1.4f, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, _imageTransition), 0.88f, 0.88f);
+		_root->DrawElement(selectedDifficultyImage, _selectedDifficulty, center.X * 0.36f, artCenterY, IMenuContainer::MainLayer, Alignment::Center, Colorf(1.0f, 1.0f, 1.0f, _imageTransition), 0.88f * artZoom, 0.88f * artZoom);
 
 		std::int32_t charOffset = 0;
 		for (std::int32_t i = 0; i < (std::int32_t)Item::Count; i++) {
@@ -162,54 +182,54 @@ namespace Jazz2::UI::Menu
 					offset = 0.0f;
 					spacing = 0.0f;
 				} else if (_availableCharacters == 2) {
-					offset = 50.0f;
-					spacing = 100.0f;
+					offset = 50.0f * columnScale;
+					spacing = 100.0f * columnScale;
 				} else {
-					offset = 100.0f;
-					spacing = 300.0f / _availableCharacters;
+					offset = 100.0f * columnScale;
+					spacing = (300.0f / _availableCharacters) * columnScale;
 				}
 
 				for (std::int32_t j = 0; j < _availableCharacters; j++) {
 					float x = center.X - offset + j * spacing;
 					if (_selectedPlayerType == j) {
-						_root->DrawStringGlow(playerTypes[j], charOffset, x, center.Y + 28.0f, IMenuContainer::FontLayer,
+						_root->DrawStringGlow(playerTypes[j], charOffset, x, center.Y + subItemOffset, IMenuContainer::FontLayer,
 							Alignment::Center, playerColors[j], 1.0f, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
 					} else {
-						_root->DrawStringShadow(playerTypes[j], charOffset, x, center.Y + 28.0f, IMenuContainer::FontLayer,
+						_root->DrawStringShadow(playerTypes[j], charOffset, x, center.Y + subItemOffset, IMenuContainer::FontLayer,
 							Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.4f, 0.9f);
 					}
 				}
 
 				if (_selectedIndex == i) {
-					_root->DrawMenuArrows(charOffset, center.X, center.Y + 28.0f, _animation, 50.0f);
+					_root->DrawMenuArrows(charOffset, center.X, center.Y + subItemOffset, _animation, 50.0f * columnScale);
 				}
 
-				_items[i].TouchY = center.Y + 28.0f;
+				_items[i].TouchY = center.Y + subItemOffset;
 			} else if (i == (std::int32_t)Item::Difficulty) {
 				const StringView difficultyTypes[] = { _("Easy"), _("Medium"), _("Hard") };
-				float spacing = 100.0f;
+				float spacing = 100.0f * columnScale;
 
 				for (std::int32_t j = 0; j < std::int32_t(arraySize(difficultyTypes)); j++) {
 					if (_selectedDifficulty == j) {
-						_root->DrawStringGlow(difficultyTypes[j], charOffset, center.X + (j - 1) * spacing, center.Y + 28.0f, IMenuContainer::FontLayer,
+						_root->DrawStringGlow(difficultyTypes[j], charOffset, center.X + (j - 1) * spacing, center.Y + subItemOffset, IMenuContainer::FontLayer,
 							Alignment::Center, Colorf(0.45f, 0.45f, 0.45f, 0.5f), 1.0f, 0.4f, 0.9f, 0.9f, 0.8f, 0.9f);
 					} else {
-						_root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * spacing, center.Y + 28.0f, IMenuContainer::FontLayer,
+						_root->DrawStringShadow(difficultyTypes[j], charOffset, center.X + (j - 1) * spacing, center.Y + subItemOffset, IMenuContainer::FontLayer,
 							Alignment::Center, Font::DefaultColor, 0.8f, 0.0f, 4.0f, 4.0f, 0.9f);
 					}
 				}
 
 				if (_selectedIndex == i) {
-					_root->DrawMenuArrows(charOffset, center.X, center.Y + 28.0f, _animation, 50.0f);
+					_root->DrawMenuArrows(charOffset, center.X, center.Y + subItemOffset, _animation, 50.0f * columnScale);
 				}
 
-				_items[i].TouchY = center.Y + 28.0f;
+				_items[i].TouchY = center.Y + subItemOffset;
 				center.Y += 6.0f;
 			} else {
 				_items[i].TouchY = center.Y;
 			}
 
-			center.Y += 60.0f;
+			center.Y += itemSpacing;
 		}
 	}
 
@@ -244,22 +264,25 @@ namespace Jazz2::UI::Menu
 				float x = event.pointers[pointerIndex].x * (float)viewSize.X;
 				float y = event.pointers[pointerIndex].y * (float)viewSize.Y;
 				float halfWidth = viewSize.X * 0.5f;
+				// Has to follow the compact layout of OnDraw() one to one, otherwise the hit areas would
+				// no longer line up with where the columns and rows are actually drawn
+				float layoutScale = (viewSize.Y < 300 ? 0.7f : 1.0f);
 
-				if (y < 80.0f) {
+				if (y < 80.0f * layoutScale) {
 					_root->PlaySfx("MenuSelect"_s, 0.5f);
 					_root->LeaveSection();
 					return;
 				}
 
 				for (std::int32_t i = 0; i < (std::int32_t)Item::Count; i++) {
-					if (std::abs(x - halfWidth) < 150.0f && std::abs(y - _items[i].TouchY) < 30.0f) {
+					if (std::abs(x - halfWidth) < 150.0f * layoutScale && std::abs(y - _items[i].TouchY) < 30.0f * layoutScale) {
 						switch ((Item)i) {
 							case Item::Character: {
 								std::int32_t selectedSubitem;
 								if (_availableCharacters == 2) {
 									selectedSubitem = (x < halfWidth ? 0 : 1);
 								} else {
-									selectedSubitem = (x < halfWidth - 50.0f ? 0 : (x > halfWidth + 50.0f ? 2 : 1));
+									selectedSubitem = (x < halfWidth - 50.0f * layoutScale ? 0 : (x > halfWidth + 50.0f * layoutScale ? 2 : 1));
 								}
 								if (_selectedPlayerType != selectedSubitem) {
 									StartImageTransition();
@@ -269,7 +292,7 @@ namespace Jazz2::UI::Menu
 								break;
 							}
 							case Item::Difficulty: {
-								std::int32_t selectedSubitem = (x < halfWidth - 50.0f ? 0 : (x > halfWidth + 50.0f ? 2 : 1));
+								std::int32_t selectedSubitem = (x < halfWidth - 50.0f * layoutScale ? 0 : (x > halfWidth + 50.0f * layoutScale ? 2 : 1));
 								if (_selectedDifficulty != selectedSubitem) {
 									StartImageTransition();
 									_selectedDifficulty = selectedSubitem;

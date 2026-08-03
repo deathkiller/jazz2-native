@@ -113,30 +113,62 @@ namespace ShaderCompiler
 		}
 		// Presets no PVR texture environment can express: the CLX2 modulates a texel by the vertex
 		// colour and adds an offset colour, and that is the whole vocabulary - it cannot lerp a texel
-		// toward a colour, nor do per-texel arithmetic on its channels. Both live in the GX's
-		// programmable combiner, so a pvr (or generic) block using them is a hard error rather than a
-		// silently wrong console frame (design doc section 5, the `tev[]`/`swap` rows of the GX table).
+		// toward a colour, nor do per-texel arithmetic on its channels. The PSP's GE cannot either (its
+		// five texture functions are modulate/decal/blend/replace/add over ONE texel and the fragment
+		// colour). Both live in the GX's programmable combiner, so any block other than one targeting
+		// the GX ALONE is a hard error rather than a silently wrong console frame (design doc section 5,
+		// the `tev[]`/`swap` rows of the GX table).
 		bool IsGxOnlyTevValueName(StringView v)
 		{
 			return (v == "TINT_MIX" || v == "LUMA_RAMP");
+		}
+		// Presets the GE has no form of at all: its texture environment applies no output scale to the
+		// combined colour, so a x2/x4 modulate cannot be expressed by any single GE draw. The PVR
+		// silently IGNORES them (it always modulates), which is why they are not "gx-only" - but that
+		// also means a block shared with the psp target would be honoured by only some of the backends
+		// it serves, so any block that reaches the PSP (a psp block, a target list naming psp, or a
+		// generic block) rejects them. Boosts belong in passes on this tier (the additive split
+		// Colorized uses on the PVR).
+		bool IsScaledModulateTevValueName(StringView v)
+		{
+			return (v == "MODULATE_X2" || v == "MODULATE_X4");
 		}
 		bool IsEnumValueName(StringView v)
 		{
 			return (BlendValueName(v) != nullptr || TevValueName(v) != nullptr);
 		}
 
+		// The two enums name the same three consoles - the parser's one describes what a block claims,
+		// the emitter's which aggregate header is being written - so capability checks over a block's
+		// target list translate its entries into backends through this
+		FixedFunctionBackend BackendOfTarget(FixedFunctionTarget target)
+		{
+			switch (target) {
+				case FixedFunctionTarget::Gx: return FixedFunctionBackend::Gx;
+				case FixedFunctionTarget::Psp: return FixedFunctionBackend::Psp;
+				default: return FixedFunctionBackend::Pvr;
+			}
+		}
+
 		// How many vertices the backend's strip-builder scratch holds (EffectContext::MaxStripVertices).
 		// The contract's floor is 8; the GX raises it to 16 so a radially subdivided iris wedge is one
-		// strip instead of three. Literal indices and counts are checked against it at generation time,
-		// because at runtime an out-of-range index is dropped and an oversized count clamped - which
-		// would silently draw the wrong geometry.
+		// strip instead of three, and the GU matches it (the GE takes a strip of any length in one draw
+		// call, so there is nothing to gain from splitting the geometry into small pieces). Literal
+		// indices and counts are checked against it at generation time, because at runtime an
+		// out-of-range index is dropped and an oversized count clamped - which would silently draw the
+		// wrong geometry. A block serving several backends may only rely on the SMALLEST of their
+		// capacities, so a "pvr, gx" block is held to the PVR's 8 vertices.
 		std::int32_t StripCapacity(FixedFunctionBackend backend)
 		{
-			return (backend == FixedFunctionBackend::Gx ? 16 : 8);
+			return (backend == FixedFunctionBackend::Pvr ? 8 : 16);
 		}
 		const char* BackendName(FixedFunctionBackend backend)
 		{
-			return (backend == FixedFunctionBackend::Gx ? "gx" : "pvr");
+			switch (backend) {
+				case FixedFunctionBackend::Gx: return "gx";
+				case FixedFunctionBackend::Psp: return "psp";
+				default: return "pvr";
+			}
 		}
 
 		// --- Statement AST ---------------------------------------------------------------------------
@@ -509,11 +541,13 @@ namespace ShaderCompiler
 		class Emitter
 		{
 		public:
-			explicit Emitter(FixedFunctionBackend backend, bool allowExtended)
-				: _backend(backend), _allowExtended(allowExtended)
+			Emitter(FixedFunctionBackend backend, const std::vector<FixedFunctionTarget>& targets)
+				: _backend(backend), _targets(targets)
 			{
-				// The portable core emits identically for both backends; the backend drives the
-				// capability checks (GX-only TEV presets, the strip-builder capacity)
+				// The portable core emits identically for every backend; what varies is only which
+				// capabilities are reachable (GX-only TEV presets, the combiner output scales, the
+				// strip-builder capacity), and that is decided by the block's own target list rather
+				// than by the header being written - see the gates below
 			}
 
 			bool Ok() const { return _ok; }
@@ -536,7 +570,16 @@ namespace ShaderCompiler
 
 		private:
 			FixedFunctionBackend _backend;
-			bool _allowExtended;
+			/**
+				The targets the block names, in declaration order - EMPTY for the generic block.
+
+				Every capability check below validates against the INTERSECTION of these, not against
+				the backend whose header is currently being written: a block may only use what ALL the
+				backends it serves can do, otherwise a shared description would be honoured by some of
+				them and silently ignored by the rest. The generic block, which serves every backend, is
+				the empty-list case and stays in the portable quad-only core.
+			*/
+			std::vector<FixedFunctionTarget> _targets;
 			std::vector<std::map<String, Ty>> _scopes;
 			bool _ok = true;
 			String _reason;
@@ -558,28 +601,108 @@ namespace ShaderCompiler
 				_requirements |= std::uint8_t(bit);
 			}
 
+			// Whether the block's target list names @p target
+			bool NamesTarget(FixedFunctionTarget target) const
+			{
+				for (FixedFunctionTarget listed : _targets) {
+					if (listed == target) {
+						return true;
+					}
+				}
+				return false;
+			}
+
+			// The listed targets other than @p target, spelled for a diagnostic - what a capability
+			// message needs to name when the block would have been valid on its own but its list drags
+			// in a backend that cannot express the feature
+			String OtherTargets(FixedFunctionTarget target) const
+			{
+				String result;
+				for (FixedFunctionTarget listed : _targets) {
+					if (listed == target) {
+						continue;
+					}
+					if (!result.empty()) {
+						result += ", ";
+					}
+					result += FixedFunctionTargetName(listed);
+				}
+				return result;
+			}
+
 			// Gates the extended vocabulary (strip builder, quad geometry, resolved uniforms) to
-			// backend-specific blocks: a generic fixed_function block must stay in the portable
-			// quad-only core (design doc section 5), so a shared block can never silently depend on
-			// geometry synthesis one backend implements differently from the other
+			// blocks that name their backends: a generic fixed_function block must stay in the portable
+			// quad-only core (design doc section 5), so a shared description can never silently depend
+			// on geometry synthesis one backend implements differently from another. A target list is
+			// backend-specific enough - every backend it serves is named in it.
 			bool RequireExtended(StringView what)
 			{
-				if (!_allowExtended) {
-					Fail(what + " is only available in a backend-specific fixed_function(pvr) or fixed_function(gx) block (generic blocks keep the portable quad-only core)"_s);
+				if (_targets.empty()) {
+					Fail(what + " is only available in a backend-specific fixed_function(pvr), fixed_function(gx) or fixed_function(psp) block (generic blocks keep the portable quad-only core)"_s);
 					return false;
 				}
 				return true;
 			}
 
-			// Gates a capability only one backend's hardware has to that backend's own block. A generic
-			// block is rejected too (it is transpiled for every backend, so the pvr emission fails).
+			// Gates a capability only one backend's hardware has to a block targeting that backend and
+			// NOTHING else: the intersection of a list that also names another console cannot include
+			// it, and a generic block is rejected as well (it is transpiled for every backend).
 			bool RequireGxOnly(StringView what)
 			{
-				if (_backend != FixedFunctionBackend::Gx || !_allowExtended) {
-					Fail(what + " is a GX-only capability - it needs the programmable TEV combiner, so it is only available in a fixed_function(gx) block"_s);
-					return false;
+				if (NamesTarget(FixedFunctionTarget::Gx) && _targets.size() == 1) {
+					return true;
 				}
-				return true;
+				String why = what + " is a GX-only capability - it needs the programmable TEV combiner, so it is only available in a fixed_function(gx) block"_s;
+				if (NamesTarget(FixedFunctionTarget::Gx)) {
+					// The list form: say which of the block's own targets is the one that cannot have it
+					why += ", not in one that also targets "_s + OtherTargets(FixedFunctionTarget::Gx);
+				}
+				Fail(std::move(why));
+				return false;
+			}
+
+			// Rejects the combiner output scales for every block the PSP can reach: the GE's texture
+			// environment has no scale stage, so nothing it can be programmed to do reproduces them.
+			// Unlike the GX-only presets this is not a per-block capability - a pvr block may keep using
+			// them, since the PVR ignores tev entirely - but a target list naming psp, and a generic
+			// block (transpiled for every backend), would otherwise be honoured by only some of the
+			// backends they serve, which is exactly what these checks exist to prevent.
+			bool RejectOnPsp(StringView what)
+			{
+				const bool listed = NamesTarget(FixedFunctionTarget::Psp);
+				if (!listed && _backend != FixedFunctionBackend::Psp) {
+					return true;
+				}
+				String why = what + " has no GE equivalent - the PSP's texture environment has no combiner output scale, so it cannot be expressed for the psp target"_s;
+				if (listed && _targets.size() > 1) {
+					// The list form: the block would have been valid without the psp target in it
+					why += " this block also names"_s;
+				}
+				why += " (write the boost as passes in a fixed_function(psp) block, e.g. an additive one)"_s;
+				Fail(std::move(why));
+				return false;
+			}
+
+			// The strip-builder capacity the block may rely on - the SMALLEST among the backends it
+			// serves, since the geometry has to fit every one of them. @p limiting receives the target
+			// that capacity belongs to (the first one listed with it, so a single-target block names
+			// itself); a generic block cannot reach the strip builder at all, so it falls back to the
+			// backend being emitted.
+			std::int32_t StripCapacityLimit(const char*& limiting) const
+			{
+				if (_targets.empty()) {
+					limiting = BackendName(_backend);
+					return StripCapacity(_backend);
+				}
+				std::int32_t capacity = 0;
+				for (FixedFunctionTarget listed : _targets) {
+					const std::int32_t own = StripCapacity(BackendOfTarget(listed));
+					if (capacity == 0 || own < capacity) {
+						capacity = own;
+						limiting = FixedFunctionTargetName(listed);
+					}
+				}
+				return capacity;
 			}
 
 			// Constant folding has already run, so a strip index or vertex count that the author wrote
@@ -590,11 +713,17 @@ namespace ShaderCompiler
 				if (e == nullptr || e->Kind != ExprKind::IntLit) {
 					return true;
 				}
-				const std::int32_t capacity = StripCapacity(_backend);
+				const char* limiting = "";
+				const std::int32_t capacity = StripCapacityLimit(limiting);
 				const std::int32_t value = std::atoi(String{e->Text}.data());
 				if (value < lo || value > capacity - (lo == 0 ? 1 : 0)) {
-					Fail(what + " "_s + e->Text + " is outside the "_s + BackendName(_backend) +
-						" strip builder's capacity of "_s + Death::format("{}", capacity) + " vertices"_s);
+					String why = what + " "_s + e->Text + " is outside the "_s + limiting +
+						" strip builder's capacity of "_s + Death::format("{}", capacity) + " vertices"_s;
+					if (_targets.size() > 1) {
+						// The list form: name why THAT target's capacity is the one that applies
+						why += " (the smallest capacity among the block's targets)"_s;
+					}
+					Fail(std::move(why));
 					return false;
 				}
 				return true;
@@ -884,6 +1013,9 @@ namespace ShaderCompiler
 							return;
 						}
 						if (IsGxOnlyTevValueName(rhs->Text) && !RequireGxOnly(rhs->Text)) {
+							return;
+						}
+						if (IsScaledModulateTevValueName(rhs->Text) && !RejectOnPsp(rhs->Text)) {
 							return;
 						}
 						out += indent + passName + ".Tev = FixedFunctionPass::TevPreset::"_s + value + ";\n"_s;
@@ -1531,9 +1663,10 @@ namespace ShaderCompiler
 			return result;
 		}
 
-		// The extended vocabulary (strip builder, quad geometry, resolved uniforms) is reserved for
-		// backend-specific blocks; a generic block stays in the portable quad-only core
-		Emitter emitter(backend, block.Target != FixedFunctionTarget::Generic);
+		// The block's own target list drives every capability check: the extended vocabulary needs a
+		// block that names its backends (a generic one stays in the portable quad-only core), and what
+		// a named block may use is the INTERSECTION of what its targets can do
+		Emitter emitter(backend, block.Targets);
 		String body = emitter.EmitBody(top.get(), "\t\t\t"_s);
 		if (!emitter.Ok()) {
 			result.Error = emitter.Reason();

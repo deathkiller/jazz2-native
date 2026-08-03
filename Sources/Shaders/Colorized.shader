@@ -11,17 +11,20 @@ void fragment() {
 	COLOR = gray * dye;
 }
 
-void fixed_function(pvr) {
+void fixed_function(pvr, psp) {
 	// Console fixed-function tier: gray = (r + g + b) * 0.5 and COLOR = gray * dye with
 	// dye = 1 + (color - 0.5) * 4. The textures this runs on are grayscale (fonts), so r = g = b and
 	// that "average" is really a 1.5x brightening; the product reaches 4.5 for a fully bright tint.
 	//
-	// PVR: a vertex colour cannot carry a multiplier above 1.0, and neither workaround alone is right -
-	// folding the excess into the offset colour adds a constant, which lifts a glyph's dark texels as
-	// much as its bright ones and blows the antialiased edges out, while simply clamping the multiplier
-	// leaves bright tints looking washed out. So the multiplier is split into whole units drawn as
-	// successive additive passes - the sum stays proportional to the texel, and the framebuffer
-	// saturates it exactly where the shader's own clamp would.
+	// This is the NO-COMBINER tier, which is why both of these consoles run the same code: a vertex
+	// colour cannot carry a multiplier above 1.0 on either, and neither has an output scale to make up
+	// the difference (the PVR always modulates; the GE's five texture functions combine one texel with
+	// the fragment colour and nothing else). Neither workaround alone is right - folding the excess into
+	// the offset colour adds a constant, which lifts a glyph's dark texels as much as its bright ones
+	// and blows the antialiased edges out, while simply clamping the multiplier leaves bright tints
+	// looking washed out. So the multiplier is split into whole units drawn as successive additive
+	// passes - the sum stays proportional to the texel, and the framebuffer saturates it exactly where
+	// the shader's own clamp would. Only the GX escapes the split, in its own block below.
 	vec3 gain = 1.5 * (1.0 + (COLOR.rgb - 0.5) * 4.0);
 	float alpha = 1.0 + (COLOR.a - 0.5) * 4.0;
 	int passes = clamp(int(ceil(max(0.0, max(max(gain.r, gain.g), gain.b)))), 1, 3);

@@ -14,10 +14,11 @@ The project requires following tools and libraries to build it successfully:
 -   C++ compiler with C++17 support --- any recent version of **GCC**, **Clang** and **MSVC**
     should work, **MinGW** and **Clang-CL** toolchains should be also supported
 -   **OpenGL** 3.3, **OpenGL|ES** 3.0 or **WebGL** 2.0 library @m_span{m-text m-dim} (alternatively **ANGLE**
-    or **Mesa** translation library) @m_endspan
+    or **Mesa** translation library, not required with the software renderer or on the
+    @ref consoles "consoles that have a fixed-function rendering backend") @m_endspan
 -   **GLEW** library @m_span{m-text m-dim} (required only on **Windows**) @m_endspan
--   **GLFW** or **SDL2** library @m_span{m-text m-dim} (not required on **Android** and **UWP**, because these
-    platforms use a different backend) @m_endspan
+-   **GLFW** or **SDL2** library @m_span{m-text m-dim} (not required on **Android**, **UWP** and most
+    @ref consoles "consoles", because these platforms use a different backend) @m_endspan
 -   **libcurl** library @m_span{m-text m-dim} (not required on **Emscripten** and **Windows**, because these
     platforms use a different backend) @m_endspan
 -   **zlib** library
@@ -70,6 +71,15 @@ make -j $(nproc) -C build
 @m_class{m-noindent}
 
 Everything should be built into the @cpp "build" @ce directory and ready to go.
+
+@m_class{m-noindent}
+
+Two offline tools are built alongside the game on desktop platforms and skipped when
+cross-compiling, because both of them run on the build machine:
+@ref asset-packer "AssetPacker" converts the original game data into the layout a given platform
+loads, and @ref shader-compiler "ShaderCompiler" preprocesses the `.shader` files into the generated
+headers that are committed to the repository @m_span{m-text m-dim} (so the game's own build never
+runs it) @m_endspan.
 
 @subsection building-android Building on Android
 
@@ -139,6 +149,30 @@ cmake -B build -D CMAKE_BUILD_TYPE=Debug -A x64 ^
 Additionaly, a code-signing certificate is required to create an installable `.msixbundle` package.
 See @ref building-config-params-uwp for more details.
 
+@subsection building-consoles Building for consoles
+
+Six consoles are supported, each cross-compiled with its own SDK and its own CMake toolchain file.
+The build is configured the same way as above --- @cpp "Build<Platform>.sh" @ce scripts in the
+repository root wrap it --- but every one of them also needs its toolchain installed, its own
+packaging step and, on four of them, a game content tree prepared in advance with
+@ref asset-packer "AssetPacker". All of that is documented in depth on a page of its own:
+
+Console | Toolchain | Build script | Details
+------- | --------- | ------------ | -------
+Sega Dreamcast | KallistiOS | @cpp "BuildDreamcast.sh" @ce | @ref consoles-dreamcast
+PlayStation Portable | pspdev | @cpp "BuildPsp.sh" @ce | @ref consoles-psp
+Nintendo Wii | devkitPPC + libogc | @cpp "BuildWii.sh" @ce | @ref consoles-wii
+Nintendo GameCube | devkitPPC + libogc | @cpp "BuildGameCube.sh" @ce | @ref consoles-gamecube
+PS Vita | VitaSDK | @cpp "BuildVita.sh" @ce | @ref consoles-vita
+Nintendo Switch | devkitA64 | --- | @ref consoles-switch
+
+@m_class{m-noindent}
+
+See @ref consoles "Building for consoles" for the toolchain installation, deployment to the device
+or an emulator, how to read the game's log on each of them, and what each console does and does not
+support. The game can also be built as a **libretro core** for RetroArch, see
+@ref consoles-libretro.
+
 - - -
 
 @subsection building-config-params Build configuration parameters
@@ -156,19 +190,29 @@ The following parameters can be used to customize the build:
 -   `NCINE_CREATE_CONTENT_SYMLINK` (default @cpp OFF @ce) --- Create symbolic link to the @cpp "Content" @ce game data directory in target directory
     -   Ignored on **Android**, **Emscripten**, **Nintendo Switch** and **UWP** platforms
 -   `NCINE_DOWNLOAD_DEPENDENCIES` (default @cpp ON @ce) --- Download all missing dependencies automatically
--   `NCINE_EMBED_SHADERS` (default @cpp ON @ce) --- Embed shader files in executable
--   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce) --- Preferred core backend
+-   `NCINE_BUILD_ASSET_PACKER` (default @cpp ON @ce) --- Build the offline @ref asset-packer "AssetPacker" tool
+    -   It runs on the build machine, so it's skipped for every cross-compiled target
+-   `NCINE_BUILD_LIBRETRO` (default @cpp OFF @ce) --- Build as a **libretro** core instead of an executable, see @ref consoles-libretro
+    -   Only `Software` and `OpenGL` are valid values of `NCINE_PREFERRED_RHI` in this configuration
+-   `NCINE_PREFERRED_BACKEND` (default @cpp "GLFW" @ce, @cpp "SDL2" @ce on **PS Vita** and **Nintendo Switch**) --- Preferred core backend
     -   Possible values: `GLFW`, `SDL2`, `SDL3`
-    -   Ignored on **Android** and **UWP** platforms
+    -   Ignored on **Android**, **UWP** and the @ref consoles "consoles with a bespoke window backend"
 -   `NCINE_PREFERRED_RHI` (default @cpp "OpenGL" @ce) --- Preferred rendering backend (RHI)
     -   Possible values:
         - `OpenGL` --- Uses OpenGL 3.3, OpenGL|ES 3.0 or WebGL 2.0 depending on platform (use `NCINE_RHI_GL_PROFILE_ES2` to force OpenGL|ES 2.0 profile)
         - `D3D11` --- Uses Direct3D 11 (Windows only)
         - `Vulkan` --- Uses Vulkan
         - `Software` --- Uses custom software renderer (no hardware acceleration, lower visual quality and performance)
--   `NCINE_RHI_SOFTWARE_FB16` (default @cpp OFF @ce) --- Use 16-bit (RGB565) screen framebuffer for the software renderer
+    -   Pinned to the console's only rendering backend on **Sega Dreamcast** (`PVR`), **Nintendo Wii**
+        and **Nintendo GameCube** (`GX`) and **PlayStation Portable** (`GU`); any other value is a
+        configure error there, see @ref consoles
+-   `NCINE_RHI_GL_PROFILE_ES2` (default @cpp OFF @ce, @cpp ON @ce on **PS Vita**) --- Request the **OpenGL|ES** 2.0 profile
+    -   Requires `NCINE_WITH_OPENGLES` or `NCINE_WITH_ANGLE`; compiles the ESSL 100 shader variants, which have no uniform buffer objects
+-   `NCINE_RHI_SOFTWARE_FB16` (default @cpp OFF @ce) --- Use a 16-bit (RGB565) screen framebuffer with the software renderer
+    -   Halves framebuffer memory and present bandwidth at the cost of color depth; ignored by the other backends
 -   `NCINE_VERSION_FROM_GIT` (default @cpp ON @ce) --- Set current game version from Git repository automatically
--   `NCINE_WITH_THREADS` (default @cpp ON @ce except on Emscripten) --- Allow to use multiple threads for better performance
+-   `NCINE_WITH_THREADS` (default @cpp ON @ce except on **Emscripten** and **PlayStation Portable**) --- Allow to use multiple threads for better performance
+    -   Multiplayer requires threads, so it's compiled out where they are unavailable
 -   `NCINE_WITH_OPENGLES` (default @cpp OFF @ce) --- Use **OpenGL|ES** library instead of **OpenGL**
 -   `NCINE_WITH_ANGLE` (default @cpp OFF @ce except on UWP) --- Enable Google **ANGLE** library support
 -   `NCINE_WITH_GLEW` (default @cpp ON @ce) --- Use **GLEW** library
@@ -176,8 +220,9 @@ The following parameters can be used to customize the build:
 -   `NCINE_WITH_WEBP` @m_class{m-label m-danger m-flat} **deprecated** --- Enable `.webp` image file support, requires **libwebp** library
 -   `NCINE_WITH_AUDIO` (default @cpp ON @ce) --- Enable audio support, requires **OpenAL** library
 -   `NCINE_WITH_VORBIS` (default @cpp ON @ce) --- Enable `.ogg` audio file support, requires **libvorbis** library
--   `NCINE_WITH_OPENMPT` (default @cpp ON @ce) --- Enable module music audio file support, requires **libopenmpt** library
+-   `NCINE_WITH_OPENMPT` (default @cpp ON @ce, forced @cpp OFF @ce on **PlayStation Portable**) --- Enable module music audio file support, requires **libopenmpt** library
     -   `NCINE_COMPILE_OPENMPT` (default @cpp OFF @ce) --- Download and compile **libopenmpt** library from source automatically
+    -   See @ref consoles-psp-limits for why it's disabled on **PlayStation Portable**
 -   `NCINE_WITH_ANGELSCRIPT` (default @cpp OFF @ce) --- Enable [AngelScript](https://www.angelcode.com/angelscript/) scripting support
     -   `ANGELSCRIPT_VERSION_TAG` allows to specify the version to be downloaded if @cpp NCINE_DOWNLOAD_DEPENDENCIES @ce is enabled
 -   `NCINE_WITH_LUA` @m_class{m-label m-danger m-flat} **deprecated** --- Enable [Lua](https://www.lua.org/) scripting support
@@ -187,7 +232,6 @@ The following parameters can be used to customize the build:
 @subsubsection building-config-params-android Platform-specific parameters for Android
 
 -   `NCINE_BUILD_ANDROID` (default @cpp OFF @ce) --- Enable building for **Android** platform
--   `NCINE_BUILD_LIBRETRO` (default @cpp OFF @ce) --- Enable building as **libretro** core
 -   `NCINE_ASSEMBLE_APK` (default @cpp ON @ce) --- Assemble Android APK file, requires with **Gradle**
 -   `NCINE_NDK_ARCHITECTURES` (default @cpp "arm64-v8a" @ce) --- Semicolon-separated list of target CPU architectures
     -   Possible values: `arm64-v8a` (for 64-bit ARM), `armeabi-v7a` (for 32-bit ARM), `x86`, `x86_64`
@@ -211,6 +255,7 @@ The following parameters can be used to customize the build:
 -   `DEATH_WITH_VC_LTL` (default @cpp ON @ce) --- Build with **VC-LTL** for lighter
     binaries, requires [VC-LTL](https://github.com/Chuyu-Team/VC-LTL5)
 -   `NCINE_COPY_DEPENDENCIES` (default @cpp ON @ce) --- Copy all required libraries to build target directory automatically
+-   `NCINE_INSTALL_SYSLIBS` (default @cpp OFF @ce) --- Install the required **MSVC** system libraries with CMake
 
 @subsubsection building-config-params-uwp Platform-specific parameters for Universal Windows Platform
 
@@ -234,6 +279,7 @@ The following parameters can be used to customize the build:
     -   Enabled by default on Windows platforms
 -   `DEATH_TRACE` (default @cpp ON @ce) --- Enable runtime event tracing, see @ref Asserts.h file
 -   `DEATH_TRACE_ASYNC` (default @cpp ON @ce if `NCINE_WITH_THREADS`) --- Enable asynchronous processing of event tracing for better performance
+    -   Always @cpp OFF @ce on the @ref consoles "consoles" and in the libretro core
 -   `DEATH_TRACE_LOG_PATH` --- Override path to trace log file if specified
     -   Also forces writing traces to file on some platforms (except on Android/Switch where it's already forced)
 -   `DEATH_USE_RUNTIME_CAST` (default @cpp ON @ce) --- Enable @ref Death::runtime_cast() and type information optimization
