@@ -347,7 +347,7 @@ namespace nCine::RHI::Software
 		if (width <= 0 || height <= 0) {
 			return;
 		}
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 		// 16-bit mode: the screen buffer stores native-endian RGB565 (2 bytes per pixel - half the memory
 		// and present bandwidth); render-target textures stay RGBA8 (see SwRaster.h)
 		constexpr std::size_t ScreenBpp = 2;
@@ -453,7 +453,7 @@ namespace nCine::RHI::Software
 		}
 	}
 
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 	// RGBA8 staging row for the RGB565 screen framebuffer, used by ApplyPendingSoftwareLighting below (its
 	// row kernels operate on 4-byte pixels). Main-thread-only, like the whole Combine intercept. Sized for
 	// the widest surface the tile renderer accepts.
@@ -547,7 +547,7 @@ namespace nCine::RHI::Software
 		// bit-identical to the scalar loop it replaced, see SwScanlineOps.h).
 		for (std::int32_t y = 0; y < vpH; y++) {
 			std::uint8_t* px;
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 			// The screen framebuffer is RGB565 in this mode; stage each touched row as RGBA8 so the row
 			// kernels below (wave shift, water tint, lighting combine) stay unchanged, then store it back
 			std::uint8_t* fbRow16 = fb.pixels + (std::size_t)(vpY + y) * fb.strideBytes + (std::size_t)vpX * 2;
@@ -595,7 +595,7 @@ namespace nCine::RHI::Software
 				BlendScanlineConstSrcAlpha(px, vpW, aboveWaterBlend);
 			}
 
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 			SwStoreFbSpan565(fbRow16, g_fb16RowStage, vpW);
 #endif
 		}

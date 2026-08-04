@@ -46,7 +46,7 @@ namespace Jazz2::Rendering
 			// by the backend instead
 			_view->SetClearMode(Viewport::ClearMode::Never);
 #else
-			_viewTexture = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, w, h);
+			_viewTexture = std::make_unique<Texture>(nullptr, Texture::ColorTargetFormat, w, h);
 			_view = std::make_unique<Viewport>(_viewTexture.get(), Viewport::DepthStencilFormat::None);
 #endif
 
@@ -60,7 +60,7 @@ namespace Jazz2::Rendering
 			_view->SetScissorRect(bounds);
 #else
 			_view->RemoveAllTextures();
-			_viewTexture->Init(nullptr, Texture::Format::RGB8, w, h);
+			_viewTexture->Init(nullptr, Texture::ColorTargetFormat, w, h);
 			_view->SetTexture(_viewTexture.get());
 #endif
 		}

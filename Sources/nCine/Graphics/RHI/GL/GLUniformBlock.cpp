@@ -1,7 +1,7 @@
 #include "GLUniformBlock.h"
 #include "GLShaderProgram.h"
 #include "GLDebug.h"
-#include "../../IGfxCapabilities.h"
+#include "../IRhiCapabilities.h"
 #include "../../../ServiceLocator.h"
 
 #include <cstring>
@@ -71,7 +71,7 @@ namespace nCine::RHI::GL
 					("Uniform {} name length is {}, which is more than {}", i, uniformNameLengths[i], GLUniform::MaxNameLength), );
 #endif
 
-#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(RHI_GL_PROFILE_CORE) && !defined(DEATH_TARGET_EMSCRIPTEN)
 				glGetActiveUniformName(program, uniformIndices[i], MaxNameLength, &uniformNameLengths[i], blockUniform.name_);
 #else
 				// Some drivers do not accept a `nullptr` for size and type
@@ -86,7 +86,7 @@ namespace nCine::RHI::GL
 		GL_LOG_ERRORS();
 
 		// Align to the uniform buffer offset alignment or `glBindBufferRange()` will generate an `INVALID_VALUE` error
-		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		static const std::int32_t offsetAlignment = theServiceLocator().GetRhiCapabilities().GetValue(IRhiCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 		alignAmount_ = (offsetAlignment - size_ % offsetAlignment) % offsetAlignment;
 		size_ += alignAmount_;
 #endif
@@ -110,7 +110,7 @@ namespace nCine::RHI::GL
 		name_[length] = '\0';
 
 		// Align to the uniform buffer offset alignment or `glBindBufferRange()` will generate an `INVALID_VALUE` error
-		static const std::int32_t offsetAlignment = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+		static const std::int32_t offsetAlignment = theServiceLocator().GetRhiCapabilities().GetValue(IRhiCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 		alignAmount_ = (offsetAlignment - size_ % offsetAlignment) % offsetAlignment;
 		size_ += alignAmount_;
 	}

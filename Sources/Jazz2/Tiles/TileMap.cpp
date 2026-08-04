@@ -2289,7 +2289,7 @@ namespace Jazz2::Tiles
 			_camera = std::make_unique<Camera>();
 			_camera->SetOrthoProjection(0.0f, (float)width, 0.0f, (float)height);
 			_camera->SetView(0, 0, 0, 1);
-			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+			_target = std::make_unique<Texture>(nullptr, Texture::ColorTargetFormat, width, height);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->SetRootNode(this);
 			_view->SetCamera(_camera.get());

@@ -23,7 +23,7 @@ namespace Jazz2::Rendering
 		_camera->SetView(0.0f, 0.0f, 0.0f, 1.0f);
 
 		if (notInitialized) {
-			_target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, width, height);
+			_target = std::make_unique<Texture>(nullptr, Texture::ColorTargetFormat, width, height);
 			_target->SetWrap(SamplerWrapping::ClampToEdge);
 			_view = std::make_unique<Viewport>(_target.get(), Viewport::DepthStencilFormat::None);
 			_view->SetRootNode(this);
@@ -31,7 +31,7 @@ namespace Jazz2::Rendering
 			//_view->setClearMode(Viewport::ClearMode::Never);
 		} else {
 			_view->RemoveAllTextures();
-			_target->Init(nullptr, Texture::Format::RGB8, width, height);
+			_target->Init(nullptr, Texture::ColorTargetFormat, width, height);
 			_view->SetTexture(_target.get());
 		}
 		_target->SetMagFiltering(SamplerFilter::Linear);

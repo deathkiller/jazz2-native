@@ -29,9 +29,9 @@
 
 using namespace Death::Containers;
 
-namespace nCine
+namespace nCine::RHI
 {
-	class IGfxCapabilities;
+	class IRhiCapabilities;
 }
 
 // Some OpenGL|ES 3.0/3.1 headers (notably aarch64 Mesa) ship a <GLES2/gl2ext.h> that omits the KHR_debug
@@ -40,7 +40,7 @@ namespace nCine
 // headers; the #ifndef guards make this a no-op wherever the GL/ES headers already provide them. (This avoids
 // pulling <GLES3/gl32.h> into the header, which would define GL_ES_VERSION_3_2 mid-translation-unit and flip
 // GL_ES_VERSION_3_2-gated declarations, e.g. GLBufferObject::TexBuffer.)
-#if defined(WITH_OPENGLES) && GL_ES_VERSION_3_0
+#if defined(RHI_GL_PROFILE_ES) && GL_ES_VERSION_3_0
 #	ifndef GL_BUFFER_KHR
 #		define GL_BUFFER_KHR 0x82E0
 #	endif
@@ -104,7 +104,7 @@ namespace nCine::RHI::GL
 			Texture = GL_TEXTURE,
 			RenderBuffer = GL_RENDERBUFFER,
 			FrameBuffer = GL_FRAMEBUFFER,
-#	if ((defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21) || (!defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES))) && (GL_ES_VERSION_3_0 || (defined(RHI_GL_PROFILE_ES2) && !defined(DEATH_TARGET_VITA)))
+#	if ((defined(DEATH_TARGET_ANDROID) && __ANDROID_API__ >= 21) || (!defined(DEATH_TARGET_ANDROID) && defined(RHI_GL_PROFILE_ES))) && (GL_ES_VERSION_3_0 || (defined(RHI_GL_PROFILE_ES2) && !defined(DEATH_TARGET_VITA)))
 			Buffer = GL_BUFFER_KHR,
 			Shader = GL_SHADER_KHR,
 			Program = GL_PROGRAM_KHR,
@@ -144,9 +144,9 @@ namespace nCine::RHI::GL
 		/**
 		 * @brief Queries debug capabilities and enables debug output if available
 		 *
-		 * @param gfxCaps	Graphics capabilities used to detect `KHR_debug` support
+		 * @param caps	Graphics capabilities used to detect `KHR_debug` support
 		 */
-		static void Init(const IGfxCapabilities& gfxCaps);
+		static void Init(const IRhiCapabilities& caps);
 		/** @brief Resets the running debug group id counter */
 		static inline void Reset() {
 			debugGroupId_ = 0;

@@ -19,7 +19,7 @@ namespace nCine::RHI::GL
 		// Real OpenGL|ES 2.0 profile: ESSL 100 (attribute/varying/gl_FragColor, no UBOs, no gl_VertexID).
 		// The engine feeds the ProgramVariant's *100 (Essl100Emitter) sources on this path.
 		static constexpr StringView CommonShaderVersion = "#version 100\n"_s;
-#elif (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
+#elif (defined(RHI_GL_PROFILE_ES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 		static constexpr StringView CommonShaderVersion = "#version 300 es\n"_s;
 #else
 		static constexpr StringView CommonShaderVersion = "#version 330\n"_s;

@@ -16,7 +16,8 @@ namespace nCine
 	class AudioReaderWav : public IAudioReader
 	{
 	public:
-		AudioReaderWav(std::unique_ptr<Death::IO::Stream> fileHandle);
+		/** @param bytesPerSample Needed to byte-swap the samples on big-endian targets */
+		AudioReaderWav(std::unique_ptr<Death::IO::Stream> fileHandle, std::int32_t bytesPerSample);
 
 		AudioReaderWav(const AudioReaderWav&) = delete;
 		AudioReaderWav& operator=(const AudioReaderWav&) = delete;
@@ -26,5 +27,6 @@ namespace nCine
 
 	private:
 		std::unique_ptr<Death::IO::Stream> fileHandle_;
+		std::int32_t bytesPerSample_;
 	};
 }

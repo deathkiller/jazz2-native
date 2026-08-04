@@ -6,9 +6,9 @@
 
 using namespace Death::Containers;
 
-namespace nCine
+namespace nCine::RHI
 {
-	class IGfxCapabilities;
+	class IRhiCapabilities;
 }
 
 namespace nCine::RHI::Software
@@ -50,8 +50,8 @@ namespace nCine::RHI::Software
 			}
 		};
 
-		static void Init(const IGfxCapabilities& gfxCaps) {
-			static_cast<void>(gfxCaps);
+		static void Init(const IRhiCapabilities& caps) {
+			static_cast<void>(caps);
 		}
 		static inline void Reset() {}
 

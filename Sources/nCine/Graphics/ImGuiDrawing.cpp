@@ -61,7 +61,7 @@ namespace nCine
 #endif
 
 		io.BackendRendererUserData = this;
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		io.BackendRendererName = "nCine_OpenGL_ES";
 #else
 		io.BackendRendererName = "nCine_OpenGL";
@@ -73,7 +73,7 @@ namespace nCine
 		io.IniFilename = iniFilename;
 #endif*/
 
-#if !(defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if !(defined(RHI_GL_PROFILE_ES) && !GL_ES_VERSION_3_2) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;	// We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #endif
 		io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;	// We can honor ImGuiPlatformIO::Textures[] requests during render.

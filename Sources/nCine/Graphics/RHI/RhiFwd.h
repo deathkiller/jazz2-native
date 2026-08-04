@@ -7,7 +7,7 @@
 // Compile-time RHI backend selection — exactly one backend is compiled into a binary. The OpenGL
 // family backend (OpenGL 3.3 core / OpenGL ES 3.0 / WebGL 2 / ANGLE) is the default when no
 // `WITH_RHI_*` macro is defined by the build.
-#if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && !defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PVR) && !defined(WITH_RHI_GU)
+#if !defined(WITH_RHI_GL) && !defined(WITH_RHI_D3D11) && !defined(WITH_RHI_VULKAN) && !defined(WITH_RHI_SOFTWARE) && !defined(WITH_RHI_GX) && !defined(WITH_RHI_PVR) && !defined(WITH_RHI_GU) && !defined(WITH_RHI_GXM)
 #	define WITH_RHI_GL
 #endif
 
@@ -40,6 +40,7 @@ namespace nCine::RHI::GL
 	class GLRenderTarget;
 	class GLVertexArrayObject;
 	class GLVertexFormat;
+	class GLRhiCapabilities;
 	class GLDebug;
 }
 
@@ -65,6 +66,9 @@ namespace nCine::RHI
 	using RenderTarget = RHI::GL::GLRenderTarget;
 	using VertexArray = RHI::GL::GLVertexArrayObject;
 	using VertexFormat = RHI::GL::GLVertexFormat;
+
+	// Runtime capabilities of the selected backend
+	using Capabilities = RHI::GL::GLRhiCapabilities;
 
 	// Debug output and object labelling
 	using Debug = RHI::GL::GLDebug;
@@ -117,6 +121,7 @@ namespace nCine::RHI::Software
 	class SwRenderTarget;
 	class SwVertexArray;
 	class SwVertexFormat;
+	class SwRhiCapabilities;
 	class SwDebug;
 }
 
@@ -142,6 +147,9 @@ namespace nCine::RHI
 	using RenderTarget = RHI::Software::SwRenderTarget;
 	using VertexArray = RHI::Software::SwVertexArray;
 	using VertexFormat = RHI::Software::SwVertexFormat;
+
+	// Runtime capabilities of the selected backend
+	using Capabilities = RHI::Software::SwRhiCapabilities;
 
 	// Debug output and object labelling
 	using Debug = RHI::Software::SwDebug;
@@ -194,6 +202,7 @@ namespace nCine::RHI::GX
 	class GxRenderTarget;
 	class GxVertexArray;
 	class GxVertexFormat;
+	class GxRhiCapabilities;
 	class GxDebug;
 }
 
@@ -217,6 +226,9 @@ namespace nCine::RHI
 	using RenderTarget = RHI::GX::GxRenderTarget;
 	using VertexArray = RHI::GX::GxVertexArray;
 	using VertexFormat = RHI::GX::GxVertexFormat;
+
+	// Runtime capabilities of the selected backend
+	using Capabilities = RHI::GX::GxRhiCapabilities;
 
 	// Debug output and object labelling
 	using Debug = RHI::GX::GxDebug;
@@ -283,6 +295,7 @@ namespace nCine::RHI::PVR
 	class PvrRenderTarget;
 	class PvrVertexArray;
 	class PvrVertexFormat;
+	class PvrRhiCapabilities;
 	class PvrDebug;
 }
 
@@ -306,6 +319,9 @@ namespace nCine::RHI
 	using RenderTarget = RHI::PVR::PvrRenderTarget;
 	using VertexArray = RHI::PVR::PvrVertexArray;
 	using VertexFormat = RHI::PVR::PvrVertexFormat;
+
+	// Runtime capabilities of the selected backend
+	using Capabilities = RHI::PVR::PvrRhiCapabilities;
 
 	// Debug output and object labelling
 	using Debug = RHI::PVR::PvrDebug;
@@ -373,6 +389,7 @@ namespace nCine::RHI::GU
 	class GuRenderTarget;
 	class GuVertexArray;
 	class GuVertexFormat;
+	class GuRhiCapabilities;
 	class GuDebug;
 }
 
@@ -397,8 +414,94 @@ namespace nCine::RHI
 	using VertexArray = RHI::GU::GuVertexArray;
 	using VertexFormat = RHI::GU::GuVertexFormat;
 
+	// Runtime capabilities of the selected backend
+	using Capabilities = RHI::GU::GuRhiCapabilities;
+
 	// Debug output and object labelling
 	using Debug = RHI::GU::GuDebug;
+
+	/**
+		@brief Locates a sub-range within a buffer object, together with its mapped memory
+	*/
+	struct BufferRange
+	{
+		BufferRange()
+			: object(nullptr), size(0), offset(0), mapBase(nullptr) {}
+
+		/** @brief Buffer object the range belongs to */
+		Buffer* object;
+		/** @brief Size of the range in bytes */
+		std::uint32_t size;
+		/** @brief Byte offset of the range within the buffer object */
+		std::uint32_t offset;
+		/** @brief Base pointer of the mapped (or host) buffer memory */
+		std::uint8_t* mapBase;
+	};
+}
+
+#elif defined(WITH_RHI_GXM)
+
+// Rendering capability flags of the selected backend (see the OpenGL arm above for the meaning). The PS Vita
+// backend drives the console's own graphics API (sceGxm) directly, in the same spirit as the PVR/GX/GU
+// backends of the older consoles - but the Vita's PowerVR SGX is a UNIFIED-SHADER part and sceGxm is a
+// shader-only API (there is no texture-combiner stage to configure), so this is a full-pipeline backend like
+// OpenGL or Direct3D 11: both capabilities are advertised and the whole bloom / lighting / combine / rescale
+// chain runs. What it removes compared to the OpenGL path on the same console is only vitaGL, the
+// OpenGL|ES 2.0 translation layer that sits between the engine and sceGxm.
+#define RHI_CAP_SHADERS
+#define RHI_CAP_FRAMEBUFFERS
+
+namespace nCine::RHI::GXM
+{
+	class GxmDevice;
+	class GxmTexture;
+	class GxmBufferObject;
+	class GxmShader;
+	class GxmShaderProgram;
+	class GxmShaderUniforms;
+	class GxmShaderUniformBlocks;
+	class GxmUniform;
+	class GxmUniformBlock;
+	class GxmUniformCache;
+	class GxmUniformBlockCache;
+	class GxmAttribute;
+	class GxmFramebuffer;
+	class GxmRenderbuffer;
+	class GxmRenderTarget;
+	class GxmVertexArray;
+	class GxmVertexFormat;
+	class GxmRhiCapabilities;
+	class GxmDebug;
+}
+
+namespace nCine::RHI
+{
+	// Backend-neutral names for the classes of the selected backend. The render pipeline only refers
+	// to these aliases, so that additional backends only have to provide the same set of names with
+	// the same surface. This header only forward-declares them — include `Rhi.h` for the definitions.
+	using Device = RHI::GXM::GxmDevice;
+	using Texture = RHI::GXM::GxmTexture;
+	using Buffer = RHI::GXM::GxmBufferObject;
+	using Shader = RHI::GXM::GxmShader;
+	using ShaderProgram = RHI::GXM::GxmShaderProgram;
+	using ShaderUniforms = RHI::GXM::GxmShaderUniforms;
+	using ShaderUniformBlocks = RHI::GXM::GxmShaderUniformBlocks;
+	using Uniform = RHI::GXM::GxmUniform;
+	using UniformBlock = RHI::GXM::GxmUniformBlock;
+	using UniformCache = RHI::GXM::GxmUniformCache;
+	using UniformBlockCache = RHI::GXM::GxmUniformBlockCache;
+	using Attribute = RHI::GXM::GxmAttribute;
+	using Framebuffer = RHI::GXM::GxmFramebuffer;
+	using Renderbuffer = RHI::GXM::GxmRenderbuffer;
+	using RenderTarget = RHI::GXM::GxmRenderTarget;
+	using VertexArray = RHI::GXM::GxmVertexArray;
+	using VertexFormat = RHI::GXM::GxmVertexFormat;
+
+	// Runtime capabilities of the selected backend
+	using Capabilities = RHI::GXM::GxmRhiCapabilities;
+
+	// Debug output and object labelling
+	using Debug = RHI::GXM::GxmDebug;
 
 	/**
 		@brief Locates a sub-range within a buffer object, together with its mapped memory
@@ -447,6 +550,7 @@ namespace nCine::RHI::D3D11
 	class D3D11RenderTarget;
 	class D3D11VertexArray;
 	class D3D11VertexFormat;
+	class D3D11RhiCapabilities;
 	class D3D11Debug;
 }
 
@@ -472,6 +576,9 @@ namespace nCine::RHI
 	using RenderTarget = RHI::D3D11::D3D11RenderTarget;
 	using VertexArray = RHI::D3D11::D3D11VertexArray;
 	using VertexFormat = RHI::D3D11::D3D11VertexFormat;
+
+	// Runtime capabilities of the selected backend
+	using Capabilities = RHI::D3D11::D3D11RhiCapabilities;
 
 	// Debug output and object labelling
 	using Debug = RHI::D3D11::D3D11Debug;
@@ -524,6 +631,7 @@ namespace nCine::RHI::Vulkan
 	class VulkanRenderTarget;
 	class VulkanVertexArray;
 	class VulkanVertexFormat;
+	class VulkanRhiCapabilities;
 	class VulkanDebug;
 }
 
@@ -549,6 +657,9 @@ namespace nCine::RHI
 	using RenderTarget = RHI::Vulkan::VulkanRenderTarget;
 	using VertexArray = RHI::Vulkan::VulkanVertexArray;
 	using VertexFormat = RHI::Vulkan::VulkanVertexFormat;
+
+	// Runtime capabilities of the selected backend
+	using Capabilities = RHI::Vulkan::VulkanRhiCapabilities;
 
 	// Debug output and object labelling
 	using Debug = RHI::Vulkan::VulkanDebug;

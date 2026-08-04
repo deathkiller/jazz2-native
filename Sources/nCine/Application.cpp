@@ -49,7 +49,6 @@ extern "C"
 #include "Base/Algorithms.h"
 #include "Base/Random.h"
 #include "IAppEventHandler.h"
-#include "Graphics/GfxCapabilities.h"
 #include "Graphics/RenderResources.h"
 #include "Graphics/RenderQueue.h"
 #include "Graphics/ScreenViewport.h"
@@ -70,7 +69,13 @@ extern "C"
 #include <IO/FileSystem.h>
 
 #if defined(WITH_AUDIO)
-#	include "Audio/ALAudioDevice.h"
+#	if defined(WITH_OPENAL)
+#		include "Audio/Backends/AL/ALAudioDevice.h"
+#	elif defined(WITH_ASND)
+#		include "Audio/Backends/ASND/AsndAudioDevice.h"
+#	elif defined(WITH_AICA)
+#		include "Audio/Backends/AICA/AicaAudioDevice.h"
+#	endif
 #endif
 
 #if defined(WITH_THREADS)
@@ -753,7 +758,13 @@ namespace nCine
 
 #if defined(WITH_AUDIO)
 		if (appCfg_.withAudio) {
+#	if defined(WITH_OPENAL)
 			theServiceLocator().RegisterAudioDevice(std::make_unique<ALAudioDevice>());
+#	elif defined(WITH_ASND)
+			theServiceLocator().RegisterAudioDevice(std::make_unique<AsndAudioDevice>());
+#	elif defined(WITH_AICA)
+			theServiceLocator().RegisterAudioDevice(std::make_unique<AicaAudioDevice>());
+#	endif
 		}
 #endif
 #if defined(WITH_THREADS)
@@ -763,15 +774,15 @@ namespace nCine
 #endif
 
 		if (appCfg_.withGraphics) {
-			theServiceLocator().RegisterGfxCapabilities(std::make_unique<GfxCapabilities>());
-			const auto& gfxCapabilities = theServiceLocator().GetGfxCapabilities();
-			RHI::Debug::Init(gfxCapabilities);
+			theServiceLocator().RegisterRhiCapabilities(std::make_unique<RHI::Capabilities>());
+			const auto& rhiCapabilities = theServiceLocator().GetRhiCapabilities();
+			RHI::Debug::Init(rhiCapabilities);
 
 #if !defined(WITH_ANGLE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !defined(DEATH_TARGET_WINDOWS_RT)
 			if (appCfg_.fixedBatchSize > 0) {
 				LOGI("Using fixed batch size: {}", appCfg_.fixedBatchSize);
 			} else {
-				const auto& info = gfxCapabilities.GetInfoStrings();
+				const auto& info = rhiCapabilities.GetInfoStrings();
 				const StringView vendor = info.vendor;
 				const StringView renderer = info.renderer;
 				// Some GPUs don't work with dynamic batch size, so it refuses to render VBOs (shows a black screen), disable it for them

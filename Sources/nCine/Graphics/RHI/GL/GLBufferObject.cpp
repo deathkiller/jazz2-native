@@ -77,7 +77,7 @@ namespace nCine::RHI::GL
 		GL_LOG_ERRORS();
 	}
 
-#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
+#if defined(RHI_GL_PROFILE_CORE) && !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM))
 	void GLBufferObject::BufferStorage(GLsizeiptr size, const GLvoid* data, GLbitfield flags)
 	{
 		TracyGpuZone("glBufferStorage");
@@ -185,7 +185,7 @@ namespace nCine::RHI::GL
 #endif
 	}
 
-#if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
+#if defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_2
 	void GLBufferObject::TexBuffer(GLenum internalformat)
 	{
 		FATAL_ASSERT(target_ == GL_TEXTURE_BUFFER);

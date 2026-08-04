@@ -4,35 +4,40 @@
 #include "../../../nCine/Application.h"
 #include "../../../nCine/I18n.h"
 
-// Rendering backend (RHI) currently compiled in. The non-OpenGL backends take precedence - the OpenGL
-// family backend then distinguishes WebGL / OpenGL|ES. The software renderer additionally reports the
-// optional 16-bit (RGB565) screen-framebuffer mode.
+// Rendering backend (RHI) currently compiled in. The non-OpenGL backends take precedence; the OpenGL family
+// backend reports which of its profiles was built (see `NCINE_RHI_GL_PROFILE`).
 #if defined(WITH_RHI_SOFTWARE)
-#	if defined(RHI_SOFTWARE_FB16)
-#		define _i1 "\nSoftware renderer (16-bit)"
-#	else
-#		define _i1 "\nSoftware renderer"
-#	endif
+#	define _i1a "\nSoftware renderer"
 #elif defined(WITH_RHI_D3D11)
-#	define _i1 "\nDirect3D 11"
+#	define _i1a "\nDirect3D 11"
 #elif defined(WITH_RHI_VULKAN)
-#	define _i1 "\nVulkan"
+#	define _i1a "\nVulkan"
+#elif defined(WITH_RHI_GXM)
+#	define _i1a "\nGXM"
 #elif defined(WITH_RHI_GX)
-#	define _i1 "\nGX (fixed-function)"
+#	define _i1a "\nGX (fixed-function)"
 #elif defined(WITH_RHI_PVR)
-#	define _i1 "\nPowerVR (fixed-function)"
+#	define _i1a "\nPowerVR (fixed-function)"
 #elif defined(WITH_RHI_GU)
-#	define _i1 "\nGU (fixed-function)"
-#elif defined(DEATH_TARGET_EMSCRIPTEN)
-#	define _i1 "\nWebGL"
-#elif defined(WITH_OPENGLES)
-#	if defined(RHI_GL_PROFILE_ES2)
-#		define _i1 "\nOpenGL│ES 2.0"
+#	define _i1a "\nGU (fixed-function)"
+#elif defined(RHI_GL_PROFILE_ES2)
+#	define _i1a "\nOpenGL│ES 2.0"
+#elif defined(RHI_GL_PROFILE_ES3)
+#	if defined(DEATH_TARGET_EMSCRIPTEN)
+#		define _i1a "\nWebGL 2.0"
 #	else
-#		define _i1 "\nOpenGL│ES"
+#		define _i1a "\nOpenGL│ES 3.0"
 #	endif
 #else
-#	define _i1 "\nOpenGL"
+#	define _i1a "\nOpenGL 3.3"
+#endif
+
+// Both backends that own their presented surface's pixel format additionally report the optional
+// 16-bit (RGB565) framebuffer mode (`NCINE_RHI_USE_FB16`)
+#if defined(RHI_USE_FB16)
+#	define _i1 _i1a " (16-bit)"
+#else
+#	define _i1 _i1a
 #endif
 
 #if defined(DEATH_TARGET_WINDOWS_RT)

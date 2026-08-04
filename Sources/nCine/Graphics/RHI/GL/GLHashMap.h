@@ -82,7 +82,7 @@ namespace nCine::RHI::GL
 				case GL_UNIFORM_BUFFER:
 					value = 2;
 					break;
-#if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0)
+#if defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_0
 				// Pixel buffer objects are OpenGL ES 3.0 (and desktop GL). A real ES 2.0 target such as PS Vita's
 				// vitaGL neither declares these enums nor ever binds a PBO, so the cases exist only where available.
 				case GL_PIXEL_PACK_BUFFER:
@@ -92,7 +92,7 @@ namespace nCine::RHI::GL
 					value = 4;
 					break;
 #endif
-#if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
+#if defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_2
 				case GL_TEXTURE_BUFFER:
 					value = 5;
 					break;
@@ -123,7 +123,7 @@ namespace nCine::RHI::GL
 			std::uint32_t value = 0;
 
 			switch (key) {
-#if !defined(WITH_OPENGLES) // not available in OpenGL ES
+#if defined(RHI_GL_PROFILE_CORE) // not available in OpenGL ES
 				case GL_TEXTURE_1D:
 					value = 0;
 					break;
@@ -131,14 +131,14 @@ namespace nCine::RHI::GL
 				case GL_TEXTURE_2D:
 					value = 1;
 					break;
-#if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0)
+#if defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_0
 				// 3D textures are OpenGL ES 3.0 (and desktop GL), unavailable and never bound on a real ES 2.0
 				// target such as PS Vita's vitaGL.
 				case GL_TEXTURE_3D:
 					value = 2;
 					break;
 #endif
-#if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
+#if defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_2
 				case GL_TEXTURE_BUFFER:
 					value = 3;
 					break;

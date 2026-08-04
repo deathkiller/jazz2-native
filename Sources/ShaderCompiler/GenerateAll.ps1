@@ -187,6 +187,19 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "ok: software fragments -> Generated\SwGeneratedShaders.h"
 
+# Emit the aggregate CgGeneratedShaders.h consumed by the PS Vita's native sceGxm backend: the Cg dialect
+# of the HLSL emitter translates both stages of every program variant, and the backend compiles them on
+# the console through SceShaccCg. Kept out of the per-shader headers on purpose - those carry the
+# precompiled DXBC and SPIR-V blobs, which only a Windows run can produce, so a machine without them
+# would write nulls over that binary data; Cg needs no external compiler and regenerates anywhere.
+$cgGenPath = Join-Path $outDir 'CgGeneratedShaders.h'
+& $tool --emit-cg $cgGenPath @($shaders | ForEach-Object { $_.FullName })
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "error: failed to emit CgGeneratedShaders.h"
+    exit 1
+}
+Write-Host "ok: Cg stage sources -> Generated\CgGeneratedShaders.h"
+
 # Emit the aggregate fixed-function effect headers consumed by the console backends: the
 # fixed-function transpiler lowers each program variant's void fixed_function([pvr|gx|psp]) block
 # into a C++ effect function over the EffectContext contract (FixedFunctionPass.h). A

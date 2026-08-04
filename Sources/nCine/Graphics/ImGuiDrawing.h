@@ -57,7 +57,7 @@ namespace nCine
 	private:
 		bool withSceneGraph_;
 		HashMap<RHI::Texture*, std::unique_ptr<RHI::Texture>> textures_;
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN) || !defined(WITH_RHI_GL)
+#if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN) || !defined(WITH_RHI_GL)
 		// Sub-rect updates are repacked into a contiguous buffer where GL_UNPACK_ROW_LENGTH is unavailable
 		// (OpenGL ES / WebGL) or the backend is not OpenGL at all
 		SmallVector<char, 0> tempTexBuffer_;

@@ -14,32 +14,34 @@ The primary mode turns one `.shader` file into one generated header:
 
 ```
 ShaderCompiler <input.shader> -o <output.h> [-n <namespace>] [--glslang <path>]
-ShaderCompiler <input.shader> --check | --essl100-check | --hlsl | --vulkan
+ShaderCompiler <input.shader> --check | --essl100-check | --hlsl | --cg | --vulkan
 ```
 
 | Option | Meaning |
 | --- | --- |
-| `-o <output.h>` | Path of the generated C++ header. Required unless one of the four dump switches is given |
+| `-o <output.h>` | Path of the generated C++ header. Required unless one of the five dump switches is given |
 | `-n <namespace>` | Namespace for the generated program data (default `ShaderArtifacts`); `::` nesting is allowed, an empty name, a leading digit or a character outside `[A-Za-z0-9_:]` is an error |
 | `--glslang <path>` | `glslangValidator` used to compile the embedded SPIR-V; otherwise discovered via `VULKAN_SDK\Bin`, `VULKAN_SDK\Bin32` and `PATH`. Without it the SPIR-V fields are emitted as null (Windows-only integration) |
 | `--no-dxbc` | Embed the HLSL stage sources instead of precompiled DXBC bytecode (see the Direct3D 11 section below) |
 | `--check` | Parse and print a human-readable reflection dump to stdout instead of writing output |
 | `--essl100-check` (or `--target essl100`) | Print the ESSL 100 (OpenGL ES 2.0) transform of every variant's stage sources to stdout, for inspection (see below). `essl100` is the only accepted `--target` value |
 | `--hlsl` | Print the HLSL (Shader Model 4/5) transform of every stage to stdout |
+| `--cg` | Print the Cg transform of every stage to stdout, in the dialect the PS Vita's sceGxm backend compiles (see below) |
 | `--vulkan` | Print the Vulkan GLSL (`#version 450`) transform of every stage to stdout — does not require glslang |
 | `--help`, `-h`, `/?` | Print the usage text (to stderr) and exit successfully |
 
-The four dump switches write nothing — they print to stdout and never touch the committed
+The five dump switches write nothing — they print to stdout and never touch the committed
 artifacts. They are not mutually exclusive but they are ordered: when several are combined the
-first of `--essl100-check`, `--hlsl`, `--vulkan`, `--check` wins and the others are ignored.
+first of `--essl100-check`, `--hlsl`, `--cg`, `--vulkan`, `--check` wins and the others are ignored.
 `--glslang` is ignored by every dump path.
 
-Five **standalone modes** are recognized only as the *first* argument (anywhere else they are
+Six **standalone modes** are recognized only as the *first* argument (anywhere else they are
 rejected as an unknown option):
 
 ```
 ShaderCompiler --emit-types <output.h>
 ShaderCompiler --emit-sw-generated <output.h> <input.shader ...>
+ShaderCompiler --emit-cg <output.h> <input.shader ...>
 ShaderCompiler --emit-fixed-function <pvr|gx|psp> <output.h> <input.shader ...>
 ShaderCompiler --hlsl-check <input.shader ...>
 ShaderCompiler --spirv-check [--glslang <path>] <input.shader ...>
@@ -49,6 +51,7 @@ ShaderCompiler --spirv-check [--glslang <path>] <input.shader ...>
 | --- | --- |
 | `--emit-types` | Write the shared reflection-types header (`Generated/ShaderCompilerTypes.h`) and nothing else |
 | `--emit-sw-generated` | Transpile the fragment stage of every variant of every input to C++ and write the aggregate `SwGeneratedShaders.h` consumed by the software renderer. Shaders outside the supported subset are **declined** and omitted (the printed summary lists each with its reason), so this mode never fails on unsupported input. It is also the only path that builds stage sources with `SOFTWARE_RENDERER` defined |
+| `--emit-cg` | Transform every variant of every input to Cg and write the aggregate `CgGeneratedShaders.h` consumed by the PS Vita's sceGxm backend (see below). Like the software transpiler it never fails on unsupported input — a declined variant is omitted and listed in the summary |
 | `--emit-fixed-function` | Transpile the applicable `fixed_function` block of every variant of every input and write the aggregate `PvrGeneratedEffects.h` / `GxGeneratedEffects.h` / `GuGeneratedEffects.h` (see below). Unlike the software transpiler, an invalid block is a **hard error** |
 | `--hlsl-check` | Emit the VS + PS HLSL of every variant and compile each stage via `D3DCompile` (`vs_5_0`/`ps_5_0`), printing a pass/fail table. Windows only (`d3dcompiler_47.dll`); writes nothing |
 | `--spirv-check` | Emit the Vulkan GLSL of every variant and compile each stage to SPIR-V via `glslangValidator`, printing a pass/fail table. Windows only; writes nothing |
@@ -667,7 +670,7 @@ ES 2.0 uses a **different dialect** — ESSL 100 (`#version 100`) — so it need
 different source, which `Essl100.h`/`.cpp` produces from the already-lowered modern-GLSL stage.
 Every generated header carries that lowering next to the modern one (`_Vs100`/`_Fs100`, the
 `ProgramVariant::VsSource100`/`FsSource100` fields), and the engine consumes it under
-`NCINE_RHI_GL_PROFILE_ES2`; `#version 100` (like the other versions) is injected by the engine, not
+`NCINE_RHI_GL_PROFILE=ES2`; `#version 100` (like the other versions) is injected by the engine, not
 the tool. The ES2 profile additionally links this emitter into the game, so a runtime-compiled
 `.shader` gets the same lowering at load time. `--essl100-check` prints the transform of every
 variant for inspection without writing anything.
@@ -725,6 +728,40 @@ HLSL sources (`HlslVsSource`/`HlslFsSource`) as before and the D3D11 backend run
 dependency of the generated artifacts — headers built without it still compile everywhere. All the
 D3D11 artifacts (blobs or sources) are gated behind `#if defined(WITH_RHI_D3D11)`, so other backend
 builds carry none of them.
+
+## PlayStation Vita target (Cg → GXP on the console)
+
+`sceGxm` consumes compiled GXP shader binaries, and the VitaSDK ships no offline compiler for them:
+the only Cg compiler for the platform is `libshacccg.suprx`, a firmware module extracted from the
+console itself. So unlike every other precompiled target, this one ships **source** —
+`--emit-cg` writes `Generated/CgGeneratedShaders.h`, two Cg stage strings per program variant, and
+the backend compiles them at load time through vitaShaRK. That firmware module is therefore a hard
+requirement of the GXM backend, which says so explicitly at startup when it is missing — and of the
+platform as a whole, since the vitaGL alternative compiles the GLSL it is handed through the very
+same SceShaccCg.
+
+Cg is the same language family as HLSL (`floatN`, `mul()`, `lerp`/`frac`/`ddx`, `TEXCOORD<i>`
+interpolants), so it is emitted by the *same* emitter — `Hlsl.h`/`.cpp` with
+`HlslEmitter::Dialect::Cg` — rather than one of its own. What differs:
+
+- both entry points are named `main` (not `VSMain`/`PSMain`);
+- system semantics are the fixed-function-era Cg set: `POSITION` for the clip position, `WPOS` for
+  the fragment position, `COLOR` for the colour output;
+- no `cbuffer` — uniforms are plain `uniform` declarations, a std140 block's members are hoisted to
+  top-level uniforms, and samplers are combined `sampler2D`/`sampler3D` objects with the GXM
+  `TEXUNIT<n>` semantic, read with `tex2D()`/`tex2Dlod()`;
+- **no vertex-ID or instance-ID input exists at all**, so `VertexIdRewrite.h` — shared with the ESSL
+  100 profile, which has the same gap — rewrites the engine's `gl_VertexID` quad synthesis into reads
+  of the `aQuadCorner`/`aInstanceIndex` attributes. A stage that still references either built-in
+  afterwards is rejected with a diagnostic rather than mis-emitted;
+- a batched shader's `BATCH_SIZE` is baked in as a plain `#define` (a Cg source is compiled as one
+  string, with no place to inject a define ahead of it); the backend rewrites that number when the
+  runtime settles on a different batch size.
+
+Why its own header rather than two more `ProgramVariant` fields: the DXBC and SPIR-V blobs in the
+per-shader headers can only be produced on Windows, so regenerating those headers on any other host
+would silently drop both. A separate aggregate keeps a Cg run from touching anything else. The whole
+header is gated behind `#if defined(WITH_RHI_GXM)`.
 
 ## Known limitations
 

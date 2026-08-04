@@ -34,7 +34,7 @@
 #if defined(WITH_GLEW)
 #	define GLEW_NO_GLU
 #	include <GL/glew.h>
-#elif defined(WITH_RHI_GL) && defined(WITH_OPENGLES)
+#elif defined(WITH_RHI_GL) && defined(RHI_GL_PROFILE_ES)
 // No GLEW on the OpenGL|ES (ANGLE) path; pull in the GL/ES headers (GLubyte, glGetString, ...) directly
 #	define NCINE_INCLUDE_OPENGL
 #	include "../CommonHeaders.h"
@@ -276,6 +276,10 @@ namespace nCine::Backends
 		if ((SDL_GetWindowFlags(windowHandle_) & SDL_WINDOW_MINIMIZED) != 0) {
 			SDL_Delay(12);
 		}
+#elif defined(WITH_RHI_GXM)
+		// The native sceGxm backend owns the Vita's display queue: it flips the frame's screen surface into the
+		// next display buffer and hands that to the display controller
+		RHI::Device::PresentFrame();
 #elif defined(DEATH_TARGET_VITA)
 		// Vita renders through vitaGL, which owns the GXM display; present its backbuffer directly (SDL neither
 		// created nor manages this GL context). GL_FALSE = do not pump the SceCommonDialog overlay here.
@@ -568,7 +572,7 @@ namespace nCine::Backends
 		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, displayMode_.stencilBits());
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, contextInfo_.majorVersion);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, contextInfo_.minorVersion);
-#if defined(WITH_OPENGLES)
+#if defined(RHI_GL_PROFILE_ES)
 		SDL_SetHint(SDL_HINT_OPENGL_ES_DRIVER, "1");
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 #elif defined(DEATH_TARGET_EMSCRIPTEN)
@@ -587,7 +591,14 @@ namespace nCine::Backends
 
 		LOGD("Initializing window...");
 
+#if defined(WITH_RHI_GXM)
+		// The native sceGxm backend owns the display itself, so asking SDL for an OpenGL-capable window makes
+		// SDL_CreateWindow fail outright on this platform ("OpenGL support is either not configured in SDL or
+		// not available in current SDL video driver"). A plain window is all the input and event handling needs.
+		Uint32 flags = 0;
+#else
 		Uint32 flags = SDL_WINDOW_OPENGL;
+#endif
 #if !defined(DEATH_TARGET_EMSCRIPTEN)
 		flags |= NCINE_SDL_WINDOW_HIGHDPI;
 #endif
@@ -635,14 +646,21 @@ namespace nCine::Backends
 			SDL_GetWindowSize(windowHandle_, &width_, &height_);
 		}
 
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		LOGD("Initializing OpenGL|ES {}.{} context...", contextInfo_.majorVersion, contextInfo_.minorVersion);
 #else
 		LOGD("Initializing OpenGL {}.{} {} context...", contextInfo_.majorVersion, contextInfo_.minorVersion,
 			contextInfo_.coreProfile ? "Core" : "Compatibility");
 #endif
 
-#if defined(DEATH_TARGET_VITA)
+#if defined(WITH_RHI_GXM)
+		// The native sceGxm backend drives the console's graphics API directly, so there is no GL context to
+		// create at all: this brings up sceGxm itself, the display buffers and the shader patcher. It is not an
+		// SDL-managed surface either - the Vita has one fixed 960x544 panel, which the window handle and the
+		// requested size below say nothing about, so they are ignored.
+		FATAL_ASSERT_MSG(RHI::Device::CreateSwapchain(nullptr, drawableWidth_, drawableHeight_, true),
+			"Failed to initialize the sceGxm rendering backend");
+#elif defined(DEATH_TARGET_VITA)
 		// PS Vita renders through vitaGL, a static OpenGL|ES 2.0 implementation layered over SceGxm. This is not
 		// an SDL/EGL-managed context - SDL_GL_CreateContext() does not initialize vitaGL's internal GXM state - so
 		// it must be brought up explicitly here. Otherwise the very first gl* call (GLDevice::SetupInitialState's
@@ -658,7 +676,7 @@ namespace nCine::Backends
 
 		if (!glContextHandle_ && contextInfo_.minorVersion > 0) {
 			// Retry with lower minor version
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
 			LOGW("SDL_GL_CreateContext() with OpenGL|ES {}.{} failed, retrying with lower version: {}",
 				contextInfo_.majorVersion, contextInfo_.minorVersion, SDL_GetError());
 #else
@@ -670,7 +688,7 @@ namespace nCine::Backends
 			goto Retry;
 		}
 
-#if defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		FATAL_ASSERT_MSG(glContextHandle_, "SDL_GL_CreateContext() with OpenGL|ES {}.{} failed: {}",
 			contextInfo_.majorVersion, contextInfo_.minorVersion, SDL_GetError());
 #else
@@ -732,7 +750,7 @@ namespace nCine::Backends
 			SDL_DestroyTexture(softwareTexture_);
 			softwareTexture_ = nullptr;
 		}
-#	if defined(RHI_SOFTWARE_FB16)
+#	if defined(RHI_USE_FB16)
 		// 16-bit mode: the backend framebuffer stores native-endian RGB565 texels, SDL's RGB565 packed format
 		softwareTexture_ = SDL_CreateTexture(softwareRenderer_, SDL_PIXELFORMAT_RGB565,
 			SDL_TEXTUREACCESS_STREAMING, width, height);

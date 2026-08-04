@@ -51,13 +51,20 @@ namespace nCine
 		long bytes = 0;
 		std::int32_t bufferSeek = 0;
 
-		do {
-			// Read up to a buffer's worth of decoded sound data
-			// (0: little endian, 2: 16bit, 1: signed)
-#if defined(WITH_VORBIS_DYNAMIC)
-			bytes = _ov_read(&oggFile_, static_cast<char*>(buffer) + bufferSeek, bufferSize - bufferSeek, 0, 2, 1, &bitStream);
+		// The buffer formats of IAudioDevice are native-endian, which is what the module decoder
+		// produces as well, so the samples have to come out of Vorbis in the host byte order too
+#if defined(DEATH_TARGET_BIG_ENDIAN)
+		constexpr int BigEndianPacking = 1;
 #else
-			bytes = ov_read(&oggFile_, static_cast<char*>(buffer) + bufferSeek, bufferSize - bufferSeek, 0, 2, 1, &bitStream);
+		constexpr int BigEndianPacking = 0;
+#endif
+
+		do {
+			// Read up to a buffer's worth of decoded sound data (2: 16bit, 1: signed)
+#if defined(WITH_VORBIS_DYNAMIC)
+			bytes = _ov_read(&oggFile_, static_cast<char*>(buffer) + bufferSeek, bufferSize - bufferSeek, BigEndianPacking, 2, 1, &bitStream);
+#else
+			bytes = ov_read(&oggFile_, static_cast<char*>(buffer) + bufferSeek, bufferSize - bufferSeek, BigEndianPacking, 2, 1, &bitStream);
 #endif
 			if (bytes < 0) {
 #if defined(WITH_VORBIS_DYNAMIC)

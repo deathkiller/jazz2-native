@@ -22,7 +22,7 @@ Console | Toolchain @m_span{m-text m-dim} (CMake toolchain file) @m_endspan | Re
 @ref consoles-psp "PlayStation Portable" | pspdev @m_span{m-text m-dim} (`pspdev.cmake`) @m_endspan | `GU` --- fixed-function | `Psp` | `EBOOT.PBP` @m_span{m-text m-dim} (in a staged `ms0/` tree) @m_endspan
 @ref consoles-wii "Nintendo Wii" | devkitPPC + libogc @m_span{m-text m-dim} (`Wii.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `boot.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
 @ref consoles-gamecube "Nintendo GameCube" | devkitPPC + libogc @m_span{m-text m-dim} (`GameCube.cmake`) @m_endspan | `GX` --- fixed-function | `Ogc` | `Jazz2.dol` @m_span{m-text m-dim} (in a staged `sd/` tree) @m_endspan
-@ref consoles-vita "PS Vita" | VitaSDK @m_span{m-text m-dim} (`vita.toolchain.cmake`) @m_endspan | `OpenGL` via **vitaGL** @m_span{m-text m-dim} (ES 2.0 profile) @m_endspan or `Software` | SDL2 | `jazz2.vpk`
+@ref consoles-vita "PlayStation Vita" | VitaSDK @m_span{m-text m-dim} (`vita.toolchain.cmake`) @m_endspan | `GXM` @m_span{m-text m-dim} (native sceGxm, the default) @m_endspan, `OpenGL` via **vitaGL** @m_span{m-text m-dim} (ES 2.0 profile) @m_endspan or `Software` | SDL2 | `jazz2.vpk`
 @ref consoles-switch "Nintendo Switch" | devkitA64 @m_span{m-text m-dim} (`Switch.cmake`) @m_endspan | `OpenGL` | SDL2 | `jazz2.nro`
 
 @m_class{m-noindent}
@@ -72,9 +72,7 @@ make -j $(nproc) -C build
 @m_class{m-noindent}
 
 Point the console build at that directory with `NCINE_CONTENT_DIR`; the build stages it into the
-package it creates, under the name @cpp "Content" @ce, at the place the console looks for it. The PS
-Vita is the one exception --- its VPK carries only the executable, and the data is installed next to
-it on the device:
+package it creates, under the name @cpp "Content" @ce, at the place the console looks for it:
 
 Console | Content directory the game reads | Cache / save data
 ------- | -------------------------------- | -----------------
@@ -82,7 +80,7 @@ Dreamcast | @cpp "/cd/Content/" @ce @m_span{m-text m-dim} (inside the disc image
 PlayStation Portable | @cpp "ms0:/PSP/GAME/Jazz2/Content/" @ce | @cpp "ms0:/PSP/GAME/Jazz2/Cache/" @ce
 Wii | @cpp "sd:/apps/Jazz2/Content/" @ce | @cpp "sd:/apps/Jazz2/Cache/" @ce
 GameCube | @cpp "carda:/Jazz2/Content/" @ce | @cpp "carda:/Jazz2/Cache/" @ce
-PS Vita | @cpp "ux0:/data/jazz2/Content/" @ce | @cpp "ux0:/data/jazz2/Cache/" @ce
+PS Vita | @cpp "app0:/Content/" @ce @m_span{m-text m-dim} (inside the VPK) @m_endspan | @cpp "ux0:/data/jazz2/Cache/" @ce
 Switch | @cpp "romfs:/" @ce @m_span{m-text m-dim} (embedded in the `.nro`) @m_endspan | @cpp "sdmc:/Games/Jazz2/Cache/" @ce
 
 @m_class{m-block m-warning}
@@ -102,20 +100,57 @@ Feature | Dreamcast | PSP | Wii | GameCube | Vita | Switch
 ------- | --------- | --- | --- | -------- | ---- | ------
 Threads @m_span{m-text m-dim} (`NCINE_WITH_THREADS`) @m_endspan | yes | **no** | yes | yes | yes | yes
 Asynchronous tracing @m_span{m-text m-dim} (`DEATH_TRACE_ASYNC`) @m_endspan | no | no | no | no | no | no
-Sound effects | **no** --- no OpenAL for the platform | yes | **no** --- no OpenAL for the platform | **no** --- no OpenAL for the platform | SDK-dependent | SDK-dependent
-Module music @m_span{m-text m-dim} (**libopenmpt**) @m_endspan | no | **off on purpose** @m_span{m-text m-dim} (see @ref consoles-psp-limits) @m_endspan | no | no | SDK-dependent | SDK-dependent
+Audio backend | `AICA` @m_span{m-text m-dim} (KallistiOS sound driver) @m_endspan | `OpenAL` @m_span{m-text m-dim} (pspdev's OpenAL Soft) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `ASND` @m_span{m-text m-dim} (libogc DSP mixer) @m_endspan | `OpenAL` if the SDK has one | `OpenAL` if the SDK has one
+Sound effects | yes | yes | yes | yes | SDK-dependent | SDK-dependent
+Module music @m_span{m-text m-dim} (**libopenmpt**) @m_endspan | yes | **off on purpose** @m_span{m-text m-dim} (see @ref consoles-psp-limits) @m_endspan | yes | yes | SDK-dependent | SDK-dependent
+Underwater low-pass filter | **no** --- the driver leaves it off | **no** --- no `efx.h` in pspdev | **no** --- no filter stage on the DSP | **no** --- no filter stage on the DSP | SDK-dependent | yes
 Local splitscreen | yes | **no** --- needs threads | yes | yes | yes | yes
 Online multiplayer | **no** | **no** | **no** | **no** | yes | yes
 Post-processing and rescale filters | **no** --- fixed-function | **no** --- fixed-function | **no** --- fixed-function | **no** --- fixed-function | yes | yes
 External `.shader` files | **no** | **no** | **no** | **no** | yes | yes
 Converts the game data itself | **no** | **no** | **no** | **no** | yes | yes
 
-@m_class{m-noindent}
+@subsection consoles-common-audio Audio backends
 
-The three consoles without sound are not missing an engine feature --- their SDKs simply have no
-**OpenAL** implementation to link, so `WITH_AUDIO` is never defined and the audio subsystem is
-compiled out. `NCINE_WITH_AUDIO` is left at @cpp ON @ce there and has no effect; nothing has to be
-turned off by hand.
+Sound is structured the way rendering is: `WITH_AUDIO` says the audio subsystem is compiled in at
+all, and exactly one **audio backend** is compiled with it, chosen at configure time from the
+platform. The backend implements @ref nCine::IAudioDevice --- buffers, sources and the streaming
+queue --- and @ref nCine::AudioBuffer, @ref nCine::IAudioPlayer and @ref nCine::AudioStream contain
+no backend calls of their own, so a console only has to provide a device.
+
+Each backend lives in @cpp "nCine/Audio/Backends/<backend>/" @ce, the way the rendering ones live
+under @cpp "nCine/Graphics/RHI/" @ce:
+
+Backend | `WITH_*` | What it drives
+------- | -------- | --------------
+@ref nCine::ALAudioDevice "AL" | `WITH_OPENAL` | The system OpenAL on desktop, and the SDK's own on the PSP, Switch and Vita
+@ref nCine::AsndAudioDevice "ASND" | `WITH_ASND` | libogc's DSP mixer, the only sound API devkitPro ships for PowerPC. Comes with the toolchain, so there is nothing to install
+@ref nCine::AicaAudioDevice "AICA" | `WITH_AICA` | The Dreamcast sound processor through KallistiOS, using its wavetable channels for sound effects and its `snd_stream` driver for music
+@ref nCine::NullAudioDevice "none" | --- | The silent fallback when no backend is available, or when the game is started with audio turned off
+
+Nothing has to be installed by hand for any of them --- each console's own SDK provides what its
+backend needs. `NCINE_WITH_AUDIO` is left at @cpp ON @ce everywhere and turns the whole subsystem
+off when cleared.
+
+@m_class{m-block m-info}
+
+@par Why the Dreamcast does not use OpenAL
+There is an OpenAL implementation for KallistiOS in kos-ports @m_span{m-text m-dim} (ALdc)
+@m_endspan and it was tried first, but it is not usable as it stands: its startup sequence unlocks a
+KallistiOS mutex nobody holds and panics the kernel, @cpp "alSourcei(AL_BUFFER, 0)" @ce queues an
+internal null buffer instead of detaching, @cpp "alSourcef(AL_GAIN)" @ce is stored but never
+applied so no volume setting has any effect, and its mixing thread sleeps ten milliseconds per live
+source while holding the context lock. Talking to the AICA through KallistiOS directly is both less
+code on our side and considerably better behaved.
+
+@m_class{m-block m-info}
+
+@par Sample byte order
+The buffer formats of @ref nCine::IAudioDevice are **native-endian**, which is what the module
+decoder produces. The WAVE and Vorbis readers therefore byte-swap 16-bit samples on a big-endian
+target @m_span{m-text m-dim} (Vorbis for free, by asking `ov_read()` for big-endian packing)
+@m_endspan --- without that, every `.wav` sound effect would come out as noise on the two PowerPC
+consoles.
 
 @subsection consoles-common-logging Getting a log out of a console
 
@@ -259,8 +294,31 @@ crash also loses everything written since the last flush.
     @m_span{m-text m-dim} (bursts are coarsened rather than truncated, so an explosion still looks
     like one) @m_endspan, the outgoing level's assets are released before the incoming level loads,
     and the host copies of PVR textures are kept RLE-compressed.
--   **There is no sound.** No OpenAL implementation is available for KallistiOS, so `WITH_AUDIO` is
-    never defined and the audio subsystem is compiled out entirely.
+-   **Audio costs almost nothing in main memory here**, which is worth knowing on a console whose
+    heap is the binding constraint: the AICA has its own **2 MB of sound RAM** and every fully
+    loaded sound effect lives there, not on the 13.8 MB heap. What main memory does hold is the
+    module decoder and the three 16 KB buffers a stream is refilled through.
+-   The two kinds of player use two different parts of the sound processor, see
+    @ref nCine::AicaAudioDevice. A sound effect is one AICA wavetable channel
+    @m_span{m-text m-dim} (two for a stereo sample, since a channel is mono --- the sample is
+    de-interleaved into one block per channel when it is uploaded) @m_endspan, and whether it has
+    finished is read back from the hardware rather than predicted from a timer. Music goes through
+    KallistiOS's `snd_stream` driver, of which there are only **four**.
+-   A channel addresses at most **65534 samples** from wherever it is pointed at, which a long
+    sound effect can exceed @m_span{m-text m-dim} (about 3 seconds of 22 kHz audio) @m_endspan.
+    Rather than cutting one off, @ref nCine::AicaAudioDevice::uploadBuffer halves its sample rate
+    until it fits and says so in the log --- the hardware resamples every channel anyway, so the
+    sound still plays to its end at the right pitch and only loses some high end. A sound long
+    enough to need this more than once is really a stream.
+-   Panning and distance attenuation are computed on the SH4 and folded into the channel volume and
+    pan, because the hardware has no notion of a listener. Each channel does have a low-pass filter,
+    but the KallistiOS driver switches it off and exposes no command to reach it, so nothing is
+    muffled underwater.
+-   Module music is rendered at 22050 Hz rather than at the output rate: the AICA resamples every
+    channel in hardware for free, so a higher rate would only cost the SH4 more time in the module
+    mixer --- the one place this console has no headroom to spare.
+-   A stream is resampled at the rate it was started with and the driver cannot change it
+    afterwards, so pitch changes apply to sound effects only.
 -   Textures are 16-bit @m_span{m-text m-dim} (ARGB4444, or palettized with the hardware's palette
     banks) @m_endspan, the PVR has no hardware scissor @m_span{m-text m-dim} (clipping is
     geometric) @m_endspan, and there is no post-processing tier, so the rescale filters and the
@@ -451,7 +509,21 @@ nothing. Frame dumps are the practical way to check rendering: `DumpXFBTarget = 
 
 @subsection consoles-wii-limits Limits and known issues
 
--   **There is no sound** --- devkitPro has no OpenAL for PowerPC, so audio is compiled out.
+-   **Sound goes through libogc's ASND**, not OpenAL --- devkitPro ships no OpenAL for PowerPC. The
+    DSP mixes up to **16 voices** at 48 kHz and resamples each one, so the voice count rather than
+    CPU time is the limit; that is also the source count the engine advertises, well below the 64 it
+    uses on desktop. Panning and distance attenuation are computed on the CPU and folded into the
+    per-voice volume, because ASND has no notion of a listener --- see
+    @ref nCine::AsndAudioDevice::computeVolume.
+-   ASND holds only two buffers per voice @m_span{m-text m-dim} (one playing, one queued) @m_endspan
+    where a streaming player expects an OpenAL-style queue, so the queue itself is kept in the
+    backend and fed into the voice one buffer at a time from
+    @ref nCine::AsndAudioDevice::updatePlayers.
+-   Sample data is read by the DSP straight out of main memory by DMA, so every buffer is 32-byte
+    aligned and padded. Unlike the Dreamcast, there is no separate sound RAM --- a level's sound
+    effects come out of the same heap as everything else, which is worth remembering on the
+    GameCube in particular.
+-   There is no filter stage on the DSP, so nothing is muffled underwater.
 -   Online multiplayer is disabled; local splitscreen works.
 -   No post-processing tier, so no rescale filters; the lightmap is combined on the CPU.
 -   Textures are converted to the GX formats @m_span{m-text m-dim} (including CI8 with a hardware
@@ -516,7 +588,9 @@ build/gamecube/sd/Jazz2/Content/…
 Everything in @ref consoles-wii-limits applies, with two additions:
 
 -   **Memory is much tighter than on the Wii** --- 24 MB total, with no second pool to fall back
-    on. The console budgets described for the Dreamcast are active here as well.
+    on. The console budgets described for the Dreamcast are active here as well, and audio is one
+    more claim on that pool here: the ASND backend keeps every decoded sound effect in main memory
+    for the DSP to read by DMA.
 -   There is no Bluetooth, so only GameCube controllers are read
     @m_span{m-text m-dim} (the Wii build additionally links `wiiuse` and `bte` for Wii Remotes)
     @m_endspan.
@@ -525,10 +599,15 @@ Everything in @ref consoles-wii-limits applies, with two additions:
 
 @section consoles-vita PS Vita
 
-The Vita is a shader platform: **vitaGL** provides OpenGL|ES 2.0 on top of the console's GPU, and
-the window and input come from **SDL2**, so the build differs from a desktop one mostly in its
-packaging. `NCINE_PREFERRED_RHI=OpenGL` @m_span{m-text m-dim} (the default) @m_endspan force-enables
-the OpenGL|ES path and the strict ES 2.0 profile; `Software` selects the CPU rasterizer instead.
+The Vita is a shader platform, and the only console here with a choice of two hardware backends. Its
+GPU is a PowerVR SGX543MP4+ driven by **sceGxm**, the console's own graphics API; the window and
+input come from **SDL2**, so the build differs from a desktop one mostly in its packaging.
+
+`NCINE_PREFERRED_RHI` | What it drives
+-------------------- | --------------
+`GXM` @m_span{m-text m-dim} (the default) @m_endspan | **sceGxm directly.** A full-pipeline backend --- unlike the fixed-function consoles above, the SGX is a unified-shader part, so the whole bloom / lighting / combine chain runs. What it removes compared to the OpenGL path on the same console is the translation layer between the engine and sceGxm, nothing else
+`OpenGL` | **vitaGL**, an OpenGL\|ES 2.0 implementation layered on that very same sceGxm. Force-enables the OpenGL\|ES path and the strict ES 2.0 profile
+`Software` | The CPU rasterizer, for comparison and bring-up
 
 @subsection consoles-vita-toolchain Toolchain
 
@@ -547,22 +626,59 @@ make -j $(nproc) -C ./build/vita/
 
 @m_class{m-noindent}
 
+The native `GXM` backend is what this builds; add @cpp "-D NCINE_PREFERRED_RHI=OpenGL" @ce for the
+vitaGL one instead. Either way the console needs @cpp "libshacccg.suprx" @ce, see
+@ref consoles-vita-shaders.
+
 @cpp "BuildVita.sh" @ce currently configures a **Debug** build with synchronous tracing enabled,
 which is what a bring-up build wants; edit it or use the command above for a release build. The
 result is @cpp "build/vita/jazz2.vpk" @ce.
 
 @subsection consoles-vita-deploy Deploying and running
 
-Install the VPK with **VitaShell** @m_span{m-text m-dim} (or over FTP) @m_endspan. Unlike the four
-consoles above, the Vita **converts the original game data itself** on first run, so copy an
-original installation to @cpp "ux0:/data/jazz2/Source/" @ce and let it build
+Install the VPK with **VitaShell** @m_span{m-text m-dim} (or over FTP) @m_endspan. It carries the
+@cpp "Content" @ce directory with it, which the firmware unpacks into the application's own read-only
+directory @m_span{m-text m-dim} (@cpp "ux0:/app/jazz20000/" @ce, mounted as @cpp "app0:" @ce)
+@m_endspan, so nothing else has to be copied for the game to start.
+
+Unlike the four consoles above, the Vita **converts the original game data itself** on first run, so
+copy an original installation to @cpp "ux0:/data/jazz2/Source/" @ce and let it build
 @cpp "ux0:/data/jazz2/Cache/" @ce --- or prepare the tree with AssetPacker anyway to skip the wait.
+Both of those live on @cpp "ux0:" @ce because @cpp "app0:" @ce cannot be written to; reinstalling the
+VPK replaces the content but leaves the cache, the converted source data and the settings alone.
+
+@subsection consoles-vita-shaders The console needs a firmware module
+
+Shaders are compiled **on the console**, whichever backend is selected, because the VitaSDK ships no
+offline shader compiler for the platform: the only one is @cpp "libshacccg.suprx" @ce, part of the
+console's own firmware. Extract it with
+[VitaShaRK's instructions](https://github.com/Rinnegatamante/vitaShaRK) and place it in
+@cpp "ur0:/data/" @ce.
+
+-   `GXM` consumes GXP binaries, so it ships its shaders as **Cg source** @m_span{m-text m-dim} (the
+    generated @cpp "CgGeneratedShaders.h" @ce, see @ref shader-compiler-cg) @m_endspan and compiles
+    them through vitaShaRK when a program links. Without the module the backend refuses to start and
+    says exactly that in the log.
+-   `OpenGL` hands GLSL to @cpp glCompileShader() @ce, and vitaGL compiles it through the very same
+    SceShaccCg. That is also what lets external @cpp ".shader" @ce files and the rescale filters work
+    on this platform, unlike the fixed-function consoles above.
 
 @subsection consoles-vita-limits Limits and known issues
 
--   The ES 2.0 profile has no uniform buffer objects and no @cpp gl_VertexID @ce, so the shaders
-    come from the **ESSL 100** lowering that ShaderCompiler bakes into the same generated headers,
-    see @ref shader-compiler-platforms.
+-   The ES 2.0 profile has no uniform buffer objects and no @cpp gl_VertexID @ce, so its shaders come
+    from the **ESSL 100** lowering that ShaderCompiler bakes into the same generated headers, see
+    @ref shader-compiler-platforms. The `GXM` backend has the same missing vertex-ID input and reuses
+    the very same rewrite, so both read the quad corner from a vertex attribute instead.
+-   Under **Vita3K** the `GXM` backend draws a one-pixel seam where a repeating texture wraps --- most
+    visibly along the scrolling textured background. The wrap is set up correctly for the hardware
+    @m_span{m-text m-dim} (a power-of-two, tiled colour-surface texture whose control words read back
+    with @cpp SCE_GXM_TEXTURE_ADDR_REPEAT @ce on both axes) @m_endspan and the emulator translates
+    sceGxm onto desktop OpenGL, where such a texture repeats without any restriction, so the join is
+    expected to be absent on a console. No workaround is applied for it: emulating one in the shared
+    shader would cost every other backend and could not blend across the join anyway.
+-   Online multiplayer is unavailable: ENet has no Vita arm @m_span{m-text m-dim} (it needs
+    @cpp "sys/ioctl.h" @ce, which the SDK does not provide) @m_endspan, so `WITH_ONLINE_MULTIPLAYER`
+    is forced off. Local (split-screen) multiplayer is unaffected.
 -   Asynchronous tracing is disabled; threads are available.
 -   Sound depends on the SDK providing an OpenAL implementation --- without one, audio is compiled
     out exactly as on the fixed-function consoles.
@@ -659,8 +775,11 @@ boot into the main menu and need a content tree prepared as described in
     @ref consoles-psp-deploy.
 -   **CMake cannot find the compiler on the Dreamcast.** @cpp "environ.sh" @ce was not sourced in
     that shell, see @ref consoles-dreamcast-toolchain.
--   **The whole build is silent on the Dreamcast, Wii or GameCube.** Expected --- there is no
-    OpenAL implementation for those SDKs, see @ref consoles-common-features.
+-   **A fully loaded sound is cut short on the Dreamcast.** An AICA channel addresses 65534 samples
+    at most, see @ref consoles-dreamcast-limits.
+-   **Sound effects are noise on the Wii or GameCube.** The buffer formats are native-endian, so a
+    reader that emits little-endian samples on a big-endian console produces exactly this, see
+    @ref consoles-common-audio.
 
 */
 

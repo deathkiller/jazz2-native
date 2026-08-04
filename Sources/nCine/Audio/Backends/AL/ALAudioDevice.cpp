@@ -1,7 +1,8 @@
 #include "ALAudioDevice.h"
-#include "AudioBufferPlayer.h"
-#include "AudioStreamPlayer.h"
-#include "../ServiceLocator.h"
+#include "ALDebug.h"
+#include "../../AudioBufferPlayer.h"
+#include "../../AudioStreamPlayer.h"
+#include "../../../ServiceLocator.h"
 
 #include <Containers/StringUtils.h>
 
@@ -15,13 +16,26 @@ using namespace Death::Containers::Literals;
 
 namespace nCine
 {
+	namespace
+	{
+		ALenum alFormat(IAudioDevice::BufferFormat format)
+		{
+			switch (format) {
+				case IAudioDevice::BufferFormat::Stereo8: return AL_FORMAT_STEREO8;
+				case IAudioDevice::BufferFormat::Mono16: return AL_FORMAT_MONO16;
+				case IAudioDevice::BufferFormat::Stereo16: return AL_FORMAT_STEREO16;
+				default: return AL_FORMAT_MONO8;
+			}
+		}
+	}
+
 	ALAudioDevice::ALAudioDevice()
-		: device_(nullptr), context_(nullptr), gain_(1.0f), sources_ {}, deviceName_(nullptr), nativeFreq_(44100)
+		: device_(nullptr), context_(nullptr), sources_{}, nativeFreq_(44100), deviceName_(nullptr)
+#if defined(OPENAL_FILTERS_SUPPORTED)
+		, filters_{}
+#endif
 #if defined(WITH_LIBRETRO)
 		, alcRenderSamplesSOFT_(nullptr)
-#endif
-#if defined(WITH_THREADS)
-		, decodeThreadCreated_(false), decodeThreadShouldQuit_(false)
 #endif
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		, alcReopenDeviceSOFT_(nullptr), pEnumerator_(nullptr), lastDeviceChangeTime_(0), shouldRecreate_(false)
@@ -92,9 +106,18 @@ namespace nCine
 		if (error != AL_NO_ERROR) {
 			LOGE("alGenSources() failed with error 0x{:x}", error);
 		} else {
-			for (std::int32_t i = MaxSources - 1; i >= 0; i--) {
-				sourcePool_.push_back(sources_[i]);
+			// The distance model parameters never change per source, so they are applied once here
+			// instead of every time a player takes a source out of the pool
+			for (std::int32_t i = 0; i < MaxSources; i++) {
+				alSourcef(sources_[i], AL_REFERENCE_DISTANCE, ReferenceDistance);
+				alSourcef(sources_[i], AL_MAX_DISTANCE, MaxDistance);
 			}
+
+			std::uint32_t sourceIds[MaxSources];
+			for (std::int32_t i = 0; i < MaxSources; i++) {
+				sourceIds[i] = sources_[i];
+			}
+			setSourcePool(arrayView(sourceIds, MaxSources));
 		}
 
 		alDistanceModel(AL_LINEAR_DISTANCE_CLAMPED);
@@ -223,24 +246,21 @@ namespace nCine
 	{
 		LOGD("Disposing OpenAL audio device...");
 
-#if defined(WITH_THREADS)
 		// Shut down the decoding thread first, so it doesn't touch any readers afterwards
-		decodeMutex_.Lock();
-		decodeThreadShouldQuit_ = true;
-		// Requests still in the queue will never be executed, reset them so their owners don't wait forever
-		for (auto& request : decodeQueue_) {
-			request->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
-		}
-		decodeQueue_.clear();
-		decodeMutex_.Unlock();
-		decodeQueueCond_.Broadcast();
-		if (decodeThreadCreated_) {
-			decodeThread_.Join();
-		}
-#endif
+		shutdownDecodeThread();
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		unregisterAudioEvents();
+#endif
+
+#if defined(OPENAL_FILTERS_SUPPORTED)
+		for (std::int32_t i = 0; i < MaxSources; i++) {
+			if (filters_[i] != 0) {
+				alSourcei(sources_[i], AL_DIRECT_FILTER, 0);
+				alDeleteFilters(1, &filters_[i]);
+				filters_[i] = 0;
+			}
+		}
 #endif
 
 		for (ALuint sourceId : sources_) {
@@ -265,223 +285,15 @@ namespace nCine
 		return deviceName_;
 	}
 
-	void ALAudioDevice::setGain(ALfloat gain)
+	void ALAudioDevice::setGain(float gain)
 	{
 		gain_ = gain;
 		alListenerf(AL_GAIN, gain_);
 	}
 
-	const IAudioPlayer* ALAudioDevice::player(std::uint32_t index) const
-	{
-		if (index < players_.size()) {
-			return players_[index];
-		}
-		return nullptr;
-	}
-
-	IAudioPlayer* ALAudioDevice::player(std::uint32_t index)
-	{
-		if (index < players_.size()) {
-			return players_[index];
-		}
-		return nullptr;
-	}
-
-	void ALAudioDevice::stopPlayers()
-	{
-		// Iterating backwards because stop() unregisters the player, erasing it from the array
-		for (std::size_t i = players_.size(); i > 0; i--) {
-			players_[i - 1]->stop();
-		}
-		players_.clear();
-	}
-
-	void ALAudioDevice::pausePlayers()
-	{
-		for (auto& player : players_) {
-			player->pause();
-		}
-		players_.clear();
-	}
-
-	void ALAudioDevice::stopPlayers(PlayerType playerType)
-	{
-		const Object::ObjectType objectType = (playerType == PlayerType::Buffer)
-			? AudioBufferPlayer::sType()
-			: AudioStreamPlayer::sType();
-
-		// Iterating backwards because stop() unregisters the player, erasing it from the array
-		for (std::size_t i = players_.size(); i > 0; i--) {
-			IAudioPlayer* player = players_[i - 1];
-			if (player->type() == objectType) {
-				player->stop();
-			}
-		}
-	}
-
-	void ALAudioDevice::pausePlayers(PlayerType playerType)
-	{
-		const Object::ObjectType objectType = (playerType == PlayerType::Buffer)
-			? AudioBufferPlayer::sType()
-			: AudioStreamPlayer::sType();
-
-		// Iterating backwards, so removing the current element doesn't affect the remaining ones
-		for (std::size_t i = players_.size(); i > 0; i--) {
-			IAudioPlayer* player = players_[i - 1];
-			if (player->type() == objectType) {
-				player->pause();
-				players_.eraseUnordered(&players_[i - 1]);
-			}
-		}
-	}
-
-	void ALAudioDevice::freezePlayers()
-	{
-		for (auto& player : players_) {
-			player->pause();
-		}
-		// The players array is not cleared at this point, it is needed as-is by the unfreeze method
-	}
-
-	void ALAudioDevice::unfreezePlayers()
-	{
-		for (auto& player : players_) {
-			player->play();
-		}
-	}
-
-	std::uint32_t ALAudioDevice::registerPlayer(IAudioPlayer* player)
-	{
-		if (sourcePool_.empty()) {
-			return UnavailableSource;
-		}
-
-		ALuint sourceId = sourcePool_.pop_back_val();
-
-		if (players_.size() < MaxSources) {
-			players_.push_back(player);
-		}
-
-		return sourceId;
-	}
-
-	void ALAudioDevice::unregisterPlayer(IAudioPlayer* player)
-	{
-		if (player->sourceId_ == UnavailableSource) {
-			return;
-		}
-
-		sourcePool_.push_back(player->sourceId_);
-		player->sourceId_ = UnavailableSource;
-
-		auto it = players_.begin();
-		while (it != players_.end()) {
-			if (*it == player) {
-				players_.erase(it);
-				break;
-			}
-			++it;
-		}
-	}
-
-	void ALAudioDevice::updatePlayers()
-	{
-#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
-		// Audio device cannot be recreated in event callback, so do it here
-		if (shouldRecreate_) {
-			shouldRecreate_ = false;
-			recreateAudioDevice();
-		}
-#endif
-
-		// Iterating backwards because a finished player unregisters itself, erasing it from the array
-		for (std::size_t i = players_.size(); i > 0; i--) {
-			players_[i - 1]->updateState();
-		}
-	}
-
-	bool ALAudioDevice::submitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
-	{
-#if defined(WITH_THREADS)
-		decodeMutex_.Lock();
-		if (!decodeThreadCreated_) {
-			// The decoding thread is created lazily on the first streamed sound
-			decodeThreadCreated_ = true;
-			decodeThread_ = Thread(ALAudioDevice::decodeThreadFunc, this);
-		}
-		decodeQueue_.push_back(request);
-		decodeMutex_.Unlock();
-		decodeQueueCond_.Signal();
-		return true;
-#else
-		return false;
-#endif
-	}
-
-	void ALAudioDevice::drainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request)
-	{
-#if defined(WITH_THREADS)
-		// A null request would compare equal to the idle active request and wait forever
-		if (request == nullptr) {
-			return;
-		}
-
-		decodeMutex_.Lock();
-		// Remove the request from the queue if it hasn't been picked up yet
-		for (std::size_t i = 0; i < decodeQueue_.size(); i++) {
-			if (decodeQueue_[i] == request) {
-				decodeQueue_.erase(&decodeQueue_[i]);
-				request->state.store(StreamDecodeRequest::State::Idle, std::memory_order_relaxed);
-				decodeMutex_.Unlock();
-				return;
-			}
-		}
-		// Wait for the decoding thread if the request is currently being executed
-		while (activeDecodeRequest_ == request) {
-			decodeDoneCond_.Wait(decodeMutex_);
-		}
-		decodeMutex_.Unlock();
-#endif
-	}
-
-#if defined(WITH_THREADS)
-	void ALAudioDevice::decodeThreadFunc(void* arg)
-	{
-		Thread::SetCurrentName("Audio decoding");
-
-		ALAudioDevice* device = static_cast<ALAudioDevice*>(arg);
-		device->decodeMutex_.Lock();
-		while (true) {
-			while (device->decodeQueue_.empty() && !device->decodeThreadShouldQuit_) {
-				device->decodeQueueCond_.Wait(device->decodeMutex_);
-			}
-			if (device->decodeThreadShouldQuit_) {
-				break;
-			}
-
-			device->activeDecodeRequest_ = std::move(device->decodeQueue_.front());
-			device->decodeQueue_.erase(device->decodeQueue_.begin());
-			device->decodeMutex_.Unlock();
-
-			// Decoding is executed without holding the lock, so new requests can still be submitted
-			device->activeDecodeRequest_->Execute();
-
-			device->decodeMutex_.Lock();
-			device->activeDecodeRequest_ = nullptr;
-			device->decodeDoneCond_.Broadcast();
-		}
-		device->decodeMutex_.Unlock();
-	}
-#endif
-
-	const Vector3f& ALAudioDevice::getListenerPosition() const
-	{
-		return _listenerPos;
-	}
-
 	void ALAudioDevice::updateListener(const Vector3f& position, const Vector3f& velocity)
 	{
-		_listenerPos = position;
+		listenerPos_ = position;
 
 		alListener3f(AL_POSITION, position.X * LengthToPhysical, position.Y * -LengthToPhysical, position.Z * -LengthToPhysical);
 		alListener3f(AL_VELOCITY, velocity.X * VelocityToPhysical, velocity.Y * -VelocityToPhysical, velocity.Z * -VelocityToPhysical);
@@ -490,6 +302,188 @@ namespace nCine
 	std::int32_t ALAudioDevice::nativeFrequency()
 	{
 		return nativeFreq_;
+	}
+
+	std::uint32_t ALAudioDevice::createBuffer(BufferUsage usage)
+	{
+		alGetError();
+		// Through a local of OpenAL's own type: `ALuint` is `unsigned int` while `std::uint32_t` can be
+		// `long unsigned int` (it is on MIPS), and taking the address of the caller's variable would then
+		// hand the library a pointer to the wrong type even though both are 32 bits wide
+		ALuint bufferId = 0;
+		alGenBuffers(1, &bufferId);
+		const ALenum error = alGetError();
+		if DEATH_UNLIKELY(error != AL_NO_ERROR) {
+			LOGW("alGenBuffers() failed with error 0x{:x}", error);
+			return 0;
+		}
+		return bufferId;
+	}
+
+	void ALAudioDevice::deleteBuffer(std::uint32_t bufferId)
+	{
+		const ALuint id = bufferId;
+		alDeleteBuffers(1, &id);
+		AL_LOG_ERRORS();
+	}
+
+	bool ALAudioDevice::uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency)
+	{
+		alGetError();
+		// On iOS `alBufferDataStatic()` could be used instead
+		alBufferData(bufferId, alFormat(format), data, size, frequency);
+		const ALenum error = alGetError();
+		if DEATH_UNLIKELY(error != AL_NO_ERROR) {
+			LOGW("alBufferData() failed with error 0x{:x}", error);
+			return false;
+		}
+		return true;
+	}
+
+	void ALAudioDevice::setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	{
+		alSourcei(sourceId, AL_BUFFER, ALint(bufferId));
+		AL_LOG_ERRORS();
+	}
+
+	void ALAudioDevice::setSourceGain(std::uint32_t sourceId, float gain)
+	{
+		alSourcef(sourceId, AL_GAIN, gain);
+		AL_LOG_ERRORS();
+	}
+
+	void ALAudioDevice::setSourcePitch(std::uint32_t sourceId, float pitch)
+	{
+		alSourcef(sourceId, AL_PITCH, pitch);
+		AL_LOG_ERRORS();
+	}
+
+	void ALAudioDevice::setSourceLooping(std::uint32_t sourceId, bool looping)
+	{
+		alSourcei(sourceId, AL_LOOPING, looping ? AL_TRUE : AL_FALSE);
+		AL_LOG_ERRORS();
+	}
+
+	void ALAudioDevice::setSourceRelative(std::uint32_t sourceId, bool relative)
+	{
+		alSourcei(sourceId, AL_SOURCE_RELATIVE, relative ? AL_TRUE : AL_FALSE);
+		AL_LOG_ERRORS();
+	}
+
+	void ALAudioDevice::setSourcePosition(std::uint32_t sourceId, const Vector3f& position)
+	{
+		alSource3f(sourceId, AL_POSITION, position.X, position.Y, position.Z);
+		AL_LOG_ERRORS();
+	}
+
+#if defined(OPENAL_FILTERS_SUPPORTED)
+	ALuint* ALAudioDevice::filterForSource(std::uint32_t sourceId)
+	{
+		for (std::int32_t i = 0; i < MaxSources; i++) {
+			if (sources_[i] == sourceId) {
+				return &filters_[i];
+			}
+		}
+		return nullptr;
+	}
+#endif
+
+	void ALAudioDevice::setSourceLowPass(std::uint32_t sourceId, float value)
+	{
+#if defined(OPENAL_FILTERS_SUPPORTED)
+		ALuint* filterHandle = filterForSource(sourceId);
+		if (filterHandle == nullptr) {
+			return;
+		}
+
+		if (value < 1.0f) {
+			if (*filterHandle == 0) {
+				alGenFilters(1, filterHandle);
+				alFilteri(*filterHandle, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+				alFilterf(*filterHandle, AL_LOWPASS_GAIN, 1.0f);
+			}
+			if (*filterHandle != 0) {
+				alFilterf(*filterHandle, AL_LOWPASS_GAINHF, value);
+				alSourcei(sourceId, AL_DIRECT_FILTER, *filterHandle);
+			}
+		} else if (*filterHandle != 0) {
+			alFilterf(*filterHandle, AL_LOWPASS_GAINHF, 1.0f);
+			alSourcei(sourceId, AL_DIRECT_FILTER, 0);
+		}
+		AL_LOG_ERRORS();
+#endif
+	}
+
+	std::int32_t ALAudioDevice::sourceSampleOffset(std::uint32_t sourceId)
+	{
+		ALint sampleOffset = 0;
+		alGetSourcei(sourceId, AL_SAMPLE_OFFSET, &sampleOffset);
+		AL_LOG_ERRORS();
+		return sampleOffset;
+	}
+
+	void ALAudioDevice::setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset)
+	{
+		alSourcei(sourceId, AL_SAMPLE_OFFSET, offset);
+		AL_LOG_ERRORS();
+	}
+
+	void ALAudioDevice::playSource(std::uint32_t sourceId)
+	{
+		alSourcePlay(sourceId);
+		AL_LOG_ERRORS();
+	}
+
+	void ALAudioDevice::pauseSource(std::uint32_t sourceId)
+	{
+		alSourcePause(sourceId);
+		AL_LOG_ERRORS();
+	}
+
+	void ALAudioDevice::stopSource(std::uint32_t sourceId)
+	{
+		alSourceStop(sourceId);
+		AL_LOG_ERRORS();
+	}
+
+	bool ALAudioDevice::isSourcePlaying(std::uint32_t sourceId)
+	{
+		ALenum state = AL_STOPPED;
+		alGetSourcei(sourceId, AL_SOURCE_STATE, &state);
+		AL_LOG_ERRORS();
+		return (state == AL_PLAYING);
+	}
+
+	void ALAudioDevice::queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId)
+	{
+		const ALuint id = bufferId;
+		alSourceQueueBuffers(sourceId, 1, &id);
+		AL_LOG_ERRORS();
+	}
+
+	std::int32_t ALAudioDevice::numProcessedBuffers(std::uint32_t sourceId)
+	{
+		ALint numProcessedBuffers = 0;
+		alGetSourcei(sourceId, AL_BUFFERS_PROCESSED, &numProcessedBuffers);
+		AL_LOG_ERRORS();
+		return numProcessedBuffers;
+	}
+
+	void ALAudioDevice::unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds)
+	{
+		// Through locals of OpenAL's own type, for the same reason as in createBuffer()
+		constexpr std::int32_t MaxUnqueuedBuffers = 8;
+		ALuint unqueuedIds[MaxUnqueuedBuffers];
+		if DEATH_UNLIKELY(count > MaxUnqueuedBuffers) {
+			count = MaxUnqueuedBuffers;
+		}
+
+		alSourceUnqueueBuffers(sourceId, count, unqueuedIds);
+		AL_LOG_ERRORS();
+
+		for (std::int32_t i = 0; i < count; i++) {
+			bufferIds[i] = unqueuedIds[i];
+		}
 	}
 
 #if defined(WITH_LIBRETRO)
@@ -522,6 +516,17 @@ namespace nCine
 	}
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+	void ALAudioDevice::updatePlayers()
+	{
+		// Audio device cannot be recreated in event callback, so do it here
+		if (shouldRecreate_) {
+			shouldRecreate_ = false;
+			recreateAudioDevice();
+		}
+
+		AudioDeviceBase::updatePlayers();
+	}
+
 	void ALAudioDevice::recreateAudioDevice()
 	{
 		// Try to use ALC_SOFT_reopen_device extension to reopen the device

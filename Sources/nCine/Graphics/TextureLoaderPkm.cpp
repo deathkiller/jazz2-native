@@ -1,6 +1,6 @@
 #include "TextureLoaderPkm.h"
 
-#if defined(DEATH_TARGET_ANDROID) && defined(WITH_OPENGLES)
+#if defined(DEATH_TARGET_ANDROID) && defined(RHI_GL_PROFILE_ES)
 
 #include <cstring>
 

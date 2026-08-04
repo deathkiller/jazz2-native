@@ -233,7 +233,13 @@ endif()
 if(ANDROID)
 	find_library(ANDROID_LIBRARY android)
 	find_library(EGL_LIBRARY EGL)
-	find_library(GLES3_LIBRARY GLESv3)
+	# The GL client library follows NCINE_RHI_GL_PROFILE: libGLESv3 exposes the ES 3.0 entry points,
+	# libGLESv2 only the ES 2.0 ones (the ES2 profile must not be able to reach an ES3 symbol by accident)
+	if(NCINE_RHI_GL_PROFILE STREQUAL "ES2")
+		find_library(GLES_LIBRARY GLESv2)
+	else()
+		find_library(GLES_LIBRARY GLESv3)
+	endif()
 	find_library(LOG_LIBRARY log)
 	find_library(NATIVEWINDOW_LIBRARY nativewindow)
 	find_library(OPENSLES_LIBRARY OpenSLES)
@@ -521,7 +527,7 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 	if(NCINE_ARM_PROCESSOR)
 		include(check_atomic)
 	endif()
-	if(NCINE_WITH_OPENGLES OR NINTENDO_SWITCH)
+	if(NCINE_RHI_GL_PROFILE MATCHES "^ES" OR NINTENDO_SWITCH)
 		find_package(OpenGLES2)
 	endif()
 	# Look for both GLFW and SDL2 to make the fallback logic work
@@ -541,11 +547,26 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 		find_package(WebP)
 	endif()
 	if(NCINE_WITH_AUDIO)
-		find_package(OpenAL)
+		if(NINTENDO_WII OR NINTENDO_GAMECUBE)
+			# devkitPro ships no OpenAL for these consoles. libogc's ASND drives the DSP mixer instead
+			# and comes with the toolchain, so there is nothing to look for - see AsndAudioDevice
+			set(ASND_FOUND 1)
+		elseif(PLATFORM_DREAMCAST)
+			# There is no OpenAL worth using on this console - the kos-ports one (ALdc) neither applies
+			# the source gain nor drives the AICA correctly against current KallistiOS. The backend talks
+			# to the sound processor through KallistiOS itself instead, which is part of the SDK, so
+			# there is nothing to look for. Any stale OpenAL paths a previously configured build
+			# directory left in the cache would only confuse the summary below.
+			unset(OPENAL_INCLUDE_DIR CACHE)
+			unset(OPENAL_LIBRARY CACHE)
+			set(AICA_FOUND 1)
+		else()
+			find_package(OpenAL)
 
-		if(NINTENDO_SWITCH)
-			# This flag is not set correctly by the toolchain
-			set(OPENAL_FOUND 1)
+			if(NINTENDO_SWITCH)
+				# This flag is not set correctly by the toolchain
+				set(OPENAL_FOUND 1)
+			endif()
 		endif()
 
 		if(NCINE_WITH_VORBIS)
@@ -587,8 +608,8 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			INTERFACE_LINK_LIBRARIES atomic)
 	endif()
 
-	if(NINTENDO_SWITCH OR VITA)
-		# Nintendo Switch and PS Vita support only static linking
+	if(NINTENDO_SWITCH OR VITA OR NINTENDO_WII OR NINTENDO_GAMECUBE OR PLATFORM_DREAMCAST OR PLATFORM_PSP)
+		# These platforms support only static linking
 		set(LIBRARY_LINKAGE STATIC)
 	else()
 		set(LIBRARY_LINKAGE SHARED)
@@ -641,8 +662,8 @@ elseif(NOT NCINE_BUILD_ANDROID) # GCC and LLVM
 			INTERFACE_INCLUDE_DIRECTORIES "${WEBP_INCLUDE_DIR}")
 	endif()
 
-	if(OPENAL_FOUND)
-		if(NOT TARGET OpenAL::OpenAL)
+	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND)
+		if(OPENAL_FOUND AND NOT TARGET OpenAL::OpenAL)
 			add_library(OpenAL::OpenAL ${LIBRARY_LINKAGE} IMPORTED)
 			set_target_properties(OpenAL::OpenAL PROPERTIES
 				IMPORTED_LOCATION "${OPENAL_LIBRARY}"

@@ -5,7 +5,7 @@
 #include "RenderCommandPool.h"
 #include "RenderBatcher.h"
 #include "Camera.h"
-#include "IGfxCapabilities.h"
+#include "RHI/IRhiCapabilities.h"
 #include "../Application.h"
 #include "../ServiceLocator.h"
 #include "../../Main.h"
@@ -242,8 +242,8 @@ namespace nCine
 			{ RenderResources::defaultShaderPrograms_[std::int32_t(Material::ShaderProgramType::BatchedMeshSpritesNoTexture)], ShadersGen::DefaultBatchedMeshSpritesNoTexture, RHI::ShaderProgram::Introspection::NoUniformsInBlocks, "Batched_MeshSprites_NoTexture" },
 		};
 
-		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		std::int32_t maxUniformBlockSize = gfxCaps.GetValue(IGfxCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
+		const RHI::IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
+		std::int32_t maxUniformBlockSize = caps.GetValue(RHI::IRhiCapabilities::IntValues::MAX_UNIFORM_BLOCK_SIZE_NORMALIZED);
 
 		char sourceString[64];
 		StringView vertexStrings[2];
@@ -294,7 +294,7 @@ namespace nCine
 					if (instanceStride > 0) {
 						// The whole per-batch block is suballocated from a uniform buffer, so its size has to
 						// respect the uniform buffer offset alignment, exactly like the introspected size did
-						const std::int32_t offsetAlignment = gfxCaps.GetValue(IGfxCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
+						const std::int32_t offsetAlignment = caps.GetValue(RHI::IRhiCapabilities::IntValues::UNIFORM_BUFFER_OFFSET_ALIGNMENT);
 						std::int32_t alignedStride = instanceStride;
 						if (offsetAlignment > 0) {
 							alignedStride += (offsetAlignment - instanceStride % offsetAlignment) % offsetAlignment;

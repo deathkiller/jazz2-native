@@ -91,7 +91,7 @@ namespace nCine::RHI::Software
 				// Current render target buffer
 				std::uint8_t* targetBuffer = nullptr;
 				bool isFboTarget = false;
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 				// Whether targetBuffer is the RGB565 screen framebuffer (tiles are rasterized in RGBA8
 				// scratch either way; only the tile <-> framebuffer copies convert)
 				bool is16Bit = false;
@@ -323,7 +323,7 @@ namespace nCine::RHI::Software
 					if DEATH_UNLIKELY(dstY < 0 || dstY >= fbHeight) {
 						continue;
 					}
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 					if (g_tile.is16Bit) {
 						// Tiles are rasterized as RGBA8; the 565 conversion happens once here, per copied row
 						SwStoreFbSpan565(fb + (dstY * fbWidth + tileX) * 2, src, tileW);
@@ -352,7 +352,7 @@ namespace nCine::RHI::Software
 						std::memset(dst, 0, rowBytes);
 						continue;
 					}
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 					if (g_tile.is16Bit) {
 						SwLoadFbSpan565(dst, fb + (srcY * fbWidth + tileX) * 2, tileW);
 						continue;
@@ -586,7 +586,7 @@ namespace nCine::RHI::Software
 
 			g_tile.targetBuffer = buffer;
 			g_tile.isFboTarget = isFboTarget;
-#if defined(RHI_SOFTWARE_FB16)
+#if defined(RHI_USE_FB16)
 			// On the software backend a non-FBO target IS the screen framebuffer - the only 16-bit surface
 			g_tile.is16Bit = !isFboTarget;
 #endif

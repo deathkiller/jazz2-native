@@ -113,7 +113,7 @@
 #endif
 
 // Core program-binary format queries (ES 3.0 / ARB_get_program_binary). The ES2 profile uses the OES
-// spelling; these appear only in the ARB fallback branch of GfxCapabilities, never taken on ES2.
+// spelling; these appear only in the ARB fallback branch of GLRhiCapabilities, never taken on ES2.
 #if !defined(GL_NUM_PROGRAM_BINARY_FORMATS)
 #	define GL_NUM_PROGRAM_BINARY_FORMATS 0x87FE
 #endif

@@ -56,7 +56,13 @@ namespace Jazz2
 	bool PreferencesCache::PreferZoomOut = true;
 	bool PreferencesCache::BackgroundDithering = true;
 	bool PreferencesCache::BlurEffects = true;
+#if defined(DEATH_TARGET_VITA)
+	// The lighting buffer is a full-resolution off-screen pass the composite samples per pixel, and halving
+	// it costs the SGX a quarter of that work for a difference the light falloff largely hides
+	std::uint8_t PreferencesCache::LightingResolutionPercent = 50;
+#else
 	std::uint8_t PreferencesCache::LightingResolutionPercent = 100;
+#endif
 	bool PreferencesCache::EnableReforgedGameplay = true;
 	bool PreferencesCache::EnableReforgedHUD = true;
 	bool PreferencesCache::EnableReforgedMainMenu = true;

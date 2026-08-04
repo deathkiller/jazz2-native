@@ -631,7 +631,16 @@ namespace nCine
 			// Graphics device should always be created before the input manager
 			IGfxDevice::ContextInfo contextInfo(appCfg_);
 			const DisplayMode::VSync vSyncMode = (appCfg_.withVSync ? DisplayMode::VSync::Enabled : DisplayMode::VSync::Disabled);
+#if defined(RHI_USE_FB16) && defined(WITH_RHI_GL)
+			// 16-bit screen framebuffer (`NCINE_RHI_USE_FB16`): ask the window system for a 5/6/5 visual with no
+			// destination alpha, halving the memory and the present bandwidth of the default framebuffer. The
+			// render targets follow through Texture::ColorTargetFormat. The depth/stencil request is unchanged -
+			// the 2D pipeline never allocates them for the screen anyway, and a driver is free to pick a deeper
+			// buffer than asked for, so this is a request rather than a guarantee.
+			DisplayMode displayMode(5, 6, 5, 0, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
+#else
 			DisplayMode displayMode(8, 8, 8, 8, 24, 8, DisplayMode::DoubleBuffering::Enabled, vSyncMode);
+#endif
 
 			const IGfxDevice::WindowMode windowMode(appCfg_.resolution.X, appCfg_.resolution.Y, appCfg_.windowPosition.X,
 				appCfg_.windowPosition.Y, appCfg_.fullscreen, appCfg_.resizable, appCfg_.windowScaling);

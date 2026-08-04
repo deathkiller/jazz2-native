@@ -9,6 +9,12 @@
 #	include <GL/glew.h>
 #endif
 
+// GLFW must not include a GL header of its own: which one is correct depends on the profile
+// (`CommonHeaders.h` picks desktop GL, GLES2 or GLES3 headers for it), and letting GLFW pull in the desktop
+// <GL/gl.h> + <GL/glext.h> on an ES build breaks the ES headers - glext.h defines `GL_KHR_debug` with the
+// unsuffixed spellings, which then suppresses the `*_KHR` block of <GLES2/gl2ext.h> the engine reads.
+#define GLFW_INCLUDE_NONE
+
 #if !defined(CMAKE_BUILD) && defined(__has_include)
 #	if __has_include("GL/glfw3.h")
 #		define __HAS_LOCAL_GLFW

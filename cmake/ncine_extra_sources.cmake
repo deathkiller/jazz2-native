@@ -12,43 +12,55 @@ if(TARGET Backward)
 	target_link_libraries(${NCINE_APP} PRIVATE Backward)
 endif()
 
-if(VITA OR ANGLE_FOUND OR OPENGLES2_FOUND)
-	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OPENGLES")
-
-	if(VITA)
-		# PS Vita renders through vitaGL, a static OpenGL|ES 2.0 implementation that is linked (together with its
-		# Sce stub libraries) further below. find_package(OpenGLES2) cannot locate it - that module only probes
-		# for GLES2/gl2.h and libGLESv2/libEGL.
+# Client library and profile macros of the OpenGL family backend. Only this backend has a GL dependency at
+# all: the software rasterizer draws on the CPU, the console backends talk to their own hardware API, and
+# D3D11 / Vulkan bring their own (d3d11/dxgi/d3dcompiler, resp. a dynamically loaded vulkan-1). None of them
+# must drag in a GL runtime - pspdev even ships a libGL (pspgl) wrapping the very GE the GU backend drives
+# itself, which find_package(OpenGL) happily locates.
+if(NCINE_PREFERRED_RHI STREQUAL "OpenGL")
+	# Exactly one profile macro is defined, plus RHI_GL_PROFILE_ES for the two ES ones (they share the
+	# client library, the EGL/GLES headers and everything but the context version and shader dialect)
+	if(NCINE_RHI_GL_PROFILE STREQUAL "ES2")
+		target_compile_definitions(${NCINE_APP} PRIVATE "RHI_GL_PROFILE_ES2" "RHI_GL_PROFILE_ES")
+	elseif(NCINE_RHI_GL_PROFILE STREQUAL "ES3")
+		target_compile_definitions(${NCINE_APP} PRIVATE "RHI_GL_PROFILE_ES3" "RHI_GL_PROFILE_ES")
 	else()
-		target_link_libraries(${NCINE_APP} PRIVATE EGL::EGL OpenGLES2::GLES2)
+		target_compile_definitions(${NCINE_APP} PRIVATE "RHI_GL_PROFILE_CORE")
 	endif()
 
-	if(ANGLE_FOUND)
-		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ANGLE")
-	endif()
+	if(NCINE_RHI_GL_PROFILE MATCHES "^ES")
+		if(ANGLE_FOUND)
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ANGLE")
+		endif()
 
-	# OpenGL|ES 2.0 profile (real ES 2.0 context: ESSL 100, no UBOs, no gl_VertexID). Gated so the GL 3.3
-	# desktop and software builds - which never set NCINE_RHI_GL_PROFILE_ES2 - are completely unaffected,
-	# on PS Vita it is force-enabled (vitaGL IS an ES 2.0 implementation).
-	if(NCINE_RHI_GL_PROFILE_ES2)
-		target_compile_definitions(${NCINE_APP} PRIVATE "RHI_GL_PROFILE_ES2")
-	endif()
+		if(VITA)
+			# PS Vita renders through vitaGL, a static OpenGL|ES 2.0 implementation that is linked (together with
+			# its Sce stub libraries) further below. find_package(OpenGLES2) cannot locate it - that module only
+			# probes for GLES2/gl2.h and libGLESv2/libEGL.
+		elseif(ANDROID OR EMSCRIPTEN)
+			# Android links libGLESv2/libGLESv3 and libEGL from the NDK (see the Android bridge CMakeLists);
+			# Emscripten's WebGL implementation is part of the runtime the linker provides itself
+		elseif(TARGET OpenGLES2::GLES2)
+			target_link_libraries(${NCINE_APP} PRIVATE EGL::EGL OpenGLES2::GLES2)
+		else()
+			message(FATAL_ERROR "NCINE_RHI_GL_PROFILE=${NCINE_RHI_GL_PROFILE} needs an OpenGL|ES client library (libGLESv2 + libEGL), which was not found. Install it, or build the Core profile against desktop OpenGL.")
+		endif()
 
-	list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.h)
-	list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.cpp)
-elseif(OPENGL_FOUND AND NOT NCINE_PREFERRED_RHI STREQUAL "Software" AND NOT NCINE_PREFERRED_RHI STREQUAL "GU")
-	# The software backend rasterizes on the CPU and must not drag in a GL runtime dependency. Neither must
-	# the GU backend: pspdev ships a libGL (pspgl) that find_package(OpenGL) does locate, but it is a wrapper
-	# around the very GE this backend drives itself, so linking it would only add dead weight.
-	if(TARGET OpenGL::OpenGL)
-		target_link_libraries(${NCINE_APP} PRIVATE OpenGL::OpenGL)
-	else()
-		target_link_libraries(${NCINE_APP} PRIVATE OpenGL::GL)
+		# ETC1-compressed textures (".pkm") are an Android-only asset form, and the loader guards itself the
+		# same way (see TextureLoaderPkm.h) - other ES builds used to compile it as dead code
+		if(ANDROID OR NCINE_BUILD_ANDROID)
+			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.h)
+			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderPkm.cpp)
+		endif()
+	elseif(OPENGL_FOUND)
+		if(TARGET OpenGL::OpenGL)
+			target_link_libraries(${NCINE_APP} PRIVATE OpenGL::OpenGL)
+		else()
+			target_link_libraries(${NCINE_APP} PRIVATE OpenGL::GL)
+		endif()
+	elseif(NOT EMSCRIPTEN)
+		message(FATAL_ERROR "NCINE_RHI_GL_PROFILE=Core needs a desktop OpenGL library, which was not found. Install it, or build an ES profile against OpenGL|ES.")
 	endif()
-elseif(NOT ANDROID AND NOT NCINE_BUILD_ANDROID AND NOT VITA AND NOT NCINE_PREFERRED_RHI STREQUAL "D3D11" AND NOT NCINE_PREFERRED_RHI STREQUAL "Vulkan")
-	# The D3D11 / Vulkan backends are excluded: those backends deliberately import no OpenGL/EGL
-	# library (D3D11 links d3d11/dxgi/d3dcompiler; Vulkan loads vulkan-1.dll dynamically at runtime).
-	message(STATUS "No graphics library found! Make sure OpenGL or OpenGL|ES library is available on your system.")
 endif()
 
 if(GLEW_FOUND)
@@ -60,12 +72,6 @@ if(NCINE_PREFERRED_RHI STREQUAL "Software")
 	# Selects the CPU software backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	message(STATUS "Rendering backend: Software (CPU rasterizer)")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_SOFTWARE")
-	if(NCINE_RHI_SOFTWARE_FB16)
-		# Optional 16-bit (RGB565) screen framebuffer: half the framebuffer memory and present bandwidth at
-		# the cost of color depth; intended for low-memory targets. Render-target textures stay RGBA8.
-		message(STATUS "Software renderer screen framebuffer: RGB565 (16-bit)")
-		target_compile_definitions(${NCINE_APP} PRIVATE "RHI_SOFTWARE_FB16")
-	endif()
 elseif(NCINE_PREFERRED_RHI STREQUAL "GX")
 	# Selects the Nintendo GameCube/Wii fixed-function GX backend in RhiFwd.h/Rhi.h
 	message(STATUS "Rendering backend: GX (Nintendo GameCube/Wii)")
@@ -80,6 +86,14 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "GU")
 	# libraries it calls into are linked with the platform packaging below
 	message(STATUS "Rendering backend: GU (PlayStation Portable)")
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GU")
+elseif(NCINE_PREFERRED_RHI STREQUAL "GXM")
+	# Selects the PS Vita's native sceGxm backend in RhiFwd.h/Rhi.h. Unlike the other console backends this
+	# is a SHADER backend - the Vita's PowerVR SGX has no fixed-function pipeline - so it keeps the whole
+	# post-processing chain; what it drops is the OpenGL translation layer (vitaGL) between the engine and
+	# sceGxm. Its shaders are the baked Cg sources compiled on the console by SceShaccCg through vitashark
+	# (the stubs are linked with the Vita packaging below, next to vitaGL's).
+	message(STATUS "Rendering backend: GXM (PS Vita, native sceGxm)")
+	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GXM")
 elseif(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 	# Selects the Direct3D 11 backend in RhiFwd.h/Rhi.h instead of the default OpenGL family backend
 	message(STATUS "Rendering backend: Direct3D 11")
@@ -95,15 +109,19 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "Vulkan")
 	target_include_directories(${NCINE_APP} PRIVATE "${VULKAN_HEADERS_INCLUDE_DIR}")
 else()
 	# OpenGL/WebGL is the default rendering backend
-	if(ANGLE_FOUND)
-		set(_NCINE_RHI_SUMMARY "OpenGL|ES (ANGLE)")
-	elseif(OPENGLES2_FOUND)
-		set(_NCINE_RHI_SUMMARY "OpenGL|ES")
+	if(NCINE_RHI_GL_PROFILE STREQUAL "ES2")
+		set(_NCINE_RHI_SUMMARY "OpenGL|ES 2.0 profile (ESSL 100, no UBOs)")
+	elseif(NCINE_RHI_GL_PROFILE STREQUAL "ES3")
+		set(_NCINE_RHI_SUMMARY "OpenGL|ES 3.0 profile")
 	else()
-		set(_NCINE_RHI_SUMMARY "OpenGL")
+		set(_NCINE_RHI_SUMMARY "OpenGL 3.3 core profile")
 	endif()
-	if(NCINE_RHI_GL_PROFILE_ES2)
-		string(APPEND _NCINE_RHI_SUMMARY ", ES 2.0 profile (ESSL 100, no UBOs)")
+	if(ANGLE_FOUND)
+		string(APPEND _NCINE_RHI_SUMMARY ", ANGLE")
+	elseif(EMSCRIPTEN)
+		string(APPEND _NCINE_RHI_SUMMARY ", WebGL")
+	elseif(VITA)
+		string(APPEND _NCINE_RHI_SUMMARY ", vitaGL")
 	endif()
 	if(GLEW_FOUND)
 		string(APPEND _NCINE_RHI_SUMMARY ", GLEW loader")
@@ -113,6 +131,13 @@ else()
 	message(STATUS "Rendering backend: ${_NCINE_RHI_SUMMARY}")
 
 	target_compile_definitions(${NCINE_APP} PRIVATE "WITH_RHI_GL")
+endif()
+
+# Optional 16-bit (RGB565) screen framebuffer, honored by the software and OpenGL backends (see the option's
+# comment in ncine_options.cmake). Defined after the backend selection so both read the same single macro.
+if(NCINE_RHI_USE_FB16)
+	message(STATUS "Screen framebuffer: RGB565 (16-bit)")
+	target_compile_definitions(${NCINE_APP} PRIVATE "RHI_USE_FB16")
 endif()
 
 if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
@@ -217,25 +242,51 @@ if(NOT DEDICATED_SERVER AND NOT NCINE_BUILD_LIBRETRO)
 endif()
 
 if(NOT DEDICATED_SERVER)
-	if(OPENAL_FOUND)
+	if(OPENAL_FOUND OR ASND_FOUND OR AICA_FOUND)
 		target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AUDIO")
-		target_link_libraries(${NCINE_APP} PRIVATE OpenAL::OpenAL)
 
 		list(APPEND HEADERS
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioDeviceBase.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.h
-			${NCINE_SOURCE_DIR}/nCine/Audio/ALAudioDevice.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.h
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.h
 		)
 
 		list(APPEND SOURCES
-			${NCINE_SOURCE_DIR}/nCine/Audio/ALAudioDevice.cpp
+			${NCINE_SOURCE_DIR}/nCine/Audio/AudioDeviceBase.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioBufferPlayer.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioStreamPlayer.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioLoaderWav.cpp
 			${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderWav.cpp
 		)
+
+		# Exactly one audio backend is compiled into a binary, mirroring the rendering backends. Each
+		# one lives in "nCine/Audio/Backends/<backend>/" and implements IAudioDevice.
+		if(OPENAL_FOUND)
+			set(_NCINE_AUDIO_BACKEND "OpenAL")
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_OPENAL")
+			target_link_libraries(${NCINE_APP} PRIVATE OpenAL::OpenAL)
+
+			list(APPEND HEADERS
+				${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AL/ALAudioDevice.h
+				${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AL/ALDebug.h)
+			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AL/ALAudioDevice.cpp)
+		elseif(ASND_FOUND)
+			set(_NCINE_AUDIO_BACKEND "ASND --- libogc DSP mixer")
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_ASND")
+			target_link_libraries(${NCINE_APP} PRIVATE asnd)
+
+			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/ASND/AsndAudioDevice.h)
+			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/ASND/AsndAudioDevice.cpp)
+		elseif(AICA_FOUND)
+			set(_NCINE_AUDIO_BACKEND "AICA --- KallistiOS sound driver")
+			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_AICA")
+
+			list(APPEND HEADERS ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AICA/AicaAudioDevice.h)
+			list(APPEND SOURCES ${NCINE_SOURCE_DIR}/nCine/Audio/Backends/AICA/AicaAudioDevice.cpp)
+		endif()
+		message(STATUS "Audio backend: ${_NCINE_AUDIO_BACKEND}")
 
 		if(VORBIS_FOUND)
 			target_compile_definitions(${NCINE_APP} PRIVATE "WITH_VORBIS")
@@ -274,7 +325,7 @@ if(NOT DEDICATED_SERVER)
 				${NCINE_SOURCE_DIR}/nCine/Audio/AudioReaderMpt.cpp)
 		endif()
 	elseif(NOT NCINE_BUILD_ANDROID)
-		message(STATUS "Cannot find OpenAL library")
+		message(STATUS "Cannot find any audio backend library")
 	endif()
 endif()
 
@@ -915,9 +966,13 @@ else()
 			string(LENGTH ${VITA_TITLEID} _TITLEID_LEN)
 		endwhile()
 		vita_create_self(${NCINE_APP}.self ${NCINE_APP})
+		# The game content travels inside the VPK, next to the executable, so it ends up in the
+		# application's own read-only directory ("ux0:/app/<titleid>/", mounted as "app0:") and needs
+		# no separate copy on the device.
 		vita_create_vpk(${NCINE_APP}.vpk ${VITA_TITLEID} ${NCINE_APP}.self
 			VERSION ${VITA_VERSION} NAME ${NCINE_APP_NAME}
-			FILE "${NCINE_SOURCE_DIR}/Icons/128px.png" "sce_sys/icon0.png")
+			FILE "${NCINE_SOURCE_DIR}/Icons/128px.png" "sce_sys/icon0.png"
+			FILE "${NCINE_CONTENT_DIR}" "Content")
 	elseif(WIN32 AND NCINE_COPY_DEPENDENCIES)
 		set(WIN32_DEPENDENCIES "")
 		

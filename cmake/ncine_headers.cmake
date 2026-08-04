@@ -114,9 +114,7 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Graphics/DisplayMode.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/DrawableNode.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Geometry.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/GfxCapabilities.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IDebugOverlay.h
-	${NCINE_SOURCE_DIR}/nCine/Graphics/IGfxCapabilities.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/IGfxDevice.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureLoader.h
 	#${NCINE_SOURCE_DIR}/nCine/Graphics/ITextureSaver.h
@@ -150,7 +148,9 @@ list(APPEND HEADERS
 	${NCINE_SOURCE_DIR}/nCine/Graphics/TextureLoaderRaw.h
 	#${NCINE_SOURCE_DIR}/nCine/Graphics/TextureSaverPng.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/Viewport.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/IRhiCapabilities.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Rhi.h
+	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RhiCapabilitiesBase.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RhiFwd.h
 	${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/RhiTypes.h
 	${NCINE_SOURCE_DIR}/nCine/Input/IInputEventHandler.h
@@ -190,6 +190,7 @@ if(NCINE_PREFERRED_RHI STREQUAL "Software")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwDevice.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwRaster.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwRenderTarget.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwRhiCapabilities.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwScanlineOps.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwShader.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwShaderProgram.h
@@ -201,6 +202,24 @@ if(NCINE_PREFERRED_RHI STREQUAL "Software")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwUniformCache.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Software/SwVertexFormat.h
 	)
+elseif(NCINE_PREFERRED_RHI STREQUAL "GXM")
+	# PS Vita native sceGxm rendering backend
+	list(APPEND HEADERS
+		${NCINE_SOURCE_DIR}/Shaders/Generated/CgGeneratedShaders.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmBufferObject.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmDebug.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmDevice.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmMemory.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmRenderTarget.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmRhiCapabilities.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmShader.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmShaderProgram.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmShaderTypes.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmShaderUniforms.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmTexture.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmUniformCache.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GXM/GxmVertexFormat.h
+	)
 elseif(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 	# Direct3D 11 rendering backend
 	list(APPEND HEADERS
@@ -208,6 +227,7 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "D3D11")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11Debug.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11Device.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11RenderTarget.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11RhiCapabilities.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11Shader.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11ShaderProgram.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/D3D11/D3D11ShaderTypes.h
@@ -224,6 +244,7 @@ elseif(NCINE_PREFERRED_RHI STREQUAL "Vulkan")
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanDebug.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanDevice.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanRenderTarget.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanRhiCapabilities.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanShader.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanShaderProgram.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/Vulkan/VulkanShaderTypes.h
@@ -247,6 +268,7 @@ else()
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLHashMap.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLRenderbuffer.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLRenderTarget.h
+		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLRhiCapabilities.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLScissorTest.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShader.h
 		${NCINE_SOURCE_DIR}/nCine/Graphics/RHI/GL/GLShaderProgram.h

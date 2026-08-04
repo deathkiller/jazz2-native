@@ -74,7 +74,7 @@ namespace nCine::RHI::GL
 			case GL_FLOAT_MAT3:
 			case GL_FLOAT_MAT4:
 				return GL_FLOAT;
-#if !defined(WITH_OPENGLES) // not available in OpenGL ES
+#if defined(RHI_GL_PROFILE_CORE) // not available in OpenGL ES
 			case GL_SAMPLER_1D:
 #endif
 			case GL_SAMPLER_2D:
@@ -82,7 +82,7 @@ namespace nCine::RHI::GL
 			case GL_SAMPLER_3D:
 #endif
 			case GL_SAMPLER_CUBE:
-#if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
+#if defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_2
 			case GL_SAMPLER_BUFFER:
 #endif
 				return GL_INT;
@@ -129,7 +129,7 @@ namespace nCine::RHI::GL
 				return 9;
 			case GL_FLOAT_MAT4:
 				return 16;
-#if !defined(WITH_OPENGLES) // not available in OpenGL ES
+#if defined(RHI_GL_PROFILE_CORE) // not available in OpenGL ES
 			case GL_SAMPLER_1D:
 #endif
 			case GL_SAMPLER_2D:
@@ -137,7 +137,7 @@ namespace nCine::RHI::GL
 			case GL_SAMPLER_3D:
 #endif
 			case GL_SAMPLER_CUBE:
-#if !defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_2)
+#if defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_2
 			case GL_SAMPLER_BUFFER:
 #endif
 				return 1;

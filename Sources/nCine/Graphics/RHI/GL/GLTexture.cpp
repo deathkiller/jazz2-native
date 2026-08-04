@@ -214,7 +214,7 @@ namespace nCine::RHI::GL
 
 	void GLTexture::GetTexImage(std::int32_t level, PixelFormat format, bool bgr, void* pixels)
 	{
-#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(RHI_GL_PROFILE_CORE) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		TracyGpuZone("glGetTexImage");
 		Bind();
 		GLint internalFormat;
@@ -301,17 +301,17 @@ namespace nCine::RHI::GL
 		// compiles against, not the runtime context); EXT_texture_storage is not assumed - use the mutable
 		// glTexImage2D() per-level fallback instead
 		return false;
-#elif (defined(WITH_OPENGLES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
+#elif (defined(RHI_GL_PROFILE_ES) && GL_ES_VERSION_3_0) || defined(DEATH_TARGET_EMSCRIPTEN)
 		return true;
 #else
-		const IGfxCapabilities& gfxCaps = theServiceLocator().GetGfxCapabilities();
-		return gfxCaps.HasExtension(IGfxCapabilities::Extensions::ARB_TEXTURE_STORAGE);
+		const IRhiCapabilities& caps = theServiceLocator().GetRhiCapabilities();
+		return caps.HasExtension(IRhiCapabilities::Extensions::ARB_TEXTURE_STORAGE);
 #endif
 	}
 
 	bool GLTexture::SupportsTextureReadback()
 	{
-#if !defined(WITH_OPENGLES) && !defined(DEATH_TARGET_EMSCRIPTEN)
+#if defined(RHI_GL_PROFILE_CORE) && !defined(DEATH_TARGET_EMSCRIPTEN)
 		return true;
 #else
 		return false;

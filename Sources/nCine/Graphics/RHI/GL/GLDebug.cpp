@@ -1,8 +1,8 @@
 #include "GLDebug.h"
-#include "../../IGfxCapabilities.h"
+#include "../IRhiCapabilities.h"
 #include "../../../Application.h"
 
-#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_VITA) && defined(WITH_OPENGLES) && defined(__linux__)
+#if !defined(DEATH_TARGET_ANDROID) && !defined(DEATH_TARGET_VITA) && defined(RHI_GL_PROFILE_ES) && defined(__linux__)
 #	include <GLES3/gl32.h>
 #endif
 
@@ -15,7 +15,7 @@
 
 // The strict-ES2 profile compiling against gl2.h has no GL_ES_VERSION_3_0 macro, but KHR_debug (gl2ext.h)
 // provides the same *KHR-suffixed entry points and enums, so route to them here as well
-#if defined(GL_DEBUG_SUPPORTED) && defined(WITH_OPENGLES) && (GL_ES_VERSION_3_0 || defined(RHI_GL_PROFILE_ES2)) && !GL_ES_VERSION_3_2
+#if defined(GL_DEBUG_SUPPORTED) && defined(RHI_GL_PROFILE_ES) && (GL_ES_VERSION_3_0 || defined(RHI_GL_PROFILE_ES2)) && !GL_ES_VERSION_3_2
 #	define glPushDebugGroup glPushDebugGroupKHR
 #	define glPopDebugGroup glPopDebugGroupKHR
 #	define glDebugMessageInsert glDebugMessageInsertKHR
@@ -63,10 +63,10 @@ namespace nCine::RHI::GL
 	GLuint GLDebug::debugGroupId_ = 0;
 	std::int32_t GLDebug::maxLabelLength_ = 0;
 
-	void GLDebug::Init(const IGfxCapabilities& gfxCaps)
+	void GLDebug::Init(const IRhiCapabilities& caps)
 	{
 #if defined(GL_DEBUG_SUPPORTED)
-		debugAvailable_ = gfxCaps.HasExtension(IGfxCapabilities::Extensions::KHR_DEBUG) &&
+		debugAvailable_ = caps.HasExtension(IRhiCapabilities::Extensions::KHR_DEBUG) &&
 			theApplication().GetGfxDevice().contextInfo().debugContext;
 
 		glGetIntegerv(GL_MAX_LABEL_LENGTH, &maxLabelLength_);

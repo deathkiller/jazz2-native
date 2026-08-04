@@ -27,6 +27,14 @@ namespace nCine
 		fixedBatchSize(24),
 #elif defined(DEATH_TARGET_EMSCRIPTEN) || defined(WITH_ANGLE)
 		fixedBatchSize(10),
+#elif defined(WITH_RHI_GXM)
+		// A batched draw's instance array lives in the sceGxm *default uniform buffer*, which is uploaded per
+		// draw and indexed dynamically by the shader. Sized from the 64 KB uniform-block budget the other
+		// profiles get, that array is 585 instances - 64 KB of per-draw uniform data for a PowerVR SGX543,
+		// which is not a shape this hardware is meant to be fed. The engine already forces a fixed batch on
+		// the PowerVR Rogue parts for the same reason (see Application::InitCommon()), one generation *newer*
+		// than the Vita's, so the same 10 is used here.
+		fixedBatchSize(10),
 #else
 		fixedBatchSize(0),
 #endif
@@ -56,7 +64,7 @@ namespace nCine
 		// Real OpenGL|ES 2.0 profile (PS Vita target): ESSL 100, no UBOs, no gl_VertexID
 		glMajorVersion_(2),
 		glMinorVersion_(0),
-#elif defined(WITH_OPENGLES) || defined(DEATH_TARGET_EMSCRIPTEN)
+#elif defined(RHI_GL_PROFILE_ES) || defined(DEATH_TARGET_EMSCRIPTEN)
 		glMajorVersion_(3),
 		glMinorVersion_(0),
 #else

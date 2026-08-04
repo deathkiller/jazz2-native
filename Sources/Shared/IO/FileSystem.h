@@ -106,7 +106,7 @@ namespace Death { namespace IO {
 		FileSystem() = delete;
 		~FileSystem() = delete;
 
-#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH)
+#if defined(DEATH_TARGET_WINDOWS) || defined(DEATH_TARGET_SWITCH) || defined(DEATH_TARGET_VITA)
 		/**
 		 * @brief Returns path with correct case on case-sensitive platforms (or `{}` if path not found)
 		 * 

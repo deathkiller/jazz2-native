@@ -161,7 +161,7 @@ namespace nCine::Backends
 		format.setDepthBufferSize(displayMode_.depthBits());
 		format.setStencilBufferSize(displayMode_.stencilBits());
 		format.setVersion(contextInfo_.majorVersion, contextInfo_.minorVersion);
-#if defined(WITH_OPENGLES)
+#if defined(RHI_GL_PROFILE_ES)
 		format.setRenderableType(QSurfaceFormat::OpenGLES);
 #endif
 		format.setProfile(contextInfo_.coreProfile ? QSurfaceFormat::CoreProfile : QSurfaceFormat::CompatibilityProfile);

@@ -10,7 +10,7 @@ namespace nCine
 	}
 
 	ServiceLocator::ServiceLocator()
-		: audioDevice_(&nullAudioDevice_), threadPool_(&nullThreadPool_), gfxCapabilities_(&nullGfxCapabilities_)
+		: audioDevice_(&nullAudioDevice_), threadPool_(&nullThreadPool_), rhiCapabilities_(&nullRhiCapabilities_)
 	{
 	}
 
@@ -38,16 +38,16 @@ namespace nCine
 		threadPool_ = &nullThreadPool_;
 	}
 
-	void ServiceLocator::RegisterGfxCapabilities(std::unique_ptr<nCine::IGfxCapabilities> service)
+	void ServiceLocator::RegisterRhiCapabilities(std::unique_ptr<RHI::IRhiCapabilities> service)
 	{
-		registeredGfxCapabilities_ = std::move(service);
-		gfxCapabilities_ = registeredGfxCapabilities_.get();
+		registeredRhiCapabilities_ = std::move(service);
+		rhiCapabilities_ = registeredRhiCapabilities_.get();
 	}
 
-	void ServiceLocator::UnregisterGfxCapabilities()
+	void ServiceLocator::UnregisterRhiCapabilities()
 	{
-		registeredGfxCapabilities_ = nullptr;
-		gfxCapabilities_ = &nullGfxCapabilities_;
+		registeredRhiCapabilities_ = nullptr;
+		rhiCapabilities_ = &nullRhiCapabilities_;
 	}
 
 	void ServiceLocator::UnregisterAll()
@@ -60,7 +60,7 @@ namespace nCine
 		registeredThreadPool_ = nullptr;
 		threadPool_ = &nullThreadPool_;
 
-		registeredGfxCapabilities_ = nullptr;
-		gfxCapabilities_ = &nullGfxCapabilities_;
+		registeredRhiCapabilities_ = nullptr;
+		rhiCapabilities_ = &nullRhiCapabilities_;
 	}
 }

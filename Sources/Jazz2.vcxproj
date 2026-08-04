@@ -621,7 +621,6 @@
     <ClInclude Include="nCine\Graphics\DisplayMode.h" />
     <ClInclude Include="nCine\Graphics\DrawableNode.h" />
     <ClInclude Include="nCine\Graphics\Geometry.h" />
-    <ClInclude Include="nCine\Graphics\GfxCapabilities.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\GLAttribute.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\GLBlending.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\GLBufferObject.h" />
@@ -635,6 +634,7 @@
     <ClInclude Include="nCine\Graphics\RHI\GL\GLHashMap.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\GLRenderbuffer.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\GLRenderTarget.h" />
+    <ClInclude Include="nCine\Graphics\RHI\GL\GLRhiCapabilities.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\GLScissorTest.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\GLShader.h" />
     <ClInclude Include="nCine\Graphics\RHI\GL\GLShaderProgram.h" />
@@ -652,7 +652,6 @@
     <ClInclude Include="nCine\Backends\Qt5GfxDevice.h" />
     <ClInclude Include="nCine\Backends\SdlGfxDevice.h" />
     <ClInclude Include="nCine\Graphics\IDebugOverlay.h" />
-    <ClInclude Include="nCine\Graphics\IGfxCapabilities.h" />
     <ClInclude Include="nCine\Graphics\IGfxDevice.h" />
     <ClInclude Include="nCine\Graphics\ImGuiDebugOverlay.h" />
     <ClInclude Include="nCine\Graphics\ImGuiDrawing.h" />
@@ -674,7 +673,9 @@
     <ClInclude Include="nCine\Graphics\RenderResources.h" />
     <ClInclude Include="nCine\Graphics\RenderStatistics.h" />
     <ClInclude Include="nCine\Graphics\RenderVaoPool.h" />
+    <ClInclude Include="nCine\Graphics\RHI\IRhiCapabilities.h" />
     <ClInclude Include="nCine\Graphics\RHI\Rhi.h" />
+    <ClInclude Include="nCine\Graphics\RHI\RhiCapabilitiesBase.h" />
     <ClInclude Include="nCine\Graphics\RHI\RhiFwd.h" />
     <ClInclude Include="nCine\Graphics\RHI\RhiTypes.h" />
     <ClInclude Include="nCine\Graphics\SceneNode.h" />
@@ -1029,7 +1030,6 @@
     <ClCompile Include="nCine\Graphics\Camera.cpp" />
     <ClCompile Include="nCine\Graphics\DrawableNode.cpp" />
     <ClCompile Include="nCine\Graphics\Geometry.cpp" />
-    <ClCompile Include="nCine\Graphics\GfxCapabilities.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLAttribute.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLBlending.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLBufferObject.cpp" />
@@ -1042,6 +1042,8 @@
     <ClCompile Include="nCine\Backends\GlfwGfxDevice.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLRenderbuffer.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLRenderTarget.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\GL\GLRhiCapabilities.cpp" />
+    <ClCompile Include="nCine\Graphics\RHI\RhiCapabilitiesBase.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLScissorTest.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLShader.cpp" />
     <ClCompile Include="nCine\Graphics\RHI\GL\GLShaderProgram.cpp" />

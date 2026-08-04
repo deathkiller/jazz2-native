@@ -70,7 +70,7 @@ namespace Jazz2::Rendering
 		std::int32_t textureHeight = height * _supersample;
 
 		// An overlay layer needs an alpha channel so the scene shows through where nothing is drawn
-		Texture::Format targetFormat = (overlay ? Texture::Format::RGBA8 : Texture::Format::RGB8);
+		Texture::Format targetFormat = (overlay ? Texture::Format::RGBA8 : Texture::ColorTargetFormat);
 
 		_targetSize = Vector2f((float)targetWidth, (float)targetHeight);
 
@@ -95,9 +95,9 @@ namespace Jazz2::Rendering
 
 			if (std::abs(requiredWidth - targetWidth) > 2 || std::abs(requiredHeight - targetHeight) > 2) {
 				if (_antialiasing._target == nullptr) {
-					_antialiasing._target = std::make_unique<Texture>(nullptr, Texture::Format::RGB8, requiredWidth, requiredHeight);
+					_antialiasing._target = std::make_unique<Texture>(nullptr, Texture::ColorTargetFormat, requiredWidth, requiredHeight);
 				} else {
-					_antialiasing._target->Init(nullptr, Texture::Format::RGB8, requiredWidth, requiredHeight);
+					_antialiasing._target->Init(nullptr, Texture::ColorTargetFormat, requiredWidth, requiredHeight);
 				}
 				_antialiasing._target->SetMinFiltering(SamplerFilter::Linear);
 				_antialiasing._target->SetMagFiltering(SamplerFilter::Linear);

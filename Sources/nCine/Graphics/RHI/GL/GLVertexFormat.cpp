@@ -1,6 +1,6 @@
 #include "GLVertexFormat.h"
 #include "GLBufferObject.h"
-#include "../../IGfxCapabilities.h"
+#include "../IRhiCapabilities.h"
 #include "../../../ServiceLocator.h"
 #include "../../../../Main.h"
 
@@ -50,8 +50,8 @@ namespace nCine::RHI::GL
 
 	void GLVertexFormat::Attribute::SetVboParameters(GLsizei stride, const GLvoid* pointer)
 	{
-#if !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && (!defined(WITH_OPENGLES) || (defined(WITH_OPENGLES) && GL_ES_VERSION_3_1))
-		static const std::int32_t MaxVertexAttribStride = theServiceLocator().GetGfxCapabilities().GetValue(IGfxCapabilities::IntValues::MAX_VERTEX_ATTRIB_STRIDE);
+#if !defined(DEATH_TARGET_EMSCRIPTEN) && !(defined(DEATH_TARGET_APPLE) && defined(DEATH_TARGET_ARM)) && (defined(RHI_GL_PROFILE_CORE) || GL_ES_VERSION_3_1)
+		static const std::int32_t MaxVertexAttribStride = theServiceLocator().GetRhiCapabilities().GetValue(IRhiCapabilities::IntValues::MAX_VERTEX_ATTRIB_STRIDE);
 
 		if (stride > MaxVertexAttribStride) {
 			stride_ = MaxVertexAttribStride;
@@ -72,7 +72,7 @@ namespace nCine::RHI::GL
 				attributes_[i].vbo_->Bind();
 				glEnableVertexAttribArray(attributes_[i].index_);
 
-#if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if (defined(RHI_GL_PROFILE_ES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 				const GLubyte* initialPointer = reinterpret_cast<const GLubyte*>(attributes_[i].pointer_);
 				const GLvoid* pointer = reinterpret_cast<const GLvoid*>(initialPointer + attributes_[i].baseOffset_);
 #else

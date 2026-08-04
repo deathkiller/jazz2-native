@@ -2,15 +2,10 @@
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 #define NCINE_INCLUDE_OPENALC
-#include "../CommonHeaders.h"
+#include "../../../CommonHeaders.h"
 #endif
 
-#include "IAudioDevice.h"
-
-#if defined(WITH_THREADS)
-#	include "../Threading/Thread.h"
-#	include "../Threading/ThreadSync.h"
-#endif
+#include "../../AudioDeviceBase.h"
 
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 #	include <CommonWindows.h>
@@ -18,7 +13,6 @@
 #	include <audiopolicy.h>
 #endif
 
-#include <Containers/SmallVector.h>
 #include <Containers/String.h>
 
 using namespace Death::Containers;
@@ -27,12 +21,12 @@ namespace nCine
 {
 	/**
 		@brief OpenAL implementation of @ref IAudioDevice
-		
+
 		Owns the OpenAL device and context, manages a fixed pool of sources and tracks the active
 		players. On desktop Windows it also listens for default device changes and recreates the
 		device when needed.
 	*/
-	class ALAudioDevice : public IAudioDevice
+	class ALAudioDevice : public AudioDeviceBase
 #if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
 		, public IMMNotificationClient
 #endif
@@ -41,48 +35,37 @@ namespace nCine
 		ALAudioDevice();
 		~ALAudioDevice() override;
 
-		ALAudioDevice(const ALAudioDevice&) = delete;
-		ALAudioDevice& operator=(const ALAudioDevice&) = delete;
-
 		bool isValid() const override;
 
 		const char* name() const override;
 
-		float gain() const override {
-			return gain_;
-		}
 		void setGain(float gain) override;
 
-		inline std::uint32_t maxNumPlayers() const override {
-			return MaxSources;
-		}
-		inline std::uint32_t numPlayers() const override {
-			return std::uint32_t(players_.size());
-		}
-		// Spelled with the fixed-width type the interface uses: on targets where `std::uint32_t` is `long
-		// unsigned int` (MIPS, among others) `unsigned int` is a different type and would not override it
-		const IAudioPlayer* player(std::uint32_t index) const override;
-		IAudioPlayer* player(std::uint32_t index) override;
-
-		void stopPlayers() override;
-		void pausePlayers() override;
-		void stopPlayers(PlayerType playerType) override;
-		void pausePlayers(PlayerType playerType) override;
-
-		void freezePlayers() override;
-		void unfreezePlayers() override;
-
-		std::uint32_t registerPlayer(IAudioPlayer* player) override;
-		void unregisterPlayer(IAudioPlayer* player) override;
-		void updatePlayers() override;
-
-		bool submitStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
-		void drainStreamDecode(const std::shared_ptr<StreamDecodeRequest>& request) override;
-
-		const Vector3f& getListenerPosition() const override;
 		void updateListener(const Vector3f& position, const Vector3f& velocity) override;
 
 		std::int32_t nativeFrequency() override;
+
+		std::uint32_t createBuffer(BufferUsage usage) override;
+		void deleteBuffer(std::uint32_t bufferId) override;
+		bool uploadBuffer(std::uint32_t bufferId, BufferFormat format, const void* data, std::int32_t size, std::int32_t frequency) override;
+
+		void setSourceBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
+		void setSourceGain(std::uint32_t sourceId, float gain) override;
+		void setSourcePitch(std::uint32_t sourceId, float pitch) override;
+		void setSourceLooping(std::uint32_t sourceId, bool looping) override;
+		void setSourceRelative(std::uint32_t sourceId, bool relative) override;
+		void setSourcePosition(std::uint32_t sourceId, const Vector3f& position) override;
+		void setSourceLowPass(std::uint32_t sourceId, float value) override;
+		std::int32_t sourceSampleOffset(std::uint32_t sourceId) override;
+		void setSourceSampleOffset(std::uint32_t sourceId, std::int32_t offset) override;
+		void playSource(std::uint32_t sourceId) override;
+		void pauseSource(std::uint32_t sourceId) override;
+		void stopSource(std::uint32_t sourceId) override;
+		bool isSourcePlaying(std::uint32_t sourceId) override;
+
+		void queueBuffer(std::uint32_t sourceId, std::uint32_t bufferId) override;
+		std::int32_t numProcessedBuffers(std::uint32_t sourceId) override;
+		void unqueueBuffers(std::uint32_t sourceId, std::int32_t count, std::uint32_t* bufferIds) override;
 
 #if defined(WITH_LIBRETRO)
 		bool renderSamples(std::int16_t* buffer, std::int32_t numFrames) override;
@@ -90,6 +73,10 @@ namespace nCine
 
 		void suspendDevice() override;
 		void resumeDevice() override;
+
+#if defined(DEATH_TARGET_WINDOWS) && !defined(DEATH_TARGET_WINDOWS_RT)
+		void updatePlayers() override;
+#endif
 
 	private:
 		/** @brief Maximum number of OpenAL sources */
@@ -110,41 +97,20 @@ namespace nCine
 		ALCdevice* device_;
 		/** @brief OpenAL context for the device */
 		ALCcontext* context_;
-		/** @brief Listener gain (master volume) */
-		ALfloat gain_;
 		/** @brief Array of all audio sources */
 		ALuint sources_[MaxSources];
-		/** @brief Pool of currently inactive audio sources */
-		SmallVector<ALuint, MaxSources> sourcePool_;
-		/** @brief Currently active audio players */
-		SmallVector<IAudioPlayer*, MaxSources> players_;
-		/** @brief Listener position */
-		Vector3f _listenerPos;
 		/** @brief Native device sample frequency */
 		std::int32_t nativeFreq_;
 
 		/** @brief OpenAL device name */
 		const char* deviceName_;
 
-#if defined(WITH_THREADS)
-		// Decoding thread that executes stream decode requests ahead of time
-		Thread decodeThread_;
-		// Protects the request queue, the active request and the quit flag
-		Mutex decodeMutex_;
-		// Signaled when a request is added to the queue or the thread should quit
-		CondVariable decodeQueueCond_;
-		// Signaled when the decoding thread finishes executing a request
-		CondVariable decodeDoneCond_;
-		// Queue of decode requests waiting to be executed
-		SmallVector<std::shared_ptr<StreamDecodeRequest>, 4> decodeQueue_;
-		// Request currently being executed by the decoding thread, if any
-		std::shared_ptr<StreamDecodeRequest> activeDecodeRequest_;
-		// Whether the decoding thread has been created
-		bool decodeThreadCreated_;
-		// Whether the decoding thread should quit
-		bool decodeThreadShouldQuit_;
+#if defined(OPENAL_FILTERS_SUPPORTED)
+		/** @brief Low-pass filter of each source, created on first use, `0` when the source has none */
+		ALuint filters_[MaxSources];
 
-		static void decodeThreadFunc(void* arg);
+		/** @brief Returns a reference to the filter slot of the specified source, or `nullptr` if unknown */
+		ALuint* filterForSource(std::uint32_t sourceId);
 #endif
 
 		void Init();

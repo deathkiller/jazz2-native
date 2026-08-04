@@ -2,14 +2,14 @@
 
 #include "Audio/IAudioDevice.h"
 #include "Threading/IThreadPool.h"
-#include "Graphics/IGfxCapabilities.h"
+#include "Graphics/RHI/IRhiCapabilities.h"
 
 namespace nCine
 {
 	/**
 		@brief Central registry that provides engine services to requesting classes
 		
-		Holds the active audio device, thread pool and graphics capabilities providers. Null implementations
+		Holds the active audio device, thread pool and RHI capabilities providers. Null implementations
 		are used until a real provider is registered, so callers can always obtain a valid reference.
 	*/
 	class ServiceLocator
@@ -33,14 +33,14 @@ namespace nCine
 		/** @brief Unregisters the thread pool provider and reinstates the null one */
 		void UnregisterThreadPool();
 
-		/** @brief Returns reference to the current graphics capabilities instance */
-		const IGfxCapabilities& GetGfxCapabilities() {
-			return *gfxCapabilities_;
+		/** @brief Returns reference to the current RHI capabilities instance */
+		const RHI::IRhiCapabilities& GetRhiCapabilities() {
+			return *rhiCapabilities_;
 		}
-		/** @brief Registers a graphics capabilities provider */
-		void RegisterGfxCapabilities(std::unique_ptr<IGfxCapabilities> service);
-		/** @brief Unregisters the graphics capabilities provider and reinstates the null one */
-		void UnregisterGfxCapabilities();
+		/** @brief Registers an RHI capabilities provider */
+		void RegisterRhiCapabilities(std::unique_ptr<RHI::IRhiCapabilities> service);
+		/** @brief Unregisters the RHI capabilities provider and reinstates the null one */
+		void UnregisterRhiCapabilities();
 
 		/** @brief Unregisters every registered service and reinstates null ones */
 		void UnregisterAll();
@@ -54,9 +54,9 @@ namespace nCine
 		std::unique_ptr<IThreadPool> registeredThreadPool_;
 		NullThreadPool nullThreadPool_;
 
-		IGfxCapabilities* gfxCapabilities_;
-		std::unique_ptr<IGfxCapabilities> registeredGfxCapabilities_;
-		NullGfxCapabilities nullGfxCapabilities_;
+		RHI::IRhiCapabilities* rhiCapabilities_;
+		std::unique_ptr<RHI::IRhiCapabilities> registeredRhiCapabilities_;
+		RHI::NullRhiCapabilities nullRhiCapabilities_;
 
 		ServiceLocator();
 

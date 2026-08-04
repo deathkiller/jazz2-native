@@ -48,12 +48,35 @@ namespace ShaderCompiler
 	{
 	public:
 		/**
+			@brief Which member of the HLSL/Cg dialect family to emit
+
+			`Cg` targets the PS Vita's sceGxm backend, whose shaders are compiled on the console by
+			SceShaccCg. It is the same language family - `floatN`, `mul()`, `lerp`/`frac`/`ddx` and
+			`TEXCOORD<i>` interpolant semantics are shared, which is why it lives here instead of in an
+			emitter of its own - and differs only in the places listed below:
+
+			- Entry points are both named `main` (`VSMain`/`PSMain` in HLSL)
+			- System semantics: `POSITION` for the clip position, `WPOS` for the fragment position and
+			  `COLOR` for the colour output, instead of `SV_Position`/`SV_Target`
+			- Uniforms are plain `uniform` declarations (there is no `cbuffer`); the samplers are combined
+			  `sampler2D`/`sampler3D` objects carrying the GXM `TEXUNIT<n>` semantic, sampled with
+			  `tex2D()`/`tex2Dlod()` instead of `Texture2D` + `SamplerState` + `.Sample()`
+			- There is no vertex-ID or instance-ID input at all - the GXM parameter semantics are the
+			  fixed-function-era Cg set - so a stage still referencing `gl_VertexID`/`gl_InstanceID` after
+			  @ref VertexIdRewrite has run is rejected with a diagnostic rather than mis-emitted
+		*/
+		enum class Dialect {
+			Hlsl,
+			Cg
+		};
+
+		/**
 			Transforms @p modernSource (as produced by ShaderParser::BuildStageSource) into HLSL, writing the
 			result to @p out. @p vertexStage selects the vertex-vs-fragment lowering; @p reflection supplies
 			texture-unit register assignments and the batched instance-block stride (for the emitted array
 			size). Returns false and fills @p diag when the source uses a construct the emitter does not handle.
 		*/
 		static bool Transform(StringView modernSource, bool vertexStage, const StageReflection& reflection,
-			String& out, Diagnostic& diag);
+			String& out, Diagnostic& diag, Dialect dialect = Dialect::Hlsl);
 	};
 }

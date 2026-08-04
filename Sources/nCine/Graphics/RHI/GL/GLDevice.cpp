@@ -222,7 +222,7 @@ namespace nCine::RHI::GL
 	void GLDevice::DrawElements(PrimitiveType primitive, std::uint32_t numIndices, IndexFormat indexFormat, std::uintptr_t indexOffset, std::int32_t baseVertex)
 	{
 		void* indexOffsetPtr = reinterpret_cast<void*>(indexOffset);
-#if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if (defined(RHI_GL_PROFILE_ES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 		// Base vertex is emulated by the caller offsetting the vertex format instead
 		static_cast<void>(baseVertex);
 		glDrawElements(static_cast<GLenum>(primitive), GLsizei(numIndices), static_cast<GLenum>(indexFormat), indexOffsetPtr);
@@ -240,7 +240,7 @@ namespace nCine::RHI::GL
 		FATAL_ASSERT_MSG(false, "Instanced drawing is not supported on OpenGL|ES 2.0");
 #else
 		void* indexOffsetPtr = reinterpret_cast<void*>(indexOffset);
-#if (defined(WITH_OPENGLES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
+#if (defined(RHI_GL_PROFILE_ES) && !GL_ES_VERSION_3_2) || defined(DEATH_TARGET_EMSCRIPTEN)
 		// Base vertex is emulated by the caller offsetting the vertex format instead
 		static_cast<void>(baseVertex);
 		glDrawElementsInstanced(static_cast<GLenum>(primitive), GLsizei(numIndices), static_cast<GLenum>(indexFormat), indexOffsetPtr, numInstances);
@@ -254,7 +254,7 @@ namespace nCine::RHI::GL
 	{
 #if defined(RHI_GL_PROFILE_ES2)
 		// Fence sync objects are ES 3.0; the only user is the persistent-mapping ring, which is compiled out
-		// on every OpenGL|ES configuration (NCINE_HAS_PERSISTENT_MAPPING excludes WITH_OPENGLES)
+		// on every OpenGL|ES configuration (NCINE_HAS_PERSISTENT_MAPPING excludes RHI_GL_PROFILE_ES)
 		return nullptr;
 #else
 		return glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
